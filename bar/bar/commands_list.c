@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/commands_list.c,v $
-* $Revision: 1.10 $
+* $Revision: 1.11 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive list function
 * Systems: all
@@ -47,14 +47,14 @@
 
 /***************************** Constants *******************************/
 
-#define DEFAULT_FORMAT_TITLE_NORMAL_LONG "%type:-5s %size:-10s %date:-25s %part:-22s %compress:-10s %ratio:-7s %crypt:-10s %name:s"
+#define DEFAULT_FORMAT_TITLE_NORMAL_LONG "%type:-8s %size:-10s %date:-25s %part:-22s %compress:-10s %ratio:-7s %crypt:-10s %name:s"
 #define DEFAULT_FORMAT_TITLE_GROUP_LONG  "%archiveName:-20s %type:4s %size:-10s %date:-25s %part:-22s %compress:-10s %ratio:-7s %crypt:-10s %name:s"
-#define DEFAULT_FORMAT_TITLE_NORMAL      "%type:-5s %size:-10s %date:-25s %name:s"
+#define DEFAULT_FORMAT_TITLE_NORMAL      "%type:-8s %size:-10s %date:-25s %name:s"
 #define DEFAULT_FORMAT_TITLE_GROUP       "%archiveName:-20s %type:4s %size:-10s %date:-25s %name:s"
 
-#define DEFAULT_FORMAT_NORMAL_LONG       "%type:-5s %size:-10s %date:-25s %part:-22s %compress:-10s %ratio:-7s %crypt:-10s %name:s"
+#define DEFAULT_FORMAT_NORMAL_LONG       "%type:-8s %size:-10s %date:-25s %part:-22s %compress:-10s %ratio:-7s %crypt:-10s %name:s"
 #define DEFAULT_FORMAT_GROUP_LONG        "%archiveName:-20s %type:4s %size:-10s %date:-25s %part:-22s %compress:-10s %ratio:-7s %crypt:-10s %name:s"
-#define DEFAULT_FORMAT_NORMAL            "%type:-5s %size:-10s %date:-25s %name:s"
+#define DEFAULT_FORMAT_NORMAL            "%type:-8s %size:-10s %date:-25s %name:s"
 #define DEFAULT_FORMAT_GROUP             "%archiveName:-20s %type:4s %size:-10s %date:-25s %name:s"
 
 /***************************** Datatypes *******************************/
@@ -105,6 +105,18 @@ typedef struct ArchiveContentNode
       CryptAlgorithms cryptAlgorithm;
       CryptTypes      cryptType;
     } link;
+    struct
+    {
+      String             fileName;
+      uint64             size;
+      uint64             timeModified;
+      uint64             archiveSize;
+      CompressAlgorithms compressAlgorithm;
+      CryptAlgorithms    cryptAlgorithm;
+      CryptTypes         cryptType;
+      uint64             fragmentOffset;
+      uint64             fragmentSize;
+    } hardLink;
     struct
     {
       String           fileName;
@@ -242,7 +254,7 @@ LOCAL void printHeader(const String storageName)
     }
     Misc_expandMacros(String_clear(string),template,MACROS,SIZE_OF_ARRAY(MACROS));
     printInfo(0,"%s\n",String_cString(string));
-    printInfo(0,"--------------------------------------------------------------------------------------------------------------\n");
+    printInfo(0,"---------------------------------------------------------------------------------------------------------------\n");
   }
 
   String_delete(string);
@@ -261,7 +273,7 @@ LOCAL void printFooter(ulong fileCount)
 {
   if (!globalOptions.noHeaderFooterFlag)
   {
-    printInfo(0,"--------------------------------------------------------------------------------------------------------------\n");
+    printInfo(0,"---------------------------------------------------------------------------------------------------------------\n");
     printInfo(0,"%lu %s\n",fileCount,(fileCount == 1)?"entry":"entries");
     printInfo(0,"\n");
   }
@@ -306,9 +318,9 @@ LOCAL void printFileInfo(const String       storageName,
 
   dateTime = Misc_formatDateTime(String_new(),timeModified,NULL);
 
-  if ((compressAlgorithm != COMPRESS_ALGORITHM_NONE) && (fragmentSize > 0))
+  if ((compressAlgorithm != COMPRESS_ALGORITHM_NONE) && (fragmentSize > 0LL))
   {
-    ratio = 100.0-archiveSize*100.0/fragmentSize;
+    ratio = 100.0-archiveSize*100.0/(double)fragmentSize;
   }
   else
   {
@@ -319,7 +331,7 @@ LOCAL void printFileInfo(const String       storageName,
   {
     printf("%-20s ",String_cString(storageName));
   }
-  printf("FILE  ");
+  printf("FILE     ");
   if (globalOptions.humanFormatFlag)
   {
     printf("%10s",getHumanSizeString(buffer,sizeof(buffer),size));
@@ -334,7 +346,7 @@ LOCAL void printFileInfo(const String       storageName,
     printf(" %-25s %10llu..%10llu %-10s %6.1f%% %-10s %s\n",
            String_cString(dateTime),
            fragmentOffset,
-           (fragmentSize > 0)?fragmentOffset+fragmentSize-1:fragmentOffset,
+           (fragmentSize > 0LL)?fragmentOffset+fragmentSize-1:fragmentOffset,
            Compress_getAlgorithmName(compressAlgorithm),
            ratio,
            String_cString(cryptString),
@@ -403,7 +415,7 @@ LOCAL void printImageInfo(const String       storageName,
   {
     printf("%-20s ",String_cString(storageName));
   }
-  printf("IMAGE ");
+  printf("IMAGE    ");
   if (globalOptions.humanFormatFlag)
   {
     printf("%10s",getHumanSizeString(buffer,sizeof(buffer),size));
@@ -463,7 +475,7 @@ LOCAL void printDirectoryInfo(const String    storageName,
   if (globalOptions.longFormatFlag)
   {
     cryptString = String_format(String_new(),"%s%c",Crypt_getAlgorithmName(cryptAlgorithm),(cryptType==CRYPT_TYPE_ASYMMETRIC)?'*':' ');
-    printf("DIR                                                                                  %-10s %s\n",
+    printf("DIR                                                                                     %-10s %s\n",
            String_cString(cryptString),
            String_cString(directoryName)
           );
@@ -471,7 +483,7 @@ LOCAL void printDirectoryInfo(const String    storageName,
   }
   else
   {
-    printf("DIR                                        %s\n",
+    printf("DIR                                           %s\n",
            String_cString(directoryName)
           );
   }
@@ -510,7 +522,7 @@ LOCAL void printLinkInfo(const String    storageName,
   if (globalOptions.longFormatFlag)
   {
     cryptString = String_format(String_new(),"%s%c",Crypt_getAlgorithmName(cryptAlgorithm),(cryptType==CRYPT_TYPE_ASYMMETRIC)?'*':' ');
-    printf("LINK                                                                                 %-10s %s -> %s\n",
+    printf("LINK                                                                                    %-10s %s -> %s\n",
            String_cString(cryptString),
            String_cString(linkName),
            String_cString(destinationName)
@@ -519,11 +531,97 @@ LOCAL void printLinkInfo(const String    storageName,
   }
   else
   {
-    printf("LINK                                       %s -> %s\n",
+    printf("LINK                                          %s -> %s\n",
            String_cString(linkName),
            String_cString(destinationName)
           );
   }
+}
+
+/***********************************************************************\
+* Name   : printHardLinkInfo
+* Purpose: print hard link information
+* Input  : storageName       - storage name or NULL if storage name
+*                              should not be printed
+*          fileName          - file name
+*          fileSize          - file size [bytes]
+*          archiveSize       - archive size [bytes]
+*          compressAlgorithm - used compress algorithm
+*          cryptAlgorithm    - used crypt algorithm
+*          cryptType         - crypt type; see CRYPT_TYPES
+*          fragmentOffset    - fragment offset (0..n-1)
+*          fragmentSize      - fragment length
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void printHardLinkInfo(const String       storageName,
+                             const String       fileName,
+                             uint64             size,
+                             uint64             timeModified,
+                             uint64             archiveSize,
+                             CompressAlgorithms compressAlgorithm,
+                             CryptAlgorithms    cryptAlgorithm,
+                             CryptTypes         cryptType,
+                             uint64             fragmentOffset,
+                             uint64             fragmentSize
+                            )
+{
+  String dateTime;
+  double ratio;
+  char   buffer[16];
+  String cryptString;
+
+  assert(fileName != NULL);
+
+  dateTime = Misc_formatDateTime(String_new(),timeModified,NULL);
+
+  if ((compressAlgorithm != COMPRESS_ALGORITHM_NONE) && (fragmentSize > 0LL))
+  {
+    ratio = 100.0-archiveSize*100.0/(double)fragmentSize;
+  }
+  else
+  {
+    ratio = 0;
+  }
+
+  if (storageName != NULL)
+  {
+    printf("%-20s ",String_cString(storageName));
+  }
+  printf("HARDLINK ");
+  if (globalOptions.humanFormatFlag)
+  {
+    printf("%10s",getHumanSizeString(buffer,sizeof(buffer),size));
+  }
+  else
+  {
+    printf("%10llu",size);
+  }
+  if (globalOptions.longFormatFlag)
+  {
+    cryptString = String_format(String_new(),"%s%c",Crypt_getAlgorithmName(cryptAlgorithm),(cryptType==CRYPT_TYPE_ASYMMETRIC)?'*':' ');
+    printf(" %-25s %10llu..%10llu %-10s %6.1f%% %-10s %s\n",
+           String_cString(dateTime),
+           fragmentOffset,
+           (fragmentSize > 0LL)?fragmentOffset+fragmentSize-1:fragmentOffset,
+           Compress_getAlgorithmName(compressAlgorithm),
+           ratio,
+           String_cString(cryptString),
+           String_cString(fileName)
+          );
+    String_delete(cryptString);
+  }
+  else
+  {
+    printf(" %-25s %s\n",
+           String_cString(dateTime),
+           String_cString(fileName)
+          );
+  }
+
+  String_delete(dateTime);
 }
 
 /***********************************************************************\
@@ -565,7 +663,7 @@ LOCAL void printSpecialInfo(const String     storageName,
       if (globalOptions.longFormatFlag)
       {
         cryptString = String_format(String_new(),"%s%c",Crypt_getAlgorithmName(cryptAlgorithm),(cryptType==CRYPT_TYPE_ASYMMETRIC)?'*':' ');
-        printf("CHAR                                                                                 %-10s %s, %lu %lu\n",
+        printf("CHAR                                                                                    %-10s %s, %lu %lu\n",
                String_cString(cryptString),
                String_cString(fileName),
                major,
@@ -575,7 +673,7 @@ LOCAL void printSpecialInfo(const String     storageName,
       }
       else
       {
-        printf("CHAR                                       %s\n",
+        printf("CHAR                                          %s\n",
                String_cString(fileName)
               );
       }
@@ -584,7 +682,7 @@ LOCAL void printSpecialInfo(const String     storageName,
       if (globalOptions.longFormatFlag)
       {
         cryptString = String_format(String_new(),"%s%c",Crypt_getAlgorithmName(cryptAlgorithm),(cryptType==CRYPT_TYPE_ASYMMETRIC)?'*':' ');
-        printf("BLOCK                                                                               %-10s %s, %lu %lu\n",
+        printf("BLOCK                                                                                  %-10s %s, %lu %lu\n",
                String_cString(cryptString),
                String_cString(fileName),
                major,
@@ -594,7 +692,7 @@ LOCAL void printSpecialInfo(const String     storageName,
       }
       else
       {
-        printf("BLOCK                                      %s\n",
+        printf("BLOCK                                         %s\n",
                String_cString(fileName)
               );
       }
@@ -603,7 +701,7 @@ LOCAL void printSpecialInfo(const String     storageName,
       if (globalOptions.longFormatFlag)
       {
         cryptString = String_format(String_new(),"%s%c",Crypt_getAlgorithmName(cryptAlgorithm),(cryptType==CRYPT_TYPE_ASYMMETRIC)?'*':' ');
-        printf("FIFO                                                                                 %-10s %s\n",
+        printf("FIFO                                                                                    %-10s %s\n",
                String_cString(cryptString),
                String_cString(fileName)
               );
@@ -611,7 +709,7 @@ LOCAL void printSpecialInfo(const String     storageName,
       }
       else
       {
-        printf("FIFO                                       %s\n",
+        printf("FIFO                                          %s\n",
                String_cString(fileName)
               );
       }
@@ -620,7 +718,7 @@ LOCAL void printSpecialInfo(const String     storageName,
       if (globalOptions.longFormatFlag)
       {
         cryptString = String_format(String_new(),"%s%c",Crypt_getAlgorithmName(cryptAlgorithm),(cryptType==CRYPT_TYPE_ASYMMETRIC)?'*':' ');
-        printf("SOCKET                                                                              %-10s %s\n",
+        printf("SOCKET                                                                                 %-10s %s\n",
                String_cString(cryptString),
                String_cString(fileName)
               );
@@ -628,7 +726,7 @@ LOCAL void printSpecialInfo(const String     storageName,
       }
       else
       {
-        printf("SOCKET                                     %s\n",
+        printf("SOCKET                                        %s\n",
                String_cString(fileName)
               );
       }
@@ -833,6 +931,61 @@ LOCAL void addListLinkInfo(const String    storageName,
 }
 
 /***********************************************************************\
+* Name   : addListHardLinkInfo
+* Purpose: add hard link info to archive entry list
+* Input  : storageName       - storage name
+*          fileName          - file name
+*          fileSize          - file size [bytes]
+*          archiveSize       - archive size [bytes]
+*          compressAlgorithm - used compress algorithm
+*          cryptAlgorithm    - used crypt algorithm
+*          cryptType         - crypt type; see CRYPT_TYPES
+*          fragmentOffset    - fragment offset (0..n-1)
+*          fragmentSize      - fragment length
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void addListHardLinkInfo(const String       storageName,
+                               const String       fileName,
+                               uint64             size,
+                               uint64             timeModified,
+                               uint64             archiveSize,
+                               CompressAlgorithms compressAlgorithm,
+                               CryptAlgorithms    cryptAlgorithm,
+                               CryptTypes         cryptType,
+                               uint64             fragmentOffset,
+                               uint64             fragmentSize
+                              )
+{
+  ArchiveContentNode *archiveContentNode;
+
+  /* allocate node */
+  archiveContentNode = LIST_NEW_NODE(ArchiveContentNode);
+  if (archiveContentNode == NULL)
+  {
+    HALT_INSUFFICIENT_MEMORY();
+  }
+
+  /* init node */
+  archiveContentNode->storageName                = String_duplicate(storageName);
+  archiveContentNode->type                       = ARCHIVE_ENTRY_TYPE_HARDLINK;
+  archiveContentNode->hardLink.fileName          = String_duplicate(fileName);
+  archiveContentNode->hardLink.size              = size;
+  archiveContentNode->hardLink.timeModified      = timeModified;
+  archiveContentNode->hardLink.archiveSize       = archiveSize;
+  archiveContentNode->hardLink.compressAlgorithm = compressAlgorithm;
+  archiveContentNode->hardLink.cryptAlgorithm    = cryptAlgorithm;
+  archiveContentNode->hardLink.cryptType         = cryptType;
+  archiveContentNode->hardLink.fragmentOffset    = fragmentOffset;
+  archiveContentNode->hardLink.fragmentSize      = fragmentSize;
+
+  /* append to list */
+  List_append(&archiveContentList,archiveContentNode);
+}
+
+/***********************************************************************\
 * Name   : addListSpecialInfo
 * Purpose: add special info to archive entry list
 * Input  : storageName      - storage name
@@ -906,6 +1059,9 @@ LOCAL void freeArchiveContentNode(ArchiveContentNode *archiveContentNode, void *
       String_delete(archiveContentNode->link.destinationName);
       String_delete(archiveContentNode->link.linkName);
       break;
+    case ARCHIVE_ENTRY_TYPE_HARDLINK:
+      String_delete(archiveContentNode->hardLink.fileName);
+      break;
     case ARCHIVE_ENTRY_TYPE_SPECIAL:
       String_delete(archiveContentNode->special.fileName);
       break;
@@ -960,6 +1116,10 @@ LOCAL int compareArchiveContentNode(ArchiveContentNode *archiveContentNode1, Arc
       name1         = archiveContentNode1->link.linkName;
       modifiedTime1 = 0LL;
       break;
+    case ARCHIVE_ENTRY_TYPE_HARDLINK:
+      name1         = archiveContentNode1->hardLink.fileName;
+      modifiedTime1 = archiveContentNode1->hardLink.timeModified;
+      break;
     case ARCHIVE_ENTRY_TYPE_SPECIAL:
       name1         = archiveContentNode1->special.fileName;
       modifiedTime1 = 0LL;
@@ -983,6 +1143,10 @@ LOCAL int compareArchiveContentNode(ArchiveContentNode *archiveContentNode1, Arc
     case ARCHIVE_ENTRY_TYPE_LINK:
       name2         = archiveContentNode2->link.linkName;
       modifiedTime2 = 0LL;
+      break;
+    case ARCHIVE_ENTRY_TYPE_HARDLINK:
+      name2         = archiveContentNode2->hardLink.fileName;
+      modifiedTime2 = archiveContentNode2->hardLink.timeModified;
       break;
     case ARCHIVE_ENTRY_TYPE_SPECIAL:
       name2         = archiveContentNode2->special.fileName;
@@ -1117,6 +1281,27 @@ LOCAL void printList(void)
           prevArchiveName      = archiveContentNode->link.linkName;
         }
         break;
+      case ARCHIVE_ENTRY_TYPE_HARDLINK:
+        if (   globalOptions.allFlag
+            || (prevArchiveEntryType != ARCHIVE_ENTRY_TYPE_HARDLINK)
+            || !String_equals(prevArchiveName,archiveContentNode->file.fileName)
+           )
+        {
+          printHardLinkInfo(archiveContentNode->storageName,
+                            archiveContentNode->hardLink.fileName,
+                            archiveContentNode->hardLink.size,
+                            archiveContentNode->hardLink.timeModified,
+                            archiveContentNode->hardLink.archiveSize,
+                            archiveContentNode->hardLink.compressAlgorithm,
+                            archiveContentNode->hardLink.cryptAlgorithm,
+                            archiveContentNode->hardLink.cryptType,
+                            archiveContentNode->hardLink.fragmentOffset,
+                            archiveContentNode->hardLink.fragmentSize
+                           );
+          prevArchiveEntryType = ARCHIVE_ENTRY_TYPE_HARDLINK;
+          prevArchiveName      = archiveContentNode->hardLink.fileName;
+        }
+        break;
       case ARCHIVE_ENTRY_TYPE_SPECIAL:
         if (   globalOptions.allFlag
             || (prevArchiveEntryType != ARCHIVE_ENTRY_TYPE_SPECIAL)
@@ -1199,7 +1384,7 @@ remoteBarFlag=FALSE;
         {
           Errors            error;
           ArchiveInfo       archiveInfo;
-          ArchiveFileInfo   archiveFileInfo;
+          ArchiveEntryInfo  archiveEntryInfo;
           ArchiveEntryTypes archiveEntryType;
 
           /* open archive */
@@ -1220,17 +1405,18 @@ remoteBarFlag=FALSE;
           }
 
           /* list contents */
-          while (   !Archive_eof(&archiveInfo)
+          while (   !Archive_eof(&archiveInfo,TRUE)
                  && (failError == ERROR_NONE)
                 )
           {
             /* get next archive entry type */
             error = Archive_getNextArchiveEntryType(&archiveInfo,
-                                                    &archiveEntryType
+                                                    &archiveEntryType,
+                                                    TRUE
                                                    );
             if (error != ERROR_NONE)
             {
-              printError("Cannot not read next entry from storage '%s' (error: %s)!\n",
+              printError("Cannot read next entry from storage '%s' (error: %s)!\n",
                          String_cString(storageName),
                          Errors_getText(error)
                         );
@@ -1242,7 +1428,7 @@ remoteBarFlag=FALSE;
             {
               case ARCHIVE_ENTRY_TYPE_FILE:
                 {
-                  ArchiveFileInfo    archiveFileInfo;
+                  ArchiveEntryInfo   archiveEntryInfo;
                   CompressAlgorithms compressAlgorithm;
                   CryptAlgorithms    cryptAlgorithm;
                   CryptTypes         cryptType;
@@ -1250,10 +1436,10 @@ remoteBarFlag=FALSE;
                   FileInfo           fileInfo;
                   uint64             fragmentOffset,fragmentSize;
 
-                  /* open archive file */
+                  /* read archive file */
                   fileName = String_new();
                   error = Archive_readFileEntry(&archiveInfo,
-                                                &archiveFileInfo,
+                                                &archiveEntryInfo,
                                                 &compressAlgorithm,
                                                 &cryptAlgorithm,
                                                 &cryptType,
@@ -1264,7 +1450,7 @@ remoteBarFlag=FALSE;
                                                );
                   if (error != ERROR_NONE)
                   {
-                    printError("Cannot not read 'file' content from storage '%s' (error: %s)!\n",
+                    printError("Cannot read 'file' content from storage '%s' (error: %s)!\n",
                                String_cString(storageName),
                                Errors_getText(error)
                               );
@@ -1284,7 +1470,7 @@ remoteBarFlag=FALSE;
                                       fileName,
                                       fileInfo.size,
                                       fileInfo.timeModified,
-                                      archiveFileInfo.file.chunkInfoFileData.size,
+                                      archiveEntryInfo.file.chunkFileData.info.size,
                                       compressAlgorithm,
                                       cryptAlgorithm,
                                       cryptType,
@@ -1305,7 +1491,7 @@ remoteBarFlag=FALSE;
                                     fileName,
                                     fileInfo.size,
                                     fileInfo.timeModified,
-                                    archiveFileInfo.file.chunkInfoFileData.size,
+                                    archiveEntryInfo.file.chunkFileData.info.size,
                                     compressAlgorithm,
                                     cryptAlgorithm,
                                     cryptType,
@@ -1317,13 +1503,19 @@ remoteBarFlag=FALSE;
                   }
 
                   /* close archive file, free resources */
-                  Archive_closeEntry(&archiveFileInfo);
+                  error = Archive_closeEntry(&archiveEntryInfo);
+                  if (error != ERROR_NONE)
+                  {
+                    printWarning("close 'file' entry fail (error: %s)\n",Errors_getText(error));
+                  }
+
+                  /* free resources */
                   String_delete(fileName);
                 }
                 break;
               case ARCHIVE_ENTRY_TYPE_IMAGE:
                 {
-                  ArchiveFileInfo    archiveFileInfo;
+                  ArchiveEntryInfo   archiveEntryInfo;
                   CompressAlgorithms compressAlgorithm;
                   CryptAlgorithms    cryptAlgorithm;
                   CryptTypes         cryptType;
@@ -1331,10 +1523,10 @@ remoteBarFlag=FALSE;
                   DeviceInfo         deviceInfo;
                   uint64             blockOffset,blockCount;
 
-                  /* open archive file */
+                  /* read archive image */
                   imageName = String_new();
                   error = Archive_readImageEntry(&archiveInfo,
-                                                 &archiveFileInfo,
+                                                 &archiveEntryInfo,
                                                  &compressAlgorithm,
                                                  &cryptAlgorithm,
                                                  &cryptType,
@@ -1345,7 +1537,7 @@ remoteBarFlag=FALSE;
                                                 );
                   if (error != ERROR_NONE)
                   {
-                    printError("Cannot not read 'image' content from storage '%s' (error: %s)!\n",
+                    printError("Cannot read 'image' content from storage '%s' (error: %s)!\n",
                                String_cString(storageName),
                                Errors_getText(error)
                               );
@@ -1364,7 +1556,7 @@ remoteBarFlag=FALSE;
                       addListImageInfo(storageName,
                                        imageName,
                                        deviceInfo.size,
-                                       archiveFileInfo.image.chunkInfoImageData.size,
+                                       archiveEntryInfo.image.chunkImageData.info.size,
                                        compressAlgorithm,
                                        cryptAlgorithm,
                                        cryptType,
@@ -1385,7 +1577,7 @@ remoteBarFlag=FALSE;
                       printImageInfo(NULL,
                                      imageName,
                                      deviceInfo.size,
-                                     archiveFileInfo.image.chunkInfoImageData.size,
+                                     archiveEntryInfo.image.chunkImageData.info.size,
                                      compressAlgorithm,
                                      cryptAlgorithm,
                                      cryptType,
@@ -1398,7 +1590,13 @@ remoteBarFlag=FALSE;
                   }
 
                   /* close archive file, free resources */
-                  Archive_closeEntry(&archiveFileInfo);
+                  error = Archive_closeEntry(&archiveEntryInfo);
+                  if (error != ERROR_NONE)
+                  {
+                    printWarning("close 'image' entry fail (error: %s)\n",Errors_getText(error));
+                  }
+
+                  /* free resources */
                   String_delete(imageName);
                 }
                 break;
@@ -1409,10 +1607,10 @@ remoteBarFlag=FALSE;
                   CryptTypes      cryptType;
                   FileInfo        fileInfo;
 
-                  /* open archive lin */
+                  /* read archive directory entry */
                   directoryName = String_new();
                   error = Archive_readDirectoryEntry(&archiveInfo,
-                                                     &archiveFileInfo,
+                                                     &archiveEntryInfo,
                                                      &cryptAlgorithm,
                                                      &cryptType,
                                                      directoryName,
@@ -1420,7 +1618,7 @@ remoteBarFlag=FALSE;
                                                     );
                   if (error != ERROR_NONE)
                   {
-                    printError("Cannot not read 'directory' content from storage '%s' (error: %s)!\n",
+                    printError("Cannot read 'directory' content from storage '%s' (error: %s)!\n",
                                String_cString(storageName),
                                Errors_getText(error)
                               );
@@ -1461,7 +1659,13 @@ remoteBarFlag=FALSE;
                   }
 
                   /* close archive file, free resources */
-                  Archive_closeEntry(&archiveFileInfo);
+                  error = Archive_closeEntry(&archiveEntryInfo);
+                  if (error != ERROR_NONE)
+                  {
+                    printWarning("close 'directory' entry fail (error: %s)\n",Errors_getText(error));
+                  }
+
+                  /* free resources */
                   String_delete(directoryName);
                 }
                 break;
@@ -1473,11 +1677,11 @@ remoteBarFlag=FALSE;
                   String          fileName;
                   FileInfo        fileInfo;
 
-                  /* open archive lin */
+                  /* read archive link */
                   linkName = String_new();
                   fileName = String_new();
                   error = Archive_readLinkEntry(&archiveInfo,
-                                                &archiveFileInfo,
+                                                &archiveEntryInfo,
                                                 &cryptAlgorithm,
                                                 &cryptType,
                                                 linkName,
@@ -1486,7 +1690,7 @@ remoteBarFlag=FALSE;
                                                );
                   if (error != ERROR_NONE)
                   {
-                    printError("Cannot not read 'link' content from storage '%s' (error: %s)!\n",
+                    printError("Cannot read 'link' content from storage '%s' (error: %s)!\n",
                                String_cString(storageName),
                                Errors_getText(error)
                               );
@@ -1530,9 +1734,107 @@ remoteBarFlag=FALSE;
                   }
 
                   /* close archive file, free resources */
-                  Archive_closeEntry(&archiveFileInfo);
+                  error = Archive_closeEntry(&archiveEntryInfo);
+                  if (error != ERROR_NONE)
+                  {
+                    printWarning("close 'link' entry fail (error: %s)\n",Errors_getText(error));
+                  }
+
+                  /* free resources */
                   String_delete(fileName);
                   String_delete(linkName);
+                }
+                break;
+              case ARCHIVE_ENTRY_TYPE_HARDLINK:
+                {
+                  ArchiveEntryInfo   archiveEntryInfo;
+                  CompressAlgorithms compressAlgorithm;
+                  CryptAlgorithms    cryptAlgorithm;
+                  CryptTypes         cryptType;
+                  StringList         fileNameList;
+                  FileInfo           fileInfo;
+                  uint64             fragmentOffset,fragmentSize;
+                  StringNode         *stringNode;
+                  String             fileName;
+
+                  /* read archive hard link */
+                  StringList_init(&fileNameList);
+                  error = Archive_readHardLinkEntry(&archiveInfo,
+                                                    &archiveEntryInfo,
+                                                    &compressAlgorithm,
+                                                    &cryptAlgorithm,
+                                                    &cryptType,
+                                                    &fileNameList,
+                                                    &fileInfo,
+                                                    &fragmentOffset,
+                                                    &fragmentSize
+                                                   );
+                  if (error != ERROR_NONE)
+                  {
+                    printError("Cannot read 'hard link' content from storage '%s' (error: %s)!\n",
+                               String_cString(storageName),
+                               Errors_getText(error)
+                              );
+                    StringList_done(&fileNameList);
+                    if (failError == ERROR_NONE) failError = error;
+                    break;
+                  }
+
+                  STRINGLIST_ITERATE(&fileNameList,stringNode,fileName)
+                  {
+                    if (   (List_empty(includeEntryList) || EntryList_match(includeEntryList,fileName,PATTERN_MATCH_MODE_EXACT))
+                        && !PatternList_match(excludePatternList,fileName,PATTERN_MATCH_MODE_EXACT)
+                       )
+                    {
+                      if (globalOptions.groupFlag)
+                      {
+                        /* add file info to list */
+                        addListHardLinkInfo(storageName,
+                                            fileName,
+                                            fileInfo.size,
+                                            fileInfo.timeModified,
+                                            archiveEntryInfo.file.chunkFileData.info.size,
+                                            compressAlgorithm,
+                                            cryptAlgorithm,
+                                            cryptType,
+                                            fragmentOffset,
+                                            fragmentSize
+                                           );
+                      }
+                      else
+                      {
+                        if (!printedInfoFlag)
+                        {
+                          printHeader(storageName);
+                          printedInfoFlag = TRUE;
+                        }
+
+                        /* output file info */
+                        printHardLinkInfo(NULL,
+                                          fileName,
+                                          fileInfo.size,
+                                          fileInfo.timeModified,
+                                          archiveEntryInfo.file.chunkFileData.info.size,
+                                          compressAlgorithm,
+                                          cryptAlgorithm,
+                                          cryptType,
+                                          fragmentOffset,
+                                          fragmentSize
+                                         );
+                      }
+                      fileCount++;
+                    }
+                  }
+
+                  /* close archive file, free resources */
+                  error = Archive_closeEntry(&archiveEntryInfo);
+                  if (error != ERROR_NONE)
+                  {
+                    printWarning("close 'hard link' entry fail (error: %s)\n",Errors_getText(error));
+                  }
+
+                  /* free resources */
+                  StringList_done(&fileNameList);
                 }
                 break;
               case ARCHIVE_ENTRY_TYPE_SPECIAL:
@@ -1545,7 +1847,7 @@ remoteBarFlag=FALSE;
                   /* open archive lin */
                   fileName = String_new();
                   error = Archive_readSpecialEntry(&archiveInfo,
-                                                   &archiveFileInfo,
+                                                   &archiveEntryInfo,
                                                    &cryptAlgorithm,
                                                    &cryptType,
                                                    fileName,
@@ -1553,7 +1855,7 @@ remoteBarFlag=FALSE;
                                                   );
                   if (error != ERROR_NONE)
                   {
-                    printError("Cannot not read 'special' content from storage '%s' (error: %s)!\n",
+                    printError("Cannot read 'special' content from storage '%s' (error: %s)!\n",
                                String_cString(storageName),
                                Errors_getText(error)
                               );
@@ -1600,7 +1902,13 @@ remoteBarFlag=FALSE;
                   }
 
                   /* close archive file, free resources */
-                  Archive_closeEntry(&archiveFileInfo);
+                  error = Archive_closeEntry(&archiveEntryInfo);
+                  if (error != ERROR_NONE)
+                  {
+                    printWarning("close 'special' entry fail (error: %s)\n",Errors_getText(error));
+                  }
+
+                  /* free resources */
                   String_delete(fileName);
                 }
                 break;
@@ -1655,7 +1963,7 @@ remoteBarFlag=FALSE;
           {
             String_delete(hostName);
             String_delete(loginName);
-            printError("Cannot not parse storage name '%s'!\n",
+            printError("Cannot parse storage name '%s'!\n",
                        String_cString(storageSpecifier)
                       );
             if (failError == ERROR_NONE) failError = ERROR_INIT_TLS;
@@ -1680,7 +1988,7 @@ remoteBarFlag=FALSE;
                                    );
             if (error != ERROR_NONE)
             {
-              printError("Cannot not connecto to '%s:%d' (error: %s)!\n",
+              printError("Cannot connecto to '%s:%d' (error: %s)!\n",
                          String_cString(hostName),
                          hostPort,
                          Errors_getText(error)
@@ -1704,7 +2012,7 @@ fprintf(stderr,"%s,%d: line=%s\n",__FILE__,__LINE__,String_cString(line));
                                  );
           if (error != ERROR_NONE)
           {
-            printError("Cannot not execute remote BAR program '%s' (error: %s)!\n",
+            printError("Cannot execute remote BAR program '%s' (error: %s)!\n",
                        String_cString(line),
                        Errors_getText(error)
                       );
@@ -1762,7 +2070,6 @@ fprintf(stderr,"%s,%d: line=%s\n",__FILE__,__LINE__,String_cString(line));
             {
               /* read line */
               Network_executeReadLine(&networkExecuteHandle,NETWORK_EXECUTE_IO_TYPE_STDOUT,line,60*1000);
-fprintf(stderr,"%s,%d: line=%s\n",__FILE__,__LINE__,String_cString(line));
 
               /* parse and output list */
               if      (String_parse(line,
