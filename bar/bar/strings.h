@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/strings.h,v $
-* $Revision: 1.15 $
+* $Revision: 1.16 $
 * $Author: torsten $
 * Contents: dynamic string functions
 * Systems: all
@@ -890,7 +890,18 @@ void String_debugDone(void);
 * Notes  : -
 \***********************************************************************/
 
-void String_debug(void);
+void String_debugPrintInfo(void);
+
+/***********************************************************************\
+* Name   : String_debugPrintStatistics
+* Purpose: string debug function: output strings statistics
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void String_debugPrintStatistics(void);
 
 /***********************************************************************\
 * Name   : String_debugPrintCurrentStackTrace
