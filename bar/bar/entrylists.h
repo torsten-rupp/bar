@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/entrylists.h,v $
-* $Revision: 1.1 $
+* $Revision: 1.2 $
 * $Author: torsten $
 * Contents: Backup ARchiver entry list functions
 * Systems: all
@@ -23,6 +23,7 @@
 #include "global.h"
 #include "lists.h"
 #include "strings.h"
+#include "stringlists.h"
 #include "patterns.h"
 
 #include "errors.h"
@@ -168,10 +169,11 @@ Errors EntryList_appendCString(EntryList    *entryList,
                               );
 
 /***********************************************************************\
-* Name   : EntryList_match
-* Purpose: patch string with all entrys of list
+* Name   : EntryList_match, EntryList_matchStringList
+* Purpose: patch string/string list with all entrys of list
 * Input  : entryList        - entry list
-*          s                - string
+*          string           - string
+*          stringList       - string list
 *          patternMatchMode - pattern match mode; see PatternMatchModes
 * Output : -
 * Return : TRUE if entry match, FALSE otherwise
@@ -182,6 +184,10 @@ bool EntryList_match(const EntryList   *entryList,
                      const String      string,
                      PatternMatchModes patternMatchMode
                     );
+bool EntryList_matchStringList(const EntryList   *entryList,
+                               const StringList  *stringList,
+                               PatternMatchModes patternMatchMode
+                              );
 
 #ifdef __cplusplus
   }

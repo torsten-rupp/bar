@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/entrylists.c,v $
-* $Revision: 1.2 $
+* $Revision: 1.3 $
 * $Author: torsten $
 * Contents: Backup ARchiver entry list functions
 * Systems: all
@@ -20,6 +20,8 @@
 
 #include "global.h"
 #include "lists.h"
+#include "strings.h"
+#include "stringlists.h"
 
 #include "bar.h"
 #include "patterns.h"
@@ -226,6 +228,28 @@ bool EntryList_match(const EntryList   *entryList,
   {
     matchFlag = Pattern_match(&entryNode->pattern,string,patternMatchMode);
     entryNode = entryNode->next;
+  }
+
+  return matchFlag;
+}
+
+bool EntryList_matchStringList(const EntryList   *entryList,
+                               const StringList  *stringList,
+                               PatternMatchModes patternMatchMode
+                              )
+{
+  bool       matchFlag;
+  StringNode *stringNode;
+
+  assert(entryList != NULL);
+  assert(stringList != NULL);
+
+  matchFlag  = FALSE;
+  stringNode = stringList->head;
+  while ((stringNode != NULL) && !matchFlag)
+  {
+    matchFlag = EntryList_match(entryList,stringNode->string,patternMatchMode);
+    stringNode = stringNode->next;
   }
 
   return matchFlag;
