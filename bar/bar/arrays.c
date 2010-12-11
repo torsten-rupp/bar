@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/arrays.c,v $
-* $Revision: 1.3 $
+* $Revision: 1.4 $
 * $Author: torsten $
 * Contents: dynamic array functions
 * Systems: all
@@ -52,6 +52,7 @@ struct __Array
   typedef struct
   {
     LIST_HEADER(DebugArrayNode);
+    ulong allocatedMemory;
   } DebugArrayList;
 #endif /* not NDEBUG */
 
@@ -76,6 +77,7 @@ LOCAL void debugArrayInit(void)
 {
   pthread_mutex_init(&debugArrayLock,NULL);
   List_init(&debugArrayList);
+  debugArrayList.allocatedMemory = 0L;
 }
 #endif /* not NDEBUG */
 
@@ -121,15 +123,18 @@ Array __Array_new(const char *fileName, ulong lineNb, ulong elementSize, ulong l
     pthread_once(&debugArrayInitFlag,debugArrayInit);
 
     pthread_mutex_lock(&debugArrayLock);
-    debugArrayNode = LIST_NEW_NODE(DebugArrayNode);
-    if (debugArrayNode == NULL)
     {
-      HALT_INSUFFICIENT_MEMORY();
+      debugArrayNode = LIST_NEW_NODE(DebugArrayNode);
+      if (debugArrayNode == NULL)
+      {
+        HALT_INSUFFICIENT_MEMORY();
+      }
+      debugArrayNode->fileName = fileName;
+      debugArrayNode->lineNb   = lineNb;
+      debugArrayNode->array    = array;
+      List_append(&debugArrayList,debugArrayNode);
+      debugArrayList.allocatedMemory += sizeof(DebugArrayNode)+sizeof(struct __Array)+array->elementSize*array->maxLength;
     }
-    debugArrayNode->fileName = fileName;
-    debugArrayNode->lineNb   = lineNb;
-    debugArrayNode->array    = array;
-    List_append(&debugArrayList,debugArrayNode);
     pthread_mutex_unlock(&debugArrayLock);
   #endif /* not NDEBUG */
 
@@ -160,21 +165,25 @@ void Array_delete(Array array, ArrayElementFreeFunction arrayElementFreeFunction
       pthread_once(&debugArrayInitFlag,debugArrayInit);
 
       pthread_mutex_lock(&debugArrayLock);
-      debugArrayNode = debugArrayList.head;
-      while ((debugArrayNode != NULL) && (debugArrayNode->array != array))
       {
-        debugArrayNode = debugArrayNode->next;
-      }
-      if (debugArrayNode != NULL)
-      {
-        List_remove(&debugArrayList,debugArrayNode);
-        LIST_DELETE_NODE(debugArrayNode);
-      }
-      else
-      {
-        fprintf(stderr,"DEBUG WARNING: array %p not found in debug list!\n",
-                array
-               );
+        debugArrayNode = debugArrayList.head;
+        while ((debugArrayNode != NULL) && (debugArrayNode->array != array))
+        {
+          debugArrayNode = debugArrayNode->next;
+        }
+        if (debugArrayNode != NULL)
+        {
+          List_remove(&debugArrayList,debugArrayNode);
+          assert(debugArrayList.allocatedMemory >= sizeof(DebugArrayNode)+sizeof(struct __Array)+array->maxLength*array->elementSize);
+          debugArrayList.allocatedMemory -= sizeof(DebugArrayNode)+sizeof(struct __Array)+array->maxLength*array->elementSize;
+          LIST_DELETE_NODE(debugArrayNode);
+        }
+        else
+        {
+          fprintf(stderr,"DEBUG WARNING: array %p not found in debug list!\n",
+                  array
+                 );
+        }
       }
       pthread_mutex_unlock(&debugArrayLock);
     #endif /* not NDEBUG */
@@ -210,7 +219,11 @@ ulong Array_length(Array array)
 
 bool Array_put(Array array, ulong index, const void *data)
 {
-  void *newData;
+  void  *newData;
+  ulong newMaxLength;
+  #ifndef NDEBUG
+    DebugArrayNode *debugArrayNode;;
+  #endif /* not NDEBUG */
 
   if (array != NULL)
   {
@@ -219,12 +232,24 @@ bool Array_put(Array array, ulong index, const void *data)
     /* extend array if needed */
     if (index >= array->maxLength)
     {
-      newData = realloc(array->data,(index+1)*array->elementSize);
+      newMaxLength = index+1;
+      newData = realloc(array->data,newMaxLength*array->elementSize);
       if (newData == NULL)
       {
         return FALSE;
       }
-      array->maxLength = index+1;
+
+      #ifndef NDEBUG
+        pthread_once(&debugArrayInitFlag,debugArrayInit);
+
+        pthread_mutex_lock(&debugArrayLock);
+        {
+          debugArrayList.allocatedMemory += (newMaxLength-array->maxLength)*array->elementSize;
+        }
+        pthread_mutex_unlock(&debugArrayLock);
+      #endif /* not NDEBUG */
+
+      array->maxLength = newMaxLength;
       array->data      = newData;
     }
 
@@ -375,20 +400,36 @@ const void *Array_cArray(Array array)
 }
 
 #ifndef NDEBUG
-void Array_debug(void)
+void Array_debugPrintInfo(void)
 {
   DebugArrayNode *debugArrayNode;
 
   pthread_once(&debugArrayInitFlag,debugArrayInit);
 
   pthread_mutex_lock(&debugArrayLock);
-  for (debugArrayNode = debugArrayList.head; debugArrayNode != NULL; debugArrayNode = debugArrayNode->next)
   {
-    fprintf(stderr,"DEBUG WARNING: array %p[%ld] allocated at %s, line %ld\n",
-            debugArrayNode->array->data,
-            debugArrayNode->array->maxLength,
-            debugArrayNode->fileName,
-            debugArrayNode->lineNb
+    for (debugArrayNode = debugArrayList.head; debugArrayNode != NULL; debugArrayNode = debugArrayNode->next)
+    {
+      fprintf(stderr,"DEBUG WARNING: array %p[%ld] allocated at %s, line %ld\n",
+              debugArrayNode->array->data,
+              debugArrayNode->array->maxLength,
+              debugArrayNode->fileName,
+              debugArrayNode->lineNb
+             );
+    }
+  }
+  pthread_mutex_unlock(&debugArrayLock);
+}
+
+void Array_debugPrintStatistics(void)
+{
+  pthread_once(&debugArrayInitFlag,debugArrayInit);
+
+  pthread_mutex_lock(&debugArrayLock);
+  {
+    fprintf(stderr,"DEBUG: %lu array(s) allocated, total %lu bytes\n",
+            List_count(&debugArrayList),
+            debugArrayList.allocatedMemory
            );
   }
   pthread_mutex_unlock(&debugArrayLock);
@@ -399,8 +440,9 @@ void Array_debugDone(void)
   pthread_once(&debugArrayInitFlag,debugArrayInit);
 
   pthread_mutex_lock(&debugArrayLock);
-  List_done(&debugArrayList,NULL,NULL);
-
+  {
+    List_done(&debugArrayList,NULL,NULL);
+  }
   pthread_mutex_unlock(&debugArrayLock);
 }
 #endif /* not NDEBUG */

@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/arrays.h,v $
-* $Revision: 1.2 $
+* $Revision: 1.3 $
 * $Author: torsten $
 * Contents: dynamic array functions
 * Systems: all
@@ -184,15 +184,26 @@ const void *Array_cArray(Array array);
 
 #ifndef NDEBUG
 /***********************************************************************\
-* Name   : Array_debug
-* Purpose: array debug function: output not deallocated strings
+* Name   : Array_debugPrintInfo
+* Purpose: array debug function: output not deallocated arrays
 * Input  : -
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-void Array_debug(void);
+void Array_debugPrintInfo(void);
+
+/***********************************************************************\
+* Name   : Array_debugPrintStatistics
+* Purpose: array debug function: output arrays statistics
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void Array_debugPrintStatistics(void);
 
 /***********************************************************************\
 * Name   : Array_debugDone
