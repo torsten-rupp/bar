@@ -7,7 +7,7 @@
 # ----------------------------------------------------------------------------
 #
 # $Source: /home/torsten/cvs/bar/bar/archive_format.pl,v $
-# $Revision: 1.3 $
+# $Revision: 1.4 $
 # $Author: torsten $
 # Contents: create header/c file definition from format definition
 # Systems: all
@@ -83,6 +83,10 @@ if ($hFileName ne "")
   open(HFILE_HANDLE,"> $hFileName");
   print HFILE_HANDLE "#ifndef __ARCHIVE_FORMAT__\n";
   print HFILE_HANDLE "#define __ARCHIVE_FORMAT__\n";
+  print HFILE_HANDLE "#include \"lists.h\"\n";
+  print HFILE_HANDLE "#include \"chunks.h\"\n";
+  print HFILE_HANDLE "#include \"crypt.h\"\n";
+  print HFILE_HANDLE "#include \"compress.h\"\n";
 }
 
 writeCFile("#include \"chunks.h\"\n");
@@ -109,14 +113,25 @@ while ($line=<STDIN>)
     # Note: use padding in C structures for access via pointer
 
     writeHFile("#define $PREFIX_ID$idName (('".substr($id,0,1)."' << 24) | ('".substr($id,1,1)."' << 16) | ('".substr($id,2,1)."' << 8) | '".substr($id,3,1)."')\n");
-    writeHFile("typedef struct {\n");
+    writeHFile("typedef struct $PREFIX_NAME$structName\n");
+    writeHFile("{\n");
+    writeHFile("  LIST_NODE_HEADER(struct $PREFIX_NAME$structName);\n");
+    writeHFile("  ChunkInfo info;\n");
     while ($line=<STDIN>)
     {
       chop $line;
       $lineNb++;
       if ($line =~ /^\s*#/ || $line =~ /^\s*$/) { last; }
 
-      if    ($line =~ /^\s*(uint8|int8)\s+(\w+)/)
+      if    ($line =~ /^\s*ENCRYPT\s*$/)
+      {
+        writeHFile("  CryptInfo cryptInfo;\n");
+      }
+      elsif ($line =~ /^\s*COMPRESS\s*$/)
+      {
+        writeHFile("  CompressInfo compressInfo;\n");
+      }
+      elsif ($line =~ /^\s*(uint8|int8)\s+(\w+)/)
       {
         writeHFile("  $1 $2;\n");
         writeHFile("  uint8 pad".$n."[3];\n");
@@ -167,9 +182,11 @@ while ($line=<STDIN>)
       $n++;
     }
     writeHFile("} $PREFIX_NAME$structName;\n");
+    writeHFile("typedef struct { LIST_HEADER($PREFIX_NAME$structName); } $PREFIX_NAME$structName"."List".";\n");
+
     push(@parseDefinitions,"0");
-    writeHFile("extern int $PREFIX_DEFINITION$idName\[\];\n");
-    writeCFile("int $PREFIX_DEFINITION$idName\[\] = {".join(",",@parseDefinitions)."};\n");
+    writeHFile("extern const int $PREFIX_DEFINITION$idName\[\];\n");
+    writeCFile("const int $PREFIX_DEFINITION$idName\[\] = {".join(",",@parseDefinitions)."};\n");
   }
   else
   {
