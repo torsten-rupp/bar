@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/lists.h,v $
-* $Revision: 1.5 $
+* $Revision: 1.6 $
 * $Author: torsten $
 * Contents: dynamic list functions
 * Systems: all
@@ -78,6 +78,26 @@ typedef int(*ListNodeCompareFunction)(const void *node1, const void *node2, void
   } type ## List
 
 /***********************************************************************\
+* Name   : LIST_DONE
+* Purpose: iterated over list and execute block, delete node
+* Input  : list     - list
+*          variable - iterator variable
+* Output : -
+* Return : -
+* Notes  : usage:
+*            LIST_ITERATE(list,variable)
+*            {
+*              ... = variable->...
+*            }
+\***********************************************************************/
+
+#define LIST_DONE(list,variable) \
+  for ((variable) = (list)->head; \
+       (variable) != NULL; \
+       (variable) = (typeof(variable))List_deleteNode((Node*)variable) \
+      )
+
+/***********************************************************************\
 * Name   : LIST_ITERATE
 * Purpose: iterated over list and execute block
 * Input  : list     - list
@@ -92,9 +112,9 @@ typedef int(*ListNodeCompareFunction)(const void *node1, const void *node2, void
 \***********************************************************************/
 
 #define LIST_ITERATE(list,variable) \
-  for (variable = list.head; \
-       variable != NULL; \
-       variable = variable->next \
+  for ((variable) = (list)->head; \
+       (variable) != NULL; \
+       (variable) = (variable)->next \
       )
 
 /***************************** Forwards ********************************/
@@ -308,7 +328,7 @@ INLINE unsigned long List_count(const void *list)
 #endif /* NDEBUG || __LISTS_IMPLEMENATION__ */
 
 /***********************************************************************\
-* Name   : List_ins
+* Name   : List_insert
 * Purpose: insert node into list
 * Input  : list     - list
 *          node     - node to insert
@@ -350,6 +370,50 @@ void List_append(void *list,
 void *List_remove(void *list,
                   void *node
                  );
+
+/***********************************************************************\
+* Name   : List_first
+* Purpose: first node from list
+* Input  : list - list
+* Output : -
+* Return : node or NULL if list is empty
+* Notes  : -
+\***********************************************************************/
+
+INLINE Node *List_first(const void *list);
+#if defined(NDEBUG) || defined(__LISTS_IMPLEMENATION__)
+INLINE Node *List_first(const void *list)
+{
+  assert(list != NULL);
+  assert(((((List*)list)->count == 0) && (((List*)list)->head == NULL) && (((List*)list)->tail == NULL)) ||
+         ((((List*)list)->count > 0) && (((List*)list)->head != NULL) && (((List*)list)->tail != NULL))
+        );
+
+  return ((List*)list)->head;
+}
+#endif /* NDEBUG || __LISTS_IMPLEMENATION__ */
+
+/***********************************************************************\
+* Name   : List_last
+* Purpose: last node from list
+* Input  : list - list
+* Output : -
+* Return : node or NULL if list is empty
+* Notes  : -
+\***********************************************************************/
+
+INLINE Node *List_last(const void *list);
+#if defined(NDEBUG) || defined(__LISTS_IMPLEMENATION__)
+INLINE Node *List_last(const void *list)
+{
+  assert(list != NULL);
+  assert(((((List*)list)->count == 0) && (((List*)list)->head == NULL) && (((List*)list)->tail == NULL)) ||
+         ((((List*)list)->count > 0) && (((List*)list)->head != NULL) && (((List*)list)->tail != NULL))
+        );
+
+  return ((List*)list)->tail;
+}
+#endif /* NDEBUG || __LISTS_IMPLEMENATION__ */
 
 /***********************************************************************\
 * Name   : List_getFirst
