@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/commands_test.c,v $
-* $Revision: 1.9 $
+* $Revision: 1.10 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive test function
 * Systems : all
@@ -41,6 +41,7 @@
 
 /***************************** Constants *******************************/
 
+/* file data buffer size */
 #define BUFFER_SIZE (64*1024)
 
 /***************************** Datatypes *******************************/
@@ -73,7 +74,7 @@ Errors Command_test(StringList                      *archiveFileNameList,
   Errors            failError;
   Errors            error;
   ArchiveInfo       archiveInfo;
-  ArchiveFileInfo   archiveFileInfo;
+  ArchiveEntryInfo  archiveEntryInfo;
   ArchiveEntryTypes archiveEntryType;
   FragmentNode      *fragmentNode;
 
@@ -120,16 +121,19 @@ Errors Command_test(StringList                      *archiveFileNameList,
       continue;
     }
 
-    /* read files */
-    while (!Archive_eof(&archiveInfo) && (failError == ERROR_NONE))
+    /* read archive */
+    while (   !Archive_eof(&archiveInfo,FALSE)
+           && (failError == ERROR_NONE)
+          )
     {
       /* get next archive entry type */
       error = Archive_getNextArchiveEntryType(&archiveInfo,
-                                              &archiveEntryType
+                                              &archiveEntryType,
+                                              FALSE
                                              );
       if (error != ERROR_NONE)
       {
-        printError("Cannot not read next entry in archive '%s' (error: %s)!\n",
+        printError("Cannot read next entry in archive '%s' (error: %s)!\n",
                    String_cString(archiveFileName),
                    Errors_getText(error)
                   );
@@ -151,7 +155,7 @@ Errors Command_test(StringList                      *archiveFileNameList,
             /* read file */
             fileName = String_new();
             error = Archive_readFileEntry(&archiveInfo,
-                                          &archiveFileInfo,
+                                          &archiveEntryInfo,
                                           NULL,
                                           NULL,
                                           NULL,
@@ -162,7 +166,7 @@ Errors Command_test(StringList                      *archiveFileNameList,
                                          );
             if (error != ERROR_NONE)
             {
-              printError("Cannot not read 'file' content of archive '%s' (error: %s)!\n",
+              printError("Cannot read 'file' content of archive '%s' (error: %s)!\n",
                          String_cString(archiveFileName),
                          Errors_getText(error)
                         );
@@ -192,11 +196,11 @@ Errors Command_test(StringList                      *archiveFileNameList,
                 n = MIN(fragmentSize-length,BUFFER_SIZE);
 
                 /* read archive file */
-                error = Archive_readData(&archiveFileInfo,archiveBuffer,n);
+                error = Archive_readData(&archiveEntryInfo,archiveBuffer,n);
                 if (error != ERROR_NONE)
                 {
                   printInfo(2,"FAIL!\n");
-                  printError("Cannot not read content of archive '%s' (error: %s)!\n",
+                  printError("Cannot read content of archive '%s' (error: %s)!\n",
                              String_cString(archiveFileName),
                              Errors_getText(error)
                             );
@@ -208,9 +212,25 @@ Errors Command_test(StringList                      *archiveFileNameList,
               }
               if (failError != ERROR_NONE)
               {
-                Archive_closeEntry(&archiveFileInfo);
+                Archive_closeEntry(&archiveEntryInfo);
                 String_delete(fileName);
                 continue;
+              }
+
+              /* check if all data read.
+                 Note: it is not possible to check if all data is read when
+                 compression is used. The decompressor may not all data even
+                 data is _not_ corrupt.
+              */
+              if (   (archiveEntryInfo.file.compressAlgorithm == COMPRESS_ALGORITHM_NONE)
+                  && !Archive_eofData(&archiveEntryInfo))
+              {
+                printInfo(2,"FAIL!\n");
+                printError("unexpected data at end of file entry '%S'!\n",fileName);
+                if (failError == ERROR_NONE) failError = ERROR_CORRUPT_DATA;
+                Archive_closeEntry(&archiveEntryInfo);
+                String_delete(fileName);
+                break;
               }
 
               printInfo(2,"ok\n");
@@ -233,7 +253,18 @@ Errors Command_test(StringList                      *archiveFileNameList,
             }
 
             /* close archive file, free resources */
-            Archive_closeEntry(&archiveFileInfo);
+            error = Archive_closeEntry(&archiveEntryInfo);
+            if (error != ERROR_NONE)
+            {
+              printError("closing 'file' entry fail (error: %s)!\n",
+                         Errors_getText(error)
+                        );
+              String_delete(fileName);
+              if (failError == ERROR_NONE) failError = error;
+              break;
+            }
+
+            /* free resources */
             String_delete(fileName);
           }
           break;
@@ -249,7 +280,7 @@ Errors Command_test(StringList                      *archiveFileNameList,
             /* read image */
             imageName = String_new();
             error = Archive_readImageEntry(&archiveInfo,
-                                           &archiveFileInfo,
+                                           &archiveEntryInfo,
                                            NULL,
                                            NULL,
                                            NULL,
@@ -260,7 +291,7 @@ Errors Command_test(StringList                      *archiveFileNameList,
                                           );
             if (error != ERROR_NONE)
             {
-              printError("Cannot not read 'image' content of archive '%s' (error: %s)!\n",
+              printError("Cannot read 'image' content of archive '%s' (error: %s)!\n",
                          String_cString(archiveFileName),
                          Errors_getText(error)
                         );
@@ -291,11 +322,11 @@ Errors Command_test(StringList                      *archiveFileNameList,
                 bufferBlockCount = MIN(blockCount-block,BUFFER_SIZE/deviceInfo.blockSize);
 
                 /* read archive file */
-                error = Archive_readData(&archiveFileInfo,archiveBuffer,bufferBlockCount*deviceInfo.blockSize);
+                error = Archive_readData(&archiveEntryInfo,archiveBuffer,bufferBlockCount*deviceInfo.blockSize);
                 if (error != ERROR_NONE)
                 {
                   printInfo(2,"FAIL!\n");
-                  printError("Cannot not read content of archive '%s' (error: %s)!\n",
+                  printError("Cannot read content of archive '%s' (error: %s)!\n",
                              String_cString(archiveFileName),
                              Errors_getText(error)
                             );
@@ -307,9 +338,25 @@ Errors Command_test(StringList                      *archiveFileNameList,
               }
               if (failError != ERROR_NONE)
               {
-                Archive_closeEntry(&archiveFileInfo);
+                Archive_closeEntry(&archiveEntryInfo);
                 String_delete(imageName);
                 continue;
+              }
+
+              /* check if all data read.
+                 Note: it is not possible to check if all data is read when
+                 compression is used. The decompressor may not all data even
+                 data is _not_ corrupt.
+              */
+              if (   (archiveEntryInfo.image.compressAlgorithm == COMPRESS_ALGORITHM_NONE)
+                  && !Archive_eofData(&archiveEntryInfo))
+              {
+                printInfo(2,"FAIL!\n");
+                printError("unexpected data at end of image entry '%S'!\n",imageName);
+                if (failError == ERROR_NONE) failError = ERROR_CORRUPT_DATA;
+                Archive_closeEntry(&archiveEntryInfo);
+                String_delete(imageName);
+                break;
               }
 
               printInfo(2,"ok\n");
@@ -322,8 +369,6 @@ Errors Command_test(StringList                      *archiveFileNameList,
               {
                 FragmentList_remove(&fragmentList,fragmentNode);
               }
-
-              /* free resources */
             }
             else
             {
@@ -332,7 +377,18 @@ Errors Command_test(StringList                      *archiveFileNameList,
             }
 
             /* close archive file, free resources */
-            Archive_closeEntry(&archiveFileInfo);
+            error = Archive_closeEntry(&archiveEntryInfo);
+            if (error != ERROR_NONE)
+            {
+              printError("closing 'image' entry fail (error: %s)!\n",
+                         Errors_getText(error)
+                        );
+              String_delete(imageName);
+              if (failError == ERROR_NONE) failError = error;
+              break;
+            }
+
+            /* free resources */
             String_delete(imageName);
           }
           break;
@@ -344,7 +400,7 @@ Errors Command_test(StringList                      *archiveFileNameList,
             /* read directory */
             directoryName = String_new();
             error = Archive_readDirectoryEntry(&archiveInfo,
-                                               &archiveFileInfo,
+                                               &archiveEntryInfo,
                                                NULL,
                                                NULL,
                                                directoryName,
@@ -352,7 +408,7 @@ Errors Command_test(StringList                      *archiveFileNameList,
                                               );
             if (error != ERROR_NONE)
             {
-              printError("Cannot not read 'directory' content of archive '%s' (error: %s)!\n",
+              printError("Cannot read 'directory' content of archive '%s' (error: %s)!\n",
                          String_cString(archiveFileName),
                          Errors_getText(error)
                         );
@@ -367,6 +423,17 @@ Errors Command_test(StringList                      *archiveFileNameList,
             {
               printInfo(2,"  Test directory '%s'...",String_cString(directoryName));
 
+              /* check if all data read */
+              if (!Archive_eofData(&archiveEntryInfo))
+              {
+                printInfo(2,"FAIL!\n");
+                printError("unexpected data at end of directory entry '%S'!\n",directoryName);
+                Archive_closeEntry(&archiveEntryInfo);
+                String_delete(directoryName);
+                if (failError == ERROR_NONE) failError = ERROR_CORRUPT_DATA;
+                break;
+              }
+
               printInfo(2,"ok\n");
 
               /* free resources */
@@ -378,7 +445,18 @@ Errors Command_test(StringList                      *archiveFileNameList,
             }
 
             /* close archive file */
-            Archive_closeEntry(&archiveFileInfo);
+            error = Archive_closeEntry(&archiveEntryInfo);
+            if (error != ERROR_NONE)
+            {
+              printError("closing 'directory' entry fail (error: %s)!\n",
+                         Errors_getText(error)
+                        );
+              String_delete(directoryName);
+              if (failError == ERROR_NONE) failError = error;
+              break;
+            }
+
+            /* free resources */
             String_delete(directoryName);
           }
           break;
@@ -392,7 +470,7 @@ Errors Command_test(StringList                      *archiveFileNameList,
             linkName = String_new();
             fileName = String_new();
             error = Archive_readLinkEntry(&archiveInfo,
-                                          &archiveFileInfo,
+                                          &archiveEntryInfo,
                                           NULL,
                                           NULL,
                                           linkName,
@@ -401,7 +479,7 @@ Errors Command_test(StringList                      *archiveFileNameList,
                                          );
             if (error != ERROR_NONE)
             {
-              printError("Cannot not read 'link' content of archive '%s' (error: %s)!\n",
+              printError("Cannot read 'link' content of archive '%s' (error: %s)!\n",
                          String_cString(archiveFileName),
                          Errors_getText(error)
                         );
@@ -417,6 +495,18 @@ Errors Command_test(StringList                      *archiveFileNameList,
             {
               printInfo(2,"  Test link '%s'...",String_cString(linkName));
 
+              /* check if all data read */
+              if (!Archive_eofData(&archiveEntryInfo))
+              {
+                printInfo(2,"FAIL!\n");
+                printError("unexpected data at end of link entry '%S'!\n",linkName);
+                Archive_closeEntry(&archiveEntryInfo);
+                String_delete(fileName);
+                String_delete(linkName);
+                if (failError == ERROR_NONE) failError = ERROR_CORRUPT_DATA;
+                break;
+              }
+
               printInfo(2,"ok\n");
 
               /* free resources */
@@ -428,9 +518,170 @@ Errors Command_test(StringList                      *archiveFileNameList,
             }
 
             /* close archive file */
-            Archive_closeEntry(&archiveFileInfo);
+            error = Archive_closeEntry(&archiveEntryInfo);
+            if (error != ERROR_NONE)
+            {
+              printError("closing 'link' entry fail (error: %s)!\n",
+                         Errors_getText(error)
+                        );
+              String_delete(fileName);
+              String_delete(linkName);
+              if (failError == ERROR_NONE) failError = error;
+              break;
+            }
+
+            /* free resources */
             String_delete(fileName);
             String_delete(linkName);
+          }
+          break;
+        case ARCHIVE_ENTRY_TYPE_HARDLINK:
+          {
+            StringList       fileNameList;
+            FileInfo         fileInfo;
+            uint64           fragmentOffset,fragmentSize;
+            bool             testedDataFlag;
+            const StringNode *stringNode;
+            String           fileName;
+            FragmentNode     *fragmentNode;
+            uint64           length;
+            ulong            n;
+
+            /* read hard linke */
+            StringList_init(&fileNameList);
+            error = Archive_readHardLinkEntry(&archiveInfo,
+                                              &archiveEntryInfo,
+                                              NULL,
+                                              NULL,
+                                              NULL,
+                                              &fileNameList,
+                                              &fileInfo,
+                                              &fragmentOffset,
+                                              &fragmentSize
+                                             );
+            if (error != ERROR_NONE)
+            {
+              printError("Cannot read 'hard link' content of archive '%s' (error: %s)!\n",
+                         String_cString(archiveFileName),
+                         Errors_getText(error)
+                        );
+              StringList_done(&fileNameList);
+              if (failError == ERROR_NONE) failError = error;
+              break;
+            }
+
+            testedDataFlag = FALSE;
+            STRINGLIST_ITERATE(&fileNameList,stringNode,fileName)
+            {
+              if (   (List_empty(includeEntryList) || EntryList_match(includeEntryList,fileName,PATTERN_MATCH_MODE_EXACT))
+                  && !PatternList_match(excludePatternList,fileName,PATTERN_MATCH_MODE_EXACT)
+                 )
+              {
+                printInfo(2,"  Test hard link '%s'...",String_cString(fileName));
+
+                if (!testedDataFlag && (failError == ERROR_NONE))
+                {
+                  /* test hard link data */
+
+                  /* get file fragment list */
+                  fragmentNode = FragmentList_find(&fragmentList,fileName);
+                  if (fragmentNode == NULL)
+                  {
+                    fragmentNode = FragmentList_add(&fragmentList,fileName,fileInfo.size);
+                  }
+    //FragmentList_print(fragmentNode,String_cString(fileName));
+
+                  /* test read hard link content */
+                  length = 0;
+                  while (length < fragmentSize)
+                  {
+                    n = MIN(fragmentSize-length,BUFFER_SIZE);
+
+                    /* read archive file */
+                    error = Archive_readData(&archiveEntryInfo,archiveBuffer,n);
+                    if (error != ERROR_NONE)
+                    {
+                      printInfo(2,"FAIL!\n");
+                      printError("Cannot read content of archive '%s' (error: %s)!\n",
+                                 String_cString(archiveFileName),
+                                 Errors_getText(error)
+                                );
+                      if (failError == ERROR_NONE) failError = error;
+                      break;
+                    }
+
+                    length += (uint64)n;
+                  }
+                  if (failError != ERROR_NONE)
+                  {
+                    break;
+                  }
+
+                  /* check if all data read.
+                     Note: it is not possible to check if all data is read when
+                     compression is used. The decompressor may not all data even
+                     data is _not_ corrupt.
+                  */
+                  if (   (archiveEntryInfo.hardLink.compressAlgorithm == COMPRESS_ALGORITHM_NONE)
+                      && !Archive_eofData(&archiveEntryInfo))
+                  {
+                    printError("unexpected data at end of hard link entry '%S'!\n",fileName);
+                    if (failError == ERROR_NONE) failError = ERROR_CORRUPT_DATA;
+                    break;
+                  }
+
+                  printInfo(2,"ok\n");
+
+                  /* add fragment to file fragment list */
+                  FragmentList_addEntry(fragmentNode,fragmentOffset,fragmentSize);
+
+                  /* discard fragment list if file is complete */
+                  if (FragmentList_checkEntryComplete(fragmentNode))
+                  {
+                    FragmentList_remove(&fragmentList,fragmentNode);
+                  }
+
+                  testedDataFlag = TRUE;
+                }
+                else
+                {
+                  /* test hard link data already done */
+                  if (failError == ERROR_NONE)
+                  {
+                    printInfo(2,"ok\n");
+                  }
+                  else
+                  {
+                    printInfo(2,"FAIL!\n");
+                  }
+                }
+              }
+              else
+              {
+                /* skip */
+                printInfo(3,"  Test '%s'...skipped\n",String_cString(fileName));
+              }
+            }
+            if (failError != ERROR_NONE)
+            {
+              StringList_done(&fileNameList);
+              break;
+            }
+
+            /* close archive file, free resources */
+            error = Archive_closeEntry(&archiveEntryInfo);
+            if (error != ERROR_NONE)
+            {
+              printError("closing 'hard link' entry fail (error: %s)!\n",
+                         Errors_getText(error)
+                        );
+              StringList_done(&fileNameList);
+              if (failError == ERROR_NONE) failError = error;
+              break;
+            }
+
+            /* free resources */
+            StringList_done(&fileNameList);
           }
           break;
         case ARCHIVE_ENTRY_TYPE_SPECIAL:
@@ -441,7 +692,7 @@ Errors Command_test(StringList                      *archiveFileNameList,
             /* read special */
             fileName = String_new();
             error = Archive_readSpecialEntry(&archiveInfo,
-                                             &archiveFileInfo,
+                                             &archiveEntryInfo,
                                              NULL,
                                              NULL,
                                              fileName,
@@ -449,7 +700,7 @@ Errors Command_test(StringList                      *archiveFileNameList,
                                             );
             if (error != ERROR_NONE)
             {
-              printError("Cannot not read 'special' content of archive '%s' (error: %s)!\n",
+              printError("Cannot read 'special' content of archive '%s' (error: %s)!\n",
                          String_cString(archiveFileName),
                          Errors_getText(error)
                         );
@@ -464,6 +715,17 @@ Errors Command_test(StringList                      *archiveFileNameList,
             {
               printInfo(2,"  Test special device '%s'...",String_cString(fileName));
 
+              /* check if all data read */
+              if (!Archive_eofData(&archiveEntryInfo))
+              {
+                printInfo(2,"FAIL!\n");
+                printError("unexpected data at end of special entry '%S'!\n",fileName);
+                Archive_closeEntry(&archiveEntryInfo);
+                String_delete(fileName);
+                if (failError == ERROR_NONE) failError = ERROR_CORRUPT_DATA;
+                break;
+              }
+
               printInfo(2,"ok\n");
 
               /* free resources */
@@ -475,7 +737,18 @@ Errors Command_test(StringList                      *archiveFileNameList,
             }
 
             /* close archive file */
-            Archive_closeEntry(&archiveFileInfo);
+            error = Archive_closeEntry(&archiveEntryInfo);
+            if (error != ERROR_NONE)
+            {
+              printError("closing 'special' entry fail (error: %s)!\n",
+                         Errors_getText(error)
+                        );
+              String_delete(fileName);
+              if (failError == ERROR_NONE) failError = error;
+              break;
+            }
+
+            /* free resources */
             String_delete(fileName);
           }
           break;
