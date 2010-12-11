@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/stringlists.c,v $
-* $Revision: 1.5 $
+* $Revision: 1.6 $
 * $Author: torsten $
 * Contents: 
 * Systems :
@@ -102,6 +102,38 @@ void StringList_done(StringList *stringList)
 StringList *StringList_new(void)
 {
   return (StringList*)List_new();
+}
+
+StringList *StringList_duplicate(const StringList *stringList)
+{
+  StringList *newStringList;
+
+  assert(stringList != NULL);
+
+  newStringList = StringList_new();
+  if (newStringList == NULL)
+  {
+    return NULL;
+  }
+
+  StringList_copy(newStringList,stringList);
+
+  return newStringList;
+}
+
+void StringList_copy(StringList *stringList, const StringList *fromStringList)
+{
+  StringNode *stringNode;
+
+  assert(stringList != NULL);
+  assert(fromStringList != NULL);
+
+  stringNode = fromStringList->head;
+  while (stringNode != NULL)
+  {
+    StringList_append(stringList,stringNode->string);
+    stringNode = stringNode->next;
+  }
 }
 
 void StringList_delete(StringList *stringList)
@@ -242,6 +274,8 @@ String StringList_getLast(StringList *stringList, String string)
 
 StringNode *StringList_find(StringList *stringList, const String string)
 {
+  assert(stringList != NULL);
+
   return StringList_findCString(stringList,String_cString(string));
 }
 
@@ -260,6 +294,20 @@ StringNode *StringList_findCString(StringList *stringList, const char *s)
   }
 
   return stringNode;
+}
+
+bool StringList_contain(StringList *stringList, const String string)
+{
+  assert(stringList != NULL);
+
+  return (StringList_find(stringList,string) != NULL);
+}
+
+bool StringList_containCString(StringList *stringList, const char *s)
+{
+  assert(stringList != NULL);
+
+  return (StringList_findCString(stringList,s) != NULL);
 }
 
 StringNode *StringList_match(StringList *stringList, const String pattern)

@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/stringlists.h,v $
-* $Revision: 1.5 $
+* $Revision: 1.6 $
 * $Author: torsten $
 * Contents: string list functions
 * Systems: all
@@ -44,10 +44,21 @@ typedef struct
 
 /****************************** Macros *********************************/
 
+/***********************************************************************\
+* Name   : STRINGLIST_ITERATE
+* Purpose: iterate over string list
+* Input  : stringList - string list
+*          variable   - iteration variable (type StringNode)
+*          value      - iteration value (must not be initalised!)
+* Output : -
+* Return : -
+* Notes  : value will contain all strings in list
+\***********************************************************************/
+
 #define STRINGLIST_ITERATE(stringList,variable,value) \
-  for (variable = stringList.head, (stringList.head != NULL) ? String_set(value,stringList.head->string) : String_clear(value); \
-       variable != NULL; \
-       variable = variable->next, (variable != NULL) ? String_set(value,variable->string) : String_clear(value) \
+  for ((variable) = (stringList)->head, value = ((variable) != NULL) ? (stringList)->head->string : NULL; \
+       (variable) != NULL; \
+       (variable) = (variable)->next, value = ((variable) != NULL) ? (variable)->string : NULL \
       )
 
 /***************************** Forwards ********************************/
@@ -63,7 +74,7 @@ typedef struct
 * Purpose: initialise string list
 * Input  : stringList - string list to initialize
 * Output : -
-* Return : -
+* Return : initialized string list
 * Notes  : -
 \***********************************************************************/
 
@@ -90,6 +101,29 @@ void StringList_done(StringList *stringList);
 \***********************************************************************/
 
 StringList *StringList_new(void);
+
+/***********************************************************************\
+* Name   : StringList_duplicate
+* Purpose: duplicate string list
+* Input  : stringList - string list to duplicate
+* Output : -
+* Return : string list or NULL on insufficient memory
+* Notes  : -
+\***********************************************************************/
+
+StringList *StringList_duplicate(const StringList *stringList);
+
+/***********************************************************************\
+* Name   : StringList_copy
+* Purpose: copy sting list
+* Input  : stringList - string list
+*          fromStringList - string list to copy
+* Output : -
+* Return : string list or NULL on insufficient memory
+* Notes  : -
+\***********************************************************************/
+
+void StringList_copy(StringList *stringList, const StringList *fromStringList);
 
 /***********************************************************************\
 * Name   : StringList_delete
@@ -209,6 +243,64 @@ void StringList_appendBuffer(StringList *stringList, char *buffer, ulong bufferL
 StringNode *StringList_remove(StringList *stringList, StringNode *stringNode);
 
 /***********************************************************************\
+* Name   : StringList_first
+* Purpose: first string from list
+* Input  : stringList - string list
+*          string     - string variable (can be NULL)
+* Output : -
+* Return : string or NULL if no more strings
+* Notes  : if no string variable is supplied, the string from the list
+*          is returned directly and must not be freed!
+\***********************************************************************/
+
+INLINE String StringList_first(const StringList *stringList, String string);
+#if defined(NDEBUG) || defined(__STRINGLISTS_IMPLEMENATION__)
+INLINE String StringList_first(const StringList *stringList, String string)
+{
+  assert(stringList != NULL);
+
+  if (string != NULL)
+  {
+    String_set(string,stringList->head->string);
+    return string;
+  }
+  else
+  {
+    return stringList->head->string;
+  }
+}
+#endif /* NDEBUG || __STRINGLISTS_IMPLEMENATION__ */
+
+/***********************************************************************\
+* Name   : StringList_last
+* Purpose: last string from list
+* Input  : stringList - string list
+*          string     - string variable (can be NULL)
+* Output : -
+* Return : string or NULL if no more strings
+* Notes  : if no string variable is supplied, the string from the list
+*          is returned directly and must not be freed!
+\***********************************************************************/
+
+INLINE String StringList_last(const StringList *stringList, String string);
+#if defined(NDEBUG) || defined(__STRINGLISTS_IMPLEMENATION__)
+INLINE String StringList_last(const StringList *stringList, String string)
+{
+  assert(stringList != NULL);
+
+  if (string != NULL)
+  {
+    String_set(string,stringList->tail->string);
+    return string;
+  }
+  else
+  {
+    return stringList->tail->string;
+  }
+}
+#endif /* NDEBUG || __STRINGLISTS_IMPLEMENATION__ */
+
+/***********************************************************************\
 * Name   : StringList_getFirst
 * Purpose: remove first string from list
 * Input  : stringList - string list
@@ -235,7 +327,7 @@ String StringList_getFirst(StringList *stringList, String string);
 String StringList_getLast(StringList *stringList, String string);
 
 /***********************************************************************\
-* Name   : StringList_find
+* Name   : StringList_find, StringList_findCString
 * Purpose: find string in string list
 * Input  : stringList - string list
 *          string,s   - string to find
@@ -246,6 +338,19 @@ String StringList_getLast(StringList *stringList, String string);
 
 StringNode *StringList_find(StringList *stringList, const String string);
 StringNode *StringList_findCString(StringList *stringList, const char *s);
+
+/***********************************************************************\
+* Name   : StringList_contain, StringList_containCString
+* Purpose: check if string list contain string
+* Input  : stringList - string list
+*          string,s   - string to find
+* Output : -
+* Return : TRUE if string found, FALSE otherwise
+* Notes  : -
+\***********************************************************************/
+
+bool StringList_contain(StringList *stringList, const String string);
+bool StringList_containCString(StringList *stringList, const char *s);
 
 /***********************************************************************\
 * Name   : StringList_match
