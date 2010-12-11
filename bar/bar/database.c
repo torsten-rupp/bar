@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/database.c,v $
-* $Revision: 1.6 $
+* $Revision: 1.7 $
 * $Author: torsten $
 * Contents: Database functions
 * Systems: all
@@ -936,6 +936,148 @@ Errors Database_getString(DatabaseHandle *databaseHandle,
     }
 
     sqlite3_finalize(handle);
+  }
+  if (error != ERROR_NONE)
+  {
+    String_delete(sqlString);
+    return error;
+  }
+
+  /* free resources */
+  String_delete(sqlString);
+
+  return ERROR_NONE;
+}
+
+Errors Database_setInteger64(DatabaseHandle *databaseHandle,
+                             int64          l,
+                             const char     *tableName,
+                             const char     *columnName,
+                             const char     *additional,
+                             ...
+                            )
+{
+  String  sqlString;
+  va_list arguments;
+  Errors  error;
+  int     sqliteResult;
+
+  assert(databaseHandle != NULL);
+  assert(tableName != NULL);
+  assert(columnName != NULL);
+
+  /* format SQL command string */
+  sqlString = String_format(String_new(),
+                            "UPDATE %s \
+                             SET %s=%ld \
+                            ",
+                            tableName,
+                            columnName,
+                            l
+                           );
+  if (additional != NULL)
+  {
+    String_appendChar(sqlString,' ');
+    va_start(arguments,additional);
+    formatSQLString(sqlString,
+                    additional,
+                    arguments
+                   );
+    va_end(arguments);
+  }
+
+  /* execute SQL command */
+  error = ERROR_NONE;
+  SEMAPHORE_LOCKED_DO(&databaseHandle->lock)
+  {
+    #ifdef DATABASE_DEBUG
+     fprintf(stderr,"Database debug: set integer 64: %s\n",__FILE__,__LINE__,String_cString(sqlString));
+    #endif
+    sqliteResult = sqlite3_exec(databaseHandle->handle,
+                                String_cString(sqlString),
+                                NULL,
+                                NULL,
+                                NULL
+                               );
+    if (sqliteResult == SQLITE_OK)
+    {
+      error = ERROR_NONE;
+    }
+    else
+    {
+      error = ERRORX(DATABASE,sqlite3_errcode(databaseHandle->handle),sqlite3_errmsg(databaseHandle->handle));
+    }
+  }
+  if (error != ERROR_NONE)
+  {
+    String_delete(sqlString);
+    return error;
+  }
+
+  /* free resources */
+  String_delete(sqlString);
+
+  return ERROR_NONE;
+}
+
+Errors Database_setString(DatabaseHandle *databaseHandle,
+                          const String   string,
+                          const char     *tableName,
+                          const char     *columnName,
+                          const char     *additional,
+                          ...
+                         )
+{
+  String  sqlString;
+  va_list arguments;
+  Errors  error;
+  int     sqliteResult;
+
+  assert(databaseHandle != NULL);
+  assert(tableName != NULL);
+  assert(columnName != NULL);
+
+  /* format SQL command string */
+  sqlString = String_format(String_new(),
+                            "UPDATE %s \
+                             SET %s=%'S \
+                            ",
+                            tableName,
+                            columnName,
+                            string
+                           );
+  if (additional != NULL)
+  {
+    String_appendChar(sqlString,' ');
+    va_start(arguments,additional);
+    formatSQLString(sqlString,
+                    additional,
+                    arguments
+                   );
+    va_end(arguments);
+  }
+
+  /* execute SQL command */
+  error = ERROR_NONE;
+  SEMAPHORE_LOCKED_DO(&databaseHandle->lock)
+  {
+    #ifdef DATABASE_DEBUG
+     fprintf(stderr,"Database debug: set string 64: %s\n",__FILE__,__LINE__,String_cString(sqlString));
+    #endif
+    sqliteResult = sqlite3_exec(databaseHandle->handle,
+                                String_cString(sqlString),
+                                NULL,
+                                NULL,
+                                NULL
+                               );
+    if (sqliteResult == SQLITE_OK)
+    {
+      error = ERROR_NONE;
+    }
+    else
+    {
+      error = ERRORX(DATABASE,sqlite3_errcode(databaseHandle->handle),sqlite3_errmsg(databaseHandle->handle));
+    }
   }
   if (error != ERROR_NONE)
   {

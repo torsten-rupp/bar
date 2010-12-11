@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/database.h,v $
-* $Revision: 1.4 $
+* $Revision: 1.5 $
 * $Author: torsten $
 * Contents: database functions (SQLite3)
 * Systems: all
@@ -251,6 +251,52 @@ Errors Database_getInteger64(DatabaseHandle *databaseHandle,
 
 Errors Database_getString(DatabaseHandle *databaseHandle,
                           String         string,
+                          const char     *tableName,
+                          const char     *columnName,
+                          const char     *additional,
+                          ...
+                         );
+
+/***********************************************************************\
+* Name   : Database_setInteger64
+* Purpose: get int64 value from database table
+* Input  : databaseHandle - database handle
+*          l              - int64 value
+*          tableName      - table name
+*          columnName     - column name
+*          additional     - additional string (e. g. WHERE...)
+*                           special functions:
+*                             REGEXP(pattern,case-flag,text)
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors Database_setInteger64(DatabaseHandle *databaseHandle,
+                             int64          l,
+                             const char     *tableName,
+                             const char     *columnName,
+                             const char     *additional,
+                             ...
+                            );
+
+/***********************************************************************\
+* Name   : Database_setString
+* Purpose: set string value from database table
+* Input  : databaseHandle - database handle
+*          string         - string value
+*          tableName      - table name
+*          columnName     - column name
+*          additional     - additional string (e. g. WHERE...)
+*                           special functions:
+*                             REGEXP(pattern,case-flag,text)
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors Database_setString(DatabaseHandle *databaseHandle,
+                          const String   string,
                           const char     *tableName,
                           const char     *columnName,
                           const char     *additional,
