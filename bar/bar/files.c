@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/files.c,v $
-* $Revision: 1.12 $
+* $Revision: 1.13 $
 * $Author: torsten $
 * Contents: Backup ARchiver file functions
 * Systems: all
@@ -771,8 +771,6 @@ Errors File_printLine(FileHandle *fileHandle,
 uint64 File_getSize(FileHandle *fileHandle)
 {
   assert(fileHandle != NULL);
-//??? geth niht
-  assert(fileHandle->file != NULL);
 
   return fileHandle->size;
 }
@@ -803,7 +801,7 @@ Errors File_seek(FileHandle *fileHandle,
                  uint64     offset
                 )
 {
-   assert(fileHandle != NULL);
+  assert(fileHandle != NULL);
   assert(fileHandle->file != NULL);
 
   if (fseeko(fileHandle->file,(off_t)offset,SEEK_SET) == -1)
@@ -819,6 +817,9 @@ Errors File_truncate(FileHandle *fileHandle,
                      uint64     size
                     )
 {
+  assert(fileHandle != NULL);
+  assert(fileHandle->file != NULL);
+
   if (size < fileHandle->size)
   {
     if (ftruncate(fileno(fileHandle->file),(off_t)size) != 0)
@@ -953,6 +954,8 @@ uint32 File_userNameToUserId(const char *name)
   char          buffer[1024];
   struct passwd *result;
 
+  assert(name != NULL);
+
   getpwnam_r(name,&passwordEntry,buffer,sizeof(buffer),&result);
   return (result != NULL)?result->pw_uid:FILE_DEFAULT_USER_ID;
 }
@@ -962,6 +965,8 @@ uint32 File_groupNameToGroupId(const char *name)
   struct group groupEntry;
   char         buffer[1024];
   struct group *result;
+
+  assert(name != NULL);
 
   getgrnam_r(name,&groupEntry,buffer,sizeof(buffer),&result);
   return (result != NULL)?result->gr_gid:FILE_DEFAULT_GROUP_ID;
@@ -975,7 +980,7 @@ FileTypes File_getType(const String fileName)
 
   if (lstat64(String_cString(fileName),&fileStat) == 0)
   {
-    if      (S_ISREG(fileStat.st_mode))  return FILE_TYPE_FILE;
+    if      (S_ISREG(fileStat.st_mode))  return (fileStat.st_nlink > 1)?FILE_TYPE_HARDLINK:FILE_TYPE_FILE;
     else if (S_ISDIR(fileStat.st_mode))  return FILE_TYPE_DIRECTORY;
     else if (S_ISLNK(fileStat.st_mode))  return FILE_TYPE_LINK;
     else if (S_ISCHR(fileStat.st_mode))  return FILE_TYPE_SPECIAL;
@@ -1058,6 +1063,13 @@ Errors File_getDataCString(const char *fileName,
 Errors File_delete(const String fileName, bool recursiveFlag)
 {
   struct stat64 fileStat;
+  Errors        error;
+  StringList    directoryList;
+  DIR           *dir;
+  struct dirent *entry;
+  String        directoryName;
+  bool          emptyFlag;
+  String        name;
 
   assert(fileName != NULL);
 
@@ -1077,14 +1089,6 @@ Errors File_delete(const String fileName, bool recursiveFlag)
   }
   else if (S_ISDIR(fileStat.st_mode))
   {
-    Errors        error;
-    StringList    directoryList;
-    DIR           *dir;
-    struct dirent *entry;
-    String        directoryName;
-    bool          emptyFlag;
-    String        name;
-
     error = ERROR_NONE;
     if (recursiveFlag)
     {
@@ -1373,8 +1377,8 @@ bool File_isWriteableCString(const char *fileName)
   return access(fileName,F_OK|W_OK) == 0;
 }
 
-Errors File_getFileInfo(const String fileName,
-                        FileInfo     *fileInfo
+Errors File_getFileInfo(FileInfo     *fileInfo,
+                        const String fileName
                        )
 {
   struct stat64 fileStat;
@@ -1395,7 +1399,7 @@ Errors File_getFileInfo(const String fileName,
 
   if      (S_ISREG(fileStat.st_mode))
   {
-    fileInfo->type = FILE_TYPE_FILE;
+    fileInfo->type = (fileStat.st_nlink > 1)?FILE_TYPE_HARDLINK:FILE_TYPE_FILE;
     fileInfo->size = fileStat.st_size;
   }
   else if (S_ISDIR(fileStat.st_mode))
@@ -1421,7 +1425,7 @@ Errors File_getFileInfo(const String fileName,
     fileInfo->specialType = FILE_SPECIAL_TYPE_BLOCK_DEVICE;
 
     /* try to detect block device size */
-    if (Device_getDeviceInfo(fileName,&deviceInfo) == ERROR_NONE)
+    if (Device_getDeviceInfo(&deviceInfo,fileName) == ERROR_NONE)
     {
       fileInfo->size = deviceInfo.size;
     }
@@ -1451,6 +1455,8 @@ Errors File_getFileInfo(const String fileName,
   fileInfo->permission      = fileStat.st_mode;
   fileInfo->major           = major(fileStat.st_rdev);
   fileInfo->minor           = minor(fileStat.st_rdev);
+  fileInfo->id              = (uint64)fileStat.st_ino;
+  fileInfo->linkCount       = (uint)fileStat.st_nlink;
   cast.d0 = fileStat.st_mtime;
   cast.d1 = fileStat.st_ctime;
   memcpy(fileInfo->cast,&cast,sizeof(FileCast));
@@ -1518,6 +1524,7 @@ Errors File_setFileInfo(const String fileName,
   {
     case FILE_TYPE_FILE:
     case FILE_TYPE_DIRECTORY:
+    case FILE_TYPE_HARDLINK:
     case FILE_TYPE_SPECIAL:
       utimeBuffer.actime  = fileInfo->timeLastAccess;
       utimeBuffer.modtime = fileInfo->timeModified;
@@ -1527,7 +1534,6 @@ Errors File_setFileInfo(const String fileName,
       }
       if (chown(String_cString(fileName),fileInfo->userId,fileInfo->groupId) != 0)
       {
-fprintf(stderr,"%s,%d:  %d %d\n",__FILE__,__LINE__,fileInfo->userId,fileInfo->groupId);
         return ERRORX(IO_ERROR,errno,String_cString(fileName));
       }
       if (chmod(String_cString(fileName),fileInfo->permission) != 0)
@@ -1681,8 +1687,8 @@ Errors File_makeDirectory(const String pathName,
   return ERROR_NONE;
 }
 
-Errors File_readLink(const String linkName,
-                     String       fileName
+Errors File_readLink(String       fileName,
+                     const String linkName
                     )
 {
   #define BUFFER_SIZE  256
@@ -1738,6 +1744,22 @@ Errors File_makeLink(const String linkName,
 
   unlink(String_cString(linkName));
   if (symlink(String_cString(fileName),String_cString(linkName)) != 0)
+  {
+    return ERRORX(IO_ERROR,errno,String_cString(linkName));
+  }
+
+  return ERROR_NONE;
+}
+
+Errors File_makeHardLink(const String linkName,
+                         const String fileName
+                        )
+{
+  assert(linkName != NULL);
+  assert(fileName != NULL);
+
+  unlink(String_cString(linkName));
+  if (link(String_cString(fileName),String_cString(linkName)) != 0)
   {
     return ERRORX(IO_ERROR,errno,String_cString(linkName));
   }

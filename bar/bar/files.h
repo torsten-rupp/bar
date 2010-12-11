@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/files.h,v $
-* $Revision: 1.9 $
+* $Revision: 1.10 $
 * $Author: torsten $
 * Contents: Backup ARchiver files functions
 * Systems: all
@@ -39,6 +39,7 @@ typedef enum
   FILE_TYPE_FILE,
   FILE_TYPE_DIRECTORY,
   FILE_TYPE_LINK,
+  FILE_TYPE_HARDLINK,
   FILE_TYPE_SPECIAL,
 
   FILE_TYPE_UNKNOWN
@@ -91,18 +92,20 @@ typedef byte FileCast[FILE_CAST_SIZE];
 /* file info data */
 typedef struct
 {
-  FileTypes        type;
-  int64            size;
-  uint64           timeLastAccess;
-  uint64           timeModified;
-  uint64           timeLastChanged;
-  uint32           userId;
-  uint32           groupId;
-  uint32           permission;
-  FileSpecialTypes specialType;
-  uint32           major,minor;
+  FileTypes        type;                     // file type; see FileTypes
+  int64            size;                     // size of file [bytes]
+  uint64           timeLastAccess;           // timestamp of last access
+  uint64           timeModified;             // timestamp of last modification
+  uint64           timeLastChanged;          // timestamp of last changed
+  uint32           userId;                   // user id
+  uint32           groupId;                  // group id
+  uint32           permission;               // permission flags
+  FileSpecialTypes specialType;              // special type; see FileSpecialTypes
+  uint32           major,minor;              // special type major/minor number
 
-  FileCast         cast;
+  uint64           id;                       // unique id (e. g. inode number)
+  uint             linkCount;                // number of hard links
+  FileCast         cast;                     // cast value for checking if file was changed
 } FileInfo;
 
 /* file system info data */
@@ -696,14 +699,15 @@ bool File_isWriteableCString(const char *fileName);
 /***********************************************************************\
 * Name   : File_getInfo
 * Purpose: get file info
-* Input  : fileName - file name
-* Output : fileInfo - file info variable to file
+* Input  : fileInfo - file info variable
+*          fileName - file name
+* Output : fileInfo - file info
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-Errors File_getFileInfo(const String fileName,
-                        FileInfo     *fileInfo
+Errors File_getFileInfo(FileInfo     *fileInfo,
+                        const String fileName
                        );
 
 /***********************************************************************\
@@ -788,13 +792,13 @@ Errors File_makeDirectory(const String pathName,
 * Notes  : -
 \***********************************************************************/
 
-Errors File_readLink(const String linkName,
-                     String       fileName
+Errors File_readLink(String       fileName,
+                     const String linkName
                     );
 
 /***********************************************************************\
-* Name   : File_link
-* Purpose: create link
+* Name   : File_makeLink
+* Purpose: create (symbolic) link linkName -> fileName
 * Input  : linkName - link name
 *          fileName - file name
 * Output : -
@@ -805,6 +809,20 @@ Errors File_readLink(const String linkName,
 Errors File_makeLink(const String linkName,
                      const String fileName
                     );
+
+/***********************************************************************\
+* Name   : File_makeHardLink
+* Purpose: create hard link linkName -> fileName
+* Input  : linkName - link name
+*          fileName - file name
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors File_makeHardLink(const String linkName,
+                         const String fileName
+                        );
 
 /***********************************************************************\
 * Name   : File_makeSpecial
