@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/destroyer.c,v $
-* $Revision: 1.3 $
+* $Revision: 1.4 $
 * $Author: torsten $
 * Contents: "destroy" binary files by overwrite/insert/delete bytes;
 *           used for test only!
@@ -35,6 +35,7 @@
 typedef enum
 {
   DEFINITION_TYPE_MODIFY,
+  DEFINITION_TYPE_RANDOMIZE,
   DEFINITION_TYPE_INSERT,
   DEFINITION_TYPE_DELETE,
 } DefinitionTypes;
@@ -44,8 +45,12 @@ typedef enum
 typedef struct
 {
   DefinitionTypes type;
-  int             value;
   int64           position;
+  union
+  {
+    String value;
+    uint   length;
+  };
 } Definition;
 
 /***************************** Variables *******************************/
@@ -83,7 +88,13 @@ LOCAL void printUsage(const char *programName)
  {
   assert(programName != NULL);
 
-  printf("Usage: %s [<options>] [--] <input file> [<output file>]\n",programName);
+  printf("Usage: %s [<options>] [--] <input file> [<command>...]\n",programName);
+  printf("\n");
+  printf("Commands:\n");
+  printf("  m:<position>:<value>  - modify byte at <position> into <value>\n");
+  printf("  r:<position>:<length> - randomize <length> byte from <position>\n");
+  printf("  d:<position>:<length> - delete <length> bytes from <position>\n");
+  printf("  i:<position>:<value>  - insert at <position> byte <value>\n");
   printf("\n");
   CmdOption_printHelp(stdout,
                       COMMAND_LINE_OPTIONS,SIZE_OF_ARRAY(COMMAND_LINE_OPTIONS),
@@ -106,7 +117,7 @@ LOCAL void initRandom(int64 seed)
 }
 
 /***********************************************************************\
-* Name   : getRandomInt64
+* Name   : getRandomByte
 * Purpose: get random byte value
 * Input  : -
 * Output : -
@@ -120,7 +131,21 @@ LOCAL byte getRandomByte(uint max)
 }
 
 /***********************************************************************\
-* Name   : getRandomInt64
+* Name   : getRandomInteger
+* Purpose: get random int value
+* Input  : -
+* Output : -
+* Return : value
+* Notes  : -
+\***********************************************************************/
+
+LOCAL uint getRandomInteger(uint max)
+{
+  return (uint)rand()%max;
+}
+
+/***********************************************************************\
+* Name   : getRandomInteger64
 * Purpose: get random int64 value
 * Input  : max - max. value
 * Output : -
@@ -128,14 +153,37 @@ LOCAL byte getRandomByte(uint max)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL int64 getRandomInt64(int64 max)
+LOCAL uint64 getRandomInteger64(uint64 max)
 {
   return (int64)(((uint64)rand() << 32) | ((uint64)rand() << 0))%max;
 }
 
 /***********************************************************************\
-* Name   : 
-* Purpose: 
+* Name   : getRandomBuffer
+* Purpose: get random buffer
+* Input  : buffer - buffer to fill
+*          length - length of buffer
+* Output : -
+* Return : value
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void getRandomBuffer(void *buffer, uint length)
+{
+  byte *p;
+
+  p = (byte*)buffer;
+  while (length > 0)
+  {
+    (*p) = (byte)(rand()%256);
+    p++;
+    length--;
+  }
+}
+
+/***********************************************************************\
+* Name   : parseDefinition
+* Purpose: parse definitions
 * Input  : -
 * Output : -
 * Return : -
@@ -147,6 +195,8 @@ LOCAL bool parseDefinition(const char *s, Definition *definition, uint64 maxPosi
   StringTokenizer stringTokenizer;
   String          t;
   String          w;
+  uint            length;
+  char            buffer[1024];
 
   assert(definition != NULL);
 
@@ -157,6 +207,7 @@ LOCAL bool parseDefinition(const char *s, Definition *definition, uint64 maxPosi
   if (String_getNextToken(&stringTokenizer,&w,NULL))
   {
     if      (String_equalsCString(w,"m")) definition->type = DEFINITION_TYPE_MODIFY;
+    else if (String_equalsCString(w,"r")) definition->type = DEFINITION_TYPE_RANDOMIZE;
     else if (String_equalsCString(w,"i")) definition->type = DEFINITION_TYPE_INSERT;
     else if (String_equalsCString(w,"d")) definition->type = DEFINITION_TYPE_DELETE;
     else
@@ -188,23 +239,91 @@ LOCAL bool parseDefinition(const char *s, Definition *definition, uint64 maxPosi
   }
   else
   {
-    definition->position = getRandomInt64(maxPosition);
+    definition->position = getRandomInteger64(maxPosition);
   }
 
-  /* get value */
+  /* get value/length */
   if (String_getNextToken(&stringTokenizer,&w,NULL))
   {
-    if (!String_scan(w,STRING_BEGIN,"%c",&definition->value))
+    switch (definition->type)
     {
-      String_doneTokenizer(&stringTokenizer);
-      String_delete(t);
-      fprintf(stderr,"ERROR: Invalid value in definition '%s'!\n",s);
-      return FALSE;
-    }
+      case DEFINITION_TYPE_MODIFY:
+        definition->value = String_new();
+        if (!String_scan(w,STRING_BEGIN,"%S",definition->value))
+        {
+          String_delete(definition->value);
+          String_doneTokenizer(&stringTokenizer);
+          String_delete(t);
+          fprintf(stderr,"ERROR: Invalid length in definition '%s'!\n",s);
+          return FALSE;
+        }
+        break;
+      case DEFINITION_TYPE_RANDOMIZE:
+        if (!String_scan(w,STRING_BEGIN,"%u",&length))
+        {
+          String_doneTokenizer(&stringTokenizer);
+          String_delete(t);
+          fprintf(stderr,"ERROR: Invalid length in definition '%s'!\n",s);
+          return FALSE;
+        }
+        if (length > sizeof(buffer)) length = sizeof(buffer);
+        getRandomBuffer(buffer,length);
+        definition->value = String_newBuffer(buffer,length);
+        break;
+      case DEFINITION_TYPE_INSERT:
+        definition->value = String_new();
+        if (!String_scan(w,STRING_BEGIN,"%S",definition->value))
+        {
+          String_delete(definition->value);
+          String_doneTokenizer(&stringTokenizer);
+          String_delete(t);
+          fprintf(stderr,"ERROR: Invalid value in definition '%s'!\n",s);
+          return FALSE;
+        }
+        break;
+      case DEFINITION_TYPE_DELETE:
+        if (!String_scan(w,STRING_BEGIN,"%u",&definition->length))
+        {
+          String_doneTokenizer(&stringTokenizer);
+          String_delete(t);
+          fprintf(stderr,"ERROR: Invalid length in definition '%s'!\n",s);
+          return FALSE;
+        }
+        break;
+    }   
   }
   else
   {
-    definition->value = getRandomByte(256);
+    switch (definition->type)
+    {
+      case DEFINITION_TYPE_MODIFY:
+        definition->value = String_newChar((char)getRandomByte(256));
+        break;
+      case DEFINITION_TYPE_RANDOMIZE:
+        getRandomBuffer(buffer,sizeof(buffer));
+        definition->value = String_newBuffer(buffer,getRandomInteger(sizeof(buffer)));
+        break;
+      case DEFINITION_TYPE_INSERT:
+        definition->value = String_new();
+        if (!String_scan(w,STRING_BEGIN,"%S",&definition->value))
+        {
+          String_delete(definition->value);
+          String_doneTokenizer(&stringTokenizer);
+          String_delete(t);
+          fprintf(stderr,"ERROR: Invalid value in definition '%s'!\n",s);
+          return FALSE;
+        }
+        break;
+      case DEFINITION_TYPE_DELETE:
+        if (!String_scan(w,STRING_BEGIN,"%u",&definition->length))
+        {
+          String_doneTokenizer(&stringTokenizer);
+          String_delete(t);
+          fprintf(stderr,"ERROR: Invalid length in definition '%s'!\n",s);
+          return FALSE;
+        }
+        break;
+    }   
   }
 
   if (String_getNextToken(&stringTokenizer,&w,NULL))
@@ -233,6 +352,7 @@ int main(int argc, const char *argv[])
   uint64      size;
   const char  *inputFileName;
   FILE        *inputHandle;
+  uint        deleteCount;
   byte        data;
   uint64      n;
 
@@ -304,37 +424,48 @@ int main(int argc, const char *argv[])
   }
 
   /* destroy and write to stdout */
+  deleteCount = 0;
   for (n = 0; n < size; n++)
   {
     /* read byte */
     data = fgetc(inputHandle);
 
-    /* find matching definition */
-    z = 0;
-    while ((z < definitionCount) && (n != definitions[z].position))
+    if (deleteCount == 0)
     {
-      z++;
-    }
-
-    /* output byte */
-    if (z < definitionCount)
-    {
-      switch (definitions[z].type)
+      /* find matching definition */
+      z = 0;
+      while ((z < definitionCount) && (n != definitions[z].position))
       {
-        case DEFINITION_TYPE_MODIFY:
-          fputc(definitions[z].value,stdout);
-          break;
-        case DEFINITION_TYPE_INSERT:
-          fputc(definitions[z].value,stdout);
-          fputc(data,stdout);
-          break;
-        case DEFINITION_TYPE_DELETE:
-          break;
+        z++;
+      }
+
+      /* output byte */
+      if (z < definitionCount)
+      {
+        switch (definitions[z].type)
+        {
+          case DEFINITION_TYPE_MODIFY:
+          case DEFINITION_TYPE_RANDOMIZE:
+            fwrite(String_cString(definitions[z].value),1,String_length(definitions[z].value),stdout);
+            deleteCount = String_length(definitions[z].value)-1;
+            break;
+          case DEFINITION_TYPE_INSERT:
+            fwrite(String_cString(definitions[z].value),1,String_length(definitions[z].value),stdout);
+            fputc(data,stdout);
+            break;
+          case DEFINITION_TYPE_DELETE:
+            deleteCount = definitions[z].length-1;
+            break;
+        }
+      }
+      else
+      {
+        fputc(data,stdout);
       }
     }
     else
     {
-      fputc(data,stdout);
+      deleteCount--;
     }
   }
 
