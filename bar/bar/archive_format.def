@@ -1,25 +1,75 @@
 #***********************************************************************
 #
 # $Source: /home/torsten/cvs/bar/bar/archive_format.def,v $
-# $Revision: 1.6 $
+# $Revision: 1.7 $
 # $Author: torsten $
 # Contents: Backup ARchiver file format definition
 # Systems: all
 #
 #***********************************************************************
 
+# BAR files are organized in 'chunks' (a sequence of bytes prefixed by
+# a header). Chunks are stored continously in a file. Chunks may contain
+# sub-chunks. Each chunk have a header of the/ File format of a chunk
+# header is:
+#
+# 4 bytes: id, 4 8bit-characters
+# 8 bytes: length (excluding size of header), 64bit big-enddian
+#
+# The following syntax is used for specification:
+#
+# CHUNK <name> <id, 4 character string> <data type name>
+#   [ENCRYPT]
+#   ]COMPRESS]
+#   <data definition>
+#   ...
+# <empty line>
+#
+# ENCRYPT means chunk can be encrypted (without header)
+# COMPRESS means data in chunk can be compressed
+#
+#
+# Available data types:
+#   uint8  unsigned integer 8bit
+#   uint16 unsigned integer 16bit
+#   uint32 unsigned integer 32bit
+#   uint64 unsigned integer 64bit
+#   int8   signed integer 8bit
+#   int16  signed integer 16bit
+#   int32  signed integer 32bit
+#   int64  signed integer 64bit
+#   string string
+#            uint16 length
+#            char   string data (UTF-8), padded to a 2-byte boundary
+#   data   data bytes
+#   crc32  32bit CRC of the previous data types
+#
+# Note: all data types except 'data' are stored in big endian format.
+
+# ---
+
 # archive info header
+# parent: none
 # never compress/encrypted
 CHUNK BAR "BAR0" Bar
   crc32  crc
 
-# asymmetric encryption key
+# ---
+
+# asymmetric encryption key used for the following chunks which
+# could be encrypted (hybrid encryption). The key is encrypted
+# with the public key. To decrypt the key the private key is
+# required.
+# parent: none
 # never compress/encrypted
 CHUNK KEY "KEY0" Key
   data   data
   crc32  crc
 
+# ---
+
 # file info header
+# parent: none
 # never compress/encrypted
 CHUNK FILE "FIL0" File
   uint16 compressAlgorithm;
@@ -27,8 +77,10 @@ CHUNK FILE "FIL0" File
   crc32  crc
 
 # file entry
+# parent: FIL0
 # compress/encrypted as specified in FIL0
 CHUNK FILE_ENTRY "FENT" FileEntry
+  ENCRYPT
   uint64 size
   uint64 timeLastAccess
   uint64 timeModified
@@ -40,14 +92,20 @@ CHUNK FILE_ENTRY "FENT" FileEntry
   crc32  crc
 
 # file data
+# parent: FIL0
 # compress/encrypted as specified in FIL0
 CHUNK FILE_DATA "FDAT" FileData
+  ENCRYPT
+  COMPRESS
   uint64 fragmentOffset
   uint64 fragmentSize
   crc32  crc
   data   data
 
+# ---
+
 # image info header
+# parent: none
 # never compress/encrypted
 CHUNK IMAGE "IMG0" Image
   uint16 compressAlgorithm;
@@ -55,8 +113,10 @@ CHUNK IMAGE "IMG0" Image
   crc32  crc
 
 # image entry
+# parent: IMG0
 # compress/encrypted as specified in IMG0
-CHUNK IMAGE_ENTRY "IENT" ImageEntry
+CHUNK IMAGE_ENTRY "IENT" ImageEntry +encrypted
+  ENCRYPT
   uint16 fileSystemType
   uint64 size
   uint32 blockSize
@@ -64,22 +124,30 @@ CHUNK IMAGE_ENTRY "IENT" ImageEntry
   crc32  crc
 
 # image data
+# parent: IMG0
 # compress/encrypted as specified in IMG0
 CHUNK IMAGE_DATA "IDAT" ImageData
+  ENCRYPT
+  COMPRESS
   uint64 blockOffset
   uint64 blockCount
   crc32  crc
   data   data
 
+# ---
+
 # directory info header
+# parent: none
 # never compress/encrypted
 CHUNK DIRECTORY "DIR0" Directory
   uint16 cryptAlgorithm;
   crc32  crc
 
 # directory entry
+# parent: DIR0
 # compress/encrypted as specified in DIR0
 CHUNK DIRECTORY_ENTRY "DENT" DirectoryEntry
+  ENCRYPT
   uint64 timeLastAccess
   uint64 timeModified
   uint64 timeLastChanged
@@ -89,15 +157,20 @@ CHUNK DIRECTORY_ENTRY "DENT" DirectoryEntry
   string name
   crc32  crc
 
-# link info header
+# ---
+
+# (symbolic) link info header
+# parent: none
 # never compress/encrypted
 CHUNK LINK "LNK0" Link
   uint16 cryptAlgorithm;
   crc32  crc
 
-# link entry
+# (symbolic) link entry
+# parent: LNK0
 # compress/encrypted as specified in LNK0
 CHUNK LINK_ENTRY "LENT" LinkEntry
+  ENCRYPT
   uint64 timeLastAccess
   uint64 timeModified
   uint64 timeLastChanged
@@ -108,15 +181,63 @@ CHUNK LINK_ENTRY "LENT" LinkEntry
   string destinationName
   crc32  crc
 
+# ---
+
+# hard link info header
+# parent: none
+# never compress/encrypted
+CHUNK HARDLINK "HLN0" HardLink
+  uint16 compressAlgorithm;
+  uint16 cryptAlgorithm;
+  crc32  crc
+
+# hard link entry
+# parent: HLN0
+# compress/encrypted as specified in HLN0
+CHUNK HARDLINK_ENTRY "HENT" HardLinkEntry
+  ENCRYPT
+  uint64 size
+  uint64 timeLastAccess
+  uint64 timeModified
+  uint64 timeLastChanged
+  uint32 userId
+  uint32 groupId
+  uint32 permission
+  crc32  crc
+
+# hard link name
+# parent: HLN0
+# compress/encrypted as specified in HLN0
+CHUNK HARDLINK_NAME "HNAM" HardLinkName
+  ENCRYPT
+  string name
+  crc32  crc
+
+# hard link data
+# parent: HLN0
+# compress/encrypted as specified in HLN0
+CHUNK HARDLINK_DATA "HDAT" HardLinkData
+  ENCRYPT
+  COMPRESS
+  uint64 fragmentOffset
+  uint64 fragmentSize
+  crc32  crc
+  data   data
+
+# ---
+
 # special info header
+# parent: none
 # never compress/encrypted
 CHUNK SPECIAL "SPE0" Special
   uint16 cryptAlgorithm;
   crc32  crc
 
 # special entry
+# parent: SPE0
 # compress/encrypted as specified in SPE0
 CHUNK SPECIAL_ENTRY "SENT" SpecialEntry
+  ENCRYPT
   uint16 specialType
   uint64 timeLastAccess
   uint64 timeModified
@@ -128,5 +249,7 @@ CHUNK SPECIAL_ENTRY "SENT" SpecialEntry
   uint32 minor
   string name
   crc32  crc
+
+# ---
 
 # end of file
