@@ -14,8 +14,8 @@ INSERT INTO meta (name,value) VALUES ('datetime',DATETIME('now'));
 CREATE TABLE storage(
   id              INTEGER PRIMARY KEY,
   name            TEXT,
-  size            INTEGER,
   created         INTEGER,
+  size            INTEGER,
   state           INTEGER,
   mode            INTEGER,
   lastChecked     INTEGER,
