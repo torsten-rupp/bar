@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/barcontrol/src/BARControl.java,v $
-* $Revision: 1.29 $
+* $Revision: 1.30 $
 * $Author: torsten $
 * Contents: BARControl (frontend for BAR)
 * Systems: all
@@ -667,7 +667,7 @@ public class BARControl
     new Option("--port",              "-p",Options.Types.INTEGER,    "serverPort"),
     new Option("--tls-port",          null,Options.Types.INTEGER,    "serverTLSPort"),
     new Option("--key-file",          null,Options.Types.STRING,     "serverKeyFileName"),
-    new Option("--select-job",        null,Options.Types.STRING,     "selectJobName"),
+    new Option("--select-job",        null,Options.Types.STRING,     "selectedJobName"),
     new Option("--login-dialog",      null,Options.Types.BOOLEAN,    "loginDialogFlag"),
 
     new Option("--job",               "-j",Options.Types.STRING,     "runJobName"),
@@ -1011,7 +1011,6 @@ public class BARControl
         switch (event.keyCode)
         {
           case SWT.F1:
-        System.out.println(event);
             Widgets.showTab(tabFolder,tabStatus.widgetTab);
             event.doit = false;
             break;
@@ -1181,8 +1180,10 @@ public class BARControl
         {
         }
       });
+
       Widgets.addMenuSeparator(menu);
       menuItem = Widgets.addMenuItem(menu,"Quit",SWT.CTRL+'Q');
+
       menuItem.addSelectionListener(new SelectionListener()
       {
         public void widgetSelected(SelectionEvent selectionEvent)
@@ -1223,6 +1224,19 @@ public class BARControl
           {
             MenuItem widget = (MenuItem)selectionEvent.widget;
             BARServer.executeCommand("DEBUG_MEMORY_INFO");
+          }
+          public void widgetDefaultSelected(SelectionEvent selectionEvent)
+          {
+          }
+        });
+
+        menuItem = Widgets.addMenuItem(menu,"Dump memory statistics");
+        menuItem.addSelectionListener(new SelectionListener()
+        {
+          public void widgetSelected(SelectionEvent selectionEvent)
+          {
+            MenuItem widget = (MenuItem)selectionEvent.widget;
+            BARServer.executeCommand("DEBUG_MEMORY_STATISTICS");
           }
           public void widgetDefaultSelected(SelectionEvent selectionEvent)
           {
@@ -1834,7 +1848,7 @@ public class BARControl
    */
   public static void main(String[] args)
   {
-    BARControl barControl = new BARControl(args);
+    new BARControl(args);
   }
 }
 
