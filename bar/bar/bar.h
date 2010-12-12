@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/bar.h,v $
-* $Revision: 1.18 $
+* $Revision: 1.19 $
 * $Author: torsten $
 * Contents: Backup ARchiver main program
 * Systems: all
@@ -87,6 +87,7 @@ typedef enum
   ARCHIVE_TYPE_NORMAL,                  // normal archives; no incremental list file
   ARCHIVE_TYPE_FULL,                    // full archives, create incremental list file
   ARCHIVE_TYPE_INCREMENTAL,             // incremental achives
+  ARCHIVE_TYPE_DIFFERENTIAL,            // differential achives
   ARCHIVE_TYPE_UNKNOWN,
 } ArchiveTypes;
 
@@ -235,18 +236,18 @@ typedef struct
   String                 tmpDirectory;                   // directory for temporary files
   uint64                 maxTmpSize;                     // max. size of temporary files
 
-  ulong                  maxBandWidth;                   // max. bandwidth to use [bytes/s]
+  ulong                  maxBandWidth;                   // max. bandwidth to use [bits/s]
 
   ulong                  compressMinFileSize;            // min. size of file for using compression
 
   Password               *cryptPassword;                 // default password for encryption/decryption
 
   FTPServer              *ftpServer;                     // current selected FTP server
-  const FTPServerList    *ftpServerList;                 // list with remote servers
+  const FTPServerList    *ftpServerList;                 // list with FTP servers
   FTPServer              *defaultFTPServer;              // default FTP server
 
   SSHServer              *sshServer;                     // current selected SSH server
-  const SSHServerList    *sshServerList;                 // list with remote servers
+  const SSHServerList    *sshServerList;                 // list with SSH servers
   SSHServer              *defaultSSHServer;              // default SSH server
 
   String                 remoteBARExecutable;
@@ -268,6 +269,7 @@ typedef struct
   bool                   humanFormatFlag;                // TRUE iff human format list
   bool                   noHeaderFooterFlag;             // TRUE iff no header/footer should be printed in list
   bool                   deleteOldArchiveFilesFlag;      // TRUE iff old archive files should be deleted after creating new files
+  bool                   ignoreNoBackupFileFlag;         // TRUE iff .nobackup/.NOBACKUP file should be ignored
 
   bool                   noDefaultConfigFlag;            // TRUE iff default config should not be read 
   bool                   quietFlag;                      // TRUE iff suppress any output
@@ -339,7 +341,8 @@ typedef struct
   bool                errorCorrectionCodesFlag;
   bool                waitFirstVolumeFlag;
   bool                rawImagesFlag;                     // TRUE for storing raw images
-  bool                noStorageFlag;
+  bool                dryRunFlag;                        // TRUE to do a dry-run (do not store, do not create incremental data, do not store in database)
+  bool                noStorageFlag;                     // TRUE to skip storage, only create incremental data file
   bool                noBAROnMediumFlag;                 // TRUE for not storing BAR on medium
   bool                stopOnErrorFlag;
 } JobOptions;
@@ -833,10 +836,15 @@ bool configValueFormatPassword(void **formatUserData, void *userData, String lin
 /***********************************************************************\
 * Name   : parseSchedule
 * Purpose: parse schedule
-* Input  : s            - string
+* Input  : s - schedule string
 * Output : 
 * Return : scheduleNode or NULL on error
-* Notes  : -
+* Notes  : string format
+*            <year|*>-<month|*>-<day|*> [<week day|*>] <hour|*>:<minute|*> <0|1> <type>
+*          month names: jan, feb, mar, arp, may, jun, jul, aug, sep, oct
+*          nov, dec
+*          week day names: mon, tue, wed, thu, fri, sat, sun
+"          type names: normal, full, incremental
 \***********************************************************************/
 
 ScheduleNode *parseSchedule(const String s);
