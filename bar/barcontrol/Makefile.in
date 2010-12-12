@@ -1,7 +1,7 @@
 # ----------------------------------------------------------------------------
 #
 # $Source: /home/torsten/cvs/bar/barcontrol/Makefile.in,v $
-# $Revision: 1.21 $
+# $Revision: 1.22 $
 # $Author: torsten $
 # Contents: Makefile for barcontrol
 # Systems: all
@@ -154,14 +154,16 @@ TARGETS        = barcontrol \
 .PHONY: all clean distclean depend
 all: $(TARGETS)
 
-clean:
+clean: \
+  clean_jars
 	$(RMF) $(OBJECTS)
 	$(RMF) $(INTERMEDIATE)
 	$(RMF) classes/*.class
 	$(RMF) $(TARGETS)
 	$(RMRF) tmp
 
-distclean: clean
+distclean: \
+  clean
 	$(RMF) Makefile
 	$(RMF) src/Config.java
 	$(RMF) barcontrol

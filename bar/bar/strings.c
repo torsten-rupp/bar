@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/strings.c,v $
-* $Revision: 1.22 $
+* $Revision: 1.23 $
 * $Author: torsten $
 * Contents: dynamic string functions
 * Systems: all
@@ -122,12 +122,12 @@ typedef struct
 
 /***************************** Variables *******************************/
 #ifndef NDEBUG
-  pthread_once_t  debugStringInitFlag = PTHREAD_ONCE_INIT;
-  pthread_mutex_t debugStringLock;
-  DebugStringList debugAllocStringList;
-  DebugStringList debugFreeStringList;
+  LOCAL pthread_once_t  debugStringInitFlag = PTHREAD_ONCE_INIT;
+  LOCAL pthread_mutex_t debugStringLock;
+  LOCAL DebugStringList debugAllocStringList;
+  LOCAL DebugStringList debugFreeStringList;
   #ifdef MAX_STRINGS_CHECK
-    ulong debugMaxStringNextWarningCount;
+    LOCAL ulong debugMaxStringNextWarningCount;
   #endif /* MAX_STRINGS_CHECK */
 #endif /* not NDEBUG */
 
@@ -1969,7 +1969,7 @@ void __String_delete(const char *fileName, ulong lineNb, String string)
       }
       if (debugStringNode != NULL)
       {
-        fprintf(stderr,"DEBUG WARNING: multiple free of string %p at %s, %ld and previously at %s, %ld which was allocated at %s, %ld!\n",
+        fprintf(stderr,"DEBUG WARNING: multiple free of string %p at %s, %lu and previously at %s, %lu which was allocated at %s, %ld!\n",
                 string,
                 fileName,
                 lineNb,
@@ -2032,7 +2032,7 @@ void __String_delete(const char *fileName, ulong lineNb, String string)
         }
         else
         {
-          fprintf(stderr,"DEBUG WARNING: string '%s' not found in debug list at %s, line %ld\n",
+          fprintf(stderr,"DEBUG WARNING: string '%s' not found in debug list at %s, line %lu\n",
                   string->data,
                   fileName,
                   lineNb
@@ -4383,7 +4383,7 @@ LOCAL void String_debugPrintAllocated(void)
 
   for (debugStringNode = debugAllocStringList.head; debugStringNode != NULL; debugStringNode = debugStringNode->next)
   {
-    fprintf(stderr,"DEBUG WARNING: string %p '%s' allocated at %s, line %ld\n",
+    fprintf(stderr,"DEBUG WARNING: string %p '%s' allocated at %s, line %lu\n",
             debugStringNode->string,
             debugStringNode->string->data,
             debugStringNode->fileName,
