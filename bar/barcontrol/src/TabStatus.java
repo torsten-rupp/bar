@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/barcontrol/src/TabStatus.java,v $
-* $Revision: 1.22 $
+* $Revision: 1.23 $
 * $Author: torsten $
 * Contents: status tab
 * Systems: all
@@ -1293,10 +1293,11 @@ class TabStatus
     // get job mode
     mode = Dialogs.select(shell,
                           "Confirmation","Start job '"+selectedJobData.name+"'?",
-                          new String[]{"Normal","Full","Incremental","Cancel"},
-                          2
+                          new String[]{"Normal","Full","Incremental","Dry-run","Cancel"},
+                          new String[]{"Store all files.","Store all files and create incremental data file.","Store changed files, only and update incremental data file.","Collect and process all files, but do not create archives."},
+                          4
                          );
-    if ((mode != 0) && (mode != 1) && (mode != 2))
+    if ((mode != 0) && (mode != 1) && (mode != 2) && (mode != 3))
     {
       return;
     }
@@ -1331,9 +1332,11 @@ class TabStatus
         errorCode = BARServer.executeCommand("JOB_START "+selectedJobData.id+" incremental");
         break;
       case 3:
+        errorCode = BARServer.executeCommand("JOB_START "+selectedJobData.id+" dry-run");
+        break;
+      case 4:
         break;
     }
-//  Dprintf.dprintf("----------------------- errorCode=%d\n",errorCode);
   }
 
   /** abort selected job
