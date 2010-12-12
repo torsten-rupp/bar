@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/barcontrol/src/Settings.java,v $
-* $Revision: 1.4 $
+* $Revision: 1.5 $
 * $Author: torsten $
 * Contents: load/save program settings
 * Systems: all
@@ -144,7 +144,6 @@ public class Settings
           {
             serverTLSPort = (Integer)data[0];
           }
-//else {  System.err.println("BARControl.java"+", "+6090+": "+line); }
         }
         input.close();
       }
