@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/barcontrol/src/Dialogs.java,v $
-* $Revision: 1.11 $
+* $Revision: 1.12 $
 * $Author: torsten $
 * Contents: BARControl (frontend for BAR)
 * Systems: all
@@ -588,7 +588,7 @@ class Dialogs
    * @param defaultValue default value
    * @return selection index (0..n-1)
    */
-  static int select(Shell parentShell, String title, String message, String[] texts, int defaultValue)
+  static int select(Shell parentShell, String title, String message, String[] texts, String[] helpTexts, int defaultValue)
   {
     TableLayoutData tableLayoutData;
     Composite       composite;
@@ -648,12 +648,21 @@ class Dialogs
           {
           }
         });
+        if ((helpTexts != null) && (n < helpTexts.length))
+        {
+          button.setToolTipText(helpTexts[n]);
+        }
 
         n++;
       }
     }
 
     return (Integer)run(dialog,defaultValue);
+  }
+
+  static int select(Shell parentShell, String title, String message, String[] texts, int defaultValue)
+  {
+    return select(parentShell,title,message,texts,null,defaultValue);
   }
 
   /** password dialog
