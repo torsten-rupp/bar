@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/arrays.c,v $
-* $Revision: 1.4 $
+* $Revision: 1.5 $
 * $Author: torsten $
 * Contents: dynamic array functions
 * Systems: all
@@ -221,9 +221,6 @@ bool Array_put(Array array, ulong index, const void *data)
 {
   void  *newData;
   ulong newMaxLength;
-  #ifndef NDEBUG
-    DebugArrayNode *debugArrayNode;;
-  #endif /* not NDEBUG */
 
   if (array != NULL)
   {
