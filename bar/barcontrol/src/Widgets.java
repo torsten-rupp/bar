@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/barcontrol/src/Widgets.java,v $
-* $Revision: 1.20 $
+* $Revision: 1.21 $
 * $Author: torsten $
 * Contents: simple widgets functions
 * Systems: all
@@ -87,7 +87,7 @@ class WidgetVariable
   private String              string;
   private String              enumeration[];
 
-  /** create BAR variable
+  /** create widget variable
    * @param b/l/d/string/enumeration value
    */
   WidgetVariable(boolean b)
@@ -255,8 +255,8 @@ class WidgetVariable
  */
 class WidgetListener
 {
-  private WidgetVariable variable;
-  private Control        control;
+  private Control          control;
+  private WidgetVariable[] variables;
 
   // cached text for widget
   private String cachedText = null;
@@ -265,18 +265,28 @@ class WidgetListener
    */
   WidgetListener()
   {
-    this.control  = null;
-    this.variable = null;
+    this.control   = null;
+    this.variables = null;
   }
 
   /** create widget listener
    * @param control control widget
-   * @param variable BAR variable
+   * @param variable widget variable
    */
   WidgetListener(Control control, WidgetVariable variable)
   {
-    this.control  = control;
-    this.variable = variable;
+    this.control   = control;
+    this.variables = new WidgetVariable[]{variable};
+  }
+
+  /** create widget listener
+   * @param control control widget
+   * @param variable widget variable
+   */
+  WidgetListener(Control control, WidgetVariable[] variables)
+  {
+    this.control   = control;
+    this.variables = variables;
   }
 
   /** set control widget
@@ -288,26 +298,30 @@ class WidgetListener
   }
 
   /** set variable
-   * @param variable BAR variable
+   * @param variable widget variable
    * @return 
    */
   void setVariable(WidgetVariable variable)
   {
-    this.variable = variable;
+    this.variables = new WidgetVariable[]{variable};
   }
 
   /** compare variables
-   * @param variable variable
-   * @return true iff equal
+   * @param object variable object
+   * @return true iff equal variable object is equal to some variable
    */
-  public boolean equals(Object variable)
+  public boolean equals(Object object)
   {
-    return (this.variable != null) && this.variable.equals(variable);
+    for (WidgetVariable variable : variables)
+    {
+      if ((variable != null) && variable.equals(object)) return true;
+    }
+    return false;
   }
 
-  /** nofity modify variable
-   * @param control control widget
-   * @param variable BAR variable
+  /** set text or selection fo control acording to value of variable
+   * @param control control widget to set
+   * @param variable variable
    */
   void modified(Control control, WidgetVariable variable)
   {
@@ -456,12 +470,24 @@ class WidgetListener
     }
     else
     {
-      throw new InternalError("Unknown widget '"+control+"' in wiget listener!");
+      throw new InternalError("Unknown widget '"+control+"' in widget listener!");
+    }
+  }
+
+  /** set text or selection fo control acording to value of variable
+   * @param control control widget to set
+   * @param variable variable
+   */
+  void modified(Control control, WidgetVariable[] variables)
+  {
+    for (WidgetVariable variable : variables)
+    {
+      modified(control,variable);
     }
   }
 
   /** notify modify variable
-   * @param variable BAR variable
+   * @param variable widget variable
    */
   public void modified(WidgetVariable variable)
   {
@@ -469,14 +495,22 @@ class WidgetListener
   }
 
   /** notify modify variable
+   * @param variable widget variable
+   */
+  public void modified(WidgetVariable[] variables)
+  {
+    modified(control,variables);
+  }
+
+  /** notify modify variable
    */
   public void modified()
   {
-    modified(variable);
+    modified(variables);
   }
 
-  /** get string of varable
-   * @param variable BAR variable
+  /** get string of variable
+   * @param variable widget variable
    */
   String getString(WidgetVariable variable)
   {
@@ -1428,6 +1462,11 @@ class Widgets
     return newTable(composite,SWT.NONE);
   }
 
+static void recalculateTableWidth(Table table)
+  {
+    
+  }
+
   /** add column to table widget
    * @param table table widget
    * @param columnNb column number
@@ -1457,9 +1496,21 @@ class Widgets
    * @param resizable TRUE iff resizable column
    * @return new table column
    */
+  static TableColumn addTableColumn(Table table, int columnNb, int style, int width, boolean resizable)
+  {
+    return addTableColumn(table,columnNb,"",style,width,resizable);
+  }
+
+  /** add column to table widget
+   * @param table table widget
+   * @param columnNb column number
+   * @param style style
+   * @param width width of column
+   * @return new table column
+   */
   static TableColumn addTableColumn(Table table, int columnNb, int style, int width)
   {
-    return addTableColumn(table,columnNb,"",style,width,false);
+    return addTableColumn(table,columnNb,style,width,false);
   }
 
   /** hide table column
