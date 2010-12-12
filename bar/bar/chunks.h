@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/chunks.h,v $
-* $Revision: 1.4 $
+* $Revision: 1.5 $
 * $Author: torsten $
 * Contents: Backup ARchiver file chunk functions
 * Systems: all
@@ -95,10 +95,12 @@ typedef struct ChunkInfo
 
   ChunkId          id;              // chunk id
   const int        *definition;     // chunk definition
-  ulong            definitionSize;  // chunk definition size (without data elements)
+  ulong            chunkSize;       // size of fixed chunk data (without chunk header+data elements)
   uint64           size;            // total size of chunk (without chunk header)
   uint64           offset;          // start of chunk in file (offset of header)
   uint64           index;           // current position in chunk (from begin=end of header)
+
+  void             *data;           // chunk data
 } ChunkInfo;
 
 typedef struct
@@ -186,8 +188,11 @@ Errors Chunk_init(ChunkInfo     *chunkInfo,
                   ChunkInfo     *parentChunkInfo,
                   const ChunkIO *chunkIO,
                   void          *chunkIOUserData,
+                  ChunkId       chunkId,
+                  const int     *definition,
                   uint          alignment,
-                  CryptInfo     *cryptInfo
+                  CryptInfo     *cryptInfo,
+                  void          *data
                  );
 
 /***********************************************************************\
@@ -284,10 +289,8 @@ Errors Chunk_seek(ChunkInfo *chunkInfo, uint64 index);
 
 Errors Chunk_open(ChunkInfo         *chunkInfo,
                   const ChunkHeader *chunkHeader,
-                  ChunkId           chunkId,
-                  const int         *definition,
-                  ulong             definitionSize,
-                  void              *data
+//                  void              *data,
+                  ulong             dataSize
                  );
 
 /***********************************************************************\
@@ -303,11 +306,8 @@ Errors Chunk_open(ChunkInfo         *chunkInfo,
 * Notes  : -
 \***********************************************************************/
 
-Errors Chunk_create(ChunkInfo  *chunkInfo,
-                    ChunkId    chunkId,
-                    const int  *definition,
-                    ulong      definitionSize,
-                    const void *data
+Errors Chunk_create(ChunkInfo  *chunkInfo
+//                    const void *data
                    );
 
 /***********************************************************************\
@@ -370,8 +370,8 @@ bool Chunk_eofSub(ChunkInfo *chunkInfo);
 * Notes  : -
 \***********************************************************************/
 
-Errors Chunk_update(ChunkInfo  *chunkInfo,
-                    const void *data
+Errors Chunk_update(ChunkInfo  *chunkInfo
+//                    const void *data
                    );
 
 /***********************************************************************\
