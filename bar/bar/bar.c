@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/bar.c,v $
-* $Revision: 1.35 $
+* $Revision: 1.36 $
 * $Author: torsten $
 * Contents: Backup ARchiver main program
 * Systems: all
@@ -328,9 +328,8 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
   CMD_OPTION_ENUM         ("normal",                       0,  1,1,jobOptions.archiveType,                    ARCHIVE_TYPE_NORMAL,                                   "create normal archive (no incremental list file)"                         ),
   CMD_OPTION_ENUM         ("full",                         'f',0,1,jobOptions.archiveType,                    ARCHIVE_TYPE_FULL,                                     "create full archive and incremental list file"                            ),
   CMD_OPTION_ENUM         ("incremental",                  'i',0,1,jobOptions.archiveType,                    ARCHIVE_TYPE_INCREMENTAL,                              "create incremental archive"                                               ),
-  CMD_OPTION_ENUM         ("differential",                 'i',0,1,jobOptions.archiveType,                    ARCHIVE_TYPE_DIFFERENTIAL,                             "create differential archive"                                              ),
-
   CMD_OPTION_SPECIAL      ("incremental-list-file",        'I',1,1,&jobOptions.incrementalListFileName,       cmdOptionParseString,NULL,                             "incremental list file name (default: <archive name>.bid)","file name"     ),
+  CMD_OPTION_ENUM         ("differential",                 0,  0,1,jobOptions.archiveType,                    ARCHIVE_TYPE_DIFFERENTIAL,                             "create differential archive"                                              ),
 
   CMD_OPTION_SELECT       ("pattern-type",                 0,  1,1,jobOptions.patternType,                    COMMAND_LINE_OPTIONS_PATTERN_TYPES,                    "select pattern type"                                                      ),
 
@@ -3046,6 +3045,9 @@ bool configValueFormatSchedule(void **formatUserData, void *userData, String lin
         break;
       case ARCHIVE_TYPE_INCREMENTAL:
         String_appendCString(line,"INCREMENTAL");
+        break;
+      case ARCHIVE_TYPE_DIFFERENTIAL:
+        String_appendCString(line,"DIFFERENTIAL");
         break;
       case ARCHIVE_TYPE_UNKNOWN:
         return FALSE;
