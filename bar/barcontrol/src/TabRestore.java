@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/barcontrol/src/TabRestore.java,v $
-* $Revision: 1.16 $
+* $Revision: 1.17 $
 * $Author: torsten $
 * Contents: restore tab
 * Systems: all
@@ -382,14 +382,14 @@ class TabRestore
               {
                 /* get data
                    format:
-                     size
                      date/time
+                     size
                      state
                      storage name
                      error message
                 */
-                long        size         = (Long)data[0];
-                long        datetime     = (Long)data[1];
+                long        datetime     = (Long)data[0];
+                long        size         = (Long)data[1];
                 IndexStates state        = Enum.valueOf(IndexStates.class,(String)data[2]);
                 String      storageName  = (String)data[3];
                 String      errorMessage = (String)data[4];
@@ -550,6 +550,7 @@ class TabRestore
   class EntryData
   {
     String        storageName;
+    long          storageDateTime;
     String        name;
     EntryTypes    type;
     long          size;
@@ -559,31 +560,34 @@ class TabRestore
 
     /** create entry data
      * @param storageName archive name
+     * @param storageDateTime archive date/time (timestamp)
      * @param name entry name
      * @param type entry type
      * @param size size [bytes]
      * @param datetime date/time (timestamp)
      */
-    EntryData(String storageName, String name, EntryTypes type, long size, long datetime)
+    EntryData(String storageName, long storageDateTime, String name, EntryTypes type, long size, long datetime)
     {
-      this.storageName  = storageName;
-      this.name         = name;
-      this.type         = type;
-      this.size         = size;
-      this.datetime     = datetime;
-      this.tagged       = false;
-      this.restoreState = RestoreStates.UNKNOWN;
+      this.storageName     = storageName;
+      this.storageDateTime = storageDateTime;
+      this.name            = name;
+      this.type            = type;
+      this.size            = size;
+      this.datetime        = datetime;
+      this.tagged          = false;
+      this.restoreState    = RestoreStates.UNKNOWN;
     }
 
     /** create entry data
      * @param storageName archive name
+     * @param storageDateTime archive date/time (timestamp)
      * @param name entry name
      * @param type entry type
      * @param datetime date/time (timestamp)
      */
-    EntryData(String storageName, String name, EntryTypes type, long datetime)
+    EntryData(String storageName, long storageDateTime, String name, EntryTypes type, long datetime)
     {
-      this(storageName,name,type,0L,datetime);
+      this(storageName,storageDateTime,name,type,0L,datetime);
     }
 
     /** set restore state of entry
@@ -800,10 +804,11 @@ class TabRestore
               Object data[] = new Object[10];
               for (String line : result)
               {
-                if      (StringParser.parse(line,"FILE %ld %ld %d %d %d %ld %ld %S %S",data,StringParser.QUOTE_CHARS))
+                if      (StringParser.parse(line,"FILE %ld %ld %ld %d %d %d %ld %ld %S %S",data,StringParser.QUOTE_CHARS))
                 {
                   /* get data
                      format:
+                       storage date/time
                        size
                        date/time
                        user id
@@ -814,12 +819,13 @@ class TabRestore
                        storage name
                        file name
                   */
-                  long   size           = (Long  )data[0];
-                  long   datetime       = (Long  )data[1];
-                  long   fragmentOffset = (Long  )data[5];
-                  long   fragmentSize   = (Long  )data[6];
-                  String storageName    = (String)data[7];
-                  String fileName       = (String)data[8];
+                  long   storageDateTime = (Long  )data[0];
+                  long   size            = (Long  )data[1];
+                  long   datetime        = (Long  )data[2];
+                  long   fragmentOffset  = (Long  )data[6];
+                  long   fragmentSize    = (Long  )data[7];
+                  String storageName     = (String)data[8];
+                  String fileName        = (String)data[9];
 
                   EntryData entryData = entryDataMap.get(storageName,fileName,EntryTypes.FILE);
                   if (entryData != null)
@@ -829,25 +835,27 @@ class TabRestore
                   }
                   else
                   {
-                    entryData = new EntryData(storageName,fileName,EntryTypes.FILE,size,datetime);
+                    entryData = new EntryData(storageName,storageDateTime,fileName,EntryTypes.FILE,size,datetime);
                     entryDataMap.put(entryData);
                   }
                 }
-                else if (StringParser.parse(line,"IMAGE %ld %ld %ld %S %S",data,StringParser.QUOTE_CHARS))
+                else if (StringParser.parse(line,"IMAGE %ld %ld %ld %ld %S %S",data,StringParser.QUOTE_CHARS))
                 {
                   /* get data
                      format:
+                       storage date/time
                        size
                        blockOffset
                        blockCount
                        storage name
                        name
                   */
-                  long   size        = (Long  )data[0];
-                  long   blockOffset = (Long  )data[1];
-                  long   blockCount  = (Long  )data[2];
-                  String storageName = (String)data[3];
-                  String imageName   = (String)data[4];
+                  long   storageDateTime = (Long  )data[0];
+                  long   size            = (Long  )data[1];
+                  long   blockOffset     = (Long  )data[2];
+                  long   blockCount      = (Long  )data[3];
+                  String storageName     = (String)data[4];
+                  String imageName       = (String)data[5];
 
                   EntryData entryData = entryDataMap.get(storageName,imageName,EntryTypes.IMAGE);
                   if (entryData != null)
@@ -856,14 +864,15 @@ class TabRestore
                   }
                   else
                   {
-                    entryData = new EntryData(storageName,imageName,EntryTypes.IMAGE,size,0L);
+                    entryData = new EntryData(storageName,storageDateTime,imageName,EntryTypes.IMAGE,size,0L);
                     entryDataMap.put(entryData);
                   }
                 }
-                else if (StringParser.parse(line,"DIRECTORY %ld %d %d %d %S %S",data,StringParser.QUOTE_CHARS))
+                else if (StringParser.parse(line,"DIRECTORY %ld %ld %d %d %d %S %S",data,StringParser.QUOTE_CHARS))
                 {
                   /* get data
                      format:
+                       storage date/time
                        date/time
                        user id
                        group id
@@ -871,9 +880,10 @@ class TabRestore
                        storage name
                        directory name
                   */
-                  long   datetime      = (Long  )data[0];
-                  String storageName   = (String)data[4];
-                  String directoryName = (String)data[5];
+                  long   storageDateTime = (Long  )data[0];
+                  long   datetime        = (Long  )data[1];
+                  String storageName     = (String)data[5];
+                  String directoryName   = (String)data[6];
 
                   EntryData entryData = entryDataMap.get(storageName,directoryName,EntryTypes.DIRECTORY);
                   if (entryData != null)
@@ -882,14 +892,15 @@ class TabRestore
                   }
                   else
                   {
-                    entryData = new EntryData(storageName,directoryName,EntryTypes.DIRECTORY,datetime);
+                    entryData = new EntryData(storageName,storageDateTime,directoryName,EntryTypes.DIRECTORY,datetime);
                     entryDataMap.put(entryData);
                   }
                 }
-                else if (StringParser.parse(line,"LINK %ld %d %d %d %S %S %S",data,StringParser.QUOTE_CHARS))
+                else if (StringParser.parse(line,"LINK %ld %ld %d %d %d %S %S %S",data,StringParser.QUOTE_CHARS))
                 {
                   /* get data
                      format:
+                       storage date/time
                        date/time
                        user id
                        group id
@@ -898,9 +909,10 @@ class TabRestore
                        link name
                        destination name
                   */
-                  long   datetime    = (Long  )data[0];
-                  String storageName = (String)data[4];
-                  String linkName    = (String)data[5];
+                  long   storageDateTime = (Long  )data[0];
+                  long   datetime        = (Long  )data[1];
+                  String storageName     = (String)data[5];
+                  String linkName        = (String)data[6];
 
                   EntryData entryData = entryDataMap.get(storageName,linkName,EntryTypes.LINK);
                   if (entryData != null)
@@ -909,14 +921,15 @@ class TabRestore
                   }
                   else
                   {
-                    entryData = new EntryData(storageName,linkName,EntryTypes.LINK,datetime);
+                    entryData = new EntryData(storageName,storageDateTime,linkName,EntryTypes.LINK,datetime);
                     entryDataMap.put(entryData);
                   }
                 }
-                else if (StringParser.parse(line,"SPECIAL %ld %d %d %d %S %S",data,StringParser.QUOTE_CHARS))
+                else if (StringParser.parse(line,"SPECIAL %ld %ld %d %d %d %S %S",data,StringParser.QUOTE_CHARS))
                 {
                   /* get data
                      format:
+                       storage date/time
                        date/time
                        user id
                        group id
@@ -924,9 +937,10 @@ class TabRestore
                        storage name
                        name
                   */
-                  long   datetime    = (Long  )data[0];
-                  String storageName = (String)data[4];
-                  String name        = (String)data[5];
+                  long   storageDateTime = (Long  )data[0];
+                  long   datetime        = (Long  )data[1];
+                  String storageName     = (String)data[5];
+                  String name            = (String)data[6];
 
                   EntryData entryData = entryDataMap.get(storageName,name,EntryTypes.SPECIAL);
                   if (entryData != null)
@@ -935,7 +949,7 @@ class TabRestore
                   }
                   else
                   {
-                    entryData = new EntryData(storageName,name,EntryTypes.SPECIAL,datetime);
+                    entryData = new EntryData(storageName,storageDateTime,name,EntryTypes.SPECIAL,datetime);
                     entryDataMap.put(entryData);
                   }
                 }
@@ -946,7 +960,7 @@ class TabRestore
             }
             else
             {
-Dprintf.dprintf("r=%s",result);
+//Dprintf.dprintf("r=%s",result);
               final String errorText = result.get(0);
               display.syncExec(new Runnable()
               {
@@ -1240,13 +1254,13 @@ Dprintf.dprintf("r=%s",result);
       tableColumn = Widgets.addTableColumn(widgetStorageList,0,"Name",    SWT.LEFT, 450,true);
       tableColumn.addSelectionListener(storageListColumnSelectionListener);
       tableColumn.setToolTipText("Click to sort for name.");
-      tableColumn = Widgets.addTableColumn(widgetStorageList,1,"Size",    SWT.RIGHT,100,false);
+      tableColumn = Widgets.addTableColumn(widgetStorageList,1,"Size",    SWT.RIGHT,100,true);
       tableColumn.addSelectionListener(storageListColumnSelectionListener);
       tableColumn.setToolTipText("Click to sort for size.");
-      tableColumn = Widgets.addTableColumn(widgetStorageList,2,"Modified",SWT.LEFT, 150,false);
+      tableColumn = Widgets.addTableColumn(widgetStorageList,2,"Modified",SWT.LEFT, 150,true);
       tableColumn.addSelectionListener(storageListColumnSelectionListener);
       tableColumn.setToolTipText("Click to sort for modification date/time.");
-      tableColumn = Widgets.addTableColumn(widgetStorageList,3,"State",   SWT.LEFT,  30,false);
+      tableColumn = Widgets.addTableColumn(widgetStorageList,3,"State",   SWT.LEFT,  30,true);
       tableColumn.addSelectionListener(storageListColumnSelectionListener);
       tableColumn.setToolTipText("Click to sort for state.");
       widgetStorageList.addListener(SWT.MouseDoubleClick,new Listener()
@@ -1346,22 +1360,22 @@ Dprintf.dprintf("r=%s",result);
             label.setBackground(COLOR_BACKGROUND);
             Widgets.layout(label,0,1,TableLayoutData.WE);
 
-            label = Widgets.newLabel(widgetStorageListToolTip,"Size:");
+            label = Widgets.newLabel(widgetStorageListToolTip,"Created:");
             label.setForeground(COLOR_FORGROUND);
             label.setBackground(COLOR_BACKGROUND);
             Widgets.layout(label,1,0,TableLayoutData.W);
 
-            label = Widgets.newLabel(widgetStorageListToolTip,String.format("%d bytes (%s)",storageData.size,Units.formatByteSize(storageData.size)));
+            label = Widgets.newLabel(widgetStorageListToolTip,simpleDateFormat.format(new Date(storageData.datetime*1000)));
             label.setForeground(COLOR_FORGROUND);
             label.setBackground(COLOR_BACKGROUND);
             Widgets.layout(label,1,1,TableLayoutData.WE);
 
-            label = Widgets.newLabel(widgetStorageListToolTip,"Date:");
+            label = Widgets.newLabel(widgetStorageListToolTip,"Size:");
             label.setForeground(COLOR_FORGROUND);
             label.setBackground(COLOR_BACKGROUND);
             Widgets.layout(label,2,0,TableLayoutData.W);
 
-            label = Widgets.newLabel(widgetStorageListToolTip,simpleDateFormat.format(new Date(storageData.datetime*1000)));
+            label = Widgets.newLabel(widgetStorageListToolTip,String.format("%d bytes (%s)",storageData.size,Units.formatByteSize(storageData.size)));
             label.setForeground(COLOR_FORGROUND);
             label.setBackground(COLOR_BACKGROUND);
             Widgets.layout(label,2,1,TableLayoutData.WE);
@@ -1388,7 +1402,7 @@ Dprintf.dprintf("r=%s",result);
 
             Point size = widgetStorageListToolTip.computeSize(SWT.DEFAULT,SWT.DEFAULT);
             Rectangle bounds = tableItem.getBounds(0);
-            Point point = table.toDisplay(bounds.x,bounds.y);
+            Point point = table.toDisplay(mouseEvent.x+16,bounds.y);
             widgetStorageListToolTip.setBounds(point.x,point.y,size.x,size.y);
             widgetStorageListToolTip.setVisible(true);
           }
@@ -1410,7 +1424,7 @@ Dprintf.dprintf("r=%s",result);
           }
         });
 
-        menuItem = Widgets.addMenuItem(menu,"Remove");
+        menuItem = Widgets.addMenuItem(menu,"Remove...");
         menuItem.addSelectionListener(new SelectionListener()
         {
           public void widgetSelected(SelectionEvent selectionEvent)
@@ -1423,7 +1437,7 @@ Dprintf.dprintf("r=%s",result);
           }
         });
 
-        menuItem = Widgets.addMenuItem(menu,"Refresh");
+        menuItem = Widgets.addMenuItem(menu,"Refresh...");
         menuItem.addSelectionListener(new SelectionListener()
         {
           public void widgetSelected(SelectionEvent selectionEvent)
@@ -1436,7 +1450,7 @@ Dprintf.dprintf("r=%s",result);
           }
         });
 
-        menuItem = Widgets.addMenuItem(menu,"Refresh all with error");
+        menuItem = Widgets.addMenuItem(menu,"Refresh all with error...");
         menuItem.addSelectionListener(new SelectionListener()
         {
           public void widgetSelected(SelectionEvent selectionEvent)
@@ -1733,13 +1747,14 @@ Dprintf.dprintf("r=%s",result);
           {
             EntryData entryData = (EntryData)tableItem.getData();
             Label     label;
+            Control   control;
 
             final Color COLOR_FORGROUND  = display.getSystemColor(SWT.COLOR_INFO_FOREGROUND);
             final Color COLOR_BACKGROUND = display.getSystemColor(SWT.COLOR_INFO_BACKGROUND);
 
             widgetEntryListToolTip = new Shell(shell,SWT.ON_TOP|SWT.NO_FOCUS|SWT.TOOL);
             widgetEntryListToolTip.setBackground(COLOR_BACKGROUND);
-            widgetEntryListToolTip.setLayout(new TableLayout(1.0,new double[]{0.0,1.0},2));
+            widgetEntryListToolTip.setLayout(new TableLayout(0.0,new double[]{0.0,1.0},2));
             Widgets.layout(widgetEntryListToolTip,0,0,TableLayoutData.NSWE);
             widgetEntryListToolTip.addMouseTrackListener(new MouseTrackListener()
             {
@@ -1768,49 +1783,62 @@ Dprintf.dprintf("r=%s",result);
             label.setBackground(COLOR_BACKGROUND);
             Widgets.layout(label,0,1,TableLayoutData.WE);
 
-            label = Widgets.newLabel(widgetEntryListToolTip,"Type:");
+            label = Widgets.newLabel(widgetEntryListToolTip,"Created:");
             label.setForeground(COLOR_FORGROUND);
             label.setBackground(COLOR_BACKGROUND);
             Widgets.layout(label,1,0,TableLayoutData.W);
 
-            label = Widgets.newLabel(widgetEntryListToolTip,entryData.type.toString());
+            label = Widgets.newLabel(widgetEntryListToolTip,simpleDateFormat.format(new Date(entryData.storageDateTime*1000)));
             label.setForeground(COLOR_FORGROUND);
             label.setBackground(COLOR_BACKGROUND);
             Widgets.layout(label,1,1,TableLayoutData.WE);
 
-            label = Widgets.newLabel(widgetEntryListToolTip,"Name:");
-            label.setForeground(COLOR_FORGROUND);
-            label.setBackground(COLOR_BACKGROUND);
-            Widgets.layout(label,2,0,TableLayoutData.W);
+            control = Widgets.newSpacer(widgetEntryListToolTip);
+            Widgets.layout(control,2,0,TableLayoutData.WE,0,2,0,0,SWT.DEFAULT,1,SWT.DEFAULT,1,SWT.DEFAULT,1);
 
-            label = Widgets.newLabel(widgetEntryListToolTip,entryData.name);
-            label.setForeground(COLOR_FORGROUND);
-            label.setBackground(COLOR_BACKGROUND);
-            Widgets.layout(label,2,1,TableLayoutData.WE);
-
-            label = Widgets.newLabel(widgetEntryListToolTip,"Size:");
+            label = Widgets.newLabel(widgetEntryListToolTip,"Type:");
             label.setForeground(COLOR_FORGROUND);
             label.setBackground(COLOR_BACKGROUND);
             Widgets.layout(label,3,0,TableLayoutData.W);
 
-            label = Widgets.newLabel(widgetEntryListToolTip,String.format("%d bytes (%s)",entryData.size,Units.formatByteSize(entryData.size)));
+            label = Widgets.newLabel(widgetEntryListToolTip,entryData.type.toString());
             label.setForeground(COLOR_FORGROUND);
             label.setBackground(COLOR_BACKGROUND);
             Widgets.layout(label,3,1,TableLayoutData.WE);
 
-            label = Widgets.newLabel(widgetEntryListToolTip,"Date:");
+            label = Widgets.newLabel(widgetEntryListToolTip,"Name:");
             label.setForeground(COLOR_FORGROUND);
             label.setBackground(COLOR_BACKGROUND);
             Widgets.layout(label,4,0,TableLayoutData.W);
 
-            label = Widgets.newLabel(widgetEntryListToolTip,simpleDateFormat.format(new Date(entryData.datetime*1000)));
+            label = Widgets.newLabel(widgetEntryListToolTip,entryData.name);
             label.setForeground(COLOR_FORGROUND);
             label.setBackground(COLOR_BACKGROUND);
             Widgets.layout(label,4,1,TableLayoutData.WE);
 
+            label = Widgets.newLabel(widgetEntryListToolTip,"Size:");
+            label.setForeground(COLOR_FORGROUND);
+            label.setBackground(COLOR_BACKGROUND);
+            Widgets.layout(label,5,0,TableLayoutData.W);
+
+            label = Widgets.newLabel(widgetEntryListToolTip,String.format("%d bytes (%s)",entryData.size,Units.formatByteSize(entryData.size)));
+            label.setForeground(COLOR_FORGROUND);
+            label.setBackground(COLOR_BACKGROUND);
+            Widgets.layout(label,5,1,TableLayoutData.WE);
+
+            label = Widgets.newLabel(widgetEntryListToolTip,"Date:");
+            label.setForeground(COLOR_FORGROUND);
+            label.setBackground(COLOR_BACKGROUND);
+            Widgets.layout(label,6,0,TableLayoutData.W);
+
+            label = Widgets.newLabel(widgetEntryListToolTip,simpleDateFormat.format(new Date(entryData.datetime*1000)));
+            label.setForeground(COLOR_FORGROUND);
+            label.setBackground(COLOR_BACKGROUND);
+            Widgets.layout(label,6,1,TableLayoutData.WE);
+
             Point size = widgetEntryListToolTip.computeSize(SWT.DEFAULT,SWT.DEFAULT);
             Rectangle bounds = tableItem.getBounds(0);
-            Point point = table.toDisplay(bounds.x,bounds.y);
+            Point point = table.toDisplay(mouseEvent.x+16,bounds.y);
             widgetEntryListToolTip.setBounds(point.x,point.y,size.x,size.y);
             widgetEntryListToolTip.setVisible(true);
           }
