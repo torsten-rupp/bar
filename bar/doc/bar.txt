@@ -33,7 +33,7 @@ OPTIONS
          -m|--image                                create new images archive
          -l|--list                                 list contents of archive
          -t|--test                                 test contents of archive
-         -d|--compare                              compare contents of archive with files
+         -d|--compare                              compare contents of archive with files and images
          -x|--extract                              restore archive
          --generate-keys                           generate new public/private key pair
          --generate-keys-bits=<n>[K]               key bits (default: 1024)
@@ -42,6 +42,7 @@ OPTIONS
          -f|--full                                 create full archive and incremental list file
          -i|--incremental                          create incremental archive
          -I|--incremental-list-file=<file name>    incremental list file name (default: <archive name>.bid)
+         --differential                            create differential archive
          --pattern-type=<name>                     select pattern type
                                                      * glob: glob patterns: * and ? (default)
                                                      * regex: regular expression pattern matching
@@ -86,6 +87,7 @@ OPTIONS
                                                      * lzma8: LZMA compression level 8
                                                      * lzma9: LZMA compression level 9
          --compress-min-size=<n>[G|M|K]            minimal size of file for compression (default: 32)
+         --compress-exclude=<pattern>              exclude compression pattern
          -y|--crypt-algorithm=<name>               select crypt algorithm to use
                                                      * none: no crypting (default)
                                                      * 3DES: 3DES cipher
@@ -119,7 +121,7 @@ OPTIONS
          --server-password=<password>              server password (use with care!)
          --server-jobs-directory=<path name>       server job directory (default: /etc/bar/jobs)
          --nice-level=<n>                          general nice level of processes/threads
-         --max-band-width=<n>[K]                   max. network band width to use
+         --max-band-width=<n>[M|K]                 max. network band width to use [bits/s]
          --remote-bar-executable=<file name>       remote BAR executable
          --cd-request-volume-command=<command>     request new CD volume command
          --cd-unload-volume-command=<command>      unload CD volume command (default: eject -r %device)
@@ -201,12 +203,14 @@ OPTIONS
          -H|--human-format                         list in human readable format
          --no-header-footer                        output no header/footer in list
          --delete-old-archive-files                delete old archive files after creating new files
+         --ignore-no-backup-file                   ignore .nobackup/.NOBACKUP file
          --skip-unreadable                         skip unreadable files
-         --overwrite-archive-files                 overwrite existing archive files
+         -o|--overwrite-archive-files              overwrite existing archive files
          --overwrite-files                         overwrite existing files
          --wait-first-volume                       wait for first volume
          --raw-images                              store raw images (store all image blocks)
-         --no-storage                              do not store archives (skip storage)
+         --dry-run                                 do dry-run (skip storage/restore, incremental data, database index)
+         --no-storage                              do not store archives (skip storage, database index)
          --no-bar-on-medium                        do not store a copy of BAR on medium
          --stop-on-error                           immediately stop on error
          --no-default-config                       do not read personal config file ~/.bar/bar.cfg
