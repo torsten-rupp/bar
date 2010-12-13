@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/bar.c,v $
-* $Revision: 1.36 $
+* $Revision: 1.37 $
 * $Author: torsten $
 * Contents: Backup ARchiver main program
 * Systems: all
@@ -329,7 +329,7 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
   CMD_OPTION_ENUM         ("full",                         'f',0,1,jobOptions.archiveType,                    ARCHIVE_TYPE_FULL,                                     "create full archive and incremental list file"                            ),
   CMD_OPTION_ENUM         ("incremental",                  'i',0,1,jobOptions.archiveType,                    ARCHIVE_TYPE_INCREMENTAL,                              "create incremental archive"                                               ),
   CMD_OPTION_SPECIAL      ("incremental-list-file",        'I',1,1,&jobOptions.incrementalListFileName,       cmdOptionParseString,NULL,                             "incremental list file name (default: <archive name>.bid)","file name"     ),
-  CMD_OPTION_ENUM         ("differential",                 0,  0,1,jobOptions.archiveType,                    ARCHIVE_TYPE_DIFFERENTIAL,                             "create differential archive"                                              ),
+  CMD_OPTION_ENUM         ("differential",                 0,  1,1,jobOptions.archiveType,                    ARCHIVE_TYPE_DIFFERENTIAL,                             "create differential archive"                                              ),
 
   CMD_OPTION_SELECT       ("pattern-type",                 0,  1,1,jobOptions.patternType,                    COMMAND_LINE_OPTIONS_PATTERN_TYPES,                    "select pattern type"                                                      ),
 
@@ -343,8 +343,8 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
 
   CMD_OPTION_INTEGER64    ("archive-part-size",            's',0,1,jobOptions.archivePartSize,                0,MAX_LONG_LONG,COMMAND_LINE_BYTES_UNITS,              "approximated archive part size"                                           ),
 
-  CMD_OPTION_INTEGER      ("directory-strip",              'p',1,1,jobOptions.directoryStripCount,            0,MAX_INT,NULL,                                         "number of directories to strip on extract"                                ),
-  CMD_OPTION_STRING       ("destination",                  0,  0,1,jobOptions.destination,                                                                          "destination to restore files/image","path"                                ),
+  CMD_OPTION_INTEGER      ("directory-strip",              'p',1,1,jobOptions.directoryStripCount,            0,MAX_INT,NULL,                                         "number of directories to strip on extract"                               ),
+  CMD_OPTION_STRING       ("destination",                  0,  0,1,jobOptions.destination,                                                                          "destination to restore files/images","path"                                ),
   CMD_OPTION_SPECIAL      ("owner",                        0,  0,1,&jobOptions.owner,                         cmdOptionParseOwner,NULL,                              "user and group of restored files","user:group"                            ),
 
   CMD_OPTION_SELECT       ("compress-algorithm",           'z',0,1,jobOptions.compressAlgorithm,              COMMAND_LINE_OPTIONS_COMPRESS_ALGORITHMS,              "select compress algorithm to use"                                         ),
