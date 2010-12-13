@@ -9,7 +9,7 @@ DESCRIPTION
 BAR is a backup archiver program for files and disk images to create compressed,
 encrypted and splitted archive files which can be stored on a local hard disk,
 via network on a server or (with additional external tools) an optical medium
-like a CD, DVD, or BD.
+like a CD, DVD, or BD. It can create full and incremental/differential archives.
 
 Archive files can be created, the content can be listed, tested, compared and
 extracted. Individual archive files can be read independent. Listing the contents
@@ -54,7 +54,7 @@ OPTIONS
          --max-tmp-size=<n>[G|M|K]                 max. size of temporary files
          -s|--archive-part-size=<n>[G|M|K]         approximated archive part size
          -p|--directory-strip=<n>                  number of directories to strip on extract
-         --destination=<path>                      destination to restore files/image
+         --destination=<path>                      destination to restore files/images
          --owner=<user:group>                      user and group of restored files
          -z|--compress-algorithm=<name>            select compress algorithm to use
                                                      * none : no compression (default)
