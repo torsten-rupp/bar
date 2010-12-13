@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/commands_create.h,v $
-* $Revision: 1.8 $
+* $Revision: 1.9 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive create function
 * Systems : all
@@ -88,6 +88,8 @@ typedef bool(*CreateStatusInfoFunction)(void                   *userData,
 * Input  : storageName                      - storage name
 *          includeEntryList                 - include entry list
 *          excludePatternList               - exclude pattern list
+*          excludeCompressPatternList       - exclude compression pattern
+*                                             list
 *          jobOptions                       - job options
 *          archiveType                      - archive type; see
 *                                             ArchiveTypes (normal/full/
@@ -115,8 +117,9 @@ typedef bool(*CreateStatusInfoFunction)(void                   *userData,
 \***********************************************************************/
 
 Errors Command_create(const char                      *storageName,
-                      EntryList                       *includeEntryList,
-                      PatternList                     *excludePatternList,
+                      const EntryList                 *includeEntryList,
+                      const PatternList               *excludePatternList,
+                      const PatternList               *excludeCompressPatternList,
                       JobOptions                      *jobOptions,
                       ArchiveTypes                    archiveType,
                       ArchiveGetCryptPasswordFunction archiveGetCryptPasswordFunction,
