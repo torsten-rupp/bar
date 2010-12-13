@@ -3955,16 +3955,14 @@ Errors Storage_tell(StorageFileHandle *storageFileHandle,
   assert(offset != NULL);
 
   (*offset) = 0LL;
+
+  error = ERROR_NONE;
   switch (storageFileHandle->type)
   {
     case STORAGE_TYPE_FILESYSTEM:
       if (!storageFileHandle->jobOptions->dryRunFlag)
       {
         error = File_tell(&storageFileHandle->fileSystem.fileHandle,offset);
-      }
-      else
-      {
-        error = ERROR_NONE;
       }
       break;
     case STORAGE_TYPE_FTP:
@@ -3988,10 +3986,6 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
           (*offset) = storageFileHandle->scp.index;
           error     = ERROR_NONE;
         }
-        else
-        {
-          error = ERROR_NONE;
-        }
       #else /* not HAVE_SSH2 */
         error = ERROR_FUNCTION_NOT_SUPPORTED;
       #endif /* HAVE_SSH2 */
@@ -4002,10 +3996,6 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
         {
           (*offset) = storageFileHandle->sftp.index;
           error     = ERROR_NONE;
-        }
-        else
-        {
-          error = ERROR_NONE;
         }
       #else /* not HAVE_SSH2 */
         error = ERROR_FUNCTION_NOT_SUPPORTED;
@@ -4019,10 +4009,6 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
         {
           error = File_tell(&storageFileHandle->opticalDisk.fileHandle,offset);
         }
-        else
-        {
-          error = ERROR_NONE;
-        }
       #else /* not HAVE_SSH2 */
         error = ERROR_FUNCTION_NOT_SUPPORTED;
       #endif /* HAVE_SSH2 */
@@ -4031,10 +4017,6 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
       if (!storageFileHandle->jobOptions->dryRunFlag)
       {
         error = File_tell(&storageFileHandle->device.fileHandle,offset);
-      }
-      else
-      {
-        error = ERROR_NONE;
       }
       break;
     #ifndef NDEBUG
@@ -4055,6 +4037,7 @@ Errors Storage_seek(StorageFileHandle *storageFileHandle,
 
   assert(storageFileHandle != NULL);
 
+  error = ERROR_NONE;
   switch (storageFileHandle->type)
   {
     case STORAGE_TYPE_FILESYSTEM:
@@ -4145,10 +4128,6 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
               error = ERROR_FUNCTION_NOT_SUPPORTED;
             }
           }
-          else
-          {
-            error = ERROR_NONE;
-          }
         }
       #else /* not HAVE_SSH2 */
         error = ERROR_FUNCTION_NOT_SUPPORTED;
@@ -4169,10 +4148,6 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
           #endif
           storageFileHandle->sftp.index = offset;
         }
-        else
-        {
-          error = ERROR_NONE;
-        }
       #else /* not HAVE_SSH2 */
         error = ERROR_FUNCTION_NOT_SUPPORTED;
       #endif /* HAVE_SSH2 */
@@ -4184,19 +4159,11 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
       {
         error = File_seek(&storageFileHandle->opticalDisk.fileHandle,offset);
       }
-      else
-      {
-        error = ERROR_NONE;
-      }
       break;
     case STORAGE_TYPE_DEVICE:
       if (!storageFileHandle->jobOptions->dryRunFlag)
       {
         error = File_seek(&storageFileHandle->device.fileHandle,offset);
-      }
-      else
-      {
-        error = ERROR_NONE;
       }
       break;
     #ifndef NDEBUG
