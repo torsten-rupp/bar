@@ -27,6 +27,8 @@
   * support building Debian/Ubuntu packages with SuSE build
     service!
   * fix install: add bar-keygen
+  * added option --differential: differential storage. Like
+    --incremental, but incremental data is not updated
 
 2010-12-05 0.15f
   * fix SigSegV in string.c:formatString() which can occur on
