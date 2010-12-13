@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/barcontrol/src/TabJobs.java,v $
-* $Revision: 1.28 $
+* $Revision: 1.29 $
 * $Author: torsten $
 * Contents: jobs tab
 * Systems: all
@@ -94,6 +94,10 @@ import org.eclipse.swt.widgets.Widget;
  */
 class TabJobs
 {
+  // temporary fix: must be configured from server settings
+  final static String FILE_SEPARATOR      = "/";
+  final static char   FILE_SEPARATOR_CHAR = '/';
+
   /** entry types
    */
   enum EntryTypes
@@ -413,7 +417,7 @@ class TabJobs
       {
         this.name      = name;
         this.forceFlag = forceFlag;
-        this.depth     = name.split(File.separator).length;
+        this.depth     = name.split(FILE_SEPARATOR).length;
         this.timeout   = timeout;
         this.treeItem  = treeItem;
       }
@@ -1165,8 +1169,7 @@ class TabJobs
   private Table        widgetIncludeTable;
   private List         widgetExcludeList;
   private Combo        widgetArchivePartSize;
-  private Text         widgetCryptPublicKeyFileName;
-  private Button       widgetCryptPublicKeyFileNameSelect;
+  private List         widgetCompressExcludeList;
   private Text         widgetCryptPassword1,widgetCryptPassword2;
   private Combo        widgetFTPMaxBandWidth;
   private Combo        widgetSCPSFTPMaxBandWidth;
@@ -1181,6 +1184,7 @@ class TabJobs
   private WidgetVariable  archivePartSizeFlag     = new WidgetVariable(false);
   private WidgetVariable  archivePartSize         = new WidgetVariable(0);
   private WidgetVariable  compressAlgorithm       = new WidgetVariable(new String[]{"none","zip0","zip1","zip2","zip3","zip4","zip5","zip6","zip7","zip8","zip9","bzip1","bzip2","bzip3","bzip4","bzip5","bzip6","bzip7","bzip8","bzip9","lzma1","lzma2","lzma3","lzma4","lzma5","lzma6","lzma7","lzma8","lzma9"});
+  private WidgetVariable  compressMinSize         = new WidgetVariable(0);
   private WidgetVariable  cryptAlgorithm          = new WidgetVariable(new String[]{"none","3DES","CAST5","BLOWFISH","AES128","AES192","AES256","TWOFISH128","TWOFISH256"});
   private WidgetVariable  cryptType               = new WidgetVariable(new String[]{"none","symmetric","asymmetric"});
   private WidgetVariable  cryptPublicKeyFileName  = new WidgetVariable("");
@@ -1205,13 +1209,14 @@ class TabJobs
 
   // variables
   private     DirectoryInfoThread       directoryInfoThread;
-  private     boolean                   directorySizesFlag = false;
-  private     HashMap<String,Integer>   jobIds             = new HashMap<String,Integer>();
-  private     String                    selectedJobName    = null;
-  private     int                       selectedJobId      = 0;
-  private     HashMap<String,EntryData> includeHashMap     = new HashMap<String,EntryData>();
-  private     HashSet<String>           excludeHashSet     = new HashSet<String>();
-  private     LinkedList<ScheduleData>  scheduleList       = new LinkedList<ScheduleData>();
+  private     boolean                   directorySizesFlag     = false;
+  private     HashMap<String,Integer>   jobIds                 = new HashMap<String,Integer>();
+  private     String                    selectedJobName        = null;
+  private     int                       selectedJobId          = 0;
+  private     HashMap<String,EntryData> includeHashMap         = new HashMap<String,EntryData>();
+  private     HashSet<String>           excludeHashSet         = new HashSet<String>();
+  private     HashSet<String>           compressExcludeHashSet = new HashSet<String>();
+  private     LinkedList<ScheduleData>  scheduleList           = new LinkedList<ScheduleData>();
 
 
   /** create jobs tab
@@ -1225,7 +1230,7 @@ class TabJobs
     Menu        menu;
     MenuItem    menuItem;
     Group       group;
-    Composite   composite,subComposite;
+    Composite   composite,subComposite,subSubComposite;
     Label       label;
     Button      button;
     Combo       combo;
@@ -1292,6 +1297,7 @@ class TabJobs
           {
             selectedJobName = widgetJobList.getItem(index);
             selectedJobId   = jobIds.get(selectedJobName);
+
             Widgets.setEnabled(widgetTabFolder,true);
             update();
           }
@@ -1860,33 +1866,15 @@ class TabJobs
         widgetIncludeTable = Widgets.newTable(tab);
         widgetIncludeTable.setHeaderVisible(false);
         Widgets.addTableColumn(widgetIncludeTable,0,SWT.LEFT,20);
-        Widgets.addTableColumn(widgetIncludeTable,1,SWT.LEFT,0);
+        Widgets.addTableColumn(widgetIncludeTable,1,SWT.LEFT,1024,true);
+// automatic column width calculation?
+//widgetIncludeTable.setLayout(new TableLayout(new double[]{0.5,0.0,0.5,0.0,0.0},new double[]{0.0,1.0}));
         Widgets.layout(widgetIncludeTable,0,1,TableLayoutData.NSWE);
         widgetIncludeTable.setToolTipText("List of included entries.");
 
         menu = Widgets.newPopupMenu(shell);
         {
-          menuItem = Widgets.addMenuItem(menu,"Include");
-          menuItem.addSelectionListener(new SelectionListener()
-          {
-            public void widgetSelected(SelectionEvent selectionEvent)
-            {
-              MenuItem widget = (MenuItem)selectionEvent.widget;
-
-              for (TreeItem treeItem : widgetDeviceTree.getSelection())
-              {
-                DeviceTreeData deviceTreeData = (DeviceTreeData)treeItem.getData();
-                includeAdd(EntryTypes.IMAGE,deviceTreeData.name);
-                excludeRemove(deviceTreeData.name);
-                treeItem.setImage(IMAGE_DEVICE_INCLUDED);
-              }
-            }
-            public void widgetDefaultSelected(SelectionEvent selectionEvent)
-            {
-            }
-          });
-
-          menuItem = Widgets.addMenuItem(menu,"Exclude");
+          menuItem = Widgets.addMenuItem(menu,"Add");
           menuItem.addSelectionListener(new SelectionListener()
           {
             public void widgetSelected(SelectionEvent selectionEvent)
@@ -1902,7 +1890,7 @@ class TabJobs
             }
           });
 
-          menuItem = Widgets.addMenuItem(menu,"None");
+          menuItem = Widgets.addMenuItem(menu,"Remove");
           menuItem.addSelectionListener(new SelectionListener()
           {
             public void widgetSelected(SelectionEvent selectionEvent)
@@ -1919,7 +1907,7 @@ class TabJobs
           });
         }
         widgetIncludeTable.setMenu(menu);
-        widgetIncludeTable.setToolTipText("List with include pattern, right-click for context menu.");
+        widgetIncludeTable.setToolTipText("List with include patterns, right-click for context menu.");
 
         // buttons
         composite = Widgets.newComposite(tab,SWT.NONE,4);
@@ -1967,31 +1955,9 @@ class TabJobs
         Widgets.layout(label,2,0,TableLayoutData.NS);
         widgetExcludeList = Widgets.newList(tab);
         Widgets.layout(widgetExcludeList,2,1,TableLayoutData.NSWE);
-        widgetExcludeList.setToolTipText("List of excluded entries.");
-
         menu = Widgets.newPopupMenu(shell);
         {
-          menuItem = Widgets.addMenuItem(menu,"Include");
-          menuItem.addSelectionListener(new SelectionListener()
-          {
-            public void widgetSelected(SelectionEvent selectionEvent)
-            {
-              MenuItem widget = (MenuItem)selectionEvent.widget;
-
-              for (TreeItem treeItem : widgetDeviceTree.getSelection())
-              {
-                DeviceTreeData deviceTreeData = (DeviceTreeData)treeItem.getData();
-                includeAdd(EntryTypes.IMAGE,deviceTreeData.name);
-                excludeRemove(deviceTreeData.name);
-                treeItem.setImage(IMAGE_DEVICE_INCLUDED);
-              }
-            }
-            public void widgetDefaultSelected(SelectionEvent selectionEvent)
-            {
-            }
-          });
-
-          menuItem = Widgets.addMenuItem(menu,"Exclude");
+          menuItem = Widgets.addMenuItem(menu,"Add");
           menuItem.addSelectionListener(new SelectionListener()
           {
             public void widgetSelected(SelectionEvent selectionEvent)
@@ -2007,7 +1973,7 @@ class TabJobs
             }
           });
 
-          menuItem = Widgets.addMenuItem(menu,"None");
+          menuItem = Widgets.addMenuItem(menu,"Remove");
           menuItem.addSelectionListener(new SelectionListener()
           {
             public void widgetSelected(SelectionEvent selectionEvent)
@@ -2024,7 +1990,7 @@ class TabJobs
           });
         }
         widgetExcludeList.setMenu(menu);
-        widgetExcludeList.setToolTipText("List with exclude pattern, right-click for context menu.");
+        widgetExcludeList.setToolTipText("List with exclude patterns, right-click for context menu.");
 
         // buttons
         composite = Widgets.newComposite(tab,SWT.NONE,4);
@@ -2112,7 +2078,7 @@ class TabJobs
       }
 
       tab = Widgets.addTab(widgetTabFolder,"Storage");
-      tab.setLayout(new TableLayout(null,new double[]{0.0,1.0}));
+      tab.setLayout(new TableLayout(new double[]{0.0,0.0,1.0,0.0,0.0,0.0,0.0,0.0},new double[]{0.0,1.0}));
       Widgets.layout(tab,0,0,TableLayoutData.NSWE);
       {
         // part size
@@ -2141,7 +2107,6 @@ class TabJobs
             public void modified(Control control, WidgetVariable archivePartSizeFlag)
             {
               ((Button)control).setSelection(!archivePartSizeFlag.getBoolean());
-              widgetArchivePartSize.setEnabled(!archivePartSizeFlag.getBoolean());
             }
           });
           button.setToolTipText("Create storage files with an unlimited size. Do not split storage files.");
@@ -2164,7 +2129,6 @@ class TabJobs
             public void modified(Control control, WidgetVariable archivePartSizeFlag)
             {
               ((Button)control).setSelection(archivePartSizeFlag.getBoolean());
-              widgetArchivePartSize.setEnabled(archivePartSizeFlag.getBoolean());
             }
           });
           button.setToolTipText("Limit size of storage files to specified value.");
@@ -2173,6 +2137,13 @@ class TabJobs
           widgetArchivePartSize.setItems(new String[]{"32M","64M","128M","256M","512M","1G","2G"});
           widgetArchivePartSize.setData("showedErrorDialog",false);
           Widgets.layout(widgetArchivePartSize,0,2,TableLayoutData.W);
+          Widgets.addModifyListener(new WidgetListener(widgetArchivePartSize,archivePartSizeFlag)
+          {
+            public void modified(Control control, WidgetVariable archivePartSizeFlag)
+            {
+              Widgets.setEnabled(control,archivePartSizeFlag.getBoolean());
+            }
+          });
           widgetArchivePartSize.addModifyListener(new ModifyListener()
           {
             public void modifyText(ModifyEvent modifyEvent)
@@ -2275,7 +2246,7 @@ class TabJobs
               return Units.formatByteSize(variable.getLong());
             }
           });
-          widgetArchivePartSize.setToolTipText("Limit for one storage file part.");
+          widgetArchivePartSize.setToolTipText("Size limit for one storage file part.");
 
           label = Widgets.newLabel(composite,"bytes");
           Widgets.layout(label,0,3,TableLayoutData.W);
@@ -2283,10 +2254,12 @@ class TabJobs
 
         // compress
         label = Widgets.newLabel(tab,"Compress:");
-        Widgets.layout(label,1,0,TableLayoutData.W);
+        Widgets.layout(label,1,0,TableLayoutData.NW);
         composite = Widgets.newComposite(tab);
-        Widgets.layout(composite,1,1,TableLayoutData.WE);
+        composite.setLayout(new TableLayout(new double[]{0.0,1.0},1.0));
+        Widgets.layout(composite,1,1,TableLayoutData.NSWE);
         {
+          // compress algorithm
           combo = Widgets.newOptionMenu(composite);
           combo.setItems(new String[]{"none","zip0","zip1","zip2","zip3","zip4","zip5","zip6","zip7","zip8","zip9","bzip1","bzip2","bzip3","bzip4","bzip5","bzip6","bzip7","bzip8","bzip9","lzma1","lzma2","lzma3","lzma4","lzma5","lzma6","lzma7","lzma8","lzma9"});
           Widgets.layout(combo,0,0,TableLayoutData.W);
@@ -2294,7 +2267,6 @@ class TabJobs
           {
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
             {
-throw new Error("NYI");
             }
             public void widgetSelected(SelectionEvent selectionEvent)
             {
@@ -2307,12 +2279,119 @@ throw new Error("NYI");
           Widgets.addModifyListener(new WidgetListener(combo,compressAlgorithm));
           combo.setToolTipText("Compression method to use.");
         }
+          
+        label = Widgets.newLabel(tab,"Compress exclude:");
+        Widgets.layout(label,2,0,TableLayoutData.NW);
+        composite = Widgets.newComposite(tab);
+        composite.setLayout(new TableLayout(new double[]{1.0,0.0},1.0));
+        Widgets.layout(composite,2,1,TableLayoutData.NSWE);
+        {
+          // compress exclude list
+          widgetCompressExcludeList = Widgets.newList(composite);
+          Widgets.layout(widgetCompressExcludeList,0,0,TableLayoutData.NSWE);
+          Widgets.addModifyListener(new WidgetListener(widgetCompressExcludeList,compressAlgorithm)
+          {
+            public void modified(Control control, WidgetVariable compressAlgorithm)
+            {
+              Widgets.setEnabled(control,!compressAlgorithm.equals("none"));
+            }
+          });
+          menu = Widgets.newPopupMenu(shell);
+          {
+            menuItem = Widgets.addMenuItem(menu,"Add");
+            menuItem.addSelectionListener(new SelectionListener()
+            {
+              public void widgetSelected(SelectionEvent selectionEvent)
+              {
+                MenuItem widget = (MenuItem)selectionEvent.widget;
+
+                compressExcludeAdd();
+              }
+              public void widgetDefaultSelected(SelectionEvent selectionEvent)
+              {
+              }
+            });
+
+            menuItem = Widgets.addMenuItem(menu,"Remove");
+            menuItem.addSelectionListener(new SelectionListener()
+            {
+              public void widgetSelected(SelectionEvent selectionEvent)
+              {
+                MenuItem widget = (MenuItem)selectionEvent.widget;
+                if (selectedJobId > 0)
+                {
+                  compressExcludeRemove();
+                }
+              }
+              public void widgetDefaultSelected(SelectionEvent selectionEvent)
+              {
+              }
+            });
+          }
+          widgetCompressExcludeList.setMenu(menu);
+          widgetCompressExcludeList.setToolTipText("List with compress exclude patterns. Entries which match to one these patterns will not be compressed.\nRight-click for context menu.");
+
+          // buttons
+          subComposite = Widgets.newComposite(composite,SWT.NONE,4);
+          Widgets.layout(subComposite,1,0,TableLayoutData.W);
+          {
+            button = Widgets.newButton(subComposite,"Add");
+            Widgets.layout(button,0,0,TableLayoutData.DEFAULT,0,0,0,0,60,SWT.DEFAULT);
+            Widgets.addModifyListener(new WidgetListener(button,compressAlgorithm)
+            {
+              public void modified(Control control, WidgetVariable compressAlgorithm)
+              {
+                Widgets.setEnabled(control,!compressAlgorithm.equals("none"));
+              }
+            });
+            button.addSelectionListener(new SelectionListener()
+            {
+              public void widgetSelected(SelectionEvent selectionEvent)
+              {
+                Button widget = (Button)selectionEvent.widget;
+                if (selectedJobId > 0)
+                {
+                  compressExcludeAdd();
+                }
+              }
+              public void widgetDefaultSelected(SelectionEvent selectionEvent)
+              {
+              }
+            });
+            button.setToolTipText("Add entry to compress exclude list.");
+
+            button = Widgets.newButton(subComposite,"Rem");
+            Widgets.layout(button,0,1,TableLayoutData.DEFAULT,0,0,0,0,60,SWT.DEFAULT);
+            Widgets.addModifyListener(new WidgetListener(button,compressAlgorithm)
+            {
+              public void modified(Control control, WidgetVariable compressAlgorithm)
+              {
+                Widgets.setEnabled(control,!compressAlgorithm.equals("none"));
+              }
+            });
+            button.addSelectionListener(new SelectionListener()
+            {
+              public void widgetSelected(SelectionEvent selectionEvent)
+              {
+                Button widget = (Button)selectionEvent.widget;
+                if (selectedJobId > 0)
+                {
+                  compressExcludeRemove();
+                }
+              }
+              public void widgetDefaultSelected(SelectionEvent selectionEvent)
+              {
+              }
+            });
+            button.setToolTipText("Remove entry from compress exclude list.");
+          }
+        }
 
         // crypt
         label = Widgets.newLabel(tab,"Crypt:");
-        Widgets.layout(label,2,0,TableLayoutData.NW);
+        Widgets.layout(label,3,0,TableLayoutData.NW);
         composite = Widgets.newComposite(tab);
-        Widgets.layout(composite,2,1,TableLayoutData.WE);
+        Widgets.layout(composite,3,1,TableLayoutData.WE);
         {
           combo = Widgets.newOptionMenu(composite);
           combo.setItems(new String[]{"none","3DES","CAST5","BLOWFISH","AES128","AES192","AES256","TWOFISH128","TWOFISH256"});
@@ -2321,7 +2400,6 @@ throw new Error("NYI");
           {
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
             {
-throw new Error("NYI");
             }
             public void widgetSelected(SelectionEvent selectionEvent)
             {
@@ -2333,21 +2411,27 @@ throw new Error("NYI");
           });
           Widgets.addModifyListener(new WidgetListener(combo,cryptAlgorithm));
           combo.setToolTipText("Encryption method to use.");
+
         }
 
         composite = Widgets.newComposite(tab);
         composite.setLayout(new TableLayout(null,new double[]{0.0,0.0,0.0,0.0,1.0,0.0}));
-        Widgets.layout(composite,3,1,TableLayoutData.WE);
+        Widgets.layout(composite,4,1,TableLayoutData.WE);
         {
           button = Widgets.newRadio(composite,"symmetric");
           Widgets.layout(button,0,0,TableLayoutData.W);
+          Widgets.addModifyListener(new WidgetListener(button,cryptAlgorithm)
+          {
+            public void modified(Control control, WidgetVariable cryptAlgorithm)
+            {
+              Widgets.setEnabled(control,!cryptAlgorithm.equals("none"));
+            }
+          });
           button.addSelectionListener(new SelectionListener()
           {
             public void widgetSelected(SelectionEvent selectionEvent)
             {
               Button widget = (Button)selectionEvent.widget;
-              Widgets.setEnabled(widgetCryptPublicKeyFileName,false);
-              Widgets.setEnabled(widgetCryptPublicKeyFileNameSelect,false);
               cryptType.set("symmetric");
               BARServer.setOption(selectedJobId,"crypt-type","symmetric");
             }
@@ -2359,9 +2443,6 @@ throw new Error("NYI");
           {
             public void modified(Control control, WidgetVariable cryptType)
             {
-              boolean asymmetricFlag = cryptType.equals("asymmetric");
-              Widgets.setEnabled(widgetCryptPublicKeyFileName,asymmetricFlag);
-              Widgets.setEnabled(widgetCryptPublicKeyFileNameSelect,asymmetricFlag);
               ((Button)control).setSelection(cryptType.equals("symmetric"));
             }
           });
@@ -2369,13 +2450,18 @@ throw new Error("NYI");
 
           button = Widgets.newRadio(composite,"asymmetric");
           Widgets.layout(button,0,1,TableLayoutData.W);
+          Widgets.addModifyListener(new WidgetListener(button,cryptAlgorithm)
+          {
+            public void modified(Control control, WidgetVariable cryptAlgorithm)
+            {
+              Widgets.setEnabled(control,!cryptAlgorithm.equals("none"));
+            }
+          });
           button.addSelectionListener(new SelectionListener()
           {
             public void widgetSelected(SelectionEvent selectionEvent)
             {
               Button widget = (Button)selectionEvent.widget;
-              Widgets.setEnabled(widgetCryptPublicKeyFileName,true);
-              Widgets.setEnabled(widgetCryptPublicKeyFileNameSelect,true);
               cryptType.set("asymmetric");
               BARServer.setOption(selectedJobId,"crypt-type","asymmetric");
             }
@@ -2387,9 +2473,6 @@ throw new Error("NYI");
           {
             public void modified(Control control, WidgetVariable cryptType)
             {
-              boolean asymmetricFlag = cryptType.equals("asymmetric");
-              Widgets.setEnabled(widgetCryptPublicKeyFileName,asymmetricFlag);
-              Widgets.setEnabled(widgetCryptPublicKeyFileNameSelect,asymmetricFlag);
               ((Button)control).setSelection(cryptType.equals("asymmetric"));
             }
           });
@@ -2400,9 +2483,22 @@ throw new Error("NYI");
 
           label = Widgets.newLabel(composite,"Public key:");
           Widgets.layout(label,0,3,TableLayoutData.W);
-          widgetCryptPublicKeyFileName = Widgets.newText(composite);
-          Widgets.layout(widgetCryptPublicKeyFileName,0,4,TableLayoutData.WE);
-          widgetCryptPublicKeyFileName.addModifyListener(new ModifyListener()
+          text = Widgets.newText(composite);
+          Widgets.layout(text,0,4,TableLayoutData.WE);
+          Widgets.addModifyListener(new WidgetListener(text,new WidgetVariable[]{cryptAlgorithm,cryptType})
+          {
+            public void modified(Control control, WidgetVariable cryptAlgorithm)
+            {
+            }
+            public void modified(Control control, WidgetVariable variables[])
+            {
+              Widgets.setEnabled(control,
+                                    !variables[0].equals("none")
+                                 && variables[1].equals("asymmetric")
+                                );
+            }
+          });
+          text.addModifyListener(new ModifyListener()
           {
             public void modifyText(ModifyEvent modifyEvent)
             {
@@ -2413,7 +2509,7 @@ throw new Error("NYI");
               widget.setBackground(color);
             }
           });
-          widgetCryptPublicKeyFileName.addSelectionListener(new SelectionListener()
+          text.addSelectionListener(new SelectionListener()
           {
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
             {
@@ -2424,10 +2520,9 @@ throw new Error("NYI");
             }
             public void widgetSelected(SelectionEvent selectionEvent)
             {
-throw new Error("NYI");
             }
           });
-          widgetCryptPublicKeyFileName.addFocusListener(new FocusListener()
+          text.addFocusListener(new FocusListener()
           {
             public void focusGained(FocusEvent focusEvent)
             {
@@ -2440,12 +2535,25 @@ throw new Error("NYI");
               BARServer.setOption(selectedJobId,"crypt-public-key",string);
             }
           });
-          Widgets.addModifyListener(new WidgetListener(widgetCryptPublicKeyFileName,cryptPublicKeyFileName));
-          widgetCryptPublicKeyFileName.setToolTipText("Public key file used for asymmetric encryption.");
+          Widgets.addModifyListener(new WidgetListener(text,cryptPublicKeyFileName));
+          text.setToolTipText("Public key file used for asymmetric encryption.");
 
-          widgetCryptPublicKeyFileNameSelect = Widgets.newButton(composite,IMAGE_DIRECTORY);
-          Widgets.layout(widgetCryptPublicKeyFileNameSelect,0,5,TableLayoutData.DEFAULT);
-          widgetCryptPublicKeyFileNameSelect.addSelectionListener(new SelectionListener()
+          button = Widgets.newButton(composite,IMAGE_DIRECTORY);
+          Widgets.layout(button,0,5,TableLayoutData.DEFAULT);
+          Widgets.addModifyListener(new WidgetListener(button,new WidgetVariable[]{cryptAlgorithm,cryptType})
+          {
+            public void modified(Control control, WidgetVariable cryptAlgorithm)
+            {
+            }
+            public void modified(Control control, WidgetVariable variables[])
+            {
+              Widgets.setEnabled(control,
+                                    !variables[0].equals("none")
+                                 && variables[1].equals("asymmetric")
+                                );
+            }
+          });
+          button.addSelectionListener(new SelectionListener()
           {
             public void widgetSelected(SelectionEvent selectionEvent)
             {
@@ -2469,22 +2577,30 @@ throw new Error("NYI");
           });
         }
 
-        // password
+        // crypt password
         label = Widgets.newLabel(tab,"Crypt password:");
-        Widgets.layout(label,4,0,TableLayoutData.W);
+        Widgets.layout(label,5,0,TableLayoutData.W);
         composite = Widgets.newComposite(tab);
         composite.setLayout(new TableLayout(null,new double[]{0.0,0.0,0.0,1.0,0.0,1.0}));
-        Widgets.layout(composite,4,1,TableLayoutData.WE);
+        Widgets.layout(composite,5,1,TableLayoutData.WE);
         {
           button = Widgets.newRadio(composite,"default");
           Widgets.layout(button,0,0,TableLayoutData.W);
+          Widgets.addModifyListener(new WidgetListener(button,new WidgetVariable[]{cryptAlgorithm,cryptType})
+          {
+            public void modified(Control control, WidgetVariable variables[])
+            {
+              Widgets.setEnabled(control,
+                                    !variables[0].equals("none")
+                                 && variables[1].equals("symmetric")
+                                );
+            }
+          });
           button.addSelectionListener(new SelectionListener()
           {
             public void widgetSelected(SelectionEvent selectionEvent)
             {
               Button widget = (Button)selectionEvent.widget;
-              Widgets.setEnabled(widgetCryptPassword1,false);
-              Widgets.setEnabled(widgetCryptPassword2,false);
               cryptPasswordMode.set("default");
               BARServer.setOption(selectedJobId,"crypt-password-mode","default");
             }
@@ -2496,9 +2612,6 @@ throw new Error("NYI");
           {
             public void modified(Control control, WidgetVariable cryptPasswordMode)
             {
-              boolean configFlag = cryptPasswordMode.equals("config");
-              Widgets.setEnabled(widgetCryptPassword1,configFlag);
-              Widgets.setEnabled(widgetCryptPassword2,configFlag);
               ((Button)control).setSelection(cryptPasswordMode.equals("default"));
             }
           });
@@ -2506,13 +2619,21 @@ throw new Error("NYI");
 
           button = Widgets.newRadio(composite,"ask");
           Widgets.layout(button,0,1,TableLayoutData.W);
+          Widgets.addModifyListener(new WidgetListener(button,new WidgetVariable[]{cryptAlgorithm,cryptType})
+          {
+            public void modified(Control control, WidgetVariable variables[])
+            {
+              Widgets.setEnabled(control,
+                                    !variables[0].equals("none")
+                                 && variables[1].equals("symmetric")
+                                );
+            }
+          });
           button.addSelectionListener(new SelectionListener()
           {
             public void widgetSelected(SelectionEvent selectionEvent)
             {
               Button widget = (Button)selectionEvent.widget;
-              Widgets.setEnabled(widgetCryptPassword1,false);
-              Widgets.setEnabled(widgetCryptPassword2,false);
               cryptPasswordMode.set("ask");
               BARServer.setOption(selectedJobId,"crypt-password-mode","ask");
             }
@@ -2524,9 +2645,6 @@ throw new Error("NYI");
           {
             public void modified(Control control, WidgetVariable cryptPasswordMode)
             {
-              boolean configFlag = cryptPasswordMode.equals("config");
-              Widgets.setEnabled(widgetCryptPassword1,configFlag);
-              Widgets.setEnabled(widgetCryptPassword2,configFlag);
               ((Button)control).setSelection(cryptPasswordMode.equals("ask"));
             }
           });
@@ -2534,13 +2652,21 @@ throw new Error("NYI");
 
           button = Widgets.newRadio(composite,"this");
           Widgets.layout(button,0,2,TableLayoutData.W);
+          Widgets.addModifyListener(new WidgetListener(button,new WidgetVariable[]{cryptAlgorithm,cryptType})
+          {
+            public void modified(Control control, WidgetVariable variables[])
+            {
+              Widgets.setEnabled(control,
+                                    !variables[0].equals("none")
+                                 && variables[1].equals("symmetric")
+                                );
+            }
+          });
           button.addSelectionListener(new SelectionListener()
           {
             public void widgetSelected(SelectionEvent selectionEvent)
             {
               Button widget = (Button)selectionEvent.widget;
-              Widgets.setEnabled(widgetCryptPassword1,true);
-              Widgets.setEnabled(widgetCryptPassword2,true);
               cryptPasswordMode.set("config");
               BARServer.setOption(selectedJobId,"crypt-password-mode","config");
             }
@@ -2552,9 +2678,6 @@ throw new Error("NYI");
           {
             public void modified(Control control, WidgetVariable cryptPasswordMode)
             {
-              boolean configFlag = cryptPasswordMode.equals("config");
-              Widgets.setEnabled(widgetCryptPassword1,configFlag);
-              Widgets.setEnabled(widgetCryptPassword2,configFlag);
               ((Button)control).setSelection(cryptPasswordMode.equals("config"));
             }
           });
@@ -2562,6 +2685,17 @@ throw new Error("NYI");
 
           widgetCryptPassword1 = Widgets.newPassword(composite);
           Widgets.layout(widgetCryptPassword1,0,3,TableLayoutData.WE);
+          Widgets.addModifyListener(new WidgetListener(widgetCryptPassword1,new WidgetVariable[]{cryptAlgorithm,cryptType,cryptPasswordMode})
+          {
+            public void modified(Control control, WidgetVariable variables[])
+            {
+              Widgets.setEnabled(control,
+                                    !variables[0].equals("none")
+                                 && variables[1].equals("symmetric")
+                                 && variables[2].equals("config")
+                                );
+            }
+          });
           widgetCryptPassword1.addModifyListener(new ModifyListener()
           {
             public void modifyText(ModifyEvent modifyEvent)
@@ -2587,7 +2721,6 @@ throw new Error("NYI");
             }
             public void widgetSelected(SelectionEvent selectionEvent)
             {
-throw new Error("NYI");
             }
           });
           widgetCryptPassword1.addFocusListener(new FocusListener()
@@ -2614,6 +2747,17 @@ throw new Error("NYI");
 
           widgetCryptPassword2 = Widgets.newPassword(composite);
           Widgets.layout(widgetCryptPassword2,0,5,TableLayoutData.WE);
+          Widgets.addModifyListener(new WidgetListener(widgetCryptPassword2,new WidgetVariable[]{cryptAlgorithm,cryptType,cryptPasswordMode})
+          {
+            public void modified(Control control, WidgetVariable[] variables)
+            {
+              Widgets.setEnabled(control,
+                                    !variables[0].equals("none")
+                                 && variables[1].equals("symmetric")
+                                 && variables[2].equals("config")
+                                );
+            }
+          });
           widgetCryptPassword2.addModifyListener(new ModifyListener()
           {
             public void modifyText(ModifyEvent modifyEvent)
@@ -2639,7 +2783,6 @@ throw new Error("NYI");
             }
             public void widgetSelected(SelectionEvent selectionEvent)
             {
-throw new Error("NYI");
             }
           });
           widgetCryptPassword2.addFocusListener(new FocusListener()
@@ -2668,10 +2811,10 @@ throw new Error("NYI");
 
         // archive type
         label = Widgets.newLabel(tab,"Mode:");
-        Widgets.layout(label,5,0,TableLayoutData.W);
+        Widgets.layout(label,6,0,TableLayoutData.W);
         composite = Widgets.newComposite(tab);
         composite.setLayout(new TableLayout(null,new double[]{0.0,0.0,0.0,0.0,0.0,1.0,0.0}));
-        Widgets.layout(composite,5,1,TableLayoutData.WE);
+        Widgets.layout(composite,6,1,TableLayoutData.WE);
         {
           button = Widgets.newRadio(composite,"normal");
           Widgets.layout(button,0,0,TableLayoutData.W);
@@ -2745,10 +2888,10 @@ throw new Error("NYI");
 
         // file name
         label = Widgets.newLabel(tab,"File name:");
-        Widgets.layout(label,6,0,TableLayoutData.W);
+        Widgets.layout(label,7,0,TableLayoutData.W);
         composite = Widgets.newComposite(tab);
         composite.setLayout(new TableLayout(null,new double[]{1.0,0.0}));
-        Widgets.layout(composite,6,1,TableLayoutData.WE);
+        Widgets.layout(composite,7,1,TableLayoutData.WE);
         {
           text = Widgets.newText(composite);
           Widgets.layout(text,0,0,TableLayoutData.WE);
@@ -2773,7 +2916,6 @@ throw new Error("NYI");
             }
             public void widgetSelected(SelectionEvent selectionEvent)
             {
-throw new Error("NYI");
             }
           });
           text.addFocusListener(new FocusListener()
@@ -2812,10 +2954,10 @@ throw new Error("NYI");
 
         // incremental file name
         label = Widgets.newLabel(tab,"Incremental file name:");
-        Widgets.layout(label,7,0,TableLayoutData.W);
+        Widgets.layout(label,8,0,TableLayoutData.W);
         composite = Widgets.newComposite(tab);
         composite.setLayout(new TableLayout(null,new double[]{1.0,0.0}));
-        Widgets.layout(composite,7,1,TableLayoutData.WE);
+        Widgets.layout(composite,8,1,TableLayoutData.WE);
         {
           text = Widgets.newText(composite);
           Widgets.layout(text,0,0,TableLayoutData.WE);
@@ -2841,7 +2983,6 @@ throw new Error("NYI");
             }
             public void widgetSelected(SelectionEvent selectionEvent)
             {
-  throw new Error("NYI");
             }
           });
           text.addFocusListener(new FocusListener()
@@ -2887,9 +3028,9 @@ throw new Error("NYI");
 
         // destination
         label = Widgets.newLabel(tab,"Destination:");
-        Widgets.layout(label,8,0,TableLayoutData.W);
+        Widgets.layout(label,9,0,TableLayoutData.W);
         composite = Widgets.newComposite(tab);
-        Widgets.layout(composite,8,1,TableLayoutData.WE);
+        Widgets.layout(composite,9,1,TableLayoutData.WE);
         {
           button = Widgets.newRadio(composite,"file system");
           Widgets.layout(button,0,0,TableLayoutData.W);
@@ -3079,7 +3220,7 @@ throw new Error("NYI");
         // destination file system
         composite = Widgets.newComposite(tab,SWT.BORDER);
         composite.setLayout(new TableLayout(0.0,new double[]{1.0}));
-        Widgets.layout(composite,9,1,TableLayoutData.WE|TableLayoutData.N);
+        Widgets.layout(composite,10,1,TableLayoutData.WE|TableLayoutData.N);
         Widgets.addModifyListener(new WidgetListener(composite,storageType)
         {
           public void modified(Control control, WidgetVariable variable)
@@ -3111,7 +3252,7 @@ throw new Error("NYI");
         // destination ftp
         composite = Widgets.newComposite(tab,SWT.BORDER);
         composite.setLayout(new TableLayout(0.0,1.0));
-        Widgets.layout(composite,9,1,TableLayoutData.WE|TableLayoutData.N);
+        Widgets.layout(composite,10,1,TableLayoutData.WE|TableLayoutData.N);
         Widgets.addModifyListener(new WidgetListener(composite,storageType)
         {
           public void modified(Control control, WidgetVariable variable)
@@ -3151,7 +3292,6 @@ throw new Error("NYI");
               }
               public void widgetSelected(SelectionEvent selectionEvent)
               {
-  throw new Error("NYI");
               }
             });
             text.addFocusListener(new FocusListener()
@@ -3167,7 +3307,7 @@ throw new Error("NYI");
               }
             });
             Widgets.addModifyListener(new WidgetListener(text,storageLoginName));
-            text.setToolTipText("FTP server user login name. Leave it empty to use default name from configuration file.");
+            text.setToolTipText("FTP server user login name. Leave it empty to use the default name from the configuration file.");
 
             label = Widgets.newLabel(composite,"Host:");
             Widgets.layout(label,0,2,TableLayoutData.W);
@@ -3195,7 +3335,6 @@ throw new Error("NYI");
               }
               public void widgetSelected(SelectionEvent selectionEvent)
               {
-  throw new Error("NYI");
               }
             });
             text.addFocusListener(new FocusListener()
@@ -3239,7 +3378,6 @@ throw new Error("NYI");
               }
               public void widgetSelected(SelectionEvent selectionEvent)
               {
-  throw new Error("NYI");
               }
             });
             text.addFocusListener(new FocusListener()
@@ -3255,7 +3393,7 @@ throw new Error("NYI");
               }
             });
             Widgets.addModifyListener(new WidgetListener(text,storageLoginPassword));
-            text.setToolTipText("FTP server login password. Leave it empty to use default password from configuration file.");
+            text.setToolTipText("FTP server login password. Leave it empty to use the default password from the configuration file.");
           }
 
 /*
@@ -3320,7 +3458,7 @@ throw new Error("NYI");
         // destination scp/sftp
         composite = Widgets.newComposite(tab,SWT.BORDER);
         composite.setLayout(new TableLayout(0.0,new double[]{0.0,1.0}));
-        Widgets.layout(composite,9,1,TableLayoutData.WE|TableLayoutData.N);
+        Widgets.layout(composite,10,1,TableLayoutData.WE|TableLayoutData.N);
         Widgets.addModifyListener(new WidgetListener(composite,storageType)
         {
           public void modified(Control control, WidgetVariable variable)
@@ -3362,7 +3500,6 @@ throw new Error("NYI");
               }
               public void widgetSelected(SelectionEvent selectionEvent)
               {
-  throw new Error("NYI");
               }
             });
             text.addFocusListener(new FocusListener()
@@ -3378,7 +3515,7 @@ throw new Error("NYI");
               }
             });
             Widgets.addModifyListener(new WidgetListener(text,storageLoginName));
-            text.setToolTipText("SSH login name. Leave it empty to use default login name from configuration file.");
+            text.setToolTipText("SSH login name. Leave it empty to use the default login name from the configuration file.");
 
             label = Widgets.newLabel(subComposite,"Host:");
             Widgets.layout(label,0,2,TableLayoutData.W);
@@ -3406,7 +3543,6 @@ throw new Error("NYI");
               }
               public void widgetSelected(SelectionEvent selectionEvent)
               {
-  throw new Error("NYI");
               }
             });
             text.addFocusListener(new FocusListener()
@@ -3485,7 +3621,6 @@ throw new Error("NYI");
               }
               public void widgetSelected(SelectionEvent selectionEvent)
               {
-throw new Error("NYI");
               }
             });
             text.addFocusListener(new FocusListener()
@@ -3562,7 +3697,6 @@ throw new Error("NYI");
               }
               public void widgetSelected(SelectionEvent selectionEvent)
               {
-  throw new Error("NYI");
               }
             });
             text.addFocusListener(new FocusListener()
@@ -3579,7 +3713,7 @@ throw new Error("NYI");
               }
             });
             Widgets.addModifyListener(new WidgetListener(text,sshPublicKeyFileName));
-            text.setToolTipText("SSH public key file name. Leave it empty to use default port number from configuration file.");
+            text.setToolTipText("SSH public key file name. Leave it empty to use the default key file from the configuration file.");
 
             button = Widgets.newButton(subComposite,IMAGE_DIRECTORY);
             Widgets.layout(button,0,1,TableLayoutData.DEFAULT);
@@ -3636,7 +3770,6 @@ throw new Error("NYI");
               }
               public void widgetSelected(SelectionEvent selectionEvent)
               {
-  throw new Error("NYI");
               }
             });
             text.addFocusListener(new FocusListener()
@@ -3653,7 +3786,7 @@ throw new Error("NYI");
               }
             });
             Widgets.addModifyListener(new WidgetListener(text,sshPrivateKeyFileName));
-            text.setToolTipText("SSH private key file name. Leave it empty to use default port number from configuration file.");
+            text.setToolTipText("SSH private key file name. Leave it empty to use the default key file from the configuration file.");
 
             button = Widgets.newButton(subComposite,IMAGE_DIRECTORY);
             Widgets.layout(button,0,1,TableLayoutData.DEFAULT);
@@ -3743,7 +3876,7 @@ throw new Error("NYI");
         // destination cd/dvd/bd
         composite = Widgets.newComposite(tab,SWT.BORDER);
         composite.setLayout(new TableLayout(0.0,new double[]{0.0,1.0}));
-        Widgets.layout(composite,9,1,TableLayoutData.WE);
+        Widgets.layout(composite,10,1,TableLayoutData.WE);
         Widgets.addModifyListener(new WidgetListener(composite,storageType)
         {
           public void modified(Control control, WidgetVariable variable)
@@ -3782,7 +3915,6 @@ throw new Error("NYI");
               }
               public void widgetSelected(SelectionEvent selectionEvent)
               {
-  throw new Error("NYI");
               }
             });
             text.addFocusListener(new FocusListener()
@@ -3981,7 +4113,7 @@ throw new Error("NYI");
         // destination device
         composite = Widgets.newComposite(tab,SWT.BORDER);
         composite.setLayout(new TableLayout(0.0,new double[]{0.0,1.0}));
-        Widgets.layout(composite,9,1,TableLayoutData.WE|TableLayoutData.N);
+        Widgets.layout(composite,10,1,TableLayoutData.WE|TableLayoutData.N);
         Widgets.addModifyListener(new WidgetListener(composite,storageType)
         {
           public void modified(Control control, WidgetVariable variable)
@@ -4020,7 +4152,6 @@ throw new Error("NYI");
               }
               public void widgetSelected(SelectionEvent selectionEvent)
               {
-  throw new Error("NYI");
               }
             });
             text.addFocusListener(new FocusListener()
@@ -4214,9 +4345,9 @@ throw new Error("NYI");
         tableColumn.addSelectionListener(scheduleListColumnSelectionListener);
         tableColumn = Widgets.addTableColumn(widgetScheduleList,2,"Time",     SWT.LEFT,100,false);
         tableColumn.addSelectionListener(scheduleListColumnSelectionListener);
-        tableColumn = Widgets.addTableColumn(widgetScheduleList,3,"Enabled",  SWT.LEFT,  0,false);
+        tableColumn = Widgets.addTableColumn(widgetScheduleList,3,"Enabled",  SWT.LEFT, 60,false);
         tableColumn.addSelectionListener(scheduleListColumnSelectionListener);
-        tableColumn = Widgets.addTableColumn(widgetScheduleList,4,"Type",     SWT.LEFT,  0,true );
+        tableColumn = Widgets.addTableColumn(widgetScheduleList,4,"Type",     SWT.LEFT, 80,true );
         tableColumn.addSelectionListener(scheduleListColumnSelectionListener);
 
         menu = Widgets.newPopupMenu(shell);
@@ -4452,6 +4583,7 @@ throw new Error("NYI");
 
       updateIncludeList();
       updateExcludeList();
+      updateCompressExcludeList();
       updateFileTreeImages();
       updateDeviceImages();
     }
@@ -4961,10 +5093,10 @@ throw new Error("NYI");
       TreeItem[] treeItems = widgetFileTree.getItems();
 
       StringBuffer name = new StringBuffer();
-      for (String part : entryData.pattern.split(File.separator))
+      for (String part : entryData.pattern.split(FILE_SEPARATOR))
       {
         // expand name
-        if ((name.length() == 0) || (name.charAt(name.length()-1) != File.separatorChar)) name.append(File.separatorChar);
+        if ((name.length() == 0) || (name.charAt(name.length()-1) != FILE_SEPARATOR_CHAR)) name.append(FILE_SEPARATOR_CHAR);
         name.append(part);
 
         TreeItem treeItem = findTreeItem(treeItems,name.toString());
@@ -5409,7 +5541,7 @@ throw new Error("NYI");
    * @param pattern pattern to insert
    * @return index in table
    */
-  private int findIncludeIndex(Table table, String pattern)
+  private int findTableIndex(Table table, String pattern)
   {
     TableItem tableItems[] = table.getItems();
 
@@ -5429,7 +5561,7 @@ throw new Error("NYI");
    * @param pattern pattern to insert
    * @return index in list
    */
-  private int findExcludeIndex(List list, String pattern)
+  private int findListIndex(List list, String pattern)
   {
     String patterns[] = list.getItems();
 
@@ -5483,7 +5615,7 @@ Dprintf.dprintf("name=%s %s",name,includeHashMap.containsKey(name));
 
           includeHashMap.put(pattern,entryData);
           Widgets.insertTableEntry(widgetIncludeTable,
-                                   findIncludeIndex(widgetIncludeTable,pattern),
+                                   findTableIndex(widgetIncludeTable,pattern),
                                    (Object)entryData,
                                    entryData.getImage(),
                                    entryData.pattern
@@ -5517,7 +5649,37 @@ Dprintf.dprintf("name=%s %s",name,includeHashMap.containsKey(name));
         if (!pattern.equals(""))
         {
            excludeHashSet.add(pattern);
-           widgetExcludeList.add(pattern,findExcludeIndex(widgetExcludeList,pattern));
+           widgetExcludeList.add(pattern,findListIndex(widgetExcludeList,pattern));
+        }
+      }
+    }
+  }
+
+  /** update compress exclude list
+   */
+  private void updateCompressExcludeList()
+  {
+    assert selectedJobId != 0;
+
+    ArrayList<String> result = new ArrayList<String>();
+    if (BARServer.executeCommand("EXCLUDE_COMPRESS_LIST "+selectedJobId,result) != Errors.NONE) return;
+
+    compressExcludeHashSet.clear();
+    widgetCompressExcludeList.removeAll();
+
+    for (String line : result)
+    {
+      Object[] data = new Object[2];
+      if (StringParser.parse(line,"%s %S",data,StringParser.QUOTE_CHARS))
+      {
+        // get data
+        String type    = (String)data[0];
+        String pattern = (String)data[1];
+
+        if (!pattern.equals(""))
+        {
+           compressExcludeHashSet.add(pattern);
+           widgetCompressExcludeList.add(pattern,findListIndex(widgetCompressExcludeList,pattern));
         }
       }
     }
@@ -5723,6 +5885,87 @@ throw new Error("NYI");
     return (Boolean)Dialogs.run(dialog,false) && !pattern[0].equals("");
   }
 
+  /** edit compress exclude pattern
+   * @param pattern pattern
+   * @param title dialog title
+   * @param buttonText add button text
+   */
+  private boolean compressExcludeEdit(final String[] pattern, String title, String buttonText)
+  {
+    Composite composite;
+    Label     label;
+    Button    button;
+
+    assert selectedJobId != 0;
+
+    // create dialog
+    final Shell dialog = Dialogs.open(shell,title,300,70,new double[]{1.0,0.0},1.0);
+
+    // create widgets
+    final Text   widgetPattern;
+    final Button widgetAdd;
+    composite = Widgets.newComposite(dialog,SWT.NONE,4);
+    composite.setLayout(new TableLayout(null,new double[]{0.0,1.0},4));
+    Widgets.layout(composite,0,0,TableLayoutData.WE,0,0,4);
+    {
+      label = Widgets.newLabel(composite,"Pattern:");
+      Widgets.layout(label,0,0,TableLayoutData.W);
+
+      widgetPattern = Widgets.newText(composite);
+      Widgets.layout(widgetPattern,0,1,TableLayoutData.WE);
+    }
+
+    // buttons
+    composite = Widgets.newComposite(dialog,SWT.NONE,4);
+    composite.setLayout(new TableLayout(0.0,1.0));
+    Widgets.layout(composite,1,0,TableLayoutData.WE,0,0,4);
+    {
+      widgetAdd = Widgets.newButton(composite,buttonText);
+      Widgets.layout(widgetAdd,0,0,TableLayoutData.W,0,0,0,0,60,SWT.DEFAULT);
+
+      button = Widgets.newButton(composite,"Cancel");
+      Widgets.layout(button,0,1,TableLayoutData.E,0,0,0,0,60,SWT.DEFAULT);
+      button.addSelectionListener(new SelectionListener()
+      {
+        public void widgetSelected(SelectionEvent selectionEvent)
+        {
+          Button widget = (Button)selectionEvent.widget;
+          Dialogs.close(dialog,false);
+        }
+        public void widgetDefaultSelected(SelectionEvent selectionEvent)
+        {
+        }
+      });
+    }
+
+    // add selection listeners
+    widgetPattern.addSelectionListener(new SelectionListener()
+    {
+      public void widgetDefaultSelected(SelectionEvent selectionEvent)
+      {
+        widgetAdd.forceFocus();
+      }
+      public void widgetSelected(SelectionEvent selectionEvent)
+      {
+throw new Error("NYI");
+      }
+    });
+    widgetAdd.addSelectionListener(new SelectionListener()
+    {
+      public void widgetSelected(SelectionEvent selectionEvent)
+      {
+        Button widget = (Button)selectionEvent.widget;
+        pattern[0] = widgetPattern.getText();
+        Dialogs.close(dialog,true);
+      }
+      public void widgetDefaultSelected(SelectionEvent selectionEvent)
+      {
+      }
+    });
+
+    return (Boolean)Dialogs.run(dialog,false) && !pattern[0].equals("");
+  }
+
   /** add include entry
    * @param entryType entry type
    * @param pattern pattern to add to included/exclude list
@@ -5742,7 +5985,7 @@ throw new Error("NYI");
 
     includeHashMap.put(pattern,entryData);
     Widgets.insertTableEntry(widgetIncludeTable,
-                             findIncludeIndex(widgetIncludeTable,pattern),
+                             findTableIndex(widgetIncludeTable,pattern),
                              (Object)entryData,
                              entryData.getImage(),
                              entryData.pattern
@@ -5767,7 +6010,28 @@ throw new Error("NYI");
     }
 
     excludeHashSet.add(pattern);
-    widgetExcludeList.add(pattern,findExcludeIndex(widgetExcludeList,pattern));
+    widgetExcludeList.add(pattern,findListIndex(widgetExcludeList,pattern));
+
+    updateFileTreeImages();
+    updateDeviceImages();
+  }
+
+  /** add compress exclude pattern
+   * @param pattern pattern to add to included/exclude list
+   */
+  private void compressExcludeAdd(String pattern)
+  {
+    assert selectedJobId != 0;
+
+    String[] result = new String[1];
+    if (BARServer.executeCommand("EXCLUDE_COMPRESS_ADD "+selectedJobId+" GLOB "+StringUtils.escape(pattern),result) != Errors.NONE)
+    {
+      Dialogs.error(shell,"Cannot add compress exclude entry:\n\n"+result[0]);
+      return;
+    }
+
+    compressExcludeHashSet.add(pattern);
+    widgetCompressExcludeList.add(pattern,findListIndex(widgetCompressExcludeList,pattern));
 
     updateFileTreeImages();
     updateDeviceImages();
@@ -5800,6 +6064,19 @@ throw new Error("NYI");
     }
   }
 
+  /** add new compress exclude pattern
+   */
+  private void compressExcludeAdd()
+  {
+    assert selectedJobId != 0;
+
+    String[] pattern = new String[1];
+    if (compressExcludeEdit(pattern,"New compress exclude pattern","Add"))
+    {
+      compressExcludeAdd(pattern[0]);
+    }
+  }
+
   /** remove include entry
    * @param pattern pattern to remove from include/exclude list
    */
@@ -5815,7 +6092,7 @@ throw new Error("NYI");
     {
       BARServer.executeCommand("INCLUDE_ADD "+selectedJobId+" "+entryData.entryType.toString()+" GLOB "+StringUtils.escape(entryData.pattern));
       Widgets.insertTableEntry(widgetIncludeTable,
-                               findIncludeIndex(widgetIncludeTable,entryData.pattern),
+                               findTableIndex(widgetIncludeTable,entryData.pattern),
                                (Object)entryData,
                                entryData.getImage(),
                                entryData.pattern
@@ -5840,14 +6117,35 @@ throw new Error("NYI");
     for (String s : excludeHashSet)
     {
       BARServer.executeCommand("EXCLUDE_ADD "+selectedJobId+" GLOB "+StringUtils.escape(s));
-      widgetExcludeList.add(s,findExcludeIndex(widgetExcludeList,s));
+      widgetExcludeList.add(s,findListIndex(widgetExcludeList,s));
     }
 
     updateFileTreeImages();
     updateDeviceImages();
   }
 
-  /** remove selected include/exclude pattern
+  /** remove compress exclude pattern
+   * @param pattern pattern to remove from include/exclude list
+   */
+  private void compressExcludeRemove(String pattern)
+  {
+    assert selectedJobId != 0;
+
+    compressExcludeHashSet.remove(pattern);
+
+    BARServer.executeCommand("EXCLUDE_COMPRESS_CLEAR "+selectedJobId);
+    widgetCompressExcludeList.removeAll();
+    for (String s : compressExcludeHashSet)
+    {
+      BARServer.executeCommand("EXCLUDE_COMPRESS_ADD "+selectedJobId+" GLOB "+StringUtils.escape(s));
+      widgetCompressExcludeList.add(s,findListIndex(widgetCompressExcludeList,s));
+    }
+
+    updateFileTreeImages();
+    updateDeviceImages();
+  }
+
+  /** remove selected include pattern
    */
   private void includeRemove()
   {
@@ -5860,7 +6158,7 @@ throw new Error("NYI");
     }
   }
 
-  /** remove selected include/exclude pattern
+  /** remove selected exclude pattern
    */
   private void excludeRemove()
   {
@@ -5870,6 +6168,19 @@ throw new Error("NYI");
     if (index >= 0)
     {
       excludeRemove(widgetExcludeList.getItem(index));
+    }
+  }
+
+  /** remove selected compress exclude pattern
+   */
+  private void compressExcludeRemove()
+  {
+    assert selectedJobId != 0;
+
+    int index = widgetCompressExcludeList.getSelectionIndex();
+    if (index >= 0)
+    {
+      compressExcludeRemove(widgetCompressExcludeList.getItem(index));
     }
   }
 
@@ -6897,16 +7208,19 @@ throw new Error("NYI");
         widgetYear.setText(scheduleData.getYear()); if (widgetYear.getText().equals("")) widgetYear.setText("*");
         if (widgetYear.getText().equals("")) widgetYear.setText("*");
         Widgets.layout(widgetYear,0,0,TableLayoutData.W);
+        widgetYear.setToolTipText("Year to execute job. Leave to '*' for each year.");
 
         widgetMonth = Widgets.newOptionMenu(subComposite);
         widgetMonth.setItems(new String[]{"*","Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"});
         widgetMonth.setText(scheduleData.getMonth()); if (widgetMonth.getText().equals("")) widgetMonth.setText("*");
         Widgets.layout(widgetMonth,0,1,TableLayoutData.W);
+        widgetMonth.setToolTipText("Month to execute job. Leave to '*' for each month.");
 
         widgetDay = Widgets.newOptionMenu(subComposite);
         widgetDay.setItems(new String[]{"*","1","2","3","4","5","6","7","8","9","10","11","12","13","14","15","16","17","18","19","20","21","22","23","24","25","26","27","28","29","30","31"});
         widgetDay.setText(scheduleData.getDay()); if (widgetDay.getText().equals("")) widgetDay.setText("*");
         Widgets.layout(widgetDay,0,2,TableLayoutData.W);
+        widgetDay.setToolTipText("Day to execute job. Leave to '*' for each day.");
       }
 
       label = Widgets.newLabel(composite,"Week days:");
@@ -6918,30 +7232,37 @@ throw new Error("NYI");
         widgetWeekDays[ScheduleData.MON] = Widgets.newCheckbox(subComposite,"Mon");
         Widgets.layout(widgetWeekDays[ScheduleData.MON],0,0,TableLayoutData.W);
         widgetWeekDays[ScheduleData.MON].setSelection(scheduleData.weekDayIsEnabled(ScheduleData.MON));
+        widgetWeekDays[ScheduleData.MON].setToolTipText("Week days to execute job.");
 
         widgetWeekDays[ScheduleData.TUE] = Widgets.newCheckbox(subComposite,"Tue");
         Widgets.layout(widgetWeekDays[ScheduleData.TUE],0,1,TableLayoutData.W);
         widgetWeekDays[ScheduleData.TUE].setSelection(scheduleData.weekDayIsEnabled(ScheduleData.TUE));
+        widgetWeekDays[ScheduleData.TUE].setToolTipText("Week days to execute job.");
 
         widgetWeekDays[ScheduleData.WED] = Widgets.newCheckbox(subComposite,"Wed");
         Widgets.layout(widgetWeekDays[ScheduleData.WED],0,2,TableLayoutData.W);
         widgetWeekDays[ScheduleData.WED].setSelection(scheduleData.weekDayIsEnabled(ScheduleData.WED));
+        widgetWeekDays[ScheduleData.WED].setToolTipText("Week days to execute job.");
 
         widgetWeekDays[ScheduleData.THU] = Widgets.newCheckbox(subComposite,"Thu");
         Widgets.layout(widgetWeekDays[ScheduleData.THU],0,3,TableLayoutData.W);
         widgetWeekDays[ScheduleData.THU].setSelection(scheduleData.weekDayIsEnabled(ScheduleData.THU));
+        widgetWeekDays[ScheduleData.THU].setToolTipText("Week days to execute job.");
 
         widgetWeekDays[ScheduleData.FRI] = Widgets.newCheckbox(subComposite,"Fri");
         Widgets.layout(widgetWeekDays[ScheduleData.FRI],0,4,TableLayoutData.W);
         widgetWeekDays[ScheduleData.FRI].setSelection(scheduleData.weekDayIsEnabled(ScheduleData.FRI));
+        widgetWeekDays[ScheduleData.FRI].setToolTipText("Week days to execute job.");
 
         widgetWeekDays[ScheduleData.SAT] = Widgets.newCheckbox(subComposite,"Sat");
         Widgets.layout(widgetWeekDays[ScheduleData.SAT],0,5,TableLayoutData.W);
         widgetWeekDays[ScheduleData.SAT].setSelection(scheduleData.weekDayIsEnabled(ScheduleData.SAT));
+        widgetWeekDays[ScheduleData.SAT].setToolTipText("Week days to execute job.");
 
         widgetWeekDays[ScheduleData.SUN] = Widgets.newCheckbox(subComposite,"Sun");
         Widgets.layout(widgetWeekDays[ScheduleData.SUN],0,6,TableLayoutData.W);
         widgetWeekDays[ScheduleData.SUN].setSelection(scheduleData.weekDayIsEnabled(ScheduleData.SUN));
+        widgetWeekDays[ScheduleData.SUN].setToolTipText("Week days to execute job.");
       }
 
       label = Widgets.newLabel(composite,"Time:");
@@ -6954,11 +7275,13 @@ throw new Error("NYI");
         widgetHour.setItems(new String[]{"*","1","2","3","4","5","6","7","8","9","10","11","12","13","14","15","16","17","18","19","20","21","22","23"});
         widgetHour.setText(scheduleData.getHour()); if (widgetHour.getText().equals("")) widgetHour.setText("*");
         Widgets.layout(widgetHour,0,0,TableLayoutData.W);
+        widgetHour.setToolTipText("Hour to execute job. Leave to '*' for every hour.");
 
         widgetMinute = Widgets.newOptionMenu(subComposite);
         widgetMinute.setItems(new String[]{"*","00","05","10","15","20","30","35","40","45","50","55"});
         widgetMinute.setText(scheduleData.getMinute()); if (widgetMinute.getText().equals("")) widgetMinute.setText("*");
         Widgets.layout(widgetMinute,0,1,TableLayoutData.W);
+        widgetMinute.setToolTipText("Minute to execute job. Leave to '*' for every minute.");
       }
 
       label = Widgets.newLabel(composite,"Type:");
@@ -6970,18 +7293,22 @@ throw new Error("NYI");
         widgetTypeDefault = Widgets.newRadio(subComposite,"*");
         Widgets.layout(widgetTypeDefault,0,0,TableLayoutData.W);
         widgetTypeDefault.setSelection(scheduleData.type.equals("*"));
+        widgetTypeDefault.setToolTipText("Execute job with default type.");
 
         widgetTypeNormal = Widgets.newRadio(subComposite,"normal");
         Widgets.layout(widgetTypeNormal,0,1,TableLayoutData.W);
         widgetTypeNormal.setSelection(scheduleData.type.equals("normal"));
+        widgetTypeNormal.setToolTipText("Execute job as normal backup (no incremental data).");
 
         widgetTypeFull = Widgets.newRadio(subComposite,"full");
         Widgets.layout(widgetTypeFull,0,2,TableLayoutData.W);
         widgetTypeFull.setSelection(scheduleData.type.equals("full"));
+        widgetTypeFull.setToolTipText("Execute job as full backup.");
 
         widgetTypeIncremental = Widgets.newRadio(subComposite,"incremental");
         Widgets.layout(widgetTypeIncremental,0,3,TableLayoutData.W);
         widgetTypeIncremental.setSelection(scheduleData.type.equals("incremental"));
+        widgetTypeIncremental.setToolTipText("Execute job as incremental backup.");
       }
 
       label = Widgets.newLabel(composite,"Options:");
