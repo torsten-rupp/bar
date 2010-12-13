@@ -1,9 +1,9 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/dictionaries.h,v $
-* $Revision: 1.2 $
+* $Revision: 1.3 $
 * $Author: torsten $
-* Contents: hash table functions
+* Contents: dictionary functions
 * Systems: all
 *
 \***********************************************************************/
@@ -24,17 +24,27 @@
 
 /***************************** Datatypes *******************************/
 
-/* dictionary compare function */
-typedef int(*DictionaryCompareFunction)(void *userData, const void *data0, const void *data1, ulong length);
+/***********************************************************************\
+* Name   : DictionaryCompareFunction
+* Purpose: compare dictionary entries
+* Input  : userData    - user data
+*          data0,data1 - data entries to compare
+*          length      - length of data entries
+* Output : -
+* Return : TRUE if equal, FALSE otherwise
+* Notes  : -
+\***********************************************************************/
+
+typedef bool(*DictionaryCompareFunction)(void *userData, const void *data0, const void *data1, ulong length);
 
 // dictionary entry
 typedef struct
 {
-  ulong hash;                                // hash code
-  void  *keyData;                            // key data
-  ulong keyLength;                           // length of key data
-  void  *data;                               // data of entry
-  ulong length;                              // length of data in entry
+  ulong hash;                                            // hash code
+  void  *keyData;                                        // key data
+  ulong keyLength;                                       // length of key data
+  void  *data;                                           // data of entry
+  ulong length;                                          // length of data in entry
 } DictionaryEntry;
 
 // table with dictionary entries
@@ -60,11 +70,38 @@ typedef struct
   uint             i,j;
 } DictionaryIterator;
 
-/* delete dictionary entry function */
-typedef void(*DictionaryFreeFunction)(void *userData, const void *data, ulong length);
+/***********************************************************************\
+* Name   : DictionaryFreeFunction
+* Purpose: delete dictionary entry
+* Input  : data     - data entry
+*          length   - length of data entries
+*          userData - user data
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
 
-/* iterator function */
-typedef bool(*DictionaryIterateFunction)(void *userData, const void *keyData, ulong keyLength, const void *data, ulong length);
+typedef void(*DictionaryFreeFunction)(const void *data, ulong length, void *userData);
+
+/***********************************************************************\
+* Name   : DictionaryIterateFunction
+* Purpose: iterate over dictionary entires
+* Input  : keyData   - key data
+*          keyLength - length of key data
+*          data      - entry data
+*          length    - length of entry data
+*          userData  - user data
+* Output : -
+* Return : TRUE to continue, FALSE abort
+* Notes  : -
+\***********************************************************************/
+
+typedef bool(*DictionaryIterateFunction)(const void *keyData,
+                                         ulong      keyLength,
+                                         void       *data,
+                                         ulong      length,
+                                         void       *userData
+                                        );
 
 /***************************** Variables *******************************/
 
@@ -151,7 +188,7 @@ ulong Dictionary_count(const Dictionary *dictionary);
 *          length     - length of entry data
 * Output : -
 * Return : TRUE if entry added, FALSE otherwise
-* Notes  : -
+* Notes  : key data and data will be copied!
 \***********************************************************************/
 
 bool Dictionary_add(Dictionary *dictionary,
@@ -165,8 +202,8 @@ bool Dictionary_add(Dictionary *dictionary,
 * Name   : Dictionary_rem
 * Purpose: remove entry from dictionary
 * Input  : dictionary             - dictionary
-*          data                   - data
-*          length                 - length of data
+*          keyData                - key data
+*          keyLength              - length of key data
 *          dictionaryFreeFunction - dictionary entry free function or
 *                                   NULL
 *          dictionaryFreeUserData - dictionary entry free function user
@@ -206,8 +243,8 @@ bool Dictionary_find(Dictionary *dictionary,
 * Name   : Dictionary_contain
 * Purpose: check if entry is in dictionary
 * Input  : dictionary - dictionary
-*          data       - data
-*          length     - length of data
+*          keyData    - key data
+*          keyLength  - length of key data
 * Output : -
 * Return : TRUE if entry is in dictionary, FALSE otherwise
 * Notes  : -
@@ -221,8 +258,8 @@ bool Dictionary_contain(Dictionary *dictionary,
 /***********************************************************************\
 * Name   : Dictionary_initIterator
 * Purpose: init dictionary iterator
-* Input  : dictionary         - dictionary
-*          dictionaryIterator - iterator variable
+* Input  : dictionaryIterator - iterator variable
+*          dictionary         - dictionary
 * Output : dictionaryIterator - initialized iterator variable
 * Return : -
 * Notes  : -
@@ -247,9 +284,9 @@ void Dictionary_doneIterator(DictionaryIterator *dictionaryIterator);
 * Name   : Dictionary_getNext
 * Purpose: get next entry from dictionary
 * Input  : dictionary - dictionary
-* Output : keyData   - key data (can be NULL)
+* Output : keyData   - internal key data (can be NULL)
 *          keyLength - length of key data (can be NULL)
-*          data      - entry data (can be NULL)
+*          data      - internal entry data (can be NULL)
 *          length    - length of data (can be NULL)
 * Return : TRUE if got entry, FALSE if no more entries
 * Notes  : -
@@ -258,7 +295,7 @@ void Dictionary_doneIterator(DictionaryIterator *dictionaryIterator);
 bool Dictionary_getNext(DictionaryIterator *dictionaryIterator,
                         const void         **keyData,
                         ulong              *keyLength,
-                        const void         **data,
+                        void               **data,
                         ulong              *length
                        );
 

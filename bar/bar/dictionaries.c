@@ -1,9 +1,9 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/dictionaries.c,v $
-* $Revision: 1.3 $
+* $Revision: 1.4 $
 * $Author: torsten $
-* Contents: hash table functions
+* Contents: dictionary functions
 * Systems: all
 *
 \***********************************************************************/
@@ -138,8 +138,8 @@ LOCAL_INLINE ulong rotHash(ulong hash, int n)
 /***********************************************************************\
 * Name   : calculateHash
 * Purpose: calculate hash
-* Input  : data   - data
-*          length - length of data
+* Input  : keyData   - key data
+*          keyLength - length of key data
 * Output : -
 * Return : hash value
 * Notes  : -
@@ -175,8 +175,8 @@ LOCAL ulong calculateHash(const void *keyData, ulong keyLength)
 * Purpose: check if entry is equal to data
 * Input  : entry                     - entry
 *          hash                      - data hash value
-*          data                      - data
-*          length                    - length of data
+*          keyData                   - key data
+*          keyLength                 - length of key data
 *          dictionaryCompareFunction - compare function or NULL for
 *                                      default compare
 *          dictionaryCompareUserData - compare function user data
@@ -200,7 +200,7 @@ LOCAL_INLINE bool equalsEntry(const DictionaryEntry     *entry,
   {
     if (dictionaryCompareFunction != NULL)
     {
-      if (dictionaryCompareFunction(dictionaryCompareUserData,entry->keyData,keyData,keyLength) == 0)
+      if (dictionaryCompareFunction(dictionaryCompareUserData,entry->keyData,keyData,keyLength))
       {
         return TRUE;
       }
@@ -222,8 +222,8 @@ LOCAL_INLINE bool equalsEntry(const DictionaryEntry     *entry,
 * Purpose: find entry index of entry in table
 * Input  : entryTable                - entry table
 *          hash                      - data hash value
-*          data                      - data
-*          length                    - length of data
+*          keyData                   - key data
+*          keyLength                 - length of key data
 *          dictionaryCompareFunction - compare function or NULL for
 *                                      default compare
 *          dictionaryCompareUserData - compare function user data
@@ -399,8 +399,8 @@ LOCAL int findFreeEntryIndex(DictionaryEntryTable *entryTable,
 * Purpose: find entry in hash table
 * Input  : dictionary                - dictionary
 *          hash                      - data hash value
-*          data                      - data
-*          length                    - length of data
+*          keyData                   - key data
+*          keyLength                 - length of key data
 * Output : dictionaryEntryTable - dictionary entry table
 *          index                - index in table
 * Return : TRUE if entry found, FALSE otherwise
@@ -571,9 +571,9 @@ void Dictionary_done(Dictionary             *dictionary,
       {
         if (dictionaryFreeFunction != NULL)
         {
-          dictionaryFreeFunction(dictionaryFreeUserData,
-                                 dictionary->entryTables[z].entries[index].data,
-                                 dictionary->entryTables[z].entries[index].length
+          dictionaryFreeFunction(dictionary->entryTables[z].entries[index].data,
+                                 dictionary->entryTables[z].entries[index].length,
+                                 dictionaryFreeUserData
                                 );
         }
         free(dictionary->entryTables[z].entries[index].data);
@@ -606,9 +606,9 @@ void Dictionary_clear(Dictionary             *dictionary,
       {
         if (dictionaryFreeFunction != NULL)
         {
-          dictionaryFreeFunction(dictionaryFreeUserData,
-                                 dictionary->entryTables[z].entries[index].data,
-                                 dictionary->entryTables[z].entries[index].length
+          dictionaryFreeFunction(dictionary->entryTables[z].entries[index].data,
+                                 dictionary->entryTables[z].entries[index].length,
+                                 dictionaryFreeUserData
                                 );
         }
         free(dictionary->entryTables[z].entries[index].data);
@@ -878,9 +878,9 @@ void Dictionary_rem(Dictionary             *dictionary,
 
     if (dictionaryFreeFunction != NULL)
     {
-      dictionaryFreeFunction(dictionaryFreeUserData,
-                             dictionaryEntryTable->entries[index].data,
-                             dictionaryEntryTable->entries[index].length
+      dictionaryFreeFunction(dictionaryEntryTable->entries[index].data,
+                             dictionaryEntryTable->entries[index].length,
+                             dictionaryFreeUserData
                             );
     }
     free(dictionaryEntryTable->entries[index].data);
@@ -956,7 +956,7 @@ void Dictionary_doneIterator(DictionaryIterator *dictionaryIterator)
 bool Dictionary_getNext(DictionaryIterator *dictionaryIterator,
                         const void         **keyData,
                         ulong              *keyLength,
-                        const void         **data,
+                        void               **data,
                         ulong              *length
                        )
 {
@@ -1019,7 +1019,7 @@ bool Dictionary_iterate(Dictionary                *dictionary,
   bool               okFlag;
   const void         *keyData;
   ulong              keyLength;
-  const void         *data;
+  void               *data;
   ulong              length;
 
   assert(dictionary != NULL);
@@ -1036,7 +1036,12 @@ bool Dictionary_iterate(Dictionary                *dictionary,
          && okFlag
         )
   {
-    okFlag = dictionaryIterateFunction(dictionaryIterateUserData,keyData,keyLength,data,length);
+    okFlag = dictionaryIterateFunction(keyData,
+                                       keyLength,
+                                       data,
+                                       length,
+                                       dictionaryIterateUserData
+                                      );
   }
   Dictionary_doneIterator(&dictionaryIterator);
 
