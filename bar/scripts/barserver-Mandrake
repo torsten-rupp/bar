@@ -13,14 +13,14 @@
 ### END INIT INFO
  
 # check for binaries
-BAR_BIN=/usr/local/bin/bar
+BAR_BIN=/usr/bin/bar
 if test ! -x $BAR_BIN; then
   echo "$BAR_BIN not installed"
   exit 5
 fi
 
 # check for existence of needed config file
-BAR_CONFIG=/etc/bar.cfg
+BAR_CONFIG=/etc/bar/bar.cfg
 if test ! -r $BAR_CONFIG; then
   echo "$BAR_CONFIG cannot be read"
   exit 6
