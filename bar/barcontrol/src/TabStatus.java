@@ -1293,8 +1293,8 @@ class TabStatus
     // get job mode
     mode = Dialogs.select(shell,
                           "Confirmation","Start job '"+selectedJobData.name+"'?",
-                          new String[]{"Normal","Full","Incremental","Dry-run","Cancel"},
-                          new String[]{"Store all files.","Store all files and create incremental data file.","Store changed files, only and update incremental data file.","Collect and process all files, but do not create archives."},
+                          new String[]{"Normal","Full","Incremental","Differential","Dry-run","Cancel"},
+                          new String[]{"Store all files.","Store all files and create incremental data file.","Store changed files since last incremental or full storage and update incremental data file.","Store changed files since last full storage.","Collect and process all files, but do not create archives."},
                           4
                          );
     if ((mode != 0) && (mode != 1) && (mode != 2) && (mode != 3))
@@ -1332,9 +1332,12 @@ class TabStatus
         errorCode = BARServer.executeCommand("JOB_START "+selectedJobData.id+" incremental");
         break;
       case 3:
-        errorCode = BARServer.executeCommand("JOB_START "+selectedJobData.id+" dry-run");
+        errorCode = BARServer.executeCommand("JOB_START "+selectedJobData.id+" differential");
         break;
       case 4:
+        errorCode = BARServer.executeCommand("JOB_START "+selectedJobData.id+" dry-run");
+        break;
+      case 5:
         break;
     }
   }

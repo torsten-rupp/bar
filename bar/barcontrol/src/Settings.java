@@ -30,7 +30,8 @@ public class Settings
   {
     NORMAL,
     FULL,
-    INCREMENTAL;
+    INCREMENTAL,
+    DIFFERENTIAL;
 
     /** convert to string
      * @return string
@@ -39,10 +40,11 @@ public class Settings
     {
       switch (this)
       {
-        case NORMAL:      return "normal";
-        case FULL:        return "full";
-        case INCREMENTAL: return "incremental";
-        default:          return "normal";
+        case NORMAL:       return "normal";
+        case FULL:         return "full";
+        case INCREMENTAL:  return "incremental";
+        case DIFFERENTIAL: return "differential";
+        default:           return "normal";
       }
     }
   };

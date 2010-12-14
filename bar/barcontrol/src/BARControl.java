@@ -660,6 +660,7 @@ public class BARControl
     new OptionEnumeration("normal",      Settings.ArchiveTypes.NORMAL),
     new OptionEnumeration("full",        Settings.ArchiveTypes.FULL),
     new OptionEnumeration("incremental", Settings.ArchiveTypes.INCREMENTAL),
+    new OptionEnumeration("differential",Settings.ArchiveTypes.DIFFERENTIAL),
   };
 
   private static final Option[] options =
@@ -745,6 +746,7 @@ public class BARControl
     System.out.println("                                            normal (default)");
     System.out.println("                                            full");
     System.out.println("                                            incremental");
+    System.out.println("                                            differential");
     System.out.println("         --abort=<name>                 - abort execution of job <name>");
     System.out.println("         --index-add=<name>             - add storage archive <name> to index");
     System.out.println("         --index-remove=<pattern>       - remove storage archive <name> from index");

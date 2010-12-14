@@ -725,7 +725,7 @@ class TabJobs
       setWeekDays(weekDays);
       setTime(hour,minute);
       this.enabled = enabled;
-      this.type    = getValidString(type,new String[]{"*","full","incremental"},"*");;
+      this.type    = getValidString(type,new String[]{"*","full","incremental","differential"},"*");;
     }
 
     /** get year value
@@ -1180,7 +1180,7 @@ class TabJobs
   private WidgetVariable  rawImages               = new WidgetVariable(false);
   private WidgetVariable  overwriteFiles          = new WidgetVariable(false);
 
-  private WidgetVariable  archiveType             = new WidgetVariable(new String[]{"normal","full","incremental"});
+  private WidgetVariable  archiveType             = new WidgetVariable(new String[]{"normal","full","incremental","differential"});
   private WidgetVariable  archivePartSizeFlag     = new WidgetVariable(false);
   private WidgetVariable  archivePartSize         = new WidgetVariable(0);
   private WidgetVariable  compressAlgorithm       = new WidgetVariable(new String[]{"none","zip0","zip1","zip2","zip3","zip4","zip5","zip6","zip7","zip8","zip9","bzip1","bzip2","bzip3","bzip4","bzip5","bzip6","bzip7","bzip8","bzip9","lzma1","lzma2","lzma3","lzma4","lzma5","lzma6","lzma7","lzma8","lzma9"});
@@ -2329,7 +2329,7 @@ class TabJobs
             });
           }
           widgetCompressExcludeList.setMenu(menu);
-          widgetCompressExcludeList.setToolTipText("List with compress exclude patterns. Entries which match to one these patterns will not be compressed.\nRight-click for context menu.");
+          widgetCompressExcludeList.setToolTipText("List with compress exclude patterns. Entries which match to one of these patterns will not be compressed.\nRight-click for context menu.");
 
           // buttons
           subComposite = Widgets.newComposite(composite,SWT.NONE,4);
@@ -2883,7 +2883,30 @@ class TabJobs
               ((Button)control).setSelection(archiveType.equals("incremental"));
             }
           });
-          button.setToolTipText("Incremental mode: store only modified entries since last storage.");
+          button.setToolTipText("Incremental mode: store only modified entries since last full or incremental storage.");
+
+          button = Widgets.newRadio(composite,"differential");
+          Widgets.layout(button,0,3,TableLayoutData.W);
+          button.addSelectionListener(new SelectionListener()
+          {
+            public void widgetSelected(SelectionEvent selectionEvent)
+            {
+              Button widget = (Button)selectionEvent.widget;
+              archiveType.set("differential");
+              BARServer.setOption(selectedJobId,"archive-type","differential");
+            }
+            public void widgetDefaultSelected(SelectionEvent selectionEvent)
+            {
+            }
+          });
+          Widgets.addModifyListener(new WidgetListener(button,archiveType)
+          {
+            public void modified(Control control, WidgetVariable archiveType)
+            {
+              ((Button)control).setSelection(archiveType.equals("differential"));
+            }
+          });
+          button.setToolTipText("Differential mode: store only modified entries since last full storage.");
         }
 
         // file name
@@ -6556,43 +6579,43 @@ throw new Error("NYI");
       composite.setToolTipText("Use drag&drop to add name parts.");
       {
         // column 1
-        addDragAndDrop(composite,"-","text '-'",                          0, 0);
-        addDragAndDrop(composite,".bar","text '.bar'",                    1, 0);
+        addDragAndDrop(composite,"-","text '-'",                                       0, 0);
+        addDragAndDrop(composite,".bar","text '.bar'",                                 1, 0);
         widgetText = Widgets.newText(composite);
-        addDragAndDrop(composite,"Text",widgetText,                       2, 0);
+        addDragAndDrop(composite,"Text",widgetText,                                    2, 0);
 
-        addDragAndDrop(composite,"#","part number 1 digit",              4, 0);
-        addDragAndDrop(composite,"##","part number 2 digits",            5, 0);
-        addDragAndDrop(composite,"###","part number 3 digits",           6, 0);
-        addDragAndDrop(composite,"####","part number 4 digits",          7, 0);
+        addDragAndDrop(composite,"#","part number 1 digit",                            4, 0);
+        addDragAndDrop(composite,"##","part number 2 digits",                          5, 0);
+        addDragAndDrop(composite,"###","part number 3 digits",                         6, 0);
+        addDragAndDrop(composite,"####","part number 4 digits",                        7, 0);
 
-        addDragAndDrop(composite,"%type","archive type: full,incremental",9, 0);
-        addDragAndDrop(composite,"%last","'-last' if last archive part",  10,0);
+        addDragAndDrop(composite,"%type","archive type: full,incremental,differential",9, 0);
+        addDragAndDrop(composite,"%last","'-last' if last archive part",               10,0);
 
         // column 2
-        addDragAndDrop(composite,"%d","day 01..31",                  0, 1);
-        addDragAndDrop(composite,"%j","day of year 001..366",        1, 1);
-        addDragAndDrop(composite,"%m","month 01..12",                2, 1);
-        addDragAndDrop(composite,"%b","month name",                  3, 1);
-        addDragAndDrop(composite,"%B","full month name",             4, 1);
-        addDragAndDrop(composite,"%H","hour 00..23",                 5, 1);
-        addDragAndDrop(composite,"%I","hour 00..12",                 6, 1);
-        addDragAndDrop(composite,"%M","minute 00..59",               7, 1);
-        addDragAndDrop(composite,"%p","'AM' or 'PM'",                8, 1);
-        addDragAndDrop(composite,"%P","'am' or 'pm'",                9, 1);
-        addDragAndDrop(composite,"%a","week day name",               10,1);
-        addDragAndDrop(composite,"%A","full week day name",          11,1);
-        addDragAndDrop(composite,"%u","day of week 1..7",            12,1);
-        addDragAndDrop(composite,"%w","day of week 0..6",            13,1);
-        addDragAndDrop(composite,"%U","week number 1..52",           14,1);
-        addDragAndDrop(composite,"%C","century two digits",          15,1);
-        addDragAndDrop(composite,"%Y","year four digits",            16,1);
-        addDragAndDrop(composite,"%S","seconds since 1.1.1970 00:00",17,1);
-        addDragAndDrop(composite,"%Z","time-zone abbreviation",      18,1);
+        addDragAndDrop(composite,"%d","day 01..31",                                    0, 1);
+        addDragAndDrop(composite,"%j","day of year 001..366",                          1, 1);
+        addDragAndDrop(composite,"%m","month 01..12",                                  2, 1);
+        addDragAndDrop(composite,"%b","month name",                                    3, 1);
+        addDragAndDrop(composite,"%B","full month name",                               4, 1);
+        addDragAndDrop(composite,"%H","hour 00..23",                                   5, 1);
+        addDragAndDrop(composite,"%I","hour 00..12",                                   6, 1);
+        addDragAndDrop(composite,"%M","minute 00..59",                                 7, 1);
+        addDragAndDrop(composite,"%p","'AM' or 'PM'",                                  8, 1);
+        addDragAndDrop(composite,"%P","'am' or 'pm'",                                  9, 1);
+        addDragAndDrop(composite,"%a","week day name",                                 10,1);
+        addDragAndDrop(composite,"%A","full week day name",                            11,1);
+        addDragAndDrop(composite,"%u","day of week 1..7",                              12,1);
+        addDragAndDrop(composite,"%w","day of week 0..6",                              13,1);
+        addDragAndDrop(composite,"%U","week number 1..52",                             14,1);
+        addDragAndDrop(composite,"%C","century two digits",                            15,1);
+        addDragAndDrop(composite,"%Y","year four digits",                              16,1);
+        addDragAndDrop(composite,"%S","seconds since 1.1.1970 00:00",                  17,1);
+        addDragAndDrop(composite,"%Z","time-zone abbreviation",                        18,1);
 
         // column 3
-        addDragAndDrop(composite,"%%","%",                           0, 2);
-        addDragAndDrop(composite,"%#","#",                           1, 2);
+        addDragAndDrop(composite,"%%","%",                                             0, 2);
+        addDragAndDrop(composite,"%#","#",                                             1, 2);
       }
 
       // set name
@@ -7191,7 +7214,7 @@ throw new Error("NYI");
     final Combo    widgetYear,widgetMonth,widgetDay;
     final Button[] widgetWeekDays = new Button[7];
     final Combo    widgetHour,widgetMinute;
-    final Button   widgetTypeDefault,widgetTypeNormal,widgetTypeFull,widgetTypeIncremental,widgetEnabled;
+    final Button   widgetTypeDefault,widgetTypeNormal,widgetTypeFull,widgetTypeIncremental,widgetTypeDifferential,widgetEnabled;
     final Button   widgetAdd;
     composite = Widgets.newComposite(dialog,SWT.NONE);
     composite.setLayout(new TableLayout(null,new double[]{0.0,1.0}));
@@ -7309,6 +7332,11 @@ throw new Error("NYI");
         Widgets.layout(widgetTypeIncremental,0,3,TableLayoutData.W);
         widgetTypeIncremental.setSelection(scheduleData.type.equals("incremental"));
         widgetTypeIncremental.setToolTipText("Execute job as incremental backup.");
+
+        widgetTypeDifferential = Widgets.newRadio(subComposite,"differential");
+        Widgets.layout(widgetTypeDifferential,0,4,TableLayoutData.W);
+        widgetTypeDifferential.setSelection(scheduleData.type.equals("differential"));
+        widgetTypeDifferential.setToolTipText("Execute job as differential backup.");
       }
 
       label = Widgets.newLabel(composite,"Options:");
@@ -7376,10 +7404,11 @@ throw new Error("NYI");
                                 );
         scheduleData.setTime(widgetHour.getText(),widgetMinute.getText());
         scheduleData.enabled = widgetEnabled.getSelection();
-        if      (widgetTypeNormal.getSelection())      scheduleData.type = "normal";
-        else if (widgetTypeFull.getSelection())        scheduleData.type = "full";
-        else if (widgetTypeIncremental.getSelection()) scheduleData.type = "incremental";
-        else                                           scheduleData.type = "*";
+        if      (widgetTypeNormal.getSelection())       scheduleData.type = "normal";
+        else if (widgetTypeFull.getSelection())         scheduleData.type = "full";
+        else if (widgetTypeIncremental.getSelection())  scheduleData.type = "incremental";
+        else if (widgetTypeDifferential.getSelection()) scheduleData.type = "differential";
+        else                                            scheduleData.type = "*";
 
         Dialogs.close(dialog,true);
       }
