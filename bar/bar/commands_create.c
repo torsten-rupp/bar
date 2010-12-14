@@ -1,6 +1,6 @@
 /***********************************************************************\
 *
-* $Source: /home/torsten/cvs/bar/bar/commands_create.c,v $
+* $URL: /home/torsten/cvs/bar/bar/commands_create.c,v $
 * $Revision: 1.24 $
 * $Author: torsten $
 * Contents: Backup ARchiver archive create function
@@ -2426,8 +2426,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
             createInfo->statusInfo.archiveDoneBytes += n;
             abortFlag |= !updateStatusInfo(createInfo);
           }
-          while (   (error == ERROR_NONE)
-                 && (createInfo->failError == ERROR_NONE)
+          while (   (createInfo->failError == ERROR_NONE)
                  && ((createInfo->requestedAbortFlag == NULL) || !(*createInfo->requestedAbortFlag))
                  && !File_eof(&fileHandle)
                 );
@@ -2441,7 +2440,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
             logMessage(LOG_TYPE_STORAGE,"stored '%s'",String_cString(storageName));
           }
         }
-        while (   (error != ERROR_NONE)
+        while (   (createInfo->failError != ERROR_NONE)
                && ((createInfo->requestedAbortFlag == NULL) || !(*createInfo->requestedAbortFlag))
               );
 
