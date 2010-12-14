@@ -97,7 +97,7 @@ typedef struct
 *          data   - data to encode
 *          length - length of data to encode
 * Output : -
-* Return : encoded strings
+* Return : encoded string
 * Notes  : -
 \***********************************************************************/
 
@@ -261,6 +261,7 @@ Errors Crypt_initAll(void)
     gcry_control(GCRYCTL_INITIALIZATION_FINISHED,0);
     gcry_control(GCRYCTL_ENABLE_QUICK_RANDOM,    0);
     #ifndef NDEBUG
+//NYI: required/useful?
 //      gcry_control(GCRYCTL_SET_DEBUG_FLAGS,1,0);
     #endif
   #endif /* HAVE_GCRYPT */
@@ -652,7 +653,9 @@ Errors Crypt_init(CryptInfo       *cryptInfo,
             return ERROR_INIT_CIPHER;
           }
 
-    #if 0
+
+#if 0
+//NYI: useful to set iv?
           /* set 0 IV */
           gcryptError = gcry_cipher_setiv(cryptInfo->gcry_cipher_hd,
                                           NULL,
@@ -666,7 +669,7 @@ Errors Crypt_init(CryptInfo       *cryptInfo,
           }
 
           gcry_cipher_reset(cryptInfo->gcry_cipher_hd);
-    #endif /* 0 */
+#endif /* 0 */
         }
       #else /* not HAVE_GCRYPT */
         UNUSED_VARIABLE(password);
