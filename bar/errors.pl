@@ -85,7 +85,7 @@ sub writeCPrefix()
   print CFILE_HANDLE "\
 #define GET_ERROR_CODE(error)      (((error) & $ERROR_CODE_MASK) >> $ERROR_CODE_SHIFT)
 #define GET_ERROR_TEXTINDEX(error) (((error) & $ERROR_TEXTINDEX_MASK) >> $ERROR_TEXTINDEX_SHIFT)
-#define GET_ERROR_TEXT(error)      ((GET_ERROR_TEXTINDEX(error)>0)?errorTexts[GET_ERROR_TEXTINDEX(error)-1].text:\"unknown\")
+#define GET_ERROR_TEXT(error)      ((GET_ERROR_TEXTINDEX(error) > 0)?errorTexts[GET_ERROR_TEXTINDEX(error)-1].text:NONE)
 #define GET_ERRNO(error)           ((int)((error) & $ERROR_ERRNO_MASK) >> $ERROR_ERRNO_SHIFT)
 
 #define ERROR_CODE GET_ERROR_CODE(error)
@@ -177,6 +177,9 @@ if ($cFileName ne "")
 
 #include \"errors.h\"
 
+// use NONE to avoid warning in strn*-functions which do not accept NULL (this case must be checked before calling s
+static const char *NONE = NULL;
+
 typedef struct
 {
   int  id;
@@ -193,35 +196,42 @@ int _Errors_textToIndex(const char *text)
   int minId;
   int z,i;
 
-  errorTextId++;
-  if (errorTextCount < $ERROR_TEXTINDEX_MAX_COUNT)
+  if (text != NULL)
   {
-    index = errorTextCount;
-    errorTextCount++;
+    errorTextId++;
+    if (errorTextCount < $ERROR_TEXTINDEX_MAX_COUNT)
+    {
+      index = errorTextCount;
+      errorTextCount++;
+    }
+    else
+    {
+      index = 0;
+      minId = INT_MAX;
+      for (z = 0; z < $ERROR_TEXTINDEX_MAX_COUNT; z++)
+      {
+        if (errorTexts[z].id < minId)
+        {
+          index = z;
+          minId = errorTexts[z].id;
+        }
+      }
+    }
+    z = 0;
+    i = 0;
+    while ((z < strlen(text)) && (i < $MAX_ERRORTEXT_LENGTH-1-1))
+    {
+      if (!iscntrl(text[z])) { errorTexts[index].text[i] = text[z]; i++; }
+      z++;
+    }
+    errorTexts[index].text[i] = '\\0';
+    errorTexts[errorTextCount].id = errorTextId;
+    return index+1;
   }
   else
   {
-    index = 0;
-    minId = INT_MAX;
-    for (z = 0; z < $ERROR_TEXTINDEX_MAX_COUNT; z++)
-    {
-      if (errorTexts[z].id < minId)
-      {
-        index = z;
-        minId = errorTexts[z].id;
-      }
-    }
+    return 0;
   }
-  z = 0;
-  i = 0;
-  while ((z < strlen(text)) && (i < $MAX_ERRORTEXT_LENGTH-1-1))
-  {
-    if (!iscntrl(text[z])) { errorTexts[index].text[i] = text[z]; i++; }
-    z++;
-  }
-  errorTexts[index].text[i] = '\\0';
-  errorTexts[errorTextCount].id = errorTextId;
-  return index+1;
 }
 
 ";
