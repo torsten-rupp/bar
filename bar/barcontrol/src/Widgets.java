@@ -251,9 +251,9 @@ class WidgetVariable
   }
 }
 
-/** widget listener
+/** widget modify listener
  */
-class WidgetListener
+class WidgetModifyListener
 {
   private Control          control;
   private WidgetVariable[] variables;
@@ -263,7 +263,7 @@ class WidgetListener
 
   /** create widget listener
    */
-  WidgetListener()
+  WidgetModifyListener()
   {
     this.control   = null;
     this.variables = null;
@@ -273,7 +273,7 @@ class WidgetListener
    * @param control control widget
    * @param variable widget variable
    */
-  WidgetListener(Control control, WidgetVariable variable)
+  WidgetModifyListener(Control control, WidgetVariable variable)
   {
     this.control   = control;
     this.variables = new WidgetVariable[]{variable};
@@ -283,7 +283,7 @@ class WidgetListener
    * @param control control widget
    * @param variable widget variable
    */
-  WidgetListener(Control control, WidgetVariable[] variables)
+  WidgetModifyListener(Control control, WidgetVariable[] variables)
   {
     this.control   = control;
     this.variables = variables;
@@ -518,6 +518,95 @@ class WidgetListener
   }
 }
 
+/** widget event
+ */
+class WidgetEvent
+{
+  private HashSet<WidgetEventListener> widgetEventListenerSet;
+
+  /** create widget event listener
+   */
+  WidgetEvent()
+  {
+    widgetEventListenerSet = new HashSet<WidgetEventListener>();
+  }
+
+  /** add widget event listern
+   * @param widgetEventListener widget event listern to add
+   */
+  public void add(WidgetEventListener widgetEventListener)
+  {
+    widgetEventListenerSet.add(widgetEventListener);
+  }
+
+  /** remove widget event listern
+   * @param widgetEventListener widget event listern to remove
+   */
+  public void remove(WidgetEventListener widgetEventListener)
+  {
+    widgetEventListenerSet.remove(widgetEventListener);
+  }
+
+  /** trigger widget event
+   */
+  public void trigger()
+  {
+    for (WidgetEventListener widgetEventListener : widgetEventListenerSet)
+    {
+      widgetEventListener.trigger();
+    }
+  }
+}
+
+/** widget event listener
+ */
+class WidgetEventListener
+{
+  private Control     control;
+  private WidgetEvent widgetEvent;
+
+  /** create widget listener
+   * @param control control widget
+   * @param widgetEvent widget event
+   */
+  WidgetEventListener(Control control, WidgetEvent widgetEvent)
+  {
+    this.control     = control;
+    this.widgetEvent = widgetEvent;
+  }
+
+  /** add widget event listern
+   * @param widgetEventListener widget event listern to add
+   */
+  public void add()
+  {
+    widgetEvent.add(this);
+  }
+
+  /** remove widget event listern
+   * @param widgetEventListener widget event listern to remove
+   */
+  public void remove()
+  {
+    widgetEvent.remove(this);
+  }
+
+  /** 
+   * @param 
+   * @return 
+   */
+  public void trigger(Control control)
+  {
+  }
+
+  /** trigger widget event
+   */
+  void trigger()
+  {
+    trigger(control);
+  }
+}
+
 /** widget column table data
  */
 class WidgetTableColumnData
@@ -542,7 +631,8 @@ class Widgets
 
   /** list of widgets listeners
    */
-  private static LinkedList<WidgetListener> listenersList = new LinkedList<WidgetListener>();
+  private static HashSet<WidgetModifyListener> widgetModifyListenerSet = new HashSet<WidgetModifyListener>();
+  private static HashSet<WidgetEvent> widgetEventSet = new HashSet<WidgetEvent>();
 
   //-----------------------------------------------------------------------
 
@@ -2948,11 +3038,11 @@ private static void printTree(Tree tree)
   //-----------------------------------------------------------------------
 
   /** add modify listener
-   * @param widgetListener listener to add
+   * @param widgetModifyListener listener to add
    */
-  static void addModifyListener(WidgetListener widgetListener)
+  static void addModifyListener(WidgetModifyListener widgetModifyListener)
   {
-    listenersList.add(widgetListener);
+    widgetModifyListenerSet.add(widgetModifyListener);
   }
 
   /** execute modify listeners
@@ -2960,13 +3050,29 @@ private static void printTree(Tree tree)
    */
   static void modified(Object variable)
   {
-    for (WidgetListener widgetListener : listenersList)
+    for (WidgetModifyListener widgetModifyListener : widgetModifyListenerSet)
     {
-      if (widgetListener.equals(variable))
+      if (widgetModifyListener.equals(variable))
       {
-        widgetListener.modified();
+        widgetModifyListener.modified();
       }
     }
+  }
+
+  /** add event listener
+   * @param widgetEventListener listener to add
+   */
+  static void addEventListener(WidgetEventListener widgetEventListener)
+  {
+    widgetEventListener.add();
+  }
+
+  /** trigger widget event
+   * @param widgetEvent widget event to trigger
+   */
+  static void trigger(WidgetEvent widgetEvent)
+  {
+    widgetEvent.trigger();
   }
 
   /** signal modified

@@ -450,9 +450,9 @@ class TabJobs
       setDaemon(true);
     }
 
-    /** 
-     * @param 
-     * @return 
+    /**
+     * @param
+     * @return
      */
     public void run()
     {
@@ -1176,10 +1176,6 @@ class TabJobs
   private Table        widgetScheduleList;
 
   // BAR variables
-  private WidgetVariable  skipUnreadable          = new WidgetVariable(false);
-  private WidgetVariable  rawImages               = new WidgetVariable(false);
-  private WidgetVariable  overwriteFiles          = new WidgetVariable(false);
-
   private WidgetVariable  archiveType             = new WidgetVariable(new String[]{"normal","full","incremental","differential"});
   private WidgetVariable  archivePartSizeFlag     = new WidgetVariable(false);
   private WidgetVariable  archivePartSize         = new WidgetVariable(0);
@@ -1206,17 +1202,21 @@ class TabJobs
   private WidgetVariable  volumeSize              = new WidgetVariable(0);
   private WidgetVariable  ecc                     = new WidgetVariable(false);
   private WidgetVariable  waitFirstVolume         = new WidgetVariable(false);
+  private WidgetVariable  skipUnreadable          = new WidgetVariable(false);
+  private WidgetVariable  rawImages               = new WidgetVariable(false);
+  private WidgetVariable  overwriteFiles          = new WidgetVariable(false);
 
   // variables
-  private     DirectoryInfoThread       directoryInfoThread;
-  private     boolean                   directorySizesFlag     = false;
-  private     HashMap<String,Integer>   jobIds                 = new HashMap<String,Integer>();
-  private     String                    selectedJobName        = null;
-  private     int                       selectedJobId          = 0;
-  private     HashMap<String,EntryData> includeHashMap         = new HashMap<String,EntryData>();
-  private     HashSet<String>           excludeHashSet         = new HashSet<String>();
-  private     HashSet<String>           compressExcludeHashSet = new HashSet<String>();
-  private     LinkedList<ScheduleData>  scheduleList           = new LinkedList<ScheduleData>();
+  private DirectoryInfoThread       directoryInfoThread;
+  private boolean                   directorySizesFlag     = false;
+  private HashMap<String,Integer>   jobIds                 = new HashMap<String,Integer>();
+  private int                       selectedJobId          = 0;
+  private String                    selectedJobName        = null;
+  private WidgetEvent               selectJobEvent         = new WidgetEvent();
+  private HashMap<String,EntryData> includeHashMap         = new HashMap<String,EntryData>();
+  private HashSet<String>           excludeHashSet         = new HashSet<String>();
+  private HashSet<String>           compressExcludeHashSet = new HashSet<String>();
+  private LinkedList<ScheduleData>  scheduleList           = new LinkedList<ScheduleData>();
 
 
   /** create jobs tab
@@ -1296,9 +1296,8 @@ class TabJobs
           if (index >= 0)
           {
             selectedJobName = widgetJobList.getItem(index);
-            selectedJobId   = jobIds.get(selectedJobName);
-
-            Widgets.setEnabled(widgetTabFolder,true);
+            selectedJobId = jobIds.get(selectedJobName);
+            selectJobEvent.trigger();
             update();
           }
         }
@@ -1324,7 +1323,15 @@ class TabJobs
       button.setToolTipText("Create new job entry.");
 
       button = Widgets.newButton(composite,"Copy");
+      button.setEnabled(false);
       Widgets.layout(button,0,3,TableLayoutData.DEFAULT);
+      Widgets.addEventListener(new WidgetEventListener(button,selectJobEvent)
+      {
+        public void trigger(Control control)
+        {
+          Widgets.setEnabled(control,selectedJobId != 0);
+        }
+      });
       button.addSelectionListener(new SelectionListener()
       {
         public void widgetSelected(SelectionEvent selectionEvent)
@@ -1342,7 +1349,15 @@ class TabJobs
       button.setToolTipText("Copy an existing job entry and create a new one.");
 
       button = Widgets.newButton(composite,"Rename");
+      button.setEnabled(false);
       Widgets.layout(button,0,4,TableLayoutData.DEFAULT);
+      Widgets.addEventListener(new WidgetEventListener(button,selectJobEvent)
+      {
+        public void trigger(Control control)
+        {
+          Widgets.setEnabled(control,selectedJobId != 0);
+        }
+      });
       button.addSelectionListener(new SelectionListener()
       {
         public void widgetSelected(SelectionEvent selectionEvent)
@@ -1360,7 +1375,15 @@ class TabJobs
       button.setToolTipText("Rename a job entry.");
 
       button = Widgets.newButton(composite,"Delete");
+      button.setEnabled(false);
       Widgets.layout(button,0,5,TableLayoutData.DEFAULT);
+      Widgets.addEventListener(new WidgetEventListener(button,selectJobEvent)
+      {
+        public void trigger(Control control)
+        {
+          Widgets.setEnabled(control,selectedJobId != 0);
+        }
+      });
       button.addSelectionListener(new SelectionListener()
       {
         public void widgetSelected(SelectionEvent selectionEvent)
@@ -1380,6 +1403,7 @@ class TabJobs
 
     // create sub-tabs
     widgetTabFolder = Widgets.newTabFolder(widgetTab);
+    Widgets.setEnabled(widgetTabFolder,false);
     Widgets.layout(widgetTabFolder,1,0,TableLayoutData.NSWE);
     {
       tab = Widgets.addTab(widgetTabFolder,"Files");
@@ -2054,7 +2078,7 @@ class TabJobs
             {
             }
           });
-          Widgets.addModifyListener(new WidgetListener(button,skipUnreadable));
+          Widgets.addModifyListener(new WidgetModifyListener(button,skipUnreadable));
           button.setToolTipText("If enabled skip not readable entries (write information to log file).\nIf disabled stop job with an error.");
 
           button = Widgets.newCheckbox(composite,"raw images");
@@ -2072,7 +2096,7 @@ class TabJobs
             {
             }
           });
-          Widgets.addModifyListener(new WidgetListener(button,rawImages));
+          Widgets.addModifyListener(new WidgetModifyListener(button,rawImages));
           button.setToolTipText("If enabled store all data of a device into an image.\nIf disabled try to detect file system and only store used blocks to image.");
         }
       }
@@ -2102,7 +2126,7 @@ class TabJobs
             {
             }
           });
-          Widgets.addModifyListener(new WidgetListener(button,archivePartSizeFlag)
+          Widgets.addModifyListener(new WidgetModifyListener(button,archivePartSizeFlag)
           {
             public void modified(Control control, WidgetVariable archivePartSizeFlag)
             {
@@ -2124,7 +2148,7 @@ class TabJobs
             {
             }
           });
-          Widgets.addModifyListener(new WidgetListener(button,archivePartSizeFlag)
+          Widgets.addModifyListener(new WidgetModifyListener(button,archivePartSizeFlag)
           {
             public void modified(Control control, WidgetVariable archivePartSizeFlag)
             {
@@ -2137,7 +2161,7 @@ class TabJobs
           widgetArchivePartSize.setItems(new String[]{"32M","64M","128M","256M","512M","1G","2G"});
           widgetArchivePartSize.setData("showedErrorDialog",false);
           Widgets.layout(widgetArchivePartSize,0,2,TableLayoutData.W);
-          Widgets.addModifyListener(new WidgetListener(widgetArchivePartSize,archivePartSizeFlag)
+          Widgets.addModifyListener(new WidgetModifyListener(widgetArchivePartSize,archivePartSizeFlag)
           {
             public void modified(Control control, WidgetVariable archivePartSizeFlag)
             {
@@ -2239,7 +2263,7 @@ class TabJobs
               }
             }
           });
-          Widgets.addModifyListener(new WidgetListener(widgetArchivePartSize,archivePartSize)
+          Widgets.addModifyListener(new WidgetModifyListener(widgetArchivePartSize,archivePartSize)
           {
             public String getString(WidgetVariable variable)
             {
@@ -2276,10 +2300,10 @@ class TabJobs
               BARServer.setOption(selectedJobId,"compress-algorithm",s);
             }
           });
-          Widgets.addModifyListener(new WidgetListener(combo,compressAlgorithm));
+          Widgets.addModifyListener(new WidgetModifyListener(combo,compressAlgorithm));
           combo.setToolTipText("Compression method to use.");
         }
-          
+
         label = Widgets.newLabel(tab,"Compress exclude:");
         Widgets.layout(label,2,0,TableLayoutData.NW);
         composite = Widgets.newComposite(tab);
@@ -2289,7 +2313,7 @@ class TabJobs
           // compress exclude list
           widgetCompressExcludeList = Widgets.newList(composite);
           Widgets.layout(widgetCompressExcludeList,0,0,TableLayoutData.NSWE);
-          Widgets.addModifyListener(new WidgetListener(widgetCompressExcludeList,compressAlgorithm)
+          Widgets.addModifyListener(new WidgetModifyListener(widgetCompressExcludeList,compressAlgorithm)
           {
             public void modified(Control control, WidgetVariable compressAlgorithm)
             {
@@ -2337,7 +2361,7 @@ class TabJobs
           {
             button = Widgets.newButton(subComposite,"Add");
             Widgets.layout(button,0,0,TableLayoutData.DEFAULT,0,0,0,0,60,SWT.DEFAULT);
-            Widgets.addModifyListener(new WidgetListener(button,compressAlgorithm)
+            Widgets.addModifyListener(new WidgetModifyListener(button,compressAlgorithm)
             {
               public void modified(Control control, WidgetVariable compressAlgorithm)
               {
@@ -2362,7 +2386,7 @@ class TabJobs
 
             button = Widgets.newButton(subComposite,"Rem");
             Widgets.layout(button,0,1,TableLayoutData.DEFAULT,0,0,0,0,60,SWT.DEFAULT);
-            Widgets.addModifyListener(new WidgetListener(button,compressAlgorithm)
+            Widgets.addModifyListener(new WidgetModifyListener(button,compressAlgorithm)
             {
               public void modified(Control control, WidgetVariable compressAlgorithm)
               {
@@ -2409,7 +2433,7 @@ class TabJobs
               BARServer.setOption(selectedJobId,"crypt-algorithm",s);
             }
           });
-          Widgets.addModifyListener(new WidgetListener(combo,cryptAlgorithm));
+          Widgets.addModifyListener(new WidgetModifyListener(combo,cryptAlgorithm));
           combo.setToolTipText("Encryption method to use.");
 
         }
@@ -2420,7 +2444,7 @@ class TabJobs
         {
           button = Widgets.newRadio(composite,"symmetric");
           Widgets.layout(button,0,0,TableLayoutData.W);
-          Widgets.addModifyListener(new WidgetListener(button,cryptAlgorithm)
+          Widgets.addModifyListener(new WidgetModifyListener(button,cryptAlgorithm)
           {
             public void modified(Control control, WidgetVariable cryptAlgorithm)
             {
@@ -2439,7 +2463,7 @@ class TabJobs
             {
             }
           });
-          Widgets.addModifyListener(new WidgetListener(button,cryptType)
+          Widgets.addModifyListener(new WidgetModifyListener(button,cryptType)
           {
             public void modified(Control control, WidgetVariable cryptType)
             {
@@ -2450,7 +2474,7 @@ class TabJobs
 
           button = Widgets.newRadio(composite,"asymmetric");
           Widgets.layout(button,0,1,TableLayoutData.W);
-          Widgets.addModifyListener(new WidgetListener(button,cryptAlgorithm)
+          Widgets.addModifyListener(new WidgetModifyListener(button,cryptAlgorithm)
           {
             public void modified(Control control, WidgetVariable cryptAlgorithm)
             {
@@ -2469,7 +2493,7 @@ class TabJobs
             {
             }
           });
-          Widgets.addModifyListener(new WidgetListener(button,cryptType)
+          Widgets.addModifyListener(new WidgetModifyListener(button,cryptType)
           {
             public void modified(Control control, WidgetVariable cryptType)
             {
@@ -2485,7 +2509,7 @@ class TabJobs
           Widgets.layout(label,0,3,TableLayoutData.W);
           text = Widgets.newText(composite);
           Widgets.layout(text,0,4,TableLayoutData.WE);
-          Widgets.addModifyListener(new WidgetListener(text,new WidgetVariable[]{cryptAlgorithm,cryptType})
+          Widgets.addModifyListener(new WidgetModifyListener(text,new WidgetVariable[]{cryptAlgorithm,cryptType})
           {
             public void modified(Control control, WidgetVariable cryptAlgorithm)
             {
@@ -2535,12 +2559,12 @@ class TabJobs
               BARServer.setOption(selectedJobId,"crypt-public-key",string);
             }
           });
-          Widgets.addModifyListener(new WidgetListener(text,cryptPublicKeyFileName));
+          Widgets.addModifyListener(new WidgetModifyListener(text,cryptPublicKeyFileName));
           text.setToolTipText("Public key file used for asymmetric encryption.");
 
           button = Widgets.newButton(composite,IMAGE_DIRECTORY);
           Widgets.layout(button,0,5,TableLayoutData.DEFAULT);
-          Widgets.addModifyListener(new WidgetListener(button,new WidgetVariable[]{cryptAlgorithm,cryptType})
+          Widgets.addModifyListener(new WidgetModifyListener(button,new WidgetVariable[]{cryptAlgorithm,cryptType})
           {
             public void modified(Control control, WidgetVariable cryptAlgorithm)
             {
@@ -2586,7 +2610,7 @@ class TabJobs
         {
           button = Widgets.newRadio(composite,"default");
           Widgets.layout(button,0,0,TableLayoutData.W);
-          Widgets.addModifyListener(new WidgetListener(button,new WidgetVariable[]{cryptAlgorithm,cryptType})
+          Widgets.addModifyListener(new WidgetModifyListener(button,new WidgetVariable[]{cryptAlgorithm,cryptType})
           {
             public void modified(Control control, WidgetVariable variables[])
             {
@@ -2608,7 +2632,7 @@ class TabJobs
             {
             }
           });
-          Widgets.addModifyListener(new WidgetListener(button,cryptPasswordMode)
+          Widgets.addModifyListener(new WidgetModifyListener(button,cryptPasswordMode)
           {
             public void modified(Control control, WidgetVariable cryptPasswordMode)
             {
@@ -2619,7 +2643,7 @@ class TabJobs
 
           button = Widgets.newRadio(composite,"ask");
           Widgets.layout(button,0,1,TableLayoutData.W);
-          Widgets.addModifyListener(new WidgetListener(button,new WidgetVariable[]{cryptAlgorithm,cryptType})
+          Widgets.addModifyListener(new WidgetModifyListener(button,new WidgetVariable[]{cryptAlgorithm,cryptType})
           {
             public void modified(Control control, WidgetVariable variables[])
             {
@@ -2641,7 +2665,7 @@ class TabJobs
             {
             }
           });
-          Widgets.addModifyListener(new WidgetListener(button,cryptPasswordMode)
+          Widgets.addModifyListener(new WidgetModifyListener(button,cryptPasswordMode)
           {
             public void modified(Control control, WidgetVariable cryptPasswordMode)
             {
@@ -2652,7 +2676,7 @@ class TabJobs
 
           button = Widgets.newRadio(composite,"this");
           Widgets.layout(button,0,2,TableLayoutData.W);
-          Widgets.addModifyListener(new WidgetListener(button,new WidgetVariable[]{cryptAlgorithm,cryptType})
+          Widgets.addModifyListener(new WidgetModifyListener(button,new WidgetVariable[]{cryptAlgorithm,cryptType})
           {
             public void modified(Control control, WidgetVariable variables[])
             {
@@ -2674,7 +2698,7 @@ class TabJobs
             {
             }
           });
-          Widgets.addModifyListener(new WidgetListener(button,cryptPasswordMode)
+          Widgets.addModifyListener(new WidgetModifyListener(button,cryptPasswordMode)
           {
             public void modified(Control control, WidgetVariable cryptPasswordMode)
             {
@@ -2685,7 +2709,7 @@ class TabJobs
 
           widgetCryptPassword1 = Widgets.newPassword(composite);
           Widgets.layout(widgetCryptPassword1,0,3,TableLayoutData.WE);
-          Widgets.addModifyListener(new WidgetListener(widgetCryptPassword1,new WidgetVariable[]{cryptAlgorithm,cryptType,cryptPasswordMode})
+          Widgets.addModifyListener(new WidgetModifyListener(widgetCryptPassword1,new WidgetVariable[]{cryptAlgorithm,cryptType,cryptPasswordMode})
           {
             public void modified(Control control, WidgetVariable variables[])
             {
@@ -2739,7 +2763,7 @@ class TabJobs
               }
             }
           });
-          Widgets.addModifyListener(new WidgetListener(widgetCryptPassword1,cryptPassword));
+          Widgets.addModifyListener(new WidgetModifyListener(widgetCryptPassword1,cryptPassword));
           widgetCryptPassword1.setToolTipText("Password used for encryption.");
 
           label = Widgets.newLabel(composite,"Repeat:");
@@ -2747,7 +2771,7 @@ class TabJobs
 
           widgetCryptPassword2 = Widgets.newPassword(composite);
           Widgets.layout(widgetCryptPassword2,0,5,TableLayoutData.WE);
-          Widgets.addModifyListener(new WidgetListener(widgetCryptPassword2,new WidgetVariable[]{cryptAlgorithm,cryptType,cryptPasswordMode})
+          Widgets.addModifyListener(new WidgetModifyListener(widgetCryptPassword2,new WidgetVariable[]{cryptAlgorithm,cryptType,cryptPasswordMode})
           {
             public void modified(Control control, WidgetVariable[] variables)
             {
@@ -2805,7 +2829,7 @@ class TabJobs
               }
             }
           });
-          Widgets.addModifyListener(new WidgetListener(widgetCryptPassword2,cryptPassword));
+          Widgets.addModifyListener(new WidgetModifyListener(widgetCryptPassword2,cryptPassword));
           widgetCryptPassword1.setToolTipText("Password used for encryption.");
         }
 
@@ -2830,7 +2854,7 @@ class TabJobs
             {
             }
           });
-          Widgets.addModifyListener(new WidgetListener(button,archiveType)
+          Widgets.addModifyListener(new WidgetModifyListener(button,archiveType)
           {
             public void modified(Control control, WidgetVariable archiveType)
             {
@@ -2853,7 +2877,7 @@ class TabJobs
             {
             }
           });
-          Widgets.addModifyListener(new WidgetListener(button,archiveType)
+          Widgets.addModifyListener(new WidgetModifyListener(button,archiveType)
           {
             public void modified(Control control, WidgetVariable archiveType)
             {
@@ -2876,7 +2900,7 @@ class TabJobs
             {
             }
           });
-          Widgets.addModifyListener(new WidgetListener(button,archiveType)
+          Widgets.addModifyListener(new WidgetModifyListener(button,archiveType)
           {
             public void modified(Control control, WidgetVariable archiveType)
             {
@@ -2899,7 +2923,7 @@ class TabJobs
             {
             }
           });
-          Widgets.addModifyListener(new WidgetListener(button,archiveType)
+          Widgets.addModifyListener(new WidgetModifyListener(button,archiveType)
           {
             public void modified(Control control, WidgetVariable archiveType)
             {
@@ -2953,7 +2977,7 @@ class TabJobs
               BARServer.setOption(selectedJobId,"archive-name",getArchiveName());
             }
           });
-          Widgets.addModifyListener(new WidgetListener(text,storageFileName));
+          Widgets.addModifyListener(new WidgetModifyListener(text,storageFileName));
           text.setToolTipText("Name of storage files to create. Several macros are supported. Click on button to the right to open storage file name editor.");
 
           button = Widgets.newButton(composite,IMAGE_DIRECTORY);
@@ -3021,7 +3045,7 @@ class TabJobs
               BARServer.setOption(selectedJobId,"incremental-list-file",string);
             }
           });
-          Widgets.addModifyListener(new WidgetListener(text,incrementalListFileName));
+          Widgets.addModifyListener(new WidgetModifyListener(text,incrementalListFileName));
           text.setToolTipText("Name of incremental data file. If no file name is given a name is derived automatically from the storage file name.");
 
           button = Widgets.newButton(composite,IMAGE_DIRECTORY);
@@ -3069,7 +3093,7 @@ class TabJobs
             {
             }
           });
-          Widgets.addModifyListener(new WidgetListener(button,storageType)
+          Widgets.addModifyListener(new WidgetModifyListener(button,storageType)
           {
             public void modified(Control control, WidgetVariable storageType)
             {
@@ -3092,7 +3116,7 @@ class TabJobs
             {
             }
           });
-          Widgets.addModifyListener(new WidgetListener(button,storageType)
+          Widgets.addModifyListener(new WidgetModifyListener(button,storageType)
           {
             public void modified(Control control, WidgetVariable storageType)
             {
@@ -3115,7 +3139,7 @@ class TabJobs
             {
             }
           });
-          Widgets.addModifyListener(new WidgetListener(button,storageType)
+          Widgets.addModifyListener(new WidgetModifyListener(button,storageType)
           {
             public void modified(Control control, WidgetVariable storageType)
             {
@@ -3138,7 +3162,7 @@ class TabJobs
             {
             }
           });
-          Widgets.addModifyListener(new WidgetListener(button,storageType)
+          Widgets.addModifyListener(new WidgetModifyListener(button,storageType)
           {
             public void modified(Control control, WidgetVariable storageType)
             {
@@ -3161,7 +3185,7 @@ class TabJobs
             {
             }
           });
-          Widgets.addModifyListener(new WidgetListener(button,storageType)
+          Widgets.addModifyListener(new WidgetModifyListener(button,storageType)
           {
             public void modified(Control control, WidgetVariable storageType)
             {
@@ -3184,7 +3208,7 @@ class TabJobs
             {
             }
           });
-          Widgets.addModifyListener(new WidgetListener(button,storageType)
+          Widgets.addModifyListener(new WidgetModifyListener(button,storageType)
           {
             public void modified(Control control, WidgetVariable storageType)
             {
@@ -3207,7 +3231,7 @@ class TabJobs
             {
             }
           });
-          Widgets.addModifyListener(new WidgetListener(button,storageType)
+          Widgets.addModifyListener(new WidgetModifyListener(button,storageType)
           {
             public void modified(Control control, WidgetVariable storageType)
             {
@@ -3230,7 +3254,7 @@ class TabJobs
             {
             }
           });
-          Widgets.addModifyListener(new WidgetListener(button,storageType)
+          Widgets.addModifyListener(new WidgetModifyListener(button,storageType)
           {
             public void modified(Control control, WidgetVariable storageType)
             {
@@ -3244,7 +3268,7 @@ class TabJobs
         composite = Widgets.newComposite(tab,SWT.BORDER);
         composite.setLayout(new TableLayout(0.0,new double[]{1.0}));
         Widgets.layout(composite,10,1,TableLayoutData.WE|TableLayoutData.N);
-        Widgets.addModifyListener(new WidgetListener(composite,storageType)
+        Widgets.addModifyListener(new WidgetModifyListener(composite,storageType)
         {
           public void modified(Control control, WidgetVariable variable)
           {
@@ -3268,7 +3292,7 @@ class TabJobs
             {
             }
           });
-          Widgets.addModifyListener(new WidgetListener(button,overwriteArchiveFiles));
+          Widgets.addModifyListener(new WidgetModifyListener(button,overwriteArchiveFiles));
           button.setToolTipText("If enabled overwrite existing archive files. If disabled do not overwrite existing files and stop with an error.");
         }
 
@@ -3276,7 +3300,7 @@ class TabJobs
         composite = Widgets.newComposite(tab,SWT.BORDER);
         composite.setLayout(new TableLayout(0.0,1.0));
         Widgets.layout(composite,10,1,TableLayoutData.WE|TableLayoutData.N);
-        Widgets.addModifyListener(new WidgetListener(composite,storageType)
+        Widgets.addModifyListener(new WidgetModifyListener(composite,storageType)
         {
           public void modified(Control control, WidgetVariable variable)
           {
@@ -3329,7 +3353,7 @@ class TabJobs
                 BARServer.setOption(selectedJobId,"archive-name",getArchiveName());
               }
             });
-            Widgets.addModifyListener(new WidgetListener(text,storageLoginName));
+            Widgets.addModifyListener(new WidgetModifyListener(text,storageLoginName));
             text.setToolTipText("FTP server user login name. Leave it empty to use the default name from the configuration file.");
 
             label = Widgets.newLabel(composite,"Host:");
@@ -3372,7 +3396,7 @@ class TabJobs
                 BARServer.setOption(selectedJobId,"archive-name",getArchiveName());
               }
             });
-            Widgets.addModifyListener(new WidgetListener(text,storageHostName));
+            Widgets.addModifyListener(new WidgetModifyListener(text,storageHostName));
             text.setToolTipText("FTP server name.");
 
             label = Widgets.newLabel(composite,"Password:");
@@ -3415,7 +3439,7 @@ class TabJobs
                 BARServer.setOption(selectedJobId,"archive-name",getArchiveName());
               }
             });
-            Widgets.addModifyListener(new WidgetListener(text,storageLoginPassword));
+            Widgets.addModifyListener(new WidgetModifyListener(text,storageLoginPassword));
             text.setToolTipText("FTP server login password. Leave it empty to use the default password from the configuration file.");
           }
 
@@ -3440,7 +3464,7 @@ class TabJobs
               {
               }
             });
-            Widgets.addModifyListener(new WidgetListener(button,archivePartSizeFlag)
+            Widgets.addModifyListener(new WidgetModifyListener(button,archivePartSizeFlag)
             {
               public void modified(Control control, WidgetVariable archivePartSizeFlag)
               {
@@ -3462,7 +3486,7 @@ class TabJobs
               {
               }
             });
-            Widgets.addModifyListener(new WidgetListener(button,archivePartSizeFlag)
+            Widgets.addModifyListener(new WidgetModifyListener(button,archivePartSizeFlag)
             {
               public void modified(Control control, WidgetVariable archivePartSizeFlag)
               {
@@ -3482,7 +3506,7 @@ class TabJobs
         composite = Widgets.newComposite(tab,SWT.BORDER);
         composite.setLayout(new TableLayout(0.0,new double[]{0.0,1.0}));
         Widgets.layout(composite,10,1,TableLayoutData.WE|TableLayoutData.N);
-        Widgets.addModifyListener(new WidgetListener(composite,storageType)
+        Widgets.addModifyListener(new WidgetModifyListener(composite,storageType)
         {
           public void modified(Control control, WidgetVariable variable)
           {
@@ -3537,7 +3561,7 @@ class TabJobs
                 BARServer.setOption(selectedJobId,"archive-name",getArchiveName());
               }
             });
-            Widgets.addModifyListener(new WidgetListener(text,storageLoginName));
+            Widgets.addModifyListener(new WidgetModifyListener(text,storageLoginName));
             text.setToolTipText("SSH login name. Leave it empty to use the default login name from the configuration file.");
 
             label = Widgets.newLabel(subComposite,"Host:");
@@ -3580,7 +3604,7 @@ class TabJobs
                 BARServer.setOption(selectedJobId,"archive-name",getArchiveName());
               }
             });
-            Widgets.addModifyListener(new WidgetListener(text,storageHostName));
+            Widgets.addModifyListener(new WidgetModifyListener(text,storageHostName));
             text.setToolTipText("SSH login host name.");
 
             label = Widgets.newLabel(subComposite,"Port:");
@@ -3686,7 +3710,7 @@ class TabJobs
                 }
               }
             });
-            Widgets.addModifyListener(new WidgetListener(text,storageHostPort));
+            Widgets.addModifyListener(new WidgetModifyListener(text,storageHostPort));
             text.setToolTipText("SSH login port number. Set to 0 to use default port number from configuration file.");
           }
 
@@ -3735,7 +3759,7 @@ class TabJobs
                 BARServer.setOption(selectedJobId,"ssh-public-key",string);
               }
             });
-            Widgets.addModifyListener(new WidgetListener(text,sshPublicKeyFileName));
+            Widgets.addModifyListener(new WidgetModifyListener(text,sshPublicKeyFileName));
             text.setToolTipText("SSH public key file name. Leave it empty to use the default key file from the configuration file.");
 
             button = Widgets.newButton(subComposite,IMAGE_DIRECTORY);
@@ -3808,7 +3832,7 @@ class TabJobs
                 BARServer.setOption(selectedJobId,"ssh-private-key",string);
               }
             });
-            Widgets.addModifyListener(new WidgetListener(text,sshPrivateKeyFileName));
+            Widgets.addModifyListener(new WidgetModifyListener(text,sshPrivateKeyFileName));
             text.setToolTipText("SSH private key file name. Leave it empty to use the default key file from the configuration file.");
 
             button = Widgets.newButton(subComposite,IMAGE_DIRECTORY);
@@ -3856,7 +3880,7 @@ class TabJobs
               {
               }
             });
-            Widgets.addModifyListener(new WidgetListener(button,archivePartSizeFlag)
+            Widgets.addModifyListener(new WidgetModifyListener(button,archivePartSizeFlag)
             {
               public void modified(Control control, WidgetVariable archivePartSizeFlag)
               {
@@ -3880,7 +3904,7 @@ class TabJobs
               {
               }
             });
-            Widgets.addModifyListener(new WidgetListener(button,archivePartSizeFlag)
+            Widgets.addModifyListener(new WidgetModifyListener(button,archivePartSizeFlag)
             {
               public void modified(Control control, WidgetVariable archivePartSizeFlag)
               {
@@ -3900,7 +3924,7 @@ class TabJobs
         composite = Widgets.newComposite(tab,SWT.BORDER);
         composite.setLayout(new TableLayout(0.0,new double[]{0.0,1.0}));
         Widgets.layout(composite,10,1,TableLayoutData.WE);
-        Widgets.addModifyListener(new WidgetListener(composite,storageType)
+        Widgets.addModifyListener(new WidgetModifyListener(composite,storageType)
         {
           public void modified(Control control, WidgetVariable variable)
           {
@@ -3952,7 +3976,7 @@ class TabJobs
                 BARServer.setOption(selectedJobId,"archive-name",getArchiveName());
               }
             });
-            Widgets.addModifyListener(new WidgetListener(text,storageDeviceName));
+            Widgets.addModifyListener(new WidgetModifyListener(text,storageDeviceName));
             text.setToolTipText("Device name. Leave it empty to use system default device name.");
 
             button = Widgets.newButton(subComposite,IMAGE_DIRECTORY);
@@ -4077,7 +4101,7 @@ class TabJobs
                 }
               }
             });
-            Widgets.addModifyListener(new WidgetListener(combo,volumeSize)
+            Widgets.addModifyListener(new WidgetModifyListener(combo,volumeSize)
             {
               public String getString(WidgetVariable variable)
               {
@@ -4110,7 +4134,7 @@ class TabJobs
               {
               }
             });
-            Widgets.addModifyListener(new WidgetListener(button,ecc));
+            Widgets.addModifyListener(new WidgetModifyListener(button,ecc));
             button.setToolTipText("Add error-correction codes to CD/DVD/BD image (require dvdisaster tool).");
 
             button = Widgets.newCheckbox(subComposite,"wait for first volume");
@@ -4128,7 +4152,7 @@ class TabJobs
               {
               }
             });
-            Widgets.addModifyListener(new WidgetListener(button,waitFirstVolume));
+            Widgets.addModifyListener(new WidgetModifyListener(button,waitFirstVolume));
             button.setToolTipText("Wait until first volume is loaded.");
           }
         }
@@ -4137,7 +4161,7 @@ class TabJobs
         composite = Widgets.newComposite(tab,SWT.BORDER);
         composite.setLayout(new TableLayout(0.0,new double[]{0.0,1.0}));
         Widgets.layout(composite,10,1,TableLayoutData.WE|TableLayoutData.N);
-        Widgets.addModifyListener(new WidgetListener(composite,storageType)
+        Widgets.addModifyListener(new WidgetModifyListener(composite,storageType)
         {
           public void modified(Control control, WidgetVariable variable)
           {
@@ -4189,7 +4213,7 @@ class TabJobs
                 BARServer.setOption(selectedJobId,"archive-name",getArchiveName());
               }
             });
-            Widgets.addModifyListener(new WidgetListener(text,storageDeviceName));
+            Widgets.addModifyListener(new WidgetModifyListener(text,storageDeviceName));
             text.setToolTipText("Device name.");
 
             button = Widgets.newButton(subComposite,IMAGE_DIRECTORY);
@@ -4314,7 +4338,7 @@ class TabJobs
                 }
               }
             });
-            Widgets.addModifyListener(new WidgetListener(combo,volumeSize)
+            Widgets.addModifyListener(new WidgetModifyListener(combo,volumeSize)
             {
               public String getString(WidgetVariable variable)
               {
@@ -4468,7 +4492,13 @@ class TabJobs
         }
       }
     }
-    Widgets.setEnabled(widgetTabFolder,false);
+    Widgets.addEventListener(new WidgetEventListener(widgetTabFolder,selectJobEvent)
+    {
+      public void trigger(Control control)
+      {
+        Widgets.setEnabled(control,selectedJobId != 0);
+      }
+    });
 
     // add root devices
     addDirectoryRootDevices();
@@ -4478,7 +4508,7 @@ class TabJobs
     updateJobList();
   }
 
-  /** select job
+  /** select job by name
    * @param name job name
    */
   void selectJob(String name)
@@ -4497,7 +4527,8 @@ class TabJobs
         selectedJobName = name;
         selectedJobId   = jobIds.get(name);
         widgetJobList.select(index);
-        Widgets.setEnabled(widgetTabFolder,true);
+        selectJobEvent.trigger();
+
         update();
       }
     }
@@ -4579,9 +4610,6 @@ class TabJobs
     if (selectedJobId > 0)
     {
       // get job data
-      skipUnreadable.set(BARServer.getBooleanOption(selectedJobId,"skip-unreadable"));
-      overwriteFiles.set(BARServer.getBooleanOption(selectedJobId,"overwrite-files"));
-
       parseArchiveName(BARServer.getStringOption(selectedJobId,"archive-name"));
       archiveType.set(BARServer.getStringOption(selectedJobId,"archive-type"));
       archivePartSize.set(Units.parseByteSize(BARServer.getStringOption(selectedJobId,"archive-part-size"),0));
@@ -4603,6 +4631,8 @@ class TabJobs
       volumeSize.set(Units.parseByteSize(BARServer.getStringOption(selectedJobId,"volume-size"),0));
       ecc.set(BARServer.getBooleanOption(selectedJobId,"ecc"));
       waitFirstVolume.set(BARServer.getBooleanOption(selectedJobId,"wait-first-volume"));
+      skipUnreadable.set(BARServer.getBooleanOption(selectedJobId,"skip-unreadable"));
+      overwriteFiles.set(BARServer.getBooleanOption(selectedJobId,"overwrite-files"));
 
       updateIncludeList();
       updateExcludeList();
@@ -4640,6 +4670,7 @@ class TabJobs
     ArrayList<String> result = new ArrayList<String>();
     if (BARServer.executeCommand("JOB_LIST",result) != Errors.NONE) return;
 
+// NYI: how to update job listin status tab?
     // update job list
     synchronized(widgetJobList)
     {
@@ -4993,7 +5024,7 @@ throw new Error("NYI");
         if (errorCode == Errors.NONE)
         {
           updateJobList();
-          Widgets.setEnabled(widgetTabFolder,false);
+          selectJobEvent.trigger();
           clear();
         }
         else
@@ -6176,7 +6207,7 @@ throw new Error("NYI");
 
     int index = widgetIncludeTable.getSelectionIndex();
     if (index >= 0)
-    { 
+    {
       includeRemove(((EntryData)widgetIncludeTable.getItem(index).getData()).pattern);
     }
   }
@@ -6275,7 +6306,7 @@ throw new Error("NYI");
 
     /** convert Java object to native data
      * @param object object to convert
-     * @param transferData transfer data 
+     * @param transferData transfer data
      */
     public void javaToNative(Object object, TransferData transferData)
     {

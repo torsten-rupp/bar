@@ -508,19 +508,19 @@ class TabStatus
       Widgets.layout(label,0,0,TableLayoutData.W);
       label= Widgets.newNumberView(widgetSelectedJob);
       Widgets.layout(label,0,1,TableLayoutData.WE);
-      Widgets.addModifyListener(new WidgetListener(label,doneFiles));
+      Widgets.addModifyListener(new WidgetModifyListener(label,doneFiles));
       label = Widgets.newLabel(widgetSelectedJob,"files");
       Widgets.layout(label,0,2,TableLayoutData.W);
       label = Widgets.newNumberView(widgetSelectedJob);
       Widgets.layout(label,0,3,TableLayoutData.WE);
-      Widgets.addModifyListener(new WidgetListener(label,doneBytes));
+      Widgets.addModifyListener(new WidgetModifyListener(label,doneBytes));
       label = Widgets.newLabel(widgetSelectedJob,"bytes");
       Widgets.layout(label,0,4,TableLayoutData.W);
       label = Widgets.newLabel(widgetSelectedJob,"/");
       Widgets.layout(label,0,5,TableLayoutData.W);
       label = Widgets.newNumberView(widgetSelectedJob);
       Widgets.layout(label,0,6,TableLayoutData.WE);
-      Widgets.addModifyListener(new WidgetListener(label,doneBytes)
+      Widgets.addModifyListener(new WidgetModifyListener(label,doneBytes)
       {
         public String getString(WidgetVariable variable)
         {
@@ -529,7 +529,7 @@ class TabStatus
       });
       label = Widgets.newLabel(widgetSelectedJob,"bytes");
       Widgets.layout(label,0,7,TableLayoutData.W,0,0,0,0,Widgets.getTextSize(label,new String[]{"bytes","KBytes","MBytes","GBytes"}));
-      Widgets.addModifyListener(new WidgetListener(label,doneBytes)
+      Widgets.addModifyListener(new WidgetModifyListener(label,doneBytes)
       {
         public String getString(WidgetVariable variable)
         {
@@ -543,7 +543,7 @@ class TabStatus
       {
         label = Widgets.newNumberView(composite);
         Widgets.layout(label,0,0,TableLayoutData.WE);
-        Widgets.addModifyListener(new WidgetListener(label,filesPerSecond)
+        Widgets.addModifyListener(new WidgetModifyListener(label,filesPerSecond)
         {
           public String getString(WidgetVariable variable)
           {
@@ -560,7 +560,7 @@ class TabStatus
       {
         label = Widgets.newNumberView(composite);
         Widgets.layout(label,0,0,TableLayoutData.WE);
-        Widgets.addModifyListener(new WidgetListener(label,bytesPerSecond)
+        Widgets.addModifyListener(new WidgetModifyListener(label,bytesPerSecond)
         {
           public String getString(WidgetVariable variable)
           {
@@ -569,7 +569,7 @@ class TabStatus
         });
         label = Widgets.newLabel(composite,"bytes/s");
         Widgets.layout(label,0,1,TableLayoutData.W,0,0,0,0,Widgets.getTextSize(label,new String[]{"bytes/s","KBytes/s","MBytes/s","GBytes/s"}));
-        Widgets.addModifyListener(new WidgetListener(label,bytesPerSecond)
+        Widgets.addModifyListener(new WidgetModifyListener(label,bytesPerSecond)
         {
           public String getString(WidgetVariable variable)
           {
@@ -583,14 +583,14 @@ class TabStatus
       Widgets.layout(label,1,0,TableLayoutData.W);
       label = Widgets.newNumberView(widgetSelectedJob);
       Widgets.layout(label,1,3,TableLayoutData.WE);
-      Widgets.addModifyListener(new WidgetListener(label,storedBytes));
+      Widgets.addModifyListener(new WidgetModifyListener(label,storedBytes));
       label = Widgets.newLabel(widgetSelectedJob,"bytes");
       Widgets.layout(label,1,4,TableLayoutData.W);
       label = Widgets.newLabel(widgetSelectedJob,"/");
       Widgets.layout(label,1,5,TableLayoutData.W);
       label = Widgets.newNumberView(widgetSelectedJob);
       Widgets.layout(label,1,6,TableLayoutData.WE);
-      Widgets.addModifyListener(new WidgetListener(label,storedBytes)
+      Widgets.addModifyListener(new WidgetModifyListener(label,storedBytes)
       {
         public String getString(WidgetVariable variable)
         {
@@ -599,7 +599,7 @@ class TabStatus
       });
       label = Widgets.newLabel(widgetSelectedJob,"bytes");
       Widgets.layout(label,1,7,TableLayoutData.W,0,0,0,0,Widgets.getTextSize(label,new String[]{"bytes","KBytes","MBytes","GBytes"}));
-      Widgets.addModifyListener(new WidgetListener(label,storedBytes)
+      Widgets.addModifyListener(new WidgetModifyListener(label,storedBytes)
       {
         public String getString(WidgetVariable variable)
         {
@@ -615,7 +615,7 @@ class TabStatus
         Widgets.layout(label,0,0,TableLayoutData.W);
         label = Widgets.newNumberView(composite);
         Widgets.layout(label,0,1,TableLayoutData.WE);
-        Widgets.addModifyListener(new WidgetListener(label,ratio)
+        Widgets.addModifyListener(new WidgetModifyListener(label,ratio)
         {
           public String getString(WidgetVariable variable)
           {
@@ -632,7 +632,7 @@ class TabStatus
       {
         label = Widgets.newNumberView(composite);
         Widgets.layout(label,0,0,TableLayoutData.WE);
-        Widgets.addModifyListener(new WidgetListener(label,storageBytesPerSecond)
+        Widgets.addModifyListener(new WidgetModifyListener(label,storageBytesPerSecond)
         {
           public String getString(WidgetVariable variable)
           {
@@ -641,7 +641,7 @@ class TabStatus
         });
         label = Widgets.newLabel(composite,"bytes/s");        
         Widgets.layout(label,0,1,TableLayoutData.W,0,0,0,0,Widgets.getTextSize(label,new String[]{"bytes/s","KBytes/s","MBytes/s","GBytes/s"}));
-        Widgets.addModifyListener(new WidgetListener(label,storageBytesPerSecond)
+        Widgets.addModifyListener(new WidgetModifyListener(label,storageBytesPerSecond)
         {
           public String getString(WidgetVariable variable)
           {
@@ -655,19 +655,19 @@ class TabStatus
       Widgets.layout(label,2,0,TableLayoutData.W);
       label = Widgets.newNumberView(widgetSelectedJob);
       Widgets.layout(label,2,1,TableLayoutData.WE);
-      Widgets.addModifyListener(new WidgetListener(label,skippedFiles));
+      Widgets.addModifyListener(new WidgetModifyListener(label,skippedFiles));
       label = Widgets.newLabel(widgetSelectedJob,"files");
       Widgets.layout(label,2,2,TableLayoutData.W);
       label = Widgets.newNumberView(widgetSelectedJob);
       Widgets.layout(label,2,3,TableLayoutData.WE);
-      Widgets.addModifyListener(new WidgetListener(label,skippedBytes));
+      Widgets.addModifyListener(new WidgetModifyListener(label,skippedBytes));
       label = Widgets.newLabel(widgetSelectedJob,"bytes");
       Widgets.layout(label,2,4,TableLayoutData.W);
       label = Widgets.newLabel(widgetSelectedJob,"/");
       Widgets.layout(label,2,5,TableLayoutData.W);
       label = Widgets.newNumberView(widgetSelectedJob);
       Widgets.layout(label,2,6,TableLayoutData.WE);
-      Widgets.addModifyListener(new WidgetListener(label,skippedBytes)
+      Widgets.addModifyListener(new WidgetModifyListener(label,skippedBytes)
       {
         public String getString(WidgetVariable variable)
         {
@@ -676,7 +676,7 @@ class TabStatus
       });
       label = Widgets.newLabel(widgetSelectedJob,"bytes");
       Widgets.layout(label,2,7,TableLayoutData.W,0,0,0,0,Widgets.getTextSize(label,new String[]{"bytes","KBytes","MBytes","GBytes"}));
-      Widgets.addModifyListener(new WidgetListener(label,skippedBytes)
+      Widgets.addModifyListener(new WidgetModifyListener(label,skippedBytes)
       {
         public String getString(WidgetVariable variable)
         {
@@ -689,19 +689,19 @@ class TabStatus
       Widgets.layout(label,3,0,TableLayoutData.W);
       label = Widgets.newNumberView(widgetSelectedJob);
       Widgets.layout(label,3,1,TableLayoutData.WE);
-      Widgets.addModifyListener(new WidgetListener(label,errorFiles));
+      Widgets.addModifyListener(new WidgetModifyListener(label,errorFiles));
       label = Widgets.newLabel(widgetSelectedJob,"files");
       Widgets.layout(label,3,2,TableLayoutData.W);
       label = Widgets.newNumberView(widgetSelectedJob);
       Widgets.layout(label,3,3,TableLayoutData.WE);
-      Widgets.addModifyListener(new WidgetListener(label,errorBytes));
+      Widgets.addModifyListener(new WidgetModifyListener(label,errorBytes));
       label = Widgets.newLabel(widgetSelectedJob,"bytes");
       Widgets.layout(label,3,4,TableLayoutData.W);
       label = Widgets.newLabel(widgetSelectedJob,"/");
       Widgets.layout(label,3,5,TableLayoutData.W);
       label = Widgets.newNumberView(widgetSelectedJob);
       Widgets.layout(label,3,6,TableLayoutData.WE);
-      Widgets.addModifyListener(new WidgetListener(label,errorBytes)
+      Widgets.addModifyListener(new WidgetModifyListener(label,errorBytes)
       {
         public String getString(WidgetVariable variable)
         {
@@ -710,7 +710,7 @@ class TabStatus
       });
       label = Widgets.newLabel(widgetSelectedJob,"bytes");
       Widgets.layout(label,3,7,TableLayoutData.W,0,0,0,0,Widgets.getTextSize(label,new String[]{"bytes","KBytes","MBytes","GBytes"}));
-      Widgets.addModifyListener(new WidgetListener(label,errorBytes)
+      Widgets.addModifyListener(new WidgetModifyListener(label,errorBytes)
       {
         public String getString(WidgetVariable variable)
         {
@@ -723,19 +723,19 @@ class TabStatus
       Widgets.layout(label,4,0,TableLayoutData.W);
       label = Widgets.newNumberView(widgetSelectedJob);
       Widgets.layout(label,4,1,TableLayoutData.WE);
-      Widgets.addModifyListener(new WidgetListener(label,totalFiles));
+      Widgets.addModifyListener(new WidgetModifyListener(label,totalFiles));
       label = Widgets.newLabel(widgetSelectedJob,"files");
       Widgets.layout(label,4,2,TableLayoutData.W);
       label = Widgets.newNumberView(widgetSelectedJob);
       Widgets.layout(label,4,3,TableLayoutData.WE);
-      Widgets.addModifyListener(new WidgetListener(label,totalBytes));
+      Widgets.addModifyListener(new WidgetModifyListener(label,totalBytes));
       label = Widgets.newLabel(widgetSelectedJob,"bytes");
       Widgets.layout(label,4,4,TableLayoutData.W);
       label = Widgets.newLabel(widgetSelectedJob,"/");
       Widgets.layout(label,4,5,TableLayoutData.W);
       label = Widgets.newNumberView(widgetSelectedJob);
       Widgets.layout(label,4,6,TableLayoutData.WE);
-      Widgets.addModifyListener(new WidgetListener(label,totalBytes)
+      Widgets.addModifyListener(new WidgetModifyListener(label,totalBytes)
       {
         public String getString(WidgetVariable variable)
         {
@@ -744,7 +744,7 @@ class TabStatus
       });
       label = Widgets.newLabel(widgetSelectedJob,"bytes");
       Widgets.layout(label,4,7,TableLayoutData.W,0,0,0,0,Widgets.getTextSize(label,new String[]{"bytes","KBytes","MBytes","GBytes"}));
-      Widgets.addModifyListener(new WidgetListener(label,totalBytes)
+      Widgets.addModifyListener(new WidgetModifyListener(label,totalBytes)
       {
         public String getString(WidgetVariable variable)
         {
@@ -757,48 +757,48 @@ class TabStatus
       Widgets.layout(label,5,0,TableLayoutData.W);
       label = Widgets.newView(widgetSelectedJob);
       Widgets.layout(label,5,1,TableLayoutData.WE,0,9);
-      Widgets.addModifyListener(new WidgetListener(label,fileName));
+      Widgets.addModifyListener(new WidgetModifyListener(label,fileName));
       progressBar = Widgets.newProgressBar(widgetSelectedJob);
       Widgets.layout(progressBar,6,1,TableLayoutData.WE,0,9);
-      Widgets.addModifyListener(new WidgetListener(progressBar,fileProgress));
+      Widgets.addModifyListener(new WidgetModifyListener(progressBar,fileProgress));
 
       // storage file, storage percentage
       label = Widgets.newLabel(widgetSelectedJob,"Storage:");
       Widgets.layout(label,7,0,TableLayoutData.W);
       label = Widgets.newView(widgetSelectedJob);
       Widgets.layout(label,7,1,TableLayoutData.WE,0,9);
-      Widgets.addModifyListener(new WidgetListener(label,storageName));
+      Widgets.addModifyListener(new WidgetModifyListener(label,storageName));
       progressBar = Widgets.newProgressBar(widgetSelectedJob);
       Widgets.layout(progressBar,8,1,TableLayoutData.WE,0,9);
-      Widgets.addModifyListener(new WidgetListener(progressBar,storageProgress));
+      Widgets.addModifyListener(new WidgetModifyListener(progressBar,storageProgress));
 
       // volume percentage
       label = Widgets.newLabel(widgetSelectedJob,"Volume:");
       Widgets.layout(label,9,0,TableLayoutData.W);
       progressBar = Widgets.newProgressBar(widgetSelectedJob);
       Widgets.layout(progressBar,9,1,TableLayoutData.WE,0,9);
-      Widgets.addModifyListener(new WidgetListener(progressBar,volumeProgress));
+      Widgets.addModifyListener(new WidgetModifyListener(progressBar,volumeProgress));
 
       // total files percentage
       label = Widgets.newLabel(widgetSelectedJob,"Total files:");
       Widgets.layout(label,10,0,TableLayoutData.W);
       progressBar = Widgets.newProgressBar(widgetSelectedJob);
       Widgets.layout(progressBar,10,1,TableLayoutData.WE,0,9);
-      Widgets.addModifyListener(new WidgetListener(progressBar,totalFilesProgress));
+      Widgets.addModifyListener(new WidgetModifyListener(progressBar,totalFilesProgress));
 
       // total bytes percentage
       label = Widgets.newLabel(widgetSelectedJob,"Total bytes:");
       Widgets.layout(label,11,0,TableLayoutData.W);
       progressBar = Widgets.newProgressBar(widgetSelectedJob);
       Widgets.layout(progressBar,11,1,TableLayoutData.WE,0,9);
-      Widgets.addModifyListener(new WidgetListener(progressBar,totalBytesProgress));
+      Widgets.addModifyListener(new WidgetModifyListener(progressBar,totalBytesProgress));
 
       // message
       label = Widgets.newLabel(widgetSelectedJob,"Message:");
       Widgets.layout(label,12,0,TableLayoutData.W);
       label = Widgets.newView(widgetSelectedJob);
       Widgets.layout(label,12,1,TableLayoutData.WE,0,9);
-      Widgets.addModifyListener(new WidgetListener(label,message));
+      Widgets.addModifyListener(new WidgetModifyListener(label,message));
       label.addMouseTrackListener(new MouseTrackListener()
       {
         public void mouseEnter(MouseEvent mouseEvent)
