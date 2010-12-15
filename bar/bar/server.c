@@ -589,6 +589,43 @@ LOCAL const char *getCryptPasswordModeName(PasswordModes passwordMode)
 }
 
 /***********************************************************************\
+* Name   : copySchedule
+* Purpose: copy allocated schedule node
+* Input  : scheduleNode - schedule node
+* Output : -
+* Return : copied schedule node
+* Notes  : -
+\***********************************************************************/
+
+LOCAL ScheduleNode *copySchedule(ScheduleNode *scheduleNode,
+                                 void         *userData
+                                )
+{
+  ScheduleNode *newScheduleNode;
+
+  assert(scheduleNode != NULL);
+
+  UNUSED_VARIABLE(userData);
+
+  /* allocate pattern node */
+  newScheduleNode = LIST_NEW_NODE(ScheduleNode);
+  if (newScheduleNode == NULL)
+  {
+    HALT_INSUFFICIENT_MEMORY();
+  }
+  newScheduleNode->year        = scheduleNode->year;
+  newScheduleNode->month       = scheduleNode->month;
+  newScheduleNode->day         = scheduleNode->day;
+  newScheduleNode->hour        = scheduleNode->hour;
+  newScheduleNode->minute      = scheduleNode->minute;
+  newScheduleNode->weekDays    = scheduleNode->weekDays;
+  newScheduleNode->archiveType = scheduleNode->archiveType;
+  newScheduleNode->enabled     = scheduleNode->enabled;
+
+  return newScheduleNode;
+}
+
+/***********************************************************************\
 * Name   : getNewJobId
 * Purpose: get new job id
 * Input  : -
@@ -647,7 +684,7 @@ LOCAL void resetJobRunningInfo(JobNode *jobNode)
 }
 
 /***********************************************************************\
-* Name   : newJob
+* Name   : newJobN
 * Purpose: create new job
 * Input  : jobType  - job type
 *          fileName - file name or NULL
@@ -710,45 +747,8 @@ LOCAL JobNode *newJob(JobTypes jobType, const String fileName)
 }
 
 /***********************************************************************\
-* Name   : copyScheduleNode
-* Purpose: copy allocated schedule node
-* Input  : scheduleNode - schedule node
-* Output : -
-* Return : copied schedule node
-* Notes  : -
-\***********************************************************************/
-
-LOCAL ScheduleNode *copyScheduleNode(ScheduleNode *scheduleNode,
-                                     void         *userData
-                                    )
-{
-  ScheduleNode *newScheduleNode;
-
-  assert(scheduleNode != NULL);
-
-  UNUSED_VARIABLE(userData);
-
-  /* allocate pattern node */
-  newScheduleNode = LIST_NEW_NODE(ScheduleNode);
-  if (newScheduleNode == NULL)
-  {
-    HALT_INSUFFICIENT_MEMORY();
-  }
-  newScheduleNode->year        = scheduleNode->year;
-  newScheduleNode->month       = scheduleNode->month;
-  newScheduleNode->day         = scheduleNode->day;
-  newScheduleNode->hour        = scheduleNode->hour;
-  newScheduleNode->minute      = scheduleNode->minute;
-  newScheduleNode->weekDays    = scheduleNode->weekDays;
-  newScheduleNode->archiveType = scheduleNode->archiveType;
-  newScheduleNode->enabled     = scheduleNode->enabled;
-
-  return newScheduleNode;
-}
-
-/***********************************************************************\
 * Name   : copyJob
-* Purpose: copy job
+* Purpose: copy job node
 * Input  : jobNode  - job node
 *          fileName - file name or NULL
 *          name     - name of job
@@ -780,7 +780,7 @@ LOCAL JobNode *copyJob(JobNode      *jobNode,
   EntryList_init(&newJobNode->includeEntryList); EntryList_copy(&jobNode->includeEntryList,&newJobNode->includeEntryList);
   PatternList_init(&newJobNode->excludePatternList); PatternList_copy(&jobNode->excludePatternList,&newJobNode->excludePatternList);
   PatternList_init(&newJobNode->compressExcludePatternList); PatternList_copy(&jobNode->compressExcludePatternList,&newJobNode->compressExcludePatternList);
-  List_init(&newJobNode->scheduleList); List_copy(&newJobNode->scheduleList,&jobNode->scheduleList,NULL,NULL,NULL,(ListNodeCopyFunction)copyScheduleNode,NULL);
+  List_init(&newJobNode->scheduleList); List_copy(&newJobNode->scheduleList,&jobNode->scheduleList,NULL,NULL,NULL,(ListNodeCopyFunction)copySchedule,NULL);
   initJobOptions(&newJobNode->jobOptions); copyJobOptions(&newJobNode->jobOptions,&newJobNode->jobOptions);
   newJobNode->modifiedFlag                   = TRUE;
 
@@ -5178,7 +5178,6 @@ LOCAL void serverCommand_scheduleClear(ClientInfo *clientInfo, uint id, const St
 LOCAL void serverCommand_scheduleAdd(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
 {
   uint          jobId;
-  String        s;
   SemaphoreLock semaphoreLock;
   ScheduleNode  *scheduleNode;
   JobNode       *jobNode;
@@ -5222,15 +5221,27 @@ LOCAL void serverCommand_scheduleAdd(ClientInfo *clientInfo, uint id, const Stri
   }
 
   /* parse schedule */
-  s = String_format(String_new(),"%S %S %S %S %S",arguments[1],arguments[2],arguments[3],arguments[4],arguments[5]);
-  scheduleNode = parseSchedule(s);
+  scheduleNode = parseScheduleParts(arguments[1],
+                                    arguments[2],
+                                    arguments[3],
+                                    arguments[4],
+                                    arguments[5]
+                                   );
   if (scheduleNode == NULL)
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_PARSING,"cannot parse schedule '%S'",s);
-    String_delete(s);
+    sendClientResult(clientInfo,
+                     id,
+                     TRUE,
+                     ERROR_PARSING,
+                     "cannot parse schedule '%S %S %S %S %S'",
+                     arguments[1],
+                     arguments[2],
+                     arguments[3],
+                     arguments[4],
+                     arguments[5]
+                    );
     return;
   }
-  String_delete(s);
 
   SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
   {
