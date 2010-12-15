@@ -1297,7 +1297,7 @@ class TabStatus
                           new String[]{"Store all files.","Store all files and create incremental data file.","Store changed files since last incremental or full storage and update incremental data file.","Store changed files since last full storage.","Collect and process all files, but do not create archives."},
                           4
                          );
-    if ((mode != 0) && (mode != 1) && (mode != 2) && (mode != 3))
+    if ((mode != 0) && (mode != 1) && (mode != 2) && (mode != 3) && (mode != 4))
     {
       return;
     }
