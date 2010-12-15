@@ -305,7 +305,7 @@ typedef struct
 
 typedef struct
 {
-  ArchiveTypes        archiveType;                       // archive type (normal, full, incremental)
+  ArchiveTypes        archiveType;                       // archive type (normal, full, incremental, differential)
 
   uint64              archivePartSize;                   // archive part size [bytes]
 
@@ -834,17 +834,39 @@ void configValueFormatInitPassord(void **formatUserData, void *userData, void *v
 bool configValueFormatPassword(void **formatUserData, void *userData, String line);
 
 /***********************************************************************\
+* Name   : parseScheduleParts
+* Purpose: parse schedule parts
+* Input  : date        - date string (<year|*>-<month|*>-<day|*>)
+*          weekDay     - week day string
+*          time        - time string <hour|*>:<minute|*>
+*          enabled     - enabled string (0|1)
+*          archiveType - archive type (normal, full, incremental, differential)
+* Output : 
+* Return : scheduleNode or NULL on error
+* Notes  : month names: jan, feb, mar, arp, may, jun, jul, aug, sep, oct
+*          nov, dec
+*          week day names: mon, tue, wed, thu, fri, sat, sun
+\***********************************************************************/
+
+ScheduleNode *parseScheduleParts(const String date,
+                                 const String weekDay,
+                                 const String time,
+                                 const String enabled,
+                                 const String archiveType
+                                );
+
+/***********************************************************************\
 * Name   : parseSchedule
 * Purpose: parse schedule
 * Input  : s - schedule string
 * Output : 
 * Return : scheduleNode or NULL on error
 * Notes  : string format
-*            <year|*>-<month|*>-<day|*> [<week day|*>] <hour|*>:<minute|*> <0|1> <type>
+*            <year|*>-<month|*>-<day|*> [<week day|*>] <hour|*>:<minute|*> <0|1> <archive type>
 *          month names: jan, feb, mar, arp, may, jun, jul, aug, sep, oct
 *          nov, dec
 *          week day names: mon, tue, wed, thu, fri, sat, sun
-"          type names: normal, full, incremental
+*          archive type names: normal, full, incremental, differential
 \***********************************************************************/
 
 ScheduleNode *parseSchedule(const String s);

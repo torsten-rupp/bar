@@ -2654,6 +2654,37 @@ bool configValueFormatPassword(void **formatUserData, void *userData, String lin
 }
 
 /***********************************************************************\
+* Name   : newScheduleNode
+* Purpose: create new schedule node
+* Input  : -
+* Output : -
+* Return : schedule node
+* Notes  : -
+\***********************************************************************/
+
+LOCAL ScheduleNode *newScheduleNode(void)
+{
+  ScheduleNode *scheduleNode;
+
+  /* allocate new schedule node */
+  scheduleNode = LIST_NEW_NODE(ScheduleNode);
+  if (scheduleNode == NULL)
+  {
+    HALT_INSUFFICIENT_MEMORY();
+  }
+  scheduleNode->year        = SCHEDULE_ANY;
+  scheduleNode->month       = SCHEDULE_ANY;
+  scheduleNode->day         = SCHEDULE_ANY;
+  scheduleNode->hour        = SCHEDULE_ANY;
+  scheduleNode->minute      = SCHEDULE_ANY;
+  scheduleNode->weekDays    = SCHEDULE_ANY_DAY;
+  scheduleNode->archiveType = ARCHIVE_TYPE_NORMAL;
+  scheduleNode->enabled     = FALSE;
+
+  return scheduleNode;
+}
+
+/***********************************************************************\
 * Name   : parseScheduleNumber
 * Purpose: parse schedule number (year, day, month, hour, minute)
 * Input  : s - string to parse
@@ -2808,9 +2839,10 @@ LOCAL bool parseScheduleArchiveType(const String s, ArchiveTypes *archiveType)
   {
     (*archiveType) = ARCHIVE_TYPE_NORMAL;
   }
-  else if (String_equalsIgnoreCaseCString(name,"normal"     )) (*archiveType) = ARCHIVE_TYPE_NORMAL;
-  else if (String_equalsIgnoreCaseCString(name,"full"       )) (*archiveType) = ARCHIVE_TYPE_FULL;
-  else if (String_equalsIgnoreCaseCString(name,"incremental")) (*archiveType) = ARCHIVE_TYPE_INCREMENTAL;
+  else if (String_equalsIgnoreCaseCString(name,"normal"      )) (*archiveType) = ARCHIVE_TYPE_NORMAL;
+  else if (String_equalsIgnoreCaseCString(name,"full"        )) (*archiveType) = ARCHIVE_TYPE_FULL;
+  else if (String_equalsIgnoreCaseCString(name,"incremental" )) (*archiveType) = ARCHIVE_TYPE_INCREMENTAL;
+  else if (String_equalsIgnoreCaseCString(name,"differential")) (*archiveType) = ARCHIVE_TYPE_DIFFERENTIAL;
   else
   {
     String_delete(name);
@@ -2819,6 +2851,86 @@ LOCAL bool parseScheduleArchiveType(const String s, ArchiveTypes *archiveType)
   String_delete(name);
 
   return TRUE;
+}
+
+ScheduleNode *parseScheduleParts(const String date,
+                                 const String weekDay,
+                                 const String time,
+                                 const String enabled,
+                                 const String archiveType
+                                )
+{
+  ScheduleNode *scheduleNode;
+  bool         errorFlag;
+  String       s0,s1,s2;
+  bool         b;
+
+  assert(date != NULL);
+  assert(weekDay != NULL);
+  assert(time != NULL);
+  assert(enabled != NULL);
+  assert(archiveType != NULL);
+
+  /* allocate new schedule node */
+  scheduleNode = newScheduleNode();
+
+  /* parse schedule. Format: date [weekday] time enabled [type] */
+  errorFlag = FALSE;
+  s0 = String_new();
+  s1 = String_new();
+  s2 = String_new();
+  if      (String_parse(date,STRING_BEGIN,"%S-%S-%S",NULL,s0,s1,s2))
+  {
+    if (!parseScheduleNumber(s0,&scheduleNode->year)) errorFlag = TRUE;
+    if (!parseScheduleMonth (s1,&scheduleNode->month)) errorFlag = TRUE;
+    if (!parseScheduleNumber(s2,&scheduleNode->day)) errorFlag = TRUE;
+  }
+  else
+  {
+    errorFlag = TRUE;
+  }
+  if (!parseScheduleWeekDays(weekDay,&scheduleNode->weekDays))
+  {
+    errorFlag = TRUE;
+  }
+  if (String_parse(time,STRING_BEGIN,"%S:%S",NULL,s0,s1))
+  {
+    if (!parseScheduleNumber(s0,&scheduleNode->hour  )) errorFlag = TRUE;
+    if (!parseScheduleNumber(s1,&scheduleNode->minute)) errorFlag = TRUE;
+  }
+  else
+  {
+    errorFlag = TRUE;
+  }
+  if (String_parse(enabled,STRING_BEGIN,"%y",NULL,&b))
+  {
+/* It seems gcc has a bug in option -fno-schedule-insns2: if -O2 is used this
+   option is enabled. Then either the program crashes with a SigSegV or parsing
+   boolean values here fail. It seems the address of 'b' is not received in the
+   function. Because this problem disappear when -fno-schedule-insns2 is given
+   it looks like the gcc do some rearrangements in the generated machine code
+   which is not valid anymore. How can this be tracked down? Is this problem
+   known?
+*/
+if ((b != FALSE) && (b != TRUE)) HALT_INTERNAL_ERROR("parsing boolean string value fail - C compiler bug?");
+    scheduleNode->enabled = b;
+  }
+  else
+  {
+    errorFlag = TRUE;
+  }
+  if (!parseScheduleArchiveType(archiveType,&scheduleNode->archiveType)) errorFlag = TRUE;
+  String_delete(s2);
+  String_delete(s1);
+  String_delete(s0);
+
+  if (errorFlag)
+  {
+    LIST_DELETE_NODE(scheduleNode);
+    return NULL;
+  }
+
+  return scheduleNode;
 }
 
 ScheduleNode *parseSchedule(const String s)
@@ -2832,19 +2944,7 @@ ScheduleNode *parseSchedule(const String s)
   assert(s != NULL);
 
   /* allocate new schedule node */
-  scheduleNode = LIST_NEW_NODE(ScheduleNode);
-  if (scheduleNode == NULL)
-  {
-    HALT_INSUFFICIENT_MEMORY();
-  }
-  scheduleNode->year        = SCHEDULE_ANY;
-  scheduleNode->month       = SCHEDULE_ANY;
-  scheduleNode->day         = SCHEDULE_ANY;
-  scheduleNode->hour        = SCHEDULE_ANY;
-  scheduleNode->minute      = SCHEDULE_ANY;
-  scheduleNode->weekDays    = SCHEDULE_ANY_DAY;
-  scheduleNode->archiveType = ARCHIVE_TYPE_NORMAL;
-  scheduleNode->enabled     = FALSE;
+  scheduleNode = newScheduleNode();
 
   /* parse schedule. Format: date [weekday] time enabled [type] */
   errorFlag = FALSE;
@@ -2854,9 +2954,9 @@ ScheduleNode *parseSchedule(const String s)
   nextIndex = STRING_BEGIN;
   if      (String_parse(s,nextIndex,"%S-%S-%S",&nextIndex,s0,s1,s2))
   {
-    parseScheduleNumber(s0,&scheduleNode->year);
+    if (!parseScheduleNumber(s0,&scheduleNode->year)) errorFlag = TRUE;
     if (!parseScheduleMonth (s1,&scheduleNode->month)) errorFlag = TRUE;
-    parseScheduleNumber(s2,&scheduleNode->day);
+    if (!parseScheduleNumber(s2,&scheduleNode->day)) errorFlag = TRUE;
   }
   else
   {
@@ -2865,13 +2965,13 @@ ScheduleNode *parseSchedule(const String s)
   if      (String_parse(s,nextIndex,"%S %S:%S",&nextIndex,s0,s1,s2))
   {
     if (!parseScheduleWeekDays(s0,&scheduleNode->weekDays)) errorFlag = TRUE;
-    parseScheduleNumber(s1,&scheduleNode->hour  );
-    parseScheduleNumber(s2,&scheduleNode->minute);
+    if (!parseScheduleNumber(s1,&scheduleNode->hour  )) errorFlag = TRUE;
+    if (!parseScheduleNumber(s2,&scheduleNode->minute)) errorFlag = TRUE;
   }
   else if (String_parse(s,nextIndex,"%S:%S",&nextIndex,s0,s1))
   {
-    parseScheduleNumber(s0,&scheduleNode->hour  );
-    parseScheduleNumber(s1,&scheduleNode->minute);
+    if (!parseScheduleNumber(s0,&scheduleNode->hour  )) errorFlag = TRUE;
+    if (!parseScheduleNumber(s1,&scheduleNode->minute)) errorFlag = TRUE;
   }
   else
   {
