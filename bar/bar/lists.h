@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/bar/lists.h,v $
-* $Revision: 1.6 $
+* $Revision: 1.5 $
 * $Author: torsten $
 * Contents: dynamic list functions
 * Systems: all
@@ -59,6 +59,11 @@ typedef int(*ListNodeCompareFunction)(const void *node1, const void *node2, void
 /***************************** Variables *******************************/
 
 /****************************** Macros *********************************/
+
+#ifndef NDEBUG
+  #define List_insert(list,node,nextNode) __List_insert(__FILE__,__LINE__,list,node,nextNode)
+  #define List_append(list,node) __List_append(__FILE__,__LINE__,list,node)
+#endif /* not NDEBUG */
 
 #define LIST_STATIC_INIT {NULL,NULL}
 
@@ -338,10 +343,19 @@ INLINE unsigned long List_count(const void *list)
 * Notes  : -
 \***********************************************************************/
 
+#ifdef NDEBUG
 void List_insert(void *list,
                  void *node,
                  void *nextNode
                 );
+#else /* NDEBUG */
+void __List_insert(const char *fileName,
+                   ulong      lineNb,
+                   void       *list,
+                   void       *node,
+                   void       *nextNode
+                  );
+#endif /*NDEBUG */
 
 /***********************************************************************\
 * Name   : List_append
@@ -353,9 +367,17 @@ void List_insert(void *list,
 * Notes  : -
 \***********************************************************************/
 
+#ifdef NDEBUG
 void List_append(void *list,
                  void *node
                 );
+#else /* NDEBUG */
+void __List_append(const char *fileName,
+                   ulong      lineNb,
+                   void       *list,
+                   void       *node
+                  );
+#endif /* NDEBUG */
 
 /***********************************************************************\
 * Name   : List_remove

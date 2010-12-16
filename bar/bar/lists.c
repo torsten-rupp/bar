@@ -37,6 +37,41 @@
   extern "C" {
 #endif
 
+#ifndef NDEBUG
+/***********************************************************************\
+* Name   : checkDuplicateNode
+* Purpose: check if node is already in list
+* Input  : fileName - code file name
+*          lineNb   - code line number
+*          list     - list where node should be inserted
+*          newNode  - new node to insert
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void checkDuplicateNode(const char *fileName,
+                              ulong      lineNb,
+                              const List *list,
+                              const Node *newNode
+                             )
+{
+  Node *node;
+
+  assert(list != NULL);
+
+  node = list->head;
+  while (node != NULL)
+  {
+    if (node == newNode)
+    {
+      HALT_INTERNAL_ERROR_AT(fileName,lineNb,"Node %p is already in list %p!",node,list); 
+    }
+    node = node->next;
+  }
+}
+#endif /* not NDEBUG */
+
 Node *List_newNode(ulong size)
 {
   return (Node*)malloc(size);
@@ -218,10 +253,19 @@ void List_move(void *fromList,
   }
 }
 
+#ifdef NDEBUG
 void List_insert(void *list,
                  void *node,
                  void *nextNode
                 )
+#else /* NDEBUG */
+void __List_insert(const char *fileName,
+                   ulong      lineNb,
+                   void       *list,
+                   void       *node,
+                   void       *nextNode
+                  )
+#endif /*NDEBUG */
 {
   assert(list != NULL);
 
@@ -229,6 +273,10 @@ void List_insert(void *list,
          ((((List*)list)->count > 0) && (((List*)list)->head != NULL) && (((List*)list)->tail != NULL))
         );
   assert(node != NULL);
+
+  #ifndef NDEBUG
+    checkDuplicateNode(fileName,lineNb,(List*)list,(Node*)node);
+  #endif /* not NDEBUG */
 
   if      (nextNode != NULL)
   {
@@ -264,14 +312,26 @@ void List_insert(void *list,
         );
 }
 
+#ifdef NDEBUG
 void List_append(void *list,
                  void *node
                 )
+#else /* NDEBUG */
+void __List_append(const char *fileName,
+                   ulong      lineNb,
+                   void       *list,
+                   void       *node
+                  )
+#endif /* NDEBUG */
 {
   assert(list != NULL);
   assert(node != NULL);
 
-  List_insert(list,node,NULL);
+  #ifdef NDEBUG
+    List_insert(list,node,NULL);
+  #else /* NDEBUG */
+    __List_insert(fileName,lineNb,list,node,NULL);
+  #endif /* NDEBUG */
 }
 
 void *List_remove(void *list,
