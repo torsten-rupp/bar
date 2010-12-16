@@ -508,7 +508,7 @@ test/data/zero.dat:
 test/data/readonly.dat:
 	$(ECHO) Hello World > $@; chmod 440 $@
 test/data/readonly512k.dat:
-	$(DD) if=/dev/zero of=$@ bs=1k count=512 2>/dev/null; chmod 440 $@
+	$(DD) if=/dev/urandom of=$@ bs=1k count=512 2>/dev/null; chmod 440 $@
 test/data/unreadable.dat:
 	$(ECHO) Hello World > $@; chmod 000 $@
 test/data/smallfile.dat:
