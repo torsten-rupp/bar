@@ -458,7 +458,7 @@ test6 test_image: bar
           $(MAKE) \
             BAR_FILE="test" \
             OPTIONS="--compress-algorithm=$$compress --crypt-algorithm=none" \
-            test_file_operations \
+            test_image_operations \
             ; \
         done
 	@$(ECHO) "ok"
