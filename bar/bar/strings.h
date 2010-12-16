@@ -882,7 +882,7 @@ void String_debugInit(void);
 void String_debugDone(void);
 
 /***********************************************************************\
-* Name   : String_debug
+* Name   : String_debugPrintInfo
 * Purpose: string debug function: output not deallocated strings
 * Input  : -
 * Output : -
