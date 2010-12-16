@@ -751,7 +751,7 @@ class TabJobs
         case 1:   return "Jan";
         case 2:   return "Feb";
         case 3:   return "Mar";
-        case 4:   return "Arp";
+        case 4:   return "Apr";
         case 5:   return "May";
         case 6:   return "Jun";
         case 7:   return "Jul";
@@ -888,7 +888,7 @@ class TabJobs
       else if (month.toLowerCase().equals("jan")) this.month =  1;
       else if (month.toLowerCase().equals("feb")) this.month =  2;
       else if (month.toLowerCase().equals("mar")) this.month =  3;
-      else if (month.toLowerCase().equals("arp")) this.month =  4;
+      else if (month.toLowerCase().equals("apr")) this.month =  4;
       else if (month.toLowerCase().equals("may")) this.month =  5;
       else if (month.toLowerCase().equals("jun")) this.month =  6;
       else if (month.toLowerCase().equals("jul")) this.month =  7;

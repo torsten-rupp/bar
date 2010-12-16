@@ -2739,7 +2739,7 @@ LOCAL bool parseScheduleMonth(const String s, int *month)
   else if (String_equalsIgnoreCaseCString(name,"jan")) (*month) = MONTH_JAN;
   else if (String_equalsIgnoreCaseCString(name,"feb")) (*month) = MONTH_FEB;
   else if (String_equalsIgnoreCaseCString(name,"mar")) (*month) = MONTH_MAR;
-  else if (String_equalsIgnoreCaseCString(name,"arp")) (*month) = MONTH_APR;
+  else if (String_equalsIgnoreCaseCString(name,"apr")) (*month) = MONTH_APR;
   else if (String_equalsIgnoreCaseCString(name,"may")) (*month) = MONTH_MAY;
   else if (String_equalsIgnoreCaseCString(name,"jun")) (*month) = MONTH_JUN;
   else if (String_equalsIgnoreCaseCString(name,"jul")) (*month) = MONTH_JUL;

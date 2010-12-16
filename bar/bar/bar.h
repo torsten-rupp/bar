@@ -843,7 +843,7 @@ bool configValueFormatPassword(void **formatUserData, void *userData, String lin
 *          archiveType - archive type (normal, full, incremental, differential)
 * Output : 
 * Return : scheduleNode or NULL on error
-* Notes  : month names: jan, feb, mar, arp, may, jun, jul, aug, sep, oct
+* Notes  : month names: jan, feb, mar, apr, may, jun, jul, aug, sep, oct
 *          nov, dec
 *          week day names: mon, tue, wed, thu, fri, sat, sun
 \***********************************************************************/
@@ -863,7 +863,7 @@ ScheduleNode *parseScheduleParts(const String date,
 * Return : scheduleNode or NULL on error
 * Notes  : string format
 *            <year|*>-<month|*>-<day|*> [<week day|*>] <hour|*>:<minute|*> <0|1> <archive type>
-*          month names: jan, feb, mar, arp, may, jun, jul, aug, sep, oct
+*          month names: jan, feb, mar, apr, may, jun, jul, aug, sep, oct
 *          nov, dec
 *          week day names: mon, tue, wed, thu, fri, sat, sun
 *          archive type names: normal, full, incremental, differential
