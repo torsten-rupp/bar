@@ -42,6 +42,7 @@ LD_DYNAMIC_PREFIX   = -Wl,-Bdynamic
 #---------------------------------- commands----------------------------------
 
 CAT        = cat
+CD         = cd
 CHMOD      = chmod
 CP         = cp
 DD         = dd
@@ -50,8 +51,10 @@ ECHO       = echo
 ECHO_NO_LF = echo -n
 GREP       = grep
 INSTALL    = @INSTALL@
+LN         = ln
 LS         = ls
 MKDIR      = mkdir
+MKFIFO     = mkfifo
 PERL       = @PERL@
 READLINK   = readlink
 RMDIR      = rmdir
@@ -213,7 +216,9 @@ clean:
 	$(RMF) $(INTERMEDIATE)
 	$(RMF) $(TARGETS)
 
-distclean: clean
+distclean: \
+  clean \
+  clean_test
 	$(RMF) Makefile Makefile.depend
 	$(RMF) config.h
 
@@ -247,6 +252,11 @@ help:
 	@$(ECHO) "  memcheck_extended"
 	@$(ECHO) ""
 	@$(ECHO) "  dist"
+	@$(ECHO) "  debian_dist"
+	@$(ECHO) ""
+	@$(ECHO) "  deb"
+	@$(ECHO) "  rpm"
+	@$(ECHO) "  gui"
 
 # create dependencies
 .PHONY: depend
@@ -332,18 +342,71 @@ runserver_ssl barserver_ssl: bar ../bar-ca.pem ../bar-server-cert.pem ../bar-ser
 
 # ----------------------------------------------------------------------------
 
-# do test
-.PHONY: test test1 test2 test3 test4 test5 test6 test_all
+# do tests
+#
+# Tests:
+#   create, list, test, compare, extract
+#   with compression defined in COMPRESS_NAMES
+#   with encryption defined in CRYPT_NAMES
+#   asymmetric crypt
+#   splitting
+#   everything together
+#   images
+#
+# For image tests some sudo-commands are required:
+#  sudo losetup <loop device> <file>
+#  sudo losetup -d <loop device>
+#  sudo mkfs <options> <loop device>
+#  sudo mount <loop device> test/dev
+#  sudo cp test/data test/dev
+#  sudo umount <loop device>
+#  sudo dd <loop device> <file>
+#  sudo chmod o+rw <loop device>
+
+# different test files
+TEST_FILES = \
+  test/data/zero1024.dat \
+  test/data/zero512k.dat \
+  test/data/random1024.dat \
+  test/data/random512k.dat \
+  test/data/zero.dat \
+  test/data/readonly.dat \
+  test/data/unreadable.dat \
+  test/data/smallfile.dat \
+  test/data/sub-dir \
+  test/data/sub-ignore-dir \
+  test/data/link.dat \
+  test/data/circular-link.dat.marker \
+  test/data/hardlink.dat \
+  test/data/fifo \
+  test/data/data\'.dat \
+  test/data/data\".dat \
+
+# temporary test files
+TEST_FILES_CLEAN = \
+  test/*.bar \
+  test/*.bar_destroyed \
+  test/*.bid \
+  test/new \
+  test/restore \
+  test/*.image
+
+.PHONY: test clean_test
+.PHONY: test1 test2 test3 test4 test5 test6 test_all
 .PHONY: test_basic test_compress test_crypt test_asymmetric_crypt test_split test_image
 test:
 	@$(MAKE) QUIET=1 --no-print-directory -s test1 test2 test3 test4 test5 test6 test_all
+
+clean_test:
+	$(RMRF) $(TEST_FILES) test/data/circular-link.dat
+	$(RMRF) $(TEST_FILES_CLEAN)
 
 test1 test_basic: bar
 	@$(ECHO_NO_LF) "Test 1: basic..."
 	@$(MAKE) \
           BAR_FILE="test" \
           OPTIONS="--compress-algorithm=none --crypt-algorithm=none" \
-          test_files
+          test_file_operations
 	@$(ECHO) "ok"
 
 test2 test_compress: bar
@@ -352,7 +415,7 @@ test2 test_compress: bar
           $(MAKE) \
             BAR_FILE="test" \
             OPTIONS="--compress-algorithm=$$compress --crypt-algorithm=none" \
-            test_files \
+            test_file_operations \
             ; \
         done
 	@$(ECHO) "ok"
@@ -363,7 +426,7 @@ test3 test_crypt: bar
           $(MAKE) \
             BAR_FILE="test" \
             OPTIONS="--compress-algorithm=none --crypt-algorithm=$$crypt --crypt-password=$(TEST_PASSWORD)" \
-            test_files \
+            test_file_operations \
             ; \
         done
 	@$(ECHO) "ok"
@@ -375,7 +438,7 @@ test4 test_asymmetric_crypt: bar
           $(MAKE) \
             BAR_FILE="test" \
             OPTIONS="--compress-algorithm=none --crypt-algorithm=$$crypt --crypt-password=$(TEST_PASSWORD) --crypt-type=asymmetric --crypt-public-key=test/key.public --crypt-private-key=test/key.private" \
-            test_files \
+            test_file_operations \
             ; \
         done
 	@$(ECHO) "ok"
@@ -385,7 +448,7 @@ test5 test_split: bar
 	$(MAKE) \
           BAR_FILE="test-###" \
           OPTIONS="--archive-part-size=100000 --compress-algorithm=none --crypt-algorithm=none" \
-          test_files
+          test_file_operations
 	@$(ECHO) "ok"
 
 test6 test_image: bar
@@ -394,7 +457,7 @@ test6 test_image: bar
           $(MAKE) \
             BAR_FILE="test" \
             OPTIONS="--compress-algorithm=$$compress --crypt-algorithm=none" \
-            test_files \
+            test_file_operations \
             ; \
         done
 	@$(ECHO) "ok"
@@ -407,7 +470,7 @@ test_all: bar
             $(MAKE) \
               BAR_FILE=test-### \
               OPTIONS="--compress-algorithm=$$compress --crypt-algorithm=$$crypt --crypt-password=$(TEST_PASSWORD) --crypt-type=asymmetric --crypt-public-key=test/key.public --crypt-private-key=test/key.private --archive-part-size=100K" \
-              test_files \
+              test_file_operations \
               ; \
             rc=$$?; \
             if test $$rc -ne 0; then \
@@ -416,7 +479,7 @@ test_all: bar
             $(MAKE) \
               BAR_FILE=test-### \
               OPTIONS="--compress-algorithm=$$compress --crypt-algorithm=$$crypt --crypt-password=$(TEST_PASSWORD) --crypt-type=asymmetric --crypt-public-key=test/key.public --crypt-private-key=test/key.private --archive-part-size=10M" \
-              test_images \
+              test_image_operations \
               ; \
             rc=$$?; \
             if test $$rc -ne 0; then \
@@ -426,34 +489,62 @@ test_all: bar
         done
 	@$(ECHO) "ok"
 
-TEST_FILES = \
-  test/*.bar \
-  test/*.bar_destroyed \
-  test/*.bid \
-  test/new \
-  test/restore \
-  test/*.image
+.PHONY: test_file_operations
+test_file_operations: \
+  test_file_operation_base \
+  test_file_operation_destroyed
 
-.PHONY: test_files
-test_files: \
-  test_file_base \
-  test_file_destroyed
+test/data/zero1024.dat:
+	$(DD) if=/dev/zero of=$@ bs=1 count=1024 2>/dev/null
+test/data/zero512k.dat:
+	$(DD) if=/dev/zero of=$@ bs=1k count=512 2>/dev/null
+test/data/random1024.dat:
+	$(DD) if=/dev/urandom of=$@ bs=1 count=1024 2>/dev/null
+test/data/random512k.dat:
+	$(DD) if=/dev/urandom of=$@ bs=1k count=512 2>/dev/null
+test/data/zero.dat:
+	$(RMF) $0; touch $@
+test/data/readonly.dat:
+	$(ECHO) Hello World > $@; chmod 440 $@
+test/data/unreadable.dat:
+	$(ECHO) Hello World > $@; chmod 000 $@
+test/data/smallfile.dat:
+	$(DD) if=/dev/urandom of=$@ bs=1 count=128 2>/dev/null
+test/data/sub-dir:
+	$(RMRF) $@; mkdir $@; $(ECHO) Hello World > $@/test.dat
+test/data/sub-ignore-dir:
+	$(RMRF) $@; mkdir $@; $(ECHO) Hello World > $@/test.dat
+	touch $@/.nobackup
+test/data/link.dat:
+	($(CD) test/data; $(LN) -s random1024.dat link.dat)
+test/data/circular-link.dat.marker:
+	($(CD) test/data; $(LN) -s circular-link.dat circular-link.dat)
+	touch $@
+test/data/hardlink.dat:
+	($(CD) test/data; $(LN) random1024.dat hardlink.dat)
+test/data/fifo:
+	($(CD) test/data; $(MKFIFO) fifo)
+test/data/data\'.dat:
+	$(ECHO) Hello World > $@
+test/data/data\".dat:
+	$(ECHO) Hello World > $@
 
-.PHONY: test_file_base
-test_file_base: bar destroyer
+.PHONY: test_file_operation_base
+test_file_operation_base: \
+  $(TEST_FILES)
 	# normal tests
-	$(RMRF) $(TEST_FILES)
+	$(RMRF) $(TEST_FILES_CLEAN)
 	SSH_ASKPASS= ./bar -c test/$(BAR_FILE).bar test/data $(OPTIONS) --overwrite-archive-files $(if $(QUIET),1>/dev/null)
 	SSH_ASKPASS= ./bar -l test/test*.bar $(OPTIONS) $(if $(QUIET),1>/dev/null)
 	SSH_ASKPASS= ./bar -l test/test*.bar -# '*rand*' -! '*512*' $(OPTIONS) $(if $(QUIET),1>/dev/null)
 	SSH_ASKPASS= ./bar -t test/test*.bar $(OPTIONS) $(if $(QUIET),1>/dev/null)
 	SSH_ASKPASS= ./bar -d test/test*.bar $(OPTIONS) $(if $(QUIET),1>/dev/null)
 	SSH_ASKPASS= ./bar -x test/test*.bar $(OPTIONS) --destination test/restore $(if $(QUIET),1>/dev/null)
-	$(DIFF) -r -x unreadable.txt -x circular-link.dat -x fifo -x sub-ignore-dir test/data test/restore/test/data
+	$(DIFF) -r -x unreadable.dat -x circular-link.dat -x fifo -x sub-ignore-dir test/data test/restore/test/data
 	$(READLINK) test/restore/test/data/link.dat 2>/dev/null $(if $(QUIET),1>/dev/null)
 	test `$(STAT) --format "%h" test/restore/test/data/hardlink.dat 2>/dev/null` -eq 2 $(if $(QUIET),1>/dev/null)
 	# incremental tests
-	$(RMRF) $(TEST_FILES)
+	$(RMRF) $(TEST_FILES_CLEAN)
 	SSH_ASKPASS= ./bar -c test/$(BAR_FILE)-full.bar --full --incremental-list-file=test/$(BAR_FILE).bid test/data test/new $(OPTIONS) --overwrite-archive-files $(if $(QUIET),1>/dev/null)
 	$(MKDIR) test/new; $(CP) test/data/random1024.dat test/new/random1024-new.dat
 	SSH_ASKPASS= ./bar -c test/$(BAR_FILE)-incremental.bar --incremental --incremental-list-file=test/$(BAR_FILE).bid test/data test/new $(OPTIONS) --overwrite-archive-files $(if $(QUIET),1>/dev/null)
@@ -461,10 +552,12 @@ test_file_base: bar destroyer
 	SSH_ASKPASS= ./bar -d test/test*.bar $(OPTIONS) $(if $(QUIET),1>/dev/null)
 	SSH_ASKPASS= ./bar -x test/test*.bar $(OPTIONS) --destination test/restore $(if $(QUIET),1>/dev/null)
 
-.PHONY: test_file_destroyed
-test_file_destroyed: bar destroyer
+.PHONY: test_file_operation_destroyed
+test_file_operation_destroyed: \
+  $(TEST_FILES) \
+  bar destroyer
 	# tests which must cause errors
-	$(RMRF) $(TEST_FILES)
+	$(RMRF) $(TEST_FILES_CLEAN)
 	SSH_ASKPASS= ./bar -c test/$(BAR_FILE).bar test/data $(OPTIONS) --overwrite-archive-files $(if $(QUIET),1>/dev/null)
 	$(LS) test/*.bar|while read fileName; do ./destroyer $$fileName m:16:FIL0 > $${fileName}_destroyed; done
 	! `SSH_ASKPASS= ./bar -t test/test*.bar_destroyed $(OPTIONS) 1>/dev/null 2>/dev/null` $(if $(QUIET),1>/dev/null)
@@ -532,31 +625,32 @@ FunctionTestDeviceDump = \
     ($(SUDO) $(DD) if=$1 of=-) > $2 2>/dev/null; \
   )
 
-.PHONY: test_images
-test_images: \
-  test_image_raw \
-  test_image_ext \
-  test_image_fat \
-  test_image_reiser
+.PHONY: test_image_operations
+test_image_operations: \
+  test_image_operations_raw \
+  test_image_operations_ext \
+  test_image_operations_fat \
+  test_image_operations_reiser
 
-.PHONY: test_image_raw
-test_image_raw:
+.PHONY: test_image_operations_raw
+test_image_operations_raw:
 	# raw
 	$(call FunctionTestFileRandom,test/dev0,32M); $(call FunctionTestDeviceCreate,$(LOOP0),test/dev0)
 	$(call FunctionTestFileZero,test/dev1,32M);   $(call FunctionTestDeviceCreate,$(LOOP1),test/dev1)
-	$(MAKE) test_image_base \
-           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
-           OPTIONS="$(if $(OPTIONS),$(OPTIONS) --raw-images,--compress-algorithm=none --crypt-algorithm=none --raw-images)"
+	$(MAKE) \
+          DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
+          OPTIONS="$(if $(OPTIONS),$(OPTIONS) --raw-images,--compress-algorithm=none --crypt-algorithm=none --raw-images)" \
+          test_image_operations_base 
 	$(call FunctionTestDeviceDelete,$(LOOP1),test/dev1)
 	$(call FunctionTestDeviceDelete,$(LOOP0),test/dev0)
 
 .PHONY: test_image_ext test_image_ext2 test_image_ext3 test_image_ext4
-test_image_ext: \
-  test_image_ext2 \
-  test_image_ext3 \
-  test_image_ext4 
+test_image_operations_ext: \
+  test_image_operations_ext2 \
+  test_image_operations_ext3 \
+  test_image_operations_ext4 
 
-test_image_ext2:
+test_image_operations_ext2:
 ifneq (@MKFS_EXT2@,)
 	# ext2
 	$(call FunctionTestFileZero,test/dev0,32M)
@@ -564,8 +658,9 @@ ifneq (@MKFS_EXT2@,)
 	$(call FunctionTestDeviceCreate,$(LOOP0),test/dev0)
 	$(call FunctionTestDeviceCreate,$(LOOP1),test/dev1)
 	$(call FunctionTestDeviceInitFilesystem,$(LOOP0),-t ext2,1)
-	$(MAKE) test_image_base \
-           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1)
+	$(MAKE) \
+          DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
+          test_image_operations_base 
 	$(call FunctionTestDeviceDelete,$(LOOP1),test/dev1)
 	$(call FunctionTestDeviceDelete,$(LOOP0),test/dev0)
 	#
@@ -574,8 +669,9 @@ ifneq (@MKFS_EXT2@,)
 	$(call FunctionTestDeviceCreate,$(LOOP0),test/dev0)
 	$(call FunctionTestDeviceCreate,$(LOOP1),test/dev1)
 	$(call FunctionTestDeviceInitFilesystem,$(LOOP0),-t ext2 -b 1024,1)
-	$(MAKE) test_image_base \
-           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1)
+	$(MAKE) \
+          DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
+          test_image_operations_base 
 	$(call FunctionTestDeviceDelete,$(LOOP1),test/dev1)
 	$(call FunctionTestDeviceDelete,$(LOOP0),test/dev0)
 	#
@@ -584,8 +680,9 @@ ifneq (@MKFS_EXT2@,)
 	$(call FunctionTestDeviceCreate,$(LOOP0),test/dev0)
 	$(call FunctionTestDeviceCreate,$(LOOP1),test/dev1)
 	$(call FunctionTestDeviceInitFilesystem,$(LOOP0),-t ext2 -b 2048,1)
-	$(MAKE) test_image_base \
-           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1)
+	$(MAKE) \
+          DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
+          test_image_operations_base 
 	$(call FunctionTestDeviceDelete,$(LOOP1),test/dev1)
 	$(call FunctionTestDeviceDelete,$(LOOP0),test/dev0)
 	#
@@ -594,14 +691,15 @@ ifneq (@MKFS_EXT2@,)
 	$(call FunctionTestDeviceCreate,$(LOOP0),test/dev0)
 	$(call FunctionTestDeviceCreate,$(LOOP1),test/dev1)
 	$(call FunctionTestDeviceInitFilesystem,$(LOOP0),-t ext2 -b 4096,1)
-	$(MAKE) test_image_base \
-           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1)
+	$(MAKE) \
+          DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
+          test_image_operations_base 
 	#
 	$(call FunctionTestDeviceDelete,$(LOOP1),test/dev1)
 	$(call FunctionTestDeviceDelete,$(LOOP0),test/dev0)
 endif
 
-test_image_ext3:
+test_image_operations_ext3:
 ifneq (@MKFS_EXT3@,)
 	# ext3
 	$(call FunctionTestFileZero,test/dev0,32M)
@@ -609,8 +707,9 @@ ifneq (@MKFS_EXT3@,)
 	$(call FunctionTestDeviceCreate,$(LOOP0),test/dev0)
 	$(call FunctionTestDeviceCreate,$(LOOP1),test/dev1)
 	$(call FunctionTestDeviceInitFilesystem,$(LOOP0),-t ext3,1)
-	$(MAKE) test_image_base \
-           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1)
+	$(MAKE) \
+          DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
+          test_image_operations_base 
 	$(call FunctionTestDeviceDelete,$(LOOP1),test/dev1)
 	$(call FunctionTestDeviceDelete,$(LOOP0),test/dev0)
 	#
@@ -619,8 +718,9 @@ ifneq (@MKFS_EXT3@,)
 	$(call FunctionTestDeviceCreate,$(LOOP0),test/dev0)
 	$(call FunctionTestDeviceCreate,$(LOOP1),test/dev1)
 	$(call FunctionTestDeviceInitFilesystem,$(LOOP0),-t ext3 -b 1024,1)
-	$(MAKE) test_image_base \
-           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1)
+	$(MAKE) \
+          DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
+          test_image_operations_base 
 	$(call FunctionTestDeviceDelete,$(LOOP1),test/dev1)
 	$(call FunctionTestDeviceDelete,$(LOOP0),test/dev0)
 	#
@@ -629,8 +729,9 @@ ifneq (@MKFS_EXT3@,)
 	$(call FunctionTestDeviceCreate,$(LOOP0),test/dev0)
 	$(call FunctionTestDeviceCreate,$(LOOP1),test/dev1)
 	$(call FunctionTestDeviceInitFilesystem,$(LOOP0),-t ext3 -b 2048,1)
-	$(MAKE) test_image_base \
-           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1)
+	$(MAKE) \
+          DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
+          test_image_operations_base 
 	$(call FunctionTestDeviceDelete,$(LOOP1),test/dev1)
 	$(call FunctionTestDeviceDelete,$(LOOP0),test/dev0)
 	#
@@ -639,13 +740,14 @@ ifneq (@MKFS_EXT3@,)
 	$(call FunctionTestDeviceCreate,$(LOOP0),test/dev0)
 	$(call FunctionTestDeviceCreate,$(LOOP1),test/dev1)
 	$(call FunctionTestDeviceInitFilesystem,$(LOOP0),-t ext3 -b 4096,1)
-	$(MAKE) test_image_base \
-           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1)
+	$(MAKE) \
+          DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
+          test_image_operations_base 
 	$(call FunctionTestDeviceDelete,$(LOOP1),test/dev1)
 	$(call FunctionTestDeviceDelete,$(LOOP0),test/dev0)
 endif
 
-test_image_ext4:
+test_image_operations_ext4:
 ifneq (@MKFS_EXT4@,)
 	# ext4
 	$(call FunctionTestFileZero,test/dev0,32M)
@@ -653,8 +755,9 @@ ifneq (@MKFS_EXT4@,)
 	$(call FunctionTestDeviceCreate,$(LOOP0),test/dev0)
 	$(call FunctionTestDeviceCreate,$(LOOP1),test/dev1)
 	$(call FunctionTestDeviceInitFilesystem,$(LOOP0),-t ext4,1)
-	$(MAKE) test_image_base \
-           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1)
+	$(MAKE) \
+          DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
+          test_image_operations_base 
 	$(call FunctionTestDeviceDelete,$(LOOP1),test/dev1)
 	$(call FunctionTestDeviceDelete,$(LOOP0),test/dev0)
 	#
@@ -663,8 +766,9 @@ ifneq (@MKFS_EXT4@,)
 	$(call FunctionTestDeviceCreate,$(LOOP0),test/dev0)
 	$(call FunctionTestDeviceCreate,$(LOOP1),test/dev1)
 	$(call FunctionTestDeviceInitFilesystem,$(LOOP0),-t ext4 -b 1024,1)
-	$(MAKE) test_image_base \
-           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1)
+	$(MAKE) \
+          DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
+          test_image_operations_base 
 	$(call FunctionTestDeviceDelete,$(LOOP1),test/dev1)
 	$(call FunctionTestDeviceDelete,$(LOOP0),test/dev0)
 	#
@@ -673,8 +777,9 @@ ifneq (@MKFS_EXT4@,)
 	$(call FunctionTestDeviceCreate,$(LOOP0),test/dev0)
 	$(call FunctionTestDeviceCreate,$(LOOP1),test/dev1)
 	$(call FunctionTestDeviceInitFilesystem,$(LOOP0),-t ext4 -b 2048,1)
-	$(MAKE) test_image_base \
-           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1)
+	$(MAKE) \
+          DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
+          test_image_operations_base 
 	$(call FunctionTestDeviceDelete,$(LOOP1),test/dev1)
 	$(call FunctionTestDeviceDelete,$(LOOP0),test/dev0)
 	#
@@ -683,8 +788,9 @@ ifneq (@MKFS_EXT4@,)
 	$(call FunctionTestDeviceCreate,$(LOOP0),test/dev0)
 	$(call FunctionTestDeviceCreate,$(LOOP1),test/dev1)
 	$(call FunctionTestDeviceInitFilesystem,$(LOOP0),-t ext4 -b 4096,1)
-	$(MAKE) test_image_base \
-           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1)
+	$(MAKE) \
+          DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
+          test_image_operations_base 
 	$(call FunctionTestDeviceDelete,$(LOOP1),test/dev1)
 	$(call FunctionTestDeviceDelete,$(LOOP0),test/dev0)
 	#
@@ -693,19 +799,19 @@ ifneq (@MKFS_EXT4@,)
 	#$(call FunctionTestDeviceCreate,$(LOOP0),test/dev0)
 	#$(call FunctionTestDeviceCreate,$(LOOP1),test/dev1)
 	#$(call FunctionTestDeviceInitFilesystem,$(LOOP0),-t ext4 -b 4096,1)
-	#$(MAKE) test_image_base \
+	#$(MAKE) test_image_operations_base \
         #   DEVICE0=$(LOOP0) DEVICE1=$(LOOP1)
 	#$(call FunctionTestDeviceDelete,$(LOOP1),test/dev1)
 	#$(call FunctionTestDeviceDelete,$(LOOP0),test/dev0)
 endif
 
 .PHONY: test_image_fat test_image_fat12 test_image_fat16 test_image_fat32
-test_image_fat: \
-  test_image_fat12 \
-  test_image_fat16 \
-  test_image_fat32
+test_image_operations_fat: \
+  test_image_operations_fat12 \
+  test_image_operations_fat16 \
+  test_image_operations_fat32
 
-test_image_fat12:
+test_image_operations_fat12:
 ifneq (@MKFS_MSDOS@,)
 	# FAT12
 	$(call FunctionTestFileZero,test/dev0,1440K)
@@ -713,13 +819,14 @@ ifneq (@MKFS_MSDOS@,)
 	$(call FunctionTestDeviceCreate,$(LOOP0),test/dev0)
 	$(call FunctionTestDeviceCreate,$(LOOP1),test/dev1)
 	$(call FunctionTestDeviceInitFilesystem,$(LOOP0),-t msdos -F 12,1)
-	$(MAKE) test_image_base \
-          DEVICE0=$(LOOP0) DEVICE1=$(LOOP1)
+	$(MAKE) \
+          DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
+          test_image_operations_base 
 	$(call FunctionTestDeviceDelete,$(LOOP1),test/dev1)
 	$(call FunctionTestDeviceDelete,$(LOOP0),test/dev0)
 endif
 
-test_image_fat16:
+test_image_operations_fat16:
 ifneq (@MKFS_MSDOS@,)
 	# FAT16
 	$(call FunctionTestFileZero,test/dev0,20M)
@@ -727,13 +834,14 @@ ifneq (@MKFS_MSDOS@,)
 	$(call FunctionTestDeviceCreate,$(LOOP0),test/dev0)
 	$(call FunctionTestDeviceCreate,$(LOOP1),test/dev1)
 	$(call FunctionTestDeviceInitFilesystem,$(LOOP0),-t msdos -F 16,1)
-	$(MAKE) test_image_base \
-          DEVICE0=$(LOOP0) DEVICE1=$(LOOP1)
+	$(MAKE) \
+          DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
+          test_image_operations_base 
 	$(call FunctionDeleteTestDevice,$(LOOP1),test/dev1)
 	$(call FunctionDeleteTestDevice,$(LOOP0),test/dev0)
 endif
 
-test_image_fat32:
+test_image_operations_fat32:
 ifneq (@MKFS_MSDOS@,)
 	# FAT32
 	$(call FunctionTestFileZero,test/dev0,40M)
@@ -741,28 +849,29 @@ ifneq (@MKFS_MSDOS@,)
 	$(call FunctionTestDeviceCreate,$(LOOP0),test/dev0)
 	$(call FunctionTestDeviceCreate,$(LOOP1),test/dev1)
 	$(call FunctionTestDeviceInitFilesystem,$(LOOP0),-t msdos -F 32,1)
-	$(MAKE) test_image_base \
-          DEVICE0=$(LOOP0) DEVICE1=$(LOOP1)
+	$(MAKE) \
+          DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
+          test_image_operations_base 
 	$(call FunctionTestDeviceDelete,$(LOOP1),test/dev1)
 	$(call FunctionTestDeviceDelete,$(LOOP0),test/dev0)
 endif
 
 .PHONY: test_image_reiser test_image_reiserfs1 test_image_reiserfs2 test_image_reiserfs3 test_image_reiser4
-test_image_reiser: \
-  test_image_reiserfs1 \
-  test_image_reiserfs2 \
-  test_image_reiserfs3 \
-  test_image_reiser4
+test_image_operations_reiser: \
+  test_image_operations_reiserfs1 \
+  test_image_operations_reiserfs2 \
+  test_image_operations_reiserfs3 \
+  test_image_operations_reiser4
 
-test_image_reiserfs1:
+test_image_operations_reiserfs1:
 ifneq (@MKFS_REISERFS@,)
 endif
 
-test_image_reiserfs2:
+test_image_operations_reiserfs2:
 ifneq (@MKFS_REISERFS@,)
 endif
 
-test_image_reiserfs3:
+test_image_operations_reiserfs3:
 ifneq (@MKFS_REISERFS@,)
 	# ReiserFS version 3 (Note: Linux only support block size 4096)
 	$(call FunctionTestFileZero,test/dev0,64M)
@@ -770,8 +879,9 @@ ifneq (@MKFS_REISERFS@,)
 	$(call FunctionTestDeviceCreate,$(LOOP0),test/dev0)
 	$(call FunctionTestDeviceCreate,$(LOOP1),test/dev1)
 	$(call FunctionTestDeviceInitFilesystem,$(LOOP0),-t reiserfs -b 4096 -q --format 3.5,1)
-	$(MAKE) test_image_base \
-          DEVICE0=$(LOOP0) DEVICE1=$(LOOP1)
+	$(MAKE) \
+          DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
+          test_image_operations_base 
 	$(call FunctionTestDeviceDelete,$(LOOP1),test/dev1)
 	$(call FunctionTestDeviceDelete,$(LOOP0),test/dev0)
 	#
@@ -780,13 +890,14 @@ ifneq (@MKFS_REISERFS@,)
 	$(call FunctionTestDeviceCreate,$(LOOP0),test/dev0)
 	$(call FunctionTestDeviceCreate,$(LOOP1),test/dev1)
 	$(call FunctionTestDeviceInitFilesystem,$(LOOP0),-t reiserfs -b 4096 -q --format 3.6,1)
-	$(MAKE) test_image_base \
-          DEVICE0=$(LOOP0) DEVICE1=$(LOOP1)
+	$(MAKE) \
+          DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
+          test_image_operations_base 
 	$(call FunctionTestDeviceDelete,$(LOOP1),test/dev1)
 	$(call FunctionTestDeviceDelete,$(LOOP0),test/dev0)
 endif
 
-test_image_reiser4:
+test_image_operations_reiser4:
 ifneq (@MKFS_REISER4@,)
 	# Reiser4 (Note: Linux only support block size 4096)
 	$(call FunctionTestFileZero,test/dev0,64M)
@@ -794,15 +905,16 @@ ifneq (@MKFS_REISER4@,)
 	$(call FunctionTestDeviceCreate,$(LOOP0),test/dev0)
 	$(call FunctionTestDeviceCreate,$(LOOP1),test/dev1)
 	$(call FunctionTestDeviceInitFilesystem,$(LOOP0),-t reiser4 -b 4096 -y,1)
-	$(MAKE) test_image_base \
-          DEVICE0=$(LOOP0) DEVICE1=$(LOOP1)
+	$(MAKE) \
+          DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
+          test_image_operations_base 
 	$(call FunctionTestDeviceDelete,$(LOOP1),test/dev1)
 	$(call FunctionTestDeviceDelete,$(LOOP0),test/dev0)
 endif
 
-.PHONY: test_image_base
-test_image_base: bar
-	$(RMRF) $(TEST_FILES)
+.PHONY: test_image_operations_base
+test_image_operations_base: bar
+	$(RMRF) $(TEST_FILES_CLEAN)
 	$(SUDO) $(CHMOD) o+rw $(DEVICE0)
 	$(SUDO) $(CHMOD) o+rw $(DEVICE1)
 	SSH_ASKPASS= ./bar -m test/$(if $(BAR_FILE),$(BAR_FILE),test).bar $(DEVICE0) $(if $(OPTIONS),$(OPTIONS),--compress-algorithm=none --crypt-algorithm=none) --overwrite-archive-files $(if $(QUIET),1>/dev/null)
