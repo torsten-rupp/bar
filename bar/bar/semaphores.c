@@ -49,56 +49,74 @@ typedef struct
 
 #ifndef NDEBUG
   #define LOCK(debugFlag,type,semaphore) \
-    do { \
+    do \
+    { \
       if (debugFlag) fprintf(stderr,"%s,%4d: %p wait lock %s\n",__FILE__,__LINE__,(void*)pthread_self(),type); \
       pthread_mutex_lock(semaphore); \
       if (debugFlag) fprintf(stderr,"%s,%4d: %p locked %s\n",__FILE__,__LINE__,(void*)pthread_self(),type); \
-    } while (0)
+    } \
+    while (0)
 
   #define UNLOCK(debugFlag,type,semaphore,n) \
-    do { \
+    do \
+    { \
       if (debugFlag) fprintf(stderr,"%s,%4d: %p unlock %s n=%d\n",__FILE__,__LINE__,(void*)pthread_self(),type,n); \
       pthread_mutex_unlock(semaphore); \
-    } while (0)
+    } \
+    while (0)
 
   #define WAIT(debugFlag,type,condition,semaphore) \
-    do { \
+    do \
+    { \
       if (debugFlag) fprintf(stderr,"%s,%4d: %p unlock+wait %s\n",__FILE__,__LINE__,(void*)pthread_self(),type); \
       pthread_cond_wait(condition,semaphore); \
       if (debugFlag) fprintf(stderr,"%s,%4d: %p waited+locked %s done\n",__FILE__,__LINE__,(void*)pthread_self(),type); \
-    } while (0)
+    } \
+    while (0)
 
   #define SIGNAL(debugFlag,type,condition) \
-    do { \
+    do \
+    { \
       if (debugFlag) fprintf(stderr,"%s,%4d: %p signal %s\n",__FILE__,__LINE__,(void*)pthread_self(),type); \
       pthread_cond_signal(condition); \
-    } while (0)
+    } \
+    while (0)
 
 #else /* NDEBUG */
 
   #define LOCK(debugFlag,type,semaphore) \
-    do { \
+    do \
+    { \
       pthread_mutex_lock(semaphore); \
-    } while (0)
+    } \
+    while (0)
 
   #define UNLOCK(debugFlag,type,semaphore,n) \
-    do { \
+    do \
+    { \
       pthread_mutex_unlock(semaphore); \
-    } while (0)
+    } \
+    while (0)
 
   #define WAIT(debugFlag,type,condition,semaphore) \
-    do { \
+    do \
+    { \
       pthread_cond_wait(condition,semaphore); \
-    } while (0)
+    } \
+    while (0)
 
   #define SIGNAL(debugFlag,type,condition) \
-    do { \
+    do \
+    { \
       pthread_cond_broadcast(condition); \
-    } while (0)
+    } \
+    while (0)
 #endif /* not NDEBUG */
 
 /***************************** Forwards ********************************/
-LOCAL void signalHandler(int signalNumber);
+#ifndef NDEBUG
+  LOCAL void signalHandler(int signalNumber);
+#endif /* not NDEBUG */
 
 /***************************** Functions *******************************/
 
