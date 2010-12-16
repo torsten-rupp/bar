@@ -326,14 +326,20 @@ typedef void               void32;
 #define HALT_FATAL_ERROR(format, args...) \
   do \
   { \
-     __abort(__FILE__, __LINE__,"FATAL ERROR: ",format, ## args); \
+     __abort(__FILE__,__LINE__,"FATAL ERROR: ",format, ## args); \
   } \
  while (0)
 
 #define HALT_INTERNAL_ERROR(format, args...) \
   do \
   { \
-     __abort(__FILE__, __LINE__, "INTERNAL ERROR: ", format, ## args); \
+     __abort(__FILE__,__LINE__, "INTERNAL ERROR: ", format, ## args); \
+  } \
+  while (0)
+#define HALT_INTERNAL_ERROR_AT(file, line, format, args...) \
+  do \
+  { \
+     __abort(file,line,"INTERNAL ERROR: ",format, ## args); \
   } \
   while (0)
 #define HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED() \
