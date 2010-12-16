@@ -2373,11 +2373,16 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
                          String_cString(storageName),
                          Errors_getText(error)
                         );
-              createInfo->failError = error;
-            }
 
-            /* retry */ 
-            continue;
+              /* fatal error -> stop */
+              createInfo->failError = error;
+              break;
+            }
+            else
+            {
+              /* error -> retry */ 
+              continue;
+            }
           }
 
           /* update status info, check for abort */
@@ -2403,6 +2408,8 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
                          String_cString(storageName),
                          Errors_getText(error)
                         );
+
+              /* fatal error -> stop */
               createInfo->failError = error;
               break;
             }
@@ -2417,35 +2424,55 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
                            String_cString(storageName),
                            Errors_getText(error)
                           );
+
+                /* fatal error -> stop */
                 createInfo->failError = error;
+                break;
               }
-              break;
+              else
+              {
+                /* error -> retry */
+                break;
+              }
             }
 
             /* update status info, check for abort */
             createInfo->statusInfo.archiveDoneBytes += n;
             abortFlag |= !updateStatusInfo(createInfo);
+
+            /* on fatal error/abort -> stop */
+            if (   (createInfo->failError != ERROR_NONE)
+                || ((createInfo->requestedAbortFlag != NULL) && (*createInfo->requestedAbortFlag))
+               )
+            {
+              /* fatal error/abort -> stop */
+              break;
+            }
           }
-          while (   (createInfo->failError == ERROR_NONE)
-                 && ((createInfo->requestedAbortFlag == NULL) || !(*createInfo->requestedAbortFlag))
-                 && !File_eof(&fileHandle)
-                );
+          while (!File_eof(&fileHandle));
 
           /* close storage file */
           Storage_close(&createInfo->storageFileHandle);
-        
-          if (createInfo->failError == ERROR_NONE)
+
+          /* on fatal error/abort -> stop */
+          if (   (createInfo->failError != ERROR_NONE)
+              || ((createInfo->requestedAbortFlag != NULL) && (*createInfo->requestedAbortFlag))
+             )
           {
-            printInfo(0,"ok\n");
-            logMessage(LOG_TYPE_STORAGE,"stored '%s'",String_cString(storageName));
+            /* fatal error/abort -> stop */
+            break;
           }
         }
-        while (   (createInfo->failError != ERROR_NONE)
-               && ((createInfo->requestedAbortFlag == NULL) || !(*createInfo->requestedAbortFlag))
-              );
+        while (error != ERROR_NONE);
 
         /* close file to store */
         File_close(&fileHandle);
+
+        if (createInfo->failError == ERROR_NONE)
+        {
+          printInfo(0,"ok\n");
+          logMessage(LOG_TYPE_STORAGE,"stored '%s'",String_cString(storageName));
+        }
 
         /* update database index and set state */
         if (indexDatabaseHandle != NULL)
@@ -2559,7 +2586,6 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
 
         /* add to list of stored storage files */
         StringList_append(&createInfo->storageFileList,storageMsg.destinationFileName);
-
       }
     }
 
