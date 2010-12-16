@@ -371,6 +371,7 @@ TEST_FILES = \
   test/data/random512k.dat \
   test/data/zero.dat \
   test/data/readonly.dat \
+  test/data/readonly512k.dat \
   test/data/unreadable.dat \
   test/data/smallfile.dat \
   test/data/sub-dir \
@@ -506,6 +507,8 @@ test/data/zero.dat:
 	$(RMF) $0; touch $@
 test/data/readonly.dat:
 	$(ECHO) Hello World > $@; chmod 440 $@
+test/data/readonly512k.dat:
+	$(DD) if=/dev/zero of=$@ bs=1k count=512 2>/dev/null; chmod 440 $@
 test/data/unreadable.dat:
 	$(ECHO) Hello World > $@; chmod 000 $@
 test/data/smallfile.dat:
