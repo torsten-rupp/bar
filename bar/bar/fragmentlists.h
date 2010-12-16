@@ -3,13 +3,13 @@
 * $Source: /home/torsten/cvs/bar/bar/fragmentlists.h,v $
 * $Revision: 1.1 $
 * $Author: torsten $
-* Contents: Backup ARchiver file fragment list functions
+* Contents: Backup ARchiver fragment list functions
 * Systems: all
 *
 \***********************************************************************/
 
-#ifndef __FILE_FRAGMENT_LISTS__
-#define __FILE_FRAGMENT_LISTS__
+#ifndef __FRAGMENT_LISTS__
+#define __FRAGMENT_LISTS__
 
 /****************************** Includes *******************************/
 #include <stdlib.h>
@@ -44,7 +44,9 @@ typedef struct FragmentNode
   LIST_NODE_HEADER(struct FragmentNode);
 
   String            name;               // fragment name
-  uint64            size;               // size of file
+  uint64            size;               // size of fragment
+  void              *userData;
+  uint              userDataSize;     
   FragmentEntryList fragmentEntryList;
 } FragmentNode;
 
@@ -57,6 +59,26 @@ typedef struct
 
 /****************************** Macros *********************************/
 
+/***********************************************************************\
+* Name   : FRAGMENTLIST_ITERATE
+* Purpose: iterated over fragment list and execute block
+* Input  : fragmentList - fragment list
+*          variable     - iterator variable (type FragmentNode)
+* Output : -
+* Return : -
+* Notes  : usage:
+*            LIST_ITERATE(list,variable)
+*            {
+*              ... = variable->...
+*            }
+\***********************************************************************/
+
+#define FRAGMENTLIST_ITERATE(fragmentList,variable) \
+  for ((variable) = (fragmentList)->head; \
+       (variable) != NULL; \
+       (variable) = (variable)->next \
+      )
+
 /***************************** Forwards ********************************/
 
 /***************************** Functions *******************************/
@@ -67,7 +89,7 @@ typedef struct
 
 /***********************************************************************\
 * Name   : FragmentList_init
-* Purpose: init file fragment list
+* Purpose: init fragment list
 * Input  : fragmentList - fragment list
 * Output : fragmentList - initialize fragment list
 * Return : -
@@ -78,7 +100,7 @@ void FragmentList_init(FragmentList *fragmentList);
 
 /***********************************************************************\
 * Name   : FragmentList_done
-* Purpose: free all nodes and deinitialize file fragment list
+* Purpose: free all nodes and deinitialize fragment list
 * Input  : fragmentList - fragment list
 * Output : -
 * Return : -
@@ -88,21 +110,29 @@ void FragmentList_init(FragmentList *fragmentList);
 void FragmentList_done(FragmentList *fragmentList);
 
 /***********************************************************************\
-* Name   : FragmentList_addFile
-* Purpose: add new file to file fragmen tlist
+* Name   : FragmentList_add
+* Purpose: add new fragment to fragment list
 * Input  : fragmentList - fragment list
-*          fileName     - name
-*          size         - size of file
+*          name         - name of fragment
+*          size         - size of fragment
+*          userData     - user data to store with fragment (will be
+*                         copied!)
+*          userDataSize - size of user data
 * Output : -
-* Return : file fragment node or NULL
-* Notes  : -
+* Return : fragment node or NULL on error
+* Notes  : 
 \***********************************************************************/
 
-FragmentNode *FragmentList_add(FragmentList *fragmentList, const String name, uint64 size);
+FragmentNode *FragmentList_add(FragmentList   *fragmentList,
+                               const String   name,
+                               uint64         size,
+                               const void     *userData,
+                               uint           userDataSize
+                              );
 
 /***********************************************************************\
-* Name   : FragmentList_removeFile
-* Purpose: remove file from file fragment list
+* Name   : FragmentList_discard
+* Purpose: remove fragment from fragment list and free all resources
 * Input  : fragmentList - fragment list
 *          fragmentNode - fragment node
 * Output : -
@@ -110,11 +140,11 @@ FragmentNode *FragmentList_add(FragmentList *fragmentList, const String name, ui
 * Notes  : -
 \***********************************************************************/
 
-void FragmentList_remove(FragmentList *fragmentList, FragmentNode *fragmentNode);
+void FragmentList_discard(FragmentList *fragmentList, FragmentNode *fragmentNode);
 
 /***********************************************************************\
-* Name   : FragmentList_findFile
-* Purpose: find file in file fragment list
+* Name   : FragmentList_find
+* Purpose: find fragment in fragment list
 * Input  : fragmentList - fragment list
 *          name         - name
 * Output : -
@@ -125,9 +155,9 @@ void FragmentList_remove(FragmentList *fragmentList, FragmentNode *fragmentNode)
 FragmentNode *FragmentList_find(FragmentList *fragmentList, const String name);
 
 /***********************************************************************\
-* Name   : FragmentList_clear
-* Purpose: clear fragments of file
-* Input  : fragmentNode - fragment node
+* Name   : FragmentList_clearEntry
+* Purpose: clear all fragment entries of fragment
+* Input  : fragmentNode - fragment node to clear
 * Output : -
 * Return : -
 * Notes  : -
@@ -136,8 +166,8 @@ FragmentNode *FragmentList_find(FragmentList *fragmentList, const String name);
 void FragmentList_clearEntry(FragmentNode *fragmentNode);
 
 /***********************************************************************\
-* Name   : FragmentList_add
-* Purpose: add a fragment entry
+* Name   : FragmentList_addEntry
+* Purpose: add a fragment entry to a fragment
 * Input  : fragmentNode - fragment node
 *          offset       - fragment offset (0..n)
 *          length       - length of fragment
@@ -150,7 +180,7 @@ void FragmentList_addEntry(FragmentNode *fragmentNode, uint64 offset, uint64 len
 
 /***********************************************************************\
 * Name   : FragmentList_checkEntryExists
-* Purpose: check if fragment entry already exists in file
+* Purpose: check if fragment entry already exists in fragment
 * Input  : fragmentNode - fragment node
 *          offset       - fragment offset (0..n)
 *          length       - length of fragment
@@ -163,23 +193,32 @@ bool FragmentList_checkEntryExists(FragmentNode *fragmentNode, uint64 offset, ui
 
 /***********************************************************************\
 * Name   : FragmentList_checkEntryComplete
-* Purpose: check if entry is completed (no fragmentation)
+* Purpose: check if fragment is completed (no fragmentation)
 * Input  : fragmentNode - fragment node
 * Output : -
-* Return : TRUE if file completed (no fragmented), FALSE otherwise
+* Return : TRUE if fragment completed (no fragmented), FALSE otherwise
 * Notes  : -
 \***********************************************************************/
 
 bool FragmentList_checkEntryComplete(FragmentNode *fragmentNode);
 
 #ifndef NDEBUG
-void FragmentList_print(FragmentNode *fragmentNode, const char *name);
+/***********************************************************************\
+* Name   : FragmentList_debugPrintInfo
+* Purpose: fragment list debug function: output info to fragment entries
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void FragmentList_debugPrintInfo(FragmentNode *fragmentNode, const char *name);
 #endif /* not NDEBUG */
 
 #ifdef __cplusplus
   }
 #endif
 
-#endif /* __FILE_FRAGMENT_LISTS__ */
+#endif /* __FRAGMENT_LISTS__ */
 
 /* end of file */

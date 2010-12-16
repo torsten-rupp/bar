@@ -3,7 +3,7 @@
 * $Source: /home/torsten/cvs/bar/bar/fragmentlists.c,v $
 * $Revision: 1.1 $
 * $Author: torsten $
-* Contents: Backup ARchiver file fragment list functions
+* Contents: Backup ARchiver fragment list functions
 * Systems: all
 *
 \***********************************************************************/
@@ -44,7 +44,7 @@
 
 /***********************************************************************\
 * Name   : freeFragmentNode
-* Purpose: free file fragment node
+* Purpose: free fragment node
 * Input  : fragmentNode - fragment node
 * Output : -
 * Return : -
@@ -58,6 +58,10 @@ LOCAL void freeFragmentNode(FragmentNode *fragmentNode, void *userData)
   UNUSED_VARIABLE(userData);
 
   List_done(&fragmentNode->fragmentEntryList,NULL,NULL);
+  if (fragmentNode->userData != NULL)
+  {
+    free(fragmentNode->userData);
+  }
   String_delete(fragmentNode->name);
 }
 
@@ -77,7 +81,12 @@ void FragmentList_done(FragmentList *fragmentList)
   List_done(fragmentList,(ListNodeFreeFunction)freeFragmentNode,NULL);
 }
 
-FragmentNode *FragmentList_add(FragmentList *fragmentList, const String name, uint64 size)
+FragmentNode *FragmentList_add(FragmentList   *fragmentList,
+                               const String   name,
+                               uint64         size,
+                               const void     *userData,
+                               uint           userDataSize
+                              )
 {
   FragmentNode *fragmentNode;
 
@@ -91,6 +100,21 @@ FragmentNode *FragmentList_add(FragmentList *fragmentList, const String name, ui
   }
   fragmentNode->name = String_duplicate(name);
   fragmentNode->size = size;
+  if (userData != NULL)
+  {
+    fragmentNode->userData = malloc(userDataSize);
+    if (fragmentNode->userData == NULL)
+    {
+      HALT_INSUFFICIENT_MEMORY();
+    }
+    memcpy(fragmentNode->userData,userData,userDataSize);
+    fragmentNode->userDataSize = userDataSize;
+  }
+  else
+  {
+    fragmentNode->userData     = NULL;
+    fragmentNode->userDataSize = 0;
+  }
   List_init(&fragmentNode->fragmentEntryList);
 
   List_append(fragmentList,fragmentNode);
@@ -98,7 +122,7 @@ FragmentNode *FragmentList_add(FragmentList *fragmentList, const String name, ui
   return fragmentNode;
 }
 
-void FragmentList_remove(FragmentList *fragmentList, FragmentNode *fragmentNode)
+void FragmentList_discard(FragmentList *fragmentList, FragmentNode *fragmentNode)
 {
   assert(fragmentList != NULL);
   assert(fragmentNode != NULL);
@@ -235,7 +259,7 @@ bool FragmentList_checkEntryComplete(FragmentNode *fragmentNode)
 }
 
 #ifndef NDEBUG
-void FragmentList_print(FragmentNode *fragmentNode, const char *name)
+void FragmentList_debugPrintInfo(FragmentNode *fragmentNode, const char *name)
 {
   FragmentEntryNode *fragmentEntryNode;
 

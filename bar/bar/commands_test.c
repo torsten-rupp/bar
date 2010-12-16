@@ -185,7 +185,7 @@ Errors Command_test(StringList                      *archiveFileNameList,
               fragmentNode = FragmentList_find(&fragmentList,fileName);
               if (fragmentNode == NULL)
               {
-                fragmentNode = FragmentList_add(&fragmentList,fileName,fileInfo.size);
+                fragmentNode = FragmentList_add(&fragmentList,fileName,fileInfo.size,NULL,0);
               }
 //FragmentList_print(fragmentNode,String_cString(fileName));
 
@@ -217,6 +217,15 @@ Errors Command_test(StringList                      *archiveFileNameList,
                 continue;
               }
 
+              /* add fragment to file fragment list */
+              FragmentList_addEntry(fragmentNode,fragmentOffset,fragmentSize);
+
+              /* discard fragment list if file is complete */
+              if (FragmentList_checkEntryComplete(fragmentNode))
+              {
+                FragmentList_discard(&fragmentList,fragmentNode);
+              }
+
               /* check if all data read.
                  Note: it is not possible to check if all data is read when
                  compression is used. The decompressor may not all data even
@@ -234,17 +243,6 @@ Errors Command_test(StringList                      *archiveFileNameList,
               }
 
               printInfo(2,"ok\n");
-
-              /* add fragment to file fragment list */
-              FragmentList_addEntry(fragmentNode,fragmentOffset,fragmentSize);
-
-              /* discard fragment list if file is complete */
-              if (FragmentList_checkEntryComplete(fragmentNode))
-              {
-                FragmentList_remove(&fragmentList,fragmentNode);
-              }
-
-              /* free resources */
             }
             else
             {
@@ -310,7 +308,7 @@ Errors Command_test(StringList                      *archiveFileNameList,
               fragmentNode = FragmentList_find(&fragmentList,imageName);
               if (fragmentNode == NULL)
               {
-                fragmentNode = FragmentList_add(&fragmentList,imageName,deviceInfo.size);
+                fragmentNode = FragmentList_add(&fragmentList,imageName,deviceInfo.size,NULL,0);
               }
 //FragmentList_print(fragmentNode,String_cString(imageName));
 
@@ -343,6 +341,15 @@ Errors Command_test(StringList                      *archiveFileNameList,
                 continue;
               }
 
+              /* add fragment to file fragment list */
+              FragmentList_addEntry(fragmentNode,blockOffset*(uint64)deviceInfo.blockSize,blockCount*(uint64)deviceInfo.blockSize);
+
+              /* discard fragment list if file is complete */
+              if (FragmentList_checkEntryComplete(fragmentNode))
+              {
+                FragmentList_discard(&fragmentList,fragmentNode);
+              }
+
               /* check if all data read.
                  Note: it is not possible to check if all data is read when
                  compression is used. The decompressor may not all data even
@@ -360,15 +367,6 @@ Errors Command_test(StringList                      *archiveFileNameList,
               }
 
               printInfo(2,"ok\n");
-
-              /* add fragment to file fragment list */
-              FragmentList_addEntry(fragmentNode,blockOffset*(uint64)deviceInfo.blockSize,blockCount*(uint64)deviceInfo.blockSize);
-
-              /* discard fragment list if file is complete */
-              if (FragmentList_checkEntryComplete(fragmentNode))
-              {
-                FragmentList_remove(&fragmentList,fragmentNode);
-              }
             }
             else
             {
@@ -587,7 +585,7 @@ Errors Command_test(StringList                      *archiveFileNameList,
                   fragmentNode = FragmentList_find(&fragmentList,fileName);
                   if (fragmentNode == NULL)
                   {
-                    fragmentNode = FragmentList_add(&fragmentList,fileName,fileInfo.size);
+                    fragmentNode = FragmentList_add(&fragmentList,fileName,fileInfo.size,NULL,0);
                   }
     //FragmentList_print(fragmentNode,String_cString(fileName));
 
@@ -617,6 +615,15 @@ Errors Command_test(StringList                      *archiveFileNameList,
                     break;
                   }
 
+                  /* add fragment to file fragment list */
+                  FragmentList_addEntry(fragmentNode,fragmentOffset,fragmentSize);
+
+                  /* discard fragment list if file is complete */
+                  if (FragmentList_checkEntryComplete(fragmentNode))
+                  {
+                    FragmentList_discard(&fragmentList,fragmentNode);
+                  }
+
                   /* check if all data read.
                      Note: it is not possible to check if all data is read when
                      compression is used. The decompressor may not all data even
@@ -631,15 +638,6 @@ Errors Command_test(StringList                      *archiveFileNameList,
                   }
 
                   printInfo(2,"ok\n");
-
-                  /* add fragment to file fragment list */
-                  FragmentList_addEntry(fragmentNode,fragmentOffset,fragmentSize);
-
-                  /* discard fragment list if file is complete */
-                  if (FragmentList_checkEntryComplete(fragmentNode))
-                  {
-                    FragmentList_remove(&fragmentList,fragmentNode);
-                  }
 
                   testedDataFlag = TRUE;
                 }

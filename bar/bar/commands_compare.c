@@ -247,7 +247,7 @@ Errors Command_compare(StringList                      *archiveFileNameList,
               fragmentNode = FragmentList_find(&fragmentList,fileName);
               if (fragmentNode == NULL)
               {
-                fragmentNode = FragmentList_add(&fragmentList,fileName,fileInfo.size);
+                fragmentNode = FragmentList_add(&fragmentList,fileName,fileInfo.size,NULL,0);
               }
 //FragmentList_print(fragmentNode,String_cString(fileName));
 
@@ -367,6 +367,15 @@ Errors Command_compare(StringList                      *archiveFileNameList,
                 continue;
               }
 
+              /* add fragment to file fragment list */
+              FragmentList_addEntry(fragmentNode,fragmentOffset,fragmentSize);
+
+              /* discard fragment list if file is complete */
+              if (FragmentList_checkEntryComplete(fragmentNode))
+              {
+                FragmentList_discard(&fragmentList,fragmentNode);
+              }
+
 #if 0
               /* get local file info */
               /* check file time, permissions, file owner/group */
@@ -382,15 +391,6 @@ Errors Command_compare(StringList                      *archiveFileNameList,
                   && !Archive_eofData(&archiveEntryInfo))
               {
                 printWarning("unexpected data at end of file entry '%S'.\n",fileName);
-              }
-
-              /* add fragment to file fragment list */
-              FragmentList_addEntry(fragmentNode,fragmentOffset,fragmentSize);
-
-              /* discard fragment list if file is complete */
-              if (FragmentList_checkEntryComplete(fragmentNode))
-              {
-                FragmentList_remove(&fragmentList,fragmentNode);
               }
 
               /* free resources */
@@ -471,7 +471,7 @@ Errors Command_compare(StringList                      *archiveFileNameList,
               fragmentNode = FragmentList_find(&fragmentList,imageName);
               if (fragmentNode == NULL)
               {
-                fragmentNode = FragmentList_add(&fragmentList,imageName,deviceInfo.size);
+                fragmentNode = FragmentList_add(&fragmentList,imageName,deviceInfo.size,NULL,0);
               }
 
               /* open device */
@@ -591,6 +591,15 @@ Errors Command_compare(StringList                      *archiveFileNameList,
                 continue;
               }
 
+              /* add fragment to file fragment list */
+              FragmentList_addEntry(fragmentNode,blockOffset*(uint64)deviceInfo.blockSize,blockCount*(uint64)deviceInfo.blockSize);
+
+              /* discard fragment list if file is complete */
+              if (FragmentList_checkEntryComplete(fragmentNode))
+              {
+                FragmentList_discard(&fragmentList,fragmentNode);
+              }
+
               printInfo(2,"ok\n");
 
               /* check if all data read.
@@ -602,15 +611,6 @@ Errors Command_compare(StringList                      *archiveFileNameList,
                   && !Archive_eofData(&archiveEntryInfo))
               {
                 printWarning("unexpected data at end of image entry '%S'.\n",imageName);
-              }
-
-              /* add fragment to file fragment list */
-              FragmentList_addEntry(fragmentNode,blockOffset*(uint64)deviceInfo.blockSize,blockCount*(uint64)deviceInfo.blockSize);
-
-              /* discard fragment list if file is complete */
-              if (FragmentList_checkEntryComplete(fragmentNode))
-              {
-                FragmentList_remove(&fragmentList,fragmentNode);
               }
 
               /* free resources */
@@ -977,7 +977,7 @@ Errors Command_compare(StringList                      *archiveFileNameList,
                   fragmentNode = FragmentList_find(&fragmentList,fileName);
                   if (fragmentNode == NULL)
                   {
-                    fragmentNode = FragmentList_add(&fragmentList,fileName,fileInfo.size);
+                    fragmentNode = FragmentList_add(&fragmentList,fileName,fileInfo.size,NULL,0);
                   }
 //FragmentList_print(fragmentNode,String_cString(fileName));
 
@@ -1104,6 +1104,14 @@ Errors Command_compare(StringList                      *archiveFileNameList,
                   /* close file */
                   File_close(&fileHandle);
 
+                  /* add fragment to file fragment list */
+                  FragmentList_addEntry(fragmentNode,fragmentOffset,fragmentSize);
+
+                  /* discard fragment list if file is complete */
+                  if (FragmentList_checkEntryComplete(fragmentNode))
+                  {
+                    FragmentList_discard(&fragmentList,fragmentNode);
+                  }
 #if 0
                   /* get local file info */
                   /* check file time, permissions, file owner/group */
@@ -1119,15 +1127,6 @@ Errors Command_compare(StringList                      *archiveFileNameList,
                       && !Archive_eofData(&archiveEntryInfo))
                   {
                     printWarning("unexpected data at end of hard link entry '%S'.\n",fileName);
-                  }
-
-                  /* add fragment to file fragment list */
-                  FragmentList_addEntry(fragmentNode,fragmentOffset,fragmentSize);
-
-                  /* discard fragment list if file is complete */
-                  if (FragmentList_checkEntryComplete(fragmentNode))
-                  {
-                    FragmentList_remove(&fragmentList,fragmentNode);
                   }
 
                   comparedDataFlag = TRUE;
