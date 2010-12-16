@@ -29,6 +29,12 @@
   * fix install: add bar-keygen
   * added option --differential: differential storage. Like
     --incremental, but incremental data is not updated
+  * fixed creating parent directories when restoring files:
+    use default file mask to create parent directories
+  * fix restoring splitted files which are read only
+  * fixed typing error in bar.cfg entry "schedule": must be Apr,
+    not Arp. Note: please fix this in your jobs files in /etc/bar/jobs,
+    too, when you created a job which should be scheduled in April!
 
 2010-12-05 0.15f
   * fix SigSegV in string.c:formatString() which can occur on
