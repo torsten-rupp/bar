@@ -48,14 +48,14 @@
 /***************************** Constants *******************************/
 
 #define DEFAULT_FORMAT_TITLE_NORMAL_LONG "%type:-8s %size:-10s %date:-25s %part:-22s %compress:-10s %ratio:-7s %crypt:-10s %name:s"
-#define DEFAULT_FORMAT_TITLE_GROUP_LONG  "%archiveName:-20s %type:4s %size:-10s %date:-25s %part:-22s %compress:-10s %ratio:-7s %crypt:-10s %name:s"
+#define DEFAULT_FORMAT_TITLE_GROUP_LONG  "%archiveName:-20s %type:-8s %size:-10s %date:-25s %part:-22s %compress:-10s %ratio:-7s %crypt:-10s %name:s"
 #define DEFAULT_FORMAT_TITLE_NORMAL      "%type:-8s %size:-10s %date:-25s %name:s"
-#define DEFAULT_FORMAT_TITLE_GROUP       "%archiveName:-20s %type:4s %size:-10s %date:-25s %name:s"
+#define DEFAULT_FORMAT_TITLE_GROUP       "%archiveName:-20s %type:-8s %size:-10s %date:-25s %name:s"
 
 #define DEFAULT_FORMAT_NORMAL_LONG       "%type:-8s %size:-10s %date:-25s %part:-22s %compress:-10s %ratio:-7s %crypt:-10s %name:s"
-#define DEFAULT_FORMAT_GROUP_LONG        "%archiveName:-20s %type:4s %size:-10s %date:-25s %part:-22s %compress:-10s %ratio:-7s %crypt:-10s %name:s"
+#define DEFAULT_FORMAT_GROUP_LONG        "%archiveName:-20s %type:-8s %size:-10s %date:-25s %part:-22s %compress:-10s %ratio:-7s %crypt:-10s %name:s"
 #define DEFAULT_FORMAT_NORMAL            "%type:-8s %size:-10s %date:-25s %name:s"
-#define DEFAULT_FORMAT_GROUP             "%archiveName:-20s %type:4s %size:-10s %date:-25s %name:s"
+#define DEFAULT_FORMAT_GROUP             "%archiveName:-20s %type:-8s %size:-10s %date:-25s %name:s"
 
 /***************************** Datatypes *******************************/
 
@@ -203,8 +203,8 @@ LOCAL const char* getHumanSizeString(char *buffer, uint bufferSize, uint64 n)
 /***********************************************************************\
 * Name   : printHeader
 * Purpose: print list header
-* Input  : archiveFileName - archive file name or NULL if archive should
-*                            not be printed
+* Input  : storageName - storage file name or NULL if archive should not
+*                        be printed
 * Output : -
 * Return : -
 * Notes  : -
@@ -254,7 +254,14 @@ LOCAL void printHeader(const String storageName)
     }
     Misc_expandMacros(String_clear(string),template,MACROS,SIZE_OF_ARRAY(MACROS));
     printInfo(0,"%s\n",String_cString(string));
-    printInfo(0,"---------------------------------------------------------------------------------------------------------------\n");
+    if (globalOptions.longFormatFlag)
+    {
+      printInfo(0,"------------------------------------------------------------------------------------------------------------------------------------------------------\n");
+    }
+    else
+    {
+      printInfo(0,"--------------------------------------------------------------------------------------------------------------\n");
+    }
   }
 
   String_delete(string);
@@ -273,7 +280,14 @@ LOCAL void printFooter(ulong fileCount)
 {
   if (!globalOptions.noHeaderFooterFlag)
   {
-    printInfo(0,"---------------------------------------------------------------------------------------------------------------\n");
+    if (globalOptions.longFormatFlag)
+    {
+      printInfo(0,"------------------------------------------------------------------------------------------------------------------------------------------------------\n");
+    }
+    else
+    {
+      printInfo(0,"--------------------------------------------------------------------------------------------------------------\n");
+    }
     printInfo(0,"%lu %s\n",fileCount,(fileCount == 1)?"entry":"entries");
     printInfo(0,"\n");
   }
@@ -285,7 +299,8 @@ LOCAL void printFooter(ulong fileCount)
 * Input  : storageName       - storage name or NULL if storage name
 *                              should not be printed
 *          fileName          - file name
-*          fileSize          - file size [bytes]
+*          size              - file size [bytes]
+*          timeModified      - file modified time
 *          archiveSize       - archive size [bytes]
 *          compressAlgorithm - used compress algorithm
 *          cryptAlgorithm    - used crypt algorithm
@@ -320,11 +335,11 @@ LOCAL void printFileInfo(const String       storageName,
 
   if ((compressAlgorithm != COMPRESS_ALGORITHM_NONE) && (fragmentSize > 0LL))
   {
-    ratio = 100.0-archiveSize*100.0/(double)fragmentSize;
+    ratio = 100.0-(double)archiveSize*100.0/(double)fragmentSize;
   }
   else
   {
-    ratio = 0;
+    ratio = 0.0;
   }
 
   if (storageName != NULL)
@@ -370,7 +385,7 @@ LOCAL void printFileInfo(const String       storageName,
 * Purpose: print image information
 * Input  : storageName       - storage name or NULL if storage name
 *                              should not be printed
-*          iamgeName         - image name
+*          imageName         - image name
 *          size              - image size [bytes]
 *          archiveSize       - archive size [bytes]
 *          compressAlgorithm - used compress algorithm
@@ -404,11 +419,11 @@ LOCAL void printImageInfo(const String       storageName,
 
   if ((compressAlgorithm != COMPRESS_ALGORITHM_NONE) && (blockCount > 0))
   {
-    ratio = 100.0-archiveSize*100.0/(blockCount*(uint64)blockSize);
+    ratio = 100.0-(double)archiveSize*100.0/(blockCount*(uint64)blockSize);
   }
   else
   {
-    ratio = 0;
+    ratio = 0.0;
   }
 
   if (storageName != NULL)
@@ -470,7 +485,7 @@ LOCAL void printDirectoryInfo(const String    storageName,
 
   if (storageName != NULL)
   {
-    printf("%-30s ",String_cString(storageName));
+    printf("%-20s ",String_cString(storageName));
   }
   if (globalOptions.longFormatFlag)
   {
@@ -517,7 +532,7 @@ LOCAL void printLinkInfo(const String    storageName,
 
   if (storageName != NULL)
   {
-    printf("%-30s ",String_cString(storageName));
+    printf("%-20s ",String_cString(storageName));
   }
   if (globalOptions.longFormatFlag)
   {
@@ -544,7 +559,8 @@ LOCAL void printLinkInfo(const String    storageName,
 * Input  : storageName       - storage name or NULL if storage name
 *                              should not be printed
 *          fileName          - file name
-*          fileSize          - file size [bytes]
+*          size              - file size [bytes]
+*          timeModified      - file modified time
 *          archiveSize       - archive size [bytes]
 *          compressAlgorithm - used compress algorithm
 *          cryptAlgorithm    - used crypt algorithm
@@ -579,11 +595,11 @@ LOCAL void printHardLinkInfo(const String       storageName,
 
   if ((compressAlgorithm != COMPRESS_ALGORITHM_NONE) && (fragmentSize > 0LL))
   {
-    ratio = 100.0-archiveSize*100.0/(double)fragmentSize;
+    ratio = 100.0-(double)archiveSize*100.0/(double)fragmentSize;
   }
   else
   {
-    ratio = 0;
+    ratio = 0.0;
   }
 
   if (storageName != NULL)
@@ -633,8 +649,7 @@ LOCAL void printHardLinkInfo(const String       storageName,
 *          cryptAlgorithm  - used crypt algorithm
 *          cryptType       - crypt type; see CRYPT_TYPES
 *          fileSpecialType - special file type
-*          major           - device major number
-*          minor           - device minor number
+*          major,minor     - special major/minor number
 * Output : -
 * Return : -
 * Notes  : -
@@ -655,7 +670,7 @@ LOCAL void printSpecialInfo(const String     storageName,
 
   if (storageName != NULL)
   {
-    printf("%-30s ",String_cString(storageName));
+    printf("%-20s ",String_cString(storageName));
   }
   switch (fileSpecialType)
   {
@@ -744,7 +759,8 @@ LOCAL void printSpecialInfo(const String     storageName,
 * Purpose: add file info to archive entry list
 * Input  : storageName       - storage name
 *          fileName          - file name
-*          fileSize          - file size [bytes]
+*          size              - file size [bytes]
+*          timeModified      - file modified time
 *          archiveSize       - archive size [bytes]
 *          compressAlgorithm - used compress algorithm
 *          cryptAlgorithm    - used crypt algorithm
@@ -896,7 +912,6 @@ LOCAL void addListDirectoryInfo(const String    storageName,
 *          destinationName - destination name
 *          cryptAlgorithm  - used crypt algorithm
 *          cryptType       - crypt type; see CRYPT_TYPES
-*          blockSize       - block size
 * Output : -
 * Return : -
 * Notes  : -
@@ -935,7 +950,8 @@ LOCAL void addListLinkInfo(const String    storageName,
 * Purpose: add hard link info to archive entry list
 * Input  : storageName       - storage name
 *          fileName          - file name
-*          fileSize          - file size [bytes]
+*          size              - file size [bytes]
+*          timeModified      - file modified time
 *          archiveSize       - archive size [bytes]
 *          compressAlgorithm - used compress algorithm
 *          cryptAlgorithm    - used crypt algorithm
@@ -1033,7 +1049,8 @@ LOCAL void addListSpecialInfo(const String     storageName,
 /***********************************************************************\
 * Name   : freeArchiveContentNode
 * Purpose: free archive entry node
-* Input  : archiveContentNode - node to free
+* Input  : archiveContentNode - content node to free
+*          userData           - user data (not used)
 * Output : -
 * Return : -
 * Notes  : -
@@ -1078,6 +1095,7 @@ LOCAL void freeArchiveContentNode(ArchiveContentNode *archiveContentNode, void *
 * Name   : compareArchiveContentNode
 * Purpose: compare archive content entries
 * Input  : archiveContentNode1,archiveContentNode2 - nodes to compare
+*          userData                                - user data (not used)
 * Output : -
 * Return : -1 iff name1 < name2 or
 *                 name1 == name2 && timeModified1 < timeModified2
@@ -1087,7 +1105,7 @@ LOCAL void freeArchiveContentNode(ArchiveContentNode *archiveContentNode, void *
 * Notes  : -
 \***********************************************************************/
 
-LOCAL int compareArchiveContentNode(ArchiveContentNode *archiveContentNode1, ArchiveContentNode *archiveContentNode2, void *dummy)
+LOCAL int compareArchiveContentNode(ArchiveContentNode *archiveContentNode1, ArchiveContentNode *archiveContentNode2, void *userData)
 {
   String name1,name2;
   uint64 modifiedTime1,modifiedTime2;
@@ -1095,7 +1113,7 @@ LOCAL int compareArchiveContentNode(ArchiveContentNode *archiveContentNode1, Arc
   assert(archiveContentNode1 != NULL);
   assert(archiveContentNode2 != NULL);
 
-  UNUSED_VARIABLE(dummy);
+  UNUSED_VARIABLE(userData);
 
   /* get data */
   name1         = NULL;
@@ -1793,7 +1811,7 @@ remoteBarFlag=FALSE;
                                             fileName,
                                             fileInfo.size,
                                             fileInfo.timeModified,
-                                            archiveEntryInfo.file.chunkFileData.info.size,
+                                            archiveEntryInfo.hardLink.chunkHardLinkData.info.size,
                                             compressAlgorithm,
                                             cryptAlgorithm,
                                             cryptType,
@@ -1814,7 +1832,7 @@ remoteBarFlag=FALSE;
                                           fileName,
                                           fileInfo.size,
                                           fileInfo.timeModified,
-                                          archiveEntryInfo.file.chunkFileData.info.size,
+                                          archiveEntryInfo.hardLink.chunkHardLinkData.info.size,
                                           compressAlgorithm,
                                           cryptAlgorithm,
                                           cryptType,
@@ -2335,7 +2353,7 @@ if (String_length(line)>0) fprintf(stderr,"%s,%d: error=%s\n",__FILE__,__LINE__,
   {
     printHeader(NULL);
     printList();
-//    printFooter()
+    printFooter(List_count(&archiveContentList));
   }
 
   /* free resources */
