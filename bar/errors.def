@@ -106,12 +106,8 @@ ERROR WRONG_PRIVATE_KEY              "wrong private key"
 ERROR CREATE_FILE
 ERROR OPEN_FILE
 ERROR OPEN_DIRECTORY
+  // Note: to not add file name to error message; name should be part of error text
   strncpy(errorText,strerror(ERRNO),sizeof(errorText)-1);
-  if (ERROR_TEXT != NULL)
-  {
-    strncat(errorText,": ",sizeof(errorText)-1-strlen(errorText));
-    strncat(errorText,ERROR_TEXT,sizeof(errorText)-1-strlen(errorText));
-  }
   errorText[sizeof(errorText)-1] = '\0';
 
 ERROR IO_ERROR
