@@ -96,7 +96,7 @@ String File_appendFileName(String fileName, const String name)
   assert(fileName != NULL);
   assert(name != NULL);
 
-  if (String_length(fileName) > 0)
+  if (!String_empty(fileName))
   {
     if (String_index(fileName,String_length(fileName)-1) != FILES_PATHNAME_SEPARATOR_CHAR)
     {
@@ -113,7 +113,7 @@ String File_appendFileNameCString(String fileName, const char *name)
   assert(fileName != NULL);
   assert(name != NULL);
 
-  if (String_length(fileName) > 0)
+  if (!String_empty(fileName))
   {
     if (String_index(fileName,String_length(fileName)-1) != FILES_PATHNAME_SEPARATOR_CHAR)
     {
@@ -129,7 +129,7 @@ String File_appendFileNameChar(String fileName, char ch)
 {
   assert(fileName != NULL);
 
-  if (String_length(fileName) > 0)
+  if (!String_empty(fileName))
   {
     if (String_index(fileName,String_length(fileName)-1) != FILES_PATHNAME_SEPARATOR_CHAR)
     {
@@ -145,7 +145,7 @@ String File_appendFileNameBuffer(String fileName, const char *buffer, ulong buff
 {
   assert(fileName != NULL);
 
-  if (String_length(fileName) > 0)
+  if (!String_empty(fileName))
   {
     if (String_index(fileName,String_length(fileName)-1) != FILES_PATHNAME_SEPARATOR_CHAR)
     {
@@ -1452,7 +1452,7 @@ Errors File_getFileInfo(FileInfo     *fileInfo,
   fileInfo->timeLastChanged = fileStat.st_ctime;
   fileInfo->userId          = fileStat.st_uid;
   fileInfo->groupId         = fileStat.st_gid;
-  fileInfo->permission      = fileStat.st_mode;
+  fileInfo->permission      = (FilePermission)fileStat.st_mode;
   fileInfo->major           = major(fileStat.st_rdev);
   fileInfo->minor           = minor(fileStat.st_rdev);
   fileInfo->id              = (uint64)fileStat.st_ino;
@@ -1478,13 +1478,13 @@ uint64 File_getFileTimeModified(const String fileName)
   return (uint64)fileStat.st_mtime;
 }
 
-Errors File_setPermission(const String fileName,
-                          uint32       permission
+Errors File_setPermission(const String   fileName,
+                          FilePermission permission
                          )
 {
   assert(fileName != NULL);
 
-  if (chmod(String_cString(fileName),permission) != 0)
+  if (chmod(String_cString(fileName),(mode_t)permission) != 0)
   {
     return ERRORX(IO_ERROR,errno,String_cString(fileName));
   }
@@ -1536,7 +1536,7 @@ Errors File_setFileInfo(const String fileName,
       {
         return ERRORX(IO_ERROR,errno,String_cString(fileName));
       }
-      if (chmod(String_cString(fileName),fileInfo->permission) != 0)
+      if (chmod(String_cString(fileName),(mode_t)fileInfo->permission) != 0)
       {
         return ERRORX(IO_ERROR,errno,String_cString(fileName));
       }
@@ -1557,15 +1557,17 @@ Errors File_setFileInfo(const String fileName,
   return ERROR_NONE;
 }
 
-Errors File_makeDirectory(const String pathName,
-                          uint32       userId,
-                          uint32       groupId,
-                          uint32       permission
+Errors File_makeDirectory(const String   pathName,
+                          uint32         userId,
+                          uint32         groupId,
+                          FilePermission permission
                          )
 {
   mode_t          currentCreationMask;
   StringTokenizer pathNameTokenizer;
   String          directoryName;
+  String          parentDirectoryName;
+  struct stat64   fileStat;
   uid_t           uid;
   gid_t           gid;
   Errors          error;
@@ -1573,16 +1575,19 @@ Errors File_makeDirectory(const String pathName,
 
   assert(pathName != NULL);
 
+  // initialize variables
+  directoryName = File_newFileName();
+  parentDirectoryName = File_newFileName();
+
   /* get current umask */
   currentCreationMask = umask(0);
   umask(currentCreationMask);
 
   /* create directory including parent directories */
-  directoryName = File_newFileName();
   File_initSplitFileName(&pathNameTokenizer,pathName);
   if (File_getNextSplitFileName(&pathNameTokenizer,&name))
   {
-    if (String_length(name) > 0)
+    if (!String_empty(name))
     {
       File_setFileName(directoryName,name);
     }
@@ -1597,6 +1602,7 @@ Errors File_makeDirectory(const String pathName,
     {
       error = ERRORX(IO_ERROR,errno,String_cString(directoryName));
       File_doneSplitFileName(&pathNameTokenizer);
+      File_deleteFileName(parentDirectoryName);
       File_deleteFileName(directoryName);
       return error;
     }
@@ -1610,16 +1616,18 @@ Errors File_makeDirectory(const String pathName,
       {
         error = ERRORX(IO_ERROR,errno,String_cString(directoryName));
         File_doneSplitFileName(&pathNameTokenizer);
+        File_deleteFileName(parentDirectoryName);
         File_deleteFileName(directoryName);
         return error;
       }
     }
     if (permission != FILE_DEFAULT_PERMISSION)
     {
-      if (chmod(String_cString(directoryName),(permission|S_IXUSR|S_IXGRP|S_IXOTH) & ~currentCreationMask) != 0)
+      if (chmod(String_cString(directoryName),((mode_t)permission|S_IXUSR|S_IXGRP|S_IXOTH) & ~currentCreationMask) != 0)
       {
         error = ERROR(IO_ERROR,errno);
         File_doneSplitFileName(&pathNameTokenizer);
+        File_deleteFileName(parentDirectoryName);
         File_deleteFileName(directoryName);
         return error;
       }
@@ -1629,21 +1637,47 @@ Errors File_makeDirectory(const String pathName,
   {
     error = ERRORX(NOT_A_DIRECTORY,0,String_cString(directoryName));
     File_doneSplitFileName(&pathNameTokenizer);
+    File_deleteFileName(parentDirectoryName);
     File_deleteFileName(directoryName);
     return error;
   }
+
   while (File_getNextSplitFileName(&pathNameTokenizer,&name))
   {
-    if (String_length(name) > 0)
-    {     
+    if (!String_empty(name))
+    {
+      // get new parent directory
+      File_setFileName(parentDirectoryName,directoryName);
+
+      // get sub-directory
       File_appendFileName(directoryName,name);
 
       if      (!File_exists(directoryName))
       {
+        // set read/write/execute-access in parent directory
+        if (lstat64(String_cString(parentDirectoryName),&fileStat) != 0)
+        {
+          error = ERRORX(IO_ERROR,errno,String_cString(parentDirectoryName));
+          File_doneSplitFileName(&pathNameTokenizer);
+          File_deleteFileName(parentDirectoryName);
+          File_deleteFileName(directoryName);
+          return error;
+        }
+        if (chmod(String_cString(parentDirectoryName),fileStat.st_mode|S_IRUSR|S_IWUSR|S_IXUSR) != 0)
+        {
+          error = ERRORX(IO_ERROR,errno,String_cString(parentDirectoryName));
+          File_doneSplitFileName(&pathNameTokenizer);
+          File_deleteFileName(parentDirectoryName);
+          File_deleteFileName(directoryName);
+          return error;
+        }
+
+        // create sub-directory
         if (mkdir(String_cString(directoryName),0777 & ~currentCreationMask) != 0)
         {
           error = ERRORX(IO_ERROR,errno,String_cString(directoryName));
           File_doneSplitFileName(&pathNameTokenizer);
+          File_deleteFileName(parentDirectoryName);
           File_deleteFileName(directoryName);
           return error;
         }
@@ -1651,22 +1685,26 @@ Errors File_makeDirectory(const String pathName,
             || (groupId != FILE_DEFAULT_GROUP_ID)
            )
         {
+          // set owner
           uid = (userId  != FILE_DEFAULT_USER_ID ) ? (uid_t)userId  : -1;
           gid = (groupId != FILE_DEFAULT_GROUP_ID) ? (gid_t)groupId : -1;
           if (chown(String_cString(directoryName),uid,gid) != 0)
           {
             error = ERRORX(IO_ERROR,errno,String_cString(directoryName));
             File_doneSplitFileName(&pathNameTokenizer);
+            File_deleteFileName(parentDirectoryName);
             File_deleteFileName(directoryName);
             return error;
           }
         }
         if (permission != FILE_DEFAULT_PERMISSION)
         {
-          if (chmod(String_cString(directoryName),(permission|S_IXUSR|S_IXGRP|S_IXOTH) & ~currentCreationMask) != 0)
+          // set permission
+          if (chmod(String_cString(directoryName),((mode_t)permission|S_IXUSR|S_IXGRP|S_IXOTH) & ~currentCreationMask) != 0)
           {
             error = ERRORX(IO_ERROR,errno,String_cString(directoryName));
             File_doneSplitFileName(&pathNameTokenizer);
+            File_deleteFileName(parentDirectoryName);
             File_deleteFileName(directoryName);
             return error;
           }
@@ -1676,12 +1714,14 @@ Errors File_makeDirectory(const String pathName,
       {
         error = ERRORX(NOT_A_DIRECTORY,0,String_cString(directoryName));
         File_doneSplitFileName(&pathNameTokenizer);
+        File_deleteFileName(parentDirectoryName);
         File_deleteFileName(directoryName);
         return error;
       }
     }
   }
   File_doneSplitFileName(&pathNameTokenizer);
+  File_deleteFileName(parentDirectoryName);
   File_deleteFileName(directoryName);
 
   return ERROR_NONE;

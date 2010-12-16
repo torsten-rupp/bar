@@ -63,6 +63,27 @@ typedef enum
   FILE_SPECIAL_TYPE_SOCKET
 } FileSpecialTypes;
 
+/* permission flags */
+#define FILE_PERMISSION_USER_READ    S_IRUSR
+#define FILE_PERMISSION_USER_WRITE   S_IWUSR
+#define FILE_PERMISSION_USER_EXECUTE S_IXUSR
+#define FILE_PERMISSION_USER_ACCESS  S_IXUSR
+
+#define FILE_PERMISSION_GROUP_READ    S_IRGRP
+#define FILE_PERMISSION_GROUP_WRITE   S_IWGRP
+#define FILE_PERMISSION_GROUP_EXECUTE S_IXGRP
+#define FILE_PERMISSION_GROUP_ACCESS  S_IXGRP
+
+#define FILE_PERMISSION_OTHER_READ    S_IROTH
+#define FILE_PERMISSION_OTHER_WRITE   S_IWOTH
+#define FILE_PERMISSION_OTHER_EXECUTE S_IXOTH
+#define FILE_PERMISSION_OTHER_ACCESS  S_IXOTH
+
+#define FILE_PERMISSION_READ    (FILE_PERMISSION_USER_READ|FILE_PERMISSION_GROUP_READ|FILE_PERMISSION_OTHER_READ)
+#define FILE_PERMISSION_WRITE   (FILE_PERMISSION_USER_WRITE|FILE_PERMISSION_GROUP_WRITE|FILE_PERMISSION_OTHER_WRITE)
+#define FILE_PERMISSION_EXECUTE (FILE_PERMISSION_USER_EXECUTE|FILE_PERMISSION_GROUP_EXECUTE|FILE_PERMISSION_OTHER_EXECUTE)
+
+/* default user, group ids, permission */
 #define FILE_DEFAULT_USER_ID    0xFFFFFFFF
 #define FILE_DEFAULT_GROUP_ID   0xFFFFFFFF
 #define FILE_DEFAULT_PERMISSION 0xFFFFFFFF
@@ -86,6 +107,9 @@ typedef struct
   struct dirent *entry;
 } DirectoryListHandle;
 
+/* file permission */
+typedef uint32 FilePermission;
+
 /* file cast: change if file is modified in some way */
 typedef byte FileCast[FILE_CAST_SIZE];
 
@@ -99,7 +123,7 @@ typedef struct
   uint64           timeLastChanged;          // timestamp of last changed
   uint32           userId;                   // user id
   uint32           groupId;                  // group id
-  uint32           permission;               // permission flags
+  FilePermission   permission;               // permission flags
   FileSpecialTypes specialType;              // special type; see FileSpecialTypes
   uint32           major,minor;              // special type major/minor number
 
@@ -731,8 +755,8 @@ uint64 File_getFileTimeModified(const String fileName);
 * Notes  : -
 \***********************************************************************/
 
-Errors File_setPermission(const String fileName,
-                          uint32       permission
+Errors File_setPermission(const String   fileName,
+                          FilePermission permission
                          );
 
 /***********************************************************************\
@@ -753,7 +777,7 @@ Errors File_setOwner(const String fileName,
 
 /***********************************************************************\
 * Name   : File_setFileInfo
-* Purpose: set file info
+* Purpose: set file info (time, owner, permission)
 * Input  : fileName - file name
 *          fileInfo - file info
 * Output : -
@@ -777,10 +801,10 @@ Errors File_setFileInfo(const String fileName,
 * Notes  : -
 \***********************************************************************/
 
-Errors File_makeDirectory(const String pathName,
-                          uint32       userId,
-                          uint32       groupId,
-                          uint32       permission
+Errors File_makeDirectory(const String   pathName,
+                          uint32         userId,
+                          uint32         groupId,
+                          FilePermission permission
                          );
 
 /***********************************************************************\
