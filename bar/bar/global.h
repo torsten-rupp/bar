@@ -155,30 +155,40 @@ typedef void               void32;
 
 /* scalar set macros */
 #define SET_CLEAR(set) \
-  do { \
+  do \
+  { \
     (set) = 0; \
-  } while (0)
+  } \
+  while (0)
 #define SET_VALUE(element) \
   (1 << (element))
 #define SET_ADD(set,element) \
-  do { \
+  do \
+  { \
     (set) |= SET_VALUE(element); \
-  } while (0)
+  } \
+  while (0)
 #define SET_REM(set,element) \
-  do { \
+  do \
+  { \
     (set) &= ~(SET_VALUE(element)); \
-  } while (0)
+  } \
+  while (0)
 #define IN_SET(set,element) (((set) & SET_VALUE(element)) == SET_VALUE(element))
 
 /* bitset macros */
 #define BITSET_SET(set,bit) \
-  do { \
+  do \
+  { \
     ((byte*)(set))[bit/8] |= (1 << (bit%8)); \
-  } while (0)
+  } \
+  while (0)
 #define BITSET_CLEAR(set,bit) \
-  do { \
+  do \
+  { \
     ((byte*)(set))[bit/8] &= ~(1 << (bit%8)); \
-  } while (0)
+  } \
+  while (0)
 #define BITSET_IS_SET(set,bit) \
   ((((byte*)(set))[bit/8] & (1 << (bit%8))) != 0)
 
@@ -300,11 +310,11 @@ typedef void               void32;
 #define _HALT_STRING2(z) #z
 #undef HALT
 #define HALT(errorLevel, format, args...) \
- do \
+  do \
   { \
-   __halt(__FILE__,__LINE__,errorLevel,format, ## args); \
+    __halt(__FILE__,__LINE__,errorLevel,format, ## args); \
   } \
- while (0)
+  while (0)
 
 #define HALT_INSUFFICIENT_MEMORY(args...) \
   do \
@@ -350,12 +360,12 @@ typedef void               void32;
 #define _FAIL_STRING1(z) _FAIL_STRING2(z) 
 #define _FAIL_STRING2(z) #z
 #define FAIL(errorLevel, format, args...) \
- do \
+  do \
   { \
    fprintf(stderr, format " - fail in file " __FILE__ ", line " _FAIL_STRING1(__LINE__) "\n" , ## args); \
    exit(errorLevel);\
   } \
- while (0)
+  while (0)
 
 #define MEMSET(p,value,size) memset(p,value,size)
 #define MEMCLEAR(p,size) memset(p,0,size)
