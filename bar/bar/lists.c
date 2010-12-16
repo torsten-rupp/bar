@@ -435,7 +435,7 @@ void List_sort(void                    *list,
         }
         else
         {
-          /* compare nodess from sub-list 1, 2 */
+          /* compare nodess from sub-list 1 and 2 */
           if (listNodeCompareFunction(node1,node2,listNodeCompareUserData) < 0)
           {
             /* node1 < node2 -> select node1 */
@@ -450,7 +450,7 @@ void List_sort(void                    *list,
         }
 
         /* add to list */
-        ((Node*)node)->prev = ((List*)list)->tail;
+        ((Node*)node)->prev = sortedList.tail;
         ((Node*)node)->next = NULL;
         if (sortedList.head != NULL)
         {
