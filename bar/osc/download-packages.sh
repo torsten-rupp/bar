@@ -16,7 +16,7 @@ download()
 
 if test -z "$1"; then
   echo >&2 "ERROR: no version specified!"
-  echo "Usage: $0 <version> <nb>"
+  echo "Usage: $0 <version>"
   exit 1
 fi
 version=$1
