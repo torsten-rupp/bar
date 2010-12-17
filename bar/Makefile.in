@@ -11,7 +11,6 @@
 #----------------------------- external variables ----------------------------
 #
 # DESTDIR=<path>    install destination directory
-# DIST=1            install distributin (without keys)
 
 #---------------------------------- settings ---------------------------------
 
@@ -127,7 +126,7 @@ ifeq ($(ENABLE_GUI),yes)
 	-$(MAKE) -C barcontrol clean
 endif
 	$(RMRF) $(DISTRIBUTION_NAME)
-	$(RMF) $(DISTRIBUTION_NAME).tar.bz2
+	$(RMF) $(DISTRIBUTION_NAME).tar.bz2 $(DISTRIBUTION_NAME).orig.tar.gz
 	$(RMRF) tmp
 
 distclean: clean
@@ -263,47 +262,18 @@ endif
 
 install: \
   install_base \
+  install_gui \
   install_man \
-  $(if $(DIST),,install_keys)
+  install_keys
 
 # install base files
 # Note: prefix is used for temporary installations
 install_base: \
   $(TARGETS) \
-  $(if $(findstring $(ENABLE_GUI),yes),$(if $(findstring $(PLATFORM),Linux),barcontrol/barcontrol barcontrol/barcontrol-linux.jar) \
-                                       $(if $(findstring $(PLATFORM),Windows),$(if $(LAUNCH4J),barcontrol/barcontrol.exe,barcontrol/barcontrol.bat barcontrol/barcontrol-windows.jar)) \
-  ) \
   $(SCRIPTS) \
   $(MAN)
 	$(INSTALL) -d "$(DESTDIR)$(INSTALL_BIN_DIR)"
 	$(INSTALL) bar/bar@EXEEXT@ "$(DESTDIR)$(INSTALL_BIN_DIR)"
-ifeq ($(ENABLE_GUI),yes)
-	$(INSTALL) bar/bar-keygen "$(DESTDIR)$(INSTALL_BIN_DIR)"
-ifeq ($(PLATFORM),Linux)
-	$(INSTALL) barcontrol/barcontrol \
-                   barcontrol/barcontrol-linux.jar \
-                   barcontrol/barcontrol-linux_64.jar \
-                   "$(DESTDIR)$(INSTALL_BIN_DIR)"
-endif
-ifeq ($(PLATFORM),Windows)
-	$(INSTALL) $(if $(LAUNCH4J),barcontrol/barcontrol.exe,\
-                                    barcontrol/barcontrol.bat barcontrol/barcontrol-windows.jar \
-                                    barcontrol/barcontrol.bat barcontrol/barcontrol-windows_64.jar \
-                    ) \
-                   "$(DESTDIR)$(INSTALL_BIN_DIR)"
-endif
-ifeq ($(PLATFORM),Solaris)
-	$(INSTALL) barcontrol/barcontrol \
-                   barcontrol/barcontrol-solaris.jar \
-                   "$(DESTDIR)$(INSTALL_BIN_DIR)"
-endif
-ifeq ($(PLATFORM),MacOSX)
-	$(INSTALL) barcontrol/barcontrol \
-                   barcontrol/barcontrol-macosx.jar \
-                   barcontrol/barcontrol-macosx_64.jar \
-                   "$(DESTDIR)$(INSTALL_BIN_DIR)"
-endif
-endif
 	$(INSTALL) -d "$(DESTDIR)$(INSTALL_CONFIG_DIR)"
 	if test ! -f "$(DESTDIR)$(INSTALL_CONFIG_DIR)/bar.cfg"; then \
           $(INSTALL) -m 600 bar/bar.cfg "$(DESTDIR)$(INSTALL_CONFIG_DIR)"; \
@@ -333,6 +303,44 @@ endif
         else \
           echo "$(INSTALL_ETC_DIR)/init.d/barserver NOT installed - file already exists!"; \
         fi
+
+# install GUI files
+# Note: prefix is used for temporary installations
+install_gui: \
+  $(TARGETS) \
+  $(if $(findstring $(ENABLE_GUI),yes),$(if $(findstring $(PLATFORM),Linux),barcontrol/barcontrol-linux.jar barcontrol/barcontrol-linux_64.jar) \
+                                       $(if $(findstring $(PLATFORM),Windows),$(if $(LAUNCH4J),barcontrol/barcontrol.exe) barcontrol/barcontrol-windows.jar barcontrol/barcontrol-windows_64.jar) \
+                                       $(if $(findstring $(PLATFORM),Solaris),barcontrol/barcontrol-solaris.jar) \
+                                       $(if $(findstring $(PLATFORM),MacOSX),barcontrol/barcontrol-macosx.jar barcontrol/barcontrol-macosx_64.jar) \
+  )
+	$(INSTALL) -d "$(DESTDIR)$(INSTALL_BIN_DIR)"
+ifeq ($(ENABLE_GUI),yes)
+	$(INSTALL) bar/bar-keygen "$(DESTDIR)$(INSTALL_BIN_DIR)"
+ifeq ($(PLATFORM),Linux)
+	$(INSTALL) barcontrol/barcontrol \
+                   barcontrol/barcontrol-linux.jar \
+                   barcontrol/barcontrol-linux_64.jar \
+                   "$(DESTDIR)$(INSTALL_BIN_DIR)"
+endif
+ifeq ($(PLATFORM),Windows)
+	$(INSTALL) $(if $(LAUNCH4J),barcontrol/barcontrol.exe,\
+                                    barcontrol/barcontrol.bat barcontrol/barcontrol-windows.jar \
+                                    barcontrol/barcontrol.bat barcontrol/barcontrol-windows_64.jar \
+                    ) \
+                   "$(DESTDIR)$(INSTALL_BIN_DIR)"
+endif
+ifeq ($(PLATFORM),Solaris)
+	$(INSTALL) barcontrol/barcontrol \
+                   barcontrol/barcontrol-solaris.jar \
+                   "$(DESTDIR)$(INSTALL_BIN_DIR)"
+endif
+ifeq ($(PLATFORM),MacOSX)
+	$(INSTALL) barcontrol/barcontrol \
+                   barcontrol/barcontrol-macosx.jar \
+                   barcontrol/barcontrol-macosx_64.jar \
+                   "$(DESTDIR)$(INSTALL_BIN_DIR)"
+endif
+endif
 
 # install man-page
 # Note: prefix is used for temporary installations
@@ -536,7 +544,7 @@ debian_dist: \
 clean_debian_dist:
 	$(RMF) $(DISTRIBUTION_NAME).orig.tar.gz
 
-# create debian distribution
+# create Debian distribution
 $(DISTRIBUTION_NAME).orig.tar.gz: \
   $(DISTRIBUTION_NAME).tar.bz2 \
   download-third-party-packages.sh
