@@ -9,7 +9,7 @@
 # $Source: /home/torsten/cvs/bar/osc/changelog.pl,v $
 # $Revision: 1.1 $
 # $Author: torsten $
-# Contents: convert changelog to Debian change log
+# Contents: convert ChangeLog to Debian change log
 # Systems: all
 #
 # ----------------------------------------------------------------------------
@@ -36,7 +36,6 @@ while ($line=<STDIN>)
 {
   chop $line;
   $lineNb++;
-#  if (($line =~ /^\s*$/) || ($line =~ /^\s*\/\//)) { next; }
 #print "$line\n";
 
   if ($changeLogFlag)
@@ -61,6 +60,10 @@ while ($line=<STDIN>)
       read(HANDLE,$date,1024);
       close(HANDLE);
       $changeLogFlag=1;
+    }
+    elsif (($line =~ /^\s*$/) || ($line =~ /^\s*\/\//))
+    {
+      next;
     }
     else
     {
