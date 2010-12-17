@@ -1,3 +1,44 @@
+bar (0.16) stable; urgency=low
+  * do not store content of directories and sub-directories
+    when file .nobackup or .NOBACKUP exists
+  * add option --ignore-no-backup-file
+  * support hard links: add new chunk types HLN0, HENT, HNAM,
+    HDAT
+  * rewrite chunk code: add init and done, moved clean-up
+    code down to chunk code, improve error handling
+  * fix wrong data parsing in index database for directories,
+    links, special files
+  * improved error handling
+  * fix typing errors in error messages
+  * improved tests
+  * added -o as shortcut for --overwrite-archive-files
+  * added option --dry-run: do all operations, but do not
+    compress, encrypt and store files, do not write incremental
+    data lists, do not write on CD/DVD/BD/devices
+  * fixed --no-storage: incremental data list was not written
+  * fixed possible deadlock in server when archive files cannot
+    be transmitted to a remote server and local harddisk becomes
+    full
+  * added option --compress-exclude to disable compression for
+    files, images and hard links which match to the specified
+    pattern
+  * barcontrol: added exclude list in storage tab under compress
+  * fixed memory leak
+  * support building Debian/Ubuntu packages with SuSE build
+    service!
+  * fix install: add bar-keygen
+  * added option --differential: differential storage. Like
+    --incremental, but incremental data is not updated
+  * fixed creating parent directories when restoring files:
+    use default file mask to create parent directories
+  * fix restoring splitted files which are read only
+  * fixed typing error in bar.cfg entry "schedule": must be Apr,
+    not Arp. Note: please fix this in your jobs files in /etc/bar/jobs,
+    too, when you created a job which should be scheduled in April!
+  * fixed SigSegV with option -g: internal sorting of list was wrong
+
+ -- Torsten Rupp <torsten.rupp.net>  Fri, 17 Dec 2010 00:00:00 +0900
+
 bar (0.15f) stable; urgency=low
   * fix SigSegV in string.c:formatString() which can occur on
     amd64 systems
@@ -34,6 +75,7 @@ bar (0.15c) stable; urgency=low
      - fix out-dated JAR archives
   * added missing documentation images to distribution
   * fix creation of barcontrol/barcontrol*.jar
+  * fix error message when archive file already exists
 
  -- Torsten Rupp <torsten.rupp.net>  Thu, 18 Nov 2010 00:00:00 +0900
 

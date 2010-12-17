@@ -63,7 +63,7 @@ install-bar: build
 	# Add here commands to install the package
 	# The DESTDIR Has To Be Exactly  /usr/src/packages/BUILD/debian/<nameOfPackage>
 	make \
-          DESTDIR=/usr/src/packages/BUILD/debian/bar DIST=1 \
+          DESTDIR=/usr/src/packages/BUILD/debian/bar DIST=1 SYSTEM=Debian \
           install_base install_man
 	# --- end custom part for installing
 
@@ -76,7 +76,7 @@ install-bar-gui: build
 	# Add here commands to install the package
 	# The DESTDIR Has To Be Exactly  /usr/src/packages/BUILD/debian/<nameOfPackage>
 	make \
-          DESTDIR=/usr/src/packages/BUILD/debian/bar-gui DIST=1 \
+          DESTDIR=/usr/src/packages/BUILD/debian/bar-gui DIST=1 SYSTEM=Debian \
           install_gui
 	# --- end custom part for installing
 

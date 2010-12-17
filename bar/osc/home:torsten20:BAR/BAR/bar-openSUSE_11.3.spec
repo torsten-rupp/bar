@@ -1,7 +1,7 @@
 # norootforbuild
 
 Name:          bar
-Version:       0.15f
+Version:       0.16
 Release:       0
 Summary:       Backup ARchiver
 Source:        http://www.kigen.de/projects/bar/bar-%{version}.tar.bz2
@@ -85,6 +85,7 @@ mkdir packages
 %{_bindir}/barcontrol
 %{_bindir}/barcontrol-linux.jar
 %{_bindir}/barcontrol-linux_64.jar
+%{_bindir}/bar-keygen
 %doc ChangeLog doc/README doc/bar.pdf
 %{_mandir}/man7/bar.7.gz
 %config /etc/bar/bar.cfg
