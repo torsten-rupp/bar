@@ -1147,11 +1147,11 @@ bool Storage_parseSSHSpecifier(const String sshSpecifier,
   String_clear(hostName);
   if (hostPort != NULL) (*hostPort) = 0;
 
-  if      (String_matchCString(sshSpecifier,STRING_BEGIN,"[^@]*@[^:]*:[:digit:]+",NULL,NULL,NULL))
+  if      (String_matchCString(sshSpecifier,STRING_BEGIN,"[^@]*@[^:]*:[[:digit:]]+",NULL,NULL,NULL))
   {
     result = String_parse(sshSpecifier,STRING_BEGIN,"%S@%S:%d",NULL,loginName,hostName,hostPort);
   }
-  else if (String_matchCString(sshSpecifier,STRING_BEGIN,"[^:]*:[:digit:]+",NULL,NULL,NULL))
+  else if (String_matchCString(sshSpecifier,STRING_BEGIN,"[^:]*:[[:digit:]]+",NULL,NULL,NULL))
   {
     result = String_parse(sshSpecifier,STRING_BEGIN,"%S:%d",NULL,hostName,hostPort);
   }
