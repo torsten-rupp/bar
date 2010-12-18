@@ -882,14 +882,15 @@ void String_debugInit(void);
 void String_debugDone(void);
 
 /***********************************************************************\
-* Name   : String_debugPrintInfo
-* Purpose: string debug function: output not deallocated strings
-* Input  : -
+* Name   : String_debugDumpInfo, String_debugPrintInfo
+* Purpose: string debug function: output allocated strings
+* Input  : handle - output channel
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
+void String_debugDumpInfo(FILE *handle);
 void String_debugPrintInfo(void);
 
 /***********************************************************************\

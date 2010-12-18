@@ -153,20 +153,20 @@ typedef struct
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void String_debugPrintStackTrace(const char *title, int indent, void *stackTrace[], int stackTraceSize)
+LOCAL void String_debugDumpStackTrace(FILE *handle, const char *title, int indent, void *stackTrace[], int stackTraceSize)
 {
   const char **functionNames;
   int        z,i;
 
-  for (i = 0; i < indent; i++) fprintf(stderr," ");
-  fprintf(stderr,"C stack trace: %s\n",title);
+  for (i = 0; i < indent; i++) fprintf(handle," ");
+  fprintf(handle,"C stack trace: %s\n",title);
   functionNames = (const char **)backtrace_symbols(stackTrace,stackTraceSize);
   if (functionNames != NULL)
   {
     for (z = 1; z < stackTraceSize; z++)
     {
-      for (i = 0; i < indent; i++) fprintf(stderr," ");
-      fprintf(stderr,"  %2d %p: %s\n",z,stackTrace[z],functionNames[z]);
+      for (i = 0; i < indent; i++) fprintf(handle," ");
+      fprintf(handle,"  %2d %p: %s\n",z,stackTrace[z],functionNames[z]);
     }
     free(functionNames);
   }
@@ -1979,8 +1979,8 @@ void __String_delete(const char *fileName, ulong lineNb, String string)
                 debugStringNode->lineNb
                );
         #ifdef HAVE_BACKTRACE
-          String_debugPrintStackTrace("allocated at",2,debugStringNode->stackTrace,debugStringNode->stackTraceSize);
-          String_debugPrintStackTrace("deleted at",2,debugStringNode->deleteStackTrace,debugStringNode->deleteStackTraceSize);
+          String_debugDumpStackTrace(stderr,"allocated at",2,debugStringNode->stackTrace,debugStringNode->stackTraceSize);
+          String_debugDumpStackTrace(stderr,"deleted at",2,debugStringNode->deleteStackTrace,debugStringNode->deleteStackTraceSize);
         #endif /* HAVE_BACKTRACE */
         HALT_INTERNAL_ERROR("");
       }
@@ -4377,33 +4377,43 @@ void String_debugDone(void)
   pthread_mutex_unlock(&debugStringLock);
 }
 
-LOCAL void String_debugPrintAllocated(void)
+LOCAL void String_debugDumpAllocated(FILE *handle)
 {
   DebugStringNode *debugStringNode;
 
   for (debugStringNode = debugAllocStringList.head; debugStringNode != NULL; debugStringNode = debugStringNode->next)
   {
-    fprintf(stderr,"DEBUG WARNING: string %p '%s' allocated at %s, line %lu\n",
+    fprintf(handle,"DEBUG: string %p '%s' allocated at %s, line %lu\n",
             debugStringNode->string,
             debugStringNode->string->data,
             debugStringNode->fileName,
             debugStringNode->lineNb
            );
     #ifdef HAVE_BACKTRACE
-      String_debugPrintStackTrace("allocated at",2,debugStringNode->stackTrace,debugStringNode->stackTraceSize);
+      String_debugDumpStackTrace(handle,"allocated at",2,debugStringNode->stackTrace,debugStringNode->stackTraceSize);
     #endif /* HAVE_BACKTRACE */
   }
 }
 
-void String_debugPrintInfo(void)
+LOCAL void String_debugPrintAllocated(void)
+{
+  String_debugDumpAllocated(stderr);
+}
+
+void String_debugDumpInfo(FILE *handle)
 {
   pthread_once(&debugStringInitFlag,String_debugInit);
 
   pthread_mutex_lock(&debugStringLock);
   {
-    String_debugPrintAllocated();
+    String_debugDumpAllocated(handle);
   }
   pthread_mutex_unlock(&debugStringLock);
+}
+
+void String_debugPrintInfo()
+{
+  String_debugDumpInfo(stderr);
 }
 
 void String_debugPrintStatistics(void)
@@ -4435,7 +4445,7 @@ void String_debugPrintCurrentStackTrace(void)
 
   #ifdef HAVE_BACKTRACE
     stackTraceSize = backtrace(stackTrace,MAX_STACK_TRACE_SIZE);
-    String_debugPrintStackTrace("",0,stackTrace,stackTraceSize);
+    String_debugDumpStackTrace(stderr,"",0,stackTrace,stackTraceSize);
   #endif /* HAVE_BACKTRACE */
 }
 
