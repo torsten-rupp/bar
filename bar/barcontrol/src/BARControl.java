@@ -1219,26 +1219,39 @@ public class BARControl
     {
       menu = Widgets.addMenu(menuBar,"Debug");
       {
-        menuItem = Widgets.addMenuItem(menu,"Dump memory info");
+        menuItem = Widgets.addMenuItem(menu,"Print memory statistics");
         menuItem.addSelectionListener(new SelectionListener()
         {
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             MenuItem widget = (MenuItem)selectionEvent.widget;
-            BARServer.executeCommand("DEBUG_MEMORY_INFO");
+            BARServer.executeCommand("DEBUG_MEMORY_PRINT_STATISTICS");
           }
           public void widgetDefaultSelected(SelectionEvent selectionEvent)
           {
           }
         });
 
-        menuItem = Widgets.addMenuItem(menu,"Dump memory statistics");
+        menuItem = Widgets.addMenuItem(menu,"Print memory info");
         menuItem.addSelectionListener(new SelectionListener()
         {
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             MenuItem widget = (MenuItem)selectionEvent.widget;
-            BARServer.executeCommand("DEBUG_MEMORY_STATISTICS");
+            BARServer.executeCommand("DEBUG_MEMORY_PRINT_INFO");
+          }
+          public void widgetDefaultSelected(SelectionEvent selectionEvent)
+          {
+          }
+        });
+
+        menuItem = Widgets.addMenuItem(menu,"Dump memory info");
+        menuItem.addSelectionListener(new SelectionListener()
+        {
+          public void widgetSelected(SelectionEvent selectionEvent)
+          {
+            MenuItem widget = (MenuItem)selectionEvent.widget;
+            BARServer.executeCommand("DEBUG_MEMORY_DUMP_INFO");
           }
           public void widgetDefaultSelected(SelectionEvent selectionEvent)
           {
