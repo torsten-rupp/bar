@@ -3,7 +3,7 @@
 * $Source: /home/torsten/cvs/bar/bar/stringlists.c,v $
 * $Revision: 1.6 $
 * $Author: torsten $
-* Contents: 
+* Contents:
 * Systems :
 *
 \***********************************************************************/
@@ -158,44 +158,108 @@ void StringList_move(StringList *fromStringList, StringList *toStringList)
   List_move(fromStringList,toStringList,NULL,NULL,NULL);
 }
 
+#ifdef NDEBUG
 void StringList_insert(StringList *stringList, const String string, StringNode *nextStringNode)
+#else /* not NDEBUG */
+void __StringList_insert(const char *fileName, ulong lineNb, StringList *stringList, const String string, StringNode *nextStringNode)
+#endif /* NDEBUG */
 {
-  insertString(stringList,String_duplicate(string),nextStringNode);
+  #ifdef NDEBUG
+    insertString(stringList,String_duplicate(string),nextStringNode);
+  #else /* not NDEBUG */
+    insertString(stringList,__String_duplicate(fileName,lineNb,string),nextStringNode);
+  #endif /* NDEBUG */
 }
 
+#ifdef NDEBUG
 void StringList_insertCString(StringList *stringList, const char *s, StringNode *nextStringNode)
+#else /* not NDEBUG */
+void __StringList_insertCString(const char *fileName, ulong lineNb, StringList *stringList, const char *s, StringNode *nextStringNode)
+#endif /* NDEBUG */
 {
-  insertString(stringList,String_newCString(s),nextStringNode);
+  #ifdef NDEBUG
+    insertString(stringList,String_newCString(s),nextStringNode);
+  #else /* not NDEBUG */
+    insertString(stringList,__String_newCString(fileName,lineNb,s),nextStringNode);
+  #endif /* NDEBUG */
 }
 
+#ifdef NDEBUG
 void StringList_insertChar(StringList *stringList, char ch, StringNode *nextStringNode)
+#else /* not NDEBUG */
+void __StringList_insertChar(const char *fileName, ulong lineNb, StringList *stringList, char ch, StringNode *nextStringNode)
+#endif /* NDEBUG */
 {
-  insertString(stringList,String_newChar(ch),nextStringNode);
+  #ifdef NDEBUG
+    insertString(stringList,String_newChar(ch),nextStringNode);
+  #else /* not NDEBUG */
+    insertString(stringList,__String_newChar(fileName,lineNb,ch),nextStringNode);
+  #endif /* NDEBUG */
 }
 
+#ifdef NDEBUG
 void StringList_insertBuffer(StringList *stringList, char *buffer, ulong bufferLength, StringNode *nextStringNode)
+#else /* not NDEBUG */
+void __StringList_insertBuffer(const char *fileName, ulong lineNb, StringList *stringList, char *buffer, ulong bufferLength, StringNode *nextStringNode)
+#endif /* NDEBUG */
 {
-  insertString(stringList,String_newBuffer(buffer,bufferLength),nextStringNode);
+  #ifdef NDEBUG
+    insertString(stringList,String_newBuffer(buffer,bufferLength),nextStringNode);
+  #else /* not NDEBUG */
+    insertString(stringList,__String_newBuffer(fileName,lineNb,buffer,bufferLength),nextStringNode);
+  #endif /* NDEBUG */
 }
 
+#ifdef NDEBUG
 void StringList_append(StringList *stringList, const String string)
+#else /* not NDEBUG */
+void __StringList_append(const char *fileName, ulong lineNb, StringList *stringList, const String string)
+#endif /* NDEBUG */
 {
-  insertString(stringList,String_duplicate(string),NULL);
+  #ifdef NDEBUG
+    insertString(stringList,String_duplicate(string),NULL);
+  #else /* not NDEBUG */
+    insertString(stringList,__String_duplicate(fileName,lineNb,string),NULL);
+  #endif /* NDEBUG */
 }
 
+#ifdef NDEBUG
 void StringList_appendCString(StringList *stringList, const char *s)
+#else /* not NDEBUG */
+void __StringList_appendCString(const char *fileName, ulong lineNb, StringList *stringList, const char *s)
+#endif /* NDEBUG */
 {
-  insertString(stringList,String_newCString(s),NULL);
+  #ifdef NDEBUG
+    insertString(stringList,String_newCString(s),NULL);
+  #else /* not NDEBUG */
+    insertString(stringList,__String_newCString(fileName,lineNb,s),NULL);
+  #endif /* NDEBUG */
 }
 
+#ifdef NDEBUG
 void StringList_appendChar(StringList *stringList, char ch)
+#else /* not NDEBUG */
+void __StringList_appendChar(const char *fileName, ulong lineNb, StringList *stringList, char ch)
+#endif /* NDEBUG */
 {
-  insertString(stringList,String_newChar(ch),NULL);
+  #ifdef NDEBUG
+    insertString(stringList,String_newChar(ch),NULL);
+  #else /* not NDEBUG */
+    insertString(stringList,__String_newChar(fileName,lineNb,ch),NULL);
+  #endif /* NDEBUG */
 }
 
+#ifdef NDEBUG
 void StringList_appendBuffer(StringList *stringList, char *buffer, ulong bufferLength)
+#else /* not NDEBUG */
+void __StringList_appendBuffer(const char *fileName, ulong lineNb, StringList *stringList, char *buffer, ulong bufferLength)
+#endif /* NDEBUG */
 {
-  insertString(stringList,String_newBuffer(buffer,bufferLength),NULL);
+  #ifdef NDEBUG
+    insertString(stringList,String_newBuffer(buffer,bufferLength),NULL);
+  #else /* not NDEBUG */
+    insertString(stringList,__String_newBuffer(fileName,lineNb,buffer,bufferLength),NULL);
+  #endif /* NDEBUG */
 }
 
 StringNode *StringList_remove(StringList *stringList, StringNode *stringNode)
@@ -369,7 +433,7 @@ const char* const *StringList_toCStringArray(const StringList *stringList)
 }
 
 #ifndef NDEBUG
-void StringList_print(const StringList *stringList)
+void StringList_debugDumpInfo(FILE *handle, const StringList *stringList)
 {
   StringNode *stringNode;
   uint       z;
@@ -380,10 +444,15 @@ void StringList_print(const StringList *stringList)
   z = 1;
   while (stringNode != NULL)
   {
-    printf("%d: %s\n",z,String_cString(stringNode->string));
+    fprintf(handle,"DEBUG %d: %s\n",z,String_cString(stringNode->string));
     stringNode = stringNode->next;
     z++;
   }
+}
+
+void StringList_debugPrintInfo(const StringList *stringList)
+{
+  StringList_debugDumpInfo(stderr,stringList);
 }
 #endif /* not NDEBUG */
 

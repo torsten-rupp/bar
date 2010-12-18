@@ -44,6 +44,17 @@ typedef struct
 
 /****************************** Macros *********************************/
 
+#ifndef NDEBUG
+  #define StringList_insert(stringList,string,nextStringNode)                    __StringList_insert(__FILE__,__LINE__,stringList,string,nextStringNode)
+  #define StringList_insertCString(stringList,s,nextStringNode)                  __StringList_insertCString(__FILE__,__LINE__,stringList,s,nextStringNode)
+  #define StringList_insertChar(stringList,ch,nextStringNode)                    __StringList_insertChar(__FILE__,__LINE__,stringList,ch,nextStringNode)
+  #define StringList_insertBuffer(stringList,buffer,bufferLength,nextStringNode) __StringList_insertBuffer(__FILE__,__LINE__,stringList,buffer,bufferLength,nextStringNode)
+  #define StringList_append(stringList,string)                                   __StringList_append(__FILE__,__LINE__,stringList,string)
+  #define StringList_appendCString(stringList,s)                                 __StringList_appendCString(__FILE__,__LINE__,stringList,s)
+  #define StringList_appendChar(stringList,ch)                                   __StringList_appendChar(__FILE__,__LINE__,stringList,ch)
+  #define StringList_appendBuffer(tringList,buffer,bufferLength)                 __StringList_appendBuffer(__FILE__,__LINE__,stringList,buffer,bufferLength)
+#endif /* not NDEBUG */
+
 /***********************************************************************\
 * Name   : STRINGLIST_ITERATE
 * Purpose: iterate over string list
@@ -74,7 +85,7 @@ typedef struct
 * Purpose: initialise string list
 * Input  : stringList - string list to initialize
 * Output : -
-* Return : initialized string list
+* Return : -
 * Notes  : -
 \***********************************************************************/
 
@@ -105,7 +116,7 @@ StringList *StringList_new(void);
 /***********************************************************************\
 * Name   : StringList_duplicate
 * Purpose: duplicate string list
-* Input  : stringList - string list to duplicate
+* Input  : stringList - string list to duplicate (strings will be copied!)
 * Output : -
 * Return : string list or NULL on insufficient memory
 * Notes  : -
@@ -117,7 +128,7 @@ StringList *StringList_duplicate(const StringList *stringList);
 * Name   : StringList_copy
 * Purpose: copy sting list
 * Input  : stringList - string list
-*          fromStringList - string list to copy
+*          fromStringList - string list to copy (strings will be copied!)
 * Output : -
 * Return : string list or NULL on insufficient memory
 * Notes  : -
@@ -142,7 +153,7 @@ void StringList_delete(StringList *stringList);
 * Input  : stringList - string list
 * Output : -
 * Return : -
-* Notes  : 
+* Notes  :
 \***********************************************************************/
 
 void StringList_clear(StringList *stringList);
@@ -164,7 +175,7 @@ void StringList_move(StringList *fromStringList, StringList *toStringList);
 * Purpose: check if list is empty
 * Input  : stringList - string list
 * Output : -
-* Return : TRUE if list is empty, FALSE otherwise
+* Return : TRUE if string list is empty, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
 
@@ -183,7 +194,7 @@ INLINE bool StringList_empty(const StringList *stringList)
 * Purpose: get number of elements in list
 * Input  : stringList - string list
 * Output : -
-* Return : number of elements
+* Return : number of elements in string list
 * Notes  : -
 \***********************************************************************/
 
@@ -202,17 +213,24 @@ INLINE ulong StringList_count(const StringList *stringList)
 *          StringList_insertChar/StringList_insertBuffer
 * Purpose: insert string into list
 * Input  : stringList - string list
-*          string     - string to insert
+*          string     - string to insert (will be copied!)
 *          nextNode   - insert node before nextNode (could be NULL)
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
+#ifdef NDEBUG
 void StringList_insert(StringList *stringList, const String string, StringNode *nextStringNode);
 void StringList_insertCString(StringList *stringList, const char *s, StringNode *nextStringNode);
 void StringList_insertChar(StringList *stringList, char ch, StringNode *nextStringNode);
 void StringList_insertBuffer(StringList *stringList, char *buffer, ulong bufferLength, StringNode *nextStringNode);
+#else /* not NDEBUG */
+void __StringList_insert(const char *fileName, ulong lineNb, StringList *stringList, const String string, StringNode *nextStringNode);
+void __StringList_insertCString(const char *fileName, ulong lineNb, StringList *stringList, const char *s, StringNode *nextStringNode);
+void __StringList_insertChar(const char *fileName, ulong lineNb, StringList *stringList, char ch, StringNode *nextStringNode);
+void __StringList_insertBuffer(const char *fileName, ulong lineNb, StringList *stringList, char *buffer, ulong bufferLength, StringNode *nextStringNode);
+#endif /* NDEBUG */
 
 /***********************************************************************\
 * Name   : StringList_append/StringList_appendCString
@@ -225,10 +243,17 @@ void StringList_insertBuffer(StringList *stringList, char *buffer, ulong bufferL
 * Notes  : -
 \***********************************************************************/
 
+#ifdef NDEBUG
 void StringList_append(StringList *stringList, const String string);
 void StringList_appendCString(StringList *stringList, const char *s);
 void StringList_appendChar(StringList *stringList, char ch);
 void StringList_appendBuffer(StringList *stringList, char *buffer, ulong bufferLength);
+#else /* not NDEBUG */
+void __StringList_append(const char *fileName, ulong lineNb, StringList *stringList, const String string);
+void __StringList_appendCString(const char *fileName, ulong lineNb, StringList *stringList, const char *s);
+void __StringList_appendChar(const char *fileName, ulong lineNb, StringList *stringList, char ch);
+void __StringList_appendBuffer(const char *fileName, ulong lineNb, StringList *stringList, char *buffer, ulong bufferLength);
+#endif /* NDEBUG */
 
 /***********************************************************************\
 * Name   : StringList_remove
@@ -248,7 +273,7 @@ StringNode *StringList_remove(StringList *stringList, StringNode *stringNode);
 * Input  : stringList - string list
 *          string     - string variable (can be NULL)
 * Output : -
-* Return : string or NULL if no more strings
+* Return : string or NULL if no strings
 * Notes  : if no string variable is supplied, the string from the list
 *          is returned directly and must not be freed!
 \***********************************************************************/
@@ -277,7 +302,7 @@ INLINE String StringList_first(const StringList *stringList, String string)
 * Input  : stringList - string list
 *          string     - string variable (can be NULL)
 * Output : -
-* Return : string or NULL if no more strings
+* Return : string or NULL if no strings
 * Notes  : if no string variable is supplied, the string from the list
 *          is returned directly and must not be freed!
 \***********************************************************************/
@@ -353,10 +378,10 @@ bool StringList_contain(StringList *stringList, const String string);
 bool StringList_containCString(StringList *stringList, const char *s);
 
 /***********************************************************************\
-* Name   : StringList_match
+* Name   : StringList_match, StringList_matchCString
 * Purpose: match string with string list
 * Input  : stringList - string list
-*          patternm   - pattern string
+*          pattern    - pattern string
 * Output : -
 * Return : string node or NULL of string do not match
 * Notes  : -
@@ -377,7 +402,17 @@ StringNode *StringList_matchCString(StringList *stringList, const char *pattern)
 const char* const *StringList_toCStringArray(const StringList *stringList);
 
 #ifndef NDEBUG
-void StringList_print(const StringList *stringList);
+/***********************************************************************\
+* Name   : StringList_debugDumpInfo, StringList_debugPrintInfo
+* Purpose: string list debug function: output not allocated strings
+* Input  : handle - output channel
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void StringList_debugDumpInfo(FILE *handle, const StringList *stringList);
+void StringList_debugPrintInfo(const StringList *stringList);
 #endif /* not NDEBUG */
 
 #ifdef __cplusplus
