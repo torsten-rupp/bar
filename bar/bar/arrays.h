@@ -184,14 +184,26 @@ const void *Array_cArray(Array array);
 
 #ifndef NDEBUG
 /***********************************************************************\
-* Name   : Array_debugPrintInfo
-* Purpose: array debug function: output not deallocated arrays
+* Name   : Array_debugDone
+* Purpose: done array debug functions
 * Input  : -
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
+void Array_debugDone(void);
+
+/***********************************************************************\
+* Name   : Array_debugDumpInfo, Array_debugPrintInfo
+* Purpose: array debug function: output allocated arrays
+* Input  : handle - output channel
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void Array_debugDumpInfo(FILE *handle);
 void Array_debugPrintInfo(void);
 
 /***********************************************************************\
@@ -204,17 +216,6 @@ void Array_debugPrintInfo(void);
 \***********************************************************************/
 
 void Array_debugPrintStatistics(void);
-
-/***********************************************************************\
-* Name   : Array_debugDone
-* Purpose: done array debug functions
-* Input  : -
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-void Array_debugDone(void);
 
 #endif /* not NDEBUG */
 

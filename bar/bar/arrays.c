@@ -397,7 +397,18 @@ const void *Array_cArray(Array array)
 }
 
 #ifndef NDEBUG
-void Array_debugPrintInfo(void)
+void Array_debugDone(void)
+{
+  pthread_once(&debugArrayInitFlag,debugArrayInit);
+
+  pthread_mutex_lock(&debugArrayLock);
+  {
+    List_done(&debugArrayList,NULL,NULL);
+  }
+  pthread_mutex_unlock(&debugArrayLock);
+}
+
+void Array_debugDumpInfo(FILE *handle)
 {
   DebugArrayNode *debugArrayNode;
 
@@ -407,7 +418,7 @@ void Array_debugPrintInfo(void)
   {
     for (debugArrayNode = debugArrayList.head; debugArrayNode != NULL; debugArrayNode = debugArrayNode->next)
     {
-      fprintf(stderr,"DEBUG WARNING: array %p[%ld] allocated at %s, line %ld\n",
+      fprintf(handle,"DEBUG: array %p[%ld] allocated at %s, line %ld\n",
               debugArrayNode->array->data,
               debugArrayNode->array->maxLength,
               debugArrayNode->fileName,
@@ -416,6 +427,11 @@ void Array_debugPrintInfo(void)
     }
   }
   pthread_mutex_unlock(&debugArrayLock);
+}
+
+void Array_debugPrintInfo(void)
+{
+  Array_debugDumpInfo(stderr);
 }
 
 void Array_debugPrintStatistics(void)
@@ -428,17 +444,6 @@ void Array_debugPrintStatistics(void)
             List_count(&debugArrayList),
             debugArrayList.allocatedMemory
            );
-  }
-  pthread_mutex_unlock(&debugArrayLock);
-}
-
-void Array_debugDone(void)
-{
-  pthread_once(&debugArrayInitFlag,debugArrayInit);
-
-  pthread_mutex_lock(&debugArrayLock);
-  {
-    List_done(&debugArrayList,NULL,NULL);
   }
   pthread_mutex_unlock(&debugArrayLock);
 }
