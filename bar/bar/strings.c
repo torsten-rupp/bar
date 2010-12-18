@@ -4395,11 +4395,6 @@ LOCAL void String_debugDumpAllocated(FILE *handle)
   }
 }
 
-LOCAL void String_debugPrintAllocated(void)
-{
-  String_debugDumpAllocated(stderr);
-}
-
 void String_debugDumpInfo(FILE *handle)
 {
   pthread_once(&debugStringInitFlag,String_debugInit);
