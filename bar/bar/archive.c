@@ -2953,6 +2953,7 @@ Errors Archive_newHardLinkEntry(ArchiveInfo      *archiveInfo,
                       );
     if (error != ERROR_NONE)
     {
+      LIST_DELETE_NODE(chunkHardLinkName);
       LIST_DONE(&archiveEntryInfo->hardLink.chunkHardLinkNameList,chunkHardLinkName)
       {
         Crypt_done(&chunkHardLinkName->cryptInfo);
@@ -2976,6 +2977,7 @@ Errors Archive_newHardLinkEntry(ArchiveInfo      *archiveInfo,
     if (error != ERROR_NONE)
     {
       Crypt_done(&chunkHardLinkName->cryptInfo);
+      LIST_DELETE_NODE(chunkHardLinkName);
       LIST_DONE(&archiveEntryInfo->hardLink.chunkHardLinkNameList,chunkHardLinkName)
       {
         Crypt_done(&chunkHardLinkName->cryptInfo);
