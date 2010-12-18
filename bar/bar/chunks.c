@@ -1026,11 +1026,14 @@ Errors Chunk_close(ChunkInfo *chunkInfo)
         return ERROR_INVALID_CHUNK_SIZE;
       }
 
-      /* seek to end of chunk */
-      error = chunkInfo->io->seek(chunkInfo->ioUserData,chunkInfo->offset+CHUNK_HEADER_SIZE+chunkInfo->size);
-      if (error != ERROR_NONE)
+      if (chunkInfo->offset+CHUNK_HEADER_SIZE+chunkInfo->size > offset)
       {
-        return error;
+        /* seek to end of chunk */
+        error = chunkInfo->io->seek(chunkInfo->ioUserData,chunkInfo->offset+CHUNK_HEADER_SIZE+chunkInfo->size);
+        if (error != ERROR_NONE)
+        {
+          return error;
+        }
       }
       break;
     #ifndef NDEBUG
