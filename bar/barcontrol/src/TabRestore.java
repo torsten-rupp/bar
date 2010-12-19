@@ -413,9 +413,9 @@ class TabRestore
 
                 storageNameHashSet.remove(storageName);
               }
-  //else {
-  //Dprintf.dprintf("xxxxxxxxxxx "+line);
-  //}
+//else {
+//Dprintf.dprintf("xxxxxxxxxxx "+line);
+//}
             }
           }
         }
@@ -462,7 +462,7 @@ class TabRestore
         // sleep a short time or get new pattern
         synchronized(trigger)
         {
-          // wait for trigger
+          // wait for trigger/timeout
           try { trigger.wait(30*1000); } catch (InterruptedException exception) { /* ignored */ };
 
           // get max. count
@@ -953,14 +953,10 @@ class TabRestore
                     entryDataMap.put(entryData);
                   }
                 }
-//else {
-//Dprintf.dprintf("rrrrrrrrrrrrrrrr=%s\n",line);
-//}
               }
             }
             else
             {
-//Dprintf.dprintf("r=%s",result);
               final String errorText = result.get(0);
               display.syncExec(new Runnable()
               {
@@ -2395,7 +2391,7 @@ class TabRestore
       if ((storagePattern == null) || !storagePattern.equals(string))
       {
         storagePattern = string.trim();
-        updateStorageListThread.triggerUpdate(storagePattern);
+        updateStorageListThread.triggerUpdate(string.trim());
       }
     }
     else
@@ -2403,7 +2399,7 @@ class TabRestore
       if (storagePattern != null)
       {
         storagePattern = null;
-        updateStorageListThread.triggerUpdate(storagePattern);
+        updateStorageListThread.triggerUpdate(string);
       }
     }
   }
