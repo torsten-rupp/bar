@@ -1980,7 +1980,6 @@ String Storage_getHandleName(String                  storageName,
           {
             String_format(storageSpecifier,":%d",storageFileHandle->scp.hostPort);
           }
-          String_appendChar(storageSpecifier,'/');
         }
       #else /* not HAVE_SSH2 */
       #endif /* HAVE_SSH2 */
@@ -1998,7 +1997,6 @@ String Storage_getHandleName(String                  storageName,
           {
             String_format(storageSpecifier,":%d",storageFileHandle->sftp.hostPort);
           }
-          String_appendChar(storageSpecifier,'/');
         }
       #else /* not HAVE_SSH2 */
       #endif /* HAVE_SSH2 */
