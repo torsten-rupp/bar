@@ -1259,8 +1259,20 @@ class TabStatus
              requestedVolumeNumber.set((Integer)data[23]);
              message.set              ((String)data[ 1]);
 
-             widgetButtonStart.setEnabled(!state.equals("running") && !state.equals("waiting") && !state.equals("pause"));
-             widgetButtonAbort.setEnabled(state.equals("waiting") || state.equals("running")  || state.equals("request volume"));
+             widgetButtonStart.setEnabled(   !state.equals("running")
+                                          && !state.equals("incremental")
+                                          && !state.equals("differential")
+                                          && !state.equals("dry-run")
+                                          && !state.equals("waiting")
+                                          && !state.equals("pause")
+                                         );
+             widgetButtonAbort.setEnabled(   state.equals("waiting")
+                                          || state.equals("running")
+                                          || state.equals("incremental")
+                                          || state.equals("differential")
+                                          || state.equals("dry-run")
+                                          || state.equals("request volume")
+                                         );
              widgetButtonVolume.setEnabled(state.equals("request volume"));
           }
 //          else { Dprintf.dprintf("unexecpted "+result[0]); }
