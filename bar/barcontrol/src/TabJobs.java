@@ -1898,7 +1898,7 @@ class TabJobs
 
         menu = Widgets.newPopupMenu(shell);
         {
-          menuItem = Widgets.addMenuItem(menu,"Add");
+          menuItem = Widgets.addMenuItem(menu,"Add...");
           menuItem.addSelectionListener(new SelectionListener()
           {
             public void widgetSelected(SelectionEvent selectionEvent)
@@ -1981,7 +1981,7 @@ class TabJobs
         Widgets.layout(widgetExcludeList,2,1,TableLayoutData.NSWE);
         menu = Widgets.newPopupMenu(shell);
         {
-          menuItem = Widgets.addMenuItem(menu,"Add");
+          menuItem = Widgets.addMenuItem(menu,"Add...");
           menuItem.addSelectionListener(new SelectionListener()
           {
             public void widgetSelected(SelectionEvent selectionEvent)
@@ -2322,7 +2322,7 @@ class TabJobs
           });
           menu = Widgets.newPopupMenu(shell);
           {
-            menuItem = Widgets.addMenuItem(menu,"Add");
+            menuItem = Widgets.addMenuItem(menu,"Add...");
             menuItem.addSelectionListener(new SelectionListener()
             {
               public void widgetSelected(SelectionEvent selectionEvent)
@@ -2330,6 +2330,79 @@ class TabJobs
                 MenuItem widget = (MenuItem)selectionEvent.widget;
 
                 compressExcludeAdd();
+              }
+              public void widgetDefaultSelected(SelectionEvent selectionEvent)
+              {
+              }
+            });
+
+            menuItem = Widgets.addMenuItem(menu,"Add most used compressed file suffixes");
+            menuItem.addSelectionListener(new SelectionListener()
+            {
+              public void widgetSelected(SelectionEvent selectionEvent)
+              {
+                final String[] COMPRESSED_PATTERNS = new String[]
+                {
+                  "*.gz",
+                  "*.tgz",
+                  "*.bz",
+                  "*.bz2",
+                  "*.gzip",
+                  "*.lzma",
+                  "*.zip",
+                  "*.rar",
+                  "*.7z",
+                };
+
+                MenuItem widget = (MenuItem)selectionEvent.widget;
+
+                compressExcludeAdd(COMPRESSED_PATTERNS);
+              }
+              public void widgetDefaultSelected(SelectionEvent selectionEvent)
+              {
+              }
+            });
+
+            menuItem = Widgets.addMenuItem(menu,"Add most used multi-media file suffixes");
+            menuItem.addSelectionListener(new SelectionListener()
+            {
+              public void widgetSelected(SelectionEvent selectionEvent)
+              {
+                final String[] MULTIMEDIA_PATTERNS = new String[]
+                {
+                  "*.jpg",
+                  "*.jpeg",
+                  "*.mp3",
+                  "*.mpeg",
+                  "*.avi",
+                  "*.wma",
+                  "*.flv",
+                };
+
+                MenuItem widget = (MenuItem)selectionEvent.widget;
+
+                compressExcludeAdd(MULTIMEDIA_PATTERNS);
+              }
+              public void widgetDefaultSelected(SelectionEvent selectionEvent)
+              {
+              }
+            });
+
+            menuItem = Widgets.addMenuItem(menu,"Add most used package file suffixes");
+            menuItem.addSelectionListener(new SelectionListener()
+            {
+              public void widgetSelected(SelectionEvent selectionEvent)
+              {
+                final String[] PACKAGE_PATTERNS = new String[]
+                {
+                  "*.rpm",
+                  "*.deb",
+                  "*.pkg",
+                };
+
+                MenuItem widget = (MenuItem)selectionEvent.widget;
+
+                compressExcludeAdd(PACKAGE_PATTERNS);
               }
               public void widgetDefaultSelected(SelectionEvent selectionEvent)
               {
@@ -4399,7 +4472,7 @@ class TabJobs
 
         menu = Widgets.newPopupMenu(shell);
         {
-          menuItem = Widgets.addMenuItem(menu,"Add new");
+          menuItem = Widgets.addMenuItem(menu,"Add...");
           menuItem.addSelectionListener(new SelectionListener()
           {
             public void widgetSelected(SelectionEvent selectionEvent)
@@ -4412,7 +4485,7 @@ class TabJobs
             }
           });
 
-          menuItem = Widgets.addMenuItem(menu,"Edit");
+          menuItem = Widgets.addMenuItem(menu,"Edit...");
           menuItem.addSelectionListener(new SelectionListener()
           {
             public void widgetSelected(SelectionEvent selectionEvent)
@@ -6071,21 +6144,51 @@ throw new Error("NYI");
   }
 
   /** add compress exclude pattern
-   * @param pattern pattern to add to included/exclude list
+   * @param pattern pattern to add to compress exclude list
    */
   private void compressExcludeAdd(String pattern)
   {
     assert selectedJobId != 0;
 
-    String[] result = new String[1];
-    if (BARServer.executeCommand("EXCLUDE_COMPRESS_ADD "+selectedJobId+" GLOB "+StringUtils.escape(pattern),result) != Errors.NONE)
+    if (!compressExcludeHashSet.contains(pattern))
     {
-      Dialogs.error(shell,"Cannot add compress exclude entry:\n\n"+result[0]);
-      return;
+      String[] result = new String[1];
+      if (BARServer.executeCommand("EXCLUDE_COMPRESS_ADD "+selectedJobId+" GLOB "+StringUtils.escape(pattern),result) != Errors.NONE)
+      {
+        Dialogs.error(shell,"Cannot add compress exclude entry:\n\n"+result[0]);
+        return;
+      }
+
+      compressExcludeHashSet.add(pattern);
+      widgetCompressExcludeList.add(pattern,findListIndex(widgetCompressExcludeList,pattern));
     }
 
-    compressExcludeHashSet.add(pattern);
-    widgetCompressExcludeList.add(pattern,findListIndex(widgetCompressExcludeList,pattern));
+    updateFileTreeImages();
+    updateDeviceImages();
+  }
+
+  /** add compress exclude patterns
+   * @param patterns patterns to add to compress exclude list
+   */
+  private void compressExcludeAdd(String[] patterns)
+  {
+    assert selectedJobId != 0;
+
+    for (String pattern : patterns)
+    {
+      if (!compressExcludeHashSet.contains(pattern))
+      {
+        String[] result = new String[1];
+        if (BARServer.executeCommand("EXCLUDE_COMPRESS_ADD "+selectedJobId+" GLOB "+StringUtils.escape(pattern),result) != Errors.NONE)
+        {
+          Dialogs.error(shell,"Cannot add compress exclude entry:\n\n"+result[0]);
+          return;
+        }
+
+        compressExcludeHashSet.add(pattern);
+        widgetCompressExcludeList.add(pattern,findListIndex(widgetCompressExcludeList,pattern));
+      }
+    }
 
     updateFileTreeImages();
     updateDeviceImages();
