@@ -1,4 +1,4 @@
-2010-xx-xx 0.16
+2010-12-17 0.16
   * do not store content of directories and sub-directories
     when file .nobackup or .NOBACKUP exists
   * add option --ignore-no-backup-file
@@ -35,6 +35,7 @@
   * fixed typing error in bar.cfg entry "schedule": must be Apr,
     not Arp. Note: please fix this in your jobs files in /etc/bar/jobs,
     too, when you created a job which should be scheduled in April!
+  * fixed SigSegV with option -g: internal sorting of list was wrong
 
 2010-12-05 0.15f
   * fix SigSegV in string.c:formatString() which can occur on
