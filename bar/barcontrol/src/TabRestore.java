@@ -2505,7 +2505,7 @@ class TabRestore
       }
       else
       {
-        Dialogs.error(shell,"Cannot add database index for storage file '"+storageName+"' (error: "+result[0]+")");
+        Dialogs.error(shell,"Cannot add database index for storage file\n\n'"+storageName+"'\n\n(error: "+result[0]+")");
       }
     }
   }
@@ -2535,7 +2535,7 @@ class TabRestore
             }
             else
             {
-              Dialogs.error(shell,"Cannot remove database index for storage file '"+storageData.name+"' (error: "+result[0]+")");
+              Dialogs.error(shell,"Cannot remove database index for storage file\n\n'"+storageData.name+"'\n\n(error: "+result[0]+")");
             }
           }
         }
@@ -2572,7 +2572,7 @@ class TabRestore
             }
             else
             {
-              Dialogs.error(shell,"Cannot refresh database index for storage file '"+storageData.name+"' (error: "+result[0]+")");
+              Dialogs.error(shell,"Cannot refresh database index for storage file\n\n'"+storageData.name+"'\n\n(error: "+result[0]+")");
             }
           }
 
