@@ -752,11 +752,11 @@ public class BARControl
     System.out.println("         --index-remove=<pattern>       - remove storage archive <name> from index");
     System.out.println("         --index-storage-list=<pattern> - list storage archives matching pattern <pattern>");
     System.out.println("         --index-enries-list=<pattern>  - list entries matching pattern <pattern>");
-    System.out.println("         -p|--pause=<n>                 - pause job execution for <n> seconds");  
-    System.out.println("         -i|--ping                      - check connection to server");           
-    System.out.println("         -s|--suspend                   - suspend job execution");                
-    System.out.println("         -c|--continue                  - continue job execution");               
-    System.out.println("         -l|--list                      - list jobs");                            
+    System.out.println("         -p|--pause=<n>                 - pause job execution for <n> seconds");
+    System.out.println("         -i|--ping                      - check connection to server");
+    System.out.println("         -s|--suspend                   - suspend job execution");
+    System.out.println("         -c|--continue                  - continue job execution");
+    System.out.println("         -l|--list                      - list jobs");
     System.out.println("");
     System.out.println("         -h|--help                      - print this help");
   }
