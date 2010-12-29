@@ -11,38 +11,41 @@ automated backups in the background.
 
 * create, list, test, compare and extract archives of files
   and disk images
-* fast file format: can find and extract single files
-  without decompressing/decryption of the whole archive
+* fast access to entries in archives: can find and extract single
+  files without decompressing/decryption of the whole archive
 * full and incremental/differential backup files archives
-* support for several file systems on disk images (ext, fat,
-  reiserfs)
-* can split archive files into pieces
+* support for raw and several file systems for disk images (ext,
+  fat, reiserfs)
+* can split archives into parts of selectable size,
 * compress of data with zlib, bzip2 or lzma algorithms
-* encryption with gcrypt algrithms (AES,TWOFISH etc.)
+* encrypt archive content with gcrypt algorithms (BLOWFISH,
+  TWOFISH, AES, a. o.),
 * asymmetric encryption with RSA
-* direct copy of archives to remote computer via FTP or
-  SSH (SCP or SFTP)
-* can store archives on CD,DVD,BD (with external tools)
-  and on a generic device
-* support pre- and post-processing of DVD images (e. g.
-  for including functions of dvdisaster)
-* daemon-mode with control over plain and TLS network
-  connection
-* nice graphical frontend (written in Java+SWT)
+* store archives directly on external server via ftp or scp,
+* with external tools: store archives on CD/DVD/BD including
+  error correction codes,
+* support storage on a generic device,
+* server mode with included scheduler for doing backups regularly.
+  Controlling the server can be done via network connection
+  (plain & TLS/SSL),
+* optional internal database with information to all stored files
+  and disk images,
+* graphical front end for server to check server status, create
+  jobs, start jobs and stop jobs. 
 
 --- Requirements
 
 * Unix system
-+ glibc 2.3.2 or higher (mandatory)
+* glibc 2.3.2 or higher (mandatory)
 * PTHREADs library (mandatory)
 * zlib library (mandatory)
 * bzib2 library from http://www.bzip.org (optional)
 * lzma library from http://tukaani.org/xz (optional)
+* ssh2 library from http://www.libssh2.org (optional)
 * gcrypt library from http://www.gnupg.org (optional)
 * gnutls library from http://www.gnu.org/software/gnutls
   (optional)
 * ftplib from http://nbpfaus.net/~pfau/ftplib (optional)
-* ssh2 library from http://www.libssh2.org (optional)
 * long long datatype (because of large files)
 * perl (only for compiling)
 * external tools for DVD: mkisofs, dvdisaster, growisofs,
@@ -53,6 +56,11 @@ automated backups in the background.
 * EPM (optional)
 
 --- Installation
+
+There are pre-compiled binary packages available for several
+system. You can download them from
+
+  http://www.kigen.de/projects/bar/index.html
 
 If there is no binary package available for your system, you
 can compile bar by yourself. The following additional packages
@@ -409,11 +417,14 @@ settings of BAR to create an DVD:
 
 --- Graphical frontend
 
-barcontrol is a graphical user interface for BAR. It is
+BARControl is a graphical user interface for BAR. It is
 written in Java with SWT (Note: the former version used
 TclTk). To run the graphical user interface a Java
-runtime environment V1.6 (JRE6) or newer is required.
-To start the graphical user interface type in
+runtime environment V1.6 (JRE6) or newer or Java
+development kit V1.6 (JDK6) or newer is required.
+
+To start the graphical user interface (for 32bit
+systems) type in
 
 On Linux:
 
@@ -434,12 +445,13 @@ resp.
   java -jar barcontrol-windows.jar
 
 
-barcontrol ask for BAR server and the login password and then
-connect to the running BAR server either via TLS or a plain
-socket connection. barcontrol can edit jobs on a server,
-display the current status of jobs and start or stop jobs.
+BARControl ask for server name where BAR is running and the
+login password and then connect to the running BAR server
+either via TLS or a plain socket connection. BARControl can
+edit jobs on a server, display the current status of jobs
+and start or stop jobs.
 
-To use barcontrol the BAR server daemon have to be
+To use BARControl the BAR server daemon have to be
 startet first. Either enter
 
   bar --daemon
@@ -466,13 +478,13 @@ SWT files) SWT have to be installed:
 * Download SWT from http://www.eclipse.org/swt
 * Install SWT to some directory
 
-To start barcontrol with the installed SWT you have to
+To start BARControl with the installed SWT you have to
 specify the path to the swt.jar file, e. g.
 
   java -classpath /usr/local/swt/swt.jar:barcontrol.jar BARControl
 
 If a single executable file should be created the
-barcontrol jar file can be wrapped with launch4j:
+BARControl jar file can be wrapped with launch4j:
 
 * Download launch4j from http://launch4j.sourceforge.net
 * Install
@@ -488,7 +500,7 @@ version 2 license text can be found here:
 
   http://www.gnu.org/licenses/gpl-2.0.html
 
-barcontrol is using SWT. SWT is under the "Eclipse Public License"
+BARControl is using SWT. SWT is under the "Eclipse Public License"
 which can be found here:
 
   http://www.eclipse.org/org/documents/epl-v10.php
