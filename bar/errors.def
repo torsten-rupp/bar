@@ -55,11 +55,13 @@ ERROR SSH_AUTHENTIFICATION
   errorText[sizeof(errorText)-1] = '\0';
 
 ERROR SSH
-  strncpy(errorText,"ssh protocol error",sizeof(errorText));
   if (ERROR_TEXT != NULL)
   {
-    strncat(errorText,": ",sizeof(errorText)-1-strlen(errorText));
-    strncat(errorText,ERROR_TEXT,sizeof(errorText)-1-strlen(errorText));
+    strncpy(errorText,ERROR_TEXT,sizeof(errorText));
+  }
+  else
+  {
+    strncpy(errorText,"ssh protocol error",sizeof(errorText));
   }
   errorText[sizeof(errorText)-1] = '\0';
 
