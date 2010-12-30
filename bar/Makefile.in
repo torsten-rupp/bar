@@ -11,6 +11,7 @@
 #----------------------------- external variables ----------------------------
 #
 # DESTDIR=<path>    install destination directory
+# DIST=1            install for creating distribution packages
 
 #---------------------------------- settings ---------------------------------
 
@@ -264,7 +265,7 @@ install: \
   install_base \
   install_gui \
   install_man \
-  install_keys
+  $(if $(DIST),,install_keys)
 
 # install base files
 # Note: prefix is used for temporary installations
