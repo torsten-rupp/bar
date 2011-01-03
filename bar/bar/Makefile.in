@@ -8,12 +8,16 @@
 #			   
 # ----------------------------------------------------------------------------
 
+#---------------------------------- settings ---------------------------------
+
+PLATFORM            = @PLATFORM@
+
 #------------------------------------ paths ----------------------------------
 
-INSTALL_DIR     = @INSTALL_DIR@
-INSTALL_BIN_DIR = @INSTALL_BIN_DIR@
-CONFIG_DIR      = @CONFIG_DIR@
-TLS_DIR         = @TLS_DIR@
+INSTALL_DIR         = @INSTALL_DIR@
+INSTALL_BIN_DIR     = @INSTALL_BIN_DIR@
+CONFIG_DIR          = @CONFIG_DIR@
+TLS_DIR             = @TLS_DIR@
 
 #--------------------------------- tool chain --------------------------------
 
