@@ -1,11 +1,11 @@
 Format: 1.0
 Source: bar
-Version: 0.16
+Version: 0.17
 Binary: bar
 Maintainer: Torsten Rupp <torsten.rupp@gmx.net>
 Homepage: http://www.kigen.de/projects/bar/index.html
 Architecture: any
 Build-Depends: debhelper (>= 4.1.16), libc6, openssl, openjdk-6-jdk
 Files: 
- 687fc89b07b86a7d1240cd7e23b2f5e7 38833120 bar-0.16.orig.tar.gz
-Debtransform-Tar: bar-0.16.orig.tar.gz
+ 7caa1d1ceb9453f5086a7472c88af5da 38894049 bar-0.17.orig.tar.gz
+Debtransform-Tar: bar-0.17.orig.tar.gz

@@ -1,3 +1,12 @@
+bar (0.16a) stable; urgency=low
+  * fix wrong storage name in database
+  * barcontrol: fix start/abort button enable/disable for
+    incremental/differential/dry-run jobs
+  * barcontrol: fix tab restore storage filter: edit+reset
+  * clean-up
+
+ -- Torsten Rupp <torsten.rupp.net>  Thu, 30 Dec 2010 00:00:00 +0900
+
 bar (0.16) stable; urgency=low
   * do not store content of directories and sub-directories
     when file .nobackup or .NOBACKUP exists
