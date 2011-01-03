@@ -119,11 +119,14 @@ class TabRestore
   enum IndexStates
   {
     NONE,
+
     OK,
     CREATE,
-    INDEX_UPDATE_REQUESTED,
-    INDEX_UPDATE,
+    UPDATE_REQUESTED,
+    UPDATE,
     ERROR,
+
+    ALL,
     UNKNOWN;
 
     /** convert data to string
@@ -133,12 +136,12 @@ class TabRestore
     {
       switch (this)
       {
-        case OK:                     return "ok";
-        case CREATE:                 return "creating";
-        case INDEX_UPDATE_REQUESTED: return "update requested";
-        case INDEX_UPDATE:           return "update";
-        case ERROR:                  return "error";
-        default:                     return "ok";
+        case OK:               return "ok";
+        case CREATE:           return "creating";
+        case UPDATE_REQUESTED: return "update requested";
+        case UPDATE:           return "update";
+        case ERROR:            return "error";
+        default:               return "ok";
       }
     }
   };
@@ -151,7 +154,7 @@ class TabRestore
     long        size;
     long        datetime;
     String      title;
-    IndexStates state;
+    IndexStates indexState;
     String      errorMessage;
     boolean     tagged;
 
@@ -163,13 +166,13 @@ class TabRestore
      * @param state storage state
      * @param errorMessage error message text
      */
-    StorageData(String name, long size, long datetime, String title, IndexStates state, String errorMessage)
+    StorageData(String name, long size, long datetime, String title, IndexStates indexState, String errorMessage)
     {
       this.name         = name;
       this.size         = size;
       this.datetime     = datetime;
       this.title        = title;
-      this.state        = state;
+      this.indexState   = indexState;
       this.errorMessage = errorMessage;
       this.tagged       = false;
     }
@@ -214,7 +217,7 @@ class TabRestore
      */
     public String toString()
     {
-      return "Storage {"+name+", "+size+" bytes, datetime="+datetime+", title="+title+", state="+state+", tagged="+tagged+"}";
+      return "Storage {"+name+", "+size+" bytes, datetime="+datetime+", title="+title+", state="+indexState+", tagged="+tagged+"}";
     }
   };
 
@@ -297,7 +300,7 @@ class TabRestore
           else if (storageData1.datetime > storageData2.datetime) return  1;
           else                                                    return  0;
         case SORTMODE_STATE:
-          return storageData1.state.compareTo(storageData2.state);
+          return storageData1.indexState.compareTo(storageData2.indexState);
         default:
           return 0;
       }
@@ -316,10 +319,11 @@ class TabRestore
    */
   class UpdateStorageListThread extends Thread
   {
-    private Object  trigger            = new Object();   // trigger update object
-    private int     newStorageMaxCount = -1;
-    private String  newStoragePattern  = null;           // new storage pattern
-    private boolean setColorFlag       = false;          // true to set color at update
+    private Object      trigger                    = new Object();   // trigger update object
+    private int         newStorageMaxCount         = -1;
+    private String      newStoragePattern          = null;           // new storage pattern
+    private IndexStates newStorageIndexStateFilter = null;           // new storage index state filter
+    private boolean     setColorFlag               = false;          // true to set color at update
 
     /** create update storage list thread
      */
@@ -333,8 +337,9 @@ class TabRestore
      */
     public void run()
     {
-      int    storageMaxCount = 100;
-      String storagePattern  = null;
+      int         storageMaxCount         = 100;
+      String      storagePattern          = null;
+      IndexStates storageIndexStateFilter = IndexStates.ALL;
       for (;;)
       {
         if (setColorFlag)
@@ -365,9 +370,9 @@ class TabRestore
         {
           String commandString = "INDEX_STORAGE_LIST "+
                                  storageMaxCount+" "+
-                                 "* "+
+                                 ((storageIndexStateFilter != IndexStates.ALL) ? storageIndexStateFilter.name() : "*")+" "+
                                  (((storagePattern != null) && !storagePattern.equals("")) ? StringUtils.escape(storagePattern) : "*");
-  //Dprintf.dprintf("commandString=%s",commandString);
+//Dprintf.dprintf("commandString=%s",commandString);
           Command command = BARServer.runCommand(commandString);
 
           // read results, update/add data
@@ -390,7 +395,7 @@ class TabRestore
                 */
                 long        datetime     = (Long)data[0];
                 long        size         = (Long)data[1];
-                IndexStates state        = Enum.valueOf(IndexStates.class,(String)data[2]);
+                IndexStates indexState   = Enum.valueOf(IndexStates.class,(String)data[2]);
                 String      storageName  = (String)data[3];
                 String      errorMessage = (String)data[4];
 
@@ -401,12 +406,12 @@ class TabRestore
                   {
                     storageData.size         = size;
                     storageData.datetime     = datetime;
-                    storageData.state        = state;
+                    storageData.indexState   = indexState;
                     storageData.errorMessage = errorMessage;
                   }
                   else
                   {
-                    storageData = new StorageData(storageName,size,datetime,new File(storageName).getName(),state,errorMessage);
+                    storageData = new StorageData(storageName,size,datetime,new File(storageName).getName(),indexState,errorMessage);
                     storageDataMap.put(storageData);
                   }
                 }
@@ -480,6 +485,14 @@ class TabRestore
             newStoragePattern = null;
             setColorFlag      = false;
           }
+
+          // get state filter
+          if (newStorageIndexStateFilter != null)
+          {
+            storageIndexStateFilter    = newStorageIndexStateFilter;
+            newStorageIndexStateFilter = null;
+            setColorFlag               = false;
+          }
         }
       }
     }
@@ -487,16 +500,27 @@ class TabRestore
     /** trigger an update
      * @param storageMaxCount new max. entries in list
      * @param storagePattern new storage pattern
+     * @param storageStateFilter new storage state filter
      */
-    public void triggerUpdate(int storageMaxCount, String storagePattern)
+    public void triggerUpdate(int storageMaxCount, String storagePattern, IndexStates storageIndexStateFilter)
     {
       synchronized(trigger)
       {
-        newStorageMaxCount = storageMaxCount;
-        newStoragePattern  = storagePattern;
-        setColorFlag       = true;
+        newStorageMaxCount         = storageMaxCount;
+        newStoragePattern          = storagePattern;
+        newStorageIndexStateFilter = storageIndexStateFilter;
+        setColorFlag               = true;
         trigger.notify();
       }
+    }
+
+    /** trigger an update
+     * @param storagePattern new storage pattern
+     * @param storageStateFilter
+     */
+    public void triggerUpdate(String storagePattern, IndexStates storageIndexStateFilter)
+    {
+      triggerUpdate(-1,storagePattern,storageIndexStateFilter);
     }
 
     /** trigger an update
@@ -504,7 +528,7 @@ class TabRestore
      */
     public void triggerUpdate(int storageMaxCount)
     {
-      triggerUpdate(storageMaxCount,null);
+      triggerUpdate(storageMaxCount,null,null);
     }
 
     /** trigger an update
@@ -512,14 +536,22 @@ class TabRestore
      */
     public void triggerUpdate(String storagePattern)
     {
-      triggerUpdate(-1,storagePattern);
+      triggerUpdate(-1,storagePattern,null);
+    }
+
+    /** trigger an update
+     * @param storagePattern new storage pattern
+     */
+    public void triggerUpdate(IndexStates storageIndexStateFilter)
+    {
+      triggerUpdate(-1,null,storageIndexStateFilter);
     }
 
     /** trigger an update
      */
     public void triggerUpdate()
     {
-      triggerUpdate(-1,null);
+      triggerUpdate(-1,null,null);
     }
   }
 
@@ -689,7 +721,7 @@ class TabRestore
     private final static int SORTMODE_TYPE          = 2;
     private final static int SORTMODE_SIZE          = 3;
     private final static int SORTMODE_DATE          = 4;
-    private final static int SORTMODE_RESTORE_STATE = 5;
+//    private final static int SORTMODE_RESTORE_STATE = 5;
 
     private int sortMode;
 
@@ -704,7 +736,7 @@ class TabRestore
       else if (table.getColumn(2) == sortColumn) sortMode = SORTMODE_TYPE;
       else if (table.getColumn(3) == sortColumn) sortMode = SORTMODE_SIZE;
       else if (table.getColumn(4) == sortColumn) sortMode = SORTMODE_DATE;
-      else if (table.getColumn(5) == sortColumn) sortMode = SORTMODE_RESTORE_STATE;
+//      else if (table.getColumn(5) == sortColumn) sortMode = SORTMODE_RESTORE_STATE;
       else                                       sortMode = SORTMODE_NAME;
     }
 
@@ -740,8 +772,8 @@ class TabRestore
           if      (entryData1.datetime < entryData2.datetime) return -1;
           else if (entryData1.datetime > entryData2.datetime) return  1;
           else                                                return  0;
-        case SORTMODE_RESTORE_STATE:
-          return entryData1.restoreState.compareTo(entryData2.restoreState);
+//        case SORTMODE_RESTORE_STATE:
+//          return entryData1.restoreState.compareTo(entryData2.restoreState);
         default:
           return 0;
       }
@@ -1082,22 +1114,20 @@ class TabRestore
   private Table           widgetStorageList;
   private Shell           widgetStorageListToolTip = null;
   private Text            widgetStoragePattern;
+  private Combo           widgetStorageStateFilter;
   private Combo           widgetStorageMaxCount;
+  private WidgetEvent     taggedStorageEvent = new WidgetEvent();
 
   private Table           widgetEntryList;
   private Shell           widgetEntryListToolTip = null;
   private Text            widgetEntryPattern;
   private Combo           widgetEntryMaxCount;
-
-  private Button          widgetRestoreArchivesButton;
-  private MenuItem        menuItemRestoreArchivesButton;
-  private Button          widgetRestoreEntriesButton;
-  private MenuItem        menuItemRestoreEntriesButton;
+  private WidgetEvent     taggedEntryEvent = new WidgetEvent();
 
   private Button          widgetRestoreTo;
   private Text            widgetRestoreToDirectory;
-  private Button          widgetRestoreToSelectButton;
   private Button          widgetOverwriteEntries;
+  private WidgetEvent     selectRestoreToEvent = new WidgetEvent();
 
   UpdateStorageListThread updateStorageListThread;
   private String          storagePattern = null;
@@ -1162,69 +1192,6 @@ class TabRestore
     widgetTab.setLayout(new TableLayout(new double[]{0.5,0.5,0.0},1.0,2));
     Widgets.layout(widgetTab,0,0,TableLayoutData.NSWE);
 
-/*
-    // path
-    composite = Widgets.newComposite(widgetTab);
-    composite.setLayout(new TableLayout(null,new double[]{0.0,1.0,0.0}));
-    Widgets.layout(composite,0,0,TableLayoutData.WE);
-    {
-      label = Widgets.newLabel(composite,"Path:");
-      Widgets.layout(label,0,0,TableLayoutData.W);
-
-      widgetPath = Widgets.newCombo(composite);
-      Widgets.layout(widgetPath,0,1,TableLayoutData.WE);
-      widgetPath.addSelectionListener(new SelectionListener()
-      {
-        public void widgetDefaultSelected(SelectionEvent selectionEvent)
-        {
-          Combo  widget   = (Combo)selectionEvent.widget;
-          String pathName = widget.getText();
-          setArchivePath(pathName);
-        }
-        public void widgetSelected(SelectionEvent selectionEvent)
-        {
-          Combo widget = (Combo)selectionEvent.widget;
-          String pathName = widget.getText();
-          setArchivePath(pathName);
-        }
-      });
-      widgetPath.addFocusListener(new FocusListener()
-      {
-        public void focusGained(FocusEvent focusEvent)
-        {
-        }
-        public void focusLost(FocusEvent focusEvent)
-        {
-          Combo  widget   = (Combo)focusEvent.widget;
-          String pathName = widget.getText();
-          setArchivePath(pathName);
-        }
-      });
-
-      button = Widgets.newButton(composite,IMAGE_DIRECTORY);
-      Widgets.layout(button,0,2,TableLayoutData.DEFAULT);
-      button.addSelectionListener(new SelectionListener()
-      {
-        public void widgetSelected(SelectionEvent selectionEvent)
-        {
-          Button widget = (Button)selectionEvent.widget;
-          String pathName = Dialogs.directory(shell,
-                                              "Select path",
-                                              widgetPath.getText()
-                                             );
-          if (pathName != null)
-          {
-            widgetPath.setText(pathName);
-            setArchivePath(pathName);
-          }
-        }
-        public void widgetDefaultSelected(SelectionEvent selectionEvent)
-        {
-        }
-      });
-    }
-*/
-
     // storage list
     group = Widgets.newGroup(widgetTab,"Storage");
     group.setLayout(new TableLayout(new double[]{1.0,0.0},1.0,4));
@@ -1271,9 +1238,7 @@ class TabRestore
             StorageData storageData = (StorageData)tableItem.getData();
             storageData.setChecked(tableItem.getChecked());
 
-            boolean storageTagged = checkStorageTagged();
-            widgetRestoreArchivesButton.setEnabled(storageTagged);
-            menuItemRestoreArchivesButton.setEnabled(storageTagged);
+            taggedStorageEvent.trigger();
           }
         }
       });
@@ -1288,9 +1253,7 @@ class TabRestore
             storageData.setChecked(tableItem.getChecked());
           }
 
-          boolean storageTagged = checkStorageTagged();
-          widgetRestoreArchivesButton.setEnabled(storageTagged);
-          menuItemRestoreArchivesButton.setEnabled(storageTagged);
+          taggedStorageEvent.trigger();
         }
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
         {
@@ -1381,7 +1344,7 @@ class TabRestore
             label.setBackground(COLOR_BACKGROUND);
             Widgets.layout(label,3,0,TableLayoutData.W);
 
-            label = Widgets.newLabel(widgetStorageListToolTip,storageData.state.toString());
+            label = Widgets.newLabel(widgetStorageListToolTip,storageData.indexState.toString());
             label.setForeground(COLOR_FORGROUND);
             label.setBackground(COLOR_BACKGROUND);
             Widgets.layout(label,3,1,TableLayoutData.WE);
@@ -1489,8 +1452,15 @@ class TabRestore
 
         Widgets.addMenuSeparator(menu);
 
-        menuItemRestoreArchivesButton = Widgets.addMenuItem(menu,"Restore");
-        menuItemRestoreArchivesButton.addSelectionListener(new SelectionListener()
+        menuItem = Widgets.addMenuItem(menu,"Restore");
+        Widgets.addEventListener(new WidgetEventListener(menuItem,taggedStorageEvent)
+        {
+          public void trigger(MenuItem menuItem)
+          {
+            menuItem.setEnabled(checkStorageTagged());
+          }
+        });
+        menuItem.addSelectionListener(new SelectionListener()
         {
           public void widgetSelected(SelectionEvent selectionEvent)
           {
@@ -1509,14 +1479,57 @@ class TabRestore
 
       // storage list filter
       composite = Widgets.newComposite(group);
-      composite.setLayout(new TableLayout(0.0,new double[]{0.0,1.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0}));
+      composite.setLayout(new TableLayout(0.0,new double[]{0.0,0.0,1.0,0.0,0.0,0.0,0.0,0.0,0.0}));
       Widgets.layout(composite,1,0,TableLayoutData.WE);
       {
+        button = Widgets.newButton(composite,IMAGE_MARK_ALL);
+        Widgets.layout(button,0,0,TableLayoutData.W);
+        Widgets.addEventListener(new WidgetEventListener(button,taggedStorageEvent)
+        {
+          public void trigger(Control control)
+          {
+            Button button = (Button)control;
+            if (checkStorageTagged())
+            {
+              button.setImage(IMAGE_UNMARK_ALL);
+              button.setToolTipText("Unmark all entries in list.");
+            }
+            else
+            {
+              button.setImage(IMAGE_MARK_ALL);
+              button.setToolTipText("Mark all entries in list.");
+            }
+          }
+        });
+        button.addSelectionListener(new SelectionListener()
+        {
+          public void widgetSelected(SelectionEvent selectionEvent)
+          {
+            Button button = (Button)selectionEvent.widget;
+            if (checkStorageTagged())
+            {
+              setTaggedStorage(false);
+              button.setImage(IMAGE_MARK_ALL);
+              button.setToolTipText("Mark all entries in list.");
+            }
+            else
+            {
+              setTaggedStorage(true);
+              button.setImage(IMAGE_UNMARK_ALL);
+              button.setToolTipText("Unmark all entries in list.");
+            }
+          }
+          public void widgetDefaultSelected(SelectionEvent selectionEvent)
+          {
+          }
+        });
+        button.setToolTipText("Mark all entries in list.");
+
         label = Widgets.newLabel(composite,"Filter:");
-        Widgets.layout(label,0,0,TableLayoutData.W);
+        Widgets.layout(label,0,1,TableLayoutData.W);
 
         widgetStoragePattern = Widgets.newText(composite);
-        Widgets.layout(widgetStoragePattern,0,1,TableLayoutData.WE);
+        Widgets.layout(widgetStoragePattern,0,2,TableLayoutData.WE);
         widgetStoragePattern.addSelectionListener(new SelectionListener()
         {
           public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -1556,7 +1569,7 @@ class TabRestore
         widgetStoragePattern.setToolTipText("Enter filter pattern for storage list. Wildcards: * and ?.");
 
         button = Widgets.newButton(composite,IMAGE_CLEAR);
-        Widgets.layout(button,0,2,TableLayoutData.W);
+        Widgets.layout(button,0,3,TableLayoutData.W);
         button.addSelectionListener(new SelectionListener()
         {
           public void widgetSelected(SelectionEvent selectionEvent)
@@ -1571,10 +1584,65 @@ class TabRestore
         });
         button.setToolTipText("Clear storage filter pattern.");
 
-        widgetRestoreArchivesButton = Widgets.newButton(composite,"Restore");
-        widgetRestoreArchivesButton.setEnabled(false);
-        Widgets.layout(widgetRestoreArchivesButton,0,3,TableLayoutData.DEFAULT,0,0,0,0,60,SWT.DEFAULT);
-        widgetRestoreArchivesButton.addSelectionListener(new SelectionListener()
+        label = Widgets.newLabel(composite,"State:");
+        Widgets.layout(label,0,4,TableLayoutData.W);
+
+        widgetStorageStateFilter = Widgets.newOptionMenu(composite);
+        widgetStorageStateFilter.setItems(new String[]{"*","ok","error","update","update requested"});
+        widgetStorageStateFilter.setText("*");
+        Widgets.layout(widgetStorageStateFilter,0,5,TableLayoutData.W);
+        widgetStorageStateFilter.addSelectionListener(new SelectionListener()
+        {
+          public void widgetSelected(SelectionEvent selectionEvent)
+          {
+            Combo widget = (Combo)selectionEvent.widget;
+            IndexStates indexState = IndexStates.UNKNOWN;
+            String indexStateText = widgetStorageStateFilter.getText();
+            if      (indexStateText.equalsIgnoreCase("ok"))               indexState = IndexStates.OK;
+            else if (indexStateText.equalsIgnoreCase("error"))            indexState = IndexStates.ERROR;
+            else if (indexStateText.equalsIgnoreCase("update"))           indexState = IndexStates.UPDATE;
+            else if (indexStateText.equalsIgnoreCase("update requested")) indexState = IndexStates.UPDATE_REQUESTED;
+            else if (indexStateText.equalsIgnoreCase("*"))                indexState = IndexStates.ALL;
+            else                                                          indexState = IndexStates.UNKNOWN;
+            updateStorageListThread.triggerUpdate(widgetStoragePattern.getText(),indexState);
+          }
+          public void widgetDefaultSelected(SelectionEvent selectionEvent)
+          {
+          }
+        });
+        widgetStorageStateFilter.setToolTipText("Storage states filter.");
+
+        label = Widgets.newLabel(composite,"Max:");
+        Widgets.layout(label,0,6,TableLayoutData.W);
+
+        widgetStorageMaxCount = Widgets.newOptionMenu(composite);
+        widgetStorageMaxCount.setItems(new String[]{"10","50","100","500","1000"});
+        widgetStorageMaxCount.setText("100");
+        Widgets.layout(widgetStorageMaxCount,0,7,TableLayoutData.W);
+        widgetStorageMaxCount.addSelectionListener(new SelectionListener()
+        {
+          public void widgetSelected(SelectionEvent selectionEvent)
+          {
+            Combo widget = (Combo)selectionEvent.widget;
+            updateStorageListThread.triggerUpdate(Integer.parseInt(widget.getText()));
+          }
+          public void widgetDefaultSelected(SelectionEvent selectionEvent)
+          {
+          }
+        });
+        widgetStorageMaxCount.setToolTipText("Max. number of entries in list.");
+
+        button = Widgets.newButton(composite,"Restore");
+        button.setEnabled(false);
+        Widgets.layout(button,0,8,TableLayoutData.DEFAULT,0,0,0,0,60,SWT.DEFAULT);
+        Widgets.addEventListener(new WidgetEventListener(button,taggedStorageEvent)
+        {
+          public void trigger(Control control)
+          {
+            control.setEnabled(checkStorageTagged());
+          }
+        });
+        button.addSelectionListener(new SelectionListener()
         {
           public void widgetSelected(SelectionEvent selectionEvent)
           {
@@ -1588,54 +1656,7 @@ class TabRestore
           {
           }
         });
-        widgetRestoreArchivesButton.setToolTipText("Start restoring selected archives.");
-
-        button = Widgets.newButton(composite,IMAGE_MARK_ALL);
-        Widgets.layout(button,0,4,TableLayoutData.E);
-        button.addSelectionListener(new SelectionListener()
-        {
-          public void widgetSelected(SelectionEvent selectionEvent)
-          {
-            Button widget = (Button)selectionEvent.widget;
-            setTaggedStorage(true);
-          }
-          public void widgetDefaultSelected(SelectionEvent selectionEvent)
-          {
-          }
-        });
-        button.setToolTipText("Mark all entries in list.");
-
-        button = Widgets.newButton(composite,IMAGE_UNMARK_ALL);
-        Widgets.layout(button,0,5,TableLayoutData.E);
-        button.addSelectionListener(new SelectionListener()
-        {
-          public void widgetSelected(SelectionEvent selectionEvent)
-          {
-            Button widget = (Button)selectionEvent.widget;
-            setTaggedStorage(false);
-          }
-          public void widgetDefaultSelected(SelectionEvent selectionEvent)
-          {
-          }
-        });
-        button.setToolTipText("Unmark all entries in list.");
-
-        widgetStorageMaxCount = Widgets.newOptionMenu(composite);
-        widgetStorageMaxCount.setItems(new String[]{"10","50","100","500","1000"});
-        widgetStorageMaxCount.setText("100");
-        Widgets.layout(widgetStorageMaxCount,0,6,TableLayoutData.W);
-        widgetStorageMaxCount.addSelectionListener(new SelectionListener()
-        {
-          public void widgetSelected(SelectionEvent selectionEvent)
-          {
-            Combo widget = (Combo)selectionEvent.widget;
-            updateStorageListThread.triggerUpdate(Integer.parseInt(widget.getText()));
-          }
-          public void widgetDefaultSelected(SelectionEvent selectionEvent)
-          {
-          }
-        });
-        widgetStorageMaxCount.setToolTipText("Max. number of entries in list.");
+        button.setToolTipText("Start restoring selected archives.");
       }
     }
 
@@ -1678,9 +1699,9 @@ class TabRestore
       tableColumn = Widgets.addTableColumn(widgetEntryList,4,"Date",          SWT.LEFT, 140,true );
       tableColumn.addSelectionListener(entryListColumnSelectionListener);
       tableColumn.setToolTipText("Click to sort for date.");
-      tableColumn = Widgets.addTableColumn(widgetEntryList,5,"State",         SWT.LEFT,  60,true );
-      tableColumn.addSelectionListener(entryListColumnSelectionListener);
-      tableColumn.setToolTipText("Click to sort for date.");
+//      tableColumn = Widgets.addTableColumn(widgetEntryList,5,"State",         SWT.LEFT,  60,true );
+//      tableColumn.addSelectionListener(entryListColumnSelectionListener);
+//      tableColumn.setToolTipText("Click to sort for state.");
       widgetEntryList.addListener(SWT.MouseDoubleClick,new Listener()
       {
         public void handleEvent(final Event event)
@@ -1693,9 +1714,7 @@ class TabRestore
             EntryData entryData = (EntryData)tableItem.getData();
             entryData.setTagged(tableItem.getChecked());
 
-            boolean entriesTagged = checkEntriesTagged();
-            widgetRestoreEntriesButton.setEnabled(entriesTagged);
-            menuItemRestoreEntriesButton.setEnabled(entriesTagged);
+            taggedEntryEvent.trigger();
           }
         }
       });
@@ -1710,9 +1729,7 @@ class TabRestore
             entryData.setTagged(tableItem.getChecked());
           }
 
-          boolean entriesTagged = checkEntriesTagged();
-          widgetRestoreEntriesButton.setEnabled(entriesTagged);
-          menuItemRestoreEntriesButton.setEnabled(entriesTagged);
+          taggedEntryEvent.trigger();
         }
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
         {
@@ -1871,9 +1888,16 @@ class TabRestore
 
         Widgets.addMenuSeparator(menu);
 
-        menuItemRestoreEntriesButton = Widgets.addMenuItem(menu,"Restore");
-        menuItemRestoreEntriesButton.setEnabled(false);
-        menuItemRestoreEntriesButton.addSelectionListener(new SelectionListener()
+        menuItem = Widgets.addMenuItem(menu,"Restore");
+        menuItem.setEnabled(false);
+        Widgets.addEventListener(new WidgetEventListener(menuItem,taggedEntryEvent)
+        {
+          public void trigger(MenuItem menuItem)
+          {
+            menuItem.setEnabled(checkEntriesTagged());
+          }
+        });
+        menuItem.addSelectionListener(new SelectionListener()
         {
           public void widgetSelected(SelectionEvent selectionEvent)
           {
@@ -1892,14 +1916,57 @@ class TabRestore
 
       // entry list filter
       composite = Widgets.newComposite(group);
-      composite.setLayout(new TableLayout(null,new double[]{0.0,1.0,0.0,0.0,0.0,0.0,0.0}));
+      composite.setLayout(new TableLayout(null,new double[]{0.0,0.0,1.0,0.0,0.0,0.0,0.0,0.0}));
       Widgets.layout(composite,1,0,TableLayoutData.WE);
       {
+        button = Widgets.newButton(composite,IMAGE_MARK_ALL);
+        Widgets.layout(button,0,0,TableLayoutData.E);
+        Widgets.addEventListener(new WidgetEventListener(button,taggedEntryEvent)
+        {
+          public void trigger(Control control)
+          {
+            Button button = (Button)control;
+            if (checkEntriesTagged())
+            {
+              button.setImage(IMAGE_UNMARK_ALL);
+              button.setToolTipText("Unmark all entries in list.");
+            }
+            else
+            {
+              button.setImage(IMAGE_MARK_ALL);
+              button.setToolTipText("Mark all entries in list.");
+            }
+          }
+        });
+        button.addSelectionListener(new SelectionListener()
+        {
+          public void widgetSelected(SelectionEvent selectionEvent)
+          {
+            Button button = (Button)selectionEvent.widget;
+            if (checkEntriesTagged())
+            {
+              setTaggedEntries(false);
+              button.setImage(IMAGE_MARK_ALL);
+              button.setToolTipText("Mark all entries in list.");
+            }
+            else
+            {
+              setTaggedEntries(true);
+              button.setImage(IMAGE_UNMARK_ALL);
+              button.setToolTipText("Unmark all entries in list.");
+            }
+          }
+          public void widgetDefaultSelected(SelectionEvent selectionEvent)
+          {
+          }
+        });
+        button.setToolTipText("Mark all entries in list.");
+
         label = Widgets.newLabel(composite,"Filter:");
-        Widgets.layout(label,0,0,TableLayoutData.W);
+        Widgets.layout(label,0,1,TableLayoutData.W);
 
         widgetEntryPattern = Widgets.newText(composite);
-        Widgets.layout(widgetEntryPattern,0,1,TableLayoutData.WE);
+        Widgets.layout(widgetEntryPattern,0,2,TableLayoutData.WE);
         widgetEntryPattern.addSelectionListener(new SelectionListener()
         {
           public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -1939,7 +2006,7 @@ class TabRestore
         widgetEntryPattern.setToolTipText("Enter filter pattern for entry list. Wildcards: * and ?.");
 
         button = Widgets.newButton(composite,IMAGE_CLEAR);
-        Widgets.layout(button,0,2,TableLayoutData.W);
+        Widgets.layout(button,0,3,TableLayoutData.W);
         button.addSelectionListener(new SelectionListener()
         {
           public void widgetSelected(SelectionEvent selectionEvent)
@@ -1956,7 +2023,7 @@ class TabRestore
 
         button = Widgets.newCheckbox(composite,"newest entries only");
         button.setSelection(newestEntriesOnlyFlag);
-        Widgets.layout(button,0,3,TableLayoutData.W);
+        Widgets.layout(button,0,4,TableLayoutData.W);
         button.addSelectionListener(new SelectionListener()
         {
           public void widgetSelected(SelectionEvent selectionEvent)
@@ -1971,13 +2038,37 @@ class TabRestore
         });
         button.setToolTipText("When this checkbox is enabled, only show newest entry instances and hide all older entry instances.");
 
-  //      control = Widgets.newSpacer(composite);
-  //      Widgets.layout(control,0,4,TableLayoutData.WE,0,0,30,0);
+        label = Widgets.newLabel(composite,"Max:");
+        Widgets.layout(label,0,5,TableLayoutData.W);
 
-        widgetRestoreEntriesButton = Widgets.newButton(composite,"Restore");
-        widgetRestoreEntriesButton.setEnabled(false);
-        Widgets.layout(widgetRestoreEntriesButton,0,4,TableLayoutData.DEFAULT,0,0,0,0,60,SWT.DEFAULT);
-        widgetRestoreEntriesButton.addSelectionListener(new SelectionListener()
+        widgetEntryMaxCount = Widgets.newOptionMenu(composite);
+        widgetEntryMaxCount.setItems(new String[]{"10","50","100","500","1000"});
+        widgetEntryMaxCount.setText("100");
+        Widgets.layout(widgetEntryMaxCount,0,6,TableLayoutData.W);
+        widgetEntryMaxCount.addSelectionListener(new SelectionListener()
+        {
+          public void widgetSelected(SelectionEvent selectionEvent)
+          {
+            Combo widget = (Combo)selectionEvent.widget;
+            updateEntryListThread.triggerUpdate(Integer.parseInt(widget.getText()));
+          }
+          public void widgetDefaultSelected(SelectionEvent selectionEvent)
+          {
+          }
+        });
+        widgetEntryMaxCount.setToolTipText("Max. number of entries in list.");
+
+        button = Widgets.newButton(composite,"Restore");
+        button.setEnabled(false);
+        Widgets.layout(button,0,7,TableLayoutData.DEFAULT,0,0,0,0,60,SWT.DEFAULT);
+        Widgets.addEventListener(new WidgetEventListener(button,taggedEntryEvent)
+        {
+          public void trigger(Control control)
+          {
+            control.setEnabled(checkEntriesTagged());
+          }
+        });
+        button.addSelectionListener(new SelectionListener()
         {
           public void widgetSelected(SelectionEvent selectionEvent)
           {
@@ -1991,54 +2082,7 @@ class TabRestore
           {
           }
         });
-        widgetRestoreEntriesButton.setToolTipText("Start restoring selected entries.");
-
-        button = Widgets.newButton(composite,IMAGE_MARK_ALL);
-        Widgets.layout(button,0,5,TableLayoutData.E);
-        button.addSelectionListener(new SelectionListener()
-        {
-          public void widgetSelected(SelectionEvent selectionEvent)
-          {
-            Button widget = (Button)selectionEvent.widget;
-            setTaggedEntries(true);
-          }
-          public void widgetDefaultSelected(SelectionEvent selectionEvent)
-          {
-          }
-        });
-        button.setToolTipText("Mark all entries in list.");
-
-        button = Widgets.newButton(composite,IMAGE_UNMARK_ALL);
-        Widgets.layout(button,0,7,TableLayoutData.E);
-        button.addSelectionListener(new SelectionListener()
-        {
-          public void widgetSelected(SelectionEvent selectionEvent)
-          {
-            Button widget = (Button)selectionEvent.widget;
-            setTaggedEntries(false);
-          }
-          public void widgetDefaultSelected(SelectionEvent selectionEvent)
-          {
-          }
-        });
-        button.setToolTipText("Unmark all entries in list.");
-
-        widgetEntryMaxCount = Widgets.newOptionMenu(composite);
-        widgetEntryMaxCount.setItems(new String[]{"10","50","100","500","1000"});
-        widgetEntryMaxCount.setText("100");
-        Widgets.layout(widgetEntryMaxCount,0,8,TableLayoutData.W);
-        widgetEntryMaxCount.addSelectionListener(new SelectionListener()
-        {
-          public void widgetSelected(SelectionEvent selectionEvent)
-          {
-            Combo widget = (Combo)selectionEvent.widget;
-            updateEntryListThread.triggerUpdate(Integer.parseInt(widget.getText()));
-          }
-          public void widgetDefaultSelected(SelectionEvent selectionEvent)
-          {
-          }
-        });
-        widgetEntryMaxCount.setToolTipText("Max. number of entries in list.");
+        button.setToolTipText("Start restoring selected entries.");
       }
     }
 
@@ -2056,7 +2100,7 @@ class TabRestore
           Button  widget      = (Button)selectionEvent.widget;
           boolean checkedFlag = widget.getSelection();
           widgetRestoreTo.setSelection(checkedFlag);
-          widgetRestoreToDirectory.setEnabled(checkedFlag);
+          selectRestoreToEvent.trigger();
         }
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
         {
@@ -2067,10 +2111,17 @@ class TabRestore
       widgetRestoreToDirectory = Widgets.newText(group);
       widgetRestoreToDirectory.setEnabled(false);
       Widgets.layout(widgetRestoreToDirectory,0,1,TableLayoutData.WE);
+      Widgets.addEventListener(new WidgetEventListener(widgetRestoreToDirectory,selectRestoreToEvent)
+      {
+        public void trigger(Control control)
+        {
+          control.setEnabled(widgetRestoreTo.getSelection());
+        }
+      });
 
-      widgetRestoreToSelectButton = Widgets.newButton(group,IMAGE_DIRECTORY);
-      Widgets.layout(widgetRestoreToSelectButton,0,2,TableLayoutData.DEFAULT);
-      widgetRestoreToSelectButton.addSelectionListener(new SelectionListener()
+      button = Widgets.newButton(group,IMAGE_DIRECTORY);
+      Widgets.layout(button,0,2,TableLayoutData.DEFAULT);
+      button.addSelectionListener(new SelectionListener()
       {
         public void widgetSelected(SelectionEvent selectionEvent)
         {
@@ -2082,7 +2133,7 @@ class TabRestore
           if (pathName != null)
           {
             widgetRestoreTo.setSelection(true);
-            widgetRestoreToDirectory.setEnabled(true);
+            selectRestoreToEvent.trigger();
             widgetRestoreToDirectory.setText(pathName);
           }
         }
@@ -2107,150 +2158,20 @@ class TabRestore
 
   //-----------------------------------------------------------------------
 
-  /** set archive name in tree widget
-   * @param newArchivePathName new archive path name
-   */
-  private void setArchivePath(String newArchivePathName)
-  {
-/*
-    TreeItem treeItem;
-
-    if (!archivePathName.equals(newArchivePathName))
-    {
-      archivePathName      = newArchivePathName;
-      archivePathNameParts = new ArchiveNameParts(newArchivePathName);
-
-      switch (archivePathNameParts.type)
-      {
-        case FILESYSTEM:
-        case SFTP:
-        case DVD:
-        case DEVICE:
-          widgetStorageList.removeAll();
-
-          treeItem = Widgets.addTreeItem(widgetStorageList,
-                                         new StorageData(archivePathName,
-                                                         EntryTypes.DIRECTORY,
-                                                         archivePathName
-                                                        ),
-                                         true
-                                        );
-          treeItem.setText(archivePathName);
-          treeItem.setImage(IMAGE_DIRECTORY);
-          treeItem.setGrayed(true);
-          break;
-        case FTP:
-          Dialogs.error(shell,"Sorry, FTP protocol does not support required operations to list archive content.");
-          break;
-        case SCP:
-          if (Dialogs.confirm(shell,"SCP protocol does not support required operations to list archive content.\n\nTry to open archive with SFTP protocol?"))
-          {
-            archivePathNameParts = new ArchiveNameParts(StorageTypes.SFTP,
-                                                        archivePathNameParts.loginName,
-                                                        archivePathNameParts.loginPassword,
-                                                        archivePathNameParts.hostName,
-                                                        archivePathNameParts.hostPort,
-                                                        archivePathNameParts.deviceName,
-                                                        archivePathNameParts.fileName
-                                                       );
-            String pathName = archivePathNameParts.getArchiveName();
-
-            widgetStorageList.removeAll();
-
-            treeItem = Widgets.addTreeItem(widgetStorageList,
-                                           new StorageData(pathName,
-                                                           EntryTypes.DIRECTORY,
-                                                           pathName
-                                                          ),
-                                           true
-                                          );
-            treeItem.setText(pathName);
-            treeItem.setImage(IMAGE_DIRECTORY);
-            treeItem.setGrayed(true);
-          }
-          break;
-        default:
-          break;
-      }
-    }
-*/
-  }
-
-  /** update archive path list
-   */
-  private void updateArchivePathList()
-  {
-    if (widgetPath!=null && !widgetPath.isDisposed())
-    {
-      // get job list
-      ArrayList<String> result = new ArrayList<String>();
-      if (BARServer.executeCommand("JOB_LIST",result) != Errors.NONE) return;
-
-      // get archive path names from jobs
-      HashSet <String> pathNames = new HashSet<String>();
-      for (String line : result)
-      {
-        Object data[] = new Object[11];
-        /* format:
-           <id>
-           <name>
-           <state>
-           <type>
-           <archivePartSize>
-           <compressAlgorithm>
-           <cryptAlgorithm>
-           <cryptType>
-           <cryptPasswordMode>
-           <lastExecutedDateTime>
-           <estimatedRestTime>
-        */
-        if (StringParser.parse(line,"%d %S %S %s %ld %S %S %S %S %ld %ld",data,StringParser.QUOTE_CHARS))
-        {
-          // get data
-          int id = (Integer)data[0];
-
-          // get archive name
-          String archiveName = BARServer.getStringOption(id,"archive-name");
-
-          // parse archive name
-          ArchiveNameParts archiveNameParts = new ArchiveNameParts(archiveName);
-
-          if (   (archiveNameParts.type == StorageTypes.FILESYSTEM)
-              || (archiveNameParts.type == StorageTypes.SCP)
-              || (archiveNameParts.type == StorageTypes.SFTP)
-              || (archiveNameParts.type == StorageTypes.DVD)
-              || (archiveNameParts.type == StorageTypes.DEVICE)
-             )
-          {
-            // get and save path
-            pathNames.add(archiveNameParts.getArchivePathName());
-          }
-        }
-
-        // update path list
-        widgetPath.removeAll();
-        widgetPath.add("/");
-        for (String path : pathNames)
-        {
-          widgetPath.add(path);
-        }
-      }
-    }
-  }
-
   /** set/clear tagging of all storage entries
-   * @param true for set tagged, false for clear tagged
+   * @param tagged true for set tagged, false for clear tagged
    */
-  private void setTaggedStorage(boolean flag)
+  private void setTaggedStorage(boolean tagged)
   {
     for (TableItem tableItem : widgetStorageList.getItems())
     {
-      tableItem.setChecked(flag);
+      tableItem.setChecked(tagged);
+
+      StorageData storageData = (StorageData)tableItem.getData();
+      storageData.setChecked(tagged);
     }
 
-    boolean storageTagged = checkStorageTagged();
-    widgetRestoreArchivesButton.setEnabled(storageTagged);
-    menuItemRestoreArchivesButton.setEnabled(storageTagged);
+    taggedStorageEvent.trigger();
   }
 
   /** get tagged storage names
@@ -2347,7 +2268,7 @@ class TabRestore
                                       storageData.name,
                                       Units.formatByteSize(storageData.size),
                                       simpleDateFormat.format(new Date(storageData.datetime*1000)),
-                                      storageData.state.toString()
+                                      storageData.indexState.toString()
                                      )
            )
         {
@@ -2357,7 +2278,7 @@ class TabRestore
                                    storageData.name,
                                    Units.formatByteSize(storageData.size),
                                    simpleDateFormat.format(new Date(storageData.datetime*1000)),
-                                   storageData.state.toString()
+                                   storageData.indexState.toString()
                                   );
         }
 
@@ -2390,8 +2311,8 @@ class TabRestore
     {
       if ((storagePattern == null) || !storagePattern.equals(string))
       {
-        storagePattern = string.trim();
-        updateStorageListThread.triggerUpdate(string.trim());
+        storagePattern = string;
+        updateStorageListThread.triggerUpdate(string);
       }
     }
     else
@@ -2568,7 +2489,7 @@ class TabRestore
                                                     );
             if (errorCode == Errors.NONE)
             {
-              storageData.state = IndexStates.INDEX_UPDATE_REQUESTED;
+              storageData.indexState = IndexStates.UPDATE_REQUESTED;
             }
             else
             {
@@ -2750,18 +2671,19 @@ class TabRestore
   //-----------------------------------------------------------------------
 
   /** set/clear tagging of all entries
-   * @param true for set tagged, false for clear tagged
+   * @param tagged true for set tagged, false for clear tagged
    */
   private void setTaggedEntries(boolean tagged)
   {
     for (TableItem tableItem : widgetEntryList.getItems())
     {
       tableItem.setChecked(tagged);
+
+      EntryData entryData = (EntryData)tableItem.getData();
+      entryData.setTagged(tagged);
     }
 
-    boolean entriesTagged = checkEntriesTagged();
-    widgetRestoreEntriesButton.setEnabled(entriesTagged);
-    menuItemRestoreEntriesButton.setEnabled(entriesTagged);
+    taggedEntryEvent.trigger();
   }
 
   /** get tagged entries
@@ -2908,10 +2830,8 @@ class TabRestore
       }
     }
 
-    // enable/disable restore buttons
-    boolean entriesTagged = checkEntriesTagged();
-    widgetRestoreEntriesButton.setEnabled(entriesTagged);
-    menuItemRestoreEntriesButton.setEnabled(entriesTagged);
+    // enable/disable restore button
+    taggedEntryEvent.trigger();
   }
 
   /** set entry pattern
@@ -3068,13 +2988,6 @@ class TabRestore
         }
       }
     };
-  }
-
-  /** update all data
-   */
-  private void update()
-  {
-    updateArchivePathList();
   }
 }
 
