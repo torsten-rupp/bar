@@ -64,8 +64,16 @@
 #define MAX_INT            INT_MAX
 #define MIN_LONG           LONG_MIN
 #define MAX_LONG           LONG_MAX
-#define MIN_LONG_LONG      LLONG_MIN
-#define MAX_LONG_LONG      LLONG_MAX
+#ifdef HAVE_LLONG_MIN
+  #define MIN_LONG_LONG    LLONG_MIN
+#else
+  #define MIN_LONG_LONG    -9223372036854775808LL
+#endif
+#ifdef HAVE_LLONG_MAX
+  #define MAX_LONG_LONG    LLONG_MAX
+#else
+  #define MAX_LONG_LONG    9223372036854775807LL
+#endif
 
 #define MIN_UCHAR          0
 #define MAX_UCHAR          UCHAR_MAX
@@ -76,7 +84,11 @@
 #define MIN_ULONG          0
 #define MAX_ULONG          ULONG_MAX
 #define MIN_ULONG_LONG     0
-#define MAX_ULONG_LONG     ULLONG_MAX
+#ifdef HAVE_ULLONG_MAX
+  #define MAX_ULONG_LONG   ULLONG_MAX
+#else
+  #define MAX_ULONG_LONG   18446744073709551615LL
+#endif
 
 #define MIN_FLOAT          FLT_MIN
 #define MAX_FLOAT          FLT_MAX
