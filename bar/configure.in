@@ -185,7 +185,9 @@ AC_SUBST(VERSION_MINOR)                     dnl version minor number
 
 AC_SUBST(COPYRIGHT_DATE)                    dnl copyright date
 
-AC_SUBST(PLATFORM)                          dnl platform
+AC_SUBST(PLATFORM)                          dnl platform name
+
+AC_SUBST(FILE_SEPARATOR_CHAR)               dnl file separator path character (/ or \)
 
 AC_SUBST(ENABLE_DEBUG)                      dnl "yes" for debug version, "no" otherwise
 AC_SUBST(ENABLE_GUI)                        dnl "yes" to build GUI, "no" otherwise
@@ -229,6 +231,7 @@ AC_SUBST(JAR)                               dnl jar command
 AC_SUBST(JAVA_FLAGS)                        dnl java flags
 AC_SUBST(JAVAC_FLAGS)                       dnl java compiler flags
 AC_SUBST(JAVA_DATA_MODEL)                   dnl java data model (32 or 64)
+AC_SUBST(JAVA_PATH_SEPARATOR_CHAR)          dnl java path separator (: or ;)
 
 AC_SUBST(SWT_DIR)                           dnl SWT directory
 AC_SUBST(LAUNCH4J_DIR)                      dnl launch4j directory
@@ -278,18 +281,28 @@ dnl ---------------------------- check system --------------------------
 case "$host_os" in
   linux-*)
     PLATFORM=Linux
+    FILE_SEPARATOR_CHAR="/"
+    JAVA_PATH_SEPARATOR=":"
     ;;
   windows*)
     PLATFORM=Windows
+    FILE_SEPARATOR_CHAR="\"
+    JAVA_PATH_SEPARATOR=";"
     ;;
   mingw*)
     PLATFORM=Windows
+    FILE_SEPARATOR_CHAR="\"
+    JAVA_PATH_SEPARATOR=";"
     ;;
   sunos | solaris*)
     PLATFORM=Solaris
+    FILE_SEPARATOR_CHAR="/"
+    JAVA_PATH_SEPARATOR=":"
     ;;
   darwin*)
     PLATFORM=MacOSX
+    FILE_SEPARATOR_CHAR="/"
+    JAVA_PATH_SEPARATOR=":"
     ;;
   *)
     AC_MSG_ERROR([unknown host operation system '$host_os'. Please specify host as (cpu-vendor-os or cpu-os). Supported host operating systems: $host_supported_os])
@@ -383,9 +396,15 @@ fi
 
 dnl ------------------------------ programs ----------------------------
 
-AC_PATH_PROGS(CC,gcc cc)
-AC_PATH_PROGS(LD,ld gcc)
-AC_PATH_PROGS(STRIP,strip)
+if test -z "$CC"; then
+  AC_PATH_PROGS(CC,gcc cc)
+fi
+if test -z "$LD"; then
+  AC_PATH_PROGS(LD,ld gcc)
+fi
+if test -z "$STRIP"; then
+  AC_PATH_PROGS(STRIP,strip)
+fi
 
 AC_PATH_PROGS(PERL,perl)
 if test -z "$PERL"; then
@@ -530,6 +549,9 @@ for z in $LIBRARY_PATHS ""; do
 done
 
 AC_C_LONG_LONG(AC_DEFINE(HAVE_LONG_LONG,1,[defined if long long data type available]),AC_MSG_ERROR(long long data type not available))
+AC_TRY_COMPILE([#include <limits.h>],[long long int x=LLONG_MIN;],AC_DEFINE(HAVE_LLONG_MIN,1,[defined if LLONG_MIN is available]))
+AC_TRY_COMPILE([#include <limits.h>],[long long int x=LLONG_MAX;],AC_DEFINE(HAVE_LLONG_MAX,1,[defined if LLONG_MAX is available]))
+AC_TRY_COMPILE([#include <limits.h>],[unsigned long long int x=ULLONG_MAX;],AC_DEFINE(HAVE_ULLONG_MAX,1,[defined if ULLONG_MAX is available]))
 dnl AC_SYS_LARGEFILE
 dnl echo ---
 dnl echo "ac_cv_sys_file_offset_bits=$ac_cv_sys_file_offset_bits"
@@ -1004,7 +1026,9 @@ dnl -------------------------------- misc ------------------------------
 VERSION_MAJOR=`cat version|grep MAJOR|sed 's/.*=//g'`
 VERSION_MINOR=`cat version|grep MINOR|sed 's/.*=//g'`
 
-COPYRIGHT_DATE="2007-2010"
+COPYRIGHT_DATE="2007-2011"
+
+AC_DEFINE_UNQUOTED(FILE_SEPARATOR_CHAR,'$FILE_SEPARATOR_CHAR',[file separator char])
 
 AC_DEFINE_UNQUOTED(CONFIG_DIR,"$CONFIG_DIR",[configuration directory])
 AC_DEFINE_UNQUOTED(TLS_DIR,   "$TLS_DIR",   [TLS directory])
