@@ -16,6 +16,9 @@
 /* configuration directory */
 #undef CONFIG_DIR
 
+/* file separator char */
+#undef FILE_SEPARATOR_CHAR
+
 /* backtrace() available */
 #undef HAVE_BACKTRACE
 
@@ -48,6 +51,12 @@
 
 /* Define to 1 if you have the <inttypes.h> header file. */
 #undef HAVE_INTTYPES_H
+
+/* defined if LLONG_MAX is available */
+#undef HAVE_LLONG_MAX
+
+/* defined if LLONG_MIN is available */
+#undef HAVE_LLONG_MIN
 
 /* defined if long long data type available */
 #undef HAVE_LONG_LONG
@@ -96,6 +105,9 @@
 
 /* TASN.1 installed */
 #undef HAVE_TASN1
+
+/* defined if ULLONG_MAX is available */
+#undef HAVE_ULLONG_MAX
 
 /* Define to 1 if you have the <unistd.h> header file. */
 #undef HAVE_UNISTD_H
