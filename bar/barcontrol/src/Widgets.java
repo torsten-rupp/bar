@@ -563,15 +563,16 @@ class WidgetEvent
 class WidgetEventListener
 {
   private Control     control;
+  private Widget      widget;
   private WidgetEvent widgetEvent;
 
   /** create widget listener
    * @param control control widget
    * @param widgetEvent widget event
    */
-  WidgetEventListener(Control control, WidgetEvent widgetEvent)
+  WidgetEventListener(Widget widget, WidgetEvent widgetEvent)
   {
-    this.control     = control;
+    this.widget      = widget;
     this.widgetEvent = widgetEvent;
   }
 
@@ -591,11 +592,24 @@ class WidgetEventListener
     widgetEvent.remove(this);
   }
 
-  /** 
-   * @param 
-   * @return 
+  /** trigger handler
+   * @param widget widget
+   */
+  public void trigger(Widget widget)
+  {
+  }
+
+  /** trigger handler
+   * @param control control
    */
   public void trigger(Control control)
+  {
+  }
+
+  /** trigger handler
+   * @param menuItem menu item
+   */
+  public void trigger(MenuItem menuItem)
   {
   }
 
@@ -603,7 +617,15 @@ class WidgetEventListener
    */
   void trigger()
   {
-    trigger(control);
+    if      (widget instanceof Control)
+    {
+      trigger((Control)widget);
+    }
+    else if (widget instanceof MenuItem)
+    {
+      trigger((MenuItem)widget);
+    }
+    trigger(widget);
   }
 }
 
@@ -869,12 +891,19 @@ class Widgets
   }
 
   /** set enabled
-   * @param control control to enable/disable
+   * @param widget control/menu item to enable/disable
    * @param enableFlag true to enable, false to disable
    */
-  static void setEnabled(Control control, boolean enableFlag)
+  static void setEnabled(Widget widget, boolean enableFlag)
   {
-    control.setEnabled(enableFlag);
+    if      (widget instanceof Control)
+    {
+      ((Control)widget).setEnabled(enableFlag);
+    }
+    else if (widget instanceof MenuItem)
+    {
+      ((MenuItem)widget).setEnabled(enableFlag);
+    }
   }
 
   /** set visible
