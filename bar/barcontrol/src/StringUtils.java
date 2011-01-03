@@ -170,13 +170,15 @@ public class StringUtils
   /** split string
    * @param string string to split
    * @param splitChars characters used for splitting
-   * @param spaceChars characters skipped (spaces)
-   * @param quoteChars quote characters
+   * @param spaceChars spaces characters to skip (can be null)
+   * @param quoteChars quote characters (can be null)
+   * @param emptyFlag true to return empty parts, false to skip empty parts
    * @return string array
    */
-  public static String[] split(String string, String splitChars, String spaceChars, String quoteChars)
+  public static String[] split(String string, String splitChars, String spaceChars, String quoteChars, boolean emptyFlag)
   {
     ArrayList<String> stringList = new ArrayList<String>();
+//Dprintf.dprintf("string=%s splitChars=%s spaceChars=%s quoteChars=%s em=%s",string,splitChars,spaceChars,quoteChars,emptyFlag);
 
     char[]        chars  = string.toCharArray();
     int           i      = 0;
@@ -184,10 +186,13 @@ public class StringUtils
     StringBuilder buffer = new StringBuilder();
     while (i < n)
     {
-      // skip spaces
-      while (splitChars.indexOf(chars[i]) >= 0)
+      if (spaceChars != null)
       {
-        i++;
+        // skip spaces
+        while ((i < n) && (spaceChars.indexOf(chars[i]) >= 0))
+        {
+          i++;
+        }
       }
 
       // get next word, respect quotes
@@ -232,10 +237,50 @@ public class StringUtils
       i += 1;
 
       // add to list
-      if (buffer.length() > 0) stringList.add(buffer.toString());
+      if (emptyFlag || (buffer.length() > 0))
+      {
+        stringList.add(buffer.toString());
+      }
     }
 
     return stringList.toArray(new String[0]);
+  }
+
+  /** split string
+   * @param string string to split
+   * @param splitChar character used for splitting
+   * @param spaceChars spaces characters to skip (can be null)
+   * @param quoteChars quote characters (can be null)
+   * @param emptyFlag true to return empty parts, false to skip empty parts
+   * @return string array
+   */
+  public static String[] split(String string, char splitChar, String spaceChars, String quoteChars, boolean emptyFlag)
+  {
+    return split(string,new String(new char[]{splitChar}),spaceChars,quoteChars,emptyFlag);
+  }
+
+  /** split string, discard white spaces between strings
+   * @param string string to split
+   * @param splitChars characters used for splitting
+   * @param quoteChars quote characters
+   * @param emptyFlag TRUE to return empty parts, FALSE to skip empty parts
+   * @return string array
+   */
+  public static String[] split(String string, String splitChars, String quoteChars, boolean emptyFlag)
+  {
+    return split(string,splitChars,WHITE_SPACES,quoteChars,emptyFlag);
+  }
+
+  /** split string, discard white spaces between strings
+   * @param string string to split
+   * @param splitChar characters used for splitting
+   * @param quoteChars quote characters
+   * @param emptyFlag TRUE to return empty parts, FALSE to skip empty parts
+   * @return string array
+   */
+  public static String[] split(String string, char splitChar, String quoteChars, boolean emptyFlag)
+  {
+    return split(string,splitChar,WHITE_SPACES,quoteChars,emptyFlag);
   }
 
   /** split string, discard white spaces between strings
@@ -246,7 +291,40 @@ public class StringUtils
    */
   public static String[] split(String string, String splitChars, String quoteChars)
   {
-    return split(string,splitChars,WHITE_SPACES,quoteChars);
+    return split(string,splitChars,WHITE_SPACES,quoteChars,true);
+  }
+
+  /** split string, discard white spaces between strings
+   * @param string string to split
+   * @param splitChar character used for splitting
+   * @param quoteChars quote characters
+   * @return string array
+   */
+  public static String[] split(String string, char splitChar, String quoteChars)
+  {
+    return split(string,splitChar,WHITE_SPACES,quoteChars,true);
+  }
+
+  /** split string (no quotes)
+   * @param string string to split
+   * @param splitChars characters used for splitting
+   * @param emptyFlag TRUE to return empty parts, FALSE to skip empty parts
+   * @return string array
+   */
+  public static String[] split(String string, String splitChars, boolean emptyFlag)
+  {
+    return split(string,splitChars,null,null,emptyFlag);
+  }
+
+  /** split string (no quotes)
+   * @param string string to split
+   * @param splitChar character used for splitting
+   * @param emptyFlag TRUE to return empty parts, FALSE to skip empty parts
+   * @return string array
+   */
+  public static String[] split(String string, char splitChar, boolean emptyFlag)
+  {
+    return split(string,splitChar,null,null,emptyFlag);
   }
 
   /** split string (no quotes)
@@ -256,7 +334,17 @@ public class StringUtils
    */
   public static String[] split(String string, String splitChars)
   {
-    return split(string,splitChars,WHITE_SPACES,null);
+    return split(string,splitChars,true);
+  }
+
+  /** split string (no quotes)
+   * @param string string to split
+   * @param splitChar character used for splitting
+   * @return string array
+   */
+  public static String[] split(String string, char splitChar)
+  {
+    return split(string,splitChar,true);
   }
 
   /** create n-concationation of string 
