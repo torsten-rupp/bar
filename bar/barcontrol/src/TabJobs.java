@@ -28,6 +28,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.ListIterator;
+import java.util.StringTokenizer;
 
 // graphics
 import org.eclipse.swt.custom.SashForm;
@@ -94,10 +95,6 @@ import org.eclipse.swt.widgets.Widget;
  */
 class TabJobs
 {
-  // temporary fix: must be configured from server settings
-  final static String FILE_SEPARATOR      = "/";
-  final static char   FILE_SEPARATOR_CHAR = '/';
-
   /** entry types
    */
   enum EntryTypes
@@ -417,7 +414,7 @@ class TabJobs
       {
         this.name      = name;
         this.forceFlag = forceFlag;
-        this.depth     = name.split(FILE_SEPARATOR).length;
+        this.depth     = StringUtils.split(name,BARServer.fileSeparator,true).length;
         this.timeout   = timeout;
         this.treeItem  = treeItem;
       }
@@ -1327,9 +1324,9 @@ class TabJobs
       Widgets.layout(button,0,3,TableLayoutData.DEFAULT);
       Widgets.addEventListener(new WidgetEventListener(button,selectJobEvent)
       {
-        public void trigger(Control control)
+        public void trigger(Widget widget)
         {
-          Widgets.setEnabled(control,selectedJobId != 0);
+          Widgets.setEnabled(widget,selectedJobId != 0);
         }
       });
       button.addSelectionListener(new SelectionListener()
@@ -5220,10 +5217,10 @@ throw new Error("NYI");
       TreeItem[] treeItems = widgetFileTree.getItems();
 
       StringBuffer name = new StringBuffer();
-      for (String part : entryData.pattern.split(FILE_SEPARATOR))
+      for (String part : StringUtils.split(entryData.pattern,BARServer.fileSeparator,true))
       {
         // expand name
-        if ((name.length() == 0) || (name.charAt(name.length()-1) != FILE_SEPARATOR_CHAR)) name.append(FILE_SEPARATOR_CHAR);
+        if ((name.length() == 0) || (name.charAt(name.length()-1) != BARServer.fileSeparator)) name.append(BARServer.fileSeparator);
         name.append(part);
 
         TreeItem treeItem = findTreeItem(treeItems,name.toString());
