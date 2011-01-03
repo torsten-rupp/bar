@@ -6,7 +6,6 @@ ToDo
 - improve logfile
 - ssl server: check common name? 
 - improve password quality checker
-- balloon help in barcontrol
 - novice/expert mode in barcontrol.tcl
 - barconfig for creating/edit bar.cfg
 - Windows port
@@ -19,8 +18,6 @@ ToDo
 - avoid negative bytes/s in performance monitor
 - multiple instances of backup threads
 - check ssl certificates
-- fix progress bar update when writing a DVD
-- automatic build and link of additional packages when located in a sub-directory
 - multi-threaded compression?
 - store partitions which are mounted ("on-the-fly-freeze")
 - md5 file check sum?
@@ -31,3 +28,4 @@ ToDo
 - support lzo compression library
 - support for rmt? (tape control tool)
 - support xdelta compression
+- barcontrol: file separator character
