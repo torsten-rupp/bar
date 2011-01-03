@@ -3,7 +3,7 @@
 * $Source: /home/torsten/cvs/bar/barcontrol/src/BARServer.java,v $
 * $Revision: 1.22 $
 * $Author: torsten $
-* Contents: BARControl (frontend for BAR)
+* Contents: BAR server communication functions
 * Systems: all
 *
 \***********************************************************************/
@@ -35,7 +35,7 @@ import javax.net.ssl.SSLSocketFactory;
 
 /****************************** Classes ********************************/
 
-/** Connection error
+/** connection error
  */
 class ConnectionError extends Error
 {
@@ -602,6 +602,8 @@ class BARServer
   // --------------------------- constants --------------------------------
   public final static  String JAVA_SSL_KEY_FILE_NAME = "bar.jks";  // default name Java TLS/SSL key
 
+  public static char fileSeparator;
+
   private final static int    SOCKET_READ_TIMEOUT    = 20*1000;    // timeout reading socket [ms]
 
   // --------------------------- variables --------------------------------
@@ -770,47 +772,45 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
       else                                throw new ConnectionError("no server ports specified");
     }
 
-    // read session id
-    byte sessionId[];
     try
     {
-      String line;
+      String   line;
+      String[] data;
 
+      // read session id
+      byte sessionId[];
       line = input.readLine();
       if (line == null)
       {
         throw new CommunicationError("No result from server");
       }
-      String data[] = line.split(" ",2);
-      assert data.length == 2;
-      assert data[0].equals("SESSION");
+      if (Settings.serverDebugFlag) System.err.println("Network: received '"+line+"'");
+      data = line.split(" ",2);
+      if ((data.length < 2) || !data[0].equals("SESSION"))
+      {
+        throw new CommunicationError("Invalid response from server");
+      }
       sessionId = decodeHex(data[1]);
-    }
-    catch (IOException exception)
-    {
-      throw new Error("Network error on "+socket.getInetAddress()+":"+socket.getPort()+" (error: "+exception.getMessage()+")");
-    }
 //System.err.print("BARControl.java"+", "+682+": sessionId=");for (byte b : sessionId) { System.err.print(String.format("%02x",b & 0xFF)); }; System.err.println();
 
-    // authorize
-    try
-    {
+      // authorize
       byte authorizeData[] = new byte[sessionId.length];
       for (int z = 0; z < sessionId.length; z++)
       {
         authorizeData[z] = (byte)(((z < serverPassword.length())?(int)serverPassword.charAt(z):0)^(int)sessionId[z]);
       }
       commandId++;
-      String command = Long.toString(commandId)+" AUTHORIZE "+encodeHex(authorizeData);
-      output.write(command); output.write('\n'); output.flush();
-
-      String result = input.readLine();
-      if (result == null)
+      line = Long.toString(commandId)+" AUTHORIZE "+encodeHex(authorizeData);
+      output.write(line); output.write('\n'); output.flush();
+      if (Settings.serverDebugFlag) System.err.println("Network: sent '"+line+"'");
+      line = input.readLine();
+      if (line == null)
       {
         throw new CommunicationError("No result from server");
       }
-      String data[] = result.split(" ",4);
-      if (data.length < 3)
+      if (Settings.serverDebugFlag) System.err.println("Network: received '"+line+"'");
+      data = line.split(" ",4);
+      if (data.length < 3) // at least 3 values: <command id> <complete flag> <error code>
       {
         throw new CommunicationError("Invalid response from server");
       }
@@ -821,25 +821,19 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
       {
         throw new ConnectionError("Authorization fail");
       }
-    }
-    catch (IOException exception)
-    {
-      throw new CommunicationError("Network error on "+socket.getInetAddress()+":"+socket.getPort()+" (error: "+exception.getMessage()+")");
-    }
 
-    // get version
-    try
-    {
-      String result;
-
-      output.write("VERSION"); output.write('\n'); output.flush();
-      result = input.readLine();
-      if (result == null)
+      // get version
+      line = "VERSION";
+      output.write(line); output.write('\n'); output.flush();
+      if (Settings.serverDebugFlag) System.err.println("Network: sent '"+line+"'");
+      line = input.readLine();
+      if (line == null)
       {
         throw new CommunicationError("No result from server");
       }
-      String data[] = result.split(" ",4);
-      if (data.length < 3)
+      if (Settings.serverDebugFlag) System.err.println("Network: received '"+line+"'");
+      data = line.split(" ",5);
+      if (data.length != 5) // exactly 5 values: <command id> <complete flag> <error code> <major version> <minor version>
       {
         throw new CommunicationError("Invalid response from server");
       }
@@ -847,8 +841,37 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
           || (Integer.parseInt(data[2]) != 0)
          )
       {
-        throw new ConnectionError("Cannot connect to '"+hostname+"' (error: "+data[3]+")");
+        throw new ConnectionError("Cannot get protocol version for '"+hostname+"' (error: "+data[3]+")");
       }
+      if (Integer.parseInt(data[3]) != 1)
+      {
+        throw new CommunicationError("Incompatible protocol version for '"+hostname+"' (expected 1, got "+data[3]+")");
+      }
+
+      // get file separator character
+      commandId++;
+      line = Long.toString(commandId)+" GET FILE_SEPARATOR";
+      output.write(line); output.write('\n'); output.flush();
+      if (Settings.serverDebugFlag) System.err.println("Network: sent '"+line+"'");
+      line = input.readLine();
+      if (line == null)
+      {
+        throw new CommunicationError("No result from server");
+      }
+      if (Settings.serverDebugFlag) System.err.println("Network: received '"+line+"'");
+      data = line.split(" ",4);
+      if (data.length < 4) // at least 4 values: <command id> <complete flag> <error code> <separator char>|<error text>
+      {
+        throw new CommunicationError("Invalid response from server");
+      }
+      if (   (Integer.parseInt(data[0]) != commandId)
+          || (Integer.parseInt(data[1]) != 1)
+          || (Integer.parseInt(data[2]) != 0)
+         )
+      {
+        throw new ConnectionError("Get file separator character fail (error: "+data[3]+")");
+      }
+      fileSeparator = data[3].charAt(0);
     }
     catch (IOException exception)
     {
