@@ -55,7 +55,7 @@
 /***************************** Constants *******************************/
 
 #define PROTOCOL_VERSION_MAJOR 1
-#define PROTOCOL_VERSION_MINOR 1
+#define PROTOCOL_VERSION_MINOR 2
 
 #define SESSION_ID_LENGTH 64                   // max. length of session id
 
@@ -2935,6 +2935,44 @@ LOCAL void serverCommand_authorize(ClientInfo *clientInfo, uint id, const String
 }
 
 /***********************************************************************\
+* Name   : serverCommand_get
+* Purpose: get setting
+* Input  : clientInfo    - client info
+*          id            - command id
+*          arguments     - command arguments
+*          argumentCount - command arguments count
+* Output : -
+* Return : -
+* Notes  : Arguments:
+*            <name>
+\***********************************************************************/
+
+LOCAL void serverCommand_get(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
+{
+  String name;
+
+  assert(clientInfo != NULL);
+  assert(arguments != NULL);
+
+  /* get name */
+  if (argumentCount < 1)
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected job id");
+    return;
+  }
+  name = arguments[0];
+
+  if (String_equalsCString(name,"FILE_SEPARATOR"))
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"%c",FILES_PATHNAME_SEPARATOR_CHAR);
+  }
+  else
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_UNKNOWN_VALUE,"%S",name);
+  }
+}
+
+/***********************************************************************\
 * Name   : serverCommand_abort
 * Purpose: abort command execution
 * Input  : clientInfo    - client info
@@ -3499,7 +3537,7 @@ LOCAL void serverCommand_optionGet(ClientInfo *clientInfo, uint id, const String
   assert(clientInfo != NULL);
   assert(arguments != NULL);
 
-  /* get job id, name, value */
+  /* get job id, name */
   if (argumentCount < 1)
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected job id");
@@ -6121,7 +6159,7 @@ ENTRY_TYPE_FILE,
 LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
 {
   ulong               maxCount;
-  String              statusText;
+  IndexStates         indexState;
   String              patternText;
   Errors              error;
   DatabaseQueryHandle databaseQueryHandle;
@@ -6148,7 +6186,12 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected filter status");
     return;
   }
-  statusText = arguments[1];
+  indexState = Index_stringToState(arguments[1]);
+  if (indexState == INDEX_STATE_UNKNOWN)
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"invalid filter status '%S'",arguments[1]);
+    return;
+  }
   if (argumentCount < 3)
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected filter pattern");
@@ -6165,6 +6208,7 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const
     /* list index */
     error = Index_initListStorage(&databaseQueryHandle,
                                   indexDatabaseHandle,
+                                  indexState,
                                   patternText
                                  );
     if (error != ERROR_NONE)
@@ -6350,8 +6394,7 @@ LOCAL void serverCommand_indexStorageRemove(ClientInfo *clientInfo, uint id, con
 
 LOCAL void serverCommand_indexStorageRefresh(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
 {
-  bool                stateAny;
-  IndexStates         state;
+  IndexStates         indexState;
   String              patternText;
   Errors              error;
   DatabaseQueryHandle databaseQueryHandle;
@@ -6367,29 +6410,8 @@ LOCAL void serverCommand_indexStorageRefresh(ClientInfo *clientInfo, uint id, co
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected filter status");
     return;
   }
-  stateAny = FALSE;
-  state    = INDEX_STATE_NONE;
-  if      (String_equalsCString(arguments[0],"*"))
-  {
-    stateAny = TRUE;
-  }
-  else if (String_equalsIgnoreCaseCString(arguments[0],"OK"))
-  {
-    state = INDEX_STATE_OK;
-  }
-  else if (String_equalsIgnoreCaseCString(arguments[0],"UPDATE_REQUESTED"))
-  {
-    state = INDEX_STATE_UPDATE_REQUESTED;
-  }
-  else if (String_equalsIgnoreCaseCString(arguments[0],"UPDATE"))
-  {
-    state = INDEX_STATE_UPDATE;
-  }
-  else if (String_equalsIgnoreCaseCString(arguments[0],"ERROR"))
-  {
-    state = INDEX_STATE_ERROR;
-  }
-  else
+  indexState = Index_stringToState(arguments[0]);
+  if (indexState == INDEX_STATE_UNKNOWN)
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected filter state *,OK,UPDATE_REQUESTED,UPDATE,ERROR");
     return;
@@ -6405,6 +6427,7 @@ LOCAL void serverCommand_indexStorageRefresh(ClientInfo *clientInfo, uint id, co
   {
     error = Index_initListStorage(&databaseQueryHandle,
                                   indexDatabaseHandle,
+                                  indexState,
                                   patternText
                                  );
     if (error != ERROR_NONE)
@@ -6412,17 +6435,16 @@ LOCAL void serverCommand_indexStorageRefresh(ClientInfo *clientInfo, uint id, co
       sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"%s",Errors_getText(error));
       return;
     }
-    while (   Index_getNextStorage(&databaseQueryHandle,
-                                   &storageId,
-                                   NULL,
-                                   NULL,
-                                   NULL,
-                                   &storageState,
-                                   NULL,
-                                   NULL,
-                                   NULL
-                                  )
-           && (stateAny || (state == storageState))
+    while (Index_getNextStorage(&databaseQueryHandle,
+                                &storageId,
+                                NULL,
+                                NULL,
+                                NULL,
+                                &storageState,
+                                NULL,
+                                NULL,
+                                NULL
+                               )
           )
     {
       /* set state */
@@ -7133,6 +7155,7 @@ SERVER_COMMANDS[] =
 {
   { "ERROR_INFO",                   "i",    serverCommand_errorInfo,                 AUTHORIZATION_STATE_OK      },
   { "AUTHORIZE",                    "S",    serverCommand_authorize,                 AUTHORIZATION_STATE_WAITING },
+  { "GET",                          "s",    serverCommand_get,                       AUTHORIZATION_STATE_OK      },
   { "ABORT",                        "i",    serverCommand_abort,                     AUTHORIZATION_STATE_OK      },
   { "STATUS",                       "",     serverCommand_status,                    AUTHORIZATION_STATE_OK      },
   { "PAUSE",                        "i",    serverCommand_pause,                     AUTHORIZATION_STATE_OK      },

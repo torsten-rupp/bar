@@ -98,7 +98,7 @@ String File_appendFileName(String fileName, const String name)
 
   if (!String_empty(fileName))
   {
-    if (String_index(fileName,String_length(fileName)-1) != FILES_PATHNAME_SEPARATOR_CHAR)
+    if (!String_endsWithChar(fileName,FILES_PATHNAME_SEPARATOR_CHAR))
     {
       String_appendChar(fileName,FILES_PATHNAME_SEPARATOR_CHAR);
     }
@@ -115,7 +115,7 @@ String File_appendFileNameCString(String fileName, const char *name)
 
   if (!String_empty(fileName))
   {
-    if (String_index(fileName,String_length(fileName)-1) != FILES_PATHNAME_SEPARATOR_CHAR)
+    if (!String_endsWithChar(fileName,FILES_PATHNAME_SEPARATOR_CHAR))
     {
       String_appendChar(fileName,FILES_PATHNAME_SEPARATOR_CHAR);
     }
@@ -131,7 +131,7 @@ String File_appendFileNameChar(String fileName, char ch)
 
   if (!String_empty(fileName))
   {
-    if (String_index(fileName,String_length(fileName)-1) != FILES_PATHNAME_SEPARATOR_CHAR)
+    if (!String_endsWithChar(fileName,FILES_PATHNAME_SEPARATOR_CHAR))
     {
       String_appendChar(fileName,FILES_PATHNAME_SEPARATOR_CHAR);
     }
@@ -147,7 +147,7 @@ String File_appendFileNameBuffer(String fileName, const char *buffer, ulong buff
 
   if (!String_empty(fileName))
   {
-    if (String_index(fileName,String_length(fileName)-1) != FILES_PATHNAME_SEPARATOR_CHAR)
+    if (!String_endsWithChar(fileName,FILES_PATHNAME_SEPARATOR_CHAR))
     {
       String_appendChar(fileName,FILES_PATHNAME_SEPARATOR_CHAR);
     }

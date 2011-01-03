@@ -12,6 +12,8 @@
 #define __FILES__
 
 /****************************** Includes *******************************/
+#include "config.h"
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <sys/types.h>
@@ -26,8 +28,16 @@
 
 /***************************** Constants *******************************/
 
-#define FILES_PATHNAME_SEPARATOR_CHAR '/'
-#define FILES_PATHNAME_SEPARATOR_CHARS "/"
+#ifdef FILE_SEPARAPTOR_CHAR
+  #define _FILES_PATHNAME_SEPARATOR_CHARS_STRING1(z) _FILES_PATHNAME_SEPARATOR_CHARS_STRING2(z) 
+  #define _FILES_PATHNAME_SEPARATOR_CHARS_STRING2(z) #z
+
+  #define FILES_PATHNAME_SEPARATOR_CHAR FILE_SEPARAPTOR_CHAR
+  #define FILES_PATHNAME_SEPARATOR_CHARS _FILES_PATHNAME_SEPARATOR_CHARS_STRING1(FILE_SEPARAPTOR_CHAR)
+#else
+  #define FILES_PATHNAME_SEPARATOR_CHAR '/'
+  #define FILES_PATHNAME_SEPARATOR_CHARS "/"
+#endif
 
 #define FILE_CAST_SIZE (sizeof(time_t)+sizeof(time_t))
 
