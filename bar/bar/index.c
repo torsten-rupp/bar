@@ -28,14 +28,15 @@
 /****************** Conditional compilation switches *******************/
 
 /***************************** Constants *******************************/
-const char* INDEX_STATE_STRINGS[7] =
+const char* INDEX_STATE_STRINGS[8] =
 {
   "NONE",
   "OK",
   "CREATE",
-  "INDEX_UPDATE_REQUESTED",
-  "INDEX_UPDATE",
+  "UPDATE_REQUESTED",
+  "UPDATE",
   "ERROR",
+  "*",
   "UNKNOWN"
 };
 
@@ -144,6 +145,23 @@ Errors Index_initAll(void)
 
 void Index_doneAll(void)
 {
+}
+
+IndexStates Index_stringToState(const String string)
+{
+  IndexStates indexState;
+
+  assert(string != NULL);
+
+  if      (String_equalsIgnoreCaseCString(string,"OK"              )) indexState = INDEX_STATE_OK;
+  else if (String_equalsIgnoreCaseCString(string,"CREATE"          )) indexState = INDEX_STATE_CREATE;
+  else if (String_equalsIgnoreCaseCString(string,"UPDATE_REQUESTED")) indexState = INDEX_STATE_UPDATE_REQUESTED;
+  else if (String_equalsIgnoreCaseCString(string,"UPDATE"          )) indexState = INDEX_STATE_UPDATE;
+  else if (String_equalsIgnoreCaseCString(string,"ERROR"           )) indexState = INDEX_STATE_ERROR;
+  else if (String_equalsIgnoreCaseCString(string,"*"               )) indexState = INDEX_STATE_ALL;
+  else                                                                indexState = INDEX_STATE_UNKNOWN;
+
+  return indexState;
 }
 
 Errors Index_init(DatabaseHandle *indexDatabaseHandle,
@@ -699,6 +717,7 @@ Errors Index_setState(DatabaseHandle *databaseHandle,
 
 Errors Index_initListStorage(DatabaseQueryHandle *databaseQueryHandle,
                              DatabaseHandle      *databaseHandle,
+                             IndexStates         indexState,
                              String              pattern
                             )
 {
@@ -721,9 +740,13 @@ Errors Index_initListStorage(DatabaseQueryHandle *databaseQueryHandle,
                                    errorMessage \
                             FROM storage \
                             WHERE %S \
+                                  AND (%d=%d OR state=%d) \
                                   AND state!=%d \
                            ",
                            getREGEXPString(regexpString,"name",pattern),
+                           indexState,
+                           INDEX_STATE_ALL,
+                           indexState,
                            INDEX_STATE_CREATE
                           );
   String_delete(regexpString);

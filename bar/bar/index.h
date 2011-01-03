@@ -42,10 +42,12 @@ typedef enum
   INDEX_STATE_UPDATE,
   INDEX_STATE_ERROR,
 
-  INDEX_STATE_UNKNOWN  
+  INDEX_STATE_ALL,
+
+  INDEX_STATE_UNKNOWN
 } IndexStates;
 
-extern const char* INDEX_STATE_STRINGS[7];
+extern const char* INDEX_STATE_STRINGS[8];
 
 /* index modes */
 typedef enum
@@ -91,6 +93,17 @@ Errors Index_initAll(void);
 \***********************************************************************/
 
 void Index_doneAll(void);
+
+/***********************************************************************\
+* Name   : Index_stringToState
+* Purpose: convert string to state
+* Input  : string - string
+* Output : -
+* Return : state or INDEX_STATE_UNKNOWN if not known
+* Notes  : -
+\***********************************************************************/
+
+IndexStates Index_stringToState(const String string);
 
 /***********************************************************************\
 * Name   : Index_init
@@ -265,6 +278,7 @@ Errors Index_setState(DatabaseHandle *databaseHandle,
 * Name   : Index_initListStorage
 * Purpose: list storage entries
 * Input  : databaseHandle - database handle
+*          indexState     - index state
 *          pattern        - name pattern (can be NULL)
 * Output : databaseQueryHandle - database query handle
 * Return : ERROR_NONE or error code
@@ -273,6 +287,7 @@ Errors Index_setState(DatabaseHandle *databaseHandle,
 
 Errors Index_initListStorage(DatabaseQueryHandle *databaseQueryHandle,
                              DatabaseHandle      *databaseHandle,
+                             IndexStates         indexState,
                              String              pattern
                             );
 
