@@ -58,18 +58,23 @@ typedef struct
 /***********************************************************************\
 * Name   : STRINGLIST_ITERATE
 * Purpose: iterate over string list
-* Input  : stringList - string list
-*          variable   - iteration variable (type StringNode)
-*          value      - iteration value (must not be initalised!)
+* Input  : stringList       - string list
+*          iteratorVariable - iterator variable (type StringNode)
+*          variable         - iteration variable (must not be initalised!)
 * Output : -
 * Return : -
-* Notes  : value will contain all strings in list
+* Notes  : variable will contain all strings in list
+*          usage:
+*            STRINGLIST_ITERATE(list,iteratorVariable,variable)
+*            {
+*              ... = variable->...
+*            }
 \***********************************************************************/
 
-#define STRINGLIST_ITERATE(stringList,variable,value) \
-  for ((variable) = (stringList)->head, value = ((variable) != NULL) ? (stringList)->head->string : NULL; \
-       (variable) != NULL; \
-       (variable) = (variable)->next, value = ((variable) != NULL) ? (variable)->string : NULL \
+#define STRINGLIST_ITERATE(stringList,iteratorVariable,variable) \
+  for ((iteratorVariable) = (stringList)->head, variable = ((iteratorVariable) != NULL) ? (stringList)->head->string : NULL; \
+       (iteratorVariable) != NULL; \
+       (iteratorVariable) = (iteratorVariable)->next, variable = ((iteratorVariable) != NULL) ? (iteratorVariable)->string : NULL \
       )
 
 /***************************** Forwards ********************************/
