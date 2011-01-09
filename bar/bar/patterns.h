@@ -21,7 +21,10 @@
 #include <assert.h>
 
 #include "global.h"
+#include "lists.h"
 #include "strings.h"
+#include "stringlists.h"
+#include "patterns.h"
 
 #include "errors.h"
 
