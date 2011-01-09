@@ -165,7 +165,16 @@ typedef void               void32;
 
 #define ALIGN(n,alignment) (((alignment)>0)?(((n)+(alignment)-1) & ~((alignment)-1)):(n))
 
-/* scalar set macros */
+/***********************************************************************\
+* Name   : SET_CLEAR, SET_VALUE, SET_ADD, SET_REM, IN_SET
+* Purpose: set macros
+* Input  : set     - set (integer)
+*          element - element
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
 #define SET_CLEAR(set) \
   do \
   { \
@@ -188,7 +197,16 @@ typedef void               void32;
   while (0)
 #define IN_SET(set,element) (((set) & SET_VALUE(element)) == SET_VALUE(element))
 
-/* bitset macros */
+/***********************************************************************\
+* Name   : BITSET_SET, BITSET_CLEAR, BITSET_IS_SET, SET_REM, IN_SET
+* Purpose: set macros
+* Input  : set     - set (array)
+*          element - element
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
 #define BITSET_SET(set,bit) \
   do \
   { \
@@ -218,6 +236,7 @@ typedef void               void32;
   #define MAX(x,y) (((x)>(y)) ? (x) : (y))
   #define IN_RANGE(l,x,h) ((x)<(l) ? (l) : ((x)>(h) ? (h) : (x)))
 #endif
+#define CEIL(x,n) ((((x)+(n)-1)/(n))*(n))
 #define SQUARE(x) ((x)*(x))
 #define CHECK_RANGE(l,x,u) (( ((l)<=(x)) && ((x)<=(u)) ) || \
                             ( ((u)<=(x)) && ((x)<=(l)) )    \
