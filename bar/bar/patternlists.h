@@ -51,6 +51,26 @@ typedef struct
 
 /****************************** Macros *********************************/
 
+/***********************************************************************\
+* Name   : PATTERNLIST_ITERATE
+* Purpose: iterated over pattern list and execute block
+* Input  : list     - list
+*          variable - iterator variable (type PatternNode)
+* Output : -
+* Return : -
+* Notes  : usage:
+*            PATTERNLIST_ITERATE(list,variable)
+*            {
+*              ... = variable->...
+*            }
+\***********************************************************************/
+
+#define PATTERNLIST_ITERATE(list,variable) \
+  for ((variable) = (list)->head; \
+       (variable) != NULL; \
+       (variable) = (variable)->next \
+      )
+
 /***************************** Forwards ********************************/
 
 /***************************** Functions *******************************/
