@@ -104,6 +104,20 @@ LOCAL Errors compilePattern(const char   *pattern,
               z++;
             }
             break;
+          case '[':
+          case ']':
+          case '^':
+          case '$':
+          case '(':
+          case ')':
+          case '{':
+          case '}':
+          case '+':
+          case '|':
+            String_appendChar(matchString,'\\');
+            String_appendChar(matchString,pattern[z]);
+            z++;
+            break;
           default:
             String_appendChar(matchString,pattern[z]);
             z++;
