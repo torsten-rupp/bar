@@ -175,13 +175,13 @@ class BusyDialog
       widgetAbortButton.setLayoutData(new TableLayoutData(0,0,TableLayoutData.NONE)); //,0,0,0,0,60,SWT.DEFAULT));
       widgetAbortButton.addSelectionListener(new SelectionListener()
       {
+        public void widgetDefaultSelected(SelectionEvent selectionEvent)
+        {
+        }
         public void widgetSelected(SelectionEvent selectionEvent)
         {
           Button widget = (Button)selectionEvent.widget;
           abort();
-        }
-        public void widgetDefaultSelected(SelectionEvent selectionEvent)
-        {
         }
       });
     }
