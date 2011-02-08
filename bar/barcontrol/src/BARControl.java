@@ -104,7 +104,7 @@ enum StorageTypes
 
   /** parse type string
    * @param string type string
-   * @return priority
+   * @return storage type
    */
   static StorageTypes parse(String string)
   {
@@ -913,15 +913,15 @@ public class BARControl
       widgetLoginButton.setLayoutData(new TableLayoutData(0,0,TableLayoutData.W,0,0,0,0,60,SWT.DEFAULT));
       widgetLoginButton.addSelectionListener(new SelectionListener()
       {
+        public void widgetDefaultSelected(SelectionEvent selectionEvent)
+        {
+        }
         public void widgetSelected(SelectionEvent selectionEvent)
         {
           Button widget = (Button)selectionEvent.widget;
           loginData.serverName = widgetServerName.getText();
           loginData.password   = widgetPassword.getText();
           Dialogs.close(dialog,true);
-        }
-        public void widgetDefaultSelected(SelectionEvent selectionEvent)
-        {
         }
       });
 
@@ -930,13 +930,13 @@ public class BARControl
       button.setLayoutData(new TableLayoutData(0,1,TableLayoutData.E,0,0,0,0,60,SWT.DEFAULT));
       button.addSelectionListener(new SelectionListener()
       {
+        public void widgetDefaultSelected(SelectionEvent selectionEvent)
+        {
+        }
         public void widgetSelected(SelectionEvent selectionEvent)
         {
           Button widget = (Button)selectionEvent.widget;
           Dialogs.close(dialog,false);
-        }
-        public void widgetDefaultSelected(SelectionEvent selectionEvent)
-        {
         }
       });
     }
@@ -944,24 +944,24 @@ public class BARControl
     // install handlers
     widgetServerName.addSelectionListener(new SelectionListener()
     {
-      public void widgetSelected(SelectionEvent selectionEvent)
-      {
-      }
       public void widgetDefaultSelected(SelectionEvent selectionEvent)
       {
         Text widget = (Text)selectionEvent.widget;
         widgetPassword.forceFocus();
       }
-    });
-    widgetPassword.addSelectionListener(new SelectionListener()
-    {
       public void widgetSelected(SelectionEvent selectionEvent)
       {
       }
+    });
+    widgetPassword.addSelectionListener(new SelectionListener()
+    {
       public void widgetDefaultSelected(SelectionEvent selectionEvent)
       {
         Text widget = (Text)selectionEvent.widget;
         widgetLoginButton.forceFocus();
+      }
+      public void widgetSelected(SelectionEvent selectionEvent)
+      {
       }
     });
 
@@ -1043,26 +1043,26 @@ public class BARControl
       menuItem = Widgets.addMenuItem(menu,"Start",SWT.CTRL+'S');
       menuItem.addSelectionListener(new SelectionListener()
       {
+        public void widgetDefaultSelected(SelectionEvent selectionEvent)
+        {
+        }
         public void widgetSelected(SelectionEvent selectionEvent)
         {
           MenuItem widget = (MenuItem)selectionEvent.widget;
           Widgets.notify(tabStatus.widgetButtonStart);
-        }
-        public void widgetDefaultSelected(SelectionEvent selectionEvent)
-        {
         }
       });
 
       menuItem = Widgets.addMenuItem(menu,"Abort",SWT.CTRL+'A');
       menuItem.addSelectionListener(new SelectionListener()
       {
+        public void widgetDefaultSelected(SelectionEvent selectionEvent)
+        {
+        }
         public void widgetSelected(SelectionEvent selectionEvent)
         {
           MenuItem widget = (MenuItem)selectionEvent.widget;
           Widgets.notify(tabStatus.widgetButtonAbort);
-        }
-        public void widgetDefaultSelected(SelectionEvent selectionEvent)
-        {
         }
       });
 
@@ -1073,39 +1073,39 @@ public class BARControl
         {
           public void widgetSelected(SelectionEvent selectionEvent)
           {
-            MenuItem widget = (MenuItem)selectionEvent.widget;
-            tabStatus.jobPause(10*60);
-  //          Widgets.notify(tabStatus.widgetButtonPause);
           }
           public void widgetDefaultSelected(SelectionEvent selectionEvent)
           {
+            MenuItem widget = (MenuItem)selectionEvent.widget;
+            tabStatus.jobPause(10*60);
+  //          Widgets.notify(tabStatus.widgetButtonPause);
           }
         });
 
         menuItem = Widgets.addMenuItem(subMenu,"60min",SWT.CTRL+'P');
         menuItem.addSelectionListener(new SelectionListener()
         {
+          public void widgetDefaultSelected(SelectionEvent selectionEvent)
+          {
+          }
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             MenuItem widget = (MenuItem)selectionEvent.widget;
             tabStatus.jobPause(60*60);
   //          Widgets.notify(tabStatus.widgetButtonPause);
           }
-          public void widgetDefaultSelected(SelectionEvent selectionEvent)
-          {
-          }
         });
 
         menuItem = Widgets.addMenuItem(subMenu,"120min");
         menuItem.addSelectionListener(new SelectionListener()
         {
+          public void widgetDefaultSelected(SelectionEvent selectionEvent)
+          {
+          }
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             MenuItem widget = (MenuItem)selectionEvent.widget;
             tabStatus.jobPause(120*60);
-          }
-          public void widgetDefaultSelected(SelectionEvent selectionEvent)
-          {
           }
         });
 
@@ -1114,54 +1114,54 @@ public class BARControl
         menuItem = Widgets.addMenuCheckbox(subMenu,"Create operation",Settings.pauseCreateFlag);
         menuItem.addSelectionListener(new SelectionListener()
         {
+          public void widgetDefaultSelected(SelectionEvent selectionEvent)
+          {
+          }
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             MenuItem widget = (MenuItem)selectionEvent.widget;
             Settings.pauseCreateFlag = widget.getSelection();
             tabStatus.jobPause(60*60);
           }
-          public void widgetDefaultSelected(SelectionEvent selectionEvent)
-          {
-          }
         });
 
         menuItem = Widgets.addMenuCheckbox(subMenu,"Storage operation",Settings.pauseStorageFlag);
         menuItem.addSelectionListener(new SelectionListener()
         {
+          public void widgetDefaultSelected(SelectionEvent selectionEvent)
+          {
+          }
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             MenuItem widget = (MenuItem)selectionEvent.widget;
             Settings.pauseStorageFlag = widget.getSelection();
             tabStatus.jobPause(60*60);
           }
-          public void widgetDefaultSelected(SelectionEvent selectionEvent)
-          {
-          }
         });
 
         menuItem = Widgets.addMenuCheckbox(subMenu,"Restore operation",Settings.pauseRestoreFlag);
         menuItem.addSelectionListener(new SelectionListener()
         {
+          public void widgetDefaultSelected(SelectionEvent selectionEvent)
+          {
+          }
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             MenuItem widget = (MenuItem)selectionEvent.widget;
             Settings.pauseRestoreFlag = widget.getSelection();
             tabStatus.jobPause(60*60);
           }
-          public void widgetDefaultSelected(SelectionEvent selectionEvent)
-          {
-          }
         });
         menuItem = Widgets.addMenuCheckbox(subMenu,"Index update operation",Settings.pauseIndexUpdateFlag);
         menuItem.addSelectionListener(new SelectionListener()
         {
+          public void widgetDefaultSelected(SelectionEvent selectionEvent)
+          {
+          }
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             MenuItem widget = (MenuItem)selectionEvent.widget;
             Settings.pauseIndexUpdateFlag = widget.getSelection();
-          }
-          public void widgetDefaultSelected(SelectionEvent selectionEvent)
-          {
           }
         });
       }
@@ -1169,13 +1169,13 @@ public class BARControl
       menuItem = Widgets.addMenuItem(menu,"Toggle suspend/continue",SWT.CTRL+'S');
       menuItem.addSelectionListener(new SelectionListener()
       {
+        public void widgetDefaultSelected(SelectionEvent selectionEvent)
+        {
+        }
         public void widgetSelected(SelectionEvent selectionEvent)
         {
           MenuItem widget = (MenuItem)selectionEvent.widget;
           Widgets.notify(tabStatus.widgetButtonSuspendContinue);
-        }
-        public void widgetDefaultSelected(SelectionEvent selectionEvent)
-        {
         }
       });
 
@@ -1184,13 +1184,13 @@ public class BARControl
 
       menuItem.addSelectionListener(new SelectionListener()
       {
+        public void widgetDefaultSelected(SelectionEvent selectionEvent)
+        {
+        }
         public void widgetSelected(SelectionEvent selectionEvent)
         {
           MenuItem widget = (MenuItem)selectionEvent.widget;
           Widgets.notify(tabStatus.widgetButtonQuit);
-        }
-        public void widgetDefaultSelected(SelectionEvent selectionEvent)
-        {
         }
       });
     }
@@ -1200,13 +1200,13 @@ public class BARControl
       menuItem = Widgets.addMenuItem(menu,"About");
       menuItem.addSelectionListener(new SelectionListener()
       {
+        public void widgetDefaultSelected(SelectionEvent selectionEvent)
+        {
+        }
         public void widgetSelected(SelectionEvent selectionEvent)
         {
           MenuItem widget = (MenuItem)selectionEvent.widget;
           Dialogs.info(shell,"About","BAR control "+Config.VERSION_MAJOR+"."+Config.VERSION_MINOR+".\n\nWritten by Torsten Rupp.\n\nThanx to Matthias Albert.");
-        }
-        public void widgetDefaultSelected(SelectionEvent selectionEvent)
-        {
         }
       });
     }
@@ -1218,39 +1218,39 @@ public class BARControl
         menuItem = Widgets.addMenuItem(menu,"Print memory statistics");
         menuItem.addSelectionListener(new SelectionListener()
         {
+          public void widgetDefaultSelected(SelectionEvent selectionEvent)
+          {
+          }
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             MenuItem widget = (MenuItem)selectionEvent.widget;
             BARServer.executeCommand("DEBUG_MEMORY_PRINT_STATISTICS");
-          }
-          public void widgetDefaultSelected(SelectionEvent selectionEvent)
-          {
           }
         });
 
         menuItem = Widgets.addMenuItem(menu,"Print memory info");
         menuItem.addSelectionListener(new SelectionListener()
         {
+          public void widgetDefaultSelected(SelectionEvent selectionEvent)
+          {
+          }
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             MenuItem widget = (MenuItem)selectionEvent.widget;
             BARServer.executeCommand("DEBUG_MEMORY_PRINT_INFO");
-          }
-          public void widgetDefaultSelected(SelectionEvent selectionEvent)
-          {
           }
         });
 
         menuItem = Widgets.addMenuItem(menu,"Dump memory info");
         menuItem.addSelectionListener(new SelectionListener()
         {
+          public void widgetDefaultSelected(SelectionEvent selectionEvent)
+          {
+          }
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             MenuItem widget = (MenuItem)selectionEvent.widget;
             BARServer.executeCommand("DEBUG_MEMORY_DUMP_INFO");
-          }
-          public void widgetDefaultSelected(SelectionEvent selectionEvent)
-          {
           }
         });
       }
