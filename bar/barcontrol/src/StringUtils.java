@@ -11,6 +11,8 @@
 /****************************** Imports ********************************/
 import java.util.ArrayList;
 
+import java.util.AbstractList;
+
 /****************************** Classes ********************************/
 
 /** string utility functions
@@ -40,7 +42,7 @@ public class StringUtils
    */
   public static String escape(String string, boolean enclosingQuotes, char quoteChar)
   {
-    StringBuffer buffer = new StringBuffer();
+    StringBuilder buffer = new StringBuilder();
 
     if (enclosingQuotes) buffer.append(quoteChar);
     for (int index = 0; index < string.length(); index++)
@@ -122,8 +124,8 @@ public class StringUtils
    */
   public static String join(Object[] objects, String joinString, char quoteChar)
   {
-    StringBuffer buffer = new StringBuffer();
-    String       string;
+    StringBuilder buffer = new StringBuilder();
+    String        string;
     if (objects != null)
     {
       for (Object object : objects)
@@ -165,6 +167,156 @@ public class StringUtils
   public static String join(String[] strings)
   {
     return join(strings," ");
+  }
+
+  /** join boolean array
+   * @param array array to join (convert to string with toString())
+   * @param joinString string used to join two strings
+   * @return string
+   */
+  public static String join(boolean[] array, String joinString)
+  {
+    StringBuilder buffer = new StringBuilder();
+    String        string;
+    if (array != null)
+    {
+      for (boolean n : array)
+      {
+        if (buffer.length() > 0) buffer.append(joinString);
+        buffer.append(Boolean.toString(n));
+      }
+    }
+
+    return buffer.toString();
+  }
+
+  /** join boolean array with space
+   * @param strings strings to join
+   * @return string
+   */
+  public static String join(boolean[] array)
+  {
+    return join(array," ");
+  }
+
+  /** join integer array
+   * @param array array to join (convert to string with toString())
+   * @param joinString string used to join two strings
+   * @return string
+   */
+  public static String join(int[] array, String joinString)
+  {
+    StringBuilder buffer = new StringBuilder();
+    String        string;
+    if (array != null)
+    {
+      for (int n : array)
+      {
+        if (buffer.length() > 0) buffer.append(joinString);
+        buffer.append(Integer.toString(n));
+      }
+    }
+
+    return buffer.toString();
+  }
+
+  /** join integer array with space
+   * @param strings strings to join
+   * @return string
+   */
+  public static String join(int[] array)
+  {
+    return join(array," ");
+  }
+
+  /** join long array
+   * @param array array to join (convert to string with toString())
+   * @param joinString string used to join two strings
+   * @return string
+   */
+  public static String join(long[] array, String joinString)
+  {
+    StringBuilder buffer = new StringBuilder();
+    String        string;
+    if (array != null)
+    {
+      for (long n : array)
+      {
+        if (buffer.length() > 0) buffer.append(joinString);
+        buffer.append(Long.toString(n));
+      }
+    }
+
+    return buffer.toString();
+  }
+
+  /** join long array with space
+   * @param strings strings to join
+   * @return string
+   */
+  public static String join(long[] array)
+  {
+    return join(array," ");
+  }
+
+  /** join float array
+   * @param array array to join (convert to string with toString())
+   * @param joinString string used to join two strings
+   * @return string
+   */
+  public static String join(float[] array, String joinString)
+  {
+    StringBuilder buffer = new StringBuilder();
+    String        string;
+    if (array != null)
+    {
+      for (float n : array)
+      {
+        if (buffer.length() > 0) buffer.append(joinString);
+        buffer.append(Float.toString(n));
+      }
+    }
+
+    return buffer.toString();
+  }
+
+  /** join float array with space
+   * @param strings strings to join
+   * @return string
+   */
+  public static String join(float[] array)
+  {
+    return join(array," ");
+  }
+
+  /** join double array
+   * @param array array to join (convert to string with toString())
+   * @param joinString string used to join two strings
+   * @return string
+   */
+  public static String join(double[] array, String joinString)
+  {
+    StringBuilder buffer = new StringBuilder();
+    String        string;
+    if (array != null)
+    {
+      for (double n : array)
+      {
+        if (buffer.length() > 0) buffer.append(joinString);
+        buffer.append(Double.toString(n));
+      }
+    }
+
+    return buffer.toString();
+  }
+
+  /** join double array with space
+   * @param strings strings to join
+   * @return string
+   */
+  public static String join(double[] array)
+  {
+    return join(array," ");
   }
 
   /** split string
@@ -352,9 +504,9 @@ public class StringUtils
    * @param number of concatations
    * @return string+...+string (count times)
    */
-  public static String multiply(String string, int count)
+  public static String repeat(String string, int count)
   {
-    StringBuffer buffer = new StringBuffer();
+    StringBuilder buffer = new StringBuilder();
  
     for (int z = 0; z < count; z++)
     {
@@ -362,6 +514,86 @@ public class StringUtils
     }
  
     return buffer.toString();
+  }
+
+  /** convert glob-pattern into regex-pattern
+   * @param string glob-pattern
+   * @return regex-pattern
+   */
+  public static String globToRegex(String string)
+  {
+    StringBuilder buffer = new StringBuilder();
+
+    int z = 0;
+    while (z < string.length())
+    {
+      switch (string.charAt(z))
+      {
+        case '*':
+          buffer.append(".*");
+          z++;
+          break;
+        case '?':
+          buffer.append('.');
+          z++;
+          break;
+        case '.':
+          buffer.append("\\.");
+          z++;
+          break;
+        case '\\':
+          buffer.append('\\');
+          z++;
+          if (z < string.length())
+          {
+            buffer.append(string.charAt(z));
+            z++;
+          }
+          break;
+        case '[':
+        case ']':
+        case '^':
+        case '$':
+        case '(':
+        case ')':
+        case '{':
+        case '}':
+        case '+':
+        case '|':
+          buffer.append('\\');
+          buffer.append(string.charAt(z));
+          z++;
+          break;
+        default:
+          buffer.append(string.charAt(z));
+          z++;
+          break;
+      }
+    }
+
+    return buffer.toString();
+  }
+
+  /** parse string with boolean value
+   * @param string string
+   * @return boolean value or false
+   */
+  public static boolean parseBoolean(String string)
+  {
+    final String TRUE_STRINGS[] = 
+    {
+      "1",
+      "true",
+      "yes",
+      "on",
+    };
+
+    for (String trueString : TRUE_STRINGS)
+    {
+      if (string.equalsIgnoreCase(trueString)) return true;
+    }
+
+    return false;
   }
 }
 
