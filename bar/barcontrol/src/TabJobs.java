@@ -1286,6 +1286,9 @@ class TabJobs
       Widgets.layout(widgetJobList,0,1,TableLayoutData.WE);
       widgetJobList.addSelectionListener(new SelectionListener()
       {
+        public void widgetDefaultSelected(SelectionEvent selectionEvent)
+        {
+        }
         public void widgetSelected(SelectionEvent selectionEvent)
         {
           Combo widget = (Combo)selectionEvent.widget;
@@ -1298,9 +1301,6 @@ class TabJobs
             update();
           }
         }
-        public void widgetDefaultSelected(SelectionEvent selectionEvent)
-        {
-        }
       });
       widgetJobList.setToolTipText("Existing job entries.");
 
@@ -1308,13 +1308,13 @@ class TabJobs
       Widgets.layout(button,0,2,TableLayoutData.DEFAULT);
       button.addSelectionListener(new SelectionListener()
       {
+        public void widgetDefaultSelected(SelectionEvent selectionEvent)
+        {
+        }
         public void widgetSelected(SelectionEvent selectionEvent)
         {
           Button widget = (Button)selectionEvent.widget;
           jobNew();
-        }
-        public void widgetDefaultSelected(SelectionEvent selectionEvent)
-        {
         }
       });
       button.setToolTipText("Create new job entry.");
@@ -1331,6 +1331,9 @@ class TabJobs
       });
       button.addSelectionListener(new SelectionListener()
       {
+        public void widgetDefaultSelected(SelectionEvent selectionEvent)
+        {
+        }
         public void widgetSelected(SelectionEvent selectionEvent)
         {
           Button widget = (Button)selectionEvent.widget;
@@ -1338,9 +1341,6 @@ class TabJobs
           {
             jobCopy();
           }
-        }
-        public void widgetDefaultSelected(SelectionEvent selectionEvent)
-        {
         }
       });
       button.setToolTipText("Copy an existing job entry and create a new one.");
@@ -1357,6 +1357,9 @@ class TabJobs
       });
       button.addSelectionListener(new SelectionListener()
       {
+        public void widgetDefaultSelected(SelectionEvent selectionEvent)
+        {
+        }
         public void widgetSelected(SelectionEvent selectionEvent)
         {
           Button widget = (Button)selectionEvent.widget;
@@ -1364,9 +1367,6 @@ class TabJobs
           {
             jobRename();
           }
-        }
-        public void widgetDefaultSelected(SelectionEvent selectionEvent)
-        {
         }
       });
       button.setToolTipText("Rename a job entry.");
@@ -1383,6 +1383,9 @@ class TabJobs
       });
       button.addSelectionListener(new SelectionListener()
       {
+        public void widgetDefaultSelected(SelectionEvent selectionEvent)
+        {
+        }
         public void widgetSelected(SelectionEvent selectionEvent)
         {
           Button widget = (Button)selectionEvent.widget;
@@ -1390,9 +1393,6 @@ class TabJobs
           {
             jobDelete();
           }
-        }
-        public void widgetDefaultSelected(SelectionEvent selectionEvent)
-        {
         }
       });
       button.setToolTipText("Delete a job entry.");
@@ -1412,6 +1412,9 @@ class TabJobs
         Widgets.layout(widgetFileTree,0,0,TableLayoutData.NSWE);
         SelectionListener fileTreeColumnSelectionListener = new SelectionListener()
         {
+          public void widgetDefaultSelected(SelectionEvent selectionEvent)
+          {
+          }
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             TreeColumn             treeColumn             = (TreeColumn)selectionEvent.widget;
@@ -1420,9 +1423,6 @@ class TabJobs
             {
               Widgets.sortTreeColumn(widgetFileTree,treeColumn,fileTreeDataComparator);
             }
-          }
-          public void widgetDefaultSelected(SelectionEvent selectionEvent)
-          {
           }
         };
         treeColumn = Widgets.addTreeColumn(widgetFileTree,"Name",    SWT.LEFT, 390,true);
@@ -1443,6 +1443,9 @@ class TabJobs
           menuItem = Widgets.addMenuItem(menu,"Open/Close");
           menuItem.addSelectionListener(new SelectionListener()
           {
+            public void widgetDefaultSelected(SelectionEvent selectionEvent)
+            {
+            }
             public void widgetSelected(SelectionEvent selectionEvent)
             {
               MenuItem widget = (MenuItem)selectionEvent.widget;
@@ -1468,9 +1471,6 @@ class TabJobs
                 }
               }
             }
-            public void widgetDefaultSelected(SelectionEvent selectionEvent)
-            {
-            }
           });
 
           menuItem = Widgets.addMenuSeparator(menu);
@@ -1478,6 +1478,9 @@ class TabJobs
           menuItem = Widgets.addMenuItem(menu,"Include");
           menuItem.addSelectionListener(new SelectionListener()
           {
+            public void widgetDefaultSelected(SelectionEvent selectionEvent)
+            {
+            }
             public void widgetSelected(SelectionEvent selectionEvent)
             {
               MenuItem widget = (MenuItem)selectionEvent.widget;
@@ -1499,14 +1502,14 @@ class TabJobs
                 }
               }
             }
-            public void widgetDefaultSelected(SelectionEvent selectionEvent)
-            {
-            }
           });
 
           menuItem = Widgets.addMenuItem(menu,"Exclude");
           menuItem.addSelectionListener(new SelectionListener()
           {
+            public void widgetDefaultSelected(SelectionEvent selectionEvent)
+            {
+            }
             public void widgetSelected(SelectionEvent selectionEvent)
             {
               MenuItem widget = (MenuItem)selectionEvent.widget;
@@ -1528,14 +1531,14 @@ class TabJobs
                 }
               }
             }
-            public void widgetDefaultSelected(SelectionEvent selectionEvent)
-            {
-            }
           });
 
           menuItem = Widgets.addMenuItem(menu,"None");
           menuItem.addSelectionListener(new SelectionListener()
           {
+            public void widgetDefaultSelected(SelectionEvent selectionEvent)
+            {
+            }
             public void widgetSelected(SelectionEvent selectionEvent)
             {
               MenuItem widget = (MenuItem)selectionEvent.widget;
@@ -1557,9 +1560,6 @@ class TabJobs
                 }
               }
             }
-            public void widgetDefaultSelected(SelectionEvent selectionEvent)
-            {
-            }
           });
 
           menuItem = Widgets.addMenuSeparator(menu);
@@ -1567,6 +1567,9 @@ class TabJobs
           menuItem = Widgets.addMenuItem(menu,"Directory size");
           menuItem.addSelectionListener(new SelectionListener()
           {
+            public void widgetDefaultSelected(SelectionEvent selectionEvent)
+            {
+            }
             public void widgetSelected(SelectionEvent selectionEvent)
             {
               MenuItem widget = (MenuItem)selectionEvent.widget;
@@ -1576,9 +1579,6 @@ class TabJobs
                 FileTreeData fileTreeData = (FileTreeData)treeItem.getData();
                 directoryInfoThread.add(fileTreeData.name,true,treeItem);
               }
-            }
-            public void widgetDefaultSelected(SelectionEvent selectionEvent)
-            {
             }
           });
         }
@@ -1594,6 +1594,9 @@ class TabJobs
           Widgets.layout(button,0,0,TableLayoutData.WE);
           button.addSelectionListener(new SelectionListener()
           {
+            public void widgetDefaultSelected(SelectionEvent selectionEvent)
+            {
+            }
             public void widgetSelected(SelectionEvent selectionEvent)
             {
               Button widget = (Button)selectionEvent.widget;
@@ -1614,9 +1617,6 @@ class TabJobs
                 }
               }
             }
-            public void widgetDefaultSelected(SelectionEvent selectionEvent)
-            {
-            }
           });
           button.setToolTipText("Include entry in archive.");
 
@@ -1624,6 +1624,9 @@ class TabJobs
           Widgets.layout(button,0,1,TableLayoutData.WE);
           button.addSelectionListener(new SelectionListener()
           {
+            public void widgetDefaultSelected(SelectionEvent selectionEvent)
+            {
+            }
             public void widgetSelected(SelectionEvent selectionEvent)
             {
               Button widget = (Button)selectionEvent.widget;
@@ -1644,9 +1647,6 @@ class TabJobs
                 }
               }
             }
-            public void widgetDefaultSelected(SelectionEvent selectionEvent)
-            {
-            }
           });
           button.setToolTipText("Exclude entry from archive.");
 
@@ -1654,6 +1654,9 @@ class TabJobs
           Widgets.layout(button,0,2,TableLayoutData.WE);
           button.addSelectionListener(new SelectionListener()
           {
+            public void widgetDefaultSelected(SelectionEvent selectionEvent)
+            {
+            }
             public void widgetSelected(SelectionEvent selectionEvent)
             {
               Button widget = (Button)selectionEvent.widget;
@@ -1674,9 +1677,6 @@ class TabJobs
                 }
               }
             }
-            public void widgetDefaultSelected(SelectionEvent selectionEvent)
-            {
-            }
           });
           button.setToolTipText("Do not include/exclude entry in/from archive.");
 
@@ -1687,13 +1687,13 @@ class TabJobs
           Widgets.layout(button,0,4,TableLayoutData.E,0,0,2,0);
           button.addSelectionListener(new SelectionListener()
           {
+            public void widgetDefaultSelected(SelectionEvent selectionEvent)
+            {
+            }
             public void widgetSelected(SelectionEvent selectionEvent)
             {
               Button widget = (Button)selectionEvent.widget;
               openIncludedDirectories();
-            }
-            public void widgetDefaultSelected(SelectionEvent selectionEvent)
-            {
             }
           });
           button.setToolTipText("Open all included directories.");
@@ -1702,13 +1702,13 @@ class TabJobs
           Widgets.layout(button,0,5,TableLayoutData.E,0,0,2,0);
           button.addSelectionListener(new SelectionListener()
           {
+            public void widgetDefaultSelected(SelectionEvent selectionEvent)
+            {
+            }
             public void widgetSelected(SelectionEvent selectionEvent)
             {
               Button  widget = (Button)selectionEvent.widget;
               directorySizesFlag = widget.getSelection();
-            }
-            public void widgetDefaultSelected(SelectionEvent selectionEvent)
-            {
             }
           });
           button.setToolTipText("Show directory sizes (sum of file sizes).");
@@ -1724,6 +1724,9 @@ class TabJobs
         Widgets.layout(widgetDeviceTree,0,0,TableLayoutData.NSWE);
         SelectionListener deviceTreeColumnSelectionListener = new SelectionListener()
         {
+          public void widgetDefaultSelected(SelectionEvent selectionEvent)
+          {
+          }
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             TreeColumn               treeColumn               = (TreeColumn)selectionEvent.widget;
@@ -1732,9 +1735,6 @@ class TabJobs
             {
               Widgets.sortTreeColumn(widgetDeviceTree,treeColumn,deviceTreeDataComparator);
             }
-          }
-          public void widgetDefaultSelected(SelectionEvent selectionEvent)
-          {
           }
         };
         treeColumn = Widgets.addTreeColumn(widgetDeviceTree,"Name",SWT.LEFT, 500,true);
@@ -1747,6 +1747,9 @@ class TabJobs
           menuItem = Widgets.addMenuItem(menu,"Include");
           menuItem.addSelectionListener(new SelectionListener()
           {
+            public void widgetDefaultSelected(SelectionEvent selectionEvent)
+            {
+            }
             public void widgetSelected(SelectionEvent selectionEvent)
             {
               MenuItem widget = (MenuItem)selectionEvent.widget;
@@ -1759,14 +1762,14 @@ class TabJobs
                 treeItem.setImage(IMAGE_DEVICE_INCLUDED);
               }
             }
-            public void widgetDefaultSelected(SelectionEvent selectionEvent)
-            {
-            }
           });
 
           menuItem = Widgets.addMenuItem(menu,"Exclude");
           menuItem.addSelectionListener(new SelectionListener()
           {
+            public void widgetDefaultSelected(SelectionEvent selectionEvent)
+            {
+            }
             public void widgetSelected(SelectionEvent selectionEvent)
             {
               MenuItem widget = (MenuItem)selectionEvent.widget;
@@ -1779,14 +1782,14 @@ class TabJobs
                 treeItem.setImage(IMAGE_DEVICE_EXCLUDED);
               }
             }
-            public void widgetDefaultSelected(SelectionEvent selectionEvent)
-            {
-            }
           });
 
           menuItem = Widgets.addMenuItem(menu,"None");
           menuItem.addSelectionListener(new SelectionListener()
           {
+            public void widgetDefaultSelected(SelectionEvent selectionEvent)
+            {
+            }
             public void widgetSelected(SelectionEvent selectionEvent)
             {
               MenuItem widget = (MenuItem)selectionEvent.widget;
@@ -1798,9 +1801,6 @@ class TabJobs
                 excludeRemove(deviceTreeData.name);
                 treeItem.setImage(IMAGE_DEVICE);
               }
-            }
-            public void widgetDefaultSelected(SelectionEvent selectionEvent)
-            {
             }
           });
         }
@@ -1816,6 +1816,9 @@ class TabJobs
           Widgets.layout(button,0,0,TableLayoutData.WE);
           button.addSelectionListener(new SelectionListener()
           {
+            public void widgetDefaultSelected(SelectionEvent selectionEvent)
+            {
+            }
             public void widgetSelected(SelectionEvent selectionEvent)
             {
               Button widget = (Button)selectionEvent.widget;
@@ -1827,9 +1830,6 @@ class TabJobs
                 treeItem.setImage(IMAGE_DEVICE_INCLUDED);
               }
             }
-            public void widgetDefaultSelected(SelectionEvent selectionEvent)
-            {
-            }
           });
           button.setToolTipText("Include selected device for image storage.");
 
@@ -1837,6 +1837,9 @@ class TabJobs
           Widgets.layout(button,0,1,TableLayoutData.WE);
           button.addSelectionListener(new SelectionListener()
           {
+            public void widgetDefaultSelected(SelectionEvent selectionEvent)
+            {
+            }
             public void widgetSelected(SelectionEvent selectionEvent)
             {
               Button widget = (Button)selectionEvent.widget;
@@ -1848,9 +1851,6 @@ class TabJobs
                 treeItem.setImage(IMAGE_DEVICE_EXCLUDED);
               }
             }
-            public void widgetDefaultSelected(SelectionEvent selectionEvent)
-            {
-            }
           });
           button.setToolTipText("Exclude selected device from image storage.");
 
@@ -1858,6 +1858,9 @@ class TabJobs
           Widgets.layout(button,0,2,TableLayoutData.WE);
           button.addSelectionListener(new SelectionListener()
           {
+            public void widgetDefaultSelected(SelectionEvent selectionEvent)
+            {
+            }
             public void widgetSelected(SelectionEvent selectionEvent)
             {
               Button widget = (Button)selectionEvent.widget;
@@ -1868,9 +1871,6 @@ class TabJobs
                 excludeRemove(deviceTreeData.name);
                 treeItem.setImage(IMAGE_DEVICE);
               }
-            }
-            public void widgetDefaultSelected(SelectionEvent selectionEvent)
-            {
             }
           });
           button.setToolTipText("Remove selected device from image storage.");
@@ -1898,6 +1898,9 @@ class TabJobs
           menuItem = Widgets.addMenuItem(menu,"Add...");
           menuItem.addSelectionListener(new SelectionListener()
           {
+            public void widgetDefaultSelected(SelectionEvent selectionEvent)
+            {
+            }
             public void widgetSelected(SelectionEvent selectionEvent)
             {
               MenuItem widget = (MenuItem)selectionEvent.widget;
@@ -1906,14 +1909,14 @@ class TabJobs
                 includeAdd();
               }
             }
-            public void widgetDefaultSelected(SelectionEvent selectionEvent)
-            {
-            }
           });
 
           menuItem = Widgets.addMenuItem(menu,"Remove");
           menuItem.addSelectionListener(new SelectionListener()
           {
+            public void widgetDefaultSelected(SelectionEvent selectionEvent)
+            {
+            }
             public void widgetSelected(SelectionEvent selectionEvent)
             {
               MenuItem widget = (MenuItem)selectionEvent.widget;
@@ -1921,9 +1924,6 @@ class TabJobs
               {
                 includeRemove();
               }
-            }
-            public void widgetDefaultSelected(SelectionEvent selectionEvent)
-            {
             }
           });
         }
@@ -1938,6 +1938,9 @@ class TabJobs
           Widgets.layout(button,0,0,TableLayoutData.DEFAULT,0,0,0,0,60,SWT.DEFAULT);
           button.addSelectionListener(new SelectionListener()
           {
+            public void widgetDefaultSelected(SelectionEvent selectionEvent)
+            {
+            }
             public void widgetSelected(SelectionEvent selectionEvent)
             {
               Button widget = (Button)selectionEvent.widget;
@@ -1946,9 +1949,6 @@ class TabJobs
                 includeAdd();
               }
             }
-            public void widgetDefaultSelected(SelectionEvent selectionEvent)
-            {
-            }
           });
           button.setToolTipText("Add entry to included list.");
 
@@ -1956,6 +1956,9 @@ class TabJobs
           Widgets.layout(button,0,1,TableLayoutData.DEFAULT,0,0,0,0,60,SWT.DEFAULT);
           button.addSelectionListener(new SelectionListener()
           {
+            public void widgetDefaultSelected(SelectionEvent selectionEvent)
+            {
+            }
             public void widgetSelected(SelectionEvent selectionEvent)
             {
               Button widget = (Button)selectionEvent.widget;
@@ -1963,9 +1966,6 @@ class TabJobs
               {
                 includeRemove();
               }
-            }
-            public void widgetDefaultSelected(SelectionEvent selectionEvent)
-            {
             }
           });
           button.setToolTipText("Remove entry from included list.");
@@ -1981,6 +1981,9 @@ class TabJobs
           menuItem = Widgets.addMenuItem(menu,"Add...");
           menuItem.addSelectionListener(new SelectionListener()
           {
+            public void widgetDefaultSelected(SelectionEvent selectionEvent)
+            {
+            }
             public void widgetSelected(SelectionEvent selectionEvent)
             {
               MenuItem widget = (MenuItem)selectionEvent.widget;
@@ -1989,14 +1992,14 @@ class TabJobs
                 excludeAdd();
               }
             }
-            public void widgetDefaultSelected(SelectionEvent selectionEvent)
-            {
-            }
           });
 
           menuItem = Widgets.addMenuItem(menu,"Remove");
           menuItem.addSelectionListener(new SelectionListener()
           {
+            public void widgetDefaultSelected(SelectionEvent selectionEvent)
+            {
+            }
             public void widgetSelected(SelectionEvent selectionEvent)
             {
               MenuItem widget = (MenuItem)selectionEvent.widget;
@@ -2004,9 +2007,6 @@ class TabJobs
               {
                 excludeRemove();
               }
-            }
-            public void widgetDefaultSelected(SelectionEvent selectionEvent)
-            {
             }
           });
         }
@@ -2021,6 +2021,9 @@ class TabJobs
           Widgets.layout(button,0,0,TableLayoutData.DEFAULT,0,0,0,0,60,SWT.DEFAULT);
           button.addSelectionListener(new SelectionListener()
           {
+            public void widgetDefaultSelected(SelectionEvent selectionEvent)
+            {
+            }
             public void widgetSelected(SelectionEvent selectionEvent)
             {
               Button widget = (Button)selectionEvent.widget;
@@ -2029,9 +2032,6 @@ class TabJobs
                 excludeAdd();
               }
             }
-            public void widgetDefaultSelected(SelectionEvent selectionEvent)
-            {
-            }
           });
           button.setToolTipText("Add entry to excluded list.");
 
@@ -2039,6 +2039,9 @@ class TabJobs
           Widgets.layout(button,0,1,TableLayoutData.DEFAULT,0,0,0,0,60,SWT.DEFAULT);
           button.addSelectionListener(new SelectionListener()
           {
+            public void widgetDefaultSelected(SelectionEvent selectionEvent)
+            {
+            }
             public void widgetSelected(SelectionEvent selectionEvent)
             {
               Button widget = (Button)selectionEvent.widget;
@@ -2046,9 +2049,6 @@ class TabJobs
               {
                 excludeRemove();
               }
-            }
-            public void widgetDefaultSelected(SelectionEvent selectionEvent)
-            {
             }
           });
           button.setToolTipText("Remove entry from excluded list.");
@@ -2064,15 +2064,15 @@ class TabJobs
           Widgets.layout(button,0,0,TableLayoutData.NW);
           button.addSelectionListener(new SelectionListener()
           {
+            public void widgetDefaultSelected(SelectionEvent selectionEvent)
+            {
+            }
             public void widgetSelected(SelectionEvent selectionEvent)
             {
               Button  widget      = (Button)selectionEvent.widget;
               boolean checkedFlag = widget.getSelection();
               skipUnreadable.set(checkedFlag);
               BARServer.setOption(selectedJobId,"skip-unreadable",checkedFlag);
-            }
-            public void widgetDefaultSelected(SelectionEvent selectionEvent)
-            {
             }
           });
           Widgets.addModifyListener(new WidgetModifyListener(button,skipUnreadable));
@@ -2082,15 +2082,15 @@ class TabJobs
           Widgets.layout(button,1,0,TableLayoutData.NW);
           button.addSelectionListener(new SelectionListener()
           {
+            public void widgetDefaultSelected(SelectionEvent selectionEvent)
+            {
+            }
             public void widgetSelected(SelectionEvent selectionEvent)
             {
               Button  widget      = (Button)selectionEvent.widget;
               boolean checkedFlag = widget.getSelection();
               rawImages.set(checkedFlag);
               BARServer.setOption(selectedJobId,"raw-images",checkedFlag);
-            }
-            public void widgetDefaultSelected(SelectionEvent selectionEvent)
-            {
             }
           });
           Widgets.addModifyListener(new WidgetModifyListener(button,rawImages));
@@ -2112,15 +2112,15 @@ class TabJobs
           Widgets.layout(button,0,0,TableLayoutData.W);
           button.addSelectionListener(new SelectionListener()
           {
+            public void widgetDefaultSelected(SelectionEvent selectionEvent)
+            {
+            }
             public void widgetSelected(SelectionEvent selectionEvent)
             {
               Button widget = (Button)selectionEvent.widget;
               archivePartSizeFlag.set(false);
               archivePartSize.set(0);
               BARServer.setOption(selectedJobId,"archive-part-size",0);
-            }
-            public void widgetDefaultSelected(SelectionEvent selectionEvent)
-            {
             }
           });
           Widgets.addModifyListener(new WidgetModifyListener(button,archivePartSizeFlag)
@@ -2136,13 +2136,13 @@ class TabJobs
           Widgets.layout(button,0,1,TableLayoutData.W);
           button.addSelectionListener(new SelectionListener()
           {
+            public void widgetDefaultSelected(SelectionEvent selectionEvent)
+            {
+            }
             public void widgetSelected(SelectionEvent selectionEvent)
             {
               Button widget = (Button)selectionEvent.widget;
               archivePartSizeFlag.set(true);
-            }
-            public void widgetDefaultSelected(SelectionEvent selectionEvent)
-            {
             }
           });
           Widgets.addModifyListener(new WidgetModifyListener(button,archivePartSizeFlag)
@@ -2322,20 +2322,23 @@ class TabJobs
             menuItem = Widgets.addMenuItem(menu,"Add...");
             menuItem.addSelectionListener(new SelectionListener()
             {
+              public void widgetDefaultSelected(SelectionEvent selectionEvent)
+              {
+              }
               public void widgetSelected(SelectionEvent selectionEvent)
               {
                 MenuItem widget = (MenuItem)selectionEvent.widget;
 
                 compressExcludeAdd();
               }
-              public void widgetDefaultSelected(SelectionEvent selectionEvent)
-              {
-              }
             });
 
             menuItem = Widgets.addMenuItem(menu,"Add most used compressed file suffixes");
             menuItem.addSelectionListener(new SelectionListener()
             {
+              public void widgetDefaultSelected(SelectionEvent selectionEvent)
+              {
+              }
               public void widgetSelected(SelectionEvent selectionEvent)
               {
                 final String[] COMPRESSED_PATTERNS = new String[]
@@ -2355,14 +2358,14 @@ class TabJobs
 
                 compressExcludeAdd(COMPRESSED_PATTERNS);
               }
-              public void widgetDefaultSelected(SelectionEvent selectionEvent)
-              {
-              }
             });
 
             menuItem = Widgets.addMenuItem(menu,"Add most used multi-media file suffixes");
             menuItem.addSelectionListener(new SelectionListener()
             {
+              public void widgetDefaultSelected(SelectionEvent selectionEvent)
+              {
+              }
               public void widgetSelected(SelectionEvent selectionEvent)
               {
                 final String[] MULTIMEDIA_PATTERNS = new String[]
@@ -2380,14 +2383,14 @@ class TabJobs
 
                 compressExcludeAdd(MULTIMEDIA_PATTERNS);
               }
-              public void widgetDefaultSelected(SelectionEvent selectionEvent)
-              {
-              }
             });
 
             menuItem = Widgets.addMenuItem(menu,"Add most used package file suffixes");
             menuItem.addSelectionListener(new SelectionListener()
             {
+              public void widgetDefaultSelected(SelectionEvent selectionEvent)
+              {
+              }
               public void widgetSelected(SelectionEvent selectionEvent)
               {
                 final String[] PACKAGE_PATTERNS = new String[]
@@ -2401,14 +2404,14 @@ class TabJobs
 
                 compressExcludeAdd(PACKAGE_PATTERNS);
               }
-              public void widgetDefaultSelected(SelectionEvent selectionEvent)
-              {
-              }
             });
 
             menuItem = Widgets.addMenuItem(menu,"Remove");
             menuItem.addSelectionListener(new SelectionListener()
             {
+              public void widgetDefaultSelected(SelectionEvent selectionEvent)
+              {
+              }
               public void widgetSelected(SelectionEvent selectionEvent)
               {
                 MenuItem widget = (MenuItem)selectionEvent.widget;
@@ -2416,9 +2419,6 @@ class TabJobs
                 {
                   compressExcludeRemove();
                 }
-              }
-              public void widgetDefaultSelected(SelectionEvent selectionEvent)
-              {
               }
             });
           }
@@ -2440,6 +2440,9 @@ class TabJobs
             });
             button.addSelectionListener(new SelectionListener()
             {
+              public void widgetDefaultSelected(SelectionEvent selectionEvent)
+              {
+              }
               public void widgetSelected(SelectionEvent selectionEvent)
               {
                 Button widget = (Button)selectionEvent.widget;
@@ -2447,9 +2450,6 @@ class TabJobs
                 {
                   compressExcludeAdd();
                 }
-              }
-              public void widgetDefaultSelected(SelectionEvent selectionEvent)
-              {
               }
             });
             button.setToolTipText("Add entry to compress exclude list.");
@@ -2465,6 +2465,9 @@ class TabJobs
             });
             button.addSelectionListener(new SelectionListener()
             {
+              public void widgetDefaultSelected(SelectionEvent selectionEvent)
+              {
+              }
               public void widgetSelected(SelectionEvent selectionEvent)
               {
                 Button widget = (Button)selectionEvent.widget;
@@ -2472,9 +2475,6 @@ class TabJobs
                 {
                   compressExcludeRemove();
                 }
-              }
-              public void widgetDefaultSelected(SelectionEvent selectionEvent)
-              {
               }
             });
             button.setToolTipText("Remove entry from compress exclude list.");
@@ -2523,14 +2523,14 @@ class TabJobs
           });
           button.addSelectionListener(new SelectionListener()
           {
+            public void widgetDefaultSelected(SelectionEvent selectionEvent)
+            {
+            }
             public void widgetSelected(SelectionEvent selectionEvent)
             {
               Button widget = (Button)selectionEvent.widget;
               cryptType.set("symmetric");
               BARServer.setOption(selectedJobId,"crypt-type","symmetric");
-            }
-            public void widgetDefaultSelected(SelectionEvent selectionEvent)
-            {
             }
           });
           Widgets.addModifyListener(new WidgetModifyListener(button,cryptType)
@@ -2553,14 +2553,14 @@ class TabJobs
           });
           button.addSelectionListener(new SelectionListener()
           {
+            public void widgetDefaultSelected(SelectionEvent selectionEvent)
+            {
+            }
             public void widgetSelected(SelectionEvent selectionEvent)
             {
               Button widget = (Button)selectionEvent.widget;
               cryptType.set("asymmetric");
               BARServer.setOption(selectedJobId,"crypt-type","asymmetric");
-            }
-            public void widgetDefaultSelected(SelectionEvent selectionEvent)
-            {
             }
           });
           Widgets.addModifyListener(new WidgetModifyListener(button,cryptType)
@@ -2649,6 +2649,9 @@ class TabJobs
           });
           button.addSelectionListener(new SelectionListener()
           {
+            public void widgetDefaultSelected(SelectionEvent selectionEvent)
+            {
+            }
             public void widgetSelected(SelectionEvent selectionEvent)
             {
               Button widget   = (Button)selectionEvent.widget;
@@ -2664,9 +2667,6 @@ class TabJobs
                 cryptPublicKeyFileName.set(fileName);
                 BARServer.setOption(selectedJobId,"crypt-public-key",fileName);
               }
-            }
-            public void widgetDefaultSelected(SelectionEvent selectionEvent)
-            {
             }
           });
         }
@@ -2692,14 +2692,14 @@ class TabJobs
           });
           button.addSelectionListener(new SelectionListener()
           {
+            public void widgetDefaultSelected(SelectionEvent selectionEvent)
+            {
+            }
             public void widgetSelected(SelectionEvent selectionEvent)
             {
               Button widget = (Button)selectionEvent.widget;
               cryptPasswordMode.set("default");
               BARServer.setOption(selectedJobId,"crypt-password-mode","default");
-            }
-            public void widgetDefaultSelected(SelectionEvent selectionEvent)
-            {
             }
           });
           Widgets.addModifyListener(new WidgetModifyListener(button,cryptPasswordMode)
@@ -2725,14 +2725,14 @@ class TabJobs
           });
           button.addSelectionListener(new SelectionListener()
           {
+            public void widgetDefaultSelected(SelectionEvent selectionEvent)
+            {
+            }
             public void widgetSelected(SelectionEvent selectionEvent)
             {
               Button widget = (Button)selectionEvent.widget;
               cryptPasswordMode.set("ask");
               BARServer.setOption(selectedJobId,"crypt-password-mode","ask");
-            }
-            public void widgetDefaultSelected(SelectionEvent selectionEvent)
-            {
             }
           });
           Widgets.addModifyListener(new WidgetModifyListener(button,cryptPasswordMode)
@@ -2758,14 +2758,14 @@ class TabJobs
           });
           button.addSelectionListener(new SelectionListener()
           {
+            public void widgetDefaultSelected(SelectionEvent selectionEvent)
+            {
+            }
             public void widgetSelected(SelectionEvent selectionEvent)
             {
               Button widget = (Button)selectionEvent.widget;
               cryptPasswordMode.set("config");
               BARServer.setOption(selectedJobId,"crypt-password-mode","config");
-            }
-            public void widgetDefaultSelected(SelectionEvent selectionEvent)
-            {
             }
           });
           Widgets.addModifyListener(new WidgetModifyListener(button,cryptPasswordMode)
@@ -2914,14 +2914,14 @@ class TabJobs
           Widgets.layout(button,0,0,TableLayoutData.W);
           button.addSelectionListener(new SelectionListener()
           {
+            public void widgetDefaultSelected(SelectionEvent selectionEvent)
+            {
+            }
             public void widgetSelected(SelectionEvent selectionEvent)
             {
               Button widget = (Button)selectionEvent.widget;
               archiveType.set("normal");
               BARServer.setOption(selectedJobId,"archive-type","normal");
-            }
-            public void widgetDefaultSelected(SelectionEvent selectionEvent)
-            {
             }
           });
           Widgets.addModifyListener(new WidgetModifyListener(button,archiveType)
@@ -2937,14 +2937,14 @@ class TabJobs
           Widgets.layout(button,0,1,TableLayoutData.W);
           button.addSelectionListener(new SelectionListener()
           {
+            public void widgetDefaultSelected(SelectionEvent selectionEvent)
+            {
+            }
             public void widgetSelected(SelectionEvent selectionEvent)
             {
               Button widget = (Button)selectionEvent.widget;
               archiveType.set("full");
               BARServer.setOption(selectedJobId,"archive-type","full");
-            }
-            public void widgetDefaultSelected(SelectionEvent selectionEvent)
-            {
             }
           });
           Widgets.addModifyListener(new WidgetModifyListener(button,archiveType)
@@ -2960,14 +2960,14 @@ class TabJobs
           Widgets.layout(button,0,2,TableLayoutData.W);
           button.addSelectionListener(new SelectionListener()
           {
+            public void widgetDefaultSelected(SelectionEvent selectionEvent)
+            {
+            }
             public void widgetSelected(SelectionEvent selectionEvent)
             {
               Button widget = (Button)selectionEvent.widget;
               archiveType.set("incremental");
               BARServer.setOption(selectedJobId,"archive-type","incremental");
-            }
-            public void widgetDefaultSelected(SelectionEvent selectionEvent)
-            {
             }
           });
           Widgets.addModifyListener(new WidgetModifyListener(button,archiveType)
@@ -2983,14 +2983,14 @@ class TabJobs
           Widgets.layout(button,0,3,TableLayoutData.W);
           button.addSelectionListener(new SelectionListener()
           {
+            public void widgetDefaultSelected(SelectionEvent selectionEvent)
+            {
+            }
             public void widgetSelected(SelectionEvent selectionEvent)
             {
               Button widget = (Button)selectionEvent.widget;
               archiveType.set("differential");
               BARServer.setOption(selectedJobId,"archive-type","differential");
-            }
-            public void widgetDefaultSelected(SelectionEvent selectionEvent)
-            {
             }
           });
           Widgets.addModifyListener(new WidgetModifyListener(button,archiveType)
@@ -3054,6 +3054,9 @@ class TabJobs
           Widgets.layout(button,0,1,TableLayoutData.DEFAULT);
           button.addSelectionListener(new SelectionListener()
           {
+            public void widgetDefaultSelected(SelectionEvent selectionEvent)
+            {
+            }
             public void widgetSelected(SelectionEvent selectionEvent)
             {
               Button widget = (Button)selectionEvent.widget;
@@ -3062,9 +3065,6 @@ class TabJobs
                 storageFileNameEdit();
                 BARServer.setOption(selectedJobId,"archive-name",getArchiveName());
               }
-            }
-            public void widgetDefaultSelected(SelectionEvent selectionEvent)
-            {
             }
           });
         }
@@ -3122,6 +3122,9 @@ class TabJobs
           Widgets.layout(button,0,1,TableLayoutData.DEFAULT);
           button.addSelectionListener(new SelectionListener()
           {
+            public void widgetDefaultSelected(SelectionEvent selectionEvent)
+            {
+            }
             public void widgetSelected(SelectionEvent selectionEvent)
             {
               Button widget   = (Button)selectionEvent.widget;
@@ -3137,9 +3140,6 @@ class TabJobs
                 incrementalListFileName.set(fileName);
               }
             }
-            public void widgetDefaultSelected(SelectionEvent selectionEvent)
-            {
-            }
           });
         }
 
@@ -3153,14 +3153,14 @@ class TabJobs
           Widgets.layout(button,0,0,TableLayoutData.W);
           button.addSelectionListener(new SelectionListener()
           {
+            public void widgetDefaultSelected(SelectionEvent selectionEvent)
+            {
+            }
             public void widgetSelected(SelectionEvent selectionEvent)
             {
               Button widget = (Button)selectionEvent.widget;
               storageType.set("filesystem");
               BARServer.setOption(selectedJobId,"archive-name",getArchiveName());
-            }
-            public void widgetDefaultSelected(SelectionEvent selectionEvent)
-            {
             }
           });
           Widgets.addModifyListener(new WidgetModifyListener(button,storageType)
@@ -3176,14 +3176,14 @@ class TabJobs
           Widgets.layout(button,0,1,TableLayoutData.W);
           button.addSelectionListener(new SelectionListener()
           {
+            public void widgetDefaultSelected(SelectionEvent selectionEvent)
+            {
+            }
             public void widgetSelected(SelectionEvent selectionEvent)
             {
               Button widget = (Button)selectionEvent.widget;
               storageType.set("ftp");
               BARServer.setOption(selectedJobId,"archive-name",getArchiveName());
-            }
-            public void widgetDefaultSelected(SelectionEvent selectionEvent)
-            {
             }
           });
           Widgets.addModifyListener(new WidgetModifyListener(button,storageType)
@@ -3199,14 +3199,14 @@ class TabJobs
           Widgets.layout(button,0,2,TableLayoutData.W);
           button.addSelectionListener(new SelectionListener()
           {
+            public void widgetDefaultSelected(SelectionEvent selectionEvent)
+            {
+            }
             public void widgetSelected(SelectionEvent selectionEvent)
             {
               Button widget = (Button)selectionEvent.widget;
               storageType.set("scp");
               BARServer.setOption(selectedJobId,"archive-name",getArchiveName());
-            }
-            public void widgetDefaultSelected(SelectionEvent selectionEvent)
-            {
             }
           });
           Widgets.addModifyListener(new WidgetModifyListener(button,storageType)
@@ -3222,14 +3222,14 @@ class TabJobs
           Widgets.layout(button,0,3,TableLayoutData.W);
           button.addSelectionListener(new SelectionListener()
           {
+            public void widgetDefaultSelected(SelectionEvent selectionEvent)
+            {
+            }
             public void widgetSelected(SelectionEvent selectionEvent)
             {
               Button widget = (Button)selectionEvent.widget;
               storageType.set("sftp");
               BARServer.setOption(selectedJobId,"archive-name",getArchiveName());
-            }
-            public void widgetDefaultSelected(SelectionEvent selectionEvent)
-            {
             }
           });
           Widgets.addModifyListener(new WidgetModifyListener(button,storageType)
@@ -3245,14 +3245,14 @@ class TabJobs
           Widgets.layout(button,0,4,TableLayoutData.W);
           button.addSelectionListener(new SelectionListener()
           {
+            public void widgetDefaultSelected(SelectionEvent selectionEvent)
+            {
+            }
             public void widgetSelected(SelectionEvent selectionEvent)
             {
               Button widget = (Button)selectionEvent.widget;
               storageType.set("cd");
               BARServer.setOption(selectedJobId,"archive-name",getArchiveName());
-            }
-            public void widgetDefaultSelected(SelectionEvent selectionEvent)
-            {
             }
           });
           Widgets.addModifyListener(new WidgetModifyListener(button,storageType)
@@ -3268,14 +3268,14 @@ class TabJobs
           Widgets.layout(button,0,5,TableLayoutData.W);
           button.addSelectionListener(new SelectionListener()
           {
+            public void widgetDefaultSelected(SelectionEvent selectionEvent)
+            {
+            }
             public void widgetSelected(SelectionEvent selectionEvent)
             {
               Button widget = (Button)selectionEvent.widget;
               storageType.set("dvd");
               BARServer.setOption(selectedJobId,"archive-name",getArchiveName());
-            }
-            public void widgetDefaultSelected(SelectionEvent selectionEvent)
-            {
             }
           });
           Widgets.addModifyListener(new WidgetModifyListener(button,storageType)
@@ -3291,14 +3291,14 @@ class TabJobs
           Widgets.layout(button,0,6,TableLayoutData.W);
           button.addSelectionListener(new SelectionListener()
           {
+            public void widgetDefaultSelected(SelectionEvent selectionEvent)
+            {
+            }
             public void widgetSelected(SelectionEvent selectionEvent)
             {
               Button widget = (Button)selectionEvent.widget;
               storageType.set("bd");
               BARServer.setOption(selectedJobId,"archive-name",getArchiveName());
-            }
-            public void widgetDefaultSelected(SelectionEvent selectionEvent)
-            {
             }
           });
           Widgets.addModifyListener(new WidgetModifyListener(button,storageType)
@@ -3314,14 +3314,14 @@ class TabJobs
           Widgets.layout(button,0,7,TableLayoutData.W);
           button.addSelectionListener(new SelectionListener()
           {
+            public void widgetDefaultSelected(SelectionEvent selectionEvent)
+            {
+            }
             public void widgetSelected(SelectionEvent selectionEvent)
             {
               Button widget = (Button)selectionEvent.widget;
               storageType.set("device");
               BARServer.setOption(selectedJobId,"archive-name",getArchiveName());
-            }
-            public void widgetDefaultSelected(SelectionEvent selectionEvent)
-            {
             }
           });
           Widgets.addModifyListener(new WidgetModifyListener(button,storageType)
@@ -3351,15 +3351,15 @@ class TabJobs
           Widgets.layout(button,0,0,TableLayoutData.W);
           button.addSelectionListener(new SelectionListener()
           {
+            public void widgetDefaultSelected(SelectionEvent selectionEvent)
+            {
+            }
             public void widgetSelected(SelectionEvent selectionEvent)
             {
               Button  widget      = (Button)selectionEvent.widget;
               boolean checkedFlag = widget.getSelection();
               overwriteArchiveFiles.set(checkedFlag);
               BARServer.setOption(selectedJobId,"overwrite-archive-files",checkedFlag);
-            }
-            public void widgetDefaultSelected(SelectionEvent selectionEvent)
-            {
             }
           });
           Widgets.addModifyListener(new WidgetModifyListener(button,overwriteArchiveFiles));
@@ -3523,15 +3523,15 @@ class TabJobs
             Widgets.layout(button,0,0,TableLayoutData.W);
             button.addSelectionListener(new SelectionListener()
             {
+              public void widgetDefaultSelected(SelectionEvent selectionEvent)
+              {
+              }
               public void widgetSelected(SelectionEvent selectionEvent)
               {
                 Button widget = (Button)selectionEvent.widget;
                 maxBandWidthFlag.set(false);
                 maxBandWidth.set(0);
                 BARServer.setOption(selectedJobId,"max-band-width",0);
-              }
-              public void widgetDefaultSelected(SelectionEvent selectionEvent)
-              {
               }
             });
             Widgets.addModifyListener(new WidgetModifyListener(button,archivePartSizeFlag)
@@ -3547,13 +3547,13 @@ class TabJobs
             Widgets.layout(button,0,1,TableLayoutData.W);
             button.addSelectionListener(new SelectionListener()
             {
+              public void widgetDefaultSelected(SelectionEvent selectionEvent)
+              {
+              }
               public void widgetSelected(SelectionEvent selectionEvent)
               {
                 Button widget = (Button)selectionEvent.widget;
                 archivePartSizeFlag.set(true);
-              }
-              public void widgetDefaultSelected(SelectionEvent selectionEvent)
-              {
               }
             });
             Widgets.addModifyListener(new WidgetModifyListener(button,archivePartSizeFlag)
@@ -3836,6 +3836,9 @@ class TabJobs
             Widgets.layout(button,0,1,TableLayoutData.DEFAULT);
             button.addSelectionListener(new SelectionListener()
             {
+              public void widgetDefaultSelected(SelectionEvent selectionEvent)
+              {
+              }
               public void widgetSelected(SelectionEvent selectionEvent)
               {
                 Button widget   = (Button)selectionEvent.widget;
@@ -3850,9 +3853,6 @@ class TabJobs
                 {
                   sshPublicKeyFileName.set(fileName);
                 }
-              }
-              public void widgetDefaultSelected(SelectionEvent selectionEvent)
-              {
               }
             });
           }
@@ -3909,6 +3909,9 @@ class TabJobs
             Widgets.layout(button,0,1,TableLayoutData.DEFAULT);
             button.addSelectionListener(new SelectionListener()
             {
+              public void widgetDefaultSelected(SelectionEvent selectionEvent)
+              {
+              }
               public void widgetSelected(SelectionEvent selectionEvent)
               {
                 Button widget   = (Button)selectionEvent.widget;
@@ -3923,9 +3926,6 @@ class TabJobs
                   sshPrivateKeyFileName.set(fileName);
                 }
               }
-              public void widgetDefaultSelected(SelectionEvent selectionEvent)
-              {
-              }
             });
           }
 
@@ -3939,15 +3939,15 @@ class TabJobs
             Widgets.layout(button,0,0,TableLayoutData.W);
             button.addSelectionListener(new SelectionListener()
             {
+              public void widgetDefaultSelected(SelectionEvent selectionEvent)
+              {
+              }
               public void widgetSelected(SelectionEvent selectionEvent)
               {
                 Button widget = (Button)selectionEvent.widget;
                 maxBandWidthFlag.set(false);
                 maxBandWidth.set(0);
                 BARServer.setOption(selectedJobId,"max-band-width",0);
-              }
-              public void widgetDefaultSelected(SelectionEvent selectionEvent)
-              {
               }
             });
             Widgets.addModifyListener(new WidgetModifyListener(button,archivePartSizeFlag)
@@ -3963,15 +3963,15 @@ class TabJobs
             Widgets.layout(button,0,1,TableLayoutData.W);
             button.addSelectionListener(new SelectionListener()
             {
+              public void widgetDefaultSelected(SelectionEvent selectionEvent)
+              {
+              }
               public void widgetSelected(SelectionEvent selectionEvent)
               {
                 Button widget = (Button)selectionEvent.widget;
                 maxBandWidthFlag.set(false);
                 maxBandWidth.set(0);
                 BARServer.setOption(selectedJobId,"max-band-width",0);
-              }
-              public void widgetDefaultSelected(SelectionEvent selectionEvent)
-              {
               }
             });
             Widgets.addModifyListener(new WidgetModifyListener(button,archivePartSizeFlag)
@@ -4053,6 +4053,9 @@ class TabJobs
             Widgets.layout(button,0,1,TableLayoutData.DEFAULT);
             button.addSelectionListener(new SelectionListener()
             {
+              public void widgetDefaultSelected(SelectionEvent selectionEvent)
+              {
+              }
               public void widgetSelected(SelectionEvent selectionEvent)
               {
                 Button widget   = (Button)selectionEvent.widget;
@@ -4066,9 +4069,6 @@ class TabJobs
                 {
                   storageDeviceName.set(fileName);
                 }
-              }
-              public void widgetDefaultSelected(SelectionEvent selectionEvent)
-              {
               }
             });
           }
@@ -4193,15 +4193,15 @@ class TabJobs
             Widgets.layout(button,0,0,TableLayoutData.W);
             button.addSelectionListener(new SelectionListener()
             {
+              public void widgetDefaultSelected(SelectionEvent selectionEvent)
+              {
+              }
               public void widgetSelected(SelectionEvent selectionEvent)
               {
                 Button  widget      = (Button)selectionEvent.widget;
                 boolean checkedFlag = widget.getSelection();
                 ecc.set(checkedFlag);
                 BARServer.setOption(selectedJobId,"ecc",checkedFlag);
-              }
-              public void widgetDefaultSelected(SelectionEvent selectionEvent)
-              {
               }
             });
             Widgets.addModifyListener(new WidgetModifyListener(button,ecc));
@@ -4211,15 +4211,15 @@ class TabJobs
             Widgets.layout(button,1,0,TableLayoutData.W);
             button.addSelectionListener(new SelectionListener()
             {
+              public void widgetDefaultSelected(SelectionEvent selectionEvent)
+              {
+              }
               public void widgetSelected(SelectionEvent selectionEvent)
               {
                 Button  widget      = (Button)selectionEvent.widget;
                 boolean checkedFlag = widget.getSelection();
                 waitFirstVolume.set(checkedFlag);
                 BARServer.setOption(selectedJobId,"wait-first-volume",checkedFlag);
-              }
-              public void widgetDefaultSelected(SelectionEvent selectionEvent)
-              {
               }
             });
             Widgets.addModifyListener(new WidgetModifyListener(button,waitFirstVolume));
@@ -4290,6 +4290,9 @@ class TabJobs
             Widgets.layout(button,0,1,TableLayoutData.DEFAULT);
             button.addSelectionListener(new SelectionListener()
             {
+              public void widgetDefaultSelected(SelectionEvent selectionEvent)
+              {
+              }
               public void widgetSelected(SelectionEvent selectionEvent)
               {
                 Button widget   = (Button)selectionEvent.widget;
@@ -4303,9 +4306,6 @@ class TabJobs
                 {
                   storageDeviceName.set(fileName);
                 }
-              }
-              public void widgetDefaultSelected(SelectionEvent selectionEvent)
-              {
               }
             });
           }
@@ -4439,6 +4439,9 @@ class TabJobs
         });
         SelectionListener scheduleListColumnSelectionListener = new SelectionListener()
         {
+          public void widgetDefaultSelected(SelectionEvent selectionEvent)
+          {
+          }
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             TableColumn            tableColumn = (TableColumn)selectionEvent.widget;
@@ -4447,9 +4450,6 @@ class TabJobs
             {
               Widgets.sortTableColumn(widgetScheduleList,tableColumn,scheduleDataComparator);
             }
-          }
-          public void widgetDefaultSelected(SelectionEvent selectionEvent)
-          {
           }
         };
         tableColumn = Widgets.addTableColumn(widgetScheduleList,0,"Date",     SWT.LEFT,100,false);
@@ -4472,39 +4472,39 @@ class TabJobs
           menuItem = Widgets.addMenuItem(menu,"Add...");
           menuItem.addSelectionListener(new SelectionListener()
           {
+            public void widgetDefaultSelected(SelectionEvent selectionEvent)
+            {
+            }
             public void widgetSelected(SelectionEvent selectionEvent)
             {
               MenuItem widget = (MenuItem)selectionEvent.widget;
               scheduleNew();
-            }
-            public void widgetDefaultSelected(SelectionEvent selectionEvent)
-            {
             }
           });
 
           menuItem = Widgets.addMenuItem(menu,"Edit...");
           menuItem.addSelectionListener(new SelectionListener()
           {
+            public void widgetDefaultSelected(SelectionEvent selectionEvent)
+            {
+            }
             public void widgetSelected(SelectionEvent selectionEvent)
             {
               MenuItem widget = (MenuItem)selectionEvent.widget;
               scheduleEdit();
-            }
-            public void widgetDefaultSelected(SelectionEvent selectionEvent)
-            {
             }
           });
 
           menuItem = Widgets.addMenuItem(menu,"Remove");
           menuItem.addSelectionListener(new SelectionListener()
           {
+            public void widgetDefaultSelected(SelectionEvent selectionEvent)
+            {
+            }
             public void widgetSelected(SelectionEvent selectionEvent)
             {
               MenuItem widget = (MenuItem)selectionEvent.widget;
               scheduleDelete();
-            }
-            public void widgetDefaultSelected(SelectionEvent selectionEvent)
-            {
             }
           });
         }
@@ -4519,13 +4519,13 @@ class TabJobs
           Widgets.layout(button,0,0,TableLayoutData.DEFAULT,0,0,0,0,60,SWT.DEFAULT);
           button.addSelectionListener(new SelectionListener()
           {
+            public void widgetDefaultSelected(SelectionEvent selectionEvent)
+            {
+            }
             public void widgetSelected(SelectionEvent selectionEvent)
             {
               Button widget = (Button)selectionEvent.widget;
               scheduleNew();
-            }
-            public void widgetDefaultSelected(SelectionEvent selectionEvent)
-            {
             }
           });
           button.setToolTipText("Add new schedule entry.");
@@ -4534,13 +4534,13 @@ class TabJobs
           Widgets.layout(button,0,1,TableLayoutData.DEFAULT,0,0,0,0,60,SWT.DEFAULT);
           button.addSelectionListener(new SelectionListener()
           {
+            public void widgetDefaultSelected(SelectionEvent selectionEvent)
+            {
+            }
             public void widgetSelected(SelectionEvent selectionEvent)
             {
               Button widget = (Button)selectionEvent.widget;
               scheduleEdit();
-            }
-            public void widgetDefaultSelected(SelectionEvent selectionEvent)
-            {
             }
           });
           button.setToolTipText("Edit schedule entry.");
@@ -4549,13 +4549,13 @@ class TabJobs
           Widgets.layout(button,0,2,TableLayoutData.DEFAULT,0,0,0,0,60,SWT.DEFAULT);
           button.addSelectionListener(new SelectionListener()
           {
+            public void widgetDefaultSelected(SelectionEvent selectionEvent)
+            {
+            }
             public void widgetSelected(SelectionEvent selectionEvent)
             {
               Button widget = (Button)selectionEvent.widget;
               scheduleDelete();
-            }
-            public void widgetDefaultSelected(SelectionEvent selectionEvent)
-            {
             }
           });
           button.setToolTipText("Remove schedule entry.");
@@ -4816,13 +4816,13 @@ class TabJobs
       Widgets.layout(button,0,1,TableLayoutData.E,0,0,0,0,60,SWT.DEFAULT);
       button.addSelectionListener(new SelectionListener()
       {
+        public void widgetDefaultSelected(SelectionEvent selectionEvent)
+        {
+        }
         public void widgetSelected(SelectionEvent selectionEvent)
         {
           Button widget = (Button)selectionEvent.widget;
           widget.getShell().close();
-        }
-        public void widgetDefaultSelected(SelectionEvent selectionEvent)
-        {
         }
       });
     }
@@ -4841,6 +4841,9 @@ throw new Error("NYI");
     });
     widgetAdd.addSelectionListener(new SelectionListener()
     {
+      public void widgetDefaultSelected(SelectionEvent selectionEvent)
+      {
+      }
       public void widgetSelected(SelectionEvent selectionEvent)
       {
         Button widget  = (Button)selectionEvent.widget;
@@ -4867,9 +4870,6 @@ throw new Error("NYI");
           }
         }
         widget.getShell().close();
-      }
-      public void widgetDefaultSelected(SelectionEvent selectionEvent)
-      {
       }
     });
 
@@ -4912,13 +4912,13 @@ throw new Error("NYI");
       Widgets.layout(button,0,1,TableLayoutData.E,0,0,0,0,60,SWT.DEFAULT);
       button.addSelectionListener(new SelectionListener()
       {
+        public void widgetDefaultSelected(SelectionEvent selectionEvent)
+        {
+        }
         public void widgetSelected(SelectionEvent selectionEvent)
         {
           Button widget = (Button)selectionEvent.widget;
           widget.getShell().close();
-        }
-        public void widgetDefaultSelected(SelectionEvent selectionEvent)
-        {
         }
       });
     }
@@ -4937,6 +4937,9 @@ throw new Error("NYI");
     });
     widgetCopy.addSelectionListener(new SelectionListener()
     {
+      public void widgetDefaultSelected(SelectionEvent selectionEvent)
+      {
+      }
       public void widgetSelected(SelectionEvent selectionEvent)
       {
         Button widget  = (Button)selectionEvent.widget;
@@ -4963,9 +4966,6 @@ throw new Error("NYI");
           }
         }
         widget.getShell().close();
-      }
-      public void widgetDefaultSelected(SelectionEvent selectionEvent)
-      {
       }
     });
 
@@ -5018,13 +5018,13 @@ throw new Error("NYI");
       Widgets.layout(button,0,1,TableLayoutData.E);
       button.addSelectionListener(new SelectionListener()
       {
+        public void widgetDefaultSelected(SelectionEvent selectionEvent)
+        {
+        }
         public void widgetSelected(SelectionEvent selectionEvent)
         {
           Button widget = (Button)selectionEvent.widget;
           widget.getShell().close();
-        }
-        public void widgetDefaultSelected(SelectionEvent selectionEvent)
-        {
         }
       });
     }
@@ -5043,6 +5043,9 @@ throw new Error("NYI");
     });
     widgetRename.addSelectionListener(new SelectionListener()
     {
+      public void widgetDefaultSelected(SelectionEvent selectionEvent)
+      {
+      }
       public void widgetSelected(SelectionEvent selectionEvent)
       {
         Button widget     = (Button)selectionEvent.widget;
@@ -5069,9 +5072,6 @@ throw new Error("NYI");
           }
         }
         widget.getShell().close();
-      }
-      public void widgetDefaultSelected(SelectionEvent selectionEvent)
-      {
       }
     });
 
@@ -5851,13 +5851,13 @@ Dprintf.dprintf("name=%s %s",name,includeHashMap.containsKey(name));
         Widgets.layout(button,0,0,TableLayoutData.W);
         button.addSelectionListener(new SelectionListener()
         {
+          public void widgetDefaultSelected(SelectionEvent selectionEvent)
+          {
+          }
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             Button widget = (Button)selectionEvent.widget;
             entryType[0] = EntryTypes.FILE;
-          }
-          public void widgetDefaultSelected(SelectionEvent selectionEvent)
-          {
           }
         });
         button = Widgets.newRadio(subComposite,"image");
@@ -5865,13 +5865,13 @@ Dprintf.dprintf("name=%s %s",name,includeHashMap.containsKey(name));
         Widgets.layout(button,0,1,TableLayoutData.W);
         button.addSelectionListener(new SelectionListener()
         {
+          public void widgetDefaultSelected(SelectionEvent selectionEvent)
+          {
+          }
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             Button widget = (Button)selectionEvent.widget;
             entryType[0] = EntryTypes.IMAGE;
-          }
-          public void widgetDefaultSelected(SelectionEvent selectionEvent)
-          {
           }
         });
       }
@@ -5889,13 +5889,13 @@ Dprintf.dprintf("name=%s %s",name,includeHashMap.containsKey(name));
       Widgets.layout(button,0,1,TableLayoutData.E,0,0,0,0,60,SWT.DEFAULT);
       button.addSelectionListener(new SelectionListener()
       {
+        public void widgetDefaultSelected(SelectionEvent selectionEvent)
+        {
+        }
         public void widgetSelected(SelectionEvent selectionEvent)
         {
           Button widget = (Button)selectionEvent.widget;
           Dialogs.close(dialog,false);
-        }
-        public void widgetDefaultSelected(SelectionEvent selectionEvent)
-        {
         }
       });
     }
@@ -5914,14 +5914,14 @@ throw new Error("NYI");
     });
     widgetAdd.addSelectionListener(new SelectionListener()
     {
+      public void widgetDefaultSelected(SelectionEvent selectionEvent)
+      {
+      }
       public void widgetSelected(SelectionEvent selectionEvent)
       {
         Button widget = (Button)selectionEvent.widget;
         pattern[0] = widgetPattern.getText().trim();
         Dialogs.close(dialog,true);
-      }
-      public void widgetDefaultSelected(SelectionEvent selectionEvent)
-      {
       }
     });
 
@@ -5970,13 +5970,13 @@ throw new Error("NYI");
       Widgets.layout(button,0,1,TableLayoutData.E,0,0,0,0,60,SWT.DEFAULT);
       button.addSelectionListener(new SelectionListener()
       {
+        public void widgetDefaultSelected(SelectionEvent selectionEvent)
+        {
+        }
         public void widgetSelected(SelectionEvent selectionEvent)
         {
           Button widget = (Button)selectionEvent.widget;
           Dialogs.close(dialog,false);
-        }
-        public void widgetDefaultSelected(SelectionEvent selectionEvent)
-        {
         }
       });
     }
@@ -5995,14 +5995,14 @@ throw new Error("NYI");
     });
     widgetAdd.addSelectionListener(new SelectionListener()
     {
+      public void widgetDefaultSelected(SelectionEvent selectionEvent)
+      {
+      }
       public void widgetSelected(SelectionEvent selectionEvent)
       {
         Button widget = (Button)selectionEvent.widget;
         pattern[0] = widgetPattern.getText();
         Dialogs.close(dialog,true);
-      }
-      public void widgetDefaultSelected(SelectionEvent selectionEvent)
-      {
       }
     });
 
@@ -6051,13 +6051,13 @@ throw new Error("NYI");
       Widgets.layout(button,0,1,TableLayoutData.E,0,0,0,0,60,SWT.DEFAULT);
       button.addSelectionListener(new SelectionListener()
       {
+        public void widgetDefaultSelected(SelectionEvent selectionEvent)
+        {
+        }
         public void widgetSelected(SelectionEvent selectionEvent)
         {
           Button widget = (Button)selectionEvent.widget;
           Dialogs.close(dialog,false);
-        }
-        public void widgetDefaultSelected(SelectionEvent selectionEvent)
-        {
         }
       });
     }
@@ -6076,14 +6076,14 @@ throw new Error("NYI");
     });
     widgetAdd.addSelectionListener(new SelectionListener()
     {
+      public void widgetDefaultSelected(SelectionEvent selectionEvent)
+      {
+      }
       public void widgetSelected(SelectionEvent selectionEvent)
       {
         Button widget = (Button)selectionEvent.widget;
         pattern[0] = widgetPattern.getText();
         Dialogs.close(dialog,true);
-      }
-      public void widgetDefaultSelected(SelectionEvent selectionEvent)
-      {
       }
     });
 
@@ -7210,13 +7210,13 @@ throw new Error("NYI");
       Widgets.layout(button,0,1,TableLayoutData.E,0,0,0,0,60,SWT.DEFAULT);
       button.addSelectionListener(new SelectionListener()
       {
+        public void widgetDefaultSelected(SelectionEvent selectionEvent)
+        {
+        }
         public void widgetSelected(SelectionEvent selectionEvent)
         {
           Button widget = (Button)selectionEvent.widget;
           Dialogs.close(dialog,false);
-        }
-        public void widgetDefaultSelected(SelectionEvent selectionEvent)
-        {
         }
       });
     }
@@ -7224,14 +7224,14 @@ throw new Error("NYI");
     // add selection listeners
     widgetSave.addSelectionListener(new SelectionListener()
     {
+      public void widgetDefaultSelected(SelectionEvent selectionEvent)
+      {
+      }
       public void widgetSelected(SelectionEvent selectionEvent)
       {
         Button widget = (Button)selectionEvent.widget;
         storageFileName.set(storageFileNameEditor.getFileName());
         Dialogs.close(dialog,true);
-      }
-      public void widgetDefaultSelected(SelectionEvent selectionEvent)
-      {
       }
     });
 
@@ -7494,13 +7494,13 @@ throw new Error("NYI");
       Widgets.layout(button,0,1,TableLayoutData.E,0,0,0,0,60,SWT.DEFAULT);
       button.addSelectionListener(new SelectionListener()
       {
+        public void widgetDefaultSelected(SelectionEvent selectionEvent)
+        {
+        }
         public void widgetSelected(SelectionEvent selectionEvent)
         {
           Button widget = (Button)selectionEvent.widget;
           Dialogs.close(dialog,false);
-        }
-        public void widgetDefaultSelected(SelectionEvent selectionEvent)
-        {
         }
       });
     }
@@ -7521,6 +7521,9 @@ throw new Error("NYI");
 */
     widgetAdd.addSelectionListener(new SelectionListener()
     {
+      public void widgetDefaultSelected(SelectionEvent selectionEvent)
+      {
+      }
       public void widgetSelected(SelectionEvent selectionEvent)
       {
         Button widget = (Button)selectionEvent.widget;
@@ -7542,9 +7545,6 @@ throw new Error("NYI");
         else                                            scheduleData.type = "*";
 
         Dialogs.close(dialog,true);
-      }
-      public void widgetDefaultSelected(SelectionEvent selectionEvent)
-      {
       }
     });
 
