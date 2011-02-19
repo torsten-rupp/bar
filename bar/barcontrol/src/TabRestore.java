@@ -1200,6 +1200,9 @@ class TabRestore
       Widgets.layout(widgetStorageList,0,0,TableLayoutData.NSWE);
       SelectionListener storageListColumnSelectionListener = new SelectionListener()
       {
+        public void widgetDefaultSelected(SelectionEvent selectionEvent)
+        {
+        }
         public void widgetSelected(SelectionEvent selectionEvent)
         {
           TableColumn           tableColumn           = (TableColumn)selectionEvent.widget;
@@ -1208,9 +1211,6 @@ class TabRestore
           {
             Widgets.sortTableColumn(widgetStorageList,tableColumn,storageDataComparator);
           }
-        }
-        public void widgetDefaultSelected(SelectionEvent selectionEvent)
-        {
         }
       };
       tableColumn = Widgets.addTableColumn(widgetStorageList,0,"Name",    SWT.LEFT, 450,true);
@@ -1243,6 +1243,9 @@ class TabRestore
       });
       widgetStorageList.addSelectionListener(new SelectionListener()
       {
+        public void widgetDefaultSelected(SelectionEvent selectionEvent)
+        {
+        }
         public void widgetSelected(SelectionEvent selectionEvent)
         {
           TableItem tableItem = (TableItem)selectionEvent.item;
@@ -1253,9 +1256,6 @@ class TabRestore
           }
 
           taggedStorageEvent.trigger();
-        }
-        public void widgetDefaultSelected(SelectionEvent selectionEvent)
-        {
         }
       });
       widgetStorageList.addMouseTrackListener(new MouseTrackListener()
@@ -1372,52 +1372,52 @@ class TabRestore
         menuItem = Widgets.addMenuItem(menu,"Add...");
         menuItem.addSelectionListener(new SelectionListener()
         {
+          public void widgetDefaultSelected(SelectionEvent selectionEvent)
+          {
+          }
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             MenuItem widget = (MenuItem)selectionEvent.widget;
             addStorageIndex();
-          }
-          public void widgetDefaultSelected(SelectionEvent selectionEvent)
-          {
           }
         });
 
         menuItem = Widgets.addMenuItem(menu,"Remove...");
         menuItem.addSelectionListener(new SelectionListener()
         {
+          public void widgetDefaultSelected(SelectionEvent selectionEvent)
+          {
+          }
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             MenuItem widget = (MenuItem)selectionEvent.widget;
             removeStorageIndex();
-          }
-          public void widgetDefaultSelected(SelectionEvent selectionEvent)
-          {
           }
         });
 
         menuItem = Widgets.addMenuItem(menu,"Refresh...");
         menuItem.addSelectionListener(new SelectionListener()
         {
+          public void widgetDefaultSelected(SelectionEvent selectionEvent)
+          {
+          }
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             MenuItem widget = (MenuItem)selectionEvent.widget;
             refreshStorageIndex();
-          }
-          public void widgetDefaultSelected(SelectionEvent selectionEvent)
-          {
           }
         });
 
         menuItem = Widgets.addMenuItem(menu,"Refresh all with error...");
         menuItem.addSelectionListener(new SelectionListener()
         {
+          public void widgetDefaultSelected(SelectionEvent selectionEvent)
+          {
+          }
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             MenuItem widget = (MenuItem)selectionEvent.widget;
             refreshAllWithErrorStorageIndex();
-          }
-          public void widgetDefaultSelected(SelectionEvent selectionEvent)
-          {
           }
         });
 
@@ -1426,26 +1426,26 @@ class TabRestore
         menuItem = Widgets.addMenuItem(menu,"Mark all");
         menuItem.addSelectionListener(new SelectionListener()
         {
+          public void widgetDefaultSelected(SelectionEvent selectionEvent)
+          {
+          }
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             MenuItem widget = (MenuItem)selectionEvent.widget;
             setTaggedStorage(true);
-          }
-          public void widgetDefaultSelected(SelectionEvent selectionEvent)
-          {
           }
         });
 
         menuItem = Widgets.addMenuItem(menu,"Unmark all");
         menuItem.addSelectionListener(new SelectionListener()
         {
+          public void widgetDefaultSelected(SelectionEvent selectionEvent)
+          {
+          }
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             MenuItem widget = (MenuItem)selectionEvent.widget;
             setTaggedStorage(false);
-          }
-          public void widgetDefaultSelected(SelectionEvent selectionEvent)
-          {
           }
         });
 
@@ -1461,6 +1461,9 @@ class TabRestore
         });
         menuItem.addSelectionListener(new SelectionListener()
         {
+          public void widgetDefaultSelected(SelectionEvent selectionEvent)
+          {
+          }
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             MenuItem widget = (MenuItem)selectionEvent.widget;
@@ -1468,9 +1471,6 @@ class TabRestore
                             widgetRestoreTo.getSelection() ? widgetRestoreToDirectory.getText() : "",
                             widgetOverwriteEntries.getSelection()
                            );
-          }
-          public void widgetDefaultSelected(SelectionEvent selectionEvent)
-          {
           }
         });
       }
@@ -1502,6 +1502,9 @@ class TabRestore
         });
         button.addSelectionListener(new SelectionListener()
         {
+          public void widgetDefaultSelected(SelectionEvent selectionEvent)
+          {
+          }
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             Button button = (Button)selectionEvent.widget;
@@ -1518,16 +1521,13 @@ class TabRestore
               button.setToolTipText("Unmark all entries in list.");
             }
           }
-          public void widgetDefaultSelected(SelectionEvent selectionEvent)
-          {
-          }
         });
         button.setToolTipText("Mark all entries in list.");
 
         label = Widgets.newLabel(composite,"Filter:");
         Widgets.layout(label,0,1,TableLayoutData.W);
 
-        widgetStoragePattern = Widgets.newText(composite);
+        widgetStoragePattern = Widgets.newText(composite,SWT.SEARCH|SWT.ICON_CANCEL);
         Widgets.layout(widgetStoragePattern,0,2,TableLayoutData.WE);
         widgetStoragePattern.addSelectionListener(new SelectionListener()
         {
@@ -1567,31 +1567,18 @@ class TabRestore
         });
         widgetStoragePattern.setToolTipText("Enter filter pattern for storage list. Wildcards: * and ?.");
 
-        button = Widgets.newButton(composite,IMAGE_CLEAR);
-        Widgets.layout(button,0,3,TableLayoutData.W);
-        button.addSelectionListener(new SelectionListener()
-        {
-          public void widgetSelected(SelectionEvent selectionEvent)
-          {
-            Button widget = (Button)selectionEvent.widget;
-            widgetStoragePattern.setText("");
-            setStoragePattern("");
-          }
-          public void widgetDefaultSelected(SelectionEvent selectionEvent)
-          {
-          }
-        });
-        button.setToolTipText("Clear storage filter pattern.");
-
         label = Widgets.newLabel(composite,"State:");
-        Widgets.layout(label,0,4,TableLayoutData.W);
+        Widgets.layout(label,0,3,TableLayoutData.W);
 
         widgetStorageStateFilter = Widgets.newOptionMenu(composite);
         widgetStorageStateFilter.setItems(new String[]{"*","ok","error","update","update requested"});
         widgetStorageStateFilter.setText("*");
-        Widgets.layout(widgetStorageStateFilter,0,5,TableLayoutData.W);
+        Widgets.layout(widgetStorageStateFilter,0,4,TableLayoutData.W);
         widgetStorageStateFilter.addSelectionListener(new SelectionListener()
         {
+          public void widgetDefaultSelected(SelectionEvent selectionEvent)
+          {
+          }
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             Combo widget = (Combo)selectionEvent.widget;
@@ -1605,35 +1592,32 @@ class TabRestore
             else                                                          indexState = IndexStates.UNKNOWN;
             updateStorageListThread.triggerUpdate(widgetStoragePattern.getText(),indexState);
           }
-          public void widgetDefaultSelected(SelectionEvent selectionEvent)
-          {
-          }
         });
         widgetStorageStateFilter.setToolTipText("Storage states filter.");
 
         label = Widgets.newLabel(composite,"Max:");
-        Widgets.layout(label,0,6,TableLayoutData.W);
+        Widgets.layout(label,0,5,TableLayoutData.W);
 
         widgetStorageMaxCount = Widgets.newOptionMenu(composite);
         widgetStorageMaxCount.setItems(new String[]{"10","50","100","500","1000"});
         widgetStorageMaxCount.setText("100");
-        Widgets.layout(widgetStorageMaxCount,0,7,TableLayoutData.W);
+        Widgets.layout(widgetStorageMaxCount,0,6,TableLayoutData.W);
         widgetStorageMaxCount.addSelectionListener(new SelectionListener()
         {
+          public void widgetDefaultSelected(SelectionEvent selectionEvent)
+          {
+          }
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             Combo widget = (Combo)selectionEvent.widget;
             updateStorageListThread.triggerUpdate(Integer.parseInt(widget.getText()));
-          }
-          public void widgetDefaultSelected(SelectionEvent selectionEvent)
-          {
           }
         });
         widgetStorageMaxCount.setToolTipText("Max. number of entries in list.");
 
         button = Widgets.newButton(composite,"Restore");
         button.setEnabled(false);
-        Widgets.layout(button,0,8,TableLayoutData.DEFAULT,0,0,0,0,60,SWT.DEFAULT);
+        Widgets.layout(button,0,7,TableLayoutData.DEFAULT,0,0,0,0,60,SWT.DEFAULT);
         Widgets.addEventListener(new WidgetEventListener(button,taggedStorageEvent)
         {
           public void trigger(Control control)
@@ -1643,6 +1627,9 @@ class TabRestore
         });
         button.addSelectionListener(new SelectionListener()
         {
+          public void widgetDefaultSelected(SelectionEvent selectionEvent)
+          {
+          }
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             Button widget = (Button)selectionEvent.widget;
@@ -1650,9 +1637,6 @@ class TabRestore
                             widgetRestoreTo.getSelection() ? widgetRestoreToDirectory.getText() : "",
                             widgetOverwriteEntries.getSelection()
                            );
-          }
-          public void widgetDefaultSelected(SelectionEvent selectionEvent)
-          {
           }
         });
         button.setToolTipText("Start restoring selected archives.");
@@ -1668,6 +1652,9 @@ class TabRestore
       Widgets.layout(widgetEntryList,0,0,TableLayoutData.NSWE);
       SelectionListener entryListColumnSelectionListener = new SelectionListener()
       {
+        public void widgetDefaultSelected(SelectionEvent selectionEvent)
+        {
+        }
         public void widgetSelected(SelectionEvent selectionEvent)
         {
           TableColumn         tableColumn         = (TableColumn)selectionEvent.widget;
@@ -1678,9 +1665,6 @@ class TabRestore
             Widgets.sortTableColumn(widgetEntryList,tableColumn,entryDataComparator);
             shell.setCursor(null);
           }
-        }
-        public void widgetDefaultSelected(SelectionEvent selectionEvent)
-        {
         }
       };
       tableColumn = Widgets.addTableColumn(widgetEntryList,0,"Archive",       SWT.LEFT, 200,true );
@@ -1719,6 +1703,9 @@ class TabRestore
       });
       widgetEntryList.addSelectionListener(new SelectionListener()
       {
+        public void widgetDefaultSelected(SelectionEvent selectionEvent)
+        {
+        }
         public void widgetSelected(SelectionEvent selectionEvent)
         {
           TableItem tableItem = (TableItem)selectionEvent.item;
@@ -1729,9 +1716,6 @@ class TabRestore
           }
 
           taggedEntryEvent.trigger();
-        }
-        public void widgetDefaultSelected(SelectionEvent selectionEvent)
-        {
         }
       });
       widgetEntryList.addMouseTrackListener(new MouseTrackListener()
@@ -1862,26 +1846,26 @@ class TabRestore
         menuItem = Widgets.addMenuItem(menu,"Mark all");
         menuItem.addSelectionListener(new SelectionListener()
         {
+          public void widgetDefaultSelected(SelectionEvent selectionEvent)
+          {
+          }
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             MenuItem widget = (MenuItem)selectionEvent.widget;
             setTaggedEntries(true);
-          }
-          public void widgetDefaultSelected(SelectionEvent selectionEvent)
-          {
           }
         });
 
         menuItem = Widgets.addMenuItem(menu,"Unmark all");
         menuItem.addSelectionListener(new SelectionListener()
         {
+          public void widgetDefaultSelected(SelectionEvent selectionEvent)
+          {
+          }
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             MenuItem widget = (MenuItem)selectionEvent.widget;
             setTaggedEntries(false);
-          }
-          public void widgetDefaultSelected(SelectionEvent selectionEvent)
-          {
           }
         });
 
@@ -1898,6 +1882,9 @@ class TabRestore
         });
         menuItem.addSelectionListener(new SelectionListener()
         {
+          public void widgetDefaultSelected(SelectionEvent selectionEvent)
+          {
+          }
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             MenuItem widget = (MenuItem)selectionEvent.widget;
@@ -1905,9 +1892,6 @@ class TabRestore
                            widgetRestoreTo.getSelection() ? widgetRestoreToDirectory.getText() : "",
                            widgetOverwriteEntries.getSelection()
                           );
-          }
-          public void widgetDefaultSelected(SelectionEvent selectionEvent)
-          {
           }
         });
       }
@@ -1939,6 +1923,9 @@ class TabRestore
         });
         button.addSelectionListener(new SelectionListener()
         {
+          public void widgetDefaultSelected(SelectionEvent selectionEvent)
+          {
+          }
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             Button button = (Button)selectionEvent.widget;
@@ -1955,16 +1942,13 @@ class TabRestore
               button.setToolTipText("Unmark all entries in list.");
             }
           }
-          public void widgetDefaultSelected(SelectionEvent selectionEvent)
-          {
-          }
         });
         button.setToolTipText("Mark all entries in list.");
 
         label = Widgets.newLabel(composite,"Filter:");
         Widgets.layout(label,0,1,TableLayoutData.W);
 
-        widgetEntryPattern = Widgets.newText(composite);
+        widgetEntryPattern = Widgets.newText(composite,SWT.SEARCH|SWT.ICON_CANCEL);
         Widgets.layout(widgetEntryPattern,0,2,TableLayoutData.WE);
         widgetEntryPattern.addSelectionListener(new SelectionListener()
         {
@@ -2004,62 +1988,46 @@ class TabRestore
         });
         widgetEntryPattern.setToolTipText("Enter filter pattern for entry list. Wildcards: * and ?.");
 
-        button = Widgets.newButton(composite,IMAGE_CLEAR);
+        button = Widgets.newCheckbox(composite,"newest entries only");
+        button.setSelection(newestEntriesOnlyFlag);
         Widgets.layout(button,0,3,TableLayoutData.W);
         button.addSelectionListener(new SelectionListener()
         {
-          public void widgetSelected(SelectionEvent selectionEvent)
-          {
-            Button widget = (Button)selectionEvent.widget;
-            widgetEntryPattern.setText("");
-            setEntryPattern("");
-          }
           public void widgetDefaultSelected(SelectionEvent selectionEvent)
           {
           }
-        });
-        button.setToolTipText("Clear filter entry pattern.");
-
-        button = Widgets.newCheckbox(composite,"newest entries only");
-        button.setSelection(newestEntriesOnlyFlag);
-        Widgets.layout(button,0,4,TableLayoutData.W);
-        button.addSelectionListener(new SelectionListener()
-        {
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             Button  widget = (Button)selectionEvent.widget;
             newestEntriesOnlyFlag = widget.getSelection();
             updateEntryListThread.triggerUpdate(entryPattern);
           }
-          public void widgetDefaultSelected(SelectionEvent selectionEvent)
-          {
-          }
         });
         button.setToolTipText("When this checkbox is enabled, only show newest entry instances and hide all older entry instances.");
 
         label = Widgets.newLabel(composite,"Max:");
-        Widgets.layout(label,0,5,TableLayoutData.W);
+        Widgets.layout(label,0,4,TableLayoutData.W);
 
         widgetEntryMaxCount = Widgets.newOptionMenu(composite);
         widgetEntryMaxCount.setItems(new String[]{"10","50","100","500","1000"});
         widgetEntryMaxCount.setText("100");
-        Widgets.layout(widgetEntryMaxCount,0,6,TableLayoutData.W);
+        Widgets.layout(widgetEntryMaxCount,0,5,TableLayoutData.W);
         widgetEntryMaxCount.addSelectionListener(new SelectionListener()
         {
+          public void widgetDefaultSelected(SelectionEvent selectionEvent)
+          {
+          }
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             Combo widget = (Combo)selectionEvent.widget;
             updateEntryListThread.triggerUpdate(Integer.parseInt(widget.getText()));
-          }
-          public void widgetDefaultSelected(SelectionEvent selectionEvent)
-          {
           }
         });
         widgetEntryMaxCount.setToolTipText("Max. number of entries in list.");
 
         button = Widgets.newButton(composite,"Restore");
         button.setEnabled(false);
-        Widgets.layout(button,0,7,TableLayoutData.DEFAULT,0,0,0,0,60,SWT.DEFAULT);
+        Widgets.layout(button,0,6,TableLayoutData.DEFAULT,0,0,0,0,60,SWT.DEFAULT);
         Widgets.addEventListener(new WidgetEventListener(button,taggedEntryEvent)
         {
           public void trigger(Control control)
@@ -2069,6 +2037,9 @@ class TabRestore
         });
         button.addSelectionListener(new SelectionListener()
         {
+          public void widgetDefaultSelected(SelectionEvent selectionEvent)
+          {
+          }
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             Button widget = (Button)selectionEvent.widget;
@@ -2076,9 +2047,6 @@ class TabRestore
                            widgetRestoreTo.getSelection() ? widgetRestoreToDirectory.getText() : "",
                            widgetOverwriteEntries.getSelection()
                           );
-          }
-          public void widgetDefaultSelected(SelectionEvent selectionEvent)
-          {
           }
         });
         button.setToolTipText("Start restoring selected entries.");
@@ -2094,15 +2062,15 @@ class TabRestore
       Widgets.layout(widgetRestoreTo,0,0,TableLayoutData.W);
       widgetRestoreTo.addSelectionListener(new SelectionListener()
       {
+        public void widgetDefaultSelected(SelectionEvent selectionEvent)
+        {
+        }
         public void widgetSelected(SelectionEvent selectionEvent)
         {
           Button  widget      = (Button)selectionEvent.widget;
           boolean checkedFlag = widget.getSelection();
           widgetRestoreTo.setSelection(checkedFlag);
           selectRestoreToEvent.trigger();
-        }
-        public void widgetDefaultSelected(SelectionEvent selectionEvent)
-        {
         }
       });
       widgetRestoreTo.setToolTipText("Enable this checkbox and select a directory to restore entries to different directory.");
@@ -2122,6 +2090,9 @@ class TabRestore
       Widgets.layout(button,0,2,TableLayoutData.DEFAULT);
       button.addSelectionListener(new SelectionListener()
       {
+        public void widgetDefaultSelected(SelectionEvent selectionEvent)
+        {
+        }
         public void widgetSelected(SelectionEvent selectionEvent)
         {
           Button widget = (Button)selectionEvent.widget;
@@ -2135,9 +2106,6 @@ class TabRestore
             selectRestoreToEvent.trigger();
             widgetRestoreToDirectory.setText(pathName);
           }
-        }
-        public void widgetDefaultSelected(SelectionEvent selectionEvent)
-        {
         }
       });
 
@@ -2353,6 +2321,9 @@ class TabRestore
       Widgets.layout(button,0,2,TableLayoutData.DEFAULT);
       button.addSelectionListener(new SelectionListener()
       {
+        public void widgetDefaultSelected(SelectionEvent selectionEvent)
+        {
+        }
         public void widgetSelected(SelectionEvent selectionEvent)
         {
           Button widget   = (Button)selectionEvent.widget;
@@ -2367,9 +2338,6 @@ class TabRestore
           {
             widgetStorageName.setText(fileName);
           }
-        }
-        public void widgetDefaultSelected(SelectionEvent selectionEvent)
-        {
         }
       });
       button.setToolTipText("Select local storage file.");
@@ -2387,13 +2355,13 @@ class TabRestore
       Widgets.layout(button,0,1,TableLayoutData.E,0,0,0,0,60,SWT.DEFAULT);
       button.addSelectionListener(new SelectionListener()
       {
+        public void widgetDefaultSelected(SelectionEvent selectionEvent)
+        {
+        }
         public void widgetSelected(SelectionEvent selectionEvent)
         {
           Button widget = (Button)selectionEvent.widget;
           Dialogs.close(dialog,null);
-        }
-        public void widgetDefaultSelected(SelectionEvent selectionEvent)
-        {
         }
       });
     }
@@ -2401,13 +2369,13 @@ class TabRestore
     // add selection listeners
     widgetAdd.addSelectionListener(new SelectionListener()
     {
+      public void widgetDefaultSelected(SelectionEvent selectionEvent)
+      {
+      }
       public void widgetSelected(SelectionEvent selectionEvent)
       {
         Button widget = (Button)selectionEvent.widget;
         Dialogs.close(dialog,widgetStorageName.getText());
-      }
-      public void widgetDefaultSelected(SelectionEvent selectionEvent)
-      {
       }
     });
 
