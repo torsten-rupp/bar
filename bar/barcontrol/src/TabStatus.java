@@ -375,6 +375,9 @@ class TabStatus
     Widgets.layout(widgetJobList,0,0,TableLayoutData.NSWE);
     widgetJobList.addSelectionListener(new SelectionListener()
     {
+      public void widgetDefaultSelected(SelectionEvent selectionEvent)
+      {
+      }
       public void widgetSelected(SelectionEvent selectionEvent)
       {
         Table     widget    = (Table)selectionEvent.widget;
@@ -383,12 +386,12 @@ class TabStatus
         if (tabJobs != null) tabJobs.selectJob(selectedJobData.name);
         widgetSelectedJob.setText("Selected '"+selectedJobData.name+"'");
       }
-      public void widgetDefaultSelected(SelectionEvent selectionEvent)
-      {
-      }
     });
     SelectionListener jobListColumnSelectionListener = new SelectionListener()
     {
+      public void widgetDefaultSelected(SelectionEvent selectionEvent)
+      {
+      }
       public void widgetSelected(SelectionEvent selectionEvent)
       {
         TableColumn       tableColumn       = (TableColumn)selectionEvent.widget;
@@ -397,9 +400,6 @@ class TabStatus
         {
           Widgets.sortTableColumn(widgetJobList,tableColumn,jobDataComparator);
         }
-      }
-      public void widgetDefaultSelected(SelectionEvent selectionEvent)
-      {
       }
     };
     tableColumn = Widgets.addTableColumn(widgetJobList,0,"Name",          SWT.LEFT, 110,true );
@@ -432,65 +432,65 @@ class TabStatus
       menuItem = Widgets.addMenuItem(menu,"Start");
       menuItem.addSelectionListener(new SelectionListener()
       {
+        public void widgetDefaultSelected(SelectionEvent selectionEvent)
+        {
+        }
         public void widgetSelected(SelectionEvent selectionEvent)
         {
           MenuItem widget = (MenuItem)selectionEvent.widget;
           jobStart();
-        }
-        public void widgetDefaultSelected(SelectionEvent selectionEvent)
-        {
         }
       });
 
       menuItem = Widgets.addMenuItem(menu,"Abort");
       menuItem.addSelectionListener(new SelectionListener()
       {
+        public void widgetDefaultSelected(SelectionEvent selectionEvent)
+        {
+        }
         public void widgetSelected(SelectionEvent selectionEvent)
         {
           MenuItem widget = (MenuItem)selectionEvent.widget;
           jobAbort();
-        }
-        public void widgetDefaultSelected(SelectionEvent selectionEvent)
-        {
         }
       });
 
       menuItem = Widgets.addMenuItem(menu,"Pause");
       menuItem.addSelectionListener(new SelectionListener()
       {
+        public void widgetDefaultSelected(SelectionEvent selectionEvent)
+        {
+        }
         public void widgetSelected(SelectionEvent selectionEvent)
         {
           MenuItem widget = (MenuItem)selectionEvent.widget;
           jobPause(60*60);
-        }
-        public void widgetDefaultSelected(SelectionEvent selectionEvent)
-        {
         }
       });
 
       menuItem = Widgets.addMenuItem(menu,"Continue");
       menuItem.addSelectionListener(new SelectionListener()
       {
+        public void widgetDefaultSelected(SelectionEvent selectionEvent)
+        {
+        }
         public void widgetSelected(SelectionEvent selectionEvent)
         {
           MenuItem widget = (MenuItem)selectionEvent.widget;
           jobSuspendContinue();
-        }
-        public void widgetDefaultSelected(SelectionEvent selectionEvent)
-        {
         }
       });
 
       menuItem = Widgets.addMenuItem(menu,"Volume");
       menuItem.addSelectionListener(new SelectionListener()
       {
+        public void widgetDefaultSelected(SelectionEvent selectionEvent)
+        {
+        }
         public void widgetSelected(SelectionEvent selectionEvent)
         {
           MenuItem widget = (MenuItem)selectionEvent.widget;
           volume();
-        }
-        public void widgetDefaultSelected(SelectionEvent selectionEvent)
-        {
         }
       });
     }
@@ -872,13 +872,13 @@ class TabStatus
       widgetButtonStart.setEnabled(false);
       widgetButtonStart.addSelectionListener(new SelectionListener()
       {
+        public void widgetDefaultSelected(SelectionEvent selectionEvent)
+        {
+        }
         public void widgetSelected(SelectionEvent selectionEvent)
         {
           Button widget = (Button)selectionEvent.widget;
           jobStart();
-        }
-        public void widgetDefaultSelected(SelectionEvent selectionEvent)
-        {
         }
       });
       widgetButtonStart.setToolTipText("Start selected job.");
@@ -888,13 +888,13 @@ class TabStatus
       widgetButtonAbort.setEnabled(false);
       widgetButtonAbort.addSelectionListener(new SelectionListener()
       {
+        public void widgetDefaultSelected(SelectionEvent selectionEvent)
+        {
+        }
         public void widgetSelected(SelectionEvent selectionEvent)
         {
           Button widget = (Button)selectionEvent.widget;
           jobAbort();
-        }
-        public void widgetDefaultSelected(SelectionEvent selectionEvent)
-        {
         }
       });
       widgetButtonAbort.setToolTipText("Abort selected job.");
@@ -903,13 +903,13 @@ class TabStatus
       Widgets.layout(widgetButtonPause,0,2,TableLayoutData.W,0,0,0,0,120,SWT.DEFAULT,SWT.DEFAULT,SWT.DEFAULT); // how to calculate correct min. width? ,0,0,Widgets.getTextSize(widgetButtonSuspendContinue,new String[]{"Puase [xxxxs]"}));
       widgetButtonPause.addSelectionListener(new SelectionListener()
       {
+        public void widgetDefaultSelected(SelectionEvent selectionEvent)
+        {
+        }
         public void widgetSelected(SelectionEvent selectionEvent)
         {
           Button widget = (Button)selectionEvent.widget;
           jobPause(60*60);
-        }
-        public void widgetDefaultSelected(SelectionEvent selectionEvent)
-        {
         }
       });
       widgetButtonPause.setToolTipText("Pause selected job for a specific time.");
@@ -918,13 +918,13 @@ class TabStatus
       Widgets.layout(widgetButtonSuspendContinue,0,3,TableLayoutData.W,0,0,0,0,80,SWT.DEFAULT,SWT.DEFAULT,SWT.DEFAULT); // how to calculate correct min. width? ,0,0,Widgets.getTextSize(widgetButtonSuspendContinue,new String[]{"Suspend","Continue"}));
       widgetButtonSuspendContinue.addSelectionListener(new SelectionListener()
       {
+        public void widgetDefaultSelected(SelectionEvent selectionEvent)
+        {
+        }
         public void widgetSelected(SelectionEvent selectionEvent)
         {
           Button widget = (Button)selectionEvent.widget;
           jobSuspendContinue();
-        }
-        public void widgetDefaultSelected(SelectionEvent selectionEvent)
-        {
         }
       });
       widgetButtonSuspendContinue.setToolTipText("Suspend selected job for an infinite time.");
@@ -934,13 +934,13 @@ class TabStatus
       widgetButtonVolume.setEnabled(false);
       widgetButtonVolume.addSelectionListener(new SelectionListener()
       {
+        public void widgetDefaultSelected(SelectionEvent selectionEvent)
+        {
+        }
         public void widgetSelected(SelectionEvent selectionEvent)
         {
           Button widget = (Button)selectionEvent.widget;
           volume();
-        }
-        public void widgetDefaultSelected(SelectionEvent selectionEvent)
-        {
         }
       });
       widgetButtonVolume.setToolTipText("Click when a new volume is available in drive.");
@@ -949,6 +949,9 @@ class TabStatus
       Widgets.layout(widgetButtonQuit,0,5,TableLayoutData.E,0,0,0,0,60,SWT.DEFAULT);
       widgetButtonQuit.addSelectionListener(new SelectionListener()
       {
+        public void widgetDefaultSelected(SelectionEvent selectionEvent)
+        {
+        }
         public void widgetSelected(SelectionEvent selectionEvent)
         {
           Button widget = (Button)selectionEvent.widget;
@@ -956,9 +959,6 @@ class TabStatus
           // send close-evemnt to shell
           Event event = new Event();
           shell.notifyListeners(SWT.Close,event);
-        }
-        public void widgetDefaultSelected(SelectionEvent selectionEvent)
-        {
         }
       });
       widgetButtonQuit.setToolTipText("Quit BARControl program.");
