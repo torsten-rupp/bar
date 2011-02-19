@@ -25,6 +25,9 @@
 /* bzip2 installed */
 #undef HAVE_BZ2
 
+/* fdatasync() available */
+#undef HAVE_FDATASYNC
+
 /* FTP installed */
 #undef HAVE_FTP
 
@@ -66,6 +69,9 @@
 
 /* Define to 1 if you have the <memory.h> header file. */
 #undef HAVE_MEMORY_H
+
+/* posix_fadvise() available */
+#undef HAVE_POSIX_FADVISE
 
 /* pthread_attr_setname() available */
 #undef HAVE_PTHREAD_ATTR_SETNAME
@@ -111,6 +117,12 @@
 
 /* Define to 1 if you have the <unistd.h> header file. */
 #undef HAVE_UNISTD_H
+
+/* xdelta installed */
+#undef HAVE_XDELTA
+
+/* xdelta3 installed */
+#undef HAVE_XDELTA3
 
 /* z installed */
 #undef HAVE_Z
