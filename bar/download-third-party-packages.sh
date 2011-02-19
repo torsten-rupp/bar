@@ -31,6 +31,7 @@ allFlag=1
 zlibFlag=0
 bzip2Flag=0
 lzmaFlag=0
+xdeltaFlag=0
 gcryptFlag=0
 ftplibFlag=0
 libssh2Flag=0
@@ -85,6 +86,10 @@ while test $# != 0; do
           allFlag=0
           lzmaFlag=1
           ;;
+        xdelta)
+          allFlag=0
+          xdeltaFlag=1
+          ;;
         gcrypt)
           allFlag=0
           gcryptFlag=1
@@ -131,6 +136,10 @@ while test $# != 0; do
       allFlag=0
       lzmaFlag=1
       ;;
+    xdelta)
+      allFlag=0
+      xdeltaFlag=1
+      ;;
     gcrypt)
       allFlag=0
       gcryptFlag=1
@@ -159,7 +168,7 @@ while test $# != 0; do
   shift
 done
 if test $helpFlag -eq 1; then
-  $ECHO "download-third-party-packages.sh [-d|--destination=<path>] [-n|--no-decompress] [-c|--clean] [--help] [all] [zlib] [bzip2] [lzma] [gcrypt] [ftplib] [libssh2] [gnutls] [epm]"
+  $ECHO "download-third-party-packages.sh [-d|--destination=<path>] [-n|--no-decompress] [-c|--clean] [--help] [all] [zlib] [bzip2] [lzma] [xdelta] [gcrypt] [ftplib] [libssh2] [gnutls] [epm]"
   $ECHO ""
   $ECHO "Download additional third party packages."
   exit 0
@@ -233,6 +242,27 @@ if test $cleanFlag -eq 0; then
     )
     if test $noDecompressFlag -eq 0; then
       $LN -f -s `find $tmpDirectory -type d -name "xz-*"` xz
+    fi
+  fi
+
+  if test $allFlag -eq 1 -o $xdeltaFlag -eq 1; then
+    # xdelta
+    (
+     if test -n "$destination"; then
+       cd $destination
+     else
+       cd $tmpDirectory
+     fi
+     if test ! -f xdelta3.0z.tar.gz; then
+       $WGET 'http://xdelta.googlecode.com/files/xdelta3.0z.tar.gz'
+     fi
+     if test $noDecompressFlag -eq 0; then
+       $TAR xzf xdelta3.0z.tar.gz
+       (cd xdelta3.0z; patch -p1 < ../../misc/xdelta3.0.patch)
+     fi
+    )
+    if test $noDecompressFlag -eq 0; then
+      $LN -f -s `find $tmpDirectory -type d -name "xdelta3*"` xdelta3
     fi
   fi
 
@@ -350,45 +380,68 @@ if test $cleanFlag -eq 0; then
 else
   # clean
 
-  # zlib
-  $RMF $tmpDirectory/zlib-*.tar.gz
-  $RMRF $tmpDirectory/zlib-*
-  $RMF zlib
+  if test $allFlag -eq 1 -o $zlibFlag -eq 1; then
+    # zlib
+    $RMF $tmpDirectory/zlib-*.tar.gz
+    $RMRF $tmpDirectory/zlib-*
+    $RMF zlib
+  fi
 
-  # bzip2
-  $RMF $tmpDirectory/bzip2-*.tar.gz
-  $RMRF $tmpDirectory/bzip2-*
-  $RMF bzip2
+  if test $allFlag -eq 1 -o $bzip2Flag -eq 1; then
+    # bzip2
+    $RMF $tmpDirectory/bzip2-*.tar.gz
+    $RMRF $tmpDirectory/bzip2-*
+    $RMF bzip2
+  fi
 
-  # lzma
-  $RMF `find $tmpDirectory -type f -name "xz-*.tar.gz" 2>/dev/null`
-  $RMRF `find $tmpDirectory -type d -name "xz-*" 2>/dev/null`
-  $RMF xz
+  if test $allFlag -eq 1 -o $lzmaFlag -eq 1; then
+    # lzma
+    $RMF `find $tmpDirectory -type f -name "xz-*.tar.gz" 2>/dev/null`
+    $RMRF `find $tmpDirectory -type d -name "xz-*" 2>/dev/null`
+    $RMF xz
+  fi
 
-  # gcrypt
-  $RMF $tmpDirectory/libgpg-error-*.tar.bz2 $tmpDirectory/libgcrypt-*.tar.bz2
-  $RMRF $tmpDirectory/libgpg-error-* $tmpDirectory/libgcrypt-*
-  $RMF libgpg-error libgcrypt
+  if test $allFlag -eq 1 -o $xdeltaFlag -eq 1; then
+    # xdelta
+    $RMF `find $tmpDirectory -type f -name "xdelta3*.tar.gz" 2>/dev/null`
+    $RMRF `find $tmpDirectory -type d -name "xdelta3*" 2>/dev/null`
+    $RMF xdelta
+  fi
 
-  # ftplib
-  $RMF $tmpDirectory/ftplib-*-src.tar.gz $tmpDirectory/ftplib-*.patch
-  $RMRF $tmpDirectory/ftplib-*
-  $RMF ftplib
+  if test $allFlag -eq 1 -o $gcryptFlag -eq 1; then
+    # gcrypt
+    $RMF $tmpDirectory/libgpg-error-*.tar.bz2 $tmpDirectory/libgcrypt-*.tar.bz2
+    $RMRF $tmpDirectory/libgpg-error-* $tmpDirectory/libgcrypt-*
+    $RMF libgpg-error libgcrypt
+  fi
 
-  # libssh2
-  $RMF $tmpDirectory/libssh2*.tar.gz
-  $RMRF $tmpDirectory/libssh2*
-  $RMF libssh2
+  if test $allFlag -eq 1 -o $ftplibFlag -eq 1; then
+    # ftplib
+    $RMF $tmpDirectory/ftplib-*-src.tar.gz $tmpDirectory/ftplib-*.patch
+    $RMRF $tmpDirectory/ftplib-*
+    $RMF ftplib
+  fi
 
-  # gnutls
-  $RMF $tmpDirectory/gnutls-*.tar.bz2
-  $RMRF $tmpDirectory/gnutls-*
-  $RMF gnutls
+  if test $allFlag -eq 1 -o $libssh2Flag -eq 1; then
+    # libssh2
+    $RMF $tmpDirectory/libssh2*.tar.gz
+    $RMRF $tmpDirectory/libssh2*
+    $RMF libssh2
+  fi
 
-  # epm
-  $RMF $tmpDirectory/epm-*.tar.bz2
-  $RMRF $tmpDirectory/epm-*
-  $RMF epm
+  if test $allFlag -eq 1 -o $gnutlsFlag -eq 1; then
+    # gnutls
+    $RMF $tmpDirectory/gnutls-*.tar.bz2
+    $RMRF $tmpDirectory/gnutls-*
+    $RMF gnutls
+  fi
+
+  if test $allFlag -eq 1 -o $epmFlag -eq 1; then
+    # epm
+    $RMF $tmpDirectory/epm-*.tar.bz2
+    $RMRF $tmpDirectory/epm-*
+    $RMF epm
+  fi
 fi
 
 exit 0
