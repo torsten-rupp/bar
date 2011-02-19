@@ -29,3 +29,6 @@ ToDo
 - support for rmt? (tape control tool)
 - support xdelta compression
 - barcontrol: file separator character
+- rename archive.? -> archives.?
+- remove "Function" in lists.h types
+- barcontrol: change *gif -> *png
