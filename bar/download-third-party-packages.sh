@@ -253,12 +253,12 @@ if test $cleanFlag -eq 0; then
      else
        cd $tmpDirectory
      fi
-     if test ! -f xdelta3.0z.tar.gz; then
-       $WGET 'http://xdelta.googlecode.com/files/xdelta3.0z.tar.gz'
+     if test ! -f xdelta3.0.0.tar.gz; then
+       $WGET 'http://xdelta.googlecode.com/files/xdelta3.0.0.tar.gz'
      fi
      if test $noDecompressFlag -eq 0; then
-       $TAR xzf xdelta3.0z.tar.gz
-       (cd xdelta3.0z; patch -p1 < ../../misc/xdelta3.0.patch)
+       $TAR xzf xdelta3.0.0.tar.gz
+       (cd xdelta3.0.0; patch -p1 < ../../misc/xdelta3.0.patch)
      fi
     )
     if test $noDecompressFlag -eq 0; then
