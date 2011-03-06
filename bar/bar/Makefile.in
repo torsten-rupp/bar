@@ -119,12 +119,14 @@ endif
 #---------------------------------- rules ------------------------------------
 
 # disable implicit rule for *.y -> *.c
-%.c:%.y
+%.c: %.y
 
-%.o:%.c
+# compile C source
+%.o: %.c
 	$(CC) $(CC_FLAGS) $(CC_OPTIMIZE) -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" $(foreach z,$(CC_DEFINES),-D$z) $(CC_WARN_FLAGS) $(foreach z,$(CC_INCLUDES),-I$z) -c $*.c -o $*.o
 
-%:%.o
+# link object files
+%: %.o
 	$(LD) $(LD_FLAGS) -o $@ $^ $(foreach z,$(LD_LIBRARY_PATHS),-L$z) \
           $(foreach z,$(LD_LIBRARIES), -l$z) $(foreach z,$(LD_LIBRARIES), -l$z) \
           $(if $(LD_STATIC_LIBRARIES),$(LD_STATIC_PREFIX) $(foreach z,$(LD_STATIC_LIBRARIES),-l$z) $(foreach z,$(LD_STATIC_LIBRARIES),-l$z) $(LD_DYNAMIC_PREFIX))
@@ -148,6 +150,7 @@ BAR_SOURCES          = bar.c \
                        patternlists.c \
                        entrylists.c \
                        compress.c \
+                       sources.c \
                        crypt.c \
                        passwords.c \
                        misc.c \
@@ -169,13 +172,16 @@ BAR_SOURCES          = bar.c \
                        arrays.c \
                        dictionaries.c \
                        bitmaps.c \
-                       database.c \
-                       \
-                       sqlite3.c
+                       database.c
 
 BAR_OBJECTS          = $(foreach z,$(BAR_SOURCES),$(subst .c,.o,$z)) \
                        errors.o \
                        archive_format.o
+
+EXTERN_SOURCES       = xdelta3.c \
+                       sqlite3.c
+
+EXTERN_OBJECTS       = $(foreach z,$(EXTERN_SOURCES),$(subst .c,.o,$z))
 
 DESTROYER_SOURCES    = destroyer.c \
                        global.c \
@@ -216,6 +222,7 @@ all: $(TARGETS)
 # clean
 clean:
 	$(RMF) $(BAR_OBJECTS)
+	$(RMF) $(EXTERN_OBJECTS)
 	$(RMF) $(DESTROYER_OBJECTS)
 	$(RMF) $(INTERMEDIATE)
 	$(RMF) $(TARGETS)
@@ -266,16 +273,22 @@ help:
 .PHONY: depend
 depend: Makefile.depend
 
-Makefile.depend: $(BAR_SOURCES) $(DESTROYER_SOURCES) $(INTERMEDIATE)
+Makefile.depend: $(BAR_SOURCES) $(EXTERN_SOURCES) $(DESTROYER_SOURCES) $(INTERMEDIATE)
 	$(ECHO) > Makefile.depend
-	for z in $(BAR_SOURCES) $(DESTROYER_SOURCES); do \
-          $(CC) -MM >> Makefile.depend $$z; \
+	for z in $(BAR_SOURCES) $(EXTERN_SOURCES) $(DESTROYER_SOURCES); do \
+          $(CC) $(foreach z,$(CC_DEFINES),-D$z) $(CC_WARN_FLAGS) $(foreach z,$(CC_INCLUDES),-I$z) -MM >> Makefile.depend $$z; \
         done;
 
 # ----------------------------------------------------------------------------
 
 # create BAR
-bar@EXEEXT@: $(BAR_OBJECTS)
+bar@EXEEXT@: $(BAR_OBJECTS) $(EXTERN_OBJECTS)
+
+# compile SQLite, xdelta C source without warning flags
+sqlite3.o: sqlite3.c
+	$(CC) $(CC_FLAGS) $(CC_OPTIMIZE) -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" $(foreach z,$(CC_DEFINES),-D$z) $(foreach z,$(CC_INCLUDES),-I$z) -c $*.c -o $*.o
+xdelta3.o: xdelta3.c
+	$(CC) $(CC_FLAGS) $(CC_OPTIMIZE) -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" $(foreach z,$(CC_DEFINES),-D$z) $(foreach z,$(CC_INCLUDES),-I$z) -c $*.c -o $*.o
 
 # create bar-keygen script
 bar-keygen: bar-keygen.in
@@ -1071,6 +1084,8 @@ ifneq ($(DIRECTORY),)
 	$(INSTALL) -m 664 \
                    $(sort $(BAR_SOURCES) \
                           $(patsubst %.c,%.h,$(BAR_SOURCES)) \
+                          $(EXTERN_SOURCES) \
+                          $(patsubst %.c,%.h,$(EXTERN_SOURCES)) \
                           $(DESTROYER_SOURCES) \
                           $(patsubst %.c,%.h,$(DESTROYER_SOURCES)) \
                           $(OTHER_SOURCES) \
