@@ -466,7 +466,7 @@ Errors Command_restore(StringList                      *archiveFileNameList,
               if (!jobOptions->dryRunFlag)
               {
                 /* open file */
-                error = File_open(&fileHandle,destinationFileName,FILE_OPENMODE_WRITE);
+                error = File_open(&fileHandle,destinationFileName,FILE_OPEN_WRITE);
                 if (error != ERROR_NONE)
                 {
                   printInfo(2,"FAIL!\n");
@@ -1433,7 +1433,7 @@ Errors Command_restore(StringList                      *archiveFileNameList,
                   if (!jobOptions->dryRunFlag)
                   {
                     /* open file */
-                    error = File_open(&fileHandle,destinationFileName,FILE_OPENMODE_WRITE);
+                    error = File_open(&fileHandle,destinationFileName,FILE_OPEN_WRITE);
                     if (error != ERROR_NONE)
                     {
                       printInfo(2,"FAIL!\n");

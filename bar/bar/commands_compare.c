@@ -252,7 +252,7 @@ Errors Command_compare(StringList                      *archiveFileNameList,
 //FragmentList_print(fragmentNode,String_cString(fileName));
 
               /* open file */
-              error = File_open(&fileHandle,fileName,FILE_OPENMODE_READ);
+              error = File_open(&fileHandle,fileName,FILE_OPEN_READ);
               if (error != ERROR_NONE)
               {
                 printInfo(2,"FAIL!\n");
@@ -982,7 +982,7 @@ Errors Command_compare(StringList                      *archiveFileNameList,
 //FragmentList_print(fragmentNode,String_cString(fileName));
 
                   /* open file */
-                  error = File_open(&fileHandle,fileName,FILE_OPENMODE_READ);
+                  error = File_open(&fileHandle,fileName,FILE_OPEN_READ);
                   if (error != ERROR_NONE)
                   {
                     printInfo(2,"FAIL!\n");
