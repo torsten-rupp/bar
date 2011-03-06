@@ -76,6 +76,7 @@ typedef enum
   LOG_TYPE_ENTRY_INCOMPLETE    = (1 <<  6),
   LOG_TYPE_ENTRY_EXCLUDED      = (1 <<  7),
   LOG_TYPE_STORAGE             = (1 <<  8),
+  LOG_TYPE_INDEX               = (1 <<  9),
 } LogTypes;
 
 #define LOG_TYPE_NONE 0x00000000
@@ -318,6 +319,7 @@ typedef struct
   PatternTypes        patternType;
 
   CompressAlgorithms  compressAlgorithm;                 // compress algorithm to use
+
   CryptTypes          cryptType;                         // crypt type (symmetric, asymmetric)
   CryptAlgorithms     cryptAlgorithm;                    // crypt algorithm to use
   PasswordModes       cryptPasswordMode;                 // crypt password mode
@@ -403,7 +405,7 @@ void vprintInfo(uint verboseLevel, const char *prefix, const char *format, va_li
 void printInfo(uint verboseLevel, const char *format, ...);
 
 /***********************************************************************\
-* Name   : vlogMessage, logMessage
+* Name   : vlogMessage, plogMessage, logMessage
 * Purpose: log message
 *          logType   - log type; see LOG_TYPES_*
 *          prefix    - prefix text
@@ -416,6 +418,7 @@ void printInfo(uint verboseLevel, const char *format, ...);
 \***********************************************************************/
 
 void vlogMessage(ulong logType, const char *prefix, const char *text, va_list arguments);
+void plogMessage(ulong logType, const char *prefix, const char *text, ...);
 void logMessage(ulong logType, const char *text, ...);
 
 /***********************************************************************\
@@ -721,8 +724,8 @@ bool configValueFormatFileEntry(void **formatUserData, void *userData, String li
 bool configValueFormatImageEntry(void **formatUserData, void *userData, String line);
 
 /***********************************************************************\
-* Name   : configValueParseIncludeExclude
-* Purpose: config value option call back for parsing include/exclude
+* Name   : configValueParsePattern
+* Purpose: config value option call back for parsing pattern
 *          patterns
 * Input  : userData - user data
 *          variable - config variable
@@ -734,11 +737,11 @@ bool configValueFormatImageEntry(void **formatUserData, void *userData, String l
 * Notes  : -
 \***********************************************************************/
 
-bool configValueParseIncludeExclude(void *userData, void *variable, const char *name, const char *value);
+bool configValueParsePattern(void *userData, void *variable, const char *name, const char *value);
 
 /***********************************************************************\
-* Name   : configValueFormatInitIncludeExclude
-* Purpose: init format of config include/exclude statements
+* Name   : configValueFormatInitPattern
+* Purpose: init format of config pattern statements
 * Input  : userData - user data
 *          variable - config variable
 * Output : formatUserData - format user data
@@ -746,11 +749,11 @@ bool configValueParseIncludeExclude(void *userData, void *variable, const char *
 * Notes  : -
 \***********************************************************************/
 
-void configValueFormatInitIncludeExclude(void **formatUserData, void *userData, void *variable);
+void configValueFormatInitPattern(void **formatUserData, void *userData, void *variable);
 
 /***********************************************************************\
-* Name   : configValueFormatDoneIncludeExclude
-* Purpose: done format of config include/exclude statements
+* Name   : configValueFormatDonePattern
+* Purpose: done format of config pattern statements
 * Input  : formatUserData - format user data
 *          userData       - user data
 * Input  : -
@@ -759,11 +762,11 @@ void configValueFormatInitIncludeExclude(void **formatUserData, void *userData, 
 * Notes  : -
 \***********************************************************************/
 
-void configValueFormatDoneIncludeExclude(void **formatUserData, void *userData);
+void configValueFormatDonePattern(void **formatUserData, void *userData);
 
 /***********************************************************************\
-* Name   : configValueFormatIncludeExclude
-* Purpose: format next config include/exclude statement
+* Name   : configValueFormatPattern
+* Purpose: format next config pattern statement
 * Input  : formatUserData - format user data
 *          userData       - user data
 *          line           - line variable
@@ -773,7 +776,7 @@ void configValueFormatDoneIncludeExclude(void **formatUserData, void *userData);
 * Notes  : -
 \***********************************************************************/
 
-bool configValueFormatIncludeExclude(void **formatUserData, void *userData, String line);
+bool configValueFormatPattern(void **formatUserData, void *userData, String line);
 
 /***********************************************************************\
 * Name   : configValueParseString
@@ -926,6 +929,17 @@ void configValueFormatDoneSchedule(void **formatUserData, void *userData);
 \***********************************************************************/
 
 bool configValueFormatSchedule(void **formatUserData, void *userData, String line);
+
+/***********************************************************************\
+* Name   : archiveTypeText
+* Purpose: get text for archive type
+* Input  : archiveType
+* Output : -
+* Return : text
+* Notes  : -
+\***********************************************************************/
+
+const char *archiveTypeText(ArchiveTypes archiveType);
 
 /***********************************************************************\
 * Name   : readJobFile

@@ -136,6 +136,7 @@ LOCAL SSHServerList sshServerList;
 LOCAL DeviceList    deviceList;
 LOCAL EntryList     includeEntryList;
 LOCAL PatternList   excludePatternList;
+LOCAL PatternList   sourcePatternList;
 LOCAL PatternList   compressExcludePatternList;
 LOCAL FTPServer     defaultFTPServer;
 LOCAL SSHServer     defaultSSHServer;
@@ -184,8 +185,6 @@ LOCAL bool          outputNewLineFlag;
 
 /***************************** Forwards ********************************/
 
-/***************************** Functions *******************************/
-
 #ifdef __cplusplus
   extern "C" {
 #endif
@@ -193,9 +192,19 @@ LOCAL bool          outputNewLineFlag;
 LOCAL bool cmdOptionParseOwner(void *userData, void *variable, const char *name, const char *value, const void *defaultValue);
 LOCAL bool cmdOptionParseString(void *userData, void *variable, const char *name, const char *value, const void *defaultValue);
 LOCAL bool cmdOptionParseConfigFile(void *userData, void *variable, const char *name, const char *value, const void *defaultValue);
-LOCAL bool cmdOptionParseEntry(void *userData, void *variable, const char *name, const char *value, const void *defaultValue);
-LOCAL bool cmdOptionParseIncludeExclude(void *userData, void *variable, const char *name, const char *value, const void *defaultValue);
+LOCAL bool cmdOptionParseEntryPattern(void *userData, void *variable, const char *name, const char *value, const void *defaultValue);
+LOCAL bool cmdOptionParsePattern(void *userData, void *variable, const char *name, const char *value, const void *defaultValue);
 LOCAL bool cmdOptionParsePassword(void *userData, void *variable, const char *name, const char *value, const void *defaultValue);
+
+#ifdef __cplusplus
+  }
+#endif
+
+/***************************** Functions *******************************/
+
+#ifdef __cplusplus
+  extern "C" {
+#endif
 
 LOCAL const CommandLineUnit COMMAND_LINE_BYTES_UNITS[] =
 {
@@ -260,6 +269,18 @@ const CommandLineOptionSelect COMMAND_LINE_OPTIONS_COMPRESS_ALGORITHMS[] =
     {"lzma8",COMPRESS_ALGORITHM_LZMA_8,"LZMA compression level 8"},
     {"lzma9",COMPRESS_ALGORITHM_LZMA_9,"LZMA compression level 9"},
   #endif /* HAVE_LZMA */
+
+  #ifdef HAVE_XDELTA
+    {"xdelta1",COMPRESS_ALGORITHM_XDELTA_1,"XDELTA compression level 1"},
+    {"xdelta2",COMPRESS_ALGORITHM_XDELTA_2,"XDELTA compression level 2"},
+    {"xdelta3",COMPRESS_ALGORITHM_XDELTA_3,"XDELTA compression level 3"},
+    {"xdelta4",COMPRESS_ALGORITHM_XDELTA_4,"XDELTA compression level 4"},
+    {"xdelta5",COMPRESS_ALGORITHM_XDELTA_5,"XDELTA compression level 5"},
+    {"xdelta6",COMPRESS_ALGORITHM_XDELTA_6,"XDELTA compression level 6"},
+    {"xdelta7",COMPRESS_ALGORITHM_XDELTA_7,"XDELTA compression level 7"},
+    {"xdelta8",COMPRESS_ALGORITHM_XDELTA_8,"XDELTA compression level 8"},
+    {"xdelta9",COMPRESS_ALGORITHM_XDELTA_9,"XDELTA compression level 9"},
+  #endif /* HAVE_XDELTA */
 };
 
 LOCAL const CommandLineOptionSelect COMMAND_LINE_OPTIONS_CRYPT_ALGORITHMS[] =
@@ -308,6 +329,8 @@ LOCAL const CommandLineOptionSet COMMAND_LINE_OPTIONS_LOG_TYPES[] =
 
   {"storage",   LOG_TYPE_STORAGE,            "log storage"              },
 
+  {"index",     LOG_TYPE_INDEX,              "index database"           },
+
   {"all",       LOG_TYPE_ALL,                "log everything"           },
 };
 
@@ -333,8 +356,9 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
 
   CMD_OPTION_SELECT       ("pattern-type",                 0,  1,1,jobOptions.patternType,                    COMMAND_LINE_OPTIONS_PATTERN_TYPES,                    "select pattern type"                                                      ),
 
-  CMD_OPTION_SPECIAL      ("include",                      '#',0,2,&includeEntryList,                         cmdOptionParseEntry,NULL,                              "include pattern","pattern"                                                ),
-  CMD_OPTION_SPECIAL      ("exclude",                      '!',0,2,&excludePatternList,                       cmdOptionParseIncludeExclude,NULL,                     "exclude pattern","pattern"                                                ),
+  CMD_OPTION_SPECIAL      ("include",                      '#',0,2,&includeEntryList,                         cmdOptionParseEntryPattern,NULL,                       "include pattern","pattern"                                                ),
+  CMD_OPTION_SPECIAL      ("exclude",                      '!',0,2,&excludePatternList,                       cmdOptionParsePattern,NULL,                            "exclude pattern","pattern"                                                ),
+  CMD_OPTION_SPECIAL      ("source",                       0,  0,2,&sourcePatternList,                        cmdOptionParsePattern,NULL,                            "source pattern","pattern"                                                 ),
 
   CMD_OPTION_SPECIAL      ("config",                       0,  1,0,NULL,                                      cmdOptionParseConfigFile,NULL,                         "configuration file","file name"                                           ),
 
@@ -349,7 +373,7 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
 
   CMD_OPTION_SELECT       ("compress-algorithm",           'z',0,1,jobOptions.compressAlgorithm,              COMMAND_LINE_OPTIONS_COMPRESS_ALGORITHMS,              "select compress algorithm to use"                                         ),
   CMD_OPTION_INTEGER      ("compress-min-size",            0,  1,1,globalOptions.compressMinFileSize,         0,MAX_INT,COMMAND_LINE_BYTES_UNITS,                    "minimal size of file for compression"                                     ),
-  CMD_OPTION_SPECIAL      ("compress-exclude",             0,  0,2,&compressExcludePatternList,               cmdOptionParseIncludeExclude,NULL,                     "exclude compression pattern","pattern"                                    ),
+  CMD_OPTION_SPECIAL      ("compress-exclude",             0,  0,2,&compressExcludePatternList,               cmdOptionParsePattern,NULL,                            "exclude compression pattern","pattern"                                    ),
 
   CMD_OPTION_SELECT       ("crypt-algorithm",              'y',0,1,jobOptions.cryptAlgorithm,                 COMMAND_LINE_OPTIONS_CRYPT_ALGORITHMS,                 "select crypt algorithm to use"                                            ),
   CMD_OPTION_SELECT       ("crypt-type",                   0,  0,1,jobOptions.cryptType,                      COMMAND_LINE_OPTIONS_CRYPT_TYPES,                      "select crypt type"                                                        ),
@@ -549,6 +573,18 @@ LOCAL const ConfigValueSelect CONFIG_VALUE_COMPRESS_ALGORITHMS[] =
     {"lzma8",COMPRESS_ALGORITHM_LZMA_8},
     {"lzma9",COMPRESS_ALGORITHM_LZMA_9},
   #endif /* HAVE_LZMA */
+
+  #ifdef HAVE_XDELTA3
+    {"xdelta1",COMPRESS_ALGORITHM_XDELTA_1},
+    {"xdelta2",COMPRESS_ALGORITHM_XDELTA_2},
+    {"xdelta3",COMPRESS_ALGORITHM_XDELTA_3},
+    {"xdelta4",COMPRESS_ALGORITHM_XDELTA_4},
+    {"xdelta5",COMPRESS_ALGORITHM_XDELTA_5},
+    {"xdelta6",COMPRESS_ALGORITHM_XDELTA_6},
+    {"xdelta7",COMPRESS_ALGORITHM_XDELTA_7},
+    {"xdelta8",COMPRESS_ALGORITHM_XDELTA_8},
+    {"xdelta9",COMPRESS_ALGORITHM_XDELTA_9},
+  #endif /* HAVE_XDELTA3 */
 };
 
 LOCAL const ConfigValueSelect CONFIG_VALUE_CRYPT_ALGORITHMS[] =
@@ -589,6 +625,8 @@ LOCAL const ConfigValueSet CONFIG_VALUE_LOG_TYPES[] =
   {"excluded",  LOG_TYPE_ENTRY_EXCLUDED     },
 
   {"storage",   LOG_TYPE_STORAGE            },
+
+  {"index",     LOG_TYPE_INDEX,             },
 
   {"all",       LOG_TYPE_ALL                },
 };
@@ -644,8 +682,8 @@ LOCAL const ConfigValue CONFIG_VALUES[] =
 
   CONFIG_VALUE_SPECIAL  ("include-file",                 &includeEntryList,-1,                                    configValueParseFileEntry,NULL,NULL,NULL,&jobOptions.patternType),
   CONFIG_VALUE_SPECIAL  ("include-image",                &includeEntryList,-1,                                    configValueParseImageEntry,NULL,NULL,NULL,&jobOptions.patternType),
-  CONFIG_VALUE_SPECIAL  ("exclude",                      &excludePatternList,-1,                                  configValueParseIncludeExclude,NULL,NULL,NULL,&jobOptions.patternType),
-  CONFIG_VALUE_SPECIAL  ("exclude-compress",             &compressExcludePatternList,-1,                          configValueParseIncludeExclude,NULL,NULL,NULL,&jobOptions.patternType),
+  CONFIG_VALUE_SPECIAL  ("exclude",                      &excludePatternList,-1,                                  configValueParsePattern,NULL,NULL,NULL,&jobOptions.patternType),
+  CONFIG_VALUE_SPECIAL  ("exclude-compress",             &compressExcludePatternList,-1,                          configValueParsePattern,NULL,NULL,NULL,&jobOptions.patternType),
 
   CONFIG_VALUE_INTEGER64("volume-size",                  &jobOptions.volumeSize,-1,                               0LL,MAX_LONG_LONG,CONFIG_VALUE_BYTES_UNITS),
   CONFIG_VALUE_BOOLEAN  ("ecc",                          &jobOptions.errorCorrectionCodesFlag,-1                  ),
@@ -826,7 +864,7 @@ LOCAL bool readConfigFile(const String fileName, bool printInfoFlag)
   assert(fileName != NULL);
 
   /* open file */
-  error = File_open(&fileHandle,fileName,FILE_OPENMODE_READ);
+  error = File_open(&fileHandle,fileName,FILE_OPEN_READ);
   if (error != ERROR_NONE)
   {
     printError("Cannot open file '%s' (error: %s)!\n",
@@ -1095,8 +1133,8 @@ LOCAL bool cmdOptionParseConfigFile(void *userData, void *variable, const char *
 }
 
 /***********************************************************************\
-* Name   : cmdOptionParseIncludeExclude
-* Purpose: command line option call back for parsing include/exclude
+* Name   : cmdOptionParseEntryPattern
+* Purpose: command line option call back for parsing include
 *          patterns
 * Input  : -
 * Output : -
@@ -1104,7 +1142,7 @@ LOCAL bool cmdOptionParseConfigFile(void *userData, void *variable, const char *
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool cmdOptionParseEntry(void *userData, void *variable, const char *name, const char *value, const void *defaultValue)
+LOCAL bool cmdOptionParseEntryPattern(void *userData, void *variable, const char *name, const char *value, const void *defaultValue)
 {
   EntryTypes   entryType;
   PatternTypes patternType;
@@ -1153,8 +1191,8 @@ LOCAL bool cmdOptionParseEntry(void *userData, void *variable, const char *name,
 }
 
 /***********************************************************************\
-* Name   : cmdOptionParseIncludeExclude
-* Purpose: command line option call back for parsing include/exclude
+* Name   : cmdOptionParsePattern
+* Purpose: command line option call back for parsing pattern
 *          patterns
 * Input  : -
 * Output : -
@@ -1162,7 +1200,7 @@ LOCAL bool cmdOptionParseEntry(void *userData, void *variable, const char *name,
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool cmdOptionParseIncludeExclude(void *userData, void *variable, const char *name, const char *value, const void *defaultValue)
+LOCAL bool cmdOptionParsePattern(void *userData, void *variable, const char *name, const char *value, const void *defaultValue)
 {
   PatternTypes patternType;
 
@@ -1590,6 +1628,7 @@ LOCAL bool initAll(void)
   List_init(&deviceList);
   EntryList_init(&includeEntryList);
   PatternList_init(&excludePatternList);
+  PatternList_init(&sourcePatternList);
   PatternList_init(&compressExcludePatternList);
   defaultFTPServer.loginName            = NULL;
   defaultFTPServer.password             = NULL;
@@ -1693,6 +1732,7 @@ LOCAL void doneAll(void)
   if (defaultFTPServer.password != NULL) Password_delete(defaultFTPServer.password);
   if (defaultFTPServer.loginName != NULL) String_delete(defaultFTPServer.loginName);
   PatternList_done(&compressExcludePatternList);
+  PatternList_done(&sourcePatternList);
   PatternList_done(&excludePatternList);
   EntryList_done(&includeEntryList);
   Password_delete(serverPassword);
@@ -1789,28 +1829,49 @@ void vlogMessage(ulong logType, const char *prefix, const char *text, va_list ar
       if (tmpLogFile != NULL)
       {
         /* append to temporary log file */
-        fprintf(tmpLogFile,"%s> ",String_cString(dateTime));
-        if (prefix != NULL) (void)fputs(prefix,tmpLogFile);
+        (void)fprintf(tmpLogFile,"%s> ",String_cString(dateTime));
+        if (prefix != NULL)
+        {
+          (void)fputs(prefix,tmpLogFile);
+          fprintf(tmpLogFile,": ");
+        }
         va_copy(tmpArguments,arguments);
-        vfprintf(tmpLogFile,text,tmpArguments);
+        (void)vfprintf(tmpLogFile,text,tmpArguments);
         va_end(tmpArguments);
-        fprintf(tmpLogFile,"\n");
+        (void)fprintf(tmpLogFile,"\n");
+        fflush(tmpLogFile);
       }
 
       if (logFile != NULL)
       {
         /* append to log file */
-        fprintf(logFile,"%s> ",String_cString(dateTime));
-        if (prefix != NULL) (void)fputs(prefix,tmpLogFile);
+        (void)fprintf(logFile,"%s> ",String_cString(dateTime));
+        if (prefix != NULL)
+        {
+          (void)fputs(prefix,logFile);
+          fprintf(logFile,": ");
+        }
         va_copy(tmpArguments,arguments);
-        vfprintf(logFile,text,tmpArguments);
+        (void)vfprintf(logFile,text,tmpArguments);
         va_end(tmpArguments);
-        fprintf(logFile,"\n");
+        (void)fprintf(logFile,"\n");
+        fflush(logFile);
       }
 
       String_delete(dateTime);
     }
   }
+}
+
+void plogMessage(ulong logType, const char *prefix, const char *text, ...)
+{
+  va_list arguments;
+
+  assert(text != NULL);
+
+  va_start(arguments,text);
+  vlogMessage(logType,prefix,text,arguments);
+  va_end(arguments);
 }
 
 void logMessage(ulong logType, const char *text, ...)
@@ -1853,7 +1914,7 @@ void printWarning(const char *text, ...)
 
   /* output log line */
   va_start(arguments,text);
-  vlogMessage(LOG_TYPE_WARNING,"Warning: ",text,arguments);
+  vlogMessage(LOG_TYPE_WARNING,"Warning",text,arguments);
   va_end(arguments);
 
   line = String_new();
@@ -1879,7 +1940,7 @@ void printError(const char *text, ...)
 
   /* output log line */
   va_start(arguments,text);
-  vlogMessage(LOG_TYPE_ERROR,"ERROR: ",text,arguments);
+  vlogMessage(LOG_TYPE_ERROR,"ERROR",text,arguments);
   va_end(arguments);
 
   line = String_new();
@@ -2491,7 +2552,7 @@ bool configValueFormatImageEntry(void **formatUserData, void *userData, String l
   }
 }
 
-bool configValueParseIncludeExclude(void *userData, void *variable, const char *name, const char *value)
+bool configValueParsePattern(void *userData, void *variable, const char *name, const char *value)
 {
   PatternTypes patternType;
 
@@ -2517,7 +2578,7 @@ bool configValueParseIncludeExclude(void *userData, void *variable, const char *
   return TRUE;
 }
 
-void configValueFormatInitIncludeExclude(void **formatUserData, void *userData, void *variable)
+void configValueFormatInitPattern(void **formatUserData, void *userData, void *variable)
 {
   assert(formatUserData != NULL);
 
@@ -2526,13 +2587,13 @@ void configValueFormatInitIncludeExclude(void **formatUserData, void *userData, 
   (*formatUserData) = ((PatternList*)variable)->head;
 }
 
-void configValueFormatDoneIncludeExclude(void **formatUserData, void *userData)
+void configValueFormatDonePattern(void **formatUserData, void *userData)
 {
   UNUSED_VARIABLE(userData);
   UNUSED_VARIABLE(formatUserData);  
 }
 
-bool configValueFormatIncludeExclude(void **formatUserData, void *userData, String line)
+bool configValueFormatPattern(void **formatUserData, void *userData, String line)
 {
   PatternNode *patternNode;
 
@@ -3169,6 +3230,18 @@ bool configValueFormatSchedule(void **formatUserData, void *userData, String lin
   }
 }
 
+const char *archiveTypeText(ArchiveTypes archiveType)
+{
+  switch (archiveType)
+  {
+    case ARCHIVE_TYPE_NORMAL:       return "normal";       break;
+    case ARCHIVE_TYPE_FULL:         return "full";         break;
+    case ARCHIVE_TYPE_INCREMENTAL:  return "incremental";  break;
+    case ARCHIVE_TYPE_DIFFERENTIAL: return "differential"; break;
+    default:                        return "unknown";      break;
+  }
+}
+
 bool readJobFile(const String      fileName,
                  const ConfigValue *configValues,
                  uint              configValueCount,
@@ -3190,7 +3263,7 @@ bool readJobFile(const String      fileName,
   line = String_new();
 
   /* open file */
-  error = File_open(&fileHandle,fileName,FILE_OPENMODE_READ);
+  error = File_open(&fileHandle,fileName,FILE_OPEN_READ);
   if (error != ERROR_NONE)
   {
     printError("Cannot open file '%s' (error: %s)!\n",
@@ -3290,7 +3363,7 @@ LOCAL Errors createPIDFile(void)
   if (pidFileName != NULL)
   {
     fileName = File_newFileName();
-    error = File_open(&fileHandle,File_setFileNameCString(fileName,pidFileName),FILE_OPENMODE_CREATE);
+    error = File_open(&fileHandle,File_setFileNameCString(fileName,pidFileName),FILE_OPEN_CREATE);
     if (error != ERROR_NONE)
     {
       printError("Cannot create process id file '%s' (error: %s)\n",pidFileName,Errors_getText(error));
@@ -3690,6 +3763,7 @@ int main(int argc, const char *argv[])
     error = Command_create(String_cString(archiveName),
                            &includeEntryList,
                            &excludePatternList,
+                           &sourcePatternList,
                            &compressExcludePatternList,
                            &jobOptions,
                            ARCHIVE_TYPE_NORMAL,
@@ -3743,6 +3817,7 @@ int main(int argc, const char *argv[])
           error = Command_create(archiveName,
                                  &includeEntryList,
                                  &excludePatternList,
+                                 &sourcePatternList,
                                  &compressExcludePatternList,
                                  &jobOptions,
                                  ARCHIVE_TYPE_NORMAL,
