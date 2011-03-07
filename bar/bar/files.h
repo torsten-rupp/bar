@@ -55,14 +55,21 @@ typedef enum
   FILE_TYPE_UNKNOWN
 } FileTypes;
 
+/* file open mask */
+#define FILE_OPEN_MASK_MODE  0x0000000F
+#define FILE_OPEN_MASK_FLAGS 0xFFFF0000
+
 /* file open modes */
 typedef enum
 {
-  FILE_OPENMODE_CREATE,
-  FILE_OPENMODE_READ,
-  FILE_OPENMODE_WRITE,
-  FILE_OPENMODE_APPEND
-} FileOpenModes;
+  FILE_OPEN_CREATE = 0,
+  FILE_OPEN_READ   = 1,
+  FILE_OPEN_WRITE  = 2,
+  FILE_OPEN_APPEND = 3
+} FileModes;
+
+/* additional file open flags */
+#define FILE_OPEN_NO_CACHE (1 << 16)
 
 /* special file types */
 typedef enum
@@ -104,6 +111,7 @@ typedef enum
 typedef struct
 {
   String name;
+  ulong  mode;
   FILE   *file;
   uint64 index;
   uint64 size;
@@ -334,9 +342,9 @@ Errors File_getTmpDirectoryNameCString(String directoryName, char const *pattern
 /***********************************************************************\
 * Name   : File_open, File_openCString
 * Purpose: open file
-* Input  : fileHandle   - file handle
-*          fileName     - file name
-*          fileOpenMode - file open mode; see FILE_OPENMODES_*
+* Input  : fileHandle - file handle
+*          fileName   - file name
+*          fileMode   - file modes; see FILE_OPEN_*
 * Output : fileHandle - file handle
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -344,11 +352,11 @@ Errors File_getTmpDirectoryNameCString(String directoryName, char const *pattern
 
 Errors File_open(FileHandle    *fileHandle,
                  const String  fileName,
-                 FileOpenModes fileOpenMode
+                 FileModes     fileMode
                 );
-Errors File_openCString(FileHandle    *fileHandle,
-                        const char    *fileName,
-                        FileOpenModes fileOpenMode
+Errors File_openCString(FileHandle *fileHandle,
+                        const char *fileName,
+                        FileModes  fileMode
                        );
 
 /***********************************************************************\
@@ -356,15 +364,15 @@ Errors File_openCString(FileHandle    *fileHandle,
 * Purpose: opeen file by descriptor
 * Input  : fileHandle     - file handle
 *          fileDescriptor - file descriptor
-*          fileOpenMode   - file open mode; see FILE_OPENMODES_*
+*          fileMode       - file open mode; see FILE_OPEN_*
 * Output : fileHandle - file handle
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-Errors File_openDescriptor(FileHandle    *fileHandle,
-                           int           fileDescriptor,
-                           FileOpenModes fileOpenMode
+Errors File_openDescriptor(FileHandle *fileHandle,
+                           int        fileDescriptor,
+                           FileModes  fileOpenMode
                           );
 
 /***********************************************************************\
@@ -518,6 +526,25 @@ Errors File_seek(FileHandle *fileHandle,
 Errors File_truncate(FileHandle *fileHandle,
                      uint64     size
                     );
+
+/***********************************************************************\
+* Name   : File_dropCaches
+* Purpose: drop any data in file system cache when possible
+* Input  : fileHandle - file handle
+*          offset     - offset (0..n-1)
+*          length     - length of data to drop or 0LL for all data of
+*          syncFlag   - TRUE to sync data on disk
+*                       file
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors File_dropCaches(FileHandle *fileHandle,
+                       uint64     offset,
+                       uint64     length,
+                       bool       syncFlag
+                      );
 
 /*---------------------------------------------------------------------*/
 

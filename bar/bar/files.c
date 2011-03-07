@@ -15,6 +15,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#include <fcntl.h>
 #include <dirent.h>
 #include <utime.h>
 #include <sys/statvfs.h>
@@ -345,20 +346,20 @@ Errors File_getTmpDirectoryNameCString(String directoryName, char const *pattern
 
 /*---------------------------------------------------------------------*/
 
-Errors File_open(FileHandle    *fileHandle,
-                 const String  fileName,
-                 FileOpenModes fileOpenMode
+Errors File_open(FileHandle   *fileHandle,
+                 const String fileName,
+                 FileModes    fileMode
                 )
 {
   return File_openCString(fileHandle,
                           String_cString(fileName),
-                          fileOpenMode
+                          fileMode
                          );
 }
 
-Errors File_openCString(FileHandle    *fileHandle,
-                        const char    *fileName,
-                        FileOpenModes fileOpenMode
+Errors File_openCString(FileHandle *fileHandle,
+                        const char *fileName,
+                        FileModes  fileMode
                        )
 {
   off_t  n;
@@ -368,9 +369,9 @@ Errors File_openCString(FileHandle    *fileHandle,
   assert(fileHandle != NULL);
   assert(fileName != NULL);
 
-  switch (fileOpenMode)
+  switch (fileMode & FILE_OPEN_MASK_MODE)
   {
-    case FILE_OPENMODE_CREATE:
+    case FILE_OPEN_CREATE:
       /* create file */
       fileHandle->file = fopen(fileName,"wb");
       if (fileHandle->file == NULL)
@@ -382,7 +383,7 @@ Errors File_openCString(FileHandle    *fileHandle,
       fileHandle->index = 0LL;
       fileHandle->size  = 0LL;
       break;
-    case FILE_OPENMODE_READ:
+    case FILE_OPEN_READ:
       /* open file for reading */
       fileHandle->file = fopen(fileName,"rb");
       if (fileHandle->file == NULL)
@@ -415,7 +416,7 @@ Errors File_openCString(FileHandle    *fileHandle,
       fileHandle->index = 0LL;
       fileHandle->size  = (uint64)n;
       break;
-    case FILE_OPENMODE_WRITE:
+    case FILE_OPEN_WRITE:
       /* create directory if needed */
       pathName = File_getFilePathNameCString(File_newFileName(),fileName);
       if (!File_exists(pathName))
@@ -454,7 +455,7 @@ Errors File_openCString(FileHandle    *fileHandle,
       fileHandle->index = 0LL;
       fileHandle->size  = 0LL;
       break;
-    case FILE_OPENMODE_APPEND:
+    case FILE_OPEN_APPEND:
       /* create directory if needed */
       pathName = File_getFilePathNameCString(File_newFileName(),fileName);
       if (!File_exists(pathName))
@@ -497,13 +498,14 @@ Errors File_openCString(FileHandle    *fileHandle,
         break; /* not reached */
     #endif /* NDEBUG */
   }
+  fileHandle->mode = fileMode;
 
   return ERROR_NONE;
 }
 
-Errors File_openDescriptor(FileHandle    *fileHandle,
-                           int           fileDescriptor,
-                           FileOpenModes fileOpenMode
+Errors File_openDescriptor(FileHandle *fileHandle,
+                           int        fileDescriptor,
+                           FileModes  fileMode
                           )
 {
   off_t  n;
@@ -512,9 +514,9 @@ Errors File_openDescriptor(FileHandle    *fileHandle,
   assert(fileHandle != NULL);
   assert(fileDescriptor >= 0);
 
-  switch (fileOpenMode)
+  switch (fileMode & FILE_OPEN_MASK_MODE)
   {
-    case FILE_OPENMODE_CREATE:
+    case FILE_OPEN_CREATE:
       /* create file */
       fileHandle->file = fdopen(fileDescriptor,"wb");
       if (fileHandle->file == NULL)
@@ -526,7 +528,7 @@ Errors File_openDescriptor(FileHandle    *fileHandle,
       fileHandle->index = 0LL;
       fileHandle->size  = 0LL;
       break;
-    case FILE_OPENMODE_READ:
+    case FILE_OPEN_READ:
       /* open file for reading */
       fileHandle->file = fdopen(fileDescriptor,"rb");
       if (fileHandle->file == NULL)
@@ -538,7 +540,7 @@ Errors File_openDescriptor(FileHandle    *fileHandle,
       fileHandle->index = 0LL;
       fileHandle->size  = 0LL;
       break;
-    case FILE_OPENMODE_WRITE:
+    case FILE_OPEN_WRITE:
       /* open file for writing */
       fileHandle->file = fdopen(fileDescriptor,"r+b");
       if (fileHandle->file == NULL)
@@ -550,7 +552,7 @@ Errors File_openDescriptor(FileHandle    *fileHandle,
       fileHandle->index = 0LL;
       fileHandle->size  = 0LL;
       break;
-    case FILE_OPENMODE_APPEND:
+    case FILE_OPEN_APPEND:
       /* open file for writing */
       fileHandle->file = fdopen(fileDescriptor,"ab");
       if (fileHandle->file == NULL)
@@ -577,6 +579,7 @@ Errors File_openDescriptor(FileHandle    *fileHandle,
         break; /* not reached */
     #endif /* NDEBUG */
   }
+  fileHandle->mode = fileMode;
 
   return ERROR_NONE;
 }
@@ -587,8 +590,17 @@ Errors File_close(FileHandle *fileHandle)
   assert(fileHandle->file != NULL);
   assert(fileHandle->name != NULL);
  
+  /* free caches if requested */
+  if ((fileHandle->mode & FILE_OPEN_NO_CACHE) != 0)
+  {
+    File_dropCaches(fileHandle,0LL,0LL,FALSE);
+  }
+
+  /* close file */
   fclose(fileHandle->file);
   fileHandle->file = NULL;
+
+  /* free resources */
   String_delete(fileHandle->name);
 
   return ERROR_NONE;
@@ -637,6 +649,11 @@ Errors File_read(FileHandle *fileHandle,
   }
   fileHandle->index += n;
 
+  if ((fileHandle->mode & FILE_OPEN_NO_CACHE) != 0)
+  {
+    File_dropCaches(fileHandle,0LL,fileHandle->index,FALSE);
+  }
+
   if (bytesRead != NULL) (*bytesRead) = n;
 
   return ERROR_NONE;
@@ -659,6 +676,11 @@ Errors File_write(FileHandle *fileHandle,
   if (n != bufferLength)
   {
     return ERRORX(IO_ERROR,errno,String_cString(fileHandle->name));
+  }
+
+  if ((fileHandle->mode & FILE_OPEN_NO_CACHE) != 0)
+  {
+    File_dropCaches(fileHandle,0LL,fileHandle->index,TRUE);
   }
 
   return ERROR_NONE;
@@ -828,6 +850,38 @@ Errors File_truncate(FileHandle *fileHandle,
     }
     fileHandle->size = size;
   }
+
+  return ERROR_NONE;
+}
+
+Errors File_dropCaches(FileHandle *fileHandle,
+                       uint64     offset,
+                       uint64     length,
+                       bool       syncFlag
+                      )
+{
+  #ifdef HAVE_POSIX_FADVISE
+    int handle;
+  #endif /* HAVE_POSIX_FADVISE */
+
+  assert(fileHandle != NULL);
+  assert(fileHandle->file != NULL);
+
+  handle = fileno(fileHandle->file);
+
+  #ifdef HAVE_FDATASYNC
+    if (syncFlag)
+    {
+      (void)fdatasync(handle);
+    }
+  #endif /* HAVE_FDATASYNC */
+
+  #ifdef HAVE_POSIX_FADVISE
+    if (posix_fadvise(handle,offset,length,POSIX_FADV_DONTNEED) != 0)
+    {
+      return ERRORX(IO_ERROR,errno,String_cString(fileHandle->name));
+    }
+  #endif /* HAVE_POSIX_FADVISE */
 
   return ERROR_NONE;
 }
@@ -1024,7 +1078,7 @@ Errors File_getDataCString(const char *fileName,
   assert(size != NULL);
 
   /* open file */
-  error = File_openCString(&fileHandle,fileName,FILE_OPENMODE_READ);
+  error = File_openCString(&fileHandle,fileName,FILE_OPEN_READ);
   if (error != ERROR_NONE)
   {
     return error;
