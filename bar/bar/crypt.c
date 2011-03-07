@@ -1199,7 +1199,7 @@ Errors Crypt_readKeyFile(CryptKey       *cryptKey,
     data = String_new();
 
     // read file contents
-    error = File_open(&fileHandle,dataOrfileName,FILE_OPENMODE_READ);
+    error = File_open(&fileHandle,dataOrfileName,FILE_OPEN_READ);
     if (error != ERROR_NONE)
     {
       String_delete(data);
@@ -1257,7 +1257,7 @@ Errors Crypt_writeKeyFile(CryptKey       *cryptKey,
   }
 
   // write file
-  error = File_open(&fileHandle,fileName,FILE_OPENMODE_CREATE);
+  error = File_open(&fileHandle,fileName,FILE_OPEN_CREATE);
   if (error != ERROR_NONE)
   {
     String_delete(data);
