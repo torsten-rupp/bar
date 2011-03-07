@@ -19,13 +19,16 @@
 #include "strings.h"
 #include "lists.h"
 #include "files.h"
-#include "errors.h"
+#include "devices.h"
 
-#include "archive_format.h"
+#include "errors.h"
 #include "chunks.h"
 #include "compress.h"
 #include "passwords.h"
 #include "crypt.h"
+#include "archive_format.h"
+#include "storage.h"
+#include "index.h"
 
 #include "archive.h"
 
@@ -713,7 +716,7 @@ LOCAL Errors createArchiveFile(ArchiveInfo *archiveInfo)
   /* create file */
   error = File_open(&archiveInfo->file.fileHandle,
                     archiveInfo->fileName,
-                    FILE_OPENMODE_CREATE
+                    FILE_OPEN_CREATE
                    );
   if (error != ERROR_NONE)
   {
@@ -1878,7 +1881,7 @@ Errors Archive_create(ArchiveInfo                     *archiveInfo,
 
   archiveInfo->databaseHandle                  = databaseHandle;
   archiveInfo->storageId                       = DATABASE_ID_NONE;
-  
+
   archiveInfo->chunkIO                         = &CHUNK_IO_FILE;
   archiveInfo->chunkIOUserData                 = &archiveInfo->file.fileHandle;
 
@@ -2207,11 +2210,13 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
   return !chunkHeaderFoundFlag;
 }
 
-Errors Archive_newFileEntry(ArchiveInfo      *archiveInfo,
-                            ArchiveEntryInfo *archiveEntryInfo,
-                            const String     fileName,
-                            const FileInfo   *fileInfo,
-                            bool             compressFlag
+Errors Archive_newFileEntry(ArchiveInfo                     *archiveInfo,
+                            ArchiveEntryInfo                *archiveEntryInfo,
+                            const String                    fileName,
+                            const FileInfo                  *fileInfo,
+                            CompressSourceGetEntryDataBlock sourceGetEntryDataBlock,
+                            void                            *sourceGetEntryDataBlockUserData,
+                            bool                            compressFlag
                            )
 {
   Errors error;
@@ -2351,7 +2356,9 @@ Errors Archive_newFileEntry(ArchiveInfo      *archiveInfo,
   error = Compress_new(&archiveEntryInfo->file.compressInfoData,
                        COMPRESS_MODE_DEFLATE,
                        archiveEntryInfo->file.compressAlgorithm,
-                       archiveEntryInfo->blockLength
+                       archiveEntryInfo->blockLength,
+                       sourceGetEntryDataBlock,
+                       sourceGetEntryDataBlockUserData
                       );
   if (error != ERROR_NONE)
   {
@@ -2531,6 +2538,9 @@ Errors Archive_newImageEntry(ArchiveInfo      *archiveInfo,
                        COMPRESS_MODE_DEFLATE,
                        archiveEntryInfo->image.compressAlgorithm,
                        archiveEntryInfo->blockLength
+//??? NYI
+,NULL
+,NULL
                       );
   if (error != ERROR_NONE)
   {
@@ -2865,15 +2875,15 @@ Errors Archive_newHardLinkEntry(ArchiveInfo      *archiveInfo,
   }
 
   /* init archive file info */
-  archiveEntryInfo->archiveInfo                = archiveInfo;                                                                                                             
-  archiveEntryInfo->mode                       = ARCHIVE_MODE_WRITE;                                                                                                      
+  archiveEntryInfo->archiveInfo                = archiveInfo;
+  archiveEntryInfo->mode                       = ARCHIVE_MODE_WRITE;
 
-  archiveEntryInfo->hardLink.compressAlgorithm = compressFlag?archiveInfo->jobOptions->compressAlgorithm:COMPRESS_ALGORITHM_NONE; 
+  archiveEntryInfo->hardLink.compressAlgorithm = compressFlag?archiveInfo->jobOptions->compressAlgorithm:COMPRESS_ALGORITHM_NONE;
 
-  archiveEntryInfo->cryptAlgorithm             = archiveInfo->jobOptions->cryptAlgorithm;                                                                                 
-  archiveEntryInfo->blockLength                = archiveInfo->blockLength;                                                                                                
+  archiveEntryInfo->cryptAlgorithm             = archiveInfo->jobOptions->cryptAlgorithm;
+  archiveEntryInfo->blockLength                = archiveInfo->blockLength;
 
-  archiveEntryInfo->archiveEntryType           = ARCHIVE_ENTRY_TYPE_HARDLINK;                                                                                             
+  archiveEntryInfo->archiveEntryType           = ARCHIVE_ENTRY_TYPE_HARDLINK;
 
   List_init(&archiveEntryInfo->hardLink.chunkHardLinkNameList);
 
@@ -3049,6 +3059,9 @@ Errors Archive_newHardLinkEntry(ArchiveInfo      *archiveInfo,
                        COMPRESS_MODE_DEFLATE,
                        archiveEntryInfo->hardLink.compressAlgorithm,
                        archiveEntryInfo->blockLength
+//??? NYI
+,NULL
+,NULL
                       );
   if (error != ERROR_NONE)
   {
@@ -3515,6 +3528,9 @@ Errors Archive_readFileEntry(ArchiveInfo        *archiveInfo,
                        COMPRESS_MODE_INFLATE,
                        archiveEntryInfo->file.compressAlgorithm,
                        archiveEntryInfo->blockLength
+//??? NYI
+,NULL
+,NULL
                       );
   if (error != ERROR_NONE)
   {
@@ -3554,13 +3570,12 @@ Errors Archive_readFileEntry(ArchiveInfo        *archiveInfo,
   }
   foundFileEntryFlag = FALSE;
   foundFileDataFlag  = FALSE;
+  error              = ERROR_NONE;
   while (   !foundFileEntryFlag
          && !foundFileDataFlag
-         && ((archiveEntryInfo->cryptAlgorithm == CRYPT_ALGORITHM_NONE) || (password != NULL))
+         && (error == ERROR_NONE)
         )
   {
-    error = ERROR_NONE;
-
     /* reset chunk read position */
     Chunk_seek(&archiveEntryInfo->file.chunkFile.info,index);
 
@@ -3718,15 +3733,20 @@ Errors Archive_readFileEntry(ArchiveInfo        *archiveInfo,
       Crypt_done(&archiveEntryInfo->file.chunkFileData.cryptInfo);
       Crypt_done(&archiveEntryInfo->file.chunkFileEntry.cryptInfo);
 
-      if (archiveInfo->cryptType == CRYPT_TYPE_ASYMMETRIC)
+      if (   (archiveEntryInfo->cryptAlgorithm != CRYPT_ALGORITHM_NONE)
+          && (archiveInfo->cryptType != CRYPT_TYPE_ASYMMETRIC)
+         )
       {
-        /* no more passwords when asymmetric encryption used */
-        password = NULL;
+        /* get next password */
+        password = getNextDecryptPassword(&passwordHandle);
+
+        /* reset error and try next password */
+        error = ERROR_NONE;
       }
       else
       {
-        /* next password */
-        password = getNextDecryptPassword(&passwordHandle);
+        /* no more passwords when no encryption or asymmetric encryption is used */
+        password = NULL;
       }
     }
   } /* while */
@@ -3876,6 +3896,9 @@ Errors Archive_readImageEntry(ArchiveInfo        *archiveInfo,
                        COMPRESS_MODE_INFLATE,
                        archiveEntryInfo->image.compressAlgorithm,
                        archiveEntryInfo->blockLength
+//??? NYI
+,NULL
+,NULL
                       );
   if (error != ERROR_NONE)
   {
@@ -3915,9 +3938,10 @@ Errors Archive_readImageEntry(ArchiveInfo        *archiveInfo,
   }
   foundImageEntryFlag = FALSE;
   foundImageDataFlag  = FALSE;
+  error               = ERROR_NONE;
   while (   !foundImageEntryFlag
          && !foundImageDataFlag
-         && ((archiveEntryInfo->cryptAlgorithm == CRYPT_ALGORITHM_NONE) || (password != NULL))
+         && (error == ERROR_NONE)
         )
   {
     error = ERROR_NONE;
@@ -4073,15 +4097,20 @@ Errors Archive_readImageEntry(ArchiveInfo        *archiveInfo,
       Crypt_done(&archiveEntryInfo->image.chunkImageData.cryptInfo);
       Crypt_done(&archiveEntryInfo->image.chunkImageEntry.cryptInfo);
 
-      if (archiveInfo->cryptType == CRYPT_TYPE_ASYMMETRIC)
+      if (   (archiveEntryInfo->cryptAlgorithm != CRYPT_ALGORITHM_NONE)
+          && (archiveInfo->cryptType != CRYPT_TYPE_ASYMMETRIC)
+         )
       {
-        /* no more passwords when asymmetric encryption used */
-        password = NULL;
+        /* get next password */
+        password = getNextDecryptPassword(&passwordHandle);
+
+        /* reset error and try next password */
+        error = ERROR_NONE;
       }
       else
       {
-        /* next password */
-        password = getNextDecryptPassword(&passwordHandle);
+        /* no more passwords when no encryption or asymmetric encryption is used */
+        password = NULL;
       }
     }
   } /* while */
@@ -4239,12 +4268,11 @@ Errors Archive_readDirectoryEntry(ArchiveInfo      *archiveInfo,
     decryptedFlag = TRUE;
   }
   foundDirectoryEntryFlag = FALSE;
+  error                   = ERROR_NONE;
   while (   !foundDirectoryEntryFlag
-         && ((archiveEntryInfo->cryptAlgorithm == CRYPT_ALGORITHM_NONE) || (password != NULL))
+         && (error == ERROR_NONE)
         )
   {
-    error = ERROR_NONE;
-
     /* reset chunk read position */
     Chunk_seek(&archiveEntryInfo->directory.chunkDirectory.info,index);
 
@@ -4335,15 +4363,20 @@ Errors Archive_readDirectoryEntry(ArchiveInfo      *archiveInfo,
       Crypt_done(&archiveEntryInfo->directory.chunkDirectoryEntry.cryptInfo);
       Chunk_done(&archiveEntryInfo->directory.chunkDirectory.info);
 
-      if (archiveInfo->cryptType == CRYPT_TYPE_ASYMMETRIC)
+      if (   (archiveEntryInfo->cryptAlgorithm != CRYPT_ALGORITHM_NONE)
+          && (archiveInfo->cryptType != CRYPT_TYPE_ASYMMETRIC)
+         )
       {
-        /* no more passwords when asymmetric encryption used */
-        password = NULL;
+        /* get next password */
+        password = getNextDecryptPassword(&passwordHandle);
+
+        /* reset error and try next password */
+        error = ERROR_NONE;
       }
       else
       {
-        /* next password */
-        password = getNextDecryptPassword(&passwordHandle);
+        /* no more passwords when no encryption or asymmetric encryption is used */
+        password = NULL;
       }
     }
   } /* while */
@@ -4492,10 +4525,10 @@ Errors Archive_readLinkEntry(ArchiveInfo      *archiveInfo,
     passwordFlag  = FALSE;
     decryptedFlag = TRUE;
   }
-  decryptedFlag          = FALSE;
   foundLinkEntryFlag = FALSE;
+  error              = ERROR_NONE;
   while (   !foundLinkEntryFlag
-         && ((archiveEntryInfo->cryptAlgorithm == CRYPT_ALGORITHM_NONE) || (password != NULL))
+         && (error == ERROR_NONE)
         )
   {
     error = ERROR_NONE;
@@ -4591,15 +4624,20 @@ Errors Archive_readLinkEntry(ArchiveInfo      *archiveInfo,
       Chunk_done(&archiveEntryInfo->link.chunkLinkEntry.info);
       Crypt_done(&archiveEntryInfo->link.chunkLinkEntry.cryptInfo);
 
-      if (archiveInfo->cryptType == CRYPT_TYPE_ASYMMETRIC)
+      if (   (archiveEntryInfo->cryptAlgorithm != CRYPT_ALGORITHM_NONE)
+          && (archiveInfo->cryptType != CRYPT_TYPE_ASYMMETRIC)
+         )
       {
-        /* no more passwords when asymmetric encryption used */
-        password = NULL;
+        /* get next password */
+        password = getNextDecryptPassword(&passwordHandle);
+
+        /* reset error and try next password */
+        error = ERROR_NONE;
       }
       else
       {
-        /* next password */
-        password = getNextDecryptPassword(&passwordHandle);
+        /* no more passwords when no encryption or asymmetric encryption is used */
+        password = NULL;
       }
     }
   } /* while */
@@ -4633,15 +4671,15 @@ Errors Archive_readHardLinkEntry(ArchiveInfo        *archiveInfo,
                                  uint64             *fragmentSize
                                 )
 {
-  Errors            error;                                        
-  ChunkHeader       chunkHeader;                                  
-  uint64            index;                                        
-  PasswordHandle    passwordHandle;                               
-  const Password    *password;                                    
-  bool              passwordFlag;                                 
-  bool              decryptedFlag;                                
-  ChunkHeader       subChunkHeader;                               
-  bool              foundHardLinkEntryFlag,foundHardLinkDataFlag; 
+  Errors            error;
+  ChunkHeader       chunkHeader;
+  uint64            index;
+  PasswordHandle    passwordHandle;
+  const Password    *password;
+  bool              passwordFlag;
+  bool              decryptedFlag;
+  ChunkHeader       subChunkHeader;
+  bool              foundHardLinkEntryFlag,foundHardLinkDataFlag;
   ChunkHardLinkName *chunkHardLinkName;
 
   assert(archiveInfo != NULL);
@@ -4741,6 +4779,9 @@ Errors Archive_readHardLinkEntry(ArchiveInfo        *archiveInfo,
                        COMPRESS_MODE_INFLATE,
                        archiveEntryInfo->hardLink.compressAlgorithm,
                        archiveEntryInfo->blockLength
+//??? NYI
+,NULL
+,NULL
                       );
   if (error != ERROR_NONE)
   {
@@ -4780,9 +4821,10 @@ Errors Archive_readHardLinkEntry(ArchiveInfo        *archiveInfo,
   }
   foundHardLinkEntryFlag = FALSE;
   foundHardLinkDataFlag  = FALSE;
+  error                  = ERROR_NONE;
   while (   !foundHardLinkEntryFlag
          && !foundHardLinkDataFlag
-         && ((archiveEntryInfo->cryptAlgorithm == CRYPT_ALGORITHM_NONE) || (password != NULL))
+         && (error == ERROR_NONE)
         )
   {
     error = ERROR_NONE;
@@ -5000,15 +5042,20 @@ Errors Archive_readHardLinkEntry(ArchiveInfo        *archiveInfo,
       Crypt_done(&archiveEntryInfo->hardLink.chunkHardLinkData.cryptInfo);
       Crypt_done(&archiveEntryInfo->hardLink.chunkHardLinkEntry.cryptInfo);
 
-      if (archiveInfo->cryptType == CRYPT_TYPE_ASYMMETRIC)
+      if (   (archiveEntryInfo->cryptAlgorithm != CRYPT_ALGORITHM_NONE)
+          && (archiveInfo->cryptType != CRYPT_TYPE_ASYMMETRIC)
+         )
       {
-        /* no more passwords when asymmetric encryption used */
-        password = NULL;
+        /* get next password */
+        password = getNextDecryptPassword(&passwordHandle);
+
+        /* reset error and try next password */
+        error = ERROR_NONE;
       }
       else
       {
-        /* next password */
-        password = getNextDecryptPassword(&passwordHandle);
+        /* no more passwords when no encryption or asymmetric encryption is used */
+        password = NULL;
       }
     }
   } /* while */
@@ -5165,8 +5212,9 @@ Errors Archive_readSpecialEntry(ArchiveInfo      *archiveInfo,
     decryptedFlag = TRUE;
   }
   foundSpecialEntryFlag = FALSE;
+  error                 = ERROR_NONE;
   while (   !foundSpecialEntryFlag
-         && ((archiveEntryInfo->cryptAlgorithm == CRYPT_ALGORITHM_NONE) || (password != NULL))
+         && (error == ERROR_NONE)
         )
   {
     error = ERROR_NONE;
@@ -5264,15 +5312,20 @@ Errors Archive_readSpecialEntry(ArchiveInfo      *archiveInfo,
       Chunk_done(&archiveEntryInfo->special.chunkSpecialEntry.info);
       Crypt_done(&archiveEntryInfo->special.chunkSpecialEntry.cryptInfo);
 
-      if (archiveInfo->cryptType == CRYPT_TYPE_ASYMMETRIC)
+      if (   (archiveEntryInfo->cryptAlgorithm != CRYPT_ALGORITHM_NONE)
+          && (archiveInfo->cryptType != CRYPT_TYPE_ASYMMETRIC)
+         )
       {
-        /* no more passwords when asymmetric encryption used */
-        password = NULL;
+        /* get next password */
+        password = getNextDecryptPassword(&passwordHandle);
+
+        /* reset error and try next password */
+        error = ERROR_NONE;
       }
       else
       {
-        /* next password */
-        password = getNextDecryptPassword(&passwordHandle);
+        /* no more passwords when no encryption or asymmetric encryption is used */
+        password = NULL;
       }
     }
   } /* while */
@@ -5876,6 +5929,12 @@ Errors Archive_writeData(ArchiveEntryInfo *archiveEntryInfo,
 
             /* check if compressed data blocks are available and can be encrypted and written to file */
             allowNewPartFlag = ((elementSize <= 1) || (writtenBlockBytes >= blockLength));
+/* ???
+fprintf(stderr,"%s,%d: avild =%d\n",__FILE__,__LINE__,
+Compress_getAvailableBlocks(&archiveEntryInfo->file.compressInfoData,
+                                               COMPRESS_BLOCK_TYPE_FULL
+                                              ));
+*/
             while (Compress_getAvailableBlocks(&archiveEntryInfo->file.compressInfoData,
                                                COMPRESS_BLOCK_TYPE_FULL
                                               ) > 0
@@ -6246,7 +6305,7 @@ Errors Archive_updateIndex(DatabaseHandle *databaseHandle,
                            Password       *cryptPassword,
                            String         cryptPrivateKeyFileName,
                            bool           *pauseFlag,
-                           bool           *requestedAbortFlag                           
+                           bool           *requestedAbortFlag
                           )
 {
   Errors            error;
@@ -6723,7 +6782,7 @@ Errors Archive_remIndex(DatabaseHandle *databaseHandle,
   {
     return error;
   }
-  
+
   return ERROR_NONE;
 }
 

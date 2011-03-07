@@ -20,6 +20,8 @@
 
 #include "global.h"
 #include "strings.h"
+#include "files.h"
+#include "devices.h"
 
 #include "errors.h"
 #include "chunks.h"
@@ -27,11 +29,8 @@
 #include "passwords.h"
 #include "crypt.h"
 #include "archive_format.h"
-#include "files.h"
-#include "devices.h"
 #include "storage.h"
 #include "index.h"
-
 #include "bar.h"
 
 /****************** Conditional compilation switches *******************/
@@ -141,7 +140,7 @@ typedef struct
 
   uint                            blockLength;                       // block length for file entry/file data (depend on used crypt algorithm)
 
-  String                          fileName;                          // file name
+  String                          fileName;                          // storage file name
   ArchiveIOTypes                  ioType;                            // i/o type
   union
   {
@@ -425,16 +424,19 @@ bool Archive_eof(ArchiveInfo *archiveInfo,
 *          fileName         - file name
 *          fileInfo         - file info
 *          compressFlag     - TRUE for compression, FALSE otherwise
+*                             (e. g. file to small or already compressed)
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-Errors Archive_newFileEntry(ArchiveInfo      *archiveInfo,
-                            ArchiveEntryInfo *archiveEntryInfo,
-                            const String     fileName,
-                            const FileInfo   *fileInfo,
-                            bool             compressFlag
+Errors Archive_newFileEntry(ArchiveInfo                     *archiveInfo,
+                            ArchiveEntryInfo                *archiveEntryInfo,
+                            const String                    fileName,
+                            const FileInfo                  *fileInfo,
+                            CompressSourceGetEntryDataBlock sourceGetEntryDataBlock,
+                            void                            *sourceGetEntryDataBlockUserData,
+                            bool                            compressFlag
                            );
 
 /***********************************************************************\
@@ -445,6 +447,8 @@ Errors Archive_newFileEntry(ArchiveInfo      *archiveInfo,
 *          deviceName       - special device name
 *          deviceInfo       - device info
 *          compressFlag     - TRUE for compression, FALSE otherwise
+*                             (e. g. image to small or already
+*                             compressed)
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -503,6 +507,7 @@ Errors Archive_newLinkEntry(ArchiveInfo      *archiveInfo,
 *          fileNameList     - list of file names
 *          fileInfo         - file info
 *          compressFlag     - TRUE for compression, FALSE otherwise
+*                             (e. g. file to small or already compressed)
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
