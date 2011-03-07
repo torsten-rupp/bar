@@ -32,19 +32,15 @@
 #include "files.h"
 #include "network.h"
 #include "database.h"
-#include "errors.h"
 
-#include "bar.h"
-#include "network.h"
+#include "errors.h"
+#include "crypt.h"
 #include "passwords.h"
 #include "misc.h"
-
-#include "crypt.h"
 #include "archive.h"
+#include "bar.h"
 
 #include "storage.h"
-
-//#include <fcntl.h>
 
 /****************** Conditional compilation switches *******************/
 
@@ -2578,7 +2574,7 @@ Errors Storage_create(StorageFileHandle *storageFileHandle,
         /* open file */
         error = File_open(&storageFileHandle->fileSystem.fileHandle,
                           fileName,
-                          FILE_OPENMODE_CREATE
+                          FILE_OPEN_CREATE
                          );
         if (error != ERROR_NONE)
         {
@@ -2779,7 +2775,7 @@ Errors Storage_create(StorageFileHandle *storageFileHandle,
         /* create file */
         error = File_open(&storageFileHandle->opticalDisk.fileHandle,
                           storageFileHandle->opticalDisk.fileName,
-                          FILE_OPENMODE_CREATE
+                          FILE_OPEN_CREATE
                          );
         if (error != ERROR_NONE)
         {
@@ -2797,7 +2793,7 @@ Errors Storage_create(StorageFileHandle *storageFileHandle,
         /* open file */
         error = File_open(&storageFileHandle->device.fileHandle,
                           storageFileHandle->device.fileName,
-                          FILE_OPENMODE_CREATE
+                          FILE_OPEN_CREATE
                          );
         if (error != ERROR_NONE)
         {
@@ -2833,7 +2829,7 @@ Errors Storage_open(StorageFileHandle *storageFileHandle,
       /* open file */
       error = File_open(&storageFileHandle->fileSystem.fileHandle,
                         fileName,
-                        FILE_OPENMODE_READ
+                        FILE_OPEN_READ
                        );
       if (error != ERROR_NONE)
       {
@@ -3032,7 +3028,7 @@ Errors Storage_open(StorageFileHandle *storageFileHandle,
 #if 0
       error = File_open(&storageFileHandle->fileSystem.fileHandle,
                         storageFileHandle->fileSystem.fileName,
-                        FILE_OPENMODE_READ
+                        FILE_OPEN_READ
                        );
       if (error != ERROR_NONE)
       {
@@ -3048,7 +3044,7 @@ Errors Storage_open(StorageFileHandle *storageFileHandle,
 #if 0
       error = File_open(&storageFileHandle->fileSystem.fileHandle,
                         storageFileHandle->fileSystem.fileName,
-                        FILE_OPENMODE_READ
+                        FILE_OPEN_READ
                        );
       if (error != ERROR_NONE)
       {
@@ -4377,7 +4373,7 @@ Errors Storage_openDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
           FtpQuit(control);
 
           /* open list file */
-          error = File_open(&storageDirectoryListHandle->ftp.fileHandle,storageDirectoryListHandle->ftp.fileListFileName,FILE_OPENMODE_READ);
+          error = File_open(&storageDirectoryListHandle->ftp.fileHandle,storageDirectoryListHandle->ftp.fileListFileName,FILE_OPEN_READ);
           if (error != ERROR_NONE)
           {
             String_delete(hostName);

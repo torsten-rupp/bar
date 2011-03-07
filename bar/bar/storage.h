@@ -31,11 +31,11 @@
 #include "files.h"
 #include "network.h"
 #include "database.h"
-#include "errors.h"
 
-#include "bar.h"
+#include "errors.h"
 #include "crypt.h"
 #include "passwords.h"
+#include "bar.h"
 
 /****************** Conditional compilation switches *******************/
 
@@ -139,13 +139,13 @@ typedef struct
   StorageTypes                 type;
   const JobOptions             *jobOptions;
 
-  StorageRequestVolumeFunction requestVolumeFunction;
+  StorageRequestVolumeFunction requestVolumeFunction;  // call back for request new volume
   void                         *requestVolumeUserData;
   uint                         volumeNumber;           // current loaded volume number
   uint                         requestedVolumeNumber;  // requested volume number
   StorageVolumeStates          volumeState;            // volume state
 
-  StorageStatusInfoFunction    storageStatusInfoFunction;
+  StorageStatusInfoFunction    storageStatusInfoFunction;  // call back new storage status info
   void                         *storageStatusInfoUserData;
 
   union
@@ -239,33 +239,33 @@ typedef struct
     {
       String     name;                                 // DVD device name
 
-      String     requestVolumeCommand;                 // command to request new DVD
-      String     unloadVolumeCommand;                  // command to unload DVD
-      String     loadVolumeCommand;                    // command to load DVD
-      uint64     volumeSize;                           // size of DVD [bytes]
+      String     requestVolumeCommand;                 // command to request new CD/DVD/BD
+      String     unloadVolumeCommand;                  // command to unload CD/DVD/BD
+      String     loadVolumeCommand;                    // command to load CD/DVD/BD
+      uint64     volumeSize;                           // size of CD/DVD/BD [bytes]
       String     imagePreProcessCommand;               // command to execute before creating image
       String     imagePostProcessCommand;              // command to execute after created image
-      String     imageCommand;                         // command to create DVD image
+      String     imageCommand;                         // command to create CD/DVD/BD image
       String     eccPreProcessCommand;                 // command to execute before ECC calculation
       String     eccPostProcessCommand;                // command to execute after ECC calculation
       String     eccCommand;                           // command for ECC calculation
-      String     writePreProcessCommand;               // command to execute before writing DVD
-      String     writePostProcessCommand;              // command to execute after writing DVD
-      String     writeCommand;                         // command to write DVD
-      String     writeImageCommand;                    // command to write image on DVD
+      String     writePreProcessCommand;               // command to execute before writing CD/DVD/BD
+      String     writePostProcessCommand;              // command to execute after writing CD/DVD/BD
+      String     writeCommand;                         // command to write CD/DVD/BD
+      String     writeImageCommand;                    // command to write image on CD/DVD/BD
 
-      uint       steps;                                // total number of steps to create DVD
-      String     directory;                            // temporary directory for DVD files
+      uint       steps;                                // total number of steps to create CD/DVD/BD
+      String     directory;                            // temporary directory for CD/DVD/BD files
 
       uint       step;                                 // current step number
       double     progress;                             // progress of current step
 
-      uint       number;                               // current DVD number
-      bool       newFlag;                              // TRUE iff new DVD needed
+      uint       number;                               // current CD/DVD/BD number
+      bool       newFlag;                              // TRUE iff new CD/DVD/BD needed
       StringList fileNameList;                         // list with file names
       String     fileName;                             // current file name
       FileHandle fileHandle;
-      uint64     totalSize;                            // current size of DVD [bytes]
+      uint64     totalSize;                            // current size of CD/DVD/BD [bytes]
     } opticalDisk;
 
     // device storage
