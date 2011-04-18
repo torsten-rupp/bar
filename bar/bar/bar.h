@@ -173,9 +173,17 @@ typedef struct
   LIST_HEADER(SSHServerNode);
 } SSHServerList;
 
+/* file/FTP/SCP/SFTP settings */
+typedef struct
+{
+  String writePreProcessCommand;        // command to execute before writing
+  String writePostProcessCommand;       // command to execute after writing
+} File;
+    
 /* optical disk settings */
 typedef struct
 {
+  String defaultDeviceName;             // default device name
   String requestVolumeCommand;          // command to request new medium
   String unloadVolumeCommand;           // command to unload medium
   String loadVolumeCommand;             // command to load medium
@@ -196,6 +204,7 @@ typedef struct
 /* device settings */
 typedef struct
 {
+  String defaultDeviceName;             // default device name
   String requestVolumeCommand;          // command to request new volume
   String unloadVolumeCommand;           // command to unload volume
   String loadVolumeCommand;             // command to load volume
@@ -253,11 +262,14 @@ typedef struct
 
   String                 remoteBARExecutable;
 
+  File                   file;                           // file settings
+  File                   ftp;                            // ftp settings
+  File                   scp;                            // scp settings
+  File                   sftp;                           // sftp settings
   OpticalDisk            cd;                             // CD settings
   OpticalDisk            dvd;                            // DVD settings
   OpticalDisk            bd;                             // BD settings
 
-  String                 defaultDeviceName;              // default device name
   Device                 *device;                        // current selected device
   const DeviceList       *deviceList;                    // list with devices
   Device                 *defaultDevice;                 // default device
@@ -340,7 +352,8 @@ typedef struct
   bool                skipUnreadableFlag;                // TRUE for skipping unreadable files
   bool                overwriteArchiveFilesFlag;
   bool                overwriteFilesFlag;
-  bool                errorCorrectionCodesFlag;
+  bool                errorCorrectionCodesFlag;          // TRUE iff error correction codes should be added
+  bool                alwaysCreateImageFlag;             // TRUE iff always create image for CD/DVD/BD/device
   bool                waitFirstVolumeFlag;
   bool                rawImagesFlag;                     // TRUE for storing raw images
   bool                dryRunFlag;                        // TRUE to do a dry-run (do not store, do not create incremental data, do not store in database)
