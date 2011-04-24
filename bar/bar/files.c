@@ -1781,6 +1781,22 @@ Errors File_makeDirectory(const String   pathName,
   return ERROR_NONE;
 }
 
+Errors File_makeDirectoryCString(const char     *pathName,
+                                 uint32         userId,
+                                 uint32         groupId,
+                                 FilePermission permission
+                                )
+{
+  String string;
+  Errors error;
+
+  string = File_setFileNameCString(File_newFileName(),pathName);
+  error = File_makeDirectory(string,userId,groupId,permission);
+  File_deleteFileName(string);
+
+  return error;
+}
+
 Errors File_readLink(String       fileName,
                      const String linkName
                     )

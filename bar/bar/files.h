@@ -827,7 +827,7 @@ Errors File_setFileInfo(const String fileName,
                        );
 
 /***********************************************************************\
-* Name   : File_makeDirectory
+* Name   : File_makeDirectory, File_makeDirectoryCString
 * Purpose: create directory including intermedate directories
 * Input  : pathName   - path name
 *          userId     - user id or FILE_DEFAULT_USER_ID
@@ -843,6 +843,11 @@ Errors File_makeDirectory(const String   pathName,
                           uint32         groupId,
                           FilePermission permission
                          );
+Errors File_makeDirectoryCString(const char     *pathName,
+                                 uint32         userId,
+                                 uint32         groupId,
+                                 FilePermission permission
+                                );
 
 /***********************************************************************\
 * Name   : File_readLink
