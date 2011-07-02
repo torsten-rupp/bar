@@ -1,0 +1,11 @@
+--- ftplib-3.1.org/linux/ftplib.c	2011-06-23 18:45:50.329013841 +0200
++++ ftplib-3.1/linux/ftplib.c	2011-06-23 18:46:55.349013807 +0200
+@@ -839,7 +839,7 @@
+             return 0;
+         strcpy(&buf[i],path);
+     }
+-    if (FtpOpenPort(nControl, nData, mode, dir) == -1)
++    if (FtpOpenPort(nControl, nData, mode, dir) != 1)
+ 	return 0;
+     if (!FtpSendCmd(buf, '1', nControl))
+     {
