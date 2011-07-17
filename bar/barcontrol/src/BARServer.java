@@ -389,6 +389,14 @@ class Command
   {
     BARServer.timeoutCommand(this);
   }
+
+  /** convert data to string
+   * @return string
+   */
+  public String toString()
+  {
+    return "Command {"+id+", errorCode="+errorCode+", "+errorText+" completedFlag="+completedFlag+"}";
+  }
 }
 
 /** server result read thread
@@ -797,7 +805,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
       byte authorizeData[] = new byte[sessionId.length];
       for (int z = 0; z < sessionId.length; z++)
       {
-        authorizeData[z] = (byte)(((z < serverPassword.length())?(int)serverPassword.charAt(z):0)^(int)sessionId[z]);
+        authorizeData[z] = (byte)((((serverPassword != null) && (z < serverPassword.length()))?(int)serverPassword.charAt(z):0)^(int)sessionId[z]);
       }
       commandId++;
       line = Long.toString(commandId)+" AUTHORIZE "+encodeHex(authorizeData);
@@ -905,6 +913,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
       }
       catch (InterruptedException exception)
       {
+        // ignored 
       }
 
       // free resources
