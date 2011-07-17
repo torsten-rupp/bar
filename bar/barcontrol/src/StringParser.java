@@ -571,17 +571,18 @@ class StringParser
                      && ((formatIndex >= format.length()) || (string.charAt(index) != format.charAt(formatIndex)))
                     )
               {
-                if ((string.charAt(index) == '\\') && !formatToken.greedyFlag)
+                if (   !formatToken.greedyFlag
+                    && (stringQuotes != null)
+                    && ((index+1) < string.length())
+                    && (string.charAt(index) == '\\')
+                    && (stringQuotes.indexOf(string.charAt(index+1)) >= 0)
+                   )
                 {
-                  index++;
-                  if (index < string.length())
+                  if ((formatToken.width == 0) || (buffer.length() < formatToken.width-1))
                   {
-                    if ((formatToken.width == 0) || (buffer.length() < (formatToken.width-1)))
-                    {
-                      buffer.append(string.charAt(index));
-                    }
-                    index++;
+                    buffer.append(string.charAt(index+1));
                   }
+                  index+=2;
                 }
                 else
                 {
@@ -637,17 +638,17 @@ class StringParser
                      && ((formatIndex >= format.length()) || (string.charAt(index) != format.charAt(formatIndex)))
                     )
               {
-                if (string.charAt(index) == '\\')
+                if (   (stringQuotes != null)
+                    && ((index+1) < string.length())
+                    && (string.charAt(index) == '\\')
+                    && (stringQuotes.indexOf(string.charAt(index+1)) >= 0)
+                   )
                 {
-                  index++;
-                  if (index < string.length())
+                  if ((formatToken.width == 0) || (buffer.length() < formatToken.width-1))
                   {
-                    if ((formatToken.width == 0) || (buffer.length() < formatToken.width-1))
-                    {
-                      buffer.append(string.charAt(index));
-                    }
-                    index++;
+                    buffer.append(string.charAt(index+1));
                   }
+                  index+=2;
                 }
                 else
                 {
@@ -665,17 +666,17 @@ class StringParser
                       /* get string */
                       while ((index < string.length()) && (string.charAt(index) != stringQuote))
                       {
-                        if (string.charAt(index) == '\\')
+                        if (   (stringQuotes != null)
+                            && ((index+1) < string.length())
+                            && (string.charAt(index) == '\\')
+                            && (stringQuotes.indexOf(string.charAt(index+1)) >= 0)
+                           )
                         {
-                          index++;
-                          if (index < string.length())
+                          if ((formatToken.width == 0) || (buffer.length() < formatToken.width-1))
                           {
-                            if ((formatToken.width == 0) || (buffer.length() < formatToken.width-1))
-                            {
-                              buffer.append(string.charAt(index));
-                            }
-                            index++;
+                            buffer.append(string.charAt(index+1));
                           }
+                          index+=2;
                         }
                         else
                         {
