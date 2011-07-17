@@ -574,6 +574,7 @@ error = ERROR_NONE;
     /* wait until process terminate and read stdout/stderr */
     stdoutLine = String_new();
     stderrLine = String_new();
+    status = 0;
     while ((waitpid(pid,&status,WNOHANG) == 0) || (!WIFEXITED(status) && !WIFSIGNALED(status)))
     {
       if (readProcessIO(pipeStdout[0],stdoutLine))
