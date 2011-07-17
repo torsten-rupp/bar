@@ -71,6 +71,7 @@ ERROR FTP_SESSION_FAIL               "initialize FTP session fail"
 ERROR NO_FTP_PASSWORD                "no FTP password given"
 ERROR INVALID_FTP_PASSWORD           "invalid FTP password"
 ERROR FTP_AUTHENTIFICATION           "invalid FTP user/password"
+ERROR FTP_GET_SIZE                   "get FTP file size fail"
 //ERROR FTP_CREATE                     "create FTP file fail"
 //ERROR FTP_READ                       "read FTP file fail"
 //ERROR FTP_WRITE                      "write FTP file fail"
@@ -108,12 +109,19 @@ ERROR WRONG_PRIVATE_KEY              "wrong private key"
 ERROR CREATE_FILE
 ERROR OPEN_FILE
 ERROR OPEN_DIRECTORY
-  // Note: to not add file name to error message; name should be part of error text
-  strncpy(errorText,strerror(ERRNO),sizeof(errorText)-1);
+  // Note: to not add file name to error message if error number is set; name should be part of error text
+  if (ERRNO != 0)
+  {
+    strncpy(errorText,strerror(ERRNO),sizeof(errorText)-1);
+  }
+  else
+  {
+    strncpy(errorText,ERROR_TEXT,sizeof(errorText)-1);
+  }
   errorText[sizeof(errorText)-1] = '\0';
 
 ERROR IO_ERROR
-  strncpy(errorText,strerror(ERRNO),sizeof(errorText)-1);
+  strncpy(errorText,(ERRNO != 0)?strerror(ERRNO):"i/o error",sizeof(errorText)-1);
   if (ERROR_TEXT != NULL)
   {
     strncat(errorText,": ",sizeof(errorText)-1-strlen(errorText));
