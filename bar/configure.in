@@ -16,6 +16,39 @@ AC_DEFUN([AC_MSG_COMPILE],
   _AS_ECHO_N([Compile $1... ])
 ])
 
+dnl --- check 
+AC_DEFUN([AC_SEARCH_STATIC_LIBS],
+[
+  AS_VAR_PUSHDEF([ac_search_static], [ac_cv_search_static_$1])dnl
+  AC_CACHE_CHECK(
+    [for static library containing $1],
+    [ac_search_static],
+    [
+     ac_func_search_static_save_CFLAGS="$CFLAGS"; CFLAGS="$CFLAGS -static"
+     ac_func_search_static_save_LIBS=$LIBS
+     AC_LANG_CONFTEST([AC_LANG_CALL([], [$1])])
+     for ac_lib in '' $2; do
+       if test -z "$ac_lib"; then
+         ac_res="none required"
+       else
+         ac_res=-l$ac_lib
+         LIBS="-l$ac_lib $5 $ac_func_search_save_LIBS"
+       fi
+       AC_LINK_IFELSE([], [AS_VAR_SET([ac_search_static], [$ac_res])])
+       AS_VAR_SET_IF([ac_search_static], [break])
+     done
+     AS_VAR_SET_IF([ac_search_static], , [AS_VAR_SET([ac_search_static], [no])])
+     rm conftest.$ac_ext
+     LIBS=$ac_func_search_save_LIBS
+     CFLAGS=$ac_func_search_static_save_CFLAGS
+   ]
+  )
+  AS_VAR_COPY([ac_res], [ac_search_static])
+  AS_IF([test "$ac_res" != no],[test "$ac_res" = "none required" || LIBS="$ac_res $LIBS" $3],[$4])
+  AS_VAR_POPDEF([ac_search_static])dnl
+])
+
+
 dnl --- check if C compiler long long data type available
 # (original macro from http://ac-archive.sourceforge.net/C_Support/ac_c_long_long.html)
 AC_DEFUN([AC_C_LONG_LONG],
@@ -583,6 +616,7 @@ if test -d zlib -o -d "`readlink zlib`"; then
   mkdir packages 2>/dev/null
   mkdir packages/include 2>/dev/null
   mkdir packages/lib 2>/dev/null
+  cwd=`pwd`
 
   AC_MSG_COMPILE([zlib])
   result=1
@@ -613,6 +647,8 @@ if test -d zlib -o -d "`readlink zlib`"; then
 
   if test $result -eq 1; then
     HAVE_Z=1
+    CC_INCLUDES="$CC_INCLUDES $cwd/packages/include"
+    LIBRARY_PATHS="$LIBRARY_PATHS $cwd/packages/lib"
     STATIC_LIBRARIES="$STATIC_LIBRARIES z"
     AC_DEFINE(HAVE_Z,1,[zlib installed (local)])
   fi
@@ -621,7 +657,12 @@ else
   if test $ENABLE_LINK_DYNAMIC = "yes"; then
     AC_SEARCH_LIBS(zlibVersion,z,[HAVE_Z=1;LIBRARIES="$LIBRARIES z";AC_DEFINE(HAVE_Z,1,[z installed])])
   else
-    AC_SEARCH_LIBS(zlibVersion,z,[HAVE_Z=1;STATIC_LIBRARIES="$STATIC_LIBRARIES z";AC_DEFINE(HAVE_Z,1,[z installed])])
+    if test -z "$HAVE_Z"; then
+      AC_SEARCH_STATIC_LIBS(zlibVersion,z,[HAVE_Z=1;STATIC_LIBRARIES="$STATIC_LIBRARIES z";AC_DEFINE(HAVE_Z,1,[z installed])])
+    fi
+    if test -z "$HAVE_Z"; then
+      AC_SEARCH_LIBS(zlibVersion,z,[HAVE_Z=1;LIBRARIES="$LIBRARIES z";AC_DEFINE(HAVE_Z,1,[z installed])])
+    fi
   fi
 fi
 
@@ -656,6 +697,8 @@ if test $ENABLE_BZIP2 = "yes"; then
 
     if test $result -eq 1; then
       HAVE_BZ2=1
+      CC_INCLUDES="$CC_INCLUDES $cwd/packages/include"
+      LIBRARY_PATHS="$LIBRARY_PATHS $cwd/packages/lib"
       STATIC_LIBRARIES="$STATIC_LIBRARIES bz2"
       AC_DEFINE(HAVE_BZ2,1,[bzip2 installed (local)])
     fi
@@ -664,7 +707,12 @@ if test $ENABLE_BZIP2 = "yes"; then
     if test $ENABLE_LINK_DYNAMIC = "yes"; then
       AC_SEARCH_LIBS(BZ2_bzCompressInit,bz2,[HAVE_BZ2=1;LIBRARIES="$LIBRARIES bz2";AC_DEFINE(HAVE_BZ2,1,[bzip2 installed])])
     else
-      AC_SEARCH_LIBS(BZ2_bzCompressInit,bz2,[HAVE_BZ2=1;STATIC_LIBRARIES="$STATIC_LIBRARIES bz2";AC_DEFINE(HAVE_BZ2,1,[bzip2 installed])])
+      if test -z "$HAVE_BZ2"; then
+        AC_SEARCH_STATIC_LIBS(BZ2_bzCompressInit,bz2,[HAVE_BZ2=1;STATIC_LIBRARIES="$STATIC_LIBRARIES bz2";AC_DEFINE(HAVE_BZ2,1,[static bzip2 installed])])
+      fi
+      if test -z "$HAVE_BZ2"; then
+        AC_SEARCH_LIBS(BZ2_bzCompressInit,bz2,[HAVE_BZ2=1;LIBRARIES="$LIBRARIES bz2";AC_DEFINE(HAVE_BZ2,1,[bzip2 installed])])
+      fi
     fi
   fi
 fi
@@ -707,18 +755,23 @@ if test $ENABLE_LZMA = "yes"; then
 
     if test $result -eq 1; then
       HAVE_LZMA=1
+      CC_INCLUDES="$CC_INCLUDES $cwd/packages/include"
+      LIBRARY_PATHS="$LIBRARY_PATHS $cwd/packages/lib"
       STATIC_LIBRARIES="$STATIC_LIBRARIES lzma"
       AC_DEFINE(HAVE_LZMA,1,[lzma installed (local)])
     fi
   else
     dnl search for installed lzma library
     if test $ENABLE_LINK_DYNAMIC = "yes"; then
-      AC_SEARCH_LIBS(lzma_code,lzma,[HAVE_LZMA=1;LIBRARIES="$LIBRARIES lzma";AC_DEFINE(HAVE_LZMA,1,[lzma installed])])
+      AC_SEARCH_LIBS(lzma_easy_encoder,lzma,[HAVE_LZMA=1;LIBRARIES="$LIBRARIES lzma";AC_DEFINE(HAVE_LZMA,1,[lzma installed])])
     else
-      AC_SEARCH_LIBS(lzma_code,lzma,[HAVE_LZMA=1;STATIC_LIBRARIES="$STATIC_LIBRARIES lzma";AC_DEFINE(HAVE_LZMA,1,[lzma installed])])
+      if test -z "$HAVE_LZMA"; then
+        AC_SEARCH_STATIC_LIBS(lzma_easy_encoder,lzma,[HAVE_LZMA=1;STATIC_LIBRARIES="$STATIC_LIBRARIES lzma";AC_DEFINE(HAVE_LZMA,1,[static lzma installed])])
+      fi
+      if test -z "$HAVE_LZMA"; then
+        AC_SEARCH_LIBS(lzma_easy_encoder,lzma,[HAVE_LZMA=1;LIBRARIES="$LIBRARIES lzma";AC_DEFINE(HAVE_LZMA,1,[lzma installed])])
+      fi
     fi
-  fi
-fi
 
 if test $ENABLE_XDELTA3 = "yes"; then
   if test -d xdelta3 -o -d "`readlink xdelta3`"; then
@@ -796,6 +849,8 @@ if test $ENABLE_GCRYPT = "yes"; then
     if test $result1 -eq 1 -a $result2 -eq 1; then
       HAVE_GCRYPT=1
       HAVE_GPG_ERROR=1
+      CC_INCLUDES="$CC_INCLUDES $cwd/packages/include"
+      LIBRARY_PATHS="$LIBRARY_PATHS $cwd/packages/lib"
       STATIC_LIBRARIES="$STATIC_LIBRARIES gpg-error gcrypt"
       AC_DEFINE(HAVE_GCRYPT,1,[gcrypt installed (local)])
     fi
@@ -808,12 +863,22 @@ if test $ENABLE_GCRYPT = "yes"; then
         if test $ENABLE_LINK_DYNAMIC = "yes"; then
           AC_SEARCH_LIBS(gpg_strerror,gpg-error,[HAVE_GPG_ERROR=1;LIBRARIES="$LIBRARIES gpg-error";AC_DEFINE(HAVE_GPG_ERROR,1,[GPG error installed])])
         else
-          AC_SEARCH_LIBS(gpg_strerror,gpg-error,[HAVE_GPG_ERROR=1;STATIC_LIBRARIES="$STATIC_LIBRARIES gpg-error";AC_DEFINE(HAVE_GPG_ERROR,1,[GPG error installed])])
+          if test -z "$HAVE_GPG_ERROR"; then
+            AC_SEARCH_STATIC_LIBS(gpg_strerror,gpg-error,[HAVE_GPG_ERROR=1;STATIC_LIBRARIES="$STATIC_LIBRARIES gpg-error";AC_DEFINE(HAVE_GPG_ERROR,1,[static GPG error installed])])
+          fi
+          if test -z "$HAVE_GPG_ERROR"; then
+            AC_SEARCH_LIBS(gpg_strerror,gpg-error,[HAVE_GPG_ERROR=1;LIBRARIES="$LIBRARIES gpg-error";AC_DEFINE(HAVE_GPG_ERROR,1,[GPG error installed])])
+          fi
         fi
         if test $ENABLE_LINK_DYNAMIC = "yes"; then
           AC_SEARCH_LIBS(gcry_check_version,gcrypt,[HAVE_GCRYPT=1;LIBRARIES="$LIBRARIES gcrypt";AC_DEFINE(HAVE_GCRYPT,1,[gcrypt installed])])
         else
-          AC_SEARCH_LIBS(gcry_check_version,gcrypt,[HAVE_GCRYPT=1;STATIC_LIBRARIES="$STATIC_LIBRARIES gcrypt";AC_DEFINE(HAVE_GCRYPT,1,[gcrypt installed])])
+          if test -z "$HAVE_GCRYPT"; then
+            AC_SEARCH_STATIC_LIBS(gcry_check_version,gcrypt,[HAVE_GCRYPT=1;STATIC_LIBRARIES="$STATIC_LIBRARIES gcrypt";AC_DEFINE(HAVE_GCRYPT,1,[static gcrypt installed])])
+          fi
+          if test -z "$HAVE_GCRYPT"; then
+            AC_SEARCH_LIBS(gcry_check_version,gcrypt,[HAVE_GCRYPT=1;LIBRARIES="$LIBRARIES gcrypt";AC_DEFINE(HAVE_GCRYPT,1,[gcrypt installed])])
+          fi
         fi
       ],
       [
@@ -837,7 +902,9 @@ if test $ENABLE_FTP = "yes"; then
     AC_MSG_COMPILE([ftplib])
     result=1
     if test $result -eq 1; then
-      (cd packages; patch --batch -N -p0 <$cwd/misc/ftplib-3.1-without-perror.patch) 1>/dev/null 2>/dev/null
+      (cd packages/ftplib-3.1; patch --batch -N -p1 <$cwd/misc/ftplib-3.1-without-perror.patch) 1>/dev/null 2>/dev/null
+      (cd packages/ftplib-3.1; patch --batch -N -p1 <$cwd/misc/ftplib-3.1-ftpaccess.patch) 1>/dev/null 2>/dev/null
+      (cd packages/ftplib-3.1; patch --batch -N -p1 <$cwd/misc/ftplib-3.1-receive-timeout.patch) 1>/dev/null 2>/dev/null
     fi
     if test $result -eq 1; then
       (cd ftplib/linux; make) 1>/dev/null 2>/dev/null
@@ -859,6 +926,8 @@ if test $ENABLE_FTP = "yes"; then
 
     if test $result -eq 1; then
       HAVE_FTP=1
+      CC_INCLUDES="$CC_INCLUDES $cwd/packages/include"
+      LIBRARY_PATHS="$LIBRARY_PATHS $cwd/packages/lib"
       STATIC_LIBRARIES="$STATIC_LIBRARIES ftp"
       AC_DEFINE(HAVE_FTP,1,[ftplib installed (local)])
     fi
@@ -866,14 +935,19 @@ if test $ENABLE_FTP = "yes"; then
     if test $ENABLE_LINK_DYNAMIC = "yes"; then
       AC_SEARCH_LIBS(FtpInit,ftp,[HAVE_FTP=1;LIBRARIES="$LIBRARIES ftp";AC_DEFINE(HAVE_FTP,1,[FTP installed])])
     else
-      AC_SEARCH_LIBS(FtpInit,ftp,[HAVE_FTP=1;STATIC_LIBRARIES="$STATIC_LIBRARIES ftp";AC_DEFINE(HAVE_FTP,1,[FTP installed])])
+      if test -z "$HAVE_FTP"; then
+        AC_SEARCH_STATIC_LIBS(FtpInit,ftp,[HAVE_FTP=1;STATIC_LIBRARIES="$STATIC_LIBRARIES ftp";AC_DEFINE(HAVE_FTP,1,[static FTP installed])])
+      fi
+      if test -z "$HAVE_FTP"; then
+        AC_SEARCH_LIBS(FtpInit,ftp,[HAVE_FTP=1;LIBRARIES="$LIBRARIES ftp";AC_DEFINE(HAVE_FTP,1,[FTP installed])])
+      fi
     fi
   fi
 fi
 
 if test $ENABLE_SSH = "yes"; then
   if test -d libssh2 -o -d "`readlink libssh2`"; then
-    dnl compile ssh library
+    dnl compile ssh2 library
 
     mkdir packages 2>/dev/null
     mkdir packages/include 2>/dev/null
@@ -912,6 +986,8 @@ if test $ENABLE_SSH = "yes"; then
 
     if test $result -eq 1; then
       HAVE_SSH2=1
+      CC_INCLUDES="$CC_INCLUDES $cwd/packages/include"
+      LIBRARY_PATHS="$LIBRARY_PATHS $cwd/packages/lib"
       STATIC_LIBRARIES="$STATIC_LIBRARIES ssh2"
       AC_DEFINE(HAVE_SSH2,1,[ssh2 installed (local)])
     fi
@@ -919,15 +995,25 @@ if test $ENABLE_SSH = "yes"; then
     if test $ENABLE_LINK_DYNAMIC = "yes"; then
       AC_SEARCH_LIBS(libssh2_session_init_ex,ssh2,[HAVE_SSH2=1;LIBRARIES="$LIBRARIES ssh2";AC_DEFINE(HAVE_SSH2,1,[SSH2 installed])])
     else
-      AC_SEARCH_LIBS(libssh2_session_init_ex,ssh2,[HAVE_SSH2=1;STATIC_LIBRARIES="$STATIC_LIBRARIES ssh2";AC_DEFINE(HAVE_SSH2,1,[SSH2 installed])])
+      if test -z "$HAVE_SSH2"; then
+        AC_SEARCH_STATIC_LIBS(libssh2_session_init_ex,ssh2,[HAVE_SSH2=1;STATIC_LIBRARIES="$STATIC_LIBRARIES ssh2";AC_DEFINE(HAVE_SSH2,1,[static SSH2 installed])])
+      fi
+      if test -z "$HAVE_SSH2"; then
+        AC_SEARCH_LIBS(libssh2_session_init_ex,ssh2,[HAVE_SSH2=1;LIBRARIES="$LIBRARIES ssh2";AC_DEFINE(HAVE_SSH2,1,[SSH2 installed])])
+      fi
     fi
   fi
 
   dnl link libcrypto, too, if available (may be needed by some libssh2 implemenations)
   if test $ENABLE_LINK_DYNAMIC = "yes"; then
-    AC_SEARCH_LIBS(MD5_Init,crypto,[LIBRARIES="$LIBRARIES crypto"])
+    AC_SEARCH_LIBS(MD5_Init,crypto,[HAVE_CRYPTO=1;LIBRARIES="$LIBRARIES crypto";AC_DEFINE(HAVE_CRYPTO,1,[crypto installed])])
   else
-    AC_SEARCH_LIBS(MD5_Init,crypto,[STATIC_LIBRARIES="$STATIC_LIBRARIES crypto"])
+    if test -z "$HAVE_CRYPTO"; then
+      AC_SEARCH_STATIC_LIBS(MD5_Init,crypto,[HAVE_CRYPTO=1;STATIC_LIBRARIES="$STATIC_LIBRARIES crypto";AC_DEFINE(HAVE_CRYPTO,1,[static crypto installed])])
+    fi
+    if test -z "$HAVE_CRYPTO"; then
+      AC_SEARCH_LIBS(MD5_Init,crypto,[HAVE_CRYPTO=1;LIBRARIES="$LIBRARIES crypto";AC_DEFINE(HAVE_CRYPTO,1,[crypto installed])])
+    fi
   fi
 fi
 
@@ -969,6 +1055,8 @@ if test $ENABLE_TLS = "yes"; then
 
     if test $result -eq 1; then
       HAVE_GNU_TLS=1
+      CC_INCLUDES="$CC_INCLUDES $cwd/packages/include"
+      LIBRARY_PATHS="$LIBRARY_PATHS $cwd/packages/lib"
       STATIC_LIBRARIES="$STATIC_LIBRARIES gnutls"
       AC_DEFINE(HAVE_GNU_TLS,1,[gnutls installed (local)])
     fi
@@ -978,8 +1066,19 @@ if test $ENABLE_TLS = "yes"; then
       AC_SEARCH_LIBS(gnutls_global_init,gnutls,[HAVE_GNU_TLS=1;LIBRARIES="$LIBRARIES gnutls";AC_DEFINE(HAVE_GNU_TLS,1,[GNU TLS installed])])
       AC_SEARCH_LIBS(asn1_length_der,tasn1,[HAVE_TASN1=1;LIBRARIES="$LIBRARIES tasn1";AC_DEFINE(HAVE_TASN1,1,[TASN.1 installed])])
     else
-      AC_SEARCH_LIBS(gnutls_global_init,gnutls,[HAVE_GNU_TLS=1;STATIC_LIBRARIES="$STATIC_LIBRARIES gnutls";AC_DEFINE(HAVE_GNU_TLS,1,[GNU TLS installed])])
-      AC_SEARCH_LIBS(asn1_length_der,tasn1,[HAVE_TASN1=1;STATIC_LIBRARIES="$STATIC_LIBRARIES tasn1";AC_DEFINE(HAVE_TASN1,1,[TASN.1 installed])])
+      if test -z "$HAVE_GNU_TLS"; then
+        AC_SEARCH_STATIC_LIBS(gnutls_global_init,gnutls,[HAVE_GNU_TLS=1;STATIC_LIBRARIES="$STATIC_LIBRARIES gnutls";AC_DEFINE(HAVE_GNU_TLS,1,[static GNU TLS installed])])
+      fi
+      if test -z "$HAVE_GNU_TLS"; then
+        AC_SEARCH_LIBS(gnutls_global_init,gnutls,[HAVE_GNU_TLS=1;LIBRARIES="$LIBRARIES gnutls";AC_DEFINE(HAVE_GNU_TLS,1,[GNU TLS installed])])
+      fi
+
+      if test -z "$HAVE_TASN1"; then
+        AC_SEARCH_STATIC_LIBS(asn1_length_der,tasn1,[HAVE_TASN1=1;STATIC_LIBRARIES="$STATIC_LIBRARIES tasn1";AC_DEFINE(HAVE_TASN1,1,[static TASN.1 installed])])
+      fi
+      if test -z "$HAVE_TASN1"; then
+        AC_SEARCH_LIBS(asn1_length_der,tasn1,[HAVE_TASN1=1;LIBRARIES="$LIBRARIES tasn1";AC_DEFINE(HAVE_TASN1,1,[TASN.1 installed])])
+      fi
     fi
   fi
 fi
