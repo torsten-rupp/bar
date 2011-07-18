@@ -29,6 +29,8 @@
 #define STRING_QUOTE        "'"
 #define STRING_QUOTES       "\"'"
 
+#define STRING_NO_ASSIGN (void*)(-1)
+
 /***************************** Datatypes *******************************/
 
 /***************************** Variables *******************************/
@@ -344,6 +346,22 @@ String String_replace(String string, ulong index, ulong length, const String ins
 String String_replaceCString(String string, ulong index, ulong length, const char *s);
 String String_replaceChar(String string, ulong index, ulong length, char ch);
 String String_replaceBuffer(String string, ulong index, ulong length, const char *buffer, ulong bufferLength);
+
+/***********************************************************************\
+* Name   : String_map, String_mapCString, String_mapChar,
+* Purpose: map string/char to other string/char
+* Input  : string         - string                
+*          index          - index where to start mapping 
+*          from,to        - from/to strings/chars
+*          count          - number of strings/chars
+* Output : -
+* Return : string
+* Notes  : -
+\***********************************************************************/
+
+String String_map(String string, ulong index, const String from[], const String to[], uint count);
+String String_mapCString(String string, ulong index, const char* from[], const char* to[], uint count);
+String String_mapChar(String string, ulong index, char from[], char to[], uint count);
 
 /***********************************************************************\
 * Name   : String_join, String_joinCString, String_joinChar,

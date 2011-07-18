@@ -1243,18 +1243,17 @@ LOCAL bool parseString(const char    *string,
                      && (string[index] != (*format))
                     )
               {
-                if (string[index] == '\\')
+                if (   (string[index] == '\\')
+                    && ((index+1) < length)
+                   )
                 {
-                  index++;
-                  if (index < length)
+                  /* quoted character */
+                  if ((formatToken.width == 0) || (z < formatToken.width-1))
                   {
-                    if ((formatToken.width == 0) || (z < formatToken.width-1))
-                    {
-                      if (value.s != NULL) value.s[z] = string[index];
-                      z++;
-                    }
-                    index++;
+                    String_appendChar(value.string,string[index+1]);
+                    z++;
                   }
+                  index+=2;
                 }
                 else
                 {
@@ -1273,18 +1272,17 @@ LOCAL bool parseString(const char    *string,
                       /* get string */
                       while ((index < length) && (string[index] != (*stringQuote)))
                       {
-                        if (string[index] == '\\')
+                        if (   ((index+1) < length)
+                            && (string[index] == '\\')
+                            && (string[index+1] == (*stringQuote))
+                           )
                         {
-                          index++;
-                          if (index < length)
+                          if ((formatToken.width == 0) || (z < formatToken.width-1))
                           {
-                            if ((formatToken.width == 0) || (z < formatToken.width-1))
-                            {
-                              if (value.s != NULL) value.s[z] = string[index];
-                              z++;
-                            }
-                            index++;
+                            if (value.s != NULL) value.s[z] = string[index+1];
+                            z++;
                           }
+                          index += 2;
                         }
                         else
                         {
@@ -1340,22 +1338,21 @@ LOCAL bool parseString(const char    *string,
               z = 0;
               while (   (index < length)
                      && (formatToken.blankFlag || !isspace(string[index]))
-    // NUL in string here a problem?
+// NUL in string here a problem?
                      && (string[index] != (*format))
                     )
               {
-                if (string[index] == '\\')
+                if (   (string[index] == '\\')
+                    && ((index+1) < length)
+                   )
                 {
-                  index++;
-                  if (index < length)
+                  /* quoted character */
+                  if ((formatToken.width == 0) || (z < formatToken.width-1))
                   {
-                    if ((formatToken.width == 0) || (z < formatToken.width-1))
-                    {
-                      String_appendChar(value.string,string[index]);
-                      z++;
-                    }
-                    index++;
+                    String_appendChar(value.string,string[index+1]);
+                    z++;
                   }
+                  index+=2;
                 }
                 else
                 {
@@ -1374,18 +1371,17 @@ LOCAL bool parseString(const char    *string,
                       /* get string */
                       while ((index < length) && (string[index] != (*stringQuote)))
                       {
-                        if (string[index] == '\\')
+                        if (   ((index+1) < length)
+                            && (string[index] == '\\')
+                            && (string[index+1] == (*stringQuote))
+                           )
                         {
-                          index++;
-                          if (index < length)
+                          if ((formatToken.width == 0) || (z < formatToken.width-1))
                           {
-                            if ((formatToken.width == 0) || (z < formatToken.width-1))
-                            {
-                              String_appendChar(value.string,string[index]);
-                              z++;
-                            }
-                            index++;
+                            String_appendChar(value.string,string[index+1]);
+                            z++;
                           }
+                          index += 2;
                         }
                         else
                         {
@@ -1697,9 +1693,12 @@ LOCAL bool matchString(const String  string,
     {
       matchedSubString = (String)va_arg(arguments,void*);
       assert(matchedSubString != NULL);
-      if (subMatches[z].rm_so != -1)
+      if (matchedSubString != STRING_NO_ASSIGN)
       {
-        String_setBuffer(matchedSubString,&string->data[subMatches[z].rm_so],subMatches[z].rm_eo-subMatches[z].rm_so);
+        if (subMatches[z].rm_so != -1)
+        {
+          String_setBuffer(matchedSubString,&string->data[subMatches[z].rm_so],subMatches[z].rm_eo-subMatches[z].rm_so);
+        }
       }
     }
     va_end(arguments);
@@ -2639,6 +2638,92 @@ String String_replaceBuffer(String string, ulong index, ulong length, const char
 
   String_remove(string,index,length);
   String_insertBuffer(string,index,buffer,bufferLength);
+
+  return string;
+}
+
+String String_map(String string, ulong index, const String from[], const String to[], uint count)
+{
+  uint  z;
+  ulong l0,l1;
+  bool  replaceFlag;
+
+  CHECK_VALID(string);
+
+  while (index < String_length(string))
+  {
+    replaceFlag = FALSE;
+    for (z = 0; z < count; z++)
+    {
+      l0 = String_length(from[z]);
+      l1 = String_length(to[z]);
+
+      if (String_subEquals(string,from[z],index,l0))
+      {
+        String_replace(string,index,l0,to[z]);
+        index += l1;
+        replaceFlag = TRUE;
+        break;
+      }
+    }
+    if (!replaceFlag) index++;
+  }
+
+  return string;
+}
+
+String String_mapCString(String string, ulong index, const char* from[], const char* to[], uint count)
+{
+  uint  z;
+  ulong l0,l1;
+  bool  replaceFlag;
+
+  CHECK_VALID(string);
+
+  while (index < String_length(string))
+  {
+    replaceFlag = FALSE;
+    for (z = 0; z < count; z++)
+    {
+      l0 = strlen(from[z]);
+      l1 = strlen(to[z]);
+
+      if (String_subEqualsCString(string,from[z],index,l0))
+      {
+        String_replaceCString(string,index,l0,to[z]);
+        index += l1;
+        replaceFlag = TRUE;
+        break;
+      }
+    }
+    if (!replaceFlag) index++;
+  }
+
+  return string;
+}
+
+String String_mapChar(String string, ulong index, char from[], char to[], uint count)
+{
+  uint z;
+  bool replaceFlag;
+
+  CHECK_VALID(string);
+
+  while (index < String_length(string))
+  {
+    replaceFlag = FALSE;
+    for (z = 0; z < count; z++)
+    {
+      if (String_subEqualsChar(string,from[z],index))
+      {
+        String_replaceChar(string,index,1,to[z]);
+        index += 1;
+        replaceFlag = TRUE;
+        break;
+      }
+    }
+    if (!replaceFlag) index++;
+  }
 
   return string;
 }
@@ -3978,8 +4063,20 @@ bool String_getNextToken(StringTokenizer *stringTokenizer, String *const token, 
                && (stringTokenizer->data[stringTokenizer->index] != (*s))
               )
         {
-          String_appendChar(stringTokenizer->token,stringTokenizer->data[stringTokenizer->index]);
-          stringTokenizer->index++;
+          if (   ((stringTokenizer->index+1) < stringTokenizer->length)
+              && (   (stringTokenizer->data[stringTokenizer->index] == '\\')
+                  || (stringTokenizer->data[stringTokenizer->index] == (*s))
+                 )
+             )
+          {
+            String_appendChar(stringTokenizer->token,stringTokenizer->data[stringTokenizer->index+1]);
+            stringTokenizer->index += 2;
+          }
+          else
+          {
+            String_appendChar(stringTokenizer->token,stringTokenizer->data[stringTokenizer->index]);
+            stringTokenizer->index++;
+          }
         }
         if (stringTokenizer->index < stringTokenizer->length) stringTokenizer->index++;
       }
