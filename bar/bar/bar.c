@@ -188,6 +188,8 @@ LOCAL bool          outputNewLineFlag;
 
 /***************************** Forwards ********************************/
 
+/***************************** Functions *******************************/
+
 #ifdef __cplusplus
   extern "C" {
 #endif
@@ -198,16 +200,6 @@ LOCAL bool cmdOptionParseConfigFile(void *userData, void *variable, const char *
 LOCAL bool cmdOptionParseEntryPattern(void *userData, void *variable, const char *name, const char *value, const void *defaultValue);
 LOCAL bool cmdOptionParsePattern(void *userData, void *variable, const char *name, const char *value, const void *defaultValue);
 LOCAL bool cmdOptionParsePassword(void *userData, void *variable, const char *name, const char *value, const void *defaultValue);
-
-#ifdef __cplusplus
-  }
-#endif
-
-/***************************** Functions *******************************/
-
-#ifdef __cplusplus
-  extern "C" {
-#endif
 
 LOCAL const CommandLineUnit COMMAND_LINE_BYTES_UNITS[] =
 {
@@ -401,7 +393,7 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
   CMD_OPTION_CSTRING      ("server-cert-file",             0,  1,0,serverCertFileName,                                                                               "TLS (SSL) server certificate file","file name"                            ),
   CMD_OPTION_CSTRING      ("server-key-file",              0,  1,0,serverKeyFileName,                                                                                "TLS (SSL) server key file","file name"                                    ),
   CMD_OPTION_SPECIAL      ("server-password",              0,  1,0,&serverPassword,                           cmdOptionParsePassword,NULL,                           "server password (use with care!)","password"                              ),
-  CMD_OPTION_CSTRING      ("server-jobs-directory",        0,  1,0,serverJobsDirectory,                                                                              "server job directory","path name"                                        ),
+  CMD_OPTION_CSTRING      ("server-jobs-directory",        0,  1,0,serverJobsDirectory,                                                                              "server job directory","path name"                                         ),
 
   CMD_OPTION_INTEGER      ("nice-level",                   0,  1,0,globalOptions.niceLevel,                   0,19,NULL,                                             "general nice level of processes/threads"                                  ),
 
@@ -421,12 +413,12 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
             
   CMD_OPTION_STRING       ("sftp-write-pre-command",       0,  1,0,globalOptions.sftp.writePreProcessCommand,                                                        "write SFTP pre-process command","command"                                 ),
   CMD_OPTION_STRING       ("sftp-write-post-command",      0,  1,0,globalOptions.sftp.writePostProcessCommand,                                                       "write SFTP post-process command","command"                                ),
-                  
+
   CMD_OPTION_STRING       ("cd-device",                    0,  1,0,globalOptions.cd.defaultDeviceName,                                                               "default CD device","device name"                                          ),
   CMD_OPTION_STRING       ("cd-request-volume-command",    0,  1,0,globalOptions.cd.requestVolumeCommand,                                                            "request new CD volume command","command"                                  ),
   CMD_OPTION_STRING       ("cd-unload-volume-command",     0,  1,0,globalOptions.cd.unloadVolumeCommand,                                                             "unload CD volume command","command"                                       ),
   CMD_OPTION_STRING       ("cd-load-volume-command",       0,  1,0,globalOptions.cd.loadVolumeCommand,                                                               "load CD volume command","command"                                         ),
-  CMD_OPTION_INTEGER64    ("cd-volume-size",               0,  1,0,globalOptions.cd.volumeSize,              0LL,MAX_LONG_LONG,COMMAND_LINE_BYTES_UNITS,             "CD volume size"                                                           ),
+  CMD_OPTION_INTEGER64    ("cd-volume-size",               0,  1,0,globalOptions.cd.volumeSize,               0LL,MAX_LONG_LONG,COMMAND_LINE_BYTES_UNITS,            "CD volume size"                                                           ),
   CMD_OPTION_STRING       ("cd-image-pre-command",         0,  1,0,globalOptions.cd.imagePreProcessCommand,                                                          "make CD image pre-process command","command"                              ),
   CMD_OPTION_STRING       ("cd-image-post-command",        0,  1,0,globalOptions.cd.imagePostProcessCommand,                                                         "make CD image post-process command","command"                             ),
   CMD_OPTION_STRING       ("cd-image-command",             0,  1,0,globalOptions.cd.imageCommand,                                                                    "make CD image command","command"                                          ),
@@ -458,7 +450,7 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
   CMD_OPTION_STRING       ("bd-request-volume-command",    0,  1,0,globalOptions.bd.requestVolumeCommand,                                                            "request new BD volume command","command"                                  ),
   CMD_OPTION_STRING       ("bd-unload-volume-command",     0,  1,0,globalOptions.bd.unloadVolumeCommand,                                                             "unload BD volume command","command"                                       ),
   CMD_OPTION_STRING       ("bd-load-volume-command",       0,  1,0,globalOptions.bd.loadVolumeCommand,                                                               "load BD volume command","command"                                         ),
-  CMD_OPTION_INTEGER64    ("bd-volume-size",               0,  1,0,globalOptions.bd.volumeSize,              0LL,MAX_LONG_LONG,COMMAND_LINE_BYTES_UNITS,             "BD volume size"                                                           ),
+  CMD_OPTION_INTEGER64    ("bd-volume-size",               0,  1,0,globalOptions.bd.volumeSize,               0LL,MAX_LONG_LONG,COMMAND_LINE_BYTES_UNITS,            "BD volume size"                                                           ),
   CMD_OPTION_STRING       ("bd-image-pre-command",         0,  1,0,globalOptions.bd.imagePreProcessCommand,                                                          "make BD image pre-process command","command"                              ),
   CMD_OPTION_STRING       ("bd-image-post-command",        0,  1,0,globalOptions.bd.imagePostProcessCommand,                                                         "make BD image post-process command","command"                             ),
   CMD_OPTION_STRING       ("bd-image-command",             0,  1,0,globalOptions.bd.imageCommand,                                                                    "make BD image command","command"                                          ),
@@ -2027,6 +2019,9 @@ void logPostProcess(void)
   if (logFile != NULL) fflush(logFile);
   if (tmpLogFile != NULL) fflush(tmpLogFile);
 
+  /* close temporary log file */
+  if (tmpLogFile != NULL) fclose(tmpLogFile);
+
   /* log post command */
   if (logPostCommand != NULL)
   {
@@ -2049,8 +2044,7 @@ void logPostProcess(void)
     }
   }
 
-  /* reset temporary log file */
-  if (tmpLogFile != NULL) fclose(tmpLogFile);
+  /* reset and reopen temporary log file */
   tmpLogFile = fopen(String_cString(tmpLogFileName),"w");
 }
 
@@ -2066,8 +2060,12 @@ void initJobOptions(JobOptions *jobOptions)
   jobOptions->owner.groupId             = FILE_DEFAULT_GROUP_ID;
   jobOptions->patternType               = PATTERN_TYPE_GLOB;
   jobOptions->compressAlgorithm         = COMPRESS_ALGORITHM_NONE;
-  jobOptions->cryptType                 = CRYPT_TYPE_NONE;
   jobOptions->cryptAlgorithm            = CRYPT_ALGORITHM_NONE;
+  #ifdef HAVE_GCRYPT
+    jobOptions->cryptType               = CRYPT_TYPE_SYMMETRIC;
+  #else /* not HAVE_GCRYPT */
+    jobOptions->cryptType               = CRYPT_TYPE_NONE;
+  #endif /* HAVE_GCRYPT */
   jobOptions->cryptPasswordMode         = PASSWORD_MODE_DEFAULT;
   jobOptions->volumeSize                = 0LL;
   jobOptions->skipUnreadableFlag        = TRUE;
@@ -3982,9 +3980,6 @@ int main(int argc, const char *argv[])
 
           /* free resources */
           StringList_done(&fileNameList);
-
-          /* log post command */
-          logPostProcess();
         }
         break;
       case COMMAND_GENERATE_KEYS:
