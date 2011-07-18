@@ -828,7 +828,7 @@ Errors File_setFileInfo(const String fileName,
 
 /***********************************************************************\
 * Name   : File_makeDirectory, File_makeDirectoryCString
-* Purpose: create directory including intermedate directories
+* Purpose: create directory including intermediate directories
 * Input  : pathName   - path name
 *          userId     - user id or FILE_DEFAULT_USER_ID
 *          groupId    - group id or FILE_DEFAULT_GROUP_ID
