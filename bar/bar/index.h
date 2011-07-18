@@ -131,6 +131,25 @@ Errors Index_init(DatabaseHandle *indexDatabaseHandle,
 void Index_done(DatabaseHandle *indexDatabaseHandle);
 
 /***********************************************************************\
+* Name   : Index_findById
+* Purpose: find index by id
+* Input  : databaseHandle - database handle
+*          storageId   - database id of index
+* Output : name        - name
+*          indexState  - index state (can be NULL)
+*          lastChecked - last checked date/time stamp [s] (can be NULL)
+* Return : TRUE if index found, FALSE otherwise
+* Notes  : -
+\***********************************************************************/
+
+bool Index_findById(DatabaseHandle *databaseHandle,
+                    int64          storageId,
+                    String         name,
+                    IndexStates    *indexState,
+                    uint64         *lastChecked
+                   );
+
+/***********************************************************************\
 * Name   : Index_findByName
 * Purpose: find index by name
 * Input  : databaseHandle - database handle
