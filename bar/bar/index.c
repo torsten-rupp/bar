@@ -281,6 +281,45 @@ void Index_done(DatabaseHandle *indexDatabaseHandle)
   Database_close(indexDatabaseHandle);
 }
 
+bool Index_findById(DatabaseHandle *databaseHandle,
+                    int64          storageId,
+                    String         name,
+                    IndexStates    *indexState,
+                    uint64         *lastChecked
+                   )
+{
+  DatabaseQueryHandle databaseQueryHandle;
+  Errors              error;
+  bool                result;
+
+  assert(storageId != DATABASE_ID_NONE);
+  assert(databaseHandle != NULL);
+
+  error = Database_prepare(&databaseQueryHandle,
+                           databaseHandle,
+                           "SELECT name, \
+                                   state, \
+                                   lastChecked \
+                            FROM storage \
+                            WHERE id=%ld \
+                           ",
+                           storageId
+                          );
+  if (error != ERROR_NONE)
+  {
+    return FALSE;
+  }
+  result = Database_getNextRow(&databaseQueryHandle,
+                               "%S %d %ld",
+                               name,
+                               indexState,
+                               lastChecked
+                              );
+  Database_finalize(&databaseQueryHandle);
+
+  return result;
+}
+
 bool Index_findByName(DatabaseHandle *databaseHandle,
                       const String   name,
                       int64          *storageId,
@@ -311,22 +350,12 @@ bool Index_findByName(DatabaseHandle *databaseHandle,
   {
     return FALSE;
   }
-  if (Database_getNextRow(&databaseQueryHandle,
-                          "%ld %d %ld",
-                          storageId,
-                          indexState,
-                          lastChecked
-                         )
-     )
-  {
-    if (name != NULL) String_clear(name);
-
-    result = TRUE;
-  }
-  else
-  {
-    result = FALSE;
-  }
+  result = Database_getNextRow(&databaseQueryHandle,
+                               "%ld %d %ld",
+                               storageId,
+                               indexState,
+                               lastChecked
+                              );
   Database_finalize(&databaseQueryHandle);
 
   return result;
