@@ -1,9 +1,72 @@
-2011-xx-xx 0.17
-  * barcontrol: add short cut menus to compress pattern list
-    to add most used compressed, multi-media and package patterns
-  * barcontrol: clean-up restore tab:
-      - use single button for mark/unmark all
-      - added filter for storage state  
+2011-07-18 0.16e
+  * create sub-directories when storing to file system or
+    ftp server
+  * fix creating directories: to not set parent directory
+    permissions if permissions are already set
+  * barcontrol: do not close new job dialog on error
+  * barcontrol: fixed setting crypt type radio buttons with
+    default value
+  * save job file immediately after creating a new one
+  * fix lost error state when writing file to a server
+  * improved FTP transmission, added patch to set timeout
+    for receiving data in FTPLib
+  * fixed possible inifite loop when executing external
+    command, e. g. sending the log file via log-post-command
+  * fixed error in pre-defined log-post-command in bar.cfg
+  * fix losing failure error
+  * create job files with read/write permission for owner only
+  * do not print passwords to log/screen which may be included
+    in FTP specifier
+  * fixed missing delete temporary file on error in incremental
+    mode
+  * fixed adding index of FTP content to local archive database
+  * fixed string parser: parse \x as x if outside of " or '
+  * BARControl: fix Null-Pointer-Exception when server password
+    is not set
+  * improved FTP read: try to read all data when the network
+    connection is bad
+
+2011-05-31 0.16d
+  * barcontrol: fix parsing of ftp/scp/sftp archive names
+  * fix parsing of ftp archive names
+  * support for non-passive/passive ftp connections
+  * fixed wrong free of resources when archive entry could
+    not be read
+  * fixed numbers for compress/crypt type: must be a real
+    constant (self-assigned enum may change)
+
+2011-04-17 0.16c
+  * renamed macro %file -> %directory for cd/dvd/bd/device-commands
+  * fixed typing error in code when FTP is not available
+  * added options --file-write-pre|post-command,
+    --ftp-write-pre|post-command, --scp-write-pre|post-command,
+    --sftp-write-pre|post-command
+  * added option --always-create-image
+  * fixed creating CDs: use mkisofs+cdrecord
+  * removed double linefeed for log entries
+  * fixed log entries when creating database index: avoid
+    creating huge log files
+  * only write log file in daemon/server mode
+  * add missing MacOSX JARs to distribution
+  * renewed man page, improved manual
+
+2011-04-10 0.16b
+  * fix error handling when password is wrong
+  * create jobs directory if it does not exists
+  * enable creaeting index database by default
+  * barcontrol: fix file name editor drag+drop
+  * barcontrol: ask for password on restore
+  * fix memory leak when reading archive directory entries
+  * fixed deinit error when password is wrong
+  * fixed reading file names which contain \ or LF/CR
+  * barcontrol: fix discarding first character for archive target cd:, bd:
+  * barcontrol: fixed file listing
+  * fix error handling when calling external tool for CD/DVD/BD
+  * barcontrol: add year two digits in archive file name editor, fixed
+    century
+  * barcontrol: fix enabling restore-button
+  * improved documentation: added archive file name macros, add more
+    entries to faq, small fixes
 
 2010-12-30 0.16a
   * fix wrong storage name in database
