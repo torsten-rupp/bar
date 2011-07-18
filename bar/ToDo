@@ -32,3 +32,9 @@ ToDo
 - rename archive.? -> archives.?
 - remove "Function" in lists.h types
 - barcontrol: change *gif -> *png
+- option/command to clear cached pass phrases in bar server
+- storage on Samba server directly
+- sorrage on webdav server directly
+- general handling of strings containing LF, CR..
+- doc: min. password length for 3DES
+- progress bar when writing CDs
