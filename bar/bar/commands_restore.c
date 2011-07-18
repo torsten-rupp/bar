@@ -50,7 +50,7 @@
 typedef struct
 {
   EntryList                 *includeEntryList;       // included entries (can be empty)
-  PatternList               *excludePatternList;     // excluded entries (can be empty)
+  PatternList               *excludePatternList;     // excluded entries (can be empty or NULL)
   const JobOptions          *jobOptions;
   bool                      *pauseFlag;              // pause flag (can be NULL)
   bool                      *requestedAbortFlag;     // request abort flag (can be NULL)
@@ -193,7 +193,7 @@ LOCAL bool updateStatusInfo(const RestoreInfo *restoreInfo)
 
 /*---------------------------------------------------------------------*/
 
-Errors Command_restore(StringList                      *archiveFileNameList,
+Errors Command_restore(StringList                      *archiveNameList,
                        EntryList                       *includeEntryList,
                        PatternList                     *excludePatternList,
                        JobOptions                      *jobOptions,
@@ -208,7 +208,8 @@ Errors Command_restore(StringList                      *archiveFileNameList,
   RestoreInfo       restoreInfo;
   byte              *buffer;
   FragmentList      fragmentList;
-  String            archiveFileName;
+  String            archiveName;
+  String            printableArchiveName;
   bool              abortFlag;
   Errors            error;
   ArchiveInfo       archiveInfo;
@@ -216,9 +217,8 @@ Errors Command_restore(StringList                      *archiveFileNameList,
   ArchiveEntryTypes archiveEntryType;
   FragmentNode      *fragmentNode;
 
-  assert(archiveFileNameList != NULL);
+  assert(archiveNameList != NULL);
   assert(includeEntryList != NULL);
-  assert(excludePatternList != NULL);
   assert(jobOptions != NULL);
 
   /* initialize variables */
@@ -250,12 +250,13 @@ Errors Command_restore(StringList                      *archiveFileNameList,
     HALT_INSUFFICIENT_MEMORY();
   }
   FragmentList_init(&fragmentList);
-  archiveFileName = String_new();
+  archiveName          = String_new();
+  printableArchiveName = String_new();
 
   abortFlag = FALSE;
   while (   !abortFlag
          && ((restoreInfo.requestedAbortFlag == NULL) || !(*restoreInfo.requestedAbortFlag))
-         && !StringList_empty(archiveFileNameList)
+         && !StringList_empty(archiveNameList)
          && (restoreInfo.failError == ERROR_NONE)
         )
   {
@@ -265,12 +266,12 @@ Errors Command_restore(StringList                      *archiveFileNameList,
       Misc_udelay(500*1000);
     }
 
-    StringList_getFirst(archiveFileNameList,archiveFileName);
-    printInfo(0,"Restore archive '%s':\n",String_cString(archiveFileName));
+    StringList_getFirst(archiveNameList,archiveName);
+    printInfo(0,"Restore from archive '%s':\n",String_cString(archiveName));
 
     /* open archive */
     error = Archive_open(&archiveInfo,
-                         archiveFileName,
+                         archiveName,
                          jobOptions,
                          archiveGetCryptPasswordFunction,
                          archiveGetCryptPasswordUserData
@@ -278,13 +279,13 @@ Errors Command_restore(StringList                      *archiveFileNameList,
     if (error != ERROR_NONE)
     {
       printError("Cannot open archive file '%s' (error: %s)!\n",
-                 String_cString(archiveFileName),
+                 String_cString(archiveName),
                  Errors_getText(error)
                 );
       if (restoreInfo.failError == ERROR_NONE) restoreInfo.failError = error;
       continue;
     }
-    String_set(restoreInfo.statusInfo.storageName,archiveFileName);
+    String_set(restoreInfo.statusInfo.storageName,archiveName);
     abortFlag = !updateStatusInfo(&restoreInfo);
 
     /* read files */
@@ -307,7 +308,7 @@ Errors Command_restore(StringList                      *archiveFileNameList,
       if (error != ERROR_NONE)
       {
         printError("Cannot read next entry in archive '%s' (error: %s)!\n",
-                   String_cString(archiveFileName),
+                   String_cString(archiveName),
                    Errors_getText(error)
                   );
         if (restoreInfo.failError == ERROR_NONE) restoreInfo.failError = error;
@@ -344,7 +345,7 @@ Errors Command_restore(StringList                      *archiveFileNameList,
             if (error != ERROR_NONE)
             {
               printError("Cannot read 'file' content of archive '%s' (error: %s)!\n",
-                         String_cString(archiveFileName),
+                         String_cString(archiveName),
                          Errors_getText(error)
                         );
               String_delete(fileName);
@@ -353,7 +354,7 @@ Errors Command_restore(StringList                      *archiveFileNameList,
             }
 
             if (   (List_empty(includeEntryList) || EntryList_match(includeEntryList,fileName,PATTERN_MATCH_MODE_EXACT))
-                && !PatternList_match(excludePatternList,fileName,PATTERN_MATCH_MODE_EXACT)
+                && ((excludePatternList == NULL) || !PatternList_match(excludePatternList,fileName,PATTERN_MATCH_MODE_EXACT))
                )
             {
               String_set(restoreInfo.statusInfo.name,fileName);
@@ -367,7 +368,6 @@ Errors Command_restore(StringList                      *archiveFileNameList,
                                                            jobOptions->destination,
                                                            jobOptions->directoryStripCount
                                                           );
-
 
               /* check if file fragment already exists, file already exists */
               fragmentNode = FragmentList_find(&fragmentList,destinationFileName);
@@ -524,7 +524,7 @@ Errors Command_restore(StringList                      *archiveFileNameList,
                 {
                   printInfo(2,"FAIL!\n");
                   printError("Cannot read content of archive '%s' (error: %s)!\n",
-                             String_cString(archiveFileName),
+                             String_cString(archiveName),
                              Errors_getText(error)
                             );
                   if (restoreInfo.failError == ERROR_NONE) restoreInfo.failError = error;
@@ -701,7 +701,7 @@ Errors Command_restore(StringList                      *archiveFileNameList,
             if (error != ERROR_NONE)
             {
               printError("Cannot read 'image' content of archive '%s' (error: %s)!\n",
-                         String_cString(archiveFileName),
+                         String_cString(archiveName),
                          Errors_getText(error)
                         );
               String_delete(imageName);
@@ -710,7 +710,7 @@ Errors Command_restore(StringList                      *archiveFileNameList,
             }
 
             if (   (List_empty(includeEntryList) || EntryList_match(includeEntryList,imageName,PATTERN_MATCH_MODE_EXACT))
-                && !PatternList_match(excludePatternList,imageName,PATTERN_MATCH_MODE_EXACT)
+                && ((excludePatternList == NULL) || !PatternList_match(excludePatternList,imageName,PATTERN_MATCH_MODE_EXACT))
                )
             {
               String_set(restoreInfo.statusInfo.name,imageName);
@@ -810,7 +810,7 @@ Errors Command_restore(StringList                      *archiveFileNameList,
                 {
                   printInfo(2,"FAIL!\n");
                   printError("Cannot read content of archive '%s' (error: %s)!\n",
-                             String_cString(archiveFileName),
+                             String_cString(archiveName),
                              Errors_getText(error)
                             );
                   if (restoreInfo.failError == ERROR_NONE) restoreInfo.failError = error;
@@ -920,7 +920,7 @@ Errors Command_restore(StringList                      *archiveFileNameList,
             if (error != ERROR_NONE)
             {
               printError("Cannot read 'directory' content of archive '%s' (error: %s)!\n",
-                         String_cString(archiveFileName),
+                         String_cString(archiveName),
                          Errors_getText(error)
                         );
               String_delete(directoryName);
@@ -929,7 +929,7 @@ Errors Command_restore(StringList                      *archiveFileNameList,
             }
 
             if (   (List_empty(includeEntryList) || EntryList_match(includeEntryList,directoryName,PATTERN_MATCH_MODE_EXACT))
-                && !PatternList_match(excludePatternList,directoryName,PATTERN_MATCH_MODE_EXACT)
+                && ((excludePatternList == NULL) || !PatternList_match(excludePatternList,directoryName,PATTERN_MATCH_MODE_EXACT))
                )
             {
               String_set(restoreInfo.statusInfo.name,directoryName);
@@ -1078,7 +1078,7 @@ Errors Command_restore(StringList                      *archiveFileNameList,
             if (error != ERROR_NONE)
             {
               printError("Cannot read 'link' content of archive '%s' (error: %s)!\n",
-                         String_cString(archiveFileName),
+                         String_cString(archiveName),
                          Errors_getText(error)
                         );
               String_delete(fileName);
@@ -1088,7 +1088,7 @@ Errors Command_restore(StringList                      *archiveFileNameList,
             }
 
             if (   (List_empty(includeEntryList) || EntryList_match(includeEntryList,linkName,PATTERN_MATCH_MODE_EXACT))
-                && !PatternList_match(excludePatternList,linkName,PATTERN_MATCH_MODE_EXACT)
+                && ((excludePatternList == NULL) || !PatternList_match(excludePatternList,linkName,PATTERN_MATCH_MODE_EXACT))
                )
             {
               String_set(restoreInfo.statusInfo.name,linkName);
@@ -1311,7 +1311,7 @@ Errors Command_restore(StringList                      *archiveFileNameList,
             if (error != ERROR_NONE)
             {
               printError("Cannot read 'hard link' content of archive '%s' (error: %s)!\n",
-                         String_cString(archiveFileName),
+                         String_cString(archiveName),
                          Errors_getText(error)
                         );
               StringList_done(&fileNameList);
@@ -1325,7 +1325,7 @@ Errors Command_restore(StringList                      *archiveFileNameList,
             STRINGLIST_ITERATE(&fileNameList,stringNode,fileName)
             {
               if (   (List_empty(includeEntryList) || EntryList_match(includeEntryList,fileName,PATTERN_MATCH_MODE_EXACT))
-                  && !PatternList_match(excludePatternList,fileName,PATTERN_MATCH_MODE_EXACT)
+                  && ((excludePatternList == NULL) || !PatternList_match(excludePatternList,fileName,PATTERN_MATCH_MODE_EXACT))
                  )
               {
                 String_set(restoreInfo.statusInfo.name,fileName);
@@ -1494,7 +1494,7 @@ Errors Command_restore(StringList                      *archiveFileNameList,
                     {
                       printInfo(2,"FAIL!\n");
                       printError("Cannot read content of archive '%s' (error: %s)!\n",
-                                 String_cString(archiveFileName),
+                                 String_cString(archiveName),
                                  Errors_getText(error)
                                 );
                       restoreInfo.failError = error;
@@ -1700,7 +1700,7 @@ Errors Command_restore(StringList                      *archiveFileNameList,
             if (error != ERROR_NONE)
             {
               printError("Cannot read 'special' content of archive '%s' (error: %s)!\n",
-                         String_cString(archiveFileName),
+                         String_cString(archiveName),
                          Errors_getText(error)
                         );
               String_delete(fileName);
@@ -1709,7 +1709,7 @@ Errors Command_restore(StringList                      *archiveFileNameList,
             }
 
             if (   (List_empty(includeEntryList) || EntryList_match(includeEntryList,fileName,PATTERN_MATCH_MODE_EXACT))
-                && !PatternList_match(excludePatternList,fileName,PATTERN_MATCH_MODE_EXACT)
+                && ((excludePatternList == NULL) || !PatternList_match(excludePatternList,fileName,PATTERN_MATCH_MODE_EXACT))
                )
             {
               String_set(restoreInfo.statusInfo.name,fileName);
@@ -1953,7 +1953,8 @@ Errors Command_restore(StringList                      *archiveFileNameList,
   }
 
   /* free resources */
-  String_delete(archiveFileName);
+  String_delete(printableArchiveName);
+  String_delete(archiveName);
   FragmentList_done(&fragmentList);
   free(buffer);
   String_delete(restoreInfo.statusInfo.name);
