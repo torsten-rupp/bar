@@ -720,6 +720,7 @@ LOCAL Errors createArchiveFile(ArchiveInfo *archiveInfo)
                    );
   if (error != ERROR_NONE)
   {
+    File_delete(archiveInfo->fileName,FALSE);
     return error;
   }
 
@@ -728,6 +729,7 @@ LOCAL Errors createArchiveFile(ArchiveInfo *archiveInfo)
   if (error != ERROR_NONE)
   {
     File_close(&archiveInfo->file.fileHandle);
+    File_delete(archiveInfo->fileName,FALSE);
     return error;
   }
 
@@ -738,6 +740,7 @@ LOCAL Errors createArchiveFile(ArchiveInfo *archiveInfo)
     if (error != ERROR_NONE)
     {
       File_close(&archiveInfo->file.fileHandle);
+      File_delete(archiveInfo->fileName,FALSE);
       return error;
     }
   }
@@ -757,6 +760,7 @@ LOCAL Errors createArchiveFile(ArchiveInfo *archiveInfo)
     if (error != ERROR_NONE)
     {
       File_close(&archiveInfo->file.fileHandle);
+      File_delete(archiveInfo->fileName,FALSE);
       return error;
     }
   }
@@ -785,6 +789,8 @@ LOCAL Errors closeArchiveFile(ArchiveInfo *archiveInfo,
   Errors error;
 
   assert(archiveInfo != NULL);
+  assert(archiveInfo->chunkIO != NULL);
+  assert(archiveInfo->chunkIO->getSize != NULL);
   assert(archiveInfo->jobOptions != NULL);
   assert(archiveInfo->ioType == ARCHIVE_IO_TYPE_FILE);
   assert(archiveInfo->file.openFlag);
@@ -2191,7 +2197,10 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
           {
             return FALSE;
           }
-          printWarning("Skipped unexpected chunk '%s' (offset %ld)\n",Chunk_idToString(chunkHeader.id),chunkHeader.offset);
+          if (globalOptions.verboseLevel >= 3)
+          {
+            printWarning("Skipped unexpected chunk '%s' (offset %ld)\n",Chunk_idToString(chunkHeader.id),chunkHeader.offset);
+          }
         }
         else
         {
@@ -3371,7 +3380,10 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
           {
             return error;
           }
-          printWarning("Skipped unexpected chunk '%s'\n",Chunk_idToString(chunkHeader.id));
+          if (globalOptions.verboseLevel >= 3)
+          {
+            printWarning("Skipped unexpected chunk '%s'\n",Chunk_idToString(chunkHeader.id));
+          }
         }
         else
         {
@@ -4365,8 +4377,8 @@ Errors Archive_readDirectoryEntry(ArchiveInfo      *archiveInfo,
       }
       if (error != ERROR_NONE)
       {
-        Crypt_done(&archiveEntryInfo->directory.chunkDirectoryEntry.cryptInfo);
         Chunk_done(&archiveEntryInfo->directory.chunkDirectoryEntry.info);
+        Crypt_done(&archiveEntryInfo->directory.chunkDirectoryEntry.cryptInfo);
       }
     }
 
@@ -5044,6 +5056,7 @@ Errors Archive_readHardLinkEntry(ArchiveInfo        *archiveInfo,
       }
       if (error != ERROR_NONE)
       {
+        /* free resources */
         Chunk_done(&archiveEntryInfo->hardLink.chunkHardLinkData.info);
         LIST_DONE(&archiveEntryInfo->hardLink.chunkHardLinkNameList,chunkHardLinkName)
         {
@@ -5082,6 +5095,7 @@ Errors Archive_readHardLinkEntry(ArchiveInfo        *archiveInfo,
 
   if (!foundHardLinkEntryFlag || !foundHardLinkDataFlag)
   {
+    /* free resources */
     Compress_delete(&archiveEntryInfo->hardLink.compressInfoData);
     free(archiveEntryInfo->hardLink.buffer);
     Chunk_done(&archiveEntryInfo->hardLink.chunkHardLink.info);
@@ -6394,7 +6408,7 @@ Errors Archive_updateIndex(DatabaseHandle *databaseHandle,
                  NULL
                 );
   error = ERROR_NONE;
-  while (   !Archive_eof(&archiveInfo,TRUE)
+  while (   !Archive_eof(&archiveInfo,FALSE)
          && ((requestedAbortFlag == NULL) || !(*requestedAbortFlag))
          && (error == ERROR_NONE)
         )
@@ -6408,7 +6422,7 @@ Errors Archive_updateIndex(DatabaseHandle *databaseHandle,
     /* get next file type */
     error = Archive_getNextArchiveEntryType(&archiveInfo,
                                             &archiveEntryType,
-                                            TRUE
+                                            FALSE
                                            );
     if (error == ERROR_NONE)
     {
