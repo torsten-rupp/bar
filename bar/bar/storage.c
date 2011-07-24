@@ -3365,6 +3365,10 @@ Errors Storage_open(StorageFileHandle *storageFileHandle,
       #ifdef HAVE_FTP
         {
           const char *plainPassword;
+          String     tmpFileName;
+          FileHandle fileHandle;
+          bool       foundFlag;
+          String     line;
           int        size;
 
           /* initialise variables */
@@ -3398,6 +3402,79 @@ Errors Storage_open(StorageFileHandle *storageFileHandle,
             return ERROR_FTP_AUTHENTIFICATION;
           }
           Password_undeploy(storageFileHandle->ftp.password);
+
+          /* check if file exists: first try non-passive, then passive mode */
+          tmpFileName = File_newFileName();
+          error = File_getTmpFileName(tmpFileName,NULL,tmpDirectory);
+          if (error != ERROR_NONE)
+          {
+            FtpClose(storageFileHandle->ftp.control);
+            return error;
+          }
+          FtpOptions(FTPLIB_CONNMODE,FTPLIB_PORT,storageFileHandle->ftp.control);
+          if (FtpDir(String_cString(tmpFileName),String_cString(fileName),storageFileHandle->ftp.control) != 1)
+          {
+            FtpOptions(FTPLIB_CONNMODE,FTPLIB_PASSIVE,storageFileHandle->ftp.control);
+            if (FtpDir(String_cString(tmpFileName),String_cString(fileName),storageFileHandle->ftp.control) != 1)
+            {
+              File_delete(tmpFileName,FALSE);
+              File_deleteFileName(tmpFileName);
+              FtpClose(storageFileHandle->ftp.control);
+              return ERRORX(FILE_NOT_FOUND,0,String_cString(fileName));
+            }
+          }
+          error = File_open(&fileHandle,tmpFileName,FILE_OPENMODE_READ);
+          if (error != ERROR_NONE)
+          {
+            File_delete(tmpFileName,FALSE);
+            File_deleteFileName(tmpFileName);
+            FtpClose(storageFileHandle->ftp.control);
+            return error;
+          }
+          foundFlag = FALSE;
+          line = String_new();
+          while (!File_eof(&fileHandle) && !foundFlag)
+          {
+            error = File_readLine(&fileHandle,line);
+            if (error == ERROR_NONE)
+            {
+              foundFlag =   String_parse(line,
+                                         STRING_BEGIN,
+                                         "%32s %* %* %* %llu %d-%d-%d %d:%d %S",
+                                         NULL,
+                                         NULL,
+                                         NULL,
+                                         NULL,NULL,NULL,
+                                         NULL,NULL,
+                                         NULL
+                                        )
+                         || String_parse(line,
+                                         STRING_BEGIN,
+                                         "%32s %* %* %* %llu %* %* %*:%* %S",
+                                         NULL,
+                                         NULL,
+                                         NULL,
+                                         NULL
+                                        )
+                         || String_parse(line,
+                                         STRING_BEGIN,
+                                         "%32s %* %* %* %llu %* %* %* %S",
+                                         NULL,
+                                         NULL,
+                                         NULL,
+                                         NULL
+                                        );
+            }
+          }
+          String_delete(line);
+          File_close(&fileHandle);
+          File_delete(tmpFileName,FALSE);
+          File_deleteFileName(tmpFileName);
+          if (!foundFlag)
+          {
+            FtpClose(storageFileHandle->ftp.control);
+            return ERRORX(FILE_NOT_FOUND,0,String_cString(fileName));
+          }
 
           /* get file size */
           if (FtpSize(String_cString(fileName),
@@ -3433,7 +3510,7 @@ Errors Storage_open(StorageFileHandle *storageFileHandle,
                )
             {
               FtpClose(storageFileHandle->ftp.control);
-              return ERROR_FTP_AUTHENTIFICATION;
+              return ERRORX(OPEN_FILE,0,"ftp access");
             }
           }
         }

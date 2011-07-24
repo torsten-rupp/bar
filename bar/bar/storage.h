@@ -31,8 +31,8 @@
 #include "files.h"
 #include "network.h"
 #include "database.h"
-
 #include "errors.h"
+
 #include "crypt.h"
 #include "passwords.h"
 #include "bar.h"
@@ -161,11 +161,20 @@ typedef struct
       struct
       {
         String           hostName;                     // FTP server host name
+        uint             hostPort;                     // FTP server port number
         String           loginName;                    // FTP login name
         Password         *password;                    // FTP login password
 
         netbuf           *control;
         netbuf           *data;
+        uint64           index;                        // current read/write index in file [0..n-1]
+        uint64           size;                         // size of file [bytes]
+        struct                                         // read-ahead buffer
+        {
+          byte   *data;
+          uint64 offset;
+          ulong  length;
+        } readAheadBuffer;
         StorageBandWidth bandWidth;                    // band width data
       } ftp;
     #endif /* HAVE_FTP */
@@ -234,10 +243,10 @@ typedef struct
       } sftp;
     #endif /* HAVE_SSH2 */
 
-    // dvd storage
+    // cd/dvd/bd storage
     struct
     {
-      String     name;                                 // DVD device name
+      String     name;                                 // CD/DVD/BD device name
 
       String     requestVolumeCommand;                 // command to request new CD/DVD/BD
       String     unloadVolumeCommand;                  // command to unload CD/DVD/BD
@@ -253,6 +262,7 @@ typedef struct
       String     writePostProcessCommand;              // command to execute after writing CD/DVD/BD
       String     writeCommand;                         // command to write CD/DVD/BD
       String     writeImageCommand;                    // command to write image on CD/DVD/BD
+      bool       alwaysCreateImage;                    // TRUE iff always creating image
 
       uint       steps;                                // total number of steps to create CD/DVD/BD
       String     directory;                            // temporary directory for CD/DVD/BD files
@@ -384,7 +394,7 @@ void Storage_doneAll(void);
 * Output : -
 * Return : storage type
 * Notes  : storage types supported:
-*            ftp://[<user name>[:<password>]@]<host name>/<file name>
+*            ftp://[<user name>[:<password>]@]<host name>[:<port>]/<file name>
 *            ssh://[<user name>@]<host name>[:<port>]/<file name>
 *            scp://[<user name>@]<host name>[:<port>]/<file name>
 *            sftp://[<user name>@]<host name>[:<port>]/<file name>
@@ -409,7 +419,7 @@ StorageTypes Storage_getType(const String storageName);
 *          fileName         - storage file name (can be NULL)
 * Return : storage type
 * Notes  : storage types supported:
-*            ftp://[<user name>[:<password>]@]<host name>/<file name>
+*            ftp://[<user name>[:<password>]@]<host name>[:<port>]/<file name>
 *            ssh://[<user name>@]<host name>[:<port>]/<file name>
 *            scp://[<user name>@]<host name>[:<port>]/<file name>
 *            sftp://[<user name>@]<host name>[:<port>]/<file name>
@@ -448,6 +458,19 @@ String Storage_getName(String       storageName,
                       );
 
 /***********************************************************************\
+* Name   : Storage_getPrintableName
+* Purpose: get printable storage name (without password)
+* Input  : storageName      - storage name variable
+* Output : string - string
+* Return : string
+* Notes  : -
+\***********************************************************************/
+
+String Storage_getPrintableName(String string,
+                                String storageName
+                               );
+
+/***********************************************************************\
 * Name   : Storage_parseFTPSpecifier
 * Purpose: parse FTP specifier:
 *            [<user name>[:<password>]@]<host name>
@@ -455,11 +478,11 @@ String Storage_getName(String       storageName,
 *          loginName     - login user name variable (can be NULL)
 *          password      - password variable (can be NULL)
 *          hostName      - host name variable (can be NULL)
-*          fileName      - file name variable (can be NULL)
-* Output : loginName - login user name (can be NULL)
-*          password  - password (can be NULL)
-*          hostName  - host name (can be NULL)
-*          fileName  - file name (can be NULL)
+*          hostPort      - host port variable (can be NULL)
+* Output : loginName - login user name
+*          password  - password
+*          hostName  - host name
+*          hostPort  - host port
 * Return : TRUE if FTP specifier parsed, FALSE if specifier invalid
 * Notes  : -
 \***********************************************************************/
@@ -467,7 +490,8 @@ String Storage_getName(String       storageName,
 bool Storage_parseFTPSpecifier(const String ftpSpecifier,
                                String       loginName,
                                Password     *password,
-                               String       hostName
+                               String       hostName,
+                               uint         *hostPort
                               );
 
 /***********************************************************************\
@@ -593,17 +617,21 @@ String Storage_getHandleName(String                  storageName,
 * Name   : Storage_preProcess
 * Purpose: pre-process storage
 * Input  : storageFileHandle - storage file handle
+*          initialFlag       - TRUE iff initial call, FALSE otherwise
 * Output : -
 * Return : ERROR_NONE or errorcode
 * Notes  : -
 \***********************************************************************/
 
-Errors Storage_preProcess(StorageFileHandle *storageFileHandle);
+Errors Storage_preProcess(StorageFileHandle *storageFileHandle,
+                          bool              initialFlag
+                         );
 
 /***********************************************************************\
 * Name   : Storage_postProcess
 * Purpose: post-process storage
 * Input  : storageFileHandle - storage file handle
+*          finalFlag         - TRUE iff final call, FALSE otherwise
 * Output : -
 * Return : ERROR_NONE or errorcode
 * Notes  : -
