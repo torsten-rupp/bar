@@ -1128,7 +1128,7 @@ String Storage_getPrintableName(String string,
   String fileName;
 
   assert(string != NULL);
-  assert(storageSpecifier != NULL);
+  assert(storageName != NULL);
 
   storageSpecifier = String_new();
   fileName         = String_new();
