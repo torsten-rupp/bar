@@ -28,7 +28,6 @@
 #include "msgqueues.h"
 #include "stringlists.h"
 
-#include "bar.h"
 #include "passwords.h"
 #include "network.h"
 #include "files.h"
@@ -40,6 +39,7 @@
 #include "storage.h"
 #include "index.h"
 #include "misc.h"
+#include "bar.h"
 
 #include "commands_create.h"
 #include "commands_restore.h"
@@ -104,6 +104,7 @@ typedef struct JobNode
   String       archiveName;                    // archive name
   EntryList    includeEntryList;               // included entries
   PatternList  excludePatternList;             // excluded entry patterns
+  PatternList  sourcePatternList;              // source patterns
   PatternList  compressExcludePatternList;     // excluded compression patterns
   ScheduleList scheduleList;                   // schedule list
   JobOptions   jobOptions;                     // options for job
@@ -312,6 +313,7 @@ typedef struct
 
   EntryList           includeEntryList;
   PatternList         excludePatternList;
+  PatternList         sourcePatternList;
   PatternList         compressExcludePatternList;
   JobOptions          jobOptions;
   DirectoryInfoList   directoryInfoList;
@@ -464,7 +466,7 @@ LOCAL const ConfigValue CONFIG_VALUES[] =
   CONFIG_STRUCT_VALUE_SELECT   ("pattern-type",           JobNode,jobOptions.patternType,                 CONFIG_VALUE_PATTERN_TYPES),
 
   CONFIG_STRUCT_VALUE_SELECT   ("compress-algorithm",     JobNode,jobOptions.compressAlgorithm,           CONFIG_VALUE_COMPRESS_ALGORITHMS),
-  CONFIG_STRUCT_VALUE_SPECIAL  ("compress-exclude",       JobNode,compressExcludePatternList,             configValueParseIncludeExclude,configValueFormatInitIncludeExclude,configValueFormatDoneIncludeExclude,configValueFormatIncludeExclude,NULL),
+  CONFIG_STRUCT_VALUE_SPECIAL  ("compress-exclude",       JobNode,compressExcludePatternList,             configValueParsePattern,configValueFormatInitPattern,configValueFormatDonePattern,configValueFormatPattern,NULL),
 
   CONFIG_STRUCT_VALUE_SELECT   ("crypt-algorithm",        JobNode,jobOptions.cryptAlgorithm,              CONFIG_VALUE_CRYPT_ALGORITHMS),
   CONFIG_STRUCT_VALUE_SELECT   ("crypt-type",             JobNode,jobOptions.cryptType,                   CONFIG_VALUE_CRYPT_TYPES),
@@ -483,7 +485,8 @@ LOCAL const ConfigValue CONFIG_VALUES[] =
 
   CONFIG_STRUCT_VALUE_SPECIAL  ("include-file",           JobNode,includeEntryList,                       configValueParseFileEntry,configValueFormatInitEntry,configValueFormatDoneEntry,configValueFormatFileEntry,NULL),
   CONFIG_STRUCT_VALUE_SPECIAL  ("include-image",          JobNode,includeEntryList,                       configValueParseImageEntry,configValueFormatInitEntry,configValueFormatDoneEntry,configValueFormatImageEntry,NULL),
-  CONFIG_STRUCT_VALUE_SPECIAL  ("exclude",                JobNode,excludePatternList,                     configValueParseIncludeExclude,configValueFormatInitIncludeExclude,configValueFormatDoneIncludeExclude,configValueFormatIncludeExclude,NULL),
+  CONFIG_STRUCT_VALUE_SPECIAL  ("exclude",                JobNode,excludePatternList,                     configValueParsePattern,configValueFormatInitPattern,configValueFormatDonePattern,configValueFormatPattern,NULL),
+  CONFIG_STRUCT_VALUE_SPECIAL  ("source",                 JobNode,sourcePatternList,                      configValueParsePattern,configValueFormatInitPattern,configValueFormatDonePattern,configValueFormatPattern,NULL),
 
   CONFIG_STRUCT_VALUE_INTEGER64("volume-size",            JobNode,jobOptions.volumeSize,                  0LL,MAX_LONG_LONG,CONFIG_VALUE_BYTES_UNITS),
   CONFIG_STRUCT_VALUE_BOOLEAN  ("ecc",                    JobNode,jobOptions.errorCorrectionCodesFlag     ),
@@ -684,7 +687,7 @@ LOCAL void resetJobRunningInfo(JobNode *jobNode)
 }
 
 /***********************************************************************\
-* Name   : newJobN
+* Name   : newJob
 * Purpose: create new job
 * Input  : jobType  - job type
 *          fileName - file name or NULL
@@ -713,6 +716,7 @@ LOCAL JobNode *newJob(JobTypes jobType, const String fileName)
   jobNode->archiveName                    = String_new();
   EntryList_init(&jobNode->includeEntryList);
   PatternList_init(&jobNode->excludePatternList);
+  PatternList_init(&jobNode->sourcePatternList);
   PatternList_init(&jobNode->compressExcludePatternList);
   List_init(&jobNode->scheduleList);
   initJobOptions(&jobNode->jobOptions);
@@ -779,6 +783,7 @@ LOCAL JobNode *copyJob(JobNode      *jobNode,
   newJobNode->archiveName                    = String_duplicate(jobNode->archiveName);
   EntryList_init(&newJobNode->includeEntryList); EntryList_copy(&jobNode->includeEntryList,&newJobNode->includeEntryList);
   PatternList_init(&newJobNode->excludePatternList); PatternList_copy(&jobNode->excludePatternList,&newJobNode->excludePatternList);
+  PatternList_init(&newJobNode->sourcePatternList); PatternList_copy(&jobNode->sourcePatternList,&newJobNode->sourcePatternList);
   PatternList_init(&newJobNode->compressExcludePatternList); PatternList_copy(&jobNode->compressExcludePatternList,&newJobNode->compressExcludePatternList);
   List_init(&newJobNode->scheduleList); List_copy(&newJobNode->scheduleList,&jobNode->scheduleList,NULL,NULL,NULL,(ListNodeCopyFunction)copySchedule,NULL);
   initJobOptions(&newJobNode->jobOptions); copyJobOptions(&newJobNode->jobOptions,&newJobNode->jobOptions);
@@ -842,6 +847,7 @@ LOCAL void freeJobNode(JobNode *jobNode, void *userData)
   freeJobOptions(&jobNode->jobOptions);
   List_done(&jobNode->scheduleList,NULL,NULL);
   PatternList_done(&jobNode->compressExcludePatternList);
+  PatternList_done(&jobNode->sourcePatternList);
   PatternList_done(&jobNode->excludePatternList);
   EntryList_done(&jobNode->includeEntryList);
   String_delete(jobNode->archiveName);
@@ -1004,7 +1010,7 @@ LOCAL Errors readJobScheduleInfo(JobNode *jobNode)
   if (File_exists(fileName))
   {
     /* open file .name */
-    error = File_open(&fileHandle,fileName,FILE_OPENMODE_READ);
+    error = File_open(&fileHandle,fileName,FILE_OPEN_READ);
     if (error != ERROR_NONE)
     {
       File_deleteFileName(fileName);
@@ -1076,7 +1082,7 @@ LOCAL Errors writeJobScheduleInfo(JobNode *jobNode)
   File_deleteFileName(pathName);
 
   /* create file .name */
-  error = File_open(&fileHandle,fileName,FILE_OPENMODE_CREATE);
+  error = File_open(&fileHandle,fileName,FILE_OPEN_CREATE);
   if (error != ERROR_NONE)
   {
     File_deleteFileName(fileName);
@@ -1119,6 +1125,7 @@ LOCAL bool readJob(JobNode *jobNode)
   String_clear(jobNode->archiveName);
   EntryList_clear(&jobNode->includeEntryList);
   PatternList_clear(&jobNode->excludePatternList);
+  PatternList_clear(&jobNode->sourcePatternList);
   PatternList_clear(&jobNode->compressExcludePatternList);
   List_clear(&jobNode->scheduleList,NULL,NULL);
   jobNode->jobOptions.archiveType                  = ARCHIVE_TYPE_NORMAL;
@@ -1129,7 +1136,11 @@ LOCAL bool readJob(JobNode *jobNode)
   jobNode->jobOptions.patternType                  = PATTERN_TYPE_GLOB;
   jobNode->jobOptions.compressAlgorithm            = COMPRESS_ALGORITHM_NONE;
   jobNode->jobOptions.cryptAlgorithm               = CRYPT_ALGORITHM_NONE;
-  jobNode->jobOptions.cryptType                    = CRYPT_TYPE_NONE;
+  #ifdef HAVE_GCRYPT
+    jobNode->jobOptions.cryptType                  = CRYPT_TYPE_SYMMETRIC;
+  #else /* not HAVE_GCRYPT */
+    jobNode->jobOptions.cryptType                  = CRYPT_TYPE_NONE;
+  #endif /* HAVE_GCRYPT */
   jobNode->jobOptions.cryptPasswordMode            = PASSWORD_MODE_DEFAULT;
   String_clear(jobNode->jobOptions.cryptPublicKeyFileName);
   String_clear(jobNode->jobOptions.ftpServer.loginName);
@@ -1347,7 +1358,7 @@ LOCAL Errors updateJob(JobNode *jobNode)
   line  = String_new();
 
   /* read file */
-  error = File_open(&fileHandle,jobNode->fileName,FILE_OPENMODE_READ);
+  error = File_open(&fileHandle,jobNode->fileName,FILE_OPEN_READ);
   if (error != ERROR_NONE)
   {
     StringList_done(&jobFileList);
@@ -1391,7 +1402,7 @@ LOCAL Errors updateJob(JobNode *jobNode)
   }
 
   /* write file */
-  error = File_open(&fileHandle,jobNode->fileName,FILE_OPENMODE_CREATE);
+  error = File_open(&fileHandle,jobNode->fileName,FILE_OPEN_CREATE);
   if (error != ERROR_NONE)
   {
     String_delete(line);
@@ -1410,6 +1421,15 @@ LOCAL Errors updateJob(JobNode *jobNode)
     String_delete(line);
     StringList_done(&jobFileList);
     return error;
+  }
+  error = File_setPermission(jobNode->fileName,FILE_PERMISSION_USER_READ|FILE_PERMISSION_USER_WRITE);
+  if (error != ERROR_NONE)
+  {
+    logMessage(LOG_TYPE_WARNING,
+               "cannot set file permissions of job '%s' (error: %s)\n",
+               String_cString(jobNode->fileName),
+               Errors_getText(error)
+              );
   }
 
   /* save time modified */
@@ -1704,18 +1724,22 @@ LOCAL StorageRequestResults storageRequestVolume(JobNode *jobNode,
 LOCAL void jobThreadCode(void)
 {
   JobNode      *jobNode;
-  String       archiveName;
+  String       storageName;
+  String       printableStorageName;
   EntryList    includeEntryList;
   PatternList  excludePatternList;
+  PatternList  sourcePatternList;
   PatternList  compressExcludePatternList;
   JobOptions   jobOptions;
   ArchiveTypes archiveType;
   StringList   archiveFileNameList;
 
   /* initialize variables */
-  archiveName = String_new();
+  storageName          = String_new();
+  printableStorageName = String_new();
   EntryList_init(&includeEntryList);
   PatternList_init(&excludePatternList);
+  PatternList_init(&sourcePatternList);
   PatternList_init(&compressExcludePatternList);
 
   while (!quitFlag)
@@ -1745,9 +1769,11 @@ LOCAL void jobThreadCode(void)
     startJob(jobNode);
 
     /* get copy of mandatory job data */
-    String_set(archiveName,jobNode->archiveName);
+    String_set(storageName,jobNode->archiveName);
+    Storage_getPrintableName(printableStorageName,storageName);
     EntryList_clear(&includeEntryList); EntryList_copy(&jobNode->includeEntryList,&includeEntryList);
     PatternList_clear(&excludePatternList); PatternList_copy(&jobNode->excludePatternList,&excludePatternList);
+    PatternList_clear(&sourcePatternList); PatternList_copy(&jobNode->sourcePatternList,&sourcePatternList);
     PatternList_clear(&compressExcludePatternList); PatternList_copy(&jobNode->compressExcludePatternList,&compressExcludePatternList);
     initJobOptions(&jobOptions); copyJobOptions(&jobNode->jobOptions,&jobOptions);
     archiveType = jobNode->archiveType,
@@ -1789,15 +1815,16 @@ LOCAL void jobThreadCode(void)
 }
 #else
     /* run job */
-    logMessage(LOG_TYPE_ALWAYS,"------------------------------------------------------------");
+    logMessage(LOG_TYPE_ALWAYS,"------------------------------------------------------------\n");
     switch (jobNode->jobType)
     {
       case JOB_TYPE_CREATE:
         /* create archive */
-        logMessage(LOG_TYPE_ALWAYS,"start create archive '%s'",String_cString(archiveName));
-        jobNode->runningInfo.error = Command_create(String_cString(archiveName),
+        logMessage(LOG_TYPE_ALWAYS,"start create archive '%s'\n",String_cString(printableStorageName));
+        jobNode->runningInfo.error = Command_create(String_cString(storageName),
                                                     &includeEntryList,
                                                     &excludePatternList,
+                                                    &sourcePatternList,
                                                     &compressExcludePatternList,
                                                     &jobOptions,
                                                     archiveType,
@@ -1811,12 +1838,12 @@ LOCAL void jobThreadCode(void)
                                                     &pauseFlags.storage,
                                                     &jobNode->requestedAbortFlag
                                                    );
-        logMessage(LOG_TYPE_ALWAYS,"done create archive '%s' (error: %s)",String_cString(archiveName),Errors_getText(jobNode->runningInfo.error));
+        logMessage(LOG_TYPE_ALWAYS,"done create archive '%s' (error: %s)\n",String_cString(printableStorageName),Errors_getText(jobNode->runningInfo.error));
         break;
       case JOB_TYPE_RESTORE:
-        logMessage(LOG_TYPE_ALWAYS,"start restore archive '%s'",String_cString(archiveName));
+        logMessage(LOG_TYPE_ALWAYS,"start restore archive '%s'\n",String_cString(printableStorageName));
         StringList_init(&archiveFileNameList);
-        StringList_append(&archiveFileNameList,archiveName);
+        StringList_append(&archiveFileNameList,storageName);
         jobNode->runningInfo.error = Command_restore(&archiveFileNameList,
                                                      &includeEntryList,
                                                      &excludePatternList,
@@ -1829,7 +1856,7 @@ LOCAL void jobThreadCode(void)
                                                      &jobNode->requestedAbortFlag
                                                     );
         StringList_done(&archiveFileNameList);
-        logMessage(LOG_TYPE_ALWAYS,"done restore archive '%s' (error: %s)",String_cString(archiveName),Errors_getText(jobNode->runningInfo.error));
+        logMessage(LOG_TYPE_ALWAYS,"done restore archive '%s' (error: %s)\n",String_cString(printableStorageName),Errors_getText(jobNode->runningInfo.error));
         break;
       #ifndef NDEBUG
         default:
@@ -1844,6 +1871,7 @@ LOCAL void jobThreadCode(void)
     /* free resources */
     freeJobOptions(&jobOptions);
     PatternList_clear(&compressExcludePatternList);
+    PatternList_clear(&sourcePatternList);
     PatternList_clear(&excludePatternList);
     EntryList_clear(&includeEntryList);
 
@@ -1865,9 +1893,11 @@ LOCAL void jobThreadCode(void)
 
   /* free resources */
   PatternList_done(&compressExcludePatternList);
+  PatternList_done(&sourcePatternList);
   PatternList_done(&excludePatternList);
   EntryList_done(&includeEntryList);
-  String_delete(archiveName);
+  String_delete(printableStorageName);
+  String_delete(storageName);
 }
 
 /*---------------------------------------------------------------------*/
@@ -2106,6 +2136,7 @@ LOCAL void indexThreadCode(void)
   List_init(&indexCryptPasswordList);
 
   /* reset/delete incomplete database entries (ignore possible errors) */
+  plogMessage(LOG_TYPE_INDEX,"INDEX","start clean-up database\n");
   error = ERROR_NONE;
   while (Index_findByState(indexDatabaseHandle,
                            INDEX_STATE_UPDATE,
@@ -2145,16 +2176,18 @@ LOCAL void indexThreadCode(void)
   while (Index_findByState(indexDatabaseHandle,
                            INDEX_STATE_CREATE,
                            &storageId,
-                           NULL,
+                           storageName,
                            NULL
                           )
          && (error == ERROR_NONE)
         )
   {
+    plogMessage(LOG_TYPE_INDEX,"INDEX","delete incomplete index #%lld\n",storageId);
     error = Index_delete(indexDatabaseHandle,
                          storageId
                         );
   }
+  plogMessage(LOG_TYPE_ALWAYS,"INDEX","done clean-up database\n");
 
   /* add/update index database */
   while (!quitFlag)
@@ -2200,6 +2233,8 @@ LOCAL void indexThreadCode(void)
           );
     if (quitFlag) break;
 
+    plogMessage(LOG_TYPE_INDEX,"INDEX","create index #%lld for '%s'\n",storageId,String_cString(storageName));
+
     // get all job crypt passwords and crypt public keys (including no password and default)
     addIndexCryptPasswordNode(&indexCryptPasswordList,NULL,NULL);
     addIndexCryptPasswordNode(&indexCryptPasswordList,globalOptions.cryptPassword,NULL);
@@ -2228,13 +2263,23 @@ LOCAL void indexThreadCode(void)
                                  );
       if (quitFlag || (error == ERROR_NONE)) break;
     }
-    if (!quitFlag && (error != ERROR_NONE))
+    if (!quitFlag)
     {
-      logMessage(LOG_TYPE_ERROR,
-                 "cannot create storage index '%s' (error: %s)",
-                 String_cString(storageName),
-                 Errors_getText(error)
-                );
+      if (error == ERROR_NONE)
+      {
+        plogMessage(LOG_TYPE_INDEX,
+                    "created storage index '%s'\n",
+                    String_cString(storageName)
+                   );
+      }
+      else
+      {
+        plogMessage(LOG_TYPE_ERROR,
+                    "cannot create storage index '%s' (error: %s)\n",
+                    String_cString(storageName),
+                    Errors_getText(error)
+                   );
+      }
     }
 
     /* free resources */
@@ -2417,6 +2462,7 @@ LOCAL void indexUpdateThreadCode(void)
     /* delete old indizes */
     error = Index_initListStorage(&databaseQueryHandle,
                                   indexDatabaseHandle,
+                                  INDEX_STATE_ALL,
                                   NULL
                                  );
     if (error == ERROR_NONE)
@@ -3126,6 +3172,7 @@ LOCAL void serverCommand_pause(ClientInfo *clientInfo, uint id, const String arg
       String_doneTokenizer(&stringTokenizer);
     }
     pauseEndTimestamp = Misc_getCurrentDateTime()+(uint64)pauseTime;
+    logMessage(LOG_TYPE_ALWAYS,"pause server for %dmin\n",pauseTime/60);
   }
 
   sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
@@ -3201,6 +3248,7 @@ LOCAL void serverCommand_suspend(ClientInfo *clientInfo, uint id, const String a
       }
       String_doneTokenizer(&stringTokenizer);
     }
+    logMessage(LOG_TYPE_ALWAYS,"suspend server\n");
   }
 
   sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
@@ -3236,6 +3284,7 @@ LOCAL void serverCommand_continue(ClientInfo *clientInfo, uint id, const String 
     pauseFlags.storage     = FALSE;
     pauseFlags.restore     = FALSE;
     pauseFlags.indexUpdate = FALSE;
+    logMessage(LOG_TYPE_ALWAYS,"continue server\n");
   }
 
   sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
@@ -3334,10 +3383,14 @@ LOCAL void serverCommand_deviceList(ClientInfo *clientInfo, uint id, const Strin
 
 LOCAL void serverCommand_fileList(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
 {
+  const char* FILENAME_MAP_FROM[] = {"\n","\r","\\"};
+  const char* FILENAME_MAP_TO[]   = {"\\n","\\r","\\\\"};
+
   Errors                     error;
   StorageDirectoryListHandle storageDirectoryListHandle;
   String                     fileName;
   FileInfo                   fileInfo;
+  String                     string;
 
   assert(clientInfo != NULL);
   assert(arguments != NULL);
@@ -3362,11 +3415,13 @@ LOCAL void serverCommand_fileList(ClientInfo *clientInfo, uint id, const String 
 
   /* read directory entries */
   fileName = String_new();
+  string = String_new();
   while (!Storage_endOfDirectoryList(&storageDirectoryListHandle))
   {
     error = Storage_readDirectoryList(&storageDirectoryListHandle,fileName,&fileInfo);
     if (error == ERROR_NONE)
     {
+      String_mapCString(String_set(string,fileName),STRING_BEGIN,FILENAME_MAP_FROM,FILENAME_MAP_TO,SIZE_OF_ARRAY(FILENAME_MAP_FROM));
       switch (fileInfo.type)
       {
         case FILE_TYPE_FILE:
@@ -3374,28 +3429,28 @@ LOCAL void serverCommand_fileList(ClientInfo *clientInfo, uint id, const String 
                            "FILE %llu %llu %'S",
                            fileInfo.size,
                            fileInfo.timeModified,
-                           fileName
+                           string
                           );
           break;
         case FILE_TYPE_DIRECTORY:
           sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
                            "DIRECTORY %llu %'S",
                            fileInfo.timeModified,
-                           fileName
+                           string
                           );
           break;
         case FILE_TYPE_LINK:
           sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
                            "LINK %llu %'S",
                            fileInfo.timeModified,
-                           fileName
+                           string
                           );
           break;
         case FILE_TYPE_HARDLINK:
           sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
                            "HARDLINK %llu %'S",
                            fileInfo.timeModified,
-                           fileName
+                           string
                           );
           break;
         case FILE_TYPE_SPECIAL:
@@ -3405,7 +3460,7 @@ LOCAL void serverCommand_fileList(ClientInfo *clientInfo, uint id, const String 
               sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
                                "DEVICE CHARACTER %llu %'S",
                                fileInfo.timeModified,
-                               fileName
+                               string
                               );
               break;
             case FILE_SPECIAL_TYPE_BLOCK_DEVICE:
@@ -3413,28 +3468,28 @@ LOCAL void serverCommand_fileList(ClientInfo *clientInfo, uint id, const String 
                                "DEVICE BLOCK %lld %llu %'S",
                                fileInfo.size,
                                fileInfo.timeModified,
-                               fileName
+                               string
                               );
               break;
             case FILE_SPECIAL_TYPE_FIFO:
               sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
                                "FIFO %llu %'S",
                                fileInfo.timeModified,
-                               fileName
+                               string
                               );
               break;
             case FILE_SPECIAL_TYPE_SOCKET:
               sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
                                "SOCKET %llu %'S",
                                fileInfo.timeModified,
-                               fileName
+                               string
                               );
               break;
             default:
               sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
                                "SPECIAL %llu %'S",
                                fileInfo.timeModified,
-                               fileName
+                               string
                               );
               break;
           }
@@ -3447,10 +3502,11 @@ LOCAL void serverCommand_fileList(ClientInfo *clientInfo, uint id, const String 
     {
       sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
                        "UNKNOWN %'S",
-                       fileName
+                       string
                       );
     }
   }
+  String_delete(string);
   String_delete(fileName);
 
   /* close directory */
@@ -3809,9 +3865,13 @@ LOCAL void serverCommand_jobList(ClientInfo *clientInfo, uint id, const String a
 
 LOCAL void serverCommand_jobInfo(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
 {
+  const char* FILENAME_MAP_FROM[] = {"\n","\r","\\"};
+  const char* FILENAME_MAP_TO[]   = {"\\n","\\r","\\\\"};
+
   uint       jobId;
   JobNode    *jobNode;
   const char *message;
+  String     string;
 
   assert(clientInfo != NULL);
   assert(arguments != NULL);
@@ -3848,6 +3908,7 @@ LOCAL void serverCommand_jobInfo(ClientInfo *clientInfo, uint id, const String a
     {
       message = "";
     }
+    string = String_mapCString(String_duplicate(jobNode->runningInfo.name),STRING_BEGIN,FILENAME_MAP_FROM,FILENAME_MAP_TO,SIZE_OF_ARRAY(FILENAME_MAP_FROM));
     sendClientResult(clientInfo,id,TRUE,ERROR_NONE,
                      "%'s %'s %lu %llu %lu %llu %lu %llu %lu %llu %f %f %f %llu %f %'S %llu %llu %'S %llu %llu %d %f %d",
                      getJobStateText(&jobNode->jobOptions,jobNode->state),
@@ -3865,7 +3926,7 @@ LOCAL void serverCommand_jobInfo(ClientInfo *clientInfo, uint id, const String a
                      Misc_performanceFilterGetValue(&jobNode->runningInfo.storageBytesPerSecond,60),
                      jobNode->runningInfo.archiveBytes,
                      jobNode->runningInfo.compressionRatio,
-                     jobNode->runningInfo.name,
+                     string,
                      jobNode->runningInfo.entryDoneBytes,
                      jobNode->runningInfo.entryTotalBytes,
                      jobNode->runningInfo.storageName,
@@ -3875,6 +3936,7 @@ LOCAL void serverCommand_jobInfo(ClientInfo *clientInfo, uint id, const String a
                      jobNode->runningInfo.volumeProgress,
                      jobNode->requestedVolumeNumber
                     );
+    String_delete(string);
   }
   Semaphore_unlock(&jobList.lock);
 }
@@ -3925,7 +3987,7 @@ LOCAL void serverCommand_jobNew(ClientInfo *clientInfo, uint id, const String ar
 
     /* create empty job file */
     fileName = File_appendFileName(File_setFileNameCString(File_newFileName(),serverJobsDirectory),name);
-    error = File_open(&fileHandle,fileName,FILE_OPENMODE_CREATE);
+    error = File_open(&fileHandle,fileName,FILE_OPEN_CREATE);
     if (error != ERROR_NONE)
     {
       File_deleteFileName(fileName);
@@ -3934,6 +3996,7 @@ LOCAL void serverCommand_jobNew(ClientInfo *clientInfo, uint id, const String ar
       return;
     }
     File_close(&fileHandle);
+    (void)File_setPermission(fileName,FILE_PERMISSION_USER_READ|FILE_PERMISSION_USER_WRITE);
 
     /* create new job */
     jobNode = newJob(JOB_TYPE_CREATE,fileName);
@@ -3949,6 +4012,9 @@ LOCAL void serverCommand_jobNew(ClientInfo *clientInfo, uint id, const String ar
 
     /* free resources */
     File_deleteFileName(fileName);
+
+    /* write job to file */
+    updateJob(jobNode);
 
     /* add new job to list */
     List_append(&jobList,jobNode);
@@ -4021,7 +4087,7 @@ LOCAL void serverCommand_jobCopy(ClientInfo *clientInfo, uint id, const String a
 
     /* create empty job file */
     fileName = File_appendFileName(File_setFileNameCString(File_newFileName(),serverJobsDirectory),name);
-    error = File_open(&fileHandle,fileName,FILE_OPENMODE_CREATE);
+    error = File_open(&fileHandle,fileName,FILE_OPEN_CREATE);
     if (error != ERROR_NONE)
     {
       File_deleteFileName(fileName);
@@ -4030,6 +4096,7 @@ LOCAL void serverCommand_jobCopy(ClientInfo *clientInfo, uint id, const String a
       return;
     }
     File_close(&fileHandle);
+    (void)File_setPermission(fileName,FILE_PERMISSION_USER_READ|FILE_PERMISSION_USER_WRITE);
 
     /* copy job */
     newJobNode = copyJob(jobNode,fileName);
@@ -4043,6 +4110,9 @@ LOCAL void serverCommand_jobCopy(ClientInfo *clientInfo, uint id, const String a
 
     /* free resources */
     File_deleteFileName(fileName);
+
+    /* write job to file */
+    updateJob(jobNode);
 
     /* add new job to list */
     List_append(&jobList,newJobNode);
@@ -4392,8 +4462,12 @@ LOCAL void serverCommand_jobFlush(ClientInfo *clientInfo, uint id, const String 
 
 LOCAL void serverCommand_includeList(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
 {
+  const char* PATTERN_MAP_FROM[] = {"\n","\r","\\"};
+  const char* PATTERN_MAP_TO[]   = {"\\n","\\r","\\\\"};
+
   uint       jobId;
   JobNode    *jobNode;
+  String     string;
   EntryNode  *entryNode;
   const char *entryType,*patternType;
 
@@ -4420,6 +4494,7 @@ LOCAL void serverCommand_includeList(ClientInfo *clientInfo, uint id, const Stri
     }
 
     /* send include list */
+    string = String_new();
     LIST_ITERATE(&jobNode->includeEntryList,entryNode)
     {
       entryType   = NULL;
@@ -4445,13 +4520,15 @@ LOCAL void serverCommand_includeList(ClientInfo *clientInfo, uint id, const Stri
             break;
         #endif /* NDEBUG */
       }
+      String_mapCString(String_set(string,entryNode->string),STRING_BEGIN,PATTERN_MAP_FROM,PATTERN_MAP_TO,SIZE_OF_ARRAY(PATTERN_MAP_FROM));
       sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
                        "%s %s %'S",
                        entryType,
                        patternType,
-                       entryNode->string
+                       string
                       );
     }
+    String_delete(string);
   }
   Semaphore_unlock(&jobList.lock);
 
@@ -4460,6 +4537,7 @@ LOCAL void serverCommand_includeList(ClientInfo *clientInfo, uint id, const Stri
 
 /***********************************************************************\
 * Name   : serverCommand_includeClear
+* Purpose: clear include list
 * Purpose: clear job include list
 * Input  : clientInfo    - client info
 *          id            - command id
@@ -4508,6 +4586,7 @@ LOCAL void serverCommand_includeClear(ClientInfo *clientInfo, uint id, const Str
 
 /***********************************************************************\
 * Name   : serverCommand_includeAdd
+* Purpose: add entry to include list
 * Purpose: add entry to job include list
 * Input  : clientInfo    - client info
 *          id            - command id
@@ -4524,9 +4603,13 @@ LOCAL void serverCommand_includeClear(ClientInfo *clientInfo, uint id, const Str
 
 LOCAL void serverCommand_includeAdd(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
 {
+  const char* PATTERN_MAP_FROM[] = {"\\n","\\r","\\\\"};
+  const char* PATTERN_MAP_TO[]   = {"\n","\r","\\"};
+
   uint          jobId;
   EntryTypes    entryType;
   PatternTypes  patternType;
+  String        string;
   String        pattern;
   SemaphoreLock semaphoreLock;
   JobNode       *jobNode;
@@ -4586,8 +4669,9 @@ LOCAL void serverCommand_includeAdd(ClientInfo *clientInfo, uint id, const Strin
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected pattern");
     return;
   }
-  pattern = arguments[3];
+  string = arguments[3];
 
+  pattern = String_mapCString(String_duplicate(string),STRING_BEGIN,PATTERN_MAP_FROM,PATTERN_MAP_TO,SIZE_OF_ARRAY(PATTERN_MAP_FROM));
   SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
   {
     /* find job */
@@ -4596,6 +4680,7 @@ LOCAL void serverCommand_includeAdd(ClientInfo *clientInfo, uint id, const Strin
     {
       sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job #%d not found",jobId);
       Semaphore_unlock(&jobList.lock);
+      String_delete(pattern);
       return;
     }
 
@@ -4603,6 +4688,7 @@ LOCAL void serverCommand_includeAdd(ClientInfo *clientInfo, uint id, const Strin
     EntryList_append(&jobNode->includeEntryList,entryType,pattern,patternType);
     jobNode->modifiedFlag = TRUE;
   }
+  String_delete(pattern);
 
   sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
 }
@@ -4622,8 +4708,12 @@ LOCAL void serverCommand_includeAdd(ClientInfo *clientInfo, uint id, const Strin
 
 LOCAL void serverCommand_excludeList(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
 {
+  const char* PATTERN_MAP_FROM[] = {"\n","\r","\\"};
+  const char* PATTERN_MAP_TO[]   = {"\\n","\\r","\\\\"};
+
   uint        jobId;
   JobNode     *jobNode;
+  String      string;
   PatternNode *patternNode;
   const char  *type;
 
@@ -4650,6 +4740,7 @@ LOCAL void serverCommand_excludeList(ClientInfo *clientInfo, uint id, const Stri
     }
 
     /* send exclude list */
+    string = String_new();
     LIST_ITERATE(&jobNode->excludePatternList,patternNode)
     {
       type = NULL;
@@ -4664,12 +4755,14 @@ LOCAL void serverCommand_excludeList(ClientInfo *clientInfo, uint id, const Stri
             break;
         #endif /* NDEBUG */
       }
+      String_mapCString(String_set(string,patternNode->string),STRING_BEGIN,PATTERN_MAP_FROM,PATTERN_MAP_TO,SIZE_OF_ARRAY(PATTERN_MAP_FROM));
       sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
                        "%s %'S",
                        type,
-                       patternNode->string
+                       string
                       );
     }
+    String_delete(string);
   }
   Semaphore_unlock(&jobList.lock);
 
@@ -4743,6 +4836,213 @@ LOCAL void serverCommand_excludeClear(ClientInfo *clientInfo, uint id, const Str
 
 LOCAL void serverCommand_excludeAdd(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
 {
+  const char* PATTERN_MAP_FROM[] = {"\\n","\\r","\\\\"};
+  const char* PATTERN_MAP_TO[]   = {"\n","\r","\\"};
+
+  uint          jobId;
+  PatternTypes  patternType;
+  String        string;
+  String        pattern;
+  SemaphoreLock semaphoreLock;
+  JobNode       *jobNode;
+
+  assert(clientInfo != NULL);
+  assert(arguments != NULL);
+
+  /* get job id, type, pattern type, pattern */
+  if (argumentCount < 1)
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected job id");
+    return;
+  }
+  jobId = String_toInteger(arguments[0],0,NULL,NULL,0);
+  if (argumentCount < 2)
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected pattern type");
+    return;
+  }
+  if      (String_equalsCString(arguments[1],"GLOB"))
+  {
+    patternType = PATTERN_TYPE_GLOB;
+  }
+  else if (String_equalsCString(arguments[1],"REGEX"))
+  {
+    patternType = PATTERN_TYPE_REGEX;
+  }
+  else if (String_equalsCString(arguments[1],"EXTENDED_REGEX"))
+  {
+    patternType = PATTERN_TYPE_EXTENDED_REGEX;
+  }
+  else
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_UNKNOWN_VALUE,"unknown pattern type '%S'",arguments[1]);
+    return;
+  }
+  if (argumentCount < 3)
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected pattern");
+    return;
+  }
+  string = arguments[2];
+
+  pattern = String_mapCString(String_duplicate(string),STRING_BEGIN,PATTERN_MAP_FROM,PATTERN_MAP_TO,SIZE_OF_ARRAY(PATTERN_MAP_FROM));
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+  {
+    /* find job */
+    jobNode = findJobById(jobId);
+    if (jobNode == NULL)
+    {
+      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job #%d not found",jobId);
+      Semaphore_unlock(&jobList.lock);
+      String_delete(pattern);
+      return;
+    }
+
+    /* add to exclude list */
+    PatternList_append(&jobNode->excludePatternList,pattern,patternType);
+    jobNode->modifiedFlag = TRUE;
+  }
+  String_delete(pattern);
+
+  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
+}
+
+/***********************************************************************\
+* Name   : serverCommand_sourceList
+* Purpose: get soource list
+* Input  : clientInfo    - client info
+*          id            - command id
+*          arguments     - command arguments
+*          argumentCount - command arguments count
+* Output : -
+* Return : -
+* Notes  : Arguments:
+*            <job id>
+\***********************************************************************/
+
+LOCAL void serverCommand_sourceList(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
+{
+  uint        jobId;
+  JobNode     *jobNode;
+  PatternNode *patternNode;
+  const char  *type;
+
+  assert(clientInfo != NULL);
+  assert(arguments != NULL);
+
+  /* get job id, type, pattern */
+  if (argumentCount < 1)
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected job id");
+    return;
+  }
+  jobId = String_toInteger(arguments[0],0,NULL,NULL,0);
+
+  Semaphore_lock(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ);
+  {
+    /* find job */
+    jobNode = findJobById(jobId);
+    if (jobNode == NULL)
+    {
+      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job #%d not found",jobId);
+      Semaphore_unlock(&jobList.lock);
+      return;
+    }
+
+    /* send soource list */
+    LIST_ITERATE(&jobNode->sourcePatternList,patternNode)
+    {
+      type = NULL;
+      switch (patternNode->pattern.type)
+      {
+        case PATTERN_TYPE_GLOB          : type = "GLOB";           break;
+        case PATTERN_TYPE_REGEX         : type = "REGEX";          break;
+        case PATTERN_TYPE_EXTENDED_REGEX: type = "EXTENDED_REGEX"; break;
+        #ifndef NDEBUG
+          default:
+            HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+            break;
+        #endif /* NDEBUG */
+      }
+      sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
+                       "%s %'S",
+                       type,
+                       patternNode->string
+                      );
+    }
+  }
+  Semaphore_unlock(&jobList.lock);
+
+  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
+}
+
+/***********************************************************************\
+* Name   : serverCommand_sourceClear
+* Purpose: clear source list
+* Input  : clientInfo    - client info
+*          id            - command id
+*          arguments     - command arguments
+*          argumentCount - command arguments count
+* Output : -
+* Return : -
+* Notes  : Arguments:
+*            <job id>
+\***********************************************************************/
+
+LOCAL void serverCommand_sourceClear(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
+{
+  uint          jobId;
+  SemaphoreLock semaphoreLock;
+  JobNode       *jobNode;
+
+  assert(clientInfo != NULL);
+  assert(arguments != NULL);
+
+  /* get job id, type, pattern */
+  if (argumentCount < 1)
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected job id");
+    return;
+  }
+  jobId = String_toInteger(arguments[0],0,NULL,NULL,0);
+
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+  {
+    /* find job */
+    jobNode = findJobById(jobId);
+    if (jobNode == NULL)
+    {
+      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job #%d not found",jobId);
+      Semaphore_unlock(&jobList.lock);
+      return;
+    }
+
+    /* clear source list */
+    PatternList_clear(&jobNode->sourcePatternList);
+    jobNode->modifiedFlag = TRUE;
+  }
+
+  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
+}
+
+/***********************************************************************\
+* Name   : serverCommand_sourceAdd
+* Purpose: add entry to source list
+* Input  : clientInfo    - client info
+*          id            - command id
+*          arguments     - command arguments
+*          argumentCount - command arguments count
+* Output : -
+* Return : -
+* Notes  : Arguments:
+*            <job id>
+*            <entry type>
+*            <pattern type>
+*            <pattern>
+\***********************************************************************/
+
+LOCAL void serverCommand_sourceAdd(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
+{
   uint          jobId;
   PatternTypes  patternType;
   String        pattern;
@@ -4799,8 +5099,8 @@ LOCAL void serverCommand_excludeAdd(ClientInfo *clientInfo, uint id, const Strin
       return;
     }
 
-    /* add to exclude list */
-    PatternList_append(&jobNode->excludePatternList,pattern,patternType);
+    /* add to source list */
+    PatternList_append(&jobNode->sourcePatternList,pattern,patternType);
     jobNode->modifiedFlag = TRUE;
   }
 
@@ -6021,6 +6321,11 @@ LOCAL bool updateRestoreCommandStatus(RestoreCommandInfo      *restoreCommandInf
                                       const RestoreStatusInfo *restoreStatusInfo
                                      )
 {
+  const char* FILENAME_MAP_FROM[] = {"\n","\r","\\"};
+  const char* FILENAME_MAP_TO[]   = {"\\n","\\r","\\\\"};
+
+  String string;
+
   assert(restoreCommandInfo != NULL);
   assert(restoreStatusInfo != NULL);
   assert(restoreStatusInfo->name != NULL);
@@ -6028,6 +6333,7 @@ LOCAL bool updateRestoreCommandStatus(RestoreCommandInfo      *restoreCommandInf
 
   UNUSED_VARIABLE(error);
 
+  string = String_mapCString(String_duplicate(restoreStatusInfo->name),STRING_BEGIN,FILENAME_MAP_FROM,FILENAME_MAP_TO,SIZE_OF_ARRAY(FILENAME_MAP_FROM));
   sendClientResult(restoreCommandInfo->clientInfo,
                    restoreCommandInfo->id,
                    FALSE,
@@ -6037,8 +6343,9 @@ LOCAL bool updateRestoreCommandStatus(RestoreCommandInfo      *restoreCommandInf
                    restoreStatusInfo->entryTotalBytes,
                    restoreStatusInfo->archiveDoneBytes,
                    restoreStatusInfo->archiveTotalBytes,
-                   restoreStatusInfo->name
+                   string
                   );
+    String_delete(string);
 
   return !commandAborted(restoreCommandInfo->clientInfo,restoreCommandInfo->id);
 }
@@ -6061,13 +6368,17 @@ LOCAL bool updateRestoreCommandStatus(RestoreCommandInfo      *restoreCommandInf
 
 LOCAL void serverCommand_restore(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
 {
-  StringList  archiveNameList;
-  EntryList   includeEntryList;
-  PatternList excludePatternList;
-  JobOptions  jobOptions;
-  uint        z;
+  const char* PATTERN_MAP_FROM[]  = {"\\n","\\r","\\\\"};
+  const char* PATTERN_MAP_TO[]    = {"\n","\r","\\"};
+
+  StringList         archiveNameList;
+  String             string;
+  EntryList          includeEntryList;
+  PatternList        excludePatternList;
+  JobOptions         jobOptions;
+  uint               z;
   RestoreCommandInfo restoreCommandInfo;
-  Errors      error;
+  Errors             error;
 
   assert(clientInfo != NULL);
   assert(arguments != NULL);
@@ -6077,12 +6388,11 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, uint id, const String a
   PatternList_init(&excludePatternList);
   initJobOptions(&jobOptions);
 
-  /* get archive name, files */
+  /* get archive name, destination, overwrite flag, files */
   if (argumentCount < 1)
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected storage name");
     freeJobOptions(&jobOptions);
-    PatternList_done(&excludePatternList);
     EntryList_done(&includeEntryList);
     StringList_done(&archiveNameList);
     return;
@@ -6092,7 +6402,6 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, uint id, const String a
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected destination directory or device name");
     freeJobOptions(&jobOptions);
-    PatternList_done(&excludePatternList);
     EntryList_done(&includeEntryList);
     StringList_done(&archiveNameList);
     return;
@@ -6102,28 +6411,29 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, uint id, const String a
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected destination directory or device name");
     freeJobOptions(&jobOptions);
-    PatternList_done(&excludePatternList);
     EntryList_done(&includeEntryList);
     StringList_done(&archiveNameList);
     return;
   }
   jobOptions.overwriteFilesFlag = String_equalsCString(arguments[2],"1");
+  string = String_new();
   for (z = 3; z < argumentCount; z++)
   {
     EntryList_append(&includeEntryList,
 //???
 ENTRY_TYPE_FILE,
-                     arguments[z],
+                     String_mapCString(String_set(string,arguments[z]),STRING_BEGIN,PATTERN_MAP_FROM,PATTERN_MAP_TO,SIZE_OF_ARRAY(PATTERN_MAP_FROM)),
                      PATTERN_TYPE_GLOB
                     );
   }
+  String_delete(string);
 
   /* restore */
   restoreCommandInfo.clientInfo = clientInfo;
   restoreCommandInfo.id         = id;
   error = Command_restore(&archiveNameList,
                           &includeEntryList,
-                          &excludePatternList,
+                          NULL,
                           &jobOptions,
                           NULL,
                           NULL,
@@ -6136,7 +6446,6 @@ ENTRY_TYPE_FILE,
 
   /* free resources */
   freeJobOptions(&jobOptions);
-  PatternList_done(&excludePatternList);
   EntryList_done(&includeEntryList);
   StringList_done(&archiveNameList);
 }
@@ -6160,21 +6469,23 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const
 {
   ulong               maxCount;
   IndexStates         indexState;
+  String              statusText;
   String              patternText;
   Errors              error;
   DatabaseQueryHandle databaseQueryHandle;
   ulong               n;
-  DatabaseId          databaseId;
-  String              name;
+  DatabaseId          storageId;
   uint64              dateTime;
   uint64              size;
   uint                state;
+  String              storageName;
   String              errorMessage;
+  String              printableStorageName;
 
   assert(clientInfo != NULL);
   assert(arguments != NULL);
 
-  /* get filter pattern */
+  /* get max. count, status pattern, filter pattern, */
   if (argumentCount < 1)
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected max. number of entries to send");
@@ -6192,6 +6503,7 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"invalid filter status '%S'",arguments[1]);
     return;
   }
+  statusText = arguments[1];
   if (argumentCount < 3)
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected filter pattern");
@@ -6202,8 +6514,9 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const
   if (indexDatabaseHandle != NULL)
   {
     /* initialise variables */
-    name         = String_new();
-    errorMessage = String_new();
+    storageName          = String_new();
+    errorMessage         = String_new();
+    printableStorageName = String_new();
 
     /* list index */
     error = Index_initListStorage(&databaseQueryHandle,
@@ -6213,8 +6526,9 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const
                                  );
     if (error != ERROR_NONE)
     {
+      String_delete(printableStorageName);
       String_delete(errorMessage);
-      String_delete(name);
+      String_delete(storageName);
 
       sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"%s",Errors_getText(error));
       return;
@@ -6222,8 +6536,8 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const
     n = 0L;
     while (   ((maxCount == 0L) || (n < maxCount))
            && Index_getNextStorage(&databaseQueryHandle,
-                                   &databaseId,
-                                   name,
+                                   &storageId,
+                                   storageName,
                                    &dateTime,
                                    &size,
                                    &state,
@@ -6233,15 +6547,17 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const
                                   )
           )
     {
-      UNUSED_VARIABLE(databaseId);
-
       assert((0 <= state) && (state < SIZE_OF_ARRAY(INDEX_STATE_STRINGS)));
+
+      Storage_getPrintableName(printableStorageName,storageName);
+
       sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
-                       "%llu %llu %'s %'S %'S",
+                       "%llu %llu %llu %'s %'S %'S",
+                       storageId,
                        dateTime,
                        size,
                        INDEX_STATE_STRINGS[state],
-                       name,
+                       printableStorageName,
                        errorMessage
                       );
       n++;
@@ -6249,8 +6565,9 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const
     Index_doneList(&databaseQueryHandle);
 
     /* free resources */
+    String_delete(printableStorageName);
     String_delete(errorMessage);
-    String_delete(name);
+    String_delete(storageName);
 
     sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
   }
@@ -6324,49 +6641,115 @@ LOCAL void serverCommand_indexStorageAdd(ClientInfo *clientInfo, uint id, const 
 * Output : -
 * Return : -
 * Notes  : Arguments:
-*            <name>
+*            <status>|*
+*            <id>|0
 \***********************************************************************/
 
 LOCAL void serverCommand_indexStorageRemove(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
 {
-  String name;
-  Errors error;
-  int64  storageId;
+  bool                stateAny;
+  IndexStates         state;
+  DatabaseId          storageId;
+  Errors              error;
+  DatabaseQueryHandle databaseQueryHandle;
+  IndexStates         storageState;
 
   assert(clientInfo != NULL);
   assert(arguments != NULL);
 
-  /* get archive name */
+  /* state, id */
   if (argumentCount < 1)
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected name");
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected filter status");
     return;
   }
-  name = arguments[0];
+  stateAny = FALSE;
+  state    = INDEX_STATE_NONE;
+  if      (String_equalsCString(arguments[0],"*"))
+  {
+    stateAny = TRUE;
+  }
+  else if (String_equalsIgnoreCaseCString(arguments[0],"OK"))
+  {
+    state = INDEX_STATE_OK;
+  }
+  else if (String_equalsIgnoreCaseCString(arguments[0],"UPDATE_REQUESTED"))
+  {
+    state = INDEX_STATE_UPDATE_REQUESTED;
+  }
+  else if (String_equalsIgnoreCaseCString(arguments[0],"UPDATE"))
+  {
+    state = INDEX_STATE_UPDATE;
+  }
+  else if (String_equalsIgnoreCaseCString(arguments[0],"ERROR"))
+  {
+    state = INDEX_STATE_ERROR;
+  }
+  else
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected filter state *,OK,UPDATE_REQUESTED,UPDATE,ERROR");
+    return;
+  }
+  if (argumentCount < 2)
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected filter pattern");
+    return;
+  }
+  storageId = (DatabaseId)String_toInteger64(arguments[1],0,NULL,NULL,0);
 
   if (indexDatabaseHandle != NULL)
   {
-    /* find index */
-    if (!Index_findByName(indexDatabaseHandle,
-                          name,
-                          &storageId,
-                          NULL,
-                          NULL
-                         )
-       )
+    if (storageId != 0)
     {
-      sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"cannot find index to remove");
-      return;
+      /* delete index */
+      error = Index_delete(indexDatabaseHandle,
+                           storageId
+                          );
+      if (error != ERROR_NONE)
+      {
+        sendClientResult(clientInfo,id,TRUE,error,"remove index fail");
+        return;
+      }
     }
-
-    /* delete index */
-    error = Index_delete(indexDatabaseHandle,
-                         storageId
-                        );
-    if (error != ERROR_NONE)
+    else
     {
-      sendClientResult(clientInfo,id,TRUE,error,"remove index fail");
-      return;
+      error = Index_initListStorage(&databaseQueryHandle,
+                                    indexDatabaseHandle,
+                                    INDEX_STATE_ALL,
+                                    NULL
+                                   );
+      if (error != ERROR_NONE)
+      {
+        sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"%s",Errors_getText(error));
+        return;
+      }
+      while (Index_getNextStorage(&databaseQueryHandle,
+                                  &storageId,
+                                  NULL,
+                                  NULL,
+                                  NULL,
+                                  &storageState,
+                                  NULL,
+                                  NULL,
+                                  NULL
+                                 )
+            )
+      {
+        if (stateAny || (state == storageState))
+        {
+          /* delete index */
+          error = Index_delete(indexDatabaseHandle,
+                               storageId
+                              );
+          if (error != ERROR_NONE)
+          {
+            Index_doneList(&databaseQueryHandle);
+            sendClientResult(clientInfo,id,TRUE,error,"remove index fail");
+            return;
+          }
+        }
+      }
+      Index_doneList(&databaseQueryHandle);
     }
   }
   else
@@ -6389,29 +6772,51 @@ LOCAL void serverCommand_indexStorageRemove(ClientInfo *clientInfo, uint id, con
 * Return : -
 * Notes  : Arguments:
 *            <status>|*
-*            <name pattern>
+*            <id>|0
 \***********************************************************************/
 
 LOCAL void serverCommand_indexStorageRefresh(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
 {
   IndexStates         indexState;
-  String              patternText;
+  bool                stateAny;
+  IndexStates         state;
+  int64               storageId;
   Errors              error;
   DatabaseQueryHandle databaseQueryHandle;
-  int64               storageId;
   IndexStates         storageState;
 
   assert(clientInfo != NULL);
   assert(arguments != NULL);
 
-  /* get archive name */
+  /* state, id */
   if (argumentCount < 1)
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected filter status");
     return;
   }
-  indexState = Index_stringToState(arguments[0]);
-  if (indexState == INDEX_STATE_UNKNOWN)
+  stateAny = FALSE;
+  state    = INDEX_STATE_NONE;
+  if      (String_equalsCString(arguments[0],"*"))
+  {
+    stateAny = TRUE;
+  }
+  else if (String_equalsIgnoreCaseCString(arguments[0],"OK"))
+  {
+    state = INDEX_STATE_OK;
+  }
+  else if (String_equalsIgnoreCaseCString(arguments[0],"UPDATE_REQUESTED"))
+  {
+    state = INDEX_STATE_UPDATE_REQUESTED;
+  }
+  else if (String_equalsIgnoreCaseCString(arguments[0],"UPDATE"))
+  {
+    state = INDEX_STATE_UPDATE;
+  }
+  else if (String_equalsIgnoreCaseCString(arguments[0],"ERROR"))
+  {
+    state = INDEX_STATE_ERROR;
+  }
+  else
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected filter state *,OK,UPDATE_REQUESTED,UPDATE,ERROR");
     return;
@@ -6421,31 +6826,11 @@ LOCAL void serverCommand_indexStorageRefresh(ClientInfo *clientInfo, uint id, co
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected filter pattern");
     return;
   }
-  patternText = arguments[1];
+  storageId = (DatabaseId)String_toInteger64(arguments[1],0,NULL,NULL,0);
 
   if (indexDatabaseHandle != NULL)
   {
-    error = Index_initListStorage(&databaseQueryHandle,
-                                  indexDatabaseHandle,
-                                  indexState,
-                                  patternText
-                                 );
-    if (error != ERROR_NONE)
-    {
-      sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"%s",Errors_getText(error));
-      return;
-    }
-    while (Index_getNextStorage(&databaseQueryHandle,
-                                &storageId,
-                                NULL,
-                                NULL,
-                                NULL,
-                                &storageState,
-                                NULL,
-                                NULL,
-                                NULL
-                               )
-          )
+    if (storageId != 0)
     {
       /* set state */
       Index_setState(indexDatabaseHandle,
@@ -6455,7 +6840,43 @@ LOCAL void serverCommand_indexStorageRefresh(ClientInfo *clientInfo, uint id, co
                      NULL
                     );
     }
-    Index_doneList(&databaseQueryHandle);
+    else
+    {
+      error = Index_initListStorage(&databaseQueryHandle,
+                                    indexDatabaseHandle,
+                                    INDEX_STATE_ALL,
+                                    NULL
+                                   );
+      if (error != ERROR_NONE)
+      {
+        sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"%s",Errors_getText(error));
+        return;
+      }
+      while (Index_getNextStorage(&databaseQueryHandle,
+                                  &storageId,
+                                  NULL,
+                                  NULL,
+                                  NULL,
+                                  &storageState,
+                                  NULL,
+                                  NULL,
+                                  NULL
+                                 )
+            )
+      {
+        if (stateAny || (state == storageState))
+        {
+          /* set state */
+          Index_setState(indexDatabaseHandle,
+                         storageId,
+                         INDEX_STATE_UPDATE_REQUESTED,
+                         0LL,
+                         NULL
+                        );
+        }
+      }
+      Index_doneList(&databaseQueryHandle);
+    }
   }
   else
   {
@@ -6644,18 +7065,24 @@ LOCAL IndexNode *getIndexEntryNode(IndexList *indexList, ArchiveEntryTypes type,
 
 LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
 {
+  const char* PATTERN_MAP_FROM[]  = {"\\n","\\r","\\\\"};
+  const char* PATTERN_MAP_TO[]    = {"\n","\r","\\"};
+  const char* FILENAME_MAP_FROM[] = {"\n","\r","\\"};
+  const char* FILENAME_MAP_TO[]   = {"\\n","\\r","\\\\"};
 
   ulong               maxCount;
   bool                newestEntriesOnly;
-  String              patternText;
+  String              string;
+  String              pattern;
   IndexList           indexList;
   IndexNode           *indexNode;
   String              regexpString;
-  DatabaseId          databaseId;
+  DatabaseId          storageId;
   String              storageName;
   uint64              storageDateTime;
   String              name;
   String              destinationName;
+  String              string1,string2;
   Errors              error;
   DatabaseQueryHandle databaseQueryHandle;
   uint64              size;
@@ -6668,7 +7095,7 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
   assert(clientInfo != NULL);
   assert(arguments != NULL);
 
-  /* get filter pattern */
+  /* get max. count, new entires only, filter pattern */
   if (argumentCount < 1)
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected max. number of entries to send");
@@ -6686,11 +7113,12 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected filter pattern");
     return;
   }
-  patternText = arguments[2];
+  string = arguments[2];
 
   if (indexDatabaseHandle != NULL)
   {
     /* initialise variables */
+    pattern         = String_mapCString(String_duplicate(string),STRING_BEGIN,PATTERN_MAP_FROM,PATTERN_MAP_TO,SIZE_OF_ARRAY(PATTERN_MAP_FROM));
     List_init(&indexList);
     regexpString    = String_new();
     storageName     = String_new();
@@ -6702,16 +7130,22 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
     {
       error = Index_initListFiles(&databaseQueryHandle,
                                   indexDatabaseHandle,
-                                  patternText
-                                  );
+                                  pattern
+                                 );
       if (error != ERROR_NONE)
       {
         sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"%s",Errors_getText(error));
+        String_delete(destinationName);
+        String_delete(name);
+        String_delete(storageName);
+        String_delete(regexpString);
+        List_done(&indexList,(ListNodeFreeFunction)freeIndexNode,NULL);
+        String_delete(pattern);
         return;
       }
       while (   ((maxCount == 0L) || (List_count(&indexList) < maxCount))
              && Index_getNextFile(&databaseQueryHandle,
-                                  &databaseId,
+                                  &storageId,
                                   storageName,
                                   &storageDateTime,
                                   name,
@@ -6725,6 +7159,8 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
                                  )
             )
       {
+        UNUSED_VARIABLE(storageId);
+
         indexNode = getIndexEntryNode(&indexList,ARCHIVE_ENTRY_TYPE_FILE,storageName,name,timeModified,newestEntriesOnly);
         if (indexNode == NULL) break;
         if (timeModified >= indexNode->timeModified)
@@ -6747,16 +7183,22 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
     {
       error = Index_initListImages(&databaseQueryHandle,
                                    indexDatabaseHandle,
-                                   patternText
+                                   pattern
                                   );
       if (error != ERROR_NONE)
       {
         sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"%s",Errors_getText(error));
+        String_delete(destinationName);
+        String_delete(name);
+        String_delete(storageName);
+        String_delete(regexpString);
+        List_done(&indexList,(ListNodeFreeFunction)freeIndexNode,NULL);
+        String_delete(pattern);
         return;
       }
       while (   ((maxCount == 0L) || (List_count(&indexList) < maxCount))
              && Index_getNextImage(&databaseQueryHandle,
-                                   &databaseId,
+                                   &storageId,
                                    storageName,
                                    &storageDateTime,
                                    name,
@@ -6766,6 +7208,8 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
                                   )
             )
       {
+        UNUSED_VARIABLE(storageId);
+
         indexNode = getIndexEntryNode(&indexList,ARCHIVE_ENTRY_TYPE_IMAGE,storageName,name,timeModified,newestEntriesOnly);
         if (indexNode == NULL) break;
         if (timeModified >= indexNode->timeModified)
@@ -6785,16 +7229,22 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
     {
       error = Index_initListDirectories(&databaseQueryHandle,
                                         indexDatabaseHandle,
-                                        patternText
+                                        pattern
                                        );
       if (error != ERROR_NONE)
       {
         sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"%s",Errors_getText(error));
+        String_delete(destinationName);
+        String_delete(name);
+        String_delete(storageName);
+        String_delete(regexpString);
+        List_done(&indexList,(ListNodeFreeFunction)freeIndexNode,NULL);
+        String_delete(pattern);
         return;
       }
       while (   ((maxCount == 0L) || (List_count(&indexList) < maxCount))
              && Index_getNextDirectory(&databaseQueryHandle,
-                                       &databaseId,
+                                       &storageId,
                                        storageName,
                                        &storageDateTime,
                                        name,
@@ -6805,6 +7255,8 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
                                       )
             )
       {
+        UNUSED_VARIABLE(storageId);
+
         indexNode = getIndexEntryNode(&indexList,ARCHIVE_ENTRY_TYPE_DIRECTORY,storageName,name,timeModified,newestEntriesOnly);
         if (indexNode == NULL) break;
         if (timeModified >= indexNode->timeModified)
@@ -6824,16 +7276,22 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
     {
       error = Index_initListLinks(&databaseQueryHandle,
                                   indexDatabaseHandle,
-                                  patternText
-                                  );
+                                  pattern
+                                 );
       if (error != ERROR_NONE)
       {
         sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"%s",Errors_getText(error));
+        String_delete(destinationName);
+        String_delete(name);
+        String_delete(storageName);
+        String_delete(regexpString);
+        List_done(&indexList,(ListNodeFreeFunction)freeIndexNode,NULL);
+        String_delete(pattern);
         return;
       }
       while (   ((maxCount == 0L) || (List_count(&indexList) < maxCount))
              && Index_getNextLink(&databaseQueryHandle,
-                                  &databaseId,
+                                  &storageId,
                                   storageName,
                                   &storageDateTime,
                                   name,
@@ -6845,6 +7303,8 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
                                  )
             )
       {
+        UNUSED_VARIABLE(storageId);
+
         indexNode = getIndexEntryNode(&indexList,ARCHIVE_ENTRY_TYPE_LINK,storageName,name,timeModified,newestEntriesOnly);
         if (indexNode == NULL) break;
         if (timeModified >= indexNode->timeModified)
@@ -6865,16 +7325,22 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
     {
       error = Index_initListHardLinks(&databaseQueryHandle,
                                       indexDatabaseHandle,
-                                      patternText
+                                      pattern
                                      );
       if (error != ERROR_NONE)
       {
         sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"%s",Errors_getText(error));
+        String_delete(destinationName);
+        String_delete(name);
+        String_delete(storageName);
+        String_delete(regexpString);
+        List_done(&indexList,(ListNodeFreeFunction)freeIndexNode,NULL);
+        String_delete(pattern);
         return;
       }
       while (   ((maxCount == 0L) || (List_count(&indexList) < maxCount))
              && Index_getNextHardLink(&databaseQueryHandle,
-                                      &databaseId,
+                                      &storageId,
                                       storageName,
                                       &storageDateTime,
                                       name,
@@ -6888,6 +7354,8 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
                                      )
             )
       {
+        UNUSED_VARIABLE(storageId);
+
         indexNode = getIndexEntryNode(&indexList,ARCHIVE_ENTRY_TYPE_HARDLINK,storageName,name,timeModified,newestEntriesOnly);
         if (indexNode == NULL) break;
         if (timeModified >= indexNode->timeModified)
@@ -6910,16 +7378,22 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
     {
       error = Index_initListSpecial(&databaseQueryHandle,
                                     indexDatabaseHandle,
-                                    patternText
-                                    );
+                                    pattern
+                                   );
       if (error != ERROR_NONE)
       {
         sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"%s",Errors_getText(error));
+        String_delete(destinationName);
+        String_delete(name);
+        String_delete(storageName);
+        String_delete(regexpString);
+        List_done(&indexList,(ListNodeFreeFunction)freeIndexNode,NULL);
+        String_delete(pattern);
         return;
       }
       while (   ((maxCount == 0L) || (List_count(&indexList) < maxCount))
              && Index_getNextSpecial(&databaseQueryHandle,
-                                     &databaseId,
+                                     &storageId,
                                      storageName,
                                      &storageDateTime,
                                      name,
@@ -6930,6 +7404,8 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
                                     )
             )
       {
+        UNUSED_VARIABLE(storageId);
+
         indexNode = getIndexEntryNode(&indexList,ARCHIVE_ENTRY_TYPE_SPECIAL,storageName,name,timeModified,newestEntriesOnly);
         if (indexNode == NULL) break;
         if (timeModified >= indexNode->timeModified)
@@ -6946,6 +7422,8 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
     }
 
     /* send data */
+    string1 = String_new();
+    string2 = String_new();
     indexNode = indexList.head;
     while ((indexNode != NULL) && !commandAborted(clientInfo,id))
     {
@@ -6954,6 +7432,7 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
         case ARCHIVE_ENTRY_TYPE_NONE:
           break;
         case ARCHIVE_ENTRY_TYPE_FILE:
+          String_mapCString(String_set(string1,indexNode->name),STRING_BEGIN,FILENAME_MAP_FROM,FILENAME_MAP_TO,SIZE_OF_ARRAY(FILENAME_MAP_FROM));
           sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
                            "FILE %llu %llu %llu %u %u %u %llu %llu %'S %'S",
                            indexNode->storageDateTime,
@@ -6965,10 +7444,11 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
                            indexNode->file.fragmentOffset,
                            indexNode->file.fragmentSize,
                            indexNode->storageName,
-                           indexNode->name
+                           string1
                           );
           break;
         case ARCHIVE_ENTRY_TYPE_IMAGE:
+          String_mapCString(String_set(string1,indexNode->name),STRING_BEGIN,FILENAME_MAP_FROM,FILENAME_MAP_TO,SIZE_OF_ARRAY(FILENAME_MAP_FROM));
           sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
                            "IMAGE %llu %llu %ll %llu %'S %'S",
                            indexNode->storageDateTime,
@@ -6976,10 +7456,11 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
                            indexNode->image.blockOffset,
                            indexNode->image.blockCount,
                            indexNode->storageName,
-                           indexNode->name
+                           string1
                           );
           break;
         case ARCHIVE_ENTRY_TYPE_DIRECTORY:
+          String_mapCString(String_set(string1,indexNode->name),STRING_BEGIN,FILENAME_MAP_FROM,FILENAME_MAP_TO,SIZE_OF_ARRAY(FILENAME_MAP_FROM));
           sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
                            "DIRECTORY %llu %llu %u %u %u %'S %'S",
                            indexNode->storageDateTime,
@@ -6988,10 +7469,12 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
                            indexNode->directory.groupId,
                            indexNode->directory.permission,
                            indexNode->storageName,
-                           indexNode->name
+                           string1
                           );
           break;
         case ARCHIVE_ENTRY_TYPE_LINK:
+          String_mapCString(String_set(string1,indexNode->name),STRING_BEGIN,FILENAME_MAP_FROM,FILENAME_MAP_TO,SIZE_OF_ARRAY(FILENAME_MAP_FROM));
+          String_mapCString(String_set(string2,indexNode->link.destinationName),STRING_BEGIN,FILENAME_MAP_FROM,FILENAME_MAP_TO,SIZE_OF_ARRAY(FILENAME_MAP_FROM));
           sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
                            "LINK %llu %llu %u %u %u %'S %'S %'S",
                            indexNode->storageDateTime,
@@ -7000,11 +7483,13 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
                            indexNode->link.groupId,
                            indexNode->link.permission,
                            indexNode->storageName,
-                           indexNode->name,
-                           indexNode->link.destinationName
+                           string1,
+                           string2
                           );
           break;
         case ARCHIVE_ENTRY_TYPE_HARDLINK:
+          String_mapCString(String_set(string1,indexNode->name),STRING_BEGIN,FILENAME_MAP_FROM,FILENAME_MAP_TO,SIZE_OF_ARRAY(FILENAME_MAP_FROM));
+          String_mapCString(String_set(string2,indexNode->link.destinationName),STRING_BEGIN,FILENAME_MAP_FROM,FILENAME_MAP_TO,SIZE_OF_ARRAY(FILENAME_MAP_FROM));
           sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
                            "HARDLINK %llu %llu %u %u %u %'S %'S %'S",
                            indexNode->storageDateTime,
@@ -7013,11 +7498,12 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
                            indexNode->link.groupId,
                            indexNode->link.permission,
                            indexNode->storageName,
-                           indexNode->name,
-                           indexNode->link.destinationName
+                           string1,
+                           string2
                           );
           break;
         case ARCHIVE_ENTRY_TYPE_SPECIAL:
+          String_mapCString(String_set(string1,indexNode->name),STRING_BEGIN,FILENAME_MAP_FROM,FILENAME_MAP_TO,SIZE_OF_ARRAY(FILENAME_MAP_FROM));
           sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
                            "SPECIAL %llu %llu %u %u %u %'S %'S",
                            indexNode->storageDateTime,
@@ -7026,7 +7512,7 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
                            indexNode->special.groupId,
                            indexNode->special.permission,
                            indexNode->storageName,
-                           indexNode->name
+                           string1
                           );
           break;
         case ARCHIVE_ENTRY_TYPE_UNKNOWN:
@@ -7039,13 +7525,16 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
       }
       indexNode = indexNode->next;
     }
+    String_delete(string2);
+    String_delete(string1);
 
     /* free resources */
-    List_done(&indexList,(ListNodeFreeFunction)freeIndexNode,NULL);
     String_delete(destinationName);
     String_delete(name);
     String_delete(storageName);
     String_delete(regexpString);
+    List_done(&indexList,(ListNodeFreeFunction)freeIndexNode,NULL);
+    String_delete(pattern);
 
     sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
   }
@@ -7156,53 +7645,56 @@ SERVER_COMMANDS[] =
   { "ERROR_INFO",                   "i",    serverCommand_errorInfo,                 AUTHORIZATION_STATE_OK      },
   { "AUTHORIZE",                    "S",    serverCommand_authorize,                 AUTHORIZATION_STATE_WAITING },
   { "GET",                          "s",    serverCommand_get,                       AUTHORIZATION_STATE_OK      },
-  { "ABORT",                        "i",    serverCommand_abort,                     AUTHORIZATION_STATE_OK      },
-  { "STATUS",                       "",     serverCommand_status,                    AUTHORIZATION_STATE_OK      },
-  { "PAUSE",                        "i",    serverCommand_pause,                     AUTHORIZATION_STATE_OK      },
-  { "SUSPEND",                      "",     serverCommand_suspend,                   AUTHORIZATION_STATE_OK      },
-  { "CONTINUE",                     "",     serverCommand_continue,                  AUTHORIZATION_STATE_OK      },
-  { "DEVICE_LIST",                  "",     serverCommand_deviceList,                AUTHORIZATION_STATE_OK      },
-  { "FILE_LIST",                    "S",    serverCommand_fileList,                  AUTHORIZATION_STATE_OK      },
-  { "DIRECTORY_INFO",               "S",    serverCommand_directoryInfo,             AUTHORIZATION_STATE_OK      },
-  { "JOB_LIST",                     "",     serverCommand_jobList,                   AUTHORIZATION_STATE_OK      },
-  { "JOB_INFO",                     "i",    serverCommand_jobInfo,                   AUTHORIZATION_STATE_OK      },
-  { "JOB_NEW",                      "S",    serverCommand_jobNew,                    AUTHORIZATION_STATE_OK      },
-  { "JOB_COPY",                     "i S",  serverCommand_jobCopy,                   AUTHORIZATION_STATE_OK      },
-  { "JOB_RENAME",                   "i S",  serverCommand_jobRename,                 AUTHORIZATION_STATE_OK      },
-  { "JOB_DELETE",                   "i",    serverCommand_jobDelete,                 AUTHORIZATION_STATE_OK      },
-  { "JOB_START",                    "i",    serverCommand_jobStart,                  AUTHORIZATION_STATE_OK      },
-  { "JOB_ABORT",                    "i",    serverCommand_jobAbort,                  AUTHORIZATION_STATE_OK      },
-  { "JOB_FLUSH",                    "",     serverCommand_jobFlush,                  AUTHORIZATION_STATE_OK      },
-  { "INCLUDE_LIST",                 "i",    serverCommand_includeList,               AUTHORIZATION_STATE_OK      },
-  { "INCLUDE_CLEAR",                "i",    serverCommand_includeClear,              AUTHORIZATION_STATE_OK      },
-  { "INCLUDE_ADD",                  "i S",  serverCommand_includeAdd,                AUTHORIZATION_STATE_OK      },
-  { "EXCLUDE_LIST",                 "i",    serverCommand_excludeList,               AUTHORIZATION_STATE_OK      },
-  { "EXCLUDE_CLEAR",                "i",    serverCommand_excludeClear,              AUTHORIZATION_STATE_OK      },
-  { "EXCLUDE_ADD",                  "i S",  serverCommand_excludeAdd,                AUTHORIZATION_STATE_OK      },
-  { "EXCLUDE_COMPRESS_LIST",        "i",    serverCommand_excludeCompressList,       AUTHORIZATION_STATE_OK      },
-  { "EXCLUDE_COMPRESS_CLEAR",       "i",    serverCommand_excludeCompressClear,      AUTHORIZATION_STATE_OK      },
-  { "EXCLUDE_COMPRESS_ADD",         "i S",  serverCommand_excludeCompressAdd,        AUTHORIZATION_STATE_OK      },
-  { "SCHEDULE_LIST",                "i",    serverCommand_scheduleList,              AUTHORIZATION_STATE_OK      },
-  { "SCHEDULE_CLEAR",               "i",    serverCommand_scheduleClear,             AUTHORIZATION_STATE_OK      },
-  { "SCHEDULE_ADD",                 "i S",  serverCommand_scheduleAdd,               AUTHORIZATION_STATE_OK      },
-  { "OPTION_GET",                   "s",    serverCommand_optionGet,                 AUTHORIZATION_STATE_OK      },
-  { "OPTION_SET",                   "s S",  serverCommand_optionSet,                 AUTHORIZATION_STATE_OK      },
-  { "OPTION_DELETE",                "s S",  serverCommand_optionDelete,              AUTHORIZATION_STATE_OK      },
-  { "DECRYPT_PASSWORD_CLEAR",       "",     serverCommand_decryptPasswordsClear,     AUTHORIZATION_STATE_OK      },
-  { "DECRYPT_PASSWORD_ADD",         "i S",  serverCommand_decryptPasswordAdd,        AUTHORIZATION_STATE_OK      },
-  { "FTP_PASSWORD",                 "i S",  serverCommand_ftpPassword,               AUTHORIZATION_STATE_OK      },
-  { "SSH_PASSWORD",                 "i S",  serverCommand_sshPassword,               AUTHORIZATION_STATE_OK      },
-  { "CRYPT_PASSWORD",               "S",    serverCommand_cryptPassword,             AUTHORIZATION_STATE_OK      },
-  { "VOLUME_LOAD",                  "i i",  serverCommand_volumeLoad,                AUTHORIZATION_STATE_OK      },
-  { "VOLUME_UNLOAD",                "",     serverCommand_volumeUnload,              AUTHORIZATION_STATE_OK      },
-  { "ARCHIVE_LIST",                 "S S",  serverCommand_archiveList,               AUTHORIZATION_STATE_OK      },
-  { "RESTORE",                      "S S",  serverCommand_restore,                   AUTHORIZATION_STATE_OK      },
+  { "ABORT",                        "i",        serverCommand_abort,                     AUTHORIZATION_STATE_OK      },
+  { "STATUS",                       "",         serverCommand_status,                    AUTHORIZATION_STATE_OK      },
+  { "PAUSE",                        "i",        serverCommand_pause,                     AUTHORIZATION_STATE_OK      },
+  { "SUSPEND",                      "",         serverCommand_suspend,                   AUTHORIZATION_STATE_OK      },
+  { "CONTINUE",                     "",         serverCommand_continue,                  AUTHORIZATION_STATE_OK      },
+  { "DEVICE_LIST",                  "",         serverCommand_deviceList,                AUTHORIZATION_STATE_OK      },
+  { "FILE_LIST",                    "S",        serverCommand_fileList,                  AUTHORIZATION_STATE_OK      },
+  { "DIRECTORY_INFO",               "S",        serverCommand_directoryInfo,             AUTHORIZATION_STATE_OK      },
+  { "JOB_LIST",                     "",         serverCommand_jobList,                   AUTHORIZATION_STATE_OK      },
+  { "JOB_INFO",                     "i",        serverCommand_jobInfo,                   AUTHORIZATION_STATE_OK      },
+  { "JOB_NEW",                      "S",        serverCommand_jobNew,                    AUTHORIZATION_STATE_OK      },
+  { "JOB_COPY",                     "i S",      serverCommand_jobCopy,                   AUTHORIZATION_STATE_OK      },
+  { "JOB_RENAME",                   "i S",      serverCommand_jobRename,                 AUTHORIZATION_STATE_OK      },
+  { "JOB_DELETE",                   "i",        serverCommand_jobDelete,                 AUTHORIZATION_STATE_OK      },
+  { "JOB_START",                    "i",        serverCommand_jobStart,                  AUTHORIZATION_STATE_OK      },
+  { "JOB_ABORT",                    "i",        serverCommand_jobAbort,                  AUTHORIZATION_STATE_OK      },
+  { "JOB_FLUSH",                    "",         serverCommand_jobFlush,                  AUTHORIZATION_STATE_OK      },
+  { "INCLUDE_LIST",                 "i",        serverCommand_includeList,               AUTHORIZATION_STATE_OK      },
+  { "INCLUDE_CLEAR",                "i",        serverCommand_includeClear,              AUTHORIZATION_STATE_OK      },
+  { "INCLUDE_ADD",                  "i S",      serverCommand_includeAdd,                AUTHORIZATION_STATE_OK      },
+  { "EXCLUDE_LIST",                 "i",        serverCommand_excludeList,               AUTHORIZATION_STATE_OK      },
+  { "EXCLUDE_CLEAR",                "i",        serverCommand_excludeClear,              AUTHORIZATION_STATE_OK      },
+  { "EXCLUDE_ADD",                  "i S",      serverCommand_excludeAdd,                AUTHORIZATION_STATE_OK      },
+  { "SOURCE_LIST",                  "i",    serverCommand_sourceList,                AUTHORIZATION_STATE_OK      },
+  { "SOURCE_CLEAR",                 "i",    serverCommand_sourceClear,               AUTHORIZATION_STATE_OK      },
+  { "SOURCE_ADD",                   "i S",  serverCommand_sourceAdd,                 AUTHORIZATION_STATE_OK      },
+  { "EXCLUDE_COMPRESS_LIST",        "i",        serverCommand_excludeCompressList,       AUTHORIZATION_STATE_OK      },
+  { "EXCLUDE_COMPRESS_CLEAR",       "i",        serverCommand_excludeCompressClear,      AUTHORIZATION_STATE_OK      },
+  { "EXCLUDE_COMPRESS_ADD",         "i S",      serverCommand_excludeCompressAdd,        AUTHORIZATION_STATE_OK      },
+  { "SCHEDULE_LIST",                "i",        serverCommand_scheduleList,              AUTHORIZATION_STATE_OK      },
+  { "SCHEDULE_CLEAR",               "i",        serverCommand_scheduleClear,             AUTHORIZATION_STATE_OK      },
+  { "SCHEDULE_ADD",                 "i S",      serverCommand_scheduleAdd,               AUTHORIZATION_STATE_OK      },
+  { "OPTION_GET",                   "s",        serverCommand_optionGet,                 AUTHORIZATION_STATE_OK      },
+  { "OPTION_SET",                   "s S",      serverCommand_optionSet,                 AUTHORIZATION_STATE_OK      },
+  { "OPTION_DELETE",                "s S",      serverCommand_optionDelete,              AUTHORIZATION_STATE_OK      },
+  { "DECRYPT_PASSWORD_CLEAR",       "",         serverCommand_decryptPasswordsClear,     AUTHORIZATION_STATE_OK      },
+  { "DECRYPT_PASSWORD_ADD",         "S",        serverCommand_decryptPasswordAdd,        AUTHORIZATION_STATE_OK      },
+  { "FTP_PASSWORD",                 "i S",      serverCommand_ftpPassword,               AUTHORIZATION_STATE_OK      },
+  { "SSH_PASSWORD",                 "i S",      serverCommand_sshPassword,               AUTHORIZATION_STATE_OK      },
+  { "CRYPT_PASSWORD",               "S",        serverCommand_cryptPassword,             AUTHORIZATION_STATE_OK      },
+  { "VOLUME_LOAD",                  "i i",      serverCommand_volumeLoad,                AUTHORIZATION_STATE_OK      },
+  { "VOLUME_UNLOAD",                "",         serverCommand_volumeUnload,              AUTHORIZATION_STATE_OK      },
+  { "ARCHIVE_LIST",                 "S S",      serverCommand_archiveList,               AUTHORIZATION_STATE_OK      },
+  { "RESTORE",                      "S b S b S",serverCommand_restore,                   AUTHORIZATION_STATE_OK      },
 
-  { "INDEX_STORAGE_LIST",           "i S S",serverCommand_indexStorageList,          AUTHORIZATION_STATE_OK      },
-  { "INDEX_STORAGE_ADD",            "S",    serverCommand_indexStorageAdd,           AUTHORIZATION_STATE_OK      },
-  { "INDEX_STORAGE_REMOVE",         "S",    serverCommand_indexStorageRemove,        AUTHORIZATION_STATE_OK      },
-  { "INDEX_STORAGE_REFRESH",        "S",    serverCommand_indexStorageRefresh,       AUTHORIZATION_STATE_OK      },
-  { "INDEX_ENTRIES_LIST",           "i b S",serverCommand_indexEntriesList,          AUTHORIZATION_STATE_OK      },
+  { "INDEX_STORAGE_LIST",           "i S S",    serverCommand_indexStorageList,          AUTHORIZATION_STATE_OK      },
+  { "INDEX_STORAGE_ADD",            "S",        serverCommand_indexStorageAdd,           AUTHORIZATION_STATE_OK      },
+  { "INDEX_STORAGE_REMOVE",         "i",        serverCommand_indexStorageRemove,        AUTHORIZATION_STATE_OK      },
+  { "INDEX_STORAGE_REFRESH",        "i",        serverCommand_indexStorageRefresh,       AUTHORIZATION_STATE_OK      },
+  { "INDEX_ENTRIES_LIST",           "i b S",    serverCommand_indexEntriesList,          AUTHORIZATION_STATE_OK      },
 
   #ifndef NDEBUG
   { "DEBUG_MEMORY_PRINT_INFO",      "",     serverCommand_debugMemoryPrintInfo,      AUTHORIZATION_STATE_OK      },
@@ -7759,6 +8251,29 @@ Errors Server_run(uint             port,
   pauseEndTimestamp       = 0LL;
   quitFlag                = FALSE;
 
+  /* create jobs directory if necessary */
+  if (!File_existsCString(serverJobsDirectory))
+  {
+    error = File_makeDirectoryCString(serverJobsDirectory,
+                                      FILE_DEFAULT_USER_ID,
+                                      FILE_DEFAULT_GROUP_ID,
+                                      FILE_DEFAULT_PERMISSION
+                                     );                              
+    if (error != ERROR_NONE)
+    {
+      printError("Cannot create directory '%s' (error: %s)\n",
+                 serverJobsDirectory,
+                 Errors_getText(error)
+                );
+      return error;
+    }
+  }
+  if (!File_isDirectoryCString(serverJobsDirectory))
+  {
+    printError("'%s' is not a directory!\n",serverJobsDirectory);
+    return ERROR_NOT_A_DIRECTORY;
+  }
+
   /* init server sockets */
   serverFlag    = FALSE;
   serverTLSFlag = FALSE;
@@ -8057,7 +8572,7 @@ Errors Server_batch(int inputDescriptor,
   quitFlag = FALSE;
 
   /* initialize input/output */
-  error = File_openDescriptor(&inputFileHandle,inputDescriptor,FILE_OPENMODE_READ);
+  error = File_openDescriptor(&inputFileHandle,inputDescriptor,FILE_OPEN_READ);
   if (error != ERROR_NONE)
   {
     printError("Cannot initialize input (error: %s)!\n",
@@ -8065,7 +8580,7 @@ Errors Server_batch(int inputDescriptor,
               );
     return error;
   }
-  error = File_openDescriptor(&outputFileHandle,outputDescriptor,FILE_OPENMODE_WRITE);
+  error = File_openDescriptor(&outputFileHandle,outputDescriptor,FILE_OPEN_WRITE);
   if (error != ERROR_NONE)
   {
     printError("Cannot initialize input (error: %s)!\n",
