@@ -1270,7 +1270,7 @@ bool Storage_parseFTPSpecifier(const String ftpSpecifier,
   String_clear(loginName);
   String_clear(hostName);
 
-  if      (String_matchCString(ftpSpecifier,STRING_BEGIN,"^([^:]*?):(([^@]|\\@)*?)@([^@:/]*?):(\\d*?)$",NULL,NULL,loginName,s,STRING_NO_ASSIGN,hostName,t,NULL))
+  if      (String_matchCString(ftpSpecifier,STRING_BEGIN,"^([^:]*?):(([^@]|\\@)*?)@([^@:/]*?):([0-9]+)$",NULL,NULL,loginName,s,STRING_NO_ASSIGN,hostName,t,NULL))
   {
     String_mapCString(loginName,STRING_BEGIN,LOGINNAME_MAP_FROM,LOGINNAME_MAP_TO,SIZE_OF_ARRAY(LOGINNAME_MAP_FROM));
     if (password != NULL) Password_setString(password,s);
@@ -1285,7 +1285,7 @@ bool Storage_parseFTPSpecifier(const String ftpSpecifier,
 
     result = TRUE;
   }
-  else if (String_matchCString(ftpSpecifier,STRING_BEGIN,"^(([^@]|\\@)*?)@([^@:/]*?):(\\d*?)$",NULL,NULL,loginName,STRING_NO_ASSIGN,hostName,t,NULL))
+  else if (String_matchCString(ftpSpecifier,STRING_BEGIN,"^(([^@]|\\@)*?)@([^@:/]*?):([0-9]+)$",NULL,NULL,loginName,STRING_NO_ASSIGN,hostName,t,NULL))
   {
     String_mapCString(loginName,STRING_BEGIN,LOGINNAME_MAP_FROM,LOGINNAME_MAP_TO,SIZE_OF_ARRAY(LOGINNAME_MAP_FROM));
     if (hostPort != NULL) (*hostPort) = (uint)String_toInteger(t,STRING_BEGIN,NULL,NULL,0);
@@ -1477,7 +1477,7 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
           if (String_empty(storageFileHandle->ftp.loginName)) String_set(storageFileHandle->ftp.loginName,ftpServer.loginName);
 
           /* check FTP login, get correct password */
-          error = ERROR_UNKNOWN;
+          error = ERROR_FTP_SESSION_FAIL;
           if ((error != ERROR_NONE) && !Password_empty(storageFileHandle->ftp.password))
           {
             error = checkFTPLogin(storageFileHandle->ftp.loginName,
@@ -1510,20 +1510,16 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
               Password_set(storageFileHandle->ftp.password,defaultFTPPassword);
             }
           }
-          if (error != ERROR_NONE)
+          if ((error != ERROR_NONE) && initFTPPassword(jobOptions))
           {
-            /* initialize default password */
-            if (initFTPPassword(jobOptions))
+            error = checkFTPLogin(storageFileHandle->ftp.loginName,
+                                  defaultFTPPassword,
+                                  storageFileHandle->ftp.hostName,
+                                  storageFileHandle->ftp.hostPort
+                                 );
+            if (error == ERROR_NONE)
             {
-              error = checkFTPLogin(storageFileHandle->ftp.loginName,
-                                    defaultFTPPassword,
-                                    storageFileHandle->ftp.hostName,
-                                    storageFileHandle->ftp.hostPort
-                                   );
-              if (error == ERROR_NONE)
-              {
-                Password_set(storageFileHandle->ftp.password,defaultFTPPassword);
-              }
+              Password_set(storageFileHandle->ftp.password,defaultFTPPassword);
             }
           }
           if (error != ERROR_NONE)
@@ -3423,7 +3419,7 @@ Errors Storage_open(StorageFileHandle *storageFileHandle,
               return ERRORX(FILE_NOT_FOUND,0,String_cString(fileName));
             }
           }
-          error = File_open(&fileHandle,tmpFileName,FILE_OPENMODE_READ);
+          error = File_open(&fileHandle,tmpFileName,FILE_OPEN_READ);
           if (error != ERROR_NONE)
           {
             File_delete(tmpFileName,FALSE);
