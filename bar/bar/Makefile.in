@@ -65,6 +65,7 @@ RMDIR      = rmdir
 RMF        = rm -f
 RMRF       = rm -rf
 SED        = sed
+SLEEP      = sleep
 STAT       = stat
 TAR        = tar
 
@@ -369,6 +370,7 @@ runserver_ssl barserver_ssl: bar ../bar-ca.pem ../bar-server-cert.pem ../bar-ser
 #   splitting
 #   everything together
 #   images
+#   dvd
 #
 # For image tests some sudo-commands are required:
 #  sudo losetup <loop device> <file>
@@ -411,7 +413,7 @@ TEST_FILES_CLEAN = \
 
 .PHONY: test clean_test
 .PHONY: test1 test2 test3 test4 test5 test6 test_all
-.PHONY: test_basic test_compress test_crypt test_asymmetric_crypt test_split test_image
+.PHONY: test_basic test_compress test_crypt test_asymmetric_crypt test_split test_image test_dvd
 test:
 	@$(MAKE) QUIET=1 --no-print-directory -s test1 test2 test3 test4 test5 test6 test_all
 
@@ -480,6 +482,15 @@ test6 test_image: bar
         done
 	@$(ECHO) "ok"
 
+test7 test_dvd: bar
+	@$(ECHO_NO_LF) "Test 7: dvd..."
+	$(MAKE) \
+          BAR_FILE="test" \
+          OPTIONS="--compress-algorithm=none --crypt-algorithm=none" \
+          test_dvd_operations \
+          ;
+	@$(ECHO) "ok"
+
 test_all: bar
 	@$(ECHO_NO_LF) "Test all..."
 	@$(RM) test/key.*; $(ECHO_NO_LF) -e "$(TEST_PASSWORD)\n$(TEST_PASSWORD)\n" | SSH_ASKPASS= ./bar --generate-keys test/key
@@ -513,40 +524,57 @@ test_file_operations: \
   test_file_operation_destroyed
 
 test/data/zero1024.dat:
+	$(INSTALL) -d $(@D)
 	$(DD) if=/dev/zero of=$@ bs=1 count=1024 2>/dev/null
 test/data/zero512k.dat:
+	$(INSTALL) -d $(@D)
 	$(DD) if=/dev/zero of=$@ bs=1k count=512 2>/dev/null
 test/data/random1024.dat:
+	$(INSTALL) -d $(@D)
 	$(DD) if=/dev/urandom of=$@ bs=1 count=1024 2>/dev/null
 test/data/random512k.dat:
+	$(INSTALL) -d $(@D)
 	$(DD) if=/dev/urandom of=$@ bs=1k count=512 2>/dev/null
 test/data/zero.dat:
+	$(INSTALL) -d $(@D)
 	$(RMF) $0; touch $@
 test/data/readonly.dat:
+	$(INSTALL) -d $(@D)
 	$(ECHO) Hello World > $@; chmod 440 $@
 test/data/readonly512k.dat:
+	$(INSTALL) -d $(@D)
 	$(DD) if=/dev/urandom of=$@ bs=1k count=512 2>/dev/null; chmod 440 $@
 test/data/unreadable.dat:
+	$(INSTALL) -d $(@D)
 	$(ECHO) Hello World > $@; chmod 000 $@
 test/data/smallfile.dat:
+	$(INSTALL) -d $(@D)
 	$(DD) if=/dev/urandom of=$@ bs=1 count=128 2>/dev/null
 test/data/sub-dir:
+	$(INSTALL) -d $(@D)
 	$(RMRF) $@; mkdir $@; $(ECHO) Hello World > $@/test.dat
 test/data/sub-ignore-dir:
+	$(INSTALL) -d $(@D)
 	$(RMRF) $@; mkdir $@; $(ECHO) Hello World > $@/test.dat
 	touch $@/.nobackup
 test/data/link.dat:
+	$(INSTALL) -d $(@D)
 	($(CD) test/data; $(LN) -s random1024.dat link.dat)
 test/data/circular-link.dat.marker:
+	$(INSTALL) -d $(@D)
 	($(CD) test/data; $(LN) -s circular-link.dat circular-link.dat)
 	touch $@
 test/data/hardlink.dat:
+	$(INSTALL) -d $(@D)
 	($(CD) test/data; $(LN) random1024.dat hardlink.dat)
 test/data/fifo:
+	$(INSTALL) -d $(@D)
 	($(CD) test/data; $(MKFIFO) fifo)
 test/data/data\'.dat:
+	$(INSTALL) -d $(@D)
 	$(ECHO) Hello World > $@
 test/data/data\".dat:
+	$(INSTALL) -d $(@D)
 	$(ECHO) Hello World > $@
 
 .PHONY: test_file_operation_base
@@ -960,6 +988,14 @@ test_image_operations_base: bar
 	$(call FunctionTestDeviceDump,$(DEVICE0),test/dev0.image)
 	$(call FunctionTestDeviceDump,$(DEVICE1),test/dev1.image)
 	$(DIFF) test/dev0.image test/dev1.image
+
+.PHONY: test_dvd_operations
+test_dvd_operations:
+	$(RMRF) $(TEST_FILES_CLEAN)
+	$(SLEEP) 30
+	SSH_ASKPASS= ./bar -c dvd://$(if $(BAR_FILE),$(BAR_FILE),test).bar test/data $(if $(OPTIONS),$(OPTIONS),--compress-algorithm=none --crypt-algorithm=none) $(if $(QUIET),1>/dev/null)
+	$(SLEEP) 30
+	SSH_ASKPASS= ./bar -c dvd://$(if $(BAR_FILE),$(BAR_FILE),test).bar test/data $(if $(OPTIONS),$(OPTIONS),--compress-algorithm=none --crypt-algorithm=none) --ecc $(if $(QUIET),1>/dev/null)
 
 # ----------------------------------------------------------------------------
 
