@@ -772,6 +772,8 @@ if test $ENABLE_LZMA = "yes"; then
         AC_SEARCH_LIBS(lzma_easy_encoder,lzma,[HAVE_LZMA=1;LIBRARIES="$LIBRARIES lzma";AC_DEFINE(HAVE_LZMA,1,[lzma installed])])
       fi
     fi
+  fi
+fi
 
 if test $ENABLE_XDELTA3 = "yes"; then
   if test -d xdelta3 -o -d "`readlink xdelta3`"; then

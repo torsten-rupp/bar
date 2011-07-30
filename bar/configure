@@ -6275,6 +6275,8 @@ fi
 
       fi
     fi
+  fi
+fi
 
 if test $ENABLE_XDELTA3 = "yes"; then
   if test -d xdelta3 -o -d "`readlink xdelta3`"; then
