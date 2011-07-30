@@ -94,14 +94,14 @@
 #define DVD_LOAD_VOLUME_COMMAND               "eject -t %device"
 #define DVD_IMAGE_COMMAND                     "nice mkisofs -V Backup -volset %number -r -o %image %directory"
 #define DVD_ECC_COMMAND                       "nice dvdisaster -mRS02 -n dvd -c -i %image -v"
-#define DVD_WRITE_COMMAND                     "nice growisofs -Z %device -A BAR -V Backup -volset %number -r %file"
+#define DVD_WRITE_COMMAND                     "nice growisofs -Z %device -A BAR -V Backup -volset %number -r %directory"
 #define DVD_WRITE_IMAGE_COMMAND               "nice growisofs -Z %device=%image -use-the-force-luke=dao:%sectors -use-the-force-luke=noload"
 
 #define BD_UNLOAD_VOLUME_COMMAND              "eject -r %device"
 #define BD_LOAD_VOLUME_COMMAND                "eject -t %device"
 #define BD_IMAGE_COMMAND                      "nice mkisofs -V Backup -volset %number -r -o %image %directory"
 #define BD_ECC_COMMAND                        "nice dvdisaster -mRS02 -n bd -c -i %image -v"
-#define BD_WRITE_COMMAND                      "nice growisofs -Z %device -A BAR -V Backup -volset %number -r %file"
+#define BD_WRITE_COMMAND                      "nice growisofs -Z %device -A BAR -V Backup -volset %number -r %directory"
 #define BD_WRITE_IMAGE_COMMAND                "nice growisofs -Z %device=%image -use-the-force-luke=dao:%sectors -use-the-force-luke=noload"
 
 #define MIN_PASSWORD_QUALITY_LEVEL            0.6
@@ -902,7 +902,7 @@ LOCAL bool readConfigFile(const String fileName, bool printInfoFlag)
   }
 
   /* parse file */
-  if (printInfoFlag) printf("Reading config file '%s'...",String_cString(fileName));
+  if ((globalOptions.verboseLevel >= 2) || printInfoFlag) printf("Reading config file '%s'...",String_cString(fileName));
   failFlag   = FALSE;
   lineNb     = 0;
   line       = String_new();
@@ -1026,7 +1026,7 @@ LOCAL bool readConfigFile(const String fileName, bool printInfoFlag)
     }
     else
     {
-      if (printInfoFlag) printf("FAIL!\n");
+      if ((globalOptions.verboseLevel >= 2) || printInfoFlag) printf("FAIL!\n");
       printError("Unknown config entry '%s' in %s, line %ld\n",
                  String_cString(line),
                  String_cString(fileName),
@@ -1038,7 +1038,7 @@ LOCAL bool readConfigFile(const String fileName, bool printInfoFlag)
   }
   if (!failFlag)
   {
-    if (printInfoFlag) printf("ok\n");
+    if ((globalOptions.verboseLevel >= 2) || printInfoFlag) printf("ok\n");
   }
   String_delete(value);
   String_delete(name);
@@ -3752,7 +3752,7 @@ int main(int argc, const char *argv[])
 
         /* close log files */
         if (logFile != NULL) fclose(logFile);
-        fclose(tmpLogFile);unlink(String_cString(tmpLogFileName));
+        fclose(tmpLogFile); (void)unlink(String_cString(tmpLogFileName));
         File_delete(tmpLogFileName,FALSE);
 
         /* free resources */
