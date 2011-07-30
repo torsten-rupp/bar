@@ -29,7 +29,7 @@ barcontrol(3).
 
 OPTIONS
 
-         -c|--create                               create new files archive
+-c|--create                               create new files archive
          -m|--image                                create new images archive
          -l|--list                                 list contents of archive
          -t|--test                                 test contents of archive
@@ -44,8 +44,8 @@ OPTIONS
          -I|--incremental-list-file=<file name>    incremental list file name (default: <archive name>.bid)
          --differential                            create differential archive
          --pattern-type=<name>                     select pattern type
-                                                     * glob: glob patterns: * and ? (default)
-                                                     * regex: regular expression pattern matching
+                                                     * glob    : glob patterns: * and ? (default)
+                                                     * regex   : regular expression pattern matching
                                                      * extended: extended regular expression pattern matching
          -#|--include=<pattern>                    include pattern
          -!|--exclude=<pattern>                    exclude pattern
@@ -89,17 +89,17 @@ OPTIONS
          --compress-min-size=<n>[G|M|K]            minimal size of file for compression (default: 32)
          --compress-exclude=<pattern>              exclude compression pattern
          -y|--crypt-algorithm=<name>               select crypt algorithm to use
-                                                     * none: no crypting (default)
-                                                     * 3DES: 3DES cipher
-                                                     * CAST5: CAST5 cipher
-                                                     * BLOWFISH: Blowfish cipher
-                                                     * AES128: AES cipher 128bit
-                                                     * AES192: AES cipher 192bit
-                                                     * AES256: AES cipher 256bit
+                                                     * none      : no crypting (default)
+                                                     * 3DES      : 3DES cipher
+                                                     * CAST5     : CAST5 cipher
+                                                     * BLOWFISH  : Blowfish cipher
+                                                     * AES128    : AES cipher 128bit
+                                                     * AES192    : AES cipher 192bit
+                                                     * AES256    : AES cipher 256bit
                                                      * TWOFISH128: Twofish cipher 128bit
                                                      * TWOFISH256: Twofish cipher 256bit
          --crypt-type=<name>                       select crypt type
-                                                     * symmetric: symmetric
+                                                     * symmetric : symmetric
                                                      * asymmetric: asymmetric
          --crypt-password=<password>               crypt password (use with care!)
          --crypt-public-key=<file name>            public key for encryption
@@ -123,27 +123,37 @@ OPTIONS
          --nice-level=<n>                          general nice level of processes/threads
          --max-band-width=<n>[M|K]                 max. network band width to use [bits/s]
          --remote-bar-executable=<file name>       remote BAR executable
+         --file-write-pre-command=<command>        write file pre-process command
+         --file-write-post-command=<command>       write file post-process command
+         --ftp-write-pre-command=<command>         write FTP pre-process command
+         --ftp-write-post-command=<command>        write FTP post-process command
+         --scp-write-pre-command=<command>         write SCP pre-process command
+         --scp-write-post-command=<command>        write SCP post-process command
+         --sftp-write-pre-command=<command>        write SFTP pre-process command
+         --sftp-write-post-command=<command>       write SFTP post-process command
+         --cd-device=<device name>                 default CD device (default: /dev/cdrw)
          --cd-request-volume-command=<command>     request new CD volume command
          --cd-unload-volume-command=<command>      unload CD volume command (default: eject -r %device)
          --cd-load-volume-command=<command>        load CD volume command (default: eject -t %device)
          --cd-volume-size=<n>[G|M|K]               CD volume size
          --cd-image-pre-command=<command>          make CD image pre-process command
          --cd-image-post-command=<command>         make CD image post-process command
-         --cd-image-command=<command>              make CD image command (default: nice mkisofs -V Backup -volset %number -r -o %image %file)
+         --cd-image-command=<command>              make CD image command (default: nice mkisofs -V Backup -volset %number -r -o %image %directory)
          --cd-ecc-pre-command=<command>            make CD error-correction codes pre-process command
          --cd-ecc-post-command=<command>           make CD error-correction codes post-process command
-         --cd-ecc-command=<command>                make CD error-correction codes command (default: nice dvdisaster -mRS02 -n dvd -c -i %image -v)
+         --cd-ecc-command=<command>                make CD error-correction codes command (default: nice dvdisaster -mRS02 -n cd -c -i %image -v)
          --cd-write-pre-command=<command>          write CD pre-process command
          --cd-write-post-command=<command>         write CD post-process command
-         --cd-write-command=<command>              write CD command (default: nice growisofs -Z %device -A BAR -V Backup -volset %number -r %file)
-         --cd-write-image-command=<command>        write CD image command (default: nice growisofs -Z %device=%image -use-the-force-luke=dao:%sectors -use-the-force-luke=noload)
+         --cd-write-command=<command>              write CD command (default: nice sh -c 'mkisofs -V Backup -volset %number -r -o %image %directory && cdrecord -dummy dev=%device %image')
+         --cd-write-image-command=<command>        write CD image command (default: nice cdrecord -dummy dev=%device %image)
+         --dvd-device=<device name>                default DVD device (default: /dev/dvd)
          --dvd-request-volume-command=<command>    request new DVD volume command
          --dvd-unload-volume-command=<command>     unload DVD volume command (default: eject -r %device)
          --dvd-load-volume-command=<command>       load DVD volume command (default: eject -t %device)
          --dvd-volume-size=<n>[G|M|K]              DVD volume size
          --dvd-image-pre-command=<command>         make DVD image pre-process command
          --dvd-image-post-command=<command>        make DVD image post-process command
-         --dvd-image-command=<command>             make DVD image command (default: nice mkisofs -V Backup -volset %number -r -o %image %file)
+         --dvd-image-command=<command>             make DVD image command (default: nice mkisofs -V Backup -volset %number -r -o %image %directory)
          --dvd-ecc-pre-command=<command>           make DVD error-correction codes pre-process command
          --dvd-ecc-post-command=<command>          make DVD error-correction codes post-process command
          --dvd-ecc-command=<command>               make DVD error-correction codes command (default: nice dvdisaster -mRS02 -n dvd -c -i %image -v)
@@ -151,21 +161,22 @@ OPTIONS
          --dvd-write-post-command=<command>        write DVD post-process command
          --dvd-write-command=<command>             write DVD command (default: nice growisofs -Z %device -A BAR -V Backup -volset %number -r %file)
          --dvd-write-image-command=<command>       write DVD image command (default: nice growisofs -Z %device=%image -use-the-force-luke=dao:%sectors -use-the-force-luke=noload)
+         --bd-device=<device name>                 default BD device (default: /dev/bd)
          --bd-request-volume-command=<command>     request new BD volume command
          --bd-unload-volume-command=<command>      unload BD volume command (default: eject -r %device)
          --bd-load-volume-command=<command>        load BD volume command (default: eject -t %device)
          --bd-volume-size=<n>[G|M|K]               BD volume size
          --bd-image-pre-command=<command>          make BD image pre-process command
          --bd-image-post-command=<command>         make BD image post-process command
-         --bd-image-command=<command>              make BD image command (default: nice mkisofs -V Backup -volset %number -r -o %image %file)
+         --bd-image-command=<command>              make BD image command (default: nice mkisofs -V Backup -volset %number -r -o %image %directory)
          --bd-ecc-pre-command=<command>            make BD error-correction codes pre-process command
          --bd-ecc-post-command=<command>           make BD error-correction codes post-process command
-         --bd-ecc-command=<command>                make BD error-correction codes command (default: nice dvdisaster -mRS02 -n dvd -c -i %image -v)
+         --bd-ecc-command=<command>                make BD error-correction codes command (default: nice dvdisaster -mRS02 -n bd -c -i %image -v)
          --bd-write-pre-command=<command>          write BD pre-process command
          --bd-write-post-command=<command>         write BD post-process command
          --bd-write-command=<command>              write BD command (default: nice growisofs -Z %device -A BAR -V Backup -volset %number -r %file)
          --bd-write-image-command=<command>        write BD image command (default: nice growisofs -Z %device=%image -use-the-force-luke=dao:%sectors -use-the-force-luke=noload)
-         --device=<device name>                    default device (default: /dev/dvd)
+         --device=<device name>                    default device
          --device-request-volume-command=<command> request new volume command
          --device-load-volume-command=<command>    load volume command
          --device-unload-volume-command=<command>  unload volume command
@@ -180,20 +191,21 @@ OPTIONS
          --device-write-post-command=<command>     write device post-process command
          --device-write-command=<command>          write device command
          --ecc                                     add error-correction codes with 'dvdisaster' tool
+         --always-create-image                     always create image for CD/DVD/BD/device
          --database-file=<file name>               index database file name
          --no-auto-update-database-index           disabled automatic update database index
          --log=<name>[,<name>...]                  log types
-                                                     * none: no logging (default)
-                                                     * errors: log errors
-                                                     * warnings: log warnings
-                                                     * ok: log stored/restored files
-                                                     * unknown: log unknown files
-                                                     * skipped: log skipped files
-                                                     * missing: log missing files
+                                                     * none      : no logging (default)
+                                                     * errors    : log errors
+                                                     * warnings  : log warnings
+                                                     * ok        : log stored/restored files
+                                                     * unknown   : log unknown files
+                                                     * skipped   : log skipped files
+                                                     * missing   : log missing files
                                                      * incomplete: log incomplete files
-                                                     * excluded: log excluded files
-                                                     * storage: log storage
-                                                     * all: log everything
+                                                     * excluded  : log excluded files
+                                                     * storage   : log storage
+                                                     * all       : log everything
          --log-file=<file name>                    log file name
          --log-post-command=<command>              log file post-process command
          --pid-file=<file name>                    process id file name
