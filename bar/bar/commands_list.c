@@ -95,6 +95,7 @@ typedef struct ArchiveContentNode
     struct
     {
       String          directoryName;
+      uint64          timeModified;
       CryptAlgorithms cryptAlgorithm;
       CryptTypes      cryptType;
     } directory;
@@ -466,6 +467,7 @@ LOCAL void printImageInfo(const String       storageName,
 * Input  : storageName     - storage name or NULL if storage name should
 *                            not be printed
 *          directoryName   - directory name
+*          timeModified    - file modified time
 *          cryptAlgorithm  - used crypt algorithm
 *          cryptType       - crypt type; see CRYPT_TYPES
 * Output : -
@@ -475,13 +477,17 @@ LOCAL void printImageInfo(const String       storageName,
 
 LOCAL void printDirectoryInfo(const String    storageName,
                               const String    directoryName,
+                              uint64          timeModified,
                               CryptAlgorithms cryptAlgorithm,
                               CryptTypes      cryptType
                              )
 {
+  String dateTime;
   String cryptString;
 
   assert(directoryName != NULL);
+
+  dateTime = Misc_formatDateTime(String_new(),timeModified,NULL);
 
   if (storageName != NULL)
   {
@@ -490,7 +496,8 @@ LOCAL void printDirectoryInfo(const String    storageName,
   if (globalOptions.longFormatFlag)
   {
     cryptString = String_format(String_new(),"%s%c",Crypt_getAlgorithmName(cryptAlgorithm),(cryptType==CRYPT_TYPE_ASYMMETRIC)?'*':' ');
-    printf("DIR                                                                                     %-10s %s\n",
+    printf("DIR                 %-25s                                           %-10s %s\n",
+           String_cString(dateTime),
            String_cString(cryptString),
            String_cString(directoryName)
           );
@@ -498,10 +505,13 @@ LOCAL void printDirectoryInfo(const String    storageName,
   }
   else
   {
-    printf("DIR                                           %s\n",
+    printf("DIR                 %-25s %s\n",
+           String_cString(dateTime),
            String_cString(directoryName)
           );
   }
+
+  String_delete(dateTime);
 }
 
 /***********************************************************************\
@@ -871,6 +881,7 @@ LOCAL void addListImageInfo(const String       storageName,
 * Purpose: add directory info to archive entry list
 * Input  : storageName    - storage name
 *          directoryName  - directory name
+*          timeModified   - file modified time
 *          cryptAlgorithm - used crypt algorithm
 *          cryptType      - crypt type; see CRYPT_TYPES
 * Output : -
@@ -880,6 +891,7 @@ LOCAL void addListImageInfo(const String       storageName,
 
 LOCAL void addListDirectoryInfo(const String    storageName,
                                 const String    directoryName,
+                                uint64          timeModified,
                                 CryptAlgorithms cryptAlgorithm,
                                 CryptTypes      cryptType
                                )
@@ -897,6 +909,7 @@ LOCAL void addListDirectoryInfo(const String    storageName,
   archiveContentNode->storageName              = String_duplicate(storageName);
   archiveContentNode->type                     = ARCHIVE_ENTRY_TYPE_DIRECTORY;
   archiveContentNode->directory.directoryName  = String_duplicate(directoryName);
+  archiveContentNode->directory.timeModified   = timeModified;
   archiveContentNode->directory.cryptAlgorithm = cryptAlgorithm;
   archiveContentNode->directory.cryptType      = cryptType;
 
@@ -1276,6 +1289,7 @@ LOCAL void printList(void)
         {
           printDirectoryInfo(archiveContentNode->storageName,
                              archiveContentNode->directory.directoryName,
+                             archiveContentNode->directory.timeModified,
                              archiveContentNode->directory.cryptAlgorithm,
                              archiveContentNode->directory.cryptType
                             );
@@ -1654,6 +1668,7 @@ remoteBarFlag=FALSE;
                       /* add directory info to list */
                       addListDirectoryInfo(storageName,
                                            directoryName,
+                                           fileInfo.timeModified,
                                            cryptAlgorithm,
                                            cryptType
                                           );
@@ -1669,6 +1684,7 @@ remoteBarFlag=FALSE;
                       /* output file info */
                       printDirectoryInfo(NULL,
                                          directoryName,
+                                         fileInfo.timeModified,
                                          cryptAlgorithm,
                                          cryptType
                                         );
@@ -2174,6 +2190,7 @@ fprintf(stderr,"%s,%d: line=%s\n",__FILE__,__LINE__,String_cString(line));
                     /* add directory info to list */
                     addListDirectoryInfo(storageName,
                                          directoryName,
+                                         0LL,
                                          cryptAlgorithm,
                                          cryptType
                                         );
@@ -2189,6 +2206,7 @@ fprintf(stderr,"%s,%d: line=%s\n",__FILE__,__LINE__,String_cString(line));
                     /* output file info */
                     printDirectoryInfo(NULL,
                                        directoryName,
+                                       0LL,
                                        cryptAlgorithm,
                                        cryptType
                                       );
