@@ -3271,6 +3271,19 @@ private static void printTree(Tree tree)
       }
     });
   }
+
+  /** flash widget
+   * @param control control
+   */
+  public static void flash(Control control)
+  {
+    Display display = control.getDisplay();
+
+    control.setBackground(display.getSystemColor(SWT.COLOR_RED)); display.update();
+    display.beep();
+    try { Thread.sleep(350); } catch (InterruptedException exception) { /* ignored */ };
+    control.setBackground(null); display.update();
+  }
 }
 
 /* end of file */
