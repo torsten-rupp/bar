@@ -106,17 +106,31 @@ ERROR KEY_DECRYPT_FAIL               "key decryption fail"
 ERROR WRONG_PRIVATE_KEY              "wrong private key"
 
 // file i/o
+ERROR NO_FILE_NAME                   "no file name given"
 ERROR CREATE_FILE
 ERROR OPEN_FILE
 ERROR OPEN_DIRECTORY
-  // Note: to not add file name to error message if error number is set; name should be part of error text
+  // Note: do not add error text to error message if error number is set; file name should be part of error text
   if (ERRNO != 0)
   {
     strncpy(errorText,strerror(ERRNO),sizeof(errorText)-1);
   }
   else
   {
-    strncpy(errorText,ERROR_TEXT,sizeof(errorText)-1);
+    errorText[0] = '\0';
+    switch (ERROR_CODE)
+    {
+      case ERROR_CREATE_FILE:
+        strncat(errorText,"create file: ",sizeof(errorText)-1-strlen(errorText));
+        break;
+      case ERROR_OPEN_FILE:
+        strncat(errorText,"open file: ",sizeof(errorText)-1-strlen(errorText));
+        break;
+      case ERROR_OPEN_DIRECTORY:
+        strncat(errorText,"open directory: ",sizeof(errorText)-1-strlen(errorText));
+        break;
+    }
+    strncat(errorText,ERROR_TEXT,sizeof(errorText)-1-strlen(errorText));
   }
   errorText[sizeof(errorText)-1] = '\0';
 
