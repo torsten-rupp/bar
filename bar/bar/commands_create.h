@@ -18,12 +18,13 @@
 #include <stdio.h>
 #include <assert.h>
 
-#include "bar.h"
+#include "errors.h"
 #include "entrylists.h"
 #include "patternlists.h"
 #include "compress.h"
 #include "crypt.h"
 #include "storage.h"
+#include "bar.h"
 
 /****************** Conditional compilation switches *******************/
 
@@ -88,6 +89,7 @@ typedef bool(*CreateStatusInfoFunction)(void                   *userData,
 * Input  : storageName                      - storage name
 *          includeEntryList                 - include entry list
 *          excludePatternList               - exclude pattern list
+*          sourcePatternList                - source pattern list
 *          excludeCompressPatternList       - exclude compression pattern
 *                                             list
 *          jobOptions                       - job options
@@ -119,6 +121,7 @@ typedef bool(*CreateStatusInfoFunction)(void                   *userData,
 Errors Command_create(const char                      *storageName,
                       const EntryList                 *includeEntryList,
                       const PatternList               *excludePatternList,
+                      const PatternList               *sourcePatternList,
                       const PatternList               *excludeCompressPatternList,
                       JobOptions                      *jobOptions,
                       ArchiveTypes                    archiveType,
