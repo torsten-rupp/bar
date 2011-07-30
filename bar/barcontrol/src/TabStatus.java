@@ -369,6 +369,14 @@ class TabStatus
     widgetTab = Widgets.addTab(parentTabFolder,"Status"+((accelerator != 0)?" ("+Widgets.acceleratorToText(accelerator)+")":""));
     widgetTab.setLayout(new TableLayout(new double[]{1.0,0.0,0.0},1.0,2));
     Widgets.layout(widgetTab,0,0,TableLayoutData.NSWE);
+    widgetTab.addListener(SWT.Show,new Listener()
+    {
+      public void handleEvent(Event event)
+      {
+        // make sure status data is updated when jobs tab was modified
+        updateJobList();
+      }
+    });
 
     // list with jobs
     widgetJobList = Widgets.newTable(widgetTab,SWT.NONE);
@@ -1138,29 +1146,44 @@ class TabStatus
 
                 // get/create table item
                 TableItem tableItem;
-                JobData   jobData = new JobData(id,
-                                                name,
-                                                state,
-                                                type,
-                                                archivePartSize,
-                                                compressAlgorithm,
-                                                cryptAlgorithm,
-                                                cryptType,
-                                                cryptPasswordMode,
-                                                lastExecutedDateTime,
-                                                estimatedRestTime
-                                               );
+                JobData   jobData;
                 int index = getTableItemIndex(tableItems,id);
                 if (index >= 0)
                 {
                   tableItem = tableItems[index];
+
+                  jobData = (JobData)tableItem.getData();
+                  jobData.name                 = name;
+                  jobData.state                = state;
+                  jobData.type                 = type;
+                  jobData.archivePartSize      = archivePartSize;
+                  jobData.compressAlgorithm    = compressAlgorithm;
+                  jobData.cryptAlgorithm       = cryptAlgorithm;
+                  jobData.cryptType            = cryptType;
+                  jobData.cryptPasswordMode    = cryptPasswordMode;
+                  jobData.lastExecutedDateTime = lastExecutedDateTime;
+                  jobData.estimatedRestTime    = estimatedRestTime;
+
                   tableItemFlags[index] = true;
                 }
                 else
                 {
+                  jobData = new JobData(id,
+                                        name,
+                                        state,
+                                        type,
+                                        archivePartSize,
+                                        compressAlgorithm,
+                                        cryptAlgorithm,
+                                        cryptType,
+                                        cryptPasswordMode,
+                                        lastExecutedDateTime,
+                                        estimatedRestTime
+                                       );
+
                   tableItem = new TableItem(widgetJobList,SWT.NONE,findJobListIndex(jobData));
+                  tableItem.setData(jobData);
                 }
-                tableItem.setData(jobData);
 
                 jobList.put(name,jobData);
                 tableItem.setText(0,jobData.name);
@@ -1327,7 +1350,12 @@ class TabStatus
         return;
       }
 
-      errorCode = BARServer.executeCommand("CRYPT_PASSWORD "+selectedJobData.id+" "+StringUtils.escape(password));
+      String[] result = new String[1];
+      if (BARServer.executeCommand("CRYPT_PASSWORD "+selectedJobData.id+" "+StringUtils.escape(password),result) != Errors.NONE)
+      {
+        Dialogs.error(shell,"Cannot start job (error: %s)",result[0]);
+        return;
+      }
     }
 
     // start
