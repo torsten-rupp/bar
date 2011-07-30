@@ -1285,10 +1285,10 @@ bool Storage_parseFTPSpecifier(const String ftpSpecifier,
 
     result = TRUE;
   }
-  else if (String_matchCString(ftpSpecifier,STRING_BEGIN,"^(([^@]|\\@)*?)@([^@:/]*?):([0-9]+)$",NULL,NULL,loginName,STRING_NO_ASSIGN,hostName,t,NULL))
+  else if (String_matchCString(ftpSpecifier,STRING_BEGIN,"^(([^@]|\\@)*?)@([^@:/]*?):([0-9]+)$",NULL,NULL,loginName,STRING_NO_ASSIGN,hostName,s,NULL))
   {
     String_mapCString(loginName,STRING_BEGIN,LOGINNAME_MAP_FROM,LOGINNAME_MAP_TO,SIZE_OF_ARRAY(LOGINNAME_MAP_FROM));
-    if (hostPort != NULL) (*hostPort) = (uint)String_toInteger(t,STRING_BEGIN,NULL,NULL,0);
+    if (hostPort != NULL) (*hostPort) = (uint)String_toInteger(s,STRING_BEGIN,NULL,NULL,0);
 
     result = TRUE;
   }
@@ -1418,13 +1418,15 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
 
   storageSpecifier = String_new();
   storageType = Storage_parseName(storageName,storageSpecifier,fileName);
+  if (String_empty(fileName))
+  {
+    return ERROR_NO_FILE_NAME;
+  }
   switch (storageType)
   {
     case STORAGE_TYPE_FILESYSTEM:
       /* init variables */
       storageFileHandle->type = STORAGE_TYPE_FILESYSTEM;
-
-      /* check if file can be created */
       break;
     case STORAGE_TYPE_FTP:
       #ifdef HAVE_FTP
@@ -1530,8 +1532,6 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
             String_delete(storageSpecifier);
             return error;
           }
-
-          /* free resources */
         }
       #else /* not HAVE_FTP */
         String_delete(storageSpecifier);
@@ -3008,7 +3008,7 @@ Errors Storage_create(StorageFileHandle *storageFileHandle,
       {
         /* create directory if not existing */
         directoryName = File_getFilePathName(String_new(),fileName);
-        if (!File_exists(directoryName))
+        if (!String_empty(directoryName) && !File_exists(directoryName))
         {
           error = File_makeDirectory(directoryName,
                                      FILE_DEFAULT_USER_ID,
@@ -3278,7 +3278,7 @@ LIBSSH2_SFTP_S_IRUSR|LIBSSH2_SFTP_S_IWUSR
       {
         /* create directory if not existing */
         directoryName = File_getFilePathName(String_new(),storageFileHandle->opticalDisk.fileName);
-        if (!File_exists(directoryName))
+        if (!String_empty(directoryName) && !File_exists(directoryName))
         {
           error = File_makeDirectory(directoryName,
                                      FILE_DEFAULT_USER_ID,
@@ -3480,7 +3480,6 @@ Errors Storage_open(StorageFileHandle *storageFileHandle,
                      ) != 1
              )
           {
-            FtpClose(storageFileHandle->ftp.data);
             FtpClose(storageFileHandle->ftp.control);
             return ERROR_FTP_GET_SIZE;
           }
