@@ -747,6 +747,11 @@ class Dialogs
             {
               close(dialog,password1);
             }
+            else
+            {
+              Widgets.flash(widgetPassword2);
+              widgetPassword2.setFocus();
+            }
           }
           else
           {
