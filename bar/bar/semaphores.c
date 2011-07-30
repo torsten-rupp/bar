@@ -387,7 +387,6 @@ LOCAL void unlock(const char *fileName, ulong lineNb, Semaphore *semaphore)
     case SEMAPHORE_LOCK_TYPE_NONE:
       break;
     case SEMAPHORE_LOCK_TYPE_READ:
-pthread_yield();
       LOCK(DEBUG_READ,"R",&semaphore->lock);
       {
         assert(semaphore->readLockCount > 0);
@@ -425,7 +424,6 @@ pthread_yield();
           }
         #endif /* not NDEBUG */
 
-pthread_yield();
         // do one read-unlock
         semaphore->readLockCount--;
         if (semaphore->readLockCount == 0)
@@ -433,19 +431,16 @@ pthread_yield();
           // semaphore is free
           semaphore->lockType = SEMAPHORE_LOCK_TYPE_NONE;
 
-pthread_yield();
           // signal that read-lock count become 0
           SIGNAL(DEBUG_READ,"READ0 (unlock)",&semaphore->readLockZero);
         }
       }
       UNLOCK(DEBUG_READ,"R",&semaphore->lock,semaphore->readLockCount);
-pthread_yield();
       break;
     case SEMAPHORE_LOCK_TYPE_READ_WRITE:
       assert(semaphore->readLockCount == 0);
       assert(semaphore->readWriteLockCount > 0);
 
-pthread_yield();
       #ifndef NDEBUG
         // debug lock trace code
         threadSelf = pthread_self();
@@ -478,7 +473,6 @@ pthread_yield();
         }
       #endif /* not NDEBUG */
 
-pthread_yield();
       // do one read/write-unlock
       semaphore->readWriteLockCount--;
       if (semaphore->readWriteLockCount == 0)
@@ -486,14 +480,12 @@ pthread_yield();
         // semaphore is free
         semaphore->lockType = SEMAPHORE_LOCK_TYPE_NONE;
 
-pthread_yield();
         // send modified signal
         SIGNAL(DEBUG_READ_WRITE,"MODIFIED",&semaphore->modified);
 
         // unlock
         UNLOCK(DEBUG_READ_WRITE,"RW",&semaphore->lock,semaphore->readLockCount);
       }
-pthread_yield();
       break;
     #ifndef NDEBUG
       default:
@@ -555,7 +547,6 @@ LOCAL void waitModified(const char *fileName, ulong lineNb, Semaphore *semaphore
         assert(semaphore->readLockCount > 0);
         assert(semaphore->readWriteLockCount == 0);
 
-pthread_yield();
         // temporary revert read-lock
         semaphore->readLockCount--;
         if (semaphore->readLockCount == 0)
@@ -568,41 +559,34 @@ pthread_yield();
         }
         SIGNAL(DEBUG_READ_WRITE,"MODIFIED",&semaphore->modified);
 
-pthread_yield();
         // wait for modification
         WAIT(DEBUG_READ,"MODIFIED",&semaphore->modified,&semaphore->lock); 
 
-pthread_yield();
         // wait until there are no more write-locks
         while (semaphore->readWriteLockCount > 0)
         {
           WAIT(DEBUG_READ,"W",&semaphore->modified,&semaphore->lock); 
         }
 
-pthread_yield();
         // restore temporary reverted read-lock
         semaphore->readLockCount++;
         semaphore->lockType = SEMAPHORE_LOCK_TYPE_READ;
       }
       UNLOCK(DEBUG_READ,"R",&semaphore->lock,semaphore->readLockCount);
-pthread_yield();
       break;
     case SEMAPHORE_LOCK_TYPE_READ_WRITE:
       assert(semaphore->readLockCount == 0);
       assert(semaphore->readWriteLockCount > 0);
 
-pthread_yield();
       // temporary revert write-lock
       savedReadWriteLockCount = semaphore->readWriteLockCount;
       semaphore->readWriteLockCount = 0;
       semaphore->lockType = SEMAPHORE_LOCK_TYPE_NONE;
       SIGNAL(DEBUG_READ_WRITE,"MODIFIED",&semaphore->modified);
 
-pthread_yield();
       // wait for modification
       WAIT(DEBUG_READ_WRITE,"MODIFIED",&semaphore->modified,&semaphore->lock);
 
-pthread_yield();
       // request write-lock
       pthread_mutex_lock(&semaphore->requestLock);
       {
@@ -610,7 +594,6 @@ pthread_yield();
       }
       pthread_mutex_unlock(&semaphore->requestLock);
 
-pthread_yield();
       // wait until no more read-locks
       while (semaphore->readLockCount > 0)
       {
@@ -618,7 +601,6 @@ pthread_yield();
       }
       assert(semaphore->readLockCount == 0);
 
-pthread_yield();
       // decrement write request counter
       pthread_mutex_lock(&semaphore->requestLock);
       {
@@ -627,12 +609,10 @@ pthread_yield();
       }
       pthread_mutex_unlock(&semaphore->requestLock);
 
-pthread_yield();
       // restore temporary reverted write-lock
       assert(semaphore->readWriteLockCount == 0);
       semaphore->readWriteLockCount = savedReadWriteLockCount;
       semaphore->lockType = SEMAPHORE_LOCK_TYPE_READ_WRITE;
-pthread_yield();
       break;
     #ifndef NDEBUG
       default:
