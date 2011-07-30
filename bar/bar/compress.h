@@ -23,6 +23,9 @@
 #ifdef HAVE_LZMA
   #include <lzma.h>
 #endif /* HAVE_LZMA */
+#ifdef HAVE_XDELTA3
+  #include "xdelta3.h"
+#endif /* HAVE_XDELTA */
 #include <assert.h>
 
 #include "global.h"
@@ -51,54 +54,71 @@ typedef enum
 {
   COMPRESS_ALGORITHM_NONE,
 
-  COMPRESS_ALGORITHM_ZIP_0,
-  COMPRESS_ALGORITHM_ZIP_1,
-  COMPRESS_ALGORITHM_ZIP_2,
-  COMPRESS_ALGORITHM_ZIP_3,
-  COMPRESS_ALGORITHM_ZIP_4,
-  COMPRESS_ALGORITHM_ZIP_5,
-  COMPRESS_ALGORITHM_ZIP_6,
-  COMPRESS_ALGORITHM_ZIP_7,
-  COMPRESS_ALGORITHM_ZIP_8,
-  COMPRESS_ALGORITHM_ZIP_9,
+  COMPRESS_ALGORITHM_ZIP_0     = 1,
+  COMPRESS_ALGORITHM_ZIP_1     = 2,
+  COMPRESS_ALGORITHM_ZIP_2     = 3,
+  COMPRESS_ALGORITHM_ZIP_3     = 4,
+  COMPRESS_ALGORITHM_ZIP_4     = 5,
+  COMPRESS_ALGORITHM_ZIP_5     = 6,
+  COMPRESS_ALGORITHM_ZIP_6     = 7,
+  COMPRESS_ALGORITHM_ZIP_7     = 8,
+  COMPRESS_ALGORITHM_ZIP_8     = 9,
+  COMPRESS_ALGORITHM_ZIP_9     = 10,
 
-  COMPRESS_ALGORITHM_BZIP2_1,
-  COMPRESS_ALGORITHM_BZIP2_2,
-  COMPRESS_ALGORITHM_BZIP2_3,
-  COMPRESS_ALGORITHM_BZIP2_4,
-  COMPRESS_ALGORITHM_BZIP2_5,
-  COMPRESS_ALGORITHM_BZIP2_6,
-  COMPRESS_ALGORITHM_BZIP2_7,
-  COMPRESS_ALGORITHM_BZIP2_8,
-  COMPRESS_ALGORITHM_BZIP2_9,
+  COMPRESS_ALGORITHM_BZIP2_1   = 11,
+  COMPRESS_ALGORITHM_BZIP2_2   = 12,
+  COMPRESS_ALGORITHM_BZIP2_3   = 13,
+  COMPRESS_ALGORITHM_BZIP2_4   = 14,
+  COMPRESS_ALGORITHM_BZIP2_5   = 15,
+  COMPRESS_ALGORITHM_BZIP2_6   = 16,
+  COMPRESS_ALGORITHM_BZIP2_7   = 18,
+  COMPRESS_ALGORITHM_BZIP2_8   = 19,
+  COMPRESS_ALGORITHM_BZIP2_9   = 20,
 
-  COMPRESS_ALGORITHM_LZMA_1,
-  COMPRESS_ALGORITHM_LZMA_2,
-  COMPRESS_ALGORITHM_LZMA_3,
-  COMPRESS_ALGORITHM_LZMA_4,
-  COMPRESS_ALGORITHM_LZMA_5,
-  COMPRESS_ALGORITHM_LZMA_6,
-  COMPRESS_ALGORITHM_LZMA_7,
-  COMPRESS_ALGORITHM_LZMA_8,
-  COMPRESS_ALGORITHM_LZMA_9,
+  COMPRESS_ALGORITHM_LZMA_1    = 21,
+  COMPRESS_ALGORITHM_LZMA_2    = 22,
+  COMPRESS_ALGORITHM_LZMA_3    = 23,
+  COMPRESS_ALGORITHM_LZMA_4    = 24,
+  COMPRESS_ALGORITHM_LZMA_5    = 25,
+  COMPRESS_ALGORITHM_LZMA_6    = 26,
+  COMPRESS_ALGORITHM_LZMA_7    = 27,
+  COMPRESS_ALGORITHM_LZMA_8    = 28,
+  COMPRESS_ALGORITHM_LZMA_9    = 29,
 
-  COMPRESS_ALGORITHM_UNKNOWN=0xFFFF,
+  COMPRESS_ALGORITHM_XDELTA_1  = 30,
+  COMPRESS_ALGORITHM_XDELTA_2  = 31,
+  COMPRESS_ALGORITHM_XDELTA_3  = 32,
+  COMPRESS_ALGORITHM_XDELTA_4  = 33,
+  COMPRESS_ALGORITHM_XDELTA_5  = 34,
+  COMPRESS_ALGORITHM_XDELTA_6  = 35,
+  COMPRESS_ALGORITHM_XDELTA_7  = 36,
+  COMPRESS_ALGORITHM_XDELTA_8  = 37,
+  COMPRESS_ALGORITHM_XDELTA_9  = 38,
+
+  COMPRESS_ALGORITHM_UNKNOWN = 0xFFFF,
 } CompressAlgorithms;
 
 typedef enum
 {
   COMPRESS_BLOCK_TYPE_ANY,                      // any blocks
-  COMPRESS_BLOCK_TYPE_FULL                      // full blocks (=block length) 
+  COMPRESS_BLOCK_TYPE_FULL                      // full blocks (=block length)
 } CompressBlockTypes;
 
 /***************************** Datatypes *******************************/
 
+typedef Errors(*CompressSourceGetEntryDataBlock)(void   *userData,
+                                                 void   *buffer,
+                                                 uint64 offset,
+                                                 ulong  length,
+                                                 ulong  *bytesRead
+                                                );
+
 /* compress info block */
 typedef struct
 {
-  CompressModes      compressMode;
-  CompressAlgorithms compressAlgorithm;
-  ulong              blockLength;
+  CompressModes      compressMode;              // mode: compress/decompress
+  CompressAlgorithms compressAlgorithm;         // compression algorithm to use
+  ulong              blockLength;               // block length to use [bytes]
 
   CompressStates     compressState;             // compress/decompress state
   bool               endOfDataFlag;             // TRUE if end-of-data detected
@@ -117,17 +137,34 @@ typedef struct
     #ifdef HAVE_BZ2
       struct
       {
-        uint      compressionLevel;
-        bz_stream stream;
+        uint      compressionLevel;             // used compression level (needed for reset)
+        bz_stream stream;                       // BZIP2 stream
       } bzlib;
     #endif /* HAVE_BZ2 */
     #ifdef HAVE_LZMA
       struct
       {
-        uint        compressionLevel;
-        lzma_stream stream;
+        uint        compressionLevel;           // used compression level (needed for reset)
+        lzma_stream stream;                     // LZMA stream
       } lzmalib;
     #endif /* HAVE_LZMA */
+    #ifdef HAVE_XDELTA
+      struct
+      {
+        #ifdef HAVE_XDELTA3
+          CompressSourceGetEntryDataBlock sourceGetEntryDataBlock;
+          void                            *sourceGetEntryDataBlockUserData;
+          bool                            done;               // TRUE iff compression is done
+          byte                            *sourceBuffer;      // buffer for source
+          byte                            *outputBuffer;      // buffer for output (allocated if NULL)
+          ulong                           outputBufferLength; // number of bytes in output buffer
+          ulong                           outputBufferSize;   // size of output buffer (reallocated if 0 or to small)
+          int                             flags;              // XDELTA flags
+          xd3_stream                      stream;             // XDELTA stream
+          xd3_source                      source;             // XDELTA source
+        #endif /* HAVE_XDELTA3 */
+      } xdelta;
+    #endif /* HAVE_XDELTA */
   };
 
   byte               *dataBuffer;               // buffer for uncompressed data
@@ -139,12 +176,59 @@ typedef struct
   ulong              compressBufferIndex;       // position of next byte in compressed data buffer
   ulong              compressBufferLength;      // length of data in compressed data buffer
   ulong              compressBufferSize;        // size of compressed data buffer
-
 } CompressInfo;
 
 /***************************** Variables *******************************/
 
 /****************************** Macros *********************************/
+
+/***********************************************************************\
+* Name   : COMPRESS_IS_ZIP_ALGORITHM
+* Purpose: check if ZIP algorithm
+* Input  : algorithm - algorithm
+* Output : -
+* Return : TRUE iff ZIP algorithm, FALSE otherwise
+* Notes  : -
+\***********************************************************************/
+
+#define COMPRESS_IS_ZIP_ALGORITHM(algorithm) \
+  ((COMPRESS_ALGORITHM_ZIP_0 <= (algorithm)) && ((algorithm) <= COMPRESS_ALGORITHM_ZIP_9))
+
+/***********************************************************************\
+* Name   : COMPRESS_IS_BZIP2_ALGORITHM
+* Purpose: check if BZIP2 algorithm
+* Input  : algorithm - algorithm
+* Output : -
+* Return : TRUE iff BZIP2 algorithm, FALSE otherwise
+* Notes  : -
+\***********************************************************************/
+
+#define COMPRESS_IS_BZIP2_ALGORITHM(algorithm) \
+  ((COMPRESS_ALGORITHM_BZIP2_1 <= (algorithm)) && ((algorithm) <= COMPRESS_ALGORITHM_BZIP2_9))
+
+/***********************************************************************\
+* Name   : COMPRESS_IS_LZMA_ALGORITHM
+* Purpose: check if LZMA algorithm
+* Input  : algorithm - algorithm
+* Output : -
+* Return : TRUE iff LZMA algorithm, FALSE otherwise
+* Notes  : -
+\***********************************************************************/
+
+#define COMPRESS_IS_LZMA_ALGORITHM(algorithm) \
+  ((COMPRESS_ALGORITHM_LZMA_1 <= (algorithm)) && ((algorithm) <= COMPRESS_ALGORITHM_LZMA_9))
+
+/***********************************************************************\
+* Name   : COMPRESS_IS_XDELTA_ALGORITHM
+* Purpose: check if XDELTA algorithm
+* Input  : algorithm - algorithm
+* Output : -
+* Return : TRUE iff XDELTA algorithm, FALSE otherwise
+* Notes  : -
+\***********************************************************************/
+
+#define COMPRESS_IS_XDELTA_ALGORITHM(algorithm) \
+  ((COMPRESS_ALGORITHM_XDELTA_1 <= (algorithm)) && ((algorithm) <= COMPRESS_ALGORITHM_XDELTA_9))
 
 /***************************** Forwards ********************************/
 
@@ -204,15 +288,19 @@ CompressAlgorithms Compress_getAlgorithm(const char *name);
 * Input  : compressInfo     - compress info block
 *          compressionLevel - compression level (0..9)
 *          blockLength      - block length
+*          sourceEntryInfo  - source entry info (can be NULL, used for
+*                             delta-compression)
 * Output : compressInfo - initialized compress info block
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-Errors Compress_new(CompressInfo       *compressInfo,
-                    CompressModes      compressMode,
-                    CompressAlgorithms compressAlgorithm,
-                    ulong              blockLength
+Errors Compress_new(CompressInfo                    *compressInfo,
+                    CompressModes                   compressMode,
+                    CompressAlgorithms              compressAlgorithm,
+                    ulong                           blockLength,
+                    CompressSourceGetEntryDataBlock sourceGetEntryDataBlock,
+                    void                            *sourceGetEntryDataBlockUserData
                    );
 
 /***********************************************************************\
@@ -281,22 +369,22 @@ Errors Compress_inflate(CompressInfo *compressInfo,
 Errors Compress_flush(CompressInfo *compressInfo);
 
 /***********************************************************************\
-* Name   : Compress_flush
-* Purpose: flush compress data
+* Name   : Compress_getInputLength
+* Purpose: get number of input bytes
 * Input  : compressInfo - compress info block
 * Output : -
-* Return : ERROR_NONE or error code
+* Return : number of input bytes
 * Notes  : -
 \***********************************************************************/
 
 uint64 Compress_getInputLength(CompressInfo *compressInfo);
 
 /***********************************************************************\
-* Name   : Compress_flush
-* Purpose: flush compress data
+* Name   : Compress_getOutputLength
+* Purpose: get number of output bytes
 * Input  : compressInfo - compress info block
 * Output : -
-* Return : ERROR_NONE or error code
+* Return : number of output bytes
 * Notes  : -
 \***********************************************************************/
 
@@ -306,7 +394,7 @@ uint64 Compress_getOutputLength(CompressInfo *compressInfo);
 * Name   : Compress_getAvailableBytes
 * Purpose: get number of available bytes (decompressed bytes)
 * Input  : compressInfo - compress info block
-* Output : 
+* Output :
 * Return : number of available bytes
 * Notes  : -
 \***********************************************************************/
@@ -372,6 +460,6 @@ void Compress_putBlock(CompressInfo *compressInfo,
   }
 #endif
 
-#endif /* __CRYPT__ */
+#endif /* __COMPRESS__ */
 
 /* end of file */
