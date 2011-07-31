@@ -426,7 +426,7 @@ class TabRestore
                 long        id           = (Long)data[0];
                 long        datetime     = (Long)data[1];
                 long        size         = (Long)data[2];
-                IndexStates state        = Enum.valueOf(IndexStates.class,(String)data[3]);
+                IndexStates indexState   = Enum.valueOf(IndexStates.class,(String)data[3]);
                 String      storageName  = (String)data[4];
                 String      errorMessage = (String)data[5];
 
@@ -442,7 +442,14 @@ class TabRestore
                   }
                   else
                   {
-                    storageData = new StorageData(id,storageName,size,datetime,new File(storageName).getName(),state,errorMessage);
+                    storageData = new StorageData(id,
+                                                  storageName,
+                                                  size,
+                                                  datetime,
+                                                  new File(storageName).getName(),
+                                                  indexState,
+                                                  errorMessage
+                                                 );
                     storageDataMap.put(storageData);
                   }
                 }
