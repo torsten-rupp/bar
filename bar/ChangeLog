@@ -1,4 +1,4 @@
-2011-07-18 0.16e
+2011-07-31 0.16e
   * create sub-directories when storing to file system or
     ftp server
   * fix creating directories: to not set parent directory
@@ -25,6 +25,24 @@
     is not set
   * improved FTP read: try to read all data when the network
     connection is bad
+  * fix CD/DVD/BD write command: must be %directory, not %file
+  * BARControl: add command to remove all archives with error
+    state in tab restore
+  * BARControl: fix possible null-pointe-exception on communication
+    error
+  * BARControl: improved usability. Use tagged+selected entries
+    entires to remove/refresh  in tab restore.
+  * add log type "index"
+  * BARControl: fixed list of storage archives when removing an
+    entry
+  * BARControl: ask for crypt password when starting job with
+    crypt password mode "ask"
+  * BARControl: give visual feedback when entered passwords in
+    password dialog are not equal
+  * show date/time for directories entries in list, too
+  * changed DVD write image command: removed sectors, added
+    -dvd-compat
+  * output stdout/stderr of external commands with verbose level 4    
 
 2011-05-31 0.16d
   * barcontrol: fix parsing of ftp/scp/sftp archive names
