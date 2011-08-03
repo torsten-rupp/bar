@@ -411,6 +411,27 @@ LOCAL void limitBandWidth(StorageBandWidth *storageBandWidth,
 #endif /* defined(HAVE_FTP) || defined(HAVE_SSH2) */
 
 /***********************************************************************\
+* Name   : processExecOutput
+* Purpose: process exec stdout, stderr output
+* Input  : dummy - dummy
+*          line  - line
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void processExecOutput(void         *dummy,
+                             const String line
+                            )
+{
+  assert(line != NULL);
+
+  UNUSED_VARIABLE(dummy);
+
+  printInfo(4,"%s\n",String_cString(line));
+}
+
+/***********************************************************************\
 * Name   : requestNewMedium
 * Purpose: request new CD/DVD/BD medium
 * Input  : storageFileHandle - storage file handle
@@ -441,8 +462,8 @@ LOCAL Errors requestNewMedium(StorageFileHandle *storageFileHandle, bool waitFla
     Misc_udelay(UNLOAD_VOLUME_DELAY_TIME);
     Misc_executeCommand(String_cString(storageFileHandle->opticalDisk.unloadVolumeCommand),
                         textMacros,SIZE_OF_ARRAY(textMacros),
-                        NULL,
-                        NULL,
+                        (ExecuteIOFunction)processExecOutput,
+                        (ExecuteIOFunction)processExecOutput,
                         NULL
                        );
     printInfo(0,"ok\n");
@@ -469,8 +490,8 @@ LOCAL Errors requestNewMedium(StorageFileHandle *storageFileHandle, bool waitFla
         printInfo(0,"Unload medium...");
         Misc_executeCommand(String_cString(storageFileHandle->opticalDisk.unloadVolumeCommand),
                             textMacros,SIZE_OF_ARRAY(textMacros),
-                            NULL,
-                            NULL,
+                            (ExecuteIOFunction)processExecOutput,
+                            (ExecuteIOFunction)processExecOutput,
                             NULL
                            );
         printInfo(0,"ok\n");
@@ -488,8 +509,8 @@ LOCAL Errors requestNewMedium(StorageFileHandle *storageFileHandle, bool waitFla
     printInfo(0,"Request new medium #%d...",storageFileHandle->requestedVolumeNumber);
     if (Misc_executeCommand(String_cString(storageFileHandle->opticalDisk.requestVolumeCommand),
                             textMacros,SIZE_OF_ARRAY(textMacros),
-                            NULL,
-                            NULL,
+                            (ExecuteIOFunction)processExecOutput,
+                            (ExecuteIOFunction)processExecOutput,
                             NULL
                            ) == ERROR_NONE
        )
@@ -533,8 +554,8 @@ LOCAL Errors requestNewMedium(StorageFileHandle *storageFileHandle, bool waitFla
         printInfo(0,"Load medium #%d...",storageFileHandle->requestedVolumeNumber);
         Misc_executeCommand(String_cString(storageFileHandle->opticalDisk.loadVolumeCommand),
                             textMacros,SIZE_OF_ARRAY(textMacros),
-                            NULL,
-                            NULL,
+                            (ExecuteIOFunction)processExecOutput,
+                            (ExecuteIOFunction)processExecOutput,
                             NULL
                            );
         Misc_udelay(LOAD_VOLUME_DELAY_TIME);
@@ -595,8 +616,8 @@ LOCAL Errors requestNewVolume(StorageFileHandle *storageFileHandle, bool waitFla
     Misc_udelay(UNLOAD_VOLUME_DELAY_TIME);
     Misc_executeCommand(String_cString(storageFileHandle->device.unloadVolumeCommand),
                         textMacros,SIZE_OF_ARRAY(textMacros),
-                        NULL,
-                        NULL,
+                        (ExecuteIOFunction)processExecOutput,
+                        (ExecuteIOFunction)processExecOutput,
                         NULL
                        );
     printInfo(0,"ok\n");
@@ -624,8 +645,8 @@ LOCAL Errors requestNewVolume(StorageFileHandle *storageFileHandle, bool waitFla
         Misc_udelay(UNLOAD_VOLUME_DELAY_TIME);
         Misc_executeCommand(String_cString(storageFileHandle->device.unloadVolumeCommand),
                             textMacros,SIZE_OF_ARRAY(textMacros),
-                            NULL,
-                            NULL,
+                            (ExecuteIOFunction)processExecOutput,
+                            (ExecuteIOFunction)processExecOutput,
                             NULL
                            );
         printInfo(0,"ok\n");
@@ -643,8 +664,8 @@ LOCAL Errors requestNewVolume(StorageFileHandle *storageFileHandle, bool waitFla
     printInfo(0,"Request new volume #%d...",storageFileHandle->requestedVolumeNumber);
     if (Misc_executeCommand(String_cString(storageFileHandle->device.loadVolumeCommand),
                             textMacros,SIZE_OF_ARRAY(textMacros),
-                            NULL,
-                            NULL,
+                            (ExecuteIOFunction)processExecOutput,
+                            (ExecuteIOFunction)processExecOutput,
                             NULL
                            ) == ERROR_NONE
        )
@@ -688,8 +709,8 @@ LOCAL Errors requestNewVolume(StorageFileHandle *storageFileHandle, bool waitFla
         printInfo(0,"Load volume #%d...",storageFileHandle->requestedVolumeNumber);
         Misc_executeCommand(String_cString(storageFileHandle->device.loadVolumeCommand),
                             textMacros,SIZE_OF_ARRAY(textMacros),
-                            NULL,
-                            NULL,
+                            (ExecuteIOFunction)processExecOutput,
+                            (ExecuteIOFunction)processExecOutput,
                             NULL
                            );
         Misc_udelay(LOAD_VOLUME_DELAY_TIME);
@@ -746,6 +767,8 @@ LOCAL void processIOmkisofs(StorageFileHandle *storageFileHandle,
     updateStatusInfo(storageFileHandle);
   }
   String_delete(s);
+
+  processExecOutput(NULL,line);
 }
 
 /***********************************************************************\
@@ -783,6 +806,8 @@ LOCAL void processIOdvdisaster(StorageFileHandle *storageFileHandle,
   }
 
   String_delete(s);
+
+  processExecOutput(NULL,line);
 }
 
 /***********************************************************************\
@@ -812,6 +837,8 @@ LOCAL void processIOgrowisofs(StorageFileHandle *storageFileHandle,
     updateStatusInfo(storageFileHandle);
   }
   String_delete(s);
+
+  processExecOutput(NULL,line);
 }
 
 /*---------------------------------------------------------------------*/
@@ -2285,7 +2312,13 @@ Errors Storage_preProcess(StorageFileHandle *storageFileHandle,
               if (error == ERROR_NONE)
               {
                 printInfo(0,"Write pre-processing...");
-                error = Misc_executeCommand(String_cString(globalOptions.file.writePreProcessCommand),textMacros,SIZE_OF_ARRAY(textMacros),NULL,NULL,NULL);
+                error = Misc_executeCommand(String_cString(globalOptions.file.writePreProcessCommand),
+                                            textMacros,
+                                            SIZE_OF_ARRAY(textMacros),
+                                            (ExecuteIOFunction)processExecOutput,
+                                            (ExecuteIOFunction)processExecOutput,
+                                            NULL
+                                           );
                 printInfo(0,(error == ERROR_NONE)?"ok\n":"FAIL\n");
               }
             }
@@ -2315,7 +2348,13 @@ Errors Storage_preProcess(StorageFileHandle *storageFileHandle,
                 if (error == ERROR_NONE)
                 {
                   printInfo(0,"Write pre-processing...");
-                  error = Misc_executeCommand(String_cString(globalOptions.ftp.writePreProcessCommand),textMacros,SIZE_OF_ARRAY(textMacros),NULL,NULL,NULL);
+                  error = Misc_executeCommand(String_cString(globalOptions.ftp.writePreProcessCommand),
+                                              textMacros,
+                                              SIZE_OF_ARRAY(textMacros),
+                                              (ExecuteIOFunction)processExecOutput,
+                                              (ExecuteIOFunction)processExecOutput,
+                                              NULL
+                                             );
                   printInfo(0,(error == ERROR_NONE)?"ok\n":"FAIL\n");
                 }
               }
@@ -2350,7 +2389,13 @@ Errors Storage_preProcess(StorageFileHandle *storageFileHandle,
                 if (error == ERROR_NONE)
                 {
                   printInfo(0,"Write pre-processing...");
-                  error = Misc_executeCommand(String_cString(globalOptions.scp.writePreProcessCommand),textMacros,SIZE_OF_ARRAY(textMacros),NULL,NULL,NULL);
+                  error = Misc_executeCommand(String_cString(globalOptions.scp.writePreProcessCommand),
+                                              textMacros,
+                                              SIZE_OF_ARRAY(textMacros),
+                                              (ExecuteIOFunction)processExecOutput,
+                                              (ExecuteIOFunction)processExecOutput,
+                                              NULL
+                                             );
                   printInfo(0,(error == ERROR_NONE)?"ok\n":"FAIL\n");
                 }
               }
@@ -2383,7 +2428,13 @@ Errors Storage_preProcess(StorageFileHandle *storageFileHandle,
                 if (error == ERROR_NONE)
                 {
                   printInfo(0,"Write pre-processing...");
-                  error = Misc_executeCommand(String_cString(globalOptions.sftp.writePreProcessCommand),textMacros,SIZE_OF_ARRAY(textMacros),NULL,NULL,NULL);
+                  error = Misc_executeCommand(String_cString(globalOptions.sftp.writePreProcessCommand),
+                                              textMacros,
+                                              SIZE_OF_ARRAY(textMacros),
+                                              (ExecuteIOFunction)processExecOutput,
+                                              (ExecuteIOFunction)processExecOutput,
+                                              NULL
+                                             );
                   printInfo(0,(error == ERROR_NONE)?"ok\n":"FAIL\n");
                 }
               }
@@ -2478,7 +2529,13 @@ Errors Storage_postProcess(StorageFileHandle *storageFileHandle,
               if (error == ERROR_NONE)
               {
                 printInfo(0,"Write post-processing...");
-                error = Misc_executeCommand(String_cString(globalOptions.file.writePostProcessCommand),textMacros,SIZE_OF_ARRAY(textMacros),NULL,NULL,NULL);
+                error = Misc_executeCommand(String_cString(globalOptions.file.writePostProcessCommand),
+                                            textMacros,
+                                            SIZE_OF_ARRAY(textMacros),
+                                            (ExecuteIOFunction)processExecOutput,
+                                            (ExecuteIOFunction)processExecOutput,
+                                            NULL
+                                           );
                 printInfo(0,(error == ERROR_NONE)?"ok\n":"FAIL\n");
               }
             }
@@ -2508,7 +2565,13 @@ Errors Storage_postProcess(StorageFileHandle *storageFileHandle,
                 if (error == ERROR_NONE)
                 {
                   printInfo(0,"Write post-processing...");
-                  error = Misc_executeCommand(String_cString(globalOptions.ftp.writePostProcessCommand),textMacros,SIZE_OF_ARRAY(textMacros),NULL,NULL,NULL);
+                  error = Misc_executeCommand(String_cString(globalOptions.ftp.writePostProcessCommand),
+                                              textMacros,
+                                              SIZE_OF_ARRAY(textMacros),
+                                              (ExecuteIOFunction)processExecOutput,
+                                              (ExecuteIOFunction)processExecOutput,
+                                              NULL
+                                             );
                   printInfo(0,(error == ERROR_NONE)?"ok\n":"FAIL\n");
                 }
               }
@@ -2543,7 +2606,13 @@ Errors Storage_postProcess(StorageFileHandle *storageFileHandle,
                 if (error == ERROR_NONE)
                 {
                   printInfo(0,"Write post-processing...");
-                  error = Misc_executeCommand(String_cString(globalOptions.scp.writePostProcessCommand),textMacros,SIZE_OF_ARRAY(textMacros),NULL,NULL,NULL);
+                  error = Misc_executeCommand(String_cString(globalOptions.scp.writePostProcessCommand),
+                                              textMacros,
+                                              SIZE_OF_ARRAY(textMacros),
+                                              (ExecuteIOFunction)processExecOutput,
+                                              (ExecuteIOFunction)processExecOutput,
+                                              NULL
+                                             );
                   printInfo(0,(error == ERROR_NONE)?"ok\n":"FAIL\n");
                 }
               }
@@ -2576,7 +2645,13 @@ Errors Storage_postProcess(StorageFileHandle *storageFileHandle,
                 if (error == ERROR_NONE)
                 {
                   printInfo(0,"Write post-processing...");
-                  error = Misc_executeCommand(String_cString(globalOptions.sftp.writePostProcessCommand),textMacros,SIZE_OF_ARRAY(textMacros),NULL,NULL,NULL);
+                  error = Misc_executeCommand(String_cString(globalOptions.sftp.writePostProcessCommand),
+                                              textMacros,
+                                              SIZE_OF_ARRAY(textMacros),
+                                              (ExecuteIOFunction)processExecOutput,
+                                              (ExecuteIOFunction)processExecOutput,
+                                              NULL
+                                             );
                   printInfo(0,(error == ERROR_NONE)?"ok\n":"FAIL\n");
                 }
               }
@@ -2728,7 +2803,7 @@ Errors Storage_postProcess(StorageFileHandle *storageFileHandle,
               error = Misc_executeCommand(String_cString(storageFileHandle->opticalDisk.writeCommand),
                                           textMacros,SIZE_OF_ARRAY(textMacros),
                                           (ExecuteIOFunction)processIOgrowisofs,
-                                          NULL,
+                                          (ExecuteIOFunction)processExecOutput,
                                           storageFileHandle
                                          );
               if (error != ERROR_NONE)
@@ -2826,19 +2901,37 @@ Errors Storage_postProcess(StorageFileHandle *storageFileHandle,
             if (error == ERROR_NONE)
             {
               printInfo(0,"Make image pre-processing of volume #%d...",storageFileHandle->volumeNumber);
-              error = Misc_executeCommand(String_cString(storageFileHandle->device.imagePreProcessCommand ),textMacros,SIZE_OF_ARRAY(textMacros),NULL,NULL,NULL);
+              error = Misc_executeCommand(String_cString(storageFileHandle->device.imagePreProcessCommand ),
+                                          textMacros,
+                                          SIZE_OF_ARRAY(textMacros),
+                                          (ExecuteIOFunction)processExecOutput,
+                                          (ExecuteIOFunction)processExecOutput,
+                                          NULL
+                                         );
               printInfo(0,(error == ERROR_NONE)?"ok\n":"FAIL\n");
             }
             if (error == ERROR_NONE)
             {
               printInfo(0,"Make image volume #%d...",storageFileHandle->volumeNumber);
-              error = Misc_executeCommand(String_cString(storageFileHandle->device.imageCommand           ),textMacros,SIZE_OF_ARRAY(textMacros),NULL,NULL,NULL);
+              error = Misc_executeCommand(String_cString(storageFileHandle->device.imageCommand),
+                                          textMacros,
+                                          SIZE_OF_ARRAY(textMacros),
+                                          (ExecuteIOFunction)processExecOutput,
+                                          (ExecuteIOFunction)processExecOutput,
+                                          NULL
+                                         );
               printInfo(0,(error == ERROR_NONE)?"ok\n":"FAIL\n");
             }
             if (error == ERROR_NONE)
             {
               printInfo(0,"Make image post-processing of volume #%d...",storageFileHandle->volumeNumber);
-              error = Misc_executeCommand(String_cString(storageFileHandle->device.imagePostProcessCommand),textMacros,SIZE_OF_ARRAY(textMacros),NULL,NULL,NULL);
+              error = Misc_executeCommand(String_cString(storageFileHandle->device.imagePostProcessCommand),
+                                          textMacros,
+                                          SIZE_OF_ARRAY(textMacros),
+                                          (ExecuteIOFunction)processExecOutput,
+                                          (ExecuteIOFunction)processExecOutput,
+                                          NULL
+                                         );
               printInfo(0,(error == ERROR_NONE)?"ok\n":"FAIL\n");
             }
 
@@ -2846,19 +2939,37 @@ Errors Storage_postProcess(StorageFileHandle *storageFileHandle,
             if (error == ERROR_NONE)
             {
               printInfo(0,"Write device pre-processing of volume #%d...",storageFileHandle->volumeNumber);
-              error = Misc_executeCommand(String_cString(storageFileHandle->device.writePreProcessCommand ),textMacros,SIZE_OF_ARRAY(textMacros),NULL,NULL,NULL);
+              error = Misc_executeCommand(String_cString(storageFileHandle->device.writePreProcessCommand),
+                                          textMacros,
+                                          SIZE_OF_ARRAY(textMacros),
+                                          (ExecuteIOFunction)processExecOutputL,
+                                          (ExecuteIOFunction)processExecOutput,
+                                          NULL
+                                         );
               printInfo(0,(error == ERROR_NONE)?"ok\n":"FAIL\n");
             }
             if (error == ERROR_NONE)
             {
               printInfo(0,"Write device volume #%d...",storageFileHandle->volumeNumber);
-              error = Misc_executeCommand(String_cString(storageFileHandle->device.writeCommand           ),textMacros,SIZE_OF_ARRAY(textMacros),NULL,NULL,NULL);
+              error = Misc_executeCommand(String_cString(storageFileHandle->device.writeCommand),
+                                          textMacros,
+                                          SIZE_OF_ARRAY(textMacros),
+                                          (ExecuteIOFunction)processExecOutput,
+                                          (ExecuteIOFunction)processExecOutput,
+                                          NULL
+                                         );
               printInfo(0,(error == ERROR_NONE)?"ok\n":"FAIL\n");
             }
             if (error == ERROR_NONE)
             {
               printInfo(0,"Write device post-processing of volume #%d...",storageFileHandle->volumeNumber);
-              error = Misc_executeCommand(String_cString(storageFileHandle->device.writePostProcessCommand),textMacros,SIZE_OF_ARRAY(textMacros),NULL,NULL,NULL);
+              error = Misc_executeCommand(String_cString(storageFileHandle->device.writePostProcessCommand),
+                                          textMacros,
+                                          SIZE_OF_ARRAY(textMacros),
+                                          (ExecuteIOFunction)processExecOutput,
+                                          (ExecuteIOFunction)processExecOutput,
+                                          NULL
+                                         );
               printInfo(0,(error == ERROR_NONE)?"ok\n":"FAIL\n");
             }
 
@@ -2952,8 +3063,8 @@ Errors Storage_unloadVolume(StorageFileHandle *storageFileHandle)
         TEXT_MACRO_N_STRING(textMacros[0],"%device",storageFileHandle->opticalDisk.name);
         error = Misc_executeCommand(String_cString(storageFileHandle->opticalDisk.unloadVolumeCommand),
                                     textMacros,SIZE_OF_ARRAY(textMacros),
-                                    NULL,
-                                    NULL,
+                                    (ExecuteIOFunction)processExecOutput,
+                                    (ExecuteIOFunction)processExecOutput,
                                     NULL
                                    );
       }
@@ -2965,8 +3076,8 @@ Errors Storage_unloadVolume(StorageFileHandle *storageFileHandle)
         TEXT_MACRO_N_STRING(textMacros[0],"%device",storageFileHandle->device.name);
         error = Misc_executeCommand(String_cString(storageFileHandle->device.unloadVolumeCommand),
                                     textMacros,SIZE_OF_ARRAY(textMacros),
-                                    NULL,
-                                    NULL,
+                                    (ExecuteIOFunction)processExecOutput,
+                                    (ExecuteIOFunction)processExecOutput,
                                     NULL
                                    );
       }

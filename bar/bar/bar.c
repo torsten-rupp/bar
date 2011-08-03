@@ -95,7 +95,7 @@
 #define DVD_IMAGE_COMMAND                     "nice mkisofs -V Backup -volset %number -r -o %image %directory"
 #define DVD_ECC_COMMAND                       "nice dvdisaster -mRS02 -n dvd -c -i %image -v"
 #define DVD_WRITE_COMMAND                     "nice growisofs -Z %device -A BAR -V Backup -volset %number -r %directory"
-#define DVD_WRITE_IMAGE_COMMAND               "nice growisofs -Z %device=%image -use-the-force-luke=dao:%sectors -use-the-force-luke=noload"
+#define DVD_WRITE_IMAGE_COMMAND               "nice growisofs -Z %device=%image -use-the-force-luke=dao -dvd-compat -use-the-force-luke=noload"
 
 #define BD_UNLOAD_VOLUME_COMMAND              "eject -r %device"
 #define BD_LOAD_VOLUME_COMMAND                "eject -t %device"
@@ -509,7 +509,7 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
 
   CMD_OPTION_BOOLEAN      ("no-default-config",            0,  1,0,globalOptions.noDefaultConfigFlag,                                                                "do not read personal config file ~/.bar/" DEFAULT_CONFIG_FILE_NAME        ),
   CMD_OPTION_BOOLEAN      ("quiet",                        0,  1,0,globalOptions.quietFlag,                                                                          "suppress any output"                                                      ),
-  CMD_OPTION_INTEGER_RANGE("verbose",                      'v',1,0,globalOptions.verboseLevel,                0,3,NULL,                                              "verbosity level"                                                          ),
+  CMD_OPTION_INTEGER_RANGE("verbose",                      'v',1,0,globalOptions.verboseLevel,                0,4,NULL,                                              "verbosity level"                                                          ),
 
   CMD_OPTION_BOOLEAN      ("version",                      0  ,0,0,versionFlag,                                                                                      "output version"                                                           ),
   CMD_OPTION_BOOLEAN      ("help",                         'h',0,0,helpFlag,                                                                                         "output this help"                                                         ),
@@ -707,7 +707,7 @@ LOCAL const ConfigValue CONFIG_VALUES[] =
   CONFIG_VALUE_BOOLEAN  ("wait-first-volume",            &jobOptions.waitFirstVolumeFlag,-1                       ),
   CONFIG_VALUE_BOOLEAN  ("no-bar-on-medium",             &jobOptions.noBAROnMediumFlag,-1                         ),
   CONFIG_VALUE_BOOLEAN  ("quiet",                        &globalOptions.quietFlag,-1                              ),
-  CONFIG_VALUE_INTEGER  ("verbose",                      &globalOptions.verboseLevel,-1,                          0,3,NULL),
+  CONFIG_VALUE_INTEGER  ("verbose",                      &globalOptions.verboseLevel,-1,                          0,4,NULL),
 
   /* igored job settings (server only) */
 
