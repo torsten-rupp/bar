@@ -99,7 +99,7 @@ OPTIONS
                                                      * TWOFISH128: Twofish cipher 128bit
                                                      * TWOFISH256: Twofish cipher 256bit
          --crypt-type=<name>                       select crypt type
-                                                     * symmetric : symmetric
+                                                     * symmetric : symmetric (default)
                                                      * asymmetric: asymmetric
          --crypt-password=<password>               crypt password (use with care!)
          --crypt-public-key=<file name>            public key for encryption
@@ -144,8 +144,8 @@ OPTIONS
          --cd-ecc-command=<command>                make CD error-correction codes command (default: nice dvdisaster -mRS02 -n cd -c -i %image -v)
          --cd-write-pre-command=<command>          write CD pre-process command
          --cd-write-post-command=<command>         write CD post-process command
-         --cd-write-command=<command>              write CD command (default: nice sh -c 'mkisofs -V Backup -volset %number -r -o %image %directory && cdrecord -dummy dev=%device %image')
-         --cd-write-image-command=<command>        write CD image command (default: nice cdrecord -dummy dev=%device %image)
+         --cd-write-command=<command>              write CD command (default: nice sh -c 'mkisofs -V Backup -volset %number -r -o %image %directory && cdrecord dev=%device %image')
+         --cd-write-image-command=<command>        write CD image command (default: nice cdrecord dev=%device %image)
          --dvd-device=<device name>                default DVD device (default: /dev/dvd)
          --dvd-request-volume-command=<command>    request new DVD volume command
          --dvd-unload-volume-command=<command>     unload DVD volume command (default: eject -r %device)
@@ -159,8 +159,8 @@ OPTIONS
          --dvd-ecc-command=<command>               make DVD error-correction codes command (default: nice dvdisaster -mRS02 -n dvd -c -i %image -v)
          --dvd-write-pre-command=<command>         write DVD pre-process command
          --dvd-write-post-command=<command>        write DVD post-process command
-         --dvd-write-command=<command>             write DVD command (default: nice growisofs -Z %device -A BAR -V Backup -volset %number -r %file)
-         --dvd-write-image-command=<command>       write DVD image command (default: nice growisofs -Z %device=%image -use-the-force-luke=dao:%sectors -use-the-force-luke=noload)
+         --dvd-write-command=<command>             write DVD command (default: nice growisofs -Z %device -A BAR -V Backup -volset %number -r %directory)
+         --dvd-write-image-command=<command>       write DVD image command (default: nice growisofs -Z %device=%image -use-the-force-luke=dao -dvd-compat -use-the-force-luke=noload)
          --bd-device=<device name>                 default BD device (default: /dev/bd)
          --bd-request-volume-command=<command>     request new BD volume command
          --bd-unload-volume-command=<command>      unload BD volume command (default: eject -r %device)
@@ -174,8 +174,8 @@ OPTIONS
          --bd-ecc-command=<command>                make BD error-correction codes command (default: nice dvdisaster -mRS02 -n bd -c -i %image -v)
          --bd-write-pre-command=<command>          write BD pre-process command
          --bd-write-post-command=<command>         write BD post-process command
-         --bd-write-command=<command>              write BD command (default: nice growisofs -Z %device -A BAR -V Backup -volset %number -r %file)
-         --bd-write-image-command=<command>        write BD image command (default: nice growisofs -Z %device=%image -use-the-force-luke=dao:%sectors -use-the-force-luke=noload)
+         --bd-write-command=<command>              write BD command (default: nice growisofs -Z %device -A BAR -V Backup -volset %number -r %directory)
+         --bd-write-image-command=<command>        write BD image command (default: nice growisofs -Z %device=%image -use-the-force-luke=dao -dvd-compat -use-the-force-luke=noload)
          --device=<device name>                    default device
          --device-request-volume-command=<command> request new volume command
          --device-load-volume-command=<command>    load volume command
@@ -205,6 +205,7 @@ OPTIONS
                                                      * incomplete: log incomplete files
                                                      * excluded  : log excluded files
                                                      * storage   : log storage
+                                                     * index     : log index
                                                      * all       : log everything
          --log-file=<file name>                    log file name
          --log-post-command=<command>              log file post-process command
@@ -227,7 +228,7 @@ OPTIONS
          --stop-on-error                           immediately stop on error
          --no-default-config                       do not read personal config file ~/.bar/bar.cfg
          --quiet                                   suppress any output
-         -v|--verbose=<n>                          verbosity level (0..3, default: 1)
+         -v|--verbose=<n>                          verbosity level (0..4, default: 1)
          --version                                 output version
          -h|--help                                 output this help
          --xhelp                                   output help to extended options
