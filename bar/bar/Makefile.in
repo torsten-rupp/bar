@@ -358,6 +358,9 @@ runserver_ssl barserver_ssl: bar ../bar-ca.pem ../bar-server-cert.pem ../bar-ser
           --server-cert-file=../bar-server-cert.pem \
           --server-key-file=../bar-server-key.pem
 
+../bar-ca.pem ../bar-server-cert.pem ../bar-server-key.pem:
+	$(MAKE) -C .. keys
+
 # ----------------------------------------------------------------------------
 
 # do tests
