@@ -2942,7 +2942,7 @@ Errors Storage_postProcess(StorageFileHandle *storageFileHandle,
               error = Misc_executeCommand(String_cString(storageFileHandle->device.writePreProcessCommand),
                                           textMacros,
                                           SIZE_OF_ARRAY(textMacros),
-                                          (ExecuteIOFunction)processExecOutputL,
+                                          (ExecuteIOFunction)processExecOutput,
                                           (ExecuteIOFunction)processExecOutput,
                                           NULL
                                          );
