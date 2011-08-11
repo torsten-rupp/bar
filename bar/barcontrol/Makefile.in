@@ -22,6 +22,8 @@ LAUNCH4J_DIR       = @LAUNCH4J_DIR@
 
 #--------------------------------- tool chain --------------------------------
 
+JAVA_DATA_MODEL    = @JAVA_DATA_MODEL@
+
 JAVA               = @JAVA@
 JAVA_FLAGS         = @JAVA_FLAGS@ -Xmx128m
 
