@@ -262,9 +262,9 @@ AC_SUBST(JAVA)                              dnl java command
 AC_SUBST(JAVAC)                             dnl java compiler
 AC_SUBST(JAR)                               dnl jar command
 
+AC_SUBST(JAVA_DATA_MODEL)                   dnl java data model (32 or 64)
 AC_SUBST(JAVA_FLAGS)                        dnl java flags
 AC_SUBST(JAVAC_FLAGS)                       dnl java compiler flags
-AC_SUBST(JAVA_DATA_MODEL)                   dnl java data model (32 or 64)
 AC_SUBST(JAVA_PATH_SEPARATOR_CHAR)          dnl java path separator (: or ;)
 
 AC_SUBST(SWT_DIR)                           dnl SWT directory
