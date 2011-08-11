@@ -160,10 +160,10 @@ class TabRestore
      * @param size size [bytes]
      * @param datetime date/time (timestamp)
      * @param title title to show
-     * @param state storage state
+     * @param indexState storage index state
      * @param errorMessage error message text
      */
-    StorageData(long id, String name, long size, long datetime, String title, IndexStates state, String errorMessage)
+    StorageData(long id, String name, long size, long datetime, String title, IndexStates indexState, String errorMessage)
     {
       this.id           = id;
       this.name         = name;
@@ -173,6 +173,7 @@ class TabRestore
       this.indexState   = indexState;
       this.errorMessage = errorMessage;
       this.tagged       = false;
+
     }
 
     /** create storage data
