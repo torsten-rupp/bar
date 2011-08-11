@@ -166,47 +166,73 @@ class WidgetVariable
 
   /** set boolean value
    * @param b value
+   * @return true iff changed
    */
-  void set(boolean b)
+  boolean set(boolean b)
   {
+    boolean changedFlag;
+
     assert type == WidgetVariableTypes.BOOLEAN;
+
+    changedFlag = (this.b != b);
 
     this.b = b;
     Widgets.modified(this);
+
+    return changedFlag;
   }
 
   /** set long value
    * @param l value
+   * @return true iff changed
    */
-  void set(long l)
+  boolean set(long l)
   {
+    boolean changedFlag;
+
     assert type == WidgetVariableTypes.LONG;
+
+    changedFlag = (this.l != l);
 
     this.l = l;
     Widgets.modified(this);
+
+    return changedFlag;
   }
 
   /** set double value
    * @param d value
+   * @return true iff changed
    */
-  void set(double d)
+  boolean set(double d)
   {
+    boolean changedFlag;
+
     assert type == WidgetVariableTypes.DOUBLE;
+
+    changedFlag = (this.d != d);
 
     this.d = d;
     Widgets.modified(this);
+
+    return changedFlag;
   }
 
   /** set string value
    * @param string value
+   * @return true iff changed
    */
-  void set(String string)
+  boolean set(String string)
   {
+    boolean changedFlag = false;
+
     assert (type == WidgetVariableTypes.STRING) || (type == WidgetVariableTypes.ENUMERATION);
 
     switch (type)
     {
       case STRING:
+        changedFlag = (this.string != string);
+
         this.string = string;
         Widgets.modified(this);
         break;
@@ -215,6 +241,8 @@ class WidgetVariable
         {
           if (s.equals(string))
           {
+            changedFlag = (this.string != string);
+
             this.string = string;
             Widgets.modified(this);
             break;
@@ -222,6 +250,8 @@ class WidgetVariable
         }
         break;
     }
+
+    return changedFlag;
   }
 
   /** compare string values
