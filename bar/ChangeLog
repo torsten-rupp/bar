@@ -3,14 +3,14 @@
     ftp server
   * fix creating directories: to not set parent directory
     permissions if permissions are already set
-  * barcontrol: do not close new job dialog on error
-  * barcontrol: fixed setting crypt type radio buttons with
+  * BARControl: do not close new job dialog on error
+  * BARControl: fixed setting crypt type radio buttons with
     default value
   * save job file immediately after creating a new one
   * fix lost error state when writing file to a server
   * improved FTP transmission, added patch to set timeout
     for receiving data in FTPLib
-  * fixed possible inifite loop when executing external
+  * fixed possible infinite loop when executing external
     command, e. g. sending the log file via log-post-command
   * fixed error in pre-defined log-post-command in bar.cfg
   * fix losing failure error
@@ -21,14 +21,14 @@
     mode
   * fixed adding index of FTP content to local archive database
   * fixed string parser: parse \x as x if outside of " or '
-  * BARControl: fix Null-Pointer-Exception when server password
+  * BARControl: fixed null-pointer-exception  when server password
     is not set
   * improved FTP read: try to read all data when the network
     connection is bad
   * fix CD/DVD/BD write command: must be %directory, not %file
   * BARControl: add command to remove all archives with error
     state in tab restore
-  * BARControl: fix possible null-pointe-exception on communication
+  * BARControl: fixed possible null-pointer-exception on communication
     error
   * BARControl: improved usability. Use tagged+selected entries
     entires to remove/refresh  in tab restore.
@@ -42,7 +42,10 @@
   * show date/time for directories entries in list, too
   * changed DVD write image command: removed sectors, added
     -dvd-compat
-  * output stdout/stderr of external commands with verbose level 4    
+  * output stdout/stderr of external commands with verbose level 4
+  * BARControl: added some warnings when selection of part size/
+    medium size/error correction codes may not fit to create a
+    CD/DVD/BD
 
 2011-05-31 0.16d
   * barcontrol: fix parsing of ftp/scp/sftp archive names
