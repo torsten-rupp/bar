@@ -335,6 +335,10 @@ barcontrol.bat: barcontrol.bat.in barcontrol-windows.jar
 	$(CHMOD) 775 $@
 endif
 
+# compile
+.PHONY: compile
+compile: $(OBJECTS)
+
 # run
 run: $(OBJECTS)
 ifneq ($(JAVA),)
