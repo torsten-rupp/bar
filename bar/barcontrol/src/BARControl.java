@@ -1354,7 +1354,7 @@ public class BARControl
     {
       menu = Widgets.addMenu(menuBar,"Debug");
       {
-        menuItem = Widgets.addMenuItem(menu,"Print memory statistics");
+        menuItem = Widgets.addMenuItem(menu,"Print debug statistics");
         menuItem.addSelectionListener(new SelectionListener()
         {
           public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -1363,11 +1363,11 @@ public class BARControl
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             MenuItem widget = (MenuItem)selectionEvent.widget;
-            BARServer.executeCommand("DEBUG_MEMORY_PRINT_STATISTICS");
+            BARServer.executeCommand("DEBUG_PRINT_STATISTICS");
           }
         });
 
-        menuItem = Widgets.addMenuItem(menu,"Print memory info");
+        menuItem = Widgets.addMenuItem(menu,"Print debug memory info");
         menuItem.addSelectionListener(new SelectionListener()
         {
           public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -1376,11 +1376,11 @@ public class BARControl
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             MenuItem widget = (MenuItem)selectionEvent.widget;
-            BARServer.executeCommand("DEBUG_MEMORY_PRINT_INFO");
+            BARServer.executeCommand("DEBUG_PRINT_MEMORY_INFO");
           }
         });
 
-        menuItem = Widgets.addMenuItem(menu,"Dump memory info");
+        menuItem = Widgets.addMenuItem(menu,"Dump debug memory info");
         menuItem.addSelectionListener(new SelectionListener()
         {
           public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -1389,7 +1389,7 @@ public class BARControl
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             MenuItem widget = (MenuItem)selectionEvent.widget;
-            BARServer.executeCommand("DEBUG_MEMORY_DUMP_INFO");
+            BARServer.executeCommand("DEBUG_DUMP_MEMORY_INFO");
           }
         });
       }
