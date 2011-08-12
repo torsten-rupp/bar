@@ -6781,7 +6781,6 @@ LOCAL void serverCommand_indexStorageRemove(ClientInfo *clientInfo, uint id, con
 
 LOCAL void serverCommand_indexStorageRefresh(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
 {
-  IndexStates         indexState;
   bool                stateAny;
   IndexStates         state;
   int64               storageId;
@@ -7550,8 +7549,8 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
 
 #ifndef NDEBUG
 /***********************************************************************\
-* Name   : serverCommand_debugMemoryPrintInfo
-* Purpose: print array/string debug info
+* Name   : serverCommand_debugPrintInfo
+* Purpose: print array/string/file debug info
 * Input  : clientInfo    - client info
 *          id            - command id
 *          arguments     - command arguments (not used)
@@ -7561,32 +7560,7 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
 * Notes  : Arguments:
 \***********************************************************************/
 
-LOCAL void serverCommand_debugMemoryPrintInfo(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
-{
-  assert(clientInfo != NULL);
-
-  UNUSED_VARIABLE(arguments);
-  UNUSED_VARIABLE(argumentCount);
-
-  Array_debugPrintInfo();
-  String_debugPrintInfo();
-
-  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
-}
-
-/***********************************************************************\
-* Name   : serverCommand_debugMemoryPrintStatistics
-* Purpose: print array/string debug statistics
-* Input  : clientInfo    - client info
-*          id            - command id
-*          arguments     - command arguments (not used)
-*          argumentCount - command arguments count (not used)
-* Output : -
-* Return : -
-* Notes  : Arguments:
-\***********************************************************************/
-
-LOCAL void serverCommand_debugMemoryPrintStatistics(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
+LOCAL void serverCommand_debugPrintStatistics(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
 {
   assert(clientInfo != NULL);
 
@@ -7595,13 +7569,14 @@ LOCAL void serverCommand_debugMemoryPrintStatistics(ClientInfo *clientInfo, uint
 
   Array_debugPrintStatistics();
   String_debugPrintStatistics();
+  File_debugPrintStatistics();
 
   sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
 }
 
 /***********************************************************************\
-* Name   : serverCommand_debugMemoryInfo
-* Purpose: print array/string debug info
+* Name   : serverCommand_debugPrintMemoryInfo
+* Purpose: print array/string debug memory info
 * Input  : clientInfo    - client info
 *          id            - command id
 *          arguments     - command arguments (not used)
@@ -7611,7 +7586,33 @@ LOCAL void serverCommand_debugMemoryPrintStatistics(ClientInfo *clientInfo, uint
 * Notes  : Arguments:
 \***********************************************************************/
 
-LOCAL void serverCommand_debugMemoryDumpInfo(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
+LOCAL void serverCommand_debugPrintMemoryInfo(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
+{
+  assert(clientInfo != NULL);
+
+  UNUSED_VARIABLE(arguments);
+  UNUSED_VARIABLE(argumentCount);
+
+  Array_debugPrintInfo();
+  String_debugPrintInfo();
+  File_debugPrintInfo();
+
+  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
+}
+
+/***********************************************************************\
+* Name   : serverCommand_debugDumpMemoryInfo
+* Purpose: print array/string/file debug info to file
+* Input  : clientInfo    - client info
+*          id            - command id
+*          arguments     - command arguments (not used)
+*          argumentCount - command arguments count (not used)
+* Output : -
+* Return : -
+* Notes  : Arguments:
+\***********************************************************************/
+
+LOCAL void serverCommand_debugDumpMemoryInfo(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
 {
   FILE *handle;
 
@@ -7629,6 +7630,7 @@ LOCAL void serverCommand_debugMemoryDumpInfo(ClientInfo *clientInfo, uint id, co
 
   Array_debugDumpInfo(handle);
   String_debugDumpInfo(handle);
+  File_debugDumpInfo(handle);
 
   fclose(handle);
 
@@ -7701,9 +7703,9 @@ SERVER_COMMANDS[] =
   { "INDEX_ENTRIES_LIST",           "i b S",    serverCommand_indexEntriesList,          AUTHORIZATION_STATE_OK      },
 
   #ifndef NDEBUG
-  { "DEBUG_MEMORY_PRINT_INFO",      "",     serverCommand_debugMemoryPrintInfo,      AUTHORIZATION_STATE_OK      },
-  { "DEBUG_MEMORY_PRINT_STATISTICS","",     serverCommand_debugMemoryPrintStatistics,AUTHORIZATION_STATE_OK      },
-  { "DEBUG_MEMORY_DUMP_INFO",       "",     serverCommand_debugMemoryDumpInfo,       AUTHORIZATION_STATE_OK      },
+  { "DEBUG_PRINT_STATISTICS",       "",         serverCommand_debugPrintStatistics,      AUTHORIZATION_STATE_OK      },
+  { "DEBUG_PRINT_MEMORY_INFO",      "",         serverCommand_debugPrintMemoryInfo,      AUTHORIZATION_STATE_OK      },
+  { "DEBUG_DUMP_MEMORY_INFO",       "",         serverCommand_debugDumpMemoryInfo,       AUTHORIZATION_STATE_OK      },
   #endif /* NDEBUG */
 };
 
