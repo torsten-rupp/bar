@@ -701,7 +701,7 @@ class TabJobs
       this.weekDays = ScheduleData.ANY;
       this.hour     = ScheduleData.ANY;
       this.minute   = ScheduleData.ANY;
-      this.enabled  = false;
+      this.enabled  = true;
       this.type     = "*";
     }
 
@@ -1951,7 +1951,7 @@ class TabJobs
           });
           button.setToolTipText("Add entry to included list.");
 
-          button = Widgets.newButton(composite,"Rem");
+          button = Widgets.newButton(composite,"Remove");
           Widgets.layout(button,0,1,TableLayoutData.DEFAULT,0,0,0,0,60,SWT.DEFAULT);
           button.addSelectionListener(new SelectionListener()
           {
@@ -2034,7 +2034,7 @@ class TabJobs
           });
           button.setToolTipText("Add entry to excluded list.");
 
-          button = Widgets.newButton(composite,"Rem");
+          button = Widgets.newButton(composite,"Remove");
           Widgets.layout(button,0,1,TableLayoutData.DEFAULT,0,0,0,0,60,SWT.DEFAULT);
           button.addSelectionListener(new SelectionListener()
           {
@@ -2464,7 +2464,7 @@ class TabJobs
             });
             button.setToolTipText("Add entry to compress exclude list.");
 
-            button = Widgets.newButton(subComposite,"Rem");
+            button = Widgets.newButton(subComposite,"Remove");
             Widgets.layout(button,0,1,TableLayoutData.DEFAULT,0,0,0,0,60,SWT.DEFAULT);
             Widgets.addModifyListener(new WidgetModifyListener(button,compressAlgorithm)
             {
@@ -4669,7 +4669,22 @@ class TabJobs
           });
           button.setToolTipText("Edit schedule entry.");
 
-          button = Widgets.newButton(composite,"Rem");
+          button = Widgets.newButton(composite,"Copy");
+          Widgets.layout(button,0,1,TableLayoutData.DEFAULT,0,0,0,0,60,SWT.DEFAULT);
+          button.addSelectionListener(new SelectionListener()
+          {
+            public void widgetDefaultSelected(SelectionEvent selectionEvent)
+            {
+            }
+            public void widgetSelected(SelectionEvent selectionEvent)
+            {
+              Button widget = (Button)selectionEvent.widget;
+              scheduleCopy();
+            }
+          });
+          button.setToolTipText("Copy schedule entry.");
+
+          button = Widgets.newButton(composite,"Remove");
           Widgets.layout(button,0,2,TableLayoutData.DEFAULT,0,0,0,0,60,SWT.DEFAULT);
           button.addSelectionListener(new SelectionListener()
           {
@@ -7754,6 +7769,46 @@ throw new Error("NYI");
   private void scheduleEdit()
   {
     assert selectedJobId != 0;
+
+    int index = widgetScheduleList.getSelectionIndex();
+    if (index >= 0)
+    {
+      TableItem tableItem = widgetScheduleList.getItem(index);
+
+      ScheduleData scheduleData = (ScheduleData)tableItem.getData();
+      if (scheduleEdit(scheduleData,"Edit schedule","Save"))
+      {
+        BARServer.executeCommand("SCHEDULE_CLEAR "+selectedJobId);
+        for (ScheduleData data : scheduleList)
+        {
+          BARServer.executeCommand("SCHEDULE_ADD "+
+                                   selectedJobId+" "+
+                                   data.getDate()+" "+
+                                   data.getWeekDays()+" "+
+                                   data.getTime()+" "+
+                                   data.getEnabled()+" "+
+                                   data.getType()
+                                  );
+        }
+
+        tableItem.dispose();
+        tableItem = new TableItem(widgetScheduleList,SWT.NONE,findScheduleListIndex(scheduleData));
+        tableItem.setData(scheduleData);
+        tableItem.setText(0,scheduleData.getDate());
+        tableItem.setText(1,scheduleData.getWeekDays());
+        tableItem.setText(2,scheduleData.getTime());
+        tableItem.setText(3,scheduleData.getEnabled());
+        tableItem.setText(4,scheduleData.getType());
+      }
+    }
+  }
+
+  /** copy schedule entry
+   */
+  private void scheduleCopy()
+  {
+    assert selectedJobId != 0;
+Dprintf.dprintf("");
 
     int index = widgetScheduleList.getSelectionIndex();
     if (index >= 0)
