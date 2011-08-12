@@ -5200,6 +5200,8 @@ Errors Storage_openDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
           {
             String_delete(storageDirectoryListHandle->ftp.line);
             String_delete(storageDirectoryListHandle->ftp.fileListFileName);
+            String_delete(pathName);
+            String_delete(storageSpecifier);
             return error;
           }
 
@@ -5308,6 +5310,8 @@ Errors Storage_openDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
             File_delete(storageDirectoryListHandle->ftp.fileListFileName,FALSE);
             String_delete(storageDirectoryListHandle->ftp.line);
             String_delete(storageDirectoryListHandle->ftp.fileListFileName);
+            String_delete(pathName);
+            String_delete(storageSpecifier);
             return ERROR_FTP_SESSION_FAIL;
           }
 
