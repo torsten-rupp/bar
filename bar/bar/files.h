@@ -164,6 +164,13 @@ typedef struct
 
 /****************************** Macros *********************************/
 
+#ifndef NDEBUG
+  #define File_open(fileHandle,fileName,fileMode)                 __File_open(__FILE__,__LINE__,fileHandle,fileName,fileMode)
+  #define File_openCString(fileHandle,fileName,fileMode)          __File_openCString(__FILE__,__LINE__,fileHandle,fileName,fileMode)
+  #define File_openDescriptor(fileHandle,fileDescriptor,fileMode) __File_openDescriptor(__FILE__,__LINE__,fileHandle,fileDescriptor,fileMode)
+  #define File_close(fileHandle)                                  __File_close(__FILE__,__LINE__,fileHandle)
+#endif /* not NDEBUG */
+
 /***************************** Forwards ********************************/
 
 /***************************** Functions *******************************/
@@ -351,6 +358,7 @@ Errors File_getTmpDirectoryNameCString(String directoryName, char const *pattern
 * Notes  : -
 \***********************************************************************/
 
+#ifdef NDEBUG
 Errors File_open(FileHandle    *fileHandle,
                  const String  fileName,
                  FileModes     fileMode
@@ -359,6 +367,20 @@ Errors File_openCString(FileHandle *fileHandle,
                         const char *fileName,
                         FileModes  fileMode
                        );
+#else /* not NDEBUG */
+Errors __File_open(const char   *__fileName__,
+                   ulong        __lineNb__,
+                   FileHandle   *fileHandle,
+                   const String fileName,
+                   FileModes    fileMode
+                  );
+Errors __File_openCString(const char *__fileName__,
+                          ulong      __lineNb__,
+                          FileHandle *fileHandle,
+                          const char *fileName,
+                          FileModes  fileMode
+                         );
+#endif /* NDEBUG */
 
 /***********************************************************************\
 * Name   : File_openDescriptor
@@ -371,10 +393,19 @@ Errors File_openCString(FileHandle *fileHandle,
 * Notes  : -
 \***********************************************************************/
 
+#ifdef NDEBUG
 Errors File_openDescriptor(FileHandle *fileHandle,
                            int        fileDescriptor,
-                           FileModes  fileOpenMode
+                           FileModes  fileMode
                           );
+#else /* not NDEBUG */
+Errors __File_openDescriptor(const char *__fileName__,
+                             ulong      __lineNb__,
+                             FileHandle *fileHandle,
+                             int        fileDescriptor,
+                             FileModes  fileMode
+                            );
+#endif /* NDEBUG */
 
 /***********************************************************************\
 * Name   : File_close
@@ -385,7 +416,11 @@ Errors File_openDescriptor(FileHandle *fileHandle,
 * Notes  : -
 \***********************************************************************/
 
+#ifdef NDEBUG
 Errors File_close(FileHandle *fileHandle);
+#else /* not NDEBUG */
+Errors __File_close(const char *__fileName__, ulong __lineNb__, FileHandle *fileHandle);
+#endif /* NDEBUG */
 
 /***********************************************************************\
 * Name   : File_eof
@@ -921,6 +956,64 @@ Errors File_makeSpecial(const String     name,
 Errors File_getFileSystemInfo(const          String pathName,
                               FileSystemInfo *fileSystemInfo
                              );
+
+#ifndef NDEBUG
+/***********************************************************************\
+* Name   : File_debugInit
+* Purpose: init file debug functions
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : called automatically
+\***********************************************************************/
+
+void File_debugInit(void);
+
+/***********************************************************************\
+* Name   : File_debugDone
+* Purpose: done file debug functions
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void File_debugDone(void);
+
+/***********************************************************************\
+* Name   : File_debugDumpInfo, File_debugPrintInfo
+* Purpose: string file function: output open files
+* Input  : handle - output channel
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void File_debugDumpInfo(FILE *handle);
+void File_debugPrintInfo(void);
+
+/***********************************************************************\
+* Name   : File_debugPrintStatistics
+* Purpose: file debug function: output file statistics
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void File_debugPrintStatistics(void);
+
+/***********************************************************************\
+* Name   : File_debugPrintCurrentStackTrace
+* Purpose: print C stack trace
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void File_debugPrintCurrentStackTrace(void);
+#endif /* not NDEBUG */
 
 #ifdef __cplusplus
   }
