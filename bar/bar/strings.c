@@ -1716,12 +1716,12 @@ LOCAL bool matchString(const String  string,
 #ifdef NDEBUG
 String String_new(void)
 #else /* not DEBUG */
-String __String_new(const char *fileName, ulong lineNb)
+String __String_new(const char *__fileName__, ulong __lineNb__)
 #endif /* NDEBUG */
 {
   struct __String *string;
   #ifndef NDEBUG
-    DebugStringNode *debugStringNode;;
+    DebugStringNode *debugStringNode;
     #ifdef MAX_STRINGS_CHECK
       ulong debugStringCount;
     #endif /* MAX_STRINGS_CHECK */
@@ -1764,8 +1764,8 @@ String __String_new(const char *fileName, ulong lineNb)
       debugAllocStringList.allocatedMemory += sizeof(DebugStringNode);
 
       /* init string node */
-      debugStringNode->fileName       = fileName;
-      debugStringNode->lineNb         = lineNb;
+      debugStringNode->fileName       = __fileName__;
+      debugStringNode->lineNb         = __lineNb__;
       #ifdef HAVE_BACKTRACE
         debugStringNode->stackTraceSize = backtrace(debugStringNode->stackTrace,SIZE_OF_ARRAY(debugStringNode->stackTrace));
       #endif /* HAVE_BACKTRACE */
@@ -1790,9 +1790,6 @@ String __String_new(const char *fileName, ulong lineNb)
       #endif /* MAX_STRINGS_CHECK */
     }
     pthread_mutex_unlock(&debugStringLock);
-
-    #ifdef MAX_STRINGS_CHECK
-    #endif /* MAX_STRINGS_CHECK */
   #endif /* not NDEBUG */
 
   UPDATE_VALID(string);
@@ -1803,7 +1800,7 @@ String __String_new(const char *fileName, ulong lineNb)
 #ifdef NDEBUG
 String String_newCString(const char *s)
 #else /* not NDEBUG */
-String __String_newCString(const char *fileName, ulong lineNb, const char *s)
+String __String_newCString(const char *__fileName__, ulong __lineNb__, const char *s)
 #endif /* NDEBUG */
 {
   String string;
@@ -1811,7 +1808,7 @@ String __String_newCString(const char *fileName, ulong lineNb, const char *s)
   #ifdef NDEBUG
     string = String_new();
   #else /* not DEBUG */
-    string = __String_new(fileName,lineNb);
+    string = __String_new(__fileName__,__lineNb__);
   #endif /* NDEBUG */
   String_setCString(string,s);
 
@@ -1823,7 +1820,7 @@ String __String_newCString(const char *fileName, ulong lineNb, const char *s)
 #ifdef NDEBUG
 String String_newChar(char ch)
 #else /* not NDEBUG */
-String __String_newChar(const char *fileName, ulong lineNb, char ch)
+String __String_newChar(const char *__fileName__, ulong __lineNb__, char ch)
 #endif /* NDEBUG */
 {
   String string;
@@ -1831,7 +1828,7 @@ String __String_newChar(const char *fileName, ulong lineNb, char ch)
   #ifdef NDEBUG
     string = String_new();
   #else /* not DEBUG */
-    string = __String_new(fileName,lineNb);
+    string = __String_new(__fileName__,__lineNb__);
   #endif /* NDEBUG */
   String_setChar(string,ch);
 
@@ -1843,7 +1840,7 @@ String __String_newChar(const char *fileName, ulong lineNb, char ch)
 #ifdef NDEBUG
 String String_newBuffer(const void *buffer, ulong bufferLength)
 #else /* not NDEBUG */
-String __String_newBuffer(const char *fileName, ulong lineNb, const void *buffer, ulong bufferLength)
+String __String_newBuffer(const char *__fileName__, ulong __lineNb__, const void *buffer, ulong bufferLength)
 #endif /* NDEBUG */
 {
   String string;
@@ -1851,7 +1848,7 @@ String __String_newBuffer(const char *fileName, ulong lineNb, const void *buffer
   #ifdef NDEBUG
     string = String_new();
   #else /* not DEBUG */
-    string = __String_new(fileName,lineNb);
+    string = __String_new(__fileName__,__lineNb__);
   #endif /* NDEBUG */
   String_setBuffer(string,buffer,bufferLength);
 
@@ -1863,7 +1860,7 @@ String __String_newBuffer(const char *fileName, ulong lineNb, const void *buffer
 #ifdef NDEBUG
 String String_duplicate(const String fromString)
 #else /* not NDEBUG */
-String __String_duplicate(const char *fileName, ulong lineNb, const String fromString)
+String __String_duplicate(const char *__fileName__, ulong __lineNb__, const String fromString)
 #endif /* NDEBUG */
 {
   struct __String *string;
@@ -1877,7 +1874,7 @@ String __String_duplicate(const char *fileName, ulong lineNb, const String fromS
     #ifdef NDEBUG
       string = String_new();
     #else /* not DEBUG */
-      string = __String_new(fileName,lineNb);
+      string = __String_new(__fileName__,__lineNb__);
     #endif /* NDEBUG */
     if (string == NULL)
     {
@@ -1902,7 +1899,7 @@ String __String_duplicate(const char *fileName, ulong lineNb, const String fromS
 #ifdef NDEBUG
 String String_copy(String *string, const String fromString)
 #else /* not NDEBUG */
-String __String_copy(const char *fileName, ulong lineNb, String *string, const String fromString)
+String __String_copy(const char *__fileName__, ulong __lineNb__, String *string, const String fromString)
 #endif /* NDEBUG */
 {
   CHECK_VALID(fromString);
@@ -1916,7 +1913,7 @@ String __String_copy(const char *fileName, ulong lineNb, String *string, const S
       #ifdef NDEBUG
         (*string) = String_new();
       #else /* not DEBUG */
-        (*string) = __String_new(fileName,lineNb);
+        (*string) = __String_new(__fileName__,__lineNb__);
       #endif /* NDEBUG */
       if ((*string) == NULL)
       {
@@ -1948,11 +1945,11 @@ String __String_copy(const char *fileName, ulong lineNb, String *string, const S
 #ifdef NDEBUG
 void String_delete(String string)
 #else /* not NDEBUG */
-void __String_delete(const char *fileName, ulong lineNb, String string)
+void __String_delete(const char *__fileName__, ulong __lineNb__, String string)
 #endif /* NDEBUG */
 {
   #ifndef NDEBUG
-    DebugStringNode *debugStringNode;;
+    DebugStringNode *debugStringNode;
   #endif /* not NDEBUG */
 
   #ifndef NDEBUG
@@ -1970,8 +1967,8 @@ void __String_delete(const char *fileName, ulong lineNb, String string)
       {
         fprintf(stderr,"DEBUG WARNING: multiple free of string %p at %s, %lu and previously at %s, %lu which was allocated at %s, %ld!\n",
                 string,
-                fileName,
-                lineNb,
+                __fileName__,
+                __lineNb__,
                 debugStringNode->deleteFileName,
                 debugStringNode->deleteLineNb,
                 debugStringNode->fileName,
@@ -2012,8 +2009,8 @@ void __String_delete(const char *fileName, ulong lineNb, String string)
           debugAllocStringList.allocatedMemory -= sizeof(DebugStringNode)+sizeof(struct __String)+string->maxLength;
 
           /* add to free list */
-          debugStringNode->deleteFileName = fileName;
-          debugStringNode->deleteLineNb   = lineNb;
+          debugStringNode->deleteFileName = __fileName__;
+          debugStringNode->deleteLineNb   = __lineNb__;
           #ifdef HAVE_BACKTRACE
             debugStringNode->deleteStackTraceSize = backtrace(debugStringNode->deleteStackTrace,SIZE_OF_ARRAY(debugStringNode->deleteStackTrace));
           #endif /* HAVE_BACKTRACE */
@@ -2033,8 +2030,8 @@ void __String_delete(const char *fileName, ulong lineNb, String string)
         {
           fprintf(stderr,"DEBUG WARNING: string '%s' not found in debug list at %s, line %lu\n",
                   string->data,
-                  fileName,
-                  lineNb
+                  __fileName__,
+                  __lineNb__
                  );
           #ifdef HAVE_BACKTRACE
             String_debugPrintCurrentStackTrace();
@@ -4469,7 +4466,7 @@ void String_debugDone(void)
   {
     debugMaxStringNextWarningCount = 0LL;
     List_done(&debugFreeStringList,NULL,NULL);
-    List_done(&debugFreeStringList,NULL,NULL);
+    List_done(&debugAllocStringList,NULL,NULL);
   }
   pthread_mutex_unlock(&debugStringLock);
 }
@@ -4540,7 +4537,6 @@ void String_debugPrintCurrentStackTrace(void)
     String_debugDumpStackTrace(stderr,"",0,stackTrace,stackTraceSize);
   #endif /* HAVE_BACKTRACE */
 }
-
 #endif /* not NDEBUG */
 
 #ifdef __cplusplus
