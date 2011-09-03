@@ -1375,6 +1375,7 @@ Errors Command_list(StringList                      *storageNameList,
                    )
 {
   String       storageName;
+  String       printableStorageName;
   String       storageSpecifier;
   String       archiveFileName;
   bool         printedInfoFlag;
@@ -1395,15 +1396,17 @@ remoteBarFlag=FALSE;
 
   /* init variables */
   List_init(&archiveContentList);
-  storageName      = String_new();
-  storageSpecifier = String_new();
-  archiveFileName  = String_new();
+  storageName          = String_new();
+  printableStorageName = String_new();
+  storageSpecifier     = String_new();
+  archiveFileName      = String_new();
 
   /* list archive content */
   failError = ERROR_NONE;
   while (!StringList_empty(storageNameList))
   {
     StringList_getFirst(storageNameList,storageName);
+    Storage_getPrintableName(printableStorageName,storageName);
     printedInfoFlag = FALSE;
     fileCount       = 0;
 
@@ -1429,7 +1432,7 @@ remoteBarFlag=FALSE;
           if (error != ERROR_NONE)
           {
             printError("Cannot open storage '%s' (error: %s)!\n",
-                       String_cString(storageName),
+                       String_cString(printableStorageName),
                        Errors_getText(error)
                       );
             if (failError == ERROR_NONE) failError = error;
@@ -1449,7 +1452,7 @@ remoteBarFlag=FALSE;
             if (error != ERROR_NONE)
             {
               printError("Cannot read next entry from storage '%s' (error: %s)!\n",
-                         String_cString(storageName),
+                         String_cString(printableStorageName),
                          Errors_getText(error)
                         );
               if (failError == ERROR_NONE) failError = error;
@@ -1483,7 +1486,7 @@ remoteBarFlag=FALSE;
                   if (error != ERROR_NONE)
                   {
                     printError("Cannot read 'file' content from storage '%s' (error: %s)!\n",
-                               String_cString(storageName),
+                               String_cString(printableStorageName),
                                Errors_getText(error)
                               );
                     String_delete(fileName);
@@ -1514,7 +1517,7 @@ remoteBarFlag=FALSE;
                     {
                       if (!printedInfoFlag)
                       {
-                        printHeader(storageName);
+                        printHeader(printableStorageName);
                         printedInfoFlag = TRUE;
                       }
 
@@ -1570,7 +1573,7 @@ remoteBarFlag=FALSE;
                   if (error != ERROR_NONE)
                   {
                     printError("Cannot read 'image' content from storage '%s' (error: %s)!\n",
-                               String_cString(storageName),
+                               String_cString(printableStorageName),
                                Errors_getText(error)
                               );
                     String_delete(imageName);
@@ -1601,7 +1604,7 @@ remoteBarFlag=FALSE;
                     {
                       if (!printedInfoFlag)
                       {
-                        printHeader(storageName);
+                        printHeader(printableStorageName);
                         printedInfoFlag = TRUE;
                       }
 
@@ -1651,7 +1654,7 @@ remoteBarFlag=FALSE;
                   if (error != ERROR_NONE)
                   {
                     printError("Cannot read 'directory' content from storage '%s' (error: %s)!\n",
-                               String_cString(storageName),
+                               String_cString(printableStorageName),
                                Errors_getText(error)
                               );
                     String_delete(directoryName);
@@ -1677,7 +1680,7 @@ remoteBarFlag=FALSE;
                     {
                       if (!printedInfoFlag)
                       {
-                        printHeader(storageName);
+                        printHeader(printableStorageName);
                         printedInfoFlag = TRUE;
                       }
 
@@ -1725,7 +1728,7 @@ remoteBarFlag=FALSE;
                   if (error != ERROR_NONE)
                   {
                     printError("Cannot read 'link' content from storage '%s' (error: %s)!\n",
-                               String_cString(storageName),
+                               String_cString(printableStorageName),
                                Errors_getText(error)
                               );
                     String_delete(fileName);
@@ -1752,7 +1755,7 @@ remoteBarFlag=FALSE;
                     {
                       if (!printedInfoFlag)
                       {
-                        printHeader(storageName);
+                        printHeader(printableStorageName);
                         printedInfoFlag = TRUE;
                       }
 
@@ -1806,7 +1809,7 @@ remoteBarFlag=FALSE;
                   if (error != ERROR_NONE)
                   {
                     printError("Cannot read 'hard link' content from storage '%s' (error: %s)!\n",
-                               String_cString(storageName),
+                               String_cString(printableStorageName),
                                Errors_getText(error)
                               );
                     StringList_done(&fileNameList);
@@ -1839,7 +1842,7 @@ remoteBarFlag=FALSE;
                       {
                         if (!printedInfoFlag)
                         {
-                          printHeader(storageName);
+                          printHeader(printableStorageName);
                           printedInfoFlag = TRUE;
                         }
 
@@ -1890,7 +1893,7 @@ remoteBarFlag=FALSE;
                   if (error != ERROR_NONE)
                   {
                     printError("Cannot read 'special' content from storage '%s' (error: %s)!\n",
-                               String_cString(storageName),
+                               String_cString(printableStorageName),
                                Errors_getText(error)
                               );
                     String_delete(fileName);
@@ -1918,7 +1921,7 @@ remoteBarFlag=FALSE;
                     {
                       if (!printedInfoFlag)
                       {
-                        printHeader(storageName);
+                        printHeader(printableStorageName);
                         printedInfoFlag = TRUE;
                       }
 
@@ -2148,7 +2151,7 @@ fprintf(stderr,"%s,%d: line=%s\n",__FILE__,__LINE__,String_cString(line));
                   {
                     if (!printedInfoFlag)
                     {
-                      printHeader(storageName);
+                      printHeader(printableStorageName);
                       printedInfoFlag = TRUE;
                     }
 
@@ -2199,7 +2202,7 @@ fprintf(stderr,"%s,%d: line=%s\n",__FILE__,__LINE__,String_cString(line));
                   {
                     if (!printedInfoFlag)
                     {
-                      printHeader(storageName);
+                      printHeader(printableStorageName);
                       printedInfoFlag = TRUE;
                     }
 
@@ -2246,7 +2249,7 @@ fprintf(stderr,"%s,%d: line=%s\n",__FILE__,__LINE__,String_cString(line));
                   {
                     if (!printedInfoFlag)
                     {
-                      printHeader(storageName);
+                      printHeader(printableStorageName);
                       printedInfoFlag = TRUE;
                     }
 
@@ -2297,7 +2300,7 @@ fprintf(stderr,"%s,%d: line=%s\n",__FILE__,__LINE__,String_cString(line));
                   {
                     if (!printedInfoFlag)
                     {
-                      printHeader(storageName);
+                      printHeader(printableStorageName);
                       printedInfoFlag = TRUE;
                     }
 
@@ -2377,6 +2380,7 @@ if (String_length(line)>0) fprintf(stderr,"%s,%d: error=%s\n",__FILE__,__LINE__,
   /* free resources */
   String_delete(archiveFileName);
   String_delete(storageSpecifier);
+  String_delete(printableStorageName);
   String_delete(storageName);
   List_done(&archiveContentList,(ListNodeFreeFunction)freeArchiveContentNode,NULL);
 

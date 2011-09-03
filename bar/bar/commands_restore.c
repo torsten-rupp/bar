@@ -267,7 +267,8 @@ Errors Command_restore(StringList                      *archiveNameList,
     }
 
     StringList_getFirst(archiveNameList,archiveName);
-    printInfo(0,"Restore from archive '%s':\n",String_cString(archiveName));
+    Storage_getPrintableName(printableArchiveName,archiveName);
+    printInfo(0,"Restore from archive '%s':\n",String_cString(printableArchiveName));
 
     /* open archive */
     error = Archive_open(&archiveInfo,
@@ -279,13 +280,13 @@ Errors Command_restore(StringList                      *archiveNameList,
     if (error != ERROR_NONE)
     {
       printError("Cannot open archive file '%s' (error: %s)!\n",
-                 String_cString(archiveName),
+                 String_cString(printableArchiveName),
                  Errors_getText(error)
                 );
       if (restoreInfo.failError == ERROR_NONE) restoreInfo.failError = error;
       continue;
     }
-    String_set(restoreInfo.statusInfo.storageName,archiveName);
+    String_set(restoreInfo.statusInfo.storageName,printableArchiveName);
     abortFlag = !updateStatusInfo(&restoreInfo);
 
     /* read files */
@@ -308,7 +309,7 @@ Errors Command_restore(StringList                      *archiveNameList,
       if (error != ERROR_NONE)
       {
         printError("Cannot read next entry in archive '%s' (error: %s)!\n",
-                   String_cString(archiveName),
+                   String_cString(printableArchiveName),
                    Errors_getText(error)
                   );
         if (restoreInfo.failError == ERROR_NONE) restoreInfo.failError = error;
@@ -345,7 +346,7 @@ Errors Command_restore(StringList                      *archiveNameList,
             if (error != ERROR_NONE)
             {
               printError("Cannot read 'file' content of archive '%s' (error: %s)!\n",
-                         String_cString(archiveName),
+                         String_cString(printableArchiveName),
                          Errors_getText(error)
                         );
               String_delete(fileName);
@@ -524,7 +525,7 @@ Errors Command_restore(StringList                      *archiveNameList,
                 {
                   printInfo(2,"FAIL!\n");
                   printError("Cannot read content of archive '%s' (error: %s)!\n",
-                             String_cString(archiveName),
+                             String_cString(printableArchiveName),
                              Errors_getText(error)
                             );
                   if (restoreInfo.failError == ERROR_NONE) restoreInfo.failError = error;
@@ -701,7 +702,7 @@ Errors Command_restore(StringList                      *archiveNameList,
             if (error != ERROR_NONE)
             {
               printError("Cannot read 'image' content of archive '%s' (error: %s)!\n",
-                         String_cString(archiveName),
+                         String_cString(printableArchiveName),
                          Errors_getText(error)
                         );
               String_delete(imageName);
@@ -810,7 +811,7 @@ Errors Command_restore(StringList                      *archiveNameList,
                 {
                   printInfo(2,"FAIL!\n");
                   printError("Cannot read content of archive '%s' (error: %s)!\n",
-                             String_cString(archiveName),
+                             String_cString(printableArchiveName),
                              Errors_getText(error)
                             );
                   if (restoreInfo.failError == ERROR_NONE) restoreInfo.failError = error;
@@ -920,7 +921,7 @@ Errors Command_restore(StringList                      *archiveNameList,
             if (error != ERROR_NONE)
             {
               printError("Cannot read 'directory' content of archive '%s' (error: %s)!\n",
-                         String_cString(archiveName),
+                         String_cString(printableArchiveName),
                          Errors_getText(error)
                         );
               String_delete(directoryName);
@@ -1078,7 +1079,7 @@ Errors Command_restore(StringList                      *archiveNameList,
             if (error != ERROR_NONE)
             {
               printError("Cannot read 'link' content of archive '%s' (error: %s)!\n",
-                         String_cString(archiveName),
+                         String_cString(printableArchiveName),
                          Errors_getText(error)
                         );
               String_delete(fileName);
@@ -1177,7 +1178,7 @@ Errors Command_restore(StringList                      *archiveNameList,
                 String_delete(linkName);
                 if (jobOptions->stopOnErrorFlag)
                 {
-                  restoreInfo.failError = ERROR_FILE_EXITS;
+                  restoreInfo.failError = ERRORX(FILE_EXISTS,0,String_cString(destinationFileName));
                 }
                 continue;
               }
@@ -1311,7 +1312,7 @@ Errors Command_restore(StringList                      *archiveNameList,
             if (error != ERROR_NONE)
             {
               printError("Cannot read 'hard link' content of archive '%s' (error: %s)!\n",
-                         String_cString(archiveName),
+                         String_cString(printableArchiveName),
                          Errors_getText(error)
                         );
               StringList_done(&fileNameList);
@@ -1494,7 +1495,7 @@ Errors Command_restore(StringList                      *archiveNameList,
                     {
                       printInfo(2,"FAIL!\n");
                       printError("Cannot read content of archive '%s' (error: %s)!\n",
-                                 String_cString(archiveName),
+                                 String_cString(printableArchiveName),
                                  Errors_getText(error)
                                 );
                       restoreInfo.failError = error;
@@ -1700,7 +1701,7 @@ Errors Command_restore(StringList                      *archiveNameList,
             if (error != ERROR_NONE)
             {
               printError("Cannot read 'special' content of archive '%s' (error: %s)!\n",
-                         String_cString(archiveName),
+                         String_cString(printableArchiveName),
                          Errors_getText(error)
                         );
               String_delete(fileName);
@@ -1796,7 +1797,7 @@ Errors Command_restore(StringList                      *archiveNameList,
                 String_delete(fileName);
                 if (jobOptions->stopOnErrorFlag)
                 {
-                  restoreInfo.failError = ERROR_FILE_EXITS;
+                  restoreInfo.failError = ERRORX(FILE_EXISTS,0,String_cString(destinationFileName));
                 }
                 continue;
               }
