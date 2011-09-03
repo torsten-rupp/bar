@@ -460,14 +460,14 @@ String Storage_getName(String       storageName,
 /***********************************************************************\
 * Name   : Storage_getPrintableName
 * Purpose: get printable storage name (without password)
-* Input  : storageName      - storage name variable
+* Input  : storageName - storage name variable
 * Output : string - string
 * Return : string
 * Notes  : -
 \***********************************************************************/
 
-String Storage_getPrintableName(String string,
-                                String storageName
+String Storage_getPrintableName(String       string,
+                                const String storageName
                                );
 
 /***********************************************************************\
