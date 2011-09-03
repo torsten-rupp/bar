@@ -140,20 +140,22 @@ typedef struct
 
   uint                            blockLength;                       // block length for file entry/file data (depend on used crypt algorithm)
 
-  String                          fileName;                          // storage file name
   ArchiveIOTypes                  ioType;                            // i/o type
   union
   {
     struct
     {
+      String                      fileName;                          // file name
       FileHandle                  fileHandle;                        // file handle
       bool                        openFlag;                          // TRUE iff archive file is open
     } file;
     struct
     {
+      String                      storageName;                       // storage name
       StorageFileHandle           storageFileHandle;                 // storage file handle
-    } storageFile;
+    } storage;
   };
+  String                          printableName;                     // printable file/storage name (without password)
 
   DatabaseHandle                  *databaseHandle;
   int64                           storageId;

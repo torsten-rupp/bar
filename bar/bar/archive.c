@@ -297,7 +297,12 @@ LOCAL const Password *getNextDecryptPassword(PasswordHandle *passwordHandle)
     {
       /* input password */
       Password_init(&newPassword);
-      error = passwordHandle->archiveGetCryptPasswordFunction(passwordHandle->archiveGetCryptPasswordUserData,&newPassword,passwordHandle->fileName,FALSE,FALSE);
+      error = passwordHandle->archiveGetCryptPasswordFunction(passwordHandle->archiveGetCryptPasswordUserData,
+                                                              &newPassword,
+                                                              passwordHandle->fileName,
+                                                              FALSE,
+                                                              FALSE
+                                                             );
       if (error != ERROR_NONE)
       {
         return NULL;
@@ -707,7 +712,7 @@ LOCAL Errors createArchiveFile(ArchiveInfo *archiveInfo)
   assert(!archiveInfo->file.openFlag);
 
   /* get output filename */
-  error = File_getTmpFileName(archiveInfo->fileName,NULL,tmpDirectory);
+  error = File_getTmpFileName(archiveInfo->file.fileName,NULL,tmpDirectory);
   if (error != ERROR_NONE)
   {
     return error;
@@ -715,12 +720,12 @@ LOCAL Errors createArchiveFile(ArchiveInfo *archiveInfo)
 
   /* create file */
   error = File_open(&archiveInfo->file.fileHandle,
-                    archiveInfo->fileName,
-                    FILE_OPEN_CREATE
+                    archiveInfo->file.fileName,
+                    FILE_OPENMODE_CREATE
                    );
   if (error != ERROR_NONE)
   {
-    File_delete(archiveInfo->fileName,FALSE);
+    File_delete(archiveInfo->file.fileName,FALSE);
     return error;
   }
 
@@ -729,7 +734,7 @@ LOCAL Errors createArchiveFile(ArchiveInfo *archiveInfo)
   if (error != ERROR_NONE)
   {
     File_close(&archiveInfo->file.fileHandle);
-    File_delete(archiveInfo->fileName,FALSE);
+    File_delete(archiveInfo->file.fileName,FALSE);
     return error;
   }
 
@@ -740,7 +745,7 @@ LOCAL Errors createArchiveFile(ArchiveInfo *archiveInfo)
     if (error != ERROR_NONE)
     {
       File_close(&archiveInfo->file.fileHandle);
-      File_delete(archiveInfo->fileName,FALSE);
+      File_delete(archiveInfo->file.fileName,FALSE);
       return error;
     }
   }
@@ -760,7 +765,7 @@ LOCAL Errors createArchiveFile(ArchiveInfo *archiveInfo)
     if (error != ERROR_NONE)
     {
       File_close(&archiveInfo->file.fileHandle);
-      File_delete(archiveInfo->fileName,FALSE);
+      File_delete(archiveInfo->file.fileName,FALSE);
       return error;
     }
   }
@@ -813,7 +818,7 @@ LOCAL Errors closeArchiveFile(ArchiveInfo *archiveInfo,
                                                   ? archiveInfo->databaseHandle
                                                   : NULL,
                                                 archiveInfo->storageId,
-                                                archiveInfo->fileName,
+                                                archiveInfo->file.fileName,
                                                 (archiveInfo->jobOptions->archivePartSize > 0)
                                                   ? archiveInfo->partNumber
                                                   : ARCHIVE_PART_NUMBER_NONE,
@@ -1882,8 +1887,9 @@ Errors Archive_create(ArchiveInfo                     *archiveInfo,
   archiveInfo->cryptKeyDataLength              = 0;
 
   archiveInfo->ioType                          = ARCHIVE_IO_TYPE_FILE;
-  archiveInfo->fileName                        = String_new();
+  archiveInfo->file.fileName                   = String_new();
   archiveInfo->file.openFlag                   = FALSE;
+  archiveInfo->printableName                   = String_new();
 
   archiveInfo->databaseHandle                  = databaseHandle;
   archiveInfo->storageId                       = DATABASE_ID_NONE;
@@ -1902,7 +1908,7 @@ Errors Archive_create(ArchiveInfo                     *archiveInfo,
     /* check if public key available */
     if (jobOptions->cryptPublicKeyFileName == NULL)
     {
-      String_delete(archiveInfo->fileName);
+      String_delete(archiveInfo->file.fileName);
       return ERROR_NO_PUBLIC_KEY;
     }
 
@@ -1914,7 +1920,7 @@ Errors Archive_create(ArchiveInfo                     *archiveInfo,
                              );
     if (error != ERROR_NONE)
     {
-      String_delete(archiveInfo->fileName);
+      String_delete(archiveInfo->file.fileName);
       return error;
     }
 
@@ -1942,7 +1948,7 @@ Errors Archive_create(ArchiveInfo                     *archiveInfo,
                                        );
       if (error != ERROR_NONE)
       {
-        String_delete(archiveInfo->fileName);
+        String_delete(archiveInfo->file.fileName);
         return error;
       }
       if (archiveInfo->cryptKeyDataLength < maxCryptKeyDataLength)
@@ -1998,20 +2004,21 @@ Errors Archive_open(ArchiveInfo                     *archiveInfo,
   archiveInfo->cryptKeyDataLength              = 0;
 
   archiveInfo->ioType                          = ARCHIVE_IO_TYPE_STORAGE_FILE;
-  archiveInfo->fileName                        = String_duplicate(storageName);
+  archiveInfo->storage.storageName             = String_duplicate(storageName);
+  archiveInfo->printableName                   = Storage_getPrintableName(String_new(),storageName);
 
   archiveInfo->databaseHandle                  = NULL;
   archiveInfo->storageId                       = DATABASE_ID_NONE;
 
   archiveInfo->chunkIO                         = &CHUNK_IO_STORAGE_FILE;
-  archiveInfo->chunkIOUserData                 = &archiveInfo->storageFile.storageFileHandle;
+  archiveInfo->chunkIOUserData                 = &archiveInfo->storage.storageFileHandle;
 
   archiveInfo->partNumber                      = 0;
 
   archiveInfo->pendingError                    = ERROR_NONE;
   archiveInfo->nextChunkHeaderReadFlag         = FALSE;
 
-  error = Storage_init(&archiveInfo->storageFile.storageFileHandle,
+  error = Storage_init(&archiveInfo->storage.storageFileHandle,
                        storageName,
                        jobOptions,
                        NULL,
@@ -2022,19 +2029,21 @@ Errors Archive_open(ArchiveInfo                     *archiveInfo,
                       );
   if (error != ERROR_NONE)
   {
-    String_delete(archiveInfo->fileName);
+    String_delete(archiveInfo->printableName);
+    String_delete(archiveInfo->storage.storageName);
     String_delete(fileName);
     return error;
   }
 
   /* open storage file */
-  error = Storage_open(&archiveInfo->storageFile.storageFileHandle,
+  error = Storage_open(&archiveInfo->storage.storageFileHandle,
                        fileName
                       );
   if (error != ERROR_NONE)
   {
-    Storage_done(&archiveInfo->storageFile.storageFileHandle);
-    String_delete(archiveInfo->fileName);
+    Storage_done(&archiveInfo->storage.storageFileHandle);
+    String_delete(archiveInfo->printableName);
+    String_delete(archiveInfo->storage.storageName);
     String_delete(fileName);
     return error;
   }
@@ -2058,8 +2067,8 @@ Errors Archive_close(ArchiveInfo *archiveInfo)
       }
       break;
     case ARCHIVE_IO_TYPE_STORAGE_FILE:
-      Storage_close(&archiveInfo->storageFile.storageFileHandle);
-      Storage_done(&archiveInfo->storageFile.storageFileHandle);
+      Storage_close(&archiveInfo->storage.storageFileHandle);
+      Storage_done(&archiveInfo->storage.storageFileHandle);
       break;
   }
 
@@ -2072,7 +2081,16 @@ Errors Archive_close(ArchiveInfo *archiveInfo)
   }
 
   if (archiveInfo->cryptPassword  != NULL) Password_delete(archiveInfo->cryptPassword);
-  if (archiveInfo->fileName != NULL) String_delete(archiveInfo->fileName);
+  if (archiveInfo->printableName != NULL) String_delete(archiveInfo->printableName);
+  switch (archiveInfo->ioType)
+  {
+    case ARCHIVE_IO_TYPE_FILE:
+      if (archiveInfo->file.fileName != NULL) String_delete(archiveInfo->file.fileName);
+      break;
+    case ARCHIVE_IO_TYPE_STORAGE_FILE:
+      if (archiveInfo->storage.storageName != NULL) String_delete(archiveInfo->storage.storageName);
+      break;
+  }
 
   return ERROR_NONE;
 }
@@ -2136,7 +2154,7 @@ bool Archive_eof(ArchiveInfo *archiveInfo,
           decryptedFlag = TRUE;
         }
         password = getFirstDecryptPassword(&passwordHandle,
-                                           archiveInfo->fileName,
+                                           archiveInfo->printableName,
                                            archiveInfo->jobOptions,
                                            archiveInfo->jobOptions->cryptPasswordMode,
                                            archiveInfo->archiveGetCryptPasswordFunction,
@@ -2237,7 +2255,7 @@ Errors Archive_newFileEntry(ArchiveInfo                     *archiveInfo,
   /* init crypt password */
   if ((archiveInfo->jobOptions->cryptAlgorithm != CRYPT_ALGORITHM_NONE) && (archiveInfo->cryptPassword == NULL))
   {
-    archiveInfo->cryptPassword = getCryptPassword(archiveInfo->fileName,
+    archiveInfo->cryptPassword = getCryptPassword(archiveInfo->printableName,
                                                   archiveInfo->jobOptions,
                                                   archiveInfo->jobOptions->cryptPasswordMode,
                                                   archiveInfo->archiveGetCryptPasswordFunction,
@@ -2422,7 +2440,7 @@ Errors Archive_newImageEntry(ArchiveInfo      *archiveInfo,
   /* init crypt password */
   if ((archiveInfo->jobOptions->cryptAlgorithm != CRYPT_ALGORITHM_NONE) && (archiveInfo->cryptPassword == NULL))
   {
-    archiveInfo->cryptPassword = getCryptPassword(archiveInfo->fileName,
+    archiveInfo->cryptPassword = getCryptPassword(archiveInfo->printableName,
                                                   archiveInfo->jobOptions,
                                                   archiveInfo->jobOptions->cryptPasswordMode,
                                                   archiveInfo->archiveGetCryptPasswordFunction,
@@ -2603,7 +2621,7 @@ Errors Archive_newDirectoryEntry(ArchiveInfo      *archiveInfo,
   /* init crypt password */
   if ((archiveInfo->jobOptions->cryptAlgorithm != CRYPT_ALGORITHM_NONE) && (archiveInfo->cryptPassword == NULL))
   {
-    archiveInfo->cryptPassword = getCryptPassword(archiveInfo->fileName,
+    archiveInfo->cryptPassword = getCryptPassword(archiveInfo->printableName,
                                                   archiveInfo->jobOptions,
                                                   archiveInfo->jobOptions->cryptPasswordMode,
                                                   archiveInfo->archiveGetCryptPasswordFunction,
@@ -2736,7 +2754,7 @@ Errors Archive_newLinkEntry(ArchiveInfo      *archiveInfo,
   /* init crypt password */
   if ((archiveInfo->jobOptions->cryptAlgorithm != CRYPT_ALGORITHM_NONE) && (archiveInfo->cryptPassword == NULL))
   {
-    archiveInfo->cryptPassword = getCryptPassword(archiveInfo->fileName,
+    archiveInfo->cryptPassword = getCryptPassword(archiveInfo->printableName,
                                                   archiveInfo->jobOptions,
                                                   archiveInfo->jobOptions->cryptPasswordMode,
                                                   archiveInfo->archiveGetCryptPasswordFunction,
@@ -2871,7 +2889,7 @@ Errors Archive_newHardLinkEntry(ArchiveInfo      *archiveInfo,
   /* init crypt password */
   if ((archiveInfo->jobOptions->cryptAlgorithm != CRYPT_ALGORITHM_NONE) && (archiveInfo->cryptPassword == NULL))
   {
-    archiveInfo->cryptPassword = getCryptPassword(archiveInfo->fileName,
+    archiveInfo->cryptPassword = getCryptPassword(archiveInfo->printableName,
                                                   archiveInfo->jobOptions,
                                                   archiveInfo->jobOptions->cryptPasswordMode,
                                                   archiveInfo->archiveGetCryptPasswordFunction,
@@ -3138,7 +3156,7 @@ Errors Archive_newSpecialEntry(ArchiveInfo      *archiveInfo,
   /* init crypt password */
   if ((archiveInfo->jobOptions->cryptAlgorithm != CRYPT_ALGORITHM_NONE) && (archiveInfo->cryptPassword == NULL))
   {
-    archiveInfo->cryptPassword = getCryptPassword(archiveInfo->fileName,
+    archiveInfo->cryptPassword = getCryptPassword(archiveInfo->printableName,
                                                   archiveInfo->jobOptions,
                                                   archiveInfo->jobOptions->cryptPasswordMode,
                                                   archiveInfo->archiveGetCryptPasswordFunction,
@@ -3319,7 +3337,7 @@ Errors Archive_getNextArchiveEntryType(ArchiveInfo       *archiveInfo,
           decryptedFlag = TRUE;
         }
         password = getFirstDecryptPassword(&passwordHandle,
-                                           archiveInfo->fileName,
+                                           archiveInfo->printableName,
                                            archiveInfo->jobOptions,
                                            archiveInfo->jobOptions->cryptPasswordMode,
                                            archiveInfo->archiveGetCryptPasswordFunction,
@@ -3564,7 +3582,7 @@ Errors Archive_readFileEntry(ArchiveInfo        *archiveInfo,
     else
     {
       password = getFirstDecryptPassword(&passwordHandle,
-                                         archiveInfo->fileName,
+                                         archiveInfo->printableName,
                                          archiveInfo->jobOptions,
                                          archiveInfo->jobOptions->cryptPasswordMode,
                                          archiveInfo->archiveGetCryptPasswordFunction,
@@ -3936,7 +3954,7 @@ Errors Archive_readImageEntry(ArchiveInfo        *archiveInfo,
     else
     {
       password = getFirstDecryptPassword(&passwordHandle,
-                                         archiveInfo->fileName,
+                                         archiveInfo->printableName,
                                          archiveInfo->jobOptions,
                                          archiveInfo->jobOptions->cryptPasswordMode,
                                          archiveInfo->archiveGetCryptPasswordFunction,
@@ -4271,7 +4289,7 @@ Errors Archive_readDirectoryEntry(ArchiveInfo      *archiveInfo,
     else
     {
       password = getFirstDecryptPassword(&passwordHandle,
-                                         archiveInfo->fileName,
+                                         archiveInfo->printableName,
                                          archiveInfo->jobOptions,
                                          archiveInfo->jobOptions->cryptPasswordMode,
                                          archiveInfo->archiveGetCryptPasswordFunction,
@@ -4533,7 +4551,7 @@ Errors Archive_readLinkEntry(ArchiveInfo      *archiveInfo,
     else
     {
       password = getFirstDecryptPassword(&passwordHandle,
-                                         archiveInfo->fileName,
+                                         archiveInfo->printableName,
                                          archiveInfo->jobOptions,
                                          archiveInfo->jobOptions->cryptPasswordMode,
                                          archiveInfo->archiveGetCryptPasswordFunction,
@@ -4831,7 +4849,7 @@ Errors Archive_readHardLinkEntry(ArchiveInfo        *archiveInfo,
     else
     {
       password = getFirstDecryptPassword(&passwordHandle,
-                                         archiveInfo->fileName,
+                                         archiveInfo->printableName,
                                          archiveInfo->jobOptions,
                                          archiveInfo->jobOptions->cryptPasswordMode,
                                          archiveInfo->archiveGetCryptPasswordFunction,
@@ -5229,7 +5247,7 @@ Errors Archive_readSpecialEntry(ArchiveInfo      *archiveInfo,
     else
     {
       password = getFirstDecryptPassword(&passwordHandle,
-                                         archiveInfo->fileName,
+                                         archiveInfo->printableName,
                                          archiveInfo->jobOptions,
                                          archiveInfo->jobOptions->cryptPasswordMode,
                                          archiveInfo->archiveGetCryptPasswordFunction,
