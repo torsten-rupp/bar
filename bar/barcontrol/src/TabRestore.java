@@ -2561,7 +2561,7 @@ class TabRestore
         }
         else
         {
-          Dialogs.error(shell,"Cannot remove database indizes with error state' (error: "+result[0]+")");
+          Dialogs.error(shell,"Cannot remove database indizes with error state (error: "+result[0]+")");
         }
       }
     }
@@ -2633,7 +2633,7 @@ class TabRestore
         }
         else
         {
-          Dialogs.error(shell,"Cannot refresh database indizes with error state' (error: "+result[0]+")");
+          Dialogs.error(shell,"Cannot refresh database indizes with error state (error: "+result[0]+")");
         }
       }
     }
