@@ -514,15 +514,18 @@ LOCAL Thread           indexUpdateThread;
 LOCAL ClientList       clientList;
 LOCAL Semaphore        serverStateLock;
 LOCAL ServerStates     serverState;
+LOCAL bool             createFlag;            // TRUE iff create archive in progress
+LOCAL bool             restoreFlag;           // TRUE iff restore archive in progress
 LOCAL struct
       {
         bool create;
         bool storage;
         bool restore;
         bool indexUpdate;
-      } pauseFlags;
+      } pauseFlags;                           // TRUE iff pause
 LOCAL uint64           pauseEndTimestamp;
-LOCAL bool             quitFlag;
+LOCAL bool             indexFlag;             // TRUE iff index archive in progress
+LOCAL bool             quitFlag;              // TRUE iff quit requested
 
 /****************************** Macros *********************************/
 
@@ -1733,6 +1736,7 @@ LOCAL void jobThreadCode(void)
   JobOptions   jobOptions;
   ArchiveTypes archiveType;
   StringList   archiveFileNameList;
+  int          z;
 
   /* initialize variables */
   storageName          = String_new();
@@ -1819,8 +1823,22 @@ LOCAL void jobThreadCode(void)
     switch (jobNode->jobType)
     {
       case JOB_TYPE_CREATE:
-        /* create archive */
         logMessage(LOG_TYPE_ALWAYS,"start create archive '%s'\n",String_cString(printableStorageName));
+
+        /* try to pause background index thread, do short delay to make sure network connection is possible */
+        createFlag = TRUE;
+        if (indexFlag)
+        {
+          z = 0;
+          while ((z < 5*60) && indexFlag)
+          {
+            Misc_udelay(10LL*1000LL*1000LL);
+            z += 10;
+          }
+          Misc_udelay(30LL*1000LL*1000LL);
+        }
+
+        /* create archive */
         jobNode->runningInfo.error = Command_create(String_cString(storageName),
                                                     &includeEntryList,
                                                     &excludePatternList,
@@ -1838,10 +1856,27 @@ LOCAL void jobThreadCode(void)
                                                     &pauseFlags.storage,
                                                     &jobNode->requestedAbortFlag
                                                    );
+        createFlag = FALSE;
+
         logMessage(LOG_TYPE_ALWAYS,"done create archive '%s' (error: %s)\n",String_cString(printableStorageName),Errors_getText(jobNode->runningInfo.error));
         break;
       case JOB_TYPE_RESTORE:
         logMessage(LOG_TYPE_ALWAYS,"start restore archive '%s'\n",String_cString(printableStorageName));
+
+        /* try to pause background index thread, do short delay to make sure network connection is possible */
+        restoreFlag = TRUE;
+        if (indexFlag)
+        {
+          z = 0;
+          while ((z < 5*60) && indexFlag)
+          {
+            Misc_udelay(10LL*1000LL*1000LL);
+            z += 10;
+          }
+          Misc_udelay(30LL*1000LL*1000LL);
+        }
+
+        /* restore archive */
         StringList_init(&archiveFileNameList);
         StringList_append(&archiveFileNameList,storageName);
         jobNode->runningInfo.error = Command_restore(&archiveFileNameList,
@@ -1856,6 +1891,8 @@ LOCAL void jobThreadCode(void)
                                                      &jobNode->requestedAbortFlag
                                                     );
         StringList_done(&archiveFileNameList);
+        restoreFlag = FALSE;
+
         logMessage(LOG_TYPE_ALWAYS,"done restore archive '%s' (error: %s)\n",String_cString(printableStorageName),Errors_getText(jobNode->runningInfo.error));
         break;
       #ifndef NDEBUG
@@ -2112,6 +2149,38 @@ LOCAL void freeIndexCryptPasswordNode(IndexCryptPasswordNode *indexCryptPassword
 }
 
 /***********************************************************************\
+* Name   : indexPauseCallback
+* Purpose: check if pause
+* Input  : userData - not used
+* Output : -
+* Return : TRUE on pause, FALSE otherwise
+* Notes  : -
+\***********************************************************************/
+
+LOCAL bool indexPauseCallback(void *userData)
+{
+  UNUSED_VARIABLE(userData);
+
+  return pauseFlags.indexUpdate;
+}
+
+/***********************************************************************\
+* Name   : indexAbortCallback
+* Purpose: check if abort
+* Input  : userData - not used
+* Output : -
+* Return : TRUE on quit/create/restore, FALSE otherwise
+* Notes  : -
+\***********************************************************************/
+
+LOCAL bool indexAbortCallback(void *userData)
+{
+  UNUSED_VARIABLE(userData);
+
+  return quitFlag || createFlag || restoreFlag;
+}
+
+/***********************************************************************\
 * Name   : indexThreadCode
 * Purpose: index thread entry
 * Input  : -
@@ -2194,50 +2263,6 @@ LOCAL void indexThreadCode(void)
   /* add/update index database */
   while (!quitFlag)
   {
-    // get index entry to update
-    storageId = DATABASE_ID_NONE;
-    do
-    {
-      /* get next entry */
-      error = Database_prepare(&databaseQueryHandle,
-                               indexDatabaseHandle,
-                               "SELECT id, \
-                                       name \
-                                FROM storage \
-                                WHERE state=%d \
-                                LIMIT 0,1 \
-                               ",
-                               INDEX_STATE_UPDATE_REQUESTED
-                              );
-      if (error == ERROR_NONE)
-      {
-        Database_getNextRow(&databaseQueryHandle,
-                            "%ld %S",
-                            &storageId,
-                            &storageName
-                           );
-        Database_finalize(&databaseQueryHandle);
-      }
-
-      if ((error != ERROR_NONE) || (storageId == DATABASE_ID_NONE))
-      {
-        /* sleep a short time */
-        z = 0;
-        while ((z < 60) && !quitFlag)
-        {
-          Misc_udelay(10LL*1000LL*1000LL);
-          z += 10;
-        }
-      }
-    }
-    while (   !quitFlag
-           && (storageId == DATABASE_ID_NONE)
-          );
-    if (quitFlag) break;
-    Storage_getPrintableName(printableStorageName,storageName);
-
-    plogMessage(LOG_TYPE_INDEX,"INDEX","create index #%lld for '%s'\n",storageId,String_cString(printableStorageName));
-
     // get all job crypt passwords and crypt public keys (including no password and default)
     addIndexCryptPasswordNode(&indexCryptPasswordList,NULL,NULL);
     addIndexCryptPasswordNode(&indexCryptPasswordList,globalOptions.cryptPassword,NULL);
@@ -2253,23 +2278,55 @@ LOCAL void indexThreadCode(void)
     }
     Semaphore_unlock(&jobList.lock);
 
-    // try to create index
-    LIST_ITERATE(&indexCryptPasswordList,indexCryptPasswordNode)
+    /* update index entries */
+    error = Database_prepare(&databaseQueryHandle,
+                             indexDatabaseHandle,
+                             "SELECT id, \
+                                     name \
+                              FROM storage \
+                              WHERE state=%d \
+                             ",
+                             INDEX_STATE_UPDATE_REQUESTED
+                            );
+    if (error == ERROR_NONE)
     {
-      error = Archive_updateIndex(indexDatabaseHandle,
-                                  storageId,
-                                  storageName,
-                                  indexCryptPasswordNode->cryptPassword,
-                                  indexCryptPasswordNode->cryptPrivateKeyFileName,
-                                  &pauseFlags.indexUpdate,
-                                  &quitFlag
-                                 );
-      if (quitFlag || (error == ERROR_NONE)) break;
-    }
-    if (!quitFlag)
-    {
-      if (error == ERROR_NONE)
+      storageId = DATABASE_ID_NONE;
+      while (   Database_getNextRow(&databaseQueryHandle,
+                                    "%ld %S",
+                                    &storageId,
+                                    &storageName
+                                   )
+             && (storageId != DATABASE_ID_NONE)
+             && !quitFlag
+             && !createFlag
+             && !restoreFlag
+            )
       {
+        Storage_getPrintableName(printableStorageName,storageName);
+
+        logMessage(LOG_TYPE_INDEX,"create index #%lld for '%s'\n",storageId,String_cString(printableStorageName));
+
+        // try to create index
+        LIST_ITERATE(&indexCryptPasswordList,indexCryptPasswordNode)
+        {
+          indexFlag = TRUE;
+          error = Archive_updateIndex(indexDatabaseHandle,
+                                      storageId,
+                                      storageName,
+                                      indexCryptPasswordNode->cryptPassword,
+                                      indexCryptPasswordNode->cryptPrivateKeyFileName,
+                                      indexPauseCallback,
+                                      NULL,
+                                      indexAbortCallback,
+                                      NULL
+                                     );
+          indexFlag = FALSE;
+          if (quitFlag || createFlag || restoreFlag || (error == ERROR_NONE)) break;
+        }
+        if (!quitFlag && !createFlag && !restoreFlag)
+        {
+          if (error == ERROR_NONE)
+          {
         plogMessage(LOG_TYPE_INDEX,
                     "created storage index '%s'\n",
                     String_cString(printableStorageName)
@@ -2284,9 +2341,27 @@ LOCAL void indexThreadCode(void)
                    );
       }
     }
+      }
+
+      Database_finalize(&databaseQueryHandle);
+    }
 
     /* free resources */
     List_done(&indexCryptPasswordList,(ListNodeFreeFunction)freeIndexCryptPasswordNode,NULL);
+
+    /* wait until create/restore is done */
+    while ((createFlag || restoreFlag) && !quitFlag)
+    {
+      Misc_udelay(10LL*1000LL*1000LL);
+    }
+
+    /* sleep a short time */
+    z = 0;
+    while ((z < 600) && !quitFlag)
+    {
+      Misc_udelay(10LL*1000LL*1000LL);
+      z += 10;
+    }
   }
 
   /* free resources */
@@ -6432,6 +6507,19 @@ ENTRY_TYPE_FILE,
   }
   String_delete(string);
 
+  /* try to pause background index thread, do short delay to make sure network connection is possible */
+  restoreFlag = TRUE;
+  if (indexFlag)
+  {
+    z = 0;
+    while ((z < 5*60) && indexFlag)
+    {
+      Misc_udelay(10LL*1000LL*1000LL);
+      z += 10;
+    }
+    Misc_udelay(30LL*1000LL*1000LL);
+  }
+
   /* restore */
   restoreCommandInfo.clientInfo = clientInfo;
   restoreCommandInfo.id         = id;
@@ -6447,6 +6535,7 @@ ENTRY_TYPE_FILE,
                           NULL
                          );
   sendClientResult(clientInfo,id,TRUE,error,Errors_getText(error));
+  restoreFlag = FALSE;
 
   /* free resources */
   freeJobOptions(&jobOptions);
@@ -8251,10 +8340,13 @@ Errors Server_run(uint             port,
   Semaphore_init(&serverStateLock);
   List_init(&clientList);
   serverState             = SERVER_STATE_RUNNING;
+  createFlag              = FALSE;
+  restoreFlag             = FALSE;
   pauseFlags.create       = FALSE;
   pauseFlags.restore      = FALSE;
   pauseFlags.indexUpdate  = FALSE;
   pauseEndTimestamp       = 0LL;
+  indexFlag               = FALSE;
   quitFlag                = FALSE;
 
   /* create jobs directory if necessary */
