@@ -477,6 +477,7 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
   CMD_OPTION_STRING       ("device-write-post-command",    0,  1,0,defaultDevice.writePostProcessCommand,                                                            "write device post-process command","command"                              ),
   CMD_OPTION_STRING       ("device-write-command",         0,  1,0,defaultDevice.writeCommand,                                                                       "write device command","command"                                           ),
 
+  CMD_OPTION_INTEGER64    ("volume-size",                  0,  1,1,jobOptions.volumeSize,                     0LL,MAX_LONG_LONG,COMMAND_LINE_BYTES_UNITS,            "volume size"                                                              ),
   CMD_OPTION_BOOLEAN      ("ecc",                          0,  1,1,jobOptions.errorCorrectionCodesFlag,                                                              "add error-correction codes with 'dvdisaster' tool"                        ),
   CMD_OPTION_BOOLEAN      ("always-create-image",          0,  1,1,jobOptions.alwaysCreateImageFlag,                                                                 "always create image for CD/DVD/BD/device"                                 ),
 
