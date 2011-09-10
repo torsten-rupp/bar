@@ -721,7 +721,7 @@ LOCAL Errors createArchiveFile(ArchiveInfo *archiveInfo)
   /* create file */
   error = File_open(&archiveInfo->file.fileHandle,
                     archiveInfo->file.fileName,
-                    FILE_OPENMODE_CREATE
+                    FILE_OPEN_CREATE
                    );
   if (error != ERROR_NONE)
   {
@@ -6344,6 +6344,8 @@ Errors Archive_addIndex(DatabaseHandle *databaseHandle,
                               cryptPassword,
                               cryptPrivateKeyFileName,
                               NULL,
+                              NULL,
+                              NULL,
                               NULL
                              );
   if (error != ERROR_NONE)
@@ -6355,13 +6357,15 @@ Errors Archive_addIndex(DatabaseHandle *databaseHandle,
   return ERROR_NONE;
 }
 
-Errors Archive_updateIndex(DatabaseHandle *databaseHandle,
-                           int64          storageId,
-                           const String   storageName,
-                           Password       *cryptPassword,
-                           String         cryptPrivateKeyFileName,
-                           bool           *pauseFlag,
-                           bool           *requestedAbortFlag
+Errors Archive_updateIndex(DatabaseHandle               *databaseHandle,
+                           int64                        storageId,
+                           const String                 storageName,
+                           Password                     *cryptPassword,
+                           String                       cryptPrivateKeyFileName,
+                           ArchivePauseCallbackFunction pauseCallback,
+                           void                         *pauseUserData,
+                           ArchiveAbortCallbackFunction abortCallback,
+                           void                         *abortUserData
                           )
 {
   Errors            error;
@@ -6387,14 +6391,6 @@ Errors Archive_updateIndex(DatabaseHandle *databaseHandle,
                       );
   if (error != ERROR_NONE)
   {
-    Index_setState(databaseHandle,
-                   storageId,
-                   INDEX_STATE_ERROR,
-                   0LL,
-                   "%s (error code: %d)",
-                   Errors_getText(error),
-                   Errors_getCode(error)
-                  );
     freeJobOptions(&jobOptions);
     return error;
   }
@@ -6427,12 +6423,12 @@ Errors Archive_updateIndex(DatabaseHandle *databaseHandle,
                 );
   error = ERROR_NONE;
   while (   !Archive_eof(&archiveInfo,FALSE)
-         && ((requestedAbortFlag == NULL) || !(*requestedAbortFlag))
+         && ((abortCallback == NULL) || !abortCallback(abortUserData))
          && (error == ERROR_NONE)
         )
   {
     /* pause */
-    while ((pauseFlag != NULL) && (*pauseFlag))
+    while ((pauseCallback != NULL) && pauseCallback(pauseUserData))
     {
       Misc_udelay(5000*1000);
     }
@@ -6774,7 +6770,7 @@ Errors Archive_updateIndex(DatabaseHandle *databaseHandle,
                   );
     }
   }
-  if (error == ERROR_NONE)
+  if      (error == ERROR_NONE)
   {
     Index_setState(databaseHandle,
                    storageId,
@@ -6785,14 +6781,29 @@ Errors Archive_updateIndex(DatabaseHandle *databaseHandle,
   }
   else
   {
-    Index_setState(databaseHandle,
-                   storageId,
-                   INDEX_STATE_ERROR,
-                   0LL,
-                   "%s (error code: %d)",
-                   Errors_getText(error),
-                   Errors_getCode(error)
-                  );
+    Archive_close(&archiveInfo);
+    if (Errors_getCode(error) == ERROR_NO_CRYPT_PASSWORD) 
+    {
+      Index_setState(databaseHandle,
+                     storageId,
+                     INDEX_STATE_UPDATE_REQUESTED,
+                     0LL,
+                     NULL
+                    );
+    }
+    else
+    {
+      Index_setState(databaseHandle,
+                     storageId,
+                     INDEX_STATE_ERROR,
+                     0LL,
+                     "%s (error code: %d)",
+                     Errors_getText(error),
+                     Errors_getCode(error)
+                    );
+    }
+    freeJobOptions(&jobOptions);
+    return error;
   }
 
   /* update name/size */
@@ -6838,7 +6849,7 @@ Errors Archive_remIndex(DatabaseHandle *databaseHandle,
   {
     return error;
   }
-
+  
   return ERROR_NONE;
 }
 

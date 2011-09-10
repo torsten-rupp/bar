@@ -264,6 +264,9 @@ typedef struct
   };
 } ArchiveEntryInfo;
 
+typedef bool(*ArchivePauseCallbackFunction)(void *userData);
+typedef bool(*ArchiveAbortCallbackFunction)(void *userData);
+
 /***************************** Variables *******************************/
 
 /****************************** Macros *********************************/
@@ -815,25 +818,29 @@ Errors Archive_addIndex(DatabaseHandle *databaseHandle,
 /***********************************************************************\
 * Name   : Archive_updateIndex
 * Purpose: update storage index
-* Input  : databaseHandle              - database handle
-*          storageId      - storage id
-*          storageName                 - storage name
-*          jobOptions                  - option settings
-*          archiveGetCryptPassword     - get password call back
-*          archiveGetCryptPasswordData - user data for get password call
-*                                        back
+* Input  : databaseHandle          - database handle
+*          storageId               - storage id
+*          storageName             - storage name
+*          cryptPassword           - encryption password
+*          cryptPrivateKeyFileName - encryption private key file name
+*          pauseCallback           - pause check callback (can be NULL)
+*          pauseUserData           - pause user data
+*          abortCallback           - abort check callback (can be NULL)
+*          abortUserData           - abort user data
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-Errors Archive_updateIndex(DatabaseHandle *databaseHandle,
-                           int64          storageId,
-                           const String   storageName,
-                           Password       *cryptPassword,
-                           String         cryptPrivateKeyFileName,
-                           bool           *pauseFlag,
-                           bool           *requestedAbortFlag
+Errors Archive_updateIndex(DatabaseHandle               *databaseHandle,
+                           int64                        storageId,
+                           const String                 storageName,
+                           Password                     *cryptPassword,
+                           String                       cryptPrivateKeyFileName,
+                           ArchivePauseCallbackFunction pauseCallback,
+                           void                         *pauseUserData,
+                           ArchiveAbortCallbackFunction abortCallback,
+                           void                         *abortUserData
                           );
 
 /***********************************************************************\
