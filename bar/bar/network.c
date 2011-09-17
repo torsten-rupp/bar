@@ -62,9 +62,9 @@
   LOCAL String defaultSSHPrivateKeyFileName;
 #endif /* HAVE_SSH2 */
 
-#ifdef HAVE_GNU_TLS
+#ifdef HAVE_GCRYPT
   GCRY_THREAD_OPTION_PTHREAD_IMPL;
-#endif /* HAVE_GNU_TLS */
+#endif /* HAVE_GCRYPT */
 
 /****************************** Macros *********************************/
 
@@ -92,8 +92,10 @@ Errors Network_initAll(void)
   #else /* not HAVE_SSH2 */
   #endif /* HAVE_SSH2 */
 
+  #ifdef HAVE_GCRYPT
+    gcry_control(GCRYCTL_SET_THREAD_CBS,&gcry_threads_pthread);
+  #endif /* HAVE_GCRYPT */
   #ifdef HAVE_GNU_TLS
-    gcry_control (GCRYCTL_SET_THREAD_CBS,&gcry_threads_pthread);
     gnutls_global_init();
 //gnutls_global_set_log_level(10);
 //gnutls_global_set_log_function(tlslog);
@@ -324,6 +326,25 @@ Errors Network_connect(SocketHandle *socketHandle,
           close(socketHandle->handle);
           return ERROR_SSH_SESSION_FAIL;
         }
+        if      (globalOptions.verboseLevel >= 5) libssh2_trace(socketHandle->ssh2.session,
+                                                                  LIBSSH2_TRACE_SOCKET
+                                                                | LIBSSH2_TRACE_TRANS
+                                                                | LIBSSH2_TRACE_KEX
+                                                                | LIBSSH2_TRACE_AUTH
+                                                                | LIBSSH2_TRACE_CONN
+                                                                | LIBSSH2_TRACE_SCP
+                                                                | LIBSSH2_TRACE_SFTP
+                                                                | LIBSSH2_TRACE_ERROR
+                                                                | LIBSSH2_TRACE_PUBLICKEY
+                                                               );
+        else if (globalOptions.verboseLevel >= 4) libssh2_trace(socketHandle->ssh2.session,
+                                                                  LIBSSH2_TRACE_KEX
+                                                                | LIBSSH2_TRACE_AUTH
+                                                                | LIBSSH2_TRACE_SCP
+                                                                | LIBSSH2_TRACE_SFTP
+                                                                | LIBSSH2_TRACE_ERROR
+                                                                | LIBSSH2_TRACE_PUBLICKEY
+                                                               );
         if (libssh2_session_startup(socketHandle->ssh2.session,
                                     socketHandle->handle
                                    ) != 0
@@ -811,7 +832,7 @@ Errors Network_initServer(ServerSocketHandle *serverSocketHandle,
       {
         void              *certData;
         ulong             certDataSize;
-        gnutls_datum_t    datum; 
+        gnutls_datum_t    datum;
         gnutls_x509_crt_t cert;
 
         // check if all key files exists and can be read
@@ -1231,7 +1252,7 @@ Errors Network_execute(NetworkExecuteHandle *networkExecuteHandle,
     /* disable stderr if not requested */
     if ((ioMask & NETWORK_EXECUTE_IO_MASK_STDERR) == 0) libssh2_channel_handle_extended_data(networkExecuteHandle->channel,LIBSSH2_CHANNEL_EXTENDED_DATA_IGNORE);
 
-    return ERROR_NONE;  
+    return ERROR_NONE;
   #else /* not HAVE_SSH2 */
     UNUSED_VARIABLE(networkExecuteHandle);
     UNUSED_VARIABLE(ioMask);

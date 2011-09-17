@@ -510,7 +510,7 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
 
   CMD_OPTION_BOOLEAN      ("no-default-config",            0,  1,0,globalOptions.noDefaultConfigFlag,                                                                "do not read personal config file ~/.bar/" DEFAULT_CONFIG_FILE_NAME        ),
   CMD_OPTION_BOOLEAN      ("quiet",                        0,  1,0,globalOptions.quietFlag,                                                                          "suppress any output"                                                      ),
-  CMD_OPTION_INTEGER_RANGE("verbose",                      'v',1,0,globalOptions.verboseLevel,                0,4,NULL,                                              "verbosity level"                                                          ),
+  CMD_OPTION_INTEGER_RANGE("verbose",                      'v',1,0,globalOptions.verboseLevel,                0,5,NULL,                                              "verbosity level"                                                          ),
 
   CMD_OPTION_BOOLEAN      ("version",                      0  ,0,0,versionFlag,                                                                                      "output version"                                                           ),
   CMD_OPTION_BOOLEAN      ("help",                         'h',0,0,helpFlag,                                                                                         "output this help"                                                         ),

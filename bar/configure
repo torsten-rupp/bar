@@ -2908,7 +2908,7 @@ $as_echo "fail (configure)" >&6; }
     fi
   fi
   if test $result -eq 1; then
-    (cd epm; make) 1>/dev/null 2>/dev/null
+    (cd epm; make clean; make) 1>/dev/null 2>/dev/null
     if test $? -ne 0; then
       { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (make)" >&5
 $as_echo "fail (make)" >&6; }
@@ -5637,7 +5637,7 @@ $as_echo "fail (configure)" >&6; }
     fi
   fi
   if test $result -eq 1; then
-    (cd zlib; make) 1>/dev/null 2>/dev/null
+    (cd zlib; make clean; make) 1>/dev/null 2>/dev/null
     if test $? -ne 0; then
       { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (make)" >&5
 $as_echo "fail (make)" >&6; }
@@ -5868,7 +5868,7 @@ if test $ENABLE_BZIP2 = "yes"; then
 
     result=1
     if test $result -eq 1; then
-      (cd bzip2; make) 1>/dev/null 2>/dev/null
+      (cd bzip2; make clean; make) 1>/dev/null 2>/dev/null
       if test $? -ne 0; then
         { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (make)" >&5
 $as_echo "fail (make)" >&6; }
@@ -6108,7 +6108,7 @@ $as_echo "fail (configure)" >&6; }
       fi
     fi
     if test $result -eq 1; then
-      (cd xz; make) 1>/dev/null 2>/dev/null
+      (cd xz; make clean; make) 1>/dev/null 2>/dev/null
       if test $? -ne 0; then
         { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (make)" >&5
 $as_echo "fail (make)" >&6; }
@@ -6362,7 +6362,7 @@ $as_echo "fail (configure)" >&6; }
       fi
     fi
     if test $result1 -eq 1; then
-      (cd libgpg-error; make) 1>/dev/null 2>/dev/null
+      (cd libgpg-error; make clean; make) 1>/dev/null 2>/dev/null
       if test $? -ne 0; then
         { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (configure)" >&5
 $as_echo "fail (configure)" >&6; }
@@ -6395,7 +6395,7 @@ $as_echo "fail (configure)" >&6; }
       fi
     fi
     if test $result2 -eq 1; then
-      (cd libgcrypt; make) 1>/dev/null 2>/dev/null
+      (cd libgcrypt; make clean; make) 1>/dev/null 2>/dev/null
       if test $? -ne 0; then
         { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (make)" >&5
 $as_echo "fail (make)" >&6; }
@@ -6832,9 +6832,10 @@ if test $ENABLE_FTP = "yes"; then
       (cd packages/ftplib-3.1; patch --batch -N -p1 <$cwd/misc/ftplib-3.1-without-perror.patch) 1>/dev/null 2>/dev/null
       (cd packages/ftplib-3.1; patch --batch -N -p1 <$cwd/misc/ftplib-3.1-ftpaccess.patch) 1>/dev/null 2>/dev/null
       (cd packages/ftplib-3.1; patch --batch -N -p1 <$cwd/misc/ftplib-3.1-receive-timeout.patch) 1>/dev/null 2>/dev/null
+      (cd packages/ftplib-3.1; patch --batch -N -p1 <$cwd/misc/ftplib-3.1-ftpdir-file-close.patch) 1>/dev/null 2>/dev/null
     fi
     if test $result -eq 1; then
-      (cd ftplib/linux; make) 1>/dev/null 2>/dev/null
+      (cd ftplib/linux; make clean; make) 1>/dev/null 2>/dev/null
       if test $? -ne 0; then
         { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (make)" >&5
 $as_echo "fail (make)" >&6; }
@@ -7069,7 +7070,7 @@ if test $ENABLE_SSH = "yes"; then
       (cd packages; patch --batch -N -p0 <$cwd/misc/libssh2-1.1-keepalive.patch) 1>/dev/null 2>/dev/null
     fi
     if test $result -eq 1; then
-      (cd libssh2; ./configure --prefix=$cwd/packages) 1>/dev/null 2>/dev/null
+      (cd libssh2; ./configure --prefix=$cwd/packages --enable-debug) 1>/dev/null 2>/dev/null
       if test $? -ne 0; then
         { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (configure)" >&5
 $as_echo "fail (configure)" >&6; }
@@ -7077,7 +7078,7 @@ $as_echo "fail (configure)" >&6; }
       fi
     fi
     if test $result -eq 1; then
-      (cd libssh2; make) 1>/dev/null 2>/dev/null
+      (cd libssh2; make clean; make) 1>/dev/null 2>/dev/null
       if test $? -ne 0; then
         { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (make)" >&5
 $as_echo "fail (make)" >&6; }
@@ -7504,7 +7505,7 @@ $as_echo "fail (configure)" >&6; }
       fi
     fi
     if test $result -eq 1; then
-      (cd gnutls; make) 1>/dev/null 2>/dev/null
+      (cd gnutls; make clean; make) 1>/dev/null 2>/dev/null
       if test $? -ne 0; then
         { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (make)" >&5
 $as_echo "fail (make)" >&6; }
