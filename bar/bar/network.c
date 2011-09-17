@@ -326,7 +326,7 @@ Errors Network_connect(SocketHandle *socketHandle,
           close(socketHandle->handle);
           return ERROR_SSH_SESSION_FAIL;
         }
-        if      (globalOptions.verboseLevel >= 5) libssh2_trace(socketHandle->ssh2.session,
+        if      (globalOptions.verboseLevel >= 6) libssh2_trace(socketHandle->ssh2.session,
                                                                   LIBSSH2_TRACE_SOCKET
                                                                 | LIBSSH2_TRACE_TRANS
                                                                 | LIBSSH2_TRACE_KEX
@@ -337,7 +337,7 @@ Errors Network_connect(SocketHandle *socketHandle,
                                                                 | LIBSSH2_TRACE_ERROR
                                                                 | LIBSSH2_TRACE_PUBLICKEY
                                                                );
-        else if (globalOptions.verboseLevel >= 4) libssh2_trace(socketHandle->ssh2.session,
+        else if (globalOptions.verboseLevel >= 5) libssh2_trace(socketHandle->ssh2.session,
                                                                   LIBSSH2_TRACE_KEX
                                                                 | LIBSSH2_TRACE_AUTH
                                                                 | LIBSSH2_TRACE_SCP
