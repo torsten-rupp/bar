@@ -1449,6 +1449,7 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
   storageType = Storage_parseName(storageName,storageSpecifier,fileName);
   if (String_empty(fileName))
   {
+    String_delete(storageSpecifier);
     return ERROR_NO_FILE_NAME;
   }
   switch (storageType)
