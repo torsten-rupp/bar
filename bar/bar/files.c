@@ -2246,7 +2246,7 @@ void File_debugDumpInfo(FILE *handle)
   {
     for (debugFileNode = debugOpenFileList.head; debugFileNode != NULL; debugFileNode = debugFileNode->next)
     {
-      fprintf(stderr,"DEBUG: file %p opened at %s, line %lu\n",
+      fprintf(handle,"DEBUG: file %p opened at %s, line %lu\n",
               debugFileNode->file,
               debugFileNode->fileName,
               debugFileNode->lineNb
