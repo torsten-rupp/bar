@@ -1321,6 +1321,7 @@ class TabRestore
             widgetStorageListToolTip = null;
           }
 
+          // show if table item available and mouse is in the left side
           if ((tableItem != null) && (mouseEvent.x < 64))
           {
             StorageData storageData = (StorageData)tableItem.getData();
@@ -2780,7 +2781,7 @@ class TabRestore
             }
             else
             {
-              busyDialog.updateText("Aborting...");
+              busyDialog.updateText("Aborting\u2026");
               command.abort();
               break;
             }
@@ -3143,7 +3144,7 @@ class TabRestore
             }
             else
             {
-              busyDialog.updateText("Aborting...");
+              busyDialog.updateText("Aborting\u2026");
               command.abort();
               break;
             }

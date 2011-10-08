@@ -1179,7 +1179,7 @@ public class BARControl
 
     menu = Widgets.addMenu(menuBar,"Program");
     {
-      menuItem = Widgets.addMenuItem(menu,"Start",SWT.CTRL+'S');
+      menuItem = Widgets.addMenuItem(menu,"Start\u2026",SWT.CTRL+'S');
       menuItem.addSelectionListener(new SelectionListener()
       {
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -1192,7 +1192,7 @@ public class BARControl
         }
       });
 
-      menuItem = Widgets.addMenuItem(menu,"Abort",SWT.CTRL+'A');
+      menuItem = Widgets.addMenuItem(menu,"Abort\u2026",SWT.CTRL+'A');
       menuItem.addSelectionListener(new SelectionListener()
       {
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -1217,7 +1217,6 @@ public class BARControl
           {
             MenuItem widget = (MenuItem)selectionEvent.widget;
             tabStatus.jobPause(10*60);
-  //          Widgets.notify(tabStatus.widgetButtonPause);
           }
         });
 
@@ -1231,7 +1230,6 @@ public class BARControl
           {
             MenuItem widget = (MenuItem)selectionEvent.widget;
             tabStatus.jobPause(60*60);
-  //          Widgets.notify(tabStatus.widgetButtonPause);
           }
         });
 
@@ -1336,7 +1334,7 @@ public class BARControl
 
     menu = Widgets.addMenu(menuBar,"Help");
     {
-      menuItem = Widgets.addMenuItem(menu,"About");
+      menuItem = Widgets.addMenuItem(menu,"About\u2026");
       menuItem.addSelectionListener(new SelectionListener()
       {
         public void widgetDefaultSelected(SelectionEvent selectionEvent)

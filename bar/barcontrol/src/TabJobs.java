@@ -1161,6 +1161,7 @@ class TabJobs
   private TabFolder    widgetTabFolder;
   private Combo        widgetJobList;
   private Tree         widgetFileTree;
+  private Shell        widgetFileTreeToolTip = null;
   private Tree         widgetDeviceTree;
   private Table        widgetIncludeTable;
   private List         widgetExcludeList;
@@ -1221,21 +1222,21 @@ class TabJobs
    */
   TabJobs(TabFolder parentTabFolder, int accelerator)
   {
-    Display     display;
-    Composite   tab;
-    Menu        menu;
-    MenuItem    menuItem;
-    Group       group;
-    Composite   composite,subComposite,subSubComposite;
-    Label       label;
-    Button      button;
-    Combo       combo;
-    TreeColumn  treeColumn;
-    TreeItem    treeItem;
-    Control     control;
-    Text        text;
-    Spinner     spinner;
-    TableColumn tableColumn;
+    final Display display;
+    Composite     tab;
+    Menu          menu;
+    MenuItem      menuItem;
+    Group         group;
+    Composite     composite,subComposite,subSubComposite;
+    Label         label;
+    Button        button;
+    Combo         combo;
+    TreeColumn    treeColumn;
+    TreeItem      treeItem;
+    Control       control;
+    Text          text;
+    Spinner       spinner;
+    TableColumn   tableColumn;
 
     // get shell, display
     shell = parentTabFolder.getShell();
@@ -1303,7 +1304,7 @@ class TabJobs
       });
       widgetJobList.setToolTipText("Existing job entries.");
 
-      button = Widgets.newButton(composite,"New");
+      button = Widgets.newButton(composite,"New\u2026");
       Widgets.layout(button,0,2,TableLayoutData.DEFAULT);
       button.addSelectionListener(new SelectionListener()
       {
@@ -1318,7 +1319,7 @@ class TabJobs
       });
       button.setToolTipText("Create new job entry.");
 
-      button = Widgets.newButton(composite,"Copy");
+      button = Widgets.newButton(composite,"Copy\u2026");
       button.setEnabled(false);
       Widgets.layout(button,0,3,TableLayoutData.DEFAULT);
       Widgets.addEventListener(new WidgetEventListener(button,selectJobEvent)
@@ -1344,7 +1345,7 @@ class TabJobs
       });
       button.setToolTipText("Copy an existing job entry and create a new one.");
 
-      button = Widgets.newButton(composite,"Rename");
+      button = Widgets.newButton(composite,"Rename\u2026");
       button.setEnabled(false);
       Widgets.layout(button,0,4,TableLayoutData.DEFAULT);
       Widgets.addEventListener(new WidgetEventListener(button,selectJobEvent)
@@ -1370,7 +1371,7 @@ class TabJobs
       });
       button.setToolTipText("Rename a job entry.");
 
-      button = Widgets.newButton(composite,"Delete");
+      button = Widgets.newButton(composite,"Delete\u2026");
       button.setEnabled(false);
       Widgets.layout(button,0,5,TableLayoutData.DEFAULT);
       Widgets.addEventListener(new WidgetEventListener(button,selectJobEvent)
@@ -1436,6 +1437,68 @@ class TabJobs
         treeColumn = Widgets.addTreeColumn(widgetFileTree,"Modified",SWT.LEFT, 100,true);
         treeColumn.addSelectionListener(fileTreeColumnSelectionListener);
         treeColumn.setToolTipText("Click to sort for modified time.");
+
+        widgetFileTree.addMouseTrackListener(new MouseTrackListener()
+        {
+          public void mouseEnter(MouseEvent mouseEvent)
+          {
+          }
+
+          public void mouseExit(MouseEvent mouseEvent)
+          {
+          }
+
+          public void mouseHover(MouseEvent mouseEvent)
+          {
+            Tree tree = (Tree)mouseEvent.widget;
+
+            if (widgetFileTreeToolTip != null)
+            {
+              widgetFileTreeToolTip.dispose();
+              widgetFileTreeToolTip = null;
+            }
+
+            // show if table item available and mouse is in the left side
+            if (mouseEvent.x < 64)
+            {
+              Label       label;
+
+              final Color COLOR_FORGROUND  = display.getSystemColor(SWT.COLOR_INFO_FOREGROUND);
+              final Color COLOR_BACKGROUND = display.getSystemColor(SWT.COLOR_INFO_BACKGROUND);
+
+              widgetFileTreeToolTip = new Shell(shell,SWT.ON_TOP|SWT.NO_FOCUS|SWT.TOOL);
+              widgetFileTreeToolTip.setBackground(COLOR_BACKGROUND);
+              widgetFileTreeToolTip.setLayout(new TableLayout(1.0,new double[]{0.0,1.0},2));
+              Widgets.layout(widgetFileTreeToolTip,0,0,TableLayoutData.NSWE);
+              widgetFileTreeToolTip.addMouseTrackListener(new MouseTrackListener()
+              {
+                public void mouseEnter(MouseEvent mouseEvent)
+                {
+                }
+
+                public void mouseExit(MouseEvent mouseEvent)
+                {
+                  widgetFileTreeToolTip.dispose();
+                  widgetFileTreeToolTip = null;
+                }
+
+                public void mouseHover(MouseEvent mouseEvent)
+                {
+                }
+              });
+
+              label = Widgets.newLabel(widgetFileTreeToolTip,"Tree representation of files, directories, links and special entries.\nDouble-click to open sub-directories, right-click to open context menu.\nNote size column: numbers in red color indicates size update is still in progress.");
+              label.setForeground(COLOR_FORGROUND);
+              label.setBackground(COLOR_BACKGROUND);
+              Widgets.layout(label,0,0,TableLayoutData.W);
+
+              Point size = widgetFileTreeToolTip.computeSize(SWT.DEFAULT,SWT.DEFAULT);
+              Point point = tree.toDisplay(mouseEvent.x+16,mouseEvent.y);
+              widgetFileTreeToolTip.setBounds(point.x,point.y,size.x,size.y);
+              widgetFileTreeToolTip.setVisible(true);
+            }
+          }
+        });
 
         menu = Widgets.newPopupMenu(shell);
         {
@@ -1582,7 +1645,7 @@ class TabJobs
           });
         }
         widgetFileTree.setMenu(menu);
-        widgetFileTree.setToolTipText("Tree representation of files, directories, links and special entries.\nDouble-click to open sub-directories, right-click to open context menu.\nNote size column: numbers in red color indicates size update is still in progress.");
+//        widgetFileTree.setToolTipText("Tree representation of files, directories, links and special entries.\nDouble-click to open sub-directories, right-click to open context menu.\nNote size column: numbers in red color indicates size update is still in progress.");
 
         // buttons
         composite = Widgets.newComposite(tab,SWT.NONE,4);
@@ -1894,7 +1957,7 @@ class TabJobs
 
         menu = Widgets.newPopupMenu(shell);
         {
-          menuItem = Widgets.addMenuItem(menu,"Add...");
+          menuItem = Widgets.addMenuItem(menu,"Add\u2026");
           menuItem.addSelectionListener(new SelectionListener()
           {
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -1933,7 +1996,7 @@ class TabJobs
         composite = Widgets.newComposite(tab,SWT.NONE,4);
         Widgets.layout(composite,1,1,TableLayoutData.W);
         {
-          button = Widgets.newButton(composite,"Add");
+          button = Widgets.newButton(composite,"Add\u2026");
           Widgets.layout(button,0,0,TableLayoutData.DEFAULT,0,0,0,0,60,SWT.DEFAULT);
           button.addSelectionListener(new SelectionListener()
           {
@@ -1977,7 +2040,7 @@ class TabJobs
         Widgets.layout(widgetExcludeList,2,1,TableLayoutData.NSWE);
         menu = Widgets.newPopupMenu(shell);
         {
-          menuItem = Widgets.addMenuItem(menu,"Add...");
+          menuItem = Widgets.addMenuItem(menu,"Add\u2026");
           menuItem.addSelectionListener(new SelectionListener()
           {
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -2016,7 +2079,7 @@ class TabJobs
         composite = Widgets.newComposite(tab,SWT.NONE,4);
         Widgets.layout(composite,3,1,TableLayoutData.W);
         {
-          button = Widgets.newButton(composite,"Add");
+          button = Widgets.newButton(composite,"Add\u2026");
           Widgets.layout(button,0,0,TableLayoutData.DEFAULT,0,0,0,0,60,SWT.DEFAULT);
           button.addSelectionListener(new SelectionListener()
           {
@@ -2329,7 +2392,7 @@ class TabJobs
           });
           menu = Widgets.newPopupMenu(shell);
           {
-            menuItem = Widgets.addMenuItem(menu,"Add...");
+            menuItem = Widgets.addMenuItem(menu,"Add\u2026");
             menuItem.addSelectionListener(new SelectionListener()
             {
               public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -2439,7 +2502,7 @@ class TabJobs
           subComposite = Widgets.newComposite(composite,SWT.NONE,4);
           Widgets.layout(subComposite,1,0,TableLayoutData.W);
           {
-            button = Widgets.newButton(subComposite,"Add");
+            button = Widgets.newButton(subComposite,"Add\u2026");
             Widgets.layout(button,0,0,TableLayoutData.DEFAULT,0,0,0,0,60,SWT.DEFAULT);
             Widgets.addModifyListener(new WidgetModifyListener(button,compressAlgorithm)
             {
@@ -4593,7 +4656,7 @@ class TabJobs
 
         menu = Widgets.newPopupMenu(shell);
         {
-          menuItem = Widgets.addMenuItem(menu,"Add...");
+          menuItem = Widgets.addMenuItem(menu,"Add\u2026");
           menuItem.addSelectionListener(new SelectionListener()
           {
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -4606,7 +4669,7 @@ class TabJobs
             }
           });
 
-          menuItem = Widgets.addMenuItem(menu,"Edit...");
+          menuItem = Widgets.addMenuItem(menu,"Edit\u2026");
           menuItem.addSelectionListener(new SelectionListener()
           {
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -4619,7 +4682,20 @@ class TabJobs
             }
           });
 
-          menuItem = Widgets.addMenuItem(menu,"Remove");
+          menuItem = Widgets.addMenuItem(menu,"Copy\u2026");
+          menuItem.addSelectionListener(new SelectionListener()
+          {
+            public void widgetDefaultSelected(SelectionEvent selectionEvent)
+            {
+            }
+            public void widgetSelected(SelectionEvent selectionEvent)
+            {
+              MenuItem widget = (MenuItem)selectionEvent.widget;
+              scheduleCopy();
+            }
+          });
+
+          menuItem = Widgets.addMenuItem(menu,"Remove\u2026");
           menuItem.addSelectionListener(new SelectionListener()
           {
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -4639,7 +4715,7 @@ class TabJobs
         composite = Widgets.newComposite(tab,SWT.NONE,4);
         Widgets.layout(composite,1,0,TableLayoutData.WE);
         {
-          button = Widgets.newButton(composite,"Add");
+          button = Widgets.newButton(composite,"Add\u2026");
           Widgets.layout(button,0,0,TableLayoutData.DEFAULT,0,0,0,0,60,SWT.DEFAULT);
           button.addSelectionListener(new SelectionListener()
           {
@@ -4654,7 +4730,7 @@ class TabJobs
           });
           button.setToolTipText("Add new schedule entry.");
 
-          button = Widgets.newButton(composite,"Edit");
+          button = Widgets.newButton(composite,"Edit\u2026");
           Widgets.layout(button,0,1,TableLayoutData.DEFAULT,0,0,0,0,60,SWT.DEFAULT);
           button.addSelectionListener(new SelectionListener()
           {
@@ -4669,8 +4745,8 @@ class TabJobs
           });
           button.setToolTipText("Edit schedule entry.");
 
-          button = Widgets.newButton(composite,"Copy");
-          Widgets.layout(button,0,1,TableLayoutData.DEFAULT,0,0,0,0,60,SWT.DEFAULT);
+          button = Widgets.newButton(composite,"Copy\u2026");
+          Widgets.layout(button,0,2,TableLayoutData.DEFAULT,0,0,0,0,60,SWT.DEFAULT);
           button.addSelectionListener(new SelectionListener()
           {
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -4684,8 +4760,8 @@ class TabJobs
           });
           button.setToolTipText("Copy schedule entry.");
 
-          button = Widgets.newButton(composite,"Remove");
-          Widgets.layout(button,0,2,TableLayoutData.DEFAULT,0,0,0,0,60,SWT.DEFAULT);
+          button = Widgets.newButton(composite,"Remove\u2026");
+          Widgets.layout(button,0,3,TableLayoutData.DEFAULT,0,0,0,0,60,SWT.DEFAULT);
           button.addSelectionListener(new SelectionListener()
           {
             public void widgetDefaultSelected(SelectionEvent selectionEvent)

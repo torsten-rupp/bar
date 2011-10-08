@@ -437,7 +437,7 @@ class TabStatus
 
     menu = Widgets.newPopupMenu(shell);
     {
-      menuItem = Widgets.addMenuItem(menu,"Start");
+      menuItem = Widgets.addMenuItem(menu,"Start\u2026");
       menuItem.addSelectionListener(new SelectionListener()
       {
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -450,7 +450,7 @@ class TabStatus
         }
       });
 
-      menuItem = Widgets.addMenuItem(menu,"Abort");
+      menuItem = Widgets.addMenuItem(menu,"Abort\u2026");
       menuItem.addSelectionListener(new SelectionListener()
       {
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -875,7 +875,7 @@ class TabStatus
     composite.setLayout(new TableLayout(null,new double[]{0.0,0.0,0.0,0.0,1.0}));
     Widgets.layout(composite,2,0,TableLayoutData.WE);
     {
-      widgetButtonStart = Widgets.newButton(composite,null,"Start");
+      widgetButtonStart = Widgets.newButton(composite,null,"Start\u2026");
       Widgets.layout(widgetButtonStart,0,0,TableLayoutData.W,0,0,0,0,60,SWT.DEFAULT);
       widgetButtonStart.setEnabled(false);
       widgetButtonStart.addSelectionListener(new SelectionListener()
@@ -891,7 +891,7 @@ class TabStatus
       });
       widgetButtonStart.setToolTipText("Start selected job.");
 
-      widgetButtonAbort = Widgets.newButton(composite,null,"Abort");
+      widgetButtonAbort = Widgets.newButton(composite,null,"Abort\u2026");
       Widgets.layout(widgetButtonAbort,0,1,TableLayoutData.W,0,0,0,0,60,SWT.DEFAULT);
       widgetButtonAbort.setEnabled(false);
       widgetButtonAbort.addSelectionListener(new SelectionListener()
