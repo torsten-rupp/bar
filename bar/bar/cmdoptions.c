@@ -88,9 +88,10 @@ LOCAL bool processOption(const CommandLineOption *commandLineOption,
           if (errorOutputHandle != NULL)
           {
             fprintf(errorOutputHandle,
-                    "%sValue is not a number '%s'!\n",
+                    "%sValue '%s' for option '%s' is not a number!\n",
                     (errorPrefix != NULL)?errorPrefix:"",
-                    value
+                    value,
+                    name
                    );
           }
           return FALSE;
@@ -183,9 +184,10 @@ LOCAL bool processOption(const CommandLineOption *commandLineOption,
           if (errorOutputHandle != NULL)
           {
             fprintf(errorOutputHandle,
-                    "%sValue is not a number '%s'!\n",
+                    "%sValue '%s' for option '%s' is not a number!\n",
                     (errorPrefix != NULL)?errorPrefix:"",
-                    value
+                    value,
+                    name
                    );
           }
           return FALSE;
@@ -277,9 +279,10 @@ LOCAL bool processOption(const CommandLineOption *commandLineOption,
           if (errorOutputHandle != NULL)
           {
             fprintf(errorOutputHandle,
-                    "%sValue is not a number '%s'!\n",
+                    "%sValue '%s' for option '%s' is not a number!\n",
                     (errorPrefix != NULL)?errorPrefix:"",
-                    value
+                    value,
+                    name
                    );
           }
           return FALSE;
