@@ -74,7 +74,7 @@ LOCAL bool processOption(const CommandLineOption *commandLineOption,
         i = strlen(value);
         if (i > 0)
         {
-          while ((i > 1) && !isdigit(value[i-1])) { i--; }
+          while ((i > 0) && !isdigit(value[i-1])) { i--; }
           n = MIN(i,              sizeof(number)-1); strncpy(number,&value[0],n); number[n] = '\0';
           n = MIN(strlen(value)-i,sizeof(unit)  -1); strncpy(unit,  &value[i],n); unit[n]   = '\0';
         }
@@ -83,8 +83,20 @@ LOCAL bool processOption(const CommandLineOption *commandLineOption,
           number[0] = '\0';
           unit[0]   = '\0';
         }
+        if (number[0] == '\0')
+        {
+          if (errorOutputHandle != NULL)
+          {
+            fprintf(errorOutputHandle,
+                    "%sValue is not a number '%s'!\n",
+                    (errorPrefix != NULL)?errorPrefix:"",
+                    value
+                   );
+          }
+          return FALSE;
+        }
 
-        /* find factor */
+        /* find unit factor */
         if (unit[0] != '\0')
         {
           if (commandLineOption->integerOption.units != NULL)
@@ -157,7 +169,7 @@ LOCAL bool processOption(const CommandLineOption *commandLineOption,
         i = strlen(value);
         if (i > 0)
         {
-          while ((i > 1) && !isdigit(value[i-1])) { i--; }
+          while ((i > 0) && !isdigit(value[i-1])) { i--; }
           n = MIN(i,              sizeof(number)-1); strncpy(number,&value[0],n); number[n] = '\0';
           n = MIN(strlen(value)-i,sizeof(unit)  -1); strncpy(unit,  &value[i],n); unit[n]   = '\0';
         }
@@ -166,8 +178,20 @@ LOCAL bool processOption(const CommandLineOption *commandLineOption,
           number[0] = '\0';
           unit[0]   = '\0';
         }
+        if (number[0] == '\0')
+        {
+          if (errorOutputHandle != NULL)
+          {
+            fprintf(errorOutputHandle,
+                    "%sValue is not a number '%s'!\n",
+                    (errorPrefix != NULL)?errorPrefix:"",
+                    value
+                   );
+          }
+          return FALSE;
+        }
 
-        /* find factor */
+        /* find unit factor */
         if (unit[0] != '\0')
         {
           if (commandLineOption->integer64Option.units != NULL)
@@ -239,7 +263,7 @@ LOCAL bool processOption(const CommandLineOption *commandLineOption,
         i = strlen(value);
         if (i > 0)
         {
-          while ((i > 1) && !isdigit(value[i-1])) { i--; }
+          while ((i > 0) && !isdigit(value[i-1])) { i--; }
           n = MIN(i,              sizeof(number)-1); strncpy(number,&value[0],n); number[n] = '\0';
           n = MIN(strlen(value)-i,sizeof(unit)  -1); strncpy(unit,  &value[i],n); unit[n]   = '\0';
         }
@@ -248,8 +272,20 @@ LOCAL bool processOption(const CommandLineOption *commandLineOption,
           number[0] = '\0';
           unit[0]   = '\0';
         }
+        if (number[0] == '\0')
+        {
+          if (errorOutputHandle != NULL)
+          {
+            fprintf(errorOutputHandle,
+                    "%sValue is not a number '%s'!\n",
+                    (errorPrefix != NULL)?errorPrefix:"",
+                    value
+                   );
+          }
+          return FALSE;
+        }
 
-        /* find factor */
+        /* find unit factor */
         if (unit[0] != '\0')
         {
           if (commandLineOption->doubleOption.units != NULL)
