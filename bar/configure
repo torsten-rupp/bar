@@ -8067,6 +8067,13 @@ $as_echo "#define HAVE_SSH2_KEEPALIVE_SEND 1" >>confdefs.h
 
 fi
 
+ac_fn_c_check_func "$LINENO" "libssh2_scp_send64" "ac_cv_func_libssh2_scp_send64"
+if test "x$ac_cv_func_libssh2_scp_send64" = x""yes; then :
+
+$as_echo "#define HAVE_SSH2_SCP_SEND64 1" >>confdefs.h
+
+fi
+
 ac_fn_c_check_func "$LINENO" "libssh2_sftp_seek2" "ac_cv_func_libssh2_sftp_seek2"
 if test "x$ac_cv_func_libssh2_sftp_seek2" = x""yes; then :
 
