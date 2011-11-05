@@ -881,6 +881,7 @@ LOCAL void output(FILE *file, bool saveRestoreFlag, const String string)
 
 LOCAL bool readConfigFile(const String fileName, bool printInfoFlag)
 {
+  FileInfo   fileInfo;
   Errors     error;
   FileHandle fileHandle;
   bool       failFlag;
@@ -890,6 +891,26 @@ LOCAL bool readConfigFile(const String fileName, bool printInfoFlag)
   long       nextIndex;
 
   assert(fileName != NULL);
+
+  /* check file permissions */
+  error = File_getFileInfo(&fileInfo,fileName);
+  if (error == ERROR_NONE)
+  {
+    if ((fileInfo.permission & (FILE_PERMISSION_GROUP_READ|FILE_PERMISSION_OTHER_READ)) != 0)
+    {
+      printWarning("Config file '%s' has wrong file permission %03o. Please make sure read permissions are limited to file owner (mode 600).\n",
+                   String_cString(fileName),
+                   fileInfo.permission & FILE_PERMISSION_MASK
+                  );
+    }
+  }
+  else
+  {
+    printWarning("Cannot get file info for config file '%s' (error: %s)\n",
+                 String_cString(fileName),
+                 Errors_getText(error)
+                );
+  }
 
   /* open file */
   error = File_open(&fileHandle,fileName,FILE_OPEN_READ);
@@ -3488,6 +3509,8 @@ int main(int argc, const char *argv[])
   if (!initAll())
   {
     #ifndef NDEBUG
+      File_debugPrintInfo();
+      File_debugDone();
       Array_debugPrintInfo();
       Array_debugDone();
       String_debugPrintInfo();
@@ -3508,6 +3531,8 @@ int main(int argc, const char *argv[])
   {
     doneAll();
     #ifndef NDEBUG
+      File_debugPrintInfo();
+      File_debugDone();
       Array_debugPrintInfo();
       Array_debugDone();
       String_debugPrintInfo();
@@ -3551,6 +3576,8 @@ int main(int argc, const char *argv[])
       String_delete(fileName);
       doneAll();
       #ifndef NDEBUG
+        File_debugPrintInfo();
+        File_debugDone();
         Array_debugPrintInfo();
         Array_debugDone();
         String_debugPrintInfo();
@@ -3594,6 +3621,8 @@ int main(int argc, const char *argv[])
   {
     doneAll();
     #ifndef NDEBUG
+      File_debugPrintInfo();
+      File_debugDone();
       Array_debugPrintInfo();
       Array_debugDone();
       String_debugPrintInfo();
@@ -3614,6 +3643,8 @@ int main(int argc, const char *argv[])
 
     doneAll();
     #ifndef NDEBUG
+      File_debugPrintInfo();
+      File_debugDone();
       Array_debugPrintInfo();
       Array_debugDone();
       String_debugPrintInfo();
@@ -3630,6 +3661,8 @@ int main(int argc, const char *argv[])
 
     doneAll();
     #ifndef NDEBUG
+      File_debugPrintInfo();
+      File_debugDone();
       Array_debugPrintInfo();
       Array_debugDone();
       String_debugPrintInfo();
@@ -3644,6 +3677,8 @@ int main(int argc, const char *argv[])
   {
     doneAll();
     #ifndef NDEBUG
+      File_debugPrintInfo();
+      File_debugDone();
       Array_debugPrintInfo();
       Array_debugDone();
       String_debugPrintInfo();
@@ -3667,6 +3702,8 @@ int main(int argc, const char *argv[])
                 );
       doneAll();
       #ifndef NDEBUG
+        File_debugPrintInfo();
+        File_debugDone();
         Array_debugPrintInfo();
         Array_debugDone();
         String_debugPrintInfo();
@@ -3693,6 +3730,8 @@ int main(int argc, const char *argv[])
     printError("Cannot create temporary directory in '%s' (error: %s)!\n",String_cString(globalOptions.tmpDirectory),Errors_getText(error));
     doneAll();
     #ifndef NDEBUG
+      File_debugPrintInfo();
+      File_debugDone();
       Array_debugPrintInfo();
       Array_debugDone();
       String_debugPrintInfo();
@@ -3760,6 +3799,8 @@ int main(int argc, const char *argv[])
         CmdOption_done(COMMAND_LINE_OPTIONS,SIZE_OF_ARRAY(COMMAND_LINE_OPTIONS));
         doneAll();
         #ifndef NDEBUG
+          File_debugPrintInfo();
+          File_debugDone();
           Array_debugPrintInfo();
           Array_debugDone();
           String_debugPrintInfo();
@@ -4117,6 +4158,8 @@ fprintf(stderr,"%s,%d: t=%s\n",__FILE__,__LINE__,t);
   /* free resources */
   doneAll();
   #ifndef NDEBUG
+    File_debugPrintInfo();
+    File_debugDone();
     Array_debugPrintInfo();
     Array_debugDone();
     String_debugPrintInfo();
