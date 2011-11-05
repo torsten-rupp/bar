@@ -91,6 +91,9 @@
 /* SSH2 has libssh2_keepalive_send() */
 #undef HAVE_SSH2_KEEPALIVE_SEND
 
+/* SSH2 has libssh2_scp_send64() function. */
+#undef HAVE_SSH2_SCP_SEND64
+
 /* SSH2 has libssh2_sftp_seek2() function. */
 #undef HAVE_SSH2_SFTP_SEEK2
 

@@ -1171,6 +1171,7 @@ AC_CHECK_FUNC(zlibVersion,,AC_ERROR([function zlibVersion() is not available]))
 AC_CHECK_FUNC(libssh2_channel_send_keepalive,AC_DEFINE(HAVE_SSH2_CHANNEL_SEND_KEEPALIVE,1,[SSH2 has libssh2_channel_send_keepalive()]))
 AC_CHECK_FUNC(libssh2_keepalive_config,      AC_DEFINE(HAVE_SSH2_KEEPALIVE_CONFIG,      1,[SSH2 has libssh2_keepalive_config()]))
 AC_CHECK_FUNC(libssh2_keepalive_send,        AC_DEFINE(HAVE_SSH2_KEEPALIVE_SEND,        1,[SSH2 has libssh2_keepalive_send()]))
+AC_CHECK_FUNC(libssh2_scp_send64,            AC_DEFINE(HAVE_SSH2_SCP_SEND64,            1,[SSH2 has libssh2_scp_send64() function.]))
 AC_CHECK_FUNC(libssh2_sftp_seek2,            AC_DEFINE(HAVE_SSH2_SFTP_SEEK2,            1,[SSH2 has libssh2_sftp_seek2() function.]))
 
 AC_CHECK_FUNC(backtrace,AC_DEFINE(HAVE_BACKTRACE,1,[backtrace() available]))
