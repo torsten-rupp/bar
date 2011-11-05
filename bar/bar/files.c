@@ -64,7 +64,7 @@
       void *closeStackTrace[16];
       int  closeStackTraceSize;
     #endif /* HAVE_BACKTRACE */
-    FILE *file;
+    FileHandle *fileHandle;
   } DebugFileNode;
 
   typedef struct
@@ -613,7 +613,7 @@ Errors __File_openCString(const char *__fileName__,
     {
       /* find file in closed-list; reuse or allocate new debug node */
       debugFileNode = debugClosedFileList.head;
-      while ((debugFileNode != NULL) && (debugFileNode->file != fileHandle->file))
+      while ((debugFileNode != NULL) && (debugFileNode->fileHandle != fileHandle))
       {
         debugFileNode = debugFileNode->next;
       }
@@ -631,17 +631,17 @@ Errors __File_openCString(const char *__fileName__,
       }
 
       /* init file node */
-      debugFileNode->fileName = __fileName__;
-      debugFileNode->lineNb   = __lineNb__;
+      debugFileNode->fileName              = __fileName__;
+      debugFileNode->lineNb                = __lineNb__;
       #ifdef HAVE_BACKTRACE
-        debugFileNode->stackTraceSize = backtrace(debugFileNode->stackTrace,SIZE_OF_ARRAY(debugFileNode->stackTrace));
+        debugFileNode->stackTraceSize      = backtrace(debugFileNode->stackTrace,SIZE_OF_ARRAY(debugFileNode->stackTrace));
       #endif /* HAVE_BACKTRACE */
-      debugFileNode->closeFileName = NULL;
-      debugFileNode->closeLineNb   = 0;
+      debugFileNode->closeFileName         = NULL;
+      debugFileNode->closeLineNb           = 0;
       #ifdef HAVE_BACKTRACE
         debugFileNode->closeStackTraceSize = 0;
       #endif /* HAVE_BACKTRACE */
-      debugFileNode->file     = fileHandle->file;
+      debugFileNode->fileHandle            = fileHandle;
 
       /* add string to open-list */
       List_append(&debugOpenFileList,debugFileNode);
@@ -749,7 +749,7 @@ Errors __File_openDescriptor(const char *__fileName__,
     {
       /* find file in closed-list; reuse or allocate new debug node */
       debugFileNode = debugClosedFileList.head;
-      while ((debugFileNode != NULL) && (debugFileNode->file != fileHandle->file))
+      while ((debugFileNode != NULL) && (debugFileNode->fileHandle != fileHandle))
       {
         debugFileNode = debugFileNode->next;
       }
@@ -767,17 +767,17 @@ Errors __File_openDescriptor(const char *__fileName__,
       }
 
       /* init file node */
-      debugFileNode->fileName = __fileName__;
-      debugFileNode->lineNb   = __lineNb__;
+      debugFileNode->fileName              = __fileName__;
+      debugFileNode->lineNb                = __lineNb__;
       #ifdef HAVE_BACKTRACE
-        debugFileNode->stackTraceSize = backtrace(debugFileNode->stackTrace,SIZE_OF_ARRAY(debugFileNode->stackTrace));
+        debugFileNode->stackTraceSize      = backtrace(debugFileNode->stackTrace,SIZE_OF_ARRAY(debugFileNode->stackTrace));
       #endif /* HAVE_BACKTRACE */
-      debugFileNode->closeFileName = NULL;
-      debugFileNode->closeLineNb   = 0;
+      debugFileNode->closeFileName         = NULL;
+      debugFileNode->closeLineNb           = 0;
       #ifdef HAVE_BACKTRACE
         debugFileNode->closeStackTraceSize = 0;
       #endif /* HAVE_BACKTRACE */
-      debugFileNode->file     = fileHandle->file;
+      debugFileNode->fileHandle            = fileHandle;
 
       /* add string to open-list */
       List_append(&debugOpenFileList,debugFileNode);
@@ -809,7 +809,7 @@ Errors __File_close(const char *__fileName__, ulong __lineNb__, FileHandle *file
     {
       /* find file in open-list */
       debugFileNode = debugOpenFileList.head;
-      while ((debugFileNode != NULL) && (debugFileNode->file != fileHandle->file))
+      while ((debugFileNode != NULL) && (debugFileNode->fileHandle != fileHandle))
       {
         debugFileNode = debugFileNode->next;
       }
@@ -2246,8 +2246,8 @@ void File_debugDumpInfo(FILE *handle)
   {
     for (debugFileNode = debugOpenFileList.head; debugFileNode != NULL; debugFileNode = debugFileNode->next)
     {
-      fprintf(handle,"DEBUG: file %p opened at %s, line %lu\n",
-              debugFileNode->file,
+      fprintf(handle,"DEBUG: file '%s' opened at %s, line %lu\n",
+              String_cString(debugFileNode->fileHandle->name),
               debugFileNode->fileName,
               debugFileNode->lineNb
              );
