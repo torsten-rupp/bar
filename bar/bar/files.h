@@ -954,8 +954,8 @@ Errors File_makeSpecial(const String     name,
 * Notes  : -
 \***********************************************************************/
 
-Errors File_getFileSystemInfo(const          String pathName,
-                              FileSystemInfo *fileSystemInfo
+Errors File_getFileSystemInfo(FileSystemInfo *fileSystemInfo,
+                              const          String pathName
                              );
 
 #ifndef NDEBUG
