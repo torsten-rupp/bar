@@ -223,21 +223,89 @@ typedef void               void32;
   ((((byte*)(set))[bit/8] & (1 << (bit%8))) != 0)
 
 /* mathematicl macros */
+
+/***********************************************************************\
+* Name   : IS_NAN, IS_INF
+* Purpose: check is NaN, infinite
+* Input  : d - number
+* Output : -
+* Return : TRUE iff NaN/infinite
+* Notes  : -
+\***********************************************************************/
+
 #ifndef __cplusplus
   #define IS_NAN(d) (!((d)==(d)))                        // check if Not-A-Number (NaN)
   #define IS_INF(d) ((d<-MAX_DOUBLE) || (d>MAX_DOUBLE))  // check if infinit-number
 #endif
+
+/***********************************************************************\
+* Name   : MIN, MAX, IN_RANGE
+* Purpose: get min./max.
+* Input  : x,y - numbers
+* Output : -
+* Return : min./max. of x,y
+* Notes  : -
+\***********************************************************************/
+
 #ifdef __GNUG__
   #define MIN(x,y) ((x)<?(y))
   #define MAX(x,y) ((x)>?(y))
-  #define IN_RANGE(l,x,h) (( ((x)<?(h) )>?(l))
 #else
   #define MIN(x,y) (((x)<(y)) ? (x) : (y))
   #define MAX(x,y) (((x)>(y)) ? (x) : (y))
+#endif
+
+/***********************************************************************\
+* Name   : IN_RANGE
+* Purpose: get value in range
+* Input  : l,h - lower/upper bound
+*          x   - number
+* Output : -
+* Return : x iff l<x<h,
+*          l iff x <= l,
+*          h iff x >= h
+* Notes  : -
+\***********************************************************************/
+
+#ifdef __GNUG__
+  #define IN_RANGE(l,x,h) (( ((x)<?(h) )>?(l))
+#else
   #define IN_RANGE(l,x,h) ((x)<(l) ? (l) : ((x)>(h) ? (h) : (x)))
 #endif
+
+/***********************************************************************\
+* Name   : CEIL
+* Purpose: round number up by factor
+* Input  : x - number
+*          n - factor
+* Output : -
+* Return : x round up with x' mod n == 0
+* Notes  : -
+\***********************************************************************/
+
 #define CEIL(x,n) ((((x)+(n)-1)/(n))*(n))
+
+/***********************************************************************\
+* Name   : SQUARE
+* Purpose: calculate square
+* Input  : x - number
+* Output : -
+* Return : x*x
+* Notes  : -
+\***********************************************************************/
+
 #define SQUARE(x) ((x)*(x))
+
+/***********************************************************************\
+* Name   : IN_RANGE
+* Purpose: check if number is in range
+* Input  : l,h - lower/upper bound
+*          x   - number
+* Output : -
+* Return : TRUE iff l<x<h, FALSE otherwise
+* Notes  : -
+\***********************************************************************/
+
 #define CHECK_RANGE(l,x,u) (( ((l)<=(x)) && ((x)<=(u)) ) || \
                             ( ((u)<=(x)) && ((x)<=(l)) )    \
                            )
