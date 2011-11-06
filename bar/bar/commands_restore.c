@@ -289,7 +289,7 @@ Errors Command_restore(StringList                      *archiveNameList,
     String_set(restoreInfo.statusInfo.storageName,printableArchiveName);
     abortFlag = !updateStatusInfo(&restoreInfo);
 
-    /* read files */
+    /* read archive entries */
     while (   ((restoreInfo.requestedAbortFlag == NULL) || !(*restoreInfo.requestedAbortFlag))
            && !Archive_eof(&archiveInfo,TRUE)
            && (restoreInfo.failError == ERROR_NONE)
@@ -463,7 +463,6 @@ Errors Command_restore(StringList                      *archiveNameList,
                 String_delete(parentDirectoryName);
               }
 
-              /* create file */
               if (!jobOptions->dryRunFlag)
               {
                 /* open file */
@@ -647,8 +646,9 @@ Errors Command_restore(StringList                      *archiveNameList,
 
               /* check if all data read.
                  Note: it is not possible to check if all data is read when
-                 compression is used. The decompressor may not all data even
-                 data is _not_ corrupt.
+                 compression is used. The decompressor may not be at the end
+                 of a compressed data chunk even compressed data is _not_
+                 corrupt.
               */
               if (   (archiveEntryInfo.file.compressAlgorithm == COMPRESS_ALGORITHM_NONE)
                   && !Archive_eofData(&archiveEntryInfo))
@@ -873,8 +873,9 @@ Errors Command_restore(StringList                      *archiveNameList,
 
               /* check if all data read.
                  Note: it is not possible to check if all data is read when
-                 compression is used. The decompressor may not all data even
-                 data is _not_ corrupt.
+                 compression is used. The decompressor may not be at the end
+                 of a compressed data chunk even compressed data is _not_
+                 corrupt.
               */
               if (   (archiveEntryInfo.image.compressAlgorithm == COMPRESS_ALGORITHM_NONE)
                   && !Archive_eofData(&archiveEntryInfo))
@@ -1430,7 +1431,6 @@ Errors Command_restore(StringList                      *archiveNameList,
                     fragmentNode = FragmentList_add(&fragmentList,fileName,fileInfo.size,&fileInfo,sizeof(FileInfo));
                   }
 
-                  /* create file */
                   if (!jobOptions->dryRunFlag)
                   {
                     /* open file */
@@ -1645,8 +1645,9 @@ Errors Command_restore(StringList                      *archiveNameList,
 
                   /* check if all data read.
                      Note: it is not possible to check if all data is read when
-                     compression is used. The decompressor may not all data even
-                     data is _not_ corrupt.
+                     compression is used. The decompressor may not be at the end
+                     of a compressed data chunk even compressed data is _not_
+                     corrupt.
                   */
                   if (   (archiveEntryInfo.hardLink.compressAlgorithm == COMPRESS_ALGORITHM_NONE)
                       && !Archive_eofData(&archiveEntryInfo))
