@@ -77,36 +77,36 @@ typedef uint32 ChunkId;
 /* chunk header (Note: only id+size is stored in file!) */
 typedef struct
 {
-  uint32 id;                        // chunk id
-  uint64 size;                      // size of chunk (without chunk header)
-  uint64 offset;                    // start of chunk in file (offset of header)
+  uint32 id;                          // chunk id
+  uint64 size;                        // size of chunk (without chunk header)
+  uint64 offset;                      // start of chunk in file (offset of header)
 } ChunkHeader;
 
 /* chunk information */
 typedef struct ChunkInfo
 {
   struct ChunkInfo *parentChunkInfo;
-  const ChunkIO    *io;             // i/o functions
-  void             *ioUserData;     // user data for i/o
+  const ChunkIO    *io;               // i/o functions
+  void             *ioUserData;       // user data for i/o
 
   ChunkModes       mode;
-  uint             alignment;       // alignment for chunk
-  CryptInfo        *cryptInfo;      // encryption
+  uint             alignment;         // alignment for chunk
+  CryptInfo        *cryptInfo;        // encryption
 
-  ChunkId          id;              // chunk id
-  const int        *definition;     // chunk definition
-  ulong            chunkSize;       // size of fixed chunk data (without chunk header+data elements)
-  uint64           size;            // total size of chunk (without chunk header)
-  uint64           offset;          // start of chunk in file (offset of header)
-  uint64           index;           // current position in chunk (from begin=end of header)
+  ChunkId          id;                // chunk id
+  const int        *definition;       // chunk definition
+  ulong            chunkSize;         // size of fixed chunk data (without chunk header+data elements)
+  uint64           size;              // total size of chunk (without chunk header)
+  uint64           offset;            // start of chunk in file (offset of header)
+  uint64           index;             // current position in chunk (from begin=end of header)
 
-  void             *data;           // chunk data
+  void             *data;             // chunk data
 } ChunkInfo;
 
 typedef struct
 {
-  uint64           offset;          // start of chunk in file (header)
-  uint64           index;           // current position in chunk
+  uint64           offset;            // start of chunk in file (header)
+  uint64           index;             // current position in chunk
 } ChunkPosition;
 
 /***************************** Variables *******************************/
