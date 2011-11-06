@@ -84,9 +84,9 @@ typedef struct
 /* create info  */
 typedef struct
 {
-  String                      storageName;
-  const EntryList             *includeEntryList;
-  const PatternList           *excludePatternList;
+  String                      storageName;                        // 
+  const EntryList             *includeEntryList;                  // list of included entries
+  const PatternList           *excludePatternList;                // list of exclude patterns
   const JobOptions            *jobOptions;
   ArchiveTypes                archiveType;                        // archive type to create
   bool                        *pauseCreateFlag;                   // TRUE for pause creation
@@ -105,12 +105,15 @@ typedef struct
   bool                        collectorSumThreadExitFlag;
   bool                        collectorSumThreadExitedFlag;
   Thread                      collectorThread;                    // files collector thread id
-  bool                        collectorThreadExitFlag;
+  bool                        collectorThreadExitFlag;            // TRUE iff collector thread exited
 
   MsgQueue                    storageMsgQueue;                    // queue with waiting storage files
-  Semaphore                   storageSemaphore;
-  uint                        storageCount;                       // number of current storage files
-  uint64                      storageBytes;                       // number of bytes in current storage files
+  Semaphore                   storageInfoLock;                    // lock semaphore for storage info
+  struct
+  {
+    uint                      count;                              // number of current storage files
+    uint64                    bytes;                              // number of bytes in current storage files
+  }                           storageInfo;
   Thread                      storageThread;                      // storage thread id
   bool                        storageThreadExitFlag;
   StringList                  storageFileList;                    // list with stored storage files
@@ -122,10 +125,11 @@ typedef struct
   CreateStatusInfo            statusInfo;                         // status info
 } CreateInfo;
 
+/* hard link info */
 typedef struct
 {
-  uint       count;
-  StringList nameList;
+  uint       count;                                               // number of hard links
+  StringList nameList;                                            // list of hard linked names
 } HardLinkInfo;
 
 /* entry message, send from collector thread -> main */
@@ -133,18 +137,18 @@ typedef struct
 {
   EntryTypes entryType;
   FileTypes  fileType;
-  String     name;
-  StringList nameList;
+  String     name;                                                // file/image/directory/link/special name
+  StringList nameList;                                            // list of hard link names
 } EntryMsg;
 
 /* storage message, send from main -> storage thread */
 typedef struct
 {
   DatabaseHandle *databaseHandle;
-  int64          storageId;
-  String         fileName;
-  uint64         fileSize;
-  String         destinationFileName;
+  int64          storageId;                                       // database storage id
+  String         fileName;                                        // temporary archive name
+  uint64         fileSize;                                        // archive size
+  String         destinationFileName;                             // destination archive name
 } StorageMsg;
 
 /***************************** Variables *******************************/
@@ -161,9 +165,9 @@ typedef struct
 
 /***********************************************************************\
 * Name   : readIncrementalList
-* Purpose: read incremental list file
+* Purpose: read data of incremental list from file
 * Input  : fileName        - file name
-*          filesDictionary - files dictionary
+*          filesDictionary - files dictionary variable
 * Output : -
 * Return : ERROR_NONE if incremental list read in files dictionary,
 *          error code otherwise
@@ -262,7 +266,7 @@ LOCAL Errors readIncrementalList(const String fileName,
 
 /***********************************************************************\
 * Name   : writeIncrementalList
-* Purpose: write incremental list file
+* Purpose: write incremental list data to file
 * Input  : fileName        - file name
 *          filesDictionary - files dictionary
 * Output : -
@@ -430,7 +434,7 @@ fprintf(stderr,"%s,%d: %s %d\n",__FILE__,__LINE__,s,incrementalFileInfo->state);
 * Purpose: check if file changed
 * Input  : filesDictionary - files dictionary
 *          fileName        - file name
-*          fileInfo        - file info
+*          fileInfo        - file info with file cast data
 * Output : -
 * Return : TRUE iff file changed, FALSE otherwise
 * Notes  : -
@@ -512,7 +516,7 @@ LOCAL void addIncrementalList(Dictionary     *filesDictionary,
 * Purpose: update status info
 * Input  : createInfo - create info
 * Output : -
-* Return : bool TRUE to continue, FALSE to abort
+* Return : TRUE to continue, FALSE if user aborted
 * Notes  : -
 \***********************************************************************/
 
@@ -539,7 +543,7 @@ LOCAL bool updateStatusInfo(const CreateInfo *createInfo)
 * Input  : createInfo        - create info
 *          storageStatusInfo - storage status info
 * Output : -
-* Return : bool TRUE to continue, FALSE to abort
+* Return : TRUE to continue, FALSE if user aborted
 * Notes  : -
 \***********************************************************************/
 
@@ -780,7 +784,7 @@ LOCAL void appendSpecialToEntryList(MsgQueue     *entryMsgQueue,
 
 /***********************************************************************\
 * Name   : freeEntryMsg
-* Purpose: free file msg
+* Purpose: free file entry message call back
 * Input  : entryMsg - entry message
 *          userData - user data (not used)
 * Output : -
@@ -2056,14 +2060,15 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
 
 /*---------------------------------------------------------------------*/
 
-LOCAL Errors sourceGetDataBlock(void   *userData,
-                                void   *buffer,
-                                uint64 offset,
-                                ulong  length,
-                                ulong  *bytesRead
-                               )
+LOCAL Errors sourceGetEntryDataBlock(void   *userData,
+                                     void   *buffer,
+                                     uint64 offset,
+                                     ulong  length,
+                                     ulong  *bytesRead
+                                    )
 {
-  SourceEntryInfo *sourceEntryInfo;
+  SourceEntryInfo  *sourceEntryInfo;
+  Errors           error;
 
   assert(userData != NULL);
   assert(buffer != NULL);
@@ -2073,7 +2078,19 @@ fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
 
   sourceEntryInfo = (SourceEntryInfo*)userData;
 
-  return ERROR_STILL_NOT_IMPLEMENTED;
+  error = File_seek(&sourceEntryInfo->fileHandle,offset);
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+
+  error = File_read(&sourceEntryInfo->fileHandle,buffer,length,bytesRead);
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+
+  return ERROR_NONE;
 }
 
 /***********************************************************************\
@@ -2112,10 +2129,10 @@ LOCAL void storageInfoIncrement(CreateInfo *createInfo, uint64 size)
 
   assert(createInfo != NULL);
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->storageSemaphore,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->storageInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
   {
-    createInfo->storageCount += 1;
-    createInfo->storageBytes += size;
+    createInfo->storageInfo.count += 1;
+    createInfo->storageInfo.bytes += size;
   }
 }
 
@@ -2135,12 +2152,12 @@ LOCAL void storageInfoDecrement(CreateInfo *createInfo, uint64 size)
 
   assert(createInfo != NULL);
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->storageSemaphore,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->storageInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
   {
-    assert(createInfo->storageCount > 0);
-    assert(createInfo->storageBytes >= size);
-    createInfo->storageCount -= 1;
-    createInfo->storageBytes -= size;
+    assert(createInfo->storageInfo.count > 0);
+    assert(createInfo->storageInfo.bytes >= size);
+    createInfo->storageInfo.count -= 1;
+    createInfo->storageInfo.bytes -= size;
   }
 }
 
@@ -2209,11 +2226,12 @@ LOCAL Errors storeArchiveFile(void           *userData,
   /* wait for space in temporary directory */
   if (globalOptions.maxTmpSize > 0)
   {
-    SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->storageSemaphore,SEMAPHORE_LOCK_TYPE_READ)
+    SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->storageInfoLock,SEMAPHORE_LOCK_TYPE_READ)
     {
-      while ((createInfo->storageCount > 2) && (createInfo->storageBytes > globalOptions.maxTmpSize))
+      while (   (createInfo->storageInfo.count > 2)                           // more than 2 archives are waiting
+             && (createInfo->storageInfo.bytes > globalOptions.maxTmpSize))   // temporary space above limit is used
       {
-        Semaphore_waitModified(&createInfo->storageSemaphore);
+        Semaphore_waitModified(&createInfo->storageInfoLock);
       }
     }
   }
@@ -2717,15 +2735,15 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
 * Input  : archiveInfo                  - archive info
 *          compressExcludePatternList   - exclude compression pattern
 *                                         list
-*          jobOptions                   - job options
-*          createinfo                   - create info structure
-*          buffer                       - data buffer
-*          bufferSize                   - size of data buffer
+*          jobOptions                   - job options; see JobOptions
+*          createInfo                   - create info structure
 *          storeIncrementalFileInfoFlag - TRUE to store incremental
 *                                         file data
-*          fileName                     - file name
+*          fileName                     - file name to store
 *          sourceInfo                   - source info (used for
 *                                         delta-compression)
+*          buffer                       - buffer for temporary data
+*          bufferSize                   - size of data buffer
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -2735,11 +2753,11 @@ LOCAL Errors storeFileEntry(ArchiveInfo       *archiveInfo,
                             const PatternList *compressExcludePatternList,
                             JobOptions        *jobOptions,
                             CreateInfo        *createInfo,
-                            byte              *buffer,
-                            uint              bufferSize,
                             bool              storeIncrementalFileInfoFlag,
                             const String      fileName,
-                            SourceInfo        *sourceInfo
+                            SourceInfo        *sourceInfo,
+                            byte              *buffer,
+                            uint              bufferSize
                            )
 {
   Errors           error;
@@ -2831,7 +2849,7 @@ LOCAL Errors storeFileEntry(ArchiveInfo       *archiveInfo,
                                  &archiveEntryInfo,
                                  fileName,
                                  &fileInfo,
-                                 sourceGetDataBlock,
+                                 sourceGetEntryDataBlock,
                                  &sourceEntryInfo,
                                  compressFlag
                                 );
@@ -2910,6 +2928,14 @@ LOCAL Errors storeFileEntry(ArchiveInfo       *archiveInfo,
       return error;
     }
 
+    if (compressFlag && COMPRESS_IS_XDELTA_ALGORITHM(archiveInfo->jobOptions->compressAlgorithm))
+    {
+      Source_closeEntry(&sourceEntryInfo);
+    }
+
+    /* close file */
+    File_close(&fileHandle);
+
     /* get compression ratio */
     if ((archiveEntryInfo.file.compressAlgorithm != COMPRESS_ALGORITHM_NONE) && (archiveEntryInfo.file.chunkFileData.fragmentSize > 0LL))
     {
@@ -2919,9 +2945,6 @@ LOCAL Errors storeFileEntry(ArchiveInfo       *archiveInfo,
     {
       ratio = 0.0;
     }
-
-    /* close file */
-    File_close(&fileHandle);
 
     if (!jobOptions->dryRunFlag)
     {
@@ -2955,12 +2978,12 @@ LOCAL Errors storeFileEntry(ArchiveInfo       *archiveInfo,
 * Input  : archiveInfo                  - archive info
 *          compressExcludePatternList   - exclude compression pattern
 *                                         list
-*          jobOptions                   - job options
-*          createinfo                   - create info structure
-*          buffer                       - data buffer
-*          bufferSize                   - size of data buffer
+*          jobOptions                   - job options; see JobOptions
+*          createInfo                   - create info structure
 *          storeIncrementalFileInfoFlag - not used
 *          deviceName                   - device name
+*          buffer                       - buffer for temporary data
+*          bufferSize                   - size of data buffer
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -2970,9 +2993,9 @@ LOCAL Errors storeImageEntry(ArchiveInfo       *archiveInfo,
                              const PatternList *compressExcludePatternList,
                              JobOptions        *jobOptions,
                              CreateInfo        *createInfo,
+                             const String      deviceName,
                              byte              *buffer,
-                             uint              bufferSize,
-                             const String      deviceName
+                             uint              bufferSize
                             )
 {
   Errors           error;
@@ -3026,12 +3049,12 @@ LOCAL Errors storeImageEntry(ArchiveInfo       *archiveInfo,
       printError("Device block size %llu on '%s' is to big (max: %llu)\n",
                  deviceInfo.blockSize,
                  String_cString(deviceName),
-                 BUFFER_SIZE
+                 bufferSize
                 );
       return ERROR_INVALID_DEVICE_BLOCK_SIZE;
     }
     assert(deviceInfo.blockSize != 0);
-    maxBufferBlockCount = BUFFER_SIZE/deviceInfo.blockSize;
+    maxBufferBlockCount = bufferSize/deviceInfo.blockSize;
 
     /* open device */
     error = Device_open(&deviceHandle,deviceName,DEVICE_OPENMODE_READ);
@@ -3170,6 +3193,15 @@ LOCAL Errors storeImageEntry(ArchiveInfo       *archiveInfo,
       return error;
     }
 
+    /* done file system */
+    if (fileSystemFlag)
+    {
+      FileSystem_done(&fileSystemHandle);
+    }
+
+    /* close device */
+    Device_close(&deviceHandle);
+
     /* get compression ratio */
     if ((archiveEntryInfo.image.compressAlgorithm != COMPRESS_ALGORITHM_NONE) && (archiveEntryInfo.image.chunkImageData.blockCount > 0))
     {
@@ -3179,15 +3211,6 @@ LOCAL Errors storeImageEntry(ArchiveInfo       *archiveInfo,
     {
       ratio = 0.0;
     }
-
-    /* done file system */
-    if (fileSystemFlag)
-    {
-      FileSystem_done(&fileSystemHandle);
-    }
-
-    /* close device */
-    Device_close(&deviceHandle);
 
     if (!jobOptions->dryRunFlag)
     {
@@ -3213,13 +3236,11 @@ LOCAL Errors storeImageEntry(ArchiveInfo       *archiveInfo,
 * Name   : storeDirectoryEntry
 * Purpose: store a directory entry into archive
 * Input  : archiveInfo                  - archive info
-*          jobOptions                   - job options
-*          createinfo                   - create info structure
-*          buffer                       - data buffer
-*          bufferSize                   - size of data buffer
+*          jobOptions                   - job options; see JobOptions
+*          createInfo                   - create info structure
 *          storeIncrementalFileInfoFlag - TRUE to store incremental
 *                                         file data
-*          directoryName                - directory name
+*          directoryName                - directory name to store
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -3228,8 +3249,6 @@ LOCAL Errors storeImageEntry(ArchiveInfo       *archiveInfo,
 LOCAL Errors storeDirectoryEntry(ArchiveInfo  *archiveInfo,
                                  JobOptions   *jobOptions,
                                  CreateInfo   *createInfo,
-                                 byte         *buffer,
-                                 uint         bufferSize,
                                  bool         storeIncrementalFileInfoFlag,
                                  const String directoryName
                                 )
@@ -3241,11 +3260,7 @@ LOCAL Errors storeDirectoryEntry(ArchiveInfo  *archiveInfo,
   assert(archiveInfo != NULL);
   assert(jobOptions != NULL);
   assert(createInfo != NULL);
-  assert(buffer != NULL);
   assert(directoryName != NULL);
-
-  UNUSED_VARIABLE(buffer);
-  UNUSED_VARIABLE(bufferSize);
 
   printInfo(1,"Add '%s'...",String_cString(directoryName));
 
@@ -3331,13 +3346,11 @@ LOCAL Errors storeDirectoryEntry(ArchiveInfo  *archiveInfo,
 * Name   : storeLinkEntry
 * Purpose: store a link entry into archive
 * Input  : archiveInfo                  - archive info
-*          jobOptions                   - job options
-*          createinfo                   - create info structure
-*          buffer                       - data buffer
-*          bufferSize                   - size of data buffer
+*          jobOptions                   - job options; see JobOptions
+*          createInfo                   - create info structure
 *          storeIncrementalFileInfoFlag - TRUE to store incremental
 *                                         file data
-*          linkName                     - link name
+*          linkName                     - link name to store
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -3346,8 +3359,6 @@ LOCAL Errors storeDirectoryEntry(ArchiveInfo  *archiveInfo,
 LOCAL Errors storeLinkEntry(ArchiveInfo  *archiveInfo,
                             JobOptions   *jobOptions,
                             CreateInfo   *createInfo,
-                            byte         *buffer,
-                            uint         bufferSize,
                             bool         storeIncrementalFileInfoFlag,
                             const String linkName
                            )
@@ -3360,11 +3371,7 @@ LOCAL Errors storeLinkEntry(ArchiveInfo  *archiveInfo,
   assert(archiveInfo != NULL);
   assert(jobOptions != NULL);
   assert(createInfo != NULL);
-  assert(buffer != NULL);
   assert(linkName != NULL);
-
-  UNUSED_VARIABLE(buffer);
-  UNUSED_VARIABLE(bufferSize);
 
   printInfo(1,"Add '%s'...",String_cString(linkName));
 
@@ -3483,13 +3490,13 @@ LOCAL Errors storeLinkEntry(ArchiveInfo  *archiveInfo,
 * Input  : archiveInfo                  - archive info
 *          compressExcludePatternList   - exclude compression pattern
 *                                         list
-*          jobOptions                   - job options
-*          createinfo                   - create info structure
-*          buffer                       - data buffer
-*          bufferSize                   - size of data buffer
+*          jobOptions                   - job options; see JobOptions
+*          createInfo                   - create info structure
 *          storeIncrementalFileInfoFlag - TRUE to store incremental
 *                                         file data
-*          nameList                     - hard link name list
+*          nameList                     - hard link name list to store
+*          buffer                       - buffer for temporary data
+*          bufferSize                   - size of data buffer
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -3499,16 +3506,18 @@ LOCAL Errors storeHardLinkEntry(ArchiveInfo       *archiveInfo,
                                 const PatternList *compressExcludePatternList,
                                 JobOptions        *jobOptions,
                                 CreateInfo        *createInfo,
-                                byte              *buffer,
-                                uint              bufferSize,
                                 bool              storeIncrementalFileInfoFlag,
-                                const StringList  *nameList
+                                const StringList  *nameList,
+                                SourceInfo        *sourceInfo,
+                                byte              *buffer,
+                                uint              bufferSize
                                )
 {
   Errors           error;
   FileInfo         fileInfo;
   FileHandle       fileHandle;
   bool             compressFlag;
+  SourceEntryInfo  sourceEntryInfo;
   ArchiveEntryInfo archiveEntryInfo;
   ulong            n;
   double           ratio;
@@ -3518,12 +3527,9 @@ LOCAL Errors storeHardLinkEntry(ArchiveInfo       *archiveInfo,
   assert(archiveInfo != NULL);
   assert(jobOptions != NULL);
   assert(createInfo != NULL);
-  assert(buffer != NULL);
   assert(nameList != NULL);
   assert(!StringList_empty(nameList));
-
-  UNUSED_VARIABLE(buffer);
-  UNUSED_VARIABLE(bufferSize);
+  assert(buffer != NULL);
 
   printInfo(1,"Add '%s'...",String_cString(nameList->head->string));
 
@@ -3578,11 +3584,34 @@ LOCAL Errors storeHardLinkEntry(ArchiveInfo       *archiveInfo,
     compressFlag =    (fileInfo.size > globalOptions.compressMinFileSize)
                    && !PatternList_matchStringList(compressExcludePatternList,nameList,PATTERN_MATCH_MODE_EXACT);
 
+    /* get source for delta-compression */
+    if (compressFlag && COMPRESS_IS_XDELTA_ALGORITHM(archiveInfo->jobOptions->compressAlgorithm))
+    {
+//???
+      STRINGLIST_ITERATE(nameList,stringNode,name)
+      {
+        error = Source_openEntry(&sourceEntryInfo,sourceInfo,name);
+        if (error == ERROR_NONE) break;
+      }
+      if (error != ERROR_NONE)
+      {
+        printInfo(1,"FAIL\n");
+        printError("Cannot open source file for '%s' (error: %s)\n",
+                   String_cString(StringList_first(nameList,NULL)),
+                   Errors_getText(error)
+                  );
+        File_close(&fileHandle);
+        return error;
+      }
+    }
+
     /* create new archive hard link entry */
     error = Archive_newHardLinkEntry(archiveInfo,
                                      &archiveEntryInfo,
                                      nameList,
                                      &fileInfo,
+                                     sourceGetEntryDataBlock,
+                                     &sourceEntryInfo,
                                      compressFlag
                                     );
     if (error != ERROR_NONE)
@@ -3610,7 +3639,7 @@ LOCAL Errors storeHardLinkEntry(ArchiveInfo       *archiveInfo,
         Misc_udelay(500*1000);
       }
 
-      File_read(&fileHandle,buffer,BUFFER_SIZE,&n);
+      File_read(&fileHandle,buffer,bufferSize,&n);
       if (n > 0)
       {
         error = Archive_writeData(&archiveEntryInfo,buffer,n,1);
@@ -3656,6 +3685,9 @@ LOCAL Errors storeHardLinkEntry(ArchiveInfo       *archiveInfo,
       return error;
     }
 
+    /* close file */
+    File_close(&fileHandle);
+
     /* get compression ratio */
     if ((archiveEntryInfo.hardLink.compressAlgorithm != COMPRESS_ALGORITHM_NONE) && (archiveEntryInfo.hardLink.chunkHardLinkData.fragmentSize > 0LL))
     {
@@ -3665,9 +3697,6 @@ LOCAL Errors storeHardLinkEntry(ArchiveInfo       *archiveInfo,
     {
       ratio = 0.0;
     }
-
-    /* close file */
-    File_close(&fileHandle);
 
     if (!jobOptions->dryRunFlag)
     {
@@ -3702,13 +3731,11 @@ LOCAL Errors storeHardLinkEntry(ArchiveInfo       *archiveInfo,
 * Name   : storeSpecialEntry
 * Purpose: store a special entry into archive
 * Input  : archiveInfo                  - archive info
-*          jobOptions                   - job options
-*          createinfo                   - create info structure
-*          buffer                       - data buffer
-*          bufferSize                   - size of data buffer
+*          jobOptions                   - job options; see JobOptions
+*          createInfo                   - create info structure
 *          storeIncrementalFileInfoFlag - TRUE to store incremental
 *                                         file data
-*          fileName                     - file name
+*          fileName                     - file name to store
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -3717,8 +3744,6 @@ LOCAL Errors storeHardLinkEntry(ArchiveInfo       *archiveInfo,
 LOCAL Errors storeSpecialEntry(ArchiveInfo  *archiveInfo,
                                JobOptions   *jobOptions,
                                CreateInfo   *createInfo,
-                               byte         *buffer,
-                               uint         bufferSize,
                                bool         storeIncrementalFileInfoFlag,
                                const String fileName
                               )
@@ -3730,11 +3755,7 @@ LOCAL Errors storeSpecialEntry(ArchiveInfo  *archiveInfo,
   assert(archiveInfo != NULL);
   assert(jobOptions != NULL);
   assert(createInfo != NULL);
-  assert(buffer != NULL);
   assert(fileName != NULL);
-
-  UNUSED_VARIABLE(buffer);
-  UNUSED_VARIABLE(bufferSize);
 
   printInfo(1,"Add '%s'...",String_cString(fileName));
 
@@ -3868,8 +3889,8 @@ Errors Command_create(const char                      *storageName,
   createInfo.collectorSumThreadExitFlag   = FALSE;
   createInfo.collectorSumThreadExitedFlag = FALSE;
   createInfo.collectorThreadExitFlag      = FALSE;
-  createInfo.storageCount                 = 0;
-  createInfo.storageBytes                 = 0LL;
+  createInfo.storageInfo.count            = 0;
+  createInfo.storageInfo.bytes            = 0LL;
   createInfo.storageThreadExitFlag        = FALSE;
   StringList_init(&createInfo.storageFileList);
   createInfo.failError                    = ERROR_NONE;
@@ -3931,7 +3952,7 @@ Errors Command_create(const char                      *storageName,
   {
     HALT_FATAL_ERROR("Cannot initialise storage message queue!");
   }
-  if (!Semaphore_init(&createInfo.storageSemaphore))
+  if (!Semaphore_init(&createInfo.storageInfoLock))
   {
     HALT_FATAL_ERROR("Cannot initialise storage semaphore!");
   }
@@ -3956,7 +3977,7 @@ Errors Command_create(const char                      *storageName,
                Errors_getText(error)
               );
     String_delete(printableStorageName);
-    Semaphore_done(&createInfo.storageSemaphore);
+    Semaphore_done(&createInfo.storageInfoLock);
     MsgQueue_done(&createInfo.storageMsgQueue,NULL,NULL);
     MsgQueue_done(&createInfo.entryMsgQueue,(MsgQueueMsgFreeFunction)freeEntryMsg,NULL);
     free(buffer);
@@ -4017,7 +4038,7 @@ Errors Command_create(const char                      *storageName,
         }
 #endif /* 0 */
         String_delete(printableStorageName);
-        Semaphore_done(&createInfo.storageSemaphore);
+        Semaphore_done(&createInfo.storageInfoLock);
         MsgQueue_done(&createInfo.storageMsgQueue,NULL,NULL);
         MsgQueue_done(&createInfo.entryMsgQueue,(MsgQueueMsgFreeFunction)freeEntryMsg,NULL);
         free(buffer);
@@ -4056,14 +4077,14 @@ Errors Command_create(const char                      *storageName,
         if (!incrementalFileInfoExistFlag) File_delete(incrementalListFileName,FALSE);
         String_delete(incrementalListFileName);
       }
-  #if 0
-  // NYI: must index be deleted on error?
+#if 0
+// NYI: must index be deleted on error?
       if (indexDatabaseHandle != NULL)
       {
         Storage_closeIndex(&createInfo.storageIndexHandle);
       }
-  #endif /* 0 */
-      Semaphore_done(&createInfo.storageSemaphore);
+#endif /* 0 */
+      Semaphore_done(&createInfo.storageInfoLock);
       MsgQueue_done(&createInfo.storageMsgQueue,NULL,NULL);
       MsgQueue_done(&createInfo.entryMsgQueue,(MsgQueueMsgFreeFunction)freeEntryMsg,NULL);
       free(buffer);
@@ -4107,7 +4128,7 @@ Errors Command_create(const char                      *storageName,
     }
 #endif /* 0 */
     String_delete(printableStorageName);
-    Semaphore_done(&createInfo.storageSemaphore);
+    Semaphore_done(&createInfo.storageInfoLock);
     MsgQueue_done(&createInfo.storageMsgQueue,NULL,NULL);
     MsgQueue_done(&createInfo.entryMsgQueue,(MsgQueueMsgFreeFunction)freeEntryMsg,NULL);
     free(buffer);
@@ -4174,11 +4195,11 @@ Errors Command_create(const char                      *storageName,
                                      compressExcludePatternList,
                                      jobOptions,
                                      &createInfo,
-                                     buffer,
-                                     BUFFER_SIZE,
                                      storeIncrementalFileInfoFlag,
-                                                    entryMsg.name,
-                                                    &sourceInfo
+                                     entryMsg.name,
+                                     &sourceInfo,
+                                     buffer,
+                                     BUFFER_SIZE
                                     );
               if (error != ERROR_NONE) createInfo.failError = error;
               abortFlag |= !updateStatusInfo(&createInfo);
@@ -4194,8 +4215,6 @@ Errors Command_create(const char                      *storageName,
               error = storeDirectoryEntry(&archiveInfo,
                                           jobOptions,
                                           &createInfo,
-                                          buffer,
-                                          BUFFER_SIZE,
                                           storeIncrementalFileInfoFlag,
                                           entryMsg.name
                                          );
@@ -4213,8 +4232,6 @@ Errors Command_create(const char                      *storageName,
               error = storeLinkEntry(&archiveInfo,
                                      jobOptions,
                                      &createInfo,
-                                     buffer,
-                                     BUFFER_SIZE,
                                      storeIncrementalFileInfoFlag,
                                      entryMsg.name
                                     );
@@ -4233,10 +4250,11 @@ Errors Command_create(const char                      *storageName,
                                          compressExcludePatternList,
                                          jobOptions,
                                          &createInfo,
-                                         buffer,
-                                         BUFFER_SIZE,
                                          storeIncrementalFileInfoFlag,
-                                         &entryMsg.nameList
+                                         &entryMsg.nameList,
+                                         &sourceInfo,
+                                         buffer,
+                                         BUFFER_SIZE
                                         );
               if (error != ERROR_NONE) createInfo.failError = error;
               abortFlag |= !updateStatusInfo(&createInfo);
@@ -4252,8 +4270,6 @@ Errors Command_create(const char                      *storageName,
               error = storeSpecialEntry(&archiveInfo,
                                         jobOptions,
                                         &createInfo,
-                                        buffer,
-                                        BUFFER_SIZE,
                                         storeIncrementalFileInfoFlag,
                                         entryMsg.name
                                        );
@@ -4265,9 +4281,9 @@ Errors Command_create(const char                      *storageName,
                                       compressExcludePatternList,
                                       jobOptions,
                                       &createInfo,
+                                      entryMsg.name,
                                       buffer,
-                                      BUFFER_SIZE,
-                                      entryMsg.name
+                                      BUFFER_SIZE
                                      );
               if (error != ERROR_NONE) createInfo.failError = error;
               abortFlag |= !updateStatusInfo(&createInfo);
@@ -4340,7 +4356,7 @@ Errors Command_create(const char                      *storageName,
       if (!incrementalFileInfoExistFlag) File_delete(incrementalListFileName,FALSE);
       String_delete(incrementalListFileName);
       String_delete(printableStorageName);
-      Semaphore_done(&createInfo.storageSemaphore);
+      Semaphore_done(&createInfo.storageInfoLock);
       MsgQueue_done(&createInfo.storageMsgQueue,NULL,NULL);
       MsgQueue_done(&createInfo.entryMsgQueue,(MsgQueueMsgFreeFunction)freeEntryMsg,NULL);
       free(buffer);
@@ -4380,7 +4396,7 @@ Errors Command_create(const char                      *storageName,
   Thread_done(&createInfo.collectorThread);
   Thread_done(&createInfo.storageThread);
   String_delete(printableStorageName);
-  Semaphore_done(&createInfo.storageSemaphore);
+  Semaphore_done(&createInfo.storageInfoLock);
   MsgQueue_done(&createInfo.storageMsgQueue,(MsgQueueMsgFreeFunction)freeStorageMsg,NULL);
   MsgQueue_done(&createInfo.entryMsgQueue,(MsgQueueMsgFreeFunction)freeEntryMsg,NULL);
   free(buffer);
