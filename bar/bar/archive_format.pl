@@ -22,9 +22,11 @@ use Getopt::Long;
 
 # ---------------------------- constants/variables ---------------------------
 
-my $PREFIX_ID         = "CHUNK_ID_";
-my $PREFIX_NAME       = "Chunk";
-my $PREFIX_DEFINITION = "CHUNK_DEFINITION_";
+my $PREFIX_CHUNK_ID         = "CHUNK_ID_";
+my $PREFIX_CHUNK_NAME       = "Chunk";
+my $PREFIX_CHUNK_DEFINITION = "CHUNK_DEFINITION_";
+
+my $PREFIX_CONST_NAME       = "CHUNK_CONST_";
 
 my $DEFINITION_TYPES =
   {
@@ -57,6 +59,16 @@ sub writeHFile($)
   }
 }
 
+sub writeConstFile($)
+{
+  my $s=shift(@_);
+
+  if ($constFileName ne "")
+  {
+    print CONSTFILE_HANDLE $s;
+  }
+}
+
 sub writeCFile($)
 {
   my $s=shift(@_);
@@ -71,7 +83,8 @@ sub writeCFile($)
 
 GetOptions("c=s" => \$cFileName,
            "h=s" => \$hFileName,
-           "i=s" => \$includeFileName,
+           "n=s" => \$constFileName,
+           "i=s" => \@includeFileNames,
           );
 
 if ($cFileName ne "")
@@ -83,14 +96,27 @@ if ($hFileName ne "")
   open(HFILE_HANDLE,"> $hFileName");
   print HFILE_HANDLE "#ifndef __ARCHIVE_FORMAT__\n";
   print HFILE_HANDLE "#define __ARCHIVE_FORMAT__\n";
+
   print HFILE_HANDLE "#include \"lists.h\"\n";
   print HFILE_HANDLE "#include \"chunks.h\"\n";
   print HFILE_HANDLE "#include \"crypt.h\"\n";
   print HFILE_HANDLE "#include \"compress.h\"\n";
 }
+if ($constFileName ne "")
+{
+  open(CONSTFILE_HANDLE,"> $constFileName");
+  print CONSTFILE_HANDLE "#ifndef __ARCHIVE_FORMAT_CONST__\n";
+  print CONSTFILE_HANDLE "#define __ARCHIVE_FORMAT_CONST__\n";
+}
 
 writeCFile("#include \"chunks.h\"\n");
-if ($includeFileName ne "") { writeCFile("#include \"$includeFileName\"\n"); }
+if (scalar(@includeFileNames) > 0)
+{
+  for my $includeFileName (@includeFileNames)
+  {
+    writeCFile("#include \"$includeFileName\"\n");
+  }
+}
 
 my $line;
 my $lineNb=0;
@@ -101,7 +127,7 @@ while ($line=<STDIN>)
   if ($line =~ /^\s*#/ || $line =~ /^\s*$/) { next; }
 #print "$line\n";
 
-  if ($line =~ /^CHUNK\s+(\w+)\s+"(.*)"\s+(\w+)/)
+  if    ($line =~ /^CHUNK\s+(\w+)\s+"(.*)"\s+(\w+)/)
   {
     # chunk
     my $n=0;
@@ -112,10 +138,10 @@ while ($line=<STDIN>)
 
     # Note: use padding in C structures for access via pointer
 
-    writeHFile("#define $PREFIX_ID$idName (('".substr($id,0,1)."' << 24) | ('".substr($id,1,1)."' << 16) | ('".substr($id,2,1)."' << 8) | '".substr($id,3,1)."')\n");
-    writeHFile("typedef struct $PREFIX_NAME$structName\n");
+    writeHFile("#define $PREFIX_CHUNK_ID$idName (('".substr($id,0,1)."' << 24) | ('".substr($id,1,1)."' << 16) | ('".substr($id,2,1)."' << 8) | '".substr($id,3,1)."')\n");
+    writeHFile("typedef struct $PREFIX_CHUNK_NAME$structName\n");
     writeHFile("{\n");
-    writeHFile("  LIST_NODE_HEADER(struct $PREFIX_NAME$structName);\n");
+    writeHFile("  LIST_NODE_HEADER(struct $PREFIX_CHUNK_NAME$structName);\n");
     writeHFile("  ChunkInfo info;\n");
     while ($line=<STDIN>)
     {
@@ -136,32 +162,32 @@ while ($line=<STDIN>)
         writeHFile("  $1 $2;\n");
         writeHFile("  uint8 pad".$n."[3];\n");
         push(@parseDefinitions,$DEFINITION_TYPES->{$1});
-        push(@parseDefinitions,"offsetof($PREFIX_NAME$structName,$2)");
+        push(@parseDefinitions,"offsetof($PREFIX_CHUNK_NAME$structName,$2)");
       }
       elsif ($line =~ /^\s*(uint16|int16)\s+(\w+)/)
       {
         writeHFile("  $1 $2;\n");
         writeHFile("  uint8 pad".$n."[2];\n");
         push(@parseDefinitions,$DEFINITION_TYPES->{$1});
-        push(@parseDefinitions,"offsetof($PREFIX_NAME$structName,$2)");
+        push(@parseDefinitions,"offsetof($PREFIX_CHUNK_NAME$structName,$2)");
       }
       elsif ($line =~ /^\s*(uint32|int32)\s+(\w+)/)
       {
         writeHFile("  $1 $2;\n");
         push(@parseDefinitions,$DEFINITION_TYPES->{$1});
-        push(@parseDefinitions,"offsetof($PREFIX_NAME$structName,$2)");
+        push(@parseDefinitions,"offsetof($PREFIX_CHUNK_NAME$structName,$2)");
       }
       elsif ($line =~ /^\s*(uint64|int64)\s+(\w+)/)
       {
         writeHFile("  $1 $2;\n");
         push(@parseDefinitions,$DEFINITION_TYPES->{$1});
-        push(@parseDefinitions,"offsetof($PREFIX_NAME$structName,$2)");
+        push(@parseDefinitions,"offsetof($PREFIX_CHUNK_NAME$structName,$2)");
       }
       elsif ($line =~ /^\s*string\s+(\w+)/)
       {
         writeHFile("  String $1;\n");
         push(@parseDefinitions,$DEFINITION_TYPES->{string});
-        push(@parseDefinitions,"offsetof($PREFIX_NAME$structName,$1)");
+        push(@parseDefinitions,"offsetof($PREFIX_CHUNK_NAME$structName,$1)");
       }
       elsif ($line =~ /^\s*data\s+(\w+)/)
       {
@@ -181,12 +207,20 @@ while ($line=<STDIN>)
 
       $n++;
     }
-    writeHFile("} $PREFIX_NAME$structName;\n");
-    writeHFile("typedef struct { LIST_HEADER($PREFIX_NAME$structName); } $PREFIX_NAME$structName"."List".";\n");
+    writeHFile("} $PREFIX_CHUNK_NAME$structName;\n");
+    writeHFile("typedef struct { LIST_HEADER($PREFIX_CHUNK_NAME$structName); } $PREFIX_CHUNK_NAME$structName"."List".";\n");
 
     push(@parseDefinitions,"0");
-    writeHFile("extern const int $PREFIX_DEFINITION$idName\[\];\n");
-    writeCFile("const int $PREFIX_DEFINITION$idName\[\] = {".join(",",@parseDefinitions)."};\n");
+    writeHFile("extern const int $PREFIX_CHUNK_DEFINITION$idName\[\];\n");
+    writeCFile("const int $PREFIX_CHUNK_DEFINITION$idName\[\] = {".join(",",@parseDefinitions)."};\n");
+  }
+  elsif ($line =~ /^CONST\s+(\w+)\s*=\s*(\S*)\s*/)
+  {
+    # constant
+    my $name =$1;
+    my $value=$2;
+
+    writeConstFile("#define $PREFIX_CONST_NAME$name $value\n");
   }
   else
   {
@@ -195,14 +229,19 @@ while ($line=<STDIN>)
   }
 }
 
-if ($cFileName ne "")
+if ($constFileName ne "")
 {
-  close(CFILE_HANDLE);
+  print CONSTFILE_HANDLE "#endif /* __ARCHIVE_FORMAT_CONST__ */\n";
+  close(CONSTFILE_HANDLE);
 }
 if ($hFileName ne "")
 {
   print HFILE_HANDLE "#endif /* __ARCHIVE_FORMAT__ */\n";
   close(HFILE_HANDLE);
+}
+if ($cFileName ne "")
+{
+  close(CFILE_HANDLE);
 }
 
 exit 0;

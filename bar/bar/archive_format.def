@@ -10,23 +10,55 @@
 
 # BAR files are organized in 'chunks' (a sequence of bytes prefixed by
 # a header). Chunks are stored continously in a file. Chunks may contain
-# sub-chunks. Each chunk have a header of the/ File format of a chunk
+# sub-chunks. Each chunk have a header. The format of a chunk
 # header is:
 #
 # 4 bytes: id, 4 8bit-characters
-# 8 bytes: length (excluding size of header), 64bit big-enddian
+# 8 bytes: length (excluding size of header), 64bit big-endian
 #
-# The following syntax is used for specification:
+# The chunk id of top-level chunks usually have 3 characters and one
+# digit (0-9). Details: see below.
+#
+# Chunks can contain sub-chunks. Future versions of BAR may contain new
+# chunks. Older versions of BAR skip unknown chunks.
+#
+# The general structure of a BAR file is (sub-chunks are indented, chunk
+# ids in [...] are optional chunks):
+#
+# BAR0
+# KEY0
+# FIL0
+#   FENT
+#   [DLT0]
+#   FDAT
+# IMG0
+#   IENT
+#   [DLT0]
+#   IDATA
+# DIR0
+#   DENT
+# LNK0
+#   LENT
+# HKN0
+#   HENT
+#   HDAT
+# SPE0
+#   SENT
+#
+# The ordering of the chunks *0 is arbitrary. The sub-chunks should always
+# be ordered like shown above.
+#
+# The following syntax is used for specification in this file:
 #
 # CHUNK <name> <id, 4 character string> <data type name>
 #   [ENCRYPT]
-#   ]COMPRESS]
+#   [COMPRESS]
 #   <data definition>
 #   ...
 # <empty line>
 #
-# ENCRYPT means chunk can be encrypted (without header)
-# COMPRESS means data in chunk can be compressed
+# ENCRYPT means chunk can be encrypted (without header).
+# COMPRESS means data in chunk can be compressed (data only).
 #
 #
 # Available data types:
@@ -44,11 +76,65 @@
 #   data   data bytes
 #   crc32  32bit CRC of the previous data types
 #
-# Note: all data types except 'data' are stored in big endian format.
+# Note: all data types except 'data' are stored in big-endian format.
 
 # ---
 
-# archive info header
+CONST CRYPT_ALGORITHM_3DES         = 1
+CONST CRYPT_ALGORITHM_CAST5        = 2
+CONST CRYPT_ALGORITHM_BLOWFISH     = 3
+CONST CRYPT_ALGORITHM_AES128       = 4
+CONST CRYPT_ALGORITHM_AES192       = 5
+CONST CRYPT_ALGORITHM_AES256       = 6
+CONST CRYPT_ALGORITHM_TWOFISH128   = 7
+CONST CRYPT_ALGORITHM_TWOFISH256   = 8
+
+CONST COMPRESS_ALGORITHM_ZIP_0     = 1
+CONST COMPRESS_ALGORITHM_ZIP_1     = 2
+CONST COMPRESS_ALGORITHM_ZIP_2     = 3
+CONST COMPRESS_ALGORITHM_ZIP_3     = 4
+CONST COMPRESS_ALGORITHM_ZIP_4     = 5
+CONST COMPRESS_ALGORITHM_ZIP_5     = 6
+CONST COMPRESS_ALGORITHM_ZIP_6     = 7
+CONST COMPRESS_ALGORITHM_ZIP_7     = 8
+CONST COMPRESS_ALGORITHM_ZIP_8     = 9
+CONST COMPRESS_ALGORITHM_ZIP_9     = 10
+
+CONST COMPRESS_ALGORITHM_BZIP2_1   = 11
+CONST COMPRESS_ALGORITHM_BZIP2_2   = 12
+CONST COMPRESS_ALGORITHM_BZIP2_3   = 13
+CONST COMPRESS_ALGORITHM_BZIP2_4   = 14
+CONST COMPRESS_ALGORITHM_BZIP2_5   = 15
+CONST COMPRESS_ALGORITHM_BZIP2_6   = 16
+CONST COMPRESS_ALGORITHM_BZIP2_7   = 18
+CONST COMPRESS_ALGORITHM_BZIP2_8   = 19
+CONST COMPRESS_ALGORITHM_BZIP2_9   = 20
+
+CONST COMPRESS_ALGORITHM_LZMA_1    = 21
+CONST COMPRESS_ALGORITHM_LZMA_2    = 22
+CONST COMPRESS_ALGORITHM_LZMA_3    = 23
+CONST COMPRESS_ALGORITHM_LZMA_4    = 24
+CONST COMPRESS_ALGORITHM_LZMA_5    = 25
+CONST COMPRESS_ALGORITHM_LZMA_6    = 26
+CONST COMPRESS_ALGORITHM_LZMA_7    = 27
+CONST COMPRESS_ALGORITHM_LZMA_8    = 28
+CONST COMPRESS_ALGORITHM_LZMA_9    = 29
+
+CONST COMPRESS_ALGORITHM_XDELTA_1  = 30
+CONST COMPRESS_ALGORITHM_XDELTA_2  = 31
+CONST COMPRESS_ALGORITHM_XDELTA_3  = 32
+CONST COMPRESS_ALGORITHM_XDELTA_4  = 33
+CONST COMPRESS_ALGORITHM_XDELTA_5  = 34
+CONST COMPRESS_ALGORITHM_XDELTA_6  = 35
+CONST COMPRESS_ALGORITHM_XDELTA_7  = 36
+CONST COMPRESS_ALGORITHM_XDELTA_8  = 37
+CONST COMPRESS_ALGORITHM_XDELTA_9  = 38
+
+# ---
+
+# Archive info header. Only used to identify file as a BAR
+# file.
+#
 # parent: none
 # never compress/encrypted
 CHUNK BAR "BAR0" Bar
@@ -56,10 +142,18 @@ CHUNK BAR "BAR0" Bar
 
 # ---
 
-# asymmetric encryption key used for the following chunks which
-# could be encrypted (hybrid encryption). The key is encrypted
-# with the public key. To decrypt the key the private key is
-# required.
+# asymmetric encryption key
+#
+# Used for the following chunks which could be encrypted by
+# the specified symmetric entryption. A random generated key
+# for symmetric encryption is encrypted itself with the
+# asymmetric RSA entryption and the public key (hybrid
+# encryption). To decrypt the random key and with that the
+# data the private key is required.
+#
+# Asymmetric encryption keys may be stored multiple times to
+# change key for the following chunks.
+#
 # parent: none
 # never compress/encrypted
 CHUNK KEY "KEY0" Key
@@ -69,6 +163,7 @@ CHUNK KEY "KEY0" Key
 # ---
 
 # file info header
+#
 # parent: none
 # never compress/encrypted
 CHUNK FILE "FIL0" File
@@ -77,8 +172,9 @@ CHUNK FILE "FIL0" File
   crc32  crc
 
 # file entry
+#
 # parent: FIL0
-# compress/encrypted as specified in FIL0
+# encrypted as specified in FIL0
 CHUNK FILE_ENTRY "FENT" FileEntry
   ENCRYPT
   uint64 size
@@ -91,7 +187,18 @@ CHUNK FILE_ENTRY "FENT" FileEntry
   string name
   crc32  crc
 
+# file delta compression entry
+#
+# parent: FIL0
+# encrypted as specified in FIL0
+CHUNK FILE_DELTA "FDLT" FileDelta
+  ENCRYPT
+  uint16 compressAlgorithm;
+  string source
+  crc32  crc
+
 # file data
+#
 # parent: FIL0
 # compress/encrypted as specified in FIL0
 CHUNK FILE_DATA "FDAT" FileData
@@ -105,6 +212,7 @@ CHUNK FILE_DATA "FDAT" FileData
 # ---
 
 # image info header
+#
 # parent: none
 # never compress/encrypted
 CHUNK IMAGE "IMG0" Image
@@ -113,8 +221,9 @@ CHUNK IMAGE "IMG0" Image
   crc32  crc
 
 # image entry
+#
 # parent: IMG0
-# compress/encrypted as specified in IMG0
+# encrypted as specified in IMG0
 CHUNK IMAGE_ENTRY "IENT" ImageEntry +encrypted
   ENCRYPT
   uint16 fileSystemType
@@ -123,7 +232,18 @@ CHUNK IMAGE_ENTRY "IENT" ImageEntry +encrypted
   string name
   crc32  crc
 
+# image delta compression entry
+#
+# parent: IMG0
+# encrypted as specified in IMG0
+CHUNK IMAGE_DELTA "IDLT" ImageDelta
+  ENCRYPT
+  uint16 deltaAlgorithm;
+  string source
+  crc32  crc
+
 # image data
+#
 # parent: IMG0
 # compress/encrypted as specified in IMG0
 CHUNK IMAGE_DATA "IDAT" ImageData
@@ -137,6 +257,7 @@ CHUNK IMAGE_DATA "IDAT" ImageData
 # ---
 
 # directory info header
+#
 # parent: none
 # never compress/encrypted
 CHUNK DIRECTORY "DIR0" Directory
@@ -144,8 +265,9 @@ CHUNK DIRECTORY "DIR0" Directory
   crc32  crc
 
 # directory entry
+#
 # parent: DIR0
-# compress/encrypted as specified in DIR0
+# encrypted as specified in DIR0
 CHUNK DIRECTORY_ENTRY "DENT" DirectoryEntry
   ENCRYPT
   uint64 timeLastAccess
@@ -160,6 +282,7 @@ CHUNK DIRECTORY_ENTRY "DENT" DirectoryEntry
 # ---
 
 # (symbolic) link info header
+#
 # parent: none
 # never compress/encrypted
 CHUNK LINK "LNK0" Link
@@ -167,8 +290,9 @@ CHUNK LINK "LNK0" Link
   crc32  crc
 
 # (symbolic) link entry
+#
 # parent: LNK0
-# compress/encrypted as specified in LNK0
+# encrypted as specified in LNK0
 CHUNK LINK_ENTRY "LENT" LinkEntry
   ENCRYPT
   uint64 timeLastAccess
@@ -184,6 +308,7 @@ CHUNK LINK_ENTRY "LENT" LinkEntry
 # ---
 
 # hard link info header
+#
 # parent: none
 # never compress/encrypted
 CHUNK HARDLINK "HLN0" HardLink
@@ -192,8 +317,9 @@ CHUNK HARDLINK "HLN0" HardLink
   crc32  crc
 
 # hard link entry
+#
 # parent: HLN0
-# compress/encrypted as specified in HLN0
+# encrypted as specified in HLN0
 CHUNK HARDLINK_ENTRY "HENT" HardLinkEntry
   ENCRYPT
   uint64 size
@@ -206,14 +332,16 @@ CHUNK HARDLINK_ENTRY "HENT" HardLinkEntry
   crc32  crc
 
 # hard link name
+#
 # parent: HLN0
-# compress/encrypted as specified in HLN0
+# encrypted as specified in HLN0
 CHUNK HARDLINK_NAME "HNAM" HardLinkName
   ENCRYPT
   string name
   crc32  crc
 
 # hard link data
+#
 # parent: HLN0
 # compress/encrypted as specified in HLN0
 CHUNK HARDLINK_DATA "HDAT" HardLinkData
@@ -227,6 +355,7 @@ CHUNK HARDLINK_DATA "HDAT" HardLinkData
 # ---
 
 # special info header
+#
 # parent: none
 # never compress/encrypted
 CHUNK SPECIAL "SPE0" Special
@@ -234,8 +363,9 @@ CHUNK SPECIAL "SPE0" Special
   crc32  crc
 
 # special entry
+#
 # parent: SPE0
-# compress/encrypted as specified in SPE0
+# encrypted as specified in SPE0
 CHUNK SPECIAL_ENTRY "SENT" SpecialEntry
   ENCRYPT
   uint16 specialType
@@ -248,6 +378,21 @@ CHUNK SPECIAL_ENTRY "SENT" SpecialEntry
   uint32 major
   uint32 minor
   string name
+  crc32  crc
+
+# ---
+
+# delta compression entry
+#
+# Used to enable additional delta compression for a file or image.
+# Store the used source file for delta compression.
+#
+# parent: FIL0 or IMG0
+# encrypted as specified in FIL0, IMG0
+CHUNK DELTA_ENTRY "DLT0" DeltaEntry
+  ENCRYPT
+  uint16 deltaAlgorithm;
+  string source
   crc32  crc
 
 # ---

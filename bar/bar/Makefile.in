@@ -208,6 +208,7 @@ INTERMEDIATE         = errors.c \
                        errors.h \
                        archive_format.c \
                        archive_format.h \
+                       archive_format_const.h \
                        index_definition.h \
 
 TARGETS              = bar \
@@ -322,6 +323,8 @@ errors.c: ../errors.def ../errors.pl
 # archive format definition
 archive_format.h: archive_format.def
 	$(PERL) archive_format.pl < $^ -h $@
+archive_format_const.h: archive_format.def
+	$(PERL) archive_format.pl < $^ -n $@
 archive_format.c: archive_format.def
 	$(PERL) archive_format.pl < $^ -c $@ -i archive_format.h
 
