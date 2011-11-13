@@ -469,6 +469,15 @@ Errors Compress_getAvailableCompressedBlocks(CompressInfo *compressInfo, Compres
 bool Compress_checkEndOfBlock(CompressInfo *compressInfo);
 #endif /* 0 */
 
+/***********************************************************************\
+* Name   : Compress_getByte
+* Purpose: get compressed byte
+* Input  : compressInfo - compress info block
+* Output : buffer - buffer with compressed byte
+* Return : TRUE iff compressed is read, FALSE otherwise
+* Notes  : -
+\***********************************************************************/
+
 bool Compress_getByte(CompressInfo *compressInfo,
                       byte         *buffer
                      );
