@@ -425,6 +425,10 @@ void Array_debugDumpInfo(FILE *handle)
               debugArrayNode->lineNb
              );
     }
+    if (!List_empty(&debugArrayList))
+    {
+      HALT_INTERNAL_ERROR_LOST_RESOURCE();
+    }
   }
   pthread_mutex_unlock(&debugArrayLock);
 }
