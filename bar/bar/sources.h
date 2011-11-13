@@ -3,7 +3,7 @@
 * $Source: /home/torsten/cvs/bar/bar/compress.h,v $
 * $Revision: 1.3 $
 * $Author: torsten $
-* Contents: Backup ARchiver source functions
+* Contents: Backup ARchiver delta compression source functions
 * Systems : all
 *
 \***********************************************************************/
@@ -45,30 +45,9 @@ typedef struct SourceNode
 {
   LIST_NODE_HEADER(struct SourceNode);
 
-  String      storageName;
-  uint64      offset;
-  SourceTypes type;
-  union
-  {
-    struct
-    {
-      String name;
-      uint64 fragmentOffset;
-      uint64 fragmentSize;
-    } file;
-    struct
-    {
-      String name;
-      uint64 blockOffset;
-      uint64 blockCount;
-    } image;
-    struct
-    {
-      StringList nameList;
-      uint64     fragmentOffset;
-      uint64     fragmentSize;
-    } hardLink;
-  };
+  String storageName;          // storage archive name
+  String localStorageName;     // local storage archive name
+//  bool   tmpLocalStorageFlag;  // TRUE if located storage created
 } SourceNode;
 
 typedef struct
@@ -79,14 +58,17 @@ typedef struct
 /* source info block */
 typedef struct
 {
-  SourceList sourceList;
+  SourceList       sourceList;
+  const JobOptions *jobOptions;
 } SourceInfo;
 
 /* source entry info block */
 typedef struct
 {
-//  FileHandle fileHandle;
   SourceNode *sourceNode;
+  String     tmpFileName;
+  FileHandle tmpFileHandle;
+  bool       tmpFileOpenFlag;
 } SourceEntryInfo;
 
 /***************************** Variables *******************************/
