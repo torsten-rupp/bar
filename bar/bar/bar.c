@@ -41,6 +41,9 @@
 #include "index.h"
 #include "misc.h"
 
+#include "sources.h"
+
+
 #include "commands_create.h"
 #include "commands_list.h"
 #include "commands_restore.h"
@@ -127,6 +130,7 @@ typedef enum
 
 /***************************** Variables *******************************/
 GlobalOptions       globalOptions;
+String              tmpDirectory;
 DatabaseHandle      *indexDatabaseHandle;
 
 LOCAL Commands      command;
@@ -139,7 +143,7 @@ LOCAL SSHServerList sshServerList;
 LOCAL DeviceList    deviceList;
 LOCAL EntryList     includeEntryList;
 LOCAL PatternList   excludePatternList;
-LOCAL PatternList   sourcePatternList;
+LOCAL PatternList   deltaSourcePatternList;
 LOCAL PatternList   compressExcludePatternList;
 LOCAL FTPServer     defaultFTPServer;
 LOCAL SSHServer     defaultSSHServer;
@@ -176,7 +180,6 @@ LOCAL uint          keyBits;
 
 LOCAL StringList    configFileNameList;
 
-String              tmpDirectory;
 LOCAL String        tmpLogFileName;
 LOCAL FILE          *logFile = NULL;
 LOCAL FILE          *tmpLogFile = NULL;
@@ -264,6 +267,25 @@ const CommandLineOptionSelect COMMAND_LINE_OPTIONS_COMPRESS_ALGORITHMS[] =
     {"lzma8",COMPRESS_ALGORITHM_LZMA_8,"LZMA compression level 8"},
     {"lzma9",COMPRESS_ALGORITHM_LZMA_9,"LZMA compression level 9"},
   #endif /* HAVE_LZMA */
+
+#if 0
+  #ifdef HAVE_XDELTA
+    {"xdelta1",COMPRESS_ALGORITHM_XDELTA_1,"XDELTA compression level 1"},
+    {"xdelta2",COMPRESS_ALGORITHM_XDELTA_2,"XDELTA compression level 2"},
+    {"xdelta3",COMPRESS_ALGORITHM_XDELTA_3,"XDELTA compression level 3"},
+    {"xdelta4",COMPRESS_ALGORITHM_XDELTA_4,"XDELTA compression level 4"},
+    {"xdelta5",COMPRESS_ALGORITHM_XDELTA_5,"XDELTA compression level 5"},
+    {"xdelta6",COMPRESS_ALGORITHM_XDELTA_6,"XDELTA compression level 6"},
+    {"xdelta7",COMPRESS_ALGORITHM_XDELTA_7,"XDELTA compression level 7"},
+    {"xdelta8",COMPRESS_ALGORITHM_XDELTA_8,"XDELTA compression level 8"},
+    {"xdelta9",COMPRESS_ALGORITHM_XDELTA_9,"XDELTA compression level 9"},
+  #endif /* HAVE_XDELTA */
+#endif /* 0 */
+};
+
+const CommandLineOptionSelect COMMAND_LINE_OPTIONS_DELTA_COMPRESS_ALGORITHMS[] =
+{
+  {"none", COMPRESS_ALGORITHM_NONE,   "no compression"           },
 
   #ifdef HAVE_XDELTA
     {"xdelta1",COMPRESS_ALGORITHM_XDELTA_1,"XDELTA compression level 1"},
@@ -353,7 +375,10 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
 
   CMD_OPTION_SPECIAL      ("include",                      '#',0,2,&includeEntryList,                         cmdOptionParseEntryPattern,NULL,                       "include pattern","pattern"                                                ),
   CMD_OPTION_SPECIAL      ("exclude",                      '!',0,2,&excludePatternList,                       cmdOptionParsePattern,NULL,                            "exclude pattern","pattern"                                                ),
-  CMD_OPTION_SPECIAL      ("source",                       0,  0,2,&sourcePatternList,                        cmdOptionParsePattern,NULL,                            "source pattern","pattern"                                                 ),
+
+  CMD_OPTION_SPECIAL      ("delta-source",                 0,  0,2,&deltaSourcePatternList,                   cmdOptionParsePattern,NULL,                            "source pattern","pattern"                                                 ),
+// ??? combine with compress-algorithm
+CMD_OPTION_SELECT       ("delta-algorithm",              0,  0,1,jobOptions.compressAlgorithm.delta,        COMMAND_LINE_OPTIONS_DELTA_COMPRESS_ALGORITHMS,                 "select delta algorithm to use"                                            ),
 
   CMD_OPTION_SPECIAL      ("config",                       0,  1,0,NULL,                                      cmdOptionParseConfigFile,NULL,                         "configuration file","file name"                                           ),
 
@@ -366,9 +391,10 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
   CMD_OPTION_STRING       ("destination",                  0,  0,1,jobOptions.destination,                                                                          "destination to restore files/images","path"                                ),
   CMD_OPTION_SPECIAL      ("owner",                        0,  0,1,&jobOptions.owner,                         cmdOptionParseOwner,NULL,                              "user and group of restored files","user:group"                            ),
 
-  CMD_OPTION_SELECT       ("compress-algorithm",           'z',0,1,jobOptions.compressAlgorithm,              COMMAND_LINE_OPTIONS_COMPRESS_ALGORITHMS,              "select compress algorithm to use"                                         ),
+  CMD_OPTION_SELECT       ("compress-algorithm",           'z',0,1,jobOptions.compressAlgorithm.data,         COMMAND_LINE_OPTIONS_COMPRESS_ALGORITHMS,              "select compress algorithm to use"                                         ),
   CMD_OPTION_INTEGER      ("compress-min-size",            0,  1,1,globalOptions.compressMinFileSize,         0,MAX_INT,COMMAND_LINE_BYTES_UNITS,                    "minimal size of file for compression"                                     ),
   CMD_OPTION_SPECIAL      ("compress-exclude",             0,  0,2,&compressExcludePatternList,               cmdOptionParsePattern,NULL,                            "exclude compression pattern","pattern"                                    ),
+
 
   CMD_OPTION_SELECT       ("crypt-algorithm",              'y',0,1,jobOptions.cryptAlgorithm,                 COMMAND_LINE_OPTIONS_CRYPT_ALGORITHMS,                 "select crypt algorithm to use"                                            ),
   CMD_OPTION_SELECT       ("crypt-type",                   0,  0,1,jobOptions.cryptType,                      COMMAND_LINE_OPTIONS_CRYPT_TYPES,                      "select crypt type"                                                        ),
@@ -674,7 +700,7 @@ LOCAL const ConfigValue CONFIG_VALUES[] =
 
   CONFIG_VALUE_SELECT   ("pattern-type",                 &jobOptions.patternType,-1,                              CONFIG_VALUE_PATTERN_TYPES),
  
-  CONFIG_VALUE_SELECT   ("compress-algorithm",           &jobOptions.compressAlgorithm,-1,                        CONFIG_VALUE_COMPRESS_ALGORITHMS),
+  CONFIG_VALUE_SELECT   ("compress-algorithm",           &jobOptions.compressAlgorithm.data,-1,                   CONFIG_VALUE_COMPRESS_ALGORITHMS),
 
   CONFIG_VALUE_SELECT   ("crypt-algorithm",              &jobOptions.cryptAlgorithm,-1,                           CONFIG_VALUE_CRYPT_ALGORITHMS),
   CONFIG_VALUE_SELECT   ("crypt-type",                   &jobOptions.cryptType,-1,                                CONFIG_VALUE_CRYPT_TYPES),
@@ -1705,7 +1731,7 @@ LOCAL bool initAll(void)
   List_init(&deviceList);
   EntryList_init(&includeEntryList);
   PatternList_init(&excludePatternList);
-  PatternList_init(&sourcePatternList);
+  PatternList_init(&deltaSourcePatternList);
   PatternList_init(&compressExcludePatternList);
   defaultFTPServer.loginName            = NULL;
   defaultFTPServer.password             = NULL;
@@ -1809,7 +1835,7 @@ LOCAL void doneAll(void)
   if (defaultFTPServer.password != NULL) Password_delete(defaultFTPServer.password);
   if (defaultFTPServer.loginName != NULL) String_delete(defaultFTPServer.loginName);
   PatternList_done(&compressExcludePatternList);
-  PatternList_done(&sourcePatternList);
+  PatternList_done(&deltaSourcePatternList);
   PatternList_done(&excludePatternList);
   EntryList_done(&includeEntryList);
   Password_delete(serverPassword);
@@ -2081,7 +2107,8 @@ void initJobOptions(JobOptions *jobOptions)
   jobOptions->owner.userId              = FILE_DEFAULT_USER_ID;
   jobOptions->owner.groupId             = FILE_DEFAULT_GROUP_ID;
   jobOptions->patternType               = PATTERN_TYPE_GLOB;
-  jobOptions->compressAlgorithm         = COMPRESS_ALGORITHM_NONE;
+  jobOptions->compressAlgorithm.delta   = COMPRESS_ALGORITHM_NONE;
+  jobOptions->compressAlgorithm.data    = COMPRESS_ALGORITHM_NONE;
   jobOptions->cryptAlgorithm            = CRYPT_ALGORITHM_NONE;
   #ifdef HAVE_GCRYPT
     jobOptions->cryptType               = CRYPT_TYPE_SYMMETRIC;
@@ -3888,7 +3915,7 @@ int main(int argc, const char *argv[])
     error = Command_create(String_cString(archiveName),
                            &includeEntryList,
                            &excludePatternList,
-                           &sourcePatternList,
+                           &deltaSourcePatternList,
                            &compressExcludePatternList,
                            &jobOptions,
                            ARCHIVE_TYPE_NORMAL,
@@ -3943,7 +3970,7 @@ int main(int argc, const char *argv[])
           error = Command_create(archiveName,
                                  &includeEntryList,
                                  &excludePatternList,
-                                 &sourcePatternList,
+                                 &deltaSourcePatternList,
                                  &compressExcludePatternList,
                                  &jobOptions,
                                  ARCHIVE_TYPE_NORMAL,
@@ -4147,7 +4174,8 @@ fprintf(stderr,"%s,%d: t=%s\n",__FILE__,__LINE__,t);
   }
 
   /* delete temporary directory */
-  File_delete(tmpDirectory,TRUE);
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+//  File_delete(tmpDirectory,TRUE);
 
   /* close index database (if open) */
   if (indexDatabaseHandle != NULL)

@@ -330,7 +330,15 @@ typedef struct
 
   PatternTypes        patternType;
 
-  CompressAlgorithms  compressAlgorithm;                 // compress algorithm to use
+  struct
+  {
+    CompressAlgorithms delta;
+    CompressAlgorithms data;
+  } compressAlgorithm;                 // compress algorithm to use
+//  CompressAlgorithms  deltaCompressAlgorithm;            // delta compress algorithm to use
+//  CompressAlgorithms  dataCompressAlgorithm;             // data compress algorithm to use
+//???
+//CompressAlgorithms  compressAlgorithm;                 // compress algorithm to use
 
   CryptTypes          cryptType;                         // crypt type (symmetric, asymmetric)
   CryptAlgorithms     cryptAlgorithm;                    // crypt algorithm to use
