@@ -156,11 +156,16 @@ Errors Command_test(StringList                      *archiveFileNameList,
             fileName = String_new();
             error = Archive_readFileEntry(&archiveInfo,
                                           &archiveEntryInfo,
+//???
+NULL,
+NULL,
+                                          NULL,
                                           NULL,
                                           NULL,
                                           NULL,
                                           fileName,
                                           &fileInfo,
+                                          NULL,
                                           &fragmentOffset,
                                           &fragmentSize
                                          );
@@ -228,10 +233,12 @@ Errors Command_test(StringList                      *archiveFileNameList,
 
               /* check if all data read.
                  Note: it is not possible to check if all data is read when
-                 compression is used. The decompressor may not all data even
-                 data is _not_ corrupt.
+                 compression is used. The decompressor may not be at the end
+                 of a compressed data chunk even compressed data is _not_
+                 corrupt.
               */
-              if (   (archiveEntryInfo.file.compressAlgorithm == COMPRESS_ALGORITHM_NONE)
+              if (   !COMPRESS_IS_COMPRESSED(archiveEntryInfo.file.deltaCompressAlgorithm)
+                  && !COMPRESS_IS_COMPRESSED(archiveEntryInfo.file.dataCompressAlgorithm)
                   && !Archive_eofData(&archiveEntryInfo))
               {
                 printInfo(2,"FAIL!\n");
@@ -279,6 +286,10 @@ Errors Command_test(StringList                      *archiveFileNameList,
             imageName = String_new();
             error = Archive_readImageEntry(&archiveInfo,
                                            &archiveEntryInfo,
+//???
+NULL,
+NULL,
+                                           NULL,
                                            NULL,
                                            NULL,
                                            NULL,
@@ -352,10 +363,12 @@ Errors Command_test(StringList                      *archiveFileNameList,
 
               /* check if all data read.
                  Note: it is not possible to check if all data is read when
-                 compression is used. The decompressor may not all data even
-                 data is _not_ corrupt.
+                 compression is used. The decompressor may not be at the end
+                 of a compressed data chunk even compressed data is _not_
+                 corrupt.
               */
-              if (   (archiveEntryInfo.image.compressAlgorithm == COMPRESS_ALGORITHM_NONE)
+              if (   !COMPRESS_IS_COMPRESSED(archiveEntryInfo.image.deltaCompressAlgorithm)
+                  && !COMPRESS_IS_COMPRESSED(archiveEntryInfo.image.dataCompressAlgorithm)
                   && !Archive_eofData(&archiveEntryInfo))
               {
                 printInfo(2,"FAIL!\n");
@@ -549,6 +562,10 @@ Errors Command_test(StringList                      *archiveFileNameList,
             StringList_init(&fileNameList);
             error = Archive_readHardLinkEntry(&archiveInfo,
                                               &archiveEntryInfo,
+//???
+NULL,
+NULL,
+                                              NULL,
                                               NULL,
                                               NULL,
                                               NULL,
@@ -626,10 +643,12 @@ Errors Command_test(StringList                      *archiveFileNameList,
 
                   /* check if all data read.
                      Note: it is not possible to check if all data is read when
-                     compression is used. The decompressor may not all data even
-                     data is _not_ corrupt.
+                     compression is used. The decompressor may not be at the end
+                     of a compressed data chunk even compressed data is _not_
+                     corrupt.
                   */
-                  if (   (archiveEntryInfo.hardLink.compressAlgorithm == COMPRESS_ALGORITHM_NONE)
+                  if (   !COMPRESS_IS_COMPRESSED(archiveEntryInfo.hardLink.deltaCompressAlgorithm)
+                      && !COMPRESS_IS_COMPRESSED(archiveEntryInfo.hardLink.dataCompressAlgorithm)
                       && !Archive_eofData(&archiveEntryInfo))
                   {
                     printError("unexpected data at end of hard link entry '%S'!\n",fileName);

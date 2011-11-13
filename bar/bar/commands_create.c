@@ -2067,28 +2067,27 @@ LOCAL Errors sourceGetEntryDataBlock(void   *userData,
                                      ulong  *bytesRead
                                     )
 {
-  SourceEntryInfo  *sourceEntryInfo;
-  Errors           error;
+  SourceEntryInfo *sourceEntryInfo;
+  Errors          error;
 
   assert(userData != NULL);
   assert(buffer != NULL);
   assert(bytesRead != NULL);
 
-fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
-
   sourceEntryInfo = (SourceEntryInfo*)userData;
 
-  error = File_seek(&sourceEntryInfo->fileHandle,offset);
+  error = File_seek(&sourceEntryInfo->tmpFileHandle,offset);
   if (error != ERROR_NONE)
   {
     return error;
   }
 
-  error = File_read(&sourceEntryInfo->fileHandle,buffer,length,bytesRead);
+  error = File_read(&sourceEntryInfo->tmpFileHandle,buffer,length,bytesRead);
   if (error != ERROR_NONE)
   {
     return error;
   }
+//fprintf(stderr,"%s,%d: read source %d\n",__FILE__,__LINE__,*bytesRead);
 
   return ERROR_NONE;
 }
@@ -2829,7 +2828,7 @@ LOCAL Errors storeFileEntry(ArchiveInfo       *archiveInfo,
                    && !PatternList_match(compressExcludePatternList,fileName,PATTERN_MATCH_MODE_EXACT);
 
     /* get source for delta-compression */
-    if (compressFlag && COMPRESS_IS_XDELTA_ALGORITHM(archiveInfo->jobOptions->compressAlgorithm))
+    if (compressFlag && COMPRESS_IS_COMPRESSED(archiveInfo->jobOptions->compressAlgorithm.delta))
     {
       error = Source_openEntry(&sourceEntryInfo,sourceInfo,fileName);
       if (error != ERROR_NONE)
@@ -2847,10 +2846,11 @@ LOCAL Errors storeFileEntry(ArchiveInfo       *archiveInfo,
     /* create new archive file entry */
     error = Archive_newFileEntry(archiveInfo,
                                  &archiveEntryInfo,
+                                 COMPRESS_IS_COMPRESSED(archiveInfo->jobOptions->compressAlgorithm.delta)?sourceGetEntryDataBlock:NULL,
+                                 COMPRESS_IS_COMPRESSED(archiveInfo->jobOptions->compressAlgorithm.delta)?&sourceEntryInfo:NULL,
                                  fileName,
                                  &fileInfo,
-                                 sourceGetEntryDataBlock,
-                                 &sourceEntryInfo,
+                                 COMPRESS_IS_COMPRESSED(archiveInfo->jobOptions->compressAlgorithm.delta)?sourceEntryInfo.sourceNode->storageName:NULL,
                                  compressFlag
                                 );
     if (error != ERROR_NONE)
@@ -2860,7 +2860,7 @@ LOCAL Errors storeFileEntry(ArchiveInfo       *archiveInfo,
                  String_cString(fileName),
                  Errors_getText(error)
                 );
-      if (compressFlag && COMPRESS_IS_XDELTA_ALGORITHM(archiveInfo->jobOptions->compressAlgorithm))
+      if (compressFlag && COMPRESS_IS_COMPRESSED(archiveInfo->jobOptions->compressAlgorithm.delta))
       {
         Source_closeEntry(&sourceEntryInfo);
       }
@@ -2928,16 +2928,15 @@ LOCAL Errors storeFileEntry(ArchiveInfo       *archiveInfo,
       return error;
     }
 
-    if (compressFlag && COMPRESS_IS_XDELTA_ALGORITHM(archiveInfo->jobOptions->compressAlgorithm))
+    // free resources
+    if (compressFlag && COMPRESS_IS_COMPRESSED(archiveInfo->jobOptions->compressAlgorithm.delta))
     {
       Source_closeEntry(&sourceEntryInfo);
     }
-
-    /* close file */
     File_close(&fileHandle);
 
     /* get compression ratio */
-    if ((archiveEntryInfo.file.compressAlgorithm != COMPRESS_ALGORITHM_NONE) && (archiveEntryInfo.file.chunkFileData.fragmentSize > 0LL))
+    if ((archiveEntryInfo.file.dataCompressAlgorithm != COMPRESS_ALGORITHM_NONE) && (archiveEntryInfo.file.chunkFileData.fragmentSize > 0LL))
     {
       ratio = 100.0-archiveEntryInfo.file.chunkFileData.info.size*100.0/archiveEntryInfo.file.chunkFileData.fragmentSize;
     }
@@ -2982,6 +2981,8 @@ LOCAL Errors storeFileEntry(ArchiveInfo       *archiveInfo,
 *          createInfo                   - create info structure
 *          storeIncrementalFileInfoFlag - not used
 *          deviceName                   - device name
+*          sourceInfo                   - source info (used for
+*                                         delta-compression)
 *          buffer                       - buffer for temporary data
 *          bufferSize                   - size of data buffer
 * Output : -
@@ -2994,6 +2995,7 @@ LOCAL Errors storeImageEntry(ArchiveInfo       *archiveInfo,
                              JobOptions        *jobOptions,
                              CreateInfo        *createInfo,
                              const String      deviceName,
+                             SourceInfo        *sourceInfo,
                              byte              *buffer,
                              uint              bufferSize
                             )
@@ -3004,6 +3006,7 @@ LOCAL Errors storeImageEntry(ArchiveInfo       *archiveInfo,
   bool             fileSystemFlag;
   FileSystemHandle fileSystemHandle;
   bool             compressFlag;
+  SourceEntryInfo  sourceEntryInfo;
   uint64           block;
   uint             bufferBlockCount;
   uint             maxBufferBlockCount;
@@ -3097,11 +3100,30 @@ LOCAL Errors storeImageEntry(ArchiveInfo       *archiveInfo,
     compressFlag =    (deviceInfo.size > globalOptions.compressMinFileSize)
                    && !PatternList_match(compressExcludePatternList,deviceName,PATTERN_MATCH_MODE_EXACT);
 
-    /* new image */
+    /* get source for delta-compression */
+    if (compressFlag && COMPRESS_IS_COMPRESSED(archiveInfo->jobOptions->compressAlgorithm.delta))
+    {
+      error = Source_openEntry(&sourceEntryInfo,sourceInfo,deviceName);
+      if (error != ERROR_NONE)
+      {
+        printInfo(1,"FAIL\n");
+        printError("Cannot open source file for '%s' (error: %s)\n",
+                   String_cString(deviceName),
+                   Errors_getText(error)
+                  );
+        Device_close(&deviceHandle);
+        return error;
+      }
+    }
+
+    /* create new archive image entry */
     error = Archive_newImageEntry(archiveInfo,
                                   &archiveEntryInfo,
+                                  COMPRESS_IS_COMPRESSED(archiveInfo->jobOptions->compressAlgorithm.delta)?sourceGetEntryDataBlock:NULL,
+                                  COMPRESS_IS_COMPRESSED(archiveInfo->jobOptions->compressAlgorithm.delta)?&sourceEntryInfo:NULL,
                                   deviceName,
                                   &deviceInfo,
+                                  COMPRESS_IS_COMPRESSED(archiveInfo->jobOptions->compressAlgorithm.delta)?sourceEntryInfo.sourceNode->storageName:NULL,
                                   compressFlag
                                  );
     if (error != ERROR_NONE)
@@ -3111,6 +3133,11 @@ LOCAL Errors storeImageEntry(ArchiveInfo       *archiveInfo,
                  String_cString(deviceName),
                  Errors_getText(error)
                 );
+      if (compressFlag && COMPRESS_IS_COMPRESSED(archiveInfo->jobOptions->compressAlgorithm.delta))
+      {
+        Source_closeEntry(&sourceEntryInfo);
+      }
+      Device_close(&deviceHandle);
       return error;
     }
 
@@ -3199,11 +3226,20 @@ LOCAL Errors storeImageEntry(ArchiveInfo       *archiveInfo,
       FileSystem_done(&fileSystemHandle);
     }
 
+    if (compressFlag && COMPRESS_IS_COMPRESSED(archiveInfo->jobOptions->compressAlgorithm.delta))
+    {
+      Source_closeEntry(&sourceEntryInfo);
+    }
+
     /* close device */
     Device_close(&deviceHandle);
 
     /* get compression ratio */
-    if ((archiveEntryInfo.image.compressAlgorithm != COMPRESS_ALGORITHM_NONE) && (archiveEntryInfo.image.chunkImageData.blockCount > 0))
+    if (   (   COMPRESS_IS_COMPRESSED(archiveEntryInfo.image.deltaCompressAlgorithm)
+            || COMPRESS_IS_COMPRESSED(archiveEntryInfo.image.dataCompressAlgorithm)
+           )
+        && (archiveEntryInfo.image.chunkImageData.blockCount > 0)
+       )
     {
       ratio = 100.0-archiveEntryInfo.image.chunkImageData.info.size*100.0/(archiveEntryInfo.image.chunkImageData.blockCount*(uint64)deviceInfo.blockSize);
     }
@@ -3585,7 +3621,7 @@ LOCAL Errors storeHardLinkEntry(ArchiveInfo       *archiveInfo,
                    && !PatternList_matchStringList(compressExcludePatternList,nameList,PATTERN_MATCH_MODE_EXACT);
 
     /* get source for delta-compression */
-    if (compressFlag && COMPRESS_IS_XDELTA_ALGORITHM(archiveInfo->jobOptions->compressAlgorithm))
+    if (compressFlag && COMPRESS_IS_COMPRESSED(archiveInfo->jobOptions->compressAlgorithm.delta))
     {
 //???
       STRINGLIST_ITERATE(nameList,stringNode,name)
@@ -3608,10 +3644,11 @@ LOCAL Errors storeHardLinkEntry(ArchiveInfo       *archiveInfo,
     /* create new archive hard link entry */
     error = Archive_newHardLinkEntry(archiveInfo,
                                      &archiveEntryInfo,
+                                     COMPRESS_IS_COMPRESSED(archiveInfo->jobOptions->compressAlgorithm.delta)?sourceGetEntryDataBlock:NULL,
+                                     COMPRESS_IS_COMPRESSED(archiveInfo->jobOptions->compressAlgorithm.delta)?&sourceEntryInfo:NULL,
                                      nameList,
                                      &fileInfo,
-                                     sourceGetEntryDataBlock,
-                                     &sourceEntryInfo,
+                                     COMPRESS_IS_COMPRESSED(archiveInfo->jobOptions->compressAlgorithm.delta)?sourceEntryInfo.sourceNode->storageName:NULL,
                                      compressFlag
                                     );
     if (error != ERROR_NONE)
@@ -3689,7 +3726,11 @@ LOCAL Errors storeHardLinkEntry(ArchiveInfo       *archiveInfo,
     File_close(&fileHandle);
 
     /* get compression ratio */
-    if ((archiveEntryInfo.hardLink.compressAlgorithm != COMPRESS_ALGORITHM_NONE) && (archiveEntryInfo.hardLink.chunkHardLinkData.fragmentSize > 0LL))
+    if (   (   COMPRESS_IS_COMPRESSED(archiveEntryInfo.hardLink.deltaCompressAlgorithm)
+            || COMPRESS_IS_COMPRESSED(archiveEntryInfo.hardLink.dataCompressAlgorithm)
+           )
+        && (archiveEntryInfo.hardLink.chunkHardLinkData.fragmentSize > 0LL)
+       )
     {
       ratio = 100.0-archiveEntryInfo.hardLink.chunkHardLinkData.info.size*100.0/archiveEntryInfo.hardLink.chunkHardLinkData.fragmentSize;
     }
@@ -4063,7 +4104,7 @@ Errors Command_create(const char                      *storageName,
   }
 
   /* init sources */
-  if (COMPRESS_IS_XDELTA_ALGORITHM(jobOptions->compressAlgorithm))
+  if (COMPRESS_IS_COMPRESSED(jobOptions->compressAlgorithm.delta))
   {
     error = Source_init(&sourceInfo,sourcePatternList,jobOptions);
     if (error != ERROR_NONE)
@@ -4282,6 +4323,7 @@ Errors Command_create(const char                      *storageName,
                                       jobOptions,
                                       &createInfo,
                                       entryMsg.name,
+                                      &sourceInfo,
                                       buffer,
                                       BUFFER_SIZE
                                      );
@@ -4383,7 +4425,7 @@ Errors Command_create(const char                      *storageName,
   }
 
   /* free resources */
-  if (COMPRESS_IS_XDELTA_ALGORITHM(jobOptions->compressAlgorithm))
+  if (COMPRESS_IS_COMPRESSED(jobOptions->compressAlgorithm.delta))
   {
     Source_done(&sourceInfo);
   }

@@ -335,11 +335,16 @@ Errors Command_restore(StringList                      *archiveNameList,
             fileName = String_new();
             error = Archive_readFileEntry(&archiveInfo,
                                           &archiveEntryInfo,
+//???
+NULL,
+NULL,
+                                          NULL,
                                           NULL,
                                           NULL,
                                           NULL,
                                           fileName,
                                           &fileInfo,
+                                          NULL,
                                           &fragmentOffset,
                                           &fragmentSize
                                          );
@@ -650,7 +655,8 @@ Errors Command_restore(StringList                      *archiveNameList,
                  of a compressed data chunk even compressed data is _not_
                  corrupt.
               */
-              if (   (archiveEntryInfo.file.compressAlgorithm == COMPRESS_ALGORITHM_NONE)
+              if (   !COMPRESS_IS_COMPRESSED(archiveEntryInfo.file.deltaCompressAlgorithm)
+                  && !COMPRESS_IS_COMPRESSED(archiveEntryInfo.file.dataCompressAlgorithm)
                   && !Archive_eofData(&archiveEntryInfo))
               {
                 printWarning("unexpected data at end of file entry '%S'.\n",fileName);
@@ -691,6 +697,10 @@ Errors Command_restore(StringList                      *archiveNameList,
             imageName = String_new();
             error = Archive_readImageEntry(&archiveInfo,
                                            &archiveEntryInfo,
+//???
+NULL,
+NULL,
+                                           NULL,
                                            NULL,
                                            NULL,
                                            NULL,
@@ -877,7 +887,8 @@ Errors Command_restore(StringList                      *archiveNameList,
                  of a compressed data chunk even compressed data is _not_
                  corrupt.
               */
-              if (   (archiveEntryInfo.image.compressAlgorithm == COMPRESS_ALGORITHM_NONE)
+              if (   !COMPRESS_IS_COMPRESSED(archiveEntryInfo.image.deltaCompressAlgorithm)
+                  && !COMPRESS_IS_COMPRESSED(archiveEntryInfo.image.dataCompressAlgorithm)
                   && !Archive_eofData(&archiveEntryInfo))
               {
                 printWarning("unexpected data at end of image entry '%S'.\n",imageName);
@@ -1302,6 +1313,10 @@ Errors Command_restore(StringList                      *archiveNameList,
             StringList_init(&fileNameList);
             error = Archive_readHardLinkEntry(&archiveInfo,
                                               &archiveEntryInfo,
+//???
+NULL,
+NULL,
+                                              NULL,
                                               NULL,
                                               NULL,
                                               NULL,
@@ -1649,7 +1664,8 @@ Errors Command_restore(StringList                      *archiveNameList,
                      of a compressed data chunk even compressed data is _not_
                      corrupt.
                   */
-                  if (   (archiveEntryInfo.hardLink.compressAlgorithm == COMPRESS_ALGORITHM_NONE)
+                  if (   !COMPRESS_IS_COMPRESSED(archiveEntryInfo.hardLink.deltaCompressAlgorithm)
+                      && !COMPRESS_IS_COMPRESSED(archiveEntryInfo.hardLink.dataCompressAlgorithm)
                       && !Archive_eofData(&archiveEntryInfo))
                   {
                     printWarning("unexpected data at end of hard link entry '%S'.\n",fileName);
