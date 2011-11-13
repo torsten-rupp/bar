@@ -897,8 +897,8 @@ LOCAL Errors ensureArchiveSpace(ArchiveInfo *archiveInfo,
   return ERROR_NONE;
 }
 
-LOCAL Errors flushFileDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
-                                 BlockModes       blockMode
+LOCAL Errors flushFileDataBlocks(ArchiveEntryInfo   *archiveEntryInfo,
+                                 CompressBlockTypes compressBlockType
                                 )
 {
   Errors error;
@@ -908,7 +908,7 @@ LOCAL Errors flushFileDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
   do
   {
     error = Compress_getAvailableCompressedBlocks(&archiveEntryInfo->file.dataCompressInfo,
-                                                  blockMode,
+                                                  compressBlockType,
                                                   &blockCount
                                                  );
     if (error != ERROR_NONE)
@@ -1282,7 +1282,10 @@ LOCAL Errors readFileDataBlock(ArchiveEntryInfo *archiveEntryInfo)
     {
       return error;
     }
-    error = Compress_getAvailableCompressedBlocks(&archiveEntryInfo->file.dataCompressInfo,COMPRESS_BLOCK_TYPE_ANY,&blockCount);
+    error = Compress_getAvailableCompressedBlocks(&archiveEntryInfo->file.dataCompressInfo,
+                                                  COMPRESS_BLOCK_TYPE_ANY,
+                                                  &blockCount
+                                                 );
     if (error != ERROR_NONE)
     {
       return error;
@@ -1394,7 +1397,10 @@ LOCAL Errors writeImageDataBlock(ArchiveEntryInfo *archiveEntryInfo,
     }
     do
     {
-      error = Compress_getAvailableCompressedBlocks(&archiveEntryInfo->image.dataCompressInfo,COMPRESS_BLOCK_TYPE_ANY,&blockCount);
+      error = Compress_getAvailableCompressedBlocks(&archiveEntryInfo->image.dataCompressInfo,
+                                                    COMPRESS_BLOCK_TYPE_ANY,
+                                                    &blockCount
+                                                   );
       if (error != ERROR_NONE)
       {
         return error;
@@ -1591,7 +1597,10 @@ LOCAL Errors readImageDataBlock(ArchiveEntryInfo *archiveEntryInfo)
     {
       return error;
     }
-    error = Compress_getAvailableCompressedBlocks(&archiveEntryInfo->image.dataCompressInfo,COMPRESS_BLOCK_TYPE_ANY,&blockCount);
+    error = Compress_getAvailableCompressedBlocks(&archiveEntryInfo->image.dataCompressInfo,
+                                                  COMPRESS_BLOCK_TYPE_ANY,
+                                                  &blockCount
+                                                 );
     if (error != ERROR_NONE)
     {
       return error;
@@ -1713,7 +1722,10 @@ LOCAL Errors writeHardLinkDataBlock(ArchiveEntryInfo *archiveEntryInfo,
     }
     do
     {
-      error = Compress_getAvailableCompressedBlocks(&archiveEntryInfo->hardLink.dataCompressInfo,COMPRESS_BLOCK_TYPE_ANY,&blockCount);
+      error = Compress_getAvailableCompressedBlocks(&archiveEntryInfo->hardLink.dataCompressInfo,
+                                                    COMPRESS_BLOCK_TYPE_ANY,
+                                                    &blockCount
+                                                   );
       if (error != ERROR_NONE)
       {
         return error;
@@ -1926,7 +1938,10 @@ LOCAL Errors readHardLinkDataBlock(ArchiveEntryInfo *archiveEntryInfo)
     {
       return error;
     }
-    error = Compress_getAvailableCompressedBlocks(&archiveEntryInfo->hardLink.dataCompressInfo,COMPRESS_BLOCK_TYPE_ANY,&blockCount);
+    error = Compress_getAvailableCompressedBlocks(&archiveEntryInfo->hardLink.dataCompressInfo,
+                                                  COMPRESS_BLOCK_TYPE_ANY,
+                                                  &blockCount
+                                                 );
     if (error != ERROR_NONE)
     {
       return error;
@@ -5818,7 +5833,7 @@ Errors Archive_closeEntry(ArchiveEntryInfo *archiveEntryInfo)
                     if (Compress_getByte(&archiveEntryInfo->file.deltaCompressInfo,&b))
                     {
                       // compress data
-                      error = Compress_deflate(&archiveEntryInfo->file.deltaCompressInfo,
+                      error = Compress_deflate(&archiveEntryInfo->file.dataCompressInfo,
                                                &b,
                                                1,
                                                NULL
@@ -5919,7 +5934,10 @@ Errors Archive_closeEntry(ArchiveEntryInfo *archiveEntryInfo)
               {
                 do
                 {
-                  error = Compress_getAvailableCompressedBlocks(&archiveEntryInfo->image.dataCompressInfo,COMPRESS_BLOCK_TYPE_ANY,&blockCount);
+                  error = Compress_getAvailableCompressedBlocks(&archiveEntryInfo->image.dataCompressInfo,
+                                                                COMPRESS_BLOCK_TYPE_ANY,
+                                                                &blockCount
+                                                               );
                   if (error == ERROR_NONE)
                   {
                     if (blockCount > 0)
@@ -6079,7 +6097,10 @@ Errors Archive_closeEntry(ArchiveEntryInfo *archiveEntryInfo)
               {
                 do
                 {
-                  error = Compress_getAvailableCompressedBlocks(&archiveEntryInfo->hardLink.dataCompressInfo,COMPRESS_BLOCK_TYPE_ANY,&blockCount);
+                  error = Compress_getAvailableCompressedBlocks(&archiveEntryInfo->hardLink.dataCompressInfo,
+                                                                COMPRESS_BLOCK_TYPE_ANY,
+                                                                &blockCount
+                                                               );
                   if (error == ERROR_NONE)
                   {
                     if (blockCount > 0)
