@@ -574,7 +574,7 @@ LOCAL void printDirectoryInfo(const String    storageName,
   if (globalOptions.longFormatFlag)
   {
     cryptString = String_format(String_new(),"%s%c",Crypt_getAlgorithmName(cryptAlgorithm),(cryptType==CRYPT_TYPE_ASYMMETRIC)?'*':' ');
-    printf("DIR                 %-25s                                           %-10s %s\n",
+    printf("DIR                 %-25s                                                %-10s %s\n",
            String_cString(dateTime),
            String_cString(cryptString),
            String_cString(directoryName)
@@ -625,7 +625,7 @@ LOCAL void printLinkInfo(const String    storageName,
   if (globalOptions.longFormatFlag)
   {
     cryptString = String_format(String_new(),"%s%c",Crypt_getAlgorithmName(cryptAlgorithm),(cryptType==CRYPT_TYPE_ASYMMETRIC)?'*':' ');
-    printf("LINK                                                                                    %-10s %s -> %s\n",
+    printf("LINK                                                                                         %-10s %s -> %s\n",
            String_cString(cryptString),
            String_cString(linkName),
            String_cString(destinationName)
@@ -803,7 +803,7 @@ LOCAL void printSpecialInfo(const String     storageName,
       if (globalOptions.longFormatFlag)
       {
         cryptString = String_format(String_new(),"%s%c",Crypt_getAlgorithmName(cryptAlgorithm),(cryptType==CRYPT_TYPE_ASYMMETRIC)?'*':' ');
-        printf("CHAR                                                                                    %-10s %s, %lu %lu\n",
+        printf("CHAR                                                                                         %-10s %s, %lu %lu\n",
                String_cString(cryptString),
                String_cString(fileName),
                major,
@@ -822,7 +822,7 @@ LOCAL void printSpecialInfo(const String     storageName,
       if (globalOptions.longFormatFlag)
       {
         cryptString = String_format(String_new(),"%s%c",Crypt_getAlgorithmName(cryptAlgorithm),(cryptType==CRYPT_TYPE_ASYMMETRIC)?'*':' ');
-        printf("BLOCK                                                                                  %-10s %s, %lu %lu\n",
+        printf("BLOCK                                                                                       %-10s %s, %lu %lu\n",
                String_cString(cryptString),
                String_cString(fileName),
                major,
@@ -841,7 +841,7 @@ LOCAL void printSpecialInfo(const String     storageName,
       if (globalOptions.longFormatFlag)
       {
         cryptString = String_format(String_new(),"%s%c",Crypt_getAlgorithmName(cryptAlgorithm),(cryptType==CRYPT_TYPE_ASYMMETRIC)?'*':' ');
-        printf("FIFO                                                                                    %-10s %s\n",
+        printf("FIFO                                                                                         %-10s %s\n",
                String_cString(cryptString),
                String_cString(fileName)
               );
@@ -858,7 +858,7 @@ LOCAL void printSpecialInfo(const String     storageName,
       if (globalOptions.longFormatFlag)
       {
         cryptString = String_format(String_new(),"%s%c",Crypt_getAlgorithmName(cryptAlgorithm),(cryptType==CRYPT_TYPE_ASYMMETRIC)?'*':' ');
-        printf("SOCKET                                                                                 %-10s %s\n",
+        printf("SOCKET                                                                                      %-10s %s\n",
                String_cString(cryptString),
                String_cString(fileName)
               );
