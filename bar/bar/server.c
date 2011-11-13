@@ -1137,7 +1137,8 @@ LOCAL bool readJob(JobNode *jobNode)
   jobNode->jobOptions.directoryStripCount          = 0;
   jobNode->jobOptions.destination                  = NULL;
   jobNode->jobOptions.patternType                  = PATTERN_TYPE_GLOB;
-  jobNode->jobOptions.compressAlgorithm            = COMPRESS_ALGORITHM_NONE;
+  jobNode->jobOptions.compressAlgorithm.delta      = COMPRESS_ALGORITHM_NONE;
+  jobNode->jobOptions.compressAlgorithm.data       = COMPRESS_ALGORITHM_NONE;
   jobNode->jobOptions.cryptAlgorithm               = CRYPT_ALGORITHM_NONE;
   #ifdef HAVE_GCRYPT
     jobNode->jobOptions.cryptType                  = CRYPT_TYPE_SYMMETRIC;
@@ -3913,7 +3914,7 @@ LOCAL void serverCommand_jobList(ClientInfo *clientInfo, uint id, const String a
                                           :jobNode->jobOptions.archiveType
                                          ),
                        jobNode->jobOptions.archivePartSize,
-                       Compress_getAlgorithmName(jobNode->jobOptions.compressAlgorithm),
+                       Compress_getAlgorithmName(jobNode->jobOptions.compressAlgorithm.data),
                        Crypt_getAlgorithmName(jobNode->jobOptions.cryptAlgorithm),
                        Crypt_getTypeName(jobNode->jobOptions.cryptType),
                        getCryptPasswordModeName(jobNode->jobOptions.cryptPasswordMode),
@@ -6090,23 +6091,25 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const Stri
       {
         case ARCHIVE_ENTRY_TYPE_FILE:
           {
-            String             fileName;
-            ArchiveEntryInfo   archiveEntryInfo;
-            CompressAlgorithms compressAlgorithm;
-            CryptAlgorithms    cryptAlgorithm;
-            CryptTypes         cryptType;
-            FileInfo           fileInfo;
-            uint64             fragmentOffset,fragmentSize;
+            String           fileName;
+            ArchiveEntryInfo archiveEntryInfo;
+            FileInfo         fileInfo;
+            uint64           fragmentOffset,fragmentSize;
 
             /* open archive file */
             fileName = String_new();
             error = Archive_readFileEntry(&archiveInfo,
                                           &archiveEntryInfo,
-                                          &compressAlgorithm,
-                                          &cryptAlgorithm,
-                                          &cryptType,
+//???
+NULL,
+NULL,
+                                          NULL,
+                                          NULL,
+                                          NULL,
+                                          NULL,
                                           fileName,
                                           &fileInfo,
+                                          NULL,
                                           &fragmentOffset,
                                           &fragmentSize
                                          );
@@ -6140,21 +6143,22 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const Stri
           break;
         case ARCHIVE_ENTRY_TYPE_IMAGE:
           {
-            String             imageName;
-            ArchiveEntryInfo   archiveEntryInfo;
-            CompressAlgorithms compressAlgorithm;
-            CryptAlgorithms    cryptAlgorithm;
-            CryptTypes         cryptType;
-            DeviceInfo         deviceInfo;
-            uint64             blockOffset,blockCount;
+            String           imageName;
+            ArchiveEntryInfo archiveEntryInfo;
+            DeviceInfo       deviceInfo;
+            uint64           blockOffset,blockCount;
 
             /* open archive file */
             imageName = String_new();
             error = Archive_readImageEntry(&archiveInfo,
                                            &archiveEntryInfo,
-                                           &compressAlgorithm,
-                                           &cryptAlgorithm,
-                                           &cryptType,
+//???
+NULL,
+NULL,
+                                           NULL,
+                                           NULL,
+                                           NULL,
+                                           NULL,
                                            imageName,
                                            &deviceInfo,
                                            &blockOffset,
@@ -6189,17 +6193,15 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const Stri
           break;
         case ARCHIVE_ENTRY_TYPE_DIRECTORY:
           {
-            String          directoryName;
-            CryptAlgorithms cryptAlgorithm;
-            CryptTypes      cryptType;
-            FileInfo        fileInfo;
+            String   directoryName;
+            FileInfo fileInfo;
 
             /* open archive directory */
             directoryName = String_new();
             error = Archive_readDirectoryEntry(&archiveInfo,
                                                &archiveEntryInfo,
-                                               &cryptAlgorithm,
-                                               &cryptType,
+                                               NULL,
+                                               NULL,
                                                directoryName,
                                                &fileInfo
                                               );
@@ -6229,19 +6231,17 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const Stri
           break;
         case ARCHIVE_ENTRY_TYPE_LINK:
           {
-            String          linkName;
-            String          fileName;
-            CryptAlgorithms cryptAlgorithm;
-            CryptTypes      cryptType;
-            FileInfo        fileInfo;
+            String   linkName;
+            String   fileName;
+            FileInfo fileInfo;
 
             /* open archive link */
             linkName = String_new();
             fileName = String_new();
             error = Archive_readLinkEntry(&archiveInfo,
                                           &archiveEntryInfo,
-                                          &cryptAlgorithm,
-                                          &cryptType,
+                                          NULL,
+                                          NULL,
                                           linkName,
                                           fileName,
                                           &fileInfo
@@ -6275,63 +6275,61 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const Stri
           break;
         case ARCHIVE_ENTRY_TYPE_HARDLINK:
           {
-            String          linkName;
-            String          fileName;
-            CryptAlgorithms cryptAlgorithm;
-            CryptTypes      cryptType;
-            FileInfo        fileInfo;
+            StringList fileNameList;
+            FileInfo   fileInfo;
+            uint64     fragmentOffset,fragmentSize;
 
             /* open archive link */
-            linkName = String_new();
-            fileName = String_new();
-            error = Archive_readLinkEntry(&archiveInfo,
-                                          &archiveEntryInfo,
-                                          &cryptAlgorithm,
-                                          &cryptType,
-                                          linkName,
-                                          fileName,
-                                          &fileInfo
-                                         );
+            StringList_init(&fileNameList);
+            error = Archive_readHardLinkEntry(&archiveInfo,
+                                              &archiveEntryInfo,
+//???
+NULL,
+NULL,
+                                              NULL,
+                                              NULL,
+                                              NULL,
+                                              NULL,
+                                              &fileNameList,
+                                              &fileInfo,
+                                              &fragmentOffset,
+                                              &fragmentSize
+                                             );
             if (error != ERROR_NONE)
             {
               sendClientResult(clientInfo,id,TRUE,error,"Cannot read content of storage '%S' (error: %s)",storageName,Errors_getText(error));
-              String_delete(fileName);
-              String_delete(linkName);
+              StringList_done(&fileNameList);
               break;
             }
 
             /* match pattern */
-            if (   (List_empty(&clientInfo->includeEntryList) || EntryList_match(&clientInfo->includeEntryList,linkName,PATTERN_MATCH_MODE_EXACT))
-                && !PatternList_match(&clientInfo->excludePatternList,linkName,PATTERN_MATCH_MODE_EXACT)
+            if (   (List_empty(&clientInfo->includeEntryList) || EntryList_matchStringList(&clientInfo->includeEntryList,&fileNameList,PATTERN_MATCH_MODE_EXACT))
+                && !PatternList_matchStringList(&clientInfo->excludePatternList,&fileNameList,PATTERN_MATCH_MODE_EXACT)
                )
             {
               sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
-                               "HARDLINK %llu %'S %'S",
+                               "HARDLINK %llu %'S",
                                fileInfo.timeModified,
-                               linkName,
-                               fileName
+                               fileNameList.head->string
                               );
             }
 
             /* close archive file, free resources */
             Archive_closeEntry(&archiveEntryInfo);
-            String_delete(fileName);
-            String_delete(linkName);
+            StringList_done(&fileNameList);
           }
           break;
         case ARCHIVE_ENTRY_TYPE_SPECIAL:
           {
-            String          fileName;
-            CryptAlgorithms cryptAlgorithm;
-            CryptTypes      cryptType;
-            FileInfo        fileInfo;
+            String   fileName;
+            FileInfo fileInfo;
 
             /* open archive link */
             fileName = String_new();
             error = Archive_readSpecialEntry(&archiveInfo,
                                              &archiveEntryInfo,
-                                             &cryptAlgorithm,
-                                             &cryptType,
+                                             NULL,
+                                             NULL,
                                              fileName,
                                              &fileInfo
                                             );
