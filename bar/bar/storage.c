@@ -48,6 +48,9 @@
 /****************** Conditional compilation switches *******************/
 
 /***************************** Constants *******************************/
+/* file data buffer size */
+#define BUFFER_SIZE (64*1024)
+
 #define MAX_BUFFER_SIZE     (64*1024)
 #define MAX_FILENAME_LENGTH (8*1024)
 
@@ -1851,7 +1854,7 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
            raw CD/DVD/BD data (volumeSize) and CD/DVD image (4G, single layer)
            including error correction codes (2x)
         */
-        error = File_getFileSystemInfo(tmpDirectory,&fileSystemInfo);
+        error = File_getFileSystemInfo(&fileSystemInfo,tmpDirectory);
         if (error != ERROR_NONE)
         {
           String_delete(deviceName);
@@ -1999,7 +2002,7 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
         getDeviceSettings(deviceName,jobOptions,&device);
 
         /* check space in temporary directory: 2x volumeSize */
-        error = File_getFileSystemInfo(tmpDirectory,&fileSystemInfo);
+        error = File_getFileSystemInfo(&fileSystemInfo,tmpDirectory);
         if (error != ERROR_NONE)
         {
           String_delete(deviceName);
@@ -3302,12 +3305,24 @@ Errors Storage_create(StorageFileHandle *storageFileHandle,
           if (!storageFileHandle->jobOptions->dryRunFlag)
           {
             /* open channel and file for writing */
-            storageFileHandle->scp.channel = libssh2_scp_send(Network_getSSHSession(&storageFileHandle->scp.socketHandle),
-                                                              String_cString(fileName),
+            #ifdef HAVE_SSH2_SCP_SEND64
+              storageFileHandle->scp.channel = libssh2_scp_send64(Network_getSSHSession(&storageFileHandle->scp.socketHandle),
+                                                                  String_cString(fileName),
 // ???
 0600,
-                                                              fileSize
-                                                             );
+                                                                  (libssh2_uint64_t)fileSize,
+// ???
+                                                                  0L,
+                                                                  0L
+                                                                 );
+            #else /* not HAVE_SSH2_SCP_SEND64 */
+              storageFileHandle->scp.channel = libssh2_scp_send(Network_getSSHSession(&storageFileHandle->scp.socketHandle),
+                                                                String_cString(fileName),
+// ???
+0600,
+                                                                (size_t)fileSize
+                                                               );
+            #endif /* HAVE_SSH2_SCP_SEND64 */
             if (storageFileHandle->scp.channel == NULL)
             {
               char *sshErrorText;
@@ -5963,6 +5978,110 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
   }
 
   return error;
+}
+
+Errors Storage_copy(const String                 storageName,
+                    const JobOptions             *jobOptions,
+                    StorageRequestVolumeFunction storageRequestVolumeFunction,
+                    void                         *storageRequestVolumeUserData,
+                    StorageStatusInfoFunction    storageStatusInfoFunction,
+                    void                         *storageStatusInfoUserData,
+                    const String                 localFileName
+                   )
+{
+  String            fileName;
+  void              *buffer;
+  Errors            error;
+  StorageFileHandle storageFileHandle;
+  FileHandle        fileHandle;
+  ulong             bytesRead;
+
+  // initialize variables
+  buffer   = (byte*)malloc(BUFFER_SIZE);
+  if (buffer == NULL)
+  {
+    HALT_INSUFFICIENT_MEMORY();
+  }
+
+  // open storage
+  fileName = String_new();
+  error = Storage_init(&storageFileHandle,
+                       storageName,
+                       jobOptions,
+                       storageRequestVolumeFunction,
+                       storageRequestVolumeUserData,
+                       storageStatusInfoFunction,
+                       storageStatusInfoUserData,
+                       fileName
+                      );
+  if (error != ERROR_NONE)
+  {
+    String_delete(fileName);
+    free(buffer);
+    return error;
+  }
+  error = Storage_open(&storageFileHandle,
+                       fileName
+                      );
+  if (error != ERROR_NONE)
+  {
+    String_delete(fileName);
+    free(buffer);
+    return error;
+  }
+
+  // create local file
+  error = File_open(&fileHandle,
+                    localFileName,
+                    FILE_OPEN_CREATE
+                   );
+  if (error != ERROR_NONE)
+  {
+    Storage_close(&storageFileHandle);
+    Storage_done(&storageFileHandle);
+    String_delete(fileName);
+    free(buffer);
+    return error;
+  }
+
+  // copy data from archive to local file
+  while (   (error == ERROR_NONE)
+         && !Storage_eof(&storageFileHandle)
+        )
+  {
+    error = Storage_read(&storageFileHandle,
+                         buffer,
+                         BUFFER_SIZE,
+                         &bytesRead
+                        );
+    if (error == ERROR_NONE)
+    {
+      error = File_write(&fileHandle,
+                         buffer,
+                         bytesRead
+                        );
+    }
+  }
+  if (error != ERROR_NONE)
+  {
+    Storage_close(&storageFileHandle);
+    Storage_done(&storageFileHandle);
+    String_delete(fileName);
+    free(buffer);
+  }
+
+  // close local file
+  File_close(&fileHandle);
+
+  // close archive
+  Storage_close(&storageFileHandle);
+  Storage_done(&storageFileHandle);
+  String_delete(fileName);
+
+  // free resources
+  free(buffer);
+
+  return ERROR_NONE;
 }
 
 #ifdef __cplusplus

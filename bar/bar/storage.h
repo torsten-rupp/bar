@@ -139,11 +139,11 @@ typedef struct
   StorageTypes                 type;
   const JobOptions             *jobOptions;
 
-  StorageRequestVolumeFunction requestVolumeFunction;  // call back for request new volume
+  StorageRequestVolumeFunction requestVolumeFunction;      // call back for request new volume
   void                         *requestVolumeUserData;
-  uint                         volumeNumber;           // current loaded volume number
-  uint                         requestedVolumeNumber;  // requested volume number
-  StorageVolumeStates          volumeState;            // volume state
+  uint                         volumeNumber;               // current loaded volume number
+  uint                         requestedVolumeNumber;      // requested volume number
+  StorageVolumeStates          volumeState;                // volume state
 
   StorageStatusInfoFunction    storageStatusInfoFunction;  // call back new storage status info
   void                         *storageStatusInfoUserData;
@@ -559,6 +559,9 @@ Errors Storage_prepare(const String     storageName,
 *          storageRequestVolumeFunction - volume request call back
 *          storageRequestVolumeUserData - user data for volume request
 *                                         call back
+*          storageStatusInfoFunction    - status info call back
+*          storageStatusInfoUserData    - user data for status info
+*                                         call back
 * Output : storageFileHandle - initialized storage file handle
 *          fileName          - file name (without storage specifier
 *                              prefix)
@@ -873,6 +876,45 @@ Errors Storage_readDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
                                  String                     fileName,
                                  FileInfo                   *fileInfo
                                 );
+
+/*---------------------------------------------------------------------*/
+
+/***********************************************************************\
+* Name   : Storage_copy
+* Purpose: copy storage file to local file
+* Input  : storageFileHandle            - storage file handle variable
+*          storageName                  - storage name
+*          jobOptions                   - job options
+*          storageRequestVolumeFunction - volume request call back
+*          storageRequestVolumeUserData - user data for volume request
+*                                         call back
+*          storageStatusInfoFunction    - status info call back
+*          storageStatusInfoUserData    - user data for status info
+*                                         call back
+*          localFileName                - local archive file name
+* Output : -
+* Return : ERROR_NONE or errorcode
+* Notes  : supported storage names:
+*            ftp://
+*            ssh://
+*            scp://
+*            sftp://
+*            cd://
+*            dvd://
+*            bd://
+*            device://
+*            file://
+*            plain file name
+\***********************************************************************/
+
+Errors Storage_copy(const String                 storageName,
+                    const JobOptions             *jobOptions,
+                    StorageRequestVolumeFunction storageRequestVolumeFunction,
+                    void                         *storageRequestVolumeUserData,
+                    StorageStatusInfoFunction    storageStatusInfoFunction,
+                    void                         *storageStatusInfoUserData,
+                    const String                 localFileName
+                   );
 
 #ifdef __cplusplus
   }
