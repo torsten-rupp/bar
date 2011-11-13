@@ -23,9 +23,10 @@
 
 #include "global.h"
 #include "strings.h"
-
-#include "errors.h"
 #include "passwords.h"
+
+#include "archive_format_const.h"
+#include "errors.h"
 
 /****************** Conditional compilation switches *******************/
 
@@ -34,18 +35,18 @@
 /* available chipers */
 typedef enum
 {
-  CRYPT_ALGORITHM_NONE,
+  CRYPT_ALGORITHM_NONE       = CHUNK_CONST_CRYPT_ALGORITHM_NONE,
 
-  CRYPT_ALGORITHM_3DES,
-  CRYPT_ALGORITHM_CAST5,
-  CRYPT_ALGORITHM_BLOWFISH,
-  CRYPT_ALGORITHM_AES128,
-  CRYPT_ALGORITHM_AES192,
-  CRYPT_ALGORITHM_AES256,
-  CRYPT_ALGORITHM_TWOFISH128,
-  CRYPT_ALGORITHM_TWOFISH256,
+  CRYPT_ALGORITHM_3DES       = CHUNK_CONST_CRYPT_ALGORITHM_3DES,
+  CRYPT_ALGORITHM_CAST5      = CHUNK_CONST_CRYPT_ALGORITHM_CAST5,
+  CRYPT_ALGORITHM_BLOWFISH   = CHUNK_CONST_CRYPT_ALGORITHM_BLOWFISH,
+  CRYPT_ALGORITHM_AES128     = CHUNK_CONST_CRYPT_ALGORITHM_AES128,
+  CRYPT_ALGORITHM_AES192     = CHUNK_CONST_CRYPT_ALGORITHM_AES192,
+  CRYPT_ALGORITHM_AES256     = CHUNK_CONST_CRYPT_ALGORITHM_AES256,
+  CRYPT_ALGORITHM_TWOFISH128 = CHUNK_CONST_CRYPT_ALGORITHM_TWOFISH128,
+  CRYPT_ALGORITHM_TWOFISH256 = CHUNK_CONST_CRYPT_ALGORITHM_TWOFISH256,
 
-  CRYPT_ALGORITHM_UNKNOWN=65535,
+  CRYPT_ALGORITHM_UNKNOWN = 0xFFFF,
 } CryptAlgorithms;
 
 #define MIN_ASYMMETRIC_CRYPT_KEY_BITS 1024
@@ -83,6 +84,30 @@ typedef struct
 /***************************** Variables *******************************/
 
 /****************************** Macros *********************************/
+
+/***********************************************************************\
+* Name   : CRYPT_CONSTANT_TO_ALGORITHM
+* Purpose: convert archive definition constant to algorithm enum value
+* Input  : n - number
+* Output : -
+* Return : crypt algorithm
+* Notes  : -
+\***********************************************************************/
+
+#define CRYPT_CONSTANT_TO_ALGORITHM(n) \
+  ((CryptAlgorithms)(n))
+
+/***********************************************************************\
+* Name   : CRYPT_ALGORITHM_TO_CONSTANT
+* Purpose: convert algorithm enum value to archive definition constant
+* Input  : cryptAlgorithm - crypt algorithm
+* Output : -
+* Return : number
+* Notes  : -
+\***********************************************************************/
+
+#define CRYPT_ALGORITHM_TO_CONSTANT(cryptAlgorithm) \
+  ((uint16)(cryptAlgorithm))
 
 /***************************** Forwards ********************************/
 
