@@ -459,7 +459,12 @@ typedef void               void32;
      HALT_INTERNAL_ERROR("unreachable code"); \
   } \
   while (0)
-
+#define HALT_INTERNAL_ERROR_LOST_RESOURCE() \
+  do \
+  { \
+     HALT_INTERNAL_ERROR("lost resource"); \
+  } \
+  while (0)
 
 /* 2 macros necessary, because of "string"-construction */
 #define _FAIL_STRING1(z) _FAIL_STRING2(z) 
