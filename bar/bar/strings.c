@@ -4471,31 +4471,30 @@ void String_debugDone(void)
   pthread_mutex_unlock(&debugStringLock);
 }
 
-LOCAL void String_debugDumpAllocated(FILE *handle)
+void String_debugDumpInfo(FILE *handle)
 {
   DebugStringNode *debugStringNode;
 
-  for (debugStringNode = debugAllocStringList.head; debugStringNode != NULL; debugStringNode = debugStringNode->next)
-  {
-    fprintf(handle,"DEBUG: string %p '%s' allocated at %s, line %lu\n",
-            debugStringNode->string,
-            debugStringNode->string->data,
-            debugStringNode->fileName,
-            debugStringNode->lineNb
-           );
-    #ifdef HAVE_BACKTRACE
-      String_debugDumpStackTrace(handle,"allocated at",2,debugStringNode->stackTrace,debugStringNode->stackTraceSize);
-    #endif /* HAVE_BACKTRACE */
-  }
-}
-
-void String_debugDumpInfo(FILE *handle)
-{
   pthread_once(&debugStringInitFlag,String_debugInit);
 
   pthread_mutex_lock(&debugStringLock);
   {
-    String_debugDumpAllocated(handle);
+    for (debugStringNode = debugAllocStringList.head; debugStringNode != NULL; debugStringNode = debugStringNode->next)
+    {
+      fprintf(handle,"DEBUG: string %p '%s' allocated at %s, line %lu\n",
+              debugStringNode->string,
+              debugStringNode->string->data,
+              debugStringNode->fileName,
+              debugStringNode->lineNb
+             );
+      #ifdef HAVE_BACKTRACE
+        String_debugDumpStackTrace(handle,"allocated at",2,debugStringNode->stackTrace,debugStringNode->stackTraceSize);
+      #endif /* HAVE_BACKTRACE */
+    }
+    if (!List_empty(&debugAllocStringList))
+    {
+      HALT_INTERNAL_ERROR_LOST_RESOURCE();
+    }
   }
   pthread_mutex_unlock(&debugStringLock);
 }
