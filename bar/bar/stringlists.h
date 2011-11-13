@@ -341,7 +341,7 @@ INLINE String StringList_last(const StringList *stringList, String string)
 *          is returned directly and have to be freed
 \***********************************************************************/
 
-String StringList_getFirst(StringList *stringList, String string);
+String StringList_getFirst(const StringList *stringList, String string);
 
 /***********************************************************************\
 * Name   : StringList_getLast
@@ -354,7 +354,7 @@ String StringList_getFirst(StringList *stringList, String string);
 *          is returned directly and have to be freed
 \***********************************************************************/
 
-String StringList_getLast(StringList *stringList, String string);
+String StringList_getLast(const StringList *stringList, String string);
 
 /***********************************************************************\
 * Name   : StringList_find, StringList_findCString
@@ -366,8 +366,8 @@ String StringList_getLast(StringList *stringList, String string);
 * Notes  : -
 \***********************************************************************/
 
-StringNode *StringList_find(StringList *stringList, const String string);
-StringNode *StringList_findCString(StringList *stringList, const char *s);
+StringNode *StringList_find(const StringList *stringList, const String string);
+StringNode *StringList_findCString(const StringList *stringList, const char *s);
 
 /***********************************************************************\
 * Name   : StringList_contain, StringList_containCString
@@ -379,8 +379,8 @@ StringNode *StringList_findCString(StringList *stringList, const char *s);
 * Notes  : -
 \***********************************************************************/
 
-bool StringList_contain(StringList *stringList, const String string);
-bool StringList_containCString(StringList *stringList, const char *s);
+bool StringList_contain(const StringList *stringList, const String string);
+bool StringList_containCString(const StringList *stringList, const char *s);
 
 /***********************************************************************\
 * Name   : StringList_match, StringList_matchCString
@@ -392,8 +392,8 @@ bool StringList_containCString(StringList *stringList, const char *s);
 * Notes  : -
 \***********************************************************************/
 
-StringNode *StringList_match(StringList *stringList, const String pattern);
-StringNode *StringList_matchCString(StringList *stringList, const char *pattern);
+StringNode *StringList_match(const StringList *stringList, const String pattern);
+StringNode *StringList_matchCString(const StringList *stringList, const char *pattern);
 
 /***********************************************************************\
 * Name   : StringList_toCStringArray

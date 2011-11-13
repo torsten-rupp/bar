@@ -270,7 +270,7 @@ StringNode *StringList_remove(StringList *stringList, StringNode *stringNode)
   return (StringNode*)List_remove(stringList,stringNode);
 }
 
-String StringList_getFirst(StringList *stringList, String string)
+String StringList_getFirst(const StringList *stringList, String string)
 {
   StringNode *stringNode;
 
@@ -303,7 +303,7 @@ String StringList_getFirst(StringList *stringList, String string)
   }
 }
 
-String StringList_getLast(StringList *stringList, String string)
+String StringList_getLast(const StringList *stringList, String string)
 {
   StringNode *stringNode;
 
@@ -336,14 +336,14 @@ String StringList_getLast(StringList *stringList, String string)
   }
 }
 
-StringNode *StringList_find(StringList *stringList, const String string)
+StringNode *StringList_find(const StringList *stringList, const String string)
 {
   assert(stringList != NULL);
 
   return StringList_findCString(stringList,String_cString(string));
 }
 
-StringNode *StringList_findCString(StringList *stringList, const char *s)
+StringNode *StringList_findCString(const StringList *stringList, const char *s)
 {
   StringNode *stringNode;
 
@@ -360,26 +360,26 @@ StringNode *StringList_findCString(StringList *stringList, const char *s)
   return stringNode;
 }
 
-bool StringList_contain(StringList *stringList, const String string)
+bool StringList_contain(const StringList *stringList, const String string)
 {
   assert(stringList != NULL);
 
   return (StringList_find(stringList,string) != NULL);
 }
 
-bool StringList_containCString(StringList *stringList, const char *s)
+bool StringList_containCString(const StringList *stringList, const char *s)
 {
   assert(stringList != NULL);
 
   return (StringList_findCString(stringList,s) != NULL);
 }
 
-StringNode *StringList_match(StringList *stringList, const String pattern)
+StringNode *StringList_match(const StringList *stringList, const String pattern)
 {
   return StringList_matchCString(stringList,String_cString(pattern));
 }
 
-StringNode *StringList_matchCString(StringList *stringList, const char *pattern)
+StringNode *StringList_matchCString(const StringList *stringList, const char *pattern)
 {
   regex_t    regex;
   StringNode *stringNode;
