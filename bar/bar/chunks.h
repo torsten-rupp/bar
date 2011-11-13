@@ -77,7 +77,11 @@ typedef uint32 ChunkId;
 /* chunk header (Note: only id+size is stored in file!) */
 typedef struct
 {
-  uint32 id;                          // chunk id
+  union
+  {
+    ChunkId id;
+    char    idChars[4];
+  };                                  // chunk id
   uint64 size;                        // size of chunk (without chunk header)
   uint64 offset;                      // start of chunk in file (offset of header)
 } ChunkHeader;
@@ -93,7 +97,11 @@ typedef struct ChunkInfo
   uint             alignment;         // alignment for chunk
   CryptInfo        *cryptInfo;        // encryption
 
-  ChunkId          id;                // chunk id
+  union
+  {
+    ChunkId id;
+    char    idChars[4];
+  };                                  // chunk id
   const int        *definition;       // chunk definition
   ulong            chunkSize;         // size of fixed chunk data (without chunk header+data elements)
   uint64           size;              // total size of chunk (without chunk header)
