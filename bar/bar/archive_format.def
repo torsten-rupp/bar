@@ -80,6 +80,9 @@
 
 # ---
 
+# encryption algorithms
+CONST CRYPT_ALGORITHM_NONE         = 0
+
 CONST CRYPT_ALGORITHM_3DES         = 1
 CONST CRYPT_ALGORITHM_CAST5        = 2
 CONST CRYPT_ALGORITHM_BLOWFISH     = 3
@@ -88,6 +91,9 @@ CONST CRYPT_ALGORITHM_AES192       = 5
 CONST CRYPT_ALGORITHM_AES256       = 6
 CONST CRYPT_ALGORITHM_TWOFISH128   = 7
 CONST CRYPT_ALGORITHM_TWOFISH256   = 8
+
+# compress algorithms
+CONST COMPRESS_ALGORITHM_NONE      = 0
 
 CONST COMPRESS_ALGORITHM_ZIP_0     = 1
 CONST COMPRESS_ALGORITHM_ZIP_1     = 2
@@ -174,7 +180,7 @@ CHUNK FILE "FIL0" File
 # file entry
 #
 # parent: FIL0
-# encrypted as specified in FIL0
+# never compress/encrypted as specified in FIL0
 CHUNK FILE_ENTRY "FENT" FileEntry
   ENCRYPT
   uint64 size
@@ -190,11 +196,11 @@ CHUNK FILE_ENTRY "FENT" FileEntry
 # file delta compression entry
 #
 # parent: FIL0
-# encrypted as specified in FIL0
+# never compress/encrypted as specified in FIL0
 CHUNK FILE_DELTA "FDLT" FileDelta
   ENCRYPT
   uint16 compressAlgorithm;
-  string source
+  string name
   crc32  crc
 
 # file data
@@ -223,7 +229,7 @@ CHUNK IMAGE "IMG0" Image
 # image entry
 #
 # parent: IMG0
-# encrypted as specified in IMG0
+# never compress/encrypted as specified in IMG0
 CHUNK IMAGE_ENTRY "IENT" ImageEntry +encrypted
   ENCRYPT
   uint16 fileSystemType
@@ -235,11 +241,11 @@ CHUNK IMAGE_ENTRY "IENT" ImageEntry +encrypted
 # image delta compression entry
 #
 # parent: IMG0
-# encrypted as specified in IMG0
+# never compress/encrypted as specified in IMG0
 CHUNK IMAGE_DELTA "IDLT" ImageDelta
   ENCRYPT
   uint16 deltaAlgorithm;
-  string source
+  string name
   crc32  crc
 
 # image data
@@ -267,7 +273,7 @@ CHUNK DIRECTORY "DIR0" Directory
 # directory entry
 #
 # parent: DIR0
-# encrypted as specified in DIR0
+# never compress/encrypted as specified in DIR0
 CHUNK DIRECTORY_ENTRY "DENT" DirectoryEntry
   ENCRYPT
   uint64 timeLastAccess
@@ -292,7 +298,7 @@ CHUNK LINK "LNK0" Link
 # (symbolic) link entry
 #
 # parent: LNK0
-# encrypted as specified in LNK0
+# never compress/encrypted as specified in LNK0
 CHUNK LINK_ENTRY "LENT" LinkEntry
   ENCRYPT
   uint64 timeLastAccess
@@ -319,7 +325,7 @@ CHUNK HARDLINK "HLN0" HardLink
 # hard link entry
 #
 # parent: HLN0
-# encrypted as specified in HLN0
+# never compress/encrypted as specified in HLN0
 CHUNK HARDLINK_ENTRY "HENT" HardLinkEntry
   ENCRYPT
   uint64 size
@@ -334,7 +340,7 @@ CHUNK HARDLINK_ENTRY "HENT" HardLinkEntry
 # hard link name
 #
 # parent: HLN0
-# encrypted as specified in HLN0
+# never compress/encrypted as specified in HLN0
 CHUNK HARDLINK_NAME "HNAM" HardLinkName
   ENCRYPT
   string name
@@ -365,7 +371,7 @@ CHUNK SPECIAL "SPE0" Special
 # special entry
 #
 # parent: SPE0
-# encrypted as specified in SPE0
+# never compress/encrypted as specified in SPE0
 CHUNK SPECIAL_ENTRY "SENT" SpecialEntry
   ENCRYPT
   uint16 specialType
