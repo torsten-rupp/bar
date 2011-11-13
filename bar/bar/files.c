@@ -2252,6 +2252,10 @@ void File_debugDumpInfo(FILE *handle)
               debugFileNode->lineNb
              );
     }
+    if (!List_empty(&debugOpenFileList))
+    {
+      HALT_INTERNAL_ERROR_LOST_RESOURCE();
+    }
   }
   pthread_mutex_unlock(&debugFileLock);
 }
