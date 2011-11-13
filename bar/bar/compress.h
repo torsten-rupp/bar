@@ -443,7 +443,9 @@ uint64 Compress_getOutputLength(CompressInfo *compressInfo);
 * Notes  : -
 \***********************************************************************/
 
-Errors Compress_getAvailableDecompressedBytes(CompressInfo *compressInfo, ulong *bytes);
+Errors Compress_getAvailableDecompressedBytes(CompressInfo *compressInfo,
+                                              ulong        *bytes
+                                             );
 
 /***********************************************************************\
 * Name   : Compress_getAvailableCompressedBlocks
@@ -454,7 +456,10 @@ Errors Compress_getAvailableDecompressedBytes(CompressInfo *compressInfo, ulong 
 * Notes  : -
 \***********************************************************************/
 
-Errors Compress_getAvailableCompressedBlocks(CompressInfo *compressInfo, CompressBlockTypes blockType, uint *blockCount);
+Errors Compress_getAvailableCompressedBlocks(CompressInfo       *compressInfo,
+                                             CompressBlockTypes blockType,
+                                             uint               *blockCount
+                                            );
 
 #if 0
 /***********************************************************************\

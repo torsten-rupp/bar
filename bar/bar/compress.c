@@ -2349,7 +2349,9 @@ uint64 Compress_getOutputLength(CompressInfo *compressInfo)
   return length;
 }
 
-Errors Compress_getAvailableDecompressedBytes(CompressInfo *compressInfo, ulong *bytes)
+Errors Compress_getAvailableDecompressedBytes(CompressInfo *compressInfo,
+                                              ulong        *bytes
+                                             )
 {
   Errors error;
 
@@ -2379,7 +2381,10 @@ Errors Compress_getAvailableDecompressedBytes(CompressInfo *compressInfo, ulong 
   return ERROR_NONE;
 }
 
-Errors Compress_getAvailableCompressedBlocks(CompressInfo *compressInfo, CompressBlockTypes blockType, uint *blockCount)
+Errors Compress_getAvailableCompressedBlocks(CompressInfo       *compressInfo,
+                                             CompressBlockTypes blockType,
+                                             uint               *blockCount
+                                            )
 {
   Errors error;
 
