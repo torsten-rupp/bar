@@ -592,15 +592,15 @@ LOCAL Errors readEncryptionKey(ArchiveInfo       *archiveInfo,
 }
 
 /***********************************************************************\
-* Name   : writeHeader
-* Purpose: write header
+* Name   : writeFileInfo
+* Purpose: write archive info chunk
 * Input  : archiveInfo - archive info block
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors writeHeader(ArchiveInfo *archiveInfo)
+LOCAL Errors writeFileInfo(ArchiveInfo *archiveInfo)
 {
   Errors    error;
   ChunkInfo chunkInfoBar;
@@ -724,14 +724,14 @@ LOCAL Errors createArchiveFile(ArchiveInfo *archiveInfo)
   assert(archiveInfo->ioType == ARCHIVE_IO_TYPE_FILE);
   assert(!archiveInfo->file.openFlag);
 
-  /* get output filename */
+  // get output filename
   error = File_getTmpFileName(archiveInfo->file.fileName,NULL,tmpDirectory);
   if (error != ERROR_NONE)
   {
     return error;
   }
 
-  /* create file */
+  // create file
   error = File_open(&archiveInfo->file.fileHandle,
                     archiveInfo->file.fileName,
                     FILE_OPEN_CREATE
@@ -742,8 +742,8 @@ LOCAL Errors createArchiveFile(ArchiveInfo *archiveInfo)
     return error;
   }
 
-  /* write bar header */
-  error = writeHeader(archiveInfo);
+  // write BAR file info
+  error = writeFileInfo(archiveInfo);
   if (error != ERROR_NONE)
   {
     File_close(&archiveInfo->file.fileHandle);
@@ -751,7 +751,7 @@ LOCAL Errors createArchiveFile(ArchiveInfo *archiveInfo)
     return error;
   }
 
-  /* write encrypted key if asymmetric encryption enabled */
+  // write encrypted key if asymmetric encryption enabled
   if (archiveInfo->cryptType == CRYPT_TYPE_ASYMMETRIC)
   {
     error = writeEncryptionKey(archiveInfo);
@@ -763,7 +763,7 @@ LOCAL Errors createArchiveFile(ArchiveInfo *archiveInfo)
     }
   }
 
-  /* init index */
+  // init index
   if (   (archiveInfo->databaseHandle != NULL)
       && !archiveInfo->jobOptions->dryRunFlag
       && !archiveInfo->jobOptions->noStorageFlag
@@ -783,7 +783,7 @@ LOCAL Errors createArchiveFile(ArchiveInfo *archiveInfo)
     }
   }
 
-  /* mark archive file "open" */
+  // mark archive file "open"
   archiveInfo->file.openFlag = TRUE;
 
   return ERROR_NONE;
@@ -897,6 +897,66 @@ LOCAL Errors ensureArchiveSpace(ArchiveInfo *archiveInfo,
   return ERROR_NONE;
 }
 
+/***********************************************************************\
+* Name   : writeFileChunks
+* Purpose: write file chunks
+* Input  : archiveEntryInfo  - archive file info block
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors writeFileChunks(ArchiveEntryInfo *archiveEntryInfo)
+{
+  Errors error;
+
+  // create file chunk
+  error = Chunk_create(&archiveEntryInfo->file.chunkFile.info);
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+
+  // create file entry chunk
+  error = Chunk_create(&archiveEntryInfo->file.chunkFileEntry.info);
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+
+  // create file delta chunk
+  if (COMPRESS_IS_XDELTA_ALGORITHM(archiveEntryInfo->file.deltaCompressAlgorithm))
+  {
+    error = Chunk_create(&archiveEntryInfo->file.chunkFileDelta.info);
+    if (error != ERROR_NONE)
+   {
+      return error;
+    }
+  }
+
+  // create file data chunk
+  error = Chunk_create(&archiveEntryInfo->file.chunkFileData.info);
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+
+  archiveEntryInfo->file.createdFlag       = TRUE;
+  archiveEntryInfo->file.headerWrittenFlag = TRUE;
+
+  return ERROR_NONE;
+}
+
+/***********************************************************************\
+* Name   : flushFileDataBlocks
+* Purpose: flush file data blocks
+* Input  : archiveEntryInfo  - archive file info block
+*          compressBlockType - compress block type; see CompressBlockTypes
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
 LOCAL Errors flushFileDataBlocks(ArchiveEntryInfo   *archiveEntryInfo,
                                  CompressBlockTypes compressBlockType
                                 )
@@ -905,6 +965,33 @@ LOCAL Errors flushFileDataBlocks(ArchiveEntryInfo   *archiveEntryInfo,
   uint   blockCount;
   ulong  length;
 
+  // open file if needed
+  if (!archiveEntryInfo->archiveInfo->file.openFlag)
+  {
+    // create file
+    error = createArchiveFile(archiveEntryInfo->archiveInfo);
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
+
+    // initialise variables
+    archiveEntryInfo->file.headerWrittenFlag = FALSE;
+
+    archiveEntryInfo->file.chunkFileData.fragmentOffset = archiveEntryInfo->file.chunkFileData.fragmentOffset+archiveEntryInfo->file.chunkFileData.fragmentSize;
+    archiveEntryInfo->file.chunkFileData.fragmentSize   = 0LL;
+
+    // reset data crypt
+    Crypt_reset(&archiveEntryInfo->file.cryptInfo,0);
+  }
+
+  // create new part (if not already exists)
+  if (!archiveEntryInfo->file.headerWrittenFlag && !archiveEntryInfo->file.createdFlag)
+  {
+    writeFileChunks(archiveEntryInfo);
+  }
+
+  // flush data
   do
   {
     error = Compress_getAvailableCompressedBlocks(&archiveEntryInfo->file.dataCompressInfo,
@@ -988,7 +1075,9 @@ LOCAL Errors writeFileDataBlock(ArchiveEntryInfo *archiveEntryInfo,
                 && checkNewPartNeeded(archiveEntryInfo->archiveInfo,
                                       archiveEntryInfo->file.headerLength,
                                       archiveEntryInfo->file.headerWrittenFlag,
-                                      ((length > 0) || (blockMode == BLOCK_MODE_WRITE))?archiveEntryInfo->archiveInfo->blockLength:0
+                                      ((length > 0) || (blockMode == BLOCK_MODE_WRITE))
+                                        ?archiveEntryInfo->archiveInfo->blockLength
+                                        :0
                                      );
 
   // split
@@ -997,39 +1086,7 @@ LOCAL Errors writeFileDataBlock(ArchiveEntryInfo *archiveEntryInfo,
     // create new part
     if (!archiveEntryInfo->file.headerWrittenFlag && (!archiveEntryInfo->file.createdFlag || (length > 0)))
     {
-      // create file chunk
-      error = Chunk_create(&archiveEntryInfo->file.chunkFile.info);
-      if (error != ERROR_NONE)
-      {
-        return error;
-      }
-
-      // create file entry chunk
-      error = Chunk_create(&archiveEntryInfo->file.chunkFileEntry.info);
-      if (error != ERROR_NONE)
-      {
-        return error;
-      }
-
-      // create file delta chunk
-      if (COMPRESS_IS_XDELTA_ALGORITHM(archiveEntryInfo->file.deltaCompressAlgorithm))
-      {
-        error = Chunk_create(&archiveEntryInfo->file.chunkFileDelta.info);
-        if (error != ERROR_NONE)
-       {
-          return error;
-        }
-      }
-
-      // create file data chunk
-      error = Chunk_create(&archiveEntryInfo->file.chunkFileData.info);
-      if (error != ERROR_NONE)
-      {
-        return error;
-      }
-
-      archiveEntryInfo->file.createdFlag       = TRUE;
-      archiveEntryInfo->file.headerWrittenFlag = TRUE;
+      writeFileChunks(archiveEntryInfo);
     }
 
     // write last compressed block (if any)
@@ -1145,62 +1202,10 @@ LOCAL Errors writeFileDataBlock(ArchiveEntryInfo *archiveEntryInfo,
   {
     if (!archiveEntryInfo->file.createdFlag || (length > 0))
     {
-      // open file if needed
-      if (!archiveEntryInfo->archiveInfo->file.openFlag)
-      {
-        // create file
-        error = createArchiveFile(archiveEntryInfo->archiveInfo);
-        if (error != ERROR_NONE)
-        {
-          return error;
-        }
-
-        // initialise variables
-        archiveEntryInfo->file.headerWrittenFlag = FALSE;
-
-        archiveEntryInfo->file.chunkFileData.fragmentOffset = archiveEntryInfo->file.chunkFileData.fragmentOffset+archiveEntryInfo->file.chunkFileData.fragmentSize;
-        archiveEntryInfo->file.chunkFileData.fragmentSize   = 0LL;
-
-        // reset data crypt
-        Crypt_reset(&archiveEntryInfo->file.cryptInfo,0);
-      }
-
       // create chunk-headers
       if (!archiveEntryInfo->file.headerWrittenFlag)
       {
-        // create file chunk
-        error = Chunk_create(&archiveEntryInfo->file.chunkFile.info);
-        if (error != ERROR_NONE)
-        {
-          return error;
-        }
-
-        // create file entry chunk
-        error = Chunk_create(&archiveEntryInfo->file.chunkFileEntry.info);
-        if (error != ERROR_NONE)
-        {
-          return error;
-        }
-
-        // create file delta chunk
-        if (COMPRESS_IS_XDELTA_ALGORITHM(archiveEntryInfo->file.deltaCompressAlgorithm))
-        {
-          error = Chunk_create(&archiveEntryInfo->file.chunkFileDelta.info);
-          if (error != ERROR_NONE)
-         {
-            return error;
-          }
-        }
-
-        // create file data chunk
-        error = Chunk_create(&archiveEntryInfo->file.chunkFileData.info);
-        if (error != ERROR_NONE)
-        {
-          return error;
-        }
-
-        archiveEntryInfo->file.createdFlag       = TRUE;
-        archiveEntryInfo->file.headerWrittenFlag = TRUE;
+        writeFileChunks(archiveEntryInfo);
       }
 
       // encrypt and write compressed block (if any)
@@ -2461,8 +2466,6 @@ Errors Archive_newFileEntry(ArchiveInfo                     *archiveInfo,
 
   archiveEntryInfo->archiveEntryType            = ARCHIVE_ENTRY_TYPE_FILE;
 
-//???
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   archiveEntryInfo->file.deltaCompressAlgorithm = compressFlag?archiveInfo->jobOptions->compressAlgorithm.delta:COMPRESS_ALGORITHM_NONE;
   archiveEntryInfo->file.dataCompressAlgorithm  = compressFlag?archiveInfo->jobOptions->compressAlgorithm.data :COMPRESS_ALGORITHM_NONE;
 
