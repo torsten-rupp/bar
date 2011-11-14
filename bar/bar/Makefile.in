@@ -620,7 +620,7 @@ test_file_operation_base: \
 	$(TEST_BAR) -t test/test*.bar $(OPTIONS) $(if $(QUIET),1>/dev/null)
 	$(TEST_BAR) -d test/test*.bar $(OPTIONS) $(if $(QUIET),1>/dev/null)
 	$(TEST_BAR) -x test/test*.bar $(OPTIONS) --destination test/restore $(if $(QUIET),1>/dev/null)
-	$(DIFF) -r -x unreadable.dat -x circular-link.dat -x fifo -x sub-ignore-dir test/data test/restore/test/data
+	$(DIFF) -r -x unreadable.dat -x circular-link.dat -x circular-link.dat.marker -x fifo -x sub-ignore-dir test/data test/restore/test/data
 	$(READLINK) test/restore/test/data/link.dat 2>/dev/null $(if $(QUIET),1>/dev/null)
 	test `$(STAT) --format "%h" test/restore/test/data/hardlink.dat 2>/dev/null` -eq 2 $(if $(QUIET),1>/dev/null)
 	# incremental tests
