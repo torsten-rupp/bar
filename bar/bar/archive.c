@@ -36,10 +36,10 @@
 
 /***************************** Constants *******************************/
 
-/* size of buffer for reading/writing file data */
+// size of buffer for reading/writing file data
 #define MAX_BUFFER_SIZE (64*1024)
 
-/* i/o via file functions */
+// i/o via file functions
 const ChunkIO CHUNK_IO_FILE =
 {
   (bool(*)(void*))File_eof,
@@ -50,7 +50,7 @@ const ChunkIO CHUNK_IO_FILE =
   (uint64(*)(void*))File_getSize
 };
 
-/* i/o via storage file functions */
+// i/o via storage file functions
 const ChunkIO CHUNK_IO_STORAGE_FILE =
 {
   (bool(*)(void*))Storage_eof,
@@ -63,14 +63,14 @@ const ChunkIO CHUNK_IO_STORAGE_FILE =
 
 /***************************** Datatypes *******************************/
 
-/* block modes */
+// block modes
 typedef enum
 {
   BLOCK_MODE_WRITE,            // write block
   BLOCK_MODE_FLUSH,            // flush compress data buffers and read/write block
 } BlockModes;
 
-/* decrypt password list */
+// decrypt password list
 typedef struct PasswordNode
 {
   LIST_NODE_HEADER(struct PasswordNode);
@@ -83,7 +83,7 @@ typedef struct
   LIST_HEADER(PasswordNode);
 } PasswordList;
 
-/* password handle */
+// password handle
 typedef struct
 {
   String                          fileName;                          // name of archive for which password is needed
@@ -97,7 +97,7 @@ typedef struct
 
 /***************************** Variables *******************************/
 
-/* list with all known decryption passwords */
+// list with all known decryption passwords
 LOCAL PasswordList decryptPasswordList;
 
 /****************************** Macros *********************************/
@@ -263,7 +263,7 @@ LOCAL const Password *getNextDecryptPassword(PasswordHandle *passwordHandle)
 
   if      (passwordHandle->passwordNode != NULL)
   {
-    /* next password from list */
+    // next password from list
     password = passwordHandle->passwordNode->password;
     passwordHandle->passwordNode = passwordHandle->passwordNode->next;
   }
@@ -271,20 +271,20 @@ LOCAL const Password *getNextDecryptPassword(PasswordHandle *passwordHandle)
            && (passwordHandle->cryptPassword != NULL)
           )
   {
-    /* get password */
+    // get password
     password = (Password*)passwordHandle->cryptPassword;
 
-    /* next password is: default */
+    // next password is: default
     passwordHandle->passwordMode = PASSWORD_MODE_DEFAULT;
   }
   else if (   (passwordHandle->passwordMode == PASSWORD_MODE_DEFAULT)
            && (globalOptions.cryptPassword != NULL)
           )
   {
-    /* get password */
+    // get password
     password = globalOptions.cryptPassword;
 
-    /* next password is: ask */
+    // next password is: ask
     passwordHandle->passwordMode = PASSWORD_MODE_ASK;
   }
   else if (   !passwordHandle->inputFlag
@@ -295,7 +295,7 @@ LOCAL const Password *getNextDecryptPassword(PasswordHandle *passwordHandle)
   {
     if (passwordHandle->archiveGetCryptPasswordFunction != NULL)
     {
-      /* input password */
+      // input password
       Password_init(&newPassword);
       error = passwordHandle->archiveGetCryptPasswordFunction(passwordHandle->archiveGetCryptPasswordUserData,
                                                               &newPassword,
@@ -308,13 +308,13 @@ LOCAL const Password *getNextDecryptPassword(PasswordHandle *passwordHandle)
         return NULL;
       }
 
-      /* add to password list */
+      // add to password list
       password = Archive_appendDecryptPassword(&newPassword);
 
-      /* free resources */
+      // free resources
       Password_done(&newPassword);
 
-      /* next password is: none */
+      // next password is: none
       passwordHandle->inputFlag = TRUE;
     }
     else
@@ -468,19 +468,19 @@ LOCAL bool checkNewPartNeeded(ArchiveInfo *archiveInfo,
   {
     if (archiveInfo->file.openFlag)
     {
-      /* get file size */
+      // get file size
       fileSize = archiveInfo->chunkIO->getSize(archiveInfo->chunkIOUserData);
 
       if      (   !headerWrittenFlag
                && (fileSize+headerLength >= archiveInfo->jobOptions->archivePartSize)
               )
       {
-        /* file header cannot be written without fragmentation -> new part */
+        // file header cannot be written without fragmentation -> new part
         newPartFlag = TRUE;
       }
       else if ((fileSize+minBytes) >= archiveInfo->jobOptions->archivePartSize)
       {
-        /* less than min. number of bytes left in part -> create new part */
+        // less than min. number of bytes left in part -> create new part
         newPartFlag = TRUE;
       }
     }
@@ -510,7 +510,7 @@ LOCAL Errors readEncryptionKey(ArchiveInfo       *archiveInfo,
   assert(archiveInfo != NULL);
   assert(chunkHeader != NULL);
 
-  /* create key chunk */
+  // create key chunk
   error = Chunk_init(&chunkInfoKey,
                      NULL,
                      archiveInfo->chunkIO,
@@ -526,7 +526,7 @@ LOCAL Errors readEncryptionKey(ArchiveInfo       *archiveInfo,
     return error;
   }
 
-  /* read key chunk */
+  // read key chunk
   error = Chunk_open(&chunkInfoKey,
                      chunkHeader,
                      Chunk_getSize(CHUNK_DEFINITION_KEY,0,NULL)
@@ -555,7 +555,7 @@ LOCAL Errors readEncryptionKey(ArchiveInfo       *archiveInfo,
     return error;
   }
 
-  /* check if all data read */
+  // check if all data read
   if (!Chunk_eofSub(&chunkInfoKey))
   {
     free(archiveInfo->cryptKeyData); archiveInfo->cryptKeyData = NULL;
@@ -564,7 +564,7 @@ LOCAL Errors readEncryptionKey(ArchiveInfo       *archiveInfo,
     return ERROR_CORRUPT_DATA;
   }
 
-  /* close chunk */
+  // close chunk
   error = Chunk_close(&chunkInfoKey);
   if (error != ERROR_NONE)
   {
@@ -574,7 +574,7 @@ LOCAL Errors readEncryptionKey(ArchiveInfo       *archiveInfo,
   }
   Chunk_done(&chunkInfoKey);
 
-  /* decrypt key */
+  // decrypt key
   if (archiveInfo->cryptPassword == NULL) archiveInfo->cryptPassword = Password_new();
   error = Crypt_getDecryptKey(&archiveInfo->cryptKey,
                               archiveInfo->cryptKeyData,
@@ -608,7 +608,7 @@ LOCAL Errors writeFileInfo(ArchiveInfo *archiveInfo)
 
   assert(archiveInfo != NULL);
 
-  /* create key chunk */
+  // create key chunk
   error = Chunk_init(&chunkInfoBar,
                      NULL,
                      archiveInfo->chunkIO,
@@ -624,7 +624,7 @@ LOCAL Errors writeFileInfo(ArchiveInfo *archiveInfo)
     return error;
   }
 
-  /* write header */
+  // write header
   error = Chunk_create(&chunkInfoBar);
   if (error != ERROR_NONE)
   {
@@ -632,7 +632,7 @@ LOCAL Errors writeFileInfo(ArchiveInfo *archiveInfo)
     return error;
   }
 
-  /* free resources */
+  // free resources
   error = Chunk_close(&chunkInfoBar);
   if (error != ERROR_NONE)
   {
@@ -661,7 +661,7 @@ LOCAL Errors writeEncryptionKey(ArchiveInfo *archiveInfo)
 
   assert(archiveInfo != NULL);
 
-  /* create key chunk */
+  // create key chunk
   error = Chunk_init(&chunkInfoKey,
                      NULL,
                      archiveInfo->chunkIO,
@@ -677,7 +677,7 @@ LOCAL Errors writeEncryptionKey(ArchiveInfo *archiveInfo)
     return error;
   }
 
-  /* write encrypted encryption key */
+  // write encrypted encryption key
   error = Chunk_create(&chunkInfoKey);
   if (error != ERROR_NONE)
   {
@@ -694,7 +694,7 @@ LOCAL Errors writeEncryptionKey(ArchiveInfo *archiveInfo)
     return error;
   }
 
-  /* free resources */
+  // free resources
   error = Chunk_close(&chunkInfoKey);
   if (error != ERROR_NONE)
   {
@@ -813,17 +813,17 @@ LOCAL Errors closeArchiveFile(ArchiveInfo *archiveInfo,
   assert(archiveInfo->ioType == ARCHIVE_IO_TYPE_FILE);
   assert(archiveInfo->file.openFlag);
 
-  /* get size of archive */
+  // get size of archive
   fileSize = archiveInfo->chunkIO->getSize(archiveInfo->chunkIOUserData);
 
   if (archiveInfo->file.openFlag)
   {
-    /* close file */
+    // close file
     File_close(&archiveInfo->file.fileHandle);
     archiveInfo->file.openFlag = FALSE;
   }
 
-  /* call back new archive created */
+  // call back new archive created
   if (archiveInfo->archiveNewFileFunction != NULL)
   {
     error = archiveInfo->archiveNewFileFunction(archiveInfo->archiveNewFileUserData,
@@ -843,7 +843,7 @@ LOCAL Errors closeArchiveFile(ArchiveInfo *archiveInfo,
     }
   }
 
-  /* increament part number */
+  // increament part number
   if (archiveInfo->jobOptions->archivePartSize > 0)
   {
     archiveInfo->partNumber++;
@@ -871,7 +871,7 @@ LOCAL Errors ensureArchiveSpace(ArchiveInfo *archiveInfo,
   assert(archiveInfo != NULL);
   assert(archiveInfo->ioType == ARCHIVE_IO_TYPE_FILE);
 
-  /* check if split necessary */
+  // check if split necessary
   if (checkNewPartNeeded(archiveInfo,
                          0,
                          FALSE,
@@ -879,14 +879,14 @@ LOCAL Errors ensureArchiveSpace(ArchiveInfo *archiveInfo,
                         )
      )
   {
-    /* split needed -> close file */
+    // split needed -> close file
     closeArchiveFile(archiveInfo,FALSE);
   }
 
-  /* create new file if needed */
+  // create new file if needed
   if (!archiveInfo->file.openFlag)
   {
-    /* create file */
+    // create file
     error = createArchiveFile(archiveInfo);
     if (error != ERROR_NONE)
     {
@@ -1064,13 +1064,13 @@ LOCAL Errors writeFileDataBlock(ArchiveEntryInfo *archiveEntryInfo,
   assert(archiveEntryInfo->archiveInfo != NULL);
   assert(archiveEntryInfo->archiveInfo->ioType == ARCHIVE_IO_TYPE_FILE);
 
-  /* get compressed block */
+  // get compressed block
   Compress_getBlock(&archiveEntryInfo->file.dataCompressInfo,
                     archiveEntryInfo->file.buffer,
                     &length
                    );
 
-  /* check if split is allowed and necessary */
+  // check if split is allowed and necessary
   newPartFlag =    allowNewPartFlag
                 && checkNewPartNeeded(archiveEntryInfo->archiveInfo,
                                       archiveEntryInfo->file.headerLength,
@@ -1255,7 +1255,7 @@ LOCAL Errors readFileDataBlock(ArchiveEntryInfo *archiveEntryInfo)
 
   if (!Chunk_eofSub(&archiveEntryInfo->file.chunkFileData.info))
   {
-    /* read */
+    // read
     error = Chunk_readData(&archiveEntryInfo->file.chunkFileData.info,
                            archiveEntryInfo->file.buffer,
                            archiveEntryInfo->blockLength
@@ -1265,7 +1265,7 @@ LOCAL Errors readFileDataBlock(ArchiveEntryInfo *archiveEntryInfo)
       return error;
     }
 
-    /* decrypt */
+    // decrypt
     error = Crypt_decrypt(&archiveEntryInfo->file.cryptInfo,
                           archiveEntryInfo->file.buffer,
                           archiveEntryInfo->blockLength
@@ -1329,13 +1329,13 @@ LOCAL Errors writeImageDataBlock(ArchiveEntryInfo *archiveEntryInfo,
   assert(archiveEntryInfo->archiveInfo != NULL);
   assert(archiveEntryInfo->archiveInfo->ioType == ARCHIVE_IO_TYPE_FILE);
 
-  /* get compressed block */
+  // get compressed block
   Compress_getBlock(&archiveEntryInfo->image.dataCompressInfo,
                     archiveEntryInfo->image.buffer,
                     &length
                    );
 
-  /* check if split is allowed and necessary */
+  // check if split is allowed and necessary
   newPartFlag =    allowNewPartFlag
                 && checkNewPartNeeded(archiveEntryInfo->archiveInfo,
                                       archiveEntryInfo->image.headerLength,
@@ -1343,10 +1343,10 @@ LOCAL Errors writeImageDataBlock(ArchiveEntryInfo *archiveEntryInfo,
                                       ((length > 0) || (blockMode == BLOCK_MODE_WRITE))?archiveEntryInfo->archiveInfo->blockLength:0
                                      );
 
-  /* split */
+  // split
   if (newPartFlag)
   {
-    /* create chunk-headers */
+    // create chunk-headers
     if (!archiveEntryInfo->image.headerWrittenFlag && (!archiveEntryInfo->image.createdFlag || (length > 0)))
     {
       error = Chunk_create(&archiveEntryInfo->image.chunkImage.info);
@@ -1373,7 +1373,7 @@ LOCAL Errors writeImageDataBlock(ArchiveEntryInfo *archiveEntryInfo,
 
     if (length > 0)
     {
-      /* encrypt block */
+      // encrypt block
       error = Crypt_encrypt(&archiveEntryInfo->image.cryptInfo,
                             archiveEntryInfo->image.buffer,
                             archiveEntryInfo->blockLength
@@ -1383,7 +1383,7 @@ LOCAL Errors writeImageDataBlock(ArchiveEntryInfo *archiveEntryInfo,
         return error;
       }
 
-      /* write block */
+      // write block
       error = Chunk_writeData(&archiveEntryInfo->image.chunkImageData.info,
                               archiveEntryInfo->image.buffer,
                               archiveEntryInfo->blockLength
@@ -1394,7 +1394,7 @@ LOCAL Errors writeImageDataBlock(ArchiveEntryInfo *archiveEntryInfo,
       }
     }
 
-    /* flush compress buffer */
+    // flush compress buffer
     error = Compress_flush(&archiveEntryInfo->image.dataCompressInfo);
     if (error != ERROR_NONE)
     {
@@ -1413,13 +1413,13 @@ LOCAL Errors writeImageDataBlock(ArchiveEntryInfo *archiveEntryInfo,
 
       if (blockCount > 0)
       {
-        /* get compressed block */
+        // get compressed block
         Compress_getBlock(&archiveEntryInfo->image.dataCompressInfo,
                           archiveEntryInfo->image.buffer,
                           &length
                          );
 
-        /* encrypt block */
+        // encrypt block
         error = Crypt_encrypt(&archiveEntryInfo->image.cryptInfo,
                               archiveEntryInfo->image.buffer,
                               archiveEntryInfo->blockLength
@@ -1429,7 +1429,7 @@ LOCAL Errors writeImageDataBlock(ArchiveEntryInfo *archiveEntryInfo,
           return error;
         }
 
-        /* write */
+        // write
         error = Chunk_writeData(&archiveEntryInfo->image.chunkImageData.info,
                                 archiveEntryInfo->image.buffer,
                                 archiveEntryInfo->blockLength
@@ -1442,7 +1442,7 @@ LOCAL Errors writeImageDataBlock(ArchiveEntryInfo *archiveEntryInfo,
     }
     while (blockCount > 0);
 
-    /* update part size */
+    // update part size
     assert(archiveEntryInfo->image.blockSize > 0);
     archiveEntryInfo->image.chunkImageData.blockCount = Compress_getInputLength(&archiveEntryInfo->image.dataCompressInfo)/archiveEntryInfo->image.blockSize;
     error = Chunk_update(&archiveEntryInfo->image.chunkImageData.info);
@@ -1451,7 +1451,7 @@ LOCAL Errors writeImageDataBlock(ArchiveEntryInfo *archiveEntryInfo,
       return error;
     }
 
-    /* close chunks */
+    // close chunks
     error = Chunk_close(&archiveEntryInfo->image.chunkImageData.info);
     if (error != ERROR_NONE)
     {
@@ -1469,37 +1469,37 @@ LOCAL Errors writeImageDataBlock(ArchiveEntryInfo *archiveEntryInfo,
     }
     archiveEntryInfo->image.headerWrittenFlag = FALSE;
 
-    /* close file */
+    // close file
     closeArchiveFile(archiveEntryInfo->archiveInfo,FALSE);
 
-    /* reset compress (do it here because data if buffered and can be processed before a new file is opened) */
+    // reset compress (do it here because data if buffered and can be processed before a new file is opened)
     Compress_reset(&archiveEntryInfo->image.dataCompressInfo);
   }
   else
   {
     if (!archiveEntryInfo->image.createdFlag || (length > 0))
     {
-      /* open file if needed */
+      // open file if needed
       if (!archiveEntryInfo->archiveInfo->file.openFlag)
       {
-        /* create file */
+        // create file
         error = createArchiveFile(archiveEntryInfo->archiveInfo);
         if (error != ERROR_NONE)
         {
           return error;
         }
 
-        /* initialise variables */
+        // initialise variables
         archiveEntryInfo->image.headerWrittenFlag = FALSE;
 
         archiveEntryInfo->image.chunkImageData.blockOffset = archiveEntryInfo->image.chunkImageData.blockOffset+archiveEntryInfo->image.chunkImageData.blockCount;
         archiveEntryInfo->image.chunkImageData.blockCount  = 0;
 
-        /* reset data crypt */
+        // reset data crypt
         Crypt_reset(&archiveEntryInfo->image.cryptInfo,0);
       }
 
-      /* create chunk-headers */
+      // create chunk-headers
       if (!archiveEntryInfo->image.headerWrittenFlag)
       {
         error = Chunk_create(&archiveEntryInfo->image.chunkImage.info);
@@ -1526,7 +1526,7 @@ LOCAL Errors writeImageDataBlock(ArchiveEntryInfo *archiveEntryInfo,
 
       if (length > 0)
       {
-        /* encrypt block */
+        // encrypt block
         error = Crypt_encrypt(&archiveEntryInfo->image.cryptInfo,
                               archiveEntryInfo->image.buffer,
                               archiveEntryInfo->blockLength
@@ -1536,7 +1536,7 @@ LOCAL Errors writeImageDataBlock(ArchiveEntryInfo *archiveEntryInfo,
           return error;
         }
 
-        /* write block */
+        // write block
         error = Chunk_writeData(&archiveEntryInfo->image.chunkImageData.info,
                                 archiveEntryInfo->image.buffer,
                                 archiveEntryInfo->blockLength
@@ -1570,7 +1570,7 @@ LOCAL Errors readImageDataBlock(ArchiveEntryInfo *archiveEntryInfo)
 
   if (!Chunk_eofSub(&archiveEntryInfo->image.chunkImageData.info))
   {
-    /* read */
+    // read
     error = Chunk_readData(&archiveEntryInfo->image.chunkImageData.info,
                            archiveEntryInfo->image.buffer,
                            archiveEntryInfo->blockLength
@@ -1580,7 +1580,7 @@ LOCAL Errors readImageDataBlock(ArchiveEntryInfo *archiveEntryInfo)
       return error;
     }
 
-    /* decrypt */
+    // decrypt
     error = Crypt_decrypt(&archiveEntryInfo->image.cryptInfo,
                           archiveEntryInfo->image.buffer,
                           archiveEntryInfo->blockLength
@@ -1609,7 +1609,7 @@ LOCAL Errors readImageDataBlock(ArchiveEntryInfo *archiveEntryInfo)
     if (error != ERROR_NONE)
     {
       return error;
-    }  
+    }
     if (blockCount <= 0)
     {
       return ERROR_COMPRESS_EOF;
@@ -1645,13 +1645,13 @@ LOCAL Errors writeHardLinkDataBlock(ArchiveEntryInfo *archiveEntryInfo,
   assert(archiveEntryInfo->archiveInfo != NULL);
   assert(archiveEntryInfo->archiveInfo->ioType == ARCHIVE_IO_TYPE_FILE);
 
-  /* get compressed block */
+  // get compressed block
   Compress_getBlock(&archiveEntryInfo->hardLink.dataCompressInfo,
                     archiveEntryInfo->hardLink.buffer,
                     &length
                    );
 
-  /* check if split is allowed and necessary */
+  // check if split is allowed and necessary
   newPartFlag =    allowNewPartFlag
                 && checkNewPartNeeded(archiveEntryInfo->archiveInfo,
                                       archiveEntryInfo->hardLink.headerLength,
@@ -1659,10 +1659,10 @@ LOCAL Errors writeHardLinkDataBlock(ArchiveEntryInfo *archiveEntryInfo,
                                       ((length > 0) || (blockMode == BLOCK_MODE_WRITE))?archiveEntryInfo->archiveInfo->blockLength:0
                                      );
 
-  /* split */
+  // split
   if (newPartFlag)
   {
-    /* create chunk-headers */
+    // create chunk-headers
     if (!archiveEntryInfo->hardLink.headerWrittenFlag && (!archiveEntryInfo->hardLink.createdFlag || (length > 0)))
     {
       error = Chunk_create(&archiveEntryInfo->hardLink.chunkHardLink.info);
@@ -1698,7 +1698,7 @@ LOCAL Errors writeHardLinkDataBlock(ArchiveEntryInfo *archiveEntryInfo,
 
     if (length > 0)
     {
-      /* encrypt block */
+      // encrypt block
       error = Crypt_encrypt(&archiveEntryInfo->hardLink.cryptInfo,
                             archiveEntryInfo->hardLink.buffer,
                             archiveEntryInfo->blockLength
@@ -1708,7 +1708,7 @@ LOCAL Errors writeHardLinkDataBlock(ArchiveEntryInfo *archiveEntryInfo,
         return error;
       }
 
-      /* write block */
+      // write block
       error = Chunk_writeData(&archiveEntryInfo->hardLink.chunkHardLinkData.info,
                               archiveEntryInfo->hardLink.buffer,
                               archiveEntryInfo->blockLength
@@ -1719,7 +1719,7 @@ LOCAL Errors writeHardLinkDataBlock(ArchiveEntryInfo *archiveEntryInfo,
       }
     }
 
-    /* flush compress buffer */
+    // flush compress buffer
     error = Compress_flush(&archiveEntryInfo->hardLink.dataCompressInfo);
     if (error != ERROR_NONE)
     {
@@ -1738,13 +1738,13 @@ LOCAL Errors writeHardLinkDataBlock(ArchiveEntryInfo *archiveEntryInfo,
 
       if (blockCount > 0)
       {
-        /* get compressed block */
+        // get compressed block
         Compress_getBlock(&archiveEntryInfo->hardLink.dataCompressInfo,
                           archiveEntryInfo->hardLink.buffer,
                           &length
                          );
 
-        /* encrypt block */
+        // encrypt block
         error = Crypt_encrypt(&archiveEntryInfo->hardLink.cryptInfo,
                               archiveEntryInfo->hardLink.buffer,
                               archiveEntryInfo->blockLength
@@ -1754,7 +1754,7 @@ LOCAL Errors writeHardLinkDataBlock(ArchiveEntryInfo *archiveEntryInfo,
           return error;
         }
 
-        /* write */
+        // write
         error = Chunk_writeData(&archiveEntryInfo->hardLink.chunkHardLinkData.info,
                                 archiveEntryInfo->hardLink.buffer,
                                 archiveEntryInfo->blockLength
@@ -1767,7 +1767,7 @@ LOCAL Errors writeHardLinkDataBlock(ArchiveEntryInfo *archiveEntryInfo,
     }
     while (blockCount > 0);
 
-    /* update part size */
+    // update part size
     archiveEntryInfo->hardLink.chunkHardLinkData.fragmentSize = Compress_getInputLength(&archiveEntryInfo->hardLink.dataCompressInfo);
     error = Chunk_update(&archiveEntryInfo->hardLink.chunkHardLinkData.info);
     if (error != ERROR_NONE)
@@ -1775,7 +1775,7 @@ LOCAL Errors writeHardLinkDataBlock(ArchiveEntryInfo *archiveEntryInfo,
       return error;
     }
 
-    /* close chunks */
+    // close chunks
     error = Chunk_close(&archiveEntryInfo->hardLink.chunkHardLinkData.info);
     if (error != ERROR_NONE)
     {
@@ -1801,37 +1801,37 @@ LOCAL Errors writeHardLinkDataBlock(ArchiveEntryInfo *archiveEntryInfo,
     }
     archiveEntryInfo->hardLink.headerWrittenFlag = FALSE;
 
-    /* close file */
+    // close file
     closeArchiveFile(archiveEntryInfo->archiveInfo,FALSE);
 
-    /* reset compress (do it here because data if buffered and can be processed before a new file is opened) */
+    // reset compress (do it here because data if buffered and can be processed before a new file is opened)
     Compress_reset(&archiveEntryInfo->hardLink.dataCompressInfo);
   }
   else
   {
     if (!archiveEntryInfo->hardLink.createdFlag || (length > 0))
     {
-      /* open file if needed */
+      // open file if needed
       if (!archiveEntryInfo->archiveInfo->file.openFlag)
       {
-        /* create file */
+        // create file
         error = createArchiveFile(archiveEntryInfo->archiveInfo);
         if (error != ERROR_NONE)
         {
           return error;
         }
 
-        /* initialise variables */
+        // initialise variables
         archiveEntryInfo->hardLink.headerWrittenFlag = FALSE;
 
         archiveEntryInfo->hardLink.chunkHardLinkData.fragmentOffset = archiveEntryInfo->hardLink.chunkHardLinkData.fragmentOffset+archiveEntryInfo->hardLink.chunkHardLinkData.fragmentSize;
         archiveEntryInfo->hardLink.chunkHardLinkData.fragmentSize   = 0LL;
 
-        /* reset data crypt */
+        // reset data crypt
         Crypt_reset(&archiveEntryInfo->hardLink.cryptInfo,0);
       }
 
-      /* create chunk-headers */
+      // create chunk-headers
       if (!archiveEntryInfo->hardLink.headerWrittenFlag)
       {
         error = Chunk_create(&archiveEntryInfo->hardLink.chunkHardLink.info);
@@ -1867,7 +1867,7 @@ LOCAL Errors writeHardLinkDataBlock(ArchiveEntryInfo *archiveEntryInfo,
 
       if (length > 0)
       {
-        /* encrypt block */
+        // encrypt block
         error = Crypt_encrypt(&archiveEntryInfo->hardLink.cryptInfo,
                               archiveEntryInfo->hardLink.buffer,
                               archiveEntryInfo->blockLength
@@ -1877,7 +1877,7 @@ LOCAL Errors writeHardLinkDataBlock(ArchiveEntryInfo *archiveEntryInfo,
           return error;
         }
 
-        /* write block */
+        // write block
         error = Chunk_writeData(&archiveEntryInfo->hardLink.chunkHardLinkData.info,
                                 archiveEntryInfo->hardLink.buffer,
                                 archiveEntryInfo->blockLength
@@ -1911,7 +1911,7 @@ LOCAL Errors readHardLinkDataBlock(ArchiveEntryInfo *archiveEntryInfo)
 
   if (!Chunk_eofSub(&archiveEntryInfo->hardLink.chunkHardLinkData.info))
   {
-    /* read */
+    // read
     error = Chunk_readData(&archiveEntryInfo->hardLink.chunkHardLinkData.info,
                            archiveEntryInfo->hardLink.buffer,
                            archiveEntryInfo->blockLength
@@ -1921,7 +1921,7 @@ LOCAL Errors readHardLinkDataBlock(ArchiveEntryInfo *archiveEntryInfo)
       return error;
     }
 
-    /* decrypt */
+    // decrypt
     error = Crypt_decrypt(&archiveEntryInfo->hardLink.cryptInfo,
                           archiveEntryInfo->hardLink.buffer,
                           archiveEntryInfo->blockLength
@@ -1960,16 +1960,16 @@ LOCAL Errors readHardLinkDataBlock(ArchiveEntryInfo *archiveEntryInfo)
   return ERROR_NONE;
 }
 
-/*---------------------------------------------------------------------*/
+//---------------------------------------------------------------------
 
 Errors Archive_initAll(void)
 {
   Errors error;
 
-  /* initialize variables */
+  // initialize variables
   List_init(&decryptPasswordList);
 
-  /* init chunks*/
+  // init chunks
   error = Chunk_initAll();
   if (error != ERROR_NONE)
   {
@@ -1981,7 +1981,7 @@ Errors Archive_initAll(void)
 
 void Archive_doneAll(void)
 {
-  /* free resources */
+  // free resources
   List_done(&decryptPasswordList,(ListNodeFreeFunction)freePasswordNode,NULL);
 }
 
@@ -2025,7 +2025,7 @@ Errors Archive_create(ArchiveInfo                     *archiveInfo,
   assert(archiveNewFileFunction != NULL);
   assert(jobOptions != NULL);
 
-  /* detect block length of use crypt algorithm */
+  // detect block length of use crypt algorithm
   error = Crypt_getBlockLength(jobOptions->cryptAlgorithm,&archiveInfo->blockLength);
   if (error != ERROR_NONE)
   {
@@ -2037,7 +2037,7 @@ Errors Archive_create(ArchiveInfo                     *archiveInfo,
     return ERROR_UNSUPPORTED_BLOCK_SIZE;
   }
 
-  /* init */
+  // init
   archiveInfo->archiveNewFileFunction          = archiveNewFileFunction;
   archiveInfo->archiveNewFileUserData          = archiveNewFileUserData;
   archiveInfo->archiveGetCryptPasswordFunction = archiveGetCryptPasswordFunction;
@@ -2065,17 +2065,17 @@ Errors Archive_create(ArchiveInfo                     *archiveInfo,
   archiveInfo->pendingError                    = ERROR_NONE;
   archiveInfo->nextChunkHeaderReadFlag         = FALSE;
 
-  /* init key (if asymmetric encryption used) */
+  // init key (if asymmetric encryption used)
   if (archiveInfo->cryptType == CRYPT_TYPE_ASYMMETRIC)
   {
-    /* check if public key available */
+    // check if public key available
     if (jobOptions->cryptPublicKeyFileName == NULL)
     {
       String_delete(archiveInfo->file.fileName);
       return ERROR_NO_PUBLIC_KEY;
     }
 
-    /* read public key */
+    // read public key
     Crypt_initKey(&archiveInfo->cryptKey);
     error = Crypt_readKeyFile(&archiveInfo->cryptKey,
                               jobOptions->cryptPublicKeyFileName,
@@ -2087,7 +2087,7 @@ Errors Archive_create(ArchiveInfo                     *archiveInfo,
       return error;
     }
 
-    /* create new random key for encryption */
+    // create new random key for encryption
     archiveInfo->cryptPassword = Password_new();
     if (archiveInfo->cryptPassword == NULL)
     {
@@ -2152,10 +2152,10 @@ Errors Archive_open(ArchiveInfo                     *archiveInfo,
   assert(archiveInfo != NULL);
   assert(storageName != NULL);
 
-  /* init variables */
+  // init variables
   fileName = String_new();
 
-  /* init */
+  // init
   archiveInfo->archiveNewFileFunction          = NULL;
   archiveInfo->archiveNewFileUserData          = NULL;
   archiveInfo->archiveGetCryptPasswordFunction = archiveGetCryptPasswordFunction;
@@ -2182,7 +2182,7 @@ Errors Archive_open(ArchiveInfo                     *archiveInfo,
   archiveInfo->pendingError                    = ERROR_NONE;
   archiveInfo->nextChunkHeaderReadFlag         = FALSE;
 
-  /* init storage */
+  // init storage
   error = Storage_init(&archiveInfo->storage.storageFileHandle,
                        storageName,
                        jobOptions,
@@ -2200,7 +2200,7 @@ Errors Archive_open(ArchiveInfo                     *archiveInfo,
     return error;
   }
 
-  /* open storage file */
+  // open storage file
   error = Storage_open(&archiveInfo->storage.storageFileHandle,
                        fileName
                       );
@@ -2213,7 +2213,7 @@ Errors Archive_open(ArchiveInfo                     *archiveInfo,
     return error;
   }
 
-  /* check if BAR archive file */
+  // check if BAR archive file
   error = getNextChunkHeader(archiveInfo,&chunkHeader);
   if (error != ERROR_NONE)
   {
@@ -2235,7 +2235,7 @@ Errors Archive_open(ArchiveInfo                     *archiveInfo,
   }
   ungetNextChunkHeader(archiveInfo,&chunkHeader);
 
-  /* free resources */
+  // free resources
   String_delete(fileName);
 
   return ERROR_NONE;
@@ -2294,30 +2294,30 @@ bool Archive_eof(ArchiveInfo *archiveInfo,
 
   assert(archiveInfo != NULL);
 
-  /* check for pending error */
+  // check for pending error
   if (archiveInfo->pendingError != ERROR_NONE)
   {
     return FALSE;
   }
 
-  /* find next file, image, directory, link, special chunk */
+  // find next file, image, directory, link, special chunk
   chunkHeaderFoundFlag = FALSE;
   while (   !chunkHeaderFoundFlag
          && !chunkHeaderEOF(archiveInfo)
         )
   {
-    /* get next chunk header */
+    // get next chunk header
     archiveInfo->pendingError = getNextChunkHeader(archiveInfo,&chunkHeader);
     if (archiveInfo->pendingError != ERROR_NONE)
     {
       return FALSE;
     }
 
-    /* find next file, image, directory, link, special chunk */
+    // find next file, image, directory, link, special chunk
     switch (chunkHeader.id)
     {
       case CHUNK_ID_BAR:
-        /* bar header is simply ignored */
+        // bar header is simply ignored
         archiveInfo->pendingError = Chunk_skip(archiveInfo->chunkIO,archiveInfo->chunkIOUserData,&chunkHeader);
         if (archiveInfo->pendingError != ERROR_NONE)
         {
@@ -2325,13 +2325,13 @@ bool Archive_eof(ArchiveInfo *archiveInfo,
         }
         break;
       case CHUNK_ID_KEY:
-        /* check if private key available */
+        // check if private key available
         if (archiveInfo->jobOptions->cryptPrivateKeyFileName == NULL)
         {
           return FALSE;
         }
 
-        /* read private key, try to read key with no password, all passwords */
+        // read private key, try to read key with no password, all passwords
         Crypt_initKey(&archiveInfo->cryptKey);
         decryptedFlag = FALSE;
         archiveInfo->pendingError = Crypt_readKeyFile(&archiveInfo->cryptKey,
@@ -2363,7 +2363,7 @@ bool Archive_eof(ArchiveInfo *archiveInfo,
           }
           else
           {
-            /* next password */
+            // next password
             password = getNextDecryptPassword(&passwordHandle);
           }
         }
@@ -2372,7 +2372,7 @@ bool Archive_eof(ArchiveInfo *archiveInfo,
           return FALSE;
         }
 
-        /* read encryption key */
+        // read encryption key
         archiveInfo->pendingError = readEncryptionKey(archiveInfo,&chunkHeader);
         if (archiveInfo->pendingError != ERROR_NONE)
         {
@@ -2419,7 +2419,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
 
   if (chunkHeaderFoundFlag)
   {
-    /* store chunk header for read */
+    // store chunk header for read
     ungetNextChunkHeader(archiveInfo,&chunkHeader);
   }
 
@@ -2442,7 +2442,7 @@ Errors Archive_newFileEntry(ArchiveInfo                     *archiveInfo,
   assert(archiveEntryInfo != NULL);
   assert(fileInfo != NULL);
 
-  /* init crypt password */
+  // init crypt password
   if ((archiveInfo->jobOptions->cryptAlgorithm != CRYPT_ALGORITHM_NONE) && (archiveInfo->cryptPassword == NULL))
   {
     archiveInfo->cryptPassword = getCryptPassword(archiveInfo->printableName,
@@ -2457,7 +2457,7 @@ Errors Archive_newFileEntry(ArchiveInfo                     *archiveInfo,
     }
   }
 
-  /* init archive file info */
+  // init archive file info
   archiveEntryInfo->archiveInfo                 = archiveInfo;
   archiveEntryInfo->mode                        = ARCHIVE_MODE_WRITE;
 
@@ -2476,7 +2476,7 @@ Errors Archive_newFileEntry(ArchiveInfo                     *archiveInfo,
   archiveEntryInfo->file.buffer                 = NULL;
   archiveEntryInfo->file.bufferLength           = 0;
 
-  /* init file chunk */
+  // init file chunk
   error = Chunk_init(&archiveEntryInfo->file.chunkFile.info,
                      NULL,
                      archiveInfo->chunkIO,
@@ -2494,7 +2494,7 @@ Errors Archive_newFileEntry(ArchiveInfo                     *archiveInfo,
   archiveEntryInfo->file.chunkFile.compressAlgorithm = COMPRESS_ALGORITHM_TO_CONSTANT(archiveEntryInfo->file.dataCompressAlgorithm);
   archiveEntryInfo->file.chunkFile.cryptAlgorithm    = CRYPT_ALGORITHM_TO_CONSTANT(archiveInfo->jobOptions->cryptAlgorithm);
 
-  /* init file entry chunk */
+  // init file entry chunk
   error = Crypt_init(&archiveEntryInfo->file.chunkFileEntry.cryptInfo,
                      archiveInfo->jobOptions->cryptAlgorithm,
                      archiveInfo->cryptPassword
@@ -2529,7 +2529,7 @@ Errors Archive_newFileEntry(ArchiveInfo                     *archiveInfo,
   archiveEntryInfo->file.chunkFileEntry.permission      = fileInfo->permission;
   String_set(archiveEntryInfo->file.chunkFileEntry.name,fileName);
 
-  /* init delta chunk */
+  // init delta chunk
   if (COMPRESS_IS_XDELTA_ALGORITHM(archiveEntryInfo->file.deltaCompressAlgorithm))
   {
     error = Crypt_init(&archiveEntryInfo->file.chunkFileDelta.cryptInfo,
@@ -2565,7 +2565,7 @@ Errors Archive_newFileEntry(ArchiveInfo                     *archiveInfo,
     String_set(archiveEntryInfo->file.chunkFileDelta.name,deltaSourceName);
   }
 
-  /* init file data chunk */
+  // init file data chunk
   error = Crypt_init(&archiveEntryInfo->file.chunkFileData.cryptInfo,
                      archiveInfo->jobOptions->cryptAlgorithm,
                      archiveInfo->cryptPassword
@@ -2608,7 +2608,7 @@ Errors Archive_newFileEntry(ArchiveInfo                     *archiveInfo,
   archiveEntryInfo->file.chunkFileData.fragmentOffset = 0LL;
   archiveEntryInfo->file.chunkFileData.fragmentSize   = 0LL;
 
-  /* allocate buffers */
+  // allocate buffers
   archiveEntryInfo->file.bufferLength = (MAX_BUFFER_SIZE/archiveEntryInfo->blockLength)*archiveEntryInfo->blockLength;
   archiveEntryInfo->file.buffer = (byte*)malloc(archiveEntryInfo->file.bufferLength);
   if (archiveEntryInfo->file.buffer == NULL)
@@ -2616,7 +2616,7 @@ Errors Archive_newFileEntry(ArchiveInfo                     *archiveInfo,
     HALT_INSUFFICIENT_MEMORY();
   }
 
-  /* init delta, data compress */
+  // init delta, data compress
   error = Compress_new(&archiveEntryInfo->file.deltaCompressInfo,
                        COMPRESS_MODE_DEFLATE,
                        archiveEntryInfo->file.deltaCompressAlgorithm,
@@ -2663,7 +2663,7 @@ Errors Archive_newFileEntry(ArchiveInfo                     *archiveInfo,
     return error;
   }
 
-  /* init crypt */
+  // init crypt
   error = Crypt_init(&archiveEntryInfo->file.cryptInfo,
                      archiveInfo->jobOptions->cryptAlgorithm,
                      archiveInfo->cryptPassword
@@ -2686,13 +2686,13 @@ Errors Archive_newFileEntry(ArchiveInfo                     *archiveInfo,
     return error;
   }
 
-  /* calculate header length */
+  // calculate header length
   archiveEntryInfo->file.headerLength = Chunk_getSize(CHUNK_DEFINITION_FILE,      0,                            &archiveEntryInfo->file.chunkFile     )+
                                         Chunk_getSize(CHUNK_DEFINITION_FILE_ENTRY,archiveEntryInfo->blockLength,&archiveEntryInfo->file.chunkFileEntry)+
                                         ((COMPRESS_IS_XDELTA_ALGORITHM(archiveEntryInfo->file.deltaCompressAlgorithm))
                                           ?Chunk_getSize(CHUNK_DEFINITION_FILE_DELTA,archiveEntryInfo->blockLength,&archiveEntryInfo->file.chunkFileDelta)
                                           :0
-                                        )+ 
+                                        )+
                                         Chunk_getSize(CHUNK_DEFINITION_FILE_DATA, archiveEntryInfo->blockLength,&archiveEntryInfo->file.chunkFileData );
 
   return ERROR_NONE;
@@ -2718,7 +2718,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 UNUSED_VARIABLE(sourceGetEntryDataBlock);
 UNUSED_VARIABLE(sourceGetEntryDataBlockUserData);
 
-  /* init crypt password */
+  // init crypt password
   if ((archiveInfo->jobOptions->cryptAlgorithm != CRYPT_ALGORITHM_NONE) && (archiveInfo->cryptPassword == NULL))
   {
     archiveInfo->cryptPassword = getCryptPassword(archiveInfo->printableName,
@@ -2733,7 +2733,7 @@ UNUSED_VARIABLE(sourceGetEntryDataBlockUserData);
     }
   }
 
-  /* init archive file info */
+  // init archive file info
   archiveEntryInfo->archiveInfo                  = archiveInfo;
   archiveEntryInfo->mode                         = ARCHIVE_MODE_WRITE;
 
@@ -2755,7 +2755,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   archiveEntryInfo->image.buffer                 = NULL;
   archiveEntryInfo->image.bufferLength           = 0;
 
-  /* init image chunk */
+  // init image chunk
   error = Chunk_init(&archiveEntryInfo->image.chunkImage.info,
                      NULL,
                      archiveInfo->chunkIO,
@@ -2774,7 +2774,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   archiveEntryInfo->image.chunkImage.compressAlgorithm = COMPRESS_ALGORITHM_TO_CONSTANT(archiveEntryInfo->image.dataCompressAlgorithm);
   archiveEntryInfo->image.chunkImage.cryptAlgorithm    = archiveInfo->jobOptions->cryptAlgorithm;
 
-  /* init image entry chunk */
+  // init image entry chunk
   error = Crypt_init(&archiveEntryInfo->image.chunkImageEntry.cryptInfo,
                      archiveInfo->jobOptions->cryptAlgorithm,
                      archiveInfo->cryptPassword
@@ -2804,7 +2804,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   archiveEntryInfo->image.chunkImageEntry.blockSize = deviceInfo->blockSize;
   String_set(archiveEntryInfo->image.chunkImageEntry.name,deviceName);
 
-  /* init image data chunk */
+  // init image data chunk
   error = Crypt_init(&archiveEntryInfo->image.chunkImageData.cryptInfo,
                      archiveInfo->jobOptions->cryptAlgorithm,
                      archiveInfo->cryptPassword
@@ -2837,7 +2837,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   archiveEntryInfo->image.chunkImageData.blockOffset = 0LL;
   archiveEntryInfo->image.chunkImageData.blockCount  = 0LL;
 
-  /* allocate buffer */
+  // allocate buffer
   archiveEntryInfo->image.bufferLength = (MAX_BUFFER_SIZE/archiveEntryInfo->blockLength)*archiveEntryInfo->blockLength;
   archiveEntryInfo->image.buffer = (byte*)malloc(archiveEntryInfo->image.bufferLength);
   if (archiveEntryInfo->image.buffer == NULL)
@@ -2845,7 +2845,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     HALT_INSUFFICIENT_MEMORY();
   }
 
-  /* init data compress */
+  // init data compress
   error = Compress_new(&archiveEntryInfo->image.dataCompressInfo,
                        COMPRESS_MODE_DEFLATE,
                        archiveEntryInfo->image.dataCompressAlgorithm,
@@ -2865,7 +2865,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     return error;
   }
 
-  /* init crypt */
+  // init crypt
   error = Crypt_init(&archiveEntryInfo->image.cryptInfo,
                      archiveInfo->jobOptions->cryptAlgorithm,
                      archiveInfo->cryptPassword
@@ -2882,7 +2882,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     return error;
   }
 
-  /* calculate header length */
+  // calculate header length
   archiveEntryInfo->image.headerLength = Chunk_getSize(CHUNK_DEFINITION_IMAGE,      0,                           &archiveEntryInfo->image.chunkImage     )+
                                         Chunk_getSize(CHUNK_DEFINITION_IMAGE_ENTRY,archiveEntryInfo->blockLength,&archiveEntryInfo->image.chunkImageEntry)+
                                         Chunk_getSize(CHUNK_DEFINITION_IMAGE_DATA, archiveEntryInfo->blockLength,&archiveEntryInfo->image.chunkImageData );
@@ -2903,7 +2903,7 @@ Errors Archive_newDirectoryEntry(ArchiveInfo      *archiveInfo,
   assert(archiveEntryInfo != NULL);
   assert(fileInfo != NULL);
 
-  /* init crypt password */
+  // init crypt password
   if ((archiveInfo->jobOptions->cryptAlgorithm != CRYPT_ALGORITHM_NONE) && (archiveInfo->cryptPassword == NULL))
   {
     archiveInfo->cryptPassword = getCryptPassword(archiveInfo->printableName,
@@ -2918,7 +2918,7 @@ Errors Archive_newDirectoryEntry(ArchiveInfo      *archiveInfo,
     }
   }
 
-  /* init archive file info */
+  // init archive file info
   archiveEntryInfo->archiveInfo      = archiveInfo;
   archiveEntryInfo->mode             = ARCHIVE_MODE_WRITE;
 
@@ -2927,7 +2927,7 @@ Errors Archive_newDirectoryEntry(ArchiveInfo      *archiveInfo,
 
   archiveEntryInfo->archiveEntryType = ARCHIVE_ENTRY_TYPE_DIRECTORY;
 
-  /* init directory chunk */
+  // init directory chunk
   error = Chunk_init(&archiveEntryInfo->directory.chunkDirectory.info,
                      NULL,
                      archiveInfo->chunkIO,
@@ -2944,7 +2944,7 @@ Errors Archive_newDirectoryEntry(ArchiveInfo      *archiveInfo,
   }
   archiveEntryInfo->directory.chunkDirectory.cryptAlgorithm = archiveInfo->jobOptions->cryptAlgorithm;
 
-  /* init directory entry chunk */
+  // init directory entry chunk
   error = Crypt_init(&archiveEntryInfo->directory.chunkDirectoryEntry.cryptInfo,
                      archiveInfo->jobOptions->cryptAlgorithm,
                      archiveInfo->cryptPassword
@@ -2978,13 +2978,13 @@ Errors Archive_newDirectoryEntry(ArchiveInfo      *archiveInfo,
   archiveEntryInfo->directory.chunkDirectoryEntry.permission      = fileInfo->permission;
   String_set(archiveEntryInfo->directory.chunkDirectoryEntry.name,directoryName);
 
-  /* calculate header length */
+  // calculate header length
   length = Chunk_getSize(CHUNK_DEFINITION_DIRECTORY,      0,                           &archiveEntryInfo->directory.chunkDirectory     )+
            Chunk_getSize(CHUNK_DEFINITION_DIRECTORY_ENTRY,archiveEntryInfo->blockLength,&archiveEntryInfo->directory.chunkDirectoryEntry);
 
   if (!archiveEntryInfo->archiveInfo->jobOptions->dryRunFlag)
   {
-    /* ensure space in archive */
+    // ensure space in archive
     error = ensureArchiveSpace(archiveEntryInfo->archiveInfo,
                                length
                               );
@@ -2996,7 +2996,7 @@ Errors Archive_newDirectoryEntry(ArchiveInfo      *archiveInfo,
       return error;
     }
 
-    /* write directory chunk */
+    // write directory chunk
     error = Chunk_create(&archiveEntryInfo->directory.chunkDirectory.info);
     if (error != ERROR_NONE)
     {
@@ -3032,7 +3032,7 @@ Errors Archive_newLinkEntry(ArchiveInfo      *archiveInfo,
   assert(archiveEntryInfo != NULL);
   assert(fileInfo != NULL);
 
-  /* init crypt password */
+  // init crypt password
   if ((archiveInfo->jobOptions->cryptAlgorithm != CRYPT_ALGORITHM_NONE) && (archiveInfo->cryptPassword == NULL))
   {
     archiveInfo->cryptPassword = getCryptPassword(archiveInfo->printableName,
@@ -3047,7 +3047,7 @@ Errors Archive_newLinkEntry(ArchiveInfo      *archiveInfo,
     }
   }
 
-  /* init archive file info */
+  // init archive file info
   archiveEntryInfo->archiveInfo      = archiveInfo;
   archiveEntryInfo->mode             = ARCHIVE_MODE_WRITE;
 
@@ -3056,7 +3056,7 @@ Errors Archive_newLinkEntry(ArchiveInfo      *archiveInfo,
 
   archiveEntryInfo->archiveEntryType = ARCHIVE_ENTRY_TYPE_LINK;
 
-  /* init link chunk */
+  // init link chunk
   error = Chunk_init(&archiveEntryInfo->link.chunkLink.info,
                      NULL,
                      archiveInfo->chunkIO,
@@ -3072,7 +3072,7 @@ Errors Archive_newLinkEntry(ArchiveInfo      *archiveInfo,
   }
   archiveEntryInfo->link.chunkLink.cryptAlgorithm = archiveInfo->jobOptions->cryptAlgorithm;
 
-  /* init link entry chunk */
+  // init link entry chunk
   error = Crypt_init(&archiveEntryInfo->link.chunkLinkEntry.cryptInfo,
                      archiveInfo->jobOptions->cryptAlgorithm,
                      archiveInfo->cryptPassword
@@ -3107,13 +3107,13 @@ Errors Archive_newLinkEntry(ArchiveInfo      *archiveInfo,
   String_set(archiveEntryInfo->link.chunkLinkEntry.name,linkName);
   String_set(archiveEntryInfo->link.chunkLinkEntry.destinationName,destinationName);
 
-  /* calculate length */
+  // calculate length
   length = Chunk_getSize(CHUNK_DEFINITION_LINK,      0,                           &archiveEntryInfo->link.chunkLink     )+
            Chunk_getSize(CHUNK_DEFINITION_LINK_ENTRY,archiveEntryInfo->blockLength,&archiveEntryInfo->link.chunkLinkEntry);
 
   if (!archiveEntryInfo->archiveInfo->jobOptions->dryRunFlag)
   {
-    /* ensure space in archive */
+    // ensure space in archive
     error = ensureArchiveSpace(archiveEntryInfo->archiveInfo,
                                length
                               );
@@ -3125,7 +3125,7 @@ Errors Archive_newLinkEntry(ArchiveInfo      *archiveInfo,
       return error;
     }
 
-    /* write link chunks */
+    // write link chunks
     error = Chunk_create(&archiveEntryInfo->link.chunkLink.info);
     if (error != ERROR_NONE)
     {
@@ -3169,7 +3169,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 UNUSED_VARIABLE(sourceGetEntryDataBlock);
 UNUSED_VARIABLE(sourceGetEntryDataBlockUserData);
 
-  /* init crypt password */
+  // init crypt password
   if ((archiveInfo->jobOptions->cryptAlgorithm != CRYPT_ALGORITHM_NONE) && (archiveInfo->cryptPassword == NULL))
   {
     archiveInfo->cryptPassword = getCryptPassword(archiveInfo->printableName,
@@ -3184,7 +3184,7 @@ UNUSED_VARIABLE(sourceGetEntryDataBlockUserData);
     }
   }
 
-  /* init archive file info */
+  // init archive file info
   archiveEntryInfo->archiveInfo                     = archiveInfo;
   archiveEntryInfo->mode                            = ARCHIVE_MODE_WRITE;
 
@@ -3207,7 +3207,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   archiveEntryInfo->hardLink.buffer                 = NULL;
   archiveEntryInfo->hardLink.bufferLength           = 0L;
 
-  /* init hard link chunk */
+  // init hard link chunk
   error = Chunk_init(&archiveEntryInfo->hardLink.chunkHardLink.info,
                      NULL,
                      archiveInfo->chunkIO,
@@ -3226,7 +3226,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   archiveEntryInfo->hardLink.chunkHardLink.compressAlgorithm = COMPRESS_ALGORITHM_TO_CONSTANT(archiveEntryInfo->hardLink.dataCompressAlgorithm);
   archiveEntryInfo->hardLink.chunkHardLink.cryptAlgorithm    = archiveInfo->jobOptions->cryptAlgorithm;
 
-  /* init hard link entry chunk */
+  // init hard link entry chunk
   error = Crypt_init(&archiveEntryInfo->hardLink.chunkHardLinkEntry.cryptInfo,
                      archiveInfo->jobOptions->cryptAlgorithm,
                      archiveInfo->cryptPassword
@@ -3260,17 +3260,17 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   archiveEntryInfo->hardLink.chunkHardLinkEntry.groupId         = fileInfo->groupId;
   archiveEntryInfo->hardLink.chunkHardLinkEntry.permission      = fileInfo->permission;
 
-  /* init hard link name chunk */
+  // init hard link name chunk
   STRINGLIST_ITERATE(fileNameList,stringNode,fileName)
   {
-    /* new node */
+    // new node
     chunkHardLinkName = LIST_NEW_NODE(ChunkHardLinkName);
     if (chunkHardLinkName == NULL)
     {
       HALT_INSUFFICIENT_MEMORY();
     }
 
-    /* init hard link name chunk */
+    // init hard link name chunk
     error = Crypt_init(&chunkHardLinkName->cryptInfo,
                        archiveInfo->jobOptions->cryptAlgorithm,
                        archiveInfo->cryptPassword
@@ -3317,7 +3317,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     List_append(&archiveEntryInfo->hardLink.chunkHardLinkNameList,chunkHardLinkName);
   }
 
-  /* init hard link data chunk */
+  // init hard link data chunk
   error = Crypt_init(&archiveEntryInfo->hardLink.chunkHardLinkData.cryptInfo,
                      archiveInfo->jobOptions->cryptAlgorithm,
                      archiveInfo->cryptPassword
@@ -3360,7 +3360,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   archiveEntryInfo->hardLink.chunkHardLinkData.fragmentOffset = 0LL;
   archiveEntryInfo->hardLink.chunkHardLinkData.fragmentSize   = 0LL;
 
-  /* allocate data buffer */
+  // allocate data buffer
   archiveEntryInfo->hardLink.bufferLength = (MAX_BUFFER_SIZE/archiveEntryInfo->blockLength)*archiveEntryInfo->blockLength;
   archiveEntryInfo->hardLink.buffer = (byte*)malloc(archiveEntryInfo->hardLink.bufferLength);
   if (archiveEntryInfo->hardLink.buffer == NULL)
@@ -3368,7 +3368,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     HALT_INSUFFICIENT_MEMORY();
   }
 
-  /* init data compress */
+  // init data compress
   error = Compress_new(&archiveEntryInfo->hardLink.dataCompressInfo,
                        COMPRESS_MODE_DEFLATE,
                        archiveEntryInfo->hardLink.dataCompressAlgorithm,
@@ -3393,7 +3393,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     return error;
   }
 
-  /* init crypt */
+  // init crypt
   error = Crypt_init(&archiveEntryInfo->hardLink.cryptInfo,
                      archiveInfo->jobOptions->cryptAlgorithm,
                      archiveInfo->cryptPassword
@@ -3415,7 +3415,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     return error;
   }
 
-  /* calculate header length */
+  // calculate header length
   archiveEntryInfo->hardLink.headerLength = Chunk_getSize(CHUNK_DEFINITION_HARDLINK,      0,                           &archiveEntryInfo->hardLink.chunkHardLink     )+
                                            Chunk_getSize(CHUNK_DEFINITION_HARDLINK_ENTRY,archiveEntryInfo->blockLength,&archiveEntryInfo->hardLink.chunkHardLinkEntry)+
                                            Chunk_getSize(CHUNK_DEFINITION_HARDLINK_DATA, archiveEntryInfo->blockLength,&archiveEntryInfo->hardLink.chunkHardLinkData );
@@ -3440,7 +3440,7 @@ Errors Archive_newSpecialEntry(ArchiveInfo      *archiveInfo,
   assert(archiveEntryInfo != NULL);
   assert(fileInfo != NULL);
 
-  /* init crypt password */
+  // init crypt password
   if ((archiveInfo->jobOptions->cryptAlgorithm != CRYPT_ALGORITHM_NONE) && (archiveInfo->cryptPassword == NULL))
   {
     archiveInfo->cryptPassword = getCryptPassword(archiveInfo->printableName,
@@ -3455,7 +3455,7 @@ Errors Archive_newSpecialEntry(ArchiveInfo      *archiveInfo,
     }
   }
 
-  /* init archive file info */
+  // init archive file info
   archiveEntryInfo->archiveInfo      = archiveInfo;
   archiveEntryInfo->mode             = ARCHIVE_MODE_WRITE;
 
@@ -3464,7 +3464,7 @@ Errors Archive_newSpecialEntry(ArchiveInfo      *archiveInfo,
 
   archiveEntryInfo->archiveEntryType = ARCHIVE_ENTRY_TYPE_SPECIAL;
 
-  /* init special chunk */
+  // init special chunk
   error = Chunk_init(&archiveEntryInfo->special.chunkSpecial.info,
                      NULL,
                      archiveInfo->chunkIO,
@@ -3481,7 +3481,7 @@ Errors Archive_newSpecialEntry(ArchiveInfo      *archiveInfo,
   }
   archiveEntryInfo->special.chunkSpecial.cryptAlgorithm = archiveInfo->jobOptions->cryptAlgorithm;
 
-  /* init special entry chunk */
+  // init special entry chunk
   error = Crypt_init(&archiveEntryInfo->special.chunkSpecialEntry.cryptInfo,
                      archiveInfo->jobOptions->cryptAlgorithm,
                      archiveInfo->cryptPassword
@@ -3518,13 +3518,13 @@ Errors Archive_newSpecialEntry(ArchiveInfo      *archiveInfo,
   archiveEntryInfo->special.chunkSpecialEntry.minor           = fileInfo->minor;
   String_set(archiveEntryInfo->special.chunkSpecialEntry.name,specialName);
 
-  /* calculate length */
+  // calculate length
   length = Chunk_getSize(CHUNK_DEFINITION_SPECIAL,      0,                           &archiveEntryInfo->special.chunkSpecial     )+
            Chunk_getSize(CHUNK_DEFINITION_SPECIAL_ENTRY,archiveEntryInfo->blockLength,&archiveEntryInfo->special.chunkSpecialEntry);
 
   if (!archiveEntryInfo->archiveInfo->jobOptions->dryRunFlag)
   {
-    /* ensure space in archive */
+    // ensure space in archive
     error = ensureArchiveSpace(archiveEntryInfo->archiveInfo,
                                length
                               );
@@ -3536,7 +3536,7 @@ Errors Archive_newSpecialEntry(ArchiveInfo      *archiveInfo,
       return error;
     }
 
-    /* write special chunks */
+    // write special chunks
     error = Chunk_create(&archiveEntryInfo->special.chunkSpecial.info);
     if (error != ERROR_NONE)
     {
@@ -3572,7 +3572,7 @@ Errors Archive_getNextArchiveEntryType(ArchiveInfo       *archiveInfo,
   assert(archiveInfo != NULL);
   assert(archiveEntryType != NULL);
 
-  /* check for pending error */
+  // check for pending error
   if (archiveInfo->pendingError != ERROR_NONE)
   {
     error = archiveInfo->pendingError;
@@ -3580,10 +3580,10 @@ Errors Archive_getNextArchiveEntryType(ArchiveInfo       *archiveInfo,
     return error;
   }
 
-  /* find next file, image, directory, link, special chunk */
+  // find next file, image, directory, link, special chunk
   do
   {
-    /* get next chunk */
+    // get next chunk
     error = getNextChunkHeader(archiveInfo,&chunkHeader);
     if (error != ERROR_NONE)
     {
@@ -3593,7 +3593,7 @@ Errors Archive_getNextArchiveEntryType(ArchiveInfo       *archiveInfo,
     switch (chunkHeader.id)
     {
       case CHUNK_ID_BAR:
-        /* bar header is simply ignored */
+        // bar header is simply ignored
         error = Chunk_skip(archiveInfo->chunkIO,archiveInfo->chunkIOUserData,&chunkHeader);
         if (error != ERROR_NONE)
         {
@@ -3601,13 +3601,13 @@ Errors Archive_getNextArchiveEntryType(ArchiveInfo       *archiveInfo,
         }
         break;
       case CHUNK_ID_KEY:
-        /* check if private key available */
+        // check if private key available
         if (archiveInfo->jobOptions->cryptPrivateKeyFileName == NULL)
         {
           return ERROR_NO_PRIVATE_KEY;
         }
 
-        /* read private key, try to read key with no password, all passwords */
+        // read private key, try to read key with no password, all passwords
         Crypt_initKey(&archiveInfo->cryptKey);
         decryptedFlag = FALSE;
         error = Crypt_readKeyFile(&archiveInfo->cryptKey,
@@ -3639,7 +3639,7 @@ Errors Archive_getNextArchiveEntryType(ArchiveInfo       *archiveInfo,
           }
           else
           {
-            /* next password */
+            // next password
             password = getNextDecryptPassword(&passwordHandle);
           }
         }
@@ -3648,7 +3648,7 @@ Errors Archive_getNextArchiveEntryType(ArchiveInfo       *archiveInfo,
           return error;
         }
 
-        /* read encryption key */
+        // read encryption key
         error = readEncryptionKey(archiveInfo,&chunkHeader);
         if (error != ERROR_NONE)
         {
@@ -3674,7 +3674,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
       default:
         if (skipUnknownChunksFlag)
         {
-          /* skip unknown chunks */
+          // skip unknown chunks
           error = Chunk_skip(archiveInfo->chunkIO,archiveInfo->chunkIOUserData,&chunkHeader);
           if (error != ERROR_NONE)
           {
@@ -3687,7 +3687,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
         }
         else
         {
-          /* unknown chunk */
+          // unknown chunk
           return ERROR_UNKNOWN_CHUNK;
         }
         break;
@@ -3701,7 +3701,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
          && (chunkHeader.id != CHUNK_ID_SPECIAL)
         );
 
-  /* get file type */
+  // get file type
   switch (chunkHeader.id)
   {
     case CHUNK_ID_FILE:      (*archiveEntryType) = ARCHIVE_ENTRY_TYPE_FILE;      break;
@@ -3717,7 +3717,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
     #endif /* NDEBUG */
   }
 
-  /* store chunk header for read */
+  // store chunk header for read
   ungetNextChunkHeader(archiveInfo,&chunkHeader);
 
   return ERROR_NONE;
@@ -3746,17 +3746,13 @@ Errors Archive_readFileEntry(ArchiveInfo                     *archiveInfo,
   bool           passwordFlag;
   bool           decryptedFlag;
   ChunkHeader    subChunkHeader;
-  bool           foundFileEntryFlag,foundFileDataFlag;
+  bool           foundFileEntryFlag,foundFileDeltaFlag,foundFileDataFlag;
 
   assert(archiveInfo != NULL);
   assert(archiveEntryInfo != NULL);
   assert(fileName != NULL);
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-UNUSED_VARIABLE(sourceGetEntryDataBlock);
-UNUSED_VARIABLE(sourceGetEntryDataBlockUserData);
-UNUSED_VARIABLE(deltaSourceName);
 
-  /* check for pending error */
+  // check for pending error
   if (archiveInfo->pendingError != ERROR_NONE)
   {
     error = archiveInfo->pendingError;
@@ -3764,7 +3760,7 @@ UNUSED_VARIABLE(deltaSourceName);
     return error;
   }
 
-  /* init archive file info */
+  // init archive file info
   archiveEntryInfo->archiveInfo       = archiveInfo;
   archiveEntryInfo->mode              = ARCHIVE_MODE_READ;
   archiveEntryInfo->archiveEntryType  = ARCHIVE_ENTRY_TYPE_FILE;
@@ -3772,7 +3768,7 @@ UNUSED_VARIABLE(deltaSourceName);
   archiveEntryInfo->file.buffer       = NULL;
   archiveEntryInfo->file.bufferLength = 0;
 
-  /* init file chunk */
+  // init file chunk
   error = Chunk_init(&archiveEntryInfo->file.chunkFile.info,
                      NULL,
                      archiveInfo->chunkIO,
@@ -3788,7 +3784,7 @@ UNUSED_VARIABLE(deltaSourceName);
     return error;
   }
 
-  /* find next file chunk */
+  // find next file chunk
   do
   {
     error = getNextChunkHeader(archiveInfo,&chunkHeader);
@@ -3811,7 +3807,7 @@ UNUSED_VARIABLE(deltaSourceName);
   }
   while (chunkHeader.id != CHUNK_ID_FILE);
 
-  /* read file chunk */
+  // read file chunk
   error = Chunk_open(&archiveEntryInfo->file.chunkFile.info,
                      &chunkHeader,
                      Chunk_getSize(CHUNK_DEFINITION_FILE,0,NULL)
@@ -3826,7 +3822,7 @@ UNUSED_VARIABLE(deltaSourceName);
   archiveEntryInfo->file.dataCompressAlgorithm  = COMPRESS_CONSTANT_TO_ALGORITHM(archiveEntryInfo->file.chunkFile.compressAlgorithm);
   archiveEntryInfo->cryptAlgorithm              = CRYPT_CONSTANT_TO_ALGORITHM(archiveEntryInfo->file.chunkFile.cryptAlgorithm);
 
-  /* detect block length of used crypt algorithm */
+  // detect block length of used crypt algorithm
   error = Crypt_getBlockLength(archiveEntryInfo->cryptAlgorithm,&archiveEntryInfo->blockLength);
   if (error != ERROR_NONE)
   {
@@ -3836,7 +3832,7 @@ UNUSED_VARIABLE(deltaSourceName);
   }
   assert(archiveEntryInfo->blockLength > 0);
 
-  /* allocate buffer */
+  // allocate buffer
   archiveEntryInfo->file.bufferLength = (MAX_BUFFER_SIZE/archiveEntryInfo->blockLength)*archiveEntryInfo->blockLength;
   archiveEntryInfo->file.buffer = (byte*)malloc(archiveEntryInfo->file.bufferLength);
   if (archiveEntryInfo->file.buffer == NULL)
@@ -3844,14 +3840,13 @@ UNUSED_VARIABLE(deltaSourceName);
     HALT_INSUFFICIENT_MEMORY();
   }
 
-  /* init data compress */
+  // init data compress
   error = Compress_new(&archiveEntryInfo->file.dataCompressInfo,
                        COMPRESS_MODE_INFLATE,
                        archiveEntryInfo->file.dataCompressAlgorithm,
-                       archiveEntryInfo->blockLength
-//??? NYI
-,NULL
-,NULL
+                       archiveEntryInfo->blockLength,
+                       NULL,
+                       NULL
                       );
   if (error != ERROR_NONE)
   {
@@ -3861,7 +3856,7 @@ UNUSED_VARIABLE(deltaSourceName);
     return error;
   }
 
-  /* try to read file entry with all passwords */
+  // try to read file entry with all passwords
   Chunk_tell(&archiveEntryInfo->file.chunkFile.info,&index);
   if (archiveEntryInfo->cryptAlgorithm != CRYPT_ALGORITHM_NONE)
   {
@@ -3890,6 +3885,7 @@ UNUSED_VARIABLE(deltaSourceName);
     decryptedFlag = TRUE;
   }
   foundFileEntryFlag = FALSE;
+  foundFileDeltaFlag = FALSE;
   foundFileDataFlag  = FALSE;
   error              = ERROR_NONE;
   while (   !foundFileEntryFlag
@@ -3897,10 +3893,10 @@ UNUSED_VARIABLE(deltaSourceName);
          && (error == ERROR_NONE)
         )
   {
-    /* reset chunk read position */
+    // reset chunk read position
     Chunk_seek(&archiveEntryInfo->file.chunkFile.info,index);
 
-    /* init crypt */
+    // init crypt
     if (error == ERROR_NONE)
     {
       error = Crypt_init(&archiveEntryInfo->file.chunkFileEntry.cryptInfo,
@@ -3909,17 +3905,6 @@ UNUSED_VARIABLE(deltaSourceName);
                         );
       if (error != ERROR_NONE)
       {
-      }
-    }
-    if (error == ERROR_NONE)
-    {
-      error = Crypt_init(&archiveEntryInfo->file.chunkFileDelta.cryptInfo,
-                         archiveEntryInfo->cryptAlgorithm,
-                         password
-                        );
-      if (error != ERROR_NONE)
-      {
-        Crypt_done(&archiveEntryInfo->file.chunkFileEntry.cryptInfo);
       }
     }
     if (error == ERROR_NONE)
@@ -3948,7 +3933,7 @@ UNUSED_VARIABLE(deltaSourceName);
       }
     }
 
-    /* init file entry chunk */
+    // init chunks
     if (error == ERROR_NONE)
     {
       error = Chunk_init(&archiveEntryInfo->file.chunkFileEntry.info,
@@ -3965,35 +3950,9 @@ UNUSED_VARIABLE(deltaSourceName);
       {
         Crypt_done(&archiveEntryInfo->file.cryptInfo);
         Crypt_done(&archiveEntryInfo->file.chunkFileData.cryptInfo);
-        Crypt_done(&archiveEntryInfo->file.chunkFileDelta.cryptInfo);
         Crypt_done(&archiveEntryInfo->file.chunkFileEntry.cryptInfo);
       }
     }
-
-    /* init delta chunk */
-    if (error == ERROR_NONE)
-    {
-      error = Chunk_init(&archiveEntryInfo->file.chunkFileDelta.info,
-                         &archiveEntryInfo->file.chunkFile.info,
-                         NULL,
-                         NULL,
-                         CHUNK_ID_FILE_DELTA,
-                         CHUNK_DEFINITION_FILE_DELTA,
-                         archiveEntryInfo->blockLength,
-                         &archiveEntryInfo->file.chunkFileDelta.cryptInfo,
-                         &archiveEntryInfo->file.chunkFileDelta
-                        );
-      if (error != ERROR_NONE)
-      {
-        Chunk_done(&archiveEntryInfo->file.chunkFileEntry.info);
-        Crypt_done(&archiveEntryInfo->file.cryptInfo);
-        Crypt_done(&archiveEntryInfo->file.chunkFileData.cryptInfo);
-        Crypt_done(&archiveEntryInfo->file.chunkFileDelta.cryptInfo);
-        Crypt_done(&archiveEntryInfo->file.chunkFileEntry.cryptInfo);
-      }
-    }
-
-    /* init file data chunk */
     if (error == ERROR_NONE)
     {
       error = Chunk_init(&archiveEntryInfo->file.chunkFileData.info,
@@ -4008,16 +3967,14 @@ UNUSED_VARIABLE(deltaSourceName);
                         );
       if (error != ERROR_NONE)
       {
-        Chunk_done(&archiveEntryInfo->file.chunkFileDelta.info);
         Chunk_done(&archiveEntryInfo->file.chunkFileEntry.info);
         Crypt_done(&archiveEntryInfo->file.cryptInfo);
         Crypt_done(&archiveEntryInfo->file.chunkFileData.cryptInfo);
-        Crypt_done(&archiveEntryInfo->file.chunkFileDelta.cryptInfo);
         Crypt_done(&archiveEntryInfo->file.chunkFileEntry.cryptInfo);
       }
     }
 
-    /* try to read file entry/data chunks */
+    // try to read file entry/data chunks
     if (error == ERROR_NONE)
     {
       while (   !Chunk_eofSub(&archiveEntryInfo->file.chunkFile.info)
@@ -4034,7 +3991,7 @@ UNUSED_VARIABLE(deltaSourceName);
         switch (subChunkHeader.id)
         {
           case CHUNK_ID_FILE_ENTRY:
-            /* read file entry chunk */
+            // read file entry chunk
             error = Chunk_open(&archiveEntryInfo->file.chunkFileEntry.info,
                                &subChunkHeader,
                                subChunkHeader.size
@@ -4044,7 +4001,7 @@ UNUSED_VARIABLE(deltaSourceName);
               break;
             }
 
-            /* get file meta data */
+            // get file meta data
             String_set(fileName,archiveEntryInfo->file.chunkFileEntry.name);
             if (fileInfo != NULL)
             {
@@ -4061,35 +4018,67 @@ UNUSED_VARIABLE(deltaSourceName);
             foundFileEntryFlag = TRUE;
             break;
           case CHUNK_ID_FILE_DELTA:
-            /* read file delta chunk */
-            error = Chunk_open(&archiveEntryInfo->file.chunkFileDelta.info,
-                               &subChunkHeader,
-                               subChunkHeader.size
+            // init delta crypt
+            error = Crypt_init(&archiveEntryInfo->file.chunkFileDelta.cryptInfo,
+                               archiveEntryInfo->cryptAlgorithm,
+                               password
                               );
             if (error != ERROR_NONE)
             {
               break;
             }
 
-            /* init delta compress */
+            // init delta chunk
+            error = Chunk_init(&archiveEntryInfo->file.chunkFileDelta.info,
+                               &archiveEntryInfo->file.chunkFile.info,
+                               NULL,
+                               NULL,
+                               CHUNK_ID_FILE_DELTA,
+                               CHUNK_DEFINITION_FILE_DELTA,
+                               archiveEntryInfo->blockLength,
+                               &archiveEntryInfo->file.chunkFileDelta.cryptInfo,
+                               &archiveEntryInfo->file.chunkFileDelta
+                              );
+            if (error != ERROR_NONE)
+            {
+              Crypt_done(&archiveEntryInfo->file.chunkFileDelta.cryptInfo);\
+              break;
+            }
+
+            // read file delta chunk
+            error = Chunk_open(&archiveEntryInfo->file.chunkFileDelta.info,
+                               &subChunkHeader,
+                               subChunkHeader.size
+                              );
+            if (error != ERROR_NONE)
+            {
+              Chunk_done(&archiveEntryInfo->file.chunkFileDelta.info);
+              Crypt_done(&archiveEntryInfo->file.chunkFileDelta.cryptInfo);
+              break;
+            }
+
+            // init delta compress
             error = Compress_new(&archiveEntryInfo->file.deltaCompressInfo,
                                  COMPRESS_MODE_INFLATE,
                                  archiveEntryInfo->file.chunkFileDelta.compressAlgorithm,
-                                 archiveEntryInfo->blockLength
-          //??? NYI
-          ,NULL
-          ,NULL
+                                 1,
+                                 sourceGetEntryDataBlock,
+                                 sourceGetEntryDataBlockUserData
                                 );
             if (error != ERROR_NONE)
             {
+              Chunk_done(&archiveEntryInfo->file.chunkFileDelta.info);
+              Crypt_done(&archiveEntryInfo->file.chunkFileDelta.cryptInfo);
               break;
             }
 
             archiveEntryInfo->file.deltaCompressAlgorithm = archiveEntryInfo->file.chunkFileDelta.compressAlgorithm;
             if (deltaSourceName != NULL) String_set(deltaSourceName,archiveEntryInfo->file.chunkFileDelta.name);
+
+            foundFileDeltaFlag = TRUE;
             break;
           case CHUNK_ID_FILE_DATA:
-            /* read file data chunk */
+            // read file data chunk
             error = Chunk_open(&archiveEntryInfo->file.chunkFileData.info,
                                &subChunkHeader,
                                Chunk_getSize(CHUNK_DEFINITION_FILE_DATA,archiveEntryInfo->blockLength,NULL)
@@ -4115,7 +4104,12 @@ UNUSED_VARIABLE(deltaSourceName);
       }
       if (error != ERROR_NONE)
       {
-        if (COMPRESS_IS_XDELTA_ALGORITHM(archiveEntryInfo->file.deltaCompressAlgorithm)) Compress_delete(&archiveEntryInfo->file.deltaCompressInfo);
+        if (foundFileDeltaFlag)
+        {
+          Compress_delete(&archiveEntryInfo->file.deltaCompressInfo);
+          Chunk_done(&archiveEntryInfo->file.chunkFileDelta.info);
+          Crypt_done(&archiveEntryInfo->file.chunkFileDelta.cryptInfo);
+        }
         Chunk_done(&archiveEntryInfo->file.chunkFileData.info);
         Chunk_done(&archiveEntryInfo->file.chunkFileDelta.info);
         Chunk_done(&archiveEntryInfo->file.chunkFileEntry.info);
@@ -4132,10 +4126,10 @@ UNUSED_VARIABLE(deltaSourceName);
           && (archiveInfo->cryptType != CRYPT_TYPE_ASYMMETRIC)
          )
       {
-        /* get next password */
+        // get next password
         password = getNextDecryptPassword(&passwordHandle);
 
-        /* reset error and try next password */
+        // reset error and try next password
         if (password != NULL)
         {
           error = ERROR_NONE;
@@ -4143,21 +4137,28 @@ UNUSED_VARIABLE(deltaSourceName);
       }
       else
       {
-        /* no more passwords when no encryption or asymmetric encryption is used */
+        // no more passwords when no encryption or asymmetric encryption is used
         password = NULL;
       }
     }
   } /* while */
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
 
   if (!foundFileEntryFlag || !foundFileDataFlag)
   {
-    if (COMPRESS_IS_XDELTA_ALGORITHM(archiveEntryInfo->file.deltaCompressAlgorithm)) Compress_delete(&archiveEntryInfo->file.deltaCompressInfo);
+    if (foundFileDeltaFlag)
+    {
+      Compress_delete(&archiveEntryInfo->file.deltaCompressInfo);
+      Chunk_done(&archiveEntryInfo->file.chunkFileDelta.info);
+      Crypt_done(&archiveEntryInfo->file.chunkFileDelta.cryptInfo);
+    }
     Chunk_done(&archiveEntryInfo->file.chunkFileData.info);
-    Chunk_done(&archiveEntryInfo->file.chunkFileDelta.info);
     Chunk_done(&archiveEntryInfo->file.chunkFileEntry.info);
     Crypt_done(&archiveEntryInfo->file.cryptInfo);
     Crypt_done(&archiveEntryInfo->file.chunkFileData.cryptInfo);
-    Crypt_done(&archiveEntryInfo->file.chunkFileDelta.cryptInfo);
     Crypt_done(&archiveEntryInfo->file.chunkFileEntry.cryptInfo);
     Compress_delete(&archiveEntryInfo->file.dataCompressInfo);
     free(archiveEntryInfo->file.buffer);
@@ -4178,7 +4179,7 @@ UNUSED_VARIABLE(deltaSourceName);
   if (cryptAlgorithm         != NULL) (*cryptAlgorithm)         = archiveEntryInfo->cryptAlgorithm;
   if (cryptType              != NULL) (*cryptType)              = archiveInfo->cryptType;
 
-  /* reset compress, crypt */
+  // reset compress, crypt
   if (COMPRESS_IS_XDELTA_ALGORITHM(archiveEntryInfo->file.deltaCompressAlgorithm)) Compress_reset(&archiveEntryInfo->file.deltaCompressInfo);
   Compress_reset(&archiveEntryInfo->file.dataCompressInfo);
   Crypt_reset(&archiveEntryInfo->file.chunkFileData.cryptInfo,0);
@@ -4217,7 +4218,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 UNUSED_VARIABLE(sourceGetEntryDataBlock);
 UNUSED_VARIABLE(sourceGetEntryDataBlockUserData);
 
-  /* check for pending error */
+  // check for pending error
   if (archiveInfo->pendingError != ERROR_NONE)
   {
     error = archiveInfo->pendingError;
@@ -4225,7 +4226,7 @@ UNUSED_VARIABLE(sourceGetEntryDataBlockUserData);
     return error;
   }
 
-  /* init archive file info */
+  // init archive file info
   archiveEntryInfo->archiveInfo        = archiveInfo;
   archiveEntryInfo->mode               = ARCHIVE_MODE_READ;
 //???
@@ -4234,7 +4235,7 @@ UNUSED_VARIABLE(sourceGetEntryDataBlockUserData);
   archiveEntryInfo->image.buffer       = NULL;
   archiveEntryInfo->image.bufferLength = 0;
 
-  /* init image chunk */
+  // init image chunk
   error = Chunk_init(&archiveEntryInfo->image.chunkImage.info,
                      NULL,
                      archiveInfo->chunkIO,
@@ -4250,7 +4251,7 @@ UNUSED_VARIABLE(sourceGetEntryDataBlockUserData);
     return error;
   }
 
-  /* find next image chunk */
+  // find next image chunk
   do
   {
     error = getNextChunkHeader(archiveInfo,&chunkHeader);
@@ -4273,7 +4274,7 @@ UNUSED_VARIABLE(sourceGetEntryDataBlockUserData);
   }
   while (chunkHeader.id != CHUNK_ID_IMAGE);
 
-  /* read image chunk */
+  // read image chunk
   error = Chunk_open(&archiveEntryInfo->image.chunkImage.info,
                      &chunkHeader,
                      Chunk_getSize(CHUNK_DEFINITION_IMAGE,0,NULL)
@@ -4287,7 +4288,7 @@ UNUSED_VARIABLE(sourceGetEntryDataBlockUserData);
   archiveEntryInfo->image.dataCompressAlgorithm = COMPRESS_CONSTANT_TO_ALGORITHM(archiveEntryInfo->image.chunkImage.compressAlgorithm);
   archiveEntryInfo->cryptAlgorithm              = CRYPT_CONSTANT_TO_ALGORITHM(archiveEntryInfo->image.chunkImage.cryptAlgorithm);
 
-  /* detect block length of used crypt algorithm */
+  // detect block length of used crypt algorithm
   error = Crypt_getBlockLength(archiveEntryInfo->cryptAlgorithm,&archiveEntryInfo->blockLength);
   if (error != ERROR_NONE)
   {
@@ -4297,7 +4298,7 @@ UNUSED_VARIABLE(sourceGetEntryDataBlockUserData);
   }
   assert(archiveEntryInfo->blockLength > 0);
 
-  /* allocate buffer */
+  // allocate buffer
   archiveEntryInfo->image.bufferLength = (MAX_BUFFER_SIZE/archiveEntryInfo->blockLength)*archiveEntryInfo->blockLength;
   archiveEntryInfo->image.buffer = (byte*)malloc(archiveEntryInfo->image.bufferLength);
   if (archiveEntryInfo->image.buffer == NULL)
@@ -4305,7 +4306,7 @@ UNUSED_VARIABLE(sourceGetEntryDataBlockUserData);
     HALT_INSUFFICIENT_MEMORY();
   }
 
-  /* init data compress */
+  // init data compress
   error = Compress_new(&archiveEntryInfo->image.dataCompressInfo,
                        COMPRESS_MODE_INFLATE,
                        archiveEntryInfo->image.dataCompressAlgorithm,
@@ -4322,7 +4323,7 @@ UNUSED_VARIABLE(sourceGetEntryDataBlockUserData);
     return error;
   }
 
-  /* try to read image entry with all passwords */
+  // try to read image entry with all passwords
   Chunk_tell(&archiveEntryInfo->image.chunkImage.info,&index);
   if (archiveEntryInfo->cryptAlgorithm != CRYPT_ALGORITHM_NONE)
   {
@@ -4360,10 +4361,10 @@ UNUSED_VARIABLE(sourceGetEntryDataBlockUserData);
   {
     error = ERROR_NONE;
 
-    /* reset chunk read position */
+    // reset chunk read position
     Chunk_seek(&archiveEntryInfo->image.chunkImage.info,index);
 
-    /* init crypt */
+    // init crypt
     if (error == ERROR_NONE)
     {
       error = Crypt_init(&archiveEntryInfo->image.chunkImageEntry.cryptInfo,
@@ -4398,7 +4399,7 @@ UNUSED_VARIABLE(sourceGetEntryDataBlockUserData);
       }
     }
 
-    /* init image entry chunk */
+    // init image entry chunk
     if (error == ERROR_NONE)
     {
       error = Chunk_init(&archiveEntryInfo->image.chunkImageEntry.info,
@@ -4419,7 +4420,7 @@ UNUSED_VARIABLE(sourceGetEntryDataBlockUserData);
       }
     }
 
-    /* init image data chunk */
+    // init image data chunk
     if (error == ERROR_NONE)
     {
       error = Chunk_init(&archiveEntryInfo->image.chunkImageData.info,
@@ -4441,7 +4442,7 @@ UNUSED_VARIABLE(sourceGetEntryDataBlockUserData);
       }
     }
 
-    /* try to read image entry/data chunks */
+    // try to read image entry/data chunks
     if (error == ERROR_NONE)
     {
       while (   !Chunk_eofSub(&archiveEntryInfo->image.chunkImage.info)
@@ -4458,7 +4459,7 @@ UNUSED_VARIABLE(sourceGetEntryDataBlockUserData);
         switch (subChunkHeader.id)
         {
           case CHUNK_ID_IMAGE_ENTRY:
-            /* read image entry chunk */
+            // read image entry chunk
             error = Chunk_open(&archiveEntryInfo->image.chunkImageEntry.info,
                                &subChunkHeader,
                                subChunkHeader.size
@@ -4468,7 +4469,7 @@ UNUSED_VARIABLE(sourceGetEntryDataBlockUserData);
               break;
             }
 
-            /* get image meta data */
+            // get image meta data
             String_set(deviceName,archiveEntryInfo->image.chunkImageEntry.name);
             deviceInfo->size      = archiveEntryInfo->image.chunkImageEntry.size;
             deviceInfo->blockSize = archiveEntryInfo->image.chunkImageEntry.blockSize;
@@ -4476,7 +4477,7 @@ UNUSED_VARIABLE(sourceGetEntryDataBlockUserData);
             foundImageEntryFlag = TRUE;
             break;
           case CHUNK_ID_IMAGE_DATA:
-            /* read image data chunk */
+            // read image data chunk
             error = Chunk_open(&archiveEntryInfo->image.chunkImageData.info,
                                &subChunkHeader,
                                Chunk_getSize(CHUNK_DEFINITION_FILE_DATA,archiveEntryInfo->blockLength,NULL)
@@ -4516,10 +4517,10 @@ UNUSED_VARIABLE(sourceGetEntryDataBlockUserData);
           && (archiveInfo->cryptType != CRYPT_TYPE_ASYMMETRIC)
          )
       {
-        /* get next password */
+        // get next password
         password = getNextDecryptPassword(&passwordHandle);
 
-        /* reset error and try next password */
+        // reset error and try next password
         if (password != NULL)
         {
           error = ERROR_NONE;
@@ -4527,7 +4528,7 @@ UNUSED_VARIABLE(sourceGetEntryDataBlockUserData);
       }
       else
       {
-        /* no more passwords when no encryption or asymmetric encryption is used */
+        // no more passwords when no encryption or asymmetric encryption is used
         password = NULL;
       }
     }
@@ -4554,7 +4555,7 @@ UNUSED_VARIABLE(sourceGetEntryDataBlockUserData);
   if (cryptAlgorithm         != NULL) (*cryptAlgorithm)         = archiveEntryInfo->cryptAlgorithm;
   if (cryptType              != NULL) (*cryptType)              = archiveInfo->cryptType;
 
-  /* reset compress, crypt */
+  // reset compress, crypt
   Compress_reset(&archiveEntryInfo->image.dataCompressInfo);
   Crypt_reset(&archiveEntryInfo->image.chunkImageData.cryptInfo,0);
 
@@ -4582,7 +4583,7 @@ Errors Archive_readDirectoryEntry(ArchiveInfo      *archiveInfo,
   assert(archiveInfo != NULL);
   assert(archiveEntryInfo != NULL);
 
-  /* check for pending error */
+  // check for pending error
   if (archiveInfo->pendingError != ERROR_NONE)
   {
     error = archiveInfo->pendingError;
@@ -4590,12 +4591,12 @@ Errors Archive_readDirectoryEntry(ArchiveInfo      *archiveInfo,
     return error;
   }
 
-  /* init archive file info */
+  // init archive file info
   archiveEntryInfo->archiveInfo      = archiveInfo;
   archiveEntryInfo->mode             = ARCHIVE_MODE_READ;
   archiveEntryInfo->archiveEntryType = ARCHIVE_ENTRY_TYPE_DIRECTORY;
 
-  /* init directory chunk */
+  // init directory chunk
   error = Chunk_init(&archiveEntryInfo->directory.chunkDirectory.info,
                      NULL,
                      archiveInfo->chunkIO,
@@ -4611,7 +4612,7 @@ Errors Archive_readDirectoryEntry(ArchiveInfo      *archiveInfo,
     return error;
   }
 
-  /* find next directory chunk */
+  // find next directory chunk
   do
   {
     error = getNextChunkHeader(archiveInfo,&chunkHeader);
@@ -4634,7 +4635,7 @@ Errors Archive_readDirectoryEntry(ArchiveInfo      *archiveInfo,
   }
   while (chunkHeader.id != CHUNK_ID_DIRECTORY);
 
-  /* read directory chunk */
+  // read directory chunk
   error = Chunk_open(&archiveEntryInfo->directory.chunkDirectory.info,
                      &chunkHeader,
                      Chunk_getSize(CHUNK_DEFINITION_DIRECTORY,0,NULL)
@@ -4647,7 +4648,7 @@ Errors Archive_readDirectoryEntry(ArchiveInfo      *archiveInfo,
   }
   archiveEntryInfo->cryptAlgorithm = archiveEntryInfo->directory.chunkDirectory.cryptAlgorithm;
 
-  /* detect block length of use crypt algorithm */
+  // detect block length of use crypt algorithm
   error = Crypt_getBlockLength(archiveEntryInfo->cryptAlgorithm,&archiveEntryInfo->blockLength);
   if (error != ERROR_NONE)
   {
@@ -4657,7 +4658,7 @@ Errors Archive_readDirectoryEntry(ArchiveInfo      *archiveInfo,
   }
   assert(archiveEntryInfo->blockLength > 0);
 
-  /* try to read directory entry with all passwords */
+  // try to read directory entry with all passwords
   Chunk_tell(&archiveEntryInfo->directory.chunkDirectory.info,&index);
   if (archiveEntryInfo->cryptAlgorithm != CRYPT_ALGORITHM_NONE)
   {
@@ -4691,10 +4692,10 @@ Errors Archive_readDirectoryEntry(ArchiveInfo      *archiveInfo,
          && (error == ERROR_NONE)
         )
   {
-    /* reset chunk read position */
+    // reset chunk read position
     Chunk_seek(&archiveEntryInfo->directory.chunkDirectory.info,index);
 
-    /* init crypt */
+    // init crypt
     if (error == ERROR_NONE)
     {
       error = Crypt_init(&archiveEntryInfo->directory.chunkDirectoryEntry.cryptInfo,
@@ -4706,7 +4707,7 @@ Errors Archive_readDirectoryEntry(ArchiveInfo      *archiveInfo,
       }
     }
 
-    /* init directory entry chunk */
+    // init directory entry chunk
     if (error == ERROR_NONE)
     {
       error = Chunk_init(&archiveEntryInfo->directory.chunkDirectoryEntry.info,
@@ -4725,7 +4726,7 @@ Errors Archive_readDirectoryEntry(ArchiveInfo      *archiveInfo,
       }
     }
 
-    /* read directory entry */
+    // read directory entry
     if (error == ERROR_NONE)
     {
       while (   !Chunk_eofSub(&archiveEntryInfo->directory.chunkDirectory.info)
@@ -4742,7 +4743,7 @@ Errors Archive_readDirectoryEntry(ArchiveInfo      *archiveInfo,
         switch (subChunkHeader.id)
         {
           case CHUNK_ID_DIRECTORY_ENTRY:
-            /* read directory entry chunk */
+            // read directory entry chunk
             error = Chunk_open(&archiveEntryInfo->directory.chunkDirectoryEntry.info,
                                &subChunkHeader,
                                subChunkHeader.size
@@ -4752,7 +4753,7 @@ Errors Archive_readDirectoryEntry(ArchiveInfo      *archiveInfo,
               break;
             }
 
-            /* get directory meta data */
+            // get directory meta data
             String_set(directoryName,archiveEntryInfo->directory.chunkDirectoryEntry.name);
             if (fileInfo != NULL)
             {
@@ -4789,10 +4790,10 @@ Errors Archive_readDirectoryEntry(ArchiveInfo      *archiveInfo,
           && (archiveInfo->cryptType != CRYPT_TYPE_ASYMMETRIC)
          )
       {
-        /* get next password */
+        // get next password
         password = getNextDecryptPassword(&passwordHandle);
 
-        /* reset error and try next password */
+        // reset error and try next password
         if (password != NULL)
         {
           error = ERROR_NONE;
@@ -4800,7 +4801,7 @@ Errors Archive_readDirectoryEntry(ArchiveInfo      *archiveInfo,
       }
       else
       {
-        /* no more passwords when no encryption or asymmetric encryption is used */
+        // no more passwords when no encryption or asymmetric encryption is used
         password = NULL;
       }
     }
@@ -4846,7 +4847,7 @@ Errors Archive_readLinkEntry(ArchiveInfo      *archiveInfo,
   assert(archiveInfo != NULL);
   assert(archiveEntryInfo != NULL);
 
-  /* check for pending error */
+  // check for pending error
   if (archiveInfo->pendingError != ERROR_NONE)
   {
     error = archiveInfo->pendingError;
@@ -4854,12 +4855,12 @@ Errors Archive_readLinkEntry(ArchiveInfo      *archiveInfo,
     return error;
   }
 
-  /* init archive file info */
+  // init archive file info
   archiveEntryInfo->archiveInfo      = archiveInfo;
   archiveEntryInfo->mode             = ARCHIVE_MODE_READ;
   archiveEntryInfo->archiveEntryType = ARCHIVE_ENTRY_TYPE_LINK;
 
-  /* init link chunk */
+  // init link chunk
   error = Chunk_init(&archiveEntryInfo->link.chunkLink.info,
                      NULL,
                      archiveInfo->chunkIO,
@@ -4875,7 +4876,7 @@ Errors Archive_readLinkEntry(ArchiveInfo      *archiveInfo,
     return error;
   }
 
-  /* find next soft link chunk */
+  // find next soft link chunk
   do
   {
     error = getNextChunkHeader(archiveInfo,&chunkHeader);
@@ -4898,7 +4899,7 @@ Errors Archive_readLinkEntry(ArchiveInfo      *archiveInfo,
   }
   while (chunkHeader.id != CHUNK_ID_LINK);
 
-  /* read link chunk */
+  // read link chunk
   error = Chunk_open(&archiveEntryInfo->link.chunkLink.info,
                      &chunkHeader,
                      Chunk_getSize(CHUNK_DEFINITION_LINK,0,NULL)
@@ -4911,7 +4912,7 @@ Errors Archive_readLinkEntry(ArchiveInfo      *archiveInfo,
   }
   archiveEntryInfo->cryptAlgorithm = archiveEntryInfo->link.chunkLink.cryptAlgorithm;
 
-  /* detect block length of use crypt algorithm */
+  // detect block length of use crypt algorithm
   error = Crypt_getBlockLength(archiveEntryInfo->cryptAlgorithm,&archiveEntryInfo->blockLength);
   if (error != ERROR_NONE)
   {
@@ -4921,7 +4922,7 @@ Errors Archive_readLinkEntry(ArchiveInfo      *archiveInfo,
   }
   assert(archiveEntryInfo->blockLength > 0);
 
-  /* try to read link entry with all passwords */
+  // try to read link entry with all passwords
   Chunk_tell(&archiveEntryInfo->link.chunkLink.info,&index);
   if (archiveEntryInfo->cryptAlgorithm != CRYPT_ALGORITHM_NONE)
   {
@@ -4957,10 +4958,10 @@ Errors Archive_readLinkEntry(ArchiveInfo      *archiveInfo,
   {
     error = ERROR_NONE;
 
-    /* reset chunk read position */
+    // reset chunk read position
     Chunk_seek(&archiveEntryInfo->link.chunkLink.info,index);
 
-    /* init crypt */
+    // init crypt
     if (error == ERROR_NONE)
     {
       error = Crypt_init(&archiveEntryInfo->link.chunkLinkEntry.cryptInfo,
@@ -4972,7 +4973,7 @@ Errors Archive_readLinkEntry(ArchiveInfo      *archiveInfo,
       }
     }
 
-    /* init link entry chunk */
+    // init link entry chunk
     if (error == ERROR_NONE)
     {
       error = Chunk_init(&archiveEntryInfo->link.chunkLinkEntry.info,
@@ -4991,7 +4992,7 @@ Errors Archive_readLinkEntry(ArchiveInfo      *archiveInfo,
       }
     }
 
-    /* read link entry */
+    // read link entry
     if (error == ERROR_NONE)
     {
       while (   !Chunk_eofSub(&archiveEntryInfo->link.chunkLink.info)
@@ -5008,7 +5009,7 @@ Errors Archive_readLinkEntry(ArchiveInfo      *archiveInfo,
         switch (subChunkHeader.id)
         {
           case CHUNK_ID_LINK_ENTRY:
-            /* read link entry chunk */
+            // read link entry chunk
             error = Chunk_open(&archiveEntryInfo->link.chunkLinkEntry.info,
                                &subChunkHeader,
                                subChunkHeader.size
@@ -5018,7 +5019,7 @@ Errors Archive_readLinkEntry(ArchiveInfo      *archiveInfo,
               break;
             }
 
-            /* get link meta data */
+            // get link meta data
             String_set(linkName,archiveEntryInfo->link.chunkLinkEntry.name);
             String_set(destinationName,archiveEntryInfo->link.chunkLinkEntry.destinationName);
             if (fileInfo != NULL)
@@ -5056,10 +5057,10 @@ Errors Archive_readLinkEntry(ArchiveInfo      *archiveInfo,
           && (archiveInfo->cryptType != CRYPT_TYPE_ASYMMETRIC)
          )
       {
-        /* get next password */
+        // get next password
         password = getNextDecryptPassword(&passwordHandle);
 
-        /* reset error and try next password */
+        // reset error and try next password
         if (password != NULL)
         {
           error = ERROR_NONE;
@@ -5067,11 +5068,11 @@ Errors Archive_readLinkEntry(ArchiveInfo      *archiveInfo,
       }
       else
       {
-        /* no more passwords when no encryption or asymmetric encryption is used */
+        // no more passwords when no encryption or asymmetric encryption is used
         password = NULL;
       }
     }
-  } /* while */
+  } // while
 
   if (!foundLinkEntryFlag)
   {
@@ -5123,7 +5124,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 UNUSED_VARIABLE(sourceGetEntryDataBlock);
 UNUSED_VARIABLE(sourceGetEntryDataBlockUserData);
 
-  /* check for pending error */
+  // check for pending error
   if (archiveInfo->pendingError != ERROR_NONE)
   {
     error = archiveInfo->pendingError;
@@ -5131,7 +5132,7 @@ UNUSED_VARIABLE(sourceGetEntryDataBlockUserData);
     return error;
   }
 
-  /* init archive file info */
+  // init archive file info
   archiveEntryInfo->archiveInfo           = archiveInfo;
   archiveEntryInfo->mode                  = ARCHIVE_MODE_READ;
   archiveEntryInfo->archiveEntryType      = ARCHIVE_ENTRY_TYPE_HARDLINK;
@@ -5139,7 +5140,7 @@ UNUSED_VARIABLE(sourceGetEntryDataBlockUserData);
   archiveEntryInfo->hardLink.buffer       = NULL;
   archiveEntryInfo->hardLink.bufferLength = 0;
 
-  /* init hard link chunk */
+  // init hard link chunk
   error = Chunk_init(&archiveEntryInfo->hardLink.chunkHardLink.info,
                      NULL,
                      archiveInfo->chunkIO,
@@ -5155,7 +5156,7 @@ UNUSED_VARIABLE(sourceGetEntryDataBlockUserData);
     return error;
   }
 
-  /* find next hard link chunk */
+  // find next hard link chunk
   do
   {
     error = getNextChunkHeader(archiveInfo,&chunkHeader);
@@ -5178,7 +5179,7 @@ UNUSED_VARIABLE(sourceGetEntryDataBlockUserData);
   }
   while (chunkHeader.id != CHUNK_ID_HARDLINK);
 
-  /* read hard link chunk */
+  // read hard link chunk
   error = Chunk_open(&archiveEntryInfo->hardLink.chunkHardLink.info,
                      &chunkHeader,
                      Chunk_getSize(CHUNK_DEFINITION_HARDLINK,0,NULL)
@@ -5192,7 +5193,7 @@ UNUSED_VARIABLE(sourceGetEntryDataBlockUserData);
   archiveEntryInfo->hardLink.dataCompressAlgorithm = COMPRESS_CONSTANT_TO_ALGORITHM(archiveEntryInfo->hardLink.chunkHardLink.compressAlgorithm);
   archiveEntryInfo->cryptAlgorithm                 = CRYPT_CONSTANT_TO_ALGORITHM(archiveEntryInfo->hardLink.chunkHardLink.cryptAlgorithm);
 
-  /* detect block length of used crypt algorithm */
+  // detect block length of used crypt algorithm
   error = Crypt_getBlockLength(archiveEntryInfo->cryptAlgorithm,&archiveEntryInfo->blockLength);
   if (error != ERROR_NONE)
   {
@@ -5202,7 +5203,7 @@ UNUSED_VARIABLE(sourceGetEntryDataBlockUserData);
   }
   assert(archiveEntryInfo->blockLength > 0);
 
-  /* allocate buffer */
+  // allocate buffer
   archiveEntryInfo->hardLink.bufferLength = (MAX_BUFFER_SIZE/archiveEntryInfo->blockLength)*archiveEntryInfo->blockLength;
   archiveEntryInfo->hardLink.buffer = (byte*)malloc(archiveEntryInfo->hardLink.bufferLength);
   if (archiveEntryInfo->hardLink.buffer == NULL)
@@ -5210,7 +5211,7 @@ UNUSED_VARIABLE(sourceGetEntryDataBlockUserData);
     HALT_INSUFFICIENT_MEMORY();
   }
 
-  /* init data compress */
+  // init data compress
   error = Compress_new(&archiveEntryInfo->hardLink.dataCompressInfo,
                        COMPRESS_MODE_INFLATE,
                        archiveEntryInfo->hardLink.dataCompressAlgorithm,
@@ -5227,7 +5228,7 @@ UNUSED_VARIABLE(sourceGetEntryDataBlockUserData);
     return error;
   }
 
-  /* try to read hard link entry with all passwords */
+  // try to read hard link entry with all passwords
   Chunk_tell(&archiveEntryInfo->hardLink.chunkHardLink.info,&index);
   if (archiveEntryInfo->cryptAlgorithm != CRYPT_ALGORITHM_NONE)
   {
@@ -5265,10 +5266,10 @@ UNUSED_VARIABLE(sourceGetEntryDataBlockUserData);
   {
     error = ERROR_NONE;
 
-    /* reset chunk read position */
+    // reset chunk read position
     Chunk_seek(&archiveEntryInfo->hardLink.chunkHardLink.info,index);
 
-    /* init crypt */
+    // init crypt
     if (error == ERROR_NONE)
     {
       error = Crypt_init(&archiveEntryInfo->hardLink.chunkHardLinkEntry.cryptInfo,
@@ -5303,7 +5304,7 @@ UNUSED_VARIABLE(sourceGetEntryDataBlockUserData);
       }
     }
 
-    /* init hard link entry chunk */
+    // init hard link entry chunk
     if (error == ERROR_NONE)
     {
       error = Chunk_init(&archiveEntryInfo->hardLink.chunkHardLinkEntry.info,
@@ -5324,7 +5325,7 @@ UNUSED_VARIABLE(sourceGetEntryDataBlockUserData);
       }
     }
 
-    /* init hard link data chunk */
+    // init hard link data chunk
     if (error == ERROR_NONE)
     {
       error = Chunk_init(&archiveEntryInfo->hardLink.chunkHardLinkData.info,
@@ -5346,7 +5347,7 @@ UNUSED_VARIABLE(sourceGetEntryDataBlockUserData);
       }
     }
 
-    /* try to read hard link entry/name/data chunks */
+    // try to read hard link entry/name/data chunks
     if (error == ERROR_NONE)
     {
       List_init(&archiveEntryInfo->hardLink.chunkHardLinkNameList);
@@ -5364,7 +5365,7 @@ UNUSED_VARIABLE(sourceGetEntryDataBlockUserData);
         switch (subChunkHeader.id)
         {
           case CHUNK_ID_HARDLINK_ENTRY:
-            /* read hard link entry chunk */
+            // read hard link entry chunk
             error = Chunk_open(&archiveEntryInfo->hardLink.chunkHardLinkEntry.info,
                                &subChunkHeader,
                                subChunkHeader.size
@@ -5374,7 +5375,7 @@ UNUSED_VARIABLE(sourceGetEntryDataBlockUserData);
               break;
             }
 
-            /* get hard link meta data */
+            // get hard link meta data
             if (fileInfo != NULL)
             {
               fileInfo->type            = FILE_TYPE_HARDLINK;
@@ -5390,14 +5391,14 @@ UNUSED_VARIABLE(sourceGetEntryDataBlockUserData);
             foundHardLinkEntryFlag = TRUE;
             break;
           case CHUNK_ID_HARDLINK_NAME:
-            /* new hard link name */
+            // new hard link name
             chunkHardLinkName = LIST_NEW_NODE(ChunkHardLinkName);
             if (chunkHardLinkName == NULL)
             {
               HALT_INSUFFICIENT_MEMORY();
             }
 
-            /* init hard link name chunk */
+            // init hard link name chunk
             error = Crypt_init(&chunkHardLinkName->cryptInfo,
                                archiveEntryInfo->cryptAlgorithm,
                                password
@@ -5424,7 +5425,7 @@ UNUSED_VARIABLE(sourceGetEntryDataBlockUserData);
               break;
             }
 
-            /* read hard link name chunk */
+            // read hard link name chunk
             error = Chunk_open(&chunkHardLinkName->info,
                                &subChunkHeader,
                                subChunkHeader.size
@@ -5441,7 +5442,7 @@ UNUSED_VARIABLE(sourceGetEntryDataBlockUserData);
             List_append(&archiveEntryInfo->hardLink.chunkHardLinkNameList,chunkHardLinkName);
             break;
           case CHUNK_ID_HARDLINK_DATA:
-            /* read hard link data chunk */
+            // read hard link data chunk
             error = Chunk_open(&archiveEntryInfo->hardLink.chunkHardLinkData.info,
                                &subChunkHeader,
                                Chunk_getSize(CHUNK_DEFINITION_HARDLINK_DATA,archiveEntryInfo->blockLength,NULL)
@@ -5467,7 +5468,7 @@ UNUSED_VARIABLE(sourceGetEntryDataBlockUserData);
       }
       if (error != ERROR_NONE)
       {
-        /* free resources */
+        // free resources
         Chunk_done(&archiveEntryInfo->hardLink.chunkHardLinkData.info);
         LIST_DONE(&archiveEntryInfo->hardLink.chunkHardLinkNameList,chunkHardLinkName)
         {
@@ -5487,10 +5488,10 @@ UNUSED_VARIABLE(sourceGetEntryDataBlockUserData);
           && (archiveInfo->cryptType != CRYPT_TYPE_ASYMMETRIC)
          )
       {
-        /* get next password */
+        // get next password
         password = getNextDecryptPassword(&passwordHandle);
 
-        /* reset error and try next password */
+        // reset error and try next password
         if (password != NULL)
         {
           error = ERROR_NONE;
@@ -5498,7 +5499,7 @@ UNUSED_VARIABLE(sourceGetEntryDataBlockUserData);
       }
       else
       {
-        /* no more passwords when no encryption or asymmetric encryption is used */
+        // no more passwords when no encryption or asymmetric encryption is used
         password = NULL;
       }
     }
@@ -5506,7 +5507,7 @@ UNUSED_VARIABLE(sourceGetEntryDataBlockUserData);
 
   if (!foundHardLinkEntryFlag || !foundHardLinkDataFlag)
   {
-    /* free resources */
+    // free resources
     Compress_delete(&archiveEntryInfo->hardLink.dataCompressInfo);
     free(archiveEntryInfo->hardLink.buffer);
     Chunk_done(&archiveEntryInfo->hardLink.chunkHardLink.info);
@@ -5525,7 +5526,7 @@ UNUSED_VARIABLE(sourceGetEntryDataBlockUserData);
   if (cryptAlgorithm         != NULL) (*cryptAlgorithm)         = archiveEntryInfo->cryptAlgorithm;
   if (cryptType              != NULL) (*cryptType)              = archiveInfo->cryptType;
 
-  /* reset compress, crypt */
+  // reset compress, crypt
   Compress_reset(&archiveEntryInfo->hardLink.dataCompressInfo);
   Crypt_reset(&archiveEntryInfo->hardLink.chunkHardLinkData.cryptInfo,0);
 
@@ -5553,7 +5554,7 @@ Errors Archive_readSpecialEntry(ArchiveInfo      *archiveInfo,
   assert(archiveInfo != NULL);
   assert(archiveEntryInfo != NULL);
 
-  /* check for pending error */
+  // check for pending error
   if (archiveInfo->pendingError != ERROR_NONE)
   {
     error = archiveInfo->pendingError;
@@ -5561,12 +5562,12 @@ Errors Archive_readSpecialEntry(ArchiveInfo      *archiveInfo,
     return error;
   }
 
-  /* init archive file info */
+  // init archive file info
   archiveEntryInfo->archiveInfo      = archiveInfo;
   archiveEntryInfo->mode             = ARCHIVE_MODE_READ;
   archiveEntryInfo->archiveEntryType = ARCHIVE_ENTRY_TYPE_SPECIAL;
 
-  /* init special chunk */
+  // init special chunk
   error = Chunk_init(&archiveEntryInfo->special.chunkSpecial.info,
                      NULL,
                      archiveInfo->chunkIO,
@@ -5582,7 +5583,7 @@ Errors Archive_readSpecialEntry(ArchiveInfo      *archiveInfo,
     return error;
   }
 
-  /* find next special chunk */
+  // find next special chunk
   do
   {
     error = getNextChunkHeader(archiveInfo,&chunkHeader);
@@ -5605,7 +5606,7 @@ Errors Archive_readSpecialEntry(ArchiveInfo      *archiveInfo,
   }
   while (chunkHeader.id != CHUNK_ID_SPECIAL);
 
-  /* read special chunk */
+  // read special chunk
   error = Chunk_open(&archiveEntryInfo->special.chunkSpecial.info,
                      &chunkHeader,
                      Chunk_getSize(CHUNK_DEFINITION_SPECIAL,0,NULL)
@@ -5618,7 +5619,7 @@ Errors Archive_readSpecialEntry(ArchiveInfo      *archiveInfo,
   }
   archiveEntryInfo->cryptAlgorithm = archiveEntryInfo->special.chunkSpecial.cryptAlgorithm;
 
-  /* detect block length of use crypt algorithm */
+  // detect block length of use crypt algorithm
   error = Crypt_getBlockLength(archiveEntryInfo->cryptAlgorithm,&archiveEntryInfo->blockLength);
   if (error != ERROR_NONE)
   {
@@ -5628,7 +5629,7 @@ Errors Archive_readSpecialEntry(ArchiveInfo      *archiveInfo,
   }
   assert(archiveEntryInfo->blockLength > 0);
 
-  /* try to read special entry with all passwords */
+  // try to read special entry with all passwords
   Chunk_tell(&archiveEntryInfo->special.chunkSpecial.info,&index);
   if (archiveEntryInfo->cryptAlgorithm != CRYPT_ALGORITHM_NONE)
   {
@@ -5664,10 +5665,10 @@ Errors Archive_readSpecialEntry(ArchiveInfo      *archiveInfo,
   {
     error = ERROR_NONE;
 
-    /* reset chunk read position */
+    // reset chunk read position
     Chunk_seek(&archiveEntryInfo->special.chunkSpecial.info,index);
 
-    /* init crypt */
+    // init crypt
     if (error == ERROR_NONE)
     {
       error = Crypt_init(&archiveEntryInfo->special.chunkSpecialEntry.cryptInfo,
@@ -5679,7 +5680,7 @@ Errors Archive_readSpecialEntry(ArchiveInfo      *archiveInfo,
       }
     }
 
-    /* init special entry chunk */
+    // init special entry chunk
     if (error == ERROR_NONE)
     {
       error = Chunk_init(&archiveEntryInfo->special.chunkSpecialEntry.info,
@@ -5698,7 +5699,7 @@ Errors Archive_readSpecialEntry(ArchiveInfo      *archiveInfo,
       }
     }
 
-    /* read special entry */
+    // read special entry
     if (error == ERROR_NONE)
     {
       while (   !Chunk_eofSub(&archiveEntryInfo->special.chunkSpecial.info)
@@ -5715,7 +5716,7 @@ Errors Archive_readSpecialEntry(ArchiveInfo      *archiveInfo,
         switch (subChunkHeader.id)
         {
           case CHUNK_ID_SPECIAL_ENTRY:
-            /* read special entry chunk */
+            // read special entry chunk
             error = Chunk_open(&archiveEntryInfo->special.chunkSpecialEntry.info,
                                &subChunkHeader,
                                subChunkHeader.size
@@ -5725,7 +5726,7 @@ Errors Archive_readSpecialEntry(ArchiveInfo      *archiveInfo,
               break;
             }
 
-            /* get special meta data */
+            // get special meta data
             String_set(specialName,archiveEntryInfo->special.chunkSpecialEntry.name);
             if (fileInfo != NULL)
             {
@@ -5765,10 +5766,10 @@ Errors Archive_readSpecialEntry(ArchiveInfo      *archiveInfo,
           && (archiveInfo->cryptType != CRYPT_TYPE_ASYMMETRIC)
          )
       {
-        /* get next password */
+        // get next password
         password = getNextDecryptPassword(&passwordHandle);
 
-        /* reset error and try next password */
+        // reset error and try next password
         if (password != NULL)
         {
           error = ERROR_NONE;
@@ -5776,7 +5777,7 @@ Errors Archive_readSpecialEntry(ArchiveInfo      *archiveInfo,
       }
       else
       {
-        /* no more passwords when no encryption or asymmetric encryption is used */
+        // no more passwords when no encryption or asymmetric encryption is used
         password = NULL;
       }
     }
@@ -5863,10 +5864,10 @@ Errors Archive_closeEntry(ArchiveEntryInfo *archiveEntryInfo)
                 error = flushFileDataBlocks(archiveEntryInfo,COMPRESS_BLOCK_TYPE_ANY);
               }
 
-              /* update file and chunks if header is written */
+              // update file and chunks if header is written
               if (archiveEntryInfo->file.headerWrittenFlag)
               {
-                /* update part size */
+                // update part size
                 archiveEntryInfo->file.chunkFileData.fragmentSize = Compress_getInputLength(&archiveEntryInfo->file.dataCompressInfo);
                 if (error == ERROR_NONE)
                 {
@@ -5874,7 +5875,7 @@ Errors Archive_closeEntry(ArchiveEntryInfo *archiveEntryInfo)
                   if (tmpError != ERROR_NONE) error = tmpError;
                 }
 
-                /* close chunks */
+                // close chunks
                 tmpError = Chunk_close(&archiveEntryInfo->file.chunkFileData.info);
                 if ((error == ERROR_NONE) && (tmpError != ERROR_NONE)) error = tmpError;
                 if (COMPRESS_IS_XDELTA_ALGORITHM(archiveEntryInfo->file.deltaCompressAlgorithm))
@@ -5893,7 +5894,7 @@ Errors Archive_closeEntry(ArchiveEntryInfo *archiveEntryInfo)
                   && !archiveEntryInfo->archiveInfo->jobOptions->noStorageFlag
                  )
               {
-                /* store in index database */
+                // store in index database
                 if (error == ERROR_NONE)
                 {
                   error = Index_addFile(archiveEntryInfo->archiveInfo->databaseHandle,
@@ -5913,7 +5914,7 @@ Errors Archive_closeEntry(ArchiveEntryInfo *archiveEntryInfo)
               }
             }
 
-            /* free resources */
+            // free resources
             if (COMPRESS_IS_XDELTA_ALGORITHM(archiveEntryInfo->file.deltaCompressAlgorithm)) Compress_delete(&archiveEntryInfo->file.deltaCompressInfo);
             Chunk_done(&archiveEntryInfo->file.chunkFileData.info);
             Chunk_done(&archiveEntryInfo->file.chunkFileDelta.info);
@@ -5931,7 +5932,7 @@ Errors Archive_closeEntry(ArchiveEntryInfo *archiveEntryInfo)
           {
             if (!archiveEntryInfo->archiveInfo->jobOptions->dryRunFlag)
             {
-              /* flush data */
+              // flush data
               error = Compress_flush(&archiveEntryInfo->image.dataCompressInfo);
               if (error == ERROR_NONE)
               {
@@ -5958,10 +5959,10 @@ Errors Archive_closeEntry(ArchiveEntryInfo *archiveEntryInfo)
                 }
               }
 
-              /* update file and chunks if header is written */
+              // update file and chunks if header is written
               if (archiveEntryInfo->image.headerWrittenFlag)
               {
-                /* update part block count */
+                // update part block count
                 assert(archiveEntryInfo->image.blockSize > 0);
                 assert((Compress_getInputLength(&archiveEntryInfo->image.dataCompressInfo) % archiveEntryInfo->image.blockSize) == 0);
                 archiveEntryInfo->image.chunkImageData.blockCount = Compress_getInputLength(&archiveEntryInfo->image.dataCompressInfo)/archiveEntryInfo->image.blockSize;
@@ -5971,7 +5972,7 @@ Errors Archive_closeEntry(ArchiveEntryInfo *archiveEntryInfo)
                   if (tmpError != ERROR_NONE) error = tmpError;
                 }
 
-                /* close chunks */
+                // close chunks
                 tmpError = Chunk_close(&archiveEntryInfo->image.chunkImageData.info);
                 if ((error == ERROR_NONE) && (tmpError != ERROR_NONE)) error = tmpError;
                 tmpError = Chunk_close(&archiveEntryInfo->image.chunkImageEntry.info);
@@ -5985,7 +5986,7 @@ Errors Archive_closeEntry(ArchiveEntryInfo *archiveEntryInfo)
                   && !archiveEntryInfo->archiveInfo->jobOptions->noStorageFlag
                  )
               {
-                /* store in index database */
+                // store in index database
                 if (error == ERROR_NONE)
                 {
                   error = Index_addImage(archiveEntryInfo->archiveInfo->databaseHandle,
@@ -6000,7 +6001,7 @@ Errors Archive_closeEntry(ArchiveEntryInfo *archiveEntryInfo)
               }
             }
 
-            /* free resources */
+            // free resources
             Crypt_done(&archiveEntryInfo->image.cryptInfo);
             Compress_delete(&archiveEntryInfo->image.dataCompressInfo);
             Chunk_done(&archiveEntryInfo->image.chunkImageData.info);
@@ -6015,7 +6016,7 @@ Errors Archive_closeEntry(ArchiveEntryInfo *archiveEntryInfo)
           {
             if (!archiveEntryInfo->archiveInfo->jobOptions->dryRunFlag)
             {
-              /* close chunks */
+              // close chunks
               tmpError = Chunk_close(&archiveEntryInfo->directory.chunkDirectoryEntry.info);
               if ((error == ERROR_NONE) && (tmpError != ERROR_NONE)) error = tmpError;
               tmpError = Chunk_close(&archiveEntryInfo->directory.chunkDirectory.info);
@@ -6026,7 +6027,7 @@ Errors Archive_closeEntry(ArchiveEntryInfo *archiveEntryInfo)
                   && !archiveEntryInfo->archiveInfo->jobOptions->noStorageFlag
                  )
               {
-                /* store in index database */
+                // store in index database
                 if (error == ERROR_NONE)
                 {
                   error = Index_addDirectory(archiveEntryInfo->archiveInfo->databaseHandle,
@@ -6043,7 +6044,7 @@ Errors Archive_closeEntry(ArchiveEntryInfo *archiveEntryInfo)
               }
             }
 
-            /* free resources */
+            // free resources
             Chunk_done(&archiveEntryInfo->directory.chunkDirectoryEntry.info);
             Crypt_done(&archiveEntryInfo->directory.chunkDirectoryEntry.cryptInfo);
             Chunk_done(&archiveEntryInfo->directory.chunkDirectory.info);
@@ -6053,7 +6054,7 @@ Errors Archive_closeEntry(ArchiveEntryInfo *archiveEntryInfo)
           {
             if (!archiveEntryInfo->archiveInfo->jobOptions->dryRunFlag)
             {
-              /* close chunks */
+              // close chunks
               tmpError = Chunk_close(&archiveEntryInfo->link.chunkLinkEntry.info);
               if ((error == ERROR_NONE) && (tmpError != ERROR_NONE)) error = tmpError;
               tmpError = Chunk_close(&archiveEntryInfo->link.chunkLink.info);
@@ -6064,7 +6065,7 @@ Errors Archive_closeEntry(ArchiveEntryInfo *archiveEntryInfo)
                   && !archiveEntryInfo->archiveInfo->jobOptions->noStorageFlag
                  )
               {
-                /* store in index database */
+                // store in index database
                 if (error == ERROR_NONE)
                 {
                   error = Index_addLink(archiveEntryInfo->archiveInfo->databaseHandle,
@@ -6082,7 +6083,7 @@ Errors Archive_closeEntry(ArchiveEntryInfo *archiveEntryInfo)
               }
             }
 
-            /* free resources */
+            // free resources
             Chunk_done(&archiveEntryInfo->link.chunkLinkEntry.info);
             Crypt_done(&archiveEntryInfo->link.chunkLinkEntry.cryptInfo);
             Chunk_done(&archiveEntryInfo->link.chunkLink.info);
@@ -6094,7 +6095,7 @@ Errors Archive_closeEntry(ArchiveEntryInfo *archiveEntryInfo)
 
             if (!archiveEntryInfo->archiveInfo->jobOptions->dryRunFlag)
             {
-              /* flush data */
+              // flush data
               error = Compress_flush(&archiveEntryInfo->hardLink.dataCompressInfo);
               if (error == ERROR_NONE)
               {
@@ -6121,10 +6122,10 @@ Errors Archive_closeEntry(ArchiveEntryInfo *archiveEntryInfo)
                 }
               }
 
-              /* update file and chunks if header is written */
+              // update file and chunks if header is written
               if (archiveEntryInfo->hardLink.headerWrittenFlag)
               {
-                /* update part size */
+                // update part size
                 archiveEntryInfo->hardLink.chunkHardLinkData.fragmentSize = Compress_getInputLength(&archiveEntryInfo->hardLink.dataCompressInfo);
                 if (error == ERROR_NONE)
                 {
@@ -6132,7 +6133,7 @@ Errors Archive_closeEntry(ArchiveEntryInfo *archiveEntryInfo)
                   if (tmpError != ERROR_NONE) error = tmpError;
                 }
 
-                /* close chunks */
+                // close chunks
                 tmpError = Chunk_close(&archiveEntryInfo->hardLink.chunkHardLinkData.info);
                 if ((error == ERROR_NONE) && (tmpError != ERROR_NONE)) error = tmpError;
                 LIST_ITERATE(&archiveEntryInfo->hardLink.chunkHardLinkNameList,chunkHardLinkName)
@@ -6151,7 +6152,7 @@ Errors Archive_closeEntry(ArchiveEntryInfo *archiveEntryInfo)
                   && !archiveEntryInfo->archiveInfo->jobOptions->noStorageFlag
                  )
               {
-                /* store in index database */
+                // store in index database
                 if (error == ERROR_NONE)
                 {
                   LIST_ITERATE(&archiveEntryInfo->hardLink.chunkHardLinkNameList,chunkHardLinkName)
@@ -6175,7 +6176,7 @@ Errors Archive_closeEntry(ArchiveEntryInfo *archiveEntryInfo)
               }
             }
 
-            /* free resources */
+            // free resources
             Crypt_done(&archiveEntryInfo->hardLink.cryptInfo);
             Compress_delete(&archiveEntryInfo->hardLink.dataCompressInfo);
             Chunk_done(&archiveEntryInfo->hardLink.chunkHardLinkData.info);
@@ -6195,7 +6196,7 @@ Errors Archive_closeEntry(ArchiveEntryInfo *archiveEntryInfo)
           {
             if (!archiveEntryInfo->archiveInfo->jobOptions->dryRunFlag)
             {
-              /* close chunks */
+              // close chunks
               tmpError = Chunk_close(&archiveEntryInfo->special.chunkSpecialEntry.info);
               if ((error == ERROR_NONE) && (tmpError != ERROR_NONE)) error = tmpError;
               tmpError = Chunk_close(&archiveEntryInfo->special.chunkSpecial.info);
@@ -6206,7 +6207,7 @@ Errors Archive_closeEntry(ArchiveEntryInfo *archiveEntryInfo)
                   && !archiveEntryInfo->archiveInfo->jobOptions->noStorageFlag
                  )
               {
-                /* store in index database */
+                // store in index database
                 if (error == ERROR_NONE)
                 {
                   error = Index_addSpecial(archiveEntryInfo->archiveInfo->databaseHandle,
@@ -6226,7 +6227,7 @@ Errors Archive_closeEntry(ArchiveEntryInfo *archiveEntryInfo)
               }
             }
 
-            /* free resources */
+            // free resources
             Chunk_done(&archiveEntryInfo->special.chunkSpecialEntry.info);
             Crypt_done(&archiveEntryInfo->special.chunkSpecialEntry.cryptInfo);
             Chunk_done(&archiveEntryInfo->special.chunkSpecial.info);
@@ -6244,7 +6245,7 @@ Errors Archive_closeEntry(ArchiveEntryInfo *archiveEntryInfo)
       {
         case ARCHIVE_ENTRY_TYPE_FILE:
           {
-            /* close chunks */
+            // close chunks
             tmpError = Chunk_close(&archiveEntryInfo->file.chunkFileData.info);
             if ((error == ERROR_NONE) && (tmpError != ERROR_NONE)) error = tmpError;
             if (COMPRESS_IS_XDELTA_ALGORITHM(archiveEntryInfo->file.deltaCompressAlgorithm))
@@ -6257,7 +6258,7 @@ Errors Archive_closeEntry(ArchiveEntryInfo *archiveEntryInfo)
             tmpError = Chunk_close(&archiveEntryInfo->file.chunkFile.info);
             if ((error == ERROR_NONE) && (tmpError != ERROR_NONE)) error = tmpError;
 
-            /* free resources */
+            // free resources
             if (COMPRESS_IS_XDELTA_ALGORITHM(archiveEntryInfo->file.deltaCompressAlgorithm)) Compress_delete(&archiveEntryInfo->file.deltaCompressInfo);
             Chunk_done(&archiveEntryInfo->file.chunkFileData.info);
             Chunk_done(&archiveEntryInfo->file.chunkFileDelta.info);
@@ -6273,7 +6274,7 @@ Errors Archive_closeEntry(ArchiveEntryInfo *archiveEntryInfo)
           break;
         case ARCHIVE_ENTRY_TYPE_IMAGE:
           {
-            /* close chunks */
+            // close chunks
             tmpError = Chunk_close(&archiveEntryInfo->image.chunkImageData.info);
             if ((error == ERROR_NONE) && (tmpError != ERROR_NONE)) error = tmpError;
             tmpError = Chunk_close(&archiveEntryInfo->image.chunkImageEntry.info);
@@ -6281,7 +6282,7 @@ Errors Archive_closeEntry(ArchiveEntryInfo *archiveEntryInfo)
             tmpError = Chunk_close(&archiveEntryInfo->image.chunkImage.info);
             if ((error == ERROR_NONE) && (tmpError != ERROR_NONE)) error = tmpError;
 
-            /* free resources */
+            // free resources
             Crypt_done(&archiveEntryInfo->image.cryptInfo);
             Compress_delete(&archiveEntryInfo->image.dataCompressInfo);
             Chunk_done(&archiveEntryInfo->image.chunkImageData.info);
@@ -6294,13 +6295,13 @@ Errors Archive_closeEntry(ArchiveEntryInfo *archiveEntryInfo)
           break;
         case ARCHIVE_ENTRY_TYPE_DIRECTORY:
           {
-            /* close chunks */
+            // close chunks
             tmpError = Chunk_close(&archiveEntryInfo->directory.chunkDirectoryEntry.info);
             if ((error == ERROR_NONE) && (tmpError != ERROR_NONE)) error = tmpError;
             tmpError = Chunk_close(&archiveEntryInfo->directory.chunkDirectory.info);
             if ((error == ERROR_NONE) && (tmpError != ERROR_NONE)) error = tmpError;
 
-            /* free resources */
+            // free resources
             Chunk_done(&archiveEntryInfo->directory.chunkDirectoryEntry.info);
             Crypt_done(&archiveEntryInfo->directory.chunkDirectoryEntry.cryptInfo);
             Chunk_done(&archiveEntryInfo->directory.chunkDirectory.info);
@@ -6308,13 +6309,13 @@ Errors Archive_closeEntry(ArchiveEntryInfo *archiveEntryInfo)
           break;
         case ARCHIVE_ENTRY_TYPE_LINK:
           {
-            /* close chunks */
+            // close chunks
             tmpError = Chunk_close(&archiveEntryInfo->link.chunkLinkEntry.info);
             if ((error == ERROR_NONE) && (tmpError != ERROR_NONE)) error = tmpError;
             tmpError = Chunk_close(&archiveEntryInfo->link.chunkLink.info);
             if ((error == ERROR_NONE) && (tmpError != ERROR_NONE)) error = tmpError;
 
-            /* free resources */
+            // free resources
             Chunk_done(&archiveEntryInfo->link.chunkLinkEntry.info);
             Crypt_done(&archiveEntryInfo->link.chunkLinkEntry.cryptInfo);
             Chunk_done(&archiveEntryInfo->link.chunkLink.info);
@@ -6324,7 +6325,7 @@ Errors Archive_closeEntry(ArchiveEntryInfo *archiveEntryInfo)
           {
             ChunkHardLinkName *chunkHardLinkName;
 
-            /* close chunks */
+            // close chunks
             tmpError = Chunk_close(&archiveEntryInfo->hardLink.chunkHardLinkData.info);
             if ((error == ERROR_NONE) && (tmpError != ERROR_NONE)) error = tmpError;
             LIST_ITERATE(&archiveEntryInfo->hardLink.chunkHardLinkNameList,chunkHardLinkName)
@@ -6337,7 +6338,7 @@ Errors Archive_closeEntry(ArchiveEntryInfo *archiveEntryInfo)
             tmpError = Chunk_close(&archiveEntryInfo->hardLink.chunkHardLink.info);
             if ((error == ERROR_NONE) && (tmpError != ERROR_NONE)) error = tmpError;
 
-            /* free resources */
+            // free resources
             Crypt_done(&archiveEntryInfo->hardLink.cryptInfo);
             Compress_delete(&archiveEntryInfo->hardLink.dataCompressInfo);
             Chunk_done(&archiveEntryInfo->hardLink.chunkHardLinkData.info);
@@ -6355,13 +6356,13 @@ Errors Archive_closeEntry(ArchiveEntryInfo *archiveEntryInfo)
           break;
         case ARCHIVE_ENTRY_TYPE_SPECIAL:
           {
-            /* close chunks */
+            // close chunks
             tmpError = Chunk_close(&archiveEntryInfo->special.chunkSpecialEntry.info);
             if ((error == ERROR_NONE) && (tmpError != ERROR_NONE)) error = tmpError;
             tmpError = Chunk_close(&archiveEntryInfo->special.chunkSpecial.info);
             if ((error == ERROR_NONE) && (tmpError != ERROR_NONE)) error = tmpError;
 
-            /* free resources */
+            // free resources
             Chunk_done(&archiveEntryInfo->special.chunkSpecialEntry.info);
             Crypt_done(&archiveEntryInfo->special.chunkSpecialEntry.cryptInfo);
             Chunk_done(&archiveEntryInfo->special.chunkSpecial.info);
@@ -6421,7 +6422,7 @@ Errors Archive_writeData(ArchiveEntryInfo *archiveEntryInfo,
         blockLength = length;
       }
 
-      /* write data block */
+      // write data block
       writtenBlockBytes = 0L;
       switch (archiveEntryInfo->archiveEntryType)
       {
@@ -6514,7 +6515,7 @@ fprintf(stderr,"%s,%d: avild =%d\n",__FILE__,__LINE__,blockCount);
 
           while (writtenBlockBytes < blockLength)
           {
-            /* compress */
+            // compress
             error = Compress_deflate(&archiveEntryInfo->image.dataCompressInfo,
                                      p+writtenBlockBytes,
                                      blockLength-writtenBlockBytes,
@@ -6526,7 +6527,7 @@ fprintf(stderr,"%s,%d: avild =%d\n",__FILE__,__LINE__,blockCount);
             }
             writtenBlockBytes += deflatedBytes;
 
-            /* check if compressed data blocks are available and can be encrypted and written to file */
+            // check if compressed data blocks are available and can be encrypted and written to file
             allowNewPartFlag = ((elementSize <= 1) || (writtenBlockBytes >= blockLength));
             do
             {
@@ -6556,7 +6557,7 @@ fprintf(stderr,"%s,%d: avild =%d\n",__FILE__,__LINE__,blockCount);
 
           while (writtenBlockBytes < blockLength)
           {
-            /* compress */
+            // compress
             error = Compress_deflate(&archiveEntryInfo->hardLink.dataCompressInfo,
                                      p+writtenBlockBytes,
                                      length-writtenBlockBytes,
@@ -6568,7 +6569,7 @@ fprintf(stderr,"%s,%d: avild =%d\n",__FILE__,__LINE__,blockCount);
             }
             writtenBlockBytes += deflatedBytes;
 
-            /* check if compressed data blocks are available and can be encrypted and written to file */
+            // check if compressed data blocks are available and can be encrypted and written to file
             allowNewPartFlag = ((elementSize <= 1) || (writtenBlockBytes >= blockLength));
             do
             {
@@ -6598,7 +6599,7 @@ fprintf(stderr,"%s,%d: avild =%d\n",__FILE__,__LINE__,blockCount);
           break;
       }
 
-      /* next data */
+      // next data
       p            += blockLength;
       writtenBytes += blockLength;
     }
@@ -6625,7 +6626,7 @@ Errors Archive_readData(ArchiveEntryInfo *archiveEntryInfo,
       p = (byte*)buffer;
       while (length > 0)
       {
-        /* fill decompressor with compressed data blocks */
+        // fill decompressor with compressed data blocks
         do
         {
           error = Compress_getAvailableDecompressedBytes(&archiveEntryInfo->file.dataCompressInfo,&n);
@@ -6644,7 +6645,7 @@ Errors Archive_readData(ArchiveEntryInfo *archiveEntryInfo,
         }
         while (n <= 0);
 
-        /* decompress data */
+        // decompress data
         error = Compress_inflate(&archiveEntryInfo->file.dataCompressInfo,p,1,&inflatedBytes);
         if (error != ERROR_NONE)
         {
@@ -6658,7 +6659,7 @@ Errors Archive_readData(ArchiveEntryInfo *archiveEntryInfo,
       p = (byte*)buffer;
       while (length > 0)
       {
-        /* fill decompressor with compressed data blocks */
+        // fill decompressor with compressed data blocks
         do
         {
           error = Compress_getAvailableDecompressedBytes(&archiveEntryInfo->image.dataCompressInfo,&n);
@@ -6677,7 +6678,7 @@ Errors Archive_readData(ArchiveEntryInfo *archiveEntryInfo,
         }
         while (n <= 0);
 
-        /* decompress data */
+        // decompress data
         error = Compress_inflate(&archiveEntryInfo->image.dataCompressInfo,p,1,&inflatedBytes);
         if (error != ERROR_NONE)
         {
@@ -6691,7 +6692,7 @@ Errors Archive_readData(ArchiveEntryInfo *archiveEntryInfo,
       p = (byte*)buffer;
       while (length > 0)
       {
-        /* fill decompressor with compressed data blocks */
+        // fill decompressor with compressed data blocks
         do
         {
           error = Compress_getAvailableDecompressedBytes(&archiveEntryInfo->hardLink.dataCompressInfo,&n);
@@ -6710,7 +6711,7 @@ Errors Archive_readData(ArchiveEntryInfo *archiveEntryInfo,
         }
         while (n <= 0);
 
-        /* decompress data */
+        // decompress data
         error = Compress_inflate(&archiveEntryInfo->hardLink.dataCompressInfo,p,1,&inflatedBytes);
         if (error != ERROR_NONE)
         {
@@ -6891,7 +6892,7 @@ Errors Archive_addIndex(DatabaseHandle *databaseHandle,
   assert(databaseHandle != NULL);
   assert(storageName != NULL);
 
-  /* create new index */
+  // create new index
   error = Index_create(databaseHandle,
                        storageName,
                        INDEX_STATE_UPDATE,
@@ -6903,7 +6904,7 @@ Errors Archive_addIndex(DatabaseHandle *databaseHandle,
     return error;
   }
 
-  /* add index */
+  // add index
   error = Archive_updateIndex(databaseHandle,
                               storageId,
                               storageName,
@@ -6943,12 +6944,12 @@ Errors Archive_updateIndex(DatabaseHandle               *databaseHandle,
   assert(databaseHandle != NULL);
   assert(storageName != NULL);
 
-  /* init job options */
+  // init job options
   initJobOptions(&jobOptions);
   jobOptions.cryptPassword           = Password_duplicate(cryptPassword);
   jobOptions.cryptPrivateKeyFileName = String_duplicate(cryptPrivateKeyFileName);
 
-  /* open archive */
+  // open archive
   error = Archive_open(&archiveInfo,
                        storageName,
                        &jobOptions,
@@ -6961,7 +6962,7 @@ Errors Archive_updateIndex(DatabaseHandle               *databaseHandle,
     return error;
   }
 
-  /* clear index */
+  // clear index
   error = Index_clear(databaseHandle,
                       storageId
                      );
@@ -6980,7 +6981,7 @@ Errors Archive_updateIndex(DatabaseHandle               *databaseHandle,
     return error;
   }
 
-  /* index archive contents */
+  // index archive contents
   Index_setState(databaseHandle,
                  storageId,
                  INDEX_STATE_UPDATE,
@@ -6993,20 +6994,20 @@ Errors Archive_updateIndex(DatabaseHandle               *databaseHandle,
          && (error == ERROR_NONE)
         )
   {
-    /* pause */
+    // pause
     while ((pauseCallback != NULL) && pauseCallback(pauseUserData))
     {
       Misc_udelay(5000*1000);
     }
 
-    /* get next file type */
+    // get next file type
     error = Archive_getNextArchiveEntryType(&archiveInfo,
                                             &archiveEntryType,
                                             FALSE
                                            );
     if (error == ERROR_NONE)
     {
-      /* read entry */
+      // read entry
       switch (archiveEntryType)
       {
         case ARCHIVE_ENTRY_TYPE_FILE:
@@ -7016,7 +7017,7 @@ Errors Archive_updateIndex(DatabaseHandle               *databaseHandle,
             FileInfo         fileInfo;
             uint64           fragmentOffset,fragmentSize;
 
-            /* open archive file */
+            // open archive file
             fileName = String_new();
             error = Archive_readFileEntry(&archiveInfo,
                                           &archiveEntryInfo,
@@ -7039,7 +7040,7 @@ NULL,
               break;
             }
 
-            /* add to index database */
+            // add to index database
             error = Index_addFile(databaseHandle,
                                   storageId,
                                   fileName,
@@ -7060,7 +7061,7 @@ NULL,
               break;
             }
 
-            /* close archive file, free resources */
+            // close archive file, free resources
             Archive_closeEntry(&archiveEntryInfo);
             String_delete(fileName);
           }
@@ -7072,7 +7073,7 @@ NULL,
             DeviceInfo       deviceInfo;
             uint64           blockOffset,blockCount;
 
-            /* open archive file */
+            // open archive file
             deviceName = String_new();
             error = Archive_readImageEntry(&archiveInfo,
                                            &archiveEntryInfo,
@@ -7094,7 +7095,7 @@ NULL,
               break;
             }
 
-            /* add to index database */
+            // add to index database
             error = Index_addImage(databaseHandle,
                                    storageId,
                                    deviceName,
@@ -7110,7 +7111,7 @@ NULL,
               break;
             }
 
-            /* close archive file, free resources */
+            // close archive file, free resources
             Archive_closeEntry(&archiveEntryInfo);
             String_delete(deviceName);
           }
@@ -7120,7 +7121,7 @@ NULL,
             String   directoryName;
             FileInfo fileInfo;
 
-            /* open archive directory */
+            // open archive directory
             directoryName = String_new();
             error = Archive_readDirectoryEntry(&archiveInfo,
                                                &archiveEntryInfo,
@@ -7135,7 +7136,7 @@ NULL,
               break;
             }
 
-            /* add to index database */
+            // add to index database
             error = Index_addDirectory(databaseHandle,
                                        storageId,
                                        directoryName,
@@ -7153,7 +7154,7 @@ NULL,
               break;
             }
 
-            /* close archive file, free resources */
+            // close archive file, free resources
             Archive_closeEntry(&archiveEntryInfo);
             String_delete(directoryName);
           }
@@ -7164,7 +7165,7 @@ NULL,
             String   destinationName;
             FileInfo fileInfo;
 
-            /* open archive link */
+            // open archive link
             linkName        = String_new();
             destinationName = String_new();
             error = Archive_readLinkEntry(&archiveInfo,
@@ -7182,7 +7183,7 @@ NULL,
               break;
             }
 
-            /* add to index database */
+            // add to index database
             error = Index_addLink(databaseHandle,
                                   storageId,
                                   linkName,
@@ -7202,7 +7203,7 @@ NULL,
               break;
             }
 
-            /* close archive file, free resources */
+            // close archive file, free resources
             Archive_closeEntry(&archiveEntryInfo);
             String_delete(destinationName);
             String_delete(linkName);
@@ -7217,7 +7218,7 @@ NULL,
             const StringNode *stringNode;
             String           fileName;
 
-            /* open archive file */
+            // open archive file
             StringList_init(&fileNameList);
             error = Archive_readHardLinkEntry(&archiveInfo,
                                           &archiveEntryInfo,
@@ -7240,7 +7241,7 @@ NULL,
             }
 //fprintf(stderr,"%s,%d: index update %s\n",__FILE__,__LINE__,String_cString(name));
 
-            /* add to index database */
+            // add to index database
             STRINGLIST_ITERATE(&fileNameList,stringNode,fileName)
             {
               error = Index_addHardLink(databaseHandle,
@@ -7268,7 +7269,7 @@ NULL,
               break;
             }
 
-            /* close archive file, free resources */
+            // close archive file, free resources
             Archive_closeEntry(&archiveEntryInfo);
             StringList_done(&fileNameList);
           }
@@ -7278,7 +7279,7 @@ NULL,
             String   fileName;
             FileInfo fileInfo;
 
-            /* open archive link */
+            // open archive link
             fileName = String_new();
             error = Archive_readSpecialEntry(&archiveInfo,
                                              &archiveEntryInfo,
@@ -7293,7 +7294,7 @@ NULL,
               break;
             }
 
-            /* add to index database */
+            // add to index database
             error = Index_addSpecial(databaseHandle,
                                      storageId,
                                      fileName,
@@ -7314,7 +7315,7 @@ NULL,
               break;
             }
 
-            /* close archive file, free resources */
+            // close archive file, free resources
             Archive_closeEntry(&archiveEntryInfo);
             String_delete(fileName);
           }
@@ -7326,7 +7327,7 @@ NULL,
           break; /* not reached */
       }
 
-      /* update temporary size (ignore error) */
+      // update temporary size (ignore error)
       Index_update(databaseHandle,
                    storageId,
                    NULL,
@@ -7346,7 +7347,7 @@ NULL,
   else
   {
     Archive_close(&archiveInfo);
-    if (Errors_getCode(error) == ERROR_NO_CRYPT_PASSWORD) 
+    if (Errors_getCode(error) == ERROR_NO_CRYPT_PASSWORD)
     {
       Index_setState(databaseHandle,
                      storageId,
@@ -7370,7 +7371,7 @@ NULL,
     return error;
   }
 
-  /* update name/size */
+  // update name/size
   error = Index_update(databaseHandle,
                        storageId,
                        storageName,
@@ -7391,10 +7392,10 @@ NULL,
     return error;
   }
 
-  /* close archive */
+  // close archive
   Archive_close(&archiveInfo);
 
-  /* free resources */
+  // free resources
   freeJobOptions(&jobOptions);
 
   return ERROR_NONE;
@@ -7413,7 +7414,7 @@ Errors Archive_remIndex(DatabaseHandle *databaseHandle,
   {
     return error;
   }
-  
+
   return ERROR_NONE;
 }
 
@@ -7442,7 +7443,7 @@ Errors Archive_copy(const String                    storageName,
     return error;
   }
 
-  // create destination                      
+  // create destination
   error = Archive_create(&destinationArchiveInfo,
                          jobOptions,
                          ArchiveNewFileFunction          archiveNewFileFunction,
@@ -7465,14 +7466,14 @@ Errors Archive_copy(const String                    storageName,
         )
   {
 #if 0
-    /* pause */
+    // pause
     while ((restoreInfo.pauseFlag != NULL) && (*restoreInfo.pauseFlag))
     {
       Misc_udelay(500*1000);
     }
 #endif /* 0 */
 
-    /* get next archive entry type */
+    // get next archive entry type
     error = Archive_getNextArchiveEntryType(&archiveInfo,
                                             &archiveEntryType,
                                             TRUE
@@ -7497,7 +7498,7 @@ Errors Archive_copy(const String                    storageName,
           uint64       length;
           ulong        n;
 
-          /* read file */
+          // read file
           fileName = String_new();
           error = Archive_readFileEntry(&archiveInfo,
                                         &archiveEntryInfo,
@@ -7516,7 +7517,7 @@ Errors Archive_copy(const String                    storageName,
             continue;
           }
 
-          /* check if file fragment already exists, file already exists */
+          // check if file fragment already exists, file already exists
           fragmentNode = FragmentList_find(&fragmentList,destinationFileName);
           if (fragmentNode != NULL)
           {
@@ -7539,9 +7540,9 @@ Errors Archive_copy(const String                    storageName,
             fragmentNode = FragmentList_add(&fragmentList,destinationFileName,fileInfo.size,&fileInfo,sizeof(FileInfo));
           }
 
-          /* copy file entry */
+          // copy file entry
 
-            /* seek to fragment position */
+            // seek to fragment position
             error = File_seek(&fileHandle,fragmentOffset);
             if (error != ERROR_NONE)
             {
@@ -7562,14 +7563,14 @@ Errors Archive_copy(const String                    storageName,
             }
           }
 
-          /* write file data */
+          // write file data
           length = 0;
           while (   //((restoreInfo.requestedAbortFlag == NULL) || !(*restoreInfo.requestedAbortFlag))
                  && (length < fragmentSize)
                 )
           {
 #if 0
-            /* pause */
+            // pause
             while ((restoreInfo.pauseFlag != NULL) && (*restoreInfo.pauseFlag))
             {
               Misc_udelay(500*1000);
@@ -7634,20 +7635,20 @@ Errors Archive_copy(const String                    storageName,
           }
 #endif /* 0 */
 
-          /* add fragment to file fragment list */
+          // add fragment to file fragment list
           FragmentList_addEntry(fragmentNode,fragmentOffset,fragmentSize);
 //FragmentList_debugPrintInfo(fragmentNode,String_cString(fileName));
 
-          /* close file */
+          // close file
           if (!jobOptions->dryRunFlag)
           {
             File_close(&fileHandle);
           }
 
-          /* close source archive file, free resources */
+          // close source archive file, free resources
           (void)Archive_closeEntry(&sourceArchiveEntryInfo);
 
-          /* free resources */
+          // free resources
           String_delete(fileName);
         }
         break;
@@ -7662,7 +7663,7 @@ Errors Archive_copy(const String                    storageName,
           uint64       block;
           ulong        bufferBlockCount;
 
-          /* read image */
+          // read image
           imageName = String_new();
           error = Archive_readImageEntry(&archiveInfo,
                                          &archiveEntryInfo,
@@ -7694,14 +7695,14 @@ Errors Archive_copy(const String                    storageName,
             restoreInfo.statusInfo.entryTotalBytes = blockCount;
             abortFlag = !updateStatusInfo(&restoreInfo);
 
-            /* get destination filename */
+            // get destination filename
             destinationDeviceName = getDestinationDeviceName(String_new(),
                                                              imageName,
                                                              jobOptions->destination
                                                             );
 
 
-            /* check if image fragment exists */
+            // check if image fragment exists
             fragmentNode = FragmentList_find(&fragmentList,imageName);
             if (fragmentNode != NULL)
             {
@@ -7726,7 +7727,7 @@ Errors Archive_copy(const String                    storageName,
 
             printInfo(2,"  Restore image '%s'...",String_cString(destinationDeviceName));
 
-            /* open device */
+            // open device
             if (!jobOptions->dryRunFlag)
             {
               error = Device_open(&deviceHandle,destinationDeviceName,DEVICE_OPENMODE_WRITE);
@@ -7766,13 +7767,13 @@ Errors Archive_copy(const String                    storageName,
               }
             }
 
-            /* write image data */
+            // write image data
             block = 0;
             while (   ((restoreInfo.requestedAbortFlag == NULL) || !(*restoreInfo.requestedAbortFlag))
                    && (block < blockCount)
                   )
             {
-              /* pause */
+              // pause
               while ((restoreInfo.pauseFlag != NULL) && (*restoreInfo.pauseFlag))
               {
                 Misc_udelay(500*1000);
@@ -7827,11 +7828,11 @@ Errors Archive_copy(const String                    storageName,
               }
             }
 
-            /* add fragment to file fragment list */
+            // add fragment to file fragment list
             FragmentList_addEntry(fragmentNode,blockOffset*(uint64)deviceInfo.blockSize,blockCount*(uint64)deviceInfo.blockSize);
 //FragmentList_debugPrintInfo(fragmentNode,String_cString(fileName));
 
-            /* discard fragment list if file is complete */
+            // discard fragment list if file is complete
             if (FragmentList_checkEntryComplete(fragmentNode))
             {
               FragmentList_discard(&fragmentList,fragmentNode);
@@ -7857,23 +7858,23 @@ Errors Archive_copy(const String                    storageName,
               printWarning("unexpected data at end of image entry '%S'.\n",imageName);
             }
 
-            /* free resources */
+            // free resources
             String_delete(destinationDeviceName);
           }
           else
           {
-            /* skip */
+            // skip
             printInfo(3,"  Restore '%s'...skipped\n",String_cString(imageName));
           }
 
-          /* close archive file, free resources */
+          // close archive file, free resources
           error = Archive_closeEntry(&archiveEntryInfo);
           if (error != ERROR_NONE)
           {
             printWarning("close 'image' entry fail (error: %s)\n",Errors_getText(error));
           }
 
-          /* free resources */
+          // free resources
           String_delete(imageName);
         }
         break;
@@ -7884,7 +7885,7 @@ Errors Archive_copy(const String                    storageName,
           String   destinationFileName;
 //            FileInfo localFileInfo;
 
-          /* read directory */
+          // read directory
           directoryName = String_new();
           error = Archive_readDirectoryEntry(&archiveInfo,
                                              &archiveEntryInfo,
@@ -7913,7 +7914,7 @@ Errors Archive_copy(const String                    storageName,
             restoreInfo.statusInfo.entryTotalBytes = 00L;
             abortFlag = !updateStatusInfo(&restoreInfo);
 
-            /* get destination filename */
+            // get destination filename
             destinationFileName = getDestinationFileName(String_new(),
                                                          directoryName,
                                                          jobOptions->destination,
@@ -7921,7 +7922,7 @@ Errors Archive_copy(const String                    storageName,
                                                         );
 
 
-            /* check if directory already exists */
+            // check if directory already exists
             if (!jobOptions->overwriteFilesFlag && File_exists(destinationFileName))
             {
               printInfo(1,
@@ -7936,7 +7937,7 @@ Errors Archive_copy(const String                    storageName,
 
             printInfo(2,"  Restore directory '%s'...",String_cString(destinationFileName));
 
-            /* create directory */
+            // create directory
             if (!jobOptions->dryRunFlag)
             {
               error = File_makeDirectory(destinationFileName,
@@ -7962,7 +7963,7 @@ Errors Archive_copy(const String                    storageName,
               }
             }
 
-            /* set file time, file owner/group */
+            // set file time, file owner/group
             if (!jobOptions->dryRunFlag)
             {
               if (jobOptions->owner.userId  != FILE_DEFAULT_USER_ID ) fileInfo.userId  = jobOptions->owner.userId;
@@ -8005,29 +8006,29 @@ Errors Archive_copy(const String                    storageName,
               printInfo(2,"ok (dry-run)\n");
             }
 
-            /* check if all data read */
+            // check if all data read
             if (!Archive_eofData(&archiveEntryInfo))
             {
               printWarning("unexpected data at end of directory entry '%S'.\n",directoryName);
             }
 
-            /* free resources */
+            // free resources
             String_delete(destinationFileName);
           }
           else
           {
-            /* skip */
+            // skip
             printInfo(3,"  Restore '%s'...skipped\n",String_cString(directoryName));
           }
 
-          /* close archive file */
+          // close archive file
           error = Archive_closeEntry(&archiveEntryInfo);
           if (error != ERROR_NONE)
           {
             printWarning("close 'directory' entry fail (error: %s)\n",Errors_getText(error));
           }
 
-          /* free resources */
+          // free resources
           String_delete(directoryName);
         }
         break;
@@ -8040,7 +8041,7 @@ Errors Archive_copy(const String                    storageName,
           String   parentDirectoryName;
 //            FileInfo localFileInfo;
 
-          /* read link */
+          // read link
           linkName = String_new();
           fileName = String_new();
           error = Archive_readLinkEntry(&archiveInfo,
@@ -8072,20 +8073,20 @@ Errors Archive_copy(const String                    storageName,
             restoreInfo.statusInfo.entryTotalBytes = 00L;
             abortFlag = !updateStatusInfo(&restoreInfo);
 
-            /* get destination filename */
+            // get destination filename
             destinationFileName = getDestinationFileName(String_new(),
                                                          linkName,
                                                          jobOptions->destination,
                                                          jobOptions->directoryStripCount
                                                         );
 
-            /* create parent directories if not existing */
+            // create parent directories if not existing
             if (!jobOptions->dryRunFlag)
             {
               parentDirectoryName = File_getFilePathName(String_new(),destinationFileName);
               if (!File_exists(parentDirectoryName))
               {
-                /* create directory */
+                // create directory
                 error = File_makeDirectory(parentDirectoryName,
                                            FILE_DEFAULT_USER_ID,
                                            FILE_DEFAULT_GROUP_ID,
@@ -8107,7 +8108,7 @@ Errors Archive_copy(const String                    storageName,
                   continue;
                 }
 
-                /* set directory owner ship */
+                // set directory owner ship
                 error = File_setOwner(parentDirectoryName,
                                       (jobOptions->owner.userId != FILE_DEFAULT_USER_ID)?jobOptions->owner.userId:fileInfo.userId,
                                       (jobOptions->owner.groupId != FILE_DEFAULT_GROUP_ID)?jobOptions->owner.groupId:fileInfo.groupId
@@ -8140,7 +8141,7 @@ Errors Archive_copy(const String                    storageName,
               String_delete(parentDirectoryName);
             }
 
-            /* check if link areadly exists */
+            // check if link areadly exists
             if (!jobOptions->overwriteFilesFlag && File_exists(destinationFileName))
             {
               printInfo(1,
@@ -8160,7 +8161,7 @@ Errors Archive_copy(const String                    storageName,
 
             printInfo(2,"  Restore link '%s'...",String_cString(destinationFileName));
 
-            /* create link */
+            // create link
             if (!jobOptions->dryRunFlag)
             {
               error = File_makeLink(destinationFileName,fileName);
@@ -8184,7 +8185,7 @@ Errors Archive_copy(const String                    storageName,
               }
             }
 
-            /* set file time, file owner/group */
+            // set file time, file owner/group
             if (!jobOptions->dryRunFlag)
             {
               if (jobOptions->owner.userId  != FILE_DEFAULT_USER_ID ) fileInfo.userId  = jobOptions->owner.userId;
@@ -8228,29 +8229,29 @@ Errors Archive_copy(const String                    storageName,
               printInfo(2,"ok (dry-run)\n");
             }
 
-            /* check if all data read */
+            // check if all data read
             if (!Archive_eofData(&archiveEntryInfo))
             {
               printWarning("unexpected data at end of link entry '%S'.\n",linkName);
             }
 
-            /* free resources */
+            // free resources
             String_delete(destinationFileName);
           }
           else
           {
-            /* skip */
+            // skip
             printInfo(3,"  Restore '%s'...skipped\n",String_cString(linkName));
           }
 
-          /* close archive file */
+          // close archive file
           error = Archive_closeEntry(&archiveEntryInfo);
           if (error != ERROR_NONE)
           {
             printWarning("close 'link' entry fail (error: %s)\n",Errors_getText(error));
           }
 
-          /* free resources */
+          // free resources
           String_delete(fileName);
           String_delete(linkName);
         }
@@ -8272,7 +8273,7 @@ Errors Archive_copy(const String                    storageName,
           uint64           length;
           ulong            n;
 
-          /* read hard link */
+          // read hard link
           StringList_init(&fileNameList);
           error = Archive_readHardLinkEntry(&archiveInfo,
                                             &archiveEntryInfo,
@@ -8309,7 +8310,7 @@ Errors Archive_copy(const String                    storageName,
               restoreInfo.statusInfo.entryTotalBytes = fragmentSize;
               abortFlag = !updateStatusInfo(&restoreInfo);
 
-              /* get destination filename */
+              // get destination filename
               getDestinationFileName(destinationFileName,
                                      fileName,
                                      jobOptions->destination,
@@ -8318,13 +8319,13 @@ Errors Archive_copy(const String                    storageName,
 
               printInfo(2,"  Restore hard link '%s'...",String_cString(destinationFileName));
 
-              /* create parent directories if not existing */
+              // create parent directories if not existing
               if (!jobOptions->dryRunFlag)
               {
                 parentDirectoryName = File_getFilePathName(String_new(),destinationFileName);
                 if (!File_exists(parentDirectoryName))
                 {
-                  /* create directory */
+                  // create directory
                   error = File_makeDirectory(parentDirectoryName,
                                              FILE_DEFAULT_USER_ID,
                                              FILE_DEFAULT_GROUP_ID,
@@ -8349,7 +8350,7 @@ Errors Archive_copy(const String                    storageName,
                     }
                   }
 
-                  /* set directory owner ship */
+                  // set directory owner ship
                   error = File_setOwner(parentDirectoryName,
                                         (jobOptions->owner.userId != FILE_DEFAULT_USER_ID)?jobOptions->owner.userId:fileInfo.userId,
                                         (jobOptions->owner.groupId != FILE_DEFAULT_GROUP_ID)?jobOptions->owner.groupId:fileInfo.groupId
@@ -8381,7 +8382,7 @@ Errors Archive_copy(const String                    storageName,
 
               if (!restoredDataFlag)
               {
-                /* check if file fragment already eixsts, file already exists */
+                // check if file fragment already eixsts, file already exists
                 fragmentNode = FragmentList_find(&fragmentList,fileName);
                 if (fragmentNode != NULL)
                 {
@@ -8405,10 +8406,10 @@ Errors Archive_copy(const String                    storageName,
                   fragmentNode = FragmentList_add(&fragmentList,fileName,fileInfo.size,&fileInfo,sizeof(FileInfo));
                 }
 
-                /* create file */
+                // create file
                 if (!jobOptions->dryRunFlag)
                 {
-                  /* open file */
+                  // open file
                   error = File_open(&fileHandle,destinationFileName,FILE_OPEN_WRITE);
                   if (error != ERROR_NONE)
                   {
@@ -8428,7 +8429,7 @@ Errors Archive_copy(const String                    storageName,
                     }
                   }
 
-                  /* seek to fragment position */
+                  // seek to fragment position
                   error = File_seek(&fileHandle,fragmentOffset);
                   if (error != ERROR_NONE)
                   {
@@ -8451,13 +8452,13 @@ Errors Archive_copy(const String                    storageName,
                   String_set(hardLinkFileName,destinationFileName);
                 }
 
-                /* write file data */
+                // write file data
                 length = 0;
                 while (   ((restoreInfo.requestedAbortFlag == NULL) || !(*restoreInfo.requestedAbortFlag))
                        && (length < fragmentSize)
                       )
                 {
-                  /* pause */
+                  // pause
                   while ((restoreInfo.pauseFlag != NULL) && (*restoreInfo.pauseFlag))
                   {
                     Misc_udelay(500*1000);
@@ -8513,11 +8514,11 @@ Errors Archive_copy(const String                    storageName,
                   break;
                 }
 
-                /* add fragment to file fragment list */
+                // add fragment to file fragment list
                 FragmentList_addEntry(fragmentNode,fragmentOffset,fragmentSize);
 //FragmentList_debugPrintInfo(fragmentNode,String_cString(fileName));
 
-                /* set file size */
+                // set file size
                 if (!jobOptions->dryRunFlag)
                 {
                   if (File_getSize(&fileHandle) > fileInfo.size)
@@ -8526,13 +8527,13 @@ Errors Archive_copy(const String                    storageName,
                   }
                 }
 
-                /* close file */
+                // close file
                 if (!jobOptions->dryRunFlag)
                 {
                   File_close(&fileHandle);
                 }
 
-                /* set file time, file owner/group */
+                // set file time, file owner/group
                 if (!jobOptions->dryRunFlag)
                 {
                   if (jobOptions->owner.userId  != FILE_DEFAULT_USER_ID ) fileInfo.userId  = jobOptions->owner.userId;
@@ -8569,7 +8570,7 @@ Errors Archive_copy(const String                    storageName,
                   printInfo(2,"ok (dry-run)\n");
                 }
 
-                /* discard fragment list if file is complete */
+                // discard fragment list if file is complete
                 if (FragmentList_checkEntryComplete(fragmentNode))
                 {
                   FragmentList_discard(&fragmentList,fragmentNode);
@@ -8579,14 +8580,14 @@ Errors Archive_copy(const String                    storageName,
               }
               else
               {
-                /* check file if exists */
+                // check file if exists
                 if (!jobOptions->overwriteFilesFlag && File_exists(destinationFileName))
                 {
                   printInfo(2,"skipped (file exists)\n",String_cString(destinationFileName));
                   continue;
                 }
 
-                /* create hard link */
+                // create hard link
                 if (!jobOptions->dryRunFlag)
                 {
                   error = File_makeHardLink(destinationFileName,hardLinkFileName);
@@ -8632,7 +8633,7 @@ Errors Archive_copy(const String                    storageName,
             }
             else
             {
-              /* skip */
+              // skip
               printInfo(3,"  Restore '%s'...skipped\n",String_cString(fileName));
             }
           }
@@ -8645,14 +8646,14 @@ Errors Archive_copy(const String                    storageName,
             continue;
           }
 
-          /* close archive file, free resources */
+          // close archive file, free resources
           error = Archive_closeEntry(&archiveEntryInfo);
           if (error != ERROR_NONE)
           {
             printWarning("close 'hard link' entry fail (error: %s)\n",Errors_getText(error));
           }
 
-          /* free resources */
+          // free resources
           StringList_done(&fileNameList);
         }
         break;
@@ -8664,7 +8665,7 @@ Errors Archive_copy(const String                    storageName,
           String   parentDirectoryName;
 //            FileInfo localFileInfo;
 
-          /* read special device */
+          // read special device
           fileName = String_new();
           error = Archive_readSpecialEntry(&archiveInfo,
                                            &archiveEntryInfo,
@@ -8693,20 +8694,20 @@ Errors Archive_copy(const String                    storageName,
             restoreInfo.statusInfo.entryTotalBytes = 00L;
             abortFlag = !updateStatusInfo(&restoreInfo);
 
-            /* get destination filename */
+            // get destination filename
             destinationFileName = getDestinationFileName(String_new(),
                                                          fileName,
                                                          jobOptions->destination,
                                                          jobOptions->directoryStripCount
                                                         );
 
-            /* create parent directories if not existing */
+            // create parent directories if not existing
             if (!jobOptions->dryRunFlag)
             {
               parentDirectoryName = File_getFilePathName(String_new(),destinationFileName);
               if (!File_exists(parentDirectoryName))
               {
-                /* create directory */
+                // create directory
                 error = File_makeDirectory(parentDirectoryName,
                                            FILE_DEFAULT_USER_ID,
                                            FILE_DEFAULT_GROUP_ID,
@@ -8727,7 +8728,7 @@ Errors Archive_copy(const String                    storageName,
                   continue;
                 }
 
-                /* set directory owner ship */
+                // set directory owner ship
                 error = File_setOwner(parentDirectoryName,
                                       (jobOptions->owner.userId != FILE_DEFAULT_USER_ID)?jobOptions->owner.userId:fileInfo.userId,
                                       (jobOptions->owner.groupId != FILE_DEFAULT_GROUP_ID)?jobOptions->owner.groupId:fileInfo.groupId
@@ -8760,7 +8761,7 @@ Errors Archive_copy(const String                    storageName,
               String_delete(parentDirectoryName);
             }
 
-            /* check if special file already exists */
+            // check if special file already exists
             if (!jobOptions->overwriteFilesFlag && File_exists(destinationFileName))
             {
               printInfo(1,
@@ -8779,7 +8780,7 @@ Errors Archive_copy(const String                    storageName,
 
             printInfo(2,"  Restore special device '%s'...",String_cString(destinationFileName));
 
-            /* create special device */
+            // create special device
             if (!jobOptions->dryRunFlag)
             {
               error = File_makeSpecial(destinationFileName,
@@ -8805,7 +8806,7 @@ Errors Archive_copy(const String                    storageName,
               }
             }
 
-            /* set file time, file owner/group */
+            // set file time, file owner/group
             if (!jobOptions->dryRunFlag)
             {
               if (jobOptions->owner.userId  != FILE_DEFAULT_USER_ID ) fileInfo.userId  = jobOptions->owner.userId;
@@ -8848,29 +8849,29 @@ Errors Archive_copy(const String                    storageName,
               printInfo(2,"ok (dry-run)\n");
             }
 
-            /* check if all data read */
+            // check if all data read
             if (!Archive_eofData(&archiveEntryInfo))
             {
               printWarning("unexpected data at end of special entry '%S'.\n",fileName);
             }
 
-            /* free resources */
+            // free resources
             String_delete(destinationFileName);
           }
           else
           {
-            /* skip */
+            // skip
             printInfo(3,"  Restore '%s'...skipped\n",String_cString(fileName));
           }
 
-          /* close archive file */
+          // close archive file
           error = Archive_closeEntry(&archiveEntryInfo);
           if (error != ERROR_NONE)
           {
             printWarning("close 'special' entry fail (error: %s)\n",Errors_getText(error));
           }
 
-          /* free resources */
+          // free resources
           String_delete(fileName);
         }
         break;
