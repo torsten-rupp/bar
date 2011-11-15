@@ -1158,7 +1158,7 @@ LOCAL Errors writeFileDataBlock(ArchiveEntryInfo *archiveEntryInfo,
     }
 
     // update part size
-    archiveEntryInfo->file.chunkFileData.fragmentSize = Compress_getInputLength(&archiveEntryInfo->file.dataCompressInfo);
+    archiveEntryInfo->file.chunkFileData.fragmentSize = Compress_getInputLength(&archiveEntryInfo->file.deltaCompressInfo);
     error = Chunk_update(&archiveEntryInfo->file.chunkFileData.info);
     if (error != ERROR_NONE)
     {
@@ -2529,7 +2529,7 @@ Errors Archive_newFileEntry(ArchiveInfo                     *archiveInfo,
   archiveEntryInfo->file.chunkFileEntry.permission      = fileInfo->permission;
   String_set(archiveEntryInfo->file.chunkFileEntry.name,fileName);
 
-  // init delta chunk
+  // init delta chunk (if no delta-compression is enabled, use identity-compressor)
   if (COMPRESS_IS_XDELTA_ALGORITHM(archiveEntryInfo->file.deltaCompressAlgorithm))
   {
     error = Crypt_init(&archiveEntryInfo->file.chunkFileDelta.cryptInfo,
@@ -5868,7 +5868,7 @@ Errors Archive_closeEntry(ArchiveEntryInfo *archiveEntryInfo)
               if (archiveEntryInfo->file.headerWrittenFlag)
               {
                 // update part size
-                archiveEntryInfo->file.chunkFileData.fragmentSize = Compress_getInputLength(&archiveEntryInfo->file.dataCompressInfo);
+                archiveEntryInfo->file.chunkFileData.fragmentSize = Compress_getInputLength(&archiveEntryInfo->file.deltaCompressInfo);
                 if (error == ERROR_NONE)
                 {
                   tmpError = Chunk_update(&archiveEntryInfo->file.chunkFileData.info);
