@@ -910,6 +910,26 @@ LOCAL Errors writeFileChunks(ArchiveEntryInfo *archiveEntryInfo)
 {
   Errors error;
 
+  // open file if needed
+  if (!archiveEntryInfo->archiveInfo->file.openFlag)
+  {
+    // create file
+    error = createArchiveFile(archiveEntryInfo->archiveInfo);
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
+
+    // initialise variables
+    archiveEntryInfo->file.headerWrittenFlag = FALSE;
+
+    archiveEntryInfo->file.chunkFileData.fragmentOffset = archiveEntryInfo->file.chunkFileData.fragmentOffset+archiveEntryInfo->file.chunkFileData.fragmentSize;
+    archiveEntryInfo->file.chunkFileData.fragmentSize   = 0LL;
+
+    // reset data crypt
+    Crypt_reset(&archiveEntryInfo->file.cryptInfo,0);
+  }
+
   // create file chunk
   error = Chunk_create(&archiveEntryInfo->file.chunkFile.info);
   if (error != ERROR_NONE)
@@ -964,26 +984,6 @@ LOCAL Errors flushFileDataBlocks(ArchiveEntryInfo   *archiveEntryInfo,
   Errors error;
   uint   blockCount;
   ulong  length;
-
-  // open file if needed
-  if (!archiveEntryInfo->archiveInfo->file.openFlag)
-  {
-    // create file
-    error = createArchiveFile(archiveEntryInfo->archiveInfo);
-    if (error != ERROR_NONE)
-    {
-      return error;
-    }
-
-    // initialise variables
-    archiveEntryInfo->file.headerWrittenFlag = FALSE;
-
-    archiveEntryInfo->file.chunkFileData.fragmentOffset = archiveEntryInfo->file.chunkFileData.fragmentOffset+archiveEntryInfo->file.chunkFileData.fragmentSize;
-    archiveEntryInfo->file.chunkFileData.fragmentSize   = 0LL;
-
-    // reset data crypt
-    Crypt_reset(&archiveEntryInfo->file.cryptInfo,0);
-  }
 
   // create new part (if not already exists)
   if (!archiveEntryInfo->file.headerWrittenFlag && !archiveEntryInfo->file.createdFlag)
