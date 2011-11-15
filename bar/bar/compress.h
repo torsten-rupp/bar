@@ -169,7 +169,6 @@ typedef struct
                                                                  be available until next input byte is requested
                                                               */
           bool                            flushFlag;          // TRUE iff flush send to xdelta compressor
-          bool                            doneFlag;           // TRUE iff xdelta compressor done
         #endif /* HAVE_XDELTA3 */
       } xdelta;
     #endif /* HAVE_XDELTA */
