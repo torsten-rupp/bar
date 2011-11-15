@@ -29,11 +29,11 @@
 # KEY0
 # FIL0
 #   FENT
-#   [DLT0]
+#   [FDLT]
 #   FDAT
 # IMG0
 #   IENT
-#   [DLT0]
+#   [IDLT]
 #   IDATA
 # DIR0
 #   DENT
