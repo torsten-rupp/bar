@@ -405,7 +405,7 @@ typedef void               void32;
 #endif
 
 /* 2 macros necessary, because of "string"-construction */
-#define _HALT_STRING1(z) _HALT_STRING2(z) 
+#define _HALT_STRING1(z) _HALT_STRING2(z)
 #define _HALT_STRING2(z) #z
 #undef HALT
 #define HALT(errorLevel, format, args...) \
@@ -467,7 +467,7 @@ typedef void               void32;
   while (0)
 
 /* 2 macros necessary, because of "string"-construction */
-#define _FAIL_STRING1(z) _FAIL_STRING2(z) 
+#define _FAIL_STRING1(z) _FAIL_STRING2(z)
 #define _FAIL_STRING2(z) #z
 #define FAIL(errorLevel, format, args...) \
   do \
@@ -760,7 +760,7 @@ inline ushort swapWORD(ushort n)
 
 inline ulong swapLONG(ulong n)
 {
-  return( ((n & 0xFF000000) >> 24) | 
+  return( ((n & 0xFF000000) >> 24) |
           ((n & 0x00FF0000) >>  8) |
           ((n & 0x0000FF00) <<  8) |
           ((n & 0x000000FF) << 24)
@@ -808,6 +808,20 @@ void __abort(const char   *filename,
              const char   *format,
              ...
             );
+
+/***********************************************************************\
+* Name   : dumpMemory
+* Purpose: dump memory content
+* Input  : address - start address
+*          length  - length
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+#ifndef NDEBUG
+void dumpMemory(const void *address, uint length);
+#endif /* NDEBUG */
 
 #ifdef __cplusplus
 }

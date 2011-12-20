@@ -70,6 +70,47 @@ void __abort(const char   *filename,
   abort();
 }
 
+#ifndef NDEBUG
+void dumpMemory(const void *address, uint length)
+{
+  const byte *p;
+  uint       z,i;
+
+  z = 0;
+  while (z < length)
+  {
+    for (i = 0; i < 16; i++)
+    {
+      if ((z+i) < length)
+      {
+        p = (const byte*)address+z+i;
+        printf("%02x ",((uint)(*p)) & 0xFF);
+      }
+      else
+      {
+        printf("   ");
+      }
+    }
+    printf("  ");
+
+    for (i = 0; i < 16; i++)
+    {
+      if ((z+i) < length)
+      {
+        p = (const byte*)address+z+i;
+        printf("%c",isprint((int)(*p))?(*p):'.');
+      }
+      else
+      {
+      }
+    }
+    printf("\n");
+
+    z += 16;
+  }
+}
+#endif /* NDEBUG */
+
 #ifdef __cplusplus
 }
 #endif
