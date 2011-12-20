@@ -8,6 +8,8 @@
 *
 \***********************************************************************/
 
+#define __COMPRESS_IMPLEMENATION__
+
 /****************************** Includes *******************************/
 #include "config.h"
 
@@ -140,15 +142,17 @@ LOCAL Errors compressData(CompressInfo *compressInfo)
   switch (compressInfo->compressAlgorithm)
   {
     case COMPRESS_ALGORITHM_NONE:
-      if (compressInfo->compressBufferLength < compressInfo->compressBufferSize)  // space in compress buffer
+      if (   (compressInfo->compressBufferLength < compressInfo->compressBufferSize)  // space in compress buffer
+          && !compressInfo->endOfDataFlag                                             // not end-of-data
+         )
       {
         if (compressInfo->dataBufferLength > 0L)  // data available
         {
-          /* get max. number of data and compressed bytes */
+          // get max. number of data and max. number of "compressed" bytes
           maxDataBytes     = compressInfo->dataBufferLength-compressInfo->dataBufferIndex;
           maxCompressBytes = compressInfo->compressBufferSize-compressInfo->compressBufferLength;
 
-          /* copy from data buffer -> compress buffer */
+          // copy from data buffer -> compress buffer
           compressBytes = MIN(maxDataBytes,maxCompressBytes);
           dataBytes     = compressBytes;
           memcpy(compressInfo->compressBuffer+compressInfo->compressBufferLength,
@@ -156,11 +160,11 @@ LOCAL Errors compressData(CompressInfo *compressInfo)
                  compressBytes
                 );
 
-          /* update compress state, compress length */
+          // update compress state, compress length
           compressInfo->compressState = COMPRESS_STATE_RUNNING;
           compressInfo->compressBufferLength += compressBytes;
 
-          /* shift data buffer */
+          // shift data buffer
           memmove(compressInfo->dataBuffer,
                   compressInfo->dataBuffer+compressInfo->dataBufferIndex+dataBytes,
                   compressInfo->dataBufferLength-compressInfo->dataBufferIndex-dataBytes
@@ -169,8 +173,20 @@ LOCAL Errors compressData(CompressInfo *compressInfo)
           compressInfo->dataBufferIndex = 0L;
           compressInfo->dataBufferLength -= dataBytes;
 
-          /* store number of bytes "compressed" */
-          compressInfo->none.length += compressBytes;
+          // store number of bytes "compressed"
+          compressInfo->none.totalBytes += compressBytes;
+        }
+      }
+      if (   (compressInfo->compressBufferLength < compressInfo->compressBufferSize)  // space in "compress" buffer
+          && !compressInfo->endOfDataFlag                                             // not end-of-data
+         )
+      {
+        // finish "compress"
+        if (   compressInfo->flushFlag                                  // flush data requested
+            && (compressInfo->compressState == COMPRESS_STATE_RUNNING)  // compressor is running -> data available in internal buffers
+           )
+        {
+          compressInfo->endOfDataFlag = TRUE;
         }
       }
       break;
@@ -192,14 +208,14 @@ LOCAL Errors compressData(CompressInfo *compressInfo)
               && !compressInfo->endOfDataFlag                                             // not end-of-data
              )
           {
-            /* compress available data */
+            // compress available data
             if      (compressInfo->dataBufferLength > 0)  // data available
             {
-              /* get max. number of data and compressed bytes */
+              // get max. number of data and max. number of compressed bytes
               maxDataBytes     = compressInfo->dataBufferLength-compressInfo->dataBufferIndex;
               maxCompressBytes = compressInfo->compressBufferSize-compressInfo->compressBufferLength;
 
-              /* compress: transfer data buffer -> compress buffer */
+              // compress: transfer data buffer -> compress buffer
               compressInfo->zlib.stream.next_in   = compressInfo->dataBuffer+compressInfo->dataBufferIndex;
               compressInfo->zlib.stream.avail_in  = maxDataBytes;
               compressInfo->zlib.stream.next_out  = compressInfo->compressBuffer+compressInfo->compressBufferLength;
@@ -209,16 +225,16 @@ LOCAL Errors compressData(CompressInfo *compressInfo)
                    && (zlibError != Z_BUF_ERROR)
                  )
               {
-                return ERROR_COMPRESS_ERROR;
+                return ERROR(DEFLATE_FAIL,zlibError);
               }
               dataBytes     = maxDataBytes-compressInfo->zlib.stream.avail_in;
               compressBytes = maxCompressBytes-compressInfo->zlib.stream.avail_out;
 
-              /* update compress state, compress length */
+              // update compress state, compress length
               compressInfo->compressState = COMPRESS_STATE_RUNNING;
               compressInfo->compressBufferLength += compressBytes;
 
-              /* shift data buffer */
+              // shift data buffer
 //              memmove(compressInfo->dataBuffer+compressInfo->dataBufferIndex,
               memmove(compressInfo->dataBuffer,
                       compressInfo->dataBuffer+compressInfo->dataBufferIndex+dataBytes,
@@ -232,15 +248,15 @@ LOCAL Errors compressData(CompressInfo *compressInfo)
               && !compressInfo->endOfDataFlag                                             // not end-of-data
              )
           {
-            /* finish compress, flush internal compress buffers */
-            if (   (compressInfo->flushFlag)                                // flush data requested
+            // finish compress, flush internal compress buffers
+            if (   compressInfo->flushFlag                                  // flush data requested
                 && (compressInfo->compressState == COMPRESS_STATE_RUNNING)  // compressor is running -> data available in internal buffers
                )
             {
-              /* get max. number of compressed bytes */
+              // get max. number of compressed bytes
               maxCompressBytes = compressInfo->compressBufferSize-compressInfo->compressBufferLength;
 
-              /* compress with flush: transfer to compress buffer */
+              // compress with flush: transfer to compress buffer
               compressInfo->zlib.stream.next_in   = NULL;
               compressInfo->zlib.stream.avail_in  = 0;
               compressInfo->zlib.stream.next_out  = compressInfo->compressBuffer+compressInfo->compressBufferLength;
@@ -254,11 +270,11 @@ LOCAL Errors compressData(CompressInfo *compressInfo)
                        && (zlibError != Z_BUF_ERROR)
                       )
               {
-                return ERROR_COMPRESS_ERROR;
+                return ERROR(DEFLATE_FAIL,zlibError);
               }
               compressBytes = maxCompressBytes-compressInfo->zlib.stream.avail_out;
 
-              /* update compress length */
+              // update compress length
               compressInfo->compressBufferLength += compressBytes;
             }
           }
@@ -284,14 +300,14 @@ LOCAL Errors compressData(CompressInfo *compressInfo)
               && !compressInfo->endOfDataFlag                                             // not end-of-data
              )
           {
-            /* compress available data */
+            // compress available data
             if      (compressInfo->dataBufferLength > 0)  // data available
             {
-              /* get max. number of data and compressed bytes */
+              // get max. number of data and max. number of compressed bytes
               maxDataBytes     = compressInfo->dataBufferLength-compressInfo->dataBufferIndex;
               maxCompressBytes = compressInfo->compressBufferSize-compressInfo->compressBufferLength;
 
-              /* compress: transfer data buffer -> compress buffer */
+              // compress: transfer data buffer -> compress buffer
               compressInfo->bzlib.stream.next_in   = (char*)(compressInfo->dataBuffer+compressInfo->dataBufferIndex);
               compressInfo->bzlib.stream.avail_in  = maxDataBytes;
               compressInfo->bzlib.stream.next_out  = (char*)(compressInfo->compressBuffer+compressInfo->compressBufferLength);
@@ -299,16 +315,16 @@ LOCAL Errors compressData(CompressInfo *compressInfo)
               bzlibError = BZ2_bzCompress(&compressInfo->bzlib.stream,BZ_RUN);
               if (bzlibError != BZ_RUN_OK)
               {
-                return ERROR_COMPRESS_ERROR;
+                return ERROR(DEFLATE_FAIL,bzlibError);
               }
               dataBytes     = maxDataBytes-compressInfo->bzlib.stream.avail_in;
               compressBytes = maxCompressBytes-compressInfo->bzlib.stream.avail_out;
 
-              /* update compress state, compress length */
+              // update compress state, compress length
               compressInfo->compressState = COMPRESS_STATE_RUNNING;
               compressInfo->compressBufferLength += compressBytes;
 
-              /* shift data buffer */
+              // shift data buffer
 //              memmove(compressInfo->dataBuffer+compressInfo->dataBufferIndex,
               memmove(compressInfo->dataBuffer,
                       compressInfo->dataBuffer+compressInfo->dataBufferIndex+dataBytes,
@@ -322,15 +338,15 @@ LOCAL Errors compressData(CompressInfo *compressInfo)
               && !compressInfo->endOfDataFlag                                             // not end-of-data
              )
           {
-            /* finish compress, flush internal compress buffers */
-            if (   (compressInfo->flushFlag)                                // flush data requested
+            // finish compress, flush internal compress buffers
+            if (   compressInfo->flushFlag                                  // flush data requested
                 && (compressInfo->compressState == COMPRESS_STATE_RUNNING)  // compressor is running -> data available in internal buffers
                )
             {
-              /* get max. number of compressed bytes */
+              // get max. number of compressed bytes
               maxCompressBytes = compressInfo->compressBufferSize-compressInfo->compressBufferLength;
 
-              /* compress with flush: transfer to compress buffer */
+              // compress with flush: transfer to compress buffer
               compressInfo->bzlib.stream.next_in   = NULL;
               compressInfo->bzlib.stream.avail_in  = 0;
               compressInfo->bzlib.stream.next_out  = (char*)(compressInfo->compressBuffer+compressInfo->compressBufferLength);
@@ -342,11 +358,11 @@ LOCAL Errors compressData(CompressInfo *compressInfo)
               }
               else if (bzlibError != BZ_FINISH_OK)
               {
-                return ERROR_COMPRESS_ERROR;
+                return ERROR(DEFLATE_FAIL,bzlibError);
               }
               compressBytes = maxCompressBytes-compressInfo->bzlib.stream.avail_out;
 
-              /* update compress length */
+              // update compress length
               compressInfo->compressBufferLength += compressBytes;
             }
           }
@@ -372,14 +388,14 @@ LOCAL Errors compressData(CompressInfo *compressInfo)
               && !compressInfo->endOfDataFlag                                             // not end-of-data
              )
           {
-            /* compress available data */
+            // compress available data
             if      (compressInfo->dataBufferLength > 0)  // data available
             {
-              /* get max. number of data and compressed bytes */
+              // get max. number of data and max. number of compressed bytes
               maxDataBytes     = compressInfo->dataBufferLength-compressInfo->dataBufferIndex;
               maxCompressBytes = compressInfo->compressBufferSize-compressInfo->compressBufferLength;
 
-              /* compress: transfer data buffer -> compress buffer */
+              // compress: transfer data buffer -> compress buffer
               compressInfo->lzmalib.stream.next_in   = (uint8_t*)(compressInfo->dataBuffer+compressInfo->dataBufferIndex);
               compressInfo->lzmalib.stream.avail_in  = maxDataBytes;
               compressInfo->lzmalib.stream.next_out  = (uint8_t*)(compressInfo->compressBuffer+compressInfo->compressBufferLength);
@@ -387,16 +403,16 @@ LOCAL Errors compressData(CompressInfo *compressInfo)
               lzmaResult = lzma_code(&compressInfo->lzmalib.stream,LZMA_RUN);
               if (lzmaResult != LZMA_OK)
               {
-                return ERROR(COMPRESS_ERROR,lzmaResult);
+                return ERROR(DEFLATE_FAIL,lzmaResult);
               }
               dataBytes     = maxDataBytes-compressInfo->lzmalib.stream.avail_in;
               compressBytes = maxCompressBytes-compressInfo->lzmalib.stream.avail_out;
 
-              /* update compress state, compress length */
+              // update compress state, compress length
               compressInfo->compressState = COMPRESS_STATE_RUNNING;
               compressInfo->compressBufferLength += compressBytes;
 
-              /* shift data buffer */
+              // shift data buffer
 //              memmove(compressInfo->dataBuffer+compressInfo->dataBufferIndex,
               memmove(compressInfo->dataBuffer,
                       compressInfo->dataBuffer+compressInfo->dataBufferIndex+dataBytes,
@@ -410,15 +426,15 @@ LOCAL Errors compressData(CompressInfo *compressInfo)
               && !compressInfo->endOfDataFlag                                             // not end-of-data
              )
           {
-            /* finish compress, flush internal compress buffers */
-            if (   (compressInfo->flushFlag)                                // flush data requested
+            // finish compress, flush internal compress buffers
+            if (   compressInfo->flushFlag                                  // flush data requested
                 && (compressInfo->compressState == COMPRESS_STATE_RUNNING)  // compressor is running -> data available in internal buffers
                )
             {
-              /* get max. number of compressed bytes */
+              // get max. number of compressed bytes
               maxCompressBytes = compressInfo->compressBufferSize-compressInfo->compressBufferLength;
 
-              /* compress with flush: transfer to compress buffer */
+              // compress with flush: transfer to compress buffer
               compressInfo->lzmalib.stream.next_in   = NULL;
               compressInfo->lzmalib.stream.avail_in  = 0;
               compressInfo->lzmalib.stream.next_out  = (uint8_t*)(compressInfo->compressBuffer+compressInfo->compressBufferLength);
@@ -430,11 +446,11 @@ LOCAL Errors compressData(CompressInfo *compressInfo)
               }
               else if (lzmaResult != LZMA_OK)
               {
-                return ERROR(COMPRESS_ERROR,lzmaResult);
+                return ERROR(DEFLATE_FAIL,lzmaResult);
               }
               compressBytes = maxCompressBytes-compressInfo->lzmalib.stream.avail_out;
 
-              /* update compress length */
+              // update compress length
               compressInfo->compressBufferLength += compressBytes;
             }
           }
@@ -457,86 +473,92 @@ LOCAL Errors compressData(CompressInfo *compressInfo)
           ulong  dataBytes;
           int    xdeltaResult;
           Errors error;
-          ulong  bytesRead;
-          byte   *outputBuffer;
           ulong  outputBufferSize;
+          byte   *outputBuffer;
+          ulong  bytesRead;
 
           if (   (compressInfo->compressBufferLength < compressInfo->compressBufferSize)  // space in compress buffer
               && !compressInfo->endOfDataFlag                                             // not end-of-data
              )
           {
-            /* compress available data */
+            // compress available data
             if      (compressInfo->dataBufferLength > 0)  // data available
             {
-              /* get max. number of data and compressed bytes */
+              // get max. number of data and max. number of compressed bytes
               maxDataBytes     = compressInfo->dataBufferLength-compressInfo->dataBufferIndex;
               maxCompressBytes = compressInfo->compressBufferSize-compressInfo->compressBufferLength;
 
-              /* compress: transfer data buffer -> output buffer */
-              dataBytes = 0L;
-              do
+              if (maxDataBytes > compressInfo->xdelta.outputBufferLength)
               {
-                xdeltaResult = xd3_encode_input(&compressInfo->xdelta.stream);
-                switch (xdeltaResult)
+                // compress: transfer data buffer -> output buffer
+                dataBytes = 0L;
+                do
                 {
-                  case XD3_INPUT:
-                    if (dataBytes < maxDataBytes)
-                    {
+                  xdeltaResult = xd3_encode_input(&compressInfo->xdelta.stream);
+                  switch (xdeltaResult)
+                  {
+                    case XD3_INPUT:
+                      if (dataBytes < maxDataBytes)
+                      {
 //??? dataBufferIndex is always 0?
-                      compressInfo->xdelta.inputBuffer[0] = *(compressInfo->dataBuffer+compressInfo->dataBufferIndex+dataBytes);
-                      xd3_avail_input(&compressInfo->xdelta.stream,
-                                      compressInfo->xdelta.inputBuffer,
-                                      1
-                                     );
+                        compressInfo->xdelta.inputBuffer[0] = *(compressInfo->dataBuffer+compressInfo->dataBufferIndex+dataBytes);
+                        xd3_avail_input(&compressInfo->xdelta.stream,
+                                        compressInfo->xdelta.inputBuffer,
+                                        1
+                                       );
 xr++;
 //fprintf(stderr,"%s,%d: XD3_INPUT 1 - %lu %c\n",__FILE__,__LINE__,xr,*(compressInfo->dataBuffer+compressInfo->dataBufferIndex+dataBytes));
-                      dataBytes++;
-                    }
-                    break;
-                  case XD3_OUTPUT:
-                    /* allocate/resize output buffer */
-                    if (   (compressInfo->xdelta.outputBuffer == NULL)
-                        || (compressInfo->xdelta.outputBufferLength+(ulong)compressInfo->xdelta.stream.avail_out > compressInfo->xdelta.outputBufferSize)
-                       )
-                    {
-                      outputBufferSize = CEIL(compressInfo->xdelta.outputBufferLength+(ulong)compressInfo->xdelta.stream.avail_out,256);
-                      outputBuffer = realloc(compressInfo->xdelta.outputBuffer,outputBufferSize);
-                      if (outputBuffer == NULL)
-                      {
-                        HALT_INSUFFICIENT_MEMORY();
+                        dataBytes++;
                       }
-                      compressInfo->xdelta.outputBuffer     = outputBuffer;
-                      compressInfo->xdelta.outputBufferSize = outputBufferSize;
-                    }
+                      break;
+                    case XD3_OUTPUT:
+                      // allocate/resize output buffer
+                      if (   (compressInfo->xdelta.outputBuffer == NULL)
+                          || (compressInfo->xdelta.outputBufferLength+(ulong)compressInfo->xdelta.stream.avail_out > compressInfo->xdelta.outputBufferSize)
+                         )
+                      {
+                        outputBufferSize = CEIL(compressInfo->xdelta.outputBufferLength+(ulong)compressInfo->xdelta.stream.avail_out,256);
+                        outputBuffer = realloc(compressInfo->xdelta.outputBuffer,outputBufferSize);
+                        if (outputBuffer == NULL)
+                        {
+                          HALT_INSUFFICIENT_MEMORY();
+                        }
+                        compressInfo->xdelta.outputBuffer     = outputBuffer;
+                        compressInfo->xdelta.outputBufferSize = outputBufferSize;
+                      }
 
-                    /* copy data to output buffer */
-                    memcpy(compressInfo->xdelta.outputBuffer+compressInfo->xdelta.outputBufferLength,
-                           compressInfo->xdelta.stream.next_out,
-                           compressInfo->xdelta.stream.avail_out
-                          );
-                    compressInfo->xdelta.outputBufferLength += (ulong)compressInfo->xdelta.stream.avail_out;
-xw += compressInfo->xdelta.stream.avail_out;
+                      // append compressed data to output buffer
+                      memcpy(compressInfo->xdelta.outputBuffer+compressInfo->xdelta.outputBufferLength,
+                             compressInfo->xdelta.stream.next_out,
+                             compressInfo->xdelta.stream.avail_out
+                            );
+  //fprintf(stderr,"a n=%d:\n",compressInfo->xdelta.stream.avail_out);
+  //dumpMemory(compressInfo->xdelta.stream.next_out,compressInfo->xdelta.stream.avail_out);
 
-                    /* done data */
-                    xd3_consume_output(&compressInfo->xdelta.stream);
-fprintf(stderr,"%s,%d: XD3_OUTPUT %d\n",__FILE__,__LINE__,xw);
+                      compressInfo->xdelta.outputBufferLength += (ulong)compressInfo->xdelta.stream.avail_out;
+  xw += compressInfo->xdelta.stream.avail_out;
+
+                      // done compressed data
+                      xd3_consume_output(&compressInfo->xdelta.stream);
+//fprintf(stderr,"%s,%d: XD3_OUTPUT xw=%d\n",__FILE__,__LINE__,xw);
 //fprintf(stderr,"%s,%d: s=%ld l=%ld\n",__FILE__,__LINE__,compressInfo->xdelta.outputBufferSize,compressInfo->xdelta.outputBufferLength);
-                    break;
-                  case XD3_GETSRCBLK:
-                    assert(compressInfo->xdelta.sourceGetEntryDataBlock != NULL);
-                    error = compressInfo->xdelta.sourceGetEntryDataBlock(compressInfo->xdelta.sourceGetEntryDataBlockUserData,
-                                                                         (void*)compressInfo->xdelta.source.curblk,
-                                                                         (uint64)compressInfo->xdelta.source.blksize*compressInfo->xdelta.source.getblkno,
-                                                                         compressInfo->xdelta.source.blksize,
-                                                                         &bytesRead
-                                                                        );
-                    if (error != ERROR_NONE)
-                    {
+                      break;
+                    case XD3_GETSRCBLK:
+                      assert(compressInfo->xdelta.sourceGetEntryDataBlock != NULL);
+                      error = compressInfo->xdelta.sourceGetEntryDataBlock(compressInfo->xdelta.sourceGetEntryDataBlockUserData,
+                                                                           (void*)compressInfo->xdelta.source.curblk,
+                                                                           (uint64)compressInfo->xdelta.source.blksize*compressInfo->xdelta.source.getblkno,
+                                                                           compressInfo->xdelta.source.blksize,
+                                                                           &bytesRead
+                                                                          );
+                      if (error != ERROR_NONE)
+                      {
 fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,Errors_getText(error));
-                      return error;
-                    }
-                    compressInfo->xdelta.source.onblk    = bytesRead;
-                    compressInfo->xdelta.source.curblkno = compressInfo->xdelta.source.getblkno;
+                        return error;
+                      }
+                      compressInfo->xdelta.source.onblk    = bytesRead;
+                      compressInfo->xdelta.source.curblkno = compressInfo->xdelta.source.getblkno;
+#if 0
 fprintf(stderr,"%s,%d: XD3_GETSRCBLK %d %d %d: %02x %02x %02x %02x %02x %02x\n",__FILE__,__LINE__,compressInfo->xdelta.source.onblk,compressInfo->xdelta.source.curblkno,compressInfo->xdelta.source.blksize,
 compressInfo->xdelta.source.curblk[0],
 compressInfo->xdelta.source.curblk[1],
@@ -545,30 +567,43 @@ compressInfo->xdelta.source.curblk[3],
 compressInfo->xdelta.source.curblk[4],
 compressInfo->xdelta.source.curblk[5]
 );
-                    break;
-                  case XD3_GOTHEADER:
-fprintf(stderr,"%s,%d: XD3_GOTHEADER\n",__FILE__,__LINE__);
-                    break;
-                  case XD3_WINSTART:
-fprintf(stderr,"%s,%d: XD3_WINSTART\n",__FILE__,__LINE__);
-                    break;
-                  case XD3_WINFINISH:
-fprintf(stderr,"%s,%d: XD3_WINFINISH\n",__FILE__,__LINE__);
-                    break;
-                  default:
-                    return ERRORX(COMPRESS_ERROR,xdeltaResult,xd3_errstring(&compressInfo->xdelta.stream));
-                    break;
+#endif /* 0 */
+                      break;
+                    case XD3_GOTHEADER:
+//fprintf(stderr,"%s,%d: XD3_GOTHEADER\n",__FILE__,__LINE__);
+                      break;
+                    case XD3_WINSTART:
+//fprintf(stderr,"%s,%d: XD3_WINSTART\n",__FILE__,__LINE__);
+                      break;
+                    case XD3_WINFINISH:
+//fprintf(stderr,"%s,%d: XD3_WINFINISH\n",__FILE__,__LINE__);
+                      break;
+                    default:
+                      return ERRORX(DEFLATE_FAIL,xdeltaResult,xd3_errstring(&compressInfo->xdelta.stream));
+                      break;
+                  }
                 }
-              }
-              while (   (dataBytes < maxDataBytes)
-                     && (xdeltaResult != XD3_OUTPUT)
-                    );
+                while (   (dataBytes < maxDataBytes)
+                       && (xdeltaResult != XD3_OUTPUT)
+                      );
 
-              /* update compress state, copy compress data, update compress length */
-              compressInfo->compressState = COMPRESS_STATE_RUNNING;
+                // update compress state, copy compress data, update compress length
+                compressInfo->compressState = COMPRESS_STATE_RUNNING;
+
+                // shift data buffer
+//                memmove(compressInfo->dataBuffer+compressInfo->dataBufferIndex,
+                memmove(compressInfo->dataBuffer,
+                        compressInfo->dataBuffer+compressInfo->dataBufferIndex+dataBytes,
+                        compressInfo->dataBufferLength-compressInfo->dataBufferIndex-dataBytes
+                       );
+                compressInfo->dataBufferIndex = 0L;
+                compressInfo->dataBufferLength -= dataBytes;
+              }
+
+              // get compressed data
               if (compressInfo->xdelta.outputBufferLength > 0L)
               {
-                /* copy from output buffer -> compress buffer */
+                // copy from output buffer -> compress buffer
                 compressBytes = MIN(compressInfo->xdelta.outputBufferLength,maxCompressBytes);
                 memcpy(compressInfo->compressBuffer+compressInfo->compressBufferLength,
                        compressInfo->xdelta.outputBuffer,
@@ -577,22 +612,13 @@ fprintf(stderr,"%s,%d: XD3_WINFINISH\n",__FILE__,__LINE__);
                 compressInfo->compressBufferLength += compressBytes;
 assert(compressInfo->compressBufferLength <= compressInfo->compressBufferSize);
 
-                /* shift output buffer */
+                // shift output buffer
                 memmove(compressInfo->xdelta.outputBuffer,
                         compressInfo->xdelta.outputBuffer+compressBytes,
                         compressInfo->xdelta.outputBufferLength-compressBytes
                        );
                 compressInfo->xdelta.outputBufferLength -= compressBytes;
               }
-
-              /* shift data buffer */
-//              memmove(compressInfo->dataBuffer+compressInfo->dataBufferIndex,
-              memmove(compressInfo->dataBuffer,
-                      compressInfo->dataBuffer+compressInfo->dataBufferIndex+dataBytes,
-                      compressInfo->dataBufferLength-compressInfo->dataBufferIndex-dataBytes
-                     );
-              compressInfo->dataBufferIndex = 0L;
-              compressInfo->dataBufferLength -= dataBytes;
             }
           }
 
@@ -600,19 +626,21 @@ assert(compressInfo->compressBufferLength <= compressInfo->compressBufferSize);
               && !compressInfo->endOfDataFlag                                             // not end-of-data
              )
           {
+//fprintf(stderr,"%s, %d: compressInfo->flushFlag=%d (compressInfo->compressState=%d\n",__FILE__,__LINE__,compressInfo->flushFlag,compressInfo->compressState);
             // finish compress, flush internal compress buffers
             if (   compressInfo->flushFlag                                  // flush data requested
                 && (compressInfo->compressState == COMPRESS_STATE_RUNNING)  // compressor is running -> data available in internal buffers
                )
             {
 //fprintf(stderr,"%s,%d: %lu %lu ----------------------\n",__FILE__,__LINE__,(long)compressInfo->xdelta.stream.total_in,(long)compressInfo->xdelta.stream.total_out);
-              /* get max. number of data and compressed bytes */
+              // get max. number of data bytes and max. number of compressed bytes
               maxDataBytes     = compressInfo->dataBufferLength;
               maxCompressBytes = compressInfo->compressBufferSize-compressInfo->compressBufferLength;
 
-              dataBytes = 0L;
-              do
+              if (maxCompressBytes > compressInfo->xdelta.outputBufferLength)
               {
+                // compress: transfer data buffer -> output buffer
+                dataBytes = 0L;
                 do
                 {
                   xdeltaResult = xd3_encode_input(&compressInfo->xdelta.stream);
@@ -632,7 +660,6 @@ xr++;
                       }
                       else
                       {
-fprintf(stderr,"%s, %d: --- FLUSH ---\n",__FILE__,__LINE__);
                         xd3_set_flags(&compressInfo->xdelta.stream,compressInfo->xdelta.stream.flags|XD3_FLUSH);
                         xd3_avail_input(&compressInfo->xdelta.stream,compressInfo->xdelta.inputBuffer,0);
 
@@ -640,7 +667,7 @@ fprintf(stderr,"%s, %d: --- FLUSH ---\n",__FILE__,__LINE__);
                       }
                       break;
                     case XD3_OUTPUT:
-                      /* allocate/resize output buffer */
+                      // allocate/resize output buffer
                       if (   (compressInfo->xdelta.outputBuffer == NULL)
                           || (compressInfo->xdelta.outputBufferLength+(ulong)compressInfo->xdelta.stream.avail_out > compressInfo->xdelta.outputBufferSize)
                          )
@@ -655,21 +682,22 @@ fprintf(stderr,"%s, %d: --- FLUSH ---\n",__FILE__,__LINE__);
                         compressInfo->xdelta.outputBufferSize = outputBufferSize;
                       }
 
-                      /* copy data to output buffer */
+                      // append compressed data to output buffer
                       memcpy(compressInfo->xdelta.outputBuffer,
                              compressInfo->xdelta.stream.next_out,
                              compressInfo->xdelta.stream.avail_out
                             );
+//fprintf(stderr,"b n=%d:\n",compressInfo->xdelta.stream.avail_out);
+//dumpMemory(compressInfo->xdelta.stream.next_out,compressInfo->xdelta.stream.avail_out);
                       compressInfo->xdelta.outputBufferLength += (ulong)compressInfo->xdelta.stream.avail_out;
-  xw += compressInfo->xdelta.stream.avail_out;
+xw += compressInfo->xdelta.stream.avail_out;
 
-                      /* done data */
+                      // done compressed data
                       xd3_consume_output(&compressInfo->xdelta.stream);
-  fprintf(stderr,"%s,%d: XD3_OUTPUT %d\n",__FILE__,__LINE__,xw);
-  //fprintf(stderr,"%s,%d: outputBufferSize=%ld outputBufferLength=%ld\n",__FILE__,__LINE__,compressInfo->xdelta.outputBufferSize,compressInfo->xdelta.outputBufferLength);
+//fprintf(stderr,"%s,%d: XD3_OUTPUT xw=%d\n",__FILE__,__LINE__,xw);
+//fprintf(stderr,"%s,%d: outputBufferSize=%ld outputBufferLength=%ld\n",__FILE__,__LINE__,compressInfo->xdelta.outputBufferSize,compressInfo->xdelta.outputBufferLength);
                       break;
                     case XD3_GETSRCBLK:
-  fprintf(stderr,"%s,%d: XD3_GETSRCBLK %d\n",__FILE__,__LINE__,compressInfo->xdelta.source.getblkno);
                       assert(compressInfo->xdelta.sourceGetEntryDataBlock != NULL);
                       error = compressInfo->xdelta.sourceGetEntryDataBlock(compressInfo->xdelta.sourceGetEntryDataBlockUserData,
                                                                            (void*)compressInfo->xdelta.source.curblk,
@@ -679,20 +707,20 @@ fprintf(stderr,"%s, %d: --- FLUSH ---\n",__FILE__,__LINE__);
                                                                           );
                       if (error != ERROR_NONE)
                       {
-  fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,Errors_getText(error));
+fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,Errors_getText(error));
                         return error;
                       }
                       compressInfo->xdelta.source.onblk    = bytesRead;
                       compressInfo->xdelta.source.curblkno = compressInfo->xdelta.source.getblkno;
 #if 0
-  fprintf(stderr,"%s,%d: XD3_GETSRCBLK %d %d %d: %02x %02x %02x %02x %02x %02x\n",__FILE__,__LINE__,compressInfo->xdelta.source.onblk,compressInfo->xdelta.source.curblkno,compressInfo->xdelta.source.blksize,
-  compressInfo->xdelta.source.curblk[0],
-  compressInfo->xdelta.source.curblk[1],
-  compressInfo->xdelta.source.curblk[2],
-  compressInfo->xdelta.source.curblk[3],
-  compressInfo->xdelta.source.curblk[4],
-  compressInfo->xdelta.source.curblk[5]
-  );
+fprintf(stderr,"%s,%d: XD3_GETSRCBLK %d %d %d: %02x %02x %02x %02x %02x %02x\n",__FILE__,__LINE__,compressInfo->xdelta.source.onblk,compressInfo->xdelta.source.curblkno,compressInfo->xdelta.source.blksize,
+compressInfo->xdelta.source.curblk[0],
+compressInfo->xdelta.source.curblk[1],
+compressInfo->xdelta.source.curblk[2],
+compressInfo->xdelta.source.curblk[3],
+compressInfo->xdelta.source.curblk[4],
+compressInfo->xdelta.source.curblk[5]
+);
 #endif /* 0 */
                       break;
                     case XD3_GOTHEADER:
@@ -702,40 +730,39 @@ fprintf(stderr,"%s, %d: --- FLUSH ---\n",__FILE__,__LINE__);
 //fprintf(stderr,"%s,%d: XD3_WINSTART\n",__FILE__,__LINE__);
                       break;
                     case XD3_WINFINISH:
-                      /* Note: WINFINSIH after flush mean: end of compression */
+                      // Note: WINFINSIH after flush mean: end of compression
 //fprintf(stderr,"%s,%d: XD3_WINFINISH\n",__FILE__,__LINE__);
                       if (compressInfo->xdelta.flushFlag) compressInfo->endOfDataFlag = TRUE;
                       break;
                     default:
-                      return ERRORX(COMPRESS_ERROR,xdeltaResult,xd3_errstring(&compressInfo->xdelta.stream));
+                      return ERRORX(DEFLATE_FAIL,xdeltaResult,xd3_errstring(&compressInfo->xdelta.stream));
                       break;
                   }
                 }
                 while (   !compressInfo->endOfDataFlag
                        && (xdeltaResult != XD3_OUTPUT)
                       );
-
-                /* copy compress data, update compress length */
-                if ((maxCompressBytes > 0) && (compressInfo->xdelta.outputBufferLength > 0L))
-                {
-                  /* copy from output buffer -> compress buffer */
-                  compressBytes = MIN(compressInfo->xdelta.outputBufferLength,maxCompressBytes);
-                  memcpy(compressInfo->compressBuffer+compressInfo->compressBufferLength,
-                         compressInfo->xdelta.outputBuffer,
-                         compressBytes
-                        );
-                  compressInfo->compressBufferLength += compressBytes;
-                  maxCompressBytes -= compressBytes;
-
-                  /* shift output buffer */
-                  memmove(compressInfo->xdelta.outputBuffer,
-                          compressInfo->xdelta.outputBuffer+compressBytes,
-                          compressInfo->xdelta.outputBufferLength-compressBytes
-                         );
-                  compressInfo->xdelta.outputBufferLength -= compressBytes;
-                }
               }
-              while (!compressInfo->endOfDataFlag);
+
+              // get compressed data
+              if (compressInfo->xdelta.outputBufferLength > 0L)
+              {
+                // copy from output buffer -> compress buffer
+                compressBytes = MIN(compressInfo->xdelta.outputBufferLength,maxCompressBytes);
+                memcpy(compressInfo->compressBuffer+compressInfo->compressBufferLength,
+                       compressInfo->xdelta.outputBuffer,
+                       compressBytes
+                      );
+                compressInfo->compressBufferLength += compressBytes;
+                maxCompressBytes -= compressBytes;
+
+                // shift output buffer
+                memmove(compressInfo->xdelta.outputBuffer,
+                        compressInfo->xdelta.outputBuffer+compressBytes,
+                        compressInfo->xdelta.outputBufferLength-compressBytes
+                       );
+                compressInfo->xdelta.outputBufferLength -= compressBytes;
+              }
             }
           }
         }
@@ -776,7 +803,7 @@ LOCAL Errors decompressData(CompressInfo *compressInfo)
   assert(compressInfo->compressBufferIndex <= compressInfo->compressBufferLength);
   assert(compressInfo->compressBufferLength <= compressInfo->compressBufferSize);
 
-  /* decompress if possible */
+  // decompress if possible
   switch (compressInfo->compressAlgorithm)
   {
     case COMPRESS_ALGORITHM_NONE:
@@ -785,27 +812,47 @@ LOCAL Errors decompressData(CompressInfo *compressInfo)
         compressInfo->dataBufferIndex  = 0L;
         compressInfo->dataBufferLength = 0L;
 
-        if (compressInfo->compressBufferIndex < compressInfo->compressBufferLength)  // unprocessed compressed data available
+        if (!compressInfo->endOfDataFlag)
         {
-          /* get max. number of compressed and data bytes */
-          maxCompressBytes = compressInfo->compressBufferLength-compressInfo->compressBufferIndex;
-          maxDataBytes     = compressInfo->dataBufferSize-compressInfo->dataBufferIndex;
+          // "decompress" available data
+          if (compressInfo->compressBufferIndex < compressInfo->compressBufferLength)  // unprocessed "compressed" data available
+          {
+            // get max. number of "compressed" bytes and max. number of data bytes
+            maxCompressBytes = compressInfo->compressBufferLength-compressInfo->compressBufferIndex;
+            maxDataBytes     = compressInfo->dataBufferSize-compressInfo->dataBufferIndex;
 
-          /* copy from compress buffer -> data buffer */
-          dataBytes     = MIN(maxCompressBytes,maxDataBytes);
-          compressBytes = dataBytes;
-          memcpy(compressInfo->dataBuffer+compressInfo->dataBufferIndex,
-                 compressInfo->compressBuffer+compressInfo->compressBufferIndex,
-                 dataBytes
-                );
+            // copy from compress buffer -> data buffer
+            dataBytes     = MIN(maxCompressBytes,maxDataBytes);
+            compressBytes = dataBytes;
+            memcpy(compressInfo->dataBuffer+compressInfo->dataBufferIndex,
+                   compressInfo->compressBuffer+compressInfo->compressBufferIndex,
+                   dataBytes
+                  );
 
-          /* update compress state, compress index, data length */
-          compressInfo->compressState = COMPRESS_STATE_RUNNING;
-          compressInfo->compressBufferIndex += compressBytes;
-          compressInfo->dataBufferLength += dataBytes;
+            // update compress state, compress index, data length
+            compressInfo->compressState = COMPRESS_STATE_RUNNING;
+            compressInfo->compressBufferIndex += compressBytes;
+            compressInfo->dataBufferLength += dataBytes;
 
-          /* store number of data bytes */
-          compressInfo->none.length += dataBytes;
+            // store number of "decompressed" data bytes
+            compressInfo->none.totalBytes += dataBytes;
+          }
+        }
+      }
+      if (compressInfo->dataBufferIndex >= compressInfo->dataBufferLength)  // no data in data buffer
+      {
+        compressInfo->dataBufferIndex  = 0L;
+        compressInfo->dataBufferLength = 0L;
+
+        if (!compressInfo->endOfDataFlag)
+        {
+          // finish "decompress"
+          if (   compressInfo->flushFlag                                  // flush data requested
+              && (compressInfo->compressState == COMPRESS_STATE_RUNNING)  // compressor is running -> data available in internal buffers
+             )
+          {
+            compressInfo->endOfDataFlag = TRUE;
+          }
         }
       }
       break;
@@ -830,14 +877,14 @@ LOCAL Errors decompressData(CompressInfo *compressInfo)
 
             if (!compressInfo->endOfDataFlag)
             {
-              /* decompress available data */
+              // decompress available data
               if      (compressInfo->compressBufferIndex < compressInfo->compressBufferLength)  // unprocessed compressed data available
               {
-                /* get max. number of compressed and data bytes */
+                // get max. number of compressed and max. number of data bytes
                 maxCompressBytes = compressInfo->compressBufferLength-compressInfo->compressBufferIndex;
                 maxDataBytes     = compressInfo->dataBufferSize;
 
-                /* decompress: transfer compress buffer -> data buffer */
+                // decompress: transfer compress buffer -> data buffer
                 compressInfo->zlib.stream.next_in   = compressInfo->compressBuffer+compressInfo->compressBufferIndex;
                 compressInfo->zlib.stream.avail_in  = maxCompressBytes;
                 compressInfo->zlib.stream.next_out  = compressInfo->dataBuffer;
@@ -851,12 +898,12 @@ LOCAL Errors decompressData(CompressInfo *compressInfo)
                          && (zlibResult != Z_BUF_ERROR)
                         )
                 {
-                  return ERROR_COMPRESS_ERROR;
+                  return ERROR(INFLATE_FAIL,zlibResult);
                 }
                 compressBytes = maxCompressBytes-compressInfo->zlib.stream.avail_in;
                 dataBytes     = maxDataBytes-compressInfo->zlib.stream.avail_out;
 
-                /* update compress state, compress index, data length */
+                // update compress state, compress index, data length
                 compressInfo->compressState = COMPRESS_STATE_RUNNING;
                 compressInfo->compressBufferIndex += compressBytes;
                 compressInfo->dataBufferLength = dataBytes;
@@ -870,16 +917,16 @@ LOCAL Errors decompressData(CompressInfo *compressInfo)
 
             if (!compressInfo->endOfDataFlag)
             {
-              /* finish decompress, flush internal decompress buffers */
-              if (   (compressInfo->flushFlag)                                // flush data requested
+              // finish decompress, flush internal decompress buffers
+              if (   compressInfo->flushFlag                                  // flush data requested
                   && (compressInfo->compressState == COMPRESS_STATE_RUNNING)  // compressor is running -> data available in internal buffers
                  )
               {
-                /* get max. number of compressed and data bytes */
+                // get max. number of compressed and max. number of data bytes
                 maxCompressBytes = compressInfo->compressBufferLength-compressInfo->compressBufferIndex;
                 maxDataBytes     = compressInfo->dataBufferSize;
 
-                /* decompress with flush: transfer to data buffer */
+                // decompress with flush: transfer rest of internal data -> data buffer
                 compressInfo->zlib.stream.next_in   = NULL;
                 compressInfo->zlib.stream.avail_in  = 0;
                 compressInfo->zlib.stream.next_out  = compressInfo->dataBuffer;
@@ -893,11 +940,11 @@ LOCAL Errors decompressData(CompressInfo *compressInfo)
                          && (zlibResult != Z_BUF_ERROR)
                         )
                 {
-                  return ERROR_COMPRESS_ERROR;
+                  return ERROR(INFLATE_FAIL,zlibResult);
                 }
                 dataBytes = maxDataBytes-compressInfo->zlib.stream.avail_out;
 
-                /* update data length */
+                // update data length
                 compressInfo->dataBufferLength = dataBytes;
               }
             }
@@ -927,14 +974,14 @@ LOCAL Errors decompressData(CompressInfo *compressInfo)
 
             if (!compressInfo->endOfDataFlag)
             {
-              /* decompress available data */
+              // decompress available data
               if      (compressInfo->compressBufferIndex < compressInfo->compressBufferLength)  // unprocessed compressed data available
               {
-                /* get max. number of compressed and data bytes */
+                // get max. number of compressed and max. number of data bytes
                 maxCompressBytes = compressInfo->compressBufferLength-compressInfo->compressBufferIndex;
                 maxDataBytes     = compressInfo->dataBufferSize;
 
-                /* decompress: transfer compress buffer -> data buffer */
+                // decompress: transfer compress buffer -> data buffer
                 compressInfo->bzlib.stream.next_in   = (char*)(compressInfo->compressBuffer+compressInfo->compressBufferIndex);
                 compressInfo->bzlib.stream.avail_in  = maxCompressBytes;
                 compressInfo->bzlib.stream.next_out  = (char*)compressInfo->dataBuffer;
@@ -946,12 +993,12 @@ LOCAL Errors decompressData(CompressInfo *compressInfo)
                 }
                 else if (bzlibResult != BZ_OK)
                 {
-                  return ERROR_COMPRESS_ERROR;
+                  return ERROR(INFLATE_FAIL,bzlibResult);
                 }
                 compressBytes = maxCompressBytes-compressInfo->bzlib.stream.avail_in;
                 dataBytes     = maxDataBytes-compressInfo->bzlib.stream.avail_out;
 
-                /* update compress state, compress index, data length */
+                // update compress state, compress index, data length
                 compressInfo->compressState = COMPRESS_STATE_RUNNING;
                 compressInfo->compressBufferIndex += compressBytes;
                 compressInfo->dataBufferLength = dataBytes;
@@ -965,16 +1012,16 @@ LOCAL Errors decompressData(CompressInfo *compressInfo)
 
             if (!compressInfo->endOfDataFlag)
             {
-              /* finish decompress, flush internal decompress buffers */
-              if (   (compressInfo->flushFlag)                                // flush data requested
+              // finish decompress, flush internal decompress buffers
+              if (   compressInfo->flushFlag                                  // flush data requested
                   && (compressInfo->compressState == COMPRESS_STATE_RUNNING)  // compressor is running -> data available in internal buffers
                  )
               {
-                /* get max. number of compressed and data bytes */
+                // get max. number of compressed and max. number of data bytes
                 maxCompressBytes = compressInfo->compressBufferLength-compressInfo->compressBufferIndex;
                 maxDataBytes     = compressInfo->dataBufferSize;
 
-                /* decompress with flush: transfer to data buffer */
+                // decompress with flush: transfer rest of internal data -> data buffer
                 compressInfo->bzlib.stream.next_in   = NULL;
                 compressInfo->bzlib.stream.avail_in  = 0;
                 compressInfo->bzlib.stream.next_out  = (char*)compressInfo->dataBuffer;
@@ -986,11 +1033,11 @@ LOCAL Errors decompressData(CompressInfo *compressInfo)
                 }
                 else if (bzlibResult != BZ_RUN_OK)
                 {
-                  return ERROR_COMPRESS_ERROR;
+                  return ERROR(INFLATE_FAIL,bzlibResult);
                 }
                 dataBytes = maxDataBytes-compressInfo->bzlib.stream.avail_out;
 
-                /* update data length */
+                // update data length
                 compressInfo->dataBufferLength = dataBytes;
               }
             }
@@ -1020,14 +1067,14 @@ LOCAL Errors decompressData(CompressInfo *compressInfo)
 
             if (!compressInfo->endOfDataFlag)
             {
-              /* decompress available data */
+              // decompress available data
               if      (compressInfo->compressBufferIndex < compressInfo->compressBufferLength)  // unprocessed compressed data available
               {
-                /* get max. number of compressed and data bytes */
+                // get max. number of compressed and max. number of data bytes
                 maxCompressBytes = compressInfo->compressBufferLength-compressInfo->compressBufferIndex;
                 maxDataBytes     = compressInfo->dataBufferSize;
 
-                /* decompress: transfer compress buffer -> data buffer */
+                // decompress: transfer compress buffer -> data buffer
                 compressInfo->lzmalib.stream.next_in   = (uint8_t*)(compressInfo->compressBuffer+compressInfo->compressBufferIndex);
                 compressInfo->lzmalib.stream.avail_in  = maxCompressBytes;
                 compressInfo->lzmalib.stream.next_out  = (uint8_t*)compressInfo->dataBuffer;
@@ -1039,12 +1086,12 @@ LOCAL Errors decompressData(CompressInfo *compressInfo)
                 }
                 else if (lzmaResult != LZMA_OK)
                 {
-                  return ERROR_COMPRESS_ERROR;
+                  return ERROR(INFLATE_FAIL,lzmaResult);
                 }
                 compressBytes = maxCompressBytes-compressInfo->lzmalib.stream.avail_in;
                 dataBytes     = maxDataBytes-compressInfo->lzmalib.stream.avail_out;
 
-                /* update compress state, compress index, data length */
+                // update compress state, compress index, data length
                 compressInfo->compressState = COMPRESS_STATE_RUNNING;
                 compressInfo->compressBufferIndex += compressBytes;
                 compressInfo->dataBufferLength = dataBytes;
@@ -1058,16 +1105,16 @@ LOCAL Errors decompressData(CompressInfo *compressInfo)
 
             if (!compressInfo->endOfDataFlag)
             {
-              /* finish decompress, flush internal decompress buffers */
-              if (   (compressInfo->flushFlag)                                // flush data requested
+              // finish decompress, flush internal decompress buffers
+              if (   compressInfo->flushFlag                                  // flush data requested
                   && (compressInfo->compressState == COMPRESS_STATE_RUNNING)  // compressor is running -> data available in internal buffers
                  )
               {
-                /* get max. number of compressed and data bytes */
+                // get max. number of compressed and max. number of data bytes
                 maxCompressBytes = compressInfo->compressBufferLength-compressInfo->compressBufferIndex;
                 maxDataBytes     = compressInfo->dataBufferSize;
 
-                /* decompress with flush: transfer to data buffer */
+                // decompress with flush: transfer rest of internal data -> data buffer
                 compressInfo->lzmalib.stream.next_in   = NULL;
                 compressInfo->lzmalib.stream.avail_in  = 0;
                 compressInfo->lzmalib.stream.next_out  = (uint8_t*)compressInfo->dataBuffer;
@@ -1079,11 +1126,11 @@ LOCAL Errors decompressData(CompressInfo *compressInfo)
                 }
                 else if (lzmaResult != LZMA_OK)
                 {
-                  return ERROR_COMPRESS_ERROR;
+                  return ERROR(INFLATE_FAIL,lzmaResult);
                 }
                 dataBytes = maxDataBytes-compressInfo->lzmalib.stream.avail_out;
 
-                /* update data length */
+                // update data length
                 compressInfo->dataBufferLength = dataBytes;
               }
             }
@@ -1104,100 +1151,149 @@ LOCAL Errors decompressData(CompressInfo *compressInfo)
     case COMPRESS_ALGORITHM_XDELTA_9:
       #ifdef HAVE_XDELTA3
         {
-          ulong compressBytes;
-          int   xdeltaResult;
-          ulong outputBufferSize;
-          byte  *outputBuffer;
+          ulong  compressBytes;
+          int    xdeltaResult;
+          Errors error;
+          ulong  outputBufferSize;
+          byte   *outputBuffer;
+          ulong  bytesRead;
 
           if (compressInfo->dataBufferIndex >= compressInfo->dataBufferLength)  // no data in data buffer
           {
             compressInfo->dataBufferIndex  = 0L;
             compressInfo->dataBufferLength = 0L;
 
-            if (!compressInfo->endOfDataFlag)
+            if (!compressInfo->endOfDataFlag)  // not end-of-data
             {
-              /* decompress available data */
+              // decompress available data
               if      (compressInfo->compressBufferIndex < compressInfo->compressBufferLength)  // unprocessed compressed data available
               {
-                /* get max. number of compressed and data bytes */
+                // get max. number of compressed and max. number of data bytes
                 maxCompressBytes = compressInfo->compressBufferLength-compressInfo->compressBufferIndex;
                 maxDataBytes     = compressInfo->dataBufferSize;
 
-                /* decompress: transfer compress buffer -> output buffer */
-                compressBytes = 0L;
-                do
+                if (maxDataBytes > compressInfo->xdelta.outputBufferLength)
                 {
-                  xdeltaResult = xd3_decode_input(&compressInfo->xdelta.stream);
-                  switch (xdeltaResult)
+                  // decompress: transfer compress buffer -> output buffer
+//fprintf(stderr,"%s,%d: decompress ----------------------------------\n",__FILE__,__LINE__);
+                  compressBytes = 0L;
+bool                  doneFlag = FALSE;
+                  do
                   {
-                    case XD3_INPUT:
-//fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
-                      compressInfo->xdelta.inputBuffer[0] = *(compressInfo->compressBuffer+compressInfo->compressBufferIndex+compressBytes);
-                      xd3_avail_input(&compressInfo->xdelta.stream,
-                                      compressInfo->xdelta.inputBuffer,
-                                      1
-                                     );
-                      compressBytes++;
-                      break;
-                    case XD3_OUTPUT:
-fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
-                      /* allocate/resize output buffer */
-                      if (   (compressInfo->xdelta.outputBuffer == NULL)
-                          || (compressInfo->xdelta.outputBufferLength+(ulong)compressInfo->xdelta.stream.avail_out > compressInfo->xdelta.outputBufferSize)
-                         )
-                      {
-                        outputBufferSize = CEIL(compressInfo->xdelta.outputBufferLength+(ulong)compressInfo->xdelta.stream.avail_out,256);
-                        outputBuffer = realloc(compressInfo->xdelta.outputBuffer,outputBufferSize);
-                        if (outputBuffer == NULL)
+                    xdeltaResult = xd3_decode_input(&compressInfo->xdelta.stream);
+                    switch (xdeltaResult)
+                    {
+                      case XD3_INPUT:
+                        if (compressBytes < maxCompressBytes)
                         {
-                          HALT_INSUFFICIENT_MEMORY();
+                          compressInfo->xdelta.inputBuffer[0] = *(compressInfo->compressBuffer+compressInfo->compressBufferIndex+compressBytes);
+                          xd3_avail_input(&compressInfo->xdelta.stream,
+                                          compressInfo->xdelta.inputBuffer,
+                                          1
+                                         );
+xr++;
+//fprintf(stderr,"%s,%d: XD3_INPUT xr=%d\n",__FILE__,__LINE__,xr);
+                          compressBytes++;
                         }
-                        compressInfo->xdelta.outputBuffer     = outputBuffer;
-                        compressInfo->xdelta.outputBufferSize = outputBufferSize;
-                      }
+                        else
+                        {
+                          doneFlag = TRUE;
+                        }
+                        break;
+                      case XD3_OUTPUT:
+                        // allocate/resize output buffer
+                        if (   (compressInfo->xdelta.outputBuffer == NULL)
+                            || (compressInfo->xdelta.outputBufferLength+(ulong)compressInfo->xdelta.stream.avail_out > compressInfo->xdelta.outputBufferSize)
+                           )
+                        {
+                          outputBufferSize = CEIL(compressInfo->xdelta.outputBufferLength+(ulong)compressInfo->xdelta.stream.avail_out,256);
+                          outputBuffer = realloc(compressInfo->xdelta.outputBuffer,outputBufferSize);
+                          if (outputBuffer == NULL)
+                          {
+                            HALT_INSUFFICIENT_MEMORY();
+                          }
+                          compressInfo->xdelta.outputBuffer     = outputBuffer;
+                          compressInfo->xdelta.outputBufferSize = outputBufferSize;
+                        }
 
-                      /* copy data to output buffer */
-                      memcpy(compressInfo->xdelta.outputBuffer+compressInfo->xdelta.outputBufferLength,
-                             compressInfo->xdelta.stream.next_out,
-                             compressInfo->xdelta.stream.avail_out
-                            );
-                      compressInfo->xdelta.outputBufferLength += (ulong)compressInfo->xdelta.stream.avail_out;
-                      xd3_consume_output(&compressInfo->xdelta.stream);
+                        // append decompressed data to output buffer
+                        memcpy(compressInfo->xdelta.outputBuffer+compressInfo->xdelta.outputBufferLength,
+                               compressInfo->xdelta.stream.next_out,
+                               compressInfo->xdelta.stream.avail_out
+                              );
 
-  fprintf(stderr,"%s,%d: s=%ld l=%ld\n",__FILE__,__LINE__,compressInfo->xdelta.outputBufferSize,compressInfo->xdelta.outputBufferLength);
-                      break;
-                    case XD3_GOTHEADER:
-  fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
-                      break;
-                    case XD3_WINSTART:
-  fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
-                      break;
-                    case XD3_WINFINISH:
-  fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
-                      break;
-                    default:
-                      return ERRORX(COMPRESS_ERROR,xdeltaResult,xd3_errstring(&compressInfo->xdelta.stream));
-                      break;
+                        compressInfo->xdelta.outputBufferLength += (ulong)compressInfo->xdelta.stream.avail_out;
+xw += compressInfo->xdelta.stream.avail_out;
+
+                        // done decompressed data
+                        xd3_consume_output(&compressInfo->xdelta.stream);
+//fprintf(stderr,"%s,%d: XD3_OUTPUT xw=%d\n",__FILE__,__LINE__,xw);
+//fprintf(stderr,"%s,%d: outputBufferSize=%ld outputBufferLength=%ld\n",__FILE__,__LINE__,compressInfo->xdelta.outputBufferSize,compressInfo->xdelta.outputBufferLength);
+                        break;
+                      case XD3_GETSRCBLK:
+                        assert(compressInfo->xdelta.sourceGetEntryDataBlock != NULL);
+                        error = compressInfo->xdelta.sourceGetEntryDataBlock(compressInfo->xdelta.sourceGetEntryDataBlockUserData,
+                                                                             (void*)compressInfo->xdelta.source.curblk,
+                                                                             (uint64)compressInfo->xdelta.source.blksize*compressInfo->xdelta.source.getblkno,
+                                                                             compressInfo->xdelta.source.blksize,
+                                                                             &bytesRead
+                                                                            );
+                        if (error != ERROR_NONE)
+                        {
+fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,Errors_getText(error));
+                          return error;
+                        }
+                        compressInfo->xdelta.source.onblk    = bytesRead;
+                        compressInfo->xdelta.source.curblkno = compressInfo->xdelta.source.getblkno;
+#if 0
+fprintf(stderr,"%s,%d: XD3_GETSRCBLK %d %d %d: %02x %02x %02x %02x %02x %02x\n",__FILE__,__LINE__,compressInfo->xdelta.source.onblk,compressInfo->xdelta.source.curblkno,compressInfo->xdelta.source.blksize,
+compressInfo->xdelta.source.curblk[0],
+compressInfo->xdelta.source.curblk[1],
+compressInfo->xdelta.source.curblk[2],
+compressInfo->xdelta.source.curblk[3],
+compressInfo->xdelta.source.curblk[4],
+compressInfo->xdelta.source.curblk[5]
+);
+#endif /* 0 */
+                        break;
+                      case XD3_GOTHEADER:
+//fprintf(stderr,"%s,%d: XD3_GOTHEADER\n",__FILE__,__LINE__);
+                        break;
+                      case XD3_WINSTART:
+//fprintf(stderr,"%s,%d: XD3_WINSTART\n",__FILE__,__LINE__);
+                        break;
+                      case XD3_WINFINISH:
+//fprintf(stderr,"%s,%d: XD3_WINFINISH\n",__FILE__,__LINE__);
+                        break;
+                      default:
+                        return ERRORX(INFLATE_FAIL,xdeltaResult,xd3_errstring(&compressInfo->xdelta.stream));
+                        break;
+                    }
                   }
-                }
-                while (   (compressBytes < maxCompressBytes)
-                       && (xdeltaResult != XD3_OUTPUT)
-                      );
+                  while (   1 //(compressBytes < maxCompressBytes)
+                  && !doneFlag
+                         && (xdeltaResult != XD3_OUTPUT)
+                        );
 
-                /* update compress state, compress index, data length */
-                compressInfo->compressState = COMPRESS_STATE_RUNNING;
-                compressInfo->compressBufferIndex += compressBytes;
+                  // update compress state, compress index
+                  compressInfo->compressState = COMPRESS_STATE_RUNNING;
+                  compressInfo->compressBufferIndex += compressBytes;
+//fprintf(stderr,"%s, %d: compressInfo->xdelta.outputBufferLength=%d compressBytes=%d maxCompressBytes=%d xdeltaResult=%d==%d\n",__FILE__,__LINE__,compressInfo->xdelta.outputBufferLength,compressBytes,maxCompressBytes,xdeltaResult,XD3_OUTPUT);
+                }
+
+                // get decompressed data
                 if (compressInfo->xdelta.outputBufferLength > 0L)
                 {
-                  /* copy from output buffer -> data buffer */
+                  // copy from output buffer -> data buffer
                   dataBytes = MIN(compressInfo->xdelta.outputBufferLength,maxDataBytes);
+//fprintf(stderr,"%s, %d: %d\n",__FILE__,__LINE__,dataBytes);
                   memcpy(compressInfo->dataBuffer,
                          compressInfo->xdelta.outputBuffer,
                          dataBytes
                         );
                   compressInfo->dataBufferLength = dataBytes;
 
-                  /* shift output buffer */
+                  // shift output buffer
                   memmove(compressInfo->xdelta.outputBuffer,
                           compressInfo->xdelta.outputBuffer+dataBytes,
                           compressInfo->xdelta.outputBufferLength-dataBytes
@@ -1214,74 +1310,84 @@ fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
 
             if (!compressInfo->endOfDataFlag)
             {
-              /* finish decompress, flush internal decompress buffers */
+              // finish decompress, flush internal decompress buffers
               if (   (compressInfo->compressBufferIndex >= compressInfo->compressBufferLength)  // all compressed data processed
-                  && (compressInfo->flushFlag)                                                  // flush data requested
+                  && compressInfo->flushFlag                                                    // flush data requested
                   && (compressInfo->compressState == COMPRESS_STATE_RUNNING)                    // compressor is running -> data available in internal buffers
                  )
               {
-                /* get max. number of data bytes */
+                // get max. number of data bytes
                 maxDataBytes = compressInfo->dataBufferSize-compressInfo->dataBufferLength;
 
-                /* decompress with flush: transfer data buffer -> output buffer */
-                xd3_set_flags(&compressInfo->xdelta.stream,compressInfo->xdelta.stream.flags|XD3_FLUSH);
-                xd3_avail_input(&compressInfo->xdelta.stream,compressInfo->xdelta.inputBuffer,0);
-                do
+                if (maxDataBytes > compressInfo->xdelta.outputBufferLength)
                 {
-                  xdeltaResult = xd3_decode_input(&compressInfo->xdelta.stream);
-                  switch (xdeltaResult)
+                  // decompress with flush: transfer rest of internal data -> output buffer
+                  xd3_set_flags(&compressInfo->xdelta.stream,compressInfo->xdelta.stream.flags|XD3_FLUSH);
+                  xd3_avail_input(&compressInfo->xdelta.stream,compressInfo->xdelta.inputBuffer,0);
+                  do
                   {
-                    case XD3_INPUT:
-//fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
-                      xd3_avail_input(&compressInfo->xdelta.stream,compressInfo->xdelta.inputBuffer,0);
-                      break;
-                    case XD3_OUTPUT:
+                    xdeltaResult = xd3_decode_input(&compressInfo->xdelta.stream);
+                    switch (xdeltaResult)
+                    {
+                      case XD3_INPUT:
 fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
-                      /* allocate/resize output buffer */
-                      if (   (compressInfo->xdelta.outputBuffer == NULL)
-                          || (compressInfo->xdelta.outputBufferLength+(ulong)compressInfo->xdelta.stream.avail_out > compressInfo->xdelta.outputBufferSize)
-                         )
-                      {
-                        outputBufferSize = CEIL(compressInfo->xdelta.outputBufferLength+(ulong)compressInfo->xdelta.stream.avail_out,256);
-                        outputBuffer = realloc(compressInfo->xdelta.outputBuffer,outputBufferSize);
-                        if (outputBuffer == NULL)
+xd3_set_flags(&compressInfo->xdelta.stream,compressInfo->xdelta.stream.flags|XD3_FLUSH);
+                        xd3_avail_input(&compressInfo->xdelta.stream,compressInfo->xdelta.inputBuffer,0);
+//fprintf(stderr,"%s,%d: XD3_INPUT xr=%d\n",__FILE__,__LINE__,xr);
+                        break;
+                      case XD3_OUTPUT:
+fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
+                        // allocate/resize output buffer
+                        if (   (compressInfo->xdelta.outputBuffer == NULL)
+                            || (compressInfo->xdelta.outputBufferLength+(ulong)compressInfo->xdelta.stream.avail_out > compressInfo->xdelta.outputBufferSize)
+                           )
                         {
-                          HALT_INSUFFICIENT_MEMORY();
+                          outputBufferSize = CEIL(compressInfo->xdelta.outputBufferLength+(ulong)compressInfo->xdelta.stream.avail_out,256);
+                          outputBuffer = realloc(compressInfo->xdelta.outputBuffer,outputBufferSize);
+                          if (outputBuffer == NULL)
+                          {
+                            HALT_INSUFFICIENT_MEMORY();
+                          }
+                          compressInfo->xdelta.outputBuffer     = outputBuffer;
+                          compressInfo->xdelta.outputBufferSize = outputBufferSize;
                         }
-                        compressInfo->xdelta.outputBuffer     = outputBuffer;
-                        compressInfo->xdelta.outputBufferSize = outputBufferSize;
-                      }
 
-                      /* copy data to output buffer */
-                      memcpy(compressInfo->xdelta.outputBuffer+compressInfo->xdelta.outputBufferLength,
-                             compressInfo->xdelta.stream.next_out,
-                             compressInfo->xdelta.stream.avail_out
-                            );
-                      compressInfo->xdelta.outputBufferLength += (ulong)compressInfo->xdelta.stream.avail_out;
-                      xd3_consume_output(&compressInfo->xdelta.stream);
+                        // append decompressed data to output buffer
+                        memcpy(compressInfo->xdelta.outputBuffer+compressInfo->xdelta.outputBufferLength,
+                               compressInfo->xdelta.stream.next_out,
+                               compressInfo->xdelta.stream.avail_out
+                              );
 
-  fprintf(stderr,"%s,%d: s=%ld l=%ld\n",__FILE__,__LINE__,compressInfo->xdelta.outputBufferSize,compressInfo->xdelta.outputBufferLength);
-                      break;
-                    case XD3_GOTHEADER:
-  fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
-                      break;
-                    case XD3_WINSTART:
-  fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
-                      break;
-                    case XD3_WINFINISH:
-  fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
-                      break;
-                    default:
-                      return ERRORX(COMPRESS_ERROR,xdeltaResult,xd3_errstring(&compressInfo->xdelta.stream));
-                      break;
+                        compressInfo->xdelta.outputBufferLength += (ulong)compressInfo->xdelta.stream.avail_out;
+xw += compressInfo->xdelta.stream.avail_out;
+
+                        // done decompressed data
+                        xd3_consume_output(&compressInfo->xdelta.stream);
+//fprintf(stderr,"%s,%d: XD3_OUTPUT %d\n",__FILE__,__LINE__,xw);
+                        break;
+                      case XD3_GOTHEADER:
+//fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
+                        break;
+                      case XD3_WINSTART:
+//fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
+                        break;
+                      case XD3_WINFINISH:
+//fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
+                        break;
+                      default:
+                        return ERRORX(INFLATE_FAIL,xdeltaResult,xd3_errstring(&compressInfo->xdelta.stream));
+                        break;
+                    }
                   }
+                  while (   (xdeltaResult != XD3_WINFINISH)
+                         && (xdeltaResult != XD3_OUTPUT)
+                        );
                 }
-                while (xdeltaResult != XD3_OUTPUT);
 
-                /* update data length */
+                // get decompressed data
                 if (compressInfo->xdelta.outputBufferLength > 0L)
                 {
-                  /* copy from output buffer -> data buffer */
+                  // copy from output buffer -> data buffer
                   dataBytes = MIN(compressInfo->xdelta.outputBufferLength,maxDataBytes);
                   memcpy(compressInfo->dataBuffer,
                          compressInfo->xdelta.outputBuffer,
@@ -1289,7 +1395,7 @@ fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
                         );
                   compressInfo->dataBufferLength = dataBytes;
 
-                  /* shift output buffer */
+                  // shift output buffer
                   memmove(compressInfo->xdelta.outputBuffer,
                           compressInfo->xdelta.outputBuffer+dataBytes,
                           compressInfo->xdelta.outputBufferLength-dataBytes
@@ -1298,7 +1404,7 @@ fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
                 }
                 else
                 {
-                  /* no more data */
+                  // no more data
                   compressInfo->endOfDataFlag = TRUE;
                 }
               }
@@ -1319,52 +1425,6 @@ fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
   return ERROR_NONE;
 }
 
-#ifdef HAVE_XDELTA
-/***********************************************************************\
-* Name   : xdeltaGetBlock
-* Purpose:
-* Input  : -
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL int xdelta3GetBlock(xd3_stream *xd3Stream,
-                          xd3_source *xd3Source,
-                          xoff_t      blkno
-                         )
-{
-  CompressInfo *compressInfo;
-  Errors       error;
-  ulong        bytesRead;
-
-  assert(xd3Stream != NULL);
-  assert(xd3Source != NULL);
-
-  compressInfo = (CompressInfo*)xd3Source->ioh;
-
-  #ifdef HAVE_XDELTA3
-    assert(compressInfo->xdelta.sourceGetEntryDataBlock != NULL);
-    error = compressInfo->xdelta.sourceGetEntryDataBlock(compressInfo->xdelta.sourceGetEntryDataBlockUserData,
-                                                         (void*)xd3Source->curblk,
-                                                         (uint64)xd3Source->blksize*blkno,
-                                                         xd3Source->blksize,
-                                                         &bytesRead
-                                                        );
-    if (error != ERROR_NONE)
-    {
-fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,Errors_getText(error));
-      return error;
-    }
-    xd3Source->onblk    = bytesRead;
-    xd3Source->curblkno = blkno;
-  #else /* not HAVE_XDELTA3 */
-    return ERROR_FUNCTION_NOT_SUPPORTED;
-  #endif /* HAVE_XDELTA3 */
-
-  return 0;
-}
-#endif /* HAVE_XDELTA */
 /*---------------------------------------------------------------------*/
 
 Errors Compress_init(void)
@@ -1465,7 +1525,7 @@ Errors Compress_new(CompressInfo                    *compressInfo,
   switch (compressAlgorithm)
   {
     case COMPRESS_ALGORITHM_NONE:
-      compressInfo->none.length = 0;
+      compressInfo->none.totalBytes = 0LL;
       break;
     case COMPRESS_ALGORITHM_ZIP_0:
     case COMPRESS_ALGORITHM_ZIP_1:
@@ -1696,12 +1756,10 @@ Errors Compress_new(CompressInfo                    *compressInfo,
               #endif /* NDEBUG */
               break;
           }
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 
           // init xdelta configuration
           memset(&xd3Config,0,sizeof(xd3Config));
           xd3_init_config(&xd3Config,compressInfo->xdelta.flags);
-//          xd3Config.getblk  = NULL; //xdelta3GetBlock;
           xd3Config.winsize = XDELTA_BUFFER_SIZE;
 
           // init xdelta stream
@@ -1874,7 +1932,7 @@ Errors Compress_reset(CompressInfo *compressInfo)
   switch (compressInfo->compressAlgorithm)
   {
     case COMPRESS_ALGORITHM_NONE:
-      compressInfo->none.length = 0;
+      compressInfo->none.totalBytes = 0LL;
       break;
     case COMPRESS_ALGORITHM_ZIP_0:
     case COMPRESS_ALGORITHM_ZIP_1:
@@ -1895,19 +1953,23 @@ Errors Compress_reset(CompressInfo *compressInfo)
           {
             case COMPRESS_MODE_DEFLATE:
               zlibResult = deflateReset(&compressInfo->zlib.stream);
+              if ((zlibResult != Z_OK) && (zlibResult != Z_STREAM_END))
+              {
+                return ERROR(DEFLATE_FAIL,zlibResult);
+              }
               break;
             case COMPRESS_MODE_INFLATE:
               zlibResult = inflateReset(&compressInfo->zlib.stream);
+              if ((zlibResult != Z_OK) && (zlibResult != Z_STREAM_END))
+              {
+                return ERROR(INFLATE_FAIL,zlibResult);
+              }
               break;
             #ifndef NDEBUG
               default:
                 HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
                 break; /* not reached */
             #endif /* NDEBUG */
-          }
-          if ((zlibResult != Z_OK) && (zlibResult != Z_STREAM_END))
-          {
-            return ERROR_COMPRESS_ERROR;
           }
         }
       #else /* not HAVE_Z */
@@ -1933,20 +1995,24 @@ Errors Compress_reset(CompressInfo *compressInfo)
             case COMPRESS_MODE_DEFLATE:
               BZ2_bzCompressEnd(&compressInfo->bzlib.stream);
               bzlibResult = BZ2_bzCompressInit(&compressInfo->bzlib.stream,compressInfo->bzlib.compressionLevel,0,0);
+              if (bzlibResult != BZ_OK)
+              {
+                return ERROR(DEFLATE_FAIL,bzlibResult);
+              }
               break;
             case COMPRESS_MODE_INFLATE:
               BZ2_bzDecompressEnd(&compressInfo->bzlib.stream);
               bzlibResult = BZ2_bzDecompressInit(&compressInfo->bzlib.stream,0,0);
+              if (bzlibResult != BZ_OK)
+              {
+                return ERROR(INFLATE_FAIL,bzlibResult);
+              }
               break;
             #ifndef NDEBUG
               default:
                 HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
                 break; /* not reached */
             #endif /* NDEBUG */
-          }
-          if (bzlibResult != BZ_OK)
-          {
-            return ERROR_COMPRESS_ERROR;
           }
         }
       #else /* not HAVE_BZ2 */
@@ -1974,21 +2040,25 @@ Errors Compress_reset(CompressInfo *compressInfo)
               lzma_end(&compressInfo->lzmalib.stream);
               compressInfo->lzmalib.stream = streamInit;
               lzmalibResult = lzma_easy_encoder(&compressInfo->lzmalib.stream,compressInfo->lzmalib.compressionLevel,LZMA_CHECK_NONE);
+              if (lzmalibResult != LZMA_OK)
+              {
+                return ERROR(DEFLATE_FAIL,lzmalibResult);;
+              }
               break;
             case COMPRESS_MODE_INFLATE:
               lzma_end(&compressInfo->lzmalib.stream);
               compressInfo->lzmalib.stream = streamInit;
               lzmalibResult = lzma_auto_decoder(&compressInfo->lzmalib.stream,0xFFFffffFFFFffffLL,0);
+              if (lzmalibResult != LZMA_OK)
+              {
+                return ERROR(INFLATE_FAIL,lzmalibResult);
+              }
               break;
             #ifndef NDEBUG
               default:
                 HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
                 break; /* not reached */
             #endif /* NDEBUG */
-          }
-          if (lzmalibResult != LZMA_OK)
-          {
-            return ERROR_COMPRESS_ERROR;
           }
         }
       #else /* not HAVE_LZMA */
@@ -2019,13 +2089,25 @@ Errors Compress_reset(CompressInfo *compressInfo)
           // re-init xdelta configuration
           memset(&xd3Config,0,sizeof(xd3Config));
           xd3_init_config(&xd3Config,compressInfo->xdelta.flags);
-          xd3Config.getblk  = //xdelta3GetBlock;
           xd3Config.winsize = XDELTA_BUFFER_SIZE;
 
           // re-init xdelta stream
           if (xd3_config_stream(&compressInfo->xdelta.stream,&xd3Config) != 0)
           {
-            return ERROR_COMPRESS_ERROR;
+            switch (compressInfo->compressMode)
+            {
+              case COMPRESS_MODE_DEFLATE:
+                return ERRORX(DEFLATE_FAIL,0,xd3_errstring(&compressInfo->xdelta.stream));
+                break;
+              case COMPRESS_MODE_INFLATE:
+                return ERRORX(INFLATE_FAIL,0,xd3_errstring(&compressInfo->xdelta.stream));
+                break;
+              #ifndef NDEBUG
+                default:
+                  HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+                  break; /* not reached */
+              #endif /* NDEBUG */
+            }
           }
 
           // re-init xdelta source
@@ -2033,7 +2115,20 @@ Errors Compress_reset(CompressInfo *compressInfo)
           compressInfo->xdelta.source.curblkno = (xoff_t)(-1);
           if (xd3_set_source(&compressInfo->xdelta.stream,&compressInfo->xdelta.source) != 0)
           {
-            return ERROR_COMPRESS_ERROR;
+            switch (compressInfo->compressMode)
+            {
+              case COMPRESS_MODE_DEFLATE:
+                return ERRORX(DEFLATE_FAIL,0,xd3_errstring(&compressInfo->xdelta.stream));
+                break;
+              case COMPRESS_MODE_INFLATE:
+                return ERRORX(INFLATE_FAIL,0,xd3_errstring(&compressInfo->xdelta.stream));
+                break;
+              #ifndef NDEBUG
+                default:
+                  HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+                  break; /* not reached */
+              #endif /* NDEBUG */
+            }
           }
         }
       #else /* not HAVE_XDELTA3 */
@@ -2150,6 +2245,7 @@ Errors Compress_flush(CompressInfo *compressInfo)
   // mark compress flush
   compressInfo->flushFlag = TRUE;
 
+#if 0
   // try to compress/decompress data
   switch (compressInfo->compressMode)
   {
@@ -2167,6 +2263,8 @@ Errors Compress_flush(CompressInfo *compressInfo)
         break; /* not reached */
     #endif /* NDEBUG */
   }
+#endif
+error=ERROR_NONE;
 
   return error;
 }
@@ -2181,7 +2279,7 @@ uint64 Compress_getInputLength(CompressInfo *compressInfo)
   switch (compressInfo->compressAlgorithm)
   {
     case COMPRESS_ALGORITHM_NONE:
-      length = compressInfo->none.length;
+      length = compressInfo->none.totalBytes;
       break;
     case COMPRESS_ALGORITHM_ZIP_0:
     case COMPRESS_ALGORITHM_ZIP_1:
@@ -2264,7 +2362,7 @@ uint64 Compress_getOutputLength(CompressInfo *compressInfo)
   switch (compressInfo->compressAlgorithm)
   {
     case COMPRESS_ALGORITHM_NONE:
-      length = compressInfo->none.length;
+      length = compressInfo->none.totalBytes;
       break;
     case COMPRESS_ALGORITHM_ZIP_0:
     case COMPRESS_ALGORITHM_ZIP_1:
@@ -2344,26 +2442,17 @@ Errors Compress_getAvailableDecompressedBytes(CompressInfo *compressInfo,
   Errors error;
 
   assert(compressInfo != NULL);
+  assert(compressInfo->compressMode == COMPRESS_MODE_INFLATE);
   assert(bytes != NULL);
 
-  switch (compressInfo->compressMode)
+  // decompress data
+  error = decompressData(compressInfo);
+  if (error != ERROR_NONE)
   {
-    case COMPRESS_MODE_DEFLATE:
-      error = compressData(compressInfo);
-      if (error != ERROR_NONE) return error;
-      break;
-    case COMPRESS_MODE_INFLATE:
-      error = decompressData(compressInfo);
-      if (error != ERROR_NONE) return error;
-      break;
-    #ifndef NDEBUG
-      default:
-        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-        break; /* not reached */
-    #endif /* NDEBUG */
+    return error;
   }
 
-  /* data is available iff bufferIndex < bufferLength */
+  // decompressed data is available iff bufferIndex < bufferLength
   (*bytes) = compressInfo->dataBufferLength-compressInfo->dataBufferIndex;
 
   return ERROR_NONE;
@@ -2377,25 +2466,17 @@ Errors Compress_getAvailableCompressedBlocks(CompressInfo       *compressInfo,
   Errors error;
 
   assert(compressInfo != NULL);
+  assert(compressInfo->compressMode == COMPRESS_MODE_DEFLATE);
   assert(blockCount != NULL);
 
-  switch (compressInfo->compressMode)
+  // compress data
+  error = compressData(compressInfo);
+  if (error != ERROR_NONE)
   {
-    case COMPRESS_MODE_DEFLATE:
-      error = compressData(compressInfo);
-      if (error != ERROR_NONE) return error;
-      break;
-    case COMPRESS_MODE_INFLATE:
-      error = decompressData(compressInfo);
-      if (error != ERROR_NONE) return error;
-      break;
-    #ifndef NDEBUG
-      default:
-        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-        break; /* not reached */
-    #endif /* NDEBUG */
+    return error;
   }
 
+  // get number of compressed blocks
   (*blockCount) = 0;
   switch (blockType)
   {
@@ -2417,21 +2498,26 @@ Errors Compress_getAvailableCompressedBlocks(CompressInfo       *compressInfo,
   return ERROR_NONE;
 }
 
-bool Compress_getByte(CompressInfo *compressInfo,
-                      byte         *buffer
-                     )
+#if 0
+obsolete
+bool Compress_getCompressedByte(CompressInfo *compressInfo,
+                                byte         *b
+                               )
 {
   assert(compressInfo != NULL);
   assert(compressInfo->compressBuffer != NULL);
 // ??? blocklength
   assert(compressInfo->compressBufferLength <= compressInfo->compressBufferSize);
-  assert(buffer != NULL);
+  assert(b != NULL);
+
 
   if (compressInfo->compressBufferLength > compressInfo->compressBufferIndex)
   {
-    (*buffer) = (*(compressInfo->compressBuffer+compressInfo->compressBufferIndex));
+    // get next byte from compressed buffer
+    (*b) = (*(compressInfo->compressBuffer+compressInfo->compressBufferIndex));
     compressInfo->compressBufferIndex++;
 
+    // reset when compressed buffer is empty
     if (compressInfo->compressBufferIndex >= compressInfo->compressBufferLength)
     {
       compressInfo->compressBufferIndex  = 0L;
@@ -2446,43 +2532,77 @@ bool Compress_getByte(CompressInfo *compressInfo,
   }
 }
 
-void Compress_getBlock(CompressInfo *compressInfo,
-                       byte         *buffer,
-                       ulong        *bufferLength
-                      )
+bool Compress_putCompressedByte(CompressInfo *compressInfo,
+                                byte         b
+                               )
 {
   assert(compressInfo != NULL);
   assert(compressInfo->compressBuffer != NULL);
 // ??? blocklength
   assert(compressInfo->compressBufferLength <= compressInfo->compressBufferSize);
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+
+  if (compressInfo->compressBufferLength < compressInfo->compressBufferSize)
+  {
+    (*(compressInfo->compressBuffer+compressInfo->compressBufferLength)) = b;
+    compressInfo->compressBufferLength++;
+
+    return TRUE;
+  }
+  else
+  {
+    return FALSE;
+  }
+}
+#endif /* 0 */
+
+void Compress_getCompressedBlock(CompressInfo *compressInfo,
+                                 byte         *buffer,
+                                 ulong        *bufferLength
+                                )
+{
+  assert(compressInfo != NULL);
+  assert(compressInfo->compressMode == COMPRESS_MODE_DEFLATE);
+  assert(compressInfo->compressBuffer != NULL);
+  assert(compressInfo->compressBufferLength <= compressInfo->compressBufferSize);
   assert(buffer != NULL);
   assert(bufferLength != NULL);
 
+  // compress data (ignore error here)
+  (void)compressData(compressInfo);
+
+  // copy compressed data into buffer
   memcpy(buffer,
          compressInfo->compressBuffer+compressInfo->compressBufferIndex,
          compressInfo->compressBufferLength-compressInfo->compressBufferIndex
         );
+  (*bufferLength) = compressInfo->compressBufferLength-compressInfo->compressBufferIndex;
+
+  // set rest of buffer to 0
   memset(buffer+compressInfo->compressBufferLength,
          0,
-         compressInfo->blockLength-compressInfo->compressBufferIndex
+         compressInfo->blockLength-(compressInfo->compressBufferLength-compressInfo->compressBufferIndex)
         );
-  (*bufferLength) = compressInfo->compressBufferLength;
 
+  // clear compress buffer
   compressInfo->compressBufferIndex  = 0L;
   compressInfo->compressBufferLength = 0L;
 }
 
-void Compress_putBlock(CompressInfo *compressInfo,
-                       void         *buffer,
-                       ulong        bufferLength
-                      )
+void Compress_putCompressedBlock(CompressInfo *compressInfo,
+                                 void         *buffer,
+                                 ulong        bufferLength
+                                )
 {
   assert(compressInfo != NULL);
+  assert(compressInfo->compressMode == COMPRESS_MODE_INFLATE);
   assert(compressInfo->compressBuffer != NULL);
   assert(buffer != NULL);
   assert(bufferLength <= compressInfo->compressBufferSize);
 
+  // copy data into compressed buffer
   memcpy(compressInfo->compressBuffer,buffer,bufferLength);
+
   compressInfo->compressBufferIndex  = 0L;
   compressInfo->compressBufferLength = bufferLength;
 }

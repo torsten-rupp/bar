@@ -118,7 +118,7 @@ typedef Errors(*CompressSourceGetEntryDataBlock)(void   *userData,
 /* compress info block */
 typedef struct
 {
-  CompressModes      compressMode;              // mode: compress/decompress
+  CompressModes      compressMode;              // mode: deflate (compress)/inflate (decompress)
   CompressAlgorithms compressAlgorithm;         // compression algorithm to use
   ulong              blockLength;               // block length to use [bytes]
 
@@ -130,7 +130,7 @@ typedef struct
   {
     struct
     {
-      uint64 length;
+      uint64 totalBytes;                        // total number of processed bytes
     } none;
     struct
     {
@@ -213,66 +213,6 @@ typedef struct
 #define COMPRESS_ALGORITHM_TO_CONSTANT(compressAlgorithm) \
   ((uint16)(compressAlgorithm))
 
-/***********************************************************************\
-* Name   : COMPRESS_IS_COMPRESSED
-* Purpose: check if compressed
-* Input  : compressAlgorithm - compress algorithm
-* Output : -
-* Return : TRUE iff compressed, FALSE otherwise
-* Notes  : -
-\***********************************************************************/
-
-#define COMPRESS_IS_COMPRESSED(compressAlgorithm) \
-  ((compressAlgorithm) != COMPRESS_ALGORITHM_NONE)
-
-/***********************************************************************\
-* Name   : COMPRESS_IS_ZIP_ALGORITHM
-* Purpose: check if ZIP algorithm
-* Input  : compressAlgorithm - compress algorithm
-* Output : -
-* Return : TRUE iff ZIP compress algorithm, FALSE otherwise
-* Notes  : -
-\***********************************************************************/
-
-#define COMPRESS_IS_ZIP_ALGORITHM(compressAlgorithm) \
-  ((COMPRESS_ALGORITHM_ZIP_0 <= (compressAlgorithm)) && ((compressAlgorithm) <= COMPRESS_ALGORITHM_ZIP_9))
-
-/***********************************************************************\
-* Name   : COMPRESS_IS_BZIP2_ALGORITHM
-* Purpose: check if BZIP2 algorithm
-* Input  : compressAlgorithm - compress algorithm
-* Output : -
-* Return : TRUE iff BZIP2 compress algorithm, FALSE otherwise
-* Notes  : -
-\***********************************************************************/
-
-#define COMPRESS_IS_BZIP2_ALGORITHM(compressAlgorithm) \
-  ((COMPRESS_ALGORITHM_BZIP2_1 <= (compressAlgorithm)) && ((compressAlgorithm) <= COMPRESS_ALGORITHM_BZIP2_9))
-
-/***********************************************************************\
-* Name   : COMPRESS_IS_LZMA_ALGORITHM
-* Purpose: check if LZMA algorithm
-* Input  : compressAlgorithm - compress algorithm
-* Output : -
-* Return : TRUE iff LZMA compress algorithm, FALSE otherwise
-* Notes  : -
-\***********************************************************************/
-
-#define COMPRESS_IS_LZMA_ALGORITHM(compressAlgorithm) \
-  ((COMPRESS_ALGORITHM_LZMA_1 <= (compressAlgorithm)) && ((compressAlgorithm) <= COMPRESS_ALGORITHM_LZMA_9))
-
-/***********************************************************************\
-* Name   : COMPRESS_IS_XDELTA_ALGORITHM
-* Purpose: check if XDELTA algorithm
-* Input  : compressAlgorithm - compress algorithm
-* Output : -
-* Return : TRUE iff XDELTA compress algorithm, FALSE otherwise
-* Notes  : -
-\***********************************************************************/
-
-#define COMPRESS_IS_XDELTA_ALGORITHM(compressAlgorithm) \
-  ((COMPRESS_ALGORITHM_XDELTA_1 <= (compressAlgorithm)) && ((compressAlgorithm) <= COMPRESS_ALGORITHM_XDELTA_9))
-
 /***************************** Forwards ********************************/
 
 /***************************** Functions *******************************/
@@ -324,6 +264,91 @@ const char *Compress_getAlgorithmName(CompressAlgorithms compressAlgorithm);
 \***********************************************************************/
 
 CompressAlgorithms Compress_getAlgorithm(const char *name);
+
+/***********************************************************************\
+* Name   : Compress_isCompressed
+* Purpose: check if compressed
+* Input  : compressAlgorithm - compress algorithm
+* Output : -
+* Return : TRUE iff compressed, FALSE otherwise
+* Notes  : -
+\***********************************************************************/
+
+INLINE bool Compress_isCompressed(CompressAlgorithms compressAlgorithm);
+#if defined(NDEBUG) || defined(__COMPRESS_IMPLEMENATION__)
+INLINE bool Compress_isCompressed(CompressAlgorithms compressAlgorithm)
+{
+  return compressAlgorithm != COMPRESS_ALGORITHM_NONE;
+}
+#endif /* NDEBUG || __COMPRESS_IMPLEMENATION__ */
+
+/***********************************************************************\
+* Name   : Compress_isZIPCompressed
+* Purpose: check if ZIP algorithm
+* Input  : compressAlgorithm - compress algorithm
+* Output : -
+* Return : TRUE iff ZIP compress algorithm, FALSE otherwise
+* Notes  : -
+\***********************************************************************/
+
+INLINE bool Compress_isZIPCompressed(CompressAlgorithms compressAlgorithm);
+#if defined(NDEBUG) || defined(__COMPRESS_IMPLEMENATION__)
+INLINE bool Compress_isZIPCompressed(CompressAlgorithms compressAlgorithm)
+{
+  return (COMPRESS_ALGORITHM_ZIP_0 <= compressAlgorithm) && (compressAlgorithm <= COMPRESS_ALGORITHM_ZIP_9);
+}
+#endif /* NDEBUG || __COMPRESS_IMPLEMENATION__ */
+
+/***********************************************************************\
+* Name   : Compress_isBZIP2Compressed
+* Purpose: check if BZIP2 algorithm
+* Input  : compressAlgorithm - compress algorithm
+* Output : -
+* Return : TRUE iff BZIP2 compress algorithm, FALSE otherwise
+* Notes  : -
+\***********************************************************************/
+
+INLINE bool Compress_isBZIP2Compressed(CompressAlgorithms compressAlgorithm);
+#if defined(NDEBUG) || defined(__COMPRESS_IMPLEMENATION__)
+INLINE bool Compress_isBZIP2Compressed(CompressAlgorithms compressAlgorithm)
+{
+  return (COMPRESS_ALGORITHM_BZIP2_1 <= compressAlgorithm) && (compressAlgorithm <= COMPRESS_ALGORITHM_BZIP2_9);
+}
+#endif /* NDEBUG || __COMPRESS_IMPLEMENATION__ */
+
+/***********************************************************************\
+* Name   : Compress_isLZMACompressed
+* Purpose: check if LZMA algorithm
+* Input  : compressAlgorithm - compress algorithm
+* Output : -
+* Return : TRUE iff LZMA compress algorithm, FALSE otherwise
+* Notes  : -
+\***********************************************************************/
+
+INLINE bool Compress_isLZMACompressed(CompressAlgorithms compressAlgorithm);
+#if defined(NDEBUG) || defined(__COMPRESS_IMPLEMENATION__)
+INLINE bool Compress_isLZMACompressed(CompressAlgorithms compressAlgorithm)
+{
+  return (COMPRESS_ALGORITHM_LZMA_1 <= compressAlgorithm) && (compressAlgorithm <= COMPRESS_ALGORITHM_LZMA_9);
+}
+#endif /* NDEBUG || __COMPRESS_IMPLEMENATION__ */
+
+/***********************************************************************\
+* Name   : Compress_isXDeltaCompressed
+* Purpose: check if XDELTA algorithm
+* Input  : compressAlgorithm - compress algorithm
+* Output : -
+* Return : TRUE iff XDELTA compress algorithm, FALSE otherwise
+* Notes  : -
+\***********************************************************************/
+
+INLINE bool Compress_isXDeltaCompressed(CompressAlgorithms compressAlgorithm);
+#if defined(NDEBUG) || defined(__COMPRESS_IMPLEMENATION__)
+INLINE bool Compress_isXDeltaCompressed(CompressAlgorithms compressAlgorithm)
+{
+  return (COMPRESS_ALGORITHM_XDELTA_1 <= compressAlgorithm) && (compressAlgorithm <= COMPRESS_ALGORITHM_XDELTA_9);
+}
+#endif /* NDEBUG || __COMPRESS_IMPLEMENATION__ */
 
 /***********************************************************************\
 * Name   : Compress_new
@@ -412,6 +437,44 @@ Errors Compress_inflate(CompressInfo *compressInfo,
 Errors Compress_flush(CompressInfo *compressInfo);
 
 /***********************************************************************\
+* Name   : Compress_isFlush
+* Purpose: check if flush compress data is set
+* Input  : compressInfo - compress info block
+* Output : -
+* Return : TRUE iff flush, FALSE otherwise
+* Notes  : -
+\***********************************************************************/
+
+INLINE bool Compress_isFlush(CompressInfo *compressInfo);
+#if defined(NDEBUG) || defined(__COMPRESS_IMPLEMENATION__)
+INLINE bool Compress_isFlush(CompressInfo *compressInfo)
+{
+  assert(compressInfo != NULL);
+
+  return compressInfo->flushFlag;
+}
+#endif /* defined(NDEBUG) || defined(__COMPRESS_IMPLEMENATION__) */
+
+/***********************************************************************\
+* Name   : Compress_isEndOfData
+* Purpose: check if end of compress data
+* Input  : compressInfo - compress info block
+* Output : -
+* Return : TRUE iff end of compress data, FALSE otherwise
+* Notes  : -
+\***********************************************************************/
+
+INLINE bool Compress_isEndOfData(CompressInfo *compressInfo);
+#if defined(NDEBUG) || defined(__COMPRESS_IMPLEMENATION__)
+INLINE bool Compress_isEndOfData(CompressInfo *compressInfo)
+{
+  assert(compressInfo != NULL);
+
+  return compressInfo->endOfDataFlag;
+}
+#endif /* defined(NDEBUG) || defined(__COMPRESS_IMPLEMENATION__) */
+
+/***********************************************************************\
 * Name   : Compress_getInputLength
 * Purpose: get number of input bytes
 * Input  : compressInfo - compress info block
@@ -435,7 +498,8 @@ uint64 Compress_getOutputLength(CompressInfo *compressInfo);
 
 /***********************************************************************\
 * Name   : Compress_getAvailableDecompressedBytes
-* Purpose: get number of available bytes (decompressed bytes)
+* Purpose: decompress data and get number of available bytes in
+*          decompressor
 * Input  : compressInfo - compress info block
 * Output : bytes - number of available bytes
 * Return : ERROR_NONE or error code
@@ -448,7 +512,8 @@ Errors Compress_getAvailableDecompressedBytes(CompressInfo *compressInfo,
 
 /***********************************************************************\
 * Name   : Compress_getAvailableCompressedBlocks
-* Purpose: get number of available (full) compressed blocks
+* Purpose: compress data and get number of available compressed blocks
+*          in compressor
 * Input  : compressInfo - compress info block
 * Output : blockCount - number of available (full) blocks
 * Return : ERROR_NONE or error code
@@ -473,22 +538,28 @@ Errors Compress_getAvailableCompressedBlocks(CompressInfo       *compressInfo,
 bool Compress_checkEndOfBlock(CompressInfo *compressInfo);
 #endif /* 0 */
 
+#if 0
+obsolete
+//????
 /***********************************************************************\
-* Name   : Compress_getByte
-* Purpose: get compressed byte
+* Name   : Compress_getCompressedByte
+* Purpose: get next compressed byte
 * Input  : compressInfo - compress info block
 * Output : buffer - buffer with compressed byte
 * Return : TRUE iff compressed is read, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
 
-bool Compress_getByte(CompressInfo *compressInfo,
-                      byte         *buffer
-                     );
+// replace by Compress_getCompressedBlock? compressed data is always organized in blocks?
+bool Compress_getCompressedByte(CompressInfo *compressInfo,
+                                byte         *buffer
+                               );
+#endif /* 0 */
 
 /***********************************************************************\
-* Name   : Compress_getBlock
-* Purpose: get block data
+* Name   : Compress_getCompressedBlock
+* Purpose: compress data and get next compressed data block from
+*          compressor
 * Input  : compressInfo - compress info block
 * Output : buffer       - data
 *          bufferLength - number of bytes in block
@@ -496,14 +567,14 @@ bool Compress_getByte(CompressInfo *compressInfo,
 * Notes  : buffer size have to be at least blockLength!
 \***********************************************************************/
 
-void Compress_getBlock(CompressInfo *compressInfo,
-                       byte         *buffer,
-                       ulong        *bufferLength
-                      );
+void Compress_getCompressedBlock(CompressInfo *compressInfo,
+                                 byte         *buffer,
+                                 ulong        *bufferLength
+                                );
 
 /***********************************************************************\
-* Name   : Compress_putBlock
-* Purpose: put block data
+* Name   : Compress_putCompressedBlock
+* Purpose: put compressed block data into decompressor
 * Input  : compressInfo - compress info block
 *          buffer       - data
 *          bufferLength - length of data
@@ -512,10 +583,10 @@ void Compress_getBlock(CompressInfo *compressInfo,
 * Notes  : -
 \***********************************************************************/
 
-void Compress_putBlock(CompressInfo *compressInfo,
-                       void         *buffer,
-                       ulong        bufferLength
-                      );
+void Compress_putCompressedBlock(CompressInfo *compressInfo,
+                                 void         *buffer,
+                                 ulong        bufferLength
+                                );
 
 #ifdef __cplusplus
   }
