@@ -430,13 +430,13 @@ CMD_OPTION_SELECT       ("delta-algorithm",              0,  0,1,jobOptions.comp
 
   CMD_OPTION_STRING       ("file-write-pre-command",       0,  1,0,globalOptions.file.writePreProcessCommand,                                                        "write file pre-process command","command"                                 ),
   CMD_OPTION_STRING       ("file-write-post-command",      0,  1,0,globalOptions.file.writePostProcessCommand,                                                       "write file post-process command","command"                                ),
-    
+
   CMD_OPTION_STRING       ("ftp-write-pre-command",        0,  1,0,globalOptions.ftp.writePreProcessCommand,                                                         "write FTP pre-process command","command"                                  ),
   CMD_OPTION_STRING       ("ftp-write-post-command",       0,  1,0,globalOptions.ftp.writePostProcessCommand,                                                        "write FTP post-process command","command"                                 ),
-        
+
   CMD_OPTION_STRING       ("scp-write-pre-command",        0,  1,0,globalOptions.scp.writePreProcessCommand,                                                         "write SCP pre-process command","command"                                  ),
   CMD_OPTION_STRING       ("scp-write-post-command",       0,  1,0,globalOptions.scp.writePostProcessCommand,                                                        "write SCP post-process command","command"                                 ),
-            
+
   CMD_OPTION_STRING       ("sftp-write-pre-command",       0,  1,0,globalOptions.sftp.writePreProcessCommand,                                                        "write SFTP pre-process command","command"                                 ),
   CMD_OPTION_STRING       ("sftp-write-post-command",      0,  1,0,globalOptions.sftp.writePostProcessCommand,                                                       "write SFTP post-process command","command"                                ),
 
@@ -699,7 +699,7 @@ LOCAL const ConfigValue CONFIG_VALUES[] =
   CONFIG_VALUE_SPECIAL  ("owner",                        &jobOptions.owner,-1,                                    configValueParseOwner,NULL,NULL,NULL,&jobOptions.owner),
 
   CONFIG_VALUE_SELECT   ("pattern-type",                 &jobOptions.patternType,-1,                              CONFIG_VALUE_PATTERN_TYPES),
- 
+
   CONFIG_VALUE_SELECT   ("compress-algorithm",           &jobOptions.compressAlgorithm.data,-1,                   CONFIG_VALUE_COMPRESS_ALGORITHMS),
 
   CONFIG_VALUE_SELECT   ("crypt-algorithm",              &jobOptions.cryptAlgorithm,-1,                           CONFIG_VALUE_CRYPT_ALGORITHMS),
@@ -744,16 +744,16 @@ LOCAL const ConfigValue CONFIG_VALUES[] =
 
   CONFIG_VALUE_STRING   ("file-write-pre-command",       &globalOptions.file.writePreProcessCommand,-1            ),
   CONFIG_VALUE_STRING   ("file-write-post-command",      &globalOptions.file.writePostProcessCommand,-1           ),
-    
+
   CONFIG_VALUE_STRING   ("ftp-write-pre-command",        &globalOptions.ftp.writePreProcessCommand,-1             ),
   CONFIG_VALUE_STRING   ("ftp-write-post-command",       &globalOptions.ftp.writePostProcessCommand,-1            ),
-        
+
   CONFIG_VALUE_STRING   ("scp-write-pre-command",        &globalOptions.scp.writePreProcessCommand,-1             ),
   CONFIG_VALUE_STRING   ("scp-write-post-command",       &globalOptions.scp.writePostProcessCommand,-1            ),
-            
+
   CONFIG_VALUE_STRING   ("sftp-write-pre-command",       &globalOptions.sftp.writePreProcessCommand,-1            ),
   CONFIG_VALUE_STRING   ("sftp-write-post-command",      &globalOptions.sftp.writePostProcessCommand,-1           ),
-                
+
   CONFIG_VALUE_STRING   ("cd-device",                    &globalOptions.bd.defaultDeviceName,-1                   ),
   CONFIG_VALUE_STRING   ("cd-request-volume-command",    &globalOptions.cd.requestVolumeCommand,-1                ),
   CONFIG_VALUE_STRING   ("cd-unload-volume-command",     &globalOptions.cd.unloadVolumeCommand,-1                 ),
@@ -1404,16 +1404,16 @@ LOCAL void initGlobalOptions(void)
 
   globalOptions.file.writePreProcessCommand  = NULL;
   globalOptions.file.writePostProcessCommand = NULL;
-    
+
   globalOptions.ftp.writePreProcessCommand   = NULL;
   globalOptions.ftp.writePostProcessCommand  = NULL;
-        
+
   globalOptions.scp.writePreProcessCommand   = NULL;
   globalOptions.scp.writePostProcessCommand  = NULL;
-      
+
   globalOptions.sftp.writePreProcessCommand  = NULL;
   globalOptions.sftp.writePostProcessCommand = NULL;
-                
+
   globalOptions.cd.defaultDeviceName         = String_newCString(DEFAULT_CD_DEVICE_NAME);
   globalOptions.cd.requestVolumeCommand      = NULL;
   globalOptions.cd.unloadVolumeCommand       = String_newCString(CD_UNLOAD_VOLUME_COMMAND);
@@ -1533,16 +1533,16 @@ LOCAL void doneGlobalOptions(void)
 
   String_delete(globalOptions.sftp.writePostProcessCommand);
   String_delete(globalOptions.sftp.writePreProcessCommand);
-    
+
   String_delete(globalOptions.scp.writePostProcessCommand);
   String_delete(globalOptions.scp.writePreProcessCommand);
-        
+
   String_delete(globalOptions.ftp.writePostProcessCommand);
   String_delete(globalOptions.ftp.writePreProcessCommand);
-            
+
   String_delete(globalOptions.file.writePostProcessCommand);
   String_delete(globalOptions.file.writePreProcessCommand);
-                
+
   String_delete(globalOptions.remoteBARExecutable);
   String_delete(globalOptions.tmpDirectory);
 }
@@ -1628,11 +1628,11 @@ LOCAL void freeDeviceNode(DeviceNode *deviceNode, void *userData)
 * Purpose: initialize
 * Input  : -
 * Output : -
-* Return : TRUE if init ok, FALSE on error
+* Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool initAll(void)
+LOCAL Errors initAll(void)
 {
   Errors error;
 
@@ -1640,20 +1640,20 @@ LOCAL bool initAll(void)
   error = Password_initAll();
   if (error != ERROR_NONE)
   {
-    return FALSE;
+    return error;
   }
   error = Crypt_initAll();
   if (error != ERROR_NONE)
   {
     Password_doneAll();
-    return FALSE;
+    return error;
   }
   error = Pattern_initAll();
   if (error != ERROR_NONE)
   {
     Crypt_doneAll();
     Password_doneAll();
-    return FALSE;
+    return error;
   }
   error = PatternList_initAll();
   if (error != ERROR_NONE)
@@ -1661,7 +1661,7 @@ LOCAL bool initAll(void)
     Pattern_doneAll();
     Crypt_doneAll();
     Password_doneAll();
-    return FALSE;
+    return error;
   }
   error = Archive_initAll();
   if (error != ERROR_NONE)
@@ -1670,7 +1670,7 @@ LOCAL bool initAll(void)
     Pattern_doneAll();
     Crypt_doneAll();
     Password_doneAll();
-    return FALSE;
+    return error;
   }
   error = Storage_initAll();
   if (error != ERROR_NONE)
@@ -1680,7 +1680,7 @@ LOCAL bool initAll(void)
     Pattern_doneAll();
     Crypt_doneAll();
     Password_doneAll();
-    return FALSE;
+    return error;
   }
   error = Index_initAll();
   if (error != ERROR_NONE)
@@ -1691,7 +1691,7 @@ LOCAL bool initAll(void)
     Pattern_doneAll();
     Crypt_doneAll();
     Password_doneAll();
-    return FALSE;
+    return error;
   }
   error = Network_initAll();
   if (error != ERROR_NONE)
@@ -1703,7 +1703,7 @@ LOCAL bool initAll(void)
     Pattern_doneAll();
     Crypt_doneAll();
     Password_doneAll();
-    return FALSE;
+    return error;
   }
   error = Server_initAll();
   if (error != ERROR_NONE)
@@ -1716,7 +1716,7 @@ LOCAL bool initAll(void)
     Pattern_doneAll();
     Crypt_doneAll();
     Password_doneAll();
-    return FALSE;
+    return error;
   }
 
   /* initialise variables */
@@ -1725,7 +1725,7 @@ LOCAL bool initAll(void)
   command                               = COMMAND_LIST;
   jobName                               = NULL;
   archiveName                           = NULL;
-  initJobOptions(&jobOptions);  
+  initJobOptions(&jobOptions);
   List_init(&ftpServerList);
   List_init(&sshServerList);
   List_init(&deviceList);
@@ -1797,7 +1797,7 @@ LOCAL bool initAll(void)
   ConfigValue_init(CONFIG_VALUES,SIZE_OF_ARRAY(CONFIG_VALUES));
   CmdOption_init(COMMAND_LINE_OPTIONS,SIZE_OF_ARRAY(COMMAND_LINE_OPTIONS));
 
-  return TRUE;
+  return ERROR_NONE;
 }
 
 /***********************************************************************\
@@ -2502,7 +2502,7 @@ void configValueFormatInitOwner(void **formatUserData, void *userData, void *var
 void configValueFormatDoneOwner(void **formatUserData, void *userData)
 {
   UNUSED_VARIABLE(userData);
-  UNUSED_VARIABLE(formatUserData);  
+  UNUSED_VARIABLE(formatUserData);
 }
 
 bool configValueFormatOwner(void **formatUserData, void *userData, String line)
@@ -2582,7 +2582,7 @@ void configValueFormatInitEntry(void **formatUserData, void *userData, void *var
 void configValueFormatDoneEntry(void **formatUserData, void *userData)
 {
   UNUSED_VARIABLE(userData);
-  UNUSED_VARIABLE(formatUserData);  
+  UNUSED_VARIABLE(formatUserData);
 }
 
 bool configValueFormatFileEntry(void **formatUserData, void *userData, String line)
@@ -2715,7 +2715,7 @@ void configValueFormatInitPattern(void **formatUserData, void *userData, void *v
 void configValueFormatDonePattern(void **formatUserData, void *userData)
 {
   UNUSED_VARIABLE(userData);
-  UNUSED_VARIABLE(formatUserData);  
+  UNUSED_VARIABLE(formatUserData);
 }
 
 bool configValueFormatPattern(void **formatUserData, void *userData, String line)
@@ -2891,7 +2891,7 @@ LOCAL bool parseScheduleNumber(const String s, int *n)
   {
     (*n) = SCHEDULE_ANY;
   }
-  else 
+  else
   {
     (*n) = (uint)String_toInteger(s,0,&nextIndex,NULL,0);
     if (nextIndex != STRING_END) return FALSE;
@@ -3240,7 +3240,7 @@ void configValueFormatInitSchedule(void **formatUserData, void *userData, void *
 void configValueFormatDoneSchedule(void **formatUserData, void *userData)
 {
   UNUSED_VARIABLE(userData);
-  UNUSED_VARIABLE(formatUserData);  
+  UNUSED_VARIABLE(formatUserData);
 }
 
 bool configValueFormatSchedule(void **formatUserData, void *userData, String line)
@@ -3527,14 +3527,18 @@ LOCAL void deletePIDFile(void)
 
 int main(int argc, const char *argv[])
 {
+  Errors         error;
   String         fileName;
   bool           printInfoFlag;
-  Errors         error;
   DatabaseHandle databaseHandle;
 
   /* init */
-  if (!initAll())
+  error = initAll();
+  if (error != ERROR_NONE)
   {
+    printError("Cannot initialize program resources (error: %s)\n",
+               Errors_getText(error)
+              );
     #ifndef NDEBUG
       File_debugPrintInfo();
       File_debugDone();
@@ -3770,7 +3774,7 @@ int main(int argc, const char *argv[])
 
   error = ERROR_NONE;
   if      (daemonFlag)
-  {    
+  {
     /* create session log file */
     File_setFileName(tmpLogFileName,tmpDirectory);
     File_appendFileNameCString(tmpLogFileName,"log.txt");
@@ -4025,6 +4029,7 @@ int main(int argc, const char *argv[])
               error = Command_compare(&fileNameList,
                                       &includeEntryList,
                                       &excludePatternList,
+                                      &deltaSourcePatternList,
                                       &jobOptions,
                                       inputCryptPassword,
                                       NULL
@@ -4034,6 +4039,7 @@ int main(int argc, const char *argv[])
               error = Command_restore(&fileNameList,
                                       &includeEntryList,
                                       &excludePatternList,
+                                      &deltaSourcePatternList,
                                       &jobOptions,
                                       inputCryptPassword,
                                       NULL,
@@ -4219,4 +4225,3 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 #endif
 
 /* end of file */
-
