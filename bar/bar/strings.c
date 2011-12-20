@@ -182,7 +182,7 @@ LOCAL void String_debugDumpStackTrace(FILE *handle, const char *title, int inden
 * Notes  : -
 \***********************************************************************/
 
-LOCAL inline struct __String* allocString(void)
+LOCAL_INLINE struct __String* allocString(void)
 {
   struct __String *string;
 
@@ -229,7 +229,7 @@ LOCAL inline struct __String* allocString(void)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL inline void deleteString(struct __String *string)
+LOCAL_INLINE void deleteString(struct __String *string)
 {
   assert(string != NULL);
   assert(string->data != NULL);
@@ -248,7 +248,7 @@ LOCAL inline void deleteString(struct __String *string)
 *          strings
 \***********************************************************************/
 
-LOCAL inline struct __String* allocTmpString(void)
+LOCAL_INLINE struct __String* allocTmpString(void)
 {
   return allocString();
 }
@@ -263,7 +263,7 @@ LOCAL inline struct __String* allocTmpString(void)
 * Notes  : fromString will become invalid after operation!
 \***********************************************************************/
 
-LOCAL inline void assignTmpString(struct __String *toString, struct __String *fromString)
+LOCAL_INLINE void assignTmpString(struct __String *toString, struct __String *fromString)
 {
   assert(toString != NULL);
   assert(toString->data != NULL);
@@ -513,7 +513,7 @@ LOCAL const char *parseNextFormatToken(const char *format, FormatToken *formatTo
   }
 
   ADD_CHAR(formatToken,'\0');
-  
+
   return format;
 
   #undef ADD_CHAR
@@ -586,7 +586,7 @@ LOCAL void formatString(struct __String *string,
           {
             ensureStringLength(string,string->length+length);
             snprintf(&string->data[string->length],length+1,formatToken.token,data.i);
-            string->length += length; 
+            string->length += length;
             UPDATE_VALID(string);
           }
           break;
@@ -606,7 +606,7 @@ LOCAL void formatString(struct __String *string,
                 {
                   ensureStringLength(string,string->length+length);
                   snprintf(&string->data[string->length],length+1,formatToken.token,data.i);
-                  string->length += length; 
+                  string->length += length;
                   UPDATE_VALID(string);
                 }
               }
@@ -623,7 +623,7 @@ LOCAL void formatString(struct __String *string,
                 {
                   ensureStringLength(string,string->length+length);
                   snprintf(&string->data[string->length],length+1,formatToken.token,data.l);
-                  string->length += length; 
+                  string->length += length;
                   UPDATE_VALID(string);
                 }
               }
@@ -641,7 +641,7 @@ LOCAL void formatString(struct __String *string,
                   {
                     ensureStringLength(string,string->length+length);
                     snprintf(&string->data[string->length],length+1,formatToken.token,data.ll);
-                    string->length += length; 
+                    string->length += length;
                     UPDATE_VALID(string);
                   }
                 #else /* not _LONG_LONG || HAVE_LONG_LONG */
@@ -674,7 +674,7 @@ LOCAL void formatString(struct __String *string,
                 {
                   ensureStringLength(string,string->length+length);
                   snprintf(&string->data[string->length],length+1,formatToken.token,data.ui);
-                  string->length += length; 
+                  string->length += length;
                   UPDATE_VALID(string);
                 }
               }
@@ -691,7 +691,7 @@ LOCAL void formatString(struct __String *string,
                 {
                   ensureStringLength(string,string->length+length);
                   snprintf(&string->data[string->length],length+1,formatToken.token,data.ul);
-                  string->length += length; 
+                  string->length += length;
                   UPDATE_VALID(string);
                 }
               }
@@ -709,7 +709,7 @@ LOCAL void formatString(struct __String *string,
                   {
                     ensureStringLength(string,string->length+length);
                     snprintf(&string->data[string->length],length+1,formatToken.token,data.ull);
-                    string->length += length; 
+                    string->length += length;
                     UPDATE_VALID(string);
                   }
                 #else /* not _LONG_LONG || HAVE_LONG_LONG */
@@ -747,7 +747,7 @@ LOCAL void formatString(struct __String *string,
                 {
                   ensureStringLength(string,string->length+length);
                   snprintf(&string->data[string->length],length+1,formatToken.token,data.d);
-                  string->length += length; 
+                  string->length += length;
                   UPDATE_VALID(string);
                 }
               }
@@ -796,7 +796,7 @@ LOCAL void formatString(struct __String *string,
             {
               ensureStringLength(string,string->length+length);
               snprintf(&string->data[string->length],length+1,formatToken.token,data.s);
-              string->length += length; 
+              string->length += length;
               UPDATE_VALID(string);
            }
           }
@@ -815,7 +815,7 @@ LOCAL void formatString(struct __String *string,
           {
             ensureStringLength(string,string->length+length);
             snprintf(&string->data[string->length],length+1,formatToken.token,data.p);
-            string->length += length; 
+            string->length += length;
             UPDATE_VALID(string);
           }
           break;
@@ -853,7 +853,7 @@ LOCAL void formatString(struct __String *string,
             {
               ensureStringLength(string,string->length+length);
               snprintf(&string->data[string->length],length+1,formatToken.token,String_cString(data.string));
-              string->length += length; 
+              string->length += length;
               UPDATE_VALID(string);
             }
           }
@@ -918,7 +918,7 @@ HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
           {
             ensureStringLength(string,string->length+length);
             snprintf(&string->data[string->length],length+1,formatToken.token);
-            string->length += length; 
+            string->length += length;
             UPDATE_VALID(string);
           }
           break;
@@ -1334,7 +1334,7 @@ LOCAL bool parseString(const char    *string,
 
             if (index < length)
             {
-              String_clear(value.string);           
+              String_clear(value.string);
               z = 0;
               while (   (index < length)
                      && (formatToken.blankFlag || !isspace(string[index]))
@@ -2138,7 +2138,7 @@ String String_setChar(String string, char ch)
 {
   CHECK_VALID(string);
 
-  String_setBuffer(string,&ch,1); 
+  String_setBuffer(string,&ch,1);
 
   UPDATE_VALID(string);
 
@@ -4362,7 +4362,7 @@ bool String_toBoolean(const String convertString, ulong index, long *nextIndex, 
     n = 0;
     if (nextIndex != NULL) (*nextIndex) = index;
   }
-  
+
   return n;
 }
 
