@@ -72,11 +72,14 @@
 #   int64  signed integer 64bit
 #   string string
 #            uint16 length
-#            char   string data (UTF-8), padded to a 2-byte boundary
+#            char   string data (UTF-8)
 #   data   data bytes
 #   crc32  32bit CRC of the previous data types
 #
-# Note: all data types except 'data' are stored in big-endian format.
+# Note:
+#   - all data types except 'data' are stored in big-endian format.
+#   - encrypted data is padded with 0-bytes to a multiple-size of
+#     encryption block size
 
 # ---
 
