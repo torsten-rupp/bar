@@ -341,8 +341,8 @@ LOCAL void printFileInfo(const String       storageName,
 
   dateTime = Misc_formatDateTime(String_new(),timeModified,NULL);
 
-  if (   (   COMPRESS_IS_COMPRESSED(deltaCompressAlgorithm)
-          || COMPRESS_IS_COMPRESSED(dataCompressAlgorithm)
+  if (   (   Compress_isCompressed(deltaCompressAlgorithm)
+          || Compress_isCompressed(dataCompressAlgorithm)
          )
       && (fragmentSize > 0LL)
      )
@@ -369,7 +369,7 @@ LOCAL void printFileInfo(const String       storageName,
   }
   if (globalOptions.longFormatFlag)
   {
-    if      ((COMPRESS_IS_COMPRESSED(deltaCompressAlgorithm) && COMPRESS_IS_COMPRESSED(dataCompressAlgorithm)))
+    if      ((Compress_isCompressed(deltaCompressAlgorithm) && Compress_isCompressed(dataCompressAlgorithm)))
     {
       compressString = String_format(String_new(),
                                      "%s+%s",
@@ -377,14 +377,14 @@ LOCAL void printFileInfo(const String       storageName,
                                      Compress_getAlgorithmName(dataCompressAlgorithm)
                                     );
     }
-    else if (COMPRESS_IS_COMPRESSED(deltaCompressAlgorithm))
+    else if (Compress_isCompressed(deltaCompressAlgorithm))
     {
       compressString = String_format(String_new(),
                                      "%s",
                                      Compress_getAlgorithmName(deltaCompressAlgorithm)
                                     );
     }
-    else if (COMPRESS_IS_COMPRESSED(dataCompressAlgorithm))
+    else if (Compress_isCompressed(dataCompressAlgorithm))
     {
       compressString = String_format(String_new(),
                                      "%s",
@@ -462,8 +462,8 @@ LOCAL void printImageInfo(const String       storageName,
 
   assert(imageName != NULL);
 
-  if (   (   COMPRESS_IS_COMPRESSED(deltaCompressAlgorithm)
-          || COMPRESS_IS_COMPRESSED(dataCompressAlgorithm)
+  if (   (   Compress_isCompressed(deltaCompressAlgorithm)
+          || Compress_isCompressed(dataCompressAlgorithm)
          )
       && (blockCount > 0LL)
      )
@@ -490,7 +490,7 @@ LOCAL void printImageInfo(const String       storageName,
   }
   if (globalOptions.longFormatFlag)
   {
-    if      ((COMPRESS_IS_COMPRESSED(deltaCompressAlgorithm) && COMPRESS_IS_COMPRESSED(dataCompressAlgorithm)))
+    if      ((Compress_isCompressed(deltaCompressAlgorithm) && Compress_isCompressed(dataCompressAlgorithm)))
     {
       compressString = String_format(String_new(),
                                      "%s+%s",
@@ -498,14 +498,14 @@ LOCAL void printImageInfo(const String       storageName,
                                      Compress_getAlgorithmName(dataCompressAlgorithm)
                                     );
     }
-    else if (COMPRESS_IS_COMPRESSED(deltaCompressAlgorithm))
+    else if (Compress_isCompressed(deltaCompressAlgorithm))
     {
       compressString = String_format(String_new(),
                                      "%s",
                                      Compress_getAlgorithmName(deltaCompressAlgorithm)
                                     );
     }
-    else if (COMPRESS_IS_COMPRESSED(dataCompressAlgorithm))
+    else if (Compress_isCompressed(dataCompressAlgorithm))
     {
       compressString = String_format(String_new(),
                                      "%s",
@@ -684,8 +684,8 @@ LOCAL void printHardLinkInfo(const String       storageName,
 
   dateTime = Misc_formatDateTime(String_new(),timeModified,NULL);
 
-  if (   (   COMPRESS_IS_COMPRESSED(deltaCompressAlgorithm)
-          || COMPRESS_IS_COMPRESSED(dataCompressAlgorithm)
+  if (   (   Compress_isCompressed(deltaCompressAlgorithm)
+          || Compress_isCompressed(dataCompressAlgorithm)
          )
       && (fragmentSize > 0LL)
      )
@@ -712,7 +712,7 @@ LOCAL void printHardLinkInfo(const String       storageName,
   }
   if (globalOptions.longFormatFlag)
   {
-    if      ((COMPRESS_IS_COMPRESSED(deltaCompressAlgorithm) && COMPRESS_IS_COMPRESSED(dataCompressAlgorithm)))
+    if      ((Compress_isCompressed(deltaCompressAlgorithm) && Compress_isCompressed(dataCompressAlgorithm)))
     {
       compressString = String_format(String_new(),
                                      "%s+%s",
@@ -720,14 +720,14 @@ LOCAL void printHardLinkInfo(const String       storageName,
                                      Compress_getAlgorithmName(dataCompressAlgorithm)
                                     );
     }
-    else if (COMPRESS_IS_COMPRESSED(deltaCompressAlgorithm))
+    else if (Compress_isCompressed(deltaCompressAlgorithm))
     {
       compressString = String_format(String_new(),
                                      "%s",
                                      Compress_getAlgorithmName(deltaCompressAlgorithm)
                                     );
     }
-    else if (COMPRESS_IS_COMPRESSED(dataCompressAlgorithm))
+    else if (Compress_isCompressed(dataCompressAlgorithm))
     {
       compressString = String_format(String_new(),
                                      "%s",
@@ -889,10 +889,10 @@ LOCAL void printSpecialInfo(const String     storageName,
 *          archiveSize            - archive size [bytes]
 *          deltaCompressAlgorithm - used delta compress algorithm
 *          deltaCompressAlgorithm - used data compress algorithm
-*          cryptAlgorithm         - used crypt algorithm        
-*          cryptType              - crypt type; see CRYPT_TYPES 
-*          fragmentOffset         - fragment offset (0..n-1)    
-*          fragmentSize           - fragment length             
+*          cryptAlgorithm         - used crypt algorithm
+*          cryptType              - crypt type; see CRYPT_TYPES
+*          fragmentOffset         - fragment offset (0..n-1)
+*          fragmentSize           - fragment length
 * Output : -
 * Return : -
 * Notes  : -

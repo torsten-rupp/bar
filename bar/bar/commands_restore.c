@@ -49,8 +49,8 @@
 /* restore information */
 typedef struct
 {
-  EntryList                 *includeEntryList;       // included entries (can be empty)
-  PatternList               *excludePatternList;     // excluded entries (can be empty or NULL)
+  const EntryList           *includeEntryList;       // included entries (can be empty)
+  const PatternList         *excludePatternList;     // excluded entries (can be empty or NULL)
   const JobOptions          *jobOptions;
   bool                      *pauseFlag;              // pause flag (can be NULL)
   bool                      *requestedAbortFlag;     // request abort flag (can be NULL)
@@ -124,7 +124,7 @@ LOCAL String getDestinationFileName(String       destinationFileName,
   while (File_getNextSplitFileName(&fileNameTokenizer,&name))
   {
     File_appendFileName(destinationFileName,name);
-  }     
+  }
   File_doneSplitFileName(&fileNameTokenizer);
 
   /* create destination file name */
@@ -193,9 +193,10 @@ LOCAL bool updateStatusInfo(const RestoreInfo *restoreInfo)
 
 /*---------------------------------------------------------------------*/
 
-Errors Command_restore(StringList                      *archiveNameList,
-                       EntryList                       *includeEntryList,
-                       PatternList                     *excludePatternList,
+Errors Command_restore(const StringList                *archiveNameList,
+                       const EntryList                 *includeEntryList,
+                       const PatternList               *excludePatternList,
+                       const PatternList               *sourcePatternList,
                        JobOptions                      *jobOptions,
                        ArchiveGetCryptPasswordFunction archiveGetCryptPasswordFunction,
                        void                            *archiveGetCryptPasswordUserData,
@@ -655,8 +656,8 @@ NULL,
                  of a compressed data chunk even compressed data is _not_
                  corrupt.
               */
-              if (   !COMPRESS_IS_COMPRESSED(archiveEntryInfo.file.deltaCompressAlgorithm)
-                  && !COMPRESS_IS_COMPRESSED(archiveEntryInfo.file.dataCompressAlgorithm)
+              if (   !Compress_isCompressed(archiveEntryInfo.file.deltaCompressAlgorithm)
+                  && !Compress_isCompressed(archiveEntryInfo.file.dataCompressAlgorithm)
                   && !Archive_eofData(&archiveEntryInfo))
               {
                 printWarning("unexpected data at end of file entry '%S'.\n",fileName);
@@ -887,8 +888,8 @@ NULL,
                  of a compressed data chunk even compressed data is _not_
                  corrupt.
               */
-              if (   !COMPRESS_IS_COMPRESSED(archiveEntryInfo.image.deltaCompressAlgorithm)
-                  && !COMPRESS_IS_COMPRESSED(archiveEntryInfo.image.dataCompressAlgorithm)
+              if (   !Compress_isCompressed(archiveEntryInfo.image.deltaCompressAlgorithm)
+                  && !Compress_isCompressed(archiveEntryInfo.image.dataCompressAlgorithm)
                   && !Archive_eofData(&archiveEntryInfo))
               {
                 printWarning("unexpected data at end of image entry '%S'.\n",imageName);
@@ -1664,8 +1665,8 @@ NULL,
                      of a compressed data chunk even compressed data is _not_
                      corrupt.
                   */
-                  if (   !COMPRESS_IS_COMPRESSED(archiveEntryInfo.hardLink.deltaCompressAlgorithm)
-                      && !COMPRESS_IS_COMPRESSED(archiveEntryInfo.hardLink.dataCompressAlgorithm)
+                  if (   !Compress_isCompressed(archiveEntryInfo.hardLink.deltaCompressAlgorithm)
+                      && !Compress_isCompressed(archiveEntryInfo.hardLink.dataCompressAlgorithm)
                       && !Archive_eofData(&archiveEntryInfo))
                   {
                     printWarning("unexpected data at end of hard link entry '%S'.\n",fileName);

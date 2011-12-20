@@ -237,8 +237,8 @@ NULL,
                  of a compressed data chunk even compressed data is _not_
                  corrupt.
               */
-              if (   !COMPRESS_IS_COMPRESSED(archiveEntryInfo.file.deltaCompressAlgorithm)
-                  && !COMPRESS_IS_COMPRESSED(archiveEntryInfo.file.dataCompressAlgorithm)
+              if (   !Compress_isCompressed(archiveEntryInfo.file.deltaCompressAlgorithm)
+                  && !Compress_isCompressed(archiveEntryInfo.file.dataCompressAlgorithm)
                   && !Archive_eofData(&archiveEntryInfo))
               {
                 printInfo(2,"FAIL!\n");
@@ -367,8 +367,8 @@ NULL,
                  of a compressed data chunk even compressed data is _not_
                  corrupt.
               */
-              if (   !COMPRESS_IS_COMPRESSED(archiveEntryInfo.image.deltaCompressAlgorithm)
-                  && !COMPRESS_IS_COMPRESSED(archiveEntryInfo.image.dataCompressAlgorithm)
+              if (   !Compress_isCompressed(archiveEntryInfo.image.deltaCompressAlgorithm)
+                  && !Compress_isCompressed(archiveEntryInfo.image.dataCompressAlgorithm)
                   && !Archive_eofData(&archiveEntryInfo))
               {
                 printInfo(2,"FAIL!\n");
@@ -647,8 +647,8 @@ NULL,
                      of a compressed data chunk even compressed data is _not_
                      corrupt.
                   */
-                  if (   !COMPRESS_IS_COMPRESSED(archiveEntryInfo.hardLink.deltaCompressAlgorithm)
-                      && !COMPRESS_IS_COMPRESSED(archiveEntryInfo.hardLink.dataCompressAlgorithm)
+                  if (   !Compress_isCompressed(archiveEntryInfo.hardLink.deltaCompressAlgorithm)
+                      && !Compress_isCompressed(archiveEntryInfo.hardLink.dataCompressAlgorithm)
                       && !Archive_eofData(&archiveEntryInfo))
                   {
                     printError("unexpected data at end of hard link entry '%S'!\n",fileName);

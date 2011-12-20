@@ -1171,7 +1171,7 @@ LOCAL bool readJob(JobNode *jobNode)
      )
   {
     return FALSE;
-  }                   
+  }
 
   /* save time modified */
   jobNode->timeModified = File_getFileTimeModified(jobNode->fileName);
@@ -1883,6 +1883,7 @@ LOCAL void jobThreadCode(void)
         jobNode->runningInfo.error = Command_restore(&archiveFileNameList,
                                                      &includeEntryList,
                                                      &excludePatternList,
+                                                     &sourcePatternList,
                                                      &jobOptions,
                                                      getCryptPassword,
                                                      jobNode,
@@ -2514,7 +2515,7 @@ LOCAL void indexUpdateThreadCode(void)
                 }
               }
             }
-            else            
+            else
             {
               // add index
               error = Index_create(indexDatabaseHandle,
@@ -2532,13 +2533,13 @@ LOCAL void indexUpdateThreadCode(void)
 
           /* close directory */
           Storage_closeDirectoryList(&storageDirectoryListHandle);
-        }      
+        }
       }
     }
     freeJobOptions(&jobOptions);
 
 #if 0
-// NYI: how to remove old/not existing indizes in a safe way?  
+// NYI: how to remove old/not existing indizes in a safe way?
     /* delete old indizes */
     error = Index_initListStorage(&databaseQueryHandle,
                                   indexDatabaseHandle,
@@ -6452,6 +6453,7 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, uint id, const String a
   String             string;
   EntryList          includeEntryList;
   PatternList        excludePatternList;
+  PatternList        sourcePatternList;
   JobOptions         jobOptions;
   uint               z;
   RestoreCommandInfo restoreCommandInfo;
@@ -6463,6 +6465,7 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, uint id, const String a
   StringList_init(&archiveNameList);
   EntryList_init(&includeEntryList);
   PatternList_init(&excludePatternList);
+  PatternList_init(&sourcePatternList);
   initJobOptions(&jobOptions);
 
   /* get archive name, destination, overwrite flag, files */
@@ -6470,6 +6473,8 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, uint id, const String a
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected storage name");
     freeJobOptions(&jobOptions);
+    PatternList_done(&sourcePatternList);
+    PatternList_done(&excludePatternList);
     EntryList_done(&includeEntryList);
     StringList_done(&archiveNameList);
     return;
@@ -6479,6 +6484,8 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, uint id, const String a
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected destination directory or device name");
     freeJobOptions(&jobOptions);
+    PatternList_done(&sourcePatternList);
+    PatternList_done(&excludePatternList);
     EntryList_done(&includeEntryList);
     StringList_done(&archiveNameList);
     return;
@@ -6488,6 +6495,8 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, uint id, const String a
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected destination directory or device name");
     freeJobOptions(&jobOptions);
+    PatternList_done(&sourcePatternList);
+    PatternList_done(&excludePatternList);
     EntryList_done(&includeEntryList);
     StringList_done(&archiveNameList);
     return;
@@ -6524,6 +6533,7 @@ ENTRY_TYPE_FILE,
   error = Command_restore(&archiveNameList,
                           &includeEntryList,
                           NULL,
+                          &sourcePatternList,
                           &jobOptions,
                           NULL,
                           NULL,
@@ -6537,6 +6547,8 @@ ENTRY_TYPE_FILE,
 
   /* free resources */
   freeJobOptions(&jobOptions);
+  PatternList_done(&sourcePatternList);
+  PatternList_done(&excludePatternList);
   EntryList_done(&includeEntryList);
   StringList_done(&archiveNameList);
 }
@@ -6705,7 +6717,7 @@ LOCAL void serverCommand_indexStorageAdd(ClientInfo *clientInfo, uint id, const 
                          storageName,
                          INDEX_STATE_UPDATE_REQUESTED,
                          INDEX_MODE_MANUAL,
-                         &storageId                         
+                         &storageId
                         );
     if (error != ERROR_NONE)
     {
@@ -8354,7 +8366,7 @@ Errors Server_run(uint             port,
                                       FILE_DEFAULT_USER_ID,
                                       FILE_DEFAULT_GROUP_ID,
                                       FILE_DEFAULT_PERMISSION
-                                     );                              
+                                     );
     if (error != ERROR_NONE)
     {
       printError("Cannot create directory '%s' (error: %s)\n",

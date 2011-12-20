@@ -49,6 +49,7 @@
 * Input  : archiveFileNameList              - list with archive files
 *          includeEntryList                 - include entry list
 *          excludePatternList               - exclude pattern list
+*          sourcePatternList                - source pattern list
 *          jobOptions                       - job options
 *          archiveGetCryptPasswordFunction  - get password call back
 *          archiveGetCryptPasswordUserData  - user data for get password
@@ -58,9 +59,10 @@
 * Notes  : -
 \***********************************************************************/
 
-Errors Command_compare(StringList                      *archiveFileNameList,
-                       EntryList                       *includeEntryList,
-                       PatternList                     *excludePatternList,
+Errors Command_compare(const StringList                *archiveFileNameList,
+                       const EntryList                 *includeEntryList,
+                       const PatternList               *excludePatternList,
+                       const PatternList               *sourcePatternList,
                        JobOptions                      *jobOptions,
                        ArchiveGetCryptPasswordFunction archiveGetCryptPasswordFunction,
                        void                            *archiveGetCryptPasswordUserData

@@ -84,7 +84,7 @@ typedef struct
 /* create info  */
 typedef struct
 {
-  String                      storageName;                        // 
+  String                      storageName;                        //
   const EntryList             *includeEntryList;                  // list of included entries
   const PatternList           *excludePatternList;                // list of exclude patterns
   const JobOptions            *jobOptions;
@@ -746,7 +746,7 @@ LOCAL void appendHardLinkToEntryList(MsgQueue   *entryMsgQueue,
   entryMsg.name      = NULL;
   StringList_init(&entryMsg.nameList);
   StringList_move(nameList,&entryMsg.nameList);
-  
+
   /* put into message queue */
   MsgQueue_put(entryMsgQueue,&entryMsg,sizeof(entryMsg));
 }
@@ -2060,38 +2060,6 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
 
 /*---------------------------------------------------------------------*/
 
-LOCAL Errors sourceGetEntryDataBlock(void   *userData,
-                                     void   *buffer,
-                                     uint64 offset,
-                                     ulong  length,
-                                     ulong  *bytesRead
-                                    )
-{
-  SourceEntryInfo *sourceEntryInfo;
-  Errors          error;
-
-  assert(userData != NULL);
-  assert(buffer != NULL);
-  assert(bytesRead != NULL);
-
-  sourceEntryInfo = (SourceEntryInfo*)userData;
-
-  error = File_seek(&sourceEntryInfo->tmpFileHandle,offset);
-  if (error != ERROR_NONE)
-  {
-    return error;
-  }
-
-  error = File_read(&sourceEntryInfo->tmpFileHandle,buffer,length,bytesRead);
-  if (error != ERROR_NONE)
-  {
-    return error;
-  }
-//fprintf(stderr,"%s,%d: read source %d\n",__FILE__,__LINE__,*bytesRead);
-
-  return ERROR_NONE;
-}
-
 /***********************************************************************\
 * Name   : freeStorageMsg
 * Purpose: free storage msg
@@ -2262,7 +2230,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
   FileInfo                   fileInfo;
   FileHandle                 fileHandle;
   uint                       retryCount;
-  ulong                      n;
+  ulong                      bufferLength;
   String                     pattern;
   String                     storagePath;
   String                     fileName;
@@ -2425,7 +2393,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
             }
             else
             {
-              /* error -> retry */ 
+              /* error -> retry */
               continue;
             }
           }
@@ -2444,7 +2412,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
               Misc_udelay(500*1000);
             }
 
-            error = File_read(&fileHandle,buffer,BUFFER_SIZE,&n);
+            error = File_read(&fileHandle,buffer,BUFFER_SIZE,&bufferLength);
             if (error != ERROR_NONE)
             {
               /* output error message, store error */
@@ -2458,7 +2426,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
               createInfo->failError = error;
               break;
             }
-            error = Storage_write(&createInfo->storageFileHandle,buffer,n);
+            error = Storage_write(&createInfo->storageFileHandle,buffer,bufferLength);
             if (error != ERROR_NONE)
             {
               if (retryCount > MAX_RETRIES)
@@ -2482,7 +2450,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
             }
 
             /* update status info, check for abort */
-            createInfo->statusInfo.archiveDoneBytes += n;
+            createInfo->statusInfo.archiveDoneBytes += (uint64)bufferLength;
             abortFlag |= !updateStatusInfo(createInfo);
 
             /* on fatal error/abort -> stop */
@@ -2739,8 +2707,6 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
 *          storeIncrementalFileInfoFlag - TRUE to store incremental
 *                                         file data
 *          fileName                     - file name to store
-*          sourceInfo                   - source info (used for
-*                                         delta-compression)
 *          buffer                       - buffer for temporary data
 *          bufferSize                   - size of data buffer
 * Output : -
@@ -2754,7 +2720,6 @@ LOCAL Errors storeFileEntry(ArchiveInfo       *archiveInfo,
                             CreateInfo        *createInfo,
                             bool              storeIncrementalFileInfoFlag,
                             const String      fileName,
-                            SourceInfo        *sourceInfo,
                             byte              *buffer,
                             uint              bufferSize
                            )
@@ -2765,7 +2730,7 @@ LOCAL Errors storeFileEntry(ArchiveInfo       *archiveInfo,
   bool             compressFlag;
   SourceEntryInfo  sourceEntryInfo;
   ArchiveEntryInfo archiveEntryInfo;
-  ulong            n;
+  ulong            bufferLength;
   double           ratio;
 
   assert(archiveInfo != NULL);
@@ -2828,9 +2793,13 @@ LOCAL Errors storeFileEntry(ArchiveInfo       *archiveInfo,
                    && !PatternList_match(compressExcludePatternList,fileName,PATTERN_MATCH_MODE_EXACT);
 
     /* get source for delta-compression */
-    if (compressFlag && COMPRESS_IS_COMPRESSED(archiveInfo->jobOptions->compressAlgorithm.delta))
+    if (compressFlag && Compress_isCompressed(archiveInfo->jobOptions->compressAlgorithm.delta))
     {
-      error = Source_openEntry(&sourceEntryInfo,sourceInfo,fileName);
+      error = Source_openEntry(&sourceEntryInfo,
+                               NULL,
+                               jobOptions,
+                               fileName
+                              );
       if (error != ERROR_NONE)
       {
         printInfo(1,"FAIL\n");
@@ -2846,11 +2815,11 @@ LOCAL Errors storeFileEntry(ArchiveInfo       *archiveInfo,
     /* create new archive file entry */
     error = Archive_newFileEntry(archiveInfo,
                                  &archiveEntryInfo,
-                                 COMPRESS_IS_COMPRESSED(archiveInfo->jobOptions->compressAlgorithm.delta)?sourceGetEntryDataBlock:NULL,
-                                 COMPRESS_IS_COMPRESSED(archiveInfo->jobOptions->compressAlgorithm.delta)?&sourceEntryInfo:NULL,
+                                 Compress_isCompressed(archiveInfo->jobOptions->compressAlgorithm.delta)?Source_getEntryDataBlock:NULL,
+                                 Compress_isCompressed(archiveInfo->jobOptions->compressAlgorithm.delta)?&sourceEntryInfo:NULL,
                                  fileName,
                                  &fileInfo,
-                                 COMPRESS_IS_COMPRESSED(archiveInfo->jobOptions->compressAlgorithm.delta)?sourceEntryInfo.sourceNode->storageName:NULL,
+                                 Compress_isCompressed(archiveInfo->jobOptions->compressAlgorithm.delta)?sourceEntryInfo.sourceNode->storageName:NULL,
                                  compressFlag
                                 );
     if (error != ERROR_NONE)
@@ -2860,7 +2829,7 @@ LOCAL Errors storeFileEntry(ArchiveInfo       *archiveInfo,
                  String_cString(fileName),
                  Errors_getText(error)
                 );
-      if (compressFlag && COMPRESS_IS_COMPRESSED(archiveInfo->jobOptions->compressAlgorithm.delta))
+      if (compressFlag && Compress_isCompressed(archiveInfo->jobOptions->compressAlgorithm.delta))
       {
         Source_closeEntry(&sourceEntryInfo);
       }
@@ -2882,19 +2851,19 @@ LOCAL Errors storeFileEntry(ArchiveInfo       *archiveInfo,
         Misc_udelay(500*1000);
       }
 
-      File_read(&fileHandle,buffer,bufferSize,&n);
-      if (n > 0)
+      File_read(&fileHandle,buffer,bufferSize,&bufferLength);
+      if (bufferLength > 0)
       {
-        error = Archive_writeData(&archiveEntryInfo,buffer,n,1);
-        createInfo->statusInfo.doneBytes += (uint64)n;
-        createInfo->statusInfo.entryDoneBytes += (uint64)n;
+        error = Archive_writeData(&archiveEntryInfo,buffer,bufferLength,1);
+        createInfo->statusInfo.doneBytes += (uint64)bufferLength;
+        createInfo->statusInfo.entryDoneBytes += (uint64)bufferLength;
         createInfo->statusInfo.archiveBytes = createInfo->statusInfo.archiveTotalBytes+Archive_getSize(archiveInfo);
         createInfo->statusInfo.compressionRatio = 100.0-(createInfo->statusInfo.archiveTotalBytes+Archive_getSize(archiveInfo))*100.0/createInfo->statusInfo.doneBytes;
         updateStatusInfo(createInfo);
       }
     }
     while (   ((createInfo->requestedAbortFlag == NULL) || !(*createInfo->requestedAbortFlag))
-           && (n > 0)
+           && (bufferLength > 0)
            && (createInfo->failError == ERROR_NONE)
            && (error == ERROR_NONE)
           );
@@ -2929,7 +2898,7 @@ LOCAL Errors storeFileEntry(ArchiveInfo       *archiveInfo,
     }
 
     // free resources
-    if (compressFlag && COMPRESS_IS_COMPRESSED(archiveInfo->jobOptions->compressAlgorithm.delta))
+    if (compressFlag && Compress_isCompressed(archiveInfo->jobOptions->compressAlgorithm.delta))
     {
       Source_closeEntry(&sourceEntryInfo);
     }
@@ -2981,8 +2950,6 @@ LOCAL Errors storeFileEntry(ArchiveInfo       *archiveInfo,
 *          createInfo                   - create info structure
 *          storeIncrementalFileInfoFlag - not used
 *          deviceName                   - device name
-*          sourceInfo                   - source info (used for
-*                                         delta-compression)
 *          buffer                       - buffer for temporary data
 *          bufferSize                   - size of data buffer
 * Output : -
@@ -2995,7 +2962,6 @@ LOCAL Errors storeImageEntry(ArchiveInfo       *archiveInfo,
                              JobOptions        *jobOptions,
                              CreateInfo        *createInfo,
                              const String      deviceName,
-                             SourceInfo        *sourceInfo,
                              byte              *buffer,
                              uint              bufferSize
                             )
@@ -3101,9 +3067,13 @@ LOCAL Errors storeImageEntry(ArchiveInfo       *archiveInfo,
                    && !PatternList_match(compressExcludePatternList,deviceName,PATTERN_MATCH_MODE_EXACT);
 
     /* get source for delta-compression */
-    if (compressFlag && COMPRESS_IS_COMPRESSED(archiveInfo->jobOptions->compressAlgorithm.delta))
+    if (compressFlag && Compress_isCompressed(archiveInfo->jobOptions->compressAlgorithm.delta))
     {
-      error = Source_openEntry(&sourceEntryInfo,sourceInfo,deviceName);
+      error = Source_openEntry(&sourceEntryInfo,
+                               NULL,
+                               jobOptions,
+                               deviceName
+                              );
       if (error != ERROR_NONE)
       {
         printInfo(1,"FAIL\n");
@@ -3119,11 +3089,11 @@ LOCAL Errors storeImageEntry(ArchiveInfo       *archiveInfo,
     /* create new archive image entry */
     error = Archive_newImageEntry(archiveInfo,
                                   &archiveEntryInfo,
-                                  COMPRESS_IS_COMPRESSED(archiveInfo->jobOptions->compressAlgorithm.delta)?sourceGetEntryDataBlock:NULL,
-                                  COMPRESS_IS_COMPRESSED(archiveInfo->jobOptions->compressAlgorithm.delta)?&sourceEntryInfo:NULL,
+                                  Compress_isCompressed(archiveInfo->jobOptions->compressAlgorithm.delta)?Source_getEntryDataBlock:NULL,
+                                  Compress_isCompressed(archiveInfo->jobOptions->compressAlgorithm.delta)?&sourceEntryInfo:NULL,
                                   deviceName,
                                   &deviceInfo,
-                                  COMPRESS_IS_COMPRESSED(archiveInfo->jobOptions->compressAlgorithm.delta)?sourceEntryInfo.sourceNode->storageName:NULL,
+                                  Compress_isCompressed(archiveInfo->jobOptions->compressAlgorithm.delta)?sourceEntryInfo.sourceNode->storageName:NULL,
                                   compressFlag
                                  );
     if (error != ERROR_NONE)
@@ -3133,7 +3103,7 @@ LOCAL Errors storeImageEntry(ArchiveInfo       *archiveInfo,
                  String_cString(deviceName),
                  Errors_getText(error)
                 );
-      if (compressFlag && COMPRESS_IS_COMPRESSED(archiveInfo->jobOptions->compressAlgorithm.delta))
+      if (compressFlag && Compress_isCompressed(archiveInfo->jobOptions->compressAlgorithm.delta))
       {
         Source_closeEntry(&sourceEntryInfo);
       }
@@ -3226,7 +3196,7 @@ LOCAL Errors storeImageEntry(ArchiveInfo       *archiveInfo,
       FileSystem_done(&fileSystemHandle);
     }
 
-    if (compressFlag && COMPRESS_IS_COMPRESSED(archiveInfo->jobOptions->compressAlgorithm.delta))
+    if (compressFlag && Compress_isCompressed(archiveInfo->jobOptions->compressAlgorithm.delta))
     {
       Source_closeEntry(&sourceEntryInfo);
     }
@@ -3235,8 +3205,8 @@ LOCAL Errors storeImageEntry(ArchiveInfo       *archiveInfo,
     Device_close(&deviceHandle);
 
     /* get compression ratio */
-    if (   (   COMPRESS_IS_COMPRESSED(archiveEntryInfo.image.deltaCompressAlgorithm)
-            || COMPRESS_IS_COMPRESSED(archiveEntryInfo.image.dataCompressAlgorithm)
+    if (   (   Compress_isCompressed(archiveEntryInfo.image.deltaCompressAlgorithm)
+            || Compress_isCompressed(archiveEntryInfo.image.dataCompressAlgorithm)
            )
         && (archiveEntryInfo.image.chunkImageData.blockCount > 0)
        )
@@ -3544,7 +3514,6 @@ LOCAL Errors storeHardLinkEntry(ArchiveInfo       *archiveInfo,
                                 CreateInfo        *createInfo,
                                 bool              storeIncrementalFileInfoFlag,
                                 const StringList  *nameList,
-                                SourceInfo        *sourceInfo,
                                 byte              *buffer,
                                 uint              bufferSize
                                )
@@ -3555,7 +3524,7 @@ LOCAL Errors storeHardLinkEntry(ArchiveInfo       *archiveInfo,
   bool             compressFlag;
   SourceEntryInfo  sourceEntryInfo;
   ArchiveEntryInfo archiveEntryInfo;
-  ulong            n;
+  ulong            bufferLength;
   double           ratio;
   const StringNode *stringNode;
   String           name;
@@ -3621,12 +3590,16 @@ LOCAL Errors storeHardLinkEntry(ArchiveInfo       *archiveInfo,
                    && !PatternList_matchStringList(compressExcludePatternList,nameList,PATTERN_MATCH_MODE_EXACT);
 
     /* get source for delta-compression */
-    if (compressFlag && COMPRESS_IS_COMPRESSED(archiveInfo->jobOptions->compressAlgorithm.delta))
+    if (compressFlag && Compress_isCompressed(archiveInfo->jobOptions->compressAlgorithm.delta))
     {
 //???
       STRINGLIST_ITERATE(nameList,stringNode,name)
       {
-        error = Source_openEntry(&sourceEntryInfo,sourceInfo,name);
+        error = Source_openEntry(&sourceEntryInfo,
+                                 NULL,
+                                 jobOptions,
+                                 name
+                                );
         if (error == ERROR_NONE) break;
       }
       if (error != ERROR_NONE)
@@ -3644,11 +3617,11 @@ LOCAL Errors storeHardLinkEntry(ArchiveInfo       *archiveInfo,
     /* create new archive hard link entry */
     error = Archive_newHardLinkEntry(archiveInfo,
                                      &archiveEntryInfo,
-                                     COMPRESS_IS_COMPRESSED(archiveInfo->jobOptions->compressAlgorithm.delta)?sourceGetEntryDataBlock:NULL,
-                                     COMPRESS_IS_COMPRESSED(archiveInfo->jobOptions->compressAlgorithm.delta)?&sourceEntryInfo:NULL,
+                                     Compress_isCompressed(archiveInfo->jobOptions->compressAlgorithm.delta)?Source_getEntryDataBlock:NULL,
+                                     Compress_isCompressed(archiveInfo->jobOptions->compressAlgorithm.delta)?&sourceEntryInfo:NULL,
                                      nameList,
                                      &fileInfo,
-                                     COMPRESS_IS_COMPRESSED(archiveInfo->jobOptions->compressAlgorithm.delta)?sourceEntryInfo.sourceNode->storageName:NULL,
+                                     Compress_isCompressed(archiveInfo->jobOptions->compressAlgorithm.delta)?sourceEntryInfo.sourceNode->storageName:NULL,
                                      compressFlag
                                     );
     if (error != ERROR_NONE)
@@ -3676,19 +3649,19 @@ LOCAL Errors storeHardLinkEntry(ArchiveInfo       *archiveInfo,
         Misc_udelay(500*1000);
       }
 
-      File_read(&fileHandle,buffer,bufferSize,&n);
-      if (n > 0)
+      File_read(&fileHandle,buffer,bufferSize,&bufferLength);
+      if (bufferLength > 0)
       {
-        error = Archive_writeData(&archiveEntryInfo,buffer,n,1);
-        createInfo->statusInfo.doneBytes += (uint64)StringList_count(nameList)*(uint64)n;
-        createInfo->statusInfo.entryDoneBytes += (uint64)StringList_count(nameList)*(uint64)n;
+        error = Archive_writeData(&archiveEntryInfo,buffer,bufferLength,1);
+        createInfo->statusInfo.doneBytes += (uint64)StringList_count(nameList)*(uint64)bufferLength;
+        createInfo->statusInfo.entryDoneBytes += (uint64)StringList_count(nameList)*(uint64)bufferLength;
         createInfo->statusInfo.archiveBytes = createInfo->statusInfo.archiveTotalBytes+Archive_getSize(archiveInfo);
         createInfo->statusInfo.compressionRatio = 100.0-(createInfo->statusInfo.archiveTotalBytes+Archive_getSize(archiveInfo))*100.0/createInfo->statusInfo.doneBytes;
         updateStatusInfo(createInfo);
       }
     }
     while (   ((createInfo->requestedAbortFlag == NULL) || !(*createInfo->requestedAbortFlag))
-           && (n > 0)
+           && (bufferLength > 0)
            && (createInfo->failError == ERROR_NONE)
            && (error == ERROR_NONE)
           );
@@ -3726,8 +3699,8 @@ LOCAL Errors storeHardLinkEntry(ArchiveInfo       *archiveInfo,
     File_close(&fileHandle);
 
     /* get compression ratio */
-    if (   (   COMPRESS_IS_COMPRESSED(archiveEntryInfo.hardLink.deltaCompressAlgorithm)
-            || COMPRESS_IS_COMPRESSED(archiveEntryInfo.hardLink.dataCompressAlgorithm)
+    if (   (   Compress_isCompressed(archiveEntryInfo.hardLink.deltaCompressAlgorithm)
+            || Compress_isCompressed(archiveEntryInfo.hardLink.dataCompressAlgorithm)
            )
         && (archiveEntryInfo.hardLink.chunkHardLinkData.fragmentSize > 0LL)
        )
@@ -3906,7 +3879,6 @@ Errors Command_create(const char                      *storageName,
   bool             useIncrementalFileInfoFlag;
   bool             storeIncrementalFileInfoFlag;
   bool             incrementalFileInfoExistFlag;
-  SourceInfo       sourceInfo;
   bool             abortFlag;
   EntryMsg         entryMsg;
   bool             ownFileFlag;
@@ -4103,40 +4075,11 @@ Errors Command_create(const char                      *storageName,
                                    || (createInfo.archiveType == ARCHIVE_TYPE_INCREMENTAL);
   }
 
-  /* init sources */
-  if (COMPRESS_IS_COMPRESSED(jobOptions->compressAlgorithm.delta))
+//???
+  error = Source_init(sourcePatternList,jobOptions);
+  if (error != ERROR_NONE)
   {
-    error = Source_init(&sourceInfo,sourcePatternList,jobOptions);
-    if (error != ERROR_NONE)
-    {
-      printError("Cannot initialize sources for delta compression (error: %s)\n",
-                 Errors_getText(error)
-                );
-      if (useIncrementalFileInfoFlag)
-      {
-        Dictionary_done(&createInfo.filesDictionary,NULL,NULL);
-        if (!incrementalFileInfoExistFlag) File_delete(incrementalListFileName,FALSE);
-        String_delete(incrementalListFileName);
-      }
-#if 0
-// NYI: must index be deleted on error?
-      if (indexDatabaseHandle != NULL)
-      {
-        Storage_closeIndex(&createInfo.storageIndexHandle);
-      }
-#endif /* 0 */
-      Semaphore_done(&createInfo.storageInfoLock);
-      MsgQueue_done(&createInfo.storageMsgQueue,NULL,NULL);
-      MsgQueue_done(&createInfo.entryMsgQueue,(MsgQueueMsgFreeFunction)freeEntryMsg,NULL);
-      free(buffer);
-      String_delete(createInfo.statusInfo.storageName);
-      String_delete(createInfo.statusInfo.name);
-      String_delete(createInfo.archiveFileName);
-      StringList_done(&createInfo.storageFileList);
-      String_delete(createInfo.storageName);
-
-      return error;
-    }
+    HALT_FATAL_ERROR("Cannot initialise delta sources!");
   }
 
   /* create new archive */
@@ -4154,7 +4097,6 @@ Errors Command_create(const char                      *storageName,
                String_cString(printableStorageName),
                Errors_getText(error)
               );
-    Source_done(&sourceInfo);
     if (useIncrementalFileInfoFlag)
     {
       Dictionary_done(&createInfo.filesDictionary,NULL,NULL);
@@ -4238,7 +4180,6 @@ Errors Command_create(const char                      *storageName,
                                      &createInfo,
                                      storeIncrementalFileInfoFlag,
                                      entryMsg.name,
-                                     &sourceInfo,
                                      buffer,
                                      BUFFER_SIZE
                                     );
@@ -4293,7 +4234,6 @@ Errors Command_create(const char                      *storageName,
                                          &createInfo,
                                          storeIncrementalFileInfoFlag,
                                          &entryMsg.nameList,
-                                         &sourceInfo,
                                          buffer,
                                          BUFFER_SIZE
                                         );
@@ -4323,7 +4263,6 @@ Errors Command_create(const char                      *storageName,
                                       jobOptions,
                                       &createInfo,
                                       entryMsg.name,
-                                      &sourceInfo,
                                       buffer,
                                       BUFFER_SIZE
                                      );
@@ -4362,6 +4301,8 @@ Errors Command_create(const char                      *storageName,
 
   /* close archive */
   Archive_close(&archiveInfo);
+
+  Source_done();
 
   /* signal end of data */
   createInfo.collectorSumThreadExitFlag = TRUE;
@@ -4425,10 +4366,6 @@ Errors Command_create(const char                      *storageName,
   }
 
   /* free resources */
-  if (COMPRESS_IS_COMPRESSED(jobOptions->compressAlgorithm.delta))
-  {
-    Source_done(&sourceInfo);
-  }
   if (useIncrementalFileInfoFlag)
   {
     Dictionary_done(&createInfo.filesDictionary,NULL,NULL);

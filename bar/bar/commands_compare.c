@@ -34,6 +34,7 @@
 #include "files.h"
 #include "archive.h"
 #include "fragmentlists.h"
+#include "sources.h"
 
 #include "commands_compare.h"
 
@@ -68,7 +69,7 @@
 * Notes  : -
 \***********************************************************************/
 
-LOCAL ulong compare(const void *p0, const void *p1, ulong length)
+LOCAL_INLINE ulong compare(const void *p0, const void *p1, ulong length)
 {
   const char *b0,*b1;
   ulong      i;
@@ -90,9 +91,10 @@ LOCAL ulong compare(const void *p0, const void *p1, ulong length)
 
 /*---------------------------------------------------------------------*/
 
-Errors Command_compare(StringList                      *archiveFileNameList,
-                       EntryList                       *includeEntryList,
-                       PatternList                     *excludePatternList,
+Errors Command_compare(const StringList                *archiveFileNameList,
+                       const EntryList                 *includeEntryList,
+                       const PatternList               *excludePatternList,
+                       const PatternList               *sourcePatternList,
                        JobOptions                      *jobOptions,
                        ArchiveGetCryptPasswordFunction archiveGetCryptPasswordFunction,
                        void                            *archiveGetCryptPasswordUserData
@@ -127,6 +129,13 @@ Errors Command_compare(StringList                      *archiveFileNameList,
   }
   FragmentList_init(&fragmentList);
   archiveFileName = String_new();
+
+//???
+  error = Source_init(sourcePatternList,jobOptions);
+  if (error != ERROR_NONE)
+  {
+    HALT_FATAL_ERROR("Cannot initialise delta sources!");
+  }
 
   failError = ERROR_NONE;
   while (   !StringList_empty(archiveFileNameList)
@@ -177,31 +186,34 @@ Errors Command_compare(StringList                      *archiveFileNameList,
       {
         case ARCHIVE_ENTRY_TYPE_FILE:
           {
-            String       fileName;
-            FileInfo     fileInfo;
-            uint64       fragmentOffset,fragmentSize;
-            FragmentNode *fragmentNode;
-//            FileInfo   localFileInfo;
-            FileHandle   fileHandle;
-            bool         equalFlag;
-            uint64       length;
-            ulong        n;
-            ulong        diffIndex;
+            CompressAlgorithms deltaCompressAlgorithm,dataCompressAlgorithm;
+            String             fileName;
+            FileInfo           fileInfo;
+            String             deltaSourceName;
+            uint64             fragmentOffset,fragmentSize;
+            SourceEntryInfo    sourceEntryInfo;
+            FragmentNode       *fragmentNode;
+//            FileInfo         localFileInfo;
+            FileHandle         fileHandle;
+            bool               equalFlag;
+            uint64             length;
+            ulong              bufferLength;
+            ulong              diffIndex;
 
             /* read file */
-            fileName = String_new();
+            fileName        = String_new();
+            deltaSourceName = String_new();
             error = Archive_readFileEntry(&archiveInfo,
                                           &archiveEntryInfo,
-//???
-NULL,
-NULL,
-                                          NULL,
-                                          NULL,
+NULL,//                                          Source_getEntryDataBlock,
+NULL,//                                          &sourceEntryInfo,
+                                          &deltaCompressAlgorithm,
+                                          &dataCompressAlgorithm,
                                           NULL,
                                           NULL,
                                           fileName,
                                           &fileInfo,
-                                          NULL,
+                                          deltaSourceName,
                                           &fragmentOffset,
                                           &fragmentSize
                                          );
@@ -211,6 +223,7 @@ NULL,
                          String_cString(archiveFileName),
                          Errors_getText(error)
                         );
+              String_delete(deltaSourceName);
               String_delete(fileName);
               if (failError == ERROR_NONE) failError = error;
               break;
@@ -266,6 +279,7 @@ NULL,
                            Errors_getText(error)
                           );
                 Archive_closeEntry(&archiveEntryInfo);
+                String_delete(deltaSourceName);
                 String_delete(fileName);
                 if (jobOptions->stopOnErrorFlag)
                 {
@@ -285,6 +299,7 @@ NULL,
                           );
                 File_close(&fileHandle);
                 Archive_closeEntry(&archiveEntryInfo);
+                String_delete(deltaSourceName);
                 String_delete(fileName);
                 if (jobOptions->stopOnErrorFlag)
                 {
@@ -304,6 +319,7 @@ NULL,
                           );
                 File_close(&fileHandle);
                 Archive_closeEntry(&archiveEntryInfo);
+                String_delete(deltaSourceName);
                 String_delete(fileName);
                 if (jobOptions->stopOnErrorFlag)
                 {
@@ -316,10 +332,10 @@ NULL,
               diffIndex = 0;
               while ((length < fragmentSize) && equalFlag)
               {
-                n = MIN(fragmentSize-length,BUFFER_SIZE);
+                bufferLength = MIN(fragmentSize-length,BUFFER_SIZE);
 
                 /* read archive, file */
-                error = Archive_readData(&archiveEntryInfo,archiveBuffer,n);
+                error = Archive_readData(&archiveEntryInfo,archiveBuffer,bufferLength);
                 if (error != ERROR_NONE)
                 {
                   printInfo(2,"FAIL!\n");
@@ -330,7 +346,7 @@ NULL,
                   if (failError == ERROR_NONE) failError = error;
                   break;
                 }
-                error = File_read(&fileHandle,buffer,n,NULL);
+                error = File_read(&fileHandle,buffer,bufferLength,NULL);
                 if (error != ERROR_NONE)
                 {
                   printInfo(2,"FAIL!\n");
@@ -346,8 +362,8 @@ NULL,
                 }
 
                 /* compare */
-                diffIndex = compare(archiveBuffer,buffer,n);
-                equalFlag = (diffIndex >= n);
+                diffIndex = compare(archiveBuffer,buffer,bufferLength);
+                equalFlag = (diffIndex >= bufferLength);
                 if (!equalFlag)
                 {
                   printInfo(2,"FAIL!\n");
@@ -362,12 +378,13 @@ NULL,
                   break;
                 }
 
-                length += n;
+                length += bufferLength;
               }
               File_close(&fileHandle);
               if (failError != ERROR_NONE)
               {
                 Archive_closeEntry(&archiveEntryInfo);
+                String_delete(deltaSourceName);
                 String_delete(fileName);
                 continue;
               }
@@ -393,8 +410,8 @@ NULL,
                  of a compressed data chunk even compressed data is _not_
                  corrupt.
               */
-              if (   !COMPRESS_IS_COMPRESSED(archiveEntryInfo.file.deltaCompressAlgorithm)
-                  && !COMPRESS_IS_COMPRESSED(archiveEntryInfo.file.dataCompressAlgorithm)
+              if (   !Compress_isCompressed(deltaCompressAlgorithm)
+                  && !Compress_isCompressed(dataCompressAlgorithm)
                   && !Archive_eofData(&archiveEntryInfo))
               {
                 printWarning("unexpected data at end of file entry '%S'.\n",fileName);
@@ -408,7 +425,7 @@ NULL,
               printInfo(3,"  Compare '%s'...skipped\n",String_cString(fileName));
             }
 
-            /* close archive file, free resources */
+            /* close archive file */
             error = Archive_closeEntry(&archiveEntryInfo);
             if (error != ERROR_NONE)
             {
@@ -416,20 +433,22 @@ NULL,
             }
 
             /* free resources */
+            String_delete(deltaSourceName);
             String_delete(fileName);
           }
           break;
         case ARCHIVE_ENTRY_TYPE_IMAGE:
           {
-            String       imageName;
-            DeviceInfo   deviceInfo;
-            uint64       blockOffset,blockCount;
-            FragmentNode *fragmentNode;
-            DeviceHandle deviceHandle;
-            bool         equalFlag;
-            uint64       block;
-            ulong        bufferBlockCount;
-            ulong        diffIndex;
+            CompressAlgorithms deltaCompressAlgorithm,dataCompressAlgorithm;
+            String             imageName;
+            DeviceInfo         deviceInfo;
+            uint64             blockOffset,blockCount;
+            FragmentNode       *fragmentNode;
+            DeviceHandle       deviceHandle;
+            bool               equalFlag;
+            uint64             block;
+            ulong              bufferBlockCount;
+            ulong              diffIndex;
 
             /* read image */
             imageName = String_new();
@@ -438,8 +457,8 @@ NULL,
 //???
 NULL,
 NULL,
-                                           NULL,
-                                           NULL,
+                                           &deltaCompressAlgorithm,
+                                           &dataCompressAlgorithm,
                                            NULL,
                                            NULL,
                                            imageName,
@@ -619,8 +638,8 @@ NULL,
                  of a compressed data chunk even compressed data is _not_
                  corrupt.
               */
-              if (   !COMPRESS_IS_COMPRESSED(archiveEntryInfo.image.deltaCompressAlgorithm)
-                  && !COMPRESS_IS_COMPRESSED(archiveEntryInfo.image.dataCompressAlgorithm)
+              if (   !Compress_isCompressed(deltaCompressAlgorithm)
+                  && !Compress_isCompressed(dataCompressAlgorithm)
                   && !Archive_eofData(&archiveEntryInfo))
               {
                 printWarning("unexpected data at end of image entry '%S'.\n",imageName);
@@ -906,19 +925,20 @@ NULL,
           break;
         case ARCHIVE_ENTRY_TYPE_HARDLINK:
           {
-            StringList       fileNameList;
-            FileInfo         fileInfo;
-            uint64           fragmentOffset,fragmentSize;
-            bool             comparedDataFlag;
-            const StringNode *stringNode;
-            String           fileName;
-            FragmentNode     *fragmentNode;
-//            FileInfo       localFileInfo;
-            FileHandle       fileHandle;
-            bool             equalFlag;
-            uint64           length;
-            ulong            n;
-            ulong            diffIndex;
+            CompressAlgorithms deltaCompressAlgorithm,dataCompressAlgorithm;
+            StringList         fileNameList;
+            FileInfo           fileInfo;
+            uint64             fragmentOffset,fragmentSize;
+            bool               comparedDataFlag;
+            const StringNode   *stringNode;
+            String             fileName;
+            FragmentNode       *fragmentNode;
+//            FileInfo         localFileInfo;
+            FileHandle         fileHandle;
+            bool               equalFlag;
+            uint64             length;
+            ulong              bufferLength;
+            ulong              diffIndex;
 
             /* read hard link */
             StringList_init(&fileNameList);
@@ -927,8 +947,8 @@ NULL,
 //???
 NULL,
 NULL,
-                                              NULL,
-                                              NULL,
+                                              &deltaCompressAlgorithm,
+                                              &dataCompressAlgorithm,
                                               NULL,
                                               NULL,
                                               &fileNameList,
@@ -1064,10 +1084,10 @@ NULL,
                   diffIndex = 0;
                   while ((length < fragmentSize) && equalFlag)
                   {
-                    n = MIN(fragmentSize-length,BUFFER_SIZE);
+                    bufferLength = MIN(fragmentSize-length,BUFFER_SIZE);
 
                     /* read archive, file */
-                    error = Archive_readData(&archiveEntryInfo,archiveBuffer,n);
+                    error = Archive_readData(&archiveEntryInfo,archiveBuffer,bufferLength);
                     if (error != ERROR_NONE)
                     {
                       printInfo(2,"FAIL!\n");
@@ -1078,7 +1098,7 @@ NULL,
                       if (failError == ERROR_NONE) failError = error;
                       break;
                     }
-                    error = File_read(&fileHandle,buffer,n,NULL);
+                    error = File_read(&fileHandle,buffer,bufferLength,NULL);
                     if (error != ERROR_NONE)
                     {
                       printInfo(2,"FAIL!\n");
@@ -1094,8 +1114,8 @@ NULL,
                     }
 
                     /* compare */
-                    diffIndex = compare(archiveBuffer,buffer,n);
-                    equalFlag = (diffIndex >= n);
+                    diffIndex = compare(archiveBuffer,buffer,bufferLength);
+                    equalFlag = (diffIndex >= bufferLength);
                     if (!equalFlag)
                     {
                       printInfo(2,"FAIL!\n");
@@ -1110,7 +1130,7 @@ NULL,
                       break;
                     }
 
-                    length += n;
+                    length += bufferLength;
                   }
                   if (failError != ERROR_NONE)
                   {
@@ -1141,8 +1161,8 @@ NULL,
                      of a compressed data chunk even compressed data is _not_
                      corrupt.
                   */
-                  if (   !COMPRESS_IS_COMPRESSED(archiveEntryInfo.hardLink.deltaCompressAlgorithm)
-                      && !COMPRESS_IS_COMPRESSED(archiveEntryInfo.hardLink.dataCompressAlgorithm)
+                  if (   !Compress_isCompressed(deltaCompressAlgorithm)
+                      && !Compress_isCompressed(dataCompressAlgorithm)
                       && !Archive_eofData(&archiveEntryInfo))
                   {
                     printWarning("unexpected data at end of hard link entry '%S'.\n",fileName);
@@ -1359,6 +1379,7 @@ NULL,
   }
 
   /* free resources */
+  Source_done();
   String_delete(archiveFileName);
   FragmentList_done(&fragmentList);
   free(buffer);

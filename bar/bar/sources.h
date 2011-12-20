@@ -55,13 +55,6 @@ typedef struct
   LIST_HEADER(SourceNode);
 } SourceList;
 
-/* source info block */
-typedef struct
-{
-  SourceList       sourceList;
-  const JobOptions *jobOptions;
-} SourceInfo;
-
 /* source entry info block */
 typedef struct
 {
@@ -84,42 +77,95 @@ typedef struct
 #endif
 
 /***********************************************************************\
-* Name   : Source_new
+* Name   : Source_initAll
 * Purpose: initialize source handle
-* Input  : sourceInfo        - source info block
-*          sourcePatternList - source pattern list
+* Input  : sourcePatternList - source pattern list
+* ???
 * Output : sourceInfo - initialized source info block
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-Errors Source_init(SourceInfo        *sourceInfo,
-                   const PatternList *sourcePatternList,
-                   JobOptions        *jobOptions
-                  );
+Errors Source_initAll(void);
 
 /***********************************************************************\
-* Name   : Source_delete
+* Name   : Source_doneAll
 * Purpose: deinitialize source handle
-* Input  : sourceInfo - source info block
+* Input  : -
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-void Source_done(SourceInfo *sourceInfo);
+void Source_doneAll();
 
-Errors Source_openEntry(SourceEntryInfo *sourceEntryInfo,
-                        SourceInfo      *sourceInfo,
-                        const String    name
+/***********************************************************************\
+* Name   : Source_new
+* Purpose: initialize source handle
+* Input  : sourcePatternList - source pattern list
+* ???
+* Output : sourceInfo - initialized source info block
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors Source_init(const PatternList *patternList,
+                   JobOptions        *jobOptions
+                  );
+
+/***********************************************************************\
+* Name   : Source_done
+* Purpose: deinitialize source handle
+* Input  : -
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+void Source_done();
+
+void Source_addSource(String sourcePattern, JobOptions *jobOptions);
+
+/***********************************************************************\
+* Name   :
+* Purpose:
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+Errors Source_openEntry(SourceEntryInfo  *sourceEntryInfo,
+                        const String     sourceStorageName,
+                        JobOptions       *jobOptions,
+                        const String     name
                        );
+
+/***********************************************************************\
+* Name   :
+* Purpose:
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
 
 void Source_closeEntry(SourceEntryInfo *sourceEntryInfo);
 
-Errors Source_getEntryDataBlock(SourceEntryInfo *sourceEntryInfo,
-                                void            *buffer,
-                                uint64          offset,
-                                ulong           length
+/***********************************************************************\
+* Name   :
+* Purpose:
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+Errors Source_getEntryDataBlock(void   *userData,
+                                void   *buffer,
+                                uint64 offset,
+                                ulong  length,
+                                ulong  *bytesRead
                                );
 
 #ifdef __cplusplus

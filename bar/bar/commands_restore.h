@@ -78,28 +78,29 @@ typedef bool(*RestoreStatusInfoFunction)(void                    *userData,
 /***********************************************************************\
 * Name   : Command_restore
 * Purpose: restore archive content
-* Input  : archiveFileNameList              - list with archive files 
+* Input  : archiveFileNameList              - list with archive files
 *          includeEntryList                 - include entry list
 *          excludePatternList               - exclude pattern list
-*          jobOptions                       - job options             
+*          jobOptions                       - job options
 *          archiveGetCryptPasswordFunction  - get password call back
 *          archiveGetCryptPasswordUserData  - user data for get password
 *                                             call back
 *          createStatusInfoFunction         - status info call back
-*                                             function (can be NULL)                      
+*                                             function (can be NULL)
 *          createStatusInfoUserData         - user data for status info
-*                                             function 
-*          pauseFlag                        - pause flag (can be NULL)           
+*                                             function
+*          pauseFlag                        - pause flag (can be NULL)
 *          requestedAbortFlag               - request abort flag (can be
-*                                             NULL)   
+*                                             NULL)
 * Output : -
 * Return : ERROR_NONE if all files restored, otherwise error code
 * Notes  : -
 \***********************************************************************/
 
-Errors Command_restore(StringList                      *archiveFileNameList,
-                       EntryList                       *includeEntryList,
-                       PatternList                     *excludePatternList,
+Errors Command_restore(const StringList                *archiveFileNameList,
+                       const EntryList                 *includeEntryList,
+                       const PatternList               *excludePatternList,
+                       const PatternList               *sourcePatternList,
                        JobOptions                      *jobOptions,
                        ArchiveGetCryptPasswordFunction archiveGetCryptPasswordFunction,
                        void                            *archiveGetCryptPasswordUserData,
