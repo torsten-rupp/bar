@@ -28,6 +28,7 @@
 #include "compress.h"
 #include "passwords.h"
 #include "crypt.h"
+#include "sources.h"
 #include "archive_format.h"
 #include "storage.h"
 #include "index.h"
@@ -124,13 +125,13 @@ typedef Errors(*ArchiveGetCryptPasswordFunction)(void         *userData,
 
 typedef struct
 {
+  JobOptions                      *jobOptions;
 //  ArchiveNewEntryFunction         archiveNewEntryFunction;           // call back for new archive entry
 //  void                            *archiveNewEntryUserData;          // user data for call back for new archive entry
   ArchiveNewFileFunction          archiveNewFileFunction;            // call back for new archive file
   void                            *archiveNewFileUserData;           // user data for call back for new archive file
   ArchiveGetCryptPasswordFunction archiveGetCryptPasswordFunction;   // call back to get crypt password
   void                            *archiveGetCryptPasswordUserData;  // user data for call back to get crypt password
-  JobOptions                      *jobOptions;
 
   CryptTypes                      cryptType;                         // crypt type (symmetric/asymmetric; see CryptTypes)
   Password                        *cryptPassword;                    // cryption password for encryption/decryption
@@ -192,6 +193,8 @@ typedef struct
   {
     struct
     {
+      SourceEntryInfo       sourceEntryInfo;
+
       CompressAlgorithms    deltaCompressAlgorithm;    // delta compression algorithm
       CompressAlgorithms    dataCompressAlgorithm;     // data compression algorithm
 
@@ -362,6 +365,7 @@ Errors Archive_create(ArchiveInfo                     *archiveInfo,
 * Purpose: open archive
 * Input  : archiveInfo                 - archive info block
 *          storageName                 - storage name
+*          sourcePatternList, ???
 *          jobOptions                  - option settings
 *          archiveGetCryptPassword     - get password call back
 *          archiveGetCryptPasswordData - user data for get password call
