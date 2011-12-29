@@ -145,7 +145,7 @@ LOCAL void Semaphore_debugInit(void)
 
 /***********************************************************************\
 * Name   : Semaphore_debugPrintInfo
-* Purpose: 
+* Purpose:
 * Input  : -
 * Output : -
 * Return : -
@@ -271,7 +271,7 @@ LOCAL void lock(const char         *fileName,
           else
           {
             fprintf(stderr,
-                    "DEBUG WARNING: too many thread locks for semaphore %p at %s, line %lu (max. %d)!\n",
+                    "DEBUG WARNING: too many thread locks for semaphore %p at %s, line %lu (max. %lu)!\n",
                     semaphore,
                     fileName,
                     lineNb,
@@ -283,7 +283,7 @@ LOCAL void lock(const char         *fileName,
         // wait until no more read/write-locks
         while (semaphore->readWriteLockCount > 0)
         {
-          WAIT(DEBUG_READ_WRITE,"R",&semaphore->modified,&semaphore->lock); 
+          WAIT(DEBUG_READ_WRITE,"R",&semaphore->modified,&semaphore->lock);
         }
         assert(semaphore->readWriteLockCount == 0);
 
@@ -324,7 +324,7 @@ LOCAL void lock(const char         *fileName,
         else
         {
           fprintf(stderr,
-                  "DEBUG WARNING: too many thread locks for semaphore '%s' at %s, line %lu (max. %d)!\n",
+                  "DEBUG WARNING: too many thread locks for semaphore '%s' at %s, line %lu (max. %lu)!\n",
                   semaphore->name,
                   fileName,
                   lineNb,
@@ -336,7 +336,7 @@ LOCAL void lock(const char         *fileName,
       // wait until no more read-locks
       while (semaphore->readLockCount > 0)
       {
-        WAIT(DEBUG_READ_WRITE,"R",&semaphore->readLockZero,&semaphore->lock); 
+        WAIT(DEBUG_READ_WRITE,"R",&semaphore->readLockZero,&semaphore->lock);
       }
       assert(semaphore->readLockCount == 0);
 
@@ -560,12 +560,12 @@ LOCAL void waitModified(const char *fileName, ulong lineNb, Semaphore *semaphore
         SIGNAL(DEBUG_READ_WRITE,"MODIFIED",&semaphore->modified);
 
         // wait for modification
-        WAIT(DEBUG_READ,"MODIFIED",&semaphore->modified,&semaphore->lock); 
+        WAIT(DEBUG_READ,"MODIFIED",&semaphore->modified,&semaphore->lock);
 
         // wait until there are no more write-locks
         while (semaphore->readWriteLockCount > 0)
         {
-          WAIT(DEBUG_READ,"W",&semaphore->modified,&semaphore->lock); 
+          WAIT(DEBUG_READ,"W",&semaphore->modified,&semaphore->lock);
         }
 
         // restore temporary reverted read-lock
@@ -597,7 +597,7 @@ LOCAL void waitModified(const char *fileName, ulong lineNb, Semaphore *semaphore
       // wait until no more read-locks
       while (semaphore->readLockCount > 0)
       {
-        WAIT(DEBUG_READ_WRITE,"R",&semaphore->readLockZero,&semaphore->lock); 
+        WAIT(DEBUG_READ_WRITE,"R",&semaphore->readLockZero,&semaphore->lock);
       }
       assert(semaphore->readLockCount == 0);
 
@@ -811,9 +811,9 @@ void __Semaphore_waitModified(const char *fileName, ulong lineNb, Semaphore *sem
   if (!semaphore->endFlag)
   {
     #ifdef NDEBUG
-      waitModified(semaphore); 
+      waitModified(semaphore);
     #else /* not NDEBUG */
-      waitModified(fileName,lineNb,semaphore); 
+      waitModified(fileName,lineNb,semaphore);
     #endif /* NDEBUG */
   }
 }
