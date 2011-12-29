@@ -221,24 +221,6 @@ LOCAL_INLINE struct __String* allocString(void)
 }
 
 /***********************************************************************\
-* Name   : deleteString
-* Purpose: delete a string
-* Input  : string - string to delete
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL_INLINE void deleteString(struct __String *string)
-{
-  assert(string != NULL);
-  assert(string->data != NULL);
-
-  free(string->data);
-  free(string);
-}
-
-/***********************************************************************\
 * Name   : allocTmpString
 * Purpose: allocate a temporary string
 * Input  : -
