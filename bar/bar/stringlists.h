@@ -341,7 +341,7 @@ INLINE String StringList_last(const StringList *stringList, String string)
 *          is returned directly and have to be freed
 \***********************************************************************/
 
-String StringList_getFirst(const StringList *stringList, String string);
+String StringList_getFirst(StringList *stringList, String string);
 
 /***********************************************************************\
 * Name   : StringList_getLast
@@ -354,7 +354,7 @@ String StringList_getFirst(const StringList *stringList, String string);
 *          is returned directly and have to be freed
 \***********************************************************************/
 
-String StringList_getLast(const StringList *stringList, String string);
+String StringList_getLast(StringList *stringList, String string);
 
 /***********************************************************************\
 * Name   : StringList_find, StringList_findCString

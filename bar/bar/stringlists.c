@@ -270,7 +270,7 @@ StringNode *StringList_remove(StringList *stringList, StringNode *stringNode)
   return (StringNode*)List_remove(stringList,stringNode);
 }
 
-String StringList_getFirst(const StringList *stringList, String string)
+String StringList_getFirst(StringList *stringList, String string)
 {
   StringNode *stringNode;
 
@@ -303,7 +303,7 @@ String StringList_getFirst(const StringList *stringList, String string)
   }
 }
 
-String StringList_getLast(const StringList *stringList, String string)
+String StringList_getLast(StringList *stringList, String string)
 {
   StringNode *stringNode;
 
