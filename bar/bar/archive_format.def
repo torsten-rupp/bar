@@ -81,7 +81,7 @@
 #   - encrypted data is padded with 0-bytes to a multiple-size of
 #     encryption block size
 
-# ---
+# ----------------------------------------------------------------------
 
 # encryption algorithms
 CONST CRYPT_ALGORITHM_NONE         = 0
@@ -149,7 +149,7 @@ CONST COMPRESS_ALGORITHM_XDELTA_9  = 38
 CHUNK BAR "BAR0" Bar
   crc32  crc
 
-# ---
+# ----------------------------------------------------------------------
 
 # asymmetric encryption key
 #
@@ -169,7 +169,7 @@ CHUNK KEY "KEY0" Key
   data   data
   crc32  crc
 
-# ---
+# ----------------------------------------------------------------------
 
 # file info header
 #
@@ -183,7 +183,7 @@ CHUNK FILE "FIL0" File
 # file entry
 #
 # parent: FIL0
-# never compress/encrypted as specified in FIL0
+# never compress, encrypted as specified in FIL0
 CHUNK FILE_ENTRY "FENT" FileEntry
   ENCRYPT
   uint64 size
@@ -196,13 +196,13 @@ CHUNK FILE_ENTRY "FENT" FileEntry
   string name
   crc32  crc
 
-# file delta compression entry
+# file delta compression
 #
 # parent: FIL0
-# never compress/encrypted as specified in FIL0
+# never compress, encrypted as specified in FIL0
 CHUNK FILE_DELTA "FDLT" FileDelta
   ENCRYPT
-  uint16 compressAlgorithm;
+  uint16 deltaAlgorithm;
   string name
   crc32  crc
 
@@ -218,7 +218,7 @@ CHUNK FILE_DATA "FDAT" FileData
   crc32  crc
   data   data
 
-# ---
+# ----------------------------------------------------------------------
 
 # image info header
 #
@@ -232,7 +232,7 @@ CHUNK IMAGE "IMG0" Image
 # image entry
 #
 # parent: IMG0
-# never compress/encrypted as specified in IMG0
+# never compress, encrypted as specified in IMG0
 CHUNK IMAGE_ENTRY "IENT" ImageEntry +encrypted
   ENCRYPT
   uint16 fileSystemType
@@ -241,10 +241,10 @@ CHUNK IMAGE_ENTRY "IENT" ImageEntry +encrypted
   string name
   crc32  crc
 
-# image delta compression entry
+# image delta compression
 #
 # parent: IMG0
-# never compress/encrypted as specified in IMG0
+# never compress, encrypted as specified in IMG0
 CHUNK IMAGE_DELTA "IDLT" ImageDelta
   ENCRYPT
   uint16 deltaAlgorithm;
@@ -263,7 +263,7 @@ CHUNK IMAGE_DATA "IDAT" ImageData
   crc32  crc
   data   data
 
-# ---
+# ----------------------------------------------------------------------
 
 # directory info header
 #
@@ -276,7 +276,7 @@ CHUNK DIRECTORY "DIR0" Directory
 # directory entry
 #
 # parent: DIR0
-# never compress/encrypted as specified in DIR0
+# never compress, encrypted as specified in DIR0
 CHUNK DIRECTORY_ENTRY "DENT" DirectoryEntry
   ENCRYPT
   uint64 timeLastAccess
@@ -288,7 +288,7 @@ CHUNK DIRECTORY_ENTRY "DENT" DirectoryEntry
   string name
   crc32  crc
 
-# ---
+# ----------------------------------------------------------------------
 
 # (symbolic) link info header
 #
@@ -301,7 +301,7 @@ CHUNK LINK "LNK0" Link
 # (symbolic) link entry
 #
 # parent: LNK0
-# never compress/encrypted as specified in LNK0
+# never compress, encrypted as specified in LNK0
 CHUNK LINK_ENTRY "LENT" LinkEntry
   ENCRYPT
   uint64 timeLastAccess
@@ -314,7 +314,7 @@ CHUNK LINK_ENTRY "LENT" LinkEntry
   string destinationName
   crc32  crc
 
-# ---
+# ----------------------------------------------------------------------
 
 # hard link info header
 #
@@ -328,7 +328,7 @@ CHUNK HARDLINK "HLN0" HardLink
 # hard link entry
 #
 # parent: HLN0
-# never compress/encrypted as specified in HLN0
+# never compress, encrypted as specified in HLN0
 CHUNK HARDLINK_ENTRY "HENT" HardLinkEntry
   ENCRYPT
   uint64 size
@@ -343,9 +343,19 @@ CHUNK HARDLINK_ENTRY "HENT" HardLinkEntry
 # hard link name
 #
 # parent: HLN0
-# never compress/encrypted as specified in HLN0
+# never compress, encrypted as specified in HLN0
 CHUNK HARDLINK_NAME "HNAM" HardLinkName
   ENCRYPT
+  string name
+  crc32  crc
+
+# hard link delta compression
+#
+# parent: HLN0
+# never compress, encrypted as specified in HLN0
+CHUNK HARDLINK_DELTA "HDLT" HardLinkDelta
+  ENCRYPT
+  uint16 deltaAlgorithm;
   string name
   crc32  crc
 
@@ -361,7 +371,7 @@ CHUNK HARDLINK_DATA "HDAT" HardLinkData
   crc32  crc
   data   data
 
-# ---
+# ----------------------------------------------------------------------
 
 # special info header
 #
@@ -389,7 +399,7 @@ CHUNK SPECIAL_ENTRY "SENT" SpecialEntry
   string name
   crc32  crc
 
-# ---
+# ----------------------------------------------------------------------
 
 # delta compression entry
 #
@@ -398,11 +408,11 @@ CHUNK SPECIAL_ENTRY "SENT" SpecialEntry
 #
 # parent: FIL0 or IMG0
 # encrypted as specified in FIL0, IMG0
-CHUNK DELTA_ENTRY "DLT0" DeltaEntry
-  ENCRYPT
-  uint16 deltaAlgorithm;
-  string source
-  crc32  crc
+#CHUNK DELTA_ENTRY "DLT0" DeltaEntry
+#  ENCRYPT
+#  uint16 deltaAlgorithm;
+#  string source
+#  crc32  crc
 
 # ---
 
