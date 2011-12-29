@@ -115,7 +115,7 @@ typedef Errors(*CompressSourceGetEntryDataBlock)(void   *userData,
                                                  ulong  *bytesRead
                                                 );
 
-/* compress info block */
+// compress info block
 typedef struct
 {
   CompressModes      compressMode;              // mode: deflate (compress)/inflate (decompress)
