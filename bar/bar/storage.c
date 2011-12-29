@@ -4038,7 +4038,7 @@ whould this be a possible implementation?
         {
           String command;
 
-          /* there is no unlink command for scp: execute either 'rm' or 'del' on remote server */
+          // there is no unlink command for scp: execute either 'rm' or 'del' on remote server
           command = String_new();
           if (error != ERROR_NONE)
           {
