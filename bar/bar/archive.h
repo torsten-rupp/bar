@@ -193,7 +193,8 @@ typedef struct
   {
     struct
     {
-      SourceEntryInfo       sourceEntryInfo;
+      bool                  deltaSourceInit;           // TRUE if delta source is initialized
+      SourceEntryInfo       sourceEntryInfo;           // delta source info
 
       CompressAlgorithms    deltaCompressAlgorithm;    // delta compression algorithm
       CompressAlgorithms    dataCompressAlgorithm;     // data compression algorithm
@@ -216,16 +217,20 @@ typedef struct
     } file;
     struct
     {
+      bool                  deltaSourceInit;           // TRUE if delta source is initialized
+      SourceEntryInfo       sourceEntryInfo;           // delta source info
+
       uint                  blockSize;                 // block size of device
+
       CompressAlgorithms    deltaCompressAlgorithm;    // delta compression algorithm
       CompressAlgorithms    dataCompressAlgorithm;     // data compression algorithm
 
       ChunkImage            chunkImage;                // image
       ChunkImageEntry       chunkImageEntry;           // image entry
-      ChunkDeltaEntry       chunkDeltaEntry;           // delta entry
+      ChunkImageDelta       chunkImageDelta;           // image delta
       ChunkImageData        chunkImageData;            // image data
 
-      CompressInfo          compressInfoDelta;         // delta compress info
+      CompressInfo          deltaCompressInfo;         // delta compress info
       CompressInfo          dataCompressInfo;          // data compress info
       CryptInfo             cryptInfo;                 // cryption info
 
@@ -248,16 +253,19 @@ typedef struct
     } link;
     struct
     {
+      bool                  deltaSourceInit;           // TRUE if delta source is initialized
+      SourceEntryInfo       sourceEntryInfo;           // delta source info
+
       CompressAlgorithms    deltaCompressAlgorithm;    // delta compression algorithm
       CompressAlgorithms    dataCompressAlgorithm;     // data compression algorithm
 
       ChunkHardLink         chunkHardLink;             // hard link
       ChunkHardLinkEntry    chunkHardLinkEntry;        // hard link entry
       ChunkHardLinkNameList chunkHardLinkNameList;     // hard link name list
-      ChunkDeltaEntry       chunkDeltaEntry;           // delta entry
+      ChunkHardLinkDelta    chunkHardLinkDelta;        // hard link delta
       ChunkHardLinkData     chunkHardLinkData;         // hard link data
 
-      CompressInfo          compressInfoDelta;         // delta compress info
+      CompressInfo          deltaCompressInfo;         // delta compress info
       CompressInfo          dataCompressInfo;          // data compress info
       CryptInfo             cryptInfo;                 // cryption info
 
@@ -568,9 +576,6 @@ Errors Archive_getNextArchiveEntryType(ArchiveInfo       *archiveInfo,
 * Purpose: read file info from archive
 * Input  : archiveInfo      - archive info
 *          archiveEntryInfo - archive file entry info
-//????
-*          sourceGetEntryDataBlock
-*          sourceGetEntryDataBlockUserData
 * Output : compressAlgorithm - used compression algorithm (can be NULL)
 *          fileName          - file name
 *          fileInfo          - file info
@@ -582,19 +587,17 @@ Errors Archive_getNextArchiveEntryType(ArchiveInfo       *archiveInfo,
 * Notes  : -
 \***********************************************************************/
 
-Errors Archive_readFileEntry(ArchiveInfo                     *archiveInfo,
-                             ArchiveEntryInfo                *archiveEntryInfo,
-                             CompressSourceGetEntryDataBlock sourceGetEntryDataBlock,
-                             void                            *sourceGetEntryDataBlockUserData,
-                             CompressAlgorithms              *deltaCompressAlgorithm,
-                             CompressAlgorithms              *dataCompressAlgorithm,
-                             CryptAlgorithms                 *cryptAlgorithm,
-                             CryptTypes                      *cryptType,
-                             String                          fileName,
-                             FileInfo                        *fileInfo,
-                             String                          deltaSourceName,
-                             uint64                          *fragmentOffset,
-                             uint64                          *fragmentSize
+Errors Archive_readFileEntry(ArchiveInfo        *archiveInfo,
+                             ArchiveEntryInfo   *archiveEntryInfo,
+                             CompressAlgorithms *deltaCompressAlgorithm,
+                             CompressAlgorithms *dataCompressAlgorithm,
+                             CryptAlgorithms    *cryptAlgorithm,
+                             CryptTypes         *cryptType,
+                             String             fileName,
+                             FileInfo           *fileInfo,
+                             String             deltaSourceName,
+                             uint64             *fragmentOffset,
+                             uint64             *fragmentSize
                             );
 
 /***********************************************************************\
@@ -602,9 +605,6 @@ Errors Archive_readFileEntry(ArchiveInfo                     *archiveInfo,
 * Purpose: read block device image info from archive
 * Input  : archiveInfo      - archive info
 *          archiveEntryInfo - archive image entry info
-//????
-*          sourceGetEntryDataBlock
-*          sourceGetEntryDataBlockUserData
 * Output : cryptAlgorithm - used crypt algorithm (can be NULL)
 *          cryptType      - used crypt type (can be NULL)
 *          deviceName     - image name
@@ -614,18 +614,17 @@ Errors Archive_readFileEntry(ArchiveInfo                     *archiveInfo,
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
-Errors Archive_readImageEntry(ArchiveInfo                     *archiveInfo,
-                              ArchiveEntryInfo                *archiveEntryInfo,
-                              CompressSourceGetEntryDataBlock sourceGetEntryDataBlock,
-                              void                            *sourceGetEntryDataBlockUserData,
-                              CompressAlgorithms              *deltaCompressAlgorithm,
-                              CompressAlgorithms              *dataCompressAlgorithm,
-                              CryptAlgorithms                 *cryptAlgorithm,
-                              CryptTypes                      *cryptType,
-                              String                          deviceName,
-                              DeviceInfo                      *deviceInfo,
-                              uint64                          *blockOffset,
-                              uint64                          *blockCount
+Errors Archive_readImageEntry(ArchiveInfo        *archiveInfo,
+                              ArchiveEntryInfo   *archiveEntryInfo,
+                              CompressAlgorithms *deltaCompressAlgorithm,
+                              CompressAlgorithms *dataCompressAlgorithm,
+                              CryptAlgorithms    *cryptAlgorithm,
+                              CryptTypes         *cryptType,
+                              String             deviceName,
+                              DeviceInfo         *deviceInfo,
+                              String             deltaSourceName,
+                              uint64             *blockOffset,
+                              uint64             *blockCount
                              );
 
 /***********************************************************************\
@@ -691,18 +690,17 @@ Errors Archive_readLinkEntry(ArchiveInfo      *archiveInfo,
 * Notes  : -
 \***********************************************************************/
 
-Errors Archive_readHardLinkEntry(ArchiveInfo                     *archiveInfo,
-                                 ArchiveEntryInfo                *archiveEntryInfo,
-                                 CompressSourceGetEntryDataBlock sourceGetEntryDataBlock,
-                                 void                            *sourceGetEntryDataBlockUserData,
-                                 CompressAlgorithms              *deltaCompressAlgorithm,
-                                 CompressAlgorithms              *dataCompressAlgorithm,
-                                 CryptAlgorithms                 *cryptAlgorithm,
-                                 CryptTypes                      *cryptType,
-                                 StringList                      *fileNameList,
-                                 FileInfo                        *fileInfo,
-                                 uint64                          *fragmentOffset,
-                                 uint64                          *fragmentSize
+Errors Archive_readHardLinkEntry(ArchiveInfo        *archiveInfo,
+                                 ArchiveEntryInfo   *archiveEntryInfo,
+                                 CompressAlgorithms *deltaCompressAlgorithm,
+                                 CompressAlgorithms *dataCompressAlgorithm,
+                                 CryptAlgorithms    *cryptAlgorithm,
+                                 CryptTypes         *cryptType,
+                                 StringList         *fileNameList,
+                                 FileInfo           *fileInfo,
+                                 String             deltaSourceName,
+                                 uint64             *fragmentOffset,
+                                 uint64             *fragmentSize
                                 );
 
 /***********************************************************************\
