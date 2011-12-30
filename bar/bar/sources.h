@@ -100,31 +100,30 @@ Errors Source_initAll(void);
 void Source_doneAll();
 
 /***********************************************************************\
-* Name   : Source_new
-* Purpose: initialize source handle
-* Input  : sourcePatternList - source pattern list
-* ???
-* Output : sourceInfo - initialized source info block
-* Return : ERROR_NONE or error code
-* Notes  : -
-\***********************************************************************/
-
-Errors Source_init(const PatternList *patternList,
-                   JobOptions        *jobOptions
-                  );
-
-/***********************************************************************\
-* Name   : Source_done
-* Purpose: deinitialize source handle
+* Name   :
+* Purpose:
 * Input  : -
 * Output : -
-* Return : ERROR_NONE or error code
+* Return : -
 * Notes  : -
 \***********************************************************************/
 
-void Source_done();
+void Source_addSource(const String sourcePattern,
+                      JobOptions   *jobOptions
+                     );
 
-void Source_addSource(String sourcePattern, JobOptions *jobOptions);
+/***********************************************************************\
+* Name   :
+* Purpose:
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+Errors Source_addSourceList(const PatternList *sourcePatternList,
+                            JobOptions        *jobOptions
+                           );
 
 /***********************************************************************\
 * Name   :

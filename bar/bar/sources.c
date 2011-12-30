@@ -30,7 +30,7 @@
 
 /***************************** Constants *******************************/
 
-/* file data buffer size */
+// file data buffer size
 #define BUFFER_SIZE (64*1024)
 
 /***************************** Datatypes *******************************/
@@ -113,9 +113,9 @@ LOCAL Errors restoreFile(const String                    archiveName,
   assert(jobOptions != NULL);
   assert(destinationFileName != NULL);
 
-  /* initialize variables */
+  // initialize variables
 
-  /* allocate resources */
+  // allocate resources
   buffer = malloc(BUFFER_SIZE);
   if (buffer == NULL)
   {
@@ -123,7 +123,7 @@ LOCAL Errors restoreFile(const String                    archiveName,
   }
 //  printableArchiveName = String_new();
 
-  /* open archive */
+  // open archive
   error = Archive_open(&archiveInfo,
                        archiveName,
                        jobOptions,
@@ -142,7 +142,7 @@ LOCAL Errors restoreFile(const String                    archiveName,
   }
 //  abortFlag = !updateStatusInfo(&restoreInfo);
 
-  /* read archive entries */
+  // read archive entries
   failError = ERROR_NONE;
   while (   TRUE//((restoreInfo.requestedAbortFlag == NULL) || !(*restoreInfo.requestedAbortFlag))
          && !Archive_eof(&archiveInfo,TRUE)
@@ -150,14 +150,14 @@ LOCAL Errors restoreFile(const String                    archiveName,
         )
   {
 #if 0
-    /* pause */
+    // pause
     while ((restoreInfo.pauseFlag != NULL) && (*restoreInfo.pauseFlag))
     {
       Misc_udelay(500*1000);
     }
 #endif /* 0 */
 
-    /* get next archive entry type */
+    // get next archive entry type
     error = Archive_getNextArchiveEntryType(&archiveInfo,
                                             &archiveEntryType,
                                             TRUE
@@ -184,13 +184,13 @@ LOCAL Errors restoreFile(const String                    archiveName,
           uint64     length;
           ulong      bufferLength;
 
-          /* read file */
+          // read file
           fileName = String_new();
           error = Archive_readFileEntry(&archiveInfo,
                                         &archiveEntryInfo,
 //???
-NULL,
-NULL,
+//NULL,
+//NULL,
                                         NULL,
                                         NULL,
                                         NULL,
@@ -220,7 +220,7 @@ NULL,
 
             if (!jobOptions->dryRunFlag)
             {
-              /* open file */
+              // open file
               error = File_open(&fileHandle,destinationFileName,FILE_OPEN_WRITE);
               if (error != ERROR_NONE)
               {
@@ -237,7 +237,7 @@ NULL,
                 continue;
               }
 
-              /* seek to fragment position */
+              // seek to fragment position
               error = File_seek(&fileHandle,fragmentOffset);
               if (error != ERROR_NONE)
               {
@@ -256,14 +256,14 @@ NULL,
               }
             }
 
-            /* write file data */
+            // write file data
             length = 0;
             while (   TRUE//((restoreInfo.requestedAbortFlag == NULL) || !(*restoreInfo.requestedAbortFlag))
                    && (length < fragmentSize)
                   )
             {
 #if 0
-              /* pause */
+              // pause
               while ((restoreInfo.pauseFlag != NULL) && (*restoreInfo.pauseFlag))
               {
                 Misc_udelay(500*1000);
@@ -328,17 +328,17 @@ NULL,
             }
 #endif /* 0 */
 
-            /* close file */
+            // close file
             if (!jobOptions->dryRunFlag)
             {
               File_close(&fileHandle);
             }
           }
 
-          /* close archive file, free resources */
+          // close archive file, free resources
           (void)Archive_closeEntry(&archiveEntryInfo);
 
-          /* free resources */
+          // free resources
           String_delete(fileName);
         }
         break;
@@ -351,18 +351,19 @@ NULL,
           ulong      bufferBlockCount;
           ulong      bufferLength;
 
-          /* read image */
+          // read image
           imageName = String_new();
           error = Archive_readImageEntry(&archiveInfo,
                                          &archiveEntryInfo,
 //???
-NULL,
-NULL,
+//NULL,
+//NULL,
                                          NULL,
                                          NULL,
                                          NULL,
                                          NULL,
                                          imageName,
+                                         NULL,
                                          NULL,
                                          &blockOffset,
                                          &blockCount
@@ -384,7 +385,7 @@ NULL,
           {
 //            abortFlag = !updateStatusInfo(&restoreInfo);
 
-            /* open file */
+            // open file
             if (!jobOptions->dryRunFlag)
             {
               error = File_open(&fileHandle,destinationFileName,FILE_OPEN_WRITE);
@@ -403,7 +404,7 @@ NULL,
                 continue;
               }
 
-              /* seek to fragment position */
+              // seek to fragment position
               error = File_seek(&fileHandle,blockOffset);
               if (error != ERROR_NONE)
               {
@@ -422,14 +423,14 @@ NULL,
               }
             }
 
-            /* write image data to file */
+            // write image data to file
             block = 0;
             while (   TRUE//((restoreInfo.requestedAbortFlag == NULL) || !(*restoreInfo.requestedAbortFlag))
                    && (block < blockCount)
                   )
             {
 #if 0
-              /* pause */
+              // pause
               while ((restoreInfo.pauseFlag != NULL) && (*restoreInfo.pauseFlag))
               {
                 Misc_udelay(500*1000);
@@ -474,17 +475,17 @@ bufferBlockCount = 0;
               block += (uint64)bufferBlockCount;
             }
 
-            /* close file */
+            // close file
             if (!jobOptions->dryRunFlag)
             {
               File_close(&fileHandle);
             }
           }
 
-          /* close archive file, free resources */
+          // close archive file, free resources
           (void)Archive_closeEntry(&archiveEntryInfo);
 
-          /* free resources */
+          // free resources
           String_delete(imageName);
         }
         break;
@@ -502,18 +503,19 @@ bufferBlockCount = 0;
           uint64           length;
           ulong            bufferLength;
 
-          /* read hard link */
+          // read hard link
           StringList_init(&fileNameList);
           error = Archive_readHardLinkEntry(&archiveInfo,
                                             &archiveEntryInfo,
 //???
-NULL,
-NULL,
+//NULL,
+//NULL,
                                             NULL,
                                             NULL,
                                             NULL,
                                             NULL,
                                             &fileNameList,
+                                            NULL,
                                             NULL,
                                             &fragmentOffset,
                                             &fragmentSize
@@ -537,7 +539,7 @@ NULL,
 
             if (!jobOptions->dryRunFlag)
             {
-              /* open file */
+              // open file
               error = File_open(&fileHandle,destinationFileName,FILE_OPEN_WRITE);
               if (error != ERROR_NONE)
               {
@@ -554,7 +556,7 @@ NULL,
                 continue;
               }
 
-              /* seek to fragment position */
+              // seek to fragment position
               error = File_seek(&fileHandle,fragmentOffset);
               if (error != ERROR_NONE)
               {
@@ -573,14 +575,14 @@ NULL,
               }
             }
 
-            /* write file data */
+            // write file data
             length = 0;
             while (   TRUE//((restoreInfo.requestedAbortFlag == NULL) || !(*restoreInfo.requestedAbortFlag))
                    && (length < fragmentSize)
                   )
             {
 #if 0
-              /* pause */
+              // pause
               while ((restoreInfo.pauseFlag != NULL) && (*restoreInfo.pauseFlag))
               {
                 Misc_udelay(500*1000);
@@ -638,7 +640,7 @@ NULL,
             }
 #endif /* 0 */
 
-            /* close file */
+            // close file
             if (!jobOptions->dryRunFlag)
             {
               File_close(&fileHandle);
@@ -651,10 +653,10 @@ NULL,
             continue;
           }
 
-          /* close archive file, free resources */
+          // close archive file, free resources
           (void)Archive_closeEntry(&archiveEntryInfo);
 
-          /* free resources */
+          // free resources
           StringList_done(&fileNameList);
         }
         break;
@@ -668,10 +670,10 @@ NULL,
     }
   }
 
-  /* close archive */
+  // close archive
   (void)Archive_close(&archiveInfo);
 
-  /* free resources */
+  // free resources
 //  String_delete(printableArchiveName);
   free(buffer);
 
@@ -729,34 +731,7 @@ void Source_doneAll()
   List_done(&sourceList,(ListNodeFreeFunction)freeSourceNode,NULL);
 }
 
-Errors Source_init(const PatternList *sourcePatternList,
-                   JobOptions        *jobOptions
-                  )
-{
-  String      fileName;
-  PatternNode *patternNode;
-  Errors      error;
-  StorageDirectoryListHandle storageDirectoryListHandle;
-  SourceNode *sourceNode;
-
-  assert(sourcePatternList != NULL);
-
-  fileName = String_new();
-  PATTERNLIST_ITERATE(sourcePatternList,patternNode)
-  {
-    Source_addSource(patternNode->string,jobOptions);
-  }
-  String_delete(fileName);
-
-  return ERROR_NONE;
-}
-
-void Source_done()
-{
-  List_done(&sourceList,(ListNodeFreeFunction)freeSourceNode,NULL);
-}
-
-void Source_addSource(String sourcePattern, JobOptions *jobOptions)
+void Source_addSource(const String sourcePattern, JobOptions *jobOptions)
 {
   Errors error;
   StorageDirectoryListHandle storageDirectoryListHandle;
@@ -805,6 +780,28 @@ void Source_addSource(String sourcePattern, JobOptions *jobOptions)
 //      sourceNode->tmpLocalStorageFlag = FALSE;
     List_append(&sourceList,sourceNode);
   }
+}
+
+Errors Source_addSourceList(const PatternList *sourcePatternList,
+                            JobOptions        *jobOptions
+                           )
+{
+  String      fileName;
+  PatternNode *patternNode;
+  Errors      error;
+  StorageDirectoryListHandle storageDirectoryListHandle;
+  SourceNode *sourceNode;
+
+  assert(sourcePatternList != NULL);
+
+  fileName = String_new();
+  PATTERNLIST_ITERATE(sourcePatternList,patternNode)
+  {
+    Source_addSource(patternNode->string,jobOptions);
+  }
+  String_delete(fileName);
+
+  return ERROR_NONE;
 }
 
 Errors Source_openEntry(SourceEntryInfo  *sourceEntryInfo,
@@ -920,7 +917,7 @@ Errors Source_openEntry(SourceEntryInfo  *sourceEntryInfo,
   if (!restoredFlag)
   {
     String_delete(sourceEntryInfo->tmpFileName);
-    return ERROR_DELTA_SOURCE_NOT_FOUND;
+    return ERRORX(DELTA_SOURCE_NOT_FOUND,0,String_cString(sourceStorageName));
   }
 
   // open temporary restored file
