@@ -285,38 +285,29 @@ Errors Chunk_seek(ChunkInfo *chunkInfo, uint64 index);
 /***********************************************************************\
 * Name   : Chunk_open
 * Purpose: open chunk
-* Input  : chunkInfo      - chunk info block
-*          chunkHeader    - chunk header
-*          chunkId        - chunk id
-*          definition     - chunk definition
-*          definitionSize - size of chunk (without data elements)
-* Output : data - chunk data
+* Input  : chunkInfo   - chunk info block
+*          chunkHeader - chunk header
+*          dataSize    - data size of chunk
+* Output : -
 * Return : ERROR_NONE or errorcode
 * Notes  : -
 \***********************************************************************/
 
 Errors Chunk_open(ChunkInfo         *chunkInfo,
                   const ChunkHeader *chunkHeader,
-//                  void              *data,
                   ulong             dataSize
                  );
 
 /***********************************************************************\
 * Name   : Chunk_create
 * Purpose: create new chunk
-* Input  : chunkInfo      - chunk info block
-*          chunkId        - chunk id
-*          definition     - chunk definition
-*          definitionSize - size of chunk (without data elements)
-*          data           - chunk data
+* Input  : chunkInfo - chunk info block
 * Output : -
 * Return : ERROR_NONE or errorcode
 * Notes  : -
 \***********************************************************************/
 
-Errors Chunk_create(ChunkInfo  *chunkInfo
-//                    const void *data
-                   );
+Errors Chunk_create(ChunkInfo *chunkInfo);
 
 /***********************************************************************\
 * Name   : Chunk_close

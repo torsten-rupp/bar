@@ -432,10 +432,10 @@ LOCAL Errors writeDefinition(const ChunkIO *io,
                              void          *ioUserData,
                              const int     *definition,
                              uint          size,
-                             uint          alignment,    
-                             CryptInfo     *cryptInfo,   
-                             const void    *data,        
-                             ulong         *bytesWritten 
+                             uint          alignment,
+                             CryptInfo     *cryptInfo,
+                             const void    *data,
+                             ulong         *bytesWritten
                             )
 {
   ulong  bufferLength;
@@ -878,8 +878,7 @@ Errors Chunk_open(ChunkInfo         *chunkInfo,
   return ERROR_NONE;
 }
 
-Errors Chunk_create(ChunkInfo  *chunkInfo
-                   )
+Errors Chunk_create(ChunkInfo *chunkInfo)
 {
   Errors      error;
   uint64      offset;
@@ -892,10 +891,10 @@ Errors Chunk_create(ChunkInfo  *chunkInfo
   assert(chunkInfo->data != NULL);
 
   /* init */
-  chunkInfo->size           = 0;
-  chunkInfo->offset         = 0;
-  chunkInfo->mode           = CHUNK_MODE_WRITE;
-  chunkInfo->index          = 0;
+  chunkInfo->size   = 0;
+  chunkInfo->offset = 0;
+  chunkInfo->mode   = CHUNK_MODE_WRITE;
+  chunkInfo->index  = 0;
 
   /* get size of chunk (without data elements) */
   chunkInfo->chunkSize = Chunk_getSize(chunkInfo->definition,chunkInfo->alignment,chunkInfo->data);
@@ -1043,7 +1042,7 @@ Errors Chunk_close(ChunkInfo *chunkInfo)
     #endif /* NDEBUG */
   }
 
-  return ERROR_NONE; 
+  return ERROR_NONE;
 }
 
 Errors Chunk_nextSub(ChunkInfo   *chunkInfo,
@@ -1115,7 +1114,7 @@ Errors Chunk_skipSub(ChunkInfo   *chunkInfo,
 
   HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
 
-  return ERROR_NONE; 
+  return ERROR_NONE;
 }
 
 bool Chunk_eofSub(ChunkInfo *chunkInfo)
