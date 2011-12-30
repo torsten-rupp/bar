@@ -42,7 +42,7 @@
 
 /***************************** Constants *******************************/
 
-/* file data buffer size */
+// file data buffer size
 #define BUFFER_SIZE (64*1024)
 
 /***************************** Datatypes *******************************/
@@ -91,7 +91,7 @@ LOCAL_INLINE ulong compare(const void *p0, const void *p1, ulong length)
 
 /*---------------------------------------------------------------------*/
 
-Errors Command_compare(const StringList                *archiveFileNameList,
+Errors Command_compare(const StringList                *archiveNameList,
                        const EntryList                 *includeEntryList,
                        const PatternList               *excludePatternList,
                        const PatternList               *sourcePatternList,
@@ -102,7 +102,9 @@ Errors Command_compare(const StringList                *archiveFileNameList,
 {
   byte              *archiveBuffer,*buffer;
   FragmentList      fragmentList;
-  String            archiveFileName;
+  StringNode        *stringNode;
+  String            archiveName;
+  String            printableArchiveName;
   Errors            failError;
   Errors            error;
   ArchiveInfo       archiveInfo;
@@ -110,12 +112,12 @@ Errors Command_compare(const StringList                *archiveFileNameList,
   ArchiveEntryTypes archiveEntryType;
   FragmentNode      *fragmentNode;
 
-  assert(archiveFileNameList != NULL);
+  assert(archiveNameList != NULL);
   assert(includeEntryList != NULL);
   assert(excludePatternList != NULL);
   assert(jobOptions != NULL);
 
-  /* allocate resources */
+  // allocate resources
   archiveBuffer = (byte*)malloc(BUFFER_SIZE);
   if (archiveBuffer == NULL)
   {
@@ -128,26 +130,17 @@ Errors Command_compare(const StringList                *archiveFileNameList,
     HALT_INSUFFICIENT_MEMORY();
   }
   FragmentList_init(&fragmentList);
-  archiveFileName = String_new();
-
-//???
-  error = Source_init(sourcePatternList,jobOptions);
-  if (error != ERROR_NONE)
-  {
-    HALT_FATAL_ERROR("Cannot initialise delta sources!");
-  }
+  printableArchiveName = String_new();
 
   failError = ERROR_NONE;
-  while (   !StringList_empty(archiveFileNameList)
-         && (failError == ERROR_NONE)
-        )
+  STRINGLIST_ITERATE(archiveNameList,stringNode,archiveName)
   {
-    StringList_getFirst(archiveFileNameList,archiveFileName);
-    printInfo(1,"Comparing archive '%s':\n",String_cString(archiveFileName));
+    Storage_getPrintableName(printableArchiveName,archiveName);
+    printInfo(1,"Comparing archive '%s':\n",String_cString(printableArchiveName));
 
-    /* open archive */
+    // open archive
     error = Archive_open(&archiveInfo,
-                         archiveFileName,
+                         archiveName,
                          jobOptions,
                          archiveGetCryptPasswordFunction,
                          archiveGetCryptPasswordUserData
@@ -155,19 +148,19 @@ Errors Command_compare(const StringList                *archiveFileNameList,
     if (error != ERROR_NONE)
     {
       printError("Cannot open archive file '%s' (error: %s)!\n",
-                 String_cString(archiveFileName),
+                 String_cString(printableArchiveName),
                  Errors_getText(error)
                 );
       if (failError == ERROR_NONE) failError = error;
       continue;
     }
 
-    /* read files */
+    // read files
     while (   !Archive_eof(&archiveInfo,TRUE)
            && (failError == ERROR_NONE)
           )
     {
-      /* get next archive entry type */
+      // get next archive entry type
       error = Archive_getNextArchiveEntryType(&archiveInfo,
                                               &archiveEntryType,
                                               TRUE
@@ -175,7 +168,7 @@ Errors Command_compare(const StringList                *archiveFileNameList,
       if (error != ERROR_NONE)
       {
         printError("Cannot read next entry in archive '%s' (error: %s)!\n",
-                   String_cString(archiveFileName),
+                   String_cString(printableArchiveName),
                    Errors_getText(error)
                   );
         if (failError == ERROR_NONE) failError = error;
@@ -191,7 +184,6 @@ Errors Command_compare(const StringList                *archiveFileNameList,
             FileInfo           fileInfo;
             String             deltaSourceName;
             uint64             fragmentOffset,fragmentSize;
-            SourceEntryInfo    sourceEntryInfo;
             FragmentNode       *fragmentNode;
 //            FileInfo         localFileInfo;
             FileHandle         fileHandle;
@@ -200,13 +192,11 @@ Errors Command_compare(const StringList                *archiveFileNameList,
             ulong              bufferLength;
             ulong              diffIndex;
 
-            /* read file */
+            // read file
             fileName        = String_new();
             deltaSourceName = String_new();
             error = Archive_readFileEntry(&archiveInfo,
                                           &archiveEntryInfo,
-NULL,//                                          Source_getEntryDataBlock,
-NULL,//                                          &sourceEntryInfo,
                                           &deltaCompressAlgorithm,
                                           &dataCompressAlgorithm,
                                           NULL,
@@ -220,7 +210,7 @@ NULL,//                                          &sourceEntryInfo,
             if (error != ERROR_NONE)
             {
               printError("Cannot read 'file' content of archive '%s' (error: %s)!\n",
-                         String_cString(archiveFileName),
+                         String_cString(printableArchiveName),
                          Errors_getText(error)
                         );
               String_delete(deltaSourceName);
@@ -235,7 +225,7 @@ NULL,//                                          &sourceEntryInfo,
             {
               printInfo(2,"  Compare file '%s'...",String_cString(fileName));
 
-              /* check if file exists and file type */
+              // check if file exists and file type
               if (!File_exists(fileName))
               {
                 printInfo(2,"FAIL!\n");
@@ -261,7 +251,7 @@ NULL,//                                          &sourceEntryInfo,
                 break;
               }
 
-              /* get file fragment list */
+              // get file fragment list
               fragmentNode = FragmentList_find(&fragmentList,fileName);
               if (fragmentNode == NULL)
               {
@@ -269,7 +259,7 @@ NULL,//                                          &sourceEntryInfo,
               }
 //FragmentList_print(fragmentNode,String_cString(fileName));
 
-              /* open file */
+              // open file
               error = File_open(&fileHandle,fileName,FILE_OPEN_READ);
               if (error != ERROR_NONE)
               {
@@ -288,7 +278,7 @@ NULL,//                                          &sourceEntryInfo,
                 continue;
               }
 
-              /* check file size */
+              // check file size
               if (fileInfo.size != File_getSize(&fileHandle))
               {
                 printInfo(2,"FAIL!\n");
@@ -308,7 +298,7 @@ NULL,//                                          &sourceEntryInfo,
                 continue;
               }
 
-              /* compare archive and file content */
+              // compare archive and file content
               error = File_seek(&fileHandle,fragmentOffset);
               if (error != ERROR_NONE)
               {
@@ -334,13 +324,13 @@ NULL,//                                          &sourceEntryInfo,
               {
                 bufferLength = MIN(fragmentSize-length,BUFFER_SIZE);
 
-                /* read archive, file */
+                // read archive, file
                 error = Archive_readData(&archiveEntryInfo,archiveBuffer,bufferLength);
                 if (error != ERROR_NONE)
                 {
                   printInfo(2,"FAIL!\n");
                   printError("Cannot read content of archive '%s' (error: %s)!\n",
-                             String_cString(archiveFileName),
+                             String_cString(printableArchiveName),
                              Errors_getText(error)
                             );
                   if (failError == ERROR_NONE) failError = error;
@@ -361,7 +351,7 @@ NULL,//                                          &sourceEntryInfo,
                   break;
                 }
 
-                /* compare */
+                // compare
                 diffIndex = compare(archiveBuffer,buffer,bufferLength);
                 equalFlag = (diffIndex >= bufferLength);
                 if (!equalFlag)
@@ -389,18 +379,18 @@ NULL,//                                          &sourceEntryInfo,
                 continue;
               }
 
-              /* add fragment to file fragment list */
+              // add fragment to file fragment list
               FragmentList_addEntry(fragmentNode,fragmentOffset,fragmentSize);
 
-              /* discard fragment list if file is complete */
+              // discard fragment list if file is complete
               if (FragmentList_checkEntryComplete(fragmentNode))
               {
                 FragmentList_discard(&fragmentList,fragmentNode);
               }
 
 #if 0
-              /* get local file info */
-              /* check file time, permissions, file owner/group */
+              // get local file info
+              // check file time, permissions, file owner/group
 #endif /* 0 */
               printInfo(2,"ok\n");
 
@@ -417,22 +407,22 @@ NULL,//                                          &sourceEntryInfo,
                 printWarning("unexpected data at end of file entry '%S'.\n",fileName);
               }
 
-              /* free resources */
+              // free resources
             }
             else
             {
-              /* skip */
+              // skip
               printInfo(3,"  Compare '%s'...skipped\n",String_cString(fileName));
             }
 
-            /* close archive file */
+            // close archive file
             error = Archive_closeEntry(&archiveEntryInfo);
             if (error != ERROR_NONE)
             {
               printWarning("close 'file' entry fail (error: %s)\n",Errors_getText(error));
             }
 
-            /* free resources */
+            // free resources
             String_delete(deltaSourceName);
             String_delete(fileName);
           }
@@ -450,26 +440,24 @@ NULL,//                                          &sourceEntryInfo,
             ulong              bufferBlockCount;
             ulong              diffIndex;
 
-            /* read image */
+            // read image
             imageName = String_new();
             error = Archive_readImageEntry(&archiveInfo,
                                            &archiveEntryInfo,
-//???
-NULL,
-NULL,
                                            &deltaCompressAlgorithm,
                                            &dataCompressAlgorithm,
                                            NULL,
                                            NULL,
                                            imageName,
                                            &deviceInfo,
+                                           NULL,
                                            &blockOffset,
                                            &blockCount
                                           );
             if (error != ERROR_NONE)
             {
               printError("Cannot read 'image' content of archive '%s' (error: %s)!\n",
-                         String_cString(archiveFileName),
+                         String_cString(printableArchiveName),
                          Errors_getText(error)
                         );
               String_delete(imageName);
@@ -483,7 +471,7 @@ NULL,
             {
               printInfo(2,"  Compare image '%s'...",String_cString(imageName));
 
-              /* check if device exists */
+              // check if device exists
               if (!File_exists(imageName))
               {
                 printInfo(2,"FAIL!\n");
@@ -497,14 +485,14 @@ NULL,
                 break;
               }
 
-              /* get image fragment list */
+              // get image fragment list
               fragmentNode = FragmentList_find(&fragmentList,imageName);
               if (fragmentNode == NULL)
               {
                 fragmentNode = FragmentList_add(&fragmentList,imageName,deviceInfo.size,NULL,0);
               }
 
-              /* open device */
+              // open device
               error = Device_open(&deviceHandle,imageName,DEVICE_OPENMODE_READ);
               if (error != ERROR_NONE)
               {
@@ -522,7 +510,7 @@ NULL,
                 continue;
               }
 
-              /* check image size */
+              // check image size
               if (deviceInfo.size != Device_getSize(&deviceHandle))
               {
                 printInfo(2,"FAIL!\n");
@@ -541,7 +529,7 @@ NULL,
                 continue;
               }
 
-              /* compare archive and device content */
+              // compare archive and device content
               error = Device_seek(&deviceHandle,blockOffset*(uint64)deviceInfo.blockSize);
               if (error != ERROR_NONE)
               {
@@ -567,13 +555,13 @@ NULL,
                 assert(deviceInfo.blockSize > 0);
                 bufferBlockCount = MIN(blockCount-block,BUFFER_SIZE/deviceInfo.blockSize);
 
-                /* read archive, file */
+                // read archive, file
                 error = Archive_readData(&archiveEntryInfo,archiveBuffer,bufferBlockCount*deviceInfo.blockSize);
                 if (error != ERROR_NONE)
                 {
                   printInfo(2,"FAIL!\n");
                   printError("Cannot read content of archive '%s' (error: %s)!\n",
-                             String_cString(archiveFileName),
+                             String_cString(printableArchiveName),
                              Errors_getText(error)
                             );
                   if (failError == ERROR_NONE) failError = error;
@@ -594,7 +582,7 @@ NULL,
                   break;
                 }
 
-                /* compare */
+                // compare
                 diffIndex = compare(archiveBuffer,buffer,bufferBlockCount*deviceInfo.blockSize);
                 equalFlag = (diffIndex >= bufferBlockCount*deviceInfo.blockSize);
                 if (!equalFlag)
@@ -621,10 +609,10 @@ NULL,
                 continue;
               }
 
-              /* add fragment to file fragment list */
+              // add fragment to file fragment list
               FragmentList_addEntry(fragmentNode,blockOffset*(uint64)deviceInfo.blockSize,blockCount*(uint64)deviceInfo.blockSize);
 
-              /* discard fragment list if file is complete */
+              // discard fragment list if file is complete
               if (FragmentList_checkEntryComplete(fragmentNode))
               {
                 FragmentList_discard(&fragmentList,fragmentNode);
@@ -645,22 +633,22 @@ NULL,
                 printWarning("unexpected data at end of image entry '%S'.\n",imageName);
               }
 
-              /* free resources */
+              // free resources
             }
             else
             {
-              /* skip */
+              // skip
               printInfo(3,"  Compare '%s'...skipped\n",String_cString(imageName));
             }
 
-            /* close archive file, free resources */
+            // close archive file, free resources
             error = Archive_closeEntry(&archiveEntryInfo);
             if (error != ERROR_NONE)
             {
               printWarning("close 'image' entry fail (error: %s)\n",Errors_getText(error));
             }
 
-            /* free resources */
+            // free resources
             String_delete(imageName);
           }
           break;
@@ -671,7 +659,7 @@ NULL,
 //            String   localFileName;
 //            FileInfo localFileInfo;
 
-            /* read directory */
+            // read directory
             directoryName = String_new();
             error = Archive_readDirectoryEntry(&archiveInfo,
                                                &archiveEntryInfo,
@@ -683,7 +671,7 @@ NULL,
             if (error != ERROR_NONE)
             {
               printError("Cannot read 'directory' content of archive '%s' (error: %s)!\n",
-                         String_cString(archiveFileName),
+                         String_cString(printableArchiveName),
                          Errors_getText(error)
                         );
               String_delete(directoryName);
@@ -697,7 +685,7 @@ NULL,
             {
               printInfo(2,"  Compare directory '%s'...",String_cString(directoryName));
 
-              /* check if file exists and file type */
+              // check if file exists and file type
               if (!File_exists(directoryName))
               {
                 printInfo(2,"FAIL!\n");
@@ -726,7 +714,7 @@ NULL,
               }
 
 #if 0
-              /* get local file info */
+              // get local file info
               error = File_getFileInfo(&localFileInfo,directoryName);
               if (error != ERROR_NONE)
               {
@@ -740,32 +728,32 @@ NULL,
                 break;
               }
 
-              /* check file time, permissions, file owner/group */
+              // check file time, permissions, file owner/group
 #endif /* 0 */
               printInfo(2,"ok\n");
 
-              /* check if all data read */
+              // check if all data read
               if (!Archive_eofData(&archiveEntryInfo))
               {
                 printWarning("unexpected data at end of directory entry '%S'.\n",directoryName);
               }
 
-              /* free resources */
+              // free resources
             }
             else
             {
-              /* skip */
+              // skip
               printInfo(3,"  Compare '%s'...skipped\n",String_cString(directoryName));
             }
 
-            /* close archive file */
+            // close archive file
             error = Archive_closeEntry(&archiveEntryInfo);
             if (error != ERROR_NONE)
             {
               printWarning("close 'directory' entry fail (error: %s)\n",Errors_getText(error));
             }
 
-            /* free resources */
+            // free resources
             String_delete(directoryName);
           }
           break;
@@ -777,7 +765,7 @@ NULL,
             String   localFileName;
 //            FileInfo localFileInfo;
 
-            /* read link */
+            // read link
             linkName = String_new();
             fileName = String_new();
             error = Archive_readLinkEntry(&archiveInfo,
@@ -791,7 +779,7 @@ NULL,
             if (error != ERROR_NONE)
             {
               printError("Cannot read 'link' content of archive '%s' (error: %s)!\n",
-                         String_cString(archiveFileName),
+                         String_cString(printableArchiveName),
                          Errors_getText(error)
                         );
               String_delete(fileName);
@@ -806,7 +794,7 @@ NULL,
             {
               printInfo(2,"  Compare link '%s'...",String_cString(linkName));
 
-              /* check if file exists and file type */
+              // check if file exists and file type
               if (!File_exists(linkName))
               {
                 printInfo(2,"FAIL!\n");
@@ -839,7 +827,7 @@ NULL,
                 break;
               }
 
-              /* check link name */
+              // check link name
               localFileName = String_new();
               error = File_readLink(localFileName,linkName);
               if (error != ERROR_NONE)
@@ -878,7 +866,7 @@ NULL,
               String_delete(localFileName);
 
 #if 0
-              /* get local file info */
+              // get local file info
               error = File_getFileInfo(&localFileInfo,linkName);
               if (error != ERROR_NONE)
               {
@@ -893,32 +881,32 @@ NULL,
                 break;
               }
 
-              /* check file time, permissions, file owner/group */
+              // check file time, permissions, file owner/group
 #endif /* 0 */
               printInfo(2,"ok\n");
 
-              /* check if all data read */
+              // check if all data read
               if (!Archive_eofData(&archiveEntryInfo))
               {
                 printWarning("unexpected data at end of link entry '%S'.\n",linkName);
               }
 
-              /* free resources */
+              // free resources
             }
             else
             {
-              /* skip */
+              // skip
               printInfo(3,"  Compare '%s'...skipped\n",String_cString(linkName));
             }
 
-            /* close archive file */
+            // close archive file
             error = Archive_closeEntry(&archiveEntryInfo);
             if (error != ERROR_NONE)
             {
               printWarning("close 'link' entry fail (error: %s)\n",Errors_getText(error));
             }
 
-            /* free resources */
+            // free resources
             String_delete(fileName);
             String_delete(linkName);
           }
@@ -940,26 +928,24 @@ NULL,
             ulong              bufferLength;
             ulong              diffIndex;
 
-            /* read hard link */
+            // read hard link
             StringList_init(&fileNameList);
             error = Archive_readHardLinkEntry(&archiveInfo,
                                               &archiveEntryInfo,
-//???
-NULL,
-NULL,
                                               &deltaCompressAlgorithm,
                                               &dataCompressAlgorithm,
                                               NULL,
                                               NULL,
                                               &fileNameList,
                                               &fileInfo,
+                                              NULL,
                                               &fragmentOffset,
                                               &fragmentSize
                                              );
             if (error != ERROR_NONE)
             {
               printError("Cannot read 'hard link' content of archive '%s' (error: %s)!\n",
-                         String_cString(archiveFileName),
+                         String_cString(printableArchiveName),
                          Errors_getText(error)
                         );
               StringList_done(&fileNameList);
@@ -976,7 +962,7 @@ NULL,
               {
                 printInfo(2,"  Compare hard link '%s'...",String_cString(fileName));
 
-                /* check file if exists and file type */
+                // check file if exists and file type
                 if (!File_exists(fileName))
                 {
                   printInfo(2,"FAIL!\n");
@@ -1008,9 +994,9 @@ NULL,
 
                 if (!comparedDataFlag && (failError == ERROR_NONE))
                 {
-                  /* compare hard link data */
+                  // compare hard link data
 
-                  /* get file fragment list */
+                  // get file fragment list
                   fragmentNode = FragmentList_find(&fragmentList,fileName);
                   if (fragmentNode == NULL)
                   {
@@ -1018,7 +1004,7 @@ NULL,
                   }
 //FragmentList_print(fragmentNode,String_cString(fileName));
 
-                  /* open file */
+                  // open file
                   error = File_open(&fileHandle,fileName,FILE_OPEN_READ);
                   if (error != ERROR_NONE)
                   {
@@ -1038,7 +1024,7 @@ NULL,
                     }
                   }
 
-                  /* check file size */
+                  // check file size
                   if (fileInfo.size != File_getSize(&fileHandle))
                   {
                     printInfo(2,"FAIL!\n");
@@ -1059,7 +1045,7 @@ NULL,
                     }
                   }
 
-                  /* compare archive and hard link content */
+                  // compare archive and hard link content
                   error = File_seek(&fileHandle,fragmentOffset);
                   if (error != ERROR_NONE)
                   {
@@ -1086,13 +1072,13 @@ NULL,
                   {
                     bufferLength = MIN(fragmentSize-length,BUFFER_SIZE);
 
-                    /* read archive, file */
+                    // read archive, file
                     error = Archive_readData(&archiveEntryInfo,archiveBuffer,bufferLength);
                     if (error != ERROR_NONE)
                     {
                       printInfo(2,"FAIL!\n");
                       printError("Cannot read content of archive '%s' (error: %s)!\n",
-                                 String_cString(archiveFileName),
+                                 String_cString(printableArchiveName),
                                  Errors_getText(error)
                                 );
                       if (failError == ERROR_NONE) failError = error;
@@ -1113,7 +1099,7 @@ NULL,
                       break;
                     }
 
-                    /* compare */
+                    // compare
                     diffIndex = compare(archiveBuffer,buffer,bufferLength);
                     equalFlag = (diffIndex >= bufferLength);
                     if (!equalFlag)
@@ -1138,20 +1124,20 @@ NULL,
                     break;
                   }
 
-                  /* close file */
+                  // close file
                   File_close(&fileHandle);
 
-                  /* add fragment to file fragment list */
+                  // add fragment to file fragment list
                   FragmentList_addEntry(fragmentNode,fragmentOffset,fragmentSize);
 
-                  /* discard fragment list if file is complete */
+                  // discard fragment list if file is complete
                   if (FragmentList_checkEntryComplete(fragmentNode))
                   {
                     FragmentList_discard(&fragmentList,fragmentNode);
                   }
 #if 0
-                  /* get local file info */
-                  /* check file time, permissions, file owner/group */
+                  // get local file info
+                  // check file time, permissions, file owner/group
 #endif /* 0 */
                   printInfo(2,"ok\n");
 
@@ -1172,7 +1158,7 @@ NULL,
                 }
                 else
                 {
-                  /* compare hard link data already done */
+                  // compare hard link data already done
                   if (failError == ERROR_NONE)
                   {
                     printInfo(2,"ok\n");
@@ -1185,19 +1171,19 @@ NULL,
               }
               else
               {
-                /* skip */
+                // skip
                 printInfo(3,"  Compare '%s'...skipped\n",String_cString(fileName));
               }
             }
 
-            /* close archive file, free resources */
+            // close archive file, free resources
             error = Archive_closeEntry(&archiveEntryInfo);
             if (error != ERROR_NONE)
             {
               printWarning("close 'hard link' entry fail (error: %s)\n",Errors_getText(error));
             }
 
-            /* free resources */
+            // free resources
             StringList_done(&fileNameList);
           }
           break;
@@ -1207,7 +1193,7 @@ NULL,
             FileInfo fileInfo;
             FileInfo localFileInfo;
 
-            /* read special */
+            // read special
             fileName = String_new();
             error = Archive_readSpecialEntry(&archiveInfo,
                                              &archiveEntryInfo,
@@ -1219,7 +1205,7 @@ NULL,
             if (error != ERROR_NONE)
             {
               printError("Cannot read 'special' content of archive '%s' (error: %s)!\n",
-                         String_cString(archiveFileName),
+                         String_cString(printableArchiveName),
                          Errors_getText(error)
                         );
               String_delete(fileName);
@@ -1233,7 +1219,7 @@ NULL,
             {
               printInfo(2,"  Compare special device '%s'...",String_cString(fileName));
 
-              /* check if file exists and file type */
+              // check if file exists and file type
               if (!File_exists(fileName))
               {
                 printInfo(2,"FAIL!\n");
@@ -1263,7 +1249,7 @@ NULL,
                 break;
               }
 
-              /* check special settings */
+              // check special settings
               error = File_getFileInfo(&localFileInfo,fileName);
               if (error != ERROR_NONE)
               {
@@ -1326,33 +1312,33 @@ NULL,
 
 #if 0
 
-              /* check file time, permissions, file owner/group */
+              // check file time, permissions, file owner/group
 #endif /* 0 */
 
               printInfo(2,"ok\n");
 
-              /* check if all data read */
+              // check if all data read
               if (!Archive_eofData(&archiveEntryInfo))
               {
                 printWarning("unexpected data at end of special entry '%S'.\n",fileName);
               }
 
-              /* free resources */
+              // free resources
             }
             else
             {
-              /* skip */
+              // skip
               printInfo(3,"  Compare '%s'...skipped\n",String_cString(fileName));
             }
 
-            /* close archive file */
+            // close archive file
             error = Archive_closeEntry(&archiveEntryInfo);
             if (error != ERROR_NONE)
             {
               printWarning("close 'special' entry fail (error: %s)\n",Errors_getText(error));
             }
 
-            /* free resources */
+            // free resources
             String_delete(fileName);
           }
           break;
@@ -1364,11 +1350,13 @@ NULL,
       }
     }
 
-    /* close archive */
+    // close archive
     Archive_close(&archiveInfo);
+
+    if (failError != ERROR_NONE) break;
   }
 
-  /* check fragment lists */
+  // check fragment lists
   for (fragmentNode = fragmentList.head; fragmentNode != NULL; fragmentNode = fragmentNode->next)
   {
     if (!FragmentList_checkEntryComplete(fragmentNode))
@@ -1378,9 +1366,8 @@ NULL,
     }
   }
 
-  /* free resources */
-  Source_done();
-  String_delete(archiveFileName);
+  // free resources
+  String_delete(printableArchiveName);
   FragmentList_done(&fragmentList);
   free(buffer);
   free(archiveBuffer);

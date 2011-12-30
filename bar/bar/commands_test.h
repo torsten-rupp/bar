@@ -46,10 +46,10 @@
 /***********************************************************************\
 * Name   : Commands_test
 * Purpose: compare archive and file system content
-* Input  : archiveFileNameList              - list with archive files 
+* Input  : archiveFileNameList              - list with archive files
 *          includeEntryList                 - include entry list
 *          excludePatternList               - exclude pattern list
-*          jobOptions                       - job options             
+*          jobOptions                       - job options
 *          archiveGetCryptPasswordFunction  - get password call back
 *          archiveGetCryptPasswordUserData  - user data for get password
 *                                             call back
@@ -58,9 +58,9 @@
 * Notes  : -
 \***********************************************************************/
 
-Errors Command_test(StringList                      *archiveFileNameList,
-                    EntryList                       *includeEntryList,
-                    PatternList                     *excludePatternList,
+Errors Command_test(const StringList                *archiveFileNameList,
+                    const EntryList                 *includeEntryList,
+                    const PatternList               *excludePatternList,
                     JobOptions                      *jobOptions,
                     ArchiveGetCryptPasswordFunction archiveGetCryptPasswordFunction,
                     void                            *archiveGetCryptPasswordUserData

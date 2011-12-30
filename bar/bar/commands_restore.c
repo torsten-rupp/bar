@@ -41,12 +41,12 @@
 
 /***************************** Constants *******************************/
 
-/* file data buffer size */
+// file data buffer size
 #define BUFFER_SIZE (64*1024)
 
 /***************************** Datatypes *******************************/
 
-/* restore information */
+// restore information
 typedef struct
 {
   const EntryList           *includeEntryList;       // included entries (can be empty)
@@ -101,7 +101,7 @@ LOCAL String getDestinationFileName(String       destinationFileName,
   assert(destinationFileName != NULL);
   assert(fileName != NULL);
 
-  /* get destination base directory */
+  // get destination base directory
   if (destination != NULL)
   {
     File_setFileName(destinationFileName,destination);
@@ -111,10 +111,10 @@ LOCAL String getDestinationFileName(String       destinationFileName,
     File_clearFileName(destinationFileName);
   }
 
-  /* split file name */
+  // split file name
   File_splitFileName(fileName,&pathName,&baseName);
 
-  /* strip directory, create destination directory */
+  // strip directory, create destination directory
   File_initSplitFileName(&fileNameTokenizer,pathName);
   z = 0;
   while ((z< directoryStripCount) && File_getNextSplitFileName(&fileNameTokenizer,&name))
@@ -127,10 +127,10 @@ LOCAL String getDestinationFileName(String       destinationFileName,
   }
   File_doneSplitFileName(&fileNameTokenizer);
 
-  /* create destination file name */
+  // create destination file name
   File_appendFileName(destinationFileName,baseName);
 
-  /* free resources  */
+  // free resources
   String_delete(pathName);
   String_delete(baseName);
 
@@ -209,6 +209,7 @@ Errors Command_restore(const StringList                *archiveNameList,
   RestoreInfo       restoreInfo;
   byte              *buffer;
   FragmentList      fragmentList;
+  StringNode        *stringNode;
   String            archiveName;
   String            printableArchiveName;
   bool              abortFlag;
@@ -222,7 +223,7 @@ Errors Command_restore(const StringList                *archiveNameList,
   assert(includeEntryList != NULL);
   assert(jobOptions != NULL);
 
-  /* initialize variables */
+  // initialize variables
   restoreInfo.includeEntryList             = includeEntryList;
   restoreInfo.excludePatternList           = excludePatternList;
   restoreInfo.jobOptions                   = jobOptions;
@@ -244,34 +245,28 @@ Errors Command_restore(const StringList                *archiveNameList,
   restoreInfo.statusInfo.archiveDoneBytes  = 0LL;
   restoreInfo.statusInfo.archiveTotalBytes = 0LL;
 
-  /* allocate resources */
+  // allocate resources
   buffer = malloc(BUFFER_SIZE);
   if (buffer == NULL)
   {
     HALT_INSUFFICIENT_MEMORY();
   }
   FragmentList_init(&fragmentList);
-  archiveName          = String_new();
   printableArchiveName = String_new();
 
   abortFlag = FALSE;
-  while (   !abortFlag
-         && ((restoreInfo.requestedAbortFlag == NULL) || !(*restoreInfo.requestedAbortFlag))
-         && !StringList_empty(archiveNameList)
-         && (restoreInfo.failError == ERROR_NONE)
-        )
+  STRINGLIST_ITERATE(archiveNameList,stringNode,archiveName)
   {
-    /* pause */
+    // pause
     while ((restoreInfo.pauseFlag != NULL) && (*restoreInfo.pauseFlag))
     {
       Misc_udelay(500*1000);
     }
 
-    StringList_getFirst(archiveNameList,archiveName);
     Storage_getPrintableName(printableArchiveName,archiveName);
     printInfo(0,"Restore from archive '%s':\n",String_cString(printableArchiveName));
 
-    /* open archive */
+    // open archive
     error = Archive_open(&archiveInfo,
                          archiveName,
                          jobOptions,
@@ -290,19 +285,19 @@ Errors Command_restore(const StringList                *archiveNameList,
     String_set(restoreInfo.statusInfo.storageName,printableArchiveName);
     abortFlag = !updateStatusInfo(&restoreInfo);
 
-    /* read archive entries */
+    // read archive entries
     while (   ((restoreInfo.requestedAbortFlag == NULL) || !(*restoreInfo.requestedAbortFlag))
            && !Archive_eof(&archiveInfo,TRUE)
            && (restoreInfo.failError == ERROR_NONE)
           )
     {
-      /* pause */
+      // pause
       while ((restoreInfo.pauseFlag != NULL) && (*restoreInfo.pauseFlag))
       {
         Misc_udelay(500*1000);
       }
 
-      /* get next archive entry type */
+      // get next archive entry type
       error = Archive_getNextArchiveEntryType(&archiveInfo,
                                               &archiveEntryType,
                                               TRUE
@@ -332,13 +327,10 @@ Errors Command_restore(const StringList                *archiveNameList,
             uint64       length;
             ulong        n;
 
-            /* read file */
+            // read file
             fileName = String_new();
             error = Archive_readFileEntry(&archiveInfo,
                                           &archiveEntryInfo,
-//???
-NULL,
-NULL,
                                           NULL,
                                           NULL,
                                           NULL,
@@ -369,14 +361,14 @@ NULL,
               restoreInfo.statusInfo.entryTotalBytes = fragmentSize;
               abortFlag = !updateStatusInfo(&restoreInfo);
 
-              /* get destination filename */
+              // get destination filename
               destinationFileName = getDestinationFileName(String_new(),
                                                            fileName,
                                                            jobOptions->destination,
                                                            jobOptions->directoryStripCount
                                                           );
 
-              /* check if file fragment already exists, file already exists */
+              // check if file fragment already exists, file already exists
               fragmentNode = FragmentList_find(&fragmentList,destinationFileName);
               if (fragmentNode != NULL)
               {
@@ -409,13 +401,13 @@ NULL,
 
               printInfo(2,"  Restore file '%s'...",String_cString(destinationFileName));
 
-              /* create parent directories if not existing */
+              // create parent directories if not existing
               if (!jobOptions->dryRunFlag)
               {
                 parentDirectoryName = File_getFilePathName(String_new(),destinationFileName);
                 if (!File_exists(parentDirectoryName))
                 {
-                  /* create directory */
+                  // create directory
                   error = File_makeDirectory(parentDirectoryName,
                                              FILE_DEFAULT_USER_ID,
                                              FILE_DEFAULT_GROUP_ID,
@@ -436,9 +428,9 @@ NULL,
                     continue;
                   }
 
-                  /* set directory owner ship */
+                  // set directory owner ship
                   error = File_setOwner(parentDirectoryName,
-                                        (jobOptions->owner.userId != FILE_DEFAULT_USER_ID)?jobOptions->owner.userId:fileInfo.userId,
+                                        (jobOptions->owner.userId  != FILE_DEFAULT_USER_ID )?jobOptions->owner.userId :fileInfo.userId,
                                         (jobOptions->owner.groupId != FILE_DEFAULT_GROUP_ID)?jobOptions->owner.groupId:fileInfo.groupId
                                        );
                   if (error != ERROR_NONE)
@@ -471,7 +463,7 @@ NULL,
 
               if (!jobOptions->dryRunFlag)
               {
-                /* open file */
+                // open file
                 error = File_open(&fileHandle,destinationFileName,FILE_OPEN_WRITE);
                 if (error != ERROR_NONE)
                 {
@@ -490,7 +482,7 @@ NULL,
                   continue;
                 }
 
-                /* seek to fragment position */
+                // seek to fragment position
                 error = File_seek(&fileHandle,fragmentOffset);
                 if (error != ERROR_NONE)
                 {
@@ -511,13 +503,13 @@ NULL,
                 }
               }
 
-              /* write file data */
+              // write file data
               length = 0;
               while (   ((restoreInfo.requestedAbortFlag == NULL) || !(*restoreInfo.requestedAbortFlag))
                      && (length < fragmentSize)
                     )
               {
-                /* pause */
+                // pause
                 while ((restoreInfo.pauseFlag != NULL) && (*restoreInfo.pauseFlag))
                 {
                   Misc_udelay(500*1000);
@@ -582,11 +574,11 @@ NULL,
                 continue;
               }
 
-              /* add fragment to file fragment list */
+              // add fragment to file fragment list
               FragmentList_addEntry(fragmentNode,fragmentOffset,fragmentSize);
 //FragmentList_debugPrintInfo(fragmentNode,String_cString(fileName));
 
-              /* set file size */
+              // set file size
               if (!jobOptions->dryRunFlag)
               {
                 if (File_getSize(&fileHandle) > fileInfo.size)
@@ -595,16 +587,16 @@ NULL,
                 }
               }
 
-              /* close file */
+              // close file
               if (!jobOptions->dryRunFlag)
               {
                 File_close(&fileHandle);
               }
 
-              /* check if file is complete */
+              // check if file is complete
               if (FragmentList_checkEntryComplete(fragmentNode))
               {
-                /* set file time, file owner/group, file permission */
+                // set file time, file owner/group, file permission
                 if (!jobOptions->dryRunFlag)
                 {
                   assert(fragmentNode->userData != NULL);
@@ -637,7 +629,7 @@ NULL,
                   }
                 }
 
-                /* discard fragment list */
+                // discard fragment list
                 FragmentList_discard(&fragmentList,fragmentNode);
               }
 
@@ -663,23 +655,23 @@ NULL,
                 printWarning("unexpected data at end of file entry '%S'.\n",fileName);
               }
 
-              /* free resources */
+              // free resources
               String_delete(destinationFileName);
             }
             else
             {
-              /* skip */
+              // skip
               printInfo(3,"  Restore '%s'...skipped\n",String_cString(fileName));
             }
 
-            /* close archive file, free resources */
+            // close archive file, free resources
             error = Archive_closeEntry(&archiveEntryInfo);
             if (error != ERROR_NONE)
             {
               printWarning("close 'file' entry fail (error: %s)\n",Errors_getText(error));
             }
 
-            /* free resources */
+            // free resources
             String_delete(fileName);
           }
           break;
@@ -694,19 +686,17 @@ NULL,
             uint64       block;
             ulong        bufferBlockCount;
 
-            /* read image */
+            // read image
             imageName = String_new();
             error = Archive_readImageEntry(&archiveInfo,
                                            &archiveEntryInfo,
-//???
-NULL,
-NULL,
                                            NULL,
                                            NULL,
                                            NULL,
                                            NULL,
                                            imageName,
                                            &deviceInfo,
+                                           NULL,
                                            &blockOffset,
                                            &blockCount
                                           );
@@ -730,14 +720,14 @@ NULL,
               restoreInfo.statusInfo.entryTotalBytes = blockCount;
               abortFlag = !updateStatusInfo(&restoreInfo);
 
-              /* get destination filename */
+              // get destination filename
               destinationDeviceName = getDestinationDeviceName(String_new(),
                                                                imageName,
                                                                jobOptions->destination
                                                               );
 
 
-              /* check if image fragment exists */
+              // check if image fragment exists
               fragmentNode = FragmentList_find(&fragmentList,imageName);
               if (fragmentNode != NULL)
               {
@@ -762,7 +752,7 @@ NULL,
 
               printInfo(2,"  Restore image '%s'...",String_cString(destinationDeviceName));
 
-              /* open device */
+              // open device
               if (!jobOptions->dryRunFlag)
               {
                 error = Device_open(&deviceHandle,destinationDeviceName,DEVICE_OPENMODE_WRITE);
@@ -802,13 +792,13 @@ NULL,
                 }
               }
 
-              /* write image data */
+              // write image data
               block = 0;
               while (   ((restoreInfo.requestedAbortFlag == NULL) || !(*restoreInfo.requestedAbortFlag))
                      && (block < blockCount)
                     )
               {
-                /* pause */
+                // pause
                 while ((restoreInfo.pauseFlag != NULL) && (*restoreInfo.pauseFlag))
                 {
                   Misc_udelay(500*1000);
@@ -863,11 +853,11 @@ NULL,
                 }
               }
 
-              /* add fragment to file fragment list */
+              // add fragment to file fragment list
               FragmentList_addEntry(fragmentNode,blockOffset*(uint64)deviceInfo.blockSize,blockCount*(uint64)deviceInfo.blockSize);
 //FragmentList_debugPrintInfo(fragmentNode,String_cString(fileName));
 
-              /* discard fragment list if file is complete */
+              // discard fragment list if file is complete
               if (FragmentList_checkEntryComplete(fragmentNode))
               {
                 FragmentList_discard(&fragmentList,fragmentNode);
@@ -895,23 +885,23 @@ NULL,
                 printWarning("unexpected data at end of image entry '%S'.\n",imageName);
               }
 
-              /* free resources */
+              // free resources
               String_delete(destinationDeviceName);
             }
             else
             {
-              /* skip */
+              // skip
               printInfo(3,"  Restore '%s'...skipped\n",String_cString(imageName));
             }
 
-            /* close archive file, free resources */
+            // close archive file, free resources
             error = Archive_closeEntry(&archiveEntryInfo);
             if (error != ERROR_NONE)
             {
               printWarning("close 'image' entry fail (error: %s)\n",Errors_getText(error));
             }
 
-            /* free resources */
+            // free resources
             String_delete(imageName);
           }
           break;
@@ -922,7 +912,7 @@ NULL,
             String   destinationFileName;
 //            FileInfo localFileInfo;
 
-            /* read directory */
+            // read directory
             directoryName = String_new();
             error = Archive_readDirectoryEntry(&archiveInfo,
                                                &archiveEntryInfo,
@@ -951,7 +941,7 @@ NULL,
               restoreInfo.statusInfo.entryTotalBytes = 00L;
               abortFlag = !updateStatusInfo(&restoreInfo);
 
-              /* get destination filename */
+              // get destination filename
               destinationFileName = getDestinationFileName(String_new(),
                                                            directoryName,
                                                            jobOptions->destination,
@@ -959,7 +949,7 @@ NULL,
                                                           );
 
 
-              /* check if directory already exists */
+              // check if directory already exists
               if (!jobOptions->overwriteFilesFlag && File_exists(destinationFileName))
               {
                 printInfo(1,
@@ -974,7 +964,7 @@ NULL,
 
               printInfo(2,"  Restore directory '%s'...",String_cString(destinationFileName));
 
-              /* create directory */
+              // create directory
               if (!jobOptions->dryRunFlag)
               {
                 error = File_makeDirectory(destinationFileName,
@@ -1000,7 +990,7 @@ NULL,
                 }
               }
 
-              /* set file time, file owner/group */
+              // set file time, file owner/group
               if (!jobOptions->dryRunFlag)
               {
                 if (jobOptions->owner.userId  != FILE_DEFAULT_USER_ID ) fileInfo.userId  = jobOptions->owner.userId;
@@ -1043,29 +1033,29 @@ NULL,
                 printInfo(2,"ok (dry-run)\n");
               }
 
-              /* check if all data read */
+              // check if all data read
               if (!Archive_eofData(&archiveEntryInfo))
               {
                 printWarning("unexpected data at end of directory entry '%S'.\n",directoryName);
               }
 
-              /* free resources */
+              // free resources
               String_delete(destinationFileName);
             }
             else
             {
-              /* skip */
+              // skip
               printInfo(3,"  Restore '%s'...skipped\n",String_cString(directoryName));
             }
 
-            /* close archive file */
+            // close archive file
             error = Archive_closeEntry(&archiveEntryInfo);
             if (error != ERROR_NONE)
             {
               printWarning("close 'directory' entry fail (error: %s)\n",Errors_getText(error));
             }
 
-            /* free resources */
+            // free resources
             String_delete(directoryName);
           }
           break;
@@ -1078,7 +1068,7 @@ NULL,
             String   parentDirectoryName;
 //            FileInfo localFileInfo;
 
-            /* read link */
+            // read link
             linkName = String_new();
             fileName = String_new();
             error = Archive_readLinkEntry(&archiveInfo,
@@ -1110,20 +1100,20 @@ NULL,
               restoreInfo.statusInfo.entryTotalBytes = 00L;
               abortFlag = !updateStatusInfo(&restoreInfo);
 
-              /* get destination filename */
+              // get destination filename
               destinationFileName = getDestinationFileName(String_new(),
                                                            linkName,
                                                            jobOptions->destination,
                                                            jobOptions->directoryStripCount
                                                           );
 
-              /* create parent directories if not existing */
+              // create parent directories if not existing
               if (!jobOptions->dryRunFlag)
               {
                 parentDirectoryName = File_getFilePathName(String_new(),destinationFileName);
                 if (!File_exists(parentDirectoryName))
                 {
-                  /* create directory */
+                  // create directory
                   error = File_makeDirectory(parentDirectoryName,
                                              FILE_DEFAULT_USER_ID,
                                              FILE_DEFAULT_GROUP_ID,
@@ -1145,7 +1135,7 @@ NULL,
                     continue;
                   }
 
-                  /* set directory owner ship */
+                  // set directory owner ship
                   error = File_setOwner(parentDirectoryName,
                                         (jobOptions->owner.userId != FILE_DEFAULT_USER_ID)?jobOptions->owner.userId:fileInfo.userId,
                                         (jobOptions->owner.groupId != FILE_DEFAULT_GROUP_ID)?jobOptions->owner.groupId:fileInfo.groupId
@@ -1178,7 +1168,7 @@ NULL,
                 String_delete(parentDirectoryName);
               }
 
-              /* check if link areadly exists */
+              // check if link areadly exists
               if (!jobOptions->overwriteFilesFlag && File_exists(destinationFileName))
               {
                 printInfo(1,
@@ -1198,7 +1188,7 @@ NULL,
 
               printInfo(2,"  Restore link '%s'...",String_cString(destinationFileName));
 
-              /* create link */
+              // create link
               if (!jobOptions->dryRunFlag)
               {
                 error = File_makeLink(destinationFileName,fileName);
@@ -1222,7 +1212,7 @@ NULL,
                 }
               }
 
-              /* set file time, file owner/group */
+              // set file time, file owner/group
               if (!jobOptions->dryRunFlag)
               {
                 if (jobOptions->owner.userId  != FILE_DEFAULT_USER_ID ) fileInfo.userId  = jobOptions->owner.userId;
@@ -1266,29 +1256,29 @@ NULL,
                 printInfo(2,"ok (dry-run)\n");
               }
 
-              /* check if all data read */
+              // check if all data read
               if (!Archive_eofData(&archiveEntryInfo))
               {
                 printWarning("unexpected data at end of link entry '%S'.\n",linkName);
               }
 
-              /* free resources */
+              // free resources
               String_delete(destinationFileName);
             }
             else
             {
-              /* skip */
+              // skip
               printInfo(3,"  Restore '%s'...skipped\n",String_cString(linkName));
             }
 
-            /* close archive file */
+            // close archive file
             error = Archive_closeEntry(&archiveEntryInfo);
             if (error != ERROR_NONE)
             {
               printWarning("close 'link' entry fail (error: %s)\n",Errors_getText(error));
             }
 
-            /* free resources */
+            // free resources
             String_delete(fileName);
             String_delete(linkName);
           }
@@ -1310,19 +1300,17 @@ NULL,
             uint64           length;
             ulong            n;
 
-            /* read hard link */
+            // read hard link
             StringList_init(&fileNameList);
             error = Archive_readHardLinkEntry(&archiveInfo,
                                               &archiveEntryInfo,
-//???
-NULL,
-NULL,
                                               NULL,
                                               NULL,
                                               NULL,
                                               NULL,
                                               &fileNameList,
                                               &fileInfo,
+                                              NULL,
                                               &fragmentOffset,
                                               &fragmentSize
                                              );
@@ -1351,7 +1339,7 @@ NULL,
                 restoreInfo.statusInfo.entryTotalBytes = fragmentSize;
                 abortFlag = !updateStatusInfo(&restoreInfo);
 
-                /* get destination filename */
+                // get destination filename
                 getDestinationFileName(destinationFileName,
                                        fileName,
                                        jobOptions->destination,
@@ -1360,13 +1348,13 @@ NULL,
 
                 printInfo(2,"  Restore hard link '%s'...",String_cString(destinationFileName));
 
-                /* create parent directories if not existing */
+                // create parent directories if not existing
                 if (!jobOptions->dryRunFlag)
                 {
                   parentDirectoryName = File_getFilePathName(String_new(),destinationFileName);
                   if (!File_exists(parentDirectoryName))
                   {
-                    /* create directory */
+                    // create directory
                     error = File_makeDirectory(parentDirectoryName,
                                                FILE_DEFAULT_USER_ID,
                                                FILE_DEFAULT_GROUP_ID,
@@ -1391,7 +1379,7 @@ NULL,
                       }
                     }
 
-                    /* set directory owner ship */
+                    // set directory owner ship
                     error = File_setOwner(parentDirectoryName,
                                           (jobOptions->owner.userId != FILE_DEFAULT_USER_ID)?jobOptions->owner.userId:fileInfo.userId,
                                           (jobOptions->owner.groupId != FILE_DEFAULT_GROUP_ID)?jobOptions->owner.groupId:fileInfo.groupId
@@ -1423,7 +1411,7 @@ NULL,
 
                 if (!restoredDataFlag)
                 {
-                  /* check if file fragment already eixsts, file already exists */
+                  // check if file fragment already eixsts, file already exists
                   fragmentNode = FragmentList_find(&fragmentList,fileName);
                   if (fragmentNode != NULL)
                   {
@@ -1449,7 +1437,7 @@ NULL,
 
                   if (!jobOptions->dryRunFlag)
                   {
-                    /* open file */
+                    // open file
                     error = File_open(&fileHandle,destinationFileName,FILE_OPEN_WRITE);
                     if (error != ERROR_NONE)
                     {
@@ -1469,7 +1457,7 @@ NULL,
                       }
                     }
 
-                    /* seek to fragment position */
+                    // seek to fragment position
                     error = File_seek(&fileHandle,fragmentOffset);
                     if (error != ERROR_NONE)
                     {
@@ -1492,13 +1480,13 @@ NULL,
                     String_set(hardLinkFileName,destinationFileName);
                   }
 
-                  /* write file data */
+                  // write file data
                   length = 0;
                   while (   ((restoreInfo.requestedAbortFlag == NULL) || !(*restoreInfo.requestedAbortFlag))
                          && (length < fragmentSize)
                         )
                   {
-                    /* pause */
+                    // pause
                     while ((restoreInfo.pauseFlag != NULL) && (*restoreInfo.pauseFlag))
                     {
                       Misc_udelay(500*1000);
@@ -1554,11 +1542,11 @@ NULL,
                     break;
                   }
 
-                  /* add fragment to file fragment list */
+                  // add fragment to file fragment list
                   FragmentList_addEntry(fragmentNode,fragmentOffset,fragmentSize);
 //FragmentList_debugPrintInfo(fragmentNode,String_cString(fileName));
 
-                  /* set file size */
+                  // set file size
                   if (!jobOptions->dryRunFlag)
                   {
                     if (File_getSize(&fileHandle) > fileInfo.size)
@@ -1567,13 +1555,13 @@ NULL,
                     }
                   }
 
-                  /* close file */
+                  // close file
                   if (!jobOptions->dryRunFlag)
                   {
                     File_close(&fileHandle);
                   }
 
-                  /* set file time, file owner/group */
+                  // set file time, file owner/group
                   if (!jobOptions->dryRunFlag)
                   {
                     if (jobOptions->owner.userId  != FILE_DEFAULT_USER_ID ) fileInfo.userId  = jobOptions->owner.userId;
@@ -1610,7 +1598,7 @@ NULL,
                     printInfo(2,"ok (dry-run)\n");
                   }
 
-                  /* discard fragment list if file is complete */
+                  // discard fragment list if file is complete
                   if (FragmentList_checkEntryComplete(fragmentNode))
                   {
                     FragmentList_discard(&fragmentList,fragmentNode);
@@ -1620,14 +1608,14 @@ NULL,
                 }
                 else
                 {
-                  /* check file if exists */
+                  // check file if exists
                   if (!jobOptions->overwriteFilesFlag && File_exists(destinationFileName))
                   {
                     printInfo(2,"skipped (file exists)\n",String_cString(destinationFileName));
                     continue;
                   }
 
-                  /* create hard link */
+                  // create hard link
                   if (!jobOptions->dryRunFlag)
                   {
                     error = File_makeHardLink(destinationFileName,hardLinkFileName);
@@ -1675,7 +1663,7 @@ NULL,
               }
               else
               {
-                /* skip */
+                // skip
                 printInfo(3,"  Restore '%s'...skipped\n",String_cString(fileName));
               }
             }
@@ -1688,14 +1676,14 @@ NULL,
               continue;
             }
 
-            /* close archive file, free resources */
+            // close archive file, free resources
             error = Archive_closeEntry(&archiveEntryInfo);
             if (error != ERROR_NONE)
             {
               printWarning("close 'hard link' entry fail (error: %s)\n",Errors_getText(error));
             }
 
-            /* free resources */
+            // free resources
             StringList_done(&fileNameList);
           }
           break;
@@ -1707,7 +1695,7 @@ NULL,
             String   parentDirectoryName;
 //            FileInfo localFileInfo;
 
-            /* read special device */
+            // read special device
             fileName = String_new();
             error = Archive_readSpecialEntry(&archiveInfo,
                                              &archiveEntryInfo,
@@ -1736,20 +1724,20 @@ NULL,
               restoreInfo.statusInfo.entryTotalBytes = 00L;
               abortFlag = !updateStatusInfo(&restoreInfo);
 
-              /* get destination filename */
+              // get destination filename
               destinationFileName = getDestinationFileName(String_new(),
                                                            fileName,
                                                            jobOptions->destination,
                                                            jobOptions->directoryStripCount
                                                           );
 
-              /* create parent directories if not existing */
+              // create parent directories if not existing
               if (!jobOptions->dryRunFlag)
               {
                 parentDirectoryName = File_getFilePathName(String_new(),destinationFileName);
                 if (!File_exists(parentDirectoryName))
                 {
-                  /* create directory */
+                  // create directory
                   error = File_makeDirectory(parentDirectoryName,
                                              FILE_DEFAULT_USER_ID,
                                              FILE_DEFAULT_GROUP_ID,
@@ -1770,7 +1758,7 @@ NULL,
                     continue;
                   }
 
-                  /* set directory owner ship */
+                  // set directory owner ship
                   error = File_setOwner(parentDirectoryName,
                                         (jobOptions->owner.userId != FILE_DEFAULT_USER_ID)?jobOptions->owner.userId:fileInfo.userId,
                                         (jobOptions->owner.groupId != FILE_DEFAULT_GROUP_ID)?jobOptions->owner.groupId:fileInfo.groupId
@@ -1803,7 +1791,7 @@ NULL,
                 String_delete(parentDirectoryName);
               }
 
-              /* check if special file already exists */
+              // check if special file already exists
               if (!jobOptions->overwriteFilesFlag && File_exists(destinationFileName))
               {
                 printInfo(1,
@@ -1822,7 +1810,7 @@ NULL,
 
               printInfo(2,"  Restore special device '%s'...",String_cString(destinationFileName));
 
-              /* create special device */
+              // create special device
               if (!jobOptions->dryRunFlag)
               {
                 error = File_makeSpecial(destinationFileName,
@@ -1848,7 +1836,7 @@ NULL,
                 }
               }
 
-              /* set file time, file owner/group */
+              // set file time, file owner/group
               if (!jobOptions->dryRunFlag)
               {
                 if (jobOptions->owner.userId  != FILE_DEFAULT_USER_ID ) fileInfo.userId  = jobOptions->owner.userId;
@@ -1891,29 +1879,29 @@ NULL,
                 printInfo(2,"ok (dry-run)\n");
               }
 
-              /* check if all data read */
+              // check if all data read
               if (!Archive_eofData(&archiveEntryInfo))
               {
                 printWarning("unexpected data at end of special entry '%S'.\n",fileName);
               }
 
-              /* free resources */
+              // free resources
               String_delete(destinationFileName);
             }
             else
             {
-              /* skip */
+              // skip
               printInfo(3,"  Restore '%s'...skipped\n",String_cString(fileName));
             }
 
-            /* close archive file */
+            // close archive file
             error = Archive_closeEntry(&archiveEntryInfo);
             if (error != ERROR_NONE)
             {
               printWarning("close 'special' entry fail (error: %s)\n",Errors_getText(error));
             }
 
-            /* free resources */
+            // free resources
             String_delete(fileName);
           }
           break;
@@ -1925,11 +1913,19 @@ NULL,
       }
     }
 
-    /* close archive */
+    // close archive
     Archive_close(&archiveInfo);
+
+    if (   abortFlag
+        || ((restoreInfo.requestedAbortFlag != NULL) && (*restoreInfo.requestedAbortFlag))
+        || (restoreInfo.failError != ERROR_NONE)
+       )
+    {
+      break;
+    }
   }
 
-  /* check fragment lists, set file info for incomplete entries */
+  // check fragment lists, set file info for incomplete entries
   if ((restoreInfo.requestedAbortFlag == NULL) || !(*restoreInfo.requestedAbortFlag))
   {
     FRAGMENTLIST_ITERATE(&fragmentList,fragmentNode)
@@ -1942,7 +1938,7 @@ NULL,
 
       if (fragmentNode->userData != NULL)
       {
-        /* set file time, file owner/group, file permission */
+        // set file time, file owner/group, file permission
         if (!jobOptions->dryRunFlag)
         {
           if (jobOptions->owner.userId  != FILE_DEFAULT_USER_ID ) ((FileInfo*)fragmentNode->userData)->userId  = jobOptions->owner.userId;
@@ -1971,7 +1967,7 @@ NULL,
     }
   }
 
-  /* free resources */
+  // free resources
   String_delete(printableArchiveName);
   String_delete(archiveName);
   FragmentList_done(&fragmentList);
