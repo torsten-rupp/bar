@@ -197,12 +197,13 @@ LOCAL bool          outputNewLineFlag;
   extern "C" {
 #endif
 
-LOCAL bool cmdOptionParseOwner(void *userData, void *variable, const char *name, const char *value, const void *defaultValue);
 LOCAL bool cmdOptionParseString(void *userData, void *variable, const char *name, const char *value, const void *defaultValue);
 LOCAL bool cmdOptionParseConfigFile(void *userData, void *variable, const char *name, const char *value, const void *defaultValue);
 LOCAL bool cmdOptionParseEntryPattern(void *userData, void *variable, const char *name, const char *value, const void *defaultValue);
 LOCAL bool cmdOptionParsePattern(void *userData, void *variable, const char *name, const char *value, const void *defaultValue);
+LOCAL bool cmdOptionParseOwner(void *userData, void *variable, const char *name, const char *value, const void *defaultValue);
 LOCAL bool cmdOptionParsePassword(void *userData, void *variable, const char *name, const char *value, const void *defaultValue);
+LOCAL bool cmdOptionParseCompressAlgorithm(void *userData, void *variable, const char *name, const char *value, const void *defaultValue);
 
 LOCAL const CommandLineUnit COMMAND_LINE_BYTES_UNITS[] =
 {
@@ -229,6 +230,72 @@ LOCAL const CommandLineOptionSelect COMMAND_LINE_OPTIONS_PATTERN_TYPES[] =
   {"extended",PATTERN_TYPE_EXTENDED_REGEX,"extended regular expression pattern matching"},
 };
 
+LOCAL const struct
+{
+  const char         *name;
+  CompressAlgorithms compressAlgorithm;
+} COMPRESS_ALGORITHMS_DELTA[] =
+{
+  {"none", COMPRESS_ALGORITHM_NONE},
+
+  #ifdef HAVE_XDELTA
+    {"xdelta1",COMPRESS_ALGORITHM_XDELTA_1},
+    {"xdelta2",COMPRESS_ALGORITHM_XDELTA_2},
+    {"xdelta3",COMPRESS_ALGORITHM_XDELTA_3},
+    {"xdelta4",COMPRESS_ALGORITHM_XDELTA_4},
+    {"xdelta5",COMPRESS_ALGORITHM_XDELTA_5},
+    {"xdelta6",COMPRESS_ALGORITHM_XDELTA_6},
+    {"xdelta7",COMPRESS_ALGORITHM_XDELTA_7},
+    {"xdelta8",COMPRESS_ALGORITHM_XDELTA_8},
+    {"xdelta9",COMPRESS_ALGORITHM_XDELTA_9},
+  #endif /* HAVE_XDELTA */
+};
+
+LOCAL const struct
+{
+  const char         *name;
+  CompressAlgorithms compressAlgorithm;
+} COMPRESS_ALGORITHMS_BYTE[] =
+{
+  {"none",COMPRESS_ALGORITHM_NONE},
+
+  {"zip0",COMPRESS_ALGORITHM_ZIP_0},
+  {"zip1",COMPRESS_ALGORITHM_ZIP_1},
+  {"zip2",COMPRESS_ALGORITHM_ZIP_2},
+  {"zip3",COMPRESS_ALGORITHM_ZIP_3},
+  {"zip4",COMPRESS_ALGORITHM_ZIP_4},
+  {"zip5",COMPRESS_ALGORITHM_ZIP_5},
+  {"zip6",COMPRESS_ALGORITHM_ZIP_6},
+  {"zip7",COMPRESS_ALGORITHM_ZIP_7},
+  {"zip8",COMPRESS_ALGORITHM_ZIP_8},
+  {"zip9",COMPRESS_ALGORITHM_ZIP_9},
+
+  #ifdef HAVE_BZ2
+    {"bzip1",COMPRESS_ALGORITHM_BZIP2_1},
+    {"bzip2",COMPRESS_ALGORITHM_BZIP2_2},
+    {"bzip3",COMPRESS_ALGORITHM_BZIP2_3},
+    {"bzip4",COMPRESS_ALGORITHM_BZIP2_4},
+    {"bzip5",COMPRESS_ALGORITHM_BZIP2_5},
+    {"bzip6",COMPRESS_ALGORITHM_BZIP2_6},
+    {"bzip7",COMPRESS_ALGORITHM_BZIP2_7},
+    {"bzip8",COMPRESS_ALGORITHM_BZIP2_8},
+    {"bzip9",COMPRESS_ALGORITHM_BZIP2_9},
+  #endif /* HAVE_BZ2 */
+
+  #ifdef HAVE_LZMA
+    {"lzma1",COMPRESS_ALGORITHM_LZMA_1},
+    {"lzma2",COMPRESS_ALGORITHM_LZMA_2},
+    {"lzma3",COMPRESS_ALGORITHM_LZMA_3},
+    {"lzma4",COMPRESS_ALGORITHM_LZMA_4},
+    {"lzma5",COMPRESS_ALGORITHM_LZMA_5},
+    {"lzma6",COMPRESS_ALGORITHM_LZMA_6},
+    {"lzma7",COMPRESS_ALGORITHM_LZMA_7},
+    {"lzma8",COMPRESS_ALGORITHM_LZMA_8},
+    {"lzma9",COMPRESS_ALGORITHM_LZMA_9},
+  #endif /* HAVE_LZMA */
+};
+
+#if 0
 const CommandLineOptionSelect COMMAND_LINE_OPTIONS_COMPRESS_ALGORITHMS[] =
 {
   {"none", COMPRESS_ALGORITHM_NONE,   "no compression"           },
@@ -299,6 +366,7 @@ const CommandLineOptionSelect COMMAND_LINE_OPTIONS_DELTA_COMPRESS_ALGORITHMS[] =
     {"xdelta9",COMPRESS_ALGORITHM_XDELTA_9,"XDELTA compression level 9"},
   #endif /* HAVE_XDELTA */
 };
+#endif /* 0 */
 
 LOCAL const CommandLineOptionSelect COMMAND_LINE_OPTIONS_CRYPT_ALGORITHMS[] =
 {
@@ -376,9 +444,9 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
   CMD_OPTION_SPECIAL      ("include",                      '#',0,2,&includeEntryList,                         cmdOptionParseEntryPattern,NULL,                       "include pattern","pattern"                                                ),
   CMD_OPTION_SPECIAL      ("exclude",                      '!',0,2,&excludePatternList,                       cmdOptionParsePattern,NULL,                            "exclude pattern","pattern"                                                ),
 
-  CMD_OPTION_SPECIAL      ("delta-source",                 0,  0,2,&deltaSourcePatternList,                   cmdOptionParsePattern,NULL,                            "source pattern","pattern"                                                 ),
+  CMD_OPTION_SPECIAL      ("delta-source",                 0,  0,2,&deltaSourcePatternList,                   cmdOptionParsePattern,NULL,                            "source pattern\ntest1\ntest2","pattern"                                                 ),
 // ??? combine with compress-algorithm
-CMD_OPTION_SELECT       ("delta-algorithm",              0,  0,1,jobOptions.compressAlgorithm.delta,        COMMAND_LINE_OPTIONS_DELTA_COMPRESS_ALGORITHMS,                 "select delta algorithm to use"                                            ),
+//CMD_OPTION_SELECT       ("delta-algorithm",              0,  0,1,jobOptions.compressAlgorithm.delta,        COMMAND_LINE_OPTIONS_DELTA_COMPRESS_ALGORITHMS,                 "select delta algorithm to use"                                            ),
 
   CMD_OPTION_SPECIAL      ("config",                       0,  1,0,NULL,                                      cmdOptionParseConfigFile,NULL,                         "configuration file","file name"                                           ),
 
@@ -389,9 +457,17 @@ CMD_OPTION_SELECT       ("delta-algorithm",              0,  0,1,jobOptions.comp
 
   CMD_OPTION_INTEGER      ("directory-strip",              'p',1,1,jobOptions.directoryStripCount,            0,MAX_INT,NULL,                                         "number of directories to strip on extract"                               ),
   CMD_OPTION_STRING       ("destination",                  0,  0,1,jobOptions.destination,                                                                          "destination to restore files/images","path"                                ),
-  CMD_OPTION_SPECIAL      ("owner",                        0,  0,1,&jobOptions.owner,                         cmdOptionParseOwner,NULL,                              "user and group of restored files","user:group"                            ),
+  CMD_OPTION_SPECIAL      ("owner",                        0,  0,1,&jobOptions,                               cmdOptionParseOwner,NULL,                              "user and group of restored files","user:group"                            ),
 
-  CMD_OPTION_SELECT       ("compress-algorithm",           'z',0,1,jobOptions.compressAlgorithm.data,         COMMAND_LINE_OPTIONS_COMPRESS_ALGORITHMS,              "select compress algorithm to use"                                         ),
+//  CMD_OPTION_SELECT       ("xcompress-algorithm",           'z',0,1,jobOptions.compressAlgorithm.byte,         COMMAND_LINE_OPTIONS_COMPRESS_ALGORITHMS,              "select compress algorithm to use"                                         ),
+  CMD_OPTION_SPECIAL      ("compress-algorithm",           'z',0,1,&jobOptions,                               cmdOptionParseCompressAlgorithm,NULL,                  "select compress algorithms to use\n"
+                                                                                                                                                                     "  none        : no compression (default)\n"
+                                                                                                                                                                     "  zip0..zip9  : ZIP compression level 0..9\n"
+                                                                                                                                                                     "  bzip1..bzip9: BZIP2 compression level 1..9\n"
+                                                                                                                                                                     "  lzma1..lzma9: LZMA compression level 1..9\n"
+                                                                                                                                                                     "additional select with '+':\n"
+                                                                                                                                                                     "  xdelta1..xdelta9: XDELTA compression level 1..9",
+                                                                                                                                                                     "algorithm|xdelta+algorithm"                            ),
   CMD_OPTION_INTEGER      ("compress-min-size",            0,  1,1,globalOptions.compressMinFileSize,         0,MAX_INT,COMMAND_LINE_BYTES_UNITS,                    "minimal size of file for compression"                                     ),
   CMD_OPTION_SPECIAL      ("compress-exclude",             0,  0,2,&compressExcludePatternList,               cmdOptionParsePattern,NULL,                            "exclude compression pattern","pattern"                                    ),
 
@@ -525,6 +601,7 @@ CMD_OPTION_SELECT       ("delta-algorithm",              0,  0,1,jobOptions.comp
   CMD_OPTION_BOOLEAN      ("ignore-no-backup-file",        0,  1,1,globalOptions.ignoreNoBackupFileFlag,                                                             "ignore .nobackup/.NOBACKUP file"                                          ),
 
   CMD_OPTION_BOOLEAN      ("skip-unreadable",              0,  0,1,jobOptions.skipUnreadableFlag,                                                                    "skip unreadable files"                                                    ),
+  CMD_OPTION_BOOLEAN      ("force-delta-compression",      0,  0,1,jobOptions.forceDeltaCompressionFlag,                                                             "force delta compression of files. Stop on error"                          ),
   CMD_OPTION_BOOLEAN      ("overwrite-archive-files",      'o',0,1,jobOptions.overwriteArchiveFilesFlag,                                                             "overwrite existing archive files"                                         ),
   CMD_OPTION_BOOLEAN      ("overwrite-files",              0,  0,1,jobOptions.overwriteFilesFlag,                                                                    "overwrite existing files"                                                 ),
   CMD_OPTION_BOOLEAN      ("wait-first-volume",            0,  1,1,jobOptions.waitFirstVolumeFlag,                                                                   "wait for first volume"                                                    ),
@@ -671,7 +748,7 @@ LOCAL const ConfigValueSet CONFIG_VALUE_LOG_TYPES[] =
 
 LOCAL const ConfigValue CONFIG_VALUES[] =
 {
-  /* general settings */
+  // general settings
   CONFIG_VALUE_SPECIAL  ("config",                       NULL,-1,                                                 configValueParseConfigFile,NULL,NULL,NULL,NULL),
 
   CONFIG_VALUE_STRING   ("tmp-directory",                &globalOptions.tmpDirectory,-1                           ),
@@ -686,7 +763,7 @@ LOCAL const ConfigValue CONFIG_VALUES[] =
   CONFIG_VALUE_CSTRING  ("database-file",                &indexDatabaseFileName,-1                                ),
   CONFIG_VALUE_BOOLEAN  ("no-auto-update-database-index",&globalOptions.noAutoUpdateDatabaseIndexFlag,-1          ),
 
-  /* global job settings */
+  // global job settings
   CONFIG_VALUE_STRING   ("archive-name",                 &archiveName,-1                                          ),
   CONFIG_VALUE_SELECT   ("archive-type",                 &jobOptions.archiveType,-1,                              CONFIG_VALUE_ARCHIVE_TYPES),
 
@@ -696,11 +773,12 @@ LOCAL const ConfigValue CONFIG_VALUES[] =
 
   CONFIG_VALUE_INTEGER  ("directory-strip",              &jobOptions.directoryStripCount,-1,                      0,MAX_INT,NULL),
   CONFIG_VALUE_STRING   ("destination",                  &jobOptions.destination,-1                               ),
-  CONFIG_VALUE_SPECIAL  ("owner",                        &jobOptions.owner,-1,                                    configValueParseOwner,NULL,NULL,NULL,&jobOptions.owner),
+  CONFIG_VALUE_SPECIAL  ("owner",                        &jobOptions,-1,                                          configValueParseOwner,NULL,NULL,NULL,&jobOptions),
 
   CONFIG_VALUE_SELECT   ("pattern-type",                 &jobOptions.patternType,-1,                              CONFIG_VALUE_PATTERN_TYPES),
 
-  CONFIG_VALUE_SELECT   ("compress-algorithm",           &jobOptions.compressAlgorithm.data,-1,                   CONFIG_VALUE_COMPRESS_ALGORITHMS),
+//  CONFIG_VALUE_SELECT   ("compress-algorithm",           &jobOptions.compressAlgorithm.byte,-1,                   CONFIG_VALUE_COMPRESS_ALGORITHMS),
+  CONFIG_VALUE_SPECIAL  ("compress-algorithm",           &jobOptions,-1,                                          configValueParseCompressAlgorithm,NULL,NULL,NULL,&jobOptions),
 
   CONFIG_VALUE_SELECT   ("crypt-algorithm",              &jobOptions.cryptAlgorithm,-1,                           CONFIG_VALUE_CRYPT_ALGORITHMS),
   CONFIG_VALUE_SELECT   ("crypt-type",                   &jobOptions.cryptType,-1,                                CONFIG_VALUE_CRYPT_TYPES),
@@ -736,11 +814,11 @@ LOCAL const ConfigValue CONFIG_VALUES[] =
   CONFIG_VALUE_BOOLEAN  ("quiet",                        &globalOptions.quietFlag,-1                              ),
   CONFIG_VALUE_INTEGER  ("verbose",                      &globalOptions.verboseLevel,-1,                          0,6,NULL),
 
-  /* igored job settings (server only) */
+  // igored job settings (server only)
 
   CONFIG_VALUE_SPECIAL  ("schedule",                     NULL,-1,                                                 configValueParseSchedule,configValueFormatInitSchedule,configValueFormatDoneSchedule,configValueFormatSchedule,NULL),
 
-  /* commands */
+  // commands
 
   CONFIG_VALUE_STRING   ("file-write-pre-command",       &globalOptions.file.writePreProcessCommand,-1            ),
   CONFIG_VALUE_STRING   ("file-write-post-command",      &globalOptions.file.writePostProcessCommand,-1           ),
@@ -817,7 +895,7 @@ LOCAL const ConfigValue CONFIG_VALUES[] =
   CONFIG_VALUE_STRING   ("device-write-post-command",    &currentDevice,offsetof(Device,writePostProcessCommand)  ),
   CONFIG_VALUE_STRING   ("device-write-command",         &currentDevice,offsetof(Device,writeCommand)             ),
 
-  /* server settings */
+  // server settings
 
   CONFIG_VALUE_INTEGER  ("server-port",                  &serverPort,-1,                                          0,65535,NULL),
   CONFIG_VALUE_INTEGER  ("server-tls-port",              &serverTLSPort,-1,                                       0,65535,NULL),
@@ -857,7 +935,7 @@ LOCAL void output(FILE *file, bool saveRestoreFlag, const String string)
 
   if (saveRestoreFlag)
   {
-    /* wipe-out current line */
+    // wipe-out current line
     for (z = 0; z < String_length(outputLine); z++)
     {
       fwrite("\b",1,1,file);
@@ -871,18 +949,18 @@ LOCAL void output(FILE *file, bool saveRestoreFlag, const String string)
       fwrite("\b",1,1,file);
     }
 
-    /* output line */
+    // output line
     fwrite(String_cString(string),1,String_length(string),file);
 
-    /* restore line */
+    // restore line
     fwrite(String_cString(outputLine),1,String_length(outputLine),file);
   }
   else
   {
-    /* output string */
+    // output string
     fwrite(String_cString(string),1,String_length(string),file);
 
-    /* store */
+    // store
     if (String_index(string,STRING_END) == '\n')
     {
       String_clear(outputLine);
@@ -918,7 +996,7 @@ LOCAL bool readConfigFile(const String fileName, bool printInfoFlag)
 
   assert(fileName != NULL);
 
-  /* check file permissions */
+  // check file permissions
   error = File_getFileInfo(&fileInfo,fileName);
   if (error == ERROR_NONE)
   {
@@ -938,7 +1016,7 @@ LOCAL bool readConfigFile(const String fileName, bool printInfoFlag)
                 );
   }
 
-  /* open file */
+  // open file
   error = File_open(&fileHandle,fileName,FILE_OPEN_READ);
   if (error != ERROR_NONE)
   {
@@ -949,7 +1027,7 @@ LOCAL bool readConfigFile(const String fileName, bool printInfoFlag)
     return FALSE;
   }
 
-  /* parse file */
+  // parse file
   if ((globalOptions.verboseLevel >= 2) || printInfoFlag) printf("Reading config file '%s'...",String_cString(fileName));
   failFlag   = FALSE;
   lineNb     = 0;
@@ -958,7 +1036,7 @@ LOCAL bool readConfigFile(const String fileName, bool printInfoFlag)
   value      = String_new();
   while (!File_eof(&fileHandle) && !failFlag)
   {
-    /* read line */
+    // read line
     error = File_readLine(&fileHandle,line);
     if (error != ERROR_NONE)
     {
@@ -972,13 +1050,13 @@ LOCAL bool readConfigFile(const String fileName, bool printInfoFlag)
     }
     lineNb++;
 
-    /* skip comments, empty lines */
+    // skip comments, empty lines
     if ((String_length(line) == 0) || (String_index(line,0) == '#'))
     {
       continue;
     }
 
-    /* parse line */
+    // parse line
     if      (String_parse(line,STRING_BEGIN,"[ftp-server %S]",NULL,name))
     {
       FTPServerNode *ftpServerNode;
@@ -1092,10 +1170,10 @@ LOCAL bool readConfigFile(const String fileName, bool printInfoFlag)
   String_delete(name);
   String_delete(line);
 
-  /* close file */
+  // close file
   File_close(&fileHandle);
 
-  /* free resources */
+  // free resources
 
   return !failFlag;
 }
@@ -1105,7 +1183,7 @@ LOCAL bool readConfigFile(const String fileName, bool printInfoFlag)
 * Purpose: command line option call back for parsing string
 * Input  : -
 * Output : -
-* Return : -
+* Return : TRUE iff parsed, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
 
@@ -1114,9 +1192,9 @@ LOCAL bool cmdOptionParseString(void *userData, void *variable, const char *name
   assert(variable != NULL);
   assert(value != NULL);
 
+  UNUSED_VARIABLE(userData);
   UNUSED_VARIABLE(name);
   UNUSED_VARIABLE(defaultValue);
-  UNUSED_VARIABLE(userData);
 
   if ((*(String*)variable) != NULL)
   {
@@ -1131,11 +1209,128 @@ LOCAL bool cmdOptionParseString(void *userData, void *variable, const char *name
 }
 
 /***********************************************************************\
+* Name   : cmdOptionParseConfigFile
+* Purpose: command line option call back for parsing config file
+* Input  : -
+* Output : -
+* Return : TRUE iff parsed, FALSE otherwise
+* Notes  : -
+\***********************************************************************/
+
+LOCAL bool cmdOptionParseConfigFile(void *userData, void *variable, const char *name, const char *value, const void *defaultValue)
+{
+  assert(value != NULL);
+
+  UNUSED_VARIABLE(userData);
+  UNUSED_VARIABLE(variable);
+  UNUSED_VARIABLE(name);
+  UNUSED_VARIABLE(defaultValue);
+
+  StringList_appendCString(&configFileNameList,value);
+
+  return TRUE;
+}
+
+/***********************************************************************\
+* Name   : cmdOptionParseEntryPattern
+* Purpose: command line option call back for parsing include
+*          patterns
+* Input  : -
+* Output : -
+* Return : TRUE iff parsed, FALSE otherwise
+* Notes  : -
+\***********************************************************************/
+
+LOCAL bool cmdOptionParseEntryPattern(void *userData, void *variable, const char *name, const char *value, const void *defaultValue)
+{
+  EntryTypes   entryType;
+  PatternTypes patternType;
+
+  assert(variable != NULL);
+  assert(value != NULL);
+
+  UNUSED_VARIABLE(userData);
+  UNUSED_VARIABLE(defaultValue);
+
+  // get entry type
+  entryType = ENTRY_TYPE_FILE;
+  switch (command)
+  {
+    case COMMAND_CREATE_FILES:
+    case COMMAND_LIST:
+    case COMMAND_TEST:
+    case COMMAND_COMPARE:
+    case COMMAND_RESTORE:
+    case COMMAND_GENERATE_KEYS:
+    case COMMAND_NEW_KEY_PASSWORD:
+      entryType = ENTRY_TYPE_FILE;
+      break;
+    case COMMAND_CREATE_IMAGES:
+      entryType = ENTRY_TYPE_IMAGE;
+      break;
+    default:
+      HALT_INTERNAL_ERROR("no valid command set");
+      break;
+  }
+
+  // detect pattern type, get pattern
+  if      (strncmp(value,"r:",2) == 0) { patternType = PATTERN_TYPE_REGEX;          value += 2; }
+  else if (strncmp(value,"x:",2) == 0) { patternType = PATTERN_TYPE_EXTENDED_REGEX; value += 2; }
+  else if (strncmp(value,"g:",2) == 0) { patternType = PATTERN_TYPE_GLOB;           value += 2; }
+  else                                 { patternType = PATTERN_TYPE_GLOB;                       }
+
+  // append to list
+  if (EntryList_appendCString((EntryList*)variable,entryType,value,patternType) != ERROR_NONE)
+  {
+    fprintf(stderr,"Cannot parse varlue '%s' of option '%s'!\n",value,name);
+    return FALSE;
+  }
+
+  return TRUE;
+}
+
+/***********************************************************************\
+* Name   : cmdOptionParsePattern
+* Purpose: command line option call back for parsing pattern
+*          patterns
+* Input  : -
+* Output : -
+* Return : TRUE iff parsed, FALSE otherwise
+* Notes  : -
+\***********************************************************************/
+
+LOCAL bool cmdOptionParsePattern(void *userData, void *variable, const char *name, const char *value, const void *defaultValue)
+{
+  PatternTypes patternType;
+
+  assert(variable != NULL);
+  assert(value != NULL);
+
+  UNUSED_VARIABLE(userData);
+  UNUSED_VARIABLE(defaultValue);
+
+  // detect pattern type, get pattern
+  if      (strncmp(value,"r:",2) == 0) { patternType = PATTERN_TYPE_REGEX;          value += 2; }
+  else if (strncmp(value,"x:",2) == 0) { patternType = PATTERN_TYPE_EXTENDED_REGEX; value += 2; }
+  else if (strncmp(value,"g:",2) == 0) { patternType = PATTERN_TYPE_GLOB;           value += 2; }
+  else                                 { patternType = PATTERN_TYPE_GLOB;                       }
+
+  // append to list
+  if (PatternList_appendCString((PatternList*)variable,value,patternType) != ERROR_NONE)
+  {
+    fprintf(stderr,"Cannot parse varlue '%s' of option '%s'!\n",value,name);
+    return FALSE;
+  }
+
+  return TRUE;
+}
+
+/***********************************************************************\
 * Name   : cmdOptionParseOwner
 * Purpose: command line option call back for parsing owner
 * Input  : -
 * Output : -
-* Return : -
+* Return : TRUE iff parsed, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
 
@@ -1147,11 +1342,11 @@ LOCAL bool cmdOptionParseOwner(void *userData, void *variable, const char *name,
   assert(variable != NULL);
   assert(value != NULL);
 
+  UNUSED_VARIABLE(userData);
   UNUSED_VARIABLE(name);
   UNUSED_VARIABLE(defaultValue);
-  UNUSED_VARIABLE(userData);
 
-  /* parse */
+  // parse
   if      (String_scanCString(value,"%256s:%256s",userName,groupName))
   {
     userId  = File_userNameToUserId(userName);
@@ -1177,126 +1372,9 @@ LOCAL bool cmdOptionParseOwner(void *userData, void *variable, const char *name,
     return FALSE;
   }
 
-  /* store owner values */
-  ((Owner*)variable)->userId  = userId;
-  ((Owner*)variable)->groupId = groupId;
-
-  return TRUE;
-}
-
-/***********************************************************************\
-* Name   : cmdOptionParseConfigFile
-* Purpose: command line option call back for parsing config file
-* Input  : -
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL bool cmdOptionParseConfigFile(void *userData, void *variable, const char *name, const char *value, const void *defaultValue)
-{
-  assert(value != NULL);
-
-  UNUSED_VARIABLE(variable);
-  UNUSED_VARIABLE(name);
-  UNUSED_VARIABLE(defaultValue);
-  UNUSED_VARIABLE(userData);
-
-  StringList_appendCString(&configFileNameList,value);
-
-  return TRUE;
-}
-
-/***********************************************************************\
-* Name   : cmdOptionParseEntryPattern
-* Purpose: command line option call back for parsing include
-*          patterns
-* Input  : -
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL bool cmdOptionParseEntryPattern(void *userData, void *variable, const char *name, const char *value, const void *defaultValue)
-{
-  EntryTypes   entryType;
-  PatternTypes patternType;
-
-  assert(variable != NULL);
-  assert(value != NULL);
-
-  UNUSED_VARIABLE(defaultValue);
-  UNUSED_VARIABLE(userData);
-
-  /* get entry type */
-  entryType = ENTRY_TYPE_FILE;
-  switch (command)
-  {
-    case COMMAND_CREATE_FILES:
-    case COMMAND_LIST:
-    case COMMAND_TEST:
-    case COMMAND_COMPARE:
-    case COMMAND_RESTORE:
-    case COMMAND_GENERATE_KEYS:
-    case COMMAND_NEW_KEY_PASSWORD:
-      entryType = ENTRY_TYPE_FILE;
-      break;
-    case COMMAND_CREATE_IMAGES:
-      entryType = ENTRY_TYPE_IMAGE;
-      break;
-    default:
-      HALT_INTERNAL_ERROR("no valid command set");
-      break;
-  }
-
-  /* detect pattern type, get pattern */
-  if      (strncmp(value,"r:",2) == 0) { patternType = PATTERN_TYPE_REGEX;          value += 2; }
-  else if (strncmp(value,"x:",2) == 0) { patternType = PATTERN_TYPE_EXTENDED_REGEX; value += 2; }
-  else if (strncmp(value,"g:",2) == 0) { patternType = PATTERN_TYPE_GLOB;           value += 2; }
-  else                                 { patternType = PATTERN_TYPE_GLOB;                       }
-
-  /* append to list */
-  if (EntryList_appendCString((EntryList*)variable,entryType,value,patternType) != ERROR_NONE)
-  {
-    fprintf(stderr,"Cannot parse varlue '%s' of option '%s'!\n",value,name);
-    return FALSE;
-  }
-
-  return TRUE;
-}
-
-/***********************************************************************\
-* Name   : cmdOptionParsePattern
-* Purpose: command line option call back for parsing pattern
-*          patterns
-* Input  : -
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL bool cmdOptionParsePattern(void *userData, void *variable, const char *name, const char *value, const void *defaultValue)
-{
-  PatternTypes patternType;
-
-  assert(variable != NULL);
-  assert(value != NULL);
-
-  UNUSED_VARIABLE(defaultValue);
-  UNUSED_VARIABLE(userData);
-
-  /* detect pattern type, get pattern */
-  if      (strncmp(value,"r:",2) == 0) { patternType = PATTERN_TYPE_REGEX;          value += 2; }
-  else if (strncmp(value,"x:",2) == 0) { patternType = PATTERN_TYPE_EXTENDED_REGEX; value += 2; }
-  else if (strncmp(value,"g:",2) == 0) { patternType = PATTERN_TYPE_GLOB;           value += 2; }
-  else                                 { patternType = PATTERN_TYPE_GLOB;                       }
-
-  /* append to list */
-  if (PatternList_appendCString((PatternList*)variable,value,patternType) != ERROR_NONE)
-  {
-    fprintf(stderr,"Cannot parse varlue '%s' of option '%s'!\n",value,name);
-    return FALSE;
-  }
+  // store owner values
+  ((JobOptions*)variable)->owner.userId  = userId;
+  ((JobOptions*)variable)->owner.groupId = groupId;
 
   return TRUE;
 }
@@ -1306,7 +1384,7 @@ LOCAL bool cmdOptionParsePattern(void *userData, void *variable, const char *nam
 * Purpose: command line option call back for parsing password
 * Input  : -
 * Output : -
-* Return : -
+* Return : TRUE iff parsed, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
 
@@ -1315,15 +1393,120 @@ LOCAL bool cmdOptionParsePassword(void *userData, void *variable, const char *na
   assert(variable != NULL);
   assert(value != NULL);
 
+  UNUSED_VARIABLE(userData);
   UNUSED_VARIABLE(name);
   UNUSED_VARIABLE(defaultValue);
-  UNUSED_VARIABLE(userData);
 
   if ((*(Password**)variable) == NULL)
   {
     (*(Password**)variable) = Password_new();
   }
   Password_setCString(*(Password**)variable,value);
+
+  return TRUE;
+}
+
+/***********************************************************************\
+* Name   : cmdOptionParseCompressAlgorithm
+* Purpose: command line option call back for parsing compress algorithm
+* Input  : -
+* Output : -
+* Return : TRUE iff parsed, FALSE otherwise
+* Notes  : -
+\***********************************************************************/
+
+LOCAL bool cmdOptionParseCompressAlgorithm(void *userData, void *variable, const char *name, const char *value, const void *defaultValue)
+{
+  char               algorithm1[256],algorithm2[256];
+  CompressAlgorithms compressAlgorithmDelta,compressAlgorithmByte;
+  bool               foundFlag;
+  int                z;
+
+  assert(variable != NULL);
+  assert(value != NULL);
+
+  UNUSED_VARIABLE(userData);
+  UNUSED_VARIABLE(name);
+  UNUSED_VARIABLE(defaultValue);
+
+  compressAlgorithmDelta = COMPRESS_ALGORITHM_NONE;
+  compressAlgorithmByte  = COMPRESS_ALGORITHM_NONE;
+
+  // parse
+  if (   String_scanCString(value,"%256s+%256s",algorithm1,algorithm2)
+      || String_scanCString(value,"%256s,%256s",algorithm1,algorithm2)
+     )
+  {
+    foundFlag = FALSE;
+    for (z = 0; z < SIZE_OF_ARRAY(COMPRESS_ALGORITHMS_DELTA); z++)
+    {
+      if (strcasecmp(algorithm1,COMPRESS_ALGORITHMS_DELTA[z].name) == 0)
+      {
+        compressAlgorithmDelta = COMPRESS_ALGORITHMS_DELTA[z].compressAlgorithm;
+        foundFlag = TRUE;
+        break;
+      }
+    }
+    for (z = 0; z < SIZE_OF_ARRAY(COMPRESS_ALGORITHMS_BYTE); z++)
+    {
+      if (strcasecmp(algorithm1,COMPRESS_ALGORITHMS_BYTE[z].name) == 0)
+      {
+        compressAlgorithmByte = COMPRESS_ALGORITHMS_BYTE[z].compressAlgorithm;
+        foundFlag = TRUE;
+        break;
+      }
+    }
+    if (!foundFlag) return FALSE;
+
+    foundFlag = FALSE;
+    for (z = 0; z < SIZE_OF_ARRAY(COMPRESS_ALGORITHMS_DELTA); z++)
+    {
+      if (strcasecmp(algorithm2,COMPRESS_ALGORITHMS_DELTA[z].name) == 0)
+      {
+        compressAlgorithmDelta = COMPRESS_ALGORITHMS_DELTA[z].compressAlgorithm;
+        foundFlag = TRUE;
+        break;
+      }
+    }
+    for (z = 0; z < SIZE_OF_ARRAY(COMPRESS_ALGORITHMS_BYTE); z++)
+    {
+      if (strcasecmp(algorithm2,COMPRESS_ALGORITHMS_BYTE[z].name) == 0)
+      {
+        compressAlgorithmByte = COMPRESS_ALGORITHMS_BYTE[z].compressAlgorithm;
+        foundFlag = TRUE;
+        break;
+      }
+    }
+    if (!foundFlag) return FALSE;
+  }
+  else
+  {
+    foundFlag = FALSE;
+    for (z = 0; z < SIZE_OF_ARRAY(COMPRESS_ALGORITHMS_DELTA); z++)
+    {
+      if (strcasecmp(value,COMPRESS_ALGORITHMS_DELTA[z].name) == 0)
+      {
+        compressAlgorithmDelta = COMPRESS_ALGORITHMS_DELTA[z].compressAlgorithm;
+        foundFlag = TRUE;
+        break;
+      }
+    }
+    for (z = 0; z < SIZE_OF_ARRAY(COMPRESS_ALGORITHMS_BYTE); z++)
+    {
+      if (strcasecmp(value,COMPRESS_ALGORITHMS_BYTE[z].name) == 0)
+      {
+        compressAlgorithmByte = COMPRESS_ALGORITHMS_BYTE[z].compressAlgorithm;
+        foundFlag = TRUE;
+        break;
+      }
+    }
+    if (!foundFlag) return FALSE;
+  }
+//fprintf(stderr,"%s, %d: compressAlgorithmDelta=%d compressAlgorithmByte=%d\n",__FILE__,__LINE__,compressAlgorithmDelta,compressAlgorithmByte);
+
+  // store compress algorithm values
+  ((JobOptions*)variable)->compressAlgorithm.delta = compressAlgorithmDelta;
+  ((JobOptions*)variable)->compressAlgorithm.byte  = compressAlgorithmByte;
 
   return TRUE;
 }
@@ -1341,9 +1524,9 @@ LOCAL bool configValueParseConfigFile(void *userData, void *variable, const char
 {
   assert(value != NULL);
 
+  UNUSED_VARIABLE(userData);
   UNUSED_VARIABLE(variable);
   UNUSED_VARIABLE(name);
-  UNUSED_VARIABLE(userData);
 
   StringList_appendCString(&configFileNameList,value);
 
@@ -1636,7 +1819,7 @@ LOCAL Errors initAll(void)
 {
   Errors error;
 
-  /* initialise modules */
+  // initialise modules
   error = Password_initAll();
   if (error != ERROR_NONE)
   {
@@ -1663,9 +1846,30 @@ LOCAL Errors initAll(void)
     Password_doneAll();
     return error;
   }
+  error = Chunk_initAll();
+  if (error != ERROR_NONE)
+  {
+    PatternList_doneAll();
+    Pattern_doneAll();
+    Crypt_doneAll();
+    Password_doneAll();
+    return error;
+  }
+  error = Source_initAll();
+  if (error != ERROR_NONE)
+  {
+    Chunk_doneAll();
+    PatternList_doneAll();
+    Pattern_doneAll();
+    Crypt_doneAll();
+    Password_doneAll();
+    return error;
+  }
   error = Archive_initAll();
   if (error != ERROR_NONE)
   {
+    Source_doneAll();
+    Chunk_doneAll();
     PatternList_doneAll();
     Pattern_doneAll();
     Crypt_doneAll();
@@ -1676,6 +1880,8 @@ LOCAL Errors initAll(void)
   if (error != ERROR_NONE)
   {
     Archive_doneAll();
+    Source_doneAll();
+    Chunk_doneAll();
     PatternList_doneAll();
     Pattern_doneAll();
     Crypt_doneAll();
@@ -1687,6 +1893,8 @@ LOCAL Errors initAll(void)
   {
     Storage_doneAll();
     Archive_doneAll();
+    Source_doneAll();
+    Chunk_doneAll();
     PatternList_doneAll();
     Pattern_doneAll();
     Crypt_doneAll();
@@ -1699,6 +1907,8 @@ LOCAL Errors initAll(void)
     Index_doneAll();
     Storage_doneAll();
     Archive_doneAll();
+    Source_doneAll();
+    Chunk_doneAll();
     PatternList_doneAll();
     Pattern_doneAll();
     Crypt_doneAll();
@@ -1712,6 +1922,8 @@ LOCAL Errors initAll(void)
     Index_doneAll();
     Storage_doneAll();
     Archive_doneAll();
+    Source_doneAll();
+    Chunk_doneAll();
     PatternList_doneAll();
     Pattern_doneAll();
     Crypt_doneAll();
@@ -1719,7 +1931,7 @@ LOCAL Errors initAll(void)
     return error;
   }
 
-  /* initialise variables */
+  // initialise variables
   initGlobalOptions();
 
   command                               = COMMAND_LIST;
@@ -1793,7 +2005,7 @@ LOCAL Errors initAll(void)
   outputLine                            = String_new();
   outputNewLineFlag                     = TRUE;
 
-  /* initialize command line options and config values */
+  // initialize command line options and config values
   ConfigValue_init(CONFIG_VALUES,SIZE_OF_ARRAY(CONFIG_VALUES));
   CmdOption_init(COMMAND_LINE_OPTIONS,SIZE_OF_ARRAY(COMMAND_LINE_OPTIONS));
 
@@ -1811,11 +2023,11 @@ LOCAL Errors initAll(void)
 
 LOCAL void doneAll(void)
 {
-  /* deinitialize command line options and config values */
+  // deinitialize command line options and config values
   CmdOption_done(COMMAND_LINE_OPTIONS,SIZE_OF_ARRAY(COMMAND_LINE_OPTIONS));
   ConfigValue_done(CONFIG_VALUES,SIZE_OF_ARRAY(CONFIG_VALUES));
 
-  /* deinitialise variables */
+  // deinitialise variables
   if (defaultDevice.writeCommand != NULL) String_delete(defaultDevice.writeCommand);
   if (defaultDevice.writePostProcessCommand != NULL) String_delete(defaultDevice.writePostProcessCommand);
   if (defaultDevice.writePreProcessCommand != NULL) String_delete(defaultDevice.writePreProcessCommand);
@@ -1852,12 +2064,14 @@ LOCAL void doneAll(void)
   StringList_done(&configFileNameList);
   String_delete(keyFileName);
 
-  /* deinitialise modules */
+  // deinitialise modules
   Server_doneAll();
   Network_doneAll();
   Index_doneAll();
   Storage_doneAll();
   Archive_doneAll();
+  Source_doneAll();
+  Chunk_doneAll();
   PatternList_doneAll();
   Pattern_doneAll();
   Crypt_doneAll();
@@ -1894,11 +2108,11 @@ void vprintInfo(uint verboseLevel, const char *prefix, const char *format, va_li
   {
     line = String_new();
 
-    /* format line */
+    // format line
     if (prefix != NULL) String_appendCString(line,prefix);
     String_vformat(line,format,arguments);
 
-    /* output */
+    // output
     output(stdout,FALSE,line);
 
     String_delete(line);
@@ -1931,7 +2145,7 @@ void vlogMessage(ulong logType, const char *prefix, const char *text, va_list ar
 
       if (tmpLogFile != NULL)
       {
-        /* append to temporary log file */
+        // append to temporary log file
         (void)fprintf(tmpLogFile,"%s> ",String_cString(dateTime));
         if (prefix != NULL)
         {
@@ -1946,7 +2160,7 @@ void vlogMessage(ulong logType, const char *prefix, const char *text, va_list ar
 
       if (logFile != NULL)
       {
-        /* append to log file */
+        // append to log file
         (void)fprintf(logFile,"%s> ",String_cString(dateTime));
         if (prefix != NULL)
         {
@@ -1995,12 +2209,12 @@ void printConsole(const char *format, ...)
 
   line = String_new();
 
-  /* format line */
+  // format line
   va_start(arguments,format);
   String_vformat(line,format,arguments);
   va_end(arguments);
 
-  /* output */
+  // output
   output(stdout,FALSE,line);
 
   String_delete(line);
@@ -2013,20 +2227,20 @@ void printWarning(const char *text, ...)
 
   assert(text != NULL);
 
-  /* output log line */
+  // output log line
   va_start(arguments,text);
   vlogMessage(LOG_TYPE_WARNING,"Warning",text,arguments);
   va_end(arguments);
 
   line = String_new();
 
-  /* format line */
+  // format line
   va_start(arguments,text);
   String_appendCString(line,"Warning: ");
   String_vformat(line,text,arguments);
   va_end(arguments);
 
-  /* output */
+  // output
   output(stdout,TRUE,line);
 
   String_delete(line);
@@ -2039,20 +2253,20 @@ void printError(const char *text, ...)
 
   assert(text != NULL);
 
-  /* output log line */
+  // output log line
   va_start(arguments,text);
   vlogMessage(LOG_TYPE_ERROR,"ERROR",text,arguments);
   va_end(arguments);
 
   line = String_new();
 
-  /* format line */
+  // format line
   va_start(arguments,text);
   String_appendCString(line,"ERROR: ");
   String_vformat(line,text,arguments);
   va_end(arguments);
 
-  /* output console */
+  // output console
   output(stderr,TRUE,line);
 
   String_delete(line);
@@ -2063,14 +2277,14 @@ void logPostProcess(void)
   TextMacro textMacros[1];
   Errors    error;
 
-  /* flush logs */
+  // flush logs
   if (logFile != NULL) fflush(logFile);
   if (tmpLogFile != NULL) fflush(tmpLogFile);
 
-  /* close temporary log file */
+  // close temporary log file
   if (tmpLogFile != NULL) fclose(tmpLogFile);
 
-  /* log post command */
+  // log post command
   if (logPostCommand != NULL)
   {
     printInfo(2,"Log post process...");
@@ -2092,7 +2306,7 @@ void logPostProcess(void)
     }
   }
 
-  /* reset and reopen temporary log file */
+  // reset and reopen temporary log file
   tmpLogFile = fopen(String_cString(tmpLogFileName),"w");
 }
 
@@ -2108,7 +2322,7 @@ void initJobOptions(JobOptions *jobOptions)
   jobOptions->owner.groupId             = FILE_DEFAULT_GROUP_ID;
   jobOptions->patternType               = PATTERN_TYPE_GLOB;
   jobOptions->compressAlgorithm.delta   = COMPRESS_ALGORITHM_NONE;
-  jobOptions->compressAlgorithm.data    = COMPRESS_ALGORITHM_NONE;
+  jobOptions->compressAlgorithm.byte    = COMPRESS_ALGORITHM_NONE;
   jobOptions->cryptAlgorithm            = CRYPT_ALGORITHM_NONE;
   #ifdef HAVE_GCRYPT
     jobOptions->cryptType               = CRYPT_TYPE_SYMMETRIC;
@@ -2391,10 +2605,10 @@ Errors inputCryptPassword(void         *userData,
     case RUN_MODE_INTERACTIVE:
       {
         String title;
-        /* initialise variables */
+        // initialise variables
         title = String_new();
 
-        /* input password */
+        // input password
         String_format(String_clear(title),"Crypt password for '%S'",fileName);
         if (!Password_input(password,String_cString(title),PASSWORD_INPUT_MODE_ANY) || (Password_length(password) <= 0))
         {
@@ -2417,7 +2631,7 @@ Errors inputCryptPassword(void         *userData,
 
         if (weakCheckFlag)
         {
-          /* check password quality */
+          // check password quality
           if (Password_getQualityLevel(password) < MIN_PASSWORD_QUALITY_LEVEL)
           {
             printWarning("Low password quality!\n");
@@ -2457,7 +2671,7 @@ bool configValueParseOwner(void *userData, void *variable, const char *name, con
   UNUSED_VARIABLE(userData);
   UNUSED_VARIABLE(name);
 
-  /* parse */
+  // parse
   if      (String_scanCString(value,"%256s:%256s",userName,groupName))
   {
     userId  = File_userNameToUserId(userName);
@@ -2483,9 +2697,9 @@ bool configValueParseOwner(void *userData, void *variable, const char *name, con
     return FALSE;
   }
 
-  /* store owner values */
-  ((Owner*)variable)->userId  = userId;
-  ((Owner*)variable)->groupId = groupId;
+  // store owner values
+  ((JobOptions*)variable)->owner.userId  = userId;
+  ((JobOptions*)variable)->owner.groupId = groupId;
 
   return TRUE;
 }
@@ -2501,8 +2715,8 @@ void configValueFormatInitOwner(void **formatUserData, void *userData, void *var
 
 void configValueFormatDoneOwner(void **formatUserData, void *userData)
 {
-  UNUSED_VARIABLE(userData);
   UNUSED_VARIABLE(formatUserData);
+  UNUSED_VARIABLE(userData);
 }
 
 bool configValueFormatOwner(void **formatUserData, void *userData, String line)
@@ -2541,13 +2755,13 @@ LOCAL bool configValueParseEntry(EntryTypes entryType, void *userData, void *var
 //??? userData = default patterType?
   UNUSED_VARIABLE(name);
 
-  /* detect pattern type, get pattern */
+  // detect pattern type, get pattern
   if      (strncmp(value,"r:",2) == 0) { patternType = PATTERN_TYPE_REGEX;          value += 2; }
   else if (strncmp(value,"x:",2) == 0) { patternType = PATTERN_TYPE_EXTENDED_REGEX; value += 2; }
   else if (strncmp(value,"g:",2) == 0) { patternType = PATTERN_TYPE_GLOB;           value += 2; }
   else                                 { patternType = PATTERN_TYPE_GLOB;                       }
 
-  /* append to list */
+  // append to list
   pattern = String_mapCString(String_newCString(value),STRING_BEGIN,FILENAME_MAP_FROM,FILENAME_MAP_TO,SIZE_OF_ARRAY(FILENAME_MAP_FROM));
   if (EntryList_append((EntryList*)variable,entryType,pattern,patternType) != ERROR_NONE)
   {
@@ -2581,8 +2795,8 @@ void configValueFormatInitEntry(void **formatUserData, void *userData, void *var
 
 void configValueFormatDoneEntry(void **formatUserData, void *userData)
 {
-  UNUSED_VARIABLE(userData);
   UNUSED_VARIABLE(formatUserData);
+  UNUSED_VARIABLE(userData);
 }
 
 bool configValueFormatFileEntry(void **formatUserData, void *userData, String line)
@@ -2687,13 +2901,13 @@ bool configValueParsePattern(void *userData, void *variable, const char *name, c
   UNUSED_VARIABLE(userData);
   UNUSED_VARIABLE(name);
 
-  /* detect pattern type, get pattern */
+  // detect pattern type, get pattern
   if      (strncmp(value,"r:",2) == 0) { patternType = PATTERN_TYPE_REGEX;          value += 2; }
   else if (strncmp(value,"x:",2) == 0) { patternType = PATTERN_TYPE_EXTENDED_REGEX; value += 2; }
   else if (strncmp(value,"g:",2) == 0) { patternType = PATTERN_TYPE_GLOB;           value += 2; }
   else                                 { patternType = PATTERN_TYPE_GLOB;                       }
 
-  /* append to list */
+  // append to list
   if (PatternList_appendCString((PatternList*)variable,value,patternType) != ERROR_NONE)
   {
     fprintf(stderr,"Cannot parse varlue '%s' of option '%s'!\n",value,name);
@@ -2714,8 +2928,8 @@ void configValueFormatInitPattern(void **formatUserData, void *userData, void *v
 
 void configValueFormatDonePattern(void **formatUserData, void *userData)
 {
-  UNUSED_VARIABLE(userData);
   UNUSED_VARIABLE(formatUserData);
+  UNUSED_VARIABLE(userData);
 }
 
 bool configValueFormatPattern(void **formatUserData, void *userData, String line)
@@ -2756,15 +2970,6 @@ bool configValueFormatPattern(void **formatUserData, void *userData, String line
     return FALSE;
   }
 }
-
-/***********************************************************************\
-* Name   : cmdOptionParseString
-* Purpose: command line option call back for parsing string
-* Input  : -
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
 
 bool configValueParseString(void *userData, void *variable, const char *name, const char *value)
 {
@@ -2839,6 +3044,143 @@ bool configValueFormatPassword(void **formatUserData, void *userData, String lin
   }
 }
 
+bool configValueParseCompressAlgorithm(void *userData, void *variable, const char *name, const char *value)
+{
+  char               algorithm1[256],algorithm2[256];
+  CompressAlgorithms compressAlgorithmDelta,compressAlgorithmByte;
+  bool               foundFlag;
+  int                z;
+
+  assert(variable != NULL);
+  assert(value != NULL);
+
+  UNUSED_VARIABLE(userData);
+  UNUSED_VARIABLE(name);
+
+  compressAlgorithmDelta = COMPRESS_ALGORITHM_NONE;
+  compressAlgorithmByte  = COMPRESS_ALGORITHM_NONE;
+
+  // parse
+  if (   String_scanCString(value,"%256s+%256s",algorithm1,algorithm2)
+      || String_scanCString(value,"%256s,%256s",algorithm1,algorithm2)
+     )
+  {
+    foundFlag = FALSE;
+    for (z = 0; z < SIZE_OF_ARRAY(COMPRESS_ALGORITHMS_DELTA); z++)
+    {
+      if (strcasecmp(algorithm1,COMPRESS_ALGORITHMS_DELTA[z].name) == 0)
+      {
+        compressAlgorithmDelta = COMPRESS_ALGORITHMS_DELTA[z].compressAlgorithm;
+        foundFlag = TRUE;
+        break;
+      }
+    }
+    for (z = 0; z < SIZE_OF_ARRAY(COMPRESS_ALGORITHMS_BYTE); z++)
+    {
+      if (strcasecmp(algorithm1,COMPRESS_ALGORITHMS_BYTE[z].name) == 0)
+      {
+        compressAlgorithmByte = COMPRESS_ALGORITHMS_BYTE[z].compressAlgorithm;
+        foundFlag = TRUE;
+        break;
+      }
+    }
+    if (!foundFlag) return FALSE;
+
+    foundFlag = FALSE;
+    for (z = 0; z < SIZE_OF_ARRAY(COMPRESS_ALGORITHMS_DELTA); z++)
+    {
+      if (strcasecmp(algorithm2,COMPRESS_ALGORITHMS_DELTA[z].name) == 0)
+      {
+        compressAlgorithmDelta = COMPRESS_ALGORITHMS_DELTA[z].compressAlgorithm;
+        foundFlag = TRUE;
+        break;
+      }
+    }
+    for (z = 0; z < SIZE_OF_ARRAY(COMPRESS_ALGORITHMS_BYTE); z++)
+    {
+      if (strcasecmp(algorithm2,COMPRESS_ALGORITHMS_BYTE[z].name) == 0)
+      {
+        compressAlgorithmByte = COMPRESS_ALGORITHMS_BYTE[z].compressAlgorithm;
+        foundFlag = TRUE;
+        break;
+      }
+    }
+    if (!foundFlag) return FALSE;
+  }
+  else
+  {
+    foundFlag = FALSE;
+    for (z = 0; z < SIZE_OF_ARRAY(COMPRESS_ALGORITHMS_DELTA); z++)
+    {
+      if (strcasecmp(value,COMPRESS_ALGORITHMS_DELTA[z].name) == 0)
+      {
+        compressAlgorithmDelta = COMPRESS_ALGORITHMS_DELTA[z].compressAlgorithm;
+        foundFlag = TRUE;
+        break;
+      }
+    }
+    for (z = 0; z < SIZE_OF_ARRAY(COMPRESS_ALGORITHMS_BYTE); z++)
+    {
+      if (strcasecmp(value,COMPRESS_ALGORITHMS_BYTE[z].name) == 0)
+      {
+        compressAlgorithmByte = COMPRESS_ALGORITHMS_BYTE[z].compressAlgorithm;
+        foundFlag = TRUE;
+        break;
+      }
+    }
+    if (!foundFlag) return FALSE;
+  }
+//fprintf(stderr,"%s, %d: compressAlgorithmDelta=%d compressAlgorithmByte=%d\n",__FILE__,__LINE__,compressAlgorithmDelta,compressAlgorithmByte);
+
+  // store compress algorithm values
+  ((JobOptions*)variable)->compressAlgorithm.delta = compressAlgorithmDelta;
+  ((JobOptions*)variable)->compressAlgorithm.byte  = compressAlgorithmByte;
+
+  return TRUE;
+}
+
+void configValueFormatInitCompressAlgorithm(void **formatUserData, void *userData, void *variable)
+{
+  assert(formatUserData != NULL);
+
+  UNUSED_VARIABLE(userData);
+
+  (*formatUserData) = (*(Password**)variable);
+}
+
+void configValueFormatDoneCompressAlgorithm(void **formatUserData, void *userData)
+{
+  UNUSED_VARIABLE(formatUserData);
+  UNUSED_VARIABLE(userData);
+}
+
+bool configValueFormatCompressAlgorithm(void **formatUserData, void *userData, String line)
+{
+  Password   *password;
+  const char *s;
+
+  assert(formatUserData != NULL);
+  assert(line != NULL);
+
+  UNUSED_VARIABLE(userData);
+
+  password = (Password*)(*formatUserData);
+  if (password != NULL)
+  {
+    s = Password_deploy(password);
+    String_format(line,"%'s",s);
+    Password_undeploy(password);
+
+    (*formatUserData) = NULL;
+
+    return TRUE;
+  }
+  else
+  {
+    return FALSE;
+  }
+}
+
 /***********************************************************************\
 * Name   : newScheduleNode
 * Purpose: create new schedule node
@@ -2852,7 +3194,7 @@ LOCAL ScheduleNode *newScheduleNode(void)
 {
   ScheduleNode *scheduleNode;
 
-  /* allocate new schedule node */
+  // allocate new schedule node
   scheduleNode = LIST_NEW_NODE(ScheduleNode);
   if (scheduleNode == NULL)
   {
@@ -2886,7 +3228,7 @@ LOCAL bool parseScheduleNumber(const String s, int *n)
   assert(s != NULL);
   assert(n != NULL);
 
-  /* init variables */
+  // init variables
   if   (String_equalsCString(s,"*"))
   {
     (*n) = SCHEDULE_ANY;
@@ -3057,10 +3399,10 @@ ScheduleNode *parseScheduleParts(const String date,
   assert(enabled != NULL);
   assert(archiveType != NULL);
 
-  /* allocate new schedule node */
+  // allocate new schedule node
   scheduleNode = newScheduleNode();
 
-  /* parse schedule. Format: date [weekday] time enabled [type] */
+  // parse schedule. Format: date [weekday] time enabled [type]
   errorFlag = FALSE;
   s0 = String_new();
   s1 = String_new();
@@ -3129,10 +3471,10 @@ ScheduleNode *parseSchedule(const String s)
 
   assert(s != NULL);
 
-  /* allocate new schedule node */
+  // allocate new schedule node
   scheduleNode = newScheduleNode();
 
-  /* parse schedule. Format: date [weekday] time enabled [type] */
+  // parse schedule. Format: date [weekday] time enabled [type]
   errorFlag = FALSE;
   s0 = String_new();
   s1 = String_new();
@@ -3212,7 +3554,7 @@ bool configValueParseSchedule(void *userData, void *variable, const char *name, 
   UNUSED_VARIABLE(userData);
   UNUSED_VARIABLE(name);
 
-  /* allocate new schedule node */
+  // allocate new schedule node
   s = String_newCString(value);
   scheduleNode = parseSchedule(s);
   if (scheduleNode == NULL)
@@ -3222,7 +3564,7 @@ bool configValueParseSchedule(void *userData, void *variable, const char *name, 
   }
   String_delete(s);
 
-  /* append to list */
+  // append to list
   List_append((ScheduleList*)variable,scheduleNode);
 
   return TRUE;
@@ -3384,10 +3726,10 @@ bool readJobFile(const String      fileName,
   assert(fileName != NULL);
   assert(configValues != NULL);
 
-  /* initialise variables */
+  // initialise variables
   line = String_new();
 
-  /* open file */
+  // open file
   error = File_open(&fileHandle,fileName,FILE_OPEN_READ);
   if (error != ERROR_NONE)
   {
@@ -3399,14 +3741,14 @@ bool readJobFile(const String      fileName,
     return FALSE;
   }
 
-  /* parse file */
+  // parse file
   failFlag = FALSE;
   lineNb   = 0;
   name     = String_new();
   value    = String_new();
   while (!File_eof(&fileHandle) && !failFlag)
   {
-    /* read line */
+    // read line
     error = File_readLine(&fileHandle,line);
     if (error != ERROR_NONE)
     {
@@ -3420,13 +3762,13 @@ bool readJobFile(const String      fileName,
     String_trim(line,STRING_WHITE_SPACES);
     lineNb++;
 
-    /* skip comments, empty lines */
+    // skip comments, empty lines
     if ((String_length(line) == 0) || (String_index(line,0) == '#'))
     {
       continue;
     }
 
-    /* parse line */
+    // parse line
     if (String_parse(line,STRING_BEGIN,"%S=% S",&nextIndex,name,value))
     {
       if (!ConfigValue_parse(String_cString(name),
@@ -3461,10 +3803,10 @@ bool readJobFile(const String      fileName,
   String_delete(value);
   String_delete(name);
 
-  /* close file */
+  // close file
   File_close(&fileHandle);
 
-  /* free resources */
+  // free resources
   String_delete(line);
 
   return !failFlag;
@@ -3532,7 +3874,7 @@ int main(int argc, const char *argv[])
   bool           printInfoFlag;
   DatabaseHandle databaseHandle;
 
-  /* init */
+  // init
   error = initAll();
   if (error != ERROR_NONE)
   {
@@ -3552,7 +3894,7 @@ int main(int argc, const char *argv[])
   }
   globalOptions.barExecutable = argv[0];
 
-  /* parse command line: pre-options */
+  // parse command line: pre-options
   if (!CmdOption_parse(argv,&argc,
                        COMMAND_LINE_OPTIONS,SIZE_OF_ARRAY(COMMAND_LINE_OPTIONS),
                        0,
@@ -3577,7 +3919,7 @@ int main(int argc, const char *argv[])
   {
     fileName = File_newFileName();
 
-    /* read default configuration from /CONFIG_DIR/bar.cfg (ignore errors) */
+    // read default configuration from /CONFIG_DIR/bar.cfg (ignore errors)
     File_setFileNameCString(fileName,CONFIG_DIR);
     File_appendFileNameCString(fileName,DEFAULT_CONFIG_FILE_NAME);
     if (File_isFile(fileName) && File_isReadable(fileName))
@@ -3585,7 +3927,7 @@ int main(int argc, const char *argv[])
       StringList_append(&configFileNameList,fileName);
     }
 
-    /* read default configuration from $HOME/.bar/bar.cfg (if exists) */
+    // read default configuration from $HOME/.bar/bar.cfg (if exists)
     File_setFileNameCString(fileName,getenv("HOME"));
     File_appendFileNameCString(fileName,".bar");
     File_appendFileNameCString(fileName,DEFAULT_CONFIG_FILE_NAME);
@@ -3597,7 +3939,7 @@ int main(int argc, const char *argv[])
     File_deleteFileName(fileName);
   }
 
-  /* read all configuration files */
+  // read all configuration files
   fileName = String_new();
   printInfoFlag = daemonFlag;
   while (StringList_getFirst(&configFileNameList,fileName) != NULL)
@@ -3620,12 +3962,12 @@ int main(int argc, const char *argv[])
   }
   String_delete(fileName);
 
-  /* read job file */
+  // read job file
   if (jobName != NULL)
   {
     fileName = File_newFileName();
 
-    /* read job file */
+    // read job file
     File_setFileNameCString(fileName,serverJobsDirectory);
     File_appendFileName(fileName,jobName);
     if (!readJobFile(fileName,
@@ -3642,7 +3984,7 @@ int main(int argc, const char *argv[])
     File_deleteFileName(fileName);
   }
 
-  /* parse command line: all */
+  // parse command line: all
   if (!CmdOption_parse(argv,&argc,
                        COMMAND_LINE_OPTIONS,SIZE_OF_ARRAY(COMMAND_LINE_OPTIONS),
                        CMD_PRIORITY_ANY,
@@ -3663,7 +4005,7 @@ int main(int argc, const char *argv[])
     return EXITCODE_INVALID_ARGUMENT;
   }
 
-  /* output version, help */
+  // output version, help
   if (versionFlag)
   {
     #ifndef NDEBUG
@@ -3703,7 +4045,7 @@ int main(int argc, const char *argv[])
     return EXITCODE_OK;
   }
 
-  /* check parameters */
+  // check parameters
   if (!validateOptions())
   {
     doneAll();
@@ -3719,9 +4061,27 @@ int main(int argc, const char *argv[])
     return EXITCODE_FAIL;
   }
 
+  // add delta sources
+  error = Source_addSourceList(&deltaSourcePatternList,&jobOptions);
+  if (error != ERROR_NONE)
+  {
+    printError("Cannot add delta sources (error: %s)!\n",Errors_getText(error));
+    doneAll();
+    #ifndef NDEBUG
+      File_debugPrintInfo();
+      File_debugDone();
+      Array_debugPrintInfo();
+      Array_debugDone();
+      String_debugPrintInfo();
+      String_debugPrintStatistics();
+      String_debugDone();
+    #endif /* not NDEBUG */
+    return EXITCODE_FAIL;
+  }
+
   if (indexDatabaseFileName != NULL)
   {
-    /* open index database */
+    // open index database
     if (printInfoFlag) printf("Opening database file '%s'...",indexDatabaseFileName);
     error = Index_init(&databaseHandle,indexDatabaseFileName);
     if (error != ERROR_NONE)
@@ -3750,11 +4110,11 @@ int main(int argc, const char *argv[])
   }
   else
   {
-    /* no index database */
+    // no index database
     indexDatabaseHandle = NULL;
   }
 
-  /* create temporary directory */
+  // create temporary directory
   error = File_getTmpDirectoryNameCString(tmpDirectory,"bar-XXXXXX",globalOptions.tmpDirectory);
   if (error != ERROR_NONE)
   {
@@ -3775,35 +4135,35 @@ int main(int argc, const char *argv[])
   error = ERROR_NONE;
   if      (daemonFlag)
   {
-    /* create session log file */
+    // create session log file
     File_setFileName(tmpLogFileName,tmpDirectory);
     File_appendFileNameCString(tmpLogFileName,"log.txt");
     tmpLogFile = fopen(String_cString(tmpLogFileName),"w");
 
-    /* open log files */
+    // open log files
     if (logFileName != NULL)
     {
       logFile = fopen(logFileName,"a");
       if (logFile == NULL) printWarning("Cannot open log file '%s' (error: %s)!\n",logFileName,strerror(errno));
     }
 
-    /* daemon mode -> run server with network */
+    // daemon mode -> run server with network
     globalOptions.runMode = RUN_MODE_SERVER;
 
     if (!noDetachFlag)
     {
-      /* run server (detached) */
+      // run server (detached)
       if (daemon(1,0) == 0)
       {
         if (pidFileName != NULL)
         {
-          /* create pid file */
+          // create pid file
           error = createPIDFile();
         }
 
         if (error == ERROR_NONE)
         {
-          /* run server */
+          // run server
           error = Server_run(serverPort,
                              serverTLSPort,
                              serverCAFileName,
@@ -3817,16 +4177,16 @@ int main(int argc, const char *argv[])
 
         if (pidFileName != NULL)
         {
-          /* delete pid file */
+          // delete pid file
           deletePIDFile();
         }
 
-        /* close log files */
+        // close log files
         if (logFile != NULL) fclose(logFile);
         fclose(tmpLogFile); (void)unlink(String_cString(tmpLogFileName));
         File_delete(tmpLogFileName,FALSE);
 
-        /* free resources */
+        // free resources
         CmdOption_done(COMMAND_LINE_OPTIONS,SIZE_OF_ARRAY(COMMAND_LINE_OPTIONS));
         doneAll();
         #ifndef NDEBUG
@@ -3866,7 +4226,7 @@ int main(int argc, const char *argv[])
     {
       if (pidFileName != NULL)
       {
-        /* create pid file */
+        // create pid file
         error = createPIDFile();
         if (error != ERROR_NONE)
         {
@@ -3876,7 +4236,7 @@ int main(int argc, const char *argv[])
 
       if (error == ERROR_NONE)
       {
-        /* run server (not detached) */
+        // run server (not detached)
         error = Server_run(serverPort,
                            serverTLSPort,
                            serverCAFileName,
@@ -3890,32 +4250,32 @@ int main(int argc, const char *argv[])
 
       if (pidFileName != NULL)
       {
-        /* delete pid file */
+        // delete pid file
         deletePIDFile();
       }
     }
 
-    /* close log files */
+    // close log files
     if (logFile != NULL) fclose(logFile);
     fclose(tmpLogFile);
     unlink(String_cString(tmpLogFileName));
   }
   else if (batchFlag)
   {
-    /* batch mode */
+    // batch mode
     globalOptions.runMode = RUN_MODE_BATCH;
 
-    /* batch mode -> run server with standard i/o */
+    // batch mode -> run server with standard i/o
     error = Server_batch(STDIN_FILENO,
                          STDOUT_FILENO
                         );
   }
   else if (jobName != NULL)
   {
-    /* start job execution */
+    // start job execution
     globalOptions.runMode = RUN_MODE_INTERACTIVE;
 
-    /* create archive */
+    // create archive
     error = Command_create(String_cString(archiveName),
                            &includeEntryList,
                            &excludePatternList,
@@ -3937,7 +4297,7 @@ int main(int argc, const char *argv[])
   }
   else
   {
-    /* interactive mode */
+    // interactive mode
     globalOptions.runMode = RUN_MODE_INTERACTIVE;
 
     switch (command)
@@ -3949,7 +4309,7 @@ int main(int argc, const char *argv[])
           EntryTypes entryType;
           int        z;
 
-          /* get archive file name */
+          // get archive file name
           if (argc <= 1)
           {
             printError("No archive file name given!\n");
@@ -3958,7 +4318,7 @@ int main(int argc, const char *argv[])
           }
           archiveName = argv[1];
 
-          /* get include patterns */
+          // get include patterns
           switch (command)
           {
             case COMMAND_CREATE_FILES:  entryType = ENTRY_TYPE_FILE;  break;
@@ -3970,7 +4330,7 @@ int main(int argc, const char *argv[])
             error = EntryList_appendCString(&includeEntryList,entryType,argv[z],jobOptions.patternType);
           }
 
-          /* create archive */
+          // create archive
           error = Command_create(archiveName,
                                  &includeEntryList,
                                  &excludePatternList,
@@ -3998,7 +4358,7 @@ int main(int argc, const char *argv[])
           StringList fileNameList;
           int        z;
 
-          /* get archive files */
+          // get archive files
           StringList_init(&fileNameList);
           for (z = 1; z < argc; z++)
           {
@@ -4053,19 +4413,19 @@ int main(int argc, const char *argv[])
               break;
           }
 
-          /* free resources */
+          // free resources
           StringList_done(&fileNameList);
         }
         break;
       case COMMAND_GENERATE_KEYS:
         {
-          /* generate new key pair */
+          // generate new key pair
           const char *keyFileName;
           Password   cryptPassword;
           CryptKey   publicKey,privateKey;
           String     publicKeyFileName,privateKeyFileName;
 
-          /* get key file name */
+          // get key file name
           if (argc <= 1)
           {
             printError("No key file name given!\n");
@@ -4075,17 +4435,17 @@ int main(int argc, const char *argv[])
           }
           keyFileName = argv[1];
 
-          /* initialise variables */
+          // initialise variables
           publicKeyFileName  = File_newFileName();
           privateKeyFileName = File_newFileName();
 
-          /* get file names of keys */
+          // get file names of keys
           File_setFileNameCString(publicKeyFileName,keyFileName);
           String_appendCString(publicKeyFileName,".public");
           File_setFileNameCString(privateKeyFileName,keyFileName);
           String_appendCString(privateKeyFileName,".private");
 
-          /* check if key files already exists */
+          // check if key files already exists
           if (File_exists(publicKeyFileName))
           {
             printError("Public key file '%s' already exists!\n",String_cString(publicKeyFileName));
@@ -4101,7 +4461,7 @@ int main(int argc, const char *argv[])
             break;
           }
 
-          /* input crypt password for private key encryption */
+          // input crypt password for private key encryption
           Password_init(&cryptPassword);
           error = inputCryptPassword(NULL,&cryptPassword,privateKeyFileName,TRUE,FALSE);
           if (error != ERROR_NONE)
@@ -4113,7 +4473,7 @@ int main(int argc, const char *argv[])
             break;
           }
 
-          /* generate new keys pair */
+          // generate new keys pair
           Crypt_initKey(&publicKey);
           Crypt_initKey(&privateKey);
           error = Crypt_createKeys(&publicKey,&privateKey,keyBits);
@@ -4164,7 +4524,7 @@ fprintf(stderr,"%s,%d: t=%s\n",__FILE__,__LINE__,t);
 
 }
 #endif /* 0 */
-          /* free resources */
+          // free resources
           Crypt_doneKey(&privateKey);
           Crypt_doneKey(&publicKey);
           Password_done(&cryptPassword);
@@ -4179,17 +4539,17 @@ fprintf(stderr,"%s,%d: t=%s\n",__FILE__,__LINE__,t);
     }
   }
 
-  /* delete temporary directory */
+  // delete temporary directory
 fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 //  File_delete(tmpDirectory,TRUE);
 
-  /* close index database (if open) */
+  // close index database (if open)
   if (indexDatabaseHandle != NULL)
   {
     Database_close(indexDatabaseHandle);
   }
 
-  /* free resources */
+  // free resources
   doneAll();
   #ifndef NDEBUG
     File_debugPrintInfo();
