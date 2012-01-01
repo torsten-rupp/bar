@@ -55,7 +55,7 @@
 /***************************** Constants *******************************/
 
 #define PROTOCOL_VERSION_MAJOR 1
-#define PROTOCOL_VERSION_MINOR 2
+#define PROTOCOL_VERSION_MINOR 3
 
 #define SESSION_ID_LENGTH 64                   // max. length of session id
 
@@ -377,46 +377,6 @@ LOCAL const ConfigValueSelect CONFIG_VALUE_PATTERN_TYPES[] =
   {"extended",PATTERN_TYPE_EXTENDED_REGEX},
 };
 
-LOCAL const ConfigValueSelect CONFIG_VALUE_COMPRESS_ALGORITHMS[] =
-{
-  {"none", COMPRESS_ALGORITHM_NONE,  },
-
-  {"zip0", COMPRESS_ALGORITHM_ZIP_0, },
-  {"zip1", COMPRESS_ALGORITHM_ZIP_1, },
-  {"zip2", COMPRESS_ALGORITHM_ZIP_2, },
-  {"zip3", COMPRESS_ALGORITHM_ZIP_3, },
-  {"zip4", COMPRESS_ALGORITHM_ZIP_4, },
-  {"zip5", COMPRESS_ALGORITHM_ZIP_5, },
-  {"zip6", COMPRESS_ALGORITHM_ZIP_6, },
-  {"zip7", COMPRESS_ALGORITHM_ZIP_7, },
-  {"zip8", COMPRESS_ALGORITHM_ZIP_8, },
-  {"zip9", COMPRESS_ALGORITHM_ZIP_9, },
-
-  #ifdef HAVE_BZ2
-    {"bzip1",COMPRESS_ALGORITHM_BZIP2_1},
-    {"bzip2",COMPRESS_ALGORITHM_BZIP2_2},
-    {"bzip3",COMPRESS_ALGORITHM_BZIP2_3},
-    {"bzip4",COMPRESS_ALGORITHM_BZIP2_4},
-    {"bzip5",COMPRESS_ALGORITHM_BZIP2_5},
-    {"bzip6",COMPRESS_ALGORITHM_BZIP2_6},
-    {"bzip7",COMPRESS_ALGORITHM_BZIP2_7},
-    {"bzip8",COMPRESS_ALGORITHM_BZIP2_8},
-    {"bzip9",COMPRESS_ALGORITHM_BZIP2_9},
-  #endif /* HAVE_BZ2 */
-
-  #ifdef HAVE_LZMA
-    {"lzma1",COMPRESS_ALGORITHM_LZMA_1},
-    {"lzma2",COMPRESS_ALGORITHM_LZMA_2},
-    {"lzma3",COMPRESS_ALGORITHM_LZMA_3},
-    {"lzma4",COMPRESS_ALGORITHM_LZMA_4},
-    {"lzma5",COMPRESS_ALGORITHM_LZMA_5},
-    {"lzma6",COMPRESS_ALGORITHM_LZMA_6},
-    {"lzma7",COMPRESS_ALGORITHM_LZMA_7},
-    {"lzma8",COMPRESS_ALGORITHM_LZMA_8},
-    {"lzma9",COMPRESS_ALGORITHM_LZMA_9},
-  #endif /* HAVE_LZMA */
-};
-
 LOCAL const ConfigValueSelect CONFIG_VALUE_CRYPT_ALGORITHMS[] =
 {
   {"none",CRYPT_ALGORITHM_NONE},
@@ -465,7 +425,7 @@ LOCAL const ConfigValue CONFIG_VALUES[] =
 
   CONFIG_STRUCT_VALUE_SELECT   ("pattern-type",           JobNode,jobOptions.patternType,                 CONFIG_VALUE_PATTERN_TYPES),
 
-  CONFIG_STRUCT_VALUE_SELECT   ("compress-algorithm",     JobNode,jobOptions.compressAlgorithm,           CONFIG_VALUE_COMPRESS_ALGORITHMS),
+  CONFIG_STRUCT_VALUE_SPECIAL  ("compress-algorithm",     JobNode,jobOptions,                             configValueParseCompressAlgorithm,configValueFormatInitCompressAlgorithm,configValueFormatDoneCompressAlgorithm,configValueFormatCompressAlgorithm,NULL),
   CONFIG_STRUCT_VALUE_SPECIAL  ("compress-exclude",       JobNode,compressExcludePatternList,             configValueParsePattern,configValueFormatInitPattern,configValueFormatDonePattern,configValueFormatPattern,NULL),
 
   CONFIG_STRUCT_VALUE_SELECT   ("crypt-algorithm",        JobNode,jobOptions.cryptAlgorithm,              CONFIG_VALUE_CRYPT_ALGORITHMS),
@@ -1138,7 +1098,7 @@ LOCAL bool readJob(JobNode *jobNode)
   jobNode->jobOptions.destination                  = NULL;
   jobNode->jobOptions.patternType                  = PATTERN_TYPE_GLOB;
   jobNode->jobOptions.compressAlgorithm.delta      = COMPRESS_ALGORITHM_NONE;
-  jobNode->jobOptions.compressAlgorithm.data       = COMPRESS_ALGORITHM_NONE;
+  jobNode->jobOptions.compressAlgorithm.byte       = COMPRESS_ALGORITHM_NONE;
   jobNode->jobOptions.cryptAlgorithm               = CRYPT_ALGORITHM_NONE;
   #ifdef HAVE_GCRYPT
     jobNode->jobOptions.cryptType                  = CRYPT_TYPE_SYMMETRIC;
@@ -3903,7 +3863,7 @@ LOCAL void serverCommand_jobList(ClientInfo *clientInfo, uint id, const String a
     while ((jobNode != NULL) && !commandAborted(clientInfo,id))
     {
       sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
-                       "%u %'S %'s %s %llu %'s %'s %'s %'s %llu %lu",
+                       "%u %'S %'s %s %llu %'s %'s %'s %'s %'s %llu %lu",
                        jobNode->id,
                        jobNode->name,
                        getJobStateText(&jobNode->jobOptions,jobNode->state),
@@ -3915,7 +3875,8 @@ LOCAL void serverCommand_jobList(ClientInfo *clientInfo, uint id, const String a
                                           :jobNode->jobOptions.archiveType
                                          ),
                        jobNode->jobOptions.archivePartSize,
-                       Compress_getAlgorithmName(jobNode->jobOptions.compressAlgorithm.data),
+                       Compress_getAlgorithmName(jobNode->jobOptions.compressAlgorithm.delta),
+                       Compress_getAlgorithmName(jobNode->jobOptions.compressAlgorithm.byte),
                        Crypt_getAlgorithmName(jobNode->jobOptions.cryptAlgorithm),
                        Crypt_getTypeName(jobNode->jobOptions.cryptType),
                        getCryptPasswordModeName(jobNode->jobOptions.cryptPasswordMode),
