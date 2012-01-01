@@ -38,8 +38,7 @@ extern "C" {
 * Name   : processOption
 * Purpose: process single command line option
 * Input  : commandLineOption - command line option
-*          prefix            - option prefix ("-" or "--")
-*          name              - option name
+*          option            - option name
 *          value             - option value or NULL
 *          errorOutputHandle - error output handle or NULL
 *          errorPrefix       - error prefix or NULL
@@ -49,16 +48,14 @@ extern "C" {
 \***********************************************************************/
 
 LOCAL bool processOption(const CommandLineOption *commandLineOption,
-                         const char              *prefix,
-                         const char              *name,
+                         const char              *option,
                          const char              *value,
                          FILE                    *errorOutputHandle,
                          const char              *errorPrefix
                         )
 {
   assert(commandLineOption != NULL);
-  assert(prefix != NULL);
-  assert(name != NULL);
+  assert(option != NULL);
 
   switch (commandLineOption->type)
   {
@@ -91,7 +88,7 @@ LOCAL bool processOption(const CommandLineOption *commandLineOption,
                     "%sValue '%s' for option '%s' is not a number!\n",
                     (errorPrefix != NULL)?errorPrefix:"",
                     value,
-                    name
+                    option
                    );
           }
           return FALSE;
@@ -128,7 +125,14 @@ LOCAL bool processOption(const CommandLineOption *commandLineOption,
           }
           else
           {
-            if (errorOutputHandle != NULL) fprintf(errorOutputHandle,"%sUnexpected unit in value '%s'!\n",(errorPrefix != NULL)?errorPrefix:"",value);
+            if (errorOutputHandle != NULL)
+            {
+              fprintf(errorOutputHandle,
+                      "%sUnexpected unit in value '%s'!\n",
+                      (errorPrefix != NULL)?errorPrefix:"",
+                      value
+                     );
+            }
             return FALSE;
           }
         }
@@ -146,13 +150,12 @@ LOCAL bool processOption(const CommandLineOption *commandLineOption,
            )
         {
           if (errorOutputHandle != NULL) fprintf(errorOutputHandle,
-                                                 "%sValue '%s' out of range %d..%d for option '%s%s'!\n",
+                                                 "%sValue '%s' out of range %d..%d for option '%s'!\n",
                                                  (errorPrefix != NULL)?errorPrefix:"",
                                                  value,
                                                  commandLineOption->integerOption.min,
                                                  commandLineOption->integerOption.max,
-                                                 prefix,
-                                                 name
+                                                 option
                                                 );
           return FALSE;
         }
@@ -187,7 +190,7 @@ LOCAL bool processOption(const CommandLineOption *commandLineOption,
                     "%sValue '%s' for option '%s' is not a number!\n",
                     (errorPrefix != NULL)?errorPrefix:"",
                     value,
-                    name
+                    option
                    );
           }
           return FALSE;
@@ -224,7 +227,14 @@ LOCAL bool processOption(const CommandLineOption *commandLineOption,
           }
           else
           {
-            if (errorOutputHandle != NULL) fprintf(errorOutputHandle,"%sUnexpected unit in value '%s'!\n",(errorPrefix != NULL)?errorPrefix:"",value);
+            if (errorOutputHandle != NULL)
+            {
+              fprintf(errorOutputHandle,
+                      "%sUnexpected unit in value '%s'!\n",
+                      (errorPrefix != NULL)?errorPrefix:"",
+                      value
+                     );
+            }
             return FALSE;
           }
         }
@@ -241,13 +251,12 @@ LOCAL bool processOption(const CommandLineOption *commandLineOption,
            )
         {
           if (errorOutputHandle != NULL) fprintf(errorOutputHandle,
-                                                 "%sValue '%s' out of range %lld..%lld for option '%s%s'!\n",
+                                                 "%sValue '%s' out of range %lld..%lld for option '%s'!\n",
                                                  (errorPrefix != NULL)?errorPrefix:"",
                                                  value,
                                                  commandLineOption->integer64Option.min,
                                                  commandLineOption->integer64Option.max,
-                                                 prefix,
-                                                 name
+                                                 option
                                                 );
           return FALSE;
         }
@@ -282,7 +291,7 @@ LOCAL bool processOption(const CommandLineOption *commandLineOption,
                     "%sValue '%s' for option '%s' is not a number!\n",
                     (errorPrefix != NULL)?errorPrefix:"",
                     value,
-                    name
+                    option
                    );
           }
           return FALSE;
@@ -319,7 +328,14 @@ LOCAL bool processOption(const CommandLineOption *commandLineOption,
           }
           else
           {
-            if (errorOutputHandle != NULL) fprintf(errorOutputHandle,"%sUnexpected unit in value '%s'!\n",(errorPrefix != NULL)?errorPrefix:"",value);
+            if (errorOutputHandle != NULL)
+            {
+              fprintf(errorOutputHandle,
+                      "%sUnexpected unit in value '%s'!\n",
+                      (errorPrefix != NULL)?errorPrefix:"",
+                      value
+                     );
+            }
             return FALSE;
           }
         }
@@ -334,13 +350,12 @@ LOCAL bool processOption(const CommandLineOption *commandLineOption,
            )
         {
           if (errorOutputHandle != NULL) fprintf(errorOutputHandle,
-                                                 "%sValue '%s' out of range %lf..%lf for float option '%s%s'!\n",
+                                                 "%sValue '%s' out of range %lf..%lf for float option '%s'!\n",
                                                  (errorPrefix != NULL)?errorPrefix:"",
                                                  value,
                                                  commandLineOption->doubleOption.min,
                                                  commandLineOption->doubleOption.max,
-                                                 prefix,
-                                                 name
+                                                 option
                                                 );
           return FALSE;
         }
@@ -367,7 +382,15 @@ LOCAL bool processOption(const CommandLineOption *commandLineOption,
       }
       else
       {
-        if (errorOutputHandle != NULL) fprintf(errorOutputHandle,"%sInvalid value '%s' for boolean option '%s%s'!\n",(errorPrefix != NULL)?errorPrefix:"",value,prefix,name);
+        if (errorOutputHandle != NULL)
+        {
+          fprintf(errorOutputHandle,
+                  "%sInvalid value '%s' for boolean option '%s'!\n",
+                  (errorPrefix != NULL)?errorPrefix:"",
+                  value,
+                  option
+                 );
+        }
         return FALSE;
       }
       break;
@@ -388,7 +411,15 @@ LOCAL bool processOption(const CommandLineOption *commandLineOption,
         }
         if (z >= commandLineOption->selectOption.selectCount)
         {
-          if (errorOutputHandle != NULL) fprintf(errorOutputHandle,"%sUnknown value '%s' for option '%s%s'!\n",(errorPrefix != NULL)?errorPrefix:"",value,prefix,name);
+          if (errorOutputHandle != NULL)
+          {
+            fprintf(errorOutputHandle,
+                    "%sUnknown value '%s' for option '%s'!\n",
+                    (errorPrefix != NULL)?errorPrefix:"",
+                    value,
+                    option
+                   );
+          }
           return FALSE;
         }
         (*commandLineOption->variable.select) = commandLineOption->selectOption.selects[z].value;
@@ -426,7 +457,15 @@ LOCAL bool processOption(const CommandLineOption *commandLineOption,
             }
             if (z >= commandLineOption->setOption.setCount)
             {
-              if (errorOutputHandle != NULL) fprintf(errorOutputHandle,"%sUnknown value '%s' for option '%s%s'!\n",(errorPrefix != NULL)?errorPrefix:"",setName,prefix,name);
+              if (errorOutputHandle != NULL)
+              {
+                fprintf(errorOutputHandle,
+                        "%sUnknown value '%s' for option '%s'!\n",
+                        (errorPrefix != NULL)?errorPrefix:"",
+                        setName,
+                        option
+                       );
+              }
               return FALSE;
             }
 
@@ -479,12 +518,21 @@ LOCAL bool processOption(const CommandLineOption *commandLineOption,
     case CMD_OPTION_TYPE_SPECIAL:
       if (!commandLineOption->specialOption.parseSpecial(commandLineOption->specialOption.userData,
                                                          commandLineOption->variable.special,
-                                                         commandLineOption->name,
+                                                         option,
                                                          value,
                                                          commandLineOption->defaultValue.special
                                                         )
          )
       {
+        if (errorOutputHandle != NULL)
+        {
+          fprintf(errorOutputHandle,
+                  "%sInvalid value '%s' for option '%s'!\n",
+                  (errorPrefix != NULL)?errorPrefix:"",
+                  value,
+                  option
+                 );
+        }
         return FALSE;
       }
       break;
@@ -519,7 +567,7 @@ LOCAL void printSpaces(FILE *outputHandle, uint n)
   }
   while (z < n)
   {
-    (void)fwrite(" ",1,1,outputHandle);
+    (void)fputc(' ',outputHandle);
     z++;
   }
 }
@@ -673,6 +721,7 @@ bool CmdOption_parse(const char              *argv[],
   bool       endOfOptionsFlag;
   const char *s;
   char       name[128];
+  char       option[128];
   uint       i;
   const char *optionChars;
   const char *value;
@@ -756,7 +805,14 @@ bool CmdOption_parse(const char              *argv[],
             {
               if ((z+1) >= (*argc))
               {
-                if (errorOutputHandle != NULL) fprintf(errorOutputHandle,"%sNo value given for option '--%s'!\n",(errorPrefix != NULL)?errorPrefix:"",name);
+                if (errorOutputHandle != NULL)
+                {
+                  fprintf(errorOutputHandle,
+                          "%sNo value given for option '--%s'!\n",
+                          (errorPrefix != NULL)?errorPrefix:"",
+                          name
+                         );
+                }
                 return FALSE;
               }
               z++;
@@ -776,7 +832,8 @@ bool CmdOption_parse(const char              *argv[],
           if (commandLineOptions[i].priority == priority)
           {
             /* process option */
-            if (!processOption(&commandLineOptions[i],"--",name,value,errorOutputHandle,errorPrefix))
+            snprintf(option,sizeof(option),"--%s",name);
+            if (!processOption(&commandLineOptions[i],option,value,errorOutputHandle,errorPrefix))
             {
               return FALSE;
             }
@@ -784,7 +841,14 @@ bool CmdOption_parse(const char              *argv[],
         }
         else
         {
-          if (errorOutputHandle != NULL) fprintf(errorOutputHandle,"%sUnknown option '--%s'!\n",(errorPrefix != NULL)?errorPrefix:"",name);
+          if (errorOutputHandle != NULL)
+          {
+            fprintf(errorOutputHandle,
+                    "%sUnknown option '--%s'!\n",
+                    (errorPrefix != NULL)?errorPrefix:"",
+                    name
+                   );
+          }
           return FALSE;
         }
       }
@@ -820,7 +884,14 @@ bool CmdOption_parse(const char              *argv[],
               /* next argument is option value */
               if ((z+1) >= (*argc))
               {
-                if (errorOutputHandle != NULL) fprintf(errorOutputHandle,"%sNo value given for option '-%s'!\n",(errorPrefix != NULL)?errorPrefix:"",name);
+                if (errorOutputHandle != NULL)
+                {
+                  fprintf(errorOutputHandle,
+                          "%sNo value given for option '-%s'!\n",
+                          (errorPrefix != NULL)?errorPrefix:"",
+                          name
+                         );
+                }
                 return FALSE;
               }
               z++;
@@ -836,7 +907,8 @@ bool CmdOption_parse(const char              *argv[],
             if (commandLineOptions[i].priority == priority)
             {
               /* process option */
-              if (!processOption(&commandLineOptions[i],"-",name,value,errorOutputHandle,errorPrefix))
+              snprintf(option,sizeof(option),"-%s",name);
+              if (!processOption(&commandLineOptions[i],option,value,errorOutputHandle,errorPrefix))
               {
                 return FALSE;
               }
@@ -854,7 +926,14 @@ bool CmdOption_parse(const char              *argv[],
           }
           else
           {
-            if (errorOutputHandle != NULL) fprintf(errorOutputHandle,"%sUnknown option '-%s'!\n",(errorPrefix != NULL)?errorPrefix:"",name);
+            if (errorOutputHandle != NULL)
+            {
+              fprintf(errorOutputHandle,
+                      "%sUnknown option '-%s'!\n",
+                      (errorPrefix != NULL)?errorPrefix:"",
+                      name
+                     );
+            }
             return FALSE;
           }
         }
@@ -905,7 +984,7 @@ bool CmdOption_parseString(const CommandLineOption *commandLineOption,
   assert(commandLineOption != NULL);
 
 
-  return processOption(commandLineOption,"",commandLineOption->name,value,NULL,NULL);
+  return processOption(commandLineOption,commandLineOption->name,value,NULL,NULL);
 }
 
 void CmdOption_printHelp(FILE                    *outputHandle,
@@ -916,13 +995,15 @@ void CmdOption_printHelp(FILE                    *outputHandle,
 {
   #define PREFIX "Options: "
 
-  uint i;
-  uint maxNameLength;
-  uint n;
-  char name[128];
-  uint j;
-  char s[6];
-  uint maxValueLength;
+  uint       i;
+  uint       maxNameLength;
+  uint       n;
+  char       name[128];
+  uint       j;
+  char       s[6];
+  uint       maxValueLength;
+  const char *token;
+  const char *separator;
 
   assert(outputHandle != NULL);
   assert(commandLineOptions != NULL);
@@ -954,7 +1035,7 @@ void CmdOption_printHelp(FILE                    *outputHandle,
             {
               if (j > 0) n += 1; /* | */
               n += strlen(commandLineOptions[i].integerOption.units[j].name); /* unit */
-            }       
+            }
             n += 1; /* ] */
           }
           break;
@@ -967,7 +1048,7 @@ void CmdOption_printHelp(FILE                    *outputHandle,
             {
               if (j > 0) n += 1; /* | */
               n += strlen(commandLineOptions[i].integer64Option.units[j].name); /* unit */
-            }       
+            }
             n += 1; /* ] */
           }
           break;
@@ -975,7 +1056,7 @@ void CmdOption_printHelp(FILE                    *outputHandle,
           n += 4; /* =<n> */
           break;
         case CMD_OPTION_TYPE_BOOLEAN:
-          if (commandLineOptions[i].booleanOption.yesnoFlag) 
+          if (commandLineOptions[i].booleanOption.yesnoFlag)
           {
             n += 9; /* [=yes|no] */
           }
@@ -997,7 +1078,7 @@ void CmdOption_printHelp(FILE                    *outputHandle,
           }
           else
           {
-            n += 6; /* string */
+            n += 5; /* string */
           }
           n += 1; /* > */
           break;
@@ -1009,7 +1090,7 @@ void CmdOption_printHelp(FILE                    *outputHandle,
           }
           else
           {
-            n += 2; /* ... */
+            n += 3; /* ... */
           }
           n += 1; /* > */
           break;
@@ -1027,7 +1108,7 @@ void CmdOption_printHelp(FILE                    *outputHandle,
       /* output prefix */
       if (i == 0)
       {
-        fprintf(outputHandle,PREFIX);
+        (void)fputs(PREFIX,outputHandle);
       }
       else
       {
@@ -1055,7 +1136,7 @@ void CmdOption_printHelp(FILE                    *outputHandle,
             {
               if (j > 0) strncat(name,"|",sizeof(name)-strlen(name));
               strncat(name,commandLineOptions[i].integerOption.units[j].name,sizeof(name)-strlen(name));
-            }       
+            }
             strncat(name,"]",sizeof(name)-strlen(name));
           }
           break;
@@ -1068,7 +1149,7 @@ void CmdOption_printHelp(FILE                    *outputHandle,
             {
               if (j > 0) strncat(name,"|",sizeof(name)-strlen(name));
               strncat(name,commandLineOptions[i].integer64Option.units[j].name,sizeof(name)-strlen(name));
-            }       
+            }
             strncat(name,"]",sizeof(name)-strlen(name));
           }
           break;
@@ -1076,7 +1157,7 @@ void CmdOption_printHelp(FILE                    *outputHandle,
           strncat(name,"=<n>",sizeof(name)-strlen(name));
           break;
         case CMD_OPTION_TYPE_BOOLEAN:
-          if (commandLineOptions[i].booleanOption.yesnoFlag) 
+          if (commandLineOptions[i].booleanOption.yesnoFlag)
           {
             strncat(name,"[=yes|no]",sizeof(name)-strlen(name));
           }
@@ -1115,14 +1196,31 @@ void CmdOption_printHelp(FILE                    *outputHandle,
           strncat(name,">",sizeof(name)-strlen(name));
           break;
       }
-      fprintf(outputHandle,"%s",name);
+      (void)fputs(name,outputHandle);
 
       /* output descriptions */
       assert(maxNameLength >= strlen(name));
       printSpaces(outputHandle,maxNameLength-strlen(name));
       if (commandLineOptions[i].description != NULL)
       {
-        fprintf(outputHandle," %s",commandLineOptions[i].description);
+        token = commandLineOptions[i].description;
+        separator = strchr(token,'\n');
+        if (separator != NULL)
+        {
+          do
+          {
+            (void)fputc(' ',outputHandle);
+            (void)fwrite(token,1,separator-token,outputHandle);
+            (void)fputc('\n',outputHandle);
+            printSpaces(outputHandle,strlen(PREFIX)+maxNameLength);
+
+            token = separator+1;
+            separator = strchr(token,'\n');
+          }
+          while (separator != NULL);
+        }
+        (void)fputc(' ',outputHandle);
+        (void)fputs(token,outputHandle);
       }
       switch (commandLineOptions[i].type)
       {
@@ -1145,9 +1243,9 @@ void CmdOption_printHelp(FILE                    *outputHandle,
             {
               fprintf(outputHandle,", default: %d",commandLineOptions[i].defaultValue.i);
             }
-            fprintf(outputHandle,")");
+            (void)fputc(')',outputHandle);
           }
-          else 
+          else
           {
             if (commandLineOptions[i].defaultValue.i != 0)
             {
@@ -1174,7 +1272,7 @@ void CmdOption_printHelp(FILE                    *outputHandle,
             {
               fprintf(outputHandle,", default: %lld",commandLineOptions[i].defaultValue.l);
             }
-            fprintf(outputHandle,")");
+            (void)fputc(')',outputHandle);
           }
           else
           {
@@ -1203,7 +1301,7 @@ void CmdOption_printHelp(FILE                    *outputHandle,
             {
               fprintf(outputHandle,", default: %lf",commandLineOptions[i].defaultValue.d);
             }
-            fprintf(outputHandle,")");
+            (void)fputc(')',outputHandle);
           }
           else
           {
@@ -1236,7 +1334,7 @@ void CmdOption_printHelp(FILE                    *outputHandle,
         case CMD_OPTION_TYPE_SPECIAL:
           break;
       }
-      fprintf(outputHandle,"\n");
+      (void)fputc('\n',outputHandle);
       switch (commandLineOptions[i].type)
       {
         case CMD_OPTION_TYPE_INTEGER:
@@ -1258,14 +1356,15 @@ void CmdOption_printHelp(FILE                    *outputHandle,
           for (j = 0; j < commandLineOptions[i].selectOption.selectCount; j++)
           {
             printSpaces(outputHandle,strlen(PREFIX)+maxNameLength+((commandLineOptions[i].description != NULL)?2:0)+1);
-            fprintf(outputHandle,"%s",commandLineOptions[i].selectOption.selects[j].name);
+            (void)fputs(commandLineOptions[i].selectOption.selects[j].name,outputHandle);
             printSpaces(outputHandle,maxValueLength-strlen(commandLineOptions[i].selectOption.selects[j].name));
-            fprintf(outputHandle,": %s",commandLineOptions[i].selectOption.selects[j].description);
+            (void)fputs(": ",outputHandle);
+            (void)fputs(commandLineOptions[i].selectOption.selects[j].description,outputHandle);
             if (commandLineOptions[i].selectOption.selects[j].value == commandLineOptions[i].defaultValue.select)
             {
-              fprintf(outputHandle," (default)");
+              (void)fputs(" (default)",outputHandle);
             }
-            fprintf(outputHandle,"\n");
+            (void)fputc('\n',outputHandle);
           }
           break;
         case CMD_OPTION_TYPE_SET:
@@ -1278,14 +1377,15 @@ void CmdOption_printHelp(FILE                    *outputHandle,
           for (j = 0; j < commandLineOptions[i].setOption.setCount; j++)
           {
             printSpaces(outputHandle,strlen(PREFIX)+maxNameLength+((commandLineOptions[i].description != NULL)?2:0)+1);
-            fprintf(outputHandle,"%s",commandLineOptions[i].setOption.set[j].name);
+            (void)fputs(commandLineOptions[i].setOption.set[j].name,outputHandle);
             printSpaces(outputHandle,maxValueLength-strlen(commandLineOptions[i].setOption.set[j].name));
-            fprintf(outputHandle,": %s",commandLineOptions[i].setOption.set[j].description);
+            (void)fputs(": ",outputHandle);
+            (void)fputs(commandLineOptions[i].setOption.set[j].description,outputHandle);
             if (commandLineOptions[i].setOption.set[j].value == commandLineOptions[i].defaultValue.set)
             {
-              fprintf(outputHandle," (default)");
+              (void)fputs(" (default)",outputHandle);
             }
-            fprintf(outputHandle,"\n");
+            (void)fputc('\n',outputHandle);
           }
           break;
         case CMD_OPTION_TYPE_CSTRING:

@@ -151,7 +151,7 @@ typedef struct CommandLineOption
   } stringOption;
   struct
   {
-    bool(*parseSpecial)(void *userData, void *variable, const char *name, const char *value, const void *defaultValue);
+    bool(*parseSpecial)(void *userData, void *variable, const char *option, const char *value, const void *defaultValue);
     void                          *userData;            // user data for parse special
     const char                    *helpArgument;        // text for help argument
   } specialOption;
@@ -211,12 +211,12 @@ const CommandLineOption COMMAND_LINE_OPTIONS[] =
   CMD_OPTION_CSTRING      ("string",  0,  0,0,cStringValue,"",                                          "string value"),
   CMD_OPTION_STRING       ("string",  0,  0,0,stringValue,"",                                           "string value"),
 
-  CMD_OPTION_ENUM         ("e1",      '1',0,0,enumValue,  ENUM1,ENUM1,                                  "enum 1"), 
-  CMD_OPTION_ENUM         ("e2",      '2',0,0,enumValue,  ENUM1,ENUM2,                                  "enum 2"), 
-  CMD_OPTION_ENUM         ("e3",      '3',0,0,enumValue,  ENUM1,ENUM3,                                  "enum 3"), 
-  CMD_OPTION_ENUM         ("e4",      '4',0,0,enumValue,  ENUM1,ENUM4,                                  "enum 4"), 
+  CMD_OPTION_ENUM         ("e1",      '1',0,0,enumValue,  ENUM1,ENUM1,                                  "enum 1"),
+  CMD_OPTION_ENUM         ("e2",      '2',0,0,enumValue,  ENUM1,ENUM2,                                  "enum 2"),
+  CMD_OPTION_ENUM         ("e3",      '3',0,0,enumValue,  ENUM1,ENUM3,                                  "enum 3"),
+  CMD_OPTION_ENUM         ("e4",      '4',0,0,enumValue,  ENUM1,ENUM4,                                  "enum 4"),
 
-  CMD_OPTION_SPECIAL      ("special", 's',0,1,specialValue,parseSpecial,123,                            "special","abc"), 
+  CMD_OPTION_SPECIAL      ("special", 's',0,1,specialValue,parseSpecial,123,                            "special","abc"),
   CMD_OPTION_INTEGER      ("extended",'i',1,0,extendValue,0,0,123,NULL                                  "extended integer"),
 
   CMD_OPTION_BOOLEAN      ("help",    'h',0,0,helpFlag,   FALSE,                                        "output this help"),
