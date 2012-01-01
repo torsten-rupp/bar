@@ -2335,7 +2335,11 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
         Storage_getPrintableName(printableStorageName,storageName);
 
         // open file to store
-        printInfo(0,"Store '%s' to '%s'...",String_cString(storageMsg.fileName),String_cString(printableStorageName));
+        #ifndef NDEBUG
+          printInfo(0,"Store '%s' to '%s'...",String_cString(storageMsg.fileName),String_cString(printableStorageName));
+        #else /* not NDEBUG */
+          printInfo(0,"Store archive '%s'...",String_cString(printableStorageName));
+        #endif /* NDEBUG */
         error = File_open(&fileHandle,storageMsg.fileName,FILE_OPEN_READ);
         if (error != ERROR_NONE)
         {
@@ -2728,6 +2732,7 @@ LOCAL Errors storeFileEntry(ArchiveInfo       *archiveInfo,
   FileInfo         fileInfo;
   FileHandle       fileHandle;
   bool             compressFlag;
+  bool             deltaCompressFlag;
   SourceEntryInfo  sourceEntryInfo;
   ArchiveEntryInfo archiveEntryInfo;
   ulong            bufferLength;
@@ -2792,34 +2797,51 @@ LOCAL Errors storeFileEntry(ArchiveInfo       *archiveInfo,
     compressFlag =    (fileInfo.size > globalOptions.compressMinFileSize)
                    && !PatternList_match(compressExcludePatternList,fileName,PATTERN_MATCH_MODE_EXACT);
 
-    // get source for delta-compression
+    // check if file data should be delta compressed
+    deltaCompressFlag = FALSE;
     if (compressFlag && Compress_isCompressed(archiveInfo->jobOptions->compressAlgorithm.delta))
     {
+      // get source for delta-compression
       error = Source_openEntry(&sourceEntryInfo,
                                NULL,
                                jobOptions,
                                fileName
                               );
-      if (error != ERROR_NONE)
+      if (error == ERROR_NONE)
       {
-        printInfo(1,"FAIL\n");
-        printError("Cannot open source file for '%s' (error: %s)\n",
-                   String_cString(fileName),
-                   Errors_getText(error)
-                  );
-        File_close(&fileHandle);
-        return error;
+        deltaCompressFlag = TRUE;
+      }
+      else
+      {
+        if (jobOptions->forceDeltaCompressionFlag)
+        {
+          printInfo(1,"FAIL\n");
+          printError("Cannot open source file for '%s' (error: %s)\n",
+                     String_cString(fileName),
+                     Errors_getText(error)
+                    );
+          File_close(&fileHandle);
+          return error;
+        }
+        else
+        {
+          logMessage(LOG_TYPE_WARNING,
+                     "File '%s' not delta compressed (no source file found)\n",
+                     String_cString(fileName)
+                    );
+        }
       }
     }
 
     // create new archive file entry
     error = Archive_newFileEntry(archiveInfo,
                                  &archiveEntryInfo,
-                                 Compress_isCompressed(archiveInfo->jobOptions->compressAlgorithm.delta)?Source_getEntryDataBlock:NULL,
-                                 Compress_isCompressed(archiveInfo->jobOptions->compressAlgorithm.delta)?&sourceEntryInfo:NULL,
+                                 deltaCompressFlag?Source_getEntryDataBlock:NULL,
+                                 deltaCompressFlag?&sourceEntryInfo:NULL,
                                  fileName,
                                  &fileInfo,
-                                 Compress_isCompressed(archiveInfo->jobOptions->compressAlgorithm.delta)?sourceEntryInfo.sourceNode->storageName:NULL,
+                                 deltaCompressFlag?sourceEntryInfo.storageName:NULL,
+                                 deltaCompressFlag,
                                  compressFlag
                                 );
     if (error != ERROR_NONE)
@@ -2829,7 +2851,7 @@ LOCAL Errors storeFileEntry(ArchiveInfo       *archiveInfo,
                  String_cString(fileName),
                  Errors_getText(error)
                 );
-      if (compressFlag && Compress_isCompressed(archiveInfo->jobOptions->compressAlgorithm.delta))
+      if (deltaCompressFlag)
       {
         Source_closeEntry(&sourceEntryInfo);
       }
@@ -2898,10 +2920,12 @@ LOCAL Errors storeFileEntry(ArchiveInfo       *archiveInfo,
     }
 
     // free resources
-    if (compressFlag && Compress_isCompressed(archiveInfo->jobOptions->compressAlgorithm.delta))
+    if (deltaCompressFlag)
     {
       Source_closeEntry(&sourceEntryInfo);
     }
+
+    // close file
     File_close(&fileHandle);
 
     // get compression ratio
@@ -2972,6 +2996,7 @@ LOCAL Errors storeImageEntry(ArchiveInfo       *archiveInfo,
   bool             fileSystemFlag;
   FileSystemHandle fileSystemHandle;
   bool             compressFlag;
+  bool             deltaCompressFlag;
   SourceEntryInfo  sourceEntryInfo;
   uint64           block;
   uint             bufferBlockCount;
@@ -3040,7 +3065,7 @@ LOCAL Errors storeImageEntry(ArchiveInfo       *archiveInfo,
       else
       {
         printInfo(1,"FAIL\n");
-        printError("Cannot open file '%s' (error: %s)\n",
+        printError("Cannot open device '%s' (error: %s)\n",
                    String_cString(deviceName),
                    Errors_getText(error)
                   );
@@ -3066,34 +3091,51 @@ LOCAL Errors storeImageEntry(ArchiveInfo       *archiveInfo,
     compressFlag =    (deviceInfo.size > globalOptions.compressMinFileSize)
                    && !PatternList_match(compressExcludePatternList,deviceName,PATTERN_MATCH_MODE_EXACT);
 
-    // get source for delta-compression
+    // check if file data should be delta compressed
+    deltaCompressFlag = FALSE;
     if (compressFlag && Compress_isCompressed(archiveInfo->jobOptions->compressAlgorithm.delta))
     {
+      // get source for delta-compression
       error = Source_openEntry(&sourceEntryInfo,
                                NULL,
                                jobOptions,
                                deviceName
                               );
-      if (error != ERROR_NONE)
+      if (error == ERROR_NONE)
       {
-        printInfo(1,"FAIL\n");
-        printError("Cannot open source file for '%s' (error: %s)\n",
-                   String_cString(deviceName),
-                   Errors_getText(error)
-                  );
-        Device_close(&deviceHandle);
-        return error;
+        deltaCompressFlag = TRUE;
+      }
+      else
+      {
+        if (jobOptions->forceDeltaCompressionFlag)
+        {
+          printInfo(1,"FAIL\n");
+          printError("Cannot open source file for '%s' (error: %s)\n",
+                     String_cString(deviceName),
+                     Errors_getText(error)
+                    );
+          Device_close(&deviceHandle);
+          return error;
+        }
+        else
+        {
+          logMessage(LOG_TYPE_WARNING,
+                     "Image of device '%s' not delta compressed (no source file found)\n",
+                     String_cString(deviceName)
+                    );
+        }
       }
     }
 
     // create new archive image entry
     error = Archive_newImageEntry(archiveInfo,
                                   &archiveEntryInfo,
-                                  Compress_isCompressed(archiveInfo->jobOptions->compressAlgorithm.delta)?Source_getEntryDataBlock:NULL,
-                                  Compress_isCompressed(archiveInfo->jobOptions->compressAlgorithm.delta)?&sourceEntryInfo:NULL,
+                                  deltaCompressFlag?Source_getEntryDataBlock:NULL,
+                                  deltaCompressFlag?&sourceEntryInfo:NULL,
                                   deviceName,
                                   &deviceInfo,
-                                  Compress_isCompressed(archiveInfo->jobOptions->compressAlgorithm.delta)?sourceEntryInfo.sourceNode->storageName:NULL,
+                                  deltaCompressFlag?sourceEntryInfo.storageName:NULL,
+                                  deltaCompressFlag,
                                   compressFlag
                                  );
     if (error != ERROR_NONE)
@@ -3103,7 +3145,7 @@ LOCAL Errors storeImageEntry(ArchiveInfo       *archiveInfo,
                  String_cString(deviceName),
                  Errors_getText(error)
                 );
-      if (compressFlag && Compress_isCompressed(archiveInfo->jobOptions->compressAlgorithm.delta))
+      if (deltaCompressFlag)
       {
         Source_closeEntry(&sourceEntryInfo);
       }
@@ -3196,7 +3238,8 @@ LOCAL Errors storeImageEntry(ArchiveInfo       *archiveInfo,
       FileSystem_done(&fileSystemHandle);
     }
 
-    if (compressFlag && Compress_isCompressed(archiveInfo->jobOptions->compressAlgorithm.delta))
+    // free resources
+    if (deltaCompressFlag)
     {
       Source_closeEntry(&sourceEntryInfo);
     }
@@ -3522,6 +3565,7 @@ LOCAL Errors storeHardLinkEntry(ArchiveInfo       *archiveInfo,
   FileInfo         fileInfo;
   FileHandle       fileHandle;
   bool             compressFlag;
+  bool             deltaCompressFlag;
   SourceEntryInfo  sourceEntryInfo;
   ArchiveEntryInfo archiveEntryInfo;
   ulong            bufferLength;
@@ -3589,9 +3633,11 @@ LOCAL Errors storeHardLinkEntry(ArchiveInfo       *archiveInfo,
     compressFlag =    (fileInfo.size > globalOptions.compressMinFileSize)
                    && !PatternList_matchStringList(compressExcludePatternList,nameList,PATTERN_MATCH_MODE_EXACT);
 
-    // get source for delta-compression
+    // check if file data should be delta compressed
+    deltaCompressFlag = FALSE;
     if (compressFlag && Compress_isCompressed(archiveInfo->jobOptions->compressAlgorithm.delta))
     {
+      // get source for delta-compression
 //???
       STRINGLIST_ITERATE(nameList,stringNode,name)
       {
@@ -3602,26 +3648,41 @@ LOCAL Errors storeHardLinkEntry(ArchiveInfo       *archiveInfo,
                                 );
         if (error == ERROR_NONE) break;
       }
-      if (error != ERROR_NONE)
+      if (error == ERROR_NONE)
       {
-        printInfo(1,"FAIL\n");
-        printError("Cannot open source file for '%s' (error: %s)\n",
-                   String_cString(StringList_first(nameList,NULL)),
-                   Errors_getText(error)
-                  );
-        File_close(&fileHandle);
-        return error;
+        deltaCompressFlag = TRUE;
+      }
+      else
+      {
+        if (jobOptions->forceDeltaCompressionFlag)
+        {
+          printInfo(1,"FAIL\n");
+          printError("Cannot open source file for '%s' (error: %s)\n",
+                     String_cString(nameList->head->string),
+                     Errors_getText(error)
+                    );
+          File_close(&fileHandle);
+          return error;
+        }
+        else
+        {
+          logMessage(LOG_TYPE_WARNING,
+                     "File '%s' not delta compressed (no source file found)\n",
+                     String_cString(nameList->head->string)
+                    );
+        }
       }
     }
 
     // create new archive hard link entry
     error = Archive_newHardLinkEntry(archiveInfo,
                                      &archiveEntryInfo,
-                                     Compress_isCompressed(archiveInfo->jobOptions->compressAlgorithm.delta)?Source_getEntryDataBlock:NULL,
-                                     Compress_isCompressed(archiveInfo->jobOptions->compressAlgorithm.delta)?&sourceEntryInfo:NULL,
+                                     deltaCompressFlag?Source_getEntryDataBlock:NULL,
+                                     deltaCompressFlag?&sourceEntryInfo:NULL,
                                      nameList,
                                      &fileInfo,
-                                     Compress_isCompressed(archiveInfo->jobOptions->compressAlgorithm.delta)?sourceEntryInfo.sourceNode->storageName:NULL,
+                                     deltaCompressFlag?sourceEntryInfo.storageName:NULL,
+                                     deltaCompressFlag,
                                      compressFlag
                                     );
     if (error != ERROR_NONE)
@@ -3693,6 +3754,12 @@ LOCAL Errors storeHardLinkEntry(ArchiveInfo       *archiveInfo,
                 );
       File_close(&fileHandle);
       return error;
+    }
+
+    // free resources
+    if (deltaCompressFlag)
+    {
+      Source_closeEntry(&sourceEntryInfo);
     }
 
     // close file
