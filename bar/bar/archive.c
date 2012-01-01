@@ -2686,7 +2686,8 @@ Errors Archive_newFileEntry(ArchiveInfo                     *archiveInfo,
                             const String                    fileName,
                             const FileInfo                  *fileInfo,
                             const String                    deltaSourceName,
-                            bool                            compressFlag
+                            bool                            deltaCompressFlag,
+                            bool                            byteCompressFlag
                            )
 {
   Errors error;
@@ -2719,8 +2720,8 @@ Errors Archive_newFileEntry(ArchiveInfo                     *archiveInfo,
 
   archiveEntryInfo->archiveEntryType            = ARCHIVE_ENTRY_TYPE_FILE;
 
-  archiveEntryInfo->file.deltaCompressAlgorithm = compressFlag?archiveInfo->jobOptions->compressAlgorithm.delta:COMPRESS_ALGORITHM_NONE;
-  archiveEntryInfo->file.dataCompressAlgorithm  = compressFlag?archiveInfo->jobOptions->compressAlgorithm.data :COMPRESS_ALGORITHM_NONE;
+  archiveEntryInfo->file.deltaCompressAlgorithm = deltaCompressFlag?archiveInfo->jobOptions->compressAlgorithm.delta:COMPRESS_ALGORITHM_NONE;
+  archiveEntryInfo->file.dataCompressAlgorithm  = byteCompressFlag ?archiveInfo->jobOptions->compressAlgorithm.byte :COMPRESS_ALGORITHM_NONE;
 
   archiveEntryInfo->file.deltaSourceInit        = FALSE;
 
@@ -2954,7 +2955,8 @@ Errors Archive_newImageEntry(ArchiveInfo                     *archiveInfo,
                              const String                    deviceName,
                              const DeviceInfo                *deviceInfo,
                              const String                    deltaSourceName,
-                             bool                            compressFlag
+                             bool                            deltaCompressFlag,
+                             bool                            byteCompressFlag
                             )
 {
   Errors error;
@@ -2990,8 +2992,8 @@ Errors Archive_newImageEntry(ArchiveInfo                     *archiveInfo,
 
   archiveEntryInfo->image.blockSize              = deviceInfo->blockSize;
 
-  archiveEntryInfo->image.deltaCompressAlgorithm = compressFlag?archiveInfo->jobOptions->compressAlgorithm.delta:COMPRESS_ALGORITHM_NONE;
-  archiveEntryInfo->image.dataCompressAlgorithm  = compressFlag?archiveInfo->jobOptions->compressAlgorithm.data :COMPRESS_ALGORITHM_NONE;
+  archiveEntryInfo->image.deltaCompressAlgorithm = deltaCompressFlag?archiveInfo->jobOptions->compressAlgorithm.delta:COMPRESS_ALGORITHM_NONE;
+  archiveEntryInfo->image.dataCompressAlgorithm  = byteCompressFlag ?archiveInfo->jobOptions->compressAlgorithm.byte :COMPRESS_ALGORITHM_NONE;
 
   archiveEntryInfo->image.deltaSourceInit        = FALSE;
 
@@ -3477,7 +3479,8 @@ Errors Archive_newHardLinkEntry(ArchiveInfo                     *archiveInfo,
                                 const StringList                *fileNameList,
                                 const FileInfo                  *fileInfo,
                                 const String                    deltaSourceName,
-                                bool                            compressFlag
+                                bool                            deltaCompressFlag,
+                                bool                            byteCompressFlag
                                )
 {
   Errors            error;
@@ -3508,8 +3511,8 @@ Errors Archive_newHardLinkEntry(ArchiveInfo                     *archiveInfo,
   archiveEntryInfo->archiveInfo                     = archiveInfo;
   archiveEntryInfo->mode                            = ARCHIVE_MODE_WRITE;
 
-  archiveEntryInfo->hardLink.deltaCompressAlgorithm = compressFlag?archiveInfo->jobOptions->compressAlgorithm.delta:COMPRESS_ALGORITHM_NONE;
-  archiveEntryInfo->hardLink.dataCompressAlgorithm  = compressFlag?archiveInfo->jobOptions->compressAlgorithm.data :COMPRESS_ALGORITHM_NONE;
+  archiveEntryInfo->hardLink.deltaCompressAlgorithm = deltaCompressFlag?archiveInfo->jobOptions->compressAlgorithm.delta:COMPRESS_ALGORITHM_NONE;
+  archiveEntryInfo->hardLink.dataCompressAlgorithm  = byteCompressFlag ?archiveInfo->jobOptions->compressAlgorithm.byte :COMPRESS_ALGORITHM_NONE;
 
   archiveEntryInfo->cryptAlgorithm                  = archiveInfo->jobOptions->cryptAlgorithm;
   archiveEntryInfo->blockLength                     = archiveInfo->blockLength;
@@ -4132,6 +4135,38 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
 
   // store chunk header for read
   ungetNextChunkHeader(archiveInfo,&chunkHeader);
+
+  return ERROR_NONE;
+}
+
+Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
+{
+  Errors      error;
+  ChunkHeader chunkHeader;
+
+  assert(archiveInfo != NULL);
+
+  // check for pending error
+  if (archiveInfo->pendingError != ERROR_NONE)
+  {
+    error = archiveInfo->pendingError;
+    archiveInfo->pendingError = ERROR_NONE;
+    return error;
+  }
+
+  // read next chunk
+  error = getNextChunkHeader(archiveInfo,&chunkHeader);
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+
+  // skip entry
+  error = Chunk_skip(archiveInfo->chunkIO,archiveInfo->chunkIOUserData,&chunkHeader);
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
 
   return ERROR_NONE;
 }

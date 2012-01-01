@@ -427,6 +427,8 @@ bool Archive_eof(ArchiveInfo *archiveInfo,
 *          fileName                        - file name
 *          fileInfo                        - file info
 *          deltaSourceName                 - delta source name or NULL
+*          deltaCompressFlag               - TRUE for delta compression,
+*                                            FALSE otherwise
 *          compressFlag                    - TRUE for compression, FALSE
 *                                            otherwise (e. g. file to
 *                                            small or already compressed)
@@ -442,6 +444,7 @@ Errors Archive_newFileEntry(ArchiveInfo                     *archiveInfo,
                             const String                    fileName,
                             const FileInfo                  *fileInfo,
                             const String                    deltaSourceName,
+                            bool                            deltaCompressFlag,
                             bool                            compressFlag
                            );
 
@@ -456,6 +459,8 @@ Errors Archive_newFileEntry(ArchiveInfo                     *archiveInfo,
 *          deviceName                      - special device name
 *          deviceInfo                      - device info
 *          deltaSourceName                 - delta source name or NULL
+*          deltaCompressFlag               - TRUE for delta compression,
+*                                            FALSE otherwise
 *          compressFlag                    - TRUE for compression, FALSE
 *                                            otherwise (e. g. file to
 *                                            small or already compressed)
@@ -471,6 +476,7 @@ Errors Archive_newImageEntry(ArchiveInfo                     *archiveInfo,
                              const String                    deviceName,
                              const DeviceInfo                *deviceInfo,
                              const String                    deltaSourceName,
+                             bool                            deltaCompressFlag,
                              bool                            compressFlag
                             );
 
@@ -521,6 +527,8 @@ Errors Archive_newLinkEntry(ArchiveInfo      *archiveInfo,
 *          fileNameList                    - list of file names
 *          fileInfo                        - file info
 *          deltaSourceName                 - delta source name or NULL
+*          deltaCompressFlag               - TRUE for delta compression,
+*                                            FALSE otherwise
 *          compressFlag                    - TRUE for compression, FALSE
 *                                            otherwise (e. g. file to
 *                                            small or already compressed)
@@ -536,6 +544,7 @@ Errors Archive_newHardLinkEntry(ArchiveInfo                     *archiveInfo,
                                 const StringList                *fileNameList,
                                 const FileInfo                  *fileInfo,
                                 const String                    deltaSourceName,
+                                bool                            deltaCompressFlag,
                                 bool                            compressFlag
                                );
 
@@ -570,6 +579,17 @@ Errors Archive_getNextArchiveEntryType(ArchiveInfo       *archiveInfo,
                                        ArchiveEntryTypes *archiveEntryType,
                                        bool              skipUnknownChunksFlag
                                       );
+
+/***********************************************************************\
+* Name   : Archive_skipNextEntry
+* Purpose: skip next entry in archive
+* Input  : archiveInfo - archive info block
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo);
 
 /***********************************************************************\
 * Name   : Archive_readFileEntry
