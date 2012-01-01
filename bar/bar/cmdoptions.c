@@ -579,8 +579,31 @@ bool CmdOption_init(CommandLineOption commandLineOptions[],
                    )
 {
   uint i;
+  #ifndef NDEBUG
+    uint j;
+  #endif /* NDEBUG */
 
   assert(commandLineOptions != NULL);
+
+  #ifndef NDEBUG
+    for (i = 0; i < commandLineOptionCount; i++)
+    {
+      for (j = 0; j < commandLineOptionCount; j++)
+      {
+        if (i != j)
+        {
+          if (strcmp(commandLineOptions[i].name,commandLineOptions[j].name) == 0)
+          {
+            HALT_INTERNAL_ERROR("duplicate name '%s' in command line options %d and %d",commandLineOptions[i].name,i,j);
+          }
+          if ((commandLineOptions[i].shortName != '\0') && (commandLineOptions[i].shortName == commandLineOptions[j].shortName))
+          {
+            HALT_INTERNAL_ERROR("duplicate short name '%c' in command line options %d and %d",commandLineOptions[i].shortName,i,j);
+          }
+        }
+      }
+    }
+  #endif /* NDEBUG */
 
   for (i = 0; i < commandLineOptionCount; i++)
   {
@@ -650,9 +673,12 @@ bool CmdOption_init(CommandLineOption commandLineOptions[],
       case CMD_OPTION_TYPE_SPECIAL:
         commandLineOptions[i].defaultValue.special = commandLineOptions[i].variable.special;
         break;
+      #ifndef NDEBUG
+        default:
+          HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+          break;
+      #endif /* NDEBUG */
     }
-
-
   }
 
   return TRUE;
@@ -702,6 +728,11 @@ void CmdOption_done(CommandLineOption commandLineOptions[],
         break;
       case CMD_OPTION_TYPE_SPECIAL:
         break;
+      #ifndef NDEBUG
+        default:
+          HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+          break;
+      #endif /* NDEBUG */
     }
   }
 }
@@ -1078,7 +1109,7 @@ void CmdOption_printHelp(FILE                    *outputHandle,
           }
           else
           {
-            n += 5; /* string */
+            n += 6; /* string */
           }
           n += 1; /* > */
           break;
@@ -1094,6 +1125,11 @@ void CmdOption_printHelp(FILE                    *outputHandle,
           }
           n += 1; /* > */
           break;
+        #ifndef NDEBUG
+          default:
+            HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+            break;
+        #endif /* NDEBUG */
       }
 
       maxNameLength = MAX(n,maxNameLength);
@@ -1195,6 +1231,11 @@ void CmdOption_printHelp(FILE                    *outputHandle,
           }
           strncat(name,">",sizeof(name)-strlen(name));
           break;
+        #ifndef NDEBUG
+          default:
+            HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+            break;
+        #endif /* NDEBUG */
       }
       (void)fputs(name,outputHandle);
 
@@ -1333,6 +1374,11 @@ void CmdOption_printHelp(FILE                    *outputHandle,
           break;
         case CMD_OPTION_TYPE_SPECIAL:
           break;
+        #ifndef NDEBUG
+          default:
+            HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+            break;
+        #endif /* NDEBUG */
       }
       (void)fputc('\n',outputHandle);
       switch (commandLineOptions[i].type)
@@ -1394,6 +1440,11 @@ void CmdOption_printHelp(FILE                    *outputHandle,
           break;
         case CMD_OPTION_TYPE_SPECIAL:
           break;
+        #ifndef NDEBUG
+          default:
+            HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+            break;
+        #endif /* NDEBUG */
       }
     }
   }
