@@ -35,11 +35,11 @@
 
 /***************************** Constants *******************************/
 
-/* file name extensions */
+// file name extensions
 #define FILE_NAME_EXTENSION_ARCHIVE_FILE     ".bar"
 #define FILE_NAME_EXTENSION_INCREMENTAL_FILE ".bid"
 
-/* program exit codes */
+// program exit codes
 typedef enum
 {
   EXITCODE_OK=0,
@@ -55,7 +55,7 @@ typedef enum
   EXITCODE_UNKNOWN=128
 } ExitCodes;
 
-/* run modes */
+// run modes
 typedef enum
 {
   RUN_MODE_INTERACTIVE,
@@ -63,7 +63,7 @@ typedef enum
   RUN_MODE_SERVER,
 } RunModes;
 
-/* log types */
+// log types
 typedef enum
 {
   LOG_TYPE_ALWAYS              = 0,
@@ -82,7 +82,7 @@ typedef enum
 #define LOG_TYPE_NONE 0x00000000
 #define LOG_TYPE_ALL  0xFFFFffff
 
-/* archive types */
+// archive types
 typedef enum
 {
   ARCHIVE_TYPE_NORMAL,                  // normal archives; no incremental list file
@@ -121,7 +121,7 @@ typedef enum
 
 /***************************** Datatypes *******************************/
 
-/* password mode */
+// password mode
 typedef enum
 {
   PASSWORD_MODE_DEFAULT,                // use global password
@@ -130,7 +130,7 @@ typedef enum
   PASSWORD_MODE_UNKNOWN,
 } PasswordModes;
 
-/* FTP server settings */
+// FTP server settings
 typedef struct
 {
   String   loginName;                   // login name
@@ -150,7 +150,7 @@ typedef struct
   LIST_HEADER(FTPServerNode);
 } FTPServerList;
 
-/* SSH server settings */
+// SSH server settings
 typedef struct
 {
   uint     port;                        // server port (ssh,scp,sftp)
@@ -173,14 +173,14 @@ typedef struct
   LIST_HEADER(SSHServerNode);
 } SSHServerList;
 
-/* file/FTP/SCP/SFTP settings */
+// file/FTP/SCP/SFTP settings
 typedef struct
 {
   String writePreProcessCommand;        // command to execute before writing
   String writePostProcessCommand;       // command to execute after writing
 } File;
-    
-/* optical disk settings */
+
+// optical disk settings
 typedef struct
 {
   String defaultDeviceName;             // default device name
@@ -201,7 +201,7 @@ typedef struct
   String writeImageCommand;             // command to write image on medium
 } OpticalDisk;
 
-/* device settings */
+// device settings
 typedef struct
 {
   String defaultDeviceName;             // default device name
@@ -234,7 +234,7 @@ typedef struct
   LIST_HEADER(DeviceNode);
 } DeviceList;
 
-/* global options */
+// global options
 typedef struct
 {
   RunModes               runMode;
@@ -242,7 +242,7 @@ typedef struct
   const char             *barExecutable;                 // name of BAR executable
 
   uint                   niceLevel;
-  
+
   String                 tmpDirectory;                   // directory for temporary files
   uint64                 maxTmpSize;                     // max. size of temporary files
 
@@ -284,12 +284,12 @@ typedef struct
   bool                   deleteOldArchiveFilesFlag;      // TRUE iff old archive files should be deleted after creating new files
   bool                   ignoreNoBackupFileFlag;         // TRUE iff .nobackup/.NOBACKUP file should be ignored
 
-  bool                   noDefaultConfigFlag;            // TRUE iff default config should not be read 
+  bool                   noDefaultConfigFlag;            // TRUE iff default config should not be read
   bool                   quietFlag;                      // TRUE iff suppress any output
   long                   verboseLevel;
 } GlobalOptions;
 
-/* schedule */
+// schedule
 typedef struct ScheduleNode
 {
   LIST_NODE_HEADER(struct ScheduleNode);
@@ -309,13 +309,7 @@ typedef struct
   LIST_HEADER(ScheduleNode);
 } ScheduleList;
 
-/* job options */
-typedef struct
-{
-  uint32              userId;                            // user id
-  uint32              groupId;                           // group id 
-} Owner;
-
+// job options
 typedef struct
 {
   ArchiveTypes        archiveType;                       // archive type (normal, full, incremental, differential)
@@ -326,19 +320,19 @@ typedef struct
 
   uint                directoryStripCount;               // number of directories to strip in restore
   String              destination     ;                  // destination for restore
-  Owner               owner;                             // restore owner
+  struct
+  {
+    uint32            userId;                            // restore user id
+    uint32            groupId;                           // restore group id
+  } owner;
 
   PatternTypes        patternType;
 
   struct
   {
-    CompressAlgorithms delta;
-    CompressAlgorithms data;
-  } compressAlgorithm;                 // compress algorithm to use
-//  CompressAlgorithms  deltaCompressAlgorithm;            // delta compress algorithm to use
-//  CompressAlgorithms  dataCompressAlgorithm;             // data compress algorithm to use
-//???
-//CompressAlgorithms  compressAlgorithm;                 // compress algorithm to use
+    CompressAlgorithms delta;                            // delta compress algorithm to use
+    CompressAlgorithms byte;                             // byte compress algorithm to use
+  } compressAlgorithm;
 
   CryptTypes          cryptType;                         // crypt type (symmetric, asymmetric)
   CryptAlgorithms     cryptAlgorithm;                    // crypt algorithm to use
@@ -358,11 +352,12 @@ typedef struct
   uint64              volumeSize;                        // volume size or 0LL for default [bytes]
 
   bool                skipUnreadableFlag;                // TRUE for skipping unreadable files
-  bool                overwriteArchiveFilesFlag;
-  bool                overwriteFilesFlag;
+  bool                forceDeltaCompressionFlag;         // TRUE to force delta compression of files
+  bool                overwriteArchiveFilesFlag;         // TRUE for overwrite existing archive files
+  bool                overwriteFilesFlag;                // TURE for overwrite existing files on restore
   bool                errorCorrectionCodesFlag;          // TRUE iff error correction codes should be added
   bool                alwaysCreateImageFlag;             // TRUE iff always create image for CD/DVD/BD/device
-  bool                waitFirstVolumeFlag;
+  bool                waitFirstVolumeFlag;               // TRUE for wait for first volume
   bool                rawImagesFlag;                     // TRUE for storing raw images
   bool                dryRunFlag;                        // TRUE to do a dry-run (do not store, do not create incremental data, do not store in database)
   bool                noStorageFlag;                     // TRUE to skip storage, only create incremental data file
@@ -371,19 +366,19 @@ typedef struct
 } JobOptions;
 
 /***************************** Variables *******************************/
-extern GlobalOptions  globalOptions;
-extern String         tmpDirectory;
-extern DatabaseHandle *indexDatabaseHandle;
+extern GlobalOptions  globalOptions;          // global options
+extern String         tmpDirectory;           // temporary directory
+extern DatabaseHandle *indexDatabaseHandle;   // index database handle
 
 /****************************** Macros *********************************/
 
-/* return short number of bytes */
+// return short number of bytes
 #define BYTES_SHORT(n) (((n)>(1024LL*1024LL*1024LL))?(double)(n)/(double)(1024LL*1024LL*1024LL): \
                         ((n)>       (1024LL*1024LL))?(double)(n)/(double)(1024LL*1024LL*1024LL): \
                         ((n)>                1024LL)?(double)(n)/(double)(1024LL*1024LL*1024LL): \
                         (double)(n) \
                        )
-/* return unit for short number of bytes */
+// return unit for short number of bytes
 #define BYTES_UNIT(n) (((n)>(1024LL*1024LL*1024LL))?"GB": \
                        ((n)>       (1024LL*1024LL))?"MB": \
                        ((n)>                1024LL)?"KB": \
@@ -858,6 +853,62 @@ void configValueFormatInitPassord(void **formatUserData, void *userData, void *v
 bool configValueFormatPassword(void **formatUserData, void *userData, String line);
 
 /***********************************************************************\
+* Name   : configValueParseCompressAlgorithm
+* Purpose: config value option call back for parsing compress algorithm
+* Input  : userData - user data
+*          variable - config variable
+*          name     - config name
+*          value    - config value
+* Output : -
+* Return : TRUE if config value parsed and stored in variable, FALSE
+*          otherwise
+* Notes  : -
+\***********************************************************************/
+
+bool configValueParseCompressAlgorithm(void *userData, void *variable, const char *name, const char *value);
+
+/***********************************************************************\
+* Name   : configValueFormatInitCompressAlgorithm
+* Purpose: init format config compress algorithm
+* Input  : userData - user data
+*          variable - config variable
+* Output : formatUserData - format user data
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void configValueFormatInitCompressAlgorithm(void **formatUserData, void *userData, void *variable);
+
+/***********************************************************************\
+* Name   : configValueFormatDoneCompressAlgorithm
+* Purpose: done format of config compress algorithm
+* Input  : formatUserData - format user data
+*          userData       - user data
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void configValueFormatDoneCompressAlgorithm(void **formatUserData, void *userData);
+
+/***********************************************************************\
+* Name   : configValueFormatCompressAlgorithm
+* Purpose: format compress algorithm config statement
+* Input  : formatUserData - format user data
+*          userData       - user data
+*          line           - line variable
+*          name           - config name
+* Output : line - formated line
+* Return : TRUE if config statement formated, FALSE if end of data
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+bool configValueFormatCompressAlgorithm(void **formatUserData, void *userData, String line);
+
+/***********************************************************************\
 * Name   : parseScheduleParts
 * Purpose: parse schedule parts
 * Input  : date        - date string (<year|*>-<month|*>-<day|*>)
@@ -865,7 +916,7 @@ bool configValueFormatPassword(void **formatUserData, void *userData, String lin
 *          time        - time string <hour|*>:<minute|*>
 *          enabled     - enabled string (0|1)
 *          archiveType - archive type (normal, full, incremental, differential)
-* Output : 
+* Output :
 * Return : scheduleNode or NULL on error
 * Notes  : month names: jan, feb, mar, apr, may, jun, jul, aug, sep, oct
 *          nov, dec
@@ -883,7 +934,7 @@ ScheduleNode *parseScheduleParts(const String date,
 * Name   : parseSchedule
 * Purpose: parse schedule
 * Input  : s - schedule string
-* Output : 
+* Output :
 * Return : scheduleNode or NULL on error
 * Notes  : string format
 *            <year|*>-<month|*>-<day|*> [<week day|*>] <hour|*>:<minute|*> <0|1> <archive type>
