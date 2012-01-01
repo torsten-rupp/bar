@@ -254,6 +254,7 @@ help:
 	@$(ECHO) "  test4, test_asymmetric_crypt"
 	@$(ECHO) "  test5, test_split"
 	@$(ECHO) "  test6, test_image"
+	@$(ECHO) "  test_parameters"
 	@$(ECHO) "  test_combined"
 	@$(ECHO) ""
 	@$(ECHO) "  test_image_raw"
@@ -424,8 +425,8 @@ TEST_FILES_CLEAN = \
 TEST_BAR = ./bar@EXEEXT@
 
 .PHONY: test clean_test
-.PHONY: test1 test2 test3 test4 test5 test6 test_combined
-.PHONY: test_basic test_compress test_crypt test_asymmetric_crypt test_split test_parameters test_image test_dvd
+.PHONY: test1 test2 test3 test4 test5 test6 test7 test_combined
+.PHONY: test_basic test_compress test_crypt test_asymmetric_crypt test_split test_image test_dvd test_parameters
 test:
 	@$(MAKE) QUIET=1 --no-print-directory -s test_basic test_compress test_crypt test_asymmetric_crypt test_split test_image test_combined test_parameters
 
@@ -530,12 +531,6 @@ test_combined: bar@EXEEXT@
         done
 	@$(ECHO) "ok"
 
-# test bar exeuctable
-TEST_BAR = ./bar
-
-# check exitcode
-checkExitcode = $2; if test $$? -gt $1; then false; fi
-
 test_parameters: bar@EXEEXT@
 	@$(ECHO_NO_LF) "Test parameters..."
 	$(RMRF) $(TEST_FILES_CLEAN)
@@ -545,8 +540,15 @@ test_parameters: bar@EXEEXT@
 	$(call checkExitcode,5,SSH_ASKPASS= $(TEST_BAR) --not-existing-option 1>/dev/null) $(if $(QUIET),1>/dev/null)
 	$(call checkExitcode,5,SSH_ASKPASS= $(TEST_BAR) -c test/test.bar test/data --compress-algorithm=not-existing-compress) $(if $(QUIET),1>/dev/null)
 	$(call checkExitcode,5,SSH_ASKPASS= $(TEST_BAR) -c test/test.bar test/data --crypt-algorithm=not-existing-compress) $(if $(QUIET),1>/dev/null)
-	$(call checkExitcode,1,SSH_ASKPASS= $(TEST_BAR) -c test/test.bar test/data --delta-source=does-not-exists --delta-algorithm=xdelta9 --overwrite-archive-files) $(if $(QUIET),1>/dev/null)
+	$(call checkExitcode,1,SSH_ASKPASS= $(TEST_BAR) -c test/test.bar test/data --delta-source=does-not-exists --compress-algorithm=xdelta9 --overwrite-archive-files) $(if $(QUIET),1>/dev/null)
 	@$(ECHO) "ok"
+
+# test bar exeuctable
+TEST_BAR = ./bar
+
+# check exitcode
+checkExitcode = $2; if test $$? -gt $1; then false; fi
+
 
 .PHONY: test_file_operations
 test_file_operations: \
@@ -649,7 +651,14 @@ test_file_operation_delta: \
   $(TEST_FILES)
 	# delta tests
 	($(CD) test/data/delta1; SSH_ASKPASS= ../../../$(TEST_BAR) -c ../../$(BAR_FILE)1.bar test.dat $(OPTIONS) --overwrite-archive-files $(if $(QUIET),1>/dev/null))
-	($(CD) test/data/delta2; SSH_ASKPASS= ../../../$(TEST_BAR) -c ../../$(BAR_FILE)2.bar --delta-source=../../$(BAR_FILE)1.bar --delta-algorithm=xdelta9 test.dat $(OPTIONS) --overwrite-archive-files $(if $(QUIET),1>/dev/null))
+	($(CD) test/data/delta2; SSH_ASKPASS= ../../../$(TEST_BAR) -c ../../$(BAR_FILE)2.bar --delta-source=../../$(BAR_FILE)1.bar test.dat $(OPTIONS) --compress-algorithm=xdelta9 --overwrite-archive-files $(if $(QUIET),1>/dev/null))
+	($(CD) test/data/delta2; SSH_ASKPASS= ../../../$(TEST_BAR) -c ../../$(BAR_FILE)2.bar --delta-source=../../$(BAR_FILE)1.bar test.dat $(OPTIONS) --compress-algorithm=xdelta9+zip9 --overwrite-archive-files $(if $(QUIET),1>/dev/null))
+ifeq (@HAVE_BZ2@,1)
+	($(CD) test/data/delta2; SSH_ASKPASS= ../../../$(TEST_BAR) -c ../../$(BAR_FILE)2.bar --delta-source=../../$(BAR_FILE)1.bar test.dat $(OPTIONS) --compress-algorithm=xdelta9+bzip2 --overwrite-archive-files $(if $(QUIET),1>/dev/null))
+endif
+ifeq (@HAVE_LZMA@,1)
+	($(CD) test/data/delta2; SSH_ASKPASS= ../../../$(TEST_BAR) -c ../../$(BAR_FILE)2.bar --delta-source=../../$(BAR_FILE)1.bar test.dat $(OPTIONS) --compress-algorithm=xdelta9+lzma9 --overwrite-archive-files $(if $(QUIET),1>/dev/null))
+endif
 	SSH_ASKPASS= $(TEST_BAR) -t test/$(BAR_FILE)2.bar --delta-source=test/$(BAR_FILE)1.bar $(OPTIONS) $(if $(QUIET),1>/dev/null)
 	($(CD) test/data/delta2; SSH_ASKPASS= ../../../$(TEST_BAR) -d ../../$(BAR_FILE)2.bar --delta-source=../../$(BAR_FILE)1.bar $(OPTIONS) $(if $(QUIET),1>/dev/null))
 	($(CD) test/data/delta2; SSH_ASKPASS= ../../../$(TEST_BAR) -x ../../$(BAR_FILE)2.bar --delta-source=../../$(BAR_FILE)1.bar $(OPTIONS) --destination ../../restore $(if $(QUIET),1>/dev/null))
