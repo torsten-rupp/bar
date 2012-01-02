@@ -955,7 +955,7 @@ LOCAL Errors writeFileChunks(ArchiveEntryInfo *archiveEntryInfo)
   {
     error = Chunk_create(&archiveEntryInfo->file.chunkFileDelta.info);
     if (error != ERROR_NONE)
-   {
+    {
       return error;
     }
   }
@@ -2815,7 +2815,7 @@ Errors Archive_newFileEntry(ArchiveInfo                     *archiveInfo,
                      NULL,
                      CHUNK_ID_FILE_DELTA,
                      CHUNK_DEFINITION_FILE_DELTA,
-                     1,
+                     archiveEntryInfo->blockLength,
                      &archiveEntryInfo->file.chunkFileDelta.cryptInfo,
                      &archiveEntryInfo->file.chunkFileDelta
                     );
@@ -3082,7 +3082,7 @@ Errors Archive_newImageEntry(ArchiveInfo                     *archiveInfo,
                      NULL,
                      CHUNK_ID_IMAGE_DELTA,
                      CHUNK_DEFINITION_IMAGE_DELTA,
-                     1,
+                     archiveEntryInfo->blockLength,
                      &archiveEntryInfo->image.chunkImageDelta.cryptInfo,
                      &archiveEntryInfo->image.chunkImageDelta
                     );
@@ -3676,7 +3676,7 @@ Errors Archive_newHardLinkEntry(ArchiveInfo                     *archiveInfo,
                      NULL,
                      CHUNK_ID_HARDLINK_DELTA,
                      CHUNK_DEFINITION_HARDLINK_DELTA,
-                     1,
+                     archiveEntryInfo->blockLength,
                      &archiveEntryInfo->hardLink.chunkHardLinkDelta.cryptInfo,
                      &archiveEntryInfo->hardLink.chunkHardLinkDelta
                     );
@@ -4420,7 +4420,7 @@ Errors Archive_readFileEntry(ArchiveInfo        *archiveInfo,
                          NULL,
                          CHUNK_ID_FILE_DELTA,
                          CHUNK_DEFINITION_FILE_DELTA,
-                         1,
+                         archiveEntryInfo->blockLength,
                          &archiveEntryInfo->file.chunkFileDelta.cryptInfo,
                          &archiveEntryInfo->file.chunkFileDelta
                         );
@@ -4893,7 +4893,7 @@ Errors Archive_readImageEntry(ArchiveInfo        *archiveInfo,
                          NULL,
                          CHUNK_ID_IMAGE_DELTA,
                          CHUNK_DEFINITION_IMAGE_DELTA,
-                         1,
+                         archiveEntryInfo->blockLength,
                          &archiveEntryInfo->image.chunkImageDelta.cryptInfo,
                          &archiveEntryInfo->image.chunkImageDelta
                         );
@@ -5880,7 +5880,7 @@ Errors Archive_readHardLinkEntry(ArchiveInfo        *archiveInfo,
                          NULL,
                          CHUNK_ID_HARDLINK_DELTA,
                          CHUNK_DEFINITION_HARDLINK_DELTA,
-                         1,
+                         archiveEntryInfo->blockLength,
                          &archiveEntryInfo->hardLink.chunkHardLinkDelta.cryptInfo,
                          &archiveEntryInfo->hardLink.chunkHardLinkDelta
                         );
