@@ -2324,6 +2324,7 @@ Errors Archive_create(ArchiveInfo                     *archiveInfo,
     // check if public key available
     if (jobOptions->cryptPublicKeyFileName == NULL)
     {
+      String_delete(archiveInfo->printableName);
       String_delete(archiveInfo->file.fileName);
       return ERROR_NO_PUBLIC_KEY;
     }
@@ -2336,6 +2337,7 @@ Errors Archive_create(ArchiveInfo                     *archiveInfo,
                              );
     if (error != ERROR_NONE)
     {
+      String_delete(archiveInfo->printableName);
       String_delete(archiveInfo->file.fileName);
       return error;
     }
@@ -2364,6 +2366,7 @@ Errors Archive_create(ArchiveInfo                     *archiveInfo,
                                        );
       if (error != ERROR_NONE)
       {
+        String_delete(archiveInfo->printableName);
         String_delete(archiveInfo->file.fileName);
         return error;
       }
