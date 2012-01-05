@@ -2502,6 +2502,13 @@ if (String_length(line)>0) fprintf(stderr,"%s,%d: error=%s\n",__FILE__,__LINE__,
           String_delete(loginName);
         }
         break;
+      case STORAGE_TYPE_CD:
+      case STORAGE_TYPE_DVD:
+      case STORAGE_TYPE_BD:
+      case STORAGE_TYPE_DEVICE:
+        printError("List archives on CD/DVD/BD/device is not supported!\n");
+        failError = ERROR_FUNCTION_NOT_SUPPORTED;
+        break;
       default:
         #ifndef NDEBUG
           HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
