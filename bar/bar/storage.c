@@ -3829,6 +3829,8 @@ Errors Storage_open(StorageFileHandle *storageFileHandle,
         return error;
       }
 #endif /* 0 */
+      UNUSED_VARIABLE(fileName);
+      return ERROR_FUNCTION_NOT_SUPPORTED;
       break;
     #ifndef NDEBUG
       default:
