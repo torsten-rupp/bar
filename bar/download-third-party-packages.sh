@@ -36,6 +36,7 @@ gcryptFlag=0
 ftplibFlag=0
 libssh2Flag=0
 gnutlsFlag=0
+libcdioFlag=0
 epmFlag=0
 destination=""
 noDecompressFlag=0
@@ -106,6 +107,10 @@ while test $# != 0; do
           allFlag=0
           gnutlsFlag=1
           ;;
+        libcdio)
+          allFlag=0
+          libcdioFlag=1
+          ;;
         epm)
           allFlag=0
           epmFlag=1
@@ -156,6 +161,10 @@ while test $# != 0; do
       allFlag=0
       gnutlsFlag=1
       ;;
+    libcdio)
+      allFlag=0
+      libcdioFlag=1
+      ;;
     epm)
       allFlag=0
       epmFlag=1
@@ -168,7 +177,7 @@ while test $# != 0; do
   shift
 done
 if test $helpFlag -eq 1; then
-  $ECHO "download-third-party-packages.sh [-d|--destination=<path>] [-n|--no-decompress] [-c|--clean] [--help] [all] [zlib] [bzip2] [lzma] [xdelta] [gcrypt] [ftplib] [libssh2] [gnutls] [epm]"
+  $ECHO "download-third-party-packages.sh [-d|--destination=<path>] [-n|--no-decompress] [-c|--clean] [--help] [all] [zlib] [bzip2] [lzma] [xdelta] [gcrypt] [ftplib] [libssh2] [gnutls] [libcdio] [epm]"
   $ECHO ""
   $ECHO "Download additional third party packages."
   exit 0
@@ -357,6 +366,27 @@ if test $cleanFlag -eq 0; then
     fi
   fi
 
+  if test $allFlag -eq 1 -o $libcdioFlag -eq 1; then
+    # libcdio 0.83
+    (
+     if test -n "$destination"; then
+       cd $destination
+     else
+       cd $tmpDirectory
+     fi
+     
+     if test ! -f libcdio-0.83.tar.gz; then
+       $WGET 'ftp://ftp.gnu.org/gnu/libcdio/libcdio-0.83.tar.gz'
+     fi
+     if test $noDecompressFlag -eq 0; then
+       $TAR xzf libcdio-0.83.tar.gz
+     fi
+    )
+    if test $noDecompressFlag -eq 0; then
+      $LN -f -s $tmpDirectory/libcdio-0.83 libcdio
+    fi
+  fi
+
   if test $allFlag -eq 1 -o $epmFlag -eq 1; then
     # epm 4.1
     (
@@ -434,6 +464,13 @@ else
     $RMF $tmpDirectory/gnutls-*.tar.bz2
     $RMRF $tmpDirectory/gnutls-*
     $RMF gnutls
+  fi
+
+  if test $allFlag -eq 1 -o $libcdioFlag -eq 1; then
+    # gnutls
+    $RMF $tmpDirectory/libcdio-*.tar.gz
+    $RMRF $tmpDirectory/libcdio-*
+    $RMF libcdio
   fi
 
   if test $allFlag -eq 1 -o $epmFlag -eq 1; then
