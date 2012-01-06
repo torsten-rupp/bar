@@ -525,7 +525,7 @@ Errors __File_openCString(const char *__fileName__,
     case FILE_OPEN_WRITE:
       /* create directory if needed */
       pathName = File_getFilePathNameCString(File_newFileName(),fileName);
-      if (!File_exists(pathName))
+      if (!String_empty(pathName) && !File_exists(pathName))
       {
         error = File_makeDirectory(pathName,
                                    FILE_DEFAULT_USER_ID,
@@ -534,6 +534,7 @@ Errors __File_openCString(const char *__fileName__,
                                   );
         if (error != ERROR_NONE)
         {
+          File_deleteFileName(pathName);
           return error;
         }
       }
@@ -564,7 +565,7 @@ Errors __File_openCString(const char *__fileName__,
     case FILE_OPEN_APPEND:
       /* create directory if needed */
       pathName = File_getFilePathNameCString(File_newFileName(),fileName);
-      if (!File_exists(pathName))
+      if (!String_empty(pathName) && !File_exists(pathName))
       {
         error = File_makeDirectory(pathName,
                                    FILE_DEFAULT_USER_ID,
@@ -573,6 +574,7 @@ Errors __File_openCString(const char *__fileName__,
                                   );
         if (error != ERROR_NONE)
         {
+          File_deleteFileName(pathName);
           return error;
         }
       }
