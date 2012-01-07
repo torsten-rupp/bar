@@ -1,0 +1,51 @@
+--- cdio/cdio_config.h.org	2012-01-07 07:47:42.505218556 +0100
++++ cdio/cdio_config.h	2012-01-07 07:47:47.485218556 +0100
+@@ -302,27 +302,6 @@
+ /* Define to 1 if your C compiler doesn't accept -c and -o together. */
+ /* #undef NO_MINUS_C_MINUS_O */
+ 
+-/* Name of package */
+-#define PACKAGE "libcdio"
+-
+-/* Define to the address where bug reports for this package should be sent. */
+-#define PACKAGE_BUGREPORT "libcdio-help@gnu.org"
+-
+-/* Define to the full name of this package. */
+-#define PACKAGE_NAME "libcdio"
+-
+-/* Define to the full name and version of this package. */
+-#define PACKAGE_STRING "libcdio 0.83"
+-
+-/* Define to the one symbol short name of this package. */
+-#define PACKAGE_TARNAME "libcdio"
+-
+-/* Define to the home page for this package. */
+-#define PACKAGE_URL ""
+-
+-/* Define to the version of this package. */
+-#define PACKAGE_VERSION "0.83"
+-
+ /* Define to 1 if you have the ANSI C header files. */
+ #define STDC_HEADERS 1
+ 
+--- cdio/types.h.org	2012-01-07 07:45:36.385218532 +0100
++++ cdio/types.h	2012-01-07 07:47:56.475218558 +0100
+@@ -105,18 +105,6 @@
+ # endif
+ #endif
+   
+-#ifndef __cplusplus
+-# if defined(HAVE_STDBOOL_H)
+-#  include <stdbool.h>
+-# else
+-   /* ISO/IEC 9899:1999 <stdbool.h> missing -- enabling workaround */
+-  
+-#   define false   0
+-#   define true    1
+-#   define bool uint8_t
+-# endif /*HAVE_STDBOOL_H*/
+-#endif /*C++*/
+-  
+   /* some GCC optimizations -- gcc 2.5+ */
+   
+ #if __GNUC__ > 2 || (__GNUC__ == 2 && __GNUC_MINOR__ > 4)
