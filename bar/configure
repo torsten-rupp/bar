@@ -5621,62 +5621,6 @@ if test "$ac_res" != no; then :
   LIBRARIES="$LIBRARIES dl"
 fi
 
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing iso9660_open" >&5
-$as_echo_n "checking for library containing iso9660_open... " >&6; }
-if test "${ac_cv_search_iso9660_open+set}" = set; then :
-  $as_echo_n "(cached) " >&6
-else
-  ac_func_search_save_LIBS=$LIBS
-cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-
-/* Override any GCC internal prototype to avoid an error.
-   Use char because int might match the return type of a GCC
-   builtin and then its argument prototype would still apply.  */
-#ifdef __cplusplus
-extern "C"
-#endif
-char iso9660_open ();
-int
-main ()
-{
-return iso9660_open ();
-  ;
-  return 0;
-}
-_ACEOF
-for ac_lib in '' iso9660; do
-  if test -z "$ac_lib"; then
-    ac_res="none required"
-  else
-    ac_res=-l$ac_lib
-    LIBS="-l$ac_lib  $ac_func_search_save_LIBS"
-  fi
-  if ac_fn_c_try_link "$LINENO"; then :
-  ac_cv_search_iso9660_open=$ac_res
-fi
-rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext
-  if test "${ac_cv_search_iso9660_open+set}" = set; then :
-  break
-fi
-done
-if test "${ac_cv_search_iso9660_open+set}" = set; then :
-
-else
-  ac_cv_search_iso9660_open=no
-fi
-rm conftest.$ac_ext
-LIBS=$ac_func_search_save_LIBS
-fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_iso9660_open" >&5
-$as_echo "$ac_cv_search_iso9660_open" >&6; }
-ac_res=$ac_cv_search_iso9660_open
-if test "$ac_res" != no; then :
-  test "$ac_res" = "none required" || LIBS="$ac_res $LIBS"
-
-fi
-
 
 # optional packages
 cwd=`pwd`
@@ -7984,7 +7928,7 @@ fi
 fi
 
 if test $ENABLE_ISO9660 = "yes"; then
-  if test -d libiso9660 -o -d "`readlink libiso9660`"; then
+  if test -d libcdio -o -d "`readlink libcdio`"; then
 
     mkdir packages 2>/dev/null
     mkdir packages/include 2>/dev/null
@@ -7992,11 +7936,19 @@ if test $ENABLE_ISO9660 = "yes"; then
     cwd=`pwd`
 
 
-  $as_echo_n "Compile libiso9660... " >&6
+  $as_echo_n "Compile libcdio... " >&6
 
     result=1
     if test $result -eq 1; then
-      (cd libiso9660; make clean; make) 1>/dev/null 2>/dev/null
+      (cd libcdio; ./configure --prefix=$cwd/packages --disable-cxx --enable-static=iso9660 --disable-shared) 1>/dev/null 2>/dev/null
+      if test $? -ne 0; then
+        { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (configure)" >&5
+$as_echo "fail (configure)" >&6; }
+        result=0
+      fi
+    fi
+    if test $result -eq 1; then
+      (cd libcdio; make clean; make) 1>/dev/null 2>/dev/null
       if test $? -ne 0; then
         { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (make)" >&5
 $as_echo "fail (make)" >&6; }
@@ -8004,13 +7956,22 @@ $as_echo "fail (make)" >&6; }
       fi
     fi
     if test $result -eq 1; then
-      (cd libiso9660; make install PREFIX=$cwd/packages) 1>/dev/null 2>/dev/null
+      (cd libcdio; make install PREFIX=$cwd/packages) 1>/dev/null 2>/dev/null
       if test $? -ne 0; then
         { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (make)" >&5
 $as_echo "fail (make)" >&6; }
         result=0
       fi
     fi
+    if test $result -eq 1; then
+      (cd $cwd/packages/include; patch --batch -N -p0 <$cwd/misc/libcdio-config.patch) 1>/dev/null 2>/dev/null
+      if test $? -ne 0; then
+        { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (make)" >&5
+$as_echo "fail (make)" >&6; }
+        result=0
+      fi
+    fi
+
     if test $result -eq 1; then
       { $as_echo "$as_me:${as_lineno-$LINENO}: result: done" >&5
 $as_echo "done" >&6; }
@@ -8020,7 +7981,7 @@ $as_echo "done" >&6; }
       HAVE_ISO9660=1
       CC_INCLUDES="$CC_INCLUDES $cwd/packages/include"
       LIBRARY_PATHS="$LIBRARY_PATHS $cwd/packages/lib"
-      STATIC_LIBRARIES="$STATIC_LIBRARIES iso9660"
+      STATIC_LIBRARIES="$STATIC_LIBRARIES iso9660 cdio"
 
 $as_echo "#define HAVE_ISO9660 1" >>confdefs.h
 
@@ -8080,7 +8041,7 @@ $as_echo "$ac_cv_search_iso9660_open" >&6; }
 ac_res=$ac_cv_search_iso9660_open
 if test "$ac_res" != no; then :
   test "$ac_res" = "none required" || LIBS="$ac_res $LIBS"
-  HAVE_ISO9660=1;LIBRARIES="$LIBRARIES bz2";
+  HAVE_ISO9660=1;LIBRARIES="$LIBRARIES iso9660 cdio";
 $as_echo "#define HAVE_ISO9660 1" >>confdefs.h
 
 fi
@@ -8145,7 +8106,7 @@ fi
 $as_echo "$ac_cv_search_static_iso9660_open" >&6; }
   ac_res=$ac_cv_search_static_iso9660_open
   if test "$ac_res" != no; then :
-  test "$ac_res" = "none required" || LIBS="$ac_res $LIBS" HAVE_ISO9660=1;STATIC_LIBRARIES="$STATIC_LIBRARIES iso9660";
+  test "$ac_res" = "none required" || LIBS="$ac_res $LIBS" HAVE_ISO9660=1;STATIC_LIBRARIES="$STATIC_LIBRARIES iso9660 cdio";
 $as_echo "#define HAVE_ISO9660 1" >>confdefs.h
 
 fi
@@ -8205,7 +8166,7 @@ $as_echo "$ac_cv_search_iso9660_open" >&6; }
 ac_res=$ac_cv_search_iso9660_open
 if test "$ac_res" != no; then :
   test "$ac_res" = "none required" || LIBS="$ac_res $LIBS"
-  HAVE_ISO9660=1;LIBRARIES="$LIBRARIES iso9660";
+  HAVE_ISO9660=1;LIBRARIES="$LIBRARIES iso9660 cdio";
 $as_echo "#define HAVE_ISO9660 1" >>confdefs.h
 
 fi
@@ -8470,6 +8431,8 @@ if test "$mandir" = "\${prefix}/man"; then
 else
   MAN_DIR=${mandir}
 fi
+
+ac_config_commands="$ac_config_commands SET_PACKAGE_IN_CONFIG_H"
 
 ac_config_files="$ac_config_files Makefile"
 
@@ -9204,6 +9167,7 @@ for ac_config_target in $ac_config_targets
 do
   case $ac_config_target in
     "bar/config.h") CONFIG_HEADERS="$CONFIG_HEADERS bar/config.h" ;;
+    "SET_PACKAGE_IN_CONFIG_H") CONFIG_COMMANDS="$CONFIG_COMMANDS SET_PACKAGE_IN_CONFIG_H" ;;
     "Makefile") CONFIG_FILES="$CONFIG_FILES Makefile" ;;
     "bar/Makefile") CONFIG_FILES="$CONFIG_FILES bar/Makefile" ;;
     "barcontrol/Makefile") CONFIG_FILES="$CONFIG_FILES barcontrol/Makefile" ;;
@@ -9762,6 +9726,8 @@ $as_echo "$as_me: executing $ac_file commands" >&6;}
 
 
   case $ac_file$ac_mode in
+    "SET_PACKAGE_IN_CONFIG_H":C) sed -i 's/#define PACKAGE_/#define BAR_PACKAGE_/g' bar/config.h
+                   ;;
     "BUILD_NOTE":C) echo "";
                     echo "Configuration:";
                     echo "  debug version     : `if test "$ENABLE_DEBUG" = "yes"; then echo yes; else echo no; fi`";

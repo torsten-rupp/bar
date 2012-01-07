@@ -1138,18 +1138,18 @@ if test $ENABLE_TLS = "yes"; then
 fi
 
 if test $ENABLE_ISO9660 = "yes"; then
-  if test -d libiso9660 -o -d "`readlink libiso9660`"; then
-    dnl compile libiso9660 library
+  if test -d libcdio -o -d "`readlink libcdio`"; then
+    dnl compile libcdio library
 
     mkdir packages 2>/dev/null
     mkdir packages/include 2>/dev/null
     mkdir packages/lib 2>/dev/null
     cwd=`pwd`
 
-    AC_MSG_COMPILE([libiso9660])
+    AC_MSG_COMPILE([libcdio])
     result=1
     if test $result -eq 1; then
-      (cd libcdio; ./configure --prefix=$cwd/packages --enable-debug) 1>/dev/null 2>/dev/null
+      (cd libcdio; ./configure --prefix=$cwd/packages --disable-cxx --enable-static=iso9660 --disable-shared) 1>/dev/null 2>/dev/null
       if test $? -ne 0; then 
         AC_MSG_RESULT([fail (configure)])
         result=0
@@ -1170,6 +1170,14 @@ if test $ENABLE_ISO9660 = "yes"; then
       fi
     fi
     if test $result -eq 1; then
+      (cd $cwd/packages/include; patch --batch -N -p0 <$cwd/misc/libcdio-config.patch) 1>/dev/null 2>/dev/null
+      if test $? -ne 0; then 
+        AC_MSG_RESULT([fail (make)])
+        result=0
+      fi
+    fi
+
+    if test $result -eq 1; then
       AC_MSG_RESULT([done])
     fi
 
@@ -1177,19 +1185,19 @@ if test $ENABLE_ISO9660 = "yes"; then
       HAVE_ISO9660=1
       CC_INCLUDES="$CC_INCLUDES $cwd/packages/include"
       LIBRARY_PATHS="$LIBRARY_PATHS $cwd/packages/lib"
-      STATIC_LIBRARIES="$STATIC_LIBRARIES iso9660"
+      STATIC_LIBRARIES="$STATIC_LIBRARIES iso9660 cdio"
       AC_DEFINE(HAVE_ISO9660,1,[iso9660 installed (local)])
     fi
   else
     dnl search for installed iso9660 library
     if test $ENABLE_LINK_DYNAMIC = "yes"; then
-      AC_SEARCH_LIBS(iso9660_open,iso9660,[HAVE_ISO9660=1;LIBRARIES="$LIBRARIES bz2";AC_DEFINE(HAVE_ISO9660,1,[iso9660 installed])])
+      AC_SEARCH_LIBS(iso9660_open,iso9660,[HAVE_ISO9660=1;LIBRARIES="$LIBRARIES iso9660 cdio";AC_DEFINE(HAVE_ISO9660,1,[iso9660 installed])])
     else
       if test -z "$HAVE_ISO9660"; then
-        AC_SEARCH_STATIC_LIBS(iso9660_open,iso9660,[HAVE_ISO9660=1;STATIC_LIBRARIES="$STATIC_LIBRARIES iso9660";AC_DEFINE(HAVE_ISO9660,1,[static iso9660 installed])])
+        AC_SEARCH_STATIC_LIBS(iso9660_open,iso9660,[HAVE_ISO9660=1;STATIC_LIBRARIES="$STATIC_LIBRARIES iso9660 cdio";AC_DEFINE(HAVE_ISO9660,1,[static iso9660 installed])])
       fi
       if test -z "$HAVE_ISO9660"; then
-        AC_SEARCH_LIBS(iso9660_open,iso9660,[HAVE_ISO9660=1;LIBRARIES="$LIBRARIES iso9660";AC_DEFINE(HAVE_ISO9660,1,[iso9660 installed])])
+        AC_SEARCH_LIBS(iso9660_open,iso9660,[HAVE_ISO9660=1;LIBRARIES="$LIBRARIES iso9660 cdio";AC_DEFINE(HAVE_ISO9660,1,[iso9660 installed])])
       fi
     fi
   fi
@@ -1301,6 +1309,10 @@ else
   MAN_DIR=${mandir}
 fi
 
+dnl patch PACKAGE entries in config.h
+AC_CONFIG_COMMANDS(SET_PACKAGE_IN_CONFIG_H,
+                   [sed -i 's/#define PACKAGE_/#define BAR_PACKAGE_/g' bar/config.h]
+                  )
 dnl make files
 AC_CONFIG_FILES(Makefile)
 AC_CONFIG_FILES(bar/Makefile)
