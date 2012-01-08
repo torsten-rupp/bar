@@ -629,8 +629,8 @@ bool CmdOption_init(CommandLineOption commandLineOptions[],
         break;
       case CMD_OPTION_TYPE_BOOLEAN:
         assert(commandLineOptions[i].variable.b != NULL);
-        assert(   ((*commandLineOptions[i].variable.i) == TRUE )
-               || ((*commandLineOptions[i].variable.i) == FALSE)
+        assert(   ((*commandLineOptions[i].variable.b) == TRUE )
+               || ((*commandLineOptions[i].variable.b) == FALSE)
               );
         commandLineOptions[i].defaultValue.b = (*commandLineOptions[i].variable.b);
         break;
