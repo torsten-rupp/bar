@@ -58,6 +58,21 @@
 /* Define to 1 if you have the <inttypes.h> header file. */
 #undef HAVE_INTTYPES_H
 
+/* iso9660 installed */
+#undef HAVE_ISO9660
+
+/* iso9660_close() available */
+#undef HAVE_ISO9660_CLOSE
+
+/* iso9660_ifs_stat_translate() available */
+#undef HAVE_ISO9660_IFS_STAT_TRANSLATE
+
+/* iso9660_iso_seek_read() available */
+#undef HAVE_ISO9660_ISO_SEEK_READ
+
+/* iso9660_open() available */
+#undef HAVE_ISO9660_OPEN
+
 /* defined if LLONG_MAX is available */
 #undef HAVE_LLONG_MAX
 
@@ -91,10 +106,10 @@
 /* SSH2 has libssh2_keepalive_send() */
 #undef HAVE_SSH2_KEEPALIVE_SEND
 
-/* SSH2 has libssh2_scp_send64() function. */
+/* SSH2 has libssh2_scp_send64() function */
 #undef HAVE_SSH2_SCP_SEND64
 
-/* SSH2 has libssh2_sftp_seek2() function. */
+/* SSH2 has libssh2_sftp_seek2() function */
 #undef HAVE_SSH2_SFTP_SEEK2
 
 /* Define to 1 if you have the <stdint.h> header file. */
