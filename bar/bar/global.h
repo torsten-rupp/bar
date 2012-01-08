@@ -109,7 +109,7 @@
 
 /**************************** Datatypes ********************************/
 #ifndef __cplusplus
-  typedef int                bool;
+  typedef unsigned char    bool;
 #endif
 typedef unsigned char      uchar;
 typedef short int          shortint;
