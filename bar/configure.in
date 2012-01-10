@@ -639,6 +639,8 @@ for z in $LIBRARY_PATHS ""; do
   fi
 done
 
+AC_CHECK_HEADERS(stdbool.h)
+
 AC_C_LONG_LONG(AC_DEFINE(HAVE_LONG_LONG,1,[defined if long long data type available]),AC_MSG_ERROR(long long data type not available))
 AC_TRY_COMPILE([#include <limits.h>],[long long int x=LLONG_MIN;],AC_DEFINE(HAVE_LLONG_MIN,1,[defined if LLONG_MIN is available]))
 AC_TRY_COMPILE([#include <limits.h>],[long long int x=LLONG_MAX;],AC_DEFINE(HAVE_LLONG_MAX,1,[defined if LLONG_MAX is available]))
@@ -1149,7 +1151,11 @@ if test $ENABLE_ISO9660 = "yes"; then
     AC_MSG_COMPILE([libcdio])
     result=1
     if test $result -eq 1; then
-      (cd libcdio; ./configure --prefix=$cwd/packages --disable-cxx --enable-static=iso9660 --disable-shared) 1>/dev/null 2>/dev/null
+      if test "$ENABLE_DEBUG" = "yes"; then
+        (cd libcdio; CFLAGS="-g -O0" CXXFLAGS="-g -O0" ./configure --prefix=$cwd/packages --disable-cxx --enable-static=iso9660 --disable-shared) 1>/dev/null 2>/dev/null
+      else
+        (cd libcdio; ./configure --prefix=$cwd/packages --disable-cxx --enable-static=iso9660 --disable-shared) 1>/dev/null 2>/dev/null
+      fi
       if test $? -ne 0; then 
         AC_MSG_RESULT([fail (configure)])
         result=0
@@ -1165,18 +1171,10 @@ if test $ENABLE_ISO9660 = "yes"; then
     if test $result -eq 1; then
       (cd libcdio; make install PREFIX=$cwd/packages) 1>/dev/null 2>/dev/null
       if test $? -ne 0; then 
-        AC_MSG_RESULT([fail (make)])
+        AC_MSG_RESULT([fail (install)])
         result=0
       fi
     fi
-    if test $result -eq 1; then
-      (cd $cwd/packages/include; patch --batch -N -p0 <$cwd/misc/libcdio-config.patch) 1>/dev/null 2>/dev/null
-      if test $? -ne 0; then 
-        AC_MSG_RESULT([fail (make)])
-        result=0
-      fi
-    fi
-
     if test $result -eq 1; then
       AC_MSG_RESULT([done])
     fi
