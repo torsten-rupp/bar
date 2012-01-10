@@ -23,6 +23,10 @@
   #include <libssh2.h>
   #include <libssh2_sftp.h>
 #endif /* HAVE_SSH2 */
+#ifdef HAVE_ISO9660
+  #include <cdio/cdio.h>
+  #include <cdio/iso9660.h>
+#endif /* HAVE_ISO9660 */
 #include <assert.h>
 
 #include "global.h"
@@ -97,6 +101,8 @@ typedef enum
 {
   STORAGE_MODE_READ,
   STORAGE_MODE_WRITE,
+
+  STORAGE_MODE_UNKNOWN,
 } StorageModes;
 
 /* storage types */
@@ -246,36 +252,57 @@ typedef struct
     // cd/dvd/bd storage
     struct
     {
-      String     name;                                 // CD/DVD/BD device name
+      String     name;                                 // cd/dvd/bd device name
 
-      String     requestVolumeCommand;                 // command to request new CD/DVD/BD
-      String     unloadVolumeCommand;                  // command to unload CD/DVD/BD
-      String     loadVolumeCommand;                    // command to load CD/DVD/BD
-      uint64     volumeSize;                           // size of CD/DVD/BD [bytes]
-      String     imagePreProcessCommand;               // command to execute before creating image
-      String     imagePostProcessCommand;              // command to execute after created image
-      String     imageCommand;                         // command to create CD/DVD/BD image
-      String     eccPreProcessCommand;                 // command to execute before ECC calculation
-      String     eccPostProcessCommand;                // command to execute after ECC calculation
-      String     eccCommand;                           // command for ECC calculation
-      String     writePreProcessCommand;               // command to execute before writing CD/DVD/BD
-      String     writePostProcessCommand;              // command to execute after writing CD/DVD/BD
-      String     writeCommand;                         // command to write CD/DVD/BD
-      String     writeImageCommand;                    // command to write image on CD/DVD/BD
-      bool       alwaysCreateImage;                    // TRUE iff always creating image
+      // read cd/dvd/bd
+      struct
+      {
+        #ifdef HAVE_ISO9660
+          iso9660_t      *iso9660Handle;               // ISO9660 image handle
+          iso9660_stat_t *iso9660Stat;                 // ISO9660 file handle
+          uint64         index;                        // current read/write index in ISO image [0..n-1]
+        #endif /* HAVE_ISO9660 */
 
-      uint       steps;                                // total number of steps to create CD/DVD/BD
-      String     directory;                            // temporary directory for CD/DVD/BD files
+        struct                                         // read buffer
+        {
+          byte   *data;
+          uint64 blockIndex;
+          ulong  length;
+        } buffer;
+      } read;
 
-      uint       step;                                 // current step number
-      double     progress;                             // progress of current step
+      // write cd/dvd/bd
+      struct
+      {
+        String     requestVolumeCommand;               // command to request new cd/dvd/bd
+        String     unloadVolumeCommand;                // command to unload cd/dvd/bd
+        String     loadVolumeCommand;                  // command to load cd/dvd/bd
+        uint64     volumeSize;                         // size of cd/dvd/bd [bytes]
+        String     imagePreProcessCommand;             // command to execute before creating image
+        String     imagePostProcessCommand;            // command to execute after created image
+        String     imageCommand;                       // command to create cd/dvd/bd image
+        String     eccPreProcessCommand;               // command to execute before ECC calculation
+        String     eccPostProcessCommand;              // command to execute after ECC calculation
+        String     eccCommand;                         // command for ECC calculation
+        String     writePreProcessCommand;             // command to execute before writing cd/dvd/bd
+        String     writePostProcessCommand;            // command to execute after writing cd/dvd/bd
+        String     writeCommand;                       // command to write cd/dvd/bd
+        String     writeImageCommand;                  // command to write image on cd/dvd/bd
+        bool       alwaysCreateImage;                  // TRUE iff always creating image
 
-      uint       number;                               // current CD/DVD/BD number
-      bool       newFlag;                              // TRUE iff new CD/DVD/BD needed
-      StringList fileNameList;                         // list with file names
-      String     fileName;                             // current file name
-      FileHandle fileHandle;
-      uint64     totalSize;                            // current size of CD/DVD/BD [bytes]
+        uint       steps;                              // total number of steps to create cd/dvd/bd
+        String     directory;                          // temporary directory for cd/dvd/bd files
+
+        uint       step;                               // current step number
+        double     progress;                           // progress of current step
+
+        uint       number;                             // current cd/dvd/bd number
+        bool       newFlag;                            // TRUE iff new cd/dvd/bd needed
+        StringList fileNameList;                       // list with file names
+        String     fileName;                           // current file name
+        FileHandle fileHandle;
+        uint64     totalSize;                          // current size of cd/dvd/bd [bytes]
+      } write;
     } opticalDisk;
 
     // device storage
@@ -303,7 +330,7 @@ typedef struct
       bool       newFlag;                              // TRUE iff new volume needed
       StringList fileNameList;                         // list with file names
       String     fileName;                             // current file name
-      FileHandle fileHandle;               
+      FileHandle fileHandle;
       uint64     totalSize;                            // current size [bytes]
     } device;
   };
@@ -415,7 +442,7 @@ StorageTypes Storage_getType(const String storageName);
 * Name   : Storage_parseName
 * Purpose: parse storage name and get storage type
 * Input  : storageName - storage name
-* Output : storageSpecifier - storage specific data (can be NULL)                             
+* Output : storageSpecifier - storage specific data (can be NULL)
 *          fileName         - storage file name (can be NULL)
 * Return : storage type
 * Notes  : storage types supported:

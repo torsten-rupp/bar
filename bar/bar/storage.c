@@ -436,7 +436,7 @@ LOCAL void processExecOutput(void         *dummy,
 
 /***********************************************************************\
 * Name   : requestNewMedium
-* Purpose: request new CD/DVD/BD medium
+* Purpose: request new cd/dvd/bd medium
 * Input  : storageFileHandle - storage file handle
 *          waitFlag          - TRUE to wait for new medium
 * Output : -
@@ -463,7 +463,7 @@ LOCAL Errors requestNewMedium(StorageFileHandle *storageFileHandle, bool waitFla
     // sleep a short time to give hardware time for finishing volume, then unload current volume
     printInfo(0,"Unload medium #%d...",storageFileHandle->volumeNumber);
     Misc_udelay(UNLOAD_VOLUME_DELAY_TIME);
-    Misc_executeCommand(String_cString(storageFileHandle->opticalDisk.unloadVolumeCommand),
+    Misc_executeCommand(String_cString(storageFileHandle->opticalDisk.write.unloadVolumeCommand),
                         textMacros,SIZE_OF_ARRAY(textMacros),
                         (ExecuteIOFunction)processExecOutput,
                         (ExecuteIOFunction)processExecOutput,
@@ -491,7 +491,7 @@ LOCAL Errors requestNewMedium(StorageFileHandle *storageFileHandle, bool waitFla
       {
         // sleep a short time to give hardware time for finishing volume, then unload current medium
         printInfo(0,"Unload medium...");
-        Misc_executeCommand(String_cString(storageFileHandle->opticalDisk.unloadVolumeCommand),
+        Misc_executeCommand(String_cString(storageFileHandle->opticalDisk.write.unloadVolumeCommand),
                             textMacros,SIZE_OF_ARRAY(textMacros),
                             (ExecuteIOFunction)processExecOutput,
                             (ExecuteIOFunction)processExecOutput,
@@ -504,13 +504,13 @@ LOCAL Errors requestNewMedium(StorageFileHandle *storageFileHandle, bool waitFla
 
     storageFileHandle->volumeState = STORAGE_VOLUME_STATE_WAIT;
   }
-  else if (storageFileHandle->opticalDisk.requestVolumeCommand != NULL)
+  else if (storageFileHandle->opticalDisk.write.requestVolumeCommand != NULL)
   {
     mediumRequestedFlag = TRUE;
 
     // request new volume via external command
     printInfo(0,"Request new medium #%d...",storageFileHandle->requestedVolumeNumber);
-    if (Misc_executeCommand(String_cString(storageFileHandle->opticalDisk.requestVolumeCommand),
+    if (Misc_executeCommand(String_cString(storageFileHandle->opticalDisk.write.requestVolumeCommand),
                             textMacros,SIZE_OF_ARRAY(textMacros),
                             (ExecuteIOFunction)processExecOutput,
                             (ExecuteIOFunction)processExecOutput,
@@ -555,7 +555,7 @@ LOCAL Errors requestNewMedium(StorageFileHandle *storageFileHandle, bool waitFla
       case STORAGE_REQUEST_VOLUME_OK:
         // load volume, then sleep a short time to give hardware time for reading volume information
         printInfo(0,"Load medium #%d...",storageFileHandle->requestedVolumeNumber);
-        Misc_executeCommand(String_cString(storageFileHandle->opticalDisk.loadVolumeCommand),
+        Misc_executeCommand(String_cString(storageFileHandle->opticalDisk.write.loadVolumeCommand),
                             textMacros,SIZE_OF_ARRAY(textMacros),
                             (ExecuteIOFunction)processExecOutput,
                             (ExecuteIOFunction)processExecOutput,
@@ -766,7 +766,7 @@ LOCAL void processIOmkisofs(StorageFileHandle *storageFileHandle,
   {
 //fprintf(stderr,"%s,%d: mkisofs: %s\n",__FILE__,__LINE__,String_cString(line));
     p = String_toDouble(s,0,NULL,NULL,0);
-    storageFileHandle->runningInfo.volumeProgress = ((double)storageFileHandle->opticalDisk.step*100.0+p)/(double)(storageFileHandle->opticalDisk.steps*100);
+    storageFileHandle->runningInfo.volumeProgress = ((double)storageFileHandle->opticalDisk.write.step*100.0+p)/(double)(storageFileHandle->opticalDisk.write.steps*100);
     updateStatusInfo(storageFileHandle);
   }
   String_delete(s);
@@ -797,14 +797,14 @@ LOCAL void processIOdvdisaster(StorageFileHandle *storageFileHandle,
   {
 //fprintf(stderr,"%s,%d: dvdisaster1: %s\n",__FILE__,__LINE__,String_cString(line));
     p = String_toDouble(s,0,NULL,NULL,0);
-    storageFileHandle->runningInfo.volumeProgress = ((double)(storageFileHandle->opticalDisk.step+0)*100.0+p)/(double)(storageFileHandle->opticalDisk.steps*100);
+    storageFileHandle->runningInfo.volumeProgress = ((double)(storageFileHandle->opticalDisk.write.step+0)*100.0+p)/(double)(storageFileHandle->opticalDisk.write.steps*100);
     updateStatusInfo(storageFileHandle);
   }
   if (String_matchCString(line,STRING_BEGIN,".*generation: +([0-9\\.]+)%",NULL,NULL,s,NULL))
   {
 //fprintf(stderr,"%s,%d: dvdisaster2: %s\n",__FILE__,__LINE__,String_cString(line));
     p = String_toDouble(s,0,NULL,NULL,0);
-    storageFileHandle->runningInfo.volumeProgress = ((double)(storageFileHandle->opticalDisk.step+1)*100.0+p)/(double)(storageFileHandle->opticalDisk.steps*100);
+    storageFileHandle->runningInfo.volumeProgress = ((double)(storageFileHandle->opticalDisk.write.step+1)*100.0+p)/(double)(storageFileHandle->opticalDisk.write.steps*100);
     updateStatusInfo(storageFileHandle);
   }
 
@@ -836,7 +836,7 @@ LOCAL void processIOgrowisofs(StorageFileHandle *storageFileHandle,
   {
 //fprintf(stderr,"%s,%d: growisofs2: %s\n",__FILE__,__LINE__,String_cString(line));
     p = String_toDouble(s,0,NULL,NULL,0);
-    storageFileHandle->runningInfo.volumeProgress = ((double)storageFileHandle->opticalDisk.step*100.0+p)/(double)(storageFileHandle->opticalDisk.steps*100);
+    storageFileHandle->runningInfo.volumeProgress = ((double)storageFileHandle->opticalDisk.write.step*100.0+p)/(double)(storageFileHandle->opticalDisk.write.steps*100);
     updateStatusInfo(storageFileHandle);
   }
   String_delete(s);
@@ -1430,6 +1430,7 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
   assert(jobOptions != NULL);
   assert(fileName != NULL);
 
+  storageFileHandle->mode                      = STORAGE_MODE_UNKNOWN;
   storageFileHandle->jobOptions                = jobOptions;
   storageFileHandle->requestVolumeFunction     = storageRequestVolumeFunction;
   storageFileHandle->requestVolumeUserData     = storageRequestVolumeUserData;
@@ -1831,7 +1832,7 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
           }
         }
 
-        // get CD/DVD/BD settings
+        // get cd/dvd/bd settings
         switch (storageType)
         {
           case STORAGE_TYPE_CD:
@@ -1851,7 +1852,7 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
         }
 
         /* check space in temporary directory: should be enough to hold
-           raw CD/DVD/BD data (volumeSize) and CD/DVD image (4G, single layer)
+           raw cd/dvd/bd data (volumeSize) and cd/dvd image (4G, single layer)
            including error correction codes (2x)
         */
         error = File_getFileSystemInfo(&fileSystemInfo,tmpDirectory);
@@ -1917,45 +1918,54 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
         }
 
         // init variables
-        storageFileHandle->type                               = storageType;
-        storageFileHandle->opticalDisk.name                   = deviceName;
-        storageFileHandle->opticalDisk.requestVolumeCommand   = opticalDisk.requestVolumeCommand;
-        storageFileHandle->opticalDisk.unloadVolumeCommand    = opticalDisk.unloadVolumeCommand;
-        storageFileHandle->opticalDisk.loadVolumeCommand      = opticalDisk.loadVolumeCommand;
-        storageFileHandle->opticalDisk.volumeSize             = volumeSize;
-        storageFileHandle->opticalDisk.imagePreProcessCommand = opticalDisk.imagePreProcessCommand;
-        storageFileHandle->opticalDisk.imagePostProcessCommand= opticalDisk.imagePostProcessCommand;
-        storageFileHandle->opticalDisk.imageCommand           = opticalDisk.imageCommand;
-        storageFileHandle->opticalDisk.eccPreProcessCommand   = opticalDisk.eccPreProcessCommand;
-        storageFileHandle->opticalDisk.eccPostProcessCommand  = opticalDisk.eccPostProcessCommand;
-        storageFileHandle->opticalDisk.eccCommand             = opticalDisk.eccCommand;
-        storageFileHandle->opticalDisk.writePreProcessCommand = opticalDisk.writePreProcessCommand;
-        storageFileHandle->opticalDisk.writePostProcessCommand= opticalDisk.writePostProcessCommand;
-        storageFileHandle->opticalDisk.writeCommand           = opticalDisk.writeCommand;
-        storageFileHandle->opticalDisk.writeImageCommand      = opticalDisk.writeImageCommand;
-        storageFileHandle->opticalDisk.steps                  = jobOptions->errorCorrectionCodesFlag?4:1;
-        storageFileHandle->opticalDisk.directory              = String_new();
-        storageFileHandle->opticalDisk.step                   = 0;
+        storageFileHandle->type                                     = storageType;
+        storageFileHandle->opticalDisk.name                         = deviceName;
+
+        // allocate read-buffer
+        storageFileHandle->opticalDisk.read.buffer.data = (byte*)malloc(ISO_BLOCKSIZE);
+        if (storageFileHandle->opticalDisk.read.buffer.data == NULL)
+        {
+          HALT_INSUFFICIENT_MEMORY();
+        }
+
+        storageFileHandle->opticalDisk.write.requestVolumeCommand   = opticalDisk.requestVolumeCommand;
+        storageFileHandle->opticalDisk.write.unloadVolumeCommand    = opticalDisk.unloadVolumeCommand;
+        storageFileHandle->opticalDisk.write.loadVolumeCommand      = opticalDisk.loadVolumeCommand;
+        storageFileHandle->opticalDisk.write.volumeSize             = volumeSize;
+        storageFileHandle->opticalDisk.write.imagePreProcessCommand = opticalDisk.imagePreProcessCommand;
+        storageFileHandle->opticalDisk.write.imagePostProcessCommand= opticalDisk.imagePostProcessCommand;
+        storageFileHandle->opticalDisk.write.imageCommand           = opticalDisk.imageCommand;
+        storageFileHandle->opticalDisk.write.eccPreProcessCommand   = opticalDisk.eccPreProcessCommand;
+        storageFileHandle->opticalDisk.write.eccPostProcessCommand  = opticalDisk.eccPostProcessCommand;
+        storageFileHandle->opticalDisk.write.eccCommand             = opticalDisk.eccCommand;
+        storageFileHandle->opticalDisk.write.writePreProcessCommand = opticalDisk.writePreProcessCommand;
+        storageFileHandle->opticalDisk.write.writePostProcessCommand= opticalDisk.writePostProcessCommand;
+        storageFileHandle->opticalDisk.write.writeCommand           = opticalDisk.writeCommand;
+        storageFileHandle->opticalDisk.write.writeImageCommand      = opticalDisk.writeImageCommand;
+        storageFileHandle->opticalDisk.write.steps                  = jobOptions->errorCorrectionCodesFlag?4:1;
+        storageFileHandle->opticalDisk.write.directory              = String_new();
+        storageFileHandle->opticalDisk.write.step                   = 0;
         if (jobOptions->waitFirstVolumeFlag)
         {
-          storageFileHandle->opticalDisk.number  = 0;
-          storageFileHandle->opticalDisk.newFlag = TRUE;
+          storageFileHandle->opticalDisk.write.number  = 0;
+          storageFileHandle->opticalDisk.write.newFlag = TRUE;
         }
         else
         {
-          storageFileHandle->opticalDisk.number  = 1;
-          storageFileHandle->opticalDisk.newFlag = FALSE;
+          storageFileHandle->opticalDisk.write.number  = 1;
+          storageFileHandle->opticalDisk.write.newFlag = FALSE;
         }
-        StringList_init(&storageFileHandle->opticalDisk.fileNameList);
-        storageFileHandle->opticalDisk.fileName     = String_new();
-        storageFileHandle->opticalDisk.totalSize    = 0LL;
+        StringList_init(&storageFileHandle->opticalDisk.write.fileNameList);
+        storageFileHandle->opticalDisk.write.fileName               = String_new();
+        storageFileHandle->opticalDisk.write.totalSize              = 0LL;
 
         // create temporary directory for medium files
-        error = File_getTmpDirectoryName(storageFileHandle->opticalDisk.directory,NULL,tmpDirectory);
+        error = File_getTmpDirectoryName(storageFileHandle->opticalDisk.write.directory,NULL,tmpDirectory);
         if (error != ERROR_NONE)
         {
-          String_delete(storageFileHandle->opticalDisk.fileName);
-          String_delete(storageFileHandle->opticalDisk.directory);
+          free(storageFileHandle->opticalDisk.read.buffer.data);
+          String_delete(storageFileHandle->opticalDisk.write.fileName);
+          String_delete(storageFileHandle->opticalDisk.write.directory);
           String_delete(deviceName);
           String_delete(storageSpecifier);
           return error;
@@ -1966,9 +1976,9 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
           // store a copy of BAR executable on medium (ignore errors)
           sourceFileName = String_newCString(globalOptions.barExecutable);
           fileBaseName = File_getFileBaseName(String_new(),sourceFileName);
-          destinationFileName = File_appendFileName(String_duplicate(storageFileHandle->opticalDisk.directory),fileBaseName);
+          destinationFileName = File_appendFileName(String_duplicate(storageFileHandle->opticalDisk.write.directory),fileBaseName);
           File_copy(sourceFileName,destinationFileName);
-          StringList_append(&storageFileHandle->opticalDisk.fileNameList,destinationFileName);
+          StringList_append(&storageFileHandle->opticalDisk.write.fileNameList,destinationFileName);
           String_delete(destinationFileName);
           String_delete(fileBaseName);
           String_delete(sourceFileName);
@@ -2122,11 +2132,11 @@ Errors Storage_done(StorageFileHandle *storageFileHandle)
         Errors error;
         String fileName;
 
-        /* delete files */
+        // delete files
         fileName = String_new();
-        while (!StringList_empty(&storageFileHandle->opticalDisk.fileNameList))
+        while (!StringList_empty(&storageFileHandle->opticalDisk.write.fileNameList))
         {
-          StringList_getFirst(&storageFileHandle->opticalDisk.fileNameList,fileName);
+          StringList_getFirst(&storageFileHandle->opticalDisk.write.fileNameList,fileName);
           error = File_delete(fileName,FALSE);
           if (error != ERROR_NONE)
           {
@@ -2137,11 +2147,12 @@ Errors Storage_done(StorageFileHandle *storageFileHandle)
         String_delete(fileName);
 
         // delete temporare directory
-        File_delete(storageFileHandle->opticalDisk.directory,FALSE);
+        File_delete(storageFileHandle->opticalDisk.write.directory,FALSE);
 
         // free resources
-        String_delete(storageFileHandle->opticalDisk.fileName);
-        String_delete(storageFileHandle->opticalDisk.directory);
+        free(storageFileHandle->opticalDisk.read.buffer.data);
+        String_delete(storageFileHandle->opticalDisk.write.fileName);
+        String_delete(storageFileHandle->opticalDisk.write.directory);
         String_delete(storageFileHandle->opticalDisk.name);
       }
       break;
@@ -2305,6 +2316,7 @@ Errors Storage_preProcess(StorageFileHandle *storageFileHandle,
   Errors error;
 
   assert(storageFileHandle != NULL);
+  assert(storageFileHandle->jobOptions != NULL);
 
   error = ERROR_NONE;
   switch (storageFileHandle->type)
@@ -2470,12 +2482,12 @@ Errors Storage_preProcess(StorageFileHandle *storageFileHandle,
       if (!storageFileHandle->jobOptions->dryRunFlag)
       {
         // request next medium
-        if (storageFileHandle->opticalDisk.newFlag)
+        if (storageFileHandle->opticalDisk.write.newFlag)
         {
-          storageFileHandle->opticalDisk.number++;
-          storageFileHandle->opticalDisk.newFlag = FALSE;
+          storageFileHandle->opticalDisk.write.number++;
+          storageFileHandle->opticalDisk.write.newFlag = FALSE;
 
-          storageFileHandle->requestedVolumeNumber = storageFileHandle->opticalDisk.number;
+          storageFileHandle->requestedVolumeNumber = storageFileHandle->opticalDisk.write.number;
         }
 
         // check if new medium is required
@@ -2522,6 +2534,7 @@ Errors Storage_postProcess(StorageFileHandle *storageFileHandle,
   Errors error;
 
   assert(storageFileHandle != NULL);
+  assert(storageFileHandle->jobOptions != NULL);
 
   error = ERROR_NONE;
   switch (storageFileHandle->type)
@@ -2692,7 +2705,7 @@ Errors Storage_postProcess(StorageFileHandle *storageFileHandle,
 
         if (!storageFileHandle->jobOptions->dryRunFlag)
         {
-          if (finalFlag || (storageFileHandle->opticalDisk.totalSize > storageFileHandle->opticalDisk.volumeSize))
+          if (finalFlag || (storageFileHandle->opticalDisk.write.totalSize > storageFileHandle->opticalDisk.write.volumeSize))
           {
             // medium size limit reached -> create medium and request new volume
 
@@ -2709,18 +2722,18 @@ Errors Storage_postProcess(StorageFileHandle *storageFileHandle,
             }
 
             // init macros
-            TEXT_MACRO_N_STRING (textMacros[0],"%device",   storageFileHandle->opticalDisk.name     );
-            TEXT_MACRO_N_STRING (textMacros[1],"%directory",storageFileHandle->opticalDisk.directory);
-            TEXT_MACRO_N_STRING (textMacros[2],"%image",    imageFileName                           );
-            TEXT_MACRO_N_INTEGER(textMacros[3],"%sectors",  0                                       );
-            TEXT_MACRO_N_INTEGER(textMacros[4],"%number",   storageFileHandle->volumeNumber         );
+            TEXT_MACRO_N_STRING (textMacros[0],"%device",   storageFileHandle->opticalDisk.name           );
+            TEXT_MACRO_N_STRING (textMacros[1],"%directory",storageFileHandle->opticalDisk.write.directory);
+            TEXT_MACRO_N_STRING (textMacros[2],"%image",    imageFileName                                 );
+            TEXT_MACRO_N_INTEGER(textMacros[3],"%sectors",  0                                             );
+            TEXT_MACRO_N_INTEGER(textMacros[4],"%number",   storageFileHandle->volumeNumber               );
 
             if (storageFileHandle->jobOptions->alwaysCreateImageFlag || storageFileHandle->jobOptions->errorCorrectionCodesFlag)
             {
               // create medium image
-              printInfo(0,"Make medium image #%d with %d file(s)...",storageFileHandle->opticalDisk.number,StringList_count(&storageFileHandle->opticalDisk.fileNameList));
-              storageFileHandle->opticalDisk.step = 0;
-              error = Misc_executeCommand(String_cString(storageFileHandle->opticalDisk.imageCommand),
+              printInfo(0,"Make medium image #%d with %d file(s)...",storageFileHandle->opticalDisk.write.number,StringList_count(&storageFileHandle->opticalDisk.write.fileNameList));
+              storageFileHandle->opticalDisk.write.step = 0;
+              error = Misc_executeCommand(String_cString(storageFileHandle->opticalDisk.write.imageCommand),
                                           textMacros,SIZE_OF_ARRAY(textMacros),
                                           (ExecuteIOFunction)processIOmkisofs,
                                           (ExecuteIOFunction)processIOmkisofs,
@@ -2739,9 +2752,9 @@ Errors Storage_postProcess(StorageFileHandle *storageFileHandle,
               if (storageFileHandle->jobOptions->errorCorrectionCodesFlag)
               {
                 // add error-correction codes to medium image
-                printInfo(0,"Add ECC to image #%d...",storageFileHandle->opticalDisk.number);
-                storageFileHandle->opticalDisk.step = 1;
-                error = Misc_executeCommand(String_cString(storageFileHandle->opticalDisk.eccCommand),
+                printInfo(0,"Add ECC to image #%d...",storageFileHandle->opticalDisk.write.number);
+                storageFileHandle->opticalDisk.write.step = 1;
+                error = Misc_executeCommand(String_cString(storageFileHandle->opticalDisk.write.eccCommand),
                                             textMacros,SIZE_OF_ARRAY(textMacros),
                                             (ExecuteIOFunction)processIOdvdisaster,
                                             (ExecuteIOFunction)processIOdvdisaster,
@@ -2779,9 +2792,9 @@ Errors Storage_postProcess(StorageFileHandle *storageFileHandle,
               }
 
               // write image to medium
-              printInfo(0,"Write image to medium #%d...",storageFileHandle->opticalDisk.number);
-              storageFileHandle->opticalDisk.step = 3;
-              error = Misc_executeCommand(String_cString(storageFileHandle->opticalDisk.writeImageCommand),
+              printInfo(0,"Write image to medium #%d...",storageFileHandle->opticalDisk.write.number);
+              storageFileHandle->opticalDisk.write.step = 3;
+              error = Misc_executeCommand(String_cString(storageFileHandle->opticalDisk.write.writeImageCommand),
                                           textMacros,SIZE_OF_ARRAY(textMacros),
                                           (ExecuteIOFunction)processIOgrowisofs,
                                           (ExecuteIOFunction)processIOgrowisofs,
@@ -2813,9 +2826,9 @@ Errors Storage_postProcess(StorageFileHandle *storageFileHandle,
               }
 
               // write to medium
-              printInfo(0,"Write medium #%d with %d file(s)...",storageFileHandle->opticalDisk.number,StringList_count(&storageFileHandle->opticalDisk.fileNameList));
-              storageFileHandle->opticalDisk.step = 0;
-              error = Misc_executeCommand(String_cString(storageFileHandle->opticalDisk.writeCommand),
+              printInfo(0,"Write medium #%d with %d file(s)...",storageFileHandle->opticalDisk.write.number,StringList_count(&storageFileHandle->opticalDisk.write.fileNameList));
+              storageFileHandle->opticalDisk.write.step = 0;
+              error = Misc_executeCommand(String_cString(storageFileHandle->opticalDisk.write.writeCommand),
                                           textMacros,SIZE_OF_ARRAY(textMacros),
                                           (ExecuteIOFunction)processIOgrowisofs,
                                           (ExecuteIOFunction)processExecOutput,
@@ -2841,9 +2854,9 @@ Errors Storage_postProcess(StorageFileHandle *storageFileHandle,
 
             // delete stored files
             fileName = String_new();
-            while (!StringList_empty(&storageFileHandle->opticalDisk.fileNameList))
+            while (!StringList_empty(&storageFileHandle->opticalDisk.write.fileNameList))
             {
-              StringList_getFirst(&storageFileHandle->opticalDisk.fileNameList,fileName);
+              StringList_getFirst(&storageFileHandle->opticalDisk.write.fileNameList,fileName);
               error = File_delete(fileName,FALSE);
               if (error != ERROR_NONE)
               {
@@ -2857,14 +2870,14 @@ Errors Storage_postProcess(StorageFileHandle *storageFileHandle,
             }
 
             // reset
-            storageFileHandle->opticalDisk.newFlag   = TRUE;
-            storageFileHandle->opticalDisk.totalSize = 0;
+            storageFileHandle->opticalDisk.write.newFlag   = TRUE;
+            storageFileHandle->opticalDisk.write.totalSize = 0;
           }
         }
         else
         {
           // update info
-          storageFileHandle->opticalDisk.step = 3;
+          storageFileHandle->opticalDisk.write.step = 3;
           storageFileHandle->runningInfo.volumeProgress = 1.0;
           updateStatusInfo(storageFileHandle);
         }
@@ -3076,7 +3089,7 @@ Errors Storage_unloadVolume(StorageFileHandle *storageFileHandle)
         TextMacro textMacros[1];
 
         TEXT_MACRO_N_STRING(textMacros[0],"%device",storageFileHandle->opticalDisk.name);
-        error = Misc_executeCommand(String_cString(storageFileHandle->opticalDisk.unloadVolumeCommand),
+        error = Misc_executeCommand(String_cString(storageFileHandle->opticalDisk.write.unloadVolumeCommand),
                                     textMacros,SIZE_OF_ARRAY(textMacros),
                                     (ExecuteIOFunction)processExecOutput,
                                     (ExecuteIOFunction)processExecOutput,
@@ -3116,6 +3129,7 @@ Errors Storage_create(StorageFileHandle *storageFileHandle,
   String directoryName;
 
   assert(storageFileHandle != NULL);
+  assert(storageFileHandle->jobOptions != NULL);
   assert(fileName != NULL);
 
   // init variables
@@ -3409,13 +3423,13 @@ LIBSSH2_SFTP_S_IRUSR|LIBSSH2_SFTP_S_IWUSR
     case STORAGE_TYPE_DVD:
     case STORAGE_TYPE_BD:
       // create file name
-      String_set(storageFileHandle->opticalDisk.fileName,storageFileHandle->opticalDisk.directory);
-      File_appendFileName(storageFileHandle->opticalDisk.fileName,fileName);
+      String_set(storageFileHandle->opticalDisk.write.fileName,storageFileHandle->opticalDisk.write.directory);
+      File_appendFileName(storageFileHandle->opticalDisk.write.fileName,fileName);
 
       if (!storageFileHandle->jobOptions->dryRunFlag)
       {
         // create directory if not existing
-        directoryName = File_getFilePathName(String_new(),storageFileHandle->opticalDisk.fileName);
+        directoryName = File_getFilePathName(String_new(),storageFileHandle->opticalDisk.write.fileName);
         if (!String_empty(directoryName) && !File_exists(directoryName))
         {
           error = File_makeDirectory(directoryName,
@@ -3432,8 +3446,8 @@ LIBSSH2_SFTP_S_IRUSR|LIBSSH2_SFTP_S_IWUSR
         String_delete(directoryName);
 
         // create file
-        error = File_open(&storageFileHandle->opticalDisk.fileHandle,
-                          storageFileHandle->opticalDisk.fileName,
+        error = File_open(&storageFileHandle->opticalDisk.write.fileHandle,
+                          storageFileHandle->opticalDisk.write.fileName,
                           FILE_OPEN_CREATE
                          );
         if (error != ERROR_NONE)
@@ -3795,23 +3809,41 @@ Errors Storage_open(StorageFileHandle *storageFileHandle,
     case STORAGE_TYPE_CD:
     case STORAGE_TYPE_DVD:
     case STORAGE_TYPE_BD:
-      // init variables
+      #ifdef HAVE_ISO9660
+        {
+          // initialise variables
+          storageFileHandle->opticalDisk.read.index             = 0LL;
+          storageFileHandle->opticalDisk.read.buffer.blockIndex = 0LL;
+          storageFileHandle->opticalDisk.read.buffer.length     = 0L;
 
-      // open file
-#if 0
-      error = File_open(&storageFileHandle->fileSystem.fileHandle,
-                        storageFileHandle->fileSystem.fileName,
-                        FILE_OPEN_READ
-                       );
-      if (error != ERROR_NONE)
-      {
-        String_delete(storageFileHandle->fileSystem.fileName);
-        String_delete(storageSpecifier);
-        return error;
-      }
-#endif /* 0 */
-      UNUSED_VARIABLE(fileName);
-      return ERROR_FUNCTION_NOT_SUPPORTED;
+          // open optical disk/ISO 9660 file
+          storageFileHandle->opticalDisk.read.iso9660Handle = iso9660_open(String_cString(storageFileHandle->opticalDisk.name));
+          if (storageFileHandle->opticalDisk.read.iso9660Handle == NULL)
+          {
+            if (File_isFile(storageFileHandle->opticalDisk.name))
+            {
+              return ERRORX(OPEN_ISO9660_FILE,errno,String_cString(storageFileHandle->opticalDisk.name));
+            }
+            else
+            {
+              return ERRORX(OPEN_OPTICAL_DISK,errno,String_cString(storageFileHandle->opticalDisk.name));
+            }
+          }
+
+          // prepare file for reading
+          storageFileHandle->opticalDisk.read.iso9660Stat = iso9660_ifs_stat_translate(storageFileHandle->opticalDisk.read.iso9660Handle,
+                                                                                       String_cString(fileName)
+                                                                                      );
+          if (storageFileHandle->opticalDisk.read.iso9660Stat == NULL)
+          {
+            iso9660_close(storageFileHandle->opticalDisk.read.iso9660Handle);
+            return ERRORX(FILE_NOT_FOUND,errno,String_cString(fileName));
+          }
+        }
+      #else /* not HAVE_ISO9660 */
+        UNUSED_VARIABLE(fileName);
+        return ERROR_FUNCTION_NOT_SUPPORTED;
+      #endif /* HAVE_ISO9660 */
       break;
     case STORAGE_TYPE_DEVICE:
       // init variables
@@ -3845,6 +3877,7 @@ Errors Storage_open(StorageFileHandle *storageFileHandle,
 void Storage_close(StorageFileHandle *storageFileHandle)
 {
   assert(storageFileHandle != NULL);
+  assert(storageFileHandle->jobOptions != NULL);
 
   switch (storageFileHandle->type)
   {
@@ -3956,13 +3989,17 @@ void Storage_close(StorageFileHandle *storageFileHandle)
         case STORAGE_MODE_WRITE:
           if (!storageFileHandle->jobOptions->dryRunFlag)
           {
-            storageFileHandle->opticalDisk.totalSize += File_getSize(&storageFileHandle->opticalDisk.fileHandle);
-            File_close(&storageFileHandle->opticalDisk.fileHandle);
+            storageFileHandle->opticalDisk.write.totalSize += File_getSize(&storageFileHandle->opticalDisk.write.fileHandle);
+            File_close(&storageFileHandle->opticalDisk.write.fileHandle);
           }
+          StringList_append(&storageFileHandle->opticalDisk.write.fileNameList,storageFileHandle->opticalDisk.write.fileName);
           break;
         case STORAGE_MODE_READ:
-          storageFileHandle->opticalDisk.totalSize += File_getSize(&storageFileHandle->opticalDisk.fileHandle);
-          File_close(&storageFileHandle->opticalDisk.fileHandle);
+          assert(storageFileHandle->opticalDisk.read.iso9660Handle != NULL);
+          assert(storageFileHandle->opticalDisk.read.iso9660Stat != NULL);
+
+          free(storageFileHandle->opticalDisk.read.iso9660Stat);
+          iso9660_close(storageFileHandle->opticalDisk.read.iso9660Handle);
           break;
         #ifndef NDEBUG
           default:
@@ -3970,7 +4007,6 @@ void Storage_close(StorageFileHandle *storageFileHandle)
             break; /* not reached */
         #endif /* NDEBUG */
       }
-      StringList_append(&storageFileHandle->opticalDisk.fileNameList,storageFileHandle->opticalDisk.fileName);
       break;
     case STORAGE_TYPE_DEVICE:
       switch (storageFileHandle->mode)
@@ -4009,6 +4045,7 @@ Errors Storage_delete(StorageFileHandle *storageFileHandle,
   Errors error;
 
   assert(storageFileHandle != NULL);
+  assert(storageFileHandle->jobOptions != NULL);
 
   error = ERROR_UNKNOWN;
   switch (storageFileHandle->type)
@@ -4110,11 +4147,7 @@ whould this be a possible implementation?
     case STORAGE_TYPE_CD:
     case STORAGE_TYPE_DVD:
     case STORAGE_TYPE_BD:
-      #ifdef HAVE_SSH2
-        error = ERROR_NONE;
-      #else /* not HAVE_SSH2 */
-        error = ERROR_FUNCTION_NOT_SUPPORTED;
-      #endif /* HAVE_SSH2 */
+      error = ERROR_FUNCTION_NOT_SUPPORTED;
       break;
     case STORAGE_TYPE_DEVICE:
       error = ERROR_NONE;
@@ -4132,6 +4165,8 @@ whould this be a possible implementation?
 bool Storage_eof(StorageFileHandle *storageFileHandle)
 {
   assert(storageFileHandle != NULL);
+  assert(storageFileHandle->mode == STORAGE_MODE_READ);
+  assert(storageFileHandle->jobOptions != NULL);
 
   switch (storageFileHandle->type)
   {
@@ -4195,18 +4230,21 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
     case STORAGE_TYPE_CD:
     case STORAGE_TYPE_DVD:
     case STORAGE_TYPE_BD:
-      #ifdef HAVE_SSH2
+      #ifdef HAVE_ISO9660
+        assert(storageFileHandle->opticalDisk.read.iso9660Handle != NULL);
+        assert(storageFileHandle->opticalDisk.read.iso9660Stat != NULL);
+
         if (!storageFileHandle->jobOptions->dryRunFlag)
         {
-          return File_eof(&storageFileHandle->opticalDisk.fileHandle);
+          return storageFileHandle->opticalDisk.read.index >= storageFileHandle->opticalDisk.read.iso9660Stat->size;
         }
         else
         {
           return TRUE;
         }
-      #else /* not HAVE_SSH2 */
+      #else /* not HAVE_ISO9660 */
         return TRUE;
-      #endif /* HAVE_SSH2 */
+      #endif /* HAVE_ISO9660 */
       break;
     case STORAGE_TYPE_DEVICE:
       if (!storageFileHandle->jobOptions->dryRunFlag)
@@ -4238,6 +4276,8 @@ Errors Storage_read(StorageFileHandle *storageFileHandle,
 
   assert(storageFileHandle != NULL);
   assert(storageFileHandle->mode == STORAGE_MODE_READ);
+  assert(storageFileHandle->jobOptions != NULL);
+  assert(storageFileHandle->mode == STORAGE_MODE_READ);
   assert(buffer != NULL);
   assert(bytesRead != NULL);
 
@@ -4256,7 +4296,8 @@ Errors Storage_read(StorageFileHandle *storageFileHandle,
       #ifdef HAVE_FTP
         {
           ulong   i;
-          ssize_t n;
+          ssize_t readBytes;
+          uint64  n;
 
           if (!storageFileHandle->jobOptions->dryRunFlag)
           {
@@ -4270,7 +4311,7 @@ Errors Storage_read(StorageFileHandle *storageFileHandle,
                 && (storageFileHandle->ftp.index < (storageFileHandle->ftp.readAheadBuffer.offset+storageFileHandle->ftp.readAheadBuffer.length))
                )
             {
-              i = storageFileHandle->ftp.index-storageFileHandle->ftp.readAheadBuffer.offset;
+              i = (ulong)(storageFileHandle->ftp.index-storageFileHandle->ftp.readAheadBuffer.offset);
               n = MIN(size,storageFileHandle->ftp.readAheadBuffer.length-i);
               memcpy(buffer,storageFileHandle->ftp.readAheadBuffer.data+i,n);
               buffer = (byte*)buffer+n;
@@ -4285,60 +4326,61 @@ Errors Storage_read(StorageFileHandle *storageFileHandle,
               if (size < MAX_BUFFER_SIZE)
               {
                 // read into read-ahead buffer
-                n = FtpRead(storageFileHandle->ftp.readAheadBuffer.data,
-                            MIN((size_t)(storageFileHandle->ftp.size-storageFileHandle->ftp.index),MAX_BUFFER_SIZE),
-                            storageFileHandle->ftp.data
-                           );
-                if (n == 0)
+                readBytes = FtpRead(storageFileHandle->ftp.readAheadBuffer.data,
+                                    MIN((size_t)(storageFileHandle->ftp.size-storageFileHandle->ftp.index),MAX_BUFFER_SIZE),
+                                    storageFileHandle->ftp.data
+                                  );
+                if (readBytes == 0)
                 {
                   // wait a short time for more data
                   Misc_udelay(250*1000);
 
                   // read into read-ahead buffer
-                  n = FtpRead(storageFileHandle->ftp.readAheadBuffer.data,
-                              MIN((size_t)(storageFileHandle->ftp.size-storageFileHandle->ftp.index),MAX_BUFFER_SIZE),
-                              storageFileHandle->ftp.data
-                             );
+                  readBytes = FtpRead(storageFileHandle->ftp.readAheadBuffer.data,
+                                      MIN((size_t)(storageFileHandle->ftp.size-storageFileHandle->ftp.index),MAX_BUFFER_SIZE),
+                                      storageFileHandle->ftp.data
+                                     );
                 }
-                if (n <= 0)
+                if (readBytes <= 0)
                 {
                   error = ERROR(IO_ERROR,errno);
                   break;
                 }
                 storageFileHandle->ftp.readAheadBuffer.offset = storageFileHandle->ftp.index;
-                storageFileHandle->ftp.readAheadBuffer.length = n;
+                storageFileHandle->ftp.readAheadBuffer.length = (uint64)n;
 
+                // copy data
                 n = MIN(size,storageFileHandle->ftp.readAheadBuffer.length);
                 memcpy(buffer,storageFileHandle->ftp.readAheadBuffer.data,n);
               }
               else
               {
                 // read direct
-                n = FtpRead(buffer,
-                            size,
-                            storageFileHandle->ftp.data
-                           );
-                if (n == 0)
+                readBytes = FtpRead(buffer,
+                                    size,
+                                    storageFileHandle->ftp.data
+                                   );
+                if (readBytes == 0)
                 {
                   // wait a short time for more data
                   Misc_udelay(250*1000);
 
                   // read direct
-                  n = FtpRead(buffer,
-                              size,
-                              storageFileHandle->ftp.data
-                             );
+                  readBytes = FtpRead(buffer,
+                                      size,
+                                      storageFileHandle->ftp.data
+                                     );
                 }
-                if (n <= 0)
+                if (readBytes <= 0)
                 {
                   error = ERROR(IO_ERROR,errno);
                   break;
                 }
               }
-              buffer = (byte*)buffer+n;
-              size -= n;
-              (*bytesRead) += n;
-              storageFileHandle->ftp.index += n;
+              buffer = (byte*)buffer+(uint64)n;
+              size -= (uint64)n;
+              (*bytesRead) += (uint64)n;
+              storageFileHandle->ftp.index += (uint64)n;
             }
           }
         }
@@ -4353,7 +4395,8 @@ Errors Storage_read(StorageFileHandle *storageFileHandle,
       #ifdef HAVE_SSH2
         {
           ulong   i;
-          ssize_t n;
+          ssize_t readBytes;
+          uint64  n;
 
           if (!storageFileHandle->jobOptions->dryRunFlag)
           {
@@ -4361,23 +4404,23 @@ Errors Storage_read(StorageFileHandle *storageFileHandle,
             assert(storageFileHandle->scp.readAheadBuffer.data != NULL);
 
 #if 0
-            n = libssh2_channel_read(storageFileHandle->scp.channel,
-                                                buffer,
-                                                size
-                                               );
-            if (n < 0)
+            readBytes = libssh2_channel_read(storageFileHandle->scp.channel,
+                                             buffer,
+                                             size
+                                            );
+            if (readBytes < 0)
             {
               return ERROR(IO_ERROR,errno);
             }
-            (*bytesRead) += n;
-            storageFileHandle->scp.index += n;
+            (*bytesRead) += (uint64)n;
+            storageFileHandle->scp.index += (uint64)n;
 #else /* 0 */
             // copy as much as available from read-ahead buffer
             if (   (storageFileHandle->scp.index >= storageFileHandle->scp.readAheadBuffer.offset)
                 && (storageFileHandle->scp.index < (storageFileHandle->scp.readAheadBuffer.offset+storageFileHandle->scp.readAheadBuffer.length))
                )
             {
-              i = storageFileHandle->scp.index-storageFileHandle->scp.readAheadBuffer.offset;
+              i = (ulong)(storageFileHandle->scp.index-storageFileHandle->scp.readAheadBuffer.offset);
               n = MIN(size,storageFileHandle->scp.readAheadBuffer.length-i);
               memcpy(buffer,storageFileHandle->scp.readAheadBuffer.data+i,n);
               buffer = (byte*)buffer+n;
@@ -4394,42 +4437,47 @@ Errors Storage_read(StorageFileHandle *storageFileHandle,
                 // read into read-ahead buffer
                 do
                 {
-                  n = libssh2_channel_read(storageFileHandle->scp.channel,
-                                           (char*)storageFileHandle->scp.readAheadBuffer.data,
-                                           MIN((size_t)(storageFileHandle->scp.size-storageFileHandle->scp.index),MAX_BUFFER_SIZE)
-                                          );
+                  readBytes = libssh2_channel_read(storageFileHandle->scp.channel,
+                                                   (char*)storageFileHandle->scp.readAheadBuffer.data,
+                                                   MIN((size_t)(storageFileHandle->scp.size-storageFileHandle->scp.index),MAX_BUFFER_SIZE)
+                                                 );
                 }
-                while (n == LIBSSH2_ERROR_EAGAIN);
-                if (n < 0)
+                while (readBytes == LIBSSH2_ERROR_EAGAIN);
+                if (readBytes < 0)
                 {
                   error = ERROR(IO_ERROR,errno);
                   break;
                 }
                 storageFileHandle->scp.readAheadBuffer.offset = storageFileHandle->scp.index;
-                storageFileHandle->scp.readAheadBuffer.length = n;
+                storageFileHandle->scp.readAheadBuffer.length = (uint64)n;
   //fprintf(stderr,"%s,%d: n=%ld storageFileHandle->scp.bufferOffset=%llu storageFileHandle->scp.bufferLength=%lu\n",__FILE__,__LINE__,n,
   //storageFileHandle->scp.readAheadBuffer.offset,storageFileHandle->scp.readAheadBuffer.length);
 
+                // copy data
                 n = MIN(size,storageFileHandle->scp.readAheadBuffer.length);
                 memcpy(buffer,storageFileHandle->scp.readAheadBuffer.data,n);
               }
               else
               {
                 // read direct
-                n = libssh2_channel_read(storageFileHandle->scp.channel,
-                                         buffer,
-                                         size
-                                        );
-                if (n < 0)
+                do
+                {
+                  readBytes = libssh2_channel_read(storageFileHandle->scp.channel,
+                                                   buffer,
+                                                   size
+                                                  );
+                }
+                while (readBytes == LIBSSH2_ERROR_EAGAIN);
+                if (readBytes < 0)
                 {
                   error = ERROR(IO_ERROR,errno);
                   break;
                 }
               }
-              buffer = (byte*)buffer+n;
-              size -= n;
-              (*bytesRead) += n;
-              storageFileHandle->scp.index += n;
+              buffer = (byte*)buffer+(uint64)readBytes;
+              size -= (uint64)readBytes;
+              (*bytesRead) += (uint64)readBytes;
+              storageFileHandle->scp.index += (uint64)readBytes;
             }
           }
 #endif /* 0 */
@@ -4442,7 +4490,8 @@ Errors Storage_read(StorageFileHandle *storageFileHandle,
       #ifdef HAVE_SSH2
         {
           ulong   i;
-          ssize_t n;
+          ssize_t readBytes;
+          ulong   n;
 
           if (!storageFileHandle->jobOptions->dryRunFlag)
           {
@@ -4454,7 +4503,7 @@ Errors Storage_read(StorageFileHandle *storageFileHandle,
                 && (storageFileHandle->sftp.index < (storageFileHandle->sftp.readAheadBuffer.offset+storageFileHandle->sftp.readAheadBuffer.length))
                )
             {
-              i = storageFileHandle->sftp.index-storageFileHandle->sftp.readAheadBuffer.offset;
+              i = (ulong)(storageFileHandle->sftp.index-storageFileHandle->sftp.readAheadBuffer.offset);
               n = MIN(size,storageFileHandle->sftp.readAheadBuffer.length-i);
               memcpy(buffer,storageFileHandle->sftp.readAheadBuffer.data+i,n);
               buffer = (byte*)buffer+n;
@@ -4471,41 +4520,43 @@ Errors Storage_read(StorageFileHandle *storageFileHandle,
               #else
                 libssh2_sftp_seek(storageFileHandle->sftp.sftpHandle,storageFileHandle->sftp.index);
               #endif
+
               if (size < MAX_BUFFER_SIZE)
               {
                 // read into read-ahead buffer
-                n = libssh2_sftp_read(storageFileHandle->sftp.sftpHandle,
-                                      (char*)storageFileHandle->sftp.readAheadBuffer.data,
-                                      MIN((size_t)(storageFileHandle->sftp.size-storageFileHandle->sftp.index),MAX_BUFFER_SIZE)
-                                     );
-                if (n < 0)
+                readBytes = libssh2_sftp_read(storageFileHandle->sftp.sftpHandle,
+                                              (char*)storageFileHandle->sftp.readAheadBuffer.data,
+                                              MIN((size_t)(storageFileHandle->sftp.size-storageFileHandle->sftp.index),MAX_BUFFER_SIZE)
+                                             );
+                if (readBytes < 0)
                 {
                   error = ERROR(IO_ERROR,errno);
                   break;
                 }
                 storageFileHandle->sftp.readAheadBuffer.offset = storageFileHandle->sftp.index;
-                storageFileHandle->sftp.readAheadBuffer.length = n;
+                storageFileHandle->sftp.readAheadBuffer.length = (uint64)readBytes;
 //fprintf(stderr,"%s,%d: n=%ld storageFileHandle->sftp.bufferOffset=%llu storageFileHandle->sftp.bufferLength=%lu\n",__FILE__,__LINE__,n,
 //storageFileHandle->sftp.readAheadBuffer.offset,storageFileHandle->sftp.readAheadBuffer.length);
 
+                // copy data
                 n = MIN(size,storageFileHandle->sftp.readAheadBuffer.length);
                 memcpy(buffer,storageFileHandle->sftp.readAheadBuffer.data,n);
               }
               else
               {
                 // read direct
-                n = libssh2_sftp_read(storageFileHandle->sftp.sftpHandle,
-                                      buffer,
-                                      size
-                                     );
-                if (n < 0)
+                readBytes = libssh2_sftp_read(storageFileHandle->sftp.sftpHandle,
+                                              buffer,
+                                              size
+                                             );
+                if (readBytes < 0)
                 {
                   error = ERROR(IO_ERROR,errno);
                   break;
                 }
               }
-              (*bytesRead) += n;
-              storageFileHandle->sftp.index += n;
+              (*bytesRead) += (uint64)n;
+              storageFileHandle->sftp.index += (uint64)n;
             }
           }
         }
@@ -4516,10 +4567,64 @@ Errors Storage_read(StorageFileHandle *storageFileHandle,
     case STORAGE_TYPE_CD:
     case STORAGE_TYPE_DVD:
     case STORAGE_TYPE_BD:
-      if (!storageFileHandle->jobOptions->dryRunFlag)
-      {
-        error = File_read(&storageFileHandle->opticalDisk.fileHandle,buffer,size,bytesRead);
-      }
+      #ifdef HAVE_ISO9660
+        {
+          uint64   blockIndex;
+          uint     blockOffset;
+          long int readBytes;
+          uint64   n;
+
+          assert(storageFileHandle->opticalDisk.read.iso9660Handle != NULL);
+          assert(storageFileHandle->opticalDisk.read.iso9660Stat != NULL);
+
+          if (!storageFileHandle->jobOptions->dryRunFlag)
+          {
+            assert(storageFileHandle->opticalDisk.read.buffer.data != NULL);
+
+            while (   (size > 0L)
+                   && (storageFileHandle->opticalDisk.read.index < (uint64)storageFileHandle->opticalDisk.read.iso9660Stat->size)
+                  )
+            {
+              // get ISO9660 block index, offset
+              blockIndex  = (int64)(storageFileHandle->opticalDisk.read.index/ISO_BLOCKSIZE);
+              blockOffset = (uint)(storageFileHandle->opticalDisk.read.index%ISO_BLOCKSIZE);
+//fprintf(stderr,"%s, %d: blockIndex=%ld blockOffset=%d\n",__FILE__,__LINE__,blockIndex,blockOffset);
+
+              if (   (blockIndex != storageFileHandle->opticalDisk.read.buffer.blockIndex)
+                  || (blockOffset >= storageFileHandle->opticalDisk.read.buffer.length)
+                 )
+              {
+                // read ISO9660 block
+                readBytes = iso9660_iso_seek_read(storageFileHandle->opticalDisk.read.iso9660Handle,
+                                                  storageFileHandle->opticalDisk.read.buffer.data,
+                                                  storageFileHandle->opticalDisk.read.iso9660Stat->lsn+(lsn_t)blockIndex,
+                                                  1 // read 1 block
+                                                 );
+                if (readBytes < ISO_BLOCKSIZE)
+                {
+                  error = ERROR(IO_ERROR,errno);
+                  break;
+                }
+                storageFileHandle->opticalDisk.read.buffer.blockIndex = blockIndex;
+                storageFileHandle->opticalDisk.read.buffer.length     = (((blockIndex+1)*ISO_BLOCKSIZE) <= (uint64)storageFileHandle->opticalDisk.read.iso9660Stat->size)
+                                                                          ? ISO_BLOCKSIZE
+                                                                          : (ulong)(storageFileHandle->opticalDisk.read.iso9660Stat->size%ISO_BLOCKSIZE);
+              }
+
+              // copy data
+              n = MIN(size,storageFileHandle->opticalDisk.read.buffer.length-blockOffset);
+              memcpy(buffer,storageFileHandle->opticalDisk.read.buffer.data+blockOffset,n);
+
+              buffer = (byte*)buffer+n;
+              size -= n;
+              (*bytesRead) += n;
+              storageFileHandle->opticalDisk.read.index += n;
+            }
+          }
+        }
+      #else /* not HAVE_ISO9660 */
+        error = ERROR_FUNCTION_NOT_SUPPORTED;
+      #endif /* HAVE_ISO9660 */
       break;
     case STORAGE_TYPE_DEVICE:
       if (!storageFileHandle->jobOptions->dryRunFlag)
@@ -4546,6 +4651,7 @@ Errors Storage_write(StorageFileHandle *storageFileHandle,
 
   assert(storageFileHandle != NULL);
   assert(storageFileHandle->mode == STORAGE_MODE_WRITE);
+  assert(storageFileHandle->jobOptions != NULL);
   assert(buffer != NULL);
 
   error = ERROR_NONE;
@@ -4791,10 +4897,7 @@ Errors Storage_write(StorageFileHandle *storageFileHandle,
     case STORAGE_TYPE_CD:
     case STORAGE_TYPE_DVD:
     case STORAGE_TYPE_BD:
-      if (!storageFileHandle->jobOptions->dryRunFlag)
-      {
-        error = File_write(&storageFileHandle->opticalDisk.fileHandle,buffer,size);
-      }
+      error = ERROR_FUNCTION_NOT_SUPPORTED;
       break;
     case STORAGE_TYPE_DEVICE:
       if (!storageFileHandle->jobOptions->dryRunFlag)
@@ -4817,6 +4920,7 @@ uint64 Storage_getSize(StorageFileHandle *storageFileHandle)
   uint64 size;
 
   assert(storageFileHandle != NULL);
+  assert(storageFileHandle->jobOptions != NULL);
 
   size = 0LL;
   switch (storageFileHandle->type)
@@ -4863,13 +4967,13 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
     case STORAGE_TYPE_CD:
     case STORAGE_TYPE_DVD:
     case STORAGE_TYPE_BD:
-      #ifdef HAVE_SSH2
+      #ifdef HAVE_ISO9660
         if (!storageFileHandle->jobOptions->dryRunFlag)
         {
-          size = File_getSize(&storageFileHandle->opticalDisk.fileHandle);
+          size = (uint64)storageFileHandle->opticalDisk.read.iso9660Stat->size;
         }
-      #else /* not HAVE_SSH2 */
-      #endif /* HAVE_SSH2 */
+      #else /* not HAVE_ISO9660 */
+      #endif /* HAVE_ISO9660 */
       break;
     case STORAGE_TYPE_DEVICE:
       if (!storageFileHandle->jobOptions->dryRunFlag)
@@ -4894,6 +4998,7 @@ Errors Storage_tell(StorageFileHandle *storageFileHandle,
   Errors error;
 
   assert(storageFileHandle != NULL);
+  assert(storageFileHandle->jobOptions != NULL);
   assert(offset != NULL);
 
   (*offset) = 0LL;
@@ -4950,14 +5055,14 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
     case STORAGE_TYPE_CD:
     case STORAGE_TYPE_DVD:
     case STORAGE_TYPE_BD:
-      #ifdef HAVE_SSH2
+      #ifdef HAVE_ISO9660
         if (!storageFileHandle->jobOptions->dryRunFlag)
         {
-          error = File_tell(&storageFileHandle->opticalDisk.fileHandle,offset);
+          (*offset) = storageFileHandle->opticalDisk.read.index;
+          error     = ERROR_NONE;
         }
-      #else /* not HAVE_SSH2 */
-        error = ERROR_FUNCTION_NOT_SUPPORTED;
-      #endif /* HAVE_SSH2 */
+      #else /* not HAVE_ISO9660 */
+      #endif /* HAVE_ISO9660 */
       break;
     case STORAGE_TYPE_DEVICE:
       if (!storageFileHandle->jobOptions->dryRunFlag)
@@ -4982,6 +5087,7 @@ Errors Storage_seek(StorageFileHandle *storageFileHandle,
   Errors error;
 
   assert(storageFileHandle != NULL);
+  assert(storageFileHandle->jobOptions != NULL);
 
   error = ERROR_NONE;
   switch (storageFileHandle->type)
@@ -5160,10 +5266,14 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
     case STORAGE_TYPE_CD:
     case STORAGE_TYPE_DVD:
     case STORAGE_TYPE_BD:
-      if (!storageFileHandle->jobOptions->dryRunFlag)
-      {
-        error = File_seek(&storageFileHandle->opticalDisk.fileHandle,offset);
-      }
+      #ifdef HAVE_ISO9660
+        if (!storageFileHandle->jobOptions->dryRunFlag)
+        {
+          storageFileHandle->opticalDisk.read.index = offset;
+          error = ERROR_NONE;
+        }
+      #else /* not HAVE_ISO9660 */
+      #endif /* HAVE_ISO9660 */
       break;
     case STORAGE_TYPE_DEVICE:
       if (!storageFileHandle->jobOptions->dryRunFlag)
