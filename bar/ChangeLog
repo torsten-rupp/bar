@@ -1,3 +1,49 @@
+2011-??-?? 0.17
+  * added support for delta compression!
+  * added support for libcdio to read content of CD/DVD/BD
+    devices/images without mounting (required for test/restore
+    of archives from CD/DVD/BD)
+  * updated integrated libssh2 to version 1.3.0
+  * added check for file permission of config files. Should
+    be 400 or 600.
+  * barcontrol: add ellipsis character to menus/buttons which
+    require further user input
+  * barcontrol: added schedule copy menu entry/button
+  * barcontrol: show tool tip in tree view only when mouse is
+    in the left side to avoid that tooltip is shown all the
+    time
+  * use libssh2 send64() when available to be able to
+    send large files, too
+
+2012-01-05 0.16g
+  * fix restore: do not create empty parent directories
+  * fix restoring archive entries without directory part
+  * added verbose level 5, output ssh debug messages for
+    level 4 and 5
+  * fixed crash when archive on CD/DVD/BD/device should
+    be listed/tested/extracted directly. Please mount
+    a CD/DVD/BD/device and use the file operations instead
+  * fixed memory leaks
+
+2011-09-10 0.16f
+  * re-added option --volume-size, fixed setting CD/DVD/BD
+    volume size
+  * added check for Java version
+  * improved error messages
+  * do not print passwords which may be included in FTP
+    specifier when creating/list/restore entries
+  * barcontrol: ask for crypt password when restoring
+    single archive entries
+  * fixed URI parser: clear port number if not set
+  * improved index database: do not set error state when
+    connection to server cannot be opened
+  * fixed memory leaks
+  * back-ported file handle debug code
+  * do not set index state to error if archive cannot be
+    decrypted because of missing password
+  * fix bug in ftplib: listing directory did not close
+    temporary file
+
 2011-07-31 0.16e
   * create sub-directories when storing to file system or
     ftp server
@@ -398,7 +444,7 @@
   * barcontrol: added version number in about-dialog
   * fixed parsing of schedule data (type was missing)
   * fixed detection of size of current archive (was always 0)
-  * new scheme to build a incremental file name from an 
+  * new scheme to build a incremental file name from an
     archive file name if no incremental file name is given:
       - discard all %-macros
       - discard all #
