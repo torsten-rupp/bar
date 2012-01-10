@@ -187,6 +187,10 @@ ERROR NOT_A_DIRECTORY
   }
   errorText[sizeof(errorText)-1] = '\0';
 
+// optical disk i/o
+ERROR OPEN_OPTICAL_DISK              "error open CD/DVD/BD disk"
+ERROR OPEN_ISO9660_FILE              "error open ISO 9660 image"
+
 // device i/o
 ERROR OPEN_DEVICE
   strncpy(errorText,strerror(ERRNO),sizeof(errorText)-1);
