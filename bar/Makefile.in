@@ -141,6 +141,51 @@ endif
 	$(RMF) config.status
 	$(RMF) config.log
 
+# help
+.PHONY: help
+help:
+	@$(ECHO) "Help targets:"
+	@$(ECHO) ""
+	@$(ECHO) "  all "
+	@$(ECHO) "  clean "
+	@$(ECHO) "  distclean"
+	@$(ECHO) ""
+	@$(ECHO) "  keys"
+	@$(ECHO) ""
+	@$(ECHO) "  doc"
+	@$(ECHO) "  man"
+	@$(ECHO) "  showman"
+	@$(ECHO) ""
+	@$(ECHO) "  install"
+	@$(ECHO) ""
+	@$(ECHO) "  test"
+	@$(ECHO) "  test1, test_basic"
+	@$(ECHO) "  test2, test_compress"
+	@$(ECHO) "  test3, test_crypt"
+	@$(ECHO) "  test4, test_asymmetric_crypt"
+	@$(ECHO) "  test5, test_split"
+	@$(ECHO) "  test6, test_image"
+	@$(ECHO) "  test7, test_dvd"
+	@$(ECHO) "  test_parameters"
+	@$(ECHO) "  test_combined"
+	@$(ECHO) ""
+	@$(ECHO) "  memcheck"
+	@$(ECHO) "  memcheck_extended"
+	@$(ECHO) ""
+	@$(ECHO) "  dist"
+	@$(ECHO) "  clean_dist"
+	@$(ECHO) "  debian_dist"
+	@$(ECHO) "  clean_debian_dist"
+	@$(ECHO) ""
+	@$(ECHO) "  rpm"
+	@$(ECHO) "  clean_rpm"
+	@$(ECHO) "  deb"
+	@$(ECHO) "  clean_deb"
+	@$(ECHO) "  debian_package"
+	@$(ECHO) "  clean_debian_package"
+	@$(ECHO) "  gui"
+	@$(ECHO) "  clean_gui"
+
 # ----------------------------------------------------------------------------
 
 # --- create main
@@ -397,20 +442,25 @@ barserver_ssl:
 	@$(MAKE) -C bar barserver_ssl
 
 # do tests
-.PHONY: test test1 test2 test3 test4 test5 testall
+.PHONY: test test1 test2 test3 test4 test5 test6 test7 test_combined
+.PHONY: test_basic test_compress test_crypt test_asymmetric_crypt test_split test_image test_dvd test_parameters
 test:
 	@$(MAKE) -C bar test
-test1:
+test1 test_basic:
 	@$(MAKE) -C bar test1
-test2:
+test2 test_compress:
 	@$(MAKE) -C bar test2
-test3:
+test3 test_crypt:
 	@$(MAKE) -C bar test3
-test4:
+test4 test_asymmetric_crypt:
 	@$(MAKE) -C bar test4
-test5:
+test5 test_split:
 	@$(MAKE) -C bar test5
-test_all:
+test6 test_image:
+	@$(MAKE) -C bar test6
+test7 test_dvd:
+	@$(MAKE) -C bar test7
+test_combined:
 	@$(MAKE) -C bar test_all
 
 # memory checks
