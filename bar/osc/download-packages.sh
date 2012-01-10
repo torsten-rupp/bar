@@ -35,6 +35,8 @@ download "$OSC_URL/$OSC_PATH/SLE_11_SP1/x86_64"      'bar-.*\.rpm'     bar-$vers
 
 download "$OSC_URL/$OSC_PATH/openSUSE_11.3/i586"     'bar-.*\.rpm'     bar-$version-opensuse11.3_i586.rpm
 download "$OSC_URL/$OSC_PATH/openSUSE_11.3/x86_64"   'bar-.*\.rpm'     bar-$version-opensuse11.3_x86_64.rpm
+download "$OSC_URL/$OSC_PATH/openSUSE_11.4/i586"     'bar-.*\.rpm'     bar-$version-opensuse11.4_i586.rpm
+download "$OSC_URL/$OSC_PATH/openSUSE_11.4/x86_64"   'bar-.*\.rpm'     bar-$version-opensuse11.4_x86_64.rpm
 
 download "$OSC_URL/$OSC_PATH/Debian_5.0/i386"        'bar_.*\.deb'     bar-$version-debian5_i386.deb
 download "$OSC_URL/$OSC_PATH/Debian_5.0/i386"        'bar-gui_.*\.deb' bar-gui-$version-debian5_i386.deb
