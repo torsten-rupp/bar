@@ -16,6 +16,10 @@
 
 /****************************** Includes *******************************/
 #include <stdlib.h>
+#include <stdint.h>
+#ifdef HAVE_STDBOOL_H
+  #include <stdbool.h>
+#endif
 #include <limits.h>
 #include <float.h>
 #include <ctype.h>
@@ -29,7 +33,7 @@
 #define DEBUG_LEVEL 8                          // debug level
 
 /* definition of boolean values */
-#ifdef __cplusplus
+#if defined(__cplusplus) || defined(HAVE_STDBOOL_H)
   #ifndef FALSE
     #define FALSE false
   #endif
@@ -108,9 +112,12 @@
 #define EXITCODE_INTERNAL_ERROR 128
 
 /**************************** Datatypes ********************************/
-#ifndef __cplusplus
-  typedef unsigned char    bool;
+#ifndef HAVE_STDBOOL_H
+  #ifndef __cplusplus
+    typedef uint8_t          bool;
+  #endif
 #endif
+
 typedef unsigned char      uchar;
 typedef short int          shortint;
 typedef unsigned short int ushortint;
@@ -122,22 +129,21 @@ typedef enum
   CMP_GREATER=+1
 } TCmpResults;
 
-// ??? configure
-typedef unsigned char      byte;
+typedef uint8_t             byte;
 
-typedef char               bool8;
-typedef int                bool32;
-typedef char               char8;
-typedef char               uchar8;
-typedef char               int8;
-typedef short int          int16;
-typedef int                int32;
-typedef long long          int64;
-typedef unsigned char      uint8;
-typedef unsigned short int uint16;
-typedef unsigned int       uint32;
-typedef unsigned long long uint64;
-typedef void               void32;
+typedef unsigned char       bool8;
+typedef unsigned int        bool32;
+typedef char                char8;
+typedef unsigned char       uchar8;
+typedef char                int8;
+typedef short int           int16;
+typedef int                 int32;
+typedef long long int       int64;
+typedef unsigned char       uint8;
+typedef unsigned short int  uint16;
+typedef unsigned int        uint32;
+typedef unsigned long long  uint64;
+typedef void                void32;
 
 /**************************** Variables ********************************/
 
