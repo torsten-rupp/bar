@@ -18,7 +18,7 @@
   #include <gcrypt.h>
 #endif /* HAVE_GCRYPT */
 #include <termios.h>
-#include <unistd.h>        
+#include <unistd.h>
 #include <sys/ioctl.h>
 #include <errno.h>
 #include <assert.h>
@@ -106,6 +106,8 @@ void Password_freeSecure(void *p)
   #ifndef HAVE_GCRYPT
     MemoryHeader *memoryHeader;
   #endif
+
+  assert(p != NULL);
 
   #ifdef HAVE_GCRYPT
     gcry_free(p);
