@@ -649,7 +649,7 @@ Errors Command_restore(const StringList                *archiveNameList,
                  corrupt.
               */
               if (   !Compress_isCompressed(archiveEntryInfo.file.deltaCompressAlgorithm)
-                  && !Compress_isCompressed(archiveEntryInfo.file.dataCompressAlgorithm)
+                  && !Compress_isCompressed(archiveEntryInfo.file.byteCompressAlgorithm)
                   && !Archive_eofData(&archiveEntryInfo))
               {
                 printWarning("unexpected data at end of file entry '%S'.\n",fileName);
@@ -879,7 +879,7 @@ Errors Command_restore(const StringList                *archiveNameList,
                  corrupt.
               */
               if (   !Compress_isCompressed(archiveEntryInfo.image.deltaCompressAlgorithm)
-                  && !Compress_isCompressed(archiveEntryInfo.image.dataCompressAlgorithm)
+                  && !Compress_isCompressed(archiveEntryInfo.image.byteCompressAlgorithm)
                   && !Archive_eofData(&archiveEntryInfo))
               {
                 printWarning("unexpected data at end of image entry '%S'.\n",imageName);
@@ -1654,7 +1654,7 @@ Errors Command_restore(const StringList                *archiveNameList,
                      corrupt.
                   */
                   if (   !Compress_isCompressed(archiveEntryInfo.hardLink.deltaCompressAlgorithm)
-                      && !Compress_isCompressed(archiveEntryInfo.hardLink.dataCompressAlgorithm)
+                      && !Compress_isCompressed(archiveEntryInfo.hardLink.byteCompressAlgorithm)
                       && !Archive_eofData(&archiveEntryInfo))
                   {
                     printWarning("unexpected data at end of hard link entry '%S'.\n",fileName);

@@ -179,7 +179,7 @@ Errors Command_compare(const StringList                *archiveNameList,
       {
         case ARCHIVE_ENTRY_TYPE_FILE:
           {
-            CompressAlgorithms deltaCompressAlgorithm,dataCompressAlgorithm;
+            CompressAlgorithms deltaCompressAlgorithm,byteCompressAlgorithm;
             String             fileName;
             FileInfo           fileInfo;
             String             deltaSourceName;
@@ -198,7 +198,7 @@ Errors Command_compare(const StringList                *archiveNameList,
             error = Archive_readFileEntry(&archiveInfo,
                                           &archiveEntryInfo,
                                           &deltaCompressAlgorithm,
-                                          &dataCompressAlgorithm,
+                                          &byteCompressAlgorithm,
                                           NULL,
                                           NULL,
                                           fileName,
@@ -401,7 +401,7 @@ Errors Command_compare(const StringList                *archiveNameList,
                  corrupt.
               */
               if (   !Compress_isCompressed(deltaCompressAlgorithm)
-                  && !Compress_isCompressed(dataCompressAlgorithm)
+                  && !Compress_isCompressed(byteCompressAlgorithm)
                   && !Archive_eofData(&archiveEntryInfo))
               {
                 printWarning("unexpected data at end of file entry '%S'.\n",fileName);
@@ -429,7 +429,7 @@ Errors Command_compare(const StringList                *archiveNameList,
           break;
         case ARCHIVE_ENTRY_TYPE_IMAGE:
           {
-            CompressAlgorithms deltaCompressAlgorithm,dataCompressAlgorithm;
+            CompressAlgorithms deltaCompressAlgorithm,byteCompressAlgorithm;
             String             imageName;
             DeviceInfo         deviceInfo;
             uint64             blockOffset,blockCount;
@@ -445,7 +445,7 @@ Errors Command_compare(const StringList                *archiveNameList,
             error = Archive_readImageEntry(&archiveInfo,
                                            &archiveEntryInfo,
                                            &deltaCompressAlgorithm,
-                                           &dataCompressAlgorithm,
+                                           &byteCompressAlgorithm,
                                            NULL,
                                            NULL,
                                            imageName,
@@ -627,7 +627,7 @@ Errors Command_compare(const StringList                *archiveNameList,
                  corrupt.
               */
               if (   !Compress_isCompressed(deltaCompressAlgorithm)
-                  && !Compress_isCompressed(dataCompressAlgorithm)
+                  && !Compress_isCompressed(byteCompressAlgorithm)
                   && !Archive_eofData(&archiveEntryInfo))
               {
                 printWarning("unexpected data at end of image entry '%S'.\n",imageName);
@@ -913,7 +913,7 @@ Errors Command_compare(const StringList                *archiveNameList,
           break;
         case ARCHIVE_ENTRY_TYPE_HARDLINK:
           {
-            CompressAlgorithms deltaCompressAlgorithm,dataCompressAlgorithm;
+            CompressAlgorithms deltaCompressAlgorithm,byteCompressAlgorithm;
             StringList         fileNameList;
             FileInfo           fileInfo;
             uint64             fragmentOffset,fragmentSize;
@@ -933,7 +933,7 @@ Errors Command_compare(const StringList                *archiveNameList,
             error = Archive_readHardLinkEntry(&archiveInfo,
                                               &archiveEntryInfo,
                                               &deltaCompressAlgorithm,
-                                              &dataCompressAlgorithm,
+                                              &byteCompressAlgorithm,
                                               NULL,
                                               NULL,
                                               &fileNameList,
@@ -1148,7 +1148,7 @@ Errors Command_compare(const StringList                *archiveNameList,
                      corrupt.
                   */
                   if (   !Compress_isCompressed(deltaCompressAlgorithm)
-                      && !Compress_isCompressed(dataCompressAlgorithm)
+                      && !Compress_isCompressed(byteCompressAlgorithm)
                       && !Archive_eofData(&archiveEntryInfo))
                   {
                     printWarning("unexpected data at end of hard link entry '%S'.\n",fileName);
