@@ -14,15 +14,20 @@
     time
   * use libssh2 send64() when available to be able to
     send large files, too
+  * improved error handling with public/private keys
+  * fixed handling of error case when asymmetric encrypted
+    archive cannot be read
 
-2012-01-05 0.16g
+2012-01-14 0.16g
   * fix restore: do not create empty parent directories
   * fix restoring archive entries without directory part
   * added verbose level 5, output ssh debug messages for
     level 4 and 5
   * fixed crash when archive on CD/DVD/BD/device should
     be listed/tested/extracted directly. Please mount
-    a CD/DVD/BD/device and use the file operations instead
+    a CD/DVD/BD/device and use the file operations instead.
+    Next version of BAR will support reading CD/DVD/BD
+    directly
   * fixed memory leaks
 
 2011-09-10 0.16f
