@@ -438,6 +438,7 @@ test1 test_basic: bar@EXEEXT@
 	@$(ECHO_NO_LF) "Test 1: basic..."
 	@$(MAKE) \
           BAR_FILE="test" \
+          BAR_PATTERN="test" \
           OPTIONS="--compress-algorithm=none --crypt-algorithm=none" \
           test_file_operations
 	@$(ECHO) "ok"
@@ -447,6 +448,7 @@ test2 test_compress: bar@EXEEXT@
 	for compress in $(COMPRESS_NAMES); do \
           $(MAKE) \
             BAR_FILE="test" \
+            BAR_PATTERN="test" \
             OPTIONS="--compress-algorithm=$$compress --crypt-algorithm=none" \
             test_file_operations \
             ; \
@@ -458,6 +460,7 @@ test3 test_crypt: bar@EXEEXT@
 	for crypt in $(CRYPT_NAMES); do \
           $(MAKE) \
             BAR_FILE="test" \
+            BAR_PATTERN="test" \
             OPTIONS="--compress-algorithm=none --crypt-algorithm=$$crypt --crypt-password=$(TEST_PASSWORD)" \
             test_file_operations \
             ; \
@@ -470,6 +473,7 @@ test4 test_asymmetric_crypt: bar@EXEEXT@
 	for crypt in $(CRYPT_NAMES); do \
           $(MAKE) \
             BAR_FILE="test" \
+            BAR_PATTERN="test" \
             OPTIONS="--compress-algorithm=none --crypt-algorithm=$$crypt --crypt-password=$(TEST_PASSWORD) --crypt-type=asymmetric --crypt-public-key=$(PWD)/test/key.public --crypt-private-key=$(PWD)/test/key.private" \
             test_file_operations \
             ; \
@@ -480,6 +484,7 @@ test5 test_split: bar@EXEEXT@
 	@$(ECHO_NO_LF) "Test 5: split..."
 	$(MAKE) \
           BAR_FILE="test-###" \
+          BAR_PATTERN="test-*" \
           OPTIONS="--archive-part-size=100000 --compress-algorithm=none --crypt-algorithm=none" \
           test_file_operations
 	@$(ECHO) "ok"
@@ -489,6 +494,7 @@ test6 test_image: bar@EXEEXT@
 	for compress in none zip9; do \
           $(MAKE) \
             BAR_FILE="test" \
+            BAR_PATTERN="test" \
             OPTIONS="--compress-algorithm=$$compress --crypt-algorithm=none" \
             test_image_operations \
             ; \
@@ -499,6 +505,7 @@ test7 test_dvd: bar@EXEEXT@
 	@$(ECHO_NO_LF) "Test 7: dvd..."
 	$(MAKE) \
           BAR_FILE="test" \
+          BAR_PATTERN="test" \
           OPTIONS="--compress-algorithm=none --crypt-algorithm=none" \
           test_dvd_operations \
           ;
@@ -511,6 +518,7 @@ test_combined: bar@EXEEXT@
           for crypt in $(TEST_COMBINED_CRYPT_NAMES); do \
             $(MAKE) \
               BAR_FILE=test-### \
+              BAR_PATTERN="test-*" \
               OPTIONS="--compress-algorithm=$$compress --crypt-algorithm=$$crypt --crypt-password=$(TEST_PASSWORD) --crypt-type=asymmetric --crypt-public-key=$(PWD)/test/key.public --crypt-private-key=$(PWD)/test/key.private --archive-part-size=100K" \
               test_file_operations \
               ; \
@@ -520,6 +528,7 @@ test_combined: bar@EXEEXT@
             fi; \
             $(MAKE) \
               BAR_FILE=test-### \
+              BAR_PATTERN="test-*" \
               OPTIONS="--compress-algorithm=$$compress --crypt-algorithm=$$crypt --crypt-password=$(TEST_PASSWORD) --crypt-type=asymmetric --crypt-public-key=$(PWD)/test/key.public --crypt-private-key=$(PWD)/test/key.private --archive-part-size=10M" \
               test_image_operations \
               ; \
@@ -670,18 +679,18 @@ test_file_operation_base: \
 test_file_operation_delta: \
   $(TEST_FILES)
 	# delta tests
-	($(CD) test/data/delta1; SSH_ASKPASS= ../../../$(TEST_BAR) -c ../../$(BAR_FILE)1.bar test.dat $(OPTIONS) --overwrite-archive-files $(if $(QUIET),1>/dev/null))
-	($(CD) test/data/delta2; SSH_ASKPASS= ../../../$(TEST_BAR) -c ../../$(BAR_FILE)2.bar --delta-source=../../$(BAR_FILE)1.bar test.dat $(OPTIONS) --compress-algorithm=xdelta9 --overwrite-archive-files $(if $(QUIET),1>/dev/null))
-	($(CD) test/data/delta2; SSH_ASKPASS= ../../../$(TEST_BAR) -c ../../$(BAR_FILE)2.bar --delta-source=../../$(BAR_FILE)1.bar test.dat $(OPTIONS) --compress-algorithm=xdelta9+zip9 --overwrite-archive-files $(if $(QUIET),1>/dev/null))
-ifeq (@HAVE_BZ2@,1)
-	($(CD) test/data/delta2; SSH_ASKPASS= ../../../$(TEST_BAR) -c ../../$(BAR_FILE)2.bar --delta-source=../../$(BAR_FILE)1.bar test.dat $(OPTIONS) --compress-algorithm=xdelta9+bzip2 --overwrite-archive-files $(if $(QUIET),1>/dev/null))
+	($(CD) test/data/delta1; SSH_ASKPASS= ../../../$(TEST_BAR) -c ../../$(BAR_FILE)-A.bar test.dat $(OPTIONS) --overwrite-archive-files $(if $(QUIET),1>/dev/null))
+	($(CD) test/data/delta2; SSH_ASKPASS= ../../../$(TEST_BAR) -c ../../$(BAR_FILE)-B.bar --delta-source='../../$(BAR_PATTERN)-A.bar' test.dat $(OPTIONS) --compress-algorithm=xdelta9 --overwrite-archive-files $(if $(QUIET),1>/dev/null))
+	($(CD) test/data/delta2; SSH_ASKPASS= ../../../$(TEST_BAR) -c ../../$(BAR_FILE)-B.bar --delta-source='../../$(BAR_PATTERN)-A.bar' test.dat $(OPTIONS) --compress-algorithm=xdelta9+zip9 --overwrite-archive-files $(if $(QUIET),1>/dev/null))
+ifeq (1,1)
+	($(CD) test/data/delta2; SSH_ASKPASS= ../../../$(TEST_BAR) -c ../../$(BAR_FILE)-B.bar --delta-source='../../$(BAR_PATTERN)-A.bar' test.dat $(OPTIONS) --compress-algorithm=xdelta9+bzip2 --overwrite-archive-files $(if $(QUIET),1>/dev/null))
 endif
-ifeq (@HAVE_LZMA@,1)
-	($(CD) test/data/delta2; SSH_ASKPASS= ../../../$(TEST_BAR) -c ../../$(BAR_FILE)2.bar --delta-source=../../$(BAR_FILE)1.bar test.dat $(OPTIONS) --compress-algorithm=xdelta9+lzma9 --overwrite-archive-files $(if $(QUIET),1>/dev/null))
+ifeq (1,1)
+	($(CD) test/data/delta2; SSH_ASKPASS= ../../../$(TEST_BAR) -c ../../$(BAR_FILE)-B.bar --delta-source='../../$(BAR_PATTERN)-A.bar' test.dat $(OPTIONS) --compress-algorithm=xdelta9+lzma9 --overwrite-archive-files $(if $(QUIET),1>/dev/null))
 endif
-	SSH_ASKPASS= $(TEST_BAR) -t test/$(BAR_FILE)2.bar --delta-source=test/$(BAR_FILE)1.bar $(OPTIONS) $(if $(QUIET),1>/dev/null)
-	($(CD) test/data/delta2; SSH_ASKPASS= ../../../$(TEST_BAR) -d ../../$(BAR_FILE)2.bar --delta-source=../../$(BAR_FILE)1.bar $(OPTIONS) $(if $(QUIET),1>/dev/null))
-	($(CD) test/data/delta2; SSH_ASKPASS= ../../../$(TEST_BAR) -x ../../$(BAR_FILE)2.bar --delta-source=../../$(BAR_FILE)1.bar $(OPTIONS) --destination ../../restore $(if $(QUIET),1>/dev/null))
+	SSH_ASKPASS= $(TEST_BAR) -t test/$(BAR_PATTERN)-B.bar --delta-source='test/$(BAR_PATTERN)-A.bar' $(OPTIONS) $(if $(QUIET),1>/dev/null)
+	($(CD) test/data/delta2; SSH_ASKPASS= ../../../$(TEST_BAR) -d ../../$(BAR_FILE)-B.bar --delta-source='../../$(BAR_PATTERN)-A.bar' $(OPTIONS) $(if $(QUIET),1>/dev/null))
+	($(CD) test/data/delta2; SSH_ASKPASS= ../../../$(TEST_BAR) -x ../../$(BAR_FILE)-B.bar --delta-source='../../$(BAR_PATTERN)-A.bar' $(OPTIONS) --destination ../../restore $(if $(QUIET),1>/dev/null))
 	$(DIFF) test/data/delta2/test.dat test/restore/test.dat
 
 test_file_operation_incremental: \
