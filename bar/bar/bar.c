@@ -4540,8 +4540,7 @@ fprintf(stderr,"%s,%d: t=%s\n",__FILE__,__LINE__,t);
   }
 
   // delete temporary directory
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-//  File_delete(tmpDirectory,TRUE);
+  File_delete(tmpDirectory,TRUE);
 
   // close index database (if open)
   if (indexDatabaseHandle != NULL)
