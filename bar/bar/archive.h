@@ -197,7 +197,7 @@ typedef struct
       SourceEntryInfo       sourceEntryInfo;           // delta source info
 
       CompressAlgorithms    deltaCompressAlgorithm;    // delta compression algorithm
-      CompressAlgorithms    dataCompressAlgorithm;     // data compression algorithm
+      CompressAlgorithms    byteCompressAlgorithm;     // byte compression algorithm
 
       ChunkFile             chunkFile;                 // file
       ChunkFileEntry        chunkFileEntry;            // file entry
@@ -205,10 +205,9 @@ typedef struct
       ChunkFileData         chunkFileData;             // file data
 
       CompressInfo          deltaCompressInfo;         // delta compress info
-      CompressInfo          dataCompressInfo;          // data compress info
+      CompressInfo          byteCompressInfo;          // byte compress info
       CryptInfo             cryptInfo;                 // cryption info
 
-      bool                  createdFlag;               // TRUE iff file created
       uint                  headerLength;              // length of header
       bool                  headerWrittenFlag;         // TRUE iff header written
 
@@ -223,7 +222,7 @@ typedef struct
       uint                  blockSize;                 // block size of device
 
       CompressAlgorithms    deltaCompressAlgorithm;    // delta compression algorithm
-      CompressAlgorithms    dataCompressAlgorithm;     // data compression algorithm
+      CompressAlgorithms    byteCompressAlgorithm;     // byte compression algorithm
 
       ChunkImage            chunkImage;                // image
       ChunkImageEntry       chunkImageEntry;           // image entry
@@ -231,10 +230,9 @@ typedef struct
       ChunkImageData        chunkImageData;            // image data
 
       CompressInfo          deltaCompressInfo;         // delta compress info
-      CompressInfo          dataCompressInfo;          // data compress info
+      CompressInfo          byteCompressInfo;          // byte compress info
       CryptInfo             cryptInfo;                 // cryption info
 
-      bool                  createdFlag;               // TRUE iff file created
       uint                  headerLength;              // length of header
       bool                  headerWrittenFlag;         // TRUE iff header written
 
@@ -257,7 +255,7 @@ typedef struct
       SourceEntryInfo       sourceEntryInfo;           // delta source info
 
       CompressAlgorithms    deltaCompressAlgorithm;    // delta compression algorithm
-      CompressAlgorithms    dataCompressAlgorithm;     // data compression algorithm
+      CompressAlgorithms    byteCompressAlgorithm;     // byte compression algorithm
 
       ChunkHardLink         chunkHardLink;             // hard link
       ChunkHardLinkEntry    chunkHardLinkEntry;        // hard link entry
@@ -266,10 +264,9 @@ typedef struct
       ChunkHardLinkData     chunkHardLinkData;         // hard link data
 
       CompressInfo          deltaCompressInfo;         // delta compress info
-      CompressInfo          dataCompressInfo;          // data compress info
+      CompressInfo          byteCompressInfo;          // byte compress info
       CryptInfo             cryptInfo;                 // cryption info
 
-      bool                  createdFlag;               // TRUE iff hard link created
       uint                  headerLength;              // length of header
       bool                  headerWrittenFlag;         // TRUE iff header written
 
@@ -610,7 +607,7 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo);
 Errors Archive_readFileEntry(ArchiveInfo        *archiveInfo,
                              ArchiveEntryInfo   *archiveEntryInfo,
                              CompressAlgorithms *deltaCompressAlgorithm,
-                             CompressAlgorithms *dataCompressAlgorithm,
+                             CompressAlgorithms *byteCompressAlgorithm,
                              CryptAlgorithms    *cryptAlgorithm,
                              CryptTypes         *cryptType,
                              String             fileName,
@@ -637,7 +634,7 @@ Errors Archive_readFileEntry(ArchiveInfo        *archiveInfo,
 Errors Archive_readImageEntry(ArchiveInfo        *archiveInfo,
                               ArchiveEntryInfo   *archiveEntryInfo,
                               CompressAlgorithms *deltaCompressAlgorithm,
-                              CompressAlgorithms *dataCompressAlgorithm,
+                              CompressAlgorithms *byteCompressAlgorithm,
                               CryptAlgorithms    *cryptAlgorithm,
                               CryptTypes         *cryptType,
                               String             deviceName,
@@ -713,7 +710,7 @@ Errors Archive_readLinkEntry(ArchiveInfo      *archiveInfo,
 Errors Archive_readHardLinkEntry(ArchiveInfo        *archiveInfo,
                                  ArchiveEntryInfo   *archiveEntryInfo,
                                  CompressAlgorithms *deltaCompressAlgorithm,
-                                 CompressAlgorithms *dataCompressAlgorithm,
+                                 CompressAlgorithms *byteCompressAlgorithm,
                                  CryptAlgorithms    *cryptAlgorithm,
                                  CryptTypes         *cryptType,
                                  StringList         *fileNameList,
