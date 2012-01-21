@@ -102,7 +102,39 @@ ERROR PASSWORDS_MISMATCH             "passwords mismatch"
 ERROR INIT_CIPHER                    "init cipher fail"
 ERROR ENCRYPT_FAIL                   "encrypt fail"
 ERROR DECRYPT_FAIL                   "decrypt fail"
-ERROR CREATE_KEY_FAIL                ERROR_TEXT
+ERROR CREATE_KEY_FAIL
+  if (ERROR_TEXT != NULL)
+  {
+    snprintf(errorText,sizeof(errorText)-1,"create public/private key '%s' fail",ERROR_TEXT);
+  }
+  else
+  {
+    strncpy(errorText,"create public/private key fail",sizeof(errorText)-1);
+  }
+  errorText[sizeof(errorText)-1] = '\0';
+
+ERROR KEY_NOT_FOUND
+  if (ERROR_TEXT != NULL)
+  {
+    snprintf(errorText,sizeof(errorText)-1,"public/private key '%s' not found",ERROR_TEXT);
+  }
+  else
+  {
+    strncpy(errorText,"public/private key not found",sizeof(errorText)-1);
+  }
+  errorText[sizeof(errorText)-1] = '\0';
+
+ERROR READ_KEY_FAIL
+  if (ERROR_TEXT != NULL)
+  {
+    snprintf(errorText,sizeof(errorText)-1,"read public/private key '%s' fail",ERROR_TEXT);
+  }
+  else
+  {
+    strncpy(errorText,"read public/private key fail",sizeof(errorText)-1);
+  }
+  errorText[sizeof(errorText)-1] = '\0';
+
 ERROR INVALID_KEY                    "invalid key"
 ERROR INVALID_KEY_LENGTH             "invalid key length"
 ERROR INVALID_BLOCK_LENGTH           "invalid block length"
