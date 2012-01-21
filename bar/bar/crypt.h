@@ -32,7 +32,7 @@
 
 /***************************** Constants *******************************/
 
-/* available chipers */
+// available chipers
 typedef enum
 {
   CRYPT_ALGORITHM_NONE       = CHUNK_CONST_CRYPT_ALGORITHM_NONE,
@@ -63,7 +63,7 @@ typedef enum
 
 /***************************** Datatypes *******************************/
 
-/* crypt info block */
+// crypt info block
 typedef struct
 {
   CryptAlgorithms  cryptAlgorithm;
@@ -73,7 +73,7 @@ typedef struct
   #endif /* HAVE_GCRYPT */
 } CryptInfo;
 
-/* public/private key */
+// public/private key
 typedef struct
 {
   #ifdef HAVE_GCRYPT
@@ -320,6 +320,36 @@ void Crypt_doneKey(CryptKey *cryptKey);
 CryptKey *Crypt_newKey(void);
 
 /***********************************************************************\
+* Name   : Crypt_getKeyData
+* Purpose: get public/private key data as string
+* Input  : cryptKey - crypt key
+*          string   - string variable
+* Output : string - string with key data
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors Crypt_getKeyData(CryptKey       *cryptKey,
+                        String         string,
+                        const Password *password
+                       );
+
+/***********************************************************************\
+* Name   : Crypt_setKeyData
+* Purpose: set public/private key data from string
+* Input  : cryptKey - crypt key
+*          string   - string with key data
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors Crypt_setKeyData(CryptKey       *cryptKey,
+                        const String   string,
+                        const Password *password
+                       );
+
+/***********************************************************************\
 * Name   : Crypt_readKeyFile
 * Purpose: read key from file
 * Input  : fileName - file name
@@ -451,7 +481,7 @@ Errors Crypt_getDecryptKey(CryptKey   *privateKey,
                            Password   *password
                           );
 
-                                 
+
 
 #ifdef __cplusplus
   }
