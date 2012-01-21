@@ -581,7 +581,14 @@ LOCAL Errors readEncryptionKey(ArchiveInfo       *archiveInfo,
   Chunk_done(&chunkInfoKey);
 
   // decrypt key
-  if (archiveInfo->cryptPassword == NULL) archiveInfo->cryptPassword = Password_new();
+  if (archiveInfo->cryptPassword == NULL)
+  {
+    archiveInfo->cryptPassword = Password_new();
+    if (archiveInfo->cryptPassword == NULL)
+    {
+      HALT_INSUFFICIENT_MEMORY();
+    }
+  }
   error = Crypt_getDecryptKey(&archiveInfo->cryptKey,
                               archiveInfo->cryptKeyData,
                               archiveInfo->cryptKeyDataLength,
@@ -589,7 +596,7 @@ LOCAL Errors readEncryptionKey(ArchiveInfo       *archiveInfo,
                              );
   if (error != ERROR_NONE)
   {
-    Password_delete(archiveInfo->cryptPassword);
+    Password_delete(archiveInfo->cryptPassword); archiveInfo->cryptPassword = NULL;
     free(archiveInfo->cryptKeyData); archiveInfo->cryptKeyData = NULL;
     return error;
   }
