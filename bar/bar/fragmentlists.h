@@ -206,6 +206,19 @@ bool FragmentList_entryExists(FragmentNode *fragmentNode, uint64 offset, uint64 
 
 bool FragmentList_isEntryComplete(FragmentNode *fragmentNode);
 
+/***********************************************************************\
+* Name   : FragmentList_print
+* Purpose: print fragment list
+* Input  : outputHandle - output handle
+*          indent       - indention
+*          fragmentNode - fragment node
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void FragmentList_print(FILE *outputHandle, uint indent, FragmentNode *fragmentNode);
+
 #ifndef NDEBUG
 /***********************************************************************\
 * Name   : FragmentList_debugPrintInfo

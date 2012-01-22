@@ -65,6 +65,37 @@ LOCAL void freeFragmentNode(FragmentNode *fragmentNode, void *userData)
   String_delete(fragmentNode->name);
 }
 
+/***********************************************************************\
+* Name   : printSpaces
+* Purpose: print spaces
+* Input  : outputHandle - output file handle
+*          n            - number of spaces to print
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void printSpaces(FILE *outputHandle, uint n)
+{
+  const char *SPACES8 = "        ";
+
+  uint z;
+
+  assert(outputHandle != NULL);
+
+  z = 0;
+  while ((z+8) < n)
+  {
+    (void)fwrite(SPACES8,1,8,outputHandle);
+    z += 8;
+  }
+  while (z < n)
+  {
+    (void)fputc(' ',outputHandle);
+    z++;
+  }
+}
+
 /*---------------------------------------------------------------------*/
 
 void FragmentList_init(FragmentList *fragmentList)
@@ -258,16 +289,21 @@ bool FragmentList_isEntryComplete(FragmentNode *fragmentNode)
             );
 }
 
-#ifndef NDEBUG
-void FragmentList_debugPrintInfo(FragmentNode *fragmentNode, const char *name)
+void FragmentList_print(FILE *outputHandle, uint indent, FragmentNode *fragmentNode)
 {
   FragmentEntryNode *fragmentEntryNode;
 
-  printf("Fragments '%s':\n",name);
   for (fragmentEntryNode = fragmentNode->fragmentEntryList.head; fragmentEntryNode != NULL; fragmentEntryNode = fragmentEntryNode->next)
   {
-    printf("  %8llu..%8llu\n",F0(fragmentEntryNode),F1(fragmentEntryNode));
+    printSpaces(outputHandle,indent); fprintf(outputHandle,"%8llu..%8llu\n",F0(fragmentEntryNode),F1(fragmentEntryNode));
   }
+}
+
+#ifndef NDEBUG
+void FragmentList_debugPrintInfo(FragmentNode *fragmentNode, const char *name)
+{
+  fprintf(stdout,"Fragments '%s':\n",name);
+  FragmentList_print(stdout,0,fragmentNode);
 }
 #endif /* not NDEBUG */
 
