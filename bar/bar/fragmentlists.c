@@ -162,7 +162,7 @@ void FragmentList_addEntry(FragmentNode *fragmentNode, uint64 offset, uint64 len
 
   assert(fragmentNode != NULL);
 
-  /* remove all fragments which are completely covered by new fragment */
+  // remove all fragments which are completely covered by new fragment
   fragmentEntryNode = fragmentNode->fragmentEntryList.head;
   while (fragmentEntryNode != NULL)
   {
@@ -179,7 +179,7 @@ void FragmentList_addEntry(FragmentNode *fragmentNode, uint64 offset, uint64 len
     }
   }
 
-  /* find prev/next fragment */
+  // find prev/next fragment
   prevFragmentEntryNode = NULL;
   fragmentEntryNode = fragmentNode->fragmentEntryList.head;
   while ((fragmentEntryNode != NULL) && (F1(fragmentEntryNode) < I1(offset,length)))
@@ -195,22 +195,22 @@ void FragmentList_addEntry(FragmentNode *fragmentNode, uint64 offset, uint64 len
     fragmentEntryNode = fragmentEntryNode->prev;
   }
 
-  /* check if existing Fragment can be extended or new Fragment have to be inserted */
+  // check if existing Fragment can be extended or new Fragment have to be inserted
   if      ((prevFragmentEntryNode != NULL) && (F1(prevFragmentEntryNode)+1 >= I0(offset,length)))
   {
-    /* combine with previous existing fragment */
+    // combine with previous existing fragment
     prevFragmentEntryNode->length = (offset+length)-prevFragmentEntryNode->offset;
     prevFragmentEntryNode->offset = prevFragmentEntryNode->offset;
   }
   else if ((nextFragmentEntryNode != NULL) && (I1(offset,length)+1 >= F0(nextFragmentEntryNode)))
   {
-    /* combine with next existing fragment */
+    // combine with next existing fragment
     nextFragmentEntryNode->length = (nextFragmentEntryNode->offset+nextFragmentEntryNode->length)-offset;
     nextFragmentEntryNode->offset = offset;
   }
   else
   {
-    /* insert new Fragment */
+    // insert new Fragment
     fragmentEntryNode = LIST_NEW_NODE(FragmentEntryNode);
     if (fragmentEntryNode == NULL)
     {
