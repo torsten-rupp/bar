@@ -26,6 +26,7 @@
 
 /***************************** Datatypes *******************************/
 
+// fragment list entry node
 typedef struct FragmentEntryNode
 {
   LIST_NODE_HEADER(struct FragmentEntryNode);
@@ -34,11 +35,13 @@ typedef struct FragmentEntryNode
   uint64 length;                        // length of fragment
 } FragmentEntryNode;
 
+// fragment list entry
 typedef struct
 {
   LIST_HEADER(FragmentEntryNode);
 } FragmentEntryList;
 
+// fragment list node
 typedef struct FragmentNode
 {
   LIST_NODE_HEADER(struct FragmentNode);
@@ -50,6 +53,7 @@ typedef struct FragmentNode
   FragmentEntryList fragmentEntryList;
 } FragmentNode;
 
+// sorted fragment list
 typedef struct
 {
   LIST_HEADER(FragmentNode);
