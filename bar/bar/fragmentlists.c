@@ -195,7 +195,7 @@ void FragmentList_addEntry(FragmentNode *fragmentNode, uint64 offset, uint64 len
     fragmentEntryNode = fragmentEntryNode->prev;
   }
 
-  // check if existing Fragment can be extended or new Fragment have to be inserted
+  // check if existing fragment can be extended or new fragment have to be inserted
   if      ((prevFragmentEntryNode != NULL) && (F1(prevFragmentEntryNode)+1 >= I0(offset,length)))
   {
     // combine with previous existing fragment
@@ -210,7 +210,7 @@ void FragmentList_addEntry(FragmentNode *fragmentNode, uint64 offset, uint64 len
   }
   else
   {
-    // insert new Fragment
+    // insert new fragment
     fragmentEntryNode = LIST_NEW_NODE(FragmentEntryNode);
     if (fragmentEntryNode == NULL)
     {
