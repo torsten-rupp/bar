@@ -372,7 +372,7 @@ Errors Command_restore(const StringList                *archiveNameList,
               fragmentNode = FragmentList_find(&fragmentList,destinationFileName);
               if (fragmentNode != NULL)
               {
-                if (!jobOptions->overwriteFilesFlag && FragmentList_checkEntryExists(fragmentNode,fragmentOffset,fragmentSize))
+                if (!jobOptions->overwriteFilesFlag && FragmentList_entryExists(fragmentNode,fragmentOffset,fragmentSize))
                 {
                   printInfo(1,
                             "  Restore file '%s'...skipped (file part %llu..%llu exists)\n",
@@ -594,7 +594,7 @@ Errors Command_restore(const StringList                *archiveNameList,
               }
 
               // check if file is complete
-              if (FragmentList_checkEntryComplete(fragmentNode))
+              if (FragmentList_isEntryComplete(fragmentNode))
               {
                 // set file time, file owner/group, file permission
                 if (!jobOptions->dryRunFlag)
@@ -731,7 +731,7 @@ Errors Command_restore(const StringList                *archiveNameList,
               fragmentNode = FragmentList_find(&fragmentList,imageName);
               if (fragmentNode != NULL)
               {
-                if (!jobOptions->overwriteFilesFlag && FragmentList_checkEntryExists(fragmentNode,blockOffset*(uint64)deviceInfo.blockSize,blockCount*(uint64)deviceInfo.blockSize))
+                if (!jobOptions->overwriteFilesFlag && FragmentList_entryExists(fragmentNode,blockOffset*(uint64)deviceInfo.blockSize,blockCount*(uint64)deviceInfo.blockSize))
                 {
                   printInfo(1,
                             "  Restore image '%s'...skipped (image part %llu..%llu exists)\n",
@@ -858,7 +858,7 @@ Errors Command_restore(const StringList                *archiveNameList,
 //FragmentList_debugPrintInfo(fragmentNode,String_cString(fileName));
 
               // discard fragment list if file is complete
-              if (FragmentList_checkEntryComplete(fragmentNode))
+              if (FragmentList_isEntryComplete(fragmentNode))
               {
                 FragmentList_discard(&fragmentList,fragmentNode);
               }
@@ -1415,7 +1415,7 @@ Errors Command_restore(const StringList                *archiveNameList,
                   fragmentNode = FragmentList_find(&fragmentList,fileName);
                   if (fragmentNode != NULL)
                   {
-                    if (!jobOptions->overwriteFilesFlag && FragmentList_checkEntryExists(fragmentNode,fragmentOffset,fragmentSize))
+                    if (!jobOptions->overwriteFilesFlag && FragmentList_entryExists(fragmentNode,fragmentOffset,fragmentSize))
                     {
                       printInfo(2,"skipped (file part %llu..%llu exists)\n",
                                 String_cString(destinationFileName),
@@ -1599,7 +1599,7 @@ Errors Command_restore(const StringList                *archiveNameList,
                   }
 
                   // discard fragment list if file is complete
-                  if (FragmentList_checkEntryComplete(fragmentNode))
+                  if (FragmentList_isEntryComplete(fragmentNode))
                   {
                     FragmentList_discard(&fragmentList,fragmentNode);
                   }
@@ -1930,7 +1930,7 @@ Errors Command_restore(const StringList                *archiveNameList,
   {
     FRAGMENTLIST_ITERATE(&fragmentList,fragmentNode)
     {
-      if (!FragmentList_checkEntryComplete(fragmentNode))
+      if (!FragmentList_isEntryComplete(fragmentNode))
       {
         printInfo(0,"Warning: incomplete entry '%s'\n",String_cString(fragmentNode->name));
         if (restoreInfo.failError == ERROR_NONE) restoreInfo.failError = ERROR_FILE_INCOMPLETE;

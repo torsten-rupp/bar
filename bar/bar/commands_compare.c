@@ -383,7 +383,7 @@ Errors Command_compare(const StringList                *archiveNameList,
               FragmentList_addEntry(fragmentNode,fragmentOffset,fragmentSize);
 
               // discard fragment list if file is complete
-              if (FragmentList_checkEntryComplete(fragmentNode))
+              if (FragmentList_isEntryComplete(fragmentNode))
               {
                 FragmentList_discard(&fragmentList,fragmentNode);
               }
@@ -613,7 +613,7 @@ Errors Command_compare(const StringList                *archiveNameList,
               FragmentList_addEntry(fragmentNode,blockOffset*(uint64)deviceInfo.blockSize,blockCount*(uint64)deviceInfo.blockSize);
 
               // discard fragment list if file is complete
-              if (FragmentList_checkEntryComplete(fragmentNode))
+              if (FragmentList_isEntryComplete(fragmentNode))
               {
                 FragmentList_discard(&fragmentList,fragmentNode);
               }
@@ -1131,7 +1131,7 @@ Errors Command_compare(const StringList                *archiveNameList,
                   FragmentList_addEntry(fragmentNode,fragmentOffset,fragmentSize);
 
                   // discard fragment list if file is complete
-                  if (FragmentList_checkEntryComplete(fragmentNode))
+                  if (FragmentList_isEntryComplete(fragmentNode))
                   {
                     FragmentList_discard(&fragmentList,fragmentNode);
                   }
@@ -1359,7 +1359,7 @@ Errors Command_compare(const StringList                *archiveNameList,
   // check fragment lists
   for (fragmentNode = fragmentList.head; fragmentNode != NULL; fragmentNode = fragmentNode->next)
   {
-    if (!FragmentList_checkEntryComplete(fragmentNode))
+    if (!FragmentList_isEntryComplete(fragmentNode))
     {
       printInfo(0,"Warning: incomplete entry '%s'\n",String_cString(fragmentNode->name));
       if (failError == ERROR_NONE) failError = ERROR_FILE_INCOMPLETE;

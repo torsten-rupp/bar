@@ -46,7 +46,7 @@ typedef struct FragmentNode
   String            name;               // fragment name
   uint64            size;               // size of fragment
   void              *userData;
-  uint              userDataSize;     
+  uint              userDataSize;
   FragmentEntryList fragmentEntryList;
 } FragmentNode;
 
@@ -120,7 +120,7 @@ void FragmentList_done(FragmentList *fragmentList);
 *          userDataSize - size of user data
 * Output : -
 * Return : fragment node or NULL on error
-* Notes  : 
+* Notes  :
 \***********************************************************************/
 
 FragmentNode *FragmentList_add(FragmentList   *fragmentList,
@@ -179,7 +179,7 @@ void FragmentList_clearEntry(FragmentNode *fragmentNode);
 void FragmentList_addEntry(FragmentNode *fragmentNode, uint64 offset, uint64 length);
 
 /***********************************************************************\
-* Name   : FragmentList_checkEntryExists
+* Name   : FragmentList_entryExists
 * Purpose: check if fragment entry already exists in fragment
 * Input  : fragmentNode - fragment node
 *          offset       - fragment offset (0..n)
@@ -189,10 +189,10 @@ void FragmentList_addEntry(FragmentNode *fragmentNode, uint64 offset, uint64 len
 * Notes  : -
 \***********************************************************************/
 
-bool FragmentList_checkEntryExists(FragmentNode *fragmentNode, uint64 offset, uint64 length);
+bool FragmentList_entryExists(FragmentNode *fragmentNode, uint64 offset, uint64 length);
 
 /***********************************************************************\
-* Name   : FragmentList_checkEntryComplete
+* Name   : FragmentList_isEntryComplete
 * Purpose: check if fragment is completed (no fragmentation)
 * Input  : fragmentNode - fragment node
 * Output : -
@@ -200,7 +200,7 @@ bool FragmentList_checkEntryExists(FragmentNode *fragmentNode, uint64 offset, ui
 * Notes  : -
 \***********************************************************************/
 
-bool FragmentList_checkEntryComplete(FragmentNode *fragmentNode);
+bool FragmentList_isEntryComplete(FragmentNode *fragmentNode);
 
 #ifndef NDEBUG
 /***********************************************************************\

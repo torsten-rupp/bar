@@ -222,7 +222,7 @@ void FragmentList_addEntry(FragmentNode *fragmentNode, uint64 offset, uint64 len
   }
 }
 
-bool FragmentList_checkEntryExists(FragmentNode *fragmentNode, uint64 offset, uint64 length)
+bool FragmentList_entryExists(FragmentNode *fragmentNode, uint64 offset, uint64 length)
 {
   bool              existsFlag;
   uint64            i0,i1;
@@ -247,7 +247,7 @@ bool FragmentList_checkEntryExists(FragmentNode *fragmentNode, uint64 offset, ui
   return existsFlag;
 }
 
-bool FragmentList_checkEntryComplete(FragmentNode *fragmentNode)
+bool FragmentList_isEntryComplete(FragmentNode *fragmentNode)
 {
   assert(fragmentNode != NULL);
 
