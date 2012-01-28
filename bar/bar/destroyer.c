@@ -1,8 +1,8 @@
 /***********************************************************************\
 *
-* $Source: /home/torsten/cvs/bar/bar/destroyer.c,v $
-* $Revision: 1.4 $
-* $Author: torsten $
+* $Revision$
+* $Date$
+* $Author$
 * Contents: "destroy" binary files by overwrite/insert/delete bytes;
 *           used for test only!
 * Systems:
@@ -290,7 +290,7 @@ LOCAL bool parseDefinition(const char *s, Definition *definition, uint64 maxPosi
           return FALSE;
         }
         break;
-    }   
+    }
   }
   else
   {
@@ -323,7 +323,7 @@ LOCAL bool parseDefinition(const char *s, Definition *definition, uint64 maxPosi
           return FALSE;
         }
         break;
-    }   
+    }
   }
 
   if (String_getNextToken(&stringTokenizer,&w,NULL))

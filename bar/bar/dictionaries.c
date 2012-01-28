@@ -1,8 +1,8 @@
 /***********************************************************************\
 *
-* $Source: /home/torsten/cvs/bar/bar/dictionaries.c,v $
-* $Revision: 1.4 $
-* $Author: torsten $
+* $Revision$
+* $Date$
+* $Author$
 * Contents: dictionary functions
 * Systems: all
 *
@@ -683,7 +683,7 @@ bool Dictionary_add(Dictionary *dictionary,
 
   /* add entry in existing table */
   if (findFreeEntry(dictionary,hash,&dictionaryEntryTable,&entryIndex))
-  {   
+  {
     assert(dictionaryEntryTable->entries != NULL);
 
     // allocate key memory
@@ -782,7 +782,7 @@ bool Dictionary_add(Dictionary *dictionary,
     z++;
   }
   if (dictionaryEntryTable != NULL)
-  {   
+  {
     assert(dictionaryEntryTable->entries != NULL);
 
     // allocate key memory
@@ -991,7 +991,7 @@ bool Dictionary_getNext(DictionaryIterator *dictionaryIterator,
         foundFlag = TRUE;
       }
 
-      /* next entry */    
+      /* next entry */
       if (dictionaryIterator->j < TABLE_SIZES[dictionaryIterator->dictionary->entryTables[dictionaryIterator->i].sizeIndex]-1)
       {
         dictionaryIterator->j++;

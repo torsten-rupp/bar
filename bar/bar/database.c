@@ -1,8 +1,8 @@
 /***********************************************************************\
 *
-* $Source: /home/torsten/cvs/bar/bar/database.c,v $
-* $Revision: 1.8 $
-* $Author: torsten $
+* $Revision$
+* $Date$
+* $Author$
 * Contents: Database functions
 * Systems: all
 *

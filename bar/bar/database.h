@@ -1,8 +1,8 @@
 /***********************************************************************\
 *
-* $Source: /home/torsten/cvs/bar/bar/database.h,v $
-* $Revision: 1.5 $
-* $Author: torsten $
+* $Revision$
+* $Date$
+* $Author$
 * Contents: database functions (SQLite3)
 * Systems: all
 *
@@ -21,7 +21,7 @@
 #include "semaphores.h"
 #include "errors.h"
 
-#include "sqlite3.h"  
+#include "sqlite3.h"
 
 /****************** Conditional compilation switches *******************/
 

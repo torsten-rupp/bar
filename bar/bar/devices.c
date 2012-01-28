@@ -1,8 +1,8 @@
 /***********************************************************************\
 *
-* $Source: /home/torsten/cvs/bar/bar/devices.c,v $
-* $Revision: 1.5 $
-* $Author: torsten $
+* $Revision$
+* $Date$
+* $Author$
 * Contents: Backup ARchiver device functions
 * Systems: all
 *
@@ -122,7 +122,7 @@ Errors Device_close(DeviceHandle *deviceHandle)
   assert(deviceHandle != NULL);
   assert(deviceHandle->file != NULL);
   assert(deviceHandle->name != NULL);
- 
+
   fclose(deviceHandle->file);
   deviceHandle->file = NULL;
   String_delete(deviceHandle->name);

@@ -1,8 +1,8 @@
 /***********************************************************************\
 *
-* $Source: /home/torsten/cvs/bar/bar/entrylists.c,v $
-* $Revision: 1.3 $
-* $Author: torsten $
+* $Revision$
+* $Date$
+* $Author$
 * Contents: Backup ARchiver entry list functions
 * Systems: all
 *

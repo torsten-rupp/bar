@@ -1,8 +1,8 @@
 /***********************************************************************\
 *
-* $Source: /home/torsten/cvs/bar/bar/dictionaries.h,v $
-* $Revision: 1.3 $
-* $Author: torsten $
+* $Revision$
+* $Date$
+* $Author$
 * Contents: dictionary functions
 * Systems: all
 *
