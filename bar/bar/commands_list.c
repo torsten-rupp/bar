@@ -1,8 +1,8 @@
 /***********************************************************************\
 *
-* $Source: /home/torsten/cvs/bar/bar/commands_list.c,v $
-* $Revision: 1.11 $
-* $Author: torsten $
+* $Revision$
+* $Date$
+* $Author$
 * Contents: Backup ARchiver archive list function
 * Systems: all
 *
