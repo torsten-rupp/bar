@@ -1,8 +1,9 @@
 /***********************************************************************\
 *
-* $Source: /home/torsten/cvs/bar/bar/archive.h,v $
-* $Revision: 1.12 $
-* $Author: torsten $
+* $URL$
+* $Revision$
+* $Date$
+* $Author$
 * Contents: Backup ARchiver archive functions
 * Systems: all
 *
@@ -194,7 +195,7 @@ typedef struct
     struct
     {
       bool                  deltaSourceInit;           // TRUE if delta source is initialized
-      SourceEntryInfo       sourceEntryInfo;           // delta source info
+      SourceHandle          sourceHandle;              // delta handle
 
       CompressAlgorithms    deltaCompressAlgorithm;    // delta compression algorithm
       CompressAlgorithms    byteCompressAlgorithm;     // byte compression algorithm
@@ -217,7 +218,7 @@ typedef struct
     struct
     {
       bool                  deltaSourceInit;           // TRUE if delta source is initialized
-      SourceEntryInfo       sourceEntryInfo;           // delta source info
+      SourceHandle          sourceHandle;              // delta source info
 
       uint                  blockSize;                 // block size of device
 
@@ -252,7 +253,7 @@ typedef struct
     struct
     {
       bool                  deltaSourceInit;           // TRUE if delta source is initialized
-      SourceEntryInfo       sourceEntryInfo;           // delta source info
+      SourceHandle          sourceHandle;              // delta source info
 
       CompressAlgorithms    deltaCompressAlgorithm;    // delta compression algorithm
       CompressAlgorithms    byteCompressAlgorithm;     // byte compression algorithm
@@ -426,23 +427,23 @@ bool Archive_eof(ArchiveInfo *archiveInfo,
 *          deltaSourceName                 - delta source name or NULL
 *          deltaCompressFlag               - TRUE for delta compression,
 *                                            FALSE otherwise
-*          compressFlag                    - TRUE for compression, FALSE
-*                                            otherwise (e. g. file to
-*                                            small or already compressed)
+*          byteCompressFlag                - TRUE for byte compression,
+*                                            FALSE otherwise (e. g. file
+*                                            is to small or already
+*                                            compressed)
 * Output : archiveEntryInfo - archive file entry info
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-Errors Archive_newFileEntry(ArchiveInfo                     *archiveInfo,
-                            ArchiveEntryInfo                *archiveEntryInfo,
-                            CompressSourceGetEntryDataBlock sourceGetEntryDataBlock,
-                            void                            *sourceGetEntryDataBlockUserData,
-                            const String                    fileName,
-                            const FileInfo                  *fileInfo,
-                            const String                    deltaSourceName,
-                            bool                            deltaCompressFlag,
-                            bool                            compressFlag
+Errors Archive_newFileEntry(ArchiveInfo      *archiveInfo,
+                            ArchiveEntryInfo *archiveEntryInfo,
+                            SourceHandle     *sourceHandle,
+                            const String     fileName,
+                            const FileInfo   *fileInfo,
+                            const String     deltaSourceName,
+                            bool             deltaCompressFlag,
+                            bool             byteCompressFlag
                            );
 
 /***********************************************************************\
@@ -458,23 +459,23 @@ Errors Archive_newFileEntry(ArchiveInfo                     *archiveInfo,
 *          deltaSourceName                 - delta source name or NULL
 *          deltaCompressFlag               - TRUE for delta compression,
 *                                            FALSE otherwise
-*          compressFlag                    - TRUE for compression, FALSE
-*                                            otherwise (e. g. file to
-*                                            small or already compressed)
+*          byteCompressFlag                - TRUE for byte compression,
+*                                            FALSE otherwise (e. g. file
+*                                            is to small or already
+*                                            compressed)
 * Output : archiveEntryInfo - archive image entry info
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-Errors Archive_newImageEntry(ArchiveInfo                     *archiveInfo,
-                             ArchiveEntryInfo                *archiveEntryInfo,
-                             CompressSourceGetEntryDataBlock sourceGetEntryDataBlock,
-                             void                            *sourceGetEntryDataBlockUserData,
-                             const String                    deviceName,
-                             const DeviceInfo                *deviceInfo,
-                             const String                    deltaSourceName,
-                             bool                            deltaCompressFlag,
-                             bool                            compressFlag
+Errors Archive_newImageEntry(ArchiveInfo      *archiveInfo,
+                             ArchiveEntryInfo *archiveEntryInfo,
+                             SourceHandle     *sourceHandle,
+                             const String     deviceName,
+                             const DeviceInfo *deviceInfo,
+                             const String     deltaSourceName,
+                             bool             deltaCompressFlag,
+                             bool             byteCompressFlag
                             );
 
 /***********************************************************************\
@@ -526,23 +527,23 @@ Errors Archive_newLinkEntry(ArchiveInfo      *archiveInfo,
 *          deltaSourceName                 - delta source name or NULL
 *          deltaCompressFlag               - TRUE for delta compression,
 *                                            FALSE otherwise
-*          compressFlag                    - TRUE for compression, FALSE
-*                                            otherwise (e. g. file to
-*                                            small or already compressed)
+*          byteCompressFlag                - TRUE for byte compression,
+*                                            FALSE otherwise (e. g. file
+*                                            is to small or already
+*                                            compressed)
 * Output : archiveEntryInfo - archive hard link entry info
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-Errors Archive_newHardLinkEntry(ArchiveInfo                     *archiveInfo,
-                                ArchiveEntryInfo                *archiveEntryInfo,
-                                CompressSourceGetEntryDataBlock sourceGetEntryDataBlock,
-                                void                            *sourceGetEntryDataBlockUserData,
-                                const StringList                *fileNameList,
-                                const FileInfo                  *fileInfo,
-                                const String                    deltaSourceName,
-                                bool                            deltaCompressFlag,
-                                bool                            compressFlag
+Errors Archive_newHardLinkEntry(ArchiveInfo      *archiveInfo,
+                                ArchiveEntryInfo *archiveEntryInfo,
+                                SourceHandle     *sourceHandle,
+                                const StringList *fileNameList,
+                                const FileInfo   *fileInfo,
+                                const String     deltaSourceName,
+                                bool             deltaCompressFlag,
+                                bool             byteCompressFlag
                                );
 
 /***********************************************************************\
