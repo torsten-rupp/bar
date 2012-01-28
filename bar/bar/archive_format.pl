@@ -6,9 +6,9 @@
 
 # ----------------------------------------------------------------------------
 #
-# $Source: /home/torsten/cvs/bar/bar/archive_format.pl,v $
-# $Revision: 1.4 $
-# $Author: torsten $
+* $Revision$
+* $Date$
+* $Author$
 # Contents: create header/c file definition from format definition
 # Systems: all
 #
