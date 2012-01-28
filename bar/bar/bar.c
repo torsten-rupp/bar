@@ -1,8 +1,8 @@
 /***********************************************************************\
 *
-* $Source: /home/torsten/cvs/bar/bar/bar.c,v $
-* $Revision: 1.37 $
-* $Author: torsten $
+* $Revision$
+* $Date$
+* $Author$
 * Contents: Backup ARchiver main program
 * Systems: all
 *
@@ -4062,7 +4062,7 @@ int main(int argc, const char *argv[])
   }
 
   // add delta sources
-  error = Source_addSourceList(&deltaSourcePatternList,&jobOptions);
+  error = Source_addSourceList(&deltaSourcePatternList);//,&jobOptions);
   if (error != ERROR_NONE)
   {
     printError("Cannot add delta sources (error: %s)!\n",Errors_getText(error));
