@@ -249,10 +249,10 @@ String File_getFilePathNameCString(String pathName, const char *fileName)
   assert(fileName != NULL);
   assert(pathName != NULL);
 
-  /* find last path separator */
+  // find last path separator
   lastPathSeparator = strrchr(fileName,FILES_PATHNAME_SEPARATOR_CHAR);
 
-  /* get path */
+  // get path
   if (lastPathSeparator != NULL)
   {
     String_setBuffer(pathName,fileName,lastPathSeparator-fileName);
@@ -280,10 +280,10 @@ String File_getFileBaseNameCString(String baseName, const char *fileName)
   assert(fileName != NULL);
   assert(baseName != NULL);
 
-  /* find last path separator */
+  // find last path separator
   lastPathSeparator = strrchr(fileName,FILES_PATHNAME_SEPARATOR_CHAR);
 
-  /* get path */
+  // get path
   if (lastPathSeparator != NULL)
   {
     String_setCString(baseName,lastPathSeparator+1);
@@ -478,7 +478,7 @@ Errors __File_openCString(const char *__fileName__,
   switch (fileMode & FILE_OPEN_MASK_MODE)
   {
     case FILE_OPEN_CREATE:
-      /* create file */
+      // create file
       fileHandle->file = fopen(fileName,"wb");
       if (fileHandle->file == NULL)
       {
@@ -490,14 +490,14 @@ Errors __File_openCString(const char *__fileName__,
       fileHandle->size  = 0LL;
       break;
     case FILE_OPEN_READ:
-      /* open file for reading */
+      // open file for reading
       fileHandle->file = fopen(fileName,"rb");
       if (fileHandle->file == NULL)
       {
         return ERRORX(OPEN_FILE,errno,fileName);
       }
 
-      /* get file size */
+      // get file size
       if (fseeko(fileHandle->file,(off_t)0,SEEK_END) == -1)
       {
         error = ERRORX(IO_ERROR,errno,fileName);
@@ -523,7 +523,7 @@ Errors __File_openCString(const char *__fileName__,
       fileHandle->size  = (uint64)n;
       break;
     case FILE_OPEN_WRITE:
-      /* create directory if needed */
+      // create directory if needed
       pathName = File_getFilePathNameCString(File_newFileName(),fileName);
       if (!String_empty(pathName) && !File_exists(pathName))
       {
@@ -540,7 +540,7 @@ Errors __File_openCString(const char *__fileName__,
       }
       File_deleteFileName(pathName);
 
-      /* open existing file for writing */
+      // open existing file for writing
       fileHandle->file = fopen(fileName,"r+b");
       if (fileHandle->file == NULL)
       {
@@ -563,7 +563,7 @@ Errors __File_openCString(const char *__fileName__,
       fileHandle->size  = 0LL;
       break;
     case FILE_OPEN_APPEND:
-      /* create directory if needed */
+      // create directory if needed
       pathName = File_getFilePathNameCString(File_newFileName(),fileName);
       if (!String_empty(pathName) && !File_exists(pathName))
       {
@@ -580,14 +580,14 @@ Errors __File_openCString(const char *__fileName__,
       }
       File_deleteFileName(pathName);
 
-      /* open existing file for writing */
+      // open existing file for writing
       fileHandle->file = fopen(fileName,"ab");
       if (fileHandle->file == NULL)
       {
         return ERRORX(OPEN_FILE,errno,fileName);
       }
 
-      /* get file size */
+      // get file size
       n = ftello(fileHandle->file);
       if (n == (off_t)(-1))
       {
@@ -613,7 +613,7 @@ Errors __File_openCString(const char *__fileName__,
 
     pthread_mutex_lock(&debugFileLock);
     {
-      /* find file in closed-list; reuse or allocate new debug node */
+      // find file in closed-list; reuse or allocate new debug node
       debugFileNode = debugClosedFileList.head;
       while ((debugFileNode != NULL) && (debugFileNode->fileHandle != fileHandle))
       {
@@ -632,7 +632,7 @@ Errors __File_openCString(const char *__fileName__,
         }
       }
 
-      /* init file node */
+      // init file node
       debugFileNode->fileName              = __fileName__;
       debugFileNode->lineNb                = __lineNb__;
       #ifdef HAVE_BACKTRACE
@@ -645,7 +645,7 @@ Errors __File_openCString(const char *__fileName__,
       #endif /* HAVE_BACKTRACE */
       debugFileNode->fileHandle            = fileHandle;
 
-      /* add string to open-list */
+      // add string to open-list
       List_append(&debugOpenFileList,debugFileNode);
     }
     pthread_mutex_unlock(&debugFileLock);
@@ -680,7 +680,7 @@ Errors __File_openDescriptor(const char *__fileName__,
   switch (fileMode & FILE_OPEN_MASK_MODE)
   {
     case FILE_OPEN_CREATE:
-      /* create file */
+      // create file
       fileHandle->file = fdopen(fileDescriptor,"wb");
       if (fileHandle->file == NULL)
       {
@@ -692,7 +692,7 @@ Errors __File_openDescriptor(const char *__fileName__,
       fileHandle->size  = 0LL;
       break;
     case FILE_OPEN_READ:
-      /* open file for reading */
+      // open file for reading
       fileHandle->file = fdopen(fileDescriptor,"rb");
       if (fileHandle->file == NULL)
       {
@@ -704,7 +704,7 @@ Errors __File_openDescriptor(const char *__fileName__,
       fileHandle->size  = 0LL;
       break;
     case FILE_OPEN_WRITE:
-      /* open file for writing */
+      // open file for writing
       fileHandle->file = fdopen(fileDescriptor,"r+b");
       if (fileHandle->file == NULL)
       {
@@ -716,14 +716,14 @@ Errors __File_openDescriptor(const char *__fileName__,
       fileHandle->size  = 0LL;
       break;
     case FILE_OPEN_APPEND:
-      /* open file for writing */
+      // open file for writing
       fileHandle->file = fdopen(fileDescriptor,"ab");
       if (fileHandle->file == NULL)
       {
         return ERROR(OPEN_FILE,errno);
       }
 
-      /* get file size */
+      // get file size
       n = ftello(fileHandle->file);
       if (n == (off_t)(-1))
       {
@@ -749,7 +749,7 @@ Errors __File_openDescriptor(const char *__fileName__,
 
     pthread_mutex_lock(&debugFileLock);
     {
-      /* find file in closed-list; reuse or allocate new debug node */
+      // find file in closed-list; reuse or allocate new debug node
       debugFileNode = debugClosedFileList.head;
       while ((debugFileNode != NULL) && (debugFileNode->fileHandle != fileHandle))
       {
@@ -768,7 +768,7 @@ Errors __File_openDescriptor(const char *__fileName__,
         }
       }
 
-      /* init file node */
+      // init file node
       debugFileNode->fileName              = __fileName__;
       debugFileNode->lineNb                = __lineNb__;
       #ifdef HAVE_BACKTRACE
@@ -781,7 +781,7 @@ Errors __File_openDescriptor(const char *__fileName__,
       #endif /* HAVE_BACKTRACE */
       debugFileNode->fileHandle            = fileHandle;
 
-      /* add string to open-list */
+      // add string to open-list
       List_append(&debugOpenFileList,debugFileNode);
     }
     pthread_mutex_unlock(&debugFileLock);
@@ -809,7 +809,7 @@ Errors __File_close(const char *__fileName__, ulong __lineNb__, FileHandle *file
 
     pthread_mutex_lock(&debugFileLock);
     {
-      /* find file in open-list */
+      // find file in open-list
       debugFileNode = debugOpenFileList.head;
       while ((debugFileNode != NULL) && (debugFileNode->fileHandle != fileHandle))
       {
@@ -817,10 +817,10 @@ Errors __File_close(const char *__fileName__, ulong __lineNb__, FileHandle *file
       }
       if (debugFileNode != NULL)
       {
-        /* remove from open list */
+        // remove from open list
         List_remove(&debugOpenFileList,debugFileNode);
 
-        /* add to closed list */
+        // add to closed list
         debugFileNode->closeFileName = __fileName__;
         debugFileNode->closeLineNb   = __lineNb__;
         #ifdef HAVE_BACKTRACE
@@ -828,7 +828,7 @@ Errors __File_close(const char *__fileName__, ulong __lineNb__, FileHandle *file
         #endif /* HAVE_BACKTRACE */
         List_append(&debugClosedFileList,debugFileNode);
 
-        /* shorten closed list */
+        // shorten closed list
         while (debugClosedFileList.count > DEBUG_MAX_CLOSED_LIST)
         {
           debugFileNode = (DebugFileNode*)List_getFirst(&debugClosedFileList);
@@ -851,17 +851,17 @@ Errors __File_close(const char *__fileName__, ulong __lineNb__, FileHandle *file
     pthread_mutex_unlock(&debugFileLock);
   #endif /* not NDEBUG */
 
-  /* free caches if requested */
+  // free caches if requested
   if ((fileHandle->mode & FILE_OPEN_NO_CACHE) != 0)
   {
     File_dropCaches(fileHandle,0LL,0LL,FALSE);
   }
 
-  /* close file */
+  // close file
   fclose(fileHandle->file);
   fileHandle->file = NULL;
 
-  /* free resources */
+  // free resources
   String_delete(fileHandle->name);
 
   return ERROR_NONE;
@@ -1023,15 +1023,15 @@ Errors File_printLine(FileHandle *fileHandle,
   assert(fileHandle->file != NULL);
   assert(format != NULL);
 
-  /* initialise variables */
+  // initialise variables
   line = String_new();
 
-  /* format line */
+  // format line
   va_start(arguments,format);
   String_vformat(line,format,arguments);
   va_end(arguments);
 
-  /* write line */
+  // write line
   error = File_write(fileHandle,String_cString(line),String_length(line));
   if (error != ERROR_NONE)
   {
@@ -1045,7 +1045,7 @@ Errors File_printLine(FileHandle *fileHandle,
     return error;
   }
 
-  /* free resources */
+  // free resources
   String_delete(line);
 
   return ERROR_NONE;
@@ -1203,13 +1203,13 @@ bool File_endOfDirectoryList(DirectoryListHandle *directoryListHandle)
   assert(directoryListHandle->name != NULL);
   assert(directoryListHandle->dir != NULL);
 
-  /* read entry iff not read */
+  // read entry iff not read
   if (directoryListHandle->entry == NULL)
   {
     directoryListHandle->entry = readdir(directoryListHandle->dir);
   }
 
-  /* skip "." and ".." entries */
+  // skip "." and ".." entries
   while (   (directoryListHandle->entry != NULL)
          && (   (strcmp(directoryListHandle->entry->d_name,"." ) == 0)
              || (strcmp(directoryListHandle->entry->d_name,"..") == 0)
@@ -1231,13 +1231,13 @@ Errors File_readDirectoryList(DirectoryListHandle *directoryListHandle,
   assert(directoryListHandle->dir != NULL);
   assert(fileName != NULL);
 
-  /* read entry iff not read */
+  // read entry iff not read
   if (directoryListHandle->entry == NULL)
   {
     directoryListHandle->entry = readdir(directoryListHandle->dir);
   }
 
-  /* skip "." and ".." entries */
+  // skip "." and ".." entries
   while (   (directoryListHandle->entry != NULL)
          && (   (strcmp(directoryListHandle->entry->d_name,"." ) == 0)
              || (strcmp(directoryListHandle->entry->d_name,"..") == 0)
@@ -1251,11 +1251,11 @@ Errors File_readDirectoryList(DirectoryListHandle *directoryListHandle,
     return ERRORX(IO_ERROR,errno,String_cString(directoryListHandle->name));
   }
 
-  /* get entry name */
+  // get entry name
   String_set(fileName,directoryListHandle->name);
   File_appendFileNameCString(fileName,directoryListHandle->entry->d_name);
 
-  /* mark entry read */
+  // mark entry read
   directoryListHandle->entry = NULL;
 
   return ERROR_NONE;
@@ -1338,17 +1338,17 @@ Errors File_getDataCString(const char *fileName,
   assert(data != NULL);
   assert(size != NULL);
 
-  /* open file */
+  // open file
   error = File_openCString(&fileHandle,fileName,FILE_OPEN_READ);
   if (error != ERROR_NONE)
   {
     return error;
   }
 
-  /* get file size */
+  // get file size
   (*size) = (ulong)File_getSize(&fileHandle);
 
-  /* allocate memory for data */
+  // allocate memory for data
   (*data) = malloc(*size);
   if ((*data) == NULL)
   {
@@ -1356,7 +1356,7 @@ Errors File_getDataCString(const char *fileName,
     return ERROR_INSUFFICIENT_MEMORY;
   }
 
-  /* read data */
+  // read data
   error = File_read(&fileHandle,*data,*size,&bytesRead);
   if (error != ERROR_NONE)
   {
@@ -1369,7 +1369,7 @@ Errors File_getDataCString(const char *fileName,
     return ERROR(IO_ERROR,errno);
   }
 
-  /* close file */
+  // close file
   File_close(&fileHandle);
 
   return ERROR_NONE;
@@ -1407,7 +1407,7 @@ Errors File_delete(const String fileName, bool recursiveFlag)
     error = ERROR_NONE;
     if (recursiveFlag)
     {
-      /* delete entries in directory */
+      // delete entries in directory
       StringList_init(&directoryList);
       StringList_append(&directoryList,fileName);
       directoryName = File_newFileName();
@@ -1492,17 +1492,17 @@ Errors File_rename(const String oldFileName,
   assert(oldFileName != NULL);
   assert(newFileName != NULL);
 
-  /* try rename */
+  // try rename
   if (rename(String_cString(oldFileName),String_cString(newFileName)) != 0)
   {
-    /* copy to new file */
+    // copy to new file
     error = File_copy(oldFileName,newFileName);
     if (error != ERROR_NONE)
     {
       return error;
     }
 
-    /* delete old file */
+    // delete old file
     if (unlink(String_cString(oldFileName)) != 0)
     {
       return ERRORX(IO_ERROR,errno,String_cString(oldFileName));
@@ -1527,14 +1527,14 @@ Errors File_copy(const String sourceFileName,
   assert(sourceFileName != NULL);
   assert(destinationFileName != NULL);
 
-  /* allocate buffer */
+  // allocate buffer
   buffer = (byte*)malloc(BUFFER_SIZE);
   if (buffer == NULL)
   {
     return ERROR_INSUFFICIENT_MEMORY;
   }
 
-  /* open files */
+  // open files
   sourceFile = fopen(String_cString(sourceFileName),"r");
   if (sourceFile == NULL)
   {
@@ -1551,7 +1551,7 @@ Errors File_copy(const String sourceFileName,
     return error;
   }
 
-  /* copy data */
+  // copy data
   do
   {
     n = fread(buffer,1,BUFFER_SIZE,sourceFile);
@@ -1580,14 +1580,14 @@ Errors File_copy(const String sourceFileName,
   }
   while (n > 0);
 
-  /* close files */
+  // close files
   fclose(destinationFile);
   fclose(sourceFile);
 
-  /* free resources */
+  // free resources
   free(buffer);
 
-  /* copy permissions */
+  // copy permissions
   if (lstat64(String_cString(sourceFileName),&fileStat) != 0)
   {
     return ERRORX(IO_ERROR,errno,String_cString(sourceFileName));
@@ -1739,7 +1739,7 @@ Errors File_getFileInfo(FileInfo     *fileInfo,
     fileInfo->size        = -1LL;
     fileInfo->specialType = FILE_SPECIAL_TYPE_BLOCK_DEVICE;
 
-    /* try to detect block device size */
+    // try to detect block device size
     if (Device_getDeviceInfo(&deviceInfo,fileName) == ERROR_NONE)
     {
       fileInfo->size = deviceInfo.size;
@@ -1894,11 +1894,11 @@ Errors File_makeDirectory(const String   pathName,
   directoryName = File_newFileName();
   parentDirectoryName = File_newFileName();
 
-  /* get current umask */
+  // get current umask
   currentCreationMask = umask(0);
   umask(currentCreationMask);
 
-  /* create directory including parent directories */
+  // create directory including parent directories
   File_initSplitFileName(&pathNameTokenizer,pathName);
   if (File_getNextSplitFileName(&pathNameTokenizer,&name))
   {
@@ -2086,7 +2086,7 @@ Errors File_readLink(String       fileName,
   assert(linkName != NULL);
   assert(fileName != NULL);
 
-  /* allocate initial buffer for name */
+  // allocate initial buffer for name
   buffer = (char*)malloc(BUFFER_SIZE);
   if (buffer == NULL)
   {
@@ -2094,7 +2094,7 @@ Errors File_readLink(String       fileName,
   }
   bufferSize = BUFFER_SIZE;
 
-  /* try to read link, increase buffer if needed */
+  // try to read link, increase buffer if needed
   while ((result = readlink(String_cString(linkName),buffer,bufferSize)) == bufferSize)
   {
     bufferSize += BUFFER_DELTA;

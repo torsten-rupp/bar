@@ -30,7 +30,7 @@
 /***************************** Constants *******************************/
 
 #ifdef FILE_SEPARAPTOR_CHAR
-  #define _FILES_PATHNAME_SEPARATOR_CHARS_STRING1(z) _FILES_PATHNAME_SEPARATOR_CHARS_STRING2(z) 
+  #define _FILES_PATHNAME_SEPARATOR_CHARS_STRING1(z) _FILES_PATHNAME_SEPARATOR_CHARS_STRING2(z)
   #define _FILES_PATHNAME_SEPARATOR_CHARS_STRING2(z) #z
 
   #define FILES_PATHNAME_SEPARATOR_CHAR FILE_SEPARAPTOR_CHAR
@@ -42,7 +42,7 @@
 
 #define FILE_CAST_SIZE (sizeof(time_t)+sizeof(time_t))
 
-/* file types */
+// file types
 typedef enum
 {
   FILE_TYPE_NONE,
@@ -56,11 +56,11 @@ typedef enum
   FILE_TYPE_UNKNOWN
 } FileTypes;
 
-/* file open mask */
+// file open mask
 #define FILE_OPEN_MASK_MODE  0x0000000F
 #define FILE_OPEN_MASK_FLAGS 0xFFFF0000
 
-/* file open modes */
+// file open modes
 typedef enum
 {
   FILE_OPEN_CREATE = 0,
@@ -69,10 +69,10 @@ typedef enum
   FILE_OPEN_APPEND = 3
 } FileModes;
 
-/* additional file open flags */
+// additional file open flags
 #define FILE_OPEN_NO_CACHE (1 << 16)
 
-/* special file types */
+// special file types
 typedef enum
 {
   FILE_SPECIAL_TYPE_CHARACTER_DEVICE,
@@ -81,7 +81,7 @@ typedef enum
   FILE_SPECIAL_TYPE_SOCKET
 } FileSpecialTypes;
 
-/* permission flags */
+// permission flags
 #define FILE_PERMISSION_USER_READ    S_IRUSR
 #define FILE_PERMISSION_USER_WRITE   S_IWUSR
 #define FILE_PERMISSION_USER_EXECUTE S_IXUSR
@@ -102,14 +102,14 @@ typedef enum
 #define FILE_PERMISSION_EXECUTE (FILE_PERMISSION_USER_EXECUTE|FILE_PERMISSION_GROUP_EXECUTE|FILE_PERMISSION_OTHER_EXECUTE)
 #define FILE_PERMISSION_MASK    (FILE_PERMISSION_READ|FILE_PERMISSION_WRITE|FILE_PERMISSION_EXECUTE)
 
-/* default user, group ids, permission */
+// default user, group ids, permission
 #define FILE_DEFAULT_USER_ID    0xFFFFFFFF
 #define FILE_DEFAULT_GROUP_ID   0xFFFFFFFF
 #define FILE_DEFAULT_PERMISSION 0xFFFFFFFF
 
 /***************************** Datatypes *******************************/
 
-/* file i/o handle */
+// file i/o handle
 typedef struct
 {
   String name;
@@ -119,7 +119,7 @@ typedef struct
   uint64 size;
 } FileHandle;
 
-/* directory list handle */
+// directory list handle
 typedef struct
 {
   String        name;
@@ -127,13 +127,13 @@ typedef struct
   struct dirent *entry;
 } DirectoryListHandle;
 
-/* file permission */
+// file permission
 typedef uint32 FilePermission;
 
-/* file cast: change if file is modified in some way */
+// file cast: change if file is modified in some way
 typedef byte FileCast[FILE_CAST_SIZE];
 
-/* file info data */
+// file info data
 typedef struct
 {
   FileTypes        type;                     // file type; see FileTypes
@@ -152,7 +152,7 @@ typedef struct
   FileCast         cast;                     // cast value for checking if file was changed
 } FileInfo;
 
-/* file system info data */
+// file system info data
 typedef struct
 {
   ulong  blockSize;                          // size of block [bytes]
@@ -306,7 +306,7 @@ void File_doneSplitFileName(StringTokenizer *stringTokenizer);
 
 /***********************************************************************\
 * Name   : File_getNextFileName
-* Purpose: get next part of file name 
+* Purpose: get next part of file name
 * Input  : stringTokenizer - string tokenizer (see strings.h)
 * Output : name - next name (internal reference; do not delete!)
 * Return : TRUE if file name found, FALSE otherwise
