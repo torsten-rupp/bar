@@ -1,8 +1,8 @@
 /***********************************************************************\
 *
-* $Source: /home/torsten/cvs/bar/bar/archive.c,v $
-* $Revision: 1.22 $
-* $Author: torsten $
+* $Revision$
+* $Date$
+* $Author$
 * Contents: Backup ARchiver archive functions
 * Systems: all
 *
@@ -2674,15 +2674,14 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
   return !chunkHeaderFoundFlag;
 }
 
-Errors Archive_newFileEntry(ArchiveInfo                     *archiveInfo,
-                            ArchiveEntryInfo                *archiveEntryInfo,
-                            CompressSourceGetEntryDataBlock sourceGetEntryDataBlock,
-                            void                            *sourceGetEntryDataBlockUserData,
-                            const String                    fileName,
-                            const FileInfo                  *fileInfo,
-                            const String                    deltaSourceName,
-                            bool                            deltaCompressFlag,
-                            bool                            byteCompressFlag
+Errors Archive_newFileEntry(ArchiveInfo      *archiveInfo,
+                            ArchiveEntryInfo *archiveEntryInfo,
+                            SourceHandle     *sourceHandle,
+                            const String     fileName,
+                            const FileInfo   *fileInfo,
+                            const String     deltaSourceName,
+                            bool             deltaCompressFlag,
+                            bool             byteCompressFlag
                            )
 {
   Errors error;
@@ -2872,8 +2871,7 @@ Errors Archive_newFileEntry(ArchiveInfo                     *archiveInfo,
                        COMPRESS_MODE_DEFLATE,
                        archiveEntryInfo->file.deltaCompressAlgorithm,
                        1,
-                       sourceGetEntryDataBlock,
-                       sourceGetEntryDataBlockUserData
+                       sourceHandle
                       );
   if (error != ERROR_NONE)
   {
@@ -2893,7 +2891,6 @@ Errors Archive_newFileEntry(ArchiveInfo                     *archiveInfo,
                        COMPRESS_MODE_DEFLATE,
                        archiveEntryInfo->file.byteCompressAlgorithm,
                        archiveEntryInfo->blockLength,
-                       NULL,
                        NULL
                       );
   if (error != ERROR_NONE)
@@ -2942,15 +2939,14 @@ Errors Archive_newFileEntry(ArchiveInfo                     *archiveInfo,
   return ERROR_NONE;
 }
 
-Errors Archive_newImageEntry(ArchiveInfo                     *archiveInfo,
-                             ArchiveEntryInfo                *archiveEntryInfo,
-                             CompressSourceGetEntryDataBlock sourceGetEntryDataBlock,
-                             void                            *sourceGetEntryDataBlockUserData,
-                             const String                    deviceName,
-                             const DeviceInfo                *deviceInfo,
-                             const String                    deltaSourceName,
-                             bool                            deltaCompressFlag,
-                             bool                            byteCompressFlag
+Errors Archive_newImageEntry(ArchiveInfo      *archiveInfo,
+                             ArchiveEntryInfo *archiveEntryInfo,
+                             SourceHandle     *sourceHandle,
+                             const String     deviceName,
+                             const DeviceInfo *deviceInfo,
+                             const String     deltaSourceName,
+                             bool             deltaCompressFlag,
+                             bool             byteCompressFlag
                             )
 {
   Errors error;
@@ -3138,8 +3134,7 @@ Errors Archive_newImageEntry(ArchiveInfo                     *archiveInfo,
                        COMPRESS_MODE_DEFLATE,
                        archiveEntryInfo->image.deltaCompressAlgorithm,
                        1,
-                       sourceGetEntryDataBlock,
-                       sourceGetEntryDataBlockUserData
+                       sourceHandle
                       );
   if (error != ERROR_NONE)
   {
@@ -3159,7 +3154,6 @@ Errors Archive_newImageEntry(ArchiveInfo                     *archiveInfo,
                        COMPRESS_MODE_DEFLATE,
                        archiveEntryInfo->image.byteCompressAlgorithm,
                        archiveEntryInfo->blockLength,
-                       NULL,
                        NULL
                       );
   if (error != ERROR_NONE)
@@ -3465,15 +3459,14 @@ Errors Archive_newLinkEntry(ArchiveInfo      *archiveInfo,
   return ERROR_NONE;
 }
 
-Errors Archive_newHardLinkEntry(ArchiveInfo                     *archiveInfo,
-                                ArchiveEntryInfo                *archiveEntryInfo,
-                                CompressSourceGetEntryDataBlock sourceGetEntryDataBlock,
-                                void                            *sourceGetEntryDataBlockUserData,
-                                const StringList                *fileNameList,
-                                const FileInfo                  *fileInfo,
-                                const String                    deltaSourceName,
-                                bool                            deltaCompressFlag,
-                                bool                            byteCompressFlag
+Errors Archive_newHardLinkEntry(ArchiveInfo      *archiveInfo,
+                                ArchiveEntryInfo *archiveEntryInfo,
+                                SourceHandle     *sourceHandle,
+                                const StringList *fileNameList,
+                                const FileInfo   *fileInfo,
+                                const String     deltaSourceName,
+                                bool             deltaCompressFlag,
+                                bool             byteCompressFlag
                                )
 {
   Errors            error;
@@ -3746,8 +3739,7 @@ Errors Archive_newHardLinkEntry(ArchiveInfo                     *archiveInfo,
                        COMPRESS_MODE_DEFLATE,
                        archiveEntryInfo->hardLink.deltaCompressAlgorithm,
                        1,
-                       sourceGetEntryDataBlock,
-                       sourceGetEntryDataBlockUserData
+                       sourceHandle
                       );
   if (error != ERROR_NONE)
   {
@@ -3772,7 +3764,6 @@ Errors Archive_newHardLinkEntry(ArchiveInfo                     *archiveInfo,
                        COMPRESS_MODE_DEFLATE,
                        archiveEntryInfo->hardLink.byteCompressAlgorithm,
                        archiveEntryInfo->blockLength,
-                       NULL,
                        NULL
                       );
   if (error != ERROR_NONE)
@@ -4285,7 +4276,6 @@ Errors Archive_readFileEntry(ArchiveInfo        *archiveInfo,
                        COMPRESS_MODE_INFLATE,
                        archiveEntryInfo->file.byteCompressAlgorithm,
                        archiveEntryInfo->blockLength,
-                       NULL,
                        NULL
                       );
   if (error != ERROR_NONE)
@@ -4600,8 +4590,7 @@ Errors Archive_readFileEntry(ArchiveInfo        *archiveInfo,
                        COMPRESS_MODE_INFLATE,
                        archiveEntryInfo->file.deltaCompressAlgorithm,
                        1,
-                       Source_getEntryDataBlock,
-                       &archiveEntryInfo->file.sourceEntryInfo
+                       &archiveEntryInfo->file.sourceHandle
                       );
   if (error != ERROR_NONE)
   {
@@ -4756,7 +4745,6 @@ Errors Archive_readImageEntry(ArchiveInfo        *archiveInfo,
                        COMPRESS_MODE_INFLATE,
                        archiveEntryInfo->image.byteCompressAlgorithm,
                        archiveEntryInfo->blockLength,
-                       NULL,
                        NULL
                       );
   if (error != ERROR_NONE)
@@ -5058,8 +5046,7 @@ Errors Archive_readImageEntry(ArchiveInfo        *archiveInfo,
                        COMPRESS_MODE_INFLATE,
                        archiveEntryInfo->image.deltaCompressAlgorithm,
                        1,
-                       Source_getEntryDataBlock,
-                       &archiveEntryInfo->image.sourceEntryInfo
+                       &archiveEntryInfo->image.sourceHandle
                       );
   if (error != ERROR_NONE)
   {
@@ -5743,7 +5730,6 @@ Errors Archive_readHardLinkEntry(ArchiveInfo        *archiveInfo,
                        COMPRESS_MODE_INFLATE,
                        archiveEntryInfo->hardLink.byteCompressAlgorithm,
                        archiveEntryInfo->blockLength,
-                       NULL,
                        NULL
                       );
   if (error != ERROR_NONE)
@@ -6117,8 +6103,7 @@ Errors Archive_readHardLinkEntry(ArchiveInfo        *archiveInfo,
                        COMPRESS_MODE_INFLATE,
                        archiveEntryInfo->hardLink.deltaCompressAlgorithm,
                        1,
-                       Source_getEntryDataBlock,
-                       &archiveEntryInfo->hardLink.sourceEntryInfo
+                       &archiveEntryInfo->hardLink.sourceHandle
                       );
   if (error != ERROR_NONE)
   {
@@ -6898,7 +6883,7 @@ Errors Archive_closeEntry(ArchiveEntryInfo *archiveEntryInfo)
             Compress_delete(&archiveEntryInfo->file.deltaCompressInfo);
             if (archiveEntryInfo->file.deltaSourceInit)
             {
-              Source_closeEntry(&archiveEntryInfo->file.sourceEntryInfo);
+              Source_closeEntry(&archiveEntryInfo->file.sourceHandle);
             }
             Chunk_done(&archiveEntryInfo->file.chunkFileData.info);
             Chunk_done(&archiveEntryInfo->file.chunkFileDelta.info);
@@ -6931,7 +6916,7 @@ Errors Archive_closeEntry(ArchiveEntryInfo *archiveEntryInfo)
             Compress_delete(&archiveEntryInfo->image.deltaCompressInfo);
             if (archiveEntryInfo->image.deltaSourceInit)
             {
-              Source_closeEntry(&archiveEntryInfo->image.sourceEntryInfo);
+              Source_closeEntry(&archiveEntryInfo->image.sourceHandle);
             }
             Chunk_done(&archiveEntryInfo->image.chunkImageData.info);
             Chunk_done(&archiveEntryInfo->image.chunkImageDelta.info);
@@ -6999,7 +6984,7 @@ Errors Archive_closeEntry(ArchiveEntryInfo *archiveEntryInfo)
             Compress_delete(&archiveEntryInfo->hardLink.deltaCompressInfo);
             if (archiveEntryInfo->hardLink.deltaSourceInit)
             {
-              Source_closeEntry(&archiveEntryInfo->hardLink.sourceEntryInfo);
+              Source_closeEntry(&archiveEntryInfo->hardLink.sourceHandle);
             }
             Chunk_done(&archiveEntryInfo->hardLink.chunkHardLinkData.info);
             Chunk_done(&archiveEntryInfo->hardLink.chunkHardLinkDelta.info);
@@ -7300,9 +7285,8 @@ Errors Archive_readData(ArchiveEntryInfo *archiveEntryInfo,
          )
       {
         // get source for delta-compression
-        error = Source_openEntry(&archiveEntryInfo->file.sourceEntryInfo,
+        error = Source_openEntry(&archiveEntryInfo->file.sourceHandle,
                                  archiveEntryInfo->file.chunkFileDelta.name,
-                                 archiveEntryInfo->archiveInfo->jobOptions,
                                  archiveEntryInfo->file.chunkFileEntry.name
                                 );
         if (error != ERROR_NONE)
@@ -7424,9 +7408,8 @@ Errors Archive_readData(ArchiveEntryInfo *archiveEntryInfo,
          )
       {
         // get source for delta-compression
-        error = Source_openEntry(&archiveEntryInfo->image.sourceEntryInfo,
+        error = Source_openEntry(&archiveEntryInfo->image.sourceHandle,
                                  archiveEntryInfo->image.chunkImageDelta.name,
-                                 archiveEntryInfo->archiveInfo->jobOptions,
                                  archiveEntryInfo->image.chunkImageEntry.name
                                 );
         if (error != ERROR_NONE)
@@ -7552,9 +7535,8 @@ Errors Archive_readData(ArchiveEntryInfo *archiveEntryInfo,
         {
           return ERROR_DELTA_SOURCE_NOT_FOUND;
         }
-        error = Source_openEntry(&archiveEntryInfo->hardLink.sourceEntryInfo,
+        error = Source_openEntry(&archiveEntryInfo->hardLink.sourceHandle,
                                  archiveEntryInfo->hardLink.chunkHardLinkDelta.name,
-                                 archiveEntryInfo->archiveInfo->jobOptions,
                                  ((ChunkHardLinkName*)List_first(&archiveEntryInfo->hardLink.chunkHardLinkNameList))->name
                                 );
         if (error != ERROR_NONE)
