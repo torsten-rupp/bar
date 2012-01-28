@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
-* $Source: /home/torsten/cvs/bar/bar/arrays.h,v $
 * $Revision: 1.3 $
+* $Date: 1.3 $
 * $Author: torsten $
 * Contents: dynamic array functions
 * Systems: all
@@ -227,4 +227,3 @@ void Array_debugPrintStatistics(void);
 
 
 /* end of file */
-
