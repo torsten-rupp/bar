@@ -3,11 +3,11 @@
 # ----------------------------------------------------------------------------
 #
 # $Source: /home/torsten/cvs/bar/bar/bar-keygen.in,v $
-# $Revision: 1.12 $
-# $Author: torsten $
+# $Revision$
+# $Author$
 # Contents: generate BAR server keys (PEM files)
 # Systems: Unix
-#			   
+#
 # ----------------------------------------------------------------------------
 
 # --------------------------------- constants --------------------------------
