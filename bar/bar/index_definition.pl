@@ -6,9 +6,9 @@
 
 # ----------------------------------------------------------------------------
 #
-# $Source: /home/torsten/cvs/bar/bar/archive_format.pl,v $
-# $Revision: 1.2 $
-# $Author: torsten $
+# $Revision$
+# $Date$
+# $Author$
 # Contents: create header file definition from database definition
 # Systems: all
 #
