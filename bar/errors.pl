@@ -7,8 +7,8 @@
 # ----------------------------------------------------------------------------
 #
 # $Source: /home/torsten/cvs/bar/errors.pl,v $
-# $Revision: 1.14 $
-# $Author: torsten $
+# $Revision$
+# $Author$
 # Contents: create header/c file definition from errors definition
 # Systems: all
 #
