@@ -1,8 +1,8 @@
 /***********************************************************************\
 *
-* $Source: /home/torsten/cvs/bar/bar/filesystems_ext.c,v $
-* $Revision: 1.5 $
-* $Author: torsten $
+* $Revision$
+* $Date$
+* $Author$
 * Contents: Backup ARchiver EXT2/3/4 file system plug in
 * Systems: all
 *
@@ -37,7 +37,7 @@ typedef struct
   uint32 blocksPerGroup;                    // number of blocks in block group
   uint64 firstDataBlock;                    // first data block (0..n-1)
   uint64 totalBlocks;                       // total number of blocks
-  uint64 *bitmapBlocks;                 
+  uint64 *bitmapBlocks;
   uint32 bitmapBlocksCount;
   int    bitmapIndex;                       // index of currently read bitmap (0..n-1)
   uchar  bitmapData[EXT2_MAX_BLOCK_SIZE];   // bitmap block data

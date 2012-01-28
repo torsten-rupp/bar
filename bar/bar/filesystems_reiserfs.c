@@ -1,8 +1,8 @@
 /***********************************************************************\
 *
-* $Source: /home/torsten/cvs/bar/bar/filesystems_reiserfs.c,v $
-* $Revision: 1.3 $
-* $Author: torsten $
+* $Revision$
+* $Date$
+* $Author$
 * Contents: Backup ARchiver ReiserFS file system plug in
 * Systems: all
 *

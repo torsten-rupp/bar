@@ -1,8 +1,8 @@
 /***********************************************************************\
 *
-* $Source: /home/torsten/cvs/bar/bar/filesystems_fat.c,v $
-* $Revision: 1.2 $
-* $Author: torsten $
+* $Revision$
+* $Date$
+* $Author$
 * Contents: Backup ARchiver FAT file systems plug in
 * Systems: all
 *
