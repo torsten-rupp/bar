@@ -1,8 +1,8 @@
 /***********************************************************************\
 *
-* $Source: /home/torsten/cvs/bar/bar/storage.c,v $
-* $Revision: 1.28 $
-* $Author: torsten $
+* $Revision$
+* $Date$
+* $Author$
 * Contents: storage functions
 * Systems: all
 *
