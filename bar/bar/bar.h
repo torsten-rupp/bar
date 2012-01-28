@@ -1,8 +1,8 @@
 /***********************************************************************\
 *
-* $Source: /home/torsten/cvs/bar/bar/bar.h,v $
-* $Revision: 1.19 $
-* $Author: torsten $
+* $Revision$
+* $Date$
+* $Author$
 * Contents: Backup ARchiver main program
 * Systems: all
 *
