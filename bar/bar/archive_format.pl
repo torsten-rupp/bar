@@ -6,9 +6,9 @@
 
 # ----------------------------------------------------------------------------
 #
-* $Revision$
-* $Date$
-* $Author$
+# $Revision$
+# $Date$
+# $Author$
 # Contents: create header/c file definition from format definition
 # Systems: all
 #
