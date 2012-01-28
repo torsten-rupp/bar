@@ -1,8 +1,8 @@
 /**********************************************************************
 *
-* $Source: /home/torsten/cvs/bar/bar/cmdoptions.h,v $
-* $Revision: 1.4 $
-* $Author: torsten $
+* $Revision$
+* $Date$
+* $Author$
 * Contents: command line options parser
 * Systems: all
 *
