@@ -117922,7 +117922,7 @@ SQLITE_API int sqlite3_extension_init(
 **    May you share freely, never taking more than you give.
 **
 *************************************************************************
-** $Id: sqlite3.c,v 1.1 2010-07-31 23:50:17 torsten Exp $
+** $Id$
 **
 ** This file implements an integration between the ICU library 
 ** ("International Components for Unicode", an open-source library 
@@ -118423,7 +118423,7 @@ SQLITE_API int sqlite3_extension_init(
 *************************************************************************
 ** This file implements a tokenizer for fts3 based on the ICU library.
 ** 
-** $Id: sqlite3.c,v 1.1 2010-07-31 23:50:17 torsten Exp $
+** $Id$
 */
 
 #if !defined(SQLITE_CORE) || defined(SQLITE_ENABLE_FTS3)
