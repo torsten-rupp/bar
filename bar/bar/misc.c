@@ -1,8 +1,8 @@
 /***********************************************************************\
 *
-* $Source: /home/torsten/cvs/bar/bar/misc.c,v $
-* $Revision: 1.10 $
-* $Author: torsten $
+* $Revision$
+* $Date$
+* $Author$
 * Contents: miscellaneous functions
 * Systems: all
 *
@@ -128,13 +128,13 @@ uint64 Misc_getCurrentDateTime(void)
 }
 
 void Misc_splitDateTime(uint64   dateTime,
-                        uint     *year,   
-                        uint     *month,  
-                        uint     *day,    
-                        uint     *hour,   
-                        uint     *minute, 
-                        uint     *second, 
-                        WeekDays *weekDay 
+                        uint     *year,
+                        uint     *month,
+                        uint     *day,
+                        uint     *hour,
+                        uint     *minute,
+                        uint     *second,
+                        WeekDays *weekDay
                        )
 {
   time_t    n;
@@ -238,7 +238,7 @@ void Misc_udelay(uint64 time)
   ts.tv_nsec = (ulong)((time%1000000LL)*1000);
   while (nanosleep(&ts,&ts) == -1)
   {
-  }  
+  }
 }
 
 /*---------------------------------------------------------------------*/
@@ -346,7 +346,7 @@ String Misc_expandMacros(String          string,
           #endif /* NDEBUG */
         }
       }
-      
+
       switch (macros[index].type)
       {
         case TEXT_MACRO_TYPE_INTEGER:
@@ -750,7 +750,7 @@ void Misc_performanceFilterAdd(PerformanceFilter *performanceFilter,
 
   if (timeStamp > (performanceFilter->performanceValues[performanceFilter->index].timeStamp+1000))
   {
-    /* calculate new average value */    
+    /* calculate new average value */
     if (performanceFilter->seconds > 0)
     {
       valueDelta     = value-performanceFilter->performanceValues[performanceFilter->index].value;

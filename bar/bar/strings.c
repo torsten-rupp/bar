@@ -1,8 +1,8 @@
 /***********************************************************************\
 *
-* $Source: /home/torsten/cvs/bar/bar/strings.c,v $
-* $Revision: 1.23 $
-* $Author: torsten $
+* $Revision$
+* $Date$
+* $Author$
 * Contents: dynamic string functions
 * Systems: all
 *

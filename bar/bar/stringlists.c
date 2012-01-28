@@ -1,10 +1,10 @@
 /***********************************************************************\
 *
-* $Source: /home/torsten/cvs/bar/bar/stringlists.c,v $
-* $Revision: 1.6 $
-* $Author: torsten $
+* $Revision$
+* $Date$
+* $Author$
 * Contents:
-* Systems :
+* Systems: all
 *
 \***********************************************************************/
 

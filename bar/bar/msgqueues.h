@@ -1,8 +1,8 @@
 /***********************************************************************\
 *
-* $Source: /home/torsten/cvs/bar/bar/msgqueues.h,v $
-* $Revision: 1.1 $
-* $Author: torsten $
+* $Revision$
+* $Date$
+* $Author$
 * Contents: functions for inter-process message queues
 * Systems: all POSIX
 *
@@ -66,7 +66,7 @@ bool MsgQueue_init(MsgQueue *msgQueue, ulong maxMsgs);
 
 /***********************************************************************\
 * Name   : MsgQueue_done
-* Purpose: free all remaining message in queue and deinitialize 
+* Purpose: free all remaining message in queue and deinitialize
 * Input  : msgQueue                - message queue
 *          msgQueueMsgFreeFunction - message free function or NULL
 *          msgQueueMsgFreeUserData - user data for free function

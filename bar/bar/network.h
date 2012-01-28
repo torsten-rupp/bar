@@ -1,8 +1,8 @@
 /***********************************************************************\
 *
-* $Source: /home/torsten/cvs/bar/bar/network.h,v $
-* $Revision: 1.4 $
-* $Author: torsten $
+* $Revision$
+* $Date$
+* $Author$
 * Contents: Network functions
 * Systems: all
 *
@@ -88,7 +88,7 @@ typedef enum
 typedef struct
 {
   ServerTypes type;
-  int         handle; 
+  int         handle;
   #ifdef HAVE_GNU_TLS
     bool                             initTLSFlag;
     gnutls_certificate_credentials_t gnuTLSCredentials;

@@ -1,8 +1,8 @@
 /***********************************************************************\
 *
-* $Source: /home/torsten/cvs/bar/bar/semaphores.h,v $
-* $Revision: 1.5 $
-* $Author: torsten $
+* $Revision$
+* $Date$
+* $Author$
 * Contents: functions for inter-process mutex semaphores
 * Systems: all POSIX
 *
@@ -99,7 +99,7 @@ typedef bool SemaphoreLock;
 
 #ifndef NDEBUG
   /* 2 macros necessary, because of "string"-construction */
-  #define _SEMAPHORE_NAME(variable) _SEMAPHORE_NAME_INTERN(variable) 
+  #define _SEMAPHORE_NAME(variable) _SEMAPHORE_NAME_INTERN(variable)
   #define _SEMAPHORE_NAME_INTERN(variable) #variable
 
   #define Semaphore_init(semaphore) __Semaphore_init(_SEMAPHORE_NAME(semaphore),semaphore)

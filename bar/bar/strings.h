@@ -1,8 +1,8 @@
 /***********************************************************************\
 *
-* $Source: /home/torsten/cvs/bar/bar/strings.h,v $
-* $Revision: 1.16 $
-* $Author: torsten $
+* $Revision$
+* $Date$
+* $Author$
 * Contents: dynamic string functions
 * Systems: all
 *
@@ -330,9 +330,9 @@ String String_remove(String string, ulong index, ulong length);
 * Name   : String_replace, String_replaceCString, String_replaceChar,
 *          String_replaceBuffer
 * Purpose: replace part of string with other string
-* Input  : string         - string                
-*          index          - index where to insert 
-*          length         - length to replace     
+* Input  : string         - string
+*          index          - index where to insert
+*          length         - length to replace
 *          insertString/s - string to insert
 *          ch             - character to insert
 *          buffer         - buffer to insert
@@ -350,8 +350,8 @@ String String_replaceBuffer(String string, ulong index, ulong length, const char
 /***********************************************************************\
 * Name   : String_map, String_mapCString, String_mapChar,
 * Purpose: map string/char to other string/char
-* Input  : string         - string                
-*          index          - index where to start mapping 
+* Input  : string         - string
+*          index          - index where to start mapping
 *          from,to        - from/to strings/chars
 *          count          - number of strings/chars
 * Output : -

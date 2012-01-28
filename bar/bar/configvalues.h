@@ -1,8 +1,8 @@
 /**********************************************************************
 *
-* $Source: /home/torsten/cvs/bar/bar/configvalues.h,v $
-* $Revision: 1.4 $
-* $Author: torsten $
+* $Revision$
+* $Date$
+* $Author$
 * Contents: config file entry parser
 * Systems: all
 *
@@ -185,12 +185,12 @@ const ConfigValue CONFIG_VALUES[] =
   CONFIG_VALUE_CSTRING      ("string",  &stringValue,  NULL,-1,      "",                        ),
   CONFIG_VALUE_STRING       ("string",  &stringValue,  NULL,-1,      "",                        ),
 
-  CONFIG_VALUE_ENUM         ("e1",      &enumValue,    NULL,-1,      ENUM1,                     ), 
-  CONFIG_VALUE_ENUM         ("e2",      &enumValue,    NULL,-1,      ENUM2,                     ), 
-  CONFIG_VALUE_ENUM         ("e3",      &enumValue,    NULL,-1,      ENUM3,                     ), 
-  CONFIG_VALUE_ENUM         ("e4",      &enumValue,    NULL,-1,      ENUM4,                     ), 
+  CONFIG_VALUE_ENUM         ("e1",      &enumValue,    NULL,-1,      ENUM1,                     ),
+  CONFIG_VALUE_ENUM         ("e2",      &enumValue,    NULL,-1,      ENUM2,                     ),
+  CONFIG_VALUE_ENUM         ("e3",      &enumValue,    NULL,-1,      ENUM3,                     ),
+  CONFIG_VALUE_ENUM         ("e4",      &enumValue,    NULL,-1,      ENUM4,                     ),
 
-  CONFIG_VALUE_SPECIAL      ("special", &specialValue, NULL,-1,      parseSpecial,123,          ), 
+  CONFIG_VALUE_SPECIAL      ("special", &specialValue, NULL,-1,      parseSpecial,123,          ),
 
   CONFIG_VALUE_BOOLEAN      ("flag",    &helpFlag,     NULL,-1,      FALSE,                     ),
 };

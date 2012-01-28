@@ -1,8 +1,8 @@
 /***********************************************************************\
 *
-* $Source: /home/torsten/cvs/bar/bar/patterns.c,v $
-* $Revision: 1.4 $
-* $Author: torsten $
+* $Revision$
+* $Date$
+* $Author$
 * Contents: Backup ARchiver pattern functions
 * Systems: all
 *
@@ -123,7 +123,7 @@ LOCAL Errors compilePattern(const char   *pattern,
             z++;
             break;
         }
-      }     
+      }
       break;
     case PATTERN_TYPE_REGEX:
       String_setCString(matchString,pattern);
@@ -198,7 +198,7 @@ Errors Pattern_initCString(Pattern *pattern, const char *string, PatternTypes pa
   Errors error;
 
   assert(pattern != NULL);
-  
+
   /* initialize pattern */
   pattern->type = patternType;
 

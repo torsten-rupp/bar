@@ -1,8 +1,8 @@
 /***********************************************************************\
 *
-* $Source: /home/torsten/cvs/bar/bar/index.h,v $
-* $Revision: 1.2 $
-* $Author: torsten $
+* $Revision$
+* $Date$
+* $Author$
 * Contents: database index functions
 * Systems: all
 *
@@ -55,7 +55,7 @@ typedef enum
   INDEX_MODE_MANUAL,
   INDEX_MODE_AUTO,
 
-  INDEX_MODE_UNKNOWN  
+  INDEX_MODE_UNKNOWN
 } IndexModes;
 
 /***************************** Datatypes *******************************/

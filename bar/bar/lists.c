@@ -1,8 +1,8 @@
 /***********************************************************************\
 *
-* $Source: /home/torsten/cvs/bar/bar/lists.c,v $
-* $Revision: 1.5 $
-* $Author: torsten $
+* $Revision$
+* $Date$
+* $Author$
 * Contents: dynamic list functions
 * Systems: all
 *
@@ -65,7 +65,7 @@ LOCAL void checkDuplicateNode(const char *fileName,
   {
     if (node == newNode)
     {
-      HALT_INTERNAL_ERROR_AT(fileName,lineNb,"Node %p is already in list %p!",node,list); 
+      HALT_INTERNAL_ERROR_AT(fileName,lineNb,"Node %p is already in list %p!",node,list);
     }
     node = node->next;
   }
@@ -202,7 +202,7 @@ void List_copy(const void           *fromList,
 {
   Node *node;
   Node *newNode;
-  
+
   assert(fromList != NULL);
   assert(toList != NULL);
   assert(listNodeCopyFunction != NULL);
@@ -232,7 +232,7 @@ void List_move(void *fromList,
 {
   Node *node;
   Node *nextNode;
-  
+
   assert(fromList != NULL);
   assert(toList != NULL);
 
@@ -506,7 +506,7 @@ void List_sort(void                    *list,
             /* node1 >= node2 -> select node2 */
             node = node2; node2 = ((Node*)node2)->next; n2--;
           }
-          mergedFlag = TRUE;    
+          mergedFlag = TRUE;
         }
 
         /* add to list */

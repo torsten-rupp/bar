@@ -1,11 +1,12 @@
 /***********************************************************************\
 *
-* File    : global.h
-* Author  : Torsten Rupp
+* $Revision$
+* $Date$
+* $Author$
 * Contents: global definitions
-* Systems : Linux
+* Systems: Linux
 *
-************************************************************************/
+\***********************************************************************/
 
 #ifndef _GLOBAL_H
  #define _GLOBAL_H

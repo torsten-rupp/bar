@@ -1,8 +1,8 @@
 /***********************************************************************\
 *
-* $Source: /home/torsten/cvs/bar/bar/index.c,v $
-* $Revision: 1.2 $
-* $Author: torsten $
+* $Revision$
+* $Date$
+* $Author$
 * Contents: database index functions
 * Systems: all
 *
@@ -539,42 +539,42 @@ Errors Index_clear(DatabaseHandle *databaseHandle,
                            NULL,
                            "DELETE FROM files WHERE storageId=%ld;",
                            storageId
-                          );  
+                          );
   if (error != ERROR_NONE) return error;
   error = Database_execute(databaseHandle,
                            NULL,
                            NULL,
                            "DELETE FROM images WHERE storageId=%ld;",
                            storageId
-                          );  
+                          );
   if (error != ERROR_NONE) return error;
   error = Database_execute(databaseHandle,
                            NULL,
                            NULL,
                            "DELETE FROM directories WHERE storageId=%ld;",
                            storageId
-                          );  
+                          );
   if (error != ERROR_NONE) return error;
   error = Database_execute(databaseHandle,
                            NULL,
                            NULL,
                            "DELETE FROM links WHERE storageId=%ld;",
                            storageId
-                          );  
+                          );
   if (error != ERROR_NONE) return error;
   error = Database_execute(databaseHandle,
                            NULL,
                            NULL,
                            "DELETE FROM hardlinks WHERE storageId=%ld;",
                            storageId
-                          );  
+                          );
   if (error != ERROR_NONE) return error;
   error = Database_execute(databaseHandle,
                            NULL,
                            NULL,
                            "DELETE FROM special WHERE storageId=%ld;",
                            storageId
-                          );  
+                          );
 
   return ERROR_NONE;
 }
@@ -676,7 +676,7 @@ Errors Index_setState(DatabaseHandle *databaseHandle,
   Errors  error;
   va_list arguments;
   String  s;
-  
+
 
   assert(databaseHandle != NULL);
 
@@ -735,7 +735,7 @@ Errors Index_setState(DatabaseHandle *databaseHandle,
       return error;
     }
 
-    String_delete(s);    
+    String_delete(s);
   }
   else
   {

@@ -1,8 +1,8 @@
 /***********************************************************************\
 *
-* $Source: /home/torsten/cvs/bar/bar/msgqueues.c,v $
-* $Revision: 1.1 $
-* $Author: torsten $
+* $Revision$
+* $Date$
+* $Author$
 * Contents: functions for inter-process message queues
 * Systems: all POSIX
 *
@@ -80,7 +80,7 @@ LOCAL void waitModified(MsgQueue *msgQueue)
 
   for (z = 1; z < lockCount; z++) pthread_mutex_unlock(&msgQueue->lock);
   msgQueue->lockCount  = 0;
-  pthread_cond_wait(&msgQueue->modified,&msgQueue->lock); 
+  pthread_cond_wait(&msgQueue->modified,&msgQueue->lock);
   msgQueue->lockCount  = lockCount;
   for (z = 1; z < lockCount; z++) pthread_mutex_lock(&msgQueue->lock);
 }
@@ -219,7 +219,7 @@ bool MsgQueue_get(MsgQueue *msgQueue, void *msg, ulong *size, ulong maxSize)
   /* wait for message */
   while (!msgQueue->endOfMsgFlag && (List_count(&msgQueue->list) <= 0))
   {
-    waitModified(msgQueue); 
+    waitModified(msgQueue);
   }
 
   /* get message */
@@ -275,7 +275,7 @@ bool MsgQueue_put(MsgQueue *msgQueue, const void *msg, ulong size)
   {
     while (!msgQueue->endOfMsgFlag && (List_count(&msgQueue->list) >= msgQueue->maxMsgs))
     {
-      waitModified(msgQueue); 
+      waitModified(msgQueue);
     }
     if (List_count(&msgQueue->list) >= msgQueue->maxMsgs)
     {
@@ -324,7 +324,7 @@ void MsgQueue_wait(MsgQueue *msgQueue)
 
   if (!msgQueue->endOfMsgFlag)
   {
-    waitModified(msgQueue); 
+    waitModified(msgQueue);
   }
 
   /* unlock */

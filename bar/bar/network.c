@@ -1,8 +1,8 @@
 /***********************************************************************\
 *
-* $Source: /home/torsten/cvs/bar/bar/network.c,v $
-* $Revision: 1.13 $
-* $Author: torsten $
+* $Revision$
+* $Date$
+* $Author$
 * Contents: Network functions
 * Systems: all
 *
