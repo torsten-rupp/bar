@@ -1,7 +1,7 @@
 /***********************************************************************\
 *
-* $Revision: 1.3 $
-* $Date: 1.3 $
+* $Revision:$
+* $Date:$
 * $Author: torsten $
 * Contents: dynamic array functions
 * Systems: all
