@@ -1,8 +1,8 @@
 /***********************************************************************\
 *
-* $Source: /home/torsten/cvs/bar/bar/arrays.c,v $
-* $Revision: 1.5 $
-* $Author: torsten $
+* $Revision$
+* $Date$
+* $Author$
 * Contents: dynamic array functions
 * Systems: all
 *
@@ -457,6 +457,3 @@ void Array_debugPrintStatistics(void)
 #endif
 
 /* end of file */
-
-
-
