@@ -1,8 +1,8 @@
 /***********************************************************************\
 *
-* $Source: /home/torsten/cvs/bar/bar/compress.h,v $
-* $Revision: 1.3 $
-* $Author: torsten $
+* $Revision$
+* $Date$
+* $Author$
 * Contents: Backup ARchiver compress functions
 * Systems : all
 *
@@ -33,11 +33,11 @@
 
 #include "archive_format_const.h"
 #include "errors.h"
+#include "sources.h"
 
 /****************** Conditional compilation switches *******************/
 
-/******************- use archive format constants
-*********** Constants *******************************/
+/***************************** Constants *******************************/
 
 typedef enum
 {
@@ -108,13 +108,6 @@ typedef enum
 
 /***************************** Datatypes *******************************/
 
-typedef Errors(*CompressSourceGetEntryDataBlock)(void   *userData,
-                                                 void   *buffer,
-                                                 uint64 offset,
-                                                 ulong  length,
-                                                 ulong  *bytesRead
-                                                );
-
 // compress info block
 typedef struct
 {
@@ -154,21 +147,20 @@ typedef struct
       struct
       {
         #ifdef HAVE_XDELTA3
-          CompressSourceGetEntryDataBlock sourceGetEntryDataBlock;
-          void                            *sourceGetEntryDataBlockUserData;
-          byte                            *sourceBuffer;      // buffer for source
-          byte                            *outputBuffer;      // buffer for output (allocated if NULL)
-          ulong                           outputBufferLength; // number of bytes in output buffer
-          ulong                           outputBufferSize;   // size of output buffer (reallocated if 0 or to small)
-          int                             flags;              // XDELTA flags
-          xd3_stream                      stream;             // XDELTA stream
-          xd3_source                      source;             // XDELTA source
-          byte                            inputBuffer[1];     /* buffer for next input byte (Note: do not use
-                                                                 pointer to dataBuffer/compressBuffer because
-                                                                 input/output is not processed immediately and must
-                                                                 be available until next input byte is requested
-                                                              */
-          bool                            flushFlag;          // TRUE iff flush send to xdelta compressor
+          void       *sourceHandle;             // source handle
+          byte       *sourceBuffer;             // buffer for source
+          byte       *outputBuffer;             // buffer for output (allocated if NULL)
+          ulong      outputBufferLength;        // number of bytes in output buffer
+          ulong      outputBufferSize;          // size of output buffer (reallocated if 0 or to small)
+          int        flags;                     // XDELTA flags
+          xd3_stream stream;                    // XDELTA stream
+          xd3_source source;                    // XDELTA source
+          byte       inputBuffer[1];            /* buffer for next input byte (Note: do not use
+                                                   pointer to dataBuffer/compressBuffer because
+                                                   input/output is not processed immediately and must
+                                                   be available until next input byte is requested
+                                                */
+          bool       flushFlag;                 // TRUE iff flush send to xdelta compressor
         #endif /* HAVE_XDELTA3 */
       } xdelta;
     #endif /* HAVE_XDELTA */
@@ -356,19 +348,18 @@ INLINE bool Compress_isXDeltaCompressed(CompressAlgorithms compressAlgorithm)
 * Input  : compressInfo     - compress info block
 *          compressionLevel - compression level (0..9)
 *          blockLength      - block length
-*          sourceEntryInfo  - source entry info (can be NULL, used for
-*                             delta-compression)
+*          sourceHandle     - source handle (can be NULL if no
+*                             delta-compression is used)
 * Output : compressInfo - initialized compress info block
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-Errors Compress_new(CompressInfo                    *compressInfo,
-                    CompressModes                   compressMode,
-                    CompressAlgorithms              compressAlgorithm,
-                    ulong                           blockLength,
-                    CompressSourceGetEntryDataBlock sourceGetEntryDataBlock,
-                    void                            *sourceGetEntryDataBlockUserData
+Errors Compress_new(CompressInfo       *compressInfo,
+                    CompressModes      compressMode,
+                    CompressAlgorithms compressAlgorithm,
+                    ulong              blockLength,
+                    SourceHandle       *sourceHandle
                    );
 
 /***********************************************************************\

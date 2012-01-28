@@ -1,8 +1,8 @@
 /***********************************************************************\
 *
-* $Source: /home/torsten/cvs/bar/bar/compress.c,v $
-* $Revision: 1.5 $
-* $Author: torsten $
+* $Revision$
+* $Date$
+* $Author$
 * Contents: Backup ARchiver compress functions
 * Systems : all
 *
@@ -38,7 +38,7 @@
 #include "errors.h"
 #include "entrylists.h"
 #include "patternlists.h"
-#include "compress.h"
+#include "sources.h"
 #include "crypt.h"
 #include "storage.h"
 #include "bar.h"
@@ -544,13 +544,12 @@ xr++;
 //fprintf(stderr,"%s,%d: s=%ld l=%ld\n",__FILE__,__LINE__,compressInfo->xdelta.outputBufferSize,compressInfo->xdelta.outputBufferLength);
                       break;
                     case XD3_GETSRCBLK:
-                      assert(compressInfo->xdelta.sourceGetEntryDataBlock != NULL);
-                      error = compressInfo->xdelta.sourceGetEntryDataBlock(compressInfo->xdelta.sourceGetEntryDataBlockUserData,
-                                                                           (void*)compressInfo->xdelta.source.curblk,
-                                                                           (uint64)compressInfo->xdelta.source.blksize*compressInfo->xdelta.source.getblkno,
-                                                                           compressInfo->xdelta.source.blksize,
-                                                                           &bytesRead
-                                                                          );
+                      error = Source_getEntryDataBlock(compressInfo->xdelta.sourceHandle,
+                                                       (void*)compressInfo->xdelta.source.curblk,
+                                                       (uint64)compressInfo->xdelta.source.blksize*compressInfo->xdelta.source.getblkno,
+                                                       compressInfo->xdelta.source.blksize,
+                                                       &bytesRead
+                                                      );
                       if (error != ERROR_NONE)
                       {
 fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,Errors_getText(error));
@@ -698,13 +697,12 @@ xw += compressInfo->xdelta.stream.avail_out;
 //fprintf(stderr,"%s,%d: outputBufferSize=%ld outputBufferLength=%ld\n",__FILE__,__LINE__,compressInfo->xdelta.outputBufferSize,compressInfo->xdelta.outputBufferLength);
                       break;
                     case XD3_GETSRCBLK:
-                      assert(compressInfo->xdelta.sourceGetEntryDataBlock != NULL);
-                      error = compressInfo->xdelta.sourceGetEntryDataBlock(compressInfo->xdelta.sourceGetEntryDataBlockUserData,
-                                                                           (void*)compressInfo->xdelta.source.curblk,
-                                                                           (uint64)compressInfo->xdelta.source.blksize*compressInfo->xdelta.source.getblkno,
-                                                                           compressInfo->xdelta.source.blksize,
-                                                                           &bytesRead
-                                                                          );
+                      error = Source_getEntryDataBlock(compressInfo->xdelta.sourceHandle,
+                                                       (void*)compressInfo->xdelta.source.curblk,
+                                                       (uint64)compressInfo->xdelta.source.blksize*compressInfo->xdelta.source.getblkno,
+                                                       compressInfo->xdelta.source.blksize,
+                                                       &bytesRead
+                                                      );
                       if (error != ERROR_NONE)
                       {
 fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,Errors_getText(error));
@@ -1231,13 +1229,12 @@ xw += compressInfo->xdelta.stream.avail_out;
 //fprintf(stderr,"%s,%d: outputBufferSize=%ld outputBufferLength=%ld\n",__FILE__,__LINE__,compressInfo->xdelta.outputBufferSize,compressInfo->xdelta.outputBufferLength);
                         break;
                       case XD3_GETSRCBLK:
-                        assert(compressInfo->xdelta.sourceGetEntryDataBlock != NULL);
-                        error = compressInfo->xdelta.sourceGetEntryDataBlock(compressInfo->xdelta.sourceGetEntryDataBlockUserData,
-                                                                             (void*)compressInfo->xdelta.source.curblk,
-                                                                             (uint64)compressInfo->xdelta.source.blksize*compressInfo->xdelta.source.getblkno,
-                                                                             compressInfo->xdelta.source.blksize,
-                                                                             &bytesRead
-                                                                            );
+                        error = Source_getEntryDataBlock(compressInfo->xdelta.sourceHandle,
+                                                         (void*)compressInfo->xdelta.source.curblk,
+                                                         (uint64)compressInfo->xdelta.source.blksize*compressInfo->xdelta.source.getblkno,
+                                                         compressInfo->xdelta.source.blksize,
+                                                         &bytesRead
+                                                        );
                         if (error != ERROR_NONE)
                         {
 fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,Errors_getText(error));
@@ -1486,12 +1483,11 @@ CompressAlgorithms Compress_getAlgorithm(const char *name)
   return compressAlgorithm;
 }
 
-Errors Compress_new(CompressInfo                    *compressInfo,
-                    CompressModes                   compressMode,
-                    CompressAlgorithms              compressAlgorithm,
-                    ulong                           blockLength,
-                    CompressSourceGetEntryDataBlock sourceGetEntryDataBlock,
-                    void                            *sourceGetEntryDataBlockUserData
+Errors Compress_new(CompressInfo       *compressInfo,
+                    CompressModes      compressMode,
+                    CompressAlgorithms compressAlgorithm,
+                    ulong              blockLength,
+                    SourceHandle       *sourceHandle
                    )
 {
   assert(compressInfo != NULL);
@@ -1730,13 +1726,12 @@ Errors Compress_new(CompressInfo                    *compressInfo,
           xd3_config xd3Config;
 
           // initialize variables
-          compressInfo->xdelta.sourceGetEntryDataBlock         = sourceGetEntryDataBlock;
-          compressInfo->xdelta.sourceGetEntryDataBlockUserData = sourceGetEntryDataBlockUserData;
-          compressInfo->xdelta.outputBuffer                    = NULL;
-          compressInfo->xdelta.outputBufferLength              = 0L;
-          compressInfo->xdelta.outputBufferSize                = 0L;
-          compressInfo->xdelta.flags                           = 0;
-          compressInfo->xdelta.flushFlag                       = FALSE;
+          compressInfo->xdelta.sourceHandle       = sourceHandle;
+          compressInfo->xdelta.outputBuffer       = NULL;
+          compressInfo->xdelta.outputBufferLength = 0L;
+          compressInfo->xdelta.outputBufferSize   = 0L;
+          compressInfo->xdelta.flags              = 0;
+          compressInfo->xdelta.flushFlag          = FALSE;
 
           // initialize xdelta flags
           switch (compressAlgorithm)
