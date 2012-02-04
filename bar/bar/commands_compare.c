@@ -4,7 +4,7 @@
 * $Date$
 * $Author$
 * Contents: Backup ARchiver archive compare function
-* Systems : all
+* Systems: all
 *
 \***********************************************************************/
 
