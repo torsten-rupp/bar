@@ -4,7 +4,7 @@
 * $Date$
 * $Author$
 * Contents: Backup ARchiver archive list function
-* Systems : all
+* Systems: all
 *
 \***********************************************************************/
 
