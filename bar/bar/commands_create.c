@@ -2804,7 +2804,6 @@ LOCAL Errors storeFileEntry(ArchiveInfo       *archiveInfo,
       // get source for delta-compression
       error = Source_openEntry(&sourceHandle,
                                NULL,
-//                               jobOptions,
                                fileName
                               );
       if (error == ERROR_NONE)
@@ -2836,7 +2835,6 @@ LOCAL Errors storeFileEntry(ArchiveInfo       *archiveInfo,
     // create new archive file entry
     error = Archive_newFileEntry(archiveInfo,
                                  &archiveEntryInfo,
-//                                 deltaCompressFlag?Source_getEntryDataBlock:NULL,
                                  deltaCompressFlag?&sourceHandle:NULL,
                                  fileName,
                                  &fileInfo,
@@ -3100,7 +3098,6 @@ LOCAL Errors storeImageEntry(ArchiveInfo       *archiveInfo,
       // get source for delta-compression
       error = Source_openEntry(&sourceHandle,
                                NULL,
-//                               jobOptions,
                                deviceName
                               );
       if (error == ERROR_NONE)
@@ -3132,7 +3129,6 @@ LOCAL Errors storeImageEntry(ArchiveInfo       *archiveInfo,
     // create new archive image entry
     error = Archive_newImageEntry(archiveInfo,
                                   &archiveEntryInfo,
-//                                  deltaCompressFlag?Source_getEntryDataBlock:NULL,
                                   deltaCompressFlag?&sourceHandle:NULL,
                                   deviceName,
                                   &deviceInfo,
@@ -3641,11 +3637,11 @@ LOCAL Errors storeHardLinkEntry(ArchiveInfo       *archiveInfo,
     {
       // get source for delta-compression
 //???
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       STRINGLIST_ITERATE(nameList,stringNode,name)
       {
         error = Source_openEntry(&sourceHandle,
                                  NULL,
-//                                 jobOptions,
                                  name
                                 );
         if (error == ERROR_NONE) break;
@@ -3677,10 +3673,8 @@ LOCAL Errors storeHardLinkEntry(ArchiveInfo       *archiveInfo,
     }
 
     // create new archive hard link entry
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     error = Archive_newHardLinkEntry(archiveInfo,
                                      &archiveEntryInfo,
-//                                     deltaCompressFlag?Source_getEntryDataBlock:NULL,
                                      deltaCompressFlag?&sourceHandle:NULL,
                                      nameList,
                                      &fileInfo,

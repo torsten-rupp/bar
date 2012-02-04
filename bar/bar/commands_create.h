@@ -4,7 +4,7 @@
 * $Date$
 * $Author$
 * Contents: Backup ARchiver archive create function
-* Systems : all
+* Systems: all
 *
 \***********************************************************************/
 
