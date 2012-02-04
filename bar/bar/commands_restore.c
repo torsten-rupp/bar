@@ -4,7 +4,7 @@
 * $Date$
 * $Author$
 * Contents: Backup ARchiver archive restore function
-* Systems : all
+* Systems: all
 *
 \***********************************************************************/
 
