@@ -4,7 +4,7 @@
 * $Date$
 * $Author$
 * Contents: Backup ARchiver archive test function
-* Systems : all
+* Systems: all
 *
 \***********************************************************************/
 
