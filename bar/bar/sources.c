@@ -1,10 +1,10 @@
 /***********************************************************************\
 *
-* $Source: /home/torsten/cvs/bar/bar/compress.h,v $
-* $Revision: 1.3 $
-* $Author: torsten $
+* $Revision$
+* $Date$
+* $Author$
 * Contents: Backup ARchiver source functions
-* Systems : all
+* Systems: all
 *
 \***********************************************************************/
 
@@ -13,7 +13,6 @@
 
 #include <stdlib.h>
 #include <stdio.h>
-#include <zlib.h>
 #include <assert.h>
 
 #include "global.h"
@@ -100,7 +99,6 @@ LOCAL Errors restoreFile(const String                    archiveName,
                         )
 {
   byte              *buffer;
-//  String            printableArchiveName;
 //  bool              abortFlag;
   Errors            error;
   ArchiveInfo       archiveInfo;
@@ -121,7 +119,6 @@ LOCAL Errors restoreFile(const String                    archiveName,
   {
     HALT_INSUFFICIENT_MEMORY();
   }
-//  printableArchiveName = String_new();
 
   // open archive
   error = Archive_open(&archiveInfo,
@@ -132,30 +129,21 @@ LOCAL Errors restoreFile(const String                    archiveName,
                       );
   if (error != ERROR_NONE)
   {
-#if 0
-    printError("Cannot open archive file '%s' (error: %s)!\n",
-               String_cString(printableArchiveName),
-               Errors_getText(error)
-              );
-#endif /* 0 */
     return error;
   }
-//  abortFlag = !updateStatusInfo(&restoreInfo);
 
   // read archive entries
   failError = ERROR_NONE;
-  while (   TRUE//((restoreInfo.requestedAbortFlag == NULL) || !(*restoreInfo.requestedAbortFlag))
+  while (   ((requestedAbortFlag == NULL) || !(*requestedAbortFlag))
          && !Archive_eof(&archiveInfo,TRUE)
          && (failError == ERROR_NONE)
         )
   {
-#if 0
     // pause
-    while ((restoreInfo.pauseFlag != NULL) && (*restoreInfo.pauseFlag))
+    while ((pauseFlag != NULL) && (*pauseFlag))
     {
       Misc_udelay(500*1000);
     }
-#endif /* 0 */
 
     // get next archive entry type
     error = Archive_getNextArchiveEntryType(&archiveInfo,
@@ -164,12 +152,6 @@ LOCAL Errors restoreFile(const String                    archiveName,
                                            );
     if (error != ERROR_NONE)
     {
-#if 0
-      printError("Cannot read next entry in archive '%s' (error: %s)!\n",
-                 String_cString(printableArchiveName),
-                 Errors_getText(error)
-                );
-#endif /* 0 */
       if (failError == ERROR_NONE) failError = error;
       break;
     }
@@ -203,12 +185,6 @@ LOCAL Errors restoreFile(const String                    archiveName,
                                        );
           if (error != ERROR_NONE)
           {
-#if 0
-            printError("Cannot read 'file' content of archive '%s' (error: %s)!\n",
-                       String_cString(printableArchiveName),
-                       Errors_getText(error)
-                      );
-#endif /* 0 */
             String_delete(fileName);
             if (failError == ERROR_NONE) failError = error;
             continue;
@@ -218,87 +194,64 @@ LOCAL Errors restoreFile(const String                    archiveName,
           {
 //            abortFlag = !updateStatusInfo(&restoreInfo);
 
-            if (!jobOptions->dryRunFlag)
+            // open file
+            error = File_open(&fileHandle,destinationFileName,FILE_OPEN_WRITE);
+            if (error != ERROR_NONE)
             {
-              // open file
-              error = File_open(&fileHandle,destinationFileName,FILE_OPEN_WRITE);
-              if (error != ERROR_NONE)
-              {
-                printError("Cannot create/write to file '%s' (error: %s)\n",
-                           String_cString(destinationFileName),
-                           Errors_getText(error)
-                          );
-                (void)Archive_closeEntry(&archiveEntryInfo);
-                String_delete(fileName);
-                if (jobOptions->stopOnErrorFlag)
-                {
-                  failError = error;
-                }
-                continue;
-              }
+              printError("Cannot create/write to file '%s' (error: %s)\n",
+                         String_cString(destinationFileName),
+                         Errors_getText(error)
+                        );
+              (void)Archive_closeEntry(&archiveEntryInfo);
+              String_delete(fileName);
+              failError = error;
+              continue;
+            }
 
-              // seek to fragment position
-              error = File_seek(&fileHandle,fragmentOffset);
-              if (error != ERROR_NONE)
-              {
-                printError("Cannot write file '%s' (error: %s)\n",
-                           String_cString(destinationFileName),
-                           Errors_getText(error)
-                          );
-                File_close(&fileHandle);
-                (void)Archive_closeEntry(&archiveEntryInfo);
-                String_delete(fileName);
-                if (jobOptions->stopOnErrorFlag)
-                {
-                  failError = error;
-                }
-                continue;
-              }
+            // seek to fragment position
+            error = File_seek(&fileHandle,fragmentOffset);
+            if (error != ERROR_NONE)
+            {
+              printError("Cannot write file '%s' (error: %s)\n",
+                         String_cString(destinationFileName),
+                         Errors_getText(error)
+                        );
+              File_close(&fileHandle);
+              (void)Archive_closeEntry(&archiveEntryInfo);
+              String_delete(fileName);
+              failError = error;
+              continue;
             }
 
             // write file data
             length = 0;
-            while (   TRUE//((restoreInfo.requestedAbortFlag == NULL) || !(*restoreInfo.requestedAbortFlag))
+            while (   ((requestedAbortFlag == NULL) || !(*requestedAbortFlag))
                    && (length < fragmentSize)
                   )
             {
-#if 0
               // pause
-              while ((restoreInfo.pauseFlag != NULL) && (*restoreInfo.pauseFlag))
+              while ((pauseFlag != NULL) && (*pauseFlag))
               {
                 Misc_udelay(500*1000);
               }
-#endif /* 0 */
 
               bufferLength = MIN(fragmentSize-length,BUFFER_SIZE);
 
               error = Archive_readData(&archiveEntryInfo,buffer,bufferLength);
               if (error != ERROR_NONE)
               {
-#if 0
-                printError("Cannot read content of archive '%s' (error: %s)!\n",
-                           String_cString(printableArchiveName),
-                           Errors_getText(error)
-                          );
-#endif /* 0 */
                 if (failError == ERROR_NONE) failError = error;
                 break;
               }
-              if (!jobOptions->dryRunFlag)
+              error = File_write(&fileHandle,buffer,bufferLength);
+              if (error != ERROR_NONE)
               {
-                error = File_write(&fileHandle,buffer,bufferLength);
-                if (error != ERROR_NONE)
-                {
-                  printError("Cannot write file '%s' (error: %s)\n",
-                             String_cString(destinationFileName),
-                             Errors_getText(error)
-                            );
-                  if (jobOptions->stopOnErrorFlag)
-                  {
-                    failError = error;
-                  }
-                  break;
-                }
+                printError("Cannot write file '%s' (error: %s)\n",
+                           String_cString(destinationFileName),
+                           Errors_getText(error)
+                          );
+                failError = error;
+                break;
               }
 //              abortFlag = !updateStatusInfo(&restoreInfo);
 
@@ -306,33 +259,21 @@ LOCAL Errors restoreFile(const String                    archiveName,
             }
             if      (failError != ERROR_NONE)
             {
-              if (!jobOptions->dryRunFlag)
-              {
-                File_close(&fileHandle);
-              }
+              File_close(&fileHandle);
               (void)Archive_closeEntry(&archiveEntryInfo);
               String_delete(fileName);
               continue;
             }
-#if 0
-            else if ((restoreInfo.requestedAbortFlag != NULL) && (*restoreInfo.requestedAbortFlag))
-            {
-              printInfo(2,"ABORTED\n");
-              if (!jobOptions->dryRunFlag)
-              {
-                File_close(&fileHandle);
-              }
-              (void)Archive_closeEntry(&archiveEntryInfo);
-              String_delete(fileName);
-              continue;
-            }
-#endif /* 0 */
-
-            // close file
-            if (!jobOptions->dryRunFlag)
+            else if ((requestedAbortFlag != NULL) && (*requestedAbortFlag))
             {
               File_close(&fileHandle);
+              (void)Archive_closeEntry(&archiveEntryInfo);
+              String_delete(fileName);
+              continue;
             }
+
+            // close file
+            File_close(&fileHandle);
           }
 
           // close archive file, free resources
@@ -370,12 +311,6 @@ LOCAL Errors restoreFile(const String                    archiveName,
                                         );
           if (error != ERROR_NONE)
           {
-#if 0
-            printError("Cannot read 'image' content of archive '%s' (error: %s)!\n",
-                       String_cString(printableArchiveName),
-                       Errors_getText(error)
-                      );
-#endif /* 0 */
             String_delete(imageName);
             if (failError == ERROR_NONE) failError = error;
             break;
@@ -386,56 +321,45 @@ LOCAL Errors restoreFile(const String                    archiveName,
 //            abortFlag = !updateStatusInfo(&restoreInfo);
 
             // open file
-            if (!jobOptions->dryRunFlag)
+            error = File_open(&fileHandle,destinationFileName,FILE_OPEN_WRITE);
+            if (error != ERROR_NONE)
             {
-              error = File_open(&fileHandle,destinationFileName,FILE_OPEN_WRITE);
-              if (error != ERROR_NONE)
-              {
-                printError("Cannot create/write to file '%s' (error: %s)\n",
-                           String_cString(destinationFileName),
-                           Errors_getText(error)
-                          );
-                (void)Archive_closeEntry(&archiveEntryInfo);
-                String_delete(imageName);
-                if (jobOptions->stopOnErrorFlag)
-                {
-                  failError = error;
-                }
-                continue;
-              }
+              printError("Cannot create/write to file '%s' (error: %s)\n",
+                         String_cString(destinationFileName),
+                         Errors_getText(error)
+                        );
+              (void)Archive_closeEntry(&archiveEntryInfo);
+              String_delete(imageName);
+              failError = error;
+              continue;
+            }
 
-              // seek to fragment position
-              error = File_seek(&fileHandle,blockOffset);
-              if (error != ERROR_NONE)
-              {
-                printError("Cannot write file '%s' (error: %s)\n",
-                           String_cString(destinationFileName),
-                           Errors_getText(error)
-                          );
-                File_close(&fileHandle);
-                (void)Archive_closeEntry(&archiveEntryInfo);
-                String_delete(imageName);
-                if (jobOptions->stopOnErrorFlag)
-                {
-                  failError = error;
-                }
-                continue;
-              }
+            // seek to fragment position
+            error = File_seek(&fileHandle,blockOffset);
+            if (error != ERROR_NONE)
+            {
+              printError("Cannot write file '%s' (error: %s)\n",
+                         String_cString(destinationFileName),
+                         Errors_getText(error)
+                        );
+              File_close(&fileHandle);
+              (void)Archive_closeEntry(&archiveEntryInfo);
+              String_delete(imageName);
+              failError = error;
+              continue;
             }
 
             // write image data to file
             block = 0;
-            while (   TRUE//((restoreInfo.requestedAbortFlag == NULL) || !(*restoreInfo.requestedAbortFlag))
+            while (   ((requestedAbortFlag == NULL) || !(*requestedAbortFlag))
                    && (block < blockCount)
                   )
             {
-#if 0
               // pause
-              while ((restoreInfo.pauseFlag != NULL) && (*restoreInfo.pauseFlag))
+              while ((pauseFlag != NULL) && (*pauseFlag))
               {
                 Misc_udelay(500*1000);
               }
-#endif
 
 //              assert(deviceInfo.blockSize > 0);
 //              bufferBlockCount = MIN(blockCount-block,BUFFER_SIZE/deviceInfo.blockSize);
@@ -445,30 +369,18 @@ bufferBlockCount = 0;
               error = Archive_readData(&archiveEntryInfo,buffer,0/*bufferLength ???bufferBlockCount*deviceInfo.blockSize*/);
               if (error != ERROR_NONE)
               {
-#if 0
-                printError("Cannot read content of archive '%s' (error: %s)!\n",
-                           String_cString(printableArchiveName),
-                           Errors_getText(error)
-                          );
-#endif /* 0 */
                 if (failError == ERROR_NONE) failError = error;
                 break;
               }
-              if (!jobOptions->dryRunFlag)
+              error = File_write(&fileHandle,buffer,bufferLength);
+              if (error != ERROR_NONE)
               {
-                error = File_write(&fileHandle,buffer,bufferLength);
-                if (error != ERROR_NONE)
-                {
-                  printError("Cannot write file '%s' (error: %s)\n",
-                             String_cString(destinationFileName),
-                             Errors_getText(error)
-                            );
-                  if (jobOptions->stopOnErrorFlag)
-                  {
-                    failError = error;
-                  }
-                  break;
-                }
+                printError("Cannot write file '%s' (error: %s)\n",
+                           String_cString(destinationFileName),
+                           Errors_getText(error)
+                          );
+                failError = error;
+                break;
               }
 //              abortFlag = !updateStatusInfo(&restoreInfo);
 
@@ -476,10 +388,7 @@ bufferBlockCount = 0;
             }
 
             // close file
-            if (!jobOptions->dryRunFlag)
-            {
-              File_close(&fileHandle);
-            }
+            File_close(&fileHandle);
           }
 
           // close archive file, free resources
@@ -488,10 +397,6 @@ bufferBlockCount = 0;
           // free resources
           String_delete(imageName);
         }
-        break;
-      case ARCHIVE_ENTRY_TYPE_DIRECTORY:
-        break;
-      case ARCHIVE_ENTRY_TYPE_LINK:
         break;
       case ARCHIVE_ENTRY_TYPE_HARDLINK:
         {
@@ -522,12 +427,6 @@ bufferBlockCount = 0;
                                            );
           if (error != ERROR_NONE)
           {
-#if 0
-            printError("Cannot read 'hard link' content of archive '%s' (error: %s)!\n",
-                       String_cString(printableArchiveName),
-                       Errors_getText(error)
-                      );
-#endif /* 0 */
             StringList_done(&fileNameList);
             if (failError == ERROR_NONE) failError = error;
             continue;
@@ -537,87 +436,64 @@ bufferBlockCount = 0;
           {
 //              abortFlag = !updateStatusInfo(&restoreInfo);
 
-            if (!jobOptions->dryRunFlag)
+            // open file
+            error = File_open(&fileHandle,destinationFileName,FILE_OPEN_WRITE);
+            if (error != ERROR_NONE)
             {
-              // open file
-              error = File_open(&fileHandle,destinationFileName,FILE_OPEN_WRITE);
-              if (error != ERROR_NONE)
-              {
-                printError("Cannot create/write to file '%s' (error: %s)\n",
-                           String_cString(destinationFileName),
-                           Errors_getText(error)
-                          );
-                (void)Archive_closeEntry(&archiveEntryInfo);
-                StringList_done(&fileNameList);
-                if (jobOptions->stopOnErrorFlag)
-                {
-                  failError = error;
-                }
-                continue;
-              }
+              printError("Cannot create/write to file '%s' (error: %s)\n",
+                         String_cString(destinationFileName),
+                         Errors_getText(error)
+                        );
+              (void)Archive_closeEntry(&archiveEntryInfo);
+              StringList_done(&fileNameList);
+              failError = error;
+              continue;
+            }
 
-              // seek to fragment position
-              error = File_seek(&fileHandle,fragmentOffset);
-              if (error != ERROR_NONE)
-              {
-                printError("Cannot write file '%s' (error: %s)\n",
-                           String_cString(destinationFileName),
-                           Errors_getText(error)
-                          );
-                File_close(&fileHandle);
-                (void)Archive_closeEntry(&archiveEntryInfo);
-                StringList_done(&fileNameList);
-                if (jobOptions->stopOnErrorFlag)
-                {
-                  failError = error;
-                }
-                continue;
-              }
+            // seek to fragment position
+            error = File_seek(&fileHandle,fragmentOffset);
+            if (error != ERROR_NONE)
+            {
+              printError("Cannot write file '%s' (error: %s)\n",
+                         String_cString(destinationFileName),
+                         Errors_getText(error)
+                        );
+              File_close(&fileHandle);
+              (void)Archive_closeEntry(&archiveEntryInfo);
+              StringList_done(&fileNameList);
+              failError = error;
+              continue;
             }
 
             // write file data
             length = 0;
-            while (   TRUE//((restoreInfo.requestedAbortFlag == NULL) || !(*restoreInfo.requestedAbortFlag))
+            while (   ((requestedAbortFlag == NULL) || !(*requestedAbortFlag))
                    && (length < fragmentSize)
                   )
             {
-#if 0
               // pause
-              while ((restoreInfo.pauseFlag != NULL) && (*restoreInfo.pauseFlag))
+              while ((pauseFlag != NULL) && (*pauseFlag))
               {
                 Misc_udelay(500*1000);
               }
-#endif /* 0 */
 
               bufferLength = MIN(fragmentSize-length,BUFFER_SIZE);
 
               error = Archive_readData(&archiveEntryInfo,buffer,bufferLength);
               if (error != ERROR_NONE)
               {
-#if 0
-                printError("Cannot read content of archive '%s' (error: %s)!\n",
-                           String_cString(printableArchiveName),
-                           Errors_getText(error)
-                          );
-#endif /* 0 */
                 failError = error;
                 break;
               }
-              if (!jobOptions->dryRunFlag)
+              error = File_write(&fileHandle,buffer,bufferLength);
+              if (error != ERROR_NONE)
               {
-                error = File_write(&fileHandle,buffer,bufferLength);
-                if (error != ERROR_NONE)
-                {
-                  printError("Cannot write file '%s' (error: %s)\n",
-                             String_cString(destinationFileName),
-                             Errors_getText(error)
-                            );
-                  if (jobOptions->stopOnErrorFlag)
-                  {
-                    failError = error;
-                  }
-                  break;
-                }
+                printError("Cannot write file '%s' (error: %s)\n",
+                           String_cString(destinationFileName),
+                           Errors_getText(error)
+                          );
+                failError = error;
+                break;
               }
 //                  abortFlag = !updateStatusInfo(&restoreInfo);
 
@@ -625,26 +501,17 @@ bufferBlockCount = 0;
             }
             if      (failError != ERROR_NONE)
             {
-              if (!jobOptions->dryRunFlag)
-              {
-                File_close(&fileHandle);
-                break;
-              }
-            }
-#if 0
-            else if ((restoreInfo.requestedAbortFlag != NULL) && (*restoreInfo.requestedAbortFlag))
-            {
-              printInfo(2,"ABORTED\n");
               File_close(&fileHandle);
               break;
             }
-#endif /* 0 */
-
-            // close file
-            if (!jobOptions->dryRunFlag)
+            else if ((requestedAbortFlag != NULL) && (*requestedAbortFlag))
             {
               File_close(&fileHandle);
+              break;
             }
+
+            // close file
+            File_close(&fileHandle);
           }
           if (failError != ERROR_NONE)
           {
@@ -660,7 +527,14 @@ bufferBlockCount = 0;
           StringList_done(&fileNameList);
         }
         break;
+      case ARCHIVE_ENTRY_TYPE_DIRECTORY:
+      case ARCHIVE_ENTRY_TYPE_LINK:
       case ARCHIVE_ENTRY_TYPE_SPECIAL:
+        error = Archive_skipNextEntry(&archiveInfo);
+        if (error != ERROR_NONE)
+        {
+          if (failError == ERROR_NONE) failError = error;
+        }
         break;
       default:
         #ifndef NDEBUG
@@ -674,19 +548,8 @@ bufferBlockCount = 0;
   (void)Archive_close(&archiveInfo);
 
   // free resources
-//  String_delete(printableArchiveName);
   free(buffer);
 
-#if 0
-  if ((restoreInfo.requestedAbortFlag == NULL) || !(*restoreInfo.requestedAbortFlag))
-  {
-    return restoreInfo.failError;
-  }
-  else
-  {
-    return ERROR_ABORTED;
-  }
-#endif /* 0 */
   return failError;
 }
 
@@ -708,11 +571,7 @@ LOCAL void freeSourceNode(SourceNode *sourceNode, void *userData)
 
   if (sourceNode->localStorageName != NULL)
   {
-//    if (sourceNode->tmpLocalStorageFlag)
-//    {
-      File_delete(sourceNode->localStorageName,FALSE);
-//    }
-    String_delete(sourceNode->localStorageName);
+    deleteLocalStorageArchive(sourceNode->localStorageName);
   }
   String_delete(sourceNode->storageName);
 }
@@ -726,21 +585,26 @@ Errors Source_initAll(void)
   return ERROR_NONE;
 }
 
-void Source_doneAll()
+void Source_doneAll(void)
 {
   List_done(&sourceList,(ListNodeFreeFunction)freeSourceNode,NULL);
 }
 
-void Source_addSource(const String sourcePattern, JobOptions *jobOptions)
+void Source_addSource(const String sourcePattern)
 {
-  Errors error;
+  JobOptions                 jobOptions;
+  Errors                     error;
   StorageDirectoryListHandle storageDirectoryListHandle;
-  String fileName;
-  SourceNode *sourceNode;
+  String                     fileName;
+  SourceNode                 *sourceNode;
 
+  // init options
+  initJobOptions(&jobOptions);
+
+  // open directory list
   error = Storage_openDirectoryList(&storageDirectoryListHandle,
                                     sourcePattern,
-                                    jobOptions
+                                    &jobOptions
                                    );
   if (error == ERROR_NONE)
   {
@@ -780,11 +644,12 @@ void Source_addSource(const String sourcePattern, JobOptions *jobOptions)
 //      sourceNode->tmpLocalStorageFlag = FALSE;
     List_append(&sourceList,sourceNode);
   }
+
+  // free resources
+  freeJobOptions(&jobOptions);
 }
 
-Errors Source_addSourceList(const PatternList *sourcePatternList,
-                            JobOptions        *jobOptions
-                           )
+Errors Source_addSourceList(const PatternList *sourcePatternList)
 {
   String      fileName;
   PatternNode *patternNode;
@@ -797,91 +662,101 @@ Errors Source_addSourceList(const PatternList *sourcePatternList,
   fileName = String_new();
   PATTERNLIST_ITERATE(sourcePatternList,patternNode)
   {
-    Source_addSource(patternNode->string,jobOptions);
+    Source_addSource(patternNode->string);//,jobOptions);
   }
   String_delete(fileName);
 
   return ERROR_NONE;
 }
 
-Errors Source_openEntry(SourceEntryInfo  *sourceEntryInfo,
-                        const String     sourceStorageName,
-                        JobOptions       *jobOptions,
-                        const String     name
+Errors Source_openEntry(SourceHandle *sourceHandle,
+                        const String sourceStorageName,
+                        const String name
                        )
 {
-  Errors error;
-  bool   restoredFlag;
-  String localStorageName;
+  JobOptions jobOptions;
+  Errors     error;
+  bool       restoredFlag;
+  String     localStorageName;
   SourceNode *sourceNode;
 
-  assert(sourceEntryInfo != NULL);
+  assert(sourceHandle != NULL);
   assert(name != NULL);
 
+  // init options
+  initJobOptions(&jobOptions);
+
   // create temporary restore file as delta source
-  sourceEntryInfo->tmpFileName = String_new();
-  error = File_getTmpFileName(sourceEntryInfo->tmpFileName,NULL,tmpDirectory);
+  sourceHandle->tmpFileName = String_new();
+  error = File_getTmpFileName(sourceHandle->tmpFileName,NULL,tmpDirectory);
   if (error != ERROR_NONE)
   {
-    String_delete(sourceEntryInfo->tmpFileName);
+    String_delete(sourceHandle->tmpFileName);
+    freeJobOptions(&jobOptions);
     return error;
   }
 
-  // restore from source pattern list
   restoredFlag = FALSE;
-  LIST_ITERATE(&sourceList,sourceNode)
-  {
-    if (sourceNode->localStorageName == NULL)
-    {
-      // create local copy of storage file
-      localStorageName = String_new();
-      error = createLocalStorageArchive(localStorageName,
-                                        sourceNode->storageName,
-                                        jobOptions
-                                      );
-      if (error != ERROR_NONE)
-      {
-        String_delete(localStorageName);
-        String_delete(sourceEntryInfo->tmpFileName);
-        return error;
-      }
-      sourceNode->localStorageName = localStorageName;
-    }
-    assert(sourceNode->localStorageName != NULL);
 
-    // restore to temporary file
-    error = restoreFile(sourceNode->localStorageName,
-                        name,
-                        NULL,
-                        jobOptions,
-                        sourceEntryInfo->tmpFileName,
-                        inputCryptPassword,
-                        NULL,
-                        NULL,//bool                            *pauseFlag,
-                        NULL//bool                            *requestedAbortFlag
-                       );
-    if (error == ERROR_NONE)
+  if (!restoredFlag)
+  {
+    // restore from source pattern list
+    LIST_ITERATE(&sourceList,sourceNode)
     {
-      sourceEntryInfo->sourceNode = sourceNode;
-      restoredFlag = TRUE;
-      break;
+      if (sourceNode->localStorageName == NULL)
+      {
+        // create local copy of storage file
+        localStorageName = String_new();
+        error = createLocalStorageArchive(localStorageName,
+                                          sourceNode->storageName,
+                                          &jobOptions
+                                        );
+        if (error != ERROR_NONE)
+        {
+          String_delete(localStorageName);
+          String_delete(sourceHandle->tmpFileName);
+          freeJobOptions(&jobOptions);
+          return error;
+        }
+        sourceNode->localStorageName = localStorageName;
+      }
+      assert(sourceNode->localStorageName != NULL);
+
+      // restore to temporary file
+      error = restoreFile(sourceNode->localStorageName,
+                          name,
+                          NULL,
+                          &jobOptions,
+                          sourceHandle->tmpFileName,
+                          inputCryptPassword,
+                          NULL,
+                          NULL,//bool                            *pauseFlag,
+                          NULL//bool                            *requestedAbortFlag
+                         );
+      if (error == ERROR_NONE)
+      {
+        sourceHandle->storageName = sourceNode->storageName;
+        restoredFlag = TRUE;
+        break;
+      }
     }
   }
 
   if (!restoredFlag)
   {
+    // restore from given storage name
     if (sourceStorageName != NULL)
     {
-      // restore from given storage name
       localStorageName = String_new();
       error = createLocalStorageArchive(localStorageName,
                                         sourceStorageName,
-                                        jobOptions
+                                        &jobOptions
                                        );
       if (error != ERROR_NONE)
       {
         String_delete(localStorageName);
-        String_delete(sourceEntryInfo->tmpFileName);
+        String_delete(sourceHandle->tmpFileName);
+        freeJobOptions(&jobOptions);
         return error;
       }
 
@@ -889,8 +764,8 @@ Errors Source_openEntry(SourceEntryInfo  *sourceEntryInfo,
       error = restoreFile(localStorageName,
                           name,
                           NULL,
-                          jobOptions,
-                          sourceEntryInfo->tmpFileName,
+                          &jobOptions,
+                          sourceHandle->tmpFileName,
                           inputCryptPassword,
                           NULL,
                           NULL,//bool                            *pauseFlag,
@@ -904,7 +779,8 @@ Errors Source_openEntry(SourceEntryInfo  *sourceEntryInfo,
       {
         File_delete(localStorageName,FALSE);
         String_delete(localStorageName);
-        String_delete(sourceEntryInfo->tmpFileName);
+        String_delete(sourceHandle->tmpFileName);
+        freeJobOptions(&jobOptions);
         return error;
       }
 
@@ -916,55 +792,56 @@ Errors Source_openEntry(SourceEntryInfo  *sourceEntryInfo,
 
   if (!restoredFlag)
   {
-    String_delete(sourceEntryInfo->tmpFileName);
+    String_delete(sourceHandle->tmpFileName);
+    freeJobOptions(&jobOptions);
     return ERRORX(DELTA_SOURCE_NOT_FOUND,0,String_cString(sourceStorageName));
   }
 
   // open temporary restored file
-  error = File_open(&sourceEntryInfo->tmpFileHandle,sourceEntryInfo->tmpFileName,FILE_OPEN_READ);
+  error = File_open(&sourceHandle->tmpFileHandle,sourceHandle->tmpFileName,FILE_OPEN_READ);
   if (error != ERROR_NONE)
   {
-    String_delete(sourceEntryInfo->tmpFileName);
+    String_delete(sourceHandle->tmpFileName);
+    freeJobOptions(&jobOptions);
     return error;
   }
+
+  // free resources
+  freeJobOptions(&jobOptions);
 
   return ERROR_NONE;
 }
 
-void Source_closeEntry(SourceEntryInfo *sourceEntryInfo)
+void Source_closeEntry(SourceHandle *sourceHandle)
 {
-  assert(sourceEntryInfo != NULL);
-  assert(sourceEntryInfo->tmpFileName != NULL);
+  assert(sourceHandle != NULL);
+  assert(sourceHandle->tmpFileName != NULL);
 
-  File_close(&sourceEntryInfo->tmpFileHandle);
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-//  File_delete(sourceEntryInfo->tmpFileName,FALSE);
-  String_delete(sourceEntryInfo->tmpFileName);
+  File_close(&sourceHandle->tmpFileHandle);
+  File_delete(sourceHandle->tmpFileName,FALSE);
+  String_delete(sourceHandle->tmpFileName);
 }
 
-Errors Source_getEntryDataBlock(void   *userData,
-                                void   *buffer,
-                                uint64 offset,
-                                ulong  length,
-                                ulong  *bytesRead
+Errors Source_getEntryDataBlock(SourceHandle *sourceHandle,
+                                void         *buffer,
+                                uint64       offset,
+                                ulong        length,
+                                ulong        *bytesRead
                                )
 {
-  SourceEntryInfo *sourceEntryInfo;
   Errors          error;
 
-  assert(userData != NULL);
+  assert(sourceHandle != NULL);
   assert(buffer != NULL);
   assert(bytesRead != NULL);
 
-  sourceEntryInfo = (SourceEntryInfo*)userData;
-
-  error = File_seek(&sourceEntryInfo->tmpFileHandle,offset);
+  error = File_seek(&sourceHandle->tmpFileHandle,offset);
   if (error != ERROR_NONE)
   {
     return error;
   }
 
-  error = File_read(&sourceEntryInfo->tmpFileHandle,buffer,length,bytesRead);
+  error = File_read(&sourceHandle->tmpFileHandle,buffer,length,bytesRead);
   if (error != ERROR_NONE)
   {
     return error;
