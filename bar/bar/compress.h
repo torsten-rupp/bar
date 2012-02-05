@@ -4,7 +4,7 @@
 * $Date$
 * $Author$
 * Contents: Backup ARchiver compress functions
-* Systems : all
+* Systems: all
 *
 \***********************************************************************/
 
