@@ -35,6 +35,8 @@ import org.eclipse.swt.widgets.Text;
 class BusyDialog
 {
   // --------------------------- constants --------------------------------
+
+  // busy dialog flags
   public final static int NONE          = 0;
   public final static int TEXT0         = 1 << 0;
   public final static int TEXT1         = 1 << 1;
@@ -67,6 +69,7 @@ class BusyDialog
    * @param title dialog title
    * @param width,height width/height of dialog
    * @param message dialog message
+   * @param flags busy dialog flags
    */
   public BusyDialog(Shell parentShell, String title, int width, int height, String message, int flags)
   {
@@ -79,8 +82,8 @@ class BusyDialog
     display = parentShell.getDisplay();
 
     // load images
-    images[0] = Widgets.loadImage(parentShell.getDisplay(),"busy0.gif");
-    images[1] = Widgets.loadImage(parentShell.getDisplay(),"busy1.gif");
+    images[0] = Widgets.loadImage(parentShell.getDisplay(),"busy0.png");
+    images[1] = Widgets.loadImage(parentShell.getDisplay(),"busy1.png");
     imageTimestamp = System.currentTimeMillis();
     imageIndex = 0;
 
@@ -243,6 +246,7 @@ class BusyDialog
    * @param parentShell parent shell
    * @param title dialog title
    * @param width,height width/height of dialog
+   * @param message dialog message
    */
   public BusyDialog(Shell parentShell, String title, int width, int height, String message)
   {
