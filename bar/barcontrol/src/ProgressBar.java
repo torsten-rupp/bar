@@ -80,6 +80,14 @@ class ProgressBar extends Canvas
     setSelection(0.0);
   }
 
+  /** create progress bar
+   * @param composite parent composite widget
+   */
+  ProgressBar(Composite composite)
+  {
+    this(composite,SWT.NONE);
+  }
+
   /** compute size of pane
    * @param wHint,hHint width/height hint
    * @param changed TRUE iff no cache values should be used
@@ -96,7 +104,7 @@ class ProgressBar extends Canvas
     width  = 2+textSize.x+2;
     height = 2+textSize.y+2;
     if (wHint != SWT.DEFAULT) width  = wHint;
-    if (hHint != SWT.DEFAULT) height = hHint;         
+    if (hHint != SWT.DEFAULT) height = hHint;
 
     return new Point(width,height);
   }
