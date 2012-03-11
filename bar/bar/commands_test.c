@@ -185,11 +185,15 @@ Errors Command_test(const StringList                *archiveNameList,
             {
               printInfo(2,"  Test file '%s'...",String_cString(fileName));
 
-              // get file fragment list
-              fragmentNode = FragmentList_find(&fragmentList,fileName);
-              if (fragmentNode == NULL)
+              if (!jobOptions->noFragmentsCheckFlag)
               {
-                fragmentNode = FragmentList_add(&fragmentList,fileName,fileInfo.size,NULL,0);
+                // get file fragment list
+                fragmentNode = FragmentList_find(&fragmentList,fileName);
+                if (fragmentNode == NULL)
+                {
+                  fragmentNode = FragmentList_add(&fragmentList,fileName,fileInfo.size,NULL,0);
+                }
+                assert(fragmentNode != NULL);
               }
 //FragmentList_print(fragmentNode,String_cString(fileName));
 
@@ -221,13 +225,16 @@ Errors Command_test(const StringList                *archiveNameList,
                 continue;
               }
 
-              // add fragment to file fragment list
-              FragmentList_addEntry(fragmentNode,fragmentOffset,fragmentSize);
-
-              // discard fragment list if file is complete
-              if (FragmentList_isEntryComplete(fragmentNode))
+              if (!jobOptions->noFragmentsCheckFlag)
               {
-                FragmentList_discard(&fragmentList,fragmentNode);
+                // add fragment to file fragment list
+                FragmentList_addEntry(fragmentNode,fragmentOffset,fragmentSize);
+
+                // discard fragment list if file is complete
+                if (FragmentList_isEntryComplete(fragmentNode))
+                {
+//                FragmentList_discard(&fragmentList,fragmentNode);
+                }
               }
 
               /* check if all data read.
@@ -312,13 +319,17 @@ Errors Command_test(const StringList                *archiveNameList,
             {
               printInfo(2,"  Test image '%s'...",String_cString(imageName));
 
-              // get file fragment list
-              fragmentNode = FragmentList_find(&fragmentList,imageName);
-              if (fragmentNode == NULL)
+              if (!jobOptions->noFragmentsCheckFlag)
               {
-                fragmentNode = FragmentList_add(&fragmentList,imageName,deviceInfo.size,NULL,0);
-              }
+                // get file fragment list
+                fragmentNode = FragmentList_find(&fragmentList,imageName);
+                if (fragmentNode == NULL)
+                {
+                  fragmentNode = FragmentList_add(&fragmentList,imageName,deviceInfo.size,NULL,0);
+                }
 //FragmentList_print(fragmentNode,String_cString(imageName));
+                assert(fragmentNode != NULL);
+              }
 
               // test read image content
               block = 0LL;
@@ -349,13 +360,16 @@ Errors Command_test(const StringList                *archiveNameList,
                 continue;
               }
 
-              // add fragment to file fragment list
-              FragmentList_addEntry(fragmentNode,blockOffset*(uint64)deviceInfo.blockSize,blockCount*(uint64)deviceInfo.blockSize);
-
-              // discard fragment list if file is complete
-              if (FragmentList_isEntryComplete(fragmentNode))
+              if (!jobOptions->noFragmentsCheckFlag)
               {
-                FragmentList_discard(&fragmentList,fragmentNode);
+                // add fragment to file fragment list
+                FragmentList_addEntry(fragmentNode,blockOffset*(uint64)deviceInfo.blockSize,blockCount*(uint64)deviceInfo.blockSize);
+
+                // discard fragment list if file is complete
+                if (FragmentList_isEntryComplete(fragmentNode))
+                {
+                  FragmentList_discard(&fragmentList,fragmentNode);
+                }
               }
 
               /* check if all data read.
@@ -593,13 +607,17 @@ Errors Command_test(const StringList                *archiveNameList,
                 {
                   // test hard link data
 
-                  // get file fragment list
-                  fragmentNode = FragmentList_find(&fragmentList,fileName);
-                  if (fragmentNode == NULL)
+                  if (!jobOptions->noFragmentsCheckFlag)
                   {
-                    fragmentNode = FragmentList_add(&fragmentList,fileName,fileInfo.size,NULL,0);
+                     // get file fragment list
+                     fragmentNode = FragmentList_find(&fragmentList,fileName);
+                     if (fragmentNode == NULL)
+                    {
+                      fragmentNode = FragmentList_add(&fragmentList,fileName,fileInfo.size,NULL,0);
+                    }
+                    assert(fragmentNode != NULL);
+//FragmentList_print(fragmentNode,String_cString(fileName));
                   }
-    //FragmentList_print(fragmentNode,String_cString(fileName));
 
                   // test read hard link content
                   length = 0;
@@ -627,13 +645,16 @@ Errors Command_test(const StringList                *archiveNameList,
                     break;
                   }
 
-                  // add fragment to file fragment list
-                  FragmentList_addEntry(fragmentNode,fragmentOffset,fragmentSize);
-
-                  // discard fragment list if file is complete
-                  if (FragmentList_isEntryComplete(fragmentNode))
+                  if (!jobOptions->noFragmentsCheckFlag)
                   {
-                    FragmentList_discard(&fragmentList,fragmentNode);
+                    // add fragment to file fragment list
+                    FragmentList_addEntry(fragmentNode,fragmentOffset,fragmentSize);
+
+                    // discard fragment list if file is complete
+                    if (FragmentList_isEntryComplete(fragmentNode))
+                    {
+                      FragmentList_discard(&fragmentList,fragmentNode);
+                    }
                   }
 
                   /* check if all data read.
@@ -776,18 +797,21 @@ Errors Command_test(const StringList                *archiveNameList,
     Archive_close(&archiveInfo);
   }
 
-  // check fragment lists
-  for (fragmentNode = fragmentList.head; fragmentNode != NULL; fragmentNode = fragmentNode->next)
+  if (!jobOptions->noFragmentsCheckFlag)
   {
-    if (!FragmentList_isEntryComplete(fragmentNode))
+    // check fragment lists
+    for (fragmentNode = fragmentList.head; fragmentNode != NULL; fragmentNode = fragmentNode->next)
     {
-      printInfo(0,"Warning: incomplete file '%s'\n",String_cString(fragmentNode->name));
-      if (globalOptions.verboseLevel >= 2)
+      if (!FragmentList_isEntryComplete(fragmentNode))
       {
-        printInfo(2,"  Fragments:\n");
-        FragmentList_print(stdout,4,fragmentNode);
+        printInfo(0,"Warning: incomplete file '%s'\n",String_cString(fragmentNode->name));
+        if (globalOptions.verboseLevel >= 2)
+        {
+          printInfo(2,"  Fragments:\n");
+          FragmentList_print(stdout,4,fragmentNode);
+        }
+        if (failError == ERROR_NONE) failError = ERROR_FILE_INCOMPLETE;
       }
-      if (failError == ERROR_NONE) failError = ERROR_FILE_INCOMPLETE;
     }
   }
 
