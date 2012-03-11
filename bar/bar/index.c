@@ -811,16 +811,35 @@ bool Index_getNextStorage(DatabaseQueryHandle *databaseQueryHandle,
 
 Errors Index_initListFiles(DatabaseQueryHandle *databaseQueryHandle,
                            DatabaseHandle      *databaseHandle,
+                           const DatabaseId    *storageIds,
+                           uint                storageIdCount,
                            String              pattern
                           )
 {
   String regexpString;
+  String storageIdsString;
+  uint   z;
   Errors error;
 
   assert(databaseQueryHandle != NULL);
   assert(databaseHandle != NULL);
 
-  regexpString = String_new();
+  regexpString = getREGEXPString(String_new(),"files.name",pattern);
+
+  if (storageIds != NULL)
+  {
+    storageIdsString = String_newCString("(0");
+    for (z = 0; z < storageIdCount; z++)
+    {
+      String_format(storageIdsString," OR (storage.id=%d)",storageIds[z]);
+    }
+    String_appendCString(storageIdsString,")");
+  }
+  else
+  {
+    storageIdsString = String_newCString("1");
+  }
+
   error = Database_prepare(databaseQueryHandle,
                            databaseHandle,
                            "SELECT files.id, \
@@ -836,10 +855,14 @@ Errors Index_initListFiles(DatabaseQueryHandle *databaseQueryHandle,
                                    files.fragmentSize\
                             FROM files\
                               LEFT JOIN storage ON storage.id=files.storageId \
-                            WHERE %S \
+                            WHERE     %S \
+                                  AND %S \
                            ",
-                           getREGEXPString(regexpString,"files.name",pattern)
+                           regexpString,
+                           storageIdsString
                           );
+
+  String_delete(storageIdsString);
   String_delete(regexpString);
 
   return error;
@@ -879,16 +902,35 @@ bool Index_getNextFile(DatabaseQueryHandle *databaseQueryHandle,
 
 Errors Index_initListImages(DatabaseQueryHandle *databaseQueryHandle,
                             DatabaseHandle      *databaseHandle,
+                            const DatabaseId    *storageIds,
+                            uint                storageIdCount,
                             String              pattern
                            )
 {
   String regexpString;
+  String storageIdsString;
+  uint   z;
   Errors error;
 
   assert(databaseQueryHandle != NULL);
   assert(databaseHandle != NULL);
 
-  regexpString = String_new();
+  regexpString = getREGEXPString(String_new(),"images.name",pattern);
+
+  if (storageIds != NULL)
+  {
+    storageIdsString = String_newCString("(0");
+    for (z = 0; z < storageIdCount; z++)
+    {
+      String_format(storageIdsString," OR (storage.id=%d)",storageIds[z]);
+    }
+    String_appendCString(storageIdsString,")");
+  }
+  else
+  {
+    storageIdsString = String_newCString("1");
+  }
+
   error = Database_prepare(databaseQueryHandle,
                            databaseHandle,
                            "SELECT images.id, \
@@ -900,10 +942,14 @@ Errors Index_initListImages(DatabaseQueryHandle *databaseQueryHandle,
                                    images.blockCount \
                             FROM images \
                               LEFT JOIN storage ON storage.id=images.storageId \
-                            WHERE %S \
+                            WHERE     %S \
+                                  AND %S \
                            ",
-                           getREGEXPString(regexpString,"images.name",pattern)
+                           regexpString,
+                           storageIdsString
                           );
+
+  String_delete(storageIdsString);
   String_delete(regexpString);
 
   return error;
@@ -935,16 +981,35 @@ bool Index_getNextImage(DatabaseQueryHandle *databaseQueryHandle,
 
 Errors Index_initListDirectories(DatabaseQueryHandle *databaseQueryHandle,
                                  DatabaseHandle      *databaseHandle,
+                                 const DatabaseId    *storageIds,
+                                 uint                storageIdCount,
                                  String              pattern
                                 )
 {
   String regexpString;
+  String storageIdsString;
+  uint   z;
   Errors error;
 
   assert(databaseQueryHandle != NULL);
   assert(databaseHandle != NULL);
 
-  regexpString = String_new();
+  regexpString = getREGEXPString(String_new(),"directories.name",pattern);
+
+  if (storageIds != NULL)
+  {
+    storageIdsString = String_newCString("(0");
+    for (z = 0; z < storageIdCount; z++)
+    {
+      String_format(storageIdsString," OR (storage.id=%d)",storageIds[z]);
+    }
+    String_appendCString(storageIdsString,")");
+  }
+  else
+  {
+    storageIdsString = String_newCString("1");
+  }
+
   error = Database_prepare(databaseQueryHandle,
                            databaseHandle,
                            "SELECT directories.id,\
@@ -957,10 +1022,14 @@ Errors Index_initListDirectories(DatabaseQueryHandle *databaseQueryHandle,
                                    directories.permission \
                             FROM directories \
                               LEFT JOIN storage ON storage.id=directories.storageId \
-                            WHERE %S \
+                            WHERE     %S \
+                                  AND %S \
                            ",
-                           getREGEXPString(regexpString,"directories.name",pattern)
+                           regexpString,
+                           storageIdsString
                           );
+
+  String_delete(storageIdsString);
   String_delete(regexpString);
 
   return error;
@@ -994,16 +1063,35 @@ bool Index_getNextDirectory(DatabaseQueryHandle *databaseQueryHandle,
 
 Errors Index_initListLinks(DatabaseQueryHandle *databaseQueryHandle,
                            DatabaseHandle      *databaseHandle,
+                           const DatabaseId    *storageIds,
+                           uint                storageIdCount,
                            String              pattern
                           )
 {
   String regexpString;
+  String storageIdsString;
+  uint   z;
   Errors error;
 
   assert(databaseQueryHandle != NULL);
   assert(databaseHandle != NULL);
 
-  regexpString = String_new();
+  regexpString = getREGEXPString(String_new(),"links.name",pattern);
+
+  if (storageIds != NULL)
+  {
+    storageIdsString = String_newCString("(0");
+    for (z = 0; z < storageIdCount; z++)
+    {
+      String_format(storageIdsString," OR (storage.id=%d)",storageIds[z]);
+    }
+    String_appendCString(storageIdsString,")");
+  }
+  else
+  {
+    storageIdsString = String_newCString("1");
+  }
+
   error = Database_prepare(databaseQueryHandle,
                            databaseHandle,
                            "SELECT links.id,\
@@ -1017,10 +1105,14 @@ Errors Index_initListLinks(DatabaseQueryHandle *databaseQueryHandle,
                                    links.permission \
                             FROM links \
                               LEFT JOIN storage ON storage.id=links.storageId \
-                            WHERE %S \
+                            WHERE     %S \
+                                  AND %S \
                            ",
-                           getREGEXPString(regexpString,"links.name",pattern)
+                           regexpString,
+                           storageIdsString
                           );
+
+  String_delete(storageIdsString);
   String_delete(regexpString);
 
   return error;
@@ -1056,16 +1148,35 @@ bool Index_getNextLink(DatabaseQueryHandle *databaseQueryHandle,
 
 Errors Index_initListHardLinks(DatabaseQueryHandle *databaseQueryHandle,
                                DatabaseHandle      *databaseHandle,
+                               const DatabaseId    *storageIds,
+                               uint                storageIdCount,
                                String              pattern
                               )
 {
   String regexpString;
+  String storageIdsString;
+  uint   z;
   Errors error;
 
   assert(databaseQueryHandle != NULL);
   assert(databaseHandle != NULL);
 
-  regexpString = String_new();
+  regexpString = getREGEXPString(String_new(),"hardlinks.name",pattern);
+
+  if (storageIds != NULL)
+  {
+    storageIdsString = String_newCString("(0");
+    for (z = 0; z < storageIdCount; z++)
+    {
+      String_format(storageIdsString," OR (storage.id=%d)",storageIds[z]);
+    }
+    String_appendCString(storageIdsString,")");
+  }
+  else
+  {
+    storageIdsString = String_newCString("1");
+  }
+
   error = Database_prepare(databaseQueryHandle,
                            databaseHandle,
                            "SELECT hardlinks.id,\
@@ -1081,10 +1192,14 @@ Errors Index_initListHardLinks(DatabaseQueryHandle *databaseQueryHandle,
                                    hardlinks.fragmentSize\
                             FROM hardlinks \
                               LEFT JOIN storage ON storage.id=hardlinks.storageId \
-                            WHERE %S \
+                            WHERE     %S \
+                                  AND %S \
                            ",
-                           getREGEXPString(regexpString,"hardlinks.name",pattern)
+                           regexpString,
+                           storageIdsString
                           );
+
+  String_delete(storageIdsString);
   String_delete(regexpString);
 
   return error;
@@ -1124,16 +1239,35 @@ bool Index_getNextHardLink(DatabaseQueryHandle *databaseQueryHandle,
 
 Errors Index_initListSpecial(DatabaseQueryHandle *databaseQueryHandle,
                              DatabaseHandle      *databaseHandle,
+                             const DatabaseId    *storageIds,
+                             uint                storageIdCount,
                              String              pattern
                             )
 {
   String regexpString;
+  String storageIdsString;
+  uint   z;
   Errors error;
 
   assert(databaseQueryHandle != NULL);
   assert(databaseHandle != NULL);
 
-  regexpString = String_new();
+  regexpString = getREGEXPString(String_new(),"special.name",pattern);
+
+  if (storageIds != NULL)
+  {
+    storageIdsString = String_newCString("(0");
+    for (z = 0; z < storageIdCount; z++)
+    {
+      String_format(storageIdsString," OR (storage.id=%d)",storageIds[z]);
+    }
+    String_appendCString(storageIdsString,")");
+  }
+  else
+  {
+    storageIdsString = String_newCString("1");
+  }
+
   error = Database_prepare(databaseQueryHandle,
                            databaseHandle,
                            "SELECT special.id,\
@@ -1146,10 +1280,14 @@ Errors Index_initListSpecial(DatabaseQueryHandle *databaseQueryHandle,
                                    special.permission \
                             FROM special \
                               LEFT JOIN storage ON storage.id=special.storageId \
-                            WHERE %S \
+                            WHERE     %S \
+                                  AND %S \
                            ",
-                           getREGEXPString(regexpString,"special.name",pattern)
+                           regexpString,
+                           storageIdsString
                           );
+
+  String_delete(storageIdsString);
   String_delete(regexpString);
 
   return error;

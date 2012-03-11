@@ -349,6 +349,8 @@ bool Index_getNextStorage(DatabaseQueryHandle *databaseQueryHandle,
 
 Errors Index_initListFiles(DatabaseQueryHandle *databaseQueryHandle,
                            DatabaseHandle      *databaseHandle,
+                           const DatabaseId    *storageIds,
+                           uint                storageIdCount,
                            String              pattern
                           );
 
@@ -396,6 +398,8 @@ bool Index_getNextFile(DatabaseQueryHandle *databaseQueryHandle,
 
 Errors Index_initListImages(DatabaseQueryHandle *databaseQueryHandle,
                             DatabaseHandle      *databaseHandle,
+                            const DatabaseId    *storageIds,
+                            uint                storageIdCount,
                             String              pattern
                            );
 
@@ -435,6 +439,8 @@ bool Index_getNextImage(DatabaseQueryHandle *databaseQueryHandle,
 
 Errors Index_initListDirectories(DatabaseQueryHandle *databaseQueryHandle,
                                  DatabaseHandle      *databaseHandle,
+                                 const DatabaseId    *storageIds,
+                                 uint                storageIdCount,
                                  String              pattern
                                 );
 
@@ -476,6 +482,8 @@ bool Index_getNextDirectory(DatabaseQueryHandle *databaseQueryHandle,
 
 Errors Index_initListLinks(DatabaseQueryHandle *databaseQueryHandle,
                            DatabaseHandle      *databaseHandle,
+                           const DatabaseId    *storageIds,
+                           uint                storageIdCount,
                            String              pattern
                           );
 
@@ -519,6 +527,8 @@ bool Index_getNextLink(DatabaseQueryHandle *databaseQueryHandle,
 
 Errors Index_initListHardLinks(DatabaseQueryHandle *databaseQueryHandle,
                                DatabaseHandle      *databaseHandle,
+                               const DatabaseId    *storageIds,
+                               uint                storageIdCount,
                                String              pattern
                                );
 
@@ -566,6 +576,8 @@ bool Index_getNextHardLink(DatabaseQueryHandle *databaseQueryHandle,
 
 Errors Index_initListSpecial(DatabaseQueryHandle *databaseQueryHandle,
                              DatabaseHandle      *databaseHandle,
+                             const DatabaseId    *storageIds,
+                             uint                storageIdCount,
                              String              pattern
                             );
 
