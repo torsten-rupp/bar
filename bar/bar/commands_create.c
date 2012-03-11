@@ -601,29 +601,51 @@ LOCAL bool checkIsExcluded(const PatternList *excludePatternList,
 }
 
 /***********************************************************************\
-* Name   : checkHaveNoBackup
+* Name   : checkNoBackup
 * Purpose: check if file .nobackup/.NOBACKUP exists in sub-directory
 * Input  : pathName - path name
 * Output : -
-* Return : TRUE if .nobackup/.NOBACKUP exists, FALSE otherwise
+* Return : TRUE if .nobackup/.NOBACKUP exists and option
+*          ignoreNoBackupFile is not set, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool checkHaveNoBackup(const String pathName)
+LOCAL bool checkNoBackup(const String pathName)
 {
   String fileName;
-  bool   haveNoBackup;
+  bool   haveNoBackupFlag;
 
   assert(pathName != NULL);
 
-  haveNoBackup = FALSE;
+  haveNoBackupFlag = FALSE;
+  if (!globalOptions.ignoreNoBackupFileFlag)
+  {
+    fileName = File_newFileName();
+    haveNoBackupFlag |= File_exists(File_appendFileNameCString(File_setFileName(fileName,pathName),".nobackup"));
+    haveNoBackupFlag |= File_exists(File_appendFileNameCString(File_setFileName(fileName,pathName),".NOBACKUP"));
+    File_deleteFileName(fileName);
+  }
 
-  fileName = File_newFileName();
-  if (!haveNoBackup) haveNoBackup = File_exists(File_appendFileNameCString(File_setFileName(fileName,pathName),".nobackup"));
-  if (!haveNoBackup) haveNoBackup = File_exists(File_appendFileNameCString(File_setFileName(fileName,pathName),".NOBACKUP"));
-  File_deleteFileName(fileName);
+  return haveNoBackupFlag;
+}
 
-  return haveNoBackup;
+/***********************************************************************\
+* Name   : checkNoDumpAttribute
+* Purpose: check if file attribute 'no dump' is set
+* Input  : fileInfo   - file info
+*          jobOptions - job options
+* Output : -
+* Return : TRUE if 'no dump' attribute is set and option ignoreNoDump is
+*          not set, FALSE otherwise
+* Notes  : -
+\***********************************************************************/
+
+LOCAL_INLINE bool checkNoDumpAttribute(const FileInfo *fileInfo, const JobOptions *jobOptions)
+{
+  assert(fileInfo != NULL);
+  assert(jobOptions != NULL);
+
+  return !jobOptions->ignoreNoDumpAttributeFlag && ((fileInfo->attributes & FILE_ATTRIBUTE_NO_DUMP) != 0);
 }
 
 /***********************************************************************\
@@ -1237,50 +1259,49 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
       // get next directory to process
       name = StringList_getLast(&nameList,name);
 
-      // read file info
-      error = File_getFileInfo(&fileInfo,name);
-      if (error != ERROR_NONE)
-      {
-        continue;
-      }
-
-      if (   (fileInfo.type == FILE_TYPE_DIRECTORY)
-          || (   checkIsIncluded(includeEntryNode,name)
-              && !checkIsExcluded(createInfo->excludePatternList,name)
-             )
+      if (   checkIsIncluded(includeEntryNode,name)
+          && !checkIsExcluded(createInfo->excludePatternList,name)
          )
       {
-        switch (fileInfo.type)
+
+        // read file info
+        error = File_getFileInfo(&fileInfo,name);
+        if (error != ERROR_NONE)
         {
-          case FILE_TYPE_FILE:
-            switch (includeEntryNode->type)
-            {
-              case ENTRY_TYPE_FILE:
-                if (   !createInfo->partialFlag
-                    || checkFileChanged(&createInfo->filesDictionary,name,&fileInfo)
-                   )
-                {
-                  createInfo->statusInfo.totalEntries++;
-                  createInfo->statusInfo.totalBytes += fileInfo.size;
-                  abortFlag |= !updateStatusInfo(createInfo);
-                }
-                break;
-              case ENTRY_TYPE_IMAGE:
-                break;
-            }
-            break;
-          case FILE_TYPE_DIRECTORY:
-            if (   globalOptions.ignoreNoBackupFileFlag
-                || !checkHaveNoBackup(name)
-               )
-            {
+          continue;
+        }
+
+        if (   (fileInfo.type == FILE_TYPE_DIRECTORY)
+            || !checkNoDumpAttribute(&fileInfo,createInfo->jobOptions)
+           )
+        {
+          switch (fileInfo.type)
+          {
+            case FILE_TYPE_FILE:
               switch (includeEntryNode->type)
               {
                 case ENTRY_TYPE_FILE:
-                  if (   checkIsIncluded(includeEntryNode,name)
-                      && !checkIsExcluded(createInfo->excludePatternList,name)
+                  if (   !createInfo->partialFlag
+                      || checkFileChanged(&createInfo->filesDictionary,name,&fileInfo)
                      )
                   {
+                    createInfo->statusInfo.totalEntries++;
+                    createInfo->statusInfo.totalBytes += fileInfo.size;
+                    abortFlag |= !updateStatusInfo(createInfo);
+                  }
+                  break;
+                case ENTRY_TYPE_IMAGE:
+                  break;
+              }
+              break;
+            case FILE_TYPE_DIRECTORY:
+              if (   !checkNoBackup(name)
+                  && !checkNoDumpAttribute(&fileInfo,createInfo->jobOptions)
+                 )
+              {
+                switch (includeEntryNode->type)
+                {
+                  case ENTRY_TYPE_FILE:
                     if (   !createInfo->partialFlag
                         || checkFileChanged(&createInfo->filesDictionary,name,&fileInfo)
                        )
@@ -1288,210 +1309,215 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
                       createInfo->statusInfo.totalEntries++;
                       abortFlag |= !updateStatusInfo(createInfo);
                     }
-                  }
-                  break;
-                case ENTRY_TYPE_IMAGE:
-                  break;
-              }
+                    break;
+                  case ENTRY_TYPE_IMAGE:
+                    break;
+                }
 
-              // open directory contents
-              error = File_openDirectoryList(&directoryListHandle,name);
-              if (error == ERROR_NONE)
-              {
-                // read directory contents
-                fileName = String_new();
-                while (   !createInfo->collectorSumThreadExitFlag
-                       && (createInfo->failError == ERROR_NONE)
-                       && ((createInfo->requestedAbortFlag == NULL) || !(*createInfo->requestedAbortFlag))
-                       && !File_endOfDirectoryList(&directoryListHandle)
-                      )
+                // open directory contents
+                error = File_openDirectoryList(&directoryListHandle,name);
+                if (error == ERROR_NONE)
                 {
-                  // pause
-                  while ((createInfo->pauseCreateFlag != NULL) && (*createInfo->pauseCreateFlag))
+                  // read directory contents
+                  fileName = String_new();
+                  while (   !createInfo->collectorSumThreadExitFlag
+                         && (createInfo->failError == ERROR_NONE)
+                         && ((createInfo->requestedAbortFlag == NULL) || !(*createInfo->requestedAbortFlag))
+                         && !File_endOfDirectoryList(&directoryListHandle)
+                        )
                   {
-                    Misc_udelay(500*1000);
-                  }
+                    // pause
+                    while ((createInfo->pauseCreateFlag != NULL) && (*createInfo->pauseCreateFlag))
+                    {
+                      Misc_udelay(500*1000);
+                    }
 
-                  // read next directory entry
-                  error = File_readDirectoryList(&directoryListHandle,fileName);
-                  if (error != ERROR_NONE)
-                  {
-                    continue;
-                  }
-
-                  if (   checkIsIncluded(includeEntryNode,fileName)
-                      && !checkIsExcluded(createInfo->excludePatternList,fileName)
-                     )
-                  {
-                    // read file info
-                    error = File_getFileInfo(&fileInfo,fileName);
+                    // read next directory entry
+                    error = File_readDirectoryList(&directoryListHandle,fileName);
                     if (error != ERROR_NONE)
                     {
                       continue;
                     }
 
-                    switch (fileInfo.type)
+                    if (   checkIsIncluded(includeEntryNode,fileName)
+                        && !checkIsExcluded(createInfo->excludePatternList,fileName)
+                       )
                     {
-                      case FILE_TYPE_FILE:
-                        switch (includeEntryNode->type)
+                      // read file info
+                      error = File_getFileInfo(&fileInfo,fileName);
+                      if (error != ERROR_NONE)
+                      {
+                        continue;
+                      }
+
+                      if (   (fileInfo.type == FILE_TYPE_DIRECTORY)
+                          || !checkNoDumpAttribute(&fileInfo,createInfo->jobOptions)
+                         )
+                      {
+                        switch (fileInfo.type)
                         {
-                          case ENTRY_TYPE_FILE:
-                            if (   !createInfo->partialFlag
-                                || checkFileChanged(&createInfo->filesDictionary,fileName,&fileInfo)
-                               )
+                          case FILE_TYPE_FILE:
+                            switch (includeEntryNode->type)
                             {
-                              createInfo->statusInfo.totalEntries++;
-                              createInfo->statusInfo.totalBytes += fileInfo.size;
-                              abortFlag |= !updateStatusInfo(createInfo);
+                              case ENTRY_TYPE_FILE:
+                                if (   !createInfo->partialFlag
+                                    || checkFileChanged(&createInfo->filesDictionary,fileName,&fileInfo)
+                                   )
+                                {
+                                  createInfo->statusInfo.totalEntries++;
+                                  createInfo->statusInfo.totalBytes += fileInfo.size;
+                                  abortFlag |= !updateStatusInfo(createInfo);
+                                }
+                                break;
+                              case ENTRY_TYPE_IMAGE:
+                                break;
                             }
                             break;
-                          case ENTRY_TYPE_IMAGE:
+                          case FILE_TYPE_DIRECTORY:
+                            // add to name list
+                            StringList_append(&nameList,fileName);
+                            break;
+                          case FILE_TYPE_LINK:
+                            switch (includeEntryNode->type)
+                            {
+                              case ENTRY_TYPE_FILE:
+                                if (   !createInfo->partialFlag
+                                    || checkFileChanged(&createInfo->filesDictionary,fileName,&fileInfo)
+                                   )
+                                {
+                                  createInfo->statusInfo.totalEntries++;
+                                  abortFlag |= !updateStatusInfo(createInfo);
+                                }
+                                break;
+                              case ENTRY_TYPE_IMAGE:
+                                break;
+                            }
+                            break;
+                          case FILE_TYPE_HARDLINK:
+                            switch (includeEntryNode->type)
+                            {
+                              case ENTRY_TYPE_FILE:
+                                if (  !createInfo->partialFlag
+                                    || checkFileChanged(&createInfo->filesDictionary,fileName,&fileInfo)
+                                   )
+                                {
+                                  createInfo->statusInfo.totalEntries++;
+                                  createInfo->statusInfo.totalBytes += fileInfo.size;
+                                  abortFlag |= !updateStatusInfo(createInfo);
+                                }
+                                break;
+                              case ENTRY_TYPE_IMAGE:
+                                break;
+                            }
+                            break;
+                          case FILE_TYPE_SPECIAL:
+                            switch (includeEntryNode->type)
+                            {
+                              case ENTRY_TYPE_FILE:
+                                if (  !createInfo->partialFlag
+                                    || checkFileChanged(&createInfo->filesDictionary,fileName,&fileInfo)
+                                   )
+                                {
+                                  createInfo->statusInfo.totalEntries++;
+                                  if (   (includeEntryNode->type == ENTRY_TYPE_IMAGE)
+                                      && (fileInfo.specialType == FILE_SPECIAL_TYPE_BLOCK_DEVICE)
+                                      && (fileInfo.size >= 0L)
+                                     )
+                                  {
+                                    createInfo->statusInfo.totalBytes += fileInfo.size;
+                                  }
+                                  abortFlag |= !updateStatusInfo(createInfo);
+                                }
+                                break;
+                              case ENTRY_TYPE_IMAGE:
+                                if (fileInfo.specialType == FILE_SPECIAL_TYPE_BLOCK_DEVICE)
+                                {
+                                  createInfo->statusInfo.totalEntries++;
+                                  if (fileInfo.size >= 0L) createInfo->statusInfo.totalBytes += fileInfo.size;
+                                  abortFlag |= !updateStatusInfo(createInfo);
+                                }
+                                break;
+                            }
+                            break;
+                          default:
                             break;
                         }
-                        break;
-                      case FILE_TYPE_DIRECTORY:
-                        // add to name list
-                        StringList_append(&nameList,fileName);
-                        break;
-                      case FILE_TYPE_LINK:
-                        switch (includeEntryNode->type)
-                        {
-                          case ENTRY_TYPE_FILE:
-                            if (   !createInfo->partialFlag
-                                || checkFileChanged(&createInfo->filesDictionary,fileName,&fileInfo)
-                               )
-                            {
-                              createInfo->statusInfo.totalEntries++;
-                              abortFlag |= !updateStatusInfo(createInfo);
-                            }
-                            break;
-                          case ENTRY_TYPE_IMAGE:
-                            break;
-                        }
-                        break;
-                      case FILE_TYPE_HARDLINK:
-                        switch (includeEntryNode->type)
-                        {
-                          case ENTRY_TYPE_FILE:
-                            if (   !createInfo->partialFlag
-                                || checkFileChanged(&createInfo->filesDictionary,fileName,&fileInfo)
-                               )
-                            {
-                              createInfo->statusInfo.totalEntries++;
-                              createInfo->statusInfo.totalBytes += fileInfo.size;
-                              abortFlag |= !updateStatusInfo(createInfo);
-                            }
-                            break;
-                          case ENTRY_TYPE_IMAGE:
-                            break;
-                        }
-                        break;
-                      case FILE_TYPE_SPECIAL:
-                        switch (includeEntryNode->type)
-                        {
-                          case ENTRY_TYPE_FILE:
-                            if (   !createInfo->partialFlag
-                                || checkFileChanged(&createInfo->filesDictionary,fileName,&fileInfo)
-                               )
-                            {
-                              createInfo->statusInfo.totalEntries++;
-                              if (   (includeEntryNode->type == ENTRY_TYPE_IMAGE)
-                                  && (fileInfo.specialType == FILE_SPECIAL_TYPE_BLOCK_DEVICE)
-                                  && (fileInfo.size >= 0L)
-                                 )
-                              {
-                                createInfo->statusInfo.totalBytes += fileInfo.size;
-                              }
-                              abortFlag |= !updateStatusInfo(createInfo);
-                            }
-                            break;
-                          case ENTRY_TYPE_IMAGE:
-                            if (fileInfo.specialType == FILE_SPECIAL_TYPE_BLOCK_DEVICE)
-                            {
-                              createInfo->statusInfo.totalEntries++;
-                              if (fileInfo.size >= 0L) createInfo->statusInfo.totalBytes += fileInfo.size;
-                              abortFlag |= !updateStatusInfo(createInfo);
-                            }
-                            break;
-                        }
-                        break;
-                      default:
-                        break;
+                      }
                     }
                   }
-                }
-                String_delete(fileName);
+                  String_delete(fileName);
 
-                // close directory
-                File_closeDirectoryList(&directoryListHandle);
+                  // close directory
+                  File_closeDirectoryList(&directoryListHandle);
+                }
               }
-            }
-            break;
-          case FILE_TYPE_LINK:
-            switch (includeEntryNode->type)
-            {
-              case ENTRY_TYPE_FILE:
-                if (   !createInfo->partialFlag
-                    || checkFileChanged(&createInfo->filesDictionary,name,&fileInfo)
-                   )
-                {
-                  createInfo->statusInfo.totalEntries++;
-                  abortFlag |= !updateStatusInfo(createInfo);
-                }
-                break;
-              case ENTRY_TYPE_IMAGE:
-                break;
-            }
-            break;
-          case FILE_TYPE_HARDLINK:
-            switch (includeEntryNode->type)
-            {
-              case ENTRY_TYPE_FILE:
-                if (   !createInfo->partialFlag
-                    || checkFileChanged(&createInfo->filesDictionary,name,&fileInfo)
-                   )
-                {
-                  createInfo->statusInfo.totalEntries++;
-                  createInfo->statusInfo.totalBytes += fileInfo.size;
-                  abortFlag |= !updateStatusInfo(createInfo);
-                }
-                break;
-              case ENTRY_TYPE_IMAGE:
-                break;
-            }
-            break;
-          case FILE_TYPE_SPECIAL:
-            switch (includeEntryNode->type)
-            {
-              case ENTRY_TYPE_FILE:
-                if (   !createInfo->partialFlag
-                    || checkFileChanged(&createInfo->filesDictionary,name,&fileInfo)
-                   )
-                {
-                  createInfo->statusInfo.totalEntries++;
-                  abortFlag |= !updateStatusInfo(createInfo);
-                }
-                break;
-              case ENTRY_TYPE_IMAGE:
-                if (fileInfo.specialType == FILE_SPECIAL_TYPE_BLOCK_DEVICE)
-                {
-                  // get device info
-                  error = Device_getDeviceInfo(&deviceInfo,name);
-                  if (error != ERROR_NONE)
+              break;
+            case FILE_TYPE_LINK:
+              switch (includeEntryNode->type)
+              {
+                case ENTRY_TYPE_FILE:
+                  if (   !createInfo->partialFlag
+                      || checkFileChanged(&createInfo->filesDictionary,name,&fileInfo)
+                     )
                   {
-                    continue;
+                    createInfo->statusInfo.totalEntries++;
+                    abortFlag |= !updateStatusInfo(createInfo);
                   }
-                  UNUSED_VARIABLE(deviceInfo);
+                  break;
+                case ENTRY_TYPE_IMAGE:
+                  break;
+              }
+              break;
+            case FILE_TYPE_HARDLINK:
+              switch (includeEntryNode->type)
+              {
+                case ENTRY_TYPE_FILE:
+                  if (   !createInfo->partialFlag
+                      || checkFileChanged(&createInfo->filesDictionary,name,&fileInfo)
+                     )
+                  {
+                    createInfo->statusInfo.totalEntries++;
+                    createInfo->statusInfo.totalBytes += fileInfo.size;
+                    abortFlag |= !updateStatusInfo(createInfo);
+                  }
+                  break;
+                case ENTRY_TYPE_IMAGE:
+                  break;
+              }
+              break;
+            case FILE_TYPE_SPECIAL:
+              switch (includeEntryNode->type)
+              {
+                case ENTRY_TYPE_FILE:
+                  if (   !createInfo->partialFlag
+                      || checkFileChanged(&createInfo->filesDictionary,name,&fileInfo)
+                     )
+                  {
+                    createInfo->statusInfo.totalEntries++;
+                    abortFlag |= !updateStatusInfo(createInfo);
+                  }
+                  break;
+                case ENTRY_TYPE_IMAGE:
+                  if (fileInfo.specialType == FILE_SPECIAL_TYPE_BLOCK_DEVICE)
+                  {
+                    // get device info
+                    error = Device_getDeviceInfo(&deviceInfo,name);
+                    if (error != ERROR_NONE)
+                    {
+                      continue;
+                    }
+                    UNUSED_VARIABLE(deviceInfo);
 
-                  createInfo->statusInfo.totalEntries++;
-                  if (fileInfo.size >= 0L) createInfo->statusInfo.totalBytes += fileInfo.size;
-                  abortFlag |= !updateStatusInfo(createInfo);
-                }
-                break;
-            }
-            break;
-          default:
-            break;
+                    createInfo->statusInfo.totalEntries++;
+                    if (fileInfo.size >= 0L) createInfo->statusInfo.totalBytes += fileInfo.size;
+                    abortFlag |= !updateStatusInfo(createInfo);
+                  }
+                  break;
+              }
+              break;
+            default:
+              break;
+          }
         }
       }
     }
@@ -1601,414 +1627,448 @@ LOCAL void collectorThreadCode(CreateInfo *createInfo)
       // get next directory to process
       name = StringList_getLast(&nameList,name);
 
-      // read file info
-      error = File_getFileInfo(&fileInfo,name);
-      if (error != ERROR_NONE)
-      {
-        printInfo(2,"Cannot access '%s' (error: %s) - skipped\n",String_cString(name),Errors_getText(error));
-        logMessage(LOG_TYPE_ENTRY_ACCESS_DENIED,"access denied '%s'\n",String_cString(name));
-        createInfo->statusInfo.errorEntries++;
-        abortFlag |= !updateStatusInfo(createInfo);
-        continue;
-      }
-
-      if (   (fileInfo.type == FILE_TYPE_DIRECTORY)
-          || (   checkIsIncluded(includeEntryNode,name)
-              && !checkIsExcluded(createInfo->excludePatternList,name)
-             )
+      if (   checkIsIncluded(includeEntryNode,name)
+          && !checkIsExcluded(createInfo->excludePatternList,name)
          )
       {
-        switch (fileInfo.type)
+        // read file info
+        error = File_getFileInfo(&fileInfo,name);
+        if (error != ERROR_NONE)
         {
-          case FILE_TYPE_FILE:
-            switch (includeEntryNode->type)
-            {
-              case ENTRY_TYPE_FILE:
-                if (   !createInfo->partialFlag
-                    || checkFileChanged(&createInfo->filesDictionary,name,&fileInfo)
-                   )
-                {
-                  // add to file list
-                  appendFileToEntryList(&createInfo->entryMsgQueue,
-                                        ENTRY_TYPE_FILE,
-                                        name
-                                       );
-                }
-                break;
-              case ENTRY_TYPE_IMAGE:
-                break;
-            }
-            break;
-          case FILE_TYPE_DIRECTORY:
-            if (   globalOptions.ignoreNoBackupFileFlag
-                || !checkHaveNoBackup(name)
-               )
-            {
+          printInfo(2,"Cannot access '%s' (error: %s) - skipped\n",String_cString(name),Errors_getText(error));
+          logMessage(LOG_TYPE_ENTRY_ACCESS_DENIED,"access denied '%s'\n",String_cString(name));
+          createInfo->statusInfo.errorEntries++;
+          abortFlag |= !updateStatusInfo(createInfo);
+          continue;
+        }
+
+        if (   (fileInfo.type == FILE_TYPE_DIRECTORY)
+            || !checkNoDumpAttribute(&fileInfo,createInfo->jobOptions)
+           )
+        {
+          switch (fileInfo.type)
+          {
+            case FILE_TYPE_FILE:
               switch (includeEntryNode->type)
               {
                 case ENTRY_TYPE_FILE:
-                  if (   checkIsIncluded(includeEntryNode,name)
-                      && !checkIsExcluded(createInfo->excludePatternList,name)
+                  if (   !createInfo->partialFlag
+                      || checkFileChanged(&createInfo->filesDictionary,name,&fileInfo)
                      )
                   {
+                    // add to store list
+                    appendFileToEntryList(&createInfo->entryMsgQueue,
+                                          ENTRY_TYPE_FILE,
+                                          name
+                                         );
+                  }
+                  break;
+                case ENTRY_TYPE_IMAGE:
+                  break;
+              }
+              break;
+            case FILE_TYPE_DIRECTORY:
+              if (!checkNoBackup(name))
+              {
+                switch (includeEntryNode->type)
+                {
+                  case ENTRY_TYPE_FILE:
                     if (   !createInfo->partialFlag
                         || checkFileChanged(&createInfo->filesDictionary,name,&fileInfo)
                        )
                     {
-                      // add to file list
+                      // add to store list
                       appendDirectoryToEntryList(&createInfo->entryMsgQueue,
                                                  ENTRY_TYPE_FILE,
                                                  name
                                                 );
+                    }
+                    break;
+                  case ENTRY_TYPE_IMAGE:
+                    break;
+                }
+
+                // open directory contents
+                error = File_openDirectoryList(&directoryListHandle,name);
+                if (error == ERROR_NONE)
+                {
+                  // read directory contents
+                  while (   (createInfo->failError == ERROR_NONE)
+                         && ((createInfo->requestedAbortFlag == NULL) || !(*createInfo->requestedAbortFlag))
+                         && !File_endOfDirectoryList(&directoryListHandle)
+                        )
+                  {
+                    // pause
+                    while ((createInfo->pauseCreateFlag != NULL) && (*createInfo->pauseCreateFlag))
+                    {
+                      Misc_udelay(500*1000);
+                    }
+
+                    // read next directory entry
+                    error = File_readDirectoryList(&directoryListHandle,fileName);
+                    if (error != ERROR_NONE)
+                    {
+                      printInfo(2,"Cannot read directory '%s' (error: %s) - skipped\n",String_cString(name),Errors_getText(error));
+                      logMessage(LOG_TYPE_ENTRY_ACCESS_DENIED,"access denied '%s'\n",String_cString(name));
+                      createInfo->statusInfo.errorEntries++;
+                      createInfo->statusInfo.errorBytes += (uint64)fileInfo.size;
+                      abortFlag |= !updateStatusInfo(createInfo);
+                      continue;
+                    }
+
+                    if (   checkIsIncluded(includeEntryNode,fileName)
+                        && !checkIsExcluded(createInfo->excludePatternList,fileName)
+                       )
+                    {
+                      // read file info
+                      error = File_getFileInfo(&fileInfo,fileName);
+                      if (error != ERROR_NONE)
+                      {
+                        printInfo(2,"Cannot access '%s' (error: %s) - skipped\n",String_cString(fileName),Errors_getText(error));
+                        logMessage(LOG_TYPE_ENTRY_ACCESS_DENIED,"access denied '%s'\n",String_cString(fileName));
+                        createInfo->statusInfo.errorEntries++;
+                        abortFlag |= !updateStatusInfo(createInfo);
+                        continue;
+                      }
+
+                      if (   (fileInfo.type == FILE_TYPE_DIRECTORY)
+                          || !checkNoDumpAttribute(&fileInfo,createInfo->jobOptions)
+                         )
+                      {
+                        // detect file type
+                        switch (fileInfo.type)
+                        {
+                          case FILE_TYPE_FILE:
+                            switch (includeEntryNode->type)
+                            {
+                              case ENTRY_TYPE_FILE:
+                                if (   !createInfo->partialFlag
+                                    || checkFileChanged(&createInfo->filesDictionary,fileName,&fileInfo)
+                                   )
+                                {
+                                  // add to store list
+                                  appendFileToEntryList(&createInfo->entryMsgQueue,
+                                                        ENTRY_TYPE_FILE,
+                                                        fileName
+                                                       );
+                                }
+                                break;
+                              case ENTRY_TYPE_IMAGE:
+                                break;
+                            }
+                            break;
+                          case FILE_TYPE_DIRECTORY:
+                            // add to directory search list
+                            StringList_append(&nameList,fileName);
+                            break;
+                          case FILE_TYPE_LINK:
+                            switch (includeEntryNode->type)
+                            {
+                              case ENTRY_TYPE_FILE:
+                                if (   !createInfo->partialFlag
+                                    || checkFileChanged(&createInfo->filesDictionary,fileName,&fileInfo)
+                                   )
+                                {
+                                  // add to store list
+                                  appendLinkToEntryList(&createInfo->entryMsgQueue,
+                                                        ENTRY_TYPE_FILE,
+                                                        fileName
+                                                       );
+                                }
+                                break;
+                              case ENTRY_TYPE_IMAGE:
+                                break;
+                            }
+                            break;
+                          case FILE_TYPE_HARDLINK:
+                            switch (includeEntryNode->type)
+                            {
+                              case ENTRY_TYPE_FILE:
+                                {
+                                  union { void *value; HardLinkInfo *hardLinkInfo; } data;
+                                  HardLinkInfo hardLinkInfo;
+
+                                  if (   !createInfo->partialFlag
+                                      || checkFileChanged(&createInfo->filesDictionary,fileName,&fileInfo)
+                                     )
+                                  {
+                                    if (Dictionary_find(&hardLinkDictionary,
+                                                        &fileInfo.id,
+                                                        sizeof(fileInfo.id),
+                                                        &data.value,
+                                                        NULL
+                                                       )
+                                       )
+                                    {
+                                      // append name to hard link name list
+                                      StringList_append(&data.hardLinkInfo->nameList,fileName);
+
+                                      if (StringList_count(&data.hardLinkInfo->nameList) >= data.hardLinkInfo->count)
+                                      {
+                                        // found last hardlink -> add to store list
+                                        appendHardLinkToEntryList(&createInfo->entryMsgQueue,
+                                                                  ENTRY_TYPE_FILE,
+                                                                  &data.hardLinkInfo->nameList
+                                                                 );
+
+                                        // clear entry
+                                        Dictionary_rem(&hardLinkDictionary,
+                                                       &fileInfo.id,
+                                                       sizeof(fileInfo.id),
+                                                       NULL,
+                                                       NULL
+                                                      );
+                                      }
+                                    }
+                                    else
+                                    {
+                                      // create hard link name list
+                                      hardLinkInfo.count = fileInfo.linkCount;
+                                      StringList_init(&hardLinkInfo.nameList);
+                                      StringList_append(&hardLinkInfo.nameList,fileName);
+
+                                      if (!Dictionary_add(&hardLinkDictionary,
+                                                          &fileInfo.id,
+                                                          sizeof(fileInfo.id),
+                                                          &hardLinkInfo,
+                                                          sizeof(hardLinkInfo)
+                                                         )
+                                         )
+                                      {
+                                        HALT_INSUFFICIENT_MEMORY();
+                                      }
+                                    }
+                                  }
+                                }
+                                break;
+                              case ENTRY_TYPE_IMAGE:
+                                break;
+                            }
+                            break;
+                          case FILE_TYPE_SPECIAL:
+                            switch (includeEntryNode->type)
+                            {
+                              case ENTRY_TYPE_FILE:
+                                if (   !createInfo->partialFlag
+                                    || checkFileChanged(&createInfo->filesDictionary,fileName,&fileInfo)
+                                   )
+                                {
+                                  // add to store list
+                                  appendSpecialToEntryList(&createInfo->entryMsgQueue,
+                                                           ENTRY_TYPE_FILE,
+                                                           fileName
+                                                          );
+                                }
+                                break;
+                              case ENTRY_TYPE_IMAGE:
+                                if (fileInfo.specialType == FILE_SPECIAL_TYPE_BLOCK_DEVICE)
+                                {
+                                  // add to store list
+                                  appendSpecialToEntryList(&createInfo->entryMsgQueue,
+                                                           ENTRY_TYPE_IMAGE,
+                                                           fileName
+                                                          );
+                                }
+                                break;
+                            }
+                            break;
+                          default:
+                            printInfo(2,"Unknown type of file '%s' - skipped\n",String_cString(fileName));
+                            logMessage(LOG_TYPE_ENTRY_TYPE_UNKNOWN,"unknown type '%s'\n",String_cString(fileName));
+                            createInfo->statusInfo.errorEntries++;
+                            createInfo->statusInfo.errorBytes += (uint64)fileInfo.size;
+                            abortFlag |= !updateStatusInfo(createInfo);
+                            break;
+                        }
+                      }
+                      else
+                      {
+                        if (checkNoDumpAttribute(&fileInfo,createInfo->jobOptions))
+                        {
+                          logMessage(LOG_TYPE_ENTRY_EXCLUDED,"excluded '%s' (no dump attribute)\n",String_cString(fileName));
+                        }
+                        else
+                        {
+                          logMessage(LOG_TYPE_ENTRY_EXCLUDED,"excluded '%s'\n",String_cString(fileName));
+                        }
+                        createInfo->statusInfo.skippedEntries++;
+                        createInfo->statusInfo.skippedBytes += fileInfo.size;
+                        abortFlag |= !updateStatusInfo(createInfo);
+                      }
+                    }
+                    else
+                    {
+                      logMessage(LOG_TYPE_ENTRY_EXCLUDED,"excluded '%s'\n",String_cString(fileName));
+                      createInfo->statusInfo.skippedEntries++;
+                      createInfo->statusInfo.skippedBytes += fileInfo.size;
+                      abortFlag |= !updateStatusInfo(createInfo);
+                    }
+                  }
+
+                  // close directory
+                  File_closeDirectoryList(&directoryListHandle);
+                }
+                else
+                {
+                  printInfo(2,"Cannot open directory '%s' (error: %s) - skipped\n",String_cString(name),Errors_getText(error));
+                  logMessage(LOG_TYPE_ENTRY_ACCESS_DENIED,"access denied '%s'\n",String_cString(name));
+                  createInfo->statusInfo.errorEntries++;
+                  abortFlag |= !updateStatusInfo(createInfo);
+                }
+              }
+              else
+              {
+                logMessage(LOG_TYPE_ENTRY_EXCLUDED,"excluded '%s' (.nobackup file)\n",String_cString(name));
+              }
+              break;
+            case FILE_TYPE_LINK:
+              switch (includeEntryNode->type)
+              {
+                case ENTRY_TYPE_FILE:
+                  if (  !createInfo->partialFlag
+                      || checkFileChanged(&createInfo->filesDictionary,name,&fileInfo)
+                    )
+                  {
+                    // add to store list
+                    appendLinkToEntryList(&createInfo->entryMsgQueue,
+                                          ENTRY_TYPE_FILE,
+                                          name
+                                         );
+                  }
+                  break;
+                case ENTRY_TYPE_IMAGE:
+                  break;
+              }
+              break;
+            case FILE_TYPE_HARDLINK:
+              switch (includeEntryNode->type)
+              {
+                case ENTRY_TYPE_FILE:
+                  if (   !createInfo->partialFlag
+                      || checkFileChanged(&createInfo->filesDictionary,name,&fileInfo)
+                     )
+                  {
+                    union { void *value; HardLinkInfo *hardLinkInfo; } data;
+                    HardLinkInfo hardLinkInfo;
+
+                    if (   !createInfo->partialFlag
+                        || checkFileChanged(&createInfo->filesDictionary,fileName,&fileInfo)
+                       )
+                    {
+                      if (Dictionary_find(&hardLinkDictionary,
+                                          &fileInfo.id,
+                                          sizeof(fileInfo.id),
+                                          &data.value,
+                                          NULL
+                                         )
+                         )
+                      {
+                        // append name to hard link name list
+                        StringList_append(&data.hardLinkInfo->nameList,name);
+
+                        if (StringList_count(&data.hardLinkInfo->nameList) >= data.hardLinkInfo->count)
+                        {
+                          // found last hardlink -> add to store list
+                          appendHardLinkToEntryList(&createInfo->entryMsgQueue,
+                                                    ENTRY_TYPE_FILE,
+                                                    &data.hardLinkInfo->nameList
+                                                   );
+
+                          // clear entry
+                          Dictionary_rem(&hardLinkDictionary,
+                                         &fileInfo.id,
+                                         sizeof(fileInfo.id),
+                                         NULL,
+                                         NULL
+                                        );
+                        }
+                      }
+                      else
+                      {
+                        // create hard link name list
+                        hardLinkInfo.count = fileInfo.linkCount;
+                        StringList_init(&hardLinkInfo.nameList);
+                        StringList_append(&hardLinkInfo.nameList,name);
+
+                        if (!Dictionary_add(&hardLinkDictionary,
+                                            &fileInfo.id,
+                                            sizeof(fileInfo.id),
+                                            &hardLinkInfo,
+                                            sizeof(hardLinkInfo)
+                                           )
+                           )
+                        {
+                          HALT_INSUFFICIENT_MEMORY();
+                        }
+                      }
                     }
                   }
                   break;
                 case ENTRY_TYPE_IMAGE:
                   break;
               }
-
-              // open directory contents
-              error = File_openDirectoryList(&directoryListHandle,name);
-              if (error == ERROR_NONE)
+              break;
+            case FILE_TYPE_SPECIAL:
+              switch (includeEntryNode->type)
               {
-                // read directory contents
-                while (   (createInfo->failError == ERROR_NONE)
-                       && ((createInfo->requestedAbortFlag == NULL) || !(*createInfo->requestedAbortFlag))
-                       && !File_endOfDirectoryList(&directoryListHandle)
-                      )
-                {
-                  // pause
-                  while ((createInfo->pauseCreateFlag != NULL) && (*createInfo->pauseCreateFlag))
-                  {
-                    Misc_udelay(500*1000);
-                  }
-
-                  // read next directory entry
-                  error = File_readDirectoryList(&directoryListHandle,fileName);
-                  if (error != ERROR_NONE)
-                  {
-                    printInfo(2,"Cannot read directory '%s' (error: %s) - skipped\n",String_cString(name),Errors_getText(error));
-                    logMessage(LOG_TYPE_ENTRY_ACCESS_DENIED,"access denied '%s'\n",String_cString(name));
-                    createInfo->statusInfo.errorEntries++;
-                    createInfo->statusInfo.errorBytes += (uint64)fileInfo.size;
-                    abortFlag |= !updateStatusInfo(createInfo);
-                    continue;
-                  }
-
-                  if (   checkIsIncluded(includeEntryNode,fileName)
-                      && !checkIsExcluded(createInfo->excludePatternList,fileName)
+                case ENTRY_TYPE_FILE:
+                  if (   !createInfo->partialFlag
+                      || checkFileChanged(&createInfo->filesDictionary,name,&fileInfo)
                      )
                   {
-                    // read file info
-                    error = File_getFileInfo(&fileInfo,fileName);
+                    // add to store list
+                    appendSpecialToEntryList(&createInfo->entryMsgQueue,
+                                             ENTRY_TYPE_FILE,
+                                             name
+                                            );
+                  }
+                  break;
+                case ENTRY_TYPE_IMAGE:
+                  if (fileInfo.specialType == FILE_SPECIAL_TYPE_BLOCK_DEVICE)
+                  {
+                    // get device info
+                    error = Device_getDeviceInfo(&deviceInfo,name);
                     if (error != ERROR_NONE)
                     {
-                      printInfo(2,"Cannot access '%s' (error: %s) - skipped\n",String_cString(fileName),Errors_getText(error));
-                      logMessage(LOG_TYPE_ENTRY_ACCESS_DENIED,"access denied '%s'\n",String_cString(fileName));
+                      printInfo(2,"Cannot access '%s' (error: %s) - skipped\n",String_cString(name),Errors_getText(error));
+                      logMessage(LOG_TYPE_ENTRY_ACCESS_DENIED,"access denied '%s'\n",String_cString(name));
                       createInfo->statusInfo.errorEntries++;
                       abortFlag |= !updateStatusInfo(createInfo);
                       continue;
                     }
+                    UNUSED_VARIABLE(deviceInfo);
 
-                    // detect file type
-                    switch (fileInfo.type)
-                    {
-                      case FILE_TYPE_FILE:
-                        switch (includeEntryNode->type)
-                        {
-                          case ENTRY_TYPE_FILE:
-                            if (   !createInfo->partialFlag
-                                || checkFileChanged(&createInfo->filesDictionary,fileName,&fileInfo)
-                               )
-                            {
-                              // add to file list
-                              appendFileToEntryList(&createInfo->entryMsgQueue,
-                                                    ENTRY_TYPE_FILE,
-                                                    fileName
-                                                   );
-                            }
-                            break;
-                          case ENTRY_TYPE_IMAGE:
-                            break;
-                        }
-                        break;
-                      case FILE_TYPE_DIRECTORY:
-                        // add to name list
-                        StringList_append(&nameList,fileName);
-                        break;
-                      case FILE_TYPE_LINK:
-                        switch (includeEntryNode->type)
-                        {
-                          case ENTRY_TYPE_FILE:
-                            if (   !createInfo->partialFlag
-                                || checkFileChanged(&createInfo->filesDictionary,fileName,&fileInfo)
-                               )
-                            {
-                              // add to file list
-                              appendLinkToEntryList(&createInfo->entryMsgQueue,
-                                                    ENTRY_TYPE_FILE,
-                                                    fileName
-                                                   );
-                            }
-                            break;
-                          case ENTRY_TYPE_IMAGE:
-                            break;
-                        }
-                        break;
-                      case FILE_TYPE_HARDLINK:
-                        switch (includeEntryNode->type)
-                        {
-                          case ENTRY_TYPE_FILE:
-                            {
-                              union { void *value; HardLinkInfo *hardLinkInfo; } data;
-                              HardLinkInfo hardLinkInfo;
-
-                              if (   !createInfo->partialFlag
-                                  || checkFileChanged(&createInfo->filesDictionary,fileName,&fileInfo)
-                                 )
-                              {
-                                if (Dictionary_find(&hardLinkDictionary,
-                                                    &fileInfo.id,
-                                                    sizeof(fileInfo.id),
-                                                    &data.value,
-                                                    NULL
-                                                   )
-                                   )
-                                {
-                                  // append name to hard link name list
-                                  StringList_append(&data.hardLinkInfo->nameList,fileName);
-
-                                  if (StringList_count(&data.hardLinkInfo->nameList) >= data.hardLinkInfo->count)
-                                  {
-                                    // add to file list
-                                    appendHardLinkToEntryList(&createInfo->entryMsgQueue,
-                                                              ENTRY_TYPE_FILE,
-                                                              &data.hardLinkInfo->nameList
-                                                             );
-
-                                    // clear entry
-                                    Dictionary_rem(&hardLinkDictionary,
-                                                   &fileInfo.id,
-                                                   sizeof(fileInfo.id),
-                                                   NULL,
-                                                   NULL
-                                                  );
-                                  }
-                                }
-                                else
-                                {
-                                  // create hard link name list
-                                  hardLinkInfo.count = fileInfo.linkCount;
-                                  StringList_init(&hardLinkInfo.nameList);
-                                  StringList_append(&hardLinkInfo.nameList,fileName);
-
-                                  if (!Dictionary_add(&hardLinkDictionary,
-                                                      &fileInfo.id,
-                                                      sizeof(fileInfo.id),
-                                                      &hardLinkInfo,
-                                                      sizeof(hardLinkInfo)
-                                                     )
-                                     )
-                                  {
-                                    HALT_INSUFFICIENT_MEMORY();
-                                  }
-                                }
-                              }
-                            }
-                            break;
-                          case ENTRY_TYPE_IMAGE:
-                            break;
-                        }
-                        break;
-                      case FILE_TYPE_SPECIAL:
-                        switch (includeEntryNode->type)
-                        {
-                          case ENTRY_TYPE_FILE:
-                            if (   !createInfo->partialFlag
-                                || checkFileChanged(&createInfo->filesDictionary,fileName,&fileInfo)
-                               )
-                            {
-                              // add to file list
-                              appendSpecialToEntryList(&createInfo->entryMsgQueue,
-                                                       ENTRY_TYPE_FILE,
-                                                       fileName
-                                                      );
-                            }
-                            break;
-                          case ENTRY_TYPE_IMAGE:
-                            if (fileInfo.specialType == FILE_SPECIAL_TYPE_BLOCK_DEVICE)
-                            {
-                              // add to file list
-                              appendSpecialToEntryList(&createInfo->entryMsgQueue,
-                                                       ENTRY_TYPE_IMAGE,
-                                                       fileName
-                                                      );
-                            }
-                            break;
-                        }
-                        break;
-                      default:
-                        printInfo(2,"Unknown type of file '%s' - skipped\n",String_cString(fileName));
-                        logMessage(LOG_TYPE_ENTRY_TYPE_UNKNOWN,"unknown type '%s'\n",String_cString(fileName));
-                        createInfo->statusInfo.errorEntries++;
-                        createInfo->statusInfo.errorBytes += (uint64)fileInfo.size;
-                        abortFlag |= !updateStatusInfo(createInfo);
-                        break;
-                    }
+                    // add to store list
+                    appendSpecialToEntryList(&createInfo->entryMsgQueue,
+                                             ENTRY_TYPE_IMAGE,
+                                             name
+                                            );
                   }
-                  else
-                  {
-                    createInfo->statusInfo.skippedEntries++;
-                    createInfo->statusInfo.skippedBytes += fileInfo.size;
-                    abortFlag |= !updateStatusInfo(createInfo);
-                  }
-                }
-
-                // close directory
-                File_closeDirectoryList(&directoryListHandle);
+                  break;
               }
-              else
-              {
-                printInfo(2,"Cannot open directory '%s' (error: %s) - skipped\n",String_cString(name),Errors_getText(error));
-                logMessage(LOG_TYPE_ENTRY_ACCESS_DENIED,"access denied '%s'\n",String_cString(name));
-                createInfo->statusInfo.errorEntries++;
-                abortFlag |= !updateStatusInfo(createInfo);
-              }
-            }
-            break;
-          case FILE_TYPE_LINK:
-            switch (includeEntryNode->type)
-            {
-              case ENTRY_TYPE_FILE:
-                if (   !createInfo->partialFlag
-                    || checkFileChanged(&createInfo->filesDictionary,name,&fileInfo)
-                   )
-                {
-                  // add to file list
-                  appendLinkToEntryList(&createInfo->entryMsgQueue,
-                                        ENTRY_TYPE_FILE,
-                                        name
-                                       );
-                }
-                break;
-              case ENTRY_TYPE_IMAGE:
-                break;
-            }
-            break;
-          case FILE_TYPE_HARDLINK:
-            switch (includeEntryNode->type)
-            {
-              case ENTRY_TYPE_FILE:
-                if (   !createInfo->partialFlag
-                    || checkFileChanged(&createInfo->filesDictionary,name,&fileInfo)
-                   )
-                {
-                  union { void *value; HardLinkInfo *hardLinkInfo; } data;
-                  HardLinkInfo hardLinkInfo;
-
-                  if (   !createInfo->partialFlag
-                      || checkFileChanged(&createInfo->filesDictionary,fileName,&fileInfo)
-                     )
-                  {
-                    if (Dictionary_find(&hardLinkDictionary,
-                                        &fileInfo.id,
-                                        sizeof(fileInfo.id),
-                                        &data.value,
-                                        NULL
-                                       )
-                       )
-                    {
-                      // append name to hard link name list
-                      StringList_append(&data.hardLinkInfo->nameList,name);
-
-                      if (StringList_count(&data.hardLinkInfo->nameList) >= data.hardLinkInfo->count)
-                      {
-                        // add to file list
-                        appendHardLinkToEntryList(&createInfo->entryMsgQueue,
-                                                  ENTRY_TYPE_FILE,
-                                                  &data.hardLinkInfo->nameList
-                                                 );
-
-                        // clear entry
-                        Dictionary_rem(&hardLinkDictionary,
-                                       &fileInfo.id,
-                                       sizeof(fileInfo.id),
-                                       NULL,
-                                       NULL
-                                      );
-                      }
-                    }
-                    else
-                    {
-                      // create hard link name list
-                      hardLinkInfo.count = fileInfo.linkCount;
-                      StringList_init(&hardLinkInfo.nameList);
-                      StringList_append(&hardLinkInfo.nameList,name);
-
-                      if (!Dictionary_add(&hardLinkDictionary,
-                                          &fileInfo.id,
-                                          sizeof(fileInfo.id),
-                                          &hardLinkInfo,
-                                          sizeof(hardLinkInfo)
-                                         )
-                         )
-                      {
-                        HALT_INSUFFICIENT_MEMORY();
-                      }
-                    }
-                  }
-                }
-                break;
-              case ENTRY_TYPE_IMAGE:
-                break;
-            }
-            break;
-          case FILE_TYPE_SPECIAL:
-            switch (includeEntryNode->type)
-            {
-              case ENTRY_TYPE_FILE:
-                if (   !createInfo->partialFlag
-                    || checkFileChanged(&createInfo->filesDictionary,name,&fileInfo)
-                   )
-                {
-                  // add to file list
-                  appendSpecialToEntryList(&createInfo->entryMsgQueue,
-                                           ENTRY_TYPE_FILE,
-                                           name
-                                          );
-                }
-                break;
-              case ENTRY_TYPE_IMAGE:
-                if (fileInfo.specialType == FILE_SPECIAL_TYPE_BLOCK_DEVICE)
-                {
-                  // get device info
-                  error = Device_getDeviceInfo(&deviceInfo,name);
-                  if (error != ERROR_NONE)
-                  {
-                    printInfo(2,"Cannot access '%s' (error: %s) - skipped\n",String_cString(name),Errors_getText(error));
-                    logMessage(LOG_TYPE_ENTRY_ACCESS_DENIED,"access denied '%s'\n",String_cString(name));
-                    createInfo->statusInfo.errorEntries++;
-                    abortFlag |= !updateStatusInfo(createInfo);
-                    continue;
-                  }
-                  UNUSED_VARIABLE(deviceInfo);
-
-                  // add to file list
-                  appendSpecialToEntryList(&createInfo->entryMsgQueue,
-                                           ENTRY_TYPE_IMAGE,
-                                           name
-                                          );
-                }
-                break;
-            }
-            break;
-          default:
-            printInfo(2,"Unknown type of file '%s' - skipped\n",String_cString(name));
-            logMessage(LOG_TYPE_ENTRY_TYPE_UNKNOWN,"unknown type '%s'\n",String_cString(name));
-            createInfo->statusInfo.errorEntries++;
-            createInfo->statusInfo.errorBytes += (uint64)fileInfo.size;
-            abortFlag |= !updateStatusInfo(createInfo);
-            break;
+              break;
+            default:
+              printInfo(2,"Unknown type of file '%s' - skipped\n",String_cString(name));
+              logMessage(LOG_TYPE_ENTRY_TYPE_UNKNOWN,"unknown type '%s'\n",String_cString(name));
+              createInfo->statusInfo.errorEntries++;
+              createInfo->statusInfo.errorBytes += (uint64)fileInfo.size;
+              abortFlag |= !updateStatusInfo(createInfo);
+              break;
+          }
+        }
+        else
+        {
+          if (checkNoDumpAttribute(&fileInfo,createInfo->jobOptions))
+          {
+            logMessage(LOG_TYPE_ENTRY_EXCLUDED,"excluded '%s' (no dump attribute)\n",String_cString(name));
+          }
+          else
+          {
+            logMessage(LOG_TYPE_ENTRY_EXCLUDED,"excluded '%s'\n",String_cString(name));
+          }
+          createInfo->statusInfo.skippedEntries++;
+          createInfo->statusInfo.skippedBytes += fileInfo.size;
+          abortFlag |= !updateStatusInfo(createInfo);
         }
       }
       else
