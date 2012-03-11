@@ -312,57 +312,63 @@ typedef struct
 // job options
 typedef struct
 {
-  ArchiveTypes        archiveType;                       // archive type (normal, full, incremental, differential)
+  uint32 userId;                                                 // restore user id
+  uint32 groupId;                                                // restore group id
+} JobOptionsOwner;
 
-  uint64              archivePartSize;                   // archive part size [bytes]
+typedef struct
+{
+  CompressAlgorithms delta;                                      // delta compress algorithm to use
+  CompressAlgorithms byte;                                       // byte compress algorithm to use
+} JobOptionsCompressAlgorithm;
 
-  String              incrementalListFileName;           // name of incremental list file
+typedef struct
+{
+  ArchiveTypes                archiveType;                       // archive type (normal, full, incremental, differential)
 
-  uint                directoryStripCount;               // number of directories to strip in restore
-  String              destination     ;                  // destination for restore
-  struct
-  {
-    uint32            userId;                            // restore user id
-    uint32            groupId;                           // restore group id
-  } owner;
+  uint64                      archivePartSize;                   // archive part size [bytes]
 
-  PatternTypes        patternType;
+  String                      incrementalListFileName;           // name of incremental list file
 
-  struct
-  {
-    CompressAlgorithms delta;                            // delta compress algorithm to use
-    CompressAlgorithms byte;                             // byte compress algorithm to use
-  } compressAlgorithm;
+  uint                        directoryStripCount;               // number of directories to strip in restore
+  String                      destination;                       // destination for restore
+  JobOptionsOwner             owner;                             // restore owner
 
-  CryptTypes          cryptType;                         // crypt type (symmetric, asymmetric)
-  CryptAlgorithms     cryptAlgorithm;                    // crypt algorithm to use
-  PasswordModes       cryptPasswordMode;                 // crypt password mode
-  Password            *cryptPassword;                    // crypt password
-  String              cryptPublicKeyFileName;
-  String              cryptPrivateKeyFileName;
+  PatternTypes                patternType;
 
-  FTPServer           ftpServer;                         // job specific FTP server settings
-  SSHServer           sshServer;                         // job specific SSH server settings
+  JobOptionsCompressAlgorithm compressAlgorithm;                 // compress algorithms
 
-  OpticalDisk         opticalDisk;                       // job specific optical disk settings
+  CryptTypes                  cryptType;                         // crypt type (symmetric, asymmetric)
+  CryptAlgorithms             cryptAlgorithm;                    // crypt algorithm to use
+  PasswordModes               cryptPasswordMode;                 // crypt password mode
+  Password                    *cryptPassword;                    // crypt password
+  String                      cryptPublicKeyFileName;
+  String                      cryptPrivateKeyFileName;
 
-  String              deviceName;                        // device name to use
-  Device              device;                            // job specific device settings
+  FTPServer                   ftpServer;                         // job specific FTP server settings
+  SSHServer                   sshServer;                         // job specific SSH server settings
 
-  uint64              volumeSize;                        // volume size or 0LL for default [bytes]
+  OpticalDisk                 opticalDisk;                       // job specific optical disk settings
 
-  bool                skipUnreadableFlag;                // TRUE for skipping unreadable files
-  bool                forceDeltaCompressionFlag;         // TRUE to force delta compression of files
-  bool                overwriteArchiveFilesFlag;         // TRUE for overwrite existing archive files
-  bool                overwriteFilesFlag;                // TURE for overwrite existing files on restore
-  bool                errorCorrectionCodesFlag;          // TRUE iff error correction codes should be added
-  bool                alwaysCreateImageFlag;             // TRUE iff always create image for CD/DVD/BD/device
-  bool                waitFirstVolumeFlag;               // TRUE for wait for first volume
-  bool                rawImagesFlag;                     // TRUE for storing raw images
-  bool                dryRunFlag;                        // TRUE to do a dry-run (do not store, do not create incremental data, do not store in database)
-  bool                noStorageFlag;                     // TRUE to skip storage, only create incremental data file
-  bool                noBAROnMediumFlag;                 // TRUE for not storing BAR on medium
-  bool                stopOnErrorFlag;
+  String                      deviceName;                        // device name to use
+  Device                      device;                            // job specific device settings
+
+  uint64                      volumeSize;                        // volume size or 0LL for default [bytes]
+
+  bool                        skipUnreadableFlag;                // TRUE for skipping unreadable files
+  bool                        forceDeltaCompressionFlag;         // TRUE to force delta compression of files
+  bool                        ignoreNoDumpAttributeFlag;         // TRUE for ignoring no-dump attribute
+  bool                        overwriteArchiveFilesFlag;         // TRUE for overwrite existing archive files
+  bool                        overwriteFilesFlag;                // TURE for overwrite existing files on restore
+  bool                        errorCorrectionCodesFlag;          // TRUE iff error correction codes should be added
+  bool                        alwaysCreateImageFlag;             // TRUE iff always create image for CD/DVD/BD/device
+  bool                        waitFirstVolumeFlag;               // TRUE for wait for first volume
+  bool                        rawImagesFlag;                     // TRUE for storing raw images
+  bool                        noFragmentsCheckFlag;              // TRUE to skip checking file fragments for completeness
+  bool                        dryRunFlag;                        // TRUE to do a dry-run (do not store, do not create incremental data, do not store in database)
+  bool                        noStorageFlag;                     // TRUE to skip storage, only create incremental data file
+  bool                        noBAROnMediumFlag;                 // TRUE for not storing BAR on medium
+  bool                        stopOnErrorFlag;
 } JobOptions;
 
 /***************************** Variables *******************************/
@@ -851,6 +857,120 @@ void configValueFormatInitPassord(void **formatUserData, void *userData, void *v
 \***********************************************************************/
 
 bool configValueFormatPassword(void **formatUserData, void *userData, String line);
+
+/***********************************************************************\
+* Name   : configValueParseDeltaCompressAlgorithm
+* Purpose: config value option call back for parsing delta compress
+*          algorithm
+* Input  : userData - user data
+*          variable - config variable
+*          name     - config name
+*          value    - config value
+* Output : -
+* Return : TRUE if config value parsed and stored in variable, FALSE
+*          otherwise
+* Notes  : -
+\***********************************************************************/
+
+bool configValueParseDeltaCompressAlgorithm(void *userData, void *variable, const char *name, const char *value);
+
+/***********************************************************************\
+* Name   : configValueFormatInitDeltaCompressAlgorithm
+* Purpose: init format config compress algorithm
+* Input  : userData - user data
+*          variable - config variable
+* Output : formatUserData - format user data
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void configValueFormatInitDeltaCompressAlgorithm(void **formatUserData, void *userData, void *variable);
+
+/***********************************************************************\
+* Name   : configValueFormatDoneDeltaCompressAlgorithm
+* Purpose: done format of config compress algorithm
+* Input  : formatUserData - format user data
+*          userData       - user data
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void configValueFormatDoneDeltaCompressAlgorithm(void **formatUserData, void *userData);
+
+/***********************************************************************\
+* Name   : configValueFormatDeltaCompressAlgorithm
+* Purpose: format compress algorithm config statement
+* Input  : formatUserData - format user data
+*          userData       - user data
+*          line           - line variable
+*          name           - config name
+* Output : line - formated line
+* Return : TRUE if config statement formated, FALSE if end of data
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+bool configValueFormatDeltaCompressAlgorithm(void **formatUserData, void *userData, String line);
+
+/***********************************************************************\
+* Name   : configValueParseByteCompressAlgorithm
+* Purpose: config value option call back for parsing byte compress
+*          algorithm
+* Input  : userData - user data
+*          variable - config variable
+*          name     - config name
+*          value    - config value
+* Output : -
+* Return : TRUE if config value parsed and stored in variable, FALSE
+*          otherwise
+* Notes  : -
+\***********************************************************************/
+
+bool configValueParseByteCompressAlgorithm(void *userData, void *variable, const char *name, const char *value);
+
+/***********************************************************************\
+* Name   : configValueFormatInitByteCompressAlgorithm
+* Purpose: init format config compress algorithm
+* Input  : userData - user data
+*          variable - config variable
+* Output : formatUserData - format user data
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void configValueFormatInitByteCompressAlgorithm(void **formatUserData, void *userData, void *variable);
+
+/***********************************************************************\
+* Name   : configValueFormatDoneByteCompressAlgorithm
+* Purpose: done format of config compress algorithm
+* Input  : formatUserData - format user data
+*          userData       - user data
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void configValueFormatDoneByteCompressAlgorithm(void **formatUserData, void *userData);
+
+/***********************************************************************\
+* Name   : configValueFormatByteCompressAlgorithm
+* Purpose: format compress algorithm config statement
+* Input  : formatUserData - format user data
+*          userData       - user data
+*          line           - line variable
+*          name           - config name
+* Output : line - formated line
+* Return : TRUE if config statement formated, FALSE if end of data
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+bool configValueFormatByteCompressAlgorithm(void **formatUserData, void *userData, String line);
 
 /***********************************************************************\
 * Name   : configValueParseCompressAlgorithm

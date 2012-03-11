@@ -445,8 +445,6 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
   CMD_OPTION_SPECIAL      ("exclude",                      '!',0,2,&excludePatternList,                       cmdOptionParsePattern,NULL,                            "exclude pattern","pattern"                                                ),
 
   CMD_OPTION_SPECIAL      ("delta-source",                 0,  0,2,&deltaSourcePatternList,                   cmdOptionParsePattern,NULL,                            "source pattern\ntest1\ntest2","pattern"                                                 ),
-// ??? combine with compress-algorithm
-//CMD_OPTION_SELECT       ("delta-algorithm",              0,  0,1,jobOptions.compressAlgorithm.delta,        COMMAND_LINE_OPTIONS_DELTA_COMPRESS_ALGORITHMS,                 "select delta algorithm to use"                                            ),
 
   CMD_OPTION_SPECIAL      ("config",                       0,  1,0,NULL,                                      cmdOptionParseConfigFile,NULL,                         "configuration file","file name"                                           ),
 
@@ -459,8 +457,7 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
   CMD_OPTION_STRING       ("destination",                  0,  0,1,jobOptions.destination,                                                                          "destination to restore files/images","path"                                ),
   CMD_OPTION_SPECIAL      ("owner",                        0,  0,1,&jobOptions,                               cmdOptionParseOwner,NULL,                              "user and group of restored files","user:group"                            ),
 
-//  CMD_OPTION_SELECT       ("xcompress-algorithm",           'z',0,1,jobOptions.compressAlgorithm.byte,         COMMAND_LINE_OPTIONS_COMPRESS_ALGORITHMS,              "select compress algorithm to use"                                         ),
-  CMD_OPTION_SPECIAL      ("compress-algorithm",           'z',0,1,&jobOptions,                               cmdOptionParseCompressAlgorithm,NULL,                  "select compress algorithms to use\n"
+  CMD_OPTION_SPECIAL      ("compress-algorithm",           'z',0,1,&jobOptions.compressAlgorithm,             cmdOptionParseCompressAlgorithm,NULL,                  "select compress algorithms to use\n"
                                                                                                                                                                      "  none        : no compression (default)\n"
                                                                                                                                                                      "  zip0..zip9  : ZIP compression level 0..9\n"
                                                                                                                                                                      "  bzip1..bzip9: BZIP2 compression level 1..9\n"
@@ -599,13 +596,15 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
   CMD_OPTION_BOOLEAN      ("no-header-footer",             0,  0,0,globalOptions.noHeaderFooterFlag,                                                                 "output no header/footer in list"                                          ),
   CMD_OPTION_BOOLEAN      ("delete-old-archive-files",     0,  1,0,globalOptions.deleteOldArchiveFilesFlag,                                                          "delete old archive files after creating new files"                        ),
   CMD_OPTION_BOOLEAN      ("ignore-no-backup-file",        0,  1,1,globalOptions.ignoreNoBackupFileFlag,                                                             "ignore .nobackup/.NOBACKUP file"                                          ),
+  CMD_OPTION_BOOLEAN      ("ignore-no-dump",               0,  1,1,jobOptions.ignoreNoDumpAttributeFlag,                                                             "ignore 'no dump' attribute of files"                                      ),
 
   CMD_OPTION_BOOLEAN      ("skip-unreadable",              0,  0,1,jobOptions.skipUnreadableFlag,                                                                    "skip unreadable files"                                                    ),
   CMD_OPTION_BOOLEAN      ("force-delta-compression",      0,  0,1,jobOptions.forceDeltaCompressionFlag,                                                             "force delta compression of files. Stop on error"                          ),
+  CMD_OPTION_BOOLEAN      ("raw-images",                   0,  1,1,jobOptions.rawImagesFlag,                                                                         "store raw images (store all image blocks)"                                ),
+  CMD_OPTION_BOOLEAN      ("no-fragments-check",           0,  1,1,jobOptions.noFragmentsCheckFlag,                                                                  "do not check completeness of file fragments"                              ),
   CMD_OPTION_BOOLEAN      ("overwrite-archive-files",      'o',0,1,jobOptions.overwriteArchiveFilesFlag,                                                             "overwrite existing archive files"                                         ),
   CMD_OPTION_BOOLEAN      ("overwrite-files",              0,  0,1,jobOptions.overwriteFilesFlag,                                                                    "overwrite existing files"                                                 ),
   CMD_OPTION_BOOLEAN      ("wait-first-volume",            0,  1,1,jobOptions.waitFirstVolumeFlag,                                                                   "wait for first volume"                                                    ),
-  CMD_OPTION_BOOLEAN      ("raw-images",                   0,  1,1,jobOptions.rawImagesFlag,                                                                         "store raw images (store all image blocks)"                                ),
   CMD_OPTION_BOOLEAN      ("dry-run",                      0,  1,1,jobOptions.dryRunFlag,                                                                            "do dry-run (skip storage/restore, incremental data, database index)"      ),
   CMD_OPTION_BOOLEAN      ("no-storage",                   0,  1,1,jobOptions.noStorageFlag,                                                                         "do not store archives (skip storage, database index)"                     ),
   CMD_OPTION_BOOLEAN      ("no-bar-on-medium",             0,  1,1,jobOptions.noBAROnMediumFlag,                                                                     "do not store a copy of BAR on medium"                                     ),
@@ -777,8 +776,7 @@ LOCAL const ConfigValue CONFIG_VALUES[] =
 
   CONFIG_VALUE_SELECT   ("pattern-type",                 &jobOptions.patternType,-1,                              CONFIG_VALUE_PATTERN_TYPES),
 
-//  CONFIG_VALUE_SELECT   ("compress-algorithm",           &jobOptions.compressAlgorithm.byte,-1,                   CONFIG_VALUE_COMPRESS_ALGORITHMS),
-  CONFIG_VALUE_SPECIAL  ("compress-algorithm",           &jobOptions,-1,                                          configValueParseCompressAlgorithm,NULL,NULL,NULL,&jobOptions),
+  CONFIG_VALUE_SPECIAL  ("compress-algorithm",           &jobOptions.compressAlgorithm,-1,                        configValueParseCompressAlgorithm,NULL,NULL,NULL,&jobOptions),
 
   CONFIG_VALUE_SELECT   ("crypt-algorithm",              &jobOptions.cryptAlgorithm,-1,                           CONFIG_VALUE_CRYPT_ALGORITHMS),
   CONFIG_VALUE_SELECT   ("crypt-type",                   &jobOptions.cryptType,-1,                                CONFIG_VALUE_CRYPT_TYPES),
@@ -807,6 +805,7 @@ LOCAL const ConfigValue CONFIG_VALUES[] =
 
   CONFIG_VALUE_BOOLEAN  ("skip-unreadable",              &jobOptions.skipUnreadableFlag,-1                        ),
   CONFIG_VALUE_BOOLEAN  ("raw-images",                   &jobOptions.rawImagesFlag,-1                             ),
+  CONFIG_VALUE_BOOLEAN  ("no-fragments-check",           &jobOptions.noFragmentsCheckFlag,-1                      ),
   CONFIG_VALUE_BOOLEAN  ("overwrite-archive-files",      &jobOptions.overwriteArchiveFilesFlag,-1                 ),
   CONFIG_VALUE_BOOLEAN  ("overwrite-files",              &jobOptions.overwriteFilesFlag,-1                        ),
   CONFIG_VALUE_BOOLEAN  ("wait-first-volume",            &jobOptions.waitFirstVolumeFlag,-1                       ),
@@ -1373,8 +1372,8 @@ LOCAL bool cmdOptionParseOwner(void *userData, void *variable, const char *name,
   }
 
   // store owner values
-  ((JobOptions*)variable)->owner.userId  = userId;
-  ((JobOptions*)variable)->owner.groupId = groupId;
+  ((JobOptionsOwner*)variable)->userId  = userId;
+  ((JobOptionsOwner*)variable)->groupId = groupId;
 
   return TRUE;
 }
@@ -1505,8 +1504,8 @@ LOCAL bool cmdOptionParseCompressAlgorithm(void *userData, void *variable, const
 //fprintf(stderr,"%s, %d: compressAlgorithmDelta=%d compressAlgorithmByte=%d\n",__FILE__,__LINE__,compressAlgorithmDelta,compressAlgorithmByte);
 
   // store compress algorithm values
-  ((JobOptions*)variable)->compressAlgorithm.delta = compressAlgorithmDelta;
-  ((JobOptions*)variable)->compressAlgorithm.byte  = compressAlgorithmByte;
+  ((JobOptionsCompressAlgorithm*)variable)->delta = compressAlgorithmDelta;
+  ((JobOptionsCompressAlgorithm*)variable)->byte  = compressAlgorithmByte;
 
   return TRUE;
 }
@@ -2330,6 +2329,8 @@ void initJobOptions(JobOptions *jobOptions)
     jobOptions->cryptType               = CRYPT_TYPE_NONE;
   #endif /* HAVE_GCRYPT */
   jobOptions->cryptPasswordMode         = PASSWORD_MODE_DEFAULT;
+  jobOptions->cryptPublicKeyFileName    = NULL;
+  jobOptions->cryptPrivateKeyFileName   = NULL;
   jobOptions->volumeSize                = 0LL;
   jobOptions->skipUnreadableFlag        = TRUE;
   jobOptions->overwriteArchiveFilesFlag = FALSE;
@@ -2698,8 +2699,8 @@ bool configValueParseOwner(void *userData, void *variable, const char *name, con
   }
 
   // store owner values
-  ((JobOptions*)variable)->owner.userId  = userId;
-  ((JobOptions*)variable)->owner.groupId = groupId;
+  ((JobOptionsOwner*)variable)->userId  = userId;
+  ((JobOptionsOwner*)variable)->groupId = groupId;
 
   return TRUE;
 }
@@ -3044,6 +3045,145 @@ bool configValueFormatPassword(void **formatUserData, void *userData, String lin
   }
 }
 
+bool configValueParseDeltaCompressAlgorithm(void *userData, void *variable, const char *name, const char *value)
+{
+  CompressAlgorithms compressAlgorithm;
+  bool               foundFlag;
+  int                z;
+
+  assert(variable != NULL);
+  assert(value != NULL);
+
+  UNUSED_VARIABLE(userData);
+  UNUSED_VARIABLE(name);
+
+  compressAlgorithm = COMPRESS_ALGORITHM_NONE;
+
+  // parse
+  foundFlag = FALSE;
+  for (z = 0; z < SIZE_OF_ARRAY(COMPRESS_ALGORITHMS_DELTA); z++)
+  {
+    if (strcasecmp(value,COMPRESS_ALGORITHMS_DELTA[z].name) == 0)
+    {
+      compressAlgorithm = COMPRESS_ALGORITHMS_DELTA[z].compressAlgorithm;
+      foundFlag = TRUE;
+      break;
+    }
+  }
+  if (!foundFlag) return FALSE;
+//fprintf(stderr,"%s, %d: compressAlgorithm=%d\n",__FILE__,__LINE__,compressAlgorithm);
+
+  // store compress algorithm values
+  (*((CompressAlgorithms*)variable)) = compressAlgorithm;
+
+  return TRUE;
+}
+
+void configValueFormatInitDeltaCompressAlgorithm(void **formatUserData, void *userData, void *variable)
+{
+  assert(formatUserData != NULL);
+
+  UNUSED_VARIABLE(userData);
+
+  (*formatUserData) = (CompressAlgorithms*)variable;
+}
+
+void configValueFormatDoneDeltaCompressAlgorithm(void **formatUserData, void *userData)
+{
+  UNUSED_VARIABLE(formatUserData);
+  UNUSED_VARIABLE(userData);
+}
+
+bool configValueFormatDeltaCompressAlgorithm(void **formatUserData, void *userData, String line)
+{
+  assert(formatUserData != NULL);
+  assert(line != NULL);
+
+  UNUSED_VARIABLE(userData);
+
+  if ((*formatUserData) != NULL)
+  {
+    String_format(line,"%s",Compress_getAlgorithmName(*(CompressAlgorithms*)(*formatUserData)));
+    (*formatUserData) = NULL;
+
+    return TRUE;
+  }
+  else
+  {
+    return FALSE;
+  }
+}
+
+bool configValueParseByteCompressAlgorithm(void *userData, void *variable, const char *name, const char *value)
+{
+  CompressAlgorithms compressAlgorithm;
+  bool               foundFlag;
+  int                z;
+
+  assert(variable != NULL);
+  assert(value != NULL);
+
+  UNUSED_VARIABLE(userData);
+  UNUSED_VARIABLE(name);
+
+  compressAlgorithm = COMPRESS_ALGORITHM_NONE;
+
+  // parse
+  for (z = 0; z < SIZE_OF_ARRAY(COMPRESS_ALGORITHMS_BYTE); z++)
+  {
+    if (strcasecmp(value,COMPRESS_ALGORITHMS_BYTE[z].name) == 0)
+    {
+      compressAlgorithm = COMPRESS_ALGORITHMS_BYTE[z].compressAlgorithm;
+      foundFlag = TRUE;
+      break;
+    }
+  }
+  if (!foundFlag) return FALSE;
+//fprintf(stderr,"%s, %d: compressAlgorithm=%d\n",__FILE__,__LINE__,compressAlgorithm);
+
+  // store compress algorithm values
+  (*((CompressAlgorithms*)variable)) = compressAlgorithm;
+
+  return TRUE;
+}
+
+void configValueFormatInitByteCompressAlgorithm(void **formatUserData, void *userData, void *variable)
+{
+  assert(formatUserData != NULL);
+
+  UNUSED_VARIABLE(userData);
+
+  (*formatUserData) = (CompressAlgorithms*)variable;
+}
+
+void configValueFormatDoneByteCompressAlgorithm(void **formatUserData, void *userData)
+{
+  UNUSED_VARIABLE(formatUserData);
+  UNUSED_VARIABLE(userData);
+}
+
+bool configValueFormatByteCompressAlgorithm(void **formatUserData, void *userData, String line)
+{
+  assert(formatUserData != NULL);
+  assert(line != NULL);
+
+  UNUSED_VARIABLE(userData);
+
+  if ((*formatUserData) != NULL)
+  {
+    String_format(line,"%s",Compress_getAlgorithmName(*(CompressAlgorithms*)(*formatUserData)));
+    (*formatUserData) = NULL;
+
+    return TRUE;
+  }
+  else
+  {
+    return FALSE;
+  }
+
+  return TRUE;
+}
+
 bool configValueParseCompressAlgorithm(void *userData, void *variable, const char *name, const char *value)
 {
   char               algorithm1[256],algorithm2[256];
@@ -3133,8 +3273,8 @@ bool configValueParseCompressAlgorithm(void *userData, void *variable, const cha
 //fprintf(stderr,"%s, %d: compressAlgorithmDelta=%d compressAlgorithmByte=%d\n",__FILE__,__LINE__,compressAlgorithmDelta,compressAlgorithmByte);
 
   // store compress algorithm values
-  ((JobOptions*)variable)->compressAlgorithm.delta = compressAlgorithmDelta;
-  ((JobOptions*)variable)->compressAlgorithm.byte  = compressAlgorithmByte;
+  ((JobOptionsCompressAlgorithm*)variable)->delta = compressAlgorithmDelta;
+  ((JobOptionsCompressAlgorithm*)variable)->byte  = compressAlgorithmByte;
 
   return TRUE;
 }
@@ -3145,7 +3285,7 @@ void configValueFormatInitCompressAlgorithm(void **formatUserData, void *userDat
 
   UNUSED_VARIABLE(userData);
 
-  (*formatUserData) = (*(Password**)variable);
+  (*formatUserData) = (*(JobOptionsCompressAlgorithm**)variable);
 }
 
 void configValueFormatDoneCompressAlgorithm(void **formatUserData, void *userData)
@@ -3156,21 +3296,21 @@ void configValueFormatDoneCompressAlgorithm(void **formatUserData, void *userDat
 
 bool configValueFormatCompressAlgorithm(void **formatUserData, void *userData, String line)
 {
-  Password   *password;
-  const char *s;
+  JobOptionsCompressAlgorithm *jobOptionsCompressAlgorithm;
 
   assert(formatUserData != NULL);
   assert(line != NULL);
 
   UNUSED_VARIABLE(userData);
 
-  password = (Password*)(*formatUserData);
-  if (password != NULL)
+  jobOptionsCompressAlgorithm = (JobOptionsCompressAlgorithm*)(*formatUserData);
+  if (jobOptionsCompressAlgorithm != NULL)
   {
-    s = Password_deploy(password);
-    String_format(line,"%'s",s);
-    Password_undeploy(password);
-
+    String_format(line,
+                  "%s+%s",
+                  Compress_getAlgorithmName(jobOptionsCompressAlgorithm->delta),
+                  Compress_getAlgorithmName(jobOptionsCompressAlgorithm->byte)
+                 );
     (*formatUserData) = NULL;
 
     return TRUE;
