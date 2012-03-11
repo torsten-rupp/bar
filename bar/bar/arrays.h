@@ -103,7 +103,7 @@ void Array_clear(Array array, ArrayElementFreeFunction arrayElementFreeFunction,
 * Notes  : -
 \***********************************************************************/
 
-ulong Array_length(Array array);
+ulong Array_length(const Array array);
 
 /***********************************************************************\
 * Name   : Array_put
@@ -130,7 +130,7 @@ bool Array_put(Array array, ulong index, const void *data);
 *          data element in the array is returned
 \***********************************************************************/
 
-void *Array_get(Array array, ulong index, void *data);
+void *Array_get(const Array array, ulong index, void *data);
 
 /***********************************************************************\
 * Name   : Array_insert
@@ -180,7 +180,7 @@ void Array_remove(Array array, ulong index, ArrayElementFreeFunction arrayElemen
 * Notes  : -
 \***********************************************************************/
 
-const void *Array_cArray(Array array);
+const void *Array_cArray(const Array array);
 
 #ifndef NDEBUG
 /***********************************************************************\

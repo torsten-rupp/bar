@@ -81,6 +81,8 @@ LOCAL void debugArrayInit(void)
 }
 #endif /* not NDEBUG */
 
+// ----------------------------------------------------------------------
+
 #ifdef NDEBUG
 Array Array_new(ulong elementSize, ulong length)
 #else /* not NDEBUG */
@@ -144,7 +146,6 @@ Array __Array_new(const char *fileName, ulong lineNb, ulong elementSize, ulong l
 void Array_delete(Array array, ArrayElementFreeFunction arrayElementFreeFunction, void *arrayElementFreeUserData)
 {
   ulong z;
-
   #ifndef NDEBUG
     DebugArrayNode *debugArrayNode;;
   #endif /* not NDEBUG */
@@ -212,9 +213,9 @@ void Array_clear(Array array, ArrayElementFreeFunction arrayElementFreeFunction,
   }
 }
 
-ulong Array_length(Array array)
+ulong Array_length(const Array array)
 {
-  return (array != NULL)?array->length:0;
+  return (array != NULL) ? array->length : 0;
 }
 
 bool Array_put(Array array, ulong index, const void *data)
@@ -226,7 +227,7 @@ bool Array_put(Array array, ulong index, const void *data)
   {
     assert(array->data != NULL);
 
-    /* extend array if needed */
+    // extend array if needed
     if (index >= array->maxLength)
     {
       newMaxLength = index+1;
@@ -250,7 +251,7 @@ bool Array_put(Array array, ulong index, const void *data)
       array->data      = newData;
     }
 
-    /* store element */
+    // store element
     memcpy(array->data+index*array->elementSize,data,array->elementSize);
     if (index > array->length) array->length = index+1;
 
@@ -262,7 +263,7 @@ bool Array_put(Array array, ulong index, const void *data)
   }
 }
 
-void *Array_get(Array array, ulong index, void *data)
+void *Array_get(const Array array, ulong index, void *data)
 {
   void *element;
 
@@ -271,7 +272,7 @@ void *Array_get(Array array, ulong index, void *data)
   {
     assert(array->data != NULL);
 
-    /* get element */
+    // get element
     if (index < array->length)
     {
       if (data != NULL)
@@ -297,6 +298,7 @@ bool Array_insert(Array array, long nextIndex, const void *data)
   {
     assert(array->data != NULL);
 
+    // extend array if needed
     if      (nextIndex == ARRAY_END)
     {
     }
@@ -311,7 +313,7 @@ bool Array_insert(Array array, long nextIndex, const void *data)
       array->data      = newData;
     }
 
-    /* insert element */
+    // insert element
     if (nextIndex < array->length)
     {
       memmove(array->data+(nextIndex+1)*array->elementSize,
@@ -338,7 +340,7 @@ bool Array_append(Array array, const void *data)
   {
     assert(array->data != NULL);
 
-    /* extend array if needed */
+    // extend array if needed
     if (array->length >= array->maxLength)
     {
       newData = realloc(array->data,(array->maxLength+DELTA_LENGTH)*array->elementSize);
@@ -350,7 +352,7 @@ bool Array_append(Array array, const void *data)
       array->data      = newData;
     }
 
-    /* store element */
+    // store element
     memcpy(array->data+array->length*array->elementSize,data,array->elementSize);
     array->length++;
 
@@ -368,7 +370,7 @@ void Array_remove(Array array, ulong index, ArrayElementFreeFunction arrayElemen
   {
     assert(array->data != NULL);
 
-    /* remove element */
+    // remove element
     if (index < array->length)
     {
       if (arrayElementFreeFunction != NULL)
@@ -391,9 +393,9 @@ void Array_remove(Array array, ulong index, ArrayElementFreeFunction arrayElemen
   }
 }
 
-const void *Array_cArray(Array array)
+const void *Array_cArray(const Array array)
 {
-  return (array != NULL)?array->data:0;
+  return (array != NULL) ? array->data : NULL;
 }
 
 #ifndef NDEBUG
