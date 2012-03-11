@@ -317,6 +317,7 @@ typedef struct
   PatternList         compressExcludePatternList;
   JobOptions          jobOptions;
   DirectoryInfoList   directoryInfoList;
+  Array               storageIdArray;
 } ClientInfo;
 
 // client node
@@ -412,52 +413,53 @@ LOCAL const ConfigValueSelect CONFIG_VALUE_PASSWORD_MODES[] =
 
 LOCAL const ConfigValue CONFIG_VALUES[] =
 {
-  CONFIG_STRUCT_VALUE_STRING   ("archive-name",           JobNode,archiveName                             ),
-  CONFIG_STRUCT_VALUE_SELECT   ("archive-type",           JobNode,jobOptions.archiveType,                 CONFIG_VALUE_ARCHIVE_TYPES),
+  CONFIG_STRUCT_VALUE_STRING   ("archive-name",            JobNode,archiveName                             ),
+  CONFIG_STRUCT_VALUE_SELECT   ("archive-type",            JobNode,jobOptions.archiveType,                 CONFIG_VALUE_ARCHIVE_TYPES),
 
-  CONFIG_STRUCT_VALUE_STRING   ("incremental-list-file",  JobNode,jobOptions.incrementalListFileName      ),
+  CONFIG_STRUCT_VALUE_STRING   ("incremental-list-file",   JobNode,jobOptions.incrementalListFileName      ),
 
-  CONFIG_STRUCT_VALUE_INTEGER64("archive-part-size",      JobNode,jobOptions.archivePartSize,             0LL,MAX_LONG_LONG,CONFIG_VALUE_BYTES_UNITS),
+  CONFIG_STRUCT_VALUE_INTEGER64("archive-part-size",       JobNode,jobOptions.archivePartSize,             0LL,MAX_LONG_LONG,CONFIG_VALUE_BYTES_UNITS),
 
-  CONFIG_STRUCT_VALUE_INTEGER  ("directory-strip",        JobNode,jobOptions.directoryStripCount,         0,MAX_INT,NULL),
-  CONFIG_STRUCT_VALUE_STRING   ("destination",            JobNode,jobOptions.destination                  ),
-  CONFIG_STRUCT_VALUE_SPECIAL  ("owner",                  JobNode,jobOptions.owner,                       configValueParseOwner,configValueFormatInitOwner,NULL,configValueFormatOwner,NULL),
+  CONFIG_STRUCT_VALUE_INTEGER  ("directory-strip",         JobNode,jobOptions.directoryStripCount,         0,MAX_INT,NULL),
+  CONFIG_STRUCT_VALUE_STRING   ("destination",             JobNode,jobOptions.destination                  ),
+  CONFIG_STRUCT_VALUE_SPECIAL  ("owner",                   JobNode,jobOptions.owner,                       configValueParseOwner,configValueFormatInitOwner,NULL,configValueFormatOwner,NULL),
 
-  CONFIG_STRUCT_VALUE_SELECT   ("pattern-type",           JobNode,jobOptions.patternType,                 CONFIG_VALUE_PATTERN_TYPES),
+  CONFIG_STRUCT_VALUE_SELECT   ("pattern-type",            JobNode,jobOptions.patternType,                 CONFIG_VALUE_PATTERN_TYPES),
 
-  CONFIG_STRUCT_VALUE_SPECIAL  ("compress-algorithm",     JobNode,jobOptions,                             configValueParseCompressAlgorithm,configValueFormatInitCompressAlgorithm,configValueFormatDoneCompressAlgorithm,configValueFormatCompressAlgorithm,NULL),
-  CONFIG_STRUCT_VALUE_SPECIAL  ("compress-exclude",       JobNode,compressExcludePatternList,             configValueParsePattern,configValueFormatInitPattern,configValueFormatDonePattern,configValueFormatPattern,NULL),
+  CONFIG_STRUCT_VALUE_SPECIAL  ("delta-compress-algorithm",JobNode,jobOptions.compressAlgorithm.delta,     configValueParseDeltaCompressAlgorithm,configValueFormatInitDeltaCompressAlgorithm,configValueFormatDoneDeltaCompressAlgorithm,configValueFormatDeltaCompressAlgorithm,NULL),
+  CONFIG_STRUCT_VALUE_SPECIAL  ("byte-compress-algorithm", JobNode,jobOptions.compressAlgorithm.byte,      configValueParseByteCompressAlgorithm,configValueFormatInitByteCompressAlgorithm,configValueFormatDoneByteCompressAlgorithm,configValueFormatByteCompressAlgorithm,NULL),
+  CONFIG_STRUCT_VALUE_SPECIAL  ("compress-exclude",        JobNode,compressExcludePatternList,             configValueParsePattern,configValueFormatInitPattern,configValueFormatDonePattern,configValueFormatPattern,NULL),
 
-  CONFIG_STRUCT_VALUE_SELECT   ("crypt-algorithm",        JobNode,jobOptions.cryptAlgorithm,              CONFIG_VALUE_CRYPT_ALGORITHMS),
-  CONFIG_STRUCT_VALUE_SELECT   ("crypt-type",             JobNode,jobOptions.cryptType,                   CONFIG_VALUE_CRYPT_TYPES),
-  CONFIG_STRUCT_VALUE_SELECT   ("crypt-password-mode",    JobNode,jobOptions.cryptPasswordMode,           CONFIG_VALUE_PASSWORD_MODES),
-  CONFIG_STRUCT_VALUE_SPECIAL  ("crypt-password",         JobNode,jobOptions.cryptPassword,               configValueParsePassword,configValueFormatInitPassord,NULL,configValueFormatPassword,NULL),
-  CONFIG_STRUCT_VALUE_STRING   ("crypt-public-key",       JobNode,jobOptions.cryptPublicKeyFileName       ),
+  CONFIG_STRUCT_VALUE_SELECT   ("crypt-algorithm",         JobNode,jobOptions.cryptAlgorithm,              CONFIG_VALUE_CRYPT_ALGORITHMS),
+  CONFIG_STRUCT_VALUE_SELECT   ("crypt-type",              JobNode,jobOptions.cryptType,                   CONFIG_VALUE_CRYPT_TYPES),
+  CONFIG_STRUCT_VALUE_SELECT   ("crypt-password-mode",     JobNode,jobOptions.cryptPasswordMode,           CONFIG_VALUE_PASSWORD_MODES),
+  CONFIG_STRUCT_VALUE_SPECIAL  ("crypt-password",          JobNode,jobOptions.cryptPassword,               configValueParsePassword,configValueFormatInitPassord,NULL,configValueFormatPassword,NULL),
+  CONFIG_STRUCT_VALUE_STRING   ("crypt-public-key",        JobNode,jobOptions.cryptPublicKeyFileName       ),
 
-  CONFIG_STRUCT_VALUE_STRING   ("ftp-login-name",         JobNode,jobOptions.ftpServer.loginName          ),
-  CONFIG_STRUCT_VALUE_SPECIAL  ("ftp-password",           JobNode,jobOptions.ftpServer.password,          configValueParsePassword,configValueFormatInitPassord,NULL,configValueFormatPassword,NULL),
+  CONFIG_STRUCT_VALUE_STRING   ("ftp-login-name",          JobNode,jobOptions.ftpServer.loginName          ),
+  CONFIG_STRUCT_VALUE_SPECIAL  ("ftp-password",            JobNode,jobOptions.ftpServer.password,          configValueParsePassword,configValueFormatInitPassord,NULL,configValueFormatPassword,NULL),
 
-  CONFIG_STRUCT_VALUE_INTEGER  ("ssh-port",               JobNode,jobOptions.sshServer.port,              0,65535,NULL),
-  CONFIG_STRUCT_VALUE_STRING   ("ssh-login-name",         JobNode,jobOptions.sshServer.loginName          ),
-  CONFIG_STRUCT_VALUE_SPECIAL  ("ssh-password",           JobNode,jobOptions.sshServer.password,          configValueParsePassword,configValueFormatInitPassord,NULL,configValueFormatPassword,NULL),
-  CONFIG_STRUCT_VALUE_STRING   ("ssh-public-key",         JobNode,jobOptions.sshServer.publicKeyFileName  ),
-  CONFIG_STRUCT_VALUE_STRING   ("ssh-private-key",        JobNode,jobOptions.sshServer.privateKeyFileName ),
+  CONFIG_STRUCT_VALUE_INTEGER  ("ssh-port",                JobNode,jobOptions.sshServer.port,              0,65535,NULL),
+  CONFIG_STRUCT_VALUE_STRING   ("ssh-login-name",          JobNode,jobOptions.sshServer.loginName          ),
+  CONFIG_STRUCT_VALUE_SPECIAL  ("ssh-password",            JobNode,jobOptions.sshServer.password,          configValueParsePassword,configValueFormatInitPassord,NULL,configValueFormatPassword,NULL),
+  CONFIG_STRUCT_VALUE_STRING   ("ssh-public-key",          JobNode,jobOptions.sshServer.publicKeyFileName  ),
+  CONFIG_STRUCT_VALUE_STRING   ("ssh-private-key",         JobNode,jobOptions.sshServer.privateKeyFileName ),
 
-  CONFIG_STRUCT_VALUE_SPECIAL  ("include-file",           JobNode,includeEntryList,                       configValueParseFileEntry,configValueFormatInitEntry,configValueFormatDoneEntry,configValueFormatFileEntry,NULL),
-  CONFIG_STRUCT_VALUE_SPECIAL  ("include-image",          JobNode,includeEntryList,                       configValueParseImageEntry,configValueFormatInitEntry,configValueFormatDoneEntry,configValueFormatImageEntry,NULL),
-  CONFIG_STRUCT_VALUE_SPECIAL  ("exclude",                JobNode,excludePatternList,                     configValueParsePattern,configValueFormatInitPattern,configValueFormatDonePattern,configValueFormatPattern,NULL),
-  CONFIG_STRUCT_VALUE_SPECIAL  ("source",                 JobNode,sourcePatternList,                      configValueParsePattern,configValueFormatInitPattern,configValueFormatDonePattern,configValueFormatPattern,NULL),
+  CONFIG_STRUCT_VALUE_SPECIAL  ("include-file",            JobNode,includeEntryList,                       configValueParseFileEntry,configValueFormatInitEntry,configValueFormatDoneEntry,configValueFormatFileEntry,NULL),
+  CONFIG_STRUCT_VALUE_SPECIAL  ("include-image",           JobNode,includeEntryList,                       configValueParseImageEntry,configValueFormatInitEntry,configValueFormatDoneEntry,configValueFormatImageEntry,NULL),
+  CONFIG_STRUCT_VALUE_SPECIAL  ("exclude",                 JobNode,excludePatternList,                     configValueParsePattern,configValueFormatInitPattern,configValueFormatDonePattern,configValueFormatPattern,NULL),
+  CONFIG_STRUCT_VALUE_SPECIAL  ("source",                  JobNode,sourcePatternList,                      configValueParsePattern,configValueFormatInitPattern,configValueFormatDonePattern,configValueFormatPattern,NULL),
 
-  CONFIG_STRUCT_VALUE_INTEGER64("volume-size",            JobNode,jobOptions.volumeSize,                  0LL,MAX_LONG_LONG,CONFIG_VALUE_BYTES_UNITS),
-  CONFIG_STRUCT_VALUE_BOOLEAN  ("ecc",                    JobNode,jobOptions.errorCorrectionCodesFlag     ),
+  CONFIG_STRUCT_VALUE_INTEGER64("volume-size",             JobNode,jobOptions.volumeSize,                  0LL,MAX_LONG_LONG,CONFIG_VALUE_BYTES_UNITS),
+  CONFIG_STRUCT_VALUE_BOOLEAN  ("ecc",                     JobNode,jobOptions.errorCorrectionCodesFlag     ),
 
-  CONFIG_STRUCT_VALUE_BOOLEAN  ("skip-unreadable",        JobNode,jobOptions.skipUnreadableFlag           ),
-  CONFIG_STRUCT_VALUE_BOOLEAN  ("raw-images",             JobNode,jobOptions.rawImagesFlag                ),
-  CONFIG_STRUCT_VALUE_BOOLEAN  ("overwrite-archive-files",JobNode,jobOptions.overwriteArchiveFilesFlag    ),
-  CONFIG_STRUCT_VALUE_BOOLEAN  ("overwrite-files",        JobNode,jobOptions.overwriteFilesFlag           ),
-  CONFIG_STRUCT_VALUE_BOOLEAN  ("wait-first-volume",      JobNode,jobOptions.waitFirstVolumeFlag          ),
+  CONFIG_STRUCT_VALUE_BOOLEAN  ("skip-unreadable",         JobNode,jobOptions.skipUnreadableFlag           ),
+  CONFIG_STRUCT_VALUE_BOOLEAN  ("raw-images",              JobNode,jobOptions.rawImagesFlag                ),
+  CONFIG_STRUCT_VALUE_BOOLEAN  ("overwrite-archive-files", JobNode,jobOptions.overwriteArchiveFilesFlag    ),
+  CONFIG_STRUCT_VALUE_BOOLEAN  ("overwrite-files",         JobNode,jobOptions.overwriteFilesFlag           ),
+  CONFIG_STRUCT_VALUE_BOOLEAN  ("wait-first-volume",       JobNode,jobOptions.waitFirstVolumeFlag          ),
 
-  CONFIG_STRUCT_VALUE_SPECIAL  ("schedule",               JobNode,scheduleList,                           configValueParseSchedule,configValueFormatInitSchedule,configValueFormatDoneSchedule,configValueFormatSchedule,NULL),
+  CONFIG_STRUCT_VALUE_SPECIAL  ("schedule",                JobNode,scheduleList,                           configValueParseSchedule,configValueFormatInitSchedule,configValueFormatDoneSchedule,configValueFormatSchedule,NULL),
 };
 
 /***************************** Variables *******************************/
@@ -3669,7 +3671,7 @@ LOCAL void serverCommand_optionGet(ClientInfo *clientInfo, uint id, const String
     }
     if (z >= SIZE_OF_ARRAY(CONFIG_VALUES))
     {
-      sendClientResult(clientInfo,id,TRUE,ERROR_UNKNOWN_VALUE,"unknown config value '%S'",name);
+      sendClientResult(clientInfo,id,TRUE,ERROR_UNKNOWN_VALUE,"unknown config value for '%S'",name);
       Semaphore_unlock(&jobList.lock);
       return;
     }
@@ -3760,7 +3762,7 @@ LOCAL void serverCommand_optionSet(ClientInfo *clientInfo, uint id, const String
     }
     else
     {
-      sendClientResult(clientInfo,id,TRUE,ERROR_UNKNOWN_VALUE,"unknown config value '%S'",name);
+      sendClientResult(clientInfo,id,TRUE,ERROR_UNKNOWN_VALUE,"unknown config value for '%S'",name);
     }
   }
 }
@@ -3825,7 +3827,7 @@ LOCAL void serverCommand_optionDelete(ClientInfo *clientInfo, uint id, const Str
     }
     if (z >= SIZE_OF_ARRAY(CONFIG_VALUES))
     {
-      sendClientResult(clientInfo,id,TRUE,ERROR_UNKNOWN_VALUE,"unknown config value '%S'",name);
+      sendClientResult(clientInfo,id,TRUE,ERROR_UNKNOWN_VALUE,"unknown config value for '%S'",name);
       Semaphore_unlock(&jobList.lock);
       return;
     }
@@ -3863,7 +3865,7 @@ LOCAL void serverCommand_jobList(ClientInfo *clientInfo, uint id, const String a
     while ((jobNode != NULL) && !commandAborted(clientInfo,id))
     {
       sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
-                       "%u %'S %'s %s %llu %'s %'s %'s %'s %'s %llu %lu",
+                       "%u %'S %'s %s %llu '%s+%s' %'s %'s %'s %llu %lu",
                        jobNode->id,
                        jobNode->name,
                        getJobStateText(&jobNode->jobOptions,jobNode->state),
@@ -4578,7 +4580,7 @@ LOCAL void serverCommand_includeList(ClientInfo *clientInfo, uint id, const Stri
 }
 
 /***********************************************************************\
-* Name   : serverCommand_includeClear
+* Name   : serverCommand_includeListClear
 * Purpose: clear include list
 * Purpose: clear job include list
 * Input  : clientInfo    - client info
@@ -4591,7 +4593,7 @@ LOCAL void serverCommand_includeList(ClientInfo *clientInfo, uint id, const Stri
 *            <job id>
 \***********************************************************************/
 
-LOCAL void serverCommand_includeClear(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
+LOCAL void serverCommand_includeListClear(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
 {
   uint          jobId;
   SemaphoreLock semaphoreLock;
@@ -4627,7 +4629,7 @@ LOCAL void serverCommand_includeClear(ClientInfo *clientInfo, uint id, const Str
 }
 
 /***********************************************************************\
-* Name   : serverCommand_includeAdd
+* Name   : serverCommand_includeListAdd
 * Purpose: add entry to include list
 * Purpose: add entry to job include list
 * Input  : clientInfo    - client info
@@ -4643,7 +4645,7 @@ LOCAL void serverCommand_includeClear(ClientInfo *clientInfo, uint id, const Str
 *            <pattern>
 \***********************************************************************/
 
-LOCAL void serverCommand_includeAdd(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
+LOCAL void serverCommand_includeListAdd(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
 {
   const char* PATTERN_MAP_FROM[] = {"\\n","\\r","\\\\"};
   const char* PATTERN_MAP_TO[]   = {"\n","\r","\\"};
@@ -4812,7 +4814,7 @@ LOCAL void serverCommand_excludeList(ClientInfo *clientInfo, uint id, const Stri
 }
 
 /***********************************************************************\
-* Name   : serverCommand_excludeClear
+* Name   : serverCommand_excludeListClear
 * Purpose: clear job exclude list
 * Input  : clientInfo    - client info
 *          id            - command id
@@ -4824,7 +4826,7 @@ LOCAL void serverCommand_excludeList(ClientInfo *clientInfo, uint id, const Stri
 *            <job id>
 \***********************************************************************/
 
-LOCAL void serverCommand_excludeClear(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
+LOCAL void serverCommand_excludeListClear(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
 {
   uint          jobId;
   SemaphoreLock semaphoreLock;
@@ -4861,7 +4863,7 @@ LOCAL void serverCommand_excludeClear(ClientInfo *clientInfo, uint id, const Str
 }
 
 /***********************************************************************\
-* Name   : serverCommand_excludeAdd
+* Name   : serverCommand_excludeListAdd
 * Purpose: add entry to job exclude list
 * Input  : clientInfo    - client info
 *          id            - command id
@@ -4876,7 +4878,7 @@ LOCAL void serverCommand_excludeClear(ClientInfo *clientInfo, uint id, const Str
 *            <pattern>
 \***********************************************************************/
 
-LOCAL void serverCommand_excludeAdd(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
+LOCAL void serverCommand_excludeListAdd(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
 {
   const char* PATTERN_MAP_FROM[] = {"\\n","\\r","\\\\"};
   const char* PATTERN_MAP_TO[]   = {"\n","\r","\\"};
@@ -5019,7 +5021,7 @@ LOCAL void serverCommand_sourceList(ClientInfo *clientInfo, uint id, const Strin
 }
 
 /***********************************************************************\
-* Name   : serverCommand_sourceClear
+* Name   : serverCommand_sourceListClear
 * Purpose: clear source list
 * Input  : clientInfo    - client info
 *          id            - command id
@@ -5031,7 +5033,7 @@ LOCAL void serverCommand_sourceList(ClientInfo *clientInfo, uint id, const Strin
 *            <job id>
 \***********************************************************************/
 
-LOCAL void serverCommand_sourceClear(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
+LOCAL void serverCommand_sourceListClear(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
 {
   uint          jobId;
   SemaphoreLock semaphoreLock;
@@ -5068,7 +5070,7 @@ LOCAL void serverCommand_sourceClear(ClientInfo *clientInfo, uint id, const Stri
 }
 
 /***********************************************************************\
-* Name   : serverCommand_sourceAdd
+* Name   : serverCommand_sourceListAdd
 * Purpose: add entry to source list
 * Input  : clientInfo    - client info
 *          id            - command id
@@ -5083,7 +5085,7 @@ LOCAL void serverCommand_sourceClear(ClientInfo *clientInfo, uint id, const Stri
 *            <pattern>
 \***********************************************************************/
 
-LOCAL void serverCommand_sourceAdd(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
+LOCAL void serverCommand_sourceListAdd(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
 {
   uint          jobId;
   PatternTypes  patternType;
@@ -5219,7 +5221,7 @@ LOCAL void serverCommand_excludeCompressList(ClientInfo *clientInfo, uint id, co
 }
 
 /***********************************************************************\
-* Name   : serverCommand_excludeCompressClear
+* Name   : serverCommand_excludeCompressListClear
 * Purpose: clear job exclude compress list
 * Input  : clientInfo    - client info
 *          id            - command id
@@ -5231,7 +5233,7 @@ LOCAL void serverCommand_excludeCompressList(ClientInfo *clientInfo, uint id, co
 *            <job id>
 \***********************************************************************/
 
-LOCAL void serverCommand_excludeCompressClear(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
+LOCAL void serverCommand_excludeCompressListClear(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
 {
   uint          jobId;
   SemaphoreLock semaphoreLock;
@@ -5268,7 +5270,7 @@ LOCAL void serverCommand_excludeCompressClear(ClientInfo *clientInfo, uint id, c
 }
 
 /***********************************************************************\
-* Name   : serverCommand_excludeCompressAdd
+* Name   : serverCommand_excludeCompressListAdd
 * Purpose: add entry to job exclude compress list
 * Input  : clientInfo    - client info
 *          id            - command id
@@ -5283,7 +5285,7 @@ LOCAL void serverCommand_excludeCompressClear(ClientInfo *clientInfo, uint id, c
 *            <pattern>
 \***********************************************************************/
 
-LOCAL void serverCommand_excludeCompressAdd(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
+LOCAL void serverCommand_excludeCompressListAdd(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
 {
   uint          jobId;
   PatternTypes  patternType;
@@ -5489,7 +5491,7 @@ LOCAL void serverCommand_scheduleList(ClientInfo *clientInfo, uint id, const Str
 }
 
 /***********************************************************************\
-* Name   : serverCommand_scheduleClear
+* Name   : serverCommand_scheduleListClear
 * Purpose: clear job schedule list
 * Input  : clientInfo    - client info
 *          id            - command id
@@ -5501,7 +5503,7 @@ LOCAL void serverCommand_scheduleList(ClientInfo *clientInfo, uint id, const Str
 *            <job id>
 \***********************************************************************/
 
-LOCAL void serverCommand_scheduleClear(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
+LOCAL void serverCommand_scheduleListClear(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
 {
   uint          jobId;
   SemaphoreLock semaphoreLock;
@@ -5538,7 +5540,7 @@ LOCAL void serverCommand_scheduleClear(ClientInfo *clientInfo, uint id, const St
 }
 
 /***********************************************************************\
-* Name   : serverCommand_scheduleAdd
+* Name   : serverCommand_scheduleListAdd
 * Purpose: add entry to job schedule list
 * Input  : clientInfo    - client info
 *          id            - command id
@@ -5555,7 +5557,7 @@ LOCAL void serverCommand_scheduleClear(ClientInfo *clientInfo, uint id, const St
 *            <type>
 \***********************************************************************/
 
-LOCAL void serverCommand_scheduleAdd(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
+LOCAL void serverCommand_scheduleListAdd(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
 {
   uint          jobId;
   SemaphoreLock semaphoreLock;
@@ -5724,14 +5726,14 @@ LOCAL void serverCommand_decryptPasswordAdd(ClientInfo *clientInfo, uint id, con
 * Output : -
 * Return : -
 * Notes  : Arguments:
-*            <job id>
+*            <job id>|0
 *            <password>
 \***********************************************************************/
 
 LOCAL void serverCommand_ftpPassword(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
 {
   uint          jobId;
-  Password      *password;
+  String        password;
   SemaphoreLock semaphoreLock;
   JobNode       *jobNode;
 
@@ -5750,21 +5752,28 @@ LOCAL void serverCommand_ftpPassword(ClientInfo *clientInfo, uint id, const Stri
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected password");
     return;
   }
-  password = Password_newString(arguments[1]);
+  password = arguments[1];
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+  if (jobId != 0)
   {
-    // find job
-    jobNode = findJobById(jobId);
-    if (jobNode == NULL)
+    SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
     {
-      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job #%d not found",jobId);
-      Semaphore_unlock(&jobList.lock);
-      return;
-    }
+      // find job
+      jobNode = findJobById(jobId);
+      if (jobNode == NULL)
+      {
+        sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job #%d not found",jobId);
+        Semaphore_unlock(&jobList.lock);
+        return;
+      }
 
-    // set password
-    jobNode->ftpPassword = password;
+      // set password
+      jobNode->ftpPassword = Password_newString(password);
+    }
+  }
+  else
+  {
+    Password_setString(clientInfo->jobOptions.ftpServer.password,password);
   }
 
   sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
@@ -5780,14 +5789,14 @@ LOCAL void serverCommand_ftpPassword(ClientInfo *clientInfo, uint id, const Stri
 * Output : -
 * Return : -
 * Notes  : Arguments:
-*            <job id>
+*            <job id>|0
 *            <password>
 \***********************************************************************/
 
 LOCAL void serverCommand_sshPassword(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
 {
   uint          jobId;
-  Password      *password;
+  String        password;
   SemaphoreLock semaphoreLock;
   JobNode        *jobNode;
 
@@ -5806,21 +5815,28 @@ LOCAL void serverCommand_sshPassword(ClientInfo *clientInfo, uint id, const Stri
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected password");
     return;
   }
-  password = Password_newString(arguments[1]);
+  password = arguments[1];
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+  if (jobId != 0)
   {
-    // find job
-    jobNode = findJobById(jobId);
-    if (jobNode == NULL)
+    SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
     {
-      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job #%d not found",jobId);
-      Semaphore_unlock(&jobList.lock);
-      return;
-    }
+      // find job
+      jobNode = findJobById(jobId);
+      if (jobNode == NULL)
+      {
+        sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job #%d not found",jobId);
+        Semaphore_unlock(&jobList.lock);
+        return;
+      }
 
-    // set password
-    jobNode->sshPassword = password;
+      // set password
+      jobNode->sshPassword = Password_newString(password);
+    }
+  }
+  else
+  {
+    Password_setString(clientInfo->jobOptions.sshServer.password,password);
   }
 
   sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
@@ -5836,14 +5852,14 @@ LOCAL void serverCommand_sshPassword(ClientInfo *clientInfo, uint id, const Stri
 * Output : -
 * Return : -
 * Notes  : Arguments:
-*            <job id>
+*            <job id>|0
 *            <password>
 \***********************************************************************/
 
 LOCAL void serverCommand_cryptPassword(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
 {
   uint          jobId;
-  Password      *password;
+  String        password;
   SemaphoreLock semaphoreLock;
   JobNode       *jobNode;
 
@@ -5862,23 +5878,58 @@ LOCAL void serverCommand_cryptPassword(ClientInfo *clientInfo, uint id, const St
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected password");
     return;
   }
-  password = Password_newString(arguments[1]);
+  password = arguments[1];
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+  if (jobId != 0)
   {
-    // find job
-    jobNode = findJobById(jobId);
-    if (jobNode == NULL)
+    SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
     {
-      sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job #%d not found",jobId);
-      Semaphore_unlock(&jobList.lock);
-      return;
-    }
+      // find job
+      jobNode = findJobById(jobId);
+      if (jobNode == NULL)
+      {
+        sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job #%d not found",jobId);
+        Semaphore_unlock(&jobList.lock);
+        return;
+      }
 
-    // set password
-    if (jobNode->cryptPassword != NULL) Password_delete(jobNode->cryptPassword);
-    jobNode->cryptPassword = password;
+      // set password
+      if (jobNode->cryptPassword == NULL) jobNode->cryptPassword = Password_new();
+      Password_setString(jobNode->cryptPassword,password);
+    }
   }
+  else
+  {
+    Password_setString(clientInfo->jobOptions.cryptPassword,password);
+  }
+
+  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
+}
+
+
+/***********************************************************************\
+* Name   : serverCommand_passwordsClear
+* Purpose: clear ssh/ftp/crypt passwords stored in memory
+* Input  : clientInfo    - client info
+*          id            - command id
+*          arguments     - command arguments
+*          argumentCount - command arguments count
+* Output : -
+* Return : -
+* Notes  : Arguments:
+\***********************************************************************/
+
+LOCAL void serverCommand_passwordsClear(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
+{
+  assert(clientInfo != NULL);
+  assert(arguments != NULL);
+
+  UNUSED_VARIABLE(arguments);
+  UNUSED_VARIABLE(argumentCount);
+
+  Password_clear(clientInfo->jobOptions.ftpServer.password);
+  Password_clear(clientInfo->jobOptions.sshServer.password);
+  Password_clear(clientInfo->jobOptions.cryptPassword);
 
   sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
 }
@@ -6380,6 +6431,66 @@ LOCAL bool updateRestoreCommandStatus(RestoreCommandInfo      *restoreCommandInf
     String_delete(string);
 
   return !commandAborted(restoreCommandInfo->clientInfo,restoreCommandInfo->id);
+}
+
+
+/***********************************************************************\
+* Name   : serverCommand_storageListClear
+* Purpose: clear storage list
+* Input  : clientInfo    - client info
+*          id            - command id
+*          arguments     - command arguments
+*          argumentCount - command arguments count
+* Output : -
+* Return : -
+* Notes  : Arguments:
+\***********************************************************************/
+
+LOCAL void serverCommand_storageListClear(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
+{
+  assert(clientInfo != NULL);
+  assert(arguments != NULL);
+
+  UNUSED_VARIABLE(arguments);
+  UNUSED_VARIABLE(argumentCount);
+
+  Array_clear(clientInfo->storageIdArray,NULL,NULL);
+
+  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
+}
+
+/***********************************************************************\
+* Name   : serverCommand_storageListAdd
+* Purpose: add to storage list
+* Input  : clientInfo    - client info
+*          id            - command id
+*          arguments     - command arguments
+*          argumentCount - command arguments count
+* Output : -
+* Return : -
+* Notes  : Arguments:
+*            <storage>
+\***********************************************************************/
+
+LOCAL void serverCommand_storageListAdd(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
+{
+  DatabaseId storageId;
+
+  assert(clientInfo != NULL);
+  assert(arguments != NULL);
+
+  // get storage id
+  if (argumentCount < 1)
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected storage id");
+    return;
+  }
+  storageId = (DatabaseId)String_toInteger(arguments[0],0,NULL,NULL,0);
+
+  // add to storage id array
+  Array_append(clientInfo->storageIdArray,&storageId);
+
+  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
 }
 
 /***********************************************************************\
@@ -7114,6 +7225,7 @@ LOCAL IndexNode *getIndexEntryNode(IndexList *indexList, ArchiveEntryTypes type,
 * Output : -
 * Return : -
 * Notes  : Arguments:
+*            <all|tagged storage archives 0|1>
 *            <max. count>
 *            <newestEntriesOnly 0|1>
 *            <name pattern>
@@ -7126,8 +7238,9 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
   const char* FILENAME_MAP_FROM[] = {"\n","\r","\\"};
   const char* FILENAME_MAP_TO[]   = {"\\n","\\r","\\\\"};
 
-  ulong               maxCount;
-  bool                newestEntriesOnly;
+  bool                checkedStorageOnlyFlag;
+  ulong               entryMaxCount;
+  bool                newestEntriesOnlyFlag;
   String              string;
   String              pattern;
   IndexList           indexList;
@@ -7157,19 +7270,25 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected max. number of entries to send");
     return;
   }
-  maxCount = String_toInteger64(arguments[0],STRING_BEGIN,NULL,NULL,0);
-  if (argumentCount < 2)
-  {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected newest entries only flag");
-    return;
-  }
-  newestEntriesOnly = String_toBoolean(arguments[1],STRING_BEGIN,NULL,NULL,0,NULL,0);
+  checkedStorageOnlyFlag = String_toBoolean(arguments[0],STRING_BEGIN,NULL,NULL,0,NULL,0);
   if (argumentCount < 2)
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected filter pattern");
     return;
   }
-  string = arguments[2];
+  entryMaxCount = String_toInteger64(arguments[1],STRING_BEGIN,NULL,NULL,0);
+  if (argumentCount < 3)
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected newest entries only flag");
+    return;
+  }
+  newestEntriesOnlyFlag = String_toBoolean(arguments[2],STRING_BEGIN,NULL,NULL,0,NULL,0);
+  if (argumentCount < 4)
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected filter pattern");
+    return;
+  }
+  string = arguments[3];
 
   if (indexDatabaseHandle != NULL)
   {
@@ -7182,12 +7301,26 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
     destinationName = String_new();
 
     // collect index data
-    if ((maxCount == 0L) || (List_count(&indexList) < maxCount))
+    if ((entryMaxCount == 0L) || (List_count(&indexList) < entryMaxCount))
     {
-      error = Index_initListFiles(&databaseQueryHandle,
-                                  indexDatabaseHandle,
-                                  pattern
-                                 );
+      if (checkedStorageOnlyFlag)
+      {
+        error = Index_initListFiles(&databaseQueryHandle,
+                                    indexDatabaseHandle,
+                                    Array_cArray(clientInfo->storageIdArray),
+                                    Array_length(clientInfo->storageIdArray),
+                                    pattern
+                                   );
+      }
+      else
+      {
+        error = Index_initListFiles(&databaseQueryHandle,
+                                    indexDatabaseHandle,
+                                    NULL,
+                                    0,
+                                    pattern
+                                   );
+      }
       if (error != ERROR_NONE)
       {
         sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"%s",Errors_getText(error));
@@ -7199,7 +7332,7 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
         String_delete(pattern);
         return;
       }
-      while (   ((maxCount == 0L) || (List_count(&indexList) < maxCount))
+      while (   ((entryMaxCount == 0L) || (List_count(&indexList) < entryMaxCount))
              && Index_getNextFile(&databaseQueryHandle,
                                   &storageId,
                                   storageName,
@@ -7217,7 +7350,7 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
       {
         UNUSED_VARIABLE(storageId);
 
-        indexNode = getIndexEntryNode(&indexList,ARCHIVE_ENTRY_TYPE_FILE,storageName,name,timeModified,newestEntriesOnly);
+        indexNode = getIndexEntryNode(&indexList,ARCHIVE_ENTRY_TYPE_FILE,storageName,name,timeModified,newestEntriesOnlyFlag);
         if (indexNode == NULL) break;
         if (timeModified >= indexNode->timeModified)
         {
@@ -7235,12 +7368,26 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
       Index_doneList(&databaseQueryHandle);
     }
 
-    if ((maxCount == 0L) || (List_count(&indexList) < maxCount))
+    if ((entryMaxCount == 0L) || (List_count(&indexList) < entryMaxCount))
     {
-      error = Index_initListImages(&databaseQueryHandle,
-                                   indexDatabaseHandle,
-                                   pattern
-                                  );
+      if (checkedStorageOnlyFlag)
+      {
+        error = Index_initListImages(&databaseQueryHandle,
+                                     indexDatabaseHandle,
+                                     Array_cArray(clientInfo->storageIdArray),
+                                     Array_length(clientInfo->storageIdArray),
+                                     pattern
+                                    );
+      }
+      else
+      {
+        error = Index_initListImages(&databaseQueryHandle,
+                                     indexDatabaseHandle,
+                                     NULL,
+                                     0,
+                                     pattern
+                                    );
+      }
       if (error != ERROR_NONE)
       {
         sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"%s",Errors_getText(error));
@@ -7252,7 +7399,7 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
         String_delete(pattern);
         return;
       }
-      while (   ((maxCount == 0L) || (List_count(&indexList) < maxCount))
+      while (   ((entryMaxCount == 0L) || (List_count(&indexList) < entryMaxCount))
              && Index_getNextImage(&databaseQueryHandle,
                                    &storageId,
                                    storageName,
@@ -7266,7 +7413,7 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
       {
         UNUSED_VARIABLE(storageId);
 
-        indexNode = getIndexEntryNode(&indexList,ARCHIVE_ENTRY_TYPE_IMAGE,storageName,name,timeModified,newestEntriesOnly);
+        indexNode = getIndexEntryNode(&indexList,ARCHIVE_ENTRY_TYPE_IMAGE,storageName,name,timeModified,newestEntriesOnlyFlag);
         if (indexNode == NULL) break;
         if (timeModified >= indexNode->timeModified)
         {
@@ -7281,12 +7428,26 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
       Index_doneList(&databaseQueryHandle);
     }
 
-    if ((maxCount == 0L) || (List_count(&indexList) < maxCount))
+    if ((entryMaxCount == 0L) || (List_count(&indexList) < entryMaxCount))
     {
-      error = Index_initListDirectories(&databaseQueryHandle,
-                                        indexDatabaseHandle,
-                                        pattern
-                                       );
+      if (checkedStorageOnlyFlag)
+      {
+        error = Index_initListDirectories(&databaseQueryHandle,
+                                          indexDatabaseHandle,
+                                          Array_cArray(clientInfo->storageIdArray),
+                                          Array_length(clientInfo->storageIdArray),
+                                          pattern
+                                         );
+      }
+      else
+      {
+        error = Index_initListDirectories(&databaseQueryHandle,
+                                          indexDatabaseHandle,
+                                          NULL,
+                                          0,
+                                          pattern
+                                         );
+      }
       if (error != ERROR_NONE)
       {
         sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"%s",Errors_getText(error));
@@ -7298,7 +7459,7 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
         String_delete(pattern);
         return;
       }
-      while (   ((maxCount == 0L) || (List_count(&indexList) < maxCount))
+      while (   ((entryMaxCount == 0L) || (List_count(&indexList) < entryMaxCount))
              && Index_getNextDirectory(&databaseQueryHandle,
                                        &storageId,
                                        storageName,
@@ -7313,7 +7474,7 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
       {
         UNUSED_VARIABLE(storageId);
 
-        indexNode = getIndexEntryNode(&indexList,ARCHIVE_ENTRY_TYPE_DIRECTORY,storageName,name,timeModified,newestEntriesOnly);
+        indexNode = getIndexEntryNode(&indexList,ARCHIVE_ENTRY_TYPE_DIRECTORY,storageName,name,timeModified,newestEntriesOnlyFlag);
         if (indexNode == NULL) break;
         if (timeModified >= indexNode->timeModified)
         {
@@ -7328,12 +7489,26 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
       Index_doneList(&databaseQueryHandle);
     }
 
-    if ((maxCount == 0L) || (List_count(&indexList) < maxCount))
+    if ((entryMaxCount == 0L) || (List_count(&indexList) < entryMaxCount))
     {
-      error = Index_initListLinks(&databaseQueryHandle,
-                                  indexDatabaseHandle,
-                                  pattern
-                                 );
+      if (checkedStorageOnlyFlag)
+      {
+        error = Index_initListLinks(&databaseQueryHandle,
+                                    indexDatabaseHandle,
+                                    Array_cArray(clientInfo->storageIdArray),
+                                    Array_length(clientInfo->storageIdArray),
+                                    pattern
+                                   );
+      }
+      else
+      {
+        error = Index_initListLinks(&databaseQueryHandle,
+                                    indexDatabaseHandle,
+                                    NULL,
+                                    0,
+                                    pattern
+                                   );
+      }
       if (error != ERROR_NONE)
       {
         sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"%s",Errors_getText(error));
@@ -7345,7 +7520,7 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
         String_delete(pattern);
         return;
       }
-      while (   ((maxCount == 0L) || (List_count(&indexList) < maxCount))
+      while (   ((entryMaxCount == 0L) || (List_count(&indexList) < entryMaxCount))
              && Index_getNextLink(&databaseQueryHandle,
                                   &storageId,
                                   storageName,
@@ -7361,7 +7536,7 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
       {
         UNUSED_VARIABLE(storageId);
 
-        indexNode = getIndexEntryNode(&indexList,ARCHIVE_ENTRY_TYPE_LINK,storageName,name,timeModified,newestEntriesOnly);
+        indexNode = getIndexEntryNode(&indexList,ARCHIVE_ENTRY_TYPE_LINK,storageName,name,timeModified,newestEntriesOnlyFlag);
         if (indexNode == NULL) break;
         if (timeModified >= indexNode->timeModified)
         {
@@ -7377,12 +7552,26 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
       Index_doneList(&databaseQueryHandle);
     }
 
-    if ((maxCount == 0L) || (List_count(&indexList) < maxCount))
+    if ((entryMaxCount == 0L) || (List_count(&indexList) < entryMaxCount))
     {
-      error = Index_initListHardLinks(&databaseQueryHandle,
-                                      indexDatabaseHandle,
-                                      pattern
-                                     );
+      if (checkedStorageOnlyFlag)
+      {
+        error = Index_initListHardLinks(&databaseQueryHandle,
+                                        indexDatabaseHandle,
+                                        Array_cArray(clientInfo->storageIdArray),
+                                        Array_length(clientInfo->storageIdArray),
+                                        pattern
+                                       );
+      }
+      else
+      {
+        error = Index_initListHardLinks(&databaseQueryHandle,
+                                        indexDatabaseHandle,
+                                        NULL,
+                                        0,
+                                        pattern
+                                       );
+      }
       if (error != ERROR_NONE)
       {
         sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"%s",Errors_getText(error));
@@ -7394,7 +7583,7 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
         String_delete(pattern);
         return;
       }
-      while (   ((maxCount == 0L) || (List_count(&indexList) < maxCount))
+      while (   ((entryMaxCount == 0L) || (List_count(&indexList) < entryMaxCount))
              && Index_getNextHardLink(&databaseQueryHandle,
                                       &storageId,
                                       storageName,
@@ -7412,7 +7601,7 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
       {
         UNUSED_VARIABLE(storageId);
 
-        indexNode = getIndexEntryNode(&indexList,ARCHIVE_ENTRY_TYPE_HARDLINK,storageName,name,timeModified,newestEntriesOnly);
+        indexNode = getIndexEntryNode(&indexList,ARCHIVE_ENTRY_TYPE_HARDLINK,storageName,name,timeModified,newestEntriesOnlyFlag);
         if (indexNode == NULL) break;
         if (timeModified >= indexNode->timeModified)
         {
@@ -7430,12 +7619,26 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
       Index_doneList(&databaseQueryHandle);
     }
 
-    if ((maxCount == 0L) || (List_count(&indexList) < maxCount))
+    if ((entryMaxCount == 0L) || (List_count(&indexList) < entryMaxCount))
     {
-      error = Index_initListSpecial(&databaseQueryHandle,
-                                    indexDatabaseHandle,
-                                    pattern
-                                   );
+      if (checkedStorageOnlyFlag)
+      {
+        error = Index_initListSpecial(&databaseQueryHandle,
+                                      indexDatabaseHandle,
+                                      Array_cArray(clientInfo->storageIdArray),
+                                      Array_length(clientInfo->storageIdArray),
+                                      pattern
+                                     );
+      }
+      else
+      {
+        error = Index_initListSpecial(&databaseQueryHandle,
+                                      indexDatabaseHandle,
+                                      NULL,
+                                      0,
+                                      pattern
+                                     );
+      }
       if (error != ERROR_NONE)
       {
         sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"%s",Errors_getText(error));
@@ -7447,7 +7650,7 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
         String_delete(pattern);
         return;
       }
-      while (   ((maxCount == 0L) || (List_count(&indexList) < maxCount))
+      while (   ((entryMaxCount == 0L) || (List_count(&indexList) < entryMaxCount))
              && Index_getNextSpecial(&databaseQueryHandle,
                                      &storageId,
                                      storageName,
@@ -7462,7 +7665,7 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
       {
         UNUSED_VARIABLE(storageId);
 
-        indexNode = getIndexEntryNode(&indexList,ARCHIVE_ENTRY_TYPE_SPECIAL,storageName,name,timeModified,newestEntriesOnly);
+        indexNode = getIndexEntryNode(&indexList,ARCHIVE_ENTRY_TYPE_SPECIAL,storageName,name,timeModified,newestEntriesOnlyFlag);
         if (indexNode == NULL) break;
         if (timeModified >= indexNode->timeModified)
         {
@@ -7695,70 +7898,76 @@ LOCAL void serverCommand_debugDumpMemoryInfo(ClientInfo *clientInfo, uint id, co
 const struct
 {
   const char            *name;
-  const char            *parameters;
   ServerCommandFunction serverCommandFunction;
   AuthorizationStates   authorizationState;
 }
 SERVER_COMMANDS[] =
 {
-  { "ERROR_INFO",                   "i",    serverCommand_errorInfo,                 AUTHORIZATION_STATE_OK      },
-  { "AUTHORIZE",                    "S",    serverCommand_authorize,                 AUTHORIZATION_STATE_WAITING },
-  { "GET",                          "s",    serverCommand_get,                       AUTHORIZATION_STATE_OK      },
-  { "ABORT",                        "i",        serverCommand_abort,                     AUTHORIZATION_STATE_OK      },
-  { "STATUS",                       "",         serverCommand_status,                    AUTHORIZATION_STATE_OK      },
-  { "PAUSE",                        "i",        serverCommand_pause,                     AUTHORIZATION_STATE_OK      },
-  { "SUSPEND",                      "",         serverCommand_suspend,                   AUTHORIZATION_STATE_OK      },
-  { "CONTINUE",                     "",         serverCommand_continue,                  AUTHORIZATION_STATE_OK      },
-  { "DEVICE_LIST",                  "",         serverCommand_deviceList,                AUTHORIZATION_STATE_OK      },
-  { "FILE_LIST",                    "S",        serverCommand_fileList,                  AUTHORIZATION_STATE_OK      },
-  { "DIRECTORY_INFO",               "S",        serverCommand_directoryInfo,             AUTHORIZATION_STATE_OK      },
-  { "JOB_LIST",                     "",         serverCommand_jobList,                   AUTHORIZATION_STATE_OK      },
-  { "JOB_INFO",                     "i",        serverCommand_jobInfo,                   AUTHORIZATION_STATE_OK      },
-  { "JOB_NEW",                      "S",        serverCommand_jobNew,                    AUTHORIZATION_STATE_OK      },
-  { "JOB_COPY",                     "i S",      serverCommand_jobCopy,                   AUTHORIZATION_STATE_OK      },
-  { "JOB_RENAME",                   "i S",      serverCommand_jobRename,                 AUTHORIZATION_STATE_OK      },
-  { "JOB_DELETE",                   "i",        serverCommand_jobDelete,                 AUTHORIZATION_STATE_OK      },
-  { "JOB_START",                    "i",        serverCommand_jobStart,                  AUTHORIZATION_STATE_OK      },
-  { "JOB_ABORT",                    "i",        serverCommand_jobAbort,                  AUTHORIZATION_STATE_OK      },
-  { "JOB_FLUSH",                    "",         serverCommand_jobFlush,                  AUTHORIZATION_STATE_OK      },
-  { "INCLUDE_LIST",                 "i",        serverCommand_includeList,               AUTHORIZATION_STATE_OK      },
-  { "INCLUDE_CLEAR",                "i",        serverCommand_includeClear,              AUTHORIZATION_STATE_OK      },
-  { "INCLUDE_ADD",                  "i S",      serverCommand_includeAdd,                AUTHORIZATION_STATE_OK      },
-  { "EXCLUDE_LIST",                 "i",        serverCommand_excludeList,               AUTHORIZATION_STATE_OK      },
-  { "EXCLUDE_CLEAR",                "i",        serverCommand_excludeClear,              AUTHORIZATION_STATE_OK      },
-  { "EXCLUDE_ADD",                  "i S",      serverCommand_excludeAdd,                AUTHORIZATION_STATE_OK      },
-  { "SOURCE_LIST",                  "i",    serverCommand_sourceList,                AUTHORIZATION_STATE_OK      },
-  { "SOURCE_CLEAR",                 "i",    serverCommand_sourceClear,               AUTHORIZATION_STATE_OK      },
-  { "SOURCE_ADD",                   "i S",  serverCommand_sourceAdd,                 AUTHORIZATION_STATE_OK      },
-  { "EXCLUDE_COMPRESS_LIST",        "i",        serverCommand_excludeCompressList,       AUTHORIZATION_STATE_OK      },
-  { "EXCLUDE_COMPRESS_CLEAR",       "i",        serverCommand_excludeCompressClear,      AUTHORIZATION_STATE_OK      },
-  { "EXCLUDE_COMPRESS_ADD",         "i S",      serverCommand_excludeCompressAdd,        AUTHORIZATION_STATE_OK      },
-  { "SCHEDULE_LIST",                "i",        serverCommand_scheduleList,              AUTHORIZATION_STATE_OK      },
-  { "SCHEDULE_CLEAR",               "i",        serverCommand_scheduleClear,             AUTHORIZATION_STATE_OK      },
-  { "SCHEDULE_ADD",                 "i S",      serverCommand_scheduleAdd,               AUTHORIZATION_STATE_OK      },
-  { "OPTION_GET",                   "s",        serverCommand_optionGet,                 AUTHORIZATION_STATE_OK      },
-  { "OPTION_SET",                   "s S",      serverCommand_optionSet,                 AUTHORIZATION_STATE_OK      },
-  { "OPTION_DELETE",                "s S",      serverCommand_optionDelete,              AUTHORIZATION_STATE_OK      },
-  { "DECRYPT_PASSWORD_CLEAR",       "",         serverCommand_decryptPasswordsClear,     AUTHORIZATION_STATE_OK      },
-  { "DECRYPT_PASSWORD_ADD",         "S",        serverCommand_decryptPasswordAdd,        AUTHORIZATION_STATE_OK      },
-  { "FTP_PASSWORD",                 "i S",      serverCommand_ftpPassword,               AUTHORIZATION_STATE_OK      },
-  { "SSH_PASSWORD",                 "i S",      serverCommand_sshPassword,               AUTHORIZATION_STATE_OK      },
-  { "CRYPT_PASSWORD",               "S",        serverCommand_cryptPassword,             AUTHORIZATION_STATE_OK      },
-  { "VOLUME_LOAD",                  "i i",      serverCommand_volumeLoad,                AUTHORIZATION_STATE_OK      },
-  { "VOLUME_UNLOAD",                "",         serverCommand_volumeUnload,              AUTHORIZATION_STATE_OK      },
-  { "ARCHIVE_LIST",                 "S S",      serverCommand_archiveList,               AUTHORIZATION_STATE_OK      },
-  { "RESTORE",                      "S b S b S",serverCommand_restore,                   AUTHORIZATION_STATE_OK      },
+  { "ERROR_INFO",                 serverCommand_errorInfo,               AUTHORIZATION_STATE_OK      },
+  { "AUTHORIZE",                  serverCommand_authorize,               AUTHORIZATION_STATE_WAITING },
+  { "GET",                        serverCommand_get,                     AUTHORIZATION_STATE_OK      },
+  { "ABORT",                      serverCommand_abort,                   AUTHORIZATION_STATE_OK      },
+  { "STATUS",                     serverCommand_status,                  AUTHORIZATION_STATE_OK      },
+  { "PAUSE",                      serverCommand_pause,                   AUTHORIZATION_STATE_OK      },
+  { "SUSPEND",                    serverCommand_suspend,                 AUTHORIZATION_STATE_OK      },
+  { "CONTINUE",                   serverCommand_continue,                AUTHORIZATION_STATE_OK      },
+  { "DEVICE_LIST",                serverCommand_deviceList,              AUTHORIZATION_STATE_OK      },
+  { "FILE_LIST",                  serverCommand_fileList,                AUTHORIZATION_STATE_OK      },
+  { "DIRECTORY_INFO",             serverCommand_directoryInfo,           AUTHORIZATION_STATE_OK      },
+  { "JOB_LIST",                   serverCommand_jobList,                 AUTHORIZATION_STATE_OK      },
+  { "JOB_INFO",                   serverCommand_jobInfo,                 AUTHORIZATION_STATE_OK      },
+  { "JOB_NEW",                    serverCommand_jobNew,                  AUTHORIZATION_STATE_OK      },
+  { "JOB_COPY",                   serverCommand_jobCopy,                 AUTHORIZATION_STATE_OK      },
+  { "JOB_RENAME",                 serverCommand_jobRename,               AUTHORIZATION_STATE_OK      },
+  { "JOB_DELETE",                 serverCommand_jobDelete,               AUTHORIZATION_STATE_OK      },
+  { "JOB_START",                  serverCommand_jobStart,                AUTHORIZATION_STATE_OK      },
+  { "JOB_ABORT",                  serverCommand_jobAbort,                AUTHORIZATION_STATE_OK      },
+  { "JOB_FLUSH",                  serverCommand_jobFlush,                AUTHORIZATION_STATE_OK      },
+  { "INCLUDE_LIST",               serverCommand_includeList,             AUTHORIZATION_STATE_OK      },
+  { "INCLUDE_LIST_CLEAR",         serverCommand_includeListClear,        AUTHORIZATION_STATE_OK      },
+  { "INCLUDE_LIST_ADD",           serverCommand_includeListAdd,          AUTHORIZATION_STATE_OK      },
+  { "EXCLUDE_LIST",               serverCommand_excludeList,             AUTHORIZATION_STATE_OK      },
+  { "EXCLUDE_LIST_CLEAR",         serverCommand_excludeListClear,        AUTHORIZATION_STATE_OK      },
+  { "EXCLUDE_LIST_ADD",           serverCommand_excludeListAdd,          AUTHORIZATION_STATE_OK      },
+  { "SOURCE_LIST",                serverCommand_sourceList,              AUTHORIZATION_STATE_OK      },
+  { "SOURCE_LIST_CLEAR",          serverCommand_sourceListClear,         AUTHORIZATION_STATE_OK      },
+  { "SOURCE_LIST_ADD",            serverCommand_sourceListAdd,           AUTHORIZATION_STATE_OK      },
+  { "EXCLUDE_COMPRESS_LIST",      serverCommand_excludeCompressList,     AUTHORIZATION_STATE_OK      },
+  { "EXCLUDE_COMPRESS_LIST_CLEAR",serverCommand_excludeCompressListClear,AUTHORIZATION_STATE_OK      },
+  { "EXCLUDE_COMPRESS_LIST_ADD",  serverCommand_excludeCompressListAdd,  AUTHORIZATION_STATE_OK      },
+  { "SCHEDULE_LIST",              serverCommand_scheduleList,            AUTHORIZATION_STATE_OK      },
+  { "SCHEDULE_LIST_CLEAR",        serverCommand_scheduleListClear,       AUTHORIZATION_STATE_OK      },
+  { "SCHEDULE_LIST_ADD",          serverCommand_scheduleListAdd,         AUTHORIZATION_STATE_OK      },
+  { "OPTION_GET",                 serverCommand_optionGet,               AUTHORIZATION_STATE_OK      },
+  { "OPTION_SET",                 serverCommand_optionSet,               AUTHORIZATION_STATE_OK      },
+  { "OPTION_DELETE",              serverCommand_optionDelete,            AUTHORIZATION_STATE_OK      },
+  { "DECRYPT_PASSWORD_CLEAR",     serverCommand_decryptPasswordsClear,   AUTHORIZATION_STATE_OK      },
+  { "DECRYPT_PASSWORD_ADD",       serverCommand_decryptPasswordAdd,      AUTHORIZATION_STATE_OK      },
+  { "FTP_PASSWORD",               serverCommand_ftpPassword,             AUTHORIZATION_STATE_OK      },
+  { "SSH_PASSWORD",               serverCommand_sshPassword,             AUTHORIZATION_STATE_OK      },
+  { "CRYPT_PASSWORD",             serverCommand_cryptPassword,           AUTHORIZATION_STATE_OK      },
+  { "PASSWORDS_CLEAR",            serverCommand_passwordsClear,          AUTHORIZATION_STATE_OK      },
+  { "VOLUME_LOAD",                serverCommand_volumeLoad,              AUTHORIZATION_STATE_OK      },
+  { "VOLUME_UNLOAD",              serverCommand_volumeUnload,            AUTHORIZATION_STATE_OK      },
 
-  { "INDEX_STORAGE_LIST",           "i S S",    serverCommand_indexStorageList,          AUTHORIZATION_STATE_OK      },
-  { "INDEX_STORAGE_ADD",            "S",        serverCommand_indexStorageAdd,           AUTHORIZATION_STATE_OK      },
-  { "INDEX_STORAGE_REMOVE",         "i",        serverCommand_indexStorageRemove,        AUTHORIZATION_STATE_OK      },
-  { "INDEX_STORAGE_REFRESH",        "i",        serverCommand_indexStorageRefresh,       AUTHORIZATION_STATE_OK      },
-  { "INDEX_ENTRIES_LIST",           "i b S",    serverCommand_indexEntriesList,          AUTHORIZATION_STATE_OK      },
+  { "ARCHIVE_LIST",               serverCommand_archiveList,             AUTHORIZATION_STATE_OK      },
+
+  { "STORAGE_LIST_CLEAR",         serverCommand_storageListClear,        AUTHORIZATION_STATE_OK      },
+  { "STORAGE_LIST_ADD",           serverCommand_storageListAdd,          AUTHORIZATION_STATE_OK      },
+
+  { "RESTORE",                    serverCommand_restore,                 AUTHORIZATION_STATE_OK      },
+
+  { "INDEX_STORAGE_LIST",         serverCommand_indexStorageList,        AUTHORIZATION_STATE_OK      },
+  { "INDEX_STORAGE_ADD",          serverCommand_indexStorageAdd,         AUTHORIZATION_STATE_OK      },
+  { "INDEX_STORAGE_REMOVE",       serverCommand_indexStorageRemove,      AUTHORIZATION_STATE_OK      },
+  { "INDEX_STORAGE_REFRESH",      serverCommand_indexStorageRefresh,     AUTHORIZATION_STATE_OK      },
+
+  { "INDEX_ENTRIES_LIST",         serverCommand_indexEntriesList,        AUTHORIZATION_STATE_OK      },
 
   #ifndef NDEBUG
-  { "DEBUG_PRINT_STATISTICS",       "",         serverCommand_debugPrintStatistics,      AUTHORIZATION_STATE_OK      },
-  { "DEBUG_PRINT_MEMORY_INFO",      "",         serverCommand_debugPrintMemoryInfo,      AUTHORIZATION_STATE_OK      },
-  { "DEBUG_DUMP_MEMORY_INFO",       "",         serverCommand_debugDumpMemoryInfo,       AUTHORIZATION_STATE_OK      },
+  { "DEBUG_PRINT_STATISTICS",     serverCommand_debugPrintStatistics,    AUTHORIZATION_STATE_OK      },
+  { "DEBUG_PRINT_MEMORY_INFO",    serverCommand_debugPrintMemoryInfo,    AUTHORIZATION_STATE_OK      },
+  { "DEBUG_DUMP_MEMORY_INFO",     serverCommand_debugDumpMemoryInfo,     AUTHORIZATION_STATE_OK      },
   #endif /* NDEBUG */
 };
 
@@ -8036,12 +8245,16 @@ LOCAL void initNetworkClient(ClientInfo   *clientInfo,
   clientInfo->network.port         = port;
   clientInfo->network.socketHandle = socketHandle;
   clientInfo->network.exitFlag     = FALSE;
-
   EntryList_init(&clientInfo->includeEntryList);
   PatternList_init(&clientInfo->excludePatternList);
   PatternList_init(&clientInfo->compressExcludePatternList);
   initJobOptions(&clientInfo->jobOptions);
   List_init(&clientInfo->directoryInfoList);
+  clientInfo->storageIdArray = Array_new(sizeof(DatabaseId),64);
+  if (clientInfo->storageIdArray == NULL)
+  {
+    HALT_INSUFFICIENT_MEMORY();
+  }
 
   if (!MsgQueue_init(&clientInfo->network.commandMsgQueue,0))
   {
@@ -8105,6 +8318,7 @@ LOCAL void doneClient(ClientInfo *clientInfo)
       break;
   }
 
+  Array_delete(clientInfo->storageIdArray,NULL,NULL);
   List_done(&clientInfo->directoryInfoList,(ListNodeFreeFunction)freeDirectoryInfoNode,NULL);
   freeJobOptions(&clientInfo->jobOptions);
   PatternList_done(&clientInfo->compressExcludePatternList);
