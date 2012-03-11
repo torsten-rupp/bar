@@ -28,9 +28,11 @@
 
 /****************************** Macros *********************************/
 
+// begin/end offset of fragment
 #define I0(offset,length) (offset)
 #define I1(offset,length) (((length)>0)?(offset)+(length)-1:(offset))
 
+// begin/end of fragment
 #define F0(fragmentEntryNode) I0(fragmentEntryNode->offset,fragmentEntryNode->length)
 #define F1(fragmentEntryNode) I1(fragmentEntryNode->offset,fragmentEntryNode->length)
 
@@ -213,14 +215,14 @@ void FragmentList_addEntry(FragmentNode *fragmentNode, uint64 offset, uint64 len
   // find prev/next fragment
   prevFragmentEntryNode = NULL;
   fragmentEntryNode = fragmentNode->fragmentEntryList.head;
-  while ((fragmentEntryNode != NULL) && (F1(fragmentEntryNode) < I1(offset,length)))
+  while ((fragmentEntryNode != NULL) && (F1(fragmentEntryNode) <= I1(offset,length)))
   {
     prevFragmentEntryNode = fragmentEntryNode;
     fragmentEntryNode = fragmentEntryNode->next;
   }
   nextFragmentEntryNode = NULL;
   fragmentEntryNode = fragmentNode->fragmentEntryList.tail;
-  while ((fragmentEntryNode != NULL) && (F0(fragmentEntryNode) > I0(offset,length)))
+  while ((fragmentEntryNode != NULL) && (F0(fragmentEntryNode) >= I0(offset,length)))
   {
     nextFragmentEntryNode = fragmentEntryNode;
     fragmentEntryNode = fragmentEntryNode->prev;
@@ -239,7 +241,9 @@ void FragmentList_addEntry(FragmentNode *fragmentNode, uint64 offset, uint64 len
     nextFragmentEntryNode->length = (nextFragmentEntryNode->offset+nextFragmentEntryNode->length)-offset;
     nextFragmentEntryNode->offset = offset;
   }
-  else
+  else if (   ((prevFragmentEntryNode == NULL) || (F1(prevFragmentEntryNode)+1 < I0(offset,length)))
+           && ((nextFragmentEntryNode == NULL) || (F0(nextFragmentEntryNode)-1 > I1(offset,length)))
+          )
   {
     // insert new fragment
     fragmentEntryNode = LIST_NEW_NODE(FragmentEntryNode);
