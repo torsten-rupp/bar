@@ -36,8 +36,8 @@
 
 typedef enum
 {
-  ENTRY_TYPE_FILE,
-  ENTRY_TYPE_IMAGE,
+  ENTRY_TYPE_FILE,                      // store matching entries as files
+  ENTRY_TYPE_IMAGE,                     // store matching entries as block device images
 } EntryTypes;
 
 typedef struct EntryNode
