@@ -154,7 +154,7 @@ LOCAL Device        *currentDevice;
 LOCAL bool          daemonFlag;
 LOCAL bool          noDetachFlag;
 LOCAL uint          serverPort;
-LOCAL bool          serverTLSPort;
+LOCAL uint          serverTLSPort;
 LOCAL const char    *serverCAFileName;
 LOCAL const char    *serverCertFileName;
 LOCAL const char    *serverKeyFileName;
@@ -370,7 +370,7 @@ const CommandLineOptionSelect COMMAND_LINE_OPTIONS_DELTA_COMPRESS_ALGORITHMS[] =
 
 LOCAL const CommandLineOptionSelect COMMAND_LINE_OPTIONS_CRYPT_ALGORITHMS[] =
 {
-  {"none",      CRYPT_ALGORITHM_NONE,      "no crypting"          },
+  {"none",      CRYPT_ALGORITHM_NONE,      "no encryption"          },
 
   #ifdef HAVE_GCRYPT
     {"3DES",      CRYPT_ALGORITHM_3DES,      "3DES cipher"          },
@@ -1817,6 +1817,7 @@ LOCAL void freeDeviceNode(DeviceNode *deviceNode, void *userData)
 LOCAL Errors initAll(void)
 {
   Errors error;
+  String fileName;
 
   // initialise modules
   error = Password_initAll();
@@ -2003,6 +2004,26 @@ LOCAL Errors initAll(void)
 
   outputLine                            = String_new();
   outputNewLineFlag                     = TRUE;
+
+  // initialize default ssh keys
+  fileName = File_appendFileNameCString(String_newCString(getenv("HOME")),".ssh/id_rsa.pub");
+  if (File_exists(fileName))
+  {
+    defaultSSHServer.publicKeyFileName = fileName;
+  }
+  else
+  {
+    String_delete(fileName);
+  }
+  fileName = File_appendFileNameCString(String_newCString(getenv("HOME")),".ssh/id_rsa");
+  if (File_exists(fileName))
+  {
+    defaultSSHServer.privateKeyFileName = fileName;
+  }
+  else
+  {
+    String_delete(fileName);
+  }
 
   // initialize command line options and config values
   ConfigValue_init(CONFIG_VALUES,SIZE_OF_ARRAY(CONFIG_VALUES));
