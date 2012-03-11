@@ -19,6 +19,8 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <dirent.h>
+#include <linux/fs.h>
+#include <sys/ioctl.h>
 #include <utime.h>
 #include <sys/statvfs.h>
 #include <pwd.h>
@@ -1703,15 +1705,20 @@ Errors File_getFileInfo(FileInfo     *fileInfo,
     time_t d0;
     time_t d1;
   } cast;
+  int           handle;
+  Errors        error;
+  long          attributes;
 
   assert(fileName != NULL);
   assert(fileInfo != NULL);
 
+  // get file meta data
   if (lstat64(String_cString(fileName),&fileStat) != 0)
   {
     return ERRORX(IO_ERROR,errno,String_cString(fileName));
   }
 
+  // store meta data
   if      (S_ISREG(fileStat.st_mode))
   {
     fileInfo->type = (fileStat.st_nlink > 1)?FILE_TYPE_HARDLINK:FILE_TYPE_FILE;
@@ -1775,6 +1782,24 @@ Errors File_getFileInfo(FileInfo     *fileInfo,
   cast.d0 = fileStat.st_mtime;
   cast.d1 = fileStat.st_ctime;
   memcpy(fileInfo->cast,&cast,sizeof(FileCast));
+
+  // get extended file attributes
+  handle = open(String_cString(fileName),O_RDONLY|O_NONBLOCK);
+  if (handle == -1)
+  {
+    return ERRORX(IO_ERROR,errno,String_cString(fileName));
+  }
+  fileInfo->attributes = 0LL;
+  if (ioctl(handle,FS_IOC_GETFLAGS,&attributes) != 0)
+  {
+    error = ERRORX(IO_ERROR,errno,String_cString(fileName));
+    close(handle);
+    return error;
+  }
+  if ((attributes & FILE_ATTRIBUTE_COMPRESS   ) != 0LL) fileInfo->attributes |= FILE_ATTRIBUTE_COMPRESS;
+  if ((attributes & FILE_ATTRIBUTE_NO_COMPRESS) != 0LL) fileInfo->attributes |= FILE_ATTRIBUTE_NO_COMPRESS;
+  if ((attributes & FILE_ATTRIBUTE_NO_DUMP    ) != 0LL) fileInfo->attributes |= FILE_ATTRIBUTE_NO_DUMP;
+  close(handle);
 
   return ERROR_NONE;
 }

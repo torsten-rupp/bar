@@ -19,6 +19,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <dirent.h>
+#include <linux/fs.h>
 #include <assert.h>
 
 #include "global.h"
@@ -107,6 +108,11 @@ typedef enum
 #define FILE_DEFAULT_GROUP_ID   0xFFFFFFFF
 #define FILE_DEFAULT_PERMISSION 0xFFFFFFFF
 
+// attributes
+#define FILE_ATTRIBUTE_COMPRESS    FS_COMPR_FL
+#define FILE_ATTRIBUTE_NO_COMPRESS FS_NOCOMP_FL
+#define FILE_ATTRIBUTE_NO_DUMP     FS_NODUMP_FL
+
 /***************************** Datatypes *******************************/
 
 // file i/o handle
@@ -146,6 +152,7 @@ typedef struct
   FilePermission   permission;               // permission flags
   FileSpecialTypes specialType;              // special type; see FileSpecialTypes
   uint32           major,minor;              // special type major/minor number
+  uint64           attributes;               // attributes
 
   uint64           id;                       // unique id (e. g. inode number)
   uint             linkCount;                // number of hard links
