@@ -320,7 +320,6 @@ Errors Command_restore(const StringList                *archiveNameList,
             FileInfo     fileInfo;
             uint64       fragmentOffset,fragmentSize;
             String       destinationFileName;
-            FragmentNode *fragmentNode;
             String       parentDirectoryName;
 //            FileInfo         localFileInfo;
             FileHandle   fileHandle;
@@ -369,34 +368,39 @@ Errors Command_restore(const StringList                *archiveNameList,
                                                           );
 
               // check if file fragment already exists, file already exists
-              fragmentNode = FragmentList_find(&fragmentList,destinationFileName);
-              if (fragmentNode != NULL)
+              if (!jobOptions->noFragmentsCheckFlag)
               {
-                if (!jobOptions->overwriteFilesFlag && FragmentList_entryExists(fragmentNode,fragmentOffset,fragmentSize))
+                fragmentNode = FragmentList_find(&fragmentList,destinationFileName);
+                if (fragmentNode != NULL)
                 {
-                  printInfo(1,
-                            "  Restore file '%s'...skipped (file part %llu..%llu exists)\n",
-                            String_cString(destinationFileName),
-                            fragmentOffset,
-                            (fragmentSize > 0LL)?fragmentOffset+fragmentSize-1:fragmentOffset
-                           );
-                  String_delete(destinationFileName);
-                  Archive_closeEntry(&archiveEntryInfo);
-                  String_delete(fileName);
-                  continue;
+                  if (!jobOptions->overwriteFilesFlag && FragmentList_entryExists(fragmentNode,fragmentOffset,fragmentSize))
+                  {
+                    printInfo(1,
+                              "  Restore file '%s'...skipped (file part %llu..%llu exists)\n",
+                              String_cString(destinationFileName),
+                              fragmentOffset,
+                              (fragmentSize > 0LL)?fragmentOffset+fragmentSize-1:fragmentOffset
+                             );
+                    String_delete(destinationFileName);
+                    Archive_closeEntry(&archiveEntryInfo);
+                    String_delete(fileName);
+                    continue;
+                  }
                 }
-              }
-              else
-              {
-                if (!jobOptions->overwriteFilesFlag && File_exists(destinationFileName))
+                else
                 {
-                  printInfo(1,"  Restore file '%s'...skipped (file exists)\n",String_cString(destinationFileName));
-                  String_delete(destinationFileName);
-                  Archive_closeEntry(&archiveEntryInfo);
-                  String_delete(fileName);
-                  continue;
+                  if (!jobOptions->overwriteFilesFlag && File_exists(destinationFileName))
+                  {
+                    printInfo(1,"  Restore file '%s'...skipped (file exists)\n",String_cString(destinationFileName));
+                    String_delete(destinationFileName);
+                    Archive_closeEntry(&archiveEntryInfo);
+                    String_delete(fileName);
+                    continue;
+                  }
+                  fragmentNode = FragmentList_add(&fragmentList,destinationFileName,fileInfo.size,&fileInfo,sizeof(FileInfo));
                 }
-                fragmentNode = FragmentList_add(&fragmentList,destinationFileName,fileInfo.size,&fileInfo,sizeof(FileInfo));
+
+                assert(fragmentNode != NULL);
               }
 
               printInfo(2,"  Restore file '%s'...",String_cString(destinationFileName));
@@ -430,8 +434,8 @@ Errors Command_restore(const StringList                *archiveNameList,
 
                   // set directory owner ship
                   error = File_setOwner(parentDirectoryName,
-                                        (jobOptions->owner.userId  != FILE_DEFAULT_USER_ID )?jobOptions->owner.userId :fileInfo.userId,
-                                        (jobOptions->owner.groupId != FILE_DEFAULT_GROUP_ID)?jobOptions->owner.groupId:fileInfo.groupId
+                                        (jobOptions->owner.userId  != FILE_DEFAULT_USER_ID ) ? jobOptions->owner.userId  : fileInfo.userId,
+                                        (jobOptions->owner.groupId != FILE_DEFAULT_GROUP_ID) ? jobOptions->owner.groupId : fileInfo.groupId
                                        );
                   if (error != ERROR_NONE)
                   {
@@ -574,10 +578,6 @@ Errors Command_restore(const StringList                *archiveNameList,
                 continue;
               }
 
-              // add fragment to file fragment list
-              FragmentList_addEntry(fragmentNode,fragmentOffset,fragmentSize);
-//FragmentList_debugPrintInfo(fragmentNode,String_cString(fileName));
-
               // set file size
               if (!jobOptions->dryRunFlag)
               {
@@ -593,8 +593,14 @@ Errors Command_restore(const StringList                *archiveNameList,
                 File_close(&fileHandle);
               }
 
-              // check if file is complete
-              if (FragmentList_isEntryComplete(fragmentNode))
+              if (!jobOptions->noFragmentsCheckFlag)
+              {
+                // add fragment to file fragment list
+                FragmentList_addEntry(fragmentNode,fragmentOffset,fragmentSize);
+//FragmentList_debugPrintInfo(fragmentNode,String_cString(fileName));
+              }
+
+              if (jobOptions->noFragmentsCheckFlag || FragmentList_isEntryComplete(fragmentNode))
               {
                 // set file time, file owner/group, file permission
                 if (!jobOptions->dryRunFlag)
@@ -628,9 +634,15 @@ Errors Command_restore(const StringList                *archiveNameList,
                     }
                   }
                 }
+              }
 
-                // discard fragment list
-                FragmentList_discard(&fragmentList,fragmentNode);
+              if (!jobOptions->noFragmentsCheckFlag)
+              {
+                if (FragmentList_isEntryComplete(fragmentNode))
+                {
+                  // discard fragment list
+                  FragmentList_discard(&fragmentList,fragmentNode);
+                }
               }
 
               if (!jobOptions->dryRunFlag)
@@ -681,7 +693,6 @@ Errors Command_restore(const StringList                *archiveNameList,
             DeviceInfo   deviceInfo;
             uint64       blockOffset,blockCount;
             String       destinationDeviceName;
-            FragmentNode *fragmentNode;
             DeviceHandle deviceHandle;
             uint64       block;
             ulong        bufferBlockCount;
@@ -727,27 +738,32 @@ Errors Command_restore(const StringList                *archiveNameList,
                                                               );
 
 
-              // check if image fragment exists
-              fragmentNode = FragmentList_find(&fragmentList,imageName);
-              if (fragmentNode != NULL)
+              if (!jobOptions->noFragmentsCheckFlag)
               {
-                if (!jobOptions->overwriteFilesFlag && FragmentList_entryExists(fragmentNode,blockOffset*(uint64)deviceInfo.blockSize,blockCount*(uint64)deviceInfo.blockSize))
+                // check if image fragment exists
+                fragmentNode = FragmentList_find(&fragmentList,imageName);
+                if (fragmentNode != NULL)
                 {
-                  printInfo(1,
-                            "  Restore image '%s'...skipped (image part %llu..%llu exists)\n",
-                            String_cString(destinationDeviceName),
-                            blockOffset*(uint64)deviceInfo.blockSize,
-                            ((blockCount > 0)?blockOffset+blockCount-1:blockOffset)*(uint64)deviceInfo.blockSize
-                           );
-                  String_delete(destinationDeviceName);
-                  Archive_closeEntry(&archiveEntryInfo);
-                  String_delete(imageName);
-                  continue;
+                  if (!jobOptions->overwriteFilesFlag && FragmentList_entryExists(fragmentNode,blockOffset*(uint64)deviceInfo.blockSize,blockCount*(uint64)deviceInfo.blockSize))
+                  {
+                    printInfo(1,
+                              "  Restore image '%s'...skipped (image part %llu..%llu exists)\n",
+                              String_cString(destinationDeviceName),
+                              blockOffset*(uint64)deviceInfo.blockSize,
+                              ((blockCount > 0)?blockOffset+blockCount-1:blockOffset)*(uint64)deviceInfo.blockSize
+                             );
+                    String_delete(destinationDeviceName);
+                    Archive_closeEntry(&archiveEntryInfo);
+                    String_delete(imageName);
+                    continue;
+                  }
                 }
-              }
-              else
-              {
-                fragmentNode = FragmentList_add(&fragmentList,imageName,deviceInfo.size,NULL,0);
+                else
+                {
+                  fragmentNode = FragmentList_add(&fragmentList,imageName,deviceInfo.size,NULL,0);
+                }
+
+                assert(fragmentNode != NULL);
               }
 
               printInfo(2,"  Restore image '%s'...",String_cString(destinationDeviceName));
@@ -853,14 +869,17 @@ Errors Command_restore(const StringList                *archiveNameList,
                 }
               }
 
-              // add fragment to file fragment list
-              FragmentList_addEntry(fragmentNode,blockOffset*(uint64)deviceInfo.blockSize,blockCount*(uint64)deviceInfo.blockSize);
+              if (!jobOptions->noFragmentsCheckFlag)
+              {
+                // add fragment to file fragment list
+                FragmentList_addEntry(fragmentNode,blockOffset*(uint64)deviceInfo.blockSize,blockCount*(uint64)deviceInfo.blockSize);
 //FragmentList_debugPrintInfo(fragmentNode,String_cString(fileName));
 
-              // discard fragment list if file is complete
-              if (FragmentList_isEntryComplete(fragmentNode))
-              {
-                FragmentList_discard(&fragmentList,fragmentNode);
+                // discard fragment list if file is complete
+                if (FragmentList_isEntryComplete(fragmentNode))
+                {
+                  FragmentList_discard(&fragmentList,fragmentNode);
+                }
               }
 
               if (!jobOptions->dryRunFlag)
@@ -1137,8 +1156,8 @@ Errors Command_restore(const StringList                *archiveNameList,
 
                   // set directory owner ship
                   error = File_setOwner(parentDirectoryName,
-                                        (jobOptions->owner.userId != FILE_DEFAULT_USER_ID)?jobOptions->owner.userId:fileInfo.userId,
-                                        (jobOptions->owner.groupId != FILE_DEFAULT_GROUP_ID)?jobOptions->owner.groupId:fileInfo.groupId
+                                        (jobOptions->owner.userId  != FILE_DEFAULT_USER_ID ) ? jobOptions->owner.userId  : fileInfo.userId,
+                                        (jobOptions->owner.groupId != FILE_DEFAULT_GROUP_ID) ? jobOptions->owner.groupId : fileInfo.groupId
                                        );
                   if (error != ERROR_NONE)
                   {
@@ -1293,7 +1312,6 @@ Errors Command_restore(const StringList                *archiveNameList,
             bool             restoredDataFlag;
             const StringNode *stringNode;
             String           fileName;
-            FragmentNode     *fragmentNode;
             String           parentDirectoryName;
 //            FileInfo         localFileInfo;
             FileHandle       fileHandle;
@@ -1381,8 +1399,8 @@ Errors Command_restore(const StringList                *archiveNameList,
 
                     // set directory owner ship
                     error = File_setOwner(parentDirectoryName,
-                                          (jobOptions->owner.userId != FILE_DEFAULT_USER_ID)?jobOptions->owner.userId:fileInfo.userId,
-                                          (jobOptions->owner.groupId != FILE_DEFAULT_GROUP_ID)?jobOptions->owner.groupId:fileInfo.groupId
+                                          (jobOptions->owner.userId  != FILE_DEFAULT_USER_ID ) ? jobOptions->owner.userId  : fileInfo.userId,
+                                          (jobOptions->owner.groupId != FILE_DEFAULT_GROUP_ID) ? jobOptions->owner.groupId : fileInfo.groupId
                                          );
                     if (error != ERROR_NONE)
                     {
@@ -1411,28 +1429,33 @@ Errors Command_restore(const StringList                *archiveNameList,
 
                 if (!restoredDataFlag)
                 {
-                  // check if file fragment already eixsts, file already exists
-                  fragmentNode = FragmentList_find(&fragmentList,fileName);
-                  if (fragmentNode != NULL)
+                  if (!jobOptions->noFragmentsCheckFlag)
                   {
-                    if (!jobOptions->overwriteFilesFlag && FragmentList_entryExists(fragmentNode,fragmentOffset,fragmentSize))
+                    // check if file fragment already eixsts, file already exists
+                    fragmentNode = FragmentList_find(&fragmentList,fileName);
+                    if (fragmentNode != NULL)
                     {
-                      printInfo(2,"skipped (file part %llu..%llu exists)\n",
-                                String_cString(destinationFileName),
-                                fragmentOffset,
-                                (fragmentSize > 0LL)?fragmentOffset+fragmentSize-1:fragmentOffset
-                               );
-                      continue;
+                      if (!jobOptions->overwriteFilesFlag && FragmentList_entryExists(fragmentNode,fragmentOffset,fragmentSize))
+                      {
+                        printInfo(2,"skipped (file part %llu..%llu exists)\n",
+                                  String_cString(destinationFileName),
+                                  fragmentOffset,
+                                  (fragmentSize > 0LL)?fragmentOffset+fragmentSize-1:fragmentOffset
+                                 );
+                        continue;
+                      }
                     }
-                  }
-                  else
-                  {
-                    if (!jobOptions->overwriteFilesFlag && File_exists(destinationFileName))
+                    else
                     {
-                      printInfo(2,"skipped (file exists)\n",String_cString(destinationFileName));
-                      continue;
+                      if (!jobOptions->overwriteFilesFlag && File_exists(destinationFileName))
+                      {
+                        printInfo(2,"skipped (file exists)\n",String_cString(destinationFileName));
+                        continue;
+                      }
+                      fragmentNode = FragmentList_add(&fragmentList,fileName,fileInfo.size,&fileInfo,sizeof(FileInfo));
                     }
-                    fragmentNode = FragmentList_add(&fragmentList,fileName,fileInfo.size,&fileInfo,sizeof(FileInfo));
+
+                    assert(fragmentNode != NULL);
                   }
 
                   if (!jobOptions->dryRunFlag)
@@ -1542,10 +1565,6 @@ Errors Command_restore(const StringList                *archiveNameList,
                     break;
                   }
 
-                  // add fragment to file fragment list
-                  FragmentList_addEntry(fragmentNode,fragmentOffset,fragmentSize);
-//FragmentList_debugPrintInfo(fragmentNode,String_cString(fileName));
-
                   // set file size
                   if (!jobOptions->dryRunFlag)
                   {
@@ -1561,31 +1580,50 @@ Errors Command_restore(const StringList                *archiveNameList,
                     File_close(&fileHandle);
                   }
 
-                  // set file time, file owner/group
-                  if (!jobOptions->dryRunFlag)
+                  if (!jobOptions->noFragmentsCheckFlag)
                   {
-                    if (jobOptions->owner.userId  != FILE_DEFAULT_USER_ID ) fileInfo.userId  = jobOptions->owner.userId;
-                    if (jobOptions->owner.groupId != FILE_DEFAULT_GROUP_ID) fileInfo.groupId = jobOptions->owner.groupId;
-                    error = File_setFileInfo(destinationFileName,&fileInfo);
-                    if (error != ERROR_NONE)
+                    // add fragment to file fragment list
+                    FragmentList_addEntry(fragmentNode,fragmentOffset,fragmentSize);
+//FragmentList_debugPrintInfo(fragmentNode,String_cString(fileName));
+                  }
+
+                  if (jobOptions->noFragmentsCheckFlag || FragmentList_isEntryComplete(fragmentNode))
+                  {
+                    // set file time, file owner/group
+                    if (!jobOptions->dryRunFlag)
                     {
-                      if (jobOptions->stopOnErrorFlag)
+                      if (jobOptions->owner.userId  != FILE_DEFAULT_USER_ID ) fileInfo.userId  = jobOptions->owner.userId;
+                      if (jobOptions->owner.groupId != FILE_DEFAULT_GROUP_ID) fileInfo.groupId = jobOptions->owner.groupId;
+                      error = File_setFileInfo(destinationFileName,&fileInfo);
+                      if (error != ERROR_NONE)
                       {
-                        printInfo(2,"FAIL!\n");
-                        printError("Cannot set file info of '%s' (error: %s)\n",
-                                   String_cString(destinationFileName),
-                                   Errors_getText(error)
-                                  );
-                        restoreInfo.failError = error;
-                        break;
-                      }
-                      else
-                      {
-                        printWarning("Cannot set file info of '%s' (error: %s)\n",
+                        if (jobOptions->stopOnErrorFlag)
+                        {
+                          printInfo(2,"FAIL!\n");
+                          printError("Cannot set file info of '%s' (error: %s)\n",
                                      String_cString(destinationFileName),
                                      Errors_getText(error)
                                     );
+                          restoreInfo.failError = error;
+                          break;
+                        }
+                        else
+                        {
+                          printWarning("Cannot set file info of '%s' (error: %s)\n",
+                                       String_cString(destinationFileName),
+                                       Errors_getText(error)
+                                      );
+                        }
                       }
+                    }
+                  }
+
+                  if (!jobOptions->noFragmentsCheckFlag)
+                  {
+                    if (FragmentList_isEntryComplete(fragmentNode))
+                    {
+                      // discard fragment list
+                      FragmentList_discard(&fragmentList,fragmentNode);
                     }
                   }
 
@@ -1598,10 +1636,13 @@ Errors Command_restore(const StringList                *archiveNameList,
                     printInfo(2,"ok (dry-run)\n");
                   }
 
-                  // discard fragment list if file is complete
-                  if (FragmentList_isEntryComplete(fragmentNode))
+                  if (!jobOptions->noFragmentsCheckFlag)
                   {
-                    FragmentList_discard(&fragmentList,fragmentNode);
+                    // discard fragment list if file is complete
+                    if (FragmentList_isEntryComplete(fragmentNode))
+                    {
+                      FragmentList_discard(&fragmentList,fragmentNode);
+                    }
                   }
 
                   restoredDataFlag = TRUE;
@@ -1760,8 +1801,8 @@ Errors Command_restore(const StringList                *archiveNameList,
 
                   // set directory owner ship
                   error = File_setOwner(parentDirectoryName,
-                                        (jobOptions->owner.userId != FILE_DEFAULT_USER_ID)?jobOptions->owner.userId:fileInfo.userId,
-                                        (jobOptions->owner.groupId != FILE_DEFAULT_GROUP_ID)?jobOptions->owner.groupId:fileInfo.groupId
+                                        (jobOptions->owner.userId  != FILE_DEFAULT_USER_ID ) ? jobOptions->owner.userId  : fileInfo.userId,
+                                        (jobOptions->owner.groupId != FILE_DEFAULT_GROUP_ID) ? jobOptions->owner.groupId : fileInfo.groupId
                                        );
                   if (error != ERROR_NONE)
                   {
@@ -1925,46 +1966,49 @@ Errors Command_restore(const StringList                *archiveNameList,
     }
   }
 
-  // check fragment lists, set file info for incomplete entries
-  if ((restoreInfo.requestedAbortFlag == NULL) || !(*restoreInfo.requestedAbortFlag))
+  if (!jobOptions->noFragmentsCheckFlag)
   {
-    FRAGMENTLIST_ITERATE(&fragmentList,fragmentNode)
+    // check fragment lists, set file info for incomplete entries
+    if ((restoreInfo.requestedAbortFlag == NULL) || !(*restoreInfo.requestedAbortFlag))
     {
-      if (!FragmentList_isEntryComplete(fragmentNode))
+      FRAGMENTLIST_ITERATE(&fragmentList,fragmentNode)
       {
-        printInfo(0,"Warning: incomplete entry '%s'\n",String_cString(fragmentNode->name));
-        if (globalOptions.verboseLevel >= 2)
+        if (!FragmentList_isEntryComplete(fragmentNode))
         {
-          printInfo(2,"  Fragments:\n");
-          FragmentList_print(stdout,4,fragmentNode);
-        }
-        if (restoreInfo.failError == ERROR_NONE) restoreInfo.failError = ERROR_FILE_INCOMPLETE;
-      }
-
-      if (fragmentNode->userData != NULL)
-      {
-        // set file time, file owner/group, file permission
-        if (!jobOptions->dryRunFlag)
-        {
-          if (jobOptions->owner.userId  != FILE_DEFAULT_USER_ID ) ((FileInfo*)fragmentNode->userData)->userId  = jobOptions->owner.userId;
-          if (jobOptions->owner.groupId != FILE_DEFAULT_GROUP_ID) ((FileInfo*)fragmentNode->userData)->groupId = jobOptions->owner.groupId;
-          error = File_setFileInfo(fragmentNode->name,(FileInfo*)fragmentNode->userData);
-          if (error != ERROR_NONE)
+          printInfo(0,"Warning: incomplete entry '%s'\n",String_cString(fragmentNode->name));
+          if (globalOptions.verboseLevel >= 2)
           {
-            if (jobOptions->stopOnErrorFlag)
+            printInfo(2,"  Fragments:\n");
+            FragmentList_print(stdout,4,fragmentNode);
+          }
+          if (restoreInfo.failError == ERROR_NONE) restoreInfo.failError = ERROR_FILE_INCOMPLETE;
+        }
+
+        if (fragmentNode->userData != NULL)
+        {
+          // set file time, file owner/group, file permission
+          if (!jobOptions->dryRunFlag)
+          {
+            if (jobOptions->owner.userId  != FILE_DEFAULT_USER_ID ) ((FileInfo*)fragmentNode->userData)->userId  = jobOptions->owner.userId;
+            if (jobOptions->owner.groupId != FILE_DEFAULT_GROUP_ID) ((FileInfo*)fragmentNode->userData)->groupId = jobOptions->owner.groupId;
+            error = File_setFileInfo(fragmentNode->name,(FileInfo*)fragmentNode->userData);
+            if (error != ERROR_NONE)
             {
-              printError("Cannot set file info of '%s' (error: %s)\n",
-                         String_cString(fragmentNode->name),
-                         Errors_getText(error)
-                        );
-              restoreInfo.failError = error;
-            }
-            else
-            {
-              printWarning("Cannot set file info of '%s' (error: %s)\n",
+              if (jobOptions->stopOnErrorFlag)
+              {
+                printError("Cannot set file info of '%s' (error: %s)\n",
                            String_cString(fragmentNode->name),
                            Errors_getText(error)
                           );
+                restoreInfo.failError = error;
+              }
+              else
+              {
+                printWarning("Cannot set file info of '%s' (error: %s)\n",
+                             String_cString(fragmentNode->name),
+                             Errors_getText(error)
+                            );
+              }
             }
           }
         }
