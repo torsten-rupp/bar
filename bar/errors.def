@@ -339,8 +339,12 @@ ERROR JOB                            "job error"
 
 // database (SQLite3)
 ERROR DATABASE
-  strncpy(errorText,"database error: ",sizeof(errorText)-1);
-  strncat(errorText,ERROR_TEXT,sizeof(errorText)-1-strlen(errorText));
+  strncpy(errorText,"database error",sizeof(errorText)-1);
+  if (ERROR_TEXT != NULL)
+  {
+    strncat(errorText,": ",sizeof(errorText)-1-strlen(errorText));
+    strncat(errorText,ERROR_TEXT,sizeof(errorText)-1-strlen(errorText));
+  }
   errorText[sizeof(errorText)-1] = '\0';
 
 ERROR DATABASE_CREATE_INDEX          "error creating index"
