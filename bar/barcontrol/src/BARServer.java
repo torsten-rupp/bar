@@ -608,6 +608,9 @@ class ReadThread extends Thread
 class BARServer
 {
   // --------------------------- constants --------------------------------
+  private final static int PROTOCOL_VERSION_MAJOR = 1;
+  private final static int PROTOCOL_VERSION_MINOR = 3;
+
   public final static  String JAVA_SSL_KEY_FILE_NAME = "bar.jks";  // default name Java TLS/SSL key
 
   public static char fileSeparator;
@@ -851,9 +854,13 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
       {
         throw new ConnectionError("Cannot get protocol version for '"+hostname+"' (error: "+data[3]+")");
       }
-      if (Integer.parseInt(data[3]) != 1)
+      if (Integer.parseInt(data[3]) != PROTOCOL_VERSION_MAJOR)
       {
-        throw new CommunicationError("Incompatible protocol version for '"+hostname+"' (expected 1, got "+data[3]+")");
+        throw new CommunicationError("Incompatible protocol version for '"+hostname+"' (expected "+PROTOCOL_VERSION_MAJOR+", got "+data[3]+")");
+      }
+      if (Integer.parseInt(data[4]) != PROTOCOL_VERSION_MINOR)
+      {
+        BARControl.printWarning("Incompatible minor protocol version for '"+hostname+"' (expected "+PROTOCOL_VERSION_MINOR+", got "+data[4]+")");
       }
 
       // get file separator character
@@ -913,7 +920,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
       }
       catch (InterruptedException exception)
       {
-        // ignored 
+        // ignored
       }
 
       // free resources
