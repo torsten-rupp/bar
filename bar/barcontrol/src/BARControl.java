@@ -789,7 +789,8 @@ public class BARControl
   }
 
   // --------------------------- constants --------------------------------
-  /* command line options */
+
+  // command line options
   private static final OptionEnumeration[] archiveTypeEnumeration =
   {
     new OptionEnumeration("normal",      Settings.ArchiveTypes.NORMAL),
@@ -844,7 +845,7 @@ public class BARControl
    * @param format format string
    * @param args optional arguments
    */
-  private void printError(String format, Object... args)
+  public static void printError(String format, Object... args)
   {
     System.err.println("ERROR: "+String.format(format,args));
   }
@@ -853,10 +854,21 @@ public class BARControl
    * @param format format string
    * @param args optional arguments
    */
-  private void printWarning(String format, Object... args)
+  public static void printWarning(String format, Object... args)
   {
     System.err.println("Warning: "+String.format(format,args));
   }
+
+  /** print internal error to stderr
+   * @param format format string
+   * @param args optional arguments
+   */
+  public static void printInternalError(String format, Object... args)
+  {
+    System.err.println("INTERNAL ERROR: "+String.format(format,args));
+  }
+
+  // ----------------------------------------------------------------------
 
   /** print program usage
    * @param
@@ -976,21 +988,22 @@ public class BARControl
     BARServer.executeCommand("JOB_LIST",result);
     for (String line : result)
     {
-      Object data[] = new Object[11];
+      Object data[] = new Object[12];
       /* format:
          <id>
          <name>
          <state>
          <type>
          <archivePartSize>
-         <compressAlgorithm>
+         <deltaCompressAlgorithm>
+         <byteCompressAlgorithm>
          <cryptAlgorithm>
          <cryptType>
          <cryptPasswordMode>
          <lastExecutedDateTime>
          <estimatedRestTime>
       */
-      if (StringParser.parse(line,"%d %S %S %s %ld %S %S %S %S %ld %ld",data,StringParser.QUOTE_CHARS))
+      if (StringParser.parse(line,"%d %S %S %s %ld %S %S %S %S %S %ld %ld",data,StringParser.QUOTE_CHARS))
       {
         if (name.equalsIgnoreCase((String)data[1]))
         {
@@ -1015,7 +1028,7 @@ public class BARControl
     Label           label;
     Button          button;
 
-    final Shell dialog = Dialogs.open(new Shell(),"Login BAR server",250,SWT.DEFAULT);
+    final Shell dialog = Dialogs.openModal(new Shell(),"Login BAR server",250,SWT.DEFAULT);
 
     // password
     final Text   widgetServerName;
@@ -1756,7 +1769,7 @@ public class BARControl
         }
         if (Settings.listFlag)
         {
-          Object data[] = new Object[11];
+          Object data[] = new Object[12];
 
           // get server state
           String serverState = null;
@@ -1802,37 +1815,38 @@ public class BARControl
                <state>
                <type>
                <archivePartSize>
-               <compressAlgorithm>
+               <deltaCompressAlgorithm>
+               <byteCompressAlgorithm>
                <cryptAlgorithm>
                <cryptType>
                <cryptPasswordMode>
                <lastExecutedDateTime>
                <estimatedRestTime>
             */
-      //System.err.println("BARControl.java"+", "+1357+": "+line);
-            if (StringParser.parse(line,"%d %S %S %s %ld %S %S %S %S %ld %ld",data,StringParser.QUOTE_CHARS))
+            if (StringParser.parse(line,"%d %S %S %s %ld %S %S %S %S %S %ld %ld",data,StringParser.QUOTE_CHARS))
             {
-      //System.err.println("BARControl.java"+", "+747+": "+data[0]+"--"+data[5]+"--"+data[6]);
               // get data
-              int    id                   = (Integer)data[ 0];
-              String name                 = (String) data[ 1];
-              String state                = (String) data[ 2];
-              String type                 = (String) data[ 3];
-              long   archivePartSize      = (Long)   data[ 4];
-              String compressAlgorithm    = (String) data[ 5];
-              String cryptAlgorithm       = (String) data[ 6];
-              String cryptType            = (String) data[ 7];
-              String cryptPasswordMode    = (String) data[ 8];
-              Long   lastExecutedDateTime = (Long)   data[ 9];
-              Long   estimatedRestTime    = (Long)   data[10];
+              int    id                     = (Integer)data[ 0];
+              String name                   = (String) data[ 1];
+              String state                  = (String) data[ 2];
+              String type                   = (String) data[ 3];
+              long   archivePartSize        = (Long)   data[ 4];
+              String deltaCompressAlgorithm = (String) data[ 5];
+              String byteCompressAlgorithm  = (String) data[ 6];
+              String cryptAlgorithm         = (String) data[ 7];
+              String cryptType              = (String) data[ 8];
+              String cryptPasswordMode      = (String) data[ 9];
+              Long   lastExecutedDateTime   = (Long)   data[10];
+              Long   estimatedRestTime      = (Long)   data[11];
 
-              System.out.println(String.format("%2d: %-40s %-10s %-11s %12d %-12s %-12s %-10s %-8s %s %8d",
+              System.out.println(String.format("%2d: %-40s %-10s %-11s %12d %-12s %-12s %-12s %-10s %-8s %s %8d",
                                                id,
                                                name,
                                                (serverState == null)?state:serverState,
                                                type,
                                                archivePartSize,
-                                               compressAlgorithm,
+                                               deltaCompressAlgorithm,
+                                               byteCompressAlgorithm,
                                                cryptAlgorithm,
                                                cryptType,
                                                cryptPasswordMode,
@@ -1976,6 +1990,12 @@ public class BARControl
     catch (InternalError error)
     {
       System.err.println("INTERNAL ERROR: "+error.getMessage());
+      for (StackTraceElement stackTraceElement : error.getStackTrace())
+      {
+        System.err.println("  "+stackTraceElement);
+      }
+      System.err.println("");
+      System.err.println("Please report this internal error to torsten.rupp@gmx.net.");
     }
     catch (Error error)
     {
