@@ -2018,7 +2018,6 @@ Errors Command_restore(const StringList                *archiveNameList,
 
   // free resources
   String_delete(printableArchiveName);
-  String_delete(archiveName);
   FragmentList_done(&fragmentList);
   free(buffer);
   String_delete(restoreInfo.statusInfo.name);
