@@ -1,4 +1,4 @@
-2011-??-?? 0.17
+2012-??-?? 0.17
   * added support for delta compression!
   * added support for libcdio to read content of CD/DVD/BD
     devices/images without mounting (required for test/restore
@@ -17,6 +17,20 @@
   * improved error handling with public/private keys
   * fixed handling of error case when asymmetric encrypted
     archive cannot be read
+  * print fragment info if file is incomplete on verbose
+    level >= 2
+  * fix header information in sources
+  * barcontrol: add warning when minor protocol version do
+    not match
+  * improved logging for not stored files
+  * support no-dump file attribute, add option
+    --ignore-no-dump (see lsattr, chattr)
+  * set default ssh keys to $HOME/.ssh/id_rsa.pub,
+    $HOME/.ssh/id_rsa
+  * fix string free bug in restore
+  * fix file-seek bug in restore
+  * BARControl: ask for FTP/SSH password on restore if
+    required
 
 2012-01-14 0.16g
   * fix restore: do not create empty parent directories
