@@ -378,10 +378,10 @@ double Password_getQualityLevel(const Password *password)
   browniePoints    = 0;
   maxBrowniePoints = 0;
 
-  /* length >= 8 */
+  // length >= 8
   CHECK(password->length >= 8);
 
-  /* contain numbers */
+  // contain numbers
   flag0 = FALSE;
   for (z = 0; z < password->length; z++)
   {
@@ -389,7 +389,7 @@ double Password_getQualityLevel(const Password *password)
   }
   CHECK(flag0);
 
-  /* contain special characters */
+  // contain special characters
   flag0 = FALSE;
   for (z = 0; z < password->length; z++)
   {
@@ -397,7 +397,7 @@ double Password_getQualityLevel(const Password *password)
   }
   CHECK(flag0);
 
-  /* capital/non-capital letters */
+  // capital/non-capital letters
   flag0 = FALSE;
   flag1 = FALSE;
   for (z = 0; z < password->length; z++)
@@ -407,7 +407,7 @@ double Password_getQualityLevel(const Password *password)
   }
   CHECK(flag0 && flag1);
 
-  /* estimate entropie by compression */
+  // estimate entropie by compression
 // ToDo
 
   return (double)browniePoints/(double)maxBrowniePoints;
@@ -456,7 +456,7 @@ void Password_undeploy(Password *password)
 }
 
 bool Password_input(Password   *password,
-                    const char *title,
+                    const char *message,
                     uint       modes
                    )
 {
@@ -468,7 +468,7 @@ bool Password_input(Password   *password,
 
   okFlag = FALSE;
 
-  /* input via SSH_ASKPASS program */
+  // input via SSH_ASKPASS program
   if (((modes & PASSWORD_INPUT_MODE_GUI) != 0) && !okFlag)
   {
     const char *sshAskPassword;
@@ -480,11 +480,11 @@ bool Password_input(Password   *password,
     sshAskPassword = getenv("SSH_ASKPASS");
     if ((sshAskPassword != NULL) && (strcmp(sshAskPassword,"") != 0))
     {
-      /* open pipe to external password program */
+      // open pipe to external password program
       command = String_newCString(sshAskPassword);
-      if (title != NULL)
+      if (message != NULL)
       {
-        String_format(command," %\"s:",title);
+        String_format(command," %\"s:",message);
       }
       file = popen(String_cString(command),"r");
       if (file == NULL)
@@ -494,7 +494,7 @@ bool Password_input(Password   *password,
       }
       String_delete(command);
 
-      /* read password, discard last LF */
+      // read password, discard last LF
       printInfo(2,"Wait for password...");
       eolFlag = FALSE;
       do
@@ -521,14 +521,14 @@ bool Password_input(Password   *password,
       while (!eolFlag);
       printInfo(2,"ok\n");
 
-      /* close pipe */
+      // close pipe
       pclose(file);
 
       okFlag = TRUE;
     }
   }
 
-  /* input via console */
+  // input via console
   if (((modes & PASSWORD_INPUT_MODE_CONSOLE) != 0) && !okFlag)
   {
     int            n;
@@ -539,19 +539,19 @@ bool Password_input(Password   *password,
 
     if (isatty(STDIN_FILENO) == 1)
     {
-      /* read data from interactive input */
-      if (title != NULL)
+      // read data from interactive input
+      if (message != NULL)
       {
-        fprintf(stderr,"%s: ",title);fflush(stderr);
+        fprintf(stderr,"%s: ",message); fflush(stderr);
       }
 
-      /* save current console settings */
+      // save current console settings
       if (tcgetattr(STDIN_FILENO,&oldTermioSettings) != 0)
       {
         return FALSE;
       }
 
-      /* disable echo */
+      // disable echo
       memcpy(&termioSettings,&oldTermioSettings,sizeof(struct termios));
       termioSettings.c_lflag &= ~ECHO;
       if (tcsetattr(STDIN_FILENO,TCSANOW,&termioSettings) != 0)
@@ -559,7 +559,7 @@ bool Password_input(Password   *password,
         return FALSE;
       }
 
-      /* input password */
+      // input password
       eolFlag = FALSE;
       do
       {
@@ -584,17 +584,17 @@ bool Password_input(Password   *password,
       }
       while (!eolFlag);
 
-      /* restore console settings */
+      // restore console settings
       tcsetattr(STDIN_FILENO,TCSANOW,&oldTermioSettings);
 
-      if (title != NULL)
+      if (message != NULL)
       {
         fprintf(stderr,"\n");
       }
     }
     else
     {
-      /* read data from non-interactive input */
+      // read data from non-interactive input
       eolFlag = FALSE;
       do
       {
@@ -631,27 +631,27 @@ bool Password_input(Password   *password,
 }
 
 bool Password_inputVerify(const Password *password,
-                          const char     *title,
+                          const char     *message,
                           uint           modes
                          )
 {
   Password verifyPassword;
   bool     equalFlag;
 
-  /* read passsword again */
+  // read passsword again
   Password_init(&verifyPassword);
-  if (!Password_input(&verifyPassword,title,modes))
+  if (!Password_input(&verifyPassword,message,modes))
   {
     Password_done(&verifyPassword);
     return FALSE;
   }
 
-  /* verify password */
+  // verify password
   equalFlag = TRUE;
   if (password->length != verifyPassword.length) equalFlag = FALSE;
   if (memcmp(password->data,verifyPassword.data,password->length) != 0) equalFlag = FALSE;
 
-  /* free resources */
+  // free resources
   Password_done(&verifyPassword);
 
   return equalFlag;

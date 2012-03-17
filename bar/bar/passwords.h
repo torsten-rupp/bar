@@ -268,7 +268,7 @@ char Password_getChar(const Password *password, uint index);
 * Input  : password - password
 * Output : -
 * Return : C-string
-* Notes  : use depoy as less and as short a possible! If no secure
+* Notes  : use deploy as less and as short a possible! If no secure
 *          memory is available the password will be stored a plain text
 *          in memory.
 \***********************************************************************/
@@ -290,7 +290,7 @@ void Password_undeploy(Password *password);
 * Name   : Password_input
 * Purpose: input password from stdin (without echo characters)
 * Input  : password - password
-*          title    - title text
+*          message  - message text
 *          mode     - input modes; see PASSWORD_INPUT_MODE_*
 * Output : -
 * Return : TRUE if password read, FALSE otherwise
@@ -298,7 +298,7 @@ void Password_undeploy(Password *password);
 \***********************************************************************/
 
 bool Password_input(Password   *password,
-                    const char *title,
+                    const char *message,
                     uint       modes
                    );
 
