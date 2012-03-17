@@ -4347,7 +4347,7 @@ Errors Storage_read(StorageFileHandle *storageFileHandle,
                   break;
                 }
                 storageFileHandle->ftp.readAheadBuffer.offset = storageFileHandle->ftp.index;
-                storageFileHandle->ftp.readAheadBuffer.length = (uint64)n;
+                storageFileHandle->ftp.readAheadBuffer.length = (uint64)readBytes;
 
                 // copy data
                 n = MIN(size,storageFileHandle->ftp.readAheadBuffer.length);
@@ -4449,7 +4449,7 @@ Errors Storage_read(StorageFileHandle *storageFileHandle,
                   break;
                 }
                 storageFileHandle->scp.readAheadBuffer.offset = storageFileHandle->scp.index;
-                storageFileHandle->scp.readAheadBuffer.length = (uint64)n;
+                storageFileHandle->scp.readAheadBuffer.length = (uint64)readBytes;
   //fprintf(stderr,"%s,%d: n=%ld storageFileHandle->scp.bufferOffset=%llu storageFileHandle->scp.bufferLength=%lu\n",__FILE__,__LINE__,n,
   //storageFileHandle->scp.readAheadBuffer.offset,storageFileHandle->scp.readAheadBuffer.length);
 
@@ -5113,51 +5113,51 @@ Errors Storage_seek(StorageFileHandle *storageFileHandle,
           if      (offset > storageFileHandle->ftp.index)
           {
             uint64  skip;
-            ulong   i;
-            ssize_t n;
+            uint64  i;
+            uint64  n;
+            ssize_t readBytes;
 
             skip = offset-storageFileHandle->ftp.index;
 
-            // skip data in read-ahead buffer
-            if (   (storageFileHandle->ftp.index >= storageFileHandle->ftp.readAheadBuffer.offset)
-                && (storageFileHandle->ftp.index < (storageFileHandle->ftp.readAheadBuffer.offset+storageFileHandle->ftp.readAheadBuffer.length))
-               )
-            {
-              i = storageFileHandle->ftp.index-storageFileHandle->ftp.readAheadBuffer.offset;
-              n = MIN(skip,storageFileHandle->ftp.readAheadBuffer.length-i);
-              skip -= n;
-              storageFileHandle->ftp.index += n;
-            }
-
-            // skip rest of data
             while (skip > 0LL)
             {
-              // read data
-              n = FtpRead(storageFileHandle->ftp.readAheadBuffer.data,
-                          MIN((size_t)skip,MAX_BUFFER_SIZE),
-                          storageFileHandle->ftp.data
-                         );
-              if (n == 0)
+              // skip data in read-ahead buffer
+              if (   (storageFileHandle->ftp.index >= storageFileHandle->ftp.readAheadBuffer.offset)
+                  && (storageFileHandle->ftp.index < (storageFileHandle->ftp.readAheadBuffer.offset+storageFileHandle->ftp.readAheadBuffer.length))
+                 )
               {
-                // wait a short time for more data
-                Misc_udelay(250*1000);
-
-                // read into read-ahead buffer
-                n = FtpRead(storageFileHandle->ftp.readAheadBuffer.data,
-                            MIN((size_t)skip,MAX_BUFFER_SIZE),
-                            storageFileHandle->ftp.data
-                           );
+                i = storageFileHandle->ftp.index-storageFileHandle->ftp.readAheadBuffer.offset;
+                n = MIN(skip,storageFileHandle->ftp.readAheadBuffer.length-i);
+                skip -= n;
+                storageFileHandle->ftp.index += n;
               }
-              if (n <= 0)
+
+              if (skip > 0LL)
               {
-                error = ERROR(IO_ERROR,errno);
-                break;
-              }
-              storageFileHandle->ftp.readAheadBuffer.offset = storageFileHandle->ftp.index;
-              storageFileHandle->ftp.readAheadBuffer.length = n;
+                // read data
+                readBytes = FtpRead(storageFileHandle->ftp.readAheadBuffer.data,
+                                    MIN((size_t)skip,MAX_BUFFER_SIZE),
+                                    storageFileHandle->ftp.data
+                                   );
+                if (readBytes == 0)
+                {
+                  // wait a short time for more data
+                  Misc_udelay(250*1000);
 
-              skip -= n;
-              storageFileHandle->ftp.index += n;
+                  // read into read-ahead buffer
+                  readBytes = FtpRead(storageFileHandle->ftp.readAheadBuffer.data,
+                                      MIN((size_t)skip,MAX_BUFFER_SIZE),
+                                      storageFileHandle->ftp.data
+                                     );
+                }
+                if (readBytes <= 0)
+                {
+                  error = ERROR(IO_ERROR,errno);
+                  break;
+                }
+                storageFileHandle->ftp.readAheadBuffer.offset = storageFileHandle->ftp.index;
+                storageFileHandle->ftp.readAheadBuffer.length = (uint64)readBytes;
+              }
             }
           }
           else if (offset < storageFileHandle->ftp.index)
@@ -5192,47 +5192,47 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
           if      (offset > storageFileHandle->scp.index)
           {
             uint64  skip;
-            ulong   i;
-            ssize_t n;
+            uint64  i;
+            uint64  n;
+            ssize_t readBytes;
 
             skip = offset-storageFileHandle->scp.index;
 
-            // skip data in read-ahead buffer
-            if (   (storageFileHandle->scp.index >= storageFileHandle->scp.readAheadBuffer.offset)
-                && (storageFileHandle->scp.index < (storageFileHandle->scp.readAheadBuffer.offset+storageFileHandle->scp.readAheadBuffer.length))
-               )
-            {
-              i = storageFileHandle->scp.index-storageFileHandle->scp.readAheadBuffer.offset;
-              n = MIN(skip,storageFileHandle->scp.readAheadBuffer.length-i);
-              skip -= n;
-              storageFileHandle->scp.index += n;
-            }
-
-            // skip rest of data
             while (skip > 0LL)
             {
-              // wait for data
-              if (!waitSessionSocket(&storageFileHandle->scp.socketHandle))
+              // skip data in read-ahead buffer
+              if (   (storageFileHandle->scp.index >= storageFileHandle->scp.readAheadBuffer.offset)
+                  && (storageFileHandle->scp.index < (storageFileHandle->scp.readAheadBuffer.offset+storageFileHandle->scp.readAheadBuffer.length))
+                 )
               {
-                error = ERROR(IO_ERROR,errno);
-                break;
+                i = storageFileHandle->scp.index-storageFileHandle->scp.readAheadBuffer.offset;
+                n = MIN(skip,storageFileHandle->scp.readAheadBuffer.length-i);
+                skip -= n;
+                storageFileHandle->scp.index += n;
               }
 
-              // read data
-              n = libssh2_channel_read(storageFileHandle->scp.channel,
-                                       (char*)storageFileHandle->scp.readAheadBuffer.data,
-                                       MIN((size_t)skip,MAX_BUFFER_SIZE)
-                                      );
-              if (n < 0)
+              if (skip > 0LL)
               {
-                error = ERROR(IO_ERROR,errno);
-                break;
-              }
-              storageFileHandle->scp.readAheadBuffer.offset = storageFileHandle->scp.index;
-              storageFileHandle->scp.readAheadBuffer.length = n;
+                // wait for data
+                if (!waitSessionSocket(&storageFileHandle->scp.socketHandle))
+                {
+                  error = ERROR(IO_ERROR,errno);
+                  break;
+                }
 
-              skip -= n;
-              storageFileHandle->scp.index += n;
+                // read data
+                readBytes = libssh2_channel_read(storageFileHandle->scp.channel,
+                                                 (char*)storageFileHandle->scp.readAheadBuffer.data,
+                                                 MIN((size_t)skip,MAX_BUFFER_SIZE)
+                                                );
+                if (readBytes < 0)
+                {
+                  error = ERROR(IO_ERROR,errno);
+                  break;
+                }
+                storageFileHandle->scp.readAheadBuffer.offset = storageFileHandle->scp.index;
+                storageFileHandle->scp.readAheadBuffer.length = (uint64)readBytes;
+              }
             }
           }
           else if (offset < storageFileHandle->scp.index)
