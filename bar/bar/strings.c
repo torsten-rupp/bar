@@ -4444,6 +4444,8 @@ void String_debugDone(void)
 {
   pthread_once(&debugStringInitFlag,String_debugInit);
 
+  String_debugCheck();
+
   pthread_mutex_lock(&debugStringLock);
   {
     debugMaxStringNextWarningCount = 0LL;
@@ -4473,10 +4475,6 @@ void String_debugDumpInfo(FILE *handle)
         String_debugDumpStackTrace(handle,"allocated at",2,debugStringNode->stackTrace,debugStringNode->stackTraceSize);
       #endif /* HAVE_BACKTRACE */
     }
-    if (!List_empty(&debugAllocStringList))
-    {
-      HALT_INTERNAL_ERROR_LOST_RESOURCE();
-    }
   }
   pthread_mutex_unlock(&debugStringLock);
 }
@@ -4500,6 +4498,23 @@ void String_debugPrintStatistics(void)
             List_count(&debugFreeStringList),
             debugFreeStringList.allocatedMemory
            );
+  }
+  pthread_mutex_unlock(&debugStringLock);
+}
+
+void String_debugCheck()
+{
+  pthread_once(&debugStringInitFlag,String_debugInit);
+
+  String_debugPrintInfo();
+  String_debugPrintStatistics();
+
+  pthread_mutex_lock(&debugStringLock);
+  {
+    if (!List_empty(&debugAllocStringList))
+    {
+      HALT_INTERNAL_ERROR_LOST_RESOURCE();
+    }
   }
   pthread_mutex_unlock(&debugStringLock);
 }

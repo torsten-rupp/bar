@@ -924,6 +924,18 @@ void String_debugPrintInfo(void);
 void String_debugPrintStatistics(void);
 
 /***********************************************************************\
+* Name   : String_debugCheck
+* Purpose: string debug function: output allocated strings and
+*          statistics, check lost resources
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void String_debugCheck(void);
+
+/***********************************************************************\
 * Name   : String_debugPrintCurrentStackTrace
 * Purpose: print C stack trace
 * Input  : -
