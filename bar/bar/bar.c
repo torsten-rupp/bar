@@ -2643,9 +2643,9 @@ Errors inputCryptPassword(void         *userData,
           String_format(String_clear(title),"Verify password for '%S'",fileName);
           if (!Password_inputVerify(password,String_cString(title),PASSWORD_INPUT_MODE_ANY))
           {
-            printError("Passwords are not equal!\n");
+            printError("Crypt passwords are not equal!\n");
             String_delete(title);
-            error = ERROR_PASSWORDS_MISMATCH;
+            error = ERROR_CRYPT_PASSWORDS_MISMATCH;
             break;
           }
         }
