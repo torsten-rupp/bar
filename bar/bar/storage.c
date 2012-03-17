@@ -1472,7 +1472,7 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
   if (String_empty(fileName))
   {
     String_delete(storageSpecifier);
-    return ERROR_NO_FILE_NAME;
+    return ERROR_NO_ARCHIVE_FILE_NAME;
   }
   switch (storageType)
   {
@@ -2120,11 +2120,14 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
 
 Errors Storage_done(StorageFileHandle *storageFileHandle)
 {
+  Errors error;
+
   assert(storageFileHandle != NULL);
 
   switch (storageFileHandle->type)
   {
     case STORAGE_TYPE_FILESYSTEM:
+      error = ERROR_NONE;
       break;
     case STORAGE_TYPE_FTP:
       #ifdef HAVE_FTP
@@ -2134,6 +2137,8 @@ Errors Storage_done(StorageFileHandle *storageFileHandle)
         String_delete(storageFileHandle->ftp.hostName);
       #else /* not HAVE_FTP */
       #endif /* HAVE_FTP */
+
+      error = ERROR_NONE;
       break;
     case STORAGE_TYPE_SSH:
       break;
@@ -2145,6 +2150,8 @@ Errors Storage_done(StorageFileHandle *storageFileHandle)
         String_delete(storageFileHandle->scp.hostName);
       #else /* not HAVE_SSH2 */
       #endif /* HAVE_SSH2 */
+
+      error = ERROR_NONE;
       break;
     case STORAGE_TYPE_SFTP:
       #ifdef HAVE_SSH2
@@ -2154,24 +2161,27 @@ Errors Storage_done(StorageFileHandle *storageFileHandle)
         String_delete(storageFileHandle->sftp.hostName);
       #else /* not HAVE_SSH2 */
       #endif /* HAVE_SSH2 */
+
+      error = ERROR_NONE;
       break;
     case STORAGE_TYPE_CD:
     case STORAGE_TYPE_DVD:
     case STORAGE_TYPE_BD:
       {
-        Errors error;
         String fileName;
+        Errors tmpError;
+
+        error = ERROR_NONE;
 
         // delete files
         fileName = String_new();
         while (!StringList_empty(&storageFileHandle->opticalDisk.write.fileNameList))
         {
           StringList_getFirst(&storageFileHandle->opticalDisk.write.fileNameList,fileName);
-          error = File_delete(fileName,FALSE);
-          if (error != ERROR_NONE)
+          tmpError = File_delete(fileName,FALSE);
+          if (tmpError != ERROR_NONE)
           {
-            String_delete(fileName);
-            return error;
+            if (error == ERROR_NONE) error = tmpError;
           }
         }
         String_delete(fileName);
@@ -2188,19 +2198,18 @@ Errors Storage_done(StorageFileHandle *storageFileHandle)
       break;
     case STORAGE_TYPE_DEVICE:
       {
-        Errors error;
         String fileName;
+        Errors tmpError;
 
         // delete files
         fileName = String_new();
         while (!StringList_empty(&storageFileHandle->device.fileNameList))
         {
           StringList_getFirst(&storageFileHandle->device.fileNameList,fileName);
-          error = File_delete(fileName,FALSE);
-          if (error != ERROR_NONE)
+          tmpError = File_delete(fileName,FALSE);
+          if (tmpError != ERROR_NONE)
           {
-            String_delete(fileName);
-            return error;
+            if (error == ERROR_NONE) error = tmpError;
           }
         }
         String_delete(fileName);
@@ -2221,7 +2230,7 @@ Errors Storage_done(StorageFileHandle *storageFileHandle)
     #endif /* NDEBUG */
   }
 
-  return ERROR_NONE;
+  return error;
 }
 
 String Storage_getHandleName(String                  storageName,
