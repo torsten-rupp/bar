@@ -2255,6 +2255,8 @@ void File_debugDone(void)
 {
   pthread_once(&debugFileInitFlag,File_debugInit);
 
+  File_debugCheck();
+
   pthread_mutex_lock(&debugFileLock);
   {
     List_done(&debugClosedFileList,NULL,NULL);
@@ -2279,10 +2281,6 @@ void File_debugDumpInfo(FILE *handle)
               debugFileNode->lineNb
              );
     }
-    if (!List_empty(&debugOpenFileList))
-    {
-      HALT_INTERNAL_ERROR_LOST_RESOURCE();
-    }
   }
   pthread_mutex_unlock(&debugFileLock);
 }
@@ -2304,6 +2302,23 @@ void File_debugPrintStatistics(void)
     fprintf(stderr,"DEBUG: %lu file(s) in closed list\n",
             List_count(&debugClosedFileList)
            );
+  }
+  pthread_mutex_unlock(&debugFileLock);
+}
+
+void File_debugCheck(void)
+{
+  pthread_once(&debugFileInitFlag,File_debugInit);
+
+  File_debugPrintInfo();
+  File_debugPrintStatistics();
+
+  pthread_mutex_lock(&debugFileLock);
+  {
+    if (!List_empty(&debugOpenFileList))
+    {
+      HALT_INTERNAL_ERROR_LOST_RESOURCE();
+    }
   }
   pthread_mutex_unlock(&debugFileLock);
 }

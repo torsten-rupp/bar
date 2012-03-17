@@ -1012,6 +1012,18 @@ void File_debugPrintInfo(void);
 void File_debugPrintStatistics(void);
 
 /***********************************************************************\
+* Name   : File_debugCheck
+* Purpose: file debug function: output open files and statistics, check
+*          for lost resources
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void File_debugCheck(void);
+
+/***********************************************************************\
 * Name   : File_debugPrintCurrentStackTrace
 * Purpose: print C stack trace
 * Input  : -
