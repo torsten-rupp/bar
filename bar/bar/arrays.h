@@ -217,6 +217,18 @@ void Array_debugPrintInfo(void);
 
 void Array_debugPrintStatistics(void);
 
+/***********************************************************************\
+* Name   : Array_debugCheck
+* Purpose: array debug function: output allocated arrays and statistics,
+*          check for lost resources
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void Array_debugCheck(void);
+
 #endif /* not NDEBUG */
 
 #ifdef __cplusplus

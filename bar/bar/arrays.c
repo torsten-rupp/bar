@@ -403,6 +403,8 @@ void Array_debugDone(void)
 {
   pthread_once(&debugArrayInitFlag,debugArrayInit);
 
+  Array_debugCheck();
+
   pthread_mutex_lock(&debugArrayLock);
   {
     List_done(&debugArrayList,NULL,NULL);
@@ -427,10 +429,6 @@ void Array_debugDumpInfo(FILE *handle)
               debugArrayNode->lineNb
              );
     }
-    if (!List_empty(&debugArrayList))
-    {
-      HALT_INTERNAL_ERROR_LOST_RESOURCE();
-    }
   }
   pthread_mutex_unlock(&debugArrayLock);
 }
@@ -450,6 +448,23 @@ void Array_debugPrintStatistics(void)
             List_count(&debugArrayList),
             debugArrayList.allocatedMemory
            );
+  }
+  pthread_mutex_unlock(&debugArrayLock);
+}
+
+void Array_debugCheck(void)
+{
+  pthread_once(&debugArrayInitFlag,debugArrayInit);
+
+  Array_debugPrintInfo();
+  Array_debugPrintStatistics();
+
+  pthread_mutex_lock(&debugArrayLock);
+  {
+    if (!List_empty(&debugArrayList))
+    {
+      HALT_INTERNAL_ERROR_LOST_RESOURCE();
+    }
   }
   pthread_mutex_unlock(&debugArrayLock);
 }
