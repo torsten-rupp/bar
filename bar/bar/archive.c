@@ -32,12 +32,6 @@
 
 #include "archive.h"
 
-
-#include <sys/types.h>
-       #include <sys/stat.h>
-       #include <fcntl.h>
-       #include <errno.h>
-
 /****************** Conditional compilation switches *******************/
 
 /***************************** Constants *******************************/
@@ -4579,7 +4573,7 @@ Errors Archive_readFileEntry(ArchiveInfo        *archiveInfo,
 
     if      (error != ERROR_NONE) return error;
     else if (!passwordFlag)       return ERROR_NO_CRYPT_PASSWORD;
-    else if (!decryptedFlag)      return ERROR_INVALID_PASSWORD;
+    else if (!decryptedFlag)      return ERROR_INVALID_CRYPT_PASSWORD;
     else if (!foundFileEntryFlag) return ERROR_NO_FILE_ENTRY;
     else if (!foundFileDataFlag)  return ERROR_NO_FILE_DATA;
     HALT_INTERNAL_ERROR_UNREACHABLE();
@@ -5035,7 +5029,7 @@ Errors Archive_readImageEntry(ArchiveInfo        *archiveInfo,
 
     if      (error != ERROR_NONE)  return error;
     else if (!passwordFlag)        return ERROR_NO_CRYPT_PASSWORD;
-    else if (!decryptedFlag)       return ERROR_INVALID_PASSWORD;
+    else if (!decryptedFlag)       return ERROR_INVALID_CRYPT_PASSWORD;
     else if (!foundImageEntryFlag) return ERROR_NO_IMAGE_ENTRY;
     else if (!foundImageDataFlag)  return ERROR_NO_IMAGE_DATA;
     HALT_INTERNAL_ERROR_UNREACHABLE();
@@ -5331,7 +5325,7 @@ Errors Archive_readDirectoryEntry(ArchiveInfo      *archiveInfo,
 
     if      (error != ERROR_NONE)      return error;
     else if (!passwordFlag)            return ERROR_NO_CRYPT_PASSWORD;
-    else if (!decryptedFlag)           return ERROR_INVALID_PASSWORD;
+    else if (!decryptedFlag)           return ERROR_INVALID_CRYPT_PASSWORD;
     else if (!foundDirectoryEntryFlag) return ERROR_NO_DIRECTORY_ENTRY;
     HALT_INTERNAL_ERROR_UNREACHABLE();
   }
@@ -5598,7 +5592,7 @@ Errors Archive_readLinkEntry(ArchiveInfo      *archiveInfo,
 
     if      (error != ERROR_NONE)     return error;
     else if (!passwordFlag)           return ERROR_NO_CRYPT_PASSWORD;
-    else if (!decryptedFlag)          return ERROR_INVALID_PASSWORD;
+    else if (!decryptedFlag)          return ERROR_INVALID_CRYPT_PASSWORD;
     else if (!foundLinkEntryFlag) return ERROR_NO_LINK_ENTRY;
     HALT_INTERNAL_ERROR_UNREACHABLE();
   }
@@ -6092,7 +6086,7 @@ Errors Archive_readHardLinkEntry(ArchiveInfo        *archiveInfo,
 
     if      (error != ERROR_NONE)     return error;
     else if (!passwordFlag)           return ERROR_NO_CRYPT_PASSWORD;
-    else if (!decryptedFlag)          return ERROR_INVALID_PASSWORD;
+    else if (!decryptedFlag)          return ERROR_INVALID_CRYPT_PASSWORD;
     else if (!foundHardLinkEntryFlag) return ERROR_NO_FILE_ENTRY;
     else if (!foundHardLinkDataFlag)  return ERROR_NO_FILE_DATA;
     HALT_INTERNAL_ERROR_UNREACHABLE();
@@ -6398,7 +6392,7 @@ Errors Archive_readSpecialEntry(ArchiveInfo      *archiveInfo,
 
     if      (error != ERROR_NONE)    return error;
     else if (!passwordFlag)          return ERROR_NO_CRYPT_PASSWORD;
-    else if (!decryptedFlag)         return ERROR_INVALID_PASSWORD;
+    else if (!decryptedFlag)         return ERROR_INVALID_CRYPT_PASSWORD;
     else if (!foundSpecialEntryFlag) return ERROR_NO_SPECIAL_ENTRY;
     HALT_INTERNAL_ERROR_UNREACHABLE();
   }
