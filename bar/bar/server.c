@@ -3025,7 +3025,7 @@ LOCAL void serverCommand_authorize(ClientInfo *clientInfo, uint id, const String
 
 /***********************************************************************\
 * Name   : serverCommand_get
-* Purpose: get setting
+* Purpose: get setting from server
 * Input  : clientInfo    - client info
 *          id            - command id
 *          arguments     - command arguments
@@ -5726,55 +5726,26 @@ LOCAL void serverCommand_decryptPasswordAdd(ClientInfo *clientInfo, uint id, con
 * Output : -
 * Return : -
 * Notes  : Arguments:
-*            <job id>|0
 *            <password>
 \***********************************************************************/
 
 LOCAL void serverCommand_ftpPassword(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
 {
-  uint          jobId;
-  String        password;
-  SemaphoreLock semaphoreLock;
-  JobNode       *jobNode;
+  String password;
 
   assert(clientInfo != NULL);
   assert(arguments != NULL);
 
-  // get job id, type, pattern
+  // get password
   if (argumentCount < 1)
-  {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected job id");
-    return;
-  }
-  jobId = String_toInteger(arguments[0],0,NULL,NULL,0);
-  if (argumentCount < 2)
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected password");
     return;
   }
-  password = arguments[1];
+  password = arguments[0];
 
-  if (jobId != 0)
-  {
-    SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
-    {
-      // find job
-      jobNode = findJobById(jobId);
-      if (jobNode == NULL)
-      {
-        sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job #%d not found",jobId);
-        Semaphore_unlock(&jobList.lock);
-        return;
-      }
-
-      // set password
-      jobNode->ftpPassword = Password_newString(password);
-    }
-  }
-  else
-  {
-    Password_setString(clientInfo->jobOptions.ftpServer.password,password);
-  }
+  if (clientInfo->jobOptions.ftpServer.password == NULL) clientInfo->jobOptions.ftpServer.password = Password_new();
+  Password_setString(clientInfo->jobOptions.ftpServer.password,password);
 
   sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
 }
@@ -5789,55 +5760,26 @@ LOCAL void serverCommand_ftpPassword(ClientInfo *clientInfo, uint id, const Stri
 * Output : -
 * Return : -
 * Notes  : Arguments:
-*            <job id>|0
 *            <password>
 \***********************************************************************/
 
 LOCAL void serverCommand_sshPassword(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
 {
-  uint          jobId;
-  String        password;
-  SemaphoreLock semaphoreLock;
-  JobNode        *jobNode;
+  String password;
 
   assert(clientInfo != NULL);
   assert(arguments != NULL);
 
-  // get job id, type, pattern
+  // get password
   if (argumentCount < 1)
-  {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected job id");
-    return;
-  }
-  jobId = String_toInteger(arguments[0],0,NULL,NULL,0);
-  if (argumentCount < 2)
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected password");
     return;
   }
-  password = arguments[1];
+  password = arguments[0];
 
-  if (jobId != 0)
-  {
-    SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
-    {
-      // find job
-      jobNode = findJobById(jobId);
-      if (jobNode == NULL)
-      {
-        sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job #%d not found",jobId);
-        Semaphore_unlock(&jobList.lock);
-        return;
-      }
-
-      // set password
-      jobNode->sshPassword = Password_newString(password);
-    }
-  }
-  else
-  {
-    Password_setString(clientInfo->jobOptions.sshServer.password,password);
-  }
+  if (clientInfo->jobOptions.sshServer.password == NULL) clientInfo->jobOptions.sshServer.password = Password_new();
+  Password_setString(clientInfo->jobOptions.sshServer.password,password);
 
   sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
 }
@@ -5905,7 +5847,6 @@ LOCAL void serverCommand_cryptPassword(ClientInfo *clientInfo, uint id, const St
 
   sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
 }
-
 
 /***********************************************************************\
 * Name   : serverCommand_passwordsClear
@@ -6519,7 +6460,6 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, uint id, const String a
   EntryList          includeEntryList;
   PatternList        excludePatternList;
   PatternList        sourcePatternList;
-  JobOptions         jobOptions;
   uint               z;
   RestoreCommandInfo restoreCommandInfo;
   Errors             error;
@@ -6531,13 +6471,11 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, uint id, const String a
   EntryList_init(&includeEntryList);
   PatternList_init(&excludePatternList);
   PatternList_init(&sourcePatternList);
-  initJobOptions(&jobOptions);
 
   // get archive name, destination, overwrite flag, files
   if (argumentCount < 1)
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected storage name");
-    freeJobOptions(&jobOptions);
     PatternList_done(&sourcePatternList);
     PatternList_done(&excludePatternList);
     EntryList_done(&includeEntryList);
@@ -6548,25 +6486,23 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, uint id, const String a
   if (argumentCount < 2)
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected destination directory or device name");
-    freeJobOptions(&jobOptions);
     PatternList_done(&sourcePatternList);
     PatternList_done(&excludePatternList);
     EntryList_done(&includeEntryList);
     StringList_done(&archiveNameList);
     return;
   }
-  jobOptions.destination = String_duplicate(arguments[1]);
+  clientInfo->jobOptions.destination = String_duplicate(arguments[1]);
   if (argumentCount < 3)
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected destination directory or device name");
-    freeJobOptions(&jobOptions);
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected overwrite flag");
     PatternList_done(&sourcePatternList);
     PatternList_done(&excludePatternList);
     EntryList_done(&includeEntryList);
     StringList_done(&archiveNameList);
     return;
   }
-  jobOptions.overwriteFilesFlag = String_equalsCString(arguments[2],"1");
+  clientInfo->jobOptions.overwriteFilesFlag = String_equalsCString(arguments[2],"1");
   string = String_new();
   for (z = 3; z < argumentCount; z++)
   {
@@ -6599,7 +6535,7 @@ ENTRY_TYPE_FILE,
                           &includeEntryList,
                           NULL,
                           &sourcePatternList,
-                          &jobOptions,
+                          &clientInfo->jobOptions,
                           NULL,
                           NULL,
                           (RestoreStatusInfoFunction)updateRestoreCommandStatus,
@@ -6611,7 +6547,6 @@ ENTRY_TYPE_FILE,
   restoreFlag = FALSE;
 
   // free resources
-  freeJobOptions(&jobOptions);
   PatternList_done(&sourcePatternList);
   PatternList_done(&excludePatternList);
   EntryList_done(&includeEntryList);
