@@ -117,10 +117,10 @@ void MsgQueue_done(MsgQueue *msgQueue, MsgQueueMsgFreeFunction msgQueueMsgFreeFu
 
   assert(msgQueue != NULL);
 
-  /* lock */
+  // lock
   lock(msgQueue);
 
-  /* discard all remaining messages */
+  // discard all remaining messages
   while (!List_empty(&msgQueue->list))
   {
     msgNode = (MsgNode*)List_getFirst(&msgQueue->list);
@@ -132,7 +132,7 @@ void MsgQueue_done(MsgQueue *msgQueue, MsgQueueMsgFreeFunction msgQueueMsgFreeFu
     free(msgNode);
   }
 
-  /* free resources */
+  // free resources
   pthread_cond_destroy(&msgQueue->modified);
   pthread_mutex_destroy(&msgQueue->lock);
   pthread_mutexattr_destroy(&msgQueue->lockAttributes);
@@ -173,10 +173,10 @@ void MsgQueue_clear(MsgQueue *msgQueue, MsgQueueMsgFreeFunction msgQueueMsgFreeF
 
   assert(msgQueue != NULL);
 
-  /* lock */
+  // lock
   lock(msgQueue);
 
-  /* discard all remaining messages */
+  // discard all remaining messages
   while (!List_empty(&msgQueue->list))
   {
     msgNode = (MsgNode*)List_getFirst(&msgQueue->list);
@@ -188,7 +188,7 @@ void MsgQueue_clear(MsgQueue *msgQueue, MsgQueueMsgFreeFunction msgQueueMsgFreeF
     free(msgNode);
   }
 
-  /* unlock */
+  // unlock
   unlock(msgQueue);
 }
 
@@ -213,25 +213,25 @@ bool MsgQueue_get(MsgQueue *msgQueue, void *msg, ulong *size, ulong maxSize)
 
   assert(msgQueue != NULL);
 
-  /* lock */
+  // lock
   lock(msgQueue);
 
-  /* wait for message */
+  // wait for message
   while (!msgQueue->endOfMsgFlag && (List_count(&msgQueue->list) <= 0))
   {
     waitModified(msgQueue);
   }
 
-  /* get message */
+  // get message
   msgNode = (MsgNode*)List_getFirst(&msgQueue->list);
 
-  /* signal modify */
+  // signal modify
   msgQueue->modifiedFlag = TRUE;
 
-  /* unlock */
+  // unlock
   unlock(msgQueue);
 
-  /* copy data, free message */
+  // copy data, free message
   if (msgNode == NULL)
   {
     return FALSE;
@@ -250,7 +250,7 @@ bool MsgQueue_put(MsgQueue *msgQueue, const void *msg, ulong size)
 
   assert(msgQueue != NULL);
 
-  /* allocate message */
+  // allocate message
   msgNode = (MsgNode*)malloc(sizeof(MsgNode)+size);
   if (msgNode == NULL)
   {
@@ -259,10 +259,10 @@ bool MsgQueue_put(MsgQueue *msgQueue, const void *msg, ulong size)
   msgNode->size = size;
   memcpy(msgNode->data,msg,size);
 
-  /* lock */
+  // lock
   lock(msgQueue);
 
-  /* check if end of message */
+  // check if end of message
   if (msgQueue->endOfMsgFlag)
   {
     free(msgNode);
@@ -270,7 +270,7 @@ bool MsgQueue_put(MsgQueue *msgQueue, const void *msg, ulong size)
     return FALSE;
   }
 
-  /* check number of messages */
+  // check number of messages
   if (msgQueue->maxMsgs > 0)
   {
     while (!msgQueue->endOfMsgFlag && (List_count(&msgQueue->list) >= msgQueue->maxMsgs))
@@ -285,13 +285,13 @@ bool MsgQueue_put(MsgQueue *msgQueue, const void *msg, ulong size)
     }
   }
 
-  /* put message */
+  // put message
   List_append(&msgQueue->list,msgNode);
 
-  /* signal modify */
+  // signal modify
   msgQueue->modifiedFlag = TRUE;
 
-  /* unlock */
+  // unlock
   unlock(msgQueue);
 
   return TRUE;
@@ -303,13 +303,13 @@ ulong MsgQueue_count(MsgQueue *msgQueue)
 
   assert(msgQueue != NULL);
 
-  /* lock */
+  // lock
   lock(msgQueue);
 
-  /* get count */
+  // get count
   count = List_count(&msgQueue->list);
 
-  /* unlock */
+  // unlock
   unlock(msgQueue);
 
   return count;
@@ -319,7 +319,7 @@ void MsgQueue_wait(MsgQueue *msgQueue)
 {
   assert(msgQueue != NULL);
 
-  /* lock */
+  // lock
   lock(msgQueue);
 
   if (!msgQueue->endOfMsgFlag)
@@ -327,7 +327,7 @@ void MsgQueue_wait(MsgQueue *msgQueue)
     waitModified(msgQueue);
   }
 
-  /* unlock */
+  // unlock
   unlock(msgQueue);
 }
 
@@ -335,15 +335,15 @@ void MsgQueue_setEndOfMsg(MsgQueue *msgQueue)
 {
   assert(msgQueue != NULL);
 
-  /* lock */
+  // lock
   lock(msgQueue);
 
   msgQueue->endOfMsgFlag = TRUE;
 
-  /* signal modify */
+  // signal modify
   msgQueue->modifiedFlag = TRUE;
 
-  /* unlock */
+  // unlock
   unlock(msgQueue);
 }
 
