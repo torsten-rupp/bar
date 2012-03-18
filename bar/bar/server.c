@@ -426,8 +426,7 @@ LOCAL const ConfigValue CONFIG_VALUES[] =
 
   CONFIG_STRUCT_VALUE_SELECT   ("pattern-type",            JobNode,jobOptions.patternType,                 CONFIG_VALUE_PATTERN_TYPES),
 
-  CONFIG_STRUCT_VALUE_SPECIAL  ("delta-compress-algorithm",JobNode,jobOptions.compressAlgorithm.delta,     configValueParseDeltaCompressAlgorithm,configValueFormatInitDeltaCompressAlgorithm,configValueFormatDoneDeltaCompressAlgorithm,configValueFormatDeltaCompressAlgorithm,NULL),
-  CONFIG_STRUCT_VALUE_SPECIAL  ("byte-compress-algorithm", JobNode,jobOptions.compressAlgorithm.byte,      configValueParseByteCompressAlgorithm,configValueFormatInitByteCompressAlgorithm,configValueFormatDoneByteCompressAlgorithm,configValueFormatByteCompressAlgorithm,NULL),
+  CONFIG_STRUCT_VALUE_SPECIAL  ("compress-algorithm",      JobNode,jobOptions.compressAlgorithm,           configValueParseCompressAlgorithm,configValueFormatInitCompressAlgorithm,configValueFormatDoneCompressAlgorithm,configValueFormatCompressAlgorithm,NULL),
   CONFIG_STRUCT_VALUE_SPECIAL  ("compress-exclude",        JobNode,compressExcludePatternList,             configValueParsePattern,configValueFormatInitPattern,configValueFormatDonePattern,configValueFormatPattern,NULL),
 
   CONFIG_STRUCT_VALUE_SELECT   ("crypt-algorithm",         JobNode,jobOptions.cryptAlgorithm,              CONFIG_VALUE_CRYPT_ALGORITHMS),
@@ -1146,7 +1145,7 @@ LOCAL bool readJob(JobNode *jobNode)
 
 /***********************************************************************\
 * Name   : rereadAllJobs
-* Purpose: re-read all jobs
+* Purpose: re-read all job files
 * Input  : jobsDirectory - directory with job files
 * Output : -
 * Return : ERROR_NONE or error code
@@ -1301,7 +1300,7 @@ LOCAL StringNode *deleteJobEntries(StringList *stringList,
 
 /***********************************************************************\
 * Name   : updateJob
-* Purpose: update job
+* Purpose: update job file
 * Input  : jobNode - job node
 * Output : -
 * Return : ERROR_NONE or error code
