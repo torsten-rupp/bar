@@ -8,8 +8,8 @@
 *
 \***********************************************************************/
 
-#ifndef _GLOBAL_H
- #define _GLOBAL_H
+#ifndef __GLOBAL__
+#define __GLOBAL__
 
  #if (defined DEBUG)
   #warning DEBUG option set - no LOCAL and no -O2 (optimizer) will be used!
@@ -33,7 +33,7 @@
 /***************************** Constants *******************************/
 #define DEBUG_LEVEL 8                          // debug level
 
-/* definition of boolean values */
+// definition of boolean values
 #if defined(__cplusplus) || defined(HAVE_STDBOOL_H)
   #ifndef FALSE
     #define FALSE false
@@ -54,13 +54,15 @@
 #define OFF FALSE
 #define ON  TRUE
 
+// math constants
 #ifndef PI
   #define PI 3.14159265358979323846
 #endif
 
+// time constants
 #define MILLI_PER_SECOND 1000
 
-/* minimal and maximal values for some scalar data types */
+// minimal and maximal values for some scalar data types
 #define MIN_CHAR           CHAR_MIN
 #define MAX_CHAR           CHAR_MAX
 #define MIN_SHORTINT       SHRT_MIN
@@ -105,11 +107,11 @@
 #define MAX_LONGDOUBLE     LDBL_MAX
 #define EPSILON_LONGDOUBLE LDBL_EPSILON
 
-/* special constants */
+// special constants
 #define NO_WAIT      0
 #define WAIT_FOREVER (-1)
 
-/* exit codes */
+// exit codes
 #define EXITCODE_INTERNAL_ERROR 128
 
 /**************************** Datatypes ********************************/
@@ -166,19 +168,47 @@ typedef void                void32;
   #define ATTRIBUTE_PACKED
 #endif
 
-#define UNUSED_VARIABLE(s) (void)s
+/***********************************************************************\
+* Name   : UNUSED_VARIABLE
+* Purpose: avoid compiler warning for unused variables/parameters
+* Input  : variable - variable
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
 
-#define SIZE_OF_ARRAY(a) (sizeof(a)/sizeof(a[0]))
+#define UNUSED_VARIABLE(variable) (void)variable
+
+/***********************************************************************\
+* Name   : SIZE_OF_ARRAY
+* Purpose: get size of array
+* Input  : array - array
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+#define SIZE_OF_ARRAY(array) (sizeof(array)/sizeof(array[0]))
+
+/***********************************************************************\
+* Name   : ALIGN
+* Purpose: align value to boundary
+* Input  : n         - address
+*          alignment - alignment
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
 
 #define ALIGN(n,alignment) (((alignment)>0)?(((n)+(alignment)-1) & ~((alignment)-1)):(n))
 
 /***********************************************************************\
-* Name   : SET_CLEAR, SET_VALUE, SET_ADD, SET_REM, IN_SET
+* Name   : SET_CLEAR, SET_VALUE, SET_ADD, SET_REM
 * Purpose: set macros
 * Input  : set     - set (integer)
 *          element - element
 * Output : -
-* Return : -
+* Return : TRUE if value is in set, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
 
@@ -188,20 +218,24 @@ typedef void                void32;
     (set) = 0; \
   } \
   while (0)
+
 #define SET_VALUE(element) \
   (1 << (element))
+
 #define SET_ADD(set,element) \
   do \
   { \
     (set) |= SET_VALUE(element); \
   } \
   while (0)
+
 #define SET_REM(set,element) \
   do \
   { \
     (set) &= ~(SET_VALUE(element)); \
   } \
   while (0)
+
 #define IN_SET(set,element) (((set) & SET_VALUE(element)) == SET_VALUE(element))
 
 /***********************************************************************\
@@ -210,7 +244,7 @@ typedef void                void32;
 * Input  : set     - set (array)
 *          element - element
 * Output : -
-* Return : -
+* Return : TRUE if value is in bitset, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
 
@@ -220,16 +254,16 @@ typedef void                void32;
     ((byte*)(set))[bit/8] |= (1 << (bit%8)); \
   } \
   while (0)
+
 #define BITSET_CLEAR(set,bit) \
   do \
   { \
     ((byte*)(set))[bit/8] &= ~(1 << (bit%8)); \
   } \
   while (0)
+
 #define BITSET_IS_SET(set,bit) \
   ((((byte*)(set))[bit/8] & (1 << (bit%8))) != 0)
-
-/* mathematicl macros */
 
 /***********************************************************************\
 * Name   : IS_NAN, IS_INF
@@ -304,7 +338,7 @@ typedef void                void32;
 #define SQUARE(x) ((x)*(x))
 
 /***********************************************************************\
-* Name   : IN_RANGE
+* Name   : CHECK_RANGE
 * Purpose: check if number is in range
 * Input  : l,h - lower/upper bound
 *          x   - number
@@ -316,12 +350,31 @@ typedef void                void32;
 #define CHECK_RANGE(l,x,u) (( ((l)<=(x)) && ((x)<=(u)) ) || \
                             ( ((u)<=(x)) && ((x)<=(l)) )    \
                            )
+
+/***********************************************************************\
+* Name   : CHECK_ANGLE_RANGE
+* Purpose: check if number/angle is in range
+* Input  : l,h - lower/upper bound [rad]
+*          a   - angle [rad]
+* Output : -
+* Return : TRUE iff l<a<h, FALSE otherwise
+* Notes  : -
+\***********************************************************************/
+
 #define CHECK_ANGLE_RANGE(l,a,u) (((NormRad(l))<=(NormRad(u)))?CHECK_RANGE(NormRad(l),NormRad(a),NormRad(u)):(CHECK_RANGE(l,a,2*PI) || CHECK_RANGE(0,NormRad(a),NormRad(u))))
 #ifndef __cplusplus
  #define IndexMod(l,i,u) ( l+(((i)<0)?( ((u)-(l)+1)-((-(i)%((u)-(l)+1)))%((u)-(l)+1) ):( ((i)>((u)-(l)+1))?( (i)%((u)-(l)+1) ):( (i) ) )) )
 #endif
 
-/* used in constant declarations */
+/***********************************************************************\
+* Name   : RAD_TO_DEGREE, DEGREE_TO_RAD
+* Purpose: convert rad to degree/degree to rad
+* Input  : n - rad/degree
+* Output : -
+* Return : degree/rad value
+* Notes  : -
+\***********************************************************************/
+
 #define RAD_TO_DEGREE(n) ((n)>=0?\
                           (((n)<=2*PI)?\
                            (n)*180.0/PI:\
@@ -329,6 +382,7 @@ typedef void                void32;
                           ):\
                           (((n)+2*PI)*180.0/PI)\
                          )
+
 #define DEGREE_TO_RAD(n) ((n)>=0?\
                           (((n)<=360)?\
                            (n)*PI/180.0:\
@@ -342,8 +396,17 @@ typedef void                void32;
   #define DegreeToRad(n) DEGREE_TO_RAD(n)
 #endif
 
-/* used in constant declarations */
+/***********************************************************************\
+* Name   : NORM_RAD360, NORM_RAD180, NORM_RAD90, NORM_RAD
+* Purpose: normalize rad value
+* Input  : n - value
+* Output : -
+* Return : normalized value
+* Notes  : -
+\***********************************************************************/
+
 #define NORM_RAD360(n)    (fmod(n,2*PI))
+
 #define NORM_RAD180(n)    (((n)>PI)\
                            ?((n)-2*PI)\
                            :(((n)<-PI)\
@@ -351,6 +414,7 @@ typedef void                void32;
                              :(n)\
                             )\
                           )
+
 #define NORM_RAD90(n)     (((n)>3*PI/2)\
                            ?((n)-2*PI)\
                            :(((n)>PI/2)\
@@ -371,7 +435,18 @@ typedef void                void32;
                              :(n)\
                             )\
                           )
+
+/***********************************************************************\
+* Name   : NORM_DEGREE360, NORM_DEGREE180, NORM_DEGREE90, NORM_DEGREE
+* Purpose: normalize degree value
+* Input  : n - value
+* Output : -
+* Return : normalized value
+* Notes  : -
+\***********************************************************************/
+
 #define NORM_DEGREE360(n) (fmod(n,360))
+
 #define NORM_DEGREE180(n) (((n)>180)\
                            ?((n)-360)\
                            :(((n)<-180)\
@@ -392,6 +467,7 @@ typedef void                void32;
                                )\
                              )\
                           )
+
 #define NORM_DEGREE(n)    (((n)<0)\
                            ?((n)+360)\
                            :(((n)>360)\
@@ -410,6 +486,22 @@ typedef void                void32;
                         ((n & 0x000000FF) << 24)   \
                       )
 #endif
+
+/***********************************************************************\
+* Name   : HALT, HALT_INSUFFICIENT_MEMORY, HALT_FATAL_ERROR,
+*          HALT_INTERNAL_ERROR, HALT_INTERNAL_ERROR_AT,
+*          HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED,
+*          HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE,
+*          HALT_INTERNAL_ERROR_UNREACHABLE,
+*          HALT_INTERNAL_ERROR_LOST_RESOURCE
+* Purpose: halt macros
+* Input  : errorLevel - error level
+*          format     - format string
+*          args       - optional arguments
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
 
 /* 2 macros necessary, because of "string"-construction */
 #define _HALT_STRING1(z) _HALT_STRING2(z)
@@ -473,6 +565,17 @@ typedef void                void32;
   } \
   while (0)
 
+/***********************************************************************\
+* Name   : FAIL
+* Purpose: fail macros
+* Input  : errorLevel - error level
+*          format     - format string
+*          args       - optional arguments
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
 /* 2 macros necessary, because of "string"-construction */
 #define _FAIL_STRING1(z) _FAIL_STRING2(z)
 #define _FAIL_STRING2(z) #z
@@ -484,7 +587,19 @@ typedef void                void32;
   } \
   while (0)
 
+/***********************************************************************\
+* Name   : MEMSET, MEMCLEAR
+* Purpose: set/clear memory macros
+* Input  : p     - pointer
+*          value - value
+*          size  - size (in bytes)
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
 #define MEMSET(p,value,size) memset(p,value,size)
+
 #define MEMCLEAR(p,size) memset(p,0,size)
 
 /**************************** Functions ********************************/
@@ -495,16 +610,15 @@ extern "C" {
 
 #ifndef NDEBUG
 /***********************************************************************\
-* Name       : __dprintf
-* Purpose    : debug printf
-* Input      : filename - filename
-*              lineNb   - line number
-*              format   - format string (like printf)
-*              ...      - optional arguments
-* Output     : -
-* Return     : -
-* Side-effect: unknown
-* Notes      : -
+* Name   : __dprintf
+* Purpose: debug printf
+* Input  : filename - filename
+*          lineNb   - line number
+*          format   - format string (like printf)
+*          ...      - optional arguments
+* Output : -
+* Return : -
+* Notes  : -
 \***********************************************************************/
 
 void __dprintf(const char *filename, unsigned int lineNb, const char *format, ...);
@@ -513,13 +627,12 @@ void __dprintf(const char *filename, unsigned int lineNb, const char *format, ..
 #ifdef __cplusplus
 
 /***********************************************************************\
-* Name       : isNaN
-* Purpose    : check if not-a-number (NaN)
-* Input      : n - numer
-* Output     : -
-* Return     : TRUE if n is NaN, FALSE otherwise
-* Side-Effect: unknown
-* Notes      : -
+* Name   : isNaN
+* Purpose: check if not-a-number (NaN)
+* Input  : n - numer
+* Output : -
+* Return : TRUE if n is NaN, FALSE otherwise
+* Notes  : -
 \***********************************************************************/
 
 inline bool isNaN(double n)
@@ -528,13 +641,12 @@ inline bool isNaN(double n)
 }
 
 /***********************************************************************\
-* Name       : isInf
-* Purpose    : check if number is infinit
-* Input      : n - number
-* Output     : -
-* Return     : TRUE if n is infinit, FALSE otherwise
-* Side-Effect: unknown
-* Notes      : -
+* Name   : isInf
+* Purpose: check if number is infinit
+* Input  : n - number
+* Output : -
+* Return : TRUE if n is infinit, FALSE otherwise
+* Notes  : -
 \***********************************************************************/
 
 inline bool isInf(double n)
@@ -547,13 +659,12 @@ inline bool isInf(double n)
 #ifdef __cplusplus
 
 /***********************************************************************\
-* Name       : radToDegree
-* Purpose    : convert rad to degree
-* Input      : n - angle in rad
-* Output     : -
-* Return     : angle in degree
-* Side-Effect: unknown
-* Notes      : -
+* Name   : radToDegree
+* Purpose: convert rad to degree
+* Input  : n - angle in rad
+* Output : -
+* Return : angle in degree
+* Notes  : -
 \***********************************************************************/
 
 inline double radToDegree(double n)
@@ -565,13 +676,12 @@ inline double radToDegree(double n)
 }
 
 /***********************************************************************\
-* Name       : degreeToRad
-* Purpose    : convert degree to rad
-* Input      : n - angle in degree
-* Output     : -
-* Return     : angle in rad
-* Side-Effect: unknown
-* Notes      : -
+* Name   : degreeToRad
+* Purpose: convert degree to rad
+* Input  : n - angle in degree
+* Output : -
+* Return : angle in rad
+* Notes  : -
 \***********************************************************************/
 
 inline double degreeToRad(double n)
@@ -587,13 +697,12 @@ inline double degreeToRad(double n)
 #ifdef __cplusplus
 
 /***********************************************************************\
-* Name       : normRad
-* Purpose    : normalize angle in rad (0..2PI)
-* Input      : n - angle in rad
-* Output     : -
-* Return     : normalized angle (0..2PI)
-* Side-Effect: unknown
-* Notes      : -
+* Name   : normRad
+* Purpose: normalize angle in rad (0..2PI)
+* Input  : n - angle in rad
+* Output : -
+* Return : normalized angle (0..2PI)
+* Notes  : -
 \***********************************************************************/
 
 inline double normRad(double n)
@@ -605,13 +714,12 @@ inline double normRad(double n)
 }
 
 /***********************************************************************\
-* Name       : normDegree
-* Purpose    : normalize angle in degree (0..360)
-* Input      : n - angle in degree
-* Output     : -
-* Return     : normalize angle (0..360)
-* Side-Effect: unknown
-* Notes      : -
+* Name   : normDegree
+* Purpose: normalize angle in degree (0..360)
+* Input  : n - angle in degree
+* Output : -
+* Return : normalize angle (0..360)
+* Notes  : -
 \***********************************************************************/
 
 inline double normDegree(double n)
@@ -623,16 +731,15 @@ inline double normDegree(double n)
 }
 
 /***********************************************************************\
-* Name       : normRad90
-* Purpose    : normalize angle in rad (-PI/2..PI/2)
-* Input      : n - angle in rad
-* Output     : -
-* Return     : normalized angle (-PI/2..PI/2)
-* Side-Effect: unknown
-* Notes      : PI/2..3PI/2   = -PI/2..PI/2
-*              3PI/2..2PI    = -PI/2..0
-*              -PI/2..-3PI/2 = PI/2..-PI/2
-*              -3PI/2..-2PI  = PI/2..0
+* Name   : normRad90
+* Purpose: normalize angle in rad (-PI/2..PI/2)
+* Input  : n - angle in rad
+* Output : -
+* Return : normalized angle (-PI/2..PI/2)
+* Notes  : PI/2..3PI/2   = -PI/2..PI/2
+*          3PI/2..2PI    = -PI/2..0
+*          -PI/2..-3PI/2 = PI/2..-PI/2
+*          -3PI/2..-2PI  = PI/2..0
 \***********************************************************************/
 
 inline double normRad90(double n)
@@ -646,13 +753,12 @@ inline double normRad90(double n)
 }
 
 /***********************************************************************\
-* Name       : normRad180
-* Purpose    : normalize angle in rad (-PI..PI)
-* Input      : n - angle in rad
-* Output     : -
-* Return     : normalized angle (-PI..PI)
-* Side-Effect: unknown
-* Notes      : -
+* Name   : normRad180
+* Purpose: normalize angle in rad (-PI..PI)
+* Input  : n - angle in rad
+* Output : -
+* Return : normalized angle (-PI..PI)
+* Notes  : -
 \***********************************************************************/
 
 inline double normRad180(double n)
@@ -662,16 +768,15 @@ inline double normRad180(double n)
 }
 
 /***********************************************************************\
-* Name       : normDegree90
-* Purpose    : normalize angle in rad (-90..90)
-* Input      : n - angle in degree
-* Output     : -
-* Return     : normalized angle (-90..90)
-* Side-Effect: unknown
-* Notes      : 90..270    = -90..
-*              270..360   = -90..0
-*              -90..-270  = 90..-90
-*              -270..-360 = 90..0
+* Name   : normDegree90
+* Purpose: normalize angle in rad (-90..90)
+* Input  : n - angle in degree
+* Output : -
+* Return : normalized angle (-90..90)
+* Notes  : 90..270    = -90..
+*          270..360   = -90..0
+*          -90..-270  = 90..-90
+*          -270..-360 = 90..0
 \***********************************************************************/
 
 inline double normDegree90(double n)
@@ -685,13 +790,12 @@ inline double normDegree90(double n)
 }
 
 /***********************************************************************\
-* Name       : normDegree180
-* Purpose    : normalize angle in degree (-180..180)
-* Input      : n - angle in degree
-* Output     : -
-* Return     : normalize angle (-180..180)
-* Side-Effect: unknown
-* Notes      : -
+* Name   : normDegree180
+* Purpose: normalize angle in degree (-180..180)
+* Input  : n - angle in degree
+* Output : -
+* Return : normalize angle (-180..180)
+* Notes  : -
 \***********************************************************************/
 
 inline double normDegree180(double n)
@@ -701,13 +805,12 @@ inline double normDegree180(double n)
 }
 
 /***********************************************************************\
-* Name       : normRad360
-* Purpose    : normalize angle in rad (-2PI...2PI)
-* Input      : n - angle in rad
-* Output     : -
-* Return     : normalized angle (-2PI..2PI)
-* Side-Effect: unknown
-* Notes      : -
+* Name   : normRad360
+* Purpose: normalize angle in rad (-2PI...2PI)
+* Input  : n - angle in rad
+* Output : -
+* Return : normalized angle (-2PI..2PI)
+* Notes  : -
 \***********************************************************************/
 
 inline double normRad360(double n)
@@ -717,13 +820,12 @@ inline double normRad360(double n)
 }
 
 /***********************************************************************\
-* Name       : normDegree360
-* Purpose    : normalize angle in degree (-360..360)
-* Input      : n - angle in degree
-* Output     : -
-* Return     : normalize angle (-360..360)
-* Side-Effect: unknown
-* Notes      : -
+* Name   : normDegree360
+* Purpose: normalize angle in degree (-360..360)
+* Input  : n - angle in degree
+* Output : -
+* Return : normalize angle (-360..360)
+* Notes  : -
 \***********************************************************************/
 
 inline double normDegree360(double n)
@@ -739,13 +841,12 @@ inline double normDegree360(double n)
 #ifdef __cplusplus
 
 /***********************************************************************\
-* Name       : swapWORD
-* Purpose    : swap low/high byte of word (2 bytes)
-* Input      : n - word (a:b)
-* Output     : -
-* Return     : swapped word (b:a)
-* Side-Effect: unknown
-* Notes      : -
+* Name   : swapWORD
+* Purpose: swap low/high byte of word (2 bytes)
+* Input  : n - word (a:b)
+* Output : -
+* Return : swapped word (b:a)
+* Notes  : -
 \***********************************************************************/
 
 inline ushort swapWORD(ushort n)
@@ -756,13 +857,12 @@ inline ushort swapWORD(ushort n)
 }
 
 /***********************************************************************\
-* Name       : swapLONG
-* Purpose    : swap bytes of long (4 bytes)
-* Input      : n - long (a:b:c:d)
-* Output     : -
-* Return     : swapped long (d:c:b:a)
-* Side-Effect: unknown
-* Notes      : -
+* Name   : swapLONG
+* Purpose: swap bytes of long (4 bytes)
+* Input  : n - long (a:b:c:d)
+* Output : -
+* Return : swapped long (d:c:b:a)
+* Notes  : -
 \***********************************************************************/
 
 inline ulong swapLONG(ulong n)
@@ -818,7 +918,7 @@ void __abort(const char   *filename,
 
 /***********************************************************************\
 * Name   : dumpMemory
-* Purpose: dump memory content
+* Purpose: dump memory content (hex dump)
 * Input  : address - start address
 *          length  - length
 * Output : -
@@ -834,6 +934,6 @@ void dumpMemory(const void *address, uint length);
 }
 #endif
 
-#endif /* _GLOBAL_H */
+#endif /* __GLOBAL__ */
 
 /* end of file */
