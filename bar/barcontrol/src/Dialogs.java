@@ -1,8 +1,8 @@
 /***********************************************************************\
 *
 * $Source: /tmp/cvs/onzen/src/Dialogs.java,v $
-* $Revision: 1.1 $
-* $Author: torsten $
+* $Revision: 949 $
+* $Author: trupp $
 * Contents: dialog functions
 * Systems: all
 *
@@ -76,12 +76,13 @@ class SimpleBusyDialog
    * @param image image to show
    * @param imageSize size of image
    * @param message message to show
+   * @param abortButton true for abort-button, false otherwise
    */
-  SimpleBusyDialog(Shell parentShell, String title, Image image, Point imageSize, String message)
+  SimpleBusyDialog(Shell parentShell, String title, Image image, Point imageSize, String message, boolean abortButton)
   {
-    Composite       composite;
-    Label           label;
-    Button          button;
+    Composite composite;
+    Label     label;
+    Button    button;
 
     this.image     = image;
     this.imageSize = imageSize;
@@ -102,7 +103,29 @@ class SimpleBusyDialog
 
       label = new Label(composite,SWT.LEFT|SWT.WRAP);
       label.setText(message);
-      label.setLayoutData(new TableLayoutData(0,1,TableLayoutData.NS|TableLayoutData.W,0,0,4));
+      label.setLayoutData(new TableLayoutData(0,1,TableLayoutData.N|TableLayoutData.WE,0,0,4));
+    }
+
+    if (abortButton)
+    {
+      composite = new Composite(dialog,SWT.NONE);
+      composite.setLayout(new TableLayout(null,1.0,4));
+      composite.setLayoutData(new TableLayoutData(1,0,TableLayoutData.WE));
+      {
+        button = new Button(composite,SWT.CENTER);
+        button.setText("Abort");
+        button.setLayoutData(new TableLayoutData(0,0,TableLayoutData.E,0,0,0,0,SWT.DEFAULT,SWT.DEFAULT,60,SWT.DEFAULT));
+        button.addSelectionListener(new SelectionListener()
+        {
+          public void widgetDefaultSelected(SelectionEvent selectionEvent)
+          {
+          }
+          public void widgetSelected(SelectionEvent selectionEvent)
+          {
+            close();
+          }
+        });
+      }
     }
 
     Dialogs.show(dialog);
@@ -113,11 +136,46 @@ class SimpleBusyDialog
    * @param parentShell parent shell
    * @param title window title
    * @param image image to show
+   * @param imageSize size of image
+   * @param message message to show
+   */
+  SimpleBusyDialog(Shell parentShell, String title, Image image, Point imageSize, String message)
+  {
+    this(parentShell,title,image,imageSize,message,false);
+  }
+
+  /** create simple busy dialog
+   * @param parentShell parent shell
+   * @param title window title
+   * @param image image to show
+   * @param message message to show
+   * @param abortButton true for abort-button, false otherwise
+   */
+  SimpleBusyDialog(Shell parentShell, String title, Image image, String message, boolean abortButton)
+  {
+    this(parentShell,title,image,new Point(48,48),message,abortButton);
+  }
+
+  /** create simple busy dialog
+   * @param parentShell parent shell
+   * @param title window title
+   * @param image image to show
    * @param message message to show
    */
   SimpleBusyDialog(Shell parentShell, String title, Image image, String message)
   {
-    this(parentShell,title,image,new Point(48,48),message);
+    this(parentShell,title,image,message,false);
+  }
+
+  /** create simple busy dialog
+   * @param parentShell parent shell
+   * @param title window title
+   * @param message message to show
+   * @param abortButton true for abort-button, false otherwise
+   */
+  SimpleBusyDialog(Shell parentShell, String title, String message, boolean abortButton)
+  {
+    this(parentShell,title,Widgets.loadImage(parentShell.getDisplay(),"working.png"),message,abortButton);
   }
 
   /** create simple busy dialog
@@ -127,7 +185,7 @@ class SimpleBusyDialog
    */
   SimpleBusyDialog(Shell parentShell, String title, String message)
   {
-    this(parentShell,title,Widgets.loadImage(parentShell.getDisplay(),"working.png"),message);
+    this(parentShell,title,message,false);
   }
 
   /** animate dialog
@@ -192,7 +250,18 @@ class SimpleBusyDialog
   public void close()
   {
     data.animationQuit = true;
-    Dialogs.close(dialog);
+    if (!dialog.isDisposed())
+    {
+      Dialogs.close(dialog);
+    }
+  }
+
+  /** check if dialog is closed
+   * @return true iff closed
+   */
+  public boolean isClosed()
+  {
+    return dialog.isDisposed();
   }
 }
 
@@ -306,7 +375,6 @@ Dprintf.dprintf("");
       {
         while (!data.animationQuit)
         {
-Dprintf.dprintf("");
           animate();
           try { Thread.sleep(timeInterval); } catch (InterruptedException exception) { /* ignore */ }
         }
@@ -1400,7 +1468,7 @@ class Dialogs
             // message
             label = new Label(subComposite,SWT.LEFT|SWT.WRAP);
             label.setText(message);
-            label.setLayoutData(new TableLayoutData(row,0,TableLayoutData.W,0,0,4)); row++;
+            label.setLayoutData(new TableLayoutData(row,0,TableLayoutData.NSWE,0,0,4)); row++;
           }
 
           // buttons
@@ -1628,7 +1696,7 @@ class Dialogs
         // message
         label = new Label(composite,SWT.LEFT|SWT.WRAP);
         label.setText(message);
-        label.setLayoutData(new TableLayoutData(0,1,TableLayoutData.WE,0,0,4));
+        label.setLayoutData(new TableLayoutData(0,1,TableLayoutData.NSWE,0,0,4));
 
         // checkboxes
         subComposite = new Composite(composite,SWT.NONE);
@@ -2207,10 +2275,32 @@ class Dialogs
    * @param title title text
    * @param message info message
    * @return simple busy dialog
+   * @param abortButton true for abort-button, false otherwise
+   */
+  public static SimpleBusyDialog openSimpleBusy(Shell parentShell, String title, String message, boolean abortButton)
+  {
+    return new SimpleBusyDialog(parentShell,title,message,abortButton);
+  }
+
+  /** open simple busy dialog
+   * @param parentShell parent shell
+   * @param title title text
+   * @param message info message
+   * @return simple busy dialog
    */
   public static SimpleBusyDialog openSimpleBusy(Shell parentShell, String title, String message)
   {
-    return new SimpleBusyDialog(parentShell,title,message);
+    return openSimpleBusy(parentShell,title,message,false);
+  }
+
+  /** open simple busy dialog
+   * @param parentShell parent shell
+   * @param message info message
+   * @return simple busy dialog
+   */
+  public static SimpleBusyDialog openSimpleBusy(Shell parentShell, String message, boolean abortButton)
+  {
+    return openSimpleBusy(parentShell,"Busy",message,abortButton);
   }
 
   /** open simple busy dialog
@@ -2220,7 +2310,7 @@ class Dialogs
    */
   public static SimpleBusyDialog openSimpleBusy(Shell parentShell, String message)
   {
-    return openSimpleBusy(parentShell,"Busy",message);
+    return openSimpleBusy(parentShell,message,false);
   }
 
   /** close simple busy dialog
