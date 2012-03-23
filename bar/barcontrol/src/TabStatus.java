@@ -92,7 +92,8 @@ class TabStatus
     String state;
     String type;
     long   archivePartSize;
-    String compressAlgorithm;
+    String deltaCompressAlgorithm;
+    String byteCompressAlgorithm;
     String cryptAlgorithm;
     String cryptType;
     String cryptPasswordMode;
@@ -104,25 +105,49 @@ class TabStatus
 
     /** create job data
      */
-    JobData(int id, String name, String state, String type, long archivePartSize, String compressAlgorithm, String cryptAlgorithm, String cryptType, String cryptPasswordMode, long lastExecutedDateTime, long estimatedRestTime)
+    JobData(int id, String name, String state, String type, long archivePartSize, String deltaCompressAlgorithm, String byteCompressAlgorithm, String cryptAlgorithm, String cryptType, String cryptPasswordMode, long lastExecutedDateTime, long estimatedRestTime)
     {
-      this.id                   = id;
-      this.name                 = name;
-      this.state                = state;
-      this.type                 = type;
-      this.archivePartSize      = archivePartSize;
-      this.compressAlgorithm    = compressAlgorithm;
-      this.cryptAlgorithm       = cryptAlgorithm;
-      this.cryptType            = cryptType;
-      this.cryptPasswordMode    = cryptPasswordMode;
-      this.lastExecutedDateTime = lastExecutedDateTime;
-      this.estimatedRestTime    = estimatedRestTime;
+      this.id                     = id;
+      this.name                   = name;
+      this.state                  = state;
+      this.type                   = type;
+      this.archivePartSize        = archivePartSize;
+      this.deltaCompressAlgorithm = deltaCompressAlgorithm;
+      this.byteCompressAlgorithm  = byteCompressAlgorithm;
+      this.cryptAlgorithm         = cryptAlgorithm;
+      this.cryptType              = cryptType;
+      this.cryptPasswordMode      = cryptPasswordMode;
+      this.lastExecutedDateTime   = lastExecutedDateTime;
+      this.estimatedRestTime      = estimatedRestTime;
     }
 
-    /** get job crypt algorithm (including "*" for asymmetric)
-     * @return crypt algorithm
+    /** format job compress algorithms
+     * @return compress algorithm string
      */
-    String getCryptAlgorithm()
+    String formatCompressAlgorithm()
+    {
+      boolean deltaCompressIsNone = deltaCompressAlgorithm.equals("none");
+      boolean byteCompressIsNone  = byteCompressAlgorithm.equals("none");
+
+      if (!deltaCompressIsNone || !byteCompressIsNone)
+      {
+        StringBuilder buffer = new StringBuilder();
+        if (!deltaCompressIsNone) buffer.append(deltaCompressAlgorithm);
+        if (buffer.length() > 0) buffer.append('+');
+        if (!byteCompressIsNone) buffer.append(byteCompressAlgorithm);
+
+        return buffer.toString();
+      }
+      else
+      {
+        return "none";
+      }
+    }
+
+    /** format job crypt algorithm (including "*" for asymmetric)
+     * @return crypt algorithm string
+     */
+    String formatCryptAlgorithm()
     {
       return cryptAlgorithm+(cryptType.equals("ASYMMETRIC")?"*":"");
     }
@@ -223,7 +248,7 @@ class TabStatus
     /** compare job data
      * @param jobData1, jobData2 file tree data to compare
      * @return -1 iff jobData1 < jobData2,
-                0 iff jobData1 = jobData2, 
+                0 iff jobData1 = jobData2,
                 1 iff jobData1 > jobData2
      */
     public int compare(JobData jobData1, JobData jobData2)
@@ -241,7 +266,8 @@ class TabStatus
           else if (jobData1.archivePartSize > jobData2.archivePartSize) return  1;
           else                                                          return  0;
         case SORTMODE_COMPRESS:
-          return jobData1.compressAlgorithm.compareTo(jobData2.compressAlgorithm);
+          int result = jobData1.deltaCompressAlgorithm.compareTo(jobData2.deltaCompressAlgorithm);
+          if (result == 0) result = jobData1.byteCompressAlgorithm.compareTo(jobData2.byteCompressAlgorithm);
         case SORTMODE_CRYPT:
           String crypt1 = jobData1.cryptAlgorithm+(jobData1.cryptType.equals("ASYMMETRIC")?"*":"");
           String crypt2 = jobData2.cryptAlgorithm+(jobData2.cryptType.equals("ASYMMETRIC")?"*":"");
@@ -289,7 +315,7 @@ class TabStatus
   private WidgetVariable totalFiles            = new WidgetVariable(0);
   private WidgetVariable totalBytes            = new WidgetVariable(0);
 
-  private WidgetVariable filesPerSecond        = new WidgetVariable(0.0); 
+  private WidgetVariable filesPerSecond        = new WidgetVariable(0.0);
   private WidgetVariable bytesPerSecond        = new WidgetVariable(0.0);
   private WidgetVariable storageBytesPerSecond = new WidgetVariable(0.0);
   private WidgetVariable ratio                 = new WidgetVariable(0.0);
@@ -513,7 +539,7 @@ class TabStatus
       // done files/bytes, files/s, bytes/s
       label = Widgets.newLabel(widgetSelectedJob,"Done:");
       Widgets.layout(label,0,0,TableLayoutData.W);
-      label= Widgets.newNumberView(widgetSelectedJob);
+      label = Widgets.newNumberView(widgetSelectedJob);
       Widgets.layout(label,0,1,TableLayoutData.WE);
       Widgets.addModifyListener(new WidgetModifyListener(label,doneFiles));
       label = Widgets.newLabel(widgetSelectedJob,"files");
@@ -646,7 +672,7 @@ class TabStatus
             return Units.getByteSize(variable.getDouble());
           }
         });
-        label = Widgets.newLabel(composite,"bytes/s");        
+        label = Widgets.newLabel(composite,"bytes/s");
         Widgets.layout(label,0,1,TableLayoutData.W,0,0,0,0,Widgets.getTextSize(label,new String[]{"bytes/s","KBytes/s","MBytes/s","GBytes/s"}));
         Widgets.addModifyListener(new WidgetModifyListener(label,storageBytesPerSecond)
         {
@@ -820,7 +846,7 @@ class TabStatus
         {
           Label label = (Label)mouseEvent.widget;
           Text  text;
-        
+
           if (widgetMessageToolTip != null)
           {
             widgetMessageToolTip.dispose();
@@ -1115,34 +1141,36 @@ class TabStatus
             boolean[]   tableItemFlags = new boolean[tableItems.length];
             for (String line : result)
             {
-              Object data[] = new Object[11];
+              Object data[] = new Object[12];
               /* format:
                  <id>
                  <name>
                  <state>
                  <type>
                  <archivePartSize>
-                 <compressAlgorithm>
+                 <deltaCompressAlgorithm>+<byteCompressAlgorithm>
+                 <byteCompressAlgorithm>
                  <cryptAlgorithm>
                  <cryptType>
                  <cryptPasswordMode>
                  <lastExecutedDateTime>
                  <estimatedRestTime>
               */
-              if (StringParser.parse(line,"%d %S %S %s %ld %S %S %S %S %ld %ld",data,StringParser.QUOTE_CHARS))
+              if (StringParser.parse(line,"%d %S %S %s %ld '%s+%s' %S %S %S %ld %ld",data,StringParser.QUOTE_CHARS))
               {
                 // get data
-                int    id                   = (Integer)data[0];
-                String name                 = (String )data[1];
-                String state                = (String )data[2];
-                String type                 = (String )data[3];
-                long   archivePartSize      = (Long   )data[4];
-                String compressAlgorithm    = (String )data[5];
-                String cryptAlgorithm       = (String )data[6];
-                String cryptType            = (String )data[7];
-                String cryptPasswordMode    = (String )data[8];
-                long   lastExecutedDateTime = (Long   )data[9];
-                long   estimatedRestTime    = (Long   )data[10];
+                int    id                     = (Integer)data[ 0];
+                String name                   = (String )data[ 1];
+                String state                  = (String )data[ 2];
+                String type                   = (String )data[ 3];
+                long   archivePartSize        = (Long   )data[ 4];
+                String deltaCompressAlgorithm = (String )data[ 5];
+                String byteCompressAlgorithm  = (String )data[ 6];
+                String cryptAlgorithm         = (String )data[ 7];
+                String cryptType              = (String )data[ 8];
+                String cryptPasswordMode      = (String )data[ 9];
+                long   lastExecutedDateTime   = (Long   )data[10];
+                long   estimatedRestTime      = (Long   )data[11];
 
                 // get/create table item
                 TableItem tableItem;
@@ -1153,16 +1181,17 @@ class TabStatus
                   tableItem = tableItems[index];
 
                   jobData = (JobData)tableItem.getData();
-                  jobData.name                 = name;
-                  jobData.state                = state;
-                  jobData.type                 = type;
-                  jobData.archivePartSize      = archivePartSize;
-                  jobData.compressAlgorithm    = compressAlgorithm;
-                  jobData.cryptAlgorithm       = cryptAlgorithm;
-                  jobData.cryptType            = cryptType;
-                  jobData.cryptPasswordMode    = cryptPasswordMode;
-                  jobData.lastExecutedDateTime = lastExecutedDateTime;
-                  jobData.estimatedRestTime    = estimatedRestTime;
+                  jobData.name                   = name;
+                  jobData.state                  = state;
+                  jobData.type                   = type;
+                  jobData.archivePartSize        = archivePartSize;
+                  jobData.deltaCompressAlgorithm = deltaCompressAlgorithm;
+                  jobData.byteCompressAlgorithm  = byteCompressAlgorithm;
+                  jobData.cryptAlgorithm         = cryptAlgorithm;
+                  jobData.cryptType              = cryptType;
+                  jobData.cryptPasswordMode      = cryptPasswordMode;
+                  jobData.lastExecutedDateTime   = lastExecutedDateTime;
+                  jobData.estimatedRestTime      = estimatedRestTime;
 
                   tableItemFlags[index] = true;
                 }
@@ -1173,7 +1202,8 @@ class TabStatus
                                         state,
                                         type,
                                         archivePartSize,
-                                        compressAlgorithm,
+                                        deltaCompressAlgorithm,
+                                        byteCompressAlgorithm,
                                         cryptAlgorithm,
                                         cryptType,
                                         cryptPasswordMode,
@@ -1190,8 +1220,8 @@ class TabStatus
                 tableItem.setText(1,(status == States.RUNNING)?jobData.state:"suspended");
                 tableItem.setText(2,jobData.type);
                 tableItem.setText(3,(jobData.archivePartSize > 0)?Units.formatByteSize(jobData.archivePartSize):"unlimited");
-                tableItem.setText(4,jobData.compressAlgorithm);
-                tableItem.setText(5,jobData.getCryptAlgorithm());
+                tableItem.setText(4,jobData.formatCompressAlgorithm());
+                tableItem.setText(5,jobData.formatCryptAlgorithm());
                 tableItem.setText(6,jobData.formatLastExecutedDateTime());
                 tableItem.setText(7,jobData.formatEstimatedRestTime());
               }
@@ -1326,7 +1356,8 @@ class TabStatus
 
     // get job mode
     mode = Dialogs.select(shell,
-                          "Confirmation","Start job '"+selectedJobData.name+"'?",
+                          "Confirmation",
+                          "Start job '"+selectedJobData.name+"'?",
                           new String[]{"Normal","Full","Incremental","Differential","Dry-run","Cancel"},
                           new String[]{"Store all files.","Store all files and create incremental data file.","Store changed files since last incremental or full storage and update incremental data file.","Store changed files since last full storage.","Collect and process all files, but do not create archives."},
                           4
@@ -1379,6 +1410,8 @@ class TabStatus
       case 5:
         break;
     }
+// ???
+Dprintf.dprintf("xxxxxxxxxx %d",errorCode);
   }
 
   /** abort selected job
@@ -1423,7 +1456,7 @@ class TabStatus
   private void jobSuspendContinue()
   {
     String[] result = new String[1];
-    int      error  = Errors.NONE;   
+    int      error  = Errors.NONE;
     switch (status)
     {
       case RUNNING: error = BARServer.executeCommand("SUSPEND" ,result); break;
@@ -1444,7 +1477,7 @@ class TabStatus
 
     long     volumeNumber = requestedVolumeNumber.getLong();
     String[] result       = new String[1];
-    int      error        = Errors.NONE;   
+    int      error        = Errors.NONE;
     switch (Dialogs.select(shell,"Volume request","Load volume number "+volumeNumber+".",new String[]{"OK","Unload tray","Cancel"},0))
     {
       case 0:
