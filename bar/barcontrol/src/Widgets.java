@@ -1,8 +1,8 @@
 /***********************************************************************\
 *
-* $Source: /home/torsten/cvs/bar/barcontrol/src/Widgets.java,v $
-* $Revision: 1.21 $
-* $Author: torsten $
+* $Revision: 800 $
+* $Date: 2012-01-28 10:49:16 +0100 (Sat, 28 Jan 2012) $
+* $Author: trupp $
 * Contents: simple widgets functions
 * Systems: all
 *
@@ -13,12 +13,16 @@
 import java.io.File;
 import java.io.InputStream;
 import java.net.URL;
+import java.util.Arrays;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashSet;
-import java.util.LinkedList;
+import java.util.Scanner;
 
 // graphics
 import org.eclipse.swt.custom.SashForm;
+import org.eclipse.swt.custom.ScrolledComposite;
+import org.eclipse.swt.custom.StyledText;
 import org.eclipse.swt.dnd.Clipboard;
 import org.eclipse.swt.dnd.Transfer;
 import org.eclipse.swt.dnd.TextTransfer;
@@ -32,6 +36,8 @@ import org.eclipse.swt.events.SelectionEvent;
 import org.eclipse.swt.events.SelectionListener;
 import org.eclipse.swt.graphics.Color;
 import org.eclipse.swt.graphics.GC;
+import org.eclipse.swt.graphics.Font;
+import org.eclipse.swt.graphics.FontData;
 import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.graphics.Point;
 import org.eclipse.swt.SWT;
@@ -74,6 +80,7 @@ enum WidgetVariableTypes
   DOUBLE,
   STRING,
   ENUMERATION,
+  OBJECT,
 };
 
 /** widget variable
@@ -86,6 +93,7 @@ class WidgetVariable
   private double              d;
   private String              string;
   private String              enumeration[];
+  private Object              object;
 
   /** create widget variable
    * @param b/l/d/string/enumeration value
@@ -114,6 +122,11 @@ class WidgetVariable
   {
     this.type        = WidgetVariableTypes.ENUMERATION;
     this.enumeration = enumeration;
+  }
+  WidgetVariable(Object object)
+  {
+    this.type   = WidgetVariableTypes.OBJECT;
+    this.object = object;
   }
 
   /** get variable type
@@ -255,13 +268,22 @@ class WidgetVariable
   }
 
   /** compare string values
-   * @param value
+   * @param value value to compare with
    * @return true iff equal
    */
   public boolean equals(String value)
   {
     String s = toString();
-    return (s != null)?s.equals(value):(value == null);
+    return (s != null) ? s.equals(value) : (value == null);
+  }
+
+  /** compare object reference
+   * @param object object  to compare with
+   * @return true iff equal
+   */
+  public boolean equals(Object object)
+  {
+    return this.object == object;
   }
 
   /** convert to string
@@ -276,6 +298,7 @@ class WidgetVariable
       case DOUBLE:      return Double.toString(d);
       case STRING:      return string;
       case ENUMERATION: return string;
+      case OBJECT:      return object.toString();
     }
     return "";
   }
@@ -285,7 +308,7 @@ class WidgetVariable
  */
 class WidgetModifyListener
 {
-  private Control          control;
+  private Widget           widget;
   private WidgetVariable[] variables;
 
   // cached text for widget
@@ -295,41 +318,49 @@ class WidgetModifyListener
    */
   WidgetModifyListener()
   {
-    this.control   = null;
+    this.widget    = null;
     this.variables = null;
   }
 
   /** create widget listener
-   * @param control control widget
+   * @param widget widget
    * @param variable widget variable
    */
-  WidgetModifyListener(Control control, WidgetVariable variable)
+  WidgetModifyListener(Widget widget, WidgetVariable variable)
   {
-    this.control   = control;
-    this.variables = new WidgetVariable[]{variable};
+    this(widget,new WidgetVariable[]{variable});
   }
 
   /** create widget listener
-   * @param control control widget
+   * @param widget widget
    * @param variable widget variable
    */
-  WidgetModifyListener(Control control, WidgetVariable[] variables)
+  WidgetModifyListener(Widget widget, WidgetVariable[] variables)
   {
-    this.control   = control;
+    this.widget    = widget;
     this.variables = variables;
   }
 
-  /** set control widget
-   * @param control control widget
+  /** create widget listener
+   * @param widget widget
+   * @param object object
    */
-  void setControl(Control control)
+  WidgetModifyListener(Widget widget, Object object)
   {
-    this.control = control;
+    this(widget,new WidgetVariable(object));
+  }
+
+  /** set widget
+   * @param widget widget
+   */
+  void setControl(Widget widget)
+  {
+    this.widget = widget;
   }
 
   /** set variable
    * @param variable widget variable
-   * @return 
+   * @return
    */
   void setVariable(WidgetVariable variable)
   {
@@ -344,169 +375,260 @@ class WidgetModifyListener
   {
     for (WidgetVariable variable : variables)
     {
-      if ((variable != null) && variable.equals(object)) return true;
+      if (variable != null)
+      {
+        switch (variable.getType())
+        {
+          case BOOLEAN:
+          case LONG:
+          case DOUBLE:
+          case STRING:
+          case ENUMERATION:
+            if (variable.equals(object.toString())) return true;
+            break;
+          case OBJECT:
+            if (variable.equals(object)) return true;
+            break;
+        }
+      }
     }
+
     return false;
   }
 
-  /** set text or selection fo control acording to value of variable
-   * @param control control widget to set
+  /** set text or selection fo widget according to value of variable
+   * @param widget widget widget to set
    * @param variable variable
    */
-  void modified(Control control, WidgetVariable variable)
+  void modified(Widget widget, WidgetVariable variable)
   {
-    if      (control instanceof Label)
+    if      (widget instanceof Label)
     {
+      Label widgetLabel = (Label)widget;
+
       String text = getString(variable);
       if (text == null)
       {
         switch (variable.getType())
         {
-          case LONG:   text = Long.toString(variable.getLong()); break; 
-          case DOUBLE: text = Double.toString(variable.getDouble()); break; 
-          case STRING: text = variable.getString(); break; 
+          case LONG:   text = Long.toString(variable.getLong()); break;
+          case DOUBLE: text = Double.toString(variable.getDouble()); break;
+          case STRING: text = variable.getString(); break;
         }
       }
-      if (!text.equals(cachedText))
+      if ((text != null) && !text.equals(cachedText))
       {
-        ((Label)control).setText(text);
-        control.getParent().layout(true,true);
+        widgetLabel.setText(text);
+// label layout does not work as expected: width of first label is expanded, rest reduced?
+//        widgetLabel.getParent().layout();
         cachedText = text;
       }
     }
-    else if (control instanceof Button)
+    else if (widget instanceof Button)
     {
-      if      ((((Button)control).getStyle() & SWT.PUSH) == SWT.PUSH)
+      Button widgetButton = (Button)widget;
+
+      if      ((widgetButton.getStyle() & SWT.PUSH) == SWT.PUSH)
       {
         String text = getString(variable);
         if (text == null)
         {
           switch (variable.getType())
           {
-            case LONG:   text = Long.toString(variable.getLong()); break; 
-            case DOUBLE: text = Double.toString(variable.getDouble()); break; 
-            case STRING: text = variable.getString(); break; 
+            case LONG:   text = Long.toString(variable.getLong()); break;
+            case DOUBLE: text = Double.toString(variable.getDouble()); break;
+            case STRING: text = variable.getString(); break;
           }
         }
-        if (!text.equals(cachedText))
+        if ((text != null) && !text.equals(cachedText))
         {
-          ((Button)control).setText(text);
-          control.getParent().layout();
+          widgetButton.setText(text);
+          widgetButton.getParent().layout();
           cachedText = text;
         }
       }
-      else if ((((Button)control).getStyle() & SWT.CHECK) == SWT.CHECK)
+      else if ((widgetButton.getStyle() & SWT.CHECK) == SWT.CHECK)
       {
         boolean selection = false;
         switch (variable.getType())
         {
           case BOOLEAN: selection = variable.getBoolean(); break;
-          case LONG:    selection = (variable.getLong() != 0); break; 
-          case DOUBLE:  selection = (variable.getDouble() != 0); break; 
+          case LONG:    selection = (variable.getLong() != 0); break;
+          case DOUBLE:  selection = (variable.getDouble() != 0); break;
         }
-        ((Button)control).setSelection(selection);
+        widgetButton.setSelection(selection);
       }
-      else if ((((Button)control).getStyle() & SWT.RADIO) == SWT.RADIO)
+      else if ((widgetButton.getStyle() & SWT.RADIO) == SWT.RADIO)
       {
         boolean selection = false;
         switch (variable.getType())
         {
           case BOOLEAN: selection = variable.getBoolean(); break;
-          case LONG:    selection = (variable.getLong() != 0); break; 
-          case DOUBLE:  selection = (variable.getDouble() != 0); break; 
+          case LONG:    selection = (variable.getLong() != 0); break;
+          case DOUBLE:  selection = (variable.getDouble() != 0); break;
         }
-        ((Button)control).setSelection(selection);
+        widgetButton.setSelection(selection);
       }
     }
-    else if (control instanceof Combo)
+    else if (widget instanceof Combo)
     {
+      Combo widgetCombo = (Combo)widget;
+
       String text = getString(variable);
       if (text == null)
       {
         switch (variable.getType())
         {
           case BOOLEAN:     text = Boolean.toString(variable.getBoolean()); break;
-          case LONG:        text = Long.toString(variable.getLong()); break; 
-          case DOUBLE:      text = Double.toString(variable.getDouble()); break; 
+          case LONG:        text = Long.toString(variable.getLong()); break;
+          case DOUBLE:      text = Double.toString(variable.getDouble()); break;
           case STRING:      text = variable.getString(); break;
           case ENUMERATION: text = variable.getString(); break;
         }
       }
-      if (!text.equals(cachedText))
+      if ((text != null) && !text.equals(cachedText))
       {
-        ((Combo)control).setText(text);
-        control.getParent().layout();
+        widgetCombo.setText(text);
+        widgetCombo.getParent().layout();
         cachedText = text;
       }
     }
-    else if (control instanceof Text)
+    else if (widget instanceof Text)
     {
+      Text widgetText = (Text)widget;
+
       String text = getString(variable);
       if (text == null)
       {
         switch (variable.getType())
         {
-          case LONG:   text = Long.toString(variable.getLong()); break; 
-          case DOUBLE: text = Double.toString(variable.getDouble()); break; 
-          case STRING: text = variable.getString(); break; 
+          case LONG:   text = Long.toString(variable.getLong()); break;
+          case DOUBLE: text = Double.toString(variable.getDouble()); break;
+          case STRING: text = variable.getString(); break;
         }
       }
-      if (!text.equals(cachedText))
+      if ((text != null) && !text.equals(cachedText))
       {
-        ((Text)control).setText(text);
-        control.getParent().layout();
+        widgetText.setText(text);
+// text layout does not work as expected: width of first label is expanded, rest reduced?
+//        widgetText.getParent().layout();
         cachedText = text;
       }
     }
-    else if (control instanceof Spinner)
+    else if (widget instanceof StyledText)
     {
+      StyledText widgetStyledText = (StyledText)widget;
+
+      String text = getString(variable);
+      if (text == null)
+      {
+        switch (variable.getType())
+        {
+          case LONG:   text = Long.toString(variable.getLong()); break;
+          case DOUBLE: text = Double.toString(variable.getDouble()); break;
+          case STRING: text = variable.getString(); break;
+        }
+      }
+      if ((text != null) && !text.equals(cachedText))
+      {
+        widgetStyledText.setText(text);
+        widgetStyledText.getParent().layout();
+        cachedText = text;
+      }
+    }
+    else if (widget instanceof Spinner)
+    {
+      Spinner widgetSpinner = (Spinner)widget;
+
       int n = 0;
       switch (variable.getType())
       {
-        case LONG:   n = (int)variable.getLong(); break; 
-        case DOUBLE: n = (int)variable.getDouble(); break; 
+        case LONG:   n = (int)variable.getLong(); break;
+        case DOUBLE: n = (int)variable.getDouble(); break;
       }
-      ((Spinner)control).setSelection(n);
+      widgetSpinner.setSelection(n);
     }
-    else if (control instanceof Slider)
+    else if (widget instanceof Slider)
     {
+      Slider widgetSlider = (Slider)widget;
+
       int n = 0;
       switch (variable.getType())
       {
-        case LONG:   n = (int)variable.getLong(); break; 
-        case DOUBLE: n = (int)variable.getDouble(); break; 
+        case LONG:   n = (int)variable.getLong(); break;
+        case DOUBLE: n = (int)variable.getDouble(); break;
       }
-      ((Slider)control).setSelection(n);
+      widgetSlider.setSelection(n);
     }
-    else if (control instanceof Scale)
+    else if (widget instanceof Scale)
     {
+      Scale widgetScale = (Scale)widget;
+
       int n = 0;
       switch (variable.getType())
       {
-        case LONG:   n = (int)variable.getLong(); break; 
-        case DOUBLE: n = (int)variable.getDouble(); break; 
+        case LONG:   n = (int)variable.getLong(); break;
+        case DOUBLE: n = (int)variable.getDouble(); break;
       }
-      ((Scale)control).setSelection(n);
+      widgetScale.setSelection(n);
     }
-    else if (control instanceof ProgressBar)
+    else if (widget instanceof ProgressBar)
     {
+      ProgressBar widgetProgressBar = (ProgressBar)widget;
+
       double value = 0;
       switch (variable.getType())
       {
-        case LONG:   value = (double)variable.getLong(); break; 
-        case DOUBLE: value = variable.getDouble(); break; 
+        case LONG:   value = (double)variable.getLong(); break;
+        case DOUBLE: value = variable.getDouble(); break;
       }
-      ((ProgressBar)control).setSelection(value);
+      widgetProgressBar.setSelection(value);
+    }
+    else if (widget instanceof MenuItem)
+    {
+      MenuItem widgetMenuItem = (MenuItem)widget;
     }
     else
     {
-      throw new InternalError("Unknown widget '"+control+"' in widget listener!");
+      throw new InternalError("Unhandled widget '"+widget+"' in widget listener!");
     }
   }
 
-  /** set text or selection fo control acording to value of variable
-   * @param control control widget to set
+  /** modified handler
+   * Note: required because it can be overwritten by specific handler
+   * @param control control to notify about modified variable
    * @param variable variable
+   */
+  void modified(Control control, WidgetVariable variable)
+  {
+    modified((Widget)control,variable);
+  }
+
+  /** modified handler
+   * Note: required because it can be overwritten by specific handler
+   * @param menuItem menu item to notify about modified variable
+   * @param variable variable
+   */
+  void modified(MenuItem menuItem, WidgetVariable variable)
+  {
+    modified((Widget)menuItem,variable);
+  }
+
+  /** set text or selection fo widget according to value of variable
+   * @param widget widget to notify about modified variable
+   * @param variables variables
+   */
+  void modified(Widget widget, WidgetVariable[] variables)
+  {
+    for (WidgetVariable variable : variables)
+    {
+      modified(widget,variable);
+    }
+  }
+
+  /** set text or selection fo widget according to value of variable
+   * @param control control to notify about modified variable
+   * @param variables variables
    */
   void modified(Control control, WidgetVariable[] variables)
   {
@@ -516,27 +638,101 @@ class WidgetModifyListener
     }
   }
 
-  /** notify modify variable
-   * @param variable widget variable
+  /** set text or selection fo widget according to value of variable
+   * @param menuItem menu item to notify about modified variable
+   * @param variables variables
    */
-  public void modified(WidgetVariable variable)
+  void modified(MenuItem menuItem, WidgetVariable[] variables)
   {
-    modified(control,variable);
+    modified((Widget)menuItem,variables);
   }
 
   /** notify modify variable
    * @param variable widget variable
    */
+  public void modified(WidgetVariable variable)
+  {
+    if (widget instanceof Control)
+    {
+      modified((Control)widget,variable);
+    }
+    else
+    {
+      modified(widget,variable);
+    }
+  }
+
+  /** notify modify variable
+   * @param variables widget variables
+   */
   public void modified(WidgetVariable[] variables)
   {
+    if (widget instanceof Control)
+    {
+      modified((Control)widget,variables);
+    }
+    else
+    {
+      modified(widget,variables);
+    }
+  }
+
+  /** notify modify variable
+   * @param widget widget to notify
+   */
+  void modified(Widget widget)
+  {
+    modified(widget,variables);
+  }
+
+  /** notify modify variable
+   * Note: required because it can be overwritten by specific handler
+   * @param control control to notify
+   */
+  void modified(Control control)
+  {
     modified(control,variables);
+  }
+
+  /** notify modify variable
+   * Note: required because it can be overwritten by specific handler
+   * @param button button to notify
+   */
+  void modified(Combo combo)
+  {
+    modified((Control)combo);
+  }
+
+  /** notify modify variable
+   * Note: required because it can be overwritten by specific handler
+   * @param button button to notify
+   */
+  void modified(Button button)
+  {
+    modified((Control)button);
+  }
+
+  /** notify modify variable
+   * Note: required because it can be overwritten by specific handler
+   * @param menuItem menu item to notify
+   */
+  void modified(MenuItem menuItem)
+  {
+    modified(menuItem,variables);
   }
 
   /** notify modify variable
    */
   public void modified()
   {
-    modified(variables);
+    if (widget instanceof Control)
+    {
+      modified((Control)widget);
+    }
+    else
+    {
+      modified(widget);
+    }
   }
 
   /** get string of variable
@@ -563,6 +759,7 @@ class WidgetEvent
 
   /** add widget event listern
    * @param widgetEventListener widget event listern to add
+
    */
   public void add(WidgetEventListener widgetEventListener)
   {
@@ -571,6 +768,7 @@ class WidgetEvent
 
   /** remove widget event listern
    * @param widgetEventListener widget event listern to remove
+
    */
   public void remove(WidgetEventListener widgetEventListener)
   {
@@ -683,8 +881,7 @@ class Widgets
 
   /** list of widgets listeners
    */
-  private static HashSet<WidgetModifyListener> widgetModifyListenerSet = new HashSet<WidgetModifyListener>();
-  private static HashSet<WidgetEvent> widgetEventSet = new HashSet<WidgetEvent>();
+  private static ArrayList<WidgetModifyListener> listenersList = new ArrayList<WidgetModifyListener>();
 
   //-----------------------------------------------------------------------
 
@@ -698,7 +895,7 @@ class Widgets
    * @param minWidth,minHeight min. width/height
    * @param maxWidth,maxHeight max. width/height
    */
-  static void layout(Control control, int row, int column, int style, int rowSpawn, int columnSpawn, int padX, int padY, int width, int height, int minWidth, int minHeight, int maxWidth, int maxHeight)
+  public static void layout(Control control, int row, int column, int style, int rowSpawn, int columnSpawn, int padX, int padY, int width, int height, int minWidth, int minHeight, int maxWidth, int maxHeight)
   {
     TableLayoutData tableLayoutData = new TableLayoutData(row,column,style,rowSpawn,columnSpawn,padX,padY,width,height,minWidth,minHeight,maxWidth,maxHeight);
     control.setLayoutData(tableLayoutData);
@@ -713,7 +910,7 @@ class Widgets
    * @param width,height width/height
    * @param minWidth,minHeight min. width/height
    */
-  static void layout(Control control, int row, int column, int style, int rowSpawn, int columnSpawn, int padX, int padY, int width, int height, int minWidth, int minHeight)
+  public static void layout(Control control, int row, int column, int style, int rowSpawn, int columnSpawn, int padX, int padY, int width, int height, int minWidth, int minHeight)
   {
     layout(control,row,column,style,rowSpawn,columnSpawn,padX,padY,width,height,minWidth,minHeight,SWT.DEFAULT,SWT.DEFAULT);
   }
@@ -726,7 +923,7 @@ class Widgets
    * @param padX,padY padding X/Y
    * @param width,height min. width/height
    */
-  static void layout(Control control, int row, int column, int style, int rowSpawn, int columnSpawn, int padX, int padY, int width, int height)
+  public static void layout(Control control, int row, int column, int style, int rowSpawn, int columnSpawn, int padX, int padY, int width, int height)
   {
     layout(control,row,column,style,rowSpawn,columnSpawn,padX,padY,width,height,SWT.DEFAULT,SWT.DEFAULT);
   }
@@ -739,7 +936,7 @@ class Widgets
    * @param padX,padY padding X/Y
    * @param size min. width/height
    */
-  static void layout(Control control, int row, int column, int style, int rowSpawn, int columnSpawn, int padX, int padY, Point size)
+  public static void layout(Control control, int row, int column, int style, int rowSpawn, int columnSpawn, int padX, int padY, Point size)
   {
     layout(control,row,column,style,rowSpawn,columnSpawn,padX,padY,size.x,size.y);
   }
@@ -752,7 +949,7 @@ class Widgets
    * @param pad padding X/Y
    * @param size min. width/height
    */
-  static void layout(Control control, int row, int column, int style, int rowSpawn, int columnSpawn, Point pad, Point size)
+  public static void layout(Control control, int row, int column, int style, int rowSpawn, int columnSpawn, Point pad, Point size)
   {
     layout(control,row,column,style,rowSpawn,columnSpawn,pad.x,pad.y,size.x,size.y);
   }
@@ -764,7 +961,7 @@ class Widgets
    * @param rowSpawn,columnSpan row/column spawn (0..n)
    * @param padX,padY padding X/Y
    */
-  static void layout(Control control, int row, int column, int style, int rowSpawn, int columnSpawn, int padX, int padY)
+  public static void layout(Control control, int row, int column, int style, int rowSpawn, int columnSpawn, int padX, int padY)
   {
     layout(control,row,column,style,rowSpawn,columnSpawn,padX,padY,SWT.DEFAULT,SWT.DEFAULT);
   }
@@ -776,7 +973,7 @@ class Widgets
    * @param rowSpawn,columnSpan row/column spawn (0..n)
    * @param size padding size
    */
-  static void layout(Control control, int row, int column, int style, int rowSpawn, int columnSpawn, Point size)
+  public static void layout(Control control, int row, int column, int style, int rowSpawn, int columnSpawn, Point size)
   {
     layout(control,row,column,style,rowSpawn,columnSpawn,size.x,size.y);
   }
@@ -788,7 +985,7 @@ class Widgets
    * @param rowSpawn,columnSpan row/column spawn (0..n)
    * @param pad padding X/Y
    */
-  static void layout(Control control, int row, int column, int style, int rowSpawn, int columnSpawn, int pad)
+  public static void layout(Control control, int row, int column, int style, int rowSpawn, int columnSpawn, int pad)
   {
     layout(control,row,column,style,rowSpawn,columnSpawn,pad,pad);
   }
@@ -799,7 +996,7 @@ class Widgets
    * @param style SWT style flags
    * @param rowSpawn,columnSpan row/column spawn (0..n)
    */
-  static void layout(Control control, int row, int column, int style, int rowSpawn, int columnSpawn)
+  public static void layout(Control control, int row, int column, int style, int rowSpawn, int columnSpawn)
   {
     layout(control,row,column,style,rowSpawn,columnSpawn,0);
   }
@@ -809,37 +1006,31 @@ class Widgets
    * @param row,column row,column (0..n)
    * @param style SWT style flags
    */
-  static void layout(Control control, int row, int column, int style)
+  public static void layout(Control control, int row, int column, int style)
   {
 //    layout(control,row,column,style,0,0);
     layout(control,row,column,style,0,0,0,0,SWT.DEFAULT,SWT.DEFAULT);
-  }
-
-  /** get text height
-   * @param control control
-   * @return height of text
-   */
-  static int getTextHeight(Control control)
-  {
-    int height;
-
-    GC gc = new GC(control);
-    height = gc.getFontMetrics().getHeight();
-    gc.dispose();
-
-    return height;
   }
 
   /** get text size
    * @param control control
    * @return size of text
    */
-  static Point getTextSize(Control control, String text)
+  public static Point getTextSize(GC gc, String text)
+  {
+    return gc.textExtent(text);
+  }
+
+  /** get text size
+   * @param control control
+   * @return size of text
+   */
+  public static Point getTextSize(Control control, String text)
   {
     Point size;
 
     GC gc = new GC(control);
-    size = gc.textExtent(text);
+    size = getTextSize(gc,text);
     gc.dispose();
 
     return size;
@@ -849,27 +1040,104 @@ class Widgets
    * @param control control
    * @return max. size of all texts
    */
-  static Point getTextSize(Control control, String[] texts)
+  public static Point getTextSize(GC gc, String[] texts)
+  {
+    Point size;
+    Point point;
+
+    size = new Point(0,0);
+    for (String text : texts)
+    {
+      point = getTextSize(gc,text);
+      size.x = Math.max(size.x,point.x);
+      size.y = Math.max(size.y,point.y);
+    }
+
+    return size;
+  }
+
+  /** get max. text size
+   * @param control control
+   * @return max. size of all texts
+   */
+  public static Point getTextSize(Control control, String[] texts)
   {
     Point size;
 
-    size = new Point(0,0);
     GC gc = new GC(control);
-    for (String text : texts)
-    {
-      size.x = Math.max(size.x,gc.textExtent(text).x);
-      size.y = Math.max(size.y,gc.textExtent(text).y);
-    }
+    size = getTextSize(gc,texts);
     gc.dispose();
 
     return size;
+  }
+
+  /** get text width
+   * @param control control
+   * @return width of text
+   */
+  public static int getTextWidth(GC gc, String text)
+  {
+    return getTextSize(gc,text).x;
+  }
+
+  /** get text width
+   * @param control control
+   * @return width of text
+   */
+  public static int getTextWidth(Control control, String text)
+  {
+    return getTextSize(control,text).x;
+  }
+
+  /** get max. text width
+   * @param control control
+   * @return max. width of all texts
+   */
+  public static int getTextWidth(GC gc, String[] texts)
+  {
+    return getTextSize(gc,texts).x;
+  }
+
+  /** get max. text width
+   * @param control control
+   * @return max. width of all texts
+   */
+  public static int getTextWidth(Control control, String[] texts)
+  {
+    return getTextSize(control,texts).x;
+  }
+
+  /** get text height
+   * @param control control
+   * @return height of text
+   */
+  public static int getTextHeight(GC gc)
+  {
+// NYI: does not work?
+//    return gc.getFontMetrics().getHeight();
+    return gc.textExtent("Hj").y;
+  }
+
+  /** get text height
+   * @param control control
+   * @return height of text
+   */
+  public static int getTextHeight(Control control)
+  {
+    int height;
+
+    GC gc = new GC(control);
+    height = getTextHeight(gc);
+    gc.dispose();
+
+    return height;
   }
 
   /** load image from jar or directory "images"
    * @param fileName image file name
    * @return image
    */
-  static Image loadImage(Display display, String fileName)
+  public static Image loadImage(Display display, String fileName)
   {
     // try to load from jar file
     try
@@ -889,35 +1157,383 @@ class Widgets
     return new Image(display,"images"+File.separator+fileName);
   }
 
-  /** get accelerator text
-   * @param accelerator SWT accelerator
-   * @return accelerator text
+  /** create new font
+   * @param display display
+   * @param fontData font data
+   * @return font or null
    */
-  static String acceleratorToText(int accelerator)
+  public static Font newFont(Display display, FontData fontData)
   {
-    StringBuffer text = new StringBuffer();
+    return (fontData != null) ? new Font(display,fontData) : null;
+  }
+
+  /** create new font
+   * @param display display
+   * @param name font name
+   * @param height font height
+   * @param style font style
+   * @return font or null
+   */
+  public static Font newFont(Display display, String name, int height, int style)
+  {
+    return (name != null) ? new Font(display,name,height,style) : null;
+  }
+
+  /** create new font
+   * @param display display
+   * @param name font name
+   * @param height font height
+   * @return font or null
+   */
+  public static Font newFont(Display display, String name, int height)
+  {
+    return newFont(display,
+                   name,
+                   height,
+                   display.getSystemFont().getFontData()[0].getStyle()
+                  );
+  }
+
+  /** create new font
+   * @param display display
+   * @param name font name
+   * @return font or null
+   */
+  public static Font newFont(Display display, String name)
+  {
+    return newFont(display,
+                   name,
+                   display.getSystemFont().getFontData()[0].getHeight()
+                  );
+  }
+
+  /** convert font data to text
+   * @param fontData font data
+   * @return text
+   */
+  public static String fontDataToText(FontData fontData)
+  {
+    StringBuilder buffer = new StringBuilder();
+
+    buffer.append(fontData.getName());
+    buffer.append(',');
+    buffer.append(Integer.toString(fontData.getHeight()));
+    int style = fontData.getStyle();
+    if      ((style & (SWT.BOLD|SWT.ITALIC)) == (SWT.BOLD|SWT.ITALIC)) buffer.append(",bold italic");
+    else if ((style & SWT.BOLD             ) == SWT.BOLD             ) buffer.append(",bold");
+    else if ((style & SWT.ITALIC           ) == SWT.ITALIC           ) buffer.append(",italic");
+
+    return buffer.toString();
+  }
+
+  /** convert text to font data
+   * @param string string
+   * @return font data or null
+   */
+  public static FontData textToFontData(String string)
+  {
+    String name;
+    int    height = 0;
+    int    style  = 0;
+
+    Scanner scanner = new Scanner(string.trim()).useDelimiter("\\s*,\\s*");
+
+    if (!scanner.hasNext()) return null;
+    name = scanner.next();
+
+    if (scanner.hasNext())
+    {
+      if (!scanner.hasNextInt()) return null;
+      height = scanner.nextInt();
+    }
+
+    if (scanner.hasNext())
+    {
+      String styleString = scanner.next();
+      if      (styleString.equalsIgnoreCase("normal"     )) style = SWT.NORMAL;
+      else if (styleString.equalsIgnoreCase("bold italic")) style = SWT.BOLD|SWT.ITALIC;
+      else if (styleString.equalsIgnoreCase("bold"       )) style = SWT.BOLD;
+      else if (styleString.equalsIgnoreCase("italic"     )) style = SWT.ITALIC;
+      else return null;
+    }
+
+    return new FontData(name,height,style);
+  }
+
+  /** get key code text
+   * @param keyCode accelerator key code
+   * @param separatorText separator text
+   * @param controlText Ctrl key text or null
+   * @param altText ALT key text or null
+   * @param controlText Shift key text or null
+   * @return accelerator key code text
+   */
+  private static String acceleratorToText(int accelerator, String separatorText, String controlText, String altText, String shiftText)
+  {
+    StringBuilder buffer = new StringBuilder();
 
     if (accelerator != 0)
     {
-      if ((accelerator & SWT.MOD1) == SWT.CTRL) text.append("Ctrl+");
-      if ((accelerator & SWT.MOD2) == SWT.ALT ) text.append("Alt+");
+      if (   ((accelerator & SWT.MOD1) == SWT.SHIFT)
+          || ((accelerator & SWT.MOD2) == SWT.SHIFT)
+          || ((accelerator & SWT.MOD3) == SWT.SHIFT)
+          || ((accelerator & SWT.MOD4) == SWT.SHIFT)
+         )
+      {
+        if (buffer.length() > 0) buffer.append('+'); buffer.append((shiftText   != null)?shiftText  :"Shift");
+      }
+      if (   ((accelerator & SWT.MOD1) == SWT.CTRL)
+          || ((accelerator & SWT.MOD2) == SWT.CTRL)
+          || ((accelerator & SWT.MOD3) == SWT.CTRL)
+          || ((accelerator & SWT.MOD4) == SWT.CTRL)
+         )
+      {
+        if (buffer.length() > 0) buffer.append('+'); buffer.append((controlText != null)?controlText:"Ctrl" );
+      }
+      if (   ((accelerator & SWT.MOD1) == SWT.ALT)
+          || ((accelerator & SWT.MOD2) == SWT.ALT)
+          || ((accelerator & SWT.MOD3) == SWT.ALT)
+          || ((accelerator & SWT.MOD4) == SWT.ALT)
+         )
+      {
+        if (buffer.length() > 0) buffer.append('+'); buffer.append((altText     != null)?altText    :"Alt"  );
+      }
 
-      if      ((accelerator & SWT.KEY_MASK) == SWT.F1 ) text.append("F1");
-      else if ((accelerator & SWT.KEY_MASK) == SWT.F2 ) text.append("F2");
-      else if ((accelerator & SWT.KEY_MASK) == SWT.F3 ) text.append("F3");
-      else if ((accelerator & SWT.KEY_MASK) == SWT.F4 ) text.append("F4");
-      else if ((accelerator & SWT.KEY_MASK) == SWT.F5 ) text.append("F5");
-      else if ((accelerator & SWT.KEY_MASK) == SWT.F6 ) text.append("F6");
-      else if ((accelerator & SWT.KEY_MASK) == SWT.F7 ) text.append("F7");
-      else if ((accelerator & SWT.KEY_MASK) == SWT.F8 ) text.append("F8");
-      else if ((accelerator & SWT.KEY_MASK) == SWT.F9 ) text.append("F9");
-      else if ((accelerator & SWT.KEY_MASK) == SWT.F10) text.append("F10");
-      else if ((accelerator & SWT.KEY_MASK) == SWT.F11) text.append("F11");
-      else if ((accelerator & SWT.KEY_MASK) == SWT.F12) text.append("F12");
-      else                                              text.append((char)(accelerator & SWT.KEY_MASK));
+      if ((separatorText != null) && (buffer.length() > 0)) buffer.append(separatorText);
+      if      ((accelerator & SWT.KEY_MASK) == SWT.F1         ) buffer.append("F1");
+      else if ((accelerator & SWT.KEY_MASK) == SWT.F2         ) buffer.append("F2");
+      else if ((accelerator & SWT.KEY_MASK) == SWT.F3         ) buffer.append("F3");
+      else if ((accelerator & SWT.KEY_MASK) == SWT.F4         ) buffer.append("F4");
+      else if ((accelerator & SWT.KEY_MASK) == SWT.F5         ) buffer.append("F5");
+      else if ((accelerator & SWT.KEY_MASK) == SWT.F6         ) buffer.append("F6");
+      else if ((accelerator & SWT.KEY_MASK) == SWT.F7         ) buffer.append("F7");
+      else if ((accelerator & SWT.KEY_MASK) == SWT.F8         ) buffer.append("F8");
+      else if ((accelerator & SWT.KEY_MASK) == SWT.F9         ) buffer.append("F9");
+      else if ((accelerator & SWT.KEY_MASK) == SWT.F10        ) buffer.append("F10");
+      else if ((accelerator & SWT.KEY_MASK) == SWT.F11        ) buffer.append("F11");
+      else if ((accelerator & SWT.KEY_MASK) == SWT.F12        ) buffer.append("F12");
+      else if ((accelerator & SWT.KEY_MASK) == SWT.F13        ) buffer.append("F13");
+      else if ((accelerator & SWT.KEY_MASK) == SWT.F14        ) buffer.append("F14");
+      else if ((accelerator & SWT.KEY_MASK) == SWT.F15        ) buffer.append("F15");
+      else if ((accelerator & SWT.KEY_MASK) == SWT.F16        ) buffer.append("F16");
+      else if ((accelerator & SWT.KEY_MASK) == SWT.F17        ) buffer.append("F17");
+      else if ((accelerator & SWT.KEY_MASK) == SWT.F18        ) buffer.append("F18");
+      else if ((accelerator & SWT.KEY_MASK) == SWT.F19        ) buffer.append("F19");
+      else if ((accelerator & SWT.KEY_MASK) == SWT.F20        ) buffer.append("F20");
+      else if ((accelerator & SWT.KEY_MASK) == SWT.CR         ) buffer.append("Return");
+      else if ((accelerator & SWT.KEY_MASK) == SWT.TAB        ) buffer.append("Tab");
+      else if ((accelerator & SWT.KEY_MASK) == SWT.ARROW_LEFT ) buffer.append("Left");
+      else if ((accelerator & SWT.KEY_MASK) == SWT.ARROW_RIGHT) buffer.append("Right");
+      else if ((accelerator & SWT.KEY_MASK) == SWT.ARROW_UP   ) buffer.append("Up");
+      else if ((accelerator & SWT.KEY_MASK) == SWT.ARROW_DOWN ) buffer.append("Down");
+      else if ((accelerator & SWT.KEY_MASK) == SWT.PAGE_UP    ) buffer.append("PageUp");
+      else if ((accelerator & SWT.KEY_MASK) == SWT.PAGE_DOWN  ) buffer.append("PageDown");
+      else if ((accelerator & SWT.KEY_MASK) == SWT.BS         ) buffer.append("Backspace");
+      else if ((accelerator & SWT.KEY_MASK) == SWT.DEL        ) buffer.append("Delete");
+      else if ((accelerator & SWT.KEY_MASK) == SWT.INSERT     ) buffer.append("Insert");
+      else if ((accelerator & SWT.KEY_MASK) == SWT.HOME       ) buffer.append("Home");
+      else if ((accelerator & SWT.KEY_MASK) == SWT.END        ) buffer.append("End");
+      else if ((accelerator & SWT.KEY_MASK) == SWT.ESC        ) buffer.append("ESC");
+      else if ((accelerator & SWT.KEY_MASK) == ' '            ) buffer.append("Space");
+      else                                                      buffer.append(Character.toUpperCase((char)(accelerator & SWT.KEY_MASK)));
     }
 
-    return text.toString();
+    return buffer.toString();
+  }
+
+  /** get accelerator key code text
+   * @param keyCode accelerator key code
+   * @return accelerator key code text
+   */
+  public static String acceleratorToText(int accelerator)
+  {
+    return acceleratorToText(accelerator,"+","Ctrl","Alt","Shift");
+  }
+
+  /** get accelerator key code text for menu item
+   * @param keyCode accelerator key code
+   * @return accelerator key code text
+   */
+  public static String menuAcceleratorToText(int accelerator)
+  {
+    return acceleratorToText(accelerator);
+  }
+
+  /** get accelerator key code text for button
+   * @param keyCode accelerator key code
+   * @return accelerator key code text
+   */
+  public static String buttonAcceleratorToText(int accelerator)
+  {
+    return acceleratorToText(accelerator,null,"^","\u8657","\u9830");
+  }
+
+  /** convert text to key accelerator
+   * @param text accelerator key code text
+   * @return accelerator key code
+   */
+  public static int textToAccelerator(String text)
+  {
+    int keyCode = 0;
+
+    text = text.toLowerCase();
+
+    // parse modifiers
+    boolean modifierFlag = true;
+    do
+    {
+      if      (text.startsWith("ctrl+"))
+      {
+        keyCode |= SWT.CTRL;
+        text = text.substring(5);
+      }
+      else if (text.startsWith("alt+"))
+      {
+        keyCode |= SWT.ALT;
+        text = text.substring(4);
+      }
+      else if (text.startsWith("shift+"))
+      {
+        keyCode |= SWT.SHIFT;
+        text = text.substring(6);
+      }
+      else
+      {
+        modifierFlag = false;
+      }
+    }
+    while (modifierFlag);
+
+    // parse character/key
+    if      (text.equals("f1"            )) keyCode |= SWT.F1;
+    else if (text.equals("f2"            )) keyCode |= SWT.F2;
+    else if (text.equals("f3"            )) keyCode |= SWT.F3;
+    else if (text.equals("f4"            )) keyCode |= SWT.F4;
+    else if (text.equals("f5"            )) keyCode |= SWT.F5;
+    else if (text.equals("f6"            )) keyCode |= SWT.F6;
+    else if (text.equals("f7"            )) keyCode |= SWT.F7;
+    else if (text.equals("f8"            )) keyCode |= SWT.F8;
+    else if (text.equals("f9"            )) keyCode |= SWT.F9;
+    else if (text.equals("f10"           )) keyCode |= SWT.F10;
+    else if (text.equals("f11"           )) keyCode |= SWT.F11;
+    else if (text.equals("f12"           )) keyCode |= SWT.F12;
+    else if (text.equals("f13"           )) keyCode |= SWT.F13;
+    else if (text.equals("f14"           )) keyCode |= SWT.F14;
+    else if (text.equals("f15"           )) keyCode |= SWT.F15;
+    else if (text.equals("f16"           )) keyCode |= SWT.F16;
+    else if (text.equals("f17"           )) keyCode |= SWT.F17;
+    else if (text.equals("f18"           )) keyCode |= SWT.F18;
+    else if (text.equals("f19"           )) keyCode |= SWT.F19;
+    else if (text.equals("f20"           )) keyCode |= SWT.F20;
+    else if (text.equals("keypad0"       )) keyCode |= SWT.KEYPAD_0;
+    else if (text.equals("keypad1"       )) keyCode |= SWT.KEYPAD_1;
+    else if (text.equals("keypad2"       )) keyCode |= SWT.KEYPAD_2;
+    else if (text.equals("keypad3"       )) keyCode |= SWT.KEYPAD_3;
+    else if (text.equals("keypad4"       )) keyCode |= SWT.KEYPAD_4;
+    else if (text.equals("keypad5"       )) keyCode |= SWT.KEYPAD_5;
+    else if (text.equals("keypad6"       )) keyCode |= SWT.KEYPAD_6;
+    else if (text.equals("keypad7"       )) keyCode |= SWT.KEYPAD_7;
+    else if (text.equals("keypad8"       )) keyCode |= SWT.KEYPAD_8;
+    else if (text.equals("keypad9"       )) keyCode |= SWT.KEYPAD_9;
+    else if (text.equals("keypadplus"    )) keyCode |= SWT.KEYPAD_ADD;
+    else if (text.equals("keypadminus"   )) keyCode |= SWT.KEYPAD_SUBTRACT;
+    else if (text.equals("keypadmultiply")) keyCode |= SWT.KEYPAD_MULTIPLY;
+    else if (text.equals("keypaddivide"  )) keyCode |= SWT.KEYPAD_DIVIDE;
+    else if (text.equals("keypaddecimal" )) keyCode |= SWT.KEYPAD_DECIMAL;
+    else if (text.equals("return"        )) keyCode |= SWT.CR;
+    else if (text.equals("enter"         )) keyCode |= SWT.KEYPAD_CR;
+    else if (text.equals("tab"           )) keyCode |= SWT.TAB;
+    else if (text.equals("left"          )) keyCode |= SWT.ARROW_LEFT;
+    else if (text.equals("right"         )) keyCode |= SWT.ARROW_RIGHT;
+    else if (text.equals("up"            )) keyCode |= SWT.ARROW_UP;
+    else if (text.equals("down"          )) keyCode |= SWT.ARROW_DOWN;
+    else if (text.equals("pageup"        )) keyCode |= SWT.PAGE_UP;
+    else if (text.equals("pagedown"      )) keyCode |= SWT.PAGE_DOWN;
+    else if (text.equals("bs"            )) keyCode |= SWT.BS;
+    else if (text.equals("delelte"       )) keyCode |= SWT.DEL;
+    else if (text.equals("insert"        )) keyCode |= SWT.INSERT;
+    else if (text.equals("home"          )) keyCode |= SWT.HOME;
+    else if (text.equals("end"           )) keyCode |= SWT.END;
+    else if (text.equals("esc"           )) keyCode |= SWT.ESC;
+    else if (text.equals("space"         )) keyCode |= ' ';
+    else if (text.length() == 1)            keyCode |= (int)text.charAt(0);
+    else                                    keyCode = 0;
+
+    return keyCode;
+  }
+
+  /** check if key event is accelerator key
+   * @param keyCode key code
+   * @param stateMask event state mask
+   * @param character character
+   * @param accelerator accelerator key code
+   * @return true iff key event is accelerator key
+   */
+  public static boolean isAccelerator(int keyCode, int stateMask, char character, int accelerator)
+  {
+    if (accelerator != 0)
+    {
+      if      (keyCode == SWT.KEYPAD_ADD     ) keyCode = '+';
+      else if (keyCode == SWT.KEYPAD_SUBTRACT) keyCode = '-';
+      else if (keyCode == SWT.KEYPAD_MULTIPLY) keyCode = '*';
+      else if (keyCode == SWT.KEYPAD_DIVIDE  ) keyCode = '/';
+      else if (keyCode == SWT.KEYPAD_EQUAL   ) keyCode = '=';
+      else if (keyCode == SWT.KEYPAD_CR      ) keyCode = SWT.CR;
+
+      if ((accelerator & SWT.MODIFIER_MASK) != 0)
+      {
+        // accelerator has a modified -> match modifier+key code
+        return    (((accelerator & SWT.MODIFIER_MASK) & stateMask) == (accelerator & SWT.MODIFIER_MASK))
+               && ((accelerator & SWT.KEY_MASK) == keyCode);
+      }
+      else
+      {
+        // accelerator has no modified -> accept no modifier/shift+character or match key code
+        return    (   (   ((stateMask & SWT.MODIFIER_MASK) == 0)
+                       || ((stateMask & SWT.MODIFIER_MASK) == SWT.SHIFT)
+                      )
+                   && ((accelerator & SWT.KEY_MASK) == character)
+                  )
+               || ((accelerator & SWT.KEY_MASK) == keyCode);
+      }
+    }
+    else
+    {
+      return false;
+    }
+  }
+
+  /** check if key event is accelerator key
+   * @param keyEvent key event
+   * @param accelerator accelerator key code
+   * @return true iff key event is accelerator key
+   */
+  public static boolean isAccelerator(KeyEvent keyEvent, int accelerator)
+  {
+    return isAccelerator(keyEvent.keyCode,keyEvent.stateMask,keyEvent.character,accelerator);
+  }
+
+  /** check if key event is accelerator key
+   * @param event event
+   * @param accelerator accelerator key code
+   * @return true iff event is accelerator key
+   */
+  public static boolean isAccelerator(Event event, int accelerator)
+  {
+    return isAccelerator(event.keyCode,event.stateMask,event.character,accelerator);
+  }
+
+  /** set enabled
+   * @param control control to enable/disable
+   * @param enableFlag true to enable, false to disable
+   */
+  public static void setEnabled(Control control, boolean enableFlag)
+  {
+    if (!control.isDisposed())
+    {
+      control.setEnabled(enableFlag);
+      control.getDisplay().update();
+    }
   }
 
   /** set enabled
@@ -940,14 +1556,82 @@ class Widgets
    * @param control control to make visible/invisible
    * @param visibleFlag true to make visible, false to make invisible
    */
-  static void setVisible(Control control, boolean visibleFlag)
+  public static void setVisible(Control control, boolean visibleFlag)
   {
-    TableLayoutData tableLayoutData = (TableLayoutData)control.getLayoutData();
-    tableLayoutData.exclude = !visibleFlag;
-    control.setVisible(visibleFlag);
-    if (visibleFlag)
+    if (!control.isDisposed())
     {
-      control.getParent().layout();
+      TableLayoutData tableLayoutData = (TableLayoutData)control.getLayoutData();
+      tableLayoutData.exclude = !visibleFlag;
+      control.setVisible(visibleFlag);
+      if (visibleFlag)
+      {
+        control.getParent().layout();
+      }
+    }
+  }
+
+  /** set focus
+   * @param control control to set focus
+   */
+  public static void setFocus(Control control)
+  {
+    if (!control.isDisposed())
+    {
+      control.setFocus();
+      if      (control instanceof Text)
+      {
+        Text   widget = (Text)control;
+        String text   = widget.getText();
+        widget.setSelection(text.length(),text.length());
+      }
+      else if (control instanceof StyledText)
+      {
+        StyledText widget = (StyledText)control;
+        String     text   = widget.getText();
+        widget.setSelection(text.length(),text.length());
+      }
+    }
+  }
+
+  /** set next focus for control
+   * @param control control
+   * @param nextControl next control to focus on RETURN
+   */
+  public static void setNextFocus(Control control, final Control nextControl)
+  {
+    if (!control.isDisposed())
+    {
+      SelectionListener selectionListener = new SelectionListener()
+      {
+        public void widgetDefaultSelected(SelectionEvent selectionEvent)
+        {
+          Widgets.setFocus(nextControl);
+        }
+        public void widgetSelected(SelectionEvent selectionEvent)
+        {
+        }
+      };
+
+      if      (control instanceof Button)
+      {
+        ((Button)control).addSelectionListener(selectionListener);
+      }
+      else if (control instanceof Combo)
+      {
+        ((Combo)control).addSelectionListener(selectionListener);
+      }
+      else if (control instanceof Spinner)
+      {
+        ((Spinner)control).addSelectionListener(selectionListener);
+      }
+      else if (control instanceof Text)
+      {
+        ((Text)control).addSelectionListener(selectionListener);
+      }
+      else
+      {
+        throw new Error("Internal error: unknown control");
+      }
     }
   }
 
@@ -1005,12 +1689,18 @@ class Widgets
 
   //-----------------------------------------------------------------------
 
+  /** invoke button
+   * @param button button to invoke
+   */
   public static void invoke(Button button)
   {
-    Event event = new Event();
-    event.widget = button;
+    if (!button.isDisposed() && button.isEnabled())
+    {
+      Event event = new Event();
+      event.widget = button;
 
-    button.notifyListeners(SWT.Selection,event);
+      button.notifyListeners(SWT.Selection,event);
+    }
   }
 
   //-----------------------------------------------------------------------
@@ -1019,11 +1709,48 @@ class Widgets
    * @param composite composite widget
    * @return control space control
    */
-  static Control newSpacer(Composite composite)
+  public static Control newSpacer(Composite composite)
   {
     Label label = new Label(composite,SWT.NONE);
 
     return (Control)label;
+  }
+
+  //-----------------------------------------------------------------------
+
+  /** create new label
+   * @param composite composite widget
+   * @param text label text
+   * @param style label style
+   * @return new label
+   */
+  public static Label newLabel(Composite composite, String text, int style, int accelerator)
+  {
+    Label label;
+
+    if (accelerator != 0)
+    {
+      char key = (char)(accelerator & SWT.KEY_MASK);
+      int index = text.toLowerCase().indexOf(key);
+      if (index >= 0)
+      {
+        text = text.substring(0,index)+'&'+text.substring(index);
+      }
+      else
+      {
+        text = text+" ["+buttonAcceleratorToText(accelerator)+"]";
+      }
+    }
+    label = new Label(composite,style);
+    label.setText(text);
+
+    // set scrolled composite content
+    if (composite instanceof ScrolledComposite)
+    {
+      ((ScrolledComposite)composite).setContent(label);
+    }
+
+    return label;
   }
 
   /** create new label
@@ -1032,14 +1759,9 @@ class Widgets
    * @param style label style
    * @return new label
    */
-  static Label newLabel(Composite composite, String text, int style)
+  public static Label newLabel(Composite composite, String text, int style)
   {
-    Label label;
-
-    label = new Label(composite,style);
-    label.setText(text);
-
-    return label;
+    return newLabel(composite,text,style,0);
   }
 
   /** create new label
@@ -1047,7 +1769,7 @@ class Widgets
    * @param text label text
    * @return new label
    */
-  static Label newLabel(Composite composite, String text)
+  public static Label newLabel(Composite composite, String text)
   {
     return newLabel(composite,text,SWT.LEFT);
   }
@@ -1056,10 +1778,12 @@ class Widgets
    * @param composite composite widget
    * @return new label
    */
-  static Label newLabel(Composite composite)
+  public static Label newLabel(Composite composite)
   {
     return newLabel(composite,"");
   }
+
+  //-----------------------------------------------------------------------
 
   /** create new image
    * @param composite composite widget
@@ -1067,7 +1791,7 @@ class Widgets
    * @param style label style
    * @return new image
    */
-  static Control newImage(Composite composite, Image image, int style)
+  public static Control newImage(Composite composite, Image image, int style)
   {
     Label label;
 
@@ -1082,10 +1806,12 @@ class Widgets
    * @param image image
    * @return new image
    */
-  static Control newImage(Composite composite, Image image)
+  public static Control newImage(Composite composite, Image image)
   {
     return newImage(composite,image,SWT.LEFT);
   }
+
+  //-----------------------------------------------------------------------
 
   /** create new view
    * @param composite composite widget
@@ -1093,7 +1819,7 @@ class Widgets
    * @param style view style
    * @return new view
    */
-  static Label newView(Composite composite, String text, int style)
+  public static Label newView(Composite composite, String text, int style)
   {
     Label label;
 
@@ -1108,7 +1834,7 @@ class Widgets
    * @param text view text
    * @return new view
    */
-  static Label newView(Composite composite, String text)
+  public static Label newView(Composite composite, String text)
   {
     return newView(composite,text,SWT.NONE);
   }
@@ -1117,37 +1843,92 @@ class Widgets
    * @param composite composite widget
    * @return new view
    */
-  static Label newView(Composite composite)
+  public static Label newView(Composite composite)
   {
     return newView(composite,"");
+  }
+
+  //-----------------------------------------------------------------------
+
+  /** create new number view
+   * @param composite composite widget
+   * @param style view style
+   * @return new view
+   */
+  static Label newNumberView(Composite composite, int style)
+  {
+    Label label;
+
+    label = new Label(composite,style|SWT.BORDER);
+    label.setText("0");
+
+    return label;
   }
 
   /** create new number view
    * @param composite composite widget
    * @return new view
    */
-  static Label newNumberView(Composite composite)
+  public static Label newNumberView(Composite composite)
   {
-    Label label;
+    return newNumberView(composite,SWT.RIGHT);
+  }
 
-    label = new Label(composite,SWT.RIGHT|SWT.BORDER);
-    label.setText("0");
+  //-----------------------------------------------------------------------
 
-    return label;
+  /** create new string view
+   * @param composite composite widget
+   * @param style view style
+   * @return new view
+   */
+  public static Text newStringView(Composite composite, int style)
+  {
+    Text text;
+
+    text = new Text(composite,style|SWT.READ_ONLY);
+    text.setBackground(composite.getBackground());
+    text.setText("");
+
+    return text;
   }
 
   /** create new string view
    * @param composite composite widget
    * @return new view
    */
-  static Label newStringView(Composite composite)
+  public static Text newStringView(Composite composite)
   {
-    Label label;
+    return newStringView(composite,SWT.LEFT|SWT.BORDER);
+  }
 
-    label = new Label(composite,SWT.LEFT|SWT.BORDER);
-    label.setText("");
+  //-----------------------------------------------------------------------
 
-    return label;
+  /** create new button
+   * @param composite composite widget
+   * @param text text
+   * @return new button
+   */
+  public static Button newButton(Composite composite, String text, int accelerator)
+  {
+    Button button;
+
+    if (accelerator != 0)
+    {
+      char key = (char)(accelerator & SWT.KEY_MASK);
+      int index = text.toLowerCase().indexOf(key);
+      if (index >= 0)
+      {
+        text = text.substring(0,index)+'&'+text.substring(index);
+      }
+      else
+      {
+        text = text+" ["+buttonAcceleratorToText(accelerator)+"]";
+      }
+    }
+    button = new Button(composite,SWT.PUSH);
+    button.setText(text);
+
+    return button;
   }
 
   /** create new button
@@ -1155,14 +1936,9 @@ class Widgets
    * @param text text
    * @return new button
    */
-  static Button newButton(Composite composite, String text)
+  public static Button newButton(Composite composite, String text)
   {
-    Button button;
-
-    button = new Button(composite,SWT.PUSH);
-    button.setText(text);
-
-    return button;
+    return newButton(composite,text,0);
   }
 
   /** create new button with image
@@ -1170,7 +1946,7 @@ class Widgets
    * @param image image
    * @return new button
    */
-  static Button newButton(Composite composite, Image image)
+  public static Button newButton(Composite composite, Image image)
   {
     Button button;
 
@@ -1186,7 +1962,7 @@ class Widgets
    * @param text text
    * @return new button
    */
-  static Button newButton(Composite composite, Image image, String text)
+  public static Button newButton(Composite composite, Image image, String text)
   {
     Button button;
 
@@ -1196,6 +1972,21 @@ class Widgets
 
     return button;
   }
+
+  /** create new button
+   * @param composite composite widget
+   * @return new button
+   */
+  public static Button newButton(Composite composite)
+  {
+    Button button;
+
+    button = new Button(composite,SWT.PUSH);
+
+    return button;
+  }
+
+  //-----------------------------------------------------------------------
 
   /** create new checkbox
    * @param composite composite widget
@@ -1205,7 +1996,7 @@ class Widgets
    * @param value value for checkbox
    * @return new checkbox button
    */
-  static Button newCheckbox(Composite composite, String text, final Object data, final String field, boolean value)
+  public static Button newCheckbox(Composite composite, String text, final Object data, final String field, boolean value)
   {
     Button button;
 
@@ -1234,7 +2025,7 @@ class Widgets
    * @param field field name in data structure to set on selection
    * @return new checkbox button
    */
-  static Button newCheckbox(Composite composite, String text, final Object data, final String field)
+  public static Button newCheckbox(Composite composite, String text, final Object data, final String field)
   {
     return newCheckbox(composite,text,data,field,false);
   }
@@ -1244,7 +2035,7 @@ class Widgets
    * @param text text
    * @return new checkbox button
    */
-  static Button newCheckbox(Composite composite, String text)
+  public static Button newCheckbox(Composite composite, String text)
   {
     return newCheckbox(composite,text,null,null);
   }
@@ -1253,10 +2044,78 @@ class Widgets
    * @param composite composite widget
    * @return new checkbox button
    */
-  static Button newCheckbox(Composite composite)
+  public static Button newCheckbox(Composite composite)
   {
-    return newCheckbox(composite,null);
+    return newCheckbox(composite,(String)null);
   }
+
+  /** create new checkbox
+   * @param composite composite widget
+   * @param imageOn,imageOf on/off image
+   * @param data data structure to store checkbox value or null
+   * @param field field name in data structure to set on selection
+   * @param value value for checkbox
+   * @return new checkbox button
+   */
+  public static Button newCheckbox(Composite composite, final Image imageOn, final Image imageOff, final Object data, final String field, boolean value)
+  {
+    Button button;
+
+    button = new Button(composite,SWT.TOGGLE);
+    button.setImage(imageOff);
+    button.addSelectionListener(new SelectionListener()
+    {
+      public void widgetSelected(SelectionEvent selectionEvent)
+      {
+        Button widget = (Button)selectionEvent.widget;
+
+        if (widget.getImage() == imageOff)
+        {
+          // switch on
+          widget.setImage(imageOn);
+          widget.setSelection(true);
+          setField(data,field,true);
+        }
+        else
+        {
+          // switch off
+          widget.setImage(imageOff);
+          widget.setSelection(false);
+          setField(data,field,false);
+        }
+      }
+      public void widgetDefaultSelected(SelectionEvent selectionEvent)
+      {
+      }
+    });
+    button.setSelection(value);
+
+    return button;
+  }
+
+  /** create new checkbox
+   * @param composite composite widget
+   * @param imageOn,imageOf on/off image
+   * @param data data structure to store checkbox value or null
+   * @param field field name in data structure to set on selection
+   * @return new checkbox button
+   */
+  public static Button newCheckbox(Composite composite, Image imageOn, Image imageOff, final Object data, final String field)
+  {
+    return newCheckbox(composite,imageOn,imageOff,data,field,false);
+  }
+
+  /** create new checkbox
+   * @param composite composite widget
+   * @param imageOn,imageOf on/off image
+   * @return new checkbox button
+   */
+  public static Button newCheckbox(Composite composite, Image imageOn, Image imageOff)
+  {
+    return newCheckbox(composite,imageOn,imageOff,null,null);
+  }
+
+  //-----------------------------------------------------------------------
 
   /** create new radio button
    * @param composite composite widget
@@ -1266,7 +2125,7 @@ class Widgets
    * @param value value for radio button
    * @return new button
    */
-  static Button newRadio(Composite composite, String text, final Object data, final String field, final Object value)
+  public static Button newRadio(Composite composite, String text, final Object data, final String field, final Object value)
   {
     Button button;
 
@@ -1293,10 +2152,12 @@ class Widgets
    * @param text text
    * @return new button
    */
-  static Button newRadio(Composite composite, String text)
+  public static Button newRadio(Composite composite, String text)
   {
     return newRadio(composite,text,null,null,null);
   }
+
+  //-----------------------------------------------------------------------
 
   /** create new text input widget (single line)
    * @param composite composite widget
@@ -1306,7 +2167,7 @@ class Widgets
    * @param style text style
    * @return new text widget
    */
-  static Text newText(Composite composite, final Object data, final String field, String value, int style)
+  public static Text newText(Composite composite, final Object data, final String field, String value, int style)
   {
     Text text;
 
@@ -1362,7 +2223,7 @@ class Widgets
    * @param value value for text input field
    * @return new text widget
    */
-  static Text newText(Composite composite, final Object data, final String field, String value)
+  public static Text newText(Composite composite, final Object data, final String field, String value)
   {
     return newText(composite,data,field,value,SWT.LEFT|SWT.BORDER|SWT.V_SCROLL|SWT.SINGLE);
   }
@@ -1374,7 +2235,7 @@ class Widgets
    * @param style text style
    * @return new text widget
    */
-  static Text newText(Composite composite, final Object data, final String field, int style)
+  public static Text newText(Composite composite, final Object data, final String field, int style)
   {
     return newText(composite,data,field,"",style);
   }
@@ -1385,7 +2246,7 @@ class Widgets
    * @param field field name in data structure to set on selection
    * @return new text widget
    */
-  static Text newText(Composite composite, final Object data, final String field)
+  public static Text newText(Composite composite, final Object data, final String field)
   {
     return newText(composite,data,field,"");
   }
@@ -1395,7 +2256,7 @@ class Widgets
    * @param style text style
    * @return new text widget
    */
-  static Text newText(Composite composite, int style)
+  public static Text newText(Composite composite, int style)
   {
     return newText(composite,null,null,style);
   }
@@ -1404,16 +2265,131 @@ class Widgets
    * @param composite composite widget
    * @return new text widget
    */
-  static Text newText(Composite composite)
+  public static Text newText(Composite composite)
   {
     return newText(composite,null,null);
   }
+
+  //-----------------------------------------------------------------------
+
+  /** create new styled text input widget
+   * @param composite composite widget
+   * @param data data structure to store text value or null
+   * @param field field name in data structure to set on selection
+   * @param value value for text input field
+   * @param style text style
+   * @return new text widget
+   */
+  public static StyledText newStyledText(Composite composite, final Object data, final String field, String value, int style)
+  {
+    StyledText styledText;
+
+    styledText = new StyledText(composite,style);
+    if      (value != null)
+    {
+      styledText.setText(value);
+      setField(data,field,value);
+    }
+    else if (getField(data,field) != null)
+    {
+      styledText.setText((String)getField(data,field));
+    }
+
+    styledText.addSelectionListener(new SelectionListener()
+    {
+      public void widgetSelected(SelectionEvent selectionEvent)
+      {
+        StyledText widget = (StyledText)selectionEvent.widget;
+        setField(data,field,widget.getText());
+      }
+      public void widgetDefaultSelected(SelectionEvent selectionEvent)
+      {
+      }
+    });
+    styledText.addModifyListener(new ModifyListener()
+    {
+      public void modifyText(ModifyEvent modifyEvent)
+      {
+        StyledText widget = (StyledText)modifyEvent.widget;
+        setField(data,field,widget.getText());
+      }
+    });
+    styledText.addFocusListener(new FocusListener()
+    {
+      public void focusGained(FocusEvent focusEvent)
+      {
+      }
+      public void focusLost(FocusEvent focusEvent)
+      {
+        StyledText widget = (StyledText)focusEvent.widget;
+        setField(data,field,widget.getText());
+      }
+    });
+
+    return styledText;
+  }
+
+  /** create new styled text input widget (single line)
+   * @param composite composite widget
+   * @param data data structure to store text value or null
+   * @param field field name in data structure to set on selection
+   * @param value value for text input field
+   * @return new text widget
+   */
+  public static StyledText newStyledText(Composite composite, final Object data, final String field, String value)
+  {
+    return newStyledText(composite,data,field,value,SWT.LEFT|SWT.BORDER|SWT.V_SCROLL|SWT.SINGLE);
+  }
+
+  /** create new styled text input widget (single line)
+   * @param composite composite widget
+   * @param data data structure to store text value or null
+   * @param field field name in data structure to set on selection
+   * @param style text style
+   * @return new text widget
+   */
+  public static StyledText newStyledText(Composite composite, final Object data, final String field, int style)
+  {
+    return newStyledText(composite,data,field,"",style);
+  }
+
+  /** create new styled text input widget (single line)
+   * @param composite composite widget
+   * @param data data structure to store text value or null
+   * @param field field name in data structure to set on selection
+   * @return new text widget
+   */
+  public static StyledText newStyledText(Composite composite, final Object data, final String field)
+  {
+    return newStyledText(composite,data,field,"");
+  }
+
+  /** create new styled text input widget (single line)
+   * @param composite composite widget
+   * @param style text style
+   * @return new text widget
+   */
+  public static StyledText newStyledText(Composite composite, int style)
+  {
+    return newStyledText(composite,null,null,style);
+  }
+
+  /** create new styled text input widget (single line)
+   * @param composite composite widget
+   * @return new text widget
+   */
+  public static StyledText newStyledText(Composite composite)
+  {
+    return newStyledText(composite,null,null);
+  }
+
+  //-----------------------------------------------------------------------
 
   /** create new password input widget (single line)
    * @param composite composite widget
    * @return new text widget
    */
-  static Text newPassword(Composite composite)
+  public static Text newPassword(Composite composite)
   {
     Text text;
 
@@ -1422,12 +2398,14 @@ class Widgets
     return text;
   }
 
+  //-----------------------------------------------------------------------
+
   /** create new list widget
    * @param composite composite widget
    * @param style style
    * @return new list widget
    */
-  static List newList(Composite composite, int style)
+  public static List newList(Composite composite, int style)
   {
     List list;
 
@@ -1440,10 +2418,34 @@ class Widgets
    * @param composite composite widget
    * @return new list widget
    */
-  static List newList(Composite composite)
+  public static List newList(Composite composite)
   {
     return newList(composite,SWT.BORDER|SWT.MULTI|SWT.V_SCROLL);
   }
+
+  /** sort list
+   * @param list list
+   * @param comparator list data comparator
+   */
+  public static void sortList(List list, Comparator comparator)
+  {
+    if (!list.isDisposed())
+    {
+      String[] texts = list.getItems();
+      Arrays.sort(texts,comparator);
+      list.setItems(texts);
+    }
+  }
+
+  /** sort list
+   * @param list list
+   */
+  public static void sortList(List list)
+  {
+    sortList(list,String.CASE_INSENSITIVE_ORDER);
+  }
+
+  //-----------------------------------------------------------------------
 
   /** new combo widget
    * @param composite composite widget
@@ -1452,7 +2454,7 @@ class Widgets
    * @param value value for checkbox
    * @return new combo widget
    */
-  static Combo newCombo(Composite composite, final Object data, final String field, String value)
+  public static Combo newCombo(Composite composite, final Object data, final String field, String value)
   {
     Combo combo;
 
@@ -1488,7 +2490,7 @@ class Widgets
    * @param field field name in data structure to set on selection
    * @return new combo widget
    */
-  static Combo newCombo(Composite composite, final Object data, final String field)
+  public static Combo newCombo(Composite composite, final Object data, final String field)
   {
     return newCombo(composite,data,field,null);
   }
@@ -1497,10 +2499,12 @@ class Widgets
    * @param composite composite widget
    * @return new combo widget
    */
-  static Combo newCombo(Composite composite)
+  public static Combo newCombo(Composite composite)
   {
     return newCombo(composite,null,null);
   }
+
+  //-----------------------------------------------------------------------
 
   /** new combo widget
    * @param composite composite widget
@@ -1509,7 +2513,7 @@ class Widgets
    * @param value value for checkbox
    * @return new select widget
    */
-  static Combo newSelect(Composite composite, final Object data, final String field, String value)
+  public static Combo newSelect(Composite composite, final Object data, final String field, String value)
   {
     Combo combo;
 
@@ -1545,7 +2549,7 @@ class Widgets
    * @param field field name in data structure to set on selection
    * @return new select widget
    */
-  static Combo newSelect(Composite composite, final Object data, final String field)
+  public static Combo newSelect(Composite composite, final Object data, final String field)
   {
     return newSelect(composite,data,field,null);
   }
@@ -1554,16 +2558,18 @@ class Widgets
    * @param composite composite widget
    * @return new select widget
    */
-  static Combo newSelect(Composite composite)
+  public static Combo newSelect(Composite composite)
   {
     return newSelect(composite,null,null);
   }
+
+  //-----------------------------------------------------------------------
 
   /** create new option menu
    * @param composite composite widget
    * @return new combo widget
    */
-  static Combo newOptionMenu(Composite composite)
+  public static Combo newOptionMenu(Composite composite)
   {
     Combo combo;
 
@@ -1572,18 +2578,55 @@ class Widgets
     return combo;
   }
 
+  //-----------------------------------------------------------------------
+
+  /** create new spinner widget
+   * @param composite composite widget
+   * @param style style
+   * @param min,max min./max. value
+   * @return new spinner widget
+   */
+  public static Spinner newSpinner(Composite composite, int style, int min, int max)
+  {
+    Spinner spinner;
+
+    spinner = new Spinner(composite,style);
+    spinner.setMinimum(min);
+    spinner.setMaximum(max);
+
+    return spinner;
+  }
+
+  /** create new spinner widget
+   * @param composite composite widget
+   * @param min,max min./max. value
+   * @return new spinner widget
+   */
+  public static Spinner newSpinner(Composite composite, int min, int max)
+  {
+    return newSpinner(composite,SWT.BORDER|SWT.RIGHT,min,max);
+  }
+
+  /** create new spinner widget
+   * @param composite composite widget
+   * @param min min. value
+   * @return new spinner widget
+   */
+  public static Spinner newSpinner(Composite composite, int min)
+  {
+    return newSpinner(composite,min,Integer.MAX_VALUE);
+  }
+
   /** create new spinner widget
    * @param composite composite widget
    * @return new spinner widget
    */
-  static Spinner newSpinner(Composite composite)
+  public static Spinner newSpinner(Composite composite)
   {
-    Spinner spinner;
-
-    spinner = new Spinner(composite,SWT.READ_ONLY);
-
-    return spinner;
+    return newSpinner(composite,Integer.MIN_VALUE);
   }
+
+  //-----------------------------------------------------------------------
 
   /** create new table widget
    * @param composite composite widget
@@ -1591,7 +2634,7 @@ class Widgets
    * @param object object data
    * @return new table widget
    */
-  static Table newTable(Composite composite, int style)
+  public static Table newTable(Composite composite, int style)
   {
     Table table;
 
@@ -1606,14 +2649,9 @@ class Widgets
    * @param composite composite widget
    * @return new table widget
    */
-  static Table newTable(Composite composite)
+  public static Table newTable(Composite composite)
   {
     return newTable(composite,SWT.NONE);
-  }
-
-static void recalculateTableWidth(Table table)
-  {
-    
   }
 
   /** add column to table widget
@@ -1625,7 +2663,7 @@ static void recalculateTableWidth(Table table)
    * @param resizable TRUE iff resizable column
    * @return new table column
    */
-  static TableColumn addTableColumn(Table table, int columnNb, String title, int style, int width, boolean resizable)
+  public static TableColumn addTableColumn(Table table, int columnNb, String title, int style, int width, boolean resizable)
   {
     TableColumn tableColumn = new TableColumn(table,style);
     tableColumn.setText(title);
@@ -1640,12 +2678,37 @@ static void recalculateTableWidth(Table table)
   /** add column to table widget
    * @param table table widget
    * @param columnNb column number
+   * @param title column title
+   * @param style style
+   * @param resizable TRUE iff resizable column
+   * @return new table column
+   */
+  public static TableColumn addTableColumn(Table table, int columnNb, String title, int style, boolean resizable)
+  {
+    return addTableColumn(table,columnNb,title,style,SWT.DEFAULT,resizable);
+  }
+
+  /** add column to table widget
+   * @param table table widget
+   * @param columnNb column number
+   * @param title column title
+   * @param style style
+   * @return new table column
+   */
+  public static TableColumn addTableColumn(Table table, int columnNb, String title, int style)
+  {
+    return addTableColumn(table,columnNb,title,style,true);
+  }
+
+  /** add column to table widget
+   * @param table table widget
+   * @param columnNb column number
    * @param style style
    * @param width width of column
    * @param resizable TRUE iff resizable column
    * @return new table column
    */
-  static TableColumn addTableColumn(Table table, int columnNb, int style, int width, boolean resizable)
+  public static TableColumn addTableColumn(Table table, int columnNb, int style, int width, boolean resizable)
   {
     return addTableColumn(table,columnNb,"",style,width,resizable);
   }
@@ -1657,38 +2720,95 @@ static void recalculateTableWidth(Table table)
    * @param width width of column
    * @return new table column
    */
-  static TableColumn addTableColumn(Table table, int columnNb, int style, int width)
+  public static TableColumn addTableColumn(Table table, int columnNb, int style, int width)
   {
-    return addTableColumn(table,columnNb,style,width,false);
+    return addTableColumn(table,columnNb,style,width,true);
   }
 
-  /** hide table column
-   * @param tableColumn table column to hide
+  /** add column to table widget
+   * @param table table widget
+   * @param columnNb column number
+   * @param style style
+   * @return new table column
    */
-  static void hideTableColumn(TableColumn tableColumn)
+  public static TableColumn addTableColumn(Table table, int columnNb, int style)
   {
-    tableColumn.setWidth(0);
-    tableColumn.setResizable(false);
+    return addTableColumn(table,columnNb,style,SWT.DEFAULT);
+  }
+
+  /** show table column
+   * @param tableColumn table column to show
+   * @param width table column width
+   * @param showFlag true to show colume, false for hide
+   */
+  public static void showTableColumn(TableColumn tableColumn, boolean showFlag)
+  {
+    if (showFlag)
+    {
+      WidgetTableColumnData widgetTableColumnData = (WidgetTableColumnData)tableColumn.getData();
+
+      if (widgetTableColumnData != null)
+      {
+       tableColumn.setWidth(widgetTableColumnData.width);
+        tableColumn.setResizable(widgetTableColumnData.resizable);
+      }
+    }
+    else
+    {
+      tableColumn.setWidth(0);
+      tableColumn.setResizable(false);
+    }
   }
 
   /** show table column
    * @param tableColumn table column to show
    * @param width table column width
    */
-  static void showTableColumn(TableColumn tableColumn)
+  public static void showTableColumn(TableColumn tableColumn)
   {
-    WidgetTableColumnData widgetTableColumnData = (WidgetTableColumnData)tableColumn.getData();
+    showTableColumn(tableColumn,true);
+  }
 
-    if (widgetTableColumnData != null)
+  /** hide table column
+   * @param tableColumn table column to hide
+   */
+  public static void hideTableColumn(TableColumn tableColumn)
+  {
+    showTableColumn(tableColumn,false);
+  }
+
+  /** get width of table columns
+   * @param table table
+   * @return table columns width array
+   */
+  public static int[] getTableColumnWidth(Table table)
+  {
+    TableColumn[] tableColumns = table.getColumns();
+    int[] width = new int[tableColumns.length];
+    for (int z = 0; z < tableColumns.length; z++)
     {
-      tableColumn.setWidth(widgetTableColumnData.width);
-      tableColumn.setResizable(widgetTableColumnData.resizable);
+      width[z] = tableColumns[z].getWidth();
+    }
+
+    return width;
+  }
+
+  /** set width of table columns
+   * @param table table
+   * @param width column width array
+   */
+  public static void setTableColumnWidth(Table table, int[] width)
+  {
+    TableColumn[] tableColumns = table.getColumns();
+    for (int z = 0; z < Math.min(tableColumns.length,width.length); z++)
+    {
+      tableColumns[z].setWidth(width[z]);
     }
   }
 
   /** default table sort selection listener
    */
-  final static SelectionListener DEFAULT_TABLE_SELECTION_LISTENER = new SelectionListener()
+  final public static SelectionListener DEFAULT_TABLE_SELECTION_LISTENER_STRING = new SelectionListener()
   {
     public void widgetSelected(SelectionEvent selectionEvent)
     {
@@ -1700,13 +2820,49 @@ static void recalculateTableWidth(Table table)
     {
     }
   };
+  final public static SelectionListener DEFAULT_TABLE_SELECTION_LISTENER_INT = new SelectionListener()
+  {
+    public void widgetSelected(SelectionEvent selectionEvent)
+    {
+      TableColumn tableColumn = (TableColumn)selectionEvent.widget;
+      Table       table       = tableColumn.getParent();
+      Widgets.sortTableColumn(table,tableColumn,new Comparator<Integer>()
+      {
+        public int compare(Integer i1, Integer i2)
+        {
+          return i1.compareTo(i2);
+        }
+      });
+    }
+    public void widgetDefaultSelected(SelectionEvent selectionEvent)
+    {
+    }
+  };
+  final public static SelectionListener DEFAULT_TABLE_SELECTION_LISTENER_LONG = new SelectionListener()
+  {
+    public void widgetSelected(SelectionEvent selectionEvent)
+    {
+      TableColumn tableColumn = (TableColumn)selectionEvent.widget;
+      Table       table       = tableColumn.getParent();
+      Widgets.sortTableColumn(table,tableColumn,new Comparator<Long>()
+      {
+        public int compare(Long i1, Long i2)
+        {
+          return i1.compareTo(i2);
+        }
+      });
+    }
+    public void widgetDefaultSelected(SelectionEvent selectionEvent)
+    {
+    }
+  };
 
-  /** sort table column
+  /** select sort column and sort table
    * @param table table
    * @param tableColumn table column to sort by
    * @param comparator table data comparator
    */
-  static void sortTableColumn(Table table, TableColumn tableColumn, Comparator comparator)
+  public static void sortTableColumn(Table table, TableColumn tableColumn, Comparator comparator)
   {
     if (!table.isDisposed())
     {
@@ -1729,11 +2885,21 @@ static void recalculateTableWidth(Table table)
     }
   }
 
-  /** sort table column
+  /** select sort column and sort table
+   * @param table table
+   * @param columnNb column index to sort by (0..n-1)
+   * @param comparator table data comparator
+   */
+  public static void sortTableColumn(Table table, int columnNb, Comparator comparator)
+  {
+    sortTableColumn(table,table.getColumn(columnNb),comparator);
+  }
+
+  /** sort table by selected sort column
    * @param table table
    * @param comparator table data comparator
    */
-  static void sortTableColumn(Table table, Comparator comparator)
+  public static void sortTableColumn(Table table, Comparator comparator)
   {
     if (!table.isDisposed())
     {
@@ -1779,10 +2945,20 @@ static void recalculateTableWidth(Table table)
           {
             // save data
             Object   data = tableItems[i].getData();
-            String[] texts = new String[table.getColumnCount()];
-            for (int z = 0; z < table.getColumnCount(); z++)
+            int columnCount = table.getColumnCount();
+            String[] texts;
+            if (columnCount > 0)
             {
-              texts[z] = tableItems[i].getText(z);
+              texts = new String[table.getColumnCount()];
+              for (int z = 0; z < table.getColumnCount(); z++)
+              {
+                texts[z] = tableItems[i].getText(z);
+              }
+            }
+            else
+            {
+              texts = new String[1];
+              texts[0] = tableItems[i].getText();
             }
             Color foregroundColor = tableItems[i].getForeground();
             Color backgroundColor = tableItems[i].getBackground();
@@ -1794,10 +2970,17 @@ static void recalculateTableWidth(Table table)
             // create new item
             TableItem tableItem = new TableItem(table,SWT.NONE,j);
             tableItem.setData(data);
-            tableItem.setText(texts);
-            tableItem.setChecked(checked);
+            if (columnCount > 0)
+            {
+              tableItem.setText(texts);
+            }
+            else
+            {
+              tableItem.setText(texts[0]);
+            }
             tableItem.setForeground(foregroundColor);
             tableItem.setBackground(backgroundColor);
+            tableItem.setChecked(checked);
 
             tableItems = table.getItems();
           }
@@ -1811,7 +2994,7 @@ static void recalculateTableWidth(Table table)
    * @param tableColumn table column
    * @param sortDirection sorting direction
    */
-  static void sortTable(Table table, TableColumn tableColumn, int sortDirection)
+  public static void sortTable(Table table, TableColumn tableColumn, int sortDirection)
   {
     Event event = new Event();
 
@@ -1822,21 +3005,29 @@ static void recalculateTableWidth(Table table)
 
   /** sort table column
    * @param table table
-   * @param n column index (0..n-1)
+   * @param columnNb column index (0..n-1)
    * @param sortDirection sorting direction
    */
-  static void sortTable(Table table, int n, int sortDirection)
+  public static void sortTable(Table table, int columnNb, int sortDirection)
   {
-    sortTable(table,table.getColumn(n),sortDirection);
+    sortTable(table,table.getColumn(columnNb),sortDirection);
   }
 
-  /** sort table column
+  /** sort table column (ascending)
    * @param table table
-   * @param n column index (0..n-1)
+   * @param columnNb column index (0..n-1)
    */
-  static void sortTable(Table table, int n)
+  public static void sortTable(Table table, int columnNb)
   {
-    sortTable(table,n,SWT.UP);
+    sortTable(table,columnNb,SWT.UP);
+  }
+
+  /** sort table (ascending)
+   * @param table table
+   */
+  public static void sortTable(Table table)
+  {
+    sortTableColumn(table,String.CASE_INSENSITIVE_ORDER);
   }
 
   /** get insert position in sorted table
@@ -1845,7 +3036,7 @@ static void recalculateTableWidth(Table table)
    * @param data data
    * @return index in table
    */
-  static int getTableItemIndex(Table table, Comparator comparator, Object data)
+  public static int getTableItemIndex(Table table, Comparator comparator, Object data)
   {
     int index = 0;
 
@@ -1886,7 +3077,7 @@ static void recalculateTableWidth(Table table)
             else
               foundFlag = (comparator.compare(tableItems[index].getText(sortColumnIndex),data) < 0);
             break;
-        }       
+        }
         if (!foundFlag) index++;
       }
     }
@@ -1901,27 +3092,24 @@ static void recalculateTableWidth(Table table)
    * @param values values list
    * @return insert index
    */
-  static int insertTableEntry(final Table table, final int index, final Object data, final Object... values)
+  public static TableItem insertTableEntry(final Table table, final int index, final Object data, final Object... values)
   {
     /** table insert runnable
      */
     class TableRunnable implements Runnable
     {
-      int insertIndex = -1;
+      TableItem tableItem = null;
 
       public void run()
       {
         if (!table.isDisposed())
         {
-          TableItem tableItem;
           if (index >= 0)
           {
-            insertIndex = index;
             tableItem = new TableItem(table,SWT.NONE,index);
           }
           else
           {
-            insertIndex = table.getItemCount();
             tableItem = new TableItem(table,SWT.NONE);
           }
           tableItem.setData(data);
@@ -1931,6 +3119,7 @@ static void recalculateTableWidth(Table table)
             {
               if      (values[i] instanceof String)
               {
+//Dprintf.dprintf("i=%d values[i]=%s",i,values[i]);
                 tableItem.setText(i,(String)values[i]);
               }
               else if (values[i] instanceof Image)
@@ -1949,32 +3138,32 @@ static void recalculateTableWidth(Table table)
       table.getDisplay().syncExec(tableRunnable);
     }
 
-    return tableRunnable.insertIndex;
+    return tableRunnable.tableItem;
   }
 
-  /** add table entry
+  /** insert table entry
    * @param table table
    * @param comparator table entry comperator
    * @param table entry data
    * @param values values list
-   * @return insert index
+   * @return table item
    */
-  static int insertTableEntry(final Table table, final Comparator comparator, final Object data, final Object... values)
+  public static TableItem insertTableEntry(final Table table, final Comparator comparator, final Object data, final Object... values)
   {
     /** table insert runnable
      */
     class TableRunnable implements Runnable
     {
-      int insertIndex = -1;
+      TableItem tableItem = null;
 
       public void run()
       {
         if (!table.isDisposed())
         {
-          TableItem tableItem = new TableItem(table,
-                                              SWT.NONE,
-                                              getTableItemIndex(table,comparator,data)
-                                             );
+          tableItem = new TableItem(table,
+                                    SWT.NONE,
+                                    getTableItemIndex(table,comparator,data)
+                                   );
           tableItem.setData(data);
           for (int i = 0; i < values.length; i++)
           {
@@ -2000,16 +3189,16 @@ static void recalculateTableWidth(Table table)
       table.getDisplay().syncExec(tableRunnable);
     }
 
-    return tableRunnable.insertIndex;
+    return tableRunnable.tableItem;
   }
 
   /** add table entry
    * @param table table
    * @param table entry data
    * @param values values list
-   * @return insert index
+   * @return table item
    */
-  static int addTableEntry(Table table, Object data, Object... values)
+  public static TableItem addTableEntry(Table table, Object data, Object... values)
   {
     return insertTableEntry(table,-1,data,values);
   }
@@ -2020,7 +3209,7 @@ static void recalculateTableWidth(Table table)
    * @param values values list
    * @param true if updated, false if not found
    */
-  static boolean updateTableEntry(final Table table, final Object data, final Object... values)
+  public static boolean updateTableEntry(final Table table, final Object data, final Object... values)
   {
     /** table update runnable
      */
@@ -2073,7 +3262,7 @@ static void recalculateTableWidth(Table table)
    * @param foregroundColor foregound color
    * @param backgroundColor background color
    */
-  static void setTableEntryColor(final Table table, final Object data, final Color foregroundColor, final Color backgroundColor)
+  public static void setTableEntryColor(final Table table, final Object data, final Color foregroundColor, final Color backgroundColor)
   {
     if (!table.isDisposed())
     {
@@ -2103,9 +3292,132 @@ static void recalculateTableWidth(Table table)
    * @param table entry data
    * @param backgroundColor background color
    */
-  static void setTableEntryColor(Table table, Object data, Color backgroundColor)
+  public static void setTableEntryColor(Table table, Object data, Color backgroundColor)
   {
     setTableEntryColor(table,data,null,backgroundColor);
+  }
+
+  /** set table entry color
+   * @param table table
+   * @param table entry data
+   * @param columnNb column (0..n-1)
+   * @param foregroundColor foregound color
+   * @param backgroundColor background color
+   */
+  public static void setTableEntryColor(final Table table, final Object data, final int columnNb, final Color foregroundColor, final Color backgroundColor)
+  {
+    if (!table.isDisposed())
+    {
+      table.getDisplay().syncExec(new Runnable()
+      {
+        public void run()
+        {
+          if (!table.isDisposed())
+          {
+            for (TableItem tableItem : table.getItems())
+            {
+              if (tableItem.getData() == data)
+              {
+                tableItem.setForeground(columnNb,foregroundColor);
+                tableItem.setBackground(columnNb,backgroundColor);
+                break;
+              }
+            }
+          }
+        }
+      });
+    }
+  }
+
+  /** set table entry color
+   * @param table table
+   * @param table entry data
+   * @param columnNb column (0..n-1)
+   * @param backgroundColor background color
+   */
+  public static void setTableEntryColor(Table table, Object data, int columnNb, Color backgroundColor)
+  {
+    setTableEntryColor(table,data,columnNb,null,backgroundColor);
+  }
+
+  /** set table entry font
+   * @param table table
+   * @param table entry data
+   * @param font font
+   */
+  public static void setTableEntryFont(final Table table, final Object data, final Font font)
+  {
+    if (!table.isDisposed())
+    {
+      table.getDisplay().syncExec(new Runnable()
+      {
+        public void run()
+        {
+          if (!table.isDisposed())
+          {
+            for (TableItem tableItem : table.getItems())
+            {
+              if (tableItem.getData() == data)
+              {
+                tableItem.setFont(font);
+                break;
+              }
+            }
+          }
+        }
+      });
+    }
+  }
+
+  /** set table entry font
+   * @param table table
+   * @param table entry data
+   * @param fontData font data
+   */
+  public static void setTableEntryFont(final Table table, final Object data, final FontData fontData)
+  {
+    setTableEntryFont(table,data,new Font(table.getDisplay(),fontData));
+  }
+
+  /** set table entry font
+   * @param table table
+   * @param table entry data
+   * @param columnNb column (0..n-1)
+   * @param font font
+   */
+  public static void setTableEntryFont(final Table table, final Object data, final int columnNb, final Font font)
+  {
+    if (!table.isDisposed())
+    {
+      table.getDisplay().syncExec(new Runnable()
+      {
+        public void run()
+        {
+          if (!table.isDisposed())
+          {
+            for (TableItem tableItem : table.getItems())
+            {
+              if (tableItem.getData() == data)
+              {
+                tableItem.setFont(columnNb,font);
+                break;
+              }
+            }
+          }
+        }
+      });
+    }
+  }
+
+  /** set table entry font
+   * @param table table
+   * @param table entry data
+   * @param columnNb column (0..n-1)
+   * @param fontData font data
+   */
+  public static void setTableEntryFont(final Table table, final Object data, final int columnNb, final FontData fontData)
+  {
+    setTableEntryFont(table,data,columnNb,new Font(table.getDisplay(),fontData));
   }
 
   /** set table entry checked
@@ -2113,7 +3425,7 @@ static void recalculateTableWidth(Table table)
    * @param table entry data
    * @param checked checked flag
    */
-  static void setTableEntryChecked(final Table table, final Object data, final boolean checked)
+  public static void setTableEntryChecked(final Table table, final Object data, final boolean checked)
   {
     if (!table.isDisposed())
     {
@@ -2141,7 +3453,7 @@ static void recalculateTableWidth(Table table)
    * @param table table
    * @param table entry data
    */
-  static void removeTableEntry(final Table table, final Object data)
+  public static void removeTableEntry(final Table table, final Object data)
   {
     if (!table.isDisposed())
     {
@@ -2169,7 +3481,7 @@ static void recalculateTableWidth(Table table)
    * @param table table
    * @param tableItem table item to remove
    */
-  static void removeTableEntry(final Table table, final TableItem tableItem)
+  public static void removeTableEntry(final Table table, final TableItem tableItem)
   {
     if (!table.isDisposed())
     {
@@ -2189,7 +3501,7 @@ static void recalculateTableWidth(Table table)
   /** remove all table entries
    * @param table table
    */
-  static void removeAllTableEntries(final Table table)
+  public static void removeAllTableEntries(final Table table)
   {
     if (!table.isDisposed())
     {
@@ -2206,12 +3518,14 @@ static void recalculateTableWidth(Table table)
     }
   }
 
+  //-----------------------------------------------------------------------
+
   /** new progress bar widget
    * @param composite composite widget
    * @param min, max min/max value
    * @return new progress bar widget
    */
-  static ProgressBar newProgressBar(Composite composite, double min, double max)
+  public static ProgressBar newProgressBar(Composite composite, double min, double max)
   {
     ProgressBar progressBar;
 
@@ -2227,7 +3541,7 @@ static void recalculateTableWidth(Table table)
    * @param composite composite widget
    * @return new progress bar widget
    */
-  static ProgressBar newProgressBar(Composite composite)
+  public static ProgressBar newProgressBar(Composite composite)
   {
     return newProgressBar(composite,0.0,100.0);
   }
@@ -2236,7 +3550,7 @@ static void recalculateTableWidth(Table table)
    * @param progressBar progress bar
    * @param value value
    */
-  static void setProgressBar(final ProgressBar progressBar, final double value)
+  public static void setProgressBar(final ProgressBar progressBar, final double value)
   {
     if (!progressBar.isDisposed())
     {
@@ -2253,12 +3567,14 @@ static void recalculateTableWidth(Table table)
     }
   }
 
+  //-----------------------------------------------------------------------
+
   /** new tree widget
    * @param composite composite widget
    * @param style style
    * @return new tree widget
    */
-  static Tree newTree(Composite composite, int style)
+  public static Tree newTree(Composite composite, int style)
   {
     Tree tree = new Tree(composite,style|SWT.BORDER|SWT.H_SCROLL|SWT.V_SCROLL);
     tree.setHeaderVisible(true);
@@ -2270,7 +3586,7 @@ static void recalculateTableWidth(Table table)
    * @param composite composite widget
    * @return new tree widget
    */
-  static Tree newTree(Composite composite)
+  public static Tree newTree(Composite composite)
   {
     return newTree(composite,SWT.NONE);
   }
@@ -2284,7 +3600,7 @@ static void recalculateTableWidth(Table table)
    * @param resizable TRUE iff resizable column
    * @return new tree column
    */
-  static TreeColumn addTreeColumn(Tree tree, String title, int style, int width, boolean resizable)
+  public static TreeColumn addTreeColumn(Tree tree, String title, int style, int width, boolean resizable)
   {
     TreeColumn treeColumn = new TreeColumn(tree,style);
     treeColumn.setText(title);
@@ -2302,7 +3618,7 @@ static void recalculateTableWidth(Table table)
    * @param folderFlag TRUE iff foler
    * @return new tree item
    */
-  static TreeItem addTreeItem(Tree tree, int index, Object data, boolean folderFlag)
+  public static TreeItem addTreeItem(Tree tree, int index, Object data, boolean folderFlag)
   {
     TreeItem treeItem = new TreeItem(tree,SWT.CHECK,index);
     treeItem.setData(data);
@@ -2317,7 +3633,7 @@ static void recalculateTableWidth(Table table)
    * @param folderFlag TRUE iff foler
    * @return new tree item
    */
-  static TreeItem addTreeItem(Tree tree, Object data, boolean folderFlag)
+  public static TreeItem addTreeItem(Tree tree, Object data, boolean folderFlag)
   {
     return addTreeItem(tree,0,data,folderFlag);
   }
@@ -2329,7 +3645,7 @@ static void recalculateTableWidth(Table table)
    * @param folderFlag TRUE iff foler
    * @return new tree item
    */
-  static TreeItem addTreeItem(TreeItem parentTreeItem, int index, Object data, boolean folderFlag)
+  public static TreeItem addTreeItem(TreeItem parentTreeItem, int index, Object data, boolean folderFlag)
   {
     TreeItem treeItem = new TreeItem(parentTreeItem,SWT.NONE,index);
     treeItem.setData(data);
@@ -2344,7 +3660,7 @@ static void recalculateTableWidth(Table table)
    * @param folderFlag TRUE iff foler
    * @return new tree item
    */
-  static TreeItem addTreeItem(TreeItem parentTreeItem, Object data, boolean folderFlag)
+  public static TreeItem addTreeItem(TreeItem parentTreeItem, Object data, boolean folderFlag)
   {
     return addTreeItem(parentTreeItem,0,data,folderFlag);
   }
@@ -2394,6 +3710,8 @@ private static void printTree(Tree tree)
       {
         texts[z] = treeItem.getText(z);
       }
+      Color foregroundColor = treeItem.getForeground();
+      Color backgroundColor = treeItem.getBackground();
       boolean checked = treeItem.getChecked();
       Image image = treeItem.getImage();
 
@@ -2402,6 +3720,8 @@ private static void printTree(Tree tree)
       else                        newTreeItem = new TreeItem(tree,SWT.NONE,index);
       newTreeItem.setData(data);
       newTreeItem.setText(texts);
+      newTreeItem.setForeground(foregroundColor);
+      newTreeItem.setBackground(backgroundColor);
       newTreeItem.setChecked(checked);
       newTreeItem.setImage(image);
       for (TreeItem subTreeItem : treeItem.getItems())
@@ -2489,7 +3809,7 @@ private static void printTree(Tree tree)
       // sort sub-tree
 //boolean xx = treeItem.getExpanded();
       for (int i = 0; i < subTreeItems.length; i++)
-      {     
+      {
         boolean sortedFlag = false;
         for (int j = 0; (j <= i) && !sortedFlag; j++)
         {
@@ -2533,7 +3853,7 @@ private static void printTree(Tree tree)
       // sort tree
 //boolean xx = treeItem.getExpanded();
       for (int i = 0; i < subTreeItems.length; i++)
-      {     
+      {
         boolean sortedFlag = false;
         for (int j = 0; (j <= i) && !sortedFlag; j++)
         {
@@ -2554,44 +3874,86 @@ private static void printTree(Tree tree)
     }
   }
 
-  /** get expanded (open) directories in tree
-   * @param expandedDirectories hash-set for expanded directories
+  /** get expanded (open) data entries in tree
+   * @param expandedDataSet hash-set for expanded data entries
    * @param treeItem tree item to start
    */
-  private static void getExpandedDiretories(HashSet expandedDirectories, TreeItem treeItem)
+  private static void getExpandedTreeData(HashSet expandedDataSet, TreeItem treeItem)
   {
     if (!treeItem.isDisposed())
     {
-      if (treeItem.getExpanded()) expandedDirectories.add(treeItem.getData());
+      if (treeItem.getExpanded()) expandedDataSet.add(treeItem.getData());
       for (TreeItem subTreeItem : treeItem.getItems())
       {
-        getExpandedDiretories(expandedDirectories,subTreeItem);
+        getExpandedTreeData(expandedDataSet,subTreeItem);
       }
     }
-  }  
+  }
 
-  /** re-expand directories
-   * @param expandedDirectories directories to re-expand
+  /** get expanded (open) tree items in tree
+   * @param treeItemSet hash-set for expanded tree items
+   * @param treeItem tree item to start
+   * @param rootItemsOnly true to collect expanded sub-tree root items only
+   */
+  private static void getTreeItems(HashSet<TreeItem> treeItemSet, TreeItem treeItem, boolean rootItemsOnly)
+  {
+    if (!rootItemsOnly || treeItem.getExpanded()) treeItemSet.add(treeItem);
+    for (TreeItem subTreeItem : treeItem.getItems())
+    {
+      getTreeItems(treeItemSet,subTreeItem,rootItemsOnly);
+    }
+  }
+
+  /** get tree items in tree
+   * @param tree tree
+   * @param rootItemsOnly true to collect expanded sub-tree root items only
+   * @return tree items array
+   */
+  public static TreeItem[] getTreeItems(Tree tree, boolean rootItemsOnly)
+  {
+    HashSet<TreeItem> treeItemSet = new HashSet<TreeItem>();
+    if (!tree.isDisposed())
+    {
+      for (TreeItem treeItem : tree.getItems())
+      {
+        getTreeItems(treeItemSet,treeItem,rootItemsOnly);
+      }
+    }
+
+    return treeItemSet.toArray(new TreeItem[treeItemSet.size()]);
+  }
+
+  /** get tree items in tree
+   * @param tree tree
+   * @return tree items array
+   */
+  public static TreeItem[] getTreeItems(Tree tree)
+  {
+    return getTreeItems(tree,false);
+  }
+
+  /** re-expand entries
+   * @param expandedEntrySet data entries to re-expand
    * @return treeItem tree item to start
    */
-  private static void reExpandDiretories(HashSet expandedDirectories, TreeItem treeItem)
+  private static void reExpandTreeItems(HashSet expandedEntrySet, TreeItem treeItem)
   {
     if (!treeItem.isDisposed())
     {
-      treeItem.setExpanded(expandedDirectories.contains(treeItem.getData()));
+      treeItem.setExpanded(expandedEntrySet.contains(treeItem.getData()));
       for (TreeItem subTreeItem : treeItem.getItems())
       {
-        reExpandDiretories(expandedDirectories,subTreeItem);
+        reExpandTreeItems(expandedEntrySet,subTreeItem);
       }
     }
-  }  
+  }
 
   /** sort tree column
    * @param tree tree
    * @param tableColumn table column to sort by
    * @param comparator table data comparator
    */
-  static void sortTreeColumn(Tree tree, TreeColumn treeColumn, Comparator comparator)
+  public static void sortTreeColumn(Tree tree, TreeColumn treeColumn, Comparator comparator)
   {
     if (!tree.isDisposed())
     {
@@ -2614,12 +3976,12 @@ private static void printTree(Tree tree)
       // parent is not expanded. Because for sort the tree entries are copied
       // (recreated) the state of the expanded sub-trees are stored here and will
       // later be restored when the complete new tree is created.
-      HashSet expandedDirectories = new HashSet();
+      HashSet expandedEntrySet = new HashSet();
       for (TreeItem treeItem : tree.getItems())
       {
-        getExpandedDiretories(expandedDirectories,treeItem);
+        getExpandedTreeData(expandedEntrySet,treeItem);
       }
-//System.err.println("BARControl.java"+", "+1627+": "+expandedDirectories.toString());
+//System.err.println("BARControl.java"+", "+1627+": "+expandedEntrySet.toString());
 
       // sort column
 //printTree(tree);
@@ -2628,7 +3990,7 @@ private static void printTree(Tree tree)
       // restore expanded sub-trees
       for (TreeItem treeItem : tree.getItems())
       {
-        reExpandDiretories(expandedDirectories,treeItem);
+        reExpandTreeItems(expandedEntrySet,treeItem);
       }
 
       // set column sort indicators
@@ -2639,12 +4001,14 @@ private static void printTree(Tree tree)
     }
   }
 
+  //-----------------------------------------------------------------------
+
   /** create new sash widget (pane)
    * @param composite composite widget
    * @return new sash widget
    */
-  static Sash newSash(Composite composite, int style)
-  {    
+  public static Sash newSash(Composite composite, int style)
+  {
     Sash sash = new Sash(composite,style);
 
     return sash;
@@ -2654,12 +4018,14 @@ private static void printTree(Tree tree)
    * @param composite composite widget
    * @return new sash form widget
    */
-  static SashForm newSashForm(Composite composite, int style)
-  {    
+  public static SashForm newSashForm(Composite composite, int style)
+  {
     SashForm sashForm = new SashForm(composite,style);
 
     return sashForm;
   }
+
+  //-----------------------------------------------------------------------
 
   /** create new pane widget
    * @param composite composite widget
@@ -2667,8 +4033,8 @@ private static void printTree(Tree tree)
    * @param prevPane previous pane
    * @return new pane widget
    */
-  static Pane newPane(Composite composite, int style, Pane prevPane)
-  {    
+  public static Pane newPane(Composite composite, int style, Pane prevPane)
+  {
     Pane pane = new Pane(composite,style,prevPane);
 
     return pane;
@@ -2679,34 +4045,54 @@ private static void printTree(Tree tree)
    * @param style style
    * @return new pane widget
    */
-  static Pane newPane(Composite composite, int style)
-  {    
+  public static Pane newPane(Composite composite, int style)
+  {
     Pane pane = new Pane(composite,style,null);
 
     return pane;
   }
 
+  //-----------------------------------------------------------------------
+
   /** create new tab folder
    * @param compositet composite
    * @return new tab folder widget
    */
-  static TabFolder newTabFolder(Composite composite)
-  {    
+  public static TabFolder newTabFolder(Composite composite)
+  {
     TabFolder tabFolder = new TabFolder(composite,SWT.NONE);
     tabFolder.setLayoutData(new TableLayoutData(1,0,TableLayoutData.NSWE));
 
     return tabFolder;
   }
 
-  /** add tab widget
+  /** insert tab widget
    * @param tabFolder tab folder
+   * @param leftComposite left tab item composite or null
    * @param title title of tab
+   * @param data data element
    * @return new composite widget
    */
-  static Composite addTab(TabFolder tabFolder, String title)
+  public static Composite insertTab(TabFolder tabFolder, Composite leftComposite, String title, Object data)
   {
-    TabItem tabItem = new TabItem(tabFolder,SWT.NONE);
+    // get tab item index
+    int index = 0;
+    TabItem[] tabItems = tabFolder.getItems();
+    for (index = 0; index < tabItems.length; index++)
+    {
+      if (tabItems[index].getControl() == leftComposite)
+      {
+        index++;
+        break;
+      }
+    }
+
+    // create tab
+    TabItem tabItem = new TabItem(tabFolder,SWT.NONE,index);
+    tabItem.setData(data);
     tabItem.setText(title);
+
+    // create composite
     Composite composite = new Composite(tabFolder,SWT.NONE);
     TableLayout tableLayout = new TableLayout();
     tableLayout.marginTop    = 2;
@@ -2714,25 +4100,212 @@ private static void printTree(Tree tree)
     tableLayout.marginLeft   = 2;
     tableLayout.marginRight  = 2;
     composite.setLayout(tableLayout);
+
     tabItem.setControl(composite);
 
     return composite;
+  }
+
+  /** add tab widget
+   * @param tabFolder tab folder
+   * @param title title of tab
+   * @param data data element
+   * @return new composite widget
+   */
+  public static Composite addTab(TabFolder tabFolder, String title, Object data)
+  {
+    return insertTab(tabFolder,null,title,data);
+  }
+
+  /** add tab widget
+   * @param tabFolder tab folder
+   * @param title title of tab
+   * @return new composite widget
+   */
+  public static Composite addTab(TabFolder tabFolder, String title)
+  {
+    return addTab(tabFolder,title,null);
+  }
+
+  /** set tab widget
+   * @param tabItem tab item
+   * @param composite tab to set
+   * @param title title of tab
+   * @param data data element
+   */
+  public static void setTab(TabItem tabItem, Composite composite, String title, Object data)
+  {
+    tabItem.setData(data);
+    tabItem.setText(title);
+    tabItem.setControl(composite);
+  }
+
+  /** set tab widget
+   * @param tabItem tab item
+   * @param composite tab to set
+   * @param title title of tab
+   */
+  public static void setTab(TabItem tabItem, Composite composite, String title)
+  {
+    setTab(tabItem,composite,title,null);
+  }
+
+  /** remove tab widget
+   * @param tabFolder tab folder
+   * @param composite tab to remove
+   */
+  public static void removeTab(TabFolder tabFolder, Composite composite)
+  {
+    TabItem tabItem = getTabItem(tabFolder,composite);
+    if (tabItem != null)
+    {
+      composite.dispose();
+      tabItem.dispose();
+    }
+  }
+
+  /** get tab composite array
+   * @param tabFolder tab folder
+   * @param title title of tab
+   * @return tab composites array
+   */
+  public static Composite[] getTabList(TabFolder tabFolder)
+  {
+    TabItem[] tabItems = tabFolder.getItems();
+    Composite[] tabList = new Composite[tabItems.length];
+    for (int z = 0; z < tabItems.length; z++)
+    {
+      tabList[z] = (Composite)tabItems[z].getControl();
+    }
+    return tabList;
+  }
+
+  /** get tab item
+   * @param tabFolder tab folder
+   * @param composite tab to find
+   * @param tab item or null if not found
+   */
+  public static TabItem getTabItem(TabFolder tabFolder, Composite composite)
+  {
+    for (TabItem tabItem : tabFolder.getItems())
+    {
+      if (tabItem.getControl() == composite)
+      {
+        return tabItem;
+      }
+    }
+    return null;
+  }
+
+  /** move tab
+   * @param tabFolder tab folder
+   * @param tabItem tab item
+   * @param newIndex new tab index (0..n)
+   */
+  public static void moveTab(TabFolder tabFolder, TabItem tabItem, int newIndex)
+  {
+    TabItem[] tabItems = tabFolder.getItems();
+
+    // save data
+    int     style       = tabItem.getStyle();
+    String  title       = tabItem.getText();
+    Object  data        = tabItem.getData();
+    Control control     = tabItem.getControl();
+    String  toolTipText = tabItem.getToolTipText();
+    boolean selected    = false;
+    for (TabItem selectedTabItem : tabFolder.getSelection())
+    {
+      if (selectedTabItem == tabItem)
+      {
+        selected = true;
+        break;
+      }
+    }
+
+    // remove old tab
+    tabItem.dispose();
+
+    // create tab a new position
+    tabItem = new TabItem(tabFolder,style,newIndex);
+
+    // restore data
+    tabItem.setText(title);
+    tabItem.setData(data);
+    tabItem.setControl(control);
+    tabItem.setToolTipText(toolTipText);
+    if (selected) tabFolder.setSelection(tabItem);
+  }
+
+  /** move tab
+   * @param tabFolder tab folder
+   * @param composite tab item
+   * @param newIndex new tab index (0..n)
+   */
+  public static void moveTab(TabFolder tabFolder, Composite composite, int newIndex)
+  {
+    moveTab(tabFolder,getTabItem(tabFolder,composite),newIndex);
+  }
+
+  /** set tab widget title
+   * @param tabFolder tab folder
+   * @param composite tab item
+   * @param title title to set
+   */
+  public static void setTabTitle(TabFolder tabFolder, Composite composite, String title)
+  {
+    TabItem tabItem = getTabItem(tabFolder,composite);
+    if (tabItem != null)
+    {
+      tabItem.setText(title);
+    }
   }
 
   /** show tab
    * @param tabFolder tab folder
    * @param composite tab to show
    */
-  static void showTab(TabFolder tabFolder, Composite composite)
+  public static void showTab(TabFolder tabFolder, Composite composite)
   {
-    for (TabItem tabItem : tabFolder.getItems())
+    TabItem tabItem = getTabItem(tabFolder,composite);
+    if (tabItem != null)
     {
-      if (tabItem.getControl() == composite)
-      {
-        tabFolder.setSelection(tabItem);
-        break;
-      }
+      tabFolder.setSelection(tabItem);
     }
+  }
+
+  //-----------------------------------------------------------------------
+
+  /** create new canvas widget
+   * @param composite composite
+   * @param style style
+   * @param width/height size of canvas
+   * @return new canvas widget
+   */
+  public static Canvas newCanvas(Composite composite, int style, int width, int height)
+  {
+    Canvas canvas = new Canvas(composite,style);
+    // canvas is a composite; set default layout
+    canvas.setLayout(new TableLayout(0.0,0.0,0));
+    canvas.setSize(width,height);
+
+    // set scrolled composite content
+    if (composite instanceof ScrolledComposite)
+    {
+      ((ScrolledComposite)composite).setContent(canvas);
+    }
+
+    return canvas;
+  }
+
+  /** create new canvas widget
+   * @param composite composite
+   * @param style style
+   * @param size size of canvas
+   * @return new canvas widget
+   */
+  public static Canvas newCanvas(Composite composite, int style, Point size)
+  {
+    return newCanvas(composite,style,size.x,size.y);
   }
 
   /** create new canvas widget
@@ -2740,44 +4313,55 @@ private static void printTree(Tree tree)
    * @param style style
    * @return new canvas widget
    */
-  static Canvas newCanvas(Composite composite, int style)
-  {    
-    Canvas canvas = new Canvas(composite,style);
-    /* canvas is a composite; set default layout */
-    canvas.setLayout(new TableLayout(0.0,0.0,0));
-
-    return canvas;
+  public static Canvas newCanvas(Composite composite, int style)
+  {
+    return newCanvas(composite,style,SWT.DEFAULT,SWT.DEFAULT);
   }
+
+  /** create new canvas widget
+   * @param composite composite
+   * @return new canvas widget
+   */
+  public static Canvas newCanvas(Composite composite)
+  {
+    return newCanvas(composite,SWT.NONE);
+  }
+
+  //-----------------------------------------------------------------------
 
   /** new slider widget
    * @param composite composite widget
    * @param style style
    * @return new group widget
    */
-  static Slider newSlider(Composite composite, int style)
+  public static Slider newSlider(Composite composite, int style)
   {
     Slider slider = new Slider(composite,style);
 
     return slider;
   }
 
+  //-----------------------------------------------------------------------
+
   /** new scale widget
    * @param composite composite widget
    * @param style style
    * @return new group widget
    */
-  static Scale newScale(Composite composite, int style)
+  public static Scale newScale(Composite composite, int style)
   {
     Scale scale = new Scale(composite,style);
 
     return scale;
   }
 
+  //-----------------------------------------------------------------------
+
   /** create new menu bar
    * @param shell shell
    * @return new menu bar
    */
-  static Menu newMenuBar(Shell shell)
+  public static Menu newMenuBar(Shell shell)
   {
     Menu menu = new Menu(shell,SWT.BAR);
     shell.setMenuBar(menu);
@@ -2789,7 +4373,7 @@ private static void printTree(Tree tree)
    * @param shell shell
    * @return new popup menu
    */
-  static Menu newPopupMenu(Shell shell)
+  public static Menu newPopupMenu(Shell shell)
   {
     Menu menu = new Menu(shell,SWT.POP_UP);
 
@@ -2801,7 +4385,7 @@ private static void printTree(Tree tree)
    * @param text menu text
    * @return new menu
    */
-  static Menu addMenu(Menu menu, String text)
+  public static Menu addMenu(Menu menu, String text)
   {
     MenuItem menuItem = new MenuItem(menu,SWT.CASCADE);
     menuItem.setText(text);
@@ -2817,7 +4401,7 @@ private static void printTree(Tree tree)
    * @param accelerator accelerator key or 0
    * @return new menu item
    */
-  static MenuItem addMenuItem(Menu menu, String text, int accelerator)
+  public static MenuItem addMenuItem(Menu menu, String text, int accelerator)
   {
     if (accelerator != 0)
     {
@@ -2827,7 +4411,7 @@ private static void printTree(Tree tree)
       {
         text = text.substring(0,index)+'&'+text.substring(index);
       }
-      text = text+"\t"+acceleratorToText(accelerator);
+      text = text+"\t"+menuAcceleratorToText(accelerator);
     }
     MenuItem menuItem = new MenuItem(menu,SWT.DROP_DOWN);
     menuItem.setText(text);
@@ -2841,7 +4425,7 @@ private static void printTree(Tree tree)
    * @param text menu item text
    * @return new menu item
    */
-  static MenuItem addMenuItem(Menu menu, String text)
+  public static MenuItem addMenuItem(Menu menu, String text)
   {
     return addMenuItem(menu,text,0);
   }
@@ -2855,7 +4439,7 @@ private static void printTree(Tree tree)
    * @param accelerator accelerator key or 0
    * @return new menu item
    */
-  static MenuItem addMenuCheckbox(Menu menu, String text, final Object data, final String field, final Object value, int accelerator)
+  public static MenuItem addMenuCheckbox(Menu menu, String text, final Object data, final String field, final Object value, int accelerator)
   {
     if (accelerator != 0)
     {
@@ -2865,7 +4449,7 @@ private static void printTree(Tree tree)
       {
         text = text.substring(0,index)+'&'+text.substring(index);
       }
-      text = text+"\t"+acceleratorToText(accelerator);
+      text = text+"\t"+menuAcceleratorToText(accelerator);
     }
     MenuItem menuItem = new MenuItem(menu,SWT.CHECK);
     menuItem.setText(text);
@@ -2898,7 +4482,7 @@ private static void printTree(Tree tree)
    * @param accelerator accelerator key or 0
    * @return new menu item
    */
-  static MenuItem addMenuCheckbox(Menu menu, String text, final Object data, final String field, final Object value)
+  public static MenuItem addMenuCheckbox(Menu menu, String text, final Object data, final String field, final Object value)
   {
     return addMenuCheckbox(menu,text,data,field,value,0);
   }
@@ -2909,7 +4493,7 @@ private static void printTree(Tree tree)
    * @param selected true iff checkbox menu entry is selected
    * @return new menu item
    */
-  static MenuItem addMenuCheckbox(Menu menu, String text, boolean selected)
+  public static MenuItem addMenuCheckbox(Menu menu, String text, boolean selected)
   {
     MenuItem menuItem = addMenuCheckbox(menu,text,null,null,null);
     menuItem.setSelection(selected);
@@ -2921,7 +4505,7 @@ private static void printTree(Tree tree)
    * @param text menu item text
    * @return new menu item
    */
-  static MenuItem addMenuCheckbox(Menu menu, String text)
+  public static MenuItem addMenuCheckbox(Menu menu, String text)
   {
     return addMenuCheckbox(menu,text,null,null,null);
   }
@@ -2935,7 +4519,7 @@ private static void printTree(Tree tree)
    * @param accelerator accelerator key or 0
    * @return new menu item
    */
-  static MenuItem addMenuRadio(Menu menu, String text, final Object data, final String field, final Object value, int accelerator)
+  public static MenuItem addMenuRadio(Menu menu, String text, final Object data, final String field, final Object value, int accelerator)
   {
     if (accelerator != 0)
     {
@@ -2945,7 +4529,7 @@ private static void printTree(Tree tree)
       {
         text = text.substring(0,index)+'&'+text.substring(index);
       }
-      text = text+"\t"+acceleratorToText(accelerator);
+      text = text+"\t"+menuAcceleratorToText(accelerator);
     }
     MenuItem menuItem = new MenuItem(menu,SWT.RADIO);
     menuItem.setText(text);
@@ -2977,7 +4561,7 @@ private static void printTree(Tree tree)
    * @param value value for radio button
    * @return new menu item
    */
-  static MenuItem addMenuRadio(Menu menu, String text, final Object data, final String field, final Object value)
+  public static MenuItem addMenuRadio(Menu menu, String text, final Object data, final String field, final Object value)
   {
     return addMenuRadio(menu,text,data,field,value,0);
   }
@@ -2988,7 +4572,7 @@ private static void printTree(Tree tree)
    * @param selected true iff radio menu entry is selected
    * @return new menu item
    */
-  static MenuItem addMenuRadio(Menu menu, String text, boolean selected)
+  public static MenuItem addMenuRadio(Menu menu, String text, boolean selected)
   {
     MenuItem menuItem = addMenuRadio(menu,text,null,null,null);
     menuItem.setSelection(selected);
@@ -3000,7 +4584,7 @@ private static void printTree(Tree tree)
    * @param text menu item text
    * @return new menu item
    */
-  static MenuItem addMenuRadio(Menu menu, String text)
+  public static MenuItem addMenuRadio(Menu menu, String text)
   {
     return addMenuRadio(menu,text,null,null,null);
   }
@@ -3009,7 +4593,7 @@ private static void printTree(Tree tree)
    * @param menu menu
    * @return new menu item
    */
-  static MenuItem addMenuSeparator(Menu menu)
+  public static MenuItem addMenuSeparator(Menu menu)
   {
     MenuItem menuItem = new MenuItem(menu,SWT.SEPARATOR);
 
@@ -3024,11 +4608,55 @@ private static void printTree(Tree tree)
    * @param margin margin or 0
    * @return new composite widget
    */
-  static Composite newComposite(Composite composite, int style, int margin)
+  public static Composite newComposite(Composite composite, int style, int margin)
   {
     Composite childComposite;
 
     childComposite = new Composite(composite,style);
+    TableLayout tableLayout = new TableLayout(margin);
+    childComposite.setLayout(tableLayout);
+
+    // set scrolled composite content
+    if (composite instanceof ScrolledComposite)
+    {
+      ((ScrolledComposite)composite).setContent(childComposite);
+    }
+
+    return childComposite;
+  }
+
+  /** new composite widget
+   * @param composite composite widget
+   * @param style style
+   * @return new composite widget
+   */
+  public static Composite newComposite(Composite composite, int style)
+  {
+    return newComposite(composite,style,0);
+  }
+
+  /** new composite widget
+   * @param composite composite widget
+   * @return new composite widget
+   */
+  public static Composite newComposite(Composite composite)
+  {
+    return newComposite(composite,SWT.NONE);
+  }
+
+  //-----------------------------------------------------------------------
+
+  /** new composite widget
+   * @param composite composite widget
+   * @param style style
+   * @param margin margin or 0
+   * @return new composite widget
+   */
+  public static ScrolledComposite newScrolledComposite(Composite composite, int style, int margin)
+  {
+    ScrolledComposite childComposite;
+
+    childComposite = new ScrolledComposite(composite,style);
     TableLayout tableLayout = new TableLayout(margin);
     childComposite.setLayout(tableLayout);
 
@@ -3040,19 +4668,21 @@ private static void printTree(Tree tree)
    * @param style style
    * @return new composite widget
    */
-  static Composite newComposite(Composite composite, int style)
+  public static ScrolledComposite newScrolledComposite(Composite composite, int style)
   {
-    return newComposite(composite,style,0);
+    return newScrolledComposite(composite,style,0);
   }
 
   /** new composite widget
    * @param composite composite widget
    * @return new composite widget
    */
-  static Composite newComposite(Composite composite)
+  public static ScrolledComposite newScrolledComposite(Composite composite)
   {
-    return newComposite(composite,SWT.NONE,0);
+    return newScrolledComposite(composite,SWT.NONE);
   }
+
+  //-----------------------------------------------------------------------
 
   /** new group widget
    * @param composite composite widget
@@ -3061,7 +4691,7 @@ private static void printTree(Tree tree)
    * @param margin margin or 0
    * @return new group widget
    */
-  static Group newGroup(Composite composite, String title, int style, int margin)
+  public static Group newGroup(Composite composite, String title, int style, int margin)
   {
     Group group;
 
@@ -3079,7 +4709,7 @@ private static void printTree(Tree tree)
    * @param style style
    * @return new group widget
    */
-  static Group newGroup(Composite composite, String title, int style)
+  public static Group newGroup(Composite composite, String title, int style)
   {
     return newGroup(composite,title,style,0);
   }
@@ -3089,7 +4719,7 @@ private static void printTree(Tree tree)
    * @param title group title
    * @return new group widget
    */
-  static Group newGroup(Composite composite, String title)
+  public static Group newGroup(Composite composite, String title)
   {
     return newGroup(composite,title,SWT.NONE);
   }
@@ -3099,19 +4729,20 @@ private static void printTree(Tree tree)
   /** add modify listener
    * @param widgetModifyListener listener to add
    */
-  static void addModifyListener(WidgetModifyListener widgetModifyListener)
+  public static void addModifyListener(WidgetModifyListener widgetModifyListener)
   {
-    widgetModifyListenerSet.add(widgetModifyListener);
+    listenersList.add(widgetModifyListener);
+    widgetModifyListener.modified();
   }
 
   /** execute modify listeners
    * @param variable modified variable
    */
-  static void modified(Object variable)
+  public static void modified(Object object)
   {
-    for (WidgetModifyListener widgetModifyListener : widgetModifyListenerSet)
+    for (WidgetModifyListener widgetModifyListener : listenersList)
     {
-      if (widgetModifyListener.equals(variable))
+      if (widgetModifyListener.equals(object))
       {
         widgetModifyListener.modified();
       }
@@ -3138,44 +4769,78 @@ private static void printTree(Tree tree)
    * @param control control
    * @param type event type to generate
    * @param widget widget of event
+   * @param index index of event
    * @param item item of event
    */
-  static void notify(Control control, int type, Widget widget, Widget item)
+  public static void notify(Control control, int type, Widget widget, int index, Widget item)
   {
-    if (control.isEnabled())
+    if (!control.isDisposed() && control.isEnabled())
     {
       Event event = new Event();
       event.widget = widget;
+      event.index  = index;
       event.item   = item;
       control.notifyListeners(type,event);
     }
   }
 
-  /** signal modified
+  /** event notification
+   * @param control control
+   * @param type event type to generate
+   * @param index index of event
+   * @param widget widget of event
+   */
+  public static void notify(Control control, int type, int index, Widget widget)
+  {
+    notify(control,type,widget,index,null);
+  }
+
+  /** event notification
+   * @param control control
+   * @param type event type to generate
+   * @param widget widget of event
+   * @param item item of event
+   */
+  public static void notify(Control control, int type, Widget widget, Widget item)
+  {
+    notify(control,type,widget,-1,item);
+  }
+
+  /** event notification
    * @param control control
    * @param type event type to generate
    * @param widget widget of event
    */
-  static void notify(Control control, int type, Widget widget)
+  public static void notify(Control control, int type, Widget widget)
   {
-    notify(control,type,widget,null);
+    notify(control,type,widget,-1,null);
   }
 
-  /** signal modified
+  /** event notification
+   * @param control control
+   * @param type event type to generate
+   * @param index index of event
+   */
+  public static void notify(Control control, int type, int index)
+  {
+    notify(control,type,control,index,null);
+  }
+
+  /** event notification
    * @param control control
    * @param type event type to generate
    */
-  static void notify(Control control, int type)
+  public static void notify(Control control, int type)
   {
-    notify(control,type,control,null);
+    notify(control,type,control);
   }
 
-  /** signal modified
+  /** event notification
    * @param control control
    */
-  static void notify(Control control)
+  public static void notify(Control control)
   {
-    notify(control,SWT.Selection,control,null);
+    notify(control,SWT.Selection);
   }
 
   //-----------------------------------------------------------------------
@@ -3193,13 +4858,13 @@ private static void printTree(Tree tree)
    * @param clipboard clipboard
    * @param texts text lines
    */
-  public static void setClipboard(Clipboard clipboard, String texts[])
+  public static void setClipboard(Clipboard clipboard, String lines[])
   {
-    StringBuffer buffer = new StringBuffer();
+    StringBuilder buffer = new StringBuilder();
     String lineSeparator = System.getProperty("line.separator");
-    for (String text : texts)
+    for (String line : lines)
     {
-      buffer.append(text);
+      buffer.append(line);
       buffer.append(lineSeparator);
     }
     setClipboard(clipboard,buffer.toString());
@@ -3214,13 +4879,22 @@ private static void printTree(Tree tree)
     setClipboard(clipboard,label.getText());
   }
 
-  /** set clipboard with text from label
+  /** set clipboard with text from text
    * @param clipboard clipboard
-   * @param label label
+   * @param text text
    */
   public static void setClipboard(Clipboard clipboard, Text text)
   {
     setClipboard(clipboard,text.getSelectionText());
+  }
+
+  /** set clipboard with text from styled text
+   * @param clipboard clipboard
+   * @param styledText styled text
+   */
+  public static void setClipboard(Clipboard clipboard, StyledText styledText)
+  {
+    setClipboard(clipboard,styledText.getSelectionText());
   }
 
   /** set clipboard with text from table item
@@ -3232,7 +4906,7 @@ private static void printTree(Tree tree)
     Table table       = tableItem.getParent();
     int   columnCount = table.getColumnCount();
 
-    StringBuffer buffer = new StringBuffer();
+    StringBuilder buffer = new StringBuilder();
     for (int i = 0; i < columnCount ; i++)
     {
       if (i > 0) buffer.append('\t');
@@ -3245,28 +4919,46 @@ private static void printTree(Tree tree)
   /** set clipboard with text from table item
    * @param clipboard clipboard
    * @param tableItem table item
+   * @param columnNb or -1 for all columns
    */
-  public static void setClipboard(Clipboard clipboard, TableItem[] tableItems)
+  public static void setClipboard(Clipboard clipboard, TableItem[] tableItems, int columnNb)
   {
     if (tableItems.length > 0)
     {
-      Table table       = tableItems[0].getParent();
-      int   columnCount = Math.max(table.getColumnCount(),1);
-      //if (columnCount==0) columnCount=1;
+      Table table = tableItems[0].getParent();
 
-      StringBuffer buffer = new StringBuffer();
-      for (int z = 0; z < tableItems.length ; z++)
+      StringBuilder buffer = new StringBuilder();
+      if (columnNb >= 0)
       {
-        if (z > 0) buffer.append('\n');
-        for (int i = 0; i < columnCount ; i++)
+        for (int z = 0; z < tableItems.length ; z++)
         {
-          if (i > 0) buffer.append('\t');
-          buffer.append(tableItems[z].getText(i));
+          buffer.append(tableItems[z].getText(columnNb)); buffer.append('\n');
         }
       }
-
+      else
+      {
+        int columnCount = Math.max(table.getColumnCount(),1);
+        for (int z = 0; z < tableItems.length ; z++)
+        {
+          for (int i = 0; i < columnCount ; i++)
+          {
+            if (i > 0) buffer.append('\t');
+            buffer.append(tableItems[z].getText(i));
+          }
+          buffer.append('\n');
+        }
+      }
       setClipboard(clipboard,buffer.toString());
     }
+  }
+
+  /** set clipboard with text from table item
+   * @param clipboard clipboard
+   * @param tableItem table item
+   */
+  public static void setClipboard(Clipboard clipboard, TableItem[] tableItems)
+  {
+    setClipboard(clipboard,tableItems,-1);
   }
 
   /** add copy listener (copy content to clipboard on ctrl-c)
@@ -3285,6 +4977,10 @@ private static void printTree(Tree tree)
           if      (control instanceof Text)
           {
             setClipboard(clipboard,(Text)control);
+          }
+          else if (control instanceof StyledText)
+          {
+            setClipboard(clipboard,(StyledText)control);
           }
           else if (control instanceof Table)
           {
