@@ -1176,7 +1176,8 @@ class TabJobs
   private WidgetVariable  archiveType             = new WidgetVariable(new String[]{"normal","full","incremental","differential"});
   private WidgetVariable  archivePartSizeFlag     = new WidgetVariable(false);
   private WidgetVariable  archivePartSize         = new WidgetVariable(0);
-  private WidgetVariable  compressAlgorithm       = new WidgetVariable(new String[]{"none","zip0","zip1","zip2","zip3","zip4","zip5","zip6","zip7","zip8","zip9","bzip1","bzip2","bzip3","bzip4","bzip5","bzip6","bzip7","bzip8","bzip9","lzma1","lzma2","lzma3","lzma4","lzma5","lzma6","lzma7","lzma8","lzma9"});
+  private WidgetVariable  deltaCompressAlgorithm  = new WidgetVariable(new String[]{"none","xdelta1","xdelta2","xdelta3","xdelta4","xdelta5","xdelta6","xdelta7","xdelta8","xdelta9"});
+  private WidgetVariable  byteCompressAlgorithm   = new WidgetVariable(new String[]{"none","zip0","zip1","zip2","zip3","zip4","zip5","zip6","zip7","zip8","zip9","bzip1","bzip2","bzip3","bzip4","bzip5","bzip6","bzip7","bzip8","bzip9","lzma1","lzma2","lzma3","lzma4","lzma5","lzma6","lzma7","lzma8","lzma9"});
   private WidgetVariable  compressMinSize         = new WidgetVariable(0);
   private WidgetVariable  cryptAlgorithm          = new WidgetVariable(new String[]{"none","3DES","CAST5","BLOWFISH","AES128","AES192","AES256","TWOFISH128","TWOFISH256"});
   private WidgetVariable  cryptType               = new WidgetVariable(new String[]{"none","symmetric","asymmetric"});
@@ -1550,8 +1551,8 @@ class TabJobs
               for (TreeItem treeItem : widgetFileTree.getSelection())
               {
                 FileTreeData fileTreeData = (FileTreeData)treeItem.getData();
-                includeAdd(EntryTypes.FILE,fileTreeData.name);
-                excludeRemove(fileTreeData.name);
+                includeListAdd(EntryTypes.FILE,fileTreeData.name);
+                excludeListRemove(fileTreeData.name);
                 switch (fileTreeData.type)
                 {
                   case FILE:      treeItem.setImage(IMAGE_FILE_INCLUDED);      break;
@@ -1579,8 +1580,8 @@ class TabJobs
               for (TreeItem treeItem : widgetFileTree.getSelection())
               {
                 FileTreeData fileTreeData = (FileTreeData)treeItem.getData();
-                includeRemove(fileTreeData.name);
-                excludeAdd(fileTreeData.name);
+                includeListRemove(fileTreeData.name);
+                excludeListAdd(fileTreeData.name);
                 switch (fileTreeData.type)
                 {
                   case FILE:      treeItem.setImage(IMAGE_FILE_EXCLUDED);      break;
@@ -1608,8 +1609,8 @@ class TabJobs
               for (TreeItem treeItem : widgetFileTree.getSelection())
               {
                 FileTreeData fileTreeData = (FileTreeData)treeItem.getData();
-                includeRemove(fileTreeData.name);
-                excludeRemove(fileTreeData.name);
+                includeListRemove(fileTreeData.name);
+                excludeListRemove(fileTreeData.name);
                 switch (fileTreeData.type)
                 {
                   case FILE:      treeItem.setImage(IMAGE_FILE);      break;
@@ -1665,8 +1666,8 @@ class TabJobs
               for (TreeItem treeItem : widgetFileTree.getSelection())
               {
                 FileTreeData fileTreeData = (FileTreeData)treeItem.getData();
-                includeAdd(EntryTypes.FILE,fileTreeData.name);
-                excludeRemove(fileTreeData.name);
+                includeListAdd(EntryTypes.FILE,fileTreeData.name);
+                excludeListRemove(fileTreeData.name);
                 switch (fileTreeData.type)
                 {
                   case FILE:      treeItem.setImage(IMAGE_FILE_INCLUDED);      break;
@@ -1695,8 +1696,8 @@ class TabJobs
               for (TreeItem treeItem : widgetFileTree.getSelection())
               {
                 FileTreeData fileTreeData = (FileTreeData)treeItem.getData();
-                includeRemove(fileTreeData.name);
-                excludeAdd(fileTreeData.name);
+                includeListRemove(fileTreeData.name);
+                excludeListAdd(fileTreeData.name);
                 switch (fileTreeData.type)
                 {
                   case FILE:      treeItem.setImage(IMAGE_FILE_EXCLUDED);      break;
@@ -1725,8 +1726,8 @@ class TabJobs
               for (TreeItem treeItem : widgetFileTree.getSelection())
               {
                 FileTreeData fileTreeData = (FileTreeData)treeItem.getData();
-                includeRemove(fileTreeData.name);
-                excludeRemove(fileTreeData.name);
+                includeListRemove(fileTreeData.name);
+                excludeListRemove(fileTreeData.name);
                 switch (fileTreeData.type)
                 {
                   case FILE:      treeItem.setImage(IMAGE_FILE);      break;
@@ -1819,8 +1820,8 @@ class TabJobs
               for (TreeItem treeItem : widgetDeviceTree.getSelection())
               {
                 DeviceTreeData deviceTreeData = (DeviceTreeData)treeItem.getData();
-                includeAdd(EntryTypes.IMAGE,deviceTreeData.name);
-                excludeRemove(deviceTreeData.name);
+                includeListAdd(EntryTypes.IMAGE,deviceTreeData.name);
+                excludeListRemove(deviceTreeData.name);
                 treeItem.setImage(IMAGE_DEVICE_INCLUDED);
               }
             }
@@ -1839,8 +1840,8 @@ class TabJobs
               for (TreeItem treeItem : widgetDeviceTree.getSelection())
               {
                 DeviceTreeData deviceTreeData = (DeviceTreeData)treeItem.getData();
-                includeRemove(deviceTreeData.name);
-                excludeAdd(deviceTreeData.name);
+                includeListRemove(deviceTreeData.name);
+                excludeListAdd(deviceTreeData.name);
                 treeItem.setImage(IMAGE_DEVICE_EXCLUDED);
               }
             }
@@ -1859,8 +1860,8 @@ class TabJobs
               for (TreeItem treeItem : widgetDeviceTree.getSelection())
               {
                 DeviceTreeData deviceTreeData = (DeviceTreeData)treeItem.getData();
-                includeRemove(deviceTreeData.name);
-                excludeRemove(deviceTreeData.name);
+                includeListRemove(deviceTreeData.name);
+                excludeListRemove(deviceTreeData.name);
                 treeItem.setImage(IMAGE_DEVICE);
               }
             }
@@ -1887,8 +1888,8 @@ class TabJobs
               for (TreeItem treeItem : widgetDeviceTree.getSelection())
               {
                 DeviceTreeData deviceTreeData = (DeviceTreeData)treeItem.getData();
-                includeAdd(EntryTypes.IMAGE,deviceTreeData.name);
-                excludeRemove(deviceTreeData.name);
+                includeListAdd(EntryTypes.IMAGE,deviceTreeData.name);
+                excludeListRemove(deviceTreeData.name);
                 treeItem.setImage(IMAGE_DEVICE_INCLUDED);
               }
             }
@@ -1908,8 +1909,8 @@ class TabJobs
               for (TreeItem treeItem : widgetDeviceTree.getSelection())
               {
                 DeviceTreeData deviceTreeData = (DeviceTreeData)treeItem.getData();
-                includeRemove(deviceTreeData.name);
-                excludeAdd(deviceTreeData.name);
+                includeListRemove(deviceTreeData.name);
+                excludeListAdd(deviceTreeData.name);
                 treeItem.setImage(IMAGE_DEVICE_EXCLUDED);
               }
             }
@@ -1929,8 +1930,8 @@ class TabJobs
               for (TreeItem treeItem : widgetDeviceTree.getSelection())
               {
                 DeviceTreeData deviceTreeData = (DeviceTreeData)treeItem.getData();
-                includeRemove(deviceTreeData.name);
-                excludeRemove(deviceTreeData.name);
+                includeListRemove(deviceTreeData.name);
+                excludeListRemove(deviceTreeData.name);
                 treeItem.setImage(IMAGE_DEVICE);
               }
             }
@@ -1968,7 +1969,7 @@ class TabJobs
               MenuItem widget = (MenuItem)selectionEvent.widget;
               if (selectedJobId > 0)
               {
-                includeAdd();
+                includeListAdd();
               }
             }
           });
@@ -1984,7 +1985,7 @@ class TabJobs
               MenuItem widget = (MenuItem)selectionEvent.widget;
               if (selectedJobId > 0)
               {
-                includeRemove();
+                includeListRemove();
               }
             }
           });
@@ -2008,7 +2009,7 @@ class TabJobs
               Button widget = (Button)selectionEvent.widget;
               if (selectedJobId > 0)
               {
-                includeAdd();
+                includeListAdd();
               }
             }
           });
@@ -2026,7 +2027,7 @@ class TabJobs
               Button widget = (Button)selectionEvent.widget;
               if (selectedJobId > 0)
               {
-                includeRemove();
+                includeListRemove();
               }
             }
           });
@@ -2051,7 +2052,7 @@ class TabJobs
               MenuItem widget = (MenuItem)selectionEvent.widget;
               if (selectedJobId > 0)
               {
-                excludeAdd();
+                excludeListAdd();
               }
             }
           });
@@ -2067,7 +2068,7 @@ class TabJobs
               MenuItem widget = (MenuItem)selectionEvent.widget;
               if (selectedJobId > 0)
               {
-                excludeRemove();
+                excludeListRemove();
               }
             }
           });
@@ -2091,7 +2092,7 @@ class TabJobs
               Button widget = (Button)selectionEvent.widget;
               if (selectedJobId > 0)
               {
-                excludeAdd();
+                excludeListAdd();
               }
             }
           });
@@ -2109,7 +2110,7 @@ class TabJobs
               Button widget = (Button)selectionEvent.widget;
               if (selectedJobId > 0)
               {
-                excludeRemove();
+                excludeListRemove();
               }
             }
           });
@@ -2350,13 +2351,15 @@ class TabJobs
         label = Widgets.newLabel(tab,"Compress:");
         Widgets.layout(label,1,0,TableLayoutData.W);
         composite = Widgets.newComposite(tab);
-        composite.setLayout(new TableLayout(new double[]{0.0,1.0},1.0));
-        Widgets.layout(composite,1,1,TableLayoutData.NSWE);
+        composite.setLayout(new TableLayout(1.0,0.0));
+        Widgets.layout(composite,1,1,TableLayoutData.W);
         {
-          // compress algorithm
+          label = Widgets.newLabel(composite,"Delta:");
+          Widgets.layout(label,0,0,TableLayoutData.NONE);
+
           combo = Widgets.newOptionMenu(composite);
-          combo.setItems(new String[]{"none","zip0","zip1","zip2","zip3","zip4","zip5","zip6","zip7","zip8","zip9","bzip1","bzip2","bzip3","bzip4","bzip5","bzip6","bzip7","bzip8","bzip9","lzma1","lzma2","lzma3","lzma4","lzma5","lzma6","lzma7","lzma8","lzma9"});
-          Widgets.layout(combo,0,0,TableLayoutData.W);
+          combo.setItems(new String[]{"none","xdelta1","xdelta2","xdelta3","xdelta4","xdelta5","xdelta6","xdelta7","xdelta8","xdelta9"});
+          Widgets.layout(combo,0,1,TableLayoutData.W);
           combo.addSelectionListener(new SelectionListener()
           {
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -2366,12 +2369,34 @@ class TabJobs
             {
               Combo  widget = (Combo)selectionEvent.widget;
               String s      = widget.getText();
-              compressAlgorithm.set(s);
-              BARServer.setOption(selectedJobId,"compress-algorithm",s);
+              deltaCompressAlgorithm.set(s);
+              BARServer.setOption(selectedJobId,"compress-algorithm",deltaCompressAlgorithm.toString()+"+"+byteCompressAlgorithm.toString());
             }
           });
-          Widgets.addModifyListener(new WidgetModifyListener(combo,compressAlgorithm));
-          combo.setToolTipText("Compression method to use.");
+          Widgets.addModifyListener(new WidgetModifyListener(combo,deltaCompressAlgorithm));
+          combo.setToolTipText("Delta compression method to use.");
+
+          label = Widgets.newLabel(composite,"Byte:");
+          Widgets.layout(label,0,2,TableLayoutData.NONE);
+
+          combo = Widgets.newOptionMenu(composite);
+          combo.setItems(new String[]{"none","zip0","zip1","zip2","zip3","zip4","zip5","zip6","zip7","zip8","zip9","bzip1","bzip2","bzip3","bzip4","bzip5","bzip6","bzip7","bzip8","bzip9","lzma1","lzma2","lzma3","lzma4","lzma5","lzma6","lzma7","lzma8","lzma9"});
+          Widgets.layout(combo,0,3,TableLayoutData.W);
+          combo.addSelectionListener(new SelectionListener()
+          {
+            public void widgetDefaultSelected(SelectionEvent selectionEvent)
+            {
+            }
+            public void widgetSelected(SelectionEvent selectionEvent)
+            {
+              Combo  widget = (Combo)selectionEvent.widget;
+              String s      = widget.getText();
+              byteCompressAlgorithm.set(s);
+              BARServer.setOption(selectedJobId,"compress-algorithm",deltaCompressAlgorithm.toString()+"+"+byteCompressAlgorithm.toString());
+            }
+          });
+          Widgets.addModifyListener(new WidgetModifyListener(combo,byteCompressAlgorithm));
+          combo.setToolTipText("Byte compression method to use.");
         }
 
         label = Widgets.newLabel(tab,"Compress exclude:");
@@ -2383,11 +2408,11 @@ class TabJobs
           // compress exclude list
           widgetCompressExcludeList = Widgets.newList(composite);
           Widgets.layout(widgetCompressExcludeList,0,0,TableLayoutData.NSWE);
-          Widgets.addModifyListener(new WidgetModifyListener(widgetCompressExcludeList,compressAlgorithm)
+          Widgets.addModifyListener(new WidgetModifyListener(widgetCompressExcludeList,new WidgetVariable[]{deltaCompressAlgorithm,byteCompressAlgorithm})
           {
-            public void modified(Control control, WidgetVariable compressAlgorithm)
+            public void modified(Control control, WidgetVariable[] compressAlgorithms)
             {
-              Widgets.setEnabled(control,!compressAlgorithm.equals("none"));
+              Widgets.setEnabled(control,!deltaCompressAlgorithm.equals("none") || !byteCompressAlgorithm.equals("none"));
             }
           });
           menu = Widgets.newPopupMenu(shell);
@@ -2402,7 +2427,7 @@ class TabJobs
               {
                 MenuItem widget = (MenuItem)selectionEvent.widget;
 
-                compressExcludeAdd();
+                compressExcludeListAdd();
               }
             });
 
@@ -2429,7 +2454,7 @@ class TabJobs
 
                 MenuItem widget = (MenuItem)selectionEvent.widget;
 
-                compressExcludeAdd(COMPRESSED_PATTERNS);
+                compressExcludeListAdd(COMPRESSED_PATTERNS);
               }
             });
 
@@ -2454,7 +2479,7 @@ class TabJobs
 
                 MenuItem widget = (MenuItem)selectionEvent.widget;
 
-                compressExcludeAdd(MULTIMEDIA_PATTERNS);
+                compressExcludeListAdd(MULTIMEDIA_PATTERNS);
               }
             });
 
@@ -2475,7 +2500,7 @@ class TabJobs
 
                 MenuItem widget = (MenuItem)selectionEvent.widget;
 
-                compressExcludeAdd(PACKAGE_PATTERNS);
+                compressExcludeListAdd(PACKAGE_PATTERNS);
               }
             });
 
@@ -2490,7 +2515,7 @@ class TabJobs
                 MenuItem widget = (MenuItem)selectionEvent.widget;
                 if (selectedJobId > 0)
                 {
-                  compressExcludeRemove();
+                  compressExcludeListRemove();
                 }
               }
             });
@@ -2504,11 +2529,11 @@ class TabJobs
           {
             button = Widgets.newButton(subComposite,"Add\u2026");
             Widgets.layout(button,0,0,TableLayoutData.DEFAULT,0,0,0,0,60,SWT.DEFAULT);
-            Widgets.addModifyListener(new WidgetModifyListener(button,compressAlgorithm)
+            Widgets.addModifyListener(new WidgetModifyListener(button,new WidgetVariable[]{deltaCompressAlgorithm,byteCompressAlgorithm})
             {
-              public void modified(Control control, WidgetVariable compressAlgorithm)
+              public void modified(Control control, WidgetVariable byteCompressAlgorithm)
               {
-                Widgets.setEnabled(control,!compressAlgorithm.equals("none"));
+                Widgets.setEnabled(control,!deltaCompressAlgorithm.equals("none") || !byteCompressAlgorithm.equals("none"));
               }
             });
             button.addSelectionListener(new SelectionListener()
@@ -2521,7 +2546,7 @@ class TabJobs
                 Button widget = (Button)selectionEvent.widget;
                 if (selectedJobId > 0)
                 {
-                  compressExcludeAdd();
+                  compressExcludeListAdd();
                 }
               }
             });
@@ -2529,11 +2554,11 @@ class TabJobs
 
             button = Widgets.newButton(subComposite,"Remove");
             Widgets.layout(button,0,1,TableLayoutData.DEFAULT,0,0,0,0,60,SWT.DEFAULT);
-            Widgets.addModifyListener(new WidgetModifyListener(button,compressAlgorithm)
+            Widgets.addModifyListener(new WidgetModifyListener(button,new WidgetVariable[]{deltaCompressAlgorithm,byteCompressAlgorithm})
             {
-              public void modified(Control control, WidgetVariable compressAlgorithm)
+              public void modified(Control control, WidgetVariable byteCompressAlgorithm)
               {
-                Widgets.setEnabled(control,!compressAlgorithm.equals("none"));
+                Widgets.setEnabled(control,!deltaCompressAlgorithm.equals("none") || !byteCompressAlgorithm.equals("none"));
               }
             });
             button.addSelectionListener(new SelectionListener()
@@ -2546,7 +2571,7 @@ class TabJobs
                 Button widget = (Button)selectionEvent.widget;
                 if (selectedJobId > 0)
                 {
-                  compressExcludeRemove();
+                  compressExcludeListRemove();
                 }
               }
             });
@@ -4787,7 +4812,7 @@ class TabJobs
 
     // add root devices
     addDirectoryRootDevices();
-    addDevices();
+    addDevicesList();
 
     // update data
     updateJobList();
@@ -4899,9 +4924,14 @@ class TabJobs
       archiveType.set(BARServer.getStringOption(selectedJobId,"archive-type"));
       archivePartSize.set(Units.parseByteSize(BARServer.getStringOption(selectedJobId,"archive-part-size"),0));
       archivePartSizeFlag.set(archivePartSize.getLong() > 0);
-      compressAlgorithm.set(BARServer.getStringOption(selectedJobId,"compress-algorithm"));
+Dprintf.dprintf("%s",BARServer.getStringOption(selectedJobId,"compress-algorithm"));
+
+      String[] compressAlgorithms = StringUtils.split(BARServer.getStringOption(selectedJobId,"compress-algorithm"),"+");
+      assert compressAlgorithms.length == 2;
+      deltaCompressAlgorithm.set(compressAlgorithms[0]);
+      byteCompressAlgorithm.set(compressAlgorithms[1]);
       cryptAlgorithm.set(BARServer.getStringOption(selectedJobId,"crypt-algorithm"));
-      cryptType.set(BARServer.getStringOption(selectedJobId,"crypt-type"));      
+      cryptType.set(BARServer.getStringOption(selectedJobId,"crypt-type"));
       cryptPublicKeyFileName.set(BARServer.getStringOption(selectedJobId,"crypt-public-key"));
       cryptPasswordMode.set(BARServer.getStringOption(selectedJobId,"crypt-password-mode"));
       cryptPassword.set(BARServer.getStringOption(selectedJobId,"crypt-password"));
@@ -4963,14 +4993,14 @@ class TabJobs
       widgetJobList.removeAll();
       for (String line : result)
       {
-        Object data[] = new Object[11];
+        Object data[] = new Object[12];
         /* format:
            <id>
            <name>
            <state>
            <type>
-           <archivePartSize>
            <compressAlgorithm>
+           <byteCompressAlgorithm>
            <cryptAlgorithm>
            <cryptType>
            <cryptPasswordMode>
@@ -5003,7 +5033,7 @@ class TabJobs
     Label     label;
     Button    button;
 
-    final Shell dialog = Dialogs.open(shell,"New job",300,SWT.DEFAULT,new double[]{1.0,0.0},1.0);
+    final Shell dialog = Dialogs.openModal(shell,"New job",300,SWT.DEFAULT,new double[]{1.0,0.0},1.0);
 
     // create widgets
     final Text   widgetJobName;
@@ -5103,7 +5133,7 @@ throw new Error("NYI");
     Label     label;
     Button    button;
 
-    final Shell dialog = Dialogs.open(shell,"Copy job",300,SWT.DEFAULT,new double[]{1.0,0.0},1.0);
+    final Shell dialog = Dialogs.openModal(shell,"Copy job",300,SWT.DEFAULT,new double[]{1.0,0.0},1.0);
 
     // create widgets
     final Text   widgetJobName;
@@ -5202,7 +5232,7 @@ throw new Error("NYI");
     assert selectedJobName != null;
     assert selectedJobId != 0;
 
-    final Shell dialog = Dialogs.open(shell,"Rename job",300,SWT.DEFAULT,new double[]{1.0,0.0},1.0);
+    final Shell dialog = Dialogs.openModal(shell,"Rename job",300,SWT.DEFAULT,new double[]{1.0,0.0},1.0);
 
     // create widgets
     final Text   widgetNewJobName;
@@ -5802,9 +5832,9 @@ throw new Error("NYI");
 
   //-----------------------------------------------------------------------
 
-  /** add devices
+  /** add devices to list
    */
-  private void addDevices()
+  private void addDevicesList()
   {
     ArrayList<String> result = new ArrayList<String>();
     int errorCode = BARServer.executeCommand("DEVICE_LIST",result);
@@ -6053,7 +6083,7 @@ Dprintf.dprintf("name=%s %s",name,includeHashMap.containsKey(name));
     assert selectedJobId != 0;
 
     // create dialog
-    final Shell dialog = Dialogs.open(shell,title,300,70,new double[]{1.0,0.0},1.0);
+    final Shell dialog = Dialogs.openModal(shell,title,300,70,new double[]{1.0,0.0},1.0);
 
     // create widgets
     final Text   widgetPattern;
@@ -6171,7 +6201,7 @@ throw new Error("NYI");
     assert selectedJobId != 0;
 
     // create dialog
-    final Shell dialog = Dialogs.open(shell,title,300,70,new double[]{1.0,0.0},1.0);
+    final Shell dialog = Dialogs.openModal(shell,title,300,70,new double[]{1.0,0.0},1.0);
 
     // create widgets
     final Text   widgetPattern;
@@ -6252,7 +6282,7 @@ throw new Error("NYI");
     assert selectedJobId != 0;
 
     // create dialog
-    final Shell dialog = Dialogs.open(shell,title,300,70,new double[]{1.0,0.0},1.0);
+    final Shell dialog = Dialogs.openModal(shell,title,300,70,new double[]{1.0,0.0},1.0);
 
     // create widgets
     final Text   widgetPattern;
@@ -6323,7 +6353,7 @@ throw new Error("NYI");
    * @param entryType entry type
    * @param pattern pattern to add to included/exclude list
    */
-  private void includeAdd(EntryTypes entryType, String pattern)
+  private void includeListAdd(EntryTypes entryType, String pattern)
   {
     final String[] PATTERN_MAP_FROM = new String[]{"\n","\r","\\"};
     final String[] PATTERN_MAP_TO   = new String[]{"\\n","\\r","\\\\"};
@@ -6333,7 +6363,7 @@ throw new Error("NYI");
     EntryData entryData = new EntryData(entryType,pattern);
 
     String[] result = new String[1];
-    if (BARServer.executeCommand("INCLUDE_ADD "+selectedJobId+" "+entryType.toString()+" GLOB "+StringUtils.escape(StringUtils.map(entryData.pattern,PATTERN_MAP_FROM,PATTERN_MAP_TO)),result) != Errors.NONE)
+    if (BARServer.executeCommand("INCLUDE_LIST_ADD "+selectedJobId+" "+entryType.toString()+" GLOB "+StringUtils.escape(StringUtils.map(entryData.pattern,PATTERN_MAP_FROM,PATTERN_MAP_TO)),result) != Errors.NONE)
     {
       Dialogs.error(shell,"Cannot add include entry:\n\n"+result[0]);
       return;
@@ -6354,7 +6384,7 @@ throw new Error("NYI");
   /** add exclude pattern
    * @param pattern pattern to add to included/exclude list
    */
-  private void excludeAdd(String pattern)
+  private void excludeListAdd(String pattern)
   {
     final String[] PATTERN_MAP_FROM = new String[]{"\n","\r","\\"};
     final String[] PATTERN_MAP_TO   = new String[]{"\\n","\\r","\\\\"};
@@ -6362,7 +6392,7 @@ throw new Error("NYI");
     assert selectedJobId != 0;
 
     String[] result = new String[1];
-    if (BARServer.executeCommand("EXCLUDE_ADD "+selectedJobId+" GLOB "+StringUtils.escape(StringUtils.map(pattern,PATTERN_MAP_FROM,PATTERN_MAP_TO)),result) != Errors.NONE)
+    if (BARServer.executeCommand("EXCLUDE_LIST_ADD "+selectedJobId+" GLOB "+StringUtils.escape(StringUtils.map(pattern,PATTERN_MAP_FROM,PATTERN_MAP_TO)),result) != Errors.NONE)
     {
       Dialogs.error(shell,"Cannot add exclude entry:\n\n"+result[0]);
       return;
@@ -6378,7 +6408,7 @@ throw new Error("NYI");
   /** add compress exclude pattern
    * @param pattern pattern to add to compress exclude list
    */
-  private void compressExcludeAdd(String pattern)
+  private void compressExcludeListAdd(String pattern)
   {
     final String[] PATTERN_MAP_FROM = new String[]{"\n","\r","\\"};
     final String[] PATTERN_MAP_TO   = new String[]{"\\n","\\r","\\\\"};
@@ -6388,7 +6418,7 @@ throw new Error("NYI");
     if (!compressExcludeHashSet.contains(pattern))
     {
       String[] result = new String[1];
-      if (BARServer.executeCommand("EXCLUDE_COMPRESS_ADD "+selectedJobId+" GLOB "+StringUtils.escape(StringUtils.map(pattern,PATTERN_MAP_FROM,PATTERN_MAP_TO)),result) != Errors.NONE)
+      if (BARServer.executeCommand("EXCLUDE_COMPRESS_LIST_ADD "+selectedJobId+" GLOB "+StringUtils.escape(StringUtils.map(pattern,PATTERN_MAP_FROM,PATTERN_MAP_TO)),result) != Errors.NONE)
       {
         Dialogs.error(shell,"Cannot add compress exclude entry:\n\n"+result[0]);
         return;
@@ -6405,7 +6435,7 @@ throw new Error("NYI");
   /** add compress exclude patterns
    * @param patterns patterns to add to compress exclude list
    */
-  private void compressExcludeAdd(String[] patterns)
+  private void compressExcludeListAdd(String[] patterns)
   {
     final String[] PATTERN_MAP_FROM = new String[]{"\n","\r","\\"};
     final String[] PATTERN_MAP_TO   = new String[]{"\\n","\\r","\\\\"};
@@ -6417,7 +6447,7 @@ throw new Error("NYI");
       if (!compressExcludeHashSet.contains(pattern))
       {
         String[] result = new String[1];
-        if (BARServer.executeCommand("EXCLUDE_COMPRESS_ADD "+selectedJobId+" GLOB "+StringUtils.escape(StringUtils.map(pattern,PATTERN_MAP_FROM,PATTERN_MAP_TO)),result) != Errors.NONE)
+        if (BARServer.executeCommand("EXCLUDE_COMPRESS_LIST_ADD "+selectedJobId+" GLOB "+StringUtils.escape(StringUtils.map(pattern,PATTERN_MAP_FROM,PATTERN_MAP_TO)),result) != Errors.NONE)
         {
           Dialogs.error(shell,"Cannot add compress exclude entry:\n\n"+result[0]);
           return;
@@ -6434,7 +6464,7 @@ throw new Error("NYI");
 
   /** add new include entry
    */
-  private void includeAdd()
+  private void includeListAdd()
   {
     assert selectedJobId != 0;
 
@@ -6442,40 +6472,40 @@ throw new Error("NYI");
     String[]     pattern   = new String[1];
     if (includeEdit(entryType,pattern,"New include pattern","Add"))
     {
-      includeAdd(entryType[0],pattern[0]);
+      includeListAdd(entryType[0],pattern[0]);
     }
   }
 
   /** add new exclude pattern
    */
-  private void excludeAdd()
+  private void excludeListAdd()
   {
     assert selectedJobId != 0;
 
     String[] pattern = new String[1];
     if (excludeEdit(pattern,"New exclude pattern","Add"))
     {
-      excludeAdd(pattern[0]);
+      excludeListAdd(pattern[0]);
     }
   }
 
   /** add new compress exclude pattern
    */
-  private void compressExcludeAdd()
+  private void compressExcludeListAdd()
   {
     assert selectedJobId != 0;
 
     String[] pattern = new String[1];
     if (compressExcludeEdit(pattern,"New compress exclude pattern","Add"))
     {
-      compressExcludeAdd(pattern[0]);
+      compressExcludeListAdd(pattern[0]);
     }
   }
 
   /** remove include entry
    * @param pattern pattern to remove from include/exclude list
    */
-  private void includeRemove(String pattern)
+  private void includeListRemove(String pattern)
   {
     final String[] PATTERN_MAP_FROM = new String[]{"\n","\r","\\"};
     final String[] PATTERN_MAP_TO   = new String[]{"\\n","\\r","\\\\"};
@@ -6484,11 +6514,11 @@ throw new Error("NYI");
 
     includeHashMap.remove(pattern);
 
-    BARServer.executeCommand("INCLUDE_CLEAR "+selectedJobId);
+    BARServer.executeCommand("INCLUDE_LIST_CLEAR "+selectedJobId);
     widgetIncludeTable.removeAll();
     for (EntryData entryData : includeHashMap.values())
     {
-      BARServer.executeCommand("INCLUDE_ADD "+selectedJobId+" "+entryData.entryType.toString()+" GLOB "+StringUtils.escape(StringUtils.map(entryData.pattern,PATTERN_MAP_FROM,PATTERN_MAP_TO)));
+      BARServer.executeCommand("INCLUDE_LIST_ADD "+selectedJobId+" "+entryData.entryType.toString()+" GLOB "+StringUtils.escape(StringUtils.map(entryData.pattern,PATTERN_MAP_FROM,PATTERN_MAP_TO)));
       Widgets.insertTableEntry(widgetIncludeTable,
                                findTableIndex(widgetIncludeTable,entryData.pattern),
                                (Object)entryData,
@@ -6504,7 +6534,7 @@ throw new Error("NYI");
   /** remove exclude pattern
    * @param pattern pattern to remove from include/exclude list
    */
-  private void excludeRemove(String pattern)
+  private void excludeListRemove(String pattern)
   {
     final String[] PATTERN_MAP_FROM = new String[]{"\n","\r","\\"};
     final String[] PATTERN_MAP_TO   = new String[]{"\\n","\\r","\\\\"};
@@ -6513,11 +6543,11 @@ throw new Error("NYI");
 
     excludeHashSet.remove(pattern);
 
-    BARServer.executeCommand("EXCLUDE_CLEAR "+selectedJobId);
+    BARServer.executeCommand("EXCLUDE_LIST_CLEAR "+selectedJobId);
     widgetExcludeList.removeAll();
     for (String s : excludeHashSet)
     {
-      BARServer.executeCommand("EXCLUDE_ADD "+selectedJobId+" GLOB "+StringUtils.escape(StringUtils.map(s,PATTERN_MAP_FROM,PATTERN_MAP_TO)));
+      BARServer.executeCommand("EXCLUDE_LIST_ADD "+selectedJobId+" GLOB "+StringUtils.escape(StringUtils.map(s,PATTERN_MAP_FROM,PATTERN_MAP_TO)));
       widgetExcludeList.add(s,findListIndex(widgetExcludeList,s));
     }
 
@@ -6528,7 +6558,7 @@ throw new Error("NYI");
   /** remove compress exclude pattern
    * @param pattern pattern to remove from include/exclude list
    */
-  private void compressExcludeRemove(String pattern)
+  private void compressExcludeListRemove(String pattern)
   {
     final String[] PATTERN_MAP_FROM = new String[]{"\n","\r","\\"};
     final String[] PATTERN_MAP_TO   = new String[]{"\\n","\\r","\\\\"};
@@ -6537,11 +6567,11 @@ throw new Error("NYI");
 
     compressExcludeHashSet.remove(pattern);
 
-    BARServer.executeCommand("EXCLUDE_COMPRESS_CLEAR "+selectedJobId);
+    BARServer.executeCommand("EXCLUDE_COMPRESS_LIST_CLEAR "+selectedJobId);
     widgetCompressExcludeList.removeAll();
     for (String s : compressExcludeHashSet)
     {
-      BARServer.executeCommand("EXCLUDE_COMPRESS_ADD "+selectedJobId+" GLOB "+StringUtils.escape(StringUtils.map(s,PATTERN_MAP_FROM,PATTERN_MAP_TO)));
+      BARServer.executeCommand("EXCLUDE_COMPRESS_LIST_ADD "+selectedJobId+" GLOB "+StringUtils.escape(StringUtils.map(s,PATTERN_MAP_FROM,PATTERN_MAP_TO)));
       widgetCompressExcludeList.add(s,findListIndex(widgetCompressExcludeList,s));
     }
 
@@ -6551,40 +6581,40 @@ throw new Error("NYI");
 
   /** remove selected include pattern
    */
-  private void includeRemove()
+  private void includeListRemove()
   {
     assert selectedJobId != 0;
 
     int index = widgetIncludeTable.getSelectionIndex();
     if (index >= 0)
     {
-      includeRemove(((EntryData)widgetIncludeTable.getItem(index).getData()).pattern);
+      includeListRemove(((EntryData)widgetIncludeTable.getItem(index).getData()).pattern);
     }
   }
 
   /** remove selected exclude pattern
    */
-  private void excludeRemove()
+  private void excludeListRemove()
   {
     assert selectedJobId != 0;
 
     int index = widgetExcludeList.getSelectionIndex();
     if (index >= 0)
     {
-      excludeRemove(widgetExcludeList.getItem(index));
+      excludeListRemove(widgetExcludeList.getItem(index));
     }
   }
 
   /** remove selected compress exclude pattern
    */
-  private void compressExcludeRemove()
+  private void compressExcludeListRemove()
   {
     assert selectedJobId != 0;
 
     int index = widgetCompressExcludeList.getSelectionIndex();
     if (index >= 0)
     {
-      compressExcludeRemove(widgetCompressExcludeList.getItem(index));
+      compressExcludeListRemove(widgetCompressExcludeList.getItem(index));
     }
   }
 
@@ -7448,7 +7478,7 @@ throw new Error("NYI");
     assert selectedJobId != 0;
 
     // create dialog
-    final Shell dialog = Dialogs.open(shell,"Edit storage file name",700,SWT.DEFAULT,new double[]{1.0,0.0},1.0);
+    final Shell dialog = Dialogs.openModal(shell,"Edit storage file name",700,SWT.DEFAULT,new double[]{1.0,0.0},1.0);
 
     // create widgets
     final StorageFileNameEditor storageFileNameEditor;
@@ -7599,7 +7629,7 @@ throw new Error("NYI");
     assert selectedJobId != 0;
 
     // create dialog
-    final Shell dialog = Dialogs.open(shell,title,300,70,new double[]{1.0,0.0},1.0);
+    final Shell dialog = Dialogs.openModal(shell,title,300,70,new double[]{1.0,0.0},1.0);
 
     // create widgets
     final Combo    widgetYear,widgetMonth,widgetDay;
@@ -7820,7 +7850,7 @@ throw new Error("NYI");
     ScheduleData scheduleData = new ScheduleData();
     if (scheduleEdit(scheduleData,"New schedule","Add"))
     {
-      BARServer.executeCommand("SCHEDULE_ADD "+
+      BARServer.executeCommand("SCHEDULE_LIST_ADD "+
                                selectedJobId+" "+
                                scheduleData.getDate()+" "+
                                scheduleData.getWeekDays()+" "+
@@ -7854,10 +7884,10 @@ throw new Error("NYI");
       ScheduleData scheduleData = (ScheduleData)tableItem.getData();
       if (scheduleEdit(scheduleData,"Edit schedule","Save"))
       {
-        BARServer.executeCommand("SCHEDULE_CLEAR "+selectedJobId);
+        BARServer.executeCommand("SCHEDULE_LIST_CLEAR "+selectedJobId);
         for (ScheduleData data : scheduleList)
         {
-          BARServer.executeCommand("SCHEDULE_ADD "+
+          BARServer.executeCommand("SCHEDULE_LIST_ADD "+
                                    selectedJobId+" "+
                                    data.getDate()+" "+
                                    data.getWeekDays()+" "+
@@ -7894,10 +7924,10 @@ Dprintf.dprintf("");
       ScheduleData scheduleData = (ScheduleData)tableItem.getData();
       if (scheduleEdit(scheduleData,"Edit schedule","Save"))
       {
-        BARServer.executeCommand("SCHEDULE_CLEAR "+selectedJobId);
+        BARServer.executeCommand("SCHEDULE_LIST_CLEAR "+selectedJobId);
         for (ScheduleData data : scheduleList)
         {
-          BARServer.executeCommand("SCHEDULE_ADD "+
+          BARServer.executeCommand("SCHEDULE_LIST_ADD "+
                                    selectedJobId+" "+
                                    data.getDate()+" "+
                                    data.getWeekDays()+" "+
@@ -7936,10 +7966,10 @@ Dprintf.dprintf("");
 
         scheduleList.remove(scheduleData);
 
-        BARServer.executeCommand("SCHEDULE_CLEAR "+selectedJobId);
+        BARServer.executeCommand("SCHEDULE_LIST_CLEAR "+selectedJobId);
         for (ScheduleData data : scheduleList)
         {
-          BARServer.executeCommand("SCHEDULE_ADD "+
+          BARServer.executeCommand("SCHEDULE_LIST_ADD "+
                                    selectedJobId+" "+
                                    data.getDate()+" "+
                                    data.getWeekDays()+" "+
