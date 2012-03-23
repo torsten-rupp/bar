@@ -46,9 +46,10 @@ class BusyDialog
   // --------------------------- variables --------------------------------
   private Display     display;
 
-  private Image       images[] = new Image[2];
-  private long        imageTimestamp;
-  private int         imageIndex;
+  private int         animationInterval;
+  private Image       animationImages[] = new Image[2];
+  private long        animationImageTimestamp;
+  private int         animationImageIndex;
 
   private Shell       dialog;
   private Label       widgetImage;
@@ -57,6 +58,7 @@ class BusyDialog
   private ProgressBar widgetProgressBar0,widgetProgressBar1;
   private Button      widgetAbortButton;
 
+  private boolean     quitFlag;
   private boolean     abortedFlag;
   private boolean     resizedFlag;
 
@@ -82,10 +84,10 @@ class BusyDialog
     display = parentShell.getDisplay();
 
     // load images
-    images[0] = Widgets.loadImage(parentShell.getDisplay(),"busy0.png");
-    images[1] = Widgets.loadImage(parentShell.getDisplay(),"busy1.png");
-    imageTimestamp = System.currentTimeMillis();
-    imageIndex = 0;
+    animationImages[0] = Widgets.loadImage(display,"busy0.png");
+    animationImages[1] = Widgets.loadImage(display,"busy1.png");
+    animationImageTimestamp = System.currentTimeMillis();
+    animationImageIndex = 0;
 
     // create dialog
     dialog = new Shell(parentShell,SWT.DIALOG_TRIM|SWT.RESIZE|SWT.APPLICATION_MODAL);
@@ -102,7 +104,7 @@ class BusyDialog
     composite.setLayoutData(new TableLayoutData(0,0,TableLayoutData.NSWE));
     {
       widgetImage = new Label(composite,SWT.LEFT);
-      widgetImage.setImage(images[imageIndex]);
+      widgetImage.setImage(animationImages[animationImageIndex]);
       widgetImage.setLayoutData(new TableLayoutData(0,0,TableLayoutData.NW,0,0,4,4));
 
       subComposite = new Composite(composite,SWT.NONE);
@@ -240,6 +242,21 @@ class BusyDialog
     resizedFlag = false;
     abortedFlag = false;
     dialog.open();
+
+    // start animation
+    animationInterval = 250;
+    Thread thread = new Thread()
+    {
+      public void run()
+      {
+        while (!dialog.isDisposed())
+        {
+          animate();
+          try { Thread.sleep(animationInterval); } catch (InterruptedException exception) { /* ignore */ }
+        }
+      }
+    };
+    thread.start();
   }
 
   /** create busy dialog
@@ -311,6 +328,14 @@ class BusyDialog
     return abortedFlag;
   }
 
+  /** set auto animate interval
+   * @param animationInterval animate time interval [ms]
+   */
+  public void setAnimateInterval(int animationInterval)
+  {
+    this.animationInterval = animationInterval;
+  }
+
   /** set message
    * @param message message to show
    */
@@ -352,14 +377,6 @@ class BusyDialog
       {
         public void run()
         {
-          long timestamp = System.currentTimeMillis();
-          if (timestamp > (imageTimestamp+250))
-          {
-            imageTimestamp = timestamp;
-            imageIndex     = (imageIndex+1)%2;
-            widgetImage.setImage(images[imageIndex]);
-          }
-
           if (text != null)
           {
             Label widgetText        = null;
@@ -406,14 +423,6 @@ class BusyDialog
       {
         public void run()
         {
-          long timestamp = System.currentTimeMillis();
-          if (timestamp > (imageTimestamp+250))
-          {
-            imageTimestamp = timestamp;
-            imageIndex     = (imageIndex+1)%2;
-            widgetImage.setImage(images[imageIndex]);
-          }
-
           ProgressBar widgetProgressBar = null;
           switch (i)
           {
@@ -487,6 +496,31 @@ class BusyDialog
   {
     return update(0);
   }
+
+  // ----------------------------------------------------------------------
+
+  /** animate dialog
+   */
+  public void animate()
+  {
+    if (!dialog.isDisposed())
+    {
+      display.syncExec(new Runnable()
+      {
+        public void run()
+        {
+          long timestamp = System.currentTimeMillis();
+          if (timestamp > (animationImageTimestamp+250))
+          {
+            animationImageTimestamp = timestamp;
+            animationImageIndex     = (animationImageIndex+1)%2;
+            widgetImage.setImage(animationImages[animationImageIndex]);
+          }
+        }
+      });
+    }
+  }
+
 }
 
 /* end of file */
