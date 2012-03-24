@@ -649,6 +649,42 @@ LOCAL_INLINE bool checkNoDumpAttribute(const FileInfo *fileInfo, const JobOption
 }
 
 /***********************************************************************\
+* Name   : freeEntryMsg
+* Purpose: free file entry message call back
+* Input  : entryMsg - entry message
+*          userData - user data (not used)
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void freeEntryMsg(EntryMsg *entryMsg, void *userData)
+{
+  assert(entryMsg != NULL);
+
+  UNUSED_VARIABLE(userData);
+
+  switch (entryMsg->fileType)
+  {
+    case FILE_TYPE_FILE:
+    case FILE_TYPE_DIRECTORY:
+    case FILE_TYPE_LINK:
+    case FILE_TYPE_SPECIAL:
+      StringList_done(&entryMsg->nameList);
+      String_delete(entryMsg->name);
+      break;
+    case FILE_TYPE_HARDLINK:
+      StringList_done(&entryMsg->nameList);
+      break;
+    default:
+      #ifndef NDEBUG
+        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+      #endif /* NDEBUG */
+      break; /* not reached */
+  }
+}
+
+/***********************************************************************\
 * Name   : appendFileToEntryList
 * Purpose: append file to entry list
 * Input  : entryMsgQueue - entry message queue
@@ -676,7 +712,10 @@ LOCAL void appendFileToEntryList(MsgQueue     *entryMsgQueue,
   StringList_init(&entryMsg.nameList);
 
   // put into message queue
-  MsgQueue_put(entryMsgQueue,&entryMsg,sizeof(entryMsg));
+  if (!MsgQueue_put(entryMsgQueue,&entryMsg,sizeof(entryMsg)))
+  {
+    freeEntryMsg(&entryMsg,NULL);
+  }
 }
 
 /***********************************************************************\
@@ -707,7 +746,10 @@ LOCAL void appendDirectoryToEntryList(MsgQueue     *entryMsgQueue,
   StringList_init(&entryMsg.nameList);
 
   // put into message queue
-  MsgQueue_put(entryMsgQueue,&entryMsg,sizeof(entryMsg));
+  if (!MsgQueue_put(entryMsgQueue,&entryMsg,sizeof(entryMsg)))
+  {
+    freeEntryMsg(&entryMsg,NULL);
+  }
 }
 
 /***********************************************************************\
@@ -739,7 +781,10 @@ LOCAL void appendLinkToEntryList(MsgQueue     *entryMsgQueue,
   StringList_init(&entryMsg.nameList);
 
   // put into message queue
-  MsgQueue_put(entryMsgQueue,&entryMsg,sizeof(entryMsg));
+  if (!MsgQueue_put(entryMsgQueue,&entryMsg,sizeof(entryMsg)))
+  {
+    freeEntryMsg(&entryMsg,NULL);
+  }
 }
 
 /***********************************************************************\
@@ -770,7 +815,10 @@ LOCAL void appendHardLinkToEntryList(MsgQueue   *entryMsgQueue,
   StringList_move(nameList,&entryMsg.nameList);
 
   // put into message queue
-  MsgQueue_put(entryMsgQueue,&entryMsg,sizeof(entryMsg));
+  if (!MsgQueue_put(entryMsgQueue,&entryMsg,sizeof(entryMsg)))
+  {
+    freeEntryMsg(&entryMsg,NULL);
+  }
 }
 
 /***********************************************************************\
@@ -798,44 +846,12 @@ LOCAL void appendSpecialToEntryList(MsgQueue     *entryMsgQueue,
   entryMsg.entryType = entryType;
   entryMsg.fileType  = FILE_TYPE_SPECIAL;
   entryMsg.name      = String_duplicate(name);
-  StringList_init(&entryMsg.nameList);
+//  StringList_init(&entryMsg.nameList);
 
   // put into message queue
-  MsgQueue_put(entryMsgQueue,&entryMsg,sizeof(entryMsg));
-}
-
-/***********************************************************************\
-* Name   : freeEntryMsg
-* Purpose: free file entry message call back
-* Input  : entryMsg - entry message
-*          userData - user data (not used)
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void freeEntryMsg(EntryMsg *entryMsg, void *userData)
-{
-  assert(entryMsg != NULL);
-
-  UNUSED_VARIABLE(userData);
-
-  switch (entryMsg->fileType)
+  if (!MsgQueue_put(entryMsgQueue,&entryMsg,sizeof(entryMsg)))
   {
-    case FILE_TYPE_FILE:
-    case FILE_TYPE_DIRECTORY:
-    case FILE_TYPE_LINK:
-    case FILE_TYPE_SPECIAL:
-      String_delete(entryMsg->name);
-      break;
-    case FILE_TYPE_HARDLINK:
-      StringList_done(&entryMsg->nameList);
-      break;
-    default:
-      #ifndef NDEBUG
-        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-      #endif /* NDEBUG */
-      break; /* not reached */
+    freeEntryMsg(&entryMsg,NULL);
   }
 }
 
@@ -2190,7 +2206,7 @@ LOCAL void storageInfoDecrement(CreateInfo *createInfo, uint64 size)
 
 /***********************************************************************\
 * Name   : storeArchiveFile
-* Purpose: storage archive call back
+* Purpose: call back to store archive
 * Input  : userData       - user data
 *          databaseHandle - database handle or NULL if no database
 *          storageId      - database id of storage
@@ -2244,7 +2260,11 @@ LOCAL Errors storeArchiveFile(void           *userData,
   storageMsg.fileSize            = fileInfo.size;
   storageMsg.destinationFileName = destinationFileName;
   storageInfoIncrement(createInfo,fileInfo.size);
-  MsgQueue_put(&createInfo->storageMsgQueue,&storageMsg,sizeof(storageMsg));
+  if (!MsgQueue_put(&createInfo->storageMsgQueue,&storageMsg,sizeof(storageMsg)))
+  {
+    freeStorageMsg(&storageMsg,NULL);
+    return ERROR_NONE;
+  }
 
   // update info
   createInfo->statusInfo.archiveTotalBytes += fileInfo.size;
@@ -2357,10 +2377,13 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
                     );
           createInfo->failError = error;
 
+          // delete database index
           if (indexDatabaseHandle != NULL)
           {
             Index_delete(indexDatabaseHandle,storageMsg.storageId);
           }
+
+          // free resources
           File_delete(storageMsg.fileName,FALSE);
           storageInfoDecrement(createInfo,storageMsg.fileSize);
           freeStorageMsg(&storageMsg,NULL);
@@ -2377,10 +2400,13 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
                     );
           createInfo->failError = error;
 
+          // delete database index
           if (indexDatabaseHandle != NULL)
           {
             Index_delete(indexDatabaseHandle,storageMsg.storageId);
           }
+
+          // free resources
           File_delete(storageMsg.fileName,FALSE);
           storageInfoDecrement(createInfo,storageMsg.fileSize);
           freeStorageMsg(&storageMsg,NULL);
@@ -2410,10 +2436,13 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
                     );
           createInfo->failError = error;
 
+          // delete database index
           if (indexDatabaseHandle != NULL)
           {
             Index_delete(indexDatabaseHandle,storageMsg.storageId);
           }
+
+          // free resources
           File_delete(storageMsg.fileName,FALSE);
           storageInfoDecrement(createInfo,storageMsg.fileSize);
           freeStorageMsg(&storageMsg,NULL);
@@ -2493,6 +2522,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
             error = Storage_write(&createInfo->storageFileHandle,buffer,bufferLength);
             if (error != ERROR_NONE)
             {
+fprintf(stderr,"%s, %d: error=%x\n",__FILE__,__LINE__,error);
               if (retryCount > MAX_RETRIES)
               {
                 // output error message, store error
@@ -2552,15 +2582,17 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
         }
 
         // update database index and set state
-        if (indexDatabaseHandle != NULL)
+        if (   (createInfo->failError == ERROR_NONE)
+            && ((createInfo->requestedAbortFlag == NULL) || !(*createInfo->requestedAbortFlag))
+           )
         {
-          if ((createInfo->requestedAbortFlag == NULL) || !(*createInfo->requestedAbortFlag))
+          if (indexDatabaseHandle != NULL)
           {
             // delete old indizes for same storage file
             if (createInfo->failError == ERROR_NONE)
             {
               while (Index_findByName(indexDatabaseHandle,
-                                      storageName,
+                                      printableStorageName,
                                       &oldStorageId,
                                       NULL,
                                       NULL
@@ -2573,32 +2605,32 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
               if (error != ERROR_NONE)
               {
                 printError("Cannot update index for storage '%s' (error: %s)!\n",
-                           String_cString(storageMsg.fileName),
+                           String_cString(printableStorageName),
                            Errors_getText(error)
                           );
                 createInfo->failError = error;
               }
             }
 
-            // set storage name, size
+            // set database storage name, size
             if (createInfo->failError == ERROR_NONE)
             {
               error = Index_update(indexDatabaseHandle,
                                    storageMsg.storageId,
-                                   storageName,
+                                   printableStorageName,
                                    fileInfo.size
                                   );
               if (error != ERROR_NONE)
               {
                 printError("Cannot update index for storage '%s' (error: %s)!\n",
-                           String_cString(storageMsg.fileName),
+                           String_cString(printableStorageName),
                            Errors_getText(error)
                           );
                 createInfo->failError = error;
               }
             }
 
-            // set state
+            // set database state
             if (createInfo->failError == ERROR_NONE)
             {
               error = Index_setState(indexDatabaseHandle,
@@ -2610,16 +2642,12 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
               if (error != ERROR_NONE)
               {
                 printError("Cannot update index for storage '%s' (error: %s)!\n",
-                           String_cString(storageMsg.fileName),
+                           String_cString(printableStorageName),
                            Errors_getText(error)
                           );
                 createInfo->failError = error;
               }
             }
-          }
-          else
-          {
-            Index_delete(indexDatabaseHandle,storageMsg.storageId);
           }
         }
 
@@ -2639,22 +2667,36 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
           }
         }
 
-        // check for error
+        // check error/aborted
         if (   (createInfo->failError != ERROR_NONE)
-            && ((createInfo->requestedAbortFlag == NULL) || !(*createInfo->requestedAbortFlag))
+            || ((createInfo->requestedAbortFlag != NULL) && (*createInfo->requestedAbortFlag))
            )
         {
-          if (indexDatabaseHandle != NULL)
+          if (createInfo->failError != ERROR_NONE)
           {
-            Index_setState(indexDatabaseHandle,
-                           storageMsg.storageId,
-                           INDEX_STATE_ERROR,
-                           0LL,
-                           "%s (error code: %d)",
-                           Errors_getText(error),
-                           error
-                          );
+            // error -> set database state
+            if (indexDatabaseHandle != NULL)
+            {
+              Index_setState(indexDatabaseHandle,
+                             storageMsg.storageId,
+                             INDEX_STATE_ERROR,
+                             0LL,
+                             "%s (error code: %d)",
+                             Errors_getText(error),
+                             error
+                            );
+            }
           }
+          else if ((createInfo->requestedAbortFlag != NULL) && (*createInfo->requestedAbortFlag))
+          {
+            // aborted -> delete database index
+            if (indexDatabaseHandle != NULL)
+            {
+              Index_delete(indexDatabaseHandle,storageMsg.storageId);
+            }
+          }
+
+          // free resources
           File_delete(storageMsg.fileName,FALSE);
           freeStorageMsg(&storageMsg,NULL);
           storageInfoDecrement(createInfo,storageMsg.fileSize);
@@ -4174,6 +4216,7 @@ Errors Command_create(const char                      *storageName,
           Storage_indexDiscard(&createInfo.storageIndexHandle);
         }
 #endif /* 0 */
+        Storage_done(&createInfo.storageFileHandle);
         String_delete(printableStorageName);
         Semaphore_done(&createInfo.storageInfoLock);
         MsgQueue_done(&createInfo.storageMsgQueue,NULL,NULL);
@@ -4227,6 +4270,7 @@ Errors Command_create(const char                      *storageName,
       Storage_closeIndex(&createInfo.storageIndexHandle);
     }
 #endif /* 0 */
+    Storage_done(&createInfo.storageFileHandle);
     String_delete(printableStorageName);
     Semaphore_done(&createInfo.storageInfoLock);
     MsgQueue_done(&createInfo.storageMsgQueue,NULL,NULL);
