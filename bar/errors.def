@@ -147,7 +147,6 @@ ERROR KEY_DECRYPT_FAIL               "key decryption fail"
 ERROR WRONG_PRIVATE_KEY              "wrong private key"
 
 // file i/o
-ERROR NO_FILE_NAME                   "no file name given"
 ERROR CREATE_FILE
 ERROR OPEN_FILE
 ERROR OPEN_DIRECTORY
@@ -219,6 +218,8 @@ ERROR NOT_A_DIRECTORY
   }
   errorText[sizeof(errorText)-1] = '\0';
 
+ERROR END_OF_DIRECTORY               "end of directory list"
+
 // optical disk i/o
 ERROR OPEN_OPTICAL_DISK              "error open CD/DVD/BD disk"
 ERROR OPEN_ISO9660_FILE              "error open ISO 9660 image"
@@ -239,6 +240,7 @@ ERROR WRITE_DEVICE                   "write device fail"
 ERROR PARSE_DEVICE_LIST              "error parsing device list"
 
 // archive
+ERROR NO_ARCHIVE_FILE_NAME           "no archive file name given"
 ERROR NOT_AN_ARCHIVE_FILE            "not an archive file"
 ERROR END_OF_ARCHIVE                 "end of archive"
 ERROR NO_FILE_ENTRY                  "no file entry"
@@ -339,11 +341,13 @@ ERROR JOB                            "job error"
 
 // database (SQLite3)
 ERROR DATABASE
-  strncpy(errorText,"database error",sizeof(errorText)-1);
   if (ERROR_TEXT != NULL)
   {
-    strncat(errorText,": ",sizeof(errorText)-1-strlen(errorText));
-    strncat(errorText,ERROR_TEXT,sizeof(errorText)-1-strlen(errorText));
+    strncpy(errorText,ERROR_TEXT,sizeof(errorText)-1);
+  }
+  else
+  {
+    strncpy(errorText,"database error",sizeof(errorText)-1);
   }
   errorText[sizeof(errorText)-1] = '\0';
 
