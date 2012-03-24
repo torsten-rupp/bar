@@ -4924,7 +4924,6 @@ class TabJobs
       archiveType.set(BARServer.getStringOption(selectedJobId,"archive-type"));
       archivePartSize.set(Units.parseByteSize(BARServer.getStringOption(selectedJobId,"archive-part-size"),0));
       archivePartSizeFlag.set(archivePartSize.getLong() > 0);
-Dprintf.dprintf("%s",BARServer.getStringOption(selectedJobId,"compress-algorithm"));
 
       String[] compressAlgorithms = StringUtils.split(BARServer.getStringOption(selectedJobId,"compress-algorithm"),"+");
       assert compressAlgorithms.length == 2;
