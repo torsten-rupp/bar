@@ -569,10 +569,6 @@ LOCAL void freeSourceNode(SourceNode *sourceNode, void *userData)
 
   UNUSED_VARIABLE(userData);
 
-  if (sourceNode->localStorageName != NULL)
-  {
-    deleteLocalStorageArchive(sourceNode->localStorageName);
-  }
   String_delete(sourceNode->storageName);
 }
 
@@ -624,8 +620,6 @@ void Source_addSource(const String sourcePattern)
           HALT_INSUFFICIENT_MEMORY();
         }
         sourceNode->storageName         = String_duplicate(fileName);
-        sourceNode->localStorageName    = NULL;
-//          sourceNode->tmpLocalStorageFlag = FALSE;
         List_append(&sourceList,sourceNode);
       }
     }
@@ -640,8 +634,6 @@ void Source_addSource(const String sourcePattern)
       HALT_INSUFFICIENT_MEMORY();
     }
     sourceNode->storageName         = String_duplicate(sourcePattern);
-    sourceNode->localStorageName    = NULL;
-//      sourceNode->tmpLocalStorageFlag = FALSE;
     List_append(&sourceList,sourceNode);
   }
 
@@ -703,45 +695,35 @@ Errors Source_openEntry(SourceHandle *sourceHandle,
     // restore from given storage name
     if (sourceStorageName != NULL)
     {
+      // create local copy of storage file
       localStorageName = String_new();
       error = createLocalStorageArchive(localStorageName,
                                         sourceStorageName,
                                         &jobOptions
                                        );
-      if (error != ERROR_NONE)
-      {
-        String_delete(localStorageName);
-        String_delete(sourceHandle->tmpFileName);
-        freeJobOptions(&jobOptions);
-        return error;
-      }
-
-      // restore to temporary file
-      error = restoreFile(localStorageName,
-                          name,
-                          NULL,
-                          &jobOptions,
-                          sourceHandle->tmpFileName,
-                          inputCryptPassword,
-                          NULL,
-                          NULL,//bool                            *pauseFlag,
-                          NULL//bool                            *requestedAbortFlag
-                         );
       if (error == ERROR_NONE)
       {
-        restoredFlag = TRUE;
-      }
-      else
-      {
+        // restore to temporary file
+        error = restoreFile(localStorageName,
+                            name,
+                            NULL,
+                            &jobOptions,
+                            sourceHandle->tmpFileName,
+                            inputCryptPassword,
+                            NULL,
+                            NULL,//bool                            *pauseFlag,
+                            NULL//bool                            *requestedAbortFlag
+                           );
+        if (error == ERROR_NONE)
+        {
+          restoredFlag = TRUE;
+        }
+
+        // delete local storage file
         File_delete(localStorageName,FALSE);
-        String_delete(localStorageName);
-        String_delete(sourceHandle->tmpFileName);
-        freeJobOptions(&jobOptions);
-        return error;
       }
 
-      // delete local storage file
-      File_delete(localStorageName,FALSE);
+      // free resources
       String_delete(localStorageName);
     }
   }
@@ -751,42 +733,38 @@ Errors Source_openEntry(SourceHandle *sourceHandle,
     // restore from source pattern list
     LIST_ITERATE(&sourceList,sourceNode)
     {
-      if (sourceNode->localStorageName == NULL)
-      {
-        // create local copy of storage file
-        localStorageName = String_new();
-        error = createLocalStorageArchive(localStorageName,
-                                          sourceNode->storageName,
-                                          &jobOptions
-                                        );
-        if (error != ERROR_NONE)
-        {
-          String_delete(localStorageName);
-          String_delete(sourceHandle->tmpFileName);
-          freeJobOptions(&jobOptions);
-          return error;
-        }
-        sourceNode->localStorageName = localStorageName;
-      }
-      assert(sourceNode->localStorageName != NULL);
-
-      // restore to temporary file
-      error = restoreFile(sourceNode->localStorageName,
-                          name,
-                          NULL,
-                          &jobOptions,
-                          sourceHandle->tmpFileName,
-                          inputCryptPassword,
-                          NULL,
-                          NULL,//bool                            *pauseFlag,
-                          NULL//bool                            *requestedAbortFlag
-                         );
+      // create local copy of storage file
+      localStorageName = String_new();
+      error = createLocalStorageArchive(localStorageName,
+                                        sourceNode->storageName,
+                                        &jobOptions
+                                      );
       if (error == ERROR_NONE)
       {
-        sourceHandle->storageName = sourceNode->storageName;
-        restoredFlag = TRUE;
-        break;
+        // restore to temporary file
+        error = restoreFile(localStorageName,
+                            name,
+                            NULL,
+                            &jobOptions,
+                            sourceHandle->tmpFileName,
+                            inputCryptPassword,
+                            NULL,
+                            NULL,//bool                            *pauseFlag,
+                            NULL//bool                            *requestedAbortFlag
+                           );
+        if (error == ERROR_NONE)
+        {
+          restoredFlag = TRUE;
+        }
+
+        // delete local storage file
+        File_delete(localStorageName,FALSE);
       }
+
+      // free resources
+      String_delete(localStorageName);
+
+      if (restoredFlag) break;
     }
   }
 

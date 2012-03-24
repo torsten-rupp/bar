@@ -38,8 +38,6 @@ typedef struct SourceNode
   LIST_NODE_HEADER(struct SourceNode);
 
   String storageName;          // storage archive name
-  String localStorageName;     // local storage archive name
-//  bool   tmpLocalStorageFlag;  // TRUE if located storage created
 } SourceNode;
 
 typedef struct
