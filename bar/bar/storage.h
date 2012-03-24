@@ -375,7 +375,15 @@ typedef struct
     #endif /* HAVE_SSH2 */
     struct
     {
-      DirectoryListHandle directoryListHandle;
+      #ifdef HAVE_ISO9660
+        String                  pathName;              // directory name
+
+        iso9660_t               *iso9660Handle;        // ISO9660 image handle
+        CdioList_t              *cdioList;             // ISO9660 entry list
+        CdioListNode_t          *cdioNextNode;         // next entry in list
+      #else /* not HAVE_ISO9660 */
+        DirectoryListHandle directoryListHandle;
+      #endif /* HAVE_ISO9660 */
     } opticalDisk;
   };
 } StorageDirectoryListHandle;
