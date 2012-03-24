@@ -455,7 +455,7 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
 
   CMD_OPTION_INTEGER      ("directory-strip",              'p',1,1,jobOptions.directoryStripCount,            0,MAX_INT,NULL,                                         "number of directories to strip on extract"                               ),
   CMD_OPTION_STRING       ("destination",                  0,  0,1,jobOptions.destination,                                                                          "destination to restore files/images","path"                                ),
-  CMD_OPTION_SPECIAL      ("owner",                        0,  0,1,&jobOptions,                               cmdOptionParseOwner,NULL,                              "user and group of restored files","user:group"                            ),
+  CMD_OPTION_SPECIAL      ("owner",                        0,  0,1,&jobOptions.owner,                         cmdOptionParseOwner,NULL,                              "user and group of restored files","user:group"                            ),
 
   CMD_OPTION_SPECIAL      ("compress-algorithm",           'z',0,1,&jobOptions.compressAlgorithm,             cmdOptionParseCompressAlgorithm,NULL,                  "select compress algorithms to use\n"
                                                                                                                                                                      "  none        : no compression (default)\n"
@@ -758,6 +758,7 @@ LOCAL const ConfigValue CONFIG_VALUES[] =
   CONFIG_VALUE_INTEGER  ("max-band-width",               &globalOptions.maxBandWidth,-1,                          0,MAX_INT,CONFIG_VALUE_BITS_UNITS),
 
   CONFIG_VALUE_INTEGER  ("compress-min-size",            &globalOptions.compressMinFileSize,-1,                   0,MAX_INT,CONFIG_VALUE_BYTES_UNITS),
+  CONFIG_VALUE_SPECIAL  ("compress-exclude",             &compressExcludePatternList,-1,                          configValueParsePattern,NULL,NULL,NULL,NULL),
 
   CONFIG_VALUE_CSTRING  ("database-file",                &indexDatabaseFileName,-1                                ),
   CONFIG_VALUE_BOOLEAN  ("no-auto-update-database-index",&globalOptions.noAutoUpdateDatabaseIndexFlag,-1          ),
@@ -772,7 +773,7 @@ LOCAL const ConfigValue CONFIG_VALUES[] =
 
   CONFIG_VALUE_INTEGER  ("directory-strip",              &jobOptions.directoryStripCount,-1,                      0,MAX_INT,NULL),
   CONFIG_VALUE_STRING   ("destination",                  &jobOptions.destination,-1                               ),
-  CONFIG_VALUE_SPECIAL  ("owner",                        &jobOptions,-1,                                          configValueParseOwner,NULL,NULL,NULL,&jobOptions),
+  CONFIG_VALUE_SPECIAL  ("owner",                        &jobOptions.owner,-1,                                    configValueParseOwner,NULL,NULL,NULL,&jobOptions),
 
   CONFIG_VALUE_SELECT   ("pattern-type",                 &jobOptions.patternType,-1,                              CONFIG_VALUE_PATTERN_TYPES),
 
@@ -1501,7 +1502,6 @@ LOCAL bool cmdOptionParseCompressAlgorithm(void *userData, void *variable, const
     }
     if (!foundFlag) return FALSE;
   }
-//fprintf(stderr,"%s, %d: compressAlgorithmDelta=%d compressAlgorithmByte=%d\n",__FILE__,__LINE__,compressAlgorithmDelta,compressAlgorithmByte);
 
   // store compress algorithm values
   ((JobOptionsCompressAlgorithm*)variable)->delta = compressAlgorithmDelta;
@@ -1548,6 +1548,11 @@ LOCAL void printUsage(const char *programName, uint level)
   assert(programName != NULL);
   printf("Usage: %s [<options>] [--] <archive name> [<files>...]\n",programName);
   printf("       %s [<options>] [--] <key file name>\n",programName);
+  printf("\n");
+  printf("Archive name:  <file name>\n");
+  printf("               file://<file name>\n");
+  printf("               ftp|scp|sftp://[<login name>[:<password>]@]<host name>[:<port>]/<file name>\n");
+  printf("               cd|dvd|bd|device://[<device name>:]<file name>\n");
   printf("\n");
   CmdOption_printHelp(stdout,
                       COMMAND_LINE_OPTIONS,SIZE_OF_ARRAY(COMMAND_LINE_OPTIONS),
@@ -3066,149 +3071,11 @@ bool configValueFormatPassword(void **formatUserData, void *userData, String lin
   }
 }
 
-bool configValueParseDeltaCompressAlgorithm(void *userData, void *variable, const char *name, const char *value)
-{
-  CompressAlgorithms compressAlgorithm;
-  bool               foundFlag;
-  int                z;
-
-  assert(variable != NULL);
-  assert(value != NULL);
-
-  UNUSED_VARIABLE(userData);
-  UNUSED_VARIABLE(name);
-
-  compressAlgorithm = COMPRESS_ALGORITHM_NONE;
-
-  // parse
-  foundFlag = FALSE;
-  for (z = 0; z < SIZE_OF_ARRAY(COMPRESS_ALGORITHMS_DELTA); z++)
-  {
-    if (strcasecmp(value,COMPRESS_ALGORITHMS_DELTA[z].name) == 0)
-    {
-      compressAlgorithm = COMPRESS_ALGORITHMS_DELTA[z].compressAlgorithm;
-      foundFlag = TRUE;
-      break;
-    }
-  }
-  if (!foundFlag) return FALSE;
-//fprintf(stderr,"%s, %d: compressAlgorithm=%d\n",__FILE__,__LINE__,compressAlgorithm);
-
-  // store compress algorithm values
-  (*((CompressAlgorithms*)variable)) = compressAlgorithm;
-
-  return TRUE;
-}
-
-void configValueFormatInitDeltaCompressAlgorithm(void **formatUserData, void *userData, void *variable)
-{
-  assert(formatUserData != NULL);
-
-  UNUSED_VARIABLE(userData);
-
-  (*formatUserData) = (CompressAlgorithms*)variable;
-}
-
-void configValueFormatDoneDeltaCompressAlgorithm(void **formatUserData, void *userData)
-{
-  UNUSED_VARIABLE(formatUserData);
-  UNUSED_VARIABLE(userData);
-}
-
-bool configValueFormatDeltaCompressAlgorithm(void **formatUserData, void *userData, String line)
-{
-  assert(formatUserData != NULL);
-  assert(line != NULL);
-
-  UNUSED_VARIABLE(userData);
-
-  if ((*formatUserData) != NULL)
-  {
-    String_format(line,"%s",Compress_getAlgorithmName(*(CompressAlgorithms*)(*formatUserData)));
-    (*formatUserData) = NULL;
-
-    return TRUE;
-  }
-  else
-  {
-    return FALSE;
-  }
-}
-
-bool configValueParseByteCompressAlgorithm(void *userData, void *variable, const char *name, const char *value)
-{
-  CompressAlgorithms compressAlgorithm;
-  bool               foundFlag;
-  int                z;
-
-  assert(variable != NULL);
-  assert(value != NULL);
-
-  UNUSED_VARIABLE(userData);
-  UNUSED_VARIABLE(name);
-
-  compressAlgorithm = COMPRESS_ALGORITHM_NONE;
-
-  // parse
-  for (z = 0; z < SIZE_OF_ARRAY(COMPRESS_ALGORITHMS_BYTE); z++)
-  {
-    if (strcasecmp(value,COMPRESS_ALGORITHMS_BYTE[z].name) == 0)
-    {
-      compressAlgorithm = COMPRESS_ALGORITHMS_BYTE[z].compressAlgorithm;
-      foundFlag = TRUE;
-      break;
-    }
-  }
-  if (!foundFlag) return FALSE;
-//fprintf(stderr,"%s, %d: compressAlgorithm=%d\n",__FILE__,__LINE__,compressAlgorithm);
-
-  // store compress algorithm values
-  (*((CompressAlgorithms*)variable)) = compressAlgorithm;
-
-  return TRUE;
-}
-
-void configValueFormatInitByteCompressAlgorithm(void **formatUserData, void *userData, void *variable)
-{
-  assert(formatUserData != NULL);
-
-  UNUSED_VARIABLE(userData);
-
-  (*formatUserData) = (CompressAlgorithms*)variable;
-}
-
-void configValueFormatDoneByteCompressAlgorithm(void **formatUserData, void *userData)
-{
-  UNUSED_VARIABLE(formatUserData);
-  UNUSED_VARIABLE(userData);
-}
-
-bool configValueFormatByteCompressAlgorithm(void **formatUserData, void *userData, String line)
-{
-  assert(formatUserData != NULL);
-  assert(line != NULL);
-
-  UNUSED_VARIABLE(userData);
-
-  if ((*formatUserData) != NULL)
-  {
-    String_format(line,"%s",Compress_getAlgorithmName(*(CompressAlgorithms*)(*formatUserData)));
-    (*formatUserData) = NULL;
-
-    return TRUE;
-  }
-  else
-  {
-    return FALSE;
-  }
-
-  return TRUE;
-}
-
 bool configValueParseCompressAlgorithm(void *userData, void *variable, const char *name, const char *value)
 {
   char               algorithm1[256],algorithm2[256];
   CompressAlgorithms compressAlgorithmDelta,compressAlgorithmByte;
+  bool               foundFlag1,foundFlag2;
   bool               foundFlag;
   int                z;
 
@@ -3226,67 +3093,93 @@ bool configValueParseCompressAlgorithm(void *userData, void *variable, const cha
       || String_scanCString(value,"%256s,%256s",algorithm1,algorithm2)
      )
   {
-    foundFlag = FALSE;
-    for (z = 0; z < SIZE_OF_ARRAY(COMPRESS_ALGORITHMS_DELTA); z++)
-    {
-      if (strcasecmp(algorithm1,COMPRESS_ALGORITHMS_DELTA[z].name) == 0)
-      {
-        compressAlgorithmDelta = COMPRESS_ALGORITHMS_DELTA[z].compressAlgorithm;
-        foundFlag = TRUE;
-        break;
-      }
-    }
-    for (z = 0; z < SIZE_OF_ARRAY(COMPRESS_ALGORITHMS_BYTE); z++)
-    {
-      if (strcasecmp(algorithm1,COMPRESS_ALGORITHMS_BYTE[z].name) == 0)
-      {
-        compressAlgorithmByte = COMPRESS_ALGORITHMS_BYTE[z].compressAlgorithm;
-        foundFlag = TRUE;
-        break;
-      }
-    }
-    if (!foundFlag) return FALSE;
+    foundFlag1 = FALSE;
+    foundFlag2 = FALSE;
 
-    foundFlag = FALSE;
-    for (z = 0; z < SIZE_OF_ARRAY(COMPRESS_ALGORITHMS_DELTA); z++)
+    // find delta+byte algorithm
+    if (!foundFlag1 || !foundFlag2)
     {
-      if (strcasecmp(algorithm2,COMPRESS_ALGORITHMS_DELTA[z].name) == 0)
+      foundFlag1 = FALSE;
+      foundFlag2 = FALSE;
+      for (z = 0; z < SIZE_OF_ARRAY(COMPRESS_ALGORITHMS_DELTA); z++)
       {
-        compressAlgorithmDelta = COMPRESS_ALGORITHMS_DELTA[z].compressAlgorithm;
-        foundFlag = TRUE;
-        break;
+        if (strcasecmp(algorithm1,COMPRESS_ALGORITHMS_DELTA[z].name) == 0)
+        {
+          compressAlgorithmDelta = COMPRESS_ALGORITHMS_DELTA[z].compressAlgorithm;
+          foundFlag1 = TRUE;
+          break;
+        }
+      }
+      for (z = 0; z < SIZE_OF_ARRAY(COMPRESS_ALGORITHMS_BYTE); z++)
+      {
+        if (strcasecmp(algorithm2,COMPRESS_ALGORITHMS_BYTE[z].name) == 0)
+        {
+          compressAlgorithmByte = COMPRESS_ALGORITHMS_BYTE[z].compressAlgorithm;
+          foundFlag2 = TRUE;
+          break;
+        }
       }
     }
-    for (z = 0; z < SIZE_OF_ARRAY(COMPRESS_ALGORITHMS_BYTE); z++)
+
+    // find byte+delta algorithm
+    if (!foundFlag1 || !foundFlag2)
     {
-      if (strcasecmp(algorithm2,COMPRESS_ALGORITHMS_BYTE[z].name) == 0)
+      foundFlag1 = FALSE;
+      foundFlag2 = FALSE;
+      for (z = 0; z < SIZE_OF_ARRAY(COMPRESS_ALGORITHMS_BYTE); z++)
       {
-        compressAlgorithmByte = COMPRESS_ALGORITHMS_BYTE[z].compressAlgorithm;
-        foundFlag = TRUE;
-        break;
+        if (strcasecmp(algorithm1,COMPRESS_ALGORITHMS_BYTE[z].name) == 0)
+        {
+          compressAlgorithmByte = COMPRESS_ALGORITHMS_BYTE[z].compressAlgorithm;
+          foundFlag2 = TRUE;
+          break;
+        }
+      }
+      for (z = 0; z < SIZE_OF_ARRAY(COMPRESS_ALGORITHMS_DELTA); z++)
+      {
+        if (strcasecmp(algorithm2,COMPRESS_ALGORITHMS_DELTA[z].name) == 0)
+        {
+          compressAlgorithmDelta = COMPRESS_ALGORITHMS_DELTA[z].compressAlgorithm;
+          foundFlag1 = TRUE;
+          break;
+        }
       }
     }
-    if (!foundFlag) return FALSE;
+
+    if (!foundFlag1 || !foundFlag2)
+    {
+      return FALSE;
+    }
   }
   else
   {
     foundFlag = FALSE;
-    for (z = 0; z < SIZE_OF_ARRAY(COMPRESS_ALGORITHMS_DELTA); z++)
+
+    // find delta algorithm
+    if (!foundFlag)
     {
-      if (strcasecmp(value,COMPRESS_ALGORITHMS_DELTA[z].name) == 0)
+      for (z = 0; z < SIZE_OF_ARRAY(COMPRESS_ALGORITHMS_DELTA); z++)
       {
-        compressAlgorithmDelta = COMPRESS_ALGORITHMS_DELTA[z].compressAlgorithm;
-        foundFlag = TRUE;
-        break;
+        if (strcasecmp(value,COMPRESS_ALGORITHMS_DELTA[z].name) == 0)
+        {
+          compressAlgorithmDelta = COMPRESS_ALGORITHMS_DELTA[z].compressAlgorithm;
+          foundFlag1 = TRUE;
+          break;
+        }
       }
     }
-    for (z = 0; z < SIZE_OF_ARRAY(COMPRESS_ALGORITHMS_BYTE); z++)
+
+    // find byte algorithm
+    if (!foundFlag)
     {
-      if (strcasecmp(value,COMPRESS_ALGORITHMS_BYTE[z].name) == 0)
+      for (z = 0; z < SIZE_OF_ARRAY(COMPRESS_ALGORITHMS_BYTE); z++)
       {
-        compressAlgorithmByte = COMPRESS_ALGORITHMS_BYTE[z].compressAlgorithm;
-        foundFlag = TRUE;
-        break;
+        if (strcasecmp(value,COMPRESS_ALGORITHMS_BYTE[z].name) == 0)
+        {
+          compressAlgorithmByte = COMPRESS_ALGORITHMS_BYTE[z].compressAlgorithm;
+          foundFlag2 = TRUE;
+          break;
+        }
       }
     }
     if (!foundFlag) return FALSE;
@@ -3306,7 +3199,7 @@ void configValueFormatInitCompressAlgorithm(void **formatUserData, void *userDat
 
   UNUSED_VARIABLE(userData);
 
-  (*formatUserData) = (*(JobOptionsCompressAlgorithm**)variable);
+  (*formatUserData) = (JobOptionsCompressAlgorithm*)variable;
 }
 
 void configValueFormatDoneCompressAlgorithm(void **formatUserData, void *userData)
@@ -4043,12 +3936,8 @@ int main(int argc, const char *argv[])
                Errors_getText(error)
               );
     #ifndef NDEBUG
-      File_debugPrintInfo();
       File_debugDone();
-      Array_debugPrintInfo();
       Array_debugDone();
-      String_debugPrintInfo();
-      String_debugPrintStatistics();
       String_debugDone();
     #endif /* not NDEBUG */
     return EXITCODE_INIT_FAIL;
@@ -4065,12 +3954,8 @@ int main(int argc, const char *argv[])
   {
     doneAll();
     #ifndef NDEBUG
-      File_debugPrintInfo();
       File_debugDone();
-      Array_debugPrintInfo();
       Array_debugDone();
-      String_debugPrintInfo();
-      String_debugPrintStatistics();
       String_debugDone();
     #endif /* not NDEBUG */
     return EXITCODE_INVALID_ARGUMENT;
@@ -4110,12 +3995,8 @@ int main(int argc, const char *argv[])
       String_delete(fileName);
       doneAll();
       #ifndef NDEBUG
-        File_debugPrintInfo();
         File_debugDone();
-        Array_debugPrintInfo();
         Array_debugDone();
-        String_debugPrintInfo();
-        String_debugPrintStatistics();
         String_debugDone();
       #endif /* not NDEBUG */
       return EXITCODE_CONFIG_ERROR;
@@ -4155,12 +4036,8 @@ int main(int argc, const char *argv[])
   {
     doneAll();
     #ifndef NDEBUG
-      File_debugPrintInfo();
       File_debugDone();
-      Array_debugPrintInfo();
       Array_debugDone();
-      String_debugPrintInfo();
-      String_debugPrintStatistics();
       String_debugDone();
     #endif /* not NDEBUG */
     return EXITCODE_INVALID_ARGUMENT;
@@ -4177,12 +4054,8 @@ int main(int argc, const char *argv[])
 
     doneAll();
     #ifndef NDEBUG
-      File_debugPrintInfo();
       File_debugDone();
-      Array_debugPrintInfo();
       Array_debugDone();
-      String_debugPrintInfo();
-      String_debugPrintStatistics();
       String_debugDone();
     #endif /* not NDEBUG */
     return EXITCODE_OK;
@@ -4195,12 +4068,8 @@ int main(int argc, const char *argv[])
 
     doneAll();
     #ifndef NDEBUG
-      File_debugPrintInfo();
       File_debugDone();
-      Array_debugPrintInfo();
       Array_debugDone();
-      String_debugPrintInfo();
-      String_debugPrintStatistics();
       String_debugDone();
     #endif /* not NDEBUG */
     return EXITCODE_OK;
@@ -4211,12 +4080,8 @@ int main(int argc, const char *argv[])
   {
     doneAll();
     #ifndef NDEBUG
-      File_debugPrintInfo();
       File_debugDone();
-      Array_debugPrintInfo();
       Array_debugDone();
-      String_debugPrintInfo();
-      String_debugPrintStatistics();
       String_debugDone();
     #endif /* not NDEBUG */
     return EXITCODE_FAIL;
@@ -4229,12 +4094,8 @@ int main(int argc, const char *argv[])
     printError("Cannot add delta sources (error: %s)!\n",Errors_getText(error));
     doneAll();
     #ifndef NDEBUG
-      File_debugPrintInfo();
       File_debugDone();
-      Array_debugPrintInfo();
       Array_debugDone();
-      String_debugPrintInfo();
-      String_debugPrintStatistics();
       String_debugDone();
     #endif /* not NDEBUG */
     return EXITCODE_FAIL;
@@ -4254,12 +4115,8 @@ int main(int argc, const char *argv[])
                 );
       doneAll();
       #ifndef NDEBUG
-        File_debugPrintInfo();
         File_debugDone();
-        Array_debugPrintInfo();
         Array_debugDone();
-        String_debugPrintInfo();
-        String_debugPrintStatistics();
         String_debugDone();
       #endif /* not NDEBUG */
       return EXITCODE_FAIL;
@@ -4282,12 +4139,8 @@ int main(int argc, const char *argv[])
     printError("Cannot create temporary directory in '%s' (error: %s)!\n",String_cString(globalOptions.tmpDirectory),Errors_getText(error));
     doneAll();
     #ifndef NDEBUG
-      File_debugPrintInfo();
       File_debugDone();
-      Array_debugPrintInfo();
       Array_debugDone();
-      String_debugPrintInfo();
-      String_debugPrintStatistics();
       String_debugDone();
     #endif /* not NDEBUG */
     return EXITCODE_FAIL;
@@ -4351,12 +4204,8 @@ int main(int argc, const char *argv[])
         CmdOption_done(COMMAND_LINE_OPTIONS,SIZE_OF_ARRAY(COMMAND_LINE_OPTIONS));
         doneAll();
         #ifndef NDEBUG
-          File_debugPrintInfo();
           File_debugDone();
-          Array_debugPrintInfo();
           Array_debugDone();
-          String_debugPrintInfo();
-          String_debugPrintStatistics();
           String_debugDone();
         #endif /* not NDEBUG */
 
@@ -4712,12 +4561,8 @@ fprintf(stderr,"%s,%d: t=%s\n",__FILE__,__LINE__,t);
   // free resources
   doneAll();
   #ifndef NDEBUG
-    File_debugPrintInfo();
     File_debugDone();
-    Array_debugPrintInfo();
     Array_debugDone();
-    String_debugPrintInfo();
-    String_debugPrintStatistics();
     String_debugDone();
   #endif /* not NDEBUG */
 
