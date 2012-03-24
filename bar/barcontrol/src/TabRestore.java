@@ -145,20 +145,20 @@ class TabRestore
    */
   class StorageData
   {
-    long        id;
-    String      name;
-    long        size;
-    long        datetime;
-    String      title;
-    IndexStates indexState;
-    String      errorMessage;
-    boolean     tagged;
+    long        id;                       // storage id
+    String      name;                     // storage name
+    long        size;                     // storage size [bytes]
+    long        datetime;                 // date/time when storage was created
+    String      title;                    // title to show
+    IndexStates indexState;               // state of index
+    String      errorMessage;             // last error message
+    boolean     checked;                  // true iff storage entry is tagged
 
     /** create storage data
      * @param id database id
-     * @param name name
-     * @param size size [bytes]
-     * @param datetime date/time (timestamp)
+     * @param name name of storage
+     * @param size size of storage [bytes]
+     * @param datetime date/time (timestamp) when storage was created
      * @param title title to show
      * @param indexState storage index state
      * @param errorMessage error message text
@@ -172,14 +172,14 @@ class TabRestore
       this.title        = title;
       this.indexState   = indexState;
       this.errorMessage = errorMessage;
-      this.tagged       = false;
+      this.checked      = false;
 
     }
 
     /** create storage data
      * @param id database id
-     * @param name name
-     * @param datetime date/time (timestamp)
+     * @param name name of storage
+     * @param datetime date/time (timestamp) when storage was created
      * @param title title to show
      */
     StorageData(long id, String name, long datetime, String title)
@@ -189,7 +189,7 @@ class TabRestore
 
     /** create storage data
      * @param id database id
-     * @param name name
+     * @param name name of storage
      * @param title title to show
      */
     StorageData(long id, String name, String title)
@@ -197,20 +197,20 @@ class TabRestore
       this(id,name,0,title);
     }
 
-    /** check if tagged
-     * @return true if entry is tagged, false otherwise
+    /** check if checked
+     * @return true if entry is checked, false otherwise
      */
-    public boolean isTagged()
+    public boolean isChecked()
     {
-      return tagged;
+      return checked;
     }
 
     /** set checked state
      * @param checked checked state
      */
-    public void setChecked(boolean tagged)
+    public void setChecked(boolean checked)
     {
-      this.tagged = tagged;
+      this.checked = checked;
     }
 
     /** convert data to string
@@ -218,7 +218,7 @@ class TabRestore
      */
     public String toString()
     {
-      return "Storage {"+name+", "+size+" bytes, datetime="+datetime+", title="+title+", state="+indexState+", tagged="+tagged+"}";
+      return "Storage {"+name+", "+size+" bytes, datetime="+datetime+", title="+title+", state="+indexState+", checked="+checked+"}";
     }
   };
 
@@ -226,20 +226,21 @@ class TabRestore
    */
   class StorageDataMap extends HashMap<Long,StorageData>
   {
-    /** remove not tagged entries
+    /** remove not checked entries
      */
-    public void clearNotTagged()
+    public void clearNotChecked()
     {
       String[] keys = keySet().toArray(new String[0]);
       for (String key : keys)
       {
         StorageData storageData = get(key);
-        if (!storageData.isTagged()) remove(key);
+        if (!storageData.isChecked()) remove(key);
       }
     }
 
     /** get storage data from map
      * @param id storage id
+     * @return storage data
      */
     public StorageData get(long storageId)
     {
@@ -248,6 +249,7 @@ class TabRestore
 
     /** get storage data from map
      * @param storageName storage name
+     * @return storage data
      */
     public StorageData get(String storageName)
     {
@@ -349,11 +351,12 @@ class TabRestore
    */
   class UpdateStorageListThread extends Thread
   {
-    private Object      trigger                    = new Object();   // trigger update object
-    private int         newStorageMaxCount         = -1;
-    private String      newStoragePattern          = null;           // new storage pattern
-    private IndexStates newStorageIndexStateFilter = null;           // new storage index state filter
-    private boolean     setColorFlag               = false;          // true to set color at update
+    private Object      trigger                 = new Object();   // trigger update object
+    private boolean     triggeredFlag           = false;
+    private int         storageMaxCount         = 100;
+    private String      storagePattern          = null;
+    private IndexStates storageIndexStateFilter = IndexStates.ALL;
+    private boolean     setColorFlag            = false;          // true to set color at update
 
     /** create update storage list thread
      */
@@ -367,9 +370,6 @@ class TabRestore
      */
     public void run()
     {
-      int         storageMaxCount         = 100;
-      String      storagePattern          = null;
-      IndexStates storageIndexStateFilter = IndexStates.ALL;
       for (;;)
       {
         if (setColorFlag)
@@ -417,14 +417,14 @@ class TabRestore
               {
                 /* get data
                    format:
-                     id
+                     storage id
                      date/time
                      size
                      state
                      storage name
                      error message
                 */
-                long        id           = (Long)data[0];
+                long        storageId    = (Long)data[0];
                 long        datetime     = (Long)data[1];
                 long        size         = (Long)data[2];
                 IndexStates indexState   = Enum.valueOf(IndexStates.class,(String)data[3]);
@@ -433,7 +433,7 @@ class TabRestore
 
                 synchronized(storageDataMap)
                 {
-                  StorageData storageData = storageDataMap.get(id);
+                  StorageData storageData = storageDataMap.get(storageId);
                   if (storageData != null)
                   {
                     storageData.size         = size;
@@ -443,7 +443,7 @@ class TabRestore
                   }
                   else
                   {
-                    storageData = new StorageData(id,
+                    storageData = new StorageData(storageId,
                                                   storageName,
                                                   size,
                                                   datetime,
@@ -471,7 +471,7 @@ class TabRestore
           for (String storageName : storageNameHashSet)
           {
             StorageData storageData = storageDataMap.get(storageName);
-            if ((storageData != null) && !storageData.isTagged())
+            if ((storageData != null) && !storageData.isChecked())
             {
               storageDataMap.remove(storageData);
             }
@@ -503,91 +503,34 @@ class TabRestore
         // sleep a short time or get new pattern
         synchronized(trigger)
         {
-          // wait for trigger/timeout
+          // wait for refresh request or timeout
           try { trigger.wait(30*1000); } catch (InterruptedException exception) { /* ignored */ };
 
-          // get max. count
-          if (newStorageMaxCount != -1)
-          {
-            storageMaxCount    = newStorageMaxCount;
-            newStorageMaxCount = -1;
-            setColorFlag       = false;
-          }
+          // if not triggered (timeout occurred) update is done invisible (color is not set)
+          if (!triggeredFlag) setColorFlag = false;
 
-          // get pattern
-          if (newStoragePattern != null)
-          {
-            storagePattern    = newStoragePattern;
-            newStoragePattern = null;
-            setColorFlag      = false;
-          }
-
-          // get state filter
-          if (newStorageIndexStateFilter != null)
-          {
-            storageIndexStateFilter    = newStorageIndexStateFilter;
-            newStorageIndexStateFilter = null;
-            setColorFlag               = false;
-          }
+          triggeredFlag = false;
         }
       }
     }
 
     /** trigger an update
-     * @param storageMaxCount new max. entries in list
      * @param storagePattern new storage pattern
      * @param storageStateFilter new storage state filter
+     * @param storageMaxCount new max. entries in list
      */
-    public void triggerUpdate(int storageMaxCount, String storagePattern, IndexStates storageIndexStateFilter)
+    public void triggerUpdate(String storagePattern, IndexStates storageIndexStateFilter, int storageMaxCount)
     {
       synchronized(trigger)
       {
-        newStorageMaxCount         = storageMaxCount;
-        newStoragePattern          = storagePattern;
-        newStorageIndexStateFilter = storageIndexStateFilter;
-        setColorFlag               = true;
+        this.storagePattern          = storagePattern;
+        this.storageIndexStateFilter = storageIndexStateFilter;
+        this.storageMaxCount         = storageMaxCount;
+        this.setColorFlag            = true;
+
+        triggeredFlag = true;
         trigger.notify();
       }
-    }
-
-    /** trigger an update
-     * @param storagePattern new storage pattern
-     * @param storageStateFilter
-     */
-    public void triggerUpdate(String storagePattern, IndexStates storageIndexStateFilter)
-    {
-      triggerUpdate(-1,storagePattern,storageIndexStateFilter);
-    }
-
-    /** trigger an update
-     * @param storageMaxCount new max. entries in list
-     */
-    public void triggerUpdate(int storageMaxCount)
-    {
-      triggerUpdate(storageMaxCount,null,null);
-    }
-
-    /** trigger an update
-     * @param storagePattern new storage pattern
-     */
-    public void triggerUpdate(String storagePattern)
-    {
-      triggerUpdate(-1,storagePattern,null);
-    }
-
-    /** trigger an update
-     * @param storagePattern new storage pattern
-     */
-    public void triggerUpdate(IndexStates storageIndexStateFilter)
-    {
-      triggerUpdate(-1,null,storageIndexStateFilter);
-    }
-
-    /** trigger an update
-     */
-    public void triggerUpdate()
-    {
-      triggerUpdate(-1,null,null);
     }
   }
 
@@ -623,7 +566,7 @@ class TabRestore
     EntryTypes    type;
     long          size;
     long          datetime;
-    boolean       tagged;
+    boolean       checked;
     RestoreStates restoreState;
 
     /** create entry data
@@ -642,7 +585,7 @@ class TabRestore
       this.type            = type;
       this.size            = size;
       this.datetime        = datetime;
-      this.tagged          = false;
+      this.checked         = false;
       this.restoreState    = RestoreStates.UNKNOWN;
     }
 
@@ -666,20 +609,20 @@ class TabRestore
       this.restoreState = restoreState;
     }
 
-    /** check if entry is tagged
+    /** check if entry is checked
      * @return true if entry is checked, false otherwise
      */
-    public boolean isTagged()
+    public boolean isChecked()
     {
-      return tagged;
+      return checked;
     }
 
-    /** set tagged state
+    /** set checked state
      * @param checked checked state
      */
-    public void setTagged(boolean tagged)
+    public void setChecked(boolean checked)
     {
-      this.tagged = tagged;
+      this.checked = checked;
     }
 
     /** convert data to string
@@ -687,7 +630,7 @@ class TabRestore
      */
     public String toString()
     {
-      return "Entry {"+storageName+", "+name+", "+type+", "+size+" bytes, datetime="+datetime+", tagged="+tagged+", state="+restoreState+"}";
+      return "Entry {"+storageName+", "+name+", "+type+", "+size+" bytes, datetime="+datetime+", checked="+checked+", state="+restoreState+"}";
     }
   };
 
@@ -695,15 +638,15 @@ class TabRestore
    */
   class EntryDataMap extends HashMap<String,EntryData>
   {
-    /** remove not tagged entries
+    /** remove not checked entries
      */
-    public void clearNotTagged()
+    public void clearNotChecked()
     {
       String[] keys = keySet().toArray(new String[0]);
       for (String key : keys)
       {
         EntryData entryData = get(key);
-        if (!entryData.isTagged()) remove(key);
+        if (!entryData.isChecked()) remove(key);
       }
     }
 
@@ -820,9 +763,13 @@ class TabRestore
    */
   class UpdateEntryListThread extends Thread
   {
-    private Object trigger          = new Object();   // trigger update object
-    private int    newEntryMaxCount = -1;
-    private String newEntryPattern  = null;           // entry pattern
+    private Object  trigger                = new Object();   // trigger update object
+    private boolean triggeredFlag          = false;
+
+    private boolean checkedStorageOnlyFlag = false;
+    private int     entryMaxCount          = 100;
+    private String  entryPattern           = null;
+    private boolean newestEntriesOnlyFlag  = false;
 
     /** create update entry list thread
      */
@@ -841,8 +788,6 @@ class TabRestore
       final String[] FILENAME_MAP_FROM = new String[]{"\\n","\\r","\\\\"};
       final String[] FILENAME_MAP_TO   = new String[]{"\n","\r","\\"};
 
-      int    entryMaxCount = 100;
-      String entryPattern  = null;
       for (;;)
       {
         // set busy cursor, foreground color to inform about update
@@ -858,8 +803,8 @@ class TabRestore
         // update
         synchronized(entryDataMap)
         {
-          // clear not tagged entries
-          entryDataMap.clearNotTagged();
+          // clear not checked entries
+          entryDataMap.clearNotChecked();
 
           // get matching entries
           if (entryPattern != null)
@@ -867,6 +812,7 @@ class TabRestore
             // execute command
             ArrayList<String> result = new ArrayList<String>();
             String commandString = "INDEX_ENTRIES_LIST "+
+                                   (checkedStorageOnlyFlag  ? "1" : "0")+" "+
                                    entryMaxCount+" "+
                                    (newestEntriesOnlyFlag ? "1" : "0")+" "+
                                    StringUtils.escape(StringUtils.map(entryPattern,PATTERN_MAP_FROM,PATTERN_MAP_TO));
@@ -1064,55 +1010,34 @@ class TabRestore
         // get new pattern
         synchronized(trigger)
         {
-          // wait for trigger
-          while ((newEntryMaxCount == -1) && (newEntryPattern == null))
+          // wait for refresh request trigger
+          while (!triggeredFlag)
           {
             try { trigger.wait(); } catch (InterruptedException exception) { /* ignored */ };
           }
-
-          // get pattern
-          if (newEntryMaxCount != -1)
-          {
-            entryMaxCount    = newEntryMaxCount;
-            newEntryMaxCount = -1;
-          }
-          if (newEntryPattern != null)
-          {
-            entryPattern    = newEntryPattern;
-            newEntryPattern = null;
-          }
+          triggeredFlag = false;
         }
       }
     }
 
     /** trigger an update
-     * @param entryMaxCount max. entries in list
-     * @param entryPattern new entry pattern
+     * @param checkedStorageOnlyFlag checked storage only or null
+     * @param entryPattern new entry pattern or null
+     * @param newestEntriesOnlyFlag flag for newest entries only or null
+     * @param entryMaxCount max. entries in list or null
      */
-    public void triggerUpdate(int entryMaxCount, String entryPattern)
+    public void triggerUpdate(boolean checkedStorageOnlyFlag, String entryPattern, boolean newestEntriesOnlyFlag, int entryMaxCount)
     {
       synchronized(trigger)
       {
-        newEntryMaxCount = entryMaxCount;
-        newEntryPattern  = entryPattern;
+        this.checkedStorageOnlyFlag = checkedStorageOnlyFlag;
+        this.entryPattern           = entryPattern;
+        this.newestEntriesOnlyFlag  = newestEntriesOnlyFlag;
+        this.entryMaxCount          = entryMaxCount;
+
+        triggeredFlag = true;
         trigger.notify();
       }
-    }
-
-    /** trigger an update
-     * @param entryMaxCount max. entries in list
-     */
-    public void triggerUpdate(int entryMaxCount)
-    {
-      triggerUpdate(entryMaxCount,null);
-    }
-
-    /** trigger an update
-     * @param entryPattern new entry pattern
-     */
-    public void triggerUpdate(String entryPattern)
-    {
-      triggerUpdate(-1,entryPattern);
     }
   }
 
@@ -1135,6 +1060,9 @@ class TabRestore
   private final Image IMAGE_MARK_ALL;
   private final Image IMAGE_UNMARK_ALL;
 
+  private final Image IMAGE_CONNECT0;
+  private final Image IMAGE_CONNECT1;
+
   // date/time format
   private final SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
@@ -1150,33 +1078,35 @@ class TabRestore
   // widgets
   public  Composite       widgetTab;
   private TabFolder       widgetTabFolder;
-  private Combo           widgetPath;
 
   private Table           widgetStorageList;
   private Shell           widgetStorageListToolTip = null;
   private Text            widgetStoragePattern;
   private Combo           widgetStorageStateFilter;
   private Combo           widgetStorageMaxCount;
-  private WidgetEvent     taggedStorageEvent = new WidgetEvent();
+  private WidgetEvent     checkedStorageEvent = new WidgetEvent();
 
   private Table           widgetEntryList;
   private Shell           widgetEntryListToolTip = null;
-  private Text            widgetEntryPattern;
-  private Combo           widgetEntryMaxCount;
-  private WidgetEvent     taggedEntryEvent = new WidgetEvent();
+  private WidgetEvent     checkedEntryEvent = new WidgetEvent();
 
   private Button          widgetRestoreTo;
   private Text            widgetRestoreToDirectory;
   private Button          widgetOverwriteEntries;
   private WidgetEvent     selectRestoreToEvent = new WidgetEvent();
 
+  private boolean         checkedStorageOnlyFlag = false;
+
   UpdateStorageListThread updateStorageListThread;
-  private String          storagePattern = null;
-  private StorageDataMap  storageDataMap = new StorageDataMap();
+  private String          storagePattern    = null;
+  private IndexStates     storageIndexState = IndexStates.ALL;
+  private int             storageMaxCount   = 100;
+  private StorageDataMap  storageDataMap    = new StorageDataMap();
 
   UpdateEntryListThread   updateEntryListThread;
   private String          entryPattern          = null;
-  private boolean         newestEntriesOnlyFlag = true;
+  private boolean         newestEntriesOnlyFlag = false;
+  private int             entryMaxCount         = 100;
   private EntryDataMap    entryDataMap          = new EntryDataMap();
 
   // ------------------------ native functions ----------------------------
@@ -1211,32 +1141,52 @@ class TabRestore
     COLOR_MODIFIED = shell.getDisplay().getSystemColor(SWT.COLOR_GRAY);
 
     // get images
-    IMAGE_DIRECTORY          = Widgets.loadImage(display,"directory.gif");
-    IMAGE_DIRECTORY_INCLUDED = Widgets.loadImage(display,"directoryIncluded.gif");
-    IMAGE_DIRECTORY_EXCLUDED = Widgets.loadImage(display,"directoryExcluded.gif");
-    IMAGE_FILE               = Widgets.loadImage(display,"file.gif");
-    IMAGE_FILE_INCLUDED      = Widgets.loadImage(display,"fileIncluded.gif");
-    IMAGE_FILE_EXCLUDED      = Widgets.loadImage(display,"fileExcluded.gif");
-    IMAGE_LINK               = Widgets.loadImage(display,"link.gif");
-    IMAGE_LINK_INCLUDED      = Widgets.loadImage(display,"linkIncluded.gif");
-    IMAGE_LINK_EXCLUDED      = Widgets.loadImage(display,"linkExcluded.gif");
+    IMAGE_DIRECTORY          = Widgets.loadImage(display,"directory.png");
+    IMAGE_DIRECTORY_INCLUDED = Widgets.loadImage(display,"directoryIncluded.png");
+    IMAGE_DIRECTORY_EXCLUDED = Widgets.loadImage(display,"directoryExcluded.png");
+    IMAGE_FILE               = Widgets.loadImage(display,"file.png");
+    IMAGE_FILE_INCLUDED      = Widgets.loadImage(display,"fileIncluded.png");
+    IMAGE_FILE_EXCLUDED      = Widgets.loadImage(display,"fileExcluded.png");
+    IMAGE_LINK               = Widgets.loadImage(display,"link.png");
+    IMAGE_LINK_INCLUDED      = Widgets.loadImage(display,"linkIncluded.png");
+    IMAGE_LINK_EXCLUDED      = Widgets.loadImage(display,"linkExcluded.png");
 
-    IMAGE_CLEAR              = Widgets.loadImage(display,"clear.gif");
-    IMAGE_MARK_ALL           = Widgets.loadImage(display,"mark.gif");
-    IMAGE_UNMARK_ALL         = Widgets.loadImage(display,"unmark.gif");
+    IMAGE_CLEAR              = Widgets.loadImage(display,"clear.png");
+    IMAGE_MARK_ALL           = Widgets.loadImage(display,"mark.png");
+    IMAGE_UNMARK_ALL         = Widgets.loadImage(display,"unmark.png");
+
+    IMAGE_CONNECT0           = Widgets.loadImage(display,"connect0.png");
+    IMAGE_CONNECT1           = Widgets.loadImage(display,"connect1.png");
 
     // get cursors
     waitCursor = new Cursor(display,SWT.CURSOR_WAIT);
 
     // create tab
     widgetTab = Widgets.addTab(parentTabFolder,"Restore"+((accelerator != 0) ? " ("+Widgets.acceleratorToText(accelerator)+")" : ""));
-    widgetTab.setLayout(new TableLayout(new double[]{0.5,0.5,0.0},1.0,2));
+    widgetTab.setLayout(new TableLayout(new double[]{0.5,0.5,0.0},new double[]{0.0,1.0},2));
     Widgets.layout(widgetTab,0,0,TableLayoutData.NSWE);
+
+    // connector button
+    button = Widgets.newCheckbox(widgetTab,IMAGE_CONNECT0,IMAGE_CONNECT1);
+    Widgets.layout(button,0,0,TableLayoutData.W,2,0);
+    button.addSelectionListener(new SelectionListener()
+    {
+      public void widgetDefaultSelected(SelectionEvent selectionEvent)
+      {
+      }
+      public void widgetSelected(SelectionEvent selectionEvent)
+      {
+        Button widget = (Button)selectionEvent.widget;
+        checkedStorageOnlyFlag = widget.getSelection();
+        updateEntryListThread.triggerUpdate(checkedStorageOnlyFlag,entryPattern,newestEntriesOnlyFlag,entryMaxCount);
+      }
+    });
+    button.setToolTipText("When this connector is in state 'closed', only tagged storage archives are used for list entries.");
 
     // storage list
     group = Widgets.newGroup(widgetTab,"Storage");
     group.setLayout(new TableLayout(new double[]{1.0,0.0},1.0,4));
-    Widgets.layout(group,0,0,TableLayoutData.NSWE);
+    Widgets.layout(group,0,1,TableLayoutData.NSWE);
     {
       widgetStorageList = Widgets.newTable(group,SWT.CHECK);
       Widgets.layout(widgetStorageList,0,0,TableLayoutData.NSWE);
@@ -1275,11 +1225,9 @@ class TabRestore
           if (tableItem != null)
           {
             tableItem.setChecked(!tableItem.getChecked());
+            ((StorageData)tableItem.getData()).setChecked(tableItem.getChecked());
 
-            StorageData storageData = (StorageData)tableItem.getData();
-            storageData.setChecked(tableItem.getChecked());
-
-            taggedStorageEvent.trigger();
+            checkedStorageEvent.trigger();
           }
         }
       });
@@ -1293,11 +1241,25 @@ class TabRestore
           TableItem tableItem = (TableItem)selectionEvent.item;
           if (tableItem != null)
           {
-            StorageData storageData = (StorageData)tableItem.getData();
-            storageData.setChecked(tableItem.getChecked());
+            ((StorageData)tableItem.getData()).setChecked(tableItem.getChecked());
+
+            BARServer.executeCommand("STORAGE_LIST_CLEAR");
+            for (StorageData storageData : storageDataMap.values())
+            {
+              if (storageData.isChecked())
+              {
+                BARServer.executeCommand("STORAGE_LIST_ADD "+
+                                         storageData.id
+                                        );
+              }
+            }
           }
 
-          taggedStorageEvent.trigger();
+          checkedStorageEvent.trigger();
+          if (checkedStorageOnlyFlag)
+          {
+            updateEntryListThread.triggerUpdate(checkedStorageOnlyFlag,entryPattern,newestEntriesOnlyFlag,entryMaxCount);
+          }
         }
       });
       widgetStorageList.addMouseTrackListener(new MouseTrackListener()
@@ -1488,7 +1450,7 @@ class TabRestore
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             MenuItem widget = (MenuItem)selectionEvent.widget;
-            setTaggedStorage(true);
+            setCheckedStorage(true);
           }
         });
 
@@ -1501,18 +1463,18 @@ class TabRestore
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             MenuItem widget = (MenuItem)selectionEvent.widget;
-            setTaggedStorage(false);
+            setCheckedStorage(false);
           }
         });
 
         Widgets.addMenuSeparator(menu);
 
         menuItem = Widgets.addMenuItem(menu,"Restore");
-        Widgets.addEventListener(new WidgetEventListener(menuItem,taggedStorageEvent)
+        Widgets.addEventListener(new WidgetEventListener(menuItem,checkedStorageEvent)
         {
           public void trigger(MenuItem menuItem)
           {
-            menuItem.setEnabled(checkStorageTagged());
+            menuItem.setEnabled(checkStorageChecked());
           }
         });
         menuItem.addSelectionListener(new SelectionListener()
@@ -1523,7 +1485,7 @@ class TabRestore
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             MenuItem widget = (MenuItem)selectionEvent.widget;
-            restoreArchives(getTaggedStorageNameHashSet(),
+            restoreArchives(getCheckedStorageNameHashSet(),
                             widgetRestoreTo.getSelection() ? widgetRestoreToDirectory.getText() : "",
                             widgetOverwriteEntries.getSelection()
                            );
@@ -1539,12 +1501,12 @@ class TabRestore
       {
         button = Widgets.newButton(composite,IMAGE_MARK_ALL);
         Widgets.layout(button,0,0,TableLayoutData.W);
-        Widgets.addEventListener(new WidgetEventListener(button,taggedStorageEvent)
+        Widgets.addEventListener(new WidgetEventListener(button,checkedStorageEvent)
         {
           public void trigger(Control control)
           {
             Button button = (Button)control;
-            if (checkStorageTagged())
+            if (checkStorageChecked())
             {
               button.setImage(IMAGE_UNMARK_ALL);
               button.setToolTipText("Unmark all entries in list.");
@@ -1564,15 +1526,15 @@ class TabRestore
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             Button button = (Button)selectionEvent.widget;
-            if (checkStorageTagged())
+            if (checkStorageChecked())
             {
-              setTaggedStorage(false);
+              setCheckedStorage(false);
               button.setImage(IMAGE_MARK_ALL);
               button.setToolTipText("Mark all entries in list.");
             }
             else
             {
-              setTaggedStorage(true);
+              setCheckedStorage(true);
               button.setImage(IMAGE_UNMARK_ALL);
               button.setToolTipText("Unmark all entries in list.");
             }
@@ -1583,7 +1545,8 @@ class TabRestore
         label = Widgets.newLabel(composite,"Filter:");
         Widgets.layout(label,0,1,TableLayoutData.W);
 
-        widgetStoragePattern = Widgets.newText(composite,SWT.SEARCH|SWT.ICON_CANCEL);
+        widgetStoragePattern = Widgets.newText(composite,SWT.SEARCH|SWT.ICON_SEARCH|SWT.ICON_CANCEL);
+        widgetStoragePattern.setMessage("Enter text to filter storage list");
         Widgets.layout(widgetStoragePattern,0,2,TableLayoutData.WE);
         widgetStoragePattern.addSelectionListener(new SelectionListener()
         {
@@ -1638,15 +1601,14 @@ class TabRestore
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             Combo widget = (Combo)selectionEvent.widget;
-            IndexStates indexState = IndexStates.UNKNOWN;
-            String indexStateText = widgetStorageStateFilter.getText();
-            if      (indexStateText.equalsIgnoreCase("ok"))               indexState = IndexStates.OK;
-            else if (indexStateText.equalsIgnoreCase("error"))            indexState = IndexStates.ERROR;
-            else if (indexStateText.equalsIgnoreCase("update"))           indexState = IndexStates.UPDATE;
-            else if (indexStateText.equalsIgnoreCase("update requested")) indexState = IndexStates.UPDATE_REQUESTED;
-            else if (indexStateText.equalsIgnoreCase("*"))                indexState = IndexStates.ALL;
-            else                                                          indexState = IndexStates.UNKNOWN;
-            updateStorageListThread.triggerUpdate(widgetStoragePattern.getText(),indexState);
+            String indexStateText = widget.getText();
+            if      (indexStateText.equalsIgnoreCase("ok"))               storageIndexState = IndexStates.OK;
+            else if (indexStateText.equalsIgnoreCase("error"))            storageIndexState = IndexStates.ERROR;
+            else if (indexStateText.equalsIgnoreCase("update"))           storageIndexState = IndexStates.UPDATE;
+            else if (indexStateText.equalsIgnoreCase("update requested")) storageIndexState = IndexStates.UPDATE_REQUESTED;
+            else if (indexStateText.equalsIgnoreCase("*"))                storageIndexState = IndexStates.ALL;
+            else                                                          storageIndexState = IndexStates.UNKNOWN;
+            updateStorageListThread.triggerUpdate(storagePattern,storageIndexState,storageMaxCount);
           }
         });
         widgetStorageStateFilter.setToolTipText("Storage states filter.");
@@ -1666,7 +1628,8 @@ class TabRestore
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             Combo widget = (Combo)selectionEvent.widget;
-            updateStorageListThread.triggerUpdate(Integer.parseInt(widget.getText()));
+            storageMaxCount = Integer.parseInt(widget.getText());
+            updateStorageListThread.triggerUpdate(storagePattern,storageIndexState,storageMaxCount);
           }
         });
         widgetStorageMaxCount.setToolTipText("Max. number of entries in list.");
@@ -1674,11 +1637,11 @@ class TabRestore
         button = Widgets.newButton(composite,"Restore");
         button.setEnabled(false);
         Widgets.layout(button,0,7,TableLayoutData.DEFAULT,0,0,0,0,60,SWT.DEFAULT);
-        Widgets.addEventListener(new WidgetEventListener(button,taggedStorageEvent)
+        Widgets.addEventListener(new WidgetEventListener(button,checkedStorageEvent)
         {
           public void trigger(Control control)
           {
-            control.setEnabled(checkStorageTagged());
+            control.setEnabled(checkStorageChecked());
           }
         });
         button.addSelectionListener(new SelectionListener()
@@ -1689,7 +1652,7 @@ class TabRestore
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             Button widget = (Button)selectionEvent.widget;
-            restoreArchives(getTaggedStorageNameHashSet(),
+            restoreArchives(getCheckedStorageNameHashSet(),
                             widgetRestoreTo.getSelection() ? widgetRestoreToDirectory.getText() : "",
                             widgetOverwriteEntries.getSelection()
                            );
@@ -1702,7 +1665,7 @@ class TabRestore
     // entries list
     group = Widgets.newGroup(widgetTab,"Entries");
     group.setLayout(new TableLayout(new double[]{1.0,0.0},1.0,4));
-    Widgets.layout(group,1,0,TableLayoutData.NSWE);
+    Widgets.layout(group,1,1,TableLayoutData.NSWE);
     {
       widgetEntryList = Widgets.newTable(group,SWT.CHECK);
       Widgets.layout(widgetEntryList,0,0,TableLayoutData.NSWE);
@@ -1738,9 +1701,6 @@ class TabRestore
       tableColumn = Widgets.addTableColumn(widgetEntryList,4,"Date",          SWT.LEFT, 140,true );
       tableColumn.addSelectionListener(entryListColumnSelectionListener);
       tableColumn.setToolTipText("Click to sort for date.");
-//      tableColumn = Widgets.addTableColumn(widgetEntryList,5,"State",         SWT.LEFT,  60,true );
-//      tableColumn.addSelectionListener(entryListColumnSelectionListener);
-//      tableColumn.setToolTipText("Click to sort for state.");
       widgetEntryList.addListener(SWT.MouseDoubleClick,new Listener()
       {
         public void handleEvent(final Event event)
@@ -1751,9 +1711,9 @@ class TabRestore
             tableItem.setChecked(!tableItem.getChecked());
 
             EntryData entryData = (EntryData)tableItem.getData();
-            entryData.setTagged(tableItem.getChecked());
+            entryData.setChecked(tableItem.getChecked());
 
-            taggedEntryEvent.trigger();
+            checkedEntryEvent.trigger();
           }
         }
       });
@@ -1768,10 +1728,10 @@ class TabRestore
           if (tableItem != null)
           {
             EntryData entryData = (EntryData)tableItem.getData();
-            entryData.setTagged(tableItem.getChecked());
+            entryData.setChecked(tableItem.getChecked());
           }
 
-          taggedEntryEvent.trigger();
+          checkedEntryEvent.trigger();
         }
       });
       widgetEntryList.addMouseTrackListener(new MouseTrackListener()
@@ -1908,7 +1868,7 @@ class TabRestore
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             MenuItem widget = (MenuItem)selectionEvent.widget;
-            setTaggedEntries(true);
+            setCheckedEntries(true);
           }
         });
 
@@ -1921,7 +1881,7 @@ class TabRestore
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             MenuItem widget = (MenuItem)selectionEvent.widget;
-            setTaggedEntries(false);
+            setCheckedEntries(false);
           }
         });
 
@@ -1929,11 +1889,11 @@ class TabRestore
 
         menuItem = Widgets.addMenuItem(menu,"Restore");
         menuItem.setEnabled(false);
-        Widgets.addEventListener(new WidgetEventListener(menuItem,taggedEntryEvent)
+        Widgets.addEventListener(new WidgetEventListener(menuItem,checkedEntryEvent)
         {
           public void trigger(MenuItem menuItem)
           {
-            menuItem.setEnabled(checkEntriesTagged());
+            menuItem.setEnabled(checkEntriesChecked());
           }
         });
         menuItem.addSelectionListener(new SelectionListener()
@@ -1944,7 +1904,7 @@ class TabRestore
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             MenuItem widget = (MenuItem)selectionEvent.widget;
-            restoreEntries(getTaggedEntries(),
+            restoreEntries(getCheckedEntries(),
                            widgetRestoreTo.getSelection() ? widgetRestoreToDirectory.getText() : "",
                            widgetOverwriteEntries.getSelection()
                           );
@@ -1960,12 +1920,12 @@ class TabRestore
       {
         button = Widgets.newButton(composite,IMAGE_MARK_ALL);
         Widgets.layout(button,0,0,TableLayoutData.E);
-        Widgets.addEventListener(new WidgetEventListener(button,taggedEntryEvent)
+        Widgets.addEventListener(new WidgetEventListener(button,checkedEntryEvent)
         {
           public void trigger(Control control)
           {
             Button button = (Button)control;
-            if (checkEntriesTagged())
+            if (checkEntriesChecked())
             {
               button.setImage(IMAGE_UNMARK_ALL);
               button.setToolTipText("Unmark all entries in list.");
@@ -1985,15 +1945,15 @@ class TabRestore
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             Button button = (Button)selectionEvent.widget;
-            if (checkEntriesTagged())
+            if (checkEntriesChecked())
             {
-              setTaggedEntries(false);
+              setCheckedEntries(false);
               button.setImage(IMAGE_MARK_ALL);
               button.setToolTipText("Mark all entries in list.");
             }
             else
             {
-              setTaggedEntries(true);
+              setCheckedEntries(true);
               button.setImage(IMAGE_UNMARK_ALL);
               button.setToolTipText("Unmark all entries in list.");
             }
@@ -2004,9 +1964,10 @@ class TabRestore
         label = Widgets.newLabel(composite,"Filter:");
         Widgets.layout(label,0,1,TableLayoutData.W);
 
-        widgetEntryPattern = Widgets.newText(composite,SWT.SEARCH|SWT.ICON_CANCEL);
-        Widgets.layout(widgetEntryPattern,0,2,TableLayoutData.WE);
-        widgetEntryPattern.addSelectionListener(new SelectionListener()
+        text = Widgets.newText(composite,SWT.SEARCH|SWT.ICON_SEARCH|SWT.ICON_CANCEL);
+        text.setMessage("Enter text to filter entry list");
+        Widgets.layout(text,0,2,TableLayoutData.WE);
+        text.addSelectionListener(new SelectionListener()
         {
           public void widgetDefaultSelected(SelectionEvent selectionEvent)
           {
@@ -2019,7 +1980,7 @@ class TabRestore
             setEntryPattern(widget.getText());
           }
         });
-        widgetEntryPattern.addKeyListener(new KeyListener()
+        text.addKeyListener(new KeyListener()
         {
           public void keyPressed(KeyEvent keyEvent)
           {
@@ -2031,7 +1992,7 @@ class TabRestore
           }
         });
 //???
-        widgetEntryPattern.addFocusListener(new FocusListener()
+        text.addFocusListener(new FocusListener()
         {
           public void focusGained(FocusEvent focusEvent)
           {
@@ -2042,10 +2003,9 @@ class TabRestore
 //            setEntryPattern(widget.getText());
           }
         });
-        widgetEntryPattern.setToolTipText("Enter filter pattern for entry list. Wildcards: * and ?.");
+        text.setToolTipText("Enter filter pattern for entry list. Wildcards: * and ?.");
 
         button = Widgets.newCheckbox(composite,"newest entries only");
-        button.setSelection(newestEntriesOnlyFlag);
         Widgets.layout(button,0,3,TableLayoutData.W);
         button.addSelectionListener(new SelectionListener()
         {
@@ -2054,9 +2014,9 @@ class TabRestore
           }
           public void widgetSelected(SelectionEvent selectionEvent)
           {
-            Button  widget = (Button)selectionEvent.widget;
+            Button widget = (Button)selectionEvent.widget;
             newestEntriesOnlyFlag = widget.getSelection();
-            updateEntryListThread.triggerUpdate(entryPattern);
+            updateEntryListThread.triggerUpdate(checkedStorageOnlyFlag,entryPattern,newestEntriesOnlyFlag,entryMaxCount);
           }
         });
         button.setToolTipText("When this checkbox is enabled, only show newest entry instances and hide all older entry instances.");
@@ -2064,11 +2024,11 @@ class TabRestore
         label = Widgets.newLabel(composite,"Max:");
         Widgets.layout(label,0,4,TableLayoutData.W);
 
-        widgetEntryMaxCount = Widgets.newOptionMenu(composite);
-        widgetEntryMaxCount.setItems(new String[]{"10","50","100","500","1000"});
-        widgetEntryMaxCount.setText("100");
-        Widgets.layout(widgetEntryMaxCount,0,5,TableLayoutData.W);
-        widgetEntryMaxCount.addSelectionListener(new SelectionListener()
+        combo = Widgets.newOptionMenu(composite);
+        combo.setItems(new String[]{"10","50","100","500","1000"});
+        combo.setText("100");
+        Widgets.layout(combo,0,5,TableLayoutData.W);
+        combo.addSelectionListener(new SelectionListener()
         {
           public void widgetDefaultSelected(SelectionEvent selectionEvent)
           {
@@ -2076,19 +2036,20 @@ class TabRestore
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             Combo widget = (Combo)selectionEvent.widget;
-            updateEntryListThread.triggerUpdate(Integer.parseInt(widget.getText()));
+            entryMaxCount = Integer.parseInt(widget.getText());
+            updateEntryListThread.triggerUpdate(checkedStorageOnlyFlag,entryPattern,newestEntriesOnlyFlag,entryMaxCount);
           }
         });
-        widgetEntryMaxCount.setToolTipText("Max. number of entries in list.");
+        combo.setToolTipText("Max. number of entries in list.");
 
         button = Widgets.newButton(composite,"Restore");
         button.setEnabled(false);
         Widgets.layout(button,0,6,TableLayoutData.DEFAULT,0,0,0,0,60,SWT.DEFAULT);
-        Widgets.addEventListener(new WidgetEventListener(button,taggedEntryEvent)
+        Widgets.addEventListener(new WidgetEventListener(button,checkedEntryEvent)
         {
           public void trigger(Control control)
           {
-            control.setEnabled(checkEntriesTagged());
+            control.setEnabled(checkEntriesChecked());
           }
         });
         button.addSelectionListener(new SelectionListener()
@@ -2099,7 +2060,7 @@ class TabRestore
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             Button widget = (Button)selectionEvent.widget;
-            restoreEntries(getTaggedEntries(),
+            restoreEntries(getCheckedEntries(),
                            widgetRestoreTo.getSelection() ? widgetRestoreToDirectory.getText() : "",
                            widgetOverwriteEntries.getSelection()
                           );
@@ -2112,7 +2073,7 @@ class TabRestore
     // destination
     group = Widgets.newGroup(widgetTab,"Destination");
     group.setLayout(new TableLayout(null,new double[]{0.0,1.0,0.0,0.0},4));
-    Widgets.layout(group,2,0,TableLayoutData.WE);
+    Widgets.layout(group,2,0,TableLayoutData.WE,0,2);
     {
       widgetRestoreTo = Widgets.newCheckbox(group,"to");
       Widgets.layout(widgetRestoreTo,0,0,TableLayoutData.W);
@@ -2129,7 +2090,7 @@ class TabRestore
           selectRestoreToEvent.trigger();
         }
       });
-      widgetRestoreTo.setToolTipText("Enable this checkbox and select a directory to restore entries to different directory.");
+      widgetRestoreTo.setToolTipText("Enable this checkbox and select a directory to restore entries to different location.");
 
       widgetRestoreToDirectory = Widgets.newText(group);
       widgetRestoreToDirectory.setEnabled(false);
@@ -2139,6 +2100,28 @@ class TabRestore
         public void trigger(Control control)
         {
           control.setEnabled(widgetRestoreTo.getSelection());
+        }
+      });
+      group.addMouseListener(new MouseListener()
+      {
+        public void mouseDoubleClick(final MouseEvent mouseEvent)
+        {
+        }
+
+        public void mouseDown(final MouseEvent mouseEvent)
+        {
+          Rectangle bounds = widgetRestoreToDirectory.getBounds();
+
+          if (bounds.contains(mouseEvent.x,mouseEvent.y))
+          {
+            widgetRestoreTo.setSelection(true);
+            selectRestoreToEvent.trigger();
+            Widgets.setFocus(widgetRestoreToDirectory);
+          }
+        }
+
+        public void mouseUp(final MouseEvent mouseEvent)
+        {
         }
       });
 
@@ -2167,7 +2150,7 @@ class TabRestore
 
       widgetOverwriteEntries = Widgets.newCheckbox(group,"overwrite existing entries");
       Widgets.layout(widgetOverwriteEntries,0,3,TableLayoutData.W);
-      widgetOverwriteEntries.setToolTipText("Enable this checkbox when existing entries should be overwritten.");
+      widgetOverwriteEntries.setToolTipText("Enable this checkbox when existing entries in destination should be overwritten.");
     }
 
     // start storage list update thread
@@ -2182,26 +2165,33 @@ class TabRestore
   //-----------------------------------------------------------------------
 
   /** set/clear tagging of all storage entries
-   * @param tagged true for set tagged, false for clear tagged
+   * @param checked true for set checked, false for clear checked
    */
-  private void setTaggedStorage(boolean tagged)
+  private void setCheckedStorage(boolean checked)
   {
+    BARServer.executeCommand("STORAGE_LIST_CLEAR");
     for (TableItem tableItem : widgetStorageList.getItems())
     {
-      tableItem.setChecked(tagged);
+      tableItem.setChecked(checked);
 
       StorageData storageData = (StorageData)tableItem.getData();
-      storageData.setChecked(tagged);
+      storageData.setChecked(checked);
+      if (checked)
+      {
+        BARServer.executeCommand("STORAGE_LIST_ADD "+
+                                 storageData.id
+                                );
+      }
     }
 
-    taggedStorageEvent.trigger();
+    checkedStorageEvent.trigger();
   }
 
-  /** get tagged storage names
+  /** get checked storage names
    * @param storageNamesHashSet storage hash set to fill
-   * @return tagged storage name hash set
+   * @return checked storage name hash set
    */
-  private HashSet<String> getTaggedStorageNameHashSet(HashSet<String> storageNamesHashSet)
+  private HashSet<String> getCheckedStorageNameHashSet(HashSet<String> storageNamesHashSet)
   {
     for (TableItem tableItem : widgetStorageList.getItems())
     {
@@ -2215,19 +2205,19 @@ class TabRestore
     return storageNamesHashSet;
   }
 
-  /** get tagged storage names
-   * @return tagged storage name hash set
+  /** get checked storage names
+   * @return checked storage name hash set
    */
-  private HashSet<String> getTaggedStorageNameHashSet()
+  private HashSet<String> getCheckedStorageNameHashSet()
   {
-    return getTaggedStorageNameHashSet(new HashSet<String>());
+    return getCheckedStorageNameHashSet(new HashSet<String>());
   }
 
-  /** get tagged storage
+  /** get checked storage
    * @param storageNamesHashSet storage hash set to fill
-   * @return tagged storage hash set
+   * @return checked storage hash set
    */
-  private HashSet<StorageData> getTaggedStorageHashSet(HashSet<StorageData> storageNamesHashSet)
+  private HashSet<StorageData> getCheckedStorageHashSet(HashSet<StorageData> storageNamesHashSet)
   {
     for (TableItem tableItem : widgetStorageList.getItems())
     {
@@ -2241,12 +2231,12 @@ class TabRestore
     return storageNamesHashSet;
   }
 
-  /** get tagged storage
-   * @return tagged storage hash set
+  /** get checked storage
+   * @return checked storage hash set
    */
-  private HashSet<StorageData> getTaggedStorageHashSet()
+  private HashSet<StorageData> getCheckedStorageHashSet()
   {
-    return getTaggedStorageHashSet(new HashSet<StorageData>());
+    return getCheckedStorageHashSet(new HashSet<StorageData>());
   }
 
   /** get selected storage
@@ -2275,10 +2265,10 @@ class TabRestore
     return getSelectedStorageHashSet(new HashSet<StorageData>());
   }
 
-  /** check if some storage entries are tagged
-   * @return true iff some entry is tagged
+  /** check if some storage entries are checked
+   * @return true iff some entry is checked
    */
-  private boolean checkStorageTagged()
+  private boolean checkStorageChecked()
   {
     for (TableItem tableItem : widgetStorageList.getItems())
     {
@@ -2348,7 +2338,7 @@ class TabRestore
         // set checkbox
         Widgets.setTableEntryChecked(widgetStorageList,
                                      (Object)storageData,
-                                     storageData.isTagged()
+                                     storageData.isChecked()
                                     );
       }
 
@@ -2375,7 +2365,7 @@ class TabRestore
       if ((storagePattern == null) || !storagePattern.equals(string))
       {
         storagePattern = string;
-        updateStorageListThread.triggerUpdate(string);
+        updateStorageListThread.triggerUpdate(storagePattern,storageIndexState,storageMaxCount);
       }
     }
     else
@@ -2383,7 +2373,7 @@ class TabRestore
       if (storagePattern != null)
       {
         storagePattern = null;
-        updateStorageListThread.triggerUpdate(string);
+        updateStorageListThread.triggerUpdate(storagePattern,storageIndexState,storageMaxCount);
       }
     }
   }
@@ -2399,7 +2389,7 @@ class TabRestore
     Button     widgetAdd;
 
     // create dialog
-    final Shell dialog = Dialogs.open(shell,"Add storage to database index",400,SWT.DEFAULT,new double[]{1.0,0.0},1.0);
+    final Shell dialog = Dialogs.openModal(shell,"Add storage to database index",400,SWT.DEFAULT,new double[]{1.0,0.0},1.0);
 
     // create widgets
     composite = Widgets.newComposite(dialog);
@@ -2485,7 +2475,7 @@ class TabRestore
       int errorCode = BARServer.executeCommand("INDEX_STORAGE_ADD "+StringUtils.escape(storageName),result);
       if (errorCode == Errors.NONE)
       {
-        updateStorageListThread.triggerUpdate(storagePattern);
+        updateStorageListThread.triggerUpdate(storagePattern,storageIndexState,storageMaxCount);
       }
       else
       {
@@ -2502,7 +2492,7 @@ class TabRestore
     {
       HashSet<StorageData> selectedStorageHashSet = new HashSet<StorageData>();
 
-      getTaggedStorageHashSet(selectedStorageHashSet);
+      getCheckedStorageHashSet(selectedStorageHashSet);
       getSelectedStorageHashSet(selectedStorageHashSet);
       if (!selectedStorageHashSet.isEmpty())
       {
@@ -2558,7 +2548,7 @@ class TabRestore
                                                 );
         if (errorCode == Errors.NONE)
         {
-          updateStorageListThread.triggerUpdate();
+          updateStorageListThread.triggerUpdate(storagePattern,storageIndexState,storageMaxCount);
         }
         else
         {
@@ -2580,7 +2570,7 @@ class TabRestore
     {
       HashSet<StorageData> selectedStorageHashSet = new HashSet<StorageData>();
 
-      getTaggedStorageHashSet(selectedStorageHashSet);
+      getCheckedStorageHashSet(selectedStorageHashSet);
       getSelectedStorageHashSet(selectedStorageHashSet);
       if (!selectedStorageHashSet.isEmpty())
       {
@@ -2630,7 +2620,7 @@ class TabRestore
                                                 );
         if (errorCode == Errors.NONE)
         {
-          updateStorageListThread.triggerUpdate();
+          updateStorageListThread.triggerUpdate(storagePattern,storageIndexState,storageMaxCount);
         }
         else
         {
@@ -2692,7 +2682,7 @@ class TabRestore
                                      StringUtils.escape(directory)+" "+
                                      (overwriteEntries?"1":"0")
                                      ;
-//Dprintf.dprintf("command=%s",commandString);
+Dprintf.dprintf("command=%s",commandString);
               command = BARServer.runCommand(commandString);
 
               // read results, update/add data
@@ -2702,10 +2692,10 @@ class TabRestore
                      && !busyDialog.isAborted()
                     )
               {
-                line = command.getNextResult(60*1000);
+                line = command.getNextResult(1000);
                 if (line != null)
                 {
-//Dprintf.dprintf("line=%s",line);
+Dprintf.dprintf("line=%s",line);
                   if      (StringParser.parse(line,"%ld %ld %ld %ld %S",data,StringParser.QUOTE_CHARS))
                   {
                     /* get data
@@ -2726,15 +2716,11 @@ class TabRestore
                     busyDialog.updateProgressBar(1,(totalBytes > 0) ? ((double)doneBytes*100.0)/(double)totalBytes : 0.0);
                   }
                 }
-                else
-                {
-                  busyDialog.update();
-                }
               }
 //Dprintf.dprintf("command=%s",command);
 
               if (   (   (command.getErrorCode() == Errors.NO_CRYPT_PASSWORD)
-                      || (command.getErrorCode() == Errors.INVALID_PASSWORD)
+                      || (command.getErrorCode() == Errors.INVALID_CRYPT_PASSWORD)
                       || (command.getErrorCode() == Errors.CORRUPT_DATA)
                      )
                   && !passwordFlag
@@ -2817,25 +2803,25 @@ class TabRestore
   //-----------------------------------------------------------------------
 
   /** set/clear tagging of all entries
-   * @param tagged true for set tagged, false for clear tagged
+   * @param checked true for set checked, false for clear checked
    */
-  private void setTaggedEntries(boolean tagged)
+  private void setCheckedEntries(boolean checked)
   {
     for (TableItem tableItem : widgetEntryList.getItems())
     {
-      tableItem.setChecked(tagged);
+      tableItem.setChecked(checked);
 
       EntryData entryData = (EntryData)tableItem.getData();
-      entryData.setTagged(tagged);
+      entryData.setChecked(checked);
     }
 
-    taggedEntryEvent.trigger();
+    checkedEntryEvent.trigger();
   }
 
-  /** get tagged entries
-   * @return tagged entries data
+  /** get checked entries
+   * @return checked entries data
    */
-  private EntryData[] getTaggedEntries()
+  private EntryData[] getCheckedEntries()
   {
     ArrayList<EntryData> entryDataArray = new ArrayList<EntryData>();
 
@@ -2843,23 +2829,23 @@ class TabRestore
     {
       for (EntryData entryData : entryDataMap.values())
       {
-        if (entryData.isTagged()) entryDataArray.add(entryData);
+        if (entryData.isChecked()) entryDataArray.add(entryData);
       }
     }
 
     return entryDataArray.toArray(new EntryData[entryDataArray.size()]);
   }
 
-  /** check if some entry is tagged
-   * @return tree iff some entry is tagged
+  /** check if some entry is checked
+   * @return tree iff some entry is checked
    */
-  private boolean checkEntriesTagged()
+  private boolean checkEntriesChecked()
   {
     synchronized(entryDataMap)
     {
       for (EntryData entryData : entryDataMap.values())
       {
-        if (entryData.isTagged()) return true;
+        if (entryData.isChecked()) return true;
       }
     }
 
@@ -2971,13 +2957,13 @@ class TabRestore
 
         Widgets.setTableEntryChecked(widgetEntryList,
                                      (Object)entryData,
-                                     entryData.isTagged()
+                                     entryData.isChecked()
                                     );
       }
     }
 
     // enable/disable restore button
-    taggedEntryEvent.trigger();
+    checkedEntryEvent.trigger();
   }
 
   /** set entry pattern
@@ -2991,7 +2977,7 @@ class TabRestore
       if ((entryPattern == null) || !entryPattern.equals(string))
       {
         entryPattern = string.trim();
-        updateEntryListThread.triggerUpdate(entryPattern);
+        updateEntryListThread.triggerUpdate(checkedStorageOnlyFlag,entryPattern,newestEntriesOnlyFlag,entryMaxCount);
       }
     }
     else
@@ -2999,7 +2985,7 @@ class TabRestore
       if (entryPattern != null)
       {
         entryPattern = null;
-        updateEntryListThread.triggerUpdate(entryPattern);
+        updateEntryListThread.triggerUpdate(checkedStorageOnlyFlag,entryPattern,newestEntriesOnlyFlag,entryMaxCount);
       }
     }
   }
@@ -3044,7 +3030,9 @@ class TabRestore
 
             Command command;
             boolean retryFlag;
-            boolean passwordFlag = false;
+            boolean ftpPasswordFlag     = false;
+            boolean sshPasswordFlag     = false;
+            boolean decryptPasswordFlag = false;
             do
             {
               retryFlag = false;
@@ -3096,13 +3084,71 @@ class TabRestore
                 }
               }
 
-              if (   (   (command.getErrorCode() == Errors.NO_CRYPT_PASSWORD)
-                      || (command.getErrorCode() == Errors.INVALID_PASSWORD)
-                      || (command.getErrorCode() == Errors.CORRUPT_DATA)
-                     )
-                  && !passwordFlag
-                  && !busyDialog.isAborted()
-                 )
+              if      (   (   (command.getErrorCode() == Errors.FTP_SESSION_FAIL)
+                           || (command.getErrorCode() == Errors.NO_FTP_PASSWORD)
+                           || (command.getErrorCode() == Errors.INVALID_FTP_PASSWORD)
+                          )
+                       && !ftpPasswordFlag
+                       && !busyDialog.isAborted()
+                      )
+              {
+                // get ftp password
+                display.syncExec(new Runnable()
+                {
+                  public void run()
+                  {
+                    String password = Dialogs.password(shell,
+                                                       "FTP login password",
+                                                       "Please enter FTP login password for: "+entryData.storageName+".",
+                                                       "Password:"
+                                                      );
+                    if (password != null)
+                    {
+                      BARServer.executeCommand("FTP_PASSWORD "+StringUtils.escape(password));
+                    }
+                  }
+                });
+                ftpPasswordFlag = true;
+
+                // retry
+                retryFlag = true;
+              }
+              else if (   (   (command.getErrorCode() == Errors.SSH_SESSION_FAIL)
+                           || (command.getErrorCode() == Errors.NO_SSH_PASSWORD)
+                           || (command.getErrorCode() == Errors.INVALID_SSH_PASSWORD)
+                          )
+                       && !ftpPasswordFlag
+                       && !busyDialog.isAborted()
+                      )
+              {
+                // get ssh password
+                display.syncExec(new Runnable()
+                {
+                  public void run()
+                  {
+                    String password = Dialogs.password(shell,
+                                                       "SSH (TLS) login password",
+                                                       "Please enter SSH (TLS) login password for: "+entryData.storageName+".",
+                                                       "Password:"
+                                                      );
+                    if (password != null)
+                    {
+                      BARServer.executeCommand("SSH_PASSWORD "+StringUtils.escape(password));
+                    }
+                  }
+                });
+                sshPasswordFlag = true;
+
+                // retry
+                retryFlag = true;
+              }
+              else if (   (   (command.getErrorCode() == Errors.NO_CRYPT_PASSWORD)
+                           || (command.getErrorCode() == Errors.INVALID_CRYPT_PASSWORD)
+                           || (command.getErrorCode() == Errors.CORRUPT_DATA)
+                          )
+                       && !decryptPasswordFlag
+                       && !busyDialog.isAborted()
+                      )
               {
                 // get crypt password
                 display.syncExec(new Runnable()
@@ -3111,6 +3157,7 @@ class TabRestore
                   {
                     String password = Dialogs.password(shell,
                                                        "Decrypt password",
+                                                       "Please enter decrypt password for: "+entryData.storageName+".",
                                                        "Password:"
                                                       );
                     if (password != null)
@@ -3119,7 +3166,7 @@ class TabRestore
                     }
                   }
                 });
-                passwordFlag = true;
+                decryptPasswordFlag = true;
 
                 // retry
                 retryFlag = true;
