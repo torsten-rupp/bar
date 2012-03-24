@@ -132,9 +132,16 @@ class TabStatus
       if (!deltaCompressIsNone || !byteCompressIsNone)
       {
         StringBuilder buffer = new StringBuilder();
-        if (!deltaCompressIsNone) buffer.append(deltaCompressAlgorithm);
-        if (buffer.length() > 0) buffer.append('+');
-        if (!byteCompressIsNone) buffer.append(byteCompressAlgorithm);
+
+        if (!deltaCompressIsNone)
+        {
+          buffer.append(deltaCompressAlgorithm);
+        }
+        if (!byteCompressIsNone)
+        {
+          if (buffer.length() > 0) buffer.append('+');
+          buffer.append(byteCompressAlgorithm);
+        }
 
         return buffer.toString();
       }
@@ -1369,7 +1376,7 @@ class TabStatus
 
     if (selectedJobData.cryptPasswordMode.equals("ask"))
     {
-      // set crypt password
+      // get crypt password
       String password = Dialogs.password(shell,
                                          "Crypt password",
                                          null,
@@ -1381,6 +1388,7 @@ class TabStatus
         return;
       }
 
+      // set crypt password
       String[] result = new String[1];
       if (BARServer.executeCommand("CRYPT_PASSWORD "+selectedJobData.id+" "+StringUtils.escape(password),result) != Errors.NONE)
       {
@@ -1389,29 +1397,27 @@ class TabStatus
       }
     }
 
-    // start
+    // start (ignore error code here; error is reported via state-update)
     switch (mode)
     {
       case 0:
-        errorCode = BARServer.executeCommand("JOB_START "+selectedJobData.id+" normal");
+        BARServer.executeCommand("JOB_START "+selectedJobData.id+" normal");
         break;
       case 1:
-        errorCode = BARServer.executeCommand("JOB_START "+selectedJobData.id+" full");
+        BARServer.executeCommand("JOB_START "+selectedJobData.id+" full");
         break;
       case 2:
-        errorCode = BARServer.executeCommand("JOB_START "+selectedJobData.id+" incremental");
+        BARServer.executeCommand("JOB_START "+selectedJobData.id+" incremental");
         break;
       case 3:
-        errorCode = BARServer.executeCommand("JOB_START "+selectedJobData.id+" differential");
+        BARServer.executeCommand("JOB_START "+selectedJobData.id+" differential");
         break;
       case 4:
-        errorCode = BARServer.executeCommand("JOB_START "+selectedJobData.id+" dry-run");
+        BARServer.executeCommand("JOB_START "+selectedJobData.id+" dry-run");
         break;
       case 5:
         break;
     }
-// ???
-Dprintf.dprintf("xxxxxxxxxx %d",errorCode);
   }
 
   /** abort selected job
