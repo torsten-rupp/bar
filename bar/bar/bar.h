@@ -635,8 +635,18 @@ Errors inputCryptPassword(void         *userData,
                          );
 
 /***********************************************************************\
+* Name   : cmdOptionParsePattern
+* Purpose: command line option call back for parsing pattern
+*          patterns
+* Input  : -
+* Output : -
+* Return : TRUE iff parsed, FALSE otherwise
+* Notes  : -
+\***********************************************************************/
+
+/***********************************************************************\
 * Name   : configValueParseOwner
-* Purpose: config value option call back for parsing owner
+* Purpose: config value call back for parsing owner
 *          patterns
 * Input  : userData - user data
 *          variable - config variable
