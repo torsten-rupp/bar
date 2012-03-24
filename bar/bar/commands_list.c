@@ -229,9 +229,6 @@ LOCAL void printHeader(const String storageName)
     TEXT_MACRO_CSTRING("%crypt",      "Crypt"    ),
     TEXT_MACRO_CSTRING("%name",       "Name"     ),
     TEXT_MACRO_CSTRING("%type",       "Type"     ),
-//    TEXT_MACRO_CSTRING("%type",       "Type"     ),
-//    TEXT_MACRO_CSTRING("%type",       "Type"     ),
-//    TEXT_MACRO_CSTRING("%type",       "Type"     ),
   };
 
   String     string;
@@ -1519,6 +1516,7 @@ bool         remoteBarFlag;
   assert(excludePatternList != NULL);
   assert(jobOptions != NULL);
 
+// NYI ???
 remoteBarFlag=FALSE;
 
   // init variables
