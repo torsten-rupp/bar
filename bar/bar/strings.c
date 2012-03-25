@@ -104,12 +104,14 @@ typedef struct
       void *stackTrace[16];
       int  stackTraceSize;
     #endif /* HAVE_BACKTRACE */
+
     const char      *deleteFileName;
     ulong           deleteLineNb;
     #ifdef HAVE_BACKTRACE
       void *deleteStackTrace[16];
       int  deleteStackTraceSize;
     #endif /* HAVE_BACKTRACE */
+
     struct __String *string;
   } DebugStringNode;
 
@@ -124,8 +126,8 @@ typedef struct
 #ifndef NDEBUG
   LOCAL pthread_once_t  debugStringInitFlag = PTHREAD_ONCE_INIT;
   LOCAL pthread_mutex_t debugStringLock;
-  LOCAL DebugStringList debugAllocStringList;
-  LOCAL DebugStringList debugFreeStringList;
+  LOCAL DebugStringList debugStringAllocList;
+  LOCAL DebugStringList debugStringFreeList;
   #ifdef MAX_STRINGS_CHECK
     LOCAL ulong debugMaxStringNextWarningCount;
   #endif /* MAX_STRINGS_CHECK */
@@ -140,6 +142,29 @@ typedef struct
 #ifdef __cplusplus
   extern "C" {
 #endif
+
+/***********************************************************************\
+* Name   : debugStringInit
+* Purpose: initialize debug functions
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+#ifndef NDEBUG
+LOCAL void debugStringInit(void)
+{
+  pthread_mutex_init(&debugStringLock,NULL);
+  List_init(&debugStringAllocList);
+  debugStringAllocList.allocatedMemory = 0L;
+  List_init(&debugStringFreeList);
+  debugStringFreeList.allocatedMemory = 0L;
+  #ifdef MAX_STRINGS_CHECK
+    debugMaxStringNextWarningCount = WARN_MAX_STRINGS;
+  #endif /* MAX_STRINGS_CHECK */
+}
+#endif /* not NDEBUG */
 
 #if !defined(NDEBUG) && defined(HAVE_BACKTRACE)
 /***********************************************************************\
@@ -293,11 +318,11 @@ LOCAL_INLINE void ensureStringLength(struct __String *string, ulong newLength)
       exit(128);
     }
     #ifndef NDEBUG
-      pthread_once(&debugStringInitFlag,String_debugInit);
+      pthread_once(&debugStringInitFlag,debugStringInit);
 
       pthread_mutex_lock(&debugStringLock);
       {
-        debugAllocStringList.allocatedMemory += (newMaxLength-string->maxLength);
+        debugStringAllocList.allocatedMemory += (newMaxLength-string->maxLength);
       }
       pthread_mutex_unlock(&debugStringLock);
       #ifdef FILL_MEMORY
@@ -1716,36 +1741,36 @@ String __String_new(const char *__fileName__, ulong __lineNb__)
   }
 
   #ifndef NDEBUG
-    pthread_once(&debugStringInitFlag,String_debugInit);
+    pthread_once(&debugStringInitFlag,debugStringInit);
 
     pthread_mutex_lock(&debugStringLock);
     {
-      /* update allocation info */
-      debugAllocStringList.allocatedMemory += sizeof(struct __String)+string->maxLength;
+      // update allocation info
+      debugStringAllocList.allocatedMemory += sizeof(struct __String)+string->maxLength;
 
-      /* find string in free-list; reuse or allocate new debug node */
-      debugStringNode = debugFreeStringList.head;
+      // find string in free-list; reuse or allocate new debug node
+      debugStringNode = debugStringFreeList.head;
       while ((debugStringNode != NULL) && (debugStringNode->string != string))
       {
         debugStringNode = debugStringNode->next;
       }
       if (debugStringNode != NULL)
       {
-        List_remove(&debugFreeStringList,debugStringNode);
-        assert(debugFreeStringList.allocatedMemory >= sizeof(DebugStringNode));
-        debugFreeStringList.allocatedMemory -= sizeof(DebugStringNode);
+        List_remove(&debugStringFreeList,debugStringNode);
+        assert(debugStringFreeList.allocatedMemory >= sizeof(DebugStringNode));
+        debugStringFreeList.allocatedMemory -= sizeof(DebugStringNode);
       }
       else
       {
-        debugStringNode = LIST_NEW_NODE(DebugStringNode);
+        debugStringNode = (DebugStringNode*)__List_newNode(__fileName__,__lineNb__,sizeof(DebugStringNode));
         if (debugStringNode == NULL)
         {
           HALT_INSUFFICIENT_MEMORY();
         }
       }
-      debugAllocStringList.allocatedMemory += sizeof(DebugStringNode);
+      debugStringAllocList.allocatedMemory += sizeof(DebugStringNode);
 
-      /* init string node */
+      // init string node
       debugStringNode->fileName       = __fileName__;
       debugStringNode->lineNb         = __lineNb__;
       #ifdef HAVE_BACKTRACE
@@ -1758,10 +1783,10 @@ String __String_new(const char *__fileName__, ulong __lineNb__)
       #endif /* HAVE_BACKTRACE */
       debugStringNode->string         = string;
 
-      /* add string to allocated-list */
-      List_append(&debugAllocStringList,debugStringNode);
+      // add string to allocated-list
+      List_append(&debugStringAllocList,debugStringNode);
       #ifdef MAX_STRINGS_CHECK
-        debugStringCount = List_count(&debugAllocStringList);
+        debugStringCount = List_count(&debugStringAllocList);
         if (debugStringCount > debugMaxStringNextWarningCount)
         {
           fprintf(stderr,"DEBUG WARNING: %lu strings allocated!\n",debugStringCount);
@@ -1934,38 +1959,6 @@ void __String_delete(const char *__fileName__, ulong __lineNb__, String string)
     DebugStringNode *debugStringNode;
   #endif /* not NDEBUG */
 
-  #ifndef NDEBUG
-    pthread_once(&debugStringInitFlag,String_debugInit);
-
-    pthread_mutex_lock(&debugStringLock);
-    {
-      /* find string in free-list to check for duplicate free */
-      debugStringNode = debugFreeStringList.head;
-      while ((debugStringNode != NULL) && (debugStringNode->string != string))
-      {
-        debugStringNode = debugStringNode->next;
-      }
-      if (debugStringNode != NULL)
-      {
-        fprintf(stderr,"DEBUG WARNING: multiple free of string %p at %s, %lu and previously at %s, %lu which was allocated at %s, %ld!\n",
-                string,
-                __fileName__,
-                __lineNb__,
-                debugStringNode->deleteFileName,
-                debugStringNode->deleteLineNb,
-                debugStringNode->fileName,
-                debugStringNode->lineNb
-               );
-        #ifdef HAVE_BACKTRACE
-          String_debugDumpStackTrace(stderr,"allocated at",2,debugStringNode->stackTrace,debugStringNode->stackTraceSize);
-          String_debugDumpStackTrace(stderr,"deleted at",2,debugStringNode->deleteStackTrace,debugStringNode->deleteStackTraceSize);
-        #endif /* HAVE_BACKTRACE */
-        HALT_INTERNAL_ERROR("");
-      }
-    }
-    pthread_mutex_unlock(&debugStringLock);
-  #endif /* not NDEBUG */
-
   CHECK_VALID(string);
 
   if (string != NULL)
@@ -1973,40 +1966,63 @@ void __String_delete(const char *__fileName__, ulong __lineNb__, String string)
     assert(string->data != NULL);
 
     #ifndef NDEBUG
-      pthread_once(&debugStringInitFlag,String_debugInit);
+      pthread_once(&debugStringInitFlag,debugStringInit);
 
       pthread_mutex_lock(&debugStringLock);
       {
-        /* add string to free-list, shorten list */
-        debugStringNode = debugAllocStringList.head;
+        // find string in free-list to check for duplicate free
+        debugStringNode = debugStringFreeList.head;
         while ((debugStringNode != NULL) && (debugStringNode->string != string))
         {
           debugStringNode = debugStringNode->next;
         }
         if (debugStringNode != NULL)
         {
-          /* remove from allocated list */
-          List_remove(&debugAllocStringList,debugStringNode);
-          assert(debugAllocStringList.allocatedMemory >= sizeof(DebugStringNode)+sizeof(struct __String)+string->maxLength);
-          debugAllocStringList.allocatedMemory -= sizeof(DebugStringNode)+sizeof(struct __String)+string->maxLength;
+          fprintf(stderr,"DEBUG WARNING: multiple free of string %p at %s, %lu and previously at %s, %lu which was allocated at %s, %ld!\n",
+                  string,
+                  __fileName__,
+                  __lineNb__,
+                  debugStringNode->deleteFileName,
+                  debugStringNode->deleteLineNb,
+                  debugStringNode->fileName,
+                  debugStringNode->lineNb
+                 );
+          #ifdef HAVE_BACKTRACE
+            String_debugDumpStackTrace(stderr,"allocated at",2,debugStringNode->stackTrace,debugStringNode->stackTraceSize);
+            String_debugDumpStackTrace(stderr,"deleted at",2,debugStringNode->deleteStackTrace,debugStringNode->deleteStackTraceSize);
+          #endif /* HAVE_BACKTRACE */
+          HALT_INTERNAL_ERROR("");
+        }
 
-          /* add to free list */
+        // remove string from allocated list, add string to free-list, shorten list
+        debugStringNode = debugStringAllocList.head;
+        while ((debugStringNode != NULL) && (debugStringNode->string != string))
+        {
+          debugStringNode = debugStringNode->next;
+        }
+        if (debugStringNode != NULL)
+        {
+          // remove from allocated list
+          List_remove(&debugStringAllocList,debugStringNode);
+          assert(debugStringAllocList.allocatedMemory >= sizeof(DebugStringNode)+sizeof(struct __String)+string->maxLength);
+          debugStringAllocList.allocatedMemory -= sizeof(DebugStringNode)+sizeof(struct __String)+string->maxLength;
+
+          // add to free list
           debugStringNode->deleteFileName = __fileName__;
           debugStringNode->deleteLineNb   = __lineNb__;
           #ifdef HAVE_BACKTRACE
             debugStringNode->deleteStackTraceSize = backtrace(debugStringNode->deleteStackTrace,SIZE_OF_ARRAY(debugStringNode->deleteStackTrace));
           #endif /* HAVE_BACKTRACE */
-          List_append(&debugFreeStringList,debugStringNode);
-          debugFreeStringList.allocatedMemory += sizeof(DebugStringNode);
+          List_append(&debugStringFreeList,debugStringNode);
+          debugStringFreeList.allocatedMemory += sizeof(DebugStringNode);
 
-          /* shorten free list */
-          while (debugFreeStringList.count > DEBUG_MAX_FREE_LIST)
+          // shorten free list
+          while (debugStringFreeList.count > DEBUG_MAX_FREE_LIST)
           {
-            debugStringNode = (DebugStringNode*)List_getFirst(&debugFreeStringList);
-            debugFreeStringList.allocatedMemory -= sizeof(DebugStringNode);
+            debugStringNode = (DebugStringNode*)List_getFirst(&debugStringFreeList);
+            debugStringFreeList.allocatedMemory -= sizeof(DebugStringNode);
             LIST_DELETE_NODE(debugStringNode);
           }
-
         }
         else
         {
@@ -4428,29 +4444,17 @@ char* String_toCString(const String string)
 }
 
 #ifndef NDEBUG
-void String_debugInit(void)
-{
-  pthread_mutex_init(&debugStringLock,NULL);
-  List_init(&debugAllocStringList);
-  debugAllocStringList.allocatedMemory = 0L;
-  List_init(&debugFreeStringList);
-  debugFreeStringList.allocatedMemory = 0L;
-  #ifdef MAX_STRINGS_CHECK
-    debugMaxStringNextWarningCount = WARN_MAX_STRINGS;
-  #endif /* MAX_STRINGS_CHECK */
-}
-
 void String_debugDone(void)
 {
-  pthread_once(&debugStringInitFlag,String_debugInit);
+  pthread_once(&debugStringInitFlag,debugStringInit);
 
   String_debugCheck();
 
   pthread_mutex_lock(&debugStringLock);
   {
     debugMaxStringNextWarningCount = 0LL;
-    List_done(&debugFreeStringList,NULL,NULL);
-    List_done(&debugAllocStringList,NULL,NULL);
+    List_done(&debugStringFreeList,NULL,NULL);
+    List_done(&debugStringAllocList,NULL,NULL);
   }
   pthread_mutex_unlock(&debugStringLock);
 }
@@ -4459,11 +4463,11 @@ void String_debugDumpInfo(FILE *handle)
 {
   DebugStringNode *debugStringNode;
 
-  pthread_once(&debugStringInitFlag,String_debugInit);
+  pthread_once(&debugStringInitFlag,debugStringInit);
 
   pthread_mutex_lock(&debugStringLock);
   {
-    for (debugStringNode = debugAllocStringList.head; debugStringNode != NULL; debugStringNode = debugStringNode->next)
+    LIST_ITERATE(&debugStringAllocList,debugStringNode)
     {
       fprintf(handle,"DEBUG: string %p '%s' allocated at %s, line %lu\n",
               debugStringNode->string,
@@ -4486,17 +4490,17 @@ void String_debugPrintInfo()
 
 void String_debugPrintStatistics(void)
 {
-  pthread_once(&debugStringInitFlag,String_debugInit);
+  pthread_once(&debugStringInitFlag,debugStringInit);
 
   pthread_mutex_lock(&debugStringLock);
   {
     fprintf(stderr,"DEBUG: %lu string(s) allocated, total %lu bytes\n",
-            List_count(&debugAllocStringList),
-            debugAllocStringList.allocatedMemory
+            List_count(&debugStringAllocList),
+            debugStringAllocList.allocatedMemory
            );
     fprintf(stderr,"DEBUG: %lu string(s) in free list, total %lu bytes\n",
-            List_count(&debugFreeStringList),
-            debugFreeStringList.allocatedMemory
+            List_count(&debugStringFreeList),
+            debugStringFreeList.allocatedMemory
            );
   }
   pthread_mutex_unlock(&debugStringLock);
@@ -4504,14 +4508,14 @@ void String_debugPrintStatistics(void)
 
 void String_debugCheck()
 {
-  pthread_once(&debugStringInitFlag,String_debugInit);
+  pthread_once(&debugStringInitFlag,debugStringInit);
 
   String_debugPrintInfo();
   String_debugPrintStatistics();
 
   pthread_mutex_lock(&debugStringLock);
   {
-    if (!List_empty(&debugAllocStringList))
+    if (!List_isEmpty(&debugStringAllocList))
     {
       HALT_INTERNAL_ERROR_LOST_RESOURCE();
     }
