@@ -44,9 +44,9 @@ struct __Array
   {
     LIST_NODE_HEADER(struct DebugArrayNode);
 
-    const char     *fileName;
-    ulong          lineNb;
-    struct __Array *array;
+    const char           *fileName;
+    ulong                lineNb;
+    const struct __Array *array;
   } DebugArrayNode;
 
   typedef struct
@@ -58,9 +58,9 @@ struct __Array
 
 /***************************** Variables *******************************/
 #ifndef NDEBUG
-  pthread_once_t  debugArrayInitFlag = PTHREAD_ONCE_INIT;
-  pthread_mutex_t debugArrayLock;
-  DebugArrayList  debugArrayList;
+  LOCAL pthread_once_t  debugArrayInitFlag = PTHREAD_ONCE_INIT;
+  LOCAL pthread_mutex_t debugArrayLock;
+  LOCAL DebugArrayList  debugArrayList;
 #endif /* not NDEBUG */
 
 /****************************** Macros *********************************/
@@ -71,6 +71,15 @@ struct __Array
 #ifdef __cplusplus
   extern "C" {
 #endif
+
+/***********************************************************************\
+* Name   : debugArrayInit
+* Purpose: initialize debug functions
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
 
 #ifndef NDEBUG
 LOCAL void debugArrayInit(void)
@@ -91,7 +100,7 @@ Array __Array_new(const char *fileName, ulong lineNb, ulong elementSize, ulong l
 {
   struct __Array *array;
   #ifndef NDEBUG
-    DebugArrayNode *debugArrayNode;;
+    DebugArrayNode *debugArrayNode;
   #endif /* not NDEBUG */
 
   assert(elementSize > 0);
@@ -147,7 +156,7 @@ void Array_delete(Array array, ArrayElementFreeFunction arrayElementFreeFunction
 {
   ulong z;
   #ifndef NDEBUG
-    DebugArrayNode *debugArrayNode;;
+    DebugArrayNode *debugArrayNode;
   #endif /* not NDEBUG */
 
   if (array != NULL)
@@ -420,7 +429,7 @@ void Array_debugDumpInfo(FILE *handle)
 
   pthread_mutex_lock(&debugArrayLock);
   {
-    for (debugArrayNode = debugArrayList.head; debugArrayNode != NULL; debugArrayNode = debugArrayNode->next)
+    LIST_ITERATE(&debugArrayList,debugArrayNode)
     {
       fprintf(handle,"DEBUG: array %p[%ld] allocated at %s, line %ld\n",
               debugArrayNode->array->data,
@@ -461,7 +470,7 @@ void Array_debugCheck(void)
 
   pthread_mutex_lock(&debugArrayLock);
   {
-    if (!List_empty(&debugArrayList))
+    if (!List_isEmpty(&debugArrayList))
     {
       HALT_INTERNAL_ERROR_LOST_RESOURCE();
     }
