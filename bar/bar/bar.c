@@ -3939,6 +3939,7 @@ int main(int argc, const char *argv[])
       File_debugDone();
       Array_debugDone();
       String_debugDone();
+      List_debugDone();
     #endif /* not NDEBUG */
     return EXITCODE_INIT_FAIL;
   }
@@ -3957,6 +3958,7 @@ int main(int argc, const char *argv[])
       File_debugDone();
       Array_debugDone();
       String_debugDone();
+      List_debugDone();
     #endif /* not NDEBUG */
     return EXITCODE_INVALID_ARGUMENT;
   }
@@ -3998,6 +4000,7 @@ int main(int argc, const char *argv[])
         File_debugDone();
         Array_debugDone();
         String_debugDone();
+        List_debugDone();
       #endif /* not NDEBUG */
       return EXITCODE_CONFIG_ERROR;
     }
@@ -4039,6 +4042,7 @@ int main(int argc, const char *argv[])
       File_debugDone();
       Array_debugDone();
       String_debugDone();
+      List_debugDone();
     #endif /* not NDEBUG */
     return EXITCODE_INVALID_ARGUMENT;
   }
@@ -4057,6 +4061,7 @@ int main(int argc, const char *argv[])
       File_debugDone();
       Array_debugDone();
       String_debugDone();
+      List_debugDone();
     #endif /* not NDEBUG */
     return EXITCODE_OK;
   }
@@ -4071,6 +4076,7 @@ int main(int argc, const char *argv[])
       File_debugDone();
       Array_debugDone();
       String_debugDone();
+      List_debugDone();
     #endif /* not NDEBUG */
     return EXITCODE_OK;
   }
@@ -4083,12 +4089,13 @@ int main(int argc, const char *argv[])
       File_debugDone();
       Array_debugDone();
       String_debugDone();
+      List_debugDone();
     #endif /* not NDEBUG */
     return EXITCODE_FAIL;
   }
 
   // add delta sources
-  error = Source_addSourceList(&deltaSourcePatternList);//,&jobOptions);
+  error = Source_addSourceList(&deltaSourcePatternList);
   if (error != ERROR_NONE)
   {
     printError("Cannot add delta sources (error: %s)!\n",Errors_getText(error));
@@ -4097,6 +4104,7 @@ int main(int argc, const char *argv[])
       File_debugDone();
       Array_debugDone();
       String_debugDone();
+      List_debugDone();
     #endif /* not NDEBUG */
     return EXITCODE_FAIL;
   }
@@ -4118,6 +4126,7 @@ int main(int argc, const char *argv[])
         File_debugDone();
         Array_debugDone();
         String_debugDone();
+        List_debugDone();
       #endif /* not NDEBUG */
       return EXITCODE_FAIL;
     }
@@ -4142,6 +4151,7 @@ int main(int argc, const char *argv[])
       File_debugDone();
       Array_debugDone();
       String_debugDone();
+      List_debugDone();
     #endif /* not NDEBUG */
     return EXITCODE_FAIL;
   }
@@ -4207,6 +4217,7 @@ int main(int argc, const char *argv[])
           File_debugDone();
           Array_debugDone();
           String_debugDone();
+          List_debugDone();
         #endif /* not NDEBUG */
 
         switch (error)
@@ -4289,7 +4300,6 @@ int main(int argc, const char *argv[])
     error = Command_create(String_cString(archiveName),
                            &includeEntryList,
                            &excludePatternList,
-                           &deltaSourcePatternList,
                            &compressExcludePatternList,
                            &jobOptions,
                            ARCHIVE_TYPE_NORMAL,
@@ -4344,7 +4354,6 @@ int main(int argc, const char *argv[])
           error = Command_create(archiveName,
                                  &includeEntryList,
                                  &excludePatternList,
-                                 &deltaSourcePatternList,
                                  &compressExcludePatternList,
                                  &jobOptions,
                                  ARCHIVE_TYPE_NORMAL,
@@ -4399,7 +4408,6 @@ int main(int argc, const char *argv[])
               error = Command_compare(&fileNameList,
                                       &includeEntryList,
                                       &excludePatternList,
-                                      &deltaSourcePatternList,
                                       &jobOptions,
                                       inputCryptPassword,
                                       NULL
@@ -4409,7 +4417,6 @@ int main(int argc, const char *argv[])
               error = Command_restore(&fileNameList,
                                       &includeEntryList,
                                       &excludePatternList,
-                                      &deltaSourcePatternList,
                                       &jobOptions,
                                       inputCryptPassword,
                                       NULL,
@@ -4564,6 +4571,7 @@ fprintf(stderr,"%s,%d: t=%s\n",__FILE__,__LINE__,t);
     File_debugDone();
     Array_debugDone();
     String_debugDone();
+    List_debugDone();
   #endif /* not NDEBUG */
 
   switch (error)
