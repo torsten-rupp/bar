@@ -93,9 +93,18 @@
   extern "C" {
 #endif
 
+#ifndef NDEBUG
+LOCAL void debugFileInit(void)
+{
+  pthread_mutex_init(&debugFileLock,NULL);
+  List_init(&debugOpenFileList);
+  List_init(&debugClosedFileList);
+}
+#endif /* NDEBUG */
+
 #if !defined(NDEBUG) && defined(HAVE_BACKTRACE)
 /***********************************************************************\
-* Name   : File_debugDumpStackTrace
+* Name   : debugFileInitDumpStackTrace
 * Purpose: print function names of stack trace
 * Input  : title          - title text
 *          stackTrace     - stack trace
@@ -105,7 +114,7 @@
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void File_debugDumpStackTrace(FILE *handle, const char *title, int indent, void *stackTrace[], int stackTraceSize)
+LOCAL void debugFileInitDumpStackTrace(FILE *handle, const char *title, int indent, void *stackTrace[], int stackTraceSize)
 {
   const char **functionNames;
   int        z,i;
@@ -611,7 +620,7 @@ Errors __File_openCString(const char *__fileName__,
   fileHandle->mode = fileMode;
 
   #ifndef NDEBUG
-    pthread_once(&debugFileInitFlag,File_debugInit);
+    pthread_once(&debugFileInitFlag,debugFileInit);
 
     pthread_mutex_lock(&debugFileLock);
     {
@@ -747,7 +756,7 @@ Errors __File_openDescriptor(const char *__fileName__,
   fileHandle->mode = fileMode;
 
   #ifndef NDEBUG
-    pthread_once(&debugFileInitFlag,File_debugInit);
+    pthread_once(&debugFileInitFlag,debugFileInit);
 
     pthread_mutex_lock(&debugFileLock);
     {
@@ -807,7 +816,7 @@ Errors __File_close(const char *__fileName__, ulong __lineNb__, FileHandle *file
   assert(fileHandle->name != NULL);
 
   #ifndef NDEBUG
-    pthread_once(&debugFileInitFlag,File_debugInit);
+    pthread_once(&debugFileInitFlag,debugFileInit);
 
     pthread_mutex_lock(&debugFileLock);
     {
@@ -1414,7 +1423,7 @@ Errors File_delete(const String fileName, bool recursiveFlag)
       StringList_append(&directoryList,fileName);
       directoryName = File_newFileName();
       name = File_newFileName();
-      while (!StringList_empty(&directoryList) && (error == ERROR_NONE))
+      while (!StringList_isEmpty(&directoryList) && (error == ERROR_NONE))
       {
         StringList_getFirst(&directoryList,directoryName);
 
@@ -2244,16 +2253,9 @@ Errors File_getFileSystemInfo(FileSystemInfo *fileSystemInfo,
 }
 
 #ifndef NDEBUG
-void File_debugInit(void)
-{
-  pthread_mutex_init(&debugFileLock,NULL);
-  List_init(&debugOpenFileList);
-  List_init(&debugClosedFileList);
-}
-
 void File_debugDone(void)
 {
-  pthread_once(&debugFileInitFlag,File_debugInit);
+  pthread_once(&debugFileInitFlag,debugFileInit);
 
   File_debugCheck();
 
@@ -2269,11 +2271,11 @@ void File_debugDumpInfo(FILE *handle)
 {
   DebugFileNode *debugFileNode;
 
-  pthread_once(&debugFileInitFlag,File_debugInit);
+  pthread_once(&debugFileInitFlag,debugFileInit);
 
   pthread_mutex_lock(&debugFileLock);
   {
-    for (debugFileNode = debugOpenFileList.head; debugFileNode != NULL; debugFileNode = debugFileNode->next)
+    LIST_ITERATE(&debugOpenFileList,debugFileNode)
     {
       fprintf(handle,"DEBUG: file '%s' opened at %s, line %lu\n",
               String_cString(debugFileNode->fileHandle->name),
@@ -2292,7 +2294,7 @@ void File_debugPrintInfo()
 
 void File_debugPrintStatistics(void)
 {
-  pthread_once(&debugFileInitFlag,File_debugInit);
+  pthread_once(&debugFileInitFlag,debugFileInit);
 
   pthread_mutex_lock(&debugFileLock);
   {
@@ -2308,14 +2310,14 @@ void File_debugPrintStatistics(void)
 
 void File_debugCheck(void)
 {
-  pthread_once(&debugFileInitFlag,File_debugInit);
+  pthread_once(&debugFileInitFlag,debugFileInit);
 
   File_debugPrintInfo();
   File_debugPrintStatistics();
 
   pthread_mutex_lock(&debugFileLock);
   {
-    if (!List_empty(&debugOpenFileList))
+    if (!List_isEmpty(&debugOpenFileList))
     {
       HALT_INTERNAL_ERROR_LOST_RESOURCE();
     }
@@ -2334,7 +2336,7 @@ void File_debugPrintCurrentStackTrace(void)
 
   #ifdef HAVE_BACKTRACE
     stackTraceSize = backtrace(stackTrace,MAX_STACK_TRACE_SIZE);
-    File_debugDumpStackTrace(stderr,"",0,stackTrace,stackTraceSize);
+    debugFileInitDumpStackTrace(stderr,"",0,stackTrace,stackTraceSize);
   #endif /* HAVE_BACKTRACE */
 }
 #endif /* not NDEBUG */

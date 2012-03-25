@@ -967,17 +967,6 @@ Errors File_getFileSystemInfo(FileSystemInfo *fileSystemInfo,
 
 #ifndef NDEBUG
 /***********************************************************************\
-* Name   : File_debugInit
-* Purpose: init file debug functions
-* Input  : -
-* Output : -
-* Return : -
-* Notes  : called automatically
-\***********************************************************************/
-
-void File_debugInit(void);
-
-/***********************************************************************\
 * Name   : File_debugDone
 * Purpose: done file debug functions
 * Input  : -
