@@ -1374,7 +1374,7 @@ LOCAL Errors updateJob(JobNode *jobNode)
     StringList_done(&jobFileList);
     return error;
   }
-  while (!StringList_empty(&jobFileList))
+  while (!StringList_isEmpty(&jobFileList))
   {
     StringList_getFirst(&jobFileList,line);
     error = File_writeLine(&fileHandle,line);
@@ -1804,7 +1804,6 @@ LOCAL void jobThreadCode(void)
         jobNode->runningInfo.error = Command_create(String_cString(storageName),
                                                     &includeEntryList,
                                                     &excludePatternList,
-                                                    &sourcePatternList,
                                                     &compressExcludePatternList,
                                                     &jobOptions,
                                                     archiveType,
@@ -1844,7 +1843,6 @@ LOCAL void jobThreadCode(void)
         jobNode->runningInfo.error = Command_restore(&archiveFileNameList,
                                                      &includeEntryList,
                                                      &excludePatternList,
-                                                     &sourcePatternList,
                                                      &jobOptions,
                                                      getCryptPassword,
                                                      jobNode,
@@ -2831,7 +2829,7 @@ LOCAL void getDirectoryInfo(DirectoryInfoNode *directoryInfoNode,
   pathName = String_new();
   fileName = String_new();
   if (timeoutFlag != NULL) (*timeoutFlag) = FALSE;
-  while (   (   !StringList_empty(&directoryInfoNode->pathNameList)
+  while (   (   !StringList_isEmpty(&directoryInfoNode->pathNameList)
              || directoryInfoNode->directoryOpenFlag
             )
          && ((timeoutFlag == NULL) || !(*timeoutFlag))
@@ -6071,7 +6069,7 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const Stri
             }
 
             // match pattern
-            if (   (List_empty(&clientInfo->includeEntryList) || EntryList_match(&clientInfo->includeEntryList,fileName,PATTERN_MATCH_MODE_EXACT))
+            if (   (List_isEmpty(&clientInfo->includeEntryList) || EntryList_match(&clientInfo->includeEntryList,fileName,PATTERN_MATCH_MODE_EXACT))
                 && !PatternList_match(&clientInfo->excludePatternList,fileName,PATTERN_MATCH_MODE_EXACT)
                )
             {
@@ -6120,7 +6118,7 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const Stri
             }
 
             // match pattern
-            if (   (List_empty(&clientInfo->includeEntryList) || EntryList_match(&clientInfo->includeEntryList,imageName,PATTERN_MATCH_MODE_EXACT))
+            if (   (List_isEmpty(&clientInfo->includeEntryList) || EntryList_match(&clientInfo->includeEntryList,imageName,PATTERN_MATCH_MODE_EXACT))
                 && !PatternList_match(&clientInfo->excludePatternList,imageName,PATTERN_MATCH_MODE_EXACT)
                )
             {
@@ -6161,7 +6159,7 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const Stri
             }
 
             // match pattern
-            if (   (List_empty(&clientInfo->includeEntryList) || EntryList_match(&clientInfo->includeEntryList,directoryName,PATTERN_MATCH_MODE_EXACT))
+            if (   (List_isEmpty(&clientInfo->includeEntryList) || EntryList_match(&clientInfo->includeEntryList,directoryName,PATTERN_MATCH_MODE_EXACT))
                 && !PatternList_match(&clientInfo->excludePatternList,directoryName,PATTERN_MATCH_MODE_EXACT)
                )
             {
@@ -6203,7 +6201,7 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const Stri
             }
 
             // match pattern
-            if (   (List_empty(&clientInfo->includeEntryList) || EntryList_match(&clientInfo->includeEntryList,linkName,PATTERN_MATCH_MODE_EXACT))
+            if (   (List_isEmpty(&clientInfo->includeEntryList) || EntryList_match(&clientInfo->includeEntryList,linkName,PATTERN_MATCH_MODE_EXACT))
                 && !PatternList_match(&clientInfo->excludePatternList,linkName,PATTERN_MATCH_MODE_EXACT)
                )
             {
@@ -6249,7 +6247,7 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const Stri
             }
 
             // match pattern
-            if (   (List_empty(&clientInfo->includeEntryList) || EntryList_matchStringList(&clientInfo->includeEntryList,&fileNameList,PATTERN_MATCH_MODE_EXACT))
+            if (   (List_isEmpty(&clientInfo->includeEntryList) || EntryList_matchStringList(&clientInfo->includeEntryList,&fileNameList,PATTERN_MATCH_MODE_EXACT))
                 && !PatternList_matchStringList(&clientInfo->excludePatternList,&fileNameList,PATTERN_MATCH_MODE_EXACT)
                )
             {
@@ -6287,7 +6285,7 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const Stri
             }
 
             // match pattern
-            if (   (List_empty(&clientInfo->includeEntryList) || EntryList_match(&clientInfo->includeEntryList,fileName,PATTERN_MATCH_MODE_EXACT))
+            if (   (List_isEmpty(&clientInfo->includeEntryList) || EntryList_match(&clientInfo->includeEntryList,fileName,PATTERN_MATCH_MODE_EXACT))
                 && !PatternList_match(&clientInfo->excludePatternList,fileName,PATTERN_MATCH_MODE_EXACT)
                )
             {
@@ -6533,7 +6531,6 @@ ENTRY_TYPE_FILE,
   error = Command_restore(&archiveNameList,
                           &includeEntryList,
                           NULL,
-                          &sourcePatternList,
                           &clientInfo->jobOptions,
                           NULL,
                           NULL,
