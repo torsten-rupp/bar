@@ -718,8 +718,8 @@ ifeq (1,1)
 	($(CD) test/data/delta2; SSH_ASKPASS= ../../../$(TEST_BAR) -c ../../$(BAR_FILE)-B.bar --delta-source='../../$(BAR_PATTERN)-A.bar' test.dat $(OPTIONS) --compress-algorithm=xdelta9+lzma9 --overwrite-archive-files $(if $(QUIET),1>/dev/null))
 endif
 	SSH_ASKPASS= $(TEST_BAR) -t test/$(BAR_PATTERN)-B.bar --delta-source='test/$(BAR_PATTERN)-A.bar' $(OPTIONS) $(if $(QUIET),1>/dev/null)
-	($(CD) test/data/delta2; SSH_ASKPASS= ../../../$(TEST_BAR) -d ../../$(BAR_FILE)-B.bar --delta-source='../../$(BAR_PATTERN)-A.bar' $(OPTIONS) $(if $(QUIET),1>/dev/null))
-	($(CD) test/data/delta2; SSH_ASKPASS= ../../../$(TEST_BAR) -x ../../$(BAR_FILE)-B.bar --delta-source='../../$(BAR_PATTERN)-A.bar' $(OPTIONS) --destination ../../restore $(if $(QUIET),1>/dev/null))
+	($(CD) test/data/delta2; SSH_ASKPASS= ../../../$(TEST_BAR) -d ../../$(BAR_PATTERN)-B.bar --delta-source='../../$(BAR_PATTERN)-A.bar' $(OPTIONS) $(if $(QUIET),1>/dev/null))
+	($(CD) test/data/delta2; SSH_ASKPASS= ../../../$(TEST_BAR) -x ../../$(BAR_PATTERN)-B.bar --delta-source='../../$(BAR_PATTERN)-A.bar' $(OPTIONS) --destination ../../restore $(if $(QUIET),1>/dev/null))
 	$(DIFF) test/data/delta2/test.dat test/restore/test.dat
 
 test_file_operation_incremental: \
