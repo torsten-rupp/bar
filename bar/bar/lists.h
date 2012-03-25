@@ -61,6 +61,8 @@ typedef int(*ListNodeCompareFunction)(const void *node1, const void *node2, void
 /****************************** Macros *********************************/
 
 #ifndef NDEBUG
+  #define List_newNode(size) __List_newNode(__FILE__,__LINE__,size)
+  #define List_deleteNode(node) __List_deleteNode(__FILE__,__LINE__,node)
   #define List_insert(list,node,nextNode) __List_insert(__FILE__,__LINE__,list,node,nextNode)
   #define List_append(list,node) __List_append(__FILE__,__LINE__,list,node)
 #endif /* not NDEBUG */
@@ -109,7 +111,7 @@ typedef int(*ListNodeCompareFunction)(const void *node1, const void *node2, void
 *          variable - iteration variable
 * Output : -
 * Return : -
-* Notes  : variable will contain all strings in list
+* Notes  : variable will contain all entries in list
 *          usage:
 *            LIST_ITERATE(list,variable)
 *            {
@@ -140,7 +142,11 @@ typedef int(*ListNodeCompareFunction)(const void *node1, const void *node2, void
 * Notes  : -
 \***********************************************************************/
 
+#ifdef NDEBUG
 Node *List_newNode(ulong size);
+#else /* NDEBUG */
+Node *__List_newNode(const char *__fileName__, ulong __lineNb__, ulong size);
+#endif /*NDEBUG */
 
 /***********************************************************************\
 * Name   : List_deleteNode
@@ -151,7 +157,11 @@ Node *List_newNode(ulong size);
 * Notes  : -
 \***********************************************************************/
 
+#ifdef NDEBUG
 Node *List_deleteNode(Node *node);
+#else /* NDEBUG */
+Node *__List_deleteNode(const char *__fileName__, ulong __lineNb__, Node *node);
+#endif /*NDEBUG */
 
 /***********************************************************************\
 * Name   : List_init
@@ -190,6 +200,21 @@ void List_done(void                 *list,
 \***********************************************************************/
 
 List *List_new(void);
+#if 0
+#ifdef NDEBUG
+void List_new(void *list,
+                 void *node,
+                 void *nextNode
+                );
+#else /* NDEBUG */
+void __List_new(const char *fileName,
+                ulong      lineNb,
+                void       *list,
+                void       *node,
+                void       *nextNode
+               );
+#endif /*NDEBUG */
+#endif /* 0 */
 
 /***********************************************************************\
 * Name   : List_duplicate
@@ -290,7 +315,7 @@ void List_move(void *fromList,
               );
 
 /***********************************************************************\
-* Name   : List_empty
+* Name   : List_isEmpty
 * Purpose: check if list is empty
 * Input  : list - list
 * Output : -
@@ -298,9 +323,9 @@ void List_move(void *fromList,
 * Notes  : -
 \***********************************************************************/
 
-INLINE bool List_empty(const void *list);
+INLINE bool List_isEmpty(const void *list);
 #if defined(NDEBUG) || defined(__LISTS_IMPLEMENATION__)
-INLINE bool List_empty(const void *list)
+INLINE bool List_isEmpty(const void *list)
 {
   assert(list != NULL);
   assert(((((List*)list)->count == 0) && (((List*)list)->head == NULL) && (((List*)list)->tail == NULL)) ||
@@ -509,6 +534,76 @@ void List_sort(void                    *list,
                ListNodeCompareFunction listNodeCompareFunction,
                void                    *listNodeCompareUserData
               );
+
+#ifndef NDEBUG
+/***********************************************************************\
+* Name   : List_debugInit
+* Purpose: init list debug functions
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : called automatically
+\***********************************************************************/
+
+void List_debugInit(void);
+
+/***********************************************************************\
+* Name   : List_debugDone
+* Purpose: done list debug functions
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void List_debugDone(void);
+
+/***********************************************************************\
+* Name   : List_debugDumpInfo, List_debugPrintInfo
+* Purpose: list debug function: output allocated list nodes
+* Input  : handle - output channel
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void List_debugDumpInfo(FILE *handle);
+void List_debugPrintInfo(void);
+
+/***********************************************************************\
+* Name   : List_debugPrintStatistics
+* Purpose: list debug function: output list statistics
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void List_debugPrintStatistics(void);
+
+/***********************************************************************\
+* Name   : List_debugCheck
+* Purpose: list debug function: output allocated list nodes and
+*          statistics, check lost resources
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void List_debugCheck(void);
+
+/***********************************************************************\
+* Name   : List_debugPrintCurrentStackTrace
+* Purpose: print C stack trace
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void List_debugPrintCurrentStackTrace(void);
+#endif /* not NDEBUG */
 
 #ifdef __cplusplus
   }
