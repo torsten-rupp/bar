@@ -121,7 +121,7 @@ void MsgQueue_done(MsgQueue *msgQueue, MsgQueueMsgFreeFunction msgQueueMsgFreeFu
   lock(msgQueue);
 
   // discard all remaining messages
-  while (!List_empty(&msgQueue->list))
+  while (!List_isEmpty(&msgQueue->list))
   {
     msgNode = (MsgNode*)List_getFirst(&msgQueue->list);
 
@@ -177,7 +177,7 @@ void MsgQueue_clear(MsgQueue *msgQueue, MsgQueueMsgFreeFunction msgQueueMsgFreeF
   lock(msgQueue);
 
   // discard all remaining messages
-  while (!List_empty(&msgQueue->list))
+  while (!List_isEmpty(&msgQueue->list))
   {
     msgNode = (MsgNode*)List_getFirst(&msgQueue->list);
 
