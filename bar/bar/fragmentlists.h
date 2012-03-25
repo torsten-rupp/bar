@@ -70,7 +70,7 @@ typedef struct
 *          variable     - iterator variable (type FragmentNode)
 * Output : -
 * Return : -
-* Notes  : usage:
+* Notes  : variable will contain all entries in list
 *            LIST_ITERATE(list,variable)
 *            {
 *              ... = variable->...
