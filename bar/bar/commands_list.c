@@ -1528,7 +1528,7 @@ remoteBarFlag=FALSE;
 
   // list archive content
   failError = ERROR_NONE;
-  while (!StringList_empty(storageNameList))
+  while (!StringList_isEmpty(storageNameList))
   {
     StringList_getFirst(storageNameList,storageName);
     Storage_getPrintableName(printableStorageName,storageName);
@@ -1626,7 +1626,7 @@ remoteBarFlag=FALSE;
                     break;
                   }
 
-                  if (   (List_empty(includeEntryList) || EntryList_match(includeEntryList,fileName,PATTERN_MATCH_MODE_EXACT))
+                  if (   (List_isEmpty(includeEntryList) || EntryList_match(includeEntryList,fileName,PATTERN_MATCH_MODE_EXACT))
                       && !PatternList_match(excludePatternList,fileName,PATTERN_MATCH_MODE_EXACT)
                      )
                   {
@@ -1718,7 +1718,7 @@ remoteBarFlag=FALSE;
                     break;
                   }
 
-                  if (   (List_empty(includeEntryList) || EntryList_match(includeEntryList,imageName,PATTERN_MATCH_MODE_EXACT))
+                  if (   (List_isEmpty(includeEntryList) || EntryList_match(includeEntryList,imageName,PATTERN_MATCH_MODE_EXACT))
                       && !PatternList_match(excludePatternList,imageName,PATTERN_MATCH_MODE_EXACT)
                      )
                   {
@@ -1801,7 +1801,7 @@ remoteBarFlag=FALSE;
                     break;
                   }
 
-                  if (   (List_empty(includeEntryList) || EntryList_match(includeEntryList,directoryName,PATTERN_MATCH_MODE_EXACT))
+                  if (   (List_isEmpty(includeEntryList) || EntryList_match(includeEntryList,directoryName,PATTERN_MATCH_MODE_EXACT))
                       && !PatternList_match(excludePatternList,directoryName,PATTERN_MATCH_MODE_EXACT)
                      )
                   {
@@ -1876,7 +1876,7 @@ remoteBarFlag=FALSE;
                     break;
                   }
 
-                  if (   (List_empty(includeEntryList) || EntryList_match(includeEntryList,linkName,PATTERN_MATCH_MODE_EXACT))
+                  if (   (List_isEmpty(includeEntryList) || EntryList_match(includeEntryList,linkName,PATTERN_MATCH_MODE_EXACT))
                       && !PatternList_match(excludePatternList,linkName,PATTERN_MATCH_MODE_EXACT)
                      )
                   {
@@ -1960,7 +1960,7 @@ remoteBarFlag=FALSE;
 
                   STRINGLIST_ITERATE(&fileNameList,stringNode,fileName)
                   {
-                    if (   (List_empty(includeEntryList) || EntryList_match(includeEntryList,fileName,PATTERN_MATCH_MODE_EXACT))
+                    if (   (List_isEmpty(includeEntryList) || EntryList_match(includeEntryList,fileName,PATTERN_MATCH_MODE_EXACT))
                         && !PatternList_match(excludePatternList,fileName,PATTERN_MATCH_MODE_EXACT)
                        )
                     {
@@ -2044,7 +2044,7 @@ remoteBarFlag=FALSE;
                     break;
                   }
 
-                  if (   (List_empty(includeEntryList) || EntryList_match(includeEntryList,fileName,PATTERN_MATCH_MODE_EXACT))
+                  if (   (List_isEmpty(includeEntryList) || EntryList_match(includeEntryList,fileName,PATTERN_MATCH_MODE_EXACT))
                       && !PatternList_match(excludePatternList,fileName,PATTERN_MATCH_MODE_EXACT)
                      )
                   {
@@ -2271,7 +2271,7 @@ fprintf(stderr,"%s,%d: line=%s\n",__FILE__,__LINE__,String_cString(line));
                                    )
                       )
               {
-                if (   (List_empty(includeEntryList) || EntryList_match(includeEntryList,fileName,PATTERN_MATCH_MODE_EXACT))
+                if (   (List_isEmpty(includeEntryList) || EntryList_match(includeEntryList,fileName,PATTERN_MATCH_MODE_EXACT))
                     && !PatternList_match(excludePatternList,fileName,PATTERN_MATCH_MODE_EXACT)
                    )
                 {
@@ -2329,7 +2329,7 @@ compressAlgorithm,//                                    deltaCompressAlgorithm,
                                    )
                       )
               {
-                if (   (List_empty(includeEntryList) || EntryList_match(includeEntryList,directoryName,PATTERN_MATCH_MODE_EXACT))
+                if (   (List_isEmpty(includeEntryList) || EntryList_match(includeEntryList,directoryName,PATTERN_MATCH_MODE_EXACT))
                     && !PatternList_match(excludePatternList,directoryName,PATTERN_MATCH_MODE_EXACT)
                    )
                 {
@@ -2376,7 +2376,7 @@ compressAlgorithm,//                                    deltaCompressAlgorithm,
                                    )
                       )
               {
-                if (   (List_empty(includeEntryList) || EntryList_match(includeEntryList,linkName,PATTERN_MATCH_MODE_EXACT))
+                if (   (List_isEmpty(includeEntryList) || EntryList_match(includeEntryList,linkName,PATTERN_MATCH_MODE_EXACT))
                     && !PatternList_match(excludePatternList,linkName,PATTERN_MATCH_MODE_EXACT)
                    )
                 {
@@ -2425,7 +2425,7 @@ compressAlgorithm,//                                    deltaCompressAlgorithm,
                                    )
                       )
               {
-                if (   (List_empty(includeEntryList) || EntryList_match(includeEntryList,linkName,PATTERN_MATCH_MODE_EXACT))
+                if (   (List_isEmpty(includeEntryList) || EntryList_match(includeEntryList,linkName,PATTERN_MATCH_MODE_EXACT))
                     && !PatternList_match(excludePatternList,linkName,PATTERN_MATCH_MODE_EXACT)
                    )
                 {

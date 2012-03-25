@@ -179,7 +179,7 @@ Errors Command_test(const StringList                *archiveNameList,
               break;
             }
 
-            if (   (List_empty(includeEntryList) || EntryList_match(includeEntryList,fileName,PATTERN_MATCH_MODE_EXACT))
+            if (   (List_isEmpty(includeEntryList) || EntryList_match(includeEntryList,fileName,PATTERN_MATCH_MODE_EXACT))
                 && !PatternList_match(excludePatternList,fileName,PATTERN_MATCH_MODE_EXACT)
                )
             {
@@ -313,7 +313,7 @@ Errors Command_test(const StringList                *archiveNameList,
               break;
             }
 
-            if (   (List_empty(includeEntryList) || EntryList_match(includeEntryList,imageName,PATTERN_MATCH_MODE_EXACT))
+            if (   (List_isEmpty(includeEntryList) || EntryList_match(includeEntryList,imageName,PATTERN_MATCH_MODE_EXACT))
                 && !PatternList_match(excludePatternList,imageName,PATTERN_MATCH_MODE_EXACT)
                )
             {
@@ -439,7 +439,7 @@ Errors Command_test(const StringList                *archiveNameList,
               break;
             }
 
-            if (   (List_empty(includeEntryList) || EntryList_match(includeEntryList,directoryName,PATTERN_MATCH_MODE_EXACT))
+            if (   (List_isEmpty(includeEntryList) || EntryList_match(includeEntryList,directoryName,PATTERN_MATCH_MODE_EXACT))
                 && !PatternList_match(excludePatternList,directoryName,PATTERN_MATCH_MODE_EXACT)
                )
             {
@@ -511,7 +511,7 @@ Errors Command_test(const StringList                *archiveNameList,
               break;
             }
 
-            if (   (List_empty(includeEntryList) || EntryList_match(includeEntryList,linkName,PATTERN_MATCH_MODE_EXACT))
+            if (   (List_isEmpty(includeEntryList) || EntryList_match(includeEntryList,linkName,PATTERN_MATCH_MODE_EXACT))
                 && !PatternList_match(excludePatternList,linkName,PATTERN_MATCH_MODE_EXACT)
                )
             {
@@ -597,7 +597,7 @@ Errors Command_test(const StringList                *archiveNameList,
             testedDataFlag = FALSE;
             STRINGLIST_ITERATE(&fileNameList,stringNode,fileName)
             {
-              if (   (List_empty(includeEntryList) || EntryList_match(includeEntryList,fileName,PATTERN_MATCH_MODE_EXACT))
+              if (   (List_isEmpty(includeEntryList) || EntryList_match(includeEntryList,fileName,PATTERN_MATCH_MODE_EXACT))
                   && !PatternList_match(excludePatternList,fileName,PATTERN_MATCH_MODE_EXACT)
                  )
               {
@@ -742,7 +742,7 @@ Errors Command_test(const StringList                *archiveNameList,
               break;
             }
 
-            if (   (List_empty(includeEntryList) || EntryList_match(includeEntryList,fileName,PATTERN_MATCH_MODE_EXACT))
+            if (   (List_isEmpty(includeEntryList) || EntryList_match(includeEntryList,fileName,PATTERN_MATCH_MODE_EXACT))
                 && !PatternList_match(excludePatternList,fileName,PATTERN_MATCH_MODE_EXACT)
                )
             {
@@ -800,7 +800,7 @@ Errors Command_test(const StringList                *archiveNameList,
   if (!jobOptions->noFragmentsCheckFlag)
   {
     // check fragment lists
-    for (fragmentNode = fragmentList.head; fragmentNode != NULL; fragmentNode = fragmentNode->next)
+    FRAGMENTLIST_ITERATE(&fragmentList,fragmentNode)
     {
       if (!FragmentList_isEntryComplete(fragmentNode))
       {

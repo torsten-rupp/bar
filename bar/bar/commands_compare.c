@@ -65,25 +65,25 @@
 * Input  : p0,p1  - memory to compare
 *          length - size of memory blocks (in bytes)
 * Output : -
-* Return : number of equal bytes or length of memory blocks are equal
+* Return : number of equal bytes or length if memory blocks are equal
 * Notes  : -
 \***********************************************************************/
 
 LOCAL_INLINE ulong compare(const void *p0, const void *p1, ulong length)
 {
-  const char *b0,*b1;
+  const byte *b0,*b1;
   ulong      i;
 
-  b0 = (char*)p0;
-  b1 = (char*)p1;
+  b0 = (const byte*)p0;
+  b1 = (const byte*)p1;
   i = 0;
   while (   (i < length)
          && ((*b0) == (*b1))
         )
   {
-    i++;
     b0++;
     b1++;
+    i++;
   }
 
   return i;
@@ -94,7 +94,6 @@ LOCAL_INLINE ulong compare(const void *p0, const void *p1, ulong length)
 Errors Command_compare(const StringList                *archiveNameList,
                        const EntryList                 *includeEntryList,
                        const PatternList               *excludePatternList,
-                       const PatternList               *sourcePatternList,
                        JobOptions                      *jobOptions,
                        ArchiveGetCryptPasswordFunction archiveGetCryptPasswordFunction,
                        void                            *archiveGetCryptPasswordUserData
@@ -123,7 +122,7 @@ Errors Command_compare(const StringList                *archiveNameList,
   {
     HALT_INSUFFICIENT_MEMORY();
   }
-  buffer = malloc(BUFFER_SIZE);
+  buffer = (byte*)malloc(BUFFER_SIZE);
   if (buffer == NULL)
   {
     free(archiveBuffer);
@@ -219,7 +218,7 @@ Errors Command_compare(const StringList                *archiveNameList,
               break;
             }
 
-            if (   (List_empty(includeEntryList) || EntryList_match(includeEntryList,fileName,PATTERN_MATCH_MODE_EXACT))
+            if (   (List_isEmpty(includeEntryList) || EntryList_match(includeEntryList,fileName,PATTERN_MATCH_MODE_EXACT))
                 && !PatternList_match(excludePatternList,fileName,PATTERN_MATCH_MODE_EXACT)
                )
             {
@@ -386,12 +385,6 @@ Errors Command_compare(const StringList                *archiveNameList,
               {
                 // add fragment to file fragment list
                 FragmentList_addEntry(fragmentNode,fragmentOffset,fragmentSize);
-
-                // discard fragment list if file is complete
-                if (FragmentList_isEntryComplete(fragmentNode))
-                {
-                  FragmentList_discard(&fragmentList,fragmentNode);
-                }
               }
 
 #if 0
@@ -471,7 +464,7 @@ Errors Command_compare(const StringList                *archiveNameList,
               break;
             }
 
-            if (   (List_empty(includeEntryList) || EntryList_match(includeEntryList,imageName,PATTERN_MATCH_MODE_EXACT))
+            if (   (List_isEmpty(includeEntryList) || EntryList_match(includeEntryList,imageName,PATTERN_MATCH_MODE_EXACT))
                 && !PatternList_match(excludePatternList,imageName,PATTERN_MATCH_MODE_EXACT)
                )
             {
@@ -622,12 +615,6 @@ Errors Command_compare(const StringList                *archiveNameList,
               {
                 // add fragment to file fragment list
                 FragmentList_addEntry(fragmentNode,blockOffset*(uint64)deviceInfo.blockSize,blockCount*(uint64)deviceInfo.blockSize);
-
-                // discard fragment list if file is complete
-                if (FragmentList_isEntryComplete(fragmentNode))
-                {
-                  FragmentList_discard(&fragmentList,fragmentNode);
-                }
               }
 
               printInfo(2,"ok\n");
@@ -691,7 +678,7 @@ Errors Command_compare(const StringList                *archiveNameList,
               break;
             }
 
-            if (   (List_empty(includeEntryList) || EntryList_match(includeEntryList,directoryName,PATTERN_MATCH_MODE_EXACT))
+            if (   (List_isEmpty(includeEntryList) || EntryList_match(includeEntryList,directoryName,PATTERN_MATCH_MODE_EXACT))
                 && !PatternList_match(excludePatternList,directoryName,PATTERN_MATCH_MODE_EXACT)
                )
             {
@@ -800,7 +787,7 @@ Errors Command_compare(const StringList                *archiveNameList,
               break;
             }
 
-            if (   (List_empty(includeEntryList) || EntryList_match(includeEntryList,linkName,PATTERN_MATCH_MODE_EXACT))
+            if (   (List_isEmpty(includeEntryList) || EntryList_match(includeEntryList,linkName,PATTERN_MATCH_MODE_EXACT))
                 && !PatternList_match(excludePatternList,linkName,PATTERN_MATCH_MODE_EXACT)
                )
             {
@@ -968,7 +955,7 @@ Errors Command_compare(const StringList                *archiveNameList,
             comparedDataFlag = FALSE;
             STRINGLIST_ITERATE(&fileNameList,stringNode,fileName)
             {
-              if (   (List_empty(includeEntryList) || EntryList_match(includeEntryList,fileName,PATTERN_MATCH_MODE_EXACT))
+              if (   (List_isEmpty(includeEntryList) || EntryList_match(includeEntryList,fileName,PATTERN_MATCH_MODE_EXACT))
                   && !PatternList_match(excludePatternList,fileName,PATTERN_MATCH_MODE_EXACT)
                  )
               {
@@ -1145,12 +1132,6 @@ Errors Command_compare(const StringList                *archiveNameList,
                   {
                     // add fragment to file fragment list
                     FragmentList_addEntry(fragmentNode,fragmentOffset,fragmentSize);
-
-                    // discard fragment list if file is complete
-                    if (FragmentList_isEntryComplete(fragmentNode))
-                    {
-                      FragmentList_discard(&fragmentList,fragmentNode);
-                    }
                   }
 #if 0
                   // get local file info
@@ -1230,7 +1211,7 @@ Errors Command_compare(const StringList                *archiveNameList,
               break;
             }
 
-            if (   (List_empty(includeEntryList) || EntryList_match(includeEntryList,fileName,PATTERN_MATCH_MODE_EXACT))
+            if (   (List_isEmpty(includeEntryList) || EntryList_match(includeEntryList,fileName,PATTERN_MATCH_MODE_EXACT))
                 && !PatternList_match(excludePatternList,fileName,PATTERN_MATCH_MODE_EXACT)
                )
             {
@@ -1376,7 +1357,7 @@ Errors Command_compare(const StringList                *archiveNameList,
   if (!jobOptions->noFragmentsCheckFlag)
   {
     // check fragment lists
-    for (fragmentNode = fragmentList.head; fragmentNode != NULL; fragmentNode = fragmentNode->next)
+    FRAGMENTLIST_ITERATE(&fragmentList,fragmentNode)
     {
       if (!FragmentList_isEntryComplete(fragmentNode))
       {

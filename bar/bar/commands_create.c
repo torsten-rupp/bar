@@ -1263,7 +1263,7 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
     while (   !createInfo->collectorSumThreadExitFlag
            && (createInfo->failError == ERROR_NONE)
            && ((createInfo->requestedAbortFlag == NULL) || !(*createInfo->requestedAbortFlag))
-           && !StringList_empty(&nameList)
+           && !StringList_isEmpty(&nameList)
           )
     {
       // pause
@@ -1631,7 +1631,7 @@ LOCAL void collectorThreadCode(CreateInfo *createInfo)
     while (   !abortFlag
            && ((createInfo->requestedAbortFlag == NULL) || !(*createInfo->requestedAbortFlag))
            && (createInfo->failError == ERROR_NONE)
-           && !StringList_empty(&nameList)
+           && !StringList_isEmpty(&nameList)
           )
     {
       // pause
@@ -3677,7 +3677,7 @@ LOCAL Errors storeHardLinkEntry(ArchiveInfo       *archiveInfo,
   assert(jobOptions != NULL);
   assert(createInfo != NULL);
   assert(nameList != NULL);
-  assert(!StringList_empty(nameList));
+  assert(!StringList_isEmpty(nameList));
   assert(buffer != NULL);
 
   printInfo(1,"Add '%s'...",String_cString(nameList->head->string));
@@ -4021,7 +4021,6 @@ LOCAL Errors storeSpecialEntry(ArchiveInfo  *archiveInfo,
 Errors Command_create(const char                      *storageName,
                       const EntryList                 *includeEntryList,
                       const PatternList               *excludePatternList,
-                      const PatternList               *sourcePatternList,
                       const PatternList               *compressExcludePatternList,
                       JobOptions                      *jobOptions,
                       ArchiveTypes                    archiveType,
