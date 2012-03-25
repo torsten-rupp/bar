@@ -176,7 +176,7 @@ void StringList_clear(StringList *stringList);
 void StringList_move(StringList *fromStringList, StringList *toStringList);
 
 /***********************************************************************\
-* Name   : StringList_empty
+* Name   : StringList_isEmpty
 * Purpose: check if list is empty
 * Input  : stringList - string list
 * Output : -
@@ -184,13 +184,13 @@ void StringList_move(StringList *fromStringList, StringList *toStringList);
 * Notes  : -
 \***********************************************************************/
 
-INLINE bool StringList_empty(const StringList *stringList);
+INLINE bool StringList_isEmpty(const StringList *stringList);
 #if defined(NDEBUG) || defined(__STRINGLISTS_IMPLEMENATION__)
-INLINE bool StringList_empty(const StringList *stringList)
+INLINE bool StringList_isEmpty(const StringList *stringList)
 {
   assert(stringList != NULL);
 
-  return List_empty(stringList);
+  return List_isEmpty(stringList);
 }
 #endif /* NDEBUG || __STRINGLISTS_IMPLEMENATION__ */
 

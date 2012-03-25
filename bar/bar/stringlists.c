@@ -161,104 +161,104 @@ void StringList_move(StringList *fromStringList, StringList *toStringList)
 #ifdef NDEBUG
 void StringList_insert(StringList *stringList, const String string, StringNode *nextStringNode)
 #else /* not NDEBUG */
-void __StringList_insert(const char *fileName, ulong lineNb, StringList *stringList, const String string, StringNode *nextStringNode)
+void __StringList_insert(const char *__fileName__, ulong __lineNb__, StringList *stringList, const String string, StringNode *nextStringNode)
 #endif /* NDEBUG */
 {
   #ifdef NDEBUG
     insertString(stringList,String_duplicate(string),nextStringNode);
   #else /* not NDEBUG */
-    insertString(stringList,__String_duplicate(fileName,lineNb,string),nextStringNode);
+    insertString(stringList,__String_duplicate(__fileName__,__lineNb__,string),nextStringNode);
   #endif /* NDEBUG */
 }
 
 #ifdef NDEBUG
 void StringList_insertCString(StringList *stringList, const char *s, StringNode *nextStringNode)
 #else /* not NDEBUG */
-void __StringList_insertCString(const char *fileName, ulong lineNb, StringList *stringList, const char *s, StringNode *nextStringNode)
+void __StringList_insertCString(const char *__fileName__, ulong __lineNb__, StringList *stringList, const char *s, StringNode *nextStringNode)
 #endif /* NDEBUG */
 {
   #ifdef NDEBUG
     insertString(stringList,String_newCString(s),nextStringNode);
   #else /* not NDEBUG */
-    insertString(stringList,__String_newCString(fileName,lineNb,s),nextStringNode);
+    insertString(stringList,__String_newCString(__fileName__,__lineNb__,s),nextStringNode);
   #endif /* NDEBUG */
 }
 
 #ifdef NDEBUG
 void StringList_insertChar(StringList *stringList, char ch, StringNode *nextStringNode)
 #else /* not NDEBUG */
-void __StringList_insertChar(const char *fileName, ulong lineNb, StringList *stringList, char ch, StringNode *nextStringNode)
+void __StringList_insertChar(const char *__fileName__, ulong __lineNb__, StringList *stringList, char ch, StringNode *nextStringNode)
 #endif /* NDEBUG */
 {
   #ifdef NDEBUG
     insertString(stringList,String_newChar(ch),nextStringNode);
   #else /* not NDEBUG */
-    insertString(stringList,__String_newChar(fileName,lineNb,ch),nextStringNode);
+    insertString(stringList,__String_newChar(__fileName__,__lineNb__,ch),nextStringNode);
   #endif /* NDEBUG */
 }
 
 #ifdef NDEBUG
 void StringList_insertBuffer(StringList *stringList, char *buffer, ulong bufferLength, StringNode *nextStringNode)
 #else /* not NDEBUG */
-void __StringList_insertBuffer(const char *fileName, ulong lineNb, StringList *stringList, char *buffer, ulong bufferLength, StringNode *nextStringNode)
+void __StringList_insertBuffer(const char *__fileName__, ulong __lineNb__, StringList *stringList, char *buffer, ulong bufferLength, StringNode *nextStringNode)
 #endif /* NDEBUG */
 {
   #ifdef NDEBUG
     insertString(stringList,String_newBuffer(buffer,bufferLength),nextStringNode);
   #else /* not NDEBUG */
-    insertString(stringList,__String_newBuffer(fileName,lineNb,buffer,bufferLength),nextStringNode);
+    insertString(stringList,__String_newBuffer(__fileName__,__lineNb__,buffer,bufferLength),nextStringNode);
   #endif /* NDEBUG */
 }
 
 #ifdef NDEBUG
 void StringList_append(StringList *stringList, const String string)
 #else /* not NDEBUG */
-void __StringList_append(const char *fileName, ulong lineNb, StringList *stringList, const String string)
+void __StringList_append(const char *__fileName__, ulong __lineNb__, StringList *stringList, const String string)
 #endif /* NDEBUG */
 {
   #ifdef NDEBUG
     insertString(stringList,String_duplicate(string),NULL);
   #else /* not NDEBUG */
-    insertString(stringList,__String_duplicate(fileName,lineNb,string),NULL);
+    insertString(stringList,__String_duplicate(__fileName__,__lineNb__,string),NULL);
   #endif /* NDEBUG */
 }
 
 #ifdef NDEBUG
 void StringList_appendCString(StringList *stringList, const char *s)
 #else /* not NDEBUG */
-void __StringList_appendCString(const char *fileName, ulong lineNb, StringList *stringList, const char *s)
+void __StringList_appendCString(const char *__fileName__, ulong __lineNb__, StringList *stringList, const char *s)
 #endif /* NDEBUG */
 {
   #ifdef NDEBUG
     insertString(stringList,String_newCString(s),NULL);
   #else /* not NDEBUG */
-    insertString(stringList,__String_newCString(fileName,lineNb,s),NULL);
+    insertString(stringList,__String_newCString(__fileName__,__lineNb__,s),NULL);
   #endif /* NDEBUG */
 }
 
 #ifdef NDEBUG
 void StringList_appendChar(StringList *stringList, char ch)
 #else /* not NDEBUG */
-void __StringList_appendChar(const char *fileName, ulong lineNb, StringList *stringList, char ch)
+void __StringList_appendChar(const char *__fileName__, ulong __lineNb__, StringList *stringList, char ch)
 #endif /* NDEBUG */
 {
   #ifdef NDEBUG
     insertString(stringList,String_newChar(ch),NULL);
   #else /* not NDEBUG */
-    insertString(stringList,__String_newChar(fileName,lineNb,ch),NULL);
+    insertString(stringList,__String_newChar(__fileName__,__lineNb__,ch),NULL);
   #endif /* NDEBUG */
 }
 
 #ifdef NDEBUG
 void StringList_appendBuffer(StringList *stringList, char *buffer, ulong bufferLength)
 #else /* not NDEBUG */
-void __StringList_appendBuffer(const char *fileName, ulong lineNb, StringList *stringList, char *buffer, ulong bufferLength)
+void __StringList_appendBuffer(const char *__fileName__, ulong __lineNb__, StringList *stringList, char *buffer, ulong bufferLength)
 #endif /* NDEBUG */
 {
   #ifdef NDEBUG
     insertString(stringList,String_newBuffer(buffer,bufferLength),NULL);
   #else /* not NDEBUG */
-    insertString(stringList,__String_newBuffer(fileName,lineNb,buffer,bufferLength),NULL);
+    insertString(stringList,__String_newBuffer(__fileName__,__lineNb__,buffer,bufferLength),NULL);
   #endif /* NDEBUG */
 }
 
@@ -288,7 +288,7 @@ String StringList_getFirst(StringList *stringList, String string)
     {
       string = stringNode->string;
     }
-    free(stringNode);
+    LIST_DELETE_NODE(stringNode);
 
     return string;
   }
@@ -321,7 +321,7 @@ String StringList_getLast(StringList *stringList, String string)
     {
       string = stringNode->string;
     }
-    free(stringNode);
+    LIST_DELETE_NODE(stringNode);
 
     return string;
   }
