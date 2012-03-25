@@ -7525,7 +7525,7 @@ Errors Archive_readData(ArchiveEntryInfo *archiveEntryInfo,
          )
       {
         // get source for delta-compression
-        if (List_empty(&archiveEntryInfo->hardLink.chunkHardLinkNameList))
+        if (List_isEmpty(&archiveEntryInfo->hardLink.chunkHardLinkNameList))
         {
           return ERROR_DELTA_SOURCE_NOT_FOUND;
         }
@@ -8611,7 +8611,7 @@ Errors Archive_copy(const String                    storageName,
             break;
           }
 
-          if (   (List_empty(includeEntryList) || EntryList_match(includeEntryList,imageName,PATTERN_MATCH_MODE_EXACT))
+          if (   (List_isEmpty(includeEntryList) || EntryList_match(includeEntryList,imageName,PATTERN_MATCH_MODE_EXACT))
               && ((excludePatternList == NULL) || !PatternList_match(excludePatternList,imageName,PATTERN_MATCH_MODE_EXACT))
              )
           {
@@ -8830,7 +8830,7 @@ Errors Archive_copy(const String                    storageName,
             break;
           }
 
-          if (   (List_empty(includeEntryList) || EntryList_match(includeEntryList,directoryName,PATTERN_MATCH_MODE_EXACT))
+          if (   (List_isEmpty(includeEntryList) || EntryList_match(includeEntryList,directoryName,PATTERN_MATCH_MODE_EXACT))
               && ((excludePatternList == NULL) || !PatternList_match(excludePatternList,directoryName,PATTERN_MATCH_MODE_EXACT))
              )
           {
@@ -8989,7 +8989,7 @@ Errors Archive_copy(const String                    storageName,
             break;
           }
 
-          if (   (List_empty(includeEntryList) || EntryList_match(includeEntryList,linkName,PATTERN_MATCH_MODE_EXACT))
+          if (   (List_isEmpty(includeEntryList) || EntryList_match(includeEntryList,linkName,PATTERN_MATCH_MODE_EXACT))
               && ((excludePatternList == NULL) || !PatternList_match(excludePatternList,linkName,PATTERN_MATCH_MODE_EXACT))
              )
           {
@@ -9226,7 +9226,7 @@ Errors Archive_copy(const String                    storageName,
           restoredDataFlag    = FALSE;
           STRINGLIST_ITERATE(&fileNameList,stringNode,fileName)
           {
-            if (   (List_empty(includeEntryList) || EntryList_match(includeEntryList,fileName,PATTERN_MATCH_MODE_EXACT))
+            if (   (List_isEmpty(includeEntryList) || EntryList_match(includeEntryList,fileName,PATTERN_MATCH_MODE_EXACT))
                 && ((excludePatternList == NULL) || !PatternList_match(excludePatternList,fileName,PATTERN_MATCH_MODE_EXACT))
                )
             {
@@ -9610,7 +9610,7 @@ Errors Archive_copy(const String                    storageName,
             break;
           }
 
-          if (   (List_empty(includeEntryList) || EntryList_match(includeEntryList,fileName,PATTERN_MATCH_MODE_EXACT))
+          if (   (List_isEmpty(includeEntryList) || EntryList_match(includeEntryList,fileName,PATTERN_MATCH_MODE_EXACT))
               && ((excludePatternList == NULL) || !PatternList_match(excludePatternList,fileName,PATTERN_MATCH_MODE_EXACT))
              )
           {
