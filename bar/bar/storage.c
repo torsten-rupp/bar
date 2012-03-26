@@ -2177,7 +2177,7 @@ Errors Storage_done(StorageFileHandle *storageFileHandle)
 
         // delete files
         fileName = String_new();
-        while (!StringList_empty(&storageFileHandle->opticalDisk.write.fileNameList))
+        while (!StringList_isEmpty(&storageFileHandle->opticalDisk.write.fileNameList))
         {
           StringList_getFirst(&storageFileHandle->opticalDisk.write.fileNameList,fileName);
           tmpError = File_delete(fileName,FALSE);
@@ -2205,7 +2205,7 @@ Errors Storage_done(StorageFileHandle *storageFileHandle)
 
         // delete files
         fileName = String_new();
-        while (!StringList_empty(&storageFileHandle->device.fileNameList))
+        while (!StringList_isEmpty(&storageFileHandle->device.fileNameList))
         {
           StringList_getFirst(&storageFileHandle->device.fileNameList,fileName);
           tmpError = File_delete(fileName,FALSE);
@@ -2895,7 +2895,7 @@ Errors Storage_postProcess(StorageFileHandle *storageFileHandle,
 
             // delete stored files
             fileName = String_new();
-            while (!StringList_empty(&storageFileHandle->opticalDisk.write.fileNameList))
+            while (!StringList_isEmpty(&storageFileHandle->opticalDisk.write.fileNameList))
             {
               StringList_getFirst(&storageFileHandle->opticalDisk.write.fileNameList,fileName);
               error = File_delete(fileName,FALSE);
@@ -3053,7 +3053,7 @@ Errors Storage_postProcess(StorageFileHandle *storageFileHandle,
 
             // delete stored files
             fileName = String_new();
-            while (!StringList_empty(&storageFileHandle->device.fileNameList))
+            while (!StringList_isEmpty(&storageFileHandle->device.fileNameList))
             {
               StringList_getFirst(&storageFileHandle->device.fileNameList,fileName);
               error = File_delete(fileName,FALSE);
