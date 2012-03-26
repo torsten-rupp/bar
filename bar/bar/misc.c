@@ -57,7 +57,7 @@
 * Purpose: read process i/o, EOL at LF/CR/BS, skip empty lines
 * Input  : fd   - file handle
 *          line - line
-* Output : line - line
+* Output : line - read line
 * Return : TRUE if line read, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
@@ -69,10 +69,10 @@ LOCAL bool readProcessIO(int fd, String line)
 
   do
   {
-    /* check if data available */
+    // check if data available
     ioctl(fd,FIONREAD,&n);
 
-    /* read data until EOL found */
+    // read data until EOL found
     while (n > 0)
     {
       if (read(fd,&ch,1) == 1)
@@ -109,7 +109,6 @@ uint64 Misc_getTimestamp(void)
 
   if (gettimeofday(&tv,NULL) == 0)
   {
-//fprintf(stderr,"%s,%d: %ld %ld\n",__FILE__,__LINE__,tv.tv_sec,tv.tv_usec);
     return (uint64)tv.tv_usec+(uint64)tv.tv_sec*1000000LL;
   }
   else
@@ -169,7 +168,7 @@ String Misc_formatDateTime(String string, uint64 dateTime, const char *format)
 
   if (format == NULL) format = "%c";
 
-  /* allocate buffer and format date/time */
+  // allocate buffer and format date/time
   bufferSize = START_BUFFER_SIZE;
   do
   {
@@ -188,10 +187,10 @@ String Misc_formatDateTime(String string, uint64 dateTime, const char *format)
   while (length == 0);
   buffer[length] = '\0';
 
-  /* set string */
+  // set string
   String_setBuffer(string,buffer,length);
 
-  /* free resources */
+  // free resources
   free(buffer);
 
   return string;
@@ -233,7 +232,6 @@ void Misc_udelay(uint64 time)
 {
   struct timespec ts;
 
-//fprintf(stderr,"%s,%d: us=%llu\n",__FILE__,__LINE__,time);
   ts.tv_sec  = (ulong)(time/1000000LL);
   ts.tv_nsec = (ulong)((time%1000000LL)*1000);
   while (nanosleep(&ts,&ts) == -1)
@@ -266,7 +264,7 @@ String Misc_expandMacros(String          string,
   i0 = 0;
   do
   {
-    /* find next macro */
+    // find next macro
     i1    = -1;
     index = -1;
     for (z = 0; z < macroCount; z++)
@@ -283,20 +281,20 @@ String Misc_expandMacros(String          string,
       }
     }
 
-    /* expand macro */
+    // expand macro
     if (index >= 0)
     {
-      /* add prefix string */
+      // add prefix string
       String_appendBuffer(string,&template[i0],i1-i0);
       i0 = i1+strlen(macros[index].name);
 
-      /* find format string (if any) */
+      // find format string (if any)
       if ((i0 < templateLength) && (template[i0] == ':'))
       {
-        /* skip ':' */
+        // skip ':'
         i0++;
 
-        /* get format string */
+        // get format string
         i = 0;
         format[i] = '%'; i++;
         while (   (i0 < templateLength)
@@ -324,7 +322,7 @@ String Misc_expandMacros(String          string,
       }
       else
       {
-        /* predefined format string */
+        // predefined format string
         switch (macros[index].type)
         {
           case TEXT_MACRO_TYPE_INTEGER:
@@ -371,7 +369,7 @@ String Misc_expandMacros(String          string,
   }
   while (index >= 0);
 
-  /* add postfix string */
+  // add postfix string
   String_appendBuffer(string,&template[i0],templateLength-i0);
 
   return string;
@@ -413,11 +411,11 @@ Errors Misc_executeCommand(const char        *commandTemplate,
     command     = File_newFileName();
     StringList_init(&argumentList);
 
-    /* expand command line */
+    // expand command line
     Misc_expandMacros(commandLine,commandTemplate,macros,macroCount);
     printInfo(3,"Execute command '%s'...",String_cString(commandLine));
 
-    /* parse command */
+    // parse command
     String_initTokenizer(&stringTokenizer,commandLine,STRING_BEGIN,STRING_WHITE_SPACES,STRING_QUOTES,FALSE);
     if (!String_getNextToken(&stringTokenizer,&token,NULL))
     {
@@ -429,14 +427,14 @@ Errors Misc_executeCommand(const char        *commandTemplate,
     }
     File_setFileName(command,token);
 
-    /* parse arguments */
+    // parse arguments
     while (String_getNextToken(&stringTokenizer,&token,NULL))
     {
       StringList_append(&argumentList,token);
     }
     String_doneTokenizer(&stringTokenizer);
 
-    /* find command */
+    // find command in PATH
     path = getenv("PATH");
     if (path != NULL)
     {
@@ -468,7 +466,7 @@ stringNode = stringNode->next;
 #endif /* 0 */
 
 #if 1
-    /* create i/o pipes */
+    // create i/o pipes
     if (pipe(pipeStdin) != 0)
     {
       error = ERRORX(IO_REDIRECT_FAIL,errno,String_cString(commandLine));
@@ -500,17 +498,17 @@ stringNode = stringNode->next;
       return error;
     }
 
-    /* do fork to start separated process */
+    // do fork to start separated process
     pid = fork();
     if      (pid == 0)
     {
 #if 1
-      /* close stdin, stdout, and stderr and reassign them to the pipes */
+      // close stdin, stdout, and stderr and reassign them to the pipes
       close(STDERR_FILENO);
       close(STDOUT_FILENO);
       close(STDIN_FILENO);
 
-      /* redirect stdin/stdout/stderr to pipe */
+      // redirect stdin/stdout/stderr to pipe
       dup2(pipeStdin[0],STDIN_FILENO);
       dup2(pipeStdout[1],STDOUT_FILENO);
       dup2(pipeStderr[1],STDERR_FILENO);
@@ -523,7 +521,7 @@ stringNode = stringNode->next;
       close(pipeStdin[1]);
 #endif /* 0 */
 
-      /* execute of external program */
+      // execute of external program
       n = 1+StringList_count(&argumentList)+1;
       arguments = (char const**)malloc(n*sizeof(char*));
       if (arguments == NULL)
@@ -543,7 +541,7 @@ stringNode = stringNode->next;
       arguments[z] = NULL; z++;
       execvp(String_cString(command),(char**)arguments);
 
-      /* in case exec() fail, return a default exitcode */
+      // in case exec() fail, return a default exitcode
       HALT_INTERNAL_ERROR("execvp() returned");
     }
     else if (pid < 0)
@@ -563,7 +561,7 @@ stringNode = stringNode->next;
       return error;
     }
 
-    /* close unused pipe handles (the pipe is duplicated by fork(), thus there are two open ends of the pipe) */
+    // close unused pipe handles (the pipe is duplicated by fork(), thus there are two open ends of the pipe)
     close(pipeStderr[1]);
     close(pipeStdout[1]);
     close(pipeStdin[0]);
@@ -571,7 +569,7 @@ stringNode = stringNode->next;
 error = ERROR_NONE;
 #endif /* 0 */
 
-    /* wait until process terminate and read stdout/stderr */
+    // wait until process terminate and read stdout/stderr
     stdoutLine = String_new();
     stderrLine = String_new();
     status = 0;
@@ -605,12 +603,12 @@ error = ERROR_NONE;
     String_delete(stderrLine);
     String_delete(stdoutLine);
 
-    /* close i/o */
+    // close i/o
     close(pipeStderr[0]);
     close(pipeStdout[0]);
     close(pipeStdin[1]);
 
-    /* check exit code */
+    // check exit code
     exitcode = -1;
     if      (WIFEXITED(status))
     {
@@ -640,7 +638,7 @@ error = ERROR_NONE;
       printInfo(3,"ok (unknown exit)\n");
     }
 
-    /* free resources */
+    // free resources
     StringList_done(&argumentList);
     String_delete(command);
     String_delete(commandLine);
@@ -657,21 +655,21 @@ void Misc_waitEnter(void)
   struct termios termioSettings;
   char           s[2];
 
-  /* save current console settings */
+  // save current console settings
   tcgetattr(STDIN_FILENO,&oldTermioSettings);
 
-  /* disable echo */
+  // disable echo
   memcpy(&termioSettings,&oldTermioSettings,sizeof(struct termios));
   termioSettings.c_lflag &= ~ECHO;
   tcsetattr(STDIN_FILENO,TCSANOW,&termioSettings);
 
-  /* read line */
+  // read line
   if (fgets(s,2,stdin) == NULL)
   {
     // ignore error
   }
 
-  /* restore console settings */
+  // restore console settings
   tcsetattr(STDIN_FILENO,TCSANOW,&oldTermioSettings);
 }
 
@@ -750,7 +748,7 @@ void Misc_performanceFilterAdd(PerformanceFilter *performanceFilter,
 
   if (timeStamp > (performanceFilter->performanceValues[performanceFilter->index].timeStamp+1000))
   {
-    /* calculate new average value */
+    // calculate new average value
     if (performanceFilter->seconds > 0)
     {
       valueDelta     = value-performanceFilter->performanceValues[performanceFilter->index].value;
@@ -767,11 +765,11 @@ void Misc_performanceFilterAdd(PerformanceFilter *performanceFilter,
       performanceFilter->n++;
     }
 
-    /* move to next index in ring buffer */
+    // move to next index in ring buffer
     performanceFilter->index = (performanceFilter->index+1)%performanceFilter->maxSeconds;
     assert(performanceFilter->index < performanceFilter->maxSeconds);
 
-    /* store value */
+    // store value
     performanceFilter->performanceValues[performanceFilter->index].timeStamp = timeStamp;
     performanceFilter->performanceValues[performanceFilter->index].value     = value;
     if (performanceFilter->seconds < performanceFilter->maxSeconds) performanceFilter->seconds++;
