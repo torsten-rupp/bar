@@ -89,7 +89,6 @@ LOCAL void deleteLocalStorageArchive(String localStorageName)
 
 LOCAL Errors restoreFile(const String                    archiveName,
                          const String                    name,
-                         const PatternList               *sourcePatternList,
                          JobOptions                      *jobOptions,
                          const String                    destinationFileName,
                          ArchiveGetCryptPasswordFunction archiveGetCryptPasswordFunction,
@@ -364,8 +363,10 @@ LOCAL Errors restoreFile(const String                    archiveName,
 //              assert(deviceInfo.blockSize > 0);
 //              bufferBlockCount = MIN(blockCount-block,BUFFER_SIZE/deviceInfo.blockSize);
 //???
+#warning NYI
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 bufferBlockCount = 0;
-
+bufferLength =0;
               error = Archive_readData(&archiveEntryInfo,buffer,0/*bufferLength ???bufferBlockCount*deviceInfo.blockSize*/);
               if (error != ERROR_NONE)
               {
@@ -402,8 +403,8 @@ bufferBlockCount = 0;
         {
           StringList       fileNameList;
           uint64           fragmentOffset,fragmentSize;
-          const StringNode *stringNode;
-          String           fileName;
+//          const StringNode *stringNode;
+//          String           fileName;
           FileHandle       fileHandle;
           uint64           length;
           ulong            bufferLength;
@@ -645,9 +646,6 @@ Errors Source_addSourceList(const PatternList *sourcePatternList)
 {
   String      fileName;
   PatternNode *patternNode;
-  Errors      error;
-  StorageDirectoryListHandle storageDirectoryListHandle;
-  SourceNode *sourceNode;
 
   assert(sourcePatternList != NULL);
 
@@ -706,7 +704,6 @@ Errors Source_openEntry(SourceHandle *sourceHandle,
         // restore to temporary file
         error = restoreFile(localStorageName,
                             name,
-                            NULL,
                             &jobOptions,
                             sourceHandle->tmpFileName,
                             inputCryptPassword,
@@ -744,7 +741,6 @@ Errors Source_openEntry(SourceHandle *sourceHandle,
         // restore to temporary file
         error = restoreFile(localStorageName,
                             name,
-                            NULL,
                             &jobOptions,
                             sourceHandle->tmpFileName,
                             inputCryptPassword,
