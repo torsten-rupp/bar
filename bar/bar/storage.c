@@ -811,23 +811,19 @@ LOCAL void processIOdvdisaster(StorageFileHandle *storageFileHandle,
   String s;
   double p;
 
-//fprintf(stderr,"%s,%d: line=%s\n",__FILE__,__LINE__,String_cString(line));
   s = String_new();
   if (String_matchCString(line,STRING_BEGIN,".*adding space\\): +([0-9\\.]+)%",NULL,NULL,s,NULL))
   {
-//fprintf(stderr,"%s,%d: dvdisaster1: %s\n",__FILE__,__LINE__,String_cString(line));
     p = String_toDouble(s,0,NULL,NULL,0);
     storageFileHandle->runningInfo.volumeProgress = ((double)(storageFileHandle->opticalDisk.write.step+0)*100.0+p)/(double)(storageFileHandle->opticalDisk.write.steps*100);
     updateStatusInfo(storageFileHandle);
   }
   if (String_matchCString(line,STRING_BEGIN,".*generation: +([0-9\\.]+)%",NULL,NULL,s,NULL))
   {
-//fprintf(stderr,"%s,%d: dvdisaster2: %s\n",__FILE__,__LINE__,String_cString(line));
     p = String_toDouble(s,0,NULL,NULL,0);
     storageFileHandle->runningInfo.volumeProgress = ((double)(storageFileHandle->opticalDisk.write.step+1)*100.0+p)/(double)(storageFileHandle->opticalDisk.write.steps*100);
     updateStatusInfo(storageFileHandle);
   }
-
   String_delete(s);
 
   processExecOutput(NULL,line);
@@ -850,11 +846,9 @@ LOCAL void processIOgrowisofs(StorageFileHandle *storageFileHandle,
   String s;
   double p;
 
-//fprintf(stderr,"%s,%d: line=%s\n",__FILE__,__LINE__,String_cString(line));
   s = String_new();
   if (String_matchCString(line,STRING_BEGIN,".* \\(([0-9\\.]+)%\\) .*",NULL,NULL,s,NULL))
   {
-//fprintf(stderr,"%s,%d: growisofs2: %s\n",__FILE__,__LINE__,String_cString(line));
     p = String_toDouble(s,0,NULL,NULL,0);
     storageFileHandle->runningInfo.volumeProgress = ((double)storageFileHandle->opticalDisk.write.step*100.0+p)/(double)(storageFileHandle->opticalDisk.write.steps*100);
     updateStatusInfo(storageFileHandle);
@@ -1454,8 +1448,6 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
   storageFileHandle->jobOptions                = jobOptions;
   storageFileHandle->requestVolumeFunction     = storageRequestVolumeFunction;
   storageFileHandle->requestVolumeUserData     = storageRequestVolumeUserData;
-  storageFileHandle->storageStatusInfoFunction = storageStatusInfoFunction;
-  storageFileHandle->storageStatusInfoUserData = storageStatusInfoUserData;
   if (jobOptions->waitFirstVolumeFlag)
   {
     storageFileHandle->volumeNumber          = 0;
@@ -1468,6 +1460,8 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
     storageFileHandle->requestedVolumeNumber = 1;
     storageFileHandle->volumeState           = STORAGE_VOLUME_STATE_LOADED;
   }
+  storageFileHandle->storageStatusInfoFunction = storageStatusInfoFunction;
+  storageFileHandle->storageStatusInfoUserData = storageStatusInfoUserData;
 
   storageSpecifier = String_new();
   storageType = Storage_parseName(storageName,storageSpecifier,fileName);
