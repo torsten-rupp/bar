@@ -229,10 +229,10 @@ clean:
 	$(RMF) $(DESTROYER_OBJECTS)
 	$(RMF) $(INTERMEDIATE)
 	$(RMF) $(TARGETS)
+	$(RMRF) test
 
 distclean: \
-  clean \
-  clean_test
+  clean
 	$(RMF) Makefile Makefile.depend
 	$(RMF) config.h
 
@@ -457,7 +457,6 @@ test:
 	@$(MAKE) QUIET=1 --no-print-directory -s test_basic test_compress test_crypt test_asymmetric_crypt test_split test_image test_combined test_parameters
 
 clean_test:
-	$(RMRF) $(TEST_FILES) test/data/circular-link.dat
 	$(RMRF) $(TEST_FILES_CLEAN)
 
 test1 test_basic: bar@EXEEXT@
@@ -668,7 +667,7 @@ test/data/hardlink.dat:
 	($(CD) test/data; $(LN) random1024.dat hardlink.dat)
 test/data/nodump.dat:
 	$(INSTALL) -d $(@D)
-	if=/dev/urandom of=$@ bs=1k count=1 2>/dev/null; $(CHMOD) 440 $@; $(CHATTR) +d $@
+	$(DD) if=/dev/urandom of=$@ bs=1k count=1 2>/dev/null; $(CHMOD) 440 $@; $(CHATTR) +d $@
 test/data/fifo:
 	$(INSTALL) -d $(@D)
 	($(CD) test/data; $(MKFIFO) fifo)
@@ -701,7 +700,7 @@ test_file_operation_base: \
 	SSH_ASKPASS= $(TEST_BAR) -t test/test*.bar $(OPTIONS) $(if $(QUIET),1>/dev/null)
 	SSH_ASKPASS= $(TEST_BAR) -d test/test*.bar $(OPTIONS) $(if $(QUIET),1>/dev/null)
 	SSH_ASKPASS= $(TEST_BAR) -x test/test*.bar $(OPTIONS) --destination test/restore $(if $(QUIET),1>/dev/null)
-	$(DIFF) -r -x unreadable.dat -x circular-link.dat -x circular-link.dat.marker -x fifo -x sub-ignore-dir -x no_dump.dat test/data test/restore/test/data
+	$(DIFF) -r -x unreadable.dat -x circular-link.dat -x circular-link.dat.marker -x fifo -x sub-ignore-dir -x nodump.dat test/data test/restore/test/data
 	$(READLINK) test/restore/test/data/link.dat 2>/dev/null $(if $(QUIET),1>/dev/null)
 	test `$(STAT) --format "%h" test/restore/test/data/hardlink.dat 2>/dev/null` -eq 2 $(if $(QUIET),1>/dev/null)
 
