@@ -480,6 +480,18 @@ test2 test_compress: bar@EXEEXT@
         done
 	@$(ECHO) "ok"
 
+test_delta_compress: bar@EXEEXT@
+	@$(ECHO_NO_LF) "Test 2: delta compress..."
+	for compress in $(COMPRESS_NAMES); do \
+          $(MAKE) \
+            BAR_FILE="test" \
+            BAR_PATTERN="test" \
+            OPTIONS="--compress-algorithm=$$compress --crypt-algorithm=none" \
+            test_file_operation_delta \
+            ; \
+        done
+	@$(ECHO) "ok"
+
 test3 test_crypt: bar@EXEEXT@
 	@$(ECHO_NO_LF) "Test 3: crypt..."
 	for crypt in $(CRYPT_NAMES); do \
