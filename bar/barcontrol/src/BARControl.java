@@ -1329,6 +1329,23 @@ public class BARControl
         }
       });
 
+      menuItem = Widgets.addMenuItem(menu,"Clear stored passwords on server",SWT.NONE);
+      menuItem.addSelectionListener(new SelectionListener()
+      {
+        public void widgetDefaultSelected(SelectionEvent selectionEvent)
+        {
+        }
+        public void widgetSelected(SelectionEvent selectionEvent)
+        {
+          String[] result = new String[1];
+          int errorCode = BARServer.executeCommand("PASSWORDS_CLEAR",result);
+          if (errorCode != Errors.NONE)
+          {
+            Dialogs.error(shell,"Cannot clear passwords on server:\n\n"+result[0]);
+          }
+        }
+      });
+
       Widgets.addMenuSeparator(menu);
       menuItem = Widgets.addMenuItem(menu,"Quit",SWT.CTRL+'Q');
 
