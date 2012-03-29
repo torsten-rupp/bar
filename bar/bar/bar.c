@@ -37,12 +37,10 @@
 #include "archive.h"
 #include "network.h"
 #include "storage.h"
+#include "sources.h"
 #include "database.h"
 #include "index.h"
 #include "misc.h"
-
-#include "sources.h"
-
 
 #include "commands_create.h"
 #include "commands_list.h"
