@@ -60,6 +60,7 @@ LN         = ln
 LS         = ls
 MKDIR      = mkdir
 MKFIFO     = mkfifo
+NETCAT     = netcat
 PERL       = @PERL@
 READLINK   = readlink
 RMDIR      = rmdir
@@ -1233,10 +1234,22 @@ memcheck7: bar
           $(VALGRIND_OPTIONS) \
           ./bar \
             --daemon \
+            --no-detach \
             --server-jobs-directory jobs \
             --server-ca-file=bar-ca.pem \
             --server-cert-file=bar-server-cert.pem \
-            --server-key-file=bar-server-key.pem
+            --server-key-file=bar-server-key.pem \
+            --server-port=39909 \
+            --server-tls-port=39910 \
+            --server-debug &
+	$(SLEEP) 30
+	$(ECHO) 'VERSION' | $(NETCAT) localhost 39909
+	$(ECHO) '1 JOB_LIST' | $(NETCAT) localhost 39909
+	$(ECHO) '1 DEVICE_LIST' | $(NETCAT) localhost 39909
+	$(ECHO) '1 FILE_LIST /tmp'| $(NETCAT) localhost 39909
+	$(ECHO) '1 PASSWORDS_CLEAR' | $(NETCAT) localhost 39909
+	$(ECHO) '1 INDEX_STORAGE_LIST 10 * x'| $(NETCAT) localhost 39909
+	$(ECHO) 'QUIT' | $(NETCAT) localhost 39909
 
 # copy distribution files
 .PHONY: dist
