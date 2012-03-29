@@ -8736,7 +8736,7 @@ Errors Server_run(uint             port,
   String_delete(clientName);
 
   // disconnect all clients
-  while (clientList.head != NULL)
+  while (!List_isEmpty(&clientList))
   {
     clientNode = (ClientNode*)List_getFirst(&clientList);
 
