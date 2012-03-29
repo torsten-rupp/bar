@@ -13,6 +13,7 @@
 import java.io.File;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.Date;
 import java.util.HashMap;
@@ -385,13 +386,16 @@ class TabRestore
           });
         }
 
-        // get names
-        HashSet<String> storageNameHashSet = new HashSet<String>();
+        // remove not marked entries
         synchronized(storageDataMap)
         {
-          for (StorageData storageData : storageDataMap.values())
+          StorageData[] storageData_ = storageDataMap.values().toArray(new StorageData[0]);
+          for (StorageData storageData : storageData_)
           {
-            storageNameHashSet.add(storageData.name);
+            if (!storageData.isChecked())
+            {
+              storageDataMap.remove(storageData);
+            }
           }
         }
 
@@ -402,7 +406,6 @@ class TabRestore
                                  storageMaxCount+" "+
                                  ((storageIndexStateFilter != IndexStates.ALL) ? storageIndexStateFilter.name() : "*")+" "+
                                  (((storagePattern != null) && !storagePattern.equals("")) ? StringUtils.escape(storagePattern) : "*");
-//Dprintf.dprintf("commandString=%s",commandString);
           Command command = BARServer.runCommand(commandString);
 
           // read results, update/add data
@@ -413,6 +416,7 @@ class TabRestore
             line = command.getNextResult(5*1000);
             if (line != null)
             {
+//Dprintf.dprintf("line=%s",line);
               if      (StringParser.parse(line,"%ld %ld %ld %S %S %S",data,StringParser.QUOTE_CHARS))
               {
                 /* get data
@@ -454,28 +458,13 @@ class TabRestore
                     storageDataMap.put(storageData);
                   }
                 }
-
-                storageNameHashSet.remove(storageName);
               }
             }
           }
         }
         catch (CommunicationError error)
         {
-          /* ignored */
-        }
-
-        // remove not existing entries, but keep marked entries
-        synchronized(storageDataMap)
-        {
-          for (String storageName : storageNameHashSet)
-          {
-            StorageData storageData = storageDataMap.get(storageName);
-            if ((storageData != null) && !storageData.isChecked())
-            {
-              storageDataMap.remove(storageData);
-            }
-          }
+          // ignored
         }
 
         // referesh list
