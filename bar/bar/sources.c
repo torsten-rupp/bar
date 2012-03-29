@@ -668,31 +668,90 @@ Errors Source_openEntry(SourceHandle *sourceHandle,
   Errors     error;
   bool       restoredFlag;
   String     localStorageName;
+  String     tmpFileName;
   SourceNode *sourceNode;
 
   assert(sourceHandle != NULL);
   assert(name != NULL);
 
-  // init options
-  initJobOptions(&jobOptions);
-
-  // create temporary restore file as delta source
-  sourceHandle->tmpFileName = String_new();
-  error = File_getTmpFileName(sourceHandle->tmpFileName,NULL,tmpDirectory);
-  if (error != ERROR_NONE)
-  {
-    String_delete(sourceHandle->tmpFileName);
-    freeJobOptions(&jobOptions);
-    return error;
-  }
+  // init variables
+  sourceHandle->tmpFileName = NULL;
 
   restoredFlag = FALSE;
 
   if (!restoredFlag)
   {
-    // restore from given storage name
+    // check if source from local file
+    if (   (sourceStorageName != NULL)
+        && File_isFile(sourceStorageName)
+       )
+    {
+      if (Archive_isArchiveFile(sourceStorageName))
+      {
+        // init options
+        initJobOptions(&jobOptions);
+
+        // create temporary restore file as delta source
+        tmpFileName = String_new();
+        error = File_getTmpFileName(tmpFileName,NULL,tmpDirectory);
+        if (error == ERROR_NONE)
+        {
+          // restore to temporary file
+          error = restoreFile(sourceStorageName,
+                              name,
+                              &jobOptions,
+                              tmpFileName,
+                              inputCryptPassword,
+                              NULL,
+                              NULL,//bool                            *pauseFlag,
+                              NULL//bool                            *requestedAbortFlag
+                             );
+          if (error == ERROR_NONE)
+          {
+            // open temporary restored file
+            error = File_open(&sourceHandle->tmpFileHandle,tmpFileName,FILE_OPEN_READ);
+            if (error == ERROR_NONE)
+            {
+              sourceHandle->sourceName  = sourceStorageName;
+              sourceHandle->tmpFileName = tmpFileName;
+              restoredFlag = TRUE;
+            }
+            else
+            {
+              File_delete(tmpFileName,FALSE);
+              String_delete(tmpFileName);
+            }
+          }
+          else
+          {
+            String_delete(tmpFileName);
+          }
+        }
+
+        // free resources
+        freeJobOptions(&jobOptions);
+      }
+      else
+      {
+        // open local file as source
+        error = File_open(&sourceHandle->tmpFileHandle,sourceStorageName,FILE_OPEN_READ);
+        if (error == ERROR_NONE)
+        {
+          sourceHandle->sourceName  = sourceStorageName;
+          restoredFlag = TRUE;
+        }
+      }
+    }
+  }
+
+  if (!restoredFlag)
+  {
+    // check if source from given storage name
     if (sourceStorageName != NULL)
     {
+      // init options
+      initJobOptions(&jobOptions);
+
       // create local copy of storage file
       localStorageName = String_new();
       error = createLocalStorageArchive(localStorageName,
@@ -701,19 +760,45 @@ Errors Source_openEntry(SourceHandle *sourceHandle,
                                        );
       if (error == ERROR_NONE)
       {
-        // restore to temporary file
-        error = restoreFile(localStorageName,
-                            name,
-                            &jobOptions,
-                            sourceHandle->tmpFileName,
-                            inputCryptPassword,
-                            NULL,
-                            NULL,//bool                            *pauseFlag,
-                            NULL//bool                            *requestedAbortFlag
-                           );
+        // create temporary restore file as delta source
+        tmpFileName = String_new();
+        error = File_getTmpFileName(tmpFileName,NULL,tmpDirectory);
         if (error == ERROR_NONE)
         {
-          restoredFlag = TRUE;
+          // restore to temporary file
+          error = restoreFile(localStorageName,
+                              name,
+                              &jobOptions,
+                              tmpFileName,
+                              inputCryptPassword,
+                              NULL,
+                              NULL,//bool                            *pauseFlag,
+                              NULL//bool                            *requestedAbortFlag
+                             );
+          if (error == ERROR_NONE)
+          {
+            // open temporary restored file
+            error = File_open(&sourceHandle->tmpFileHandle,tmpFileName,FILE_OPEN_READ);
+            if (error == ERROR_NONE)
+            {
+              sourceHandle->sourceName  = sourceStorageName;
+              sourceHandle->tmpFileName = tmpFileName;
+              restoredFlag              = TRUE;
+            }
+            else
+            {
+              File_delete(tmpFileName,FALSE);
+              String_delete(tmpFileName);
+            }
+          }
+          else
+          {
+            String_delete(tmpFileName);
+          }
+        }
+        else
+        {
+          String_delete(tmpFileName);
         }
 
         // delete local storage file
@@ -722,66 +807,147 @@ Errors Source_openEntry(SourceHandle *sourceHandle,
 
       // free resources
       String_delete(localStorageName);
+      freeJobOptions(&jobOptions);
     }
   }
 
   if (!restoredFlag)
   {
-    // restore from source pattern list
+    // init options
+    initJobOptions(&jobOptions);
+
+    // check if source from source pattern list
     LIST_ITERATE(&sourceList,sourceNode)
     {
-      // create local copy of storage file
-      localStorageName = String_new();
-      error = createLocalStorageArchive(localStorageName,
-                                        sourceNode->storageName,
-                                        &jobOptions
-                                      );
-      if (error == ERROR_NONE)
+      if (File_isFile(sourceNode->storageName))
       {
-        // restore to temporary file
-        error = restoreFile(localStorageName,
-                            name,
-                            &jobOptions,
-                            sourceHandle->tmpFileName,
-                            inputCryptPassword,
-                            NULL,
-                            NULL,//bool                            *pauseFlag,
-                            NULL//bool                            *requestedAbortFlag
-                           );
+        if (Archive_isArchiveFile(sourceNode->storageName))
+        {
+          // create temporary restore file as delta source
+          tmpFileName = String_new();
+          error = File_getTmpFileName(tmpFileName,NULL,tmpDirectory);
+          if (error == ERROR_NONE)
+          {
+            // restore to temporary file
+            error = restoreFile(sourceNode->storageName,
+                                name,
+                                &jobOptions,
+                                tmpFileName,
+                                inputCryptPassword,
+                                NULL,
+                                NULL,//bool                            *pauseFlag,
+                                NULL//bool                            *requestedAbortFlag
+                               );
+            if (error == ERROR_NONE)
+            {
+              // open temporary restored file
+              error = File_open(&sourceHandle->tmpFileHandle,tmpFileName,FILE_OPEN_READ);
+              if (error == ERROR_NONE)
+              {
+                sourceHandle->sourceName  = sourceNode->storageName;
+                sourceHandle->tmpFileName = tmpFileName;
+                restoredFlag              = TRUE;
+              }
+              else
+              {
+                File_delete(tmpFileName,FALSE);
+                String_delete(tmpFileName);
+              }
+            }
+            else
+            {
+              String_delete(tmpFileName);
+            }
+            freeJobOptions(&jobOptions);
+          }
+          else
+          {
+            String_delete(tmpFileName);
+          }
+        }
+        else
+        {
+          // open local file as source
+          error = File_open(&sourceHandle->tmpFileHandle,sourceNode->storageName,FILE_OPEN_READ);
+          if (error == ERROR_NONE)
+          {
+            sourceHandle->sourceName = sourceNode->storageName;
+            restoredFlag = TRUE;
+          }
+        }
+      }
+      else
+      {
+        // create local copy of storage file
+        localStorageName = String_new();
+        error = createLocalStorageArchive(localStorageName,
+                                          sourceNode->storageName,
+                                          &jobOptions
+                                        );
         if (error == ERROR_NONE)
         {
-          restoredFlag = TRUE;
+          // create temporary restore file as delta source
+          tmpFileName = String_new();
+          error = File_getTmpFileName(tmpFileName,NULL,tmpDirectory);
+          if (error == ERROR_NONE)
+          {
+            // restore to temporary file
+            error = restoreFile(localStorageName,
+                                name,
+                                &jobOptions,
+                                tmpFileName,
+                                inputCryptPassword,
+                                NULL,
+                                NULL,//bool                            *pauseFlag,
+                                NULL//bool                            *requestedAbortFlag
+                               );
+            if (error == ERROR_NONE)
+            {
+              // open temporary restored file
+              error = File_open(&sourceHandle->tmpFileHandle,tmpFileName,FILE_OPEN_READ);
+              if (error != ERROR_NONE)
+              {
+                sourceHandle->sourceName  = sourceNode->storageName;
+                sourceHandle->tmpFileName = tmpFileName;
+                restoredFlag = TRUE;
+              }
+              else
+              {
+                File_delete(tmpFileName,FALSE);
+                String_delete(tmpFileName);
+              }
+            }
+            else
+            {
+              String_delete(tmpFileName);
+            }
+            freeJobOptions(&jobOptions);
+          }
+          else
+          {
+            String_delete(tmpFileName);
+          }
+
+          // delete local storage file
+          File_delete(localStorageName,FALSE);
         }
 
-        // delete local storage file
-        File_delete(localStorageName,FALSE);
+        // free resources
+        String_delete(localStorageName);
       }
 
-      // free resources
-      String_delete(localStorageName);
-
+      // stop if restored
       if (restoredFlag) break;
     }
+
+    // free resources
+    freeJobOptions(&jobOptions);
   }
 
   if (!restoredFlag)
   {
-    String_delete(sourceHandle->tmpFileName);
-    freeJobOptions(&jobOptions);
     return ERRORX(DELTA_SOURCE_NOT_FOUND,0,String_cString(sourceStorageName));
   }
-
-  // open temporary restored file
-  error = File_open(&sourceHandle->tmpFileHandle,sourceHandle->tmpFileName,FILE_OPEN_READ);
-  if (error != ERROR_NONE)
-  {
-    String_delete(sourceHandle->tmpFileName);
-    freeJobOptions(&jobOptions);
-    return error;
-  }
-
-  // free resources
-  freeJobOptions(&jobOptions);
 
   return ERROR_NONE;
 }
@@ -789,11 +955,23 @@ Errors Source_openEntry(SourceHandle *sourceHandle,
 void Source_closeEntry(SourceHandle *sourceHandle)
 {
   assert(sourceHandle != NULL);
-  assert(sourceHandle->tmpFileName != NULL);
 
+  // close source file
   File_close(&sourceHandle->tmpFileHandle);
-  File_delete(sourceHandle->tmpFileName,FALSE);
-  String_delete(sourceHandle->tmpFileName);
+
+  // delete temporary source file
+  if (sourceHandle->tmpFileName != NULL)
+  {
+    File_delete(sourceHandle->tmpFileName,FALSE);
+    String_delete(sourceHandle->tmpFileName);
+  }
+}
+
+const String Source_getName(SourceHandle *sourceHandle)
+{
+  assert(sourceHandle != NULL);
+
+  return sourceHandle->sourceName;
 }
 
 Errors Source_getEntryDataBlock(SourceHandle *sourceHandle,

@@ -2908,29 +2908,27 @@ LOCAL Errors storeFileEntry(ArchiveInfo       *archiveInfo,
                                NULL,
                                fileName
                               );
-      if (error == ERROR_NONE)
+      if      (error == ERROR_NONE)
       {
         deltaCompressFlag = TRUE;
       }
+      else if (jobOptions->forceDeltaCompressionFlag)
+      {
+        printInfo(1,"FAIL\n");
+        printError("Cannot open source file for '%s' (error: %s)\n",
+                   String_cString(fileName),
+                   Errors_getText(error)
+                  );
+        File_close(&fileHandle);
+        return error;
+      }
       else
       {
-        if (jobOptions->forceDeltaCompressionFlag)
-        {
-          printInfo(1,"FAIL\n");
-          printError("Cannot open source file for '%s' (error: %s)\n",
-                     String_cString(fileName),
-                     Errors_getText(error)
-                    );
-          File_close(&fileHandle);
-          return error;
-        }
-        else
-        {
-          logMessage(LOG_TYPE_WARNING,
-                     "File '%s' not delta compressed (no source file found)\n",
-                     String_cString(fileName)
-                    );
-        }
+        printWarning("File '%s' not delta compressed (no source file found)\n",String_cString(fileName));
+        logMessage(LOG_TYPE_WARNING,
+                   "File '%s' not delta compressed (no source file found)\n",
+                   String_cString(fileName)
+                  );
       }
     }
 
@@ -2940,7 +2938,7 @@ LOCAL Errors storeFileEntry(ArchiveInfo       *archiveInfo,
                                  deltaCompressFlag?&sourceHandle:NULL,
                                  fileName,
                                  &fileInfo,
-                                 deltaCompressFlag?sourceHandle.storageName:NULL,
+                                 deltaCompressFlag?Source_getName(&sourceHandle):NULL,
                                  deltaCompressFlag,
                                  byteCompressFlag
                                 );
@@ -3234,7 +3232,7 @@ LOCAL Errors storeImageEntry(ArchiveInfo       *archiveInfo,
                                   deltaCompressFlag?&sourceHandle:NULL,
                                   deviceName,
                                   &deviceInfo,
-                                  deltaCompressFlag?sourceHandle.storageName:NULL,
+                                  deltaCompressFlag?Source_getName(&sourceHandle):NULL,
                                   deltaCompressFlag,
                                   byteCompressFlag
                                  );
@@ -3780,7 +3778,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                                      deltaCompressFlag?&sourceHandle:NULL,
                                      nameList,
                                      &fileInfo,
-                                     deltaCompressFlag?sourceHandle.storageName:NULL,
+                                     deltaCompressFlag?Source_getName(&sourceHandle):NULL,
                                      deltaCompressFlag,
                                      byteCompressFlag
                                     );

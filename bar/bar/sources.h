@@ -48,7 +48,7 @@ typedef struct
 // source handle
 typedef struct
 {
-  String     storageName;      // storage name
+  String     sourceName;       // source name
   String     tmpFileName;      // temporary file name
   FileHandle tmpFileHandle;    // temporary file handle
   bool       tmpFileOpenFlag;  // TRUE iff temporary file is open
@@ -113,9 +113,11 @@ Errors Source_addSourceList(const PatternList *sourcePatternList);
 /***********************************************************************\
 * Name   : Source_openEntry
 * Purpose: open source entry
-* Input  : sourceStorageName - storage name
-*          name              - entry name (file, image, hard link)
-* Output : sourceEntryInfo - source entry info
+* Input  : sourceHandle      - source handle variable
+*          sourceStorageName - storage name
+*          name              - entry name to open (file, image,
+*                              hard link)
+* Output : sourceHandle - source handle
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
@@ -128,7 +130,7 @@ Errors Source_openEntry(SourceHandle *sourceHandle,
 /***********************************************************************\
 * Name   : Source_closeEntry
 * Purpose: close source entry
-* Input  : sourceEntryInfo - source entry info
+* Input  : sourceHandle - source handle
 * Output : -
 * Return : -
 * Notes  : -
@@ -137,9 +139,20 @@ Errors Source_openEntry(SourceHandle *sourceHandle,
 void Source_closeEntry(SourceHandle *sourceHandle);
 
 /***********************************************************************\
+* Name   : Source_getName
+* Purpose: get source name
+* Input  : -
+* Output : -
+* Return : source name
+* Notes  : -
+\***********************************************************************/
+
+const String Source_getName(SourceHandle *sourceHandle);
+
+/***********************************************************************\
 * Name   : Source_getEntryDataBlock
 * Purpose: get source entry data block
-* Input  : sourceEntryInfo - source entry info
+* Input  : sourceHandle    - source handle
 *          buffer          - buffer for data block
 *          offset          - offset (0..n-1)
 *          length          - length of data block to read
