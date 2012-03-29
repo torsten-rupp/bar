@@ -512,7 +512,7 @@ LOCAL bool             quitFlag;              // TRUE iff quit requested
 * Purpose: get archive type name
 * Input  : archiveType - archive type
 * Output : -
-* Return : name
+* Return : name or ""
 * Notes  : -
 \***********************************************************************/
 
@@ -8699,6 +8699,7 @@ Errors Server_run(uint             port,
           deleteClientNode = clientNode;
           clientNode = clientNode->next;
           List_remove(&clientList,deleteClientNode);
+
           Network_disconnect(&deleteClientNode->clientInfo.network.socketHandle);
           deleteClient(deleteClientNode);
         }
