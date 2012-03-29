@@ -8735,6 +8735,15 @@ Errors Server_run(uint             port,
   }
   String_delete(clientName);
 
+  // disconnect all clients
+  while (clientList.head != NULL)
+  {
+    clientNode = (ClientNode*)List_getFirst(&clientList);
+
+    Network_disconnect(&clientNode->clientInfo.network.socketHandle);
+    deleteClient(clientNode);
+  }
+
   // wait for thread exit
   Semaphore_setEnd(&jobList.lock);
   if (indexDatabaseHandle != NULL)
