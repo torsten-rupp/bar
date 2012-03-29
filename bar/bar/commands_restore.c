@@ -1619,9 +1619,9 @@ Errors Command_restore(const StringList                *archiveNameList,
 
                   if (!jobOptions->noFragmentsCheckFlag)
                   {
+                    // discard fragment list if file is complete
                     if (FragmentList_isEntryComplete(fragmentNode))
                     {
-                      // discard fragment list
                       FragmentList_discard(&fragmentList,fragmentNode);
                     }
                   }
@@ -1633,15 +1633,6 @@ Errors Command_restore(const StringList                *archiveNameList,
                   else
                   {
                     printInfo(2,"ok (dry-run)\n");
-                  }
-
-                  if (!jobOptions->noFragmentsCheckFlag)
-                  {
-                    // discard fragment list if file is complete
-                    if (FragmentList_isEntryComplete(fragmentNode))
-                    {
-                      FragmentList_discard(&fragmentList,fragmentNode);
-                    }
                   }
 
                   restoredDataFlag = TRUE;
