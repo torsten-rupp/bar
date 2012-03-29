@@ -288,8 +288,7 @@ typedef struct
   bool                   quietFlag;                      // TRUE iff suppress any output
   long                   verboseLevel;
 
-  // debug only
-  bool                   serverDebugFlag;                // TRUE iff server debug enabled
+  bool                   serverDebugFlag;                // TRUE iff server debug enabled (for debug only)
 } GlobalOptions;
 
 // schedule
