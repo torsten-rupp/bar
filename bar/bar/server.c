@@ -1935,7 +1935,7 @@ LOCAL void schedulerThreadCode(void)
       currentDateTime = Misc_getCurrentDateTime();
       jobNode         = jobList.head;
       pendingFlag     = FALSE;
-      while ((jobNode != NULL) && !pendingFlag)
+      while ((jobNode != NULL) && !pendingFlag && !quitFlag)
       {
         // check if job have to be executed
         executeScheduleNode = NULL;
@@ -1945,6 +1945,7 @@ LOCAL void schedulerThreadCode(void)
           while (   ((dateTime/60LL) > (jobNode->lastCheckDateTime/60LL))
                  && (executeScheduleNode == NULL)
                  && !pendingFlag
+                 && !quitFlag
                 )
           {
             // get date/time values
@@ -1981,6 +1982,10 @@ LOCAL void schedulerThreadCode(void)
 
             // next time
             dateTime -= 60LL;
+          }
+          if (quitFlag)
+          {
+            break;
           }
           if (!pendingFlag)
           {
@@ -5643,7 +5648,7 @@ LOCAL void serverCommand_scheduleListAdd(ClientInfo *clientInfo, uint id, const 
 
 /***********************************************************************\
 * Name   : serverCommand_decryptPasswordsClear
-* Purpose: clear decrypt password in internal list
+* Purpose: clear decrypt passwords in internal list
 * Input  : clientInfo    - client info
 *          id            - command id
 *          arguments     - command arguments
@@ -5865,9 +5870,9 @@ LOCAL void serverCommand_passwordsClear(ClientInfo *clientInfo, uint id, const S
   UNUSED_VARIABLE(arguments);
   UNUSED_VARIABLE(argumentCount);
 
-  Password_clear(clientInfo->jobOptions.ftpServer.password);
-  Password_clear(clientInfo->jobOptions.sshServer.password);
-  Password_clear(clientInfo->jobOptions.cryptPassword);
+  if (clientInfo->jobOptions.ftpServer.password != NULL) Password_clear(clientInfo->jobOptions.ftpServer.password);
+  if (clientInfo->jobOptions.sshServer.password != NULL) Password_clear(clientInfo->jobOptions.sshServer.password);
+  if (clientInfo->jobOptions.cryptPassword != NULL) Password_clear(clientInfo->jobOptions.cryptPassword);
 
   sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
 }
@@ -8044,8 +8049,8 @@ LOCAL void networkClientThreadCode(ClientInfo *clientInfo)
          && MsgQueue_get(&clientInfo->network.commandMsgQueue,&commandMsg,NULL,sizeof(commandMsg))
         )
   {
-    // check authorization
-    if (clientInfo->authorizationState == commandMsg.authorizationState)
+    // check authorization (if not in server debug mode)
+    if (globalOptions.serverDebugFlag || (clientInfo->authorizationState == commandMsg.authorizationState))
     {
       // execute command
       commandMsg.serverCommandFunction(clientInfo,
@@ -8341,8 +8346,8 @@ LOCAL void processCommand(ClientInfo *clientInfo, const String command)
   #endif // SERVER_DEBUG
   if (String_equalsCString(command,"VERSION"))
   {
-    // check authorization
-    if (clientInfo->authorizationState == AUTHORIZATION_STATE_OK)
+    // check authorization (if not in server debug mode)
+    if (globalOptions.serverDebugFlag || (clientInfo->authorizationState == AUTHORIZATION_STATE_OK))
     {
       // version info
       sendClientResult(clientInfo,0,TRUE,ERROR_NONE,"%d %d",PROTOCOL_VERSION_MAJOR,PROTOCOL_VERSION_MINOR);
@@ -8354,13 +8359,11 @@ LOCAL void processCommand(ClientInfo *clientInfo, const String command)
       clientInfo->authorizationState = AUTHORIZATION_STATE_FAIL;
     }
   }
-  #ifndef NDEBUG
-    else if (String_equalsCString(command,"QUIT"))
-    {
-      quitFlag = TRUE;
-      sendClientResult(clientInfo,0,TRUE,ERROR_NONE,"ok");
-    }
-  #endif // not NDEBUG
+  else if (globalOptions.serverDebugFlag && String_equalsCString(command,"QUIT"))
+  {
+    quitFlag = TRUE;
+    sendClientResult(clientInfo,0,TRUE,ERROR_NONE,"ok");
+  }
   else
   {
     // parse command
@@ -8373,8 +8376,8 @@ LOCAL void processCommand(ClientInfo *clientInfo, const String command)
     switch (clientInfo->type)
     {
       case CLIENT_TYPE_BATCH:
-        // check authorization
-        if (clientInfo->authorizationState == commandMsg.authorizationState)
+        // check authorization (if not in server debug mode)
+        if (globalOptions.serverDebugFlag || (clientInfo->authorizationState == commandMsg.authorizationState))
         {
           // execute
           commandMsg.serverCommandFunction(clientInfo,
@@ -8593,6 +8596,10 @@ Errors Server_run(uint             port,
   }
 
   // run server
+  if (globalOptions.serverDebugFlag)
+  {
+    printWarning("Server is running in debug mode. No authorization is done and additional debug commands are enabled!\n");
+  }
   clientName = String_new();
   while (!quitFlag)
   {
