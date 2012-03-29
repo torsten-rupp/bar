@@ -287,6 +287,9 @@ typedef struct
   bool                   noDefaultConfigFlag;            // TRUE iff default config should not be read
   bool                   quietFlag;                      // TRUE iff suppress any output
   long                   verboseLevel;
+
+  // debug only
+  bool                   serverDebugFlag;                // TRUE iff server debug enabled
 } GlobalOptions;
 
 // schedule

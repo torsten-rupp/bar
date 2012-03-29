@@ -614,6 +614,8 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
   CMD_OPTION_BOOLEAN      ("quiet",                        0,  1,0,globalOptions.quietFlag,                                                                          "suppress any output"                                                      ),
   CMD_OPTION_INTEGER_RANGE("verbose",                      'v',1,0,globalOptions.verboseLevel,                0,6,NULL,                                              "verbosity level"                                                          ),
 
+  CMD_OPTION_BOOLEAN      ("server-debug",                 0,  2,0,globalOptions.serverDebugFlag,                                                                    "enable debug mode for server"                                             ),
+
   CMD_OPTION_BOOLEAN      ("version",                      0  ,0,0,versionFlag,                                                                                      "output version"                                                           ),
   CMD_OPTION_BOOLEAN      ("help",                         'h',0,0,helpFlag,                                                                                         "output this help"                                                         ),
   CMD_OPTION_BOOLEAN      ("xhelp",                        0,  0,0,xhelpFlag,                                                                                        "output help to extended options"                                          ),
@@ -1660,6 +1662,8 @@ LOCAL void initGlobalOptions(void)
   globalOptions.noDefaultConfigFlag          = FALSE;
   globalOptions.quietFlag                    = FALSE;
   globalOptions.verboseLevel                 = 1;
+
+  globalOptions.serverDebugFlag              = FALSE;
 }
 
 /***********************************************************************\
