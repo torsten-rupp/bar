@@ -1450,7 +1450,6 @@ Errors File_delete(const String fileName, bool recursiveFlag)
                   {
                     error = ERRORX(IO_ERROR,errno,String_cString(name));
                   }
-//HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
                 }
                 else if (S_ISDIR(fileStat.st_mode))
                 {
@@ -1468,7 +1467,6 @@ Errors File_delete(const String fileName, bool recursiveFlag)
             {
               error = ERRORX(IO_ERROR,errno,String_cString(directoryName));
             }
-//HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
           }
           else
           {
