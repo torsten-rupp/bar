@@ -221,8 +221,38 @@ ERROR NOT_A_DIRECTORY
 ERROR END_OF_DIRECTORY               "end of directory list"
 
 // optical disk i/o
-ERROR OPEN_OPTICAL_DISK              "error open CD/DVD/BD disk"
-ERROR OPEN_ISO9660_FILE              "error open ISO 9660 image"
+ERROR OPTICAL_DISK_NOT_FOUND
+  strncpy(errorText,"CD/DVD/BD device",sizeof(errorText)-1);
+  if (ERROR_TEXT != NULL)
+  {
+    strncat(errorText," '",sizeof(errorText)-1-strlen(errorText));
+    strncat(errorText,ERROR_TEXT,sizeof(errorText)-1-strlen(errorText));
+    strncat(errorText,"'",sizeof(errorText)-1-strlen(errorText));
+  }
+  strncat(errorText," not found",sizeof(errorText)-1-strlen(errorText));
+  errorText[sizeof(errorText)-1] = '\0';
+
+ERROR OPEN_OPTICAL_DISK
+  strncpy(errorText,"open CD/DVD/BD disk",sizeof(errorText)-1);
+  if (ERROR_TEXT != NULL)
+  {
+    strncat(errorText," '",sizeof(errorText)-1-strlen(errorText));
+    strncat(errorText,ERROR_TEXT,sizeof(errorText)-1-strlen(errorText));
+    strncat(errorText,"'",sizeof(errorText)-1-strlen(errorText));
+  }
+  strncat(errorText," fail",sizeof(errorText)-1-strlen(errorText));
+  errorText[sizeof(errorText)-1] = '\0';
+
+ERROR OPEN_ISO9660_FILE
+  strncpy(errorText,"open ISO 9660 image",sizeof(errorText)-1);
+  if (ERROR_TEXT != NULL)
+  {
+    strncat(errorText," '",sizeof(errorText)-1-strlen(errorText));
+    strncat(errorText,ERROR_TEXT,sizeof(errorText)-1-strlen(errorText));
+    strncat(errorText,"'",sizeof(errorText)-1-strlen(errorText));
+  }
+  strncat(errorText," fail",sizeof(errorText)-1-strlen(errorText));
+  errorText[sizeof(errorText)-1] = '\0';
 
 // device i/o
 ERROR OPEN_DEVICE
