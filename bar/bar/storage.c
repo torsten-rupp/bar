@@ -2120,10 +2120,11 @@ Errors Storage_done(StorageFileHandle *storageFileHandle)
 
   assert(storageFileHandle != NULL);
 
+  error = ERROR_NONE;
+
   switch (storageFileHandle->type)
   {
     case STORAGE_TYPE_FILESYSTEM:
-      error = ERROR_NONE;
       break;
     case STORAGE_TYPE_FTP:
       #ifdef HAVE_FTP
@@ -2133,8 +2134,6 @@ Errors Storage_done(StorageFileHandle *storageFileHandle)
         String_delete(storageFileHandle->ftp.hostName);
       #else /* not HAVE_FTP */
       #endif /* HAVE_FTP */
-
-      error = ERROR_NONE;
       break;
     case STORAGE_TYPE_SSH:
       break;
@@ -2146,8 +2145,6 @@ Errors Storage_done(StorageFileHandle *storageFileHandle)
         String_delete(storageFileHandle->scp.hostName);
       #else /* not HAVE_SSH2 */
       #endif /* HAVE_SSH2 */
-
-      error = ERROR_NONE;
       break;
     case STORAGE_TYPE_SFTP:
       #ifdef HAVE_SSH2
@@ -2157,8 +2154,6 @@ Errors Storage_done(StorageFileHandle *storageFileHandle)
         String_delete(storageFileHandle->sftp.hostName);
       #else /* not HAVE_SSH2 */
       #endif /* HAVE_SSH2 */
-
-      error = ERROR_NONE;
       break;
     case STORAGE_TYPE_CD:
     case STORAGE_TYPE_DVD:
@@ -2166,8 +2161,6 @@ Errors Storage_done(StorageFileHandle *storageFileHandle)
       {
         String fileName;
         Errors tmpError;
-
-        error = ERROR_NONE;
 
         // delete files
         fileName = String_new();
@@ -3851,6 +3844,12 @@ Errors Storage_open(StorageFileHandle *storageFileHandle,
           storageFileHandle->opticalDisk.read.buffer.blockIndex = 0LL;
           storageFileHandle->opticalDisk.read.buffer.length     = 0L;
 
+          // check if device exists
+          if (!File_exists(storageFileHandle->opticalDisk.name))
+          {
+            return ERRORX(OPTICAL_DISK_NOT_FOUND,0,String_cString(storageFileHandle->opticalDisk.name));
+          }
+
           // open optical disk/ISO 9660 file
           storageFileHandle->opticalDisk.read.iso9660Handle = iso9660_open(String_cString(storageFileHandle->opticalDisk.name));
           if (storageFileHandle->opticalDisk.read.iso9660Handle == NULL)
@@ -3919,6 +3918,8 @@ void Storage_close(StorageFileHandle *storageFileHandle)
     case STORAGE_TYPE_FILESYSTEM:
       switch (storageFileHandle->mode)
       {
+        case STORAGE_MODE_UNKNOWN:
+          break;
         case STORAGE_MODE_WRITE:
           if (!storageFileHandle->jobOptions->dryRunFlag)
           {
@@ -3939,6 +3940,8 @@ void Storage_close(StorageFileHandle *storageFileHandle)
       #ifdef HAVE_FTP
         switch (storageFileHandle->mode)
         {
+          case STORAGE_MODE_UNKNOWN:
+            break;
           case STORAGE_MODE_WRITE:
             if (!storageFileHandle->jobOptions->dryRunFlag)
             {
@@ -3967,6 +3970,8 @@ void Storage_close(StorageFileHandle *storageFileHandle)
       #ifdef HAVE_SSH2
         switch (storageFileHandle->mode)
         {
+          case STORAGE_MODE_UNKNOWN:
+            break;
           case STORAGE_MODE_WRITE:
             if (!storageFileHandle->jobOptions->dryRunFlag)
             {
@@ -3996,6 +4001,8 @@ void Storage_close(StorageFileHandle *storageFileHandle)
       #ifdef HAVE_SSH2
         switch (storageFileHandle->mode)
         {
+          case STORAGE_MODE_UNKNOWN:
+            break;
           case STORAGE_MODE_WRITE:
             if (!storageFileHandle->jobOptions->dryRunFlag)
             {
@@ -4021,6 +4028,8 @@ void Storage_close(StorageFileHandle *storageFileHandle)
     case STORAGE_TYPE_BD:
       switch (storageFileHandle->mode)
       {
+        case STORAGE_MODE_UNKNOWN:
+          break;
         case STORAGE_MODE_WRITE:
           if (!storageFileHandle->jobOptions->dryRunFlag)
           {
@@ -4046,6 +4055,8 @@ void Storage_close(StorageFileHandle *storageFileHandle)
     case STORAGE_TYPE_DEVICE:
       switch (storageFileHandle->mode)
       {
+        case STORAGE_MODE_UNKNOWN:
+          break;
         case STORAGE_MODE_WRITE:
           if (!storageFileHandle->jobOptions->dryRunFlag)
           {
@@ -4346,13 +4357,16 @@ Errors Storage_read(StorageFileHandle *storageFileHandle,
                 && (storageFileHandle->ftp.index < (storageFileHandle->ftp.readAheadBuffer.offset+storageFileHandle->ftp.readAheadBuffer.length))
                )
             {
+              // copy data
               i = (ulong)(storageFileHandle->ftp.index-storageFileHandle->ftp.readAheadBuffer.offset);
               n = MIN(size,storageFileHandle->ftp.readAheadBuffer.length-i);
               memcpy(buffer,storageFileHandle->ftp.readAheadBuffer.data+i,n);
-              buffer = (byte*)buffer+n;
-              size -= n;
-              (*bytesRead) += n;
-              storageFileHandle->ftp.index += n;
+
+              // adjust buffer, size, bytes read, index
+              buffer = (byte*)buffer+(uint64)n;
+              size -= (uint64)n;
+              (*bytesRead) += (uint64)n;
+              storageFileHandle->ftp.index += (uint64)n;
             }
 
             // read rest of data
@@ -4387,6 +4401,12 @@ Errors Storage_read(StorageFileHandle *storageFileHandle,
                 // copy data
                 n = MIN(size,storageFileHandle->ftp.readAheadBuffer.length);
                 memcpy(buffer,storageFileHandle->ftp.readAheadBuffer.data,n);
+
+                // adjust buffer, size, bytes read, index
+                buffer = (byte*)buffer+(uint64)n;
+                size -= (uint64)n;
+                (*bytesRead) += (uint64)n;
+                storageFileHandle->ftp.index += (uint64)n;
               }
               else
               {
@@ -4411,11 +4431,13 @@ Errors Storage_read(StorageFileHandle *storageFileHandle,
                   error = ERROR(IO_ERROR,errno);
                   break;
                 }
+
+                // adjust buffer, size, bytes read, index
+                buffer = (byte*)buffer+(uint64)readBytes;
+                size -= (uint64)readBytes;
+                (*bytesRead) += (uint64)readBytes;
+                storageFileHandle->ftp.index += (uint64)readBytes;
               }
-              buffer = (byte*)buffer+(uint64)n;
-              size -= (uint64)n;
-              (*bytesRead) += (uint64)n;
-              storageFileHandle->ftp.index += (uint64)n;
             }
           }
         }
@@ -4455,13 +4477,16 @@ Errors Storage_read(StorageFileHandle *storageFileHandle,
                 && (storageFileHandle->scp.index < (storageFileHandle->scp.readAheadBuffer.offset+storageFileHandle->scp.readAheadBuffer.length))
                )
             {
+              // copy data
               i = (ulong)(storageFileHandle->scp.index-storageFileHandle->scp.readAheadBuffer.offset);
               n = MIN(size,storageFileHandle->scp.readAheadBuffer.length-i);
               memcpy(buffer,storageFileHandle->scp.readAheadBuffer.data+i,n);
-              buffer = (byte*)buffer+n;
-              size -= n;
-              (*bytesRead) += n;
-              storageFileHandle->scp.index += n;
+
+              // adjust buffer, size, bytes read, index
+              buffer = (byte*)buffer+(uint64)n;
+              size -= (uint64)n;
+              (*bytesRead) += (uint64)n;
+              storageFileHandle->scp.index += (uint64)n;
             }
 
             // read rest of data
@@ -4491,6 +4516,12 @@ Errors Storage_read(StorageFileHandle *storageFileHandle,
                 // copy data
                 n = MIN(size,storageFileHandle->scp.readAheadBuffer.length);
                 memcpy(buffer,storageFileHandle->scp.readAheadBuffer.data,n);
+
+                // adjust buffer, size, bytes read, index
+                buffer = (byte*)buffer+(uint64)n;
+                size -= (uint64)n;
+                (*bytesRead) += (uint64)n;
+                storageFileHandle->scp.index += (uint64)n;
               }
               else
               {
@@ -4508,11 +4539,13 @@ Errors Storage_read(StorageFileHandle *storageFileHandle,
                   error = ERROR(IO_ERROR,errno);
                   break;
                 }
+
+                // adjust buffer, size, bytes read, index
+                buffer = (byte*)buffer+(uint64)readBytes;
+                size -= (uint64)readBytes;
+                (*bytesRead) += (uint64)readBytes;
+                storageFileHandle->scp.index += (uint64)readBytes;
               }
-              buffer = (byte*)buffer+(uint64)readBytes;
-              size -= (uint64)readBytes;
-              (*bytesRead) += (uint64)readBytes;
-              storageFileHandle->scp.index += (uint64)readBytes;
             }
           }
 #endif /* 0 */
@@ -4538,9 +4571,12 @@ Errors Storage_read(StorageFileHandle *storageFileHandle,
                 && (storageFileHandle->sftp.index < (storageFileHandle->sftp.readAheadBuffer.offset+storageFileHandle->sftp.readAheadBuffer.length))
                )
             {
+              // copy data
               i = (ulong)(storageFileHandle->sftp.index-storageFileHandle->sftp.readAheadBuffer.offset);
               n = MIN(size,storageFileHandle->sftp.readAheadBuffer.length-i);
               memcpy(buffer,storageFileHandle->sftp.readAheadBuffer.data+i,n);
+
+              // adjust buffer, size, bytes read, index
               buffer = (byte*)buffer+n;
               size -= n;
               (*bytesRead) += n;
@@ -4576,6 +4612,10 @@ Errors Storage_read(StorageFileHandle *storageFileHandle,
                 // copy data
                 n = MIN(size,storageFileHandle->sftp.readAheadBuffer.length);
                 memcpy(buffer,storageFileHandle->sftp.readAheadBuffer.data,n);
+
+                // adjust buffer, size, bytes read, index
+                (*bytesRead) += (uint64)n;
+                storageFileHandle->sftp.index += (uint64)n;
               }
               else
               {
@@ -4589,9 +4629,11 @@ Errors Storage_read(StorageFileHandle *storageFileHandle,
                   error = ERROR(IO_ERROR,errno);
                   break;
                 }
+
+                // adjust buffer, size, bytes read, index
+                (*bytesRead) += (uint64)readBytes;
+                storageFileHandle->sftp.index += (uint64)readBytes;
               }
-              (*bytesRead) += (uint64)n;
-              storageFileHandle->sftp.index += (uint64)n;
             }
           }
         }
@@ -4650,6 +4692,7 @@ Errors Storage_read(StorageFileHandle *storageFileHandle,
               n = MIN(size,storageFileHandle->opticalDisk.read.buffer.length-blockOffset);
               memcpy(buffer,storageFileHandle->opticalDisk.read.buffer.data+blockOffset,n);
 
+              // adjust buffer, size, bytes read, index
               buffer = (byte*)buffer+n;
               size -= n;
               (*bytesRead) += n;
@@ -5684,6 +5727,12 @@ error = ERROR_FUNCTION_NOT_SUPPORTED;
 
       #ifdef HAVE_ISO9660
         UNUSED_VARIABLE(jobOptions);
+
+        // check if device exists
+        if (!File_exists(storageName))
+        {
+          return ERRORX(OPTICAL_DISK_NOT_FOUND,0,String_cString(storageName));
+        }
 
         // open optical disk/ISO 9660 file
         storageDirectoryListHandle->opticalDisk.iso9660Handle = iso9660_open(String_cString(storageName));
