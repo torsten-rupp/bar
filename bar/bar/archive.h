@@ -319,6 +319,17 @@ Errors Archive_initAll(void);
 void Archive_doneAll(void);
 
 /***********************************************************************\
+* Name   :
+* Purpose:
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+bool Archive_isArchiveFile(const String fileName);
+
+/***********************************************************************\
 * Name   : Archive_clearCryptPasswords
 * Purpose: clear decrypt passwords (except default passwords)
 * Input  : -
@@ -332,7 +343,7 @@ void Archive_clearDecryptPasswords(void);
 /***********************************************************************\
 * Name   : Archive_appendDecryptPassword
 * Purpose: append password to decrypt password list
-* Input  : password - password
+* Input  : password - decrypt password to append
 * Output : -
 * Return : appended password
 * Notes  : -
@@ -910,6 +921,8 @@ Errors Archive_remIndex(DatabaseHandle *databaseHandle,
                         int64          storageId
                        );
 
+#if 0
+// NYI
 Errors Archive_copy(ArchiveInfo                     *archiveInfo,
                     const String                    storageName,
                     JobOptions                      *jobOptions,
@@ -917,6 +930,7 @@ Errors Archive_copy(ArchiveInfo                     *archiveInfo,
                     void                            *archiveGetCryptPasswordData,
                     const String                    newStorageName
                    );
+#endif /* 0 */
 
 #ifdef __cplusplus
   }

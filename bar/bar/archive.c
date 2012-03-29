@@ -2224,6 +2224,34 @@ void Archive_doneAll(void)
   List_done(&decryptPasswordList,(ListNodeFreeFunction)freePasswordNode,NULL);
 }
 
+bool Archive_isArchiveFile(const String fileName)
+{
+  FileHandle  fileHandle;
+  Errors      error;
+  ChunkHeader chunkHeader;
+
+  error = File_open(&fileHandle,
+                    fileName,
+                    FILE_OPEN_READ
+                   );
+  if (error != ERROR_NONE)
+  {
+    return false;
+  }
+
+  error = Chunk_next(&CHUNK_IO_FILE,&fileHandle,&chunkHeader);
+  if (error != ERROR_NONE)
+  {
+    (void)File_close(&fileHandle);
+    return error;
+  }
+
+  (void)File_close(&fileHandle);
+
+  return    (chunkHeader.id == CHUNK_ID_BAR)
+         && (chunkHeader.size == sizeof(uint32));
+}
+
 void Archive_clearDecryptPasswords(void)
 {
   List_clear(&decryptPasswordList,(ListNodeFreeFunction)freePasswordNode,NULL);
