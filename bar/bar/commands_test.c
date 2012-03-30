@@ -195,6 +195,10 @@ Errors Command_test(const StringList                *archiveNameList,
                 }
                 assert(fragmentNode != NULL);
               }
+              else
+              {
+                fragmentNode = NULL;
+              }
 //FragmentList_print(fragmentNode,String_cString(fileName));
 
               // test read file content
@@ -225,7 +229,7 @@ Errors Command_test(const StringList                *archiveNameList,
                 continue;
               }
 
-              if (!jobOptions->noFragmentsCheckFlag)
+              if (fragmentNode != NULL)
               {
                 // add fragment to file fragment list
                 FragmentList_addEntry(fragmentNode,fragmentOffset,fragmentSize);
@@ -233,7 +237,7 @@ Errors Command_test(const StringList                *archiveNameList,
                 // discard fragment list if file is complete
                 if (FragmentList_isEntryComplete(fragmentNode))
                 {
-//                FragmentList_discard(&fragmentList,fragmentNode);
+                  FragmentList_discard(&fragmentList,fragmentNode);
                 }
               }
 
@@ -330,6 +334,10 @@ Errors Command_test(const StringList                *archiveNameList,
 //FragmentList_print(fragmentNode,String_cString(imageName));
                 assert(fragmentNode != NULL);
               }
+              else
+              {
+                fragmentNode = NULL;
+              }
 
               // test read image content
               block = 0LL;
@@ -360,7 +368,7 @@ Errors Command_test(const StringList                *archiveNameList,
                 continue;
               }
 
-              if (!jobOptions->noFragmentsCheckFlag)
+              if (fragmentNode != NULL)
               {
                 // add fragment to file fragment list
                 FragmentList_addEntry(fragmentNode,blockOffset*(uint64)deviceInfo.blockSize,blockCount*(uint64)deviceInfo.blockSize);
@@ -609,14 +617,18 @@ Errors Command_test(const StringList                *archiveNameList,
 
                   if (!jobOptions->noFragmentsCheckFlag)
                   {
-                     // get file fragment list
-                     fragmentNode = FragmentList_find(&fragmentList,fileName);
-                     if (fragmentNode == NULL)
+                    // get file fragment list
+                    fragmentNode = FragmentList_find(&fragmentList,fileName);
+                    if (fragmentNode == NULL)
                     {
                       fragmentNode = FragmentList_add(&fragmentList,fileName,fileInfo.size,NULL,0);
                     }
                     assert(fragmentNode != NULL);
 //FragmentList_print(fragmentNode,String_cString(fileName));
+                  }
+                  else
+                  {
+                    fragmentNode = NULL;
                   }
 
                   // test read hard link content
@@ -645,7 +657,7 @@ Errors Command_test(const StringList                *archiveNameList,
                     break;
                   }
 
-                  if (!jobOptions->noFragmentsCheckFlag)
+                  if (fragmentNode != NULL)
                   {
                     // add fragment to file fragment list
                     FragmentList_addEntry(fragmentNode,fragmentOffset,fragmentSize);
