@@ -7777,6 +7777,8 @@ Errors Archive_seek(ArchiveInfo *archiveInfo,
 
   assert(archiveInfo != NULL);
 
+  error = ERROR_NONE;
+
   if (!archiveInfo->jobOptions->dryRunFlag)
   {
     switch (archiveInfo->ioType)
