@@ -138,7 +138,7 @@ LOCAL Errors compressData(CompressInfo *compressInfo)
   assert(compressInfo->compressBufferIndex <= compressInfo->compressBufferLength);
   assert(compressInfo->compressBufferLength <= compressInfo->compressBufferSize);
 
-  /* compress if possible */
+  // compress if possible
   switch (compressInfo->compressAlgorithm)
   {
     case COMPRESS_ALGORITHM_NONE:
@@ -235,7 +235,6 @@ LOCAL Errors compressData(CompressInfo *compressInfo)
               compressInfo->compressBufferLength += compressBytes;
 
               // shift data buffer
-//              memmove(compressInfo->dataBuffer+compressInfo->dataBufferIndex,
               memmove(compressInfo->dataBuffer,
                       compressInfo->dataBuffer+compressInfo->dataBufferIndex+dataBytes,
                       compressInfo->dataBufferLength-compressInfo->dataBufferIndex-dataBytes
@@ -1492,7 +1491,7 @@ Errors Compress_new(CompressInfo       *compressInfo,
 {
   assert(compressInfo != NULL);
 
-  /* init variables */
+  // init variables
   compressInfo->compressMode         = compressMode;
   compressInfo->compressAlgorithm    = compressAlgorithm;
   compressInfo->blockLength          = blockLength;
@@ -1506,7 +1505,7 @@ Errors Compress_new(CompressInfo       *compressInfo,
   compressInfo->compressBufferLength = 0L;
   compressInfo->compressBufferSize   = blockLength;
 
-  /* allocate buffers */
+  // allocate buffers
   compressInfo->dataBuffer = malloc(compressInfo->dataBufferSize);
   if (compressInfo->dataBuffer == NULL)
   {
@@ -1915,7 +1914,7 @@ Errors Compress_reset(CompressInfo *compressInfo)
 {
   assert(compressInfo != NULL);
 
-  /* init variables */
+  // init variables
   compressInfo->compressState        = COMPRESS_STATE_INIT;
   compressInfo->endOfDataFlag        = FALSE;
   compressInfo->flushFlag            = FALSE;
@@ -2156,7 +2155,7 @@ Errors Compress_deflate(CompressInfo *compressInfo,
   if (deflatedBytes != NULL) (*deflatedBytes) = 0L;
   do
   {
-    /* check if data buffer is full, compress data buffer */
+    // check if data buffer is full, compress data buffer
     if (compressInfo->dataBufferLength >= compressInfo->dataBufferSize)
     {
       error = compressData(compressInfo);
@@ -2166,10 +2165,10 @@ Errors Compress_deflate(CompressInfo *compressInfo,
       }
     }
 
-    /* get available space in buffer */
+    // get available space in buffer
     n = MIN(length,compressInfo->dataBufferSize-compressInfo->dataBufferLength);
 
-    /* copy new data to data buffer */
+    // copy new data to data buffer
     memcpy(compressInfo->dataBuffer+compressInfo->dataBufferLength,data,n);
     compressInfo->dataBufferLength +=n;
     data += n;
@@ -2202,7 +2201,7 @@ Errors Compress_inflate(CompressInfo *compressInfo,
   if (inflatedBytes != NULL) (*inflatedBytes) = 0L;
   do
   {
-    /* check if buffer is empty, decompress data */
+    // check if buffer is empty, decompress data
     if (compressInfo->dataBufferIndex >= compressInfo->dataBufferLength)
     {
       error = decompressData(compressInfo);
@@ -2212,10 +2211,10 @@ Errors Compress_inflate(CompressInfo *compressInfo,
       }
     }
 
-    /* get number of bytes to read */
+    // get number of bytes to read
     n = MIN(length,compressInfo->dataBufferLength-compressInfo->dataBufferIndex);
 
-    /* copy from data buffer */
+    // copy from data buffer
     memcpy(data,compressInfo->dataBuffer+compressInfo->dataBufferIndex,n);
     compressInfo->dataBufferIndex += n;
     data += n;
@@ -2476,11 +2475,11 @@ Errors Compress_getAvailableCompressedBlocks(CompressInfo       *compressInfo,
   switch (blockType)
   {
     case COMPRESS_BLOCK_TYPE_ANY:
-      /* block is available iff compressBufferLength >= 0 */
+      // block is available iff compressBufferLength >= 0
       (*blockCount) = (uint)((compressInfo->compressBufferLength-compressInfo->compressBufferIndex+compressInfo->blockLength-1)/compressInfo->blockLength);
       break;
     case COMPRESS_BLOCK_TYPE_FULL:
-      /* block is full iff compressBufferLength >= blockLength */
+      // block is full iff compressBufferLength >= blockLength
       (*blockCount) = (uint)((compressInfo->compressBufferLength-compressInfo->compressBufferIndex)/compressInfo->blockLength);
       break;
     #ifndef NDEBUG
