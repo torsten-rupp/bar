@@ -48,6 +48,17 @@ LOCAL SourceList sourceList;
 #endif
 
   // create local copy of storage file
+/***********************************************************************\
+* Name   : createLocalStorageArchive
+* Purpose: create local copy of storage file
+* Input  : localStorageName - local storage name
+*          storageName      - storage name
+*          jobOptions       - job options
+* Output : -
+* Return : ERROR_NONE if local copy created, otherwise error code
+* Notes  : -
+\***********************************************************************/
+
 LOCAL Errors createLocalStorageArchive(String       localStorageName,
                                        const String storageName,
                                        JobOptions   *jobOptions
@@ -81,11 +92,37 @@ LOCAL Errors createLocalStorageArchive(String       localStorageName,
   return ERROR_NONE;
 }
 
+/***********************************************************************\
+* Name   :
+* Purpose:
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
 LOCAL void deleteLocalStorageArchive(String localStorageName)
 {
   File_delete(localStorageName,FALSE);
   String_delete(localStorageName);
 }
+
+/***********************************************************************\
+* Name   : restoreFile
+* Purpose: restore file from archive
+* Input  : archiveName                      - archive file name
+*          name                             - name of entry to restore
+*          jobOptions                       - job options
+*          archiveGetCryptPasswordFunction  - get password call back
+*          archiveGetCryptPasswordUserData  - user data for get password
+*                                             call back
+*          pauseFlag                        - pause flag (can be NULL)
+*          requestedAbortFlag               - request abort flag (can be
+*                                             NULL)
+* Output : -
+* Return : ERROR_NONE if file restored, otherwise error code
+* Notes  : -
+\***********************************************************************/
 
 LOCAL Errors restoreFile(const String                    archiveName,
                          const String                    name,
@@ -97,6 +134,7 @@ LOCAL Errors restoreFile(const String                    archiveName,
                          bool                            *requestedAbortFlag
                         )
 {
+  bool              restoredFlag;
   byte              *buffer;
 //  bool              abortFlag;
   Errors            error;
@@ -111,6 +149,7 @@ LOCAL Errors restoreFile(const String                    archiveName,
   assert(destinationFileName != NULL);
 
   // initialize variables
+  restoredFlag = FALSE;
 
   // allocate resources
   buffer = malloc(BUFFER_SIZE);
@@ -133,7 +172,8 @@ LOCAL Errors restoreFile(const String                    archiveName,
 
   // read archive entries
   failError = ERROR_NONE;
-  while (   ((requestedAbortFlag == NULL) || !(*requestedAbortFlag))
+  while (   !restoredFlag
+         && ((requestedAbortFlag == NULL) || !(*requestedAbortFlag))
          && !Archive_eof(&archiveInfo,TRUE)
          && (failError == ERROR_NONE)
         )
@@ -184,6 +224,7 @@ LOCAL Errors restoreFile(const String                    archiveName,
                                        );
           if (error != ERROR_NONE)
           {
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
             String_delete(fileName);
             if (failError == ERROR_NONE) failError = error;
             continue;
@@ -215,7 +256,7 @@ LOCAL Errors restoreFile(const String                    archiveName,
                          String_cString(destinationFileName),
                          Errors_getText(error)
                         );
-              File_close(&fileHandle);
+              (void)File_close(&fileHandle);
               (void)Archive_closeEntry(&archiveEntryInfo);
               String_delete(fileName);
               failError = error;
@@ -258,21 +299,24 @@ LOCAL Errors restoreFile(const String                    archiveName,
             }
             if      (failError != ERROR_NONE)
             {
-              File_close(&fileHandle);
+              (void)File_close(&fileHandle);
               (void)Archive_closeEntry(&archiveEntryInfo);
               String_delete(fileName);
               continue;
             }
             else if ((requestedAbortFlag != NULL) && (*requestedAbortFlag))
             {
-              File_close(&fileHandle);
+              (void)File_close(&fileHandle);
               (void)Archive_closeEntry(&archiveEntryInfo);
               String_delete(fileName);
               continue;
             }
 
             // close file
-            File_close(&fileHandle);
+            (void)File_close(&fileHandle);
+
+            // entry restored
+            restoredFlag = TRUE;
           }
 
           // close archive file, free resources
@@ -341,7 +385,7 @@ LOCAL Errors restoreFile(const String                    archiveName,
                          String_cString(destinationFileName),
                          Errors_getText(error)
                         );
-              File_close(&fileHandle);
+              (void)File_close(&fileHandle);
               (void)Archive_closeEntry(&archiveEntryInfo);
               String_delete(imageName);
               failError = error;
@@ -389,7 +433,10 @@ bufferLength =0;
             }
 
             // close file
-            File_close(&fileHandle);
+            (void)File_close(&fileHandle);
+
+            // entry restored
+            restoredFlag = TRUE;
           }
 
           // close archive file, free resources
@@ -459,7 +506,7 @@ bufferLength =0;
                          String_cString(destinationFileName),
                          Errors_getText(error)
                         );
-              File_close(&fileHandle);
+              (void)File_close(&fileHandle);
               (void)Archive_closeEntry(&archiveEntryInfo);
               StringList_done(&fileNameList);
               failError = error;
@@ -502,17 +549,20 @@ bufferLength =0;
             }
             if      (failError != ERROR_NONE)
             {
-              File_close(&fileHandle);
+              (void)File_close(&fileHandle);
               break;
             }
             else if ((requestedAbortFlag != NULL) && (*requestedAbortFlag))
             {
-              File_close(&fileHandle);
+              (void)File_close(&fileHandle);
               break;
             }
 
             // close file
-            File_close(&fileHandle);
+            (void)File_close(&fileHandle);
+
+            // entry restored
+            restoredFlag = TRUE;
           }
           if (failError != ERROR_NONE)
           {
@@ -551,7 +601,18 @@ bufferLength =0;
   // free resources
   free(buffer);
 
-  return failError;
+  if      (failError != ERROR_NONE)
+  {
+    return failError;
+  }
+  else if (!restoredFlag)
+  {
+    return ERROR_ENTRY_NOT_FOUND;
+  }
+  else
+  {
+    return ERROR_NONE;
+  }
 }
 
 /***********************************************************************\
@@ -706,7 +767,7 @@ Errors Source_openEntry(SourceHandle *sourceHandle,
                               NULL,//bool                            *pauseFlag,
                               NULL//bool                            *requestedAbortFlag
                              );
-          if (error == ERROR_NONE)
+          if      (error == ERROR_NONE)
           {
             // open temporary restored file
             error = File_open(&sourceHandle->tmpFileHandle,tmpFileName,FILE_OPEN_READ);
@@ -722,9 +783,15 @@ Errors Source_openEntry(SourceHandle *sourceHandle,
               String_delete(tmpFileName);
             }
           }
+          else if (error == ERROR_ENTRY_NOT_FOUND)
+          {
+            // not found
+            String_delete(tmpFileName);
+          }
           else
           {
             String_delete(tmpFileName);
+            return error;
           }
         }
 
@@ -791,9 +858,15 @@ Errors Source_openEntry(SourceHandle *sourceHandle,
               String_delete(tmpFileName);
             }
           }
+          else if (error == ERROR_ENTRY_NOT_FOUND)
+          {
+            // not found
+            String_delete(tmpFileName);
+          }
           else
           {
             String_delete(tmpFileName);
+            return error;
           }
         }
         else
@@ -854,9 +927,15 @@ Errors Source_openEntry(SourceHandle *sourceHandle,
                 String_delete(tmpFileName);
               }
             }
+            else if (error == ERROR_ENTRY_NOT_FOUND)
+            {
+              // not found
+              String_delete(tmpFileName);
+            }
             else
             {
               String_delete(tmpFileName);
+              return error;
             }
             freeJobOptions(&jobOptions);
           }
@@ -957,7 +1036,7 @@ void Source_closeEntry(SourceHandle *sourceHandle)
   assert(sourceHandle != NULL);
 
   // close source file
-  File_close(&sourceHandle->tmpFileHandle);
+  (void)File_close(&sourceHandle->tmpFileHandle);
 
   // delete temporary source file
   if (sourceHandle->tmpFileName != NULL)
