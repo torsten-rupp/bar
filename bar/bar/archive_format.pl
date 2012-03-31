@@ -145,10 +145,15 @@ while ($line=<STDIN>)
     writeHFile("  ChunkInfo info;\n");
     while ($line=<STDIN>)
     {
+      # get line
       chop $line;
       $lineNb++;
-      if ($line =~ /^\s*#/ || $line =~ /^\s*$/) { last; }
+      if ($line =~ /^\s*#/) { next; }
 
+      # check end of block
+      if ($line =~ /^\s*$/) { last; }
+
+      # parse
       if    ($line =~ /^\s*ENCRYPT\s*$/)
       {
         writeHFile("  CryptInfo cryptInfo;\n");
