@@ -183,7 +183,7 @@ Errors Command_test(const StringList                *archiveNameList,
                 && !PatternList_match(excludePatternList,fileName,PATTERN_MATCH_MODE_EXACT)
                )
             {
-              printInfo(2,"  Test file '%s'...",String_cString(fileName));
+              printInfo(1,"  Test file '%s'...",String_cString(fileName));
 
               if (!jobOptions->noFragmentsCheckFlag)
               {
@@ -211,7 +211,7 @@ Errors Command_test(const StringList                *archiveNameList,
                 error = Archive_readData(&archiveEntryInfo,archiveBuffer,n);
                 if (error != ERROR_NONE)
                 {
-                  printInfo(2,"FAIL!\n");
+                  printInfo(1,"FAIL!\n");
                   printError("Cannot read content of archive '%s' (error: %s)!\n",
                              String_cString(printableArchiveName),
                              Errors_getText(error)
@@ -221,13 +221,16 @@ Errors Command_test(const StringList                *archiveNameList,
                 }
 
                 length += (uint64)n;
+
+                printInfo(2,"%3d%%\b\b\b\b",(uint)((length*100LL)/fragmentSize));
               }
               if (failError != ERROR_NONE)
               {
-                Archive_closeEntry(&archiveEntryInfo);
+                (void)Archive_closeEntry(&archiveEntryInfo);
                 String_delete(fileName);
                 continue;
               }
+              printInfo(2,"    \b\b\b\b");
 
               if (fragmentNode != NULL)
               {
@@ -249,22 +252,23 @@ Errors Command_test(const StringList                *archiveNameList,
               */
               if (   !Compress_isCompressed(archiveEntryInfo.file.deltaCompressAlgorithm)
                   && !Compress_isCompressed(archiveEntryInfo.file.byteCompressAlgorithm)
-                  && !Archive_eofData(&archiveEntryInfo))
+                  && !Archive_eofData(&archiveEntryInfo)
+                 )
               {
-                printInfo(2,"FAIL!\n");
+                printInfo(1,"FAIL!\n");
                 printError("unexpected data at end of file entry '%S'!\n",fileName);
                 if (failError == ERROR_NONE) failError = ERROR_CORRUPT_DATA;
-                Archive_closeEntry(&archiveEntryInfo);
+                (void)Archive_closeEntry(&archiveEntryInfo);
                 String_delete(fileName);
                 break;
               }
 
-              printInfo(2,"ok\n");
+              printInfo(1,"ok\n");
             }
             else
             {
               // skip
-              printInfo(3,"  Test '%s'...skipped\n",String_cString(fileName));
+              printInfo(2,"  Test '%s'...skipped\n",String_cString(fileName));
             }
 
             // close archive file, free resources
@@ -321,7 +325,7 @@ Errors Command_test(const StringList                *archiveNameList,
                 && !PatternList_match(excludePatternList,imageName,PATTERN_MATCH_MODE_EXACT)
                )
             {
-              printInfo(2,"  Test image '%s'...",String_cString(imageName));
+              printInfo(1,"  Test image '%s'...",String_cString(imageName));
 
               if (!jobOptions->noFragmentsCheckFlag)
               {
@@ -350,7 +354,7 @@ Errors Command_test(const StringList                *archiveNameList,
                 error = Archive_readData(&archiveEntryInfo,archiveBuffer,bufferBlockCount*deviceInfo.blockSize);
                 if (error != ERROR_NONE)
                 {
-                  printInfo(2,"FAIL!\n");
+                  printInfo(1,"FAIL!\n");
                   printError("Cannot read content of archive '%s' (error: %s)!\n",
                              String_cString(printableArchiveName),
                              Errors_getText(error)
@@ -360,13 +364,16 @@ Errors Command_test(const StringList                *archiveNameList,
                 }
 
                 block += (uint64)bufferBlockCount;
+
+                printInfo(2,"%3d%%\b\b\b\b",(uint)((block*100LL)/blockCount));
               }
               if (failError != ERROR_NONE)
               {
-                Archive_closeEntry(&archiveEntryInfo);
+                (void)Archive_closeEntry(&archiveEntryInfo);
                 String_delete(imageName);
                 continue;
               }
+              printInfo(2,"    \b\b\b\b");
 
               if (fragmentNode != NULL)
               {
@@ -390,20 +397,20 @@ Errors Command_test(const StringList                *archiveNameList,
                   && !Compress_isCompressed(archiveEntryInfo.image.byteCompressAlgorithm)
                   && !Archive_eofData(&archiveEntryInfo))
               {
-                printInfo(2,"FAIL!\n");
+                printInfo(1,"FAIL!\n");
                 printError("unexpected data at end of image entry '%S'!\n",imageName);
                 if (failError == ERROR_NONE) failError = ERROR_CORRUPT_DATA;
-                Archive_closeEntry(&archiveEntryInfo);
+                (void)Archive_closeEntry(&archiveEntryInfo);
                 String_delete(imageName);
                 break;
               }
 
-              printInfo(2,"ok\n");
+              printInfo(1,"ok\n");
             }
             else
             {
               // skip
-              printInfo(3,"  Test '%s'...skipped\n",String_cString(imageName));
+              printInfo(2,"  Test '%s'...skipped\n",String_cString(imageName));
             }
 
             // close archive file, free resources
@@ -451,27 +458,27 @@ Errors Command_test(const StringList                *archiveNameList,
                 && !PatternList_match(excludePatternList,directoryName,PATTERN_MATCH_MODE_EXACT)
                )
             {
-              printInfo(2,"  Test directory '%s'...",String_cString(directoryName));
+              printInfo(1,"  Test directory '%s'...",String_cString(directoryName));
 
               // check if all data read
               if (!Archive_eofData(&archiveEntryInfo))
               {
-                printInfo(2,"FAIL!\n");
+                printInfo(1,"FAIL!\n");
                 printError("unexpected data at end of directory entry '%S'!\n",directoryName);
-                Archive_closeEntry(&archiveEntryInfo);
+                (void)Archive_closeEntry(&archiveEntryInfo);
                 String_delete(directoryName);
                 if (failError == ERROR_NONE) failError = ERROR_CORRUPT_DATA;
                 break;
               }
 
-              printInfo(2,"ok\n");
+              printInfo(1,"ok\n");
 
               // free resources
             }
             else
             {
               // skip
-              printInfo(3,"Test '%s'...skipped\n",String_cString(directoryName));
+              printInfo(2,"Test '%s'...skipped\n",String_cString(directoryName));
             }
 
             // close archive file
@@ -523,28 +530,28 @@ Errors Command_test(const StringList                *archiveNameList,
                 && !PatternList_match(excludePatternList,linkName,PATTERN_MATCH_MODE_EXACT)
                )
             {
-              printInfo(2,"  Test link '%s'...",String_cString(linkName));
+              printInfo(1,"  Test link '%s'...",String_cString(linkName));
 
               // check if all data read
               if (!Archive_eofData(&archiveEntryInfo))
               {
-                printInfo(2,"FAIL!\n");
+                printInfo(1,"FAIL!\n");
                 printError("unexpected data at end of link entry '%S'!\n",linkName);
-                Archive_closeEntry(&archiveEntryInfo);
+                (void)Archive_closeEntry(&archiveEntryInfo);
                 String_delete(fileName);
                 String_delete(linkName);
                 if (failError == ERROR_NONE) failError = ERROR_CORRUPT_DATA;
                 break;
               }
 
-              printInfo(2,"ok\n");
+              printInfo(1,"ok\n");
 
               // free resources
             }
             else
             {
               // skip
-              printInfo(3,"  Test '%s'...skipped\n",String_cString(linkName));
+              printInfo(2,"  Test '%s'...skipped\n",String_cString(linkName));
             }
 
             // close archive file
@@ -609,7 +616,7 @@ Errors Command_test(const StringList                *archiveNameList,
                   && !PatternList_match(excludePatternList,fileName,PATTERN_MATCH_MODE_EXACT)
                  )
               {
-                printInfo(2,"  Test hard link '%s'...",String_cString(fileName));
+                printInfo(1,"  Test hard link '%s'...",String_cString(fileName));
 
                 if (!testedDataFlag && (failError == ERROR_NONE))
                 {
@@ -641,7 +648,7 @@ Errors Command_test(const StringList                *archiveNameList,
                     error = Archive_readData(&archiveEntryInfo,archiveBuffer,n);
                     if (error != ERROR_NONE)
                     {
-                      printInfo(2,"FAIL!\n");
+                      printInfo(1,"FAIL!\n");
                       printError("Cannot read content of archive '%s' (error: %s)!\n",
                                  String_cString(printableArchiveName),
                                  Errors_getText(error)
@@ -651,11 +658,14 @@ Errors Command_test(const StringList                *archiveNameList,
                     }
 
                     length += (uint64)n;
+
+                    printInfo(2,"%3d%%\b\b\b\b",(uint)((length*100LL)/fragmentSize));
                   }
                   if (failError != ERROR_NONE)
                   {
                     break;
                   }
+                  printInfo(2,"    \b\b\b\b");
 
                   if (fragmentNode != NULL)
                   {
@@ -684,7 +694,7 @@ Errors Command_test(const StringList                *archiveNameList,
                     break;
                   }
 
-                  printInfo(2,"ok\n");
+                  printInfo(1,"ok\n");
 
                   testedDataFlag = TRUE;
                 }
@@ -693,18 +703,18 @@ Errors Command_test(const StringList                *archiveNameList,
                   // test hard link data already done
                   if (failError == ERROR_NONE)
                   {
-                    printInfo(2,"ok\n");
+                    printInfo(1,"ok\n");
                   }
                   else
                   {
-                    printInfo(2,"FAIL!\n");
+                    printInfo(1,"FAIL!\n");
                   }
                 }
               }
               else
               {
                 // skip
-                printInfo(3,"  Test '%s'...skipped\n",String_cString(fileName));
+                printInfo(2,"  Test '%s'...skipped\n",String_cString(fileName));
               }
             }
             if (failError != ERROR_NONE)
@@ -758,27 +768,27 @@ Errors Command_test(const StringList                *archiveNameList,
                 && !PatternList_match(excludePatternList,fileName,PATTERN_MATCH_MODE_EXACT)
                )
             {
-              printInfo(2,"  Test special device '%s'...",String_cString(fileName));
+              printInfo(1,"  Test special device '%s'...",String_cString(fileName));
 
               // check if all data read
               if (!Archive_eofData(&archiveEntryInfo))
               {
-                printInfo(2,"FAIL!\n");
+                printInfo(1,"FAIL!\n");
                 printError("unexpected data at end of special entry '%S'!\n",fileName);
-                Archive_closeEntry(&archiveEntryInfo);
+                (void)Archive_closeEntry(&archiveEntryInfo);
                 String_delete(fileName);
                 if (failError == ERROR_NONE) failError = ERROR_CORRUPT_DATA;
                 break;
               }
 
-              printInfo(2,"ok\n");
+              printInfo(1,"ok\n");
 
               // free resources
             }
             else
             {
               // skip
-              printInfo(3,"  Test '%s'...skipped\n",String_cString(fileName));
+              printInfo(2,"  Test '%s'...skipped\n",String_cString(fileName));
             }
 
             // close archive file
@@ -822,7 +832,7 @@ Errors Command_test(const StringList                *archiveNameList,
           printInfo(2,"  Fragments:\n");
           FragmentList_print(stdout,4,fragmentNode);
         }
-        if (failError == ERROR_NONE) failError = ERROR_FILE_INCOMPLETE;
+        if (failError == ERROR_NONE) failError = ERROR_ENTRY_INCOMPLETE;
       }
     }
   }

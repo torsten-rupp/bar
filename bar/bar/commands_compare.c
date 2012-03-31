@@ -222,12 +222,12 @@ Errors Command_compare(const StringList                *archiveNameList,
                 && !PatternList_match(excludePatternList,fileName,PATTERN_MATCH_MODE_EXACT)
                )
             {
-              printInfo(2,"  Compare file '%s'...",String_cString(fileName));
+              printInfo(1,"  Compare file '%s'...",String_cString(fileName));
 
               // check if file exists and file type
               if (!File_exists(fileName))
               {
-                printInfo(2,"FAIL!\n");
+                printInfo(1,"FAIL!\n");
                 printError("File '%s' not found!\n",String_cString(fileName));
                 Archive_closeEntry(&archiveEntryInfo);
                 String_delete(fileName);
@@ -239,13 +239,13 @@ Errors Command_compare(const StringList                *archiveNameList,
               }
               if (File_getType(fileName) != FILE_TYPE_FILE)
               {
-                printInfo(2,"FAIL!\n");
+                printInfo(1,"FAIL!\n");
                 printError("'%s' is not a file!\n",String_cString(fileName));
                 Archive_closeEntry(&archiveEntryInfo);
                 String_delete(fileName);
                 if (jobOptions->stopOnErrorFlag)
                 {
-                  failError = ERROR_WRONG_FILE_TYPE;
+                  failError = ERROR_WRONG_ENTRY_TYPE;
                 }
                 break;
               }
@@ -270,7 +270,7 @@ Errors Command_compare(const StringList                *archiveNameList,
               error = File_open(&fileHandle,fileName,FILE_OPEN_READ);
               if (error != ERROR_NONE)
               {
-                printInfo(2,"FAIL!\n");
+                printInfo(1,"FAIL!\n");
                 printError("Cannot open file '%s' (error: %s)\n",
                            String_cString(fileName),
                            Errors_getText(error)
@@ -288,7 +288,7 @@ Errors Command_compare(const StringList                *archiveNameList,
               // check file size
               if (fileInfo.size != File_getSize(&fileHandle))
               {
-                printInfo(2,"FAIL!\n");
+                printInfo(1,"FAIL!\n");
                 printError("'%s' differ in size: expected %lld bytes, found %lld bytes\n",
                            String_cString(fileName),
                            fileInfo.size,
@@ -300,7 +300,7 @@ Errors Command_compare(const StringList                *archiveNameList,
                 String_delete(fileName);
                 if (jobOptions->stopOnErrorFlag)
                 {
-                  failError = ERROR_FILES_DIFFER;
+                  failError = ERROR_ENTRIES_DIFFER;
                 }
                 continue;
               }
@@ -309,7 +309,7 @@ Errors Command_compare(const StringList                *archiveNameList,
               error = File_seek(&fileHandle,fragmentOffset);
               if (error != ERROR_NONE)
               {
-                printInfo(2,"FAIL!\n");
+                printInfo(1,"FAIL!\n");
                 printError("Cannot read file '%s' (error: %s)\n",
                            String_cString(fileName),
                            Errors_getText(error)
@@ -327,7 +327,9 @@ Errors Command_compare(const StringList                *archiveNameList,
               length    = 0;
               equalFlag = TRUE;
               diffIndex = 0;
-              while ((length < fragmentSize) && equalFlag)
+              while (   (length < fragmentSize)
+                     && equalFlag
+                    )
               {
                 bufferLength = MIN(fragmentSize-length,BUFFER_SIZE);
 
@@ -335,7 +337,7 @@ Errors Command_compare(const StringList                *archiveNameList,
                 error = Archive_readData(&archiveEntryInfo,archiveBuffer,bufferLength);
                 if (error != ERROR_NONE)
                 {
-                  printInfo(2,"FAIL!\n");
+                  printInfo(1,"FAIL!\n");
                   printError("Cannot read content of archive '%s' (error: %s)!\n",
                              String_cString(printableArchiveName),
                              Errors_getText(error)
@@ -346,7 +348,7 @@ Errors Command_compare(const StringList                *archiveNameList,
                 error = File_read(&fileHandle,buffer,bufferLength,NULL);
                 if (error != ERROR_NONE)
                 {
-                  printInfo(2,"FAIL!\n");
+                  printInfo(1,"FAIL!\n");
                   printError("Cannot read file '%s' (error: %s)\n",
                              String_cString(fileName),
                              Errors_getText(error)
@@ -363,19 +365,21 @@ Errors Command_compare(const StringList                *archiveNameList,
                 equalFlag = (diffIndex >= bufferLength);
                 if (!equalFlag)
                 {
-                  printInfo(2,"FAIL!\n");
+                  printInfo(1,"FAIL!\n");
                   printError("'%s' differ at offset %llu\n",
                              String_cString(fileName),
                              fragmentOffset+length+(uint64)diffIndex
                             );
                   if (jobOptions->stopOnErrorFlag)
                   {
-                    failError = ERROR_FILES_DIFFER;
+                    failError = ERROR_ENTRIES_DIFFER;
                   }
                   break;
                 }
 
-                length += bufferLength;
+                length += (uint64)bufferLength;
+
+                printInfo(2,"%3d%%\b\b\b\b",(uint)((length*100LL)/fragmentSize));
               }
               File_close(&fileHandle);
               if (failError != ERROR_NONE)
@@ -385,6 +389,7 @@ Errors Command_compare(const StringList                *archiveNameList,
                 String_delete(fileName);
                 continue;
               }
+              printInfo(2,"    \b\b\b\b");
 
               if (fragmentNode != NULL)
               {
@@ -402,7 +407,7 @@ Errors Command_compare(const StringList                *archiveNameList,
               // get local file info
               // check file time, permissions, file owner/group
 #endif /* 0 */
-              printInfo(2,"ok\n");
+              printInfo(1,"ok\n");
 
               /* check if all data read.
                  Note: it is not possible to check if all data is read when
@@ -422,7 +427,7 @@ Errors Command_compare(const StringList                *archiveNameList,
             else
             {
               // skip
-              printInfo(3,"  Compare '%s'...skipped\n",String_cString(fileName));
+              printInfo(2,"  Compare '%s'...skipped\n",String_cString(fileName));
             }
 
             // close archive file
@@ -479,12 +484,12 @@ Errors Command_compare(const StringList                *archiveNameList,
                 && !PatternList_match(excludePatternList,imageName,PATTERN_MATCH_MODE_EXACT)
                )
             {
-              printInfo(2,"  Compare image '%s'...",String_cString(imageName));
+              printInfo(1,"  Compare image '%s'...",String_cString(imageName));
 
               // check if device exists
               if (!File_exists(imageName))
               {
-                printInfo(2,"FAIL!\n");
+                printInfo(1,"FAIL!\n");
                 printError("Device '%s' not found!\n",String_cString(imageName));
                 Archive_closeEntry(&archiveEntryInfo);
                 String_delete(imageName);
@@ -514,7 +519,7 @@ Errors Command_compare(const StringList                *archiveNameList,
               error = Device_open(&deviceHandle,imageName,DEVICE_OPENMODE_READ);
               if (error != ERROR_NONE)
               {
-                printInfo(2,"FAIL!\n");
+                printInfo(1,"FAIL!\n");
                 printError("Cannot open file '%s' (error: %s)\n",
                            String_cString(imageName),
                            Errors_getText(error)
@@ -531,7 +536,7 @@ Errors Command_compare(const StringList                *archiveNameList,
               // check image size
               if (deviceInfo.size != Device_getSize(&deviceHandle))
               {
-                printInfo(2,"FAIL!\n");
+                printInfo(1,"FAIL!\n");
                 printError("'%s' differ in size: expected %lld bytes, found %lld bytes\n",
                            String_cString(imageName),
                            deviceInfo.size,
@@ -542,7 +547,7 @@ Errors Command_compare(const StringList                *archiveNameList,
                 String_delete(imageName);
                 if (jobOptions->stopOnErrorFlag)
                 {
-                  failError = ERROR_FILES_DIFFER;
+                  failError = ERROR_ENTRIES_DIFFER;
                 }
                 continue;
               }
@@ -551,7 +556,7 @@ Errors Command_compare(const StringList                *archiveNameList,
               error = Device_seek(&deviceHandle,blockOffset*(uint64)deviceInfo.blockSize);
               if (error != ERROR_NONE)
               {
-                printInfo(2,"FAIL!\n");
+                printInfo(1,"FAIL!\n");
                 printError("Cannot read file '%s' (error: %s)\n",
                            String_cString(imageName),
                            Errors_getText(error)
@@ -577,7 +582,7 @@ Errors Command_compare(const StringList                *archiveNameList,
                 error = Archive_readData(&archiveEntryInfo,archiveBuffer,bufferBlockCount*deviceInfo.blockSize);
                 if (error != ERROR_NONE)
                 {
-                  printInfo(2,"FAIL!\n");
+                  printInfo(1,"FAIL!\n");
                   printError("Cannot read content of archive '%s' (error: %s)!\n",
                              String_cString(printableArchiveName),
                              Errors_getText(error)
@@ -588,7 +593,7 @@ Errors Command_compare(const StringList                *archiveNameList,
                 error = Device_read(&deviceHandle,buffer,bufferBlockCount*deviceInfo.blockSize,NULL);
                 if (error != ERROR_NONE)
                 {
-                  printInfo(2,"FAIL!\n");
+                  printInfo(1,"FAIL!\n");
                   printError("Cannot read file '%s' (error: %s)\n",
                              String_cString(imageName),
                              Errors_getText(error)
@@ -605,19 +610,21 @@ Errors Command_compare(const StringList                *archiveNameList,
                 equalFlag = (diffIndex >= bufferBlockCount*deviceInfo.blockSize);
                 if (!equalFlag)
                 {
-                  printInfo(2,"FAIL!\n");
+                  printInfo(1,"FAIL!\n");
                   printError("'%s' differ at offset %llu\n",
                              String_cString(imageName),
                              blockOffset*(uint64)deviceInfo.blockSize+block*(uint64)deviceInfo.blockSize+(uint64)diffIndex
                             );
                   if (jobOptions->stopOnErrorFlag)
                   {
-                    failError = ERROR_FILES_DIFFER;
+                    failError = ERROR_ENTRIES_DIFFER;
                   }
                   break;
                 }
 
                 block += (uint64)bufferBlockCount;
+
+                printInfo(2,"%3d%%\b\b\b\b",(uint)((block*100LL)/blockCount));
               }
               Device_close(&deviceHandle);
               if (failError != ERROR_NONE)
@@ -626,6 +633,7 @@ Errors Command_compare(const StringList                *archiveNameList,
                 String_delete(imageName);
                 continue;
               }
+              printInfo(2,"    \b\b\b\b");
 
               if (fragmentNode != NULL)
               {
@@ -639,7 +647,7 @@ Errors Command_compare(const StringList                *archiveNameList,
                 }
               }
 
-              printInfo(2,"ok\n");
+              printInfo(1,"ok\n");
 
               /* check if all data read.
                  Note: it is not possible to check if all data is read when
@@ -659,7 +667,7 @@ Errors Command_compare(const StringList                *archiveNameList,
             else
             {
               // skip
-              printInfo(3,"  Compare '%s'...skipped\n",String_cString(imageName));
+              printInfo(2,"  Compare '%s'...skipped\n",String_cString(imageName));
             }
 
             // close archive file, free resources
@@ -704,12 +712,12 @@ Errors Command_compare(const StringList                *archiveNameList,
                 && !PatternList_match(excludePatternList,directoryName,PATTERN_MATCH_MODE_EXACT)
                )
             {
-              printInfo(2,"  Compare directory '%s'...",String_cString(directoryName));
+              printInfo(1,"  Compare directory '%s'...",String_cString(directoryName));
 
               // check if file exists and file type
               if (!File_exists(directoryName))
               {
-                printInfo(2,"FAIL!\n");
+                printInfo(1,"FAIL!\n");
                 printError("Directory '%s' does not exists!\n",String_cString(directoryName));
                 Archive_closeEntry(&archiveEntryInfo);
                 String_delete(directoryName);
@@ -721,7 +729,7 @@ Errors Command_compare(const StringList                *archiveNameList,
               }
               if (File_getType(directoryName) != FILE_TYPE_DIRECTORY)
               {
-                printInfo(2,"FAIL!\n");
+                printInfo(1,"FAIL!\n");
                 printError("'%s' is not a directory!\n",
                            String_cString(directoryName)
                           );
@@ -729,7 +737,7 @@ Errors Command_compare(const StringList                *archiveNameList,
                 String_delete(directoryName);
                 if (jobOptions->stopOnErrorFlag)
                 {
-                  failError = ERROR_WRONG_FILE_TYPE;
+                  failError = ERROR_WRONG_ENTRY_TYPE;
                 }
                 break;
               }
@@ -751,7 +759,7 @@ Errors Command_compare(const StringList                *archiveNameList,
 
               // check file time, permissions, file owner/group
 #endif /* 0 */
-              printInfo(2,"ok\n");
+              printInfo(1,"ok\n");
 
               // check if all data read
               if (!Archive_eofData(&archiveEntryInfo))
@@ -764,7 +772,7 @@ Errors Command_compare(const StringList                *archiveNameList,
             else
             {
               // skip
-              printInfo(3,"  Compare '%s'...skipped\n",String_cString(directoryName));
+              printInfo(2,"  Compare '%s'...skipped\n",String_cString(directoryName));
             }
 
             // close archive file
@@ -813,12 +821,12 @@ Errors Command_compare(const StringList                *archiveNameList,
                 && !PatternList_match(excludePatternList,linkName,PATTERN_MATCH_MODE_EXACT)
                )
             {
-              printInfo(2,"  Compare link '%s'...",String_cString(linkName));
+              printInfo(1,"  Compare link '%s'...",String_cString(linkName));
 
               // check if file exists and file type
               if (!File_exists(linkName))
               {
-                printInfo(2,"FAIL!\n");
+                printInfo(1,"FAIL!\n");
                 printError("Link '%s' -> '%s' does not exists!\n",
                            String_cString(linkName),
                            String_cString(fileName)
@@ -834,7 +842,7 @@ Errors Command_compare(const StringList                *archiveNameList,
               }
               if (File_getType(linkName) != FILE_TYPE_LINK)
               {
-                printInfo(2,"FAIL!\n");
+                printInfo(1,"FAIL!\n");
                 printError("'%s' is not a link!\n",
                            String_cString(linkName)
                           );
@@ -843,7 +851,7 @@ Errors Command_compare(const StringList                *archiveNameList,
                 String_delete(linkName);
                 if (jobOptions->stopOnErrorFlag)
                 {
-                  failError = ERROR_WRONG_FILE_TYPE;
+                  failError = ERROR_WRONG_ENTRY_TYPE;
                 }
                 break;
               }
@@ -869,7 +877,7 @@ Errors Command_compare(const StringList                *archiveNameList,
               }
               if (!String_equals(fileName,localFileName))
               {
-                printInfo(2,"FAIL!\n");
+                printInfo(1,"FAIL!\n");
                 printError("Link '%s' does not contain file '%s'!\n",
                            String_cString(linkName),
                            String_cString(fileName)
@@ -880,7 +888,7 @@ Errors Command_compare(const StringList                *archiveNameList,
                 String_delete(linkName);
                 if (jobOptions->stopOnErrorFlag)
                 {
-                  failError = ERROR_FILES_DIFFER;
+                  failError = ERROR_ENTRIES_DIFFER;
                 }
                 break;
               }
@@ -904,7 +912,7 @@ Errors Command_compare(const StringList                *archiveNameList,
 
               // check file time, permissions, file owner/group
 #endif /* 0 */
-              printInfo(2,"ok\n");
+              printInfo(1,"ok\n");
 
               // check if all data read
               if (!Archive_eofData(&archiveEntryInfo))
@@ -917,7 +925,7 @@ Errors Command_compare(const StringList                *archiveNameList,
             else
             {
               // skip
-              printInfo(3,"  Compare '%s'...skipped\n",String_cString(linkName));
+              printInfo(2,"  Compare '%s'...skipped\n",String_cString(linkName));
             }
 
             // close archive file
@@ -981,12 +989,12 @@ Errors Command_compare(const StringList                *archiveNameList,
                   && !PatternList_match(excludePatternList,fileName,PATTERN_MATCH_MODE_EXACT)
                  )
               {
-                printInfo(2,"  Compare hard link '%s'...",String_cString(fileName));
+                printInfo(1,"  Compare hard link '%s'...",String_cString(fileName));
 
                 // check file if exists and file type
                 if (!File_exists(fileName))
                 {
-                  printInfo(2,"FAIL!\n");
+                  printInfo(1,"FAIL!\n");
                   printError("File '%s' not found!\n",String_cString(fileName));
                   if (jobOptions->stopOnErrorFlag)
                   {
@@ -1000,11 +1008,11 @@ Errors Command_compare(const StringList                *archiveNameList,
                 }
                 if (File_getType(fileName) != FILE_TYPE_HARDLINK)
                 {
-                  printInfo(2,"FAIL!\n");
+                  printInfo(1,"FAIL!\n");
                   printError("'%s' is not a hard link!\n",String_cString(fileName));
                   if (jobOptions->stopOnErrorFlag)
                   {
-                    failError = ERROR_WRONG_FILE_TYPE;
+                    failError = ERROR_WRONG_ENTRY_TYPE;
                     break;
                   }
                   else
@@ -1036,7 +1044,7 @@ Errors Command_compare(const StringList                *archiveNameList,
                   error = File_open(&fileHandle,fileName,FILE_OPEN_READ);
                   if (error != ERROR_NONE)
                   {
-                    printInfo(2,"FAIL!\n");
+                    printInfo(1,"FAIL!\n");
                     printError("Cannot open file '%s' (error: %s)\n",
                                String_cString(fileName),
                                Errors_getText(error)
@@ -1055,7 +1063,7 @@ Errors Command_compare(const StringList                *archiveNameList,
                   // check file size
                   if (fileInfo.size != File_getSize(&fileHandle))
                   {
-                    printInfo(2,"FAIL!\n");
+                    printInfo(1,"FAIL!\n");
                     printError("'%s' differ in size: expected %lld bytes, found %lld bytes\n",
                                String_cString(fileName),
                                fileInfo.size,
@@ -1064,7 +1072,7 @@ Errors Command_compare(const StringList                *archiveNameList,
                     File_close(&fileHandle);
                     if (jobOptions->stopOnErrorFlag)
                     {
-                      failError = ERROR_FILES_DIFFER;
+                      failError = ERROR_ENTRIES_DIFFER;
                       break;
                     }
                     else
@@ -1077,7 +1085,7 @@ Errors Command_compare(const StringList                *archiveNameList,
                   error = File_seek(&fileHandle,fragmentOffset);
                   if (error != ERROR_NONE)
                   {
-                    printInfo(2,"FAIL!\n");
+                    printInfo(1,"FAIL!\n");
                     printError("Cannot read file '%s' (error: %s)\n",
                                String_cString(fileName),
                                Errors_getText(error)
@@ -1096,7 +1104,9 @@ Errors Command_compare(const StringList                *archiveNameList,
                   length    = 0;
                   equalFlag = TRUE;
                   diffIndex = 0;
-                  while ((length < fragmentSize) && equalFlag)
+                  while (   (length < fragmentSize)
+                         && equalFlag
+                        )
                   {
                     bufferLength = MIN(fragmentSize-length,BUFFER_SIZE);
 
@@ -1104,7 +1114,7 @@ Errors Command_compare(const StringList                *archiveNameList,
                     error = Archive_readData(&archiveEntryInfo,archiveBuffer,bufferLength);
                     if (error != ERROR_NONE)
                     {
-                      printInfo(2,"FAIL!\n");
+                      printInfo(1,"FAIL!\n");
                       printError("Cannot read content of archive '%s' (error: %s)!\n",
                                  String_cString(printableArchiveName),
                                  Errors_getText(error)
@@ -1115,7 +1125,7 @@ Errors Command_compare(const StringList                *archiveNameList,
                     error = File_read(&fileHandle,buffer,bufferLength,NULL);
                     if (error != ERROR_NONE)
                     {
-                      printInfo(2,"FAIL!\n");
+                      printInfo(1,"FAIL!\n");
                       printError("Cannot read file '%s' (error: %s)\n",
                                  String_cString(fileName),
                                  Errors_getText(error)
@@ -1132,25 +1142,28 @@ Errors Command_compare(const StringList                *archiveNameList,
                     equalFlag = (diffIndex >= bufferLength);
                     if (!equalFlag)
                     {
-                      printInfo(2,"FAIL!\n");
+                      printInfo(1,"FAIL!\n");
                       printError("'%s' differ at offset %llu\n",
                                  String_cString(fileName),
                                  fragmentOffset+length+(uint64)diffIndex
                                 );
                       if (jobOptions->stopOnErrorFlag)
                       {
-                        failError = ERROR_FILES_DIFFER;
+                        failError = ERROR_ENTRIES_DIFFER;
                       }
                       break;
                     }
 
-                    length += bufferLength;
+                    length += (uint64)bufferLength;
+
+                    printInfo(2,"%3d%%\b\b\b\b",(uint)((length*100LL)/fragmentSize));
                   }
                   if (failError != ERROR_NONE)
                   {
                     File_close(&fileHandle);
                     break;
                   }
+                  printInfo(2,"    \b\b\b\b");
 
                   // close file
                   File_close(&fileHandle);
@@ -1170,7 +1183,7 @@ Errors Command_compare(const StringList                *archiveNameList,
                   // get local file info
                   // check file time, permissions, file owner/group
 #endif /* 0 */
-                  printInfo(2,"ok\n");
+                  printInfo(1,"ok\n");
 
                   /* check if all data read.
                      Note: it is not possible to check if all data is read when
@@ -1192,18 +1205,18 @@ Errors Command_compare(const StringList                *archiveNameList,
                   // compare hard link data already done
                   if (failError == ERROR_NONE)
                   {
-                    printInfo(2,"ok\n");
+                    printInfo(1,"ok\n");
                   }
                   else
                   {
-                    printInfo(2,"FAIL!\n");
+                    printInfo(1,"FAIL!\n");
                   }
                 }
               }
               else
               {
                 // skip
-                printInfo(3,"  Compare '%s'...skipped\n",String_cString(fileName));
+                printInfo(2,"  Compare '%s'...skipped\n",String_cString(fileName));
               }
             }
 
@@ -1248,12 +1261,12 @@ Errors Command_compare(const StringList                *archiveNameList,
                 && !PatternList_match(excludePatternList,fileName,PATTERN_MATCH_MODE_EXACT)
                )
             {
-              printInfo(2,"  Compare special device '%s'...",String_cString(fileName));
+              printInfo(1,"  Compare special device '%s'...",String_cString(fileName));
 
               // check if file exists and file type
               if (!File_exists(fileName))
               {
-                printInfo(2,"FAIL!\n");
+                printInfo(1,"FAIL!\n");
                 printError("Special device '%s' does not exists!\n",
                            String_cString(fileName)
                           );
@@ -1267,7 +1280,7 @@ Errors Command_compare(const StringList                *archiveNameList,
               }
               if (File_getType(fileName) != FILE_TYPE_SPECIAL)
               {
-                printInfo(2,"FAIL!\n");
+                printInfo(1,"FAIL!\n");
                 printError("'%s' is not a special device!\n",
                            String_cString(fileName)
                           );
@@ -1275,7 +1288,7 @@ Errors Command_compare(const StringList                *archiveNameList,
                 String_delete(fileName);
                 if (jobOptions->stopOnErrorFlag)
                 {
-                  failError = ERROR_WRONG_FILE_TYPE;
+                  failError = ERROR_WRONG_ENTRY_TYPE;
                 }
                 break;
               }
@@ -1346,7 +1359,7 @@ Errors Command_compare(const StringList                *archiveNameList,
               // check file time, permissions, file owner/group
 #endif /* 0 */
 
-              printInfo(2,"ok\n");
+              printInfo(1,"ok\n");
 
               // check if all data read
               if (!Archive_eofData(&archiveEntryInfo))
@@ -1359,7 +1372,7 @@ Errors Command_compare(const StringList                *archiveNameList,
             else
             {
               // skip
-              printInfo(3,"  Compare '%s'...skipped\n",String_cString(fileName));
+              printInfo(2,"  Compare '%s'...skipped\n",String_cString(fileName));
             }
 
             // close archive file
@@ -1400,7 +1413,7 @@ Errors Command_compare(const StringList                *archiveNameList,
           printInfo(2,"  Fragments:\n");
           FragmentList_print(stdout,4,fragmentNode);
         }
-        if (failError == ERROR_NONE) failError = ERROR_FILE_INCOMPLETE;
+        if (failError == ERROR_NONE) failError = ERROR_ENTRY_INCOMPLETE;
       }
     }
   }

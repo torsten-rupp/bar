@@ -402,7 +402,7 @@ Errors Command_restore(const StringList                *archiveNameList,
                 assert(fragmentNode != NULL);
               }
 
-              printInfo(2,"  Restore file '%s'...",String_cString(destinationFileName));
+              printInfo(1,"  Restore file '%s'...",String_cString(destinationFileName));
 
               // create parent directories if not existing
               if (!jobOptions->dryRunFlag)
@@ -418,7 +418,7 @@ Errors Command_restore(const StringList                *archiveNameList,
                                             );
                   if (error != ERROR_NONE)
                   {
-                    printInfo(2,"FAIL!\n");
+                    printInfo(1,"FAIL!\n");
                     printError("Cannot create directory '%s' (error: %s)\n",
                                String_cString(parentDirectoryName),
                                Errors_getText(error)
@@ -440,7 +440,7 @@ Errors Command_restore(const StringList                *archiveNameList,
                   {
                     if (jobOptions->stopOnErrorFlag)
                     {
-                      printInfo(2,"FAIL!\n");
+                      printInfo(1,"FAIL!\n");
                       printError("Cannot set owner ship of directory '%s' (error: %s)\n",
                                  String_cString(parentDirectoryName),
                                  Errors_getText(error)
@@ -470,7 +470,7 @@ Errors Command_restore(const StringList                *archiveNameList,
                 error = File_open(&fileHandle,destinationFileName,FILE_OPEN_WRITE);
                 if (error != ERROR_NONE)
                 {
-                  printInfo(2,"FAIL!\n");
+                  printInfo(1,"FAIL!\n");
                   printError("Cannot create/write to file '%s' (error: %s)\n",
                              String_cString(destinationFileName),
                              Errors_getText(error)
@@ -489,7 +489,7 @@ Errors Command_restore(const StringList                *archiveNameList,
                 error = File_seek(&fileHandle,fragmentOffset);
                 if (error != ERROR_NONE)
                 {
-                  printInfo(2,"FAIL!\n");
+                  printInfo(1,"FAIL!\n");
                   printError("Cannot write file '%s' (error: %s)\n",
                              String_cString(destinationFileName),
                              Errors_getText(error)
@@ -523,7 +523,7 @@ Errors Command_restore(const StringList                *archiveNameList,
                 error = Archive_readData(&archiveEntryInfo,buffer,n);
                 if (error != ERROR_NONE)
                 {
-                  printInfo(2,"FAIL!\n");
+                  printInfo(1,"FAIL!\n");
                   printError("Cannot read content of archive '%s' (error: %s)!\n",
                              String_cString(printableArchiveName),
                              Errors_getText(error)
@@ -536,7 +536,7 @@ Errors Command_restore(const StringList                *archiveNameList,
                   error = File_write(&fileHandle,buffer,n);
                   if (error != ERROR_NONE)
                   {
-                    printInfo(2,"FAIL!\n");
+                    printInfo(1,"FAIL!\n");
                     printError("Cannot write file '%s' (error: %s)\n",
                                String_cString(destinationFileName),
                                Errors_getText(error)
@@ -548,10 +548,12 @@ Errors Command_restore(const StringList                *archiveNameList,
                     break;
                   }
                 }
-                restoreInfo.statusInfo.entryDoneBytes += n;
+                restoreInfo.statusInfo.entryDoneBytes += (uint64)n;
                 abortFlag = !updateStatusInfo(&restoreInfo);
 
-                length += n;
+                length += (uint64)n;
+
+                printInfo(2,"%3d%%\b\b\b\b",(uint)((length*100LL)/fragmentSize));
               }
               if      (restoreInfo.failError != ERROR_NONE)
               {
@@ -566,7 +568,7 @@ Errors Command_restore(const StringList                *archiveNameList,
               }
               else if ((restoreInfo.requestedAbortFlag != NULL) && (*restoreInfo.requestedAbortFlag))
               {
-                printInfo(2,"ABORTED\n");
+                printInfo(1,"ABORTED\n");
                 if (!jobOptions->dryRunFlag)
                 {
                   File_close(&fileHandle);
@@ -576,6 +578,7 @@ Errors Command_restore(const StringList                *archiveNameList,
                 String_delete(fileName);
                 continue;
               }
+              printInfo(2,"    \b\b\b\b");
 
               // set file size
               if (!jobOptions->dryRunFlag)
@@ -613,7 +616,7 @@ Errors Command_restore(const StringList                *archiveNameList,
                   {
                     if (jobOptions->stopOnErrorFlag)
                     {
-                      printInfo(2,"FAIL!\n");
+                      printInfo(1,"FAIL!\n");
                       printError("Cannot set file info of '%s' (error: %s)\n",
                                  String_cString(fragmentNode->name),
                                  Errors_getText(error)
@@ -646,11 +649,11 @@ Errors Command_restore(const StringList                *archiveNameList,
 
               if (!jobOptions->dryRunFlag)
               {
-                printInfo(2,"ok\n");
+                printInfo(1,"ok\n");
               }
               else
               {
-                printInfo(2,"ok (dry-run)\n");
+                printInfo(1,"ok (dry-run)\n");
               }
 
               /* check if all data read.
@@ -672,7 +675,7 @@ Errors Command_restore(const StringList                *archiveNameList,
             else
             {
               // skip
-              printInfo(3,"  Restore '%s'...skipped\n",String_cString(fileName));
+              printInfo(2,"  Restore '%s'...skipped\n",String_cString(fileName));
             }
 
             // close archive file, free resources
@@ -765,7 +768,7 @@ Errors Command_restore(const StringList                *archiveNameList,
                 assert(fragmentNode != NULL);
               }
 
-              printInfo(2,"  Restore image '%s'...",String_cString(destinationDeviceName));
+              printInfo(1,"  Restore image '%s'...",String_cString(destinationDeviceName));
 
               // open device
               if (!jobOptions->dryRunFlag)
@@ -773,7 +776,7 @@ Errors Command_restore(const StringList                *archiveNameList,
                 error = Device_open(&deviceHandle,destinationDeviceName,DEVICE_OPENMODE_WRITE);
                 if (error != ERROR_NONE)
                 {
-                  printInfo(2,"FAIL!\n");
+                  printInfo(1,"FAIL!\n");
                   printError("Cannot write to device '%s' (error: %s)\n",
                              String_cString(destinationDeviceName),
                              Errors_getText(error)
@@ -790,7 +793,7 @@ Errors Command_restore(const StringList                *archiveNameList,
                 error = Device_seek(&deviceHandle,blockOffset*(uint64)deviceInfo.blockSize);
                 if (error != ERROR_NONE)
                 {
-                  printInfo(2,"FAIL!\n");
+                  printInfo(1,"FAIL!\n");
                   printError("Cannot write to device '%s' (error: %s)\n",
                              String_cString(destinationDeviceName),
                              Errors_getText(error)
@@ -825,7 +828,7 @@ Errors Command_restore(const StringList                *archiveNameList,
                 error = Archive_readData(&archiveEntryInfo,buffer,bufferBlockCount*deviceInfo.blockSize);
                 if (error != ERROR_NONE)
                 {
-                  printInfo(2,"FAIL!\n");
+                  printInfo(1,"FAIL!\n");
                   printError("Cannot read content of archive '%s' (error: %s)!\n",
                              String_cString(printableArchiveName),
                              Errors_getText(error)
@@ -838,7 +841,7 @@ Errors Command_restore(const StringList                *archiveNameList,
                   error = Device_write(&deviceHandle,buffer,bufferBlockCount*deviceInfo.blockSize);
                   if (error != ERROR_NONE)
                   {
-                    printInfo(2,"FAIL!\n");
+                    printInfo(1,"FAIL!\n");
                     printError("Cannot write to device '%s' (error: %s)\n",
                                String_cString(destinationDeviceName),
                                Errors_getText(error)
@@ -854,19 +857,22 @@ Errors Command_restore(const StringList                *archiveNameList,
                 abortFlag = !updateStatusInfo(&restoreInfo);
 
                 block += (uint64)bufferBlockCount;
+
+                printInfo(2,"%3d%%\b\b\b\b",(uint)((block*100LL)/blockCount));
               }
               if (!jobOptions->dryRunFlag)
               {
                 Device_close(&deviceHandle);
                 if ((restoreInfo.requestedAbortFlag != NULL) && (*restoreInfo.requestedAbortFlag))
                 {
-                  printInfo(2,"ABORTED\n");
+                  printInfo(1,"ABORTED\n");
                   String_delete(destinationDeviceName);
                   Archive_closeEntry(&archiveEntryInfo);
                   String_delete(imageName);
                   continue;
                 }
               }
+              printInfo(2,"    \b\b\b\b");
 
               if (!jobOptions->noFragmentsCheckFlag)
               {
@@ -883,11 +889,11 @@ Errors Command_restore(const StringList                *archiveNameList,
 
               if (!jobOptions->dryRunFlag)
               {
-                printInfo(2,"ok\n");
+                printInfo(1,"ok\n");
               }
               else
               {
-                printInfo(2,"ok (dry-run)\n");
+                printInfo(1,"ok (dry-run)\n");
               }
 
               /* check if all data read.
@@ -909,7 +915,7 @@ Errors Command_restore(const StringList                *archiveNameList,
             else
             {
               // skip
-              printInfo(3,"  Restore '%s'...skipped\n",String_cString(imageName));
+              printInfo(2,"  Restore '%s'...skipped\n",String_cString(imageName));
             }
 
             // close archive file, free resources
@@ -980,7 +986,7 @@ Errors Command_restore(const StringList                *archiveNameList,
                 continue;
               }
 
-              printInfo(2,"  Restore directory '%s'...",String_cString(destinationFileName));
+              printInfo(1,"  Restore directory '%s'...",String_cString(destinationFileName));
 
               // create directory
               if (!jobOptions->dryRunFlag)
@@ -992,7 +998,7 @@ Errors Command_restore(const StringList                *archiveNameList,
                                           );
                 if (error != ERROR_NONE)
                 {
-                  printInfo(2,"FAIL!\n");
+                  printInfo(1,"FAIL!\n");
                   printError("Cannot create directory '%s' (error: %s)\n",
                              String_cString(destinationFileName),
                              Errors_getText(error)
@@ -1018,7 +1024,7 @@ Errors Command_restore(const StringList                *archiveNameList,
                 {
                   if (jobOptions->stopOnErrorFlag)
                   {
-                    printInfo(2,"FAIL!\n");
+                    printInfo(1,"FAIL!\n");
                     printError("Cannot set directory info of '%s' (error: %s)\n",
                                String_cString(destinationFileName),
                                Errors_getText(error)
@@ -1044,11 +1050,11 @@ Errors Command_restore(const StringList                *archiveNameList,
 
               if (!jobOptions->dryRunFlag)
               {
-                printInfo(2,"ok\n");
+                printInfo(1,"ok\n");
               }
               else
               {
-                printInfo(2,"ok (dry-run)\n");
+                printInfo(1,"ok (dry-run)\n");
               }
 
               // check if all data read
@@ -1063,7 +1069,7 @@ Errors Command_restore(const StringList                *archiveNameList,
             else
             {
               // skip
-              printInfo(3,"  Restore '%s'...skipped\n",String_cString(directoryName));
+              printInfo(2,"  Restore '%s'...skipped\n",String_cString(directoryName));
             }
 
             // close archive file
@@ -1139,7 +1145,7 @@ Errors Command_restore(const StringList                *archiveNameList,
                                             );
                   if (error != ERROR_NONE)
                   {
-                    printInfo(2,"FAIL!\n");
+                    printInfo(1,"FAIL!\n");
                     printError("Cannot create directory '%s' (error: %s)\n",
                                String_cString(parentDirectoryName),
                                Errors_getText(error)
@@ -1162,7 +1168,7 @@ Errors Command_restore(const StringList                *archiveNameList,
                   {
                     if (jobOptions->stopOnErrorFlag)
                     {
-                      printInfo(2,"FAIL!\n");
+                      printInfo(1,"FAIL!\n");
                       printError("Cannot set owner ship of directory '%s' (error: %s)\n",
                                  String_cString(parentDirectoryName),
                                  Errors_getText(error)
@@ -1204,7 +1210,7 @@ Errors Command_restore(const StringList                *archiveNameList,
                 continue;
               }
 
-              printInfo(2,"  Restore link '%s'...",String_cString(destinationFileName));
+              printInfo(1,"  Restore link '%s'...",String_cString(destinationFileName));
 
               // create link
               if (!jobOptions->dryRunFlag)
@@ -1212,7 +1218,7 @@ Errors Command_restore(const StringList                *archiveNameList,
                 error = File_makeLink(destinationFileName,fileName);
                 if (error != ERROR_NONE)
                 {
-                  printInfo(2,"FAIL!\n");
+                  printInfo(1,"FAIL!\n");
                   printError("Cannot create link '%s' -> '%s' (error: %s)\n",
                              String_cString(destinationFileName),
                              String_cString(fileName),
@@ -1240,7 +1246,7 @@ Errors Command_restore(const StringList                *archiveNameList,
                 {
                   if (jobOptions->stopOnErrorFlag)
                   {
-                    printInfo(2,"FAIL!\n");
+                    printInfo(1,"FAIL!\n");
                     printError("Cannot set file info of '%s' (error: %s)\n",
                                String_cString(destinationFileName),
                                Errors_getText(error)
@@ -1267,11 +1273,11 @@ Errors Command_restore(const StringList                *archiveNameList,
 
               if (!jobOptions->dryRunFlag)
               {
-                printInfo(2,"ok\n");
+                printInfo(1,"ok\n");
               }
               else
               {
-                printInfo(2,"ok (dry-run)\n");
+                printInfo(1,"ok (dry-run)\n");
               }
 
               // check if all data read
@@ -1286,7 +1292,7 @@ Errors Command_restore(const StringList                *archiveNameList,
             else
             {
               // skip
-              printInfo(3,"  Restore '%s'...skipped\n",String_cString(linkName));
+              printInfo(2,"  Restore '%s'...skipped\n",String_cString(linkName));
             }
 
             // close archive file
@@ -1363,7 +1369,7 @@ Errors Command_restore(const StringList                *archiveNameList,
                                        jobOptions->directoryStripCount
                                       );
 
-                printInfo(2,"  Restore hard link '%s'...",String_cString(destinationFileName));
+                printInfo(1,"  Restore hard link '%s'...",String_cString(destinationFileName));
 
                 // create parent directories if not existing
                 if (!jobOptions->dryRunFlag)
@@ -1379,7 +1385,7 @@ Errors Command_restore(const StringList                *archiveNameList,
                                               );
                     if (error != ERROR_NONE)
                     {
-                      printInfo(2,"FAIL!\n");
+                      printInfo(1,"FAIL!\n");
                       printError("Cannot create directory '%s' (error: %s)\n",
                                  String_cString(parentDirectoryName),
                                  Errors_getText(error)
@@ -1405,7 +1411,7 @@ Errors Command_restore(const StringList                *archiveNameList,
                     {
                       if (jobOptions->stopOnErrorFlag)
                       {
-                        printInfo(2,"FAIL!\n");
+                        printInfo(1,"FAIL!\n");
                         printError("Cannot set owner ship of directory '%s' (error: %s)\n",
                                    String_cString(parentDirectoryName),
                                    Errors_getText(error)
@@ -1436,7 +1442,7 @@ Errors Command_restore(const StringList                *archiveNameList,
                     {
                       if (!jobOptions->overwriteFilesFlag && FragmentList_entryExists(fragmentNode,fragmentOffset,fragmentSize))
                       {
-                        printInfo(2,"skipped (file part %llu..%llu exists)\n",
+                        printInfo(1,"skipped (file part %llu..%llu exists)\n",
                                   String_cString(destinationFileName),
                                   fragmentOffset,
                                   (fragmentSize > 0LL)?fragmentOffset+fragmentSize-1:fragmentOffset
@@ -1448,7 +1454,7 @@ Errors Command_restore(const StringList                *archiveNameList,
                     {
                       if (!jobOptions->overwriteFilesFlag && File_exists(destinationFileName))
                       {
-                        printInfo(2,"skipped (file exists)\n",String_cString(destinationFileName));
+                        printInfo(1,"skipped (file exists)\n",String_cString(destinationFileName));
                         continue;
                       }
                       fragmentNode = FragmentList_add(&fragmentList,fileName,fileInfo.size,&fileInfo,sizeof(FileInfo));
@@ -1463,7 +1469,7 @@ Errors Command_restore(const StringList                *archiveNameList,
                     error = File_open(&fileHandle,destinationFileName,FILE_OPEN_WRITE);
                     if (error != ERROR_NONE)
                     {
-                      printInfo(2,"FAIL!\n");
+                      printInfo(1,"FAIL!\n");
                       printError("Cannot create/write to file '%s' (error: %s)\n",
                                  String_cString(destinationFileName),
                                  Errors_getText(error)
@@ -1483,7 +1489,7 @@ Errors Command_restore(const StringList                *archiveNameList,
                     error = File_seek(&fileHandle,fragmentOffset);
                     if (error != ERROR_NONE)
                     {
-                      printInfo(2,"FAIL!\n");
+                      printInfo(1,"FAIL!\n");
                       printError("Cannot write file '%s' (error: %s)\n",
                                  String_cString(destinationFileName),
                                  Errors_getText(error)
@@ -1519,7 +1525,7 @@ Errors Command_restore(const StringList                *archiveNameList,
                     error = Archive_readData(&archiveEntryInfo,buffer,n);
                     if (error != ERROR_NONE)
                     {
-                      printInfo(2,"FAIL!\n");
+                      printInfo(1,"FAIL!\n");
                       printError("Cannot read content of archive '%s' (error: %s)!\n",
                                  String_cString(printableArchiveName),
                                  Errors_getText(error)
@@ -1532,7 +1538,7 @@ Errors Command_restore(const StringList                *archiveNameList,
                       error = File_write(&fileHandle,buffer,n);
                       if (error != ERROR_NONE)
                       {
-                        printInfo(2,"FAIL!\n");
+                        printInfo(1,"FAIL!\n");
                         printError("Cannot write file '%s' (error: %s)\n",
                                    String_cString(destinationFileName),
                                    Errors_getText(error)
@@ -1544,10 +1550,12 @@ Errors Command_restore(const StringList                *archiveNameList,
                         break;
                       }
                     }
-                    restoreInfo.statusInfo.entryDoneBytes += n;
+                    restoreInfo.statusInfo.entryDoneBytes += (uint64)n;
                     abortFlag = !updateStatusInfo(&restoreInfo);
 
-                    length += n;
+                    length += (uint64)n;
+
+                    printInfo(2,"%3d%%\b\b\b\b",(uint)((length*100LL)/fragmentSize));
                   }
                   if      (restoreInfo.failError != ERROR_NONE)
                   {
@@ -1559,10 +1567,11 @@ Errors Command_restore(const StringList                *archiveNameList,
                   }
                   else if ((restoreInfo.requestedAbortFlag != NULL) && (*restoreInfo.requestedAbortFlag))
                   {
-                    printInfo(2,"ABORTED\n");
+                    printInfo(1,"ABORTED\n");
                     File_close(&fileHandle);
                     break;
                   }
+                  printInfo(2,"    \b\b\b\b");
 
                   // set file size
                   if (!jobOptions->dryRunFlag)
@@ -1598,7 +1607,7 @@ Errors Command_restore(const StringList                *archiveNameList,
                       {
                         if (jobOptions->stopOnErrorFlag)
                         {
-                          printInfo(2,"FAIL!\n");
+                          printInfo(1,"FAIL!\n");
                           printError("Cannot set file info of '%s' (error: %s)\n",
                                      String_cString(destinationFileName),
                                      Errors_getText(error)
@@ -1628,11 +1637,11 @@ Errors Command_restore(const StringList                *archiveNameList,
 
                   if (!jobOptions->dryRunFlag)
                   {
-                    printInfo(2,"ok\n");
+                    printInfo(1,"ok\n");
                   }
                   else
                   {
-                    printInfo(2,"ok (dry-run)\n");
+                    printInfo(1,"ok (dry-run)\n");
                   }
 
                   restoredDataFlag = TRUE;
@@ -1642,7 +1651,7 @@ Errors Command_restore(const StringList                *archiveNameList,
                   // check file if exists
                   if (!jobOptions->overwriteFilesFlag && File_exists(destinationFileName))
                   {
-                    printInfo(2,"skipped (file exists)\n",String_cString(destinationFileName));
+                    printInfo(1,"skipped (file exists)\n",String_cString(destinationFileName));
                     continue;
                   }
 
@@ -1652,7 +1661,7 @@ Errors Command_restore(const StringList                *archiveNameList,
                     error = File_makeHardLink(destinationFileName,hardLinkFileName);
                     if (error != ERROR_NONE)
                     {
-                      printInfo(2,"FAIL!\n");
+                      printInfo(1,"FAIL!\n");
                       printError("Cannot create/write to file '%s' (error: %s)\n",
                                  String_cString(destinationFileName),
                                  Errors_getText(error)
@@ -1671,11 +1680,11 @@ Errors Command_restore(const StringList                *archiveNameList,
 
                   if (!jobOptions->dryRunFlag)
                   {
-                    printInfo(2,"ok\n");
+                    printInfo(1,"ok\n");
                   }
                   else
                   {
-                    printInfo(2,"ok (dry-run)\n");
+                    printInfo(1,"ok (dry-run)\n");
                   }
 
                   /* check if all data read.
@@ -1695,7 +1704,7 @@ Errors Command_restore(const StringList                *archiveNameList,
               else
               {
                 // skip
-                printInfo(3,"  Restore '%s'...skipped\n",String_cString(fileName));
+                printInfo(2,"  Restore '%s'...skipped\n",String_cString(fileName));
               }
             }
             String_delete(destinationFileName);
@@ -1776,7 +1785,7 @@ Errors Command_restore(const StringList                *archiveNameList,
                                             );
                   if (error != ERROR_NONE)
                   {
-                    printInfo(2,"FAIL!\n");
+                    printInfo(1,"FAIL!\n");
                     printError("Cannot create directory '%s' (error: %s)\n",
                                String_cString(parentDirectoryName),
                                Errors_getText(error)
@@ -1798,7 +1807,7 @@ Errors Command_restore(const StringList                *archiveNameList,
                   {
                     if (jobOptions->stopOnErrorFlag)
                     {
-                      printInfo(2,"FAIL!\n");
+                      printInfo(1,"FAIL!\n");
                       printError("Cannot set owner ship of directory '%s' (error: %s)\n",
                                  String_cString(parentDirectoryName),
                                  Errors_getText(error)
@@ -1839,7 +1848,7 @@ Errors Command_restore(const StringList                *archiveNameList,
                 continue;
               }
 
-              printInfo(2,"  Restore special device '%s'...",String_cString(destinationFileName));
+              printInfo(1,"  Restore special device '%s'...",String_cString(destinationFileName));
 
               // create special device
               if (!jobOptions->dryRunFlag)
@@ -1851,7 +1860,7 @@ Errors Command_restore(const StringList                *archiveNameList,
                                         );
                 if (error != ERROR_NONE)
                 {
-                  printInfo(2,"FAIL!\n");
+                  printInfo(1,"FAIL!\n");
                   printError("Cannot create special device '%s' (error: %s)\n",
                              String_cString(fileName),
                              Errors_getText(error)
@@ -1877,7 +1886,7 @@ Errors Command_restore(const StringList                *archiveNameList,
                 {
                   if (jobOptions->stopOnErrorFlag)
                   {
-                    printInfo(2,"FAIL!\n");
+                    printInfo(1,"FAIL!\n");
                     printError("Cannot set file info of '%s' (error: %s)\n",
                                String_cString(destinationFileName),
                                Errors_getText(error)
@@ -1903,11 +1912,11 @@ Errors Command_restore(const StringList                *archiveNameList,
 
               if (!jobOptions->dryRunFlag)
               {
-                printInfo(2,"ok\n");
+                printInfo(1,"ok\n");
               }
               else
               {
-                printInfo(2,"ok (dry-run)\n");
+                printInfo(1,"ok (dry-run)\n");
               }
 
               // check if all data read
@@ -1922,7 +1931,7 @@ Errors Command_restore(const StringList                *archiveNameList,
             else
             {
               // skip
-              printInfo(3,"  Restore '%s'...skipped\n",String_cString(fileName));
+              printInfo(2,"  Restore '%s'...skipped\n",String_cString(fileName));
             }
 
             // close archive file
@@ -1971,7 +1980,7 @@ Errors Command_restore(const StringList                *archiveNameList,
             printInfo(2,"  Fragments:\n");
             FragmentList_print(stdout,4,fragmentNode);
           }
-          if (restoreInfo.failError == ERROR_NONE) restoreInfo.failError = ERROR_FILE_INCOMPLETE;
+          if (restoreInfo.failError == ERROR_NONE) restoreInfo.failError = ERROR_ENTRY_INCOMPLETE;
         }
 
         if (fragmentNode->userData != NULL)

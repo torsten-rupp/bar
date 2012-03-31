@@ -2838,6 +2838,7 @@ LOCAL Errors storeFileEntry(ArchiveInfo       *archiveInfo,
   SourceHandle     sourceHandle;
   ArchiveEntryInfo archiveEntryInfo;
   ulong            bufferLength;
+  uint             percentageDone;
   double           ratio;
 
   assert(archiveInfo != NULL);
@@ -2980,6 +2981,9 @@ LOCAL Errors storeFileEntry(ArchiveInfo       *archiveInfo,
         createInfo->statusInfo.archiveBytes = createInfo->statusInfo.archiveTotalBytes+Archive_getSize(archiveInfo);
         createInfo->statusInfo.compressionRatio = 100.0-(createInfo->statusInfo.archiveTotalBytes+Archive_getSize(archiveInfo))*100.0/createInfo->statusInfo.doneBytes;
         updateStatusInfo(createInfo);
+
+        percentageDone = (uint)((createInfo->statusInfo.entryDoneBytes*100LL)/createInfo->statusInfo.entryTotalBytes);
+        printInfo(2,"%3d%%\b\b\b\b",percentageDone);
       }
     }
     while (   ((createInfo->requestedAbortFlag == NULL) || !(*createInfo->requestedAbortFlag))
@@ -3004,6 +3008,7 @@ LOCAL Errors storeFileEntry(ArchiveInfo       *archiveInfo,
       Archive_closeEntry(&archiveEntryInfo);
       return error;
     }
+    printInfo(2,"    \b\b\b\b");
 
     // close archive entry
     error = Archive_closeEntry(&archiveEntryInfo);
@@ -3101,6 +3106,7 @@ LOCAL Errors storeImageEntry(ArchiveInfo       *archiveInfo,
   uint64           block;
   uint             bufferBlockCount;
   uint             maxBufferBlockCount;
+  uint             percentageDone;
   double           ratio;
   ArchiveEntryInfo archiveEntryInfo;
 
@@ -3298,6 +3304,9 @@ LOCAL Errors storeImageEntry(ArchiveInfo       *archiveInfo,
         createInfo->statusInfo.archiveBytes = createInfo->statusInfo.archiveTotalBytes+Archive_getSize(archiveInfo);
         createInfo->statusInfo.compressionRatio = 100.0-(createInfo->statusInfo.archiveTotalBytes+Archive_getSize(archiveInfo))*100.0/createInfo->statusInfo.doneBytes;
         updateStatusInfo(createInfo);
+
+        percentageDone = (uint)((createInfo->statusInfo.entryDoneBytes*100LL)/createInfo->statusInfo.entryTotalBytes);
+        printInfo(2,"%3d%%\b\b\b\b",percentageDone);
       }
     }
     if ((createInfo->requestedAbortFlag != NULL) && (*createInfo->requestedAbortFlag))
@@ -3317,6 +3326,7 @@ LOCAL Errors storeImageEntry(ArchiveInfo       *archiveInfo,
       Archive_closeEntry(&archiveEntryInfo);
       return error;
     }
+    printInfo(2,"    \b\b\b\b");
 
     // close archive entry
     error = Archive_closeEntry(&archiveEntryInfo);
@@ -3667,6 +3677,7 @@ LOCAL Errors storeHardLinkEntry(ArchiveInfo       *archiveInfo,
   SourceHandle     sourceHandle;
   ArchiveEntryInfo archiveEntryInfo;
   ulong            bufferLength;
+  uint             percentageDone;
   double           ratio;
   const StringNode *stringNode;
   String           name;
@@ -3816,6 +3827,9 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
         createInfo->statusInfo.archiveBytes = createInfo->statusInfo.archiveTotalBytes+Archive_getSize(archiveInfo);
         createInfo->statusInfo.compressionRatio = 100.0-(createInfo->statusInfo.archiveTotalBytes+Archive_getSize(archiveInfo))*100.0/createInfo->statusInfo.doneBytes;
         updateStatusInfo(createInfo);
+
+        percentageDone = (uint)((createInfo->statusInfo.entryDoneBytes*100LL)/createInfo->statusInfo.entryTotalBytes);
+        printInfo(2,"%3d%%\b\b\b\b",percentageDone);
       }
     }
     while (   ((createInfo->requestedAbortFlag == NULL) || !(*createInfo->requestedAbortFlag))
@@ -3840,6 +3854,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       Archive_closeEntry(&archiveEntryInfo);
       return error;
     }
+    printInfo(2,"    \b\b\b\b");
 
     // close archive entry
     error = Archive_closeEntry(&archiveEntryInfo);
