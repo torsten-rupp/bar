@@ -291,9 +291,10 @@ ERROR CRC
   }
   errorText[sizeof(errorText)-1] = '\0';
 
-ERROR FILE_INCOMPLETE                "file is incomplete"
-ERROR WRONG_FILE_TYPE                "wrong file type"
-ERROR FILES_DIFFER                   "files differ"
+ERROR ENTRY_NOT_FOUND                "entry not found"
+ERROR ENTRY_INCOMPLETE               "entry is incomplete"
+ERROR WRONG_ENTRY_TYPE               "wrong entry type"
+ERROR ENTRIES_DIFFER                 "entries differ"
 ERROR CORRUPT_DATA
   strncpy(errorText,"corrupt data or invalid password",sizeof(errorText)-1);
   if (ERROR_TEXT != NULL)
