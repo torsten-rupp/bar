@@ -430,8 +430,10 @@ TEST_FILES = \
   test/data/smallfile.dat \
   test/data/sub-dir \
   test/data/sub-ignore-dir \
+  test/data/linkdata.dat \
   test/data/link.dat \
   test/data/circular-link.dat.marker \
+  test/data/hardlinkdata.dat \
   test/data/hardlink.dat \
   test/data/nodump.dat \
   test/data/fifo \
@@ -657,16 +659,18 @@ test/data/sub-ignore-dir:
 	$(INSTALL) -d $(@D)
 	$(RMRF) $@; mkdir $@; $(ECHO) Hello World > $@/test.dat
 	touch $@/.nobackup
-test/data/link.dat:
+test/data/linkdata.dat test/data/link.dat:
 	$(INSTALL) -d $(@D)
-	($(CD) test/data; $(LN) -s random1024.dat link.dat)
+	$(DD) if=/dev/urandom of=test/data/linkdata.dat bs=1 count=1024 2>/dev/null
+	($(CD) test/data; $(RMF) link.dat; $(LN) -s linkdata.dat link.dat)
 test/data/circular-link.dat.marker:
 	$(INSTALL) -d $(@D)
 	($(CD) test/data; $(LN) -s circular-link.dat circular-link.dat)
 	touch $@
-test/data/hardlink.dat:
+test/data/hardlinkdata.dat test/data/hardlink.dat:
 	$(INSTALL) -d $(@D)
-	($(CD) test/data; $(LN) random1024.dat hardlink.dat)
+	$(DD) if=/dev/urandom of=test/data/hardlinkdata.dat bs=1 count=1024 2>/dev/null
+	($(CD) test/data; $(RMF) hardlink.dat; $(LN) hardlinkdata.dat hardlink.dat)
 test/data/nodump.dat:
 	$(INSTALL) -d $(@D)
 	$(DD) if=/dev/urandom of=$@ bs=1k count=1 2>/dev/null; $(CHMOD) 440 $@; $(CHATTR) +d $@
@@ -1286,6 +1290,11 @@ ifneq ($(DIRECTORY),)
 else
 	@$(ECHO) Please call 'make dist' from top-level directory to create a distribution.
 endif
+
+
+#valgrind --tool=cachegrind ./bar -c test2.bar -o -z xdelta9 --delta-source=test1.bar bar
+
+# ----------------------------------------------------------------------------
 
 -include Makefile.depend
 
