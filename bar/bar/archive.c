@@ -461,6 +461,8 @@ LOCAL bool checkNewPartNeeded(ArchiveInfo *archiveInfo,
   bool   newPartFlag;
   uint64 fileSize;
 
+  assert(archiveInfo != NULL);
+  assert(archiveInfo->jobOptions != NULL);
   assert(archiveInfo->ioType == ARCHIVE_IO_TYPE_FILE);
 
   newPartFlag = FALSE;
@@ -814,6 +816,7 @@ LOCAL Errors closeArchiveFile(ArchiveInfo *archiveInfo,
   Errors error;
 
   assert(archiveInfo != NULL);
+  assert(archiveInfo->jobOptions != NULL);
   assert(archiveInfo->chunkIO != NULL);
   assert(archiveInfo->chunkIO->getSize != NULL);
   assert(archiveInfo->jobOptions != NULL);
@@ -2563,6 +2566,7 @@ bool Archive_eof(ArchiveInfo *archiveInfo,
   const Password *password;
 
   assert(archiveInfo != NULL);
+  assert(archiveInfo->jobOptions != NULL);
 
   // check for pending error
   if (archiveInfo->pendingError != ERROR_NONE)
@@ -2709,6 +2713,7 @@ Errors Archive_newFileEntry(ArchiveInfo      *archiveInfo,
   Errors error;
 
   assert(archiveInfo != NULL);
+  assert(archiveInfo->jobOptions != NULL);
   assert(archiveEntryInfo != NULL);
   assert(fileInfo != NULL);
 
@@ -2974,6 +2979,7 @@ Errors Archive_newImageEntry(ArchiveInfo      *archiveInfo,
   Errors error;
 
   assert(archiveInfo != NULL);
+  assert(archiveInfo->jobOptions != NULL);
   assert(archiveEntryInfo != NULL);
   assert(deviceInfo != NULL);
   assert(deviceInfo->blockSize > 0);
@@ -3234,6 +3240,7 @@ Errors Archive_newDirectoryEntry(ArchiveInfo      *archiveInfo,
   ulong  length;
 
   assert(archiveInfo != NULL);
+  assert(archiveInfo->jobOptions != NULL);
   assert(archiveEntryInfo != NULL);
   assert(fileInfo != NULL);
 
@@ -3363,6 +3370,7 @@ Errors Archive_newLinkEntry(ArchiveInfo      *archiveInfo,
   ulong  length;
 
   assert(archiveInfo != NULL);
+  assert(archiveInfo->jobOptions != NULL);
   assert(archiveEntryInfo != NULL);
   assert(fileInfo != NULL);
 
@@ -3497,6 +3505,7 @@ Errors Archive_newHardLinkEntry(ArchiveInfo      *archiveInfo,
   ChunkHardLinkName *chunkHardLinkName;
 
   assert(archiveInfo != NULL);
+  assert(archiveInfo->jobOptions != NULL);
   assert(archiveEntryInfo != NULL);
   assert(fileInfo != NULL);
 
@@ -3858,6 +3867,7 @@ Errors Archive_newSpecialEntry(ArchiveInfo      *archiveInfo,
   ulong  length;
 
   assert(archiveInfo != NULL);
+  assert(archiveInfo->jobOptions != NULL);
   assert(archiveEntryInfo != NULL);
   assert(fileInfo != NULL);
 
@@ -3991,6 +4001,7 @@ Errors Archive_getNextArchiveEntryType(ArchiveInfo       *archiveInfo,
   const Password *password;
 
   assert(archiveInfo != NULL);
+  assert(archiveInfo->jobOptions != NULL);
   assert(archiveEntryType != NULL);
 
   // check for pending error
@@ -4200,6 +4211,7 @@ Errors Archive_readFileEntry(ArchiveInfo        *archiveInfo,
   bool           foundFileEntryFlag,foundFileDataFlag;
 
   assert(archiveInfo != NULL);
+  assert(archiveInfo->jobOptions != NULL);
   assert(archiveEntryInfo != NULL);
   assert(fileName != NULL);
 
@@ -4669,6 +4681,7 @@ Errors Archive_readImageEntry(ArchiveInfo        *archiveInfo,
   bool           foundImageEntryFlag,foundImageDataFlag;
 
   assert(archiveInfo != NULL);
+  assert(archiveInfo->jobOptions != NULL);
   assert(archiveEntryInfo != NULL);
   assert(deviceInfo != NULL);
 
@@ -5120,6 +5133,7 @@ Errors Archive_readDirectoryEntry(ArchiveInfo      *archiveInfo,
   ChunkHeader    subChunkHeader;
 
   assert(archiveInfo != NULL);
+  assert(archiveInfo->jobOptions != NULL);
   assert(archiveEntryInfo != NULL);
 
   // check for pending error
@@ -5384,6 +5398,7 @@ Errors Archive_readLinkEntry(ArchiveInfo      *archiveInfo,
   ChunkHeader    subChunkHeader;
 
   assert(archiveInfo != NULL);
+  assert(archiveInfo->jobOptions != NULL);
   assert(archiveEntryInfo != NULL);
 
   // check for pending error
@@ -5656,6 +5671,7 @@ Errors Archive_readHardLinkEntry(ArchiveInfo        *archiveInfo,
   ChunkHardLinkName *chunkHardLinkName;
 
   assert(archiveInfo != NULL);
+  assert(archiveInfo->jobOptions != NULL);
   assert(archiveEntryInfo != NULL);
   assert(fileNameList != NULL);
 
@@ -6182,6 +6198,7 @@ Errors Archive_readSpecialEntry(ArchiveInfo      *archiveInfo,
   ChunkHeader    subChunkHeader;
 
   assert(archiveInfo != NULL);
+  assert(archiveInfo->jobOptions != NULL);
   assert(archiveEntryInfo != NULL);
 
   // check for pending error
@@ -7075,6 +7092,7 @@ Errors Archive_writeData(ArchiveEntryInfo *archiveEntryInfo,
 
   assert(archiveEntryInfo != NULL);
   assert(archiveEntryInfo->archiveInfo != NULL);
+  assert(archiveEntryInfo->archiveInfo->jobOptions != NULL);
 
   if (!archiveEntryInfo->archiveInfo->jobOptions->dryRunFlag)
   {
@@ -7738,6 +7756,7 @@ uint64 Archive_tell(ArchiveInfo *archiveInfo)
   uint64 offset;
 
   assert(archiveInfo != NULL);
+  assert(archiveInfo->jobOptions != NULL);
 
   offset = 0LL;
   if (!archiveInfo->jobOptions->dryRunFlag)
@@ -7808,6 +7827,7 @@ uint64 Archive_getSize(ArchiveInfo *archiveInfo)
   uint64 size;
 
   assert(archiveInfo != NULL);
+  assert(archiveInfo->jobOptions != NULL);
 
   size = 0LL;
   if (!archiveInfo->jobOptions->dryRunFlag)
