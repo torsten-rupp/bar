@@ -819,7 +819,9 @@ Errors Command_test(const StringList                *archiveNameList,
     Archive_close(&archiveInfo);
   }
 
-  if (!jobOptions->noFragmentsCheckFlag)
+  if (   (failError == ERROR_NONE)
+      && !jobOptions->noFragmentsCheckFlag
+     )
   {
     // check fragment lists
     FRAGMENTLIST_ITERATE(&fragmentList,fragmentNode)
