@@ -213,6 +213,8 @@ typedef struct
 
       byte                  *byteBuffer;               // buffer for processing byte data
       ulong                 byteBufferSize;            // size of byte buffer
+      byte                  *deltaBuffer;              // buffer for processing delta data
+      ulong                 deltaBufferSize;           // size of delta buffer
     } file;
     struct
     {
@@ -238,6 +240,8 @@ typedef struct
 
       byte                  *byteBuffer;               // buffer for processing byte data
       ulong                 byteBufferSize;            // size of byte buffer
+      byte                  *deltaBuffer;              // buffer for processing delta data
+      ulong                 deltaBufferSize;           // size of delta buffer
     } image;
     struct
     {
@@ -272,6 +276,8 @@ typedef struct
 
       byte                  *byteBuffer;               // buffer for processing byte data
       ulong                 byteBufferSize;            // size of byte buffer
+      byte                  *deltaBuffer;              // buffer for processing delta data
+      ulong                 deltaBufferSize;           // size of delta buffer
     } hardLink;
     struct
     {
