@@ -1015,7 +1015,7 @@ LOCAL Errors flushFileDataBlocks(ArchiveEntryInfo   *archiveEntryInfo,
 
     if (blockCount > 0)
     {
-      maxBlockCount = MIN(archiveEntryInfo->file.bufferLength/archiveEntryInfo->file.byteCompressInfo.blockLength,
+      maxBlockCount = MIN(archiveEntryInfo->file.bufferSize/archiveEntryInfo->file.byteCompressInfo.blockLength,
                           blockCount
                          );
 
@@ -1089,7 +1089,7 @@ LOCAL Errors writeFileDataBlock(ArchiveEntryInfo *archiveEntryInfo,
   assert(archiveEntryInfo->archiveInfo->ioType == ARCHIVE_IO_TYPE_FILE);
 
   // get next byte-compressed data block (only 1 block, because of splitting)
-  assert(archiveEntryInfo->file.bufferLength >= archiveEntryInfo->file.byteCompressInfo.blockLength);
+  assert(archiveEntryInfo->file.bufferSize >= archiveEntryInfo->file.byteCompressInfo.blockLength);
   Compress_getCompressedData(&archiveEntryInfo->file.byteCompressInfo,
                              archiveEntryInfo->file.buffer,
                              archiveEntryInfo->file.byteCompressInfo.blockLength,
@@ -1457,7 +1457,7 @@ LOCAL Errors flushImageDataBlocks(ArchiveEntryInfo   *archiveEntryInfo,
 
     if (blockCount > 0)
     {
-      maxBlockCount = MIN(archiveEntryInfo->image.bufferLength/archiveEntryInfo->image.byteCompressInfo.blockLength,
+      maxBlockCount = MIN(archiveEntryInfo->image.bufferSize/archiveEntryInfo->image.byteCompressInfo.blockLength,
                           blockCount
                          );
 
@@ -1531,7 +1531,7 @@ LOCAL Errors writeImageDataBlock(ArchiveEntryInfo *archiveEntryInfo,
   assert(archiveEntryInfo->archiveInfo->ioType == ARCHIVE_IO_TYPE_FILE);
 
   // get next byte-compressed data block (only 1 block, because of splitting)
-  assert(archiveEntryInfo->image.bufferLength >= archiveEntryInfo->image.byteCompressInfo.blockLength);
+  assert(archiveEntryInfo->image.bufferSize >= archiveEntryInfo->image.byteCompressInfo.blockLength);
   Compress_getCompressedData(&archiveEntryInfo->image.byteCompressInfo,
                              archiveEntryInfo->image.buffer,
                              archiveEntryInfo->image.byteCompressInfo.blockLength,
@@ -1902,7 +1902,7 @@ LOCAL Errors flushHardLinkDataBlocks(ArchiveEntryInfo   *archiveEntryInfo,
 
     if (blockCount > 0)
     {
-      maxBlockCount = MIN(archiveEntryInfo->hardLink.bufferLength/archiveEntryInfo->hardLink.byteCompressInfo.blockLength,
+      maxBlockCount = MIN(archiveEntryInfo->hardLink.bufferSize/archiveEntryInfo->hardLink.byteCompressInfo.blockLength,
                           blockCount
                          );
 
@@ -1978,7 +1978,7 @@ LOCAL Errors writeHardLinkDataBlock(ArchiveEntryInfo *archiveEntryInfo,
   assert(archiveEntryInfo->archiveInfo->ioType == ARCHIVE_IO_TYPE_FILE);
 
   // get next byte-compressed data block (only 1 block, because of splitting)
-  assert(archiveEntryInfo->hardLink.bufferLength >= archiveEntryInfo->hardLink.byteCompressInfo.blockLength);
+  assert(archiveEntryInfo->hardLink.bufferSize >= archiveEntryInfo->hardLink.byteCompressInfo.blockLength);
   Compress_getCompressedData(&archiveEntryInfo->hardLink.byteCompressInfo,
                              archiveEntryInfo->hardLink.buffer,
                              archiveEntryInfo->hardLink.byteCompressInfo.blockLength,
@@ -2775,11 +2775,11 @@ Errors Archive_newFileEntry(ArchiveInfo      *archiveInfo,
   archiveEntryInfo->file.headerWrittenFlag      = FALSE;
 
   archiveEntryInfo->file.buffer                 = NULL;
-  archiveEntryInfo->file.bufferLength           = 0L;
+  archiveEntryInfo->file.bufferSize             = 0L;
 
   // allocate buffer
-  archiveEntryInfo->file.bufferLength = (MAX_BUFFER_SIZE/archiveEntryInfo->blockLength)*archiveEntryInfo->blockLength;
-  archiveEntryInfo->file.buffer = (byte*)malloc(archiveEntryInfo->file.bufferLength);
+  archiveEntryInfo->file.bufferSize = (MAX_BUFFER_SIZE/archiveEntryInfo->blockLength)*archiveEntryInfo->blockLength;
+  archiveEntryInfo->file.buffer = (byte*)malloc(archiveEntryInfo->file.bufferSize);
   if (archiveEntryInfo->file.buffer == NULL)
   {
     HALT_INSUFFICIENT_MEMORY();
@@ -3044,11 +3044,11 @@ Errors Archive_newImageEntry(ArchiveInfo      *archiveInfo,
   archiveEntryInfo->image.headerWrittenFlag      = FALSE;
 
   archiveEntryInfo->image.buffer                 = NULL;
-  archiveEntryInfo->image.bufferLength           = 0L;
+  archiveEntryInfo->image.bufferSize             = 0L;
 
   // allocate buffer
-  archiveEntryInfo->image.bufferLength = (MAX_BUFFER_SIZE/archiveEntryInfo->blockLength)*archiveEntryInfo->blockLength;
-  archiveEntryInfo->image.buffer = (byte*)malloc(archiveEntryInfo->image.bufferLength);
+  archiveEntryInfo->image.bufferSize = (MAX_BUFFER_SIZE/archiveEntryInfo->blockLength)*archiveEntryInfo->blockLength;
+  archiveEntryInfo->image.buffer = (byte*)malloc(archiveEntryInfo->image.bufferSize);
   if (archiveEntryInfo->image.buffer == NULL)
   {
     HALT_INSUFFICIENT_MEMORY();
@@ -3569,11 +3569,11 @@ Errors Archive_newHardLinkEntry(ArchiveInfo      *archiveInfo,
   archiveEntryInfo->hardLink.headerWrittenFlag      = FALSE;
 
   archiveEntryInfo->hardLink.buffer                 = NULL;
-  archiveEntryInfo->hardLink.bufferLength           = 0L;
+  archiveEntryInfo->hardLink.bufferSize             = 0L;
 
   // allocate data buffer
-  archiveEntryInfo->hardLink.bufferLength = (MAX_BUFFER_SIZE/archiveEntryInfo->blockLength)*archiveEntryInfo->blockLength;
-  archiveEntryInfo->hardLink.buffer = (byte*)malloc(archiveEntryInfo->hardLink.bufferLength);
+  archiveEntryInfo->hardLink.bufferSize = (MAX_BUFFER_SIZE/archiveEntryInfo->blockLength)*archiveEntryInfo->blockLength;
+  archiveEntryInfo->hardLink.buffer = (byte*)malloc(archiveEntryInfo->hardLink.bufferSize);
   if (archiveEntryInfo->hardLink.buffer == NULL)
   {
     HALT_INSUFFICIENT_MEMORY();
@@ -4249,14 +4249,14 @@ Errors Archive_readFileEntry(ArchiveInfo        *archiveInfo,
   }
 
   // init archive file info
-  archiveEntryInfo->archiveInfo            = archiveInfo;
-  archiveEntryInfo->mode                   = ARCHIVE_MODE_READ;
-  archiveEntryInfo->archiveEntryType       = ARCHIVE_ENTRY_TYPE_FILE;
+  archiveEntryInfo->archiveInfo          = archiveInfo;
+  archiveEntryInfo->mode                 = ARCHIVE_MODE_READ;
+  archiveEntryInfo->archiveEntryType     = ARCHIVE_ENTRY_TYPE_FILE;
 
-  archiveEntryInfo->file.deltaSourceInit   = FALSE;
+  archiveEntryInfo->file.deltaSourceInit = FALSE;
 
-  archiveEntryInfo->file.buffer            = NULL;
-  archiveEntryInfo->file.bufferLength      = 0L;
+  archiveEntryInfo->file.buffer          = NULL;
+  archiveEntryInfo->file.bufferSize      = 0L;
 
   // init file chunk
   error = Chunk_init(&archiveEntryInfo->file.chunkFile.info,
@@ -4323,8 +4323,8 @@ Errors Archive_readFileEntry(ArchiveInfo        *archiveInfo,
   assert(archiveEntryInfo->blockLength > 0);
 
   // allocate buffer
-  archiveEntryInfo->file.bufferLength = (MAX_BUFFER_SIZE/archiveEntryInfo->blockLength)*archiveEntryInfo->blockLength;
-  archiveEntryInfo->file.buffer = (byte*)malloc(archiveEntryInfo->file.bufferLength);
+  archiveEntryInfo->file.bufferSize = (MAX_BUFFER_SIZE/archiveEntryInfo->blockLength)*archiveEntryInfo->blockLength;
+  archiveEntryInfo->file.buffer = (byte*)malloc(archiveEntryInfo->file.bufferSize);
   if (archiveEntryInfo->file.buffer == NULL)
   {
     HALT_INSUFFICIENT_MEMORY();
@@ -4727,7 +4727,7 @@ Errors Archive_readImageEntry(ArchiveInfo        *archiveInfo,
   archiveEntryInfo->image.deltaSourceInit = FALSE;
 
   archiveEntryInfo->image.buffer          = NULL;
-  archiveEntryInfo->image.bufferLength    = 0L;
+  archiveEntryInfo->image.bufferSize      = 0L;
 
   // init image chunk
   error = Chunk_init(&archiveEntryInfo->image.chunkImage.info,
@@ -4793,8 +4793,8 @@ Errors Archive_readImageEntry(ArchiveInfo        *archiveInfo,
   assert(archiveEntryInfo->blockLength > 0);
 
   // allocate buffer
-  archiveEntryInfo->image.bufferLength = (MAX_BUFFER_SIZE/archiveEntryInfo->blockLength)*archiveEntryInfo->blockLength;
-  archiveEntryInfo->image.buffer = (byte*)malloc(archiveEntryInfo->image.bufferLength);
+  archiveEntryInfo->image.bufferSize = (MAX_BUFFER_SIZE/archiveEntryInfo->blockLength)*archiveEntryInfo->blockLength;
+  archiveEntryInfo->image.buffer = (byte*)malloc(archiveEntryInfo->image.bufferSize);
   if (archiveEntryInfo->image.buffer == NULL)
   {
     HALT_INSUFFICIENT_MEMORY();
@@ -5709,12 +5709,12 @@ Errors Archive_readHardLinkEntry(ArchiveInfo        *archiveInfo,
   }
 
   // init archive file info
-  archiveEntryInfo->archiveInfo           = archiveInfo;
-  archiveEntryInfo->mode                  = ARCHIVE_MODE_READ;
-  archiveEntryInfo->archiveEntryType      = ARCHIVE_ENTRY_TYPE_HARDLINK;
+  archiveEntryInfo->archiveInfo         = archiveInfo;
+  archiveEntryInfo->mode                = ARCHIVE_MODE_READ;
+  archiveEntryInfo->archiveEntryType    = ARCHIVE_ENTRY_TYPE_HARDLINK;
 
-  archiveEntryInfo->hardLink.buffer       = NULL;
-  archiveEntryInfo->hardLink.bufferLength = 0L;
+  archiveEntryInfo->hardLink.buffer     = NULL;
+  archiveEntryInfo->hardLink.bufferSize = 0L;
 
   // init hard link chunk
   error = Chunk_init(&archiveEntryInfo->hardLink.chunkHardLink.info,
@@ -5781,8 +5781,8 @@ Errors Archive_readHardLinkEntry(ArchiveInfo        *archiveInfo,
   assert(archiveEntryInfo->blockLength > 0);
 
   // allocate buffer
-  archiveEntryInfo->hardLink.bufferLength = (MAX_BUFFER_SIZE/archiveEntryInfo->blockLength)*archiveEntryInfo->blockLength;
-  archiveEntryInfo->hardLink.buffer = (byte*)malloc(archiveEntryInfo->hardLink.bufferLength);
+  archiveEntryInfo->hardLink.bufferSize = (MAX_BUFFER_SIZE/archiveEntryInfo->blockLength)*archiveEntryInfo->blockLength;
+  archiveEntryInfo->hardLink.buffer = (byte*)malloc(archiveEntryInfo->hardLink.bufferSize);
   if (archiveEntryInfo->hardLink.buffer == NULL)
   {
     HALT_INSUFFICIENT_MEMORY();
@@ -7142,7 +7142,7 @@ Errors Archive_writeData(ArchiveEntryInfo *archiveEntryInfo,
       switch (archiveEntryInfo->archiveEntryType)
       {
         case ARCHIVE_ENTRY_TYPE_FILE:
-          assert((archiveEntryInfo->file.bufferLength%archiveEntryInfo->blockLength) == 0);
+          assert((archiveEntryInfo->file.bufferSize%archiveEntryInfo->blockLength) == 0);
 
           while (writtenBlockBytes < blockLength)
           {
@@ -7232,7 +7232,7 @@ fprintf(stderr,"%s,%d: avild =%d\n",__FILE__,__LINE__,blockCount);
           }
           break;
         case ARCHIVE_ENTRY_TYPE_IMAGE:
-          assert((archiveEntryInfo->image.bufferLength%archiveEntryInfo->blockLength) == 0);
+          assert((archiveEntryInfo->image.bufferSize%archiveEntryInfo->blockLength) == 0);
 
           while (writtenBlockBytes < blockLength)
           {
@@ -7274,7 +7274,7 @@ fprintf(stderr,"%s,%d: avild =%d\n",__FILE__,__LINE__,blockCount);
           }
           break;
         case ARCHIVE_ENTRY_TYPE_HARDLINK:
-          assert((archiveEntryInfo->hardLink.bufferLength%archiveEntryInfo->blockLength) == 0);
+          assert((archiveEntryInfo->hardLink.bufferSize%archiveEntryInfo->blockLength) == 0);
 
           while (writtenBlockBytes < blockLength)
           {

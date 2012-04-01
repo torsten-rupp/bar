@@ -212,7 +212,7 @@ typedef struct
       bool                  headerWrittenFlag;         // TRUE iff header written
 
       byte                  *buffer;                   // buffer for processing data
-      ulong                 bufferLength;              // size of buffer
+      ulong                 bufferSize;                // size of buffer
     } file;
     struct
     {
@@ -237,7 +237,7 @@ typedef struct
       bool                  headerWrittenFlag;         // TRUE iff header written
 
       byte                  *buffer;                   // buffer for processing data
-      ulong                 bufferLength;              // size of buffer
+      ulong                 bufferSize;                // size of buffer
     } image;
     struct
     {
@@ -271,7 +271,7 @@ typedef struct
       bool                  headerWrittenFlag;         // TRUE iff header written
 
       byte                  *buffer;                   // buffer for processing data
-      ulong                 bufferLength;              // size of buffer
+      ulong                 bufferSize;                // size of buffer
     } hardLink;
     struct
     {
