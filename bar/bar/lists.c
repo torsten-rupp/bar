@@ -13,10 +13,13 @@
 /****************************** Includes *******************************/
 #include <stdlib.h>
 #include <stdio.h>
-#include <assert.h>
 #ifndef NDEBUG
   #include <pthread.h>
 #endif /* not NDEBUG */
+#ifdef HAVE_BACKTRACE
+  #include <execinfo.h>
+#endif
+#include <assert.h>
 
 #include "global.h"
 
