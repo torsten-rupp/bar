@@ -151,14 +151,14 @@ typedef struct
           byte       *sourceBuffer;             // buffer for source
           byte       *outputBuffer;             // buffer for output (allocated if NULL)
           ulong      outputBufferLength;        // number of bytes in output buffer
-          ulong      outputBufferSize;          // size of output buffer (reallocated if 0 or to small)
+          ulong      outputBufferSize;          // size of output buffer (buffer will reallocated if 0 or to small)
           int        flags;                     // XDELTA flags
           xd3_stream stream;                    // XDELTA stream
           xd3_source source;                    // XDELTA source
-          byte       inputBuffer[1];            /* buffer for next input byte (Note: do not use
+          byte       inputBuffer[256];          /* buffer for next input data bytes (Note: do not use
                                                    pointer to dataBuffer/compressBuffer because
                                                    input/output is not processed immediately and must
-                                                   be available until next input byte is requested
+                                                   be available until next input data is requested
                                                 */
           bool       flushFlag;                 // TRUE iff flush send to xdelta compressor
         #endif /* HAVE_XDELTA3 */
@@ -388,15 +388,16 @@ Errors Compress_reset(CompressInfo *compressInfo);
 * Name   : Compress_deflate
 * Purpose: deflate (compress) data
 * Input  : compressInfo - compress info block
-*          data         - data byte to compress
+*          buffer        - buffer with data to compress
+*          bufferLength  - length of data in buffer
 * Output : deflatedBytes - number of processed data bytes (can be NULL)
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
 Errors Compress_deflate(CompressInfo *compressInfo,
-                        const byte   *data,
-                        ulong        length,
+                        const byte   *buffer,
+                        ulong        bufferLength,
                         ulong        *deflatedBytes
                        );
 
@@ -404,15 +405,17 @@ Errors Compress_deflate(CompressInfo *compressInfo,
 * Name   : Compress_inflate
 * Purpose: inflate (decompress) data
 * Input  : compressInfo - compress info block
-* Output : data          - decompressed data
-*          inflatedBytes - number of data bytes (can be NULL)
+*          buffer       - buffer for decompressed data
+*          bufferSize   - size of buffer
+* Output : buffer        - buffer with decompressed data
+*          inflatedBytes - number of decompressed bytes in buffer
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
 Errors Compress_inflate(CompressInfo *compressInfo,
-                        byte         *data,
-                        ulong        length,
+                        byte         *buffer,
+                        ulong        bufferSize,
                         ulong        *inflatedBytes
                        );
 
@@ -488,6 +491,25 @@ uint64 Compress_getInputLength(CompressInfo *compressInfo);
 uint64 Compress_getOutputLength(CompressInfo *compressInfo);
 
 /***********************************************************************\
+* Name   : Compress_getAvailableCompressSpace
+* Purpose: get free space in compress buffer
+* Input  : compressInfo - compress info block
+* Output : -
+* Return : number of bytes free in compress buffer
+* Notes  : -
+\***********************************************************************/
+
+ulong Compress_getAvailableCompressSpace(const CompressInfo *compressInfo);
+#if defined(NDEBUG) || defined(__COMPRESS_IMPLEMENATION__)
+ulong Compress_getAvailableCompressSpace(const CompressInfo *compressInfo)
+{
+  assert(compressInfo != NULL);
+
+  return compressInfo->compressBufferSize-compressInfo->compressBufferLength;
+}
+#endif /* NDEBUG || __COMPRESS_IMPLEMENATION__ */
+
+/***********************************************************************\
 * Name   : Compress_getAvailableDecompressedBytes
 * Purpose: decompress data and get number of available bytes in
 *          decompressor
@@ -506,7 +528,8 @@ Errors Compress_getAvailableDecompressedBytes(CompressInfo *compressInfo,
 * Purpose: compress data and get number of available compressed blocks
 *          in compressor
 * Input  : compressInfo - compress info block
-* Output : blockCount - number of available (full) blocks
+*          blockType    - block type; see CompressBlockTypes
+* Output : blockCount - number of available blocks
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
@@ -516,68 +539,44 @@ Errors Compress_getAvailableCompressedBlocks(CompressInfo       *compressInfo,
                                              uint               *blockCount
                                             );
 
-#if 0
-/***********************************************************************\
-* Name   : Compress_checkEndOfBlock
-* Purpose: check end of block reached
-* Input  : compressInfo - compress info block
-* Output : -
-* Return : TRUE at end of block, FALSE otherwise
-* Notes  : -
-\***********************************************************************/
-
-bool Compress_checkEndOfBlock(CompressInfo *compressInfo);
-#endif /* 0 */
-
-#if 0
-obsolete
-//????
-/***********************************************************************\
-* Name   : Compress_getCompressedByte
-* Purpose: get next compressed byte
-* Input  : compressInfo - compress info block
-* Output : buffer - buffer with compressed byte
-* Return : TRUE iff compressed is read, FALSE otherwise
-* Notes  : -
-\***********************************************************************/
-
-// replace by Compress_getCompressedBlock? compressed data is always organized in blocks?
-bool Compress_getCompressedByte(CompressInfo *compressInfo,
-                                byte         *buffer
-                               );
-#endif /* 0 */
-
 /***********************************************************************\
 * Name   : Compress_getCompressedBlock
-* Purpose: compress data and get next compressed data block from
+* Purpose: compress data and get next compressed data bytes from
 *          compressor
 * Input  : compressInfo - compress info block
-* Output : buffer       - data
-*          bufferLength - number of bytes in block
+*          buffer       - buffer for data
+*          bufferSize   - buffer size (must be >= block length)
+* Output : buffer       - compressed data (rest in last block is filled with
+*                         0)
+*          bufferLength - number of bytes in buffer (always a multiple
+*                         of block length)
 * Return : -
-* Notes  : buffer size have to be at least blockLength!
+* Notes  : -
 \***********************************************************************/
 
-void Compress_getCompressedBlock(CompressInfo *compressInfo,
-                                 byte         *buffer,
-                                 ulong        *bufferLength
-                                );
+void Compress_getCompressedData(CompressInfo *compressInfo,
+                                byte         *buffer,
+                                ulong        bufferSize,
+                                ulong        *bufferLength
+                               );
 
 /***********************************************************************\
 * Name   : Compress_putCompressedBlock
-* Purpose: put compressed block data into decompressor
+* Purpose: decompress data and put next compressed data bytes into
+*          decompressor
 * Input  : compressInfo - compress info block
 *          buffer       - data
-*          bufferLength - length of data
+*          length       - length of data (must always fit into compress
+*                         buffer!)
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-void Compress_putCompressedBlock(CompressInfo *compressInfo,
-                                 void         *buffer,
-                                 ulong        bufferLength
-                                );
+void Compress_putCompressedData(CompressInfo *compressInfo,
+                                const void   *buffer,
+                                ulong        bufferLength
+                               );
 
 #ifdef __cplusplus
   }
