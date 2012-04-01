@@ -232,6 +232,38 @@ LOCAL void debugListInit(void)
 }
 #endif /* not NDEBUG */
 
+#if !defined(NDEBUG) && defined(HAVE_BACKTRACE)
+/***********************************************************************\
+* Name   : List_debugDumpStackTrace
+* Purpose: print function names of stack trace
+* Input  : title          - title text
+*          stackTrace     - stack trace
+*          stackTraceSize - size of stack trace
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void List_debugDumpStackTrace(FILE *handle, const char *title, int indent, void *stackTrace[], int stackTraceSize)
+{
+  const char **functionNames;
+  int        z,i;
+
+  for (i = 0; i < indent; i++) fprintf(handle," ");
+  fprintf(handle,"C stack trace: %s\n",title);
+  functionNames = (const char **)backtrace_symbols(stackTrace,stackTraceSize);
+  if (functionNames != NULL)
+  {
+    for (z = 1; z < stackTraceSize; z++)
+    {
+      for (i = 0; i < indent; i++) fprintf(handle," ");
+      fprintf(handle,"  %2d %p: %s\n",z,stackTrace[z],functionNames[z]);
+    }
+    free(functionNames);
+  }
+}
+#endif /* !defined(NDEBUG) && defined(HAVE_BACKTRACE) */
+
 // ----------------------------------------------------------------------
 
 #ifndef NDEBUG
