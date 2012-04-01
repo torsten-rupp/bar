@@ -211,8 +211,8 @@ typedef struct
       uint                  headerLength;              // length of header
       bool                  headerWrittenFlag;         // TRUE iff header written
 
-      byte                  *buffer;                   // buffer for processing data
-      ulong                 bufferSize;                // size of buffer
+      byte                  *byteBuffer;               // buffer for processing byte data
+      ulong                 byteBufferSize;            // size of byte buffer
     } file;
     struct
     {
@@ -236,8 +236,8 @@ typedef struct
       uint                  headerLength;              // length of header
       bool                  headerWrittenFlag;         // TRUE iff header written
 
-      byte                  *buffer;                   // buffer for processing data
-      ulong                 bufferSize;                // size of buffer
+      byte                  *byteBuffer;               // buffer for processing byte data
+      ulong                 byteBufferSize;            // size of byte buffer
     } image;
     struct
     {
@@ -270,8 +270,8 @@ typedef struct
       uint                  headerLength;              // length of header
       bool                  headerWrittenFlag;         // TRUE iff header written
 
-      byte                  *buffer;                   // buffer for processing data
-      ulong                 bufferSize;                // size of buffer
+      byte                  *byteBuffer;               // buffer for processing byte data
+      ulong                 byteBufferSize;            // size of byte buffer
     } hardLink;
     struct
     {

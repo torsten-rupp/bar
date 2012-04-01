@@ -1015,20 +1015,20 @@ LOCAL Errors flushFileDataBlocks(ArchiveEntryInfo   *archiveEntryInfo,
 
     if (blockCount > 0)
     {
-      maxBlockCount = MIN(archiveEntryInfo->file.bufferSize/archiveEntryInfo->file.byteCompressInfo.blockLength,
+      maxBlockCount = MIN(archiveEntryInfo->file.byteBufferSize/archiveEntryInfo->file.byteCompressInfo.blockLength,
                           blockCount
                          );
 
       // get next byte-compressed data blocks
       Compress_getCompressedData(&archiveEntryInfo->file.byteCompressInfo,
-                                 archiveEntryInfo->file.buffer,
+                                 archiveEntryInfo->file.byteBuffer,
                                  maxBlockCount*archiveEntryInfo->file.byteCompressInfo.blockLength,
                                  &length
                                 );
 #if 0
 {
 int h = open("encoded.testdata",O_CREAT|O_WRONLY|O_APPEND,0664);
-fprintf(stderr,"%s, %d: length=%d %d %s\n",__FILE__,__LINE__,length,write(h,archiveEntryInfo->file.buffer,length),strerror(errno));
+fprintf(stderr,"%s, %d: length=%d %d %s\n",__FILE__,__LINE__,length,write(h,archiveEntryInfo->file.byteBuffer,length),strerror(errno));
 close(h);
 }
 #endif /* 0 */
@@ -1036,7 +1036,7 @@ close(h);
       // encrypt block
 #warning clean
       error = Crypt_encrypt(&archiveEntryInfo->file.cryptInfo,
-                            archiveEntryInfo->file.buffer,
+                            archiveEntryInfo->file.byteBuffer,
 length//                            archiveEntryInfo->blockLength
                            );
       if (error != ERROR_NONE)
@@ -1047,7 +1047,7 @@ length//                            archiveEntryInfo->blockLength
       // store block into chunk
 #warning clean
       error = Chunk_writeData(&archiveEntryInfo->file.chunkFileData.info,
-                              archiveEntryInfo->file.buffer,
+                              archiveEntryInfo->file.byteBuffer,
 length//                              archiveEntryInfo->blockLength
                              );
       if (error != ERROR_NONE)
@@ -1089,16 +1089,16 @@ LOCAL Errors writeFileDataBlock(ArchiveEntryInfo *archiveEntryInfo,
   assert(archiveEntryInfo->archiveInfo->ioType == ARCHIVE_IO_TYPE_FILE);
 
   // get next byte-compressed data block (only 1 block, because of splitting)
-  assert(archiveEntryInfo->file.bufferSize >= archiveEntryInfo->file.byteCompressInfo.blockLength);
+  assert(archiveEntryInfo->file.byteBufferSize >= archiveEntryInfo->file.byteCompressInfo.blockLength);
   Compress_getCompressedData(&archiveEntryInfo->file.byteCompressInfo,
-                             archiveEntryInfo->file.buffer,
+                             archiveEntryInfo->file.byteBuffer,
                              archiveEntryInfo->file.byteCompressInfo.blockLength,
                              &length
                             );
 #if 0
 {
 int h = open("encoded.testdata",O_CREAT|O_WRONLY|O_APPEND,0664);
-fprintf(stderr,"%s, %d: length=%d %d %s\n",__FILE__,__LINE__,length,write(h,archiveEntryInfo->file.buffer,length),strerror(errno));
+fprintf(stderr,"%s, %d: length=%d %d %s\n",__FILE__,__LINE__,length,write(h,archiveEntryInfo->file.byteBuffer,length),strerror(errno));
 close(h);
 }
 #endif /* 0 */
@@ -1127,7 +1127,7 @@ close(h);
     {
       // encrypt block
       error = Crypt_encrypt(&archiveEntryInfo->file.cryptInfo,
-                            archiveEntryInfo->file.buffer,
+                            archiveEntryInfo->file.byteBuffer,
                             length
                            );
       if (error != ERROR_NONE)
@@ -1137,7 +1137,7 @@ close(h);
 
       // store block into chunk
       error = Chunk_writeData(&archiveEntryInfo->file.chunkFileData.info,
-                              archiveEntryInfo->file.buffer,
+                              archiveEntryInfo->file.byteBuffer,
                               length
                              );
       if (error != ERROR_NONE)
@@ -1253,7 +1253,7 @@ close(h);
 
       // encrypt block
       error = Crypt_encrypt(&archiveEntryInfo->file.cryptInfo,
-                            archiveEntryInfo->file.buffer,
+                            archiveEntryInfo->file.byteBuffer,
                             archiveEntryInfo->blockLength
                            );
       if (error != ERROR_NONE)
@@ -1263,7 +1263,7 @@ close(h);
 
       // write block
       error = Chunk_writeData(&archiveEntryInfo->file.chunkFileData.info,
-                              archiveEntryInfo->file.buffer,
+                              archiveEntryInfo->file.byteBuffer,
                               archiveEntryInfo->blockLength
                              );
       if (error != ERROR_NONE)
@@ -1296,7 +1296,7 @@ LOCAL Errors readFileDataBlock(ArchiveEntryInfo *archiveEntryInfo)
   {
     // read data block from archive
     error = Chunk_readData(&archiveEntryInfo->file.chunkFileData.info,
-                           archiveEntryInfo->file.buffer,
+                           archiveEntryInfo->file.byteBuffer,
                            archiveEntryInfo->blockLength
                           );
     if (error != ERROR_NONE)
@@ -1306,7 +1306,7 @@ LOCAL Errors readFileDataBlock(ArchiveEntryInfo *archiveEntryInfo)
 
     // decrypt data block
     error = Crypt_decrypt(&archiveEntryInfo->file.cryptInfo,
-                          archiveEntryInfo->file.buffer,
+                          archiveEntryInfo->file.byteBuffer,
                           archiveEntryInfo->blockLength
                          );
     if (error != ERROR_NONE)
@@ -1316,7 +1316,7 @@ LOCAL Errors readFileDataBlock(ArchiveEntryInfo *archiveEntryInfo)
 
     // put compressed block into decompressor
     Compress_putCompressedData(&archiveEntryInfo->file.byteCompressInfo,
-                               archiveEntryInfo->file.buffer,
+                               archiveEntryInfo->file.byteBuffer,
                                archiveEntryInfo->blockLength
                               );
   }
@@ -1457,20 +1457,20 @@ LOCAL Errors flushImageDataBlocks(ArchiveEntryInfo   *archiveEntryInfo,
 
     if (blockCount > 0)
     {
-      maxBlockCount = MIN(archiveEntryInfo->image.bufferSize/archiveEntryInfo->image.byteCompressInfo.blockLength,
+      maxBlockCount = MIN(archiveEntryInfo->image.byteBufferSize/archiveEntryInfo->image.byteCompressInfo.blockLength,
                           blockCount
                          );
 
       // get next bute-compressed data
       Compress_getCompressedData(&archiveEntryInfo->image.byteCompressInfo,
-                                 archiveEntryInfo->image.buffer,
+                                 archiveEntryInfo->image.byteBuffer,
                                  maxBlockCount*archiveEntryInfo->image.byteCompressInfo.blockLength,
                                  &length
                                 );
 #if 0
 {
 int h = open("encoded.testdata",O_CREAT|O_WRONLY|O_APPEND,0664);
-fprintf(stderr,"%s, %d: length=%d %d %s\n",__FILE__,__LINE__,length,write(h,archiveEntryInfo->image.buffer,length),strerror(errno));
+fprintf(stderr,"%s, %d: length=%d %d %s\n",__FILE__,__LINE__,length,write(h,archiveEntryInfo->image.byteBuffer,length),strerror(errno));
 close(h);
 }
 #endif /* 0 */
@@ -1478,7 +1478,7 @@ close(h);
       // encrypt block
 #warning clean
       error = Crypt_encrypt(&archiveEntryInfo->image.cryptInfo,
-                            archiveEntryInfo->image.buffer,
+                            archiveEntryInfo->image.byteBuffer,
 length//                            archiveEntryInfo->blockLength
                            );
       if (error != ERROR_NONE)
@@ -1489,7 +1489,7 @@ length//                            archiveEntryInfo->blockLength
       // store block into chunk
 #warning clean
       error = Chunk_writeData(&archiveEntryInfo->image.chunkImageData.info,
-                              archiveEntryInfo->image.buffer,
+                              archiveEntryInfo->image.byteBuffer,
 length//                              archiveEntryInfo->blockLength
                              );
       if (error != ERROR_NONE)
@@ -1531,9 +1531,9 @@ LOCAL Errors writeImageDataBlock(ArchiveEntryInfo *archiveEntryInfo,
   assert(archiveEntryInfo->archiveInfo->ioType == ARCHIVE_IO_TYPE_FILE);
 
   // get next byte-compressed data block (only 1 block, because of splitting)
-  assert(archiveEntryInfo->image.bufferSize >= archiveEntryInfo->image.byteCompressInfo.blockLength);
+  assert(archiveEntryInfo->image.byteBufferSize >= archiveEntryInfo->image.byteCompressInfo.blockLength);
   Compress_getCompressedData(&archiveEntryInfo->image.byteCompressInfo,
-                             archiveEntryInfo->image.buffer,
+                             archiveEntryInfo->image.byteBuffer,
                              archiveEntryInfo->image.byteCompressInfo.blockLength,
                              &length
                             );
@@ -1560,7 +1560,7 @@ LOCAL Errors writeImageDataBlock(ArchiveEntryInfo *archiveEntryInfo,
     {
       // encrypt block
       error = Crypt_encrypt(&archiveEntryInfo->image.cryptInfo,
-                            archiveEntryInfo->image.buffer,
+                            archiveEntryInfo->image.byteBuffer,
                             archiveEntryInfo->blockLength
                            );
       if (error != ERROR_NONE)
@@ -1570,7 +1570,7 @@ LOCAL Errors writeImageDataBlock(ArchiveEntryInfo *archiveEntryInfo,
 
       // store block into chunk
       error = Chunk_writeData(&archiveEntryInfo->image.chunkImageData.info,
-                              archiveEntryInfo->image.buffer,
+                              archiveEntryInfo->image.byteBuffer,
                               archiveEntryInfo->blockLength
                              );
       if (error != ERROR_NONE)
@@ -1687,7 +1687,7 @@ LOCAL Errors writeImageDataBlock(ArchiveEntryInfo *archiveEntryInfo,
 
       // encrypt block
       error = Crypt_encrypt(&archiveEntryInfo->image.cryptInfo,
-                            archiveEntryInfo->image.buffer,
+                            archiveEntryInfo->image.byteBuffer,
                             archiveEntryInfo->blockLength
                            );
       if (error != ERROR_NONE)
@@ -1697,7 +1697,7 @@ LOCAL Errors writeImageDataBlock(ArchiveEntryInfo *archiveEntryInfo,
 
       // store block into chunk
       error = Chunk_writeData(&archiveEntryInfo->image.chunkImageData.info,
-                              archiveEntryInfo->image.buffer,
+                              archiveEntryInfo->image.byteBuffer,
                               archiveEntryInfo->blockLength
                              );
       if (error != ERROR_NONE)
@@ -1730,7 +1730,7 @@ LOCAL Errors readImageDataBlock(ArchiveEntryInfo *archiveEntryInfo)
   {
     // read
     error = Chunk_readData(&archiveEntryInfo->image.chunkImageData.info,
-                           archiveEntryInfo->image.buffer,
+                           archiveEntryInfo->image.byteBuffer,
                            archiveEntryInfo->blockLength
                           );
     if (error != ERROR_NONE)
@@ -1740,7 +1740,7 @@ LOCAL Errors readImageDataBlock(ArchiveEntryInfo *archiveEntryInfo)
 
     // decrypt
     error = Crypt_decrypt(&archiveEntryInfo->image.cryptInfo,
-                          archiveEntryInfo->image.buffer,
+                          archiveEntryInfo->image.byteBuffer,
                           archiveEntryInfo->blockLength
                          );
     if (error != ERROR_NONE)
@@ -1750,7 +1750,7 @@ LOCAL Errors readImageDataBlock(ArchiveEntryInfo *archiveEntryInfo)
 
     // put compressed block into decompressor
     Compress_putCompressedData(&archiveEntryInfo->image.byteCompressInfo,
-                               archiveEntryInfo->image.buffer,
+                               archiveEntryInfo->image.byteBuffer,
                                archiveEntryInfo->blockLength
                               );
   }
@@ -1902,21 +1902,21 @@ LOCAL Errors flushHardLinkDataBlocks(ArchiveEntryInfo   *archiveEntryInfo,
 
     if (blockCount > 0)
     {
-      maxBlockCount = MIN(archiveEntryInfo->hardLink.bufferSize/archiveEntryInfo->hardLink.byteCompressInfo.blockLength,
+      maxBlockCount = MIN(archiveEntryInfo->hardLink.byteBufferSize/archiveEntryInfo->hardLink.byteCompressInfo.blockLength,
                           blockCount
                          );
 
       // get next byte-compressed data
 #warning clean
       Compress_getCompressedData(&archiveEntryInfo->hardLink.byteCompressInfo,
-                                 archiveEntryInfo->hardLink.buffer,
+                                 archiveEntryInfo->hardLink.byteBuffer,
                                  maxBlockCount*archiveEntryInfo->hardLink.byteCompressInfo.blockLength,
                                  &length
                                 );
 #if 0
 {
 int h = open("encoded.testdata",O_CREAT|O_WRONLY|O_APPEND,0664);
-fprintf(stderr,"%s, %d: length=%d %d %s\n",__FILE__,__LINE__,length,write(h,archiveEntryInfo->hardLink.buffer,length),strerror(errno));
+fprintf(stderr,"%s, %d: length=%d %d %s\n",__FILE__,__LINE__,length,write(h,archiveEntryInfo->hardLink.byteBuffer,length),strerror(errno));
 close(h);
 }
 #endif /* 0 */
@@ -1924,7 +1924,7 @@ close(h);
       // encrypt block
 #warning clean
       error = Crypt_encrypt(&archiveEntryInfo->hardLink.cryptInfo,
-                            archiveEntryInfo->hardLink.buffer,
+                            archiveEntryInfo->hardLink.byteBuffer,
 length//                            archiveEntryInfo->blockLength
                            );
       if (error != ERROR_NONE)
@@ -1935,7 +1935,7 @@ length//                            archiveEntryInfo->blockLength
       // store block into chunk
 #warning clean
       error = Chunk_writeData(&archiveEntryInfo->hardLink.chunkHardLinkData.info,
-                              archiveEntryInfo->hardLink.buffer,
+                              archiveEntryInfo->hardLink.byteBuffer,
 length//                              archiveEntryInfo->blockLength
                              );
       if (error != ERROR_NONE)
@@ -1978,9 +1978,9 @@ LOCAL Errors writeHardLinkDataBlock(ArchiveEntryInfo *archiveEntryInfo,
   assert(archiveEntryInfo->archiveInfo->ioType == ARCHIVE_IO_TYPE_FILE);
 
   // get next byte-compressed data block (only 1 block, because of splitting)
-  assert(archiveEntryInfo->hardLink.bufferSize >= archiveEntryInfo->hardLink.byteCompressInfo.blockLength);
+  assert(archiveEntryInfo->hardLink.byteBufferSize >= archiveEntryInfo->hardLink.byteCompressInfo.blockLength);
   Compress_getCompressedData(&archiveEntryInfo->hardLink.byteCompressInfo,
-                             archiveEntryInfo->hardLink.buffer,
+                             archiveEntryInfo->hardLink.byteBuffer,
                              archiveEntryInfo->hardLink.byteCompressInfo.blockLength,
                              &length
                             );
@@ -2007,7 +2007,7 @@ LOCAL Errors writeHardLinkDataBlock(ArchiveEntryInfo *archiveEntryInfo,
     {
       // encrypt block
       error = Crypt_encrypt(&archiveEntryInfo->hardLink.cryptInfo,
-                            archiveEntryInfo->hardLink.buffer,
+                            archiveEntryInfo->hardLink.byteBuffer,
                             archiveEntryInfo->blockLength
                            );
       if (error != ERROR_NONE)
@@ -2017,7 +2017,7 @@ LOCAL Errors writeHardLinkDataBlock(ArchiveEntryInfo *archiveEntryInfo,
 
       // store block into chunk
       error = Chunk_writeData(&archiveEntryInfo->hardLink.chunkHardLinkData.info,
-                              archiveEntryInfo->hardLink.buffer,
+                              archiveEntryInfo->hardLink.byteBuffer,
                               archiveEntryInfo->blockLength
                              );
       if (error != ERROR_NONE)
@@ -2141,7 +2141,7 @@ LOCAL Errors writeHardLinkDataBlock(ArchiveEntryInfo *archiveEntryInfo,
 
       // encrypt block
       error = Crypt_encrypt(&archiveEntryInfo->hardLink.cryptInfo,
-                            archiveEntryInfo->hardLink.buffer,
+                            archiveEntryInfo->hardLink.byteBuffer,
                             archiveEntryInfo->blockLength
                            );
       if (error != ERROR_NONE)
@@ -2151,7 +2151,7 @@ LOCAL Errors writeHardLinkDataBlock(ArchiveEntryInfo *archiveEntryInfo,
 
       // write block
       error = Chunk_writeData(&archiveEntryInfo->hardLink.chunkHardLinkData.info,
-                              archiveEntryInfo->hardLink.buffer,
+                              archiveEntryInfo->hardLink.byteBuffer,
                               archiveEntryInfo->blockLength
                              );
       if (error != ERROR_NONE)
@@ -2184,7 +2184,7 @@ LOCAL Errors readHardLinkDataBlock(ArchiveEntryInfo *archiveEntryInfo)
   {
     // read
     error = Chunk_readData(&archiveEntryInfo->hardLink.chunkHardLinkData.info,
-                           archiveEntryInfo->hardLink.buffer,
+                           archiveEntryInfo->hardLink.byteBuffer,
                            archiveEntryInfo->blockLength
                           );
     if (error != ERROR_NONE)
@@ -2194,7 +2194,7 @@ LOCAL Errors readHardLinkDataBlock(ArchiveEntryInfo *archiveEntryInfo)
 
     // decrypt
     error = Crypt_decrypt(&archiveEntryInfo->hardLink.cryptInfo,
-                          archiveEntryInfo->hardLink.buffer,
+                          archiveEntryInfo->hardLink.byteBuffer,
                           archiveEntryInfo->blockLength
                          );
     if (error != ERROR_NONE)
@@ -2204,7 +2204,7 @@ LOCAL Errors readHardLinkDataBlock(ArchiveEntryInfo *archiveEntryInfo)
 
     // put compressed block into decompressor
     Compress_putCompressedData(&archiveEntryInfo->hardLink.byteCompressInfo,
-                               archiveEntryInfo->hardLink.buffer,
+                               archiveEntryInfo->hardLink.byteBuffer,
                                archiveEntryInfo->blockLength
                               );
   }
@@ -2774,13 +2774,13 @@ Errors Archive_newFileEntry(ArchiveInfo      *archiveInfo,
   archiveEntryInfo->file.headerLength           = 0;
   archiveEntryInfo->file.headerWrittenFlag      = FALSE;
 
-  archiveEntryInfo->file.buffer                 = NULL;
-  archiveEntryInfo->file.bufferSize             = 0L;
+  archiveEntryInfo->file.byteBuffer             = NULL;
+  archiveEntryInfo->file.byteBufferSize         = 0L;
 
   // allocate buffer
-  archiveEntryInfo->file.bufferSize = (MAX_BUFFER_SIZE/archiveEntryInfo->blockLength)*archiveEntryInfo->blockLength;
-  archiveEntryInfo->file.buffer = (byte*)malloc(archiveEntryInfo->file.bufferSize);
-  if (archiveEntryInfo->file.buffer == NULL)
+  archiveEntryInfo->file.byteBufferSize = (MAX_BUFFER_SIZE/archiveEntryInfo->blockLength)*archiveEntryInfo->blockLength;
+  archiveEntryInfo->file.byteBuffer = (byte*)malloc(archiveEntryInfo->file.byteBufferSize);
+  if (archiveEntryInfo->file.byteBuffer == NULL)
   {
     HALT_INSUFFICIENT_MEMORY();
   }
@@ -2798,7 +2798,7 @@ Errors Archive_newFileEntry(ArchiveInfo      *archiveInfo,
                     );
   if (error != ERROR_NONE)
   {
-    free(archiveEntryInfo->file.buffer);
+    free(archiveEntryInfo->file.byteBuffer);
     return error;
   }
   archiveEntryInfo->file.chunkFile.compressAlgorithm = COMPRESS_ALGORITHM_TO_CONSTANT(archiveEntryInfo->file.byteCompressAlgorithm);
@@ -2812,7 +2812,7 @@ Errors Archive_newFileEntry(ArchiveInfo      *archiveInfo,
   if (error != ERROR_NONE)
   {
     Chunk_done(&archiveEntryInfo->file.chunkFile.info);
-    free(archiveEntryInfo->file.buffer);
+    free(archiveEntryInfo->file.byteBuffer);
     return error;
   }
   error = Chunk_init(&archiveEntryInfo->file.chunkFileEntry.info,
@@ -2829,7 +2829,7 @@ Errors Archive_newFileEntry(ArchiveInfo      *archiveInfo,
   {
     Crypt_done(&archiveEntryInfo->file.chunkFileEntry.cryptInfo);
     Chunk_done(&archiveEntryInfo->file.chunkFile.info);
-    free(archiveEntryInfo->file.buffer);
+    free(archiveEntryInfo->file.byteBuffer);
     return error;
   }
   archiveEntryInfo->file.chunkFileEntry.size            = fileInfo->size;
@@ -2851,7 +2851,7 @@ Errors Archive_newFileEntry(ArchiveInfo      *archiveInfo,
     Chunk_done(&archiveEntryInfo->file.chunkFileEntry.info);
     Crypt_done(&archiveEntryInfo->file.chunkFileEntry.cryptInfo);
     Chunk_done(&archiveEntryInfo->file.chunkFile.info);
-    free(archiveEntryInfo->file.buffer);
+    free(archiveEntryInfo->file.byteBuffer);
     return error;
   }
   error = Chunk_init(&archiveEntryInfo->file.chunkFileDelta.info,
@@ -2870,7 +2870,7 @@ Errors Archive_newFileEntry(ArchiveInfo      *archiveInfo,
     Chunk_done(&archiveEntryInfo->file.chunkFileEntry.info);
     Crypt_done(&archiveEntryInfo->file.chunkFileEntry.cryptInfo);
     Chunk_done(&archiveEntryInfo->file.chunkFile.info);
-    free(archiveEntryInfo->file.buffer);
+    free(archiveEntryInfo->file.byteBuffer);
     return error;
   }
   if (Compress_isCompressed(archiveEntryInfo->file.deltaCompressAlgorithm))
@@ -2891,7 +2891,7 @@ Errors Archive_newFileEntry(ArchiveInfo      *archiveInfo,
     Chunk_done(&archiveEntryInfo->file.chunkFileEntry.info);
     Crypt_done(&archiveEntryInfo->file.chunkFileEntry.cryptInfo);
     Chunk_done(&archiveEntryInfo->file.chunkFile.info);
-    free(archiveEntryInfo->file.buffer);
+    free(archiveEntryInfo->file.byteBuffer);
     return error;
   }
   error = Chunk_init(&archiveEntryInfo->file.chunkFileData.info,
@@ -2912,7 +2912,7 @@ Errors Archive_newFileEntry(ArchiveInfo      *archiveInfo,
     Chunk_done(&archiveEntryInfo->file.chunkFileEntry.info);
     Crypt_done(&archiveEntryInfo->file.chunkFileEntry.cryptInfo);
     Chunk_done(&archiveEntryInfo->file.chunkFile.info);
-    free(archiveEntryInfo->file.buffer);
+    free(archiveEntryInfo->file.byteBuffer);
     return error;
   }
   archiveEntryInfo->file.chunkFileData.fragmentOffset = 0LL;
@@ -2934,7 +2934,7 @@ Errors Archive_newFileEntry(ArchiveInfo      *archiveInfo,
     Chunk_done(&archiveEntryInfo->file.chunkFileEntry.info);
     Crypt_done(&archiveEntryInfo->file.chunkFileEntry.cryptInfo);
     Chunk_done(&archiveEntryInfo->file.chunkFile.info);
-    free(archiveEntryInfo->file.buffer);
+    free(archiveEntryInfo->file.byteBuffer);
     return error;
   }
 
@@ -2955,7 +2955,7 @@ Errors Archive_newFileEntry(ArchiveInfo      *archiveInfo,
     Chunk_done(&archiveEntryInfo->file.chunkFileEntry.info);
     Crypt_done(&archiveEntryInfo->file.chunkFileEntry.cryptInfo);
     Chunk_done(&archiveEntryInfo->file.chunkFile.info);
-    free(archiveEntryInfo->file.buffer);
+    free(archiveEntryInfo->file.byteBuffer);
     return error;
   }
 
@@ -2975,7 +2975,7 @@ Errors Archive_newFileEntry(ArchiveInfo      *archiveInfo,
     Chunk_done(&archiveEntryInfo->file.chunkFileEntry.info);
     Crypt_done(&archiveEntryInfo->file.chunkFileEntry.cryptInfo);
     Chunk_done(&archiveEntryInfo->file.chunkFile.info);
-    free(archiveEntryInfo->file.buffer);
+    free(archiveEntryInfo->file.byteBuffer);
     return error;
   }
 
@@ -3043,13 +3043,13 @@ Errors Archive_newImageEntry(ArchiveInfo      *archiveInfo,
   archiveEntryInfo->image.headerLength           = 0;
   archiveEntryInfo->image.headerWrittenFlag      = FALSE;
 
-  archiveEntryInfo->image.buffer                 = NULL;
-  archiveEntryInfo->image.bufferSize             = 0L;
+  archiveEntryInfo->image.byteBuffer             = NULL;
+  archiveEntryInfo->image.byteBufferSize         = 0L;
 
   // allocate buffer
-  archiveEntryInfo->image.bufferSize = (MAX_BUFFER_SIZE/archiveEntryInfo->blockLength)*archiveEntryInfo->blockLength;
-  archiveEntryInfo->image.buffer = (byte*)malloc(archiveEntryInfo->image.bufferSize);
-  if (archiveEntryInfo->image.buffer == NULL)
+  archiveEntryInfo->image.byteBufferSize = (MAX_BUFFER_SIZE/archiveEntryInfo->blockLength)*archiveEntryInfo->blockLength;
+  archiveEntryInfo->image.byteBuffer = (byte*)malloc(archiveEntryInfo->image.byteBufferSize);
+  if (archiveEntryInfo->image.byteBuffer == NULL)
   {
     HALT_INSUFFICIENT_MEMORY();
   }
@@ -3067,7 +3067,7 @@ Errors Archive_newImageEntry(ArchiveInfo      *archiveInfo,
                     );
   if (error != ERROR_NONE)
   {
-    free(archiveEntryInfo->image.buffer);
+    free(archiveEntryInfo->image.byteBuffer);
     return error;
   }
   archiveEntryInfo->image.chunkImage.compressAlgorithm = COMPRESS_ALGORITHM_TO_CONSTANT(archiveEntryInfo->image.byteCompressAlgorithm);
@@ -3081,7 +3081,7 @@ Errors Archive_newImageEntry(ArchiveInfo      *archiveInfo,
   if (error != ERROR_NONE)
   {
     Chunk_done(&archiveEntryInfo->image.chunkImage.info);
-    free(archiveEntryInfo->image.buffer);
+    free(archiveEntryInfo->image.byteBuffer);
     return error;
   }
   error = Chunk_init(&archiveEntryInfo->image.chunkImageEntry.info,
@@ -3098,7 +3098,7 @@ Errors Archive_newImageEntry(ArchiveInfo      *archiveInfo,
   {
     Crypt_done(&archiveEntryInfo->image.chunkImageEntry.cryptInfo);
     Chunk_done(&archiveEntryInfo->image.chunkImage.info);
-    free(archiveEntryInfo->image.buffer);
+    free(archiveEntryInfo->image.byteBuffer);
     return error;
   }
   archiveEntryInfo->image.chunkImageEntry.size      = deviceInfo->size;
@@ -3115,7 +3115,7 @@ Errors Archive_newImageEntry(ArchiveInfo      *archiveInfo,
     Chunk_done(&archiveEntryInfo->image.chunkImageEntry.info);
     Crypt_done(&archiveEntryInfo->image.chunkImageEntry.cryptInfo);
     Chunk_done(&archiveEntryInfo->image.chunkImage.info);
-    free(archiveEntryInfo->image.buffer);
+    free(archiveEntryInfo->image.byteBuffer);
     return error;
   }
   error = Chunk_init(&archiveEntryInfo->image.chunkImageDelta.info,
@@ -3134,7 +3134,7 @@ Errors Archive_newImageEntry(ArchiveInfo      *archiveInfo,
     Chunk_done(&archiveEntryInfo->image.chunkImageEntry.info);
     Crypt_done(&archiveEntryInfo->image.chunkImageEntry.cryptInfo);
     Chunk_done(&archiveEntryInfo->image.chunkImage.info);
-    free(archiveEntryInfo->image.buffer);
+    free(archiveEntryInfo->image.byteBuffer);
     return error;
   }
   if (Compress_isCompressed(archiveEntryInfo->image.deltaCompressAlgorithm))
@@ -3155,7 +3155,7 @@ Errors Archive_newImageEntry(ArchiveInfo      *archiveInfo,
     Chunk_done(&archiveEntryInfo->image.chunkImageEntry.info);
     Crypt_done(&archiveEntryInfo->image.chunkImageEntry.cryptInfo);
     Chunk_done(&archiveEntryInfo->image.chunkImage.info);
-    free(archiveEntryInfo->image.buffer);
+    free(archiveEntryInfo->image.byteBuffer);
     return error;
   }
   error = Chunk_init(&archiveEntryInfo->image.chunkImageData.info,
@@ -3176,7 +3176,7 @@ Errors Archive_newImageEntry(ArchiveInfo      *archiveInfo,
     Chunk_done(&archiveEntryInfo->image.chunkImageEntry.info);
     Crypt_done(&archiveEntryInfo->image.chunkImageEntry.cryptInfo);
     Chunk_done(&archiveEntryInfo->image.chunkImage.info);
-    free(archiveEntryInfo->image.buffer);
+    free(archiveEntryInfo->image.byteBuffer);
     return error;
   }
   archiveEntryInfo->image.chunkImageData.blockOffset = 0LL;
@@ -3198,7 +3198,7 @@ Errors Archive_newImageEntry(ArchiveInfo      *archiveInfo,
     Chunk_done(&archiveEntryInfo->image.chunkImageEntry.info);
     Crypt_done(&archiveEntryInfo->image.chunkImageEntry.cryptInfo);
     Chunk_done(&archiveEntryInfo->image.chunkImage.info);
-    free(archiveEntryInfo->image.buffer);
+    free(archiveEntryInfo->image.byteBuffer);
     return error;
   }
 
@@ -3219,7 +3219,7 @@ Errors Archive_newImageEntry(ArchiveInfo      *archiveInfo,
     Chunk_done(&archiveEntryInfo->image.chunkImageEntry.info);
     Crypt_done(&archiveEntryInfo->image.chunkImageEntry.cryptInfo);
     Chunk_done(&archiveEntryInfo->image.chunkImage.info);
-    free(archiveEntryInfo->image.buffer);
+    free(archiveEntryInfo->image.byteBuffer);
     return error;
   }
 
@@ -3239,7 +3239,7 @@ Errors Archive_newImageEntry(ArchiveInfo      *archiveInfo,
     Chunk_done(&archiveEntryInfo->image.chunkImageEntry.info);
     Crypt_done(&archiveEntryInfo->image.chunkImageEntry.cryptInfo);
     Chunk_done(&archiveEntryInfo->image.chunkImage.info);
-    free(archiveEntryInfo->image.buffer);
+    free(archiveEntryInfo->image.byteBuffer);
     return error;
   }
 
@@ -3568,13 +3568,13 @@ Errors Archive_newHardLinkEntry(ArchiveInfo      *archiveInfo,
   archiveEntryInfo->hardLink.headerLength           = 0;
   archiveEntryInfo->hardLink.headerWrittenFlag      = FALSE;
 
-  archiveEntryInfo->hardLink.buffer                 = NULL;
-  archiveEntryInfo->hardLink.bufferSize             = 0L;
+  archiveEntryInfo->hardLink.byteBuffer             = NULL;
+  archiveEntryInfo->hardLink.byteBufferSize         = 0L;
 
   // allocate data buffer
-  archiveEntryInfo->hardLink.bufferSize = (MAX_BUFFER_SIZE/archiveEntryInfo->blockLength)*archiveEntryInfo->blockLength;
-  archiveEntryInfo->hardLink.buffer = (byte*)malloc(archiveEntryInfo->hardLink.bufferSize);
-  if (archiveEntryInfo->hardLink.buffer == NULL)
+  archiveEntryInfo->hardLink.byteBufferSize = (MAX_BUFFER_SIZE/archiveEntryInfo->blockLength)*archiveEntryInfo->blockLength;
+  archiveEntryInfo->hardLink.byteBuffer = (byte*)malloc(archiveEntryInfo->hardLink.byteBufferSize);
+  if (archiveEntryInfo->hardLink.byteBuffer == NULL)
   {
     HALT_INSUFFICIENT_MEMORY();
   }
@@ -3592,7 +3592,7 @@ Errors Archive_newHardLinkEntry(ArchiveInfo      *archiveInfo,
                     );
   if (error != ERROR_NONE)
   {
-    free(archiveEntryInfo->hardLink.buffer);
+    free(archiveEntryInfo->hardLink.byteBuffer);
     return error;
   }
   archiveEntryInfo->hardLink.chunkHardLink.compressAlgorithm = COMPRESS_ALGORITHM_TO_CONSTANT(archiveEntryInfo->hardLink.byteCompressAlgorithm);
@@ -3606,7 +3606,7 @@ Errors Archive_newHardLinkEntry(ArchiveInfo      *archiveInfo,
   if (error != ERROR_NONE)
   {
     Chunk_done(&archiveEntryInfo->hardLink.chunkHardLink.info);
-    free(archiveEntryInfo->hardLink.buffer);
+    free(archiveEntryInfo->hardLink.byteBuffer);
     return error;
   }
   error = Chunk_init(&archiveEntryInfo->hardLink.chunkHardLinkEntry.info,
@@ -3623,7 +3623,7 @@ Errors Archive_newHardLinkEntry(ArchiveInfo      *archiveInfo,
   {
     Crypt_done(&archiveEntryInfo->hardLink.chunkHardLinkEntry.cryptInfo);
     Chunk_done(&archiveEntryInfo->hardLink.chunkHardLink.info);
-    free(archiveEntryInfo->hardLink.buffer);
+    free(archiveEntryInfo->hardLink.byteBuffer);
     return error;
   }
   archiveEntryInfo->hardLink.chunkHardLinkEntry.size            = fileInfo->size;
@@ -3660,7 +3660,7 @@ Errors Archive_newHardLinkEntry(ArchiveInfo      *archiveInfo,
       Chunk_done(&archiveEntryInfo->hardLink.chunkHardLinkEntry.info);
       Crypt_done(&archiveEntryInfo->hardLink.chunkHardLinkEntry.cryptInfo);
       Chunk_done(&archiveEntryInfo->hardLink.chunkHardLink.info);
-      free(archiveEntryInfo->hardLink.buffer);
+      free(archiveEntryInfo->hardLink.byteBuffer);
       return error;
     }
     error = Chunk_init(&chunkHardLinkName->info,
@@ -3685,7 +3685,7 @@ Errors Archive_newHardLinkEntry(ArchiveInfo      *archiveInfo,
       Chunk_done(&archiveEntryInfo->hardLink.chunkHardLinkEntry.info);
       Crypt_done(&archiveEntryInfo->hardLink.chunkHardLinkEntry.cryptInfo);
       Chunk_done(&archiveEntryInfo->hardLink.chunkHardLink.info);
-      free(archiveEntryInfo->hardLink.buffer);
+      free(archiveEntryInfo->hardLink.byteBuffer);
       return error;
     }
     String_set(chunkHardLinkName->name,fileName);
@@ -3708,7 +3708,7 @@ Errors Archive_newHardLinkEntry(ArchiveInfo      *archiveInfo,
     Chunk_done(&archiveEntryInfo->hardLink.chunkHardLinkEntry.info);
     Crypt_done(&archiveEntryInfo->hardLink.chunkHardLinkEntry.cryptInfo);
     Chunk_done(&archiveEntryInfo->hardLink.chunkHardLink.info);
-    free(archiveEntryInfo->hardLink.buffer);
+    free(archiveEntryInfo->hardLink.byteBuffer);
     return error;
   }
   error = Chunk_init(&archiveEntryInfo->hardLink.chunkHardLinkDelta.info,
@@ -3732,7 +3732,7 @@ Errors Archive_newHardLinkEntry(ArchiveInfo      *archiveInfo,
     Chunk_done(&archiveEntryInfo->hardLink.chunkHardLinkEntry.info);
     Crypt_done(&archiveEntryInfo->hardLink.chunkHardLinkEntry.cryptInfo);
     Chunk_done(&archiveEntryInfo->hardLink.chunkHardLink.info);
-    free(archiveEntryInfo->hardLink.buffer);
+    free(archiveEntryInfo->hardLink.byteBuffer);
     return error;
   }
   if (Compress_isCompressed(archiveEntryInfo->hardLink.deltaCompressAlgorithm))
@@ -3758,7 +3758,7 @@ Errors Archive_newHardLinkEntry(ArchiveInfo      *archiveInfo,
     Chunk_done(&archiveEntryInfo->hardLink.chunkHardLinkEntry.info);
     Crypt_done(&archiveEntryInfo->hardLink.chunkHardLinkEntry.cryptInfo);
     Chunk_done(&archiveEntryInfo->hardLink.chunkHardLink.info);
-    free(archiveEntryInfo->hardLink.buffer);
+    free(archiveEntryInfo->hardLink.byteBuffer);
     return error;
   }
   error = Chunk_init(&archiveEntryInfo->hardLink.chunkHardLinkData.info,
@@ -3784,7 +3784,7 @@ Errors Archive_newHardLinkEntry(ArchiveInfo      *archiveInfo,
     Chunk_done(&archiveEntryInfo->hardLink.chunkHardLinkEntry.info);
     Crypt_done(&archiveEntryInfo->hardLink.chunkHardLinkEntry.cryptInfo);
     Chunk_done(&archiveEntryInfo->hardLink.chunkHardLink.info);
-    free(archiveEntryInfo->hardLink.buffer);
+    free(archiveEntryInfo->hardLink.byteBuffer);
     return error;
   }
   archiveEntryInfo->hardLink.chunkHardLinkData.fragmentOffset = 0LL;
@@ -3811,7 +3811,7 @@ Errors Archive_newHardLinkEntry(ArchiveInfo      *archiveInfo,
     Chunk_done(&archiveEntryInfo->hardLink.chunkHardLinkEntry.info);
     Crypt_done(&archiveEntryInfo->hardLink.chunkHardLinkEntry.cryptInfo);
     Chunk_done(&archiveEntryInfo->hardLink.chunkHardLink.info);
-    free(archiveEntryInfo->hardLink.buffer);
+    free(archiveEntryInfo->hardLink.byteBuffer);
     return error;
   }
 
@@ -3837,7 +3837,7 @@ Errors Archive_newHardLinkEntry(ArchiveInfo      *archiveInfo,
     Chunk_done(&archiveEntryInfo->hardLink.chunkHardLinkEntry.info);
     Crypt_done(&archiveEntryInfo->hardLink.chunkHardLinkEntry.cryptInfo);
     Chunk_done(&archiveEntryInfo->hardLink.chunkHardLink.info);
-    free(archiveEntryInfo->hardLink.buffer);
+    free(archiveEntryInfo->hardLink.byteBuffer);
     return error;
   }
 
@@ -3862,7 +3862,7 @@ Errors Archive_newHardLinkEntry(ArchiveInfo      *archiveInfo,
     Chunk_done(&archiveEntryInfo->hardLink.chunkHardLinkEntry.info);
     Crypt_done(&archiveEntryInfo->hardLink.chunkHardLinkEntry.cryptInfo);
     Chunk_done(&archiveEntryInfo->hardLink.chunkHardLink.info);
-    free(archiveEntryInfo->hardLink.buffer);
+    free(archiveEntryInfo->hardLink.byteBuffer);
     return error;
   }
 
@@ -4255,8 +4255,8 @@ Errors Archive_readFileEntry(ArchiveInfo        *archiveInfo,
 
   archiveEntryInfo->file.deltaSourceInit = FALSE;
 
-  archiveEntryInfo->file.buffer          = NULL;
-  archiveEntryInfo->file.bufferSize      = 0L;
+  archiveEntryInfo->file.byteBuffer      = NULL;
+  archiveEntryInfo->file.byteBufferSize  = 0L;
 
   // init file chunk
   error = Chunk_init(&archiveEntryInfo->file.chunkFile.info,
@@ -4323,9 +4323,9 @@ Errors Archive_readFileEntry(ArchiveInfo        *archiveInfo,
   assert(archiveEntryInfo->blockLength > 0);
 
   // allocate buffer
-  archiveEntryInfo->file.bufferSize = (MAX_BUFFER_SIZE/archiveEntryInfo->blockLength)*archiveEntryInfo->blockLength;
-  archiveEntryInfo->file.buffer = (byte*)malloc(archiveEntryInfo->file.bufferSize);
-  if (archiveEntryInfo->file.buffer == NULL)
+  archiveEntryInfo->file.byteBufferSize = (MAX_BUFFER_SIZE/archiveEntryInfo->blockLength)*archiveEntryInfo->blockLength;
+  archiveEntryInfo->file.byteBuffer = (byte*)malloc(archiveEntryInfo->file.byteBufferSize);
+  if (archiveEntryInfo->file.byteBuffer == NULL)
   {
     HALT_INSUFFICIENT_MEMORY();
   }
@@ -4339,7 +4339,7 @@ Errors Archive_readFileEntry(ArchiveInfo        *archiveInfo,
                       );
   if (error != ERROR_NONE)
   {
-    free(archiveEntryInfo->file.buffer);
+    free(archiveEntryInfo->file.byteBuffer);
     Chunk_done(&archiveEntryInfo->file.chunkFile.info);
     Chunk_skip(archiveInfo->chunkIO,archiveInfo->chunkIOUserData,&chunkHeader);
     return error;
@@ -4631,7 +4631,7 @@ Errors Archive_readFileEntry(ArchiveInfo        *archiveInfo,
     Crypt_done(&archiveEntryInfo->file.chunkFileDelta.cryptInfo);
     Crypt_done(&archiveEntryInfo->file.chunkFileEntry.cryptInfo);
     Compress_delete(&archiveEntryInfo->file.byteCompressInfo);
-    free(archiveEntryInfo->file.buffer);
+    free(archiveEntryInfo->file.byteBuffer);
     Chunk_done(&archiveEntryInfo->file.chunkFile.info);
 
     Chunk_skip(archiveInfo->chunkIO,archiveInfo->chunkIOUserData,&chunkHeader);
@@ -4661,7 +4661,7 @@ Errors Archive_readFileEntry(ArchiveInfo        *archiveInfo,
     Crypt_done(&archiveEntryInfo->file.chunkFileDelta.cryptInfo);
     Crypt_done(&archiveEntryInfo->file.chunkFileEntry.cryptInfo);
     Compress_delete(&archiveEntryInfo->file.byteCompressInfo);
-    free(archiveEntryInfo->file.buffer);
+    free(archiveEntryInfo->file.byteBuffer);
     Chunk_done(&archiveEntryInfo->file.chunkFile.info);
 
     Chunk_skip(archiveInfo->chunkIO,archiveInfo->chunkIOUserData,&chunkHeader);
@@ -4726,8 +4726,8 @@ Errors Archive_readImageEntry(ArchiveInfo        *archiveInfo,
 
   archiveEntryInfo->image.deltaSourceInit = FALSE;
 
-  archiveEntryInfo->image.buffer          = NULL;
-  archiveEntryInfo->image.bufferSize      = 0L;
+  archiveEntryInfo->image.byteBuffer      = NULL;
+  archiveEntryInfo->image.byteBufferSize  = 0L;
 
   // init image chunk
   error = Chunk_init(&archiveEntryInfo->image.chunkImage.info,
@@ -4793,9 +4793,9 @@ Errors Archive_readImageEntry(ArchiveInfo        *archiveInfo,
   assert(archiveEntryInfo->blockLength > 0);
 
   // allocate buffer
-  archiveEntryInfo->image.bufferSize = (MAX_BUFFER_SIZE/archiveEntryInfo->blockLength)*archiveEntryInfo->blockLength;
-  archiveEntryInfo->image.buffer = (byte*)malloc(archiveEntryInfo->image.bufferSize);
-  if (archiveEntryInfo->image.buffer == NULL)
+  archiveEntryInfo->image.byteBufferSize = (MAX_BUFFER_SIZE/archiveEntryInfo->blockLength)*archiveEntryInfo->blockLength;
+  archiveEntryInfo->image.byteBuffer = (byte*)malloc(archiveEntryInfo->image.byteBufferSize);
+  if (archiveEntryInfo->image.byteBuffer == NULL)
   {
     HALT_INSUFFICIENT_MEMORY();
   }
@@ -4809,7 +4809,7 @@ Errors Archive_readImageEntry(ArchiveInfo        *archiveInfo,
                       );
   if (error != ERROR_NONE)
   {
-    free(archiveEntryInfo->image.buffer);
+    free(archiveEntryInfo->image.byteBuffer);
     Chunk_done(&archiveEntryInfo->image.chunkImage.info);
     Chunk_skip(archiveInfo->chunkIO,archiveInfo->chunkIOUserData,&chunkHeader);
     return error;
@@ -5088,7 +5088,7 @@ Errors Archive_readImageEntry(ArchiveInfo        *archiveInfo,
     Crypt_done(&archiveEntryInfo->image.chunkImageDelta.cryptInfo);
     Crypt_done(&archiveEntryInfo->image.chunkImageEntry.cryptInfo);
     Compress_delete(&archiveEntryInfo->image.byteCompressInfo);
-    free(archiveEntryInfo->image.buffer);
+    free(archiveEntryInfo->image.byteBuffer);
     Chunk_done(&archiveEntryInfo->image.chunkImage.info);
 
     Chunk_skip(archiveInfo->chunkIO,archiveInfo->chunkIOUserData,&chunkHeader);
@@ -5118,7 +5118,7 @@ Errors Archive_readImageEntry(ArchiveInfo        *archiveInfo,
     Crypt_done(&archiveEntryInfo->image.chunkImageDelta.cryptInfo);
     Crypt_done(&archiveEntryInfo->image.chunkImageEntry.cryptInfo);
     Compress_delete(&archiveEntryInfo->image.byteCompressInfo);
-    free(archiveEntryInfo->image.buffer);
+    free(archiveEntryInfo->image.byteBuffer);
     Chunk_done(&archiveEntryInfo->image.chunkImage.info);
 
     Chunk_skip(archiveInfo->chunkIO,archiveInfo->chunkIOUserData,&chunkHeader);
@@ -5709,12 +5709,12 @@ Errors Archive_readHardLinkEntry(ArchiveInfo        *archiveInfo,
   }
 
   // init archive file info
-  archiveEntryInfo->archiveInfo         = archiveInfo;
-  archiveEntryInfo->mode                = ARCHIVE_MODE_READ;
-  archiveEntryInfo->archiveEntryType    = ARCHIVE_ENTRY_TYPE_HARDLINK;
+  archiveEntryInfo->archiveInfo             = archiveInfo;
+  archiveEntryInfo->mode                    = ARCHIVE_MODE_READ;
+  archiveEntryInfo->archiveEntryType        = ARCHIVE_ENTRY_TYPE_HARDLINK;
 
-  archiveEntryInfo->hardLink.buffer     = NULL;
-  archiveEntryInfo->hardLink.bufferSize = 0L;
+  archiveEntryInfo->hardLink.byteBuffer     = NULL;
+  archiveEntryInfo->hardLink.byteBufferSize = 0L;
 
   // init hard link chunk
   error = Chunk_init(&archiveEntryInfo->hardLink.chunkHardLink.info,
@@ -5781,9 +5781,9 @@ Errors Archive_readHardLinkEntry(ArchiveInfo        *archiveInfo,
   assert(archiveEntryInfo->blockLength > 0);
 
   // allocate buffer
-  archiveEntryInfo->hardLink.bufferSize = (MAX_BUFFER_SIZE/archiveEntryInfo->blockLength)*archiveEntryInfo->blockLength;
-  archiveEntryInfo->hardLink.buffer = (byte*)malloc(archiveEntryInfo->hardLink.bufferSize);
-  if (archiveEntryInfo->hardLink.buffer == NULL)
+  archiveEntryInfo->hardLink.byteBufferSize = (MAX_BUFFER_SIZE/archiveEntryInfo->blockLength)*archiveEntryInfo->blockLength;
+  archiveEntryInfo->hardLink.byteBuffer = (byte*)malloc(archiveEntryInfo->hardLink.byteBufferSize);
+  if (archiveEntryInfo->hardLink.byteBuffer == NULL)
   {
     HALT_INSUFFICIENT_MEMORY();
   }
@@ -5797,7 +5797,7 @@ Errors Archive_readHardLinkEntry(ArchiveInfo        *archiveInfo,
                       );
   if (error != ERROR_NONE)
   {
-    free(archiveEntryInfo->hardLink.buffer);
+    free(archiveEntryInfo->hardLink.byteBuffer);
     Chunk_done(&archiveEntryInfo->hardLink.chunkHardLink.info);
     Chunk_skip(archiveInfo->chunkIO,archiveInfo->chunkIOUserData,&chunkHeader);
     return error;
@@ -6148,7 +6148,7 @@ Errors Archive_readHardLinkEntry(ArchiveInfo        *archiveInfo,
     Crypt_done(&archiveEntryInfo->hardLink.chunkHardLinkDelta.cryptInfo);
     Crypt_done(&archiveEntryInfo->hardLink.chunkHardLinkEntry.cryptInfo);
     Compress_delete(&archiveEntryInfo->hardLink.byteCompressInfo);
-    free(archiveEntryInfo->hardLink.buffer);
+    free(archiveEntryInfo->hardLink.byteBuffer);
     Chunk_done(&archiveEntryInfo->hardLink.chunkHardLink.info);
 
     Chunk_skip(archiveInfo->chunkIO,archiveInfo->chunkIOUserData,&chunkHeader);
@@ -6183,7 +6183,7 @@ Errors Archive_readHardLinkEntry(ArchiveInfo        *archiveInfo,
     Crypt_done(&archiveEntryInfo->hardLink.chunkHardLinkDelta.cryptInfo);
     Crypt_done(&archiveEntryInfo->hardLink.chunkHardLinkEntry.cryptInfo);
     Compress_delete(&archiveEntryInfo->hardLink.byteCompressInfo);
-    free(archiveEntryInfo->hardLink.buffer);
+    free(archiveEntryInfo->hardLink.byteBuffer);
     Chunk_done(&archiveEntryInfo->hardLink.chunkHardLink.info);
 
     Chunk_skip(archiveInfo->chunkIO,archiveInfo->chunkIOUserData,&chunkHeader);
@@ -6602,7 +6602,7 @@ Errors Archive_closeEntry(ArchiveEntryInfo *archiveEntryInfo)
             Chunk_done(&archiveEntryInfo->file.chunkFileDelta.info);
             Crypt_done(&archiveEntryInfo->file.chunkFileDelta.cryptInfo);
             Chunk_done(&archiveEntryInfo->file.chunkFileEntry.info);
-            free(archiveEntryInfo->file.buffer);
+            free(archiveEntryInfo->file.byteBuffer);
             Crypt_done(&archiveEntryInfo->file.chunkFileEntry.cryptInfo);
             Chunk_done(&archiveEntryInfo->file.chunkFile.info);
           }
@@ -6689,7 +6689,7 @@ Errors Archive_closeEntry(ArchiveEntryInfo *archiveEntryInfo)
             Chunk_done(&archiveEntryInfo->image.chunkImageDelta.info);
             Crypt_done(&archiveEntryInfo->image.chunkImageDelta.cryptInfo);
             Chunk_done(&archiveEntryInfo->image.chunkImageEntry.info);
-            free(archiveEntryInfo->image.buffer);
+            free(archiveEntryInfo->image.byteBuffer);
             Crypt_done(&archiveEntryInfo->image.chunkImageEntry.cryptInfo);
             Chunk_done(&archiveEntryInfo->image.chunkImage.info);
           }
@@ -6874,7 +6874,7 @@ Errors Archive_closeEntry(ArchiveEntryInfo *archiveEntryInfo)
             Chunk_done(&archiveEntryInfo->hardLink.chunkHardLinkEntry.info);
             Crypt_done(&archiveEntryInfo->hardLink.chunkHardLinkEntry.cryptInfo);
             Chunk_done(&archiveEntryInfo->hardLink.chunkHardLink.info);
-            free(archiveEntryInfo->hardLink.buffer);
+            free(archiveEntryInfo->hardLink.byteBuffer);
           }
           break;
         case ARCHIVE_ENTRY_TYPE_SPECIAL:
@@ -6957,7 +6957,7 @@ Errors Archive_closeEntry(ArchiveEntryInfo *archiveEntryInfo)
             Crypt_done(&archiveEntryInfo->file.chunkFileDelta.cryptInfo);
             Crypt_done(&archiveEntryInfo->file.chunkFileEntry.cryptInfo);
             Compress_delete(&archiveEntryInfo->file.byteCompressInfo);
-            free(archiveEntryInfo->file.buffer);
+            free(archiveEntryInfo->file.byteBuffer);
             Chunk_done(&archiveEntryInfo->file.chunkFile.info);
           }
           break;
@@ -6990,7 +6990,7 @@ Errors Archive_closeEntry(ArchiveEntryInfo *archiveEntryInfo)
             Crypt_done(&archiveEntryInfo->image.chunkImageDelta.cryptInfo);
             Crypt_done(&archiveEntryInfo->image.chunkImageEntry.cryptInfo);
             Compress_delete(&archiveEntryInfo->image.byteCompressInfo);
-            free(archiveEntryInfo->image.buffer);
+            free(archiveEntryInfo->image.byteBuffer);
             Chunk_done(&archiveEntryInfo->image.chunkImage.info);
           }
           break;
@@ -7063,7 +7063,7 @@ Errors Archive_closeEntry(ArchiveEntryInfo *archiveEntryInfo)
             Crypt_done(&archiveEntryInfo->hardLink.chunkHardLinkDelta.cryptInfo);
             Crypt_done(&archiveEntryInfo->hardLink.chunkHardLinkEntry.cryptInfo);
             Compress_delete(&archiveEntryInfo->hardLink.byteCompressInfo);
-            free(archiveEntryInfo->hardLink.buffer);
+            free(archiveEntryInfo->hardLink.byteBuffer);
             Chunk_done(&archiveEntryInfo->hardLink.chunkHardLink.info);
           }
           break;
@@ -7142,7 +7142,7 @@ Errors Archive_writeData(ArchiveEntryInfo *archiveEntryInfo,
       switch (archiveEntryInfo->archiveEntryType)
       {
         case ARCHIVE_ENTRY_TYPE_FILE:
-          assert((archiveEntryInfo->file.bufferSize%archiveEntryInfo->blockLength) == 0);
+          assert((archiveEntryInfo->file.byteBufferSize%archiveEntryInfo->blockLength) == 0);
 
           while (writtenBlockBytes < blockLength)
           {
@@ -7232,7 +7232,7 @@ fprintf(stderr,"%s,%d: avild =%d\n",__FILE__,__LINE__,blockCount);
           }
           break;
         case ARCHIVE_ENTRY_TYPE_IMAGE:
-          assert((archiveEntryInfo->image.bufferSize%archiveEntryInfo->blockLength) == 0);
+          assert((archiveEntryInfo->image.byteBufferSize%archiveEntryInfo->blockLength) == 0);
 
           while (writtenBlockBytes < blockLength)
           {
@@ -7274,7 +7274,7 @@ fprintf(stderr,"%s,%d: avild =%d\n",__FILE__,__LINE__,blockCount);
           }
           break;
         case ARCHIVE_ENTRY_TYPE_HARDLINK:
-          assert((archiveEntryInfo->hardLink.bufferSize%archiveEntryInfo->blockLength) == 0);
+          assert((archiveEntryInfo->hardLink.byteBufferSize%archiveEntryInfo->blockLength) == 0);
 
           while (writtenBlockBytes < blockLength)
           {
