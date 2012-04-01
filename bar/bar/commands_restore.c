@@ -1965,7 +1965,9 @@ Errors Command_restore(const StringList                *archiveNameList,
     }
   }
 
-  if (!jobOptions->noFragmentsCheckFlag)
+  if (   (restoreInfo.failError == ERROR_NONE)
+      && !jobOptions->noFragmentsCheckFlag
+     )
   {
     // check fragment lists, set file info for incomplete entries
     if ((restoreInfo.requestedAbortFlag == NULL) || !(*restoreInfo.requestedAbortFlag))
