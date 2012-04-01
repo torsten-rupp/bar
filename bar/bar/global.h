@@ -318,7 +318,7 @@ typedef void                void32;
 * Name   : FLOOR
 * Purpose: round number down by factor
 * Input  : x - number
-*          n - factor
+*          n - factor (n=y^2)
 * Output : -
 * Return : x' rounded down with x' <= x && x' mod n == 0
 * Notes  : -
@@ -330,7 +330,7 @@ typedef void                void32;
 * Name   : CEIL
 * Purpose: round number up by factor
 * Input  : x - number
-*          n - factor
+*          n - factor (n=y^2)
 * Output : -
 * Return : x' rounded up with x' >= x && x' mod n == 0
 * Notes  : -
