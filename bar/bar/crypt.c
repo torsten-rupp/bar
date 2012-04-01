@@ -45,16 +45,16 @@
 
 LOCAL const struct { const char *name; CryptAlgorithms cryptAlgorithm; } CRYPT_ALGORITHMS[] =
 {
-  {"none",      CRYPT_ALGORITHM_NONE       },
+  { "none",      CRYPT_ALGORITHM_NONE       },
 
-  {"3DES",      CRYPT_ALGORITHM_3DES       },
-  {"CAST5",     CRYPT_ALGORITHM_CAST5      },
-  {"BLOWFISH",  CRYPT_ALGORITHM_BLOWFISH   },
-  {"AES128",    CRYPT_ALGORITHM_AES128     },
-  {"AES192",    CRYPT_ALGORITHM_AES192     },
-  {"AES256",    CRYPT_ALGORITHM_AES256     },
-  {"TWOFISH128",CRYPT_ALGORITHM_TWOFISH128 },
-  {"TWOFISH256",CRYPT_ALGORITHM_TWOFISH256 },
+  { "3DES",      CRYPT_ALGORITHM_3DES       },
+  { "CAST5",     CRYPT_ALGORITHM_CAST5      },
+  { "BLOWFISH",  CRYPT_ALGORITHM_BLOWFISH   },
+  { "AES128",    CRYPT_ALGORITHM_AES128     },
+  { "AES192",    CRYPT_ALGORITHM_AES192     },
+  { "AES256",    CRYPT_ALGORITHM_AES256     },
+  { "TWOFISH128",CRYPT_ALGORITHM_TWOFISH128 },
+  { "TWOFISH256",CRYPT_ALGORITHM_TWOFISH256 },
 };
 
 // PKCS1 encoded message buffer for RSA encryption/decryption
