@@ -101,7 +101,7 @@ LOCAL const struct { const char *name; CompressAlgorithms compressAlgorithm; } C
 #endif /* HAVE_XDELTA3 */
 
 // size of compress buffers
-#define MAX_BUFFER_SIZE (64*1024)
+#define MAX_BUFFER_SIZE (4*1024)
 
 /***************************** Datatypes *******************************/
 
