@@ -79,8 +79,24 @@ ERROR FTP_GET_SIZE                   "get FTP file size fail"
 
 // compress
 ERROR INIT_COMPRESS                  "init compress fail"
-ERROR DEFLATE_FAIL                   "compress fail"
-ERROR INFLATE_FAIL                   "decompress fail"
+ERROR DEFLATE_FAIL
+  strncpy(errorText,"compress fail",sizeof(errorText)-1);
+  if (ERROR_TEXT != NULL)
+  {
+    strncat(errorText,": ",sizeof(errorText)-1-strlen(errorText));
+    strncat(errorText,ERROR_TEXT,sizeof(errorText)-1-strlen(errorText));
+  }
+  errorText[sizeof(errorText)-1] = '\0';
+
+ERROR INFLATE_FAIL
+  strncpy(errorText,"decompress fail",sizeof(errorText)-1);
+  if (ERROR_TEXT != NULL)
+  {
+    strncat(errorText,": ",sizeof(errorText)-1-strlen(errorText));
+    strncat(errorText,ERROR_TEXT,sizeof(errorText)-1-strlen(errorText));
+  }
+  errorText[sizeof(errorText)-1] = '\0';
+
 ERROR COMPRESS_EOF                   "end of compressed file"
 ERROR DELTA_SOURCE_NOT_FOUND
   if (ERROR_TEXT != NULL)
