@@ -429,7 +429,7 @@ void Storage_doneAll(void);
 * Output : -
 * Return : storage type
 * Notes  : storage types supported:
-*            ftp://[<user name>[:<password>]@]<host name>[:<port>]/<file name>
+*            ftp://[<user name>[:<password>]@]<host name>/<file name>
 *            ssh://[<user name>@]<host name>[:<port>]/<file name>
 *            scp://[<user name>@]<host name>[:<port>]/<file name>
 *            sftp://[<user name>@]<host name>[:<port>]/<file name>
