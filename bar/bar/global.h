@@ -315,16 +315,28 @@ typedef void                void32;
 #endif
 
 /***********************************************************************\
+* Name   : FLOOR
+* Purpose: round number down by factor
+* Input  : x - number
+*          n - factor
+* Output : -
+* Return : x' rounded down with x' <= x && x' mod n == 0
+* Notes  : -
+\***********************************************************************/
+
+#define FLOOR(x,n) ((x) & ~((n)-1))
+
+/***********************************************************************\
 * Name   : CEIL
 * Purpose: round number up by factor
 * Input  : x - number
 *          n - factor
 * Output : -
-* Return : x round up with x' mod n == 0
+* Return : x' rounded up with x' >= x && x' mod n == 0
 * Notes  : -
 \***********************************************************************/
 
-#define CEIL(x,n) ((((x)+(n)-1)/(n))*(n))
+#define CEIL(x,n) (((x)+(n)-1) & ~((n)-1))
 
 /***********************************************************************\
 * Name   : SQUARE
