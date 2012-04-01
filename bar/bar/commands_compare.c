@@ -1400,7 +1400,9 @@ Errors Command_compare(const StringList                *archiveNameList,
     if (failError != ERROR_NONE) break;
   }
 
-  if (!jobOptions->noFragmentsCheckFlag)
+  if (   (failError == ERROR_NONE)
+      && !jobOptions->noFragmentsCheckFlag
+     )
   {
     // check fragment lists
     FRAGMENTLIST_ITERATE(&fragmentList,fragmentNode)
