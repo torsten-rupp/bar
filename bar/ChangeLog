@@ -31,6 +31,14 @@
   * fix file-seek bug in restore
   * BARControl: ask for FTP/SSH password on restore if
     required
+  * added internal debug code for list allocations
+  * added hidden option --server-debug for automated test
+    of server functions
+  * improved valgrind tests
+  * BARControl: add functions to clear stored passwords on
+    server
+  * output percentage info if verbose level >= 2
+  * output test/compare/restore info if verbose level >= 1
 
 2012-01-14 0.16g
   * fix restore: do not create empty parent directories
