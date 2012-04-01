@@ -454,7 +454,7 @@ StorageTypes Storage_getType(const String storageName);
 *          fileName         - storage file name (can be NULL)
 * Return : storage type
 * Notes  : storage types supported:
-*            ftp://[<user name>[:<password>]@]<host name>[:<port>]/<file name>
+*            ftp://[<user name>[:<password>]@]<host name>/<file name>
 *            ssh://[<user name>@]<host name>[:<port>]/<file name>
 *            scp://[<user name>@]<host name>[:<port>]/<file name>
 *            sftp://[<user name>@]<host name>[:<port>]/<file name>
