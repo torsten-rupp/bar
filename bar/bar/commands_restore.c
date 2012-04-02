@@ -612,14 +612,14 @@ Errors Command_restore(const StringList                *archiveNameList,
                 {
                   if (jobOptions->owner.userId  != FILE_DEFAULT_USER_ID ) fileInfo.userId  = jobOptions->owner.userId;
                   if (jobOptions->owner.groupId != FILE_DEFAULT_GROUP_ID) fileInfo.groupId = jobOptions->owner.groupId;
-                  error = File_setFileInfo(fileName,&fileInfo);
+                  error = File_setFileInfo(destinationFileName,&fileInfo);
                   if (error != ERROR_NONE)
                   {
                     if (jobOptions->stopOnErrorFlag)
                     {
                       printInfo(1,"FAIL!\n");
                       printError("Cannot set file info of '%s' (error: %s)\n",
-                                 String_cString(fileName),
+                                 String_cString(destinationFileName),
                                  Errors_getText(error)
                                 );
                       String_delete(destinationFileName);
@@ -631,7 +631,7 @@ Errors Command_restore(const StringList                *archiveNameList,
                     else
                     {
                       printWarning("Cannot set file info of '%s' (error: %s)\n",
-                                   String_cString(fileName),
+                                   String_cString(destinationFileName),
                                    Errors_getText(error)
                                   );
                     }
