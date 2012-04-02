@@ -398,8 +398,11 @@ Errors Command_restore(const StringList                *archiveNameList,
                   }
                   fragmentNode = FragmentList_add(&fragmentList,destinationFileName,fileInfo.size,&fileInfo,sizeof(FileInfo));
                 }
-
                 assert(fragmentNode != NULL);
+              }
+              else
+              {
+                fragmentNode = NULL;
               }
 
               printInfo(1,"  Restore file '%s'...",String_cString(destinationFileName));
@@ -595,30 +598,28 @@ Errors Command_restore(const StringList                *archiveNameList,
                 File_close(&fileHandle);
               }
 
-              if (!jobOptions->noFragmentsCheckFlag)
+              if (fragmentNode != NULL)
               {
                 // add fragment to file fragment list
                 FragmentList_addEntry(fragmentNode,fragmentOffset,fragmentSize);
 //FragmentList_debugPrintInfo(fragmentNode,String_cString(fileName));
               }
 
-              if (jobOptions->noFragmentsCheckFlag || FragmentList_isEntryComplete(fragmentNode))
+              if ((fragmentNode == NULL) || FragmentList_isEntryComplete(fragmentNode))
               {
                 // set file time, file owner/group, file permission
                 if (!jobOptions->dryRunFlag)
                 {
-                  assert(fragmentNode->userData != NULL);
-
-                  if (jobOptions->owner.userId  != FILE_DEFAULT_USER_ID ) ((FileInfo*)fragmentNode->userData)->userId  = jobOptions->owner.userId;
-                  if (jobOptions->owner.groupId != FILE_DEFAULT_GROUP_ID) ((FileInfo*)fragmentNode->userData)->groupId = jobOptions->owner.groupId;
-                  error = File_setFileInfo(fragmentNode->name,(FileInfo*)fragmentNode->userData);
+                  if (jobOptions->owner.userId  != FILE_DEFAULT_USER_ID ) fileInfo.userId  = jobOptions->owner.userId;
+                  if (jobOptions->owner.groupId != FILE_DEFAULT_GROUP_ID) fileInfo.groupId = jobOptions->owner.groupId;
+                  error = File_setFileInfo(fileName,&fileInfo);
                   if (error != ERROR_NONE)
                   {
                     if (jobOptions->stopOnErrorFlag)
                     {
                       printInfo(1,"FAIL!\n");
                       printError("Cannot set file info of '%s' (error: %s)\n",
-                                 String_cString(fragmentNode->name),
+                                 String_cString(fileName),
                                  Errors_getText(error)
                                 );
                       String_delete(destinationFileName);
@@ -630,7 +631,7 @@ Errors Command_restore(const StringList                *archiveNameList,
                     else
                     {
                       printWarning("Cannot set file info of '%s' (error: %s)\n",
-                                   String_cString(fragmentNode->name),
+                                   String_cString(fileName),
                                    Errors_getText(error)
                                   );
                     }
@@ -638,7 +639,7 @@ Errors Command_restore(const StringList                *archiveNameList,
                 }
               }
 
-              if (!jobOptions->noFragmentsCheckFlag)
+              if (fragmentNode != NULL)
               {
                 if (FragmentList_isEntryComplete(fragmentNode))
                 {
@@ -764,8 +765,11 @@ Errors Command_restore(const StringList                *archiveNameList,
                 {
                   fragmentNode = FragmentList_add(&fragmentList,imageName,deviceInfo.size,NULL,0);
                 }
-
                 assert(fragmentNode != NULL);
+              }
+              else
+              {
+                fragmentNode = NULL;
               }
 
               printInfo(1,"  Restore image '%s'...",String_cString(destinationDeviceName));
@@ -874,7 +878,7 @@ Errors Command_restore(const StringList                *archiveNameList,
               }
               printInfo(2,"    \b\b\b\b");
 
-              if (!jobOptions->noFragmentsCheckFlag)
+              if (fragmentNode != NULL)
               {
                 // add fragment to file fragment list
                 FragmentList_addEntry(fragmentNode,blockOffset*(uint64)deviceInfo.blockSize,blockCount*(uint64)deviceInfo.blockSize);
@@ -1459,8 +1463,11 @@ Errors Command_restore(const StringList                *archiveNameList,
                       }
                       fragmentNode = FragmentList_add(&fragmentList,fileName,fileInfo.size,&fileInfo,sizeof(FileInfo));
                     }
-
                     assert(fragmentNode != NULL);
+                  }
+                  else
+                  {
+                    fragmentNode = NULL;
                   }
 
                   if (!jobOptions->dryRunFlag)
@@ -1588,14 +1595,14 @@ Errors Command_restore(const StringList                *archiveNameList,
                     File_close(&fileHandle);
                   }
 
-                  if (!jobOptions->noFragmentsCheckFlag)
+                  if (fragmentNode != NULL)
                   {
                     // add fragment to file fragment list
                     FragmentList_addEntry(fragmentNode,fragmentOffset,fragmentSize);
 //FragmentList_debugPrintInfo(fragmentNode,String_cString(fileName));
                   }
 
-                  if (jobOptions->noFragmentsCheckFlag || FragmentList_isEntryComplete(fragmentNode))
+                  if ((fragmentNode == NULL) || FragmentList_isEntryComplete(fragmentNode))
                   {
                     // set file time, file owner/group
                     if (!jobOptions->dryRunFlag)
@@ -1626,7 +1633,7 @@ Errors Command_restore(const StringList                *archiveNameList,
                     }
                   }
 
-                  if (!jobOptions->noFragmentsCheckFlag)
+                  if (fragmentNode != NULL)
                   {
                     // discard fragment list if file is complete
                     if (FragmentList_isEntryComplete(fragmentNode))
