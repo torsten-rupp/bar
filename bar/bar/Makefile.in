@@ -435,6 +435,11 @@ TEST_FILES = \
   test/data/circular-link.dat.marker \
   test/data/hardlinkdata.dat \
   test/data/hardlink.dat \
+  test/data/file400.dat \
+  test/data/file640.dat \
+  test/data/file644.dat \
+  test/data/file664.dat \
+  test/data/file666.dat \
   test/data/nodump.dat \
   test/data/fifo \
   test/data/data\'.dat \
@@ -671,6 +676,21 @@ test/data/hardlinkdata.dat test/data/hardlink.dat:
 	$(INSTALL) -d $(@D)
 	$(DD) if=/dev/urandom of=test/data/hardlinkdata.dat bs=1 count=1024 2>/dev/null
 	($(CD) test/data; $(RMF) hardlink.dat; $(LN) hardlinkdata.dat hardlink.dat)
+test/data/file400.dat:
+	$(INSTALL) -d $(@D)
+	$(DD) if=/dev/urandom of=$@ bs=1k count=1 2>/dev/null; $(CHMOD) 400 $@
+test/data/file640.dat:
+	$(INSTALL) -d $(@D)
+	$(DD) if=/dev/urandom of=$@ bs=1k count=1 2>/dev/null; $(CHMOD) 640 $@
+test/data/file644.dat:
+	$(INSTALL) -d $(@D)
+	$(DD) if=/dev/urandom of=$@ bs=1k count=1 2>/dev/null; $(CHMOD) 644 $@
+test/data/file664.dat:
+	$(INSTALL) -d $(@D)
+	$(DD) if=/dev/urandom of=$@ bs=1k count=1 2>/dev/null; $(CHMOD) 664 $@
+test/data/file666.dat:
+	$(INSTALL) -d $(@D)
+	$(DD) if=/dev/urandom of=$@ bs=1k count=1 2>/dev/null; $(CHMOD) 666 $@
 test/data/nodump.dat:
 	$(INSTALL) -d $(@D)
 	$(DD) if=/dev/urandom of=$@ bs=1k count=1 2>/dev/null; $(CHMOD) 440 $@; $(CHATTR) +d $@
@@ -708,6 +728,11 @@ test_file_operation_base: \
 	SSH_ASKPASS= $(TEST_BAR) -x test/test*.bar $(OPTIONS) --destination test/restore $(if $(QUIET),1>/dev/null)
 	$(DIFF) -r -x unreadable.dat -x circular-link.dat -x circular-link.dat.marker -x fifo -x sub-ignore-dir -x nodump.dat test/data test/restore/test/data
 	$(READLINK) test/restore/test/data/link.dat 2>/dev/null $(if $(QUIET),1>/dev/null)
+	test `$(STAT) --format "%a" test/restore/test/data/file400.dat 2>/dev/null` = "400" $(if $(QUIET),1>/dev/null)
+	test `$(STAT) --format "%a" test/restore/test/data/file640.dat 2>/dev/null` = "640" $(if $(QUIET),1>/dev/null)
+	test `$(STAT) --format "%a" test/restore/test/data/file644.dat 2>/dev/null` = "644" $(if $(QUIET),1>/dev/null)
+	test `$(STAT) --format "%a" test/restore/test/data/file664.dat 2>/dev/null` = "664" $(if $(QUIET),1>/dev/null)
+	test `$(STAT) --format "%a" test/restore/test/data/file666.dat 2>/dev/null` = "666" $(if $(QUIET),1>/dev/null)
 	test `$(STAT) --format "%h" test/restore/test/data/hardlink.dat 2>/dev/null` -eq 2 $(if $(QUIET),1>/dev/null)
 
 test_file_operation_delta: \
