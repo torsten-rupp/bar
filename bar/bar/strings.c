@@ -240,7 +240,7 @@ LOCAL_INLINE struct __String* allocString(void)
     #endif /* FILL_MEMORY */
   #endif /* not NDEBUG */
 
-  UPDATE_VALID(string);
+  STRING_UPDATE_VALID(string);
 
   return string;
 }
@@ -288,7 +288,7 @@ LOCAL_INLINE void assignTmpString(struct __String *toString, struct __String *fr
     fromString->data      = NULL;
   #endif /* not NDEBUG */
 
-  UPDATE_VALID(toString);
+  STRING_UPDATE_VALID(toString);
 }
 
 /***********************************************************************\
@@ -570,7 +570,7 @@ LOCAL void formatString(struct __String *string,
   unsigned long i;
   char          ch;
 
-  CHECK_VALID(string);
+  STRING_CHECK_VALID(string);
 
   while ((*format) != '\0')
   {
@@ -594,7 +594,7 @@ LOCAL void formatString(struct __String *string,
             ensureStringLength(string,string->length+length);
             snprintf(&string->data[string->length],length+1,formatToken.token,data.i);
             string->length += length;
-            UPDATE_VALID(string);
+            STRING_UPDATE_VALID(string);
           }
           break;
         case 'i':
@@ -614,7 +614,7 @@ LOCAL void formatString(struct __String *string,
                   ensureStringLength(string,string->length+length);
                   snprintf(&string->data[string->length],length+1,formatToken.token,data.i);
                   string->length += length;
-                  UPDATE_VALID(string);
+                  STRING_UPDATE_VALID(string);
                 }
               }
               break;
@@ -631,7 +631,7 @@ LOCAL void formatString(struct __String *string,
                   ensureStringLength(string,string->length+length);
                   snprintf(&string->data[string->length],length+1,formatToken.token,data.l);
                   string->length += length;
-                  UPDATE_VALID(string);
+                  STRING_UPDATE_VALID(string);
                 }
               }
               break;
@@ -649,7 +649,7 @@ LOCAL void formatString(struct __String *string,
                     ensureStringLength(string,string->length+length);
                     snprintf(&string->data[string->length],length+1,formatToken.token,data.ll);
                     string->length += length;
-                    UPDATE_VALID(string);
+                    STRING_UPDATE_VALID(string);
                   }
                 #else /* not _LONG_LONG || HAVE_LONG_LONG */
                   HALT_INTERNAL_ERROR("long long not supported");
@@ -682,7 +682,7 @@ LOCAL void formatString(struct __String *string,
                   ensureStringLength(string,string->length+length);
                   snprintf(&string->data[string->length],length+1,formatToken.token,data.ui);
                   string->length += length;
-                  UPDATE_VALID(string);
+                  STRING_UPDATE_VALID(string);
                 }
               }
               break;
@@ -699,7 +699,7 @@ LOCAL void formatString(struct __String *string,
                   ensureStringLength(string,string->length+length);
                   snprintf(&string->data[string->length],length+1,formatToken.token,data.ul);
                   string->length += length;
-                  UPDATE_VALID(string);
+                  STRING_UPDATE_VALID(string);
                 }
               }
               break;
@@ -717,7 +717,7 @@ LOCAL void formatString(struct __String *string,
                     ensureStringLength(string,string->length+length);
                     snprintf(&string->data[string->length],length+1,formatToken.token,data.ull);
                     string->length += length;
-                    UPDATE_VALID(string);
+                    STRING_UPDATE_VALID(string);
                   }
                 #else /* not _LONG_LONG || HAVE_LONG_LONG */
                   HALT_INTERNAL_ERROR("long long not supported");
@@ -755,7 +755,7 @@ LOCAL void formatString(struct __String *string,
                   ensureStringLength(string,string->length+length);
                   snprintf(&string->data[string->length],length+1,formatToken.token,data.d);
                   string->length += length;
-                  UPDATE_VALID(string);
+                  STRING_UPDATE_VALID(string);
                 }
               }
               break;
@@ -804,7 +804,7 @@ LOCAL void formatString(struct __String *string,
               ensureStringLength(string,string->length+length);
               snprintf(&string->data[string->length],length+1,formatToken.token,data.s);
               string->length += length;
-              UPDATE_VALID(string);
+              STRING_UPDATE_VALID(string);
            }
           }
           break;
@@ -823,13 +823,13 @@ LOCAL void formatString(struct __String *string,
             ensureStringLength(string,string->length+length);
             snprintf(&string->data[string->length],length+1,formatToken.token,data.p);
             string->length += length;
-            UPDATE_VALID(string);
+            STRING_UPDATE_VALID(string);
           }
           break;
         case 'S':
           data.string = (struct __String*)va_arg(arguments,void*);
           assert(string != NULL);
-          CHECK_VALID(data.string);
+          STRING_CHECK_VALID(data.string);
 
           if (formatToken.quoteChar != '\0')
           {
@@ -861,7 +861,7 @@ LOCAL void formatString(struct __String *string,
               ensureStringLength(string,string->length+length);
               snprintf(&string->data[string->length],length+1,formatToken.token,String_cString(data.string));
               string->length += length;
-              UPDATE_VALID(string);
+              STRING_UPDATE_VALID(string);
             }
           }
           break;
@@ -926,7 +926,7 @@ HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
             ensureStringLength(string,string->length+length);
             snprintf(&string->data[string->length],length+1,formatToken.token);
             string->length += length;
-            UPDATE_VALID(string);
+            STRING_UPDATE_VALID(string);
           }
           break;
       }
@@ -1337,7 +1337,7 @@ LOCAL bool parseString(const char    *string,
           case 'S':
             /* get and copy data */
             value.string = va_arg(arguments,String);
-            CHECK_VALID(value.string);
+            STRING_CHECK_VALID(value.string);
 
             if (index < length)
             {
@@ -1799,7 +1799,7 @@ String __String_new(const char *__fileName__, ulong __lineNb__)
     pthread_mutex_unlock(&debugStringLock);
   #endif /* not NDEBUG */
 
-  UPDATE_VALID(string);
+  STRING_UPDATE_VALID(string);
 
   return string;
 }
@@ -1819,7 +1819,7 @@ String __String_newCString(const char *__fileName__, ulong __lineNb__, const cha
   #endif /* NDEBUG */
   String_setCString(string,s);
 
-  UPDATE_VALID(string);
+  STRING_UPDATE_VALID(string);
 
   return string;
 }
@@ -1839,7 +1839,7 @@ String __String_newChar(const char *__fileName__, ulong __lineNb__, char ch)
   #endif /* NDEBUG */
   String_setChar(string,ch);
 
-  UPDATE_VALID(string);
+  STRING_UPDATE_VALID(string);
 
   return string;
 }
@@ -1859,7 +1859,7 @@ String __String_newBuffer(const char *__fileName__, ulong __lineNb__, const void
   #endif /* NDEBUG */
   String_setBuffer(string,buffer,bufferLength);
 
-  UPDATE_VALID(string);
+  STRING_UPDATE_VALID(string);
 
   return string;
 }
@@ -1872,7 +1872,7 @@ String __String_duplicate(const char *__fileName__, ulong __lineNb__, const Stri
 {
   struct __String *string;
 
-  CHECK_VALID(fromString);
+  STRING_CHECK_VALID(fromString);
 
   if (fromString != NULL)
   {
@@ -1893,7 +1893,7 @@ String __String_duplicate(const char *__fileName__, ulong __lineNb__, const Stri
     string->data[fromString->length] ='\0';
     string->length = fromString->length;
 
-    UPDATE_VALID(string);
+    STRING_UPDATE_VALID(string);
   }
   else
   {
@@ -1909,7 +1909,7 @@ String String_copy(String *string, const String fromString)
 String __String_copy(const char *__fileName__, ulong __lineNb__, String *string, const String fromString)
 #endif /* NDEBUG */
 {
-  CHECK_VALID(fromString);
+  STRING_CHECK_VALID(fromString);
 
   if (fromString != NULL)
   {
@@ -1933,7 +1933,7 @@ String __String_copy(const char *__fileName__, ulong __lineNb__, String *string,
     (*string)->data[fromString->length] ='\0';
     (*string)->length = fromString->length;
 
-    UPDATE_VALID(*string);
+    STRING_UPDATE_VALID(*string);
   }
   else
   {
@@ -1942,7 +1942,7 @@ String __String_copy(const char *__fileName__, ulong __lineNb__, String *string,
       (*string)->data[0] ='\0';
       (*string)->length = 0;
 
-      UPDATE_VALID(*string);
+      STRING_UPDATE_VALID(*string);
     }
   }
 
@@ -1959,7 +1959,7 @@ void __String_delete(const char *__fileName__, ulong __lineNb__, String string)
     DebugStringNode *debugStringNode;
   #endif /* not NDEBUG */
 
-  CHECK_VALID(string);
+  STRING_CHECK_VALID(string);
 
   if (string != NULL)
   {
@@ -2047,7 +2047,7 @@ void __String_delete(const char *__fileName__, ulong __lineNb__, String string)
 
 String String_clear(String string)
 {
-  CHECK_VALID(string);
+  STRING_CHECK_VALID(string);
 
   if (string != NULL)
   {
@@ -2056,7 +2056,7 @@ String String_clear(String string)
     string->data[0] = '\0';
     string->length = 0;
 
-    UPDATE_VALID(string);
+    STRING_UPDATE_VALID(string);
   }
 
   return string;
@@ -2064,7 +2064,7 @@ String String_clear(String string)
 
 String String_erase(String string)
 {
-  CHECK_VALID(string);
+  STRING_CHECK_VALID(string);
 
   if (string != NULL)
   {
@@ -2073,7 +2073,7 @@ String String_erase(String string)
     memset(string->data,0,string->maxLength);
     string->length = 0;
 
-    UPDATE_VALID(string);
+    STRING_UPDATE_VALID(string);
   }
 
   return string;
@@ -2081,7 +2081,7 @@ String String_erase(String string)
 
 String String_set(String string, const String sourceString)
 {
-  CHECK_VALID(string);
+  STRING_CHECK_VALID(string);
 
   if (string != NULL)
   {
@@ -2102,7 +2102,7 @@ String String_set(String string, const String sourceString)
       string->length = 0;
     }
 
-    UPDATE_VALID(string);
+    STRING_UPDATE_VALID(string);
   }
 
   return string;
@@ -2110,7 +2110,7 @@ String String_set(String string, const String sourceString)
 
 String String_setCString(String string, const char *s)
 {
-  CHECK_VALID(string);
+  STRING_CHECK_VALID(string);
 
   if (string != NULL)
   {
@@ -2126,7 +2126,7 @@ String String_setCString(String string, const char *s)
       string->length = 0;
     }
 
-    UPDATE_VALID(string);
+    STRING_UPDATE_VALID(string);
   }
 
   return string;
@@ -2134,18 +2134,18 @@ String String_setCString(String string, const char *s)
 
 String String_setChar(String string, char ch)
 {
-  CHECK_VALID(string);
+  STRING_CHECK_VALID(string);
 
   String_setBuffer(string,&ch,1);
 
-  UPDATE_VALID(string);
+  STRING_UPDATE_VALID(string);
 
   return string;
 }
 
 String String_setBuffer(String string, const void *buffer, ulong bufferLength)
 {
-  CHECK_VALID(string);
+  STRING_CHECK_VALID(string);
 
   if (string != NULL)
   {
@@ -2164,7 +2164,7 @@ String String_setBuffer(String string, const void *buffer, ulong bufferLength)
       string->length = 0;
     }
 
-    UPDATE_VALID(string);
+    STRING_UPDATE_VALID(string);
   }
 
   return string;
@@ -2174,8 +2174,8 @@ String String_sub(String string, const String fromString, ulong fromIndex, long 
 {
   ulong n;
 
-  CHECK_VALID(string);
-  CHECK_VALID(fromString);
+  STRING_CHECK_VALID(string);
+  STRING_CHECK_VALID(fromString);
 
   if (string != NULL)
   {
@@ -2207,7 +2207,7 @@ String String_sub(String string, const String fromString, ulong fromIndex, long 
       string->length = 0;
     }
 
-    UPDATE_VALID(string);
+    STRING_UPDATE_VALID(string);
   }
 
   return string;
@@ -2219,7 +2219,7 @@ char *String_subCString(char *s, const String fromString, ulong fromIndex, long 
 
   assert(s != NULL);
 
-  CHECK_VALID(fromString);
+  STRING_CHECK_VALID(fromString);
 
   if (fromLength > 0)
   {
@@ -2253,7 +2253,7 @@ char *String_subBuffer(char *buffer, const String fromString, ulong fromIndex, l
 
   assert(buffer != NULL);
 
-  CHECK_VALID(fromString);
+  STRING_CHECK_VALID(fromString);
 
   if (fromLength > 0)
   {
@@ -2285,8 +2285,8 @@ String String_append(String string, const String appendString)
 {
   ulong n;
 
-  CHECK_VALID(string);
-  CHECK_VALID(appendString);
+  STRING_CHECK_VALID(string);
+  STRING_CHECK_VALID(appendString);
 
   if (string != NULL)
   {
@@ -2300,7 +2300,7 @@ String String_append(String string, const String appendString)
       string->length = n;
     }
 
-    UPDATE_VALID(string);
+    STRING_UPDATE_VALID(string);
   }
 
   return string;
@@ -2310,8 +2310,8 @@ String String_appendSub(String string, const String fromString, ulong fromIndex,
 {
   ulong n;
 
-  CHECK_VALID(string);
-  CHECK_VALID(fromString);
+  STRING_CHECK_VALID(string);
+  STRING_CHECK_VALID(fromString);
 
   if (string != NULL)
   {
@@ -2337,7 +2337,7 @@ String String_appendSub(String string, const String fromString, ulong fromIndex,
       }
     }
 
-    UPDATE_VALID(string);
+    STRING_UPDATE_VALID(string);
   }
 
   return string;
@@ -2345,7 +2345,7 @@ String String_appendSub(String string, const String fromString, ulong fromIndex,
 
 String String_appendCString(String string, const char *s)
 {
-  CHECK_VALID(string);
+  STRING_CHECK_VALID(string);
 
   if (string != NULL)
   {
@@ -2364,7 +2364,7 @@ String String_appendChar(String string, char ch)
 {
   ulong n;
 
-  CHECK_VALID(string);
+  STRING_CHECK_VALID(string);
 
   if (string != NULL)
   {
@@ -2375,7 +2375,7 @@ String String_appendChar(String string, char ch)
     string->data[n] = '\0';
     string->length = n;
 
-    UPDATE_VALID(string);
+    STRING_UPDATE_VALID(string);
   }
 
   return string;
@@ -2385,7 +2385,7 @@ String String_appendBuffer(String string, const char *buffer, ulong bufferLength
 {
   ulong n;
 
-  CHECK_VALID(string);
+  STRING_CHECK_VALID(string);
 
   if (string != NULL)
   {
@@ -2399,7 +2399,7 @@ String String_appendBuffer(String string, const char *buffer, ulong bufferLength
       string->length = n;
     }
 
-    UPDATE_VALID(string);
+    STRING_UPDATE_VALID(string);
   }
 
   return string;
@@ -2409,8 +2409,8 @@ String String_insert(String string, ulong index, const String insertString)
 {
   ulong n;
 
-  CHECK_VALID(string);
-  CHECK_VALID(insertString);
+  STRING_CHECK_VALID(string);
+  STRING_CHECK_VALID(insertString);
 
   if (string != NULL)
   {
@@ -2437,7 +2437,7 @@ String String_insert(String string, ulong index, const String insertString)
       }
     }
 
-    UPDATE_VALID(string);
+    STRING_UPDATE_VALID(string);
   }
 
   return string;
@@ -2447,8 +2447,8 @@ String String_insertSub(String string, ulong index, const String fromString, ulo
 {
   ulong n;
 
-  CHECK_VALID(string);
-  CHECK_VALID(fromString);
+  STRING_CHECK_VALID(string);
+  STRING_CHECK_VALID(fromString);
 
   if (string != NULL)
   {
@@ -2485,7 +2485,7 @@ String String_insertSub(String string, ulong index, const String fromString, ulo
       }
     }
 
-    UPDATE_VALID(string);
+    STRING_UPDATE_VALID(string);
   }
 
   return string;
@@ -2493,7 +2493,7 @@ String String_insertSub(String string, ulong index, const String fromString, ulo
 
 String String_insertCString(String string, ulong index, const char *s)
 {
-  CHECK_VALID(string);
+  STRING_CHECK_VALID(string);
 
   if (string != NULL)
   {
@@ -2510,7 +2510,7 @@ String String_insertCString(String string, ulong index, const char *s)
 
 String String_insertChar(String string, ulong index, char ch)
 {
-  CHECK_VALID(string);
+  STRING_CHECK_VALID(string);
 
   if (string != NULL)
   {
@@ -2526,7 +2526,7 @@ String String_insertBuffer(String string, ulong index, const char *buffer, ulong
 {
   ulong n;
 
-  CHECK_VALID(string);
+  STRING_CHECK_VALID(string);
 
   if (string != NULL)
   {
@@ -2553,7 +2553,7 @@ String String_insertBuffer(String string, ulong index, const char *buffer, ulong
       }
     }
 
-    UPDATE_VALID(string);
+    STRING_UPDATE_VALID(string);
   }
 
   return string;
@@ -2563,7 +2563,7 @@ String String_remove(String string, ulong index, ulong length)
 {
   ulong n;
 
-  CHECK_VALID(string);
+  STRING_CHECK_VALID(string);
 
   if (string != NULL)
   {
@@ -2590,7 +2590,7 @@ String String_remove(String string, ulong index, ulong length)
       string->length = n;
     }
 
-    UPDATE_VALID(string);
+    STRING_UPDATE_VALID(string);
   }
 
   return string;
@@ -2598,8 +2598,8 @@ String String_remove(String string, ulong index, ulong length)
 
 String String_replace(String string, ulong index, ulong length, const String insertString)
 {
-  CHECK_VALID(string);
-  CHECK_VALID(insertString);
+  STRING_CHECK_VALID(string);
+  STRING_CHECK_VALID(insertString);
 
   String_remove(string,index,length);
   String_insert(string,index,insertString);
@@ -2609,7 +2609,7 @@ String String_replace(String string, ulong index, ulong length, const String ins
 
 String String_replaceCString(String string, ulong index, ulong length, const char *s)
 {
-  CHECK_VALID(string);
+  STRING_CHECK_VALID(string);
 
   String_remove(string,index,length);
   String_insertCString(string,index,s);
@@ -2619,7 +2619,7 @@ String String_replaceCString(String string, ulong index, ulong length, const cha
 
 String String_replaceChar(String string, ulong index, ulong length, char ch)
 {
-  CHECK_VALID(string);
+  STRING_CHECK_VALID(string);
 
   String_remove(string,index,length);
   String_insertChar(string,index,ch);
@@ -2629,7 +2629,7 @@ String String_replaceChar(String string, ulong index, ulong length, char ch)
 
 String String_replaceBuffer(String string, ulong index, ulong length, const char *buffer, ulong bufferLength)
 {
-  CHECK_VALID(string);
+  STRING_CHECK_VALID(string);
 
   String_remove(string,index,length);
   String_insertBuffer(string,index,buffer,bufferLength);
@@ -2643,7 +2643,7 @@ String String_map(String string, ulong index, const String from[], const String 
   ulong l0,l1;
   bool  replaceFlag;
 
-  CHECK_VALID(string);
+  STRING_CHECK_VALID(string);
 
   while (index < String_length(string))
   {
@@ -2673,7 +2673,7 @@ String String_mapCString(String string, ulong index, const char* from[], const c
   ulong l0,l1;
   bool  replaceFlag;
 
-  CHECK_VALID(string);
+  STRING_CHECK_VALID(string);
 
   while (index < String_length(string))
   {
@@ -2702,7 +2702,7 @@ String String_mapChar(String string, ulong index, char from[], char to[], uint c
   uint z;
   bool replaceFlag;
 
-  CHECK_VALID(string);
+  STRING_CHECK_VALID(string);
 
   while (index < String_length(string))
   {
@@ -2725,8 +2725,8 @@ String String_mapChar(String string, ulong index, char from[], char to[], uint c
 
 String String_join(String string, const String joinString, char joinChar)
 {
-  CHECK_VALID(string);
-  CHECK_VALID(joinString);
+  STRING_CHECK_VALID(string);
+  STRING_CHECK_VALID(joinString);
 
   if (!String_empty(string)) String_appendChar(string,joinChar);
   String_append(string,joinString);
@@ -2736,7 +2736,7 @@ String String_join(String string, const String joinString, char joinChar)
 
 String String_joinCString(String string, const char *s, char joinChar)
 {
-  CHECK_VALID(string);
+  STRING_CHECK_VALID(string);
 
   if (!String_empty(string)) String_appendChar(string,joinChar);
   String_appendCString(string,s);
@@ -2746,7 +2746,7 @@ String String_joinCString(String string, const char *s, char joinChar)
 
 String String_joinChar(String string, char ch, char joinChar)
 {
-  CHECK_VALID(string);
+  STRING_CHECK_VALID(string);
 
   if (!String_empty(string)) String_appendChar(string,joinChar);
   String_appendChar(string,ch);
@@ -2756,7 +2756,7 @@ String String_joinChar(String string, char ch, char joinChar)
 
 String String_joinBuffer(String string, const char *buffer, ulong bufferLength, char joinChar)
 {
-  CHECK_VALID(string);
+  STRING_CHECK_VALID(string);
 
   if (!String_empty(string)) String_appendChar(string,joinChar);
   String_appendBuffer(string,buffer,bufferLength);
@@ -2777,8 +2777,8 @@ int String_compare(const String          string1,
   assert(string1 != NULL);
   assert(string2 != NULL);
 
-  CHECK_VALID(string1);
-  CHECK_VALID(string2);
+  STRING_CHECK_VALID(string1);
+  STRING_CHECK_VALID(string2);
 
   result = 0;
   n = MIN(string1->length,string2->length);
@@ -2815,8 +2815,8 @@ bool String_equals(const String string1, const String string2)
 
   if ((string1 != NULL) && (string2 != NULL))
   {
-    CHECK_VALID(string1);
-    CHECK_VALID(string2);
+    STRING_CHECK_VALID(string1);
+    STRING_CHECK_VALID(string2);
 
     equalFlag = String_equalsBuffer(string1,string2->data,string2->length);
   }
@@ -2832,7 +2832,7 @@ bool String_equalsCString(const String string, const char *s)
 {
   bool equalFlag;
 
-  CHECK_VALID(string);
+  STRING_CHECK_VALID(string);
 
   if (string != NULL)
   {
@@ -2859,7 +2859,7 @@ bool String_equalsChar(const String string, char ch)
 {
   bool equalFlag;
 
-  CHECK_VALID(string);
+  STRING_CHECK_VALID(string);
 
   if (string != NULL)
   {
@@ -2885,7 +2885,7 @@ bool String_equalsBuffer(const String string, const char *buffer, ulong bufferLe
 
   if (string != NULL)
   {
-    CHECK_VALID(string);
+    STRING_CHECK_VALID(string);
 
     if (string->length == bufferLength)
     {
@@ -2916,8 +2916,8 @@ bool String_equalsIgnoreCase(const String string1, const String string2)
 
   if ((string1 != NULL) && (string2 != NULL))
   {
-    CHECK_VALID(string1);
-    CHECK_VALID(string2);
+    STRING_CHECK_VALID(string1);
+    STRING_CHECK_VALID(string2);
 
     equalFlag = String_equalsIgnoreCaseBuffer(string1,string2->data,string2->length);
   }
@@ -2933,7 +2933,7 @@ bool String_equalsIgnoreCaseCString(const String string, const char *s)
 {
   bool equalFlag;
 
-  CHECK_VALID(string);
+  STRING_CHECK_VALID(string);
 
   if (string != NULL)
   {
@@ -2960,7 +2960,7 @@ bool String_equalsIgnoreCaseChar(const String string, char ch)
 {
   bool equalFlag;
 
-  CHECK_VALID(string);
+  STRING_CHECK_VALID(string);
 
   if (string != NULL)
   {
@@ -2986,7 +2986,7 @@ bool String_equalsIgnoreCaseBuffer(const String string, const char *buffer, ulon
 
   if (string != NULL)
   {
-    CHECK_VALID(string);
+    STRING_CHECK_VALID(string);
 
     if (string->length == bufferLength)
     {
@@ -3018,8 +3018,8 @@ bool String_subEquals(const String string1, const String string2, long index, ul
   assert(string1 != NULL);
   assert(string2 != NULL);
 
-  CHECK_VALID(string1);
-  CHECK_VALID(string2);
+  STRING_CHECK_VALID(string1);
+  STRING_CHECK_VALID(string2);
 
   if ((string1 != NULL) && (string2 != NULL))
   {
@@ -3037,7 +3037,7 @@ bool String_subEqualsCString(const String string, const char *s, long index, ulo
 {
   bool equalFlag;
 
-  CHECK_VALID(string);
+  STRING_CHECK_VALID(string);
 
   if (string != NULL)
   {
@@ -3064,7 +3064,7 @@ bool String_subEqualsChar(const String string, char ch, long index)
 {
   bool equalFlag;
 
-  CHECK_VALID(string);
+  STRING_CHECK_VALID(string);
 
   if (string != NULL)
   {
@@ -3090,7 +3090,7 @@ bool String_subEqualsBuffer(const String string, const char *buffer, ulong buffe
 
   if (string != NULL)
   {
-    CHECK_VALID(string);
+    STRING_CHECK_VALID(string);
 
     i = (index != STRING_END)?index:(long)string->length-(long)length;
     if (   (i >= 0)
@@ -3126,8 +3126,8 @@ bool String_subEqualsIgnoreCase(const String string1, const String string2, long
   assert(string1 != NULL);
   assert(string2 != NULL);
 
-  CHECK_VALID(string1);
-  CHECK_VALID(string2);
+  STRING_CHECK_VALID(string1);
+  STRING_CHECK_VALID(string2);
 
   if ((string1 != NULL) && (string2 != NULL))
   {
@@ -3145,7 +3145,7 @@ bool String_subEqualsIgnoreCaseCString(const String string, const char *s, long 
 {
   bool equalFlag;
 
-  CHECK_VALID(string);
+  STRING_CHECK_VALID(string);
 
   if (string != NULL)
   {
@@ -3172,7 +3172,7 @@ bool String_subEqualsIgnoreCaseChar(const String string, char ch, long index)
 {
   bool equalFlag;
 
-  CHECK_VALID(string);
+  STRING_CHECK_VALID(string);
 
   if (string != NULL)
   {
@@ -3198,7 +3198,7 @@ bool String_subEqualsIgnoreCaseBuffer(const String string, const char *buffer, u
 
   if (string != NULL)
   {
-    CHECK_VALID(string);
+    STRING_CHECK_VALID(string);
 
     i = (index != STRING_END)?index:(long)string->length-(long)length;
     if (   (i >= 0)
@@ -3231,8 +3231,8 @@ bool String_startsWith(const String string1, const String string2)
 {
   bool equalFlag;
 
-  CHECK_VALID(string1);
-  CHECK_VALID(string2);
+  STRING_CHECK_VALID(string1);
+  STRING_CHECK_VALID(string2);
 
   if ((string1 != NULL) && (string2 != NULL))
   {
@@ -3250,7 +3250,7 @@ bool String_startsWithCString(const String string, const char *s)
 {
   bool equalFlag;
 
-  CHECK_VALID(string);
+  STRING_CHECK_VALID(string);
 
   if ((string != NULL) && (s != NULL))
   {
@@ -3268,7 +3268,7 @@ bool String_startsWithChar(const String string, char ch)
 {
   bool equalFlag;
 
-  CHECK_VALID(string);
+  STRING_CHECK_VALID(string);
 
   if (string != NULL)
   {
@@ -3291,7 +3291,7 @@ bool String_startsWithBuffer(const String string, const char *buffer, ulong buff
 
   assert(buffer != NULL);
 
-  CHECK_VALID(string);
+  STRING_CHECK_VALID(string);
 
   if (string != NULL)
   {
@@ -3322,8 +3322,8 @@ bool String_endsWith(const String string1, const String string2)
 {
   bool equalFlag;
 
-  CHECK_VALID(string1);
-  CHECK_VALID(string2);
+  STRING_CHECK_VALID(string1);
+  STRING_CHECK_VALID(string2);
 
   if ((string1 != NULL) && (string2 != NULL))
   {
@@ -3341,7 +3341,7 @@ bool String_endsWithCString(const String string, const char *s)
 {
   bool equalFlag;
 
-  CHECK_VALID(string);
+  STRING_CHECK_VALID(string);
 
   if ((string != NULL) && (s != NULL))
   {
@@ -3359,7 +3359,7 @@ bool String_endsWithChar(const String string, char ch)
 {
   bool equalFlag;
 
-  CHECK_VALID(string);
+  STRING_CHECK_VALID(string);
 
   if (string != NULL)
   {
@@ -3383,7 +3383,7 @@ bool String_endsWithBuffer(const String string, const char *buffer, ulong buffer
 
   assert(buffer != NULL);
 
-  CHECK_VALID(string);
+  STRING_CHECK_VALID(string);
 
   if (string != NULL)
   {
@@ -3421,8 +3421,8 @@ long String_find(const String string, ulong index, const String findString)
   assert(string != NULL);
   assert(findString != NULL);
 
-  CHECK_VALID(string);
-  CHECK_VALID(findString);
+  STRING_CHECK_VALID(string);
+  STRING_CHECK_VALID(findString);
 
   findIndex = -1;
 
@@ -3452,7 +3452,7 @@ long String_findCString(const String string, ulong index, const char *s)
   assert(string != NULL);
   assert(s != NULL);
 
-  CHECK_VALID(string);
+  STRING_CHECK_VALID(string);
 
   findIndex = -1;
 
@@ -3479,7 +3479,7 @@ long String_findChar(const String string, ulong index, char ch)
 
   assert(string != NULL);
 
-  CHECK_VALID(string);
+  STRING_CHECK_VALID(string);
 
   i = (index != STRING_BEGIN)?index:0;
   while ((i < string->length) && (string->data[i] != ch))
@@ -3499,7 +3499,7 @@ long String_findLast(const String string, long index, String findString)
   assert(string != NULL);
   assert(findString != NULL);
 
-  CHECK_VALID(string);
+  STRING_CHECK_VALID(string);
 
   findIndex = -1;
 
@@ -3529,7 +3529,7 @@ long String_findLastCString(const String string, long index, const char *s)
   assert(string != NULL);
   assert(s != NULL);
 
-  CHECK_VALID(string);
+  STRING_CHECK_VALID(string);
 
   findIndex = -1;
 
@@ -3556,7 +3556,7 @@ long String_findLastChar(const String string, long index, char ch)
 
   assert(string != NULL);
 
-  CHECK_VALID(string);
+  STRING_CHECK_VALID(string);
 
   i = (index != STRING_END)?index:string->length-1;
   while ((i >= 0) && (string->data[i] != ch))
@@ -3578,7 +3578,7 @@ String String_iterate(                      String string,
 
   assert(stringIterateFunction != NULL);
 
-  CHECK_VALID(string);
+  STRING_CHECK_VALID(string);
 
   if (string != NULL)
   {
@@ -3605,7 +3605,7 @@ String String_iterate(                      String string,
       }
     }
 
-    UPDATE_VALID(string);
+    STRING_UPDATE_VALID(string);
   }
 
   return string;
@@ -3615,7 +3615,7 @@ String String_toLower(String string)
 {
   ulong z;
 
-  CHECK_VALID(string);
+  STRING_CHECK_VALID(string);
 
   if (string != NULL)
   {
@@ -3626,7 +3626,7 @@ String String_toLower(String string)
       string->data[z] = tolower(string->data[z]);
     }
 
-    UPDATE_VALID(string);
+    STRING_UPDATE_VALID(string);
   }
 
   return string;
@@ -3636,7 +3636,7 @@ String String_toUpper(String string)
 {
   ulong z;
 
-  CHECK_VALID(string);
+  STRING_CHECK_VALID(string);
 
   if (string != NULL)
   {
@@ -3647,7 +3647,7 @@ String String_toUpper(String string)
       string->data[z] = toupper(string->data[z]);
     }
 
-    UPDATE_VALID(string);
+    STRING_UPDATE_VALID(string);
   }
 
   return string;
@@ -3655,7 +3655,7 @@ String String_toUpper(String string)
 
 String String_trim(String string, const char *chars)
 {
-  CHECK_VALID(string);
+  STRING_CHECK_VALID(string);
 
   String_trimRight(string,chars);
   String_trimLeft(string,chars);
@@ -3667,7 +3667,7 @@ String String_trimRight(String string, const char *chars)
 {
   ulong n;
 
-  CHECK_VALID(string);
+  STRING_CHECK_VALID(string);
 
   if (string != NULL)
   {
@@ -3681,7 +3681,7 @@ String String_trimRight(String string, const char *chars)
     string->data[n] = '\0';
     string->length = n;
 
-    UPDATE_VALID(string);
+    STRING_UPDATE_VALID(string);
   }
 
   return string;
@@ -3691,7 +3691,7 @@ String String_trimLeft(String string, const char *chars)
 {
   ulong z,n;
 
-  CHECK_VALID(string);
+  STRING_CHECK_VALID(string);
 
   if (string != NULL)
   {
@@ -3710,7 +3710,7 @@ String String_trimLeft(String string, const char *chars)
       string->length = n;
     }
 
-    UPDATE_VALID(string);
+    STRING_UPDATE_VALID(string);
   }
 
   return string;
@@ -3721,7 +3721,7 @@ String String_escape(String string, const char *chars, char escapeChar)
   String s;
   ulong  z;
 
-  CHECK_VALID(string);
+  STRING_CHECK_VALID(string);
 
   if (string != NULL)
   {
@@ -3747,7 +3747,7 @@ String String_unescape(String string, char escapeChar)
   String s;
   ulong  z;
 
-  CHECK_VALID(string);
+  STRING_CHECK_VALID(string);
 
   if (string != NULL)
   {
@@ -3783,7 +3783,7 @@ String String_quote(String string, char quoteChar)
   String s;
   ulong  z;
 
-  CHECK_VALID(string);
+  STRING_CHECK_VALID(string);
 
   if (string != NULL)
   {
@@ -3813,7 +3813,7 @@ String String_unquote(String string, const char *quoteChars)
   String     s;
   ulong      z;
 
-  CHECK_VALID(string);
+  STRING_CHECK_VALID(string);
 
   if (string != NULL)
   {
@@ -3860,7 +3860,7 @@ String String_padRight(String string, ulong length, char ch)
 
   assert(string != NULL);
 
-  CHECK_VALID(string);
+  STRING_CHECK_VALID(string);
 
   if (string != NULL)
   {
@@ -3872,7 +3872,7 @@ String String_padRight(String string, ulong length, char ch)
       string->data[length] = '\0';
       string->length = length;
 
-      UPDATE_VALID(string);
+      STRING_UPDATE_VALID(string);
     }
   }
 
@@ -3885,7 +3885,7 @@ String String_padLeft(String string, ulong length, char ch)
 
   assert(string != NULL);
 
-  CHECK_VALID(string);
+  STRING_CHECK_VALID(string);
 
   if (string != NULL)
   {
@@ -3898,7 +3898,7 @@ String String_padLeft(String string, ulong length, char ch)
       string->data[length] = '\0';
       string->length = length;
 
-      UPDATE_VALID(string);
+      STRING_UPDATE_VALID(string);
     }
   }
 
@@ -3907,7 +3907,7 @@ String String_padLeft(String string, ulong length, char ch)
 
 String String_fillChar(String string, ulong length, char ch)
 {
-  CHECK_VALID(string);
+  STRING_CHECK_VALID(string);
 
   if (string != NULL)
   {
@@ -3916,7 +3916,7 @@ String String_fillChar(String string, ulong length, char ch)
     string->data[length] = '\0';
     string->length = length;
 
-    UPDATE_VALID(string);
+    STRING_UPDATE_VALID(string);
   }
 
   return string;
@@ -3929,7 +3929,7 @@ String String_format(String string, const char *format, ...)
   assert(string != NULL);
   assert(format != NULL);
 
-  CHECK_VALID(string);
+  STRING_CHECK_VALID(string);
 
   if (string != NULL)
   {
@@ -3937,7 +3937,7 @@ String String_format(String string, const char *format, ...)
     formatString(string,format,arguments);
     va_end(arguments);
 
-    UPDATE_VALID(string);
+    STRING_UPDATE_VALID(string);
   }
 
   return string;
@@ -3948,13 +3948,13 @@ String String_vformat(String string, const char *format, va_list arguments)
   assert(string != NULL);
   assert(format != NULL);
 
-  CHECK_VALID(string);
+  STRING_CHECK_VALID(string);
 
   if (string != NULL)
   {
     formatString(string,format,arguments);
 
-    UPDATE_VALID(string);
+    STRING_UPDATE_VALID(string);
   }
 
   return string;
@@ -3971,7 +3971,7 @@ void String_initTokenizer(StringTokenizer *stringTokenizer,
   assert(stringTokenizer != NULL);
   assert(string != NULL);
 
-  CHECK_VALID(string);
+  STRING_CHECK_VALID(string);
 
   stringTokenizer->data            = string->data;
   stringTokenizer->length          = string->length;
@@ -4115,7 +4115,7 @@ bool String_scan(const String string, ulong index, const char *format, ...)
   assert((index == STRING_BEGIN) || (index == STRING_END) || (index < string->length));
   assert(format != NULL);
 
-  CHECK_VALID(string);
+  STRING_CHECK_VALID(string);
 
   va_start(arguments,format);
   result = parseString(string->data,string->length,index,format,arguments,NULL,&nextIndex);
@@ -4151,7 +4151,7 @@ bool String_parse(const String string, ulong index, const char *format, long *ne
   assert((index == STRING_BEGIN) || (index == STRING_END) || (index < string->length));
   assert(format != NULL);
 
-  CHECK_VALID(string);
+  STRING_CHECK_VALID(string);
 
   va_start(arguments,nextIndex);
   result = parseString(string->data,string->length,index,format,arguments,STRING_QUOTES,nextIndex);
@@ -4206,7 +4206,7 @@ int String_toInteger(const String convertString, ulong index, long *nextIndex, c
 
   assert(convertString != NULL);
 
-  CHECK_VALID(convertString);
+  STRING_CHECK_VALID(convertString);
 
   if (index < convertString->length)
   {
@@ -4264,7 +4264,7 @@ double String_toDouble(const String convertString, ulong index, long *nextIndex,
 
   assert(convertString != NULL);
 
-  CHECK_VALID(convertString);
+  STRING_CHECK_VALID(convertString);
 
   if (index < convertString->length)
   {
@@ -4297,7 +4297,7 @@ bool String_toBoolean(const String convertString, ulong index, long *nextIndex, 
 
   assert(convertString != NULL);
 
-  CHECK_VALID(convertString);
+  STRING_CHECK_VALID(convertString);
 
   n = FALSE;
 
@@ -4425,7 +4425,7 @@ char* String_toCString(const String string)
 
   assert(string != NULL);
 
-  CHECK_VALID(string);
+  STRING_CHECK_VALID(string);
 
   cString = (char*)malloc(string->length+1);
   if (cString == NULL)

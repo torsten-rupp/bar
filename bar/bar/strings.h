@@ -83,7 +83,7 @@ typedef struct
 #endif /* not NDEBUG */
 
 #ifndef NDEBUG
-  #define CHECK_VALID(string) \
+  #define STRING_CHECK_VALID(string) \
     do \
     { \
       if (string != NULL) \
@@ -102,7 +102,7 @@ typedef struct
       } \
     } \
     while (0)
-  #define UPDATE_VALID(string) \
+  #define STRING_UPDATE_VALID(string) \
     do \
     { \
       if (string != NULL) \
@@ -112,12 +112,12 @@ typedef struct
     } \
     while (0)
 #else /* NDEBUG */
-  #define CHECK_VALID(string) \
+  #define STRING_CHECK_VALID(string) \
     do \
     { \
     } \
     while (0)
-  #define UPDATE_VALID(string) \
+  #define STRING_UPDATE_VALID(string) \
     do \
     { \
     } \
@@ -396,7 +396,7 @@ INLINE ulong String_length(const String string);
 #if defined(NDEBUG) || defined(__STRINGS_IMPLEMENATION__)
 INLINE ulong String_length(const String string)
 {
-  CHECK_VALID(string);
+  STRING_CHECK_VALID(string);
 
   return (string != NULL)?string->length:0;
 }
@@ -415,7 +415,7 @@ INLINE bool String_empty(const String string);
 #if defined(NDEBUG) || defined(__STRINGS_IMPLEMENATION__)
 INLINE bool String_empty(const String string)
 {
-  CHECK_VALID(string);
+  STRING_CHECK_VALID(string);
 
   return (string != NULL)?(string->length == 0):TRUE;
 }
@@ -438,7 +438,7 @@ INLINE char String_index(const String string, ulong index)
 {
   char ch;
 
-  CHECK_VALID(string);
+  STRING_CHECK_VALID(string);
 
   if (string != NULL)
   {
@@ -477,7 +477,7 @@ INLINE const char *String_cString(const String string);
 #if defined(NDEBUG) || defined(__STRINGS_IMPLEMENATION__)
 INLINE const char *String_cString(const String string)
 {
-  CHECK_VALID(string);
+  STRING_CHECK_VALID(string);
 
   return (string != NULL)?&string->data[0]:NULL;
 }
