@@ -29,10 +29,10 @@
 
 typedef struct __Array* Array;
 
-/* delete array element function */
+// delete array element function
 typedef void(*ArrayElementFreeFunction)(void *data, void *userData);
 
-/* comparison, iteration functions */
+// comparison, iteration functions
 typedef int(*ArrayElementCompareFunction)(void *userData, void *data1, void *data2);
 typedef char(*ArrayElementIterateFunction)(void *userData, void *data);
 
