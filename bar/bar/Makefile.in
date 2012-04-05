@@ -168,6 +168,7 @@ BAR_SOURCES          = bar.c \
                        lists.c \
                        strings.c \
                        stringlists.c \
+                       ringbuffers.c \
                        threads.c \
                        msgqueues.c \
                        semaphores.c \
