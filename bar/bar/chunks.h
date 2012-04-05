@@ -26,13 +26,13 @@
 
 /***************************** Constants *******************************/
 
-/* size of chunk header */
+// size of chunk header
 #define CHUNK_HEADER_SIZE (4+8)
 
-/* chunk ids */
+// chunk ids
 #define CHUNK_ID_NONE 0
 
-/* chunk data types */
+// chunk data types
 #define CHUNK_DATATYPE_UINT8    1
 #define CHUNK_DATATYPE_UINT16   2
 #define CHUNK_DATATYPE_UINT32   3
@@ -54,27 +54,27 @@ typedef enum
 
 /***************************** Datatypes *******************************/
 
-/* i/o functions */
+// i/o functions
 typedef struct
 {
-  /* check end of data */
+  // check end of data
   bool(*eof)(void *userData);
-  /* read data */
+  // read data
   Errors(*read)(void *userData, void *buffer, ulong length, ulong *bytesRead);
-  /* write data */
+  // write data
   Errors(*write)(void *userData, const void *buffer, ulong length);
-  /* tell position */
+  // tell position
   Errors(*tell)(void *userData, uint64 *offset);
-  /* seek to position */
+  // seek to position
   Errors(*seek)(void *userData, uint64 offset);
-  /* get size */
+  // get size
   uint64(*getSize)(void *userData);
 } ChunkIO;
 
-/* chunk id: 4 characters */
+// chunk id: 4 characters
 typedef uint32 ChunkId;
 
-/* chunk header (Note: only id+size is stored in file!) */
+// chunk header (Note: only id+size is stored in file!)
 typedef struct
 {
   union
@@ -86,7 +86,7 @@ typedef struct
   uint64 offset;                      // start of chunk in file (offset of header)
 } ChunkHeader;
 
-/* chunk information */
+// chunk information
 typedef struct ChunkInfo
 {
   struct ChunkInfo *parentChunkInfo;

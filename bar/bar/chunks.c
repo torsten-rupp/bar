@@ -35,7 +35,7 @@
 
 /***************************** Constants *******************************/
 
-/* chunk header definition */
+// chunk header definition
 LOCAL int CHUNK_HEADER_DEFINITION[] = {
                                        CHUNK_DATATYPE_UINT32,offsetof(ChunkHeader,id),
                                        CHUNK_DATATYPE_UINT64,offsetof(ChunkHeader,size),
@@ -44,7 +44,7 @@ LOCAL int CHUNK_HEADER_DEFINITION[] = {
 
 /***************************** Datatypes *******************************/
 
-/* chunk header */
+// chunk header
 typedef struct
 {
   ChunkId id;
@@ -221,7 +221,7 @@ LOCAL Errors readDefinition(const ChunkIO *io,
   assert(io->read != NULL);
   assert(bytesRead != NULL);
 
-  /* allocate buffer */
+  // allocate buffer
   bufferLength = ALIGN(size,alignment);
   buffer = (byte*)calloc(bufferLength,1);
   if (buffer == NULL)
@@ -229,7 +229,7 @@ LOCAL Errors readDefinition(const ChunkIO *io,
     return ERROR_INSUFFICIENT_MEMORY;
   }
 
-  /* read data */
+  // read data
   io->tell(ioUserData,&offset);
   error = io->read(ioUserData,buffer,bufferLength,bytesRead);
   if (error != ERROR_NONE)
@@ -239,7 +239,7 @@ LOCAL Errors readDefinition(const ChunkIO *io,
     return error;
   }
 
-  /* decrypt */
+  // decrypt
   if (cryptInfo != NULL)
   {
 // NYI ???: seed value?
@@ -252,7 +252,7 @@ LOCAL Errors readDefinition(const ChunkIO *io,
     }
   }
 
-  /* read definition */
+  // read definition
   crc = crc32(0,Z_NULL,0);
   p = buffer;
   if (definition != NULL)
@@ -407,7 +407,7 @@ LOCAL Errors readDefinition(const ChunkIO *io,
     }
   }
 
-  /* free resources */
+  // free resources
   free(buffer);
 
   return ERROR_NONE;
@@ -449,7 +449,7 @@ LOCAL Errors writeDefinition(const ChunkIO *io,
   assert(io->write != NULL);
   assert(bytesWritten != NULL);
 
-  /* allocate buffer */
+  // allocate buffer
   bufferLength = ALIGN(size,alignment);
   buffer = (byte*)calloc(bufferLength,1);
   if (buffer == NULL)
@@ -457,7 +457,7 @@ LOCAL Errors writeDefinition(const ChunkIO *io,
     return ERROR_INSUFFICIENT_MEMORY;
   }
 
-  /* write definition */
+  // write definition
   crc = crc32(0,Z_NULL,0);
   p = buffer;
   if (definition != NULL)
@@ -562,7 +562,7 @@ LOCAL Errors writeDefinition(const ChunkIO *io,
     }
   }
 
-  /* encrypt */
+  // encrypt
 //cryptInfo=NULL;
   if (cryptInfo != NULL)
   {
@@ -575,7 +575,7 @@ LOCAL Errors writeDefinition(const ChunkIO *io,
     }
   }
 
-  /* write data */
+  // write data
   error = io->write(ioUserData,buffer,bufferLength);
   if (error != ERROR_NONE)
   {
@@ -584,7 +584,7 @@ LOCAL Errors writeDefinition(const ChunkIO *io,
   }
   (*bytesWritten) = bufferLength;
 
-  /* free resources */
+  // free resources
   free(buffer);
 
   return ERROR_NONE;
@@ -668,7 +668,7 @@ ulong Chunk_getSize(const int  *definition,
     }
   }
 
-  /* add padding for alignment */
+  // add padding for alignment
   definitionSize = ALIGN(definitionSize,alignment);
 
   return definitionSize;
@@ -730,7 +730,7 @@ Errors Chunk_next(const ChunkIO *io,
   assert(io->tell != NULL);
   assert(chunkHeader != NULL);
 
-  /* get current offset */
+  // get current offset
   error = io->tell(ioUserData,&offset);
   if (error != ERROR_NONE)
   {
@@ -738,7 +738,7 @@ Errors Chunk_next(const ChunkIO *io,
   }
   chunkHeader->offset = offset;
 
-  /* read chunk header */
+  // read chunk header
   error = readDefinition(io,
                          ioUserData,
                          CHUNK_HEADER_DEFINITION,
@@ -849,7 +849,7 @@ Errors Chunk_open(ChunkInfo         *chunkInfo,
   assert(chunkInfo->id == chunkHeader->id);
   assert(chunkInfo->data != NULL);
 
-  /* init */
+  // init
   chunkInfo->chunkSize = dataSize;
   chunkInfo->size      = chunkHeader->size;
   chunkInfo->offset    = chunkHeader->offset;
@@ -890,16 +890,16 @@ Errors Chunk_create(ChunkInfo *chunkInfo)
   assert(chunkInfo->id != CHUNK_ID_NONE);
   assert(chunkInfo->data != NULL);
 
-  /* init */
+  // init
   chunkInfo->size   = 0;
   chunkInfo->offset = 0;
   chunkInfo->mode   = CHUNK_MODE_WRITE;
   chunkInfo->index  = 0;
 
-  /* get size of chunk (without data elements) */
+  // get size of chunk (without data elements)
   chunkInfo->chunkSize = Chunk_getSize(chunkInfo->definition,chunkInfo->alignment,chunkInfo->data);
 
-  /* get current offset */
+  // get current offset
   error = chunkInfo->io->tell(chunkInfo->ioUserData,&offset);
   if (error != ERROR_NONE)
   {
@@ -907,7 +907,7 @@ Errors Chunk_create(ChunkInfo *chunkInfo)
   }
   chunkInfo->offset = offset;
 
-  /* write chunk header id */
+  // write chunk header id
   chunkHeader.id   = 0;
   chunkHeader.size = 0;
   error = writeDefinition(chunkInfo->io,
@@ -931,7 +931,7 @@ Errors Chunk_create(ChunkInfo *chunkInfo)
     chunkInfo->parentChunkInfo->size  += bytesWritten;
   }
 
-  /* write chunk data */
+  // write chunk data
   if (chunkInfo->definition != NULL)
   {
     error = writeDefinition(chunkInfo->io,
@@ -977,14 +977,14 @@ Errors Chunk_close(ChunkInfo *chunkInfo)
     case CHUNK_MODE_UNKNOWN:
       break;
     case CHUNK_MODE_WRITE:
-      /* save offset */
+      // save offset
       error = chunkInfo->io->tell(chunkInfo->ioUserData,&offset);
       if (error != ERROR_NONE)
       {
         return error;
       }
 
-      /* update id and size in chunk-header */
+      // update id and size in chunk-header
       error = chunkInfo->io->seek(chunkInfo->ioUserData,chunkInfo->offset);
       if (error != ERROR_NONE)
       {
@@ -1006,7 +1006,7 @@ Errors Chunk_close(ChunkInfo *chunkInfo)
         return error;
       }
 
-      /* restore offset */
+      // restore offset
       error = chunkInfo->io->seek(chunkInfo->ioUserData,offset);
       if (error != ERROR_NONE)
       {
@@ -1014,7 +1014,7 @@ Errors Chunk_close(ChunkInfo *chunkInfo)
       }
       break;
     case CHUNK_MODE_READ:
-      /* chunk size value */
+      // chunk size value
       error = chunkInfo->io->tell(chunkInfo->ioUserData,&offset);
       if (error != ERROR_NONE)
       {
@@ -1027,7 +1027,7 @@ Errors Chunk_close(ChunkInfo *chunkInfo)
 
       if (chunkInfo->offset+CHUNK_HEADER_SIZE+chunkInfo->size > offset)
       {
-        /* seek to end of chunk */
+        // seek to end of chunk
         error = chunkInfo->io->seek(chunkInfo->ioUserData,chunkInfo->offset+CHUNK_HEADER_SIZE+chunkInfo->size);
         if (error != ERROR_NONE)
         {
@@ -1063,7 +1063,7 @@ Errors Chunk_nextSub(ChunkInfo   *chunkInfo,
     return ERROR_END_OF_DATA;
   }
 
-  /* get current offset */
+  // get current offset
   error = chunkInfo->io->tell(chunkInfo->ioUserData,&offset);
   if (error != ERROR_NONE)
   {
@@ -1071,7 +1071,7 @@ Errors Chunk_nextSub(ChunkInfo   *chunkInfo,
   }
   chunkHeader->offset = offset;
 
-  /* read chunk header */
+  // read chunk header
   error = readDefinition(chunkInfo->io,
                          chunkInfo->ioUserData,
                          CHUNK_HEADER_DEFINITION,
@@ -1093,7 +1093,7 @@ Errors Chunk_nextSub(ChunkInfo   *chunkInfo,
   chunkHeader->id   = chunk.id;
   chunkHeader->size = chunk.size;
 
-  /* validate chunk */
+  // validate chunk
   if (chunk.size > (chunkInfo->size-chunkInfo->index))
   {
     return ERROR_END_OF_DATA;
@@ -1135,14 +1135,14 @@ Errors Chunk_update(ChunkInfo *chunkInfo)
   assert(chunkInfo->data != NULL);
   assert(chunkInfo->chunkSize == Chunk_getSize(chunkInfo->definition,chunkInfo->alignment,chunkInfo->data));
 
-  /* get current offset */
+  // get current offset
   error = chunkInfo->io->tell(chunkInfo->ioUserData,&offset);
   if (error != ERROR_NONE)
   {
     return error;
   }
 
-  /* update */
+  // update
   error = chunkInfo->io->seek(chunkInfo->ioUserData,chunkInfo->offset+CHUNK_HEADER_SIZE);
   if (error != ERROR_NONE)
   {
@@ -1162,7 +1162,7 @@ Errors Chunk_update(ChunkInfo *chunkInfo)
     return error;
   }
 
-  /* restore offset */
+  // restore offset
   error = chunkInfo->io->seek(chunkInfo->ioUserData,offset);
   if (error != ERROR_NONE)
   {
@@ -1259,7 +1259,7 @@ Errors Chunk_skipData(ChunkInfo *chunkInfo,
   }
   chunkInfo->index += size;
 
-  /* set size in container chunk */
+  // set size in container chunk
   if (chunkInfo->parentChunkInfo != NULL)
   {
     chunkInfo->parentChunkInfo->index += size;
