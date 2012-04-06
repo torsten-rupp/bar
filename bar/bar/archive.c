@@ -1303,7 +1303,7 @@ LOCAL Errors readFileDataBlock(ArchiveEntryInfo *archiveEntryInfo)
 
   if      (!Chunk_eofSub(&archiveEntryInfo->file.chunkFileData.info))
   {
-    // read data block from archive
+    // read data from archive
     error = Chunk_readData(&archiveEntryInfo->file.chunkFileData.info,
                            archiveEntryInfo->file.byteBuffer,
 //                           archiveEntryInfo->file.byteBufferSize,
@@ -1316,7 +1316,7 @@ archiveEntryInfo->blockLength,
     }
     assert((bytesRead%archiveEntryInfo->blockLength) == 0);
 
-    // decrypt data block
+    // decrypt data
     error = Crypt_decrypt(&archiveEntryInfo->file.cryptInfo,
                           archiveEntryInfo->file.byteBuffer,
                           bytesRead
@@ -1326,7 +1326,7 @@ archiveEntryInfo->blockLength,
       return error;
     }
 
-    // put decrypted block into decompressor
+    // put decrypted data into decompressor
     Compress_putCompressedData(&archiveEntryInfo->file.byteCompressInfo,
                                archiveEntryInfo->file.byteBuffer,
                                bytesRead
@@ -1334,7 +1334,7 @@ archiveEntryInfo->blockLength,
   }
   else if (!Compress_isFlush(&archiveEntryInfo->file.byteCompressInfo))
   {
-    // no more data in archive -> flush byte compress
+    // no more data in archive -> flush byte-compress
     error = Compress_flush(&archiveEntryInfo->file.byteCompressInfo);
     if (error != ERROR_NONE)
     {
@@ -1343,7 +1343,7 @@ archiveEntryInfo->blockLength,
   }
   else
   {
-    // check for end-of-compressed data
+    // check for end-of-compressed byte-data
     error = Compress_getAvailableCompressedBlocks(&archiveEntryInfo->file.byteCompressInfo,
                                                   COMPRESS_BLOCK_TYPE_ANY,
                                                   &blockCount
@@ -1740,10 +1740,12 @@ LOCAL Errors readImageDataBlock(ArchiveEntryInfo *archiveEntryInfo)
 
   if (!Chunk_eofSub(&archiveEntryInfo->image.chunkImageData.info))
   {
-    // read
+    // read data from archive
+#warning todo
     error = Chunk_readData(&archiveEntryInfo->image.chunkImageData.info,
                            archiveEntryInfo->image.byteBuffer,
-                           archiveEntryInfo->blockLength,
+//                           archiveEntryInfo->image.byteBufferSize,
+archiveEntryInfo->blockLength,
                            &bytesRead
                           );
     if (error != ERROR_NONE)
@@ -1752,7 +1754,7 @@ LOCAL Errors readImageDataBlock(ArchiveEntryInfo *archiveEntryInfo)
     }
     assert((bytesRead%archiveEntryInfo->blockLength) == 0);
 
-    // decrypt
+    // decrypt data
     error = Crypt_decrypt(&archiveEntryInfo->image.cryptInfo,
                           archiveEntryInfo->image.byteBuffer,
                           bytesRead
@@ -1762,7 +1764,7 @@ LOCAL Errors readImageDataBlock(ArchiveEntryInfo *archiveEntryInfo)
       return error;
     }
 
-    // put decrypted block into decompressor
+    // put decrypted data into decompressor
     Compress_putCompressedData(&archiveEntryInfo->image.byteCompressInfo,
                                archiveEntryInfo->image.byteBuffer,
                                bytesRead
@@ -1770,7 +1772,7 @@ LOCAL Errors readImageDataBlock(ArchiveEntryInfo *archiveEntryInfo)
   }
   else if (!Compress_isFlush(&archiveEntryInfo->image.byteCompressInfo))
   {
-    // no more data in archive -> flush byte compress
+    // no more data in archive -> flush byte-compress
     error = Compress_flush(&archiveEntryInfo->image.byteCompressInfo);
     if (error != ERROR_NONE)
     {
@@ -1779,7 +1781,7 @@ LOCAL Errors readImageDataBlock(ArchiveEntryInfo *archiveEntryInfo)
   }
   else
   {
-    // check for end-of-compressed data
+    // check for end-of-compressed byte-data
     error = Compress_getAvailableCompressedBlocks(&archiveEntryInfo->image.byteCompressInfo,
                                                   COMPRESS_BLOCK_TYPE_ANY,
                                                   &blockCount
@@ -2197,9 +2199,11 @@ LOCAL Errors readHardLinkDataBlock(ArchiveEntryInfo *archiveEntryInfo)
   if (!Chunk_eofSub(&archiveEntryInfo->hardLink.chunkHardLinkData.info))
   {
     // read
+#warning todo
     error = Chunk_readData(&archiveEntryInfo->hardLink.chunkHardLinkData.info,
                            archiveEntryInfo->hardLink.byteBuffer,
-                           archiveEntryInfo->blockLength,
+//                           archiveEntryInfo->hardLink.byteBufferSize,
+archiveEntryInfo->blockLength,
                            &bytesRead
                           );
     if (error != ERROR_NONE)
@@ -2208,7 +2212,7 @@ LOCAL Errors readHardLinkDataBlock(ArchiveEntryInfo *archiveEntryInfo)
     }
     assert((bytesRead%archiveEntryInfo->blockLength) == 0);
 
-    // decrypt
+    // decrypt data
     error = Crypt_decrypt(&archiveEntryInfo->hardLink.cryptInfo,
                           archiveEntryInfo->hardLink.byteBuffer,
                           bytesRead
@@ -2218,7 +2222,7 @@ LOCAL Errors readHardLinkDataBlock(ArchiveEntryInfo *archiveEntryInfo)
       return error;
     }
 
-    // put decrypted block into decompressor
+    // put decrypted data into decompressor
     Compress_putCompressedData(&archiveEntryInfo->hardLink.byteCompressInfo,
                                archiveEntryInfo->hardLink.byteBuffer,
                                bytesRead
@@ -2226,7 +2230,7 @@ LOCAL Errors readHardLinkDataBlock(ArchiveEntryInfo *archiveEntryInfo)
   }
   else if (!Compress_isFlush(&archiveEntryInfo->hardLink.byteCompressInfo))
   {
-    // no more data in archive -> flush byte compress
+    // no more data in archive -> flush byte-compress
     error = Compress_flush(&archiveEntryInfo->hardLink.byteCompressInfo);
     if (error != ERROR_NONE)
     {
@@ -2235,7 +2239,7 @@ LOCAL Errors readHardLinkDataBlock(ArchiveEntryInfo *archiveEntryInfo)
   }
   else
   {
-    // check for end-of-compressed data
+    // check for end-of-compressed byte-data
     error = Compress_getAvailableCompressedBlocks(&archiveEntryInfo->hardLink.byteCompressInfo,
                                                   COMPRESS_BLOCK_TYPE_ANY,
                                                   &blockCount
@@ -6180,6 +6184,7 @@ Errors Archive_readHardLinkEntry(ArchiveInfo        *archiveInfo,
               break;
             }
 
+            // get data meta data
             if (fragmentOffset != NULL) (*fragmentOffset) = archiveEntryInfo->hardLink.chunkHardLinkData.fragmentOffset;
             if (fragmentSize   != NULL) (*fragmentSize)   = archiveEntryInfo->hardLink.chunkHardLinkData.fragmentSize;
 
@@ -7255,15 +7260,15 @@ Errors Archive_writeData(ArchiveEntryInfo *archiveEntryInfo,
                          uint             elementSize
                         )
 {
-  byte   *p;
-  ulong  writtenBytes;
-  Errors error;
-  ulong  blockLength;
-  ulong  writtenBlockBytes;
-  ulong  deflatedBytes;
-  ulong  deltaLength;
-  bool   allowNewPartFlag;
-  uint   blockCount;
+  const byte *p;
+  ulong      writtenBytes;
+  Errors     error;
+  ulong      blockLength;
+  ulong      writtenBlockBytes;
+  ulong      deflatedBytes;
+  ulong      deltaLength;
+  bool       allowNewPartFlag;
+  uint       blockCount;
 
   assert(archiveEntryInfo != NULL);
   assert(archiveEntryInfo->archiveInfo != NULL);
@@ -7271,7 +7276,7 @@ Errors Archive_writeData(ArchiveEntryInfo *archiveEntryInfo,
 
   if (!archiveEntryInfo->archiveInfo->jobOptions->dryRunFlag)
   {
-    p            = (byte*)buffer;
+    p            = (const byte*)buffer;
     writtenBytes = 0L;
     while (writtenBytes < length)
     {
@@ -7386,6 +7391,91 @@ fprintf(stderr,"%s,%d: avild =%d\n",__FILE__,__LINE__,blockCount);
 
           while (writtenBlockBytes < blockLength)
           {
+            // do compress (delta+byte)
+            do
+            {
+              // check if compressed data is available
+              error = Compress_getAvailableCompressedBlocks(&archiveEntryInfo->image.byteCompressInfo,
+                                                            COMPRESS_BLOCK_TYPE_FULL,
+                                                            &blockCount
+                                                           );
+              if (error != ERROR_NONE)
+              {
+                return error;
+              }
+
+              if (blockCount <= 0)
+              {
+                // delta-compress data
+                error = Compress_deflate(&archiveEntryInfo->image.deltaCompressInfo,
+                                         p+writtenBlockBytes,
+                                         length-writtenBlockBytes,
+                                         &deflatedBytes
+                                        );
+                if (error != ERROR_NONE)
+                {
+                  return error;
+                }
+                writtenBlockBytes += deflatedBytes;
+
+                // get next delta-compressed data
+                Compress_getCompressedData(&archiveEntryInfo->image.deltaCompressInfo,
+                                           archiveEntryInfo->image.deltaBuffer,
+                                           archiveEntryInfo->image.deltaBufferSize,
+                                           &deltaLength
+                                          );
+                if (deltaLength > 0)
+                {
+                  // byte-compress data
+                  error = Compress_deflate(&archiveEntryInfo->image.byteCompressInfo,
+                                           archiveEntryInfo->image.deltaBuffer,
+                                           deltaLength,
+                                           NULL
+                                          );
+                  if (error != ERROR_NONE)
+                  {
+                    return error;
+                  }
+                }
+              }
+            }
+            while (   (writtenBlockBytes < blockLength)
+                   && (blockCount <= 0)
+                  );
+
+            // check if compressed data blocks are available and can be encrypted and written to file
+            allowNewPartFlag = ((elementSize <= 1) || (writtenBlockBytes >= blockLength));
+/* ???
+Compress_getAvailableBlocks(&archiveEntryInfo->image.byteCompressInfo,
+                                               COMPRESS_BLOCK_TYPE_FULL,
+                                               &blockCount
+                                              );
+fprintf(stderr,"%s,%d: avild =%d\n",__FILE__,__LINE__,blockCount);
+*/
+
+            // write compressed data
+            do
+            {
+              error = Compress_getAvailableCompressedBlocks(&archiveEntryInfo->image.byteCompressInfo,
+                                                            COMPRESS_BLOCK_TYPE_FULL,
+                                                            &blockCount
+                                                           );
+              if (error != ERROR_NONE)
+              {
+                return error;
+              }
+              if (blockCount > 0)
+              {
+                error = writeImageDataBlock(archiveEntryInfo,BLOCK_MODE_WRITE,allowNewPartFlag);
+                if (error != ERROR_NONE)
+                {
+                  return error;
+                }
+              }
+            }
+            while (blockCount > 0);
+
+#if 0
             // byte-compress data
             error = Compress_deflate(&archiveEntryInfo->image.byteCompressInfo,
                                      p+writtenBlockBytes,
@@ -7421,6 +7511,7 @@ fprintf(stderr,"%s,%d: avild =%d\n",__FILE__,__LINE__,blockCount);
               }
             }
             while (blockCount > 0);
+#endif
           }
           break;
         case ARCHIVE_ENTRY_TYPE_HARDLINK:
@@ -7428,20 +7519,69 @@ fprintf(stderr,"%s,%d: avild =%d\n",__FILE__,__LINE__,blockCount);
 
           while (writtenBlockBytes < blockLength)
           {
-            // byte-compress data
-            error = Compress_deflate(&archiveEntryInfo->hardLink.byteCompressInfo,
-                                     p+writtenBlockBytes,
-                                     length-writtenBlockBytes,
-                                     &deflatedBytes
-                                    );
-            if (error != ERROR_NONE)
+            // do compress (delta+byte)
+            do
             {
-              return error;
+              // check if compressed data is available
+              error = Compress_getAvailableCompressedBlocks(&archiveEntryInfo->hardLink.byteCompressInfo,
+                                                            COMPRESS_BLOCK_TYPE_FULL,
+                                                            &blockCount
+                                                           );
+              if (error != ERROR_NONE)
+              {
+                return error;
+              }
+
+              if (blockCount <= 0)
+              {
+                // delta-compress data
+                error = Compress_deflate(&archiveEntryInfo->hardLink.deltaCompressInfo,
+                                         p+writtenBlockBytes,
+                                         length-writtenBlockBytes,
+                                         &deflatedBytes
+                                        );
+                if (error != ERROR_NONE)
+                {
+                  return error;
+                }
+                writtenBlockBytes += deflatedBytes;
+
+                // get next delta-compressed data
+                Compress_getCompressedData(&archiveEntryInfo->hardLink.deltaCompressInfo,
+                                           archiveEntryInfo->hardLink.deltaBuffer,
+                                           archiveEntryInfo->hardLink.deltaBufferSize,
+                                           &deltaLength
+                                          );
+                if (deltaLength > 0)
+                {
+                  // byte-compress data
+                  error = Compress_deflate(&archiveEntryInfo->hardLink.byteCompressInfo,
+                                           archiveEntryInfo->hardLink.deltaBuffer,
+                                           deltaLength,
+                                           NULL
+                                          );
+                  if (error != ERROR_NONE)
+                  {
+                    return error;
+                  }
+                }
+              }
             }
-            writtenBlockBytes += deflatedBytes;
+            while (   (writtenBlockBytes < blockLength)
+                   && (blockCount <= 0)
+                  );
 
             // check if compressed data blocks are available and can be encrypted and written to file
             allowNewPartFlag = ((elementSize <= 1) || (writtenBlockBytes >= blockLength));
+/* ???
+Compress_getAvailableBlocks(&archiveEntryInfo->hardLink.byteCompressInfo,
+                                               COMPRESS_BLOCK_TYPE_FULL,
+                                               &blockCount
+                                              );
+fprintf(stderr,"%s,%d: avild =%d\n",__FILE__,__LINE__,blockCount);
+*/
+
+            // write compressed data
             do
             {
               error = Compress_getAvailableCompressedBlocks(&archiveEntryInfo->hardLink.byteCompressInfo,
@@ -7452,7 +7592,6 @@ fprintf(stderr,"%s,%d: avild =%d\n",__FILE__,__LINE__,blockCount);
               {
                 return error;
               }
-
               if (blockCount > 0)
               {
                 error = writeHardLinkDataBlock(archiveEntryInfo,BLOCK_MODE_WRITE,allowNewPartFlag);
@@ -7673,7 +7812,7 @@ Errors Archive_readData(ArchiveEntryInfo *archiveEntryInfo,
         if (availableBytes <= 0)
         {
           // no data in delta-decompressor -> do byte decompress and fill delta-compressor
-          if (!Compress_isFlush(&archiveEntryInfo->file.deltaCompressInfo))
+          if (!Compress_isFlush(&archiveEntryInfo->image.deltaCompressInfo))
           {
             // get number of available bytes in byte decompressor
             error = Compress_getAvailableDecompressedBytes(&archiveEntryInfo->image.byteCompressInfo,
@@ -7722,11 +7861,11 @@ Errors Archive_readData(ArchiveEntryInfo *archiveEntryInfo,
             if      (availableBytes > 0L)
             {
               // decompress next byte-data into delta buffer
-              maxInflateBytes = MIN(Compress_getFreeCompressSpace(&archiveEntryInfo->file.deltaCompressInfo),
-                                    archiveEntryInfo->file.deltaBufferSize
+              maxInflateBytes = MIN(Compress_getFreeCompressSpace(&archiveEntryInfo->image.deltaCompressInfo),
+                                    archiveEntryInfo->image.deltaBufferSize
                                    );
               error = Compress_inflate(&archiveEntryInfo->image.byteCompressInfo,
-                                       archiveEntryInfo->file.deltaBuffer,
+                                       archiveEntryInfo->image.deltaBuffer,
                                        maxInflateBytes,
                                        &inflatedBytes
                                       );
@@ -7738,7 +7877,7 @@ Errors Archive_readData(ArchiveEntryInfo *archiveEntryInfo,
               {
                 // put byte into delta-decompressor
                 Compress_putCompressedData(&archiveEntryInfo->image.deltaCompressInfo,
-                                           archiveEntryInfo->file.deltaBuffer,
+                                           archiveEntryInfo->image.deltaBuffer,
                                            inflatedBytes
                                           );
               }
@@ -7820,7 +7959,7 @@ Errors Archive_readData(ArchiveEntryInfo *archiveEntryInfo,
         if (availableBytes <= 0)
         {
           // no data in delta-decompressor -> do byte decompress and fill delta-compressor
-          if (!Compress_isFlush(&archiveEntryInfo->file.deltaCompressInfo))
+          if (!Compress_isFlush(&archiveEntryInfo->hardLink.deltaCompressInfo))
           {
             // get number of available bytes in byte decompressor
             error = Compress_getAvailableDecompressedBytes(&archiveEntryInfo->hardLink.byteCompressInfo,
@@ -7869,11 +8008,11 @@ Errors Archive_readData(ArchiveEntryInfo *archiveEntryInfo,
             if      (availableBytes > 0L)
             {
               // decompress next byte-data into delta buffer
-              maxInflateBytes = MIN(Compress_getFreeCompressSpace(&archiveEntryInfo->file.deltaCompressInfo),
-                                    archiveEntryInfo->file.deltaBufferSize
+              maxInflateBytes = MIN(Compress_getFreeCompressSpace(&archiveEntryInfo->hardLink.deltaCompressInfo),
+                                    archiveEntryInfo->hardLink.deltaBufferSize
                                    );
               error = Compress_inflate(&archiveEntryInfo->hardLink.byteCompressInfo,
-                                       archiveEntryInfo->file.deltaBuffer,
+                                       archiveEntryInfo->hardLink.deltaBuffer,
                                        maxInflateBytes,
                                        &inflatedBytes
                                       );
@@ -7885,7 +8024,7 @@ Errors Archive_readData(ArchiveEntryInfo *archiveEntryInfo,
               {
                 // put byte into delta-decompressor
                 Compress_putCompressedData(&archiveEntryInfo->hardLink.deltaCompressInfo,
-                                           archiveEntryInfo->file.deltaBuffer,
+                                           archiveEntryInfo->hardLink.deltaBuffer,
                                            inflatedBytes
                                           );
               }
