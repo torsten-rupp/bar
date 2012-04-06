@@ -101,7 +101,7 @@ LOCAL const struct { const char *name; CompressAlgorithms compressAlgorithm; } C
 #endif /* HAVE_XDELTA3 */
 
 // size of compress buffers
-#define MAX_BUFFER_SIZE (64*1024)
+#define MAX_BUFFER_SIZE (4*1024)
 
 /***************************** Datatypes *******************************/
 
@@ -1936,6 +1936,29 @@ LOCAL Errors decompressData(CompressInfo *compressInfo)
 #ifdef RR
           if (RingBuffer_isEmpty(&compressInfo->dataRingBuffer))                      // no data in data buffer
           {
+            // get decompressed data
+            if (compressInfo->xdelta.outputBufferLength > 0L)
+            {
+              // copy from output buffer -> data buffer
+              dataBytes = MIN(compressInfo->xdelta.outputBufferLength,
+                              RingBuffer_getFree(&compressInfo->dataRingBuffer)
+                             );
+              (void)RingBuffer_put(&compressInfo->dataRingBuffer,
+                                   compressInfo->xdelta.outputBuffer,
+                                   dataBytes
+                                  );
+
+              // shift output buffer
+              memmove(compressInfo->xdelta.outputBuffer,
+                      compressInfo->xdelta.outputBuffer+dataBytes,
+                      compressInfo->xdelta.outputBufferLength-dataBytes
+                     );
+              compressInfo->xdelta.outputBufferLength -= dataBytes;
+            }
+          }
+
+          if (RingBuffer_isEmpty(&compressInfo->dataRingBuffer))                      // no data in data buffer
+          {
             if (!compressInfo->endOfDataFlag)  // not end-of-data
             {
               // decompress available data
@@ -2063,7 +2086,6 @@ compressInfo->xdelta.source.curblk[5]
                 {
                   // copy from output buffer -> data buffer
                   dataBytes = MIN(compressInfo->xdelta.outputBufferLength,maxDataBytes);
-//fprintf(stderr,"%s, %d: %d\n",__FILE__,__LINE__,dataBytes);
                   (void)RingBuffer_put(&compressInfo->dataRingBuffer,
                                        compressInfo->xdelta.outputBuffer,
                                        dataBytes
