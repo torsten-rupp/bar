@@ -437,6 +437,46 @@ void __RingBuffer_delete(const char *__fileName__, ulong __lineNb__, RingBuffer 
   }
 }
 
+bool RingBuffer_resize(RingBuffer *ringBuffer, ulong newSize)
+{
+  void  *newData;
+  ulong n;
+
+  assert(newSize > 0);
+
+  RINGBUFFER_CHECK_VALID(ringBuffer);
+
+  // allocate new ring buffer data
+  newData = (byte*)malloc((newSize+1)*(ulong)ringBuffer->elementSize);
+  if (newData == NULL)
+  {
+    #ifdef HALT_ON_INSUFFICIENT_MEMORY
+      HALT_INSUFFICIENT_MEMORY();
+    #else /* not HALT_ON_INSUFFICIENT_MEMORY */
+      return FALSE;
+    #endif /* HALT_ON_INSUFFICIENT_MEMORY */
+  }
+
+  // normalize ring buffer output
+  normalizeOut(ringBuffer);
+
+  // move data
+  n = MIN(RingBuffer_getAvailable(ringBuffer),newSize);
+  memcpy(newData,
+         ringBuffer->data,
+         n*(ulong)ringBuffer->elementSize
+        );
+
+  // set new data, adjust size/length
+  free(ringBuffer->data);
+  ringBuffer->size   = newSize+1;
+  ringBuffer->length = n;
+  ringBuffer->nextIn = n;
+  ringBuffer->data   = newData;
+
+  return TRUE;
+}
+
 void RingBuffer_clear(RingBuffer *ringBuffer, RingBufferElementFreeFunction ringBufferElementFreeFunction, void *ringBufferElementFreeUserData)
 {
   void *p;
@@ -723,7 +763,7 @@ void *RingBuffer_cArrayIn(RingBuffer *ringBuffer)
 
   RINGBUFFER_CHECK_VALID(ringBuffer);
 
-  // normalize ring buffer
+  // normalize ring buffer input
   normalizeIn(ringBuffer);
 
   // get pointer to data
@@ -739,7 +779,7 @@ const void *RingBuffer_cArrayOut(RingBuffer *ringBuffer)
 
   RINGBUFFER_CHECK_VALID(ringBuffer);
 
-  // normalize ring buffer
+  // normalize ring buffer output
   normalizeOut(ringBuffer);
 
   // get pointer to data

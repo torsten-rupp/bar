@@ -238,6 +238,17 @@ void __RingBuffer_delete(const char *__fileName__, ulong __lineNb__, RingBuffer 
 #endif /* NDEBUG */
 
 /***********************************************************************\
+* Name   : RingBuffer_resize
+* Purpose: set new ring buffer size (resize)
+* Input  : newSize - new size of ring buffer
+* Output : -
+* Return : TRUE if ring buffer resized, FALSE otherwise
+* Notes  : -
+\***********************************************************************/
+
+bool RingBuffer_resize(RingBuffer *ringBuffer, ulong newSize);
+
+/***********************************************************************\
 * Name   : RingBuffer_clear
 * Purpose: clear ring buffer
 * Input  : ringBuffer                    - ring buffer to clear
@@ -422,9 +433,9 @@ void RingBuffer_decrement(RingBuffer *ringBuffer, ulong n);
 * Notes  : -
 \***********************************************************************/
 
-INLINE void *RingBuffer_cArray(RingBuffer *ringBuffer);
+INLINE const void *RingBuffer_cArray(RingBuffer *ringBuffer);
 #if defined(NDEBUG) || defined(__RINGBUFFER_IMPLEMENATION__)
-INLINE void *RingBuffer_cArray(RingBuffer *ringBuffer)
+INLINE const void *RingBuffer_cArray(RingBuffer *ringBuffer)
 {
   RINGBUFFER_CHECK_VALID(ringBuffer);
 
