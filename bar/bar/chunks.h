@@ -111,12 +111,6 @@ typedef struct ChunkInfo
   void             *data;             // chunk data
 } ChunkInfo;
 
-typedef struct
-{
-  uint64           offset;            // start of chunk in file (header)
-  uint64           index;             // current position in chunk
-} ChunkPosition;
-
 /***************************** Variables *******************************/
 
 /****************************** Macros *********************************/
@@ -363,30 +357,28 @@ bool Chunk_eofSub(ChunkInfo *chunkInfo);
 * Name   : Chunk_update
 * Purpose: update chunk data
 * Input  : chunkInfo - chunk info block
-*          data      - chunk data
 * Output : -
 * Return : ERROR_NONE or errorcode
 * Notes  : -
 \***********************************************************************/
 
-Errors Chunk_update(ChunkInfo  *chunkInfo
-//                    const void *data
-                   );
+Errors Chunk_update(ChunkInfo *chunkInfo);
 
 /***********************************************************************\
 * Name   : Chunk_readData
 * Purpose: read data from chunk
 * Input  : chunkInfo   - chunk info block
 *          data        - buffer for data
-*          size        - number of bytes to read
-* Output : -
+*          size        - max. number of bytes to read
+* Output : bytesRead - number of bytes read (can be NULL)
 * Return : ERROR_NONE or errorcode
 * Notes  : -
 \***********************************************************************/
 
 Errors Chunk_readData(ChunkInfo *chunkInfo,
                       void      *data,
-                      ulong     size
+                      ulong     size,
+                      ulong     *bytesRead
                      );
 
 /***********************************************************************\

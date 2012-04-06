@@ -8,6 +8,8 @@
 *
 \***********************************************************************/
 
+#define __CHUNK_IMPLEMENATION__
+
 /****************************** Includes *******************************/
 #include "config.h"
 
@@ -1174,34 +1176,47 @@ Errors Chunk_update(ChunkInfo *chunkInfo)
 
 Errors Chunk_readData(ChunkInfo *chunkInfo,
                       void      *data,
-                      ulong     size
+                      ulong     size,
+                      ulong     *bytesRead
                      )
 {
   Errors error;
-  ulong  bytesRead;
+  ulong  n;
 
   assert(chunkInfo != NULL);
   assert(chunkInfo->io != NULL);
   assert(chunkInfo->io->read != NULL);
+  assert(data != NULL);
 
+  // limit size to read to rest
   if (size > (chunkInfo->size-chunkInfo->index))
   {
     size = chunkInfo->size-chunkInfo->index;
   }
 
-  error = chunkInfo->io->read(chunkInfo->ioUserData,data,size,&bytesRead);
+  // read data
+  error = chunkInfo->io->read(chunkInfo->ioUserData,data,size,&n);
   if (error != ERROR_NONE)
   {
     return error;
   }
-  if (size != bytesRead)
+  if (bytesRead != NULL)
   {
-    return ERROR(IO_ERROR,errno);
+    (*bytesRead) = n;
   }
-  chunkInfo->index += size;
+  else
+  {
+    if (size != bytesRead)
+    {
+      return ERROR(IO_ERROR,errno);
+    }
+  }
+
+  // increment indizes
+  chunkInfo->index += (uint64)n;
   if (chunkInfo->parentChunkInfo != NULL)
   {
-    chunkInfo->parentChunkInfo->index += size;
+    chunkInfo->parentChunkInfo->index += (uint64)n;
   }
 
   return ERROR_NONE;
@@ -1218,11 +1233,14 @@ Errors Chunk_writeData(ChunkInfo  *chunkInfo,
   assert(chunkInfo->io != NULL);
   assert(chunkInfo->io->write != NULL);
 
+  // write data
   error = chunkInfo->io->write(chunkInfo->ioUserData,data,size);
   if (error != ERROR_NONE)
   {
     return ERROR(IO_ERROR,errno);
   }
+
+  // increment indizes and increase sizes
   chunkInfo->size  += size;
   chunkInfo->index += size;
   if (chunkInfo->parentChunkInfo != NULL)
@@ -1246,6 +1264,7 @@ Errors Chunk_skipData(ChunkInfo *chunkInfo,
   assert(chunkInfo->io->tell != NULL);
   assert(chunkInfo->io->seek != NULL);
 
+  // skip data
   error = chunkInfo->io->tell(chunkInfo->ioUserData,&offset);
   if (error != ERROR_NONE)
   {
@@ -1257,6 +1276,8 @@ Errors Chunk_skipData(ChunkInfo *chunkInfo,
   {
     return error;
   }
+
+  // increment size
   chunkInfo->index += size;
 
   // set size in container chunk
