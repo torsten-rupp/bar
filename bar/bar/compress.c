@@ -109,13 +109,6 @@ LOCAL const struct { const char *name; CompressAlgorithms compressAlgorithm; } C
 
 /****************************** Macros *********************************/
 
-#warning cleanup
-#define RR
-
-#ifdef RR
-#else
-#endif
-
 /***************************** Forwards ********************************/
 
 /***************************** Functions *******************************/
@@ -139,12 +132,15 @@ LOCAL Errors compressData(CompressInfo *compressInfo)
   ulong compressBytes,dataBytes;
 
   assert(compressInfo != NULL);
+#ifdef RR
+#else
   assert(compressInfo->dataBuffer != NULL);
   assert(compressInfo->compressBuffer != NULL);
   assert(compressInfo->dataBufferIndex <= compressInfo->dataBufferLength);
   assert(compressInfo->dataBufferLength <= compressInfo->dataBufferSize);
   assert(compressInfo->compressBufferIndex <= compressInfo->compressBufferLength);
   assert(compressInfo->compressBufferLength <= compressInfo->compressBufferSize);
+#endif
 
   // compress if possible
   switch (compressInfo->compressAlgorithm)
@@ -1336,7 +1332,10 @@ compressInfo->xdelta.source.curblk[5]
       #endif /* NDEBUG */
       break; /* not reached */
   }
+#ifdef RR
+#else
   assert(compressInfo->compressBufferLength <= compressInfo->compressBufferSize);
+#endif
 
   return ERROR_NONE;
 }
@@ -1356,12 +1355,15 @@ LOCAL Errors decompressData(CompressInfo *compressInfo)
   ulong compressBytes,dataBytes;
 
   assert(compressInfo != NULL);
+#ifdef RR
+#else
   assert(compressInfo->dataBuffer != NULL);
   assert(compressInfo->compressBuffer != NULL);
   assert(compressInfo->dataBufferIndex <= compressInfo->dataBufferLength);
   assert(compressInfo->dataBufferLength <= compressInfo->dataBufferSize);
   assert(compressInfo->compressBufferIndex <= compressInfo->compressBufferLength);
   assert(compressInfo->compressBufferLength <= compressInfo->compressBufferSize);
+#endif
 
   // decompress if possible
   switch (compressInfo->compressAlgorithm)
@@ -1754,9 +1756,6 @@ LOCAL Errors decompressData(CompressInfo *compressInfo)
 #ifdef RR
           if (RingBuffer_isEmpty(&compressInfo->dataRingBuffer))                      // no data in data buffer
           {
-            compressInfo->dataBufferIndex  = 0L;
-            compressInfo->dataBufferLength = 0L;
-
             if (!compressInfo->endOfDataFlag)
             {
               // decompress available data
@@ -2552,13 +2551,8 @@ Errors Compress_new(CompressInfo       *compressInfo,
   compressInfo->compressState        = COMPRESS_STATE_INIT;
   compressInfo->endOfDataFlag        = FALSE;
   compressInfo->flushFlag            = FALSE;
-  compressInfo->dataBufferIndex      = 0L;
-  compressInfo->dataBufferLength     = 0L;
-  compressInfo->dataBufferSize       = CEIL(MAX_BUFFER_SIZE,blockLength);
-  compressInfo->compressBufferIndex  = 0L;
-  compressInfo->compressBufferLength = 0L;
-  compressInfo->compressBufferSize   = CEIL(MAX_BUFFER_SIZE,blockLength);
-
+#ifdef RR
+  // allocate buffers
   if (!RingBuffer_init(&compressInfo->dataRingBuffer,1,FLOOR(MAX_BUFFER_SIZE,blockLength)))
   {
     HALT_INSUFFICIENT_MEMORY();
@@ -2567,6 +2561,13 @@ Errors Compress_new(CompressInfo       *compressInfo,
   {
     HALT_INSUFFICIENT_MEMORY();
   }
+#else
+  compressInfo->dataBufferIndex      = 0L;
+  compressInfo->dataBufferLength     = 0L;
+  compressInfo->dataBufferSize       = CEIL(MAX_BUFFER_SIZE,blockLength);
+  compressInfo->compressBufferIndex  = 0L;
+  compressInfo->compressBufferLength = 0L;
+  compressInfo->compressBufferSize   = CEIL(MAX_BUFFER_SIZE,blockLength);
 
   // allocate buffers
   compressInfo->dataBuffer = malloc(compressInfo->dataBufferSize);
@@ -2579,6 +2580,7 @@ Errors Compress_new(CompressInfo       *compressInfo,
   {
     HALT_INSUFFICIENT_MEMORY();
   }
+#endif
 
   switch (compressAlgorithm)
   {
@@ -2626,20 +2628,26 @@ Errors Compress_new(CompressInfo       *compressInfo,
             case COMPRESS_MODE_DEFLATE:
               if (deflateInit(&compressInfo->zlib.stream,compressionLevel) != Z_OK)
               {
-                free(compressInfo->compressBuffer);
-                free(compressInfo->dataBuffer);
+#ifdef RR
                 RingBuffer_done(&compressInfo->compressRingBuffer,NULL,NULL);
                 RingBuffer_done(&compressInfo->dataRingBuffer,NULL,NULL);
+#else
+                free(compressInfo->compressBuffer);
+                free(compressInfo->dataBuffer);
+#endif
                 return ERROR_INIT_COMPRESS;
               }
               break;
             case COMPRESS_MODE_INFLATE:
               if (inflateInit(&compressInfo->zlib.stream) != Z_OK)
               {
-                free(compressInfo->compressBuffer);
-                free(compressInfo->dataBuffer);
+#ifdef RR
                 RingBuffer_done(&compressInfo->compressRingBuffer,NULL,NULL);
                 RingBuffer_done(&compressInfo->dataRingBuffer,NULL,NULL);
+#else
+                free(compressInfo->compressBuffer);
+                free(compressInfo->dataBuffer);
+#endif
                 return ERROR_INIT_COMPRESS;
               }
               break;
@@ -2691,20 +2699,26 @@ Errors Compress_new(CompressInfo       *compressInfo,
             case COMPRESS_MODE_DEFLATE:
               if (BZ2_bzCompressInit(&compressInfo->bzlib.stream,compressInfo->bzlib.compressionLevel,0,0) != BZ_OK)
               {
-                free(compressInfo->compressBuffer);
-                free(compressInfo->dataBuffer);
+#ifdef RR
                 RingBuffer_done(&compressInfo->compressRingBuffer,NULL,NULL);
                 RingBuffer_done(&compressInfo->dataRingBuffer,NULL,NULL);
+#else
+                free(compressInfo->compressBuffer);
+                free(compressInfo->dataBuffer);
+#endif
                 return ERROR_INIT_COMPRESS;
               }
               break;
             case COMPRESS_MODE_INFLATE:
               if (BZ2_bzDecompressInit(&compressInfo->bzlib.stream,0,0) != BZ_OK)
               {
-                free(compressInfo->compressBuffer);
-                free(compressInfo->dataBuffer);
+#ifdef RR
                 RingBuffer_done(&compressInfo->compressRingBuffer,NULL,NULL);
                 RingBuffer_done(&compressInfo->dataRingBuffer,NULL,NULL);
+#else
+                free(compressInfo->compressBuffer);
+                free(compressInfo->dataBuffer);
+#endif
                 return ERROR_INIT_COMPRESS;
               }
               break;
@@ -2757,10 +2771,13 @@ Errors Compress_new(CompressInfo       *compressInfo,
               compressInfo->lzmalib.stream = streamInit;
               if (lzma_easy_encoder(&compressInfo->lzmalib.stream,compressInfo->lzmalib.compressionLevel,LZMA_CHECK_NONE) != LZMA_OK)
               {
-                free(compressInfo->compressBuffer);
-                free(compressInfo->dataBuffer);
+#ifdef RR
                 RingBuffer_done(&compressInfo->compressRingBuffer,NULL,NULL);
                 RingBuffer_done(&compressInfo->dataRingBuffer,NULL,NULL);
+#else
+                free(compressInfo->compressBuffer);
+                free(compressInfo->dataBuffer);
+#endif
                 return ERROR_INIT_COMPRESS;
               }
               break;
@@ -2768,10 +2785,13 @@ Errors Compress_new(CompressInfo       *compressInfo,
               compressInfo->lzmalib.stream = streamInit;
               if (lzma_auto_decoder(&compressInfo->lzmalib.stream,0xFFFffffFFFFffffLL,0) != LZMA_OK)
               {
-                free(compressInfo->compressBuffer);
-                free(compressInfo->dataBuffer);
+#ifdef RR
                 RingBuffer_done(&compressInfo->compressRingBuffer,NULL,NULL);
                 RingBuffer_done(&compressInfo->dataRingBuffer,NULL,NULL);
+#else
+                free(compressInfo->compressBuffer);
+                free(compressInfo->dataBuffer);
+#endif
                 return ERROR_INIT_COMPRESS;
               }
               break;
@@ -2835,10 +2855,13 @@ Errors Compress_new(CompressInfo       *compressInfo,
           memset(&compressInfo->xdelta.stream,0,sizeof(compressInfo->xdelta.stream));
           if (xd3_config_stream(&compressInfo->xdelta.stream,&xd3Config) != 0)
           {
-            free(compressInfo->compressBuffer);
-            free(compressInfo->dataBuffer);
+#ifdef RR
             RingBuffer_done(&compressInfo->compressRingBuffer,NULL,NULL);
             RingBuffer_done(&compressInfo->dataRingBuffer,NULL,NULL);
+#else
+            free(compressInfo->compressBuffer);
+            free(compressInfo->dataBuffer);
+#endif
             return ERROR_INIT_COMPRESS;
           }
 
@@ -2847,10 +2870,13 @@ Errors Compress_new(CompressInfo       *compressInfo,
           if (compressInfo->xdelta.sourceBuffer == NULL)
           {
             xd3_free_stream(&compressInfo->xdelta.stream);
-            free(compressInfo->compressBuffer);
-            free(compressInfo->dataBuffer);
+#ifdef RR
             RingBuffer_done(&compressInfo->compressRingBuffer,NULL,NULL);
             RingBuffer_done(&compressInfo->dataRingBuffer,NULL,NULL);
+#else
+            free(compressInfo->compressBuffer);
+            free(compressInfo->dataBuffer);
+#endif
             return ERROR_INIT_COMPRESS;
           }
           memset(&compressInfo->xdelta.source,0,sizeof(compressInfo->xdelta.source));
@@ -2863,10 +2889,13 @@ Errors Compress_new(CompressInfo       *compressInfo,
           {
             xd3_free_stream(&compressInfo->xdelta.stream);
             free(compressInfo->xdelta.sourceBuffer);
-            free(compressInfo->compressBuffer);
-            free(compressInfo->dataBuffer);
+#ifdef RR
             RingBuffer_done(&compressInfo->compressRingBuffer,NULL,NULL);
             RingBuffer_done(&compressInfo->dataRingBuffer,NULL,NULL);
+#else
+            free(compressInfo->compressBuffer);
+            free(compressInfo->dataBuffer);
+#endif
             return ERROR_INIT_COMPRESS;
           }
         }
@@ -2887,8 +2916,11 @@ Errors Compress_new(CompressInfo       *compressInfo,
 void Compress_delete(CompressInfo *compressInfo)
 {
   assert(compressInfo != NULL);
+#ifdef RR
+#else
   assert(compressInfo->dataBuffer != NULL);
   assert(compressInfo->compressBuffer != NULL);
+#endif
 
   switch (compressInfo->compressAlgorithm)
   {
@@ -2987,10 +3019,13 @@ void Compress_delete(CompressInfo *compressInfo)
       #endif /* NDEBUG */
       break; /* not reached */
   }
-  free(compressInfo->compressBuffer);
-  free(compressInfo->dataBuffer);
+#ifdef RR
   RingBuffer_done(&compressInfo->compressRingBuffer,NULL,NULL);
   RingBuffer_done(&compressInfo->dataRingBuffer,NULL,NULL);
+#else
+  free(compressInfo->compressBuffer);
+  free(compressInfo->dataBuffer);
+#endif
 }
 
 Errors Compress_reset(CompressInfo *compressInfo)
@@ -3001,12 +3036,15 @@ Errors Compress_reset(CompressInfo *compressInfo)
   compressInfo->compressState        = COMPRESS_STATE_INIT;
   compressInfo->endOfDataFlag        = FALSE;
   compressInfo->flushFlag            = FALSE;
+#ifdef RR
+  RingBuffer_clear(&compressInfo->dataRingBuffer,NULL,NULL);
+  RingBuffer_clear(&compressInfo->compressRingBuffer,NULL,NULL);
+#else
   compressInfo->dataBufferIndex      = 0L;
   compressInfo->dataBufferLength     = 0L;
   compressInfo->compressBufferIndex  = 0L;
   compressInfo->compressBufferLength = 0L;
-  RingBuffer_clear(&compressInfo->dataRingBuffer,NULL,NULL);
-  RingBuffer_clear(&compressInfo->compressRingBuffer,NULL,NULL);
+#endif
 
   switch (compressInfo->compressAlgorithm)
   {
@@ -3675,8 +3713,11 @@ void Compress_getCompressedData(CompressInfo *compressInfo,
 
   assert(compressInfo != NULL);
   assert(compressInfo->compressMode == COMPRESS_MODE_DEFLATE);
+#ifdef RR
+#else
   assert(compressInfo->compressBuffer != NULL);
   assert(compressInfo->compressBufferLength <= compressInfo->compressBufferSize);
+#endif
   assert(buffer != NULL);
   assert(bufferSize >= compressInfo->blockLength);
   assert(bufferLength != NULL);
@@ -3735,7 +3776,10 @@ void Compress_putCompressedData(CompressInfo *compressInfo,
 {
   assert(compressInfo != NULL);
   assert(compressInfo->compressMode == COMPRESS_MODE_INFLATE);
+#ifdef RR
+#else
   assert(compressInfo->compressBuffer != NULL);
+#endif
   assert(buffer != NULL);
 
   // decompress data (ignore error here)

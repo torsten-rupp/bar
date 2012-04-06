@@ -108,6 +108,9 @@ typedef enum
 
 /***************************** Datatypes *******************************/
 
+#warning cleanup
+#define RR
+
 // compress info block
 typedef struct
 {
@@ -166,17 +169,23 @@ typedef struct
     #endif /* HAVE_XDELTA */
   };
 
+#ifdef RR
   RingBuffer         dataRingBuffer;
+#else
   byte               *dataBuffer;               // buffer for uncompressed data
   ulong              dataBufferIndex;           // position of next byte in uncompressed data buffer
   ulong              dataBufferLength;          // length of data in uncompressed data buffer
   ulong              dataBufferSize;            // size of uncompressed data buffer
+#endif
 
+#ifdef RR
   RingBuffer         compressRingBuffer;
+#else
   byte               *compressBuffer;           // buffer for compressed data
   ulong              compressBufferIndex;       // position of next byte in compressed data buffer
   ulong              compressBufferLength;      // length of data in compressed data buffer
   ulong              compressBufferSize;        // size of compressed data buffer
+#endif
 } CompressInfo;
 
 /***************************** Variables *******************************/
@@ -493,7 +502,7 @@ uint64 Compress_getInputLength(CompressInfo *compressInfo);
 uint64 Compress_getOutputLength(CompressInfo *compressInfo);
 
 /***********************************************************************\
-* Name   : Compress_getAvailableCompressSpace
+* Name   : Compress_getFreeCompressSpace
 * Purpose: get free space in compress buffer
 * Input  : compressInfo - compress info block
 * Output : -
@@ -501,13 +510,17 @@ uint64 Compress_getOutputLength(CompressInfo *compressInfo);
 * Notes  : -
 \***********************************************************************/
 
-ulong Compress_getAvailableCompressSpace(const CompressInfo *compressInfo);
+ulong Compress_getFreeCompressSpace(const CompressInfo *compressInfo);
 #if defined(NDEBUG) || defined(__COMPRESS_IMPLEMENATION__)
-ulong Compress_getAvailableCompressSpace(const CompressInfo *compressInfo)
+ulong Compress_getFreeCompressSpace(const CompressInfo *compressInfo)
 {
   assert(compressInfo != NULL);
 
+#ifdef RR
+  return RingBuffer_getFree(&compressInfo->compressRingBuffer);
+#else
   return compressInfo->compressBufferSize-compressInfo->compressBufferLength;
+#endif
 }
 #endif /* NDEBUG || __COMPRESS_IMPLEMENATION__ */
 
@@ -542,7 +555,7 @@ Errors Compress_getAvailableCompressedBlocks(CompressInfo       *compressInfo,
                                             );
 
 /***********************************************************************\
-* Name   : Compress_getCompressedBlock
+* Name   : Compress_getCompressedData
 * Purpose: compress data and get next compressed data bytes from
 *          compressor
 * Input  : compressInfo - compress info block
@@ -563,7 +576,7 @@ void Compress_getCompressedData(CompressInfo *compressInfo,
                                );
 
 /***********************************************************************\
-* Name   : Compress_putCompressedBlock
+* Name   : Compress_putCompressedData
 * Purpose: decompress data and put next compressed data bytes into
 *          decompressor
 * Input  : compressInfo - compress info block

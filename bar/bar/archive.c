@@ -7577,7 +7577,7 @@ Errors Archive_readData(ArchiveEntryInfo *archiveEntryInfo,
             if      (availableBytes > 0L)
             {
               // decompress next byte-data into delta-buffer
-              maxInflateBytes = MIN(Compress_getAvailableCompressSpace(&archiveEntryInfo->file.deltaCompressInfo),
+              maxInflateBytes = MIN(Compress_getFreeCompressSpace(&archiveEntryInfo->file.deltaCompressInfo),
                                     archiveEntryInfo->file.deltaBufferSize
                                    );
               error = Compress_inflate(&archiveEntryInfo->file.byteCompressInfo,
@@ -7722,7 +7722,7 @@ Errors Archive_readData(ArchiveEntryInfo *archiveEntryInfo,
             if      (availableBytes > 0L)
             {
               // decompress next byte-data into delta buffer
-              maxInflateBytes = MIN(Compress_getAvailableCompressSpace(&archiveEntryInfo->file.deltaCompressInfo),
+              maxInflateBytes = MIN(Compress_getFreeCompressSpace(&archiveEntryInfo->file.deltaCompressInfo),
                                     archiveEntryInfo->file.deltaBufferSize
                                    );
               error = Compress_inflate(&archiveEntryInfo->image.byteCompressInfo,
@@ -7869,7 +7869,7 @@ Errors Archive_readData(ArchiveEntryInfo *archiveEntryInfo,
             if      (availableBytes > 0L)
             {
               // decompress next byte-data into delta buffer
-              maxInflateBytes = MIN(Compress_getAvailableCompressSpace(&archiveEntryInfo->file.deltaCompressInfo),
+              maxInflateBytes = MIN(Compress_getFreeCompressSpace(&archiveEntryInfo->file.deltaCompressInfo),
                                     archiveEntryInfo->file.deltaBufferSize
                                    );
               error = Compress_inflate(&archiveEntryInfo->hardLink.byteCompressInfo,
