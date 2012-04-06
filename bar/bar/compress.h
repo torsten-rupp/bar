@@ -29,7 +29,7 @@
 #include <assert.h>
 
 #include "global.h"
-#include "strings.h"
+#include "ringbuffers.h"
 
 #include "archive_format_const.h"
 #include "errors.h"
@@ -166,11 +166,13 @@ typedef struct
     #endif /* HAVE_XDELTA */
   };
 
+  RingBuffer         dataRingBuffer;
   byte               *dataBuffer;               // buffer for uncompressed data
   ulong              dataBufferIndex;           // position of next byte in uncompressed data buffer
   ulong              dataBufferLength;          // length of data in uncompressed data buffer
   ulong              dataBufferSize;            // size of uncompressed data buffer
 
+  RingBuffer         compressRingBuffer;
   byte               *compressBuffer;           // buffer for compressed data
   ulong              compressBufferIndex;       // position of next byte in compressed data buffer
   ulong              compressBufferLength;      // length of data in compressed data buffer
