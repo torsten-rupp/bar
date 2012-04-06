@@ -1370,7 +1370,8 @@ LOCAL Errors decompressData(CompressInfo *compressInfo)
   {
     case COMPRESS_ALGORITHM_NONE:
 #ifdef RR
-      // decompress with identity compressor
+      // Note: decompress with identity compressor
+
       if (RingBuffer_isEmpty(&compressInfo->dataRingBuffer))                          // no data in data buffer
       {
         if (!compressInfo->endOfDataFlag)
@@ -1397,6 +1398,7 @@ LOCAL Errors decompressData(CompressInfo *compressInfo)
           }
         }
       }
+
       if (RingBuffer_isEmpty(&compressInfo->dataRingBuffer))                          // no data in data buffer
       {
         if (!compressInfo->endOfDataFlag)
@@ -1524,6 +1526,7 @@ LOCAL Errors decompressData(CompressInfo *compressInfo)
               }
             }
           }
+
           if (RingBuffer_isEmpty(&compressInfo->dataRingBuffer))                      // no data in data buffer
           {
             if (!compressInfo->endOfDataFlag)
@@ -1665,6 +1668,7 @@ LOCAL Errors decompressData(CompressInfo *compressInfo)
         {
           int bzlibResult;
 
+#ifdef RR
           if (RingBuffer_isEmpty(&compressInfo->dataRingBuffer))                      // no data in data buffer
           {
             if (!compressInfo->endOfDataFlag)
@@ -1702,6 +1706,7 @@ LOCAL Errors decompressData(CompressInfo *compressInfo)
               }
             }
           }
+
           if (RingBuffer_isEmpty(&compressInfo->dataRingBuffer))                      // no data in data buffer
           {
             if (!compressInfo->endOfDataFlag)
@@ -1734,6 +1739,94 @@ LOCAL Errors decompressData(CompressInfo *compressInfo)
               }
             }
           }
+#else
+          if (compressInfo->dataBufferIndex >= compressInfo->dataBufferLength)  // no data in data buffer
+          {
+            compressInfo->dataBufferIndex  = 0L;
+            compressInfo->dataBufferLength = 0L;
+
+            if (!compressInfo->endOfDataFlag)
+            {
+              // decompress available data
+              if      (compressInfo->compressBufferIndex < compressInfo->compressBufferLength)  // unprocessed compressed data available
+              {
+                // get max. number of compressed and max. number of data bytes
+                maxCompressBytes = compressInfo->compressBufferLength-compressInfo->compressBufferIndex;
+                maxDataBytes     = compressInfo->dataBufferSize;
+
+                // decompress: transfer compress buffer -> data buffer
+                compressInfo->bzlib.stream.next_in   = (char*)(compressInfo->compressBuffer+compressInfo->compressBufferIndex);
+                compressInfo->bzlib.stream.avail_in  = maxCompressBytes;
+                compressInfo->bzlib.stream.next_out  = (char*)compressInfo->dataBuffer;
+                compressInfo->bzlib.stream.avail_out = maxDataBytes;
+                bzlibResult = BZ2_bzDecompress(&compressInfo->bzlib.stream);
+                if      (bzlibResult == BZ_STREAM_END)
+                {
+                  compressInfo->endOfDataFlag = TRUE;
+                }
+                else if (bzlibResult != BZ_OK)
+                {
+                  return ERROR(INFLATE_FAIL,bzlibResult);
+                }
+                compressBytes = maxCompressBytes-compressInfo->bzlib.stream.avail_in;
+                dataBytes     = maxDataBytes-compressInfo->bzlib.stream.avail_out;
+
+
+
+
+
+                // update compress state, compress index, data length
+                compressInfo->compressState = COMPRESS_STATE_RUNNING;
+                compressInfo->compressBufferIndex += compressBytes;
+                compressInfo->dataBufferLength = dataBytes;
+
+                // reset when compressed buffer is empty
+                if (compressInfo->compressBufferIndex >= compressInfo->compressBufferLength)
+                {
+                  compressInfo->compressBufferIndex  = 0L;
+                  compressInfo->compressBufferLength = 0L;
+                }
+              }
+            }
+          }
+          if (compressInfo->dataBufferIndex >= compressInfo->dataBufferLength)  // no data in data buffer
+          {
+            compressInfo->dataBufferIndex  = 0L;
+            compressInfo->dataBufferLength = 0L;
+
+            if (!compressInfo->endOfDataFlag)
+            {
+              // finish decompress, flush internal decompress buffers
+              if (   compressInfo->flushFlag                                  // flush data requested
+                  && (compressInfo->compressState == COMPRESS_STATE_RUNNING)  // compressor is running -> data available in internal buffers
+                 )
+              {
+                // get max. number of compressed and max. number of data bytes
+                maxCompressBytes = compressInfo->compressBufferLength-compressInfo->compressBufferIndex;
+                maxDataBytes     = compressInfo->dataBufferSize;
+
+                // decompress with flush: transfer rest of internal data -> data buffer
+                compressInfo->bzlib.stream.next_in   = NULL;
+                compressInfo->bzlib.stream.avail_in  = 0;
+                compressInfo->bzlib.stream.next_out  = (char*)compressInfo->dataBuffer;
+                compressInfo->bzlib.stream.avail_out = maxDataBytes;
+                bzlibResult = BZ2_bzDecompress(&compressInfo->bzlib.stream);
+                if      (bzlibResult == BZ_STREAM_END)
+                {
+                  compressInfo->endOfDataFlag = TRUE;
+                }
+                else if (bzlibResult != BZ_RUN_OK)
+                {
+                  return ERROR(INFLATE_FAIL,bzlibResult);
+                }
+                dataBytes = maxDataBytes-compressInfo->bzlib.stream.avail_out;
+
+                // update data length
+                compressInfo->dataBufferLength = dataBytes;
+              }
+            }
+          }
+#endif
         }
       #else /* not HAVE_BZ2 */
         return ERROR_FUNCTION_NOT_SUPPORTED;
@@ -2211,6 +2304,32 @@ compressInfo->xdelta.source.curblk[5]
             }
           }
 #else
+          if (compressInfo->dataBufferIndex >= compressInfo->dataBufferLength)  // no data in data buffer
+          {
+            compressInfo->dataBufferIndex  = 0L;
+            compressInfo->dataBufferLength = 0L;
+
+            // get decompressed data
+            if (compressInfo->xdelta.outputBufferLength > 0L)
+            {
+              // copy from output buffer -> data buffer
+              dataBytes = MIN(compressInfo->xdelta.outputBufferLength,compressInfo->dataBufferSize);
+//fprintf(stderr,"%s, %d: %d\n",__FILE__,__LINE__,dataBytes);
+              memcpy(compressInfo->dataBuffer,
+                     compressInfo->xdelta.outputBuffer,
+                     dataBytes
+                    );
+              compressInfo->dataBufferLength = dataBytes;
+
+              // shift output buffer
+              memmove(compressInfo->xdelta.outputBuffer,
+                      compressInfo->xdelta.outputBuffer+dataBytes,
+                      compressInfo->xdelta.outputBufferLength-dataBytes
+                     );
+              compressInfo->xdelta.outputBufferLength -= dataBytes;
+            }
+          }
+
           if (compressInfo->dataBufferIndex >= compressInfo->dataBufferLength)  // no data in data buffer
           {
             compressInfo->dataBufferIndex  = 0L;
