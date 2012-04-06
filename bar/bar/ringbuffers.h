@@ -263,10 +263,10 @@ void RingBuffer_clear(RingBuffer *ringBuffer, RingBufferElementFreeFunction ring
 
 /***********************************************************************\
 * Name   : RingBuffer_getFree
-* Purpose: get free space in ring buffer
+* Purpose: get number of free elements in ring buffer
 * Input  : ringBuffer - ring buffer
 * Output : -
-* Return : number of space elements in ring buffer
+* Return : number of free elements in ring buffer
 * Notes  : -
 \***********************************************************************/
 
