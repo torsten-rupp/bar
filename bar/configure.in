@@ -252,7 +252,6 @@ AC_SUBST(PLATFORM)                          dnl platform name
 AC_SUBST(FILE_SEPARATOR_CHAR)               dnl file separator path character (/ or \)
 
 AC_SUBST(ENABLE_DEBUG)                      dnl "yes" for debug version, "no" otherwise
-AC_SUBST(ENABLE_GUI)                        dnl "yes" to build GUI, "no" otherwise
 AC_SUBST(ENABLE_BZIP2)                      dnl "yes" for bzip2 support, "no" otherwise
 AC_SUBST(ENABLE_LZMA)                       dnl "yes" for lzma support, "no" otherwise
 AC_SUBST(ENABLE_XDELTA3)                    dnl "yes" for xdelta3 support, "no" otherwise
@@ -315,6 +314,8 @@ AC_SUBST(MKFS_MSDOS)                        dnl mksfs.msdos command
 AC_SUBST(MKFS_REISERFS)                     dnl mksfs.reiserfs command
 AC_SUBST(MKFS_REISER4)                      dnl mksfs.reiser4 command
 
+AC_SUBST(TIME)                              dnl time command
+
 AC_SUBST(EPM)                               dnl EPM tool
 AC_SUBST(EPM_VERSION_3)                     dnl 1 if EPM version 3, otherwise empty
 AC_SUBST(EPM_VERSION_4)                     dnl 1 if EPM version 4, otherwise empty
@@ -342,6 +343,7 @@ ENABLE_SSH="yes"
 ENABLE_TLS="yes"
 ENABLE_ISO9660="yes"
 ENABLE_GUI="yes"
+ENABLE_PACKAGE_COMPILE="yes"   
 
 dnl ---------------------------- check system --------------------------
 
@@ -465,6 +467,11 @@ AC_ARG_ENABLE(
   AC_HELP_STRING([--disable-gui],[disable GUI support (barcontrol)]),
   [ENABLE_GUI=$enableval]
 )
+AC_ARG_ENABLE(
+  package-compile,
+  AC_HELP_STRING([--disable-package-compile],[disable compilation of external packages]),
+  [ENABLE_PACKAGE_COMPILE=$enableval]
+)
 
 if test $ENABLE_TLS = "yes" -a ! $ENABLE_GCRYPT = "yes"; then
   AC_MSG_WARN([gcrypt no enabled, disabled TLS support.])
@@ -492,35 +499,37 @@ if test -z "$INSTALL"; then
   AC_MSG_ERROR([Cannot find a 'install' in PATH. Please check your PATH environment variable.])
 fi
 if test -d epm -o -d "`readlink epm`"; then
-  dnl compile epm
+  if test "$ENABLE_PACKAGE_COMPILE" = "yes"; then
+    dnl compile epm
 
-  cwd=`pwd`
+    cwd=`pwd`
 
-  AC_MSG_COMPILE([epm])
-  result=1
-  if test $result -eq 1; then
-    (cd epm; ./configure --prefix=$cwd/packages) 1>/dev/null 2>/dev/null
-    if test $? -ne 0; then 
-      AC_MSG_RESULT([fail (configure)])
-      result=0
+    AC_MSG_COMPILE([epm])
+    result=1
+    if test $result -eq 1; then
+      (cd epm; ./configure --prefix=$cwd/packages) 1>/dev/null 2>/dev/null
+      if test $? -ne 0; then 
+        AC_MSG_RESULT([fail (configure)])
+        result=0
+      fi
     fi
-  fi
-  if test $result -eq 1; then
-    (cd epm; make clean; make) 1>/dev/null 2>/dev/null
-    if test $? -ne 0; then 
-      AC_MSG_RESULT([fail (make)])
-      result=0
+    if test $result -eq 1; then
+      (cd epm; make clean; make) 1>/dev/null 2>/dev/null
+      if test $? -ne 0; then 
+        AC_MSG_RESULT([fail (make)])
+        result=0
+      fi
     fi
-  fi
-  if test $result -eq 1; then
-    (cd epm; make install PREFIX=$cwd/packages) 1>/dev/null 2>/dev/null
-    if test $? -ne 0; then 
-      AC_MSG_RESULT([fail (make)])
-      result=0
+    if test $result -eq 1; then
+      (cd epm; make install PREFIX=$cwd/packages) 1>/dev/null 2>/dev/null
+      if test $? -ne 0; then 
+        AC_MSG_RESULT([fail (make)])
+        result=0
+      fi
     fi
-  fi
-  if test $result -eq 1; then
-    AC_MSG_RESULT([done])
+    if test $result -eq 1; then
+      AC_MSG_RESULT([done])
+    fi
   fi
 
   EPM=$cwd/packages/bin/epm
@@ -618,6 +627,8 @@ AC_PATH_PROGS(MKFS_MSDOS,   mkfs.msdos,   ,/sbin)
 AC_PATH_PROGS(MKFS_REISERFS,mkfs.reiserfs,,/sbin)
 AC_PATH_PROGS(MKFS_REISER4, mkfs.reiser4, ,/sbin)
 
+AC_PATH_PROGS(TIME,time,,/usr/bin)
+
 dnl -------------- headers/functions/definitions/libraries -------------
 
 # set variables for tests
@@ -664,38 +675,42 @@ CC_INCLUDES="$CC_INCLUDES $cwd/packages/include"
 LIBRARY_PATHS="$LIBRARY_PATHS $cwd/packages/lib"
 
 if test -d zlib -o -d "`readlink zlib`"; then
-  dnl compile zlib library
+  if test "$ENABLE_PACKAGE_COMPILE" = "yes"; then
+    dnl compile zlib library
 
-  mkdir packages 2>/dev/null
-  mkdir packages/include 2>/dev/null
-  mkdir packages/lib 2>/dev/null
-  cwd=`pwd`
+    mkdir packages 2>/dev/null
+    mkdir packages/include 2>/dev/null
+    mkdir packages/lib 2>/dev/null
+    cwd=`pwd`
 
-  AC_MSG_COMPILE([zlib])
-  result=1
-  if test $result -eq 1; then
-    (cd zlib; ./configure --prefix=$cwd/packages) 1>/dev/null 2>/dev/null
-    if test $? -ne 0; then 
-      AC_MSG_RESULT([fail (configure)])
-      result=0
+    AC_MSG_COMPILE([zlib])
+    result=1
+    if test $result -eq 1; then
+      (cd zlib; ./configure --prefix=$cwd/packages) 1>/dev/null 2>/dev/null
+      if test $? -ne 0; then 
+        AC_MSG_RESULT([fail (configure)])
+        result=0
+      fi
     fi
-  fi
-  if test $result -eq 1; then
-    (cd zlib; make clean; make) 1>/dev/null 2>/dev/null
-    if test $? -ne 0; then 
-      AC_MSG_RESULT([fail (make)])
-      result=0
+    if test $result -eq 1; then
+      (cd zlib; make clean; make) 1>/dev/null 2>/dev/null
+      if test $? -ne 0; then 
+        AC_MSG_RESULT([fail (make)])
+        result=0
+      fi
     fi
-  fi
-  if test $result -eq 1; then
-    (cd zlib; make install PREFIX=$cwd/packages) 1>/dev/null 2>/dev/null
-    if test $? -ne 0; then 
-      AC_MSG_RESULT([fail (make)])
-      result=0
+    if test $result -eq 1; then
+      (cd zlib; make install PREFIX=$cwd/packages) 1>/dev/null 2>/dev/null
+      if test $? -ne 0; then 
+        AC_MSG_RESULT([fail (make)])
+        result=0
+      fi
     fi
-  fi
-  if test $result -eq 1; then
-    AC_MSG_RESULT([done])
+    if test $result -eq 1; then
+      AC_MSG_RESULT([done])
+    fi
+  else
+    result=1
   fi
 
   if test $result -eq 1; then
@@ -721,31 +736,35 @@ fi
 
 if test $ENABLE_BZIP2 = "yes"; then
   if test -d bzip2 -o -d "`readlink bzip2`"; then
-    dnl compile bzip2 library
+    if test "$ENABLE_PACKAGE_COMPILE" = "yes"; then
+      dnl compile bzip2 library
 
-    mkdir packages 2>/dev/null
-    mkdir packages/include 2>/dev/null
-    mkdir packages/lib 2>/dev/null
-    cwd=`pwd`
+      mkdir packages 2>/dev/null
+      mkdir packages/include 2>/dev/null
+      mkdir packages/lib 2>/dev/null
+      cwd=`pwd`
 
-    AC_MSG_COMPILE([bzip2])
-    result=1
-    if test $result -eq 1; then
-      (cd bzip2; make clean; make) 1>/dev/null 2>/dev/null
-      if test $? -ne 0; then 
-        AC_MSG_RESULT([fail (make)])
-        result=0
+      AC_MSG_COMPILE([bzip2])
+      result=1
+      if test $result -eq 1; then
+        (cd bzip2; make clean; make) 1>/dev/null 2>/dev/null
+        if test $? -ne 0; then 
+          AC_MSG_RESULT([fail (make)])
+          result=0
+        fi
       fi
-    fi
-    if test $result -eq 1; then
-      (cd bzip2; make install PREFIX=$cwd/packages) 1>/dev/null 2>/dev/null
-      if test $? -ne 0; then 
-        AC_MSG_RESULT([fail (make)])
-        result=0
+      if test $result -eq 1; then
+        (cd bzip2; make install PREFIX=$cwd/packages) 1>/dev/null 2>/dev/null
+        if test $? -ne 0; then 
+          AC_MSG_RESULT([fail (make)])
+          result=0
+        fi
       fi
-    fi
-    if test $result -eq 1; then
-      AC_MSG_RESULT([done])
+      if test $result -eq 1; then
+        AC_MSG_RESULT([done])
+      fi
+    else
+      result=1
     fi
 
     if test $result -eq 1; then
@@ -772,38 +791,42 @@ fi
 
 if test $ENABLE_LZMA = "yes"; then
   if test -d xz -o -d "`readlink xz`"; then
-    dnl compile lzma library
+    if test "$ENABLE_PACKAGE_COMPILE" = "yes"; then
+      dnl compile lzma library
 
-    mkdir packages 2>/dev/null
-    mkdir packages/include 2>/dev/null
-    mkdir packages/lib 2>/dev/null
-    cwd=`pwd`
+      mkdir packages 2>/dev/null
+      mkdir packages/include 2>/dev/null
+      mkdir packages/lib 2>/dev/null
+      cwd=`pwd`
 
-    AC_MSG_COMPILE([xz utils])
-    result=1
-    if test $result -eq 1; then
-      (cd xz; ./configure --prefix=$cwd/packages) 1>/dev/null 2>/dev/null
-      if test $? -ne 0; then 
-        AC_MSG_RESULT([fail (configure)])
-        result=0
+      AC_MSG_COMPILE([xz utils])
+      result=1
+      if test $result -eq 1; then
+        (cd xz; ./configure --prefix=$cwd/packages) 1>/dev/null 2>/dev/null
+        if test $? -ne 0; then 
+          AC_MSG_RESULT([fail (configure)])
+          result=0
+        fi
       fi
-    fi
-    if test $result -eq 1; then
-      (cd xz; make clean; make) 1>/dev/null 2>/dev/null
-      if test $? -ne 0; then 
-        AC_MSG_RESULT([fail (make)])
-        result=0
+      if test $result -eq 1; then
+        (cd xz; make clean; make) 1>/dev/null 2>/dev/null
+        if test $? -ne 0; then 
+          AC_MSG_RESULT([fail (make)])
+          result=0
+        fi
       fi
-    fi
-    if test $result -eq 1; then
-      (cd xz; make install) 1>/dev/null 2>/dev/null
-      if test $? -ne 0; then 
-        AC_MSG_RESULT([fail (install)])
-        result=0
+      if test $result -eq 1; then
+        (cd xz; make install) 1>/dev/null 2>/dev/null
+        if test $? -ne 0; then 
+          AC_MSG_RESULT([fail (install)])
+          result=0
+        fi
       fi
-    fi
-    if test $result -eq 1; then
-      AC_MSG_RESULT([done])
+      if test $result -eq 1; then
+        AC_MSG_RESULT([done])
+      fi
+    else
+      result=1
     fi
 
     if test $result -eq 1; then
@@ -840,65 +863,70 @@ fi
 
 if test $ENABLE_GCRYPT = "yes"; then
   if test \( -d libgpg-error -o -d "`readlink libgpg-error`" \) -a \( -d libgcrypt -o -d "`readlink libgcrypt`" \); then
-    dnl compile libgcrypt library
+    if test "$ENABLE_PACKAGE_COMPILE" = "yes"; then
+      dnl compile libgcrypt library
 
-    mkdir packages 2>/dev/null
-    mkdir packages/include 2>/dev/null
-    mkdir packages/lib 2>/dev/null
-    cwd=`pwd`
+      mkdir packages 2>/dev/null
+      mkdir packages/include 2>/dev/null
+      mkdir packages/lib 2>/dev/null
+      cwd=`pwd`
 
-    AC_MSG_COMPILE([libgpg-error])
-    result1=1
-    if test $result1 -eq 1; then
-      (cd libgpg-error; ./configure --prefix=$cwd/packages) 1>/dev/null 2>/dev/null
-      if test $? -ne 0; then 
-        AC_MSG_RESULT([fail (configure)])
-        result1=0
+      AC_MSG_COMPILE([libgpg-error])
+      result1=1
+      if test $result1 -eq 1; then
+        (cd libgpg-error; ./configure --prefix=$cwd/packages) 1>/dev/null 2>/dev/null
+        if test $? -ne 0; then 
+          AC_MSG_RESULT([fail (configure)])
+          result1=0
+        fi
       fi
-    fi
-    if test $result1 -eq 1; then
-      (cd libgpg-error; make clean; make) 1>/dev/null 2>/dev/null
-      if test $? -ne 0; then 
-        AC_MSG_RESULT([fail (configure)])
-        result1=0
+      if test $result1 -eq 1; then
+        (cd libgpg-error; make clean; make) 1>/dev/null 2>/dev/null
+        if test $? -ne 0; then 
+          AC_MSG_RESULT([fail (configure)])
+          result1=0
+        fi
       fi
-    fi
-    if test $result1 -eq 1; then
-      (cd libgpg-error; make install) 1>/dev/null 2>/dev/null
-      if test $? -ne 0; then 
-        AC_MSG_RESULT([fail (install)])
-        result1=0
+      if test $result1 -eq 1; then
+        (cd libgpg-error; make install) 1>/dev/null 2>/dev/null
+        if test $? -ne 0; then 
+          AC_MSG_RESULT([fail (install)])
+          result1=0
+        fi
       fi
-    fi
-    if test $result1 -eq 1; then
-      AC_MSG_RESULT([done])
-    fi
+      if test $result1 -eq 1; then
+        AC_MSG_RESULT([done])
+      fi
 
-    AC_MSG_COMPILE([libgcrypt])
-    result2=1
-    if test $result2 -eq 1; then
-      (cd libgcrypt; ./configure --prefix=$cwd/packages --with-gpg-error-prefix=$cwd/packages) 1>/dev/null 2>/dev/null
-      if test $? -ne 0; then 
-        AC_MSG_RESULT([fail (configure)])
-        result2=0
+      AC_MSG_COMPILE([libgcrypt])
+      result2=1
+      if test $result2 -eq 1; then
+        (cd libgcrypt; ./configure --prefix=$cwd/packages --with-gpg-error-prefix=$cwd/packages) 1>/dev/null 2>/dev/null
+        if test $? -ne 0; then 
+          AC_MSG_RESULT([fail (configure)])
+          result2=0
+        fi
       fi
-    fi
-    if test $result2 -eq 1; then
-      (cd libgcrypt; make clean; make) 1>/dev/null 2>/dev/null
-      if test $? -ne 0; then 
-        AC_MSG_RESULT([fail (make)])
-        result2=0
+      if test $result2 -eq 1; then
+        (cd libgcrypt; make clean; make) 1>/dev/null 2>/dev/null
+        if test $? -ne 0; then 
+          AC_MSG_RESULT([fail (make)])
+          result2=0
+        fi
       fi
-    fi
-    if test $result2 -eq 1; then
-      (cd libgcrypt; make install) 1>/dev/null 2>/dev/null
-      if test $? -ne 0; then 
-        AC_MSG_RESULT([fail (install)])
-        result2=0
+      if test $result2 -eq 1; then
+        (cd libgcrypt; make install) 1>/dev/null 2>/dev/null
+        if test $? -ne 0; then 
+          AC_MSG_RESULT([fail (install)])
+          result2=0
+        fi
       fi
-    fi
-    if test $result2 -eq 1; then
-      AC_MSG_RESULT([done])
+      if test $result2 -eq 1; then
+        AC_MSG_RESULT([done])
+      fi
+    else
+      result1=1
+      result2=1
     fi
 
     if test $result1 -eq 1 -a $result2 -eq 1; then
@@ -947,37 +975,41 @@ fi
 
 if test $ENABLE_FTP = "yes"; then
   if test -d ftplib -o -d "`readlink ftplib`"; then
-    dnl compile ftp library
+    if test "$ENABLE_PACKAGE_COMPILE" = "yes"; then
+      dnl compile ftp library
 
-    mkdir packages 2>/dev/null
-    mkdir packages/include 2>/dev/null
-    mkdir packages/lib 2>/dev/null
-    cwd=`pwd`
+      mkdir packages 2>/dev/null
+      mkdir packages/include 2>/dev/null
+      mkdir packages/lib 2>/dev/null
+      cwd=`pwd`
 
-    AC_MSG_COMPILE([ftplib])
-    result=1
-    if test $result -eq 1; then
-      (cd packages/ftplib-3.1; patch --batch -N -p1 <$cwd/misc/ftplib-3.1-without-perror.patch) 1>/dev/null 2>/dev/null
-      (cd packages/ftplib-3.1; patch --batch -N -p1 <$cwd/misc/ftplib-3.1-ftpaccess.patch) 1>/dev/null 2>/dev/null
-      (cd packages/ftplib-3.1; patch --batch -N -p1 <$cwd/misc/ftplib-3.1-receive-timeout.patch) 1>/dev/null 2>/dev/null
-      (cd packages/ftplib-3.1; patch --batch -N -p1 <$cwd/misc/ftplib-3.1-ftpdir-file-close.patch) 1>/dev/null 2>/dev/null
-    fi
-    if test $result -eq 1; then
-      (cd ftplib/linux; make clean; make) 1>/dev/null 2>/dev/null
-      if test $? -ne 0; then 
-        AC_MSG_RESULT([fail (make)])
-        result=0
+      AC_MSG_COMPILE([ftplib])
+      result=1
+      if test $result -eq 1; then
+        (cd packages/ftplib-3.1; patch --batch -N -p1 <$cwd/misc/ftplib-3.1-without-perror.patch) 1>/dev/null 2>/dev/null
+        (cd packages/ftplib-3.1; patch --batch -N -p1 <$cwd/misc/ftplib-3.1-ftpaccess.patch) 1>/dev/null 2>/dev/null
+        (cd packages/ftplib-3.1; patch --batch -N -p1 <$cwd/misc/ftplib-3.1-receive-timeout.patch) 1>/dev/null 2>/dev/null
+        (cd packages/ftplib-3.1; patch --batch -N -p1 <$cwd/misc/ftplib-3.1-ftpdir-file-close.patch) 1>/dev/null 2>/dev/null
       fi
-    fi
-    if test $result -eq 1; then
-      (cd ftplib/linux; cp ftplib.h $cwd/packages/include && cp libftp.a $cwd/packages/lib) 1>/dev/null 2>/dev/null
-      if test $? -ne 0; then 
-        AC_MSG_RESULT([fail (install)])
-        result=0
+      if test $result -eq 1; then
+        (cd ftplib/linux; make clean; make) 1>/dev/null 2>/dev/null
+        if test $? -ne 0; then 
+          AC_MSG_RESULT([fail (make)])
+          result=0
+        fi
       fi
-    fi
-    if test $result -eq 1; then
-      AC_MSG_RESULT([done])
+      if test $result -eq 1; then
+        (cd ftplib/linux; cp ftplib.h $cwd/packages/include && cp libftp.a $cwd/packages/lib) 1>/dev/null 2>/dev/null
+        if test $? -ne 0; then 
+          AC_MSG_RESULT([fail (install)])
+          result=0
+        fi
+      fi
+      if test $result -eq 1; then
+        AC_MSG_RESULT([done])
+      fi
+    else
+      result=1
     fi
 
     if test $result -eq 1; then
@@ -1003,41 +1035,45 @@ fi
 
 if test $ENABLE_SSH = "yes"; then
   if test -d libssh2 -o -d "`readlink libssh2`"; then
-    dnl compile ssh2 library
+    if test "$ENABLE_PACKAGE_COMPILE" = "yes"; then
+      dnl compile ssh2 library
 
-    mkdir packages 2>/dev/null
-    mkdir packages/include 2>/dev/null
-    mkdir packages/lib 2>/dev/null
-    cwd=`pwd`
+      mkdir packages 2>/dev/null
+      mkdir packages/include 2>/dev/null
+      mkdir packages/lib 2>/dev/null
+      cwd=`pwd`
 
-    AC_MSG_COMPILE([libssh2])
-    result=1
-    if test $result -eq 1; then
-      (cd packages; patch --batch -N -p0 <$cwd/misc/libssh2-1.1-keepalive.patch) 1>/dev/null 2>/dev/null
-    fi
-    if test $result -eq 1; then
-      (cd libssh2; ./configure --prefix=$cwd/packages --enable-debug) 1>/dev/null 2>/dev/null
-      if test $? -ne 0; then 
-        AC_MSG_RESULT([fail (configure)])
-        result=0
+      AC_MSG_COMPILE([libssh2])
+      result=1
+      if test $result -eq 1; then
+        (cd packages; patch --batch -N -p0 <$cwd/misc/libssh2-1.1-keepalive.patch) 1>/dev/null 2>/dev/null
       fi
-    fi
-    if test $result -eq 1; then
-      (cd libssh2; make clean; make) 1>/dev/null 2>/dev/null
-      if test $? -ne 0; then 
-        AC_MSG_RESULT([fail (make)])
-        result=0
+      if test $result -eq 1; then
+        (cd libssh2; ./configure --prefix=$cwd/packages --enable-debug) 1>/dev/null 2>/dev/null
+        if test $? -ne 0; then 
+          AC_MSG_RESULT([fail (configure)])
+          result=0
+        fi
       fi
-    fi
-    if test $result -eq 1; then
-      (cd libssh2; make install) 1>/dev/null 2>/dev/null
-      if test $? -ne 0; then 
-        AC_MSG_RESULT([fail (install)])
-        result=0
+      if test $result -eq 1; then
+        (cd libssh2; make clean; make) 1>/dev/null 2>/dev/null
+        if test $? -ne 0; then 
+          AC_MSG_RESULT([fail (make)])
+          result=0
+        fi
       fi
-    fi
-    if test $result -eq 1; then
-      AC_MSG_RESULT([done])
+      if test $result -eq 1; then
+        (cd libssh2; make install) 1>/dev/null 2>/dev/null
+        if test $? -ne 0; then 
+          AC_MSG_RESULT([fail (install)])
+          result=0
+        fi
+      fi
+      if test $result -eq 1; then
+        AC_MSG_RESULT([done])
+      fi
+    else
+      result=1
     fi
 
     if test $result -eq 1; then
@@ -1075,38 +1111,42 @@ fi
 
 if test $ENABLE_TLS = "yes"; then
   if test -d gnutls -o -d "`readlink gnutls`"; then
-    dnl compile gnutls library
+    if test "$ENABLE_PACKAGE_COMPILE" = "yes"; then
+      dnl compile gnutls library
 
-    mkdir packages 2>/dev/null
-    mkdir packages/include 2>/dev/null
-    mkdir packages/lib 2>/dev/null
-    cwd=`pwd`
+      mkdir packages 2>/dev/null
+      mkdir packages/include 2>/dev/null
+      mkdir packages/lib 2>/dev/null
+      cwd=`pwd`
 
-    AC_MSG_COMPILE([gnutls])
-    result=1
-    if test $result -eq 1; then
-      (cd gnutls; ./configure --prefix=$cwd/packages --with-included-libtasn1) 1>/dev/null 2>/dev/null
-      if test $? -ne 0; then 
-        AC_MSG_RESULT([fail (configure)])
-        result=0
+      AC_MSG_COMPILE([gnutls])
+      result=1
+      if test $result -eq 1; then
+        (cd gnutls; ./configure --prefix=$cwd/packages --with-included-libtasn1) 1>/dev/null 2>/dev/null
+        if test $? -ne 0; then 
+          AC_MSG_RESULT([fail (configure)])
+          result=0
+        fi
       fi
-    fi
-    if test $result -eq 1; then
-      (cd gnutls; make clean; make) 1>/dev/null 2>/dev/null
-      if test $? -ne 0; then 
-        AC_MSG_RESULT([fail (make)])
-        result=0
+      if test $result -eq 1; then
+        (cd gnutls; make clean; make) 1>/dev/null 2>/dev/null
+        if test $? -ne 0; then 
+          AC_MSG_RESULT([fail (make)])
+          result=0
+        fi
       fi
-    fi
-    if test $result -eq 1; then
-      (cd gnutls; make install) 1>/dev/null 2>/dev/null
-      if test $? -ne 0; then 
-        AC_MSG_RESULT([fail (install)])
-        result=0
+      if test $result -eq 1; then
+        (cd gnutls; make install) 1>/dev/null 2>/dev/null
+        if test $? -ne 0; then 
+          AC_MSG_RESULT([fail (install)])
+          result=0
+        fi
       fi
-    fi
-    if test $result -eq 1; then
-      AC_MSG_RESULT([done])
+      if test $result -eq 1; then
+        AC_MSG_RESULT([done])
+      fi
+    else
+      result=1
     fi
 
     if test $result -eq 1; then
@@ -1141,42 +1181,46 @@ fi
 
 if test $ENABLE_ISO9660 = "yes"; then
   if test -d libcdio -o -d "`readlink libcdio`"; then
-    dnl compile libcdio library
+    if test "$ENABLE_PACKAGE_COMPILE" = "yes"; then
+      dnl compile libcdio library
 
-    mkdir packages 2>/dev/null
-    mkdir packages/include 2>/dev/null
-    mkdir packages/lib 2>/dev/null
-    cwd=`pwd`
+      mkdir packages 2>/dev/null
+      mkdir packages/include 2>/dev/null
+      mkdir packages/lib 2>/dev/null
+      cwd=`pwd`
 
-    AC_MSG_COMPILE([libcdio])
-    result=1
-    if test $result -eq 1; then
-      if test "$ENABLE_DEBUG" = "yes"; then
-        (cd libcdio; CFLAGS="-g -O0" CXXFLAGS="-g -O0" ./configure --prefix=$cwd/packages --disable-cxx --enable-static=iso9660 --disable-shared) 1>/dev/null 2>/dev/null
-      else
-        (cd libcdio; ./configure --prefix=$cwd/packages --disable-cxx --enable-static=iso9660 --disable-shared) 1>/dev/null 2>/dev/null
+      AC_MSG_COMPILE([libcdio])
+      result=1
+      if test $result -eq 1; then
+        if test "$ENABLE_DEBUG" = "yes"; then
+          (cd libcdio; CFLAGS="-g -O0" CXXFLAGS="-g -O0" ./configure --prefix=$cwd/packages --disable-cxx --enable-static=iso9660 --disable-shared) 1>/dev/null 2>/dev/null
+        else
+          (cd libcdio; ./configure --prefix=$cwd/packages --disable-cxx --enable-static=iso9660 --disable-shared) 1>/dev/null 2>/dev/null
+        fi
+        if test $? -ne 0; then 
+          AC_MSG_RESULT([fail (configure)])
+          result=0
+        fi
       fi
-      if test $? -ne 0; then 
-        AC_MSG_RESULT([fail (configure)])
-        result=0
+      if test $result -eq 1; then
+        (cd libcdio; make clean; make) 1>/dev/null 2>/dev/null
+        if test $? -ne 0; then 
+          AC_MSG_RESULT([fail (make)])
+          result=0
+        fi
       fi
-    fi
-    if test $result -eq 1; then
-      (cd libcdio; make clean; make) 1>/dev/null 2>/dev/null
-      if test $? -ne 0; then 
-        AC_MSG_RESULT([fail (make)])
-        result=0
+      if test $result -eq 1; then
+        (cd libcdio; make install PREFIX=$cwd/packages) 1>/dev/null 2>/dev/null
+        if test $? -ne 0; then 
+          AC_MSG_RESULT([fail (install)])
+          result=0
+        fi
       fi
-    fi
-    if test $result -eq 1; then
-      (cd libcdio; make install PREFIX=$cwd/packages) 1>/dev/null 2>/dev/null
-      if test $? -ne 0; then 
-        AC_MSG_RESULT([fail (install)])
-        result=0
+      if test $result -eq 1; then
+        AC_MSG_RESULT([done])
       fi
-    fi
-    if test $result -eq 1; then
-      AC_MSG_RESULT([done])
+    else
+      result=1
     fi
 
     if test $result -eq 1; then
