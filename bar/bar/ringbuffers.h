@@ -158,7 +158,7 @@ typedef char(*RingBufferElementIterateFunction)(void *userData, void *data);
   #define RINGBUFFER_CHECK_VALID(ringBuffer) \
     do \
     { \
-      VARIABLE_UNUSED(ringBuffer); \
+      UNUSED_VARIABLE(ringBuffer); \
     } \
     while (0)
 #endif /* not NDEBUG */
@@ -238,6 +238,25 @@ void __RingBuffer_delete(const char *__fileName__, ulong __lineNb__, RingBuffer 
 #endif /* NDEBUG */
 
 /***********************************************************************\
+* Name   : RingBuffer_getSize
+* Purpose: get max. number of free elements in ring buffer
+* Input  : ringBuffer - ring buffer
+* Output : -
+* Return : max. number of elements (size) in ring buffer
+* Notes  : -
+\***********************************************************************/
+
+INLINE ulong RingBuffer_getSize(const RingBuffer *ringBuffer);
+#if defined(NDEBUG) || defined(__RINGBUFFER_IMPLEMENATION__)
+INLINE ulong RingBuffer_getSize(const RingBuffer *ringBuffer)
+{
+  RINGBUFFER_CHECK_VALID(ringBuffer);
+
+  return (ringBuffer != NULL) ? ringBuffer->size-1 : 0L;
+}
+#endif /* NDEBUG || __RINGBUFFER_IMPLEMENATION__ */
+
+/***********************************************************************\
 * Name   : RingBuffer_resize
 * Purpose: set new ring buffer size (resize)
 * Input  : newSize - new size of ring buffer
@@ -276,7 +295,7 @@ INLINE ulong RingBuffer_getFree(const RingBuffer *ringBuffer)
 {
   RINGBUFFER_CHECK_VALID(ringBuffer);
 
-  return (ringBuffer != NULL) ? ringBuffer->size-ringBuffer->length-1 : 0L;
+  return (ringBuffer != NULL) ? ringBuffer->size-1-ringBuffer->length : 0L;
 }
 #endif /* NDEBUG || __RINGBUFFER_IMPLEMENATION__ */
 

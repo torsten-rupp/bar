@@ -150,6 +150,7 @@ LOCAL void normalizeIn(RingBuffer *ringBuffer)
       && (ringBuffer->nextIn > ringBuffer->nextOut)
      )
   {
+//fprintf(stderr,"%s, %d: normalizeIn\n",__FILE__,__LINE__);
     /* non-contigous -> rearrange
 
        before:
@@ -209,6 +210,7 @@ LOCAL void normalizeOut(RingBuffer *ringBuffer)
       && (ringBuffer->nextIn < ringBuffer->nextOut)
      )
   {
+fprintf(stderr,"%s, %d: normalizeOut\n",__FILE__,__LINE__);
     /* non-contigous -> rearrange
 
        before:
@@ -443,6 +445,7 @@ bool RingBuffer_resize(RingBuffer *ringBuffer, ulong newSize)
   ulong n;
 
   assert(newSize > 0);
+fprintf(stderr,"%s, %d: RingBuffer_resize %ld %ld\n",__FILE__,__LINE__,ringBuffer->size,newSize);
 
   RINGBUFFER_CHECK_VALID(ringBuffer);
 
@@ -665,10 +668,10 @@ void *RingBuffer_get(RingBuffer *ringBuffer, void *data, ulong n)
         ringBuffer->nextIn  = 0L;
       }
     }
-    else
-    {
-      data = NULL;
-    }
+  }
+  else
+  {
+    data = NULL;
   }
 
   return data;
@@ -687,65 +690,68 @@ bool RingBuffer_move(RingBuffer *sourceRingBuffer, RingBuffer *destinationRingBu
       && (RingBuffer_getFree(destinationRingBuffer) >= n)
      )
   {
-    // copy data into ring buffer
-    if (outIsContiguous(sourceRingBuffer,n))
+    if (n > 0L)
     {
-      /* continous space -> copy from nextOut..nextOut+n0
+      // copy data into ring buffer
+      if (outIsContiguous(sourceRingBuffer,n))
+      {
+        /* continous space -> copy from nextOut..nextOut+n0
 
-                  <-- n0 -->
-         +--+--+--+--+--+--+--+--+--+--+
-         |  |  |  |aa|bb|xx|yy|  |  |  |
-         +--+--+--+--+--+--+--+--+--+--+
-                   ^next out   ^next in
-      */
-      // continous space -> copy to n0..n0+n
-      n0 = n;
-      n1 = 0L;
-    }
-    else
-    {
-      /* non-continous space -> copy from nextOut..nextOut+n0, 0..n1
+                    <-- n0 -->
+           +--+--+--+--+--+--+--+--+--+--+
+           |  |  |  |aa|bb|xx|yy|  |  |  |
+           +--+--+--+--+--+--+--+--+--+--+
+                     ^next out   ^next in
+        */
+        // continous space -> copy to n0..n0+n
+        n0 = n;
+        n1 = 0L;
+      }
+      else
+      {
+        /* non-continous space -> copy from nextOut..nextOut+n0, 0..n1
 
-         <- n1->              <-- n0 -->
-         +--+--+--+--+--+--+--+--+--+--+
-         |aa|bb|  |  |  |  |  |xx|yy|zz|
-         +--+--+--+--+--+--+--+--+--+--+
-                ^next in       ^next out
-      */
-      // non-continous space -> copy to nextIn..nextIn+n0, 0..n1
-      n0 = sourceRingBuffer->size-sourceRingBuffer->nextOut;
-      n1 = n-n0;
-    }
+           <- n1->              <-- n0 -->
+           +--+--+--+--+--+--+--+--+--+--+
+           |aa|bb|  |  |  |  |  |xx|yy|zz|
+           +--+--+--+--+--+--+--+--+--+--+
+                  ^next in       ^next out
+        */
+        // non-continous space -> copy to nextIn..nextIn+n0, 0..n1
+        n0 = sourceRingBuffer->size-sourceRingBuffer->nextOut;
+        n1 = n-n0;
+      }
 
-    // copy to destination ring buffer
+      // copy to destination ring buffer
 //fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 //dumpMemory(ringBuffer->data,ringBuffer->size*ringBuffer->elementSize);
-    assert(n0 > 0);
-    (void)RingBuffer_put(destinationRingBuffer,
-                         sourceRingBuffer->data+(ulong)sourceRingBuffer->nextOut*(ulong)sourceRingBuffer->elementSize,
-                         (ulong)n0*(ulong)sourceRingBuffer->elementSize
-                        );
-//fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-//dumpMemory(ringBuffer->data,ringBuffer->size*ringBuffer->elementSize);
-    if (n1 > 0)
-    {
+      assert(n0 > 0);
       (void)RingBuffer_put(destinationRingBuffer,
-                           sourceRingBuffer->data+0,
-                           (ulong)n1*(ulong)sourceRingBuffer->elementSize
+                           sourceRingBuffer->data+(ulong)sourceRingBuffer->nextOut*(ulong)sourceRingBuffer->elementSize,
+                           (ulong)n0*(ulong)sourceRingBuffer->elementSize
                           );
 //fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 //dumpMemory(ringBuffer->data,ringBuffer->size*ringBuffer->elementSize);
-    }
+      if (n1 > 0)
+      {
+        (void)RingBuffer_put(destinationRingBuffer,
+                             sourceRingBuffer->data+0,
+                             (ulong)n1*(ulong)sourceRingBuffer->elementSize
+                            );
+//fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+//dumpMemory(ringBuffer->data,ringBuffer->size*ringBuffer->elementSize);
+      }
 
-    // remove elements from ring buffer
-    sourceRingBuffer->length -= n;
-    sourceRingBuffer->nextOut = (sourceRingBuffer->nextOut+n)%sourceRingBuffer->size;
+      // remove elements from ring buffer
+      sourceRingBuffer->length -= n;
+      sourceRingBuffer->nextOut = (sourceRingBuffer->nextOut+n)%sourceRingBuffer->size;
 
-    // reset indizes if empty (optimization)
-    if (sourceRingBuffer->nextOut == sourceRingBuffer->nextIn)
-    {
-      sourceRingBuffer->nextOut = 0L;
-      sourceRingBuffer->nextIn  = 0L;
+      // reset indizes if empty (optimization)
+      if (sourceRingBuffer->nextOut == sourceRingBuffer->nextIn)
+      {
+        sourceRingBuffer->nextOut = 0L;
+        sourceRingBuffer->nextIn  = 0L;
+      }
     }
 
     return TRUE;
