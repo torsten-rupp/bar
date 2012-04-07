@@ -70,6 +70,7 @@ SED        = sed
 SLEEP      = sleep
 STAT       = stat
 TAR        = tar
+TIME       = @TIME@
 
 # for tests only (create test devices)
 LOSETUP    = /sbin/losetup
@@ -469,7 +470,7 @@ test:
 clean_test:
 	$(RMRF) $(TEST_FILES_CLEAN)
 
-test1 test_basic: bar@EXEEXT@
+test1 test_basic: $(TEST_BAR)
 	@$(ECHO_NO_LF) "Test 1: basic..."
 	@$(MAKE) \
           BAR_FILE="test" \
@@ -478,7 +479,7 @@ test1 test_basic: bar@EXEEXT@
           test_file_operations
 	@$(ECHO) "ok"
 
-test2 test_compress: bar@EXEEXT@
+test2 test_compress: $(TEST_BAR)
 	@$(ECHO_NO_LF) "Test 2: compress..."
 	for compress in $(COMPRESS_NAMES); do \
           $(MAKE) \
@@ -493,7 +494,7 @@ test2 test_compress: bar@EXEEXT@
         done
 	@$(ECHO) "ok"
 
-test_delta_compress: bar@EXEEXT@
+test_delta_compress: $(TEST_BAR)
 	@$(ECHO_NO_LF) "Test 2: delta compress..."
 	for compress in $(COMPRESS_NAMES); do \
           $(MAKE) \
@@ -508,7 +509,7 @@ test_delta_compress: bar@EXEEXT@
         done
 	@$(ECHO) "ok"
 
-test3 test_crypt: bar@EXEEXT@
+test3 test_crypt: $(TEST_BAR)
 	@$(ECHO_NO_LF) "Test 3: crypt..."
 	for crypt in $(CRYPT_NAMES); do \
           $(MAKE) \
@@ -523,7 +524,7 @@ test3 test_crypt: bar@EXEEXT@
         done
 	@$(ECHO) "ok"
 
-test4 test_asymmetric_crypt: bar@EXEEXT@
+test4 test_asymmetric_crypt: $(TEST_BAR)
 	@$(ECHO_NO_LF) "Test 4: asymmetric crypt..."
 	@$(RM) test/key.*; $(ECHO_NO_LF) -e "$(TEST_PASSWORD)\n$(TEST_PASSWORD)\n" | SSH_ASKPASS= ./bar --generate-keys test/key
 	for crypt in $(CRYPT_NAMES); do \
@@ -539,7 +540,7 @@ test4 test_asymmetric_crypt: bar@EXEEXT@
         done
 	@$(ECHO) "ok"
 
-test5 test_split: bar@EXEEXT@
+test5 test_split: $(TEST_BAR)
 	@$(ECHO_NO_LF) "Test 5: split..."
 	$(MAKE) \
           BAR_FILE="test-###" \
@@ -548,7 +549,7 @@ test5 test_split: bar@EXEEXT@
           test_file_operations
 	@$(ECHO) "ok"
 
-test6 test_image: bar@EXEEXT@
+test6 test_image: $(TEST_BAR)
 	@$(ECHO_NO_LF) "Test 6: image..."
 	for compress in none zip9; do \
           $(MAKE) \
@@ -563,7 +564,7 @@ test6 test_image: bar@EXEEXT@
         done
 	@$(ECHO) "ok"
 
-test7 test_dvd: bar@EXEEXT@
+test7 test_dvd: $(TEST_BAR)
 	@$(ECHO_NO_LF) "Test 7: dvd..."
 	$(MAKE) \
           BAR_FILE="test" \
@@ -573,7 +574,7 @@ test7 test_dvd: bar@EXEEXT@
           ;
 	@$(ECHO) "ok"
 
-test_combined: bar@EXEEXT@
+test_combined: $(TEST_BAR)
 	@$(ECHO_NO_LF) "Test combined..."
 	@$(RM) test/key.*; $(ECHO_NO_LF) -e "$(TEST_PASSWORD)\n$(TEST_PASSWORD)\n" | SSH_ASKPASS= ./bar --generate-keys test/key
 	for compress in $(TEST_COMBINED_COMPRESS_NAMES); do \
@@ -600,7 +601,7 @@ test_combined: bar@EXEEXT@
         done
 	@$(ECHO) "ok"
 
-test_parameters: bar
+test_parameters: $(TEST_BAR)
 	@$(ECHO_NO_LF) "Test parameters..."
 	$(RMRF) $(TEST_FILES_CLEAN)
 	# help
@@ -628,9 +629,6 @@ test_parameters: bar
 	$(call checkExitcode,127,SSH_ASKPASS= $(TEST_BAR) -d device://test/test.bar) $(if $(QUIET),1>/dev/null)
 	$(call checkExitcode,127,SSH_ASKPASS= $(TEST_BAR) -x device://test/test.bar) $(if $(QUIET),1>/dev/null)
 	@$(ECHO) "ok"
-
-# test bar exeuctable
-TEST_BAR = ./bar
 
 # check exitcode
 checkExitcode = $2; if test $$? -gt $1; then false; fi
@@ -1175,7 +1173,7 @@ test_dvd_operations:
 # ----------------------------------------------------------------------------
 
 # valgrind checks
-.PHONY: memcheck memcheck1
+.PHONY: memcheck
 memcheck: bar
 	$(MAKE) \
           VALGRIND_OPTIONS="--leak-check=summary" \
@@ -1193,7 +1191,7 @@ memcheck_extended: bar
               memcheck1 memcheck2a memcheck2b memcheck2c memcheck2d memcheck2e memcheck3 memcheck4 memcheck5 memcheck6 memcheck7 \
              )
 
-.PHONY: memcheck1 memcheck2 memcheck3 memcheck4 memcheck5 memcheck6 memcheck7
+.PHONY: memcheck1 memcheck2 memcheck2a memcheck2b memcheck2c memcheck2d memcheck2e memcheck3 memcheck4 memcheck5 memcheck6 memcheck7
 memcheck1: bar
 	valgrind \
           --leak-resolution=high \
@@ -1332,6 +1330,125 @@ endif
 
 
 #valgrind --tool=cachegrind ./bar -c test2.bar -o -z xdelta9 --delta-source=test1.bar bar
+
+# ----------------------------------------------------------------------------
+
+# different performance files
+PERFORMANCE_FILES = \
+  test/data/zero100M.dat \
+  test/data/random100M.dat \
+  test/data/delta1/test100M.dat \
+  test/data/delta2/test100M.dat \
+
+# temporary performance files
+PERFORMANCE_FILES_CLEAN = \
+  test/*.bar \
+  test/new \
+  test/restore \
+  test/*.image
+
+# test bar exeuctable
+PERFORMANCE_BAR = ./bar@EXEEXT@
+
+test/data/zero100M.dat:
+	$(INSTALL) -d $(@D)
+	$(DD) if=/dev/zero of=$@ bs=1M count=100 2>/dev/null
+test/data/random100M.dat:
+	$(INSTALL) -d $(@D)
+	$(DD) if=/dev/urandom of=$@ bs=1M count=100 2>/dev/null
+test/data/delta1/test100M.dat:
+	$(INSTALL) -d $(@D)
+	( \
+         $(DD) if=/dev/urandom bs=1M count=100 2>/dev/null; \
+        ) > $@
+test/data/delta2/test100M.dat: test/data/delta1/test100M.dat
+	$(INSTALL) -d $(@D)
+	( \
+          $(DD) if=test/data/delta1/test100M.dat skip=0 bs=1M count=50 2>/dev/null; \
+          $(DD) if=/dev/urandom bs=1M count=1 2>/dev/null; \
+          $(DD) if=test/data/delta1/test100M.dat skip=256 bs=1M count=49 2>/dev/null; \
+        ) > $@
+
+# performance tests
+.PHONY: performance
+performance:
+	@$(MAKE) \
+          $(if $(CHECK),\
+            performance$(CHECK),\
+            performance1 performance2 performance3 performance4 performance5 \
+           )
+
+.PHONY: performance1
+performance1: \
+  $(PERFORMANCE_BAR) \
+  $(PERFORMANCE_FILES)
+	@$(ECHO) "None:"
+	@$(ECHO_NO_LF) "  Create : "
+	@SSH_ASKPASS= $(TIME) --format="%E" sh -c "$(PERFORMANCE_BAR) -c test/test.bar test/data/zero100M.dat test/data/random100M.dat --overwrite-archive-files --compress-algorithm=none 1>/dev/null 2>/dev/null"
+	@$(ECHO_NO_LF) "  Test   : "
+	@SSH_ASKPASS= $(TIME) --format="%E" sh -c "$(PERFORMANCE_BAR) -t test/test.bar 1>/dev/null 2>/dev/null"
+	@$(ECHO_NO_LF) "  Diff   : "
+	@SSH_ASKPASS= $(TIME) --format="%E" sh -c "$(PERFORMANCE_BAR) -d test/test.bar 1>/dev/null 2>/dev/null"
+	@$(ECHO_NO_LF) "  Extract: "
+	@SSH_ASKPASS= $(TIME) --format="%E" sh -c "$(PERFORMANCE_BAR) -x test/test.bar --destination=test/restore --overwrite-files 1>/dev/null 2>/dev/null"
+
+.PHONY: performance2
+performance2: \
+  $(PERFORMANCE_BAR) \
+  $(PERFORMANCE_FILES)
+	@$(ECHO) "ZIP:"
+	@$(ECHO_NO_LF) "  Create : "
+	@SSH_ASKPASS= $(TIME) --format="%E" sh -c "$(PERFORMANCE_BAR) -c test/test.bar test/data/zero100M.dat test/data/random100M.dat --overwrite-archive-files --compress-algorithm=zip9 1>/dev/null 2>/dev/null"
+	@$(ECHO_NO_LF) "  Test   : "
+	@SSH_ASKPASS= $(TIME) --format="%E" sh -c "$(PERFORMANCE_BAR) -t test/test.bar 1>/dev/null 2>/dev/null"
+	@$(ECHO_NO_LF) "  Diff   : "
+	@SSH_ASKPASS= $(TIME) --format="%E" sh -c "$(PERFORMANCE_BAR) -d test/test.bar 1>/dev/null 2>/dev/null"
+	@$(ECHO_NO_LF) "  Extract: "(cd test/data/delta2; SSH_ASKPASS= /usr/bin/time --format="%E" sh -c "../../.././bar -t ../../test-B.bar --delta-source=../../test-A.bar 1>/dev/null 2>/dev/null")
+
+	@SSH_ASKPASS= $(TIME) --format="%E" sh -c "$(PERFORMANCE_BAR) -x test/test.bar --destination=test/restore --overwrite-files 1>/dev/null 2>/dev/null"
+
+.PHONY: performance3
+performance3: \
+  $(PERFORMANCE_BAR) \
+  $(PERFORMANCE_FILES)
+	@$(ECHO) "BZIP2:"
+	@$(ECHO_NO_LF) "  Create : "
+	@SSH_ASKPASS= $(TIME) --format="%E" sh -c "$(PERFORMANCE_BAR) -c test/test.bar test/data/zero100M.dat test/data/random100M.dat --overwrite-archive-files --compress-algorithm=bzip9 1>/dev/null 2>/dev/null"
+	@$(ECHO_NO_LF) "  Test   : "
+	@SSH_ASKPASS= $(TIME) --format="%E" sh -c "$(PERFORMANCE_BAR) -t test/test.bar 1>/dev/null 2>/dev/null"
+	@$(ECHO_NO_LF) "  Diff   : "
+	@SSH_ASKPASS= $(TIME) --format="%E" sh -c "$(PERFORMANCE_BAR) -d test/test.bar 1>/dev/null 2>/dev/null"
+	@$(ECHO_NO_LF) "  Extract: "
+	@SSH_ASKPASS= $(TIME) --format="%E" sh -c "$(PERFORMANCE_BAR) -x test/test.bar --destination=test/restore --overwrite-files 1>/dev/null 2>/dev/null"
+
+.PHONY: performance4
+performance4: \
+  $(PERFORMANCE_BAR) \
+  $(PERFORMANCE_FILES)
+	@$(ECHO) "LZMA:"
+	@$(ECHO_NO_LF) "  Create : "
+	@SSH_ASKPASS= $(TIME) --format="%E" sh -c "$(PERFORMANCE_BAR) -c test/test.bar test/data/zero100M.dat test/data/random100M.dat --overwrite-archive-files --compress-algorithm=lzma9 1>/dev/null 2>/dev/null"
+	@$(ECHO_NO_LF) "  Test   : "
+	@SSH_ASKPASS= $(TIME) --format="%E" sh -c "$(PERFORMANCE_BAR) -t test/test.bar 1>/dev/null 2>/dev/null"
+	@$(ECHO_NO_LF) "  Diff   : "
+	@SSH_ASKPASS= $(TIME) --format="%E" sh -c "$(PERFORMANCE_BAR) -d test/test.bar 1>/dev/null 2>/dev/null"
+	@$(ECHO_NO_LF) "  Extract: "
+	@SSH_ASKPASS= $(TIME) --format="%E" sh -c "$(PERFORMANCE_BAR) -x test/test.bar --destination=test/restore --overwrite-files 1>/dev/null 2>/dev/null"
+
+.PHONY: performance5
+performance5: \
+  $(PERFORMANCE_BAR) \
+  $(PERFORMANCE_FILES)
+	@$(ECHO) "XDELTA:"
+	@($(CD) test/data/delta1; ../../../$(PERFORMANCE_BAR) -c ../../test-A.bar test100M.dat --overwrite-archive-files --compress-algorithm=none 1>/dev/null 2>/dev/null)
+	@$(ECHO_NO_LF) "  Create : "
+	@($(CD) test/data/delta2; SSH_ASKPASS= $(TIME) --format="%E" sh -c "../../../$(PERFORMANCE_BAR) -c ../../test-B.bar test100M.dat --overwrite-archive-files --compress-algorithm=xdelta9+lzma9 --delta-source=../../test-A.bar 1>/dev/null 2>/dev/null")
+	@$(ECHO_NO_LF) "  Test   : "
+	@($(CD) test/data/delta2; SSH_ASKPASS= $(TIME) --format="%E" sh -c "../../../$(PERFORMANCE_BAR) -t ../../test-B.bar --delta-source=../../test-A.bar 1>/dev/null 2>/dev/null")
+	@$(ECHO_NO_LF) "  Diff   : "
+	@($(CD) test/data/delta2; SSH_ASKPASS= $(TIME) --format="%E" sh -c "../../../$(PERFORMANCE_BAR) -d ../../test-B.bar --delta-source=../../test-A.bar 1>/dev/null 2>/dev/null")
+	@$(ECHO_NO_LF) "  Extract: "
+	@($(CD) test/data/delta2; SSH_ASKPASS= $(TIME) --format="%E" sh -c "../../../$(PERFORMANCE_BAR) -x ../../test-B.bar --delta-source=../../test-A.bar --destination=../../restore --overwrite-files 1>/dev/null 2>/dev/null")
 
 # ----------------------------------------------------------------------------
 
