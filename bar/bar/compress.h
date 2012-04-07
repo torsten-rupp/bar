@@ -109,7 +109,8 @@ typedef enum
 /***************************** Datatypes *******************************/
 
 #warning cleanup
-#define _RR
+#define RR
+#define SS
 
 // compress info block
 typedef struct
@@ -152,11 +153,15 @@ typedef struct
         #ifdef HAVE_XDELTA3
           void       *sourceHandle;             // source handle
           byte       *sourceBuffer;             // buffer for source
+#ifdef SS
+          RingBuffer outputRingBuffer;
+#else
           byte       *outputBuffer;             // buffer for output (allocated if NULL)
           ulong      outputBufferLength;        // number of bytes in output buffer
           ulong      outputBufferSize;          /* size of output buffer (buffer will reallocated
                                                    if 0 or to small)
                                                 */
+#endif
           int        flags;                     // XDELTA flags
           xd3_stream stream;                    // XDELTA stream
           xd3_source source;                    // XDELTA source
