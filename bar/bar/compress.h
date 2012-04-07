@@ -109,7 +109,7 @@ typedef enum
 /***************************** Datatypes *******************************/
 
 #warning cleanup
-#define RR
+#define _RR
 
 // compress info block
 typedef struct
@@ -154,14 +154,17 @@ typedef struct
           byte       *sourceBuffer;             // buffer for source
           byte       *outputBuffer;             // buffer for output (allocated if NULL)
           ulong      outputBufferLength;        // number of bytes in output buffer
-          ulong      outputBufferSize;          // size of output buffer (buffer will reallocated if 0 or to small)
+          ulong      outputBufferSize;          /* size of output buffer (buffer will reallocated
+                                                   if 0 or to small)
+                                                */
           int        flags;                     // XDELTA flags
           xd3_stream stream;                    // XDELTA stream
           xd3_source source;                    // XDELTA source
-          byte       inputBuffer[256];          /* buffer for next input data bytes (Note: do not use
-                                                   pointer to dataBuffer/compressBuffer because
-                                                   input/output is not processed immediately and must
-                                                   be available until next input data is requested
+          byte       inputBuffer[256];          /* buffer for next xdelta input data bytes (Note: do
+                                                   not use pointer to data/compress ring buffers
+                                                   because input/output is not processed immediately
+                                                   and must be available until next input data is
+                                                   requested
                                                 */
           bool       flushFlag;                 // TRUE iff flush send to xdelta compressor
         #endif /* HAVE_XDELTA3 */
@@ -510,9 +513,9 @@ uint64 Compress_getOutputLength(CompressInfo *compressInfo);
 * Notes  : -
 \***********************************************************************/
 
-ulong Compress_getFreeCompressSpace(const CompressInfo *compressInfo);
+INLINE ulong Compress_getFreeCompressSpace(const CompressInfo *compressInfo);
 #if defined(NDEBUG) || defined(__COMPRESS_IMPLEMENATION__)
-ulong Compress_getFreeCompressSpace(const CompressInfo *compressInfo)
+INLINE ulong Compress_getFreeCompressSpace(const CompressInfo *compressInfo)
 {
   assert(compressInfo != NULL);
 
