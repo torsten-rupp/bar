@@ -303,7 +303,7 @@ typedef struct ScheduleNode
   int          day;
   int          hour;
   int          minute;
-  ulong        weekDays;
+  long         weekDays;
   ArchiveTypes archiveType;
   bool         enabled;
 } ScheduleNode;
