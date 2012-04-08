@@ -1374,7 +1374,7 @@ Errors Network_executeWrite(NetworkExecuteHandle *networkExecuteHandle,
     return ERROR_FUNCTION_NOT_SUPPORTED;
   #endif /* HAVE_SSH2 */
 
-  return (sentBytes == length)?ERROR_NONE:ERROR_NETWORK_SEND;
+  return (sentBytes == (long)length) ? ERROR_NONE : ERROR_NETWORK_SEND;
 }
 
 Errors Network_executeRead(NetworkExecuteHandle  *networkExecuteHandle,
