@@ -53,14 +53,14 @@ typedef struct
 typedef struct
 {
   const char *name;
-  int        value;
+  uint       value;
 } ConfigValueSelect;
 
 /* configu value set value */
 typedef struct
 {
   const char *name;
-  int        value;
+  uint       value;
 } ConfigValueSet;
 
 /* config value variable */
@@ -134,7 +134,7 @@ typedef struct
     void(*formatInit)(void **formatUserData, void *userData, void *variable);
     void(*formatDone)(void **formatUserData, void *userData);
     bool(*format)(void **formatUserData, void *userData, String line);
-    void                    *userData;            // user data for parse special
+    void *userData;                               // user data for parse special
   } specialValue;
 } ConfigValue;
 
@@ -261,7 +261,7 @@ typedef struct
     {variablePointer},\
     offset,\
     {min,max,units,sizeof(units)/sizeof(ConfigValueUnit)},\
-    {0,0,NULL,0},\
+    {0LL,0LL,NULL,0},\
     {0.0,0.0,NULL,0},\
     {},\
     {0},\
@@ -269,7 +269,7 @@ typedef struct
     {NULL,0},\
     {},\
     {},\
-    {NULL,NULL}\
+    {NULL,NULL,NULL,NULL,NULL},\
   }
 #define CONFIG_STRUCT_VALUE_INTEGER(name,type,member,min,max,units) \
   CONFIG_VALUE_INTEGER(name,NULL,offsetof(type,member),min,max,units)
@@ -304,7 +304,7 @@ typedef struct
     {NULL,0}, \
     {},\
     {},\
-    {NULL,NULL}\
+    {NULL,NULL,NULL,NULL,NULL}\
   }
 #define CONFIG_STRUCT_VALUE_INTEGER64(name,type,member,min,max,units) \
   CONFIG_VALUE_INTEGER64(name,NULL,offsetof(type,member),min,max,units)
@@ -331,7 +331,7 @@ typedef struct
     {variablePointer},\
     offset,\
     {0,0,NULL,0},\
-    {0,0,NULL,0},\
+    {0LL,0LL,NULL,0},\
     {min,max,units,sizeof(units)/sizeof(ConfigValueUnit)},\
     {},\
     {0},\
@@ -339,7 +339,7 @@ typedef struct
     {NULL,0}, \
     {},\
     {},\
-    {NULL,NULL,NULL}\
+    {NULL,NULL,NULL,NULL,NULL},\
   }
 #define CONFIG_STRUCT_VALUE_DOUBLE(name,type,member,min,max,units) \
   CONFIG_VALUE_DOUBLE(name,NULL,offsetof(type,member),min,max,units)
@@ -364,7 +364,7 @@ typedef struct
     {variablePointer},\
     offset,\
     {0,0,NULL,0},\
-    {0,0,NULL,0},\
+    {0LL,0LL,NULL,0},\
     {0.0,0.0,NULL,0},\
     {},\
     {0},\
@@ -372,7 +372,7 @@ typedef struct
     {NULL,0}, \
     {},\
     {},\
-    {NULL,NULL}\
+    {NULL,NULL,NULL,NULL,NULL},\
   }
 #define CONFIG_STRUCT_VALUE_BOOLEAN(name,type,member) \
   CONFIG_VALUE_BOOLEAN(name,NULL,offsetof(type,member))
@@ -397,7 +397,7 @@ typedef struct
     {variablePointer},\
     offset,\
     {0,0,NULL,0},\
-    {0,0,NULL,0},\
+    {0LL,0LL,NULL,0},\
     {0.0,0.0,NULL,0},\
     {TRUE},\
     {0},\
@@ -405,7 +405,7 @@ typedef struct
     {NULL,0}, \
     {},\
     {},\
-    {NULL,NULL}\
+    {NULL,NULL,NULL,NULL,NULL},\
   }
 #define CONFIG_STRUCT_VALUE_BOOLEAN_YESNO(name,variablePointer,offset) \
   CONFIG_VALUE_BOOLEAN_YESNO(name,NULL,offsetof(type,member))
@@ -431,7 +431,7 @@ typedef struct
     {variablePointer},\
     offset,\
     {0,0,NULL,0},\
-    {0,0,NULL,0},\
+    {0LL,0LL,NULL,0},\
     {0.0,0.0,NULL,0},\
     {},\
     {value},\
@@ -439,7 +439,7 @@ typedef struct
     {NULL,0}, \
     {},\
     {},\
-    {NULL,NULL}\
+    {NULL,NULL,NULL,NULL,NULL},\
   }
 #define CONFIG_STRUCT_VALUE_ENUM(name,type,member,value) \
   CONFIG_VALUE_ENUM(name,NULL,offsetof(type,member),value)
@@ -465,7 +465,7 @@ typedef struct
     {variablePointer},\
     offset,\
     {0,0,NULL,0},\
-    {0,0,NULL,0},\
+    {0LL,0LL,NULL,0},\
     {0.0,0.0,NULL,0},\
     {},\
     {0},\
@@ -473,7 +473,7 @@ typedef struct
     {NULL,0}, \
     {},\
     {},\
-    {NULL,NULL}\
+    {NULL,NULL,NULL,NULL,NULL},\
   }
 #define CONFIG_STRUCT_VALUE_SELECT(name,type,member,selects) \
   CONFIG_VALUE_SELECT(name,NULL,offsetof(type,member),selects)
@@ -499,7 +499,7 @@ typedef struct
     {variablePointer},\
     offset,\
     {0,0,NULL,0},\
-    {0,0,NULL,0},\
+    {0LL,0LL,NULL,0},\
     {0.0,0.0,NULL,0},\
     {},\
     {0},\
@@ -507,7 +507,7 @@ typedef struct
     {set,sizeof(set)/sizeof(ConfigValueSet)},\
     {},\
     {},\
-    {NULL,NULL}\
+    {NULL,NULL,NULL,NULL,NULL},\
   }
 #define CONFIG_STRUCT_VALUE_SET(name,type,member,set) \
   CONFIG_VALUE_SET(name,NULL,offsetof(type,member),set)
@@ -532,7 +532,7 @@ typedef struct
     {variablePointer},\
     offset,\
     {0,0,NULL,0},\
-    {0,0,NULL,0},\
+    {0LL,0LL,NULL,0},\
     {0.0,0.0,NULL,0},\
     {},\
     {0},\
@@ -540,7 +540,7 @@ typedef struct
     {NULL,0}, \
     {},\
     {},\
-    {NULL,NULL},\
+    {NULL,NULL,NULL,NULL,NULL},\
   }
 #define CONFIG_STRUCT_VALUE_CSTRING(name,type,member) \
   CONFIG_VALUE_CSTRING(name,NULL,offsetof(type,member))
@@ -565,7 +565,7 @@ typedef struct
     {variablePointer},\
     offset,\
     {0,0,NULL,0},\
-    {0,0,NULL,0},\
+    {0LL,0LL,NULL,0},\
     {0.0,0.0,NULL,0},\
     {},\
     {0},\
@@ -573,7 +573,7 @@ typedef struct
     {NULL,0}, \
     {},\
     {},\
-    {NULL,NULL},\
+    {NULL,NULL,NULL,NULL,NULL},\
   }
 #define CONFIG_STRUCT_VALUE_STRING(name,type,member) \
   CONFIG_VALUE_STRING(name,NULL,offsetof(type,member))
@@ -604,8 +604,8 @@ typedef struct
     {variablePointer},\
     offset,\
     {0,0,NULL,0},\
-    {0,0,NULL,0},\
-    {0.0,0.0},\
+    {0LL,0LL,NULL,0},\
+    {0.0,0.0,NULL,0},\
     {},\
     {0},\
     {NULL,0},\
