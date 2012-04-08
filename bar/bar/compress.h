@@ -151,27 +151,27 @@ typedef struct
       struct
       {
         #ifdef HAVE_XDELTA3
-          void       *sourceHandle;             // source handle
-          byte       *sourceBuffer;             // buffer for source
+          SourceHandle *sourceHandle;           // delta source handle
+          byte         *sourceBuffer;           // buffer for delta source data
 #ifdef SS
-          RingBuffer outputRingBuffer;
+          RingBuffer   outputRingBuffer;
 #else
-          byte       *outputBuffer;             // buffer for output (allocated if NULL)
-          ulong      outputBufferLength;        // number of bytes in output buffer
-          ulong      outputBufferSize;          /* size of output buffer (buffer will reallocated
+          byte         *outputBuffer;           // buffer for output (allocated if NULL)
+          ulong        outputBufferLength;      // number of bytes in output buffer
+          ulong        outputBufferSize;        /* size of output buffer (buffer will reallocated
                                                    if 0 or to small)
                                                 */
 #endif
-          int        flags;                     // XDELTA flags
-          xd3_stream stream;                    // XDELTA stream
-          xd3_source source;                    // XDELTA source
-          byte       inputBuffer[256];          /* buffer for next xdelta input data bytes (Note: do
+          int          flags;                   // XDELTA flags
+          xd3_stream   stream;                  // XDELTA stream
+          xd3_source   source;                  // XDELTA source
+          byte         inputBuffer[256];        /* buffer for next xdelta input data bytes (Note: do
                                                    not use pointer to data/compress ring buffers
                                                    because input/output is not processed immediately
                                                    and must be available until next input data is
                                                    requested
                                                 */
-          bool       flushFlag;                 // TRUE iff flush send to xdelta compressor
+          bool         flushFlag;               // TRUE iff flush send to xdelta compressor
         #endif /* HAVE_XDELTA3 */
       } xdelta;
     #endif /* HAVE_XDELTA */
