@@ -852,7 +852,7 @@ LOCAL Errors closeArchiveFile(ArchiveInfo *archiveInfo,
                                                 archiveInfo->storageId,
                                                 archiveInfo->file.fileName,
                                                 (archiveInfo->jobOptions->archivePartSize > 0)
-                                                  ? archiveInfo->partNumber
+                                                  ? (int)archiveInfo->partNumber
                                                   : ARCHIVE_PART_NUMBER_NONE,
                                                 lastPartFlag
                                                );
