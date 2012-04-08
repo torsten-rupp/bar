@@ -147,41 +147,42 @@ LOCAL Errors compressData(CompressInfo *compressInfo)
   {
     case COMPRESS_ALGORITHM_NONE:
 #ifdef RR
-      // compress with identity compressor
-      if (   !RingBuffer_isFull(&compressInfo->compressRingBuffer)                    // space in compress buffer
-          && !compressInfo->endOfDataFlag                                             // not end-of-data
-         )
+      // Note: compress with identity compressor
+
+      if (!compressInfo->endOfDataFlag)                                               // not end-of-data
       {
-        if (!RingBuffer_isEmpty(&compressInfo->dataRingBuffer))                       // data available
+        if (!RingBuffer_isFull(&compressInfo->compressRingBuffer))                    // space in compress buffer
         {
-          // get max. number of data and max. number of "compressed" bytes
-          maxDataBytes     = RingBuffer_getAvailable(&compressInfo->dataRingBuffer);
-          maxCompressBytes = RingBuffer_getFree(&compressInfo->compressRingBuffer);
+          if (!RingBuffer_isEmpty(&compressInfo->dataRingBuffer))                     // data available
+          {
+            // get max. number of data and max. number of "compressed" bytes
+            maxDataBytes     = RingBuffer_getAvailable(&compressInfo->dataRingBuffer);
+            maxCompressBytes = RingBuffer_getFree(&compressInfo->compressRingBuffer);
 
-          // copy from data buffer -> compress buffer
-          compressBytes = MIN(maxDataBytes,maxCompressBytes);
-          RingBuffer_move(&compressInfo->dataRingBuffer,
-                          &compressInfo->compressRingBuffer,
-                          compressBytes
-                         );
+            // copy from data buffer -> compress buffer
+            compressBytes = MIN(maxDataBytes,maxCompressBytes);
+            RingBuffer_move(&compressInfo->dataRingBuffer,
+                            &compressInfo->compressRingBuffer,
+                            compressBytes
+                           );
 
-          // update compress state, compress length
-          compressInfo->compressState = COMPRESS_STATE_RUNNING;
+            // update compress state, compress length
+            compressInfo->compressState = COMPRESS_STATE_RUNNING;
 
-          // store number of bytes "compressed"
-          compressInfo->none.totalBytes += compressBytes;
+            // store number of bytes "compressed"
+            compressInfo->none.totalBytes += compressBytes;
+          }
         }
-      }
-      if (   RingBuffer_isEmpty(&compressInfo->compressRingBuffer)                    // no data in "compress" buffer
-          && !compressInfo->endOfDataFlag                                             // not end-of-data
-         )
-      {
-        // finish "compress"
-        if (   compressInfo->flushFlag                                                // flush data requested
-            && (compressInfo->compressState == COMPRESS_STATE_RUNNING)                // compressor is running -> data available in internal buffers
-           )
+
+        if (RingBuffer_isEmpty(&compressInfo->compressRingBuffer))                    // no data in "compress" buffer
         {
-          compressInfo->endOfDataFlag = TRUE;
+          // finish "compress"
+          if (   compressInfo->flushFlag                                              // flush data requested
+              && (compressInfo->compressState == COMPRESS_STATE_RUNNING)              // compressor is running -> data available in internal buffers
+             )
+          {
+            compressInfo->endOfDataFlag = TRUE;
+          }
         }
       }
 #else
@@ -251,71 +252,71 @@ LOCAL Errors compressData(CompressInfo *compressInfo)
           int zlibError;
 
 #ifdef RR
-          if (   !RingBuffer_isFull(&compressInfo->compressRingBuffer)                // space in compress buffer
-              && !compressInfo->endOfDataFlag                                         // not end-of-data
-             )
+          if (!compressInfo->endOfDataFlag)                                           // not end-of-data
           {
-            // compress available data
-            if (!RingBuffer_isEmpty(&compressInfo->dataRingBuffer))                   // unprocessed data available
+            if (!RingBuffer_isFull(&compressInfo->compressRingBuffer))                // space in compress buffer
             {
-              // get max. number of data and max. number of compressed bytes
-              maxDataBytes     = RingBuffer_getAvailable(&compressInfo->dataRingBuffer);
-              maxCompressBytes = RingBuffer_getFree(&compressInfo->compressRingBuffer);
+              // compress available data
+              if (!RingBuffer_isEmpty(&compressInfo->dataRingBuffer))                 // unprocessed data available
+              {
+                // get max. number of data and max. number of compressed bytes
+                maxDataBytes     = RingBuffer_getAvailable(&compressInfo->dataRingBuffer);
+                maxCompressBytes = RingBuffer_getFree(&compressInfo->compressRingBuffer);
 
-              // compress: data buffer -> compress buffer
-              compressInfo->zlib.stream.next_in   = (Bytef*)RingBuffer_cArrayOut(&compressInfo->dataRingBuffer);
-              compressInfo->zlib.stream.avail_in  = maxDataBytes;
-              compressInfo->zlib.stream.next_out  = (Bytef*)RingBuffer_cArrayIn(&compressInfo->compressRingBuffer);
-              compressInfo->zlib.stream.avail_out = maxCompressBytes;
-              zlibError = deflate(&compressInfo->zlib.stream,Z_NO_FLUSH);
-              if (    (zlibError != Z_OK)
-                   && (zlibError != Z_BUF_ERROR)
+                // compress: data buffer -> compress buffer
+                compressInfo->zlib.stream.next_in   = (Bytef*)RingBuffer_cArrayOut(&compressInfo->dataRingBuffer);
+                compressInfo->zlib.stream.avail_in  = maxDataBytes;
+                compressInfo->zlib.stream.next_out  = (Bytef*)RingBuffer_cArrayIn(&compressInfo->compressRingBuffer);
+                compressInfo->zlib.stream.avail_out = maxCompressBytes;
+                zlibError = deflate(&compressInfo->zlib.stream,Z_NO_FLUSH);
+                if (    (zlibError != Z_OK)
+                     && (zlibError != Z_BUF_ERROR)
+                   )
+                {
+                  return ERROR(DEFLATE_FAIL,zlibError);
+                }
+                RingBuffer_decrement(&compressInfo->dataRingBuffer,
+                                     maxDataBytes-compressInfo->zlib.stream.avail_in
+                                    );
+                RingBuffer_increment(&compressInfo->compressRingBuffer,
+                                     maxCompressBytes-compressInfo->zlib.stream.avail_out
+                                    );
+
+                // update compress state
+                compressInfo->compressState = COMPRESS_STATE_RUNNING;
+              }
+            }
+
+            if (!RingBuffer_isFull(&compressInfo->compressRingBuffer))                // space in compress buffer
+            {
+              // finish compress, flush internal compress buffers
+              if (   compressInfo->flushFlag                                          // flush data requested
+                  && (compressInfo->compressState == COMPRESS_STATE_RUNNING)          // compressor is running -> data available in internal buffers
                  )
               {
-                return ERROR(DEFLATE_FAIL,zlibError);
-              }
-              RingBuffer_decrement(&compressInfo->dataRingBuffer,
-                                   maxDataBytes-compressInfo->zlib.stream.avail_in
-                                  );
-              RingBuffer_increment(&compressInfo->compressRingBuffer,
-                                   maxCompressBytes-compressInfo->zlib.stream.avail_out
-                                  );
+                // get max. number of compressed bytes
+                maxCompressBytes = RingBuffer_getFree(&compressInfo->compressRingBuffer);
 
-              // update compress state
-              compressInfo->compressState = COMPRESS_STATE_RUNNING;
-            }
-          }
-          if (   !RingBuffer_isFull(&compressInfo->compressRingBuffer)                // space in compress buffer
-              && !compressInfo->endOfDataFlag                                         // not end-of-data
-             )
-          {
-            // finish compress, flush internal compress buffers
-            if (   compressInfo->flushFlag                                            // flush data requested
-                && (compressInfo->compressState == COMPRESS_STATE_RUNNING)            // compressor is running -> data available in internal buffers
-               )
-            {
-              // get max. number of compressed bytes
-              maxCompressBytes = RingBuffer_getFree(&compressInfo->compressRingBuffer);
-
-              // compress with flush: transfer to compress buffer
-              compressInfo->zlib.stream.next_in   = NULL;
-              compressInfo->zlib.stream.avail_in  = 0;
-              compressInfo->zlib.stream.next_out  = (Bytef*)RingBuffer_cArrayIn(&compressInfo->compressRingBuffer);
-              compressInfo->zlib.stream.avail_out = maxCompressBytes;
-              zlibError = deflate(&compressInfo->zlib.stream,Z_FINISH);
-              if      (zlibError == Z_STREAM_END)
-              {
-                compressInfo->endOfDataFlag = TRUE;
+                // compress with flush: transfer to compress buffer
+                compressInfo->zlib.stream.next_in   = NULL;
+                compressInfo->zlib.stream.avail_in  = 0;
+                compressInfo->zlib.stream.next_out  = (Bytef*)RingBuffer_cArrayIn(&compressInfo->compressRingBuffer);
+                compressInfo->zlib.stream.avail_out = maxCompressBytes;
+                zlibError = deflate(&compressInfo->zlib.stream,Z_FINISH);
+                if      (zlibError == Z_STREAM_END)
+                {
+                  compressInfo->endOfDataFlag = TRUE;
+                }
+                else if (   (zlibError != Z_OK)
+                         && (zlibError != Z_BUF_ERROR)
+                        )
+                {
+                  return ERROR(DEFLATE_FAIL,zlibError);
+                }
+                RingBuffer_increment(&compressInfo->compressRingBuffer,
+                                     maxCompressBytes-compressInfo->zlib.stream.avail_out
+                                    );
               }
-              else if (   (zlibError != Z_OK)
-                       && (zlibError != Z_BUF_ERROR)
-                      )
-              {
-                return ERROR(DEFLATE_FAIL,zlibError);
-              }
-              RingBuffer_increment(&compressInfo->compressRingBuffer,
-                                   maxCompressBytes-compressInfo->zlib.stream.avail_out
-                                  );
             }
           }
 #else
@@ -413,67 +414,67 @@ LOCAL Errors compressData(CompressInfo *compressInfo)
           int bzlibError;
 
 #ifdef RR
-          if (   !RingBuffer_isFull(&compressInfo->compressRingBuffer)                // space in compress buffer
-              && !compressInfo->endOfDataFlag                                         // not end-of-data
-             )
+          if (!compressInfo->endOfDataFlag)                                           // not end-of-data
           {
-            // compress available data
-            if (!RingBuffer_isEmpty(&compressInfo->dataRingBuffer))                   // unprocessed data available
+            if (!RingBuffer_isFull(&compressInfo->compressRingBuffer))                // space in compress buffer
             {
-              // get max. number of data and max. number of compressed bytes
-              maxDataBytes     = RingBuffer_getAvailable(&compressInfo->dataRingBuffer);
-              maxCompressBytes = RingBuffer_getFree(&compressInfo->compressRingBuffer);
-
-              // compress: transfer data buffer -> compress buffer
-              compressInfo->bzlib.stream.next_in   = (char*)RingBuffer_cArrayOut(&compressInfo->dataRingBuffer);
-              compressInfo->bzlib.stream.avail_in  = maxDataBytes;
-              compressInfo->bzlib.stream.next_out  = (char*)RingBuffer_cArrayIn(&compressInfo->compressRingBuffer);
-              compressInfo->bzlib.stream.avail_out = maxCompressBytes;
-              bzlibError = BZ2_bzCompress(&compressInfo->bzlib.stream,BZ_RUN);
-              if (bzlibError != BZ_RUN_OK)
+              // compress available data
+              if (!RingBuffer_isEmpty(&compressInfo->dataRingBuffer))                 // unprocessed data available
               {
-                return ERROR(DEFLATE_FAIL,bzlibError);
-              }
-              RingBuffer_decrement(&compressInfo->dataRingBuffer,
-                                   maxDataBytes-compressInfo->bzlib.stream.avail_in
-                                  );
-              RingBuffer_increment(&compressInfo->compressRingBuffer,
-                                   maxCompressBytes-compressInfo->bzlib.stream.avail_out
-                                  );
+                // get max. number of data and max. number of compressed bytes
+                maxDataBytes     = RingBuffer_getAvailable(&compressInfo->dataRingBuffer);
+                maxCompressBytes = RingBuffer_getFree(&compressInfo->compressRingBuffer);
 
-              // update compress state
-              compressInfo->compressState = COMPRESS_STATE_RUNNING;
+                // compress: transfer data buffer -> compress buffer
+                compressInfo->bzlib.stream.next_in   = (char*)RingBuffer_cArrayOut(&compressInfo->dataRingBuffer);
+                compressInfo->bzlib.stream.avail_in  = maxDataBytes;
+                compressInfo->bzlib.stream.next_out  = (char*)RingBuffer_cArrayIn(&compressInfo->compressRingBuffer);
+                compressInfo->bzlib.stream.avail_out = maxCompressBytes;
+                bzlibError = BZ2_bzCompress(&compressInfo->bzlib.stream,BZ_RUN);
+                if (bzlibError != BZ_RUN_OK)
+                {
+                  return ERROR(DEFLATE_FAIL,bzlibError);
+                }
+                RingBuffer_decrement(&compressInfo->dataRingBuffer,
+                                     maxDataBytes-compressInfo->bzlib.stream.avail_in
+                                    );
+                RingBuffer_increment(&compressInfo->compressRingBuffer,
+                                     maxCompressBytes-compressInfo->bzlib.stream.avail_out
+                                    );
+
+                // update compress state
+                compressInfo->compressState = COMPRESS_STATE_RUNNING;
+              }
             }
-          }
-          if (   !RingBuffer_isFull(&compressInfo->compressRingBuffer)                // space in compress buffer
-              && !compressInfo->endOfDataFlag                                         // not end-of-data
-             )
-          {
-            // finish compress, flush internal compress buffers
-            if (   compressInfo->flushFlag                                            // flush data requested
-                && (compressInfo->compressState == COMPRESS_STATE_RUNNING)            // compressor is running -> data available in internal buffers
-               )
-            {
-              // get max. number of compressed bytes
-              maxCompressBytes = RingBuffer_getFree(&compressInfo->compressRingBuffer);
 
-              // compress with flush: transfer to compress buffer
-              compressInfo->bzlib.stream.next_in   = NULL;
-              compressInfo->bzlib.stream.avail_in  = 0;
-              compressInfo->bzlib.stream.next_out  = (char*)RingBuffer_cArrayIn(&compressInfo->compressRingBuffer);
-              compressInfo->bzlib.stream.avail_out = maxCompressBytes;
-              bzlibError = BZ2_bzCompress(&compressInfo->bzlib.stream,BZ_FINISH);
-              if      (bzlibError == BZ_STREAM_END)
+            if (!RingBuffer_isFull(&compressInfo->compressRingBuffer))                // space in compress buffer
+            {
+              // finish compress, flush internal compress buffers
+              if (   compressInfo->flushFlag                                          // flush data requested
+                  && (compressInfo->compressState == COMPRESS_STATE_RUNNING)          // compressor is running -> data available in internal buffers
+                 )
               {
-                compressInfo->endOfDataFlag = TRUE;
+                // get max. number of compressed bytes
+                maxCompressBytes = RingBuffer_getFree(&compressInfo->compressRingBuffer);
+
+                // compress with flush: transfer to compress buffer
+                compressInfo->bzlib.stream.next_in   = NULL;
+                compressInfo->bzlib.stream.avail_in  = 0;
+                compressInfo->bzlib.stream.next_out  = (char*)RingBuffer_cArrayIn(&compressInfo->compressRingBuffer);
+                compressInfo->bzlib.stream.avail_out = maxCompressBytes;
+                bzlibError = BZ2_bzCompress(&compressInfo->bzlib.stream,BZ_FINISH);
+                if      (bzlibError == BZ_STREAM_END)
+                {
+                  compressInfo->endOfDataFlag = TRUE;
+                }
+                else if (bzlibError != BZ_FINISH_OK)
+                {
+                  return ERROR(DEFLATE_FAIL,bzlibError);
+                }
+                RingBuffer_increment(&compressInfo->compressRingBuffer,
+                                     maxCompressBytes-compressInfo->bzlib.stream.avail_out
+                                    );
               }
-              else if (bzlibError != BZ_FINISH_OK)
-              {
-                return ERROR(DEFLATE_FAIL,bzlibError);
-              }
-              RingBuffer_increment(&compressInfo->compressRingBuffer,
-                                   maxCompressBytes-compressInfo->bzlib.stream.avail_out
-                                  );
             }
           }
 #else
@@ -567,67 +568,67 @@ LOCAL Errors compressData(CompressInfo *compressInfo)
           lzma_ret lzmaResult;
 
 #ifdef RR
-          if (   !RingBuffer_isFull(&compressInfo->compressRingBuffer)                // space in compress buffer
-              && !compressInfo->endOfDataFlag                                         // not end-of-data
-             )
+          if (!compressInfo->endOfDataFlag)                                           // not end-of-data
           {
-            // compress available data
-            if (!RingBuffer_isEmpty(&compressInfo->dataRingBuffer))                   // unprocessed data available
+            if (!RingBuffer_isFull(&compressInfo->compressRingBuffer))                // space in compress buffer
             {
-              // get max. number of data and max. number of compressed bytes
-              maxDataBytes     = RingBuffer_getAvailable(&compressInfo->dataRingBuffer);
-              maxCompressBytes = RingBuffer_getFree(&compressInfo->compressRingBuffer);
-
-              // compress: transfer data buffer -> compress buffer
-              compressInfo->lzmalib.stream.next_in   = (uint8_t*)RingBuffer_cArrayOut(&compressInfo->dataRingBuffer);
-              compressInfo->lzmalib.stream.avail_in  = maxDataBytes;
-              compressInfo->lzmalib.stream.next_out  = (uint8_t*)RingBuffer_cArrayIn(&compressInfo->compressRingBuffer);
-              compressInfo->lzmalib.stream.avail_out = maxCompressBytes;
-              lzmaResult = lzma_code(&compressInfo->lzmalib.stream,LZMA_RUN);
-              if (lzmaResult != LZMA_OK)
+              // compress available data
+              if (!RingBuffer_isEmpty(&compressInfo->dataRingBuffer))                 // unprocessed data available
               {
-                return ERROR(DEFLATE_FAIL,lzmaResult);
-              }
-              RingBuffer_decrement(&compressInfo->dataRingBuffer,
-                                   maxDataBytes-compressInfo->lzmalib.stream.avail_in
-                                  );
-              RingBuffer_increment(&compressInfo->compressRingBuffer,
-                                   maxCompressBytes-compressInfo->lzmalib.stream.avail_out
-                                  );
+                // get max. number of data and max. number of compressed bytes
+                maxDataBytes     = RingBuffer_getAvailable(&compressInfo->dataRingBuffer);
+                maxCompressBytes = RingBuffer_getFree(&compressInfo->compressRingBuffer);
 
-              // update compress state, compress length
-              compressInfo->compressState = COMPRESS_STATE_RUNNING;
+                // compress: transfer data buffer -> compress buffer
+                compressInfo->lzmalib.stream.next_in   = (uint8_t*)RingBuffer_cArrayOut(&compressInfo->dataRingBuffer);
+                compressInfo->lzmalib.stream.avail_in  = maxDataBytes;
+                compressInfo->lzmalib.stream.next_out  = (uint8_t*)RingBuffer_cArrayIn(&compressInfo->compressRingBuffer);
+                compressInfo->lzmalib.stream.avail_out = maxCompressBytes;
+                lzmaResult = lzma_code(&compressInfo->lzmalib.stream,LZMA_RUN);
+                if (lzmaResult != LZMA_OK)
+                {
+                  return ERROR(DEFLATE_FAIL,lzmaResult);
+                }
+                RingBuffer_decrement(&compressInfo->dataRingBuffer,
+                                     maxDataBytes-compressInfo->lzmalib.stream.avail_in
+                                    );
+                RingBuffer_increment(&compressInfo->compressRingBuffer,
+                                     maxCompressBytes-compressInfo->lzmalib.stream.avail_out
+                                    );
+
+                // update compress state, compress length
+                compressInfo->compressState = COMPRESS_STATE_RUNNING;
+              }
             }
-          }
-          if (   !RingBuffer_isFull(&compressInfo->compressRingBuffer)                // space in compress buffer
-              && !compressInfo->endOfDataFlag                                         // not end-of-data
-             )
-          {
-            // finish compress, flush internal compress buffers
-            if (   compressInfo->flushFlag                                            // flush data requested
-                && (compressInfo->compressState == COMPRESS_STATE_RUNNING)            // compressor is running -> data available in internal buffers
-               )
-            {
-              // get max. number of compressed bytes
-              maxCompressBytes = RingBuffer_getFree(&compressInfo->compressRingBuffer);
 
-              // compress with flush: transfer to compress buffer
-              compressInfo->lzmalib.stream.next_in   = NULL;
-              compressInfo->lzmalib.stream.avail_in  = 0;
-              compressInfo->lzmalib.stream.next_out  = (uint8_t*)RingBuffer_cArrayIn(&compressInfo->compressRingBuffer);
-              compressInfo->lzmalib.stream.avail_out = maxCompressBytes;
-              lzmaResult = lzma_code(&compressInfo->lzmalib.stream,LZMA_FINISH);
-              if      (lzmaResult == LZMA_STREAM_END)
+            if (!RingBuffer_isFull(&compressInfo->compressRingBuffer))                // space in compress buffer
+            {
+              // finish compress, flush internal compress buffers
+              if (   compressInfo->flushFlag                                          // flush data requested
+                  && (compressInfo->compressState == COMPRESS_STATE_RUNNING)          // compressor is running -> data available in internal buffers
+                 )
               {
-                compressInfo->endOfDataFlag = TRUE;
+                // get max. number of compressed bytes
+                maxCompressBytes = RingBuffer_getFree(&compressInfo->compressRingBuffer);
+
+                // compress with flush: transfer to compress buffer
+                compressInfo->lzmalib.stream.next_in   = NULL;
+                compressInfo->lzmalib.stream.avail_in  = 0;
+                compressInfo->lzmalib.stream.next_out  = (uint8_t*)RingBuffer_cArrayIn(&compressInfo->compressRingBuffer);
+                compressInfo->lzmalib.stream.avail_out = maxCompressBytes;
+                lzmaResult = lzma_code(&compressInfo->lzmalib.stream,LZMA_FINISH);
+                if      (lzmaResult == LZMA_STREAM_END)
+                {
+                  compressInfo->endOfDataFlag = TRUE;
+                }
+                else if (lzmaResult != LZMA_OK)
+                {
+                  return ERROR(DEFLATE_FAIL,lzmaResult);
+                }
+                RingBuffer_increment(&compressInfo->compressRingBuffer,
+                                     maxCompressBytes-compressInfo->lzmalib.stream.avail_out
+                                    );
               }
-              else if (lzmaResult != LZMA_OK)
-              {
-                return ERROR(DEFLATE_FAIL,lzmaResult);
-              }
-              RingBuffer_increment(&compressInfo->compressRingBuffer,
-                                   maxCompressBytes-compressInfo->lzmalib.stream.avail_out
-                                  );
             }
           }
 #else
@@ -1465,9 +1466,9 @@ LOCAL Errors decompressData(CompressInfo *compressInfo)
 #ifdef RR
       // Note: decompress with identity compressor
 
-      if (RingBuffer_isEmpty(&compressInfo->dataRingBuffer))                          // no data in data buffer
+      if (!compressInfo->endOfDataFlag)                                               // not end-of-data
       {
-        if (!compressInfo->endOfDataFlag)
+        if (!RingBuffer_isFull(&compressInfo->dataRingBuffer))                        // space in data buffer
         {
           // "decompress" available data
           if (!RingBuffer_isEmpty(&compressInfo->compressRingBuffer))                 // unprocessed "compressed" data available
@@ -1490,11 +1491,8 @@ LOCAL Errors decompressData(CompressInfo *compressInfo)
             compressInfo->none.totalBytes += dataBytes;
           }
         }
-      }
 
-      if (RingBuffer_isEmpty(&compressInfo->dataRingBuffer))                          // no data in data buffer
-      {
-        if (!compressInfo->endOfDataFlag)
+        if (RingBuffer_isEmpty(&compressInfo->dataRingBuffer))                        // no data in data buffer
         {
           // finish "decompress"
           if (   compressInfo->flushFlag                                              // flush data requested
@@ -1580,9 +1578,9 @@ LOCAL Errors decompressData(CompressInfo *compressInfo)
           int zlibResult;
 
 #ifdef RR
-          if (RingBuffer_isEmpty(&compressInfo->dataRingBuffer))                      // no data in data buffer
+          if (!compressInfo->endOfDataFlag)                                           // not end-of-data
           {
-            if (!compressInfo->endOfDataFlag)
+            if (!RingBuffer_isFull(&compressInfo->dataRingBuffer))                    // space in data buffer
             {
               // decompress available data
               if (!RingBuffer_isEmpty(&compressInfo->compressRingBuffer))             // unprocessed compressed data available
@@ -1618,11 +1616,8 @@ LOCAL Errors decompressData(CompressInfo *compressInfo)
                 compressInfo->compressState = COMPRESS_STATE_RUNNING;
               }
             }
-          }
 
-          if (RingBuffer_isEmpty(&compressInfo->dataRingBuffer))                      // no data in data buffer
-          {
-            if (!compressInfo->endOfDataFlag)
+            if (RingBuffer_isEmpty(&compressInfo->dataRingBuffer))                    // no data in data buffer
             {
               // finish decompress, flush internal decompress buffers
               if (   compressInfo->flushFlag                                          // flush data requested
@@ -1762,9 +1757,9 @@ LOCAL Errors decompressData(CompressInfo *compressInfo)
           int bzlibResult;
 
 #ifdef RR
-          if (RingBuffer_isEmpty(&compressInfo->dataRingBuffer))                      // no data in data buffer
+          if (!compressInfo->endOfDataFlag)                                           // not end-of-data
           {
-            if (!compressInfo->endOfDataFlag)
+            if (!RingBuffer_isFull(&compressInfo->dataRingBuffer))                    // space in data buffer
             {
               // decompress available data
               if (!RingBuffer_isEmpty(&compressInfo->compressRingBuffer))             // unprocessed compressed data available
@@ -1800,9 +1795,9 @@ LOCAL Errors decompressData(CompressInfo *compressInfo)
             }
           }
 
-          if (RingBuffer_isEmpty(&compressInfo->dataRingBuffer))                      // no data in data buffer
+          if (!compressInfo->endOfDataFlag)                                           // not end-of-data
           {
-            if (!compressInfo->endOfDataFlag)
+            if (RingBuffer_isEmpty(&compressInfo->dataRingBuffer))                    // no data in data buffer
             {
               // finish decompress, flush internal decompress buffers
               if (   compressInfo->flushFlag                                          // flush data requested
@@ -1940,9 +1935,9 @@ LOCAL Errors decompressData(CompressInfo *compressInfo)
           lzma_ret lzmaResult;
 
 #ifdef RR
-          if (RingBuffer_isEmpty(&compressInfo->dataRingBuffer))                      // no data in data buffer
+          if (!compressInfo->endOfDataFlag)                                           // not end-of-data
           {
-            if (!compressInfo->endOfDataFlag)
+            if (!RingBuffer_isFull(&compressInfo->dataRingBuffer))                    // space in data buffer
             {
               // decompress available data
               if (!RingBuffer_isEmpty(&compressInfo->compressRingBuffer))             // unprocessed compressed data available
@@ -1977,9 +1972,10 @@ LOCAL Errors decompressData(CompressInfo *compressInfo)
               }
             }
           }
-          if (RingBuffer_isEmpty(&compressInfo->dataRingBuffer))                      // no data in data buffer
+
+          if (!compressInfo->endOfDataFlag)                                           // not end-of-data
           {
-            if (!compressInfo->endOfDataFlag)
+            if (RingBuffer_isEmpty(&compressInfo->dataRingBuffer))                    // no data in data buffer
             {
               // finish decompress, flush internal decompress buffers
               if (   compressInfo->flushFlag                                          // flush data requested
@@ -3226,7 +3222,7 @@ Errors Compress_new(CompressInfo       *compressInfo,
             return ERROR_INIT_COMPRESS;
           }
 
-          // init xdelta source
+          // init xdelta source variables
           compressInfo->xdelta.sourceBuffer = malloc(XDELTA_BUFFER_SIZE);
           if (compressInfo->xdelta.sourceBuffer == NULL)
           {
@@ -3240,6 +3236,7 @@ Errors Compress_new(CompressInfo       *compressInfo,
 #endif
             return ERROR_INIT_COMPRESS;
           }
+#warning memset noetig?
           memset(&compressInfo->xdelta.source,0,sizeof(compressInfo->xdelta.source));
 //          compressInfo->xdelta.source.ioh      = compressInfo;
           compressInfo->xdelta.source.blksize  = XDELTA_BUFFER_SIZE;
