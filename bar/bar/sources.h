@@ -18,6 +18,11 @@
 #include <stdio.h>
 #include <assert.h>
 
+#include "forward.h"         /* required for JobOptions. Do not include
+                                bar.h, because of circular dependency
+                                in JobOptions
+                             */
+
 #include "global.h"
 #include "lists.h"
 #include "strings.h"
@@ -117,6 +122,7 @@ Errors Source_addSourceList(const PatternList *sourcePatternList);
 *          sourceStorageName - storage name
 *          name              - entry name to open (file, image,
 *                              hard link)
+*          jobOptions        - job option settings
 * Output : sourceHandle - source handle
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -124,7 +130,8 @@ Errors Source_addSourceList(const PatternList *sourcePatternList);
 
 Errors Source_openEntry(SourceHandle *sourceHandle,
                         const String sourceStorageName,
-                        const String name
+                        const String name,
+                        JobOptions   *jobOptions
                        );
 
 /***********************************************************************\

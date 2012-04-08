@@ -15,6 +15,8 @@
 #include <stdio.h>
 #include <assert.h>
 
+#include "forward.h"         // required for JobOptions
+
 #include "global.h"
 #include "strings.h"
 #include "patternlists.h"
@@ -713,7 +715,7 @@ Errors Source_addSourceList(const PatternList *sourcePatternList)
   fileName = String_new();
   PATTERNLIST_ITERATE(sourcePatternList,patternNode)
   {
-    Source_addSource(patternNode->string);//,jobOptions);
+    Source_addSource(patternNode->string);
   }
   String_delete(fileName);
 
@@ -722,10 +724,10 @@ Errors Source_addSourceList(const PatternList *sourcePatternList)
 
 Errors Source_openEntry(SourceHandle *sourceHandle,
                         const String sourceStorageName,
-                        const String name
+                        const String name,
+                        JobOptions   *jobOptions
                        )
 {
-  JobOptions jobOptions;
   Errors     error;
   bool       restoredFlag;
   String     localStorageName;
@@ -749,9 +751,6 @@ Errors Source_openEntry(SourceHandle *sourceHandle,
     {
       if (Archive_isArchiveFile(sourceStorageName))
       {
-        // init options
-        initJobOptions(&jobOptions);
-
         // create temporary restore file as delta source
         tmpFileName = String_new();
         error = File_getTmpFileName(tmpFileName,NULL,tmpDirectory);
@@ -760,7 +759,7 @@ Errors Source_openEntry(SourceHandle *sourceHandle,
           // restore to temporary file
           error = restoreFile(sourceStorageName,
                               name,
-                              &jobOptions,
+                              jobOptions,
                               tmpFileName,
                               inputCryptPassword,
                               NULL,
@@ -794,9 +793,6 @@ Errors Source_openEntry(SourceHandle *sourceHandle,
             return error;
           }
         }
-
-        // free resources
-        freeJobOptions(&jobOptions);
       }
       else
       {
@@ -816,14 +812,11 @@ Errors Source_openEntry(SourceHandle *sourceHandle,
     // check if source from given storage name
     if (sourceStorageName != NULL)
     {
-      // init options
-      initJobOptions(&jobOptions);
-
       // create local copy of storage file
       localStorageName = String_new();
       error = createLocalStorageArchive(localStorageName,
                                         sourceStorageName,
-                                        &jobOptions
+                                        jobOptions
                                        );
       if (error == ERROR_NONE)
       {
@@ -835,7 +828,7 @@ Errors Source_openEntry(SourceHandle *sourceHandle,
           // restore to temporary file
           error = restoreFile(localStorageName,
                               name,
-                              &jobOptions,
+                              jobOptions,
                               tmpFileName,
                               inputCryptPassword,
                               NULL,
@@ -880,15 +873,11 @@ Errors Source_openEntry(SourceHandle *sourceHandle,
 
       // free resources
       String_delete(localStorageName);
-      freeJobOptions(&jobOptions);
     }
   }
 
   if (!restoredFlag)
   {
-    // init options
-    initJobOptions(&jobOptions);
-
     // check if source from source pattern list
     LIST_ITERATE(&sourceList,sourceNode)
     {
@@ -904,7 +893,7 @@ Errors Source_openEntry(SourceHandle *sourceHandle,
             // restore to temporary file
             error = restoreFile(sourceNode->storageName,
                                 name,
-                                &jobOptions,
+                                jobOptions,
                                 tmpFileName,
                                 inputCryptPassword,
                                 NULL,
@@ -937,7 +926,6 @@ Errors Source_openEntry(SourceHandle *sourceHandle,
               String_delete(tmpFileName);
               return error;
             }
-            freeJobOptions(&jobOptions);
           }
           else
           {
@@ -961,7 +949,7 @@ Errors Source_openEntry(SourceHandle *sourceHandle,
         localStorageName = String_new();
         error = createLocalStorageArchive(localStorageName,
                                           sourceNode->storageName,
-                                          &jobOptions
+                                          jobOptions
                                         );
         if (error == ERROR_NONE)
         {
@@ -973,7 +961,7 @@ Errors Source_openEntry(SourceHandle *sourceHandle,
             // restore to temporary file
             error = restoreFile(localStorageName,
                                 name,
-                                &jobOptions,
+                                jobOptions,
                                 tmpFileName,
                                 inputCryptPassword,
                                 NULL,
@@ -1000,7 +988,6 @@ Errors Source_openEntry(SourceHandle *sourceHandle,
             {
               String_delete(tmpFileName);
             }
-            freeJobOptions(&jobOptions);
           }
           else
           {
@@ -1018,9 +1005,6 @@ Errors Source_openEntry(SourceHandle *sourceHandle,
       // stop if restored
       if (restoredFlag) break;
     }
-
-    // free resources
-    freeJobOptions(&jobOptions);
   }
 
   if (!restoredFlag)
