@@ -347,7 +347,7 @@ int main(int argc, const char *argv[])
   Definition  definition;
   Definition  definitions[MAX_DEFINITIONS];
   uint        definitionCount;
-  int         z;
+  uint        z;
   struct stat statBuffer;
   uint64      size;
   const char  *inputFileName;
@@ -398,7 +398,7 @@ int main(int argc, const char *argv[])
   /* parse definitions */
   initRandom(size);
   definitionCount = 0;
-  for (z = 2; z < argc; z++)
+  for (z = 2; z < (uint)argc; z++)
   {
     if (!parseDefinition(argv[z],&definition,size))
     {
@@ -434,7 +434,7 @@ int main(int argc, const char *argv[])
     {
       /* find matching definition */
       z = 0;
-      while ((z < definitionCount) && (n != definitions[z].position))
+      while ((z < definitionCount) && (n != (uint64)definitions[z].position))
       {
         z++;
       }
