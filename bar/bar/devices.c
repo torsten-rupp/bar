@@ -166,7 +166,7 @@ Errors Device_read(DeviceHandle *deviceHandle,
 
   n = fread(buffer,1,bufferLength,deviceHandle->file);
   if (   ((n <= 0) && ferror(deviceHandle->file))
-      || ((n < bufferLength) && (bytesRead == NULL))
+      || ((n < (ssize_t)bufferLength) && (bytesRead == NULL))
      )
   {
     return ERRORX(IO_ERROR,errno,String_cString(deviceHandle->name));
@@ -192,7 +192,7 @@ Errors Device_write(DeviceHandle *deviceHandle,
   n = fwrite(buffer,1,bufferLength,deviceHandle->file);
   if (n > 0) deviceHandle->index += n;
   if (deviceHandle->index > deviceHandle->size) deviceHandle->size = deviceHandle->index;
-  if (n != bufferLength)
+  if (n != (ssize_t)bufferLength)
   {
     return ERRORX(IO_ERROR,errno,String_cString(deviceHandle->name));
   }
