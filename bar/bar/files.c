@@ -184,7 +184,7 @@ String File_appendFileName(String fileName, const String name)
   assert(fileName != NULL);
   assert(name != NULL);
 
-  if (!String_empty(fileName))
+  if (!String_isEmpty(fileName))
   {
     if (!String_endsWithChar(fileName,FILES_PATHNAME_SEPARATOR_CHAR))
     {
@@ -201,7 +201,7 @@ String File_appendFileNameCString(String fileName, const char *name)
   assert(fileName != NULL);
   assert(name != NULL);
 
-  if (!String_empty(fileName))
+  if (!String_isEmpty(fileName))
   {
     if (!String_endsWithChar(fileName,FILES_PATHNAME_SEPARATOR_CHAR))
     {
@@ -217,7 +217,7 @@ String File_appendFileNameChar(String fileName, char ch)
 {
   assert(fileName != NULL);
 
-  if (!String_empty(fileName))
+  if (!String_isEmpty(fileName))
   {
     if (!String_endsWithChar(fileName,FILES_PATHNAME_SEPARATOR_CHAR))
     {
@@ -233,7 +233,7 @@ String File_appendFileNameBuffer(String fileName, const char *buffer, ulong buff
 {
   assert(fileName != NULL);
 
-  if (!String_empty(fileName))
+  if (!String_isEmpty(fileName))
   {
     if (!String_endsWithChar(fileName,FILES_PATHNAME_SEPARATOR_CHAR))
     {
@@ -536,7 +536,7 @@ Errors __File_openCString(const char *__fileName__,
     case FILE_OPEN_WRITE:
       // create directory if needed
       pathName = File_getFilePathNameCString(File_newFileName(),fileName);
-      if (!String_empty(pathName) && !File_exists(pathName))
+      if (!String_isEmpty(pathName) && !File_exists(pathName))
       {
         error = File_makeDirectory(pathName,
                                    FILE_DEFAULT_USER_ID,
@@ -576,7 +576,7 @@ Errors __File_openCString(const char *__fileName__,
     case FILE_OPEN_APPEND:
       // create directory if needed
       pathName = File_getFilePathNameCString(File_newFileName(),fileName);
-      if (!String_empty(pathName) && !File_exists(pathName))
+      if (!String_isEmpty(pathName) && !File_exists(pathName))
       {
         error = File_makeDirectory(pathName,
                                    FILE_DEFAULT_USER_ID,
@@ -1691,7 +1691,7 @@ bool File_isReadableCString(const char *fileName)
 
 bool File_isWriteable(const String fileName)
 {
-  return access(!String_empty(fileName)?String_cString(fileName):".",W_OK) == 0;
+  return access(!String_isEmpty(fileName)?String_cString(fileName):".",W_OK) == 0;
 }
 
 bool File_isWriteableCString(const char *fileName)
@@ -1934,7 +1934,7 @@ Errors File_makeDirectory(const String   pathName,
   File_initSplitFileName(&pathNameTokenizer,pathName);
   if (File_getNextSplitFileName(&pathNameTokenizer,&name))
   {
-    if (!String_empty(name))
+    if (!String_isEmpty(name))
     {
       File_setFileName(directoryName,name);
     }
@@ -1996,7 +1996,7 @@ Errors File_makeDirectory(const String   pathName,
 
   while (File_getNextSplitFileName(&pathNameTokenizer,&name))
   {
-    if (!String_empty(name))
+    if (!String_isEmpty(name))
     {
       // get new parent directory
       File_setFileName(parentDirectoryName,directoryName);

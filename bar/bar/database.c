@@ -388,7 +388,7 @@ Errors Database_open(DatabaseHandle    *databaseHandle,
 
   /* create directory if needed */
   directory = File_getFilePathNameCString(String_new(),fileName);
-  if (   !String_empty(directory)
+  if (   !String_isEmpty(directory)
       && !File_isDirectory(directory)
      )
   {

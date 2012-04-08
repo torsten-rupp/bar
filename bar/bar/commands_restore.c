@@ -411,7 +411,7 @@ Errors Command_restore(const StringList                *archiveNameList,
               if (!jobOptions->dryRunFlag)
               {
                 parentDirectoryName = File_getFilePathName(String_new(),destinationFileName);
-                if (!String_empty(parentDirectoryName) && !File_exists(parentDirectoryName))
+                if (!String_isEmpty(parentDirectoryName) && !File_exists(parentDirectoryName))
                 {
                   // create directory
                   error = File_makeDirectory(parentDirectoryName,
@@ -1139,7 +1139,7 @@ Errors Command_restore(const StringList                *archiveNameList,
               if (!jobOptions->dryRunFlag)
               {
                 parentDirectoryName = File_getFilePathName(String_new(),destinationFileName);
-                if (!String_empty(parentDirectoryName) && !File_exists(parentDirectoryName))
+                if (!String_isEmpty(parentDirectoryName) && !File_exists(parentDirectoryName))
                 {
                   // create directory
                   error = File_makeDirectory(parentDirectoryName,
@@ -1379,7 +1379,7 @@ Errors Command_restore(const StringList                *archiveNameList,
                 if (!jobOptions->dryRunFlag)
                 {
                   parentDirectoryName = File_getFilePathName(String_new(),destinationFileName);
-                  if (!String_empty(parentDirectoryName) && !File_exists(parentDirectoryName))
+                  if (!String_isEmpty(parentDirectoryName) && !File_exists(parentDirectoryName))
                   {
                     // create directory
                     error = File_makeDirectory(parentDirectoryName,
@@ -1782,7 +1782,7 @@ Errors Command_restore(const StringList                *archiveNameList,
               if (!jobOptions->dryRunFlag)
               {
                 parentDirectoryName = File_getFilePathName(String_new(),destinationFileName);
-                if (!String_empty(parentDirectoryName) && !File_exists(parentDirectoryName))
+                if (!String_isEmpty(parentDirectoryName) && !File_exists(parentDirectoryName))
                 {
                   // create directory
                   error = File_makeDirectory(parentDirectoryName,

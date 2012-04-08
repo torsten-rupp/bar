@@ -2154,7 +2154,7 @@ remoteBarFlag=FALSE;
           if (!remoteBarFlag)
           {
             getSSHServerSettings(hostName,jobOptions,&sshServer);
-            if (String_empty(loginName)) String_set(loginName,sshServer.loginName);
+            if (String_isEmpty(loginName)) String_set(loginName,sshServer.loginName);
             if (hostPort == 0) hostPort = sshServer.port;
             error = Network_connect(&socketHandle,
                                     SOCKET_TYPE_SSH,
@@ -2183,7 +2183,7 @@ remoteBarFlag=FALSE;
           }
 
           // start remote BAR in batch mode
-          line = String_format(String_new(),"%s --batch",!String_empty(globalOptions.remoteBARExecutable)?String_cString(globalOptions.remoteBARExecutable):"bar");
+          line = String_format(String_new(),"%s --batch",!String_isEmpty(globalOptions.remoteBARExecutable)?String_cString(globalOptions.remoteBARExecutable):"bar");
 fprintf(stderr,"%s,%d: line=%s\n",__FILE__,__LINE__,String_cString(line));
           error = Network_execute(&networkExecuteHandle,
                                   &socketHandle,
@@ -2206,7 +2206,7 @@ fprintf(stderr,"%s,%d: line=%s\n",__FILE__,__LINE__,String_cString(line));
           {
             Network_executeReadLine(&networkExecuteHandle,NETWORK_EXECUTE_IO_TYPE_STDERR,line,0);
             exitcode = Network_terminate(&networkExecuteHandle);
-            printError("No response from remote BAR program (error: %s, exitcode %d)!\n",!String_empty(line)?String_cString(line):"unknown",exitcode);
+            printError("No response from remote BAR program (error: %s, exitcode %d)!\n",!String_isEmpty(line)?String_cString(line):"unknown",exitcode);
             String_delete(line);
             String_delete(hostName);
             String_delete(loginName);
@@ -2219,7 +2219,7 @@ fprintf(stderr,"%s,%d: line=%s\n",__FILE__,__LINE__,String_cString(line));
           {
             Network_executeReadLine(&networkExecuteHandle,NETWORK_EXECUTE_IO_TYPE_STDERR,line,0);
             exitcode = Network_terminate(&networkExecuteHandle);
-            printError("Invalid response from remote BAR program (error: %s, exitcode %d)!\n",!String_empty(line)?String_cString(line):"unknown",exitcode);
+            printError("Invalid response from remote BAR program (error: %s, exitcode %d)!\n",!String_isEmpty(line)?String_cString(line):"unknown",exitcode);
             String_delete(line);
             String_delete(hostName);
             String_delete(loginName);

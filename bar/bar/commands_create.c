@@ -302,7 +302,7 @@ LOCAL Errors writeIncrementalList(const String     fileName,
 
   // create directory if not existing
   directoryName = File_getFilePathName(String_new(),fileName);
-  if (!String_empty(directoryName))
+  if (!String_isEmpty(directoryName))
   {
     if      (!File_exists(directoryName))
     {
@@ -4184,12 +4184,12 @@ Errors Command_create(const char                      *storageName,
   if (   (createInfo.archiveType == ARCHIVE_TYPE_FULL)
       || (createInfo.archiveType == ARCHIVE_TYPE_INCREMENTAL)
       || (createInfo.archiveType == ARCHIVE_TYPE_DIFFERENTIAL)
-      || !String_empty(jobOptions->incrementalListFileName)
+      || !String_isEmpty(jobOptions->incrementalListFileName)
      )
   {
     // get increment list file name
     incrementalListFileName = String_new();
-    if (!String_empty(jobOptions->incrementalListFileName))
+    if (!String_isEmpty(jobOptions->incrementalListFileName))
     {
       String_set(incrementalListFileName,jobOptions->incrementalListFileName);
     }

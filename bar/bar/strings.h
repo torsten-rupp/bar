@@ -403,7 +403,7 @@ INLINE ulong String_length(const String string)
 #endif /* NDEBUG || __STRINGS_IMPLEMENATION__ */
 
 /***********************************************************************\
-* Name   : String_empty
+* Name   : String_isEmpty
 * Purpose: check if string is empty
 * Input  : string - string
 * Output : -
@@ -411,9 +411,9 @@ INLINE ulong String_length(const String string)
 * Notes  : -
 \***********************************************************************/
 
-INLINE bool String_empty(const String string);
+INLINE bool String_isEmpty(const String string);
 #if defined(NDEBUG) || defined(__STRINGS_IMPLEMENATION__)
-INLINE bool String_empty(const String string)
+INLINE bool String_isEmpty(const String string)
 {
   STRING_CHECK_VALID(string);
 

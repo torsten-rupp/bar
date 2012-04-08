@@ -1080,7 +1080,7 @@ String Storage_getName(String       storageName,
   switch (storageType)
   {
     case STORAGE_TYPE_FILESYSTEM:
-      if (!String_empty(fileName))
+      if (!String_isEmpty(fileName))
       {
         String_append(storageName,fileName);
       }
@@ -1088,14 +1088,14 @@ String Storage_getName(String       storageName,
     case STORAGE_TYPE_FTP:
       String_appendCString(storageName,"ftp://");
       String_append(storageName,storageSpecifier);
-      if (!String_empty(fileName))
+      if (!String_isEmpty(fileName))
       {
         String_appendChar(storageName,'/');
         String_append(storageName,fileName);
       }
       break;
     case STORAGE_TYPE_SSH:
-      if (!String_empty(fileName))
+      if (!String_isEmpty(fileName))
       {
         String_append(storageName,fileName);
       }
@@ -1103,7 +1103,7 @@ String Storage_getName(String       storageName,
     case STORAGE_TYPE_SCP:
       String_appendCString(storageName,"scp://");
       String_append(storageName,storageSpecifier);
-      if (!String_empty(fileName))
+      if (!String_isEmpty(fileName))
       {
         String_appendChar(storageName,'/');
         String_append(storageName,fileName);
@@ -1112,7 +1112,7 @@ String Storage_getName(String       storageName,
     case STORAGE_TYPE_SFTP:
       String_appendCString(storageName,"sftp://");
       String_append(storageName,storageSpecifier);
-      if (!String_empty(fileName))
+      if (!String_isEmpty(fileName))
       {
         String_appendChar(storageName,'/');
         String_append(storageName,fileName);
@@ -1121,7 +1121,7 @@ String Storage_getName(String       storageName,
     case STORAGE_TYPE_CD:
       String_appendCString(storageName,"cd://");
       String_append(storageName,storageSpecifier);
-      if (!String_empty(fileName))
+      if (!String_isEmpty(fileName))
       {
         String_appendChar(storageName,'/');
         String_append(storageName,fileName);
@@ -1130,7 +1130,7 @@ String Storage_getName(String       storageName,
     case STORAGE_TYPE_DVD:
       String_appendCString(storageName,"dvd://");
       String_append(storageName,storageSpecifier);
-      if (!String_empty(fileName))
+      if (!String_isEmpty(fileName))
       {
         String_appendChar(storageName,'/');
         String_append(storageName,fileName);
@@ -1139,7 +1139,7 @@ String Storage_getName(String       storageName,
     case STORAGE_TYPE_BD:
       String_appendCString(storageName,"bd://");
       String_append(storageName,storageSpecifier);
-      if (!String_empty(fileName))
+      if (!String_isEmpty(fileName))
       {
         String_appendChar(storageName,'/');
         String_append(storageName,fileName);
@@ -1148,7 +1148,7 @@ String Storage_getName(String       storageName,
     case STORAGE_TYPE_DEVICE:
       String_appendCString(storageName,"device://");
       String_append(storageName,storageSpecifier);
-      if (!String_empty(fileName))
+      if (!String_isEmpty(fileName))
       {
         String_appendChar(storageName,'/');
         String_append(storageName,fileName);
@@ -1181,7 +1181,7 @@ String Storage_getPrintableName(String       string,
   switch (Storage_parseName(storageName,storageSpecifier,fileName))
   {
     case STORAGE_TYPE_FILESYSTEM:
-      if (!String_empty(fileName))
+      if (!String_isEmpty(fileName))
       {
         String_append(string,fileName);
       }
@@ -1210,7 +1210,7 @@ String Storage_getPrintableName(String       string,
         {
           String_append(string,storageSpecifier);
         }
-        if (!String_empty(fileName))
+        if (!String_isEmpty(fileName))
         {
           String_appendChar(string,'/');
           String_append(string,fileName);
@@ -1221,7 +1221,7 @@ String Storage_getPrintableName(String       string,
       }
       break;
     case STORAGE_TYPE_SSH:
-      if (!String_empty(fileName))
+      if (!String_isEmpty(fileName))
       {
         String_append(string,fileName);
       }
@@ -1229,7 +1229,7 @@ String Storage_getPrintableName(String       string,
     case STORAGE_TYPE_SCP:
       String_appendCString(string,"scp://");
       String_append(string,storageSpecifier);
-      if (!String_empty(fileName))
+      if (!String_isEmpty(fileName))
       {
         String_appendChar(string,'/');
         String_append(string,fileName);
@@ -1238,7 +1238,7 @@ String Storage_getPrintableName(String       string,
     case STORAGE_TYPE_SFTP:
       String_appendCString(string,"sftp://");
       String_append(string,storageSpecifier);
-      if (!String_empty(fileName))
+      if (!String_isEmpty(fileName))
       {
         String_appendChar(string,'/');
         String_append(string,fileName);
@@ -1247,7 +1247,7 @@ String Storage_getPrintableName(String       string,
     case STORAGE_TYPE_CD:
       String_appendCString(string,"cd://");
       String_append(string,storageSpecifier);
-      if (!String_empty(fileName))
+      if (!String_isEmpty(fileName))
       {
         String_appendChar(string,'/');
         String_append(string,fileName);
@@ -1256,7 +1256,7 @@ String Storage_getPrintableName(String       string,
     case STORAGE_TYPE_DVD:
       String_appendCString(string,"dvd://");
       String_append(string,storageSpecifier);
-      if (!String_empty(fileName))
+      if (!String_isEmpty(fileName))
       {
         String_appendChar(string,'/');
         String_append(string,fileName);
@@ -1265,7 +1265,7 @@ String Storage_getPrintableName(String       string,
     case STORAGE_TYPE_BD:
       String_appendCString(string,"bd://");
       String_append(string,storageSpecifier);
-      if (!String_empty(fileName))
+      if (!String_isEmpty(fileName))
       {
         String_appendChar(string,'/');
         String_append(string,fileName);
@@ -1274,7 +1274,7 @@ String Storage_getPrintableName(String       string,
     case STORAGE_TYPE_DEVICE:
       String_appendCString(string,"device://");
       String_append(string,storageSpecifier);
-      if (!String_empty(fileName))
+      if (!String_isEmpty(fileName))
       {
         String_appendChar(string,'/');
         String_append(string,fileName);
@@ -1344,7 +1344,7 @@ bool Storage_parseFTPSpecifier(const String ftpSpecifier,
 
     result = TRUE;
   }
-  else if (!String_empty(ftpSpecifier))
+  else if (!String_isEmpty(ftpSpecifier))
   {
     String_set(hostName,ftpSpecifier);
 
@@ -1387,7 +1387,7 @@ bool Storage_parseSSHSpecifier(const String sshSpecifier,
   {
     result = String_parse(sshSpecifier,STRING_BEGIN,"%S@%S",NULL,loginName,hostName);
   }
-  else if (!String_empty(sshSpecifier))
+  else if (!String_isEmpty(sshSpecifier))
   {
     String_set(hostName,sshSpecifier);
 
@@ -1465,7 +1465,7 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
 
   storageSpecifier = String_new();
   storageType = Storage_parseName(storageName,storageSpecifier,fileName);
-  if (String_empty(fileName))
+  if (String_isEmpty(fileName))
   {
     String_delete(storageSpecifier);
     return ERROR_NO_ARCHIVE_FILE_NAME;
@@ -1524,7 +1524,7 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
 
           // get FTP server settings
           getFTPServerSettings(storageFileHandle->ftp.hostName,jobOptions,&ftpServer);
-          if (String_empty(storageFileHandle->ftp.loginName)) String_set(storageFileHandle->ftp.loginName,ftpServer.loginName);
+          if (String_isEmpty(storageFileHandle->ftp.loginName)) String_set(storageFileHandle->ftp.loginName,ftpServer.loginName);
 
           // check FTP login, get correct password
           error = ERROR_FTP_SESSION_FAIL;
@@ -1647,7 +1647,7 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
 
           // get SSH server settings
           getSSHServerSettings(storageFileHandle->scp.hostName,jobOptions,&sshServer);
-          if (String_empty(storageFileHandle->scp.loginName)) String_set(storageFileHandle->scp.loginName,sshServer.loginName);
+          if (String_isEmpty(storageFileHandle->scp.loginName)) String_set(storageFileHandle->scp.loginName,sshServer.loginName);
           if (storageFileHandle->scp.hostPort == 0) storageFileHandle->scp.hostPort = sshServer.port;
           storageFileHandle->scp.sshPublicKeyFileName  = sshServer.publicKeyFileName;
           storageFileHandle->scp.sshPrivateKeyFileName = sshServer.privateKeyFileName;
@@ -1755,7 +1755,7 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
 
           // get SSH server settings
           getSSHServerSettings(storageFileHandle->sftp.hostName,jobOptions,&sshServer);
-          if (String_empty(storageFileHandle->sftp.loginName)) String_set(storageFileHandle->sftp.loginName,sshServer.loginName);
+          if (String_isEmpty(storageFileHandle->sftp.loginName)) String_set(storageFileHandle->sftp.loginName,sshServer.loginName);
           if (storageFileHandle->sftp.hostPort == 0) storageFileHandle->sftp.hostPort = sshServer.port;
           storageFileHandle->sftp.sshPublicKeyFileName  = sshServer.publicKeyFileName;
           storageFileHandle->sftp.sshPrivateKeyFileName = sshServer.privateKeyFileName;
@@ -1837,7 +1837,7 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
           String_delete(storageSpecifier);
           return ERROR_INVALID_DEVICE_SPECIFIER;
         }
-        if (String_empty(deviceName))
+        if (String_isEmpty(deviceName))
         {
           switch (storageType)
           {
@@ -2242,9 +2242,9 @@ String Storage_getHandleName(String                  storageName,
       break;
     case STORAGE_TYPE_FTP:
       #ifdef HAVE_FTP
-        if (!String_empty(storageFileHandle->ftp.hostName))
+        if (!String_isEmpty(storageFileHandle->ftp.hostName))
         {
-          if (!String_empty(storageFileHandle->ftp.loginName))
+          if (!String_isEmpty(storageFileHandle->ftp.loginName))
           {
             String_format(storageSpecifier,"%S@",storageFileHandle->ftp.loginName);
           }
@@ -2261,9 +2261,9 @@ String Storage_getHandleName(String                  storageName,
       break;
     case STORAGE_TYPE_SCP:
       #ifdef HAVE_SSH2
-        if (!String_empty(storageFileHandle->scp.hostName))
+        if (!String_isEmpty(storageFileHandle->scp.hostName))
         {
-          if (!String_empty(storageFileHandle->scp.loginName))
+          if (!String_isEmpty(storageFileHandle->scp.loginName))
           {
             String_format(storageSpecifier,"%S@",storageFileHandle->scp.loginName);
           }
@@ -2278,9 +2278,9 @@ String Storage_getHandleName(String                  storageName,
       break;
     case STORAGE_TYPE_SFTP:
       #ifdef HAVE_SSH2
-        if (!String_empty(storageFileHandle->sftp.hostName))
+        if (!String_isEmpty(storageFileHandle->sftp.hostName))
         {
-          if (!String_empty(storageFileHandle->sftp.loginName))
+          if (!String_isEmpty(storageFileHandle->sftp.loginName))
           {
             String_format(storageSpecifier,"%S@",storageFileHandle->sftp.loginName);
           }
@@ -2294,28 +2294,28 @@ String Storage_getHandleName(String                  storageName,
       #endif /* HAVE_SSH2 */
       break;
     case STORAGE_TYPE_CD:
-      if (!String_empty(storageFileHandle->opticalDisk.name))
+      if (!String_isEmpty(storageFileHandle->opticalDisk.name))
       {
         String_append(storageSpecifier,storageFileHandle->opticalDisk.name);
         String_appendChar(storageSpecifier,':');
       }
       break;
     case STORAGE_TYPE_DVD:
-      if (!String_empty(storageFileHandle->opticalDisk.name))
+      if (!String_isEmpty(storageFileHandle->opticalDisk.name))
       {
         String_append(storageSpecifier,storageFileHandle->opticalDisk.name);
         String_appendChar(storageSpecifier,':');
       }
       break;
     case STORAGE_TYPE_BD:
-      if (!String_empty(storageFileHandle->opticalDisk.name))
+      if (!String_isEmpty(storageFileHandle->opticalDisk.name))
       {
         String_append(storageSpecifier,storageFileHandle->opticalDisk.name);
         String_appendChar(storageSpecifier,':');
       }
       break;
     case STORAGE_TYPE_DEVICE:
-      if (!String_empty(storageFileHandle->device.name))
+      if (!String_isEmpty(storageFileHandle->device.name))
       {
         String_append(storageSpecifier,storageFileHandle->device.name);
         String_appendChar(storageSpecifier,':');
@@ -3176,7 +3176,7 @@ Errors Storage_create(StorageFileHandle *storageFileHandle,
       {
         // create directory if not existing
         directoryName = File_getFilePathName(String_new(),fileName);
-        if (!String_empty(directoryName) && !File_exists(directoryName))
+        if (!String_isEmpty(directoryName) && !File_exists(directoryName))
         {
           error = File_makeDirectory(directoryName,
                                      FILE_DEFAULT_USER_ID,
@@ -3246,7 +3246,7 @@ Errors Storage_create(StorageFileHandle *storageFileHandle,
             if (File_getNextSplitFileName(&pathNameTokenizer,&name))
             {
               // create root-directory
-              if (!String_empty(name))
+              if (!String_isEmpty(name))
               {
                 File_setFileName(directoryName,name);
               }
@@ -3259,7 +3259,7 @@ Errors Storage_create(StorageFileHandle *storageFileHandle,
               // create sub-directories
               while (File_getNextSplitFileName(&pathNameTokenizer,&name))
               {
-                if (!String_empty(name))
+                if (!String_isEmpty(name))
                 {
                   // get sub-directory
                   File_appendFileName(directoryName,name);
@@ -3458,7 +3458,7 @@ LIBSSH2_SFTP_S_IRUSR|LIBSSH2_SFTP_S_IWUSR
       {
         // create directory if not existing
         directoryName = File_getFilePathName(String_new(),storageFileHandle->opticalDisk.write.fileName);
-        if (!String_empty(directoryName) && !File_exists(directoryName))
+        if (!String_isEmpty(directoryName) && !File_exists(directoryName))
         {
           error = File_makeDirectory(directoryName,
                                      FILE_DEFAULT_USER_ID,
@@ -5451,7 +5451,7 @@ Errors Storage_openDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
 
           // get FTP server settings
           getFTPServerSettings(hostName,jobOptions,&ftpServer);
-          if (String_empty(loginName)) String_set(loginName,ftpServer.loginName);
+          if (String_isEmpty(loginName)) String_set(loginName,ftpServer.loginName);
 
           // check FTP login, get correct password
           error = ERROR_UNKNOWN;
@@ -5657,7 +5657,7 @@ error = ERROR_FUNCTION_NOT_SUPPORTED;
 
           // get SSH server settings
           getSSHServerSettings(hostName,jobOptions,&sshServer);
-          if (String_empty(loginName)) String_set(loginName,sshServer.loginName);
+          if (String_isEmpty(loginName)) String_set(loginName,sshServer.loginName);
 
           // open network connection
           error = Network_connect(&storageDirectoryListHandle->sftp.socketHandle,

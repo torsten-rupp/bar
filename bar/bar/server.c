@@ -3946,7 +3946,7 @@ LOCAL void serverCommand_jobInfo(ClientInfo *clientInfo, uint id, const String a
     {
       message = Errors_getText(jobNode->runningInfo.error);
     }
-    else if (CHECK_JOB_IS_RUNNING(jobNode) && !String_empty(jobNode->runningInfo.message))
+    else if (CHECK_JOB_IS_RUNNING(jobNode) && !String_isEmpty(jobNode->runningInfo.message))
     {
       message = String_cString(jobNode->runningInfo.message);
     }

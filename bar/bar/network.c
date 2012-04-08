@@ -313,7 +313,7 @@ Errors Network_connect(SocketHandle *socketHandle,
         }
 
         /* check login name */
-        if (String_empty(loginName))
+        if (String_isEmpty(loginName))
         {
           close(socketHandle->handle);
           return ERROR_NO_LOGIN_NAME;
@@ -364,8 +364,8 @@ Errors Network_connect(SocketHandle *socketHandle,
         plainPassword = Password_deploy(password);
         if (libssh2_userauth_publickey_fromfile(socketHandle->ssh2.session,
                                                 String_cString(loginName),
-                                                String_cString(!String_empty(sshPublicKeyFileName)?sshPublicKeyFileName:defaultSSHPublicKeyFileName),
-                                                String_cString(!String_empty(sshPrivateKeyFileName)?sshPrivateKeyFileName:defaultSSHPrivateKeyFileName),
+                                                String_cString(!String_isEmpty(sshPublicKeyFileName)?sshPublicKeyFileName:defaultSSHPublicKeyFileName),
+                                                String_cString(!String_isEmpty(sshPrivateKeyFileName)?sshPrivateKeyFileName:defaultSSHPrivateKeyFileName),
                                                 plainPassword
                                                ) != 0)
         {
