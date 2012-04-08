@@ -1044,8 +1044,8 @@ close(h);
 
       // encrypt block
 #warning clean
-      error = Crypt_encrypt(&archiveEntryInfo->file.cryptInfo,
-                            archiveEntryInfo->file.byteBuffer,
+      error = Crypt_encryptBytes(&archiveEntryInfo->file.cryptInfo,
+                                 archiveEntryInfo->file.byteBuffer,
 length//                            archiveEntryInfo->blockLength
                            );
       if (error != ERROR_NONE)
@@ -1134,10 +1134,10 @@ close(h);
     if (byteLength > 0L)
     {
       // encrypt block
-      error = Crypt_encrypt(&archiveEntryInfo->file.cryptInfo,
-                            archiveEntryInfo->file.byteBuffer,
-                            byteLength
-                           );
+      error = Crypt_encryptBytes(&archiveEntryInfo->file.cryptInfo,
+                                 archiveEntryInfo->file.byteBuffer,
+                                 byteLength
+                                );
       if (error != ERROR_NONE)
       {
         return error;
@@ -1260,10 +1260,10 @@ close(h);
       }
 
       // encrypt block
-      error = Crypt_encrypt(&archiveEntryInfo->file.cryptInfo,
-                            archiveEntryInfo->file.byteBuffer,
-                            archiveEntryInfo->blockLength
-                           );
+      error = Crypt_encryptBytes(&archiveEntryInfo->file.cryptInfo,
+                                 archiveEntryInfo->file.byteBuffer,
+                                 archiveEntryInfo->blockLength
+                                );
       if (error != ERROR_NONE)
       {
         return error;
@@ -1310,26 +1310,36 @@ LOCAL Errors readFileDataBlock(ArchiveEntryInfo *archiveEntryInfo)
                  );
     error = Chunk_readData(&archiveEntryInfo->file.chunkFileData.info,
                            archiveEntryInfo->file.byteBuffer,
-//                           archiveEntryInfo->file.byteBufferSize,
+#warning clean
+                           archiveEntryInfo->file.byteBufferSize,
 //archiveEntryInfo->blockLength,
-                           maxBytes,
+//                           maxBytes,
                            &bytesRead
                           );
+//fprintf(stderr,"%s, %d: bytesRead=%d\n",__FILE__,__LINE__,bytesRead);
     if (error != ERROR_NONE)
     {
       return error;
     }
     assert((bytesRead%archiveEntryInfo->blockLength) == 0);
+    if ((bytesRead%archiveEntryInfo->blockLength) != 0)
+    {
+      return ERROR_DECRYPT_FAIL;
+    }
+//fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+//dumpMemory(archiveEntryInfo->file.byteBuffer,bytesRead);
 
     // decrypt data
-    error = Crypt_decrypt(&archiveEntryInfo->file.cryptInfo,
-                          archiveEntryInfo->file.byteBuffer,
-                          bytesRead
-                         );
+    error = Crypt_decryptBytes(&archiveEntryInfo->file.cryptInfo,
+                               archiveEntryInfo->file.byteBuffer,
+                               bytesRead
+                              );
     if (error != ERROR_NONE)
     {
       return error;
     }
+//fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+//dumpMemory(archiveEntryInfo->file.byteBuffer,bytesRead);
 
     // put decrypted data into decompressor
     Compress_putCompressedData(&archiveEntryInfo->file.byteCompressInfo,
@@ -1494,10 +1504,10 @@ close(h);
 
       // encrypt block
 #warning clean
-      error = Crypt_encrypt(&archiveEntryInfo->image.cryptInfo,
-                            archiveEntryInfo->image.byteBuffer,
+      error = Crypt_encryptBytes(&archiveEntryInfo->image.cryptInfo,
+                                 archiveEntryInfo->image.byteBuffer,
 byteLength//                            archiveEntryInfo->blockLength
-                           );
+                                );
       if (error != ERROR_NONE)
       {
         return error;
@@ -1507,6 +1517,7 @@ byteLength//                            archiveEntryInfo->blockLength
 #warning clean
       error = Chunk_writeData(&archiveEntryInfo->image.chunkImageData.info,
                               archiveEntryInfo->image.byteBuffer,
+#warning clean
 byteLength//                              archiveEntryInfo->blockLength
                              );
       if (error != ERROR_NONE)
@@ -1575,10 +1586,10 @@ LOCAL Errors writeImageDataBlock(ArchiveEntryInfo *archiveEntryInfo,
     if (byteLength > 0L)
     {
       // encrypt block
-      error = Crypt_encrypt(&archiveEntryInfo->image.cryptInfo,
-                            archiveEntryInfo->image.byteBuffer,
-                            archiveEntryInfo->blockLength
-                           );
+      error = Crypt_encryptBytes(&archiveEntryInfo->image.cryptInfo,
+                                 archiveEntryInfo->image.byteBuffer,
+                                 archiveEntryInfo->blockLength
+                                );
       if (error != ERROR_NONE)
       {
         return error;
@@ -1702,10 +1713,10 @@ LOCAL Errors writeImageDataBlock(ArchiveEntryInfo *archiveEntryInfo,
       }
 
       // encrypt block
-      error = Crypt_encrypt(&archiveEntryInfo->image.cryptInfo,
-                            archiveEntryInfo->image.byteBuffer,
-                            archiveEntryInfo->blockLength
-                           );
+      error = Crypt_encryptBytes(&archiveEntryInfo->image.cryptInfo,
+                                 archiveEntryInfo->image.byteBuffer,
+                                 archiveEntryInfo->blockLength
+                                );
       if (error != ERROR_NONE)
       {
         return error;
@@ -1753,6 +1764,7 @@ LOCAL Errors readImageDataBlock(ArchiveEntryInfo *archiveEntryInfo)
                  );
     error = Chunk_readData(&archiveEntryInfo->image.chunkImageData.info,
                            archiveEntryInfo->image.byteBuffer,
+#warning clean
 //                           archiveEntryInfo->image.byteBufferSize,
 //archiveEntryInfo->blockLength,
                            maxBytes,
@@ -1765,10 +1777,10 @@ LOCAL Errors readImageDataBlock(ArchiveEntryInfo *archiveEntryInfo)
     assert((bytesRead%archiveEntryInfo->blockLength) == 0);
 
     // decrypt data
-    error = Crypt_decrypt(&archiveEntryInfo->image.cryptInfo,
-                          archiveEntryInfo->image.byteBuffer,
-                          bytesRead
-                         );
+    error = Crypt_decryptBytes(&archiveEntryInfo->image.cryptInfo,
+                               archiveEntryInfo->image.byteBuffer,
+                               bytesRead
+                              );
     if (error != ERROR_NONE)
     {
       return error;
@@ -1949,10 +1961,10 @@ close(h);
 
       // encrypt block
 #warning clean
-      error = Crypt_encrypt(&archiveEntryInfo->hardLink.cryptInfo,
-                            archiveEntryInfo->hardLink.byteBuffer,
+      error = Crypt_encryptBytes(&archiveEntryInfo->hardLink.cryptInfo,
+                                 archiveEntryInfo->hardLink.byteBuffer,
 byteLength//                            archiveEntryInfo->blockLength
-                           );
+                                );
       if (error != ERROR_NONE)
       {
         return error;
@@ -2031,10 +2043,10 @@ LOCAL Errors writeHardLinkDataBlock(ArchiveEntryInfo *archiveEntryInfo,
     if (byteLength > 0L)
     {
       // encrypt block
-      error = Crypt_encrypt(&archiveEntryInfo->hardLink.cryptInfo,
-                            archiveEntryInfo->hardLink.byteBuffer,
-                            archiveEntryInfo->blockLength
-                           );
+      error = Crypt_encryptBytes(&archiveEntryInfo->hardLink.cryptInfo,
+                                 archiveEntryInfo->hardLink.byteBuffer,
+                                 archiveEntryInfo->blockLength
+                                );
       if (error != ERROR_NONE)
       {
         return error;
@@ -2165,10 +2177,10 @@ LOCAL Errors writeHardLinkDataBlock(ArchiveEntryInfo *archiveEntryInfo,
       }
 
       // encrypt block
-      error = Crypt_encrypt(&archiveEntryInfo->hardLink.cryptInfo,
-                            archiveEntryInfo->hardLink.byteBuffer,
-                            archiveEntryInfo->blockLength
-                           );
+      error = Crypt_encryptBytes(&archiveEntryInfo->hardLink.cryptInfo,
+                                 archiveEntryInfo->hardLink.byteBuffer,
+                                 archiveEntryInfo->blockLength
+                                );
       if (error != ERROR_NONE)
       {
         return error;
@@ -2216,6 +2228,7 @@ LOCAL Errors readHardLinkDataBlock(ArchiveEntryInfo *archiveEntryInfo)
                  );
     error = Chunk_readData(&archiveEntryInfo->hardLink.chunkHardLinkData.info,
                            archiveEntryInfo->hardLink.byteBuffer,
+#warning clean
 //                           archiveEntryInfo->hardLink.byteBufferSize,
 //archiveEntryInfo->blockLength,
                            maxBytes,
@@ -2228,10 +2241,10 @@ LOCAL Errors readHardLinkDataBlock(ArchiveEntryInfo *archiveEntryInfo)
     assert((bytesRead%archiveEntryInfo->blockLength) == 0);
 
     // decrypt data
-    error = Crypt_decrypt(&archiveEntryInfo->hardLink.cryptInfo,
-                          archiveEntryInfo->hardLink.byteBuffer,
-                          bytesRead
-                         );
+    error = Crypt_decryptBytes(&archiveEntryInfo->hardLink.cryptInfo,
+                               archiveEntryInfo->hardLink.byteBuffer,
+                               bytesRead
+                              );
     if (error != ERROR_NONE)
     {
       return error;
@@ -2355,7 +2368,7 @@ Errors Archive_create(ArchiveInfo                     *archiveInfo,
   assert(archiveNewFileFunction != NULL);
   assert(jobOptions != NULL);
 
-  // detect block length of use crypt algorithm
+  // detect block length of used crypt algorithm
   error = Crypt_getBlockLength(jobOptions->cryptAlgorithm,&archiveInfo->blockLength);
   if (error != ERROR_NONE)
   {
@@ -5339,7 +5352,7 @@ Errors Archive_readDirectoryEntry(ArchiveInfo      *archiveInfo,
   }
   archiveEntryInfo->cryptAlgorithm = archiveEntryInfo->directory.chunkDirectory.cryptAlgorithm;
 
-  // detect block length of use crypt algorithm
+  // detect block length of used crypt algorithm
   error = Crypt_getBlockLength(archiveEntryInfo->cryptAlgorithm,&archiveEntryInfo->blockLength);
   if (error != ERROR_NONE)
   {
@@ -5604,7 +5617,7 @@ Errors Archive_readLinkEntry(ArchiveInfo      *archiveInfo,
   }
   archiveEntryInfo->cryptAlgorithm = archiveEntryInfo->link.chunkLink.cryptAlgorithm;
 
-  // detect block length of use crypt algorithm
+  // detect block length of used crypt algorithm
   error = Crypt_getBlockLength(archiveEntryInfo->cryptAlgorithm,&archiveEntryInfo->blockLength);
   if (error != ERROR_NONE)
   {
@@ -6416,7 +6429,7 @@ Errors Archive_readSpecialEntry(ArchiveInfo      *archiveInfo,
   }
   archiveEntryInfo->cryptAlgorithm = archiveEntryInfo->special.chunkSpecial.cryptAlgorithm;
 
-  // detect block length of use crypt algorithm
+  // detect block length of used crypt algorithm
   error = Crypt_getBlockLength(archiveEntryInfo->cryptAlgorithm,&archiveEntryInfo->blockLength);
   if (error != ERROR_NONE)
   {
