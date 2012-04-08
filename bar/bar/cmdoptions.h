@@ -52,14 +52,14 @@ typedef struct
 typedef struct
 {
   const char *name;
-  int        value;
+  uint       value;
   const char *description;
 } CommandLineOptionSelect;
 
 typedef struct
 {
   const char *name;
-  int        value;
+  uint       value;
   const char *description;
 } CommandLineOptionSet;
 
