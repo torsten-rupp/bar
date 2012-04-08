@@ -823,6 +823,12 @@ Errors Crypt_encrypt(CryptInfo *cryptInfo,
         assert(cryptInfo->blockLength > 0);
         assert((bufferLength%cryptInfo->blockLength) == 0);
 
+        gcryptError = gcry_cipher_cts(cryptInfo->gcry_cipher_hd,TRUE);
+        if (gcryptError != 0)
+        {
+          return ERROR_ENCRYPT_FAIL;
+        }
+
         gcryptError = gcry_cipher_encrypt(cryptInfo->gcry_cipher_hd,
                                           buffer,
                                           bufferLength,
@@ -877,6 +883,134 @@ Errors Crypt_decrypt(CryptInfo *cryptInfo,
       #ifdef HAVE_GCRYPT
         assert(cryptInfo->blockLength > 0);
         assert((bufferLength%cryptInfo->blockLength) == 0);
+
+        gcryptError = gcry_cipher_cts(cryptInfo->gcry_cipher_hd,TRUE);
+        if (gcryptError != 0)
+        {
+          return ERROR_ENCRYPT_FAIL;
+        }
+
+        gcryptError = gcry_cipher_decrypt(cryptInfo->gcry_cipher_hd,
+                                          buffer,
+                                          bufferLength,
+                                          NULL,
+                                          0
+                                         );
+        if (gcryptError != 0)
+        {
+          return ERROR_ENCRYPT_FAIL;
+        }
+      #else /* not HAVE_GCRYPT */
+        UNUSED_VARIABLE(buffer);
+        UNUSED_VARIABLE(bufferLength);
+
+        return ERROR_FUNCTION_NOT_SUPPORTED;
+      #endif /* HAVE_GCRYPT */
+      break;
+    default:
+      #ifndef NDEBUG
+        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+      #endif /* NDEBUG */
+      break; /* not reached */
+  }
+
+  return ERROR_NONE;
+}
+
+Errors Crypt_encryptBytes(CryptInfo *cryptInfo,
+                          void      *buffer,
+                          ulong      bufferLength
+                         )
+{
+  #ifdef HAVE_GCRYPT
+    gcry_error_t gcryptError;
+  #endif
+
+  assert(cryptInfo != NULL);
+  assert(buffer != NULL);
+
+  switch (cryptInfo->cryptAlgorithm)
+  {
+    case CRYPT_ALGORITHM_NONE:
+      break;
+    case CRYPT_ALGORITHM_3DES:
+    case CRYPT_ALGORITHM_CAST5:
+    case CRYPT_ALGORITHM_BLOWFISH:
+    case CRYPT_ALGORITHM_AES128:
+    case CRYPT_ALGORITHM_AES192:
+    case CRYPT_ALGORITHM_AES256:
+    case CRYPT_ALGORITHM_TWOFISH128:
+    case CRYPT_ALGORITHM_TWOFISH256:
+      #ifdef HAVE_GCRYPT
+        assert(cryptInfo->blockLength > 0);
+        assert((bufferLength%cryptInfo->blockLength) == 0);
+
+        gcryptError = gcry_cipher_cts(cryptInfo->gcry_cipher_hd,FALSE);
+        if (gcryptError != 0)
+        {
+          return ERROR_ENCRYPT_FAIL;
+        }
+
+        gcryptError = gcry_cipher_encrypt(cryptInfo->gcry_cipher_hd,
+                                          buffer,
+                                          bufferLength,
+                                          NULL,
+                                          0
+                                         );
+        if (gcryptError != 0)
+        {
+          return ERROR_ENCRYPT_FAIL;
+        }
+      #else /* not HAVE_GCRYPT */
+        UNUSED_VARIABLE(buffer);
+        UNUSED_VARIABLE(bufferLength);
+
+        return ERROR_FUNCTION_NOT_SUPPORTED;
+      #endif /* HAVE_GCRYPT */
+      break;
+    default:
+      #ifndef NDEBUG
+        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+      #endif /* NDEBUG */
+      break; /* not reached */
+  }
+
+  return ERROR_NONE;
+}
+
+Errors Crypt_decryptBytes(CryptInfo *cryptInfo,
+                          void      *buffer,
+                          ulong      bufferLength
+                         )
+{
+  #ifdef HAVE_GCRYPT
+    gcry_error_t gcryptError;
+  #endif
+
+  assert(cryptInfo != NULL);
+  assert(buffer != NULL);
+
+  switch (cryptInfo->cryptAlgorithm)
+  {
+    case CRYPT_ALGORITHM_NONE:
+      break;
+    case CRYPT_ALGORITHM_3DES:
+    case CRYPT_ALGORITHM_CAST5:
+    case CRYPT_ALGORITHM_BLOWFISH:
+    case CRYPT_ALGORITHM_AES128:
+    case CRYPT_ALGORITHM_AES192:
+    case CRYPT_ALGORITHM_AES256:
+    case CRYPT_ALGORITHM_TWOFISH128:
+    case CRYPT_ALGORITHM_TWOFISH256:
+      #ifdef HAVE_GCRYPT
+        assert(cryptInfo->blockLength > 0);
+        assert((bufferLength%cryptInfo->blockLength) == 0);
+
+        gcryptError = gcry_cipher_cts(cryptInfo->gcry_cipher_hd,FALSE);
+        if (gcryptError != 0)
+        {
+          return ERROR_ENCRYPT_FAIL;
+        }
 
         gcryptError = gcry_cipher_decrypt(cryptInfo->gcry_cipher_hd,
                                           buffer,

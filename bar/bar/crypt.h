@@ -3,7 +3,7 @@
 * $Revision$
 * $Date$
 * $Author$
-* Contents: Backup ARchive crypt functions
+* Contents: Backup ARchiver crypt functions
 * Systems: all
 *
 \***********************************************************************/
@@ -238,6 +238,25 @@ Errors Crypt_init(CryptInfo       *cryptInfo,
 void Crypt_done(CryptInfo *cryptInfo);
 
 /***********************************************************************\
+* Name   : Crypt_isEncrypted
+* Purpose: check if encrypted with some algorithm
+* Input  : compressAlgorithm - compress algorithm
+* Output : -
+* Return : TRUE iff encrypted, FALSE otherwise
+* Notes  : -
+\***********************************************************************/
+
+INLINE bool Crypt_isEncrypted(const CryptInfo *cryptInfo);
+#if defined(NDEBUG) || defined(__COMPRESS_IMPLEMENATION__)
+INLINE bool Crypt_isEncrypted(const CryptInfo *cryptInfo)
+{
+  assert(cryptInfo != NULL);
+
+  return cryptInfo->cryptAlgorithm != CRYPT_ALGORITHM_NONE;
+}
+#endif /* NDEBUG || __COMPRESS_IMPLEMENATION__ */
+
+/***********************************************************************\
 * Name   : Crypt_reset
 * Purpose: reset crypt handle
 * Input  : cryptInfo - crypt info block
@@ -254,10 +273,10 @@ Errors Crypt_reset(CryptInfo *cryptInfo,
 
 /***********************************************************************\
 * Name   : Crypt_encrypt
-* Purpose: encrypt data
+* Purpose: encrypt data block
 * Input  : cryptInfo    - crypt info block
 *          buffer       - data
-*          bufferLength - length of data
+*          bufferLength - length of data (multiple of block length!)
 * Output : buffer - encrypted data
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -270,10 +289,10 @@ Errors Crypt_encrypt(CryptInfo *cryptInfo,
 
 /***********************************************************************\
 * Name   : Crypt_decrypt
-* Purpose: decrypt data
+* Purpose: decrypt data block
 * Input  : cryptInfo    - crypt info block
 *          buffer       - encrypted data
-*          bufferLength - length of data
+*          bufferLength - length of data (multiple of block length!)
 * Output : buffer - data
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -283,6 +302,38 @@ Errors Crypt_decrypt(CryptInfo *cryptInfo,
                      void      *buffer,
                      ulong      bufferLength
                     );
+
+/***********************************************************************\
+* Name   : Crypt_encryptBytes
+* Purpose: encrypt data bytes (without Cipher Text Stealing)
+* Input  : cryptInfo    - crypt info block
+*          buffer       - data
+*          bufferLength - length of data (multiple of block length!)
+* Output : buffer - encrypted data
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors Crypt_encryptBytes(CryptInfo *cryptInfo,
+                          void      *buffer,
+                          ulong      bufferLength
+                         );
+
+/***********************************************************************\
+* Name   : Crypt_decryptBytes
+* Purpose: decrypt data bytes (without Cipher Text Stealing)
+* Input  : cryptInfo    - crypt info block
+*          buffer       - encrypted data
+*          bufferLength - length of data (multiple of block length!)
+* Output : buffer - data
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors Crypt_decryptBytes(CryptInfo *cryptInfo,
+                          void      *buffer,
+                          ulong      bufferLength
+                         );
 
 /*---------------------------------------------------------------------*/
 
