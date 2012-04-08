@@ -2835,7 +2835,7 @@ void Compress_done(void)
 
 const char *Compress_getAlgorithmName(CompressAlgorithms compressAlgorithm)
 {
-  int        z;
+  uint       z;
   const char *s;
 
   z = 0;
@@ -2859,7 +2859,7 @@ const char *Compress_getAlgorithmName(CompressAlgorithms compressAlgorithm)
 
 CompressAlgorithms Compress_getAlgorithm(const char *name)
 {
-  int                z;
+  uint               z;
   CompressAlgorithms compressAlgorithm;
 
   assert(name != NULL);
