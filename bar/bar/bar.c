@@ -1420,7 +1420,7 @@ LOCAL bool cmdOptionParseCompressAlgorithm(void *userData, void *variable, const
   char               algorithm1[256],algorithm2[256];
   CompressAlgorithms compressAlgorithmDelta,compressAlgorithmByte;
   bool               foundFlag;
-  int                z;
+  uint               z;
 
   assert(variable != NULL);
   assert(value != NULL);
@@ -3094,7 +3094,7 @@ bool configValueParseCompressAlgorithm(void *userData, void *variable, const cha
   CompressAlgorithms compressAlgorithmDelta,compressAlgorithmByte;
   bool               foundFlag1,foundFlag2;
   bool               foundFlag;
-  int                z;
+  uint               z;
 
   assert(variable != NULL);
   assert(value != NULL);
@@ -3369,7 +3369,7 @@ LOCAL bool parseScheduleMonth(const String s, int *month)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool parseScheduleWeekDays(const String s, ulong *weekDays)
+LOCAL bool parseScheduleWeekDays(const String s, long *weekDays)
 {
   String          names;
   StringTokenizer stringTokenizer;
