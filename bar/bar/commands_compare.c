@@ -286,7 +286,7 @@ Errors Command_compare(const StringList                *archiveNameList,
               }
 
               // check file size
-              if (fileInfo.size != File_getSize(&fileHandle))
+              if (fileInfo.size != (long)File_getSize(&fileHandle))
               {
                 printInfo(1,"FAIL!\n");
                 printError("'%s' differ in size: expected %lld bytes, found %lld bytes\n",
@@ -1061,7 +1061,7 @@ Errors Command_compare(const StringList                *archiveNameList,
                   }
 
                   // check file size
-                  if (fileInfo.size != File_getSize(&fileHandle))
+                  if (fileInfo.size != (long)File_getSize(&fileHandle))
                   {
                     printInfo(1,"FAIL!\n");
                     printError("'%s' differ in size: expected %lld bytes, found %lld bytes\n",
