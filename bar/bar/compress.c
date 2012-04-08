@@ -719,14 +719,20 @@ LOCAL Errors compressData(CompressInfo *compressInfo)
       // compress with xdelta
       #ifdef HAVE_XDELTA3
         {
+#ifdef RR
+#else
           ulong  dataBytes;
+#endif
           bool   doneFlag;
           int    xdeltaResult;
           ulong  n;
           Errors error;
           ulong  requiredBytes;
+#ifdef RR
+#else
           ulong  outputBufferSize;
           byte   *outputBuffer;
+#endif
           ulong  bytesRead;
 //static int xr=0;
 //static int xw=0;
@@ -2106,14 +2112,20 @@ LOCAL Errors decompressData(CompressInfo *compressInfo)
       // decompress with xdelta
       #ifdef HAVE_XDELTA3
         {
+#ifdef RR
+#else
           ulong  compressBytes;
+#endif
           bool   doneFlag;
           int    xdeltaResult;
           ulong  n;
           Errors error;
           ulong  requiredBytes;
+#ifdef RR
+#else
           ulong  outputBufferSize;
           byte   *outputBuffer;
+#endif
           ulong  bytesRead;
 
 #ifdef RR
@@ -3237,7 +3249,7 @@ Errors Compress_new(CompressInfo       *compressInfo,
             return ERROR_INIT_COMPRESS;
           }
 #warning memset noetig?
-          memset(&compressInfo->xdelta.source,0,sizeof(compressInfo->xdelta.source));
+//          memset(&compressInfo->xdelta.source,0,sizeof(compressInfo->xdelta.source));
 //          compressInfo->xdelta.source.ioh      = compressInfo;
           compressInfo->xdelta.source.blksize  = XDELTA_BUFFER_SIZE;
           compressInfo->xdelta.source.onblk    = (usize_t)0;
