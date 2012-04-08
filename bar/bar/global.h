@@ -515,7 +515,11 @@ typedef void                void32;
 * Notes  : -
 \***********************************************************************/
 
-/* 2 macros necessary, because of "string"-construction */
+// prefixes
+#define HALT_PREFIX_FATAL_ERROR    "FATAL ERROR: "
+#define HALT_PREFIX_INTERNAL_ERROR "INTERNAL ERROR: "
+
+// 2 macros necessary, because of "string"-construction
 #define _HALT_STRING1(z) _HALT_STRING2(z)
 #define _HALT_STRING2(z) #z
 #undef HALT
@@ -529,27 +533,27 @@ typedef void                void32;
 #define HALT_INSUFFICIENT_MEMORY(args...) \
   do \
   { \
-     __abort(__FILE__,__LINE__,"FATAL ERROR: ","insufficient memory", ## args); \
+     __abort(__FILE__,__LINE__,HALT_PREFIX_FATAL_ERROR,"insufficient memory", ## args); \
   } \
  while (0)
 
 #define HALT_FATAL_ERROR(format, args...) \
   do \
   { \
-     __abort(__FILE__,__LINE__,"FATAL ERROR: ",format, ## args); \
+     __abort(__FILE__,__LINE__,HALT_PREFIX_FATAL_ERROR,format, ## args); \
   } \
  while (0)
 
 #define HALT_INTERNAL_ERROR(format, args...) \
   do \
   { \
-     __abort(__FILE__,__LINE__, "INTERNAL ERROR: ", format, ## args); \
+     __abort(__FILE__,__LINE__,HALT_PREFIX_INTERNAL_ERROR, format, ## args); \
   } \
   while (0)
 #define HALT_INTERNAL_ERROR_AT(file, line, format, args...) \
   do \
   { \
-     __abort(file,line,"INTERNAL ERROR: ",format, ## args); \
+     __abort(file,line,HALT_PREFIX_INTERNAL_ERROR,format, ## args); \
   } \
   while (0)
 #define HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED() \
