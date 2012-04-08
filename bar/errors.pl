@@ -192,9 +192,9 @@ static int       errorTextId    = 0;
 
 int _Errors_textToIndex(const char *text)
 {
-  int index;
-  int minId;
-  int z,i;
+  int  index;
+  int  minId;
+  uint z,i;
 
   if (text != NULL)
   {
