@@ -275,7 +275,7 @@ void Crypt_doneAll(void)
 
 const char *Crypt_getAlgorithmName(CryptAlgorithms cryptAlgorithm)
 {
-  int        z;
+  uint       z;
   const char *algorithmName;
 
   z = 0;
@@ -299,7 +299,7 @@ const char *Crypt_getAlgorithmName(CryptAlgorithms cryptAlgorithm)
 
 CryptAlgorithms Crypt_getAlgorithm(const char *name)
 {
-  int             z;
+  uint            z;
   CryptAlgorithms cryptAlgorithm;
 
   assert(name != NULL);
@@ -529,7 +529,7 @@ Errors Crypt_init(CryptInfo       *cryptInfo,
           uint         maxKeyLength;
           uint         keyLength;
           char         key[MAX_KEY_SIZE/8];
-          int          z;
+          uint         z;
 
           if (password == NULL)
           {
@@ -735,7 +735,7 @@ Errors Crypt_reset(CryptInfo *cryptInfo, uint64 seed)
         {
           uint         ivLength;
           char         iv[MAX_KEY_SIZE/8];
-          int          z;
+          uint         z;
           gcry_error_t gcryptError;
 
           gcry_cipher_reset(cryptInfo->gcry_cipher_hd);
