@@ -2483,7 +2483,7 @@ void getFTPServerSettings(const String     name,
   {
     ftpServerNode = ftpServerNode->next;
   }
-  ftpServer->loginName = !String_empty(jobOptions->ftpServer.loginName )?jobOptions->ftpServer.loginName:((ftpServerNode != NULL)?ftpServerNode->ftpServer.loginName:globalOptions.defaultFTPServer->loginName);
+  ftpServer->loginName = !String_isEmpty(jobOptions->ftpServer.loginName )?jobOptions->ftpServer.loginName:((ftpServerNode != NULL)?ftpServerNode->ftpServer.loginName:globalOptions.defaultFTPServer->loginName);
   ftpServer->password  = !Password_empty(jobOptions->ftpServer.password)?jobOptions->ftpServer.password :((ftpServerNode != NULL)?ftpServerNode->ftpServer.password :globalOptions.defaultFTPServer->password );
 }
 
@@ -2504,10 +2504,10 @@ void getSSHServerSettings(const String     name,
     sshServerNode = sshServerNode->next;
   }
   sshServer->port               = (jobOptions->sshServer.port != 0                      )?jobOptions->sshServer.port              :((sshServerNode != NULL)?sshServerNode->sshServer.port              :globalOptions.defaultSSHServer->port              );
-  sshServer->loginName          = !String_empty(jobOptions->sshServer.loginName         )?jobOptions->sshServer.loginName         :((sshServerNode != NULL)?sshServerNode->sshServer.loginName         :globalOptions.defaultSSHServer->loginName         );
+  sshServer->loginName          = !String_isEmpty(jobOptions->sshServer.loginName         )?jobOptions->sshServer.loginName         :((sshServerNode != NULL)?sshServerNode->sshServer.loginName         :globalOptions.defaultSSHServer->loginName         );
   sshServer->password           = !Password_empty(jobOptions->sshServer.password        )?jobOptions->sshServer.password          :((sshServerNode != NULL)?sshServerNode->sshServer.password          :globalOptions.defaultSSHServer->password          );
-  sshServer->publicKeyFileName  = !String_empty(jobOptions->sshServer.publicKeyFileName )?jobOptions->sshServer.publicKeyFileName :((sshServerNode != NULL)?sshServerNode->sshServer.publicKeyFileName :globalOptions.defaultSSHServer->publicKeyFileName );
-  sshServer->privateKeyFileName = !String_empty(jobOptions->sshServer.privateKeyFileName)?jobOptions->sshServer.privateKeyFileName:((sshServerNode != NULL)?sshServerNode->sshServer.privateKeyFileName:globalOptions.defaultSSHServer->privateKeyFileName);
+  sshServer->publicKeyFileName  = !String_isEmpty(jobOptions->sshServer.publicKeyFileName )?jobOptions->sshServer.publicKeyFileName :((sshServerNode != NULL)?sshServerNode->sshServer.publicKeyFileName :globalOptions.defaultSSHServer->publicKeyFileName );
+  sshServer->privateKeyFileName = !String_isEmpty(jobOptions->sshServer.privateKeyFileName)?jobOptions->sshServer.privateKeyFileName:((sshServerNode != NULL)?sshServerNode->sshServer.privateKeyFileName:globalOptions.defaultSSHServer->privateKeyFileName);
 }
 
 void getCDSettings(const JobOptions *jobOptions,
@@ -2638,7 +2638,15 @@ Errors inputCryptPassword(void         *userData,
         title = String_new();
 
         // input password
-        String_format(String_clear(title),"Crypt password for '%S'",fileName);
+        String_clear(title);
+        if (!String_isEmpty(fileName))
+        {
+          String_format(title,"Crypt password for '%S'",fileName);
+        }
+        else
+        {
+          String_setCString(title,"Crypt password");
+        }
         if (!Password_input(password,String_cString(title),PASSWORD_INPUT_MODE_ANY) || (Password_length(password) <= 0))
         {
           String_delete(title);
@@ -2647,7 +2655,14 @@ Errors inputCryptPassword(void         *userData,
         }
         if (validateFlag)
         {
-          String_format(String_clear(title),"Verify password for '%S'",fileName);
+          if (!String_isEmpty(fileName))
+          {
+            String_format(title,"Verify password for '%S'",fileName);
+          }
+          else
+          {
+            String_setCString(title,"Verify password");
+          }
           if (!Password_inputVerify(password,String_cString(title),PASSWORD_INPUT_MODE_ANY))
           {
             printError("Crypt passwords are not equal!\n");
