@@ -19,6 +19,8 @@
 #include <stdarg.h>
 #include <assert.h>
 
+#include "forward.h"         // required for JobOptions
+
 #include "global.h"
 #include "lists.h"
 #include "strings.h"
@@ -324,7 +326,8 @@ typedef struct
   CompressAlgorithms byte;                                       // byte compress algorithm to use
 } JobOptionsCompressAlgorithm;
 
-typedef struct
+// see forward declaration in forward.h
+struct JobOptions
 {
   ArchiveTypes                archiveType;                       // archive type (normal, full, incremental, differential)
 
@@ -371,7 +374,7 @@ typedef struct
   bool                        noStorageFlag;                     // TRUE to skip storage, only create incremental data file
   bool                        noBAROnMediumFlag;                 // TRUE for not storing BAR on medium
   bool                        stopOnErrorFlag;
-} JobOptions;
+};
 
 /***************************** Variables *******************************/
 extern GlobalOptions  globalOptions;          // global options
