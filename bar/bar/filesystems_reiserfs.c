@@ -140,7 +140,7 @@ LOCAL bool REISERFS_blockIsUsed(DeviceHandle *deviceHandle, REISERFSHandle *reis
     bitmapIndex = block/(reiserFSHandle->blockSize*8);
 
     /* read correct block bitmap if needed */
-    if (reiserFSHandle->bitmapIndex != bitmapIndex)
+    if (reiserFSHandle->bitmapIndex != (int)bitmapIndex)
     {
       bitmapBlock = ((bitmapIndex > 0)?(uint32)bitmapIndex*(uint32)reiserFSHandle->blockSize*8:REISERFS_SUPER_BLOCK_OFFSET/reiserFSHandle->blockSize+1)*(uint32)reiserFSHandle->blockSize;
       if (Device_seek(deviceHandle,REISERFS_BLOCK_TO_OFFSET(reiserFSHandle,bitmapBlock)) != ERROR_NONE)

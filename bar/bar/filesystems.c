@@ -125,7 +125,7 @@ Errors FileSystem_init(FileSystemHandle *fileSystemHandle,
                       )
 {
   void *handle;
-  int  z;
+  uint z;
 
   assert(fileSystemHandle != NULL);
   assert(deviceHandle != NULL);

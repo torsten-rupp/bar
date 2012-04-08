@@ -341,7 +341,7 @@ LOCAL bool EXT_blockIsUsed(DeviceHandle *deviceHandle, EXTHandle *extHandle, uin
     assert(bitmapIndex < extHandle->bitmapBlocksCount);
 
     /* read correct block bitmap if needed */
-    if (extHandle->bitmapIndex != bitmapIndex)
+    if (extHandle->bitmapIndex != (int)bitmapIndex)
     {
       if (Device_seek(deviceHandle,EXT_BLOCK_TO_OFFSET(extHandle,extHandle->bitmapBlocks[bitmapIndex])) != ERROR_NONE)
       {

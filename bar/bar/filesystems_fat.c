@@ -280,8 +280,8 @@ LOCAL bool FAT_blockIsUsed(DeviceHandle *deviceHandle, FATHandle *fatHandle, uin
 
     /* read correct cluster bitmap if needed */
     if (   (fatHandle->clusterBaseIndex < 0)
-        || (cluster < fatHandle->clusterBaseIndex)
-        || (cluster >= fatHandle->clusterBaseIndex+CLUSTER_BITMAP_SIZE))
+        || (cluster < (uint32)fatHandle->clusterBaseIndex)
+        || (cluster >= (uint32)fatHandle->clusterBaseIndex+CLUSTER_BITMAP_SIZE))
     {
       if (!readClusterBitmap(deviceHandle,fatHandle,cluster))
       {
@@ -290,7 +290,7 @@ LOCAL bool FAT_blockIsUsed(DeviceHandle *deviceHandle, FATHandle *fatHandle, uin
     }
 
     /* check if sector is used */
-    assert((cluster >= fatHandle->clusterBaseIndex) && (cluster < fatHandle->clusterBaseIndex+CLUSTER_BITMAP_SIZE));
+    assert((cluster >= (uint32)fatHandle->clusterBaseIndex) && (cluster < (uint32)fatHandle->clusterBaseIndex+CLUSTER_BITMAP_SIZE));
     index = cluster-fatHandle->clusterBaseIndex;
     blockIsUsed = BITSET_IS_SET(fatHandle->clusterBitmap,index);
   }
