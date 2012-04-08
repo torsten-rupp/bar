@@ -311,7 +311,7 @@ bool Array_insert(Array array, long nextIndex, const void *data)
     if      (nextIndex == ARRAY_END)
     {
     }
-    else if (nextIndex+1 >= array->maxLength)
+    else if ((ulong)nextIndex+1 >= array->maxLength)
     {
       newData = realloc(array->data,(nextIndex+1)*array->elementSize);
       if (newData == NULL)
@@ -323,7 +323,7 @@ bool Array_insert(Array array, long nextIndex, const void *data)
     }
 
     // insert element
-    if (nextIndex < array->length)
+    if (nextIndex < (long)array->length)
     {
       memmove(array->data+(nextIndex+1)*array->elementSize,
               array->data+nextIndex*array->elementSize,
@@ -331,7 +331,7 @@ bool Array_insert(Array array, long nextIndex, const void *data)
              );
     }
     memcpy(array->data+nextIndex*array->elementSize,data,array->elementSize);
-    if (nextIndex > array->length) array->length = nextIndex+1;
+    if (nextIndex > (long)array->length) array->length = (ulong)nextIndex+1;
 
     return TRUE;
   }
