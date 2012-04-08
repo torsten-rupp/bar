@@ -1385,13 +1385,6 @@ performance:
             performance_none performance_zip_compress performance_bzip2_compress performance_lzma_compress performance_delta_compress \
            )
 
-	@$(ECHO) "  performance1, performance_none"
-	@$(ECHO) "  performance2, performance_zip_compress"
-	@$(ECHO) "  performance3, performance_bzip2_compress"
-	@$(ECHO) "  performance4, performance_lzma_compress"
-	@$(ECHO) "  performance5, performance_delta_compress"
-
-
 .PHONY: performance1 performance_none
 performance1 performance_none: \
   $(PERFORMANCE_BAR) \
