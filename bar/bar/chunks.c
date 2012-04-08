@@ -1201,11 +1201,13 @@ Errors Chunk_readData(ChunkInfo *chunkInfo,
   }
   if (bytesRead != NULL)
   {
+    // return number of read bytes
     (*bytesRead) = n;
   }
   else
   {
-    if (size != bytesRead)
+    // check if requested all data read
+    if (size != n)
     {
       return ERROR(IO_ERROR,errno);
     }
