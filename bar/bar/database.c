@@ -79,7 +79,7 @@ LOCAL String formatSQLString(String     sqlString,
     String     string;
   }          value;
   const char *t;
-  long       i;
+  ulong      i;
 
   assert(sqlString != NULL);
   assert(command != NULL);
@@ -207,7 +207,7 @@ LOCAL String formatSQLString(String     sqlString,
             value.string = va_arg(arguments,String);
             if (value.string != NULL)
             {
-              i = 0;
+              i = 0L;
               while (i < String_length(value.string))
               {
                 ch = String_index(value.string,i);
@@ -598,7 +598,7 @@ bool Database_getNextRow(DatabaseQueryHandle *databaseQueryHandle,
   uint    column;
   va_list arguments;
   bool    longFlag;
-  uint    maxLength;
+  int     maxLength;
   union
   {
     int    *i;
