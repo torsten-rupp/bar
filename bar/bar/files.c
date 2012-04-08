@@ -914,7 +914,7 @@ Errors File_read(FileHandle *fileHandle,
 
   n = fread(buffer,1,bufferLength,fileHandle->file);
   if (   ((n <= 0) && ferror(fileHandle->file))
-      || ((n < bufferLength) && (bytesRead == NULL))
+      || ((n < (ssize_t)bufferLength) && (bytesRead == NULL))
      )
   {
     return ERRORX(IO_ERROR,errno,String_cString(fileHandle->name));
@@ -945,7 +945,7 @@ Errors File_write(FileHandle *fileHandle,
   n = fwrite(buffer,1,bufferLength,fileHandle->file);
   if (n > 0) fileHandle->index += n;
   if (fileHandle->index > fileHandle->size) fileHandle->size = fileHandle->index;
-  if (n != bufferLength)
+  if (n != (ssize_t)bufferLength)
   {
     return ERRORX(IO_ERROR,errno,String_cString(fileHandle->name));
   }
@@ -1847,8 +1847,8 @@ Errors File_setOwner(const String fileName,
   assert(fileName != NULL);
 
   if (chown(String_cString(fileName),
-            (userId  != FILE_DEFAULT_USER_ID ) ? userId  : -1,
-            (groupId != FILE_DEFAULT_GROUP_ID) ? groupId : -1
+            (userId  != FILE_DEFAULT_USER_ID ) ? (uid_t)userId  : (uid_t)(-1),
+            (groupId != FILE_DEFAULT_GROUP_ID) ? (gid_t)groupId : (gid_t)(-1)
            ) != 0
      )
   {
@@ -1960,8 +1960,8 @@ Errors File_makeDirectory(const String   pathName,
         || (groupId != FILE_DEFAULT_GROUP_ID)
        )
     {
-      uid = (userId  != FILE_DEFAULT_USER_ID ) ? (uid_t)userId  : -1;
-      gid = (groupId != FILE_DEFAULT_GROUP_ID) ? (gid_t)groupId : -1;
+      uid = (userId  != FILE_DEFAULT_USER_ID ) ? (uid_t)userId  : (uid_t)(-1);
+      gid = (groupId != FILE_DEFAULT_GROUP_ID) ? (gid_t)groupId : (gid_t)(-1);
       if (chown(String_cString(directoryName),uid,gid) != 0)
       {
         error = ERRORX(IO_ERROR,errno,String_cString(directoryName));
@@ -2042,8 +2042,8 @@ Errors File_makeDirectory(const String   pathName,
            )
         {
           // set owner
-          uid = (userId  != FILE_DEFAULT_USER_ID ) ? (uid_t)userId  : -1;
-          gid = (groupId != FILE_DEFAULT_GROUP_ID) ? (gid_t)groupId : -1;
+          uid = (userId  != FILE_DEFAULT_USER_ID ) ? (uid_t)userId  : (uid_t)(-1);
+          gid = (groupId != FILE_DEFAULT_GROUP_ID) ? (gid_t)groupId : (gid_t)(-1);
           if (chown(String_cString(directoryName),uid,gid) != 0)
           {
             error = ERRORX(IO_ERROR,errno,String_cString(directoryName));
@@ -2110,10 +2110,10 @@ Errors File_readLink(String       fileName,
   #define BUFFER_SIZE  256
   #define BUFFER_DELTA 128
 
-  char   *buffer;
-  uint   bufferSize;
-  int    result;
-  Errors error;
+  char    *buffer;
+  ssize_t bufferSize;
+  int     result;
+  Errors  error;
 
   assert(linkName != NULL);
   assert(fileName != NULL);
