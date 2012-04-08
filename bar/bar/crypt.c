@@ -1694,7 +1694,6 @@ Errors Crypt_getRandomEncryptKey(CryptKey        *publicKey,
     gcryptError = gcry_sexp_build(&sexpData,NULL,"(data (flags raw) (value %b))",PKCS1_ENCODED_MESSAGE_LENGTH,(char*)pkcs1EncodedMessage);
     if (gcryptError != 0)
     {
-//fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
       Password_freeSecure(pkcs1EncodedMessage);
       return ERROR_KEY_ENCRYPT_FAIL;
     }
