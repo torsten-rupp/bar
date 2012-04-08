@@ -21,10 +21,7 @@
 #include <assert.h>
 
 #include "global.h"
-#include "lists.h"
 #include "strings.h"
-#include "stringlists.h"
-#include "patterns.h"
 
 #include "errors.h"
 
@@ -36,7 +33,7 @@
 #define PATTERN_CHAR_SET_REGEX          "*+?{}():[].^$|"
 #define PATTERN_CHAR_SET_EXTENDED_REGEX "*+?{}():[].^$|"
 
-/* pattern types */
+// pattern types
 typedef enum
 {
   PATTERN_TYPE_GLOB,                    // * and ?
@@ -44,7 +41,7 @@ typedef enum
   PATTERN_TYPE_EXTENDED_REGEX           // extended regular expressions
 } PatternTypes;
 
-/* match modes */
+// match modes
 typedef enum
 {
   PATTERN_MATCH_MODE_BEGIN,
@@ -165,7 +162,7 @@ bool Pattern_match(const Pattern     *pattern,
 * Purpose: check if string is a pattern
 * Input  : string - string
 * Output : -
-* Return : TRUE is s is a pattern, FALSE otherwise
+* Return : TRUE is string is a pattern, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
 
