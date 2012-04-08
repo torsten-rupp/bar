@@ -19,8 +19,9 @@
 #include <assert.h>
 
 #include "global.h"
+#include "strings.h"
 
-#include "bar.h"
+#include "errors.h"
 
 #include "patterns.h"
 
@@ -199,10 +200,10 @@ Errors Pattern_initCString(Pattern *pattern, const char *string, PatternTypes pa
 
   assert(pattern != NULL);
 
-  /* initialize pattern */
+  // initialize pattern
   pattern->type = patternType;
 
-  /* compile pattern */
+  // compile pattern
   error = compilePattern(string,
                          patternType,
                          &pattern->regexBegin,
@@ -293,12 +294,12 @@ bool Pattern_checkIsPattern(const String string)
 {
   const char *PATTERNS_CHARS = "*?[{";
 
-  long z;
-  bool patternFlag;
+  ulong z;
+  bool  patternFlag;
 
   assert(string != NULL);
 
-  z = 0;
+  z = 0L;
   patternFlag = FALSE;
   while ((z < String_length(string)) && !patternFlag)
   {
