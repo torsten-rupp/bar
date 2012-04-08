@@ -211,11 +211,8 @@ uint64 Misc_makeDateTime(uint year,
   assert(month <= 12);
   assert(day >= 1);
   assert(day <= 31);
-  assert(hour >= 0);
   assert(hour <= 23);
-  assert(minute >= 0);
   assert(minute <= 59);
-  assert(second >= 0);
   assert(second <= 59);
 
   tmStruct.tm_year = year - 1900;
@@ -252,7 +249,7 @@ String Misc_expandMacros(String          string,
   int        index;
   long       i;
   const char *s;
-  int        z;
+  uint       z;
   char       format[128];
 
   assert(template != NULL);
@@ -304,7 +301,7 @@ String Misc_expandMacros(String          string,
                   )
               )
         {
-          if (i < sizeof(format)-1)
+          if (i < (long)sizeof(format)-1)
           {
             format[i] = template[i0]; i++;
           }
@@ -312,7 +309,7 @@ String Misc_expandMacros(String          string,
         }
         if (i0 < templateLength)
         {
-          if (i < sizeof(format)-1)
+          if (i < (long)sizeof(format)-1)
           {
             format[i] = template[i0]; i++;
           }
