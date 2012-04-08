@@ -2907,7 +2907,8 @@ LOCAL Errors storeFileEntry(ArchiveInfo       *archiveInfo,
       // get source for delta-compression
       error = Source_openEntry(&sourceHandle,
                                NULL,
-                               fileName
+                               fileName,
+                               jobOptions
                               );
       if      (error == ERROR_NONE)
       {
@@ -3204,7 +3205,8 @@ LOCAL Errors storeImageEntry(ArchiveInfo       *archiveInfo,
       // get source for delta-compression
       error = Source_openEntry(&sourceHandle,
                                NULL,
-                               deviceName
+                               deviceName,
+                               jobOptions
                               );
       if (error == ERROR_NONE)
       {
@@ -3747,13 +3749,12 @@ LOCAL Errors storeHardLinkEntry(ArchiveInfo       *archiveInfo,
     if (byteCompressFlag && Compress_isCompressed(archiveInfo->jobOptions->compressAlgorithm.delta))
     {
       // get source for delta-compression
-//???
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       STRINGLIST_ITERATE(nameList,stringNode,name)
       {
         error = Source_openEntry(&sourceHandle,
                                  NULL,
-                                 name
+                                 name,
+                                 jobOptions
                                 );
         if (error == ERROR_NONE) break;
       }
