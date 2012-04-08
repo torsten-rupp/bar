@@ -294,24 +294,24 @@ bool Pattern_checkIsPattern(const String string)
 {
   const char *PATTERNS_CHARS = "*?[{";
 
-  ulong z;
+  ulong i;
   bool  patternFlag;
 
   assert(string != NULL);
 
-  z = 0L;
+  i = 0L;
   patternFlag = FALSE;
-  while ((z < String_length(string)) && !patternFlag)
+  while ((i < String_length(string)) && !patternFlag)
   {
-    if (String_index(string,z) != '\\')
+    if (String_index(string,i) != '\\')
     {
-      patternFlag = (strchr(PATTERNS_CHARS,String_index(string,z)) != NULL);
+      patternFlag = (strchr(PATTERNS_CHARS,String_index(string,i)) != NULL);
     }
     else
     {
-      z++;
+      i++;
     }
-    z++;
+    i++;
   }
 
   return patternFlag;
