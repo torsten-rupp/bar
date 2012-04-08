@@ -683,7 +683,7 @@ bool __Semaphore_init(const char *name, Semaphore *semaphore)
 void Semaphore_done(Semaphore *semaphore)
 {
   #ifndef NDEBUG
-    int z;
+    uint z;
   #endif /* not NDEBUG */
 
   assert(semaphore != NULL);
