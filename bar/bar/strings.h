@@ -23,7 +23,7 @@
 /***************************** Constants *******************************/
 
 #define STRING_BEGIN 0L
-#define STRING_END   -1L
+#define STRING_END   MAX_LONG
 
 #define STRING_WHITE_SPACES " \t\f\v\n\r"
 #define STRING_QUOTE        "'"
@@ -298,6 +298,8 @@ String String_appendBuffer(String string, const char *buffer, ulong bufferLength
 * Input  : string         - string
 *          index          - index where to insert
 *          insertString/s - string to insert
+*          fromIndex      - sub-string from index
+*          fromLength     - sub-string from length
 *          ch             - character to insert
 *          buffer         - bufer to insert
 *          bufferLength   - length of buffer

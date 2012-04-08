@@ -231,7 +231,7 @@ LOCAL_INLINE struct __String* allocString(void)
     #endif /* HALT_ON_INSUFFICIENT_MEMORY */
   }
 
-  string->length    = 0;
+  string->length    = 0L;
   string->maxLength = STRING_START_LENGTH;
   string->data[0]   = '\0';
   #ifndef NDEBUG
@@ -565,9 +565,9 @@ LOCAL void formatString(struct __String *string,
     struct __String    *string;
   } data;
   char          buffer[64];
-  unsigned int  length;
+  uint          length;
   const char    *s;
-  unsigned long i;
+  ulong         i;
   char          ch;
 
   STRING_CHECK_VALID(string);
@@ -835,7 +835,7 @@ LOCAL void formatString(struct __String *string,
           {
             /* quoted string */
             String_appendChar(string,formatToken.quoteChar);
-            i = 0;
+            i = 0L;
             while (i < String_length(data.string))
             {
               ch = String_index(data.string,i);
@@ -1015,7 +1015,7 @@ LOCAL bool parseString(const char    *string,
           case 'd':
           case 'u':
             /* get data */
-            z = 0;
+            z = 0L;
             if ((index < length) && ((string[index] == '+') || (string[index] == '-')))
             {
               buffer[z] = string[index];
@@ -1077,7 +1077,7 @@ LOCAL bool parseString(const char    *string,
             break;
           case 'o':
             /* get data */
-            z = 0;
+            z = 0L;
             while (   (index < length)
                    && (z < sizeof(buffer)-1)
                    && (string[index] >= '0')
@@ -1126,7 +1126,7 @@ LOCAL bool parseString(const char    *string,
             {
               index+=2;
             }
-            z = 0;
+            z = 0L;
             while (   (index < length)
                    && (z < sizeof(buffer)-1)
                    && isdigit(string[index])
@@ -1176,7 +1176,7 @@ LOCAL bool parseString(const char    *string,
           case 'a':
           case 'A':
             /* get data */
-            z = 0;
+            z = 0L;
             if ((index < length) && ((string[index] == '+') || (string[index] == '-')  || (string[index] == '.')))
             {
               buffer[z] = string[index];
@@ -1244,7 +1244,7 @@ LOCAL bool parseString(const char    *string,
 
             if (index < length)
             {
-              z = 0;
+              z = 0L;
               while (   (index < length)
                      && (formatToken.blankFlag || !isspace(string[index]))
                      && (string[index] != (*format))
@@ -1342,7 +1342,7 @@ LOCAL bool parseString(const char    *string,
             if (index < length)
             {
               String_clear(value.string);
-              z = 0;
+              z = 0L;
               while (   (index < length)
                      && (formatToken.blankFlag || !isspace(string[index]))
 // NUL in string here a problem?
@@ -1474,7 +1474,7 @@ LOCAL bool parseString(const char    *string,
   #endif /* 0 */
           case 'y':
             /* get data */
-            z = 0;
+            z = 0L;
             while (   (index < length)
                    && !isspace(string[index])
                   )
@@ -1493,7 +1493,7 @@ LOCAL bool parseString(const char    *string,
             {
               value.b = va_arg(arguments,bool*);
               foundFlag = FALSE;
-              z = 0;
+              z = 0L;
               while (!foundFlag && (z < SIZE_OF_ARRAY(DEFAULT_TRUE_STRINGS)))
               {
                 if (strcmp(buffer,DEFAULT_TRUE_STRINGS[z]) == 0)
@@ -1503,7 +1503,7 @@ LOCAL bool parseString(const char    *string,
                 }
                 z++;
               }
-              z = 0;
+              z = 0L;
               while (!foundFlag && (z < SIZE_OF_ARRAY(DEFAULT_FALSE_STRINGS)))
               {
                 if (strcmp(buffer,DEFAULT_FALSE_STRINGS[z]) == 0)
@@ -1526,7 +1526,7 @@ LOCAL bool parseString(const char    *string,
             break;
           case '*':
             /* skip value */
-            z = 0;
+            z = 0L;
             while (   (index < length)
                    && !isspace(string[index])
                    && (string[index] != (*format))
@@ -1940,7 +1940,7 @@ String __String_copy(const char *__fileName__, ulong __lineNb__, String *string,
     if ((*string) != NULL)
     {
       (*string)->data[0] ='\0';
-      (*string)->length = 0;
+      (*string)->length = 0L;
 
       STRING_UPDATE_VALID(*string);
     }
@@ -2054,7 +2054,7 @@ String String_clear(String string)
     assert(string->data != NULL);
 
     string->data[0] = '\0';
-    string->length = 0;
+    string->length = 0L;
 
     STRING_UPDATE_VALID(string);
   }
@@ -2071,7 +2071,7 @@ String String_erase(String string)
     assert(string->data != NULL);
 
     memset(string->data,0,string->maxLength);
-    string->length = 0;
+    string->length = 0L;
 
     STRING_UPDATE_VALID(string);
   }
@@ -2099,7 +2099,7 @@ String String_set(String string, const String sourceString)
     else
     {
       string->data[0] = '\0';
-      string->length = 0;
+      string->length = 0L;
     }
 
     STRING_UPDATE_VALID(string);
@@ -2123,7 +2123,7 @@ String String_setCString(String string, const char *s)
     else
     {
       string->data[0] = '\0';
-      string->length = 0;
+      string->length = 0L;
     }
 
     STRING_UPDATE_VALID(string);
@@ -2161,7 +2161,7 @@ String String_setBuffer(String string, const void *buffer, ulong bufferLength)
     else
     {
       string->data[0] = '\0';
-      string->length = 0;
+      string->length = 0L;
     }
 
     STRING_UPDATE_VALID(string);
@@ -2189,11 +2189,11 @@ String String_sub(String string, const String fromString, ulong fromIndex, long 
       {
         if (fromIndex == STRING_END)
         {
-          n = MIN(fromString->length,fromString->length-fromIndex);
+          n = MIN(fromString->length,fromString->length-(ulong)fromLength);
         }
         else
         {
-          n = MIN(fromLength,fromString->length-fromIndex);
+          n = MIN((ulong)fromLength,fromString->length-fromIndex);
         }
         ensureStringLength(string,n);
         memcpy(&string->data[0],&fromString->data[fromIndex],n);
@@ -2204,7 +2204,7 @@ String String_sub(String string, const String fromString, ulong fromIndex, long 
     else
     {
       string->data[0] = '\0';
-      string->length = 0;
+      string->length = 0L;
     }
 
     STRING_UPDATE_VALID(string);
@@ -2229,7 +2229,7 @@ char *String_subCString(char *s, const String fromString, ulong fromIndex, long 
 
       if (fromIndex < fromString->length)
       {
-        n = MIN(fromLength,fromString->length-fromIndex);
+        n = MIN((ulong)fromLength,fromString->length-fromIndex);
         memcpy(s,&fromString->data[fromIndex],n);
         s[n] = '\0';
       }
@@ -2263,7 +2263,7 @@ char *String_subBuffer(char *buffer, const String fromString, ulong fromIndex, l
 
       if (fromIndex < fromString->length)
       {
-        n = MIN(fromLength,fromString->length-fromIndex);
+        n = MIN((ulong)fromLength,fromString->length-fromIndex);
         memcpy(&buffer[0],&fromString->data[fromIndex],n);
         memset(&buffer[n],0,fromLength-n);
       }
@@ -2324,11 +2324,11 @@ String String_appendSub(String string, const String fromString, ulong fromIndex,
       {
         if (fromIndex == STRING_END)
         {
-          n = MIN(fromString->length,fromString->length-fromIndex);
+          n = MIN(fromString->length,fromString->length-(ulong)fromLength);
         }
         else
         {
-          n = MIN(fromLength,fromString->length-fromIndex);
+          n = MIN((ulong)fromLength,fromString->length-fromIndex);
         }
         ensureStringLength(string,string->length+n);
         memcpy(&string->data[string->length],&fromString->data[fromIndex],n);
@@ -2460,11 +2460,11 @@ String String_insertSub(String string, ulong index, const String fromString, ulo
       {
         if (fromIndex == STRING_END)
         {
-          n = MIN(fromString->length,fromString->length-fromIndex);
+          n = MIN(fromString->length,fromString->length-(ulong)fromLength);
         }
         else
         {
-          n = MIN(fromLength,fromString->length-fromIndex);
+          n = MIN((ulong)fromLength,fromString->length-fromIndex);
         }
 
         if      (index == STRING_END)
@@ -2571,7 +2571,7 @@ String String_remove(String string, ulong index, ulong length)
 
     if      (index == STRING_END)
     {
-      n = (string->length > length)?string->length-length:0;
+      n = (string->length > length) ? string->length-length : 0L;
       string->data[n] = '\0';
       string->length = n;
     }
@@ -2782,7 +2782,7 @@ int String_compare(const String          string1,
 
   result = 0;
   n = MIN(string1->length,string2->length);
-  z = 0;
+  z = 0L;
   if (stringCompareFunction != NULL)
   {
     while ((result == 0) && (z < n))
@@ -2890,7 +2890,7 @@ bool String_equalsBuffer(const String string, const char *buffer, ulong bufferLe
     if (string->length == bufferLength)
     {
       equalFlag = TRUE;
-      z         = 0;
+      z         = 0L;
       while (equalFlag && (z < string->length))
       {
         equalFlag = (string->data[z] == buffer[z]);
@@ -2991,7 +2991,7 @@ bool String_equalsIgnoreCaseBuffer(const String string, const char *buffer, ulon
     if (string->length == bufferLength)
     {
       equalFlag = TRUE;
-      z         = 0;
+      z         = 0L;
       while (equalFlag && (z < string->length))
       {
         equalFlag = (toupper(string->data[z]) == toupper(buffer[z]));
@@ -3070,7 +3070,7 @@ bool String_subEqualsChar(const String string, char ch, long index)
   {
     assert(string->data != NULL);
 
-    equalFlag = ((index < string->length) && (string->data[index] == ch));
+    equalFlag = ((index < (long)string->length) && (string->data[index] == ch));
   }
   else
   {
@@ -3099,7 +3099,7 @@ bool String_subEqualsBuffer(const String string, const char *buffer, ulong buffe
        )
     {
       equalFlag = TRUE;
-      z         = 0;
+      z         = 0L;
       while (equalFlag && (z < length))
       {
         equalFlag = (string->data[i+z] == buffer[z]);
@@ -3178,7 +3178,7 @@ bool String_subEqualsIgnoreCaseChar(const String string, char ch, long index)
   {
     assert(string->data != NULL);
 
-    equalFlag = ((index < string->length) && (toupper(string->data[index]) == toupper(ch)));
+    equalFlag = ((index < (long)string->length) && (toupper(string->data[index]) == toupper(ch)));
   }
   else
   {
@@ -3207,7 +3207,7 @@ bool String_subEqualsIgnoreCaseBuffer(const String string, const char *buffer, u
        )
     {
       equalFlag = TRUE;
-      z         = 0;
+      z         = 0L;
       while (equalFlag && (z < length))
       {
         equalFlag = (toupper(string->data[i+z]) == toupper(buffer[z]));
@@ -3414,7 +3414,7 @@ bool String_endsWithBuffer(const String string, const char *buffer, ulong buffer
 
 long String_find(const String string, ulong index, const String findString)
 {
-  long findIndex;
+  long  findIndex;
   long  i;
   ulong z;
 
@@ -3426,10 +3426,10 @@ long String_find(const String string, ulong index, const String findString)
 
   findIndex = -1;
 
-  i = (index != STRING_BEGIN)?index:0;
-  while (((i+findString->length) <= string->length) && (findIndex < 0))
+  i = (index != STRING_BEGIN) ? index : 0L;
+  while (((i+(long)findString->length) <= (long)string->length) && (findIndex < 0))
   {
-    z = 0;
+    z = 0L;
     while ((z < findString->length) && (string->data[i+z] == findString->data[z]))
     {
       z++;
@@ -3445,7 +3445,7 @@ long String_find(const String string, ulong index, const String findString)
 long String_findCString(const String string, ulong index, const char *s)
 {
   long  findIndex;
-  long  sLength;
+  ulong sLength;
   long  i;
   ulong z;
 
@@ -3454,13 +3454,13 @@ long String_findCString(const String string, ulong index, const char *s)
 
   STRING_CHECK_VALID(string);
 
-  findIndex = -1;
+  findIndex = -1L;
 
-  sLength = strlen(s);
-  i = (index != STRING_BEGIN)?index:0;
+  sLength = (ulong)strlen(s);
+  i = (index != STRING_BEGIN) ? index : 0L;
   while (((i+sLength) <= string->length) && (findIndex < 0))
   {
-    z = 0;
+    z = 0L;
     while ((z < sLength) && (string->data[i+z] == s[z]))
     {
       z++;
@@ -3481,13 +3481,13 @@ long String_findChar(const String string, ulong index, char ch)
 
   STRING_CHECK_VALID(string);
 
-  i = (index != STRING_BEGIN)?index:0;
-  while ((i < string->length) && (string->data[i] != ch))
+  i = (index != STRING_BEGIN) ? index : 0L;
+  while ((i < (long)string->length) && (string->data[i] != ch))
   {
     i++;
   }
 
-  return (i < string->length)?i:-1;
+  return (i < (long)string->length) ? i : -1L;
 }
 
 long String_findLast(const String string, long index, String findString)
@@ -3503,10 +3503,10 @@ long String_findLast(const String string, long index, String findString)
 
   findIndex = -1;
 
-  i = (index != STRING_END)?index:string->length-1;
+  i = (index != STRING_END) ? index : (long)string->length-1;
   while ((i >= 0) && (findIndex < 0))
   {
-    z = 0;
+    z = 0L;
     while ((z < findString->length) && (string->data[i+z] == findString->data[z]))
     {
       z++;
@@ -3521,8 +3521,8 @@ long String_findLast(const String string, long index, String findString)
 
 long String_findLastCString(const String string, long index, const char *s)
 {
-  long findIndex;
-  long sLength;
+  long  findIndex;
+  ulong sLength;
   long  i;
   ulong z;
 
@@ -3531,13 +3531,13 @@ long String_findLastCString(const String string, long index, const char *s)
 
   STRING_CHECK_VALID(string);
 
-  findIndex = -1;
+  findIndex = -1L;
 
-  sLength = strlen(s);
-  i = (index != STRING_END)?index:string->length-1;
+  sLength = (ulong)strlen(s);
+  i = (index != STRING_END) ? index : (long)string->length-1;
   while ((i >= 0) && (findIndex < 0))
   {
-    z = 0;
+    z = 0L;
     while ((z < sLength) && (string->data[i+z] == s[z]))
     {
       z++;
@@ -3558,7 +3558,7 @@ long String_findLastChar(const String string, long index, char ch)
 
   STRING_CHECK_VALID(string);
 
-  i = (index != STRING_END)?index:string->length-1;
+  i = (index != STRING_END) ? index : (long)string->length-1;
   while ((i >= 0) && (string->data[i] != ch))
   {
     i--;
@@ -3584,7 +3584,7 @@ String String_iterate(                      String string,
   {
     assert(string->data != NULL);
 
-    z = 0;
+    z = 0L;
     while (z < string->length)
     {
       s = stringIterateFunction(stringIterateUserData,string->data[z]);
@@ -3621,7 +3621,7 @@ String String_toLower(String string)
   {
     assert(string->data != NULL);
 
-    for (z = 0; z < string->length; z++)
+    for (z = 0L; z < string->length; z++)
     {
       string->data[z] = tolower(string->data[z]);
     }
@@ -3642,7 +3642,7 @@ String String_toUpper(String string)
   {
     assert(string->data != NULL);
 
-    for (z = 0; z < string->length; z++)
+    for (z = 0L; z < string->length; z++)
     {
       string->data[z] = toupper(string->data[z]);
     }
@@ -3697,7 +3697,7 @@ String String_trimLeft(String string, const char *chars)
   {
     assert(string->data != NULL);
 
-    z = 0;
+    z = 0L;
     while ((z < string->length) && (strchr(chars,string->data[z]) != NULL))
     {
       z++;
@@ -3728,7 +3728,7 @@ String String_escape(String string, const char *chars, char escapeChar)
     assert(string->data != NULL);
 
     s = allocTmpString();
-    for (z = 0; z < string->length; z++)
+    for (z = 0L; z < string->length; z++)
     {
       if ((string->data[z] == escapeChar) || ((chars != NULL) && (strchr(chars,string->data[z]) != NULL)))
       {
@@ -3754,7 +3754,7 @@ String String_unescape(String string, char escapeChar)
     assert(string->data != NULL);
 
     s = allocTmpString();
-    z = 0;
+    z = 0L;
     while (z < string->length)
     {
       if (string->data[z] == escapeChar)
@@ -4024,7 +4024,7 @@ bool String_getNextToken(StringTokenizer *stringTokenizer, String *const token, 
   assert(stringTokenizer != NULL);
 
   /* check index */
-  if (stringTokenizer->index >= stringTokenizer->length)
+  if (stringTokenizer->index >= (long)stringTokenizer->length)
   {
     return FALSE;
   }
@@ -4032,13 +4032,13 @@ bool String_getNextToken(StringTokenizer *stringTokenizer, String *const token, 
   if (stringTokenizer->skipEmptyTokens)
   {
     /* skip separator chars */
-    while (   (stringTokenizer->index < stringTokenizer->length)
+    while (   (stringTokenizer->index < (long)stringTokenizer->length)
            && (strchr(stringTokenizer->separatorChars,stringTokenizer->data[stringTokenizer->index]) != NULL)
           )
     {
       stringTokenizer->index++;
     }
-    if (stringTokenizer->index >= stringTokenizer->length) return FALSE;
+    if (stringTokenizer->index >= (long)stringTokenizer->length) return FALSE;
   }
 
   /* get token */
@@ -4046,7 +4046,7 @@ bool String_getNextToken(StringTokenizer *stringTokenizer, String *const token, 
   String_clear(stringTokenizer->token);
   if (stringTokenizer->stringQuotes != NULL)
   {
-    while (   (stringTokenizer->index < stringTokenizer->length)
+    while (   (stringTokenizer->index < (long)stringTokenizer->length)
            && (strchr(stringTokenizer->separatorChars,stringTokenizer->data[stringTokenizer->index]) == NULL)
           )
     {
@@ -4054,11 +4054,11 @@ bool String_getNextToken(StringTokenizer *stringTokenizer, String *const token, 
       if (s != NULL)
       {
         stringTokenizer->index++;
-        while (   (stringTokenizer->index < stringTokenizer->length)
+        while (   (stringTokenizer->index < (long)stringTokenizer->length)
                && (stringTokenizer->data[stringTokenizer->index] != (*s))
               )
         {
-          if (   ((stringTokenizer->index+1) < stringTokenizer->length)
+          if (   ((stringTokenizer->index+1) < (long)stringTokenizer->length)
               && (   (stringTokenizer->data[stringTokenizer->index] == '\\')
                   || (stringTokenizer->data[stringTokenizer->index] == (*s))
                  )
@@ -4073,7 +4073,7 @@ bool String_getNextToken(StringTokenizer *stringTokenizer, String *const token, 
             stringTokenizer->index++;
           }
         }
-        if (stringTokenizer->index < stringTokenizer->length) stringTokenizer->index++;
+        if (stringTokenizer->index < (long)stringTokenizer->length) stringTokenizer->index++;
       }
       else
       {
@@ -4084,7 +4084,7 @@ bool String_getNextToken(StringTokenizer *stringTokenizer, String *const token, 
   }
   else
   {
-    while (   (stringTokenizer->index < stringTokenizer->length)
+    while (   (stringTokenizer->index < (long)stringTokenizer->length)
            && (strchr(stringTokenizer->separatorChars,stringTokenizer->data[stringTokenizer->index]) == NULL)
           )
     {
@@ -4095,7 +4095,7 @@ bool String_getNextToken(StringTokenizer *stringTokenizer, String *const token, 
   if (token != NULL) (*token) = stringTokenizer->token;
 
   /* skip token separator */
-  if (   (stringTokenizer->index < stringTokenizer->length)
+  if (   (stringTokenizer->index < (long)stringTokenizer->length)
       && (strchr(stringTokenizer->separatorChars,stringTokenizer->data[stringTokenizer->index]) != NULL)
      )
   {
