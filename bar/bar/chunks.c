@@ -374,7 +374,6 @@ LOCAL Errors readDefinition(const ChunkIO *io,
           break;
         case CHUNK_DATATYPE_DATA:
           break;
-          break;
         case CHUNK_DATATYPE_CRC32:
           {
             uint32 n;
