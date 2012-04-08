@@ -2675,6 +2675,7 @@ bool Archive_eof(ArchiveInfo *archiveInfo,
         // check if private key available
         if (archiveInfo->jobOptions->cryptPrivateKeyFileName == NULL)
         {
+          archiveInfo->pendingError = ERROR_NO_PRIVATE_KEY;
           return FALSE;
         }
 
@@ -2716,6 +2717,7 @@ bool Archive_eof(ArchiveInfo *archiveInfo,
         }
         if (!decryptedFlag)
         {
+          archiveInfo->pendingError = ERROR_KEY_ENCRYPT_FAIL;
           return FALSE;
         }
 
@@ -2758,6 +2760,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
         }
         else
         {
+          archiveInfo->pendingError = ERROR_UNKNOWN_CHUNK;
           return FALSE;
         }
         break;
@@ -7669,13 +7672,15 @@ Errors Archive_readData(ArchiveEntryInfo *archiveEntryInfo,
         // get source for delta-compression
         error = Source_openEntry(&archiveEntryInfo->file.sourceHandle,
                                  archiveEntryInfo->file.chunkFileDelta.name,
-                                 archiveEntryInfo->file.chunkFileEntry.name
+                                 archiveEntryInfo->file.chunkFileEntry.name,
+                                 archiveEntryInfo->archiveInfo->jobOptions
                                 );
         if (error != ERROR_NONE)
         {
           return error;
         }
 
+        // mark delta-source initialized
         archiveEntryInfo->file.deltaSourceInit = TRUE;
       }
 
@@ -7812,7 +7817,8 @@ Errors Archive_readData(ArchiveEntryInfo *archiveEntryInfo,
         // get source for delta-compression
         error = Source_openEntry(&archiveEntryInfo->image.sourceHandle,
                                  archiveEntryInfo->image.chunkImageDelta.name,
-                                 archiveEntryInfo->image.chunkImageEntry.name
+                                 archiveEntryInfo->image.chunkImageEntry.name,
+                                 archiveEntryInfo->archiveInfo->jobOptions
                                 );
         if (error != ERROR_NONE)
         {
@@ -7959,7 +7965,8 @@ Errors Archive_readData(ArchiveEntryInfo *archiveEntryInfo,
         }
         error = Source_openEntry(&archiveEntryInfo->hardLink.sourceHandle,
                                  archiveEntryInfo->hardLink.chunkHardLinkDelta.name,
-                                 ((ChunkHardLinkName*)List_first(&archiveEntryInfo->hardLink.chunkHardLinkNameList))->name
+                                 ((ChunkHardLinkName*)List_first(&archiveEntryInfo->hardLink.chunkHardLinkNameList))->name,
+                                 archiveEntryInfo->archiveInfo->jobOptions
                                 );
         if (error != ERROR_NONE)
         {
