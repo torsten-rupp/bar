@@ -96,7 +96,7 @@ LOCAL String getDestinationFileName(String       destinationFileName,
 {
   String          pathName,baseName,name;
   StringTokenizer fileNameTokenizer;
-  int             z;
+  uint            z;
 
   assert(destinationFileName != NULL);
   assert(fileName != NULL);
@@ -586,7 +586,7 @@ Errors Command_restore(const StringList                *archiveNameList,
               // set file size
               if (!jobOptions->dryRunFlag)
               {
-                if (File_getSize(&fileHandle) > fileInfo.size)
+                if ((long)File_getSize(&fileHandle) > fileInfo.size)
                 {
                   File_truncate(&fileHandle,fileInfo.size);
                 }
@@ -1583,7 +1583,7 @@ Errors Command_restore(const StringList                *archiveNameList,
                   // set file size
                   if (!jobOptions->dryRunFlag)
                   {
-                    if (File_getSize(&fileHandle) > fileInfo.size)
+                    if ((long)File_getSize(&fileHandle) > fileInfo.size)
                     {
                       File_truncate(&fileHandle,fileInfo.size);
                     }
