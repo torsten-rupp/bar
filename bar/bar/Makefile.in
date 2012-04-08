@@ -533,7 +533,7 @@ test3 test_crypt: $(TEST_BAR)
 
 test4 test_asymmetric_crypt: $(TEST_BAR)
 	@$(ECHO_NO_LF) "Test 4: asymmetric crypt..."
-	@$(RM) test/key.*; $(ECHO_NO_LF) -e "$(TEST_PASSWORD)\n$(TEST_PASSWORD)\n" | SSH_ASKPASS= ./bar --generate-keys test/key
+	@$(RMF) test/key.*; $(INSTALL) -d test; $(ECHO_NO_LF) -e "$(TEST_PASSWORD)\n$(TEST_PASSWORD)\n" | SSH_ASKPASS= ./bar --generate-keys test/key
 	for crypt in $(CRYPT_NAMES); do \
           $(MAKE) \
             BAR_FILE="test" \
@@ -583,7 +583,7 @@ test7 test_dvd: $(TEST_BAR)
 
 test_combined: $(TEST_BAR)
 	@$(ECHO_NO_LF) "Test combined..."
-	@$(RM) test/key.*; $(ECHO_NO_LF) -e "$(TEST_PASSWORD)\n$(TEST_PASSWORD)\n" | SSH_ASKPASS= ./bar --generate-keys test/key
+	@$(RMF) test/key.*; $(INSTALL) -d test; $(ECHO_NO_LF) -e "$(TEST_PASSWORD)\n$(TEST_PASSWORD)\n" | SSH_ASKPASS= ./bar --generate-keys test/key
 	for compress in $(TEST_COMBINED_COMPRESS_NAMES); do \
           for crypt in $(TEST_COMBINED_CRYPT_NAMES); do \
             $(MAKE) \
