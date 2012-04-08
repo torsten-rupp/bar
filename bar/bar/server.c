@@ -518,7 +518,7 @@ LOCAL bool             quitFlag;              // TRUE iff quit requested
 
 LOCAL const char *getArchiveTypeName(ArchiveTypes archiveType)
 {
-  int z;
+  uint z;
 
   z = 0;
   while (   (z < SIZE_OF_ARRAY(CONFIG_VALUE_ARCHIVE_TYPES))
@@ -528,7 +528,7 @@ LOCAL const char *getArchiveTypeName(ArchiveTypes archiveType)
     z++;
   }
 
-  return (z < SIZE_OF_ARRAY(CONFIG_VALUE_ARCHIVE_TYPES))?CONFIG_VALUE_ARCHIVE_TYPES[z].name:"";
+  return (z < SIZE_OF_ARRAY(CONFIG_VALUE_ARCHIVE_TYPES)) ? CONFIG_VALUE_ARCHIVE_TYPES[z].name : "";
 }
 
 /***********************************************************************\
@@ -542,7 +542,7 @@ LOCAL const char *getArchiveTypeName(ArchiveTypes archiveType)
 
 LOCAL const char *getCryptPasswordModeName(PasswordModes passwordMode)
 {
-  int z;
+  uint z;
 
   z = 0;
   while (   (z < SIZE_OF_ARRAY(CONFIG_VALUE_PASSWORD_MODES))
@@ -552,7 +552,7 @@ LOCAL const char *getCryptPasswordModeName(PasswordModes passwordMode)
     z++;
   }
 
-  return (z < SIZE_OF_ARRAY(CONFIG_VALUE_PASSWORD_MODES))?CONFIG_VALUE_PASSWORD_MODES[z].name:"";
+  return (z < SIZE_OF_ARRAY(CONFIG_VALUE_PASSWORD_MODES)) ? CONFIG_VALUE_PASSWORD_MODES[z].name : "";
 }
 
 /***********************************************************************\
@@ -907,7 +907,7 @@ LOCAL void doneJob(JobNode *jobNode)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL JobNode *findJobById(int jobId)
+LOCAL JobNode *findJobById(uint jobId)
 {
   JobNode *jobNode;
 
@@ -1963,11 +1963,11 @@ LOCAL void schedulerThreadCode(void)
             scheduleNode = jobNode->scheduleList.head;
             while ((scheduleNode != NULL) && (executeScheduleNode == NULL))
             {
-              if (   ((scheduleNode->year     == SCHEDULE_ANY    ) || (scheduleNode->year   == year  )      )
-                  && ((scheduleNode->month    == SCHEDULE_ANY    ) || (scheduleNode->month  == month )      )
-                  && ((scheduleNode->day      == SCHEDULE_ANY    ) || (scheduleNode->day    == day   )      )
-                  && ((scheduleNode->hour     == SCHEDULE_ANY    ) || (scheduleNode->hour   == hour  )      )
-                  && ((scheduleNode->minute   == SCHEDULE_ANY    ) || (scheduleNode->minute == minute)      )
+              if (   ((scheduleNode->year     == SCHEDULE_ANY    ) || (scheduleNode->year   == (int)year  ) )
+                  && ((scheduleNode->month    == SCHEDULE_ANY    ) || (scheduleNode->month  == (int)month ) )
+                  && ((scheduleNode->day      == SCHEDULE_ANY    ) || (scheduleNode->day    == (int)day   ) )
+                  && ((scheduleNode->hour     == SCHEDULE_ANY    ) || (scheduleNode->hour   == (int)hour  ) )
+                  && ((scheduleNode->minute   == SCHEDULE_ANY    ) || (scheduleNode->minute == (int)minute) )
                   && ((scheduleNode->weekDays == SCHEDULE_ANY_DAY) || IN_SET(scheduleNode->weekDays,weekDay))
                   && scheduleNode->enabled
                  )
@@ -6651,7 +6651,7 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const
                                   )
           )
     {
-      assert((0 <= state) && (state < SIZE_OF_ARRAY(INDEX_STATE_STRINGS)));
+      assert(state < SIZE_OF_ARRAY(INDEX_STATE_STRINGS));
 
       Storage_getPrintableName(printableStorageName,storageName);
 
