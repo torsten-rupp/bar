@@ -1382,7 +1382,7 @@ performance:
 	@$(MAKE) \
           $(if $(CHECK),\
             performance$(CHECK),\
-            performance_none performance_zip_compress performance_bzip2_compress performance_bzip2_compress performance_lzma_compress performance_delta_compress \
+            performance_none performance_zip_compress performance_bzip2_compress performance_lzma_compress performance_delta_compress \
            )
 
 	@$(ECHO) "  performance1, performance_none"
