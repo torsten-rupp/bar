@@ -173,6 +173,23 @@ CryptAlgorithms Crypt_getAlgorithm(const char *name);
 const char *Crypt_getTypeName(CryptTypes cryptType);
 
 /***********************************************************************\
+* Name   : Crypt_isEncrypted
+* Purpose: check if encrypted with some algorithm
+* Input  : compressAlgorithm - compress algorithm
+* Output : -
+* Return : TRUE iff encrypted, FALSE otherwise
+* Notes  : -
+\***********************************************************************/
+
+INLINE bool Crypt_isEncrypted(CryptAlgorithms cryptAlgorithm);
+#if defined(NDEBUG) || defined(__COMPRESS_IMPLEMENATION__)
+INLINE bool Crypt_isEncrypted(CryptAlgorithms cryptAlgorithm)
+{
+  return cryptAlgorithm != CRYPT_ALGORITHM_NONE;
+}
+#endif /* NDEBUG || __COMPRESS_IMPLEMENATION__ */
+
+/***********************************************************************\
 * Name   : Crypt_randomize
 * Purpose: fill buffer with randomized data
 * Input  : buffer - buffer to fill with randomized data
@@ -236,25 +253,6 @@ Errors Crypt_init(CryptInfo       *cryptInfo,
 \***********************************************************************/
 
 void Crypt_done(CryptInfo *cryptInfo);
-
-/***********************************************************************\
-* Name   : Crypt_isEncrypted
-* Purpose: check if encrypted with some algorithm
-* Input  : compressAlgorithm - compress algorithm
-* Output : -
-* Return : TRUE iff encrypted, FALSE otherwise
-* Notes  : -
-\***********************************************************************/
-
-INLINE bool Crypt_isEncrypted(const CryptInfo *cryptInfo);
-#if defined(NDEBUG) || defined(__COMPRESS_IMPLEMENATION__)
-INLINE bool Crypt_isEncrypted(const CryptInfo *cryptInfo)
-{
-  assert(cryptInfo != NULL);
-
-  return cryptInfo->cryptAlgorithm != CRYPT_ALGORITHM_NONE;
-}
-#endif /* NDEBUG || __COMPRESS_IMPLEMENATION__ */
 
 /***********************************************************************\
 * Name   : Crypt_reset
