@@ -884,13 +884,13 @@ LOCAL String formatArchiveFileName(String       fileName,
 
   bool      partNumberFlag;
   struct tm tmStruct;
-  long      i,j;
+  ulong     i,j;
   char      format[4];
   char      buffer[256];
   size_t    length;
   ulong     divisor;
   ulong     n;
-  int       z;
+  uint      z;
   int       d;
 
   // expand named macros
@@ -926,7 +926,7 @@ LOCAL String formatArchiveFileName(String       fileName,
   // expand time macros, part number
   localtime_r(&time,&tmStruct);
   partNumberFlag = FALSE;
-  i = 0;
+  i = 0L;
   while (i < String_length(fileName))
   {
     switch (String_index(fileName,i))
@@ -939,12 +939,12 @@ LOCAL String formatArchiveFileName(String       fileName,
             case '%':
               // %%
               String_remove(fileName,i,1);
-              i += 1;
+              i += 1L;
               break;
             case '#':
               // %#
               String_remove(fileName,i,1);
-              i += 1;
+              i += 1L;
               break;
             default:
               // format time part
@@ -984,10 +984,10 @@ LOCAL String formatArchiveFileName(String       fileName,
                     if (strchr("*+?{}():[].^$|",buffer[z]) != NULL)
                     {
                       String_insertChar(fileName,i,'\\');
-                      i += 1;
+                      i += 1L;
                     }
                     String_insertChar(fileName,i,buffer[z]);
-                    i += 1;
+                    i += 1L;
                   }
                   break;
                 #ifndef NDEBUG
@@ -1002,7 +1002,7 @@ LOCAL String formatArchiveFileName(String       fileName,
         else
         {
           // % at end of string
-          i += 1;
+          i += 1L;
         }
         break;
       case '#':
@@ -1014,7 +1014,7 @@ LOCAL String formatArchiveFileName(String       fileName,
             {
               // find #...# and get max. divisor for part number
               divisor = 1;
-              j = i+1;
+              j = i+1L;
               while ((j < String_length(fileName) && String_index(fileName,j) == '#'))
               {
                 j++;
@@ -1040,13 +1040,13 @@ LOCAL String formatArchiveFileName(String       fileName,
             }
             else
             {
-              i += 1;
+              i += 1L;
             }
             break;
           case FORMAT_MODE_PATTERN:
             // replace by "."
             String_replaceChar(fileName,i,1,'.');
-            i += 1;
+            i += 1L;
             break;
           #ifndef NDEBUG
             default:
@@ -1056,7 +1056,7 @@ LOCAL String formatArchiveFileName(String       fileName,
         }
         break;
       default:
-        i += 1;
+        i += 1L;
         break;
     }
   }
@@ -1099,19 +1099,19 @@ LOCAL String formatIncrementalFileName(String       fileName,
 {
   #define SEPARATOR_CHARS "-_"
 
-  long i;
-  char ch;
+  ulong i;
+  char  ch;
 
   // remove all macros and leading and tailing separator characters
   String_clear(fileName);
-  i = 0;
+  i = 0L;
   while (i < String_length(templateFileName))
   {
     ch = String_index(templateFileName,i);
     switch (ch)
     {
       case '%':
-        i++;
+        i += 1L;
         if (i < String_length(templateFileName))
         {
           // removed previous separator characters
@@ -1123,12 +1123,12 @@ LOCAL String formatIncrementalFileName(String       fileName,
             case '%':
               // %%
               String_appendChar(fileName,'%');
-              i++;
+              i += 1L;
               break;
             case '#':
               // %#
               String_appendChar(fileName,'#');
-              i++;
+              i += 1L;
               break;
             default:
               // discard %xyz
@@ -1138,7 +1138,7 @@ LOCAL String formatIncrementalFileName(String       fileName,
                        && isalpha(ch)
                       )
                 {
-                  i++;
+                  i += 1L;
                   ch = String_index(templateFileName,i);
                 }
               }
@@ -1150,7 +1150,7 @@ LOCAL String formatIncrementalFileName(String       fileName,
                        && (strchr(SEPARATOR_CHARS,ch) != NULL)
                       )
                 {
-                  i++;
+                  i += 1L;
                   ch = String_index(templateFileName,i);
                 }
               }
@@ -1159,11 +1159,11 @@ LOCAL String formatIncrementalFileName(String       fileName,
         }
         break;
       case '#':
-        i++;
+        i += 1L;
         break;
       default:
         String_appendChar(fileName,ch);
-        i++;
+        i += 1L;
         break;
     }
   }
@@ -2897,7 +2897,7 @@ LOCAL Errors storeFileEntry(ArchiveInfo       *archiveInfo,
     }
 
     // check if file data should be compressed
-    byteCompressFlag =    (fileInfo.size > globalOptions.compressMinFileSize)
+    byteCompressFlag =    (fileInfo.size > (int64)globalOptions.compressMinFileSize)
                        && !PatternList_match(compressExcludePatternList,fileName,PATTERN_MATCH_MODE_EXACT);
 
     // check if file data should be delta compressed
@@ -3195,7 +3195,7 @@ LOCAL Errors storeImageEntry(ArchiveInfo       *archiveInfo,
     }
 
     // check if image data should be compressed
-    byteCompressFlag =    (deviceInfo.size > globalOptions.compressMinFileSize)
+    byteCompressFlag =    (deviceInfo.size > (int64)globalOptions.compressMinFileSize)
                        && !PatternList_match(compressExcludePatternList,deviceName,PATTERN_MATCH_MODE_EXACT);
 
     // check if file data should be delta compressed
@@ -3262,7 +3262,7 @@ LOCAL Errors storeImageEntry(ArchiveInfo       *archiveInfo,
     // write device content to archive
     error = ERROR_NONE;
     block = 0LL;
-    while (   ((block*(uint64)deviceInfo.blockSize) < deviceInfo.size)
+    while (   ((int64)(block*(uint64)deviceInfo.blockSize) < deviceInfo.size)
            && ((createInfo->requestedAbortFlag == NULL) || !(*createInfo->requestedAbortFlag))
            && (createInfo->failError == ERROR_NONE)
            && (error == ERROR_NONE)
@@ -3276,7 +3276,7 @@ LOCAL Errors storeImageEntry(ArchiveInfo       *archiveInfo,
 
       // read blocks info buffer
       bufferBlockCount = 0;
-      while (   ((block*(uint64)deviceInfo.blockSize) < deviceInfo.size)
+      while (   ((int64)(block*(uint64)deviceInfo.blockSize) < deviceInfo.size)
              && (bufferBlockCount < maxBufferBlockCount)
             )
       {
@@ -3741,7 +3741,7 @@ LOCAL Errors storeHardLinkEntry(ArchiveInfo       *archiveInfo,
     }
 
     // check if file data should be compressed
-    byteCompressFlag =    (fileInfo.size > globalOptions.compressMinFileSize)
+    byteCompressFlag =    (fileInfo.size > (int64)globalOptions.compressMinFileSize)
                        && !PatternList_matchStringList(compressExcludePatternList,nameList,PATTERN_MATCH_MODE_EXACT);
 
     // check if file data should be delta compressed
