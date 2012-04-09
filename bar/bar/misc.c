@@ -82,7 +82,7 @@ LOCAL bool readProcessIO(int fd, String line)
           case '\n':
           case '\r':
           case '\b':
-            if (String_length(line) > 0) return TRUE;
+            if (String_length(line) > 0L) return TRUE;
             break;
           default:
             String_appendChar(line,ch);
