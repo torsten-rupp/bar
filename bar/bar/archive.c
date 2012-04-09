@@ -2352,7 +2352,7 @@ const Password *Archive_appendDecryptPassword(const Password *password)
 }
 
 Errors Archive_create(ArchiveInfo                     *archiveInfo,
-                      JobOptions                      *jobOptions,
+                      const JobOptions                *jobOptions,
                       ArchiveNewFileFunction          archiveNewFileFunction,
                       void                            *archiveNewFileUserData,
                       ArchiveGetCryptPasswordFunction archiveGetCryptPasswordFunction,
@@ -2486,7 +2486,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
 
 Errors Archive_open(ArchiveInfo                     *archiveInfo,
                     const String                    storageName,
-                    JobOptions                      *jobOptions,
+                    const JobOptions                *jobOptions,
                     ArchiveGetCryptPasswordFunction archiveGetCryptPasswordFunction,
                     void                            *archiveGetCryptPasswordUserData
                    )

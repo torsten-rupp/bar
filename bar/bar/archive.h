@@ -125,7 +125,7 @@ typedef Errors(*ArchiveGetCryptPasswordFunction)(void         *userData,
 
 typedef struct
 {
-  JobOptions                      *jobOptions;
+  const JobOptions                *jobOptions;
 //  ArchiveNewEntryFunction         archiveNewEntryFunction;           // call back for new archive entry
 //  void                            *archiveNewEntryUserData;          // user data for call back for new archive entry
   ArchiveNewFileFunction          archiveNewFileFunction;            // call back for new archive file
@@ -374,7 +374,7 @@ const Password *Archive_appendDecryptPassword(const Password *password);
 \***********************************************************************/
 
 Errors Archive_create(ArchiveInfo                     *archiveInfo,
-                      JobOptions                      *jobOptions,
+                      const JobOptions                *jobOptions,
                       ArchiveNewFileFunction          archiveNewFileFunction,
                       void                            *archiveNewFileUserData,
                       ArchiveGetCryptPasswordFunction archiveGetCryptPassword,
@@ -399,7 +399,7 @@ Errors Archive_create(ArchiveInfo                     *archiveInfo,
 
 Errors Archive_open(ArchiveInfo                     *archiveInfo,
                     const String                    storageName,
-                    JobOptions                      *jobOptions,
+                    const JobOptions                *jobOptions,
                     ArchiveGetCryptPasswordFunction archiveGetCryptPassword,
                     void                            *archiveGetCryptPasswordData
                    );
@@ -931,7 +931,7 @@ Errors Archive_remIndex(DatabaseHandle *databaseHandle,
 // NYI
 Errors Archive_copy(ArchiveInfo                     *archiveInfo,
                     const String                    storageName,
-                    JobOptions                      *jobOptions,
+                    const JobOptions                *jobOptions,
                     ArchiveGetCryptPasswordFunction archiveGetCryptPassword,
                     void                            *archiveGetCryptPasswordData,
                     const String                    newStorageName
