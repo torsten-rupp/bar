@@ -66,14 +66,14 @@ LOCAL EntryNode *copyEntryNode(EntryNode *entryNode,
 
   UNUSED_VARIABLE(userData);
 
-  /* allocate entry node */
+  // allocate entry node
   newEntryNode = LIST_NEW_NODE(EntryNode);
   if (newEntryNode == NULL)
   {
     HALT_INSUFFICIENT_MEMORY();
   }
 
-  /* create entry */
+  // create entry
   newEntryNode->type   = entryNode->type;
   newEntryNode->string = String_duplicate(entryNode->string);
   error = Pattern_init(&newEntryNode->pattern,
@@ -184,7 +184,7 @@ Errors EntryList_appendCString(EntryList    *entryList,
   assert(entryList != NULL);
   assert(pattern != NULL);
 
-  /* allocate entry node */
+  // allocate entry node
   entryNode = LIST_NEW_NODE(EntryNode);
   if (entryNode == NULL)
   {
@@ -193,7 +193,7 @@ Errors EntryList_appendCString(EntryList    *entryList,
   entryNode->type   = type;
   entryNode->string = String_newCString(pattern);
 
-  /* init pattern */
+  // init pattern
   error = Pattern_initCString(&entryNode->pattern,
                               pattern,
                               patternType
@@ -205,7 +205,7 @@ Errors EntryList_appendCString(EntryList    *entryList,
     return error;
   }
 
-  /* add to list */
+  // add to list
   List_append(entryList,entryNode);
 
   return ERROR_NONE;
