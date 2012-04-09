@@ -1243,7 +1243,7 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
     File_initSplitFileName(&fileNameTokenizer,includeEntryNode->string);
     if (File_getNextSplitFileName(&fileNameTokenizer,&string) && !Pattern_checkIsPattern(string))
     {
-      if (String_length(string) > 0)
+      if (String_length(string) > 0L)
       {
         File_setFileName(basePath,string);
       }
@@ -1611,7 +1611,7 @@ LOCAL void collectorThreadCode(CreateInfo *createInfo)
     File_initSplitFileName(&fileNameTokenizer,includeEntryNode->string);
     if (File_getNextSplitFileName(&fileNameTokenizer,&string) && !Pattern_checkIsPattern(string))
     {
-      if (String_length(string) > 0)
+      if (String_length(string) > 0L)
       {
         File_setFileName(basePath,string);
       }
