@@ -1209,7 +1209,7 @@ bool ConfigValue_format(ConfigValueFormat *configValueFormat,
         {
           if ((*configVariable.set) & configValueFormat->configValue->setValue.set[z].value)
           {
-            if (String_length(s) > 0) String_appendChar(s,',');
+            if (String_length(s) > 0L) String_appendChar(s,',');
             String_appendCString(s,configValueFormat->configValue->setValue.set[z].name);
           }
         }
