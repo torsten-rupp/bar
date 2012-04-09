@@ -846,7 +846,7 @@ LOCAL void appendSpecialToEntryList(MsgQueue     *entryMsgQueue,
   entryMsg.entryType = entryType;
   entryMsg.fileType  = FILE_TYPE_SPECIAL;
   entryMsg.name      = String_duplicate(name);
-//  StringList_init(&entryMsg.nameList);
+  StringList_init(&entryMsg.nameList);
 
   // put into message queue
   if (!MsgQueue_put(entryMsgQueue,&entryMsg,sizeof(entryMsg)))
