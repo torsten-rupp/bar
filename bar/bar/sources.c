@@ -170,9 +170,9 @@ LOCAL void freeSourceNode(SourceNode *sourceNode, void *userData)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors createLocalStorageArchive(String       localStorageName,
-                                       const String storageName,
-                                       JobOptions   *jobOptions
+LOCAL Errors createLocalStorageArchive(String           localStorageName,
+                                       const String     storageName,
+                                       const JobOptions *jobOptions
                                       )
 {
   Errors error;
@@ -237,7 +237,7 @@ LOCAL void deleteLocalStorageArchive(String localStorageName)
 
 LOCAL Errors restoreFile(const String                    archiveName,
                          const String                    name,
-                         JobOptions                      *jobOptions,
+                         const JobOptions                *jobOptions,
                          const String                    destinationFileName,
                          ArchiveGetCryptPasswordFunction archiveGetCryptPasswordFunction,
                          void                            *archiveGetCryptPasswordUserData,
@@ -776,10 +776,10 @@ Errors Source_addSourceList(const PatternList *sourcePatternList)
   return ERROR_NONE;
 }
 
-Errors Source_openEntry(SourceHandle *sourceHandle,
-                        const String sourceStorageName,
-                        const String name,
-                        JobOptions   *jobOptions
+Errors Source_openEntry(SourceHandle     *sourceHandle,
+                        const String     sourceStorageName,
+                        const String     name,
+                        const JobOptions *jobOptions
                        )
 {
   Errors     error;

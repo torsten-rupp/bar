@@ -128,10 +128,10 @@ Errors Source_addSourceList(const PatternList *sourcePatternList);
 * Notes  : -
 \***********************************************************************/
 
-Errors Source_openEntry(SourceHandle *sourceHandle,
-                        const String sourceStorageName,
-                        const String name,
-                        JobOptions   *jobOptions
+Errors Source_openEntry(SourceHandle     *sourceHandle,
+                        const String     sourceStorageName,
+                        const String     name,
+                        const JobOptions *jobOptions
                        );
 
 /***********************************************************************\
