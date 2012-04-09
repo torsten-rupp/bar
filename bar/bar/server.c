@@ -988,9 +988,10 @@ LOCAL Errors readJobScheduleInfo(JobNode *jobNode)
       // read line
       error = File_readLine(&fileHandle,line);
       if (error != ERROR_NONE) break;
+      String_trim(line,STRING_WHITE_SPACES);
 
       // skip comments, empty lines
-      if ((String_length(line) == 0) || (String_index(line,0) == '#'))
+      if (String_isEmpty(line) || String_startsWithChar(line,'#'))
       {
         continue;
       }
@@ -1267,33 +1268,42 @@ LOCAL StringNode *deleteJobEntries(StringList *stringList,
   StringNode *nextNode;
 
   StringNode *stringNode;
-  String     s;
+  String     line;
+  String     string;
 
   nextNode = NULL;
+#warning check if works
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 
-  s = String_new();
+  line = String_new();
+  string = String_new();
   stringNode = stringList->head;
   while (stringNode != NULL)
   {
     // skip comments, empty lines
-    if ((String_length(stringNode->string) == 0) || (String_index(stringNode->string,0) == '#'))
+    String_trim(String_set(line,stringNode->string),STRING_WHITE_SPACES);
+    if (String_isEmpty(line) || String_startsWithChar(line,'#'))
     {
       stringNode = stringNode->next;
       continue;
     }
 
-    // parse and delete
-    if (String_parse(stringNode->string,STRING_BEGIN,"%S=% S",NULL,s,NULL) && String_equalsCString(s,name))
+    // parse and match
+    if (   String_parse(line,STRING_BEGIN,"%S=% S",NULL,string,NULL)
+        && String_equalsCString(string,name)
+       )
     {
-      if ((nextNode == NULL) || (nextNode = stringNode)) nextNode = stringNode->next;
+      // delete line
       stringNode = StringList_remove(stringList,stringNode);
     }
     else
     {
+      // keep line
       stringNode = stringNode->next;
     }
   }
-  String_delete(s);
+  String_delete(string);
+  String_delete(line);
 
   return nextNode;
 }
