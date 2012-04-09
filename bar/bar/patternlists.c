@@ -66,7 +66,7 @@ LOCAL PatternNode *copyPatternNode(PatternNode *patternNode,
 
   UNUSED_VARIABLE(userData);
 
-  /* allocate pattern node */
+  // allocate pattern node
   newPatternNode = LIST_NEW_NODE(PatternNode);
   if (newPatternNode == NULL)
   {
@@ -74,7 +74,7 @@ LOCAL PatternNode *copyPatternNode(PatternNode *patternNode,
   }
   newPatternNode->string = String_duplicate(patternNode->string);
 
-  /* create pattern */
+  // create pattern
   error = Pattern_init(&newPatternNode->pattern,
                        patternNode->string,
                        patternNode->pattern.type
@@ -181,7 +181,7 @@ Errors PatternList_appendCString(PatternList  *patternList,
   assert(patternList != NULL);
   assert(pattern != NULL);
 
-  /* allocate pattern node */
+  // allocate pattern node
   patternNode = LIST_NEW_NODE(PatternNode);
   if (patternNode == NULL)
   {
@@ -189,7 +189,7 @@ Errors PatternList_appendCString(PatternList  *patternList,
   }
   patternNode->string = String_newCString(pattern);
 
-  /* init pattern */
+  // init pattern
   error = Pattern_initCString(&patternNode->pattern,
                               pattern,
                               patternType
@@ -201,7 +201,7 @@ Errors PatternList_appendCString(PatternList  *patternList,
     return error;
   }
 
-  /* add to list */
+  // add to list
   List_append(patternList,patternNode);
 
   return ERROR_NONE;
