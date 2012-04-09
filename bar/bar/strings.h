@@ -400,7 +400,7 @@ INLINE ulong String_length(const String string)
 {
   STRING_CHECK_VALID(string);
 
-  return (string != NULL)?string->length:0;
+  return (string != NULL) ? string->length : 0L;
 }
 #endif /* NDEBUG || __STRINGS_IMPLEMENATION__ */
 
@@ -419,7 +419,7 @@ INLINE bool String_isEmpty(const String string)
 {
   STRING_CHECK_VALID(string);
 
-  return (string != NULL)?(string->length == 0):TRUE;
+  return (string != NULL) ? (string->length == 0) : TRUE;
 }
 #endif /* NDEBUG || __STRINGS_IMPLEMENATION__ */
 
@@ -446,7 +446,7 @@ INLINE char String_index(const String string, ulong index)
   {
     if      (index == STRING_END)
     {
-      ch = (string->length > 0)?string->data[string->length-1]:'\0';
+      ch = (string->length > 0L) ? string->data[string->length-1] : '\0';
     }
     else if (index < string->length)
     {
