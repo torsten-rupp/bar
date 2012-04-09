@@ -32,7 +32,7 @@ automated backups in the background.
 * optional internal database with information to all stored files
   and disk images,
 * graphical front end for server to check server status, create
-  jobs, start jobs and stop jobs. 
+  jobs, start jobs and stop jobs.
 
 --- Requirements
 
@@ -42,6 +42,7 @@ automated backups in the background.
 * zlib library (mandatory)
 * bzib2 library from http://www.bzip.org (optional)
 * lzma library from http://tukaani.org/xz (optional)
+* xdelta library from http://xdelta.org (optional)
 * ssh2 library from http://www.libssh2.org (optional)
 * gcrypt library from http://www.gnupg.org (optional)
 * gnutls library from http://www.gnu.org/software/gnutls
@@ -89,9 +90,9 @@ Extract the archives and place links in the bar build
 directory before executing bar configure:
 
 zlib:
-  http://www.zlib.net/zlib-1.2.3.tar.gz
+  http://www.zlib.net/zlib-1.2.5.tar.gz
 
-  ln -s zlib-1.2.3 zlib
+  ln -s zlib-1.2.5 zlib
 
 bzip2:
   http://www.bzip.org/1.0.5/bzip2-1.0.5.tar.gz
@@ -102,6 +103,11 @@ lzma:
   http://tukaani.org/xz/xz-4.999.8beta.tar.gz
 
   ln -s xz-4.999.8beta xz
+
+xdelta:
+  http://xdelta.googlecode.com/files/xdelta3.0.0.tar.gz
+
+  ln -s xdelta3.0.0 xdelta3
 
 gcrypt:
   ftp://ftp.gnupg.org/gcrypt/libgpg-error/libgpg-error-1.7.tar.bz2
@@ -137,7 +143,7 @@ epm:
 
 You can execute the supplied script 'download-third-party-packages.sh'
 to download (wget required) all additional packages, extract them to a
-temporary directory and set the required links for bar: 
+temporary directory and set the required links for bar:
 
   download-third-party-packages.sh
 
@@ -179,6 +185,11 @@ lzma:
   make install
 
   ldconfig
+
+xdelta:
+  http://xdelta.googlecode.com/files/xdelta3.0.0.tar.gz
+
+  ln -s xdelta3.0.0 xdelta3
 
 gcrypt:
   ftp://ftp.gnupg.org/gcrypt/libgpg-error/libgpg-error-1.7.tar.bz2
@@ -267,6 +278,8 @@ On a Debian system you can use the following packages (or newer versions):
   libbz2-dev
   liblzma
   liblzma-dev
+  libxdelta2
+  libxdelta2-dev
   libssl0.9.8
   libssl-dev
   libssh2-1
@@ -290,6 +303,8 @@ On SUSE system you may use the following packages (or newer versions):
   libbz2-1
   libbz2-devel
   liblzma0
+  libxdelta2
+  libxdelta2-devel
   xz-devel
   libgcrypt11
   libgcrypt-devel
@@ -331,6 +346,8 @@ On a Ubuntu system you can use the following packages (or newer versions):
   libbz2-dev
   liblzma
   liblzma-dev
+  libxdelta2
+  libxdelta2-dev
   libssl0.9.8
   libssl-dev
   libssh2-1
@@ -353,6 +370,22 @@ Then compile and install BAR with:
   ./configure
   make
   make install
+
+Test BAR with:
+
+  make test
+
+Note: for the image tests some commands are executed with sudo.
+Create a file /etc/sudores.d/bar with:
+
+# allow BAR tests
+Cmnd_Alias BAR_LOSETUP=/sbin/losetup -d /dev/loop0, \
+                       /sbin/losetup /dev/loop0 test/dev0, \
+                       /sbin/losetup -d /dev/loop1, \
+                       /sbin/losetup /dev/loop1 test/dev1
+Cmnd_Alias BAR_CHMOD=/bin/chmod o+rw /dev/loop0, \
+                     /bin/chmod o+rw /dev/loop1
+ALL ALL=NOPASSWD:BAR_LOSETUP,BAR_CHMOD
 
 --- Compression
 
@@ -430,7 +463,7 @@ systems) type in
 On Linux:
 
   barcontrol.sh
- 
+
 resp.
 
   java -jar barcontrol-linux.jar
