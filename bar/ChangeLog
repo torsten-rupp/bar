@@ -39,6 +39,8 @@
     server
   * output percentage info if verbose level >= 2
   * output test/compare/restore info if verbose level >= 1
+  * improved processing speed: implemented ring buffers
+    for compress/decompress
 
 2012-01-14 0.16g
   * fix restore: do not create empty parent directories
