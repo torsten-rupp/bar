@@ -931,20 +931,20 @@ LOCAL const ConfigValue CONFIG_VALUES[] =
 
 LOCAL void output(FILE *file, bool saveRestoreFlag, const String string)
 {
-  uint z;
+  ulong z;
 
   if (saveRestoreFlag)
   {
     // wipe-out current line
-    for (z = 0; z < String_length(outputLine); z++)
+    for (z = 0L; z < String_length(outputLine); z++)
     {
       fwrite("\b",1,1,file);
     }
-    for (z = 0; z < String_length(outputLine); z++)
+    for (z = 0L; z < String_length(outputLine); z++)
     {
       fwrite(" ",1,1,file);
     }
-    for (z = 0; z < String_length(outputLine); z++)
+    for (z = 0L; z < String_length(outputLine); z++)
     {
       fwrite("\b",1,1,file);
     }
@@ -1048,10 +1048,11 @@ LOCAL bool readConfigFile(const String fileName, bool printInfoFlag)
       failFlag = TRUE;
       break;
     }
+    String_trim(line,STRING_WHITE_SPACES);
     lineNb++;
 
     // skip comments, empty lines
-    if ((String_length(line) == 0) || (String_index(line,0) == '#'))
+    if (String_isEmpty(line) || String_startsWithChar(line,'#'))
     {
       continue;
     }
@@ -3834,7 +3835,7 @@ bool readJobFile(const String      fileName,
     lineNb++;
 
     // skip comments, empty lines
-    if ((String_length(line) == 0) || (String_index(line,0) == '#'))
+    if (String_isEmpty(line) || String_startsWithChar(line,'#'))
     {
       continue;
     }
