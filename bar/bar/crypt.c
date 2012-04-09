@@ -213,17 +213,17 @@ LOCAL int base64Decode(byte *data, uint maxLength, const String s)
 
   length = 0;
   z = 0;
-  while (z < String_length(s))
+  while (z < (uint)String_length(s))
   {
     x0 = String_index(s,z+0); if (!VALID_BASE64_CHAR(x0)) return -1;
     x1 = String_index(s,z+1); if (!VALID_BASE64_CHAR(x1)) return -1;
     x2 = String_index(s,z+2); if (!VALID_BASE64_CHAR(x2)) return -1;
     x3 = String_index(s,z+3); if (!VALID_BASE64_CHAR(x3)) return -1;
 
-    i0 = ((z+0) < String_length(s))?BASE64_DECODING_TABLE[(byte)x0]:0;
-    i1 = ((z+1) < String_length(s))?BASE64_DECODING_TABLE[(byte)x1]:0;
-    i2 = ((z+2) < String_length(s))?BASE64_DECODING_TABLE[(byte)x2]:0;
-    i3 = ((z+3) < String_length(s))?BASE64_DECODING_TABLE[(byte)x3]:0;
+    i0 = ((z+0) < (uint)String_length(s))?BASE64_DECODING_TABLE[(byte)x0]:0;
+    i1 = ((z+1) < (uint)String_length(s))?BASE64_DECODING_TABLE[(byte)x1]:0;
+    i2 = ((z+2) < (uint)String_length(s))?BASE64_DECODING_TABLE[(byte)x2]:0;
+    i3 = ((z+3) < (uint)String_length(s))?BASE64_DECODING_TABLE[(byte)x3]:0;
 
     b0 = (char)((i0 << 2) | ((i1 & 0x30) >> 4));
     b1 = (char)(((i1 & 0x0F) << 4) | ((i2 & 0x3C) >> 2));
