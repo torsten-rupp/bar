@@ -49,7 +49,116 @@ LOCAL SourceList sourceList;
   extern "C" {
 #endif
 
-  // create local copy of storage file
+/***********************************************************************\
+* Name   : addSourceNodes
+* Purpose: add source nodes (matching names or name)
+* Input  : storageName    - storage name
+*          storagePattern - storage pattern
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void addSourceNodes(const String storageName, const Pattern *storagePattern)
+{
+  JobOptions                 jobOptions;
+  String                     basePath;
+  StringTokenizer            fileNameTokenizer;
+  String                     string;
+  Errors                     error;
+  StorageDirectoryListHandle storageDirectoryListHandle;
+  String                     fileName;
+  SourceNode                 *sourceNode;
+
+  // init options
+  initJobOptions(&jobOptions);
+
+  // find base path
+  basePath = String_new();
+  File_initSplitFileName(&fileNameTokenizer,storageName);
+  if (File_getNextSplitFileName(&fileNameTokenizer,&string) && !Pattern_checkIsPattern(string))
+  {
+    if (String_length(string) > 0L)
+    {
+      File_setFileName(basePath,string);
+    }
+    else
+    {
+      File_setFileNameChar(basePath,FILES_PATHNAME_SEPARATOR_CHAR);
+    }
+  }
+  while (File_getNextSplitFileName(&fileNameTokenizer,&string) && !Pattern_checkIsPattern(string))
+  {
+    File_appendFileName(basePath,string);
+  }
+  File_doneSplitFileName(&fileNameTokenizer);
+
+  // open directory list
+  error = Storage_openDirectoryList(&storageDirectoryListHandle,
+                                    basePath,
+                                    &jobOptions
+                                   );
+  if (error == ERROR_NONE)
+  {
+    // read directory
+    fileName = String_new();
+    while (!Storage_endOfDirectoryList(&storageDirectoryListHandle))
+    {
+      error = Storage_readDirectoryList(&storageDirectoryListHandle,
+                                        fileName,
+                                        NULL
+                                       );
+      if (error == ERROR_NONE)
+      {
+        if (Pattern_match(storagePattern,fileName,PATTERN_MATCH_MODE_BEGIN))
+        {
+          sourceNode = LIST_NEW_NODE(SourceNode);
+          if (sourceNode == NULL)
+          {
+            HALT_INSUFFICIENT_MEMORY();
+          }
+          sourceNode->storageName = String_duplicate(fileName);
+          List_append(&sourceList,sourceNode);
+        }
+      }
+    }
+    String_delete(fileName);
+    Storage_closeDirectoryList(&storageDirectoryListHandle);
+  }
+  else
+  {
+    sourceNode = LIST_NEW_NODE(SourceNode);
+    if (sourceNode == NULL)
+    {
+      HALT_INSUFFICIENT_MEMORY();
+    }
+    sourceNode->storageName = String_duplicate(storageName);
+    List_append(&sourceList,sourceNode);
+  }
+
+  // free resources
+  freeJobOptions(&jobOptions);
+}
+
+/***********************************************************************\
+* Name   : freeSourceNode
+* Purpose: free source node
+* Input  : sourceNode - source node
+*          userData   - user data
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void freeSourceNode(SourceNode *sourceNode, void *userData)
+{
+  assert(sourceNode != NULL);
+
+  UNUSED_VARIABLE(userData);
+
+  String_delete(sourceNode->storageName);
+}
+
 /***********************************************************************\
 * Name   : createLocalStorageArchive
 * Purpose: create local copy of storage file
@@ -226,7 +335,6 @@ LOCAL Errors restoreFile(const String                    archiveName,
                                        );
           if (error != ERROR_NONE)
           {
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
             String_delete(fileName);
             if (failError == ERROR_NONE) failError = error;
             continue;
@@ -617,25 +725,6 @@ bufferLength =0;
   }
 }
 
-/***********************************************************************\
-* Name   : freeSourceNode
-* Purpose: free source node
-* Input  : sourceNode - source node
-*          userData   - user data
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void freeSourceNode(SourceNode *sourceNode, void *userData)
-{
-  assert(sourceNode != NULL);
-
-  UNUSED_VARIABLE(userData);
-
-  String_delete(sourceNode->storageName);
-}
-
 /*---------------------------------------------------------------------*/
 
 Errors Source_initAll(void)
@@ -650,74 +739,39 @@ void Source_doneAll(void)
   List_done(&sourceList,(ListNodeFreeFunction)freeSourceNode,NULL);
 }
 
-void Source_addSource(const String sourcePattern)
+Errors Source_addSource(const String storageName)
 {
-  JobOptions                 jobOptions;
-  Errors                     error;
-  StorageDirectoryListHandle storageDirectoryListHandle;
-  String                     fileName;
-  SourceNode                 *sourceNode;
+  Pattern storagePattern;
+  Errors  error;
 
-  // init options
-  initJobOptions(&jobOptions);
+  // init pattern
+  error = Pattern_init(&storagePattern,
+                       storageName,
+                       PATTERN_TYPE_GLOB
+                      );
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
 
-  // open directory list
-  error = Storage_openDirectoryList(&storageDirectoryListHandle,
-                                    sourcePattern,
-                                    &jobOptions
-                                   );
-  if (error == ERROR_NONE)
-  {
-    // read directory
-    fileName = String_new();
-    while (!Storage_endOfDirectoryList(&storageDirectoryListHandle))
-    {
-      error = Storage_readDirectoryList(&storageDirectoryListHandle,
-                                        fileName,
-                                        NULL
-                                       );
-      if (error == ERROR_NONE)
-      {
-        sourceNode = LIST_NEW_NODE(SourceNode);
-        if (sourceNode == NULL)
-        {
-          HALT_INSUFFICIENT_MEMORY();
-        }
-        sourceNode->storageName         = String_duplicate(fileName);
-        List_append(&sourceList,sourceNode);
-      }
-    }
-    String_delete(fileName);
-    Storage_closeDirectoryList(&storageDirectoryListHandle);
-  }
-  else
-  {
-    sourceNode = LIST_NEW_NODE(SourceNode);
-    if (sourceNode == NULL)
-    {
-      HALT_INSUFFICIENT_MEMORY();
-    }
-    sourceNode->storageName         = String_duplicate(sourcePattern);
-    List_append(&sourceList,sourceNode);
-  }
+  addSourceNodes(storageName,&storagePattern);
 
   // free resources
-  freeJobOptions(&jobOptions);
+  Pattern_done(&storagePattern);
+
+  return ERROR_NONE;
 }
 
 Errors Source_addSourceList(const PatternList *sourcePatternList)
 {
-  String      fileName;
   PatternNode *patternNode;
 
   assert(sourcePatternList != NULL);
 
-  fileName = String_new();
   PATTERNLIST_ITERATE(sourcePatternList,patternNode)
   {
-    Source_addSource(patternNode->string);
+    addSourceNodes(patternNode->string,&patternNode->pattern);
   }
-  String_delete(fileName);
 
   return ERROR_NONE;
 }
@@ -1030,7 +1084,7 @@ void Source_closeEntry(SourceHandle *sourceHandle)
   }
 }
 
-const String Source_getName(SourceHandle *sourceHandle)
+String Source_getName(SourceHandle *sourceHandle)
 {
   assert(sourceHandle != NULL);
 

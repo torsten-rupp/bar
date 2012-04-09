@@ -98,11 +98,11 @@ void Source_doneAll(void);
 * Purpose: add source
 * Input  : sourcePattern - source pattern
 * Output : -
-* Return : -
+* Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-void Source_addSource(const String sourcePattern);
+Errors Source_addSource(const String sourcePattern);
 
 /***********************************************************************\
 * Name   : Source_addSourceList
@@ -154,7 +154,7 @@ void Source_closeEntry(SourceHandle *sourceHandle);
 * Notes  : -
 \***********************************************************************/
 
-const String Source_getName(SourceHandle *sourceHandle);
+String Source_getName(SourceHandle *sourceHandle);
 
 /***********************************************************************\
 * Name   : Source_getEntryDataBlock
