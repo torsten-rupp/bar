@@ -615,7 +615,7 @@ test_parameters: $(TEST_BAR)
 	$(call checkExitcode,1,SSH_ASKPASS= $(TEST_BAR) -h 1>/dev/null) $(if $(QUIET),1>/dev/null)
 	$(call checkExitcode,1,SSH_ASKPASS= $(TEST_BAR) --help 1>/dev/null) $(if $(QUIET),1>/dev/null)
 	# list
-	$(call checkExitcode,0,SSH_ASKPASS= $(TEST_BAR) -c test/test.bar test/data --overwrite-archive-files) $(if $(QUIET),1>/dev/null)
+	$(call checkExitcode,0,SSH_ASKPASS= $(TEST_BAR) -c test/test.bar test/data --overwrite-archive-files) --verbose=2 $(if $(QUIET),1>/dev/null)
 	$(call checkExitcode,0,SSH_ASKPASS= $(TEST_BAR) -l test/test*.bar -g) $(if $(QUIET),1>/dev/null)
 	$(call checkExitcode,0,SSH_ASKPASS= $(TEST_BAR) -l test/test*.bar -H) $(if $(QUIET),1>/dev/null)
 	$(call checkExitcode,0,SSH_ASKPASS= $(TEST_BAR) -l test/test*.bar -L) $(if $(QUIET),1>/dev/null)
@@ -740,7 +740,7 @@ test_file_operation_base: \
   $(TEST_FILES)
 	# normal tests
 	$(RMRF) $(TEST_FILES_CLEAN)
-	SSH_ASKPASS= $(TEST_BAR) -c test/$(BAR_FILE).bar test/data $(OPTIONS) --overwrite-archive-files $(if $(QUIET),1>/dev/null)
+	SSH_ASKPASS= $(TEST_BAR) -c test/$(BAR_FILE).bar test/data $(OPTIONS) --overwrite-archive-files --verbose=2 $(if $(QUIET),1>/dev/null)
 	SSH_ASKPASS= $(TEST_BAR) -l test/test*.bar $(OPTIONS) $(if $(QUIET),1>/dev/null)
 	SSH_ASKPASS= $(TEST_BAR) -t test/test*.bar $(OPTIONS) $(if $(QUIET),1>/dev/null)
 	SSH_ASKPASS= $(TEST_BAR) -d test/test*.bar $(OPTIONS) $(if $(QUIET),1>/dev/null)
@@ -756,32 +756,34 @@ test_file_operation_base: \
 
 test_file_operation_delta: \
   $(TEST_FILES)
+ifeq (@HAVE_XDELTA@,1)
 	# delta tests
 	$(RMRF) $(TEST_FILES_CLEAN)
-	($(CD) test/data/delta1; SSH_ASKPASS= ../../../$(TEST_BAR) -c ../../$(BAR_FILE)-A.bar test.dat $(OPTIONS) --overwrite-archive-files $(if $(QUIET),1>/dev/null))
+	($(CD) test/data/delta1; SSH_ASKPASS= ../../../$(TEST_BAR) -c ../../$(BAR_FILE)-A.bar test.dat $(OPTIONS) --overwrite-archive-files --verbose=2 $(if $(QUIET),1>/dev/null))
 	$(RMF) test/$(BAR_PATTERN)-B.bar
-	($(CD) test/data/delta2; SSH_ASKPASS= ../../../$(TEST_BAR) -c ../../$(BAR_FILE)-B.bar --delta-source='../../$(BAR_PATTERN)-A.bar' test.dat $(OPTIONS) --compress-algorithm=xdelta9 --force-delta-compression --overwrite-archive-files $(if $(QUIET),1>/dev/null))
+	($(CD) test/data/delta2; SSH_ASKPASS= ../../../$(TEST_BAR) -c ../../$(BAR_FILE)-B.bar --delta-source='../../$(BAR_PATTERN)-A.bar' test.dat $(OPTIONS) --compress-algorithm=xdelta9 --force-delta-compression --overwrite-archive-files --verbose=2 $(if $(QUIET),1>/dev/null))
 	$(RMF) test/$(BAR_PATTERN)-B.bar
-	($(CD) test/data/delta2; SSH_ASKPASS= ../../../$(TEST_BAR) -c ../../$(BAR_FILE)-B.bar --delta-source='../../$(BAR_PATTERN)-A.bar' test.dat $(OPTIONS) --compress-algorithm=xdelta9+zip9 --force-delta-compression --overwrite-archive-files $(if $(QUIET),1>/dev/null))
-ifeq (1,1)
+	($(CD) test/data/delta2; SSH_ASKPASS= ../../../$(TEST_BAR) -c ../../$(BAR_FILE)-B.bar --delta-source='../../$(BAR_PATTERN)-A.bar' test.dat $(OPTIONS) --compress-algorithm=xdelta9+zip9 --force-delta-compression --overwrite-archive-files --verbose=2 $(if $(QUIET),1>/dev/null))
+ifeq (@HAVE_BZ2@,1)
 	$(RMF) test/$(BAR_PATTERN)-B.bar
-	($(CD) test/data/delta2; SSH_ASKPASS= ../../../$(TEST_BAR) -c ../../$(BAR_FILE)-B.bar --delta-source='../../$(BAR_PATTERN)-A.bar' test.dat $(OPTIONS) --compress-algorithm=xdelta9+bzip2 --force-delta-compression --overwrite-archive-files $(if $(QUIET),1>/dev/null))
+	($(CD) test/data/delta2; SSH_ASKPASS= ../../../$(TEST_BAR) -c ../../$(BAR_FILE)-B.bar --delta-source='../../$(BAR_PATTERN)-A.bar' test.dat $(OPTIONS) --compress-algorithm=xdelta9+bzip2 --force-delta-compression --overwrite-archive-files --verbose=2 $(if $(QUIET),1>/dev/null))
 endif
-ifeq (1,1)
+ifeq (@HAVE_LZMA@,1)
 	$(RMF) test/$(BAR_PATTERN)-B.bar
-	($(CD) test/data/delta2; SSH_ASKPASS= ../../../$(TEST_BAR) -c ../../$(BAR_FILE)-B.bar --delta-source='../../$(BAR_PATTERN)-A.bar' test.dat $(OPTIONS) --compress-algorithm=xdelta9+lzma9 --force-delta-compression --overwrite-archive-files $(if $(QUIET),1>/dev/null))
+	($(CD) test/data/delta2; SSH_ASKPASS= ../../../$(TEST_BAR) -c ../../$(BAR_FILE)-B.bar --delta-source='../../$(BAR_PATTERN)-A.bar' test.dat $(OPTIONS) --compress-algorithm=xdelta9+lzma9 --force-delta-compression --overwrite-archive-files --verbose=2 $(if $(QUIET),1>/dev/null))
 endif
 	SSH_ASKPASS= $(TEST_BAR) -t test/$(BAR_PATTERN)-B.bar --delta-source='test/$(BAR_PATTERN)-A.bar' $(OPTIONS) $(if $(QUIET),1>/dev/null)
 	($(CD) test/data/delta2; SSH_ASKPASS= ../../../$(TEST_BAR) -d ../../$(BAR_PATTERN)-B.bar --delta-source='../../$(BAR_PATTERN)-A.bar' $(OPTIONS) $(if $(QUIET),1>/dev/null))
 	($(CD) test/data/delta2; SSH_ASKPASS= ../../../$(TEST_BAR) -x ../../$(BAR_PATTERN)-B.bar --delta-source='../../$(BAR_PATTERN)-A.bar' $(OPTIONS) --destination ../../restore $(if $(QUIET),1>/dev/null))
 	$(DIFF) test/data/delta2/test.dat test/restore/test.dat
+endif
 
 test_file_operation_incremental: \
 	# incremental tests
 	$(RMRF) $(TEST_FILES_CLEAN)
-	SSH_ASKPASS= $(TEST_BAR) -c test/$(BAR_FILE)-full.bar --full --incremental-list-file=test/$(BAR_FILE).bid test/data test/new $(OPTIONS) --overwrite-archive-files $(if $(QUIET),1>/dev/null)
+	SSH_ASKPASS= $(TEST_BAR) -c test/$(BAR_FILE)-full.bar --full --incremental-list-file=test/$(BAR_FILE).bid test/data test/new $(OPTIONS) --overwrite-archive-files --verbose=2 $(if $(QUIET),1>/dev/null)
 	$(MKDIR) test/new; $(CP) test/data/random1024.dat test/new/random1024-new.dat
-	SSH_ASKPASS= $(TEST_BAR) -c test/$(BAR_FILE)-incremental.bar --incremental --incremental-list-file=test/$(BAR_FILE).bid test/data test/new $(OPTIONS) --overwrite-archive-files $(if $(QUIET),1>/dev/null)
+	SSH_ASKPASS= $(TEST_BAR) -c test/$(BAR_FILE)-incremental.bar --incremental --incremental-list-file=test/$(BAR_FILE).bid test/data test/new $(OPTIONS) --overwrite-archive-files --verbose=2 $(if $(QUIET),1>/dev/null)
 	SSH_ASKPASS= $(TEST_BAR) -t test/test*.bar $(OPTIONS) $(if $(QUIET),1>/dev/null)
 	SSH_ASKPASS= $(TEST_BAR) -d test/test*.bar $(OPTIONS) $(if $(QUIET),1>/dev/null)
 	SSH_ASKPASS= $(TEST_BAR) -x test/test*.bar $(OPTIONS) --destination test/restore $(if $(QUIET),1>/dev/null)
@@ -789,9 +791,9 @@ test_file_operation_incremental: \
 test_file_operation_differential: \
 	# differential tests
 	$(RMRF) $(TEST_FILES_CLEAN)
-	SSH_ASKPASS= $(TEST_BAR) -c test/$(BAR_FILE)-full.bar --full --incremental-list-file=test/$(BAR_FILE).bid test/data test/new $(OPTIONS) --overwrite-archive-files $(if $(QUIET),1>/dev/null)
+	SSH_ASKPASS= $(TEST_BAR) -c test/$(BAR_FILE)-full.bar --full --incremental-list-file=test/$(BAR_FILE).bid test/data test/new $(OPTIONS) --overwrite-archive-files --verbose=2 $(if $(QUIET),1>/dev/null)
 	$(MKDIR) test/new; $(CP) test/data/random1024.dat test/new/random1024-new.dat
-	SSH_ASKPASS= $(TEST_BAR) -c test/$(BAR_FILE)-differential.bar --differential --incremental-list-file=test/$(BAR_FILE).bid test/data test/new $(OPTIONS) --overwrite-archive-files $(if $(QUIET),1>/dev/null)
+	SSH_ASKPASS= $(TEST_BAR) -c test/$(BAR_FILE)-differential.bar --differential --incremental-list-file=test/$(BAR_FILE).bid test/data test/new $(OPTIONS) --overwrite-archive-files --verbose=2 $(if $(QUIET),1>/dev/null)
 	SSH_ASKPASS= $(TEST_BAR) -t test/test*.bar $(OPTIONS) $(if $(QUIET),1>/dev/null)
 	SSH_ASKPASS= $(TEST_BAR) -d test/test*.bar $(OPTIONS) $(if $(QUIET),1>/dev/null)
 	SSH_ASKPASS= $(TEST_BAR) -x test/test*.bar $(OPTIONS) --destination test/restore $(if $(QUIET),1>/dev/null)
@@ -802,7 +804,7 @@ test_file_operation_destroyed: \
   bar destroyer
 	# tests which must cause errors
 	$(RMRF) $(TEST_FILES_CLEAN)
-	SSH_ASKPASS= $(TEST_BAR) -c test/$(BAR_FILE).bar test/data $(OPTIONS) --overwrite-archive-files $(if $(QUIET),1>/dev/null)
+	SSH_ASKPASS= $(TEST_BAR) -c test/$(BAR_FILE).bar test/data $(OPTIONS) --overwrite-archive-files --verbose=2 $(if $(QUIET),1>/dev/null)
 	$(LS) test/*.bar|while read fileName; do ./destroyer $$fileName m:16:FIL0 > $${fileName}_destroyed; done
 	! `SSH_ASKPASS= $(TEST_BAR) -t test/test*.bar_destroyed $(OPTIONS) 1>/dev/null 2>/dev/null` $(if $(QUIET),1>/dev/null)
 	$(LS) test/*.bar|while read fileName; do ./destroyer $$fileName m:20:XXXX > $${fileName}_destroyed; done
@@ -832,21 +834,21 @@ FunctionTestDeviceDelete = \
 # call FunctionTestFileZero,<file>,<size>
 FunctionTestFileZero = \
   ( \
-    $(DD) if=/dev/zero of=$1 bs=$2 count=1 2>/dev/null; \
+    $(DD) if=/dev/zero of=$1 bs=$2 count=1 2>/dev/null; rc=$$?; if test $$rc -ne 0; then exit $$rc; fi; \
   )
 
 # helper function to fill test file with random data
 # call FunctionTestFileRandom,<file>,<size>
 FunctionTestFileRandom = \
   ( \
-    $(DD) if=/dev/urandom of=$1 bs=$2 count=1 2>/dev/null; \
+    $(DD) if=/dev/urandom of=$1 bs=$2 count=1 2>/dev/null; rc=$$?; if test $$rc -ne 0; then exit $$rc; fi; \
   )
 
 # helper function to create huge spare test file
 # call FunctionTestDeviceHugeSpare,<file>,<size>
 FunctionTestDeviceHugeSpare = \
   ( \
-    $(DD) if=/dev/zero of=$1 seek=$2 bs=1 count=1 2>/dev/null; \
+    $(DD) if=/dev/zero of=$1 seek=$2 bs=1 count=1 2>/dev/null; rc=$$?; if test $$rc -ne 0; then exit $$rc; fi; \
   )
 
 # helper function to initialize file system on a test device
@@ -879,6 +881,7 @@ test_image_operations: \
 .PHONY: test_image_operations_raw
 test_image_operations_raw:
 	# raw
+	$(INSTALL) -d test
 	$(call FunctionTestFileRandom,test/dev0,32M); $(call FunctionTestDeviceCreate,$(LOOP0),test/dev0)
 	$(call FunctionTestFileZero,test/dev1,32M);   $(call FunctionTestDeviceCreate,$(LOOP1),test/dev1)
 	$(MAKE) \
@@ -897,6 +900,7 @@ test_image_operations_ext: \
 test_image_operations_ext2:
 ifneq (@MKFS_EXT2@,)
 	# ext2
+	$(INSTALL) -d test
 	$(call FunctionTestFileZero,test/dev0,32M)
 	$(call FunctionTestFileZero,test/dev1,32M)
 	$(call FunctionTestDeviceCreate,$(LOOP0),test/dev0)
@@ -946,6 +950,7 @@ endif
 test_image_operations_ext3:
 ifneq (@MKFS_EXT3@,)
 	# ext3
+	$(INSTALL) -d test
 	$(call FunctionTestFileZero,test/dev0,32M)
 	$(call FunctionTestFileZero,test/dev1,32M)
 	$(call FunctionTestDeviceCreate,$(LOOP0),test/dev0)
@@ -994,6 +999,7 @@ endif
 test_image_operations_ext4:
 ifneq (@MKFS_EXT4@,)
 	# ext4
+	$(INSTALL) -d test
 	$(call FunctionTestFileZero,test/dev0,32M)
 	$(call FunctionTestFileZero,test/dev1,32M)
 	$(call FunctionTestDeviceCreate,$(LOOP0),test/dev0)
@@ -1058,6 +1064,7 @@ test_image_operations_fat: \
 test_image_operations_fat12:
 ifneq (@MKFS_MSDOS@,)
 	# FAT12
+	$(INSTALL) -d test
 	$(call FunctionTestFileZero,test/dev0,1440K)
 	$(call FunctionTestFileZero,test/dev1,1440K)
 	$(call FunctionTestDeviceCreate,$(LOOP0),test/dev0)
@@ -1073,6 +1080,7 @@ endif
 test_image_operations_fat16:
 ifneq (@MKFS_MSDOS@,)
 	# FAT16
+	$(INSTALL) -d test
 	$(call FunctionTestFileZero,test/dev0,20M)
 	$(call FunctionTestFileZero,test/dev1,20M)
 	$(call FunctionTestDeviceCreate,$(LOOP0),test/dev0)
@@ -1088,6 +1096,7 @@ endif
 test_image_operations_fat32:
 ifneq (@MKFS_MSDOS@,)
 	# FAT32
+	$(INSTALL) -d test
 	$(call FunctionTestFileZero,test/dev0,40M)
 	$(call FunctionTestFileZero,test/dev1,40M)
 	$(call FunctionTestDeviceCreate,$(LOOP0),test/dev0)
@@ -1118,6 +1127,7 @@ endif
 test_image_operations_reiserfs3:
 ifneq (@MKFS_REISERFS@,)
 	# ReiserFS version 3 (Note: Linux only support block size 4096)
+	$(INSTALL) -d test
 	$(call FunctionTestFileZero,test/dev0,64M)
 	$(call FunctionTestFileZero,test/dev1,64M)
 	$(call FunctionTestDeviceCreate,$(LOOP0),test/dev0)
@@ -1144,6 +1154,7 @@ endif
 test_image_operations_reiser4:
 ifneq (@MKFS_REISER4@,)
 	# Reiser4 (Note: Linux only support block size 4096)
+	$(INSTALL) -d test
 	$(call FunctionTestFileZero,test/dev0,64M)
 	$(call FunctionTestFileZero,test/dev1,64M)
 	$(call FunctionTestDeviceCreate,$(LOOP0),test/dev0)
@@ -1161,7 +1172,7 @@ test_image_operations_base: bar
 	$(RMRF) $(TEST_FILES_CLEAN)
 	$(SUDO) $(CHMOD) o+rw $(DEVICE0)
 	$(SUDO) $(CHMOD) o+rw $(DEVICE1)
-	SSH_ASKPASS= $(TEST_BAR) -m test/$(if $(BAR_FILE),$(BAR_FILE),test).bar $(DEVICE0) $(if $(OPTIONS),$(OPTIONS),--compress-algorithm=none --crypt-algorithm=none) --overwrite-archive-files $(if $(QUIET),1>/dev/null)
+	SSH_ASKPASS= $(TEST_BAR) -m test/$(if $(BAR_FILE),$(BAR_FILE),test).bar $(DEVICE0) $(if $(OPTIONS),$(OPTIONS),--compress-algorithm=none --crypt-algorithm=none) --overwrite-archive-files --verbose=2 $(if $(QUIET),1>/dev/null)
 	SSH_ASKPASS= $(TEST_BAR) -t test/test*.bar $(OPTIONS) $(if $(QUIET),1>/dev/null)
 	SSH_ASKPASS= $(TEST_BAR) -d test/test*.bar $(OPTIONS) $(if $(QUIET),1>/dev/null)
 	SSH_ASKPASS= $(TEST_BAR) -x test/test*.bar $(OPTIONS) --destination $(DEVICE1) $(if $(QUIET),1>/dev/null)
