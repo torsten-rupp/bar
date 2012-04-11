@@ -134,6 +134,48 @@ LOCAL void debugFileInitDumpStackTrace(FILE *handle, const char *title, int inde
 }
 #endif /* !defined(NDEBUG) && defined(HAVE_BACKTRACE) */
 
+/***********************************************************************\
+* Name   : getExtendedAttributes
+* Purpose: get extended file attributes
+* Input  : fileName - file name
+* Output : attributes - extended file attributes
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors getExtendedAttributes(const String fileName, uint64 *extendedAttributes)
+{
+  int    handle;
+  long   attributes;
+  Errors error;
+
+  assert(fileName != NULL);
+  assert(extendedAttributes != NULL);
+
+  // get extended file attributes
+  handle = open(String_cString(fileName),O_RDONLY|O_NONBLOCK);
+  if (handle == -1)
+  {
+    return ERRORX(IO_ERROR,errno,String_cString(fileName));
+  }
+  attributes = 0LL;
+  if (ioctl(handle,FS_IOC_GETFLAGS,&attributes) != 0)
+  {
+    error = ERRORX(IO_ERROR,errno,String_cString(fileName));
+    close(handle);
+    return error;
+  }
+  close(handle);
+
+  (*extendedAttributes) = 0LL;
+  if ((attributes & FILE_ATTRIBUTE_COMPRESS   ) != 0LL) (*extendedAttributes) |= FILE_ATTRIBUTE_COMPRESS;
+  if ((attributes & FILE_ATTRIBUTE_NO_COMPRESS) != 0LL) (*extendedAttributes) |= FILE_ATTRIBUTE_NO_COMPRESS;
+  if ((attributes & FILE_ATTRIBUTE_NO_DUMP    ) != 0LL) (*extendedAttributes) |= FILE_ATTRIBUTE_NO_DUMP;
+
+  return ERROR_NONE;
+}
+
+
 /*---------------------------------------------------------------------*/
 
 String File_newFileName(void)
@@ -1712,9 +1754,7 @@ Errors File_getFileInfo(FileInfo     *fileInfo,
     time_t d0;
     time_t d1;
   } cast;
-  int           handle;
   Errors        error;
-  long          attributes;
 
   assert(fileName != NULL);
   assert(fileInfo != NULL);
@@ -1723,58 +1763,6 @@ Errors File_getFileInfo(FileInfo     *fileInfo,
   if (lstat64(String_cString(fileName),&fileStat) != 0)
   {
     return ERRORX(IO_ERROR,errno,String_cString(fileName));
-  }
-
-  // store meta data
-  if      (S_ISREG(fileStat.st_mode))
-  {
-    fileInfo->type = (fileStat.st_nlink > 1)?FILE_TYPE_HARDLINK:FILE_TYPE_FILE;
-    fileInfo->size = fileStat.st_size;
-  }
-  else if (S_ISDIR(fileStat.st_mode))
-  {
-    fileInfo->type = FILE_TYPE_DIRECTORY;
-    fileInfo->size = 0LL;
-  }
-  else if (S_ISLNK(fileStat.st_mode))
-  {
-    fileInfo->type = FILE_TYPE_LINK;
-    fileInfo->size = 0LL;
-  }
-  else if (S_ISCHR(fileStat.st_mode))
-  {
-    fileInfo->type        = FILE_TYPE_SPECIAL;
-    fileInfo->size        = 0LL;
-    fileInfo->specialType = FILE_SPECIAL_TYPE_CHARACTER_DEVICE;
-  }
-  else if (S_ISBLK(fileStat.st_mode))
-  {
-    fileInfo->type        = FILE_TYPE_SPECIAL;
-    fileInfo->size        = -1LL;
-    fileInfo->specialType = FILE_SPECIAL_TYPE_BLOCK_DEVICE;
-
-    // try to detect block device size
-    if (Device_getDeviceInfo(&deviceInfo,fileName) == ERROR_NONE)
-    {
-      fileInfo->size = deviceInfo.size;
-    }
-  }
-  else if (S_ISFIFO(fileStat.st_mode))
-  {
-    fileInfo->type        = FILE_TYPE_SPECIAL;
-    fileInfo->size        = 0LL;
-    fileInfo->specialType = FILE_SPECIAL_TYPE_FIFO;
-  }
-  else if (S_ISSOCK(fileStat.st_mode))
-  {
-    fileInfo->type        = FILE_TYPE_SPECIAL;
-    fileInfo->size        = 0LL;
-    fileInfo->specialType = FILE_SPECIAL_TYPE_SOCKET;
-  }
-  else
-  {
-    fileInfo->type        = FILE_TYPE_UNKNOWN;
-    fileInfo->size        = 0LL;
   }
   fileInfo->timeLastAccess  = fileStat.st_atime;
   fileInfo->timeModified    = fileStat.st_mtime;
@@ -1790,23 +1778,95 @@ Errors File_getFileInfo(FileInfo     *fileInfo,
   cast.d1 = fileStat.st_ctime;
   memcpy(fileInfo->cast,&cast,sizeof(FileCast));
 
-  // get extended file attributes
-  handle = open(String_cString(fileName),O_RDONLY|O_NONBLOCK);
-  if (handle == -1)
+  // store meta data
+  if      (S_ISREG(fileStat.st_mode))
   {
-    return ERRORX(IO_ERROR,errno,String_cString(fileName));
+    fileInfo->type = (fileStat.st_nlink > 1)?FILE_TYPE_HARDLINK:FILE_TYPE_FILE;
+    fileInfo->size = fileStat.st_size;
+
+    // get extended file attributes
+    error = getExtendedAttributes(fileName,&fileInfo->attributes);
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
   }
-  fileInfo->attributes = 0LL;
-  if (ioctl(handle,FS_IOC_GETFLAGS,&attributes) != 0)
+  else if (S_ISDIR(fileStat.st_mode))
   {
-    error = ERRORX(IO_ERROR,errno,String_cString(fileName));
-    close(handle);
-    return error;
+    fileInfo->type = FILE_TYPE_DIRECTORY;
+    fileInfo->size = 0LL;
+
+    // get extended file attributes
+    error = getExtendedAttributes(fileName,&fileInfo->attributes);
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
   }
-  if ((attributes & FILE_ATTRIBUTE_COMPRESS   ) != 0LL) fileInfo->attributes |= FILE_ATTRIBUTE_COMPRESS;
-  if ((attributes & FILE_ATTRIBUTE_NO_COMPRESS) != 0LL) fileInfo->attributes |= FILE_ATTRIBUTE_NO_COMPRESS;
-  if ((attributes & FILE_ATTRIBUTE_NO_DUMP    ) != 0LL) fileInfo->attributes |= FILE_ATTRIBUTE_NO_DUMP;
-  close(handle);
+  else if (S_ISLNK(fileStat.st_mode))
+  {
+    fileInfo->type = FILE_TYPE_LINK;
+    fileInfo->size = 0LL;
+
+    // get extended file attributes
+    error = getExtendedAttributes(fileName,&fileInfo->attributes);
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
+  }
+  else if (S_ISCHR(fileStat.st_mode))
+  {
+    fileInfo->type        = FILE_TYPE_SPECIAL;
+    fileInfo->size        = 0LL;
+    fileInfo->specialType = FILE_SPECIAL_TYPE_CHARACTER_DEVICE;
+    fileInfo->attributes  = 0LL;
+  }
+  else if (S_ISBLK(fileStat.st_mode))
+  {
+    fileInfo->type        = FILE_TYPE_SPECIAL;
+    fileInfo->size        = -1LL;
+    fileInfo->specialType = FILE_SPECIAL_TYPE_BLOCK_DEVICE;
+    fileInfo->attributes  = 0LL;
+
+    // try to detect block device size
+    if (Device_getDeviceInfo(&deviceInfo,fileName) == ERROR_NONE)
+    {
+      fileInfo->size = deviceInfo.size;
+    }
+  }
+  else if (S_ISFIFO(fileStat.st_mode))
+  {
+    fileInfo->type        = FILE_TYPE_SPECIAL;
+    fileInfo->size        = 0LL;
+    fileInfo->specialType = FILE_SPECIAL_TYPE_FIFO;
+
+    // get extended file attributes
+    error = getExtendedAttributes(fileName,&fileInfo->attributes);
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
+  }
+  else if (S_ISSOCK(fileStat.st_mode))
+  {
+    fileInfo->type        = FILE_TYPE_SPECIAL;
+    fileInfo->size        = 0LL;
+    fileInfo->specialType = FILE_SPECIAL_TYPE_SOCKET;
+
+    // get extended file attributes
+    error = getExtendedAttributes(fileName,&fileInfo->attributes);
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
+  }
+  else
+  {
+    fileInfo->type        = FILE_TYPE_UNKNOWN;
+    fileInfo->size        = 0LL;
+    fileInfo->attributes  = 0LL;
+  }
 
   return ERROR_NONE;
 }
