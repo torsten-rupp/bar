@@ -137,6 +137,7 @@ LOCAL void addSourceNodes(const String storageName, const Pattern *storagePatter
   }
 
   // free resources
+  String_delete(basePath);
   freeJobOptions(&jobOptions);
 }
 
