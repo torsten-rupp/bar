@@ -652,6 +652,7 @@ CONFIG_DIR
 INSTALL_BIN_DIR
 INSTALL_DIR
 HAVE_GCRYPT
+HAVE_XDELTA
 HAVE_LZMA
 HAVE_BZ2
 ENABLE_GUI
@@ -6570,8 +6571,7 @@ $as_echo "done" >&6; }
 
       result2=1
       if test $result2 -eq 1; then
-        (set -x; cd libgcrypt; ./configure --prefix=$cwd/packages --with-gpg-error-prefix=$cwd/packages `if test "$ENABLE_DEBUG" = "yes"; then echo --disable-optimization; fi`; set +x)
-        # 1>/dev/null 2>/dev/null
+        (cd libgcrypt; ./configure --prefix=$cwd/packages --with-gpg-error-prefix=$cwd/packages `if test "$ENABLE_DEBUG" = "yes"; then echo --disable-optimization; fi`) 1>/dev/null 2>/dev/null
         if test $? -ne 0; then
           { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (configure)" >&5
 $as_echo "fail (configure)" >&6; }

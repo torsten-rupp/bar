@@ -264,6 +264,7 @@ AC_SUBST(ENABLE_GUI)                        dnl "yes" for GUI support, "no" othe
 
 AC_SUBST(HAVE_BZ2)                          dnl "1" for bzip2 support, "" otherwise
 AC_SUBST(HAVE_LZMA)                         dnl "1" for lzma support, "" otherwise
+AC_SUBST(HAVE_XDELTA)                       dnl "1" for xdelta support, "" otherwise
 AC_SUBST(HAVE_GCRYPT)                       dnl "1" for gcrypt support, "" otherwise
 
 AC_SUBST(INSTALL_DIR)                       dnl installation directory
