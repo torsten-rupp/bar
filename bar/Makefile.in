@@ -90,7 +90,7 @@ TARGETS              = bar/bar \
                          barcontrol/barcontrol.bat \
                        ) \
 
-MAN                  = doc/bar.7 \
+DOC                  = doc/bar.7 \
                        doc/bar.pdf \
 
 OTHER_SOURCES        = errors.pl \
@@ -114,7 +114,7 @@ SCRIPTS              = scripts/barserver-SuSE \
 
 all: \
   $(TARGETS) \
-  $(MAN)\
+  $(DOC) \
 
 clean: \
   clean_keys \
@@ -187,8 +187,7 @@ help:
 	@$(ECHO) "  clean_gui"
 
 # ----------------------------------------------------------------------------
-
-# --- create main
+# create main
 
 # create bar
 .PHONY: bar
@@ -227,8 +226,7 @@ else
 endif
 
 # ----------------------------------------------------------------------------
-
-# --- create SSL keys and certificates
+# create SSL keys and certificates
 
 .PHONY: keys clean_keys
 
@@ -249,8 +247,7 @@ $(KEY_FILES):
           --force \
 
 # ----------------------------------------------------------------------------
-
-# --- create documentation
+# create documentation
 
 .PHONY: doc clean_doc man clean_man showman
 
@@ -299,10 +296,8 @@ else
 	@$(ECHO) "ERROR: no 'unoconv' tool available! Cannot create PDF manual."
 endif
 
-
 # ----------------------------------------------------------------------------
-
-# --- install/uninstall
+# install/uninstall
 
 .PHONY: install install_base install_man install_keys uninstall install_dist
 
@@ -317,7 +312,7 @@ install: \
 install_base: \
   $(TARGETS) \
   $(SCRIPTS) \
-  $(MAN)
+  $(DOC)
 	$(INSTALL) -d "$(DESTDIR)$(INSTALL_BIN_DIR)"
 	$(INSTALL) bar/bar@EXEEXT@ "$(DESTDIR)$(INSTALL_BIN_DIR)"
 	$(INSTALL) -d "$(DESTDIR)$(INSTALL_CONFIG_DIR)"
@@ -430,8 +425,7 @@ uninstall:
         fi
 
 # ----------------------------------------------------------------------------
-
-# --- tests
+# tests
 
 # run server
 .PHONY: barserver barserver_ssl
@@ -472,8 +466,8 @@ memcheck_extended:
 	@$(MAKE) -C bar memcheck_extended
 
 # ----------------------------------------------------------------------------
+# distribution
 
-# --- distribution
 .PHONY: dist clean_dist $(DISTRIBUTION_NAME).tar.bz2
 
 dist: \
@@ -515,7 +509,7 @@ $(DISTRIBUTION_NAME).tar.bz2: \
   doc/bar.odt \
   doc/*.txt \
   doc/images/*.png \
-  $(MAN)
+  $(DOC)
 	$(INSTALL) -d tmp/$(DISTRIBUTION_NAME)
 	$(INSTALL) -m 775 \
                    configure \
@@ -607,8 +601,7 @@ $(DISTRIBUTION_NAME).orig.tar.gz: \
 	$(RMRF) tmp/$(DISTRIBUTION_NAME).orig
 
 # ----------------------------------------------------------------------------
-
-# --- packages
+# packages
 
 # RPM
 .PHONY: rpm clean_rpm
