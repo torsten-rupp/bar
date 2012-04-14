@@ -379,13 +379,36 @@ Note: for the image tests some commands are executed with sudo.
 Create a file /etc/sudores.d/bar with:
 
 # allow BAR tests
-Cmnd_Alias BAR_LOSETUP=/sbin/losetup -d /dev/loop0, \
-                       /sbin/losetup /dev/loop0 test/dev0, \
-                       /sbin/losetup -d /dev/loop1, \
-                       /sbin/losetup /dev/loop1 test/dev1
-Cmnd_Alias BAR_CHMOD=/bin/chmod o+rw /dev/loop0, \
-                     /bin/chmod o+rw /dev/loop1
-ALL ALL=NOPASSWD:BAR_LOSETUP,BAR_CHMOD
+Cmnd_Alias BAR_LOSETUP=\
+  /sbin/losetup -d /dev/loop0, \
+  /sbin/losetup /dev/loop0 test/dev0, \
+  /sbin/losetup -d /dev/loop1, \
+  /sbin/losetup /dev/loop1 test/dev1
+Cmnd_Alias BAR_CHMOD=\
+  /bin/chmod o+rw /dev/loop0, \
+  /bin/chmod o+rw /dev/loop1
+Cmnd_Alias BAR_DD=\
+  /bin/dd if=/dev/loop0 of=-, \
+  /bin/dd if=/dev/loop1 of=-
+Cmnd_Alias BAR_MKFS=\
+  /sbin/mkfs -t * /dev/loop0, \
+  /sbin/mkfs -t * /dev/loop1
+Cmnd_Alias BAR_MOUNT=\
+  /bin/mount /dev/loop0 test/dev, \
+  /bin/mount /dev/loop1 test/dev
+Cmnd_Alias BAR_UMOUNT=\
+  /bin/umount test/dev
+Cmnd_Alias BAR_CP=\
+  /bin/cp -r test/data/* test/dev
+
+ALL ALL=NOPASSWD:\
+  BAR_LOSETUP,\
+  BAR_CHMOD,\
+  BAR_DD,\
+  BAR_MKFS,\
+  BAR_MOUNT,\
+  BAR_UMOUNT,\
+  BAR_CP
 
 --- Compression
 
