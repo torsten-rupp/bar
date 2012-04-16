@@ -26,7 +26,7 @@
 
 /***************************** Constants *******************************/
 
-/* supported file systems */
+// supported file systems
 typedef enum
 {
   FILE_SYSTEM_TYPE_NONE,
@@ -40,12 +40,12 @@ typedef enum
 
 /***************************** Datatypes *******************************/
 
-/* file system functions */
+// file system functions
 typedef bool(*FileSystemInitFunction)(DeviceHandle *deviceHandle, void *handle);
 typedef void(*FileSystemDoneFunction)(DeviceHandle *deviceHandle, void *handle);
 typedef bool(*FileSystemBlockIsUsedFunction)(DeviceHandle *deviceHandle, void *handle, uint64 offset);
 
-/* file system handle */
+// file system handle
 typedef struct
 {
   DeviceHandle                  *deviceHandle;
@@ -91,6 +91,17 @@ Errors FileSystem_init(FileSystemHandle *fileSystemHandle,
 \***********************************************************************/
 
 Errors FileSystem_done(FileSystemHandle *fileSystemHandle);
+
+/***********************************************************************\
+* Name   : FileSystem_getName
+* Purpose: get name of file system
+* Input  : fileSystemType - file system type
+* Output : -
+* Return : file system name
+* Notes  : -
+\***********************************************************************/
+
+const char *FileSystem_getName(FileSystemTypes fileSystemType);
 
 /***********************************************************************\
 * Name   : FileSystem_blockIsUsed

@@ -27,8 +27,18 @@
 
 /***************************** Constants *******************************/
 
+LOCAL const struct { const char *name; FileSystemTypes fileSystemType; } FILESYTEM_NAMES[] =
+{
+  { "none",    FILE_SYSTEM_TYPE_NONE      },
+
+  { "Ext",     FILE_SYSTEM_TYPE_EXT       },
+  { "FAT",     FILE_SYSTEM_TYPE_FAT       },
+  { "ReiseFS", FILE_SYSTEM_TYPE_REISERFS  },
+};
+
+
 /***************************** Datatypes *******************************/
-/* file system definition */
+// file system definition
 typedef struct
 {
   FileSystemTypes               type;
@@ -40,7 +50,7 @@ typedef struct
 
 /***************************** Variables *******************************/
 
-/* define file system */
+// define file system
 #define DEFINE_FILE_SYSTEM(name) \
   { \
     FILE_SYSTEM_TYPE_ ## name, \
@@ -52,7 +62,7 @@ typedef struct
 
 /****************************** Macros *********************************/
 
-/* convert from little endian to host system format */
+// convert from little endian to host system format
 #if __BYTE_ORDER == __LITTLE_ENDIAN
   #define LE16_TO_HOST(x) (x)
   #define LE32_TO_HOST(x) (x)
@@ -110,7 +120,7 @@ LOCAL_INLINE uint32 swap32(uint32 n)
 #include "filesystems_fat.c"
 #include "filesystems_reiserfs.c"
 
-/* support file systems */
+// support file systems
 LOCAL FileSystem FILE_SYSTEMS[] =
 {
   DEFINE_FILE_SYSTEM(EXT),
@@ -130,14 +140,14 @@ Errors FileSystem_init(FileSystemHandle *fileSystemHandle,
   assert(fileSystemHandle != NULL);
   assert(deviceHandle != NULL);
 
-  /* initialize variables */
+  // initialize variables
   fileSystemHandle->deviceHandle        = deviceHandle;
   fileSystemHandle->type                = FILE_SYSTEM_TYPE_UNKNOWN;
   fileSystemHandle->handle              = NULL;
   fileSystemHandle->doneFunction        = NULL;
   fileSystemHandle->blockIsUsedFunction = NULL;
 
-  /* detect file system on device */
+  // detect file system on device
   z = 0;
   while ((z < SIZE_OF_ARRAY(FILE_SYSTEMS)) && (fileSystemHandle->type == FILE_SYSTEM_TYPE_UNKNOWN))
   {
@@ -178,6 +188,30 @@ Errors FileSystem_done(FileSystemHandle *fileSystemHandle)
   }
 
   return ERROR_NONE;
+}
+
+const char *FileSystem_getName(FileSystemTypes fileSystemType)
+{
+  uint       z;
+  const char *fileSytemName;
+
+  z = 0;
+  while (   (z < SIZE_OF_ARRAY(FILESYTEM_NAMES))
+         && (FILESYTEM_NAMES[z].fileSystemType != fileSystemType)
+        )
+  {
+    z++;
+  }
+  if (z < SIZE_OF_ARRAY(FILESYTEM_NAMES))
+  {
+    fileSytemName = FILESYTEM_NAMES[z].name;
+  }
+  else
+  {
+    fileSytemName = "unknown";
+  }
+
+  return fileSytemName;
 }
 
 bool FileSystem_blockIsUsed(FileSystemHandle *fileSystemHandle, uint64 offset)
