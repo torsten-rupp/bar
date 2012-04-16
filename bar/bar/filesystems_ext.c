@@ -43,7 +43,7 @@ typedef struct
   uchar  bitmapData[EXT2_MAX_BLOCK_SIZE];   // bitmap block data
 } EXTHandle;
 
-/* ext2/ext3 super block */
+// ext2/ext3 super block
 typedef struct
 {
   uint32 inodeCount;
@@ -72,7 +72,7 @@ typedef struct
   uint16 defaultUIDReservedBlocks;
   uint16 defaultGIDReservedBlocks;
 
-  /* only when revision level EXT2_DYNAMIC_REV is set */
+  // only when revision level EXT2_DYNAMIC_REV is set
   uint32 firstInode;
   uint16 inodeSize;
   uint16 blockGroupNumber;
@@ -84,12 +84,12 @@ typedef struct
   char   lastMounted[64];
   uint32 algorithmUsageBitmap;
 
-  /* only when EXT2_COMPAT_PREALLOC is set */
+  // only when EXT2_COMPAT_PREALLOC is set
   uint8  preallocBlocks;
   uint8  preallocDirectoryBlocks;
   uint16 reservedGroupTableBlocks;
 
-  /* only when EXT3_FEATURE_COMPAT_HAS_JOURNAL is set */
+  // only when EXT3_FEATURE_COMPAT_HAS_JOURNAL is set
   uint8  journalUUID[16];
   uint32 journalInodeNumber;
   uint32 journalDevice;
@@ -103,7 +103,7 @@ typedef struct
   uint32 mkfsTimestamp;
   uint32 journalBlocks[17];
 
-  /* only when EXT2_DYNAMIC_REV & EXT4_FEATURE_INCOMPAT_64BIT is set */
+  // only when EXT2_DYNAMIC_REV & EXT4_FEATURE_INCOMPAT_64BIT is set
   uint32 blocksCountHigh;
   uint32 reserverBlocksCountHigh;
   uint32 freeBlocksCountHigh;
@@ -122,7 +122,7 @@ typedef struct
   uint32 reserved[160];
 } EXTSuperBlock ATTRIBUTE_PACKED;
 
-/* ext2/ext3 group descriptor */
+// ext2/ext3 group descriptor
 typedef struct
 {
   uint32 blockBitmap;
@@ -137,7 +137,7 @@ typedef struct
   uint16 checksum;
 } EXT2GroupDescriptor ATTRIBUTE_PACKED;
 
-/* ext4 group descriptor */
+// ext4 group descriptor
 typedef struct
 {
   uint32 blockBitmap;
@@ -188,7 +188,7 @@ LOCAL bool EXT_init(DeviceHandle *deviceHandle, EXTHandle *extHandle)
   assert(sizeof(ext2GroupDescriptor) == 32);
   assert(sizeof(ext4GroupDescriptor) == 64);
 
-  /* read first super-block */
+  // read first super-block
   if (Device_seek(deviceHandle,EXT2_FIRST_SUPER_BLOCK_OFFSET) != ERROR_NONE)
   {
     return FALSE;
@@ -198,13 +198,13 @@ LOCAL bool EXT_init(DeviceHandle *deviceHandle, EXTHandle *extHandle)
     return FALSE;
   }
 
-  /* check if this a super block */
+  // check if this a super block
   if ((uint16)(LE16_TO_HOST(extSuperBlock.magic)) != EXT2_SUPER_MAGIC)
   {
     return FALSE;
   }
 
-  /* get block size */
+  // get block size
   switch (LE32_TO_HOST(extSuperBlock.logBlockSize))
   {
     case 0: extHandle->blockSize =  1*1024; break;
@@ -219,21 +219,21 @@ LOCAL bool EXT_init(DeviceHandle *deviceHandle, EXTHandle *extHandle)
       break;
   }
 
-  /* get ext type: ext2/3/4/ */
+  // get ext type: ext2/3/4
   if (   (LE32_TO_HOST(extSuperBlock.revisionLevel) == EXT2_REVISION_DYNAMIC)
       && ((LE32_TO_HOST(extSuperBlock.featureCompatible) & EXT4_FEATURE_INCOMPAT_64BIT) == EXT4_FEATURE_INCOMPAT_64BIT)
      )
   {
-    /* ext4 */
+    // ext4
     extHandle->type = EXT4;
   }
   else
   {
-    /* ext2/ext3 */
+    // ext2/ext3
     extHandle->type = EXT2_OR_3;
   }
 
-  /* get file system block info, init data */
+  // get file system block info, init data
   switch (extHandle->type)
   {
     case EXT2_OR_3:
@@ -253,7 +253,7 @@ LOCAL bool EXT_init(DeviceHandle *deviceHandle, EXTHandle *extHandle)
   }
   extHandle->bitmapIndex = -1;
 
-  /* validate data */
+  // validate data
   if (   !((extHandle->groupDescriptorSize > 0) && (extHandle->groupDescriptorSize <= EXT4_MAX_GROUP_DESCRIPTOR_SIZE))
       || !(extHandle->blocksPerGroup > 0)
       || !(extHandle->totalBlocks > 0)
@@ -263,7 +263,7 @@ LOCAL bool EXT_init(DeviceHandle *deviceHandle, EXTHandle *extHandle)
     return FALSE;
   }
 
-  /* read group descriptors and detect bitmap block numbers */
+  // read group descriptors and detect bitmap block numbers
   extHandle->bitmapBlocksCount = (extHandle->totalBlocks+extHandle->blocksPerGroup-1)/extHandle->blocksPerGroup;;
   extHandle->bitmapBlocks = (uint64*)malloc(extHandle->bitmapBlocksCount*sizeof(uint64));
   if (extHandle->bitmapBlocks == NULL)
@@ -330,17 +330,17 @@ LOCAL bool EXT_blockIsUsed(DeviceHandle *deviceHandle, EXTHandle *extHandle, uin
   assert(deviceHandle != NULL);
   assert(extHandle != NULL);
 
-  /* calculate block */
+  // calculate block
   block = offset/extHandle->blockSize;
 
   if (block >= 1)
   {
-    /* calculate bitmap index */
+    // calculate bitmap index
     assert(extHandle->blocksPerGroup != 0);
     bitmapIndex = (block-1)/extHandle->blocksPerGroup;
     assert(bitmapIndex < extHandle->bitmapBlocksCount);
 
-    /* read correct block bitmap if needed */
+    // read correct block bitmap if needed
     if (extHandle->bitmapIndex != (int)bitmapIndex)
     {
       if (Device_seek(deviceHandle,EXT_BLOCK_TO_OFFSET(extHandle,extHandle->bitmapBlocks[bitmapIndex])) != ERROR_NONE)
@@ -354,7 +354,7 @@ LOCAL bool EXT_blockIsUsed(DeviceHandle *deviceHandle, EXTHandle *extHandle, uin
       extHandle->bitmapIndex = bitmapIndex;
     }
 
-    /* check if block is used */
+    // check if block is used
     assert((block-1) >= bitmapIndex*extHandle->blocksPerGroup);
     index = (block-1)-bitmapIndex*extHandle->blocksPerGroup;
     return ((extHandle->bitmapData[index/8] & (1 << index%8)) != 0);
