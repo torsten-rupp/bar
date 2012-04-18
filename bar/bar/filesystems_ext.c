@@ -13,34 +13,109 @@
 /****************** Conditional compilation switches *******************/
 
 /***************************** Constants *******************************/
-#define EXT2_FIRST_SUPER_BLOCK_OFFSET  1024
-#define EXT2_SUPER_MAGIC               0xEF53
 
-#define EXT2_MAX_BLOCK_SIZE            (64*1024)
+// Note: use defines here, because headers files may not be available
 
-#define EXT2_REVISION_OLD              0
-#define EXT2_REVISION_DYNAMIC          1
+// ext2
+#define EXT2_FIRST_SUPER_BLOCK_OFFSET     1024
+#define EXT2_SUPER_MAGIC                  0xEF53
 
-#define EXT4_MAX_GROUP_DESCRIPTOR_SIZE 1024
-#define EXT4_FEATURE_INCOMPAT_64BIT    0x0080
+#define EXT2_MAX_BLOCK_SIZE               (64*1024)
+
+#define EXT2_REVISION_OLD                 0
+#define EXT2_REVISION_DYNAMIC             1
+
+#define EXT2_FEATURE_COMPAT_DIR_PREALLOC  0x0001
+#define EXT2_FEATURE_COMPAT_IMAGIC_INODES 0x0002
+#define EXT2_FEATURE_COMPAT_EXT_ATTR      0x0008
+#define EXT2_FEATURE_COMPAT_RESIZE_INO    0x0010
+#define EXT2_FEATURE_COMPAT_DIR_INDEX     0x0020
+
+#define EXT2_FEATURE_INCOMPAT_FILETYPE    0x0002
+#define EXT2_FEATURE_INCOMPAT_META_BG     0x0010
+
+#define EXT2_FEATURE_COMPAT_SUPP          (  EXT2_FEATURE_COMPAT_DIR_PREALLOC \
+                                           | EXT2_FEATURE_COMPAT_IMAGIC_INODES \
+                                           | EXT2_FEATURE_COMPAT_EXT_ATTR \
+                                           | EXT2_FEATURE_COMPAT_RESIZE_INO \
+                                           | EXT2_FEATURE_COMPAT_DIR_INDEX \
+                                          )
+#define EXT2_FEATURE_INCOMPAT_SUPP        (  EXT2_FEATURE_INCOMPAT_FILETYPE \
+                                           | EXT2_FEATURE_INCOMPAT_META_BG \
+                                          )
+
+// ext3
+#define EXT3_FEATURE_COMPAT_DIR_PREALLOC  0x0001
+#define EXT3_FEATURE_COMPAT_IMAGIC_INODES 0x0002
+#define EXT3_FEATURE_COMPAT_HAS_JOURNAL   0x0004
+#define EXT3_FEATURE_COMPAT_EXT_ATTR      0x0008
+#define EXT3_FEATURE_COMPAT_RESIZE_INODE  0x0010
+#define EXT3_FEATURE_COMPAT_DIR_INDEX     0x0020
+
+#define EXT3_FEATURE_INCOMPAT_FILETYPE    0x0002
+#define EXT3_FEATURE_INCOMPAT_RECOVER     0x0004
+#define EXT3_FEATURE_INCOMPAT_META_BG     0x0010
+
+#define EXT3_FEATURE_COMPAT_SUPP          (  EXT3_FEATURE_COMPAT_DIR_PREALLOC \
+                                           | EXT3_FEATURE_COMPAT_IMAGIC_INODES \
+                                           | EXT3_FEATURE_COMPAT_HAS_JOURNAL \
+                                           | EXT3_FEATURE_COMPAT_EXT_ATTR \
+                                           | EXT3_FEATURE_COMPAT_RESIZE_INODE \
+                                           | EXT2_FEATURE_COMPAT_EXT_ATTR \
+                                           | EXT3_FEATURE_COMPAT_DIR_INDEX \
+                                          )
+#define EXT3_FEATURE_INCOMPAT_SUPP        (  EXT3_FEATURE_INCOMPAT_FILETYPE \
+                                           | EXT3_FEATURE_INCOMPAT_RECOVER \
+                                           | EXT3_FEATURE_INCOMPAT_META_BG \
+                                          )
+
+// ext4
+#define EXT4_MAX_GROUP_DESCRIPTOR_SIZE    1024
+
+#define EXT4_FEATURE_COMPAT_DIR_PREALLOC  0x0001
+#define EXT4_FEATURE_COMPAT_IMAGIC_INODES 0x0002
+#define EXT4_FEATURE_COMPAT_HAS_JOURNAL   0x0004
+#define EXT4_FEATURE_COMPAT_EXT_ATTR      0x0008
+#define EXT4_FEATURE_COMPAT_RESIZE_INODE  0x0010
+#define EXT4_FEATURE_COMPAT_DIR_INDEX     0x0020
+
+#define EXT4_FEATURE_INCOMPAT_FILETYPE    0x0002
+#define EXT4_FEATURE_INCOMPAT_RECOVER     0x0004
+#define EXT4_FEATURE_INCOMPAT_META_BG     0x0010
+#define EXT4_FEATURE_INCOMPAT_EXTENTS     0x0040
+#define EXT4_FEATURE_INCOMPAT_64BIT       0x0080
+#define EXT4_FEATURE_INCOMPAT_MMP         0x0100
+#define EXT4_FEATURE_INCOMPAT_FLEX_BG     0x0200
+
+#define EXT4_FEATURE_COMPAT_SUPP          (  EXT4_FEATURE_COMPAT_DIR_PREALLOC \
+                                           | EXT4_FEATURE_COMPAT_IMAGIC_INODES \
+                                           | EXT4_FEATURE_COMPAT_HAS_JOURNAL \
+                                           | EXT4_FEATURE_COMPAT_EXT_ATTR \
+                                           | EXT4_FEATURE_COMPAT_RESIZE_INODE \
+                                           | EXT4_FEATURE_COMPAT_DIR_INDEX \
+                                          )
+#define EXT4_FEATURE_INCOMPAT_SUPP        (  EXT4_FEATURE_INCOMPAT_FILETYPE \
+                                           | EXT4_FEATURE_INCOMPAT_RECOVER \
+                                           | EXT4_FEATURE_INCOMPAT_META_BG \
+                                           | EXT4_FEATURE_INCOMPAT_EXTENTS \
+                                           | EXT4_FEATURE_INCOMPAT_64BIT \
+                                           | EXT4_FEATURE_INCOMPAT_MMP \
+                                           | EXT4_FEATURE_INCOMPAT_FLEX_BG \
+                                          )
 
 /***************************** Datatypes *******************************/
 typedef struct
 {
-  enum
-  {
-    EXT2_OR_3,
-    EXT4
-  }      type;                              // EXT type (ext2/3/4)
-  uint   blockSize;                         // block size [bytes]
-  uint   groupDescriptorSize;               // group descriptor size [bytes]
-  uint32 blocksPerGroup;                    // number of blocks in block group
-  uint64 firstDataBlock;                    // first data block (0..n-1)
-  uint64 totalBlocks;                       // total number of blocks
-  uint64 *bitmapBlocks;
-  uint32 bitmapBlocksCount;
-  int    bitmapIndex;                       // index of currently read bitmap (0..n-1)
-  uchar  bitmapData[EXT2_MAX_BLOCK_SIZE];   // bitmap block data
+  FileSystemTypes type;                              // EXT type: FILE_SYSTEM_TYPE_EXT2/FILE_SYSTEM_TYPE_EXT3/FILE_SYSTEM_TYPE_EXT4
+  uint            blockSize;                         // block size [bytes]
+  uint            groupDescriptorSize;               // group descriptor size [bytes]
+  uint32          blocksPerGroup;                    // number of blocks in block group
+  uint64          firstDataBlock;                    // first data block (0..n-1)
+  uint64          totalBlocks;                       // total number of blocks
+  uint64          *bitmapBlocks;                     // bitmap block numbers
+  uint32          bitmapBlocksCount;                 // number of bitmap block numbers
+  int             bitmapIndex;                       // index of currently read bitmap (0..n-1)
+  uchar           bitmapData[EXT2_MAX_BLOCK_SIZE];   // bitmap block data
 } EXTHandle;
 
 // ext2/ext3 super block
@@ -89,7 +164,7 @@ typedef struct
   uint8  preallocDirectoryBlocks;
   uint16 reservedGroupTableBlocks;
 
-  // only when EXT3_FEATURE_COMPAT_HAS_JOURNAL is set
+  // only when EXT3_FEATURE_COMPAT_HAS_JOURNAL/EXT4_FEATURE_COMPAT_HAS_JOURNAL is set
   uint8  journalUUID[16];
   uint32 journalInodeNumber;
   uint32 journalDevice;
@@ -135,7 +210,7 @@ typedef struct
   uint32 reserver0[2];
   uint16 inodeTableUnused;
   uint16 checksum;
-} EXT2GroupDescriptor ATTRIBUTE_PACKED;
+} EXT23GroupDescriptor ATTRIBUTE_PACKED;
 
 // ext4 group descriptor
 typedef struct
@@ -163,7 +238,27 @@ typedef struct
 /***************************** Variables *******************************/
 
 /****************************** Macros *********************************/
+
+/***********************************************************************\
+* Name   : LOW_HIGH_TO_UINT64
+* Purpose: convert low/high 32bit value into 64bit value
+* Input  : low, high - low/high 32bit value
+* Output : -
+* Return : 64bit valule
+* Notes  : -
+\***********************************************************************/
+
 #define LOW_HIGH_TO_UINT64(low,high) ((((uint64)(high)) << 32) | (((uint64)(low)) << 0))
+
+/***********************************************************************\
+* Name   : EXT_BLOCK_TO_OFFSET
+* Purpose: get byte offset for block number
+* Input  : extHandle - ext-handle
+*          block     - block number (0..n-1)
+* Output : -
+* Return : byte offset
+* Notes  : -
+\***********************************************************************/
 
 #define EXT_BLOCK_TO_OFFSET(extHandle,block) ((block)*extHandle->blockSize)
 
@@ -175,33 +270,33 @@ typedef struct
   extern "C" {
 #endif
 
-LOCAL bool EXT_init(DeviceHandle *deviceHandle, EXTHandle *extHandle)
+LOCAL FileSystemTypes EXT_init(DeviceHandle *deviceHandle, EXTHandle *extHandle)
 {
-  EXTSuperBlock       extSuperBlock;
-  EXT2GroupDescriptor ext2GroupDescriptor;
-  EXT4GroupDescriptor ext4GroupDescriptor;
-  uint32              z;
+  EXTSuperBlock        extSuperBlock;
+  EXT23GroupDescriptor ext23GroupDescriptor;
+  EXT4GroupDescriptor  ext4GroupDescriptor;
+  uint32               z;
 
   assert(deviceHandle != NULL);
   assert(extHandle != NULL);
   assert(sizeof(extSuperBlock) == 1024);
-  assert(sizeof(ext2GroupDescriptor) == 32);
+  assert(sizeof(ext23GroupDescriptor) == 32);
   assert(sizeof(ext4GroupDescriptor) == 64);
 
   // read first super-block
   if (Device_seek(deviceHandle,EXT2_FIRST_SUPER_BLOCK_OFFSET) != ERROR_NONE)
   {
-    return FALSE;
+    return FILE_SYSTEM_TYPE_UNKNOWN;
   }
   if (Device_read(deviceHandle,&extSuperBlock,sizeof(extSuperBlock),NULL) != ERROR_NONE)
   {
-    return FALSE;
+    return FILE_SYSTEM_TYPE_UNKNOWN;
   }
 
   // check if this a super block
   if ((uint16)(LE16_TO_HOST(extSuperBlock.magic)) != EXT2_SUPER_MAGIC)
   {
-    return FALSE;
+    return FILE_SYSTEM_TYPE_UNKNOWN;
   }
 
   // get block size
@@ -215,41 +310,76 @@ LOCAL bool EXT_init(DeviceHandle *deviceHandle, EXTHandle *extHandle)
     case 5: extHandle->blockSize = 32*1024; break;
     case 6: extHandle->blockSize = 64*1024; break;
     default:
-      return FALSE;
+      return FILE_SYSTEM_TYPE_UNKNOWN;
       break;
   }
 
   // get ext type: ext2/3/4
-  if (   (LE32_TO_HOST(extSuperBlock.revisionLevel) == EXT2_REVISION_DYNAMIC)
-      && ((LE32_TO_HOST(extSuperBlock.featureCompatible) & EXT4_FEATURE_INCOMPAT_64BIT) == EXT4_FEATURE_INCOMPAT_64BIT)
-     )
+#if 0
+fprintf(stderr,"%s, %d: revisionLevel = %d\n",__FILE__,__LINE__,LE32_TO_HOST(extSuperBlock.revisionLevel));
+fprintf(stderr,"%s, %d: featureCompatible = 0x%x\n",__FILE__,__LINE__,LE32_TO_HOST(extSuperBlock.featureCompatible));
+fprintf(stderr,"%s, %d: featureInCompatible = 0x%x\n",__FILE__,__LINE__,LE32_TO_HOST(extSuperBlock.featureInCompatible));
+fprintf(stderr,"%s, %d: featureCompatible & ~EXT2_FEATURE_COMPAT_SUPP = 0x%x\n",__FILE__,__LINE__,LE32_TO_HOST(extSuperBlock.featureCompatible)& ~EXT2_FEATURE_COMPAT_SUPP);
+fprintf(stderr,"%s, %d: featureCompatible & ~EXT3_FEATURE_COMPAT_SUPP = 0x%x\n",__FILE__,__LINE__,LE32_TO_HOST(extSuperBlock.featureCompatible)& ~EXT3_FEATURE_COMPAT_SUPP);
+fprintf(stderr,"%s, %d: featureCompatible & ~EXT4_FEATURE_COMPAT_SUPP = 0x%x\n",__FILE__,__LINE__,LE32_TO_HOST(extSuperBlock.featureCompatible)& ~EXT4_FEATURE_COMPAT_SUPP);
+fprintf(stderr,"%s, %d: featureInCompatible & ~EXT2_FEATURE_INCOMPAT_SUPP = 0x%x\n",__FILE__,__LINE__,LE32_TO_HOST(extSuperBlock.featureInCompatible)& ~EXT2_FEATURE_INCOMPAT_SUPP);
+fprintf(stderr,"%s, %d: featureInCompatible & ~EXT3_FEATURE_INCOMPAT_SUPP = 0x%x\n",__FILE__,__LINE__,LE32_TO_HOST(extSuperBlock.featureInCompatible)& ~EXT3_FEATURE_INCOMPAT_SUPP);
+fprintf(stderr,"%s, %d: featureInCompatible & ~EXT4_FEATURE_INCOMPAT_SUPP = 0x%x\n",__FILE__,__LINE__,LE32_TO_HOST(extSuperBlock.featureInCompatible)& ~EXT4_FEATURE_INCOMPAT_SUPP);
+#endif /* 0 */
+  if      (   ((LE32_TO_HOST(extSuperBlock.featureCompatible  ) & ~EXT2_FEATURE_COMPAT_SUPP  ) == 0)
+           && ((LE32_TO_HOST(extSuperBlock.featureInCompatible) & ~EXT2_FEATURE_INCOMPAT_SUPP) == 0)
+          )
+  {
+    // ext2
+    extHandle->type = FILE_SYSTEM_TYPE_EXT2;
+  }
+  else if (   (LE32_TO_HOST(extSuperBlock.revisionLevel) == EXT2_REVISION_DYNAMIC)
+           && ((LE32_TO_HOST(extSuperBlock.featureCompatible  ) & ~EXT3_FEATURE_COMPAT_SUPP  ) == 0)
+           && ((LE32_TO_HOST(extSuperBlock.featureInCompatible) & ~EXT3_FEATURE_INCOMPAT_SUPP) == 0)
+          )
+  {
+    // ext3
+    extHandle->type = FILE_SYSTEM_TYPE_EXT3;
+  }
+  else if (   (LE32_TO_HOST(extSuperBlock.revisionLevel) == EXT2_REVISION_DYNAMIC)
+           && ((LE32_TO_HOST(extSuperBlock.featureCompatible  ) & ~EXT4_FEATURE_COMPAT_SUPP  ) == 0)
+           && ((LE32_TO_HOST(extSuperBlock.featureInCompatible) & ~EXT4_FEATURE_INCOMPAT_SUPP) == 0)
+          )
   {
     // ext4
-    extHandle->type = EXT4;
+    extHandle->type = FILE_SYSTEM_TYPE_EXT4;
   }
   else
   {
-    // ext2/ext3
-    extHandle->type = EXT2_OR_3;
+    return FILE_SYSTEM_TYPE_UNKNOWN;
   }
 
   // get file system block info, init data
   switch (extHandle->type)
   {
-    case EXT2_OR_3:
-      extHandle->groupDescriptorSize = sizeof(EXT2GroupDescriptor);
+    case FILE_SYSTEM_TYPE_EXT2:
+    case FILE_SYSTEM_TYPE_EXT3:
+      extHandle->groupDescriptorSize = sizeof(EXT23GroupDescriptor);
       extHandle->blocksPerGroup      = LE32_TO_HOST(extSuperBlock.blocksPerGroup);
       extHandle->firstDataBlock      = (uint64)LE32_TO_HOST(extSuperBlock.firstDataBlock);
       extHandle->totalBlocks         = (uint64)LE32_TO_HOST(extSuperBlock.blocksCount);
       break;
-    case EXT4:
-      extHandle->groupDescriptorSize = (uint)LE16_TO_HOST(extSuperBlock.groupDescriptorSize);
+    case FILE_SYSTEM_TYPE_EXT4:
+      extHandle->groupDescriptorSize = //((LE32_TO_HOST(extSuperBlock.featureCompatible  ) & EXT4_FEATURE_COMPAT_HAS_JOURNAL) != 0)
+                                       ((LE32_TO_HOST(extSuperBlock.featureInCompatible) & EXT4_FEATURE_INCOMPAT_64BIT) != 0)
+                                         ? (uint)LE16_TO_HOST(extSuperBlock.groupDescriptorSize)
+                                         : sizeof(EXT23GroupDescriptor);
       extHandle->blocksPerGroup      = LE32_TO_HOST(extSuperBlock.blocksPerGroup);
       extHandle->firstDataBlock      = (uint64)LE32_TO_HOST(extSuperBlock.firstDataBlock);
       extHandle->totalBlocks         = LOW_HIGH_TO_UINT64(LE32_TO_HOST(extSuperBlock.blocksCount),
                                                           LE32_TO_HOST(extSuperBlock.blocksCountHigh)
                                                          );
       break;
+    default:
+      #ifndef NDEBUG
+        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+      #endif /* NDEBUG */
+      break; /* not reached */
   }
   extHandle->bitmapIndex = -1;
 
@@ -257,10 +387,12 @@ LOCAL bool EXT_init(DeviceHandle *deviceHandle, EXTHandle *extHandle)
   if (   !((extHandle->groupDescriptorSize > 0) && (extHandle->groupDescriptorSize <= EXT4_MAX_GROUP_DESCRIPTOR_SIZE))
       || !(extHandle->blocksPerGroup > 0)
       || !(extHandle->totalBlocks > 0)
-      || !(extHandle->firstDataBlock >= 1)
+      || !(   ((extHandle->blockSize <= 1024) && (extHandle->firstDataBlock == 1))
+           || ((extHandle->blockSize >  1024) && (extHandle->firstDataBlock == 0))
+          )
      )
   {
-    return FALSE;
+    return FILE_SYSTEM_TYPE_UNKNOWN;
   }
 
   // read group descriptors and detect bitmap block numbers
@@ -268,35 +400,41 @@ LOCAL bool EXT_init(DeviceHandle *deviceHandle, EXTHandle *extHandle)
   extHandle->bitmapBlocks = (uint64*)malloc(extHandle->bitmapBlocksCount*sizeof(uint64));
   if (extHandle->bitmapBlocks == NULL)
   {
-    return FALSE;
+    return FILE_SYSTEM_TYPE_UNKNOWN;
   }
   for (z = 0; z < extHandle->bitmapBlocksCount; z++)
   {
     if (Device_seek(deviceHandle,EXT_BLOCK_TO_OFFSET(extHandle,extHandle->firstDataBlock+1)+(uint64)z*(uint64)extHandle->groupDescriptorSize) != ERROR_NONE)
     {
       free(extHandle->bitmapBlocks);
-      return FALSE;
+      return FILE_SYSTEM_TYPE_UNKNOWN;
     }
     switch (extHandle->type)
     {
-      case EXT2_OR_3:
-        if (Device_read(deviceHandle,&ext2GroupDescriptor,sizeof(ext2GroupDescriptor),NULL) != ERROR_NONE)
+      case FILE_SYSTEM_TYPE_EXT2:
+      case FILE_SYSTEM_TYPE_EXT3:
+        if (Device_read(deviceHandle,&ext23GroupDescriptor,sizeof(ext23GroupDescriptor),NULL) != ERROR_NONE)
         {
           free(extHandle->bitmapBlocks);
-          return FALSE;
+          return FILE_SYSTEM_TYPE_UNKNOWN;
         }
-        extHandle->bitmapBlocks[z] = (uint64)LE32_TO_HOST(ext2GroupDescriptor.blockBitmap);
+        extHandle->bitmapBlocks[z] = (uint64)LE32_TO_HOST(ext23GroupDescriptor.blockBitmap);
         break;
-      case EXT4:
+      case FILE_SYSTEM_TYPE_EXT4:
         if (Device_read(deviceHandle,&ext4GroupDescriptor,sizeof(ext4GroupDescriptor),NULL) != ERROR_NONE)
         {
           free(extHandle->bitmapBlocks);
-          return FALSE;
+          return FILE_SYSTEM_TYPE_UNKNOWN;
         }
         extHandle->bitmapBlocks[z] = LOW_HIGH_TO_UINT64(LE32_TO_HOST(ext4GroupDescriptor.blockBitmap),
                                                         LE32_TO_HOST(ext4GroupDescriptor.blockBitmapHigh)
                                                        );
         break;
+      default:
+        #ifndef NDEBUG
+          HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+        #endif /* NDEBUG */
+        break; /* not reached */
     }
   }
 
@@ -308,13 +446,14 @@ fprintf(stderr,"%s,%d: z=%d block=%ld used=%d\n",__FILE__,__LINE__,z,extHandle->
 }
 #endif /* 0 */
 
-  return TRUE;
+  return extHandle->type;
 }
 
 LOCAL void EXT_done(DeviceHandle *deviceHandle, EXTHandle *extHandle)
 {
   assert(deviceHandle != NULL);
   assert(extHandle != NULL);
+  assert(extHandle->bitmapBlocks != NULL);
 
   UNUSED_VARIABLE(deviceHandle);
 
@@ -324,23 +463,30 @@ LOCAL void EXT_done(DeviceHandle *deviceHandle, EXTHandle *extHandle)
 LOCAL bool EXT_blockIsUsed(DeviceHandle *deviceHandle, EXTHandle *extHandle, uint64 offset)
 {
   uint64 block;
+  uint64 blockOffset;
   uint   bitmapIndex;
   uint   index;
 
   assert(deviceHandle != NULL);
   assert(extHandle != NULL);
+  assert(extHandle->bitmapBlocks != NULL);
 
   // calculate block
   block = offset/extHandle->blockSize;
 
   if (block >= 1)
   {
-    // calculate bitmap index
+//fprintf(stderr,"%s, %d: extHandle->firstDataBlock=%d extHandle->blockSize=%d\n",__FILE__,__LINE__,extHandle->firstDataBlock,extHandle->blockSize);
+assert((extHandle->firstDataBlock ==1) || (extHandle->blockSize > 1024));
+assert((extHandle->firstDataBlock ==0) || (extHandle->blockSize <= 1024));
+    blockOffset = block-extHandle->firstDataBlock;
+
+    // calculate used block bitmap index
     assert(extHandle->blocksPerGroup != 0);
-    bitmapIndex = (block-1)/extHandle->blocksPerGroup;
+    bitmapIndex = blockOffset/extHandle->blocksPerGroup;
     assert(bitmapIndex < extHandle->bitmapBlocksCount);
 
-    // read correct block bitmap if needed
+    // read correct used block bitmap if not already read
     if (extHandle->bitmapIndex != (int)bitmapIndex)
     {
       if (Device_seek(deviceHandle,EXT_BLOCK_TO_OFFSET(extHandle,extHandle->bitmapBlocks[bitmapIndex])) != ERROR_NONE)
@@ -352,15 +498,44 @@ LOCAL bool EXT_blockIsUsed(DeviceHandle *deviceHandle, EXTHandle *extHandle, uin
         return TRUE;
       }
       extHandle->bitmapIndex = bitmapIndex;
+#if 0
+fprintf(stderr,"%s, %d: bitmapIndex=%d\n",__FILE__,__LINE__,bitmapIndex);
+//dumpMemory(extHandle->bitmapData,extHandle->blockSize);
+{
+  long b;
+  long b0,b1;
+  bool f;
+  uint i;
+  for (b = bitmapIndex*extHandle->blocksPerGroup; b < bitmapIndex*extHandle->blocksPerGroup+extHandle->blockSize*8; b++)
+  {
+    i = (b)-bitmapIndex*extHandle->blocksPerGroup;
+    f = ((extHandle->bitmapData[i/8] & (1 << i%8)) != 0);
+    if (!f)
+    {
+      b0 = b;
+      do
+      {
+        b++;
+        i = (b)-bitmapIndex*extHandle->blocksPerGroup;
+        f = ((extHandle->bitmapData[i/8] & (1 << i%8)) != 0);
+      }
+      while ((b < bitmapIndex*extHandle->blocksPerGroup+extHandle->blockSize*8) && !f);
+      b1 = b-1;
+      fprintf(stderr,"%s, %d: free=%d-%d\n",__FILE__,__LINE__,b0+1,b1+1);
+    }
+  }
+}
+#endif /* 0 */
     }
 
     // check if block is used
-    assert((block-1) >= bitmapIndex*extHandle->blocksPerGroup);
-    index = (block-1)-bitmapIndex*extHandle->blocksPerGroup;
+    assert(blockOffset >= bitmapIndex*extHandle->blocksPerGroup);
+    index = blockOffset-bitmapIndex*extHandle->blocksPerGroup;
     return ((extHandle->bitmapData[index/8] & (1 << index%8)) != 0);
   }
   else
   {
+    // first block is always "used"
     return TRUE;
   }
 }
