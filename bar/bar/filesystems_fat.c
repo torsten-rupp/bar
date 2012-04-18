@@ -21,30 +21,25 @@
 
 typedef struct
 {
-  enum
-  {
-    FAT12,
-    FAT16,
-    FAT32
-  } type;
-  uint   bytesPerSector;
-  uint   sectorsPerCluster;
-  uint   reservedSectors;
-  uint   fatCount;
-  uint32 totalSectorsCount;
-  uint   maxRootEntries;
-  uint   sectorsPerFAT;
-  uint32 dataSectorsCount;
-  uint32 clustersCount;
+  FileSystemTypes type;                // FAT type: FILE_SYSTEM_TYPE_FAT12/FILE_SYSTEM_TYPE_FAT16/FILE_SYSTEM_TYPE_FAT32
+  uint            bytesPerSector;
+  uint            sectorsPerCluster;
+  uint            reservedSectors;
+  uint            fatCount;
+  uint32          totalSectorsCount;
+  uint            maxRootEntries;
+  uint            sectorsPerFAT;
+  uint32          dataSectorsCount;
+  uint32          clustersCount;
 
-  uint   bitsPerFATEntry;
-  uint32 firstDataSector;
+  uint            bitsPerFATEntry;
+  uint32          firstDataSector;
 
-//  int    fatSector;
-//  uint   fatSectorsCount;
+//  int             fatSector;
+//  uint            fatSectorsCount;
 
-  int      clusterBaseIndex;
-  byte     clusterBitmap[CLUSTER_BITMAP_SIZE/8];
+  int               clusterBaseIndex;
+  byte              clusterBitmap[CLUSTER_BITMAP_SIZE/8];
 } FATHandle;
 
 /***************************** Variables *******************************/
@@ -116,7 +111,7 @@ LOCAL bool readClusterBitmap(DeviceHandle *deviceHandle, FATHandle *fatHandle, u
   memset(fatHandle->clusterBitmap,0,sizeof(fatHandle->clusterBitmap));
   switch (fatHandle->type)
   {
-    case FAT12:
+    case FILE_SYSTEM_TYPE_FAT12:
       for (index = 0; index < clustersCount; index++)
       {
         if (index & 0x1)
@@ -133,23 +128,23 @@ LOCAL bool readClusterBitmap(DeviceHandle *deviceHandle, FATHandle *fatHandle, u
         }
       }
       break;
-    case FAT16:
+    case FILE_SYSTEM_TYPE_FAT16:
       for (index = 0; index < clustersCount; index++)
       {
         if (LE16_TO_HOST(*((uint16*)buffer+index)) != 0x0000) BITSET_SET(fatHandle->clusterBitmap,index);
       }
       break;
-    case FAT32:
+    case FILE_SYSTEM_TYPE_FAT32:
       for (index = 0; index < clustersCount; index++)
       {
         if (LE32_TO_HOST(*((uint32*)buffer+index)) != 0x00000000) BITSET_SET(fatHandle->clusterBitmap,index);
       }
       break;
-    #ifndef NDEBUG
-      default:
+    default:
+      #ifndef NDEBUG
         HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-        break; /* not reached */
-    #endif /* NDEBUG */
+      #endif /* NDEBUG */
+      break; /* not reached */
   }
 
   // free resources
@@ -158,7 +153,7 @@ LOCAL bool readClusterBitmap(DeviceHandle *deviceHandle, FATHandle *fatHandle, u
   return TRUE;
 }
 
-LOCAL bool FAT_init(DeviceHandle *deviceHandle, FATHandle *fatHandle)
+LOCAL FileSystemTypes FAT_init(DeviceHandle *deviceHandle, FATHandle *fatHandle)
 {
   char bootSector[512];
 
@@ -168,15 +163,18 @@ LOCAL bool FAT_init(DeviceHandle *deviceHandle, FATHandle *fatHandle)
   // read boot sector
   if (Device_seek(deviceHandle,0) != ERROR_NONE)
   {
-    return FALSE;
+    return FILE_SYSTEM_TYPE_UNKNOWN;
   }
   if (Device_read(deviceHandle,&bootSector,512,NULL) != ERROR_NONE)
   {
-    return FALSE;
+    return FILE_SYSTEM_TYPE_UNKNOWN;
   }
 
   // check if valid boot sector
-  if ((uint16)FAT_READ_INT16(bootSector,0x1FE) != 0xAA55) return FALSE;
+  if ((uint16)FAT_READ_INT16(bootSector,0x1FE) != 0xAA55)
+  {
+    return FILE_SYSTEM_TYPE_UNKNOWN;
+  }
 
   // int file system info
   fatHandle->bytesPerSector    = FAT_READ_INT16(bootSector,0xB);
@@ -198,7 +196,7 @@ LOCAL bool FAT_init(DeviceHandle *deviceHandle, FATHandle *fatHandle)
       || !(fatHandle->totalSectorsCount < 0x0FFFFFFF)
      )
   {
-    return FALSE;
+    return FILE_SYSTEM_TYPE_UNKNOWN;
   }
 
   /* calculate number of data sectors
@@ -218,17 +216,17 @@ LOCAL bool FAT_init(DeviceHandle *deviceHandle, FATHandle *fatHandle)
   fatHandle->clustersCount = fatHandle->dataSectorsCount/fatHandle->sectorsPerCluster;
   if      (fatHandle->clustersCount <  4085)
   {
-    fatHandle->type            = FAT12;
+    fatHandle->type            = FILE_SYSTEM_TYPE_FAT12;
     fatHandle->bitsPerFATEntry = 12;
   }
   else if (fatHandle->clustersCount < 65525)
   {
-    fatHandle->type            = FAT16;
+    fatHandle->type            = FILE_SYSTEM_TYPE_FAT16;
     fatHandle->bitsPerFATEntry = 16;
   }
   else
   {
-    fatHandle->type            = FAT32;
+    fatHandle->type            = FILE_SYSTEM_TYPE_FAT32;
     fatHandle->bitsPerFATEntry = 32;
   }
 
@@ -242,7 +240,7 @@ LOCAL bool FAT_init(DeviceHandle *deviceHandle, FATHandle *fatHandle)
                                +(fatHandle->maxRootEntries*32+fatHandle->bytesPerSector-1)/fatHandle->bytesPerSector
                                ;
 
-  return TRUE;
+  return fatHandle->type;
 }
 
 LOCAL void FAT_done(DeviceHandle *deviceHandle, FATHandle *fatHandle)
