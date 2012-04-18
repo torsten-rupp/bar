@@ -31,9 +31,15 @@ typedef enum
 {
   FILE_SYSTEM_TYPE_NONE,
 
-  FILE_SYSTEM_TYPE_EXT,
-  FILE_SYSTEM_TYPE_FAT,
-  FILE_SYSTEM_TYPE_REISERFS,
+  FILE_SYSTEM_TYPE_EXT2,
+  FILE_SYSTEM_TYPE_EXT3,
+  FILE_SYSTEM_TYPE_EXT4,
+  FILE_SYSTEM_TYPE_FAT12,
+  FILE_SYSTEM_TYPE_FAT16,
+  FILE_SYSTEM_TYPE_FAT32,
+  FILE_SYSTEM_TYPE_REISERFS1,
+  FILE_SYSTEM_TYPE_REISERFS3,
+  FILE_SYSTEM_TYPE_REISERFS4,
 
   FILE_SYSTEM_TYPE_UNKNOWN,
 } FileSystemTypes;
@@ -41,7 +47,7 @@ typedef enum
 /***************************** Datatypes *******************************/
 
 // file system functions
-typedef bool(*FileSystemInitFunction)(DeviceHandle *deviceHandle, void *handle);
+typedef FileSystemTypes(*FileSystemInitFunction)(DeviceHandle *deviceHandle, void *handle);
 typedef void(*FileSystemDoneFunction)(DeviceHandle *deviceHandle, void *handle);
 typedef bool(*FileSystemBlockIsUsedFunction)(DeviceHandle *deviceHandle, void *handle, uint64 offset);
 

@@ -29,11 +29,17 @@
 
 LOCAL const struct { const char *name; FileSystemTypes fileSystemType; } FILESYTEM_NAMES[] =
 {
-  { "none",    FILE_SYSTEM_TYPE_NONE      },
+  { "none",       FILE_SYSTEM_TYPE_NONE      },
 
-  { "Ext",     FILE_SYSTEM_TYPE_EXT       },
-  { "FAT",     FILE_SYSTEM_TYPE_FAT       },
-  { "ReiseFS", FILE_SYSTEM_TYPE_REISERFS  },
+  { "Ext2",       FILE_SYSTEM_TYPE_EXT2      },
+  { "Ext3",       FILE_SYSTEM_TYPE_EXT3      },
+  { "Ext4",       FILE_SYSTEM_TYPE_EXT4      },
+  { "FAT12",      FILE_SYSTEM_TYPE_FAT12     },
+  { "FAT16",      FILE_SYSTEM_TYPE_FAT16     },
+  { "FAT32",      FILE_SYSTEM_TYPE_FAT32     },
+  { "ReiserFS 1", FILE_SYSTEM_TYPE_REISERFS1 },
+  { "ReiserFS 3", FILE_SYSTEM_TYPE_REISERFS3 },
+  { "ReiserFS 4", FILE_SYSTEM_TYPE_REISERFS4 },
 };
 
 
@@ -41,7 +47,6 @@ LOCAL const struct { const char *name; FileSystemTypes fileSystemType; } FILESYT
 // file system definition
 typedef struct
 {
-  FileSystemTypes               type;
   uint                          sizeOfHandle;
   FileSystemInitFunction        initFunction;
   FileSystemDoneFunction        doneFunction;
@@ -53,7 +58,6 @@ typedef struct
 // define file system
 #define DEFINE_FILE_SYSTEM(name) \
   { \
-    FILE_SYSTEM_TYPE_ ## name, \
     sizeof(name ## Handle), \
     (FileSystemInitFunction)name ## _init, \
     (FileSystemDoneFunction)name ## _done, \
@@ -157,9 +161,9 @@ Errors FileSystem_init(FileSystemHandle *fileSystemHandle,
       HALT_INSUFFICIENT_MEMORY();
     }
 
-    if (FILE_SYSTEMS[z].initFunction(deviceHandle,handle))
+    fileSystemHandle->type = FILE_SYSTEMS[z].initFunction(deviceHandle,handle);
+    if (fileSystemHandle->type != FILE_SYSTEM_TYPE_UNKNOWN)
     {
-      fileSystemHandle->type                = FILE_SYSTEMS[z].type;
       fileSystemHandle->handle              = handle;
       fileSystemHandle->doneFunction        = FILE_SYSTEMS[z].doneFunction;
       fileSystemHandle->blockIsUsedFunction = FILE_SYSTEMS[z].blockIsUsedFunction;
