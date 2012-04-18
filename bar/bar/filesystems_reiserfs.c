@@ -67,9 +67,10 @@ typedef struct
   extern "C" {
 #endif
 
-LOCAL bool REISERFS_init(DeviceHandle *deviceHandle, REISERFSHandle *reiserFSHandle)
+LOCAL FileSystemTypes REISERFS_init(DeviceHandle *deviceHandle, REISERFSHandle *reiserFSHandle)
 {
   ReiserSuperBlock reiserSuperBlock;
+  FileSystemTypes  fileSystemType;
 
   assert(deviceHandle != NULL);
   assert(reiserFSHandle != NULL);
@@ -77,27 +78,37 @@ LOCAL bool REISERFS_init(DeviceHandle *deviceHandle, REISERFSHandle *reiserFSHan
   // read super-block
   if (Device_seek(deviceHandle,REISERFS_SUPER_BLOCK_OFFSET) != ERROR_NONE)
   {
-    return FALSE;
+    return FILE_SYSTEM_TYPE_UNKNOWN;
   }
   if (Device_read(deviceHandle,&reiserSuperBlock,sizeof(reiserSuperBlock),NULL) != ERROR_NONE)
   {
-    return FALSE;
+    return FILE_SYSTEM_TYPE_UNKNOWN;
   }
 
-  // check if this a ReiserFS super block
-  if (   (strncmp(reiserSuperBlock.magicString,REISERFS_SUPER_MAGIC_STRING_V1,strlen(REISERFS_SUPER_MAGIC_STRING_V1)) != 0)
-      && (strncmp(reiserSuperBlock.magicString,REISERFS_SUPER_MAGIC_STRING_V3,strlen(REISERFS_SUPER_MAGIC_STRING_V2)) != 0)
-      && (strncmp(reiserSuperBlock.magicString,REISERFS_SUPER_MAGIC_STRING_V3,strlen(REISERFS_SUPER_MAGIC_STRING_V3)) != 0)
-      && (strncmp(reiserSuperBlock.magicString,REISERFS_SUPER_MAGIC_STRING_V4,strlen(REISERFS_SUPER_MAGIC_STRING_V4)) != 0)
-     )
+  // check if this a ReiserFS super block, detect file system type
+  if      (strncmp(reiserSuperBlock.magicString,REISERFS_SUPER_MAGIC_STRING_V1,strlen(REISERFS_SUPER_MAGIC_STRING_V1)) == 0)
   {
-    return FALSE;
+    fileSystemType = FILE_SYSTEM_TYPE_REISERFS1;
+  }
+  else if (   (strncmp(reiserSuperBlock.magicString,REISERFS_SUPER_MAGIC_STRING_V3,strlen(REISERFS_SUPER_MAGIC_STRING_V2)) == 0)
+           || (strncmp(reiserSuperBlock.magicString,REISERFS_SUPER_MAGIC_STRING_V3,strlen(REISERFS_SUPER_MAGIC_STRING_V3)) == 0)
+          )
+  {
+    fileSystemType = FILE_SYSTEM_TYPE_REISERFS3;
+  }
+  else if (strncmp(reiserSuperBlock.magicString,REISERFS_SUPER_MAGIC_STRING_V4,strlen(REISERFS_SUPER_MAGIC_STRING_V4)) == 0)
+  {
+    fileSystemType = FILE_SYSTEM_TYPE_REISERFS4;
+  }
+  else
+  {
+    return FILE_SYSTEM_TYPE_UNKNOWN;
   }
 
   // get file system block info
-  reiserFSHandle->totalBlocks    = LE32_TO_HOST(reiserSuperBlock.blockCount);
-  reiserFSHandle->blockSize      = LE32_TO_HOST(reiserSuperBlock.blockSize);
-  reiserFSHandle->bitmapIndex    = -1;
+  reiserFSHandle->totalBlocks = LE32_TO_HOST(reiserSuperBlock.blockCount);
+  reiserFSHandle->blockSize   = LE32_TO_HOST(reiserSuperBlock.blockSize);
+  reiserFSHandle->bitmapIndex = -1;
 
   // validate data
   if (   !(reiserFSHandle->blockSize >= 512)
@@ -105,10 +116,10 @@ LOCAL bool REISERFS_init(DeviceHandle *deviceHandle, REISERFSHandle *reiserFSHan
       || !(reiserFSHandle->totalBlocks > 0)
      )
   {
-    return FALSE;
+    return FILE_SYSTEM_TYPE_UNKNOWN;
   }
 
-  return TRUE;
+  return fileSystemType;
 }
 
 LOCAL void REISERFS_done(DeviceHandle *deviceHandle, REISERFSHandle *reiserFSHandle)
