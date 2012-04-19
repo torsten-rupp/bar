@@ -73,6 +73,7 @@ TAR        = tar
 TIME       = @TIME@
 
 # for tests only (create test devices)
+FSCK       = fsck
 LOSETUP    = /sbin/losetup
 MKFS       = /sbin/mkfs
 MOUNT      = /bin/mount
@@ -897,8 +898,16 @@ test_image_operations: \
 test_image_operations_raw:
 	# raw
 	$(INSTALL) -d test
+	$(call FunctionTestFileZero,test/dev0,32M); $(call FunctionTestDeviceCreate,$(LOOP0),test/dev0)
+	$(call FunctionTestFileZero,test/dev1,32M); $(call FunctionTestDeviceCreate,$(LOOP1),test/dev1)
+	$(MAKE) \
+          DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
+          OPTIONS="$(if $(OPTIONS),$(OPTIONS) --raw-images,--compress-algorithm=none --crypt-algorithm=none --raw-images)" \
+          test_image_operations_base
+	$(call FunctionTestDeviceDelete,$(LOOP1),test/dev1)
+	$(call FunctionTestDeviceDelete,$(LOOP0),test/dev0)
 	$(call FunctionTestFileRandom,test/dev0,32M); $(call FunctionTestDeviceCreate,$(LOOP0),test/dev0)
-	$(call FunctionTestFileZero,test/dev1,32M);   $(call FunctionTestDeviceCreate,$(LOOP1),test/dev1)
+	$(call FunctionTestFileRandom,test/dev1,32M); $(call FunctionTestDeviceCreate,$(LOOP1),test/dev1)
 	$(MAKE) \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           OPTIONS="$(if $(OPTIONS),$(OPTIONS) --raw-images,--compress-algorithm=none --crypt-algorithm=none --raw-images)" \
@@ -912,12 +921,23 @@ test_image_operations_ext: \
   test_image_operations_ext3 \
   test_image_operations_ext4 
 
+# Ext2
 test_image_operations_ext2:
 ifneq (@MKFS_EXT2@,)
-	# ext2
 	$(INSTALL) -d test
 	$(call FunctionTestFileZero,test/dev0,32M)
 	$(call FunctionTestFileZero,test/dev1,32M)
+	$(call FunctionTestDeviceCreate,$(LOOP0),test/dev0)
+	$(call FunctionTestDeviceCreate,$(LOOP1),test/dev1)
+	$(call FunctionTestDeviceInitFilesystem,$(LOOP0),-t ext2,1)
+	$(MAKE) \
+          DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
+          test_image_operations_base \
+          test_image_operations_check
+	$(call FunctionTestDeviceDelete,$(LOOP1),test/dev1)
+	$(call FunctionTestDeviceDelete,$(LOOP0),test/dev0)
+	$(call FunctionTestFileRandom,test/dev0,32M)
+	$(call FunctionTestFileRandom,test/dev1,32M)
 	$(call FunctionTestDeviceCreate,$(LOOP0),test/dev0)
 	$(call FunctionTestDeviceCreate,$(LOOP1),test/dev1)
 	$(call FunctionTestDeviceInitFilesystem,$(LOOP0),-t ext2,1)
@@ -934,12 +954,34 @@ ifneq (@MKFS_EXT2@,)
 	$(call FunctionTestDeviceInitFilesystem,$(LOOP0),-t ext2 -b 1024,1)
 	$(MAKE) \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
+          test_image_operations_base \
+          test_image_operations_check
+	$(call FunctionTestDeviceDelete,$(LOOP1),test/dev1)
+	$(call FunctionTestDeviceDelete,$(LOOP0),test/dev0)
+	$(call FunctionTestFileRandom,test/dev0,32M)
+	$(call FunctionTestFileRandom,test/dev1,32M)
+	$(call FunctionTestDeviceCreate,$(LOOP0),test/dev0)
+	$(call FunctionTestDeviceCreate,$(LOOP1),test/dev1)
+	$(call FunctionTestDeviceInitFilesystem,$(LOOP0),-t ext2 -b 1024,1)
+	$(MAKE) \
+          DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           test_image_operations_base 
 	$(call FunctionTestDeviceDelete,$(LOOP1),test/dev1)
 	$(call FunctionTestDeviceDelete,$(LOOP0),test/dev0)
 	#
 	$(call FunctionTestFileZero,test/dev0,32M)
 	$(call FunctionTestFileZero,test/dev1,32M)
+	$(call FunctionTestDeviceCreate,$(LOOP0),test/dev0)
+	$(call FunctionTestDeviceCreate,$(LOOP1),test/dev1)
+	$(call FunctionTestDeviceInitFilesystem,$(LOOP0),-t ext2 -b 2048,1)
+	$(MAKE) \
+          DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
+          test_image_operations_base \
+          test_image_operations_check
+	$(call FunctionTestDeviceDelete,$(LOOP1),test/dev1)
+	$(call FunctionTestDeviceDelete,$(LOOP0),test/dev0)
+	$(call FunctionTestFileRandom,test/dev0,32M)
+	$(call FunctionTestFileRandom,test/dev1,32M)
 	$(call FunctionTestDeviceCreate,$(LOOP0),test/dev0)
 	$(call FunctionTestDeviceCreate,$(LOOP1),test/dev1)
 	$(call FunctionTestDeviceInitFilesystem,$(LOOP0),-t ext2 -b 2048,1)
@@ -956,18 +998,39 @@ ifneq (@MKFS_EXT2@,)
 	$(call FunctionTestDeviceInitFilesystem,$(LOOP0),-t ext2 -b 4096,1)
 	$(MAKE) \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
+          test_image_operations_base \
+          test_image_operations_check
+	$(call FunctionTestDeviceDelete,$(LOOP1),test/dev1)
+	$(call FunctionTestDeviceDelete,$(LOOP0),test/dev0)
+	$(call FunctionTestFileRandom,test/dev0,32M)
+	$(call FunctionTestFileRandom,test/dev1,32M)
+	$(call FunctionTestDeviceCreate,$(LOOP0),test/dev0)
+	$(call FunctionTestDeviceCreate,$(LOOP1),test/dev1)
+	$(call FunctionTestDeviceInitFilesystem,$(LOOP0),-t ext2 -b 4096,1)
+	$(MAKE) \
+          DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           test_image_operations_base 
-	#
 	$(call FunctionTestDeviceDelete,$(LOOP1),test/dev1)
 	$(call FunctionTestDeviceDelete,$(LOOP0),test/dev0)
 endif
 
+# Ext3
 test_image_operations_ext3:
 ifneq (@MKFS_EXT3@,)
-	# ext3
 	$(INSTALL) -d test
 	$(call FunctionTestFileZero,test/dev0,32M)
 	$(call FunctionTestFileZero,test/dev1,32M)
+	$(call FunctionTestDeviceCreate,$(LOOP0),test/dev0)
+	$(call FunctionTestDeviceCreate,$(LOOP1),test/dev1)
+	$(call FunctionTestDeviceInitFilesystem,$(LOOP0),-t ext3,1)
+	$(MAKE) \
+          DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
+          test_image_operations_base \
+          test_image_operations_check
+	$(call FunctionTestDeviceDelete,$(LOOP1),test/dev1)
+	$(call FunctionTestDeviceDelete,$(LOOP0),test/dev0)
+	$(call FunctionTestFileRandom,test/dev0,32M)
+	$(call FunctionTestFileRandom,test/dev1,32M)
 	$(call FunctionTestDeviceCreate,$(LOOP0),test/dev0)
 	$(call FunctionTestDeviceCreate,$(LOOP1),test/dev1)
 	$(call FunctionTestDeviceInitFilesystem,$(LOOP0),-t ext3,1)
@@ -984,12 +1047,34 @@ ifneq (@MKFS_EXT3@,)
 	$(call FunctionTestDeviceInitFilesystem,$(LOOP0),-t ext3 -b 1024,1)
 	$(MAKE) \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
+          test_image_operations_base \
+          test_image_operations_check
+	$(call FunctionTestDeviceDelete,$(LOOP1),test/dev1)
+	$(call FunctionTestDeviceDelete,$(LOOP0),test/dev0)
+	$(call FunctionTestFileRandom,test/dev0,32M)
+	$(call FunctionTestFileRandom,test/dev1,32M)
+	$(call FunctionTestDeviceCreate,$(LOOP0),test/dev0)
+	$(call FunctionTestDeviceCreate,$(LOOP1),test/dev1)
+	$(call FunctionTestDeviceInitFilesystem,$(LOOP0),-t ext3 -b 1024,1)
+	$(MAKE) \
+          DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           test_image_operations_base 
 	$(call FunctionTestDeviceDelete,$(LOOP1),test/dev1)
 	$(call FunctionTestDeviceDelete,$(LOOP0),test/dev0)
 	#
 	$(call FunctionTestFileZero,test/dev0,32M)
 	$(call FunctionTestFileZero,test/dev1,32M)
+	$(call FunctionTestDeviceCreate,$(LOOP0),test/dev0)
+	$(call FunctionTestDeviceCreate,$(LOOP1),test/dev1)
+	$(call FunctionTestDeviceInitFilesystem,$(LOOP0),-t ext3 -b 2048,1)
+	$(MAKE) \
+          DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
+          test_image_operations_base \
+          test_image_operations_check
+	$(call FunctionTestDeviceDelete,$(LOOP1),test/dev1)
+	$(call FunctionTestDeviceDelete,$(LOOP0),test/dev0)
+	$(call FunctionTestFileRandom,test/dev0,32M)
+	$(call FunctionTestFileRandom,test/dev1,32M)
 	$(call FunctionTestDeviceCreate,$(LOOP0),test/dev0)
 	$(call FunctionTestDeviceCreate,$(LOOP1),test/dev1)
 	$(call FunctionTestDeviceInitFilesystem,$(LOOP0),-t ext3 -b 2048,1)
@@ -1006,17 +1091,39 @@ ifneq (@MKFS_EXT3@,)
 	$(call FunctionTestDeviceInitFilesystem,$(LOOP0),-t ext3 -b 4096,1)
 	$(MAKE) \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
+          test_image_operations_base \
+          test_image_operations_check
+	$(call FunctionTestDeviceDelete,$(LOOP1),test/dev1)
+	$(call FunctionTestDeviceDelete,$(LOOP0),test/dev0)
+	$(call FunctionTestFileRandom,test/dev0,32M)
+	$(call FunctionTestFileRandom,test/dev1,32M)
+	$(call FunctionTestDeviceCreate,$(LOOP0),test/dev0)
+	$(call FunctionTestDeviceCreate,$(LOOP1),test/dev1)
+	$(call FunctionTestDeviceInitFilesystem,$(LOOP0),-t ext3 -b 4096,1)
+	$(MAKE) \
+          DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           test_image_operations_base 
 	$(call FunctionTestDeviceDelete,$(LOOP1),test/dev1)
 	$(call FunctionTestDeviceDelete,$(LOOP0),test/dev0)
 endif
 
+# Ext4
 test_image_operations_ext4:
 ifneq (@MKFS_EXT4@,)
-	# ext4
 	$(INSTALL) -d test
 	$(call FunctionTestFileZero,test/dev0,32M)
 	$(call FunctionTestFileZero,test/dev1,32M)
+	$(call FunctionTestDeviceCreate,$(LOOP0),test/dev0)
+	$(call FunctionTestDeviceCreate,$(LOOP1),test/dev1)
+	$(call FunctionTestDeviceInitFilesystem,$(LOOP0),-t ext4,1)
+	$(MAKE) \
+          DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
+          test_image_operations_base \
+          test_image_operations_check
+	$(call FunctionTestDeviceDelete,$(LOOP1),test/dev1)
+	$(call FunctionTestDeviceDelete,$(LOOP0),test/dev0)
+	$(call FunctionTestFileRandom,test/dev0,32M)
+	$(call FunctionTestFileRandom,test/dev1,32M)
 	$(call FunctionTestDeviceCreate,$(LOOP0),test/dev0)
 	$(call FunctionTestDeviceCreate,$(LOOP1),test/dev1)
 	$(call FunctionTestDeviceInitFilesystem,$(LOOP0),-t ext4,1)
@@ -1033,6 +1140,17 @@ ifneq (@MKFS_EXT4@,)
 	$(call FunctionTestDeviceInitFilesystem,$(LOOP0),-t ext4 -b 1024,1)
 	$(MAKE) \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
+          test_image_operations_base \
+          test_image_operations_check
+	$(call FunctionTestDeviceDelete,$(LOOP1),test/dev1)
+	$(call FunctionTestDeviceDelete,$(LOOP0),test/dev0)
+	$(call FunctionTestFileRandom,test/dev0,32M)
+	$(call FunctionTestFileRandom,test/dev1,32M)
+	$(call FunctionTestDeviceCreate,$(LOOP0),test/dev0)
+	$(call FunctionTestDeviceCreate,$(LOOP1),test/dev1)
+	$(call FunctionTestDeviceInitFilesystem,$(LOOP0),-t ext4 -b 1024,1)
+	$(MAKE) \
+          DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           test_image_operations_base 
 	$(call FunctionTestDeviceDelete,$(LOOP1),test/dev1)
 	$(call FunctionTestDeviceDelete,$(LOOP0),test/dev0)
@@ -1044,12 +1162,34 @@ ifneq (@MKFS_EXT4@,)
 	$(call FunctionTestDeviceInitFilesystem,$(LOOP0),-t ext4 -b 2048,1)
 	$(MAKE) \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
+          test_image_operations_base \
+          test_image_operations_check
+	$(call FunctionTestDeviceDelete,$(LOOP1),test/dev1)
+	$(call FunctionTestDeviceDelete,$(LOOP0),test/dev0)
+	$(call FunctionTestFileRandom,test/dev0,32M)
+	$(call FunctionTestFileRandom,test/dev1,32M)
+	$(call FunctionTestDeviceCreate,$(LOOP0),test/dev0)
+	$(call FunctionTestDeviceCreate,$(LOOP1),test/dev1)
+	$(call FunctionTestDeviceInitFilesystem,$(LOOP0),-t ext4 -b 2048,1)
+	$(MAKE) \
+          DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           test_image_operations_base 
 	$(call FunctionTestDeviceDelete,$(LOOP1),test/dev1)
 	$(call FunctionTestDeviceDelete,$(LOOP0),test/dev0)
 	#
 	$(call FunctionTestFileZero,test/dev0,32M)
 	$(call FunctionTestFileZero,test/dev1,32M)
+	$(call FunctionTestDeviceCreate,$(LOOP0),test/dev0)
+	$(call FunctionTestDeviceCreate,$(LOOP1),test/dev1)
+	$(call FunctionTestDeviceInitFilesystem,$(LOOP0),-t ext4 -b 4096,1)
+	$(MAKE) \
+          DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
+          test_image_operations_base \
+          test_image_operations_check
+	$(call FunctionTestDeviceDelete,$(LOOP1),test/dev1)
+	$(call FunctionTestDeviceDelete,$(LOOP0),test/dev0)
+	$(call FunctionTestFileRandom,test/dev0,32M)
+	$(call FunctionTestFileRandom,test/dev1,32M)
 	$(call FunctionTestDeviceCreate,$(LOOP0),test/dev0)
 	$(call FunctionTestDeviceCreate,$(LOOP1),test/dev1)
 	$(call FunctionTestDeviceInitFilesystem,$(LOOP0),-t ext4 -b 4096,1)
@@ -1076,12 +1216,23 @@ test_image_operations_fat: \
   test_image_operations_fat16 \
   test_image_operations_fat32
 
+# FAT 12
 test_image_operations_fat12:
 ifneq (@MKFS_MSDOS@,)
-	# FAT12
 	$(INSTALL) -d test
 	$(call FunctionTestFileZero,test/dev0,1440K)
 	$(call FunctionTestFileZero,test/dev1,1440K)
+	$(call FunctionTestDeviceCreate,$(LOOP0),test/dev0)
+	$(call FunctionTestDeviceCreate,$(LOOP1),test/dev1)
+	$(call FunctionTestDeviceInitFilesystem,$(LOOP0),-t msdos -F 12,1)
+	$(MAKE) \
+          DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
+          test_image_operations_base \
+          test_image_operations_check
+	$(call FunctionTestDeviceDelete,$(LOOP1),test/dev1)
+	$(call FunctionTestDeviceDelete,$(LOOP0),test/dev0)
+	$(call FunctionTestFileRandom,test/dev0,1440K)
+	$(call FunctionTestFileRandom,test/dev1,1440K)
 	$(call FunctionTestDeviceCreate,$(LOOP0),test/dev0)
 	$(call FunctionTestDeviceCreate,$(LOOP1),test/dev1)
 	$(call FunctionTestDeviceInitFilesystem,$(LOOP0),-t msdos -F 12,1)
@@ -1092,12 +1243,23 @@ ifneq (@MKFS_MSDOS@,)
 	$(call FunctionTestDeviceDelete,$(LOOP0),test/dev0)
 endif
 
+# FAT 16
 test_image_operations_fat16:
 ifneq (@MKFS_MSDOS@,)
-	# FAT16
 	$(INSTALL) -d test
 	$(call FunctionTestFileZero,test/dev0,20M)
 	$(call FunctionTestFileZero,test/dev1,20M)
+	$(call FunctionTestDeviceCreate,$(LOOP0),test/dev0)
+	$(call FunctionTestDeviceCreate,$(LOOP1),test/dev1)
+	$(call FunctionTestDeviceInitFilesystem,$(LOOP0),-t msdos -F 16,1)
+	$(MAKE) \
+          DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
+          test_image_operations_base \
+          test_image_operations_check
+	$(call FunctionDeleteTestDevice,$(LOOP1),test/dev1)
+	$(call FunctionDeleteTestDevice,$(LOOP0),test/dev0)
+	$(call FunctionTestFileRandom,test/dev0,20M)
+	$(call FunctionTestFileRandom,test/dev1,20M)
 	$(call FunctionTestDeviceCreate,$(LOOP0),test/dev0)
 	$(call FunctionTestDeviceCreate,$(LOOP1),test/dev1)
 	$(call FunctionTestDeviceInitFilesystem,$(LOOP0),-t msdos -F 16,1)
@@ -1108,12 +1270,23 @@ ifneq (@MKFS_MSDOS@,)
 	$(call FunctionDeleteTestDevice,$(LOOP0),test/dev0)
 endif
 
+# FAT 32
 test_image_operations_fat32:
 ifneq (@MKFS_MSDOS@,)
-	# FAT32
 	$(INSTALL) -d test
 	$(call FunctionTestFileZero,test/dev0,40M)
 	$(call FunctionTestFileZero,test/dev1,40M)
+	$(call FunctionTestDeviceCreate,$(LOOP0),test/dev0)
+	$(call FunctionTestDeviceCreate,$(LOOP1),test/dev1)
+	$(call FunctionTestDeviceInitFilesystem,$(LOOP0),-t msdos -F 32,1)
+	$(MAKE) \
+          DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
+          test_image_operations_base \
+          test_image_operations_check
+	$(call FunctionTestDeviceDelete,$(LOOP1),test/dev1)
+	$(call FunctionTestDeviceDelete,$(LOOP0),test/dev0)
+	$(call FunctionTestFileRandom,test/dev0,40M)
+	$(call FunctionTestFileRandom,test/dev1,40M)
 	$(call FunctionTestDeviceCreate,$(LOOP0),test/dev0)
 	$(call FunctionTestDeviceCreate,$(LOOP1),test/dev1)
 	$(call FunctionTestDeviceInitFilesystem,$(LOOP0),-t msdos -F 32,1)
@@ -1139,12 +1312,23 @@ test_image_operations_reiserfs2:
 ifneq (@MKFS_REISERFS@,)
 endif
 
+# ReiserFS version 3 (Note: Linux only support block size 4096)
 test_image_operations_reiserfs3:
 ifneq (@MKFS_REISERFS@,)
-	# ReiserFS version 3 (Note: Linux only support block size 4096)
 	$(INSTALL) -d test
 	$(call FunctionTestFileZero,test/dev0,64M)
 	$(call FunctionTestFileZero,test/dev1,64M)
+	$(call FunctionTestDeviceCreate,$(LOOP0),test/dev0)
+	$(call FunctionTestDeviceCreate,$(LOOP1),test/dev1)
+	$(call FunctionTestDeviceInitFilesystem,$(LOOP0),-t reiserfs -b 4096 -q --format 3.5,1)
+	$(MAKE) \
+          DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
+          test_image_operations_base \
+          test_image_operations_check
+	$(call FunctionTestDeviceDelete,$(LOOP1),test/dev1)
+	$(call FunctionTestDeviceDelete,$(LOOP0),test/dev0)
+	$(call FunctionTestFileRandom,test/dev0,64M)
+	$(call FunctionTestFileRandom,test/dev1,64M)
 	$(call FunctionTestDeviceCreate,$(LOOP0),test/dev0)
 	$(call FunctionTestDeviceCreate,$(LOOP1),test/dev1)
 	$(call FunctionTestDeviceInitFilesystem,$(LOOP0),-t reiserfs -b 4096 -q --format 3.5,1)
@@ -1161,17 +1345,39 @@ ifneq (@MKFS_REISERFS@,)
 	$(call FunctionTestDeviceInitFilesystem,$(LOOP0),-t reiserfs -b 4096 -q --format 3.6,1)
 	$(MAKE) \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
+          test_image_operations_base \
+          test_image_operations_check
+	$(call FunctionTestDeviceDelete,$(LOOP1),test/dev1)
+	$(call FunctionTestDeviceDelete,$(LOOP0),test/dev0)
+	$(call FunctionTestFileRandom,test/dev0,64M)
+	$(call FunctionTestFileRandom,test/dev1,64M)
+	$(call FunctionTestDeviceCreate,$(LOOP0),test/dev0)
+	$(call FunctionTestDeviceCreate,$(LOOP1),test/dev1)
+	$(call FunctionTestDeviceInitFilesystem,$(LOOP0),-t reiserfs -b 4096 -q --format 3.6,1)
+	$(MAKE) \
+          DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           test_image_operations_base 
 	$(call FunctionTestDeviceDelete,$(LOOP1),test/dev1)
 	$(call FunctionTestDeviceDelete,$(LOOP0),test/dev0)
 endif
 
+# Reiser4 (Note: Linux only support block size 4096)
 test_image_operations_reiser4:
 ifneq (@MKFS_REISER4@,)
-	# Reiser4 (Note: Linux only support block size 4096)
 	$(INSTALL) -d test
 	$(call FunctionTestFileZero,test/dev0,64M)
 	$(call FunctionTestFileZero,test/dev1,64M)
+	$(call FunctionTestDeviceCreate,$(LOOP0),test/dev0)
+	$(call FunctionTestDeviceCreate,$(LOOP1),test/dev1)
+	$(call FunctionTestDeviceInitFilesystem,$(LOOP0),-t reiser4 -b 4096 -y,1)
+	$(MAKE) \
+          DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
+          test_image_operations_base \
+          test_image_operations_check
+	$(call FunctionTestDeviceDelete,$(LOOP1),test/dev1)
+	$(call FunctionTestDeviceDelete,$(LOOP0),test/dev0)
+	$(call FunctionTestFileRandom,test/dev0,64M)
+	$(call FunctionTestFileRandom,test/dev1,64M)
 	$(call FunctionTestDeviceCreate,$(LOOP0),test/dev0)
 	$(call FunctionTestDeviceCreate,$(LOOP1),test/dev1)
 	$(call FunctionTestDeviceInitFilesystem,$(LOOP0),-t reiser4 -b 4096 -y,1)
@@ -1182,7 +1388,7 @@ ifneq (@MKFS_REISER4@,)
 	$(call FunctionTestDeviceDelete,$(LOOP0),test/dev0)
 endif
 
-.PHONY: test_image_operations_base
+.PHONY: test_image_operations_base test_image_operations_check
 test_image_operations_base: \
   $(TEST_BAR) \
   $(TEST_FILES)
@@ -1193,6 +1399,10 @@ test_image_operations_base: \
 	SSH_ASKPASS= $(TEST_BAR) -t test/test*.bar $(OPTIONS) $(if $(QUIET),1>/dev/null)
 	SSH_ASKPASS= $(TEST_BAR) -d test/test*.bar $(OPTIONS) $(if $(QUIET),1>/dev/null)
 	SSH_ASKPASS= $(TEST_BAR) -x test/test*.bar $(OPTIONS) --destination $(DEVICE1) $(if $(QUIET),1>/dev/null)
+
+test_image_operations_check:
+	$(FSCK) $(DEVICE0)
+	$(FSCK) $(DEVICE1)
 	$(call FunctionTestDeviceDump,$(DEVICE0),test/dev0.image)
 	$(call FunctionTestDeviceDump,$(DEVICE1),test/dev1.image)
 	$(DIFF) test/dev0.image test/dev1.image
