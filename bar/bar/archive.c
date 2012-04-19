@@ -1311,9 +1311,9 @@ LOCAL Errors readFileDataBlock(ArchiveEntryInfo *archiveEntryInfo)
     error = Chunk_readData(&archiveEntryInfo->file.chunkFileData.info,
                            archiveEntryInfo->file.byteBuffer,
 #warning clean
-                           archiveEntryInfo->file.byteBufferSize,
+//                           archiveEntryInfo->file.byteBufferSize,
 //archiveEntryInfo->blockLength,
-//                           maxBytes,
+                           maxBytes,
                            &bytesRead
                           );
 //fprintf(stderr,"%s, %d: bytesRead=%d\n",__FILE__,__LINE__,bytesRead);
@@ -7350,7 +7350,7 @@ Errors Archive_writeData(ArchiveEntryInfo *archiveEntryInfo,
                 // delta-compress data
                 error = Compress_deflate(&archiveEntryInfo->file.deltaCompressInfo,
                                          p+writtenBlockBytes,
-                                         length-writtenBlockBytes,
+                                         blockLength-writtenBlockBytes,
                                          &deflatedBytes
                                         );
                 if (error != ERROR_NONE)
@@ -7440,7 +7440,7 @@ fprintf(stderr,"%s,%d: avild =%d\n",__FILE__,__LINE__,blockCount);
                 // delta-compress data
                 error = Compress_deflate(&archiveEntryInfo->image.deltaCompressInfo,
                                          p+writtenBlockBytes,
-                                         length-writtenBlockBytes,
+                                         blockLength-writtenBlockBytes,
                                          &deflatedBytes
                                         );
                 if (error != ERROR_NONE)
@@ -7568,7 +7568,7 @@ fprintf(stderr,"%s,%d: avild =%d\n",__FILE__,__LINE__,blockCount);
                 // delta-compress data
                 error = Compress_deflate(&archiveEntryInfo->hardLink.deltaCompressInfo,
                                          p+writtenBlockBytes,
-                                         length-writtenBlockBytes,
+                                         blockLength-writtenBlockBytes,
                                          &deflatedBytes
                                         );
                 if (error != ERROR_NONE)
