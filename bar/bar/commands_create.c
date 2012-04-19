@@ -3117,83 +3117,83 @@ LOCAL Errors storeImageEntry(ArchiveInfo       *archiveInfo,
   assert(buffer != NULL);
   assert(deviceName != NULL);
 
+  // get device info
+  error = Device_getDeviceInfo(&deviceInfo,deviceName);
+  if (error != ERROR_NONE)
+  {
+    if (jobOptions->skipUnreadableFlag)
+    {
+      printInfo(1,"skipped (reason: %s)\n",Errors_getText(error));
+      logMessage(LOG_TYPE_ENTRY_ACCESS_DENIED,"access denied '%s'\n",String_cString(deviceName));
+      createInfo->statusInfo.errorEntries++;
+      return ERROR_NONE;
+    }
+    else
+    {
+      printInfo(1,"FAIL\n");
+      printError("Cannot open device '%s' (error: %s)\n",
+                 String_cString(deviceName),
+                 Errors_getText(error)
+                );
+      return error;
+    }
+  }
+
+  // check device block size, get max. blocks in buffer
+  if (deviceInfo.blockSize > bufferSize)
+  {
+    printInfo(1,"FAIL\n");
+    printError("Device block size %llu on '%s' is to big (max: %llu)\n",
+               deviceInfo.blockSize,
+               String_cString(deviceName),
+               bufferSize
+              );
+    return ERROR_INVALID_DEVICE_BLOCK_SIZE;
+  }
+  assert(deviceInfo.blockSize != 0);
+  maxBufferBlockCount = bufferSize/deviceInfo.blockSize;
+
+  // open device
+  error = Device_open(&deviceHandle,deviceName,DEVICE_OPENMODE_READ);
+  if (error != ERROR_NONE)
+  {
+    if (jobOptions->skipUnreadableFlag)
+    {
+      printInfo(1,"skipped (reason: %s)\n",Errors_getText(error));
+      logMessage(LOG_TYPE_ENTRY_ACCESS_DENIED,"open device failed '%s'\n",String_cString(deviceName));
+      createInfo->statusInfo.errorEntries++;
+      createInfo->statusInfo.errorBytes += (uint64)deviceInfo.size;
+      return ERROR_NONE;
+    }
+    else
+    {
+      printInfo(1,"FAIL\n");
+      printError("Cannot open device '%s' (error: %s)\n",
+                 String_cString(deviceName),
+                 Errors_getText(error)
+                );
+      return error;
+    }
+  }
+  String_set(createInfo->statusInfo.name,deviceName);
+  createInfo->statusInfo.entryDoneBytes  = 0LL;
+  createInfo->statusInfo.entryTotalBytes = deviceInfo.size;
+  updateStatusInfo(createInfo);
+
+  // check if device contain a known file system or a raw image should be stored
+  if (!jobOptions->rawImagesFlag)
+  {
+    fileSystemFlag = (FileSystem_init(&fileSystemHandle,&deviceHandle) == ERROR_NONE);
+  }
+  else
+  {
+    fileSystemFlag = FALSE;
+  }
+
   printInfo(1,"Add '%s'...",String_cString(deviceName));
 
   if (!jobOptions->noStorageFlag)
   {
-    // get device info
-    error = Device_getDeviceInfo(&deviceInfo,deviceName);
-    if (error != ERROR_NONE)
-    {
-      if (jobOptions->skipUnreadableFlag)
-      {
-        printInfo(1,"skipped (reason: %s)\n",Errors_getText(error));
-        logMessage(LOG_TYPE_ENTRY_ACCESS_DENIED,"access denied '%s'\n",String_cString(deviceName));
-        createInfo->statusInfo.errorEntries++;
-        return ERROR_NONE;
-      }
-      else
-      {
-        printInfo(1,"FAIL\n");
-        printError("Cannot open device '%s' (error: %s)\n",
-                   String_cString(deviceName),
-                   Errors_getText(error)
-                  );
-        return error;
-      }
-    }
-
-    // check device block size, get max. blocks in buffer
-    if (deviceInfo.blockSize > bufferSize)
-    {
-      printInfo(1,"FAIL\n");
-      printError("Device block size %llu on '%s' is to big (max: %llu)\n",
-                 deviceInfo.blockSize,
-                 String_cString(deviceName),
-                 bufferSize
-                );
-      return ERROR_INVALID_DEVICE_BLOCK_SIZE;
-    }
-    assert(deviceInfo.blockSize != 0);
-    maxBufferBlockCount = bufferSize/deviceInfo.blockSize;
-
-    // open device
-    error = Device_open(&deviceHandle,deviceName,DEVICE_OPENMODE_READ);
-    if (error != ERROR_NONE)
-    {
-      if (jobOptions->skipUnreadableFlag)
-      {
-        printInfo(1,"skipped (reason: %s)\n",Errors_getText(error));
-        logMessage(LOG_TYPE_ENTRY_ACCESS_DENIED,"open device failed '%s'\n",String_cString(deviceName));
-        createInfo->statusInfo.errorEntries++;
-        createInfo->statusInfo.errorBytes += (uint64)deviceInfo.size;
-        return ERROR_NONE;
-      }
-      else
-      {
-        printInfo(1,"FAIL\n");
-        printError("Cannot open device '%s' (error: %s)\n",
-                   String_cString(deviceName),
-                   Errors_getText(error)
-                  );
-        return error;
-      }
-    }
-    String_set(createInfo->statusInfo.name,deviceName);
-    createInfo->statusInfo.entryDoneBytes  = 0LL;
-    createInfo->statusInfo.entryTotalBytes = deviceInfo.size;
-    updateStatusInfo(createInfo);
-
-    // check if device contain a known file system or raw image should be stored
-    if (!jobOptions->rawImagesFlag)
-    {
-      fileSystemFlag = (FileSystem_init(&fileSystemHandle,&deviceHandle) == ERROR_NONE);
-    }
-    else
-    {
-      fileSystemFlag = FALSE;
-    }
-
     // check if image data should be compressed
     byteCompressFlag =    (deviceInfo.size > (int64)globalOptions.compressMinFileSize)
                        && !PatternList_match(compressExcludePatternList,deviceName,PATTERN_MATCH_MODE_EXACT);
@@ -3290,7 +3290,7 @@ LOCAL Errors storeImageEntry(ArchiveInfo       *archiveInfo,
         }
         else
         {
-          // not used -> store as "0"-block
+          // block not used -> store as "0"-block
           memset(buffer+bufferBlockCount*deviceInfo.blockSize,0,deviceInfo.blockSize);
         }
         block++;
@@ -3342,20 +3342,11 @@ LOCAL Errors storeImageEntry(ArchiveInfo       *archiveInfo,
       return error;
     }
 
-    // done file system
-    if (fileSystemFlag)
-    {
-      FileSystem_done(&fileSystemHandle);
-    }
-
     // free resources
     if (deltaCompressFlag)
     {
       Source_closeEntry(&sourceHandle);
     }
-
-    // close device
-    Device_close(&deviceHandle);
 
     // get compression ratio
     if (   (   Compress_isCompressed(archiveEntryInfo.image.deltaCompressAlgorithm)
@@ -3373,20 +3364,40 @@ LOCAL Errors storeImageEntry(ArchiveInfo       *archiveInfo,
 
     if (!jobOptions->dryRunFlag)
     {
-      printInfo(1,"ok (%llu bytes, ratio %.1f%%)\n",deviceInfo.size,ratio);
+      printInfo(1,"ok (%s, %llu bytes, ratio %.1f%%)\n",
+                fileSystemFlag?FileSystem_getName(fileSystemHandle.type):"raw",
+                deviceInfo.size,
+                ratio
+               );
       logMessage(LOG_TYPE_ENTRY_OK,"added '%s'\n",String_cString(deviceName));
     }
     else
     {
-      printInfo(1,"ok (%llu bytes, dry-run)\n",deviceInfo.size);
+      printInfo(1,"ok (%s, %llu bytes, dry-run)\n",
+                fileSystemFlag?FileSystem_getName(fileSystemHandle.type):"raw",
+                deviceInfo.size
+               );
     }
     createInfo->statusInfo.doneEntries++;
     updateStatusInfo(createInfo);
   }
   else
   {
-    printInfo(1,"ok (%llu bytes, not stored)\n",deviceInfo.size);
+    printInfo(1,"ok (%s, %llu bytes, not stored)\n",
+              fileSystemFlag?FileSystem_getName(fileSystemHandle.type):"raw",
+              deviceInfo.size
+             );
   }
+
+  // done file system
+  if (fileSystemFlag)
+  {
+    FileSystem_done(&fileSystemHandle);
+  }
+
+  // close device
+  Device_close(&deviceHandle);
+
 
   return ERROR_NONE;
 }
