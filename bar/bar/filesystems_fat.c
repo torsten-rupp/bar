@@ -35,8 +35,8 @@ typedef struct
   uint            bitsPerFATEntry;
   uint32          firstDataSector;
 
-  int               clusterBaseIndex;
-  byte              clusterBitmap[CLUSTER_BITMAP_SIZE/8];
+  int             clusterBaseIndex;
+  byte            clusterBitmap[CLUSTER_BITMAP_SIZE/8];
 } FATHandle;
 
 /***************************** Variables *******************************/
@@ -100,8 +100,6 @@ LOCAL bool readClusterBitmap(DeviceHandle *deviceHandle, FATHandle *fatHandle, u
   bool   clusterIsUsed;
 
   // calculate max. number of FAT sectors to read
-#warning todo
-//  fatSectorsCount = MIN(((CLUSTER_BITMAP_SIZE*fatHandle->bitsPerFATEntry+8-1)/8)/fatHandle->bytesPerSector,
   fatSectorsCount = MIN((((CLUSTER_BITMAP_SIZE*fatHandle->bitsPerFATEntry+8-1)/8)+fatHandle->bytesPerSector-1)/fatHandle->bytesPerSector,
                         fatHandle->sectorsPerFAT
                        );
