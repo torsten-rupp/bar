@@ -32,6 +32,7 @@
 #include "entrylists.h"
 #include "patternlists.h"
 #include "files.h"
+#include "filesystems.h"
 #include "archive.h"
 #include "fragmentlists.h"
 #include "sources.h"
@@ -365,6 +366,8 @@ Errors Command_compare(const StringList                *archiveNameList,
                 equalFlag = (diffIndex >= bufferLength);
                 if (!equalFlag)
                 {
+                  error = ERROR_ENTRIES_DIFFER;
+
                   printInfo(1,"FAIL!\n");
                   printError("'%s' differ at offset %llu\n",
                              String_cString(fileName),
@@ -372,7 +375,7 @@ Errors Command_compare(const StringList                *archiveNameList,
                             );
                   if (jobOptions->stopOnErrorFlag)
                   {
-                    failError = ERROR_ENTRIES_DIFFER;
+                    failError = error;
                   }
                   break;
                 }
@@ -382,7 +385,7 @@ Errors Command_compare(const StringList                *archiveNameList,
                 printInfo(2,"%3d%%\b\b\b\b",(uint)((length*100LL)/fragmentSize));
               }
               File_close(&fileHandle);
-              if (failError != ERROR_NONE)
+              if (error != ERROR_NONE)
               {
                 Archive_closeEntry(&archiveEntryInfo);
                 String_delete(deltaSourceName);
@@ -445,25 +448,26 @@ Errors Command_compare(const StringList                *archiveNameList,
         case ARCHIVE_ENTRY_TYPE_IMAGE:
           {
             CompressAlgorithms deltaCompressAlgorithm,byteCompressAlgorithm;
-            String             imageName;
+            String             deviceName;
             DeviceInfo         deviceInfo;
             uint64             blockOffset,blockCount;
             FragmentNode       *fragmentNode;
             DeviceHandle       deviceHandle;
+            bool               fileSystemFlag;
+            FileSystemHandle   fileSystemHandle;
             bool               equalFlag;
             uint64             block;
-            ulong              bufferBlockCount;
             ulong              diffIndex;
 
             // read image
-            imageName = String_new();
+            deviceName = String_new();
             error = Archive_readImageEntry(&archiveInfo,
                                            &archiveEntryInfo,
                                            &deltaCompressAlgorithm,
                                            &byteCompressAlgorithm,
                                            NULL,
                                            NULL,
-                                           imageName,
+                                           deviceName,
                                            &deviceInfo,
                                            NULL,
                                            &blockOffset,
@@ -475,24 +479,24 @@ Errors Command_compare(const StringList                *archiveNameList,
                          String_cString(printableArchiveName),
                          Errors_getText(error)
                         );
-              String_delete(imageName);
+              String_delete(deviceName);
               if (failError == ERROR_NONE) failError = error;
               break;
             }
 
-            if (   (List_isEmpty(includeEntryList) || EntryList_match(includeEntryList,imageName,PATTERN_MATCH_MODE_EXACT))
-                && !PatternList_match(excludePatternList,imageName,PATTERN_MATCH_MODE_EXACT)
+            if (   (List_isEmpty(includeEntryList) || EntryList_match(includeEntryList,deviceName,PATTERN_MATCH_MODE_EXACT))
+                && !PatternList_match(excludePatternList,deviceName,PATTERN_MATCH_MODE_EXACT)
                )
             {
-              printInfo(1,"  Compare image '%s'...",String_cString(imageName));
+              printInfo(1,"  Compare image '%s'...",String_cString(deviceName));
 
-              // check if device exists
-              if (!File_exists(imageName))
+              // check if device/image exists
+              if (!File_exists(deviceName))
               {
                 printInfo(1,"FAIL!\n");
-                printError("Device '%s' not found!\n",String_cString(imageName));
+                printError("Device '%s' not found!\n",String_cString(deviceName));
                 Archive_closeEntry(&archiveEntryInfo);
-                String_delete(imageName);
+                String_delete(deviceName);
                 if (jobOptions->stopOnErrorFlag)
                 {
                   failError = ERROR_FILE_NOT_FOUND;
@@ -503,10 +507,10 @@ Errors Command_compare(const StringList                *archiveNameList,
               if (!jobOptions->noFragmentsCheckFlag)
               {
                 // get image fragment list
-                fragmentNode = FragmentList_find(&fragmentList,imageName);
+                fragmentNode = FragmentList_find(&fragmentList,deviceName);
                 if (fragmentNode == NULL)
                 {
-                  fragmentNode = FragmentList_add(&fragmentList,imageName,deviceInfo.size,NULL,0);
+                  fragmentNode = FragmentList_add(&fragmentList,deviceName,deviceInfo.size,NULL,0);
                 }
                 assert(fragmentNode != NULL);
               }
@@ -515,17 +519,61 @@ Errors Command_compare(const StringList                *archiveNameList,
                 fragmentNode = NULL;
               }
 
+              // get device info
+              error = Device_getDeviceInfo(&deviceInfo,deviceName);
+              if (error != ERROR_NONE)
+              {
+                if (jobOptions->skipUnreadableFlag)
+                {
+                  printInfo(1,"skipped (reason: %s)\n",Errors_getText(error));
+                }
+                else
+                {
+                  printInfo(1,"FAIL\n");
+                  printError("Cannot open device '%s' (error: %s)\n",
+                             String_cString(deviceName),
+                             Errors_getText(error)
+                            );
+                  if (jobOptions->stopOnErrorFlag)
+                  {
+                    failError = error;
+                  }
+                }
+                Archive_closeEntry(&archiveEntryInfo);
+                String_delete(deviceName);
+                continue;
+              }
+
+              // check device block size, get max. blocks in buffer
+              if (deviceInfo.blockSize > BUFFER_SIZE)
+              {
+                printInfo(1,"FAIL\n");
+                printError("Device block size %llu on '%s' is to big (max: %llu)\n",
+                           deviceInfo.blockSize,
+                           String_cString(deviceName),
+                           BUFFER_SIZE
+                          );
+                Archive_closeEntry(&archiveEntryInfo);
+                String_delete(deviceName);
+                if (jobOptions->stopOnErrorFlag)
+                {
+                  failError = ERROR_INVALID_DEVICE_BLOCK_SIZE;
+                }
+                continue;
+              }
+              assert(deviceInfo.blockSize != 0);
+
               // open device
-              error = Device_open(&deviceHandle,imageName,DEVICE_OPENMODE_READ);
+              error = Device_open(&deviceHandle,deviceName,DEVICE_OPENMODE_READ);
               if (error != ERROR_NONE)
               {
                 printInfo(1,"FAIL!\n");
                 printError("Cannot open file '%s' (error: %s)\n",
-                           String_cString(imageName),
+                           String_cString(deviceName),
                            Errors_getText(error)
                           );
                 Archive_closeEntry(&archiveEntryInfo);
-                String_delete(imageName);
+                String_delete(deviceName);
                 if (jobOptions->stopOnErrorFlag)
                 {
                   failError = error;
@@ -538,18 +586,28 @@ Errors Command_compare(const StringList                *archiveNameList,
               {
                 printInfo(1,"FAIL!\n");
                 printError("'%s' differ in size: expected %lld bytes, found %lld bytes\n",
-                           String_cString(imageName),
+                           String_cString(deviceName),
                            deviceInfo.size,
                            Device_getSize(&deviceHandle)
                           );
                 Device_close(&deviceHandle);
                 Archive_closeEntry(&archiveEntryInfo);
-                String_delete(imageName);
+                String_delete(deviceName);
                 if (jobOptions->stopOnErrorFlag)
                 {
                   failError = ERROR_ENTRIES_DIFFER;
                 }
                 continue;
+              }
+
+              // check if device contain a known file system or a raw image should be stored
+              if (!jobOptions->rawImagesFlag)
+              {
+                fileSystemFlag = (FileSystem_init(&fileSystemHandle,&deviceHandle) == ERROR_NONE);
+              }
+              else
+              {
+                fileSystemFlag = FALSE;
               }
 
               // compare archive and device content
@@ -558,12 +616,12 @@ Errors Command_compare(const StringList                *archiveNameList,
               {
                 printInfo(1,"FAIL!\n");
                 printError("Cannot read file '%s' (error: %s)\n",
-                           String_cString(imageName),
+                           String_cString(deviceName),
                            Errors_getText(error)
                           );
                 Device_close(&deviceHandle);
                 Archive_closeEntry(&archiveEntryInfo);
-                String_delete(imageName);
+                String_delete(deviceName);
                 if (jobOptions->stopOnErrorFlag)
                 {
                   failError = error;
@@ -575,11 +633,8 @@ Errors Command_compare(const StringList                *archiveNameList,
               diffIndex = 0;
               while ((block < blockCount) && equalFlag)
               {
-                assert(deviceInfo.blockSize > 0);
-                bufferBlockCount = MIN(blockCount-block,BUFFER_SIZE/deviceInfo.blockSize);
-
-                // read archive, file
-                error = Archive_readData(&archiveEntryInfo,archiveBuffer,bufferBlockCount*deviceInfo.blockSize);
+                // read archive and device
+                error = Archive_readData(&archiveEntryInfo,archiveBuffer,deviceInfo.blockSize);
                 if (error != ERROR_NONE)
                 {
                   printInfo(1,"FAIL!\n");
@@ -590,47 +645,80 @@ Errors Command_compare(const StringList                *archiveNameList,
                   if (failError == ERROR_NONE) failError = error;
                   break;
                 }
-                error = Device_read(&deviceHandle,buffer,bufferBlockCount*deviceInfo.blockSize,NULL);
-                if (error != ERROR_NONE)
+
+                if (!fileSystemFlag || FileSystem_blockIsUsed(&fileSystemHandle,(blockOffset+block)*(uint64)deviceInfo.blockSize))
                 {
-                  printInfo(1,"FAIL!\n");
-                  printError("Cannot read file '%s' (error: %s)\n",
-                             String_cString(imageName),
-                             Errors_getText(error)
-                            );
-                  if (jobOptions->stopOnErrorFlag)
+                  // seek device/image
+                  error = Device_seek(&deviceHandle,(blockOffset+block)*(uint64)deviceInfo.blockSize);
+                  if (error != ERROR_NONE)
                   {
-                    failError = error;
+                    printInfo(1,"FAIL!\n");
+                    printError("Cannot seek device '%s' (error: %s)\n",
+                               String_cString(deviceName),
+                               Errors_getText(error)
+                              );
+                    if (jobOptions->stopOnErrorFlag)
+                    {
+                      failError = error;
+                    }
+                    break;
                   }
-                  break;
+
+                  // read data/image
+                  assert(BUFFER_SIZE >= deviceInfo.blockSize);
+                  error = Device_read(&deviceHandle,buffer,deviceInfo.blockSize,NULL);
+                  if (error != ERROR_NONE)
+                  {
+                    printInfo(1,"FAIL!\n");
+                    printError("Cannot read device '%s' (error: %s)\n",
+                               String_cString(deviceName),
+                               Errors_getText(error)
+                              );
+                    if (jobOptions->stopOnErrorFlag)
+                    {
+                      failError = error;
+                    }
+                    break;
+                  }
+
+                  // compare
+                  diffIndex = compare(archiveBuffer,buffer,deviceInfo.blockSize);
+                  equalFlag = (diffIndex >= deviceInfo.blockSize);
+                  if (!equalFlag)
+                  {
+fprintf(stderr,"%s, %d: archive\n",__FILE__,__LINE__);
+dumpMemory(archiveBuffer,deviceInfo.blockSize);
+fprintf(stderr,"%s, %d: device\n",__FILE__,__LINE__);
+dumpMemory(buffer,deviceInfo.blockSize);
+                    error = ERROR_ENTRIES_DIFFER;
+
+                    printInfo(1,"FAIL!\n");
+                    printError("'%s' differ at offset %llu block=%d blockOffset=%d diffIndex=%d deviceInfo.blockSize=%d\n",
+                               String_cString(deviceName),
+                               blockOffset*(uint64)deviceInfo.blockSize+block*(uint64)deviceInfo.blockSize+(uint64)diffIndex
+,block
+,blockOffset
+,diffIndex
+,deviceInfo.blockSize
+                              );
+                    if (jobOptions->stopOnErrorFlag)
+                    {
+                      failError = error;
+                    }
+                    break;
+                  }
                 }
 
-                // compare
-                diffIndex = compare(archiveBuffer,buffer,bufferBlockCount*deviceInfo.blockSize);
-                equalFlag = (diffIndex >= bufferBlockCount*deviceInfo.blockSize);
-                if (!equalFlag)
-                {
-                  printInfo(1,"FAIL!\n");
-                  printError("'%s' differ at offset %llu\n",
-                             String_cString(imageName),
-                             blockOffset*(uint64)deviceInfo.blockSize+block*(uint64)deviceInfo.blockSize+(uint64)diffIndex
-                            );
-                  if (jobOptions->stopOnErrorFlag)
-                  {
-                    failError = ERROR_ENTRIES_DIFFER;
-                  }
-                  break;
-                }
-
-                block += (uint64)bufferBlockCount;
+                block += 1LL;
 
                 printInfo(2,"%3d%%\b\b\b\b",(uint)((block*100LL)/blockCount));
               }
-              Device_close(&deviceHandle);
-              if (failError != ERROR_NONE)
+              if (error != ERROR_NONE)
               {
+                if (fileSystemFlag) FileSystem_done(&fileSystemHandle);
+                Device_close(&deviceHandle);
                 Archive_closeEntry(&archiveEntryInfo);
-                String_delete(imageName);
+                String_delete(deviceName);
                 continue;
               }
               printInfo(2,"    \b\b\b\b");
@@ -647,7 +735,9 @@ Errors Command_compare(const StringList                *archiveNameList,
                 }
               }
 
-              printInfo(1,"ok\n");
+              printInfo(1,"ok\n",
+                        fileSystemFlag?FileSystem_getName(fileSystemHandle.type):"raw"
+                       );
 
               /* check if all data read.
                  Note: it is not possible to check if all data is read when
@@ -659,15 +749,22 @@ Errors Command_compare(const StringList                *archiveNameList,
                   && !Compress_isCompressed(byteCompressAlgorithm)
                   && !Archive_eofData(&archiveEntryInfo))
               {
-                printWarning("unexpected data at end of image entry '%S'.\n",imageName);
+                printWarning("unexpected data at end of image entry '%S'.\n",deviceName);
               }
 
-              // free resources
+              // done file system
+              if (fileSystemFlag)
+              {
+                FileSystem_done(&fileSystemHandle);
+              }
+
+              // close device
+              Device_close(&deviceHandle);
             }
             else
             {
               // skip
-              printInfo(2,"  Compare '%s'...skipped\n",String_cString(imageName));
+              printInfo(2,"  Compare '%s'...skipped\n",String_cString(deviceName));
             }
 
             // close archive file, free resources
@@ -678,7 +775,7 @@ Errors Command_compare(const StringList                *archiveNameList,
             }
 
             // free resources
-            String_delete(imageName);
+            String_delete(deviceName);
           }
           break;
         case ARCHIVE_ENTRY_TYPE_DIRECTORY:
@@ -1142,6 +1239,8 @@ Errors Command_compare(const StringList                *archiveNameList,
                     equalFlag = (diffIndex >= bufferLength);
                     if (!equalFlag)
                     {
+                      error = ERROR_ENTRIES_DIFFER;
+
                       printInfo(1,"FAIL!\n");
                       printError("'%s' differ at offset %llu\n",
                                  String_cString(fileName),
@@ -1149,7 +1248,7 @@ Errors Command_compare(const StringList                *archiveNameList,
                                 );
                       if (jobOptions->stopOnErrorFlag)
                       {
-                        failError = ERROR_ENTRIES_DIFFER;
+                        failError = error;
                       }
                       break;
                     }
@@ -1158,7 +1257,7 @@ Errors Command_compare(const StringList                *archiveNameList,
 
                     printInfo(2,"%3d%%\b\b\b\b",(uint)((length*100LL)/fragmentSize));
                   }
-                  if (failError != ERROR_NONE)
+                  if (error != ERROR_NONE)
                   {
                     File_close(&fileHandle);
                     break;
