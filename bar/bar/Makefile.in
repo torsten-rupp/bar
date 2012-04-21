@@ -917,7 +917,8 @@ test_image_operations_raw:
 	$(MAKE) \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           OPTIONS="$(if $(OPTIONS),$(OPTIONS) --raw-images,--compress-algorithm=none --crypt-algorithm=none --raw-images)" \
-          test_image_operations_base
+          test_image_operations_base \
+          test_image_operations_check
 	$(call FunctionTestDeviceDelete,$(LOOP1),test/dev1.dat,test/dev0)
 	$(call FunctionTestDeviceDelete,$(LOOP0),test/dev0.dat,test/dev1)
 	$(call FunctionTestFileRandom,test/dev0.dat,32M); $(call FunctionTestDeviceCreate,$(LOOP0),test/dev0.dat,test/dev0)
@@ -925,7 +926,8 @@ test_image_operations_raw:
 	$(MAKE) \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           OPTIONS="$(if $(OPTIONS),$(OPTIONS) --raw-images,--compress-algorithm=none --crypt-algorithm=none --raw-images)" \
-          test_image_operations_base 
+          test_image_operations_base \
+          test_image_operations_check
 	$(call FunctionTestDeviceDelete,$(LOOP1),test/dev1.dat,test/dev1)
 	$(call FunctionTestDeviceDelete,$(LOOP0),test/dev0.dat,test/dev0)
 
@@ -958,7 +960,8 @@ ifneq (@MKFS_EXT2@,)
 	$(call FunctionTestDeviceInitFilesystem,$(LOOP0),-t ext2,test/dev0)
 	$(MAKE) \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
-          test_image_operations_base 
+          test_image_operations_base \
+          test_image_operations_check
 	$(call FunctionTestDeviceDelete,$(LOOP1),test/dev1.dat,test/dev1)
 	$(call FunctionTestDeviceDelete,$(LOOP0),test/dev0.dat,test/dev0)
 	#
@@ -981,7 +984,8 @@ ifneq (@MKFS_EXT2@,)
 	$(call FunctionTestDeviceInitFilesystem,$(LOOP0),-t ext2 -b 1024,test/dev0)
 	$(MAKE) \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
-          test_image_operations_base 
+          test_image_operations_base \
+          test_image_operations_check
 	$(call FunctionTestDeviceDelete,$(LOOP1),test/dev1.dat,test/dev1)
 	$(call FunctionTestDeviceDelete,$(LOOP0),test/dev0.dat,test/dev0)
 	#
@@ -1004,7 +1008,8 @@ ifneq (@MKFS_EXT2@,)
 	$(call FunctionTestDeviceInitFilesystem,$(LOOP0),-t ext2 -b 2048,test/dev0)
 	$(MAKE) \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
-          test_image_operations_base 
+          test_image_operations_base \
+          test_image_operations_check
 	$(call FunctionTestDeviceDelete,$(LOOP1),test/dev1.dat,test/dev1)
 	$(call FunctionTestDeviceDelete,$(LOOP0),test/dev0.dat,test/dev0)
 	#
@@ -1027,7 +1032,8 @@ ifneq (@MKFS_EXT2@,)
 	$(call FunctionTestDeviceInitFilesystem,$(LOOP0),-t ext2 -b 4096,test/dev0)
 	$(MAKE) \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
-          test_image_operations_base 
+          test_image_operations_base \
+          test_image_operations_check
 	$(call FunctionTestDeviceDelete,$(LOOP1),test/dev1.dat,test/dev1)
 	$(call FunctionTestDeviceDelete,$(LOOP0),test/dev0.dat,test/dev0)
 endif
@@ -1055,7 +1061,8 @@ ifneq (@MKFS_EXT3@,)
 	$(call FunctionTestDeviceInitFilesystem,$(LOOP0),-t ext3,test/dev0)
 	$(MAKE) \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
-          test_image_operations_base 
+          test_image_operations_base \
+          test_image_operations_check
 	$(call FunctionTestDeviceDelete,$(LOOP1),test/dev1.dat,test/dev1)
 	$(call FunctionTestDeviceDelete,$(LOOP0),test/dev0.dat,test/dev0)
 	#
@@ -1078,7 +1085,8 @@ ifneq (@MKFS_EXT3@,)
 	$(call FunctionTestDeviceInitFilesystem,$(LOOP0),-t ext3 -b 1024,test/dev0)
 	$(MAKE) \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
-          test_image_operations_base 
+          test_image_operations_base \
+          test_image_operations_check
 	$(call FunctionTestDeviceDelete,$(LOOP1),test/dev1.dat,test/dev1)
 	$(call FunctionTestDeviceDelete,$(LOOP0),test/dev0.dat,test/dev0)
 	#
@@ -1101,7 +1109,8 @@ ifneq (@MKFS_EXT3@,)
 	$(call FunctionTestDeviceInitFilesystem,$(LOOP0),-t ext3 -b 2048,test/dev0)
 	$(MAKE) \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
-          test_image_operations_base 
+          test_image_operations_base \
+          test_image_operations_check
 	$(call FunctionTestDeviceDelete,$(LOOP1),test/dev1.dat,test/dev1)
 	$(call FunctionTestDeviceDelete,$(LOOP0),test/dev0.dat,test/dev0)
 	#
@@ -1124,7 +1133,8 @@ ifneq (@MKFS_EXT3@,)
 	$(call FunctionTestDeviceInitFilesystem,$(LOOP0),-t ext3 -b 4096,test/dev0)
 	$(MAKE) \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
-          test_image_operations_base 
+          test_image_operations_base \
+          test_image_operations_check
 	$(call FunctionTestDeviceDelete,$(LOOP1),test/dev1.dat,test/dev1)
 	$(call FunctionTestDeviceDelete,$(LOOP0),test/dev0.dat,test/dev0)
 endif
@@ -1152,7 +1162,8 @@ ifneq (@MKFS_EXT4@,)
 	$(call FunctionTestDeviceInitFilesystem,$(LOOP0),-t ext4,test/dev0)
 	$(MAKE) \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
-          test_image_operations_base 
+          test_image_operations_base \
+          test_image_operations_check
 	$(call FunctionTestDeviceDelete,$(LOOP1),test/dev1.dat,test/dev1)
 	$(call FunctionTestDeviceDelete,$(LOOP0),test/dev0.dat,test/dev0)
 	#
@@ -1175,7 +1186,8 @@ ifneq (@MKFS_EXT4@,)
 	$(call FunctionTestDeviceInitFilesystem,$(LOOP0),-t ext4 -b 1024,test/dev0)
 	$(MAKE) \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
-          test_image_operations_base 
+          test_image_operations_base \
+          test_image_operations_check
 	$(call FunctionTestDeviceDelete,$(LOOP1),test/dev1.dat,test/dev1)
 	$(call FunctionTestDeviceDelete,$(LOOP0),test/dev0.dat,test/dev0)
 	#
@@ -1189,7 +1201,7 @@ ifneq (@MKFS_EXT4@,)
           test_image_operations_base \
           test_image_operations_check \
           test_image_operations_diff_image
-	$(call FunctionTestDeviceDelete,$(LOOP1),test/dev1.dat,test/dev1
+	$(call FunctionTestDeviceDelete,$(LOOP1),test/dev1.dat,test/dev1)
 	$(call FunctionTestDeviceDelete,$(LOOP0),test/dev0.dat,test/dev0)
 	$(call FunctionTestFileRandom,test/dev0.dat,32M)
 	$(call FunctionTestFileRandom,test/dev1.dat,32M)
@@ -1198,7 +1210,8 @@ ifneq (@MKFS_EXT4@,)
 	$(call FunctionTestDeviceInitFilesystem,$(LOOP0),-t ext4 -b 2048,test/dev0)
 	$(MAKE) \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
-          test_image_operations_base 
+          test_image_operations_base \
+          test_image_operations_check
 	$(call FunctionTestDeviceDelete,$(LOOP1),test/dev1.dat,test/dev1)
 	$(call FunctionTestDeviceDelete,$(LOOP0),test/dev0.dat,test/dev0)
 	#
@@ -1221,7 +1234,8 @@ ifneq (@MKFS_EXT4@,)
 	$(call FunctionTestDeviceInitFilesystem,$(LOOP0),-t ext4 -b 4096,test/dev0)
 	$(MAKE) \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
-          test_image_operations_base 
+          test_image_operations_base \
+          test_image_operations_check
 	$(call FunctionTestDeviceDelete,$(LOOP1),test/dev1.dat,test/dev1)
 	$(call FunctionTestDeviceDelete,$(LOOP0),test/dev0.dat,test/dev0)
 	#
@@ -1265,7 +1279,8 @@ ifneq (@MKFS_MSDOS@,)
 	$(call FunctionTestDeviceInitFilesystem,$(LOOP0),-t msdos -F 12,test/dev0)
 	$(MAKE) \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
-          test_image_operations_base 
+          test_image_operations_base \
+          test_image_operations_check
 	$(call FunctionTestDeviceDelete,$(LOOP1),test/dev1.dat,test/dev1)
 	$(call FunctionTestDeviceDelete,$(LOOP0),test/dev0.dat,test/dev0)
 endif
@@ -1293,7 +1308,8 @@ ifneq (@MKFS_MSDOS@,)
 	$(call FunctionTestDeviceInitFilesystem,$(LOOP0),-t msdos -F 16,test/dev0)
 	$(MAKE) \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
-          test_image_operations_base 
+          test_image_operations_base \
+          test_image_operations_check
 	$(call FunctionDeleteTestDevice,$(LOOP1),test/dev1.dat,test/dev1)
 	$(call FunctionDeleteTestDevice,$(LOOP0),test/dev0.dat,test/dev0)
 endif
@@ -1321,7 +1337,8 @@ ifneq (@MKFS_MSDOS@,)
 	$(call FunctionTestDeviceInitFilesystem,$(LOOP0),-t msdos -F 32,test/dev0)
 	$(MAKE) \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
-          test_image_operations_base 
+          test_image_operations_base \
+          test_image_operations_check
 	$(call FunctionTestDeviceDelete,$(LOOP1),test/dev1.dat,test/dev1)
 	$(call FunctionTestDeviceDelete,$(LOOP0),test/dev0.dat,test/dev0)
 endif
@@ -1364,7 +1381,8 @@ ifneq (@MKFS_REISERFS@,)
 	$(call FunctionTestDeviceInitFilesystem,$(LOOP0),-t reiserfs -b 4096 -q --format 3.5,test/dev0)
 	$(MAKE) \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
-          test_image_operations_base 
+          test_image_operations_base \
+          test_image_operations_check
 	$(call FunctionTestDeviceDelete,$(LOOP1),test/dev1.dat)
 	$(call FunctionTestDeviceDelete,$(LOOP0),test/dev0.dat,test/dev0)
 	#
@@ -1387,7 +1405,8 @@ ifneq (@MKFS_REISERFS@,)
 	$(call FunctionTestDeviceInitFilesystem,$(LOOP0),-t reiserfs -b 4096 -q --format 3.6,test/dev0)
 	$(MAKE) \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
-          test_image_operations_base 
+          test_image_operations_base \
+          test_image_operations_check
 	$(call FunctionTestDeviceDelete,$(LOOP1),test/dev1.dat)
 	$(call FunctionTestDeviceDelete,$(LOOP0),test/dev0.dat,test/dev0)
 endif
@@ -1415,7 +1434,8 @@ ifneq (@MKFS_REISER4@,)
 	$(call FunctionTestDeviceInitFilesystem,$(LOOP0),-t reiser4 -b 4096 -y,test/dev0)
 	$(MAKE) \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
-          test_image_operations_base 
+          test_image_operations_base \
+          test_image_operations_check
 	$(call FunctionTestDeviceDelete,$(LOOP1),test/dev1.dat)
 	$(call FunctionTestDeviceDelete,$(LOOP0),test/dev0.dat,test/dev0)
 endif
