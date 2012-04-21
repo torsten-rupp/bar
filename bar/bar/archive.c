@@ -1004,12 +1004,6 @@ LOCAL Errors flushFileDataBlocks(ArchiveEntryInfo   *archiveEntryInfo,
   ulong  maxBlockCount;
   ulong  length;
 
-  // create new part (if not already exists)
-  if (!archiveEntryInfo->file.headerWrittenFlag)
-  {
-    writeFileChunks(archiveEntryInfo);
-  }
-
   // flush data
   do
   {
@@ -1024,6 +1018,13 @@ LOCAL Errors flushFileDataBlocks(ArchiveEntryInfo   *archiveEntryInfo,
 
     if (blockCount > 0)
     {
+      // create new part (if not already created)
+      if (!archiveEntryInfo->file.headerWrittenFlag)
+      {
+        writeFileChunks(archiveEntryInfo);
+      }
+
+      // get max. number of byte-compressed data blocks to write
       maxBlockCount = MIN(archiveEntryInfo->file.byteBufferSize/archiveEntryInfo->file.byteCompressInfo.blockLength,
                           blockCount
                          );
@@ -1124,15 +1125,15 @@ close(h);
   // split
   if (newPartFlag)
   {
-    // create new part
-    if (!archiveEntryInfo->file.headerWrittenFlag)
-    {
-      writeFileChunks(archiveEntryInfo);
-    }
-
     // write last compressed block (if any)
     if (byteLength > 0L)
     {
+      // create new part (if not already created)
+      if (!archiveEntryInfo->file.headerWrittenFlag)
+      {
+        writeFileChunks(archiveEntryInfo);
+      }
+
       // encrypt block
       error = Crypt_encryptBytes(&archiveEntryInfo->file.cryptInfo,
                                  archiveEntryInfo->file.byteBuffer,
@@ -1253,7 +1254,7 @@ close(h);
   {
     if (byteLength > 0L)
     {
-      // create chunk-headers
+      // create new part (if not already created)
       if (!archiveEntryInfo->file.headerWrittenFlag)
       {
         writeFileChunks(archiveEntryInfo);
@@ -1464,12 +1465,6 @@ LOCAL Errors flushImageDataBlocks(ArchiveEntryInfo   *archiveEntryInfo,
   ulong  maxBlockCount;
   ulong  byteLength;
 
-  // create new part (if not already exists)
-  if (!archiveEntryInfo->image.headerWrittenFlag)
-  {
-    writeImageChunks(archiveEntryInfo);
-  }
-
   // flush data
   do
   {
@@ -1484,6 +1479,13 @@ LOCAL Errors flushImageDataBlocks(ArchiveEntryInfo   *archiveEntryInfo,
 
     if (blockCount > 0)
     {
+      // create new part (if not already created)
+      if (!archiveEntryInfo->image.headerWrittenFlag)
+      {
+        writeImageChunks(archiveEntryInfo);
+      }
+
+      // get max. number of byte-compressed data blocks to write
       maxBlockCount = MIN(archiveEntryInfo->image.byteBufferSize/archiveEntryInfo->image.byteCompressInfo.blockLength,
                           blockCount
                          );
@@ -1576,15 +1578,15 @@ LOCAL Errors writeImageDataBlock(ArchiveEntryInfo *archiveEntryInfo,
   // split
   if (newPartFlag)
   {
-    // create new part
-    if (!archiveEntryInfo->image.headerWrittenFlag)
-    {
-      writeImageChunks(archiveEntryInfo);
-    }
-
     // write last compressed block (if any)
     if (byteLength > 0L)
     {
+      // create new part (if not already created)
+      if (!archiveEntryInfo->image.headerWrittenFlag)
+      {
+        writeImageChunks(archiveEntryInfo);
+      }
+
       // encrypt block
       error = Crypt_encryptBytes(&archiveEntryInfo->image.cryptInfo,
                                  archiveEntryInfo->image.byteBuffer,
@@ -1706,7 +1708,7 @@ LOCAL Errors writeImageDataBlock(ArchiveEntryInfo *archiveEntryInfo,
   {
     if (byteLength > 0L)
     {
-      // create chunk-headers
+      // create new part (if not already created)
       if (!archiveEntryInfo->image.headerWrittenFlag)
       {
         writeImageChunks(archiveEntryInfo);
@@ -1920,12 +1922,6 @@ LOCAL Errors flushHardLinkDataBlocks(ArchiveEntryInfo   *archiveEntryInfo,
   ulong  maxBlockCount;
   ulong  byteLength;
 
-  // create new part (if not already exists)
-  if (!archiveEntryInfo->hardLink.headerWrittenFlag)
-  {
-    writeHardLinkChunks(archiveEntryInfo);
-  }
-
   // flush data
   do
   {
@@ -1940,6 +1936,13 @@ LOCAL Errors flushHardLinkDataBlocks(ArchiveEntryInfo   *archiveEntryInfo,
 
     if (blockCount > 0)
     {
+      // create new part (if not already created)
+      if (!archiveEntryInfo->hardLink.headerWrittenFlag)
+      {
+        writeHardLinkChunks(archiveEntryInfo);
+      }
+
+      // get max. number of byte-compressed data blocks to write
       maxBlockCount = MIN(archiveEntryInfo->hardLink.byteBufferSize/archiveEntryInfo->hardLink.byteCompressInfo.blockLength,
                           blockCount
                          );
@@ -2033,15 +2036,15 @@ LOCAL Errors writeHardLinkDataBlock(ArchiveEntryInfo *archiveEntryInfo,
   // split
   if (newPartFlag)
   {
-    // create new part
-    if (!archiveEntryInfo->hardLink.headerWrittenFlag)
-    {
-      writeHardLinkChunks(archiveEntryInfo);
-    }
-
     // write last compressed block (if any)
     if (byteLength > 0L)
     {
+      // create new part (if not already created)
+      if (!archiveEntryInfo->hardLink.headerWrittenFlag)
+      {
+        writeHardLinkChunks(archiveEntryInfo);
+      }
+
       // encrypt block
       error = Crypt_encryptBytes(&archiveEntryInfo->hardLink.cryptInfo,
                                  archiveEntryInfo->hardLink.byteBuffer,
@@ -2170,7 +2173,7 @@ LOCAL Errors writeHardLinkDataBlock(ArchiveEntryInfo *archiveEntryInfo,
   {
     if (byteLength > 0L)
     {
-      // create chunk-headers
+      // create new part (if not already created)
       if (!archiveEntryInfo->hardLink.headerWrittenFlag)
       {
         writeHardLinkChunks(archiveEntryInfo);
@@ -3057,6 +3060,9 @@ Errors Archive_newFileEntry(ArchiveInfo      *archiveInfo,
                                         )+
                                         Chunk_getSize(CHUNK_DEFINITION_FILE_DATA, archiveEntryInfo->blockLength,&archiveEntryInfo->file.chunkFileData );
 
+  // create new part
+  writeFileChunks(archiveEntryInfo);
+
   return ERROR_NONE;
 }
 
@@ -3338,6 +3344,9 @@ Errors Archive_newImageEntry(ArchiveInfo      *archiveInfo,
                                           : 0
                                         )+
                                         Chunk_getSize(CHUNK_DEFINITION_IMAGE_DATA, archiveEntryInfo->blockLength,&archiveEntryInfo->image.chunkImageData );
+
+  // create new part
+  writeImageChunks(archiveEntryInfo);
 
   return ERROR_NONE;
 }
@@ -3985,6 +3994,9 @@ Errors Archive_newHardLinkEntry(ArchiveInfo      *archiveInfo,
   {
     archiveEntryInfo->hardLink.headerLength += Chunk_getSize(CHUNK_DEFINITION_HARDLINK_NAME,archiveEntryInfo->blockLength,chunkHardLinkName);
   }
+
+  // create new part
+  writeHardLinkChunks(archiveEntryInfo);
 
   return ERROR_NONE;
 }
