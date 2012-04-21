@@ -1699,7 +1699,7 @@ LOCAL Errors writeImageDataBlock(ArchiveEntryInfo *archiveEntryInfo,
     closeArchiveFile(archiveEntryInfo->archiveInfo,FALSE);
 
     // reset compress (do it here because data if buffered and can be processed before a new file is opened)
-    Compress_reset(&archiveEntryInfo->file.deltaCompressInfo);
+    Compress_reset(&archiveEntryInfo->image.deltaCompressInfo);
     Compress_reset(&archiveEntryInfo->image.byteCompressInfo);
   }
   else
@@ -3151,7 +3151,7 @@ Errors Archive_newImageEntry(ArchiveInfo      *archiveInfo,
   archiveEntryInfo->image.chunkImage.compressAlgorithm = COMPRESS_ALGORITHM_TO_CONSTANT(archiveEntryInfo->image.byteCompressAlgorithm);
   archiveEntryInfo->image.chunkImage.cryptAlgorithm    = archiveInfo->jobOptions->cryptAlgorithm;
 
-  // init image entry crpy, image entry chunk
+  // init image entry crypt, image entry chunk
   error = Crypt_init(&archiveEntryInfo->image.chunkImageEntry.cryptInfo,
                      archiveInfo->jobOptions->cryptAlgorithm,
                      archiveInfo->cryptPassword
@@ -3309,7 +3309,7 @@ Errors Archive_newImageEntry(ArchiveInfo      *archiveInfo,
     return error;
   }
 
-  // init file crypt
+  // init image crypt
   error = Crypt_init(&archiveEntryInfo->image.cryptInfo,
                      archiveInfo->jobOptions->cryptAlgorithm,
                      archiveInfo->cryptPassword
@@ -4794,6 +4794,7 @@ Errors Archive_readFileEntry(ArchiveInfo        *archiveInfo,
   if (cryptType              != NULL) (*cryptType)              = archiveInfo->cryptType;
 
   // reset compress, crypt
+#warning needed?
 //  Compress_reset(&archiveEntryInfo->file.byteCompressInfo);
 //  Crypt_reset(&archiveEntryInfo->file.chunkFileData.cryptInfo,0);
 
@@ -5262,6 +5263,7 @@ Errors Archive_readImageEntry(ArchiveInfo        *archiveInfo,
   if (cryptType              != NULL) (*cryptType)              = archiveInfo->cryptType;
 
   // reset compress, crypt
+#warning needed?
 //  Compress_reset(&archiveEntryInfo->image.byteCompressInfo);
 //  Crypt_reset(&archiveEntryInfo->image.chunkImageData.cryptInfo,0);
 
@@ -6339,6 +6341,7 @@ Errors Archive_readHardLinkEntry(ArchiveInfo        *archiveInfo,
   if (cryptType              != NULL) (*cryptType)              = archiveInfo->cryptType;
 
   // reset compress, crypt
+#warning needed?
 //  Compress_reset(&archiveEntryInfo->hardLink.byteCompressInfo);
 //  Crypt_reset(&archiveEntryInfo->hardLink.chunkHardLinkData.cryptInfo,0);
 
