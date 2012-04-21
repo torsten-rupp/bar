@@ -917,8 +917,7 @@ test_image_operations_raw:
 	$(MAKE) \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           OPTIONS="$(if $(OPTIONS),$(OPTIONS) --raw-images,--compress-algorithm=none --crypt-algorithm=none --raw-images)" \
-          test_image_operations_base \
-          test_image_operations_check
+          test_image_operations_base
 	$(call FunctionTestDeviceDelete,$(LOOP1),test/dev1.dat,test/dev0)
 	$(call FunctionTestDeviceDelete,$(LOOP0),test/dev0.dat,test/dev1)
 	$(call FunctionTestFileRandom,test/dev0.dat,32M); $(call FunctionTestDeviceCreate,$(LOOP0),test/dev0.dat,test/dev0)
@@ -926,8 +925,7 @@ test_image_operations_raw:
 	$(MAKE) \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           OPTIONS="$(if $(OPTIONS),$(OPTIONS) --raw-images,--compress-algorithm=none --crypt-algorithm=none --raw-images)" \
-          test_image_operations_base \
-          test_image_operations_check
+          test_image_operations_base
 	$(call FunctionTestDeviceDelete,$(LOOP1),test/dev1.dat,test/dev1)
 	$(call FunctionTestDeviceDelete,$(LOOP0),test/dev0.dat,test/dev0)
 
@@ -1453,8 +1451,8 @@ test_image_operations_base: \
 	SSH_ASKPASS= $(TEST_BAR) -x test/test*.bar $(OPTIONS) --destination $(DEVICE1) $(if $(QUIET),1>/dev/null)
 
 test_image_operations_check:
-	$(FSCK) $(DEVICE0)
-	$(FSCK) $(DEVICE1)
+	$(FSCK) -n $(DEVICE0)
+	$(FSCK) -n $(DEVICE1)
 	$(INSTALL) -d test/dev0; $(SUDO) $(MOUNT) $(DEVICE0) test/dev0
 	$(INSTALL) -d test/dev1; $(SUDO) $(MOUNT) $(DEVICE1) test/dev1
 	$(SUDO) $(DIFF) -r test/dev0 test/dev1
