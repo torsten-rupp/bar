@@ -41,6 +41,7 @@
   * output test/compare/restore info if verbose level >= 1
   * improved processing speed: implemented ring buffers
     for compress/decompress
+  * fixed compare of images: only compare used blocks
 
 2012-01-14 0.16g
   * fix restore: do not create empty parent directories
