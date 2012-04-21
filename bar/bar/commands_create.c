@@ -2973,22 +2973,25 @@ LOCAL Errors storeFileEntry(ArchiveInfo       *archiveInfo,
         Misc_udelay(500*1000);
       }
 
-      File_read(&fileHandle,buffer,bufferSize,&bufferLength);
-      if (bufferLength > 0)
+      error = File_read(&fileHandle,buffer,bufferSize,&bufferLength);
+      if (error == ERROR_NONE)
       {
-        error = Archive_writeData(&archiveEntryInfo,buffer,bufferLength,1);
-        createInfo->statusInfo.doneBytes += (uint64)bufferLength;
-        createInfo->statusInfo.entryDoneBytes += (uint64)bufferLength;
-        createInfo->statusInfo.archiveBytes = createInfo->statusInfo.archiveTotalBytes+Archive_getSize(archiveInfo);
-        createInfo->statusInfo.compressionRatio = 100.0-(createInfo->statusInfo.archiveTotalBytes+Archive_getSize(archiveInfo))*100.0/createInfo->statusInfo.doneBytes;
-        updateStatusInfo(createInfo);
+        if (bufferLength > 0L)
+        {
+          error = Archive_writeData(&archiveEntryInfo,buffer,bufferLength,1);
+          createInfo->statusInfo.doneBytes += (uint64)bufferLength;
+          createInfo->statusInfo.entryDoneBytes += (uint64)bufferLength;
+          createInfo->statusInfo.archiveBytes = createInfo->statusInfo.archiveTotalBytes+Archive_getSize(archiveInfo);
+          createInfo->statusInfo.compressionRatio = 100.0-(createInfo->statusInfo.archiveTotalBytes+Archive_getSize(archiveInfo))*100.0/createInfo->statusInfo.doneBytes;
+          updateStatusInfo(createInfo);
 
-        percentageDone = (uint)((createInfo->statusInfo.entryDoneBytes*100LL)/createInfo->statusInfo.entryTotalBytes);
-        printInfo(2,"%3d%%\b\b\b\b",percentageDone);
+          percentageDone = (uint)((createInfo->statusInfo.entryDoneBytes*100LL)/createInfo->statusInfo.entryTotalBytes);
+          printInfo(2,"%3d%%\b\b\b\b",percentageDone);
+        }
       }
     }
     while (   ((createInfo->requestedAbortFlag == NULL) || !(*createInfo->requestedAbortFlag))
-           && (bufferLength > 0)
+           && (bufferLength > 0L)
            && (createInfo->failError == ERROR_NONE)
            && (error == ERROR_NONE)
           );
@@ -3830,22 +3833,25 @@ LOCAL Errors storeHardLinkEntry(ArchiveInfo       *archiveInfo,
         Misc_udelay(500*1000);
       }
 
-      File_read(&fileHandle,buffer,bufferSize,&bufferLength);
-      if (bufferLength > 0)
+      error = File_read(&fileHandle,buffer,bufferSize,&bufferLength);
+      if (error == ERROR_NONE)
       {
-        error = Archive_writeData(&archiveEntryInfo,buffer,bufferLength,1);
-        createInfo->statusInfo.doneBytes += (uint64)StringList_count(nameList)*(uint64)bufferLength;
-        createInfo->statusInfo.entryDoneBytes += (uint64)StringList_count(nameList)*(uint64)bufferLength;
-        createInfo->statusInfo.archiveBytes = createInfo->statusInfo.archiveTotalBytes+Archive_getSize(archiveInfo);
-        createInfo->statusInfo.compressionRatio = 100.0-(createInfo->statusInfo.archiveTotalBytes+Archive_getSize(archiveInfo))*100.0/createInfo->statusInfo.doneBytes;
-        updateStatusInfo(createInfo);
+        if (bufferLength > 0L)
+        {
+          error = Archive_writeData(&archiveEntryInfo,buffer,bufferLength,1);
+          createInfo->statusInfo.doneBytes += (uint64)StringList_count(nameList)*(uint64)bufferLength;
+          createInfo->statusInfo.entryDoneBytes += (uint64)StringList_count(nameList)*(uint64)bufferLength;
+          createInfo->statusInfo.archiveBytes = createInfo->statusInfo.archiveTotalBytes+Archive_getSize(archiveInfo);
+          createInfo->statusInfo.compressionRatio = 100.0-(createInfo->statusInfo.archiveTotalBytes+Archive_getSize(archiveInfo))*100.0/createInfo->statusInfo.doneBytes;
+          updateStatusInfo(createInfo);
 
-        percentageDone = (uint)((createInfo->statusInfo.entryDoneBytes*100LL)/createInfo->statusInfo.entryTotalBytes);
-        printInfo(2,"%3d%%\b\b\b\b",percentageDone);
+          percentageDone = (uint)((createInfo->statusInfo.entryDoneBytes*100LL)/createInfo->statusInfo.entryTotalBytes);
+          printInfo(2,"%3d%%\b\b\b\b",percentageDone);
+        }
       }
     }
     while (   ((createInfo->requestedAbortFlag == NULL) || !(*createInfo->requestedAbortFlag))
-           && (bufferLength > 0)
+           && (bufferLength > 0L)
            && (createInfo->failError == ERROR_NONE)
            && (error == ERROR_NONE)
           );
