@@ -10,6 +10,12 @@
 
 /****************************** Includes *******************************/
 
+#warning remove
+#include <stdio.h>
+#include <sys/types.h>
+       #include <sys/stat.h>
+       #include <fcntl.h>
+
 /****************** Conditional compilation switches *******************/
 
 /***************************** Constants *******************************/
@@ -270,6 +276,16 @@ typedef struct
   extern "C" {
 #endif
 
+/***********************************************************************\
+* Name   : EXT_init
+* Purpose: initialize Ext handle
+* Input  : deviceHandle - device handle
+*          extHandle    - Ext handle variable
+* Output : extHandle - Ext variable
+* Return : file system type or FILE_SYSTEN_UNKNOWN;
+* Notes  : -
+\***********************************************************************/
+
 LOCAL FileSystemTypes EXT_init(DeviceHandle *deviceHandle, EXTHandle *extHandle)
 {
   EXTSuperBlock        extSuperBlock;
@@ -449,6 +465,15 @@ fprintf(stderr,"%s,%d: z=%d block=%ld used=%d\n",__FILE__,__LINE__,z,extHandle->
   return extHandle->type;
 }
 
+/***********************************************************************\
+* Name   : EXT_done
+* Purpose: deinitialize Ext handle
+* Input  : deviceHandle - device handle
+*          extHandle    - Ext handle
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
 LOCAL void EXT_done(DeviceHandle *deviceHandle, EXTHandle *extHandle)
 {
   assert(deviceHandle != NULL);
@@ -459,6 +484,17 @@ LOCAL void EXT_done(DeviceHandle *deviceHandle, EXTHandle *extHandle)
 
   free(extHandle->bitmapBlocks);
 }
+
+/***********************************************************************\
+* Name   : EXT_blockIsUsed
+* Purpose: check if block is used
+* Input  : deviceHandle - device handle
+*          extHandle    - Ext handle
+*          offset       - offset in image
+* Output : -
+* Return : TRUE iff block at offset is used, FALSE otherwise
+* Notes  : -
+\***********************************************************************/
 
 LOCAL bool EXT_blockIsUsed(DeviceHandle *deviceHandle, EXTHandle *extHandle, uint64 offset)
 {
@@ -531,6 +567,14 @@ fprintf(stderr,"%s, %d: bitmapIndex=%d\n",__FILE__,__LINE__,bitmapIndex);
     // check if block is used
     assert(blockOffset >= bitmapIndex*extHandle->blocksPerGroup);
     index = blockOffset-bitmapIndex*extHandle->blocksPerGroup;
+if ((extHandle->bitmapData[index/8] & (1 << index%8)) == 0)
+{
+int h = open("ext_freeblocks.txt",O_CREAT|O_WRONLY|O_APPEND,0664);
+char s[256];
+sprintf(s,"%llu %d\n",offset,block);
+write(h,s,strlen(s));
+close(h);
+}
     return ((extHandle->bitmapData[index/8] & (1 << index%8)) != 0);
   }
   else
