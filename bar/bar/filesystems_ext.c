@@ -10,11 +10,13 @@
 
 /****************************** Includes *******************************/
 
-#warning remove
+#if 0
+#warning debug only
 #include <stdio.h>
 #include <sys/types.h>
-       #include <sys/stat.h>
-       #include <fcntl.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#endif /* 0 */
 
 /****************** Conditional compilation switches *******************/
 
@@ -332,6 +334,7 @@ LOCAL FileSystemTypes EXT_init(DeviceHandle *deviceHandle, EXTHandle *extHandle)
 
   // get ext type: ext2/3/4
 #if 0
+#warning debug only
 fprintf(stderr,"%s, %d: revisionLevel = %d\n",__FILE__,__LINE__,LE32_TO_HOST(extSuperBlock.revisionLevel));
 fprintf(stderr,"%s, %d: featureCompatible = 0x%x\n",__FILE__,__LINE__,LE32_TO_HOST(extSuperBlock.featureCompatible));
 fprintf(stderr,"%s, %d: featureInCompatible = 0x%x\n",__FILE__,__LINE__,LE32_TO_HOST(extSuperBlock.featureInCompatible));
@@ -455,6 +458,7 @@ fprintf(stderr,"%s, %d: featureInCompatible & ~EXT4_FEATURE_INCOMPAT_SUPP = 0x%x
   }
 
 #if 0
+#warning debug only
 fprintf(stderr,"\n");
 for (z = 0; z < extHandle->bitmapBlocksCount; z++)
 {
@@ -535,8 +539,8 @@ assert((extHandle->firstDataBlock ==0) || (extHandle->blockSize <= 1024));
       }
       extHandle->bitmapIndex = bitmapIndex;
 #if 0
+#warning debug only
 fprintf(stderr,"%s, %d: bitmapIndex=%d\n",__FILE__,__LINE__,bitmapIndex);
-//dumpMemory(extHandle->bitmapData,extHandle->blockSize);
 {
   long b;
   long b0,b1;
@@ -567,6 +571,8 @@ fprintf(stderr,"%s, %d: bitmapIndex=%d\n",__FILE__,__LINE__,bitmapIndex);
     // check if block is used
     assert(blockOffset >= bitmapIndex*extHandle->blocksPerGroup);
     index = blockOffset-bitmapIndex*extHandle->blocksPerGroup;
+#if 0
+#warning debug only
 if ((extHandle->bitmapData[index/8] & (1 << index%8)) == 0)
 {
 int h = open("ext_freeblocks.txt",O_CREAT|O_WRONLY|O_APPEND,0664);
@@ -575,6 +581,7 @@ sprintf(s,"%llu %d\n",offset,block);
 write(h,s,strlen(s));
 close(h);
 }
+#endif /* 0 */
     return ((extHandle->bitmapData[index/8] & (1 << index%8)) != 0);
   }
   else
