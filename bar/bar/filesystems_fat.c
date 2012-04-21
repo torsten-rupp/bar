@@ -35,9 +35,6 @@ typedef struct
   uint            bitsPerFATEntry;
   uint32          firstDataSector;
 
-//  int             fatSector;
-//  uint            fatSectorsCount;
-
   int               clusterBaseIndex;
   byte              clusterBitmap[CLUSTER_BITMAP_SIZE/8];
 } FATHandle;
@@ -70,6 +67,29 @@ typedef struct
   extern "C" {
 #endif
 
+/***********************************************************************\
+* Name   : readClusterBitmap
+* Purpose: read cluster bitmap
+* Input  : deviceHandle - device handle
+*          fatHandle    - FAT handle
+*          cluster      - cluster number in bitmap to read
+* Output : -
+* Return : TRUE iff cluster bitmap is read, FALSE otherwise
+* Notes  : cluster bitmap format:
+*
+*          depending on the FAT type the entry in the cluster bitmap are
+*            - 12 bit (2x 12bit in 3 bytes, little endian)
+*            - 16 bit (little endian)
+*            - 32 bit (little endian)
+*
+*          +-----------------------+
+*          | 0 | 1 | 2 | ... | n-1 |
+*          +-----------------------+
+*                    ^ first cluster (= cluster 0)
+*            ^^^^^ reserved
+*
+\***********************************************************************/
+
 LOCAL bool readClusterBitmap(DeviceHandle *deviceHandle, FATHandle *fatHandle, uint32 cluster)
 {
   uint   fatSectorsCount;
@@ -80,7 +100,11 @@ LOCAL bool readClusterBitmap(DeviceHandle *deviceHandle, FATHandle *fatHandle, u
   bool   clusterIsUsed;
 
   // calculate max. number of FAT sectors to read
-  fatSectorsCount = MIN(((CLUSTER_BITMAP_SIZE*fatHandle->bitsPerFATEntry)/8)/fatHandle->bytesPerSector,fatHandle->sectorsPerFAT);
+#warning todo
+//  fatSectorsCount = MIN(((CLUSTER_BITMAP_SIZE*fatHandle->bitsPerFATEntry+8-1)/8)/fatHandle->bytesPerSector,
+  fatSectorsCount = MIN((((CLUSTER_BITMAP_SIZE*fatHandle->bitsPerFATEntry+8-1)/8)+fatHandle->bytesPerSector-1)/fatHandle->bytesPerSector,
+                        fatHandle->sectorsPerFAT
+                       );
   assert(fatSectorsCount > 0);
 
   // allocate sectors buffer
@@ -106,6 +130,7 @@ LOCAL bool readClusterBitmap(DeviceHandle *deviceHandle, FATHandle *fatHandle, u
   fatHandle->clusterBaseIndex = (fatStartSector*fatHandle->bytesPerSector*8)/fatHandle->bitsPerFATEntry;
   clustersCount = (fatSectorsCount*fatHandle->bytesPerSector*8)/fatHandle->bitsPerFATEntry;
   if ((fatHandle->clusterBaseIndex+clustersCount) > fatHandle->clustersCount) clustersCount = fatHandle->clustersCount-fatHandle->clusterBaseIndex;
+  assert(clustersCount <= CLUSTER_BITMAP_SIZE);
 
   // init cluster bitmap from FAT entries
   memset(fatHandle->clusterBitmap,0,sizeof(fatHandle->clusterBitmap));
@@ -116,11 +141,11 @@ LOCAL bool readClusterBitmap(DeviceHandle *deviceHandle, FATHandle *fatHandle, u
       {
         if (index & 0x1)
         {
-          clusterIsUsed = (((FAT_READ_INT24(buffer,((index*12)/8) & ~0x1) & 0xFFF000) >> 12) != 0x000);
+          clusterIsUsed = (((FAT_READ_INT24(buffer,(((2+index)*12)/8) & ~0x1) & 0xFFF000) >> 12) != 0x000);
         }
         else
         {
-          clusterIsUsed = (((FAT_READ_INT24(buffer,((index*12)/8) & ~0x1) & 0x000FFF) >>  0) != 0x000);
+          clusterIsUsed = (((FAT_READ_INT24(buffer,(((2+index)*12)/8) & ~0x1) & 0x000FFF) >>  0) != 0x000);
         }
         if (clusterIsUsed)
         {
@@ -131,13 +156,13 @@ LOCAL bool readClusterBitmap(DeviceHandle *deviceHandle, FATHandle *fatHandle, u
     case FILE_SYSTEM_TYPE_FAT16:
       for (index = 0; index < clustersCount; index++)
       {
-        if (LE16_TO_HOST(*((uint16*)buffer+index)) != 0x0000) BITSET_SET(fatHandle->clusterBitmap,index);
+        if (LE16_TO_HOST(((uint16*)buffer)[2+index]) != 0x0000) BITSET_SET(fatHandle->clusterBitmap,index);
       }
       break;
     case FILE_SYSTEM_TYPE_FAT32:
       for (index = 0; index < clustersCount; index++)
       {
-        if (LE32_TO_HOST(*((uint32*)buffer+index)) != 0x00000000) BITSET_SET(fatHandle->clusterBitmap,index);
+        if (LE32_TO_HOST(((uint32*)buffer)[2+index]) != 0x00000000) BITSET_SET(fatHandle->clusterBitmap,index);
       }
       break;
     default:
@@ -152,6 +177,16 @@ LOCAL bool readClusterBitmap(DeviceHandle *deviceHandle, FATHandle *fatHandle, u
 
   return TRUE;
 }
+
+/***********************************************************************\
+* Name   : FAT_init
+* Purpose: initialize FAT handle
+* Input  : deviceHandle - device handle
+*          fatHandle    - FAT handle variable
+* Output : fatHandle - FAT variable
+* Return : file system type or FILE_SYSTEN_UNKNOWN;
+* Notes  : -
+\***********************************************************************/
 
 LOCAL FileSystemTypes FAT_init(DeviceHandle *deviceHandle, FATHandle *fatHandle)
 {
@@ -243,6 +278,16 @@ LOCAL FileSystemTypes FAT_init(DeviceHandle *deviceHandle, FATHandle *fatHandle)
   return fatHandle->type;
 }
 
+/***********************************************************************\
+* Name   : FAT_done
+* Purpose: deinitialize FAT handle
+* Input  : deviceHandle - device handle
+*          fatHandle    - FAT handle
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
 LOCAL void FAT_done(DeviceHandle *deviceHandle, FATHandle *fatHandle)
 {
   assert(deviceHandle != NULL);
@@ -251,6 +296,17 @@ LOCAL void FAT_done(DeviceHandle *deviceHandle, FATHandle *fatHandle)
   UNUSED_VARIABLE(deviceHandle);
   UNUSED_VARIABLE(fatHandle);
 }
+
+/***********************************************************************\
+* Name   : FAT_blockIsUsed
+* Purpose: check if block is used
+* Input  : deviceHandle - device handle
+*          fatHandle    - FAT handle
+*          offset       - offset in image
+* Output : -
+* Return : TRUE iff block at offset is used, FALSE otherwise
+* Notes  : -
+\***********************************************************************/
 
 LOCAL bool FAT_blockIsUsed(DeviceHandle *deviceHandle, FATHandle *fatHandle, uint64 offset)
 {
@@ -272,7 +328,7 @@ LOCAL bool FAT_blockIsUsed(DeviceHandle *deviceHandle, FATHandle *fatHandle, uin
   {
     // calculate cluster of sector
     assert(fatHandle->sectorsPerCluster != 0);
-    cluster = (sector-fatHandle->firstDataSector)/fatHandle->sectorsPerCluster+2;
+    cluster = (sector-fatHandle->firstDataSector)/fatHandle->sectorsPerCluster;
 
     // read correct cluster bitmap if needed
     if (   (fatHandle->clusterBaseIndex < 0)
@@ -287,6 +343,7 @@ LOCAL bool FAT_blockIsUsed(DeviceHandle *deviceHandle, FATHandle *fatHandle, uin
 
     // check if sector is used
     assert((cluster >= (uint32)fatHandle->clusterBaseIndex) && (cluster < (uint32)fatHandle->clusterBaseIndex+CLUSTER_BITMAP_SIZE));
+    assert(cluster < fatHandle->clusterBaseIndex+fatHandle->clustersCount);
     index = cluster-fatHandle->clusterBaseIndex;
     blockIsUsed = BITSET_IS_SET(fatHandle->clusterBitmap,index);
   }
