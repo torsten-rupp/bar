@@ -67,6 +67,16 @@ typedef struct
   extern "C" {
 #endif
 
+/***********************************************************************\
+* Name   : REISERFS_init
+* Purpose: initialize ReiserFS handle
+* Input  : deviceHandle   - device handle
+*          reiserFSHandle - ReiserFS handle variable
+* Output : reiserFSHandle - ReiserFS variable
+* Return : file system type or FILE_SYSTEN_UNKNOWN;
+* Notes  : -
+\***********************************************************************/
+
 LOCAL FileSystemTypes REISERFS_init(DeviceHandle *deviceHandle, REISERFSHandle *reiserFSHandle)
 {
   ReiserSuperBlock reiserSuperBlock;
@@ -122,6 +132,16 @@ LOCAL FileSystemTypes REISERFS_init(DeviceHandle *deviceHandle, REISERFSHandle *
   return fileSystemType;
 }
 
+/***********************************************************************\
+* Name   : REISERFS_done
+* Purpose: deinitialize ReiserFS handle
+* Input  : deviceHandle   - device handle
+*          reiserFSHandle - ReiserFS handle
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
 LOCAL void REISERFS_done(DeviceHandle *deviceHandle, REISERFSHandle *reiserFSHandle)
 {
   assert(deviceHandle != NULL);
@@ -130,6 +150,17 @@ LOCAL void REISERFS_done(DeviceHandle *deviceHandle, REISERFSHandle *reiserFSHan
   UNUSED_VARIABLE(deviceHandle);
   UNUSED_VARIABLE(reiserFSHandle);
 }
+
+/***********************************************************************\
+* Name   : REISERFS_blockIsUsed
+* Purpose: check if block is used
+* Input  : deviceHandle   - device handle
+*          reiserFSHandle - ReiserFS handle
+*          offset         - offset in image
+* Output : -
+* Return : TRUE iff block at offset is used, FALSE otherwise
+* Notes  : -
+\***********************************************************************/
 
 LOCAL bool REISERFS_blockIsUsed(DeviceHandle *deviceHandle, REISERFSHandle *reiserFSHandle, uint64 offset)
 {
