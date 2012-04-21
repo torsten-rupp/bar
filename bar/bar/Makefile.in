@@ -497,8 +497,9 @@ test2 test_compress: $(TEST_BAR)
             OPTIONS="--compress-algorithm=$$compress --crypt-algorithm=none" \
             test_file_operations \
             ; \
-          if test $$? -ne 0; then \
-            exit $$?; \
+          rc=$$?; \
+          if test $$rc -ne 0; then \
+            exit $$rc; \
           fi \
         done
 	@$(ECHO) "ok"
@@ -512,8 +513,9 @@ test_delta_compress: $(TEST_BAR)
             OPTIONS="--compress-algorithm=$$compress --crypt-algorithm=none" \
             test_file_operation_delta \
             ; \
-          if test $$? -ne 0; then \
-            exit $$?; \
+          rc=$$?; \
+          if test $$rc -ne 0; then \
+            exit $$rc; \
           fi \
         done
 	@$(ECHO) "ok"
@@ -527,8 +529,9 @@ test3 test_crypt: $(TEST_BAR)
             OPTIONS="--compress-algorithm=none --crypt-algorithm=$$crypt --crypt-password=$(TEST_PASSWORD)" \
             test_file_operations \
             ; \
-          if test $$? -ne 0; then \
-            exit $$?; \
+          rc=$$?; \
+          if test $$rc -ne 0; then \
+            exit $$rc; \
           fi \
         done
 	@$(ECHO) "ok"
@@ -543,8 +546,9 @@ test4 test_asymmetric_crypt: $(TEST_BAR)
             OPTIONS="--compress-algorithm=none --crypt-algorithm=$$crypt --crypt-password=$(TEST_PASSWORD) --crypt-type=asymmetric --crypt-public-key=$(PWD)/test/key.public --crypt-private-key=$(PWD)/test/key.private" \
             test_file_operations \
             ; \
-          if test $$? -ne 0; then \
-            exit $$?; \
+          rc=$$?; \
+          if test $$rc -ne 0; then \
+            exit $$rc; \
           fi \
         done
 	@$(ECHO) "ok"
@@ -567,8 +571,9 @@ test6 test_image: $(TEST_BAR)
             OPTIONS="--compress-algorithm=$$compress --crypt-algorithm=none" \
             test_image_operations \
             ; \
-          if test $$? -ne 0; then \
-            exit $$?; \
+          rc=$$?; \
+          if test $$rc -ne 0; then \
+            exit $$rc; \
           fi \
         done
 	@$(ECHO) "ok"
@@ -594,8 +599,9 @@ test_combined: $(TEST_BAR)
               OPTIONS="--compress-algorithm=$$compress --crypt-algorithm=$$crypt --crypt-password=$(TEST_PASSWORD) --crypt-type=asymmetric --crypt-public-key=$(PWD)/test/key.public --crypt-private-key=$(PWD)/test/key.private --archive-part-size=100K" \
               test_file_operations \
               ; \
-            if test $$? -ne 0; then \
-              exit $$?; \
+            rc=$$?; \
+            if test $$rc -ne 0; then \
+              exit $$rc; \
             fi; \
             $(MAKE) \
               BAR_FILE=test-### \
@@ -603,11 +609,20 @@ test_combined: $(TEST_BAR)
               OPTIONS="--compress-algorithm=$$compress --crypt-algorithm=$$crypt --crypt-password=$(TEST_PASSWORD) --crypt-type=asymmetric --crypt-public-key=$(PWD)/test/key.public --crypt-private-key=$(PWD)/test/key.private --archive-part-size=10M" \
               test_image_operations \
               ; \
-            if test $$? -ne 0; then \
-              exit $$?; \
+            rc=$$?; \
+            if test $$rc -ne 0; then \
+              exit $$rc; \
             fi; \
           done; \
-        done
+          rc=$$?; \
+          if test $$rc -ne 0; then \
+            exit $$rc; \
+          fi \
+        done; \
+        rc=$$?; \
+        if test $$rc -ne 0; then \
+          exit $$rc; \
+        fi
 	@$(ECHO) "ok"
 
 test_parameters: $(TEST_BAR)
@@ -617,7 +632,7 @@ test_parameters: $(TEST_BAR)
 	$(call checkExitcode,1,SSH_ASKPASS= $(TEST_BAR) -h 1>/dev/null) $(if $(QUIET),1>/dev/null)
 	$(call checkExitcode,1,SSH_ASKPASS= $(TEST_BAR) --help 1>/dev/null) $(if $(QUIET),1>/dev/null)
 	# list
-	$(call checkExitcode,0,SSH_ASKPASS= $(TEST_BAR) -c test/test.bar test/data --overwrite-archive-files) --verbose=2 $(if $(QUIET),1>/dev/null)
+	$(call checkExitcode,0,SSH_ASKPASS= $(TEST_BAR) -c test/test.bar test/data --overwrite-archive-files --verbose=2) $(if $(QUIET),1>/dev/null)
 	$(call checkExitcode,0,SSH_ASKPASS= $(TEST_BAR) -l test/test*.bar -g) $(if $(QUIET),1>/dev/null)
 	$(call checkExitcode,0,SSH_ASKPASS= $(TEST_BAR) -l test/test*.bar -H) $(if $(QUIET),1>/dev/null)
 	$(call checkExitcode,0,SSH_ASKPASS= $(TEST_BAR) -l test/test*.bar -L) $(if $(QUIET),1>/dev/null)
@@ -641,7 +656,6 @@ test_parameters: $(TEST_BAR)
 
 # check exitcode
 checkExitcode = $2; if test $$? -gt $1; then false; fi
-
 
 .PHONY: test_file_operations
 test_file_operations: \
