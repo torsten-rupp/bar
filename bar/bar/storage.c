@@ -388,7 +388,7 @@ LOCAL void limitBandWidth(StorageBandWidth *storageBandWidth,
     storageBandWidth->measurementBytes += transmittedBytes;
     storageBandWidth->measurementTime += transmissionTime;
 
-    if ((ulong)(storageBandWidth->measurementTime/1000LL) > 100L)   // to small time values are not reliable, thus accumlate time
+    if ((ulong)(storageBandWidth->measurementTime/1000LL) > 100L)   // too small time values are not reliable, thus accumlate time
     {
       // calculate average band width
       averageBandWidth = 0;
