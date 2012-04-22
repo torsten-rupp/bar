@@ -64,7 +64,7 @@ Errors Device_open(DeviceHandle    *deviceHandle,
   assert(deviceHandle != NULL);
   assert(deviceName != NULL);
 
-  /* open device */
+  // open device
   switch (deviceOpenMode)
   {
     case DEVICE_OPENMODE_READ:
@@ -88,7 +88,7 @@ Errors Device_open(DeviceHandle    *deviceHandle,
     #endif /* NDEBUG */
   }
 
-  /* get device size */
+  // get device size
   if (fseeko(deviceHandle->file,(off_t)0,SEEK_END) == -1)
   {
     error = ERRORX(IO_ERROR,errno,String_cString(deviceName));
@@ -109,7 +109,7 @@ Errors Device_open(DeviceHandle    *deviceHandle,
     return error;
   }
 
-  /* initialize handle */
+  // initialize handle
   deviceHandle->name  = String_duplicate(deviceName);
   deviceHandle->index = 0LL;
   deviceHandle->size  = (int64)n;
@@ -251,20 +251,20 @@ Errors Device_openDeviceList(DeviceListHandle *deviceListHandle)
 {
   assert(deviceListHandle != NULL);
 
-  /* open partition list file */
+  // open partition list file
   deviceListHandle->file = fopen("/proc/partitions","r");
   if (deviceListHandle->file == NULL)
   {
     return ERROR(OPEN_FILE,errno);
   }
 
-  /* skip first line (header line) */
+  // skip first line (header line)
   if (fgets(deviceListHandle->line,sizeof(deviceListHandle->line),deviceListHandle->file) == NULL)
   {
     // ignore error
   }
 
-  /* no line read jet */
+  // no line read yet
   deviceListHandle->readFlag = FALSE;
 
   return ERROR_NONE;
@@ -285,12 +285,12 @@ bool Device_endOfDeviceList(DeviceListHandle *deviceListHandle)
   assert(deviceListHandle != NULL);
   assert(deviceListHandle->file != NULL);
 
-  /* read entry iff not read */
+  // read entry iff not read
   while (   !deviceListHandle->readFlag
          && (fgets(deviceListHandle->line,sizeof(deviceListHandle->line),deviceListHandle->file) != NULL)
         )
   {
-    /* skip leading spaces */
+    // skip leading spaces
     i = 0;
     while ((i < sizeof(deviceListHandle->line)) && isspace(deviceListHandle->line[i]))
     {
@@ -304,14 +304,14 @@ bool Device_endOfDeviceList(DeviceListHandle *deviceListHandle)
       j++;
     }
 
-    /* skip trailing spaces */
+    // skip trailing spaces
     while ((j > 0) && isspace(deviceListHandle->line[j-1]))
     {
       j--;
     }
     deviceListHandle->line[j] = '\0';
 
-    /* if line is not empty set read flag */
+    // if line is not empty set read flag
     if (j > 0) deviceListHandle->readFlag = TRUE;
   }
 
@@ -329,12 +329,12 @@ Errors Device_readDeviceList(DeviceListHandle *deviceListHandle,
   assert(deviceListHandle->file != NULL);
   assert(deviceName != NULL);
 
-  /* read entry iff not read */
+  // read entry iff not read
   while (   !deviceListHandle->readFlag
          && (fgets(deviceListHandle->line,sizeof(deviceListHandle->line),deviceListHandle->file) != NULL)
         )
   {
-    /* skip leading spaces */
+    // skip leading spaces
     i = 0;
     while ((i < sizeof(deviceListHandle->line)) && isspace(deviceListHandle->line[i]))
     {
@@ -348,20 +348,20 @@ Errors Device_readDeviceList(DeviceListHandle *deviceListHandle,
       j++;
     }
 
-    /* skip trailing spaces */
+    // skip trailing spaces
     while ((j > 0) && isspace(deviceListHandle->line[j-1]))
     {
       j--;
     }
     deviceListHandle->line[j] = '\0';
 
-    /* if line is not empty set read flag */
+    // if line is not empty set read flag
     if (j > 0) deviceListHandle->readFlag = TRUE;
   }
 
   if (deviceListHandle->readFlag)
   {
-    /* parse and get device name */
+    // parse and get device name
     if (!String_scanCString(deviceListHandle->line,"%* %* %* %256s %*",buffer))
     {
       return ERRORX(IO_ERROR,0,"invalid format");
@@ -369,7 +369,7 @@ Errors Device_readDeviceList(DeviceListHandle *deviceListHandle,
     String_setCString(deviceName,"/dev");
     File_appendFileNameCString(deviceName,buffer);
 
-    /* mark entry read */
+    // mark entry read
     deviceListHandle->readFlag = FALSE;
   }
   else
@@ -386,12 +386,13 @@ Errors Device_getDeviceInfo(DeviceInfo   *deviceInfo,
 {
   struct stat64 fileStat;
   int           handle;
-  long          n;
+  int           i;
+  long          l;
 
   assert(deviceName != NULL);
   assert(deviceInfo != NULL);
 
-  /* initialize variables */
+  // initialize variables
   deviceInfo->type        = DEVICE_TYPE_UNKNOWN;
   deviceInfo->size        = -1LL;
   deviceInfo->blockSize   = 0L;
@@ -399,7 +400,7 @@ Errors Device_getDeviceInfo(DeviceInfo   *deviceInfo,
 //  deviceInfo->totalBlocks = 0LL;
 //  deviceInfo->mountedFlag = FALSE;
 
-  /* get device type */
+  // get device type
   if (lstat64(String_cString(deviceName),&fileStat) == 0)
   {
     if      (S_ISCHR(fileStat.st_mode)) deviceInfo->type = DEVICE_TYPE_CHARACTER;
@@ -408,12 +409,12 @@ Errors Device_getDeviceInfo(DeviceInfo   *deviceInfo,
 
   if (deviceInfo->type == DEVICE_TYPE_BLOCK)
   {
-    /* get block size, total size */
+    // get block size, total size
     handle = open(String_cString(deviceName),O_RDONLY);
     if (handle != -1)
     {
-      if (ioctl(handle,BLKSSZGET, &n) == 0) deviceInfo->blockSize = (ulong)n;
-      if (ioctl(handle,BLKGETSIZE,&n) == 0) deviceInfo->size      = (int64)n*512;
+      if (ioctl(handle,BLKSSZGET, &i) == 0) deviceInfo->blockSize = (ulong)i;
+      if (ioctl(handle,BLKGETSIZE,&l) == 0) deviceInfo->size      = (int64)l*512;
       close(handle);
     }
     else
