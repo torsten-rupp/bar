@@ -686,20 +686,12 @@ Errors Command_compare(const StringList                *archiveNameList,
                   equalFlag = (diffIndex >= deviceInfo.blockSize);
                   if (!equalFlag)
                   {
-fprintf(stderr,"%s, %d: archive\n",__FILE__,__LINE__);
-dumpMemory(archiveBuffer,deviceInfo.blockSize);
-fprintf(stderr,"%s, %d: device\n",__FILE__,__LINE__);
-dumpMemory(buffer,deviceInfo.blockSize);
                     error = ERROR_ENTRIES_DIFFER;
 
                     printInfo(1,"FAIL!\n");
-                    printError("'%s' differ at offset %llu block=%d blockOffset=%d diffIndex=%d deviceInfo.blockSize=%d\n",
+                    printError("'%s' differ at offset %llu\n",
                                String_cString(deviceName),
                                blockOffset*(uint64)deviceInfo.blockSize+block*(uint64)deviceInfo.blockSize+(uint64)diffIndex
-,block
-,blockOffset
-,diffIndex
-,deviceInfo.blockSize
                               );
                     if (jobOptions->stopOnErrorFlag)
                     {
