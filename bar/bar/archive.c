@@ -1002,7 +1002,7 @@ LOCAL Errors flushFileDataBlocks(ArchiveEntryInfo   *archiveEntryInfo,
   Errors error;
   uint   blockCount;
   ulong  maxBlockCount;
-  ulong  length;
+  ulong  byteLength;
 
   // flush data
   do
@@ -1033,8 +1033,9 @@ LOCAL Errors flushFileDataBlocks(ArchiveEntryInfo   *archiveEntryInfo,
       Compress_getCompressedData(&archiveEntryInfo->file.byteCompressInfo,
                                  archiveEntryInfo->file.byteBuffer,
                                  maxBlockCount*archiveEntryInfo->file.byteCompressInfo.blockLength,
-                                 &length
+                                 &byteLength
                                 );
+      assert((byteLength%archiveEntryInfo->file.byteCompressInfo.blockLength) == 0);
 #ifdef DEBUG_XDELTA_ENCODED_DATA
 {
 int h = open("encoded.testdata",O_CREAT|O_WRONLY|O_APPEND,0664);
@@ -1044,21 +1045,19 @@ close(h);
 #endif /* DEBUG_XDELTA_ENCODED_DATA */
 
       // encrypt block
-#warning clean
       error = Crypt_encryptBytes(&archiveEntryInfo->file.cryptInfo,
                                  archiveEntryInfo->file.byteBuffer,
-length//                            archiveEntryInfo->blockLength
-                           );
+                                 byteLength
+                                );
       if (error != ERROR_NONE)
       {
         return error;
       }
 
       // store block into chunk
-#warning clean
       error = Chunk_writeData(&archiveEntryInfo->file.chunkFileData.info,
                               archiveEntryInfo->file.byteBuffer,
-length//                              archiveEntryInfo->blockLength
+                              byteLength
                              );
       if (error != ERROR_NONE)
       {
@@ -1305,30 +1304,28 @@ LOCAL Errors readFileDataBlock(ArchiveEntryInfo *archiveEntryInfo)
 
   if      (!Chunk_eofSub(&archiveEntryInfo->file.chunkFileData.info))
   {
+    // get max. bytes to read (always multiple of block length)
+    maxBytes = FLOOR(MIN(Compress_getFreeCompressSpace(&archiveEntryInfo->file.byteCompressInfo),
+                         archiveEntryInfo->file.byteBufferSize
+                        ),
+                     archiveEntryInfo->file.byteCompressInfo.blockLength
+                    );
+    assert((maxBytes%archiveEntryInfo->file.byteCompressInfo.blockLength) == 0);
+
     // read data from archive
-    maxBytes = MIN(Compress_getFreeCompressSpace(&archiveEntryInfo->file.byteCompressInfo),
-                   archiveEntryInfo->file.byteBufferSize
-                 );
     error = Chunk_readData(&archiveEntryInfo->file.chunkFileData.info,
                            archiveEntryInfo->file.byteBuffer,
-#warning clean
-//                           archiveEntryInfo->file.byteBufferSize,
-//archiveEntryInfo->blockLength,
                            maxBytes,
                            &bytesRead
                           );
-//fprintf(stderr,"%s, %d: bytesRead=%d\n",__FILE__,__LINE__,bytesRead);
     if (error != ERROR_NONE)
     {
       return error;
     }
-    assert((bytesRead%archiveEntryInfo->blockLength) == 0);
-    if ((bytesRead%archiveEntryInfo->blockLength) != 0)
+    if ((bytesRead%archiveEntryInfo->file.byteCompressInfo.blockLength) != 0)
     {
       return ERROR_DECRYPT_FAIL;
     }
-//fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-//dumpMemory(archiveEntryInfo->file.byteBuffer,bytesRead);
 
     // decrypt data
     error = Crypt_decryptBytes(&archiveEntryInfo->file.cryptInfo,
@@ -1339,8 +1336,6 @@ LOCAL Errors readFileDataBlock(ArchiveEntryInfo *archiveEntryInfo)
     {
       return error;
     }
-//fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-//dumpMemory(archiveEntryInfo->file.byteBuffer,bytesRead);
 
     // put decrypted data into decompressor
     Compress_putCompressedData(&archiveEntryInfo->file.byteCompressInfo,
@@ -1496,6 +1491,7 @@ LOCAL Errors flushImageDataBlocks(ArchiveEntryInfo   *archiveEntryInfo,
                                  maxBlockCount*archiveEntryInfo->image.byteCompressInfo.blockLength,
                                  &byteLength
                                 );
+      assert((byteLength%archiveEntryInfo->image.byteCompressInfo.blockLength) == 0);
 #ifdef DEBUG_XDELTA_ENCODED_DATA
 {
 int h = open("encoded.testdata",O_CREAT|O_WRONLY|O_APPEND,0664);
@@ -1505,10 +1501,9 @@ close(h);
 #endif /* DEBUG_XDELTA_ENCODED_DATA */
 
       // encrypt block
-#warning clean
       error = Crypt_encryptBytes(&archiveEntryInfo->image.cryptInfo,
                                  archiveEntryInfo->image.byteBuffer,
-byteLength//                            archiveEntryInfo->blockLength
+                                 byteLength
                                 );
       if (error != ERROR_NONE)
       {
@@ -1516,11 +1511,9 @@ byteLength//                            archiveEntryInfo->blockLength
       }
 
       // store block into chunk
-#warning clean
       error = Chunk_writeData(&archiveEntryInfo->image.chunkImageData.info,
                               archiveEntryInfo->image.byteBuffer,
-#warning clean
-byteLength//                              archiveEntryInfo->blockLength
+                              byteLength
                              );
       if (error != ERROR_NONE)
       {
@@ -1759,16 +1752,17 @@ LOCAL Errors readImageDataBlock(ArchiveEntryInfo *archiveEntryInfo)
 
   if (!Chunk_eofSub(&archiveEntryInfo->image.chunkImageData.info))
   {
+    // get max. bytes to read (always multiple of block length)
+    maxBytes = FLOOR(MIN(Compress_getFreeCompressSpace(&archiveEntryInfo->image.byteCompressInfo),
+                         archiveEntryInfo->image.byteBufferSize
+                        ),
+                     archiveEntryInfo->image.byteCompressInfo.blockLength
+                    );
+    assert((maxBytes%archiveEntryInfo->image.byteCompressInfo.blockLength) == 0);
+
     // read data from archive
-#warning todo
-    maxBytes = MIN(Compress_getFreeCompressSpace(&archiveEntryInfo->image.byteCompressInfo),
-                   archiveEntryInfo->image.byteBufferSize
-                 );
     error = Chunk_readData(&archiveEntryInfo->image.chunkImageData.info,
                            archiveEntryInfo->image.byteBuffer,
-#warning clean
-//                           archiveEntryInfo->image.byteBufferSize,
-//archiveEntryInfo->blockLength,
                            maxBytes,
                            &bytesRead
                           );
@@ -1776,7 +1770,10 @@ LOCAL Errors readImageDataBlock(ArchiveEntryInfo *archiveEntryInfo)
     {
       return error;
     }
-    assert((bytesRead%archiveEntryInfo->blockLength) == 0);
+    if ((bytesRead%archiveEntryInfo->image.byteCompressInfo.blockLength) != 0)
+    {
+      return ERROR_DECRYPT_FAIL;
+    }
 
     // decrypt data
     error = Crypt_decryptBytes(&archiveEntryInfo->image.cryptInfo,
@@ -1948,12 +1945,12 @@ LOCAL Errors flushHardLinkDataBlocks(ArchiveEntryInfo   *archiveEntryInfo,
                          );
 
       // get next byte-compressed data
-#warning clean
       Compress_getCompressedData(&archiveEntryInfo->hardLink.byteCompressInfo,
                                  archiveEntryInfo->hardLink.byteBuffer,
                                  maxBlockCount*archiveEntryInfo->hardLink.byteCompressInfo.blockLength,
                                  &byteLength
                                 );
+      assert((byteLength%archiveEntryInfo->hardLink.byteCompressInfo.blockLength) == 0);
 #ifdef DEBUG_XDELTA_ENCODED_DATA
 {
 int h = open("encoded.testdata",O_CREAT|O_WRONLY|O_APPEND,0664);
@@ -1963,10 +1960,9 @@ close(h);
 #endif /* DEBUG_XDELTA_ENCODED_DATA */
 
       // encrypt block
-#warning clean
       error = Crypt_encryptBytes(&archiveEntryInfo->hardLink.cryptInfo,
                                  archiveEntryInfo->hardLink.byteBuffer,
-byteLength//                            archiveEntryInfo->blockLength
+                                 byteLength
                                 );
       if (error != ERROR_NONE)
       {
@@ -1974,10 +1970,9 @@ byteLength//                            archiveEntryInfo->blockLength
       }
 
       // store block into chunk
-#warning clean
       error = Chunk_writeData(&archiveEntryInfo->hardLink.chunkHardLinkData.info,
                               archiveEntryInfo->hardLink.byteBuffer,
-byteLength//                              archiveEntryInfo->blockLength
+                              byteLength
                              );
       if (error != ERROR_NONE)
       {
@@ -2224,16 +2219,17 @@ LOCAL Errors readHardLinkDataBlock(ArchiveEntryInfo *archiveEntryInfo)
 
   if (!Chunk_eofSub(&archiveEntryInfo->hardLink.chunkHardLinkData.info))
   {
-    // read
-#warning todo
-    maxBytes = MIN(Compress_getFreeCompressSpace(&archiveEntryInfo->hardLink.byteCompressInfo),
-                   archiveEntryInfo->hardLink.byteBufferSize
-                 );
+    // get max. bytes to read (always multiple of block length)
+    maxBytes = FLOOR(MIN(Compress_getFreeCompressSpace(&archiveEntryInfo->hardLink.byteCompressInfo),
+                         archiveEntryInfo->hardLink.byteBufferSize
+                        ),
+                     archiveEntryInfo->hardLink.byteCompressInfo.blockLength
+                    );
+    assert((maxBytes%archiveEntryInfo->hardLink.byteCompressInfo.blockLength) == 0);
+
+    // read data from archive
     error = Chunk_readData(&archiveEntryInfo->hardLink.chunkHardLinkData.info,
                            archiveEntryInfo->hardLink.byteBuffer,
-#warning clean
-//                           archiveEntryInfo->hardLink.byteBufferSize,
-//archiveEntryInfo->blockLength,
                            maxBytes,
                            &bytesRead
                           );
@@ -2241,7 +2237,10 @@ LOCAL Errors readHardLinkDataBlock(ArchiveEntryInfo *archiveEntryInfo)
     {
       return error;
     }
-    assert((bytesRead%archiveEntryInfo->blockLength) == 0);
+    if ((bytesRead%archiveEntryInfo->hardLink.byteCompressInfo.blockLength) != 0)
+    {
+      return ERROR_DECRYPT_FAIL;
+    }
 
     // decrypt data
     error = Crypt_decryptBytes(&archiveEntryInfo->hardLink.cryptInfo,
@@ -4805,11 +4804,6 @@ Errors Archive_readFileEntry(ArchiveInfo        *archiveInfo,
   if (cryptAlgorithm         != NULL) (*cryptAlgorithm)         = archiveEntryInfo->cryptAlgorithm;
   if (cryptType              != NULL) (*cryptType)              = archiveInfo->cryptType;
 
-  // reset compress, crypt
-#warning needed?
-//  Compress_reset(&archiveEntryInfo->file.byteCompressInfo);
-//  Crypt_reset(&archiveEntryInfo->file.chunkFileData.cryptInfo,0);
-
   return ERROR_NONE;
 }
 
@@ -4852,7 +4846,6 @@ Errors Archive_readImageEntry(ArchiveInfo        *archiveInfo,
   // init archive file info
   archiveEntryInfo->archiveInfo           = archiveInfo;
   archiveEntryInfo->mode                  = ARCHIVE_MODE_READ;
-//???
   archiveEntryInfo->archiveEntryType      = ARCHIVE_ENTRY_TYPE_IMAGE;
 
   archiveEntryInfo->image.deltaSourceInit = FALSE;
@@ -5273,11 +5266,6 @@ Errors Archive_readImageEntry(ArchiveInfo        *archiveInfo,
   if (byteCompressAlgorithm  != NULL) (*byteCompressAlgorithm)  = archiveEntryInfo->image.byteCompressAlgorithm;
   if (cryptAlgorithm         != NULL) (*cryptAlgorithm)         = archiveEntryInfo->cryptAlgorithm;
   if (cryptType              != NULL) (*cryptType)              = archiveInfo->cryptType;
-
-  // reset compress, crypt
-#warning needed?
-//  Compress_reset(&archiveEntryInfo->image.byteCompressInfo);
-//  Crypt_reset(&archiveEntryInfo->image.chunkImageData.cryptInfo,0);
 
   return ERROR_NONE;
 }
@@ -6352,11 +6340,6 @@ Errors Archive_readHardLinkEntry(ArchiveInfo        *archiveInfo,
   if (cryptAlgorithm         != NULL) (*cryptAlgorithm)         = archiveEntryInfo->cryptAlgorithm;
   if (cryptType              != NULL) (*cryptType)              = archiveInfo->cryptType;
 
-  // reset compress, crypt
-#warning needed?
-//  Compress_reset(&archiveEntryInfo->hardLink.byteCompressInfo);
-//  Crypt_reset(&archiveEntryInfo->hardLink.chunkHardLinkData.cryptInfo,0);
-
   return ERROR_NONE;
 }
 
@@ -7401,13 +7384,6 @@ Errors Archive_writeData(ArchiveEntryInfo *archiveEntryInfo,
 
             // check if compressed data blocks are available and can be encrypted and written to file
             allowNewPartFlag = ((elementSize <= 1) || (writtenBlockBytes >= blockLength));
-/* ???
-Compress_getAvailableBlocks(&archiveEntryInfo->file.byteCompressInfo,
-                                               COMPRESS_BLOCK_TYPE_FULL,
-                                               &blockCount
-                                              );
-fprintf(stderr,"%s,%d: avild =%d\n",__FILE__,__LINE__,blockCount);
-*/
 
             // write compressed data
             do
@@ -7491,13 +7467,6 @@ fprintf(stderr,"%s,%d: avild =%d\n",__FILE__,__LINE__,blockCount);
 
             // check if compressed data blocks are available and can be encrypted and written to file
             allowNewPartFlag = ((elementSize <= 1) || (writtenBlockBytes >= blockLength));
-/* ???
-Compress_getAvailableBlocks(&archiveEntryInfo->image.byteCompressInfo,
-                                               COMPRESS_BLOCK_TYPE_FULL,
-                                               &blockCount
-                                              );
-fprintf(stderr,"%s,%d: avild =%d\n",__FILE__,__LINE__,blockCount);
-*/
 
             // write compressed data
             do
@@ -7619,13 +7588,6 @@ fprintf(stderr,"%s,%d: avild =%d\n",__FILE__,__LINE__,blockCount);
 
             // check if compressed data blocks are available and can be encrypted and written to file
             allowNewPartFlag = ((elementSize <= 1) || (writtenBlockBytes >= blockLength));
-/* ???
-Compress_getAvailableBlocks(&archiveEntryInfo->hardLink.byteCompressInfo,
-                                               COMPRESS_BLOCK_TYPE_FULL,
-                                               &blockCount
-                                              );
-fprintf(stderr,"%s,%d: avild =%d\n",__FILE__,__LINE__,blockCount);
-*/
 
             // write compressed data
             do
@@ -8420,6 +8382,7 @@ Errors Archive_updateIndex(DatabaseHandle               *databaseHandle,
             fileName = String_new();
             error = Archive_readFileEntry(&archiveInfo,
                                           &archiveEntryInfo,
+#warning cleanup
 //???
 //NULL,
 //NULL,
@@ -8476,6 +8439,7 @@ Errors Archive_updateIndex(DatabaseHandle               *databaseHandle,
             deviceName = String_new();
             error = Archive_readImageEntry(&archiveInfo,
                                            &archiveEntryInfo,
+#warning cleanup
 //???
 //NULL,
 //NULL,
