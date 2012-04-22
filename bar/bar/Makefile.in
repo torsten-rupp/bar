@@ -1453,11 +1453,11 @@ test_image_operations_base: \
 	SSH_ASKPASS= $(TEST_BAR) -x test/test*.bar $(OPTIONS) --destination $(DEVICE1) $(if $(QUIET),1>/dev/null)
 
 test_image_operations_check:
-	$(FSCK) -n $(DEVICE0)
-	$(FSCK) -n $(DEVICE1)
+	$(FSCK) -n $(DEVICE0) $(if $(QUIET),1>/dev/null 2>/dev/null)
+	$(FSCK) -n $(DEVICE1) $(if $(QUIET),1>/dev/null 2>/dev/null)
 	$(INSTALL) -d test/dev0; $(SUDO) $(MOUNT) $(DEVICE0) test/dev0
 	$(INSTALL) -d test/dev1; $(SUDO) $(MOUNT) $(DEVICE1) test/dev1
-	$(SUDO) $(DIFF) -r test/dev0 test/dev1
+	$(SUDO) $(DIFF) -r test/dev0 test/dev1 $(if $(QUIET),1>/dev/null)
 	$(SLEEP) 5
 	$(SUDO) $(UMOUNT) test/dev1
 	$(SUDO) $(UMOUNT) test/dev0
