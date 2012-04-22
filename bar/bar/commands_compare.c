@@ -548,7 +548,7 @@ Errors Command_compare(const StringList                *archiveNameList,
               if (deviceInfo.blockSize > BUFFER_SIZE)
               {
                 printInfo(1,"FAIL\n");
-                printError("Device block size %llu on '%s' is to big (max: %llu)\n",
+                printError("Device block size %llu on '%s' is too big (max: %llu)\n",
                            deviceInfo.blockSize,
                            String_cString(deviceName),
                            BUFFER_SIZE
