@@ -132,7 +132,7 @@ LOCAL Errors compressData(CompressInfo *compressInfo)
   ulong compressBytes,dataBytes;
 
   assert(compressInfo != NULL);
-#ifdef RR
+#ifdef TEMPORARY_DEBUG_COMPRESS_RINGBUFFERS
 #else
   assert(compressInfo->dataBuffer != NULL);
   assert(compressInfo->compressBuffer != NULL);
@@ -140,13 +140,13 @@ LOCAL Errors compressData(CompressInfo *compressInfo)
   assert(compressInfo->dataBufferLength <= compressInfo->dataBufferSize);
   assert(compressInfo->compressBufferIndex <= compressInfo->compressBufferLength);
   assert(compressInfo->compressBufferLength <= compressInfo->compressBufferSize);
-#endif
+#endif /* TEMPORARY_DEBUG_COMPRESS_RINGBUFFERS */
 
   // compress if possible
   switch (compressInfo->compressAlgorithm)
   {
     case COMPRESS_ALGORITHM_NONE:
-#ifdef RR
+#ifdef TEMPORARY_DEBUG_COMPRESS_RINGBUFFERS
       // Note: compress with identity compressor
 
       if (!compressInfo->endOfDataFlag)                                               // not end-of-data
@@ -185,7 +185,7 @@ LOCAL Errors compressData(CompressInfo *compressInfo)
           }
         }
       }
-#else
+#else /* not TEMPORARY_DEBUG_COMPRESS_RINGBUFFERS */
       // compress with identity compressor
       if (   (compressInfo->compressBufferLength < compressInfo->compressBufferSize)  // space in compress buffer
           && !compressInfo->endOfDataFlag                                             // not end-of-data
@@ -234,7 +234,7 @@ LOCAL Errors compressData(CompressInfo *compressInfo)
           compressInfo->endOfDataFlag = TRUE;
         }
       }
-#endif
+#endif /* TEMPORARY_DEBUG_COMPRESS_RINGBUFFERS */
       break;
     case COMPRESS_ALGORITHM_ZIP_0:
     case COMPRESS_ALGORITHM_ZIP_1:
@@ -251,7 +251,7 @@ LOCAL Errors compressData(CompressInfo *compressInfo)
         {
           int zlibError;
 
-#ifdef RR
+#ifdef TEMPORARY_DEBUG_COMPRESS_RINGBUFFERS
           if (!compressInfo->endOfDataFlag)                                           // not end-of-data
           {
             if (!RingBuffer_isFull(&compressInfo->compressRingBuffer))                // space in compress buffer
@@ -319,7 +319,7 @@ LOCAL Errors compressData(CompressInfo *compressInfo)
               }
             }
           }
-#else
+#else /* not TEMPORARY_DEBUG_COMPRESS_RINGBUFFERS */
           if (   (compressInfo->compressBufferLength < compressInfo->compressBufferSize)  // space in compress buffer
               && !compressInfo->endOfDataFlag                                             // not end-of-data
              )
@@ -393,7 +393,7 @@ LOCAL Errors compressData(CompressInfo *compressInfo)
               compressInfo->compressBufferLength += compressBytes;
             }
           }
-#endif
+#endif /* TEMPORARY_DEBUG_COMPRESS_RINGBUFFERS */
         }
       #else /* not HAVE_Z */
         return ERROR_FUNCTION_NOT_SUPPORTED;
@@ -413,7 +413,7 @@ LOCAL Errors compressData(CompressInfo *compressInfo)
         {
           int bzlibError;
 
-#ifdef RR
+#ifdef TEMPORARY_DEBUG_COMPRESS_RINGBUFFERS
           if (!compressInfo->endOfDataFlag)                                           // not end-of-data
           {
             if (!RingBuffer_isFull(&compressInfo->compressRingBuffer))                // space in compress buffer
@@ -477,7 +477,7 @@ LOCAL Errors compressData(CompressInfo *compressInfo)
               }
             }
           }
-#else
+#else /* not TEMPORARY_DEBUG_COMPRESS_RINGBUFFERS */
           if (   (compressInfo->compressBufferLength < compressInfo->compressBufferSize)  // space in compress buffer
               && !compressInfo->endOfDataFlag                                             // not end-of-data
              )
@@ -547,7 +547,7 @@ LOCAL Errors compressData(CompressInfo *compressInfo)
               compressInfo->compressBufferLength += compressBytes;
             }
           }
-#endif
+#endif /* TEMPORARY_DEBUG_COMPRESS_RINGBUFFERS */
         }
       #else /* not HAVE_BZ2 */
         return ERROR_FUNCTION_NOT_SUPPORTED;
@@ -567,7 +567,7 @@ LOCAL Errors compressData(CompressInfo *compressInfo)
         {
           lzma_ret lzmaResult;
 
-#ifdef RR
+#ifdef TEMPORARY_DEBUG_COMPRESS_RINGBUFFERS
           if (!compressInfo->endOfDataFlag)                                           // not end-of-data
           {
             if (!RingBuffer_isFull(&compressInfo->compressRingBuffer))                // space in compress buffer
@@ -631,7 +631,7 @@ LOCAL Errors compressData(CompressInfo *compressInfo)
               }
             }
           }
-#else
+#else /* not TEMPORARY_DEBUG_COMPRESS_RINGBUFFERS */
           if (   (compressInfo->compressBufferLength < compressInfo->compressBufferSize)  // space in compress buffer
               && !compressInfo->endOfDataFlag                                             // not end-of-data
              )
@@ -701,7 +701,7 @@ LOCAL Errors compressData(CompressInfo *compressInfo)
               compressInfo->compressBufferLength += compressBytes;
             }
           }
-#endif
+#endif /* TEMPORARY_DEBUG_COMPRESS_RINGBUFFERS */
         }
       #else /* not HAVE_LZMA */
         return ERROR_FUNCTION_NOT_SUPPORTED;
@@ -719,25 +719,25 @@ LOCAL Errors compressData(CompressInfo *compressInfo)
       // compress with xdelta
       #ifdef HAVE_XDELTA3
         {
-#ifdef RR
-#else
+#ifdef TEMPORARY_DEBUG_COMPRESS_RINGBUFFERS
+#else /* not TEMPORARY_DEBUG_COMPRESS_RINGBUFFERS */
           ulong  dataBytes;
-#endif
+#endif /* TEMPORARY_DEBUG_COMPRESS_RINGBUFFERS */
           bool   doneFlag;
           int    xdeltaResult;
           ulong  n;
           Errors error;
           ulong  requiredBytes;
-#ifdef RR
-#else
+#ifdef TEMPORARY_DEBUG_COMPRESS_RINGBUFFERS
+#else /* not TEMPORARY_DEBUG_COMPRESS_RINGBUFFERS */
           ulong  outputBufferSize;
           byte   *outputBuffer;
-#endif
+#endif /* TEMPORARY_DEBUG_COMPRESS_RINGBUFFERS */
           ulong  bytesRead;
 //static int xr=0;
 //static int xw=0;
 
-#ifdef RR
+#ifdef TEMPORARY_DEBUG_COMPRESS_RINGBUFFERS
           if (!compressInfo->endOfDataFlag)                                           // not end-of-data
           {
             if (!RingBuffer_isFull(&compressInfo->compressRingBuffer))                // space in compress buffer
@@ -785,7 +785,7 @@ LOCAL Errors compressData(CompressInfo *compressInfo)
                       }
                       break;
                     case XD3_OUTPUT:
-#ifdef SS
+#ifdef TEMPORARY_DEBUG_XDELTA_RINGBUFFERS
                       // increase output buffer size if required
                       if (RingBuffer_getFree(&compressInfo->xdelta.outputRingBuffer) < (ulong)compressInfo->xdelta.stream.avail_out)
                       {
@@ -802,7 +802,7 @@ LOCAL Errors compressData(CompressInfo *compressInfo)
                                            compressInfo->xdelta.stream.next_out,
                                            compressInfo->xdelta.stream.avail_out
                                           );
-#else /* SSSSSSSSSSSSSSSSSS */
+#else /* not TEMPORARY_DEBUG_XDELTA_RINGBUFFERS */
                       if (   (compressInfo->xdelta.outputBuffer == NULL)
                           || (compressInfo->xdelta.outputBufferLength+(ulong)compressInfo->xdelta.stream.avail_out > compressInfo->xdelta.outputBufferSize)
                          )
@@ -825,7 +825,7 @@ LOCAL Errors compressData(CompressInfo *compressInfo)
 //fprintf(stderr,"a n=%d:\n",compressInfo->xdelta.stream.avail_out);
 //dumpMemory(compressInfo->xdelta.stream.next_out,compressInfo->xdelta.stream.avail_out);
                       compressInfo->xdelta.outputBufferLength += (ulong)compressInfo->xdelta.stream.avail_out;
-#endif /* SSSSSSSSSSSSSSSSSS */
+#endif /* TEMPORARY_DEBUG_XDELTA_RINGBUFFERS */
 
                       // done compressed data
                       xd3_consume_output(&compressInfo->xdelta.stream);
@@ -874,7 +874,7 @@ compressInfo->xdelta.source.curblk[5]
                 while (!doneFlag);
 
                 // get compressed data
-#ifdef SS
+#ifdef TEMPORARY_DEBUG_XDELTA_RINGBUFFERS
                 compressBytes = MIN(RingBuffer_getAvailable(&compressInfo->xdelta.outputRingBuffer),
                                     maxCompressBytes
                                    );
@@ -885,7 +885,7 @@ compressInfo->xdelta.source.curblk[5]
                                         compressBytes
                                        );
                 }
-#else /* SSSSSSSSSSSSSSSSSS */
+#else /* not TEMPORARY_DEBUG_XDELTA_RINGBUFFERS */
                 if (compressInfo->xdelta.outputBufferLength > 0L)
                 {
                   // copy from output buffer -> compress buffer
@@ -902,7 +902,7 @@ compressInfo->xdelta.source.curblk[5]
                          );
                   compressInfo->xdelta.outputBufferLength -= compressBytes;
                 }
-#endif /* SSSSSSSSSSSSSSSSSS */
+#endif /* TEMPORARY_DEBUG_XDELTA_RINGBUFFERS */
 
                 // update compress state
                 compressInfo->compressState = COMPRESS_STATE_RUNNING;
@@ -961,7 +961,7 @@ compressInfo->xdelta.source.curblk[5]
                       }
                       break;
                     case XD3_OUTPUT:
-#ifdef SS
+#ifdef TEMPORARY_DEBUG_XDELTA_RINGBUFFERS
                       // increase output buffer size if required
                       if (RingBuffer_getFree(&compressInfo->xdelta.outputRingBuffer) < (ulong)compressInfo->xdelta.stream.avail_out)
                       {
@@ -978,7 +978,7 @@ compressInfo->xdelta.source.curblk[5]
                                            compressInfo->xdelta.stream.next_out,
                                            compressInfo->xdelta.stream.avail_out
                                           );
-#else /* SSSSSSSSSSSSSSSSSS */
+#else /* not TEMPORARY_DEBUG_XDELTA_RINGBUFFERS */
                       if (   (compressInfo->xdelta.outputBuffer == NULL)
                           || (compressInfo->xdelta.outputBufferLength+(ulong)compressInfo->xdelta.stream.avail_out > compressInfo->xdelta.outputBufferSize)
                          )
@@ -1001,7 +1001,7 @@ compressInfo->xdelta.source.curblk[5]
 //fprintf(stderr,"b n=%d:\n",compressInfo->xdelta.stream.avail_out);
 //dumpMemory(compressInfo->xdelta.stream.next_out,compressInfo->xdelta.stream.avail_out);
                       compressInfo->xdelta.outputBufferLength += (ulong)compressInfo->xdelta.stream.avail_out;
-#endif /* SSSSSSSSSSSSSSSSSS */
+#endif /* TEMPORARY_DEBUG_XDELTA_RINGBUFFERS */
 
                       // done compressed data
                       xd3_consume_output(&compressInfo->xdelta.stream);
@@ -1052,7 +1052,7 @@ compressInfo->xdelta.source.curblk[5]
                       );
 
                 // get compressed data
-#ifdef SS
+#ifdef TEMPORARY_DEBUG_XDELTA_RINGBUFFERS
                 compressBytes = MIN(RingBuffer_getAvailable(&compressInfo->xdelta.outputRingBuffer),
                                     maxCompressBytes
                                    );
@@ -1063,7 +1063,7 @@ compressInfo->xdelta.source.curblk[5]
                                         compressBytes
                                        );
                 }
-#else /* SSSSSSSSSSSSSSSSSS */
+#else /* not TEMPORARY_DEBUG_XDELTA_RINGBUFFERS */
                 if (compressInfo->xdelta.outputBufferLength > 0L)
                 {
                   // copy from output buffer -> compress buffer
@@ -1080,12 +1080,12 @@ compressInfo->xdelta.source.curblk[5]
                          );
                   compressInfo->xdelta.outputBufferLength -= compressBytes;
                 }
-#endif
+#endif /* TEMPORARY_DEBUG_XDELTA_RINGBUFFERS */
               }
             }
           }
 
-#ifdef SS
+#ifdef TEMPORARY_DEBUG_XDELTA_RINGBUFFERS
           // copy from output buffer -> compress buffer
           compressBytes = MIN(RingBuffer_getAvailable(&compressInfo->xdelta.outputRingBuffer),
                               RingBuffer_getFree(&compressInfo->compressRingBuffer)
@@ -1097,7 +1097,7 @@ compressInfo->xdelta.source.curblk[5]
                                   compressBytes
                                  );
           }
-#else /* SSSSSSSSSSSSSSSSSS */
+#else /* not TEMPORARY_DEBUG_XDELTA_RINGBUFFERS */
           if (compressInfo->xdelta.outputBufferLength > 0L)
           {
             // copy from output buffer -> compress buffer
@@ -1116,9 +1116,9 @@ compressInfo->xdelta.source.curblk[5]
                    );
             compressInfo->xdelta.outputBufferLength -= compressBytes;
           }
-#endif /* SSSSSSSSSSSSSSSSSS */
+#endif /* TEMPORARY_DEBUG_XDELTA_RINGBUFFERS */
 
-#else /* RRRRRRRRRRRRRRRRRRRRRR */
+#else /* not TEMPORARY_DEBUG_COMPRESS_RINGBUFFERS */
           if (   (compressInfo->compressBufferLength < compressInfo->compressBufferSize)  // space in compress buffer
               && !compressInfo->endOfDataFlag                                             // not end-of-data
 
@@ -1420,7 +1420,7 @@ compressInfo->xdelta.source.curblk[5]
               }
             }
           }
-#endif
+#endif /* TEMPORARY_DEBUG_COMPRESS_RINGBUFFERS */
         }
       #else /* not HAVE_XDELTA3 */
         return ERROR_FUNCTION_NOT_SUPPORTED;
@@ -1432,10 +1432,10 @@ compressInfo->xdelta.source.curblk[5]
       #endif /* NDEBUG */
       break; /* not reached */
   }
-#ifdef RR
-#else
+#ifdef TEMPORARY_DEBUG_COMPRESS_RINGBUFFERS
+#else /* not TEMPORARY_DEBUG_COMPRESS_RINGBUFFERS */
   assert(compressInfo->compressBufferLength <= compressInfo->compressBufferSize);
-#endif
+#endif /* TEMPORARY_DEBUG_COMPRESS_RINGBUFFERS */
 
   return ERROR_NONE;
 }
@@ -1455,21 +1455,21 @@ LOCAL Errors decompressData(CompressInfo *compressInfo)
   ulong compressBytes,dataBytes;
 
   assert(compressInfo != NULL);
-#ifdef RR
-#else
+#ifdef TEMPORARY_DEBUG_COMPRESS_RINGBUFFERS
+#else /* not  */
   assert(compressInfo->dataBuffer != NULL);
   assert(compressInfo->compressBuffer != NULL);
   assert(compressInfo->dataBufferIndex <= compressInfo->dataBufferLength);
   assert(compressInfo->dataBufferLength <= compressInfo->dataBufferSize);
   assert(compressInfo->compressBufferIndex <= compressInfo->compressBufferLength);
   assert(compressInfo->compressBufferLength <= compressInfo->compressBufferSize);
-#endif
+#endif /*  */
 
   // decompress if possible
   switch (compressInfo->compressAlgorithm)
   {
     case COMPRESS_ALGORITHM_NONE:
-#ifdef RR
+#ifdef TEMPORARY_DEBUG_COMPRESS_RINGBUFFERS
       // Note: decompress with identity compressor
 
       if (!compressInfo->endOfDataFlag)                                               // not end-of-data
@@ -1509,7 +1509,7 @@ LOCAL Errors decompressData(CompressInfo *compressInfo)
           }
         }
       }
-#else
+#else /* not TEMPORARY_DEBUG_COMPRESS_RINGBUFFERS */
       // decompress with identity compressor
       if (compressInfo->dataBufferIndex >= compressInfo->dataBufferLength)            // no data in data buffer
       {
@@ -1566,7 +1566,7 @@ LOCAL Errors decompressData(CompressInfo *compressInfo)
           }
         }
       }
-#endif
+#endif /* TEMPORARY_DEBUG_COMPRESS_RINGBUFFERS */
       break;
     case COMPRESS_ALGORITHM_ZIP_0:
     case COMPRESS_ALGORITHM_ZIP_1:
@@ -1583,7 +1583,7 @@ LOCAL Errors decompressData(CompressInfo *compressInfo)
         {
           int zlibResult;
 
-#ifdef RR
+#ifdef TEMPORARY_DEBUG_COMPRESS_RINGBUFFERS
           if (!compressInfo->endOfDataFlag)                                           // not end-of-data
           {
             if (!RingBuffer_isFull(&compressInfo->dataRingBuffer))                    // space in data buffer
@@ -1655,7 +1655,7 @@ LOCAL Errors decompressData(CompressInfo *compressInfo)
               }
             }
           }
-#else
+#else /* not TEMPORARY_DEBUG_COMPRESS_RINGBUFFERS */
           if (compressInfo->dataBufferIndex >= compressInfo->dataBufferLength)  // no data in data buffer
           {
             compressInfo->dataBufferIndex  = 0L;
@@ -1742,7 +1742,7 @@ LOCAL Errors decompressData(CompressInfo *compressInfo)
               }
             }
           }
-#endif
+#endif /* TEMPORARY_DEBUG_COMPRESS_RINGBUFFERS */
         }
       #else /* not HAVE_Z */
         return ERROR_FUNCTION_NOT_SUPPORTED;
@@ -1762,7 +1762,7 @@ LOCAL Errors decompressData(CompressInfo *compressInfo)
         {
           int bzlibResult;
 
-#ifdef RR
+#ifdef TEMPORARY_DEBUG_COMPRESS_RINGBUFFERS
           if (!compressInfo->endOfDataFlag)                                           // not end-of-data
           {
             if (!RingBuffer_isFull(&compressInfo->dataRingBuffer))                    // space in data buffer
@@ -1833,7 +1833,7 @@ LOCAL Errors decompressData(CompressInfo *compressInfo)
               }
             }
           }
-#else
+#else /* not TEMPORARY_DEBUG_COMPRESS_RINGBUFFERS */
           if (compressInfo->dataBufferIndex >= compressInfo->dataBufferLength)  // no data in data buffer
           {
             compressInfo->dataBufferIndex  = 0L;
@@ -1920,7 +1920,7 @@ LOCAL Errors decompressData(CompressInfo *compressInfo)
               }
             }
           }
-#endif
+#endif /* TEMPORARY_DEBUG_COMPRESS_RINGBUFFERS */
         }
       #else /* not HAVE_BZ2 */
         return ERROR_FUNCTION_NOT_SUPPORTED;
@@ -1940,7 +1940,7 @@ LOCAL Errors decompressData(CompressInfo *compressInfo)
         {
           lzma_ret lzmaResult;
 
-#ifdef RR
+#ifdef TEMPORARY_DEBUG_COMPRESS_RINGBUFFERS
           if (!compressInfo->endOfDataFlag)                                           // not end-of-data
           {
             if (!RingBuffer_isFull(&compressInfo->dataRingBuffer))                    // space in data buffer
@@ -2011,7 +2011,7 @@ LOCAL Errors decompressData(CompressInfo *compressInfo)
               }
             }
           }
-#else
+#else /* not TEMPORARY_DEBUG_COMPRESS_RINGBUFFERS */
           if (compressInfo->dataBufferIndex >= compressInfo->dataBufferLength)  // no data in data buffer
           {
             compressInfo->dataBufferIndex  = 0L;
@@ -2094,7 +2094,7 @@ LOCAL Errors decompressData(CompressInfo *compressInfo)
               }
             }
           }
-#endif
+#endif /* TEMPORARY_DEBUG_COMPRESS_RINGBUFFERS */
         }
       #else /* not HAVE_LZMA */
         return ERROR_FUNCTION_NOT_SUPPORTED;
@@ -2112,27 +2112,27 @@ LOCAL Errors decompressData(CompressInfo *compressInfo)
       // decompress with xdelta
       #ifdef HAVE_XDELTA3
         {
-#ifdef RR
+#ifdef TEMPORARY_DEBUG_COMPRESS_RINGBUFFERS
 #else
           ulong  compressBytes;
-#endif
+#endif /* TEMPORARY_DEBUG_COMPRESS_RINGBUFFERS */
           bool   doneFlag;
           int    xdeltaResult;
           ulong  n;
           Errors error;
           ulong  requiredBytes;
-#ifdef RR
+#ifdef TEMPORARY_DEBUG_COMPRESS_RINGBUFFERS
 #else
           ulong  outputBufferSize;
           byte   *outputBuffer;
-#endif
+#endif /* TEMPORARY_DEBUG_COMPRESS_RINGBUFFERS */
           ulong  bytesRead;
 
-#ifdef RR
+#ifdef TEMPORARY_DEBUG_COMPRESS_RINGBUFFERS
           if (RingBuffer_isEmpty(&compressInfo->dataRingBuffer))                      // no data in data buffer
           {
             // get decompressed data from output buffer
-#ifdef SS
+#ifdef TEMPORARY_DEBUG_XDELTA_RINGBUFFERS
             if (!RingBuffer_isEmpty(&compressInfo->xdelta.outputRingBuffer))
             {
               dataBytes = MIN(RingBuffer_getAvailable(&compressInfo->xdelta.outputRingBuffer),
@@ -2143,7 +2143,7 @@ LOCAL Errors decompressData(CompressInfo *compressInfo)
                                     dataBytes
                                    );
             }
-#else
+#else /* not TEMPORARY_DEBUG_XDELTA_RINGBUFFERS */
             if (compressInfo->xdelta.outputBufferLength > 0L)
             {
               // copy from output buffer -> data buffer
@@ -2162,7 +2162,7 @@ LOCAL Errors decompressData(CompressInfo *compressInfo)
                      );
               compressInfo->xdelta.outputBufferLength -= dataBytes;
             }
-#endif
+#endif /* TEMPORARY_DEBUG_XDELTA_RINGBUFFERS */
           }
 
           if (!compressInfo->endOfDataFlag)                                           // not end-of-data
@@ -2213,7 +2213,7 @@ LOCAL Errors decompressData(CompressInfo *compressInfo)
                       }
                       break;
                     case XD3_OUTPUT:
-#ifdef SS
+#ifdef TEMPORARY_DEBUG_XDELTA_RINGBUFFERS
                       // increase output buffer size if required
                       if (RingBuffer_getFree(&compressInfo->xdelta.outputRingBuffer) < (ulong)compressInfo->xdelta.stream.avail_out)
                       {
@@ -2230,7 +2230,7 @@ LOCAL Errors decompressData(CompressInfo *compressInfo)
                                            compressInfo->xdelta.stream.next_out,
                                            compressInfo->xdelta.stream.avail_out
                                           );
-#else
+#else /* not TEMPORARY_DEBUG_XDELTA_RINGBUFFERS */
                       if (   (compressInfo->xdelta.outputBuffer == NULL)
                           || (compressInfo->xdelta.outputBufferLength+(ulong)compressInfo->xdelta.stream.avail_out > compressInfo->xdelta.outputBufferSize)
                          )
@@ -2252,7 +2252,7 @@ LOCAL Errors decompressData(CompressInfo *compressInfo)
                             );
 
                       compressInfo->xdelta.outputBufferLength += (ulong)compressInfo->xdelta.stream.avail_out;
-#endif
+#endif /* TEMPORARY_DEBUG_XDELTA_RINGBUFFERS */
 
                       // done decompressed data
                       xd3_consume_output(&compressInfo->xdelta.stream);
@@ -2301,7 +2301,7 @@ compressInfo->xdelta.source.curblk[5]
                 while (!doneFlag);
 
                 // get decompressed data from output buffer
-#ifdef SS
+#ifdef TEMPORARY_DEBUG_XDELTA_RINGBUFFERS
                 dataBytes = MIN(RingBuffer_getAvailable(&compressInfo->xdelta.outputRingBuffer),
                                 maxDataBytes
                                );
@@ -2312,7 +2312,7 @@ compressInfo->xdelta.source.curblk[5]
                                         dataBytes
                                        );
                 }
-#else
+#else /* not TEMPORARY_DEBUG_XDELTA_RINGBUFFERS */
                 if (compressInfo->xdelta.outputBufferLength > 0L)
                 {
                   // copy from output buffer -> data buffer
@@ -2329,7 +2329,7 @@ compressInfo->xdelta.source.curblk[5]
                          );
                   compressInfo->xdelta.outputBufferLength -= dataBytes;
                 }
-#endif
+#endif /* TEMPORARY_DEBUG_XDELTA_RINGBUFFERS */
 
                 // update compress state
                 compressInfo->compressState = COMPRESS_STATE_RUNNING;
@@ -2364,7 +2364,7 @@ compressInfo->xdelta.source.curblk[5]
                       doneFlag = TRUE;
                       break;
                     case XD3_OUTPUT:
-#ifdef SS
+#ifdef TEMPORARY_DEBUG_XDELTA_RINGBUFFERS
                       // increase output buffer size if required
                       if (RingBuffer_getFree(&compressInfo->xdelta.outputRingBuffer) < (ulong)compressInfo->xdelta.stream.avail_out)
                       {
@@ -2381,7 +2381,7 @@ compressInfo->xdelta.source.curblk[5]
                                            compressInfo->xdelta.stream.next_out,
                                            compressInfo->xdelta.stream.avail_out
                                           );
-#else
+#else /* not TEMPORARY_DEBUG_XDELTA_RINGBUFFERS */
                       if (   (compressInfo->xdelta.outputBuffer == NULL)
                           || (compressInfo->xdelta.outputBufferLength+(ulong)compressInfo->xdelta.stream.avail_out > compressInfo->xdelta.outputBufferSize)
                          )
@@ -2403,7 +2403,7 @@ compressInfo->xdelta.source.curblk[5]
                             );
 
                       compressInfo->xdelta.outputBufferLength += (ulong)compressInfo->xdelta.stream.avail_out;
-#endif
+#endif /* TEMPORARY_DEBUG_XDELTA_RINGBUFFERS */
 
                       // done decompressed data
                       xd3_consume_output(&compressInfo->xdelta.stream);
@@ -2452,7 +2452,7 @@ compressInfo->xdelta.source.curblk[5]
                 while (!doneFlag);
 
                 // get decompressed data from output buffer
-#ifdef SS
+#ifdef TEMPORARY_DEBUG_XDELTA_RINGBUFFERS
                 if (!RingBuffer_isEmpty(&compressInfo->xdelta.outputRingBuffer))
                 {
                   dataBytes = MIN(RingBuffer_getAvailable(&compressInfo->xdelta.outputRingBuffer),
@@ -2469,7 +2469,7 @@ compressInfo->xdelta.source.curblk[5]
                   compressInfo->endOfDataFlag = TRUE;
                 }
 
-#else
+#else /* not TEMPORARY_DEBUG_XDELTA_RINGBUFFERS */
                 if (compressInfo->xdelta.outputBufferLength > 0L)
                 {
                   // copy from output buffer -> data buffer
@@ -2491,11 +2491,11 @@ compressInfo->xdelta.source.curblk[5]
                   // no more data
                   compressInfo->endOfDataFlag = TRUE;
                 }
-#endif
+#endif /* TEMPORARY_DEBUG_XDELTA_RINGBUFFERS */
               }
             }
           }
-#else /* RRRRRRRRRRRRRRRRR */
+#else /* not TEMPORARY_DEBUG_COMPRESS_RINGBUFFERS */
           if (compressInfo->dataBufferIndex >= compressInfo->dataBufferLength)  // no data in data buffer
           {
             compressInfo->dataBufferIndex  = 0L;
@@ -2818,7 +2818,7 @@ compressInfo->xdelta.source.curblk[5]
               }
             }
           }
-#endif
+#endif /* TEMPORARY_DEBUG_COMPRESS_RINGBUFFERS */
         }
       #else /* not HAVE_XDELTA3 */
         return ERROR_FUNCTION_NOT_SUPPORTED;
@@ -2911,7 +2911,7 @@ Errors Compress_new(CompressInfo       *compressInfo,
   compressInfo->compressState        = COMPRESS_STATE_INIT;
   compressInfo->endOfDataFlag        = FALSE;
   compressInfo->flushFlag            = FALSE;
-#ifdef RR
+#ifdef TEMPORARY_DEBUG_COMPRESS_RINGBUFFERS
   // allocate buffers
   if (!RingBuffer_init(&compressInfo->dataRingBuffer,1,FLOOR(MAX_BUFFER_SIZE,blockLength)))
   {
@@ -2921,7 +2921,7 @@ Errors Compress_new(CompressInfo       *compressInfo,
   {
     HALT_INSUFFICIENT_MEMORY();
   }
-#else
+#else /* not TEMPORARY_DEBUG_COMPRESS_RINGBUFFERS */
   compressInfo->dataBufferIndex      = 0L;
   compressInfo->dataBufferLength     = 0L;
   compressInfo->dataBufferSize       = CEIL(MAX_BUFFER_SIZE,blockLength);
@@ -2940,7 +2940,7 @@ Errors Compress_new(CompressInfo       *compressInfo,
   {
     HALT_INSUFFICIENT_MEMORY();
   }
-#endif
+#endif /* TEMPORARY_DEBUG_COMPRESS_RINGBUFFERS */
 
   switch (compressAlgorithm)
   {
@@ -2988,26 +2988,26 @@ Errors Compress_new(CompressInfo       *compressInfo,
             case COMPRESS_MODE_DEFLATE:
               if (deflateInit(&compressInfo->zlib.stream,compressionLevel) != Z_OK)
               {
-#ifdef RR
+#ifdef TEMPORARY_DEBUG_COMPRESS_RINGBUFFERS
                 RingBuffer_done(&compressInfo->compressRingBuffer,NULL,NULL);
                 RingBuffer_done(&compressInfo->dataRingBuffer,NULL,NULL);
-#else
+#else /* not TEMPORARY_DEBUG_COMPRESS_RINGBUFFERS */
                 free(compressInfo->compressBuffer);
                 free(compressInfo->dataBuffer);
-#endif
+#endif /* TEMPORARY_DEBUG_COMPRESS_RINGBUFFERS */
                 return ERROR_INIT_COMPRESS;
               }
               break;
             case COMPRESS_MODE_INFLATE:
               if (inflateInit(&compressInfo->zlib.stream) != Z_OK)
               {
-#ifdef RR
+#ifdef TEMPORARY_DEBUG_COMPRESS_RINGBUFFERS
                 RingBuffer_done(&compressInfo->compressRingBuffer,NULL,NULL);
                 RingBuffer_done(&compressInfo->dataRingBuffer,NULL,NULL);
-#else
+#else /* not TEMPORARY_DEBUG_COMPRESS_RINGBUFFERS */
                 free(compressInfo->compressBuffer);
                 free(compressInfo->dataBuffer);
-#endif
+#endif /* TEMPORARY_DEBUG_COMPRESS_RINGBUFFERS */
                 return ERROR_INIT_COMPRESS;
               }
               break;
@@ -3059,26 +3059,26 @@ Errors Compress_new(CompressInfo       *compressInfo,
             case COMPRESS_MODE_DEFLATE:
               if (BZ2_bzCompressInit(&compressInfo->bzlib.stream,compressInfo->bzlib.compressionLevel,0,0) != BZ_OK)
               {
-#ifdef RR
+#ifdef TEMPORARY_DEBUG_COMPRESS_RINGBUFFERS
                 RingBuffer_done(&compressInfo->compressRingBuffer,NULL,NULL);
                 RingBuffer_done(&compressInfo->dataRingBuffer,NULL,NULL);
-#else
+#else /* not TEMPORARY_DEBUG_COMPRESS_RINGBUFFERS */
                 free(compressInfo->compressBuffer);
                 free(compressInfo->dataBuffer);
-#endif
+#endif /* TEMPORARY_DEBUG_COMPRESS_RINGBUFFERS */
                 return ERROR_INIT_COMPRESS;
               }
               break;
             case COMPRESS_MODE_INFLATE:
               if (BZ2_bzDecompressInit(&compressInfo->bzlib.stream,0,0) != BZ_OK)
               {
-#ifdef RR
+#ifdef TEMPORARY_DEBUG_COMPRESS_RINGBUFFERS
                 RingBuffer_done(&compressInfo->compressRingBuffer,NULL,NULL);
                 RingBuffer_done(&compressInfo->dataRingBuffer,NULL,NULL);
-#else
+#else /* not TEMPORARY_DEBUG_COMPRESS_RINGBUFFERS */
                 free(compressInfo->compressBuffer);
                 free(compressInfo->dataBuffer);
-#endif
+#endif /* TEMPORARY_DEBUG_COMPRESS_RINGBUFFERS */
                 return ERROR_INIT_COMPRESS;
               }
               break;
@@ -3131,13 +3131,13 @@ Errors Compress_new(CompressInfo       *compressInfo,
               compressInfo->lzmalib.stream = streamInit;
               if (lzma_easy_encoder(&compressInfo->lzmalib.stream,compressInfo->lzmalib.compressionLevel,LZMA_CHECK_NONE) != LZMA_OK)
               {
-#ifdef RR
+#ifdef TEMPORARY_DEBUG_COMPRESS_RINGBUFFERS
                 RingBuffer_done(&compressInfo->compressRingBuffer,NULL,NULL);
                 RingBuffer_done(&compressInfo->dataRingBuffer,NULL,NULL);
-#else
+#else /* not TEMPORARY_DEBUG_COMPRESS_RINGBUFFERS */
                 free(compressInfo->compressBuffer);
                 free(compressInfo->dataBuffer);
-#endif
+#endif /* TEMPORARY_DEBUG_COMPRESS_RINGBUFFERS */
                 return ERROR_INIT_COMPRESS;
               }
               break;
@@ -3145,13 +3145,13 @@ Errors Compress_new(CompressInfo       *compressInfo,
               compressInfo->lzmalib.stream = streamInit;
               if (lzma_auto_decoder(&compressInfo->lzmalib.stream,0xFFFffffFFFFffffLL,0) != LZMA_OK)
               {
-#ifdef RR
+#ifdef TEMPORARY_DEBUG_COMPRESS_RINGBUFFERS
                 RingBuffer_done(&compressInfo->compressRingBuffer,NULL,NULL);
                 RingBuffer_done(&compressInfo->dataRingBuffer,NULL,NULL);
-#else
+#else /* not TEMPORARY_DEBUG_COMPRESS_RINGBUFFERS */
                 free(compressInfo->compressBuffer);
                 free(compressInfo->dataBuffer);
-#endif
+#endif /* TEMPORARY_DEBUG_COMPRESS_RINGBUFFERS */
                 return ERROR_INIT_COMPRESS;
               }
               break;
@@ -3182,17 +3182,17 @@ Errors Compress_new(CompressInfo       *compressInfo,
           // initialize variables
           compressInfo->xdelta.sourceHandle       = sourceHandle;
 #warning todo
-#ifdef SS
+#ifdef TEMPORARY_DEBUG_XDELTA_RINGBUFFERS
           if (!RingBuffer_init(&compressInfo->xdelta.outputRingBuffer,1,XDELTA_BUFFER_SIZE))
           {
             HALT_INSUFFICIENT_MEMORY();
           }
 
-#else
+#else /* not TEMPORARY_DEBUG_XDELTA_RINGBUFFERS */
           compressInfo->xdelta.outputBuffer       = NULL;
           compressInfo->xdelta.outputBufferLength = 0L;
           compressInfo->xdelta.outputBufferSize   = 0L;
-#endif
+#endif /* TEMPORARY_DEBUG_XDELTA_RINGBUFFERS */
           compressInfo->xdelta.flags              = 0;
           compressInfo->xdelta.flushFlag          = FALSE;
 
@@ -3224,13 +3224,13 @@ Errors Compress_new(CompressInfo       *compressInfo,
           memset(&compressInfo->xdelta.stream,0,sizeof(compressInfo->xdelta.stream));
           if (xd3_config_stream(&compressInfo->xdelta.stream,&xd3Config) != 0)
           {
-#ifdef RR
+#ifdef TEMPORARY_DEBUG_COMPRESS_RINGBUFFERS
             RingBuffer_done(&compressInfo->compressRingBuffer,NULL,NULL);
             RingBuffer_done(&compressInfo->dataRingBuffer,NULL,NULL);
-#else
+#else /* not TEMPORARY_DEBUG_COMPRESS_RINGBUFFERS */
             free(compressInfo->compressBuffer);
             free(compressInfo->dataBuffer);
-#endif
+#endif /* TEMPORARY_DEBUG_COMPRESS_RINGBUFFERS */
             return ERROR_INIT_COMPRESS;
           }
 
@@ -3239,13 +3239,13 @@ Errors Compress_new(CompressInfo       *compressInfo,
           if (compressInfo->xdelta.sourceBuffer == NULL)
           {
             xd3_free_stream(&compressInfo->xdelta.stream);
-#ifdef RR
+#ifdef TEMPORARY_DEBUG_COMPRESS_RINGBUFFERS
             RingBuffer_done(&compressInfo->compressRingBuffer,NULL,NULL);
             RingBuffer_done(&compressInfo->dataRingBuffer,NULL,NULL);
-#else
+#else /* not TEMPORARY_DEBUG_COMPRESS_RINGBUFFERS */
             free(compressInfo->compressBuffer);
             free(compressInfo->dataBuffer);
-#endif
+#endif /* TEMPORARY_DEBUG_COMPRESS_RINGBUFFERS */
             return ERROR_INIT_COMPRESS;
           }
 #warning memset noetig?
@@ -3259,13 +3259,13 @@ Errors Compress_new(CompressInfo       *compressInfo,
           {
             xd3_free_stream(&compressInfo->xdelta.stream);
             free(compressInfo->xdelta.sourceBuffer);
-#ifdef RR
+#ifdef TEMPORARY_DEBUG_COMPRESS_RINGBUFFERS
             RingBuffer_done(&compressInfo->compressRingBuffer,NULL,NULL);
             RingBuffer_done(&compressInfo->dataRingBuffer,NULL,NULL);
-#else
+#else /* not TEMPORARY_DEBUG_COMPRESS_RINGBUFFERS */
             free(compressInfo->compressBuffer);
             free(compressInfo->dataBuffer);
-#endif
+#endif /* TEMPORARY_DEBUG_COMPRESS_RINGBUFFERS */
             return ERROR_INIT_COMPRESS;
           }
         }
@@ -3286,11 +3286,11 @@ Errors Compress_new(CompressInfo       *compressInfo,
 void Compress_delete(CompressInfo *compressInfo)
 {
   assert(compressInfo != NULL);
-#ifdef RR
-#else
+#ifdef TEMPORARY_DEBUG_COMPRESS_RINGBUFFERS
+#else /* not TEMPORARY_DEBUG_COMPRESS_RINGBUFFERS */
   assert(compressInfo->dataBuffer != NULL);
   assert(compressInfo->compressBuffer != NULL);
-#endif
+#endif /* TEMPORARY_DEBUG_COMPRESS_RINGBUFFERS */
 
   switch (compressInfo->compressAlgorithm)
   {
@@ -3377,12 +3377,12 @@ void Compress_delete(CompressInfo *compressInfo)
       #ifdef HAVE_XDELTA3
         xd3_close_stream(&compressInfo->xdelta.stream);
         xd3_free_stream(&compressInfo->xdelta.stream);
-#ifdef SS
+#ifdef TEMPORARY_DEBUG_XDELTA_RINGBUFFERS
 assert(RingBuffer_isEmpty(&compressInfo->xdelta.outputRingBuffer));
         RingBuffer_done(&compressInfo->xdelta.outputRingBuffer,NULL,NULL);
-#else
+#else /* not TEMPORARY_DEBUG_XDELTA_RINGBUFFERS */
         if (compressInfo->xdelta.outputBuffer != NULL) free(compressInfo->xdelta.outputBuffer);
-#endif
+#endif /* TEMPORARY_DEBUG_XDELTA_RINGBUFFERS */
         free(compressInfo->xdelta.sourceBuffer);
       #else /* not HAVE_XDELTA3 */
         return ERROR_FUNCTION_NOT_SUPPORTED;
@@ -3394,13 +3394,13 @@ assert(RingBuffer_isEmpty(&compressInfo->xdelta.outputRingBuffer));
       #endif /* NDEBUG */
       break; /* not reached */
   }
-#ifdef RR
+#ifdef TEMPORARY_DEBUG_COMPRESS_RINGBUFFERS
   RingBuffer_done(&compressInfo->compressRingBuffer,NULL,NULL);
   RingBuffer_done(&compressInfo->dataRingBuffer,NULL,NULL);
-#else
+#else /* not TEMPORARY_DEBUG_COMPRESS_RINGBUFFERS */
   free(compressInfo->compressBuffer);
   free(compressInfo->dataBuffer);
-#endif
+#endif /* TEMPORARY_DEBUG_COMPRESS_RINGBUFFERS */
 }
 
 Errors Compress_reset(CompressInfo *compressInfo)
@@ -3411,15 +3411,15 @@ Errors Compress_reset(CompressInfo *compressInfo)
   compressInfo->compressState        = COMPRESS_STATE_INIT;
   compressInfo->endOfDataFlag        = FALSE;
   compressInfo->flushFlag            = FALSE;
-#ifdef RR
+#ifdef TEMPORARY_DEBUG_COMPRESS_RINGBUFFERS
   RingBuffer_clear(&compressInfo->dataRingBuffer,NULL,NULL);
   RingBuffer_clear(&compressInfo->compressRingBuffer,NULL,NULL);
-#else
+#else /* not TEMPORARY_DEBUG_COMPRESS_RINGBUFFERS */
   compressInfo->dataBufferIndex      = 0L;
   compressInfo->dataBufferLength     = 0L;
   compressInfo->compressBufferIndex  = 0L;
   compressInfo->compressBufferLength = 0L;
-#endif
+#endif /* TEMPORARY_DEBUG_COMPRESS_RINGBUFFERS */
 
   switch (compressInfo->compressAlgorithm)
   {
@@ -3575,11 +3575,11 @@ Errors Compress_reset(CompressInfo *compressInfo)
           xd3_free_stream(&compressInfo->xdelta.stream);
 
           // re-initialize variables
-#ifdef SS
+#ifdef TEMPORARY_DEBUG_XDELTA_RINGBUFFERS
           RingBuffer_clear(&compressInfo->compressRingBuffer,NULL,NULL);
-#else
+#else /* not TEMPORARY_DEBUG_XDELTA_RINGBUFFERS */
           compressInfo->xdelta.outputBufferLength = 0L;
-#endif
+#endif /* TEMPORARY_DEBUG_XDELTA_RINGBUFFERS */
           compressInfo->xdelta.flushFlag          = FALSE;
 
           // re-init xdelta configuration
@@ -3655,7 +3655,7 @@ Errors Compress_deflate(CompressInfo *compressInfo,
   assert(buffer != NULL);
 
   if (deflatedBytes != NULL) (*deflatedBytes) = 0L;
-#ifdef RR
+#ifdef TEMPORARY_DEBUG_COMPRESS_RINGBUFFERS
   do
   {
     // check if data buffer is full, compress data buffer
@@ -3682,7 +3682,7 @@ Errors Compress_deflate(CompressInfo *compressInfo,
          && (bufferLength > 0L)
          && !RingBuffer_isFull(&compressInfo->compressRingBuffer)
         );
-#else
+#else /* not TEMPORARY_DEBUG_COMPRESS_RINGBUFFERS */
   do
   {
     // check if data buffer is full, compress data buffer
@@ -3710,7 +3710,7 @@ Errors Compress_deflate(CompressInfo *compressInfo,
          && (bufferLength > 0L)
          && (compressInfo->compressBufferLength < compressInfo->compressBufferSize)
         );
-#endif
+#endif /* TEMPORARY_DEBUG_COMPRESS_RINGBUFFERS */
 
   return ERROR_NONE;
 }
@@ -3730,7 +3730,7 @@ Errors Compress_inflate(CompressInfo *compressInfo,
   assert(inflatedBytes != NULL);
 
   (*inflatedBytes) = 0L;
-#ifdef RR
+#ifdef TEMPORARY_DEBUG_COMPRESS_RINGBUFFERS
   do
   {
     // check if data buffer is empty, decompress and fill data buffer
@@ -3757,7 +3757,7 @@ Errors Compress_inflate(CompressInfo *compressInfo,
          && (bufferSize > 0L)
 //         && !RingBuffer_isEmpty(&compressInfo->compressRingBuffer)
         );
-#else
+#else /* not TEMPORARY_DEBUG_COMPRESS_RINGBUFFERS */
   do
   {
     // check if buffer is empty, decompress data
@@ -3792,7 +3792,7 @@ Errors Compress_inflate(CompressInfo *compressInfo,
          && (bufferSize > 0L)
          && (compressInfo->compressBufferIndex < compressInfo->compressBufferLength)
         );
-#endif
+#endif /* TEMPORARY_DEBUG_COMPRESS_RINGBUFFERS */
 
   return ERROR_NONE;
 }
@@ -4014,11 +4014,11 @@ Errors Compress_getAvailableDecompressedBytes(CompressInfo *compressInfo,
   }
 
   // decompressed data is available iff bufferIndex < bufferLength
-#ifdef RR
+#ifdef TEMPORARY_DEBUG_COMPRESS_RINGBUFFERS
   (*bytes) = RingBuffer_getAvailable(&compressInfo->dataRingBuffer);
-#else
+#else /* not TEMPORARY_DEBUG_COMPRESS_RINGBUFFERS */
   (*bytes) = compressInfo->dataBufferLength-compressInfo->dataBufferIndex;
-#endif
+#endif /* TEMPORARY_DEBUG_COMPRESS_RINGBUFFERS */
 
   return ERROR_NONE;
 }
@@ -4043,7 +4043,7 @@ Errors Compress_getAvailableCompressedBlocks(CompressInfo       *compressInfo,
 
   // get number of compressed blocks
   (*blockCount) = 0;
-#ifdef RR
+#ifdef TEMPORARY_DEBUG_COMPRESS_RINGBUFFERS
   switch (blockType)
   {
     case COMPRESS_BLOCK_TYPE_ANY:
@@ -4060,7 +4060,7 @@ Errors Compress_getAvailableCompressedBlocks(CompressInfo       *compressInfo,
         break; /* not reached */
     #endif /* NDEBUG */
   }
-#else
+#else /* not TEMPORARY_DEBUG_COMPRESS_RINGBUFFERS */
   switch (blockType)
   {
     case COMPRESS_BLOCK_TYPE_ANY:
@@ -4077,7 +4077,7 @@ Errors Compress_getAvailableCompressedBlocks(CompressInfo       *compressInfo,
         break; /* not reached */
     #endif /* NDEBUG */
   }
-#endif
+#endif /* TEMPORARY_DEBUG_COMPRESS_RINGBUFFERS */
 
   return ERROR_NONE;
 }
@@ -4092,11 +4092,11 @@ void Compress_getCompressedData(CompressInfo *compressInfo,
 
   assert(compressInfo != NULL);
   assert(compressInfo->compressMode == COMPRESS_MODE_DEFLATE);
-#ifdef RR
-#else
+#ifdef TEMPORARY_DEBUG_COMPRESS_RINGBUFFERS
+#else /* not TEMPORARY_DEBUG_COMPRESS_RINGBUFFERS */
   assert(compressInfo->compressBuffer != NULL);
   assert(compressInfo->compressBufferLength <= compressInfo->compressBufferSize);
-#endif
+#endif /* TEMPORARY_DEBUG_COMPRESS_RINGBUFFERS */
   assert(buffer != NULL);
   assert(bufferSize >= compressInfo->blockLength);
   assert(bufferLength != NULL);
@@ -4104,7 +4104,7 @@ void Compress_getCompressedData(CompressInfo *compressInfo,
   // compress data (ignore error here)
   (void)compressData(compressInfo);
 
-#ifdef RR
+#ifdef TEMPORARY_DEBUG_COMPRESS_RINGBUFFERS
   // copy compressed data into buffer
   n = MIN(RingBuffer_getAvailable(&compressInfo->compressRingBuffer),FLOOR(bufferSize,compressInfo->blockLength));
   (void)RingBuffer_get(&compressInfo->compressRingBuffer,buffer,n);
@@ -4119,7 +4119,7 @@ void Compress_getCompressedData(CompressInfo *compressInfo,
   (*bufferLength) = CEIL(n,compressInfo->blockLength);
   assert((*bufferLength) <= bufferSize);
   assert((*bufferLength)%compressInfo->blockLength == 0);
-#else
+#else /* not TEMPORARY_DEBUG_COMPRESS_RINGBUFFERS */
   // copy compressed data into buffer
   n = MIN(compressInfo->compressBufferLength-compressInfo->compressBufferIndex,FLOOR(bufferSize,compressInfo->blockLength));
   memcpy(buffer,
@@ -4145,7 +4145,7 @@ void Compress_getCompressedData(CompressInfo *compressInfo,
          );
   compressInfo->compressBufferLength -= compressInfo->compressBufferIndex+n;
   compressInfo->compressBufferIndex = 0L;
-#endif
+#endif /* TEMPORARY_DEBUG_COMPRESS_RINGBUFFERS */
 }
 
 void Compress_putCompressedData(CompressInfo *compressInfo,
@@ -4155,7 +4155,7 @@ void Compress_putCompressedData(CompressInfo *compressInfo,
 {
   assert(compressInfo != NULL);
   assert(compressInfo->compressMode == COMPRESS_MODE_INFLATE);
-#ifdef RR
+#ifdef TEMPORARY_DEBUG_COMPRESS_RINGBUFFERS
 #else
   assert(compressInfo->compressBuffer != NULL);
 #endif
@@ -4164,16 +4164,16 @@ void Compress_putCompressedData(CompressInfo *compressInfo,
   // decompress data (ignore error here)
   (void)decompressData(compressInfo);
 
-#ifdef RR
+#ifdef TEMPORARY_DEBUG_COMPRESS_RINGBUFFERS
   // copy data into compressed buffer
   assert(RingBuffer_getFree(&compressInfo->compressRingBuffer) >= bufferLength);
   (void)RingBuffer_put(&compressInfo->compressRingBuffer,buffer,bufferLength);
-#else
+#else /* not TEMPORARY_DEBUG_COMPRESS_RINGBUFFERS */
   // copy data into compressed buffer
   assert(bufferLength <= compressInfo->compressBufferSize-compressInfo->compressBufferLength);
   memcpy(compressInfo->compressBuffer+compressInfo->compressBufferLength,buffer,bufferLength);
   compressInfo->compressBufferLength += bufferLength;
-#endif
+#endif /* TEMPORARY_DEBUG_COMPRESS_RINGBUFFERS */
 }
 
 #ifdef __cplusplus

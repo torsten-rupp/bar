@@ -109,8 +109,8 @@ typedef enum
 /***************************** Datatypes *******************************/
 
 #warning cleanup
-#define RR
-#define SS
+#define TEMPORARY_DEBUG_COMPRESS_RINGBUFFERS
+#define TEMPORARY_DEBUG_XDELTA_RINGBUFFERS
 
 // compress info block
 typedef struct
@@ -153,15 +153,15 @@ typedef struct
         #ifdef HAVE_XDELTA3
           SourceHandle *sourceHandle;           // delta source handle
           byte         *sourceBuffer;           // buffer for delta source data
-#ifdef SS
+#ifdef TEMPORARY_DEBUG_XDELTA_RINGBUFFERS
           RingBuffer   outputRingBuffer;
-#else
+#else /* not TEMPORARY_DEBUG_XDELTA_RINGBUFFERS */
           byte         *outputBuffer;           // buffer for output (allocated if NULL)
           ulong        outputBufferLength;      // number of bytes in output buffer
           ulong        outputBufferSize;        /* size of output buffer (buffer will reallocated
                                                    if 0 or to small)
                                                 */
-#endif
+#endif /* TEMPORARY_DEBUG_XDELTA_RINGBUFFERS */
           int          flags;                   // XDELTA flags
           xd3_stream   stream;                  // XDELTA stream
           xd3_source   source;                  // XDELTA source
@@ -177,7 +177,7 @@ typedef struct
     #endif /* HAVE_XDELTA */
   };
 
-#ifdef RR
+#ifdef TEMPORARY_DEBUG_COMPRESS_RINGBUFFERS
   RingBuffer         dataRingBuffer;
 #else
   byte               *dataBuffer;               // buffer for uncompressed data
@@ -186,7 +186,7 @@ typedef struct
   ulong              dataBufferSize;            // size of uncompressed data buffer
 #endif
 
-#ifdef RR
+#ifdef TEMPORARY_DEBUG_COMPRESS_RINGBUFFERS
   RingBuffer         compressRingBuffer;
 #else
   byte               *compressBuffer;           // buffer for compressed data
@@ -524,11 +524,11 @@ INLINE ulong Compress_getFreeCompressSpace(const CompressInfo *compressInfo)
 {
   assert(compressInfo != NULL);
 
-#ifdef RR
+#ifdef TEMPORARY_DEBUG_COMPRESS_RINGBUFFERS
   return RingBuffer_getFree(&compressInfo->compressRingBuffer);
-#else
+#else /* not TEMPORARY_DEBUG_COMPRESS_RINGBUFFERS */
   return compressInfo->compressBufferSize-compressInfo->compressBufferLength;
-#endif
+#endif /* TEMPORARY_DEBUG_COMPRESS_RINGBUFFERS */
 }
 #endif /* NDEBUG || __COMPRESS_IMPLEMENATION__ */
 
