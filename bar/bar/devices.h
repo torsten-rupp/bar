@@ -27,7 +27,7 @@
 
 /***************************** Constants *******************************/
 
-/* device open modes */
+// device open modes
 typedef enum
 {
   DEVICE_OPENMODE_READ,
@@ -36,7 +36,7 @@ typedef enum
 
 /***************************** Datatypes *******************************/
 
-/* device i/o handle */
+// device i/o handle
 typedef struct
 {
   String name;
@@ -45,7 +45,7 @@ typedef struct
   uint64 size;
 } DeviceHandle;
 
-/* device list read handle */
+// device list read handle
 typedef struct
 {
   FILE *file;
@@ -53,7 +53,7 @@ typedef struct
   bool readFlag;
 } DeviceListHandle;
 
-/* device types */
+// device types
 typedef enum
 {
   DEVICE_TYPE_NONE,
@@ -64,7 +64,7 @@ typedef enum
   DEVICE_TYPE_UNKNOWN
 } DeviceTypes;
 
-/* device system info data */
+// device system info data
 typedef struct
 {
   DeviceTypes type;
