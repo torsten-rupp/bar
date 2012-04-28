@@ -537,12 +537,14 @@ LOCAL const char *parseNextFormatToken(const char *format, FormatToken *formatTo
 * Notes  : -
 \***********************************************************************/
 
+#ifdef __GNUC__
 /* we have here some snprintf()-calls with a string variable as format
    string. This cause a warning. The string variable is OK, thus disable
    this warning in this function.
 */
 #pragma GCC push_options
 #pragma GCC diagnostic ignored "-Wformat-security"
+#endif /* __GNUC__ */
 
 LOCAL void formatString(struct __String *string,
                         const char      *format,
@@ -939,7 +941,9 @@ HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
   }
 }
 
+#ifdef __GNUC__
 #pragma GCC pop_options
+#endif /* __GNUC__ */
 
 /***********************************************************************\
 * Name   : parseString
