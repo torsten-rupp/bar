@@ -27,7 +27,7 @@
 
 /***************************** Datatypes ******************************/
 
-/* config value data types */
+// config value data types
 typedef enum
 {
   CONFIG_VALUE_TYPE_INTEGER,
@@ -42,28 +42,28 @@ typedef enum
   CONFIG_VALUE_TYPE_SPECIAL
 } ConfigValueTypes;
 
-/* config value unit */
+// config value unit
 typedef struct
 {
   const char *name;
   uint64     factor;
 } ConfigValueUnit;
 
-/* config value select value */
+// config value select value
 typedef struct
 {
   const char *name;
   uint       value;
 } ConfigValueSelect;
 
-/* configu value set value */
+// configu value set value
 typedef struct
 {
   const char *name;
   uint       value;
 } ConfigValueSet;
 
-/* config value variable */
+// config value variable
 typedef union
 {
   void   *pointer;
@@ -80,7 +80,7 @@ typedef union
   void   *special;
 } ConfigVariable;
 
-/* config value definition */
+// config value definition
 typedef struct
 {
   const char       *name;                         // name of config value
@@ -217,14 +217,14 @@ const ConfigValue CONFIG_VALUES[] =
 
 */
 
-/* config format value modes */
+// config format value modes
 typedef enum
 {
   CONFIG_VALUE_FORMAT_MODE_VALUE,                 // format value only
   CONFIG_VALUE_FORMAT_MODE_LINE,                  // format line
 } ConfigValueFormatModes;
 
-/* configu value format info */
+// configu value format info
 typedef struct
 {
   void                   *formatUserData;         // user data for special value call back

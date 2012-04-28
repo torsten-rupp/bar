@@ -71,7 +71,7 @@ LOCAL bool processValue(const ConfigValue *configValue,
         ulong factor;
         int   data;
 
-        /* split number, unit */
+        // split number, unit
         i = strlen(value);
         if (i > 0)
         {
@@ -85,7 +85,7 @@ LOCAL bool processValue(const ConfigValue *configValue,
           unit[0]   = '\0';
         }
 
-        /* find factor */
+        // find factor
         if (unit[0] != '\0')
         {
           if (configValue->integerValue.units != NULL)
@@ -131,7 +131,7 @@ LOCAL bool processValue(const ConfigValue *configValue,
           factor = 1;
         }
 
-        /* calculate value */
+        // calculate value
         data = strtoll(value,NULL,0)*factor;
         if (   (data < configValue->integerValue.min)
             || (data > configValue->integerValue.max)
@@ -148,7 +148,7 @@ LOCAL bool processValue(const ConfigValue *configValue,
           return FALSE;
         }
 
-        /* store value */
+        // store value
         if (configValue->offset >= 0)
         {
           if (variable != NULL)
@@ -180,7 +180,7 @@ LOCAL bool processValue(const ConfigValue *configValue,
         ulong factor;
         int64 data;
 
-        /* split number, unit */
+        // split number, unit
         i = strlen(value);
         if (i > 0)
         {
@@ -194,7 +194,7 @@ LOCAL bool processValue(const ConfigValue *configValue,
           unit[0]   = '\0';
         }
 
-        /* find factor */
+        // find factor
         if (unit[0] != '\0')
         {
           if (configValue->integer64Value.units != NULL)
@@ -240,7 +240,7 @@ LOCAL bool processValue(const ConfigValue *configValue,
           factor = 1;
         }
 
-        /* calculate value */
+        // calculate value
         data = strtoll(value,NULL,0)*factor;
         if (   (data < configValue->integer64Value.min)
             || (data > configValue->integer64Value.max)
@@ -257,7 +257,7 @@ LOCAL bool processValue(const ConfigValue *configValue,
           return FALSE;
         }
 
-        /* store value */
+        // store value
         if (configValue->offset >= 0)
         {
           if (variable != NULL)
@@ -289,7 +289,7 @@ LOCAL bool processValue(const ConfigValue *configValue,
         ulong  factor;
         double data;
 
-        /* split number, unit */
+        // split number, unit
         i = strlen(value);
         if (i > 0)
         {
@@ -303,7 +303,7 @@ LOCAL bool processValue(const ConfigValue *configValue,
           unit[0]   = '\0';
         }
 
-        /* find factor */
+        // find factor
         if (unit[0] != '\0')
         {
           if (configValue->doubleValue.units != NULL)
@@ -349,7 +349,7 @@ LOCAL bool processValue(const ConfigValue *configValue,
           factor = 1;
         }
 
-        /* calculate value */
+        // calculate value
         data = strtod(value,0);
         if (   (data < configValue->doubleValue.min)
             || (data > configValue->doubleValue.max)
@@ -366,7 +366,7 @@ LOCAL bool processValue(const ConfigValue *configValue,
           return FALSE;
         }
 
-        /* store value */
+        // store value
         if (configValue->offset >= 0)
         {
           if (variable != NULL)
@@ -395,7 +395,7 @@ LOCAL bool processValue(const ConfigValue *configValue,
       {
         bool data;
 
-        /* calculate value */
+        // calculate value
         if      (   (value == NULL)
                  || (strcmp(value,"1") == 0)
                  || (strcmp(value,"true") == 0)
@@ -424,7 +424,7 @@ LOCAL bool processValue(const ConfigValue *configValue,
           return FALSE;
         }
 
-        /* store value */
+        // store value
         if (configValue->offset >= 0)
         {
           if (variable != NULL)
@@ -479,7 +479,7 @@ LOCAL bool processValue(const ConfigValue *configValue,
       {
         uint z;
 
-        /* find select value */
+        // find select value
         z = 0;
         while (   (z < configValue->selectValue.selectCount)
                && (strcmp(configValue->selectValue.select[z].name,value) != 0)
@@ -498,7 +498,7 @@ LOCAL bool processValue(const ConfigValue *configValue,
           return FALSE;
         }
 
-        /* store value */
+        // store value
         if (configValue->offset >= 0)
         {
           if (variable != NULL)
@@ -528,15 +528,15 @@ LOCAL bool processValue(const ConfigValue *configValue,
         uint i,j,z;
         char setName[128];
 
-        /* find and store set values */
+        // find and store set values
         assert(configValue->variable.set != NULL);
         i = 0;
         while (value[i] != '\0')
         {
-          /* skip spaces */
+          // skip spaces
           while ((value[i] != '\0') && isspace(value[i])) { i++; }
 
-          /* get name */
+          // get name
           j = 0;
           while ((value[i] != '\0') && (value[i] != ','))
           {
@@ -545,12 +545,12 @@ LOCAL bool processValue(const ConfigValue *configValue,
           }
           setName[j] = '\0';
 
-          /* skip , */
+          // skip ,
           if (value[i] == ',') i++;
 
           if (setName[0] != '\0')
           {
-            /* find value */
+            // find value
             z = 0;
             while ((z < configValue->setValue.setCount) && (strcmp(configValue->setValue.set[z].name,setName) != 0))
             {
@@ -567,7 +567,7 @@ LOCAL bool processValue(const ConfigValue *configValue,
               return FALSE;
             }
 
-            /* store value */
+            // store value
             if (configValue->offset >= 0)
             {
               if (variable != NULL)
@@ -658,7 +658,7 @@ LOCAL bool processValue(const ConfigValue *configValue,
       }
       break;
     case CONFIG_VALUE_TYPE_SPECIAL:
-      /* store value */
+      // store value
       if (configValue->offset >= 0)
       {
         if (variable != NULL)
@@ -752,7 +752,7 @@ bool ConfigValue_parse(const char        *name,
   assert(name != NULL);
   assert(configValues != NULL);
 
-  /* find config value */
+  // find config value
   i = 0;
   while ((i < configValueCount) && (strcmp(configValues[i].name,name) != 0))
   {
@@ -763,7 +763,7 @@ bool ConfigValue_parse(const char        *name,
     return FALSE;
   }
 
-  /* process value */
+  // process value
   if (!processValue(&configValues[i],name,value,errorOutputHandle,errorPrefix,variable))
   {
     return FALSE;
@@ -897,6 +897,11 @@ void ConfigValue_formatDone(ConfigValueFormat *configValueFormat)
   }
 }
 
+#ifdef __GNUC__
+#pragma GCC push_options
+#pragma GCC diagnostic ignored "-Wfloat-equal"
+#endif /* __GNUC__ */
+
 bool ConfigValue_format(ConfigValueFormat *configValueFormat,
                         String            line
                        )
@@ -930,7 +935,7 @@ bool ConfigValue_format(ConfigValueFormat *configValueFormat,
     switch (configValueFormat->configValue->type)
     {
       case CONFIG_VALUE_TYPE_INTEGER:
-        /* get value */
+        // get value
         if (configValueFormat->configValue->offset >= 0)
         {
           if (configValueFormat->variable != NULL)
@@ -949,7 +954,7 @@ bool ConfigValue_format(ConfigValueFormat *configValueFormat,
           configVariable.i = configValueFormat->configValue->variable.i;
         }
 
-        /* find usable unit */
+        // find usable unit
         if ((configValueFormat->configValue->integerValue.units != NULL) && ((*configVariable.i) != 0))
         {
           z = 0;
@@ -988,7 +993,7 @@ bool ConfigValue_format(ConfigValueFormat *configValueFormat,
         configValueFormat->endOfDataFlag = TRUE;
         break;
       case CONFIG_VALUE_TYPE_INTEGER64:
-        /* get value */
+        // get value
         if (configValueFormat->configValue->offset >= 0)
         {
           if (configValueFormat->variable != NULL)
@@ -1007,7 +1012,7 @@ bool ConfigValue_format(ConfigValueFormat *configValueFormat,
           configVariable.l = configValueFormat->configValue->variable.l;
         }
 
-        /* find usable unit */
+        // find usable unit
         if ((configValueFormat->configValue->integer64Value.units != NULL) && ((*configVariable.l) != 0L))
         {
           z = 0;
@@ -1046,7 +1051,7 @@ bool ConfigValue_format(ConfigValueFormat *configValueFormat,
         configValueFormat->endOfDataFlag = TRUE;
         break;
       case CONFIG_VALUE_TYPE_DOUBLE:
-        /* get value */
+        // get value
         if (configValueFormat->configValue->offset >= 0)
         {
           if (configValueFormat->variable != NULL)
@@ -1065,7 +1070,7 @@ bool ConfigValue_format(ConfigValueFormat *configValueFormat,
           configVariable.d = configValueFormat->configValue->variable.d;
         }
 
-        /* find usable unit */
+        // find usable unit
         if ((configValueFormat->configValue->doubleValue.units != NULL) && ((*configVariable.d) != 0.0))
         {
           z = 0;
@@ -1104,7 +1109,7 @@ bool ConfigValue_format(ConfigValueFormat *configValueFormat,
         configValueFormat->endOfDataFlag = TRUE;
         break;
       case CONFIG_VALUE_TYPE_BOOLEAN:
-        /* get value */
+        // get value
         if (configValueFormat->configValue->offset >= 0)
         {
           if (configValueFormat->variable != NULL)
@@ -1123,13 +1128,13 @@ bool ConfigValue_format(ConfigValueFormat *configValueFormat,
           configVariable.b = configValueFormat->configValue->variable.b;
         }
 
-        /* format value */
+        // format value
         String_format(line,"%s",(*configVariable.b)?"yes":"no");
 
         configValueFormat->endOfDataFlag = TRUE;
         break;
       case CONFIG_VALUE_TYPE_ENUM:
-        /* get value */
+        // get value
         if (configValueFormat->configValue->offset >= 0)
         {
           if (configValueFormat->variable != NULL)
@@ -1148,13 +1153,13 @@ bool ConfigValue_format(ConfigValueFormat *configValueFormat,
           configVariable.enumeration = configValueFormat->configValue->variable.enumeration;
         }
 
-        /* format value */
+        // format value
         String_format(line,"%d",configVariable.enumeration);
 
         configValueFormat->endOfDataFlag = TRUE;
         break;
       case CONFIG_VALUE_TYPE_SELECT:
-        /* get value */
+        // get value
         if (configValueFormat->configValue->offset >= 0)
         {
           if (configValueFormat->variable != NULL)
@@ -1180,13 +1185,13 @@ bool ConfigValue_format(ConfigValueFormat *configValueFormat,
           z++;
         }
 
-        /* format value */
+        // format value
         String_format(line,"%s",(z < configValueFormat->configValue->selectValue.selectCount)?configValueFormat->configValue->selectValue.select[z].name:"");
 
         configValueFormat->endOfDataFlag = TRUE;
         break;
       case CONFIG_VALUE_TYPE_SET:
-        /* get value */
+        // get value
         if (configValueFormat->configValue->offset >= 0)
         {
           if (configValueFormat->variable != NULL)
@@ -1214,16 +1219,16 @@ bool ConfigValue_format(ConfigValueFormat *configValueFormat,
           }
         }
 
-        /* format value */
+        // format value
         String_format(line,"%s",s);
 
-        /* free resources */
+        // free resources
         String_delete(s);
 
         configValueFormat->endOfDataFlag = TRUE;
         break;
       case CONFIG_VALUE_TYPE_CSTRING:
-        /* get value */
+        // get value
         if (configValueFormat->configValue->offset >= 0)
         {
           if (configValueFormat->variable != NULL)
@@ -1242,7 +1247,7 @@ bool ConfigValue_format(ConfigValueFormat *configValueFormat,
           configVariable.cString = configValueFormat->configValue->variable.cString;
         }
 
-        /* format value */
+        // format value
         if (((*configVariable.cString) != NULL) && (strchr(*configVariable.cString,' ') != NULL))
         {
           String_format(line,"%'s",*configVariable.cString);
@@ -1255,7 +1260,7 @@ bool ConfigValue_format(ConfigValueFormat *configValueFormat,
         configValueFormat->endOfDataFlag = TRUE;
         break;
       case CONFIG_VALUE_TYPE_STRING:
-        /* get value */
+        // get value
         if (configValueFormat->configValue->offset >= 0)
         {
           if (configValueFormat->variable != NULL)
@@ -1274,7 +1279,7 @@ bool ConfigValue_format(ConfigValueFormat *configValueFormat,
           configVariable.string = configValueFormat->configValue->variable.string;
         }
 
-        /* format value */
+        // format value
 // always '?
 //        if (!String_empty(*configVariable.string) && (String_findChar(*configVariable.string,STRING_BEGIN,' ') >= 0))
 //        {
@@ -1358,6 +1363,10 @@ bool ConfigValue_format(ConfigValueFormat *configValueFormat,
     return FALSE;
   }
 }
+
+#ifdef __GNUC__
+#pragma GCC pop_options
+#endif /* __GNUC__ */
 
 #ifdef __GNUG__
 }
