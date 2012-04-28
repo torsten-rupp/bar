@@ -1456,14 +1456,14 @@ LOCAL Errors decompressData(CompressInfo *compressInfo)
 
   assert(compressInfo != NULL);
 #ifdef TEMPORARY_DEBUG_COMPRESS_RINGBUFFERS
-#else /* not  */
+#else /* not TEMPORARY_DEBUG_COMPRESS_RINGBUFFERS */
   assert(compressInfo->dataBuffer != NULL);
   assert(compressInfo->compressBuffer != NULL);
   assert(compressInfo->dataBufferIndex <= compressInfo->dataBufferLength);
   assert(compressInfo->dataBufferLength <= compressInfo->dataBufferSize);
   assert(compressInfo->compressBufferIndex <= compressInfo->compressBufferLength);
   assert(compressInfo->compressBufferLength <= compressInfo->compressBufferSize);
-#endif /*  */
+#endif /* TEMPORARY_DEBUG_COMPRESS_RINGBUFFERS */
 
   // decompress if possible
   switch (compressInfo->compressAlgorithm)
@@ -4006,11 +4006,18 @@ Errors Compress_getAvailableDecompressedBytes(CompressInfo *compressInfo,
   assert(compressInfo->compressMode == COMPRESS_MODE_INFLATE);
   assert(bytes != NULL);
 
-  // decompress data
-  error = decompressData(compressInfo);
-  if (error != ERROR_NONE)
+#ifdef TEMPORARY_DEBUG_COMPRESS_RINGBUFFERS
+  if (RingBuffer_isEmpty(&compressInfo->dataRingBuffer))
+#else /* not TEMPORARY_DEBUG_COMPRESS_RINGBUFFERS */
+  if (compressInfo->dataBufferIndex>=compressInfo->dataBufferLength)
+#endif /* TEMPORARY_DEBUG_COMPRESS_RINGBUFFERS */
   {
-    return error;
+    // decompress data
+    error = decompressData(compressInfo);
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
   }
 
   // decompressed data is available iff bufferIndex < bufferLength
