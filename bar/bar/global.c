@@ -81,7 +81,7 @@ void dumpMemory(const void *address, uint length)
   while (z < length)
   {
     p = (const byte*)address+z;
-    printf("%08x:%08x  ",p,p-(byte*)address);
+    printf("%08lx:%08lx  ",(unsigned long)p,(unsigned long)(p-(byte*)address));
 
     for (i = 0; i < 16; i++)
     {
