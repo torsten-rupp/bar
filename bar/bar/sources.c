@@ -388,12 +388,15 @@ LOCAL Errors restoreFile(const String                    archiveName,
 
               bufferLength = MIN(fragmentSize-length,BUFFER_SIZE);
 
+              // read data from archive
               error = Archive_readData(&archiveEntryInfo,buffer,bufferLength);
               if (error != ERROR_NONE)
               {
                 if (failError == ERROR_NONE) failError = error;
                 break;
               }
+
+              // write data to file
               error = File_write(&fileHandle,buffer,bufferLength);
               if (error != ERROR_NONE)
               {
@@ -440,6 +443,7 @@ LOCAL Errors restoreFile(const String                    archiveName,
       case ARCHIVE_ENTRY_TYPE_IMAGE:
         {
           String     imageName;
+          DeviceInfo deviceInfo;
           uint64     blockOffset,blockCount;
           FileHandle fileHandle;
           uint64     block;
@@ -458,7 +462,7 @@ LOCAL Errors restoreFile(const String                    archiveName,
                                          NULL,
                                          NULL,
                                          imageName,
-                                         NULL,
+                                         &deviceInfo,
                                          NULL,
                                          &blockOffset,
                                          &blockCount
@@ -469,6 +473,13 @@ LOCAL Errors restoreFile(const String                    archiveName,
             if (failError == ERROR_NONE) failError = error;
             break;
           }
+          if (deviceInfo.blockSize > BUFFER_SIZE)
+          {
+            String_delete(imageName);
+            if (failError == ERROR_NONE) failError = ERROR_INVALID_DEVICE_BLOCK_SIZE;
+            break;
+          }
+          assert(deviceInfo.blockSize > 0);
 
           if (String_equals(name,imageName))
           {
@@ -489,7 +500,7 @@ LOCAL Errors restoreFile(const String                    archiveName,
             }
 
             // seek to fragment position
-            error = File_seek(&fileHandle,blockOffset);
+            error = File_seek(&fileHandle,blockOffset*(uint64)deviceInfo.blockSize);
             if (error != ERROR_NONE)
             {
               printError("Cannot write file '%s' (error: %s)\n",
@@ -515,19 +526,17 @@ LOCAL Errors restoreFile(const String                    archiveName,
                 Misc_udelay(500*1000);
               }
 
-//              assert(deviceInfo.blockSize > 0);
-//              bufferBlockCount = MIN(blockCount-block,BUFFER_SIZE/deviceInfo.blockSize);
-//???
-#warning NYI
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-bufferBlockCount = 0;
-bufferLength =0;
-              error = Archive_readData(&archiveEntryInfo,buffer,0/*bufferLength ???bufferBlockCount*deviceInfo.blockSize*/);
+              bufferBlockCount = MIN(blockCount-block,BUFFER_SIZE/deviceInfo.blockSize);
+
+              // read data from archive
+              error = Archive_readData(&archiveEntryInfo,buffer,bufferBlockCount*(uint64)deviceInfo.blockSize);
               if (error != ERROR_NONE)
               {
                 if (failError == ERROR_NONE) failError = error;
                 break;
               }
+
+              // write data to file
               error = File_write(&fileHandle,buffer,bufferLength);
               if (error != ERROR_NONE)
               {
@@ -638,12 +647,15 @@ bufferLength =0;
 
               bufferLength = MIN(fragmentSize-length,BUFFER_SIZE);
 
+              // read data from archive
               error = Archive_readData(&archiveEntryInfo,buffer,bufferLength);
               if (error != ERROR_NONE)
               {
                 failError = error;
                 break;
               }
+
+              // write data to file
               error = File_write(&fileHandle,buffer,bufferLength);
               if (error != ERROR_NONE)
               {
