@@ -353,7 +353,7 @@ LOCAL Errors restoreFile(const String                    archiveName,
                          String_cString(destinationFileName),
                          Errors_getText(error)
                         );
-              (void)Archive_closeEntry(&archiveEntryInfo);
+              Archive_closeEntry(&archiveEntryInfo);
               String_delete(fileName);
               failError = error;
               continue;
@@ -367,8 +367,8 @@ LOCAL Errors restoreFile(const String                    archiveName,
                          String_cString(destinationFileName),
                          Errors_getText(error)
                         );
-              (void)File_close(&fileHandle);
-              (void)Archive_closeEntry(&archiveEntryInfo);
+              File_close(&fileHandle);
+              Archive_closeEntry(&archiveEntryInfo);
               String_delete(fileName);
               failError = error;
               continue;
@@ -413,28 +413,28 @@ LOCAL Errors restoreFile(const String                    archiveName,
             }
             if      (failError != ERROR_NONE)
             {
-              (void)File_close(&fileHandle);
-              (void)Archive_closeEntry(&archiveEntryInfo);
+              File_close(&fileHandle);
+              Archive_closeEntry(&archiveEntryInfo);
               String_delete(fileName);
               continue;
             }
             else if ((requestedAbortFlag != NULL) && (*requestedAbortFlag))
             {
-              (void)File_close(&fileHandle);
-              (void)Archive_closeEntry(&archiveEntryInfo);
+              File_close(&fileHandle);
+              Archive_closeEntry(&archiveEntryInfo);
               String_delete(fileName);
               continue;
             }
 
             // close file
-            (void)File_close(&fileHandle);
+            File_close(&fileHandle);
 
             // entry restored
             restoredFlag = TRUE;
           }
 
           // close archive file, free resources
-          (void)Archive_closeEntry(&archiveEntryInfo);
+          Archive_closeEntry(&archiveEntryInfo);
 
           // free resources
           String_delete(fileName);
@@ -492,7 +492,7 @@ LOCAL Errors restoreFile(const String                    archiveName,
                          String_cString(destinationFileName),
                          Errors_getText(error)
                         );
-              (void)Archive_closeEntry(&archiveEntryInfo);
+              Archive_closeEntry(&archiveEntryInfo);
               String_delete(imageName);
               failError = error;
               continue;
@@ -506,8 +506,8 @@ LOCAL Errors restoreFile(const String                    archiveName,
                          String_cString(destinationFileName),
                          Errors_getText(error)
                         );
-              (void)File_close(&fileHandle);
-              (void)Archive_closeEntry(&archiveEntryInfo);
+              File_close(&fileHandle);
+              Archive_closeEntry(&archiveEntryInfo);
               String_delete(imageName);
               failError = error;
               continue;
@@ -552,14 +552,14 @@ LOCAL Errors restoreFile(const String                    archiveName,
             }
 
             // close file
-            (void)File_close(&fileHandle);
+            File_close(&fileHandle);
 
             // entry restored
             restoredFlag = TRUE;
           }
 
           // close archive file, free resources
-          (void)Archive_closeEntry(&archiveEntryInfo);
+          Archive_closeEntry(&archiveEntryInfo);
 
           // free resources
           String_delete(imageName);
@@ -611,7 +611,7 @@ LOCAL Errors restoreFile(const String                    archiveName,
                          String_cString(destinationFileName),
                          Errors_getText(error)
                         );
-              (void)Archive_closeEntry(&archiveEntryInfo);
+              Archive_closeEntry(&archiveEntryInfo);
               StringList_done(&fileNameList);
               failError = error;
               continue;
@@ -625,8 +625,8 @@ LOCAL Errors restoreFile(const String                    archiveName,
                          String_cString(destinationFileName),
                          Errors_getText(error)
                         );
-              (void)File_close(&fileHandle);
-              (void)Archive_closeEntry(&archiveEntryInfo);
+              File_close(&fileHandle);
+              Archive_closeEntry(&archiveEntryInfo);
               StringList_done(&fileNameList);
               failError = error;
               continue;
@@ -671,30 +671,30 @@ LOCAL Errors restoreFile(const String                    archiveName,
             }
             if      (failError != ERROR_NONE)
             {
-              (void)File_close(&fileHandle);
+              File_close(&fileHandle);
               break;
             }
             else if ((requestedAbortFlag != NULL) && (*requestedAbortFlag))
             {
-              (void)File_close(&fileHandle);
+              File_close(&fileHandle);
               break;
             }
 
             // close file
-            (void)File_close(&fileHandle);
+            File_close(&fileHandle);
 
             // entry restored
             restoredFlag = TRUE;
           }
           if (failError != ERROR_NONE)
           {
-            (void)Archive_closeEntry(&archiveEntryInfo);
+            Archive_closeEntry(&archiveEntryInfo);
             StringList_done(&fileNameList);
             continue;
           }
 
           // close archive file, free resources
-          (void)Archive_closeEntry(&archiveEntryInfo);
+          Archive_closeEntry(&archiveEntryInfo);
 
           // free resources
           StringList_done(&fileNameList);
@@ -718,7 +718,7 @@ LOCAL Errors restoreFile(const String                    archiveName,
   }
 
   // close archive
-  (void)Archive_close(&archiveInfo);
+  Archive_close(&archiveInfo);
 
   // free resources
   free(buffer);
@@ -1086,7 +1086,7 @@ void Source_closeEntry(SourceHandle *sourceHandle)
   assert(sourceHandle != NULL);
 
   // close source file
-  (void)File_close(&sourceHandle->tmpFileHandle);
+  File_close(&sourceHandle->tmpFileHandle);
 
   // delete temporary source file
   if (sourceHandle->tmpFileName != NULL)
