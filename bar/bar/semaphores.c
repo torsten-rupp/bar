@@ -51,16 +51,16 @@ typedef struct
   #define LOCK(debugFlag,type,semaphore) \
     do \
     { \
-      if (debugFlag) fprintf(stderr,"%s,%4d: %p wait lock %s\n",__FILE__,__LINE__,(void*)pthread_self(),type); \
+      if (debugFlag) fprintf(stderr,"%s,%4d: 0x%x wait lock %s\n",__FILE__,__LINE__,(unsigned int)pthread_self(),type); \
       pthread_mutex_lock(semaphore); \
-      if (debugFlag) fprintf(stderr,"%s,%4d: %p locked %s\n",__FILE__,__LINE__,(void*)pthread_self(),type); \
+      if (debugFlag) fprintf(stderr,"%s,%4d: 0x%x locked %s\n",__FILE__,__LINE__,(unsigned int)pthread_self(),type); \
     } \
     while (0)
 
   #define UNLOCK(debugFlag,type,semaphore,n) \
     do \
     { \
-      if (debugFlag) fprintf(stderr,"%s,%4d: %p unlock %s n=%d\n",__FILE__,__LINE__,(void*)pthread_self(),type,n); \
+      if (debugFlag) fprintf(stderr,"%s,%4d: 0x%x unlock %s n=%d\n",__FILE__,__LINE__,(unsigned int)pthread_self(),type,n); \
       pthread_mutex_unlock(semaphore); \
     } \
     while (0)
@@ -68,16 +68,16 @@ typedef struct
   #define WAIT(debugFlag,type,condition,semaphore) \
     do \
     { \
-      if (debugFlag) fprintf(stderr,"%s,%4d: %p unlock+wait %s\n",__FILE__,__LINE__,(void*)pthread_self(),type); \
+      if (debugFlag) fprintf(stderr,"%s,%4d: 0x%x unlock+wait %s\n",__FILE__,__LINE__,(unsigned int)pthread_self(),type); \
       pthread_cond_wait(condition,semaphore); \
-      if (debugFlag) fprintf(stderr,"%s,%4d: %p waited+locked %s done\n",__FILE__,__LINE__,(void*)pthread_self(),type); \
+      if (debugFlag) fprintf(stderr,"%s,%4d: 0x%x waited+locked %s done\n",__FILE__,__LINE__,(unsigned int)pthread_self(),type); \
     } \
     while (0)
 
   #define SIGNAL(debugFlag,type,condition) \
     do \
     { \
-      if (debugFlag) fprintf(stderr,"%s,%4d: %p signal %s\n",__FILE__,__LINE__,(void*)pthread_self(),type); \
+      if (debugFlag) fprintf(stderr,"%s,%4d: 0x%x signal %s\n",__FILE__,__LINE__,(unsigned int)pthread_self(),type); \
       pthread_cond_signal(condition); \
     } \
     while (0)
