@@ -821,7 +821,7 @@ Errors Command_restore(const StringList                *archiveNameList,
               }
 
               // write image data
-              block = 0;
+              block = 0LL;
               while (   ((restoreInfo.requestedAbortFlag == NULL) || !(*restoreInfo.requestedAbortFlag))
                      && (block < blockCount)
                     )
@@ -1524,7 +1524,7 @@ Errors Command_restore(const StringList                *archiveNameList,
                   }
 
                   // write file data
-                  length = 0;
+                  length = 0LL;
                   while (   ((restoreInfo.requestedAbortFlag == NULL) || !(*restoreInfo.requestedAbortFlag))
                          && (length < fragmentSize)
                         )
