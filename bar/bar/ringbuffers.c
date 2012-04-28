@@ -210,7 +210,7 @@ LOCAL void normalizeOut(RingBuffer *ringBuffer)
       && (ringBuffer->nextIn < ringBuffer->nextOut)
      )
   {
-fprintf(stderr,"%s, %d: normalizeOut\n",__FILE__,__LINE__);
+//fprintf(stderr,"%s, %d: normalizeOut\n",__FILE__,__LINE__);
     /* non-contigous -> rearrange
 
        before:
@@ -445,11 +445,11 @@ bool RingBuffer_resize(RingBuffer *ringBuffer, ulong newSize)
   ulong n;
 
   assert(newSize > 0);
-fprintf(stderr,"%s, %d: RingBuffer_resize %ld %ld\n",__FILE__,__LINE__,ringBuffer->size,newSize);
+//fprintf(stderr,"%s, %d: RingBuffer_resize %ld %ld\n",__FILE__,__LINE__,ringBuffer->size,newSize);
 
   RINGBUFFER_CHECK_VALID(ringBuffer);
 
-  // allocate new ring buffer data
+  // allocate new ring buffer data memory
   newData = (byte*)malloc((newSize+1)*(ulong)ringBuffer->elementSize);
   if (newData == NULL)
   {
@@ -459,6 +459,9 @@ fprintf(stderr,"%s, %d: RingBuffer_resize %ld %ld\n",__FILE__,__LINE__,ringBuffe
       return FALSE;
     #endif /* HALT_ON_INSUFFICIENT_MEMORY */
   }
+  #ifndef NDEBUG
+    debugRingBufferList.allocatedMemory += (ulong)((newSize+1)-ringBuffer->size)*(ulong)ringBuffer->elementSize;
+  #endif /* not NDEBUG */
 
   // normalize ring buffer output
   normalizeOut(ringBuffer);
@@ -466,16 +469,17 @@ fprintf(stderr,"%s, %d: RingBuffer_resize %ld %ld\n",__FILE__,__LINE__,ringBuffe
   // move data
   n = MIN(RingBuffer_getAvailable(ringBuffer),newSize);
   memcpy(newData,
-         ringBuffer->data,
+         ringBuffer->data+(ulong)ringBuffer->nextOut*(ulong)ringBuffer->elementSize,
          n*(ulong)ringBuffer->elementSize
         );
 
   // set new data, adjust size/length
   free(ringBuffer->data);
-  ringBuffer->size   = newSize+1;
-  ringBuffer->length = n;
-  ringBuffer->nextIn = n;
-  ringBuffer->data   = newData;
+  ringBuffer->size    = newSize+1;
+  ringBuffer->length  = n;
+  ringBuffer->nextOut = 0L;
+  ringBuffer->nextIn  = n;
+  ringBuffer->data    = newData;
 
   return TRUE;
 }
