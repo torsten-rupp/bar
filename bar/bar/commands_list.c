@@ -1533,7 +1533,7 @@ remoteBarFlag=FALSE;
     StringList_getFirst(storageNameList,storageName);
     Storage_getPrintableName(printableStorageName,storageName);
     printedInfoFlag = FALSE;
-    fileCount       = 0;
+    fileCount       = 0L;
 
     switch (Storage_parseName(storageName,storageSpecifier,archiveFileName))
     {
