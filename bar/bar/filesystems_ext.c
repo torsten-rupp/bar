@@ -203,7 +203,7 @@ typedef struct
   uint64 kbytesWritten;
 
   uint32 reserved[160];
-} EXTSuperBlock ATTRIBUTE_PACKED;
+} ATTRIBUTE_PACKED EXTSuperBlock;
 
 // ext2/ext3 group descriptor
 typedef struct
@@ -218,7 +218,7 @@ typedef struct
   uint32 reserver0[2];
   uint16 inodeTableUnused;
   uint16 checksum;
-} EXT23GroupDescriptor ATTRIBUTE_PACKED;
+} ATTRIBUTE_PACKED EXT23GroupDescriptor;
 
 // ext4 group descriptor
 typedef struct
@@ -241,7 +241,7 @@ typedef struct
   uint16 usedDirectoriesCountHigh;
   uint16 pad0;
   uint32 reserver1[3];
-} EXT4GroupDescriptor ATTRIBUTE_PACKED;
+} ATTRIBUTE_PACKED EXT4GroupDescriptor;
 
 /***************************** Variables *******************************/
 

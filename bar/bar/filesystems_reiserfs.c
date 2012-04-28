@@ -52,7 +52,7 @@ typedef struct
   uchar  uuid[16];
   uchar  label[16];
   byte   unused0[88];
-} ReiserSuperBlock ATTRIBUTE_PACKED;
+} ATTRIBUTE_PACKED ReiserSuperBlock;
 
 /***************************** Variables *******************************/
 
