@@ -289,7 +289,7 @@ Errors Command_test(const StringList                *archiveNameList,
           break;
         case ARCHIVE_ENTRY_TYPE_IMAGE:
           {
-            String       imageName;
+            String       deviceName;
             DeviceInfo   deviceInfo;
             uint64       blockOffset,blockCount;
             FragmentNode *fragmentNode;
@@ -297,14 +297,14 @@ Errors Command_test(const StringList                *archiveNameList,
             ulong        bufferBlockCount;
 
             // read image
-            imageName = String_new();
+            deviceName = String_new();
             error = Archive_readImageEntry(&archiveInfo,
                                            &archiveEntryInfo,
                                            NULL,
                                            NULL,
                                            NULL,
                                            NULL,
-                                           imageName,
+                                           deviceName,
                                            &deviceInfo,
                                            NULL,
                                            &blockOffset,
@@ -316,26 +316,41 @@ Errors Command_test(const StringList                *archiveNameList,
                          String_cString(printableArchiveName),
                          Errors_getText(error)
                         );
-              String_delete(imageName);
+              String_delete(deviceName);
               if (failError == ERROR_NONE) failError = error;
               break;
             }
+            if (deviceInfo.blockSize > BUFFER_SIZE)
+            {
+              printError("Device block size %llu on '%s' is too big (max: %llu)\n",
+                         deviceInfo.blockSize,
+                         String_cString(deviceName),
+                         BUFFER_SIZE
+                        );
+              String_delete(deviceName);
+              if (failError == ERROR_NONE)
+              {
+                failError = ERROR_INVALID_DEVICE_BLOCK_SIZE;
+              }
+              break;
+            }
+            assert(deviceInfo.blockSize > 0);
 
-            if (   (List_isEmpty(includeEntryList) || EntryList_match(includeEntryList,imageName,PATTERN_MATCH_MODE_EXACT))
-                && !PatternList_match(excludePatternList,imageName,PATTERN_MATCH_MODE_EXACT)
+            if (   (List_isEmpty(includeEntryList) || EntryList_match(includeEntryList,deviceName,PATTERN_MATCH_MODE_EXACT))
+                && !PatternList_match(excludePatternList,deviceName,PATTERN_MATCH_MODE_EXACT)
                )
             {
-              printInfo(1,"  Test image '%s'...",String_cString(imageName));
+              printInfo(1,"  Test image '%s'...",String_cString(deviceName));
 
               if (!jobOptions->noFragmentsCheckFlag)
               {
-                // get file fragment list
-                fragmentNode = FragmentList_find(&fragmentList,imageName);
+                // get file fragment node
+                fragmentNode = FragmentList_find(&fragmentList,deviceName);
                 if (fragmentNode == NULL)
                 {
-                  fragmentNode = FragmentList_add(&fragmentList,imageName,deviceInfo.size,NULL,0);
+                  fragmentNode = FragmentList_add(&fragmentList,deviceName,deviceInfo.size,NULL,0);
                 }
-//FragmentList_print(fragmentNode,String_cString(imageName));
+//FragmentList_print(fragmentNode,String_cString(deviceName));
                 assert(fragmentNode != NULL);
               }
               else
@@ -347,7 +362,6 @@ Errors Command_test(const StringList                *archiveNameList,
               block = 0LL;
               while (block < blockCount)
               {
-                assert(deviceInfo.blockSize > 0);
                 bufferBlockCount = MIN(blockCount-block,BUFFER_SIZE/deviceInfo.blockSize);
 
                 // read archive file
@@ -370,7 +384,7 @@ Errors Command_test(const StringList                *archiveNameList,
               if (failError != ERROR_NONE)
               {
                 (void)Archive_closeEntry(&archiveEntryInfo);
-                String_delete(imageName);
+                String_delete(deviceName);
                 continue;
               }
               printInfo(2,"    \b\b\b\b");
@@ -398,10 +412,10 @@ Errors Command_test(const StringList                *archiveNameList,
                   && !Archive_eofData(&archiveEntryInfo))
               {
                 printInfo(1,"FAIL!\n");
-                printError("unexpected data at end of image entry '%S'!\n",imageName);
+                printError("unexpected data at end of image entry '%S'!\n",deviceName);
                 if (failError == ERROR_NONE) failError = ERROR_CORRUPT_DATA;
                 (void)Archive_closeEntry(&archiveEntryInfo);
-                String_delete(imageName);
+                String_delete(deviceName);
                 break;
               }
 
@@ -410,7 +424,7 @@ Errors Command_test(const StringList                *archiveNameList,
             else
             {
               // skip
-              printInfo(2,"  Test '%s'...skipped\n",String_cString(imageName));
+              printInfo(2,"  Test '%s'...skipped\n",String_cString(deviceName));
             }
 
             // close archive file, free resources
@@ -420,13 +434,13 @@ Errors Command_test(const StringList                *archiveNameList,
               printError("closing 'image' entry fail (error: %s)!\n",
                          Errors_getText(error)
                         );
-              String_delete(imageName);
+              String_delete(deviceName);
               if (failError == ERROR_NONE) failError = error;
               break;
             }
 
             // free resources
-            String_delete(imageName);
+            String_delete(deviceName);
           }
           break;
         case ARCHIVE_ENTRY_TYPE_DIRECTORY:

@@ -369,6 +369,7 @@ Errors Command_restore(const StringList                *archiveNameList,
               // check if file fragment already exists, file already exists
               if (!jobOptions->noFragmentsCheckFlag)
               {
+                // get/create file fragment node
                 fragmentNode = FragmentList_find(&fragmentList,destinationFileName);
                 if (fragmentNode != NULL)
                 {
@@ -481,10 +482,7 @@ Errors Command_restore(const StringList                *archiveNameList,
                   String_delete(destinationFileName);
                   Archive_closeEntry(&archiveEntryInfo);
                   String_delete(fileName);
-                  if (jobOptions->stopOnErrorFlag)
-                  {
-                    restoreInfo.failError = error;
-                  }
+                  if (jobOptions->stopOnErrorFlag) restoreInfo.failError = error;
                   continue;
                 }
 
@@ -501,10 +499,7 @@ Errors Command_restore(const StringList                *archiveNameList,
                   String_delete(destinationFileName);
                   Archive_closeEntry(&archiveEntryInfo);
                   String_delete(fileName);
-                  if (jobOptions->stopOnErrorFlag)
-                  {
-                    restoreInfo.failError = error;
-                  }
+                  if (jobOptions->stopOnErrorFlag) restoreInfo.failError = error;
                   continue;
                 }
               }
@@ -544,10 +539,7 @@ Errors Command_restore(const StringList                *archiveNameList,
                                String_cString(destinationFileName),
                                Errors_getText(error)
                               );
-                    if (jobOptions->stopOnErrorFlag)
-                    {
-                      restoreInfo.failError = error;
-                    }
+                    if (jobOptions->stopOnErrorFlag) restoreInfo.failError = error;
                     break;
                   }
                 }
@@ -692,7 +684,7 @@ Errors Command_restore(const StringList                *archiveNameList,
           break;
         case ARCHIVE_ENTRY_TYPE_IMAGE:
           {
-            String       imageName;
+            String       deviceName;
             DeviceInfo   deviceInfo;
             uint64       blockOffset,blockCount;
             String       destinationDeviceName;
@@ -701,14 +693,14 @@ Errors Command_restore(const StringList                *archiveNameList,
             ulong        bufferBlockCount;
 
             // read image
-            imageName = String_new();
+            deviceName = String_new();
             error = Archive_readImageEntry(&archiveInfo,
                                            &archiveEntryInfo,
                                            NULL,
                                            NULL,
                                            NULL,
                                            NULL,
-                                           imageName,
+                                           deviceName,
                                            &deviceInfo,
                                            NULL,
                                            &blockOffset,
@@ -720,31 +712,43 @@ Errors Command_restore(const StringList                *archiveNameList,
                          String_cString(printableArchiveName),
                          Errors_getText(error)
                         );
-              String_delete(imageName);
+              String_delete(deviceName);
               if (restoreInfo.failError == ERROR_NONE) restoreInfo.failError = error;
               break;
             }
+            if (deviceInfo.blockSize > BUFFER_SIZE)
+            {
+              printError("Device block size %llu on '%s' is too big (max: %llu)\n",
+                         deviceInfo.blockSize,
+                         String_cString(deviceName),
+                         BUFFER_SIZE
+                        );
+              String_delete(deviceName);
+              if (restoreInfo.failError == ERROR_NONE) restoreInfo.failError = ERROR_INVALID_DEVICE_BLOCK_SIZE;
+              break;
+            }
+            assert(deviceInfo.blockSize > 0);
 
-            if (   (List_isEmpty(includeEntryList) || EntryList_match(includeEntryList,imageName,PATTERN_MATCH_MODE_EXACT))
-                && ((excludePatternList == NULL) || !PatternList_match(excludePatternList,imageName,PATTERN_MATCH_MODE_EXACT))
+            if (   (List_isEmpty(includeEntryList) || EntryList_match(includeEntryList,deviceName,PATTERN_MATCH_MODE_EXACT))
+                && ((excludePatternList == NULL) || !PatternList_match(excludePatternList,deviceName,PATTERN_MATCH_MODE_EXACT))
                )
             {
-              String_set(restoreInfo.statusInfo.name,imageName);
+              String_set(restoreInfo.statusInfo.name,deviceName);
               restoreInfo.statusInfo.entryDoneBytes  = 0LL;
               restoreInfo.statusInfo.entryTotalBytes = blockCount;
               abortFlag = !updateStatusInfo(&restoreInfo);
 
               // get destination filename
               destinationDeviceName = getDestinationDeviceName(String_new(),
-                                                               imageName,
+                                                               deviceName,
                                                                jobOptions->destination
                                                               );
 
 
               if (!jobOptions->noFragmentsCheckFlag)
               {
-                // check if image fragment exists
-                fragmentNode = FragmentList_find(&fragmentList,imageName);
+                // get/create image fragment node
+                fragmentNode = FragmentList_find(&fragmentList,deviceName);
                 if (fragmentNode != NULL)
                 {
                   if (!jobOptions->overwriteFilesFlag && FragmentList_entryExists(fragmentNode,blockOffset*(uint64)deviceInfo.blockSize,blockCount*(uint64)deviceInfo.blockSize))
@@ -757,13 +761,13 @@ Errors Command_restore(const StringList                *archiveNameList,
                              );
                     String_delete(destinationDeviceName);
                     Archive_closeEntry(&archiveEntryInfo);
-                    String_delete(imageName);
+                    String_delete(deviceName);
                     continue;
                   }
                 }
                 else
                 {
-                  fragmentNode = FragmentList_add(&fragmentList,imageName,deviceInfo.size,NULL,0);
+                  fragmentNode = FragmentList_add(&fragmentList,deviceName,deviceInfo.size,NULL,0);
                 }
                 assert(fragmentNode != NULL);
               }
@@ -774,26 +778,28 @@ Errors Command_restore(const StringList                *archiveNameList,
 
               printInfo(1,"  Restore image '%s'...",String_cString(destinationDeviceName));
 
-              // open device
               if (!jobOptions->dryRunFlag)
               {
+                // open device
                 error = Device_open(&deviceHandle,destinationDeviceName,DEVICE_OPENMODE_WRITE);
                 if (error != ERROR_NONE)
                 {
                   printInfo(1,"FAIL!\n");
-                  printError("Cannot write to device '%s' (error: %s)\n",
+                  printError("Cannot open to device '%s' (error: %s)\n",
                              String_cString(destinationDeviceName),
                              Errors_getText(error)
                             );
                   String_delete(destinationDeviceName);
                   Archive_closeEntry(&archiveEntryInfo);
-                  String_delete(imageName);
+                  String_delete(deviceName);
                   if (jobOptions->stopOnErrorFlag)
                   {
                     restoreInfo.failError = error;
                   }
                   continue;
                 }
+
+                // seek to fragment position
                 error = Device_seek(&deviceHandle,blockOffset*(uint64)deviceInfo.blockSize);
                 if (error != ERROR_NONE)
                 {
@@ -805,7 +811,7 @@ Errors Command_restore(const StringList                *archiveNameList,
                   Device_close(&deviceHandle);
                   String_delete(destinationDeviceName);
                   Archive_closeEntry(&archiveEntryInfo);
-                  String_delete(imageName);
+                  String_delete(deviceName);
                   if (jobOptions->stopOnErrorFlag)
                   {
                     restoreInfo.failError = error;
@@ -826,9 +832,9 @@ Errors Command_restore(const StringList                *archiveNameList,
                   Misc_udelay(500*1000);
                 }
 
-                assert(deviceInfo.blockSize > 0);
                 bufferBlockCount = MIN(blockCount-block,BUFFER_SIZE/deviceInfo.blockSize);
 
+                // read data from archive
                 error = Archive_readData(&archiveEntryInfo,buffer,bufferBlockCount*deviceInfo.blockSize);
                 if (error != ERROR_NONE)
                 {
@@ -840,8 +846,10 @@ Errors Command_restore(const StringList                *archiveNameList,
                   if (restoreInfo.failError == ERROR_NONE) restoreInfo.failError = error;
                   break;
                 }
+
                 if (!jobOptions->dryRunFlag)
                 {
+                  // write data to device
                   error = Device_write(&deviceHandle,buffer,bufferBlockCount*deviceInfo.blockSize);
                   if (error != ERROR_NONE)
                   {
@@ -872,7 +880,7 @@ Errors Command_restore(const StringList                *archiveNameList,
                   printInfo(1,"ABORTED\n");
                   String_delete(destinationDeviceName);
                   Archive_closeEntry(&archiveEntryInfo);
-                  String_delete(imageName);
+                  String_delete(deviceName);
                   continue;
                 }
               }
@@ -910,7 +918,7 @@ Errors Command_restore(const StringList                *archiveNameList,
                   && !Compress_isCompressed(archiveEntryInfo.image.byteCompressAlgorithm)
                   && !Archive_eofData(&archiveEntryInfo))
               {
-                printWarning("unexpected data at end of image entry '%S'.\n",imageName);
+                printWarning("unexpected data at end of image entry '%S'.\n",deviceName);
               }
 
               // free resources
@@ -919,7 +927,7 @@ Errors Command_restore(const StringList                *archiveNameList,
             else
             {
               // skip
-              printInfo(2,"  Restore '%s'...skipped\n",String_cString(imageName));
+              printInfo(2,"  Restore '%s'...skipped\n",String_cString(deviceName));
             }
 
             // close archive file, free resources
@@ -930,7 +938,7 @@ Errors Command_restore(const StringList                *archiveNameList,
             }
 
             // free resources
-            String_delete(imageName);
+            String_delete(deviceName);
           }
           break;
         case ARCHIVE_ENTRY_TYPE_DIRECTORY:

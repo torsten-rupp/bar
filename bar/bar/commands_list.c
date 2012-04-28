@@ -1689,19 +1689,19 @@ remoteBarFlag=FALSE;
                   CompressAlgorithms deltaCompressAlgorithm,dataCompressAlgorithm;
                   CryptAlgorithms    cryptAlgorithm;
                   CryptTypes         cryptType;
-                  String             imageName;
+                  String             deviceName;
                   DeviceInfo         deviceInfo;
                   uint64             blockOffset,blockCount;
 
                   // read archive image
-                  imageName = String_new();
+                  deviceName = String_new();
                   error = Archive_readImageEntry(&archiveInfo,
                                                  &archiveEntryInfo,
                                                  &deltaCompressAlgorithm,
                                                  &dataCompressAlgorithm,
                                                  &cryptAlgorithm,
                                                  &cryptType,
-                                                 imageName,
+                                                 deviceName,
                                                  &deviceInfo,
                                                  NULL,
                                                  &blockOffset,
@@ -1713,20 +1713,20 @@ remoteBarFlag=FALSE;
                                String_cString(printableStorageName),
                                Errors_getText(error)
                               );
-                    String_delete(imageName);
+                    String_delete(deviceName);
                     if (failError == ERROR_NONE) failError = error;
                     break;
                   }
 
-                  if (   (List_isEmpty(includeEntryList) || EntryList_match(includeEntryList,imageName,PATTERN_MATCH_MODE_EXACT))
-                      && !PatternList_match(excludePatternList,imageName,PATTERN_MATCH_MODE_EXACT)
+                  if (   (List_isEmpty(includeEntryList) || EntryList_match(includeEntryList,deviceName,PATTERN_MATCH_MODE_EXACT))
+                      && !PatternList_match(excludePatternList,deviceName,PATTERN_MATCH_MODE_EXACT)
                      )
                   {
                     if (globalOptions.groupFlag)
                     {
                       // add image info to list
                       addListImageInfo(storageName,
-                                       imageName,
+                                       deviceName,
                                        deviceInfo.size,
                                        archiveEntryInfo.image.chunkImageData.info.size,
                                        deltaCompressAlgorithm,
@@ -1748,7 +1748,7 @@ remoteBarFlag=FALSE;
 
                       // output file info
                       printImageInfo(NULL,
-                                     imageName,
+                                     deviceName,
                                      deviceInfo.size,
                                      archiveEntryInfo.image.chunkImageData.info.size,
                                      deltaCompressAlgorithm,
@@ -1771,7 +1771,7 @@ remoteBarFlag=FALSE;
                   }
 
                   // free resources
-                  String_delete(imageName);
+                  String_delete(deviceName);
                 }
                 break;
               case ARCHIVE_ENTRY_TYPE_DIRECTORY:
