@@ -2320,11 +2320,11 @@ bool Archive_isArchiveFile(const String fileName)
   error = Chunk_next(&CHUNK_IO_FILE,&fileHandle,&chunkHeader);
   if (error != ERROR_NONE)
   {
-    (void)File_close(&fileHandle);
+    File_close(&fileHandle);
     return error;
   }
 
-  (void)File_close(&fileHandle);
+  File_close(&fileHandle);
 
   return    (chunkHeader.id == CHUNK_ID_BAR)
          && (chunkHeader.size == sizeof(uint32));
@@ -6805,8 +6805,8 @@ Errors Archive_closeEntry(ArchiveEntryInfo *archiveEntryInfo)
               {
                 // update part block count
                 assert(archiveEntryInfo->image.blockSize > 0);
-                assert((Compress_getInputLength(&archiveEntryInfo->image.byteCompressInfo) % archiveEntryInfo->image.blockSize) == 0);
-                archiveEntryInfo->image.chunkImageData.blockCount = Compress_getInputLength(&archiveEntryInfo->image.byteCompressInfo)/archiveEntryInfo->image.blockSize;
+                assert((Compress_getInputLength(&archiveEntryInfo->image.deltaCompressInfo) % archiveEntryInfo->image.blockSize) == 0);
+                archiveEntryInfo->image.chunkImageData.blockCount = Compress_getInputLength(&archiveEntryInfo->image.deltaCompressInfo)/archiveEntryInfo->image.blockSize;
                 if (error == ERROR_NONE)
                 {
                   tmpError = Chunk_update(&archiveEntryInfo->image.chunkImageData.info);
@@ -6816,6 +6816,11 @@ Errors Archive_closeEntry(ArchiveEntryInfo *archiveEntryInfo)
                 // close chunks
                 tmpError = Chunk_close(&archiveEntryInfo->image.chunkImageData.info);
                 if ((error == ERROR_NONE) && (tmpError != ERROR_NONE)) error = tmpError;
+                if (Compress_isCompressed(archiveEntryInfo->image.deltaCompressAlgorithm))
+                {
+                  tmpError = Chunk_close(&archiveEntryInfo->image.chunkImageDelta.info);
+                  if ((error == ERROR_NONE) && (tmpError != ERROR_NONE)) error = tmpError;
+                }
                 tmpError = Chunk_close(&archiveEntryInfo->image.chunkImageEntry.info);
                 if ((error == ERROR_NONE) && (tmpError != ERROR_NONE)) error = tmpError;
                 tmpError = Chunk_close(&archiveEntryInfo->image.chunkImage.info);
@@ -6992,7 +6997,7 @@ Errors Archive_closeEntry(ArchiveEntryInfo *archiveEntryInfo)
               if (archiveEntryInfo->hardLink.headerWrittenFlag)
               {
                 // update part size
-                archiveEntryInfo->hardLink.chunkHardLinkData.fragmentSize = Compress_getInputLength(&archiveEntryInfo->hardLink.byteCompressInfo);
+                archiveEntryInfo->hardLink.chunkHardLinkData.fragmentSize = Compress_getInputLength(&archiveEntryInfo->hardLink.deltaCompressInfo);
                 if (error == ERROR_NONE)
                 {
                   tmpError = Chunk_update(&archiveEntryInfo->hardLink.chunkHardLinkData.info);
@@ -9011,7 +9016,7 @@ Errors Archive_copy(const String                    storageName,
           }
 
           // close source archive file, free resources
-          (void)Archive_closeEntry(&sourceArchiveEntryInfo);
+          Archive_closeEntry(&sourceArchiveEntryInfo);
 
           // free resources
           String_delete(fileName);
