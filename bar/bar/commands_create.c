@@ -3038,9 +3038,7 @@ LOCAL Errors storeFileEntry(ArchiveInfo       *archiveInfo,
     File_close(&fileHandle);
 
     // get compression ratio
-    if (   Compress_isCompressed(archiveEntryInfo.file.byteCompressAlgorithm)
-        && (archiveEntryInfo.file.chunkFileData.fragmentSize > 0LL)
-       )
+    if (archiveEntryInfo.file.chunkFileData.fragmentSize > 0LL)
     {
       ratio = 100.0-archiveEntryInfo.file.chunkFileData.info.size*100.0/archiveEntryInfo.file.chunkFileData.fragmentSize;
     }
@@ -3366,11 +3364,7 @@ LOCAL Errors storeImageEntry(ArchiveInfo       *archiveInfo,
     }
 
     // get compression ratio
-    if (   (   Compress_isCompressed(archiveEntryInfo.image.deltaCompressAlgorithm)
-            || Compress_isCompressed(archiveEntryInfo.image.byteCompressAlgorithm)
-           )
-        && (archiveEntryInfo.image.chunkImageData.blockCount > 0)
-       )
+    if (archiveEntryInfo.image.chunkImageData.blockCount > 0)
     {
       ratio = 100.0-archiveEntryInfo.image.chunkImageData.info.size*100.0/(archiveEntryInfo.image.chunkImageData.blockCount*(uint64)deviceInfo.blockSize);
     }
@@ -3915,11 +3909,7 @@ LOCAL Errors storeHardLinkEntry(ArchiveInfo       *archiveInfo,
     File_close(&fileHandle);
 
     // get compression ratio
-    if (   (   Compress_isCompressed(archiveEntryInfo.hardLink.deltaCompressAlgorithm)
-            || Compress_isCompressed(archiveEntryInfo.hardLink.byteCompressAlgorithm)
-           )
-        && (archiveEntryInfo.hardLink.chunkHardLinkData.fragmentSize > 0LL)
-       )
+    if (archiveEntryInfo.hardLink.chunkHardLinkData.fragmentSize > 0LL)
     {
       ratio = 100.0-archiveEntryInfo.hardLink.chunkHardLinkData.info.size*100.0/archiveEntryInfo.hardLink.chunkHardLinkData.fragmentSize;
     }
