@@ -77,7 +77,7 @@ LOCAL_INLINE ulong compare(const void *p0, const void *p1, ulong length)
 
   b0 = (const byte*)p0;
   b1 = (const byte*)p1;
-  i = 0;
+  i = 0L;
   while (   (i < length)
          && ((*b0) == (*b1))
         )
@@ -306,7 +306,7 @@ Errors Command_compare(const StringList                *archiveNameList,
                 continue;
               }
 
-              // compare archive and file content
+              // seek to fragment position
               error = File_seek(&fileHandle,fragmentOffset);
               if (error != ERROR_NONE)
               {
@@ -325,9 +325,11 @@ Errors Command_compare(const StringList                *archiveNameList,
                 }
                 continue;
               }
-              length    = 0;
+
+              // compare archive and file content
+              length    = 0LL;
               equalFlag = TRUE;
-              diffIndex = 0;
+              diffIndex = 0L;
               while (   (length < fragmentSize)
                      && equalFlag
                     )
@@ -564,7 +566,7 @@ Errors Command_compare(const StringList                *archiveNameList,
                 if (jobOptions->stopOnErrorFlag) failError = ERROR_INVALID_DEVICE_BLOCK_SIZE;
                 continue;
               }
-              assert(deviceInfo.blockSize != 0);
+              assert(deviceInfo.blockSize > 0);
 
               // open device
               error = Device_open(&deviceHandle,deviceName,DEVICE_OPENMODE_READ);
@@ -597,7 +599,7 @@ Errors Command_compare(const StringList                *archiveNameList,
                 continue;
               }
 
-              // check if device contain a known file system or a raw image should be stored
+              // check if device contain a known file system or a raw image should be compared
               if (!jobOptions->rawImagesFlag)
               {
                 fileSystemFlag = (FileSystem_init(&fileSystemHandle,&deviceHandle) == ERROR_NONE);
@@ -626,7 +628,7 @@ Errors Command_compare(const StringList                *archiveNameList,
               // compare archive and device/image content
               block     = 0LL;
               equalFlag = TRUE;
-              diffIndex = 0;
+              diffIndex = 0L;
               while ((block < blockCount) && equalFlag)
               {
                 // read data from archive (only single block)
@@ -1158,7 +1160,7 @@ Errors Command_compare(const StringList                *archiveNameList,
                     }
                   }
 
-                  // compare archive and hard link content
+                  // seek to fragment position
                   error = File_seek(&fileHandle,fragmentOffset);
                   if (error != ERROR_NONE)
                   {
@@ -1178,9 +1180,11 @@ Errors Command_compare(const StringList                *archiveNameList,
                       continue;
                     }
                   }
-                  length    = 0;
+
+                  // compare archive and hard link content
+                  length    = 0LL;
                   equalFlag = TRUE;
-                  diffIndex = 0;
+                  diffIndex = 0L;
                   while (   (length < fragmentSize)
                          && equalFlag
                         )
