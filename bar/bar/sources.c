@@ -448,7 +448,6 @@ LOCAL Errors restoreFile(const String                    archiveName,
           FileHandle fileHandle;
           uint64     block;
           ulong      bufferBlockCount;
-          ulong      bufferLength;
 
           // read image
           imageName = String_new();
@@ -537,7 +536,7 @@ LOCAL Errors restoreFile(const String                    archiveName,
               }
 
               // write data to file
-              error = File_write(&fileHandle,buffer,bufferLength);
+              error = File_write(&fileHandle,buffer,bufferBlockCount*(uint64)deviceInfo.blockSize);
               if (error != ERROR_NONE)
               {
                 printError("Cannot write file '%s' (error: %s)\n",
