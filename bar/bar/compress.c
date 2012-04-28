@@ -798,10 +798,10 @@ LOCAL Errors compressData(CompressInfo *compressInfo)
                       }
 
                       // append compressed data to output buffer
-                      (void)RingBuffer_put(&compressInfo->xdelta.outputRingBuffer,
-                                           compressInfo->xdelta.stream.next_out,
-                                           compressInfo->xdelta.stream.avail_out
-                                          );
+                      RingBuffer_put(&compressInfo->xdelta.outputRingBuffer,
+                                     compressInfo->xdelta.stream.next_out,
+                                     compressInfo->xdelta.stream.avail_out
+                                    );
 #else /* not TEMPORARY_DEBUG_XDELTA_RINGBUFFERS */
                       if (   (compressInfo->xdelta.outputBuffer == NULL)
                           || (compressInfo->xdelta.outputBufferLength+(ulong)compressInfo->xdelta.stream.avail_out > compressInfo->xdelta.outputBufferSize)
@@ -880,20 +880,20 @@ compressInfo->xdelta.source.curblk[5]
                                    );
                 if (compressBytes > 0L)
                 {
-                  (void)RingBuffer_move(&compressInfo->xdelta.outputRingBuffer,
-                                        &compressInfo->compressRingBuffer,
-                                        compressBytes
-                                       );
+                  RingBuffer_move(&compressInfo->xdelta.outputRingBuffer,
+                                  &compressInfo->compressRingBuffer,
+                                  compressBytes
+                                 );
                 }
 #else /* not TEMPORARY_DEBUG_XDELTA_RINGBUFFERS */
                 if (compressInfo->xdelta.outputBufferLength > 0L)
                 {
                   // copy from output buffer -> compress buffer
                   compressBytes = MIN(compressInfo->xdelta.outputBufferLength,maxCompressBytes);
-                  (void)RingBuffer_put(&compressInfo->compressRingBuffer,
-                                       compressInfo->xdelta.outputBuffer,
-                                       compressBytes
-                                      );
+                  RingBuffer_put(&compressInfo->compressRingBuffer,
+                                 compressInfo->xdelta.outputBuffer,
+                                 compressBytes
+                                );
 
                   // shift output buffer
                   memmove(compressInfo->xdelta.outputBuffer,
@@ -974,10 +974,10 @@ compressInfo->xdelta.source.curblk[5]
                       }
 
                       // append compressed data to output buffer
-                      (void)RingBuffer_put(&compressInfo->xdelta.outputRingBuffer,
-                                           compressInfo->xdelta.stream.next_out,
-                                           compressInfo->xdelta.stream.avail_out
-                                          );
+                      RingBuffer_put(&compressInfo->xdelta.outputRingBuffer,
+                                     compressInfo->xdelta.stream.next_out,
+                                     compressInfo->xdelta.stream.avail_out
+                                    );
 #else /* not TEMPORARY_DEBUG_XDELTA_RINGBUFFERS */
                       if (   (compressInfo->xdelta.outputBuffer == NULL)
                           || (compressInfo->xdelta.outputBufferLength+(ulong)compressInfo->xdelta.stream.avail_out > compressInfo->xdelta.outputBufferSize)
@@ -1058,20 +1058,20 @@ compressInfo->xdelta.source.curblk[5]
                                    );
                 if (compressBytes > 0L)
                 {
-                  (void)RingBuffer_move(&compressInfo->xdelta.outputRingBuffer,
-                                        &compressInfo->compressRingBuffer,
-                                        compressBytes
-                                       );
+                  RingBuffer_move(&compressInfo->xdelta.outputRingBuffer,
+                                  &compressInfo->compressRingBuffer,
+                                  compressBytes
+                                 );
                 }
 #else /* not TEMPORARY_DEBUG_XDELTA_RINGBUFFERS */
                 if (compressInfo->xdelta.outputBufferLength > 0L)
                 {
                   // copy from output buffer -> compress buffer
                   compressBytes = MIN(compressInfo->xdelta.outputBufferLength,maxCompressBytes);
-                  (void)RingBuffer_put(&compressInfo->compressRingBuffer,
-                                       compressInfo->xdelta.outputBuffer,
-                                       compressBytes
-                                      );
+                  RingBuffer_put(&compressInfo->compressRingBuffer,
+                                 compressInfo->xdelta.outputBuffer,
+                                 compressBytes
+                                );
 
                   // shift output buffer
                   memmove(compressInfo->xdelta.outputBuffer,
@@ -1092,10 +1092,10 @@ compressInfo->xdelta.source.curblk[5]
                              );
           if (compressBytes > 0L)
           {
-            (void)RingBuffer_move(&compressInfo->xdelta.outputRingBuffer,
-                                  &compressInfo->compressRingBuffer,
-                                  compressBytes
-                                 );
+            RingBuffer_move(&compressInfo->xdelta.outputRingBuffer,
+                            &compressInfo->compressRingBuffer,
+                            compressBytes
+                           );
           }
 #else /* not TEMPORARY_DEBUG_XDELTA_RINGBUFFERS */
           if (compressInfo->xdelta.outputBufferLength > 0L)
@@ -1104,10 +1104,10 @@ compressInfo->xdelta.source.curblk[5]
             compressBytes = MIN(compressInfo->xdelta.outputBufferLength,
                                 RingBuffer_getFree(&compressInfo->compressRingBuffer)
                                );
-            (void)RingBuffer_put(&compressInfo->compressRingBuffer,
-                                 compressInfo->xdelta.outputBuffer,
-                                 compressBytes
-                                );
+            RingBuffer_put(&compressInfo->compressRingBuffer,
+                           compressInfo->xdelta.outputBuffer,
+                           compressBytes
+                          );
 
             // shift output buffer
             memmove(compressInfo->xdelta.outputBuffer,
@@ -2138,10 +2138,10 @@ LOCAL Errors decompressData(CompressInfo *compressInfo)
               dataBytes = MIN(RingBuffer_getAvailable(&compressInfo->xdelta.outputRingBuffer),
                               RingBuffer_getFree(&compressInfo->dataRingBuffer)
                              );
-              (void)RingBuffer_move(&compressInfo->xdelta.outputRingBuffer,
-                                    &compressInfo->dataRingBuffer,
-                                    dataBytes
-                                   );
+              RingBuffer_move(&compressInfo->xdelta.outputRingBuffer,
+                              &compressInfo->dataRingBuffer,
+                              dataBytes
+                             );
             }
 #else /* not TEMPORARY_DEBUG_XDELTA_RINGBUFFERS */
             if (compressInfo->xdelta.outputBufferLength > 0L)
@@ -2150,10 +2150,10 @@ LOCAL Errors decompressData(CompressInfo *compressInfo)
               dataBytes = MIN(compressInfo->xdelta.outputBufferLength,
                               RingBuffer_getFree(&compressInfo->dataRingBuffer)
                              );
-              (void)RingBuffer_put(&compressInfo->dataRingBuffer,
-                                   compressInfo->xdelta.outputBuffer,
-                                   dataBytes
-                                  );
+              RingBuffer_put(&compressInfo->dataRingBuffer,
+                             compressInfo->xdelta.outputBuffer,
+                             dataBytes
+                            );
 
               // shift output buffer
               memmove(compressInfo->xdelta.outputBuffer,
@@ -2226,10 +2226,10 @@ LOCAL Errors decompressData(CompressInfo *compressInfo)
                       }
 
                       // append compressed data to output buffer
-                      (void)RingBuffer_put(&compressInfo->xdelta.outputRingBuffer,
-                                           compressInfo->xdelta.stream.next_out,
-                                           compressInfo->xdelta.stream.avail_out
-                                          );
+                      RingBuffer_put(&compressInfo->xdelta.outputRingBuffer,
+                                     compressInfo->xdelta.stream.next_out,
+                                     compressInfo->xdelta.stream.avail_out
+                                    );
 #else /* not TEMPORARY_DEBUG_XDELTA_RINGBUFFERS */
                       if (   (compressInfo->xdelta.outputBuffer == NULL)
                           || (compressInfo->xdelta.outputBufferLength+(ulong)compressInfo->xdelta.stream.avail_out > compressInfo->xdelta.outputBufferSize)
@@ -2307,20 +2307,20 @@ compressInfo->xdelta.source.curblk[5]
                                );
                 if (dataBytes > 0L)
                 {
-                  (void)RingBuffer_move(&compressInfo->xdelta.outputRingBuffer,
-                                        &compressInfo->dataRingBuffer,
-                                        dataBytes
-                                       );
+                  RingBuffer_move(&compressInfo->xdelta.outputRingBuffer,
+                                  &compressInfo->dataRingBuffer,
+                                  dataBytes
+                                 );
                 }
 #else /* not TEMPORARY_DEBUG_XDELTA_RINGBUFFERS */
                 if (compressInfo->xdelta.outputBufferLength > 0L)
                 {
                   // copy from output buffer -> data buffer
                   dataBytes = MIN(compressInfo->xdelta.outputBufferLength,maxDataBytes);
-                  (void)RingBuffer_put(&compressInfo->dataRingBuffer,
-                                       compressInfo->xdelta.outputBuffer,
-                                       dataBytes
-                                      );
+                  RingBuffer_put(&compressInfo->dataRingBuffer,
+                                 compressInfo->xdelta.outputBuffer,
+                                 dataBytes
+                                );
 
                   // shift output buffer
                   memmove(compressInfo->xdelta.outputBuffer,
@@ -2377,10 +2377,10 @@ compressInfo->xdelta.source.curblk[5]
                       }
 
                       // append compressed data to output buffer
-                      (void)RingBuffer_put(&compressInfo->xdelta.outputRingBuffer,
-                                           compressInfo->xdelta.stream.next_out,
-                                           compressInfo->xdelta.stream.avail_out
-                                          );
+                      RingBuffer_put(&compressInfo->xdelta.outputRingBuffer,
+                                     compressInfo->xdelta.stream.next_out,
+                                     compressInfo->xdelta.stream.avail_out
+                                    );
 #else /* not TEMPORARY_DEBUG_XDELTA_RINGBUFFERS */
                       if (   (compressInfo->xdelta.outputBuffer == NULL)
                           || (compressInfo->xdelta.outputBufferLength+(ulong)compressInfo->xdelta.stream.avail_out > compressInfo->xdelta.outputBufferSize)
@@ -2458,10 +2458,10 @@ compressInfo->xdelta.source.curblk[5]
                   dataBytes = MIN(RingBuffer_getAvailable(&compressInfo->xdelta.outputRingBuffer),
                                   RingBuffer_getFree(&compressInfo->dataRingBuffer)
                                  );
-                  (void)RingBuffer_move(&compressInfo->xdelta.outputRingBuffer,
-                                        &compressInfo->dataRingBuffer,
-                                        dataBytes
-                                       );
+                  RingBuffer_move(&compressInfo->xdelta.outputRingBuffer,
+                                  &compressInfo->dataRingBuffer,
+                                  dataBytes
+                                 );
                 }
                 else
                 {
@@ -2474,10 +2474,10 @@ compressInfo->xdelta.source.curblk[5]
                 {
                   // copy from output buffer -> data buffer
                   dataBytes = MIN(compressInfo->xdelta.outputBufferLength,RingBuffer_getFree(&compressInfo->dataRingBuffer));
-                  (void)RingBuffer_put(&compressInfo->dataRingBuffer,
-                                       compressInfo->xdelta.outputBuffer,
-                                       dataBytes
-                                      );
+                  RingBuffer_put(&compressInfo->dataRingBuffer,
+                                 compressInfo->xdelta.outputBuffer,
+                                 dataBytes
+                                );
 
                   // shift output buffer
                   memmove(compressInfo->xdelta.outputBuffer,
@@ -3672,7 +3672,7 @@ Errors Compress_deflate(CompressInfo *compressInfo,
     n = MIN(RingBuffer_getFree(&compressInfo->dataRingBuffer),bufferLength);
 
     // copy uncompressed data into data buffer
-    (void)RingBuffer_put(&compressInfo->dataRingBuffer,buffer,n);
+    RingBuffer_put(&compressInfo->dataRingBuffer,buffer,n);
     buffer += n;
     bufferLength -= n;
 
@@ -3747,7 +3747,7 @@ Errors Compress_inflate(CompressInfo *compressInfo,
     n = MIN(RingBuffer_getAvailable(&compressInfo->dataRingBuffer),bufferSize);
 
     // copy decompressed data into buffer
-    (void)RingBuffer_get(&compressInfo->dataRingBuffer,buffer,n);
+    RingBuffer_get(&compressInfo->dataRingBuffer,buffer,n);
     buffer += n;
     bufferSize -= n;
 
@@ -4109,12 +4109,12 @@ void Compress_getCompressedData(CompressInfo *compressInfo,
   assert(bufferLength != NULL);
 
   // compress data (ignore error here)
-  (void)compressData(compressInfo);
+  compressData(compressInfo);
 
 #ifdef TEMPORARY_DEBUG_COMPRESS_RINGBUFFERS
   // copy compressed data into buffer
   n = MIN(RingBuffer_getAvailable(&compressInfo->compressRingBuffer),FLOOR(bufferSize,compressInfo->blockLength));
-  (void)RingBuffer_get(&compressInfo->compressRingBuffer,buffer,n);
+  RingBuffer_get(&compressInfo->compressRingBuffer,buffer,n);
 
   // set rest in last block to 0
   memset(buffer+n,
@@ -4169,12 +4169,12 @@ void Compress_putCompressedData(CompressInfo *compressInfo,
   assert(buffer != NULL);
 
   // decompress data (ignore error here)
-  (void)decompressData(compressInfo);
+  decompressData(compressInfo);
 
 #ifdef TEMPORARY_DEBUG_COMPRESS_RINGBUFFERS
   // copy data into compressed buffer
   assert(RingBuffer_getFree(&compressInfo->compressRingBuffer) >= bufferLength);
-  (void)RingBuffer_put(&compressInfo->compressRingBuffer,buffer,bufferLength);
+  RingBuffer_put(&compressInfo->compressRingBuffer,buffer,bufferLength);
 #else /* not TEMPORARY_DEBUG_COMPRESS_RINGBUFFERS */
   // copy data into compressed buffer
   assert(bufferLength <= compressInfo->compressBufferSize-compressInfo->compressBufferLength);
