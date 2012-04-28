@@ -1527,9 +1527,9 @@ LOCAL bool updateCreateJobStatus(JobNode                *jobNode,
     restBytes        = (createStatusInfo->totalBytes        > createStatusInfo->doneBytes       )?createStatusInfo->totalBytes       -createStatusInfo->doneBytes       :0LL;
     restStorageBytes = (createStatusInfo->archiveTotalBytes > createStatusInfo->archiveDoneBytes)?createStatusInfo->archiveTotalBytes-createStatusInfo->archiveDoneBytes:0LL;
     estimatedRestTime = 0;
-    if (entriesPerSecond      > 0) { estimatedRestTime = MAX(estimatedRestTime,(ulong)round((double)restFiles/entriesPerSecond            )); }
-    if (bytesPerSecond        > 0) { estimatedRestTime = MAX(estimatedRestTime,(ulong)round((double)restBytes/bytesPerSecond              )); }
-    if (storageBytesPerSecond > 0) { estimatedRestTime = MAX(estimatedRestTime,(ulong)round((double)restStorageBytes/storageBytesPerSecond)); }
+    if (entriesPerSecond      > 0) { estimatedRestTime = MAX(estimatedRestTime,(ulong)lround((double)restFiles/entriesPerSecond            )); }
+    if (bytesPerSecond        > 0) { estimatedRestTime = MAX(estimatedRestTime,(ulong)lround((double)restBytes/bytesPerSecond              )); }
+    if (storageBytesPerSecond > 0) { estimatedRestTime = MAX(estimatedRestTime,(ulong)lround((double)restStorageBytes/storageBytesPerSecond)); }
 
 /*
 fprintf(stderr,"%s,%d: createStatusInfo->doneEntries=%lu createStatusInfo->doneBytes=%llu jobNode->runningInfo.totalEntries=%lu jobNode->runningInfo.totalBytes %llu -- entriesPerSecond=%f bytesPerSecond=%f estimatedRestTime=%lus\n",__FILE__,__LINE__,
@@ -2962,7 +2962,7 @@ LOCAL void serverCommand_errorInfo(ClientInfo *clientInfo, uint id, const String
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected error code");
     return;
   }
-  error = (Errors)String_toInteger(arguments[0],0,NULL,NULL,0);
+  error = (Errors)(uint)String_toInteger(arguments[0],0,NULL,NULL,0);
 
   // format result
   sendClientResult(clientInfo,id,TRUE,ERROR_NONE,
