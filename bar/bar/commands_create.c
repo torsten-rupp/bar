@@ -279,9 +279,6 @@ LOCAL Errors writeIncrementalList(const String     fileName,
                                   const Dictionary *filesDictionary
                                  )
 {
-  assert(fileName != NULL);
-  assert(filesDictionary != NULL);
-
   String                    directoryName;
   String                    directory;
   String                    tmpFileName;
@@ -1437,7 +1434,7 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
                                   createInfo->statusInfo.totalEntries++;
                                   if (   (includeEntryNode->type == ENTRY_TYPE_IMAGE)
                                       && (fileInfo.specialType == FILE_SPECIAL_TYPE_BLOCK_DEVICE)
-                                      && (fileInfo.size >= 0L)
+                                      && (fileInfo.size >= 0LL)
                                      )
                                   {
                                     createInfo->statusInfo.totalBytes += fileInfo.size;
@@ -1449,7 +1446,7 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
                                 if (fileInfo.specialType == FILE_SPECIAL_TYPE_BLOCK_DEVICE)
                                 {
                                   createInfo->statusInfo.totalEntries++;
-                                  if (fileInfo.size >= 0L) createInfo->statusInfo.totalBytes += fileInfo.size;
+                                  if (fileInfo.size >= 0LL) createInfo->statusInfo.totalBytes += fileInfo.size;
                                   abortFlag |= !updateStatusInfo(createInfo);
                                 }
                                 break;
@@ -1525,7 +1522,7 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
                     UNUSED_VARIABLE(deviceInfo);
 
                     createInfo->statusInfo.totalEntries++;
-                    if (fileInfo.size >= 0L) createInfo->statusInfo.totalBytes += fileInfo.size;
+                    if (fileInfo.size >= 0LL) createInfo->statusInfo.totalBytes += fileInfo.size;
                     abortFlag |= !updateStatusInfo(createInfo);
                   }
                   break;
@@ -1578,6 +1575,9 @@ LOCAL void collectorThreadCode(CreateInfo *createInfo)
   DirectoryListHandle directoryListHandle;
   DeviceInfo          deviceInfo;
   DictionaryIterator  dictionaryIterator;
+//???
+union { const void *value; const uint64 *id; } keyData;
+union { void *value; HardLinkInfo *hardLinkInfo; } data;
 
   assert(createInfo != NULL);
   assert(createInfo->includeEntryList != NULL);
@@ -2104,9 +2104,6 @@ LOCAL void collectorThreadCode(CreateInfo *createInfo)
   }
 
   // add incomplete hard link entries to file list (not all hard links found)
-//???
-union { const void *value; const uint64 *id; } keyData;
-union { void *value; HardLinkInfo *hardLinkInfo; } data;
   Dictionary_initIterator(&dictionaryIterator,&hardLinkDictionary);
   while (Dictionary_getNext(&dictionaryIterator,
                             &keyData.value,
