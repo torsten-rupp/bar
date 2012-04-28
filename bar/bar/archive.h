@@ -642,7 +642,7 @@ Errors Archive_readFileEntry(ArchiveInfo        *archiveInfo,
 * Output : cryptAlgorithm - used crypt algorithm (can be NULL)
 *          cryptType      - used crypt type (can be NULL)
 *          deviceName     - image name
-*          deviceInfo     - device info
+*          deviceInfo     - device info (can be NULL)
 *          blockOffset    - block offset (0..n-1)
 *          blockCount     - number of blocks
 * Return : ERROR_NONE or error code

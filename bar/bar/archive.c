@@ -5131,8 +5131,11 @@ Errors Archive_readImageEntry(ArchiveInfo        *archiveInfo,
 
             // get image meta data
             String_set(deviceName,archiveEntryInfo->image.chunkImageEntry.name);
-            deviceInfo->size      = archiveEntryInfo->image.chunkImageEntry.size;
-            deviceInfo->blockSize = archiveEntryInfo->image.chunkImageEntry.blockSize;
+            if (deviceInfo != NULL)
+            {
+              deviceInfo->size      = archiveEntryInfo->image.chunkImageEntry.size;
+              deviceInfo->blockSize = archiveEntryInfo->image.chunkImageEntry.blockSize;
+            }
 
             foundImageEntryFlag = TRUE;
             break;
