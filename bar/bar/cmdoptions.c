@@ -1018,6 +1018,11 @@ bool CmdOption_parseString(const CommandLineOption *commandLineOption,
   return processOption(commandLineOption,commandLineOption->name,value,NULL,NULL);
 }
 
+#ifdef __GNUC__
+#pragma GCC push_options
+#pragma GCC diagnostic ignored "-Wfloat-equal"
+#endif /* __GNUC__ */
+
 void CmdOption_printHelp(FILE                    *outputHandle,
                          const CommandLineOption commandLineOptions[],
                          uint                    commandLineOptionCount,
@@ -1449,6 +1454,10 @@ void CmdOption_printHelp(FILE                    *outputHandle,
     }
   }
 }
+
+#ifdef __GNUC__
+#pragma GCC pop_options
+#endif /* __GNUC__ */
 
 #ifdef __GNUG__
 }
