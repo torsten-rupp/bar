@@ -2973,17 +2973,22 @@ LOCAL Errors storeFileEntry(ArchiveInfo       *archiveInfo,
         Misc_udelay(500*1000);
       }
 
+      // read file data
       error = File_read(&fileHandle,buffer,bufferSize,&bufferLength);
       if (error == ERROR_NONE)
       {
+        // write data to archive
         if (bufferLength > 0L)
         {
           error = Archive_writeData(&archiveEntryInfo,buffer,bufferLength,1);
-          createInfo->statusInfo.doneBytes += (uint64)bufferLength;
-          createInfo->statusInfo.entryDoneBytes += (uint64)bufferLength;
-          createInfo->statusInfo.archiveBytes = createInfo->statusInfo.archiveTotalBytes+Archive_getSize(archiveInfo);
-          createInfo->statusInfo.compressionRatio = 100.0-(createInfo->statusInfo.archiveTotalBytes+Archive_getSize(archiveInfo))*100.0/createInfo->statusInfo.doneBytes;
-          updateStatusInfo(createInfo);
+          if (error == ERROR_NONE)
+          {
+            createInfo->statusInfo.doneBytes        += (uint64)bufferLength;
+            createInfo->statusInfo.entryDoneBytes   += (uint64)bufferLength;
+            createInfo->statusInfo.archiveBytes     = createInfo->statusInfo.archiveTotalBytes+Archive_getSize(archiveInfo);
+            createInfo->statusInfo.compressionRatio = 100.0-(createInfo->statusInfo.archiveTotalBytes+Archive_getSize(archiveInfo))*100.0/createInfo->statusInfo.doneBytes;
+            updateStatusInfo(createInfo);
+          }
 
           percentageDone = (uint)((createInfo->statusInfo.entryDoneBytes*100LL)/createInfo->statusInfo.entryTotalBytes);
           printInfo(2,"%3d%%\b\b\b\b",percentageDone);
@@ -3153,7 +3158,7 @@ LOCAL Errors storeImageEntry(ArchiveInfo       *archiveInfo,
               );
     return ERROR_INVALID_DEVICE_BLOCK_SIZE;
   }
-  assert(deviceInfo.blockSize != 0);
+  assert(deviceInfo.blockSize > 0);
   maxBufferBlockCount = bufferSize/deviceInfo.blockSize;
 
   // open device
@@ -3224,6 +3229,7 @@ LOCAL Errors storeImageEntry(ArchiveInfo       *archiveInfo,
                      String_cString(deviceName),
                      Errors_getText(error)
                     );
+          if (fileSystemFlag) FileSystem_done(&fileSystemHandle);
           Device_close(&deviceHandle);
           return error;
         }
@@ -3254,10 +3260,8 @@ LOCAL Errors storeImageEntry(ArchiveInfo       *archiveInfo,
                  String_cString(deviceName),
                  Errors_getText(error)
                 );
-      if (deltaCompressFlag)
-      {
-        Source_closeEntry(&sourceHandle);
-      }
+      if (deltaCompressFlag) Source_closeEntry(&sourceHandle);
+      if (fileSystemFlag) FileSystem_done(&fileSystemHandle);
       Device_close(&deviceHandle);
       return error;
     }
@@ -3277,14 +3281,17 @@ LOCAL Errors storeImageEntry(ArchiveInfo       *archiveInfo,
         Misc_udelay(500*1000);
       }
 
-      // read blocks info buffer
+      // read blocks from device
       bufferBlockCount = 0;
       while (   ((int64)(block*(uint64)deviceInfo.blockSize) < deviceInfo.size)
              && (bufferBlockCount < maxBufferBlockCount)
             )
       {
-        if (!fileSystemFlag || FileSystem_blockIsUsed(&fileSystemHandle,block*(uint64)deviceInfo.blockSize))
+        if (   !fileSystemFlag
+            || FileSystem_blockIsUsed(&fileSystemHandle,block*(uint64)deviceInfo.blockSize)
+           )
         {
+//fprintf(stderr,"%s, %d: used %llu\n",__FILE__,__LINE__,block);
           // read single block
           error = Device_seek(&deviceHandle,block*(uint64)deviceInfo.blockSize);
           if (error != ERROR_NONE) break;
@@ -3293,6 +3300,7 @@ LOCAL Errors storeImageEntry(ArchiveInfo       *archiveInfo,
         }
         else
         {
+//fprintf(stderr,"%s, %d: free %llu\n",__FILE__,__LINE__,block);
           // block not used -> store as "0"-block
           memset(buffer+bufferBlockCount*deviceInfo.blockSize,0,deviceInfo.blockSize);
         }
@@ -3300,15 +3308,18 @@ LOCAL Errors storeImageEntry(ArchiveInfo       *archiveInfo,
         bufferBlockCount++;
       }
 
-      // write blocks content to archive
+      // write data to archive
       if (bufferBlockCount > 0)
       {
         error = Archive_writeData(&archiveEntryInfo,buffer,bufferBlockCount*deviceInfo.blockSize,deviceInfo.blockSize);
-        createInfo->statusInfo.doneBytes += (uint64)bufferBlockCount*(uint64)deviceInfo.blockSize;
-        createInfo->statusInfo.entryDoneBytes += (uint64)bufferBlockCount*(uint64)deviceInfo.blockSize;
-        createInfo->statusInfo.archiveBytes = createInfo->statusInfo.archiveTotalBytes+Archive_getSize(archiveInfo);
-        createInfo->statusInfo.compressionRatio = 100.0-(createInfo->statusInfo.archiveTotalBytes+Archive_getSize(archiveInfo))*100.0/createInfo->statusInfo.doneBytes;
-        updateStatusInfo(createInfo);
+        if (error == ERROR_NONE)
+        {
+          createInfo->statusInfo.doneBytes        += (uint64)bufferBlockCount*(uint64)deviceInfo.blockSize;
+          createInfo->statusInfo.entryDoneBytes   += (uint64)bufferBlockCount*(uint64)deviceInfo.blockSize;
+          createInfo->statusInfo.archiveBytes     = createInfo->statusInfo.archiveTotalBytes+Archive_getSize(archiveInfo);
+          createInfo->statusInfo.compressionRatio = 100.0-(createInfo->statusInfo.archiveTotalBytes+Archive_getSize(archiveInfo))*100.0/createInfo->statusInfo.doneBytes;
+          updateStatusInfo(createInfo);
+        }
 
         percentageDone = (uint)((createInfo->statusInfo.entryDoneBytes*100LL)/createInfo->statusInfo.entryTotalBytes);
         printInfo(2,"%3d%%\b\b\b\b",percentageDone);
@@ -3317,8 +3328,10 @@ LOCAL Errors storeImageEntry(ArchiveInfo       *archiveInfo,
     if ((createInfo->requestedAbortFlag != NULL) && (*createInfo->requestedAbortFlag))
     {
       printInfo(1,"ABORTED\n");
-      Device_close(&deviceHandle);
       Archive_closeEntry(&archiveEntryInfo);
+      if (deltaCompressFlag) Source_closeEntry(&sourceHandle);
+      if (fileSystemFlag) FileSystem_done(&fileSystemHandle);
+      Device_close(&deviceHandle);
       return error;
     }
     if (error != ERROR_NONE)
@@ -3327,8 +3340,10 @@ LOCAL Errors storeImageEntry(ArchiveInfo       *archiveInfo,
       printError("Cannot store archive file (error: %s)!\n",
                  Errors_getText(error)
                 );
-      Device_close(&deviceHandle);
       Archive_closeEntry(&archiveEntryInfo);
+      if (deltaCompressFlag) Source_closeEntry(&sourceHandle);
+      if (fileSystemFlag) FileSystem_done(&fileSystemHandle);
+      Device_close(&deviceHandle);
       return error;
     }
     printInfo(2,"    \b\b\b\b");
@@ -3341,6 +3356,8 @@ LOCAL Errors storeImageEntry(ArchiveInfo       *archiveInfo,
       printError("Cannot close archive image entry (error: %s)!\n",
                  Errors_getText(error)
                 );
+      if (deltaCompressFlag) Source_closeEntry(&sourceHandle);
+      if (fileSystemFlag) FileSystem_done(&fileSystemHandle);
       Device_close(&deviceHandle);
       return error;
     }
@@ -3833,17 +3850,22 @@ LOCAL Errors storeHardLinkEntry(ArchiveInfo       *archiveInfo,
         Misc_udelay(500*1000);
       }
 
+      // read file data
       error = File_read(&fileHandle,buffer,bufferSize,&bufferLength);
       if (error == ERROR_NONE)
       {
+        // write data to archive
         if (bufferLength > 0L)
         {
           error = Archive_writeData(&archiveEntryInfo,buffer,bufferLength,1);
-          createInfo->statusInfo.doneBytes += (uint64)StringList_count(nameList)*(uint64)bufferLength;
-          createInfo->statusInfo.entryDoneBytes += (uint64)StringList_count(nameList)*(uint64)bufferLength;
-          createInfo->statusInfo.archiveBytes = createInfo->statusInfo.archiveTotalBytes+Archive_getSize(archiveInfo);
-          createInfo->statusInfo.compressionRatio = 100.0-(createInfo->statusInfo.archiveTotalBytes+Archive_getSize(archiveInfo))*100.0/createInfo->statusInfo.doneBytes;
-          updateStatusInfo(createInfo);
+          if (error == ERROR_NONE)
+          {
+            createInfo->statusInfo.doneBytes        += (uint64)StringList_count(nameList)*(uint64)bufferLength;
+            createInfo->statusInfo.entryDoneBytes   += (uint64)StringList_count(nameList)*(uint64)bufferLength;
+            createInfo->statusInfo.archiveBytes     = createInfo->statusInfo.archiveTotalBytes+Archive_getSize(archiveInfo);
+            createInfo->statusInfo.compressionRatio = 100.0-(createInfo->statusInfo.archiveTotalBytes+Archive_getSize(archiveInfo))*100.0/createInfo->statusInfo.doneBytes;
+            updateStatusInfo(createInfo);
+          }
 
           percentageDone = (uint)((createInfo->statusInfo.entryDoneBytes*100LL)/createInfo->statusInfo.entryTotalBytes);
           printInfo(2,"%3d%%\b\b\b\b",percentageDone);
