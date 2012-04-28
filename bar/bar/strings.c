@@ -1587,7 +1587,7 @@ LOCAL bool parseString(const char    *string,
 * Output : nextIndex - index of next character in string not parsed or
 *                      STRING_END if string completely parsed (can be
 *                      NULL)
-* Return : -
+* Return : unit factor
 * Notes  : -
 \***********************************************************************/
 
@@ -4217,7 +4217,7 @@ int String_toInteger(const String convertString, ulong index, long *nextIndex, c
     n = strtol(&convertString->data[index],&nextData,0);
     if ((ulong)(nextData-convertString->data) < convertString->length)
     {
-      n = n*getUnitFactor(stringUnits,stringUnitCount,convertString->data,nextData,nextIndex);
+      n = n*(int)getUnitFactor(stringUnits,stringUnitCount,convertString->data,nextData,nextIndex);
     }
     else
     {
@@ -4275,7 +4275,7 @@ double String_toDouble(const String convertString, ulong index, long *nextIndex,
     n = strtod(&convertString->data[index],&nextData);
     if ((ulong)(nextData-convertString->data) < convertString->length)
     {
-      n = n*(double)getUnitFactor(stringUnits,stringUnitCount,convertString->data,nextData,nextIndex);
+      n = n*(double)(long)getUnitFactor(stringUnits,stringUnitCount,convertString->data,nextData,nextIndex);
     }
     else
     {
