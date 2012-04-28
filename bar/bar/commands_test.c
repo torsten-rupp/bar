@@ -202,7 +202,7 @@ Errors Command_test(const StringList                *archiveNameList,
 //FragmentList_print(fragmentNode,String_cString(fileName));
 
               // test read file content
-              length = 0;
+              length = 0LL;
               while (length < fragmentSize)
               {
                 n = MIN(fragmentSize-length,BUFFER_SIZE);
@@ -653,7 +653,7 @@ Errors Command_test(const StringList                *archiveNameList,
                   }
 
                   // test read hard link content
-                  length = 0;
+                  length = 0LL;
                   while (length < fragmentSize)
                   {
                     n = MIN(fragmentSize-length,BUFFER_SIZE);
