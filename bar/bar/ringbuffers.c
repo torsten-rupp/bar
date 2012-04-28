@@ -730,18 +730,18 @@ bool RingBuffer_move(RingBuffer *sourceRingBuffer, RingBuffer *destinationRingBu
 //fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 //dumpMemory(ringBuffer->data,ringBuffer->size*ringBuffer->elementSize);
       assert(n0 > 0);
-      (void)RingBuffer_put(destinationRingBuffer,
-                           sourceRingBuffer->data+(ulong)sourceRingBuffer->nextOut*(ulong)sourceRingBuffer->elementSize,
-                           (ulong)n0*(ulong)sourceRingBuffer->elementSize
-                          );
+      RingBuffer_put(destinationRingBuffer,
+                     sourceRingBuffer->data+(ulong)sourceRingBuffer->nextOut*(ulong)sourceRingBuffer->elementSize,
+                     (ulong)n0*(ulong)sourceRingBuffer->elementSize
+                    );
 //fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 //dumpMemory(ringBuffer->data,ringBuffer->size*ringBuffer->elementSize);
       if (n1 > 0)
       {
-        (void)RingBuffer_put(destinationRingBuffer,
-                             sourceRingBuffer->data+0,
-                             (ulong)n1*(ulong)sourceRingBuffer->elementSize
-                            );
+        RingBuffer_put(destinationRingBuffer,
+                       sourceRingBuffer->data+0,
+                       (ulong)n1*(ulong)sourceRingBuffer->elementSize
+                      );
 //fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 //dumpMemory(ringBuffer->data,ringBuffer->size*ringBuffer->elementSize);
       }
