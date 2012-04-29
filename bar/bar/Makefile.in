@@ -963,7 +963,7 @@ test_image_operations_ext2:
 ifneq (@MKFS_EXT2@,)
 	$(INSTALL) -d test
 	#
-	# ext2 zero-data
+	# ext2 zero-data, default block size
 	$(call functionTestFile,$(DEVICE_ZERO),test/dev0.dat,32M)
 	$(call functionTestFile,$(DEVICE_ZERO),test/dev1.dat,32M)
 	$(call functionTestDeviceCreate,$(LOOP0),test/dev0.dat,test/dev0)
@@ -978,7 +978,7 @@ ifneq (@MKFS_EXT2@,)
 	$(call functionTestDeviceDelete,$(LOOP1),test/dev1.dat,test/dev1)
 	$(call functionTestDeviceDelete,$(LOOP0),test/dev0.dat,test/dev0)
 	#
-	# ext2 random-data
+	# ext2 random-data, default block size
 	$(call functionTestFile,$(DEVICE_RANDOM),test/dev0.dat,32M)
 	$(call functionTestFile,$(DEVICE_RANDOM),test/dev1.dat,32M)
 	$(call functionTestDeviceCreate,$(LOOP0),test/dev0.dat,test/dev0)
@@ -992,7 +992,7 @@ ifneq (@MKFS_EXT2@,)
 	$(call functionTestDeviceDelete,$(LOOP1),test/dev1.dat,test/dev1)
 	$(call functionTestDeviceDelete,$(LOOP0),test/dev0.dat,test/dev0)
 	#
-	# ext2 zero-data
+	# ext2 zero-data, block size 1024 bytes
 	$(call functionTestFile,$(DEVICE_ZERO),test/dev0.dat,32M)
 	$(call functionTestFile,$(DEVICE_ZERO),test/dev1.dat,32M)
 	$(call functionTestDeviceCreate,$(LOOP0),test/dev0.dat,test/dev0)
@@ -1007,7 +1007,7 @@ ifneq (@MKFS_EXT2@,)
 	$(call functionTestDeviceDelete,$(LOOP1),test/dev1.dat,test/dev1)
 	$(call functionTestDeviceDelete,$(LOOP0),test/dev0.dat,test/dev0)
 	#
-	# ext2 random-data
+	# ext2 random-data, block size 1024 bytes
 	$(call functionTestFile,$(DEVICE_RANDOM),test/dev0.dat,32M)
 	$(call functionTestFile,$(DEVICE_RANDOM),test/dev1.dat,32M)
 	$(call functionTestDeviceCreate,$(LOOP0),test/dev0.dat,test/dev0)
@@ -1021,7 +1021,7 @@ ifneq (@MKFS_EXT2@,)
 	$(call functionTestDeviceDelete,$(LOOP1),test/dev1.dat,test/dev1)
 	$(call functionTestDeviceDelete,$(LOOP0),test/dev0.dat,test/dev0)
 	#
-	# ext2 zero-data
+	# ext2 zero-data, block size 2048 bytes
 	$(call functionTestFile,$(DEVICE_ZERO),test/dev0.dat,32M)
 	$(call functionTestFile,$(DEVICE_ZERO),test/dev1.dat,32M)
 	$(call functionTestDeviceCreate,$(LOOP0),test/dev0.dat,test/dev0)
@@ -1036,7 +1036,7 @@ ifneq (@MKFS_EXT2@,)
 	$(call functionTestDeviceDelete,$(LOOP1),test/dev1.dat,test/dev1)
 	$(call functionTestDeviceDelete,$(LOOP0),test/dev0.dat,test/dev0)
 	#
-	# ext2 random-data
+	# ext2 random-data, block size 2048 bytes
 	$(call functionTestFile,$(DEVICE_RANDOM),test/dev0.dat,32M)
 	$(call functionTestFile,$(DEVICE_RANDOM),test/dev1.dat,32M)
 	$(call functionTestDeviceCreate,$(LOOP0),test/dev0.dat,test/dev0)
@@ -1050,7 +1050,7 @@ ifneq (@MKFS_EXT2@,)
 	$(call functionTestDeviceDelete,$(LOOP1),test/dev1.dat,test/dev1)
 	$(call functionTestDeviceDelete,$(LOOP0),test/dev0.dat,test/dev0)
 	#
-	# ext2 zero-data
+	# ext2 zero-data, block size 4096 bytes
 	$(call functionTestFile,$(DEVICE_ZERO),test/dev0.dat,32M)
 	$(call functionTestFile,$(DEVICE_ZERO),test/dev1.dat,32M)
 	$(call functionTestDeviceCreate,$(LOOP0),test/dev0.dat,test/dev0)
@@ -1065,7 +1065,7 @@ ifneq (@MKFS_EXT2@,)
 	$(call functionTestDeviceDelete,$(LOOP1),test/dev1.dat,test/dev1)
 	$(call functionTestDeviceDelete,$(LOOP0),test/dev0.dat,test/dev0)
 	#
-	# ext2 random-data
+	# ext2 random-data, block size 4096 bytes
 	$(call functionTestFile,$(DEVICE_RANDOM),test/dev0.dat,32M)
 	$(call functionTestFile,$(DEVICE_RANDOM),test/dev1.dat,32M)
 	$(call functionTestDeviceCreate,$(LOOP0),test/dev0.dat,test/dev0)
@@ -1084,7 +1084,8 @@ endif
 test_image_operations_ext3:
 ifneq (@MKFS_EXT3@,)
 	$(INSTALL) -d test
-	# ext2 zero-data
+	#
+	# ext3 zero-data, default block size
 	$(call functionTestFile,$(DEVICE_ZERO),test/dev0.dat,32M)
 	$(call functionTestFile,$(DEVICE_ZERO),test/dev1.dat,32M)
 	$(call functionTestDeviceCreate,$(LOOP0),test/dev0.dat,test/dev0)
@@ -1099,7 +1100,7 @@ ifneq (@MKFS_EXT3@,)
 	$(call functionTestDeviceDelete,$(LOOP1),test/dev1.dat,test/dev1)
 	$(call functionTestDeviceDelete,$(LOOP0),test/dev0.dat,test/dev0)
 	#
-	# ext2 random-data
+	# ext3 random-data, default block size
 	$(call functionTestFile,$(DEVICE_RANDOM),test/dev0.dat,32M)
 	$(call functionTestFile,$(DEVICE_RANDOM),test/dev1.dat,32M)
 	$(call functionTestDeviceCreate,$(LOOP0),test/dev0.dat,test/dev0)
@@ -1113,7 +1114,7 @@ ifneq (@MKFS_EXT3@,)
 	$(call functionTestDeviceDelete,$(LOOP1),test/dev1.dat,test/dev1)
 	$(call functionTestDeviceDelete,$(LOOP0),test/dev0.dat,test/dev0)
 	#
-	# ext2 zero-data
+	# ext3 zero-data, block size 1024 bytes
 	$(call functionTestFile,$(DEVICE_ZERO),test/dev0.dat,32M)
 	$(call functionTestFile,$(DEVICE_ZERO),test/dev1.dat,32M)
 	$(call functionTestDeviceCreate,$(LOOP0),test/dev0.dat,test/dev0)
@@ -1128,7 +1129,7 @@ ifneq (@MKFS_EXT3@,)
 	$(call functionTestDeviceDelete,$(LOOP1),test/dev1.dat,test/dev1)
 	$(call functionTestDeviceDelete,$(LOOP0),test/dev0.dat,test/dev0)
 	#
-	# ext2 random-data
+	# ext3 random-data, block size 1024 bytes
 	$(call functionTestFile,$(DEVICE_RANDOM),test/dev0.dat,32M)
 	$(call functionTestFile,$(DEVICE_RANDOM),test/dev1.dat,32M)
 	$(call functionTestDeviceCreate,$(LOOP0),test/dev0.dat,test/dev0)
@@ -1142,7 +1143,7 @@ ifneq (@MKFS_EXT3@,)
 	$(call functionTestDeviceDelete,$(LOOP1),test/dev1.dat,test/dev1)
 	$(call functionTestDeviceDelete,$(LOOP0),test/dev0.dat,test/dev0)
 	#
-	# ext2 zero-data
+	# ext3 zero-data, block size 2048 bytes
 	$(call functionTestFile,$(DEVICE_ZERO),test/dev0.dat,32M)
 	$(call functionTestFile,$(DEVICE_ZERO),test/dev1.dat,32M)
 	$(call functionTestDeviceCreate,$(LOOP0),test/dev0.dat,test/dev0)
@@ -1157,7 +1158,7 @@ ifneq (@MKFS_EXT3@,)
 	$(call functionTestDeviceDelete,$(LOOP1),test/dev1.dat,test/dev1)
 	$(call functionTestDeviceDelete,$(LOOP0),test/dev0.dat,test/dev0)
 	#
-	# ext2 random-data
+	# ext3 random-data, block size 2048 bytes
 	$(call functionTestFile,$(DEVICE_RANDOM),test/dev0.dat,32M)
 	$(call functionTestFile,$(DEVICE_RANDOM),test/dev1.dat,32M)
 	$(call functionTestDeviceCreate,$(LOOP0),test/dev0.dat,test/dev0)
@@ -1171,7 +1172,7 @@ ifneq (@MKFS_EXT3@,)
 	$(call functionTestDeviceDelete,$(LOOP1),test/dev1.dat,test/dev1)
 	$(call functionTestDeviceDelete,$(LOOP0),test/dev0.dat,test/dev0)
 	#
-	# ext2 zero-data
+	# ext3 zero-data, block size 4096 bytes
 	$(call functionTestFile,$(DEVICE_ZERO),test/dev0.dat,32M)
 	$(call functionTestFile,$(DEVICE_ZERO),test/dev1.dat,32M)
 	$(call functionTestDeviceCreate,$(LOOP0),test/dev0.dat,test/dev0)
@@ -1186,7 +1187,7 @@ ifneq (@MKFS_EXT3@,)
 	$(call functionTestDeviceDelete,$(LOOP1),test/dev1.dat,test/dev1)
 	$(call functionTestDeviceDelete,$(LOOP0),test/dev0.dat,test/dev0)
 	#
-	# ext2 random-data
+	# ext3 random-data, block size 4096 bytes
 	$(call functionTestFile,$(DEVICE_RANDOM),test/dev0.dat,32M)
 	$(call functionTestFile,$(DEVICE_RANDOM),test/dev1.dat,32M)
 	$(call functionTestDeviceCreate,$(LOOP0),test/dev0.dat,test/dev0)
@@ -1205,7 +1206,8 @@ endif
 test_image_operations_ext4:
 ifneq (@MKFS_EXT4@,)
 	$(INSTALL) -d test
-	# ext2 zero-data
+	#
+	# ext4 zero-data, default block size
 	$(call functionTestFile,$(DEVICE_ZERO),test/dev0.dat,32M)
 	$(call functionTestFile,$(DEVICE_ZERO),test/dev1.dat,32M)
 	$(call functionTestDeviceCreate,$(LOOP0),test/dev0.dat,test/dev0)
@@ -1220,7 +1222,7 @@ ifneq (@MKFS_EXT4@,)
 	$(call functionTestDeviceDelete,$(LOOP1),test/dev1.dat,test/dev1)
 	$(call functionTestDeviceDelete,$(LOOP0),test/dev0.dat,test/dev0)
 	#
-	# ext2 random-data
+	# ext4 random-data, default block size
 	$(call functionTestFile,$(DEVICE_RANDOM),test/dev0.dat,32M)
 	$(call functionTestFile,$(DEVICE_RANDOM),test/dev1.dat,32M)
 	$(call functionTestDeviceCreate,$(LOOP0),test/dev0.dat,test/dev0)
@@ -1234,7 +1236,7 @@ ifneq (@MKFS_EXT4@,)
 	$(call functionTestDeviceDelete,$(LOOP1),test/dev1.dat,test/dev1)
 	$(call functionTestDeviceDelete,$(LOOP0),test/dev0.dat,test/dev0)
 	#
-	# ext2 zero-data
+	# ext4 zero-data, block size 1024 bytes
 	$(call functionTestFile,$(DEVICE_ZERO),test/dev0.dat,32M)
 	$(call functionTestFile,$(DEVICE_ZERO),test/dev1.dat,32M)
 	$(call functionTestDeviceCreate,$(LOOP0),test/dev0.dat,test/dev0)
@@ -1249,7 +1251,7 @@ ifneq (@MKFS_EXT4@,)
 	$(call functionTestDeviceDelete,$(LOOP1),test/dev1.dat,test/dev1)
 	$(call functionTestDeviceDelete,$(LOOP0),test/dev0.dat,test/dev0)
 	#
-	# ext2 random-data
+	# ext4 random-data, block size 1024 bytes
 	$(call functionTestFile,$(DEVICE_RANDOM),test/dev0.dat,32M)
 	$(call functionTestFile,$(DEVICE_RANDOM),test/dev1.dat,32M)
 	$(call functionTestDeviceCreate,$(LOOP0),test/dev0.dat,test/dev0)
@@ -1263,7 +1265,7 @@ ifneq (@MKFS_EXT4@,)
 	$(call functionTestDeviceDelete,$(LOOP1),test/dev1.dat,test/dev1)
 	$(call functionTestDeviceDelete,$(LOOP0),test/dev0.dat,test/dev0)
 	#
-	# ext2 zero-data
+	# ext4 zero-data, block size 2048 bytes
 	$(call functionTestFile,$(DEVICE_ZERO),test/dev0.dat,32M)
 	$(call functionTestFile,$(DEVICE_ZERO),test/dev1.dat,32M)
 	$(call functionTestDeviceCreate,$(LOOP0),test/dev0.dat,test/dev0)
@@ -1278,7 +1280,7 @@ ifneq (@MKFS_EXT4@,)
 	$(call functionTestDeviceDelete,$(LOOP1),test/dev1.dat,test/dev1)
 	$(call functionTestDeviceDelete,$(LOOP0),test/dev0.dat,test/dev0)
 	#
-	# ext2 random-data
+	# ext4 random-data, block size 2048 bytes
 	$(call functionTestFile,$(DEVICE_RANDOM),test/dev0.dat,32M)
 	$(call functionTestFile,$(DEVICE_RANDOM),test/dev1.dat,32M)
 	$(call functionTestDeviceCreate,$(LOOP0),test/dev0.dat,test/dev0)
@@ -1292,7 +1294,7 @@ ifneq (@MKFS_EXT4@,)
 	$(call functionTestDeviceDelete,$(LOOP1),test/dev1.dat,test/dev1)
 	$(call functionTestDeviceDelete,$(LOOP0),test/dev0.dat,test/dev0)
 	#
-	# ext2 zero-data
+	# ext4 zero-data, block size 4096 bytes
 	$(call functionTestFile,$(DEVICE_ZERO),test/dev0.dat,32M)
 	$(call functionTestFile,$(DEVICE_ZERO),test/dev1.dat,32M)
 	$(call functionTestDeviceCreate,$(LOOP0),test/dev0.dat,test/dev0)
@@ -1307,7 +1309,7 @@ ifneq (@MKFS_EXT4@,)
 	$(call functionTestDeviceDelete,$(LOOP1),test/dev1.dat,test/dev1)
 	$(call functionTestDeviceDelete,$(LOOP0),test/dev0.dat,test/dev0)
 	#
-	# ext2 random-data
+	# ext4 random-data, block size 4096 bytes
 	$(call functionTestFile,$(DEVICE_RANDOM),test/dev0.dat,32M)
 	$(call functionTestFile,$(DEVICE_RANDOM),test/dev1.dat,32M)
 	$(call functionTestDeviceCreate,$(LOOP0),test/dev0.dat,test/dev0)
@@ -1342,7 +1344,8 @@ test_image_operations_fat: \
 test_image_operations_fat12:
 ifneq (@MKFS_MSDOS@,)
 	$(INSTALL) -d test
-	# ext2 zero-data
+	#
+	# FAT12 zero-data
 	$(call functionTestFile,$(DEVICE_ZERO),test/dev0.dat,1440K)
 	$(call functionTestFile,$(DEVICE_ZERO),test/dev1.dat,1440K)
 	$(call functionTestDeviceCreate,$(LOOP0),test/dev0.dat,test/dev0)
@@ -1357,7 +1360,7 @@ ifneq (@MKFS_MSDOS@,)
 	$(call functionTestDeviceDelete,$(LOOP1),test/dev1.dat,test/dev1)
 	$(call functionTestDeviceDelete,$(LOOP0),test/dev0.dat,test/dev0)
 	#
-	# ext2 random-data
+	# FAT12 random-data
 	$(call functionTestFile,$(DEVICE_RANDOM),test/dev0.dat,1440K)
 	$(call functionTestFile,$(DEVICE_RANDOM),test/dev1.dat,1440K)
 	$(call functionTestDeviceCreate,$(LOOP0),test/dev0.dat,test/dev0)
@@ -1376,7 +1379,8 @@ endif
 test_image_operations_fat16:
 ifneq (@MKFS_MSDOS@,)
 	$(INSTALL) -d test
-	# ext2 zero-data
+	#
+	# FAT16 zero-data
 	$(call functionTestFile,$(DEVICE_ZERO),test/dev0.dat,20M)
 	$(call functionTestFile,$(DEVICE_ZERO),test/dev1.dat,20M)
 	$(call functionTestDeviceCreate,$(LOOP0),test/dev0.dat,test/dev0)
@@ -1391,7 +1395,7 @@ ifneq (@MKFS_MSDOS@,)
 	$(call functionDeleteTestDevice,$(LOOP1),test/dev1.dat,test/dev1)
 	$(call functionDeleteTestDevice,$(LOOP0),test/dev0.dat,test/dev0)
 	#
-	# ext2 random-data
+	# FAT16 random-data
 	$(call functionTestFile,$(DEVICE_RANDOM),test/dev0.dat,20M)
 	$(call functionTestFile,$(DEVICE_RANDOM),test/dev1.dat,20M)
 	$(call functionTestDeviceCreate,$(LOOP0),test/dev0.dat,test/dev0)
@@ -1410,7 +1414,8 @@ endif
 test_image_operations_fat32:
 ifneq (@MKFS_MSDOS@,)
 	$(INSTALL) -d test
-	# ext2 zero-data
+	#
+	# FAT32 zero-data
 	$(call functionTestFile,$(DEVICE_ZERO),test/dev0.dat,40M)
 	$(call functionTestFile,$(DEVICE_ZERO),test/dev1.dat,40M)
 	$(call functionTestDeviceCreate,$(LOOP0),test/dev0.dat,test/dev0)
@@ -1425,7 +1430,7 @@ ifneq (@MKFS_MSDOS@,)
 	$(call functionTestDeviceDelete,$(LOOP1),test/dev1.dat,test/dev1)
 	$(call functionTestDeviceDelete,$(LOOP0),test/dev0.dat,test/dev0)
 	#
-	# ext2 random-data
+	# FAT32 random-data
 	$(call functionTestFile,$(DEVICE_RANDOM),test/dev0.dat,40M)
 	$(call functionTestFile,$(DEVICE_RANDOM),test/dev1.dat,40M)
 	$(call functionTestDeviceCreate,$(LOOP0),test/dev0.dat,test/dev0)
@@ -1459,7 +1464,8 @@ endif
 test_image_operations_reiserfs3:
 ifneq (@MKFS_REISERFS@,)
 	$(INSTALL) -d test
-	# ext2 zero-data
+	#
+	# ReiserFS 3 zero-data
 	$(call functionTestFile,$(DEVICE_ZERO),test/dev0.dat,64M)
 	$(call functionTestFile,$(DEVICE_ZERO),test/dev1.dat,64M)
 	$(call functionTestDeviceCreate,$(LOOP0),test/dev0.dat,test/dev0)
@@ -1474,7 +1480,7 @@ ifneq (@MKFS_REISERFS@,)
 	$(call functionTestDeviceDelete,$(LOOP1),test/dev1.dat)
 	$(call functionTestDeviceDelete,$(LOOP0),test/dev0.dat,test/dev0)
 	#
-	# ext2 random-data
+	# ReiserFS 3 random-data
 	$(call functionTestFile,$(DEVICE_RANDOM),test/dev0.dat,64M)
 	$(call functionTestFile,$(DEVICE_RANDOM),test/dev1.dat,64M)
 	$(call functionTestDeviceCreate,$(LOOP0),test/dev0.dat,test/dev0)
@@ -1488,7 +1494,7 @@ ifneq (@MKFS_REISERFS@,)
 	$(call functionTestDeviceDelete,$(LOOP1),test/dev1.dat)
 	$(call functionTestDeviceDelete,$(LOOP0),test/dev0.dat,test/dev0)
 	#
-	# ext2 zero-data
+	# ReiserFS 3 zero-data
 	$(call functionTestFile,$(DEVICE_ZERO),test/dev0.dat,64M)
 	$(call functionTestFile,$(DEVICE_ZERO),test/dev1.dat,64M)
 	$(call functionTestDeviceCreate,$(LOOP0),test/dev0.dat,test/dev0)
@@ -1503,7 +1509,7 @@ ifneq (@MKFS_REISERFS@,)
 	$(call functionTestDeviceDelete,$(LOOP1),test/dev1.dat)
 	$(call functionTestDeviceDelete,$(LOOP0),test/dev0.dat,test/dev0)
 	#
-	# ext2 random-data
+	# ReiserFS 3 random-data
 	$(call functionTestFile,$(DEVICE_RANDOM),test/dev0.dat,64M)
 	$(call functionTestFile,$(DEVICE_RANDOM),test/dev1.dat,64M)
 	$(call functionTestDeviceCreate,$(LOOP0),test/dev0.dat,test/dev0)
@@ -1522,7 +1528,8 @@ endif
 test_image_operations_reiser4:
 ifneq (@MKFS_REISER4@,)
 	$(INSTALL) -d test
-	# ext2 zero-data
+	#
+	# Reiser 4 zero-data
 	$(call functionTestFile,$(DEVICE_ZERO),test/dev0.dat,64M)
 	$(call functionTestFile,$(DEVICE_ZERO),test/dev1.dat,64M)
 	$(call functionTestDeviceCreate,$(LOOP0),test/dev0.dat,test/dev0)
@@ -1537,7 +1544,7 @@ ifneq (@MKFS_REISER4@,)
 	$(call functionTestDeviceDelete,$(LOOP1),test/dev1.dat)
 	$(call functionTestDeviceDelete,$(LOOP0),test/dev0.dat,test/dev0)
 	#
-	# ext2 random-data
+	# Reiser 4 random-data
 	$(call functionTestFile,$(DEVICE_RANDOM),test/dev0.dat,64M)
 	$(call functionTestFile,$(DEVICE_RANDOM),test/dev1.dat,64M)
 	$(call functionTestDeviceCreate,$(LOOP0),test/dev0.dat,test/dev0)
@@ -1731,38 +1738,6 @@ memcheck7: bar
 	$(ECHO) '1 INDEX_STORAGE_LIST 10 * x'| $(NETCAT) localhost 39909
 	$(ECHO) 'QUIT' | $(NETCAT) localhost 39909
 
-# copy distribution files
-.PHONY: dist
-dist:
-ifneq ($(DIRECTORY),)
-	$(INSTALL) -d $(DIRECTORY)/bar
-	$(INSTALL) -m 664 \
-                   $(sort $(BAR_SOURCES) \
-                          $(patsubst %.c,%.h,$(BAR_SOURCES)) \
-                          $(EXTERN_SOURCES) \
-                          $(patsubst %.c,%.h,$(EXTERN_SOURCES)) \
-                          $(DESTROYER_SOURCES) \
-                          $(patsubst %.c,%.h,$(DESTROYER_SOURCES)) \
-                          $(OTHER_SOURCES) \
-                          Makefile.in \
-                          config.h.in \
-                          bar.cfg \
-                   ) \
-                   $(DIRECTORY)/bar
-	$(INSTALL) -d $(DIRECTORY)/bar/test
-	$(INSTALL) -d $(DIRECTORY)/bar/test/data
-	$(INSTALL) -m 664 test/data/zero.dat \
-                          test/data/zero512k.dat \
-                          test/data/zero1024.dat \
-                          test/data/random512k.dat \
-                          test/data/random1024.dat \
-                          test/data/smallfile.dat \
-                          $(DIRECTORY)/bar/test/data
-else
-	@$(ECHO) Please call 'make dist' from top-level directory to create a distribution.
-endif
-
-
 #valgrind --tool=cachegrind ./bar -c test2.bar -o -z xdelta9 --delta-source=test1.bar bar
 
 # ----------------------------------------------------------------------------
@@ -1882,6 +1857,39 @@ performance5 performance_delta_compress: \
 	@($(CD) test/data/delta2; SSH_ASKPASS= $(TIME) --format="%E" sh -c "../../../$(PERFORMANCE_BAR) -d ../../test-B.bar --delta-source=../../test-A.bar 1>/dev/null 2>/dev/null")
 	@$(ECHO_NO_LF) "  Extract: "
 	@($(CD) test/data/delta2; SSH_ASKPASS= $(TIME) --format="%E" sh -c "../../../$(PERFORMANCE_BAR) -x ../../test-B.bar --delta-source=../../test-A.bar --destination=../../restore --overwrite-files 1>/dev/null 2>/dev/null")
+
+# ----------------------------------------------------------------------------
+
+# copy distribution files
+.PHONY: dist
+dist:
+ifneq ($(DIRECTORY),)
+	$(INSTALL) -d $(DIRECTORY)/bar
+	$(INSTALL) -m 664 \
+                   $(sort $(BAR_SOURCES) \
+                          $(patsubst %.c,%.h,$(BAR_SOURCES)) \
+                          $(EXTERN_SOURCES) \
+                          $(patsubst %.c,%.h,$(EXTERN_SOURCES)) \
+                          $(DESTROYER_SOURCES) \
+                          $(patsubst %.c,%.h,$(DESTROYER_SOURCES)) \
+                          $(OTHER_SOURCES) \
+                          Makefile.in \
+                          config.h.in \
+                          bar.cfg \
+                   ) \
+                   $(DIRECTORY)/bar
+	$(INSTALL) -d $(DIRECTORY)/bar/test
+	$(INSTALL) -d $(DIRECTORY)/bar/test/data
+	$(INSTALL) -m 664 test/data/zero.dat \
+                          test/data/zero512k.dat \
+                          test/data/zero1024.dat \
+                          test/data/random512k.dat \
+                          test/data/random1024.dat \
+                          test/data/smallfile.dat \
+                          $(DIRECTORY)/bar/test/data
+else
+	@$(ECHO) Please call 'make dist' from top-level directory to create a distribution.
+endif
 
 # ----------------------------------------------------------------------------
 
