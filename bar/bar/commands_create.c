@@ -3101,6 +3101,7 @@ LOCAL Errors storeImageEntry(ArchiveInfo       *archiveInfo,
 {
   Errors           error;
   DeviceInfo       deviceInfo;
+  uint             maxBufferBlockCount;
   DeviceHandle     deviceHandle;
   bool             fileSystemFlag;
   FileSystemHandle fileSystemHandle;
@@ -3108,8 +3109,8 @@ LOCAL Errors storeImageEntry(ArchiveInfo       *archiveInfo,
   bool             deltaCompressFlag;
   SourceHandle     sourceHandle;
   uint64           block;
+  uint64           blockCount;
   uint             bufferBlockCount;
-  uint             maxBufferBlockCount;
   uint             percentageDone;
   double           ratio;
   ArchiveEntryInfo archiveEntryInfo;
@@ -3262,9 +3263,10 @@ LOCAL Errors storeImageEntry(ArchiveInfo       *archiveInfo,
     }
 
     // write device content to archive
-    error = ERROR_NONE;
-    block = 0LL;
-    while (   ((int64)(block*(uint64)deviceInfo.blockSize) < deviceInfo.size)
+    block      = 0LL;
+    blockCount = deviceInfo.size/(uint64)deviceInfo.blockSize;
+    error      = ERROR_NONE;
+    while (   (block < blockCount)
            && ((createInfo->requestedAbortFlag == NULL) || !(*createInfo->requestedAbortFlag))
            && (createInfo->failError == ERROR_NONE)
            && (error == ERROR_NONE)
@@ -3278,7 +3280,7 @@ LOCAL Errors storeImageEntry(ArchiveInfo       *archiveInfo,
 
       // read blocks from device
       bufferBlockCount = 0;
-      while (   ((int64)(block*(uint64)deviceInfo.blockSize) < deviceInfo.size)
+      while (   (block < blockCount)
              && (bufferBlockCount < maxBufferBlockCount)
             )
       {
@@ -3286,7 +3288,6 @@ LOCAL Errors storeImageEntry(ArchiveInfo       *archiveInfo,
             || FileSystem_blockIsUsed(&fileSystemHandle,block*(uint64)deviceInfo.blockSize)
            )
         {
-//fprintf(stderr,"%s, %d: used %llu\n",__FILE__,__LINE__,block);
           // read single block
           error = Device_seek(&deviceHandle,block*(uint64)deviceInfo.blockSize);
           if (error != ERROR_NONE) break;
@@ -3295,13 +3296,13 @@ LOCAL Errors storeImageEntry(ArchiveInfo       *archiveInfo,
         }
         else
         {
-//fprintf(stderr,"%s, %d: free %llu\n",__FILE__,__LINE__,block);
           // block not used -> store as "0"-block
           memset(buffer+bufferBlockCount*deviceInfo.blockSize,0,deviceInfo.blockSize);
         }
-        block++;
         bufferBlockCount++;
+        block++;
       }
+      if (error != ERROR_NONE) break;
 
       // write data to archive
       if (bufferBlockCount > 0)
