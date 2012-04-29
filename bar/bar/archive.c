@@ -1619,15 +1619,15 @@ LOCAL Errors writeImageDataBlock(ArchiveEntryInfo *archiveEntryInfo,
 
       // get next delta-compressed data
       Compress_getCompressedData(&archiveEntryInfo->image.deltaCompressInfo,
-                                 archiveEntryInfo->file.deltaBuffer,
-                                 archiveEntryInfo->file.deltaBufferSize,
+                                 archiveEntryInfo->image.deltaBuffer,
+                                 archiveEntryInfo->image.deltaBufferSize,
                                  &deltaLength
                                 );
       if (deltaLength > 0)
       {
         // byte-compress data
         error = Compress_deflate(&archiveEntryInfo->image.byteCompressInfo,
-                                 archiveEntryInfo->file.deltaBuffer,
+                                 archiveEntryInfo->image.deltaBuffer,
                                  deltaLength,
                                  NULL
                                 );
@@ -2079,15 +2079,15 @@ LOCAL Errors writeHardLinkDataBlock(ArchiveEntryInfo *archiveEntryInfo,
 
       // get next delta-compressed byte
       Compress_getCompressedData(&archiveEntryInfo->hardLink.deltaCompressInfo,
-                                 archiveEntryInfo->file.deltaBuffer,
-                                 archiveEntryInfo->file.deltaBufferSize,
+                                 archiveEntryInfo->hardLink.deltaBuffer,
+                                 archiveEntryInfo->hardLink.deltaBufferSize,
                                  &deltaLength
                                 );
       if (deltaLength > 0)
       {
         // byte-compress data
         error = Compress_deflate(&archiveEntryInfo->hardLink.byteCompressInfo,
-                                 archiveEntryInfo->file.deltaBuffer,
+                                 archiveEntryInfo->hardLink.deltaBuffer,
                                  deltaLength,
                                  NULL
                                 );
