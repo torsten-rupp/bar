@@ -7642,6 +7642,7 @@ Errors Archive_readData(ArchiveEntryInfo *archiveEntryInfo,
   byte   *p;
   Errors error;
   ulong  availableBytes;
+  bool   deltaDecompressEmptyFlag,byteDecompressEmptyFlag;
   ulong  maxInflateBytes;
   ulong  inflatedBytes;
 
@@ -7673,7 +7674,7 @@ Errors Archive_readData(ArchiveEntryInfo *archiveEntryInfo,
       p = (byte*)buffer;
       while (length > 0L)
       {
-        // get number of available bytes in delta-decompressor
+        // check if delta-decompressor is empty
         error = Compress_getAvailableDecompressedBytes(&archiveEntryInfo->file.deltaCompressInfo,
                                                        &availableBytes
                                                       );
@@ -7681,13 +7682,14 @@ Errors Archive_readData(ArchiveEntryInfo *archiveEntryInfo,
         {
           return error;
         }
+        deltaDecompressEmptyFlag = (availableBytes <= 0L);
 
-        if (availableBytes <= 0L)
+        if (deltaDecompressEmptyFlag)
         {
-          // no data in delta-decompressor -> do byte decompress and fill delta-compressor
-          if (!Compress_isFlush(&archiveEntryInfo->file.deltaCompressInfo))
+          // no data in delta-decompressor -> do byte-decompress and fill delta-decompressor
+          if (!Compress_isEndOfData(&archiveEntryInfo->file.deltaCompressInfo))
           {
-            // get number of available bytes in byte decompressor
+            // check if byte-decompressor is empty
             error = Compress_getAvailableDecompressedBytes(&archiveEntryInfo->file.byteCompressInfo,
                                                            &availableBytes
                                                           );
@@ -7695,11 +7697,13 @@ Errors Archive_readData(ArchiveEntryInfo *archiveEntryInfo,
             {
               return error;
             }
-            if (availableBytes <= 0L)
+            byteDecompressEmptyFlag = (availableBytes <= 0L);
+
+            if (byteDecompressEmptyFlag)
             {
-              if (!Compress_isFlush(&archiveEntryInfo->file.byteCompressInfo))
+              // no data in byte-decompressor -> read block and fill byte-decompressor
+              if (!Compress_isEndOfData(&archiveEntryInfo->file.byteCompressInfo))
               {
-                // fill byte-decompressor
                 do
                 {
                   error = readFileDataBlock(archiveEntryInfo);
@@ -7716,16 +7720,17 @@ Errors Archive_readData(ArchiveEntryInfo *archiveEntryInfo,
                   {
                     return error;
                   }
+                  byteDecompressEmptyFlag = (availableBytes <= 0L);
 //fprintf(stderr,"%s, %d: availableBytes=%d\n",__FILE__,__LINE__,availableBytes);
                 }
-                while (   !Compress_isFlush(&archiveEntryInfo->file.byteCompressInfo)
-                       && (availableBytes <= 0L)
+                while (   !Compress_isEndOfData(&archiveEntryInfo->file.byteCompressInfo)
+                       && byteDecompressEmptyFlag
                       );
               }
             }
 
 //fprintf(stderr,"%s, %d: availableBytes=%d flushed=%d end=%d\n",__FILE__,__LINE__,availableBytes,Compress_isFlush(&archiveEntryInfo->file.byteCompressInfo),Compress_isEndOfData(&archiveEntryInfo->file.byteCompressInfo));
-            if      (availableBytes > 0L)
+            if      (!byteDecompressEmptyFlag)
             {
               // decompress next byte-data into delta-buffer
               maxInflateBytes = MIN(Compress_getFreeCompressSpace(&archiveEntryInfo->file.deltaCompressInfo),
@@ -7744,7 +7749,7 @@ Errors Archive_readData(ArchiveEntryInfo *archiveEntryInfo,
               }
               if (inflatedBytes > 0L)
               {
-                // put data into delta-decompressor
+                // put bytes into delta-decompressor
                 Compress_putCompressedData(&archiveEntryInfo->file.deltaCompressInfo,
                                            archiveEntryInfo->file.deltaBuffer,
                                            inflatedBytes
@@ -7752,12 +7757,13 @@ Errors Archive_readData(ArchiveEntryInfo *archiveEntryInfo,
               }
               else
               {
-                return ERROR_END_OF_DATA;
+                // no data decompressed -> error in inflate
+                return ERROR_INFLATE_FAIL;
               }
             }
-            else if (Compress_isEndOfData(&archiveEntryInfo->file.byteCompressInfo))
+            else
             {
-              // no more data in byte-compressor -> flush delta-compressor
+              // no more bytes in byte-decompressor -> flush delta-decompressor
               error = Compress_flush(&archiveEntryInfo->file.deltaCompressInfo);
               if (error != ERROR_NONE)
               {
@@ -7767,8 +7773,8 @@ Errors Archive_readData(ArchiveEntryInfo *archiveEntryInfo,
           }
           else
           {
-            // no more data in delta-compressor -> error in deflate
-            return ERROR_INFLATE_FAIL;
+            // no more data in delta-compressor -> end of data
+            return ERROR_END_OF_DATA;
           }
         }
 
@@ -7787,10 +7793,6 @@ Errors Archive_readData(ArchiveEntryInfo *archiveEntryInfo,
           // got decompressed data
           p += inflatedBytes;
           length -= inflatedBytes;
-        }
-        else if (Compress_isFlush(&archiveEntryInfo->file.deltaCompressInfo))
-        {
-          return ERROR_END_OF_DATA;
         }
       }
       break;
@@ -7817,7 +7819,7 @@ Errors Archive_readData(ArchiveEntryInfo *archiveEntryInfo,
       p = (byte*)buffer;
       while (length > 0L)
       {
-        // get number of available bytes in delta-decompressor
+        // check if delta-decompressor is empty
         error = Compress_getAvailableDecompressedBytes(&archiveEntryInfo->image.deltaCompressInfo,
                                                        &availableBytes
                                                       );
@@ -7825,13 +7827,14 @@ Errors Archive_readData(ArchiveEntryInfo *archiveEntryInfo,
         {
           return error;
         }
+        deltaDecompressEmptyFlag = (availableBytes <= 0L);
 
-        if (availableBytes <= 0L)
+        if (deltaDecompressEmptyFlag)
         {
-          // no data in delta-decompressor -> do byte decompress and fill delta-compressor
-          if (!Compress_isFlush(&archiveEntryInfo->image.deltaCompressInfo))
+          // no data in delta-decompressor -> do byte-decompress and fill delta-decompressor
+          if (!Compress_isEndOfData(&archiveEntryInfo->image.deltaCompressInfo))
           {
-            // get number of available bytes in byte decompressor
+            // check if byte-decompressor is empty
             error = Compress_getAvailableDecompressedBytes(&archiveEntryInfo->image.byteCompressInfo,
                                                            &availableBytes
                                                           );
@@ -7839,11 +7842,13 @@ Errors Archive_readData(ArchiveEntryInfo *archiveEntryInfo,
             {
               return error;
             }
-            if (availableBytes <= 0L)
+            byteDecompressEmptyFlag = (availableBytes <= 0L);
+
+            if (byteDecompressEmptyFlag)
             {
-              if (!Compress_isFlush(&archiveEntryInfo->image.byteCompressInfo))
+              // no data in byte-decompressor -> read block and fill byte-decompressor
+              if (!Compress_isEndOfData(&archiveEntryInfo->image.byteCompressInfo))
               {
-                // fill data-decompressor
                 do
                 {
                   error = readImageDataBlock(archiveEntryInfo);
@@ -7860,22 +7865,17 @@ Errors Archive_readData(ArchiveEntryInfo *archiveEntryInfo,
                   {
                     return error;
                   }
+                  byteDecompressEmptyFlag = (availableBytes <= 0L);
 //fprintf(stderr,"%s, %d: availableBytes=%d\n",__FILE__,__LINE__,availableBytes);
                 }
-                while (   !Compress_isFlush(&archiveEntryInfo->image.byteCompressInfo)
-                       && (availableBytes <= 0L)
+                while (   !Compress_isEndOfData(&archiveEntryInfo->image.byteCompressInfo)
+                       && byteDecompressEmptyFlag
                       );
-
-                // check if there are byte-decompressed data
-                if (availableBytes <= 0L)
-                {
-                  return ERROR_END_OF_DATA;
-                }
               }
             }
 
 //fprintf(stderr,"%s, %d: availableBytes=%d flushed=%d end=%d\n",__FILE__,__LINE__,availableBytes,Compress_isFlush(&archiveEntryInfo->image.byteCompressInfo),Compress_isEndOfData(&archiveEntryInfo->image.byteCompressInfo));
-            if      (availableBytes > 0L)
+            if      (!byteDecompressEmptyFlag)
             {
               // decompress next byte-data into delta buffer
               maxInflateBytes = MIN(Compress_getFreeCompressSpace(&archiveEntryInfo->image.deltaCompressInfo),
@@ -7892,7 +7892,7 @@ Errors Archive_readData(ArchiveEntryInfo *archiveEntryInfo,
               }
               if (inflatedBytes > 0L)
               {
-                // put byte into delta-decompressor
+                // put bytes into delta-decompressor
                 Compress_putCompressedData(&archiveEntryInfo->image.deltaCompressInfo,
                                            archiveEntryInfo->image.deltaBuffer,
                                            inflatedBytes
@@ -7900,12 +7900,13 @@ Errors Archive_readData(ArchiveEntryInfo *archiveEntryInfo,
               }
               else
               {
-                return ERROR_END_OF_DATA;
+                // no data decompressed -> error in inflate
+                return ERROR_INFLATE_FAIL;
               }
             }
-            else if (Compress_isEndOfData(&archiveEntryInfo->image.byteCompressInfo))
+            else
             {
-              // no more bytes in data-compressor -> flush delta-compressor
+              // no more bytes in byte-decompressor -> flush delta-decompressor
               error = Compress_flush(&archiveEntryInfo->image.deltaCompressInfo);
               if (error != ERROR_NONE)
               {
@@ -7915,8 +7916,8 @@ Errors Archive_readData(ArchiveEntryInfo *archiveEntryInfo,
           }
           else
           {
-            // no more data in delta-compressor -> error in deflate
-            return ERROR_INFLATE_FAIL;
+            // no more data in delta-compressor -> end of data
+            return ERROR_END_OF_DATA;
           }
         }
 
@@ -7965,7 +7966,7 @@ Errors Archive_readData(ArchiveEntryInfo *archiveEntryInfo,
       p = (byte*)buffer;
       while (length > 0L)
       {
-        // get number of available bytes in delta-decompressor
+        // check if delta-decompressor is empty
         error = Compress_getAvailableDecompressedBytes(&archiveEntryInfo->hardLink.deltaCompressInfo,
                                                        &availableBytes
                                                       );
@@ -7973,13 +7974,14 @@ Errors Archive_readData(ArchiveEntryInfo *archiveEntryInfo,
         {
           return error;
         }
+        deltaDecompressEmptyFlag = (availableBytes <= 0L);
 
-        if (availableBytes <= 0L)
+        if (deltaDecompressEmptyFlag)
         {
-          // no data in delta-decompressor -> do byte decompress and fill delta-compressor
-          if (!Compress_isFlush(&archiveEntryInfo->hardLink.deltaCompressInfo))
+          // no data in delta-decompressor -> do byte-decompress and fill delta-decompressor
+          if (!Compress_isEndOfData(&archiveEntryInfo->hardLink.deltaCompressInfo))
           {
-            // get number of available bytes in byte decompressor
+            // check if byte-decompressor is empty
             error = Compress_getAvailableDecompressedBytes(&archiveEntryInfo->hardLink.byteCompressInfo,
                                                            &availableBytes
                                                           );
@@ -7987,11 +7989,13 @@ Errors Archive_readData(ArchiveEntryInfo *archiveEntryInfo,
             {
               return error;
             }
-            if (availableBytes <= 0L)
+            byteDecompressEmptyFlag = (availableBytes <= 0L);
+
+            if (byteDecompressEmptyFlag)
             {
-              if (!Compress_isFlush(&archiveEntryInfo->hardLink.byteCompressInfo))
+              // no data in byte-decompressor -> read block and fill byte-decompressor
+              if (!Compress_isEndOfData(&archiveEntryInfo->hardLink.byteCompressInfo))
               {
-                // fill byte-decompressor
                 do
                 {
                   error = readHardLinkDataBlock(archiveEntryInfo);
@@ -8008,22 +8012,17 @@ Errors Archive_readData(ArchiveEntryInfo *archiveEntryInfo,
                   {
                     return error;
                   }
+                  byteDecompressEmptyFlag = (availableBytes <= 0L);
 //fprintf(stderr,"%s, %d: availableBytes=%d\n",__FILE__,__LINE__,availableBytes);
                 }
-                while (   !Compress_isFlush(&archiveEntryInfo->hardLink.byteCompressInfo)
-                       && (availableBytes <= 0L)
+                while (   !Compress_isEndOfData(&archiveEntryInfo->hardLink.byteCompressInfo)
+                       && byteDecompressEmptyFlag
                       );
-
-                // check if there are byte-decompressed data
-                if (availableBytes <= 0L)
-                {
-                  return ERROR_END_OF_DATA;
-                }
               }
             }
 
 //fprintf(stderr,"%s, %d: availableBytes=%d flushed=%d end=%d\n",__FILE__,__LINE__,availableBytes,Compress_isFlush(&archiveEntryInfo->hardLink.byteCompressInfo),Compress_isEndOfData(&archiveEntryInfo->hardLink.byteCompressInfo));
-            if      (availableBytes > 0L)
+            if      (!byteDecompressEmptyFlag)
             {
               // decompress next byte-data into delta buffer
               maxInflateBytes = MIN(Compress_getFreeCompressSpace(&archiveEntryInfo->hardLink.deltaCompressInfo),
@@ -8040,7 +8039,7 @@ Errors Archive_readData(ArchiveEntryInfo *archiveEntryInfo,
               }
               if (inflatedBytes > 0L)
               {
-                // put byte into delta-decompressor
+                // put bytes into delta-decompressor
                 Compress_putCompressedData(&archiveEntryInfo->hardLink.deltaCompressInfo,
                                            archiveEntryInfo->hardLink.deltaBuffer,
                                            inflatedBytes
@@ -8048,10 +8047,11 @@ Errors Archive_readData(ArchiveEntryInfo *archiveEntryInfo,
               }
               else
               {
-                return ERROR_END_OF_DATA;
+                // no data decompressed -> error in inflate
+                return ERROR_INFLATE_FAIL;
               }
             }
-            else if (Compress_isEndOfData(&archiveEntryInfo->hardLink.byteCompressInfo))
+            else
             {
               // no more bytes in byte-compressor -> flush delta-compressor
               error = Compress_flush(&archiveEntryInfo->hardLink.deltaCompressInfo);
@@ -8063,8 +8063,8 @@ Errors Archive_readData(ArchiveEntryInfo *archiveEntryInfo,
           }
           else
           {
-            // no more data in delta-compressor -> error in deflate
-            return ERROR_INFLATE_FAIL;
+            // no more data in delta-compressor -> end of data
+            return ERROR_END_OF_DATA;
           }
         }
 
