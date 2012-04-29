@@ -164,7 +164,7 @@ typedef void                void32;
 
 #ifdef __GNUC__
   #define ATTRIBUTE_PACKED             __attribute__ ((__packed__))
-  #define ATTRIBUTE_WARN_UNUSED_RESULT __attribute__ ((warn_unused_result))
+  #define ATTRIBUTE_WARN_UNUSED_RESULT __attribute__ ((__warn_unused_result__))
 #else
   #define ATTRIBUTE_PACKED
   #define ATTRIBUTE_WARN_UNUSED_RESULT
