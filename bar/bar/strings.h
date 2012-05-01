@@ -83,20 +83,23 @@ typedef struct
 #endif /* not NDEBUG */
 
 #ifndef NDEBUG
+  #define STRING_CHECKSUM(string) \
+    ((ulong)(string)->length^(ulong)(string)->maxLength^(ulong)(string)->data)
+
   #define STRING_CHECK_VALID(string) \
     do \
     { \
       if (string != NULL) \
       { \
-        if (((ulong)(string)->length^(ulong)(string)->maxLength^(ulong)(string)->data) != (string)->checkSum) \
+        if (STRING_CHECKSUM(string) != (string)->checkSum) \
         { \
           String_debugPrintCurrentStackTrace(); \
-          HALT_INTERNAL_ERROR("Invalid checksum 0x%08x in string %p, length %ld (max. %ld) (expected 0x%08x)!",\
-                              (string)->checkSum,\
-                              string,\
-                              (string)->length,\
-                              (string)->maxLength,\
-                              (ulong)(string)->length^(ulong)(string)->maxLength^(ulong)(string)->data\
+          HALT_INTERNAL_ERROR("Invalid checksum 0x%08x in string %p, length %ld (max. %ld) (expected 0x%08x)!", \
+                              (string)->checkSum, \
+                              string, \
+                              (string)->length, \
+                              (string)->maxLength, \
+                              STRING_CHECKSUM(string) \
                              ); \
         } \
       } \
@@ -107,7 +110,7 @@ typedef struct
     { \
       if (string != NULL) \
       { \
-        (string)->checkSum = (ulong)(string)->length^(ulong)(string)->maxLength^(ulong)(string)->data; \
+        (string)->checkSum = STRING_CHECKSUM(string); \
       } \
     } \
     while (0)
