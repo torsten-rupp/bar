@@ -755,11 +755,22 @@ test/data/delta2/test.dat: test/data/delta1/test.dat
           $(DD) if=test/data/delta1/test.dat skip=256 bs=1k count=256 2>/dev/null; \
         ) > $@
 
+# helper function to check if parameter exists
+# call functionVerifyParameter,<name>
+functionVerifyParameter = \
+  if test -z "$($1)"; then \
+    $(ECHO) >&2 "ERROR: parameter '$1' not set"; \
+    exit 1; \
+  fi
+
 .PHONY: test_file_operations_base test_file_operations_delta test_file_operations_incremental test_file_operations_differential
 test_file_operations_base: \
   $(TEST_BAR) \
   $(TEST_FILES)
 	# normal tests
+	@$(call functionVerifyParameter,TEST_BAR)
+	@$(call functionVerifyParameter,BAR_FILE)
+	#
 	$(RMRF) $(TEST_FILES_CLEAN)
 	SSH_ASKPASS= $(TEST_BAR) -c test/$(BAR_FILE).bar test/data $(OPTIONS) --overwrite-archive-files --verbose=2 $(if $(QUIET),1>/dev/null)
 	SSH_ASKPASS= $(TEST_BAR) -l test/test*.bar $(OPTIONS) $(if $(QUIET),1>/dev/null)
@@ -780,6 +791,10 @@ test_file_operations_delta: \
   $(TEST_FILES)
 ifeq (@HAVE_XDELTA@,1)
 	# delta tests
+	@$(call functionVerifyParameter,TEST_BAR)
+	@$(call functionVerifyParameter,BAR_FILE)
+	@$(call functionVerifyParameter,BAR_PATTERN)
+	#
 	$(RMRF) $(TEST_FILES_CLEAN)
 	($(CD) test/data/delta1; SSH_ASKPASS= ../../../$(TEST_BAR) -c ../../$(BAR_FILE)-A.bar test.dat $(OPTIONS) --overwrite-archive-files --verbose=2 $(if $(QUIET),1>/dev/null))
 	#
@@ -820,6 +835,9 @@ test_file_operations_incremental: \
   $(TEST_BAR) \
   $(TEST_FILES)
 	# incremental tests
+	@$(call functionVerifyParameter,TEST_BAR)
+	@$(call functionVerifyParameter,BAR_FILE)
+	#
 	$(RMRF) $(TEST_FILES_CLEAN)
 	SSH_ASKPASS= $(TEST_BAR) -c test/$(BAR_FILE)-full.bar --full --incremental-list-file=test/$(BAR_FILE).bid test/data test/new $(OPTIONS) --overwrite-archive-files --verbose=2 $(if $(QUIET),1>/dev/null)
 	$(INSTALL) -d test/new; $(CP) test/data/random1024.dat test/new/random1024-new.dat
@@ -832,6 +850,9 @@ test_file_operations_differential: \
   $(TEST_BAR) \
   $(TEST_FILES)
 	# differential tests
+	@$(call functionVerifyParameter,TEST_BAR)
+	@$(call functionVerifyParameter,BAR_FILE)
+	#
 	$(RMRF) $(TEST_FILES_CLEAN)
 	SSH_ASKPASS= $(TEST_BAR) -c test/$(BAR_FILE)-full.bar --full --incremental-list-file=test/$(BAR_FILE).bid test/data test/new $(OPTIONS) --overwrite-archive-files --verbose=2 $(if $(QUIET),1>/dev/null)
 	$(INSTALL) -d test/new; $(CP) test/data/random1024.dat test/new/random1024-new.dat
@@ -846,6 +867,9 @@ test_file_operations_destroyed: \
   $(TEST_DESTROYER) \
   $(TEST_FILES)
 	# tests which must cause errors
+	@$(call functionVerifyParameter,TEST_BAR)
+	@$(call functionVerifyParameter,BAR_FILE)
+	#
 	$(RMRF) $(TEST_FILES_CLEAN)
 	SSH_ASKPASS= $(TEST_BAR) -c test/$(BAR_FILE).bar test/data $(OPTIONS) --overwrite-archive-files --verbose=2 $(if $(QUIET),1>/dev/null)
 	$(LS) test/*.bar|while read fileName; do $(TEST_DESTROYER) $$fileName m:16:FIL0 > $${fileName}_destroyed; done
@@ -932,6 +956,7 @@ test_image_operations_raw:
 	$(call functionTestDeviceCreate,$(LOOP1),test/dev1.dat,test/dev1)
 	$(call functionTestDeviceCreate,$(LOOP0),test/dev0.dat,test/dev0)
 	$(MAKE) \
+          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           OPTIONS="$(if $(OPTIONS),$(OPTIONS) --raw-images,--compress-algorithm=none --crypt-algorithm=none --raw-images)" \
           test_image_operations_base \
@@ -945,6 +970,7 @@ test_image_operations_raw:
 	$(call functionTestDeviceCreate,$(LOOP0),test/dev0.dat,test/dev0)
 	$(call functionTestDeviceCreate,$(LOOP1),test/dev1.dat,test/dev1)
 	$(MAKE) \
+          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           OPTIONS="$(if $(OPTIONS),$(OPTIONS) --raw-images,--compress-algorithm=none --crypt-algorithm=none --raw-images)" \
           test_image_operations_base \
@@ -970,6 +996,7 @@ ifneq (@MKFS_EXT2@,)
 	$(call functionTestDeviceCreate,$(LOOP1),test/dev1.dat,test/dev1)
 	$(call functionTestDeviceInitFilesystem,$(LOOP0),-t ext2,test/dev0)
 	$(MAKE) \
+          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           test_image_operations_base \
           test_image_operations_check \
@@ -985,6 +1012,7 @@ ifneq (@MKFS_EXT2@,)
 	$(call functionTestDeviceCreate,$(LOOP1),test/dev1.dat,test/dev1)
 	$(call functionTestDeviceInitFilesystem,$(LOOP0),-t ext2,test/dev0)
 	$(MAKE) \
+          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           test_image_operations_base \
           test_image_operations_check \
@@ -999,6 +1027,7 @@ ifneq (@MKFS_EXT2@,)
 	$(call functionTestDeviceCreate,$(LOOP1),test/dev1.dat,test/dev1)
 	$(call functionTestDeviceInitFilesystem,$(LOOP0),-t ext2 -b 1024,test/dev0)
 	$(MAKE) \
+          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           test_image_operations_base \
           test_image_operations_check \
@@ -1014,6 +1043,7 @@ ifneq (@MKFS_EXT2@,)
 	$(call functionTestDeviceCreate,$(LOOP1),test/dev1.dat,test/dev1)
 	$(call functionTestDeviceInitFilesystem,$(LOOP0),-t ext2 -b 1024,test/dev0)
 	$(MAKE) \
+          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           test_image_operations_base \
           test_image_operations_check \
@@ -1028,6 +1058,7 @@ ifneq (@MKFS_EXT2@,)
 	$(call functionTestDeviceCreate,$(LOOP1),test/dev1.dat,test/dev1)
 	$(call functionTestDeviceInitFilesystem,$(LOOP0),-t ext2 -b 2048,test/dev0)
 	$(MAKE) \
+          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           test_image_operations_base \
           test_image_operations_check \
@@ -1043,6 +1074,7 @@ ifneq (@MKFS_EXT2@,)
 	$(call functionTestDeviceCreate,$(LOOP1),test/dev1.dat,test/dev1)
 	$(call functionTestDeviceInitFilesystem,$(LOOP0),-t ext2 -b 2048,test/dev0)
 	$(MAKE) \
+          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           test_image_operations_base \
           test_image_operations_check \
@@ -1057,6 +1089,7 @@ ifneq (@MKFS_EXT2@,)
 	$(call functionTestDeviceCreate,$(LOOP1),test/dev1.dat,test/dev1)
 	$(call functionTestDeviceInitFilesystem,$(LOOP0),-t ext2 -b 4096,test/dev0)
 	$(MAKE) \
+          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           test_image_operations_base \
           test_image_operations_check \
@@ -1072,6 +1105,7 @@ ifneq (@MKFS_EXT2@,)
 	$(call functionTestDeviceCreate,$(LOOP1),test/dev1.dat,test/dev1)
 	$(call functionTestDeviceInitFilesystem,$(LOOP0),-t ext2 -b 4096,test/dev0)
 	$(MAKE) \
+          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           test_image_operations_base \
           test_image_operations_check \
@@ -1092,6 +1126,7 @@ ifneq (@MKFS_EXT3@,)
 	$(call functionTestDeviceCreate,$(LOOP1),test/dev1.dat,test/dev1)
 	$(call functionTestDeviceInitFilesystem,$(LOOP0),-t ext3,test/dev0)
 	$(MAKE) \
+          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           test_image_operations_base \
           test_image_operations_check \
@@ -1107,6 +1142,7 @@ ifneq (@MKFS_EXT3@,)
 	$(call functionTestDeviceCreate,$(LOOP1),test/dev1.dat,test/dev1)
 	$(call functionTestDeviceInitFilesystem,$(LOOP0),-t ext3,test/dev0)
 	$(MAKE) \
+          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           test_image_operations_base \
           test_image_operations_check \
@@ -1121,6 +1157,7 @@ ifneq (@MKFS_EXT3@,)
 	$(call functionTestDeviceCreate,$(LOOP1),test/dev1.dat,test/dev1)
 	$(call functionTestDeviceInitFilesystem,$(LOOP0),-t ext3 -b 1024,test/dev0)
 	$(MAKE) \
+          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           test_image_operations_base \
           test_image_operations_check \
@@ -1136,6 +1173,7 @@ ifneq (@MKFS_EXT3@,)
 	$(call functionTestDeviceCreate,$(LOOP1),test/dev1.dat,test/dev1)
 	$(call functionTestDeviceInitFilesystem,$(LOOP0),-t ext3 -b 1024,test/dev0)
 	$(MAKE) \
+          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           test_image_operations_base \
           test_image_operations_check \
@@ -1150,6 +1188,7 @@ ifneq (@MKFS_EXT3@,)
 	$(call functionTestDeviceCreate,$(LOOP1),test/dev1.dat,test/dev1)
 	$(call functionTestDeviceInitFilesystem,$(LOOP0),-t ext3 -b 2048,test/dev0)
 	$(MAKE) \
+          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           test_image_operations_base \
           test_image_operations_check \
@@ -1165,6 +1204,7 @@ ifneq (@MKFS_EXT3@,)
 	$(call functionTestDeviceCreate,$(LOOP1),test/dev1.dat,test/dev1)
 	$(call functionTestDeviceInitFilesystem,$(LOOP0),-t ext3 -b 2048,test/dev0)
 	$(MAKE) \
+          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           test_image_operations_base \
           test_image_operations_check \
@@ -1179,6 +1219,7 @@ ifneq (@MKFS_EXT3@,)
 	$(call functionTestDeviceCreate,$(LOOP1),test/dev1.dat,test/dev1)
 	$(call functionTestDeviceInitFilesystem,$(LOOP0),-t ext3 -b 4096,test/dev0)
 	$(MAKE) \
+          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           test_image_operations_base \
           test_image_operations_check \
@@ -1194,6 +1235,7 @@ ifneq (@MKFS_EXT3@,)
 	$(call functionTestDeviceCreate,$(LOOP1),test/dev1.dat,test/dev1)
 	$(call functionTestDeviceInitFilesystem,$(LOOP0),-t ext3 -b 4096,test/dev0)
 	$(MAKE) \
+          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           test_image_operations_base \
           test_image_operations_check \
@@ -1214,6 +1256,7 @@ ifneq (@MKFS_EXT4@,)
 	$(call functionTestDeviceCreate,$(LOOP1),test/dev1.dat,test/dev1)
 	$(call functionTestDeviceInitFilesystem,$(LOOP0),-t ext4,test/dev0)
 	$(MAKE) \
+          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           test_image_operations_base \
           test_image_operations_check \
@@ -1229,6 +1272,7 @@ ifneq (@MKFS_EXT4@,)
 	$(call functionTestDeviceCreate,$(LOOP1),test/dev1.dat,test/dev1)
 	$(call functionTestDeviceInitFilesystem,$(LOOP0),-t ext4,test/dev0)
 	$(MAKE) \
+          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           test_image_operations_base \
           test_image_operations_check \
@@ -1243,6 +1287,7 @@ ifneq (@MKFS_EXT4@,)
 	$(call functionTestDeviceCreate,$(LOOP1),test/dev1.dat,test/dev1)
 	$(call functionTestDeviceInitFilesystem,$(LOOP0),-t ext4 -b 1024,test/dev0)
 	$(MAKE) \
+          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           test_image_operations_base \
           test_image_operations_check \
@@ -1258,6 +1303,7 @@ ifneq (@MKFS_EXT4@,)
 	$(call functionTestDeviceCreate,$(LOOP1),test/dev1.dat,test/dev1)
 	$(call functionTestDeviceInitFilesystem,$(LOOP0),-t ext4 -b 1024,test/dev0)
 	$(MAKE) \
+          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           test_image_operations_base \
           test_image_operations_check \
@@ -1272,6 +1318,7 @@ ifneq (@MKFS_EXT4@,)
 	$(call functionTestDeviceCreate,$(LOOP1),test/dev1.dat,test/dev1)
 	$(call functionTestDeviceInitFilesystem,$(LOOP0),-t ext4 -b 2048,test/dev0)
 	$(MAKE) \
+          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           test_image_operations_base \
           test_image_operations_check \
@@ -1287,6 +1334,7 @@ ifneq (@MKFS_EXT4@,)
 	$(call functionTestDeviceCreate,$(LOOP1),test/dev1.dat,test/dev1)
 	$(call functionTestDeviceInitFilesystem,$(LOOP0),-t ext4 -b 2048,test/dev0)
 	$(MAKE) \
+          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           test_image_operations_base \
           test_image_operations_check \
@@ -1301,6 +1349,7 @@ ifneq (@MKFS_EXT4@,)
 	$(call functionTestDeviceCreate,$(LOOP1),test/dev1.dat,test/dev1)
 	$(call functionTestDeviceInitFilesystem,$(LOOP0),-t ext4 -b 4096,test/dev0)
 	$(MAKE) \
+          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           test_image_operations_base \
           test_image_operations_check \
@@ -1316,6 +1365,7 @@ ifneq (@MKFS_EXT4@,)
 	$(call functionTestDeviceCreate,$(LOOP1),test/dev1.dat,test/dev1)
 	$(call functionTestDeviceInitFilesystem,$(LOOP0),-t ext4 -b 4096,test/dev0)
 	$(MAKE) \
+          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           test_image_operations_base \
           test_image_operations_check \
@@ -1352,6 +1402,7 @@ ifneq (@MKFS_MSDOS@,)
 	$(call functionTestDeviceCreate,$(LOOP1),test/dev1.dat,test/dev1)
 	$(call functionTestDeviceInitFilesystem,$(LOOP0),-t msdos -F 12,test/dev0)
 	$(MAKE) \
+          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           test_image_operations_base \
           test_image_operations_check \
@@ -1367,6 +1418,7 @@ ifneq (@MKFS_MSDOS@,)
 	$(call functionTestDeviceCreate,$(LOOP1),test/dev1.dat,test/dev1)
 	$(call functionTestDeviceInitFilesystem,$(LOOP0),-t msdos -F 12,test/dev0)
 	$(MAKE) \
+          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           test_image_operations_base \
           test_image_operations_check \
@@ -1387,6 +1439,7 @@ ifneq (@MKFS_MSDOS@,)
 	$(call functionTestDeviceCreate,$(LOOP1),test/dev1.dat,test/dev1)
 	$(call functionTestDeviceInitFilesystem,$(LOOP0),-t msdos -F 16,test/dev0)
 	$(MAKE) \
+          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           test_image_operations_base \
           test_image_operations_check \
@@ -1402,6 +1455,7 @@ ifneq (@MKFS_MSDOS@,)
 	$(call functionTestDeviceCreate,$(LOOP1),test/dev1.dat,test/dev1)
 	$(call functionTestDeviceInitFilesystem,$(LOOP0),-t msdos -F 16,test/dev0)
 	$(MAKE) \
+          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           test_image_operations_base \
           test_image_operations_check \
@@ -1422,6 +1476,7 @@ ifneq (@MKFS_MSDOS@,)
 	$(call functionTestDeviceCreate,$(LOOP1),test/dev1.dat,test/dev1)
 	$(call functionTestDeviceInitFilesystem,$(LOOP0),-t msdos -F 32,test/dev0)
 	$(MAKE) \
+          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           test_image_operations_base \
           test_image_operations_check \
@@ -1437,6 +1492,7 @@ ifneq (@MKFS_MSDOS@,)
 	$(call functionTestDeviceCreate,$(LOOP1),test/dev1.dat,test/dev1)
 	$(call functionTestDeviceInitFilesystem,$(LOOP0),-t msdos -F 32,test/dev0)
 	$(MAKE) \
+          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           test_image_operations_base \
           test_image_operations_check \
@@ -1472,6 +1528,7 @@ ifneq (@MKFS_REISERFS@,)
 	$(call functionTestDeviceCreate,$(LOOP1),test/dev1.dat)
 	$(call functionTestDeviceInitFilesystem,$(LOOP0),-t reiserfs -b 4096 -q --format 3.5,test/dev0)
 	$(MAKE) \
+          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           test_image_operations_base \
           test_image_operations_check \
@@ -1487,6 +1544,7 @@ ifneq (@MKFS_REISERFS@,)
 	$(call functionTestDeviceCreate,$(LOOP1),test/dev1.dat)
 	$(call functionTestDeviceInitFilesystem,$(LOOP0),-t reiserfs -b 4096 -q --format 3.5,test/dev0)
 	$(MAKE) \
+          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           test_image_operations_base \
           test_image_operations_check \
@@ -1501,6 +1559,7 @@ ifneq (@MKFS_REISERFS@,)
 	$(call functionTestDeviceCreate,$(LOOP1),test/dev1.dat)
 	$(call functionTestDeviceInitFilesystem,$(LOOP0),-t reiserfs -b 4096 -q --format 3.6,test/dev0)
 	$(MAKE) \
+          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           test_image_operations_base \
           test_image_operations_check \
@@ -1516,6 +1575,7 @@ ifneq (@MKFS_REISERFS@,)
 	$(call functionTestDeviceCreate,$(LOOP1),test/dev1.dat)
 	$(call functionTestDeviceInitFilesystem,$(LOOP0),-t reiserfs -b 4096 -q --format 3.6,test/dev0)
 	$(MAKE) \
+          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           test_image_operations_base \
           test_image_operations_check \
@@ -1536,6 +1596,7 @@ ifneq (@MKFS_REISER4@,)
 	$(call functionTestDeviceCreate,$(LOOP1),test/dev1.dat)
 	$(call functionTestDeviceInitFilesystem,$(LOOP0),-t reiser4 -b 4096 -y,test/dev0)
 	$(MAKE) \
+          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           test_image_operations_base \
           test_image_operations_check \
@@ -1551,6 +1612,7 @@ ifneq (@MKFS_REISER4@,)
 	$(call functionTestDeviceCreate,$(LOOP1),test/dev1.dat)
 	$(call functionTestDeviceInitFilesystem,$(LOOP0),-t reiser4 -b 4096 -y,test/dev0)
 	$(MAKE) \
+          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           test_image_operations_base \
           test_image_operations_check \
@@ -1563,8 +1625,14 @@ endif
 test_image_operations_base: \
   $(TEST_BAR) \
   $(TEST_FILES)
+	# normal tests
+	@$(call functionVerifyParameter,TEST_BAR)
+	@$(call functionVerifyParameter,DEVICE0)
+	@$(call functionVerifyParameter,DEVICE1)
+	@$(call functionVerifyParameter,BAR_FILE)
+	#
 	$(RMRF) $(TEST_FILES_CLEAN)
-	SSH_ASKPASS= $(TEST_BAR) -m test/$(if $(BAR_FILE),$(BAR_FILE),test).bar $(DEVICE0) $(if $(OPTIONS),$(OPTIONS),--compress-algorithm=none --crypt-algorithm=none) --overwrite-archive-files --verbose=2 $(if $(QUIET),1>/dev/null)
+	SSH_ASKPASS= $(TEST_BAR) -m test/$(BAR_FILE).bar $(DEVICE0) $(if $(OPTIONS),$(OPTIONS),--compress-algorithm=none --crypt-algorithm=none) --overwrite-archive-files --verbose=2 $(if $(QUIET),1>/dev/null)
 	SSH_ASKPASS= $(TEST_BAR) -t test/test*.bar $(OPTIONS) $(if $(QUIET),1>/dev/null)
 	SSH_ASKPASS= $(TEST_BAR) -d test/test*.bar $(OPTIONS) $(if $(QUIET),1>/dev/null)
 	SSH_ASKPASS= $(TEST_BAR) -x test/test*.bar $(OPTIONS) --destination $(DEVICE1) $(if $(QUIET),1>/dev/null)
@@ -1572,6 +1640,13 @@ test_image_operations_base: \
 test_image_operations_delta: \
   $(TEST_BAR) \
   $(TEST_FILES)
+	# delta tests
+	@$(call functionVerifyParameter,TEST_BAR)
+	@$(call functionVerifyParameter,DEVICE0)
+	@$(call functionVerifyParameter,DEVICE1)
+	@$(call functionVerifyParameter,BAR_FILE)
+	@$(call functionVerifyParameter,BAR_PATTERN)
+	#
 	$(RMRF) $(TEST_FILES_CLEAN)
 	SSH_ASKPASS= $(TEST_BAR) -m test/$(BAR_FILE)-A.bar $(DEVICE0) $(OPTIONS) --overwrite-archive-files --verbose=2 $(if $(QUIET),1>/dev/null)
 	SSH_ASKPASS= $(TEST_BAR) -m test/$(BAR_FILE)-B.bar $(DEVICE0) --delta-source='test/$(BAR_PATTERN)-A.bar' $(OPTIONS) --compress-algorithm=xdelta9 --force-delta-compression --overwrite-archive-files --verbose=2 $(if $(QUIET),1>/dev/null)
@@ -1587,6 +1662,11 @@ test_image_operations_delta: \
 	SSH_ASKPASS= $(TEST_BAR) -x test/$(BAR_PATTERN)-B.bar $(OPTIONS) --destination $(DEVICE1) $(if $(QUIET),1>/dev/null)
 
 test_image_operations_check:
+	# check file systems and compare file content
+	@$(call functionVerifyParameter,TEST_BAR)
+	@$(call functionVerifyParameter,DEVICE0)
+	@$(call functionVerifyParameter,DEVICE1)
+	#
 	$(FSCK) -n $(DEVICE0) $(if $(QUIET),1>/dev/null 2>/dev/null)
 	$(FSCK) -n $(DEVICE1) $(if $(QUIET),1>/dev/null 2>/dev/null)
 	$(INSTALL) -d test/dev0; $(SUDO) $(MOUNT) $(DEVICE0) test/dev0
@@ -1597,6 +1677,11 @@ test_image_operations_check:
 	$(SUDO) $(UMOUNT) test/dev0
 
 test_image_operations_diff_image:
+	# compare devices
+	@$(call functionVerifyParameter,TEST_BAR)
+	@$(call functionVerifyParameter,DEVICE0)
+	@$(call functionVerifyParameter,DEVICE1)
+	#
 	$(call functionTestDeviceDump,$(DEVICE0),test/dev0.dump)
 	$(call functionTestDeviceDump,$(DEVICE1),test/dev1.dump)
 	$(DIFF) test/dev0.dump test/dev1.dump
@@ -1605,11 +1690,15 @@ test_image_operations_diff_image:
 test_dvd_operations: \
   $(TEST_BAR) \
   $(TEST_FILES)
+	# create DVD
+	@$(call functionVerifyParameter,TEST_BAR)
+	@$(call functionVerifyParameter,BAR_FILE)
+	#
 	$(RMRF) $(TEST_FILES_CLEAN)
 	$(SLEEP) 30
-	SSH_ASKPASS= $(TEST_BAR) -c dvd://$(if $(BAR_FILE),$(BAR_FILE),test).bar test/data $(if $(OPTIONS),$(OPTIONS),--compress-algorithm=none --crypt-algorithm=none) $(if $(QUIET),1>/dev/null)
+	SSH_ASKPASS= $(TEST_BAR) -c dvd://$(BAR_FILE).bar test/data $(if $(OPTIONS),$(OPTIONS),--compress-algorithm=none --crypt-algorithm=none) $(if $(QUIET),1>/dev/null)
 	$(SLEEP) 30
-	SSH_ASKPASS= $(TEST_BAR) -c dvd://$(if $(BAR_FILE),$(BAR_FILE),test).bar test/data $(if $(OPTIONS),$(OPTIONS),--compress-algorithm=none --crypt-algorithm=none) --ecc $(if $(QUIET),1>/dev/null)
+	SSH_ASKPASS= $(TEST_BAR) -c dvd://$(BAR_FILE).bar test/data $(if $(OPTIONS),$(OPTIONS),--compress-algorithm=none --crypt-algorithm=none) --ecc $(if $(QUIET),1>/dev/null)
 
 # ----------------------------------------------------------------------------
 
