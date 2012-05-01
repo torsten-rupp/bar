@@ -232,10 +232,7 @@ Errors Command_compare(const StringList                *archiveNameList,
                 printError("File '%s' not found!\n",String_cString(fileName));
                 Archive_closeEntry(&archiveEntryInfo);
                 String_delete(fileName);
-                if (jobOptions->stopOnErrorFlag)
-                {
-                  failError = ERROR_FILE_NOT_FOUND;
-                }
+                if (jobOptions->stopOnErrorFlag) failError = ERROR_FILE_NOT_FOUND;
                 break;
               }
               if (File_getType(fileName) != FILE_TYPE_FILE)
@@ -244,10 +241,7 @@ Errors Command_compare(const StringList                *archiveNameList,
                 printError("'%s' is not a file!\n",String_cString(fileName));
                 Archive_closeEntry(&archiveEntryInfo);
                 String_delete(fileName);
-                if (jobOptions->stopOnErrorFlag)
-                {
-                  failError = ERROR_WRONG_ENTRY_TYPE;
-                }
+                if (jobOptions->stopOnErrorFlag) failError = ERROR_WRONG_ENTRY_TYPE;
                 break;
               }
 
@@ -279,10 +273,7 @@ Errors Command_compare(const StringList                *archiveNameList,
                 Archive_closeEntry(&archiveEntryInfo);
                 String_delete(deltaSourceName);
                 String_delete(fileName);
-                if (jobOptions->stopOnErrorFlag)
-                {
-                  failError = error;
-                }
+                if (jobOptions->stopOnErrorFlag) failError = error;
                 continue;
               }
 
@@ -299,10 +290,7 @@ Errors Command_compare(const StringList                *archiveNameList,
                 Archive_closeEntry(&archiveEntryInfo);
                 String_delete(deltaSourceName);
                 String_delete(fileName);
-                if (jobOptions->stopOnErrorFlag)
-                {
-                  failError = ERROR_ENTRIES_DIFFER;
-                }
+                if (jobOptions->stopOnErrorFlag) failError = ERROR_ENTRIES_DIFFER;
                 continue;
               }
 
@@ -319,10 +307,7 @@ Errors Command_compare(const StringList                *archiveNameList,
                 Archive_closeEntry(&archiveEntryInfo);
                 String_delete(deltaSourceName);
                 String_delete(fileName);
-                if (jobOptions->stopOnErrorFlag)
-                {
-                  failError = error;
-                }
+                if (jobOptions->stopOnErrorFlag) failError = error;
                 continue;
               }
 
@@ -356,10 +341,7 @@ Errors Command_compare(const StringList                *archiveNameList,
                              String_cString(fileName),
                              Errors_getText(error)
                             );
-                  if (jobOptions->stopOnErrorFlag)
-                  {
-                    failError = error;
-                  }
+                  if (jobOptions->stopOnErrorFlag) failError = error;
                   break;
                 }
 
@@ -375,10 +357,7 @@ Errors Command_compare(const StringList                *archiveNameList,
                              String_cString(fileName),
                              fragmentOffset+length+(uint64)diffIndex
                             );
-                  if (jobOptions->stopOnErrorFlag)
-                  {
-                    failError = error;
-                  }
+                  failError = error;
                   break;
                 }
 
@@ -686,7 +665,7 @@ Errors Command_compare(const StringList                *archiveNameList,
                                String_cString(deviceName),
                                blockOffset*(uint64)deviceInfo.blockSize+block*(uint64)deviceInfo.blockSize+(uint64)diffIndex
                               );
-                    if (jobOptions->stopOnErrorFlag) failError = error;
+                    failError = error;
                     break;
                   }
                 }
@@ -800,10 +779,7 @@ Errors Command_compare(const StringList                *archiveNameList,
                 printError("Directory '%s' does not exists!\n",String_cString(directoryName));
                 Archive_closeEntry(&archiveEntryInfo);
                 String_delete(directoryName);
-                if (jobOptions->stopOnErrorFlag)
-                {
-                  failError = ERROR_FILE_NOT_FOUND;
-                }
+                if (jobOptions->stopOnErrorFlag) failError = ERROR_FILE_NOT_FOUND;
                 break;
               }
               if (File_getType(directoryName) != FILE_TYPE_DIRECTORY)
@@ -814,10 +790,7 @@ Errors Command_compare(const StringList                *archiveNameList,
                           );
                 Archive_closeEntry(&archiveEntryInfo);
                 String_delete(directoryName);
-                if (jobOptions->stopOnErrorFlag)
-                {
-                  failError = ERROR_WRONG_ENTRY_TYPE;
-                }
+                if (jobOptions->stopOnErrorFlag) failError = ERROR_WRONG_ENTRY_TYPE;
                 break;
               }
 
@@ -913,10 +886,7 @@ Errors Command_compare(const StringList                *archiveNameList,
                 Archive_closeEntry(&archiveEntryInfo);
                 String_delete(fileName);
                 String_delete(linkName);
-                if (jobOptions->stopOnErrorFlag)
-                {
-                  failError = ERROR_FILE_NOT_FOUND;
-                }
+                if (jobOptions->stopOnErrorFlag) failError = ERROR_FILE_NOT_FOUND;
                 break;
               }
               if (File_getType(linkName) != FILE_TYPE_LINK)
@@ -928,10 +898,7 @@ Errors Command_compare(const StringList                *archiveNameList,
                 Archive_closeEntry(&archiveEntryInfo);
                 String_delete(fileName);
                 String_delete(linkName);
-                if (jobOptions->stopOnErrorFlag)
-                {
-                  failError = ERROR_WRONG_ENTRY_TYPE;
-                }
+                if (jobOptions->stopOnErrorFlag) failError = ERROR_WRONG_ENTRY_TYPE;
                 break;
               }
 
@@ -948,10 +915,7 @@ Errors Command_compare(const StringList                *archiveNameList,
                 Archive_closeEntry(&archiveEntryInfo);
                 String_delete(fileName);
                 String_delete(linkName);
-                if (jobOptions->stopOnErrorFlag)
-                {
-                  failError = error;
-                }
+                if (jobOptions->stopOnErrorFlag) failError = error;
                 break;
               }
               if (!String_equals(fileName,localFileName))
@@ -965,10 +929,7 @@ Errors Command_compare(const StringList                *archiveNameList,
                 Archive_closeEntry(&archiveEntryInfo);
                 String_delete(fileName);
                 String_delete(linkName);
-                if (jobOptions->stopOnErrorFlag)
-                {
-                  failError = ERROR_ENTRIES_DIFFER;
-                }
+                if (jobOptions->stopOnErrorFlag) failError = ERROR_ENTRIES_DIFFER;
                 break;
               }
               String_delete(localFileName);
@@ -1211,10 +1172,7 @@ Errors Command_compare(const StringList                *archiveNameList,
                                  String_cString(fileName),
                                  Errors_getText(error)
                                 );
-                      if (jobOptions->stopOnErrorFlag)
-                      {
-                        failError = error;
-                      }
+                      if (jobOptions->stopOnErrorFlag) failError = error;
                       break;
                     }
 
@@ -1230,10 +1188,7 @@ Errors Command_compare(const StringList                *archiveNameList,
                                  String_cString(fileName),
                                  fragmentOffset+length+(uint64)diffIndex
                                 );
-                      if (jobOptions->stopOnErrorFlag)
-                      {
-                        failError = error;
-                      }
+                      if (jobOptions->stopOnErrorFlag) failError = error;
                       break;
                     }
 
@@ -1355,10 +1310,7 @@ Errors Command_compare(const StringList                *archiveNameList,
                           );
                 Archive_closeEntry(&archiveEntryInfo);
                 String_delete(fileName);
-                if (jobOptions->stopOnErrorFlag)
-                {
-                  failError = ERROR_FILE_NOT_FOUND;
-                }
+                if (jobOptions->stopOnErrorFlag) failError = ERROR_FILE_NOT_FOUND;
                 break;
               }
               if (File_getType(fileName) != FILE_TYPE_SPECIAL)
@@ -1369,10 +1321,7 @@ Errors Command_compare(const StringList                *archiveNameList,
                           );
                 Archive_closeEntry(&archiveEntryInfo);
                 String_delete(fileName);
-                if (jobOptions->stopOnErrorFlag)
-                {
-                  failError = ERROR_WRONG_ENTRY_TYPE;
-                }
+                if (jobOptions->stopOnErrorFlag) failError = ERROR_WRONG_ENTRY_TYPE;
                 break;
               }
 
@@ -1386,10 +1335,7 @@ Errors Command_compare(const StringList                *archiveNameList,
                           );
                 Archive_closeEntry(&archiveEntryInfo);
                 String_delete(fileName);
-                if (jobOptions->stopOnErrorFlag)
-                {
-                  failError = error;
-                }
+                if (jobOptions->stopOnErrorFlag) failError = error;
                 break;
               }
               if (fileInfo.specialType != localFileInfo.specialType)
@@ -1399,10 +1345,7 @@ Errors Command_compare(const StringList                *archiveNameList,
                           );
                 Archive_closeEntry(&archiveEntryInfo);
                 String_delete(fileName);
-                if (jobOptions->stopOnErrorFlag)
-                {
-                  failError = error;
-                }
+                if (jobOptions->stopOnErrorFlag) failError = error;
                 break;
               }
               if (   (fileInfo.specialType == FILE_SPECIAL_TYPE_CHARACTER_DEVICE)
@@ -1416,10 +1359,7 @@ Errors Command_compare(const StringList                *archiveNameList,
                             );
                   Archive_closeEntry(&archiveEntryInfo);
                   String_delete(fileName);
-                  if (jobOptions->stopOnErrorFlag)
-                  {
-                    failError = error;
-                  }
+                  if (jobOptions->stopOnErrorFlag) failError = error;
                   break;
                 }
                 if (fileInfo.minor != localFileInfo.minor)
@@ -1429,10 +1369,7 @@ Errors Command_compare(const StringList                *archiveNameList,
                             );
                   Archive_closeEntry(&archiveEntryInfo);
                   String_delete(fileName);
-                  if (jobOptions->stopOnErrorFlag)
-                  {
-                    failError = error;
-                  }
+                  if (jobOptions->stopOnErrorFlag) failError = error;
                   break;
                 }
               }
