@@ -872,17 +872,28 @@ Errors Command_restore(const StringList                *archiveNameList,
 
                 printInfo(2,"%3d%%\b\b\b\b",(uint)((block*100LL)/blockCount));
               }
-              if (!jobOptions->dryRunFlag)
+              if      (restoreInfo.failError != ERROR_NONE)
               {
-                Device_close(&deviceHandle);
-                if ((restoreInfo.requestedAbortFlag != NULL) && (*restoreInfo.requestedAbortFlag))
+                if (!jobOptions->dryRunFlag)
                 {
-                  printInfo(1,"ABORTED\n");
-                  String_delete(destinationDeviceName);
-                  Archive_closeEntry(&archiveEntryInfo);
-                  String_delete(deviceName);
-                  continue;
+                  Device_close(&deviceHandle);
                 }
+                String_delete(destinationDeviceName);
+                Archive_closeEntry(&archiveEntryInfo);
+                String_delete(deviceName);
+                continue;
+              }
+              else if ((restoreInfo.requestedAbortFlag != NULL) && (*restoreInfo.requestedAbortFlag))
+              {
+                printInfo(1,"ABORTED\n");
+                if (!jobOptions->dryRunFlag)
+                {
+                  Device_close(&deviceHandle);
+                }
+                String_delete(destinationDeviceName);
+                Archive_closeEntry(&archiveEntryInfo);
+                String_delete(deviceName);
+                continue;
               }
               printInfo(2,"    \b\b\b\b");
 
@@ -930,7 +941,7 @@ Errors Command_restore(const StringList                *archiveNameList,
               printInfo(2,"  Restore '%s'...skipped\n",String_cString(deviceName));
             }
 
-            // close archive file, free resources
+            // close archive file
             error = Archive_closeEntry(&archiveEntryInfo);
             if (error != ERROR_NONE)
             {
@@ -1577,13 +1588,16 @@ Errors Command_restore(const StringList                *archiveNameList,
                     if (!jobOptions->dryRunFlag)
                     {
                       File_close(&fileHandle);
-                      break;
                     }
+                    break;
                   }
                   else if ((restoreInfo.requestedAbortFlag != NULL) && (*restoreInfo.requestedAbortFlag))
                   {
                     printInfo(1,"ABORTED\n");
-                    File_close(&fileHandle);
+                    if (!jobOptions->dryRunFlag)
+                    {
+                      File_close(&fileHandle);
+                    }
                     break;
                   }
                   printInfo(2,"    \b\b\b\b");
@@ -1731,7 +1745,7 @@ Errors Command_restore(const StringList                *archiveNameList,
               continue;
             }
 
-            // close archive file, free resources
+            // close archive file
             error = Archive_closeEntry(&archiveEntryInfo);
             if (error != ERROR_NONE)
             {
@@ -1980,7 +1994,8 @@ Errors Command_restore(const StringList                *archiveNameList,
     }
   }
 
-  if (   (restoreInfo.failError == ERROR_NONE)
+  if (   (error == ERROR_NONE)
+      && (restoreInfo.failError == ERROR_NONE)
       && !jobOptions->noFragmentsCheckFlag
      )
   {
