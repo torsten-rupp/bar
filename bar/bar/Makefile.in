@@ -957,6 +957,7 @@ test_image_operations_raw:
 	$(call functionTestDeviceCreate,$(LOOP0),test/dev0.dat,test/dev0)
 	$(MAKE) \
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
+          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test-*)" \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           OPTIONS="$(if $(OPTIONS),$(OPTIONS) --raw-images,--compress-algorithm=none --crypt-algorithm=none --raw-images)" \
           test_image_operations_base \
@@ -971,6 +972,7 @@ test_image_operations_raw:
 	$(call functionTestDeviceCreate,$(LOOP1),test/dev1.dat,test/dev1)
 	$(MAKE) \
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
+          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test-*)" \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           OPTIONS="$(if $(OPTIONS),$(OPTIONS) --raw-images,--compress-algorithm=none --crypt-algorithm=none --raw-images)" \
           test_image_operations_base \
@@ -997,6 +999,7 @@ ifneq (@MKFS_EXT2@,)
 	$(call functionTestDeviceInitFilesystem,$(LOOP0),-t ext2,test/dev0)
 	$(MAKE) \
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
+          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test-*)" \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           test_image_operations_base \
           test_image_operations_check \
@@ -1013,6 +1016,7 @@ ifneq (@MKFS_EXT2@,)
 	$(call functionTestDeviceInitFilesystem,$(LOOP0),-t ext2,test/dev0)
 	$(MAKE) \
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
+          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test-*)" \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           test_image_operations_base \
           test_image_operations_check \
@@ -1028,6 +1032,7 @@ ifneq (@MKFS_EXT2@,)
 	$(call functionTestDeviceInitFilesystem,$(LOOP0),-t ext2 -b 1024,test/dev0)
 	$(MAKE) \
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
+          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test-*)" \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           test_image_operations_base \
           test_image_operations_check \
@@ -1044,6 +1049,7 @@ ifneq (@MKFS_EXT2@,)
 	$(call functionTestDeviceInitFilesystem,$(LOOP0),-t ext2 -b 1024,test/dev0)
 	$(MAKE) \
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
+          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test-*)" \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           test_image_operations_base \
           test_image_operations_check \
@@ -1059,6 +1065,7 @@ ifneq (@MKFS_EXT2@,)
 	$(call functionTestDeviceInitFilesystem,$(LOOP0),-t ext2 -b 2048,test/dev0)
 	$(MAKE) \
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
+          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test-*)" \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           test_image_operations_base \
           test_image_operations_check \
@@ -1075,6 +1082,7 @@ ifneq (@MKFS_EXT2@,)
 	$(call functionTestDeviceInitFilesystem,$(LOOP0),-t ext2 -b 2048,test/dev0)
 	$(MAKE) \
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
+          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test-*)" \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           test_image_operations_base \
           test_image_operations_check \
@@ -1090,6 +1098,7 @@ ifneq (@MKFS_EXT2@,)
 	$(call functionTestDeviceInitFilesystem,$(LOOP0),-t ext2 -b 4096,test/dev0)
 	$(MAKE) \
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
+          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test-*)" \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           test_image_operations_base \
           test_image_operations_check \
@@ -1106,6 +1115,7 @@ ifneq (@MKFS_EXT2@,)
 	$(call functionTestDeviceInitFilesystem,$(LOOP0),-t ext2 -b 4096,test/dev0)
 	$(MAKE) \
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
+          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test-*)" \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           test_image_operations_base \
           test_image_operations_check \
@@ -1127,6 +1137,7 @@ ifneq (@MKFS_EXT3@,)
 	$(call functionTestDeviceInitFilesystem,$(LOOP0),-t ext3,test/dev0)
 	$(MAKE) \
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
+          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test-*)" \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           test_image_operations_base \
           test_image_operations_check \
@@ -1143,6 +1154,7 @@ ifneq (@MKFS_EXT3@,)
 	$(call functionTestDeviceInitFilesystem,$(LOOP0),-t ext3,test/dev0)
 	$(MAKE) \
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
+          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test-*)" \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           test_image_operations_base \
           test_image_operations_check \
@@ -1158,6 +1170,7 @@ ifneq (@MKFS_EXT3@,)
 	$(call functionTestDeviceInitFilesystem,$(LOOP0),-t ext3 -b 1024,test/dev0)
 	$(MAKE) \
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
+          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test-*)" \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           test_image_operations_base \
           test_image_operations_check \
@@ -1174,6 +1187,7 @@ ifneq (@MKFS_EXT3@,)
 	$(call functionTestDeviceInitFilesystem,$(LOOP0),-t ext3 -b 1024,test/dev0)
 	$(MAKE) \
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
+          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test-*)" \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           test_image_operations_base \
           test_image_operations_check \
@@ -1189,6 +1203,7 @@ ifneq (@MKFS_EXT3@,)
 	$(call functionTestDeviceInitFilesystem,$(LOOP0),-t ext3 -b 2048,test/dev0)
 	$(MAKE) \
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
+          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test-*)" \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           test_image_operations_base \
           test_image_operations_check \
@@ -1205,6 +1220,7 @@ ifneq (@MKFS_EXT3@,)
 	$(call functionTestDeviceInitFilesystem,$(LOOP0),-t ext3 -b 2048,test/dev0)
 	$(MAKE) \
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
+          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test-*)" \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           test_image_operations_base \
           test_image_operations_check \
@@ -1220,6 +1236,7 @@ ifneq (@MKFS_EXT3@,)
 	$(call functionTestDeviceInitFilesystem,$(LOOP0),-t ext3 -b 4096,test/dev0)
 	$(MAKE) \
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
+          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test-*)" \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           test_image_operations_base \
           test_image_operations_check \
@@ -1236,6 +1253,7 @@ ifneq (@MKFS_EXT3@,)
 	$(call functionTestDeviceInitFilesystem,$(LOOP0),-t ext3 -b 4096,test/dev0)
 	$(MAKE) \
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
+          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test-*)" \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           test_image_operations_base \
           test_image_operations_check \
@@ -1257,6 +1275,7 @@ ifneq (@MKFS_EXT4@,)
 	$(call functionTestDeviceInitFilesystem,$(LOOP0),-t ext4,test/dev0)
 	$(MAKE) \
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
+          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           test_image_operations_base \
           test_image_operations_check \
@@ -1273,6 +1292,7 @@ ifneq (@MKFS_EXT4@,)
 	$(call functionTestDeviceInitFilesystem,$(LOOP0),-t ext4,test/dev0)
 	$(MAKE) \
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
+          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           test_image_operations_base \
           test_image_operations_check \
@@ -1288,6 +1308,7 @@ ifneq (@MKFS_EXT4@,)
 	$(call functionTestDeviceInitFilesystem,$(LOOP0),-t ext4 -b 1024,test/dev0)
 	$(MAKE) \
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
+          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           test_image_operations_base \
           test_image_operations_check \
@@ -1304,6 +1325,7 @@ ifneq (@MKFS_EXT4@,)
 	$(call functionTestDeviceInitFilesystem,$(LOOP0),-t ext4 -b 1024,test/dev0)
 	$(MAKE) \
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
+          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           test_image_operations_base \
           test_image_operations_check \
@@ -1319,6 +1341,7 @@ ifneq (@MKFS_EXT4@,)
 	$(call functionTestDeviceInitFilesystem,$(LOOP0),-t ext4 -b 2048,test/dev0)
 	$(MAKE) \
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
+          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           test_image_operations_base \
           test_image_operations_check \
@@ -1335,6 +1358,7 @@ ifneq (@MKFS_EXT4@,)
 	$(call functionTestDeviceInitFilesystem,$(LOOP0),-t ext4 -b 2048,test/dev0)
 	$(MAKE) \
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
+          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           test_image_operations_base \
           test_image_operations_check \
@@ -1350,6 +1374,7 @@ ifneq (@MKFS_EXT4@,)
 	$(call functionTestDeviceInitFilesystem,$(LOOP0),-t ext4 -b 4096,test/dev0)
 	$(MAKE) \
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
+          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           test_image_operations_base \
           test_image_operations_check \
@@ -1366,6 +1391,7 @@ ifneq (@MKFS_EXT4@,)
 	$(call functionTestDeviceInitFilesystem,$(LOOP0),-t ext4 -b 4096,test/dev0)
 	$(MAKE) \
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
+          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           test_image_operations_base \
           test_image_operations_check \
@@ -1403,6 +1429,7 @@ ifneq (@MKFS_MSDOS@,)
 	$(call functionTestDeviceInitFilesystem,$(LOOP0),-t msdos -F 12,test/dev0)
 	$(MAKE) \
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
+          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test-*)" \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           test_image_operations_base \
           test_image_operations_check \
@@ -1419,6 +1446,7 @@ ifneq (@MKFS_MSDOS@,)
 	$(call functionTestDeviceInitFilesystem,$(LOOP0),-t msdos -F 12,test/dev0)
 	$(MAKE) \
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
+          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test-*)" \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           test_image_operations_base \
           test_image_operations_check \
@@ -1440,6 +1468,7 @@ ifneq (@MKFS_MSDOS@,)
 	$(call functionTestDeviceInitFilesystem,$(LOOP0),-t msdos -F 16,test/dev0)
 	$(MAKE) \
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
+          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test-*)" \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           test_image_operations_base \
           test_image_operations_check \
@@ -1456,6 +1485,7 @@ ifneq (@MKFS_MSDOS@,)
 	$(call functionTestDeviceInitFilesystem,$(LOOP0),-t msdos -F 16,test/dev0)
 	$(MAKE) \
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
+          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test-*)" \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           test_image_operations_base \
           test_image_operations_check \
@@ -1477,6 +1507,7 @@ ifneq (@MKFS_MSDOS@,)
 	$(call functionTestDeviceInitFilesystem,$(LOOP0),-t msdos -F 32,test/dev0)
 	$(MAKE) \
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
+          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test-*)" \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           test_image_operations_base \
           test_image_operations_check \
@@ -1493,6 +1524,7 @@ ifneq (@MKFS_MSDOS@,)
 	$(call functionTestDeviceInitFilesystem,$(LOOP0),-t msdos -F 32,test/dev0)
 	$(MAKE) \
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
+          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test-*)" \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           test_image_operations_base \
           test_image_operations_check \
@@ -1529,6 +1561,7 @@ ifneq (@MKFS_REISERFS@,)
 	$(call functionTestDeviceInitFilesystem,$(LOOP0),-t reiserfs -b 4096 -q --format 3.5,test/dev0)
 	$(MAKE) \
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
+          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test-*)" \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           test_image_operations_base \
           test_image_operations_check \
@@ -1545,6 +1578,7 @@ ifneq (@MKFS_REISERFS@,)
 	$(call functionTestDeviceInitFilesystem,$(LOOP0),-t reiserfs -b 4096 -q --format 3.5,test/dev0)
 	$(MAKE) \
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
+          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test-*)" \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           test_image_operations_base \
           test_image_operations_check \
@@ -1560,6 +1594,7 @@ ifneq (@MKFS_REISERFS@,)
 	$(call functionTestDeviceInitFilesystem,$(LOOP0),-t reiserfs -b 4096 -q --format 3.6,test/dev0)
 	$(MAKE) \
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
+          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test-*)" \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           test_image_operations_base \
           test_image_operations_check \
@@ -1576,6 +1611,7 @@ ifneq (@MKFS_REISERFS@,)
 	$(call functionTestDeviceInitFilesystem,$(LOOP0),-t reiserfs -b 4096 -q --format 3.6,test/dev0)
 	$(MAKE) \
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
+          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test-*)" \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           test_image_operations_base \
           test_image_operations_check \
@@ -1597,6 +1633,7 @@ ifneq (@MKFS_REISER4@,)
 	$(call functionTestDeviceInitFilesystem,$(LOOP0),-t reiser4 -b 4096 -y,test/dev0)
 	$(MAKE) \
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
+          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test-*)" \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           test_image_operations_base \
           test_image_operations_check \
@@ -1613,6 +1650,7 @@ ifneq (@MKFS_REISER4@,)
 	$(call functionTestDeviceInitFilesystem,$(LOOP0),-t reiser4 -b 4096 -y,test/dev0)
 	$(MAKE) \
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
+          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test-*)" \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           test_image_operations_base \
           test_image_operations_check \
