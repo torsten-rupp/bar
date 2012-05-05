@@ -30,9 +30,9 @@
 // device open modes
 typedef enum
 {
-  DEVICE_OPENMODE_READ,
-  DEVICE_OPENMODE_WRITE
-} DeviceOpenModes;
+  DEVICE_OPEN_READ,
+  DEVICE_OPEN_WRITE
+} DeviceModes;
 
 /***************************** Datatypes *******************************/
 
@@ -91,17 +91,17 @@ typedef struct
 /***********************************************************************\
 * Name   : Device_open
 * Purpose: open device
-* Input  : deviceHandle   - device handle
-*          deviceName     - device name
-*          deviceOpenMode - device open mode; see DEVICE_OPENMODES_*
+* Input  : deviceHandle - device handle
+*          deviceName   - device name
+*          deviceMode   - device open mode; see DEVICE_OPEN_*
 * Output : deviceHandle - device handle
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-Errors Device_open(DeviceHandle    *deviceHandle,
-                   const String    deviceName,
-                   DeviceOpenModes deviceOpenMode
+Errors Device_open(DeviceHandle *deviceHandle,
+                   const String deviceName,
+                   DeviceModes  deviceMode
                   );
 
 /***********************************************************************\

@@ -53,9 +53,9 @@
 
 /*---------------------------------------------------------------------*/
 
-Errors Device_open(DeviceHandle    *deviceHandle,
-                   const String    deviceName,
-                   DeviceOpenModes deviceOpenMode
+Errors Device_open(DeviceHandle *deviceHandle,
+                   const String deviceName,
+                   DeviceModes  deviceMode
                   )
 {
   off_t  n;
@@ -65,16 +65,16 @@ Errors Device_open(DeviceHandle    *deviceHandle,
   assert(deviceName != NULL);
 
   // open device
-  switch (deviceOpenMode)
+  switch (deviceMode)
   {
-    case DEVICE_OPENMODE_READ:
+    case DEVICE_OPEN_READ:
       deviceHandle->file = fopen(String_cString(deviceName),"rb");
       if (deviceHandle->file == NULL)
       {
         return ERRORX(OPEN_DEVICE,errno,String_cString(deviceName));
       }
       break;
-    case DEVICE_OPENMODE_WRITE:
+    case DEVICE_OPEN_WRITE:
       deviceHandle->file = fopen(String_cString(deviceName),"r+b");
       if (deviceHandle->file == NULL)
       {
