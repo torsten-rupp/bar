@@ -1719,6 +1719,28 @@ bool File_isDirectoryCString(const char *fileName)
          );
 }
 
+bool File_isDevice(const String fileName)
+{
+  struct stat fileStat;
+
+  assert(fileName != NULL);
+
+  return (   (stat(String_cString(fileName),&fileStat) == 0)
+          && (S_ISCHR(fileStat.st_mode) || S_ISBLK(fileStat.st_mode))
+         );
+}
+
+bool File_isDeviceCString(const char *fileName)
+{
+  struct stat fileStat;
+
+  assert(fileName != NULL);
+
+  return (   (stat(fileName,&fileStat) == 0)
+          && (S_ISCHR(fileStat.st_mode) || S_ISBLK(fileStat.st_mode))
+         );
+}
+
 bool File_isReadable(const String fileName)
 {
   return access(String_cString(fileName),F_OK|R_OK) == 0;

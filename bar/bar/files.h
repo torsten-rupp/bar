@@ -741,7 +741,7 @@ Errors File_copy(const String sourceFileName,
 
 /***********************************************************************\
 * Name   : File_exists, File_existsCString
-* Purpose: check if file exists
+* Purpose: check if file/directory/link/device exists
 * Input  : fileName - file name
 * Output : -
 * Return : TRUE if file/directory exists, FALSE otherweise
@@ -765,7 +765,7 @@ bool File_isFileCString(const char *fileName);
 
 /***********************************************************************\
 * Name   : File_isDirectory, File_isDirectoryCString
-* Purpose: check if file directory
+* Purpose: check if directory
 * Input  : fileName - file name
 * Output : -
 * Return : TRUE if directory, FALSE otherweise
@@ -774,6 +774,18 @@ bool File_isFileCString(const char *fileName);
 
 bool File_isDirectory(const String fileName);
 bool File_isDirectoryCString(const char *fileName);
+
+/***********************************************************************\
+* Name   : File_isDevice, File_isDeviceCString
+* Purpose: check if device (block, character)
+* Input  : fileName - file name
+* Output : -
+* Return : TRUE if device, FALSE otherweise
+* Notes  : -
+\***********************************************************************/
+
+bool File_isDevice(const String fileName);
+bool File_isDeviceCString(const char *fileName);
 
 /***********************************************************************\
 * Name   : File_isReadable, File_isReadableCString
