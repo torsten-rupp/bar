@@ -688,7 +688,13 @@ Errors Command_restore(const StringList                *archiveNameList,
             DeviceInfo   deviceInfo;
             uint64       blockOffset,blockCount;
             String       destinationDeviceName;
+            enum
+            {
+              DEVICE,
+              FILE
+            }            type;
             DeviceHandle deviceHandle;
+            FileHandle   fileHandle;
             uint64       block;
             ulong        bufferBlockCount;
 
@@ -780,15 +786,36 @@ Errors Command_restore(const StringList                *archiveNameList,
 
               if (!jobOptions->dryRunFlag)
               {
-                // open device
-                error = Device_open(&deviceHandle,destinationDeviceName,DEVICE_OPENMODE_WRITE);
+                if (File_isDevice(destinationDeviceName))
+                {
+                  // open device
+                  error = Device_open(&deviceHandle,destinationDeviceName,DEVICE_OPEN_WRITE);
+                  if (error != ERROR_NONE)
+                  {
+                    printInfo(1,"FAIL!\n");
+                    printError("Cannot open to device '%s' (error: %s)\n",
+                               String_cString(destinationDeviceName),
+                               Errors_getText(error)
+                              );
+                  }
+                  type = DEVICE;
+                }
+                else
+                {
+                  // open file
+                  error = File_open(&fileHandle,destinationDeviceName,FILE_OPEN_CREATE);
+                  if (error != ERROR_NONE)
+                  {
+                    printInfo(1,"FAIL!\n");
+                    printError("Cannot open to file '%s' (error: %s)\n",
+                               String_cString(destinationDeviceName),
+                               Errors_getText(error)
+                              );
+                  }
+                  type = FILE;
+                }
                 if (error != ERROR_NONE)
                 {
-                  printInfo(1,"FAIL!\n");
-                  printError("Cannot open to device '%s' (error: %s)\n",
-                             String_cString(destinationDeviceName),
-                             Errors_getText(error)
-                            );
                   String_delete(destinationDeviceName);
                   Archive_closeEntry(&archiveEntryInfo);
                   String_delete(deviceName);
@@ -800,15 +827,38 @@ Errors Command_restore(const StringList                *archiveNameList,
                 }
 
                 // seek to fragment position
-                error = Device_seek(&deviceHandle,blockOffset*(uint64)deviceInfo.blockSize);
+                switch (type)
+                {
+                  case DEVICE:
+                    error = Device_seek(&deviceHandle,blockOffset*(uint64)deviceInfo.blockSize);
+                    if (error != ERROR_NONE)
+                    {
+                      printInfo(1,"FAIL!\n");
+                      printError("Cannot write to device '%s' (error: %s)\n",
+                                 String_cString(destinationDeviceName),
+                                 Errors_getText(error)
+                                );
+                    }
+                    break;
+                  case FILE:
+                    error = File_seek(&fileHandle,blockOffset*(uint64)deviceInfo.blockSize);
+                    if (error != ERROR_NONE)
+                    {
+                      printInfo(1,"FAIL!\n");
+                      printError("Cannot write to file '%s' (error: %s)\n",
+                                 String_cString(destinationDeviceName),
+                                 Errors_getText(error)
+                                );
+                    }
+                    break;
+                }
                 if (error != ERROR_NONE)
                 {
-                  printInfo(1,"FAIL!\n");
-                  printError("Cannot write to device '%s' (error: %s)\n",
-                             String_cString(destinationDeviceName),
-                             Errors_getText(error)
-                            );
-                  Device_close(&deviceHandle);
+                  switch (type)
+                  {
+                    case DEVICE: Device_close(&deviceHandle); break;
+                    case FILE:   File_close(&fileHandle); break;
+                  }
                   String_delete(destinationDeviceName);
                   Archive_closeEntry(&archiveEntryInfo);
                   String_delete(deviceName);
@@ -850,14 +900,33 @@ Errors Command_restore(const StringList                *archiveNameList,
                 if (!jobOptions->dryRunFlag)
                 {
                   // write data to device
-                  error = Device_write(&deviceHandle,buffer,bufferBlockCount*deviceInfo.blockSize);
+                  switch (type)
+                  {
+                    case DEVICE:
+                      error = Device_write(&deviceHandle,buffer,bufferBlockCount*deviceInfo.blockSize);
+                      if (error != ERROR_NONE)
+                      {
+                        printInfo(1,"FAIL!\n");
+                        printError("Cannot write to device '%s' (error: %s)\n",
+                                   String_cString(destinationDeviceName),
+                                   Errors_getText(error)
+                                  );
+                      }
+                      break;
+                    case FILE:
+                      error = File_write(&fileHandle,buffer,bufferBlockCount*deviceInfo.blockSize);
+                      if (error != ERROR_NONE)
+                      {
+                        printInfo(1,"FAIL!\n");
+                        printError("Cannot write to file '%s' (error: %s)\n",
+                                   String_cString(destinationDeviceName),
+                                   Errors_getText(error)
+                                  );
+                      }
+                      break;
+                  }
                   if (error != ERROR_NONE)
                   {
-                    printInfo(1,"FAIL!\n");
-                    printError("Cannot write to device '%s' (error: %s)\n",
-                               String_cString(destinationDeviceName),
-                               Errors_getText(error)
-                              );
                     if (jobOptions->stopOnErrorFlag)
                     {
                       restoreInfo.failError = error;
@@ -876,7 +945,11 @@ Errors Command_restore(const StringList                *archiveNameList,
               {
                 if (!jobOptions->dryRunFlag)
                 {
-                  Device_close(&deviceHandle);
+                  switch (type)
+                  {
+                    case DEVICE: Device_close(&deviceHandle); break;
+                    case FILE:   File_close(&fileHandle); break;
+                  }
                 }
                 String_delete(destinationDeviceName);
                 Archive_closeEntry(&archiveEntryInfo);
@@ -888,7 +961,11 @@ Errors Command_restore(const StringList                *archiveNameList,
                 printInfo(1,"ABORTED\n");
                 if (!jobOptions->dryRunFlag)
                 {
-                  Device_close(&deviceHandle);
+                  switch (type)
+                  {
+                    case DEVICE: Device_close(&deviceHandle); break;
+                    case FILE:   File_close(&fileHandle); break;
+                  }
                 }
                 String_delete(destinationDeviceName);
                 Archive_closeEntry(&archiveEntryInfo);
@@ -896,6 +973,16 @@ Errors Command_restore(const StringList                *archiveNameList,
                 continue;
               }
               printInfo(2,"    \b\b\b\b");
+
+              // close device/file
+              if (!jobOptions->dryRunFlag)
+              {
+                switch (type)
+                {
+                  case DEVICE: Device_close(&deviceHandle); break;
+                  case FILE:   File_close(&fileHandle); break;
+                }
+              }
 
               if (fragmentNode != NULL)
               {
