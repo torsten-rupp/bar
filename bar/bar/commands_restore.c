@@ -158,7 +158,15 @@ LOCAL String getDestinationDeviceName(String       destinationDeviceName,
 
   if (destination != NULL)
   {
-    File_setFileName(destinationDeviceName,destination);
+    if (File_isDirectory(destination))
+    {
+      File_setFileName(destinationDeviceName,destination);
+      File_appendFileName(destinationDeviceName,imageName);
+    }
+    else
+    {
+      File_setFileName(destinationDeviceName,destination);
+    }
   }
   else
   {
@@ -688,6 +696,7 @@ Errors Command_restore(const StringList                *archiveNameList,
             DeviceInfo   deviceInfo;
             uint64       blockOffset,blockCount;
             String       destinationDeviceName;
+            String       parentDirectoryName;
             enum
             {
               DEVICE,
@@ -783,6 +792,66 @@ Errors Command_restore(const StringList                *archiveNameList,
               }
 
               printInfo(1,"  Restore image '%s'...",String_cString(destinationDeviceName));
+
+              // create parent directories if not existing
+              if (!jobOptions->dryRunFlag)
+              {
+                parentDirectoryName = File_getFilePathName(String_new(),destinationDeviceName);
+                if (!String_isEmpty(parentDirectoryName) && !File_exists(parentDirectoryName))
+                {
+                  // create directory
+                  error = File_makeDirectory(parentDirectoryName,
+                                             FILE_DEFAULT_USER_ID,
+                                             FILE_DEFAULT_GROUP_ID,
+                                             FILE_DEFAULT_PERMISSION
+                                            );
+                  if (error != ERROR_NONE)
+                  {
+                    printInfo(1,"FAIL!\n");
+                    printError("Cannot create directory '%s' (error: %s)\n",
+                               String_cString(parentDirectoryName),
+                               Errors_getText(error)
+                              );
+                    String_delete(parentDirectoryName);
+                    String_delete(destinationDeviceName);
+                    Archive_closeEntry(&archiveEntryInfo);
+                    String_delete(deviceName);
+                    if (restoreInfo.failError == ERROR_NONE) restoreInfo.failError = error;
+                    continue;
+                  }
+
+                  // set directory owner ship
+                  error = File_setOwner(parentDirectoryName,
+                                        (jobOptions->owner.userId  != FILE_DEFAULT_USER_ID ) ? jobOptions->owner.userId  : deviceInfo.userId,
+                                        (jobOptions->owner.groupId != FILE_DEFAULT_GROUP_ID) ? jobOptions->owner.groupId : deviceInfo.groupId
+                                       );
+                  if (error != ERROR_NONE)
+                  {
+                    if (jobOptions->stopOnErrorFlag)
+                    {
+                      printInfo(1,"FAIL!\n");
+                      printError("Cannot set owner ship of directory '%s' (error: %s)\n",
+                                 String_cString(parentDirectoryName),
+                                 Errors_getText(error)
+                                );
+                    String_delete(parentDirectoryName);
+                    String_delete(destinationDeviceName);
+                    Archive_closeEntry(&archiveEntryInfo);
+                    String_delete(deviceName);
+                    if (restoreInfo.failError == ERROR_NONE) restoreInfo.failError = error;
+                    continue;
+                    }
+                    else
+                    {
+                      printWarning("Cannot set owner ship of directory '%s' (error: %s)\n",
+                                   String_cString(parentDirectoryName),
+                                   Errors_getText(error)
+                                  );
+                    }
+                  }
+                }
+                String_delete(parentDirectoryName);
+              }
 
               if (!jobOptions->dryRunFlag)
               {
