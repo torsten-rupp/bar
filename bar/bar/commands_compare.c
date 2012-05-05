@@ -548,7 +548,7 @@ Errors Command_compare(const StringList                *archiveNameList,
               assert(deviceInfo.blockSize > 0);
 
               // open device
-              error = Device_open(&deviceHandle,deviceName,DEVICE_OPENMODE_READ);
+              error = Device_open(&deviceHandle,deviceName,DEVICE_OPEN_READ);
               if (error != ERROR_NONE)
               {
                 printInfo(1,"FAIL!\n");
