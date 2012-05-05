@@ -64,16 +64,27 @@ typedef enum
   DEVICE_TYPE_UNKNOWN
 } DeviceTypes;
 
+// device permission
+typedef uint32 DevicePermission;
+
 // device system info data
 typedef struct
 {
-  DeviceTypes type;
-  int64       size;             // total size [bytes]
-  ulong       blockSize;        // size of a block [bytes]
+  DeviceTypes      type;
+  int64            size;                     // total size [bytes]
+  ulong            blockSize;                // size of a block [bytes]
 // NYI
 //  int64       freeBlocks;       // number of free blocks
 //  int64       totalBlocks;      // total number of blocks
 //  bool        mountedFlag;      // TRUE iff device is currently mounted
+  uint64           timeLastAccess;           // timestamp of last access
+  uint64           timeModified;             // timestamp of last modification
+  uint64           timeLastChanged;          // timestamp of last changed
+  uint32           userId;                   // user id
+  uint32           groupId;                  // group id
+  DevicePermission permission;               // permission flags
+  uint32           major,minor;              // special type major/minor number
+  uint64           id;                       // unique id (e. g. inode number)
 } DeviceInfo;
 
 /***************************** Variables *******************************/
