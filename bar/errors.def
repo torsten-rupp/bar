@@ -109,6 +109,9 @@ ERROR DELTA_SOURCE_NOT_FOUND
   }
   errorText[sizeof(errorText)-1] = '\0';
 
+ERROR INVALID_COMPRESS_ALGORITHM     "invalid compress algorithm"
+ERROR UNKNOWN_COMPRESS_ALGORITHM     "unknown compress algorithm"
+
 // crypt
 ERROR UNSUPPORTED_BLOCK_SIZE         "unsupported block size"
 ERROR INIT_CRYPT                     "init crypt fail"
