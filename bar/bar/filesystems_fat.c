@@ -190,7 +190,7 @@ else { fprintf(stderr,"%s, %d: not BITSET_SET %d\n",__FILE__,__LINE__,index); }
   // free resources
   free(buffer);
 
-#if 1
+#if 0
 {
   int i;
   int i0,i1;
@@ -328,7 +328,6 @@ LOCAL FileSystemTypes FAT_init(DeviceHandle *deviceHandle, FATHandle *fatHandle)
                                +fatHandle->fatCount*fatHandle->sectorsPerFAT
                                +(fatHandle->maxRootEntries*32+fatHandle->bytesPerSector-1)/fatHandle->bytesPerSector
                                ;
-fprintf(stderr,"%s, %d: fatHandle->firstDataSector=%d\n",__FILE__,__LINE__,fatHandle->firstDataSector);
 
   return fatHandle->type;
 }
