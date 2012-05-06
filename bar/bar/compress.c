@@ -911,13 +911,13 @@ compressInfo->xdelta.source.curblk[5]
 
             if (!RingBuffer_isFull(&compressInfo->compressRingBuffer))                // space in compress buffer
             {
-  //fprintf(stderr,"%s, %d: compressInfo->flushFlag=%d (compressInfo->compressState=%d\n",__FILE__,__LINE__,compressInfo->flushFlag,compressInfo->compressState);
+//fprintf(stderr,"%s, %d: compressInfo->flushFlag=%d (compressInfo->compressState=%d\n",__FILE__,__LINE__,compressInfo->flushFlag,compressInfo->compressState);
               // finish compress, flush internal compress buffers
               if (   compressInfo->flushFlag                                          // flush data requested
                   && (compressInfo->compressState == COMPRESS_STATE_RUNNING)          // compressor is running -> data available in internal buffers
                  )
               {
-  //fprintf(stderr,"%s,%d: %lu %lu ----------------------\n",__FILE__,__LINE__,(long)compressInfo->xdelta.stream.total_in,(long)compressInfo->xdelta.stream.total_out);
+//fprintf(stderr,"%s,%d: %lu %lu ----------------------\n",__FILE__,__LINE__,(long)compressInfo->xdelta.stream.total_in,(long)compressInfo->xdelta.stream.total_out);
                 // get max. number of data bytes and max. number of compressed bytes
                 maxDataBytes     = RingBuffer_getAvailable(&compressInfo->dataRingBuffer);
                 maxCompressBytes = RingBuffer_getFree(&compressInfo->compressRingBuffer);
@@ -2336,7 +2336,13 @@ compressInfo->xdelta.source.curblk[5]
               }
             }
 
-            if (!RingBuffer_isFull(&compressInfo->dataRingBuffer))                    // space in data buffer
+            /* Note: do not try to decompress more data here, because
+               end-of-data is not recognized by xdelta-decompressor.
+               Instead decompress only minimum, then return. Caller
+               check if all data is decompressed and call
+               xdelta-decompressor again if not all data is decompressed.
+            */
+            if (RingBuffer_isEmpty(&compressInfo->dataRingBuffer))                    // no data in data buffer
             {
 //fprintf(stderr,"%s, %d: %d %d\n",__FILE__,__LINE__,compressInfo->compressBufferIndex,compressInfo->compressBufferLength);
 //fprintf(stderr,"%s, %d: %d\n",__FILE__,__LINE__,compressInfo->flushFlag);
@@ -3771,6 +3777,7 @@ Errors Compress_inflate(CompressInfo *compressInfo,
   }
   while (   (n > 0L)
          && (bufferSize > 0L)
+#warning todo
 //         && !RingBuffer_isEmpty(&compressInfo->compressRingBuffer)
         );
 #else /* not TEMPORARY_DEBUG_COMPRESS_RINGBUFFERS */
