@@ -3767,7 +3767,6 @@ String String_unescape(String string, char escapeChar)
         if (z < string->length)
         {
           String_appendChar(s,string->data[z]);
-          z++;
         }
       }
       else
@@ -3835,13 +3834,12 @@ String String_unquote(String string, const char *quoteChars)
         z = 1;
         while (z < string->length-1)
         {
-          if (string->data[z] == quoteChar)
+          if (string->data[z] == '\\')
           {
             z++;
             if (z < string->length-1)
             {
               String_appendChar(s,string->data[z]);
-              z++;
             }
           }
           else
