@@ -966,6 +966,8 @@ LOCAL Errors writeFileChunks(ArchiveEntryInfo *archiveEntryInfo)
   // create file delta chunk
   if (Compress_isCompressed(archiveEntryInfo->file.deltaCompressAlgorithm))
   {
+    assert(Compress_isXDeltaCompressed(archiveEntryInfo->file.deltaCompressAlgorithm));
+
     error = Chunk_create(&archiveEntryInfo->file.chunkFileDelta.info);
     if (error != ERROR_NONE)
     {
@@ -1224,6 +1226,8 @@ close(h);
     }
     if (Compress_isCompressed(archiveEntryInfo->file.deltaCompressAlgorithm))
     {
+      assert(Compress_isXDeltaCompressed(archiveEntryInfo->file.deltaCompressAlgorithm));
+
       error = Chunk_close(&archiveEntryInfo->file.chunkFileDelta.info);
       if (error != ERROR_NONE)
       {
@@ -1422,6 +1426,8 @@ LOCAL Errors writeImageChunks(ArchiveEntryInfo *archiveEntryInfo)
   // create file delta chunk
   if (Compress_isCompressed(archiveEntryInfo->image.deltaCompressAlgorithm))
   {
+    assert(Compress_isXDeltaCompressed(archiveEntryInfo->image.deltaCompressAlgorithm));
+
     error = Chunk_create(&archiveEntryInfo->image.chunkImageDelta.info);
     if (error != ERROR_NONE)
    {
@@ -1672,6 +1678,8 @@ LOCAL Errors writeImageDataBlock(ArchiveEntryInfo *archiveEntryInfo,
     }
     if (Compress_isCompressed(archiveEntryInfo->image.deltaCompressAlgorithm))
     {
+      assert(Compress_isXDeltaCompressed(archiveEntryInfo->image.deltaCompressAlgorithm));
+
       error = Chunk_close(&archiveEntryInfo->image.chunkImageDelta.info);
       if (error != ERROR_NONE)
       {
@@ -1881,6 +1889,8 @@ LOCAL Errors writeHardLinkChunks(ArchiveEntryInfo *archiveEntryInfo)
   // create hard link delta chunk
   if (Compress_isCompressed(archiveEntryInfo->hardLink.deltaCompressAlgorithm))
   {
+    assert(Compress_isXDeltaCompressed(archiveEntryInfo->hardLink.deltaCompressAlgorithm));
+
     error = Chunk_create(&archiveEntryInfo->hardLink.chunkHardLinkDelta.info);
     if (error != ERROR_NONE)
    {
@@ -2131,6 +2141,8 @@ LOCAL Errors writeHardLinkDataBlock(ArchiveEntryInfo *archiveEntryInfo,
     }
     if (Compress_isCompressed(archiveEntryInfo->hardLink.deltaCompressAlgorithm))
     {
+      assert(Compress_isXDeltaCompressed(archiveEntryInfo->hardLink.deltaCompressAlgorithm));
+
       error = Chunk_close(&archiveEntryInfo->hardLink.chunkHardLinkDelta.info);
       if (error != ERROR_NONE)
       {
@@ -2941,6 +2953,8 @@ Errors Archive_newFileEntry(ArchiveInfo      *archiveInfo,
   }
   if (Compress_isCompressed(archiveEntryInfo->file.deltaCompressAlgorithm))
   {
+    assert(Compress_isXDeltaCompressed(archiveEntryInfo->file.deltaCompressAlgorithm));
+
     archiveEntryInfo->file.chunkFileDelta.deltaAlgorithm = COMPRESS_ALGORITHM_TO_CONSTANT(archiveEntryInfo->file.deltaCompressAlgorithm);
     String_set(archiveEntryInfo->file.chunkFileDelta.name,deltaSourceName);
   }
@@ -3226,6 +3240,8 @@ Errors Archive_newImageEntry(ArchiveInfo      *archiveInfo,
   }
   if (Compress_isCompressed(archiveEntryInfo->image.deltaCompressAlgorithm))
   {
+    assert(Compress_isXDeltaCompressed(archiveEntryInfo->image.deltaCompressAlgorithm));
+
     archiveEntryInfo->image.chunkImageDelta.deltaAlgorithm = COMPRESS_ALGORITHM_TO_CONSTANT(archiveEntryInfo->image.deltaCompressAlgorithm);
     String_set(archiveEntryInfo->image.chunkImageDelta.name,deltaSourceName);
   }
@@ -3847,6 +3863,8 @@ Errors Archive_newHardLinkEntry(ArchiveInfo      *archiveInfo,
   }
   if (Compress_isCompressed(archiveEntryInfo->hardLink.deltaCompressAlgorithm))
   {
+    assert(Compress_isXDeltaCompressed(archiveEntryInfo->hardLink.deltaCompressAlgorithm));
+
     archiveEntryInfo->hardLink.chunkHardLinkDelta.deltaAlgorithm = COMPRESS_ALGORITHM_TO_CONSTANT(archiveEntryInfo->hardLink.deltaCompressAlgorithm);
     String_set(archiveEntryInfo->hardLink.chunkHardLinkDelta.name,deltaSourceName);
   }
@@ -4428,6 +4446,12 @@ Errors Archive_readFileEntry(ArchiveInfo        *archiveInfo,
     Chunk_skip(archiveInfo->chunkIO,archiveInfo->chunkIOUserData,&chunkHeader);
     return error;
   }
+  if (!Compress_isValidAlgorithm(archiveEntryInfo->file.chunkFile.compressAlgorithm))
+  {
+    Chunk_done(&archiveEntryInfo->file.chunkFile.info);
+    Chunk_skip(archiveInfo->chunkIO,archiveInfo->chunkIOUserData,&chunkHeader);
+    return ERROR_INVALID_COMPRESS_ALGORITHM;
+  }
   archiveEntryInfo->file.deltaCompressAlgorithm = COMPRESS_ALGORITHM_NONE;
   archiveEntryInfo->file.byteCompressAlgorithm  = COMPRESS_CONSTANT_TO_ALGORITHM(archiveEntryInfo->file.chunkFile.compressAlgorithm);
   archiveEntryInfo->cryptAlgorithm              = CRYPT_CONSTANT_TO_ALGORITHM(archiveEntryInfo->file.chunkFile.cryptAlgorithm);
@@ -4680,6 +4704,13 @@ Errors Archive_readFileEntry(ArchiveInfo        *archiveInfo,
 
             // get delta compress meta data
             archiveEntryInfo->file.deltaCompressAlgorithm = COMPRESS_CONSTANT_TO_ALGORITHM(archiveEntryInfo->file.chunkFileDelta.deltaAlgorithm);
+            if (   !Compress_isValidAlgorithm(archiveEntryInfo->file.chunkFileDelta.deltaAlgorithm)
+                || !Compress_isXDeltaCompressed(archiveEntryInfo->file.deltaCompressAlgorithm)
+               )
+            {
+              error = ERROR_INVALID_COMPRESS_ALGORITHM;
+              break;
+            }
             if (deltaSourceName != NULL) String_set(deltaSourceName,archiveEntryInfo->file.chunkFileDelta.name);
             break;
           case CHUNK_ID_FILE_DATA:
@@ -4905,8 +4936,15 @@ Errors Archive_readImageEntry(ArchiveInfo        *archiveInfo,
     Chunk_skip(archiveInfo->chunkIO,archiveInfo->chunkIOUserData,&chunkHeader);
     return error;
   }
-  archiveEntryInfo->image.byteCompressAlgorithm = COMPRESS_CONSTANT_TO_ALGORITHM(archiveEntryInfo->image.chunkImage.compressAlgorithm);
-  archiveEntryInfo->cryptAlgorithm              = CRYPT_CONSTANT_TO_ALGORITHM(archiveEntryInfo->image.chunkImage.cryptAlgorithm);
+  if (!Compress_isValidAlgorithm(archiveEntryInfo->image.chunkImage.compressAlgorithm))
+  {
+    Chunk_done(&archiveEntryInfo->image.chunkImage.info);
+    Chunk_skip(archiveInfo->chunkIO,archiveInfo->chunkIOUserData,&chunkHeader);
+    return ERROR_INVALID_COMPRESS_ALGORITHM;
+  }
+  archiveEntryInfo->image.deltaCompressAlgorithm = COMPRESS_ALGORITHM_NONE;
+  archiveEntryInfo->image.byteCompressAlgorithm  = COMPRESS_CONSTANT_TO_ALGORITHM(archiveEntryInfo->image.chunkImage.compressAlgorithm);
+  archiveEntryInfo->cryptAlgorithm               = CRYPT_CONSTANT_TO_ALGORITHM(archiveEntryInfo->image.chunkImage.cryptAlgorithm);
 
   // detect block length of used crypt algorithm
   error = Crypt_getBlockLength(archiveEntryInfo->cryptAlgorithm,&archiveEntryInfo->blockLength);
@@ -5152,6 +5190,13 @@ Errors Archive_readImageEntry(ArchiveInfo        *archiveInfo,
 
             // get delta compress meta data
             archiveEntryInfo->image.deltaCompressAlgorithm = COMPRESS_CONSTANT_TO_ALGORITHM(archiveEntryInfo->image.chunkImageDelta.deltaAlgorithm);
+            if (   !Compress_isValidAlgorithm(archiveEntryInfo->image.chunkImageDelta.deltaAlgorithm)
+                || !Compress_isXDeltaCompressed(archiveEntryInfo->image.deltaCompressAlgorithm)
+               )
+            {
+              error = ERROR_INVALID_COMPRESS_ALGORITHM;
+              break;
+            }
             if (deltaSourceName != NULL) String_set(deltaSourceName,archiveEntryInfo->image.chunkImageDelta.name);
             break;
           case CHUNK_ID_IMAGE_DATA:
@@ -5902,6 +5947,12 @@ Errors Archive_readHardLinkEntry(ArchiveInfo        *archiveInfo,
     Chunk_skip(archiveInfo->chunkIO,archiveInfo->chunkIOUserData,&chunkHeader);
     return error;
   }
+  if (!Compress_isValidAlgorithm(archiveEntryInfo->hardLink.byteCompressAlgorithm))
+  {
+    Chunk_done(&archiveEntryInfo->hardLink.chunkHardLink.info);
+    Chunk_skip(archiveInfo->chunkIO,archiveInfo->chunkIOUserData,&chunkHeader);
+    return ERROR_INVALID_COMPRESS_ALGORITHM;
+  }
   archiveEntryInfo->hardLink.deltaCompressAlgorithm = COMPRESS_ALGORITHM_NONE;
   archiveEntryInfo->hardLink.byteCompressAlgorithm  = COMPRESS_CONSTANT_TO_ALGORITHM(archiveEntryInfo->hardLink.chunkHardLink.compressAlgorithm);
   archiveEntryInfo->cryptAlgorithm                  = CRYPT_CONSTANT_TO_ALGORITHM(archiveEntryInfo->hardLink.chunkHardLink.cryptAlgorithm);
@@ -6207,6 +6258,13 @@ Errors Archive_readHardLinkEntry(ArchiveInfo        *archiveInfo,
 
             // get delta compress meta data
             archiveEntryInfo->hardLink.deltaCompressAlgorithm = COMPRESS_CONSTANT_TO_ALGORITHM(archiveEntryInfo->hardLink.chunkHardLinkDelta.deltaAlgorithm);
+            if (   !Compress_isValidAlgorithm(archiveEntryInfo->hardLink.chunkHardLinkDelta.deltaAlgorithm)
+                || !Compress_isXDeltaCompressed(archiveEntryInfo->hardLink.deltaCompressAlgorithm)
+               )
+            {
+              error = ERROR_INVALID_COMPRESS_ALGORITHM;
+              break;
+            }
             if (deltaSourceName != NULL) String_set(deltaSourceName,archiveEntryInfo->hardLink.chunkHardLinkDelta.name);
             break;
           case CHUNK_ID_HARDLINK_DATA:
@@ -6699,6 +6757,8 @@ Errors Archive_closeEntry(ArchiveEntryInfo *archiveEntryInfo)
                 if ((error == ERROR_NONE) && (tmpError != ERROR_NONE)) error = tmpError;
                 if (Compress_isCompressed(archiveEntryInfo->file.deltaCompressAlgorithm))
                 {
+                  assert(Compress_isXDeltaCompressed(archiveEntryInfo->file.deltaCompressAlgorithm));
+
                   tmpError = Chunk_close(&archiveEntryInfo->file.chunkFileDelta.info);
                   if ((error == ERROR_NONE) && (tmpError != ERROR_NONE)) error = tmpError;
                 }
@@ -6818,6 +6878,8 @@ Errors Archive_closeEntry(ArchiveEntryInfo *archiveEntryInfo)
                 if ((error == ERROR_NONE) && (tmpError != ERROR_NONE)) error = tmpError;
                 if (Compress_isCompressed(archiveEntryInfo->image.deltaCompressAlgorithm))
                 {
+                  assert(Compress_isXDeltaCompressed(archiveEntryInfo->image.deltaCompressAlgorithm));
+
                   tmpError = Chunk_close(&archiveEntryInfo->image.chunkImageDelta.info);
                   if ((error == ERROR_NONE) && (tmpError != ERROR_NONE)) error = tmpError;
                 }
@@ -7125,6 +7187,8 @@ Errors Archive_closeEntry(ArchiveEntryInfo *archiveEntryInfo)
             if ((error == ERROR_NONE) && (tmpError != ERROR_NONE)) error = tmpError;
             if (Compress_isCompressed(archiveEntryInfo->file.deltaCompressAlgorithm))
             {
+              assert(Compress_isXDeltaCompressed(archiveEntryInfo->file.deltaCompressAlgorithm));
+
               tmpError = Chunk_close(&archiveEntryInfo->file.chunkFileDelta.info);
               if ((error == ERROR_NONE) && (tmpError != ERROR_NONE)) error = tmpError;
             }
@@ -7159,6 +7223,8 @@ Errors Archive_closeEntry(ArchiveEntryInfo *archiveEntryInfo)
             if ((error == ERROR_NONE) && (tmpError != ERROR_NONE)) error = tmpError;
             if (Compress_isCompressed(archiveEntryInfo->image.deltaCompressAlgorithm))
             {
+              assert(Compress_isXDeltaCompressed(archiveEntryInfo->image.deltaCompressAlgorithm));
+
               tmpError = Chunk_close(&archiveEntryInfo->image.chunkImageDelta.info);
               if ((error == ERROR_NONE) && (tmpError != ERROR_NONE)) error = tmpError;
             }
@@ -7223,6 +7289,8 @@ Errors Archive_closeEntry(ArchiveEntryInfo *archiveEntryInfo)
             if ((error == ERROR_NONE) && (tmpError != ERROR_NONE)) error = tmpError;
             if (Compress_isCompressed(archiveEntryInfo->hardLink.deltaCompressAlgorithm))
             {
+              assert(Compress_isXDeltaCompressed(archiveEntryInfo->hardLink.deltaCompressAlgorithm));
+
               tmpError = Chunk_close(&archiveEntryInfo->hardLink.chunkHardLinkDelta.info);
               if ((error == ERROR_NONE) && (tmpError != ERROR_NONE)) error = tmpError;
             }
