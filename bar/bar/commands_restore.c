@@ -872,7 +872,7 @@ Errors Command_restore(const StringList                *archiveNameList,
                 else
                 {
                   // open file
-                  error = File_open(&fileHandle,destinationDeviceName,FILE_OPEN_CREATE);
+                  error = File_open(&fileHandle,destinationDeviceName,FILE_OPEN_WRITE);
                   if (error != ERROR_NONE)
                   {
                     printInfo(1,"FAIL!\n");
