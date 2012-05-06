@@ -7723,6 +7723,8 @@ Errors Archive_readData(ArchiveEntryInfo *archiveEntryInfo,
           && !archiveEntryInfo->file.deltaSourceInit
          )
       {
+        assert(Compress_isXDeltaCompressed(archiveEntryInfo->file.deltaCompressAlgorithm));
+
         // get source for delta-compression
         error = Source_openEntry(&archiveEntryInfo->file.sourceHandle,
                                  archiveEntryInfo->file.chunkFileDelta.name,
@@ -7791,8 +7793,8 @@ Errors Archive_readData(ArchiveEntryInfo *archiveEntryInfo,
                   byteDecompressEmptyFlag = (availableBytes <= 0L);
 //fprintf(stderr,"%s, %d: availableBytes=%d\n",__FILE__,__LINE__,availableBytes);
                 }
-                while (   !Compress_isEndOfData(&archiveEntryInfo->file.byteCompressInfo)
-                       && byteDecompressEmptyFlag
+                while (   byteDecompressEmptyFlag
+                       && !Compress_isEndOfData(&archiveEntryInfo->file.byteCompressInfo)
                       );
               }
             }
@@ -7869,6 +7871,8 @@ Errors Archive_readData(ArchiveEntryInfo *archiveEntryInfo,
           && !archiveEntryInfo->image.deltaSourceInit
          )
       {
+        assert(Compress_isXDeltaCompressed(archiveEntryInfo->image.deltaCompressAlgorithm));
+
         // get source for delta-compression
         error = Source_openEntry(&archiveEntryInfo->image.sourceHandle,
                                  archiveEntryInfo->image.chunkImageDelta.name,
@@ -7936,8 +7940,8 @@ Errors Archive_readData(ArchiveEntryInfo *archiveEntryInfo,
                   byteDecompressEmptyFlag = (availableBytes <= 0L);
 //fprintf(stderr,"%s, %d: availableBytes=%d\n",__FILE__,__LINE__,availableBytes);
                 }
-                while (   !Compress_isEndOfData(&archiveEntryInfo->image.byteCompressInfo)
-                       && byteDecompressEmptyFlag
+                while (   byteDecompressEmptyFlag
+                       && !Compress_isEndOfData(&archiveEntryInfo->image.byteCompressInfo)
                       );
               }
             }
@@ -8012,6 +8016,8 @@ Errors Archive_readData(ArchiveEntryInfo *archiveEntryInfo,
           && !archiveEntryInfo->hardLink.deltaSourceInit
          )
       {
+        assert(Compress_isXDeltaCompressed(archiveEntryInfo->hardLink.deltaCompressAlgorithm));
+
         // get source for delta-compression
         if (List_isEmpty(&archiveEntryInfo->hardLink.chunkHardLinkNameList))
         {
@@ -8083,8 +8089,8 @@ Errors Archive_readData(ArchiveEntryInfo *archiveEntryInfo,
                   byteDecompressEmptyFlag = (availableBytes <= 0L);
 //fprintf(stderr,"%s, %d: availableBytes=%d\n",__FILE__,__LINE__,availableBytes);
                 }
-                while (   !Compress_isEndOfData(&archiveEntryInfo->hardLink.byteCompressInfo)
-                       && byteDecompressEmptyFlag
+                while (   byteDecompressEmptyFlag
+                       && !Compress_isEndOfData(&archiveEntryInfo->hardLink.byteCompressInfo)
                       );
               }
             }
