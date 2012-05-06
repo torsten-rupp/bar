@@ -429,7 +429,7 @@ Node *__List_deleteNode(const char *__fileName__, ulong __lineNb__, Node *node)
         while (debugListFreeNodeList.count > DEBUG_MAX_FREE_LIST)
         {
           debugListNode = (DebugListNode*)List_getFirst(&debugListFreeNodeList);
-          LIST_DELETE_NODE(debugListNode);
+          free(debugListNode);
         }
       }
       else
@@ -604,14 +604,14 @@ void List_move(void *fromList,
   while (node != fromListToNode)
   {
     nextNode = node->next;
-    List_remove(fromList,node);
-    List_insert(toList,node,toListNextNode);
+    listRemove(fromList,node);
+    listInsert(toList,node,toListNextNode);
     node = nextNode;
   }
   if (node != NULL)
   {
-    List_remove(fromList,node);
-    List_insert(toList,node,toListNextNode);
+    listRemove(fromList,node);
+    listInsert(toList,node,toListNextNode);
   }
 }
 
@@ -682,8 +682,8 @@ Node *List_getFirst(void *list)
 
   assert(list != NULL);
 
-  node = ((List*)list)->head;
-  if (node != NULL) List_remove(list,node);
+  node = List_first(list);
+  if (node != NULL) listRemove(list,node);
 
   return node;
 }
@@ -694,8 +694,8 @@ Node *List_getLast(void *list)
 
   assert(list != NULL);
 
-  node = ((List*)list)->tail;
-  if (node != NULL) List_remove(list,node);
+  node = List_last(list);
+  if (node != NULL) listRemove(list,node);
 
   return node;
 }
