@@ -258,7 +258,7 @@ void Crypt_done(CryptInfo *cryptInfo);
 * Name   : Crypt_reset
 * Purpose: reset crypt handle
 * Input  : cryptInfo - crypt info block
-*          seed      - seed value for initializing IV (use 0 if not
+*          seed      - seed value for initializing IV (use 0LL if not
 *                      needed)
 * Output : -
 * Return : ERROR_NONE or error code

@@ -62,6 +62,7 @@ LOCAL const struct { const char *name; CryptAlgorithms cryptAlgorithm; } CRYPT_A
 #define PKCS1_RANDOM_KEY_LENGTH              (PKCS1_ENCODED_MESSAGE_LENGTH*8-(1+1+8+1)*8)
 #define PKCS1_ENCODED_MESSAGE_PADDING_LENGTH (PKCS1_ENCODED_MESSAGE_LENGTH-(PKCS1_RANDOM_KEY_LENGTH+7)/8-1-1-1)
 
+// used symmetric encryption algorithm in RSA hybrid encryption
 #define SECRET_KEY_CRYPT_ALGORITHM CRYPT_ALGORITHM_AES256
 
 /***************************** Datatypes *******************************/
