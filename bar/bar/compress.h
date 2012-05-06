@@ -201,7 +201,7 @@ typedef struct
 /****************************** Macros *********************************/
 
 /***********************************************************************\
-* Name   : COMPRESS_NUMBER_TO_ALGORITHM
+* Name   : COMPRESS_CONSTANT_TO_ALGORITHM
 * Purpose: convert archive definition constant to algorithm enum value
 * Input  : n - number
 * Output : -
@@ -213,7 +213,7 @@ typedef struct
   ((CompressAlgorithms)(n))
 
 /***********************************************************************\
-* Name   : COMPRESS_ALGORITHM_TO_NUMBER
+* Name   : COMPRESS_ALGORITHM_TO_CONSTANT
 * Purpose: convert algorithm enum value to archive definition constant
 * Input  : compressAlgorithm - compress algorithm
 * Output : -
@@ -275,6 +275,17 @@ const char *Compress_getAlgorithmName(CompressAlgorithms compressAlgorithm);
 \***********************************************************************/
 
 CompressAlgorithms Compress_getAlgorithm(const char *name);
+
+/***********************************************************************\
+* Name   : Compress_isValidAlgorithm
+* Purpose: check if valid compress algoritm
+* Input  : n - compress algorithm constant
+* Output : -
+* Return : TRUE iff valid, FALSE otherwise
+* Notes  : -
+\***********************************************************************/
+
+bool Compress_isValidAlgorithm(uint16 n);
 
 /***********************************************************************\
 * Name   : Compress_isCompressed

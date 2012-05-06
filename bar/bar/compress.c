@@ -2895,6 +2895,21 @@ CompressAlgorithms Compress_getAlgorithm(const char *name)
   return compressAlgorithm;
 }
 
+bool Compress_isValidAlgorithm(uint16 n)
+{
+  uint z;
+
+  z = 0;
+  while (   (z < SIZE_OF_ARRAY(COMPRESS_ALGORITHMS))
+         && (COMPRESS_ALGORITHMS[z].compressAlgorithm != COMPRESS_CONSTANT_TO_ALGORITHM(n))
+        )
+  {
+    z++;
+  }
+
+  return (z < SIZE_OF_ARRAY(COMPRESS_ALGORITHMS));
+}
+
 Errors Compress_new(CompressInfo       *compressInfo,
                     CompressModes      compressMode,
                     CompressAlgorithms compressAlgorithm,
@@ -3378,7 +3393,6 @@ void Compress_delete(CompressInfo *compressInfo)
         xd3_close_stream(&compressInfo->xdelta.stream);
         xd3_free_stream(&compressInfo->xdelta.stream);
 #ifdef TEMPORARY_DEBUG_XDELTA_RINGBUFFERS
-assert(RingBuffer_isEmpty(&compressInfo->xdelta.outputRingBuffer));
         RingBuffer_done(&compressInfo->xdelta.outputRingBuffer,NULL,NULL);
 #else /* not TEMPORARY_DEBUG_XDELTA_RINGBUFFERS */
         if (compressInfo->xdelta.outputBuffer != NULL) free(compressInfo->xdelta.outputBuffer);
@@ -3576,7 +3590,7 @@ Errors Compress_reset(CompressInfo *compressInfo)
 
           // re-initialize variables
 #ifdef TEMPORARY_DEBUG_XDELTA_RINGBUFFERS
-          RingBuffer_clear(&compressInfo->compressRingBuffer,NULL,NULL);
+          RingBuffer_clear(&compressInfo->xdelta.outputRingBuffer,NULL,NULL);
 #else /* not TEMPORARY_DEBUG_XDELTA_RINGBUFFERS */
           compressInfo->xdelta.outputBufferLength = 0L;
 #endif /* TEMPORARY_DEBUG_XDELTA_RINGBUFFERS */
@@ -3588,6 +3602,7 @@ Errors Compress_reset(CompressInfo *compressInfo)
           xd3Config.winsize = XDELTA_BUFFER_SIZE;
 
           // re-init xdelta stream
+          memset(&compressInfo->xdelta.stream,0,sizeof(compressInfo->xdelta.stream));
           if (xd3_config_stream(&compressInfo->xdelta.stream,&xd3Config) != 0)
           {
             switch (compressInfo->compressMode)
@@ -3607,6 +3622,7 @@ Errors Compress_reset(CompressInfo *compressInfo)
           }
 
           // re-init xdelta source
+          compressInfo->xdelta.source.blksize  = XDELTA_BUFFER_SIZE;
           compressInfo->xdelta.source.onblk    = (usize_t)0;
           compressInfo->xdelta.source.curblkno = (xoff_t)(-1);
           if (xd3_set_source(&compressInfo->xdelta.stream,&compressInfo->xdelta.source) != 0)
