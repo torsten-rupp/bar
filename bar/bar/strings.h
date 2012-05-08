@@ -91,7 +91,10 @@ typedef struct
     { \
       if (string != NULL) \
       { \
-        if (STRING_CHECKSUM(string) != (string)->checkSum) \
+        ulong __checkSum; \
+        \
+        __checkSum = STRING_CHECKSUM(string); \
+        if (__checkSum != (string)->checkSum) \
         { \
           String_debugPrintCurrentStackTrace(); \
           HALT_INTERNAL_ERROR("Invalid checksum 0x%08x in string %p, length %ld (max. %ld) (expected 0x%08x)!", \
@@ -99,7 +102,7 @@ typedef struct
                               string, \
                               (string)->length, \
                               (string)->maxLength, \
-                              STRING_CHECKSUM(string) \
+                              __checkSum \
                              ); \
         } \
       } \
