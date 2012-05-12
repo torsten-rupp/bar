@@ -1249,7 +1249,9 @@ close(h);
     // close archive file
     closeArchiveFile(archiveEntryInfo->archiveInfo,FALSE);
 
-    // reset compress (do it here because data if buffered and can be processed before a new file is opened)
+    /* reset compress (do it here because data if buffered and can be
+       processed before a new file is opened)
+    */
     Compress_reset(&archiveEntryInfo->file.deltaCompressInfo);
     Compress_reset(&archiveEntryInfo->file.byteCompressInfo);
   }
@@ -1701,7 +1703,20 @@ LOCAL Errors writeImageDataBlock(ArchiveEntryInfo *archiveEntryInfo,
     // close archive file
     closeArchiveFile(archiveEntryInfo->archiveInfo,FALSE);
 
-    // reset compress (do it here because data if buffered and can be processed before a new file is opened)
+    // set new delta base-offset
+    if (Compress_isCompressed(archiveEntryInfo->image.deltaCompressAlgorithm))
+    {
+      assert(Compress_isXDeltaCompressed(archiveEntryInfo->image.deltaCompressAlgorithm));
+
+#warning todo
+      Source_setBaseOffset(&archiveEntryInfo->image.sourceHandle,
+                           archiveEntryInfo->image.chunkImageData.blockCount*archiveEntryInfo->image.blockSize
+                          );
+    }
+
+    /* reset compress (do it here because data if buffered and can be
+       processed before a new file is opened)
+    */
     Compress_reset(&archiveEntryInfo->image.deltaCompressInfo);
     Compress_reset(&archiveEntryInfo->image.byteCompressInfo);
   }
@@ -2172,7 +2187,9 @@ LOCAL Errors writeHardLinkDataBlock(ArchiveEntryInfo *archiveEntryInfo,
     // close archive file
     closeArchiveFile(archiveEntryInfo->archiveInfo,FALSE);
 
-    // reset compress (do it here because data if buffered and can be processed before a new file is opened)
+    /* reset compress (do it here because data if buffered and can be
+       processed before a new file is opened)
+    */
     Compress_reset(&archiveEntryInfo->hardLink.deltaCompressInfo);
     Compress_reset(&archiveEntryInfo->hardLink.byteCompressInfo);
   }
@@ -2792,10 +2809,8 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
 
 Errors Archive_newFileEntry(ArchiveInfo      *archiveInfo,
                             ArchiveEntryInfo *archiveEntryInfo,
-                            SourceHandle     *sourceHandle,
                             const String     fileName,
                             const FileInfo   *fileInfo,
-                            const String     deltaSourceName,
                             bool             deltaCompressFlag,
                             bool             byteCompressFlag
                            )
@@ -2956,7 +2971,7 @@ Errors Archive_newFileEntry(ArchiveInfo      *archiveInfo,
     assert(Compress_isXDeltaCompressed(archiveEntryInfo->file.deltaCompressAlgorithm));
 
     archiveEntryInfo->file.chunkFileDelta.deltaAlgorithm = COMPRESS_ALGORITHM_TO_CONSTANT(archiveEntryInfo->file.deltaCompressAlgorithm);
-    String_set(archiveEntryInfo->file.chunkFileDelta.name,deltaSourceName);
+    String_set(archiveEntryInfo->file.chunkFileDelta.name,fileName);
   }
 
   // init file data crypt, file data chunk
@@ -3000,15 +3015,57 @@ Errors Archive_newFileEntry(ArchiveInfo      *archiveInfo,
   archiveEntryInfo->file.chunkFileData.fragmentOffset = 0LL;
   archiveEntryInfo->file.chunkFileData.fragmentSize   = 0LL;
 
+  // get source for delta-compression
+  if (Compress_isCompressed(archiveEntryInfo->image.deltaCompressAlgorithm))
+  {
+    assert(Compress_isXDeltaCompressed(archiveEntryInfo->image.deltaCompressAlgorithm));
+
+    error = Source_openEntry(&archiveEntryInfo->file.sourceHandle,
+                             NULL,
+                             fileName,
+                             archiveInfo->jobOptions
+                            );
+    if      (error == ERROR_NONE)
+    {
+      deltaCompressFlag = TRUE;
+    }
+    else if (archiveInfo->jobOptions->forceDeltaCompressionFlag)
+    {
+      printInfo(1,"FAIL\n");
+      printError("Cannot open source file for '%s' (error: %s)\n",
+                 String_cString(fileName),
+                 Errors_getText(error)
+                );
+      Crypt_done(&archiveEntryInfo->file.chunkFileData.cryptInfo);
+      Chunk_done(&archiveEntryInfo->file.chunkFileDelta.info);
+      Crypt_done(&archiveEntryInfo->file.chunkFileDelta.cryptInfo);
+      Chunk_done(&archiveEntryInfo->file.chunkFileEntry.info);
+      Crypt_done(&archiveEntryInfo->file.chunkFileEntry.cryptInfo);
+      Chunk_done(&archiveEntryInfo->file.chunkFile.info);
+      free(archiveEntryInfo->file.deltaBuffer);
+      free(archiveEntryInfo->file.byteBuffer);
+      return error;
+    }
+    else
+    {
+      printWarning("File '%s' not delta compressed (no source file found)\n",String_cString(fileName));
+      logMessage(LOG_TYPE_WARNING,
+                 "File '%s' not delta compressed (no source file found)\n",
+                 String_cString(fileName)
+                );
+    }
+  }
+
   // init delta compress (if no delta-compression is enabled, use identity-compressor)
   error = Compress_new(&archiveEntryInfo->file.deltaCompressInfo,
                        COMPRESS_MODE_DEFLATE,
                        archiveEntryInfo->file.deltaCompressAlgorithm,
                        1,
-                       sourceHandle
+                       &archiveEntryInfo->file.sourceHandle
                       );
   if (error != ERROR_NONE)
   {
+    if (Compress_isCompressed(archiveEntryInfo->file.deltaCompressAlgorithm)) Source_closeEntry(&archiveEntryInfo->file.sourceHandle);
     Chunk_done(&archiveEntryInfo->file.chunkFileData.info);
     Crypt_done(&archiveEntryInfo->file.chunkFileData.cryptInfo);
     Chunk_done(&archiveEntryInfo->file.chunkFileDelta.info);
@@ -3031,6 +3088,7 @@ Errors Archive_newFileEntry(ArchiveInfo      *archiveInfo,
   if (error != ERROR_NONE)
   {
     Compress_delete(&archiveEntryInfo->file.deltaCompressInfo);
+    if (Compress_isCompressed(archiveEntryInfo->file.deltaCompressAlgorithm)) Source_closeEntry(&archiveEntryInfo->file.sourceHandle);
     Chunk_done(&archiveEntryInfo->file.chunkFileData.info);
     Crypt_done(&archiveEntryInfo->file.chunkFileData.cryptInfo);
     Chunk_done(&archiveEntryInfo->file.chunkFileDelta.info);
@@ -3052,6 +3110,7 @@ Errors Archive_newFileEntry(ArchiveInfo      *archiveInfo,
   {
     Compress_delete(&archiveEntryInfo->file.byteCompressInfo);
     Compress_delete(&archiveEntryInfo->file.deltaCompressInfo);
+    if (Compress_isCompressed(archiveEntryInfo->file.deltaCompressAlgorithm)) Source_closeEntry(&archiveEntryInfo->file.sourceHandle);
     Chunk_done(&archiveEntryInfo->file.chunkFileData.info);
     Crypt_done(&archiveEntryInfo->file.chunkFileData.cryptInfo);
     Chunk_done(&archiveEntryInfo->file.chunkFileDelta.info);
@@ -3081,10 +3140,8 @@ Errors Archive_newFileEntry(ArchiveInfo      *archiveInfo,
 
 Errors Archive_newImageEntry(ArchiveInfo      *archiveInfo,
                              ArchiveEntryInfo *archiveEntryInfo,
-                             SourceHandle     *sourceHandle,
                              const String     deviceName,
                              const DeviceInfo *deviceInfo,
-                             const String     deltaSourceName,
                              bool             deltaCompressFlag,
                              bool             byteCompressFlag
                             )
@@ -3243,7 +3300,7 @@ Errors Archive_newImageEntry(ArchiveInfo      *archiveInfo,
     assert(Compress_isXDeltaCompressed(archiveEntryInfo->image.deltaCompressAlgorithm));
 
     archiveEntryInfo->image.chunkImageDelta.deltaAlgorithm = COMPRESS_ALGORITHM_TO_CONSTANT(archiveEntryInfo->image.deltaCompressAlgorithm);
-    String_set(archiveEntryInfo->image.chunkImageDelta.name,deltaSourceName);
+    String_set(archiveEntryInfo->image.chunkImageDelta.name,deviceName);
   }
 
   // init image data crypt, image data chunk
@@ -3287,15 +3344,55 @@ Errors Archive_newImageEntry(ArchiveInfo      *archiveInfo,
   archiveEntryInfo->image.chunkImageData.blockOffset = 0LL;
   archiveEntryInfo->image.chunkImageData.blockCount  = 0LL;
 
+  // get source for delta-compression
+  if (Compress_isCompressed(archiveEntryInfo->image.deltaCompressAlgorithm))
+  {
+    assert(Compress_isXDeltaCompressed(archiveEntryInfo->image.deltaCompressAlgorithm));
+
+    error = Source_openEntry(&archiveEntryInfo->image.sourceHandle,
+                             NULL,
+                             deviceName,
+                             archiveInfo->jobOptions
+                            );
+    if (error != ERROR_NONE)
+    {
+      if (archiveInfo->jobOptions->forceDeltaCompressionFlag)
+      {
+        printInfo(1,"FAIL\n");
+        printError("Cannot open source file for '%s' (error: %s)\n",
+                   String_cString(deviceName),
+                   Errors_getText(error)
+                  );
+        Crypt_done(&archiveEntryInfo->image.chunkImageData.cryptInfo);
+        Chunk_done(&archiveEntryInfo->image.chunkImageDelta.info);
+        Crypt_done(&archiveEntryInfo->image.chunkImageDelta.cryptInfo);
+        Chunk_done(&archiveEntryInfo->image.chunkImageEntry.info);
+        Crypt_done(&archiveEntryInfo->image.chunkImageEntry.cryptInfo);
+        Chunk_done(&archiveEntryInfo->image.chunkImage.info);
+        free(archiveEntryInfo->image.deltaBuffer);
+        free(archiveEntryInfo->image.byteBuffer);
+        return error;
+      }
+      else
+      {
+        logMessage(LOG_TYPE_WARNING,
+                   "Image of device '%s' not delta compressed (no source file found)\n",
+                   String_cString(deviceName)
+                  );
+      }
+    }
+  }
+
   // init delta compress (if no delta-compression is enabled, use identity-compressor)
   error = Compress_new(&archiveEntryInfo->image.deltaCompressInfo,
                        COMPRESS_MODE_DEFLATE,
                        archiveEntryInfo->image.deltaCompressAlgorithm,
                        1,
-                       sourceHandle
+                       &archiveEntryInfo->image.sourceHandle
                       );
   if (error != ERROR_NONE)
   {
+    if (Compress_isCompressed(archiveEntryInfo->image.deltaCompressAlgorithm)) Source_closeEntry(&archiveEntryInfo->image.sourceHandle);
     Chunk_done(&archiveEntryInfo->image.chunkImageData.info);
     Crypt_done(&archiveEntryInfo->image.chunkImageData.cryptInfo);
     Chunk_done(&archiveEntryInfo->image.chunkImageDelta.info);
@@ -3318,6 +3415,7 @@ Errors Archive_newImageEntry(ArchiveInfo      *archiveInfo,
   if (error != ERROR_NONE)
   {
     Compress_delete(&archiveEntryInfo->image.deltaCompressInfo);
+    if (Compress_isCompressed(archiveEntryInfo->image.deltaCompressAlgorithm)) Source_closeEntry(&archiveEntryInfo->image.sourceHandle);
     Chunk_done(&archiveEntryInfo->image.chunkImageData.info);
     Crypt_done(&archiveEntryInfo->image.chunkImageData.cryptInfo);
     Chunk_done(&archiveEntryInfo->image.chunkImageDelta.info);
@@ -3339,6 +3437,7 @@ Errors Archive_newImageEntry(ArchiveInfo      *archiveInfo,
   {
     Compress_delete(&archiveEntryInfo->image.byteCompressInfo);
     Compress_delete(&archiveEntryInfo->image.deltaCompressInfo);
+    if (Compress_isCompressed(archiveEntryInfo->image.deltaCompressAlgorithm)) Source_closeEntry(&archiveEntryInfo->image.sourceHandle);
     Chunk_done(&archiveEntryInfo->image.chunkImageData.info);
     Crypt_done(&archiveEntryInfo->image.chunkImageData.cryptInfo);
     Chunk_done(&archiveEntryInfo->image.chunkImageDelta.info);
@@ -3627,10 +3726,8 @@ Errors Archive_newLinkEntry(ArchiveInfo      *archiveInfo,
 
 Errors Archive_newHardLinkEntry(ArchiveInfo      *archiveInfo,
                                 ArchiveEntryInfo *archiveEntryInfo,
-                                SourceHandle     *sourceHandle,
                                 const StringList *fileNameList,
                                 const FileInfo   *fileInfo,
-                                const String     deltaSourceName,
                                 bool             deltaCompressFlag,
                                 bool             byteCompressFlag
                                )
@@ -3866,7 +3963,6 @@ Errors Archive_newHardLinkEntry(ArchiveInfo      *archiveInfo,
     assert(Compress_isXDeltaCompressed(archiveEntryInfo->hardLink.deltaCompressAlgorithm));
 
     archiveEntryInfo->hardLink.chunkHardLinkDelta.deltaAlgorithm = COMPRESS_ALGORITHM_TO_CONSTANT(archiveEntryInfo->hardLink.deltaCompressAlgorithm);
-    String_set(archiveEntryInfo->hardLink.chunkHardLinkDelta.name,deltaSourceName);
   }
 
   // init hard link data crypt, harda link data chunk
@@ -3920,15 +4016,71 @@ Errors Archive_newHardLinkEntry(ArchiveInfo      *archiveInfo,
   archiveEntryInfo->hardLink.chunkHardLinkData.fragmentOffset = 0LL;
   archiveEntryInfo->hardLink.chunkHardLinkData.fragmentSize   = 0LL;
 
+  // get source for delta-compression
+  if (Compress_isCompressed(archiveEntryInfo->image.deltaCompressAlgorithm))
+  {
+    assert(Compress_isXDeltaCompressed(archiveEntryInfo->image.deltaCompressAlgorithm));
+
+    // get source for delta-compression
+    STRINGLIST_ITERATE(fileNameList,stringNode,fileName)
+    {
+      error = Source_openEntry(&archiveEntryInfo->hardLink.sourceHandle,
+                               NULL,
+                               fileName,
+                               archiveInfo->jobOptions
+                              );
+      if (error == ERROR_NONE)
+      {
+        String_set(archiveEntryInfo->hardLink.chunkHardLinkDelta.name,fileName);
+        break;
+      }
+    }
+    if (error != ERROR_NONE)
+    {
+      if (archiveInfo->jobOptions->forceDeltaCompressionFlag)
+      {
+        printInfo(1,"FAIL\n");
+        printError("Cannot open source file for '%s' (error: %s)\n",
+#warning todo StringList_first
+                   String_cString(fileNameList->head->string),
+                   Errors_getText(error)
+                  );
+        Crypt_done(&archiveEntryInfo->hardLink.chunkHardLinkData.cryptInfo);
+        Chunk_done(&archiveEntryInfo->hardLink.chunkHardLinkDelta.info);
+        Crypt_done(&archiveEntryInfo->hardLink.chunkHardLinkDelta.cryptInfo);
+        LIST_DONE(&archiveEntryInfo->hardLink.chunkHardLinkNameList,chunkHardLinkName)
+        {
+          Crypt_done(&chunkHardLinkName->cryptInfo);
+          Chunk_done(&chunkHardLinkName->info);
+        }
+        Chunk_done(&archiveEntryInfo->hardLink.chunkHardLinkEntry.info);
+        Crypt_done(&archiveEntryInfo->hardLink.chunkHardLinkEntry.cryptInfo);
+        Chunk_done(&archiveEntryInfo->hardLink.chunkHardLink.info);
+        free(archiveEntryInfo->hardLink.deltaBuffer);
+        free(archiveEntryInfo->hardLink.byteBuffer);
+        return error;
+      }
+      else
+      {
+        logMessage(LOG_TYPE_WARNING,
+                   "File '%s' not delta compressed (no source file found)\n",
+#warning todo StringList_first
+                   String_cString(fileNameList->head->string)
+                  );
+      }
+    }
+  }
+
   // init delta compress (if no delta-compression is enabled, use identity-compressor)
   error = Compress_new(&archiveEntryInfo->hardLink.deltaCompressInfo,
                        COMPRESS_MODE_DEFLATE,
                        archiveEntryInfo->hardLink.deltaCompressAlgorithm,
                        1,
-                       sourceHandle
+                       &archiveEntryInfo->hardLink.sourceHandle
                       );
   if (error != ERROR_NONE)
   {
+    if (Compress_isCompressed(archiveEntryInfo->hardLink.deltaCompressAlgorithm)) Source_closeEntry(&archiveEntryInfo->hardLink.sourceHandle);
     Chunk_done(&archiveEntryInfo->hardLink.chunkHardLinkData.info);
     Crypt_done(&archiveEntryInfo->hardLink.chunkHardLinkData.cryptInfo);
     Chunk_done(&archiveEntryInfo->hardLink.chunkHardLinkDelta.info);
@@ -3956,6 +4108,7 @@ Errors Archive_newHardLinkEntry(ArchiveInfo      *archiveInfo,
   if (error != ERROR_NONE)
   {
     Compress_delete(&archiveEntryInfo->hardLink.deltaCompressInfo);
+    if (Compress_isCompressed(archiveEntryInfo->hardLink.deltaCompressAlgorithm)) Source_closeEntry(&archiveEntryInfo->hardLink.sourceHandle);
     Chunk_done(&archiveEntryInfo->hardLink.chunkHardLinkData.info);
     Crypt_done(&archiveEntryInfo->hardLink.chunkHardLinkData.cryptInfo);
     Chunk_done(&archiveEntryInfo->hardLink.chunkHardLinkDelta.info);
@@ -3982,6 +4135,7 @@ Errors Archive_newHardLinkEntry(ArchiveInfo      *archiveInfo,
   {
     Compress_delete(&archiveEntryInfo->hardLink.deltaCompressInfo);
     Compress_delete(&archiveEntryInfo->hardLink.byteCompressInfo);
+    if (Compress_isCompressed(archiveEntryInfo->hardLink.deltaCompressAlgorithm)) Source_closeEntry(&archiveEntryInfo->hardLink.sourceHandle);
     Chunk_done(&archiveEntryInfo->hardLink.chunkHardLinkData.info);
     Crypt_done(&archiveEntryInfo->hardLink.chunkHardLinkData.cryptInfo);
     Chunk_done(&archiveEntryInfo->hardLink.chunkHardLinkDelta.info);
@@ -6797,6 +6951,11 @@ Errors Archive_closeEntry(ArchiveEntryInfo *archiveEntryInfo)
             Crypt_done(&archiveEntryInfo->file.cryptInfo);
             Compress_delete(&archiveEntryInfo->file.byteCompressInfo);
             Compress_delete(&archiveEntryInfo->file.deltaCompressInfo);
+            if (Compress_isCompressed(archiveEntryInfo->file.deltaCompressAlgorithm))
+            {
+              assert(Compress_isXDeltaCompressed(archiveEntryInfo->file.deltaCompressAlgorithm));
+              Source_closeEntry(&archiveEntryInfo->file.sourceHandle);
+            }
             Chunk_done(&archiveEntryInfo->file.chunkFileData.info);
             Crypt_done(&archiveEntryInfo->file.chunkFileData.cryptInfo);
             Chunk_done(&archiveEntryInfo->file.chunkFileDelta.info);
@@ -6865,6 +7024,9 @@ Errors Archive_closeEntry(ArchiveEntryInfo *archiveEntryInfo)
               {
                 // update part block count
                 assert(archiveEntryInfo->image.blockSize > 0);
+#warning todo
+fprintf(stderr,"%s, %d: %d\n",__FILE__,__LINE__,Compress_getInputLength(&archiveEntryInfo->image.deltaCompressInfo));
+fprintf(stderr,"%s, %d: %d\n",__FILE__,__LINE__,archiveEntryInfo->image.blockSize);
                 assert((Compress_getInputLength(&archiveEntryInfo->image.deltaCompressInfo) % archiveEntryInfo->image.blockSize) == 0);
                 archiveEntryInfo->image.chunkImageData.blockCount = Compress_getInputLength(&archiveEntryInfo->image.deltaCompressInfo)/archiveEntryInfo->image.blockSize;
                 if (error == ERROR_NONE)
@@ -6913,6 +7075,11 @@ Errors Archive_closeEntry(ArchiveEntryInfo *archiveEntryInfo)
             Crypt_done(&archiveEntryInfo->image.cryptInfo);
             Compress_delete(&archiveEntryInfo->image.byteCompressInfo);
             Compress_delete(&archiveEntryInfo->image.deltaCompressInfo);
+            if (Compress_isCompressed(archiveEntryInfo->image.deltaCompressAlgorithm))
+            {
+              assert(Compress_isXDeltaCompressed(archiveEntryInfo->image.deltaCompressAlgorithm));
+              Source_closeEntry(&archiveEntryInfo->image.sourceHandle);
+            }
             Chunk_done(&archiveEntryInfo->image.chunkImageData.info);
             Crypt_done(&archiveEntryInfo->image.chunkImageData.cryptInfo);
             Chunk_done(&archiveEntryInfo->image.chunkImageDelta.info);
@@ -7113,6 +7280,11 @@ Errors Archive_closeEntry(ArchiveEntryInfo *archiveEntryInfo)
             Crypt_done(&archiveEntryInfo->hardLink.cryptInfo);
             Compress_delete(&archiveEntryInfo->hardLink.byteCompressInfo);
             Compress_delete(&archiveEntryInfo->hardLink.deltaCompressInfo);
+            if (Compress_isCompressed(archiveEntryInfo->hardLink.deltaCompressAlgorithm))
+            {
+              assert(Compress_isXDeltaCompressed(archiveEntryInfo->hardLink.deltaCompressAlgorithm));
+              Source_closeEntry(&archiveEntryInfo->hardLink.sourceHandle);
+            }
             Chunk_done(&archiveEntryInfo->hardLink.chunkHardLinkData.info);
             Crypt_done(&archiveEntryInfo->hardLink.chunkHardLinkData.cryptInfo);
             Chunk_done(&archiveEntryInfo->hardLink.chunkHardLinkDelta.info);

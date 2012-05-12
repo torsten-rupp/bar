@@ -434,13 +434,8 @@ bool Archive_eof(ArchiveInfo *archiveInfo,
 * Name   : Archive_newFile
 * Purpose: add new file to archive
 * Input  : archiveInfo                     - archive info
-*          sourceGetEntryDataBlock         - get delta source block
-*                                            callback
-*          sourceGetEntryDataBlockUserData - data for get delta source
-*                                            block callback
 *          fileName                        - file name
 *          fileInfo                        - file info
-*          deltaSourceName                 - delta source name or NULL
 *          deltaCompressFlag               - TRUE for delta compression,
 *                                            FALSE otherwise
 *          byteCompressFlag                - TRUE for byte compression,
@@ -454,10 +449,8 @@ bool Archive_eof(ArchiveInfo *archiveInfo,
 
 Errors Archive_newFileEntry(ArchiveInfo      *archiveInfo,
                             ArchiveEntryInfo *archiveEntryInfo,
-                            SourceHandle     *sourceHandle,
                             const String     fileName,
                             const FileInfo   *fileInfo,
-                            const String     deltaSourceName,
                             bool             deltaCompressFlag,
                             bool             byteCompressFlag
                            );
@@ -466,13 +459,8 @@ Errors Archive_newFileEntry(ArchiveInfo      *archiveInfo,
 * Name   : Archive_newImageEntry
 * Purpose: add new block device image to archive
 * Input  : archiveInfo                     - archive info
-*          sourceGetEntryDataBlock         - get delta source block
-*                                            callback
-*          sourceGetEntryDataBlockUserData - data for get delta source
-*                                            block callback
 *          deviceName                      - special device name
 *          deviceInfo                      - device info
-*          deltaSourceName                 - delta source name or NULL
 *          deltaCompressFlag               - TRUE for delta compression,
 *                                            FALSE otherwise
 *          byteCompressFlag                - TRUE for byte compression,
@@ -486,10 +474,8 @@ Errors Archive_newFileEntry(ArchiveInfo      *archiveInfo,
 
 Errors Archive_newImageEntry(ArchiveInfo      *archiveInfo,
                              ArchiveEntryInfo *archiveEntryInfo,
-                             SourceHandle     *sourceHandle,
                              const String     deviceName,
                              const DeviceInfo *deviceInfo,
-                             const String     deltaSourceName,
                              bool             deltaCompressFlag,
                              bool             byteCompressFlag
                             );
@@ -534,13 +520,8 @@ Errors Archive_newLinkEntry(ArchiveInfo      *archiveInfo,
 * Name   : Archive_newHardLinkEntry
 * Purpose: add new hard link to archive
 * Input  : archiveInfo                     - archive info
-*          sourceGetEntryDataBlock         - get delta source block
-*                                            callback
-*          sourceGetEntryDataBlockUserData - data for get delta source
-*                                            block callback
 *          fileNameList                    - list of file names
 *          fileInfo                        - file info
-*          deltaSourceName                 - delta source name or NULL
 *          deltaCompressFlag               - TRUE for delta compression,
 *                                            FALSE otherwise
 *          byteCompressFlag                - TRUE for byte compression,
@@ -554,10 +535,8 @@ Errors Archive_newLinkEntry(ArchiveInfo      *archiveInfo,
 
 Errors Archive_newHardLinkEntry(ArchiveInfo      *archiveInfo,
                                 ArchiveEntryInfo *archiveEntryInfo,
-                                SourceHandle     *sourceHandle,
                                 const StringList *fileNameList,
                                 const FileInfo   *fileInfo,
-                                const String     deltaSourceName,
                                 bool             deltaCompressFlag,
                                 bool             byteCompressFlag
                                );
