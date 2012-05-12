@@ -57,6 +57,7 @@ typedef struct
   String     tmpFileName;      // temporary file name
   FileHandle tmpFileHandle;    // temporary file handle
   bool       tmpFileOpenFlag;  // TRUE iff temporary file is open
+  uint64     baseOffset;       // block read base offset in source
 } SourceHandle;
 
 /***************************** Variables *******************************/
@@ -148,13 +149,25 @@ void Source_closeEntry(SourceHandle *sourceHandle);
 /***********************************************************************\
 * Name   : Source_getName
 * Purpose: get source name
-* Input  : -
+* Input  : sourceHandle - source handle
 * Output : -
 * Return : source name
 * Notes  : -
 \***********************************************************************/
 
 String Source_getName(SourceHandle *sourceHandle);
+
+/***********************************************************************\
+* Name   : Source_getName
+* Purpose: get source name
+* Input  : sourceHandle - source handle
+*          offset       - base offset for read blocks
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void Source_setBaseOffset(SourceHandle *sourceHandle, uint64 offset);
 
 /***********************************************************************\
 * Name   : Source_getEntryDataBlock

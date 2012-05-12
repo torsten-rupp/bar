@@ -805,6 +805,7 @@ Errors Source_openEntry(SourceHandle     *sourceHandle,
 
   // init variables
   sourceHandle->tmpFileName = NULL;
+  sourceHandle->baseOffset  = 0LL;
 
   restoredFlag = FALSE;
 
@@ -1103,6 +1104,13 @@ String Source_getName(SourceHandle *sourceHandle)
   return sourceHandle->sourceName;
 }
 
+void Source_setBaseOffset(SourceHandle *sourceHandle, uint64 offset)
+{
+  assert(sourceHandle != NULL);
+
+  sourceHandle->baseOffset = offset;
+}
+
 Errors Source_getEntryDataBlock(SourceHandle *sourceHandle,
                                 void         *buffer,
                                 uint64       offset,
@@ -1116,7 +1124,7 @@ Errors Source_getEntryDataBlock(SourceHandle *sourceHandle,
   assert(buffer != NULL);
   assert(bytesRead != NULL);
 
-  error = File_seek(&sourceHandle->tmpFileHandle,offset);
+  error = File_seek(&sourceHandle->tmpFileHandle,sourceHandle->baseOffset+offset);
   if (error != ERROR_NONE)
   {
     return error;
