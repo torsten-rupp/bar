@@ -193,8 +193,8 @@ typedef struct
   {
     struct
     {
-      bool                  deltaSourceInit;           // TRUE if delta source is initialized
       SourceHandle          sourceHandle;              // delta handle
+      bool                  sourceHandleInitFlag;      // TRUE if delta source is initialized
 
       CompressAlgorithms    deltaCompressAlgorithm;    // delta compression algorithm
       CompressAlgorithms    byteCompressAlgorithm;     // byte compression algorithm
@@ -218,8 +218,8 @@ typedef struct
     } file;
     struct
     {
-      bool                  deltaSourceInit;           // TRUE if delta source is initialized
       SourceHandle          sourceHandle;              // delta source info
+      bool                  sourceHandleInitFlag;      // TRUE if delta source is initialized
 
       uint                  blockSize;                 // block size of device
 
@@ -255,8 +255,8 @@ typedef struct
     } link;
     struct
     {
-      bool                  deltaSourceInit;           // TRUE if delta source is initialized
       SourceHandle          sourceHandle;              // delta source info
+      bool                  sourceHandleInitFlag;      // TRUE if delta source is initialized
 
       CompressAlgorithms    deltaCompressAlgorithm;    // delta compression algorithm
       CompressAlgorithms    byteCompressAlgorithm;     // byte compression algorithm
@@ -451,8 +451,8 @@ Errors Archive_newFileEntry(ArchiveInfo      *archiveInfo,
                             ArchiveEntryInfo *archiveEntryInfo,
                             const String     fileName,
                             const FileInfo   *fileInfo,
-                            bool             deltaCompressFlag,
-                            bool             byteCompressFlag
+                            const bool       deltaCompressFlag,
+                            const bool       byteCompressFlag
                            );
 
 /***********************************************************************\
@@ -476,8 +476,8 @@ Errors Archive_newImageEntry(ArchiveInfo      *archiveInfo,
                              ArchiveEntryInfo *archiveEntryInfo,
                              const String     deviceName,
                              const DeviceInfo *deviceInfo,
-                             bool             deltaCompressFlag,
-                             bool             byteCompressFlag
+                             const bool       deltaCompressFlag,
+                             const bool       byteCompressFlag
                             );
 
 /***********************************************************************\
@@ -537,8 +537,8 @@ Errors Archive_newHardLinkEntry(ArchiveInfo      *archiveInfo,
                                 ArchiveEntryInfo *archiveEntryInfo,
                                 const StringList *fileNameList,
                                 const FileInfo   *fileInfo,
-                                bool             deltaCompressFlag,
-                                bool             byteCompressFlag
+                                const bool       deltaCompressFlag,
+                                const bool       byteCompressFlag
                                );
 
 /***********************************************************************\
