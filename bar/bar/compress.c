@@ -836,7 +836,7 @@ LOCAL Errors compressData(CompressInfo *compressInfo)
                     case XD3_GETSRCBLK:
                       error = Source_getEntryDataBlock(compressInfo->xdelta.sourceHandle,
                                                        (void*)compressInfo->xdelta.source.curblk,
-                                                       compressInfo->xdelta.sourceOffset+(uint64)compressInfo->xdelta.source.blksize*compressInfo->xdelta.source.getblkno,
+                                                       (uint64)compressInfo->xdelta.source.blksize*compressInfo->xdelta.source.getblkno,
                                                        compressInfo->xdelta.source.blksize,
                                                        &bytesRead
                                                       );
@@ -1010,7 +1010,7 @@ compressInfo->xdelta.source.curblk[5]
                     case XD3_GETSRCBLK:
                       error = Source_getEntryDataBlock(compressInfo->xdelta.sourceHandle,
                                                        (void*)compressInfo->xdelta.source.curblk,
-                                                       compressInfo->xdelta.sourceOffset+(uint64)compressInfo->xdelta.source.blksize*compressInfo->xdelta.source.getblkno,
+                                                       (uint64)compressInfo->xdelta.source.blksize*compressInfo->xdelta.source.getblkno,
                                                        compressInfo->xdelta.source.blksize,
                                                        &bytesRead
                                                       );
@@ -2263,7 +2263,7 @@ LOCAL Errors decompressData(CompressInfo *compressInfo)
                     case XD3_GETSRCBLK:
                       error = Source_getEntryDataBlock(compressInfo->xdelta.sourceHandle,
                                                        (void*)compressInfo->xdelta.source.curblk,
-                                                       compressInfo->xdelta.sourceOffset+(uint64)compressInfo->xdelta.source.blksize*compressInfo->xdelta.source.getblkno,
+                                                       (uint64)compressInfo->xdelta.source.blksize*compressInfo->xdelta.source.getblkno,
                                                        compressInfo->xdelta.source.blksize,
                                                        &bytesRead
                                                       );
@@ -2420,7 +2420,7 @@ compressInfo->xdelta.source.curblk[5]
                     case XD3_GETSRCBLK:
                       error = Source_getEntryDataBlock(compressInfo->xdelta.sourceHandle,
                                                        (void*)compressInfo->xdelta.source.curblk,
-                                                       compressInfo->xdelta.sourceOffset+(uint64)compressInfo->xdelta.source.blksize*compressInfo->xdelta.source.getblkno,
+                                                       (uint64)compressInfo->xdelta.source.blksize*compressInfo->xdelta.source.getblkno,
                                                        compressInfo->xdelta.source.blksize,
                                                        &bytesRead
                                                       );
