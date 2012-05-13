@@ -72,7 +72,7 @@ void __abort(const char   *filename,
 }
 
 #ifndef NDEBUG
-void dumpMemory(const void *address, uint length)
+void dumpMemory(bool printAddress, const void *address, uint length)
 {
   const byte *p;
   uint       z,i;
@@ -81,34 +81,36 @@ void dumpMemory(const void *address, uint length)
   while (z < length)
   {
     p = (const byte*)address+z;
-    printf("%08lx:%08lx  ",(unsigned long)p,(unsigned long)(p-(byte*)address));
+    if (printAddress) fprintf(stderr,"%08lx:",(unsigned long)p);
+    fprintf(stderr,"%08lx  ",(unsigned long)(p-(byte*)address));
+
 
     for (i = 0; i < 16; i++)
     {
       if ((z+i) < length)
       {
         p = (const byte*)address+z+i;
-        printf("%02x ",((uint)(*p)) & 0xFF);
+        fprintf(stderr,"%02x ",((uint)(*p)) & 0xFF);
       }
       else
       {
-        printf("   ");
+        fprintf(stderr,"   ");
       }
     }
-    printf("  ");
+    fprintf(stderr,"  ");
 
     for (i = 0; i < 16; i++)
     {
       if ((z+i) < length)
       {
         p = (const byte*)address+z+i;
-        printf("%c",isprint((int)(*p))?(*p):'.');
+        fprintf(stderr,"%c",isprint((int)(*p))?(*p):'.');
       }
       else
       {
       }
     }
-    printf("\n");
+    fprintf(stderr,"\n");
 
     z += 16;
   }

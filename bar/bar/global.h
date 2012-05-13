@@ -937,7 +937,8 @@ void __abort(const char   *filename,
 /***********************************************************************\
 * Name   : dumpMemory
 * Purpose: dump memory content (hex dump)
-* Input  : address - start address
+* Input  : printAddress - TRUE to print address, FALSE otherwise
+*          address - start address
 *          length  - length
 * Output : -
 * Return : -
@@ -945,7 +946,7 @@ void __abort(const char   *filename,
 \***********************************************************************/
 
 #ifndef NDEBUG
-void dumpMemory(const void *address, uint length);
+void dumpMemory(bool printAddress, const void *address, uint length);
 #endif /* NDEBUG */
 
 #ifdef __cplusplus
