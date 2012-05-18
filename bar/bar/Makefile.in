@@ -488,7 +488,7 @@ test1 test_basic: $(TEST_BAR)
 	@$(MAKE) \
           BAR_FILE="test" \
           BAR_PATTERN="test" \
-          OPTIONS="--compress-algorithm=none --crypt-algorithm=none" \
+          BAR_OPTIONS="--compress-algorithm=none --crypt-algorithm=none" \
           test_file_operations
 	@$(ECHO) "ok"
 
@@ -498,7 +498,7 @@ test2 test_compress: $(TEST_BAR)
           $(MAKE) \
             BAR_FILE="test" \
             BAR_PATTERN="test" \
-            OPTIONS="--compress-algorithm=$$compress --crypt-algorithm=none" \
+            BAR_OPTIONS="--compress-algorithm=$$compress --crypt-algorithm=none" \
             test_file_operations \
             ; \
           rc=$$?; \
@@ -514,7 +514,7 @@ test_delta_compress: $(TEST_BAR)
           $(MAKE) \
             BAR_FILE="test" \
             BAR_PATTERN="test" \
-            OPTIONS="--compress-algorithm=$$compress --crypt-algorithm=none" \
+            BAR_OPTIONS="--compress-algorithm=$$compress --crypt-algorithm=none" \
             test_file_operations_delta \
             ; \
           rc=$$?; \
@@ -530,7 +530,7 @@ test3 test_crypt: $(TEST_BAR)
           $(MAKE) \
             BAR_FILE="test" \
             BAR_PATTERN="test" \
-            OPTIONS="--compress-algorithm=none --crypt-algorithm=$$crypt --crypt-password=$(TEST_PASSWORD)" \
+            BAR_OPTIONS="--compress-algorithm=none --crypt-algorithm=$$crypt --crypt-password=$(TEST_PASSWORD)" \
             test_file_operations \
             ; \
           rc=$$?; \
@@ -547,7 +547,7 @@ test4 test_asymmetric_crypt: $(TEST_BAR)
           $(MAKE) \
             BAR_FILE="test" \
             BAR_PATTERN="test" \
-            OPTIONS="--compress-algorithm=none --crypt-algorithm=$$crypt --crypt-password=$(TEST_PASSWORD) --crypt-type=asymmetric --crypt-public-key=$(PWD)/test/key.public --crypt-private-key=$(PWD)/test/key.private" \
+            BAR_OPTIONS="--compress-algorithm=none --crypt-algorithm=$$crypt --crypt-password=$(TEST_PASSWORD) --crypt-type=asymmetric --crypt-public-key=$(PWD)/test/key.public --crypt-private-key=$(PWD)/test/key.private" \
             test_file_operations \
             ; \
           rc=$$?; \
@@ -562,7 +562,7 @@ test5 test_split: $(TEST_BAR)
 	$(MAKE) \
           BAR_FILE="test-###" \
           BAR_PATTERN="test-*" \
-          OPTIONS="--archive-part-size=100000 --compress-algorithm=none --crypt-algorithm=none" \
+          BAR_OPTIONS="--archive-part-size=100000 --compress-algorithm=none --crypt-algorithm=none" \
           test_file_operations
 	@$(ECHO) "ok"
 
@@ -572,7 +572,7 @@ test6 test_image: $(TEST_BAR)
           $(MAKE) \
             BAR_FILE="test" \
             BAR_PATTERN="test" \
-            OPTIONS="--compress-algorithm=$$compress --crypt-algorithm=none" \
+            BAR_OPTIONS="--compress-algorithm=$$compress --crypt-algorithm=none" \
             test_image_operations \
             ; \
           rc=$$?; \
@@ -587,7 +587,7 @@ test7 test_dvd: $(TEST_BAR)
 	$(MAKE) \
           BAR_FILE="test" \
           BAR_PATTERN="test" \
-          OPTIONS="--compress-algorithm=none --crypt-algorithm=none" \
+          BAR_OPTIONS="--compress-algorithm=none --crypt-algorithm=none" \
           test_dvd_operations \
           ;
 	@$(ECHO) "ok"
@@ -600,7 +600,7 @@ test_combined: $(TEST_BAR)
             $(MAKE) \
               BAR_FILE=test-### \
               BAR_PATTERN="test-*" \
-              OPTIONS="--compress-algorithm=$$compress --crypt-algorithm=$$crypt --crypt-password=$(TEST_PASSWORD) --crypt-type=asymmetric --crypt-public-key=$(PWD)/test/key.public --crypt-private-key=$(PWD)/test/key.private --archive-part-size=100K" \
+              BAR_OPTIONS="--compress-algorithm=$$compress --crypt-algorithm=$$crypt --crypt-password=$(TEST_PASSWORD) --crypt-type=asymmetric --crypt-public-key=$(PWD)/test/key.public --crypt-private-key=$(PWD)/test/key.private --archive-part-size=100K" \
               test_file_operations \
               ; \
             rc=$$?; \
@@ -610,7 +610,7 @@ test_combined: $(TEST_BAR)
             $(MAKE) \
               BAR_FILE=test-### \
               BAR_PATTERN="test-*" \
-              OPTIONS="--compress-algorithm=$$compress --crypt-algorithm=$$crypt --crypt-password=$(TEST_PASSWORD) --crypt-type=asymmetric --crypt-public-key=$(PWD)/test/key.public --crypt-private-key=$(PWD)/test/key.private --archive-part-size=10M" \
+              BAR_OPTIONS="--compress-algorithm=$$compress --crypt-algorithm=$$crypt --crypt-password=$(TEST_PASSWORD) --crypt-type=asymmetric --crypt-public-key=$(PWD)/test/key.public --crypt-private-key=$(PWD)/test/key.private --archive-part-size=10M" \
               test_image_operations \
               ; \
             rc=$$?; \
@@ -774,11 +774,11 @@ test_file_operations_base: \
 	@$(call functionVerifyParameter,BAR_FILE)
 	#
 	$(RMRF) $(TEST_FILES_CLEAN)
-	SSH_ASKPASS= $(TEST_BAR) -c test/$(BAR_FILE).bar test/data $(OPTIONS) --overwrite-archive-files --verbose=2 $(if $(QUIET),1>/dev/null)
-	SSH_ASKPASS= $(TEST_BAR) -l test/test*.bar $(OPTIONS) $(if $(QUIET),1>/dev/null)
-	SSH_ASKPASS= $(TEST_BAR) -t test/test*.bar $(OPTIONS) $(if $(QUIET),1>/dev/null)
-	SSH_ASKPASS= $(TEST_BAR) -d test/test*.bar $(OPTIONS) $(if $(QUIET),1>/dev/null)
-	SSH_ASKPASS= $(TEST_BAR) -x test/test*.bar $(OPTIONS) --destination test/restore $(if $(QUIET),1>/dev/null)
+	SSH_ASKPASS= $(TEST_BAR) -c test/$(BAR_FILE).bar test/data $(BAR_OPTIONS) --overwrite-archive-files --verbose=2 $(if $(QUIET),1>/dev/null)
+	SSH_ASKPASS= $(TEST_BAR) -l test/test*.bar $(BAR_OPTIONS) $(if $(QUIET),1>/dev/null)
+	SSH_ASKPASS= $(TEST_BAR) -t test/test*.bar $(BAR_OPTIONS) $(if $(QUIET),1>/dev/null)
+	SSH_ASKPASS= $(TEST_BAR) -d test/test*.bar $(BAR_OPTIONS) $(if $(QUIET),1>/dev/null)
+	SSH_ASKPASS= $(TEST_BAR) -x test/test*.bar $(BAR_OPTIONS) --destination test/restore $(if $(QUIET),1>/dev/null)
 	$(DIFF) -r -x unreadable.dat -x circular-link.dat -x circular-link.dat.marker -x fifo -x sub-ignore-dir -x nodump.dat test/data test/restore/test/data
 	$(READLINK) test/restore/test/data/link.dat 2>/dev/null $(if $(QUIET),1>/dev/null)
 	test `$(STAT) --format "%a" test/restore/test/data/file400.dat 2>/dev/null` = "400" $(if $(QUIET),1>/dev/null)
@@ -798,37 +798,37 @@ ifeq (@HAVE_XDELTA@,1)
 	@$(call functionVerifyParameter,BAR_PATTERN)
 	#
 	$(RMRF) $(TEST_FILES_CLEAN)
-	($(CD) test/data/delta1; SSH_ASKPASS= ../../../$(TEST_BAR) -c ../../$(BAR_FILE)-A.bar test.dat $(OPTIONS) --overwrite-archive-files --verbose=2 $(if $(QUIET),1>/dev/null))
+	($(CD) test/data/delta1; SSH_ASKPASS= ../../../$(TEST_BAR) -c ../../$(BAR_FILE)-A.bar test.dat $(BAR_OPTIONS) --overwrite-archive-files --verbose=2 $(if $(QUIET),1>/dev/null))
 	#
 	$(RMF) test/$(BAR_PATTERN)-B.bar
-	($(CD) test/data/delta2; SSH_ASKPASS= ../../../$(TEST_BAR) -c ../../$(BAR_FILE)-B.bar test.dat --delta-source='../../$(BAR_PATTERN)-A.bar' $(OPTIONS) --compress-algorithm=xdelta9 --force-delta-compression --overwrite-archive-files --verbose=2 $(if $(QUIET),1>/dev/null))
-	SSH_ASKPASS= $(TEST_BAR) -t test/$(BAR_PATTERN)-B.bar --delta-source='test/$(BAR_PATTERN)-A.bar' $(OPTIONS) $(if $(QUIET),1>/dev/null)
-	($(CD) test/data/delta2; SSH_ASKPASS= ../../../$(TEST_BAR) -d ../../$(BAR_PATTERN)-B.bar --delta-source='../../$(BAR_PATTERN)-A.bar' $(OPTIONS) $(if $(QUIET),1>/dev/null))
-	($(CD) test/data/delta2; SSH_ASKPASS= ../../../$(TEST_BAR) -x ../../$(BAR_PATTERN)-B.bar --delta-source='../../$(BAR_PATTERN)-A.bar' $(OPTIONS) --destination ../../restore $(if $(QUIET),1>/dev/null))
+	($(CD) test/data/delta2; SSH_ASKPASS= ../../../$(TEST_BAR) -c ../../$(BAR_FILE)-B.bar test.dat --delta-source='../../$(BAR_PATTERN)-A.bar' $(BAR_OPTIONS) --compress-algorithm=xdelta9 --force-delta-compression --overwrite-archive-files --verbose=2 $(if $(QUIET),1>/dev/null))
+	SSH_ASKPASS= $(TEST_BAR) -t test/$(BAR_PATTERN)-B.bar --delta-source='test/$(BAR_PATTERN)-A.bar' $(BAR_OPTIONS) $(if $(QUIET),1>/dev/null)
+	($(CD) test/data/delta2; SSH_ASKPASS= ../../../$(TEST_BAR) -d ../../$(BAR_PATTERN)-B.bar --delta-source='../../$(BAR_PATTERN)-A.bar' $(BAR_OPTIONS) $(if $(QUIET),1>/dev/null))
+	($(CD) test/data/delta2; SSH_ASKPASS= ../../../$(TEST_BAR) -x ../../$(BAR_PATTERN)-B.bar --delta-source='../../$(BAR_PATTERN)-A.bar' $(BAR_OPTIONS) --destination ../../restore $(if $(QUIET),1>/dev/null))
 	$(DIFF) test/data/delta2/test.dat test/restore/test.dat
 	#
 	$(RMF) test/$(BAR_PATTERN)-B.bar
-	($(CD) test/data/delta2; SSH_ASKPASS= ../../../$(TEST_BAR) -c ../../$(BAR_FILE)-B.bar --delta-source='../../$(BAR_PATTERN)-A.bar' test.dat $(OPTIONS) --compress-algorithm=xdelta9+zip9 --force-delta-compression --overwrite-archive-files --verbose=2 $(if $(QUIET),1>/dev/null))
-	SSH_ASKPASS= $(TEST_BAR) -t test/$(BAR_PATTERN)-B.bar --delta-source='test/$(BAR_PATTERN)-A.bar' $(OPTIONS) $(if $(QUIET),1>/dev/null)
-	($(CD) test/data/delta2; SSH_ASKPASS= ../../../$(TEST_BAR) -d ../../$(BAR_PATTERN)-B.bar --delta-source='../../$(BAR_PATTERN)-A.bar' $(OPTIONS) $(if $(QUIET),1>/dev/null))
-	($(CD) test/data/delta2; SSH_ASKPASS= ../../../$(TEST_BAR) -x ../../$(BAR_PATTERN)-B.bar --delta-source='../../$(BAR_PATTERN)-A.bar' $(OPTIONS) --destination ../../restore $(if $(QUIET),1>/dev/null))
+	($(CD) test/data/delta2; SSH_ASKPASS= ../../../$(TEST_BAR) -c ../../$(BAR_FILE)-B.bar --delta-source='../../$(BAR_PATTERN)-A.bar' test.dat $(BAR_OPTIONS) --compress-algorithm=xdelta9+zip9 --force-delta-compression --overwrite-archive-files --verbose=2 $(if $(QUIET),1>/dev/null))
+	SSH_ASKPASS= $(TEST_BAR) -t test/$(BAR_PATTERN)-B.bar --delta-source='test/$(BAR_PATTERN)-A.bar' $(BAR_OPTIONS) $(if $(QUIET),1>/dev/null)
+	($(CD) test/data/delta2; SSH_ASKPASS= ../../../$(TEST_BAR) -d ../../$(BAR_PATTERN)-B.bar --delta-source='../../$(BAR_PATTERN)-A.bar' $(BAR_OPTIONS) $(if $(QUIET),1>/dev/null))
+	($(CD) test/data/delta2; SSH_ASKPASS= ../../../$(TEST_BAR) -x ../../$(BAR_PATTERN)-B.bar --delta-source='../../$(BAR_PATTERN)-A.bar' $(BAR_OPTIONS) --destination ../../restore $(if $(QUIET),1>/dev/null))
 	$(DIFF) test/data/delta2/test.dat test/restore/test.dat
 	#
 ifeq (@HAVE_BZ2@,1)
 	$(RMF) test/$(BAR_PATTERN)-B.bar
-	($(CD) test/data/delta2; SSH_ASKPASS= ../../../$(TEST_BAR) -c ../../$(BAR_FILE)-B.bar --delta-source='../../$(BAR_PATTERN)-A.bar' test.dat $(OPTIONS) --compress-algorithm=xdelta9+bzip2 --force-delta-compression --overwrite-archive-files --verbose=2 $(if $(QUIET),1>/dev/null))
-	SSH_ASKPASS= $(TEST_BAR) -t test/$(BAR_PATTERN)-B.bar --delta-source='test/$(BAR_PATTERN)-A.bar' $(OPTIONS) $(if $(QUIET),1>/dev/null)
-	($(CD) test/data/delta2; SSH_ASKPASS= ../../../$(TEST_BAR) -d ../../$(BAR_PATTERN)-B.bar --delta-source='../../$(BAR_PATTERN)-A.bar' $(OPTIONS) $(if $(QUIET),1>/dev/null))
-	($(CD) test/data/delta2; SSH_ASKPASS= ../../../$(TEST_BAR) -x ../../$(BAR_PATTERN)-B.bar --delta-source='../../$(BAR_PATTERN)-A.bar' $(OPTIONS) --destination ../../restore $(if $(QUIET),1>/dev/null))
+	($(CD) test/data/delta2; SSH_ASKPASS= ../../../$(TEST_BAR) -c ../../$(BAR_FILE)-B.bar --delta-source='../../$(BAR_PATTERN)-A.bar' test.dat $(BAR_OPTIONS) --compress-algorithm=xdelta9+bzip2 --force-delta-compression --overwrite-archive-files --verbose=2 $(if $(QUIET),1>/dev/null))
+	SSH_ASKPASS= $(TEST_BAR) -t test/$(BAR_PATTERN)-B.bar --delta-source='test/$(BAR_PATTERN)-A.bar' $(BAR_OPTIONS) $(if $(QUIET),1>/dev/null)
+	($(CD) test/data/delta2; SSH_ASKPASS= ../../../$(TEST_BAR) -d ../../$(BAR_PATTERN)-B.bar --delta-source='../../$(BAR_PATTERN)-A.bar' $(BAR_OPTIONS) $(if $(QUIET),1>/dev/null))
+	($(CD) test/data/delta2; SSH_ASKPASS= ../../../$(TEST_BAR) -x ../../$(BAR_PATTERN)-B.bar --delta-source='../../$(BAR_PATTERN)-A.bar' $(BAR_OPTIONS) --destination ../../restore $(if $(QUIET),1>/dev/null))
 	$(DIFF) test/data/delta2/test.dat test/restore/test.dat
 endif
 	#
 ifeq (@HAVE_LZMA@,1)
 	$(RMF) test/$(BAR_PATTERN)-B.bar
-	($(CD) test/data/delta2; SSH_ASKPASS= ../../../$(TEST_BAR) -c ../../$(BAR_FILE)-B.bar --delta-source='../../$(BAR_PATTERN)-A.bar' test.dat $(OPTIONS) --compress-algorithm=xdelta9+lzma9 --force-delta-compression --overwrite-archive-files --verbose=2 $(if $(QUIET),1>/dev/null))
-	SSH_ASKPASS= $(TEST_BAR) -t test/$(BAR_PATTERN)-B.bar --delta-source='test/$(BAR_PATTERN)-A.bar' $(OPTIONS) $(if $(QUIET),1>/dev/null)
-	($(CD) test/data/delta2; SSH_ASKPASS= ../../../$(TEST_BAR) -d ../../$(BAR_PATTERN)-B.bar --delta-source='../../$(BAR_PATTERN)-A.bar' $(OPTIONS) $(if $(QUIET),1>/dev/null))
-	($(CD) test/data/delta2; SSH_ASKPASS= ../../../$(TEST_BAR) -x ../../$(BAR_PATTERN)-B.bar --delta-source='../../$(BAR_PATTERN)-A.bar' $(OPTIONS) --destination ../../restore $(if $(QUIET),1>/dev/null))
+	($(CD) test/data/delta2; SSH_ASKPASS= ../../../$(TEST_BAR) -c ../../$(BAR_FILE)-B.bar --delta-source='../../$(BAR_PATTERN)-A.bar' test.dat $(BAR_OPTIONS) --compress-algorithm=xdelta9+lzma9 --force-delta-compression --overwrite-archive-files --verbose=2 $(if $(QUIET),1>/dev/null))
+	SSH_ASKPASS= $(TEST_BAR) -t test/$(BAR_PATTERN)-B.bar --delta-source='test/$(BAR_PATTERN)-A.bar' $(BAR_OPTIONS) $(if $(QUIET),1>/dev/null)
+	($(CD) test/data/delta2; SSH_ASKPASS= ../../../$(TEST_BAR) -d ../../$(BAR_PATTERN)-B.bar --delta-source='../../$(BAR_PATTERN)-A.bar' $(BAR_OPTIONS) $(if $(QUIET),1>/dev/null))
+	($(CD) test/data/delta2; SSH_ASKPASS= ../../../$(TEST_BAR) -x ../../$(BAR_PATTERN)-B.bar --delta-source='../../$(BAR_PATTERN)-A.bar' $(BAR_OPTIONS) --destination ../../restore $(if $(QUIET),1>/dev/null))
 	$(DIFF) test/data/delta2/test.dat test/restore/test.dat
 endif
 endif
@@ -841,12 +841,12 @@ test_file_operations_incremental: \
 	@$(call functionVerifyParameter,BAR_FILE)
 	#
 	$(RMRF) $(TEST_FILES_CLEAN)
-	SSH_ASKPASS= $(TEST_BAR) -c test/$(BAR_FILE)-full.bar --full --incremental-list-file=test/$(BAR_FILE).bid test/data test/new $(OPTIONS) --overwrite-archive-files --verbose=2 $(if $(QUIET),1>/dev/null)
+	SSH_ASKPASS= $(TEST_BAR) -c test/$(BAR_FILE)-full.bar --full --incremental-list-file=test/$(BAR_FILE).bid test/data test/new $(BAR_OPTIONS) --overwrite-archive-files --verbose=2 $(if $(QUIET),1>/dev/null)
 	$(INSTALL) -d test/new; $(CP) test/data/random1024.dat test/new/random1024-new.dat
-	SSH_ASKPASS= $(TEST_BAR) -c test/$(BAR_FILE)-incremental.bar --incremental --incremental-list-file=test/$(BAR_FILE).bid test/data test/new $(OPTIONS) --overwrite-archive-files --verbose=2 $(if $(QUIET),1>/dev/null)
-	SSH_ASKPASS= $(TEST_BAR) -t test/test*.bar $(OPTIONS) $(if $(QUIET),1>/dev/null)
-	SSH_ASKPASS= $(TEST_BAR) -d test/test*.bar $(OPTIONS) $(if $(QUIET),1>/dev/null)
-	SSH_ASKPASS= $(TEST_BAR) -x test/test*.bar $(OPTIONS) --destination test/restore $(if $(QUIET),1>/dev/null)
+	SSH_ASKPASS= $(TEST_BAR) -c test/$(BAR_FILE)-incremental.bar --incremental --incremental-list-file=test/$(BAR_FILE).bid test/data test/new $(BAR_OPTIONS) --overwrite-archive-files --verbose=2 $(if $(QUIET),1>/dev/null)
+	SSH_ASKPASS= $(TEST_BAR) -t test/test*.bar $(BAR_OPTIONS) $(if $(QUIET),1>/dev/null)
+	SSH_ASKPASS= $(TEST_BAR) -d test/test*.bar $(BAR_OPTIONS) $(if $(QUIET),1>/dev/null)
+	SSH_ASKPASS= $(TEST_BAR) -x test/test*.bar $(BAR_OPTIONS) --destination test/restore $(if $(QUIET),1>/dev/null)
 
 test_file_operations_differential: \
   $(TEST_BAR) \
@@ -856,12 +856,12 @@ test_file_operations_differential: \
 	@$(call functionVerifyParameter,BAR_FILE)
 	#
 	$(RMRF) $(TEST_FILES_CLEAN)
-	SSH_ASKPASS= $(TEST_BAR) -c test/$(BAR_FILE)-full.bar --full --incremental-list-file=test/$(BAR_FILE).bid test/data test/new $(OPTIONS) --overwrite-archive-files --verbose=2 $(if $(QUIET),1>/dev/null)
+	SSH_ASKPASS= $(TEST_BAR) -c test/$(BAR_FILE)-full.bar --full --incremental-list-file=test/$(BAR_FILE).bid test/data test/new $(BAR_OPTIONS) --overwrite-archive-files --verbose=2 $(if $(QUIET),1>/dev/null)
 	$(INSTALL) -d test/new; $(CP) test/data/random1024.dat test/new/random1024-new.dat
-	SSH_ASKPASS= $(TEST_BAR) -c test/$(BAR_FILE)-differential.bar --differential --incremental-list-file=test/$(BAR_FILE).bid test/data test/new $(OPTIONS) --overwrite-archive-files --verbose=2 $(if $(QUIET),1>/dev/null)
-	SSH_ASKPASS= $(TEST_BAR) -t test/test*.bar $(OPTIONS) $(if $(QUIET),1>/dev/null)
-	SSH_ASKPASS= $(TEST_BAR) -d test/test*.bar $(OPTIONS) $(if $(QUIET),1>/dev/null)
-	SSH_ASKPASS= $(TEST_BAR) -x test/test*.bar $(OPTIONS) --destination test/restore $(if $(QUIET),1>/dev/null)
+	SSH_ASKPASS= $(TEST_BAR) -c test/$(BAR_FILE)-differential.bar --differential --incremental-list-file=test/$(BAR_FILE).bid test/data test/new $(BAR_OPTIONS) --overwrite-archive-files --verbose=2 $(if $(QUIET),1>/dev/null)
+	SSH_ASKPASS= $(TEST_BAR) -t test/test*.bar $(BAR_OPTIONS) $(if $(QUIET),1>/dev/null)
+	SSH_ASKPASS= $(TEST_BAR) -d test/test*.bar $(BAR_OPTIONS) $(if $(QUIET),1>/dev/null)
+	SSH_ASKPASS= $(TEST_BAR) -x test/test*.bar $(BAR_OPTIONS) --destination test/restore $(if $(QUIET),1>/dev/null)
 
 .PHONY: test_file_operations_destroyed
 test_file_operations_destroyed: \
@@ -873,15 +873,15 @@ test_file_operations_destroyed: \
 	@$(call functionVerifyParameter,BAR_FILE)
 	#
 	$(RMRF) $(TEST_FILES_CLEAN)
-	SSH_ASKPASS= $(TEST_BAR) -c test/$(BAR_FILE).bar test/data $(OPTIONS) --overwrite-archive-files --verbose=2 $(if $(QUIET),1>/dev/null)
+	SSH_ASKPASS= $(TEST_BAR) -c test/$(BAR_FILE).bar test/data $(BAR_OPTIONS) --overwrite-archive-files --verbose=2 $(if $(QUIET),1>/dev/null)
 	$(LS) test/*.bar|while read fileName; do $(TEST_DESTROYER) $$fileName m:16:FIL0 > $${fileName}_destroyed; done
-	! `SSH_ASKPASS= $(TEST_BAR) -t test/test*.bar_destroyed $(OPTIONS) 1>/dev/null 2>/dev/null` $(if $(QUIET),1>/dev/null)
+	! `SSH_ASKPASS= $(TEST_BAR) -t test/test*.bar_destroyed $(BAR_OPTIONS) 1>/dev/null 2>/dev/null` $(if $(QUIET),1>/dev/null)
 	$(LS) test/*.bar|while read fileName; do $(TEST_DESTROYER) $$fileName m:20:XXXX > $${fileName}_destroyed; done
-	! `SSH_ASKPASS= $(TEST_BAR) -t test/test.bar_destroyed $(OPTIONS) 1>/dev/null 2>/dev/null` $(if $(QUIET),1>/dev/null)
+	! `SSH_ASKPASS= $(TEST_BAR) -t test/test.bar_destroyed $(BAR_OPTIONS) 1>/dev/null 2>/dev/null` $(if $(QUIET),1>/dev/null)
 	$(LS) test/*.bar|while read fileName; do $(TEST_DESTROYER) $$fileName m:32:XXXX > $${fileName}_destroyed; done
-	! `SSH_ASKPASS= $(TEST_BAR) -t test/test.bar_destroyed $(OPTIONS) 1>/dev/null 2>/dev/null` $(if $(QUIET),1>/dev/null)
+	! `SSH_ASKPASS= $(TEST_BAR) -t test/test.bar_destroyed $(BAR_OPTIONS) 1>/dev/null 2>/dev/null` $(if $(QUIET),1>/dev/null)
 	$(LS) test/*.bar|while read fileName; do $(TEST_DESTROYER) $$fileName d:1000:10 > $${fileName}_destroyed; done
-	! `SSH_ASKPASS= $(TEST_BAR) -t test/test.bar_destroyed $(OPTIONS) 1>/dev/null 2>/dev/null` $(if $(QUIET),1>/dev/null)
+	! `SSH_ASKPASS= $(TEST_BAR) -t test/test.bar_destroyed $(BAR_OPTIONS) 1>/dev/null 2>/dev/null` $(if $(QUIET),1>/dev/null)
 
 # helper function to create test file with data
 # call functionTestFileCreate,<data device>,<file>,<size>
@@ -1025,7 +1025,7 @@ test_image_operations_raw:
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
-          OPTIONS="$(if $(OPTIONS),$(OPTIONS) --raw-images,--compress-algorithm=none --crypt-algorithm=none --raw-images)" \
+          BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS) --raw-images,--compress-algorithm=none --crypt-algorithm=none --raw-images)" \
           test_image_operations_base
 	$(RMF) test/dev1.dat
 	$(RMF) test/dev0.dat
@@ -1038,7 +1038,7 @@ test_image_operations_raw:
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
-          OPTIONS="$(if $(OPTIONS),$(OPTIONS) --raw-images,--compress-algorithm=none --crypt-algorithm=none --raw-images)" \
+          BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS) --raw-images,--compress-algorithm=none --crypt-algorithm=none --raw-images)" \
           test_image_operations_base
 	$(RMF) test/dev1.dat
 	$(RMF) test/dev0.dat
@@ -1052,7 +1052,7 @@ test_image_operations_raw:
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
-          OPTIONS="$(if $(OPTIONS),$(OPTIONS) --raw-images,--compress-algorithm=none --crypt-algorithm=none --raw-images)" \
+          BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS) --raw-images,--compress-algorithm=none --crypt-algorithm=none --raw-images)" \
           test_image_operations_delta
 	$(RMF) test/dev1.dat
 	$(RMF) test/dev0b.dat
@@ -1112,7 +1112,7 @@ ifneq (@MKFS_EXT2@,)
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
-          OPTIONS="$(if $(OPTIONS),$(OPTIONS) --raw-images,--compress-algorithm=none --crypt-algorithm=none --raw-images)" \
+          BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS) --raw-images,--compress-algorithm=none --crypt-algorithm=none --raw-images)" \
           test_image_operations_delta
 	$(RMF) test/dev1.dat
 	$(RMF) test/dev0b.dat
@@ -1160,7 +1160,7 @@ ifneq (@MKFS_EXT2@,)
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
-          OPTIONS="$(if $(OPTIONS),$(OPTIONS) --raw-images,--compress-algorithm=none --crypt-algorithm=none --raw-images)" \
+          BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS) --raw-images,--compress-algorithm=none --crypt-algorithm=none --raw-images)" \
           test_image_operations_delta
 	$(RMF) test/dev1.dat
 	$(RMF) test/dev0b.dat
@@ -1208,7 +1208,7 @@ ifneq (@MKFS_EXT2@,)
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
-          OPTIONS="$(if $(OPTIONS),$(OPTIONS) --raw-images,--compress-algorithm=none --crypt-algorithm=none --raw-images)" \
+          BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS) --raw-images,--compress-algorithm=none --crypt-algorithm=none --raw-images)" \
           test_image_operations_delta
 	$(RMF) test/dev1.dat
 	$(RMF) test/dev0b.dat
@@ -1256,7 +1256,7 @@ ifneq (@MKFS_EXT2@,)
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
-          OPTIONS="$(if $(OPTIONS),$(OPTIONS) --raw-images,--compress-algorithm=none --crypt-algorithm=none --raw-images)" \
+          BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS) --raw-images,--compress-algorithm=none --crypt-algorithm=none --raw-images)" \
           test_image_operations_delta
 	$(RMF) test/dev1.dat
 	$(RMF) test/dev0b.dat
@@ -1311,7 +1311,7 @@ ifneq (@MKFS_EXT3@,)
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
-          OPTIONS="$(if $(OPTIONS),$(OPTIONS) --raw-images,--compress-algorithm=none --crypt-algorithm=none --raw-images)" \
+          BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS) --raw-images,--compress-algorithm=none --crypt-algorithm=none --raw-images)" \
           test_image_operations_delta
 	$(RMF) test/dev1.dat
 	$(RMF) test/dev0b.dat
@@ -1359,7 +1359,7 @@ ifneq (@MKFS_EXT3@,)
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
-          OPTIONS="$(if $(OPTIONS),$(OPTIONS) --raw-images,--compress-algorithm=none --crypt-algorithm=none --raw-images)" \
+          BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS) --raw-images,--compress-algorithm=none --crypt-algorithm=none --raw-images)" \
           test_image_operations_delta
 	$(RMF) test/dev1.dat
 	$(RMF) test/dev0b.dat
@@ -1407,7 +1407,7 @@ ifneq (@MKFS_EXT3@,)
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
-          OPTIONS="$(if $(OPTIONS),$(OPTIONS) --raw-images,--compress-algorithm=none --crypt-algorithm=none --raw-images)" \
+          BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS) --raw-images,--compress-algorithm=none --crypt-algorithm=none --raw-images)" \
           test_image_operations_delta
 	$(RMF) test/dev1.dat
 	$(RMF) test/dev0b.dat
@@ -1455,7 +1455,7 @@ ifneq (@MKFS_EXT3@,)
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
-          OPTIONS="$(if $(OPTIONS),$(OPTIONS) --raw-images,--compress-algorithm=none --crypt-algorithm=none --raw-images)" \
+          BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS) --raw-images,--compress-algorithm=none --crypt-algorithm=none --raw-images)" \
           test_image_operations_delta
 	$(RMF) test/dev1.dat
 	$(RMF) test/dev0b.dat
@@ -1510,7 +1510,7 @@ ifneq (@MKFS_EXT4@,)
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
-          OPTIONS="$(if $(OPTIONS),$(OPTIONS) --raw-images,--compress-algorithm=none --crypt-algorithm=none --raw-images)" \
+          BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS) --raw-images,--compress-algorithm=none --crypt-algorithm=none --raw-images)" \
           test_image_operations_delta
 	$(RMF) test/dev1.dat
 	$(RMF) test/dev0b.dat
@@ -1558,7 +1558,7 @@ ifneq (@MKFS_EXT4@,)
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
-          OPTIONS="$(if $(OPTIONS),$(OPTIONS) --raw-images,--compress-algorithm=none --crypt-algorithm=none --raw-images)" \
+          BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS) --raw-images,--compress-algorithm=none --crypt-algorithm=none --raw-images)" \
           test_image_operations_delta
 	$(RMF) test/dev1.dat
 	$(RMF) test/dev0b.dat
@@ -1606,7 +1606,7 @@ ifneq (@MKFS_EXT4@,)
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
-          OPTIONS="$(if $(OPTIONS),$(OPTIONS) --raw-images,--compress-algorithm=none --crypt-algorithm=none --raw-images)" \
+          BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS) --raw-images,--compress-algorithm=none --crypt-algorithm=none --raw-images)" \
           test_image_operations_delta
 	$(RMF) test/dev1.dat
 	$(RMF) test/dev0b.dat
@@ -1664,7 +1664,7 @@ ifneq (@MKFS_EXT4@,)
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
-          OPTIONS="$(if $(OPTIONS),$(OPTIONS) --raw-images,--compress-algorithm=none --crypt-algorithm=none --raw-images)" \
+          BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS) --raw-images,--compress-algorithm=none --crypt-algorithm=none --raw-images)" \
           test_image_operations_delta
 	$(RMF) test/dev1.dat
 	$(RMF) test/dev0b.dat
@@ -1725,7 +1725,7 @@ ifneq (@MKFS_MSDOS@,)
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
-          OPTIONS="$(if $(OPTIONS),$(OPTIONS) --raw-images,--compress-algorithm=none --crypt-algorithm=none --raw-images)" \
+          BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS) --raw-images,--compress-algorithm=none --crypt-algorithm=none --raw-images)" \
           test_image_operations_delta
 	$(RMF) test/dev1.dat
 	$(RMF) test/dev0b.dat
@@ -1780,7 +1780,7 @@ ifneq (@MKFS_MSDOS@,)
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
-          OPTIONS="$(if $(OPTIONS),$(OPTIONS) --raw-images,--compress-algorithm=none --crypt-algorithm=none --raw-images)" \
+          BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS) --raw-images,--compress-algorithm=none --crypt-algorithm=none --raw-images)" \
           test_image_operations_delta
 	$(RMF) test/dev1.dat
 	$(RMF) test/dev0b.dat
@@ -1835,7 +1835,7 @@ ifneq (@MKFS_MSDOS@,)
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
-          OPTIONS="$(if $(OPTIONS),$(OPTIONS) --raw-images,--compress-algorithm=none --crypt-algorithm=none --raw-images)" \
+          BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS) --raw-images,--compress-algorithm=none --crypt-algorithm=none --raw-images)" \
           test_image_operations_delta
 	$(RMF) test/dev1.dat
 	$(RMF) test/dev0b.dat
@@ -1874,6 +1874,7 @@ ifneq (@MKFS_REISERFS@,)
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
+          FSCK_OPTIONS="-n -y" \
           test_image_operations_base \
           test_image_operations_check \
           test_image_operations_diff_image
@@ -1889,6 +1890,7 @@ ifneq (@MKFS_REISERFS@,)
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
+          FSCK_OPTIONS="-n -y" \
           test_image_operations_base \
           test_image_operations_check
 	$(RMF) test/dev1.dat
@@ -1903,6 +1905,7 @@ ifneq (@MKFS_REISERFS@,)
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
+          FSCK_OPTIONS="-n -y" \
           test_image_operations_base \
           test_image_operations_check \
           test_image_operations_diff_image
@@ -1918,6 +1921,7 @@ ifneq (@MKFS_REISERFS@,)
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
+          FSCK_OPTIONS="-n -y" \
           test_image_operations_base \
           test_image_operations_check
 	$(RMF) test/dev1.dat
@@ -1934,7 +1938,7 @@ ifneq (@MKFS_REISERFS@,)
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
-          OPTIONS="$(if $(OPTIONS),$(OPTIONS) --raw-images,--compress-algorithm=none --crypt-algorithm=none --raw-images)" \
+          BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS) --raw-images,--compress-algorithm=none --crypt-algorithm=none --raw-images)" \
           test_image_operations_delta
 	$(RMF) test/dev1.dat
 	$(RMF) test/dev0b.dat
@@ -1962,13 +1966,13 @@ test_image_operations_base: \
 	$(RMRF) $(TEST_FILES_CLEAN)
 	@
 	$(call functionTestDeviceCreate,$(DEVICE0),$(IMAGE0),test/dev0)
-	SSH_ASKPASS= $(TEST_BAR) -m test/$(BAR_FILE).bar $(DEVICE0) $(if $(OPTIONS),$(OPTIONS),--compress-algorithm=none --crypt-algorithm=none) --overwrite-archive-files --verbose=2 $(if $(QUIET),1>/dev/null)
-	SSH_ASKPASS= $(TEST_BAR) -t test/test*.bar $(OPTIONS) $(if $(QUIET),1>/dev/null)
-	SSH_ASKPASS= $(TEST_BAR) -d test/test*.bar $(OPTIONS) $(if $(QUIET),1>/dev/null)
+	SSH_ASKPASS= $(TEST_BAR) -m test/$(BAR_FILE).bar $(DEVICE0) $(if $(BAR_OPTIONS),$(BAR_OPTIONS),--compress-algorithm=none --crypt-algorithm=none) --overwrite-archive-files --verbose=2 $(if $(QUIET),1>/dev/null)
+	SSH_ASKPASS= $(TEST_BAR) -t test/test*.bar $(BAR_OPTIONS) $(if $(QUIET),1>/dev/null)
+	SSH_ASKPASS= $(TEST_BAR) -d test/test*.bar $(BAR_OPTIONS) $(if $(QUIET),1>/dev/null)
 	$(call functionTestDeviceDelete,$(DEVICE0),test/dev0)
 	@
 	$(call functionTestDeviceCreate,$(DEVICE1),$(IMAGE1),test/dev1)
-	SSH_ASKPASS= $(TEST_BAR) -x test/test*.bar $(OPTIONS) --destination $(DEVICE1) $(if $(QUIET),1>/dev/null)
+	SSH_ASKPASS= $(TEST_BAR) -x test/test*.bar $(BAR_OPTIONS) --destination $(DEVICE1) $(if $(QUIET),1>/dev/null)
 	$(call functionTestDeviceDelete,$(DEVICE1),test/dev1)
 	#
 
@@ -1989,34 +1993,34 @@ test_image_operations_delta: \
 	$(RMRF) $(TEST_FILES_CLEAN)
 	@
 	$(call functionTestDeviceCreate,$(DEVICE0),$(IMAGE0_A),test/dev0)
-	SSH_ASKPASS= $(TEST_BAR) -m test/$(BAR_FILE)-A.bar $(DEVICE0) $(OPTIONS) --overwrite-archive-files --verbose=2 $(if $(QUIET),1>/dev/null)
+	SSH_ASKPASS= $(TEST_BAR) -m test/$(BAR_FILE)-A.bar $(DEVICE0) $(BAR_OPTIONS) --overwrite-archive-files --verbose=2 $(if $(QUIET),1>/dev/null)
 	$(call functionTestDeviceDelete,$(DEVICE0),test/dev0)
 	@
 	$(call functionTestDeviceCreate,$(DEVICE0),$(IMAGE0_B),test/dev0)
-	SSH_ASKPASS= $(TEST_BAR) -m test/$(BAR_FILE)-B.bar $(DEVICE0) --delta-source='test/$(BAR_PATTERN)-A.bar' $(OPTIONS) --compress-algorithm=xdelta9 --force-delta-compression --overwrite-archive-files --verbose=2 $(if $(QUIET),1>/dev/null)
-	SSH_ASKPASS= $(TEST_BAR) -t test/$(BAR_PATTERN)-B.bar $(OPTIONS) $(if $(QUIET),1>/dev/null)
-	SSH_ASKPASS= $(TEST_BAR) -d test/$(BAR_PATTERN)-B.bar $(OPTIONS) $(if $(QUIET),1>/dev/null)
+	SSH_ASKPASS= $(TEST_BAR) -m test/$(BAR_FILE)-B.bar $(DEVICE0) --delta-source='test/$(BAR_PATTERN)-A.bar' $(BAR_OPTIONS) --compress-algorithm=xdelta9 --force-delta-compression --overwrite-archive-files --verbose=2 $(if $(QUIET),1>/dev/null)
+	SSH_ASKPASS= $(TEST_BAR) -t test/$(BAR_PATTERN)-B.bar $(BAR_OPTIONS) $(if $(QUIET),1>/dev/null)
+	SSH_ASKPASS= $(TEST_BAR) -d test/$(BAR_PATTERN)-B.bar $(BAR_OPTIONS) $(if $(QUIET),1>/dev/null)
 	$(call functionTestDeviceDelete,$(DEVICE0),test/dev0)
 	@
 	$(call functionTestDeviceCreate,$(DEVICE1),$(IMAGE1),test/dev1)
-	SSH_ASKPASS= $(TEST_BAR) -x test/$(BAR_PATTERN)-B.bar $(OPTIONS) --destination $(DEVICE1) $(if $(QUIET),1>/dev/null)
+	SSH_ASKPASS= $(TEST_BAR) -x test/$(BAR_PATTERN)-B.bar $(BAR_OPTIONS) --destination $(DEVICE1) $(if $(QUIET),1>/dev/null)
 	$(call functionTestDeviceDelete,$(DEVICE1),test/dev1)
 	@
 	@# ---
 	$(RMRF) $(TEST_FILES_CLEAN)
 	@
 	$(call functionTestDeviceCreate,$(DEVICE0),$(IMAGE0_A),test/dev0)
-	SSH_ASKPASS= $(TEST_BAR) -m test/$(BAR_FILE)-A.bar $(DEVICE0) $(OPTIONS) --compress-algorithm=zip9 --overwrite-archive-files --verbose=2 $(if $(QUIET),1>/dev/null)
+	SSH_ASKPASS= $(TEST_BAR) -m test/$(BAR_FILE)-A.bar $(DEVICE0) $(BAR_OPTIONS) --compress-algorithm=zip9 --overwrite-archive-files --verbose=2 $(if $(QUIET),1>/dev/null)
 	$(call functionTestDeviceDelete,$(DEVICE0),test/dev0)
 	@
 	$(call functionTestDeviceCreate,$(DEVICE0),$(IMAGE0_B),test/dev0)
-	SSH_ASKPASS= $(TEST_BAR) -m test/$(BAR_FILE)-B.bar $(DEVICE0) --delta-source='test/$(BAR_PATTERN)-A.bar' $(OPTIONS) --compress-algorithm=xdelta9+zip9 --force-delta-compression --overwrite-archive-files --verbose=2 $(if $(QUIET),1>/dev/null)
-	SSH_ASKPASS= $(TEST_BAR) -t test/$(BAR_PATTERN)-B.bar $(OPTIONS) $(if $(QUIET),1>/dev/null)
-	SSH_ASKPASS= $(TEST_BAR) -d test/$(BAR_PATTERN)-B.bar $(OPTIONS) $(if $(QUIET),1>/dev/null)
+	SSH_ASKPASS= $(TEST_BAR) -m test/$(BAR_FILE)-B.bar $(DEVICE0) --delta-source='test/$(BAR_PATTERN)-A.bar' $(BAR_OPTIONS) --compress-algorithm=xdelta9+zip9 --force-delta-compression --overwrite-archive-files --verbose=2 $(if $(QUIET),1>/dev/null)
+	SSH_ASKPASS= $(TEST_BAR) -t test/$(BAR_PATTERN)-B.bar $(BAR_OPTIONS) $(if $(QUIET),1>/dev/null)
+	SSH_ASKPASS= $(TEST_BAR) -d test/$(BAR_PATTERN)-B.bar $(BAR_OPTIONS) $(if $(QUIET),1>/dev/null)
 	$(call functionTestDeviceDelete,$(DEVICE0),test/dev0)
 	@
 	$(call functionTestDeviceCreate,$(DEVICE1),$(IMAGE1),test/dev1)
-	SSH_ASKPASS= $(TEST_BAR) -x test/$(BAR_PATTERN)-B.bar $(OPTIONS) --destination $(DEVICE1) $(if $(QUIET),1>/dev/null)
+	SSH_ASKPASS= $(TEST_BAR) -x test/$(BAR_PATTERN)-B.bar $(BAR_OPTIONS) --destination $(DEVICE1) $(if $(QUIET),1>/dev/null)
 	$(call functionTestDeviceDelete,$(DEVICE1),test/dev1)
 	#
 
@@ -2030,11 +2034,11 @@ test_image_operations_check:
 	@
 	@# ---
 	$(call functionTestDeviceCreate,$(DEVICE0),$(IMAGE0),test/dev0)
-	$(FSCK) -n -y $(DEVICE0) $(if $(QUIET),1>/dev/null 2>/dev/null)
+	$(FSCK) $(if $(FSCK_OPTIONS),$(FSCK_OPTIONS),-n) $(DEVICE0) $(if $(QUIET),1>/dev/null 2>/dev/null)
 	$(call functionTestDeviceDelete,$(DEVICE0),test/dev0)
 	@
 	$(call functionTestDeviceCreate,$(DEVICE1),$(IMAGE1),test/dev1)
-	$(FSCK) -n -y $(DEVICE1) $(if $(QUIET),1>/dev/null 2>/dev/null)
+	$(FSCK) $(if $(FSCK_OPTIONS),$(FSCK_OPTIONS),-n) $(DEVICE1) $(if $(QUIET),1>/dev/null 2>/dev/null)
 	$(call functionTestDeviceDelete,$(DEVICE1),test/dev1)
 	@
 	$(call functionDeviceMount,$(DEVICE0),$(IMAGE0),test/dev0)
@@ -2076,9 +2080,9 @@ test_dvd_operations: \
 	@# ---
 	$(RMRF) $(TEST_FILES_CLEAN)
 	$(SLEEP) 30
-	SSH_ASKPASS= $(TEST_BAR) -c dvd://$(BAR_FILE).bar test/data $(if $(OPTIONS),$(OPTIONS),--compress-algorithm=none --crypt-algorithm=none) $(if $(QUIET),1>/dev/null)
+	SSH_ASKPASS= $(TEST_BAR) -c dvd://$(BAR_FILE).bar test/data $(if $(BAR_OPTIONS),$(BAR_OPTIONS),--compress-algorithm=none --crypt-algorithm=none) $(if $(QUIET),1>/dev/null)
 	$(SLEEP) 30
-	SSH_ASKPASS= $(TEST_BAR) -c dvd://$(BAR_FILE).bar test/data $(if $(OPTIONS),$(OPTIONS),--compress-algorithm=none --crypt-algorithm=none) --ecc $(if $(QUIET),1>/dev/null)
+	SSH_ASKPASS= $(TEST_BAR) -c dvd://$(BAR_FILE).bar test/data $(if $(BAR_OPTIONS),$(BAR_OPTIONS),--compress-algorithm=none --crypt-algorithm=none) --ecc $(if $(QUIET),1>/dev/null)
 	#
 
 # ----------------------------------------------------------------------------
@@ -2122,67 +2126,67 @@ memcheck2a: bar
           --track-fds=yes \
           --suppressions=valgrind.supp \
           $(VALGRIND_OPTIONS) \
-          ./bar -c test/test.bar test/data $(OPTIONS) --overwrite-archive-files > /dev/null
+          ./bar -c test/test.bar test/data $(BAR_OPTIONS) --overwrite-archive-files > /dev/null
 memcheck2b: bar
 	valgrind \
           --leak-resolution=high \
           --track-fds=yes \
           --suppressions=valgrind.supp \
           $(VALGRIND_OPTIONS) \
-          ./bar -c test/test.bar test/data $(OPTIONS) --compress-algorithm=bzip9 --overwrite-archive-files > /dev/null
+          ./bar -c test/test.bar test/data $(BAR_OPTIONS) --compress-algorithm=bzip9 --overwrite-archive-files > /dev/null
 memcheck2c: bar
 	valgrind \
           --leak-resolution=high \
           --track-fds=yes \
           --suppressions=valgrind.supp \
           $(VALGRIND_OPTIONS) \
-          ./bar -c test/test.bar test/data $(OPTIONS) --crypt-algorithm=AES256 --crypt-password=$(TEST_PASSWORD) --overwrite-archive-files > /dev/null
+          ./bar -c test/test.bar test/data $(BAR_OPTIONS) --crypt-algorithm=AES256 --crypt-password=$(TEST_PASSWORD) --overwrite-archive-files > /dev/null
 memcheck2d: bar
 	valgrind \
           --leak-resolution=high \
           --track-fds=yes \
           --suppressions=valgrind.supp \
           $(VALGRIND_OPTIONS) \
-          ./bar -c test/test.bar test/data $(OPTIONS) --compress-algorithm=none --crypt-algorithm=AES256 --crypt-password=$(TEST_PASSWORD) --crypt-type=asymmetric --crypt-public-key=$(PWD)/test/key.public --crypt-private-key=$(PWD)/test/key.private --overwrite-archive-files > /dev/null
+          ./bar -c test/test.bar test/data $(BAR_OPTIONS) --compress-algorithm=none --crypt-algorithm=AES256 --crypt-password=$(TEST_PASSWORD) --crypt-type=asymmetric --crypt-public-key=$(PWD)/test/key.public --crypt-private-key=$(PWD)/test/key.private --overwrite-archive-files > /dev/null
 memcheck2e: bar
 	valgrind \
           --leak-resolution=high \
           --track-fds=yes \
           --suppressions=valgrind.supp \
           $(VALGRIND_OPTIONS) \
-          ./bar -c test/test-###.bar test/data $(OPTIONS) --archive-part-size=100000 --overwrite-archive-files > /dev/null
+          ./bar -c test/test-###.bar test/data $(BAR_OPTIONS) --archive-part-size=100000 --overwrite-archive-files > /dev/null
 memcheck3: bar
-	./bar -c test/test.bar test/data $(OPTIONS) --overwrite-archive-files > /dev/null
+	./bar -c test/test.bar test/data $(BAR_OPTIONS) --overwrite-archive-files > /dev/null
 	valgrind \
           --leak-resolution=high \
           --track-fds=yes \
           --suppressions=valgrind.supp \
           $(VALGRIND_OPTIONS) \
-          ./bar -l test/test*.bar $(OPTIONS) > /dev/null
+          ./bar -l test/test*.bar $(BAR_OPTIONS) > /dev/null
 memcheck4: bar
-	./bar -c test/test.bar test/data $(OPTIONS) --overwrite-archive-files > /dev/null
+	./bar -c test/test.bar test/data $(BAR_OPTIONS) --overwrite-archive-files > /dev/null
 	valgrind \
           --leak-resolution=high \
           --track-fds=yes \
           --suppressions=valgrind.supp \
           $(VALGRIND_OPTIONS) \
-          ./bar -t test/test*.bar $(OPTIONS) > /dev/null
+          ./bar -t test/test*.bar $(BAR_OPTIONS) > /dev/null
 memcheck5: bar
-	./bar -c test/test.bar test/data $(OPTIONS) --overwrite-archive-files > /dev/null
+	./bar -c test/test.bar test/data $(BAR_OPTIONS) --overwrite-archive-files > /dev/null
 	valgrind \
           --leak-resolution=high \
           --track-fds=yes \
           --suppressions=valgrind.supp \
           $(VALGRIND_OPTIONS) \
-          ./bar -d test/test*.bar $(OPTIONS) > /dev/null
+          ./bar -d test/test*.bar $(BAR_OPTIONS) > /dev/null
 memcheck6: bar
-	./bar -c test/test.bar test/data $(OPTIONS) --overwrite-archive-files > /dev/null
+	./bar -c test/test.bar test/data $(BAR_OPTIONS) --overwrite-archive-files > /dev/null
 	valgrind \
           --leak-resolution=high \
           --track-fds=yes \
           --suppressions=valgrind.supp \
           $(VALGRIND_OPTIONS) \
-          ./bar -x test/test*.bar $(OPTIONS) --destination test/restore > /dev/null
+          ./bar -x test/test*.bar $(BAR_OPTIONS) --destination test/restore > /dev/null
 memcheck7: bar
 	valgrind \
           --leak-resolution=high \
