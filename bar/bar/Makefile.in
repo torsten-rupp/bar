@@ -267,6 +267,7 @@ help:
 	@$(ECHO) "  test_combined"
 	@$(ECHO) "  test_parameters"
 	@$(ECHO) ""
+	@$(ECHO) "  test_image_operations"
 	@$(ECHO) "  test_image_operations_raw"
 	@$(ECHO) "  test_image_operations_ext"
 	@$(ECHO) "  test_image_operations_fat"
@@ -881,63 +882,125 @@ test_file_operations_destroyed: \
 	$(LS) test/*.bar|while read fileName; do $(TEST_DESTROYER) $$fileName d:1000:10 > $${fileName}_destroyed; done
 	! `SSH_ASKPASS= $(TEST_BAR) -t test/test.bar_destroyed $(OPTIONS) 1>/dev/null 2>/dev/null` $(if $(QUIET),1>/dev/null)
 
-# helper function to create a test device
-# call functionTestDeviceCreate,<loop device>,<file>,<mount point>
-functionTestDeviceCreate = \
-  ( \
-    $(SUDO) $(UMOUNT) $3 2>/dev/null; \
-    $(SUDO) $(LOSETUP) -d $1 2>/dev/null; \
-    $(SUDO) $(LOSETUP) $1 $2; rc=$$?; if test $$rc -ne 0; then exit $$rc; fi; \
-    $(SUDO) $(CHMOD) o+rw $1; \
-  )
-
-# helper function to delete a test device
-# call functionTestDeviceDelete,<loop device>,<file>,<mount point>
-functionTestDeviceDelete = \
-  ( \
-    $(SUDO) $(UMOUNT) $3 2>/dev/null; \
-    $(SUDO) $(LOSETUP) -d $1; \
-    $(RMF) $2; \
-  )
-
 # helper function to create test file with data
-# call functionTestFile,<data device>,<file>,<size>
-functionTestFile = \
+# call functionTestFileCreate,<data device>,<file>,<size>
+functionTestFileCreate = \
   ( \
     $(DD) if=$1 of=$2 bs=$3 count=1 2>/dev/null; rc=$$?; if test $$rc -ne 0; then exit $$rc; fi; \
   )
 
+# helper function to create a test device
+# call functionTestDeviceReset
+functionTestDeviceReset = \
+  @( \
+    $(ECHO) $(UMOUNT) test/dev0; \
+    $(SUDO) $(UMOUNT) test/dev0 2>/dev/null; \
+    $(ECHO) $(UMOUNT) test/dev1; \
+    $(SUDO) $(UMOUNT) test/dev1 2>/dev/null; \
+    $(ECHO) $(LOSETUP) -d $(LOOP0); \
+    $(SUDO) $(LOSETUP) -d $(LOOP0) 2>/dev/null; \
+    $(ECHO) $(LOSETUP) -d $(LOOP1); \
+    $(SUDO) $(LOSETUP) -d $(LOOP1) 2>/dev/null; \
+    true; \
+  ) $(if $(QUIET),1>/dev/null 2>/dev/null)
+
+# helper function to create test file with data
+# call functionCreateFileZero,<file>,<size>
+functionCreateFileZero = \
+  @( \
+    $(ECHO) $(DD) if=$(DEVICE_ZERO) of=$1 bs=$2 count=1; \
+    $(DD) if=$(DEVICE_ZERO) of=$1 bs=$2 count=1 2>/dev/null; rc=$$?; if test $$rc -ne 0; then exit $$rc; fi; \
+  ) $(if $(QUIET),1>/dev/null 2>/dev/null)
+
 # helper function to create huge spare test file
-# call functionTestDeviceHugeSpare,<file>,<size>
-functionTestDeviceHugeSpare = \
-  ( \
+# call functionCreateFileSpare,<file>,<size>
+functionCreateFileSpare = \
+  @( \
+    $(ECHO) $(DD) if=$(DEVICE_ZERO) of=$1 seek=$2 bs=1 count=1; \
     $(DD) if=$(DEVICE_ZERO) of=$1 seek=$2 bs=1 count=1 2>/dev/null; rc=$$?; if test $$rc -ne 0; then exit $$rc; fi; \
-  )
+  ) $(if $(QUIET),1>/dev/null 2>/dev/null)
+
+# helper function to create test file with data
+# call functionCreateFileRandom,<file>,<size>
+functionCreateFileRandom = \
+  @( \
+    $(ECHO) $(DD) if=$(DEVICE_RANDOM) of=$1 bs=$2 count=1; \
+    $(DD) if=$(DEVICE_RANDOM) of=$1 bs=$2 count=1 2>/dev/null; rc=$$?; if test $$rc -ne 0; then exit $$rc; fi; \
+  ) $(if $(QUIET),1>/dev/null 2>/dev/null)
+
+# helper function to create a test device
+# call functionTestDeviceCreate,<loop device>,<file>,<mount point>
+functionTestDeviceCreate = \
+  @( \
+    $(ECHO) $(LOSETUP) $1 $2; \
+    $(SUDO) $(LOSETUP) $1 $2; rc=$$?; if test $$rc -ne 0; then exit $$rc; fi; \
+    $(ECHO) $(CHMOD) o+rw $1; \
+    $(SUDO) $(CHMOD) o+rw $1; \
+  ) $(if $(QUIET),1>/dev/null 2>/dev/null)
+
+# helper function to delete a test device
+# call functionTestDeviceDelete,<loop device>,<mount point>
+functionTestDeviceDelete = \
+  @( \
+    $(ECHO) $(LOSETUP) -d $1; \
+    $(SUDO) $(LOSETUP) -d $1; \
+  ) $(if $(QUIET),1>/dev/null 2>/dev/null)
 
 # helper function to initialize file system on a test device
-# call functionTestDeviceInitFilesystem,<loop device>,<mkfs options>,<mount point>
-functionTestDeviceInitFilesystem = \
-  ( \
-    $(if $3,$(SUDO) $(UMOUNT) $3 2>/dev/null;) \
-    $(SUDO) $(MKFS) $2 $1 $(if $(QUIET),1>/dev/null 2>/dev/null); \
-    $(if $3,($(INSTALL) -d $3 2>/dev/null; \
-             $(SUDO) $(MOUNT) $1 $3; rc=$$?; if test $$rc -ne 0; then exit $$rc; fi; \
-             $(SUDO) $(CP) -r -p test/data/random*.dat $3 $(if $(QUIET),1>/dev/null 2>/dev/null); \
-             $(SUDO) $(CP) -r -p test/data/zero*.dat $3 $(if $(QUIET),1>/dev/null 2>/dev/null); \
-             $(SUDO) $(CP) -r -p test/data/readonly*.dat $3 $(if $(QUIET),1>/dev/null 2>/dev/null); \
-             $(SUDO) $(CP) -r -p test/data/file*.dat $3 $(if $(QUIET),1>/dev/null 2>/dev/null); \
-             $(SLEEP) 5; \
-             $(SUDO) $(UMOUNT) $3; $(RMDIR) $3; \
-            ) \
-     ) \
-  )
+# call functionInitFilesystem,<image file>,<mkfs options>[,<files>]
+functionInitFilesystem = \
+  @( \
+    $(ECHO) $(SUDO) $(LOSETUP) $(LOOP0) $1; \
+    $(SUDO) $(LOSETUP) $(LOOP0) $1; rc=$$?; if test $$rc -ne 0; then exit $$rc; fi; \
+    $(ECHO) $(SUDO) $(CHMOD) o+rw $(LOOP0); \
+    $(SUDO) $(CHMOD) o+rw $(LOOP0); \
+    $(ECHO) $(SUDO) $(MKFS) $2 $(LOOP0); \
+    $(SUDO) $(MKFS) $2 $(LOOP0) 1>/dev/null 2>/dev/null; rc=$$?; if test $$rc -ne 0; then exit $$rc; fi; \
+    $(if $3,$(ECHO) $(INSTALL) -d test/dev0; \
+            $(INSTALL) -d test/dev0; \
+            $(ECHO) $(MOUNT) $(LOOP0) test/dev0; \
+            $(SUDO) $(MOUNT) $(LOOP0) test/dev0; rc=$$?; if test $$rc -ne 0; then exit $$rc; fi; \
+            $(ECHO) $(CP) -r -p $3 test/dev0; \
+            $(SUDO) $(CP) -r -p $3 test/dev0 1>/dev/null 2>/dev/null; \
+            $(SLEEP) 5; \
+            $(ECHO) $(UMOUNT) test/dev0; \
+            $(SUDO) $(UMOUNT) test/dev0; \
+    ) \
+    $(ECHO) $(SUDO) $(LOSETUP) -d $(LOOP0); \
+    $(SUDO) $(LOSETUP) -d $(LOOP0); \
+  ) $(if $(QUIET),1>/dev/null 2>/dev/null)
+
+# helper function to create a test device
+# call functionDeviceMount,<loop device>,<image file>,<mount point>
+functionDeviceMount = \
+  @( \
+    $(ECHO) $(LOSETUP) $1 $2; \
+    $(SUDO) $(LOSETUP) $1 $2; rc=$$?; if test $$rc -ne 0; then exit $$rc; fi; \
+    $(ECHO) $(CHMOD) o+rw $1; \
+    $(SUDO) $(CHMOD) o+rw $1; \
+    $(ECHO) $(INSTALL) -d $3; \
+    $(INSTALL) -d $3; \
+    $(ECHO) $(MOUNT) $1 $3; \
+    $(SUDO) $(MOUNT) $1 $3; rc=$$?; if test $$rc -ne 0; then exit $$rc; fi; \
+  ) $(if $(QUIET),1>/dev/null 2>/dev/null)
+
+# helper function to create a test device
+# call functionDeviceUmount,<loop device>,<mount point>
+functionDeviceUmount = \
+  @( \
+    $(ECHO) $(UMOUNT) $2; \
+    $(SUDO) $(UMOUNT) $2; rc=$$?; if test $$rc -ne 0; then exit $$rc; fi; \
+    $(ECHO) $(LOSETUP) -d $1; \
+    $(SUDO) $(LOSETUP) -d $1; \
+  ) $(if $(QUIET),1>/dev/null 2>/dev/null)
 
 # helper function to dump content of device to file
 # call functionTestDeviceDump,<loop device>,<file>
 functionTestDeviceDump = \
-  ( \
+  @( \
+    $(ECHO) $(DD) if=$1 of=- \> $2; \
     ($(SUDO) $(DD) if=$1 of=-) > $2 2>/dev/null; \
-  )
+  ) $(if $(QUIET),1>/dev/null 2>/dev/null)
 
 .PHONY: test_image_operations
 test_image_operations: \
@@ -951,34 +1014,53 @@ test_image_operations_raw:
 	$(INSTALL) -d test
 	#
 	# raw zero-data
-	$(call functionTestFile,$(DEVICE_ZERO),test/dev0.dat,32M)
-	$(call functionTestFile,$(DEVICE_ZERO),test/dev1.dat,32M)
-	$(call functionTestDeviceCreate,$(LOOP1),test/dev1.dat,test/dev1)
+	$(call functionCreateFileZero,test/dev0.dat,32M)
+	$(call functionCreateFileZero,test/dev1.dat,32M)
 	$(call functionTestDeviceCreate,$(LOOP0),test/dev0.dat,test/dev0)
+	$(call functionTestDeviceCreate,$(LOOP1),test/dev1.dat,test/dev1)
 	$(MAKE) \
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
-          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test-*)" \
+          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           OPTIONS="$(if $(OPTIONS),$(OPTIONS) --raw-images,--compress-algorithm=none --crypt-algorithm=none --raw-images)" \
-          test_image_operations_base \
-          test_image_operations_delta
-	$(call functionTestDeviceDelete,$(LOOP1),test/dev1.dat,test/dev0)
-	$(call functionTestDeviceDelete,$(LOOP0),test/dev0.dat,test/dev1)
+          test_image_operations_base
+	$(call functionTestDeviceDelete,$(LOOP1),test/dev0)
+	$(call functionTestDeviceDelete,$(LOOP0),test/dev1)
+	$(RMF) test/dev1.dat
+	$(RMF) test/dev0.dat
 	#
 	# raw random-data
-	$(call functionTestFile,$(DEVICE_RANDOM),test/dev0.dat,32M)
-	$(call functionTestFile,$(DEVICE_RANDOM),test/dev1.dat,32M)
+	$(call functionCreateFileRandom,test/dev0.dat,32M)
+	$(call functionCreateFileRandom,test/dev1.dat,32M)
 	$(call functionTestDeviceCreate,$(LOOP0),test/dev0.dat,test/dev0)
 	$(call functionTestDeviceCreate,$(LOOP1),test/dev1.dat,test/dev1)
 	$(MAKE) \
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
-          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test-*)" \
+          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           OPTIONS="$(if $(OPTIONS),$(OPTIONS) --raw-images,--compress-algorithm=none --crypt-algorithm=none --raw-images)" \
-          test_image_operations_base \
+          test_image_operations_base
+	$(call functionTestDeviceDelete,$(LOOP1),test/dev1)
+	$(call functionTestDeviceDelete,$(LOOP0),test/dev0)
+	$(RMF) test/dev1.dat
+	$(RMF) test/dev0.dat
+	#
+
+xxx1:
+	# raw random-data delta
+	$(call functionCreateFileRandom,test/dev0a.dat,32M)
+	$(call functionCreateFileRandom,test/dev0b.dat,32M)
+	$(call functionCreateFileRandom,test/dev1.dat,32M)
+	$(MAKE) \
+          IMAGE0_A=test/dev0a.dat IMAGE0_B=test/dev0b.dat IMAGE1=test/dev1.dat \
+          DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
+          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
+          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
+          OPTIONS="$(if $(OPTIONS),$(OPTIONS) --raw-images,--compress-algorithm=none --crypt-algorithm=none --raw-images)" \
           test_image_operations_delta
-	$(call functionTestDeviceDelete,$(LOOP1),test/dev1.dat,test/dev1)
-	$(call functionTestDeviceDelete,$(LOOP0),test/dev0.dat,test/dev0)
+	$(RMF) test/dev1.dat
+	$(RMF) test/dev0b.dat
+	$(RMF) test/dev0a.dat
 
 .PHONY: test_image_ext test_image_ext2 test_image_ext3 test_image_ext4
 test_image_operations_ext: \
@@ -989,425 +1071,608 @@ test_image_operations_ext: \
 # Ext2
 test_image_operations_ext2:
 ifneq (@MKFS_EXT2@,)
+	# --------------------------------------------------------------
+	# ext2
 	$(INSTALL) -d test
-	#
+	$(call functionTestDeviceReset)
+	@
 	# ext2 zero-data, default block size
-	$(call functionTestFile,$(DEVICE_ZERO),test/dev0.dat,32M)
-	$(call functionTestFile,$(DEVICE_ZERO),test/dev1.dat,32M)
-	$(call functionTestDeviceCreate,$(LOOP0),test/dev0.dat,test/dev0)
-	$(call functionTestDeviceCreate,$(LOOP1),test/dev1.dat,test/dev1)
-	$(call functionTestDeviceInitFilesystem,$(LOOP0),-t ext2,test/dev0)
+	$(call functionCreateFileZero,test/dev0.dat,32M)
+	$(call functionCreateFileZero,test/dev1.dat,32M)
+	$(call functionInitFilesystem,test/dev0.dat,-t ext2,test/data/random* test/data/zero*.dat test/data/readonly*.dat test/data/file*.dat)
 	$(MAKE) \
-          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
-          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test-*)" \
+          IMAGE0=test/dev0.dat IMAGE1=test/dev1.dat \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
+          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
+          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
           test_image_operations_base \
           test_image_operations_check \
-          test_image_operations_diff_image \
-          test_image_operations_delta
-	$(call functionTestDeviceDelete,$(LOOP1),test/dev1.dat,test/dev1)
-	$(call functionTestDeviceDelete,$(LOOP0),test/dev0.dat,test/dev0)
-	#
+          test_image_operations_diff_image
+	$(RMF) test/dev1.dat
+	$(RMF) test/dev0.dat
+	@
 	# ext2 random-data, default block size
-	$(call functionTestFile,$(DEVICE_RANDOM),test/dev0.dat,32M)
-	$(call functionTestFile,$(DEVICE_RANDOM),test/dev1.dat,32M)
-	$(call functionTestDeviceCreate,$(LOOP0),test/dev0.dat,test/dev0)
-	$(call functionTestDeviceCreate,$(LOOP1),test/dev1.dat,test/dev1)
-	$(call functionTestDeviceInitFilesystem,$(LOOP0),-t ext2,test/dev0)
+	$(call functionCreateFileRandom,test/dev0.dat,32M)
+	$(call functionCreateFileRandom,test/dev1.dat,32M)
+	$(call functionInitFilesystem,test/dev0.dat,-t ext2,test/data/random* test/data/zero*.dat test/data/readonly*.dat test/data/file*.dat)
 	$(MAKE) \
-          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
-          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test-*)" \
+          IMAGE0=test/dev0.dat IMAGE1=test/dev1.dat \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
+          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
+          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
           test_image_operations_base \
-          test_image_operations_check \
+          test_image_operations_check
+	$(RMF) test/dev1.dat
+	$(RMF) test/dev0.dat
+	@
+	# ext2 random-data, default block size, delta image
+	$(call functionCreateFileZero,test/dev0a.dat,32M)
+	$(call functionCreateFileZero,test/dev0b.dat,32M)
+	$(call functionCreateFileZero,test/dev1.dat,32M)
+	$(call functionInitFilesystem,test/dev0a.dat,-t ext2,test/data/random* test/data/zero*.dat test/data/readonly*.dat test/data/file*.dat)
+	$(call functionInitFilesystem,test/dev0b.dat,-t ext2,test/data/random* test/data/zero*.dat test/data/readonly*.dat test/data/file*.dat)
+	$(MAKE) \
+          IMAGE0_A=test/dev0a.dat IMAGE0_B=test/dev0b.dat IMAGE1=test/dev1.dat \
+          DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
+          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
+          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
+          OPTIONS="$(if $(OPTIONS),$(OPTIONS) --raw-images,--compress-algorithm=none --crypt-algorithm=none --raw-images)" \
           test_image_operations_delta
-	$(call functionTestDeviceDelete,$(LOOP1),test/dev1.dat,test/dev1)
-	$(call functionTestDeviceDelete,$(LOOP0),test/dev0.dat,test/dev0)
-	#
+	$(RMF) test/dev1.dat
+	$(RMF) test/dev0b.dat
+	$(RMF) test/dev0a.dat
+	@
+	@# ---
+	@
 	# ext2 zero-data, block size 1024 bytes
-	$(call functionTestFile,$(DEVICE_ZERO),test/dev0.dat,32M)
-	$(call functionTestFile,$(DEVICE_ZERO),test/dev1.dat,32M)
-	$(call functionTestDeviceCreate,$(LOOP0),test/dev0.dat,test/dev0)
-	$(call functionTestDeviceCreate,$(LOOP1),test/dev1.dat,test/dev1)
-	$(call functionTestDeviceInitFilesystem,$(LOOP0),-t ext2 -b 1024,test/dev0)
+	$(call functionCreateFileZero,test/dev0.dat,32M)
+	$(call functionCreateFileZero,test/dev1.dat,32M)
+	$(call functionInitFilesystem,test/dev0.dat,-t ext2 -b 1024,test/data/random* test/data/zero*.dat test/data/readonly*.dat test/data/file*.dat)
 	$(MAKE) \
-          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
-          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test-*)" \
+          IMAGE0=test/dev0.dat IMAGE1=test/dev1.dat \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
+          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
+          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
           test_image_operations_base \
           test_image_operations_check \
-          test_image_operations_diff_image \
-          test_image_operations_delta
-	$(call functionTestDeviceDelete,$(LOOP1),test/dev1.dat,test/dev1)
-	$(call functionTestDeviceDelete,$(LOOP0),test/dev0.dat,test/dev0)
+          test_image_operations_diff_image
+	$(RMF) test/dev1.dat
+	$(RMF) test/dev0.dat
 	#
 	# ext2 random-data, block size 1024 bytes
-	$(call functionTestFile,$(DEVICE_RANDOM),test/dev0.dat,32M)
-	$(call functionTestFile,$(DEVICE_RANDOM),test/dev1.dat,32M)
-	$(call functionTestDeviceCreate,$(LOOP0),test/dev0.dat,test/dev0)
-	$(call functionTestDeviceCreate,$(LOOP1),test/dev1.dat,test/dev1)
-	$(call functionTestDeviceInitFilesystem,$(LOOP0),-t ext2 -b 1024,test/dev0)
+	$(call functionCreateFileRandom,test/dev0.dat,32M)
+	$(call functionCreateFileRandom,test/dev1.dat,32M)
+	$(call functionInitFilesystem,test/dev0.dat,-t ext2 -b 1024,test/data/random* test/data/zero*.dat test/data/readonly*.dat test/data/file*.dat)
 	$(MAKE) \
-          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
-          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test-*)" \
+          IMAGE0=test/dev0.dat IMAGE1=test/dev1.dat \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
+          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
+          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
           test_image_operations_base \
-          test_image_operations_check \
+          test_image_operations_check
+	$(RMF) test/dev1.dat
+	$(RMF) test/dev0.dat
+	@
+	# ext2 random-data, block size 1024 bytes, delta image
+	$(call functionCreateFileZero,test/dev0a.dat,32M)
+	$(call functionCreateFileZero,test/dev0b.dat,32M)
+	$(call functionCreateFileZero,test/dev1.dat,32M)
+	$(call functionInitFilesystem,test/dev0a.dat,-t ext2 -b 1024,test/data/random* test/data/zero*.dat test/data/readonly*.dat test/data/file*.dat)
+	$(call functionInitFilesystem,test/dev0b.dat,-t ext2 -b 1024,test/data/random* test/data/zero*.dat test/data/readonly*.dat test/data/file*.dat)
+	$(MAKE) \
+          IMAGE0_A=test/dev0a.dat IMAGE0_B=test/dev0b.dat IMAGE1=test/dev1.dat \
+          DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
+          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
+          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
+          OPTIONS="$(if $(OPTIONS),$(OPTIONS) --raw-images,--compress-algorithm=none --crypt-algorithm=none --raw-images)" \
           test_image_operations_delta
-	$(call functionTestDeviceDelete,$(LOOP1),test/dev1.dat,test/dev1)
-	$(call functionTestDeviceDelete,$(LOOP0),test/dev0.dat,test/dev0)
-	#
+	$(RMF) test/dev1.dat
+	$(RMF) test/dev0b.dat
+	$(RMF) test/dev0a.dat
+	@
+	@# ---
+	@
 	# ext2 zero-data, block size 2048 bytes
-	$(call functionTestFile,$(DEVICE_ZERO),test/dev0.dat,32M)
-	$(call functionTestFile,$(DEVICE_ZERO),test/dev1.dat,32M)
-	$(call functionTestDeviceCreate,$(LOOP0),test/dev0.dat,test/dev0)
-	$(call functionTestDeviceCreate,$(LOOP1),test/dev1.dat,test/dev1)
-	$(call functionTestDeviceInitFilesystem,$(LOOP0),-t ext2 -b 2048,test/dev0)
+	$(call functionCreateFileZero,test/dev0.dat,32M)
+	$(call functionCreateFileZero,test/dev1.dat,32M)
+	$(call functionInitFilesystem,test/dev0.dat,-t ext2 -b 2048,test/data/random* test/data/zero*.dat test/data/readonly*.dat test/data/file*.dat)
 	$(MAKE) \
-          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
-          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test-*)" \
+          IMAGE0=test/dev0.dat IMAGE1=test/dev1.dat \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
+          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
+          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
           test_image_operations_base \
           test_image_operations_check \
-          test_image_operations_diff_image \
-          test_image_operations_delta
-	$(call functionTestDeviceDelete,$(LOOP1),test/dev1.dat,test/dev1)
-	$(call functionTestDeviceDelete,$(LOOP0),test/dev0.dat,test/dev0)
+          test_image_operations_diff_image
+	$(RMF) test/dev1.dat
+	$(RMF) test/dev0.dat
 	#
 	# ext2 random-data, block size 2048 bytes
-	$(call functionTestFile,$(DEVICE_RANDOM),test/dev0.dat,32M)
-	$(call functionTestFile,$(DEVICE_RANDOM),test/dev1.dat,32M)
-	$(call functionTestDeviceCreate,$(LOOP0),test/dev0.dat,test/dev0)
-	$(call functionTestDeviceCreate,$(LOOP1),test/dev1.dat,test/dev1)
-	$(call functionTestDeviceInitFilesystem,$(LOOP0),-t ext2 -b 2048,test/dev0)
+	$(call functionCreateFileRandom,test/dev0.dat,32M)
+	$(call functionCreateFileRandom,test/dev1.dat,32M)
+	$(call functionInitFilesystem,test/dev0.dat,-t ext2 -b 2048,test/data/random* test/data/zero*.dat test/data/readonly*.dat test/data/file*.dat)
 	$(MAKE) \
-          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
-          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test-*)" \
+          IMAGE0=test/dev0.dat IMAGE1=test/dev1.dat \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
+          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
+          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
           test_image_operations_base \
-          test_image_operations_check \
+          test_image_operations_check
+	$(RMF) test/dev1.dat
+	$(RMF) test/dev0.dat
+	@
+	# ext2 random-data, block size 2048 bytes, delta image
+	$(call functionCreateFileZero,test/dev0a.dat,32M)
+	$(call functionCreateFileZero,test/dev0b.dat,32M)
+	$(call functionCreateFileZero,test/dev1.dat,32M)
+	$(call functionInitFilesystem,test/dev0a.dat,-t ext2 -b 2048,test/data/random* test/data/zero*.dat test/data/readonly*.dat test/data/file*.dat)
+	$(call functionInitFilesystem,test/dev0b.dat,-t ext2 -b 2048,test/data/random* test/data/zero*.dat test/data/readonly*.dat test/data/file*.dat)
+	$(MAKE) \
+          IMAGE0_A=test/dev0a.dat IMAGE0_B=test/dev0b.dat IMAGE1=test/dev1.dat \
+          DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
+          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
+          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
+          OPTIONS="$(if $(OPTIONS),$(OPTIONS) --raw-images,--compress-algorithm=none --crypt-algorithm=none --raw-images)" \
           test_image_operations_delta
-	$(call functionTestDeviceDelete,$(LOOP1),test/dev1.dat,test/dev1)
-	$(call functionTestDeviceDelete,$(LOOP0),test/dev0.dat,test/dev0)
-	#
+	$(RMF) test/dev1.dat
+	$(RMF) test/dev0b.dat
+	$(RMF) test/dev0a.dat
+	@
+	@# ---
+	@
 	# ext2 zero-data, block size 4096 bytes
-	$(call functionTestFile,$(DEVICE_ZERO),test/dev0.dat,32M)
-	$(call functionTestFile,$(DEVICE_ZERO),test/dev1.dat,32M)
-	$(call functionTestDeviceCreate,$(LOOP0),test/dev0.dat,test/dev0)
-	$(call functionTestDeviceCreate,$(LOOP1),test/dev1.dat,test/dev1)
-	$(call functionTestDeviceInitFilesystem,$(LOOP0),-t ext2 -b 4096,test/dev0)
+	$(call functionCreateFileZero,test/dev0.dat,32M)
+	$(call functionCreateFileZero,test/dev1.dat,32M)
+	$(call functionInitFilesystem,test/dev0.dat,-t ext2 -b 4096,test/data/random* test/data/zero*.dat test/data/readonly*.dat test/data/file*.dat)
 	$(MAKE) \
-          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
-          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test-*)" \
+          IMAGE0=test/dev0.dat IMAGE1=test/dev1.dat \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
+          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
+          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
           test_image_operations_base \
           test_image_operations_check \
-          test_image_operations_diff_image \
-          test_image_operations_delta
-	$(call functionTestDeviceDelete,$(LOOP1),test/dev1.dat,test/dev1)
-	$(call functionTestDeviceDelete,$(LOOP0),test/dev0.dat,test/dev0)
+          test_image_operations_diff_image
+	$(RMF) test/dev1.dat
+	$(RMF) test/dev0.dat
 	#
 	# ext2 random-data, block size 4096 bytes
-	$(call functionTestFile,$(DEVICE_RANDOM),test/dev0.dat,32M)
-	$(call functionTestFile,$(DEVICE_RANDOM),test/dev1.dat,32M)
-	$(call functionTestDeviceCreate,$(LOOP0),test/dev0.dat,test/dev0)
-	$(call functionTestDeviceCreate,$(LOOP1),test/dev1.dat,test/dev1)
-	$(call functionTestDeviceInitFilesystem,$(LOOP0),-t ext2 -b 4096,test/dev0)
+	$(call functionCreateFileRandom,test/dev0.dat,32M)
+	$(call functionCreateFileRandom,test/dev1.dat,32M)
+	$(call functionInitFilesystem,test/dev0.dat,-t ext2 -b 4096,test/data/random* test/data/zero*.dat test/data/readonly*.dat test/data/file*.dat)
 	$(MAKE) \
-          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
-          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test-*)" \
+          IMAGE0=test/dev0.dat IMAGE1=test/dev1.dat \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
+          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
+          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
           test_image_operations_base \
-          test_image_operations_check \
+          test_image_operations_check
+	$(RMF) test/dev1.dat
+	$(RMF) test/dev0.dat
+	@
+	# ext2 random-data, block size 4096 bytes, delta image
+	$(call functionCreateFileZero,test/dev0a.dat,32M)
+	$(call functionCreateFileZero,test/dev0b.dat,32M)
+	$(call functionCreateFileZero,test/dev1.dat,32M)
+	$(call functionInitFilesystem,test/dev0a.dat,-t ext2 -b 4096,test/data/random* test/data/zero*.dat test/data/readonly*.dat test/data/file*.dat)
+	$(call functionInitFilesystem,test/dev0b.dat,-t ext2 -b 4096,test/data/random* test/data/zero*.dat test/data/readonly*.dat test/data/file*.dat)
+	$(MAKE) \
+          IMAGE0_A=test/dev0a.dat IMAGE0_B=test/dev0b.dat IMAGE1=test/dev1.dat \
+          DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
+          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
+          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
+          OPTIONS="$(if $(OPTIONS),$(OPTIONS) --raw-images,--compress-algorithm=none --crypt-algorithm=none --raw-images)" \
           test_image_operations_delta
-	$(call functionTestDeviceDelete,$(LOOP1),test/dev1.dat,test/dev1)
-	$(call functionTestDeviceDelete,$(LOOP0),test/dev0.dat,test/dev0)
+	$(RMF) test/dev1.dat
+	$(RMF) test/dev0b.dat
+	$(RMF) test/dev0a.dat
 endif
 
 # Ext3
 test_image_operations_ext3:
 ifneq (@MKFS_EXT3@,)
+	# --------------------------------------------------------------
+	# ext3
 	$(INSTALL) -d test
+	$(call functionTestDeviceReset)
 	#
 	# ext3 zero-data, default block size
-	$(call functionTestFile,$(DEVICE_ZERO),test/dev0.dat,32M)
-	$(call functionTestFile,$(DEVICE_ZERO),test/dev1.dat,32M)
-	$(call functionTestDeviceCreate,$(LOOP0),test/dev0.dat,test/dev0)
-	$(call functionTestDeviceCreate,$(LOOP1),test/dev1.dat,test/dev1)
-	$(call functionTestDeviceInitFilesystem,$(LOOP0),-t ext3,test/dev0)
+	$(call functionCreateFileZero,test/dev0.dat,32M)
+	$(call functionCreateFileZero,test/dev1.dat,32M)
+	$(call functionInitFilesystem,test/dev0.dat,-t ext3,test/data/random* test/data/zero*.dat test/data/readonly*.dat test/data/file*.dat)
 	$(MAKE) \
-          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
-          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test-*)" \
+          IMAGE0=test/dev0.dat IMAGE1=test/dev1.dat \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
+          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
+          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
           test_image_operations_base \
           test_image_operations_check \
-          test_image_operations_diff_image \
-          test_image_operations_delta
-	$(call functionTestDeviceDelete,$(LOOP1),test/dev1.dat,test/dev1)
-	$(call functionTestDeviceDelete,$(LOOP0),test/dev0.dat,test/dev0)
+          test_image_operations_diff_image
+	$(RMF) test/dev1.dat
+	$(RMF) test/dev0.dat
 	#
 	# ext3 random-data, default block size
-	$(call functionTestFile,$(DEVICE_RANDOM),test/dev0.dat,32M)
-	$(call functionTestFile,$(DEVICE_RANDOM),test/dev1.dat,32M)
-	$(call functionTestDeviceCreate,$(LOOP0),test/dev0.dat,test/dev0)
-	$(call functionTestDeviceCreate,$(LOOP1),test/dev1.dat,test/dev1)
-	$(call functionTestDeviceInitFilesystem,$(LOOP0),-t ext3,test/dev0)
+	$(call functionCreateFileRandom,test/dev0.dat,32M)
+	$(call functionCreateFileRandom,test/dev1.dat,32M)
+	$(call functionInitFilesystem,test/dev0.dat,-t ext3,test/data/random* test/data/zero*.dat test/data/readonly*.dat test/data/file*.dat)
 	$(MAKE) \
-          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
-          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test-*)" \
+          IMAGE0=test/dev0.dat IMAGE1=test/dev1.dat \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
+          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
+          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
           test_image_operations_base \
-          test_image_operations_check \
+          test_image_operations_check
+	$(RMF) test/dev1.dat
+	$(RMF) test/dev0.dat
+	@
+	# ext3 random-data, default block size, delta image
+	$(call functionCreateFileZero,test/dev0a.dat,32M)
+	$(call functionCreateFileZero,test/dev0b.dat,32M)
+	$(call functionCreateFileZero,test/dev1.dat,32M)
+	$(call functionInitFilesystem,test/dev0a.dat,-t ext3,test/data/random* test/data/zero*.dat test/data/readonly*.dat test/data/file*.dat)
+	$(call functionInitFilesystem,test/dev0b.dat,-t ext3,test/data/random* test/data/zero*.dat test/data/readonly*.dat test/data/file*.dat)
+	$(MAKE) \
+          IMAGE0_A=test/dev0a.dat IMAGE0_B=test/dev0b.dat IMAGE1=test/dev1.dat \
+          DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
+          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
+          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
+          OPTIONS="$(if $(OPTIONS),$(OPTIONS) --raw-images,--compress-algorithm=none --crypt-algorithm=none --raw-images)" \
           test_image_operations_delta
-	$(call functionTestDeviceDelete,$(LOOP1),test/dev1.dat,test/dev1)
-	$(call functionTestDeviceDelete,$(LOOP0),test/dev0.dat,test/dev0)
-	#
+	$(RMF) test/dev1.dat
+	$(RMF) test/dev0b.dat
+	$(RMF) test/dev0a.dat
+	@
+	@# ---
+	@
 	# ext3 zero-data, block size 1024 bytes
-	$(call functionTestFile,$(DEVICE_ZERO),test/dev0.dat,32M)
-	$(call functionTestFile,$(DEVICE_ZERO),test/dev1.dat,32M)
-	$(call functionTestDeviceCreate,$(LOOP0),test/dev0.dat,test/dev0)
-	$(call functionTestDeviceCreate,$(LOOP1),test/dev1.dat,test/dev1)
-	$(call functionTestDeviceInitFilesystem,$(LOOP0),-t ext3 -b 1024,test/dev0)
+	$(call functionCreateFileZero,test/dev0.dat,32M)
+	$(call functionCreateFileZero,test/dev1.dat,32M)
+	$(call functionInitFilesystem,test/dev0.dat,-t ext3 -b 1024,test/data/random* test/data/zero*.dat test/data/readonly*.dat test/data/file*.dat)
 	$(MAKE) \
-          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
-          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test-*)" \
+          IMAGE0=test/dev0.dat IMAGE1=test/dev1.dat \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
+          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
+          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
           test_image_operations_base \
           test_image_operations_check \
-          test_image_operations_diff_image \
-          test_image_operations_delta
-	$(call functionTestDeviceDelete,$(LOOP1),test/dev1.dat,test/dev1)
-	$(call functionTestDeviceDelete,$(LOOP0),test/dev0.dat,test/dev0)
+          test_image_operations_diff_image
+	$(RMF) test/dev1.dat
+	$(RMF) test/dev0.dat
 	#
 	# ext3 random-data, block size 1024 bytes
-	$(call functionTestFile,$(DEVICE_RANDOM),test/dev0.dat,32M)
-	$(call functionTestFile,$(DEVICE_RANDOM),test/dev1.dat,32M)
-	$(call functionTestDeviceCreate,$(LOOP0),test/dev0.dat,test/dev0)
-	$(call functionTestDeviceCreate,$(LOOP1),test/dev1.dat,test/dev1)
-	$(call functionTestDeviceInitFilesystem,$(LOOP0),-t ext3 -b 1024,test/dev0)
+	$(call functionCreateFileRandom,test/dev0.dat,32M)
+	$(call functionCreateFileRandom,test/dev1.dat,32M)
+	$(call functionInitFilesystem,test/dev0.dat,-t ext3 -b 1024,test/data/random* test/data/zero*.dat test/data/readonly*.dat test/data/file*.dat)
 	$(MAKE) \
-          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
-          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test-*)" \
+          IMAGE0=test/dev0.dat IMAGE1=test/dev1.dat \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
+          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
+          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
           test_image_operations_base \
-          test_image_operations_check \
+          test_image_operations_check
+	$(RMF) test/dev1.dat
+	$(RMF) test/dev0.dat
+	@
+	# ext3 random-data, default block size, delta image
+	$(call functionCreateFileZero,test/dev0a.dat,32M)
+	$(call functionCreateFileZero,test/dev0b.dat,32M)
+	$(call functionCreateFileZero,test/dev1.dat,32M)
+	$(call functionInitFilesystem,test/dev0a.dat,-t ext3 -b 1024,test/data/random* test/data/zero*.dat test/data/readonly*.dat test/data/file*.dat)
+	$(call functionInitFilesystem,test/dev0b.dat,-t ext3 -b 1024,test/data/random* test/data/zero*.dat test/data/readonly*.dat test/data/file*.dat)
+	$(MAKE) \
+          IMAGE0_A=test/dev0a.dat IMAGE0_B=test/dev0b.dat IMAGE1=test/dev1.dat \
+          DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
+          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
+          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
+          OPTIONS="$(if $(OPTIONS),$(OPTIONS) --raw-images,--compress-algorithm=none --crypt-algorithm=none --raw-images)" \
           test_image_operations_delta
-	$(call functionTestDeviceDelete,$(LOOP1),test/dev1.dat,test/dev1)
-	$(call functionTestDeviceDelete,$(LOOP0),test/dev0.dat,test/dev0)
-	#
+	$(RMF) test/dev1.dat
+	$(RMF) test/dev0b.dat
+	$(RMF) test/dev0a.dat
+	@
+	@# ---
+	@
 	# ext3 zero-data, block size 2048 bytes
-	$(call functionTestFile,$(DEVICE_ZERO),test/dev0.dat,32M)
-	$(call functionTestFile,$(DEVICE_ZERO),test/dev1.dat,32M)
-	$(call functionTestDeviceCreate,$(LOOP0),test/dev0.dat,test/dev0)
-	$(call functionTestDeviceCreate,$(LOOP1),test/dev1.dat,test/dev1)
-	$(call functionTestDeviceInitFilesystem,$(LOOP0),-t ext3 -b 2048,test/dev0)
+	$(call functionCreateFileZero,test/dev0.dat,32M)
+	$(call functionCreateFileZero,test/dev1.dat,32M)
+	$(call functionInitFilesystem,test/dev0.dat,-t ext3 -b 2048,test/data/random* test/data/zero*.dat test/data/readonly*.dat test/data/file*.dat)
 	$(MAKE) \
-          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
-          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test-*)" \
+          IMAGE0=test/dev0.dat IMAGE1=test/dev1.dat \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
+          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
+          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
           test_image_operations_base \
           test_image_operations_check \
-          test_image_operations_diff_image \
-          test_image_operations_delta
-	$(call functionTestDeviceDelete,$(LOOP1),test/dev1.dat,test/dev1)
-	$(call functionTestDeviceDelete,$(LOOP0),test/dev0.dat,test/dev0)
+          test_image_operations_diff_image
+	$(RMF) test/dev1.dat
+	$(RMF) test/dev0.dat
 	#
 	# ext3 random-data, block size 2048 bytes
-	$(call functionTestFile,$(DEVICE_RANDOM),test/dev0.dat,32M)
-	$(call functionTestFile,$(DEVICE_RANDOM),test/dev1.dat,32M)
-	$(call functionTestDeviceCreate,$(LOOP0),test/dev0.dat,test/dev0)
-	$(call functionTestDeviceCreate,$(LOOP1),test/dev1.dat,test/dev1)
-	$(call functionTestDeviceInitFilesystem,$(LOOP0),-t ext3 -b 2048,test/dev0)
+	$(call functionCreateFileRandom,test/dev0.dat,32M)
+	$(call functionCreateFileRandom,test/dev1.dat,32M)
+	$(call functionInitFilesystem,test/dev0.dat,-t ext3 -b 2048,test/data/random* test/data/zero*.dat test/data/readonly*.dat test/data/file*.dat)
 	$(MAKE) \
-          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
-          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test-*)" \
+          IMAGE0=test/dev0.dat IMAGE1=test/dev1.dat \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
+          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
+          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
           test_image_operations_base \
-          test_image_operations_check \
+          test_image_operations_check
+	$(RMF) test/dev1.dat
+	$(RMF) test/dev0.dat
+	@
+	# ext3 random-data, default block size, delta image
+	$(call functionCreateFileZero,test/dev0a.dat,32M)
+	$(call functionCreateFileZero,test/dev0b.dat,32M)
+	$(call functionCreateFileZero,test/dev1.dat,32M)
+	$(call functionInitFilesystem,test/dev0a.dat,-t ext3 -b 2048,test/data/random* test/data/zero*.dat test/data/readonly*.dat test/data/file*.dat)
+	$(call functionInitFilesystem,test/dev0b.dat,-t ext3 -b 2048,test/data/random* test/data/zero*.dat test/data/readonly*.dat test/data/file*.dat)
+	$(MAKE) \
+          IMAGE0_A=test/dev0a.dat IMAGE0_B=test/dev0b.dat IMAGE1=test/dev1.dat \
+          DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
+          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
+          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
+          OPTIONS="$(if $(OPTIONS),$(OPTIONS) --raw-images,--compress-algorithm=none --crypt-algorithm=none --raw-images)" \
           test_image_operations_delta
-	$(call functionTestDeviceDelete,$(LOOP1),test/dev1.dat,test/dev1)
-	$(call functionTestDeviceDelete,$(LOOP0),test/dev0.dat,test/dev0)
-	#
+	$(RMF) test/dev1.dat
+	$(RMF) test/dev0b.dat
+	$(RMF) test/dev0a.dat
+	@
+	@# ---
+	@
 	# ext3 zero-data, block size 4096 bytes
-	$(call functionTestFile,$(DEVICE_ZERO),test/dev0.dat,32M)
-	$(call functionTestFile,$(DEVICE_ZERO),test/dev1.dat,32M)
-	$(call functionTestDeviceCreate,$(LOOP0),test/dev0.dat,test/dev0)
-	$(call functionTestDeviceCreate,$(LOOP1),test/dev1.dat,test/dev1)
-	$(call functionTestDeviceInitFilesystem,$(LOOP0),-t ext3 -b 4096,test/dev0)
+	$(call functionCreateFileZero,test/dev0.dat,32M)
+	$(call functionCreateFileZero,test/dev1.dat,32M)
+	$(call functionInitFilesystem,test/dev0.dat,-t ext3 -b 4096,test/data/random* test/data/zero*.dat test/data/readonly*.dat test/data/file*.dat)
 	$(MAKE) \
-          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
-          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test-*)" \
+          IMAGE0=test/dev0.dat IMAGE1=test/dev1.dat \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
+          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
+          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
           test_image_operations_base \
           test_image_operations_check \
-          test_image_operations_diff_image \
-          test_image_operations_delta
-	$(call functionTestDeviceDelete,$(LOOP1),test/dev1.dat,test/dev1)
-	$(call functionTestDeviceDelete,$(LOOP0),test/dev0.dat,test/dev0)
+          test_image_operations_diff_image
+	$(RMF) test/dev1.dat
+	$(RMF) test/dev0.dat
 	#
 	# ext3 random-data, block size 4096 bytes
-	$(call functionTestFile,$(DEVICE_RANDOM),test/dev0.dat,32M)
-	$(call functionTestFile,$(DEVICE_RANDOM),test/dev1.dat,32M)
-	$(call functionTestDeviceCreate,$(LOOP0),test/dev0.dat,test/dev0)
-	$(call functionTestDeviceCreate,$(LOOP1),test/dev1.dat,test/dev1)
-	$(call functionTestDeviceInitFilesystem,$(LOOP0),-t ext3 -b 4096,test/dev0)
+	$(call functionCreateFileRandom,test/dev0.dat,32M)
+	$(call functionCreateFileRandom,test/dev1.dat,32M)
+	$(call functionInitFilesystem,test/dev0.dat,-t ext3 -b 4096,test/data/random* test/data/zero*.dat test/data/readonly*.dat test/data/file*.dat)
 	$(MAKE) \
-          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
-          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test-*)" \
+          IMAGE0=test/dev0.dat IMAGE1=test/dev1.dat \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
+          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
+          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
           test_image_operations_base \
-          test_image_operations_check \
+          test_image_operations_check
+	$(RMF) test/dev1.dat
+	$(RMF) test/dev0.dat
+	@
+	# ext3 random-data, default block size, delta image
+	$(call functionCreateFileZero,test/dev0a.dat,32M)
+	$(call functionCreateFileZero,test/dev0b.dat,32M)
+	$(call functionCreateFileZero,test/dev1.dat,32M)
+	$(call functionInitFilesystem,test/dev0a.dat,-t ext3 -b 4096,test/data/random* test/data/zero*.dat test/data/readonly*.dat test/data/file*.dat)
+	$(call functionInitFilesystem,test/dev0b.dat,-t ext3 -b 4096,test/data/random* test/data/zero*.dat test/data/readonly*.dat test/data/file*.dat)
+	$(MAKE) \
+          IMAGE0_A=test/dev0a.dat IMAGE0_B=test/dev0b.dat IMAGE1=test/dev1.dat \
+          DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
+          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
+          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
+          OPTIONS="$(if $(OPTIONS),$(OPTIONS) --raw-images,--compress-algorithm=none --crypt-algorithm=none --raw-images)" \
           test_image_operations_delta
-	$(call functionTestDeviceDelete,$(LOOP1),test/dev1.dat,test/dev1)
-	$(call functionTestDeviceDelete,$(LOOP0),test/dev0.dat,test/dev0)
+	$(RMF) test/dev1.dat
+	$(RMF) test/dev0b.dat
+	$(RMF) test/dev0a.dat
 endif
 
 # Ext4
 test_image_operations_ext4:
 ifneq (@MKFS_EXT4@,)
+	# --------------------------------------------------------------
+	# ext4
 	$(INSTALL) -d test
+	$(call functionTestDeviceReset)
 	#
 	# ext4 zero-data, default block size
-	$(call functionTestFile,$(DEVICE_ZERO),test/dev0.dat,32M)
-	$(call functionTestFile,$(DEVICE_ZERO),test/dev1.dat,32M)
-	$(call functionTestDeviceCreate,$(LOOP0),test/dev0.dat,test/dev0)
-	$(call functionTestDeviceCreate,$(LOOP1),test/dev1.dat,test/dev1)
-	$(call functionTestDeviceInitFilesystem,$(LOOP0),-t ext4,test/dev0)
+	$(call functionCreateFileZero,test/dev0.dat,32M)
+	$(call functionCreateFileZero,test/dev1.dat,32M)
+	$(call functionInitFilesystem,test/dev0.dat,-t ext4,test/data/random* test/data/zero*.dat test/data/readonly*.dat test/data/file*.dat)
 	$(MAKE) \
+          IMAGE0=test/dev0.dat IMAGE1=test/dev1.dat \
+          DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
-          DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           test_image_operations_base \
           test_image_operations_check \
-          test_image_operations_diff_image \
-          test_image_operations_delta
-	$(call functionTestDeviceDelete,$(LOOP1),test/dev1.dat,test/dev1)
-	$(call functionTestDeviceDelete,$(LOOP0),test/dev0.dat,test/dev0)
+          test_image_operations_diff_image
+	$(RMF) test/dev1.dat
+	$(RMF) test/dev0.dat
 	#
 	# ext4 random-data, default block size
-	$(call functionTestFile,$(DEVICE_RANDOM),test/dev0.dat,32M)
-	$(call functionTestFile,$(DEVICE_RANDOM),test/dev1.dat,32M)
-	$(call functionTestDeviceCreate,$(LOOP0),test/dev0.dat,test/dev0)
-	$(call functionTestDeviceCreate,$(LOOP1),test/dev1.dat,test/dev1)
-	$(call functionTestDeviceInitFilesystem,$(LOOP0),-t ext4,test/dev0)
+	$(call functionCreateFileRandom,test/dev0.dat,32M)
+	$(call functionCreateFileRandom,test/dev1.dat,32M)
+	$(call functionInitFilesystem,test/dev0.dat,-t ext4,test/data/random* test/data/zero*.dat test/data/readonly*.dat test/data/file*.dat)
 	$(MAKE) \
+          IMAGE0=test/dev0.dat IMAGE1=test/dev1.dat \
+          DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
-          DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           test_image_operations_base \
-          test_image_operations_check \
+          test_image_operations_check
+	$(RMF) test/dev1.dat
+	$(RMF) test/dev0.dat
+	@
+	# ext4 random-data, default block size, delta image
+	$(call functionCreateFileZero,test/dev0a.dat,32M)
+	$(call functionCreateFileZero,test/dev0b.dat,32M)
+	$(call functionCreateFileZero,test/dev1.dat,32M)
+	$(call functionInitFilesystem,test/dev0a.dat,-t ext4,test/data/random* test/data/zero*.dat test/data/readonly*.dat test/data/file*.dat)
+	$(call functionInitFilesystem,test/dev0b.dat,-t ext4,test/data/random* test/data/zero*.dat test/data/readonly*.dat test/data/file*.dat)
+	$(MAKE) \
+          IMAGE0_A=test/dev0a.dat IMAGE0_B=test/dev0b.dat IMAGE1=test/dev1.dat \
+          DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
+          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
+          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
+          OPTIONS="$(if $(OPTIONS),$(OPTIONS) --raw-images,--compress-algorithm=none --crypt-algorithm=none --raw-images)" \
           test_image_operations_delta
-	$(call functionTestDeviceDelete,$(LOOP1),test/dev1.dat,test/dev1)
-	$(call functionTestDeviceDelete,$(LOOP0),test/dev0.dat,test/dev0)
-	#
+	$(RMF) test/dev1.dat
+	$(RMF) test/dev0b.dat
+	$(RMF) test/dev0a.dat
+	@
+	@# ---
+	@
 	# ext4 zero-data, block size 1024 bytes
-	$(call functionTestFile,$(DEVICE_ZERO),test/dev0.dat,32M)
-	$(call functionTestFile,$(DEVICE_ZERO),test/dev1.dat,32M)
-	$(call functionTestDeviceCreate,$(LOOP0),test/dev0.dat,test/dev0)
-	$(call functionTestDeviceCreate,$(LOOP1),test/dev1.dat,test/dev1)
-	$(call functionTestDeviceInitFilesystem,$(LOOP0),-t ext4 -b 1024,test/dev0)
+	$(call functionCreateFileZero,test/dev0.dat,32M)
+	$(call functionCreateFileZero,test/dev1.dat,32M)
+	$(call functionInitFilesystem,test/dev0.dat,-t ext4 -b 1024,test/data/random* test/data/zero*.dat test/data/readonly*.dat test/data/file*.dat)
 	$(MAKE) \
+          IMAGE0=test/dev0.dat IMAGE1=test/dev1.dat \
+          DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
-          DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           test_image_operations_base \
           test_image_operations_check \
-          test_image_operations_diff_image \
-          test_image_operations_delta
-	$(call functionTestDeviceDelete,$(LOOP1),test/dev1.dat,test/dev1)
-	$(call functionTestDeviceDelete,$(LOOP0),test/dev0.dat,test/dev0)
+          test_image_operations_diff_image
+	$(RMF) test/dev1.dat
+	$(RMF) test/dev0.dat
 	#
 	# ext4 random-data, block size 1024 bytes
-	$(call functionTestFile,$(DEVICE_RANDOM),test/dev0.dat,32M)
-	$(call functionTestFile,$(DEVICE_RANDOM),test/dev1.dat,32M)
-	$(call functionTestDeviceCreate,$(LOOP0),test/dev0.dat,test/dev0)
-	$(call functionTestDeviceCreate,$(LOOP1),test/dev1.dat,test/dev1)
-	$(call functionTestDeviceInitFilesystem,$(LOOP0),-t ext4 -b 1024,test/dev0)
+	$(call functionCreateFileRandom,test/dev0.dat,32M)
+	$(call functionCreateFileRandom,test/dev1.dat,32M)
+	$(call functionInitFilesystem,test/dev0.dat,-t ext4 -b 1024,test/data/random* test/data/zero*.dat test/data/readonly*.dat test/data/file*.dat)
 	$(MAKE) \
+          IMAGE0=test/dev0.dat IMAGE1=test/dev1.dat \
+          DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
-          DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           test_image_operations_base \
-          test_image_operations_check \
+          test_image_operations_check
+	$(RMF) test/dev1.dat
+	$(RMF) test/dev0.dat
+	@
+	# ext4 random-data, default block size, delta image
+	$(call functionCreateFileZero,test/dev0a.dat,32M)
+	$(call functionCreateFileZero,test/dev0b.dat,32M)
+	$(call functionCreateFileZero,test/dev1.dat,32M)
+	$(call functionInitFilesystem,test/dev0a.dat,-t ext4 -b 1024,test/data/random* test/data/zero*.dat test/data/readonly*.dat test/data/file*.dat)
+	$(call functionInitFilesystem,test/dev0b.dat,-t ext4 -b 1024,test/data/random* test/data/zero*.dat test/data/readonly*.dat test/data/file*.dat)
+	$(MAKE) \
+          IMAGE0_A=test/dev0a.dat IMAGE0_B=test/dev0b.dat IMAGE1=test/dev1.dat \
+          DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
+          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
+          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
+          OPTIONS="$(if $(OPTIONS),$(OPTIONS) --raw-images,--compress-algorithm=none --crypt-algorithm=none --raw-images)" \
           test_image_operations_delta
-	$(call functionTestDeviceDelete,$(LOOP1),test/dev1.dat,test/dev1)
-	$(call functionTestDeviceDelete,$(LOOP0),test/dev0.dat,test/dev0)
-	#
+	$(RMF) test/dev1.dat
+	$(RMF) test/dev0b.dat
+	$(RMF) test/dev0a.dat
+	@
+	@# ---
+	@
 	# ext4 zero-data, block size 2048 bytes
-	$(call functionTestFile,$(DEVICE_ZERO),test/dev0.dat,32M)
-	$(call functionTestFile,$(DEVICE_ZERO),test/dev1.dat,32M)
-	$(call functionTestDeviceCreate,$(LOOP0),test/dev0.dat,test/dev0)
-	$(call functionTestDeviceCreate,$(LOOP1),test/dev1.dat,test/dev1)
-	$(call functionTestDeviceInitFilesystem,$(LOOP0),-t ext4 -b 2048,test/dev0)
+	$(call functionCreateFileZero,test/dev0.dat,32M)
+	$(call functionCreateFileZero,test/dev1.dat,32M)
+	$(call functionInitFilesystem,test/dev0.dat,-t ext4 -b 2048,test/data/random* test/data/zero*.dat test/data/readonly*.dat test/data/file*.dat)
 	$(MAKE) \
+          IMAGE0=test/dev0.dat IMAGE1=test/dev1.dat \
+          DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
-          DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           test_image_operations_base \
           test_image_operations_check \
-          test_image_operations_diff_image \
-          test_image_operations_delta
-	$(call functionTestDeviceDelete,$(LOOP1),test/dev1.dat,test/dev1)
-	$(call functionTestDeviceDelete,$(LOOP0),test/dev0.dat,test/dev0)
+          test_image_operations_diff_image
+	$(RMF) test/dev1.dat
+	$(RMF) test/dev0.dat
 	#
 	# ext4 random-data, block size 2048 bytes
-	$(call functionTestFile,$(DEVICE_RANDOM),test/dev0.dat,32M)
-	$(call functionTestFile,$(DEVICE_RANDOM),test/dev1.dat,32M)
-	$(call functionTestDeviceCreate,$(LOOP0),test/dev0.dat,test/dev0)
-	$(call functionTestDeviceCreate,$(LOOP1),test/dev1.dat,test/dev1)
-	$(call functionTestDeviceInitFilesystem,$(LOOP0),-t ext4 -b 2048,test/dev0)
+	$(call functionCreateFileRandom,test/dev0.dat,32M)
+	$(call functionCreateFileRandom,test/dev1.dat,32M)
+	$(call functionInitFilesystem,test/dev0.dat,-t ext4 -b 2048,test/data/random* test/data/zero*.dat test/data/readonly*.dat test/data/file*.dat)
 	$(MAKE) \
+          IMAGE0=test/dev0.dat IMAGE1=test/dev1.dat \
+          DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
-          DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           test_image_operations_base \
-          test_image_operations_check \
+          test_image_operations_check
+	$(RMF) test/dev1.dat
+	$(RMF) test/dev0.dat
+	@
+	# ext4 random-data, default block size, delta image
+	$(call functionCreateFileZero,test/dev0a.dat,32M)
+	$(call functionCreateFileZero,test/dev0b.dat,32M)
+	$(call functionCreateFileZero,test/dev1.dat,32M)
+	$(call functionInitFilesystem,test/dev0a.dat,-t ext4 -b 2048,test/data/random* test/data/zero*.dat test/data/readonly*.dat test/data/file*.dat)
+	$(call functionInitFilesystem,test/dev0b.dat,-t ext4 -b 2048,test/data/random* test/data/zero*.dat test/data/readonly*.dat test/data/file*.dat)
+	$(MAKE) \
+          IMAGE0_A=test/dev0a.dat IMAGE0_B=test/dev0b.dat IMAGE1=test/dev1.dat \
+          DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
+          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
+          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
+          OPTIONS="$(if $(OPTIONS),$(OPTIONS) --raw-images,--compress-algorithm=none --crypt-algorithm=none --raw-images)" \
           test_image_operations_delta
-	$(call functionTestDeviceDelete,$(LOOP1),test/dev1.dat,test/dev1)
-	$(call functionTestDeviceDelete,$(LOOP0),test/dev0.dat,test/dev0)
-	#
+	$(RMF) test/dev1.dat
+	$(RMF) test/dev0b.dat
+	$(RMF) test/dev0a.dat
+	@
+	@# ---
+	@
 	# ext4 zero-data, block size 4096 bytes
-	$(call functionTestFile,$(DEVICE_ZERO),test/dev0.dat,32M)
-	$(call functionTestFile,$(DEVICE_ZERO),test/dev1.dat,32M)
-	$(call functionTestDeviceCreate,$(LOOP0),test/dev0.dat,test/dev0)
-	$(call functionTestDeviceCreate,$(LOOP1),test/dev1.dat,test/dev1)
-	$(call functionTestDeviceInitFilesystem,$(LOOP0),-t ext4 -b 4096,test/dev0)
+	$(call functionCreateFileZero,test/dev0.dat,32M)
+	$(call functionCreateFileZero,test/dev1.dat,32M)
+	$(call functionInitFilesystem,test/dev0.dat,-t ext4 -b 4096,test/data/random* test/data/zero*.dat test/data/readonly*.dat test/data/file*.dat)
 	$(MAKE) \
+          IMAGE0=test/dev0.dat IMAGE1=test/dev1.dat \
+          DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
-          DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           test_image_operations_base \
           test_image_operations_check \
-          test_image_operations_diff_image \
-          test_image_operations_delta
-	$(call functionTestDeviceDelete,$(LOOP1),test/dev1.dat,test/dev1)
-	$(call functionTestDeviceDelete,$(LOOP0),test/dev0.dat,test/dev0)
+          test_image_operations_diff_image
+	$(RMF) test/dev1.dat
+	$(RMF) test/dev0.dat
 	#
 	# ext4 random-data, block size 4096 bytes
-	$(call functionTestFile,$(DEVICE_RANDOM),test/dev0.dat,32M)
-	$(call functionTestFile,$(DEVICE_RANDOM),test/dev1.dat,32M)
-	$(call functionTestDeviceCreate,$(LOOP0),test/dev0.dat,test/dev0)
-	$(call functionTestDeviceCreate,$(LOOP1),test/dev1.dat,test/dev1)
-	$(call functionTestDeviceInitFilesystem,$(LOOP0),-t ext4 -b 4096,test/dev0)
+	$(call functionCreateFileRandom,test/dev0.dat,32M)
+	$(call functionCreateFileRandom,test/dev1.dat,32M)
+	$(call functionInitFilesystem,test/dev0.dat,-t ext4 -b 4096,test/data/random* test/data/zero*.dat test/data/readonly*.dat test/data/file*.dat)
 	$(MAKE) \
+          IMAGE0=test/dev0.dat IMAGE1=test/dev1.dat \
+          DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
-          DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           test_image_operations_base \
-          test_image_operations_check \
-          test_image_operations_delta
-	$(call functionTestDeviceDelete,$(LOOP1),test/dev1.dat,test/dev1)
-	$(call functionTestDeviceDelete,$(LOOP0),test/dev0.dat,test/dev0)
+          test_image_operations_check
+	$(RMF) test/dev1.dat
+	$(RMF) test/dev0.dat
 	#
-	#$(call functionTestDeviceHugeSpare,test/dev0.dat,512G)
-	#$(call functionTestDeviceHugeSpare,test/dev1.dat,512G)
-	#$(call functionTestDeviceCreate,$(LOOP0),test/dev0.dat,test/dev0)
-	#$(call functionTestDeviceCreate,$(LOOP1),test/dev1.dat,test/dev1)
-	#$(call functionTestDeviceInitFilesystem,$(LOOP0),-t ext4 -b 4096,test/dev0)
+	#$(call functionCreateSpare,test/dev0.dat,512G)
+	#$(call functionCreateSpare,test/dev1.dat,512G)
+	#$(call functionInitFilesystem,test/dev0.dat,-t ext4 -b 4096,test/data/random* test/data/zero*.dat test/data/readonly*.dat test/data/file*.dat)
 	#$(MAKE) test_image_operations_base \
         #   DEVICE0=$(LOOP0) DEVICE1=$(LOOP1)
-	#$(call functionTestDeviceDelete,$(LOOP1),test/dev1.dat,test/dev1)
-	#$(call functionTestDeviceDelete,$(LOOP0),test/dev0.dat,test/dev0)
+	#$(call functionTestDeviceDelete,$(LOOP1),test/dev1)
+	#$(call functionTestDeviceDelete,$(LOOP0),test/dev0)
+	$(RMF) test/dev1.dat
+	$(RMF) test/dev0.dat
+	@
+	# ext4 random-data, default block size, delta image
+	$(call functionCreateFileZero,test/dev0a.dat,32M)
+	$(call functionCreateFileZero,test/dev0b.dat,32M)
+	$(call functionCreateFileZero,test/dev1.dat,32M)
+	$(call functionInitFilesystem,test/dev0a.dat,-t ext4 -b 4096,test/data/random* test/data/zero*.dat test/data/readonly*.dat test/data/file*.dat)
+	$(call functionInitFilesystem,test/dev0b.dat,-t ext4 -b 4096,test/data/random* test/data/zero*.dat test/data/readonly*.dat test/data/file*.dat)
+	$(MAKE) \
+          IMAGE0_A=test/dev0a.dat IMAGE0_B=test/dev0b.dat IMAGE1=test/dev1.dat \
+          DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
+          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
+          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
+          OPTIONS="$(if $(OPTIONS),$(OPTIONS) --raw-images,--compress-algorithm=none --crypt-algorithm=none --raw-images)" \
+          test_image_operations_delta
+	$(RMF) test/dev1.dat
+	$(RMF) test/dev0b.dat
+	$(RMF) test/dev0a.dat
 endif
 
 .PHONY: test_image_fat test_image_fat12 test_image_fat16 test_image_fat32
@@ -1419,118 +1684,166 @@ test_image_operations_fat: \
 # FAT 12
 test_image_operations_fat12:
 ifneq (@MKFS_MSDOS@,)
+	# --------------------------------------------------------------
+	# FAT12
 	$(INSTALL) -d test
+	$(call functionTestDeviceReset)
 	#
 	# FAT12 zero-data
-	$(call functionTestFile,$(DEVICE_ZERO),test/dev0.dat,1440K)
-	$(call functionTestFile,$(DEVICE_ZERO),test/dev1.dat,1440K)
-	$(call functionTestDeviceCreate,$(LOOP0),test/dev0.dat,test/dev0)
-	$(call functionTestDeviceCreate,$(LOOP1),test/dev1.dat,test/dev1)
-	$(call functionTestDeviceInitFilesystem,$(LOOP0),-t msdos -F 12,test/dev0)
+	$(call functionCreateFileZero,test/dev0.dat,1440K)
+	$(call functionCreateFileZero,test/dev1.dat,1440K)
+	$(call functionInitFilesystem,test/dev0.dat,-t msdos -F 12,test/data/random* test/data/zero*.dat test/data/readonly*.dat test/data/file*.dat)
 	$(MAKE) \
-          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
-          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test-*)" \
+          IMAGE0=test/dev0.dat IMAGE1=test/dev1.dat \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
+          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
+          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
           test_image_operations_base \
           test_image_operations_check \
-          test_image_operations_diff_image \
-          test_image_operations_delta
-	$(call functionTestDeviceDelete,$(LOOP1),test/dev1.dat,test/dev1)
-	$(call functionTestDeviceDelete,$(LOOP0),test/dev0.dat,test/dev0)
+          test_image_operations_diff_image
+	$(RMF) test/dev1.dat
+	$(RMF) test/dev0.dat
 	#
 	# FAT12 random-data
-	$(call functionTestFile,$(DEVICE_RANDOM),test/dev0.dat,1440K)
-	$(call functionTestFile,$(DEVICE_RANDOM),test/dev1.dat,1440K)
-	$(call functionTestDeviceCreate,$(LOOP0),test/dev0.dat,test/dev0)
-	$(call functionTestDeviceCreate,$(LOOP1),test/dev1.dat,test/dev1)
-	$(call functionTestDeviceInitFilesystem,$(LOOP0),-t msdos -F 12,test/dev0)
+	$(call functionCreateFileRandom,test/dev0.dat,1440K)
+	$(call functionCreateFileRandom,test/dev1.dat,1440K)
+	$(call functionInitFilesystem,test/dev0.dat,-t msdos -F 12,test/data/random* test/data/zero*.dat test/data/readonly*.dat test/data/file*.dat)
 	$(MAKE) \
-          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
-          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test-*)" \
+          IMAGE0=test/dev0.dat IMAGE1=test/dev1.dat \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
+          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
+          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
           test_image_operations_base \
-          test_image_operations_check \
+          test_image_operations_check
+	$(RMF) test/dev1.dat
+	$(RMF) test/dev0.dat
+	@
+	# FAT12 random-data, default block size, delta image
+	$(call functionCreateFileZero,test/dev0a.dat,32M)
+	$(call functionCreateFileZero,test/dev0b.dat,32M)
+	$(call functionCreateFileZero,test/dev1.dat,32M)
+	$(call functionInitFilesystem,test/dev0a.dat,-t msdos -F 12,test/data/random* test/data/zero*.dat test/data/readonly*.dat test/data/file*.dat)
+	$(call functionInitFilesystem,test/dev0b.dat,-t msdos -F 12,test/data/random* test/data/zero*.dat test/data/readonly*.dat test/data/file*.dat)
+	$(MAKE) \
+          IMAGE0_A=test/dev0a.dat IMAGE0_B=test/dev0b.dat IMAGE1=test/dev1.dat \
+          DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
+          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
+          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
+          OPTIONS="$(if $(OPTIONS),$(OPTIONS) --raw-images,--compress-algorithm=none --crypt-algorithm=none --raw-images)" \
           test_image_operations_delta
-	$(call functionTestDeviceDelete,$(LOOP1),test/dev1.dat,test/dev1)
-	$(call functionTestDeviceDelete,$(LOOP0),test/dev0.dat,test/dev0)
+	$(RMF) test/dev1.dat
+	$(RMF) test/dev0b.dat
+	$(RMF) test/dev0a.dat
 endif
 
 # FAT 16
 test_image_operations_fat16:
 ifneq (@MKFS_MSDOS@,)
+	# --------------------------------------------------------------
+	# FAT16
 	$(INSTALL) -d test
+	$(call functionTestDeviceReset)
 	#
 	# FAT16 zero-data
-	$(call functionTestFile,$(DEVICE_ZERO),test/dev0.dat,20M)
-	$(call functionTestFile,$(DEVICE_ZERO),test/dev1.dat,20M)
-	$(call functionTestDeviceCreate,$(LOOP0),test/dev0.dat,test/dev0)
-	$(call functionTestDeviceCreate,$(LOOP1),test/dev1.dat,test/dev1)
-	$(call functionTestDeviceInitFilesystem,$(LOOP0),-t msdos -F 16,test/dev0)
+	$(call functionCreateFileZero,test/dev0.dat,20M)
+	$(call functionCreateFileZero,test/dev1.dat,20M)
+	$(call functionInitFilesystem,test/dev0.dat,-t msdos -F 16,test/data/random* test/data/zero*.dat test/data/readonly*.dat test/data/file*.dat)
 	$(MAKE) \
-          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
-          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test-*)" \
+          IMAGE0=test/dev0.dat IMAGE1=test/dev1.dat \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
+          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
+          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
           test_image_operations_base \
           test_image_operations_check \
-          test_image_operations_diff_image \
-          test_image_operations_delta
-	$(call functionDeleteTestDevice,$(LOOP1),test/dev1.dat,test/dev1)
-	$(call functionDeleteTestDevice,$(LOOP0),test/dev0.dat,test/dev0)
+          test_image_operations_diff_image
+	$(RMF) test/dev1.dat
+	$(RMF) test/dev0.dat
 	#
 	# FAT16 random-data
-	$(call functionTestFile,$(DEVICE_RANDOM),test/dev0.dat,20M)
-	$(call functionTestFile,$(DEVICE_RANDOM),test/dev1.dat,20M)
-	$(call functionTestDeviceCreate,$(LOOP0),test/dev0.dat,test/dev0)
-	$(call functionTestDeviceCreate,$(LOOP1),test/dev1.dat,test/dev1)
-	$(call functionTestDeviceInitFilesystem,$(LOOP0),-t msdos -F 16,test/dev0)
+	$(call functionCreateFileRandom,test/dev0.dat,20M)
+	$(call functionCreateFileRandom,test/dev1.dat,20M)
+	$(call functionInitFilesystem,test/dev0.dat,-t msdos -F 16,test/data/random* test/data/zero*.dat test/data/readonly*.dat test/data/file*.dat)
 	$(MAKE) \
-          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
-          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test-*)" \
+          IMAGE0=test/dev0.dat IMAGE1=test/dev1.dat \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
+          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
+          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
           test_image_operations_base \
-          test_image_operations_check \
+          test_image_operations_check
+	$(RMF) test/dev1.dat
+	$(RMF) test/dev0.dat
+	@
+	# FAT16 random-data, default block size, delta image
+	$(call functionCreateFileZero,test/dev0a.dat,32M)
+	$(call functionCreateFileZero,test/dev0b.dat,32M)
+	$(call functionCreateFileZero,test/dev1.dat,32M)
+	$(call functionInitFilesystem,test/dev0a.dat,-t msdos -F 16,test/data/random* test/data/zero*.dat test/data/readonly*.dat test/data/file*.dat)
+	$(call functionInitFilesystem,test/dev0b.dat,-t msdos -F 16,test/data/random* test/data/zero*.dat test/data/readonly*.dat test/data/file*.dat)
+	$(MAKE) \
+          IMAGE0_A=test/dev0a.dat IMAGE0_B=test/dev0b.dat IMAGE1=test/dev1.dat \
+          DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
+          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
+          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
+          OPTIONS="$(if $(OPTIONS),$(OPTIONS) --raw-images,--compress-algorithm=none --crypt-algorithm=none --raw-images)" \
           test_image_operations_delta
-	$(call functionDeleteTestDevice,$(LOOP1),test/dev1.dat,test/dev1)
-	$(call functionDeleteTestDevice,$(LOOP0),test/dev0.dat,test/dev0)
+	$(RMF) test/dev1.dat
+	$(RMF) test/dev0b.dat
+	$(RMF) test/dev0a.dat
 endif
 
 # FAT 32
 test_image_operations_fat32:
 ifneq (@MKFS_MSDOS@,)
+	# --------------------------------------------------------------
+	# FAT32
 	$(INSTALL) -d test
+	$(call functionTestDeviceReset)
 	#
 	# FAT32 zero-data
-	$(call functionTestFile,$(DEVICE_ZERO),test/dev0.dat,40M)
-	$(call functionTestFile,$(DEVICE_ZERO),test/dev1.dat,40M)
-	$(call functionTestDeviceCreate,$(LOOP0),test/dev0.dat,test/dev0)
-	$(call functionTestDeviceCreate,$(LOOP1),test/dev1.dat,test/dev1)
-	$(call functionTestDeviceInitFilesystem,$(LOOP0),-t msdos -F 32,test/dev0)
+	$(call functionCreateFileZero,test/dev0.dat,40M)
+	$(call functionCreateFileZero,test/dev1.dat,40M)
+	$(call functionInitFilesystem,test/dev0.dat,-t msdos -F 32,test/data/random* test/data/zero*.dat test/data/readonly*.dat test/data/file*.dat)
 	$(MAKE) \
-          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
-          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test-*)" \
+          IMAGE0=test/dev0.dat IMAGE1=test/dev1.dat \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
+          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
+          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
           test_image_operations_base \
           test_image_operations_check \
-          test_image_operations_diff_image \
-          test_image_operations_delta
-	$(call functionTestDeviceDelete,$(LOOP1),test/dev1.dat,test/dev1)
-	$(call functionTestDeviceDelete,$(LOOP0),test/dev0.dat,test/dev0)
+          test_image_operations_diff_image
+	$(RMF) test/dev1.dat
+	$(RMF) test/dev0.dat
 	#
 	# FAT32 random-data
-	$(call functionTestFile,$(DEVICE_RANDOM),test/dev0.dat,40M)
-	$(call functionTestFile,$(DEVICE_RANDOM),test/dev1.dat,40M)
-	$(call functionTestDeviceCreate,$(LOOP0),test/dev0.dat,test/dev0)
-	$(call functionTestDeviceCreate,$(LOOP1),test/dev1.dat,test/dev1)
-	$(call functionTestDeviceInitFilesystem,$(LOOP0),-t msdos -F 32,test/dev0)
+	$(call functionCreateFileRandom,test/dev0.dat,40M)
+	$(call functionCreateFileRandom,test/dev1.dat,40M)
+	$(call functionInitFilesystem,test/dev0.dat,-t msdos -F 32,test/data/random* test/data/zero*.dat test/data/readonly*.dat test/data/file*.dat)
 	$(MAKE) \
-          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
-          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test-*)" \
+          IMAGE0=test/dev0.dat IMAGE1=test/dev1.dat \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
+          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
+          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
           test_image_operations_base \
-          test_image_operations_check \
+          test_image_operations_check
+	$(RMF) test/dev1.dat
+	$(RMF) test/dev0.dat
+	@
+	# FAT32 random-data, default block size, delta image
+	$(call functionCreateFileZero,test/dev0a.dat,32M)
+	$(call functionCreateFileZero,test/dev0b.dat,32M)
+	$(call functionCreateFileZero,test/dev1.dat,32M)
+	$(call functionInitFilesystem,test/dev0a.dat,-t msdos -F 32,test/data/random* test/data/zero*.dat test/data/readonly*.dat test/data/file*.dat)
+	$(call functionInitFilesystem,test/dev0b.dat,-t msdos -F 32,test/data/random* test/data/zero*.dat test/data/readonly*.dat test/data/file*.dat)
+	$(MAKE) \
+          IMAGE0_A=test/dev0a.dat IMAGE0_B=test/dev0b.dat IMAGE1=test/dev1.dat \
+          DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
+          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
+          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
+          OPTIONS="$(if $(OPTIONS),$(OPTIONS) --raw-images,--compress-algorithm=none --crypt-algorithm=none --raw-images)" \
           test_image_operations_delta
-	$(call functionTestDeviceDelete,$(LOOP1),test/dev1.dat,test/dev1)
-	$(call functionTestDeviceDelete,$(LOOP0),test/dev0.dat,test/dev0)
+	$(RMF) test/dev1.dat
+	$(RMF) test/dev0b.dat
+	$(RMF) test/dev0a.dat
 endif
 
 .PHONY: test_image_reiser test_image_reiserfs1 test_image_reiserfs2 test_image_reiserfs3 test_image_reiser4
@@ -1551,112 +1864,140 @@ endif
 # ReiserFS version 3 (Note: Linux only support block size 4096)
 test_image_operations_reiserfs3:
 ifneq (@MKFS_REISERFS@,)
+	# --------------------------------------------------------------
+	# ReiserFS 3
 	$(INSTALL) -d test
+	$(call functionTestDeviceReset)
 	#
 	# ReiserFS 3 zero-data
-	$(call functionTestFile,$(DEVICE_ZERO),test/dev0.dat,64M)
-	$(call functionTestFile,$(DEVICE_ZERO),test/dev1.dat,64M)
-	$(call functionTestDeviceCreate,$(LOOP0),test/dev0.dat,test/dev0)
-	$(call functionTestDeviceCreate,$(LOOP1),test/dev1.dat)
-	$(call functionTestDeviceInitFilesystem,$(LOOP0),-t reiserfs -b 4096 -q --format 3.5,test/dev0)
+	$(call functionCreateFileZero,test/dev0.dat,64M)
+	$(call functionCreateFileZero,test/dev1.dat,64M)
+	$(call functionInitFilesystem,test/dev0.dat,-t reiserfs -b 4096 -q --format 3.5,test/data/random* test/data/zero*.dat test/data/readonly*.dat test/data/file*.dat)
 	$(MAKE) \
-          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
-          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test-*)" \
+          IMAGE0=test/dev0.dat IMAGE1=test/dev1.dat \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
+          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
+          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
           test_image_operations_base \
           test_image_operations_check \
-          test_image_operations_diff_image \
-          test_image_operations_delta
-	$(call functionTestDeviceDelete,$(LOOP1),test/dev1.dat)
-	$(call functionTestDeviceDelete,$(LOOP0),test/dev0.dat,test/dev0)
+          test_image_operations_diff_image
+	$(RMF) test/dev1.dat
+	$(RMF) test/dev0.dat
 	#
 	# ReiserFS 3 random-data
-	$(call functionTestFile,$(DEVICE_RANDOM),test/dev0.dat,64M)
-	$(call functionTestFile,$(DEVICE_RANDOM),test/dev1.dat,64M)
-	$(call functionTestDeviceCreate,$(LOOP0),test/dev0.dat,test/dev0)
-	$(call functionTestDeviceCreate,$(LOOP1),test/dev1.dat)
-	$(call functionTestDeviceInitFilesystem,$(LOOP0),-t reiserfs -b 4096 -q --format 3.5,test/dev0)
+	$(call functionCreateFileRandom,test/dev0.dat,64M)
+	$(call functionCreateFileRandom,test/dev1.dat,64M)
+	$(call functionInitFilesystem,test/dev0.dat,-t reiserfs -b 4096 -q --format 3.5,test/data/random* test/data/zero*.dat test/data/readonly*.dat test/data/file*.dat)
 	$(MAKE) \
-          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
-          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test-*)" \
+          IMAGE0=test/dev0.dat IMAGE1=test/dev1.dat \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
+          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
+          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
           test_image_operations_base \
-          test_image_operations_check \
-          test_image_operations_delta
-	$(call functionTestDeviceDelete,$(LOOP1),test/dev1.dat)
-	$(call functionTestDeviceDelete,$(LOOP0),test/dev0.dat,test/dev0)
+          test_image_operations_check
+	$(RMF) test/dev1.dat
+	$(RMF) test/dev0.dat
 	#
 	# ReiserFS 3 zero-data
-	$(call functionTestFile,$(DEVICE_ZERO),test/dev0.dat,64M)
-	$(call functionTestFile,$(DEVICE_ZERO),test/dev1.dat,64M)
-	$(call functionTestDeviceCreate,$(LOOP0),test/dev0.dat,test/dev0)
-	$(call functionTestDeviceCreate,$(LOOP1),test/dev1.dat)
-	$(call functionTestDeviceInitFilesystem,$(LOOP0),-t reiserfs -b 4096 -q --format 3.6,test/dev0)
+	$(call functionCreateFileZero,test/dev0.dat,64M)
+	$(call functionCreateFileZero,test/dev1.dat,64M)
+	$(call functionInitFilesystem,test/dev0.dat,-t reiserfs -b 4096 -q --format 3.6,test/data/random* test/data/zero*.dat test/data/readonly*.dat test/data/file*.dat)
 	$(MAKE) \
-          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
-          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test-*)" \
+          IMAGE0=test/dev0.dat IMAGE1=test/dev1.dat \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
+          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
+          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
           test_image_operations_base \
           test_image_operations_check \
-          test_image_operations_diff_image \
-          test_image_operations_delta
-	$(call functionTestDeviceDelete,$(LOOP1),test/dev1.dat)
-	$(call functionTestDeviceDelete,$(LOOP0),test/dev0.dat,test/dev0)
+          test_image_operations_diff_image
+	$(RMF) test/dev1.dat
+	$(RMF) test/dev0.dat
 	#
 	# ReiserFS 3 random-data
-	$(call functionTestFile,$(DEVICE_RANDOM),test/dev0.dat,64M)
-	$(call functionTestFile,$(DEVICE_RANDOM),test/dev1.dat,64M)
-	$(call functionTestDeviceCreate,$(LOOP0),test/dev0.dat,test/dev0)
-	$(call functionTestDeviceCreate,$(LOOP1),test/dev1.dat)
-	$(call functionTestDeviceInitFilesystem,$(LOOP0),-t reiserfs -b 4096 -q --format 3.6,test/dev0)
+	$(call functionCreateFileRandom,test/dev0.dat,64M)
+	$(call functionCreateFileRandom,test/dev1.dat,64M)
+	$(call functionInitFilesystem,test/dev0.dat,-t reiserfs -b 4096 -q --format 3.6,test/data/random* test/data/zero*.dat test/data/readonly*.dat test/data/file*.dat)
 	$(MAKE) \
-          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
-          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test-*)" \
+          IMAGE0=test/dev0.dat IMAGE1=test/dev1.dat \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
+          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
+          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
           test_image_operations_base \
-          test_image_operations_check \
+          test_image_operations_check
+	$(RMF) test/dev1.dat
+	$(RMF) test/dev0.dat
+	@
+	# ReiserFS 3 random-data, default block size, delta image
+	$(call functionCreateFileZero,test/dev0a.dat,32M)
+	$(call functionCreateFileZero,test/dev0b.dat,32M)
+	$(call functionCreateFileZero,test/dev1.dat,32M)
+	$(call functionInitFilesystem,test/dev0a.dat,-t reiserfs -b 4096 -q --format 3.6,test/data/random* test/data/zero*.dat test/data/readonly*.dat test/data/file*.dat)
+	$(call functionInitFilesystem,test/dev0b.dat,-t reiserfs -b 4096 -q --format 3.6,test/data/random* test/data/zero*.dat test/data/readonly*.dat test/data/file*.dat)
+	$(MAKE) \
+          IMAGE0_A=test/dev0a.dat IMAGE0_B=test/dev0b.dat IMAGE1=test/dev1.dat \
+          DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
+          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
+          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
+          OPTIONS="$(if $(OPTIONS),$(OPTIONS) --raw-images,--compress-algorithm=none --crypt-algorithm=none --raw-images)" \
           test_image_operations_delta
-	$(call functionTestDeviceDelete,$(LOOP1),test/dev1.dat)
-	$(call functionTestDeviceDelete,$(LOOP0),test/dev0.dat,test/dev0)
+	$(RMF) test/dev1.dat
+	$(RMF) test/dev0b.dat
+	$(RMF) test/dev0a.dat
 endif
 
 # Reiser4 (Note: Linux only support block size 4096)
 test_image_operations_reiser4:
 ifneq (@MKFS_REISER4@,)
+	# --------------------------------------------------------------
+	# Reiser 4
 	$(INSTALL) -d test
+	$(call functionTestDeviceReset)
 	#
 	# Reiser 4 zero-data
-	$(call functionTestFile,$(DEVICE_ZERO),test/dev0.dat,64M)
-	$(call functionTestFile,$(DEVICE_ZERO),test/dev1.dat,64M)
-	$(call functionTestDeviceCreate,$(LOOP0),test/dev0.dat,test/dev0)
-	$(call functionTestDeviceCreate,$(LOOP1),test/dev1.dat)
-	$(call functionTestDeviceInitFilesystem,$(LOOP0),-t reiser4 -b 4096 -y,test/dev0)
+	$(call functionCreateFileZero,test/dev0.dat,64M)
+	$(call functionCreateFileZero,test/dev1.dat,64M)
+	$(call functionInitFilesystem,test/dev0.dat,-t reiser4 -b 4096 -y,test/data/random* test/data/zero*.dat test/data/readonly*.dat test/data/file*.dat)
 	$(MAKE) \
-          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
-          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test-*)" \
+          IMAGE0=test/dev0.dat IMAGE1=test/dev1.dat \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
+          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
+          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
           test_image_operations_base \
           test_image_operations_check \
-          test_image_operations_diff_image \
-          test_image_operations_delta
-	$(call functionTestDeviceDelete,$(LOOP1),test/dev1.dat)
-	$(call functionTestDeviceDelete,$(LOOP0),test/dev0.dat,test/dev0)
+          test_image_operations_diff_image
+	$(RMF) test/dev1.dat
+	$(RMF) test/dev0.dat
 	#
 	# Reiser 4 random-data
-	$(call functionTestFile,$(DEVICE_RANDOM),test/dev0.dat,64M)
-	$(call functionTestFile,$(DEVICE_RANDOM),test/dev1.dat,64M)
-	$(call functionTestDeviceCreate,$(LOOP0),test/dev0.dat,test/dev0)
-	$(call functionTestDeviceCreate,$(LOOP1),test/dev1.dat)
-	$(call functionTestDeviceInitFilesystem,$(LOOP0),-t reiser4 -b 4096 -y,test/dev0)
+	$(call functionCreateFileRandom,test/dev0.dat,64M)
+	$(call functionCreateFileRandom,test/dev1.dat,64M)
+	$(call functionInitFilesystem,test/dev0.dat,-t reiser4 -b 4096 -y,test/data/random* test/data/zero*.dat test/data/readonly*.dat test/data/file*.dat)
 	$(MAKE) \
-          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
-          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test-*)" \
+          IMAGE0=test/dev0.dat IMAGE1=test/dev1.dat \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
+          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
+          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
           test_image_operations_base \
-          test_image_operations_check \
+          test_image_operations_check
+	$(RMF) test/dev1.dat
+	$(RMF) test/dev0.dat
+	@
+	# Reiser 4 random-data, default block size, delta image
+	$(call functionCreateFileZero,test/dev0a.dat,32M)
+	$(call functionCreateFileZero,test/dev0b.dat,32M)
+	$(call functionCreateFileZero,test/dev1.dat,32M)
+	$(call functionInitFilesystem,test/dev0a.dat,-t reiser4 -b 4096 -y,test/data/random* test/data/zero*.dat test/data/readonly*.dat test/data/file*.dat)
+	$(call functionInitFilesystem,test/dev0b.dat,-t reiser4 -b 4096 -y,test/data/random* test/data/zero*.dat test/data/readonly*.dat test/data/file*.dat)
+	$(MAKE) \
+          IMAGE0_A=test/dev0a.dat IMAGE0_B=test/dev0b.dat IMAGE1=test/dev1.dat \
+          DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
+          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
+          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
+          OPTIONS="$(if $(OPTIONS),$(OPTIONS) --raw-images,--compress-algorithm=none --crypt-algorithm=none --raw-images)" \
           test_image_operations_delta
-	$(call functionTestDeviceDelete,$(LOOP1),test/dev1.dat)
-	$(call functionTestDeviceDelete,$(LOOP0),test/dev0.dat,test/dev0)
+	$(RMF) test/dev1.dat
+	$(RMF) test/dev0b.dat
+	$(RMF) test/dev0a.dat
 endif
 
 .PHONY: test_image_operations_base test_image_operations_check test_image_operations_diff_image
@@ -1665,64 +2006,118 @@ test_image_operations_base: \
   $(TEST_FILES)
 	# normal tests
 	@$(call functionVerifyParameter,TEST_BAR)
+	@$(call functionVerifyParameter,IMAGE0)
+	@$(call functionVerifyParameter,IMAGE1)
 	@$(call functionVerifyParameter,DEVICE0)
 	@$(call functionVerifyParameter,DEVICE1)
 	@$(call functionVerifyParameter,BAR_FILE)
-	#
+	@
+	@# ---
 	$(RMRF) $(TEST_FILES_CLEAN)
+	@
+	$(call functionTestDeviceCreate,$(DEVICE0),$(IMAGE0),test/dev0)
 	SSH_ASKPASS= $(TEST_BAR) -m test/$(BAR_FILE).bar $(DEVICE0) $(if $(OPTIONS),$(OPTIONS),--compress-algorithm=none --crypt-algorithm=none) --overwrite-archive-files --verbose=2 $(if $(QUIET),1>/dev/null)
 	SSH_ASKPASS= $(TEST_BAR) -t test/test*.bar $(OPTIONS) $(if $(QUIET),1>/dev/null)
 	SSH_ASKPASS= $(TEST_BAR) -d test/test*.bar $(OPTIONS) $(if $(QUIET),1>/dev/null)
+	$(call functionTestDeviceDelete,$(DEVICE0),test/dev0)
+	@
+	$(call functionTestDeviceCreate,$(DEVICE1),$(IMAGE1),test/dev1)
 	SSH_ASKPASS= $(TEST_BAR) -x test/test*.bar $(OPTIONS) --destination $(DEVICE1) $(if $(QUIET),1>/dev/null)
+	$(call functionTestDeviceDelete,$(DEVICE1),test/dev1)
+	#
 
 test_image_operations_delta: \
   $(TEST_BAR) \
   $(TEST_FILES)
 	# delta tests
 	@$(call functionVerifyParameter,TEST_BAR)
+	@$(call functionVerifyParameter,IMAGE0_A)
+	@$(call functionVerifyParameter,IMAGE0_B)
+	@$(call functionVerifyParameter,IMAGE1)
 	@$(call functionVerifyParameter,DEVICE0)
 	@$(call functionVerifyParameter,DEVICE1)
 	@$(call functionVerifyParameter,BAR_FILE)
 	@$(call functionVerifyParameter,BAR_PATTERN)
-	#
+	@
+	@# ---
 	$(RMRF) $(TEST_FILES_CLEAN)
+	@
+	$(call functionTestDeviceCreate,$(DEVICE0),$(IMAGE0_A),test/dev0)
 	SSH_ASKPASS= $(TEST_BAR) -m test/$(BAR_FILE)-A.bar $(DEVICE0) $(OPTIONS) --overwrite-archive-files --verbose=2 $(if $(QUIET),1>/dev/null)
+	$(call functionTestDeviceDelete,$(DEVICE0),test/dev0)
+	@
+	$(call functionTestDeviceCreate,$(DEVICE0),$(IMAGE0_B),test/dev0)
 	SSH_ASKPASS= $(TEST_BAR) -m test/$(BAR_FILE)-B.bar $(DEVICE0) --delta-source='test/$(BAR_PATTERN)-A.bar' $(OPTIONS) --compress-algorithm=xdelta9 --force-delta-compression --overwrite-archive-files --verbose=2 $(if $(QUIET),1>/dev/null)
 	SSH_ASKPASS= $(TEST_BAR) -t test/$(BAR_PATTERN)-B.bar $(OPTIONS) $(if $(QUIET),1>/dev/null)
 	SSH_ASKPASS= $(TEST_BAR) -d test/$(BAR_PATTERN)-B.bar $(OPTIONS) $(if $(QUIET),1>/dev/null)
+	$(call functionTestDeviceDelete,$(DEVICE0),test/dev0)
+	@
+	$(call functionTestDeviceCreate,$(DEVICE1),$(IMAGE1),test/dev1)
 	SSH_ASKPASS= $(TEST_BAR) -x test/$(BAR_PATTERN)-B.bar $(OPTIONS) --destination $(DEVICE1) $(if $(QUIET),1>/dev/null)
-	#
+	$(call functionTestDeviceDelete,$(DEVICE1),test/dev1)
+	@
+	@# ---
 	$(RMRF) $(TEST_FILES_CLEAN)
+	@
+	$(call functionTestDeviceCreate,$(DEVICE0),$(IMAGE0_A),test/dev0)
 	SSH_ASKPASS= $(TEST_BAR) -m test/$(BAR_FILE)-A.bar $(DEVICE0) $(OPTIONS) --compress-algorithm=zip9 --overwrite-archive-files --verbose=2 $(if $(QUIET),1>/dev/null)
+	$(call functionTestDeviceDelete,$(DEVICE0),test/dev0)
+	@
+	$(call functionTestDeviceCreate,$(DEVICE0),$(IMAGE0_B),test/dev0)
 	SSH_ASKPASS= $(TEST_BAR) -m test/$(BAR_FILE)-B.bar $(DEVICE0) --delta-source='test/$(BAR_PATTERN)-A.bar' $(OPTIONS) --compress-algorithm=xdelta9+zip9 --force-delta-compression --overwrite-archive-files --verbose=2 $(if $(QUIET),1>/dev/null)
 	SSH_ASKPASS= $(TEST_BAR) -t test/$(BAR_PATTERN)-B.bar $(OPTIONS) $(if $(QUIET),1>/dev/null)
 	SSH_ASKPASS= $(TEST_BAR) -d test/$(BAR_PATTERN)-B.bar $(OPTIONS) $(if $(QUIET),1>/dev/null)
+	$(call functionTestDeviceDelete,$(DEVICE0),test/dev0)
+	@
+	$(call functionTestDeviceCreate,$(DEVICE1),$(IMAGE1),test/dev1)
 	SSH_ASKPASS= $(TEST_BAR) -x test/$(BAR_PATTERN)-B.bar $(OPTIONS) --destination $(DEVICE1) $(if $(QUIET),1>/dev/null)
+	$(call functionTestDeviceDelete,$(DEVICE1),test/dev1)
+	#
 
 test_image_operations_check:
 	# check file systems and compare file content
 	@$(call functionVerifyParameter,TEST_BAR)
+	@$(call functionVerifyParameter,IMAGE0)
+	@$(call functionVerifyParameter,IMAGE1)
 	@$(call functionVerifyParameter,DEVICE0)
 	@$(call functionVerifyParameter,DEVICE1)
-	#
+	@
+	@# ---
+	$(call functionTestDeviceCreate,$(DEVICE0),$(IMAGE0),test/dev0)
 	$(FSCK) -n $(DEVICE0) $(if $(QUIET),1>/dev/null 2>/dev/null)
+	$(call functionTestDeviceDelete,$(DEVICE0),test/dev0)
+	@
+	$(call functionTestDeviceCreate,$(DEVICE1),$(IMAGE1),test/dev1)
 	$(FSCK) -n $(DEVICE1) $(if $(QUIET),1>/dev/null 2>/dev/null)
-	$(INSTALL) -d test/dev0; $(SUDO) $(MOUNT) $(DEVICE0) test/dev0
-	$(INSTALL) -d test/dev1; $(SUDO) $(MOUNT) $(DEVICE1) test/dev1
+	$(call functionTestDeviceDelete,$(DEVICE1),test/dev1)
+	@
+	$(call functionDeviceMount,$(DEVICE0),$(IMAGE0),test/dev0)
+	$(call functionDeviceMount,$(DEVICE1),$(IMAGE1),test/dev1)
 	$(SUDO) $(DIFF) -r test/dev0 test/dev1 $(if $(QUIET),1>/dev/null)
 	$(SLEEP) 5
-	$(SUDO) $(UMOUNT) test/dev1
-	$(SUDO) $(UMOUNT) test/dev0
+	$(call functionDeviceUmount,$(DEVICE0),test/dev0)
+	$(call functionDeviceUmount,$(DEVICE1),test/dev1)
+	#
 
 test_image_operations_diff_image:
 	# compare devices
 	@$(call functionVerifyParameter,TEST_BAR)
+	@$(call functionVerifyParameter,IMAGE0)
+	@$(call functionVerifyParameter,IMAGE1)
 	@$(call functionVerifyParameter,DEVICE0)
 	@$(call functionVerifyParameter,DEVICE1)
-	#
+	@
+	@# ---
+	$(call functionTestDeviceCreate,$(DEVICE0),$(IMAGE0),test/dev0)
 	$(call functionTestDeviceDump,$(DEVICE0),test/dev0.dump)
+	$(call functionTestDeviceDelete,$(DEVICE0),test/dev0)
+	@
+	$(call functionTestDeviceCreate,$(DEVICE1),$(IMAGE1),test/dev1)
 	$(call functionTestDeviceDump,$(DEVICE1),test/dev1.dump)
+	$(call functionTestDeviceDelete,$(DEVICE1),test/dev1)
+	@
 	$(DIFF) test/dev0.dump test/dev1.dump
+	#
 
 .PHONY: test_dvd_operations
 test_dvd_operations: \
@@ -1731,12 +2126,14 @@ test_dvd_operations: \
 	# create DVD
 	@$(call functionVerifyParameter,TEST_BAR)
 	@$(call functionVerifyParameter,BAR_FILE)
-	#
+	@
+	@# ---
 	$(RMRF) $(TEST_FILES_CLEAN)
 	$(SLEEP) 30
 	SSH_ASKPASS= $(TEST_BAR) -c dvd://$(BAR_FILE).bar test/data $(if $(OPTIONS),$(OPTIONS),--compress-algorithm=none --crypt-algorithm=none) $(if $(QUIET),1>/dev/null)
 	$(SLEEP) 30
 	SSH_ASKPASS= $(TEST_BAR) -c dvd://$(BAR_FILE).bar test/data $(if $(OPTIONS),$(OPTIONS),--compress-algorithm=none --crypt-algorithm=none) --ecc $(if $(QUIET),1>/dev/null)
+	#
 
 # ----------------------------------------------------------------------------
 
