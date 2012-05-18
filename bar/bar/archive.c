@@ -1715,7 +1715,7 @@ LOCAL Errors writeImageDataBlock(ArchiveEntryInfo *archiveEntryInfo,
     if (archiveEntryInfo->image.sourceHandleInitFlag)
     {
       Source_setBaseOffset(&archiveEntryInfo->image.sourceHandle,
-                           archiveEntryInfo->image.chunkImageData.blockCount*archiveEntryInfo->image.blockSize
+                           archiveEntryInfo->image.chunkImageData.blockCount*(uint64)archiveEntryInfo->image.blockSize
                           );
     }
 
@@ -7931,6 +7931,12 @@ Errors Archive_readData(ArchiveEntryInfo *archiveEntryInfo,
         {
           return error;
         }
+
+        // set delta base-offset
+        Source_setBaseOffset(&archiveEntryInfo->file.sourceHandle,
+                             archiveEntryInfo->file.chunkFileData.fragmentSize
+                            );
+
         archiveEntryInfo->file.sourceHandleInitFlag = TRUE;
       }
 
@@ -8077,6 +8083,12 @@ Errors Archive_readData(ArchiveEntryInfo *archiveEntryInfo,
         {
           return error;
         }
+
+        // set delta base-offset
+        Source_setBaseOffset(&archiveEntryInfo->image.sourceHandle,
+                             archiveEntryInfo->image.chunkImageData.blockOffset*(uint64)archiveEntryInfo->image.blockSize
+                            );
+
         archiveEntryInfo->image.sourceHandleInitFlag = TRUE;
       }
 
@@ -8225,6 +8237,12 @@ Errors Archive_readData(ArchiveEntryInfo *archiveEntryInfo,
         {
           return error;
         }
+
+        // set delta base-offset
+        Source_setBaseOffset(&archiveEntryInfo->hardLink.sourceHandle,
+                             archiveEntryInfo->hardLink.chunkHardLinkData.fragmentOffset
+                            );
+
         archiveEntryInfo->hardLink.sourceHandleInitFlag = TRUE;
       }
 
