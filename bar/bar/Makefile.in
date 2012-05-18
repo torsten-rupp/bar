@@ -2079,11 +2079,11 @@ test_image_operations_check:
 	@
 	@# ---
 	$(call functionTestDeviceCreate,$(DEVICE0),$(IMAGE0),test/dev0)
-	$(FSCK) -n $(DEVICE0) $(if $(QUIET),1>/dev/null 2>/dev/null)
+	$(FSCK) -n -y $(DEVICE0) $(if $(QUIET),1>/dev/null 2>/dev/null)
 	$(call functionTestDeviceDelete,$(DEVICE0),test/dev0)
 	@
 	$(call functionTestDeviceCreate,$(DEVICE1),$(IMAGE1),test/dev1)
-	$(FSCK) -n $(DEVICE1) $(if $(QUIET),1>/dev/null 2>/dev/null)
+	$(FSCK) -n -y $(DEVICE1) $(if $(QUIET),1>/dev/null 2>/dev/null)
 	$(call functionTestDeviceDelete,$(DEVICE1),test/dev1)
 	@
 	$(call functionDeviceMount,$(DEVICE0),$(IMAGE0),test/dev0)
