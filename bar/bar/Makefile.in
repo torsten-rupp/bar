@@ -423,12 +423,13 @@ rundev_ssl: bar ../bar-ca.pem ../bar-server-cert.pem ../bar-server-key.pem
 # For image tests some sudo-commands are required:
 #  sudo losetup <loop device> <file>
 #  sudo losetup -d <loop device>
+#  sudo chmod o+rw <loop device>
 #  sudo mkfs <options> <loop device>
 #  sudo mount <loop device> test/dev
-#  sudo cp test/data test/dev
 #  sudo umount <loop device>
+#  sudo cp test/data test/dev
 #  sudo dd <loop device> <file>
-#  sudo chmod o+rw <loop device>
+#  sudo diff -r <mount point> <mount point>
 
 # different test files
 TEST_FILES = \
@@ -893,13 +894,13 @@ functionTestFileCreate = \
 # call functionTestDeviceReset
 functionTestDeviceReset = \
   @( \
-    $(ECHO) $(UMOUNT) test/dev0; \
+    $(ECHO) $(SUDO) $(UMOUNT) test/dev0; \
     $(SUDO) $(UMOUNT) test/dev0 2>/dev/null; \
-    $(ECHO) $(UMOUNT) test/dev1; \
+    $(ECHO) $(SUDO) $(UMOUNT) test/dev1; \
     $(SUDO) $(UMOUNT) test/dev1 2>/dev/null; \
-    $(ECHO) $(LOSETUP) -d $(LOOP0); \
+    $(ECHO) $(SUDO) $(LOSETUP) -d $(LOOP0); \
     $(SUDO) $(LOSETUP) -d $(LOOP0) 2>/dev/null; \
-    $(ECHO) $(LOSETUP) -d $(LOOP1); \
+    $(ECHO) $(SUDO) $(LOSETUP) -d $(LOOP1); \
     $(SUDO) $(LOSETUP) -d $(LOOP1) 2>/dev/null; \
     true; \
   ) $(if $(QUIET),1>/dev/null 2>/dev/null)
@@ -929,12 +930,12 @@ functionCreateFileRandom = \
   ) $(if $(QUIET),1>/dev/null 2>/dev/null)
 
 # helper function to create a test device
-# call functionTestDeviceCreate,<loop device>,<file>,<mount point>
+# call functionTestDeviceCreate,<loop device>,<image file>,<mount point>
 functionTestDeviceCreate = \
   @( \
-    $(ECHO) $(LOSETUP) $1 $2; \
+    $(ECHO) $(SUDO) $(LOSETUP) $1 $2; \
     $(SUDO) $(LOSETUP) $1 $2; rc=$$?; if test $$rc -ne 0; then exit $$rc; fi; \
-    $(ECHO) $(CHMOD) o+rw $1; \
+    $(ECHO) $(SUDO) $(CHMOD) o+rw $1; \
     $(SUDO) $(CHMOD) o+rw $1; \
   ) $(if $(QUIET),1>/dev/null 2>/dev/null)
 
@@ -942,7 +943,7 @@ functionTestDeviceCreate = \
 # call functionTestDeviceDelete,<loop device>,<mount point>
 functionTestDeviceDelete = \
   @( \
-    $(ECHO) $(LOSETUP) -d $1; \
+    $(ECHO) $(SUDO) $(LOSETUP) -d $1; \
     $(SUDO) $(LOSETUP) -d $1; \
   ) $(if $(QUIET),1>/dev/null 2>/dev/null)
 
@@ -958,12 +959,12 @@ functionInitFilesystem = \
     $(SUDO) $(MKFS) $2 $(LOOP0) 1>/dev/null 2>/dev/null; rc=$$?; if test $$rc -ne 0; then exit $$rc; fi; \
     $(if $3,$(ECHO) $(INSTALL) -d test/dev0; \
             $(INSTALL) -d test/dev0; \
-            $(ECHO) $(MOUNT) $(LOOP0) test/dev0; \
+            $(ECHO) $(SUDO) $(MOUNT) $(LOOP0) test/dev0; \
             $(SUDO) $(MOUNT) $(LOOP0) test/dev0; rc=$$?; if test $$rc -ne 0; then exit $$rc; fi; \
-            $(ECHO) $(CP) -r -p $3 test/dev0; \
+            $(ECHO) $(SUDO) $(CP) -r -p $3 test/dev0; \
             $(SUDO) $(CP) -r -p $3 test/dev0 1>/dev/null 2>/dev/null; \
             $(SLEEP) 5; \
-            $(ECHO) $(UMOUNT) test/dev0; \
+            $(ECHO) $(SUDO) $(UMOUNT) test/dev0; \
             $(SUDO) $(UMOUNT) test/dev0; \
     ) \
     $(ECHO) $(SUDO) $(LOSETUP) -d $(LOOP0); \
@@ -974,13 +975,13 @@ functionInitFilesystem = \
 # call functionDeviceMount,<loop device>,<image file>,<mount point>
 functionDeviceMount = \
   @( \
-    $(ECHO) $(LOSETUP) $1 $2; \
+    $(ECHO) $(SUDO) $(LOSETUP) $1 $2; \
     $(SUDO) $(LOSETUP) $1 $2; rc=$$?; if test $$rc -ne 0; then exit $$rc; fi; \
-    $(ECHO) $(CHMOD) o+rw $1; \
+    $(ECHO) $(SUDO) $(CHMOD) o+rw $1; \
     $(SUDO) $(CHMOD) o+rw $1; \
     $(ECHO) $(INSTALL) -d $3; \
     $(INSTALL) -d $3; \
-    $(ECHO) $(MOUNT) $1 $3; \
+    $(ECHO) $(SUDO) $(MOUNT) $1 $3; \
     $(SUDO) $(MOUNT) $1 $3; rc=$$?; if test $$rc -ne 0; then exit $$rc; fi; \
   ) $(if $(QUIET),1>/dev/null 2>/dev/null)
 
@@ -988,9 +989,9 @@ functionDeviceMount = \
 # call functionDeviceUmount,<loop device>,<mount point>
 functionDeviceUmount = \
   @( \
-    $(ECHO) $(UMOUNT) $2; \
+    $(ECHO) $(SUDO) $(UMOUNT) $2; \
     $(SUDO) $(UMOUNT) $2; rc=$$?; if test $$rc -ne 0; then exit $$rc; fi; \
-    $(ECHO) $(LOSETUP) -d $1; \
+    $(ECHO) $(SUDO) $(LOSETUP) -d $1; \
     $(SUDO) $(LOSETUP) -d $1; \
   ) $(if $(QUIET),1>/dev/null 2>/dev/null)
 
@@ -998,7 +999,7 @@ functionDeviceUmount = \
 # call functionTestDeviceDump,<loop device>,<file>
 functionTestDeviceDump = \
   @( \
-    $(ECHO) $(DD) if=$1 of=- \> $2; \
+    $(ECHO) $(SUDO) $(DD) if=$1 of=- \> $2; \
     ($(SUDO) $(DD) if=$1 of=-) > $2 2>/dev/null; \
   ) $(if $(QUIET),1>/dev/null 2>/dev/null)
 
@@ -1922,10 +1923,10 @@ ifneq (@MKFS_REISERFS@,)
 	$(RMF) test/dev1.dat
 	$(RMF) test/dev0.dat
 	@
-	# ReiserFS 3 random-data, default block size, delta image
-	$(call functionCreateFileZero,test/dev0a.dat,32M)
-	$(call functionCreateFileZero,test/dev0b.dat,32M)
-	$(call functionCreateFileZero,test/dev1.dat,32M)
+	# ReiserFS 3 random-data, delta image
+	$(call functionCreateFileZero,test/dev0a.dat,64M)
+	$(call functionCreateFileZero,test/dev0b.dat,64M)
+	$(call functionCreateFileZero,test/dev1.dat,64M)
 	$(call functionInitFilesystem,test/dev0a.dat,-t reiserfs -b 4096 -q --format 3.6,test/data/random* test/data/zero*.dat test/data/readonly*.dat test/data/file*.dat)
 	$(call functionInitFilesystem,test/dev0b.dat,-t reiserfs -b 4096 -q --format 3.6,test/data/random* test/data/zero*.dat test/data/readonly*.dat test/data/file*.dat)
 	$(MAKE) \
@@ -1940,59 +1941,9 @@ ifneq (@MKFS_REISERFS@,)
 	$(RMF) test/dev0a.dat
 endif
 
-# Reiser4 (Note: Linux only support block size 4096)
+# Reiser4 (Note: not supported anymore)
 test_image_operations_reiser4:
 ifneq (@MKFS_REISER4@,)
-	# --------------------------------------------------------------
-	# Reiser 4
-	$(INSTALL) -d test
-	$(call functionTestDeviceReset)
-	#
-	# Reiser 4 zero-data
-	$(call functionCreateFileZero,test/dev0.dat,64M)
-	$(call functionCreateFileZero,test/dev1.dat,64M)
-	$(call functionInitFilesystem,test/dev0.dat,-t reiser4 -b 4096 -y,test/data/random* test/data/zero*.dat test/data/readonly*.dat test/data/file*.dat)
-	$(MAKE) \
-          IMAGE0=test/dev0.dat IMAGE1=test/dev1.dat \
-          DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
-          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
-          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
-          test_image_operations_base \
-          test_image_operations_check \
-          test_image_operations_diff_image
-	$(RMF) test/dev1.dat
-	$(RMF) test/dev0.dat
-	#
-	# Reiser 4 random-data
-	$(call functionCreateFileRandom,test/dev0.dat,64M)
-	$(call functionCreateFileRandom,test/dev1.dat,64M)
-	$(call functionInitFilesystem,test/dev0.dat,-t reiser4 -b 4096 -y,test/data/random* test/data/zero*.dat test/data/readonly*.dat test/data/file*.dat)
-	$(MAKE) \
-          IMAGE0=test/dev0.dat IMAGE1=test/dev1.dat \
-          DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
-          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
-          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
-          test_image_operations_base \
-          test_image_operations_check
-	$(RMF) test/dev1.dat
-	$(RMF) test/dev0.dat
-	@
-	# Reiser 4 random-data, default block size, delta image
-	$(call functionCreateFileZero,test/dev0a.dat,32M)
-	$(call functionCreateFileZero,test/dev0b.dat,32M)
-	$(call functionCreateFileZero,test/dev1.dat,32M)
-	$(call functionInitFilesystem,test/dev0a.dat,-t reiser4 -b 4096 -y,test/data/random* test/data/zero*.dat test/data/readonly*.dat test/data/file*.dat)
-	$(call functionInitFilesystem,test/dev0b.dat,-t reiser4 -b 4096 -y,test/data/random* test/data/zero*.dat test/data/readonly*.dat test/data/file*.dat)
-	$(MAKE) \
-          IMAGE0_A=test/dev0a.dat IMAGE0_B=test/dev0b.dat IMAGE1=test/dev1.dat \
-          DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
-          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
-          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
-          OPTIONS="$(if $(OPTIONS),$(OPTIONS) --raw-images,--compress-algorithm=none --crypt-algorithm=none --raw-images)" \
-          test_image_operations_delta
-	$(RMF) test/dev1.dat
-	$(RMF) test/dev0b.dat
-	$(RMF) test/dev0a.dat
 endif
 
 .PHONY: test_image_operations_base test_image_operations_check test_image_operations_diff_image
