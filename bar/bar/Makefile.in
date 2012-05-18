@@ -1011,43 +1011,38 @@ test_image_operations: \
 
 .PHONY: test_image_operations_raw
 test_image_operations_raw:
+	# --------------------------------------------------------------
+	# raw
 	$(INSTALL) -d test
-	#
+	$(call functionTestDeviceReset)
+	@
 	# raw zero-data
 	$(call functionCreateFileZero,test/dev0.dat,32M)
 	$(call functionCreateFileZero,test/dev1.dat,32M)
-	$(call functionTestDeviceCreate,$(LOOP0),test/dev0.dat,test/dev0)
-	$(call functionTestDeviceCreate,$(LOOP1),test/dev1.dat,test/dev1)
 	$(MAKE) \
+          IMAGE0=test/dev0.dat IMAGE1=test/dev1.dat \
+          DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
-          DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           OPTIONS="$(if $(OPTIONS),$(OPTIONS) --raw-images,--compress-algorithm=none --crypt-algorithm=none --raw-images)" \
           test_image_operations_base
-	$(call functionTestDeviceDelete,$(LOOP1),test/dev0)
-	$(call functionTestDeviceDelete,$(LOOP0),test/dev1)
 	$(RMF) test/dev1.dat
 	$(RMF) test/dev0.dat
-	#
+	@
 	# raw random-data
 	$(call functionCreateFileRandom,test/dev0.dat,32M)
 	$(call functionCreateFileRandom,test/dev1.dat,32M)
-	$(call functionTestDeviceCreate,$(LOOP0),test/dev0.dat,test/dev0)
-	$(call functionTestDeviceCreate,$(LOOP1),test/dev1.dat,test/dev1)
 	$(MAKE) \
+          IMAGE0=test/dev0.dat IMAGE1=test/dev1.dat \
+          DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
-          DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           OPTIONS="$(if $(OPTIONS),$(OPTIONS) --raw-images,--compress-algorithm=none --crypt-algorithm=none --raw-images)" \
           test_image_operations_base
-	$(call functionTestDeviceDelete,$(LOOP1),test/dev1)
-	$(call functionTestDeviceDelete,$(LOOP0),test/dev0)
 	$(RMF) test/dev1.dat
 	$(RMF) test/dev0.dat
-	#
-
-xxx1:
-	# raw random-data delta
+	@
+	# raw random-data, delta image
 	$(call functionCreateFileRandom,test/dev0a.dat,32M)
 	$(call functionCreateFileRandom,test/dev0b.dat,32M)
 	$(call functionCreateFileRandom,test/dev1.dat,32M)
