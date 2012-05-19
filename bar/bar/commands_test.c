@@ -124,9 +124,7 @@ Errors Command_test(const StringList                *archiveNameList,
     }
 
     // read archive
-    while (   !Archive_eof(&archiveInfo,FALSE)
-           && (failError == ERROR_NONE)
-          )
+    while (!Archive_eof(&archiveInfo,FALSE))
     {
       // get next archive entry type
       error = Archive_getNextArchiveEntryType(&archiveInfo,
@@ -164,7 +162,8 @@ Errors Command_test(const StringList                *archiveNameList,
                                           NULL,
                                           fileName,
                                           &fileInfo,
-                                          NULL,
+                                          NULL,  // deltaSourceName
+                                          NULL,  // deltaSourceSize
                                           &fragmentOffset,
                                           &fragmentSize
                                          );
@@ -216,7 +215,6 @@ Errors Command_test(const StringList                *archiveNameList,
                              String_cString(printableArchiveName),
                              Errors_getText(error)
                             );
-                  if (failError == ERROR_NONE) failError = error;
                   break;
                 }
 
@@ -224,8 +222,9 @@ Errors Command_test(const StringList                *archiveNameList,
 
                 printInfo(2,"%3d%%\b\b\b\b",(uint)((length*100LL)/fragmentSize));
               }
-              if (failError != ERROR_NONE)
+              if (error != ERROR_NONE)
               {
+                if (failError == ERROR_NONE) failError = error;
                 Archive_closeEntry(&archiveEntryInfo);
                 String_delete(fileName);
                 continue;
@@ -306,7 +305,8 @@ Errors Command_test(const StringList                *archiveNameList,
                                            NULL,
                                            deviceName,
                                            &deviceInfo,
-                                           NULL,
+                                           NULL,  // deltaSourceName
+                                           NULL,  // deltaSourceSize
                                            &blockOffset,
                                            &blockCount
                                           );
@@ -373,7 +373,6 @@ Errors Command_test(const StringList                *archiveNameList,
                              String_cString(printableArchiveName),
                              Errors_getText(error)
                             );
-                  if (failError == ERROR_NONE) failError = error;
                   break;
                 }
 
@@ -381,8 +380,9 @@ Errors Command_test(const StringList                *archiveNameList,
 
                 printInfo(2,"%3d%%\b\b\b\b",(uint)((block*100LL)/blockCount));
               }
-              if (failError != ERROR_NONE)
+              if (error != ERROR_NONE)
               {
+                if (failError == ERROR_NONE) failError = error;
                 Archive_closeEntry(&archiveEntryInfo);
                 String_delete(deviceName);
                 continue;
@@ -608,7 +608,8 @@ Errors Command_test(const StringList                *archiveNameList,
                                               NULL,
                                               &fileNameList,
                                               &fileInfo,
-                                              NULL,
+                                              NULL,  // deltaSourceName
+                                              NULL,  // deltaSourceSize
                                               &fragmentOffset,
                                               &fragmentSize
                                              );
@@ -667,7 +668,6 @@ Errors Command_test(const StringList                *archiveNameList,
                                  String_cString(printableArchiveName),
                                  Errors_getText(error)
                                 );
-                      if (failError == ERROR_NONE) failError = error;
                       break;
                     }
 
@@ -675,8 +675,9 @@ Errors Command_test(const StringList                *archiveNameList,
 
                     printInfo(2,"%3d%%\b\b\b\b",(uint)((length*100LL)/fragmentSize));
                   }
-                  if (failError != ERROR_NONE)
+                  if (error != ERROR_NONE)
                   {
+                    if (failError == ERROR_NONE) failError = error;
                     break;
                   }
                   printInfo(2,"    \b\b\b\b");

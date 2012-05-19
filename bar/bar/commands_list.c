@@ -1596,12 +1596,10 @@ remoteBarFlag=FALSE;
                   CryptTypes         cryptType;
                   String             fileName;
                   FileInfo           fileInfo;
-                  String             deltaSourceName;
                   uint64             fragmentOffset,fragmentSize;
 
                   // read archive file
-                  fileName        = String_new();
-                  deltaSourceName = String_new();
+                  fileName = String_new();
                   error = Archive_readFileEntry(&archiveInfo,
                                                 &archiveEntryInfo,
                                                 &deltaCompressAlgorithm,
@@ -1610,7 +1608,8 @@ remoteBarFlag=FALSE;
                                                 &cryptType,
                                                 fileName,
                                                 &fileInfo,
-                                                deltaSourceName,
+                                                NULL,  // deltaSourceName
+                                                NULL,  // deltaSourceSize
                                                 &fragmentOffset,
                                                 &fragmentSize
                                                );
@@ -1620,7 +1619,6 @@ remoteBarFlag=FALSE;
                                String_cString(printableStorageName),
                                Errors_getText(error)
                               );
-                    String_delete(deltaSourceName);
                     String_delete(fileName);
                     if (failError == ERROR_NONE) failError = error;
                     break;
@@ -1679,7 +1677,6 @@ remoteBarFlag=FALSE;
                   }
 
                   // free resources
-                  String_delete(deltaSourceName);
                   String_delete(fileName);
                 }
                 break;
@@ -1703,7 +1700,8 @@ remoteBarFlag=FALSE;
                                                  &cryptType,
                                                  deviceName,
                                                  &deviceInfo,
-                                                 NULL,
+                                                 NULL,  // deltaSourceName
+                                                 NULL,  // deltaSourceSize
                                                  &blockOffset,
                                                  &blockCount
                                                 );
@@ -1943,7 +1941,8 @@ remoteBarFlag=FALSE;
                                                     &cryptType,
                                                     &fileNameList,
                                                     &fileInfo,
-                                                    NULL,
+                                                    NULL,  // deltaSourceName
+                                                    NULL,  // deltaSourceSize
                                                     &fragmentOffset,
                                                     &fragmentSize
                                                    );

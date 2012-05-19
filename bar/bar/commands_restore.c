@@ -343,7 +343,8 @@ Errors Command_restore(const StringList                *archiveNameList,
                                           NULL,
                                           fileName,
                                           &fileInfo,
-                                          NULL,
+                                          NULL,  // deltaSourceName
+                                          NULL,  // deltaSourceSize
                                           &fragmentOffset,
                                           &fragmentSize
                                          );
@@ -717,7 +718,8 @@ Errors Command_restore(const StringList                *archiveNameList,
                                            NULL,
                                            deviceName,
                                            &deviceInfo,
-                                           NULL,
+                                           NULL,  // deltaSourceName
+                                           NULL,  // deltaSourceSize
                                            &blockOffset,
                                            &blockCount
                                           );
@@ -1512,7 +1514,8 @@ Errors Command_restore(const StringList                *archiveNameList,
                                               NULL,
                                               &fileNameList,
                                               &fileInfo,
-                                              NULL,
+                                              NULL,  // deltaSourceName
+                                              NULL,  // deltaSourceSize
                                               &fragmentOffset,
                                               &fragmentSize
                                              );

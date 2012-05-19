@@ -182,7 +182,6 @@ Errors Command_compare(const StringList                *archiveNameList,
             CompressAlgorithms deltaCompressAlgorithm,byteCompressAlgorithm;
             String             fileName;
             FileInfo           fileInfo;
-            String             deltaSourceName;
             uint64             fragmentOffset,fragmentSize;
             FragmentNode       *fragmentNode;
 //            FileInfo         localFileInfo;
@@ -193,8 +192,7 @@ Errors Command_compare(const StringList                *archiveNameList,
             ulong              diffIndex;
 
             // read file
-            fileName        = String_new();
-            deltaSourceName = String_new();
+            fileName = String_new();
             error = Archive_readFileEntry(&archiveInfo,
                                           &archiveEntryInfo,
                                           &deltaCompressAlgorithm,
@@ -203,7 +201,8 @@ Errors Command_compare(const StringList                *archiveNameList,
                                           NULL,
                                           fileName,
                                           &fileInfo,
-                                          deltaSourceName,
+                                          NULL,  // deltaSourceName
+                                          NULL,  // deltaSourceSize
                                           &fragmentOffset,
                                           &fragmentSize
                                          );
@@ -213,7 +212,6 @@ Errors Command_compare(const StringList                *archiveNameList,
                          String_cString(printableArchiveName),
                          Errors_getText(error)
                         );
-              String_delete(deltaSourceName);
               String_delete(fileName);
               if (failError == ERROR_NONE) failError = error;
               break;
@@ -271,7 +269,6 @@ Errors Command_compare(const StringList                *archiveNameList,
                            Errors_getText(error)
                           );
                 Archive_closeEntry(&archiveEntryInfo);
-                String_delete(deltaSourceName);
                 String_delete(fileName);
                 if (jobOptions->stopOnErrorFlag) failError = error;
                 continue;
@@ -288,7 +285,6 @@ Errors Command_compare(const StringList                *archiveNameList,
                           );
                 File_close(&fileHandle);
                 Archive_closeEntry(&archiveEntryInfo);
-                String_delete(deltaSourceName);
                 String_delete(fileName);
                 if (jobOptions->stopOnErrorFlag) failError = ERROR_ENTRIES_DIFFER;
                 continue;
@@ -305,7 +301,6 @@ Errors Command_compare(const StringList                *archiveNameList,
                           );
                 File_close(&fileHandle);
                 Archive_closeEntry(&archiveEntryInfo);
-                String_delete(deltaSourceName);
                 String_delete(fileName);
                 if (jobOptions->stopOnErrorFlag) failError = error;
                 continue;
@@ -369,7 +364,6 @@ Errors Command_compare(const StringList                *archiveNameList,
               if (error != ERROR_NONE)
               {
                 Archive_closeEntry(&archiveEntryInfo);
-                String_delete(deltaSourceName);
                 String_delete(fileName);
                 continue;
               }
@@ -422,7 +416,6 @@ Errors Command_compare(const StringList                *archiveNameList,
             }
 
             // free resources
-            String_delete(deltaSourceName);
             String_delete(fileName);
           }
           break;
@@ -450,7 +443,8 @@ Errors Command_compare(const StringList                *archiveNameList,
                                            NULL,
                                            deviceName,
                                            &deviceInfo,
-                                           NULL,
+                                           NULL,  // deltaSourceName
+                                           NULL,  // deltaSourceSize
                                            &blockOffset,
                                            &blockCount
                                           );
@@ -1007,7 +1001,8 @@ Errors Command_compare(const StringList                *archiveNameList,
                                               NULL,
                                               &fileNameList,
                                               &fileInfo,
-                                              NULL,
+                                              NULL,  // deltaSourceName
+                                              NULL,  // deltaSourceSize
                                               &fragmentOffset,
                                               &fragmentSize
                                              );
