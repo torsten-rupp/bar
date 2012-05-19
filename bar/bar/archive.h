@@ -589,13 +589,16 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo);
 * Purpose: read file info from archive
 * Input  : archiveInfo      - archive info
 *          archiveEntryInfo - archive file entry info
-* Output : compressAlgorithm - used compression algorithm (can be NULL)
-*          fileName          - file name
-*          fileInfo          - file info
-*          cryptAlgorithm    - used crypt algorithm (can be NULL)
-*          cryptType         - used crypt type (can be NULL)
-*          fragmentOffset    - fragment offset (can be NULL)
-*          fragmentSize      - fragment size in bytes (can be NULL)
+* Output : deltaCompressAlgorithm - used delta compression algorithm (can be NULL)
+*          byteCompressAlgorithm  - used byte compression algorithm (can be NULL)
+*          cryptAlgorithm         - used crypt algorithm (can be NULL)
+*          cryptType              - used crypt type (can be NULL)
+*          fileName               - file name
+*          fileInfo               - file info
+*          deltaSourceName        - delta source name (can be NULL)
+*          deltaSourceSize        - delta source size [bytes] (can be NULL)
+*          fragmentOffset         - fragment offset (can be NULL)
+*          fragmentSize           - fragment size in bytes (can be NULL)
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
@@ -609,6 +612,7 @@ Errors Archive_readFileEntry(ArchiveInfo        *archiveInfo,
                              String             fileName,
                              FileInfo           *fileInfo,
                              String             deltaSourceName,
+                             uint64             *deltaSourceSize,
                              uint64             *fragmentOffset,
                              uint64             *fragmentSize
                             );
@@ -618,15 +622,20 @@ Errors Archive_readFileEntry(ArchiveInfo        *archiveInfo,
 * Purpose: read block device image info from archive
 * Input  : archiveInfo      - archive info
 *          archiveEntryInfo - archive image entry info
-* Output : cryptAlgorithm - used crypt algorithm (can be NULL)
-*          cryptType      - used crypt type (can be NULL)
-*          deviceName     - image name
-*          deviceInfo     - device info (can be NULL)
-*          blockOffset    - block offset (0..n-1)
-*          blockCount     - number of blocks
+* Output : deltaCompressAlgorithm - used delta compression algorithm (can be NULL)
+*          byteCompressAlgorithm  - used byte compression algorithm (can be NULL)
+*          cryptAlgorithm         - used crypt algorithm (can be NULL)
+*          cryptType              - used crypt type (can be NULL)
+*          deviceName             - image name
+*          deviceInfo             - device info (can be NULL)
+*          deltaSourceName        - delta source name (can be NULL)
+*          deltaSourceSize        - delta source size [bytes] (can be NULL)
+*          blockOffset            - block offset (0..n-1)
+*          blockCount             - number of blocks
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
+
 Errors Archive_readImageEntry(ArchiveInfo        *archiveInfo,
                               ArchiveEntryInfo   *archiveEntryInfo,
                               CompressAlgorithms *deltaCompressAlgorithm,
@@ -636,6 +645,7 @@ Errors Archive_readImageEntry(ArchiveInfo        *archiveInfo,
                               String             deviceName,
                               DeviceInfo         *deviceInfo,
                               String             deltaSourceName,
+                              uint64             *deltaSourceSize,
                               uint64             *blockOffset,
                               uint64             *blockCount
                              );
@@ -689,16 +699,16 @@ Errors Archive_readLinkEntry(ArchiveInfo      *archiveInfo,
 * Purpose: read hard link info from archive
 * Input  : archiveInfo      - archive info
 *          archiveEntryInfo - archive hard link entry info
-//????
-*          sourceGetEntryDataBlock
-*          sourceGetEntryDataBlockUserData
-* Output : compressAlgorithm - used compression algorithm (can be NULL)
-*          fileNameList      - list of file names
-*          fileInfo          - file info
-*          cryptAlgorithm    - used crypt algorithm (can be NULL)
-*          cryptType         - used crypt type (can be NULL)
-*          fragmentOffset    - fragment offset (can be NULL)
-*          fragmentSize      - fragment size in bytes (can be NULL)
+* Output : deltaCompressAlgorithm - used delta compression algorithm (can be NULL)
+*          byteCompressAlgorithm  - used byte compression algorithm (can be NULL)
+*          cryptAlgorithm         - used crypt algorithm (can be NULL)
+*          cryptType              - used crypt type (can be NULL)
+*          fileNameList           - list of file names
+*          fileInfo               - file info
+*          deltaSourceName        - delta source name (can be NULL)
+*          deltaSourceSize        - delta source size [bytes] (can be NULL)
+*          fragmentOffset         - fragment offset (can be NULL)
+*          fragmentSize           - fragment size in bytes (can be NULL)
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
@@ -712,6 +722,7 @@ Errors Archive_readHardLinkEntry(ArchiveInfo        *archiveInfo,
                                  StringList         *fileNameList,
                                  FileInfo           *fileInfo,
                                  String             deltaSourceName,
+                                 uint64             *deltaSourceSize,
                                  uint64             *fragmentOffset,
                                  uint64             *fragmentSize
                                 );

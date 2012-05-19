@@ -2196,7 +2196,7 @@ LOCAL Errors writeHardLinkDataBlock(ArchiveEntryInfo *archiveEntryInfo,
     if (archiveEntryInfo->image.sourceHandleInitFlag)
     {
       Source_setBaseOffset(&archiveEntryInfo->hardLink.sourceHandle,
-                           archiveEntryInfo->hardLink.chunkHardLinkData.fragmentSize
+                           archiveEntryInfo->hardLink.chunkHardLinkData.fragmentOffset
                           );
     }
 
@@ -2892,6 +2892,7 @@ Errors Archive_newFileEntry(ArchiveInfo      *archiveInfo,
     error = Source_openEntry(&archiveEntryInfo->file.sourceHandle,
                              NULL,
                              fileName,
+                             SOURCE_SIZE_UNKNOWN,
                              archiveInfo->jobOptions
                             );
     if      (error == ERROR_NONE)
@@ -3024,6 +3025,7 @@ Errors Archive_newFileEntry(ArchiveInfo      *archiveInfo,
 
     archiveEntryInfo->file.chunkFileDelta.deltaAlgorithm = COMPRESS_ALGORITHM_TO_CONSTANT(archiveEntryInfo->file.deltaCompressAlgorithm);
     String_set(archiveEntryInfo->file.chunkFileDelta.name,Source_getName(&archiveEntryInfo->file.sourceHandle));
+    archiveEntryInfo->file.chunkFileDelta.size = Source_getSize(&archiveEntryInfo->file.sourceHandle);
   }
 
   // init file data crypt, file data chunk
@@ -3226,6 +3228,7 @@ Errors Archive_newImageEntry(ArchiveInfo      *archiveInfo,
     error = Source_openEntry(&archiveEntryInfo->image.sourceHandle,
                              NULL,
                              deviceName,
+                             SOURCE_SIZE_UNKNOWN,
                              archiveInfo->jobOptions
                             );
     if (error == ERROR_NONE)
@@ -3361,6 +3364,7 @@ Errors Archive_newImageEntry(ArchiveInfo      *archiveInfo,
 
     archiveEntryInfo->image.chunkImageDelta.deltaAlgorithm = COMPRESS_ALGORITHM_TO_CONSTANT(archiveEntryInfo->image.deltaCompressAlgorithm);
     String_set(archiveEntryInfo->image.chunkImageDelta.name,Source_getName(&archiveEntryInfo->image.sourceHandle));
+    archiveEntryInfo->image.chunkImageDelta.size = Source_getSize(&archiveEntryInfo->file.sourceHandle);
   }
 
   // init image data crypt, image data chunk
@@ -3826,6 +3830,7 @@ Errors Archive_newHardLinkEntry(ArchiveInfo      *archiveInfo,
       error = Source_openEntry(&archiveEntryInfo->hardLink.sourceHandle,
                                NULL,
                                fileName,
+                               SOURCE_SIZE_UNKNOWN,
                                archiveInfo->jobOptions
                               );
       if (error == ERROR_NONE) break;
@@ -4040,6 +4045,7 @@ Errors Archive_newHardLinkEntry(ArchiveInfo      *archiveInfo,
 
     archiveEntryInfo->hardLink.chunkHardLinkDelta.deltaAlgorithm = COMPRESS_ALGORITHM_TO_CONSTANT(archiveEntryInfo->hardLink.deltaCompressAlgorithm);
     String_set(archiveEntryInfo->hardLink.chunkHardLinkDelta.name,Source_getName(&archiveEntryInfo->hardLink.sourceHandle));
+    archiveEntryInfo->hardLink.chunkHardLinkDelta.size = Source_getSize(&archiveEntryInfo->file.sourceHandle);
   }
 
   // init hard link data crypt, harda link data chunk
@@ -4533,6 +4539,7 @@ Errors Archive_readFileEntry(ArchiveInfo        *archiveInfo,
                              String             fileName,
                              FileInfo           *fileInfo,
                              String             deltaSourceName,
+                             uint64             *deltaSourceSize,
                              uint64             *fragmentOffset,
                              uint64             *fragmentSize
                             )
@@ -4888,6 +4895,7 @@ Errors Archive_readFileEntry(ArchiveInfo        *archiveInfo,
               break;
             }
             if (deltaSourceName != NULL) String_set(deltaSourceName,archiveEntryInfo->file.chunkFileDelta.name);
+            if (deltaSourceSize != NULL) (*deltaSourceSize) = archiveEntryInfo->file.chunkFileDelta.size;
             break;
           case CHUNK_ID_FILE_DATA:
             // read file data chunk
@@ -4951,6 +4959,10 @@ Errors Archive_readFileEntry(ArchiveInfo        *archiveInfo,
   } /* while */
   if (error != ERROR_NONE)
   {
+    Compress_delete(&archiveEntryInfo->file.byteCompressInfo);
+    free(archiveEntryInfo->file.deltaBuffer);
+    free(archiveEntryInfo->file.byteBuffer);
+    Chunk_done(&archiveEntryInfo->file.chunkFile.info);
     return error;
   }
 
@@ -5023,6 +5035,7 @@ Errors Archive_readImageEntry(ArchiveInfo        *archiveInfo,
                               String             deviceName,
                               DeviceInfo         *deviceInfo,
                               String             deltaSourceName,
+                              uint64             *deltaSourceSize,
                               uint64             *blockOffset,
                               uint64             *blockCount
                              )
@@ -5374,6 +5387,7 @@ Errors Archive_readImageEntry(ArchiveInfo        *archiveInfo,
               break;
             }
             if (deltaSourceName != NULL) String_set(deltaSourceName,archiveEntryInfo->image.chunkImageDelta.name);
+            if (deltaSourceSize != NULL) (*deltaSourceSize) = archiveEntryInfo->image.chunkImageDelta.size;
             break;
           case CHUNK_ID_IMAGE_DATA:
             // read image data chunk
@@ -5434,6 +5448,14 @@ Errors Archive_readImageEntry(ArchiveInfo        *archiveInfo,
       }
     }
   } /* while */
+  if (error != ERROR_NONE)
+  {
+    Compress_delete(&archiveEntryInfo->image.byteCompressInfo);
+    free(archiveEntryInfo->image.deltaBuffer);
+    free(archiveEntryInfo->image.byteBuffer);
+    Chunk_done(&archiveEntryInfo->image.chunkImage.info);
+    return error;
+  }
 
   if (!foundImageEntryFlag || !foundImageDataFlag)
   {
@@ -5739,10 +5761,16 @@ Errors Archive_readDirectoryEntry(ArchiveInfo      *archiveInfo,
       }
     }
   } /* while */
+  if (error != ERROR_NONE)
+  {
+    Chunk_done(&archiveEntryInfo->directory.chunkDirectory.info);
+    return error;
+  }
 
   if (!foundDirectoryEntryFlag)
   {
     Chunk_done(&archiveEntryInfo->directory.chunkDirectory.info);
+
     Chunk_skip(archiveInfo->chunkIO,archiveInfo->chunkIOUserData,&chunkHeader);
 
     if      (error != ERROR_NONE)      return error;
@@ -6007,10 +6035,16 @@ Errors Archive_readLinkEntry(ArchiveInfo      *archiveInfo,
       }
     }
   } // while
+  if (error != ERROR_NONE)
+  {
+    Chunk_done(&archiveEntryInfo->link.chunkLink.info);
+    return error;
+  }
 
   if (!foundLinkEntryFlag)
   {
     Chunk_done(&archiveEntryInfo->link.chunkLink.info);
+
     Chunk_skip(archiveInfo->chunkIO,archiveInfo->chunkIOUserData,&chunkHeader);
 
     if      (error != ERROR_NONE)     return error;
@@ -6035,6 +6069,7 @@ Errors Archive_readHardLinkEntry(ArchiveInfo        *archiveInfo,
                                  StringList         *fileNameList,
                                  FileInfo           *fileInfo,
                                  String             deltaSourceName,
+                                 uint64             *deltaSourceSize,
                                  uint64             *fragmentOffset,
                                  uint64             *fragmentSize
                                 )
@@ -6444,6 +6479,7 @@ Errors Archive_readHardLinkEntry(ArchiveInfo        *archiveInfo,
               break;
             }
             if (deltaSourceName != NULL) String_set(deltaSourceName,archiveEntryInfo->hardLink.chunkHardLinkDelta.name);
+            if (deltaSourceSize != NULL) (*deltaSourceSize) = archiveEntryInfo->hardLink.chunkHardLinkDelta.size;
             break;
           case CHUNK_ID_HARDLINK_DATA:
             // read hard link data chunk
@@ -6511,6 +6547,14 @@ Errors Archive_readHardLinkEntry(ArchiveInfo        *archiveInfo,
       }
     }
   } /* while */
+  if (error != ERROR_NONE)
+  {
+    Compress_delete(&archiveEntryInfo->hardLink.byteCompressInfo);
+    free(archiveEntryInfo->hardLink.deltaBuffer);
+    free(archiveEntryInfo->hardLink.byteBuffer);
+    Chunk_done(&archiveEntryInfo->hardLink.chunkHardLink.info);
+    return error;
+  }
 
   if (!foundHardLinkEntryFlag || !foundHardLinkDataFlag)
   {
@@ -6832,10 +6876,16 @@ Errors Archive_readSpecialEntry(ArchiveInfo      *archiveInfo,
       }
     }
   } /* while */
+  if (error != ERROR_NONE)
+  {
+    Chunk_done(&archiveEntryInfo->special.chunkSpecial.info);
+    return error;
+  }
 
   if (!foundSpecialEntryFlag)
   {
     Chunk_done(&archiveEntryInfo->special.chunkSpecial.info);
+
     Chunk_skip(archiveInfo->chunkIO,archiveInfo->chunkIOUserData,&chunkHeader);
 
     if      (error != ERROR_NONE)    return error;
@@ -7925,6 +7975,7 @@ Errors Archive_readData(ArchiveEntryInfo *archiveEntryInfo,
         error = Source_openEntry(&archiveEntryInfo->file.sourceHandle,
                                  archiveEntryInfo->file.chunkFileDelta.name,
                                  archiveEntryInfo->file.chunkFileEntry.name,
+                                 archiveEntryInfo->file.chunkFileDelta.size,
                                  archiveEntryInfo->archiveInfo->jobOptions
                                 );
         if (error != ERROR_NONE)
@@ -7934,7 +7985,7 @@ Errors Archive_readData(ArchiveEntryInfo *archiveEntryInfo,
 
         // set delta base-offset
         Source_setBaseOffset(&archiveEntryInfo->file.sourceHandle,
-                             archiveEntryInfo->file.chunkFileData.fragmentSize
+                             archiveEntryInfo->file.chunkFileData.fragmentOffset
                             );
 
         archiveEntryInfo->file.sourceHandleInitFlag = TRUE;
@@ -8077,6 +8128,7 @@ Errors Archive_readData(ArchiveEntryInfo *archiveEntryInfo,
         error = Source_openEntry(&archiveEntryInfo->image.sourceHandle,
                                  archiveEntryInfo->image.chunkImageDelta.name,
                                  archiveEntryInfo->image.chunkImageEntry.name,
+                                 archiveEntryInfo->image.chunkImageDelta.size,
                                  archiveEntryInfo->archiveInfo->jobOptions
                                 );
         if (error != ERROR_NONE)
@@ -8231,6 +8283,7 @@ Errors Archive_readData(ArchiveEntryInfo *archiveEntryInfo,
         error = Source_openEntry(&archiveEntryInfo->hardLink.sourceHandle,
                                  archiveEntryInfo->hardLink.chunkHardLinkDelta.name,
                                  ((ChunkHardLinkName*)List_first(&archiveEntryInfo->hardLink.chunkHardLinkNameList))->name,
+                                 archiveEntryInfo->hardLink.chunkHardLinkDelta.size,
                                  archiveEntryInfo->archiveInfo->jobOptions
                                 );
         if (error != ERROR_NONE)
@@ -8674,17 +8727,14 @@ Errors Archive_updateIndex(DatabaseHandle               *databaseHandle,
             fileName = String_new();
             error = Archive_readFileEntry(&archiveInfo,
                                           &archiveEntryInfo,
-#warning cleanup
-//???
-//NULL,
-//NULL,
-                                          NULL,
-                                          NULL,
-                                          NULL,
-                                          NULL,
+                                          NULL,  // deltaCompressAlgorithm
+                                          NULL,  // byteCompressAlgorithm
+                                          NULL,  // cryptAlgorithm
+                                          NULL,  // cryptType
                                           fileName,
                                           &fileInfo,
-                                          NULL,
+                                          NULL,  // deltaSourceName
+                                          NULL,  // deltaSourceSize
                                           &fragmentOffset,
                                           &fragmentSize
                                          );
@@ -8731,17 +8781,14 @@ Errors Archive_updateIndex(DatabaseHandle               *databaseHandle,
             deviceName = String_new();
             error = Archive_readImageEntry(&archiveInfo,
                                            &archiveEntryInfo,
-#warning cleanup
-//???
-//NULL,
-//NULL,
-                                           NULL,
-                                           NULL,
-                                           NULL,
-                                           NULL,
+                                           NULL,  // deltaCompressAlgorithm
+                                           NULL,  // byteCompressAlgorithm
+                                           NULL,  // cryptAlgorithm
+                                           NULL,  // cryptType
                                            deviceName,
                                            &deviceInfo,
-                                           NULL,
+                                           NULL,  // deltaSourceName
+                                           NULL,  // deltaSourceSize
                                            &blockOffset,
                                            &blockCount
                                           );
@@ -8878,13 +8925,14 @@ Errors Archive_updateIndex(DatabaseHandle               *databaseHandle,
             StringList_init(&fileNameList);
             error = Archive_readHardLinkEntry(&archiveInfo,
                                           &archiveEntryInfo,
-                                          NULL,
-                                          NULL,
-                                          NULL,
-                                          NULL,
+                                          NULL,  // deltaCompressAlgorithm
+                                          NULL,  // byteCompressAlgorithm
+                                          NULL,  // cryptAlgorithm
+                                          NULL,  // cryptType
                                           &fileNameList,
                                           &fileInfo,
-                                          NULL,
+                                          NULL,  // deltaSourceName
+                                          NULL,  // deltaSourceSize
                                           &fragmentOffset,
                                           &fragmentSize
                                          );
