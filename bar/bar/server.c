@@ -6066,13 +6066,14 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const Stri
             fileName = String_new();
             error = Archive_readFileEntry(&archiveInfo,
                                           &archiveEntryInfo,
-                                          NULL,
-                                          NULL,
-                                          NULL,
-                                          NULL,
+                                          NULL,  // deltaCompressAlgorithm
+                                          NULL,  // byteCompressAlgorithm
+                                          NULL,  // cryptAlgorithm
+                                          NULL,  // cryptType
                                           fileName,
                                           &fileInfo,
-                                          NULL,
+                                          NULL,  // deltaSourceName
+                                          NULL,  // deltaSourceSize
                                           &fragmentOffset,
                                           &fragmentSize
                                          );
@@ -6115,13 +6116,14 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const Stri
             imageName = String_new();
             error = Archive_readImageEntry(&archiveInfo,
                                            &archiveEntryInfo,
-                                           NULL,
-                                           NULL,
-                                           NULL,
-                                           NULL,
+                                           NULL,  // deltaCompressAlgorithm
+                                           NULL,  // byteCompressAlgorithm
+                                           NULL,  // cryptAlgorithm
+                                           NULL,  // cryptType
                                            imageName,
                                            &deviceInfo,
-                                           NULL,
+                                           NULL,  // deltaSourceName
+                                           NULL,  // deltaSourceSize
                                            &blockOffset,
                                            &blockCount
                                           );
@@ -6244,13 +6246,14 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const Stri
             StringList_init(&fileNameList);
             error = Archive_readHardLinkEntry(&archiveInfo,
                                               &archiveEntryInfo,
-                                              NULL,
-                                              NULL,
-                                              NULL,
-                                              NULL,
+                                              NULL,  // deltaCompressAlgorithm
+                                              NULL,  // byteCompressAlgorithm
+                                              NULL,  // cryptAlgorithm
+                                              NULL,  // cryptType
                                               &fileNameList,
                                               &fileInfo,
-                                              NULL,
+                                              NULL,  // deltaSourceName
+                                              NULL,  // deltaSourceSize
                                               &fragmentOffset,
                                               &fragmentSize
                                              );
