@@ -2902,11 +2902,6 @@ Errors Archive_newFileEntry(ArchiveInfo      *archiveInfo,
     }
     else if (archiveInfo->jobOptions->forceDeltaCompressionFlag)
     {
-      printInfo(1,"FAIL\n");
-      printError("Cannot open source file for '%s' (error: %s)\n",
-                 String_cString(fileName),
-                 Errors_getText(error)
-                );
       free(archiveEntryInfo->file.deltaBuffer);
       free(archiveEntryInfo->file.byteBuffer);
       return error;
@@ -3240,17 +3235,6 @@ Errors Archive_newImageEntry(ArchiveInfo      *archiveInfo,
     {
       if (archiveInfo->jobOptions->forceDeltaCompressionFlag)
       {
-        printInfo(1,"FAIL\n");
-        printError("Cannot open source file for '%s' (error: %s)\n",
-                   String_cString(deviceName),
-                   Errors_getText(error)
-                  );
-        Crypt_done(&archiveEntryInfo->image.chunkImageData.cryptInfo);
-        Chunk_done(&archiveEntryInfo->image.chunkImageDelta.info);
-        Crypt_done(&archiveEntryInfo->image.chunkImageDelta.cryptInfo);
-        Chunk_done(&archiveEntryInfo->image.chunkImageEntry.info);
-        Crypt_done(&archiveEntryInfo->image.chunkImageEntry.cryptInfo);
-        Chunk_done(&archiveEntryInfo->image.chunkImage.info);
         free(archiveEntryInfo->image.deltaBuffer);
         free(archiveEntryInfo->image.byteBuffer);
         return error;
@@ -3844,23 +3828,11 @@ Errors Archive_newHardLinkEntry(ArchiveInfo      *archiveInfo,
     {
       if (archiveInfo->jobOptions->forceDeltaCompressionFlag)
       {
-        printInfo(1,"FAIL\n");
-        printError("Cannot open source file for '%s' (error: %s)\n",
-#warning todo StringList_first
-                   String_cString(fileNameList->head->string),
-                   Errors_getText(error)
-                  );
-        Crypt_done(&archiveEntryInfo->hardLink.chunkHardLinkData.cryptInfo);
-        Chunk_done(&archiveEntryInfo->hardLink.chunkHardLinkDelta.info);
-        Crypt_done(&archiveEntryInfo->hardLink.chunkHardLinkDelta.cryptInfo);
         LIST_DONE(&archiveEntryInfo->hardLink.chunkHardLinkNameList,chunkHardLinkName)
         {
           Crypt_done(&chunkHardLinkName->cryptInfo);
           Chunk_done(&chunkHardLinkName->info);
         }
-        Chunk_done(&archiveEntryInfo->hardLink.chunkHardLinkEntry.info);
-        Crypt_done(&archiveEntryInfo->hardLink.chunkHardLinkEntry.cryptInfo);
-        Chunk_done(&archiveEntryInfo->hardLink.chunkHardLink.info);
         free(archiveEntryInfo->hardLink.deltaBuffer);
         free(archiveEntryInfo->hardLink.byteBuffer);
         return error;
