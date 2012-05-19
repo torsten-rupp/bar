@@ -114,6 +114,37 @@ void FragmentList_init(FragmentList *fragmentList);
 void FragmentList_done(FragmentList *fragmentList);
 
 /***********************************************************************\
+* Name   : FragmentList_initNode
+* Purpose: init fragment node
+* Input  : name         - name of fragment
+*          size         - size of fragment
+*          userData     - user data to store with fragment (will be
+*                         copied!)
+*          userDataSize - size of user data
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void FragmentList_initNode(FragmentNode *fragmentNode,
+                           const String name,
+                           uint64       size,
+                           const void   *userData,
+                           uint         userDataSize
+                          );
+
+/***********************************************************************\
+* Name   : FragmentList_doneNode
+* Purpose: free fragment node
+* Input  : fragmentNode - fragment node
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void FragmentList_doneNode(FragmentNode *fragmentNode);
+
+/***********************************************************************\
 * Name   : FragmentList_add
 * Purpose: add new fragment to fragment list
 * Input  : fragmentList - fragment list

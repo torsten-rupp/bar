@@ -114,23 +114,15 @@ void FragmentList_done(FragmentList *fragmentList)
   List_done(fragmentList,(ListNodeFreeFunction)freeFragmentNode,NULL);
 }
 
-FragmentNode *FragmentList_add(FragmentList   *fragmentList,
-                               const String   name,
-                               uint64         size,
-                               const void     *userData,
-                               uint           userDataSize
-                              )
+void FragmentList_initNode(FragmentNode *fragmentNode,
+                           const String name,
+                           uint64       size,
+                           const void   *userData,
+                           uint         userDataSize
+                          )
 {
-  FragmentNode *fragmentNode;
+  assert(fragmentNode != NULL);
 
-  assert(fragmentList != NULL);
-  assert(name != NULL);
-
-  fragmentNode = LIST_NEW_NODE(FragmentNode);
-  if (fragmentNode == NULL)
-  {
-    HALT_INSUFFICIENT_MEMORY();
-  }
   fragmentNode->name = String_duplicate(name);
   fragmentNode->size = size;
   if (userData != NULL)
@@ -149,6 +141,33 @@ FragmentNode *FragmentList_add(FragmentList   *fragmentList,
     fragmentNode->userDataSize = 0;
   }
   List_init(&fragmentNode->fragmentEntryList);
+}
+
+void FragmentList_doneNode(FragmentNode *fragmentNode)
+{
+  assert(fragmentNode != NULL);
+
+  freeFragmentNode(fragmentNode,NULL);
+}
+
+FragmentNode *FragmentList_add(FragmentList   *fragmentList,
+                               const String   name,
+                               uint64         size,
+                               const void     *userData,
+                               uint           userDataSize
+                              )
+{
+  FragmentNode *fragmentNode;
+
+  assert(fragmentList != NULL);
+  assert(name != NULL);
+
+  fragmentNode = LIST_NEW_NODE(FragmentNode);
+  if (fragmentNode == NULL)
+  {
+    HALT_INSUFFICIENT_MEMORY();
+  }
+  FragmentList_initNode(fragmentNode,name,size,userData,userDataSize);
 
   List_append(fragmentList,fragmentNode);
 
@@ -161,7 +180,7 @@ void FragmentList_discard(FragmentList *fragmentList, FragmentNode *fragmentNode
   assert(fragmentNode != NULL);
 
   List_remove(fragmentList,fragmentNode);
-  freeFragmentNode(fragmentNode,NULL);
+  FragmentList_doneNode(fragmentNode);
   LIST_DELETE_NODE(fragmentNode);
 }
 
