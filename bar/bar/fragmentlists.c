@@ -28,11 +28,11 @@
 
 /****************************** Macros *********************************/
 
-// begin/end offset of fragment
+// get begin/end index i0,i1
 #define I0(offset,length) (offset)
 #define I1(offset,length) (((length)>0)?(offset)+(length)-1:(offset))
 
-// begin/end of fragment
+// begin/end index f0,f1 of fragment
 #define F0(fragmentEntryNode) I0(fragmentEntryNode->offset,fragmentEntryNode->length)
 #define F1(fragmentEntryNode) I1(fragmentEntryNode->offset,fragmentEntryNode->length)
 
@@ -248,21 +248,35 @@ void FragmentList_addEntry(FragmentNode *fragmentNode, uint64 offset, uint64 len
   }
 
   // check if existing fragment can be extended or new fragment have to be inserted
-  if      ((prevFragmentEntryNode != NULL) && (F1(prevFragmentEntryNode)+1 >= I0(offset,length)))
+  if (   ((prevFragmentEntryNode != NULL) && (F1(prevFragmentEntryNode)+1 >= I0(offset,length)))
+      || ((nextFragmentEntryNode != NULL) && (I1(offset,length)+1 >= F0(nextFragmentEntryNode)))
+     )
   {
-    // combine with previous existing fragment
-    prevFragmentEntryNode->length = (offset+length)-prevFragmentEntryNode->offset;
-    prevFragmentEntryNode->offset = prevFragmentEntryNode->offset;
+    if      ((prevFragmentEntryNode != NULL) && (F1(prevFragmentEntryNode)+1 >= I0(offset,length)))
+    {
+      // combine with previous existing fragment
+      prevFragmentEntryNode->length = (offset+length)-prevFragmentEntryNode->offset;
+      prevFragmentEntryNode->offset = prevFragmentEntryNode->offset;
+    }
+    else if ((nextFragmentEntryNode != NULL) && (I1(offset,length)+1 >= F0(nextFragmentEntryNode)))
+    {
+      // combine with next existing fragment
+      nextFragmentEntryNode->length = (nextFragmentEntryNode->offset+nextFragmentEntryNode->length)-offset;
+      nextFragmentEntryNode->offset = offset;
+    }
+
+    if ((prevFragmentEntryNode != NULL) && (nextFragmentEntryNode != NULL) && (F1(prevFragmentEntryNode)+1 >= F0(nextFragmentEntryNode)))
+    {
+      // combine previous and next fragment
+      prevFragmentEntryNode->length += nextFragmentEntryNode->length;
+      List_remove(&fragmentNode->fragmentEntryList,nextFragmentEntryNode);
+      LIST_DELETE_NODE(nextFragmentEntryNode);
+    }
   }
-  else if ((nextFragmentEntryNode != NULL) && (I1(offset,length)+1 >= F0(nextFragmentEntryNode)))
-  {
-    // combine with next existing fragment
-    nextFragmentEntryNode->length = (nextFragmentEntryNode->offset+nextFragmentEntryNode->length)-offset;
-    nextFragmentEntryNode->offset = offset;
-  }
-  else if (   ((prevFragmentEntryNode == NULL) || (F1(prevFragmentEntryNode)+1 < I0(offset,length)))
-           && ((nextFragmentEntryNode == NULL) || (F0(nextFragmentEntryNode)-1 > I1(offset,length)))
-          )
+  else
+//  else if (   ((prevFragmentEntryNode == NULL) || (F1(prevFragmentEntryNode)+1 < I0(offset,length)))
+//           && ((nextFragmentEntryNode == NULL) || (F0(nextFragmentEntryNode)-1 > I1(offset,length)))
+//          )
   {
     // insert new fragment
     fragmentEntryNode = LIST_NEW_NODE(FragmentEntryNode);
