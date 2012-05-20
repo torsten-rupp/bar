@@ -78,6 +78,8 @@ typedef struct ArchiveContentNode
       CompressAlgorithms dataCompressAlgorithm;
       CryptAlgorithms    cryptAlgorithm;
       CryptTypes         cryptType;
+      String             deltaSourceName;
+      uint64             deltaSourceSize;
       uint64             fragmentOffset;
       uint64             fragmentSize;
     } file;
@@ -90,6 +92,8 @@ typedef struct ArchiveContentNode
       CompressAlgorithms dataCompressAlgorithm;
       CryptAlgorithms    cryptAlgorithm;
       CryptTypes         cryptType;
+      String             deltaSourceName;
+      uint64             deltaSourceSize;
       uint               blockSize;
       uint64             blockOffset;
       uint64             blockCount;
@@ -118,6 +122,8 @@ typedef struct ArchiveContentNode
       CompressAlgorithms dataCompressAlgorithm;
       CryptAlgorithms    cryptAlgorithm;
       CryptTypes         cryptType;
+      String             deltaSourceName;
+      uint64             deltaSourceSize;
       uint64             fragmentOffset;
       uint64             fragmentSize;
     } hardLink;
@@ -308,6 +314,8 @@ LOCAL void printFooter(ulong fileCount)
 *          deltaCompressAlgorithm - used data compress algorithm
 *          cryptAlgorithm         - used crypt algorithm
 *          cryptType              - crypt type; see CRYPT_TYPES
+*          deltaSourceName        - delta source name
+*          deltaSourceSize        - delta source size [bytes]
 *          fragmentOffset         - fragment offset (0..n-1)
 *          fragmentSize           - fragment length
 * Output : -
@@ -324,6 +332,8 @@ LOCAL void printFileInfo(const String       storageName,
                          CompressAlgorithms dataCompressAlgorithm,
                          CryptAlgorithms    cryptAlgorithm,
                          CryptTypes         cryptType,
+                         const String       deltaSourceName,
+                         uint64             deltaSourceSize,
                          uint64             fragmentOffset,
                          uint64             fragmentSize
                         )
@@ -407,6 +417,11 @@ LOCAL void printFileInfo(const String       storageName,
           );
     String_delete(cryptString);
     String_delete(compressString);
+
+    if (globalOptions.verboseLevel > 1)
+    {
+      printf("                                                                     source: %s, %llu bytes\n",String_cString(deltaSourceName),deltaSourceSize);
+    }
   }
   else
   {
@@ -431,6 +446,8 @@ LOCAL void printFileInfo(const String       storageName,
 *          deltaCompressAlgorithm - used data compress algorithm
 *          cryptAlgorithm         - used crypt algorithm
 *          cryptType              - crypt type; see CRYPT_TYPES
+*          deltaSourceName        - delta source name
+*          deltaSourceSize        - delta source size [bytes]
 *          blockSize              - block size :bytes]
 *          blockOffset            - block offset (0..n-1)
 *          blockCount             - number of blocks
@@ -447,6 +464,8 @@ LOCAL void printImageInfo(const String       storageName,
                           CompressAlgorithms dataCompressAlgorithm,
                           CryptAlgorithms    cryptAlgorithm,
                           CryptTypes         cryptType,
+                          const String       deltaSourceName,
+                          uint64             deltaSourceSize,
                           uint               blockSize,
                           uint64             blockOffset,
                           uint64             blockCount
@@ -527,6 +546,11 @@ LOCAL void printImageInfo(const String       storageName,
           );
     String_delete(cryptString);
     String_delete(compressString);
+
+    if (globalOptions.verboseLevel > 1)
+    {
+      printf("                                                                     source: %s, %llu bytes\n",String_cString(deltaSourceName),deltaSourceSize);
+    }
   }
   else
   {
@@ -651,6 +675,8 @@ LOCAL void printLinkInfo(const String    storageName,
 *          deltaCompressAlgorithm - used data compress algorithm
 *          cryptAlgorithm         - used crypt algorithm
 *          cryptType              - crypt type; see CRYPT_TYPES
+*          deltaSourceName        - delta source name
+*          deltaSourceSize        - delta source size [bytes]
 *          fragmentOffset         - fragment offset (0..n-1)
 *          fragmentSize           - fragment length
 * Output : -
@@ -667,6 +693,8 @@ LOCAL void printHardLinkInfo(const String       storageName,
                              CompressAlgorithms dataCompressAlgorithm,
                              CryptAlgorithms    cryptAlgorithm,
                              CryptTypes         cryptType,
+                             const String       deltaSourceName,
+                             uint64             deltaSourceSize,
                              uint64             fragmentOffset,
                              uint64             fragmentSize
                             )
@@ -750,6 +778,11 @@ LOCAL void printHardLinkInfo(const String       storageName,
           );
     String_delete(cryptString);
     String_delete(compressString);
+
+    if (globalOptions.verboseLevel > 1)
+    {
+      printf("                                                                     source: %s, %llu bytes\n",String_cString(deltaSourceName),deltaSourceSize);
+    }
   }
   else
   {
@@ -888,6 +921,8 @@ LOCAL void printSpecialInfo(const String     storageName,
 *          deltaCompressAlgorithm - used data compress algorithm
 *          cryptAlgorithm         - used crypt algorithm
 *          cryptType              - crypt type; see CRYPT_TYPES
+*          deltaSourceName        - delta source name
+*          deltaSourceSize        - delta source size [bytes]
 *          fragmentOffset         - fragment offset (0..n-1)
 *          fragmentSize           - fragment length
 * Output : -
@@ -904,6 +939,8 @@ LOCAL void addListFileInfo(const String       storageName,
                            CompressAlgorithms dataCompressAlgorithm,
                            CryptAlgorithms    cryptAlgorithm,
                            CryptTypes         cryptType,
+                           const String       deltaSourceName,
+                           uint64             deltaSourceSize,
                            uint64             fragmentOffset,
                            uint64             fragmentSize
                           )
@@ -928,6 +965,8 @@ LOCAL void addListFileInfo(const String       storageName,
   archiveContentNode->file.dataCompressAlgorithm  = dataCompressAlgorithm;
   archiveContentNode->file.cryptAlgorithm         = cryptAlgorithm;
   archiveContentNode->file.cryptType              = cryptType;
+  archiveContentNode->file.deltaSourceName        = String_duplicate(deltaSourceName);
+  archiveContentNode->file.deltaSourceSize        = deltaSourceSize;
   archiveContentNode->file.fragmentOffset         = fragmentOffset;
   archiveContentNode->file.fragmentSize           = fragmentSize;
 
@@ -946,6 +985,8 @@ LOCAL void addListFileInfo(const String       storageName,
 *          deltaCompressAlgorithm - used data compress algorithm
 *          cryptAlgorithm         - used crypt algorithm
 *          cryptType              - crypt type; see CRYPT_TYPES
+*          deltaSourceName        - delta source name
+*          deltaSourceSize        - delta source size [bytes]
 *          blockSize              - block size
 *          blockOffset            - block offset (0..n-1)
 *          blockCount             - block count
@@ -962,6 +1003,8 @@ LOCAL void addListImageInfo(const String       storageName,
                             CompressAlgorithms dataCompressAlgorithm,
                             CryptAlgorithms    cryptAlgorithm,
                             CryptTypes         cryptType,
+                            const String       deltaSourceName,
+                            uint64             deltaSourceSize,
                             uint               blockSize,
                             uint64             blockOffset,
                             uint64             blockCount
@@ -986,6 +1029,8 @@ LOCAL void addListImageInfo(const String       storageName,
   archiveContentNode->image.dataCompressAlgorithm  = dataCompressAlgorithm;
   archiveContentNode->image.cryptAlgorithm         = cryptAlgorithm;
   archiveContentNode->image.cryptType              = cryptType;
+  archiveContentNode->image.deltaSourceName        = String_duplicate(deltaSourceName);
+  archiveContentNode->image.deltaSourceSize        = deltaSourceSize;
   archiveContentNode->image.blockSize              = blockSize;
   archiveContentNode->image.blockOffset            = blockOffset;
   archiveContentNode->image.blockCount             = blockCount;
@@ -1088,6 +1133,8 @@ LOCAL void addListLinkInfo(const String    storageName,
 *          deltaCompressAlgorithm - used data compress algorithm
 *          cryptAlgorithm         - used crypt algorithm
 *          cryptType              - crypt type; see CRYPT_TYPES
+*          deltaSourceName        - delta source name
+*          deltaSourceSize        - delta source size [bytes]
 *          fragmentOffset         - fragment offset (0..n-1)
 *          fragmentSize           - fragment length
 * Output : -
@@ -1104,6 +1151,8 @@ LOCAL void addListHardLinkInfo(const String       storageName,
                                CompressAlgorithms dataCompressAlgorithm,
                                CryptAlgorithms    cryptAlgorithm,
                                CryptTypes         cryptType,
+                               const String       deltaSourceName,
+                               uint64             deltaSourceSize,
                                uint64             fragmentOffset,
                                uint64             fragmentSize
                               )
@@ -1128,6 +1177,8 @@ LOCAL void addListHardLinkInfo(const String       storageName,
   archiveContentNode->hardLink.dataCompressAlgorithm  = dataCompressAlgorithm;
   archiveContentNode->hardLink.cryptAlgorithm         = cryptAlgorithm;
   archiveContentNode->hardLink.cryptType              = cryptType;
+  archiveContentNode->hardLink.deltaSourceName        = String_duplicate(deltaSourceName);
+  archiveContentNode->hardLink.deltaSourceSize        = deltaSourceSize;
   archiveContentNode->hardLink.fragmentOffset         = fragmentOffset;
   archiveContentNode->hardLink.fragmentSize           = fragmentSize;
 
@@ -1375,6 +1426,8 @@ LOCAL void printList(void)
                         archiveContentNode->file.dataCompressAlgorithm,
                         archiveContentNode->file.cryptAlgorithm,
                         archiveContentNode->file.cryptType,
+                        archiveContentNode->file.deltaSourceName,
+                        archiveContentNode->file.deltaSourceSize,
                         archiveContentNode->file.fragmentOffset,
                         archiveContentNode->file.fragmentSize
                        );
@@ -1396,6 +1449,8 @@ LOCAL void printList(void)
                          archiveContentNode->image.dataCompressAlgorithm,
                          archiveContentNode->image.cryptAlgorithm,
                          archiveContentNode->image.cryptType,
+                         archiveContentNode->image.deltaSourceName,
+                         archiveContentNode->image.deltaSourceSize,
                          archiveContentNode->image.blockSize,
                          archiveContentNode->image.blockOffset,
                          archiveContentNode->image.blockCount
@@ -1451,6 +1506,8 @@ LOCAL void printList(void)
                             archiveContentNode->hardLink.dataCompressAlgorithm,
                             archiveContentNode->hardLink.cryptAlgorithm,
                             archiveContentNode->hardLink.cryptType,
+                            archiveContentNode->hardLink.deltaSourceName,
+                            archiveContentNode->hardLink.deltaSourceSize,
                             archiveContentNode->hardLink.fragmentOffset,
                             archiveContentNode->hardLink.fragmentSize
                            );
@@ -1596,10 +1653,13 @@ remoteBarFlag=FALSE;
                   CryptTypes         cryptType;
                   String             fileName;
                   FileInfo           fileInfo;
+                  String             deltaSourceName;
+                  uint64             delteSourceSize;
                   uint64             fragmentOffset,fragmentSize;
 
                   // read archive file
-                  fileName = String_new();
+                  fileName        = String_new();
+                  deltaSourceName = String_new();
                   error = Archive_readFileEntry(&archiveInfo,
                                                 &archiveEntryInfo,
                                                 &deltaCompressAlgorithm,
@@ -1608,8 +1668,8 @@ remoteBarFlag=FALSE;
                                                 &cryptType,
                                                 fileName,
                                                 &fileInfo,
-                                                NULL,  // deltaSourceName
-                                                NULL,  // deltaSourceSize
+                                                deltaSourceName,
+                                                &delteSourceSize,
                                                 &fragmentOffset,
                                                 &fragmentSize
                                                );
@@ -1619,6 +1679,7 @@ remoteBarFlag=FALSE;
                                String_cString(printableStorageName),
                                Errors_getText(error)
                               );
+                    String_delete(deltaSourceName);
                     String_delete(fileName);
                     if (failError == ERROR_NONE) failError = error;
                     break;
@@ -1640,6 +1701,8 @@ remoteBarFlag=FALSE;
                                       dataCompressAlgorithm,
                                       cryptAlgorithm,
                                       cryptType,
+                                      deltaSourceName,
+                                      delteSourceSize,
                                       fragmentOffset,
                                       fragmentSize
                                      );
@@ -1662,6 +1725,8 @@ remoteBarFlag=FALSE;
                                     dataCompressAlgorithm,
                                     cryptAlgorithm,
                                     cryptType,
+                                    deltaSourceName,
+                                    delteSourceSize,
                                     fragmentOffset,
                                     fragmentSize
                                    );
@@ -1677,6 +1742,7 @@ remoteBarFlag=FALSE;
                   }
 
                   // free resources
+                  String_delete(deltaSourceName);
                   String_delete(fileName);
                 }
                 break;
@@ -1688,10 +1754,13 @@ remoteBarFlag=FALSE;
                   CryptTypes         cryptType;
                   String             deviceName;
                   DeviceInfo         deviceInfo;
+                  String             deltaSourceName;
+                  uint64             delteSourceSize;
                   uint64             blockOffset,blockCount;
 
                   // read archive image
-                  deviceName = String_new();
+                  deviceName      = String_new();
+                  deltaSourceName = String_new();
                   error = Archive_readImageEntry(&archiveInfo,
                                                  &archiveEntryInfo,
                                                  &deltaCompressAlgorithm,
@@ -1700,8 +1769,8 @@ remoteBarFlag=FALSE;
                                                  &cryptType,
                                                  deviceName,
                                                  &deviceInfo,
-                                                 NULL,  // deltaSourceName
-                                                 NULL,  // deltaSourceSize
+                                                 deltaSourceName,
+                                                 &delteSourceSize,
                                                  &blockOffset,
                                                  &blockCount
                                                 );
@@ -1731,6 +1800,8 @@ remoteBarFlag=FALSE;
                                        dataCompressAlgorithm,
                                        cryptAlgorithm,
                                        cryptType,
+                                       deltaSourceName,
+                                       delteSourceSize,
                                        deviceInfo.blockSize,
                                        blockOffset,
                                        blockCount
@@ -1753,6 +1824,8 @@ remoteBarFlag=FALSE;
                                      dataCompressAlgorithm,
                                      cryptAlgorithm,
                                      cryptType,
+                                     deltaSourceName,
+                                     delteSourceSize,
                                      deviceInfo.blockSize,
                                      blockOffset,
                                      blockCount
@@ -1769,6 +1842,7 @@ remoteBarFlag=FALSE;
                   }
 
                   // free resources
+                  String_delete(deltaSourceName);
                   String_delete(deviceName);
                 }
                 break;
@@ -1927,12 +2001,15 @@ remoteBarFlag=FALSE;
                   CryptTypes         cryptType;
                   StringList         fileNameList;
                   FileInfo           fileInfo;
+                  String             deltaSourceName;
+                  uint64             deltaSourceSize;
                   uint64             fragmentOffset,fragmentSize;
                   StringNode         *stringNode;
                   String             fileName;
 
                   // read archive hard link
                   StringList_init(&fileNameList);
+
                   error = Archive_readHardLinkEntry(&archiveInfo,
                                                     &archiveEntryInfo,
                                                     &deltaCompressAlgorithm,
@@ -1941,8 +2018,8 @@ remoteBarFlag=FALSE;
                                                     &cryptType,
                                                     &fileNameList,
                                                     &fileInfo,
-                                                    NULL,  // deltaSourceName
-                                                    NULL,  // deltaSourceSize
+                                                    deltaSourceName,
+                                                    &deltaSourceSize,
                                                     &fragmentOffset,
                                                     &fragmentSize
                                                    );
@@ -1952,6 +2029,7 @@ remoteBarFlag=FALSE;
                                String_cString(printableStorageName),
                                Errors_getText(error)
                               );
+                    String_delete(deltaSourceName);
                     StringList_done(&fileNameList);
                     if (failError == ERROR_NONE) failError = error;
                     break;
@@ -1975,6 +2053,8 @@ remoteBarFlag=FALSE;
                                             dataCompressAlgorithm,
                                             cryptAlgorithm,
                                             cryptType,
+                                            deltaSourceName,
+                                            deltaSourceSize,
                                             fragmentOffset,
                                             fragmentSize
                                            );
@@ -1997,6 +2077,8 @@ remoteBarFlag=FALSE;
                                           dataCompressAlgorithm,
                                           cryptAlgorithm,
                                           cryptType,
+                                          deltaSourceName,
+                                          deltaSourceSize,
                                           fragmentOffset,
                                           fragmentSize
                                          );
@@ -2013,6 +2095,7 @@ remoteBarFlag=FALSE;
                   }
 
                   // free resources
+                  String_delete(deltaSourceName);
                   StringList_done(&fileNameList);
                 }
                 break;
@@ -2120,6 +2203,8 @@ remoteBarFlag=FALSE;
           uint64               fileSize;
           uint64               timeModified;
           uint64               archiveFileSize;
+          String               deltaSourceName;
+          uint64               deltaSourceSize;
           uint64               fragmentOffset,fragmentLength;
           CompressAlgorithms   compressAlgorithm;
           CryptAlgorithms      cryptAlgorithm;
@@ -2228,10 +2313,11 @@ fprintf(stderr,"%s,%d: line=%s\n",__FILE__,__LINE__,String_cString(line));
           String_delete(line);
 
           // read archive content
-          line          = String_new();
-          fileName      = String_new();
-          directoryName = String_new();
-          linkName      = String_new();
+          line            = String_new();
+          fileName        = String_new();
+          directoryName   = String_new();
+          linkName        = String_new();
+          deltaSourceName = String_new();
           do
           {
             // send list archive command
@@ -2253,20 +2339,22 @@ fprintf(stderr,"%s,%d: line=%s\n",__FILE__,__LINE__,String_cString(line));
               // parse and output list
               if      (String_parse(line,
                                     STRING_BEGIN,
-                                    "%d %d %y FILE %llu %llu %llu %llu %d %d %d %S",
+                                    "%d %d %y FILE %'S %llu %llu %d %d %d %'S %llu %llu %llu",
                                     NULL,
                                     &id,
                                     &errorCode,
                                     &completedFlag,
+                                    fileName,
                                     &fileSize,
                                     &timeModified,
                                     &archiveFileSize,
-                                    &fragmentOffset,
-                                    &fragmentLength,
                                     &compressAlgorithm,
                                     &cryptAlgorithm,
                                     &cryptType,
-                                    fileName
+                                    deltaSourceName,
+                                    &deltaSourceSize,
+                                    &fragmentOffset,
+                                    &fragmentLength
                                    )
                       )
               {
@@ -2282,10 +2370,13 @@ fprintf(stderr,"%s,%d: line=%s\n",__FILE__,__LINE__,String_cString(line));
                                     fileSize,
                                     timeModified,
                                     archiveFileSize,
+#warning todo
 compressAlgorithm,//                                    deltaCompressAlgorithm,
                                     compressAlgorithm,
                                     cryptAlgorithm,
                                     cryptType,
+                                    deltaSourceName,
+                                    deltaSourceSize,
                                     fragmentOffset,
                                     fragmentLength
                                    );
@@ -2308,6 +2399,8 @@ compressAlgorithm,//                                    deltaCompressAlgorithm,
                                   compressAlgorithm,
                                   cryptAlgorithm,
                                   cryptType,
+                                  deltaSourceName,
+                                  deltaSourceSize,
                                   fragmentOffset,
                                   fragmentLength
                                  );
@@ -2315,6 +2408,7 @@ compressAlgorithm,//                                    deltaCompressAlgorithm,
                   fileCount++;
                 }
               }
+#warning todo image
               else if (String_parse(line,
                                     STRING_BEGIN,
                                     "%d %d %d DIRECTORY %d %S",
@@ -2408,6 +2502,7 @@ compressAlgorithm,//                                    deltaCompressAlgorithm,
                   fileCount++;
                 }
               }
+#warning todo hardlink
               else if (String_parse(line,
                                     STRING_BEGIN,
                                     "%d %d %d SPECIAL %d %d %ld %ld %S",
