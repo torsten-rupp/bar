@@ -1,8 +1,8 @@
 2012-??-?? 0.17
-  * added support for delta compression!
+  * finally: added support for xdelta compression!
+    Note: integrating ths was a _hard_ work.
   * added support for libcdio to read content of CD/DVD/BD
-    devices/images without mounting (required for test/restore
-    of archives from CD/DVD/BD)
+    devices/images without mounting
   * updated integrated libssh2 to version 1.3.0
   * added check for file permission of config files. Should
     be 400 or 600.
@@ -42,6 +42,13 @@
   * improved processing speed: implemented ring buffers
     for compress/decompress
   * fixed compare of images: only compare used blocks
+  * fixed creating FAT images: in some cases one block was
+    missing in the archive
+  * improved tests: added more tests for images
+  * stop support of Reiser 4: file system is not supported
+    anymore by all Linux versions
+  * if an encryption password is specified on the command
+    line do not ask for another password if decryption fail
 
 2012-01-14 0.16g
   * fix restore: do not create empty parent directories
