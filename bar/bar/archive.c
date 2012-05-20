@@ -195,29 +195,40 @@ LOCAL Password *getCryptPassword(const String                    fileName,
       }
       break;
     case PASSWORD_MODE_ASK:
-      if (archiveGetCryptPasswordFunction != NULL)
+      if (globalOptions.cryptPassword != NULL)
       {
-        password = Password_new();
-        if (password == NULL)
-        {
-          return NULL;
-        }
-        error = archiveGetCryptPasswordFunction(archiveGetCryptPasswordUserData,password,fileName,TRUE,TRUE);
-        if (error != ERROR_NONE)
-        {
-          Password_delete(password);
-          return NULL;
-        }
+        password = Password_duplicate(globalOptions.cryptPassword);
       }
       else
       {
-        return NULL;
+        if (archiveGetCryptPasswordFunction != NULL)
+        {
+          password = Password_new();
+          if (password == NULL)
+          {
+            return NULL;
+          }
+          error = archiveGetCryptPasswordFunction(archiveGetCryptPasswordUserData,password,fileName,TRUE,TRUE);
+          if (error != ERROR_NONE)
+          {
+            Password_delete(password);
+            return NULL;
+          }
+        }
+        else
+        {
+          return NULL;
+        }
       }
       break;
     case PASSWORD_MODE_CONFIG:
-      if (jobOptions->cryptPassword != NULL)
+      if      (jobOptions->cryptPassword != NULL)
       {
         password = Password_duplicate(jobOptions->cryptPassword);
+      }
+      else if (globalOptions.cryptPassword != NULL)
+      {
+        password = Password_duplicate(globalOptions.cryptPassword);
       }
       else
       {
@@ -258,7 +269,11 @@ LOCAL Password *getCryptPassword(const String                    fileName,
 * Input  : passwordHandle - password handle
 * Output : -
 * Return : password or NULL if no more passwords
-* Notes  : -
+* Notes  : Ordering of password search:
+*            - next password from list
+*            - password from config
+*            - password from command line
+*            - ask for password (only if no command line password set)
 \***********************************************************************/
 
 LOCAL const Password *getNextDecryptPassword(PasswordHandle *passwordHandle)
@@ -296,9 +311,8 @@ LOCAL const Password *getNextDecryptPassword(PasswordHandle *passwordHandle)
     passwordHandle->passwordMode = PASSWORD_MODE_ASK;
   }
   else if (   !passwordHandle->inputFlag
-           && (   (passwordHandle->passwordMode == PASSWORD_MODE_ASK)
-               || (globalOptions.cryptPassword == NULL)
-              )
+           && (passwordHandle->passwordMode == PASSWORD_MODE_ASK)
+           && (globalOptions.cryptPassword == NULL)
           )
   {
     if (passwordHandle->archiveGetCryptPasswordFunction != NULL)
