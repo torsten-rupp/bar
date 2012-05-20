@@ -45,11 +45,11 @@ LD_DYNAMIC_PREFIX   = -Wl,-Bdynamic
 
 #---------------------------------- commands----------------------------------
 
-CAT        = cat
-CD         = cd
-CHATTR     = chattr
-CHMOD      = chmod
-CP         = cp
+CAT           = cat
+CD            = cd
+CHATTR        = chattr
+CHMOD         = chmod
+CP            = cp
 DD            = dd
 DIFF          = diff
 ECHO          = echo
@@ -284,11 +284,6 @@ help:
 	@$(ECHO) "  performance5, performance_delta_compress"
 	@$(ECHO) ""
 	@$(ECHO) "  dist"
-	@$(ECHO) "  debian_dist"
-	@$(ECHO) ""
-	@$(ECHO) "  deb"
-	@$(ECHO) "  rpm"
-	@$(ECHO) "  gui"
 
 # create dependencies
 .PHONY: depend
