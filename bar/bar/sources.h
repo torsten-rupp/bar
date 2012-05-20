@@ -35,6 +35,8 @@
 
 /***************************** Constants *******************************/
 
+#define SOURCE_SIZE_UNKNOWN -1LL
+
 /***************************** Datatypes *******************************/
 
 // source node
@@ -53,7 +55,8 @@ typedef struct
 // source handle
 typedef struct
 {
-  String     sourceName;       // source name
+  String     name;             // source name
+  uint64     size;             // size of source
   String     tmpFileName;      // temporary file name
   FileHandle tmpFileHandle;    // temporary file handle
   bool       tmpFileOpenFlag;  // TRUE iff temporary file is open
@@ -123,6 +126,7 @@ Errors Source_addSourceList(const PatternList *sourcePatternList);
 *          sourceStorageName - storage name
 *          name              - entry name to open (file, image,
 *                              hard link)
+*          size              - size of entry
 *          jobOptions        - job option settings
 * Output : sourceHandle - source handle
 * Return : ERROR_NONE or error code
@@ -132,6 +136,7 @@ Errors Source_addSourceList(const PatternList *sourcePatternList);
 Errors Source_openEntry(SourceHandle     *sourceHandle,
                         const String     sourceStorageName,
                         const String     name,
+                        int64            size,
                         const JobOptions *jobOptions
                        );
 
@@ -156,6 +161,17 @@ void Source_closeEntry(SourceHandle *sourceHandle);
 \***********************************************************************/
 
 String Source_getName(SourceHandle *sourceHandle);
+
+/***********************************************************************\
+* Name   : Source_getSize
+* Purpose: get source size
+* Input  : sourceHandle - source handle
+* Output : -
+* Return : source size [bytes]
+* Notes  : -
+\***********************************************************************/
+
+uint64 Source_getSize(SourceHandle *sourceHandle);
 
 /***********************************************************************\
 * Name   : Source_getName
