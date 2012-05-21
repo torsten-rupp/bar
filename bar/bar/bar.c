@@ -3093,7 +3093,6 @@ bool configValueParseCompressAlgorithm(void *userData, void *variable, const cha
 {
   char               algorithm1[256],algorithm2[256];
   CompressAlgorithms compressAlgorithmDelta,compressAlgorithmByte;
-  bool               foundFlag1,foundFlag2;
   bool               foundFlag;
   uint               z;
 
@@ -3111,98 +3110,71 @@ bool configValueParseCompressAlgorithm(void *userData, void *variable, const cha
       || String_scanCString(value,"%256s,%256s",algorithm1,algorithm2)
      )
   {
-    foundFlag1 = FALSE;
-    foundFlag2 = FALSE;
-
-    // find delta+byte algorithm
-    if (!foundFlag1 || !foundFlag2)
-    {
-      foundFlag1 = FALSE;
-      foundFlag2 = FALSE;
-      for (z = 0; z < SIZE_OF_ARRAY(COMPRESS_ALGORITHMS_DELTA); z++)
-      {
-        if (strcasecmp(algorithm1,COMPRESS_ALGORITHMS_DELTA[z].name) == 0)
-        {
-          compressAlgorithmDelta = COMPRESS_ALGORITHMS_DELTA[z].compressAlgorithm;
-          foundFlag1 = TRUE;
-          break;
-        }
-      }
-      for (z = 0; z < SIZE_OF_ARRAY(COMPRESS_ALGORITHMS_BYTE); z++)
-      {
-        if (strcasecmp(algorithm2,COMPRESS_ALGORITHMS_BYTE[z].name) == 0)
-        {
-          compressAlgorithmByte = COMPRESS_ALGORITHMS_BYTE[z].compressAlgorithm;
-          foundFlag2 = TRUE;
-          break;
-        }
-      }
-    }
-
-    // find byte+delta algorithm
-    if (!foundFlag1 || !foundFlag2)
-    {
-      foundFlag1 = FALSE;
-      foundFlag2 = FALSE;
-      for (z = 0; z < SIZE_OF_ARRAY(COMPRESS_ALGORITHMS_BYTE); z++)
-      {
-        if (strcasecmp(algorithm1,COMPRESS_ALGORITHMS_BYTE[z].name) == 0)
-        {
-          compressAlgorithmByte = COMPRESS_ALGORITHMS_BYTE[z].compressAlgorithm;
-          foundFlag2 = TRUE;
-          break;
-        }
-      }
-      for (z = 0; z < SIZE_OF_ARRAY(COMPRESS_ALGORITHMS_DELTA); z++)
-      {
-        if (strcasecmp(algorithm2,COMPRESS_ALGORITHMS_DELTA[z].name) == 0)
-        {
-          compressAlgorithmDelta = COMPRESS_ALGORITHMS_DELTA[z].compressAlgorithm;
-          foundFlag1 = TRUE;
-          break;
-        }
-      }
-    }
-
-    if (!foundFlag1 || !foundFlag2)
-    {
-      return FALSE;
-    }
-  }
-  else
-  {
     foundFlag = FALSE;
-
-    // find delta algorithm
-    if (!foundFlag)
+    for (z = 0; z < SIZE_OF_ARRAY(COMPRESS_ALGORITHMS_DELTA); z++)
     {
-      for (z = 0; z < SIZE_OF_ARRAY(COMPRESS_ALGORITHMS_DELTA); z++)
+      if (strcasecmp(algorithm1,COMPRESS_ALGORITHMS_DELTA[z].name) == 0)
       {
-        if (strcasecmp(value,COMPRESS_ALGORITHMS_DELTA[z].name) == 0)
-        {
-          compressAlgorithmDelta = COMPRESS_ALGORITHMS_DELTA[z].compressAlgorithm;
-          foundFlag1 = TRUE;
-          break;
-        }
+        compressAlgorithmDelta = COMPRESS_ALGORITHMS_DELTA[z].compressAlgorithm;
+        foundFlag = TRUE;
+        break;
       }
     }
-
-    // find byte algorithm
-    if (!foundFlag)
+    for (z = 0; z < SIZE_OF_ARRAY(COMPRESS_ALGORITHMS_BYTE); z++)
     {
-      for (z = 0; z < SIZE_OF_ARRAY(COMPRESS_ALGORITHMS_BYTE); z++)
+      if (strcasecmp(algorithm1,COMPRESS_ALGORITHMS_BYTE[z].name) == 0)
       {
-        if (strcasecmp(value,COMPRESS_ALGORITHMS_BYTE[z].name) == 0)
-        {
-          compressAlgorithmByte = COMPRESS_ALGORITHMS_BYTE[z].compressAlgorithm;
-          foundFlag2 = TRUE;
-          break;
-        }
+        compressAlgorithmByte = COMPRESS_ALGORITHMS_BYTE[z].compressAlgorithm;
+        foundFlag = TRUE;
+        break;
+      }
+    }
+    if (!foundFlag) return FALSE;
+
+    foundFlag = FALSE;
+    for (z = 0; z < SIZE_OF_ARRAY(COMPRESS_ALGORITHMS_DELTA); z++)
+    {
+      if (strcasecmp(algorithm2,COMPRESS_ALGORITHMS_DELTA[z].name) == 0)
+      {
+        compressAlgorithmDelta = COMPRESS_ALGORITHMS_DELTA[z].compressAlgorithm;
+        foundFlag = TRUE;
+        break;
+      }
+    }
+    for (z = 0; z < SIZE_OF_ARRAY(COMPRESS_ALGORITHMS_BYTE); z++)
+    {
+      if (strcasecmp(algorithm2,COMPRESS_ALGORITHMS_BYTE[z].name) == 0)
+      {
+        compressAlgorithmByte = COMPRESS_ALGORITHMS_BYTE[z].compressAlgorithm;
+        foundFlag = TRUE;
+        break;
       }
     }
     if (!foundFlag) return FALSE;
   }
-//fprintf(stderr,"%s, %d: compressAlgorithmDelta=%d compressAlgorithmByte=%d\n",__FILE__,__LINE__,compressAlgorithmDelta,compressAlgorithmByte);
+  else
+  {
+    foundFlag = FALSE;
+    for (z = 0; z < SIZE_OF_ARRAY(COMPRESS_ALGORITHMS_DELTA); z++)
+    {
+      if (strcasecmp(value,COMPRESS_ALGORITHMS_DELTA[z].name) == 0)
+      {
+        compressAlgorithmDelta = COMPRESS_ALGORITHMS_DELTA[z].compressAlgorithm;
+        foundFlag = TRUE;
+        break;
+      }
+    }
+    for (z = 0; z < SIZE_OF_ARRAY(COMPRESS_ALGORITHMS_BYTE); z++)
+    {
+      if (strcasecmp(value,COMPRESS_ALGORITHMS_BYTE[z].name) == 0)
+      {
+        compressAlgorithmByte = COMPRESS_ALGORITHMS_BYTE[z].compressAlgorithm;
+        foundFlag = TRUE;
+        break;
+      }
+    }
+    if (!foundFlag) return FALSE;
+  }
 
   // store compress algorithm values
   ((JobOptionsCompressAlgorithm*)variable)->delta = compressAlgorithmDelta;
