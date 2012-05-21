@@ -1156,8 +1156,7 @@ void Source_closeEntry(SourceHandle *sourceHandle)
   // delete temporary source file
   if (sourceHandle->tmpFileName != NULL)
   {
-#warning todo
-//    File_delete(sourceHandle->tmpFileName,FALSE);
+    File_delete(sourceHandle->tmpFileName,FALSE);
     String_delete(sourceHandle->tmpFileName);
   }
 }
