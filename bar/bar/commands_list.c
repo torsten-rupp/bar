@@ -1253,6 +1253,11 @@ LOCAL void freeArchiveContentNode(ArchiveContentNode *archiveContentNode, void *
       break;
     case ARCHIVE_ENTRY_TYPE_FILE:
       String_delete(archiveContentNode->file.fileName);
+      String_delete(archiveContentNode->file.deltaSourceName);
+      break;
+    case ARCHIVE_ENTRY_TYPE_IMAGE:
+      String_delete(archiveContentNode->image.imageName);
+      String_delete(archiveContentNode->image.deltaSourceName);
       break;
     case ARCHIVE_ENTRY_TYPE_DIRECTORY:
       String_delete(archiveContentNode->directory.directoryName);
@@ -1263,6 +1268,7 @@ LOCAL void freeArchiveContentNode(ArchiveContentNode *archiveContentNode, void *
       break;
     case ARCHIVE_ENTRY_TYPE_HARDLINK:
       String_delete(archiveContentNode->hardLink.fileName);
+      String_delete(archiveContentNode->hardLink.deltaSourceName);
       break;
     case ARCHIVE_ENTRY_TYPE_SPECIAL:
       String_delete(archiveContentNode->special.fileName);
