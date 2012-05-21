@@ -3856,7 +3856,7 @@ Errors Archive_newHardLinkEntry(ArchiveInfo      *archiveInfo,
         logMessage(LOG_TYPE_WARNING,
                    "File '%s' not delta compressed (no source file found)\n",
 #warning todo StringList_first
-                   String_cString(fileNameList->head->string)
+                   String_cString(StringList_first(fileNameList,NULL))
                   );
       }
     }
