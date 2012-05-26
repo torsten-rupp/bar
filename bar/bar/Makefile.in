@@ -629,7 +629,9 @@ test_combined: $(TEST_BAR)
 functionTestCheckExitcode = \
   $2 2>/dev/null; if test $$? -gt $1; then false; fi
 
-test_parameters: $(TEST_BAR)
+test_parameters: \
+  $(TEST_BAR) \
+  $(TEST_FILES)
 	@$(ECHO_NO_LF) "Test parameters..."
 	$(RMRF) $(TEST_FILES_CLEAN)
 	# help
@@ -646,6 +648,8 @@ test_parameters: $(TEST_BAR)
 	$(call functionTestCheckExitcode,0,SSH_ASKPASS= $(TEST_BAR) -l test/test*.bar -H -# '*rand*' -! '*512*' $(if $(QUIET),1>/dev/null))
 	$(call functionTestCheckExitcode,0,SSH_ASKPASS= $(TEST_BAR) -l test/test*.bar -L -# '*rand*' -! '*512*' $(if $(QUIET),1>/dev/null))
 	$(call functionTestCheckExitcode,0,SSH_ASKPASS= $(TEST_BAR) -l test/test*.bar -g -H -L -# '*rand*' -! '*512*' $(if $(QUIET),1>/dev/null))
+	# dry-run
+	$(call functionTestCheckExitcode,0,SSH_ASKPASS= $(TEST_BAR) -c test/test.bar test/data --overwrite-archive-files --verbose=2 --dry-run $(if $(QUIET),1>/dev/null))
 	# wrong options
 	$(call functionTestCheckExitcode,5,SSH_ASKPASS= $(TEST_BAR) --not-existing-option  $(if $(QUIET),1>/dev/null))
 	$(call functionTestCheckExitcode,5,SSH_ASKPASS= $(TEST_BAR) -c test/test.bar test/data --compress-algorithm=not-existing-compress  $(if $(QUIET),1>/dev/null))
@@ -939,6 +943,7 @@ functionTestDeviceCreate = \
 functionTestDeviceDelete = \
   @( \
     $(ECHO) $(SUDO) $(LOSETUP) -d $1; \
+    $(SLEEP) 5; \
     $(SUDO) $(LOSETUP) -d $1; \
   ) $(if $(QUIET),1>/dev/null 2>/dev/null)
 
@@ -963,6 +968,7 @@ functionInitFilesystem = \
             $(SUDO) $(UMOUNT) test/dev0; \
     ) \
     $(ECHO) $(SUDO) $(LOSETUP) -d $(LOOP0); \
+    $(SLEEP) 5; \
     $(SUDO) $(LOSETUP) -d $(LOOP0); \
   ) $(if $(QUIET),1>/dev/null 2>/dev/null)
 
@@ -987,6 +993,7 @@ functionDeviceUmount = \
     $(ECHO) $(SUDO) $(UMOUNT) $2; \
     $(SUDO) $(UMOUNT) $2; rc=$$?; if test $$rc -ne 0; then exit $$rc; fi; \
     $(ECHO) $(SUDO) $(LOSETUP) -d $1; \
+    $(SLEEP) 5; \
     $(SUDO) $(LOSETUP) -d $1; \
   ) $(if $(QUIET),1>/dev/null 2>/dev/null)
 
@@ -2150,6 +2157,13 @@ memcheck2e: bar
           --suppressions=valgrind.supp \
           $(VALGRIND_OPTIONS) \
           ./bar -c test/test-###.bar test/data $(BAR_OPTIONS) --archive-part-size=100000 --overwrite-archive-files > /dev/null
+memcheck2f: bar
+	valgrind \
+          --leak-resolution=high \
+          --track-fds=yes \
+          --suppressions=valgrind.supp \
+          $(VALGRIND_OPTIONS) \
+          ./bar -c test/test.bar test/data $(BAR_OPTIONS) --overwrite-archive-files --dry-run > /dev/null
 memcheck3: bar
 	./bar -c test/test.bar test/data $(BAR_OPTIONS) --overwrite-archive-files > /dev/null
 	valgrind \
