@@ -109,8 +109,8 @@ typedef enum
 /***************************** Datatypes *******************************/
 
 #warning cleanup
-#define TEMPORARY_DEBUG_COMPRESS_RINGBUFFERS
-#define TEMPORARY_DEBUG_XDELTA_RINGBUFFERS
+#define _TEMPORARY_DEBUG_COMPRESS_RINGBUFFERS
+#define _TEMPORARY_DEBUG_XDELTA_RINGBUFFERS
 
 // compress info block
 typedef struct
@@ -165,7 +165,7 @@ typedef struct
           int          flags;                   // XDELTA flags
           xd3_stream   stream;                  // XDELTA stream
           xd3_source   source;                  // XDELTA source
-          byte         inputBuffer[256];        /* buffer for next xdelta input data bytes (Note: do
+          byte         inputBuffer[1024];       /* buffer for next xdelta input data bytes (Note: do
                                                    not use pointer to data/compress ring buffers
                                                    because input/output is not processed immediately
                                                    and must be available until next input data is
