@@ -469,6 +469,10 @@ TEST_FILES_CLEAN = \
 TEST_BAR = ./bar@EXEEXT@
 TEST_DESTROYER = ./destroyer@EXEEXT@
 
+# test keys
+TEST_KEYS = test/key.public \
+            test/key.private
+
 .PHONY: test clean_test
 .PHONY: test1 test2 test3 test4 test5 test6 test7 test_combined
 .PHONY: test_basic test_compress test_crypt test_asymmetric_crypt test_split test_image test_dvd test_parameters
@@ -537,7 +541,7 @@ test3 test_crypt: $(TEST_BAR)
 
 test4 test_asymmetric_crypt: $(TEST_BAR)
 	@$(ECHO_NO_LF) "Test 4: asymmetric crypt..."
-	@$(RMF) test/key.*; $(INSTALL) -d test; $(ECHO_NO_LF) -e "$(TEST_PASSWORD)\n$(TEST_PASSWORD)\n" | SSH_ASKPASS= ./bar --generate-keys test/key
+	@$(RMF) test/key.*; $(MAKE) $(TEST_KEYS)
 	for crypt in $(CRYPT_NAMES); do \
           $(MAKE) \
             BAR_FILE="test" \
@@ -589,7 +593,7 @@ test7 test_dvd: $(TEST_BAR)
 
 test_combined: $(TEST_BAR)
 	@$(ECHO_NO_LF) "Test combined..."
-	@$(RMF) test/key.*; $(INSTALL) -d test; $(ECHO_NO_LF) -e "$(TEST_PASSWORD)\n$(TEST_PASSWORD)\n" | SSH_ASKPASS= ./bar --generate-keys test/key
+	@$(RMF) test/key.*; $(MAKE) $(TEST_KEYS)
 	for compress in $(TEST_COMBINED_COMPRESS_NAMES); do \
           for crypt in $(TEST_COMBINED_CRYPT_NAMES); do \
             $(MAKE) \
@@ -755,6 +759,10 @@ test/data/delta2/test.dat: test/data/delta1/test.dat
           $(DD) if=$(DEVICE_RANDOM) bs=1k count=1 2>/dev/null; \
           $(DD) if=test/data/delta1/test.dat skip=256 bs=1k count=256 2>/dev/null; \
         ) > $@
+
+test/key.public test/key.private:
+	$(INSTALL) -d test
+	$(ECHO_NO_LF) -e "$(TEST_PASSWORD)\n$(TEST_PASSWORD)\n" | SSH_ASKPASS= ./bar --generate-keys test/key
 
 # helper function to check if parameter exists
 # call functionVerifyParameter,<name>
@@ -2091,7 +2099,10 @@ test_dvd_operations: \
 
 # valgrind checks
 .PHONY: memcheck
-memcheck: bar
+memcheck: \
+  $(TEST_BAR) \
+  $(TEST_FILES)
+	@$(RMF) test/key.*; $(MAKE) test/key.public test/key.private
 	$(MAKE) \
           VALGRIND_OPTIONS="--leak-check=summary" \
           $(if $(CHECK),\
@@ -2100,7 +2111,9 @@ memcheck: bar
            )
 
 .PHONY: memcheck_extended
-memcheck_extended: bar
+memcheck_extended: \
+  $(TEST_BAR) \
+  $(TEST_FILES)
 	$(MAKE) \
           VALGRIND_OPTIONS="--leak-check=full" \
             $(if $(CHECK),\
@@ -2109,8 +2122,11 @@ memcheck_extended: bar
              )
 
 .PHONY: memcheck1 memcheck2 memcheck2a memcheck2b memcheck2c memcheck2d memcheck2e memcheck3 memcheck4 memcheck5 memcheck6 memcheck7
-memcheck1: bar
+memcheck1: \
+  $(TEST_BAR) \
+  $(TEST_FILES)
 	valgrind \
+          --log-file=valgrind.log \
           --leak-resolution=high \
           --track-fds=yes \
           --suppressions=valgrind.supp \
@@ -2122,43 +2138,61 @@ memcheck2: \
   memcheck2c \
   memcheck2d \
   memcheck2e
-memcheck2a: bar
+memcheck2a: \
+  $(TEST_BAR) \
+  $(TEST_FILES)
 	valgrind \
+          --log-file=valgrind.log \
           --leak-resolution=high \
           --track-fds=yes \
           --suppressions=valgrind.supp \
           $(VALGRIND_OPTIONS) \
           ./bar -c test/test.bar test/data $(BAR_OPTIONS) --overwrite-archive-files > /dev/null
-memcheck2b: bar
+memcheck2b: \
+  $(TEST_BAR) \
+  $(TEST_FILES)
 	valgrind \
+          --log-file=valgrind.log \
           --leak-resolution=high \
           --track-fds=yes \
           --suppressions=valgrind.supp \
           $(VALGRIND_OPTIONS) \
           ./bar -c test/test.bar test/data $(BAR_OPTIONS) --compress-algorithm=bzip9 --overwrite-archive-files > /dev/null
-memcheck2c: bar
+memcheck2c: \
+  $(TEST_BAR) \
+  $(TEST_FILES)
 	valgrind \
+          --log-file=valgrind.log \
           --leak-resolution=high \
           --track-fds=yes \
           --suppressions=valgrind.supp \
           $(VALGRIND_OPTIONS) \
           ./bar -c test/test.bar test/data $(BAR_OPTIONS) --crypt-algorithm=AES256 --crypt-password=$(TEST_PASSWORD) --overwrite-archive-files > /dev/null
-memcheck2d: bar
+memcheck2d: \
+  $(TEST_BAR) \
+  $(TEST_FILES)
 	valgrind \
+          --log-file=valgrind.log \
           --leak-resolution=high \
           --track-fds=yes \
           --suppressions=valgrind.supp \
           $(VALGRIND_OPTIONS) \
           ./bar -c test/test.bar test/data $(BAR_OPTIONS) --compress-algorithm=none --crypt-algorithm=AES256 --crypt-password=$(TEST_PASSWORD) --crypt-type=asymmetric --crypt-public-key=$(PWD)/test/key.public --crypt-private-key=$(PWD)/test/key.private --overwrite-archive-files > /dev/null
-memcheck2e: bar
+memcheck2e: \
+  $(TEST_BAR) \
+  $(TEST_FILES)
 	valgrind \
+          --log-file=valgrind.log \
           --leak-resolution=high \
           --track-fds=yes \
           --suppressions=valgrind.supp \
           $(VALGRIND_OPTIONS) \
           ./bar -c test/test-###.bar test/data $(BAR_OPTIONS) --archive-part-size=100000 --overwrite-archive-files > /dev/null
-memcheck2f: bar
+memcheck2f: \
+  $(TEST_BAR) \
+  $(TEST_FILES)
 	valgrind \
+          --log-file=valgrind.log \
           --leak-resolution=high \
           --track-fds=yes \
           --suppressions=valgrind.supp \
@@ -2167,37 +2201,50 @@ memcheck2f: bar
 memcheck3: bar
 	./bar -c test/test.bar test/data $(BAR_OPTIONS) --overwrite-archive-files > /dev/null
 	valgrind \
+          --log-file=valgrind.log \
           --leak-resolution=high \
           --track-fds=yes \
           --suppressions=valgrind.supp \
           $(VALGRIND_OPTIONS) \
           ./bar -l test/test*.bar $(BAR_OPTIONS) > /dev/null
-memcheck4: bar
+memcheck4: \
+  $(TEST_BAR) \
+  $(TEST_FILES)
 	./bar -c test/test.bar test/data $(BAR_OPTIONS) --overwrite-archive-files > /dev/null
 	valgrind \
+          --log-file=valgrind.log \
           --leak-resolution=high \
           --track-fds=yes \
           --suppressions=valgrind.supp \
           $(VALGRIND_OPTIONS) \
           ./bar -t test/test*.bar $(BAR_OPTIONS) > /dev/null
-memcheck5: bar
+memcheck5: \
+  $(TEST_BAR) \
+  $(TEST_FILES)
 	./bar -c test/test.bar test/data $(BAR_OPTIONS) --overwrite-archive-files > /dev/null
 	valgrind \
+          --log-file=valgrind.log \
           --leak-resolution=high \
           --track-fds=yes \
           --suppressions=valgrind.supp \
           $(VALGRIND_OPTIONS) \
           ./bar -d test/test*.bar $(BAR_OPTIONS) > /dev/null
-memcheck6: bar
+memcheck6: \
+  $(TEST_BAR) \
+  $(TEST_FILES)
 	./bar -c test/test.bar test/data $(BAR_OPTIONS) --overwrite-archive-files > /dev/null
 	valgrind \
+          --log-file=valgrind.log \
           --leak-resolution=high \
           --track-fds=yes \
           --suppressions=valgrind.supp \
           $(VALGRIND_OPTIONS) \
           ./bar -x test/test*.bar $(BAR_OPTIONS) --destination test/restore > /dev/null
-memcheck7: bar
+memcheck7: \
+  $(TEST_BAR) \
+  $(TEST_FILES)
 	valgrind \
+          --log-file=valgrind.log \
           --leak-resolution=high \
           --track-fds=yes \
           --suppressions=valgrind.supp \
