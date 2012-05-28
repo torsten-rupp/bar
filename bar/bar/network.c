@@ -188,7 +188,7 @@ Errors Network_connect(SocketHandle *socketHandle,
   switch (socketType)
   {
     case SOCKET_TYPE_PLAIN:
-      /* get host IP address */
+      // get host IP address
       #if   defined(HAVE_GETHOSTBYNAME_R)
         if (   (gethostbyname_r(String_cString(hostName),
                                 &bufferAddressEntry,
@@ -221,7 +221,7 @@ Errors Network_connect(SocketHandle *socketHandle,
         return ERROR_HOST_NOT_FOUND;
       }
 
-      /* connect */
+      // connect
       socketHandle->handle = socket(AF_INET,SOCK_STREAM,0);
       if (socketHandle->handle == -1)
       {
@@ -243,7 +243,7 @@ Errors Network_connect(SocketHandle *socketHandle,
 
       if ((flags & SOCKET_FLAG_NON_BLOCKING) != 0)
       {
-        /* enable non-blocking */
+        // enable non-blocking
         socketFlags = fcntl(socketHandle->handle,F_GETFL,0);
         fcntl(socketHandle->handle,F_SETFL,socketFlags | O_NONBLOCK);
       }
@@ -257,9 +257,9 @@ Errors Network_connect(SocketHandle *socketHandle,
 
         assert(loginName != NULL);
 
-        /* initialise variables */
+        // initialise variables
 
-        /* get host IP address */
+        // get host IP address
         #if   defined(HAVE_GETHOSTBYNAME_R)
           if (  (gethostbyname_r(String_cString(hostName),
                                  &bufferAddressEntry,
@@ -292,7 +292,7 @@ Errors Network_connect(SocketHandle *socketHandle,
           return ERROR_HOST_NOT_FOUND;
         }
 
-        /* connect */
+        // connect
         socketHandle->handle = socket(AF_INET,SOCK_STREAM,0);
         if (socketHandle->handle == -1)
         {
@@ -312,14 +312,14 @@ Errors Network_connect(SocketHandle *socketHandle,
           return error;
         }
 
-        /* check login name */
+        // check login name
         if (String_isEmpty(loginName))
         {
           close(socketHandle->handle);
           return ERROR_NO_LOGIN_NAME;
         }
 
-        /* init session */
+        // init session
         socketHandle->ssh2.session = libssh2_session_init();
         if (socketHandle->ssh2.session == NULL)
         {
@@ -361,11 +361,12 @@ Errors Network_connect(SocketHandle *socketHandle,
         #endif /* HAVE_SSH2_KEEPALIVE_CONFIG */
 
 #if 1
+        // authorize with key file
         plainPassword = Password_deploy(password);
         if (libssh2_userauth_publickey_fromfile(socketHandle->ssh2.session,
                                                 String_cString(loginName),
-                                                String_cString(!String_isEmpty(sshPublicKeyFileName)?sshPublicKeyFileName:defaultSSHPublicKeyFileName),
-                                                String_cString(!String_isEmpty(sshPrivateKeyFileName)?sshPrivateKeyFileName:defaultSSHPrivateKeyFileName),
+                                                String_cString(!String_isEmpty(sshPublicKeyFileName ) ? sshPublicKeyFileName  : defaultSSHPublicKeyFileName ),
+                                                String_cString(!String_isEmpty(sshPrivateKeyFileName) ? sshPrivateKeyFileName : defaultSSHPrivateKeyFileName),
                                                 plainPassword
                                                ) != 0)
         {
@@ -379,6 +380,7 @@ Errors Network_connect(SocketHandle *socketHandle,
         }
         Password_undeploy(password);
 #else
+        // authorize interactive
         if (libssh2_userauth_keyboard_interactive(socketHandle->ssh2.session,
                                                   String_cString(loginName),
                                                   NULL
@@ -396,7 +398,7 @@ Errors Network_connect(SocketHandle *socketHandle,
 
         if ((flags & SOCKET_FLAG_NON_BLOCKING) != 0)
         {
-          /* enable non-blocking */
+          // enable non-blocking
           socketFlags = fcntl(socketHandle->handle,F_GETFL,0);
           fcntl(socketHandle->handle,F_SETFL,socketFlags | O_NONBLOCK);
         }
@@ -640,7 +642,7 @@ Errors Network_send(SocketHandle *socketHandle,
       case SOCKET_TYPE_PLAIN:
           do
           {
-            /* wait until space in buffer is available */
+            // wait until space in buffer is available
             assert(socketHandle->handle < FD_SETSIZE);
             tv.tv_sec  = SEND_TIMEOUT/1000;
             tv.tv_usec = (SEND_TIMEOUT%1000)*1000;
@@ -652,7 +654,7 @@ Errors Network_send(SocketHandle *socketHandle,
             FD_SET(socketHandle->handle,&fdSetError);
             select(socketHandle->handle+1,NULL,&fdSetOutput,NULL,&tv);
 
-            /* send data */
+            // send data
             n = send(socketHandle->handle,((char*)buffer)+sentBytes,length-sentBytes,0);
             if      (n > 0) sentBytes += n;
             else if ((n == -1) && (errno != EAGAIN)) break;
@@ -670,7 +672,7 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
         #ifdef HAVE_GNU_TLS
           do
           {
-            /* wait until space in buffer is available */
+            // wait until space in buffer is available
             assert(socketHandle->handle < FD_SETSIZE);
             tv.tv_sec  = SEND_TIMEOUT/1000;
             tv.tv_usec = (SEND_TIMEOUT%1000)*1000;
@@ -682,7 +684,7 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
             FD_SET(socketHandle->handle,&fdSetError);
             select(socketHandle->handle+1,NULL,&fdSetOutput,NULL,&tv);
 
-            /* send data */
+            // send data
             n = gnutls_record_send(socketHandle->gnuTLS.session,((char*)buffer)+sentBytes,length-sentBytes);
             if      (n > 0) sentBytes += n;
             else if ((n < 0) && (errno != GNUTLS_E_AGAIN)) break;
@@ -719,14 +721,14 @@ Errors Network_readLine(SocketHandle *socketHandle,
   while (!endOfLineFlag)
   {
 // ??? optimize?
-    /* read character */
+    // read character
     error = Network_receive(socketHandle,&ch,1,timeout,&bytesReceived);
     if (error != ERROR_NONE)
     {
       return error;
     }
 
-    /* check eol, append to line */
+    // check eol, append to line
     if (bytesReceived > 0)
     {
       if (ch != '\n')
@@ -1006,7 +1008,7 @@ Errors Network_accept(SocketHandle             *socketHandle,
   assert(socketHandle != NULL);
   assert(serverSocketHandle != NULL);
 
-  /* accept */
+  // accept
   socketAddressLength = sizeof(socketAddress);
   socketHandle->handle = accept(serverSocketHandle->handle,
                                 (struct sockaddr*)&socketAddress,
@@ -1019,7 +1021,7 @@ Errors Network_accept(SocketHandle             *socketHandle,
     return error;
   }
 
-  /* initialise TLS session */
+  // initialise TLS session
   switch (serverSocketHandle->type)
   {
     case SERVER_TYPE_PLAIN:
@@ -1029,7 +1031,7 @@ Errors Network_accept(SocketHandle             *socketHandle,
       #ifdef HAVE_GNU_TLS
         socketHandle->type = SOCKET_TYPE_TLS;
 
-        /* initialise session */
+        // initialise session
         if (gnutls_init(&socketHandle->gnuTLS.session,GNUTLS_SERVER) != 0)
         {
           close(socketHandle->handle);
@@ -1070,7 +1072,7 @@ NYI: how to do certificate verification?
                                  (gnutls_transport_ptr_t)(long)socketHandle->handle
                                 );
 
-        /* do handshake */
+        // do handshake
         result = gnutls_handshake(socketHandle->gnuTLS.session);
         if (result < 0)
         {
@@ -1103,7 +1105,7 @@ NYI: how to enable client authentication?
 
   if ((flags & SOCKET_FLAG_NON_BLOCKING) != 0)
   {
-    /* enable non-blocking */
+    // enable non-blocking
     socketFlags = fcntl(socketHandle->handle,F_GETFL,0);
     fcntl(socketHandle->handle,F_SETFL,socketFlags | O_NONBLOCK);
   }
@@ -1218,7 +1220,7 @@ Errors Network_execute(NetworkExecuteHandle *networkExecuteHandle,
   assert(socketHandle->type == SOCKET_TYPE_SSH);
   assert(command != NULL);
 
-  /* initialize variables */
+  // initialize variables
   networkExecuteHandle->socketHandle        = socketHandle;
   networkExecuteHandle->stdoutBuffer.index  = 0;
   networkExecuteHandle->stdoutBuffer.length = 0;
@@ -1226,14 +1228,14 @@ Errors Network_execute(NetworkExecuteHandle *networkExecuteHandle,
   networkExecuteHandle->stderrBuffer.length = 0;
 
   #ifdef HAVE_SSH2
-    /* open channel */
+    // open channel
     networkExecuteHandle->channel = libssh2_channel_open_session(socketHandle->ssh2.session);
     if (networkExecuteHandle->channel == NULL)
     {
       return ERROR_NETWORK_EXECUTE_FAIL;
     }
 
-    /* execute command */
+    // execute command
     if (libssh2_channel_exec(networkExecuteHandle->channel,
                              command
                             ) != 0
@@ -1244,12 +1246,12 @@ Errors Network_execute(NetworkExecuteHandle *networkExecuteHandle,
       return ERROR_NETWORK_EXECUTE_FAIL;
     }
 
-    /* enable non-blocking */
+    // enable non-blocking
     socketFlags = fcntl(socketHandle->handle,F_GETFL,0);
     fcntl(socketHandle->handle,F_SETFL,socketFlags | O_NONBLOCK);
     libssh2_channel_set_blocking(networkExecuteHandle->channel,0);
 
-    /* disable stderr if not requested */
+    // disable stderr if not requested
     if ((ioMask & NETWORK_EXECUTE_IO_MASK_STDERR) == 0) libssh2_channel_handle_extended_data(networkExecuteHandle->channel,LIBSSH2_CHANNEL_EXTENDED_DATA_IGNORE);
 
     return ERROR_NONE;
@@ -1506,7 +1508,7 @@ Errors Network_executeReadLine(NetworkExecuteHandle  *networkExecuteHandle,
       case NETWORK_EXECUTE_IO_TYPE_STDOUT:
         if (networkExecuteHandle->stdoutBuffer.index >= networkExecuteHandle->stdoutBuffer.length)
         {
-          /* read character */
+          // read character
           error = Network_executeRead(networkExecuteHandle,
                                       NETWORK_EXECUTE_IO_TYPE_STDOUT,
                                       networkExecuteHandle->stdoutBuffer.data,
@@ -1524,7 +1526,7 @@ Errors Network_executeReadLine(NetworkExecuteHandle  *networkExecuteHandle,
           networkExecuteHandle->stdoutBuffer.length = bytesRead;
         }
 
-        /* check eol, append to line */
+        // check eol, append to line
         if (networkExecuteHandle->stdoutBuffer.index < networkExecuteHandle->stdoutBuffer.length)
         {
           while (   !endOfLineFlag
@@ -1550,7 +1552,7 @@ Errors Network_executeReadLine(NetworkExecuteHandle  *networkExecuteHandle,
       case NETWORK_EXECUTE_IO_TYPE_STDERR:
         if (networkExecuteHandle->stderrBuffer.index >= networkExecuteHandle->stderrBuffer.length)
         {
-          /* read character */
+          // read character
           error = Network_executeRead(networkExecuteHandle,
                                       NETWORK_EXECUTE_IO_TYPE_STDERR,
                                       networkExecuteHandle->stderrBuffer.data,
@@ -1568,7 +1570,7 @@ Errors Network_executeReadLine(NetworkExecuteHandle  *networkExecuteHandle,
           networkExecuteHandle->stderrBuffer.length = bytesRead;
         }
 
-        /* check eol, append to line */
+        // check eol, append to line
         if (networkExecuteHandle->stderrBuffer.index < networkExecuteHandle->stderrBuffer.length)
         {
           while (   !endOfLineFlag
