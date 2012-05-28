@@ -766,7 +766,7 @@ Errors __File_openDescriptor(const char *__fileName__,
       break;
     case FILE_OPEN_WRITE:
       // open file for writing
-      fileHandle->file = fdopen(fileDescriptor,"r+b");
+      fileHandle->file = fdopen(fileDescriptor,"wb");
       if (fileHandle->file == NULL)
       {
         return ERROR(OPEN_FILE,errno);
