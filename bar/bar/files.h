@@ -520,6 +520,17 @@ Errors File_printLine(FileHandle *fileHandle,
                      );
 
 /***********************************************************************\
+* Name   : File_flush
+* Purpose: flush pending output
+* Input  : fileHandle - file handle
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors File_flush(FileHandle *fileHandle);
+
+/***********************************************************************\
 * Name   : File_getSize
 * Purpose: get file size
 * Input  : fileHandle - file handle
