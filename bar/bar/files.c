@@ -57,14 +57,14 @@
     const char *fileName;
     ulong      lineNb;
     #ifdef HAVE_BACKTRACE
-      void *stackTrace[16];
-      int  stackTraceSize;
+      void const *stackTrace[16];
+      int        stackTraceSize;
     #endif /* HAVE_BACKTRACE */
     const char *closeFileName;
     ulong      closeLineNb;
     #ifdef HAVE_BACKTRACE
-      void *closeStackTrace[16];
-      int  closeStackTraceSize;
+      void const *closeStackTrace[16];
+      int        closeStackTraceSize;
     #endif /* HAVE_BACKTRACE */
     FileHandle *fileHandle;
   } DebugFileNode;
@@ -101,38 +101,6 @@ LOCAL void debugFileInit(void)
   List_init(&debugClosedFileList);
 }
 #endif /* NDEBUG */
-
-#if !defined(NDEBUG) && defined(HAVE_BACKTRACE)
-/***********************************************************************\
-* Name   : debugFileInitDumpStackTrace
-* Purpose: print function names of stack trace
-* Input  : title          - title text
-*          stackTrace     - stack trace
-*          stackTraceSize - size of stack trace
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void debugFileInitDumpStackTrace(FILE *handle, const char *title, int indent, void *stackTrace[], int stackTraceSize)
-{
-  const char **functionNames;
-  int        z,i;
-
-  for (i = 0; i < indent; i++) fprintf(handle," ");
-  fprintf(handle,"C stack trace: %s\n",title);
-  functionNames = (const char **)backtrace_symbols(stackTrace,stackTraceSize);
-  if (functionNames != NULL)
-  {
-    for (z = 1; z < stackTraceSize; z++)
-    {
-      for (i = 0; i < indent; i++) fprintf(handle," ");
-      fprintf(handle,"  %2d %p: %s\n",z,stackTrace[z],functionNames[z]);
-    }
-    free(functionNames);
-  }
-}
-#endif /* !defined(NDEBUG) && defined(HAVE_BACKTRACE) */
 
 /***********************************************************************\
 * Name   : getExtendedAttributes
@@ -697,7 +665,7 @@ Errors __File_openCString(const char *__fileName__,
       debugFileNode->fileName              = __fileName__;
       debugFileNode->lineNb                = __lineNb__;
       #ifdef HAVE_BACKTRACE
-        debugFileNode->stackTraceSize      = backtrace(debugFileNode->stackTrace,SIZE_OF_ARRAY(debugFileNode->stackTrace));
+        debugFileNode->stackTraceSize      = backtrace((void*)debugFileNode->stackTrace,SIZE_OF_ARRAY(debugFileNode->stackTrace));
       #endif /* HAVE_BACKTRACE */
       debugFileNode->closeFileName         = NULL;
       debugFileNode->closeLineNb           = 0;
@@ -833,7 +801,7 @@ Errors __File_openDescriptor(const char *__fileName__,
       debugFileNode->fileName              = __fileName__;
       debugFileNode->lineNb                = __lineNb__;
       #ifdef HAVE_BACKTRACE
-        debugFileNode->stackTraceSize      = backtrace(debugFileNode->stackTrace,SIZE_OF_ARRAY(debugFileNode->stackTrace));
+        debugFileNode->stackTraceSize      = backtrace((void*)debugFileNode->stackTrace,SIZE_OF_ARRAY(debugFileNode->stackTrace));
       #endif /* HAVE_BACKTRACE */
       debugFileNode->closeFileName         = NULL;
       debugFileNode->closeLineNb           = 0;
@@ -884,7 +852,7 @@ Errors __File_close(const char *__fileName__, ulong __lineNb__, FileHandle *file
         debugFileNode->closeFileName = __fileName__;
         debugFileNode->closeLineNb   = __lineNb__;
         #ifdef HAVE_BACKTRACE
-          debugFileNode->closeStackTraceSize = backtrace(debugFileNode->closeStackTrace,SIZE_OF_ARRAY(debugFileNode->closeStackTrace));
+          debugFileNode->closeStackTraceSize = backtrace((void*)debugFileNode->closeStackTrace,SIZE_OF_ARRAY(debugFileNode->closeStackTrace));
         #endif /* HAVE_BACKTRACE */
         List_append(&debugClosedFileList,debugFileNode);
 
@@ -903,7 +871,7 @@ Errors __File_close(const char *__fileName__, ulong __lineNb__, FileHandle *file
                 __lineNb__
                );
         #ifdef HAVE_BACKTRACE
-          File_debugPrintCurrentStackTrace();
+          debugDumpCurrentStackTrace(stderr,"",0);
         #endif /* HAVE_BACKTRACE */
         HALT_INTERNAL_ERROR("");
       }
@@ -1113,8 +1081,6 @@ Errors File_printLine(FileHandle *fileHandle,
 
 Errors File_flush(FileHandle *fileHandle)
 {
-  Errors error;
-
   assert(fileHandle != NULL);
   assert(fileHandle->file != NULL);
 
@@ -2425,21 +2391,6 @@ void File_debugCheck(void)
     }
   }
   pthread_mutex_unlock(&debugFileLock);
-}
-
-void File_debugPrintCurrentStackTrace(void)
-{
-  #ifdef HAVE_BACKTRACE
-    const int MAX_STACK_TRACE_SIZE = 256;
-
-    void *stackTrace[MAX_STACK_TRACE_SIZE];
-    int  stackTraceSize;
-  #endif /* HAVE_BACKTRACE */
-
-  #ifdef HAVE_BACKTRACE
-    stackTraceSize = backtrace(stackTrace,MAX_STACK_TRACE_SIZE);
-    debugFileInitDumpStackTrace(stderr,"",0,stackTrace,stackTraceSize);
-  #endif /* HAVE_BACKTRACE */
 }
 #endif /* not NDEBUG */
 
