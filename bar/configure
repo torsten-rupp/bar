@@ -8563,7 +8563,7 @@ ac_fn_c_check_func "$LINENO" "backtrace" "ac_cv_func_backtrace"
 if test "x$ac_cv_func_backtrace" = x""yes; then :
 
 $as_echo "#define HAVE_BACKTRACE 1" >>confdefs.h
-
+ CC_DEFINES+=HAVE_BACKTRACE
 fi
 
 
