@@ -17,6 +17,7 @@
 
 /****************************** Includes *******************************/
 #include <stdlib.h>
+#include <stdio.h>
 #include <stdint.h>
 #ifdef HAVE_STDBOOL_H
   #include <stdbool.h>
@@ -26,6 +27,9 @@
 #include <ctype.h>
 #include <string.h>
 #include <math.h>
+#ifdef HAVE_BACKTRACE
+  #include <execinfo.h>
+#endif
 #include <assert.h>
 
 /****************** Conditional compilation switches *******************/
@@ -620,6 +624,57 @@ typedef void                void32;
 
 #define MEMCLEAR(p,size) memset(p,0,size)
 
+/***********************************************************************\
+* Name   : DEBUG_MEMORY_FENCE, DEBUG_MEMORY_FENCE_INIT,
+*          DEBUG_MEMORY_FENCE_CHECK
+* Purpose: declare/init/check memory fences
+* Input  : name - variable name
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+#ifndef NDEBUG
+
+#define DEBUG_MEMORY_FENCE(name) byte name[0]
+#define DEBUG_MEMORY_FENCE_INIT(name) \
+  do \
+  { \
+    unsigned int __z; \
+    \
+    for (__z = 0; __z < sizeof(name); __z++) \
+    { \
+      name[__z] = 0xED; \
+    } \
+  } \
+  while (0)
+#define DEBUG_MEMORY_FENCE_CHECK(name) \
+  do \
+  { \
+    unsigned int __z; \
+    for (__z = 0; __z < sizeof(name); __z++) \
+    { \
+      assert(name[__z] == 0xED); \
+    } \
+  } \
+  while (0)
+
+#else /* not NDEBUG */
+
+#define DEBUG_MEMORY_FENCE(name)
+#define DEBUG_MEMORY_FENCE_INIT(name) \
+  do \
+  { \
+  } \
+  while (0)
+#define DEBUG_MEMORY_FENCE_CHECK(name) \
+  do \
+  { \
+  } \
+  while (0)
+
+#endif /* NDEBUG */
+
 /**************************** Functions ********************************/
 
 #ifdef __cplusplus
@@ -935,7 +990,24 @@ void __abort(const char   *filename,
             );
 
 /***********************************************************************\
-* Name   : dumpMemory
+* Name   : debugDumpStackTrace
+* Purpose: print function names of stack trace
+* Input  : handle         - output stream
+*          title          - title text
+*          indent         - indention of output
+*          stackTrace     - stack trace
+*          stackTraceSize - size of stack trace
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+#if !defined(NDEBUG) && defined(HAVE_BACKTRACE)
+void debugDumpStackTrace(FILE *handle, const char *title, uint indent, void *stackTrace[], uint stackTraceSize);
+#endif /* !defined(NDEBUG) && defined(HAVE_BACKTRACE) */
+
+/***********************************************************************\
+* Name   : debugDumpMemory
 * Purpose: dump memory content (hex dump)
 * Input  : printAddress - TRUE to print address, FALSE otherwise
 *          address - start address
@@ -946,7 +1018,7 @@ void __abort(const char   *filename,
 \***********************************************************************/
 
 #ifndef NDEBUG
-void dumpMemory(bool printAddress, const void *address, uint length);
+void debugDumpMemory(bool printAddress, const void *address, uint length);
 #endif /* NDEBUG */
 
 #ifdef __cplusplus

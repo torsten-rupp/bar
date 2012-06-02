@@ -12,6 +12,9 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdarg.h>
+#ifdef HAVE_BACKTRACE
+  #include <execinfo.h>
+#endif
 #include <assert.h>
 
 #include "global.h"
@@ -71,8 +74,29 @@ void __abort(const char   *filename,
   abort();
 }
 
+#if !defined(NDEBUG) && defined(HAVE_BACKTRACE)
+void debugDumpStackTrace(FILE *handle, const char *title, uint indent, void *stackTrace[], uint stackTraceSize)
+{
+  const char **functionNames;
+  uint       z,i;
+
+  for (i = 0; i < indent; i++) fprintf(handle," ");
+  fprintf(handle,"C stack trace: %s\n",title);
+  functionNames = (const char **)backtrace_symbols(stackTrace,stackTraceSize);
+  if (functionNames != NULL)
+  {
+    for (z = 1; z < stackTraceSize; z++)
+    {
+      for (i = 0; i < indent; i++) fprintf(handle," ");
+      fprintf(handle,"  %2d %p: %s\n",z,stackTrace[z],functionNames[z]);
+    }
+    free(functionNames);
+  }
+}
+#endif /* !defined(NDEBUG) && defined(HAVE_BACKTRACE) */
+
 #ifndef NDEBUG
-void dumpMemory(bool printAddress, const void *address, uint length)
+void debugDumpMemory(bool printAddress, const void *address, uint length)
 {
   const byte *p;
   uint       z,i;
