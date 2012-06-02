@@ -314,7 +314,7 @@ bool __RingBuffer_init(const char *__fileName__, ulong __lineNb__, RingBuffer *r
       debugRingBufferNode->fileName   = __fileName__;
       debugRingBufferNode->lineNb     = __lineNb__;
       #ifdef HAVE_BACKTRACE
-        debugRingBufferNode->stackTraceSize = backtrace(debugRingBufferNode->stackTrace,SIZE_OF_ARRAY(debugRingBufferNode->stackTrace));
+        debugRingBufferNode->stackTraceSize = backtrace((void*)debugRingBufferNode->stackTrace,SIZE_OF_ARRAY(debugRingBufferNode->stackTrace));
       #endif /* HAVE_BACKTRACE */
       debugRingBufferNode->ringBuffer = ringBuffer;
       List_append(&debugRingBufferList,debugRingBufferNode);
