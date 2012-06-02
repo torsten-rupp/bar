@@ -166,38 +166,6 @@ LOCAL void debugStringInit(void)
 }
 #endif /* not NDEBUG */
 
-#if !defined(NDEBUG) && defined(HAVE_BACKTRACE)
-/***********************************************************************\
-* Name   : String_printFunctionNames
-* Purpose: print function names of stack trace
-* Input  : title          - title text
-*          stackTrace     - stack trace
-*          stackTraceSize - size of stack trace
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void String_debugDumpStackTrace(FILE *handle, const char *title, int indent, void *stackTrace[], int stackTraceSize)
-{
-  const char **functionNames;
-  int        z,i;
-
-  for (i = 0; i < indent; i++) fprintf(handle," ");
-  fprintf(handle,"C stack trace: %s\n",title);
-  functionNames = (const char **)backtrace_symbols(stackTrace,stackTraceSize);
-  if (functionNames != NULL)
-  {
-    for (z = 1; z < stackTraceSize; z++)
-    {
-      for (i = 0; i < indent; i++) fprintf(handle," ");
-      fprintf(handle,"  %2d %p: %s\n",z,stackTrace[z],functionNames[z]);
-    }
-    free(functionNames);
-  }
-}
-#endif /* !defined(NDEBUG) && defined(HAVE_BACKTRACE) */
-
 /***********************************************************************\
 * Name   : allocString
 * Purpose: allocate a new string
@@ -367,12 +335,12 @@ LOCAL const char *parseNextFormatToken(const char *format, FormatToken *formatTo
   formatToken->lengthType       = FORMAT_LENGTH_TYPE_INTEGER;
   formatToken->quoteChar        = '\0';
 
-  /* format start character */
+  // format start character
   assert((*format) == '%');
   ADD_CHAR(formatToken,(*format));
   format++;
 
-  /* flags */
+  // flags
   while (   ((*format) != '\0')
          && (   ((*format) == '#')
              || ((*format) == '0')
@@ -399,7 +367,7 @@ LOCAL const char *parseNextFormatToken(const char *format, FormatToken *formatTo
     format++;
   }
 
-  /* width, precision */
+  // width, precision
   while (   ((*format) != '\0')
          && isdigit((int)(*format))
         )
@@ -410,7 +378,7 @@ LOCAL const char *parseNextFormatToken(const char *format, FormatToken *formatTo
     format++;
   }
 
-  /* precision */
+  // precision
   if (   ((*format) != '\0')
       && ((*format) == '.')
      )
@@ -426,7 +394,7 @@ LOCAL const char *parseNextFormatToken(const char *format, FormatToken *formatTo
     }
   }
 
-  /* quoting character */
+  // quoting character
   if (   ((*format) != '\0')
       && !isalpha(*format)
       && ((*format) != '%')
@@ -439,7 +407,7 @@ LOCAL const char *parseNextFormatToken(const char *format, FormatToken *formatTo
     format++;
   }
 
-  /* length modifier */
+  // length modifier
   if ((*format) != '\0')
   {
     if      (((*format) == 'h') && (*((format+1)) == 'h'))
@@ -502,7 +470,7 @@ LOCAL const char *parseNextFormatToken(const char *format, FormatToken *formatTo
     }
   }
 
-  /* conversion character */
+  // conversion character
   if ((*format) != '\0')
   {
     switch (*format)
@@ -578,10 +546,10 @@ LOCAL void formatString(struct __String *string,
   {
     if ((*format) == '%')
     {
-      /* get format token */
+      // get format token
       format = parseNextFormatToken(format,&formatToken);
 
-      /* format and store string */
+      // format and store string
       switch (formatToken.conversionChar)
       {
         case 'c':
@@ -779,7 +747,7 @@ LOCAL void formatString(struct __String *string,
 
           if (formatToken.quoteChar != '\0')
           {
-            /* quoted string */
+            // quoted string
             String_appendChar(string,formatToken.quoteChar);
             s = data.s;
             while ((ch = (*s)) != '\0')
@@ -795,7 +763,7 @@ LOCAL void formatString(struct __String *string,
           }
           else
           {
-            /* non quoted string */
+            // non quoted string
             length = snprintf(buffer,sizeof(buffer),formatToken.token,data.s);
             if (length < sizeof(buffer))
             {
@@ -835,7 +803,7 @@ LOCAL void formatString(struct __String *string,
 
           if (formatToken.quoteChar != '\0')
           {
-            /* quoted string */
+            // quoted string
             String_appendChar(string,formatToken.quoteChar);
             i = 0L;
             while (i < String_length(data.string))
@@ -852,7 +820,7 @@ LOCAL void formatString(struct __String *string,
           }
           else
           {
-            /* non quoted string */
+            // non quoted string
             length = snprintf(buffer,sizeof(buffer),formatToken.token,String_cString(data.string));
             if (length < sizeof(buffer))
             {
@@ -870,7 +838,7 @@ LOCAL void formatString(struct __String *string,
 #if 0
 still not implemented
         case 'b':
-          /* binaray value */
+          // binaray value
           switch (formatToken.lengthType)
           {
             case FORMAT_LENGTH_TYPE_INTEGER:
@@ -993,13 +961,13 @@ LOCAL bool parseString(const char    *string,
 
   while ((*format) != '\0')
   {
-    /* skip white spaces in format */
+    // skip white spaces in format
     while (((*format) != '\0') && isspace(*format))
     {
       format++;
     }
 
-    /* skip white-spaces in string */
+    // skip white-spaces in string
     while ((index < length) && isspace(string[index]))
     {
       index++;
@@ -1009,16 +977,16 @@ LOCAL bool parseString(const char    *string,
     {
       if ((*format) == '%')
       {
-        /* get format token */
+        // get format token
         format = parseNextFormatToken(format,&formatToken);
 
-        /* parse string and store values */
+        // parse string and store values
         switch (formatToken.conversionChar)
         {
           case 'i':
           case 'd':
           case 'u':
-            /* get data */
+            // get data
             z = 0L;
             if ((index < length) && ((string[index] == '+') || (string[index] == '-')))
             {
@@ -1037,7 +1005,7 @@ LOCAL bool parseString(const char    *string,
             }
             buffer[z] = '\0';
 
-            /* convert */
+            // convert
             if (z > 0)
             {
               switch (formatToken.lengthType)
@@ -1067,7 +1035,7 @@ LOCAL bool parseString(const char    *string,
             }
             break;
           case 'c':
-            /* convert */
+            // convert
             if (index < length)
             {
               value.c = va_arg(arguments,char*);
@@ -1080,7 +1048,7 @@ LOCAL bool parseString(const char    *string,
             }
             break;
           case 'o':
-            /* get data */
+            // get data
             z = 0L;
             while (   (index < length)
                    && (z < sizeof(buffer)-1)
@@ -1094,7 +1062,7 @@ LOCAL bool parseString(const char    *string,
             }
             buffer[z] = '\0';
 
-            /* convert */
+            // convert
             if (z > 0)
             {
               switch (formatToken.lengthType)
@@ -1125,7 +1093,7 @@ LOCAL bool parseString(const char    *string,
             break;
           case 'x':
           case 'X':
-            /* get data */
+            // get data
             if (((index+1) < length) && (string[index+0] == '0') && (string[index+0] == 'x'))
             {
               index+=2;
@@ -1142,7 +1110,7 @@ LOCAL bool parseString(const char    *string,
             }
             buffer[z] = '\0';
 
-            /* convert */
+            // convert
             if (z > 0)
             {
               switch (formatToken.lengthType)
@@ -1179,7 +1147,7 @@ LOCAL bool parseString(const char    *string,
           case 'G':
           case 'a':
           case 'A':
-            /* get data */
+            // get data
             z = 0L;
             if ((index < length) && ((string[index] == '+') || (string[index] == '-')  || (string[index] == '.')))
             {
@@ -1213,7 +1181,7 @@ LOCAL bool parseString(const char    *string,
             }
             buffer[z] = '\0';
 
-            /* convert */
+            // convert
             if (z > 0)
             {
               switch (formatToken.lengthType)
@@ -1242,7 +1210,7 @@ LOCAL bool parseString(const char    *string,
             }
             break;
           case 's':
-            /* get and copy data */
+            // get and copy data
             value.s = va_arg(arguments,char*);
             assert(formatToken.width > 0);
 
@@ -1258,7 +1226,7 @@ LOCAL bool parseString(const char    *string,
                     && ((index+1) < length)
                    )
                 {
-                  /* quoted character */
+                  // quoted character
                   if ((formatToken.width == 0) || (z < formatToken.width-1))
                   {
                     String_appendChar(value.string,string[index+1]);
@@ -1268,7 +1236,7 @@ LOCAL bool parseString(const char    *string,
                 }
                 else
                 {
-                  /* check for string quote */
+                  // check for string quote
                   stringQuote = NULL;
                   if ((formatToken.quoteChar != '\0') && (formatToken.quoteChar == string[index])) stringQuote = &formatToken.quoteChar;
                   if ((stringQuote == NULL) && (stringQuotes != NULL)) stringQuote = strchr(stringQuotes,string[index]);
@@ -1277,10 +1245,10 @@ LOCAL bool parseString(const char    *string,
                   {
                     do
                     {
-                      /* skip quote-char */
+                      // skip quote-char
                       index++;
 
-                      /* get string */
+                      // get string
                       while ((index < length) && (string[index] != (*stringQuote)))
                       {
                         if (   ((index+1) < length)
@@ -1306,7 +1274,7 @@ LOCAL bool parseString(const char    *string,
                         }
                       }
 
-                      /* skip quote-char */
+                      // skip quote-char
                       if (index < length)
                       {
                         index++;
@@ -1339,7 +1307,7 @@ LOCAL bool parseString(const char    *string,
           case 'n':
             break;
           case 'S':
-            /* get and copy data */
+            // get and copy data
             value.string = va_arg(arguments,String);
             STRING_CHECK_VALID(value.string);
 
@@ -1357,7 +1325,7 @@ LOCAL bool parseString(const char    *string,
                     && ((index+1) < length)
                    )
                 {
-                  /* quoted character */
+                  // quoted character
                   if ((formatToken.width == 0) || (z < formatToken.width-1))
                   {
                     String_appendChar(value.string,string[index+1]);
@@ -1367,7 +1335,7 @@ LOCAL bool parseString(const char    *string,
                 }
                 else
                 {
-                  /* check for string quote */
+                  // check for string quote
                   stringQuote = NULL;
                   if ((formatToken.quoteChar != '\0') && (formatToken.quoteChar == string[index])) stringQuote = &formatToken.quoteChar;
                   if ((stringQuote == NULL) && (stringQuotes != NULL)) stringQuote = strchr(stringQuotes,string[index]);
@@ -1376,10 +1344,10 @@ LOCAL bool parseString(const char    *string,
                   {
                     do
                     {
-                      /* skip quote-char */
+                      // skip quote-char
                       index++;
 
-                      /* get string */
+                      // get string
                       while ((index < length) && (string[index] != (*stringQuote)))
                       {
                         if (   ((index+1) < length)
@@ -1405,13 +1373,13 @@ LOCAL bool parseString(const char    *string,
                         }
                       }
 
-                      /* skip quote-char */
+                      // skip quote-char
                       if (index < length)
                       {
                         index++;
                       }
 
-                      /* check for string quote */
+                      // check for string quote
                       stringQuote = NULL;
                       if (index < length)
                       {
@@ -1437,7 +1405,7 @@ LOCAL bool parseString(const char    *string,
   #if 0
   still not implemented
           case 'b':
-            /* binaray value */
+            // binaray value
             switch (formatToken.lengthType)
             {
               case FORMAT_LENGTH_TYPE_INTEGER:
@@ -1477,7 +1445,7 @@ LOCAL bool parseString(const char    *string,
             break;
   #endif /* 0 */
           case 'y':
-            /* get data */
+            // get data
             z = 0L;
             while (   (index < length)
                    && !isspace(string[index])
@@ -1492,7 +1460,7 @@ LOCAL bool parseString(const char    *string,
             }
             buffer[z] = '\0';
 
-            /* convert */
+            // convert
             if (z > 0)
             {
               value.b = va_arg(arguments,bool*);
@@ -1529,7 +1497,7 @@ LOCAL bool parseString(const char    *string,
             }
             break;
           case '*':
-            /* skip value */
+            // skip value
             z = 0L;
             while (   (index < length)
                    && !isspace(string[index])
@@ -1658,13 +1626,13 @@ LOCAL bool matchString(const String  string,
   assert((index == STRING_BEGIN) || (index == STRING_END) || (index < string->length));
   assert(pattern != NULL);
 
-  /* compile pattern */
+  // compile pattern
   if (regcomp(&regex,pattern,REG_ICASE|REG_EXTENDED) != 0)
   {
     return FALSE;
   }
 
-  /* count sub-patterns (=1 for total matched string + number of matched-sub-strings) */
+  // count sub-patterns (=1 for total matched string + number of matched-sub-strings)
   va_copy(arguments,matchedSubStrings);
   subMatchCount = 1;
   do
@@ -1675,7 +1643,7 @@ LOCAL bool matchString(const String  string,
   while (matchedSubString != NULL);
   va_end(arguments);
 
-  /* allocate sub-patterns array */
+  // allocate sub-patterns array
   subMatches = (regmatch_t*)malloc(subMatchCount*sizeof(regmatch_t));
   if (subMatches == NULL)
   {
@@ -1683,10 +1651,10 @@ LOCAL bool matchString(const String  string,
     return FALSE;
   }
 
-  /* match */
+  // match
   matchFlag = (regexec(&regex,&string->data[index],subMatchCount,subMatches,0) == 0);
 
-  /* get sub-matches */
+  // get sub-matches
   if (matchFlag)
   {
     if (nextIndex != NULL)
@@ -1715,7 +1683,7 @@ LOCAL bool matchString(const String  string,
     va_end(arguments);
   }
 
-  /* free resources */
+  // free resources
   free(subMatches);
   regfree(&regex);
 
@@ -1992,8 +1960,8 @@ void __String_delete(const char *__fileName__, ulong __lineNb__, String string)
                   debugStringNode->lineNb
                  );
           #ifdef HAVE_BACKTRACE
-            String_debugDumpStackTrace(stderr,"allocated at",2,debugStringNode->stackTrace,debugStringNode->stackTraceSize);
-            String_debugDumpStackTrace(stderr,"deleted at",2,debugStringNode->deleteStackTrace,debugStringNode->deleteStackTraceSize);
+            debugDumpStackTrace(stderr,"allocated at",2,debugStringNode->stackTrace,debugStringNode->stackTraceSize);
+            debugDumpStackTrace(stderr,"deleted at",2,debugStringNode->deleteStackTrace,debugStringNode->deleteStackTraceSize);
           #endif /* HAVE_BACKTRACE */
           HALT_INTERNAL_ERROR("");
         }
@@ -4025,7 +3993,7 @@ bool String_getNextToken(StringTokenizer *stringTokenizer, String *const token, 
 
   assert(stringTokenizer != NULL);
 
-  /* check index */
+  // check index
   if (stringTokenizer->index >= (long)stringTokenizer->length)
   {
     return FALSE;
@@ -4033,7 +4001,7 @@ bool String_getNextToken(StringTokenizer *stringTokenizer, String *const token, 
 
   if (stringTokenizer->skipEmptyTokens)
   {
-    /* skip separator chars */
+    // skip separator chars
     while (   (stringTokenizer->index < (long)stringTokenizer->length)
            && (strchr(stringTokenizer->separatorChars,stringTokenizer->data[stringTokenizer->index]) != NULL)
           )
@@ -4043,7 +4011,7 @@ bool String_getNextToken(StringTokenizer *stringTokenizer, String *const token, 
     if (stringTokenizer->index >= (long)stringTokenizer->length) return FALSE;
   }
 
-  /* get token */
+  // get token
   if (tokenIndex != NULL) (*tokenIndex) = stringTokenizer->index;
   String_clear(stringTokenizer->token);
   if (stringTokenizer->stringQuotes != NULL)
@@ -4096,7 +4064,7 @@ bool String_getNextToken(StringTokenizer *stringTokenizer, String *const token, 
   }
   if (token != NULL) (*token) = stringTokenizer->token;
 
-  /* skip token separator */
+  // skip token separator
   if (   (stringTokenizer->index < (long)stringTokenizer->length)
       && (strchr(stringTokenizer->separatorChars,stringTokenizer->data[stringTokenizer->index]) != NULL)
      )
@@ -4379,9 +4347,9 @@ String String_toString(String string, const String convertString, ulong index, l
       {
         do
         {
-          /* skip string-char */
+          // skip string-char
           index++;
-          /* get string */
+          // get string
           while ((index < convertString->length) && (convertString->data[index] != (*stringQuote)))
           {
             if (convertString->data[index] == '\\')
@@ -4398,9 +4366,9 @@ String String_toString(String string, const String convertString, ulong index, l
               index++;
             }
           }
-          /* skip string-char */
+          // skip string-char
           index++;
-          /* next string char */
+          // next string char
           stringQuote = ((stringQuotes != NULL) && (index < convertString->length))?strchr(stringQuotes,convertString->data[index]):NULL;
         }
         while (stringQuote != NULL);
@@ -4478,7 +4446,7 @@ void String_debugDumpInfo(FILE *handle)
               debugStringNode->lineNb
              );
       #ifdef HAVE_BACKTRACE
-        String_debugDumpStackTrace(handle,"allocated at",2,debugStringNode->stackTrace,debugStringNode->stackTraceSize);
+        debugDumpStackTrace(handle,"allocated at",2,debugStringNode->stackTrace,debugStringNode->stackTraceSize);
       #endif /* HAVE_BACKTRACE */
     }
   }
@@ -4536,7 +4504,7 @@ void String_debugPrintCurrentStackTrace(void)
 
   #ifdef HAVE_BACKTRACE
     stackTraceSize = backtrace(stackTrace,MAX_STACK_TRACE_SIZE);
-    String_debugDumpStackTrace(stderr,"",0,stackTrace,stackTraceSize);
+    debugDumpStackTrace(stderr,"",0,stackTrace,stackTraceSize);
   #endif /* HAVE_BACKTRACE */
 }
 #endif /* not NDEBUG */
