@@ -389,7 +389,7 @@ Node *__List_deleteNode(const char *__fileName__, ulong __lineNb__, Node *node)
         debugListNode->deleteFileName = __fileName__;
         debugListNode->deleteLineNb   = __lineNb__;
         #ifdef HAVE_BACKTRACE
-          debugListNode->deleteStackTraceSize = backtrace(debugListNode->deleteStackTrace,SIZE_OF_ARRAY(debugListNode->deleteStackTrace));
+          debugListNode->deleteStackTraceSize = backtrace((void*)debugListNode->deleteStackTrace,SIZE_OF_ARRAY(debugListNode->deleteStackTrace));
         #endif /* HAVE_BACKTRACE */
         listAppend(&debugListFreeNodeList,debugListNode);
 
