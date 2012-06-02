@@ -4412,7 +4412,7 @@ class TabJobs
                     && ecc.getBoolean()
                    )
                 {
-                  Dialogs.warning(shell,"When writing to a CD/DVD/BD with error-correction codes enabled\nsome free space should be available on medium for error-correction codes.\n\nGood settings may be:\n- part size 140M, medium 560G\n- part size 500M, medium 3.5G\n- part size 600M, medium 3.6G");
+                  Dialogs.warning(shell,"When writing to a CD/DVD/BD with error-correction codes enabled\nsome free space should be available on medium for error-correction codes.\n\nGood settings may be:\n- part size 140M, medium 560M\n- part size 500M, medium 3.5G\n- part size 600M, medium 3.6G");
                 }
               }
             });
