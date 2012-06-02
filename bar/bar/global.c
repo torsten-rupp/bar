@@ -75,10 +75,12 @@ void __abort(const char   *filename,
 }
 
 #if !defined(NDEBUG) && defined(HAVE_BACKTRACE)
-void debugDumpStackTrace(FILE *handle, const char *title, uint indent, void *stackTrace[], uint stackTraceSize)
+void debugDumpStackTrace(FILE *handle, const char *title, uint indent, void const *stackTrace[], uint stackTraceSize)
 {
   const char **functionNames;
-  uint       z,i;
+  uint       i,z;
+
+  assert(stackTrace != NULL);
 
   for (i = 0; i < indent; i++) fprintf(handle," ");
   fprintf(handle,"C stack trace: %s\n",title);
@@ -92,6 +94,22 @@ void debugDumpStackTrace(FILE *handle, const char *title, uint indent, void *sta
     }
     free(functionNames);
   }
+}
+
+void debugDumpCurrentStackTrace(FILE *handle, const char *title, uint indent)
+{
+  const int MAX_STACK_TRACE_SIZE = 256;
+
+  void *currentStackTrace;
+  int  currentStackTraceSize;
+
+  currentStackTrace = malloc(sizeof(void*)*MAX_STACK_TRACE_SIZE);
+  if (currentStackTrace == NULL) return;
+
+  currentStackTraceSize = backtrace(currentStackTrace,MAX_STACK_TRACE_SIZE);
+  debugDumpStackTrace(handle,title,indent,currentStackTrace,currentStackTraceSize);
+
+  free(currentStackTrace);
 }
 #endif /* !defined(NDEBUG) && defined(HAVE_BACKTRACE) */
 

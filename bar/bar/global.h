@@ -990,7 +990,7 @@ void __abort(const char   *filename,
             );
 
 /***********************************************************************\
-* Name   : debugDumpStackTrace
+* Name   : debugDumpStackTrace, debugDumpCurrentStackTrace
 * Purpose: print function names of stack trace
 * Input  : handle         - output stream
 *          title          - title text
@@ -1003,7 +1003,8 @@ void __abort(const char   *filename,
 \***********************************************************************/
 
 #if !defined(NDEBUG) && defined(HAVE_BACKTRACE)
-void debugDumpStackTrace(FILE *handle, const char *title, uint indent, void *stackTrace[], uint stackTraceSize);
+void debugDumpStackTrace(FILE *handle, const char *title, uint indent, void const *stackTrace[], uint stackTraceSize);
+void debugDumpCurrentStackTrace(FILE *handle, const char *title, uint indent);
 #endif /* !defined(NDEBUG) && defined(HAVE_BACKTRACE) */
 
 /***********************************************************************\
