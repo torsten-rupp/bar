@@ -40,15 +40,15 @@
     const char      *fileName;
     ulong           lineNb;
     #ifdef HAVE_BACKTRACE
-      void *stackTrace[16];
-      int  stackTraceSize;
+      void const *stackTrace[16];
+      int        stackTraceSize;
     #endif /* HAVE_BACKTRACE */
 
     const char      *deleteFileName;
     ulong           deleteLineNb;
     #ifdef HAVE_BACKTRACE
-      void *deleteStackTrace[16];
-      int  deleteStackTraceSize;
+      void const *deleteStackTrace[16];
+      int        deleteStackTraceSize;
     #endif /* HAVE_BACKTRACE */
 
     const Node *node;
@@ -408,7 +408,7 @@ Node *__List_deleteNode(const char *__fileName__, ulong __lineNb__, Node *node)
                 __lineNb__
                );
         #ifdef HAVE_BACKTRACE
-          List_debugPrintCurrentStackTrace();
+          debugDumpCurrentStackTrace(stderr,"",0);
         #endif /* HAVE_BACKTRACE */
         HALT_INTERNAL_ERROR("");
       }
@@ -901,21 +901,6 @@ void List_debugCheck()
     }
   }
   pthread_mutex_unlock(&debugListLock);
-}
-
-void List_debugPrintCurrentStackTrace(void)
-{
-  #ifdef HAVE_BACKTRACE
-    const int MAX_STACK_TRACE_SIZE = 256;
-
-    void *stackTrace[MAX_STACK_TRACE_SIZE];
-    int  stackTraceSize;
-  #endif /* HAVE_BACKTRACE */
-
-  #ifdef HAVE_BACKTRACE
-    stackTraceSize = backtrace(stackTrace,MAX_STACK_TRACE_SIZE);
-    debugDumpStackTrace(stderr,"",0,stackTrace,stackTraceSize);
-  #endif /* HAVE_BACKTRACE */
 }
 #endif /* not NDEBUG */
 

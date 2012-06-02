@@ -592,17 +592,6 @@ void List_debugPrintStatistics(void);
 \***********************************************************************/
 
 void List_debugCheck(void);
-
-/***********************************************************************\
-* Name   : List_debugPrintCurrentStackTrace
-* Purpose: print C stack trace
-* Input  : -
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-void List_debugPrintCurrentStackTrace(void);
 #endif /* not NDEBUG */
 
 #ifdef __cplusplus
