@@ -145,6 +145,7 @@ typedef char(*RingBufferElementIterateFunction)(void *userData, void *data);
                 : (ringBuffer)->size-ringBuffer->nextOut+(ringBuffer)->nextIn; \
         if (__n != (ringBuffer)->length) \
         { \
+          debugDumpCurrentStackTrace(stderr,"",0); \
           HALT_INTERNAL_ERROR("Invalid ring buffer %p, length %lu, expected %lu!",\
                               ringBuffer,\
                               (ringBuffer)->length,\

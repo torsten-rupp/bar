@@ -14,10 +14,15 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <assert.h>
+#ifndef NDEBUG
+  #include <pthread.h>
+#endif
+#ifdef HAVE_BACKTRACE
+  #include <execinfo.h>
+#endif
 
 #include "global.h"
 #ifndef NDEBUG
-  #include <pthread.h>
   #include "lists.h"
 #endif /* not NDEBUG */
 
@@ -38,6 +43,10 @@
     const char       *fileName;
     ulong            lineNb;
     const RingBuffer *ringBuffer;
+    #ifdef HAVE_BACKTRACE
+      void const *stackTrace[16];
+      int        stackTraceSize;
+    #endif /* HAVE_BACKTRACE */
   } DebugRingBufferNode;
 
   typedef struct
@@ -304,6 +313,9 @@ bool __RingBuffer_init(const char *__fileName__, ulong __lineNb__, RingBuffer *r
       }
       debugRingBufferNode->fileName   = __fileName__;
       debugRingBufferNode->lineNb     = __lineNb__;
+      #ifdef HAVE_BACKTRACE
+        debugRingBufferNode->stackTraceSize = backtrace(debugRingBufferNode->stackTrace,SIZE_OF_ARRAY(debugRingBufferNode->stackTrace));
+      #endif /* HAVE_BACKTRACE */
       debugRingBufferNode->ringBuffer = ringBuffer;
       List_append(&debugRingBufferList,debugRingBufferNode);
       debugRingBufferList.allocatedMemory += sizeof(DebugRingBufferNode)+sizeof(RingBuffer)+(ulong)ringBuffer->size*(ulong)ringBuffer->elementSize;
@@ -361,6 +373,10 @@ void __RingBuffer_done(const char *__fileName__, ulong __lineNb__, RingBuffer *r
                   __fileName__,
                   __lineNb__
                  );
+          #ifdef HAVE_BACKTRACE
+            debugDumpCurrentStackTrace(stderr,"",0);
+          #endif /* HAVE_BACKTRACE */
+          HALT_INTERNAL_ERROR("");
         }
       }
       pthread_mutex_unlock(&debugRingBufferLock);
