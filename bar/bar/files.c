@@ -2320,6 +2320,13 @@ Errors File_getFileSystemInfo(FileSystemInfo *fileSystemInfo,
   return ERROR_NONE;
 }
 
+bool File_isTerminal(FILE *file)
+{
+  assert(file != NULL);
+
+  return isatty(fileno(file)) != 0;
+}
+
 #ifndef NDEBUG
 void File_debugDone(void)
 {

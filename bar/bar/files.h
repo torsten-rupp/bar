@@ -988,6 +988,17 @@ Errors File_getFileSystemInfo(FileSystemInfo *fileSystemInfo,
                               const          String pathName
                              );
 
+/***********************************************************************\
+* Name   : File_isTerminal
+* Purpose: check if file handle is connected to a terminal
+* Input  : file - file
+* Output : -
+* Return : TRUE if file is connected to a terminal, FALSE otherweise
+* Notes  : -
+\***********************************************************************/
+
+bool File_isTerminal(FILE *file);
+
 #ifndef NDEBUG
 /***********************************************************************\
 * Name   : File_debugDone
