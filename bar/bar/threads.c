@@ -100,14 +100,14 @@ bool Thread_init(Thread     *thread,
   assert(name != NULL);
   assert(entryFunction != NULL);
 
-  /* init thread info */
+  // init thread info
   sem_init(&startInfo.lock,0,0);
   startInfo.name          = name;
   startInfo.niceLevel     = niceLevel;
   startInfo.entryFunction = entryFunction;
   startInfo.userData      = userData;
 
-  /* start thread */
+  // start thread
   pthread_attr_init(&threadAttributes);
   #ifdef HAVE_PTHREAD_ATTR_SETNAME
     if (name != NULL)
@@ -118,7 +118,7 @@ bool Thread_init(Thread     *thread,
     UNUSED_VARIABLE(name);
   #endif /* HAVE_PTHREAD_ATTR_SETNAME */
 
-  /* start thread */
+  // start thread
   if (pthread_create(&thread->handle,
                      &threadAttributes,
                      (void*(*)(void*))threadStart,
@@ -129,10 +129,10 @@ bool Thread_init(Thread     *thread,
   }
   pthread_attr_destroy(&threadAttributes);
 
-  /* wait until thread started */
+  // wait until thread started
   sem_wait(&startInfo.lock);
 
-  /* free resources */
+  // free resources
   sem_destroy(&startInfo.lock);
 
   return TRUE;
