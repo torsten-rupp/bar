@@ -1273,7 +1273,6 @@ LOCAL StringNode *deleteJobEntries(StringList *stringList,
 
   nextNode = NULL;
 #warning check if works
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 
   line = String_new();
   string = String_new();
@@ -2585,12 +2584,12 @@ LOCAL void sendClient(ClientInfo *clientInfo, String data)
     fprintf(stderr,"%s,%d: result=%s",__FILE__,__LINE__,String_cString(data));
   #endif /* SERVER_DEBUG */
 
+//fprintf(stderr,"%s,%d: sent data: '%s'",__FILE__,__LINE__,String_cString(data));
   switch (clientInfo->type)
   {
     case CLIENT_TYPE_BATCH:
       error = File_write(&clientInfo->file.fileHandle,String_cString(data),String_length(data));
-// NYI: ???
-fflush(stdout);
+      (void)File_flush(&clientInfo->file.fileHandle);
       break;
     case CLIENT_TYPE_NETWORK:
       SEMAPHORE_LOCKED_DO(semaphoreLock,&clientInfo->network.writeLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
@@ -2604,7 +2603,6 @@ fflush(stdout);
       #endif /* NDEBUG */
       break;
   }
-//fprintf(stderr,"%s,%d: sent data: '%s'",__FILE__,__LINE__,String_cString(result));
 }
 
 /***********************************************************************\
@@ -6037,6 +6035,7 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const Stri
     sendClientResult(clientInfo,id,TRUE,error,"%s",Errors_getText(error));
     return;
   }
+ddlog("%s, %d: \n",__FILE__,__LINE__);
 
   // list contents
   error = ERROR_NONE;
@@ -6057,79 +6056,105 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const Stri
       {
         case ARCHIVE_ENTRY_TYPE_FILE:
           {
-            String           fileName;
-            ArchiveEntryInfo archiveEntryInfo;
-            FileInfo         fileInfo;
-            uint64           fragmentOffset,fragmentSize;
+            CompressAlgorithms deltaCompressAlgorithm;
+            CompressAlgorithms byteCompressAlgorithm;
+            CryptAlgorithms    cryptAlgorithm;
+            CryptTypes         cryptType;
+            String             fileName;
+            FileInfo           fileInfo;
+            String             deltaSourceName;
+            uint64             deltaSourceSize;
+            uint64             fragmentOffset,fragmentSize;
 
             // open archive file
-            fileName = String_new();
+            fileName        = String_new();
+            deltaSourceName = String_new();
             error = Archive_readFileEntry(&archiveInfo,
                                           &archiveEntryInfo,
-                                          NULL,  // deltaCompressAlgorithm
-                                          NULL,  // byteCompressAlgorithm
-                                          NULL,  // cryptAlgorithm
-                                          NULL,  // cryptType
+                                          &deltaCompressAlgorithm,
+                                          &byteCompressAlgorithm,
+                                          &cryptAlgorithm,
+                                          &cryptType,
                                           fileName,
                                           &fileInfo,
-                                          NULL,  // deltaSourceName
-                                          NULL,  // deltaSourceSize
+                                          deltaSourceName,
+                                          &deltaSourceSize,
                                           &fragmentOffset,
                                           &fragmentSize
                                          );
             if (error != ERROR_NONE)
             {
               sendClientResult(clientInfo,id,TRUE,error,"Cannot read content of storage '%S' (error: %s)",storageName,Errors_getText(error));
+              String_delete(deltaSourceName);
               String_delete(fileName);
               break;
             }
 
+ddlog("%s, %d: \n",__FILE__,__LINE__);
             // match pattern
+/*
             if (   (List_isEmpty(&clientInfo->includeEntryList) || EntryList_match(&clientInfo->includeEntryList,fileName,PATTERN_MATCH_MODE_EXACT))
                 && !PatternList_match(&clientInfo->excludePatternList,fileName,PATTERN_MATCH_MODE_EXACT)
                )
+*/
             {
+ddlog("%s, %d: \n",__FILE__,__LINE__);
               sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
-                         "FILE %llu %llu %llu %llu %llu %'S",
-                         fileInfo.size,
-                         fileInfo.timeModified,
-                         archiveEntryInfo.file.chunkFileData.info.size,
-                         fragmentOffset,
-                         fragmentSize,
-                         fileName
-                        );
+                               "FILE %'S %llu %llu %llu %d %d %d %d %'S %llu %llu %llu",
+                               fileName,
+                               fileInfo.size,
+                               fileInfo.timeModified,
+                               archiveEntryInfo.file.chunkFileData.info.size,
+                               deltaCompressAlgorithm,
+                               byteCompressAlgorithm,
+                               cryptAlgorithm,
+                               cryptType,
+                               deltaSourceName,
+                               deltaSourceSize,
+                               fragmentOffset,
+                               fragmentSize
+                              );
             }
 
             // close archive file, free resources
             Archive_closeEntry(&archiveEntryInfo);
+            String_delete(deltaSourceName);
             String_delete(fileName);
           }
           break;
         case ARCHIVE_ENTRY_TYPE_IMAGE:
           {
-            String           imageName;
-            ArchiveEntryInfo archiveEntryInfo;
-            DeviceInfo       deviceInfo;
-            uint64           blockOffset,blockCount;
+            CompressAlgorithms deltaCompressAlgorithm;
+            CompressAlgorithms byteCompressAlgorithm;
+            CryptAlgorithms    cryptAlgorithm;
+            CryptTypes         cryptType;
+#warning todo rename imageName -> deviceName
+            String             imageName;
+            DeviceInfo         deviceInfo;
+            String             deltaSourceName;
+            uint64             deltaSourceSize;
+            uint64             blockOffset,blockCount;
 
             // open archive file
-            imageName = String_new();
+            imageName       = String_new();
+            deltaSourceName = String_new();
             error = Archive_readImageEntry(&archiveInfo,
                                            &archiveEntryInfo,
-                                           NULL,  // deltaCompressAlgorithm
-                                           NULL,  // byteCompressAlgorithm
-                                           NULL,  // cryptAlgorithm
-                                           NULL,  // cryptType
+                                           &deltaCompressAlgorithm,
+                                           &byteCompressAlgorithm,
+                                           &cryptAlgorithm,
+                                           &cryptType,
                                            imageName,
                                            &deviceInfo,
-                                           NULL,  // deltaSourceName
-                                           NULL,  // deltaSourceSize
+                                           deltaSourceName,
+                                           &deltaSourceSize,
                                            &blockOffset,
                                            &blockCount
                                           );
             if (error != ERROR_NONE)
             {
               sendClientResult(clientInfo,id,TRUE,error,"Cannot read content of storage '%S' (error: %s)",storageName,Errors_getText(error));
+              String_delete(deltaSourceName);
               String_delete(imageName);
               break;
             }
@@ -6140,24 +6165,32 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const Stri
                )
             {
               sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
-                         "IMAGE %llu %llu %llu %llu %llu %'S",
-                         deviceInfo.size,
-                         archiveEntryInfo.image.chunkImageData.info.size,
-                         blockOffset,
-                         blockCount,
-                         imageName
-                        );
+                               "IMAGE %'S %llu %llu %d %d %d %d %u %llu %llu",
+                               imageName,
+                               deviceInfo.size,
+                               archiveEntryInfo.image.chunkImageData.info.size,
+                               deltaCompressAlgorithm,
+                               byteCompressAlgorithm,
+                               cryptAlgorithm,
+                               cryptType,
+                               deviceInfo.blockSize,
+                               blockOffset,
+                               blockCount
+                              );
             }
 
             // close archive file, free resources
             Archive_closeEntry(&archiveEntryInfo);
+            String_delete(deltaSourceName);
             String_delete(imageName);
           }
           break;
         case ARCHIVE_ENTRY_TYPE_DIRECTORY:
           {
-            String   directoryName;
-            FileInfo fileInfo;
+            CryptAlgorithms cryptAlgorithm;
+            CryptTypes      cryptType;
+            String          directoryName;
+            FileInfo        fileInfo;
 
             // open archive directory
             directoryName = String_new();
@@ -6181,9 +6214,11 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const Stri
                )
             {
               sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
-                         "DIRECTORY %llu %'S",
+                         "DIRECTORY %'S %llu %d %d",
+                         directoryName,
                          fileInfo.timeModified,
-                         directoryName
+                         cryptAlgorithm,
+                         cryptType
                         );
             }
 
@@ -6194,20 +6229,21 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const Stri
           break;
         case ARCHIVE_ENTRY_TYPE_LINK:
           {
-            String   linkName;
-            String   fileName;
-            FileInfo fileInfo;
+            CryptAlgorithms cryptAlgorithm;
+            CryptTypes      cryptType;
+            String          linkName;
+            String          fileName;
 
             // open archive link
             linkName = String_new();
             fileName = String_new();
             error = Archive_readLinkEntry(&archiveInfo,
                                           &archiveEntryInfo,
-                                          NULL,
-                                          NULL,
+                                          &cryptAlgorithm,
+                                          &cryptType,
                                           linkName,
                                           fileName,
-                                          &fileInfo
+                                          NULL
                                          );
             if (error != ERROR_NONE)
             {
@@ -6223,10 +6259,11 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const Stri
                )
             {
               sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
-                               "LINK %llu %'S %'S",
-                               fileInfo.timeModified,
+                               "LINK %'S %'S %d %d",
                                linkName,
-                               fileName
+                               fileName,
+                               cryptAlgorithm,
+                               cryptType
                               );
             }
 
@@ -6238,28 +6275,36 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const Stri
           break;
         case ARCHIVE_ENTRY_TYPE_HARDLINK:
           {
-            StringList fileNameList;
-            FileInfo   fileInfo;
-            uint64     fragmentOffset,fragmentSize;
+            CompressAlgorithms deltaCompressAlgorithm;
+            CompressAlgorithms byteCompressAlgorithm;
+            CryptAlgorithms    cryptAlgorithm;
+            CryptTypes         cryptType;
+            StringList         fileNameList;
+            FileInfo           fileInfo;
+            String             deltaSourceName;
+            uint64             deltaSourceSize;
+            uint64             fragmentOffset,fragmentSize;
 
-            // open archive link
+            // open archive hardlink
             StringList_init(&fileNameList);
+            deltaSourceName = String_new();
             error = Archive_readHardLinkEntry(&archiveInfo,
                                               &archiveEntryInfo,
-                                              NULL,  // deltaCompressAlgorithm
-                                              NULL,  // byteCompressAlgorithm
-                                              NULL,  // cryptAlgorithm
-                                              NULL,  // cryptType
+                                              &deltaCompressAlgorithm,
+                                              &byteCompressAlgorithm,
+                                              &cryptAlgorithm,
+                                              &cryptType,
                                               &fileNameList,
                                               &fileInfo,
-                                              NULL,  // deltaSourceName
-                                              NULL,  // deltaSourceSize
+                                              deltaSourceName,
+                                              &deltaSourceSize,
                                               &fragmentOffset,
                                               &fragmentSize
                                              );
             if (error != ERROR_NONE)
             {
               sendClientResult(clientInfo,id,TRUE,error,"Cannot read content of storage '%S' (error: %s)",storageName,Errors_getText(error));
+              String_delete(deltaSourceName);
               StringList_done(&fileNameList);
               break;
             }
@@ -6270,14 +6315,25 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const Stri
                )
             {
               sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
-                               "HARDLINK %llu %'S",
+                               "HARDLINK %'S %llu %llu %llu %d %d %d %d %'S %llu %llu %llu",
+                               StringList_first(&fileNameList,NULL),
+                               fileInfo.size,
                                fileInfo.timeModified,
-                               fileNameList.head->string
+                               archiveEntryInfo.file.chunkFileData.info.size,
+                               deltaCompressAlgorithm,
+                               byteCompressAlgorithm,
+                               cryptAlgorithm,
+                               cryptType,
+                               deltaSourceName,
+                               deltaSourceSize,
+                               fragmentOffset,
+                               fragmentSize
                               );
             }
 
             // close archive file, free resources
             Archive_closeEntry(&archiveEntryInfo);
+            String_delete(deltaSourceName);
             StringList_done(&fileNameList);
           }
           break;
@@ -8157,6 +8213,12 @@ clientInfo->authorizationState   = AUTHORIZATION_STATE_OK;
   PatternList_init(&clientInfo->excludePatternList);
   PatternList_init(&clientInfo->compressExcludePatternList);
   initJobOptions(&clientInfo->jobOptions);
+  List_init(&clientInfo->directoryInfoList);
+  clientInfo->storageIdArray = Array_new(sizeof(DatabaseId),64);
+  if (clientInfo->storageIdArray == NULL)
+  {
+    HALT_INSUFFICIENT_MEMORY();
+  }
 
   // create and send session id
 // authorization?
@@ -8795,6 +8857,19 @@ Errors Server_run(uint             port,
   return ERROR_NONE;
 }
 
+void ddlog(const char *text, ...)
+{
+  va_list arguments;
+
+  FILE *f = fopen("xxx.log","a+");
+
+  va_start(arguments,text);
+  (void)vfprintf(f,text,arguments);
+  va_end(arguments);
+
+  fclose(f);
+}
+
 Errors Server_batch(int inputDescriptor,
                     int outputDescriptor
                    )
@@ -8812,17 +8887,19 @@ Errors Server_batch(int inputDescriptor,
   error = File_openDescriptor(&inputFileHandle,inputDescriptor,FILE_OPEN_READ);
   if (error != ERROR_NONE)
   {
-    printError("Cannot initialize input (error: %s)!\n",
-               Errors_getText(error)
-              );
+    fprintf(stderr,
+            "Cannot initialize input: %s!\n",
+            Errors_getText(error)
+           );
     return error;
   }
   error = File_openDescriptor(&outputFileHandle,outputDescriptor,FILE_OPEN_WRITE);
   if (error != ERROR_NONE)
   {
-    printError("Cannot initialize input (error: %s)!\n",
-               Errors_getText(error)
-              );
+    fprintf(stderr,
+            "Cannot initialize output: %s!\n",
+            Errors_getText(error)
+           );
     File_close(&inputFileHandle);
     return error;
   }
@@ -8832,9 +8909,10 @@ Errors Server_batch(int inputDescriptor,
 
   // send info
   File_printLine(&outputFileHandle,
-                 "BAR VERSION %d %d",
+                 "BAR VERSION %d %d\n",
                  PROTOCOL_VERSION_MAJOR,PROTOCOL_VERSION_MINOR
                 );
+  File_flush(&outputFileHandle);
 
   // run server
   commandString = String_new();
@@ -8843,6 +8921,7 @@ Errors Server_batch(int inputDescriptor,
   {
     // read command line
     File_readLine(&inputFileHandle,commandString);
+ddlog("%s, %d: %s\n",__FILE__,__LINE__,String_cString(commandString));
 
     // process
     processCommand(&clientInfo,commandString);
