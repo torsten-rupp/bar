@@ -26,6 +26,7 @@
 #include "strings.h"
 #include "stringlists.h"
 #include "arrays.h"
+#include "threads.h"
 
 #include "errors.h"
 #include "files.h"
@@ -176,14 +177,16 @@ LOCAL uint          keyBits;
 
 /*---------------------------------------------------------------------*/
 
-LOCAL StringList    configFileNameList;
+LOCAL StringList    configFileNameList;  // list of configuration files to read
 
-LOCAL String        tmpLogFileName;
-LOCAL FILE          *logFile = NULL;
-LOCAL FILE          *tmpLogFile = NULL;
+LOCAL String        tmpLogFileName;      // file name of temporary log file
+LOCAL FILE          *logFile = NULL;     // log file handle
+LOCAL FILE          *tmpLogFile = NULL;  // temporary log file handle
 
 LOCAL String        outputLine;
 LOCAL bool          outputNewLineFlag;
+LOCAL ThreadLocalStorage outputLineX;
+LOCAL String             lastOutputLine;
 
 /****************************** Macros *********************************/
 
@@ -579,7 +582,7 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
   CMD_OPTION_BOOLEAN      ("always-create-image",          0,  1,1,jobOptions.alwaysCreateImageFlag,                                                                  "always create image for CD/DVD/BD/device"                                 ),
 
   CMD_OPTION_CSTRING      ("database-file",                0,  1,0,indexDatabaseFileName,                                                                             "index database file name","file name"                                     ),
-  CMD_OPTION_BOOLEAN      ("no-auto-update-database-index",0,  1,0,globalOptions.noAutoUpdateDatabaseIndexFlag,                                                      "disabled automatic update database index"                                 ),
+  CMD_OPTION_BOOLEAN      ("no-auto-update-database-index",0,  1,0,globalOptions.noAutoUpdateDatabaseIndexFlag,                                                       "disabled automatic update database index"                                 ),
 
   CMD_OPTION_SET          ("log",                          0,  1,0,logTypes,                                   COMMAND_LINE_OPTIONS_LOG_TYPES,                        "log types"                                                                ),
   CMD_OPTION_CSTRING      ("log-file",                     0,  1,0,logFileName,                                                                                       "log file name","file name"                                                ),
@@ -600,6 +603,7 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
   CMD_OPTION_BOOLEAN      ("force-delta-compression",      0,  0,1,jobOptions.forceDeltaCompressionFlag,                                                              "force delta compression of files. Stop on error"                          ),
   CMD_OPTION_BOOLEAN      ("raw-images",                   0,  1,1,jobOptions.rawImagesFlag,                                                                          "store raw images (store all image blocks)"                                ),
   CMD_OPTION_BOOLEAN      ("no-fragments-check",           0,  1,1,jobOptions.noFragmentsCheckFlag,                                                                   "do not check completeness of file fragments"                              ),
+  CMD_OPTION_BOOLEAN      ("no-database-index",            0,  1,0,jobOptions.noDatabaseIndexFlag,                                                                    "do not store database index for archives"                                 ),
   CMD_OPTION_BOOLEAN      ("overwrite-archive-files",      'o',0,1,jobOptions.overwriteArchiveFilesFlag,                                                              "overwrite existing archive files"                                         ),
   CMD_OPTION_BOOLEAN      ("overwrite-files",              0,  0,1,jobOptions.overwriteFilesFlag,                                                                     "overwrite existing files"                                                 ),
   CMD_OPTION_BOOLEAN      ("wait-first-volume",            0,  1,1,jobOptions.waitFirstVolumeFlag,                                                                    "wait for first volume"                                                    ),
@@ -917,58 +921,116 @@ LOCAL const ConfigValue CONFIG_VALUES[] =
 /*---------------------------------------------------------------------*/
 
 /***********************************************************************\
+* Name   : outputLineInit
+* Purpose: init output line variable instance callback
+* Input  : userData - user data (not used)
+* Output : -
+* Return : output line variable instance
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void *outputLineInit(void *userData)
+{
+  UNUSED_VARIABLE(userData);
+
+  return String_new();
+}
+
+/***********************************************************************\
+* Name   : outputLineDone
+* Purpose: done output line variable instance callback
+* Input  : variable - output line variable instance
+*          userData - user data (not used)
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void outputLineDone(void *variable, void *userData)
+{
+  assert(variable != NULL);
+
+  UNUSED_VARIABLE(userData);
+
+  String_delete((String)variable);
+}
+
+/***********************************************************************\
 * Name   : output
 * Purpose: output string to console
-* Input  : file            - output stream (stdout, stderr)
-*          saveRestoreFlag - TRUE if current line should be saved and
-*                            restored
-*          string          - string
+* Input  : file   - output stream (stdout, stderr)
+*          string - string
 * Output : -
 * Return : -
 * Notes  :  if saveRestoreFlag is TRUE the current line is saved, the
 *           string is printed and the line is restored
 \***********************************************************************/
 
-LOCAL void output(FILE *file, bool saveRestoreFlag, const String string)
+LOCAL void output(FILE *file, const String string)
 {
-  ulong z;
+  String outputLine;
+  ulong  z;
 
-  if (saveRestoreFlag)
+  outputLine = Thread_getLocalVariable(&outputLineX);
+
+  if (outputLine != NULL)
   {
-    // wipe-out current line
-    for (z = 0L; z < String_length(outputLine); z++)
+    if (File_isTerminal(file))
     {
-      fwrite("\b",1,1,file);
-    }
-    for (z = 0L; z < String_length(outputLine); z++)
-    {
-      fwrite(" ",1,1,file);
-    }
-    for (z = 0L; z < String_length(outputLine); z++)
-    {
-      fwrite("\b",1,1,file);
-    }
+      // restore and output line
+      if ((lastOutputLine != NULL) && (outputLine != lastOutputLine))
+      {
+        // wipe-out current line
+        for (z = 0; z < String_length(lastOutputLine); z++)
+        {
+          fwrite("\b",1,1,file);
+        }
+        for (z = 0; z < String_length(lastOutputLine); z++)
+        {
+          fwrite(" ",1,1,file);
+        }
+        for (z = 0; z < String_length(lastOutputLine); z++)
+        {
+          fwrite("\b",1,1,file);
+        }
 
-    // output line
-    fwrite(String_cString(string),1,String_length(string),file);
+        // restore line
+        fwrite(String_cString(outputLine),1,String_length(outputLine),file);
+      }
 
-    // restore line
-    fwrite(String_cString(outputLine),1,String_length(outputLine),file);
-  }
-  else
-  {
-    // output string
-    fwrite(String_cString(string),1,String_length(string),file);
+      // output string
+      fwrite(String_cString(string),1,String_length(string),file);
 
-    // store
-    if (String_index(string,STRING_END) == '\n')
-    {
-      String_clear(outputLine);
+      // store string
+      if (String_index(string,STRING_END) == '\n')
+      {
+        String_clear(outputLine);
+      }
+      else
+      {
+        String_append(outputLine,string);
+      }
+
+      lastOutputLine = outputLine;
     }
     else
     {
-      String_append(outputLine,string);
+      if (String_index(string,STRING_END) == '\n')
+      {
+        if (outputLine != NULL) fwrite(String_cString(outputLine),1,String_length(outputLine),file);
+        fwrite(String_cString(string),1,String_length(string),file);
+        String_clear(outputLine);
+      }
+      else
+      {
+        String_append(outputLine,string);
+      }
     }
+  }
+  else
+  {
+    // no entry -> output string
+    fwrite(String_cString(string),1,String_length(string),file);
   }
   fflush(stdout);
 }
@@ -2012,6 +2074,8 @@ LOCAL Errors initAll(void)
 
   outputLine                            = String_new();
   outputNewLineFlag                     = TRUE;
+  Thread_initLocalVariable(&outputLineX,outputLineInit,NULL);
+  lastOutputLine                        = NULL;
 
   // initialize default ssh keys
   fileName = File_appendFileNameCString(String_newCString(getenv("HOME")),".ssh/id_rsa.pub");
@@ -2086,6 +2150,7 @@ LOCAL void doneAll(void)
   String_delete(archiveName);
   String_delete(jobName);
   doneGlobalOptions();
+  Thread_doneLocalVariable(&outputLineX,outputLineDone,NULL);
   String_delete(outputLine);
   String_delete(tmpLogFileName);
   String_delete(tmpDirectory);
@@ -2141,7 +2206,7 @@ void vprintInfo(uint verboseLevel, const char *prefix, const char *format, va_li
     String_vformat(line,format,arguments);
 
     // output
-    output(stdout,FALSE,line);
+    output(stdout,line);
 
     String_delete(line);
   }
@@ -2243,7 +2308,7 @@ void printConsole(const char *format, ...)
   va_end(arguments);
 
   // output
-  output(stdout,FALSE,line);
+  output(stdout,line);
 
   String_delete(line);
 }
@@ -2269,7 +2334,7 @@ void printWarning(const char *text, ...)
   va_end(arguments);
 
   // output
-  output(stdout,TRUE,line);
+  output(stdout,line);
 
   String_delete(line);
 }
@@ -2295,7 +2360,7 @@ void printError(const char *text, ...)
   va_end(arguments);
 
   // output console
-  output(stderr,TRUE,line);
+  output(stderr,line);
 
   String_delete(line);
 }
@@ -2362,11 +2427,16 @@ void initJobOptions(JobOptions *jobOptions)
   jobOptions->cryptPrivateKeyFileName   = NULL;
   jobOptions->volumeSize                = 0LL;
   jobOptions->skipUnreadableFlag        = TRUE;
+  jobOptions->forceDeltaCompressionFlag = FALSE;
+  jobOptions->ignoreNoDumpAttributeFlag = FALSE;
   jobOptions->overwriteArchiveFilesFlag = FALSE;
   jobOptions->overwriteFilesFlag        = FALSE;
   jobOptions->errorCorrectionCodesFlag  = FALSE;
+  jobOptions->alwaysCreateImageFlag     = FALSE;
   jobOptions->waitFirstVolumeFlag       = FALSE;
   jobOptions->rawImagesFlag             = FALSE;
+  jobOptions->noFragmentsCheckFlag      = FALSE;
+  jobOptions->noDatabaseIndexFlag       = FALSE;
   jobOptions->dryRunFlag                = FALSE;
   jobOptions->noStorageFlag             = FALSE;
   jobOptions->noBAROnMediumFlag         = FALSE;
