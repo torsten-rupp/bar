@@ -35,7 +35,7 @@
 
 /***************************** Variables *******************************/
 
-/* string */
+// string
 typedef struct __String* String;
 
 struct __String
@@ -48,7 +48,7 @@ struct __String
   #endif /* not NDEBUG */
 };
 
-/* internal tokenizer data */
+// internal tokenizer data
 typedef struct
 {
   const char *data;                     // string data
@@ -60,7 +60,7 @@ typedef struct
   String     token;                     // next token
 } StringTokenizer;
 
-/* comparison, iteration functions */
+// comparison, iteration functions
 typedef int(*StringCompareFunction)(void *userData, char ch1, char ch2);
 typedef const char*(*StringIterateFunction)(void *userData, char ch);
 
@@ -96,7 +96,7 @@ typedef struct
         __checkSum = STRING_CHECKSUM(string); \
         if (__checkSum != (string)->checkSum) \
         { \
-          String_debugPrintCurrentStackTrace(); \
+          debugDumpCurrentStackTrace(stderr,"",0); \
           HALT_INTERNAL_ERROR("Invalid checksum 0x%08x in string %p, length %ld (max. %ld) (expected 0x%08x)!", \
                               (string)->checkSum, \
                               string, \
@@ -131,14 +131,6 @@ typedef struct
 #endif /* not NDEBUG */
 
 /***************************** Forwards ********************************/
-
-#ifdef __cplusplus
-  extern "C" {
-#endif
-void String_debugPrintCurrentStackTrace(void);
-#ifdef __cplusplus
-  }
-#endif
 
 /***************************** Functions *******************************/
 
@@ -942,17 +934,6 @@ void String_debugPrintStatistics(void);
 \***********************************************************************/
 
 void String_debugCheck(void);
-
-/***********************************************************************\
-* Name   : String_debugPrintCurrentStackTrace
-* Purpose: print C stack trace
-* Input  : -
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-void String_debugPrintCurrentStackTrace(void);
 #endif /* not NDEBUG */
 
 #ifdef __cplusplus

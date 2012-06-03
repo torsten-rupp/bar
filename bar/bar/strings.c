@@ -101,15 +101,15 @@ typedef struct
     const char      *fileName;
     ulong           lineNb;
     #ifdef HAVE_BACKTRACE
-      void *stackTrace[16];
-      int  stackTraceSize;
+      void const *stackTrace[16];
+      int        stackTraceSize;
     #endif /* HAVE_BACKTRACE */
 
     const char      *deleteFileName;
     ulong           deleteLineNb;
     #ifdef HAVE_BACKTRACE
-      void *deleteStackTrace[16];
-      int  deleteStackTraceSize;
+      void const *deleteStackTrace[16];
+      int        deleteStackTraceSize;
     #endif /* HAVE_BACKTRACE */
 
     struct __String *string;
@@ -1746,7 +1746,7 @@ String __String_new(const char *__fileName__, ulong __lineNb__)
       debugStringNode->fileName       = __fileName__;
       debugStringNode->lineNb         = __lineNb__;
       #ifdef HAVE_BACKTRACE
-        debugStringNode->stackTraceSize = backtrace(debugStringNode->stackTrace,SIZE_OF_ARRAY(debugStringNode->stackTrace));
+        debugStringNode->stackTraceSize = backtrace((void*)debugStringNode->stackTrace,SIZE_OF_ARRAY(debugStringNode->stackTrace));
       #endif /* HAVE_BACKTRACE */
       debugStringNode->deleteFileName = NULL;
       debugStringNode->deleteLineNb   = 0;
@@ -1983,7 +1983,7 @@ void __String_delete(const char *__fileName__, ulong __lineNb__, String string)
           debugStringNode->deleteFileName = __fileName__;
           debugStringNode->deleteLineNb   = __lineNb__;
           #ifdef HAVE_BACKTRACE
-            debugStringNode->deleteStackTraceSize = backtrace(debugStringNode->deleteStackTrace,SIZE_OF_ARRAY(debugStringNode->deleteStackTrace));
+            debugStringNode->deleteStackTraceSize = backtrace((void*)debugStringNode->deleteStackTrace,SIZE_OF_ARRAY(debugStringNode->deleteStackTrace));
           #endif /* HAVE_BACKTRACE */
           List_append(&debugStringFreeList,debugStringNode);
           debugStringFreeList.allocatedMemory += sizeof(DebugStringNode);
@@ -2004,7 +2004,7 @@ void __String_delete(const char *__fileName__, ulong __lineNb__, String string)
                   __lineNb__
                  );
           #ifdef HAVE_BACKTRACE
-            String_debugPrintCurrentStackTrace();
+            debugDumpCurrentStackTrace(stderr,"",0);
           #endif /* HAVE_BACKTRACE */
           HALT_INTERNAL_ERROR("");
         }
@@ -4491,21 +4491,6 @@ void String_debugCheck()
     }
   }
   pthread_mutex_unlock(&debugStringLock);
-}
-
-void String_debugPrintCurrentStackTrace(void)
-{
-  #ifdef HAVE_BACKTRACE
-    const int MAX_STACK_TRACE_SIZE = 256;
-
-    void *stackTrace[MAX_STACK_TRACE_SIZE];
-    int  stackTraceSize;
-  #endif /* HAVE_BACKTRACE */
-
-  #ifdef HAVE_BACKTRACE
-    stackTraceSize = backtrace(stackTrace,MAX_STACK_TRACE_SIZE);
-    debugDumpStackTrace(stderr,"",0,stackTrace,stackTraceSize);
-  #endif /* HAVE_BACKTRACE */
 }
 #endif /* not NDEBUG */
 
