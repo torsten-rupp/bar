@@ -228,7 +228,6 @@ void Array_debugPrintStatistics(void);
 \***********************************************************************/
 
 void Array_debugCheck(void);
-
 #endif /* not NDEBUG */
 
 #ifdef __cplusplus

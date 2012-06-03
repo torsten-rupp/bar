@@ -193,6 +193,10 @@ void Array_delete(Array array, ArrayElementFreeFunction arrayElementFreeFunction
           fprintf(stderr,"DEBUG WARNING: array %p not found in debug list!\n",
                   array
                  );
+          #ifdef HAVE_BACKTRACE
+            debugDumpCurrentStackTrace(stderr,"",0);
+          #endif /* HAVE_BACKTRACE */
+          HALT_INTERNAL_ERROR("");
         }
       }
       pthread_mutex_unlock(&debugArrayLock);
