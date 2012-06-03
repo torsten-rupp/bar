@@ -797,6 +797,7 @@ LOCAL Errors createArchiveFile(ArchiveInfo *archiveInfo)
 
   // init index
   if (   (archiveInfo->databaseHandle != NULL)
+      && !archiveInfo->jobOptions->noDatabaseIndexFlag
       && !archiveInfo->jobOptions->dryRunFlag
       && !archiveInfo->jobOptions->noStorageFlag
      )
@@ -860,7 +861,11 @@ LOCAL Errors closeArchiveFile(ArchiveInfo *archiveInfo,
   if (archiveInfo->archiveNewFileFunction != NULL)
   {
     error = archiveInfo->archiveNewFileFunction(archiveInfo->archiveNewFileUserData,
-                                                (!archiveInfo->jobOptions->dryRunFlag && !archiveInfo->jobOptions->noStorageFlag)
+                                                (   (archiveInfo->databaseHandle != NULL)
+                                                 && !archiveInfo->jobOptions->noDatabaseIndexFlag
+                                                 && !archiveInfo->jobOptions->dryRunFlag
+                                                 && !archiveInfo->jobOptions->noStorageFlag
+                                                )
                                                   ? archiveInfo->databaseHandle
                                                   : NULL,
                                                 archiveInfo->storageId,
@@ -6983,6 +6988,7 @@ Errors Archive_closeEntry(ArchiveEntryInfo *archiveEntryInfo)
               }
 
               if (   (archiveEntryInfo->archiveInfo->databaseHandle != NULL)
+                  && !archiveEntryInfo->archiveInfo->jobOptions->noDatabaseIndexFlag
                   && !archiveEntryInfo->archiveInfo->jobOptions->dryRunFlag
                   && !archiveEntryInfo->archiveInfo->jobOptions->noStorageFlag
                  )
@@ -7112,6 +7118,7 @@ fprintf(stderr,"%s, %d: %d\n",__FILE__,__LINE__,archiveEntryInfo->image.blockSiz
               }
 
               if (   (archiveEntryInfo->archiveInfo->databaseHandle != NULL)
+                  && !archiveEntryInfo->archiveInfo->jobOptions->noDatabaseIndexFlag
                   && !archiveEntryInfo->archiveInfo->jobOptions->dryRunFlag
                   && !archiveEntryInfo->archiveInfo->jobOptions->noStorageFlag
                  )
@@ -7162,6 +7169,7 @@ fprintf(stderr,"%s, %d: %d\n",__FILE__,__LINE__,archiveEntryInfo->image.blockSiz
               if ((error == ERROR_NONE) && (tmpError != ERROR_NONE)) error = tmpError;
 
               if (   (archiveEntryInfo->archiveInfo->databaseHandle != NULL)
+                  && !archiveEntryInfo->archiveInfo->jobOptions->noDatabaseIndexFlag
                   && !archiveEntryInfo->archiveInfo->jobOptions->dryRunFlag
                   && !archiveEntryInfo->archiveInfo->jobOptions->noStorageFlag
                  )
@@ -7200,6 +7208,7 @@ fprintf(stderr,"%s, %d: %d\n",__FILE__,__LINE__,archiveEntryInfo->image.blockSiz
               if ((error == ERROR_NONE) && (tmpError != ERROR_NONE)) error = tmpError;
 
               if (   (archiveEntryInfo->archiveInfo->databaseHandle != NULL)
+                  && !archiveEntryInfo->archiveInfo->jobOptions->noDatabaseIndexFlag
                   && !archiveEntryInfo->archiveInfo->jobOptions->dryRunFlag
                   && !archiveEntryInfo->archiveInfo->jobOptions->noStorageFlag
                  )
@@ -7308,6 +7317,7 @@ fprintf(stderr,"%s, %d: %d\n",__FILE__,__LINE__,archiveEntryInfo->image.blockSiz
               }
 
               if (   (archiveEntryInfo->archiveInfo->databaseHandle != NULL)
+                  && !archiveEntryInfo->archiveInfo->jobOptions->noDatabaseIndexFlag
                   && !archiveEntryInfo->archiveInfo->jobOptions->dryRunFlag
                   && !archiveEntryInfo->archiveInfo->jobOptions->noStorageFlag
                  )
@@ -7372,6 +7382,7 @@ fprintf(stderr,"%s, %d: %d\n",__FILE__,__LINE__,archiveEntryInfo->image.blockSiz
               if ((error == ERROR_NONE) && (tmpError != ERROR_NONE)) error = tmpError;
 
               if (   (archiveEntryInfo->archiveInfo->databaseHandle != NULL)
+                  && !archiveEntryInfo->archiveInfo->jobOptions->noDatabaseIndexFlag
                   && !archiveEntryInfo->archiveInfo->jobOptions->dryRunFlag
                   && !archiveEntryInfo->archiveInfo->jobOptions->noStorageFlag
                  )
