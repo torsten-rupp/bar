@@ -1241,7 +1241,9 @@ LOCAL bool parseString(const char    *string,
                   if ((formatToken.quoteChar != '\0') && (formatToken.quoteChar == string[index])) stringQuote = &formatToken.quoteChar;
                   if ((stringQuote == NULL) && (stringQuotes != NULL)) stringQuote = strchr(stringQuotes,string[index]);
 
-                  if (stringQuote != NULL)
+                  if (   (stringQuote != NULL)
+                      && !formatToken.blankFlag
+                     )
                   {
                     do
                     {
@@ -1325,7 +1327,7 @@ LOCAL bool parseString(const char    *string,
                     && ((index+1) < length)
                    )
                 {
-                  // quoted character
+                  // quoted character and not
                   if ((formatToken.width == 0) || (z < formatToken.width-1))
                   {
                     String_appendChar(value.string,string[index+1]);
@@ -1340,7 +1342,9 @@ LOCAL bool parseString(const char    *string,
                   if ((formatToken.quoteChar != '\0') && (formatToken.quoteChar == string[index])) stringQuote = &formatToken.quoteChar;
                   if ((stringQuote == NULL) && (stringQuotes != NULL)) stringQuote = strchr(stringQuotes,string[index]);
 
-                  if (stringQuote != NULL)
+                  if (   (stringQuote != NULL)
+                      && !formatToken.blankFlag
+                     )
                   {
                     do
                     {
