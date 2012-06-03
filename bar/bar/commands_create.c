@@ -2375,7 +2375,11 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
           createInfo->failError = error;
 
           // delete database index
-          if (indexDatabaseHandle != NULL)
+          if (   (indexDatabaseHandle != NULL)
+              && !createInfo->jobOptions->noDatabaseIndexFlag
+              && !createInfo->jobOptions->dryRunFlag
+              && !createInfo->jobOptions->noStorageFlag
+             )
           {
             Index_delete(indexDatabaseHandle,storageMsg.storageId);
           }
@@ -2398,7 +2402,11 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
           createInfo->failError = error;
 
           // delete database index
-          if (indexDatabaseHandle != NULL)
+          if (   (indexDatabaseHandle != NULL)
+              && !createInfo->jobOptions->noDatabaseIndexFlag
+              && !createInfo->jobOptions->dryRunFlag
+              && !createInfo->jobOptions->noStorageFlag
+             )
           {
             Index_delete(indexDatabaseHandle,storageMsg.storageId);
           }
@@ -2434,7 +2442,11 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
           createInfo->failError = error;
 
           // delete database index
-          if (indexDatabaseHandle != NULL)
+          if (   (indexDatabaseHandle != NULL)
+              && !createInfo->jobOptions->noDatabaseIndexFlag
+              && !createInfo->jobOptions->dryRunFlag
+              && !createInfo->jobOptions->noStorageFlag
+             )
           {
             Index_delete(indexDatabaseHandle,storageMsg.storageId);
           }
@@ -2583,7 +2595,11 @@ fprintf(stderr,"%s, %d: error=%x\n",__FILE__,__LINE__,error);
             && ((createInfo->requestedAbortFlag == NULL) || !(*createInfo->requestedAbortFlag))
            )
         {
-          if (indexDatabaseHandle != NULL)
+          if (   (indexDatabaseHandle != NULL)
+              && !createInfo->jobOptions->noDatabaseIndexFlag
+              && !createInfo->jobOptions->dryRunFlag
+              && !createInfo->jobOptions->noStorageFlag
+             )
           {
             // delete old indizes for same storage file
             if (createInfo->failError == ERROR_NONE)
@@ -2672,7 +2688,11 @@ fprintf(stderr,"%s, %d: error=%x\n",__FILE__,__LINE__,error);
           if (createInfo->failError != ERROR_NONE)
           {
             // error -> set database state
-            if (indexDatabaseHandle != NULL)
+            if (   (indexDatabaseHandle != NULL)
+                && !createInfo->jobOptions->noDatabaseIndexFlag
+                && !createInfo->jobOptions->dryRunFlag
+                && !createInfo->jobOptions->noStorageFlag
+               )
             {
               Index_setState(indexDatabaseHandle,
                              storageMsg.storageId,
@@ -2687,7 +2707,11 @@ fprintf(stderr,"%s, %d: error=%x\n",__FILE__,__LINE__,error);
           else if ((createInfo->requestedAbortFlag != NULL) && (*createInfo->requestedAbortFlag))
           {
             // aborted -> delete database index
-            if (indexDatabaseHandle != NULL)
+            if (   (indexDatabaseHandle != NULL)
+                && !createInfo->jobOptions->noDatabaseIndexFlag
+                && !createInfo->jobOptions->dryRunFlag
+                && !createInfo->jobOptions->noStorageFlag
+               )
             {
               Index_delete(indexDatabaseHandle,storageMsg.storageId);
             }
@@ -4114,7 +4138,11 @@ Errors Command_create(const char                      *storageName,
         String_delete(incrementalListFileName);
 #if 0
 // NYI: must index be deleted on error?
-        if (indexDatabaseHandle != NULL)
+        if (   (indexDatabaseHandle != NULL)
+            && !archiveInfo->jobOptions->noDatabaseIndexFlag
+            && !archiveInfo->jobOptions->dryRunFlag
+            && !archiveInfo->jobOptions->noStorageFlag
+           )
         {
           Storage_indexDiscard(&createInfo.storageIndexHandle);
         }
@@ -4168,7 +4196,11 @@ Errors Command_create(const char                      *storageName,
     }
 #if 0
 // NYI: must index be deleted on error?
-    if (indexDatabaseHandle != NULL)
+    if (   (indexDatabaseHandle != NULL)
+        && !archiveInfo->jobOptions->noDatabaseIndexFlag
+        && !archiveInfo->jobOptions->dryRunFlag
+        && !archiveInfo->jobOptions->noStorageFlag
+       )
     {
       Storage_closeIndex(&createInfo.storageIndexHandle);
     }
