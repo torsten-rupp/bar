@@ -8,6 +8,8 @@
 *
 \***********************************************************************/
 
+#define __THREADS_IMPLEMENATION__
+
 /****************************** Includes *******************************/
 #include <stdlib.h>
 #include <stdio.h>
@@ -17,12 +19,15 @@
 #include <assert.h>
 
 #include "global.h"
+#include "lists.h"
 
 #include "threads.h"
 
 /****************** Conditional compilation switches *******************/
 
 /***************************** Constants *******************************/
+#define THREAD_LOCAL_STOAGE_HASHTABLE_SIZE      15
+#define THREAD_LOCAL_STOAGE_HASHTABLE_INCREMENT 16
 
 /***************************** Datatypes *******************************/
 typedef struct
@@ -45,6 +50,8 @@ typedef struct
 #ifdef __cplusplus
   extern "C" {
 #endif
+
+// ----------------------------------------------------------------------
 
 /***********************************************************************\
 * Name   : threadStart
@@ -145,9 +152,82 @@ void Thread_join(Thread *thread)
   pthread_join(thread->handle,NULL);
 }
 
-void Thread_yield(void)
+void Thread_initLocalVariable(ThreadLocalStorage *threadLocalStorage, ThreadLocalStorageAllocFunction threadLocalStorageAllocFunction, void *threadLocalStorageAllocUserData)
 {
-  sched_yield();
+  assert(threadLocalStorage != NULL);
+
+  threadLocalStorage->allocFunction = threadLocalStorageAllocFunction;
+  threadLocalStorage->allocUserData = threadLocalStorageAllocUserData;
+  pthread_mutex_init(&threadLocalStorage->lock,NULL);
+  List_init(&threadLocalStorage->instanceList);
+}
+
+void Thread_doneLocalVariable(ThreadLocalStorage *threadLocalStorage, ThreadLocalStorageFreeFunction threadLocalStorageFreeFunction, void *threadLocalStorageFreeUserData)
+{
+  ThreadLocalStorageInstanceNode *threadLocalStorageInstanceNode;
+
+  assert(threadLocalStorage != NULL);
+
+  pthread_mutex_lock(&threadLocalStorage->lock);
+  {
+    while (!List_isEmpty(&threadLocalStorage->instanceList))
+    {
+      threadLocalStorageInstanceNode = (ThreadLocalStorageInstanceNode*)List_getFirst(&threadLocalStorage->instanceList);
+      if (threadLocalStorageFreeFunction != NULL) threadLocalStorageFreeFunction(threadLocalStorageInstanceNode->p,threadLocalStorageFreeUserData);
+      LIST_DELETE_NODE(threadLocalStorageInstanceNode);
+    }
+  }
+  pthread_mutex_unlock(&threadLocalStorage->lock);
+}
+
+void *Thread_getLocalVariable(ThreadLocalStorage *threadLocalStorage)
+{
+  ThreadId                       currentThreadId;
+  void                           *p;
+  ThreadLocalStorageInstanceNode *threadLocalStorageInstanceNode;
+
+  assert(threadLocalStorage != NULL);
+
+  pthread_mutex_lock(&threadLocalStorage->lock);
+  {
+    // find instance
+    threadLocalStorageInstanceNode = (ThreadLocalStorageInstanceNode*)List_first(&threadLocalStorage->instanceList);
+    currentThreadId = Thread_getCurrentId();
+    while (   (threadLocalStorageInstanceNode != NULL)
+           && (threadLocalStorageInstanceNode->threadId != currentThreadId)
+          )
+    {
+      threadLocalStorageInstanceNode = threadLocalStorageInstanceNode->next;
+    }
+
+    if (threadLocalStorageInstanceNode == NULL)
+    {
+      // allocate new instance
+      threadLocalStorageInstanceNode = LIST_NEW_NODE(ThreadLocalStorageInstanceNode);
+      if (threadLocalStorageInstanceNode == NULL)
+      {
+        pthread_mutex_unlock(&threadLocalStorage->lock);
+        return NULL;
+      }
+      threadLocalStorageInstanceNode->threadId = currentThreadId;
+
+      threadLocalStorageInstanceNode->p = threadLocalStorage->allocFunction(threadLocalStorage->allocUserData);
+      if (threadLocalStorageInstanceNode->p == NULL)
+      {
+        pthread_mutex_unlock(&threadLocalStorage->lock);
+        LIST_DELETE_NODE(threadLocalStorageInstanceNode);
+        return NULL;
+      }
+
+      // add instance
+      List_append(&threadLocalStorage->instanceList,threadLocalStorageInstanceNode);
+    }
+
+    p = threadLocalStorageInstanceNode->p;
+  }
+  pthread_mutex_unlock(&threadLocalStorage->lock);
+
+  return p;
 }
 
 #ifdef __cplusplus
