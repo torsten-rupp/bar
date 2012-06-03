@@ -6035,7 +6035,6 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const Stri
     sendClientResult(clientInfo,id,TRUE,error,"%s",Errors_getText(error));
     return;
   }
-ddlog("%s, %d: \n",__FILE__,__LINE__);
 
   // list contents
   error = ERROR_NONE;
@@ -6090,15 +6089,11 @@ ddlog("%s, %d: \n",__FILE__,__LINE__);
               break;
             }
 
-ddlog("%s, %d: \n",__FILE__,__LINE__);
             // match pattern
-/*
             if (   (List_isEmpty(&clientInfo->includeEntryList) || EntryList_match(&clientInfo->includeEntryList,fileName,PATTERN_MATCH_MODE_EXACT))
                 && !PatternList_match(&clientInfo->excludePatternList,fileName,PATTERN_MATCH_MODE_EXACT)
                )
-*/
             {
-ddlog("%s, %d: \n",__FILE__,__LINE__);
               sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
                                "FILE %'S %llu %llu %llu %d %d %d %d %'S %llu %llu %llu",
                                fileName,
@@ -8857,19 +8852,6 @@ Errors Server_run(uint             port,
   return ERROR_NONE;
 }
 
-void ddlog(const char *text, ...)
-{
-  va_list arguments;
-
-  FILE *f = fopen("xxx.log","a+");
-
-  va_start(arguments,text);
-  (void)vfprintf(f,text,arguments);
-  va_end(arguments);
-
-  fclose(f);
-}
-
 Errors Server_batch(int inputDescriptor,
                     int outputDescriptor
                    )
@@ -8921,7 +8903,6 @@ Errors Server_batch(int inputDescriptor,
   {
     // read command line
     File_readLine(&inputFileHandle,commandString);
-ddlog("%s, %d: %s\n",__FILE__,__LINE__,String_cString(commandString));
 
     // process
     processCommand(&clientInfo,commandString);
