@@ -1224,6 +1224,7 @@ LOCAL bool parseString(const char    *string,
               {
                 if (   (string[index] == '\\')
                     && ((index+1) < length)
+                    && !formatToken.blankFlag
                    )
                 {
                   // quoted character
@@ -1325,6 +1326,7 @@ LOCAL bool parseString(const char    *string,
               {
                 if (   (string[index] == '\\')
                     && ((index+1) < length)
+                    && !formatToken.blankFlag
                    )
                 {
                   // quoted character
