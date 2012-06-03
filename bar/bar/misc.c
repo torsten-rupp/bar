@@ -397,6 +397,7 @@ Errors Misc_executeCommand(const char        *commandTemplate,
   StringNode      *stringNode;
   uint            n,z;
   int             status;
+  bool            sleepFlag;
   String          stdoutLine,stderrLine;
   int             exitcode;
   int             terminateSignal;
@@ -572,17 +573,22 @@ error = ERROR_NONE;
     status = 0;
     while ((waitpid(pid,&status,WNOHANG) == 0) || (!WIFEXITED(status) && !WIFSIGNALED(status)))
     {
+      sleepFlag = TRUE;
+
       if (readProcessIO(pipeStdout[0],stdoutLine))
       {
         if (stdoutExecuteIOFunction != NULL) stdoutExecuteIOFunction(executeIOUserData,stdoutLine);
         String_clear(stdoutLine);
+        sleepFlag = FALSE;
       }
       if (readProcessIO(pipeStderr[0],stderrLine))
       {
         if (stderrExecuteIOFunction != NULL) stderrExecuteIOFunction(executeIOUserData,stderrLine);
         String_clear(stderrLine);
+        sleepFlag = FALSE;
       }
-      else
+
+      if (sleepFlag)
       {
         Misc_udelay(500LL*1000LL);
       }
