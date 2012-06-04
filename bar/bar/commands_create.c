@@ -2531,7 +2531,6 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
             error = Storage_write(&createInfo->storageFileHandle,buffer,bufferLength);
             if (error != ERROR_NONE)
             {
-fprintf(stderr,"%s, %d: error=%x\n",__FILE__,__LINE__,error);
               if (retryCount > MAX_RETRIES)
               {
                 // output error message, store error
