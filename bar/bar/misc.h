@@ -306,6 +306,17 @@ Errors Misc_executeCommand(const char        *commandTemplate,
 
 void Misc_waitEnter(void);
 
+/***********************************************************************\
+* Name   : Misc_waitYesNo
+* Purpose: wait for yes/no input
+* Input  : message - message to print
+* Output : -
+* Return : TRUE for yes, FALSE otherwise
+* Notes  : -
+\***********************************************************************/
+
+bool Misc_getYesNo(const char *message);
+
 /*---------------------------------------------------------------------*/
 
 /***********************************************************************\

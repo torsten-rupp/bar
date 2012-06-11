@@ -658,22 +658,63 @@ void Misc_waitEnter(void)
   struct termios termioSettings;
   char           s[2];
 
-  // save current console settings
-  tcgetattr(STDIN_FILENO,&oldTermioSettings);
-
-  // disable echo
-  memcpy(&termioSettings,&oldTermioSettings,sizeof(struct termios));
-  termioSettings.c_lflag &= ~ECHO;
-  tcsetattr(STDIN_FILENO,TCSANOW,&termioSettings);
-
-  // read line
-  if (fgets(s,2,stdin) == NULL)
+  if (isatty(File_getDescriptor(stdin)) != 0)
   {
-    // ignore error
-  }
+    // save current console settings
+    tcgetattr(File_getDescriptor(stdin),&oldTermioSettings);
 
-  // restore console settings
-  tcsetattr(STDIN_FILENO,TCSANOW,&oldTermioSettings);
+    // disable echo
+    memcpy(&termioSettings,&oldTermioSettings,sizeof(struct termios));
+    termioSettings.c_lflag &= ~ECHO;
+    tcsetattr(File_getDescriptor(stdin),TCSANOW,&termioSettings);
+
+    // read line
+    if (fgets(s,2,stdin) == NULL)
+    {
+      // ignore error
+    }
+
+    // restore console settings
+    tcsetattr(File_getDescriptor(stdin),TCSANOW,&oldTermioSettings);
+  }
+}
+
+bool Misc_getYesNo(const char *message)
+{
+  struct termios oldTermioSettings;
+  struct termios termioSettings;
+  char           ch;
+
+  if (isatty(File_getDescriptor(stdin)) != 0)
+  {
+    fputs(message,stdout); fputs(" [y/N]",stdout); fflush(stdout);
+
+    // save current console settings
+    tcgetattr(File_getDescriptor(stdin),&oldTermioSettings);
+
+    // set raw mode
+    memcpy(&termioSettings,&oldTermioSettings,sizeof(struct termios));
+    cfmakeraw(&termioSettings);
+    tcsetattr(File_getDescriptor(stdin),TCSANOW,&termioSettings);
+
+    // read yes/no
+    do
+    {
+      ch = toupper(fgetc(stdin));
+    }
+    while ((ch != 'Y') && (ch != 'N'));
+
+    // restore console settings
+    tcsetattr(File_getDescriptor(stdin),TCSANOW,&oldTermioSettings);
+
+    fputc('\n',stdout);
+
+    return (ch == 'Y');
+  }
+  else
+  {
+    return FALSE;
+  }
 }
 
 /*---------------------------------------------------------------------*/
