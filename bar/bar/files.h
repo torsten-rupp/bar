@@ -988,6 +988,26 @@ Errors File_getFileSystemInfo(FileSystemInfo *fileSystemInfo,
                               const          String pathName
                              );
 
+
+/***********************************************************************\
+* Name   : File_getDescriptor
+* Purpose: get file descriptor
+* Input  : file - file
+* Output : -
+* Return : file descriptor
+* Notes  : -
+\***********************************************************************/
+
+INLINE int File_getDescriptor(FILE *file);
+#if defined(NDEBUG) || defined(__FILES_IMPLEMENATION__)
+INLINE int File_getDescriptor(FILE *file)
+{
+  assert(file != NULL);
+
+  return fileno(file);
+}
+#endif /* NDEBUG || __FILES_IMPLEMENATION__ */
+
 /***********************************************************************\
 * Name   : File_isTerminal
 * Purpose: check if file handle is connected to a terminal
