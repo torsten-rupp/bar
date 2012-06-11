@@ -553,16 +553,31 @@ LOCAL Errors requestNewMedium(StorageFileHandle *storageFileHandle, bool waitFla
   {
     if (storageFileHandle->volumeState == STORAGE_VOLUME_STATE_UNLOADED)
     {
-      printInfo(0,"Please insert medium #%d into drive '%s'\n",storageFileHandle->requestedVolumeNumber,String_cString(storageFileHandle->opticalDisk.name));
+      if (waitFlag)
+      {
+        mediumRequestedFlag = TRUE;
+
+        printInfo(0,"Please insert medium #%d into drive '%s' and press ENTER to continue\n",storageFileHandle->requestedVolumeNumber,String_cString(storageFileHandle->opticalDisk.name));
+        Misc_waitEnter();
+
+        storageRequestResult = STORAGE_REQUEST_VOLUME_OK;
+      }
+      else
+      {
+        printInfo(0,"Please insert medium #%d into drive '%s'\n",storageFileHandle->requestedVolumeNumber,String_cString(storageFileHandle->opticalDisk.name));
+      }
     }
-    if (waitFlag)
+    else
     {
-      mediumRequestedFlag = TRUE;
+      if (waitFlag)
+      {
+        mediumRequestedFlag = TRUE;
 
-      printInfo(0,"<<press ENTER to continue>>\n");
-      Misc_waitEnter();
+        printInfo(0,"Press ENTER to continue\n");
+        Misc_waitEnter();
 
-      storageRequestResult = STORAGE_REQUEST_VOLUME_OK;
+        storageRequestResult = STORAGE_REQUEST_VOLUME_OK;
+      }
     }
 
     storageFileHandle->volumeState = STORAGE_VOLUME_STATE_WAIT;
@@ -708,16 +723,31 @@ LOCAL Errors requestNewVolume(StorageFileHandle *storageFileHandle, bool waitFla
   {
     if (storageFileHandle->volumeState == STORAGE_VOLUME_STATE_UNLOADED)
     {
-      printInfo(0,"Please insert volume #%d into drive '%s'\n",storageFileHandle->requestedVolumeNumber,storageFileHandle->device.name);
+      if (waitFlag)
+      {
+        volumeRequestedFlag = TRUE;
+
+        printInfo(0,"Please insert volume #%d into drive '%s' and press ENTER to continue\n",storageFileHandle->requestedVolumeNumber,storageFileHandle->device.name);
+        Misc_waitEnter();
+
+        storageRequestResult = STORAGE_REQUEST_VOLUME_OK;
+      }
+      else
+      {
+        printInfo(0,"Please insert volume #%d into drive '%s'\n",storageFileHandle->requestedVolumeNumber,storageFileHandle->device.name);
+      }
     }
-    if (waitFlag)
+    else
     {
-      volumeRequestedFlag = TRUE;
+      if (waitFlag)
+      {
+        volumeRequestedFlag = TRUE;
 
-      printInfo(0,"<<press ENTER to continue>>\n");
-      Misc_waitEnter();
+        printInfo(0,"Press ENTER to continue\n");
+        Misc_waitEnter();
 
-      storageRequestResult = STORAGE_REQUEST_VOLUME_OK;
+        storageRequestResult = STORAGE_REQUEST_VOLUME_OK;
+      }
     }
 
     storageFileHandle->volumeState = STORAGE_VOLUME_STATE_WAIT;
@@ -2730,6 +2760,7 @@ Errors Storage_postProcess(StorageFileHandle *storageFileHandle,
         TextMacro textMacros[5];
         String    fileName;
         FileInfo  fileInfo;
+        bool      retryFlag;
 
         if (!storageFileHandle->jobOptions->dryRunFlag)
         {
@@ -2819,23 +2850,38 @@ Errors Storage_postProcess(StorageFileHandle *storageFileHandle,
                 updateStatusInfo(storageFileHandle);
               }
 
-              // write image to medium
-              printInfo(0,"Write image to medium #%d...",storageFileHandle->opticalDisk.write.number);
-              storageFileHandle->opticalDisk.write.step = 3;
-              error = Misc_executeCommand(String_cString(storageFileHandle->opticalDisk.write.writeImageCommand),
-                                          textMacros,SIZE_OF_ARRAY(textMacros),
-                                          (ExecuteIOFunction)processIOgrowisofs,
-                                          (ExecuteIOFunction)processIOgrowisofs,
-                                          storageFileHandle
-                                         );
+              retryFlag = TRUE;
+              do
+              {
+                retryFlag = FALSE;
+
+                // write image to medium
+                printInfo(0,"Write image to medium #%d...",storageFileHandle->opticalDisk.write.number);
+                storageFileHandle->opticalDisk.write.step = 3;
+                error = Misc_executeCommand(String_cString(storageFileHandle->opticalDisk.write.writeImageCommand),
+                                            textMacros,SIZE_OF_ARRAY(textMacros),
+                                            (ExecuteIOFunction)processIOgrowisofs,
+                                            (ExecuteIOFunction)processIOgrowisofs,
+                                            storageFileHandle
+                                           );
+                if (error == ERROR_NONE)
+                {
+                  printInfo(0,"ok\n");
+                  retryFlag = FALSE;
+                }
+                else
+                {
+                  printInfo(0,"FAIL\n");
+                  retryFlag = Misc_getYesNo("Retry write image to medium?");
+                }
+              }
+              while ((error != ERROR_NONE) && retryFlag);
               if (error != ERROR_NONE)
               {
-                printInfo(0,"FAIL\n");
                 File_delete(imageFileName,FALSE);
                 String_delete(imageFileName);
                 break;
               }
-              printInfo(0,"ok\n");
             }
             else
             {
@@ -2853,23 +2899,37 @@ Errors Storage_postProcess(StorageFileHandle *storageFileHandle,
                 updateStatusInfo(storageFileHandle);
               }
 
-              // write to medium
-              printInfo(0,"Write medium #%d with %d file(s)...",storageFileHandle->opticalDisk.write.number,StringList_count(&storageFileHandle->opticalDisk.write.fileNameList));
-              storageFileHandle->opticalDisk.write.step = 0;
-              error = Misc_executeCommand(String_cString(storageFileHandle->opticalDisk.write.writeCommand),
-                                          textMacros,SIZE_OF_ARRAY(textMacros),
-                                          (ExecuteIOFunction)processIOgrowisofs,
-                                          (ExecuteIOFunction)processExecOutput,
-                                          storageFileHandle
-                                         );
+              retryFlag = TRUE;
+              do
+              {
+                retryFlag = FALSE;
+
+                // write to medium
+                printInfo(0,"Write medium #%d with %d file(s)...",storageFileHandle->opticalDisk.write.number,StringList_count(&storageFileHandle->opticalDisk.write.fileNameList));
+                storageFileHandle->opticalDisk.write.step = 0;
+                error = Misc_executeCommand(String_cString(storageFileHandle->opticalDisk.write.writeCommand),
+                                            textMacros,SIZE_OF_ARRAY(textMacros),
+                                            (ExecuteIOFunction)processIOgrowisofs,
+                                            (ExecuteIOFunction)processExecOutput,
+                                            storageFileHandle
+                                           );
+                if (error == ERROR_NONE)
+                {
+                  printInfo(0,"ok\n");
+                }
+                else
+                {
+                  printInfo(0,"FAIL (error: %s)\n",Errors_getText(error));
+                  retryFlag = Misc_getYesNo("Retry write image to medium?");
+                }
+              }
+              while ((error != ERROR_NONE) && retryFlag);
               if (error != ERROR_NONE)
               {
-                printInfo(0,"FAIL\n");
                 File_delete(imageFileName,FALSE);
                 String_delete(imageFileName);
                 break;
               }
-              printInfo(0,"ok\n");
             }
 
             // delete image
