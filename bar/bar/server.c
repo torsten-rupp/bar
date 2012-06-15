@@ -2945,6 +2945,8 @@ LOCAL void getDirectoryInfo(DirectoryInfoNode *directoryInfoNode,
 *            <destination directory>
 *            <overwrite flag>
 *            <files>...
+*          Result:
+*            <error text>
 \***********************************************************************/
 
 LOCAL void serverCommand_errorInfo(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
@@ -2980,6 +2982,7 @@ LOCAL void serverCommand_errorInfo(ClientInfo *clientInfo, uint id, const String
 * Return : -
 * Notes  : Arguments:
 *            <password>
+*          Result:
 \***********************************************************************/
 
 LOCAL void serverCommand_authorize(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
@@ -3044,6 +3047,8 @@ LOCAL void serverCommand_authorize(ClientInfo *clientInfo, uint id, const String
 * Return : -
 * Notes  : Arguments:
 *            <name>
+*          Result:
+*            <value>
 \***********************************************************************/
 
 LOCAL void serverCommand_get(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
@@ -3082,6 +3087,7 @@ LOCAL void serverCommand_get(ClientInfo *clientInfo, uint id, const String argum
 * Return : -
 * Notes  : Arguments:
 *            <command id>
+*          Result:
 \***********************************************************************/
 
 LOCAL void serverCommand_abort(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
@@ -3116,6 +3122,8 @@ LOCAL void serverCommand_abort(ClientInfo *clientInfo, uint id, const String arg
 * Output : -
 * Return : -
 * Notes  : Arguments:
+*          Result:
+*            <status>
 \***********************************************************************/
 
 LOCAL void serverCommand_status(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
@@ -3160,6 +3168,7 @@ LOCAL void serverCommand_status(ClientInfo *clientInfo, uint id, const String ar
 * Notes  : Arguments:
 *            <pause time [s]>
 *            [CREATE,STORAGE,RESTORE,INDEX_UPDATE]
+*          Result:
 \***********************************************************************/
 
 LOCAL void serverCommand_pause(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
@@ -3242,6 +3251,7 @@ LOCAL void serverCommand_pause(ClientInfo *clientInfo, uint id, const String arg
 * Return : -
 * Notes  : Arguments:
 *            [CREATE,STORAGE,RESTORE,INDEX_UPDATE]
+*          Result:
 \***********************************************************************/
 
 LOCAL void serverCommand_suspend(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
@@ -3317,6 +3327,7 @@ LOCAL void serverCommand_suspend(ClientInfo *clientInfo, uint id, const String a
 * Output : -
 * Return : -
 * Notes  : Arguments:
+*          Result:
 \***********************************************************************/
 
 LOCAL void serverCommand_continue(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
@@ -3353,6 +3364,9 @@ LOCAL void serverCommand_continue(ClientInfo *clientInfo, uint id, const String 
 * Output : -
 * Return : -
 * Notes  : Arguments:
+*          Result:
+*            <device size> <device name>
+*            ...
 \***********************************************************************/
 
 LOCAL void serverCommand_deviceList(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
@@ -3432,6 +3446,17 @@ LOCAL void serverCommand_deviceList(ClientInfo *clientInfo, uint id, const Strin
 * Return : -
 * Notes  : Arguments:
 *            <directory>
+*          Result:
+*            FILE <size> <time modified> <name>
+*            DIRECTORY <time modified> <name>
+*            LINK <time modified> <name>
+*            HARDLINK <time modified> <name>
+*            DEVICE CHARACTER <time modified> <name>
+*            DEVICE BLOCK <size> <time modified> <name>
+*            FIFO <time modified> <name>
+*            SOCKET <time modified> <name>
+*            SPECIAL <time modified> <name>
+*            ...
 \***********************************************************************/
 
 LOCAL void serverCommand_fileList(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
@@ -3580,6 +3605,8 @@ LOCAL void serverCommand_fileList(ClientInfo *clientInfo, uint id, const String 
 * Notes  : Arguments:
 *            <directory>
 *            <timeout [s]>
+*          Result:
+*            <file count> <total file size> <timeout flag>
 \***********************************************************************/
 
 LOCAL void serverCommand_directoryInfo(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
@@ -3632,6 +3659,8 @@ LOCAL void serverCommand_directoryInfo(ClientInfo *clientInfo, uint id, const St
 * Notes  : Arguments:
 *            <job id>
 *            <option name>
+*          Result:
+*            <value>
 \***********************************************************************/
 
 LOCAL void serverCommand_optionGet(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
@@ -3714,6 +3743,7 @@ LOCAL void serverCommand_optionGet(ClientInfo *clientInfo, uint id, const String
 *            <job id>
 *            <option name>
 *            <value>
+*          Result:
 \***********************************************************************/
 
 LOCAL void serverCommand_optionSet(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
@@ -3789,6 +3819,7 @@ LOCAL void serverCommand_optionSet(ClientInfo *clientInfo, uint id, const String
 * Notes  : Arguments:
 *            <job id>
 *            <option name>
+*          Result:
 \***********************************************************************/
 
 LOCAL void serverCommand_optionDelete(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
@@ -3857,6 +3888,10 @@ LOCAL void serverCommand_optionDelete(ClientInfo *clientInfo, uint id, const Str
 * Output : -
 * Return : -
 * Notes  : Arguments:
+*          Result:
+*            <id> <name> <state> <type> <part size> <delta compress algorithm> \
+*            <byte compress alrogithm> <crypt algorithm> <crypt type> \
+*            <password mode> <last executed time> <estimated rest time>
 \***********************************************************************/
 
 LOCAL void serverCommand_jobList(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
@@ -3915,6 +3950,13 @@ LOCAL void serverCommand_jobList(ClientInfo *clientInfo, uint id, const String a
 * Return : -
 * Notes  : Arguments:
 *            <job id>
+*          Result:
+*            <state> <message> <done entries> <done bytes> <total entries> \
+*            <total bytes> <skipped entries> <skipped bytes> <error entries> \
+*            <skipped bytes> <entries/s> <bytes/s> <storage bytes/s> \
+*            <archive bytes> <compress ratio> <filename> <entry bytes> \
+*            <entry total bytes> <storage name> <archive done> <archive total> \
+*            <volumn number> <volume progress> <requested volume number>
 \***********************************************************************/
 
 LOCAL void serverCommand_jobInfo(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
@@ -3983,6 +4025,7 @@ LOCAL void serverCommand_jobInfo(ClientInfo *clientInfo, uint id, const String a
                      string,
                      jobNode->runningInfo.entryDoneBytes,
                      jobNode->runningInfo.entryTotalBytes,
+#warning todo map name
                      jobNode->runningInfo.storageName,
                      jobNode->runningInfo.archiveDoneBytes,
                      jobNode->runningInfo.archiveTotalBytes,
@@ -4006,6 +4049,8 @@ LOCAL void serverCommand_jobInfo(ClientInfo *clientInfo, uint id, const String a
 * Return : -
 * Notes  : Arguments:
 *            <job name>
+*          Result:
+*            <job id>
 \***********************************************************************/
 
 LOCAL void serverCommand_jobNew(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
@@ -4090,6 +4135,8 @@ LOCAL void serverCommand_jobNew(ClientInfo *clientInfo, uint id, const String ar
 * Notes  : Arguments:
 *            <job id>
 *            <new job name>
+*          Result:
+*            <new job id>
 \***********************************************************************/
 
 LOCAL void serverCommand_jobCopy(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
@@ -4187,6 +4234,7 @@ LOCAL void serverCommand_jobCopy(ClientInfo *clientInfo, uint id, const String a
 * Notes  : Arguments:
 *            <job id>
 *            <new job name>
+*          Result:
 \***********************************************************************/
 
 LOCAL void serverCommand_jobRename(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
@@ -4267,6 +4315,7 @@ LOCAL void serverCommand_jobRename(ClientInfo *clientInfo, uint id, const String
 * Return : -
 * Notes  : Arguments:
 *            <job id>
+*          Result:
 \***********************************************************************/
 
 LOCAL void serverCommand_jobDelete(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
@@ -4332,6 +4381,7 @@ LOCAL void serverCommand_jobDelete(ClientInfo *clientInfo, uint id, const String
 * Return : -
 * Notes  : Arguments:
 *            <job id>
+*          Result:
 \***********************************************************************/
 
 LOCAL void serverCommand_jobStart(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
@@ -4427,6 +4477,7 @@ LOCAL void serverCommand_jobStart(ClientInfo *clientInfo, uint id, const String 
 * Return : -
 * Notes  : Arguments:
 *            <job id>
+*          Result:
 \***********************************************************************/
 
 LOCAL void serverCommand_jobAbort(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
@@ -4485,6 +4536,7 @@ LOCAL void serverCommand_jobAbort(ClientInfo *clientInfo, uint id, const String 
 * Output : -
 * Return : -
 * Notes  : Arguments:
+*          Result:
 \***********************************************************************/
 
 LOCAL void serverCommand_jobFlush(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
@@ -4512,6 +4564,9 @@ LOCAL void serverCommand_jobFlush(ClientInfo *clientInfo, uint id, const String 
 * Return : -
 * Notes  : Arguments:
 *            <job id>
+*          Result:
+*            <type> <pattern> <name>
+*            ...
 \***********************************************************************/
 
 LOCAL void serverCommand_includeList(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
@@ -4601,6 +4656,7 @@ LOCAL void serverCommand_includeList(ClientInfo *clientInfo, uint id, const Stri
 * Return : -
 * Notes  : Arguments:
 *            <job id>
+*          Result:
 \***********************************************************************/
 
 LOCAL void serverCommand_includeListClear(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
@@ -4653,6 +4709,7 @@ LOCAL void serverCommand_includeListClear(ClientInfo *clientInfo, uint id, const
 *            <entry type>
 *            <pattern type>
 *            <pattern>
+*          Result:
 \***********************************************************************/
 
 LOCAL void serverCommand_includeListAdd(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
@@ -4758,6 +4815,9 @@ LOCAL void serverCommand_includeListAdd(ClientInfo *clientInfo, uint id, const S
 * Return : -
 * Notes  : Arguments:
 *            <job id>
+*          Result:
+*            <type> <pattern> <name>
+*            ...
 \***********************************************************************/
 
 LOCAL void serverCommand_excludeList(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
@@ -4834,6 +4894,7 @@ LOCAL void serverCommand_excludeList(ClientInfo *clientInfo, uint id, const Stri
 * Return : -
 * Notes  : Arguments:
 *            <job id>
+*          Result:
 \***********************************************************************/
 
 LOCAL void serverCommand_excludeListClear(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
@@ -4886,6 +4947,7 @@ LOCAL void serverCommand_excludeListClear(ClientInfo *clientInfo, uint id, const
 *            <entry type>
 *            <pattern type>
 *            <pattern>
+*          Result:
 \***********************************************************************/
 
 LOCAL void serverCommand_excludeListAdd(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
@@ -4972,6 +5034,9 @@ LOCAL void serverCommand_excludeListAdd(ClientInfo *clientInfo, uint id, const S
 * Return : -
 * Notes  : Arguments:
 *            <job id>
+*          Result:
+*            <type> <name>
+*            ...
 \***********************************************************************/
 
 LOCAL void serverCommand_sourceList(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
@@ -5041,6 +5106,7 @@ LOCAL void serverCommand_sourceList(ClientInfo *clientInfo, uint id, const Strin
 * Return : -
 * Notes  : Arguments:
 *            <job id>
+*          Result:
 \***********************************************************************/
 
 LOCAL void serverCommand_sourceListClear(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
@@ -5093,6 +5159,7 @@ LOCAL void serverCommand_sourceListClear(ClientInfo *clientInfo, uint id, const 
 *            <entry type>
 *            <pattern type>
 *            <pattern>
+*          Result:
 \***********************************************************************/
 
 LOCAL void serverCommand_sourceListAdd(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
@@ -5172,6 +5239,9 @@ LOCAL void serverCommand_sourceListAdd(ClientInfo *clientInfo, uint id, const St
 * Return : -
 * Notes  : Arguments:
 *            <job id>
+*          Result:
+*            <type> <name>
+*            ...
 \***********************************************************************/
 
 LOCAL void serverCommand_excludeCompressList(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
@@ -5241,6 +5311,7 @@ LOCAL void serverCommand_excludeCompressList(ClientInfo *clientInfo, uint id, co
 * Return : -
 * Notes  : Arguments:
 *            <job id>
+*          Result:
 \***********************************************************************/
 
 LOCAL void serverCommand_excludeCompressListClear(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
@@ -5293,6 +5364,7 @@ LOCAL void serverCommand_excludeCompressListClear(ClientInfo *clientInfo, uint i
 *            <entry type>
 *            <pattern type>
 *            <pattern>
+*          Result:
 \***********************************************************************/
 
 LOCAL void serverCommand_excludeCompressListAdd(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
@@ -5372,6 +5444,9 @@ LOCAL void serverCommand_excludeCompressListAdd(ClientInfo *clientInfo, uint id,
 * Return : -
 * Notes  : Arguments:
 *            <job id>
+*          Result:
+*            <year> <month> <day> <week day> <hour> <minute> <enabled> <type>
+*            ...
 \***********************************************************************/
 
 LOCAL void serverCommand_scheduleList(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
@@ -5511,6 +5586,7 @@ LOCAL void serverCommand_scheduleList(ClientInfo *clientInfo, uint id, const Str
 * Return : -
 * Notes  : Arguments:
 *            <job id>
+*          Result:
 \***********************************************************************/
 
 LOCAL void serverCommand_scheduleListClear(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
@@ -5565,6 +5641,7 @@ LOCAL void serverCommand_scheduleListClear(ClientInfo *clientInfo, uint id, cons
 *            <time>
 *            <enabled/disabled 0|1>
 *            <type>
+*          Result:
 \***********************************************************************/
 
 LOCAL void serverCommand_scheduleListAdd(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
@@ -5668,6 +5745,7 @@ LOCAL void serverCommand_scheduleListAdd(ClientInfo *clientInfo, uint id, const 
 *            <destination directory>
 *            <overwrite flag>
 *            <files>...
+*          Result:
 \***********************************************************************/
 
 LOCAL void serverCommand_decryptPasswordsClear(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
@@ -5697,6 +5775,7 @@ LOCAL void serverCommand_decryptPasswordsClear(ClientInfo *clientInfo, uint id, 
 * Return : -
 * Notes  : Arguments:
 *            <password>
+*          Result:
 \***********************************************************************/
 
 LOCAL void serverCommand_decryptPasswordAdd(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
@@ -5737,6 +5816,7 @@ LOCAL void serverCommand_decryptPasswordAdd(ClientInfo *clientInfo, uint id, con
 * Return : -
 * Notes  : Arguments:
 *            <password>
+*          Result:
 \***********************************************************************/
 
 LOCAL void serverCommand_ftpPassword(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
@@ -5771,6 +5851,7 @@ LOCAL void serverCommand_ftpPassword(ClientInfo *clientInfo, uint id, const Stri
 * Return : -
 * Notes  : Arguments:
 *            <password>
+*          Result:
 \***********************************************************************/
 
 LOCAL void serverCommand_sshPassword(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
@@ -5806,6 +5887,7 @@ LOCAL void serverCommand_sshPassword(ClientInfo *clientInfo, uint id, const Stri
 * Notes  : Arguments:
 *            <job id>|0
 *            <password>
+*          Result:
 \***********************************************************************/
 
 LOCAL void serverCommand_cryptPassword(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
@@ -5868,6 +5950,7 @@ LOCAL void serverCommand_cryptPassword(ClientInfo *clientInfo, uint id, const St
 * Output : -
 * Return : -
 * Notes  : Arguments:
+*          Result:
 \***********************************************************************/
 
 LOCAL void serverCommand_passwordsClear(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
@@ -5897,6 +5980,7 @@ LOCAL void serverCommand_passwordsClear(ClientInfo *clientInfo, uint id, const S
 * Notes  : Arguments:
 *            <job id>
 *            <volume number>
+*          Result:
 \***********************************************************************/
 
 LOCAL void serverCommand_volumeLoad(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
@@ -5954,6 +6038,7 @@ LOCAL void serverCommand_volumeLoad(ClientInfo *clientInfo, uint id, const Strin
 * Return : -
 * Notes  : Arguments:
 *            <job id>
+*          Result:
 \***********************************************************************/
 
 LOCAL void serverCommand_volumeUnload(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
@@ -6002,6 +6087,20 @@ LOCAL void serverCommand_volumeUnload(ClientInfo *clientInfo, uint id, const Str
 * Return : -
 * Notes  : Arguments:
 *            <storage name>
+*          Result:
+*            FILE <name> <size> <time modifed> <chunk size> <delta compress algorithm> \
+*            <byte compress algorithm> <crypt algorithm> <crypt type> <delta source name> \
+*            <delta source size> <fragment offest> <fragment size>
+*            IMAGE <name> <size> <chunk size> <delta compress algorithm> \
+*            <byte compress algorithm> <crypt algorithm> <crypt type> <delta source name> \
+*            <delta source size> <block size> <block offest> <block size>
+*            DIRECTORY <name> <time modified> <crypt algorithm> <crypt type>
+*            LINK <link name> <name> <crypt algorithm> <crypt type>
+*            HARDLINK <name> <size> <time modifed> <chunk size> <delta compress algorithm> \
+*            <byte compress algorithm> <crypt algorithm> <crypt type> <delta source name> \
+*            <delta source size> <fragment offest> <fragment size>
+*            SPECIAL <name>
+*            ...
 \***********************************************************************/
 
 LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
@@ -6227,23 +6326,23 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const Stri
             CryptAlgorithms cryptAlgorithm;
             CryptTypes      cryptType;
             String          linkName;
-            String          fileName;
+            String          name;
 
             // open archive link
             linkName = String_new();
-            fileName = String_new();
+            name     = String_new();
             error = Archive_readLinkEntry(&archiveInfo,
                                           &archiveEntryInfo,
                                           &cryptAlgorithm,
                                           &cryptType,
                                           linkName,
-                                          fileName,
+                                          name,
                                           NULL
                                          );
             if (error != ERROR_NONE)
             {
               sendClientResult(clientInfo,id,TRUE,error,"Cannot read content of storage '%S' (error: %s)",storageName,Errors_getText(error));
-              String_delete(fileName);
+              String_delete(name);
               String_delete(linkName);
               break;
             }
@@ -6256,7 +6355,7 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const Stri
               sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
                                "LINK %'S %'S %d %d",
                                linkName,
-                               fileName,
+                               name,
                                cryptAlgorithm,
                                cryptType
                               );
@@ -6264,7 +6363,7 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const Stri
 
             // close archive file, free resources
             Archive_closeEntry(&archiveEntryInfo);
-            String_delete(fileName);
+            String_delete(name);
             String_delete(linkName);
           }
           break;
@@ -6334,39 +6433,39 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const Stri
           break;
         case ARCHIVE_ENTRY_TYPE_SPECIAL:
           {
-            String   fileName;
+            String   name;
             FileInfo fileInfo;
 
             // open archive link
-            fileName = String_new();
+            name = String_new();
             error = Archive_readSpecialEntry(&archiveInfo,
                                              &archiveEntryInfo,
                                              NULL,
                                              NULL,
-                                             fileName,
+                                             name,
                                              &fileInfo
                                             );
             if (error != ERROR_NONE)
             {
               sendClientResult(clientInfo,id,TRUE,error,"Cannot read content of storage '%S' (error: %s)",storageName,Errors_getText(error));
-              String_delete(fileName);
+              String_delete(name);
               break;
             }
 
             // match pattern
-            if (   (List_isEmpty(&clientInfo->includeEntryList) || EntryList_match(&clientInfo->includeEntryList,fileName,PATTERN_MATCH_MODE_EXACT))
-                && !PatternList_match(&clientInfo->excludePatternList,fileName,PATTERN_MATCH_MODE_EXACT)
+            if (   (List_isEmpty(&clientInfo->includeEntryList) || EntryList_match(&clientInfo->includeEntryList,name,PATTERN_MATCH_MODE_EXACT))
+                && !PatternList_match(&clientInfo->excludePatternList,name,PATTERN_MATCH_MODE_EXACT)
                )
             {
               sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
                                "SPECIAL %'S",
-                               fileName
+                               name
                               );
             }
 
             // close archive file, free resources
             Archive_closeEntry(&archiveEntryInfo);
-            String_delete(fileName);
+            String_delete(name);
           }
           break;
         default:
@@ -6451,6 +6550,7 @@ LOCAL bool updateRestoreCommandStatus(RestoreCommandInfo      *restoreCommandInf
 * Output : -
 * Return : -
 * Notes  : Arguments:
+*          Result:
 \***********************************************************************/
 
 LOCAL void serverCommand_storageListClear(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
@@ -6477,6 +6577,7 @@ LOCAL void serverCommand_storageListClear(ClientInfo *clientInfo, uint id, const
 * Return : -
 * Notes  : Arguments:
 *            <storage>
+*          Result:
 \***********************************************************************/
 
 LOCAL void serverCommand_storageListAdd(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
@@ -6514,6 +6615,7 @@ LOCAL void serverCommand_storageListAdd(ClientInfo *clientInfo, uint id, const S
 *            <destination directory>
 *            <overwrite flag>
 *            <files>...
+*          Result:
 \***********************************************************************/
 
 LOCAL void serverCommand_restore(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
@@ -6631,6 +6733,9 @@ ENTRY_TYPE_FILE,
 *            <max. count>|0
 *            <status>|*
 *            <name pattern>
+*          Result:
+*            <storage id> <date/time> <size> <state> <name> <error message>
+*            ...
 \***********************************************************************/
 
 LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
@@ -6756,6 +6861,7 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const
 * Return : -
 * Notes  : Arguments:
 *            <storage name>
+*          Result:
 \***********************************************************************/
 
 LOCAL void serverCommand_indexStorageAdd(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
@@ -6811,6 +6917,7 @@ LOCAL void serverCommand_indexStorageAdd(ClientInfo *clientInfo, uint id, const 
 * Notes  : Arguments:
 *            <status>|*
 *            <id>|0
+*          Result:
 \***********************************************************************/
 
 LOCAL void serverCommand_indexStorageRemove(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
@@ -6941,6 +7048,7 @@ LOCAL void serverCommand_indexStorageRemove(ClientInfo *clientInfo, uint id, con
 * Notes  : Arguments:
 *            <status>|*
 *            <id>|0
+*          Result:
 \***********************************************************************/
 
 LOCAL void serverCommand_indexStorageRefresh(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
@@ -7229,6 +7337,8 @@ LOCAL IndexNode *getIndexEntryNode(IndexList *indexList, ArchiveEntryTypes type,
 *            <max. count>
 *            <newestEntriesOnly 0|1>
 *            <name pattern>
+*          Result:
+*            <error text>
 \***********************************************************************/
 
 LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
@@ -7814,6 +7924,8 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
 * Output : -
 * Return : -
 * Notes  : Arguments:
+*          Result:
+*            <error text>
 \***********************************************************************/
 
 LOCAL void serverCommand_debugPrintStatistics(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
@@ -7840,6 +7952,10 @@ LOCAL void serverCommand_debugPrintStatistics(ClientInfo *clientInfo, uint id, c
 * Output : -
 * Return : -
 * Notes  : Arguments:
+*          Result:
+*            <error text>
+*          Result:
+*            <error text>
 \***********************************************************************/
 
 LOCAL void serverCommand_debugPrintMemoryInfo(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
@@ -7866,6 +7982,8 @@ LOCAL void serverCommand_debugPrintMemoryInfo(ClientInfo *clientInfo, uint id, c
 * Output : -
 * Return : -
 * Notes  : Arguments:
+*          Result:
+*            <error text>
 \***********************************************************************/
 
 LOCAL void serverCommand_debugDumpMemoryInfo(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
