@@ -386,20 +386,22 @@ class TabRestore
           });
         }
 
-        // remove not marked entries
+        // create new storage map
+        StorageDataMap newStorageDataMap = new StorageDataMap();
+
+        // save marked entries
         synchronized(storageDataMap)
         {
-          StorageData[] storageData_ = storageDataMap.values().toArray(new StorageData[0]);
-          for (StorageData storageData : storageData_)
+          for (StorageData storageData : storageDataMap.values())
           {
-            if (!storageData.isChecked())
+            if (storageData.isChecked())
             {
-              storageDataMap.remove(storageData);
+              newStorageDataMap.remove(storageData);
             }
           }
         }
 
-        // update
+        // update entries
         try
         {
           String commandString = "INDEX_STORAGE_LIST "+
@@ -435,9 +437,10 @@ class TabRestore
                 String      storageName  = (String)data[4];
                 String      errorMessage = (String)data[5];
 
+                StorageData storageData;
                 synchronized(storageDataMap)
                 {
-                  StorageData storageData = storageDataMap.get(storageId);
+                  storageData = storageDataMap.get(storageId);
                   if (storageData != null)
                   {
                     storageData.size         = size;
@@ -455,9 +458,9 @@ class TabRestore
                                                   indexState,
                                                   errorMessage
                                                  );
-                    storageDataMap.put(storageData);
                   }
                 }
+                newStorageDataMap.put(storageData);
               }
             }
           }
@@ -466,6 +469,9 @@ class TabRestore
         {
           // ignored
         }
+
+        // store new storage map
+        storageDataMap = newStorageDataMap;
 
         // referesh list
         display.syncExec(new Runnable()
@@ -2295,7 +2301,7 @@ class TabRestore
    */
   private void refreshStorageList()
   {
-//??? statt findStorageListIndex
+//??? instead of findStorageListIndex
     StorageDataComparator storageDataComparator = new StorageDataComparator(widgetStorageList);
 
     // refresh
@@ -2529,19 +2535,56 @@ class TabRestore
     {
       if (Dialogs.confirm(shell,"Really remove all indizes with error state?"))
       {
-        String[] result = new String[1];
-        int errorCode = BARServer.executeCommand("INDEX_STORAGE_REMOVE "+
-                                                 "ERROR "+
-                                                 "0",
-                                                 result
-                                                );
-        if (errorCode == Errors.NONE)
+        try
         {
-          updateStorageListThread.triggerUpdate(storagePattern,storageIndexState,storageMaxCount);
+          String commandString = "INDEX_STORAGE_LIST "+
+                                 1+" "+
+                                 "ERROR "+
+                                 "*";
+          Command command = BARServer.runCommand(commandString);
+
+          // read results, update/add data
+          String line;
+          Object data[] = new Object[6];
+          while (!command.endOfData())
+          {
+            line = command.getNextResult(5*1000);
+            if (line != null)
+            {
+              if      (StringParser.parse(line,"%ld %ld %ld %S %S %S",data,StringParser.QUOTE_CHARS))
+              {
+                /* get data
+                   format:
+                     storage id
+                     date/time
+                     size
+                     state
+                     storage name
+                     error message
+                */
+                long storageId = (Long)data[0];
+
+                String[] result = new String[1];
+                int errorCode = BARServer.executeCommand("INDEX_STORAGE_REMOVE "+
+                                                         "* "+
+                                                         storageId,
+                                                         result
+                                                        );
+                if (errorCode == Errors.NONE)
+                {
+                  updateStorageListThread.triggerUpdate(storagePattern,storageIndexState,storageMaxCount);
+                }
+                else
+                {
+                  Dialogs.error(shell,"Cannot remove database indizes with error state (error: "+result[0]+")");
+                }
+              }
+            }
+          }
         }
-        else
+        catch (CommunicationError error)
         {
-          Dialogs.error(shell,"Cannot remove database indizes with error state (error: "+result[0]+")");
+          // ignored
         }
       }
     }
