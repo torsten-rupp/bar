@@ -31,7 +31,7 @@
 /***************************** Constants *******************************/
 #define INDEX_STORAGE_ID_NONE -1LL
 
-/* index states */
+// index states
 typedef enum
 {
   INDEX_STATE_NONE,
@@ -49,7 +49,7 @@ typedef enum
 
 extern const char* INDEX_STATE_STRINGS[8];
 
-/* index modes */
+// index modes
 typedef enum
 {
   INDEX_MODE_MANUAL,

@@ -40,7 +40,7 @@ const char* INDEX_STATE_STRINGS[8] =
   "UNKNOWN"
 };
 
-/* current index database version */
+// current index database version
 #define CURRENT_INDEX_VERSION 2
 
 /***************************** Datatypes *******************************/
@@ -171,10 +171,10 @@ Errors Index_init(DatabaseHandle *indexDatabaseHandle,
   Errors error;
   int64  indexVersion;
 
-  /* open/create datbase */
+  // open/create datbase
   if (File_existsCString(indexDatabaseFileName))
   {
-    /* open index database */
+    // open index database
     error = Database_open(indexDatabaseHandle,indexDatabaseFileName,DATABASE_OPENMODE_READWRITE);
     if (error != ERROR_NONE)
     {
@@ -183,7 +183,7 @@ Errors Index_init(DatabaseHandle *indexDatabaseHandle,
   }
   else
   {
-    /* create index database */
+    // create index database
     error = Database_open(indexDatabaseHandle,indexDatabaseFileName,DATABASE_OPENMODE_CREATE);
     if (error != ERROR_NONE)
     {
@@ -201,7 +201,7 @@ Errors Index_init(DatabaseHandle *indexDatabaseHandle,
     }
   }
 
-  /* disable synchronous mode and journal to increase transaction speed */
+  // disable synchronous mode and journal to increase transaction speed
   Database_execute(indexDatabaseHandle,
                    NULL,
                    NULL,
@@ -213,7 +213,7 @@ Errors Index_init(DatabaseHandle *indexDatabaseHandle,
                    "PRAGMA journal_mode=OFF;"
                   );
 
-  /* get database version */
+  // get database version
   error = Database_getInteger64(indexDatabaseHandle,
                                 &indexVersion,
                                 "meta",
@@ -226,15 +226,15 @@ Errors Index_init(DatabaseHandle *indexDatabaseHandle,
     return error;
   }
 
-  /* upgrade database structure */
+  // upgrade database structure
   while (indexVersion < CURRENT_INDEX_VERSION)
   {
     switch (indexVersion)
     {
       case 1:
-        /* upgrade version 1 -> 2 */
+        // upgrade version 1 -> 2
 
-        /* add table hardlinks */
+        // add table hardlinks
         error = Database_execute(indexDatabaseHandle,
                                  NULL,
                                  NULL,
@@ -246,7 +246,7 @@ Errors Index_init(DatabaseHandle *indexDatabaseHandle,
           return error;
         }
 
-        /* set version */
+        // set version
         error = Database_setInteger64(indexDatabaseHandle,
                                       2,
                                       "meta",
@@ -261,7 +261,7 @@ Errors Index_init(DatabaseHandle *indexDatabaseHandle,
 
         indexVersion = 2;
       case 2:
-        /* OK! */
+        // OK!
         break;
       #ifndef NDEBUG
         default:
@@ -468,7 +468,7 @@ Errors Index_delete(DatabaseHandle *databaseHandle,
   assert(databaseHandle != NULL);
   assert(storageId != 0LL);
 
-  /* Note: do in single steps to avoid long-time-locking of database! */
+  // Note: do in single steps to avoid long-time-locking of database!
 
   error = Database_execute(databaseHandle,
                            NULL,
@@ -532,7 +532,7 @@ Errors Index_clear(DatabaseHandle *databaseHandle,
   assert(databaseHandle != NULL);
   assert(storageId != 0LL);
 
-  /* Note: do in single steps to avoid long-time-locking of database! */
+  // Note: do in single steps to avoid long-time-locking of database!
 
   error = Database_execute(databaseHandle,
                            NULL,
