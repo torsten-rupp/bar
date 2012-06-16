@@ -27,7 +27,7 @@
 
 /***************************** Constants *******************************/
 
-/* database open modes */
+// database open modes
 typedef enum
 {
   DATABASE_OPENMODE_CREATE,
@@ -40,21 +40,21 @@ typedef enum
 
 /***************************** Datatypes *******************************/
 
-/* database handle */
+// database handle
 typedef struct
 {
   Semaphore lock;
   sqlite3   *handle;
 } DatabaseHandle;
 
-/* database query handle */
+// database query handle
 typedef struct
 {
   DatabaseHandle *databaseHandle;
   sqlite3_stmt   *handle;
 } DatabaseQueryHandle;
 
-/* execute callback function */
+// execute callback function
 typedef bool(*DatabaseFunction)(void *userData, uint count, const char* names[], const char* vales[]);
 
 typedef int64 DatabaseId;

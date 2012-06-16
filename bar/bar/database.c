@@ -90,7 +90,7 @@ LOCAL String formatSQLString(String     sqlString,
     switch (ch)
     {
       case '\\':
-        /* escaped character */
+        // escaped character
         String_appendChar(sqlString,'\\');
         s++;
         if ((*s) != '\0')
@@ -100,10 +100,10 @@ LOCAL String formatSQLString(String     sqlString,
         }
         break;
       case '%':
-        /* format character */
+        // format character
         s++;
 
-        /* check for long flag */
+        // check for long flag
         if (    ((*s) != '\0')
              && ((*s) == 'l')
            )
@@ -116,7 +116,7 @@ LOCAL String formatSQLString(String     sqlString,
           longFlag = FALSE;
         }
 
-        /* quoting flag (ignore quote char) */
+        // quoting flag (ignore quote char)
         if (   ((*s) != '\0')
             && !isalpha(*s)
             && ((*s) != '%')
@@ -133,11 +133,11 @@ LOCAL String formatSQLString(String     sqlString,
           quoteFlag = FALSE;
         }
 
-        /* get format char */
+        // get format char
         switch (*s)
         {
           case 'd':
-            /* integer */
+            // integer
             s++;
 
             if (longFlag)
@@ -152,7 +152,7 @@ LOCAL String formatSQLString(String     sqlString,
             }
             break;
           case 'u':
-            /* unsigned integer */
+            // unsigned integer
             s++;
 
             if (longFlag)
@@ -167,7 +167,7 @@ LOCAL String formatSQLString(String     sqlString,
             }
             break;
           case 's':
-            /* C string */
+            // C string
             s++;
 
             value.s = va_arg(arguments,const char*);
@@ -200,7 +200,7 @@ LOCAL String formatSQLString(String     sqlString,
             if (quoteFlag) String_appendChar(sqlString,'\'');
             break;
           case 'S':
-            /* string */
+            // string
             s++;
 
             if (quoteFlag) String_appendChar(sqlString,'\'');
@@ -233,7 +233,7 @@ LOCAL String formatSQLString(String     sqlString,
             if (quoteFlag) String_appendChar(sqlString,'\'');
             break;
           case '%':
-            /* %% */
+            // %%
             s++;
 
             String_appendChar(sqlString,'%');
@@ -380,13 +380,13 @@ Errors Database_open(DatabaseHandle    *databaseHandle,
   assert(databaseHandle != NULL);
   assert(fileName != NULL);
 
-  /* create lock */
+  // create lock
   if (!Semaphore_init(&databaseHandle->lock))
   {
     return ERRORX(DATABASE,errno,"create database lock fail");
   }
 
-  /* create directory if needed */
+  // create directory if needed
   directory = File_getFilePathNameCString(String_new(),fileName);
   if (   !String_isEmpty(directory)
       && !File_isDirectory(directory)
@@ -406,7 +406,7 @@ Errors Database_open(DatabaseHandle    *databaseHandle,
   }
   File_deleteFileName(directory);
 
-  /* get mode */
+  // get mode
   sqliteMode = 0;
   switch (databaseOpenMode)
   {
@@ -415,7 +415,7 @@ Errors Database_open(DatabaseHandle    *databaseHandle,
     case DATABASE_OPENMODE_READWRITE: sqliteMode = SQLITE_OPEN_READWRITE;                    break;
   }
 
-  /* open database */
+  // open database
   sqliteResult = sqlite3_open_v2(fileName,&databaseHandle->handle,sqliteMode,NULL);
   if (sqliteResult != SQLITE_OK)
   {
@@ -423,7 +423,7 @@ Errors Database_open(DatabaseHandle    *databaseHandle,
     return ERRORX(DATABASE,sqlite3_errcode(databaseHandle->handle),sqlite3_errmsg(databaseHandle->handle));
   }
 
-  /* register REGEXP functions */
+  // register REGEXP functions
   sqlite3_create_function(databaseHandle->handle,
                           "regexp",
                           3,
@@ -483,7 +483,7 @@ Errors Database_execute(DatabaseHandle   *databaseHandle,
   assert(databaseHandle != NULL);
   assert(command != NULL);
 
-  /* format SQL command string */
+  // format SQL command string
   va_start(arguments,command);
   sqlString = formatSQLString(String_new(),
                               command,
@@ -491,7 +491,7 @@ Errors Database_execute(DatabaseHandle   *databaseHandle,
                              );
   va_end(arguments);
 
-  /* execute SQL command */
+  // execute SQL command
   error = ERROR_NONE;
   SEMAPHORE_LOCKED_DO(lockFlag,&databaseHandle->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
   {
@@ -521,7 +521,7 @@ Errors Database_execute(DatabaseHandle   *databaseHandle,
     return error;
   }
 
-  /* free resources */
+  // free resources
   String_delete(sqlString);
 
   return ERROR_NONE;
@@ -543,10 +543,10 @@ Errors Database_prepare(DatabaseQueryHandle *databaseQueryHandle,
   assert(databaseQueryHandle != NULL);
   assert(command != NULL);
 
-  /* initialize variables */
+  // initialize variables
   databaseQueryHandle->databaseHandle = databaseHandle;
 
-  /* format SQL command string */
+  // format SQL command string
   va_start(arguments,command);
   sqlString = formatSQLString(String_new(),
                               command,
@@ -554,7 +554,7 @@ Errors Database_prepare(DatabaseQueryHandle *databaseQueryHandle,
                              );
   va_end(arguments);
 
-  /* prepare SQL command execution */
+  // prepare SQL command execution
   error = ERROR_NONE;
   SEMAPHORE_LOCKED_DO(lockFlag,&databaseHandle->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
   {
@@ -582,7 +582,7 @@ Errors Database_prepare(DatabaseQueryHandle *databaseQueryHandle,
     return error;
   }
 
-  /* free resources */
+  // free resources
   String_delete(sqlString);
 
   return ERROR_NONE;
@@ -618,12 +618,12 @@ bool Database_getNextRow(DatabaseQueryHandle *databaseQueryHandle,
   {
     if (sqlite3_step(databaseQueryHandle->handle) == SQLITE_ROW)
     {
-      /* get data */
+      // get data
       column = 0;
       va_start(arguments,format);
       while ((*format) != '\0')
       {
-        /* find next format specifier */
+        // find next format specifier
         while (((*format) != '\0') && ((*format) != '%'))
         {
           format++;
@@ -633,7 +633,7 @@ bool Database_getNextRow(DatabaseQueryHandle *databaseQueryHandle,
         {
           format++;
 
-          /* skip align specifier */
+          // skip align specifier
           if (    ((*format) != '\0')
                && (   ((*format) == '-')
                    || ((*format) == '-')
@@ -643,7 +643,7 @@ bool Database_getNextRow(DatabaseQueryHandle *databaseQueryHandle,
             format++;
           }
 
-          /* get length specifier */
+          // get length specifier
           maxLength = -1;
           if (    ((*format) != '\0')
                && isdigit(*format)
@@ -659,7 +659,7 @@ bool Database_getNextRow(DatabaseQueryHandle *databaseQueryHandle,
             }
           }
 
-          /* check for long flag */
+          // check for long flag
           if (    ((*format) != '\0')
                && ((*format) == 'l')
              )
@@ -672,11 +672,11 @@ bool Database_getNextRow(DatabaseQueryHandle *databaseQueryHandle,
             longFlag = FALSE;
           }
 
-          /* handle format type */
+          // handle format type
           switch (*format)
           {
             case 'd':
-              /* integer */
+              // integer
               format++;
 
               if (longFlag)
@@ -697,7 +697,7 @@ bool Database_getNextRow(DatabaseQueryHandle *databaseQueryHandle,
               }
               break;
             case 'f':
-              /* float */
+              // float
               format++;
 
               if (longFlag)
@@ -718,7 +718,7 @@ bool Database_getNextRow(DatabaseQueryHandle *databaseQueryHandle,
               }
               break;
             case 'c':
-              /* char */
+              // char
               format++;
 
               value.ch = va_arg(arguments,char*);
@@ -728,7 +728,7 @@ bool Database_getNextRow(DatabaseQueryHandle *databaseQueryHandle,
               }
               break;
             case 's':
-              /* C string */
+              // C string
               format++;
 
               value.s = va_arg(arguments,char*);
@@ -746,7 +746,7 @@ bool Database_getNextRow(DatabaseQueryHandle *databaseQueryHandle,
               }
               break;
             case 'S':
-              /* string */
+              // string
               format++;
 
               value.string = va_arg(arguments,String*);
@@ -756,6 +756,7 @@ bool Database_getNextRow(DatabaseQueryHandle *databaseQueryHandle,
               }
               break;
             default:
+              Semaphore_unlock(&databaseQueryHandle->databaseHandle->lock);
               return FALSE;
               break;
           }
@@ -808,10 +809,10 @@ Errors Database_getInteger64(DatabaseHandle *databaseHandle,
   assert(tableName != NULL);
   assert(columnName != NULL);
 
-  /* init variables */
+  // init variables
   (*l) = DATABASE_ID_NONE;
 
-  /* format SQL command string */
+  // format SQL command string
   sqlString = String_format(String_new(),
                             "SELECT %s \
                              FROM %s \
@@ -831,7 +832,7 @@ Errors Database_getInteger64(DatabaseHandle *databaseHandle,
   }
   String_appendCString(sqlString," LIMIT 0,1");
 
-  /* execute SQL command */
+  // execute SQL command
   error = ERROR_NONE;
   SEMAPHORE_LOCKED_DO(lockFlag,&databaseHandle->lock,SEMAPHORE_LOCK_TYPE_READ)
   {
@@ -866,7 +867,7 @@ Errors Database_getInteger64(DatabaseHandle *databaseHandle,
     return error;
   }
 
-  /* free resources */
+  // free resources
   String_delete(sqlString);
 
   return ERROR_NONE;
@@ -892,10 +893,10 @@ Errors Database_getString(DatabaseHandle *databaseHandle,
   assert(tableName != NULL);
   assert(columnName != NULL);
 
-  /* init variables */
+  // init variables
   String_clear(string);
 
-  /* format SQL command string */
+  // format SQL command string
   sqlString = String_format(String_new(),
                             "SELECT %s \
                              FROM %s \
@@ -915,7 +916,7 @@ Errors Database_getString(DatabaseHandle *databaseHandle,
   }
   String_appendCString(sqlString," LIMIT 0,1");
 
-  /* execute SQL command */
+  // execute SQL command
   error = ERROR_NONE;
   SEMAPHORE_LOCKED_DO(lockFlag,&databaseHandle->lock,SEMAPHORE_LOCK_TYPE_READ)
   {
@@ -950,7 +951,7 @@ Errors Database_getString(DatabaseHandle *databaseHandle,
     return error;
   }
 
-  /* free resources */
+  // free resources
   String_delete(sqlString);
 
   return ERROR_NONE;
@@ -974,7 +975,7 @@ Errors Database_setInteger64(DatabaseHandle *databaseHandle,
   assert(tableName != NULL);
   assert(columnName != NULL);
 
-  /* format SQL command string */
+  // format SQL command string
   sqlString = String_format(String_new(),
                             "UPDATE %s \
                              SET %s=%ld \
@@ -994,7 +995,7 @@ Errors Database_setInteger64(DatabaseHandle *databaseHandle,
     va_end(arguments);
   }
 
-  /* execute SQL command */
+  // execute SQL command
   error = ERROR_NONE;
   SEMAPHORE_LOCKED_DO(lockFlag,&databaseHandle->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
   {
@@ -1022,7 +1023,7 @@ Errors Database_setInteger64(DatabaseHandle *databaseHandle,
     return error;
   }
 
-  /* free resources */
+  // free resources
   String_delete(sqlString);
 
   return ERROR_NONE;
@@ -1046,7 +1047,7 @@ Errors Database_setString(DatabaseHandle *databaseHandle,
   assert(tableName != NULL);
   assert(columnName != NULL);
 
-  /* format SQL command string */
+  // format SQL command string
   sqlString = String_format(String_new(),
                             "UPDATE %s \
                              SET %s=%'S \
@@ -1066,7 +1067,7 @@ Errors Database_setString(DatabaseHandle *databaseHandle,
     va_end(arguments);
   }
 
-  /* execute SQL command */
+  // execute SQL command
   error = ERROR_NONE;
   SEMAPHORE_LOCKED_DO(lockFlag,&databaseHandle->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
   {
@@ -1094,7 +1095,7 @@ Errors Database_setString(DatabaseHandle *databaseHandle,
     return error;
   }
 
-  /* free resources */
+  // free resources
   String_delete(sqlString);
 
   return ERROR_NONE;
