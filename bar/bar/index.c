@@ -744,6 +744,44 @@ Errors Index_setState(DatabaseHandle *databaseHandle,
   return ERROR_NONE;
 }
 
+long Index_countState(DatabaseHandle *databaseHandle,
+                      IndexStates    indexState
+                     )
+{
+  DatabaseQueryHandle databaseQueryHandle;
+  Errors              error;
+  long                count;
+
+  assert(databaseHandle != NULL);
+
+  error = Database_prepare(&databaseQueryHandle,
+                           databaseHandle,
+                           "SELECT COUNT(id) \
+                            FROM storage \
+                            WHERE (%d=%d OR state=%d) \
+                           ",
+                           indexState,
+                           INDEX_STATE_ALL,
+                           indexState
+                          );
+  if (error != ERROR_NONE)
+  {
+    return -1L;
+  }
+  if (!Database_getNextRow(&databaseQueryHandle,
+                           "%ld",
+                           &count
+                          )
+     )
+  {
+    Database_finalize(&databaseQueryHandle);
+    return -1L;
+  }
+  Database_finalize(&databaseQueryHandle);
+
+  return count;
+}
+
 Errors Index_initListStorage(DatabaseQueryHandle *databaseQueryHandle,
                              DatabaseHandle      *databaseHandle,
                              IndexStates         indexState,

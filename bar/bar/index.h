@@ -294,6 +294,20 @@ Errors Index_setState(DatabaseHandle *databaseHandle,
                      );
 
 /***********************************************************************\
+* Name   : Index_countState
+* Purpose: get number of storage entries
+* Input  : databaseHandle - database handle
+*          indexState     - index state; see IndexStates
+* Output : -
+* Return : number of entries or -1
+* Notes  : -
+\***********************************************************************/
+
+long Index_countState(DatabaseHandle *databaseHandle,
+                      IndexStates    indexState
+                     );
+
+/***********************************************************************\
 * Name   : Index_initListStorage
 * Purpose: list storage entries
 * Input  : databaseHandle - database handle
