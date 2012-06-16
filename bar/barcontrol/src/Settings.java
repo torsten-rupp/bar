@@ -83,7 +83,7 @@ public class Settings
 
   // debug
   public static boolean          debugFlag                      = false;
-  public static boolean          serverDebugFlag                = false;
+  public static boolean          debugServerFlag                = false;
 
   // help
   public static boolean          helpFlag                       = false;

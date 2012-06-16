@@ -821,7 +821,7 @@ public class BARControl
     new Option("--list",              "-l",Options.Types.BOOLEAN,    "listFlag"),
 
     new Option("--debug",             null,Options.Types.BOOLEAN,    "debugFlag"),
-    new Option("--bar-server-debug",  null,Options.Types.BOOLEAN,    "serverDebugFlag"),
+    new Option("--debug-server",      null,Options.Types.BOOLEAN,    "debugServerFlag"),
 
     new Option("--help",              "-h",Options.Types.BOOLEAN,    "helpFlag"),
 

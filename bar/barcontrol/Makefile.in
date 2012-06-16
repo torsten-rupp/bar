@@ -379,7 +379,7 @@ else
 endif
 runxdebug: $(OBJECTS)
 ifneq ($(JAVA),)
-	$(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl --debug --bar-server-debug $(OPTIONS) $(O)
+	$(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl --debug --debug-server $(OPTIONS) $(O)
 else
 	@$(ECHO) "ERROR: no 'java' command - cannot execute BARControl"
 endif
@@ -398,7 +398,7 @@ else
 endif
 rundevxdebug: $(OBJECTS)
 ifneq ($(JAVA),)
-	$(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl --port=39909 --key-file=../bar.jks --debug --bar-server-debug $(OPTIONS) $(O)
+	$(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl --port=39909 --key-file=../bar.jks --debug --debug-server $(OPTIONS) $(O)
 else
 	@$(ECHO) "ERROR: no 'java' command - cannot execute BARControl"
 endif

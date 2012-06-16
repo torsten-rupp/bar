@@ -450,7 +450,7 @@ class ReadThread extends Thread
               break;
             }
           }
-          if (Settings.serverDebugFlag) System.err.println("Network: received '"+line+"'");
+          if (Settings.debugServerFlag) System.err.println("Network: received '"+line+"'");
 
           // parse: line format <id> <error code> <completed flag> <data>
           String data[] = line.split(" ",4);
@@ -795,7 +795,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
       {
         throw new CommunicationError("No result from server");
       }
-      if (Settings.serverDebugFlag) System.err.println("Network: received '"+line+"'");
+      if (Settings.debugServerFlag) System.err.println("Network: received '"+line+"'");
       data = line.split(" ",2);
       if ((data.length < 2) || !data[0].equals("SESSION"))
       {
@@ -813,13 +813,13 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
       commandId++;
       line = Long.toString(commandId)+" AUTHORIZE "+encodeHex(authorizeData);
       output.write(line); output.write('\n'); output.flush();
-      if (Settings.serverDebugFlag) System.err.println("Network: sent '"+line+"'");
+      if (Settings.debugServerFlag) System.err.println("Network: sent '"+line+"'");
       line = input.readLine();
       if (line == null)
       {
         throw new CommunicationError("No result from server");
       }
-      if (Settings.serverDebugFlag) System.err.println("Network: received '"+line+"'");
+      if (Settings.debugServerFlag) System.err.println("Network: received '"+line+"'");
       data = line.split(" ",4);
       if (data.length < 3) // at least 3 values: <command id> <complete flag> <error code>
       {
@@ -836,13 +836,13 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
       // get version
       line = "VERSION";
       output.write(line); output.write('\n'); output.flush();
-      if (Settings.serverDebugFlag) System.err.println("Network: sent '"+line+"'");
+      if (Settings.debugServerFlag) System.err.println("Network: sent '"+line+"'");
       line = input.readLine();
       if (line == null)
       {
         throw new CommunicationError("No result from server");
       }
-      if (Settings.serverDebugFlag) System.err.println("Network: received '"+line+"'");
+      if (Settings.debugServerFlag) System.err.println("Network: received '"+line+"'");
       data = line.split(" ",5);
       if (data.length != 5) // exactly 5 values: <command id> <complete flag> <error code> <major version> <minor version>
       {
@@ -867,13 +867,13 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
       commandId++;
       line = Long.toString(commandId)+" GET FILE_SEPARATOR";
       output.write(line); output.write('\n'); output.flush();
-      if (Settings.serverDebugFlag) System.err.println("Network: sent '"+line+"'");
+      if (Settings.debugServerFlag) System.err.println("Network: sent '"+line+"'");
       line = input.readLine();
       if (line == null)
       {
         throw new CommunicationError("No result from server");
       }
-      if (Settings.serverDebugFlag) System.err.println("Network: received '"+line+"'");
+      if (Settings.debugServerFlag) System.err.println("Network: received '"+line+"'");
       data = line.split(" ",4);
       if (data.length < 4) // at least 4 values: <command id> <complete flag> <error code> <separator char>|<error text>
       {
@@ -957,12 +957,11 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
       try
       {
         output.write(line); output.write('\n'); output.flush();
-        if (Settings.serverDebugFlag) System.err.println("Network: sent '"+line+"'");
+        if (Settings.debugServerFlag) System.err.println("Network: sent '"+line+"'");
       }
       catch (IOException exception)
       {
         readThread.commandRemove(command);
-//        throw new CommunicationError("i/o error on "+socket.getInetAddress()+":"+socket.getPort()+" (error: "+exception.getMessage()+")");
         throw new CommunicationError(exception.getMessage());
       }
     }
@@ -1047,7 +1046,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
       try
       {
         output.write(line); output.write('\n'); output.flush();
-        if (Settings.serverDebugFlag) System.err.println("Network: sent '"+line+"'");
+        if (Settings.debugServerFlag) System.err.println("Network: sent '"+line+"'");
       }
       catch (IOException exception)
       {
