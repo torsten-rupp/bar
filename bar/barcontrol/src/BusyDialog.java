@@ -341,7 +341,7 @@ class BusyDialog
    */
   public void setMessage(final String message)
   {
-    if ((widgetMessage != null) && !dialog.isDisposed())
+    if ((widgetMessage != null) && !widgetMessage.isDisposed())
     {
       display.syncExec(new Runnable()
       {
@@ -364,6 +364,52 @@ class BusyDialog
     }
   }
 
+  /** set minimal progress value
+   * @param i index 0|1
+   * @param n value
+   */
+  public void setMinimum(int i, double n)
+  {
+    ProgressBar widgetProgressBar = null;
+    switch (i)
+    {
+      case 0: widgetProgressBar = widgetProgressBar0; break;
+      case 1: widgetProgressBar = widgetProgressBar1; break;
+    }
+    if (widgetProgressBar != null) widgetProgressBar.setMinimum(n);
+  }
+
+  /** set maximal progress value
+   * @param i index 0|1
+   * @param n value
+   */
+  public void setMaximum(int i, double n)
+  {
+    ProgressBar widgetProgressBar = null;
+    switch (i)
+    {
+      case 0: widgetProgressBar = widgetProgressBar0; break;
+      case 1: widgetProgressBar = widgetProgressBar1; break;
+    }
+    if (widgetProgressBar != null) widgetProgressBar.setMaximum(n);
+  }
+
+  /** set minimal progress value
+   * @param n value
+   */
+  public void setMinimum(double n)
+  {
+    setMinimum(0,n);
+  }
+
+  /** set maximal progress value
+   * @param n value
+   */
+  public void setMaximum(double n)
+  {
+    setMaximum(0,n);
+  }
+
   /** update busy dialog text
    * @param i index 0|1
    * @param text text to show (can be null)
@@ -371,7 +417,7 @@ class BusyDialog
    */
   public boolean updateText(final int i, final String text)
   {
-    if (!dialog.isDisposed())
+    if (!widgetText.isDisposed())
     {
       display.syncExec(new Runnable()
       {
@@ -417,7 +463,9 @@ class BusyDialog
    */
   public boolean updateProgressBar(final int i, final double n)
   {
-    if (!dialog.isDisposed())
+    if (   ((widgetProgressBar0 == null) || !widgetProgressBar0.isDisposed())
+        && ((widgetProgressBar1 == null) || !widgetProgressBar1.isDisposed())
+       )
     {
       display.syncExec(new Runnable()
       {
@@ -503,7 +551,7 @@ class BusyDialog
    */
   public void animate()
   {
-    if (!dialog.isDisposed())
+    if (!widgetImage.isDisposed())
     {
       display.syncExec(new Runnable()
       {
