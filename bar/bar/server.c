@@ -3267,6 +3267,7 @@ LOCAL void serverCommand_suspend(ClientInfo *clientInfo, uint id, const String a
   UNUSED_VARIABLE(arguments);
   UNUSED_VARIABLE(argumentCount);
 
+  // get mode
   if (argumentCount >= 1)
   {
     modeMask = arguments[0];
@@ -6721,6 +6722,71 @@ ENTRY_TYPE_FILE,
 }
 
 /***********************************************************************\
+* Name   : serverCommand_indexStorageInfo
+* Purpose: get database index storage info
+* Input  : clientInfo    - client info
+*          id            - command id
+*          arguments     - command arguments
+*          argumentCount - command arguments count
+* Output : -
+* Return : -
+* Notes  : Arguments:
+*          Result:
+*            <entries OK> <entries create> <entries update requested> \
+*            <entries update> <entries error>
+\***********************************************************************/
+
+LOCAL void serverCommand_indexStorageInfo(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
+{
+  Errors error;
+  ulong  storageEntryCountOK;
+  ulong  storageEntryCountCreate;
+  ulong  storageEntryCountUpdateRequested;
+  ulong  storageEntryCountUpdate;
+  ulong  storageEntryCountError;
+
+  assert(clientInfo != NULL);
+  assert(arguments != NULL);
+
+  UNUSED_VARIABLE(arguments);
+  UNUSED_VARIABLE(argumentCount);
+
+  if (indexDatabaseHandle != NULL)
+  {
+    storageEntryCountOK              = Index_countState(indexDatabaseHandle,INDEX_STATE_OK              );
+    storageEntryCountCreate          = Index_countState(indexDatabaseHandle,INDEX_STATE_CREATE          );
+    storageEntryCountUpdateRequested = Index_countState(indexDatabaseHandle,INDEX_STATE_UPDATE_REQUESTED);
+    storageEntryCountUpdate          = Index_countState(indexDatabaseHandle,INDEX_STATE_UPDATE          );
+    storageEntryCountError           = Index_countState(indexDatabaseHandle,INDEX_STATE_ERROR           );
+
+    if (   (storageEntryCountOK              >= 0L)
+        && (storageEntryCountCreate          >= 0L)
+        && (storageEntryCountUpdateRequested >= 0L)
+        && (storageEntryCountUpdate          >= 0L)
+        && (storageEntryCountError           >= 0L)
+       )
+    {
+      sendClientResult(clientInfo,id,TRUE,ERROR_NONE,
+                       "%ld %ld %ld %ld %ld",
+                       storageEntryCountOK,
+                       storageEntryCountCreate,
+                       storageEntryCountUpdateRequested,
+                       storageEntryCountUpdate,
+                       storageEntryCountError
+                      );
+    }
+    else
+    {
+      sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"get database indizes fail");
+    }
+  }
+  else
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"no index database initialized");
+  }
+}
+
+/***********************************************************************\
 * Name   : serverCommand_indexStorageList
 * Purpose: get database index storage list
 * Input  : clientInfo    - client info
@@ -8075,6 +8141,7 @@ SERVER_COMMANDS[] =
 
   { "RESTORE",                    serverCommand_restore,                 AUTHORIZATION_STATE_OK      },
 
+  { "INDEX_STORAGE_INFO",         serverCommand_indexStorageInfo,        AUTHORIZATION_STATE_OK      },
   { "INDEX_STORAGE_LIST",         serverCommand_indexStorageList,        AUTHORIZATION_STATE_OK      },
   { "INDEX_STORAGE_ADD",          serverCommand_indexStorageAdd,         AUTHORIZATION_STATE_OK      },
   { "INDEX_STORAGE_REMOVE",       serverCommand_indexStorageRemove,      AUTHORIZATION_STATE_OK      },
