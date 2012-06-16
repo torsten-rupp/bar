@@ -99,6 +99,14 @@ abstract class BackgroundTask
     thread.start();
   }
 
+  /** create background task
+   * @param busyDialog busy dialog
+   */
+  BackgroundTask(final BusyDialog busyDialog)
+  {
+    this(busyDialog,null);
+  }
+
   /** run method
    * @param busyDialog busy dialog
    * @param userData user data
@@ -2533,58 +2541,118 @@ class TabRestore
   {
     try
     {
-      if (Dialogs.confirm(shell,"Really remove all indizes with error state?"))
+      if (true || Dialogs.confirm(shell,"Really remove all indizes with error state?"))
       {
-        try
+        int    errorCode;
+        String result[] = new String[1];
+        errorCode = BARServer.executeCommand(String.format("INDEX_STORAGE_INFO"),result);
+        if (errorCode == Errors.NONE)
         {
-          String commandString = "INDEX_STORAGE_LIST "+
-                                 1+" "+
-                                 "ERROR "+
-                                 "*";
-          Command command = BARServer.runCommand(commandString);
-
-          // read results, update/add data
-          String line;
-          Object data[] = new Object[6];
-          while (!command.endOfData())
+          Object data[] = new Object[5];
+          if (StringParser.parse(result[0],"%ld %ld %ld %ld %ld",data,StringParser.QUOTE_CHARS))
           {
-            line = command.getNextResult(5*1000);
-            if (line != null)
-            {
-              if      (StringParser.parse(line,"%ld %ld %ld %S %S %S",data,StringParser.QUOTE_CHARS))
-              {
-                /* get data
-                   format:
-                     storage id
-                     date/time
-                     size
-                     state
-                     storage name
-                     error message
-                */
-                long storageId = (Long)data[0];
+            long storageEntryCountError = (Long)data[4];
 
-                String[] result = new String[1];
-                int errorCode = BARServer.executeCommand("INDEX_STORAGE_REMOVE "+
-                                                         "* "+
-                                                         storageId,
-                                                         result
-                                                        );
-                if (errorCode == Errors.NONE)
+            final BusyDialog busyDialog = new BusyDialog(shell,"Remove indizes",500,100,null,BusyDialog.TEXT0|BusyDialog.PROGRESS_BAR0);
+            busyDialog.setMaximum(storageEntryCountError);
+
+            new BackgroundTask(busyDialog)
+            {
+              public void run(final BusyDialog busyDialog, Object userData)
+              {
+                try
                 {
+                  int    errorCode;
+                  String result[] = new String[1];
+
+                  long n = 0;
+                  do
+                  {
+                    errorCode = BARServer.executeCommand(String.format("INDEX_STORAGE_LIST 1 ERROR *"),result);
+                    if (errorCode == Errors.NONE)
+                    {
+                      Object data[] = new Object[6];
+                      if (StringParser.parse(result[0],"%ld %ld %ld %S %S %S",data,StringParser.QUOTE_CHARS))
+                      {
+                        /* get data
+                           format:
+                             storage id
+                             date/time
+                             size
+                             state
+                             storage name
+                             error message
+                        */
+                        long   storageId   = (Long)data[0];
+                        String storageName = (String)data[4];
+
+                        busyDialog.updateText(0,"'"+storageName+"'");
+
+                        errorCode = BARServer.executeCommand("INDEX_STORAGE_REMOVE "+
+                                                             "* "+
+                                                             storageId,
+                                                             result
+                                                            );
+                        if (errorCode == Errors.NONE)
+                        {
+                          busyDialog.updateText(0,"'"+storageName+"'");
+                        }
+                        else
+                        {
+                          Dialogs.error(shell,"Cannot remove database indizes for '"+storageName+"' (error: "+result[0]+")");
+                        }
+
+                        n++;
+                        busyDialog.updateProgressBar(n);
+                      }
+                      else
+                      {
+                        // parse error -> stop
+                        break;
+                      }
+                    }
+                    else
+                    {
+                      Dialogs.error(shell,"Cannot remove database indizes with error state (error: "+result[0]+")");
+                      break;
+                    }
+                  }
+                  while (!busyDialog.isAborted());
+
+                  // close busy dialog, restore cursor
+                  display.syncExec(new Runnable()
+                  {
+                    public void run()
+                    {
+                      busyDialog.close();
+                    }
+                  });
+
                   updateStorageListThread.triggerUpdate(storagePattern,storageIndexState,storageMaxCount);
                 }
-                else
+                catch (CommunicationError error)
                 {
-                  Dialogs.error(shell,"Cannot remove database indizes with error state (error: "+result[0]+")");
+                  final String errorMessage = error.getMessage();
+                  display.syncExec(new Runnable()
+                  {
+                    public void run()
+                    {
+                      busyDialog.close();
+                      Dialogs.error(shell,"Communication error while removing database indizes (error: "+errorMessage+")");
+                     }
+                  });
                 }
               }
-            }
+            };
+          }
+          else
+          {
+            // parse error -> ignored
           }
         }
-        catch (CommunicationError error)
+        else
         {
-          // ignored
+          Dialogs.error(shell,"Communication error while removing database indizes (error: "+result[0]+")");
         }
       }
     }
