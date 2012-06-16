@@ -2491,47 +2491,85 @@ class TabRestore
    */
   private void removeStorageIndex()
   {
-    try
+    HashSet<StorageData> selectedStorageHashSet = new HashSet<StorageData>();
+
+    getCheckedStorageHashSet(selectedStorageHashSet);
+    getSelectedStorageHashSet(selectedStorageHashSet);
+    if (!selectedStorageHashSet.isEmpty())
     {
-      HashSet<StorageData> selectedStorageHashSet = new HashSet<StorageData>();
-
-      getCheckedStorageHashSet(selectedStorageHashSet);
-      getSelectedStorageHashSet(selectedStorageHashSet);
-      if (!selectedStorageHashSet.isEmpty())
+      if (Dialogs.confirm(shell,"Really remove index for "+selectedStorageHashSet.size()+" entries?"))
       {
-        if (Dialogs.confirm(shell,"Really remove index for "+selectedStorageHashSet.size()+" entries?"))
-        {
-          for (StorageData storageData : selectedStorageHashSet)
-          {
-            // get archive name parts
-            ArchiveNameParts archiveNameParts = new ArchiveNameParts(storageData.name);
+        final BusyDialog busyDialog = new BusyDialog(shell,"Remove indizes",500,100,null,BusyDialog.TEXT0|BusyDialog.PROGRESS_BAR0);
+        busyDialog.setMaximum(selectedStorageHashSet.size());
 
-            // remove entry
-            String[] result = new String[1];
-            int errorCode = BARServer.executeCommand("INDEX_STORAGE_REMOVE "+
-                                                     "* "+
-                                                     storageData.id,
-                                                     result
-                                                    );
-            if (errorCode == Errors.NONE)
+        new BackgroundTask(busyDialog,new Object[]{selectedStorageHashSet})
+        {
+          public void run(final BusyDialog busyDialog, Object userData)
+          {
+            HashSet<StorageData> selectedStorageHashSet = (HashSet<StorageData>)((Object[])userData)[0];
+
+            try
             {
-              synchronized(storageDataMap)
+              long n = 0;
+              for (StorageData storageData : selectedStorageHashSet)
               {
-                storageDataMap.remove(storageData);
+                // get archive name parts
+                ArchiveNameParts archiveNameParts = new ArchiveNameParts(storageData.name);
+
+                // remove entry
+                String[] result = new String[1];
+                int errorCode = BARServer.executeCommand("INDEX_STORAGE_REMOVE "+
+                                                         "* "+
+                                                         storageData.id,
+                                                         result
+                                                        );
+                if (errorCode == Errors.NONE)
+                {
+                  synchronized(storageDataMap)
+                  {
+                    storageDataMap.remove(storageData);
+                  }
+                  Widgets.removeTableEntry(widgetStorageList,storageData);
+                }
+                else
+                {
+                  Dialogs.error(shell,"Cannot remove database index for storage file\n\n'"+archiveNameParts.getPrintableName()+"'\n\n(error: "+result[0]+")");
+                }
+
+                // update progress bar
+                n++;
+                busyDialog.updateProgressBar(n);
+
+                // check for abort
+                if (busyDialog.isAborted()) break;
               }
-              Widgets.removeTableEntry(widgetStorageList,storageData);
+
+              // close busy dialog, restore cursor
+              display.syncExec(new Runnable()
+              {
+                public void run()
+                {
+                  busyDialog.close();
+                }
+              });
+
+              updateStorageListThread.triggerUpdate(storagePattern,storageIndexState,storageMaxCount);
             }
-            else
+            catch (CommunicationError error)
             {
-              Dialogs.error(shell,"Cannot remove database index for storage file\n\n'"+archiveNameParts.getPrintableName()+"'\n\n(error: "+result[0]+")");
+              final String errorMessage = error.getMessage();
+              display.syncExec(new Runnable()
+              {
+                public void run()
+                {
+                  busyDialog.close();
+                  Dialogs.error(shell,"Communication error while removing database indizes (error: "+errorMessage+")");
+                 }
+              });
             }
           }
-        }
+        };
       }
-    }
-    catch (CommunicationError error)
-    {
-      Dialogs.error(shell,"Communication error while removing database index (error: "+error.toString()+")");
     }
   }
 
@@ -2602,6 +2640,7 @@ class TabRestore
                           Dialogs.error(shell,"Cannot remove database indizes for '"+storageName+"' (error: "+result[0]+")");
                         }
 
+                        // update progress bar
                         n++;
                         busyDialog.updateProgressBar(n);
                       }
