@@ -341,11 +341,11 @@ class BusyDialog
    */
   public void setMessage(final String message)
   {
-    if ((widgetMessage != null) && !widgetMessage.isDisposed())
+    display.syncExec(new Runnable()
     {
-      display.syncExec(new Runnable()
+      public void run()
       {
-        public void run()
+        if ((widgetMessage != null) && !widgetMessage.isDisposed())
         {
           widgetMessage.setText(message);
           display.update();
@@ -360,8 +360,8 @@ class BusyDialog
             if (widgetMessage.getSize().x < width) dialog.pack();
           }
         }
-      });
-    }
+      }
+    });
   }
 
   /** set minimal progress value
@@ -417,34 +417,40 @@ class BusyDialog
    */
   public boolean updateText(final int i, final String text)
   {
-    if (!widgetText.isDisposed())
+    if (   ((widgetText0 == null) || !widgetText0.isDisposed())
+        && ((widgetText1 == null) || !widgetText1.isDisposed())
+       )
     {
       display.syncExec(new Runnable()
       {
         public void run()
         {
-          if (text != null)
+          Label widgetText = null;
+          switch (i)
           {
-            Label widgetText        = null;
-            switch (i)
-            {
-              case 0: widgetText = widgetText0; break;
-              case 1: widgetText = widgetText1; break;
-            }
-            if ((text != null) && (widgetText != null)) widgetText.setText(text);
-
-            /* resize dialog (it not manually changed) */
-            if (!resizedFlag)
-            {
-              GC gc = new GC(widgetText);
-              int width = gc.stringExtent(text).x;
-              gc.dispose();
-
-              if (widgetText.getSize().x < width) dialog.pack();
-            }
+            case 0: widgetText = widgetText0; break;
+            case 1: widgetText = widgetText1; break;
           }
 
-          display.update();
+          if ((widgetText == null) || !widgetText.isDisposed())
+          {
+            if (text != null)
+            {
+              if ((text != null) && (widgetText != null)) widgetText.setText(text);
+
+              /* resize dialog (it not manually changed) */
+              if (!resizedFlag)
+              {
+                GC gc = new GC(widgetText);
+                int width = gc.stringExtent(text).x;
+                gc.dispose();
+
+                if (widgetText.getSize().x < width) dialog.pack();
+              }
+            }
+
+            display.update();
+          }
         }
       });
 
@@ -477,9 +483,12 @@ class BusyDialog
             case 0: widgetProgressBar = widgetProgressBar0; break;
             case 1: widgetProgressBar = widgetProgressBar1; break;
           }
-          if (widgetProgressBar != null) widgetProgressBar.setSelection(n);
+          if ((widgetProgressBar == null) || !widgetProgressBar.isDisposed())
+          {
+            if (widgetProgressBar != null) widgetProgressBar.setSelection(n);
 
-          display.update();
+            display.update();
+          }
         }
       });
 
@@ -551,11 +560,11 @@ class BusyDialog
    */
   public void animate()
   {
-    if (!widgetImage.isDisposed())
+    display.syncExec(new Runnable()
     {
-      display.syncExec(new Runnable()
+      public void run()
       {
-        public void run()
+        if (!widgetImage.isDisposed())
         {
           long timestamp = System.currentTimeMillis();
           if (timestamp > (animationImageTimestamp+250))
@@ -565,8 +574,8 @@ class BusyDialog
             widgetImage.setImage(animationImages[animationImageIndex]);
           }
         }
-      });
-    }
+      }
+    });
   }
 
 }
