@@ -71,10 +71,10 @@ public class Settings
   public static String           runJobName                      = null;
   public static ArchiveTypes     archiveType                     = ArchiveTypes.NORMAL;
   public static String           abortJobName                    = null;
-  public static String           databaseIndexAddStorageName     = null;
-  public static String           databaseIndexRemoveStorageName  = null;
-  public static String           databaseIndexStorageListPattern = null;
-  public static String           databaseIndexEntriesListPattern = null;
+  public static String           indexDatabaseAddStorageName     = null;
+  public static String           indexDatabaseRemoveStorageName  = null;
+  public static String           indexDatabaseStorageListPattern = null;
+  public static String           indexDatabaseEntriesListPattern = null;
   public static int              pauseTime                       = 0;
   public static boolean          pingFlag                        = false;
   public static boolean          suspendFlag                     = false;
@@ -124,7 +124,7 @@ public class Settings
           {
             pauseRestoreFlag = (Boolean)data[0];
           }
-          else if (StringParser.parse(line,"pause-database-index-update = %y",data,StringParser.QUOTE_CHARS))
+          else if (StringParser.parse(line,"pause-index-database-update = %y",data,StringParser.QUOTE_CHARS))
           {
             pauseIndexUpdateFlag = (Boolean)data[0];
           }

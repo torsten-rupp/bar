@@ -810,10 +810,10 @@ public class BARControl
     new Option("--job",                        "-j",Options.Types.STRING,     "runJobName"),
     new Option("--archive-type",               null,Options.Types.ENUMERATION,"archiveType",archiveTypeEnumeration),
     new Option("--abort",                      null,Options.Types.STRING,     "abortJobName"),
-    new Option("--database-index-add",         null,Options.Types.STRING,     "databaseIndexAddStorageName"),
-    new Option("--database-index-remove",      null,Options.Types.STRING,     "databaseIndexRemoveStorageName"),
-    new Option("--database-index-storage-list",null,Options.Types.STRING,     "databaseIndexStorageListPattern"),
-    new Option("--database-index-entries-list",null,Options.Types.STRING,     "databaseIndexEntriesListPattern"),
+    new Option("--index-database-add",         null,Options.Types.STRING,     "indexDatabaseAddStorageName"),
+    new Option("--index-database-remove",      null,Options.Types.STRING,     "indexDatabaseRemoveStorageName"),
+    new Option("--index-database-storage-list",null,Options.Types.STRING,     "indexDatabaseStorageListPattern"),
+    new Option("--index-database-entries-list",null,Options.Types.STRING,     "indexDatabaseEntriesListPattern"),
     new Option("--pause",                      "-t",Options.Types.INTEGER,    "pauseTime"),
     new Option("--ping",                       "-i",Options.Types.BOOLEAN,    "pingFlag"),
     new Option("--suspend",                    "-s",Options.Types.BOOLEAN,    "suspendFlag"),
@@ -1470,10 +1470,10 @@ public class BARControl
       // commands
       if (   (Settings.runJobName != null)
           || (Settings.abortJobName != null)
-          || (Settings.databaseIndexAddStorageName != null)
-          || (Settings.databaseIndexRemoveStorageName != null)
-          || (Settings.databaseIndexStorageListPattern != null)
-          || (Settings.databaseIndexEntriesListPattern != null)
+          || (Settings.indexDatabaseAddStorageName != null)
+          || (Settings.indexDatabaseRemoveStorageName != null)
+          || (Settings.indexDatabaseStorageListPattern != null)
+          || (Settings.indexDatabaseEntriesListPattern != null)
           || (Settings.pauseTime > 0)
           || (Settings.pingFlag)
           || (Settings.suspendFlag)
@@ -1519,34 +1519,34 @@ public class BARControl
             System.exit(1);
           }
         }
-        if (Settings.databaseIndexAddStorageName != null)
+        if (Settings.indexDatabaseAddStorageName != null)
         {
           // add index for storage
           String[] result = new String[1];
-          int errorCode = BARServer.executeCommand("INDEX_STORAGE_ADD "+StringUtils.escape(Settings.databaseIndexAddStorageName),result);
+          int errorCode = BARServer.executeCommand("INDEX_STORAGE_ADD "+StringUtils.escape(Settings.indexDatabaseAddStorageName),result);
           if (errorCode != Errors.NONE)
           {
-            printError("cannot add index for storage '%s' to index (error: %s)",Settings.databaseIndexAddStorageName,result[0]);
+            printError("cannot add index for storage '%s' to index (error: %s)",Settings.indexDatabaseAddStorageName,result[0]);
             BARServer.disconnect();
             System.exit(1);
           }
         }
-        if (Settings.databaseIndexRemoveStorageName != null)
+        if (Settings.indexDatabaseRemoveStorageName != null)
         {
           // remote index for storage
           String[] result = new String[1];
-          int errorCode = BARServer.executeCommand("INDEX_STORAGE_REMOVE "+StringUtils.escape(Settings.databaseIndexRemoveStorageName),result);
+          int errorCode = BARServer.executeCommand("INDEX_STORAGE_REMOVE "+StringUtils.escape(Settings.indexDatabaseRemoveStorageName),result);
           if (errorCode != Errors.NONE)
           {
-            printError("cannot remove index for storage '%s' from index (error: %s)",Settings.databaseIndexRemoveStorageName,result[0]);
+            printError("cannot remove index for storage '%s' from index (error: %s)",Settings.indexDatabaseRemoveStorageName,result[0]);
             BARServer.disconnect();
             System.exit(1);
           }
         }
-        if (Settings.databaseIndexStorageListPattern != null)
+        if (Settings.indexDatabaseStorageListPattern != null)
         {
           // list storage index
-          Command command = BARServer.runCommand("INDEX_STORAGE_LIST 0 * "+StringUtils.escape(Settings.databaseIndexStorageListPattern));
+          Command command = BARServer.runCommand("INDEX_STORAGE_LIST 0 * "+StringUtils.escape(Settings.indexDatabaseStorageListPattern));
           String   line;
           Object[] data = new Object[5];
           while (!command.endOfData())
@@ -1586,10 +1586,10 @@ public class BARControl
             System.exit(1);
           }
         }
-        if (Settings.databaseIndexEntriesListPattern != null)
+        if (Settings.indexDatabaseEntriesListPattern != null)
         {
           // list storage index
-          Command  command = BARServer.runCommand("INDEX_ENTRIES_LIST 100 0 "+StringUtils.escape(Settings.databaseIndexEntriesListPattern));
+          Command  command = BARServer.runCommand("INDEX_ENTRIES_LIST 100 0 "+StringUtils.escape(Settings.indexDatabaseEntriesListPattern));
           String   line;
           Object[] data = new Object[9];
           while (!command.endOfData())
