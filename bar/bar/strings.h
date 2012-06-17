@@ -810,9 +810,11 @@ bool String_scanCString(const char *s, const char *format, ...);
 *            - match also specified text
 *            - %<n>s will return max. <n-1> characters and always add
 *              a \0 at the end of the string
-*            - %s and %S are parsed as strings which could be enclosed
-*              in "..." or '...'
+*            - %[<c>]s and %[<c>]S are parsed as strings which could
+*              be enclosed in "..." or '...'
 *            - % s and % S parse rest of string (including spaces)
+*            - % [<c>]s and % [<c>]S are parse rest of string as
+*              string which could be enclosed in "..." or '...'
 *            - %y boolean
 *            - if a value is NULL, skip value
 \***********************************************************************/

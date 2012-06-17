@@ -340,7 +340,7 @@ LOCAL const char *parseNextFormatToken(const char *format, FormatToken *formatTo
   ADD_CHAR(formatToken,(*format));
   format++;
 
-  // flags
+  // flags, quote char
   while (   ((*format) != '\0')
          && (   ((*format) == '#')
              || ((*format) == '0')
@@ -943,16 +943,19 @@ LOCAL bool parseString(const char    *string,
   FormatToken formatToken;
   union
   {
-    int             *i;
-    long int        *l;
-    long long int   *ll;
-    float           *f;
-    double          *d;
-    char            *c;
-    char            *s;
-    void            *p;
-    bool            *b;
-    struct __String *string;
+    int                *i;
+    long               *l;
+    long long          *ll;
+    unsigned int       *ui;
+    unsigned long      *ul;
+    unsigned long long *ull;
+    float              *f;
+    double             *d;
+    char               *c;
+    char               *s;
+    void               *p;
+    bool               *b;
+    struct __String    *string;
   } value;
   char        buffer[64];
   ulong       z;
@@ -985,7 +988,6 @@ LOCAL bool parseString(const char    *string,
         {
           case 'i':
           case 'd':
-          case 'u':
             // get data
             z = 0L;
             if ((index < length) && ((string[index] == '+') || (string[index] == '-')))
@@ -1021,6 +1023,53 @@ LOCAL bool parseString(const char    *string,
                 case FORMAT_LENGTH_TYPE_LONGLONG:
                   value.ll = va_arg(arguments,long long int*);
                   if (value.ll != NULL) (*value.ll) = strtoll(buffer,NULL,10);
+                  break;
+                default:
+                  #ifndef NDEBUG
+                    HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+                  #endif /* NDEBUG */
+                  break; /* not reached */
+              }
+            }
+            else
+            {
+              return FALSE;
+            }
+            break;
+          case 'u':
+            // get data
+            z = 0L;
+            if ((index < length) && (string[index] == '+'))
+            {
+              index++;
+            }
+            while (   (index < length)
+                   && (z < sizeof(buffer)-1)
+                   && isdigit(string[index])
+                  )
+            {
+              buffer[z] = string[index];
+              z++;
+              index++;
+            }
+            buffer[z] = '\0';
+
+            // convert
+            if (z > 0)
+            {
+              switch (formatToken.lengthType)
+              {
+                case FORMAT_LENGTH_TYPE_INTEGER:
+                  value.ui = va_arg(arguments,unsigned int*);
+                  if (value.ui != NULL) (*value.i) = (unsigned int)strtol(buffer,NULL,10);
+                  break;
+                case FORMAT_LENGTH_TYPE_LONG:
+                  value.ul = va_arg(arguments,unsigned long int*);
+                  if (value.ul != NULL) (*value.l) = (unsigned long int)strtol(buffer,NULL,10);
+                  break;
+                case FORMAT_LENGTH_TYPE_LONGLONG:
+                  value.ull = va_arg(arguments,unsigned long long int*);
+                  if (value.ull != NULL) (*value.ull) = (unsigned long long int)strtoll(buffer,NULL,10);
                   break;
                 default:
                   #ifndef NDEBUG
