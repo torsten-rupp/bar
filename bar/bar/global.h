@@ -121,13 +121,14 @@
 /**************************** Datatypes ********************************/
 #ifndef HAVE_STDBOOL_H
   #ifndef __cplusplus
-    typedef uint8_t          bool;
+    typedef uint8_t bool;
   #endif
 #endif
 
-typedef unsigned char      uchar;
-typedef short int          shortint;
-typedef unsigned short int ushortint;
+typedef unsigned char       uchar;
+typedef short int           shortint;
+typedef unsigned short int  ushortint;
+typedef unsigned long long  ulonglong;
 
 typedef enum
 {
