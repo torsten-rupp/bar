@@ -2381,7 +2381,7 @@ class TabRestore
     }
   }
 
-  /** add storage to database index
+  /** add storage to index database
    */
   private void addStorageIndex()
   {
@@ -2392,7 +2392,7 @@ class TabRestore
     Button     widgetAdd;
 
     // create dialog
-    final Shell dialog = Dialogs.openModal(shell,"Add storage to database index",400,SWT.DEFAULT,new double[]{1.0,0.0},1.0);
+    final Shell dialog = Dialogs.openModal(shell,"Add storage to index database",400,SWT.DEFAULT,new double[]{1.0,0.0},1.0);
 
     // create widgets
     composite = Widgets.newComposite(dialog);
@@ -2482,12 +2482,12 @@ class TabRestore
       }
       else
       {
-        Dialogs.error(shell,"Cannot add database index for storage file\n\n'"+storageName+"'\n\n(error: "+result[0]+")");
+        Dialogs.error(shell,"Cannot add index database for storage file\n\n'"+storageName+"'\n\n(error: "+result[0]+")");
       }
     }
   }
 
-  /** remove storage from database index
+  /** remove storage from index database
    */
   private void removeStorageIndex()
   {
@@ -2533,8 +2533,7 @@ class TabRestore
                 }
                 else
                 {
-                  Dialogs.error(shell,"Cannot remove database index for storage file\n\n'"+archiveNameParts.getPrintableName()+"'\n\n(error: "+result[0]+")");
-                }
+                  Dialogs.error(shell,"Cannot remove index database for storage file\n\n'"+archiveNameParts.getPrintableName()+"'\n\n(error: "+result[0]+")");               }
 
                 // update progress bar
                 n++;
@@ -2573,7 +2572,7 @@ class TabRestore
     }
   }
 
-  /** remove all storage from database index with error
+  /** remove all storage from index database with error
    */
   private void removeAllWithErrorStorageIndex()
   {
@@ -2701,7 +2700,7 @@ class TabRestore
     }
   }
 
-  /** refresh storage from database index
+  /** refresh storage from index database
    */
   private void refreshStorageIndex()
   {
@@ -2729,7 +2728,7 @@ class TabRestore
             }
             else
             {
-              Dialogs.error(shell,"Cannot refresh database index for storage file\n\n'"+storageData.name+"'\n\n(error: "+result[0]+")");
+              Dialogs.error(shell,"Cannot refresh index database for storage file\n\n'"+storageData.name+"'\n\n(error: "+result[0]+")");
             }
           }
 
@@ -2739,11 +2738,11 @@ class TabRestore
     }
     catch (CommunicationError error)
     {
-      Dialogs.error(shell,"Communication error while refreshing database index (error: "+error.toString()+")");
+      Dialogs.error(shell,"Communication error while refreshing index database (error: "+error.toString()+")");
     }
   }
 
-  /** refresh all storage from database index with error
+  /** refresh all storage from index database with error
    */
   private void refreshAllWithErrorStorageIndex()
   {
