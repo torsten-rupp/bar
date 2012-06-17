@@ -371,7 +371,7 @@ struct JobOptions
   bool                        waitFirstVolumeFlag;               // TRUE for wait for first volume
   bool                        rawImagesFlag;                     // TRUE for storing raw images
   bool                        noFragmentsCheckFlag;              // TRUE to skip checking file fragments for completeness
-  bool                        noIndexDatabaseFlag;               // TRUE for do not store database index for archives
+  bool                        noIndexDatabaseFlag;               // TRUE for do not store index database for archives
   bool                        dryRunFlag;                        // TRUE to do a dry-run (do not store, do not create incremental data, do not store in database)
   bool                        noStorageFlag;                     // TRUE to skip storage, only create incremental data file
   bool                        noBAROnMediumFlag;                 // TRUE for not storing BAR on medium
