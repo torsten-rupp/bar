@@ -52,41 +52,41 @@ public class Settings
   // --------------------------- variables --------------------------------
 
   // program settings
-  public static boolean          pauseCreateFlag                = true;
-  public static boolean          pauseStorageFlag               = false;
-  public static boolean          pauseRestoreFlag               = true;
-  public static boolean          pauseIndexUpdateFlag           = false;
+  public static boolean          pauseCreateFlag                 = true;
+  public static boolean          pauseStorageFlag                = false;
+  public static boolean          pauseRestoreFlag                = true;
+  public static boolean          pauseIndexUpdateFlag            = false;
 
   // server settings
-  public static String           serverName                     = DEFAULT_SERVER_NAME;
-  public static String           serverPassword                 = null;
-  public static int              serverPort                     = DEFAULT_SERVER_PORT;
-  public static int              serverTLSPort                  = DEFAULT_SERVER_TLS_PORT;
-  public static String           serverKeyFileName              = null;
+  public static String           serverName                      = DEFAULT_SERVER_NAME;
+  public static String           serverPassword                  = null;
+  public static int              serverPort                      = DEFAULT_SERVER_PORT;
+  public static int              serverTLSPort                   = DEFAULT_SERVER_TLS_PORT;
+  public static String           serverKeyFileName               = null;
 
-  public static String           selectedJobName                = null;
-  public static boolean          loginDialogFlag                = false;
+  public static String           selectedJobName                 = null;
+  public static boolean          loginDialogFlag                 = false;
 
   // commands and data
-  public static String           runJobName                     = null;
-  public static ArchiveTypes     archiveType                    = ArchiveTypes.NORMAL;
-  public static String           abortJobName                   = null;
-  public static String           indexAddStorageName            = null;
-  public static String           indexRemoveStorageName         = null;
-  public static String           indexStorageListPattern        = null;
-  public static String           indexEntriesListPattern        = null;
-  public static int              pauseTime                      = 0;
-  public static boolean          pingFlag                       = false;
-  public static boolean          suspendFlag                    = false;
-  public static boolean          continueFlag                   = false;
-  public static boolean          listFlag                       = false;
+  public static String           runJobName                      = null;
+  public static ArchiveTypes     archiveType                     = ArchiveTypes.NORMAL;
+  public static String           abortJobName                    = null;
+  public static String           databaseIndexAddStorageName     = null;
+  public static String           databaseIndexRemoveStorageName  = null;
+  public static String           databaseIndexStorageListPattern = null;
+  public static String           databaseIndexEntriesListPattern = null;
+  public static int              pauseTime                       = 0;
+  public static boolean          pingFlag                        = false;
+  public static boolean          suspendFlag                     = false;
+  public static boolean          continueFlag                    = false;
+  public static boolean          listFlag                        = false;
 
   // debug
-  public static boolean          debugFlag                      = false;
-  public static boolean          debugServerFlag                = false;
+  public static boolean          debugFlag                       = false;
+  public static boolean          debugServerFlag                 = false;
 
   // help
-  public static boolean          helpFlag                       = false;
+  public static boolean          helpFlag                        = false;
 
   // ------------------------ native functions ----------------------------
 
@@ -98,7 +98,7 @@ public class Settings
    */
   public static int load(String fileName)
   {
-    /* read $HOME/.bar/.barcontrol.cfg */
+    // read $HOME/.bar/.barcontrol.cfg
     File barControlConfig = new File(fileName);
     if (barControlConfig.exists())
     {
@@ -124,7 +124,7 @@ public class Settings
           {
             pauseRestoreFlag = (Boolean)data[0];
           }
-          else if (StringParser.parse(line,"pause-index-update = %y",data,StringParser.QUOTE_CHARS))
+          else if (StringParser.parse(line,"pause-database-index-update = %y",data,StringParser.QUOTE_CHARS))
           {
             pauseIndexUpdateFlag = (Boolean)data[0];
           }

@@ -801,32 +801,32 @@ public class BARControl
 
   private static final Option[] options =
   {
-    new Option("--port",              "-p",Options.Types.INTEGER,    "serverPort"),
-    new Option("--tls-port",          null,Options.Types.INTEGER,    "serverTLSPort"),
-    new Option("--key-file",          null,Options.Types.STRING,     "serverKeyFileName"),
-    new Option("--select-job",        null,Options.Types.STRING,     "selectedJobName"),
-    new Option("--login-dialog",      null,Options.Types.BOOLEAN,    "loginDialogFlag"),
+    new Option("--port",                       "-p",Options.Types.INTEGER,    "serverPort"),
+    new Option("--tls-port",                   null,Options.Types.INTEGER,    "serverTLSPort"),
+    new Option("--key-file",                   null,Options.Types.STRING,     "serverKeyFileName"),
+    new Option("--select-job",                 null,Options.Types.STRING,     "selectedJobName"),
+    new Option("--login-dialog",               null,Options.Types.BOOLEAN,    "loginDialogFlag"),
 
-    new Option("--job",               "-j",Options.Types.STRING,     "runJobName"),
-    new Option("--archive-type",      null,Options.Types.ENUMERATION,"archiveType",archiveTypeEnumeration),
-    new Option("--abort",             null,Options.Types.STRING,     "abortJobName"),
-    new Option("--index-add",         null,Options.Types.STRING,     "indexAddStorageName"),
-    new Option("--index-remove",      null,Options.Types.STRING,     "indexRemoveStorageName"),
-    new Option("--index-storage-list",null,Options.Types.STRING,     "indexStorageListPattern"),
-    new Option("--index-entries-list",null,Options.Types.STRING,     "indexEntriesListPattern"),
-    new Option("--pause",             "-t",Options.Types.INTEGER,    "pauseTime"),
-    new Option("--ping",              "-i",Options.Types.BOOLEAN,    "pingFlag"),
-    new Option("--suspend",           "-s",Options.Types.BOOLEAN,    "suspendFlag"),
-    new Option("--continue",          "-c",Options.Types.BOOLEAN,    "continueFlag"),
-    new Option("--list",              "-l",Options.Types.BOOLEAN,    "listFlag"),
+    new Option("--job",                        "-j",Options.Types.STRING,     "runJobName"),
+    new Option("--archive-type",               null,Options.Types.ENUMERATION,"archiveType",archiveTypeEnumeration),
+    new Option("--abort",                      null,Options.Types.STRING,     "abortJobName"),
+    new Option("--database-index-add",         null,Options.Types.STRING,     "databaseIndexAddStorageName"),
+    new Option("--database-index-remove",      null,Options.Types.STRING,     "databaseIndexRemoveStorageName"),
+    new Option("--database-index-storage-list",null,Options.Types.STRING,     "databaseIndexStorageListPattern"),
+    new Option("--database-index-entries-list",null,Options.Types.STRING,     "databaseIndexEntriesListPattern"),
+    new Option("--pause",                      "-t",Options.Types.INTEGER,    "pauseTime"),
+    new Option("--ping",                       "-i",Options.Types.BOOLEAN,    "pingFlag"),
+    new Option("--suspend",                    "-s",Options.Types.BOOLEAN,    "suspendFlag"),
+    new Option("--continue",                   "-c",Options.Types.BOOLEAN,    "continueFlag"),
+    new Option("--list",                       "-l",Options.Types.BOOLEAN,    "listFlag"),
 
-    new Option("--debug",             null,Options.Types.BOOLEAN,    "debugFlag"),
-    new Option("--debug-server",      null,Options.Types.BOOLEAN,    "debugServerFlag"),
+    new Option("--debug",                      null,Options.Types.BOOLEAN,    "debugFlag"),
+    new Option("--debug-server",               null,Options.Types.BOOLEAN,    "debugServerFlag"),
 
-    new Option("--help",              "-h",Options.Types.BOOLEAN,    "helpFlag"),
+    new Option("--help",                       "-h",Options.Types.BOOLEAN,    "helpFlag"),
 
     // ignored
-    new Option("--swing",             null, Options.Types.BOOLEAN,   null),
+    new Option("--swing",                      null, Options.Types.BOOLEAN,   null),
   };
 
   // --------------------------- variables --------------------------------
@@ -1470,10 +1470,10 @@ public class BARControl
       // commands
       if (   (Settings.runJobName != null)
           || (Settings.abortJobName != null)
-          || (Settings.indexAddStorageName != null)
-          || (Settings.indexRemoveStorageName != null)
-          || (Settings.indexStorageListPattern != null)
-          || (Settings.indexEntriesListPattern != null)
+          || (Settings.databaseIndexAddStorageName != null)
+          || (Settings.databaseIndexRemoveStorageName != null)
+          || (Settings.databaseIndexStorageListPattern != null)
+          || (Settings.databaseIndexEntriesListPattern != null)
           || (Settings.pauseTime > 0)
           || (Settings.pingFlag)
           || (Settings.suspendFlag)
@@ -1519,34 +1519,34 @@ public class BARControl
             System.exit(1);
           }
         }
-        if (Settings.indexAddStorageName != null)
+        if (Settings.databaseIndexAddStorageName != null)
         {
           // add index for storage
           String[] result = new String[1];
-          int errorCode = BARServer.executeCommand("INDEX_STORAGE_ADD "+StringUtils.escape(Settings.indexAddStorageName),result);
+          int errorCode = BARServer.executeCommand("INDEX_STORAGE_ADD "+StringUtils.escape(Settings.databaseIndexAddStorageName),result);
           if (errorCode != Errors.NONE)
           {
-            printError("cannot add index for storage '%s' to index (error: %s)",Settings.indexAddStorageName,result[0]);
+            printError("cannot add index for storage '%s' to index (error: %s)",Settings.databaseIndexAddStorageName,result[0]);
             BARServer.disconnect();
             System.exit(1);
           }
         }
-        if (Settings.indexRemoveStorageName != null)
+        if (Settings.databaseIndexRemoveStorageName != null)
         {
           // remote index for storage
           String[] result = new String[1];
-          int errorCode = BARServer.executeCommand("INDEX_STORAGE_REMOVE "+StringUtils.escape(Settings.indexRemoveStorageName),result);
+          int errorCode = BARServer.executeCommand("INDEX_STORAGE_REMOVE "+StringUtils.escape(Settings.databaseIndexRemoveStorageName),result);
           if (errorCode != Errors.NONE)
           {
-            printError("cannot remove index for storage '%s' from index (error: %s)",Settings.indexRemoveStorageName,result[0]);
+            printError("cannot remove index for storage '%s' from index (error: %s)",Settings.databaseIndexRemoveStorageName,result[0]);
             BARServer.disconnect();
             System.exit(1);
           }
         }
-        if (Settings.indexStorageListPattern != null)
+        if (Settings.databaseIndexStorageListPattern != null)
         {
           // list storage index
-          Command command = BARServer.runCommand("INDEX_STORAGE_LIST 0 * "+StringUtils.escape(Settings.indexStorageListPattern));
+          Command command = BARServer.runCommand("INDEX_STORAGE_LIST 0 * "+StringUtils.escape(Settings.databaseIndexStorageListPattern));
           String   line;
           Object[] data = new Object[5];
           while (!command.endOfData())
@@ -1586,10 +1586,10 @@ public class BARControl
             System.exit(1);
           }
         }
-        if (Settings.indexEntriesListPattern != null)
+        if (Settings.databaseIndexEntriesListPattern != null)
         {
           // list storage index
-          Command  command = BARServer.runCommand("INDEX_ENTRIES_LIST 100 0 "+StringUtils.escape(Settings.indexEntriesListPattern));
+          Command  command = BARServer.runCommand("INDEX_ENTRIES_LIST 100 0 "+StringUtils.escape(Settings.databaseIndexEntriesListPattern));
           String   line;
           Object[] data = new Object[9];
           while (!command.endOfData())
