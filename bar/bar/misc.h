@@ -26,7 +26,7 @@
 /***************************** Constants *******************************/
 #define DEFAULT_DATE_TIME_FORMAT "%Y-%m-%d %H:%M:%S %Z"
 
-/* month, day names */
+// month, day names
 typedef enum
 {
   MONTH_JAN =  1,
@@ -55,7 +55,7 @@ typedef enum
 } WeekDays;
 
 /***************************** Datatypes *******************************/
-/* text macro definitions */
+// text macro definitions
 typedef enum
 {
   TEXT_MACRO_TYPE_INTEGER,
@@ -233,7 +233,7 @@ uint64 Misc_makeDateTime(uint year,
 * Purpose: format date/time
 * Input  : string     - string variable
 *          dateTime   - date/time (seconds since 1970-1-1 00:00:00)
-*          format     - format string (strftime) or NULL
+*          format     - format string (see strftime) or NULL for default
 * Output : -
 * Return : date/time string
 * Notes  : -
@@ -277,9 +277,12 @@ String Misc_expandMacros(String          string,
 /***********************************************************************\
 * Name   : Misc_executeCommand
 * Purpose: execute external command
-* Input  : commandTemplate - command template string
-*          macros          - macros array
-*          macroCount      - number of macros in array
+* Input  : commandTemplate         - command template string
+*          macros                  - macros array
+*          macroCount              - number of macros in array
+*          stdoutExecuteIOFunction - stdout callback or NULL
+*          stderrExecuteIOFunction - stderr callback or NULL
+*          executeIOUserData       - user data for callbacks
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -308,7 +311,7 @@ void Misc_waitEnter(void);
 
 /***********************************************************************\
 * Name   : Misc_waitYesNo
-* Purpose: wait for yes/no input
+* Purpose: wait for user yes/no input
 * Input  : message - message to print
 * Output : -
 * Return : TRUE for yes, FALSE otherwise
