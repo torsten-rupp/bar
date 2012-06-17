@@ -276,7 +276,8 @@ typedef struct
   const DeviceList       *deviceList;                    // list with devices
   Device                 *defaultDevice;                 // default device
 
-  bool                   noAutoUpdateDatabaseIndexFlag;  // TRUE for no automatic update of datbase indizes
+  bool                   databaseIndexNoAutoUpdateFlag;  // TRUE for no automatic update of datbase indizes
+  uint                   databaseIndexKeepTime;          // number of seconds to keep index data of not existing storage
 
   bool                   groupFlag;                      // TRUE iff entries in list should be grouped
   bool                   allFlag;                        // TRUE iff all entries should be listed/restored

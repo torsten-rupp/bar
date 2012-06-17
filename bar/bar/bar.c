@@ -400,6 +400,15 @@ LOCAL const ConfigValueSelect CONFIG_VALUE_PASSWORD_MODES[] =
   {"config", PASSWORD_MODE_CONFIG, },
 };
 
+LOCAL const CommandLineUnit COMMAND_LINE_TIME_UNITS[] =
+{
+  {"weeks",7*24*60*60},
+  {"days",24*60*60},
+  {"h",60*60},
+  {"m",60},
+  {"s",1},
+};
+
 LOCAL const CommandLineOptionSet COMMAND_LINE_OPTIONS_LOG_TYPES[] =
 {
   {"none",      LOG_TYPE_NONE,               "no logging"               },
@@ -581,8 +590,9 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
   CMD_OPTION_BOOLEAN      ("ecc",                          0,  1,1,jobOptions.errorCorrectionCodesFlag,                                                               "add error-correction codes with 'dvdisaster' tool"                        ),
   CMD_OPTION_BOOLEAN      ("always-create-image",          0,  1,1,jobOptions.alwaysCreateImageFlag,                                                                  "always create image for CD/DVD/BD/device"                                 ),
 
-  CMD_OPTION_CSTRING      ("database-file",                0,  1,0,indexDatabaseFileName,                                                                             "index database file name","file name"                                     ),
-  CMD_OPTION_BOOLEAN      ("no-auto-update-database-index",0,  1,0,globalOptions.noAutoUpdateDatabaseIndexFlag,                                                       "disabled automatic update database index"                                 ),
+  CMD_OPTION_CSTRING      ("database-index",               0,  1,0,indexDatabaseFileName,                                                                             "index database file name","file name"                                     ),
+  CMD_OPTION_BOOLEAN      ("database-index-no-auto-update",0,  1,0,globalOptions.databaseIndexNoAutoUpdateFlag,                                                       "disabled automatic update database index"                                 ),
+  CMD_OPTION_INTEGER      ("database-index-keep-time",     0,  1,0,globalOptions.databaseIndexKeepTime,        0,MAX_INT,COMMAND_LINE_TIME_UNITS,                     "time to keep index data of not existing storage"                          ),
 
   CMD_OPTION_SET          ("log",                          0,  1,0,logTypes,                                   COMMAND_LINE_OPTIONS_LOG_TYPES,                        "log types"                                                                ),
   CMD_OPTION_CSTRING      ("log-file",                     0,  1,0,logFileName,                                                                                       "log file name","file name"                                                ),
@@ -729,6 +739,15 @@ LOCAL const ConfigValueSelect CONFIG_VALUE_CRYPT_TYPES[] =
   #endif /* HAVE_GCRYPT */
 };
 
+LOCAL const ConfigValueUnit CONFIG_VALUE_TIME_UNITS[] =
+{
+  {"weeks",7*24*60*60},
+  {"days",24*60*60},
+  {"h",60*60},
+  {"m",60},
+  {"s",1},
+};
+
 LOCAL const ConfigValueSet CONFIG_VALUE_LOG_TYPES[] =
 {
   {"none",      LOG_TYPE_NONE               },
@@ -764,8 +783,9 @@ LOCAL const ConfigValue CONFIG_VALUES[] =
   CONFIG_VALUE_INTEGER  ("compress-min-size",            &globalOptions.compressMinFileSize,-1,                   0,MAX_INT,CONFIG_VALUE_BYTES_UNITS),
   CONFIG_VALUE_SPECIAL  ("compress-exclude",             &compressExcludePatternList,-1,                          configValueParsePattern,NULL,NULL,NULL,NULL),
 
-  CONFIG_VALUE_CSTRING  ("database-file",                &indexDatabaseFileName,-1                                ),
-  CONFIG_VALUE_BOOLEAN  ("no-auto-update-database-index",&globalOptions.noAutoUpdateDatabaseIndexFlag,-1          ),
+  CONFIG_VALUE_CSTRING  ("database-index",               &indexDatabaseFileName,-1                                ),
+  CONFIG_VALUE_BOOLEAN  ("database-index-no-auto-update",&globalOptions.databaseIndexNoAutoUpdateFlag,-1          ),
+  CONFIG_VALUE_INTEGER  ("database-index-keep-time",     &globalOptions.databaseIndexKeepTime,-1,                 0,MAX_INT,CONFIG_VALUE_TIME_UNITS),
 
   // global job settings
   CONFIG_VALUE_STRING   ("archive-name",                 &archiveName,-1                                          ),
@@ -1636,95 +1656,99 @@ LOCAL void initGlobalOptions(void)
 {
   memset(&globalOptions,0,sizeof(GlobalOptions));
 
-  globalOptions.runMode                      = RUN_MODE_INTERACTIVE;;
-  globalOptions.barExecutable                = NULL;
-  globalOptions.niceLevel                    = 0;
-  globalOptions.tmpDirectory                 = String_newCString(DEFAULT_TMP_DIRECTORY);
-  globalOptions.maxTmpSize                   = 0LL;
-  globalOptions.maxBandWidth                 = 0;
-  globalOptions.compressMinFileSize          = DEFAULT_COMPRESS_MIN_FILE_SIZE;
-  globalOptions.cryptPassword                = NULL;
-  globalOptions.ftpServer                    = globalOptions.defaultFTPServer;
-  globalOptions.ftpServerList                = &ftpServerList;
-  globalOptions.defaultFTPServer             = &defaultFTPServer;
-  globalOptions.sshServer                    = globalOptions.defaultSSHServer;
-  globalOptions.sshServerList                = &sshServerList;
-  globalOptions.defaultSSHServer             = &defaultSSHServer;
-  globalOptions.remoteBARExecutable          = NULL;
+  globalOptions.runMode                       = RUN_MODE_INTERACTIVE;;
+  globalOptions.barExecutable                 = NULL;
+  globalOptions.niceLevel                     = 0;
+  globalOptions.tmpDirectory                  = String_newCString(DEFAULT_TMP_DIRECTORY);
+  globalOptions.maxTmpSize                    = 0LL;
+  globalOptions.maxBandWidth                  = 0;
+  globalOptions.compressMinFileSize           = DEFAULT_COMPRESS_MIN_FILE_SIZE;
+  globalOptions.cryptPassword                 = NULL;
+  globalOptions.ftpServer                     = globalOptions.defaultFTPServer;
+  globalOptions.ftpServerList                 = &ftpServerList;
+  globalOptions.defaultFTPServer              = &defaultFTPServer;
+  globalOptions.sshServer                     = globalOptions.defaultSSHServer;
+  globalOptions.sshServerList                 = &sshServerList;
+  globalOptions.defaultSSHServer              = &defaultSSHServer;
+  globalOptions.remoteBARExecutable           = NULL;
 
-  globalOptions.file.writePreProcessCommand  = NULL;
-  globalOptions.file.writePostProcessCommand = NULL;
+  globalOptions.file.writePreProcessCommand   = NULL;
+  globalOptions.file.writePostProcessCommand  = NULL;
 
-  globalOptions.ftp.writePreProcessCommand   = NULL;
-  globalOptions.ftp.writePostProcessCommand  = NULL;
+  globalOptions.ftp.writePreProcessCommand    = NULL;
+  globalOptions.ftp.writePostProcessCommand   = NULL;
 
-  globalOptions.scp.writePreProcessCommand   = NULL;
-  globalOptions.scp.writePostProcessCommand  = NULL;
+  globalOptions.scp.writePreProcessCommand    = NULL;
+  globalOptions.scp.writePostProcessCommand   = NULL;
 
-  globalOptions.sftp.writePreProcessCommand  = NULL;
-  globalOptions.sftp.writePostProcessCommand = NULL;
+  globalOptions.sftp.writePreProcessCommand   = NULL;
+  globalOptions.sftp.writePostProcessCommand  = NULL;
 
-  globalOptions.cd.defaultDeviceName         = String_newCString(DEFAULT_CD_DEVICE_NAME);
-  globalOptions.cd.requestVolumeCommand      = NULL;
-  globalOptions.cd.unloadVolumeCommand       = String_newCString(CD_UNLOAD_VOLUME_COMMAND);
-  globalOptions.cd.loadVolumeCommand         = String_newCString(CD_LOAD_VOLUME_COMMAND);
-  globalOptions.cd.volumeSize                = 0LL;
-  globalOptions.cd.imagePreProcessCommand    = NULL;
-  globalOptions.cd.imagePostProcessCommand   = NULL;
-  globalOptions.cd.imageCommand              = String_newCString(CD_IMAGE_COMMAND);
-  globalOptions.cd.eccPreProcessCommand      = NULL;
-  globalOptions.cd.eccPostProcessCommand     = NULL;
-  globalOptions.cd.eccCommand                = String_newCString(CD_ECC_COMMAND);
-  globalOptions.cd.writePreProcessCommand    = NULL;
-  globalOptions.cd.writePostProcessCommand   = NULL;
-  globalOptions.cd.writeCommand              = String_newCString(CD_WRITE_COMMAND);
-  globalOptions.cd.writeImageCommand         = String_newCString(CD_WRITE_IMAGE_COMMAND);
+  globalOptions.cd.defaultDeviceName          = String_newCString(DEFAULT_CD_DEVICE_NAME);
+  globalOptions.cd.requestVolumeCommand       = NULL;
+  globalOptions.cd.unloadVolumeCommand        = String_newCString(CD_UNLOAD_VOLUME_COMMAND);
+  globalOptions.cd.loadVolumeCommand          = String_newCString(CD_LOAD_VOLUME_COMMAND);
+  globalOptions.cd.volumeSize                 = 0LL;
+  globalOptions.cd.imagePreProcessCommand     = NULL;
+  globalOptions.cd.imagePostProcessCommand    = NULL;
+  globalOptions.cd.imageCommand               = String_newCString(CD_IMAGE_COMMAND);
+  globalOptions.cd.eccPreProcessCommand       = NULL;
+  globalOptions.cd.eccPostProcessCommand      = NULL;
+  globalOptions.cd.eccCommand                 = String_newCString(CD_ECC_COMMAND);
+  globalOptions.cd.writePreProcessCommand     = NULL;
+  globalOptions.cd.writePostProcessCommand    = NULL;
+  globalOptions.cd.writeCommand               = String_newCString(CD_WRITE_COMMAND);
+  globalOptions.cd.writeImageCommand          = String_newCString(CD_WRITE_IMAGE_COMMAND);
 
-  globalOptions.dvd.defaultDeviceName        = String_newCString(DEFAULT_DVD_DEVICE_NAME);
-  globalOptions.dvd.requestVolumeCommand     = NULL;
-  globalOptions.dvd.unloadVolumeCommand      = String_newCString(DVD_UNLOAD_VOLUME_COMMAND);
-  globalOptions.dvd.loadVolumeCommand        = String_newCString(DVD_LOAD_VOLUME_COMMAND);
-  globalOptions.dvd.volumeSize               = 0LL;
-  globalOptions.dvd.imagePreProcessCommand   = NULL;
-  globalOptions.dvd.imagePostProcessCommand  = NULL;
-  globalOptions.dvd.imageCommand             = String_newCString(DVD_IMAGE_COMMAND);
-  globalOptions.dvd.eccPreProcessCommand     = NULL;
-  globalOptions.dvd.eccPostProcessCommand    = NULL;
-  globalOptions.dvd.eccCommand               = String_newCString(DVD_ECC_COMMAND);
-  globalOptions.dvd.writePreProcessCommand   = NULL;
-  globalOptions.dvd.writePostProcessCommand  = NULL;
-  globalOptions.dvd.writeCommand             = String_newCString(DVD_WRITE_COMMAND);
-  globalOptions.dvd.writeImageCommand        = String_newCString(DVD_WRITE_IMAGE_COMMAND);
+  globalOptions.dvd.defaultDeviceName         = String_newCString(DEFAULT_DVD_DEVICE_NAME);
+  globalOptions.dvd.requestVolumeCommand      = NULL;
+  globalOptions.dvd.unloadVolumeCommand       = String_newCString(DVD_UNLOAD_VOLUME_COMMAND);
+  globalOptions.dvd.loadVolumeCommand         = String_newCString(DVD_LOAD_VOLUME_COMMAND);
+  globalOptions.dvd.volumeSize                = 0LL;
+  globalOptions.dvd.imagePreProcessCommand    = NULL;
+  globalOptions.dvd.imagePostProcessCommand   = NULL;
+  globalOptions.dvd.imageCommand              = String_newCString(DVD_IMAGE_COMMAND);
+  globalOptions.dvd.eccPreProcessCommand      = NULL;
+  globalOptions.dvd.eccPostProcessCommand     = NULL;
+  globalOptions.dvd.eccCommand                = String_newCString(DVD_ECC_COMMAND);
+  globalOptions.dvd.writePreProcessCommand    = NULL;
+  globalOptions.dvd.writePostProcessCommand   = NULL;
+  globalOptions.dvd.writeCommand              = String_newCString(DVD_WRITE_COMMAND);
+  globalOptions.dvd.writeImageCommand         = String_newCString(DVD_WRITE_IMAGE_COMMAND);
 
-  globalOptions.bd.defaultDeviceName         = String_newCString(DEFAULT_BD_DEVICE_NAME);
-  globalOptions.bd.requestVolumeCommand      = NULL;
-  globalOptions.bd.unloadVolumeCommand       = String_newCString(BD_UNLOAD_VOLUME_COMMAND);
-  globalOptions.bd.loadVolumeCommand         = String_newCString(BD_LOAD_VOLUME_COMMAND);
-  globalOptions.bd.volumeSize                = 0LL;
-  globalOptions.bd.imagePreProcessCommand    = NULL;
-  globalOptions.bd.imagePostProcessCommand   = NULL;
-  globalOptions.bd.imageCommand              = String_newCString(BD_IMAGE_COMMAND);
-  globalOptions.bd.eccPreProcessCommand      = NULL;
-  globalOptions.bd.eccPostProcessCommand     = NULL;
-  globalOptions.bd.eccCommand                = String_newCString(BD_ECC_COMMAND);
-  globalOptions.bd.writePreProcessCommand    = NULL;
-  globalOptions.bd.writePostProcessCommand   = NULL;
-  globalOptions.bd.writeCommand              = String_newCString(BD_WRITE_COMMAND);
-  globalOptions.bd.writeImageCommand         = String_newCString(BD_WRITE_IMAGE_COMMAND);
+  globalOptions.bd.defaultDeviceName          = String_newCString(DEFAULT_BD_DEVICE_NAME);
+  globalOptions.bd.requestVolumeCommand       = NULL;
+  globalOptions.bd.unloadVolumeCommand        = String_newCString(BD_UNLOAD_VOLUME_COMMAND);
+  globalOptions.bd.loadVolumeCommand          = String_newCString(BD_LOAD_VOLUME_COMMAND);
+  globalOptions.bd.volumeSize                 = 0LL;
+  globalOptions.bd.imagePreProcessCommand     = NULL;
+  globalOptions.bd.imagePostProcessCommand    = NULL;
+  globalOptions.bd.imageCommand               = String_newCString(BD_IMAGE_COMMAND);
+  globalOptions.bd.eccPreProcessCommand       = NULL;
+  globalOptions.bd.eccPostProcessCommand      = NULL;
+  globalOptions.bd.eccCommand                 = String_newCString(BD_ECC_COMMAND);
+  globalOptions.bd.writePreProcessCommand     = NULL;
+  globalOptions.bd.writePostProcessCommand    = NULL;
+  globalOptions.bd.writeCommand               = String_newCString(BD_WRITE_COMMAND);
+  globalOptions.bd.writeImageCommand          = String_newCString(BD_WRITE_IMAGE_COMMAND);
 
-  globalOptions.device                       = globalOptions.defaultDevice;
-  globalOptions.deviceList                   = &deviceList;
-  globalOptions.defaultDevice                = &defaultDevice;
-  globalOptions.groupFlag                    = FALSE;
-  globalOptions.allFlag                      = FALSE;
-  globalOptions.longFormatFlag               = FALSE;
-  globalOptions.noHeaderFooterFlag           = FALSE;
-  globalOptions.deleteOldArchiveFilesFlag    = FALSE;
-  globalOptions.noDefaultConfigFlag          = FALSE;
-  globalOptions.quietFlag                    = FALSE;
-  globalOptions.verboseLevel                 = 1;
+  globalOptions.device                        = globalOptions.defaultDevice;
+  globalOptions.deviceList                    = &deviceList;
+  globalOptions.defaultDevice                 = &defaultDevice;
 
-  globalOptions.serverDebugFlag              = FALSE;
+  globalOptions.databaseIndexNoAutoUpdateFlag = FALSE;
+  globalOptions.databaseIndexKeepTime         = 24*60*60;
+
+  globalOptions.groupFlag                     = FALSE;
+  globalOptions.allFlag                       = FALSE;
+  globalOptions.longFormatFlag                = FALSE;
+  globalOptions.noHeaderFooterFlag            = FALSE;
+  globalOptions.deleteOldArchiveFilesFlag     = FALSE;
+  globalOptions.noDefaultConfigFlag           = FALSE;
+  globalOptions.quietFlag                     = FALSE;
+  globalOptions.verboseLevel                  = 1;
+
+  globalOptions.serverDebugFlag               = FALSE;
 }
 
 /***********************************************************************\
@@ -4172,12 +4196,12 @@ int main(int argc, const char *argv[])
   if (indexDatabaseFileName != NULL)
   {
     // open index database
-    if (printInfoFlag) printf("Opening database file '%s'...",indexDatabaseFileName);
+    if (printInfoFlag) printf("Opening database index '%s'...",indexDatabaseFileName);
     error = Index_init(&databaseHandle,indexDatabaseFileName);
     if (error != ERROR_NONE)
     {
       if (printInfoFlag) printf("fail!\n");
-      printError("Cannot open database '%s' (error: %s)!\n",
+      printError("Cannot open database index '%s' (error: %s)!\n",
                  indexDatabaseFileName,
                  Errors_getText(error)
                 );
