@@ -67,14 +67,16 @@ LOCAL String formatSQLString(String     sqlString,
 {
   const char *s;
   char       ch;
-  bool       longFlag;
+  bool       longFlag,longLongFlag;
   char       quoteFlag;
   union
   {
     int        i;
     uint       ui;
-    int64      l;
-    uint64     ul;
+    long       l;
+    ulong      ul;
+    int64      ll;
+    uint64     ull;
     const char *s;
     String     string;
   }          value;
@@ -103,17 +105,21 @@ LOCAL String formatSQLString(String     sqlString,
         // format character
         s++;
 
-        // check for long flag
-        if (    ((*s) != '\0')
-             && ((*s) == 'l')
-           )
+        // check for longlong/long flag
+        longLongFlag = FALSE;
+        longFlag     = FALSE;
+        if ((*s) == 'l')
         {
-          longFlag = TRUE;
           s++;
-        }
-        else
-        {
-          longFlag = FALSE;
+          if ((*s) == 'l')
+          {
+            s++;
+            longLongFlag = TRUE;
+          }
+          else
+          {
+            longFlag = TRUE;
+          }
         }
 
         // quoting flag (ignore quote char)
@@ -140,7 +146,12 @@ LOCAL String formatSQLString(String     sqlString,
             // integer
             s++;
 
-            if (longFlag)
+            if      (longLongFlag)
+            {
+              value.ll = va_arg(arguments,int64);
+              String_format(sqlString,"%lld",value.ll);
+            }
+            else if (longFlag)
             {
               value.l = va_arg(arguments,int64);
               String_format(sqlString,"%ld",value.l);
@@ -155,9 +166,14 @@ LOCAL String formatSQLString(String     sqlString,
             // unsigned integer
             s++;
 
-            if (longFlag)
+            if      (longLongFlag)
             {
-              value.ul = va_arg(arguments,uint64);
+              value.ull = va_arg(arguments,uint64);
+              String_format(sqlString,"%llu",value.ull);
+            }
+            else if (longFlag)
+            {
+              value.ul = va_arg(arguments,ulong);
               String_format(sqlString,"%lu",value.ul);
             }
             else
@@ -596,12 +612,16 @@ bool Database_getNextRow(DatabaseQueryHandle *databaseQueryHandle,
   bool    lockFlag;
   uint    column;
   va_list arguments;
-  bool    longFlag;
+  bool    longFlag,longLongFlag;
   int     maxLength;
   union
   {
     int    *i;
-    int64  *l;
+    uint   *ui;
+    long   *l;
+    ulong  *ul;
+    int64  *ll;
+    uint64 *ull;
     float  *f;
     double *d;
     char   *ch;
@@ -658,17 +678,21 @@ bool Database_getNextRow(DatabaseQueryHandle *databaseQueryHandle,
             }
           }
 
-          // check for long flag
-          if (    ((*format) != '\0')
-               && ((*format) == 'l')
-             )
+          // check for longlong/long flag
+          longLongFlag = FALSE;
+          longFlag     = FALSE;
+          if ((*format) == 'l')
           {
-            longFlag = TRUE;
             format++;
-          }
-          else
-          {
-            longFlag = FALSE;
+            if ((*format) == 'l')
+            {
+              format++;
+              longLongFlag = TRUE;
+            }
+            else
+            {
+              longFlag = TRUE;
+            }
           }
 
           // handle format type
@@ -678,12 +702,20 @@ bool Database_getNextRow(DatabaseQueryHandle *databaseQueryHandle,
               // integer
               format++;
 
-              if (longFlag)
+              if      (longLongFlag)
               {
-                value.l = va_arg(arguments,int64*);
+                value.ll = va_arg(arguments,int64*);
+                if (value.ll != NULL)
+                {
+                  (*value.ll) = (int64)sqlite3_column_int64(databaseQueryHandle->handle,column);
+                }
+              }
+              else if (longFlag)
+              {
+                value.l = va_arg(arguments,long*);
                 if (value.l != NULL)
                 {
-                  (*value.l) = (int64)sqlite3_column_int64(databaseQueryHandle->handle,column);
+                  (*value.l) = (long)sqlite3_column_int64(databaseQueryHandle->handle,column);
                 }
               }
               else
@@ -692,6 +724,35 @@ bool Database_getNextRow(DatabaseQueryHandle *databaseQueryHandle,
                 if (value.i != NULL)
                 {
                   (*value.i) = sqlite3_column_int(databaseQueryHandle->handle,column);
+                }
+              }
+              break;
+            case 'u':
+              // unsigned integer
+              format++;
+
+              if      (longLongFlag)
+              {
+                value.ull = va_arg(arguments,uint64*);
+                if (value.ull != NULL)
+                {
+                  (*value.ull) = (uint64)sqlite3_column_int64(databaseQueryHandle->handle,column);
+                }
+              }
+              else if (longFlag)
+              {
+                value.ul = va_arg(arguments,ulong*);
+                if (value.ul != NULL)
+                {
+                  (*value.ul) = (ulong)sqlite3_column_int64(databaseQueryHandle->handle,column);
+                }
+              }
+              else
+              {
+                value.ui = va_arg(arguments,uint*);
+                if (value.ui != NULL)
+                {
+                  (*value.ui) = (uint)sqlite3_column_int(databaseQueryHandle->handle,column);
                 }
               }
               break;
