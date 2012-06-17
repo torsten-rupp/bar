@@ -340,7 +340,7 @@ LOCAL const char *parseNextFormatToken(const char *format, FormatToken *formatTo
   ADD_CHAR(formatToken,(*format));
   format++;
 
-  // flags, quote char
+  // flags
   while (   ((*format) != '\0')
          && (   ((*format) == '#')
              || ((*format) == '0')
