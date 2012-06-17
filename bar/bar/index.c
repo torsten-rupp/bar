@@ -3,7 +3,7 @@
 * $Revision$
 * $Date$
 * $Author$
-* Contents: database index functions
+* Contents: index database functions
 * Systems: all
 *
 \***********************************************************************/
@@ -299,7 +299,7 @@ bool Index_findById(DatabaseHandle *databaseHandle,
                            databaseHandle,
                            "SELECT name, \
                                    state, \
-                                   lastChecked \
+                                   STRFTIME('%%s',lastChecked) \
                             FROM storage \
                             WHERE id=%ld \
                            ",
@@ -310,7 +310,7 @@ bool Index_findById(DatabaseHandle *databaseHandle,
     return FALSE;
   }
   result = Database_getNextRow(&databaseQueryHandle,
-                               "%S %d %ld",
+                               "%S %d %llu",
                                name,
                                indexState,
                                lastChecked
@@ -340,7 +340,7 @@ bool Index_findByName(DatabaseHandle *databaseHandle,
                            databaseHandle,
                            "SELECT id, \
                                    state, \
-                                   lastChecked \
+                                   STRFTIME('%%s',lastChecked) \
                             FROM storage \
                             WHERE name=%'S \
                            ",
@@ -351,7 +351,7 @@ bool Index_findByName(DatabaseHandle *databaseHandle,
     return FALSE;
   }
   result = Database_getNextRow(&databaseQueryHandle,
-                               "%ld %d %ld",
+                               "%ld %d %llu",
                                storageId,
                                indexState,
                                lastChecked
@@ -376,12 +376,14 @@ bool Index_findByState(DatabaseHandle *databaseHandle,
   assert(databaseHandle != NULL);
 
   (*storageId) = DATABASE_ID_NONE;
+  if (name != NULL) String_clear(name);
+  if (lastChecked != NULL) (*lastChecked) = 0LL;
 
   error = Database_prepare(&databaseQueryHandle,
                            databaseHandle,
                            "SELECT id, \
                                    name \
-                                   lastChecked \
+                                   STRFTIME('%%s',lastChecked) \
                             FROM storage \
                             WHERE state=%d \
                            ",
@@ -391,22 +393,12 @@ bool Index_findByState(DatabaseHandle *databaseHandle,
   {
     return FALSE;
   }
-  if (Database_getNextRow(&databaseQueryHandle,
-                          "%ld %S %ld",
-                          storageId,
-                          &name,
-                          lastChecked
-                         )
-     )
-  {
-    if (name != NULL) String_clear(name);
-
-    result = TRUE;
-  }
-  else
-  {
-    result = FALSE;
-  }
+  result = Database_getNextRow(&databaseQueryHandle,
+                               "%ld %S %llu",
+                               storageId,
+                               &name,
+                               lastChecked
+                              );
   Database_finalize(&databaseQueryHandle);
 
   return result;
@@ -638,7 +630,7 @@ Errors Index_getState(DatabaseHandle *databaseHandle,
   error = Database_prepare(&databaseQueryHandle,
                            databaseHandle,
                            "SELECT state, \
-                                   lastChecked, \
+                                   STRFTIME('%%s',lastChecked), \
                                    errorMessage \
                             FROM storage \
                             WHERE id=%ld \
@@ -650,7 +642,7 @@ Errors Index_getState(DatabaseHandle *databaseHandle,
     return error;
   }
   if (!Database_getNextRow(&databaseQueryHandle,
-                           "%d %S",
+                           "%d %llu %S",
                            indexState,
                            lastChecked,
                            errorMessage
@@ -803,7 +795,7 @@ Errors Index_initListStorage(DatabaseQueryHandle *databaseQueryHandle,
                                    size, \
                                    state, \
                                    mode, \
-                                   lastChecked, \
+                                   STRFTIME('%%s',lastChecked), \
                                    errorMessage \
                             FROM storage \
                             WHERE %S \
@@ -824,25 +816,25 @@ Errors Index_initListStorage(DatabaseQueryHandle *databaseQueryHandle,
 bool Index_getNextStorage(DatabaseQueryHandle *databaseQueryHandle,
                           DatabaseId          *databaseId,
                           String              storageName,
-                          uint64              *dateTime,
+                          uint64              *createDateTime,
                           uint64              *size,
                           IndexStates         *indexState,
                           IndexModes          *indexMode,
-                          uint64              *lastChecked,
+                          uint64              *lastCheckedDateTime,
                           String              errorMessage
                          )
 {
   assert(databaseQueryHandle != NULL);
 
   return Database_getNextRow(databaseQueryHandle,
-                             "%ld %S %ld %ld %d %d %ld %S",
+                             "%lld %S %llu %llu %d %d %llu %S",
                              databaseId,
                              &storageName,
-                             dateTime,
+                             createDateTime,
                              size,
                              indexState,
                              indexMode,
-                             lastChecked,
+                             lastCheckedDateTime,
                              &errorMessage
                             );
 }
@@ -923,7 +915,7 @@ bool Index_getNextFile(DatabaseQueryHandle *databaseQueryHandle,
   assert(databaseQueryHandle != NULL);
 
   return Database_getNextRow(databaseQueryHandle,
-                             "%ld %S %ld %S %ld %ld %d %d %d %ld %ld",
+                             "%lld %S %llu %S %llu %llu %d %d %d %llu %llu",
                              databaseId,
                              &storageName,
                              storageDateTime,
@@ -1006,7 +998,7 @@ bool Index_getNextImage(DatabaseQueryHandle *databaseQueryHandle,
   assert(databaseQueryHandle != NULL);
 
   return Database_getNextRow(databaseQueryHandle,
-                             "%ld %S %ld %S %ld %ld %ld",
+                             "%lld %S %llu %S %llu %llu %llu",
                              databaseId,
                              &storageName,
                              storageDateTime,
@@ -1087,7 +1079,7 @@ bool Index_getNextDirectory(DatabaseQueryHandle *databaseQueryHandle,
   assert(databaseQueryHandle != NULL);
 
   return Database_getNextRow(databaseQueryHandle,
-                             "%ld %S %ld %S %ld %d %d %d",
+                             "%lld %S %llu %S %llu %d %d %d",
                              databaseId,
                              &storageName,
                              storageDateTime,
@@ -1171,7 +1163,7 @@ bool Index_getNextLink(DatabaseQueryHandle *databaseQueryHandle,
   assert(databaseQueryHandle != NULL);
 
   return Database_getNextRow(databaseQueryHandle,
-                             "%ld %S %ld %S %S %ld %d %d %d",
+                             "%lld %S %llu %S %S %llu %d %d %d",
                              databaseId,
                              &storageName,
                              storageDateTime,
@@ -1260,7 +1252,7 @@ bool Index_getNextHardLink(DatabaseQueryHandle *databaseQueryHandle,
   assert(databaseQueryHandle != NULL);
 
   return Database_getNextRow(databaseQueryHandle,
-                             "%ld %S %ld %S %ld %ld %d %d %d %ld %ld",
+                             "%lld %S %llu %S %llu %llu %d %d %d %llu %llu",
                              databaseId,
                              &storageName,
                              storageDateTime,
@@ -1345,7 +1337,7 @@ bool Index_getNextSpecial(DatabaseQueryHandle *databaseQueryHandle,
   assert(databaseQueryHandle != NULL);
 
   return Database_getNextRow(databaseQueryHandle,
-                             "%ld %S %ld %S %ld %d %d %d",
+                             "%lld %S %llu %S %llu %d %d %d",
                              databaseId,
                              &storageName,
                              storageDateTime,

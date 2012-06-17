@@ -3,7 +3,7 @@
 * $Revision$
 * $Date$
 * $Author$
-* Contents: database index functions
+* Contents: index database functions
 * Systems: all
 *
 \***********************************************************************/
@@ -107,7 +107,7 @@ IndexStates Index_stringToState(const String string);
 
 /***********************************************************************\
 * Name   : Index_init
-* Purpose: initialize database index
+* Purpose: initialize index database
 * Input  : indexDatabaseHandle   - index database handle variable
 *          indexDatabaseFileName - database file name
 * Output : indexDatabaseHandle - index database handle
@@ -121,7 +121,7 @@ Errors Index_init(DatabaseHandle *indexDatabaseHandle,
 
 /***********************************************************************\
 * Name   : Index_done
-* Purpose: deinitialize database index
+* Purpose: deinitialize index database
 * Input  : indexDatabaseHandle - index database handle
 * Output : -
 * Return : -
@@ -328,14 +328,14 @@ Errors Index_initListStorage(DatabaseQueryHandle *databaseQueryHandle,
 * Name   : Index_getNextStorage
 * Purpose: get next index storage entry
 * Input  : databaseQueryHandle - database query handle
-* Output : databaseId   - database id of entry
-*          storageName  - storage name
-*          dateTime     - date/time stamp [s]
-*          size         - size [bytes]
-*          indexState   - index state (can be NULL)
-*          indexMode    - index mode (can be NULL)
-*          lastChecked  - last checked date/time stamp [s] (can be NULL)
-*          errorMessage - last error message
+* Output : databaseId          - database id of entry
+*          storageName         - storage name
+*          createdDateTime     - date/time stamp [s]
+*          size                - size [bytes]
+*          indexState          - index state (can be NULL)
+*          indexMode           - index mode (can be NULL)
+*          lastCheckedDateTime - last checked date/time stamp [s] (can be NULL)
+*          errorMessage        - last error message
 * Return : TRUE if entry read, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
@@ -343,11 +343,11 @@ Errors Index_initListStorage(DatabaseQueryHandle *databaseQueryHandle,
 bool Index_getNextStorage(DatabaseQueryHandle *databaseQueryHandle,
                           DatabaseId          *databaseId,
                           String              storageName,
-                          uint64              *dateTime,
+                          uint64              *createdDateTime,
                           uint64              *size,
                           IndexStates         *indexState,
                           IndexModes          *indexMode,
-                          uint64              *lastChecked,
+                          uint64              *lastCheckedDateTime,
                           String              errorMessage
                          );
 
