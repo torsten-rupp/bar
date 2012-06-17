@@ -40,6 +40,14 @@ const char* INDEX_STATE_STRINGS[8] =
   "UNKNOWN"
 };
 
+const char* INDEX_MODE_STRINGS[4] =
+{
+  "MANUAL",
+  "AUTO",
+  "*",
+  "UNKNOWN"
+};
+
 // current index database version
 #define CURRENT_INDEX_VERSION 2
 
@@ -153,15 +161,30 @@ IndexStates Index_stringToState(const String string)
 
   assert(string != NULL);
 
-  if      (String_equalsIgnoreCaseCString(string,"OK"              )) indexState = INDEX_STATE_OK;
-  else if (String_equalsIgnoreCaseCString(string,"CREATE"          )) indexState = INDEX_STATE_CREATE;
-  else if (String_equalsIgnoreCaseCString(string,"UPDATE_REQUESTED")) indexState = INDEX_STATE_UPDATE_REQUESTED;
-  else if (String_equalsIgnoreCaseCString(string,"UPDATE"          )) indexState = INDEX_STATE_UPDATE;
-  else if (String_equalsIgnoreCaseCString(string,"ERROR"           )) indexState = INDEX_STATE_ERROR;
-  else if (String_equalsIgnoreCaseCString(string,"*"               )) indexState = INDEX_STATE_ALL;
-  else                                                                indexState = INDEX_STATE_UNKNOWN;
+  if      (String_equalsIgnoreCaseCString(string,INDEX_STATE_STRINGS[0])) indexState = INDEX_STATE_NONE;
+  else if (String_equalsIgnoreCaseCString(string,INDEX_STATE_STRINGS[1])) indexState = INDEX_STATE_OK;
+  else if (String_equalsIgnoreCaseCString(string,INDEX_STATE_STRINGS[2])) indexState = INDEX_STATE_CREATE;
+  else if (String_equalsIgnoreCaseCString(string,INDEX_STATE_STRINGS[3])) indexState = INDEX_STATE_UPDATE_REQUESTED;
+  else if (String_equalsIgnoreCaseCString(string,INDEX_STATE_STRINGS[4])) indexState = INDEX_STATE_UPDATE;
+  else if (String_equalsIgnoreCaseCString(string,INDEX_STATE_STRINGS[5])) indexState = INDEX_STATE_ERROR;
+  else if (String_equalsIgnoreCaseCString(string,INDEX_STATE_STRINGS[6])) indexState = INDEX_STATE_ALL;
+  else                                                                    indexState = INDEX_STATE_UNKNOWN;
 
   return indexState;
+}
+
+IndexModes Index_stringToMode(const String string)
+{
+  IndexModes indexMode;
+
+  assert(string != NULL);
+
+  if      (String_equalsIgnoreCaseCString(string,INDEX_MODE_STRINGS[0])) indexMode = INDEX_MODE_MANUAL;
+  else if (String_equalsIgnoreCaseCString(string,INDEX_MODE_STRINGS[1])) indexMode = INDEX_MODE_AUTO;
+  else if (String_equalsIgnoreCaseCString(string,INDEX_MODE_STRINGS[2])) indexMode = INDEX_MODE_ALL;
+  else                                                                   indexMode = INDEX_MODE_UNKNOWN;
+
+  return indexMode;
 }
 
 Errors Index_init(DatabaseHandle *indexDatabaseHandle,
@@ -694,10 +717,11 @@ Errors Index_setState(DatabaseHandle *databaseHandle,
                              NULL,
                              NULL,
                              "UPDATE storage \
-                              SET lastChecked=%ld \
+                              SET lastChecked=DATETIME(%llu,'unixepoch') \
                               WHERE id=%ld; \
                              ",
-                             lastChecked
+                             lastChecked,
+                             storageId
                             );
     if (error != ERROR_NONE)
     {

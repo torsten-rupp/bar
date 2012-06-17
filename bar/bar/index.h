@@ -46,7 +46,6 @@ typedef enum
 
   INDEX_STATE_UNKNOWN
 } IndexStates;
-
 extern const char* INDEX_STATE_STRINGS[8];
 
 // index modes
@@ -55,8 +54,11 @@ typedef enum
   INDEX_MODE_MANUAL,
   INDEX_MODE_AUTO,
 
+  INDEX_MODE_ALL,
+
   INDEX_MODE_UNKNOWN
 } IndexModes;
+extern const char* INDEX_MODE_STRINGS[4];
 
 /***************************** Datatypes *******************************/
 
@@ -104,6 +106,17 @@ void Index_doneAll(void);
 \***********************************************************************/
 
 IndexStates Index_stringToState(const String string);
+
+/***********************************************************************\
+* Name   : Index_stringToMode
+* Purpose: convert string to mode
+* Input  : string - string
+* Output : -
+* Return : mode or INDEX_MODE_UNKNOWN if not known
+* Notes  : -
+\***********************************************************************/
+
+IndexModes Index_stringToMode(const String string);
 
 /***********************************************************************\
 * Name   : Index_init
