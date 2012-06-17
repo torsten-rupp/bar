@@ -1287,7 +1287,7 @@ void CmdOption_printHelp(FILE                    *outputHandle,
             }
             if (commandLineOptions[i].defaultValue.i != 0)
             {
-              fprintf(outputHandle,", default: %d",commandLineOptions[i].defaultValue.i);
+              fprintf(outputHandle,", default: ");
             }
             (void)fputc(')',outputHandle);
           }
@@ -1295,7 +1295,23 @@ void CmdOption_printHelp(FILE                    *outputHandle,
           {
             if (commandLineOptions[i].defaultValue.i != 0)
             {
-              fprintf(outputHandle," (default: %d)",commandLineOptions[i].defaultValue.i);
+              fprintf(outputHandle," (default: ");
+              j = 0;
+              while (   (j < commandLineOptions[i].integerOption.unitCount)
+                     && ((commandLineOptions[i].defaultValue.i % commandLineOptions[i].integerOption.units[j].factor) != 0)
+                    )
+              {
+                j++;
+              }
+              if (j < commandLineOptions[i].integerOption.unitCount)
+              {
+                fprintf(outputHandle,"%d%s",commandLineOptions[i].defaultValue.i/(int)commandLineOptions[i].integerOption.units[j].factor,commandLineOptions[i].integerOption.units[j].name);
+              }
+              else
+              {
+                fprintf(outputHandle,"%d",commandLineOptions[i].defaultValue.i);
+              }
+              (void)fputc(')',outputHandle);
             }
           }
           break;
@@ -1316,7 +1332,22 @@ void CmdOption_printHelp(FILE                    *outputHandle,
             }
             if (commandLineOptions[i].defaultValue.l != 0LL)
             {
-              fprintf(outputHandle,", default: %lld",commandLineOptions[i].defaultValue.l);
+              fprintf(outputHandle,", default: ");
+              j = 0;
+              while (   (j < commandLineOptions[i].integer64Option.unitCount)
+                     && ((commandLineOptions[i].defaultValue.l % commandLineOptions[i].integer64Option.units[j].factor) != 0)
+                    )
+              {
+                j++;
+              }
+              if (j < commandLineOptions[i].integer64Option.unitCount)
+              {
+                fprintf(outputHandle,"%lld%s",commandLineOptions[i].defaultValue.l/commandLineOptions[i].integer64Option.units[j].factor,commandLineOptions[i].integer64Option.units[j].name);
+              }
+              else
+              {
+                fprintf(outputHandle,"%lld",commandLineOptions[i].defaultValue.l);
+              }
             }
             (void)fputc(')',outputHandle);
           }
@@ -1324,7 +1355,23 @@ void CmdOption_printHelp(FILE                    *outputHandle,
           {
             if (commandLineOptions[i].defaultValue.l != 0LL)
             {
-              fprintf(outputHandle," (default: %lld)",commandLineOptions[i].defaultValue.l);
+              fprintf(outputHandle," (default: ");
+              j = 0;
+              while (   (j < commandLineOptions[i].integer64Option.unitCount)
+                     && ((commandLineOptions[i].defaultValue.l % commandLineOptions[i].integer64Option.units[j].factor) != 0)
+                    )
+              {
+                j++;
+              }
+              if (j < commandLineOptions[i].integer64Option.unitCount)
+              {
+                fprintf(outputHandle,"%lld%s",commandLineOptions[i].defaultValue.l/commandLineOptions[i].integer64Option.units[j].factor,commandLineOptions[i].integer64Option.units[j].name);
+              }
+              else
+              {
+                fprintf(outputHandle,"%lld",commandLineOptions[i].defaultValue.l);
+              }
+              (void)fputc(')',outputHandle);
             }
           }
           break;
