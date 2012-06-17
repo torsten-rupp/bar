@@ -276,8 +276,8 @@ typedef struct
   const DeviceList       *deviceList;                    // list with devices
   Device                 *defaultDevice;                 // default device
 
-  bool                   databaseIndexNoAutoUpdateFlag;  // TRUE for no automatic update of datbase indizes
-  uint                   databaseIndexKeepTime;          // number of seconds to keep index data of not existing storage
+  bool                   indexDatabaseNoAutoUpdateFlag;  // TRUE for no automatic update of index datbase
+  uint                   indexDatabaseKeepTime;          // number of seconds to keep index data of not existing storage
 
   bool                   groupFlag;                      // TRUE iff entries in list should be grouped
   bool                   allFlag;                        // TRUE iff all entries should be listed/restored
@@ -371,7 +371,7 @@ struct JobOptions
   bool                        waitFirstVolumeFlag;               // TRUE for wait for first volume
   bool                        rawImagesFlag;                     // TRUE for storing raw images
   bool                        noFragmentsCheckFlag;              // TRUE to skip checking file fragments for completeness
-  bool                        noDatabaseIndexFlag;               // TRUE for do not store database index for archives
+  bool                        noIndexDatabaseFlag;               // TRUE for do not store database index for archives
   bool                        dryRunFlag;                        // TRUE to do a dry-run (do not store, do not create incremental data, do not store in database)
   bool                        noStorageFlag;                     // TRUE to skip storage, only create incremental data file
   bool                        noBAROnMediumFlag;                 // TRUE for not storing BAR on medium

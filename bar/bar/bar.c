@@ -590,9 +590,9 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
   CMD_OPTION_BOOLEAN      ("ecc",                          0,  1,1,jobOptions.errorCorrectionCodesFlag,                                                               "add error-correction codes with 'dvdisaster' tool"                        ),
   CMD_OPTION_BOOLEAN      ("always-create-image",          0,  1,1,jobOptions.alwaysCreateImageFlag,                                                                  "always create image for CD/DVD/BD/device"                                 ),
 
-  CMD_OPTION_CSTRING      ("database-index",               0,  1,0,indexDatabaseFileName,                                                                             "index database file name","file name"                                     ),
-  CMD_OPTION_BOOLEAN      ("database-index-no-auto-update",0,  1,0,globalOptions.databaseIndexNoAutoUpdateFlag,                                                       "disabled automatic update database index"                                 ),
-  CMD_OPTION_INTEGER      ("database-index-keep-time",     0,  1,0,globalOptions.databaseIndexKeepTime,        0,MAX_INT,COMMAND_LINE_TIME_UNITS,                     "time to keep index data of not existing storage"                          ),
+  CMD_OPTION_CSTRING      ("index-database",               0,  1,0,indexDatabaseFileName,                                                                             "index database file name","file name"                                     ),
+  CMD_OPTION_BOOLEAN      ("index-database-no-auto-update",0,  1,0,globalOptions.indexDatabaseNoAutoUpdateFlag,                                                       "disabled automatic update index database"                                 ),
+  CMD_OPTION_INTEGER      ("index-database-keep-time",     0,  1,0,globalOptions.indexDatabaseKeepTime,        0,MAX_INT,COMMAND_LINE_TIME_UNITS,                     "time to keep index data of not existing storage"                          ),
 
   CMD_OPTION_SET          ("log",                          0,  1,0,logTypes,                                   COMMAND_LINE_OPTIONS_LOG_TYPES,                        "log types"                                                                ),
   CMD_OPTION_CSTRING      ("log-file",                     0,  1,0,logFileName,                                                                                       "log file name","file name"                                                ),
@@ -613,12 +613,12 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
   CMD_OPTION_BOOLEAN      ("force-delta-compression",      0,  0,1,jobOptions.forceDeltaCompressionFlag,                                                              "force delta compression of files. Stop on error"                          ),
   CMD_OPTION_BOOLEAN      ("raw-images",                   0,  1,1,jobOptions.rawImagesFlag,                                                                          "store raw images (store all image blocks)"                                ),
   CMD_OPTION_BOOLEAN      ("no-fragments-check",           0,  1,1,jobOptions.noFragmentsCheckFlag,                                                                   "do not check completeness of file fragments"                              ),
-  CMD_OPTION_BOOLEAN      ("no-database-index",            0,  1,0,jobOptions.noDatabaseIndexFlag,                                                                    "do not store database index for archives"                                 ),
+  CMD_OPTION_BOOLEAN      ("no-index-database",            0,  1,0,jobOptions.noIndexDatabaseFlag,                                                                    "do not store index database for archives"                                 ),
   CMD_OPTION_BOOLEAN      ("overwrite-archive-files",      'o',0,1,jobOptions.overwriteArchiveFilesFlag,                                                              "overwrite existing archive files"                                         ),
   CMD_OPTION_BOOLEAN      ("overwrite-files",              0,  0,1,jobOptions.overwriteFilesFlag,                                                                     "overwrite existing files"                                                 ),
   CMD_OPTION_BOOLEAN      ("wait-first-volume",            0,  1,1,jobOptions.waitFirstVolumeFlag,                                                                    "wait for first volume"                                                    ),
-  CMD_OPTION_BOOLEAN      ("dry-run",                      0,  1,1,jobOptions.dryRunFlag,                                                                             "do dry-run (skip storage/restore, incremental data, database index)"      ),
-  CMD_OPTION_BOOLEAN      ("no-storage",                   0,  1,1,jobOptions.noStorageFlag,                                                                          "do not store archives (skip storage, database index)"                     ),
+  CMD_OPTION_BOOLEAN      ("dry-run",                      0,  1,1,jobOptions.dryRunFlag,                                                                             "do dry-run (skip storage/restore, incremental data, index database)"      ),
+  CMD_OPTION_BOOLEAN      ("no-storage",                   0,  1,1,jobOptions.noStorageFlag,                                                                          "do not store archives (skip storage, index database)"                     ),
   CMD_OPTION_BOOLEAN      ("no-bar-on-medium",             0,  1,1,jobOptions.noBAROnMediumFlag,                                                                      "do not store a copy of BAR on medium"                                     ),
   CMD_OPTION_BOOLEAN      ("stop-on-error",                0,  1,1,jobOptions.stopOnErrorFlag,                                                                        "immediately stop on error"                                                ),
 
@@ -783,9 +783,9 @@ LOCAL const ConfigValue CONFIG_VALUES[] =
   CONFIG_VALUE_INTEGER  ("compress-min-size",            &globalOptions.compressMinFileSize,-1,                   0,MAX_INT,CONFIG_VALUE_BYTES_UNITS),
   CONFIG_VALUE_SPECIAL  ("compress-exclude",             &compressExcludePatternList,-1,                          configValueParsePattern,NULL,NULL,NULL,NULL),
 
-  CONFIG_VALUE_CSTRING  ("database-index",               &indexDatabaseFileName,-1                                ),
-  CONFIG_VALUE_BOOLEAN  ("database-index-no-auto-update",&globalOptions.databaseIndexNoAutoUpdateFlag,-1          ),
-  CONFIG_VALUE_INTEGER  ("database-index-keep-time",     &globalOptions.databaseIndexKeepTime,-1,                 0,MAX_INT,CONFIG_VALUE_TIME_UNITS),
+  CONFIG_VALUE_CSTRING  ("index-database",               &indexDatabaseFileName,-1                                ),
+  CONFIG_VALUE_BOOLEAN  ("index-database-no-auto-update",&globalOptions.indexDatabaseNoAutoUpdateFlag,-1          ),
+  CONFIG_VALUE_INTEGER  ("index-database-keep-time",     &globalOptions.indexDatabaseKeepTime,-1,                 0,MAX_INT,CONFIG_VALUE_TIME_UNITS),
 
   // global job settings
   CONFIG_VALUE_STRING   ("archive-name",                 &archiveName,-1                                          ),
@@ -1736,8 +1736,8 @@ LOCAL void initGlobalOptions(void)
   globalOptions.deviceList                    = &deviceList;
   globalOptions.defaultDevice                 = &defaultDevice;
 
-  globalOptions.databaseIndexNoAutoUpdateFlag = FALSE;
-  globalOptions.databaseIndexKeepTime         = 24*60*60;
+  globalOptions.indexDatabaseNoAutoUpdateFlag = FALSE;
+  globalOptions.indexDatabaseKeepTime         = 24*60*60;
 
   globalOptions.groupFlag                     = FALSE;
   globalOptions.allFlag                       = FALSE;
@@ -2460,7 +2460,7 @@ void initJobOptions(JobOptions *jobOptions)
   jobOptions->waitFirstVolumeFlag       = FALSE;
   jobOptions->rawImagesFlag             = FALSE;
   jobOptions->noFragmentsCheckFlag      = FALSE;
-  jobOptions->noDatabaseIndexFlag       = FALSE;
+  jobOptions->noIndexDatabaseFlag       = FALSE;
   jobOptions->dryRunFlag                = FALSE;
   jobOptions->noStorageFlag             = FALSE;
   jobOptions->noBAROnMediumFlag         = FALSE;
@@ -4196,12 +4196,12 @@ int main(int argc, const char *argv[])
   if (indexDatabaseFileName != NULL)
   {
     // open index database
-    if (printInfoFlag) printf("Opening database index '%s'...",indexDatabaseFileName);
+    if (printInfoFlag) printf("Opening index database '%s'...",indexDatabaseFileName);
     error = Index_init(&databaseHandle,indexDatabaseFileName);
     if (error != ERROR_NONE)
     {
       if (printInfoFlag) printf("fail!\n");
-      printError("Cannot open database index '%s' (error: %s)!\n",
+      printError("Cannot open indexd database '%s' (error: %s)!\n",
                  indexDatabaseFileName,
                  Errors_getText(error)
                 );

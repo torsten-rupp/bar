@@ -2374,9 +2374,9 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
                     );
           createInfo->failError = error;
 
-          // delete database index
+          // delete index database
           if (   (indexDatabaseHandle != NULL)
-              && !createInfo->jobOptions->noDatabaseIndexFlag
+              && !createInfo->jobOptions->noIndexDatabaseFlag
               && !createInfo->jobOptions->dryRunFlag
               && !createInfo->jobOptions->noStorageFlag
              )
@@ -2401,9 +2401,9 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
                     );
           createInfo->failError = error;
 
-          // delete database index
+          // delete index database
           if (   (indexDatabaseHandle != NULL)
-              && !createInfo->jobOptions->noDatabaseIndexFlag
+              && !createInfo->jobOptions->noIndexDatabaseFlag
               && !createInfo->jobOptions->dryRunFlag
               && !createInfo->jobOptions->noStorageFlag
              )
@@ -2441,9 +2441,9 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
                     );
           createInfo->failError = error;
 
-          // delete database index
+          // delete index database
           if (   (indexDatabaseHandle != NULL)
-              && !createInfo->jobOptions->noDatabaseIndexFlag
+              && !createInfo->jobOptions->noIndexDatabaseFlag
               && !createInfo->jobOptions->dryRunFlag
               && !createInfo->jobOptions->noStorageFlag
              )
@@ -2589,13 +2589,13 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
           logMessage(LOG_TYPE_STORAGE,"stored '%s'\n",String_cString(printableStorageName));
         }
 
-        // update database index and set state
+        // update index database and set state
         if (   (createInfo->failError == ERROR_NONE)
             && ((createInfo->requestedAbortFlag == NULL) || !(*createInfo->requestedAbortFlag))
            )
         {
           if (   (indexDatabaseHandle != NULL)
-              && !createInfo->jobOptions->noDatabaseIndexFlag
+              && !createInfo->jobOptions->noIndexDatabaseFlag
               && !createInfo->jobOptions->dryRunFlag
               && !createInfo->jobOptions->noStorageFlag
              )
@@ -2688,7 +2688,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
           {
             // error -> set database state
             if (   (indexDatabaseHandle != NULL)
-                && !createInfo->jobOptions->noDatabaseIndexFlag
+                && !createInfo->jobOptions->noIndexDatabaseFlag
                 && !createInfo->jobOptions->dryRunFlag
                 && !createInfo->jobOptions->noStorageFlag
                )
@@ -2705,9 +2705,9 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
           }
           else if ((createInfo->requestedAbortFlag != NULL) && (*createInfo->requestedAbortFlag))
           {
-            // aborted -> delete database index
+            // aborted -> delete index database
             if (   (indexDatabaseHandle != NULL)
-                && !createInfo->jobOptions->noDatabaseIndexFlag
+                && !createInfo->jobOptions->noIndexDatabaseFlag
                 && !createInfo->jobOptions->dryRunFlag
                 && !createInfo->jobOptions->noStorageFlag
                )
@@ -4138,7 +4138,7 @@ Errors Command_create(const char                      *storageName,
 #if 0
 // NYI: must index be deleted on error?
         if (   (indexDatabaseHandle != NULL)
-            && !archiveInfo->jobOptions->noDatabaseIndexFlag
+            && !archiveInfo->jobOptions->noIndexDatabaseFlag
             && !archiveInfo->jobOptions->dryRunFlag
             && !archiveInfo->jobOptions->noStorageFlag
            )
@@ -4196,7 +4196,7 @@ Errors Command_create(const char                      *storageName,
 #if 0
 // NYI: must index be deleted on error?
     if (   (indexDatabaseHandle != NULL)
-        && !archiveInfo->jobOptions->noDatabaseIndexFlag
+        && !archiveInfo->jobOptions->noIndexDatabaseFlag
         && !archiveInfo->jobOptions->dryRunFlag
         && !archiveInfo->jobOptions->noStorageFlag
        )
