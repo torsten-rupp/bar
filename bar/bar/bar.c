@@ -1213,6 +1213,7 @@ LOCAL bool readConfigFile(const String fileName, bool printInfoFlag)
     }
     else if (String_parse(line,STRING_BEGIN,"%S=% S",&nextIndex,name,value))
     {
+      String_unquote(value,STRING_QUOTES);
       if (!ConfigValue_parse(String_cString(name),
                              String_cString(value),
                              CONFIG_VALUES,SIZE_OF_ARRAY(CONFIG_VALUES),
@@ -2399,7 +2400,7 @@ void logPostProcess(void)
   if (tmpLogFile != NULL) fflush(tmpLogFile);
 
   // close temporary log file
-  if (tmpLogFile != NULL) fclose(tmpLogFile);
+  if (tmpLogFile != NULL) fclose(tmpLogFile); tmpLogFile = NULL;
 
   // log post command
   if (logPostCommand != NULL)
@@ -3909,6 +3910,7 @@ bool readJobFile(const String      fileName,
     // parse line
     if (String_parse(line,STRING_BEGIN,"%S=% S",&nextIndex,name,value))
     {
+      String_unquote(value,STRING_QUOTES);
       if (!ConfigValue_parse(String_cString(name),
                              String_cString(value),
                              configValues,configValueCount,
@@ -4248,7 +4250,7 @@ int main(int argc, const char *argv[])
     File_appendFileNameCString(tmpLogFileName,"log.txt");
     tmpLogFile = fopen(String_cString(tmpLogFileName),"w");
 
-    // open log files
+    // open log file
     if (logFileName != NULL)
     {
       logFile = fopen(logFileName,"a");
