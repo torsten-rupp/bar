@@ -61,6 +61,12 @@
 
 #define MAX_NETWORK_CLIENT_THREADS 3           // number of threads for a client
 
+// sleep times [s]
+#define SLEEP_TIME_SCHEDULER_THREAD    ( 1*60)
+#define SLEEP_TIME_PAUSE_THREAD        ( 1*60)
+#define SLEEP_TIME_INDEX_THREAD        (15*60)
+#define SLEEP_TIME_INDEX_UPDATE_THREAD (15*60)
+
 /***************************** Datatypes *******************************/
 
 // server states
@@ -200,7 +206,7 @@ typedef struct
   LIST_HEADER(IndexCryptPasswordNode);
 } IndexCryptPasswordList;
 
-// database index entry node
+// index database entry node
 typedef struct IndexNode
 {
   LIST_NODE_HEADER(struct IndexNode);
@@ -252,7 +258,7 @@ typedef struct IndexNode
   };
 } IndexNode;
 
-// database index node list
+// index database node list
 typedef struct
 {
   LIST_HEADER(IndexNode);
@@ -2018,9 +2024,9 @@ LOCAL void schedulerThreadCode(void)
     }
     Semaphore_unlock(&jobList.lock);
 
-    // sleep 1min, check quit flag
+    // sleep, check quit flag
     z = 0;
-    while ((z < 60) && !quitFlag)
+    while ((z < SLEEP_TIME_SCHEDULER_THREAD) && !quitFlag)
     {
       Misc_udelay(10LL*1000LL*1000LL);
       z += 10;
@@ -2064,9 +2070,9 @@ LOCAL void pauseThreadCode(void)
       }
     }
 
-    // sleep 1min, check update and quit flag
+    // sleep, check update and quit flag
     z = 0;
-    while ((z < 60) && !quitFlag)
+    while ((z < SLEEP_TIME_PAUSE_THREAD) && !quitFlag)
     {
       Misc_udelay(10LL*1000LL*1000LL);
       z += 10;
@@ -2169,8 +2175,8 @@ LOCAL void indexThreadCode(void)
   String                 storageName;
   String                 printableStorageName;
   IndexCryptPasswordList indexCryptPasswordList;
-  DatabaseQueryHandle    databaseQueryHandle;
   int64                  storageId;
+  bool                   interruptFlag;
   Errors                 error;
   JobNode                *jobNode;
   IndexCryptPasswordNode *indexCryptPasswordNode;
@@ -2200,7 +2206,7 @@ LOCAL void indexThreadCode(void)
                            NULL
                           );
   }
-  if (globalOptions.noAutoUpdateDatabaseIndexFlag)
+  if (globalOptions.indexDatabaseNoAutoUpdateFlag)
   {
     while (Index_findByState(indexDatabaseHandle,
                              INDEX_STATE_UPDATE_REQUESTED,
@@ -2254,71 +2260,68 @@ LOCAL void indexThreadCode(void)
     Semaphore_unlock(&jobList.lock);
 
     // update index entries
-    error = Database_prepare(&databaseQueryHandle,
-                             indexDatabaseHandle,
-                             "SELECT id, \
-                                     name \
-                              FROM storage \
-                              WHERE state=%d \
-                             ",
-                             INDEX_STATE_UPDATE_REQUESTED
-                            );
-    if (error == ERROR_NONE)
+    interruptFlag = FALSE;
+    while (   Index_findByState(indexDatabaseHandle,
+                                INDEX_STATE_UPDATE_REQUESTED,
+                                &storageId,
+                                storageName,
+                                NULL
+                               )
+           && !interruptFlag
+           && !quitFlag
+          )
     {
-      storageId = DATABASE_ID_NONE;
-      while (   Database_getNextRow(&databaseQueryHandle,
-                                    "%ld %S",
-                                    &storageId,
-                                    &storageName
-                                   )
-             && (storageId != DATABASE_ID_NONE)
-             && !quitFlag
-             && !createFlag
-             && !restoreFlag
-            )
+      Storage_getPrintableName(printableStorageName,storageName);
+
+      logMessage(LOG_TYPE_INDEX,"create index #%lld for '%s'\n",storageId,String_cString(printableStorageName));
+
+      // try to create index
+      LIST_ITERATE(&indexCryptPasswordList,indexCryptPasswordNode)
       {
-        Storage_getPrintableName(printableStorageName,storageName);
+        // set state 'index update in progress'
+        indexFlag = TRUE;
 
-        logMessage(LOG_TYPE_INDEX,"create index #%lld for '%s'\n",storageId,String_cString(printableStorageName));
-
-        // try to create index
-        LIST_ITERATE(&indexCryptPasswordList,indexCryptPasswordNode)
+        // index update
+        error = Archive_updateIndex(indexDatabaseHandle,
+                                    storageId,
+                                    storageName,
+                                    indexCryptPasswordNode->cryptPassword,
+                                    indexCryptPasswordNode->cryptPrivateKeyFileName,
+                                    indexPauseCallback,
+                                    NULL,
+                                    indexAbortCallback,
+                                    NULL
+                                   );
+        if (error == ERROR_NONE)
         {
-          indexFlag = TRUE;
-          error = Archive_updateIndex(indexDatabaseHandle,
-                                      storageId,
-                                      storageName,
-                                      indexCryptPasswordNode->cryptPassword,
-                                      indexCryptPasswordNode->cryptPrivateKeyFileName,
-                                      indexPauseCallback,
-                                      NULL,
-                                      indexAbortCallback,
-                                      NULL
-                                     );
           indexFlag = FALSE;
-          if (quitFlag || createFlag || restoreFlag || (error == ERROR_NONE)) break;
+          break;
         }
-        if (!quitFlag && !createFlag && !restoreFlag)
-        {
-          if (error == ERROR_NONE)
-          {
-        plogMessage(LOG_TYPE_INDEX,
-                    "created storage index '%s'\n",
-                    String_cString(printableStorageName)
-                   );
-      }
-      else
-      {
-        plogMessage(LOG_TYPE_ERROR,
-                    "cannot create storage index '%s' (error: %s)\n",
-                    String_cString(printableStorageName),
-                    Errors_getText(error)
-                   );
-      }
-    }
-      }
 
-      Database_finalize(&databaseQueryHandle);
+        // clear state 'index update in progress'
+        indexFlag = FALSE;
+
+        // check if interrupted
+        if (createFlag || restoreFlag) interruptFlag = TRUE;
+      }
+      if (!interruptFlag && !quitFlag)
+      {
+        if (error == ERROR_NONE)
+        {
+          plogMessage(LOG_TYPE_INDEX,
+                      "created storage index '%s'\n",
+                      String_cString(printableStorageName)
+                     );
+        }
+        else
+        {
+          plogMessage(LOG_TYPE_ERROR,
+                      "cannot create storage index '%s' (error: %s)\n",
+                      String_cString(printableStorageName),
+                      Errors_getText(error)
+                     );
+        }
+      }
     }
 
     // free resources
@@ -2330,12 +2333,15 @@ LOCAL void indexThreadCode(void)
       Misc_udelay(10LL*1000LL*1000LL);
     }
 
-    // sleep a short time
-    z = 0;
-    while ((z < 600) && !quitFlag)
+    if (!interruptFlag)
     {
-      Misc_udelay(10LL*1000LL*1000LL);
-      z += 10;
+      // sleep for 10min, check quit flag
+      z = 0;
+      while ((z < SLEEP_TIME_INDEX_THREAD) && !quitFlag)
+      {
+        Misc_udelay(10LL*1000LL*1000LL);
+        z += 10;
+      }
     }
   }
 
@@ -2387,8 +2393,6 @@ LOCAL void getStorageDirectories(StringList *storageDirectoryList)
 
 LOCAL void indexUpdateThreadCode(void)
 {
-  #define MAX_INDEX_CHECK_TIME (7*24*60*60)
-
   String                     storageSpecifier;
   String                     fileName;
   String                     storageName;
@@ -2400,14 +2404,14 @@ LOCAL void indexUpdateThreadCode(void)
   FileInfo                   fileInfo;
   StorageTypes               storageType;
   int64                      storageId;
+  uint64                     createdDateTime;
   IndexStates                indexState;
-  uint64                     lastChecked;
+  uint64                     lastCheckedDateTime;
   int                        z;
-#if 0
   uint64                     now;
+  String                     printableStorageName;
   DatabaseQueryHandle        databaseQueryHandle;
   IndexModes                 indexMode;
-#endif /* 0 */
 
   // initialize variables
   StringList_init(&storageDirectoryList);
@@ -2434,6 +2438,7 @@ LOCAL void indexUpdateThreadCode(void)
          )
       {
         // list directory, update index checked/request create index
+//fprintf(stderr,"%s, %d: check %s\n",__FILE__,__LINE__,String_cString(storageName));
         error = Storage_openDirectoryList(&storageDirectoryListHandle,
                                           storageName,
                                           &jobOptions
@@ -2456,20 +2461,17 @@ LOCAL void indexUpdateThreadCode(void)
             {
               continue;
             }
+
             // check index update state of file, add index
-/*
-            DATABASE_LOCKED_DO(indexDatabaseHandle)
-            {
-            }
-*/
             Storage_getName(storageName,storageType,storageSpecifier,fileName);
+//fprintf(stderr,"%s, %d: find %s -- %s\n",__FILE__,__LINE__,String_cString(storageSpecifier),String_cString(fileName));
 
             // get index id, request index update
             if (Index_findByName(indexDatabaseHandle,
                                  storageName,
                                  &storageId,
                                  &indexState,
-                                 &lastChecked
+                                 NULL
                                 )
                )
             {
@@ -2511,9 +2513,7 @@ LOCAL void indexUpdateThreadCode(void)
     }
     freeJobOptions(&jobOptions);
 
-#if 0
-// NYI: how to remove old/not existing indizes in a safe way?
-    // delete old indizes
+    // delete not existing indizes
     error = Index_initListStorage(&databaseQueryHandle,
                                   indexDatabaseHandle,
                                   INDEX_STATE_ALL,
@@ -2521,33 +2521,40 @@ LOCAL void indexUpdateThreadCode(void)
                                  );
     if (error == ERROR_NONE)
     {
-      now = Misc_getCurrentDateTime();
+      now                  = Misc_getCurrentDateTime();
+      storageName          = String_new();
+      printableStorageName = String_new();
       while (Index_getNextStorage(&databaseQueryHandle,
                                   &storageId,
-                                  NULL,
-                                  NULL,
+                                  storageName,
+                                  &createdDateTime,
                                   NULL,
                                   &indexState,
                                   &indexMode,
-                                  &lastChecked,
+                                  &lastCheckedDateTime,
                                   NULL
                                  )
             )
       {
+        Storage_getPrintableName(printableStorageName,storageName);
+
         if (   (indexMode == INDEX_MODE_AUTO)
-            && (now > (lastChecked+MAX_INDEX_CHECK_TIME))
+            && (now > (createdDateTime+globalOptions.indexDatabaseKeepTime))
+            && (now > (lastCheckedDateTime+globalOptions.indexDatabaseKeepTime))
            )
         {
           Index_delete(indexDatabaseHandle,storageId);
+          logMessage(LOG_TYPE_INDEX,"Deleted index for '%s'",String_cString(printableStorageName));
         }
       }
       Index_doneList(&databaseQueryHandle);
+      String_delete(printableStorageName);
+      String_delete(storageName);
     }
-#endif /* 0 */
 
-    // sleep 1min, check quit flag
+    // sleep, check quit flag
     z = 0;
-    while ((z < 60) && !quitFlag)
+    while ((z < SLEEP_TIME_INDEX_UPDATE_THREAD) && !quitFlag)
     {
       Misc_udelay(10LL*1000LL*1000LL);
       z += 10;
@@ -6223,7 +6230,6 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const Stri
             CompressAlgorithms byteCompressAlgorithm;
             CryptAlgorithms    cryptAlgorithm;
             CryptTypes         cryptType;
-#warning todo rename imageName -> deviceName
             String             imageName;
             DeviceInfo         deviceInfo;
             String             deltaSourceName;
@@ -6291,8 +6297,8 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const Stri
             directoryName = String_new();
             error = Archive_readDirectoryEntry(&archiveInfo,
                                                &archiveEntryInfo,
-                                               NULL,
-                                               NULL,
+                                               &cryptAlgorithm,
+                                               &cryptType,
                                                directoryName,
                                                &fileInfo
                                               );
@@ -6309,12 +6315,12 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const Stri
                )
             {
               sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
-                         "DIRECTORY %'S %llu %d %d",
-                         directoryName,
-                         fileInfo.timeModified,
-                         cryptAlgorithm,
-                         cryptType
-                        );
+                               "DIRECTORY %'S %llu %d %d",
+                               directoryName,
+                               fileInfo.timeModified,
+                               cryptAlgorithm,
+                               cryptType
+                              );
             }
 
             // close archive file, free resources
@@ -6723,7 +6729,7 @@ ENTRY_TYPE_FILE,
 
 /***********************************************************************\
 * Name   : serverCommand_indexStorageInfo
-* Purpose: get database index storage info
+* Purpose: get index database storage info
 * Input  : clientInfo    - client info
 *          id            - command id
 *          arguments     - command arguments
@@ -6738,12 +6744,11 @@ ENTRY_TYPE_FILE,
 
 LOCAL void serverCommand_indexStorageInfo(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
 {
-  Errors error;
-  ulong  storageEntryCountOK;
-  ulong  storageEntryCountCreate;
-  ulong  storageEntryCountUpdateRequested;
-  ulong  storageEntryCountUpdate;
-  ulong  storageEntryCountError;
+  long storageEntryCountOK;
+  long storageEntryCountCreate;
+  long storageEntryCountUpdateRequested;
+  long storageEntryCountUpdate;
+  long storageEntryCountError;
 
   assert(clientInfo != NULL);
   assert(arguments != NULL);
@@ -6777,7 +6782,7 @@ LOCAL void serverCommand_indexStorageInfo(ClientInfo *clientInfo, uint id, const
     }
     else
     {
-      sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"get database indizes fail");
+      sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"get index database fail");
     }
   }
   else
@@ -6788,7 +6793,7 @@ LOCAL void serverCommand_indexStorageInfo(ClientInfo *clientInfo, uint id, const
 
 /***********************************************************************\
 * Name   : serverCommand_indexStorageList
-* Purpose: get database index storage list
+* Purpose: get index database storage list
 * Input  : clientInfo    - client info
 *          id            - command id
 *          arguments     - command arguments
@@ -6798,26 +6803,30 @@ LOCAL void serverCommand_indexStorageInfo(ClientInfo *clientInfo, uint id, const
 * Notes  : Arguments:
 *            <max. count>|0
 *            <status>|*
+*            <mode>|*
 *            <name pattern>
 *          Result:
-*            <storage id> <date/time> <size> <state> <name> <error message>
+*            <storage id> <name>  <created date/time> <size> <state> \
+*            <mode> <last checked date/time> <error message>
 *            ...
 \***********************************************************************/
 
 LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
 {
   ulong               maxCount;
+  String              indexStatusText;
   IndexStates         indexState;
-  String              statusText;
+  String              indexModeText;
+  IndexModes          indexMode;
   String              patternText;
   Errors              error;
   DatabaseQueryHandle databaseQueryHandle;
   ulong               n;
   DatabaseId          storageId;
-  uint64              dateTime;
-  uint64              size;
-  uint                state;
   String              storageName;
+  uint64              createdDateTime;
+  uint64              size;
+  uint64              lastCheckedDateTime;
   String              errorMessage;
   String              printableStorageName;
 
@@ -6836,19 +6845,26 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected filter status");
     return;
   }
-  indexState = Index_stringToState(arguments[1]);
+  indexStatusText = arguments[1];
+  indexState = Index_stringToState(indexStatusText);
   if (indexState == INDEX_STATE_UNKNOWN)
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"invalid filter status '%S'",arguments[1]);
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"invalid filter status '%S'",indexStatusText);
     return;
   }
-  statusText = arguments[1];
-  if (argumentCount < 3)
+  indexModeText = arguments[2];
+  indexMode = Index_stringToMode(indexModeText);
+  if (indexMode == INDEX_MODE_UNKNOWN)
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"invalid filter mode '%S'",indexModeText);
+    return;
+  }
+  if (argumentCount < 4)
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected filter pattern");
     return;
   }
-  patternText = arguments[2];
+  patternText = arguments[3];
 
   if (indexDatabaseHandle != NULL)
   {
@@ -6877,26 +6893,29 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const
            && Index_getNextStorage(&databaseQueryHandle,
                                    &storageId,
                                    storageName,
-                                   &dateTime,
+                                   &createdDateTime,
                                    &size,
-                                   &state,
-                                   NULL,
-                                   NULL,
+                                   &indexState,
+                                   &indexMode,
+                                   &lastCheckedDateTime,
                                    errorMessage
                                   )
           )
     {
-      assert(state < SIZE_OF_ARRAY(INDEX_STATE_STRINGS));
+      assert(indexState < SIZE_OF_ARRAY(INDEX_STATE_STRINGS));
+      assert(indexMode < SIZE_OF_ARRAY(INDEX_MODE_STRINGS));
 
       Storage_getPrintableName(printableStorageName,storageName);
 
       sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
-                       "%llu %llu %llu %'s %'S %'S",
+                       "%llu %'S %llu %llu %'s %'s %llu %'S",
                        storageId,
-                       dateTime,
-                       size,
-                       INDEX_STATE_STRINGS[state],
                        printableStorageName,
+                       createdDateTime,
+                       size,
+                       INDEX_STATE_STRINGS[indexState],
+                       INDEX_MODE_STRINGS[indexMode],
+                       lastCheckedDateTime,
                        errorMessage
                       );
       n++;
@@ -6918,7 +6937,7 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const
 
 /***********************************************************************\
 * Name   : serverCommand_indexStorageAdd
-* Purpose: add storage to database index
+* Purpose: add storage to index database
 * Input  : clientInfo    - client info
 *          id            - command id
 *          arguments     - command arguments
@@ -6973,7 +6992,7 @@ LOCAL void serverCommand_indexStorageAdd(ClientInfo *clientInfo, uint id, const 
 
 /***********************************************************************\
 * Name   : serverCommand_indexStorageRemove
-* Purpose: remove storage from database index
+* Purpose: remove storage from index database
 * Input  : clientInfo    - client info
 *          id            - command id
 *          arguments     - command arguments
@@ -7104,7 +7123,7 @@ LOCAL void serverCommand_indexStorageRemove(ClientInfo *clientInfo, uint id, con
 
 /***********************************************************************\
 * Name   : serverCommand_indexStorageRefresh
-* Purpose: refresh database index for storage
+* Purpose: refresh index database for storage
 * Input  : clientInfo    - client info
 *          id            - command id
 *          arguments     - command arguments
@@ -7391,7 +7410,7 @@ LOCAL IndexNode *getIndexEntryNode(IndexList *indexList, ArchiveEntryTypes type,
 
 /***********************************************************************\
 * Name   : serverCommand_indexEntriesList
-* Purpose: get database index entry list
+* Purpose: get index database entry list
 * Input  : clientInfo    - client info
 *          id            - command id
 *          arguments     - command arguments
@@ -8841,7 +8860,7 @@ Errors Server_run(uint             port,
     {
       HALT_FATAL_ERROR("Cannot initialise index thread!");
     }
-    if (!globalOptions.noAutoUpdateDatabaseIndexFlag)
+    if (!globalOptions.indexDatabaseNoAutoUpdateFlag)
     {
       if (!Thread_init(&indexUpdateThread,"BAR update index",globalOptions.niceLevel,indexUpdateThreadCode,NULL))
       {
@@ -9003,7 +9022,7 @@ Errors Server_run(uint             port,
   Semaphore_setEnd(&jobList.lock);
   if (indexDatabaseHandle != NULL)
   {
-    if (!globalOptions.noAutoUpdateDatabaseIndexFlag)
+    if (!globalOptions.indexDatabaseNoAutoUpdateFlag)
     {
       Thread_join(&indexUpdateThread);
     }
@@ -9020,7 +9039,7 @@ Errors Server_run(uint             port,
   // free resources
   if (indexDatabaseHandle != NULL)
   {
-    if (!globalOptions.noAutoUpdateDatabaseIndexFlag)
+    if (!globalOptions.indexDatabaseNoAutoUpdateFlag)
     {
       Thread_done(&indexUpdateThread);
     }
