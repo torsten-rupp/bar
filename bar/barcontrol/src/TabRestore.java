@@ -150,6 +150,30 @@ class TabRestore
     }
   };
 
+  /** index modes
+   */
+  enum IndexModes
+  {
+    MANUAL,
+    AUTO,
+
+    ALL,
+    UNKNOWN;
+
+    /** convert data to string
+     * @return string
+     */
+    public String toString()
+    {
+      switch (this)
+      {
+        case MANUAL: return "manual";
+        case AUTO:   return "auto";
+        default:     return "manual";
+      }
+    }
+  };
+
   /** storage data
    */
   class StorageData
@@ -157,9 +181,11 @@ class TabRestore
     long        id;                       // storage id
     String      name;                     // storage name
     long        size;                     // storage size [bytes]
-    long        datetime;                 // date/time when storage was created
+    long        createdDateTime;          // date/time when storage was created
     String      title;                    // title to show
     IndexStates indexState;               // state of index
+    IndexModes  indexMode;                // mode of index
+    long        lastCheckedDateTime;      // last checked date/time
     String      errorMessage;             // last error message
     boolean     checked;                  // true iff storage entry is tagged
 
@@ -167,33 +193,38 @@ class TabRestore
      * @param id database id
      * @param name name of storage
      * @param size size of storage [bytes]
-     * @param datetime date/time (timestamp) when storage was created
+     * @param createdDateTime date/time (timestamp) when storage was created
      * @param title title to show
      * @param indexState storage index state
+     * @param indexMode storage index mode
+     * @param lastCheckedDateTime last checked date/time (timestamp)
      * @param errorMessage error message text
      */
-    StorageData(long id, String name, long size, long datetime, String title, IndexStates indexState, String errorMessage)
+    StorageData(long id, String name, long size, long createdDateTime, String title, IndexStates indexState, IndexModes indexMode, long lastCheckedDateTime, String errorMessage)
     {
-      this.id           = id;
-      this.name         = name;
-      this.size         = size;
-      this.datetime     = datetime;
-      this.title        = title;
-      this.indexState   = indexState;
-      this.errorMessage = errorMessage;
-      this.checked      = false;
+      this.id                  = id;
+      this.name                = name;
+      this.size                = size;
+      this.createdDateTime     = createdDateTime;
+      this.title               = title;
+      this.indexState          = indexState;
+      this.indexMode           = indexMode;
+      this.lastCheckedDateTime = lastCheckedDateTime;
+      this.errorMessage        = errorMessage;
+      this.checked             = false;
 
     }
 
     /** create storage data
      * @param id database id
      * @param name name of storage
-     * @param datetime date/time (timestamp) when storage was created
+     * @param createdDateTime date/time (timestamp) when storage was created
      * @param title title to show
+     * @param lastCheckedDateTime last checked date/time (timestamp)
      */
-    StorageData(long id, String name, long datetime, String title)
+    StorageData(long id, String name, long createdDateTime, String title, long lastCheckedDateTime)
     {
-      this(id,name,0,datetime,title,IndexStates.OK,null);
+      this(id,name,0,createdDateTime,title,IndexStates.OK,IndexModes.MANUAL,lastCheckedDateTime,null);
     }
 
     /** create storage data
@@ -203,7 +234,7 @@ class TabRestore
      */
     StorageData(long id, String name, String title)
     {
-      this(id,name,0,title);
+      this(id,name,0,title,0);
     }
 
     /** check if checked
@@ -227,7 +258,7 @@ class TabRestore
      */
     public String toString()
     {
-      return "Storage {"+name+", "+size+" bytes, datetime="+datetime+", title="+title+", state="+indexState+", checked="+checked+"}";
+      return "Storage {"+name+", "+size+" bytes, created="+createdDateTime+", title="+title+", state="+indexState+", last checked="+lastCheckedDateTime+", checked="+checked+"}";
     }
   };
 
@@ -292,10 +323,10 @@ class TabRestore
   class StorageDataComparator implements Comparator<StorageData>
   {
     // Note: enum in inner classes are not possible in Java, thus use the old way...
-    private final static int SORTMODE_NAME     = 0;
-    private final static int SORTMODE_SIZE     = 1;
-    private final static int SORTMODE_DATETIME = 2;
-    private final static int SORTMODE_STATE    = 3;
+    private final static int SORTMODE_NAME             = 0;
+    private final static int SORTMODE_SIZE             = 1;
+    private final static int SORTMODE_CREATED_DATETIME = 2;
+    private final static int SORTMODE_STATE            = 3;
 
     private int sortMode;
 
@@ -307,7 +338,7 @@ class TabRestore
     {
       if      (table.getColumn(0) == sortColumn) sortMode = SORTMODE_NAME;
       else if (table.getColumn(1) == sortColumn) sortMode = SORTMODE_SIZE;
-      else if (table.getColumn(2) == sortColumn) sortMode = SORTMODE_DATETIME;
+      else if (table.getColumn(2) == sortColumn) sortMode = SORTMODE_CREATED_DATETIME;
       else if (table.getColumn(3) == sortColumn) sortMode = SORTMODE_STATE;
       else                                       sortMode = SORTMODE_NAME;
     }
@@ -336,10 +367,10 @@ class TabRestore
           if      (storageData1.size < storageData2.size) return -1;
           else if (storageData1.size > storageData2.size) return  1;
           else                                            return  0;
-        case SORTMODE_DATETIME:
-          if      (storageData1.datetime < storageData2.datetime) return -1;
-          else if (storageData1.datetime > storageData2.datetime) return  1;
-          else                                                    return  0;
+        case SORTMODE_CREATED_DATETIME:
+          if      (storageData1.createdDateTime < storageData2.createdDateTime) return -1;
+          else if (storageData1.createdDateTime > storageData2.createdDateTime) return  1;
+          else                                                                  return  0;
         case SORTMODE_STATE:
           return storageData1.indexState.compareTo(storageData2.indexState);
         default:
@@ -415,35 +446,40 @@ class TabRestore
           String commandString = "INDEX_STORAGE_LIST "+
                                  storageMaxCount+" "+
                                  ((storageIndexStateFilter != IndexStates.ALL) ? storageIndexStateFilter.name() : "*")+" "+
+                                 "* "+
                                  (((storagePattern != null) && !storagePattern.equals("")) ? StringUtils.escape(storagePattern) : "*");
           Command command = BARServer.runCommand(commandString);
 
           // read results, update/add data
           String line;
-          Object data[] = new Object[6];
+          Object data[] = new Object[8];
           while (!command.endOfData())
           {
             line = command.getNextResult(5*1000);
             if (line != null)
             {
 //Dprintf.dprintf("line=%s",line);
-              if      (StringParser.parse(line,"%ld %ld %ld %S %S %S",data,StringParser.QUOTE_CHARS))
+              if      (StringParser.parse(line,"%ld %S %ld %ld %S %S %ld %S",data,StringParser.QUOTE_CHARS))
               {
                 /* get data
                    format:
                      storage id
-                     date/time
-                     size
-                     state
                      storage name
+                     created date/time
+                     size
+                     index state
+                     index mode
+                     last check date/time
                      error message
                 */
-                long        storageId    = (Long)data[0];
-                long        datetime     = (Long)data[1];
-                long        size         = (Long)data[2];
-                IndexStates indexState   = Enum.valueOf(IndexStates.class,(String)data[3]);
-                String      storageName  = (String)data[4];
-                String      errorMessage = (String)data[5];
+                long        storageId           = (Long)data[0];
+                String      name                = (String)data[1];
+                long        createdDateTime     = (Long)data[2];
+                long        size                = (Long)data[3];
+                IndexStates indexState          = Enum.valueOf(IndexStates.class,(String)data[4]);
+                IndexModes  indexMode           = Enum.valueOf(IndexModes.class,(String)data[5]);
+                long        lastCheckedDateTime = (Long)data[6];
+                String      errorMessage        = (String)data[7];
 
                 StorageData storageData;
                 synchronized(storageDataMap)
@@ -451,19 +487,24 @@ class TabRestore
                   storageData = storageDataMap.get(storageId);
                   if (storageData != null)
                   {
-                    storageData.size         = size;
-                    storageData.datetime     = datetime;
-                    storageData.indexState   = indexState;
-                    storageData.errorMessage = errorMessage;
+                    storageData.name                = name;
+                    storageData.size                = size;
+                    storageData.createdDateTime     = createdDateTime;
+                    storageData.indexState          = indexState;
+                    storageData.indexMode           = indexMode;
+                    storageData.lastCheckedDateTime = lastCheckedDateTime;
+                    storageData.errorMessage        = errorMessage;
                   }
                   else
                   {
                     storageData = new StorageData(storageId,
-                                                  storageName,
+                                                  name,
                                                   size,
-                                                  datetime,
-                                                  new File(storageName).getName(),
+                                                  createdDateTime,
+                                                  new File(name).getName(),
                                                   indexState,
+                                                  indexMode,
+                                                  lastCheckedDateTime,
                                                   errorMessage
                                                  );
                   }
@@ -1331,7 +1372,7 @@ class TabRestore
             label.setBackground(COLOR_BACKGROUND);
             Widgets.layout(label,1,0,TableLayoutData.W);
 
-            label = Widgets.newLabel(widgetStorageListToolTip,simpleDateFormat.format(new Date(storageData.datetime*1000)));
+            label = Widgets.newLabel(widgetStorageListToolTip,simpleDateFormat.format(new Date(storageData.createdDateTime*1000)));
             label.setForeground(COLOR_FORGROUND);
             label.setBackground(COLOR_BACKGROUND);
             Widgets.layout(label,1,1,TableLayoutData.WE);
@@ -1356,15 +1397,25 @@ class TabRestore
             label.setBackground(COLOR_BACKGROUND);
             Widgets.layout(label,3,1,TableLayoutData.WE);
 
-            label = Widgets.newLabel(widgetStorageListToolTip,"Error:");
+            label = Widgets.newLabel(widgetStorageListToolTip,"Last checked:");
             label.setForeground(COLOR_FORGROUND);
             label.setBackground(COLOR_BACKGROUND);
             Widgets.layout(label,4,0,TableLayoutData.W);
 
-            label = Widgets.newLabel(widgetStorageListToolTip,storageData.errorMessage);
+            label = Widgets.newLabel(widgetStorageListToolTip,simpleDateFormat.format(new Date(storageData.lastCheckedDateTime*1000)));
             label.setForeground(COLOR_FORGROUND);
             label.setBackground(COLOR_BACKGROUND);
             Widgets.layout(label,4,1,TableLayoutData.WE);
+
+            label = Widgets.newLabel(widgetStorageListToolTip,"Error:");
+            label.setForeground(COLOR_FORGROUND);
+            label.setBackground(COLOR_BACKGROUND);
+            Widgets.layout(label,5,0,TableLayoutData.W);
+
+            label = Widgets.newLabel(widgetStorageListToolTip,storageData.errorMessage);
+            label.setForeground(COLOR_FORGROUND);
+            label.setBackground(COLOR_BACKGROUND);
+            Widgets.layout(label,5,1,TableLayoutData.WE);
 
             Point size = widgetStorageListToolTip.computeSize(SWT.DEFAULT,SWT.DEFAULT);
             Rectangle bounds = tableItem.getBounds(0);
@@ -2323,7 +2374,7 @@ class TabRestore
                                       (Object)storageData,
                                       storageData.name,
                                       Units.formatByteSize(storageData.size),
-                                      simpleDateFormat.format(new Date(storageData.datetime*1000)),
+                                      simpleDateFormat.format(new Date(storageData.createdDateTime*1000)),
                                       storageData.indexState.toString()
                                      )
            )
@@ -2333,7 +2384,7 @@ class TabRestore
                                    (Object)storageData,
                                    storageData.name,
                                    Units.formatByteSize(storageData.size),
-                                   simpleDateFormat.format(new Date(storageData.datetime*1000)),
+                                   simpleDateFormat.format(new Date(storageData.createdDateTime*1000)),
                                    storageData.indexState.toString()
                                   );
         }
@@ -2605,23 +2656,25 @@ class TabRestore
                   long n = 0;
                   do
                   {
-                    errorCode = BARServer.executeCommand(String.format("INDEX_STORAGE_LIST 1 ERROR *"),result);
+                    errorCode = BARServer.executeCommand(String.format("INDEX_STORAGE_LIST 1 ERROR * *"),result);
                     if (errorCode == Errors.NONE)
                     {
-                      Object data[] = new Object[6];
-                      if (StringParser.parse(result[0],"%ld %ld %ld %S %S %S",data,StringParser.QUOTE_CHARS))
+                      Object data[] = new Object[8];
+                      if (StringParser.parse(result[0],"%ld %S %ld %ld %S %S %ld %S",data,StringParser.QUOTE_CHARS))
                       {
                         /* get data
                            format:
                              storage id
-                             date/time
-                             size
-                             state
                              storage name
+                             created date/time
+                             size
+                             index state
+                             index mode
+                             last check date/time
                              error message
                         */
                         long   storageId   = (Long)data[0];
-                        String storageName = (String)data[4];
+                        String storageName = (String)data[1];
 
                         busyDialog.updateText(0,"'"+storageName+"'");
 
