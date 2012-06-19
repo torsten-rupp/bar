@@ -177,8 +177,9 @@ OPTIONS
          --volume-size=<n>[G|M|K]                             volume size
          --ecc                                                add error-correction codes with 'dvdisaster' tool
          --always-create-image                                always create image for CD/DVD/BD/device
-         --database-file=<file name>                          index database file name
-         --no-auto-update-database-index                      disabled automatic update database index
+         --index-database=<file name>                         index database file name
+         --index-database-no-auto-update                      disabled automatic update database index
+         --index-database-keep-time=<n>[weeks|days|h|m|s]     time to keep index data of not existing storage (default: 1days)
          --log=<name>[,<name>...]                             log types
                                                                 none        no logging (default)
                                                                 errors      log errors
@@ -210,8 +211,8 @@ OPTIONS
          -o|--overwrite-archive-files                         overwrite existing archive files
          --overwrite-files                                    overwrite existing files
          --wait-first-volume                                  wait for first volume
-         --dry-run                                            do dry-run (skip storage/restore, incremental data, database index)
-         --no-storage                                         do not store archives (skip storage, database index)
+         --dry-run                                            do dry-run (skip storage/restore, incremental data, index database)
+         --no-storage                                         do not store archives (skip storage, index database)
          --no-bar-on-medium                                   do not store a copy of BAR on medium
          --stop-on-error                                      immediately stop on error
          --no-default-config                                  do not read personal config file ~/.bar/bar.cfg
