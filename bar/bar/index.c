@@ -405,7 +405,7 @@ bool Index_findByState(DatabaseHandle *databaseHandle,
   error = Database_prepare(&databaseQueryHandle,
                            databaseHandle,
                            "SELECT id, \
-                                   name \
+                                   name, \
                                    STRFTIME('%%s',lastChecked) \
                             FROM storage \
                             WHERE state=%d \
