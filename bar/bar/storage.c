@@ -4403,7 +4403,7 @@ Errors Storage_read(StorageFileHandle *storageFileHandle,
         {
           ulong   i;
           ssize_t readBytes;
-          uint64  n;
+          ulong   n;
 
           if (!storageFileHandle->jobOptions->dryRunFlag)
           {
@@ -4423,9 +4423,9 @@ Errors Storage_read(StorageFileHandle *storageFileHandle,
               memcpy(buffer,storageFileHandle->ftp.readAheadBuffer.data+i,n);
 
               // adjust buffer, size, bytes read, index
-              buffer = (byte*)buffer+(uint64)n;
-              size -= (uint64)n;
-              (*bytesRead) += (uint64)n;
+              buffer = (byte*)buffer+n;
+              size -= n;
+              (*bytesRead) += n;
               storageFileHandle->ftp.index += (uint64)n;
             }
 
@@ -4456,16 +4456,16 @@ Errors Storage_read(StorageFileHandle *storageFileHandle,
                   break;
                 }
                 storageFileHandle->ftp.readAheadBuffer.offset = storageFileHandle->ftp.index;
-                storageFileHandle->ftp.readAheadBuffer.length = (uint64)readBytes;
+                storageFileHandle->ftp.readAheadBuffer.length = (ulong)readBytes;
 
                 // copy data
                 n = MIN(size,storageFileHandle->ftp.readAheadBuffer.length);
                 memcpy(buffer,storageFileHandle->ftp.readAheadBuffer.data,n);
 
                 // adjust buffer, size, bytes read, index
-                buffer = (byte*)buffer+(uint64)n;
-                size -= (uint64)n;
-                (*bytesRead) += (uint64)n;
+                buffer = (byte*)buffer+n;
+                size -= n;
+                (*bytesRead) += n;
                 storageFileHandle->ftp.index += (uint64)n;
               }
               else
@@ -4493,9 +4493,9 @@ Errors Storage_read(StorageFileHandle *storageFileHandle,
                 }
 
                 // adjust buffer, size, bytes read, index
-                buffer = (byte*)buffer+(uint64)readBytes;
-                size -= (uint64)readBytes;
-                (*bytesRead) += (uint64)readBytes;
+                buffer = (byte*)buffer+readBytes;
+                size -= (ulong)readBytes;
+                (*bytesRead) += (ulong)readBytes;
                 storageFileHandle->ftp.index += (uint64)readBytes;
               }
             }
@@ -4513,7 +4513,7 @@ Errors Storage_read(StorageFileHandle *storageFileHandle,
         {
           ulong   i;
           ssize_t readBytes;
-          uint64  n;
+          ulong   n;
 
           if (!storageFileHandle->jobOptions->dryRunFlag)
           {
@@ -4529,7 +4529,7 @@ Errors Storage_read(StorageFileHandle *storageFileHandle,
             {
               return ERROR(IO_ERROR,errno);
             }
-            (*bytesRead) += (uint64)n;
+            (*bytesRead) += n;
             storageFileHandle->scp.index += (uint64)n;
 #else /* 0 */
             // copy as much as available from read-ahead buffer
@@ -4543,9 +4543,9 @@ Errors Storage_read(StorageFileHandle *storageFileHandle,
               memcpy(buffer,storageFileHandle->scp.readAheadBuffer.data+i,n);
 
               // adjust buffer, size, bytes read, index
-              buffer = (byte*)buffer+(uint64)n;
-              size -= (uint64)n;
-              (*bytesRead) += (uint64)n;
+              buffer = (byte*)buffer+n;
+              size -= n;
+              (*bytesRead) += n;
               storageFileHandle->scp.index += (uint64)n;
             }
 
@@ -4569,18 +4569,18 @@ Errors Storage_read(StorageFileHandle *storageFileHandle,
                   break;
                 }
                 storageFileHandle->scp.readAheadBuffer.offset = storageFileHandle->scp.index;
-                storageFileHandle->scp.readAheadBuffer.length = (uint64)readBytes;
-  //fprintf(stderr,"%s,%d: n=%ld storageFileHandle->scp.bufferOffset=%llu storageFileHandle->scp.bufferLength=%lu\n",__FILE__,__LINE__,n,
-  //storageFileHandle->scp.readAheadBuffer.offset,storageFileHandle->scp.readAheadBuffer.length);
+                storageFileHandle->scp.readAheadBuffer.length = (ulong)readBytes;
+//fprintf(stderr,"%s,%d: n=%ld storageFileHandle->scp.bufferOffset=%llu storageFileHandle->scp.bufferLength=%lu\n",__FILE__,__LINE__,n,
+//storageFileHandle->scp.readAheadBuffer.offset,storageFileHandle->scp.readAheadBuffer.length);
 
                 // copy data
                 n = MIN(size,storageFileHandle->scp.readAheadBuffer.length);
                 memcpy(buffer,storageFileHandle->scp.readAheadBuffer.data,n);
 
                 // adjust buffer, size, bytes read, index
-                buffer = (byte*)buffer+(uint64)n;
-                size -= (uint64)n;
-                (*bytesRead) += (uint64)n;
+                buffer = (byte*)buffer+n;
+                size -= n;
+                (*bytesRead) += n;
                 storageFileHandle->scp.index += (uint64)n;
               }
               else
@@ -4601,9 +4601,9 @@ Errors Storage_read(StorageFileHandle *storageFileHandle,
                 }
 
                 // adjust buffer, size, bytes read, index
-                buffer = (byte*)buffer+(uint64)readBytes;
-                size -= (uint64)readBytes;
-                (*bytesRead) += (uint64)readBytes;
+                buffer = (byte*)buffer+readBytes;
+                size -= (ulong)readBytes;
+                (*bytesRead) += (ulong)readBytes;
                 storageFileHandle->scp.index += (uint64)readBytes;
               }
             }
@@ -4665,7 +4665,7 @@ Errors Storage_read(StorageFileHandle *storageFileHandle,
                   break;
                 }
                 storageFileHandle->sftp.readAheadBuffer.offset = storageFileHandle->sftp.index;
-                storageFileHandle->sftp.readAheadBuffer.length = (uint64)readBytes;
+                storageFileHandle->sftp.readAheadBuffer.length = readBytes;
 //fprintf(stderr,"%s,%d: n=%ld storageFileHandle->sftp.bufferOffset=%llu storageFileHandle->sftp.bufferLength=%lu\n",__FILE__,__LINE__,n,
 //storageFileHandle->sftp.readAheadBuffer.offset,storageFileHandle->sftp.readAheadBuffer.length);
 
@@ -4674,7 +4674,7 @@ Errors Storage_read(StorageFileHandle *storageFileHandle,
                 memcpy(buffer,storageFileHandle->sftp.readAheadBuffer.data,n);
 
                 // adjust buffer, size, bytes read, index
-                (*bytesRead) += (uint64)n;
+                (*bytesRead) += n;
                 storageFileHandle->sftp.index += (uint64)n;
               }
               else
@@ -4691,7 +4691,7 @@ Errors Storage_read(StorageFileHandle *storageFileHandle,
                 }
 
                 // adjust buffer, size, bytes read, index
-                (*bytesRead) += (uint64)readBytes;
+                (*bytesRead) += readBytes;
                 storageFileHandle->sftp.index += (uint64)readBytes;
               }
             }
@@ -4709,7 +4709,7 @@ Errors Storage_read(StorageFileHandle *storageFileHandle,
           uint64   blockIndex;
           uint     blockOffset;
           long int readBytes;
-          uint64   n;
+          ulong    n;
 
           assert(storageFileHandle->opticalDisk.read.iso9660Handle != NULL);
           assert(storageFileHandle->opticalDisk.read.iso9660Stat != NULL);
