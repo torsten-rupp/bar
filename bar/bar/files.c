@@ -1784,6 +1784,7 @@ Errors File_getFileInfo(FileInfo     *fileInfo,
   fileInfo->permission      = (FilePermission)fileStat.st_mode;
   fileInfo->major           = major(fileStat.st_rdev);
   fileInfo->minor           = minor(fileStat.st_rdev);
+  fileInfo->attributes      = FILE_ATTRIBUTE_NONE;
   fileInfo->id              = (uint64)fileStat.st_ino;
   fileInfo->linkCount       = (uint)fileStat.st_nlink;
   cast.d0 = fileStat.st_mtime;
@@ -1820,12 +1821,8 @@ Errors File_getFileInfo(FileInfo     *fileInfo,
     fileInfo->type = FILE_TYPE_LINK;
     fileInfo->size = 0LL;
 
-    // get extended file attributes
-    error = getExtendedAttributes(fileName,&fileInfo->attributes);
-    if (error != ERROR_NONE)
-    {
-      return error;
-    }
+    // get extended file attributes (igonore error; destination may not exist)
+    (void)getExtendedAttributes(fileName,&fileInfo->attributes);
   }
   else if (S_ISCHR(fileStat.st_mode))
   {
