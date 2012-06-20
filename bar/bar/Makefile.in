@@ -441,6 +441,7 @@ TEST_FILES = \
   test/data/sub-ignore-dir \
   test/data/linkdata.dat \
   test/data/link.dat \
+  test/data/link-not-existing-file.dat \
   test/data/circular-link.dat.marker \
   test/data/hardlinkdata.dat \
   test/data/hardlink.dat \
@@ -720,6 +721,9 @@ test/data/linkdata.dat test/data/link.dat:
 	$(INSTALL) -d $(@D)
 	$(DD) if=$(DEVICE_RANDOM) of=test/data/linkdata.dat bs=1 count=1024 2>/dev/null
 	($(CD) test/data; $(RMF) link.dat; $(LN) -s linkdata.dat link.dat)
+test/data/link-not-existing-file.dat:
+	$(INSTALL) -d $(@D)
+	($(CD) test/data; $(RMF) link-not-existing-file.dat; $(LN) -s not-existing-file link-not-existing-file.dat)
 test/data/circular-link.dat.marker:
 	$(INSTALL) -d $(@D)
 	($(CD) test/data; $(LN) -s circular-link.dat circular-link.dat)
@@ -794,7 +798,7 @@ test_file_operations_base: \
 	SSH_ASKPASS= $(TEST_BAR) -t test/test*.bar $(BAR_OPTIONS) $(if $(QUIET),1>/dev/null)
 	SSH_ASKPASS= $(TEST_BAR) -d test/test*.bar $(BAR_OPTIONS) $(if $(QUIET),1>/dev/null)
 	SSH_ASKPASS= $(TEST_BAR) -x test/test*.bar $(BAR_OPTIONS) --destination test/restore $(if $(QUIET),1>/dev/null)
-	$(DIFF) -r -x unreadable.dat -x circular-link.dat -x circular-link.dat.marker -x fifo -x sub-ignore-dir -x nodump.dat test/data test/restore/test/data
+	$(DIFF) -r -x unreadable.dat -x link-not-existing-file.dat -x circular-link.dat -x circular-link.dat.marker -x fifo -x sub-ignore-dir -x nodump.dat test/data test/restore/test/data
 	$(READLINK) test/restore/test/data/link.dat 2>/dev/null $(if $(QUIET),1>/dev/null)
 	test `$(STAT) --format "%a" test/restore/test/data/file400.dat 2>/dev/null` = "400" $(if $(QUIET),1>/dev/null)
 	test `$(STAT) --format "%a" test/restore/test/data/file640.dat 2>/dev/null` = "640" $(if $(QUIET),1>/dev/null)
