@@ -2015,7 +2015,7 @@ remoteBarFlag=FALSE;
 
                   // read archive hard link
                   StringList_init(&fileNameList);
-
+                  deltaSourceName = String_new();
                   error = Archive_readHardLinkEntry(&archiveInfo,
                                                     &archiveEntryInfo,
                                                     &deltaCompressAlgorithm,
@@ -2631,8 +2631,6 @@ fprintf(stderr,"%s, %d: type=#%s# arguments=%s\n",__FILE__,__LINE__,type,String_
                     String          linkName,fileName;
                     CryptAlgorithms cryptAlgorithm;
                     CryptTypes      cryptType;
-                    String          deltaSourceName;
-                    uint64          deltaSourceSize;
 //fprintf(stderr,"%s, %d: type=#%s# arguments=%s\n",__FILE__,__LINE__,type,String_cString(arguments));
 
                     linkName = String_new();
@@ -2692,7 +2690,7 @@ fprintf(stderr,"%s, %d: type=#%s# arguments=%s\n",__FILE__,__LINE__,type,String_
                   }
                   else if (strcmp(type,"HARDLINK") == 0)
                   {
-                    String               fileName,directoryName,linkName;
+                    String               fileName;
                     uint64               fileSize;
                     uint64               timeModified;
                     uint64               archiveFileSize;
@@ -2703,9 +2701,6 @@ fprintf(stderr,"%s, %d: type=#%s# arguments=%s\n",__FILE__,__LINE__,type,String_
                     String               deltaSourceName;
                     uint64               deltaSourceSize;
                     uint64               fragmentOffset,fragmentLength;
-                    FileSpecialTypes     fileSpecialType;
-                    ulong                major;
-                    ulong                minor;
 //fprintf(stderr,"%s, %d: type=#%s# arguments=%s\n",__FILE__,__LINE__,type,String_cString(arguments));
 
                     fileName        = String_new();
