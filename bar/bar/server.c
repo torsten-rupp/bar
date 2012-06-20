@@ -2273,7 +2273,12 @@ LOCAL void indexThreadCode(void)
     {
       Storage_getPrintableName(printableStorageName,storageName);
 
-      logMessage(LOG_TYPE_INDEX,"create index #%lld for '%s'\n",storageId,String_cString(printableStorageName));
+      plogMessage(LOG_TYPE_INDEX,
+                  "INDEX",
+                  "create index #%lld for '%s'\n",
+                  storageId,
+                  String_cString(printableStorageName)
+                 );
 
       // try to create index
       LIST_ITERATE(&indexCryptPasswordList,indexCryptPasswordNode)
@@ -2309,6 +2314,7 @@ LOCAL void indexThreadCode(void)
         if (error == ERROR_NONE)
         {
           plogMessage(LOG_TYPE_INDEX,
+                      "INDEX",
                       "created storage index '%s'\n",
                       String_cString(printableStorageName)
                      );
@@ -2316,6 +2322,7 @@ LOCAL void indexThreadCode(void)
         else
         {
           plogMessage(LOG_TYPE_ERROR,
+                      "INDEX",
                       "cannot create storage index '%s' (error: %s)\n",
                       String_cString(printableStorageName),
                       Errors_getText(error)
@@ -2544,7 +2551,7 @@ LOCAL void indexUpdateThreadCode(void)
            )
         {
           Index_delete(indexDatabaseHandle,storageId);
-          logMessage(LOG_TYPE_INDEX,"Deleted index for '%s'",String_cString(printableStorageName));
+          plogMessage(LOG_TYPE_INDEX,"INDEX","Deleted index for '%s'",String_cString(printableStorageName));
         }
       }
       Index_doneList(&databaseQueryHandle);
