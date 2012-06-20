@@ -88,7 +88,12 @@ mkdir packages
 %{_bindir}/bar-keygen
 %doc ChangeLog doc/README doc/bar.pdf
 %{_mandir}/man7/bar.7.gz
+%dir /etc/bar
+%dir /etc/bar/jobs
 %config /etc/bar/bar.cfg
 /etc/init.d/barserver
+
+%post
+install -d /etc/bar/jobs
 
 %changelog

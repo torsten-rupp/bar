@@ -93,4 +93,7 @@ export NO_BRP_CHECK_BYTECODE_VERSION=true
 %config /etc/bar/bar.cfg
 /etc/init.d/barserver
 
+%post
+install -d /etc/bar/jobs
+
 %changelog
