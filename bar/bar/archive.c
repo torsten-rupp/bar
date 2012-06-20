@@ -797,7 +797,7 @@ LOCAL Errors createArchiveFile(ArchiveInfo *archiveInfo)
 
   // init index
   if (   (archiveInfo->databaseHandle != NULL)
-      && !archiveInfo->jobOptions->noDatabaseIndexFlag
+      && !archiveInfo->jobOptions->noIndexDatabaseFlag
       && !archiveInfo->jobOptions->dryRunFlag
       && !archiveInfo->jobOptions->noStorageFlag
      )
@@ -862,7 +862,7 @@ LOCAL Errors closeArchiveFile(ArchiveInfo *archiveInfo,
   {
     error = archiveInfo->archiveNewFileFunction(archiveInfo->archiveNewFileUserData,
                                                 (   (archiveInfo->databaseHandle != NULL)
-                                                 && !archiveInfo->jobOptions->noDatabaseIndexFlag
+                                                 && !archiveInfo->jobOptions->noIndexDatabaseFlag
                                                  && !archiveInfo->jobOptions->dryRunFlag
                                                  && !archiveInfo->jobOptions->noStorageFlag
                                                 )
@@ -6988,7 +6988,7 @@ Errors Archive_closeEntry(ArchiveEntryInfo *archiveEntryInfo)
               }
 
               if (   (archiveEntryInfo->archiveInfo->databaseHandle != NULL)
-                  && !archiveEntryInfo->archiveInfo->jobOptions->noDatabaseIndexFlag
+                  && !archiveEntryInfo->archiveInfo->jobOptions->noIndexDatabaseFlag
                   && !archiveEntryInfo->archiveInfo->jobOptions->dryRunFlag
                   && !archiveEntryInfo->archiveInfo->jobOptions->noStorageFlag
                  )
@@ -7118,7 +7118,7 @@ fprintf(stderr,"%s, %d: %d\n",__FILE__,__LINE__,archiveEntryInfo->image.blockSiz
               }
 
               if (   (archiveEntryInfo->archiveInfo->databaseHandle != NULL)
-                  && !archiveEntryInfo->archiveInfo->jobOptions->noDatabaseIndexFlag
+                  && !archiveEntryInfo->archiveInfo->jobOptions->noIndexDatabaseFlag
                   && !archiveEntryInfo->archiveInfo->jobOptions->dryRunFlag
                   && !archiveEntryInfo->archiveInfo->jobOptions->noStorageFlag
                  )
@@ -7169,7 +7169,7 @@ fprintf(stderr,"%s, %d: %d\n",__FILE__,__LINE__,archiveEntryInfo->image.blockSiz
               if ((error == ERROR_NONE) && (tmpError != ERROR_NONE)) error = tmpError;
 
               if (   (archiveEntryInfo->archiveInfo->databaseHandle != NULL)
-                  && !archiveEntryInfo->archiveInfo->jobOptions->noDatabaseIndexFlag
+                  && !archiveEntryInfo->archiveInfo->jobOptions->noIndexDatabaseFlag
                   && !archiveEntryInfo->archiveInfo->jobOptions->dryRunFlag
                   && !archiveEntryInfo->archiveInfo->jobOptions->noStorageFlag
                  )
@@ -7208,7 +7208,7 @@ fprintf(stderr,"%s, %d: %d\n",__FILE__,__LINE__,archiveEntryInfo->image.blockSiz
               if ((error == ERROR_NONE) && (tmpError != ERROR_NONE)) error = tmpError;
 
               if (   (archiveEntryInfo->archiveInfo->databaseHandle != NULL)
-                  && !archiveEntryInfo->archiveInfo->jobOptions->noDatabaseIndexFlag
+                  && !archiveEntryInfo->archiveInfo->jobOptions->noIndexDatabaseFlag
                   && !archiveEntryInfo->archiveInfo->jobOptions->dryRunFlag
                   && !archiveEntryInfo->archiveInfo->jobOptions->noStorageFlag
                  )
@@ -7317,7 +7317,7 @@ fprintf(stderr,"%s, %d: %d\n",__FILE__,__LINE__,archiveEntryInfo->image.blockSiz
               }
 
               if (   (archiveEntryInfo->archiveInfo->databaseHandle != NULL)
-                  && !archiveEntryInfo->archiveInfo->jobOptions->noDatabaseIndexFlag
+                  && !archiveEntryInfo->archiveInfo->jobOptions->noIndexDatabaseFlag
                   && !archiveEntryInfo->archiveInfo->jobOptions->dryRunFlag
                   && !archiveEntryInfo->archiveInfo->jobOptions->noStorageFlag
                  )
@@ -7382,7 +7382,7 @@ fprintf(stderr,"%s, %d: %d\n",__FILE__,__LINE__,archiveEntryInfo->image.blockSiz
               if ((error == ERROR_NONE) && (tmpError != ERROR_NONE)) error = tmpError;
 
               if (   (archiveEntryInfo->archiveInfo->databaseHandle != NULL)
-                  && !archiveEntryInfo->archiveInfo->jobOptions->noDatabaseIndexFlag
+                  && !archiveEntryInfo->archiveInfo->jobOptions->noIndexDatabaseFlag
                   && !archiveEntryInfo->archiveInfo->jobOptions->dryRunFlag
                   && !archiveEntryInfo->archiveInfo->jobOptions->noStorageFlag
                  )
@@ -8638,9 +8638,11 @@ Errors Archive_updateIndex(DatabaseHandle               *databaseHandle,
                            void                         *abortUserData
                           )
 {
+  String            s,t;
   Errors            error;
   JobOptions        jobOptions;
   ArchiveInfo       archiveInfo;
+  String            printableStorageName;
   ArchiveEntryInfo  archiveEntryInfo;
   ArchiveEntryTypes archiveEntryType;
 
@@ -8653,14 +8655,51 @@ Errors Archive_updateIndex(DatabaseHandle               *databaseHandle,
   jobOptions.cryptPrivateKeyFileName = String_duplicate(cryptPrivateKeyFileName);
 
   // open archive
-  error = Archive_open(&archiveInfo,
-                       storageName,
-                       &jobOptions,
-                       NULL,
-                       NULL
-                      );
+  if (String_startsWithCString(storageName,"scp:"))
+  {
+    // try to open scp-storage first with sftp
+    s = String_sub(String_new(),storageName,4,STRING_END);
+    t = String_format(String_new(),"sftp:%S",s);
+    error = Archive_open(&archiveInfo,
+                         t,
+                         &jobOptions,
+                         NULL,
+                         NULL
+                        );
+    String_delete(t);
+    String_delete(s);
+
+    if (error != ERROR_NONE)
+    {
+      // open scp-storage
+      error = Archive_open(&archiveInfo,
+                           storageName,
+                           &jobOptions,
+                           NULL,
+                           NULL
+                          );
+    }
+  }
+  else
+  {
+    // open other storage types
+    error = Archive_open(&archiveInfo,
+                         storageName,
+                         &jobOptions,
+                         NULL,
+                         NULL
+                        );
+  }
   if (error != ERROR_NONE)
   {
+    Index_setState(databaseHandle,
+                   storageId,
+                   INDEX_STATE_ERROR,
+                   0LL,
+                   "%s (error code: %d)",
+                   Errors_getText(error),
+                   Errors_getCode(error)
+                  );
     freeJobOptions(&jobOptions);
     return error;
   }
@@ -8684,14 +8723,17 @@ Errors Archive_updateIndex(DatabaseHandle               *databaseHandle,
     return error;
   }
 
-  // index archive contents
+  // set state 'update'
   Index_setState(databaseHandle,
                  storageId,
                  INDEX_STATE_UPDATE,
                  0LL,
                  NULL
                 );
+
+  // index archive contents
   error = ERROR_NONE;
+  printableStorageName = Storage_getPrintableName(String_new(),storageName);
   while (   !Archive_eof(&archiveInfo,FALSE)
          && ((abortCallback == NULL) || !abortCallback(abortUserData))
          && (error == ERROR_NONE)
@@ -8761,6 +8803,7 @@ Errors Archive_updateIndex(DatabaseHandle               *databaseHandle,
               String_delete(fileName);
               break;
             }
+            printInfo(4,"Added file '%s' to index '%s'\n",String_cString(fileName),String_cString(printableStorageName));
 
             // close archive file, free resources
             Archive_closeEntry(&archiveEntryInfo);
@@ -8769,20 +8812,20 @@ Errors Archive_updateIndex(DatabaseHandle               *databaseHandle,
           break;
         case ARCHIVE_ENTRY_TYPE_IMAGE:
           {
-            String           deviceName;
+            String           imageName;
             ArchiveEntryInfo archiveEntryInfo;
             DeviceInfo       deviceInfo;
             uint64           blockOffset,blockCount;
 
             // open archive file
-            deviceName = String_new();
+            imageName = String_new();
             error = Archive_readImageEntry(&archiveInfo,
                                            &archiveEntryInfo,
                                            NULL,  // deltaCompressAlgorithm
                                            NULL,  // byteCompressAlgorithm
                                            NULL,  // cryptAlgorithm
                                            NULL,  // cryptType
-                                           deviceName,
+                                           imageName,
                                            &deviceInfo,
                                            NULL,  // deltaSourceName
                                            NULL,  // deltaSourceSize
@@ -8791,14 +8834,14 @@ Errors Archive_updateIndex(DatabaseHandle               *databaseHandle,
                                           );
             if (error != ERROR_NONE)
             {
-              String_delete(deviceName);
+              String_delete(imageName);
               break;
             }
 
             // add to index database
             error = Index_addImage(databaseHandle,
                                    storageId,
-                                   deviceName,
+                                   imageName,
                                    deviceInfo.size,
                                    deviceInfo.blockSize,
                                    blockOffset,
@@ -8807,13 +8850,14 @@ Errors Archive_updateIndex(DatabaseHandle               *databaseHandle,
             if (error != ERROR_NONE)
             {
               Archive_closeEntry(&archiveEntryInfo);
-              String_delete(deviceName);
+              String_delete(imageName);
               break;
             }
+            printInfo(4,"Added image '%s' to index '%s'\n",String_cString(imageName),String_cString(printableStorageName));
 
             // close archive file, free resources
             Archive_closeEntry(&archiveEntryInfo);
-            String_delete(deviceName);
+            String_delete(imageName);
           }
           break;
         case ARCHIVE_ENTRY_TYPE_DIRECTORY:
@@ -8853,6 +8897,7 @@ Errors Archive_updateIndex(DatabaseHandle               *databaseHandle,
               String_delete(directoryName);
               break;
             }
+            printInfo(4,"Added directory '%s' to index '%s'\n",String_cString(directoryName),String_cString(printableStorageName));
 
             // close archive file, free resources
             Archive_closeEntry(&archiveEntryInfo);
@@ -8902,6 +8947,7 @@ Errors Archive_updateIndex(DatabaseHandle               *databaseHandle,
               String_delete(linkName);
               break;
             }
+            printInfo(4,"Added link '%s' to index '%s'\n",String_cString(linkName),String_cString(printableStorageName));
 
             // close archive file, free resources
             Archive_closeEntry(&archiveEntryInfo);
@@ -8938,7 +8984,6 @@ Errors Archive_updateIndex(DatabaseHandle               *databaseHandle,
               StringList_done(&fileNameList);
               break;
             }
-//fprintf(stderr,"%s,%d: index update %s\n",__FILE__,__LINE__,String_cString(name));
 
             // add to index database
             STRINGLIST_ITERATE(&fileNameList,stringNode,fileName)
@@ -8967,6 +9012,7 @@ Errors Archive_updateIndex(DatabaseHandle               *databaseHandle,
               StringList_done(&fileNameList);
               break;
             }
+            printInfo(4,"Added hardlink '%s' to index '%s'\n",String_cString(StringList_first(&fileNameList,NULL)),String_cString(printableStorageName));
 
             // close archive file, free resources
             Archive_closeEntry(&archiveEntryInfo);
@@ -9013,6 +9059,7 @@ Errors Archive_updateIndex(DatabaseHandle               *databaseHandle,
               String_delete(fileName);
               break;
             }
+            printInfo(4,"Added special '%s' to index '%s'\n",String_cString(fileName),String_cString(printableStorageName));
 
             // close archive file, free resources
             Archive_closeEntry(&archiveEntryInfo);
@@ -9034,18 +9081,8 @@ Errors Archive_updateIndex(DatabaseHandle               *databaseHandle,
                   );
     }
   }
-  if      (error == ERROR_NONE)
+  if      (error != ERROR_NONE)
   {
-    Index_setState(databaseHandle,
-                   storageId,
-                   INDEX_STATE_OK,
-                   Misc_getCurrentDateTime(),
-                   NULL
-                  );
-  }
-  else
-  {
-    Archive_close(&archiveInfo);
     if (Errors_getCode(error) == ERROR_NO_CRYPT_PASSWORD)
     {
       Index_setState(databaseHandle,
@@ -9066,9 +9103,21 @@ Errors Archive_updateIndex(DatabaseHandle               *databaseHandle,
                      Errors_getCode(error)
                     );
     }
+
+    Archive_close(&archiveInfo);
     freeJobOptions(&jobOptions);
+
     return error;
   }
+  String_delete(printableStorageName);
+
+  // set index state 'OK'
+  Index_setState(databaseHandle,
+                 storageId,
+                 INDEX_STATE_OK,
+                 Misc_getCurrentDateTime(),
+                 NULL
+                );
 
   // update name/size
   error = Index_update(databaseHandle,
