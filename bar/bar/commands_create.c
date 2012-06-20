@@ -1269,7 +1269,7 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
         Misc_udelay(500*1000);
       }
 
-      // get next directory to process
+      // get next file/directory to process
       name = StringList_getLast(&nameList,name);
 
       if (   checkIsIncluded(includeEntryNode,name)
