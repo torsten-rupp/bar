@@ -5015,7 +5015,7 @@ class TabJobs
       archivePartSizeFlag.set(archivePartSize.getLong() > 0);
 
       String[] compressAlgorithms = StringUtils.split(BARServer.getStringOption(selectedJobId,"compress-algorithm"),"+");
-      assert compressAlgorithms.length <= 2;
+      assert compressAlgorithms.length == 2;
       deltaCompressAlgorithm.set(compressAlgorithms[0]);
       byteCompressAlgorithm.set(compressAlgorithms[1]);
       cryptAlgorithm.set(BARServer.getStringOption(selectedJobId,"crypt-algorithm"));
