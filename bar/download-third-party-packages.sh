@@ -327,22 +327,22 @@ if test $cleanFlag -eq 0; then
   fi
 
   if test $allFlag -eq 1 -o $libssh2Flag -eq 1; then
-    # libssh2 1.3.0
+    # libssh2 1.4.2
     (
      if test -n "$destination"; then
        cd $destination
      else
        cd $tmpDirectory
      fi
-     if test ! -f libssh2-1.3.0.tar.gz; then
-       $WGET 'http://www.libssh2.org/download/libssh2-1.3.0.tar.gz'
+     if test ! -f libssh2-1.4.2.tar.gz; then
+       $WGET 'http://www.libssh2.org/download/libssh2-1.4.2.tar.gz'
      fi
      if test $noDecompressFlag -eq 0; then
-       $TAR xzf libssh2-1.3.0.tar.gz
+       $TAR xzf libssh2-1.4.2.tar.gz
      fi
     )
     if test $noDecompressFlag -eq 0; then
-      $LN -f -s $tmpDirectory/libssh2-1.3.0 libssh2
+      $LN -f -s $tmpDirectory/libssh2-1.4.2 libssh2
     fi
   fi
 
