@@ -2696,7 +2696,7 @@ class TabJobs
         }
 
         composite = Widgets.newComposite(tab);
-        composite.setLayout(new TableLayout(null,new double[]{0.0,0.0,0.0,0.0,1.0,0.0}));
+        composite.setLayout(new TableLayout(1.0,new double[]{0.0,0.0,0.0,0.0,1.0,0.0}));
         Widgets.layout(composite,5,1,TableLayoutData.WE);
         {
           button = Widgets.newRadio(composite,"symmetric");
@@ -2864,7 +2864,7 @@ class TabJobs
         label = Widgets.newLabel(tab,"Crypt password:");
         Widgets.layout(label,6,0,TableLayoutData.W);
         composite = Widgets.newComposite(tab);
-        composite.setLayout(new TableLayout(null,new double[]{0.0,0.0,0.0,1.0,0.0,1.0}));
+        composite.setLayout(new TableLayout(1.0,new double[]{0.0,0.0,0.0,1.0,0.0,1.0}));
         Widgets.layout(composite,6,1,TableLayoutData.WE);
         {
           button = Widgets.newRadio(composite,"default");
@@ -3096,7 +3096,7 @@ class TabJobs
         label = Widgets.newLabel(tab,"Mode:");
         Widgets.layout(label,7,0,TableLayoutData.W);
         composite = Widgets.newComposite(tab);
-        composite.setLayout(new TableLayout(null,new double[]{0.0,0.0,0.0,0.0,0.0,1.0,0.0}));
+        composite.setLayout(new TableLayout(1.0,new double[]{0.0,0.0,0.0,0.0,0.0,1.0,0.0}));
         Widgets.layout(composite,7,1,TableLayoutData.WE);
         {
           button = Widgets.newRadio(composite,"normal");
@@ -3196,7 +3196,7 @@ class TabJobs
         label = Widgets.newLabel(tab,"File name:");
         Widgets.layout(label,8,0,TableLayoutData.W);
         composite = Widgets.newComposite(tab);
-        composite.setLayout(new TableLayout(null,new double[]{1.0,0.0}));
+        composite.setLayout(new TableLayout(1.0,new double[]{1.0,0.0}));
         Widgets.layout(composite,8,1,TableLayoutData.WE);
         {
           text = Widgets.newText(composite);
@@ -3262,7 +3262,7 @@ class TabJobs
         label = Widgets.newLabel(tab,"Incremental file name:");
         Widgets.layout(label,9,0,TableLayoutData.W);
         composite = Widgets.newComposite(tab);
-        composite.setLayout(new TableLayout(null,new double[]{1.0,0.0}));
+        composite.setLayout(new TableLayout(1.0,new double[]{1.0,0.0}));
         Widgets.layout(composite,9,1,TableLayoutData.WE);
         {
           text = Widgets.newText(composite);
@@ -3641,7 +3641,7 @@ class TabJobs
         Widgets.setVisible(composite,false);
         {
           composite = Widgets.newComposite(composite,SWT.NONE);
-          composite.setLayout(new TableLayout(null,new double[]{0.0,1.0,0.0,1.0,0.0,1.0}));
+          composite.setLayout(new TableLayout(1.0,new double[]{0.0,1.0,0.0,1.0,0.0,1.0}));
           Widgets.layout(composite,0,0,TableLayoutData.WE);
           {
             label = Widgets.newLabel(composite,"User:");
@@ -4048,7 +4048,7 @@ class TabJobs
           label = Widgets.newLabel(composite,"SSH public key:");
           Widgets.layout(label,1,0,TableLayoutData.W);
           subComposite = Widgets.newComposite(composite,SWT.NONE);
-          subComposite.setLayout(new TableLayout(null,new double[]{1.0,0.0}));
+          subComposite.setLayout(new TableLayout(1.0,new double[]{1.0,0.0}));
           Widgets.layout(subComposite,1,1,TableLayoutData.WE);
           {
             text = Widgets.newText(subComposite);
@@ -4121,7 +4121,7 @@ class TabJobs
           label = Widgets.newLabel(composite,"SSH private key:");
           Widgets.layout(label,2,0,TableLayoutData.W);
           subComposite = Widgets.newComposite(composite,SWT.NONE);
-          subComposite.setLayout(new TableLayout(null,new double[]{1.0,0.0}));
+          subComposite.setLayout(new TableLayout(1.0,new double[]{1.0,0.0}));
           Widgets.layout(subComposite,2,1,TableLayoutData.WE);
           {
             text = Widgets.newText(subComposite);
@@ -4267,7 +4267,7 @@ class TabJobs
           label = Widgets.newLabel(composite,"Device:");
           Widgets.layout(label,0,0,TableLayoutData.W);
           subComposite = Widgets.newComposite(composite,SWT.NONE);
-          subComposite.setLayout(new TableLayout(null,new double[]{1.0,0.0}));
+          subComposite.setLayout(new TableLayout(1.0,new double[]{1.0,0.0}));
           Widgets.layout(subComposite,0,1,TableLayoutData.WE);
           {
             text = Widgets.newText(subComposite);
@@ -4544,7 +4544,7 @@ class TabJobs
           label = Widgets.newLabel(composite,"Device:");
           Widgets.layout(label,0,0,TableLayoutData.W);
           subComposite = Widgets.newComposite(composite,SWT.NONE);
-          subComposite.setLayout(new TableLayout(null,new double[]{1.0,0.0}));
+          subComposite.setLayout(new TableLayout(1.0,new double[]{1.0,0.0}));
           Widgets.layout(subComposite,0,1,TableLayoutData.WE);
           {
             text = Widgets.newText(subComposite);
