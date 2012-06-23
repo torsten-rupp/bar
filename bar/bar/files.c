@@ -1820,9 +1820,6 @@ Errors File_getFileInfo(FileInfo     *fileInfo,
   {
     fileInfo->type = FILE_TYPE_LINK;
     fileInfo->size = 0LL;
-
-    // get extended file attributes (igonore error; destination may not exist)
-    (void)getExtendedAttributes(fileName,&fileInfo->attributes);
   }
   else if (S_ISCHR(fileStat.st_mode))
   {
