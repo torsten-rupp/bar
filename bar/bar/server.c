@@ -110,7 +110,7 @@ typedef struct JobNode
   String       archiveName;                    // archive name
   EntryList    includeEntryList;               // included entries
   PatternList  excludePatternList;             // excluded entry patterns
-  PatternList  sourcePatternList;              // source patterns
+  PatternList  deltaSourcePatternList;         // delta source patterns
   PatternList  compressExcludePatternList;     // excluded compression patterns
   ScheduleList scheduleList;                   // schedule list
   JobOptions   jobOptions;                     // options for job
@@ -319,7 +319,7 @@ typedef struct
 
   EntryList           includeEntryList;
   PatternList         excludePatternList;
-  PatternList         sourcePatternList;
+  PatternList         deltaSourcePatternList;
   PatternList         compressExcludePatternList;
   JobOptions          jobOptions;
   DirectoryInfoList   directoryInfoList;
@@ -453,7 +453,7 @@ LOCAL const ConfigValue CONFIG_VALUES[] =
   CONFIG_STRUCT_VALUE_SPECIAL  ("include-file",            JobNode,includeEntryList,                       configValueParseFileEntry,configValueFormatInitEntry,configValueFormatDoneEntry,configValueFormatFileEntry,NULL),
   CONFIG_STRUCT_VALUE_SPECIAL  ("include-image",           JobNode,includeEntryList,                       configValueParseImageEntry,configValueFormatInitEntry,configValueFormatDoneEntry,configValueFormatImageEntry,NULL),
   CONFIG_STRUCT_VALUE_SPECIAL  ("exclude",                 JobNode,excludePatternList,                     configValueParsePattern,configValueFormatInitPattern,configValueFormatDonePattern,configValueFormatPattern,NULL),
-  CONFIG_STRUCT_VALUE_SPECIAL  ("source",                  JobNode,sourcePatternList,                      configValueParsePattern,configValueFormatInitPattern,configValueFormatDonePattern,configValueFormatPattern,NULL),
+  CONFIG_STRUCT_VALUE_SPECIAL  ("delta-source",            JobNode,deltaSourcePatternList,                 configValueParsePattern,configValueFormatInitPattern,configValueFormatDonePattern,configValueFormatPattern,NULL),
 
   CONFIG_STRUCT_VALUE_INTEGER64("volume-size",             JobNode,jobOptions.volumeSize,                  0LL,MAX_LONG_LONG,CONFIG_VALUE_BYTES_UNITS),
   CONFIG_STRUCT_VALUE_BOOLEAN  ("ecc",                     JobNode,jobOptions.errorCorrectionCodesFlag     ),
@@ -686,7 +686,7 @@ LOCAL JobNode *newJob(JobTypes jobType, const String fileName)
   jobNode->archiveName                    = String_new();
   EntryList_init(&jobNode->includeEntryList);
   PatternList_init(&jobNode->excludePatternList);
-  PatternList_init(&jobNode->sourcePatternList);
+  PatternList_init(&jobNode->deltaSourcePatternList);
   PatternList_init(&jobNode->compressExcludePatternList);
   List_init(&jobNode->scheduleList);
   initJobOptions(&jobNode->jobOptions);
@@ -753,7 +753,7 @@ LOCAL JobNode *copyJob(JobNode      *jobNode,
   newJobNode->archiveName                    = String_duplicate(jobNode->archiveName);
   EntryList_init(&newJobNode->includeEntryList); EntryList_copy(&jobNode->includeEntryList,&newJobNode->includeEntryList);
   PatternList_init(&newJobNode->excludePatternList); PatternList_copy(&jobNode->excludePatternList,&newJobNode->excludePatternList);
-  PatternList_init(&newJobNode->sourcePatternList); PatternList_copy(&jobNode->sourcePatternList,&newJobNode->sourcePatternList);
+  PatternList_init(&newJobNode->deltaSourcePatternList); PatternList_copy(&jobNode->deltaSourcePatternList,&newJobNode->deltaSourcePatternList);
   PatternList_init(&newJobNode->compressExcludePatternList); PatternList_copy(&jobNode->compressExcludePatternList,&newJobNode->compressExcludePatternList);
   List_init(&newJobNode->scheduleList); List_copy(&newJobNode->scheduleList,&jobNode->scheduleList,NULL,NULL,NULL,(ListNodeCopyFunction)copySchedule,NULL);
   initJobOptions(&newJobNode->jobOptions); copyJobOptions(&newJobNode->jobOptions,&newJobNode->jobOptions);
@@ -817,7 +817,7 @@ LOCAL void freeJobNode(JobNode *jobNode, void *userData)
   freeJobOptions(&jobNode->jobOptions);
   List_done(&jobNode->scheduleList,NULL,NULL);
   PatternList_done(&jobNode->compressExcludePatternList);
-  PatternList_done(&jobNode->sourcePatternList);
+  PatternList_done(&jobNode->deltaSourcePatternList);
   PatternList_done(&jobNode->excludePatternList);
   EntryList_done(&jobNode->includeEntryList);
   String_delete(jobNode->archiveName);
@@ -1044,7 +1044,7 @@ LOCAL Errors writeJobScheduleInfo(JobNode *jobNode)
 
   assert(jobNode != NULL);
 
-  /* get filename*/
+  // get filename
   fileName = File_newFileName();
   File_splitFileName(jobNode->fileName,&pathName,&baseName);
   File_setFileName(fileName,pathName);
@@ -1096,7 +1096,7 @@ LOCAL bool readJob(JobNode *jobNode)
   String_clear(jobNode->archiveName);
   EntryList_clear(&jobNode->includeEntryList);
   PatternList_clear(&jobNode->excludePatternList);
-  PatternList_clear(&jobNode->sourcePatternList);
+  PatternList_clear(&jobNode->deltaSourcePatternList);
   PatternList_clear(&jobNode->compressExcludePatternList);
   List_clear(&jobNode->scheduleList,NULL,NULL);
   jobNode->jobOptions.archiveType                  = ARCHIVE_TYPE_NORMAL;
@@ -1708,7 +1708,7 @@ LOCAL void jobThreadCode(void)
   String       printableStorageName;
   EntryList    includeEntryList;
   PatternList  excludePatternList;
-  PatternList  sourcePatternList;
+  PatternList  deltaSourcePatternList;
   PatternList  compressExcludePatternList;
   JobOptions   jobOptions;
   ArchiveTypes archiveType;
@@ -1720,7 +1720,7 @@ LOCAL void jobThreadCode(void)
   printableStorageName = String_new();
   EntryList_init(&includeEntryList);
   PatternList_init(&excludePatternList);
-  PatternList_init(&sourcePatternList);
+  PatternList_init(&deltaSourcePatternList);
   PatternList_init(&compressExcludePatternList);
 
   while (!quitFlag)
@@ -1754,7 +1754,7 @@ LOCAL void jobThreadCode(void)
     Storage_getPrintableName(printableStorageName,storageName);
     EntryList_clear(&includeEntryList); EntryList_copy(&jobNode->includeEntryList,&includeEntryList);
     PatternList_clear(&excludePatternList); PatternList_copy(&jobNode->excludePatternList,&excludePatternList);
-    PatternList_clear(&sourcePatternList); PatternList_copy(&jobNode->sourcePatternList,&sourcePatternList);
+    PatternList_clear(&deltaSourcePatternList); PatternList_copy(&jobNode->deltaSourcePatternList,&deltaSourcePatternList);
     PatternList_clear(&compressExcludePatternList); PatternList_copy(&jobNode->compressExcludePatternList,&compressExcludePatternList);
     initJobOptions(&jobOptions); copyJobOptions(&jobNode->jobOptions,&jobOptions);
     archiveType = jobNode->archiveType,
@@ -1884,7 +1884,7 @@ LOCAL void jobThreadCode(void)
     // free resources
     freeJobOptions(&jobOptions);
     PatternList_clear(&compressExcludePatternList);
-    PatternList_clear(&sourcePatternList);
+    PatternList_clear(&deltaSourcePatternList);
     PatternList_clear(&excludePatternList);
     EntryList_clear(&includeEntryList);
 
@@ -1906,7 +1906,7 @@ LOCAL void jobThreadCode(void)
 
   // free resources
   PatternList_done(&compressExcludePatternList);
-  PatternList_done(&sourcePatternList);
+  PatternList_done(&deltaSourcePatternList);
   PatternList_done(&excludePatternList);
   EntryList_done(&includeEntryList);
   String_delete(printableStorageName);
@@ -4536,6 +4536,9 @@ LOCAL void serverCommand_jobAbort(ClientInfo *clientInfo, uint id, const String 
     {
       jobNode->state = JOB_STATE_NONE;
     }
+
+    // store schedule info
+    writeJobScheduleInfo(jobNode);
   }
 
   sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
@@ -5084,7 +5087,7 @@ LOCAL void serverCommand_sourceList(ClientInfo *clientInfo, uint id, const Strin
     }
 
     // send soource list
-    LIST_ITERATE(&jobNode->sourcePatternList,patternNode)
+    LIST_ITERATE(&jobNode->deltaSourcePatternList,patternNode)
     {
       type = NULL;
       switch (patternNode->pattern.type)
@@ -5153,7 +5156,7 @@ LOCAL void serverCommand_sourceListClear(ClientInfo *clientInfo, uint id, const 
     }
 
     // clear source list
-    PatternList_clear(&jobNode->sourcePatternList);
+    PatternList_clear(&jobNode->deltaSourcePatternList);
     jobNode->modifiedFlag = TRUE;
   }
 
@@ -5236,7 +5239,7 @@ LOCAL void serverCommand_sourceListAdd(ClientInfo *clientInfo, uint id, const St
     }
 
     // add to source list
-    PatternList_append(&jobNode->sourcePatternList,pattern,patternType);
+    PatternList_append(&jobNode->deltaSourcePatternList,pattern,patternType);
     jobNode->modifiedFlag = TRUE;
   }
 
@@ -6641,7 +6644,7 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, uint id, const String a
   String             string;
   EntryList          includeEntryList;
   PatternList        excludePatternList;
-  PatternList        sourcePatternList;
+  PatternList        deltaSourcePatternList;
   uint               z;
   RestoreCommandInfo restoreCommandInfo;
   Errors             error;
@@ -6652,13 +6655,13 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, uint id, const String a
   StringList_init(&archiveNameList);
   EntryList_init(&includeEntryList);
   PatternList_init(&excludePatternList);
-  PatternList_init(&sourcePatternList);
+  PatternList_init(&deltaSourcePatternList);
 
   // get archive name, destination, overwrite flag, files
   if (argumentCount < 1)
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected storage name");
-    PatternList_done(&sourcePatternList);
+    PatternList_done(&deltaSourcePatternList);
     PatternList_done(&excludePatternList);
     EntryList_done(&includeEntryList);
     StringList_done(&archiveNameList);
@@ -6668,7 +6671,7 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, uint id, const String a
   if (argumentCount < 2)
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected destination directory or device name");
-    PatternList_done(&sourcePatternList);
+    PatternList_done(&deltaSourcePatternList);
     PatternList_done(&excludePatternList);
     EntryList_done(&includeEntryList);
     StringList_done(&archiveNameList);
@@ -6678,7 +6681,7 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, uint id, const String a
   if (argumentCount < 3)
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected overwrite flag");
-    PatternList_done(&sourcePatternList);
+    PatternList_done(&deltaSourcePatternList);
     PatternList_done(&excludePatternList);
     EntryList_done(&includeEntryList);
     StringList_done(&archiveNameList);
@@ -6728,7 +6731,7 @@ ENTRY_TYPE_FILE,
   restoreFlag = FALSE;
 
   // free resources
-  PatternList_done(&sourcePatternList);
+  PatternList_done(&deltaSourcePatternList);
   PatternList_done(&excludePatternList);
   EntryList_done(&includeEntryList);
   StringList_done(&archiveNameList);
