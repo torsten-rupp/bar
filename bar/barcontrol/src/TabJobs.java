@@ -1177,6 +1177,7 @@ class TabJobs
   private WidgetVariable  archivePartSizeFlag     = new WidgetVariable(false);
   private WidgetVariable  archivePartSize         = new WidgetVariable(0);
   private WidgetVariable  deltaCompressAlgorithm  = new WidgetVariable(new String[]{"none","xdelta1","xdelta2","xdelta3","xdelta4","xdelta5","xdelta6","xdelta7","xdelta8","xdelta9"});
+  private WidgetVariable  deltaSource             = new WidgetVariable("");
   private WidgetVariable  byteCompressAlgorithm   = new WidgetVariable(new String[]{"none","zip0","zip1","zip2","zip3","zip4","zip5","zip6","zip7","zip8","zip9","bzip1","bzip2","bzip3","bzip4","bzip5","bzip6","bzip7","bzip8","bzip9","lzma1","lzma2","lzma3","lzma4","lzma5","lzma6","lzma7","lzma8","lzma9"});
   private WidgetVariable  compressMinSize         = new WidgetVariable(0);
   private WidgetVariable  cryptAlgorithm          = new WidgetVariable(new String[]{"none","3DES","CAST5","BLOWFISH","AES128","AES192","AES256","TWOFISH128","TWOFISH256"});
@@ -2162,7 +2163,7 @@ class TabJobs
       }
 
       tab = Widgets.addTab(widgetTabFolder,"Storage");
-      tab.setLayout(new TableLayout(new double[]{0.0,0.0,1.0,0.0,0.0,0.0,0.0,0.0},new double[]{0.0,1.0}));
+      tab.setLayout(new TableLayout(new double[]{0.0,0.0,0.0,1.0,0.0,0.0,0.0,0.0,0.0},new double[]{0.0,1.0}));
       Widgets.layout(tab,0,0,TableLayoutData.NSWE);
       {
         // part size
@@ -2262,10 +2263,10 @@ class TabJobs
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
             {
               Combo  widget = (Combo)selectionEvent.widget;
-              String s      = widget.getText();
+              String string = widget.getText();
               try
               {
-                long n = Units.parseByteSize(s);
+                long n = Units.parseByteSize(string);
                 archivePartSize.set(n);
                 BARServer.setOption(selectedJobId,"archive-part-size",n);
                 widget.setText(Units.formatByteSize(n));
@@ -2276,7 +2277,7 @@ class TabJobs
                 if (!(Boolean)widget.getData("showedErrorDialog"))
                 {
                   widget.setData("showedErrorDialog",true);
-                  Dialogs.error(shell,"'"+s+"' is not valid size!\n\nEnter a number in the format 'n' or 'n.m'. Optional units are KB, MB or GB.");
+                  Dialogs.error(shell,"'"+string+"' is not valid size!\n\nEnter a number in the format 'n' or 'n.m'. Optional units are KB, MB or GB.");
                   widget.forceFocus();
                 }
               }
@@ -2284,10 +2285,10 @@ class TabJobs
             public void widgetSelected(SelectionEvent selectionEvent)
             {
               Combo  widget = (Combo)selectionEvent.widget;
-              String s      = widget.getText();
+              String string = widget.getText();
               try
               {
-                long  n = Units.parseByteSize(s);
+                long  n = Units.parseByteSize(string);
                 archivePartSize.set(n);
                 BARServer.setOption(selectedJobId,"archive-part-size",n);
                 widget.setText(Units.formatByteSize(n));
@@ -2298,7 +2299,7 @@ class TabJobs
                 if (!(Boolean)widget.getData("showedErrorDialog"))
                 {
                   widget.setData("showedErrorDialog",true);
-                  Dialogs.error(shell,"'"+s+"' is not valid size!\n\nEnter a number in the format 'n' or 'n.m'. Optional units are KB, MB or GB.");
+                  Dialogs.error(shell,"'"+string+"' is not valid size!\n\nEnter a number in the format 'n' or 'n.m'. Optional units are KB, MB or GB.");
                   widget.forceFocus();
                 }
               }
@@ -2314,10 +2315,10 @@ class TabJobs
             public void focusLost(FocusEvent focusEvent)
             {
               Combo  widget = (Combo)focusEvent.widget;
-              String s      = widget.getText();
+              String string = widget.getText();
               try
               {
-                long n = Units.parseByteSize(s);
+                long n = Units.parseByteSize(string);
                 archivePartSize.set(n);
                 BARServer.setOption(selectedJobId,"archive-part-size",n);
                 widget.setText(Units.formatByteSize(n));
@@ -2328,7 +2329,7 @@ class TabJobs
                 if (!(Boolean)widget.getData("showedErrorDialog"))
                 {
                   widget.setData("showedErrorDialog",true);
-                  Dialogs.error(shell,"'"+s+"' is not valid size!\n\nEnter a number in the format 'n' or 'n.m'. Optional units are KB, MB or GB.");
+                  Dialogs.error(shell,"'"+string+"' is not valid size!\n\nEnter a number in the format 'n' or 'n.m'. Optional units are KB, MB or GB.");
                   widget.forceFocus();
                 }
               }
@@ -2368,8 +2369,8 @@ class TabJobs
             public void widgetSelected(SelectionEvent selectionEvent)
             {
               Combo  widget = (Combo)selectionEvent.widget;
-              String s      = widget.getText();
-              deltaCompressAlgorithm.set(s);
+              String string = widget.getText();
+              deltaCompressAlgorithm.set(string);
               BARServer.setOption(selectedJobId,"compress-algorithm",deltaCompressAlgorithm.toString()+"+"+byteCompressAlgorithm.toString());
             }
           });
@@ -2390,8 +2391,8 @@ class TabJobs
             public void widgetSelected(SelectionEvent selectionEvent)
             {
               Combo  widget = (Combo)selectionEvent.widget;
-              String s      = widget.getText();
-              byteCompressAlgorithm.set(s);
+              String string = widget.getText();
+              byteCompressAlgorithm.set(string);
               BARServer.setOption(selectedJobId,"compress-algorithm",deltaCompressAlgorithm.toString()+"+"+byteCompressAlgorithm.toString());
             }
           });
@@ -2399,11 +2400,99 @@ class TabJobs
           combo.setToolTipText("Byte compression method to use.");
         }
 
+        composite = Widgets.newComposite(tab);
+        composite.setLayout(new TableLayout(1.0,new double[]{0.0,1.0,0.0}));
+        Widgets.layout(composite,2,1,TableLayoutData.WE);
+        {
+          label = Widgets.newLabel(composite,"Source:");
+          Widgets.layout(label,0,0,TableLayoutData.NONE);
+
+          text = Widgets.newText(composite);
+          Widgets.layout(text,0,1,TableLayoutData.WE);
+          Widgets.addModifyListener(new WidgetModifyListener(text,deltaCompressAlgorithm)
+          {
+            public void modified(Control control, WidgetVariable byteCompressAlgorithm)
+            {
+              Widgets.setEnabled(control,!deltaCompressAlgorithm.equals("none"));
+            }
+          });
+          text.addModifyListener(new ModifyListener()
+          {
+            public void modifyText(ModifyEvent modifyEvent)
+            {
+              Text  widget = (Text)modifyEvent.widget;
+              Color color  = COLOR_MODIFIED;
+              String s = widget.getText();
+              if (deltaSource.getString().equals(s)) color = COLOR_WHITE;
+              widget.setBackground(color);
+            }
+          });
+          text.addSelectionListener(new SelectionListener()
+          {
+            public void widgetDefaultSelected(SelectionEvent selectionEvent)
+            {
+              Text   widget = (Text)selectionEvent.widget;
+              String string = widget.getText();
+              deltaSource.set(string);
+              BARServer.setOption(selectedJobId,"delta-source",string);
+            }
+            public void widgetSelected(SelectionEvent selectionEvent)
+            {
+            }
+          });
+          text.addFocusListener(new FocusListener()
+          {
+            public void focusGained(FocusEvent focusEvent)
+            {
+            }
+            public void focusLost(FocusEvent focusEvent)
+            {
+              Text widget = (Text)focusEvent.widget;
+              String string = widget.getText();
+              deltaSource.set(string);
+              BARServer.setOption(selectedJobId,"delta-source",string);
+            }
+          });
+          Widgets.addModifyListener(new WidgetModifyListener(text,deltaSource));
+          text.setToolTipText("Name of source to use for delta-compression.");
+
+          button = Widgets.newButton(composite,IMAGE_DIRECTORY);
+          Widgets.layout(button,0,2,TableLayoutData.DEFAULT);
+          Widgets.addModifyListener(new WidgetModifyListener(button,deltaCompressAlgorithm)
+          {
+            public void modified(Control control, WidgetVariable byteCompressAlgorithm)
+            {
+              Widgets.setEnabled(control,!deltaCompressAlgorithm.equals("none"));
+            }
+          });
+          button.addSelectionListener(new SelectionListener()
+          {
+            public void widgetDefaultSelected(SelectionEvent selectionEvent)
+            {
+            }
+            public void widgetSelected(SelectionEvent selectionEvent)
+            {
+              Button widget   = (Button)selectionEvent.widget;
+              String fileName = Dialogs.fileSave(shell,
+                                                 "Select source file",
+                                                 deltaSource.getString(),
+                                                 new String[]{"BAR files","*.bar",
+                                                              "All files","*",
+                                                             }
+                                                );
+              if (fileName != null)
+              {
+                deltaSource.set(fileName);
+              }
+            }
+          });
+        }
+
         label = Widgets.newLabel(tab,"Compress exclude:");
-        Widgets.layout(label,2,0,TableLayoutData.NW);
+        Widgets.layout(label,3,0,TableLayoutData.NW);
         composite = Widgets.newComposite(tab);
         composite.setLayout(new TableLayout(new double[]{1.0,0.0},1.0));
-        Widgets.layout(composite,2,1,TableLayoutData.NSWE);
+        Widgets.layout(composite,3,1,TableLayoutData.NSWE);
         {
           // compress exclude list
           widgetCompressExcludeList = Widgets.newList(composite);
@@ -2471,6 +2560,7 @@ class TabJobs
                   "*.jpg",
                   "*.jpeg",
                   "*.mp3",
+                  "*.mp4",
                   "*.mpeg",
                   "*.avi",
                   "*.wma",
@@ -2581,9 +2671,9 @@ class TabJobs
 
         // crypt
         label = Widgets.newLabel(tab,"Crypt:");
-        Widgets.layout(label,3,0,TableLayoutData.NW);
+        Widgets.layout(label,4,0,TableLayoutData.NW);
         composite = Widgets.newComposite(tab);
-        Widgets.layout(composite,3,1,TableLayoutData.WE);
+        Widgets.layout(composite,4,1,TableLayoutData.WE);
         {
           combo = Widgets.newOptionMenu(composite);
           combo.setItems(new String[]{"none","3DES","CAST5","BLOWFISH","AES128","AES192","AES256","TWOFISH128","TWOFISH256"});
@@ -2596,19 +2686,18 @@ class TabJobs
             public void widgetSelected(SelectionEvent selectionEvent)
             {
               Combo  widget = (Combo)selectionEvent.widget;
-              String s      = widget.getText();
-              cryptAlgorithm.set(s);
-              BARServer.setOption(selectedJobId,"crypt-algorithm",s);
+              String string = widget.getText();
+              cryptAlgorithm.set(string);
+              BARServer.setOption(selectedJobId,"crypt-algorithm",string);
             }
           });
           Widgets.addModifyListener(new WidgetModifyListener(combo,cryptAlgorithm));
           combo.setToolTipText("Encryption method to use.");
-
         }
 
         composite = Widgets.newComposite(tab);
         composite.setLayout(new TableLayout(null,new double[]{0.0,0.0,0.0,0.0,1.0,0.0}));
-        Widgets.layout(composite,4,1,TableLayoutData.WE);
+        Widgets.layout(composite,5,1,TableLayoutData.WE);
         {
           button = Widgets.newRadio(composite,"symmetric");
           button.setSelection(true);
@@ -2773,10 +2862,10 @@ class TabJobs
 
         // crypt password
         label = Widgets.newLabel(tab,"Crypt password:");
-        Widgets.layout(label,5,0,TableLayoutData.W);
+        Widgets.layout(label,6,0,TableLayoutData.W);
         composite = Widgets.newComposite(tab);
         composite.setLayout(new TableLayout(null,new double[]{0.0,0.0,0.0,1.0,0.0,1.0}));
-        Widgets.layout(composite,5,1,TableLayoutData.WE);
+        Widgets.layout(composite,6,1,TableLayoutData.WE);
         {
           button = Widgets.newRadio(composite,"default");
           Widgets.layout(button,0,0,TableLayoutData.W);
@@ -3005,10 +3094,10 @@ class TabJobs
 
         // archive type
         label = Widgets.newLabel(tab,"Mode:");
-        Widgets.layout(label,6,0,TableLayoutData.W);
+        Widgets.layout(label,7,0,TableLayoutData.W);
         composite = Widgets.newComposite(tab);
         composite.setLayout(new TableLayout(null,new double[]{0.0,0.0,0.0,0.0,0.0,1.0,0.0}));
-        Widgets.layout(composite,6,1,TableLayoutData.WE);
+        Widgets.layout(composite,7,1,TableLayoutData.WE);
         {
           button = Widgets.newRadio(composite,"normal");
           Widgets.layout(button,0,0,TableLayoutData.W);
@@ -3105,10 +3194,10 @@ class TabJobs
 
         // file name
         label = Widgets.newLabel(tab,"File name:");
-        Widgets.layout(label,7,0,TableLayoutData.W);
+        Widgets.layout(label,8,0,TableLayoutData.W);
         composite = Widgets.newComposite(tab);
         composite.setLayout(new TableLayout(null,new double[]{1.0,0.0}));
-        Widgets.layout(composite,7,1,TableLayoutData.WE);
+        Widgets.layout(composite,8,1,TableLayoutData.WE);
         {
           text = Widgets.newText(composite);
           Widgets.layout(text,0,0,TableLayoutData.WE);
@@ -3171,10 +3260,10 @@ class TabJobs
 
         // incremental file name
         label = Widgets.newLabel(tab,"Incremental file name:");
-        Widgets.layout(label,8,0,TableLayoutData.W);
+        Widgets.layout(label,9,0,TableLayoutData.W);
         composite = Widgets.newComposite(tab);
         composite.setLayout(new TableLayout(null,new double[]{1.0,0.0}));
-        Widgets.layout(composite,8,1,TableLayoutData.WE);
+        Widgets.layout(composite,9,1,TableLayoutData.WE);
         {
           text = Widgets.newText(composite);
           Widgets.layout(text,0,0,TableLayoutData.WE);
@@ -3182,10 +3271,10 @@ class TabJobs
           {
             public void modifyText(ModifyEvent modifyEvent)
             {
-              Text  widget = (Text)modifyEvent.widget;
-              Color color  = COLOR_MODIFIED;
-              String s = widget.getText();
-              if (incrementalListFileName.getString().equals(s)) color = COLOR_WHITE;
+              Text   widget = (Text)modifyEvent.widget;
+              Color  color  = COLOR_MODIFIED;
+              String string = widget.getText();
+              if (incrementalListFileName.getString().equals(string)) color = COLOR_WHITE;
               widget.setBackground(color);
             }
           });
@@ -3245,9 +3334,9 @@ class TabJobs
 
         // destination
         label = Widgets.newLabel(tab,"Destination:");
-        Widgets.layout(label,9,0,TableLayoutData.W);
+        Widgets.layout(label,10,0,TableLayoutData.W);
         composite = Widgets.newComposite(tab);
-        Widgets.layout(composite,9,1,TableLayoutData.WE);
+        Widgets.layout(composite,10,1,TableLayoutData.WE);
         {
           button = Widgets.newRadio(composite,"file system");
           Widgets.layout(button,0,0,TableLayoutData.W);
@@ -3509,7 +3598,7 @@ class TabJobs
         // destination file system
         composite = Widgets.newComposite(tab,SWT.BORDER);
         composite.setLayout(new TableLayout(0.0,new double[]{1.0}));
-        Widgets.layout(composite,10,1,TableLayoutData.WE|TableLayoutData.N);
+        Widgets.layout(composite,11,1,TableLayoutData.WE|TableLayoutData.N);
         Widgets.addModifyListener(new WidgetModifyListener(composite,storageType)
         {
           public void modified(Control control, WidgetVariable variable)
@@ -3541,7 +3630,7 @@ class TabJobs
         // destination ftp
         composite = Widgets.newComposite(tab,SWT.BORDER);
         composite.setLayout(new TableLayout(0.0,1.0));
-        Widgets.layout(composite,10,1,TableLayoutData.WE|TableLayoutData.N);
+        Widgets.layout(composite,11,1,TableLayoutData.WE|TableLayoutData.N);
         Widgets.addModifyListener(new WidgetModifyListener(composite,storageType)
         {
           public void modified(Control control, WidgetVariable variable)
@@ -3564,10 +3653,10 @@ class TabJobs
             {
               public void modifyText(ModifyEvent modifyEvent)
               {
-                Text  widget = (Text)modifyEvent.widget;
-                Color color  = COLOR_MODIFIED;
-                String s = widget.getText();
-                if (storageLoginName.getString().equals(s)) color = COLOR_WHITE;
+                Text   widget = (Text)modifyEvent.widget;
+                Color  color  = COLOR_MODIFIED;
+                String string = widget.getText();
+                if (storageLoginName.getString().equals(string)) color = COLOR_WHITE;
                 widget.setBackground(color);
               }
             });
@@ -3607,10 +3696,10 @@ class TabJobs
             {
               public void modifyText(ModifyEvent modifyEvent)
               {
-                Text  widget = (Text)modifyEvent.widget;
-                Color color  = COLOR_MODIFIED;
-                String s = widget.getText();
-                if (storageHostName.getString().equals(s)) color = COLOR_WHITE;
+                Text   widget = (Text)modifyEvent.widget;
+                Color  color  = COLOR_MODIFIED;
+                String string = widget.getText();
+                if (storageHostName.getString().equals(string)) color = COLOR_WHITE;
                 widget.setBackground(color);
               }
             });
@@ -3650,10 +3739,10 @@ class TabJobs
             {
               public void modifyText(ModifyEvent modifyEvent)
               {
-                Text  widget = (Text)modifyEvent.widget;
-                Color color  = COLOR_MODIFIED;
-                String s = widget.getText();
-                if (storageLoginPassword.getString().equals(s)) color = COLOR_WHITE;
+                Text   widget = (Text)modifyEvent.widget;
+                Color  color  = COLOR_MODIFIED;
+                String string = widget.getText();
+                if (storageLoginPassword.getString().equals(string)) color = COLOR_WHITE;
                 widget.setBackground(color);
               }
             });
@@ -3747,7 +3836,7 @@ class TabJobs
         // destination scp/sftp
         composite = Widgets.newComposite(tab,SWT.BORDER);
         composite.setLayout(new TableLayout(0.0,new double[]{0.0,1.0}));
-        Widgets.layout(composite,10,1,TableLayoutData.WE|TableLayoutData.N);
+        Widgets.layout(composite,11,1,TableLayoutData.WE|TableLayoutData.N);
         Widgets.addModifyListener(new WidgetModifyListener(composite,storageType)
         {
           public void modified(Control control, WidgetVariable variable)
@@ -3772,10 +3861,10 @@ class TabJobs
             {
               public void modifyText(ModifyEvent modifyEvent)
               {
-                Text  widget = (Text)modifyEvent.widget;
-                Color color  = COLOR_MODIFIED;
-                String s = widget.getText();
-                if (storageLoginName.getString().equals(s)) color = COLOR_WHITE;
+                Text   widget = (Text)modifyEvent.widget;
+                Color  color  = COLOR_MODIFIED;
+                String string = widget.getText();
+                if (storageLoginName.getString().equals(string)) color = COLOR_WHITE;
                 widget.setBackground(color);
               }
             });
@@ -3817,8 +3906,8 @@ class TabJobs
               {
                 Text   widget = (Text)modifyEvent.widget;
                 Color  color  = COLOR_MODIFIED;
-                String s      = widget.getText();
-                if (storageHostName.getString().equals(s)) color = COLOR_WHITE;
+                String string = widget.getText();
+                if (storageHostName.getString().equals(string)) color = COLOR_WHITE;
                 widget.setBackground(color);
               }
             });
@@ -3861,10 +3950,10 @@ class TabJobs
               {
                 Text   widget = (Text)modifyEvent.widget;
                 Color  color  = COLOR_MODIFIED;
-                String s      = widget.getText();
+                String string = widget.getText();
                 try
                 {
-                  long n = !s.equals("")?Long.parseLong(widget.getText()):0;
+                  long n = !string.equals("") ? Long.parseLong(string) : 0;
                   if (storageHostPort.getLong() == n) color = COLOR_WHITE;
                 }
                 catch (NumberFormatException exception)
@@ -3879,10 +3968,10 @@ class TabJobs
               public void widgetDefaultSelected(SelectionEvent selectionEvent)
               {
                 Text   widget = (Text)selectionEvent.widget;
-                String s      = widget.getText();
+                String string = widget.getText();
                 try
                 {
-                  long n = !s.equals("")?Long.parseLong(widget.getText()):0;
+                  long n = !string.equals("") ? Long.parseLong(string) : 0;
                   if ((n >= 0) && (n <= 65535))
                   {
                     storageHostPort.set(n);
@@ -3903,7 +3992,7 @@ class TabJobs
                   if (!(Boolean)widget.getData("showedErrorDialog"))
                   {
                     widget.setData("showedErrorDialog",true);
-                    Dialogs.error(shell,"'"+s+"' is not valid port number!\n\nEnter a number between 0 and 65535.");
+                    Dialogs.error(shell,"'"+string+"' is not valid port number!\n\nEnter a number between 0 and 65535.");
                     widget.forceFocus();
                   }
                 }
@@ -3922,10 +4011,10 @@ class TabJobs
               public void focusLost(FocusEvent focusEvent)
               {
                 Text   widget = (Text)focusEvent.widget;
-                String s      = widget.getText();
+                String string = widget.getText();
                 try
                 {
-                  long n = !s.equals("")?Long.parseLong(widget.getText()):0;
+                  long n = !string.equals("") ? Long.parseLong(string) : 0;
                   if ((n >= 0) && (n <= 65535))
                   {
                     storageHostPort.set(n);
@@ -3946,7 +4035,7 @@ class TabJobs
                   if (!(Boolean)widget.getData("showedErrorDialog"))
                   {
                     widget.setData("showedErrorDialog",true);
-                    Dialogs.error(shell,"'"+s+"' is not valid port number!\n\nEnter a number between 0 and 65535.");
+                    Dialogs.error(shell,"'"+string+"' is not valid port number!\n\nEnter a number between 0 and 65535.");
                     widget.forceFocus();
                   }
                 }
@@ -3968,10 +4057,10 @@ class TabJobs
             {
               public void modifyText(ModifyEvent modifyEvent)
               {
-                Text  widget = (Text)modifyEvent.widget;
-                Color color  = COLOR_MODIFIED;
-                String s = widget.getText();
-                if (sshPublicKeyFileName.getString().equals(s)) color = COLOR_WHITE;
+                Text   widget = (Text)modifyEvent.widget;
+                Color  color  = COLOR_MODIFIED;
+                String string = widget.getText();
+                if (sshPublicKeyFileName.getString().equals(string)) color = COLOR_WHITE;
                 widget.setBackground(color);
               }
             });
@@ -4041,10 +4130,10 @@ class TabJobs
             {
               public void modifyText(ModifyEvent modifyEvent)
               {
-                Text  widget = (Text)modifyEvent.widget;
-                Color color  = COLOR_MODIFIED;
-                String s = widget.getText();
-                if (sshPrivateKeyFileName.getString().equals(s)) color = COLOR_WHITE;
+                Text   widget = (Text)modifyEvent.widget;
+                Color  color  = COLOR_MODIFIED;
+                String string = widget.getText();
+                if (sshPrivateKeyFileName.getString().equals(string)) color = COLOR_WHITE;
                 widget.setBackground(color);
               }
             });
@@ -4165,7 +4254,7 @@ class TabJobs
         // destination cd/dvd/bd
         composite = Widgets.newComposite(tab,SWT.BORDER);
         composite.setLayout(new TableLayout(0.0,new double[]{0.0,1.0}));
-        Widgets.layout(composite,10,1,TableLayoutData.WE);
+        Widgets.layout(composite,11,1,TableLayoutData.WE);
         Widgets.addModifyListener(new WidgetModifyListener(composite,storageType)
         {
           public void modified(Control control, WidgetVariable variable)
@@ -4187,10 +4276,10 @@ class TabJobs
             {
               public void modifyText(ModifyEvent modifyEvent)
               {
-                Text  widget = (Text)modifyEvent.widget;
-                Color color  = COLOR_MODIFIED;
-                String s = widget.getText();
-                if (storageDeviceName.getString().equals(s)) color = COLOR_WHITE;
+                Text   widget = (Text)modifyEvent.widget;
+                Color  color  = COLOR_MODIFIED;
+                String string = widget.getText();
+                if (storageDeviceName.getString().equals(string)) color = COLOR_WHITE;
                 widget.setBackground(color);
               }
             });
@@ -4277,10 +4366,10 @@ class TabJobs
               public void widgetDefaultSelected(SelectionEvent selectionEvent)
               {
                 Combo  widget = (Combo)selectionEvent.widget;
-                String s      = widget.getText();
+                String string = widget.getText();
                 try
                 {
-                  long n = Units.parseByteSize(s);
+                  long n = Units.parseByteSize(string);
                   boolean changedFlag = volumeSize.set(n);
                   BARServer.setOption(selectedJobId,"volume-size",n);
 
@@ -4299,7 +4388,7 @@ class TabJobs
                   if (!(Boolean)widget.getData("showedErrorDialog"))
                   {
                     widget.setData("showedErrorDialog",true);
-                    Dialogs.error(shell,"'"+s+"' is not valid size!\n\nEnter a number in the format 'n' or 'n.m'. Optional units are KB, MB or GB.");
+                    Dialogs.error(shell,"'"+string+"' is not valid size!\n\nEnter a number in the format 'n' or 'n.m'. Optional units are KB, MB or GB.");
                     widget.forceFocus();
                   }
                 }
@@ -4307,10 +4396,10 @@ class TabJobs
               public void widgetSelected(SelectionEvent selectionEvent)
               {
                 Combo  widget = (Combo)selectionEvent.widget;
-                String s      = widget.getText();
+                String string = widget.getText();
                 try
                 {
-                  long  n = Units.parseByteSize(s);
+                  long  n = Units.parseByteSize(string);
                   boolean changedFlag = volumeSize.set(n);
                   BARServer.setOption(selectedJobId,"volume-size",n);
 
@@ -4329,7 +4418,7 @@ class TabJobs
                   if (!(Boolean)widget.getData("showedErrorDialog"))
                   {
                     widget.setData("showedErrorDialog",true);
-                    Dialogs.error(shell,"'"+s+"' is not valid size!\n\nEnter a number in the format 'n' or 'n.m'. Optional units are KB, MB or GB.");
+                    Dialogs.error(shell,"'"+string+"' is not valid size!\n\nEnter a number in the format 'n' or 'n.m'. Optional units are KB, MB or GB.");
                     widget.forceFocus();
                   }
                 }
@@ -4345,10 +4434,10 @@ class TabJobs
               public void focusLost(FocusEvent focusEvent)
               {
                 Combo  widget = (Combo)focusEvent.widget;
-                String s      = widget.getText();
+                String string = widget.getText();
                 try
                 {
-                  long n = Units.parseByteSize(s);
+                  long n = Units.parseByteSize(string);
                   boolean changedFlag = volumeSize.set(n);
                   BARServer.setOption(selectedJobId,"volume-size",n);
 
@@ -4367,7 +4456,7 @@ class TabJobs
                   if (!(Boolean)widget.getData("showedErrorDialog"))
                   {
                     widget.setData("showedErrorDialog",true);
-                    Dialogs.error(shell,"'"+s+"' is not valid size!\n\nEnter a number in the format 'n' or 'n.m'. Optional units are KB, MB or GB.");
+                    Dialogs.error(shell,"'"+string+"' is not valid size!\n\nEnter a number in the format 'n' or 'n.m'. Optional units are KB, MB or GB.");
                     widget.forceFocus();
                   }
                 }
@@ -4442,7 +4531,7 @@ class TabJobs
         // destination device
         composite = Widgets.newComposite(tab,SWT.BORDER);
         composite.setLayout(new TableLayout(0.0,new double[]{0.0,1.0}));
-        Widgets.layout(composite,10,1,TableLayoutData.WE|TableLayoutData.N);
+        Widgets.layout(composite,11,1,TableLayoutData.WE|TableLayoutData.N);
         Widgets.addModifyListener(new WidgetModifyListener(composite,storageType)
         {
           public void modified(Control control, WidgetVariable variable)
@@ -4464,10 +4553,10 @@ class TabJobs
             {
               public void modifyText(ModifyEvent modifyEvent)
               {
-                Text  widget = (Text)modifyEvent.widget;
-                Color color  = COLOR_MODIFIED;
-                String s = widget.getText();
-                if (storageDeviceName.getString().equals(s)) color = COLOR_WHITE;
+                Text   widget = (Text)modifyEvent.widget;
+                Color  color  = COLOR_MODIFIED;
+                String string = widget.getText();
+                if (storageDeviceName.getString().equals(string)) color = COLOR_WHITE;
                 widget.setBackground(color);
               }
             });
@@ -4554,10 +4643,10 @@ class TabJobs
               public void widgetDefaultSelected(SelectionEvent selectionEvent)
               {
                 Combo  widget = (Combo)selectionEvent.widget;
-                String s      = widget.getText();
+                String string = widget.getText();
                 try
                 {
-                  long n = Units.parseByteSize(s);
+                  long n = Units.parseByteSize(string);
                   volumeSize.set(n);
                   BARServer.setOption(selectedJobId,"volume-size",n);
                 }
@@ -4566,18 +4655,18 @@ class TabJobs
                   if (!(Boolean)widget.getData("showedErrorDialog"))
                   {
                     widget.setData("showedErrorDialog",true);
-                    Dialogs.error(shell,"'"+s+"' is not valid size!\n\nEnter a number in the format 'n' or 'n.m'. Optional units are KB, MB or GB.");
+                    Dialogs.error(shell,"'"+string+"' is not valid size!\n\nEnter a number in the format 'n' or 'n.m'. Optional units are KB, MB or GB.");
                     widget.forceFocus();
                   }
                 }
               }
               public void widgetSelected(SelectionEvent selectionEvent)
               {
-                Combo widget = (Combo)selectionEvent.widget;
-                String s      = widget.getText();
+                Combo  widget = (Combo)selectionEvent.widget;
+                String string = widget.getText();
                 try
                 {
-                  long  n = Units.parseByteSize(s);
+                  long  n = Units.parseByteSize(string);
                   volumeSize.set(n);
                   BARServer.setOption(selectedJobId,"volume-size",n);
                 }
@@ -4586,7 +4675,7 @@ class TabJobs
                   if (!(Boolean)widget.getData("showedErrorDialog"))
                   {
                     widget.setData("showedErrorDialog",true);
-                    Dialogs.error(shell,"'"+s+"' is not valid size!\n\nEnter a number in the format 'n' or 'n.m'. Optional units are KB, MB or GB.");
+                    Dialogs.error(shell,"'"+string+"' is not valid size!\n\nEnter a number in the format 'n' or 'n.m'. Optional units are KB, MB or GB.");
                     widget.forceFocus();
                   }
                 }
@@ -4602,10 +4691,10 @@ class TabJobs
               public void focusLost(FocusEvent focusEvent)
               {
                 Combo  widget = (Combo)focusEvent.widget;
-                String s      = widget.getText();
+                String string = widget.getText();
                 try
                 {
-                  long n = Units.parseByteSize(s);
+                  long n = Units.parseByteSize(string);
                   volumeSize.set(n);
                   BARServer.setOption(selectedJobId,"volume-size",n);
                 }
@@ -4614,7 +4703,7 @@ class TabJobs
                   if (!(Boolean)widget.getData("showedErrorDialog"))
                   {
                     widget.setData("showedErrorDialog",true);
-                    Dialogs.error(shell,"'"+s+"' is not valid size!\n\nEnter a number in the format 'n' or 'n.m'. Optional units are KB, MB or GB.");
+                    Dialogs.error(shell,"'"+string+"' is not valid size!\n\nEnter a number in the format 'n' or 'n.m'. Optional units are KB, MB or GB.");
                     widget.forceFocus();
                   }
                 }
