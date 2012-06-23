@@ -35,6 +35,7 @@ import org.eclipse.swt.events.ModifyListener;
 import org.eclipse.swt.events.SelectionEvent;
 import org.eclipse.swt.events.SelectionListener;
 import org.eclipse.swt.graphics.Color;
+import org.eclipse.swt.graphics.Cursor;
 import org.eclipse.swt.graphics.GC;
 import org.eclipse.swt.graphics.Font;
 import org.eclipse.swt.graphics.FontData;
@@ -419,6 +420,7 @@ class WidgetModifyListener
       if ((text != null) && !text.equals(cachedText))
       {
         widgetLabel.setText(text);
+        widgetLabel.getParent().layout(true,true);
 // label layout does not work as expected: width of first label is expanded, rest reduced?
 //        widgetLabel.getParent().layout();
         cachedText = text;
@@ -510,6 +512,7 @@ class WidgetModifyListener
       if ((text != null) && !text.equals(cachedText))
       {
         widgetText.setText(text);
+        widgetText.getParent().layout();
 // text layout does not work as expected: width of first label is expanded, rest reduced?
 //        widgetText.getParent().layout();
         cachedText = text;
@@ -728,6 +731,10 @@ class WidgetModifyListener
     if (widget instanceof Control)
     {
       modified((Control)widget);
+    }
+    else if (widget instanceof MenuItem)
+    {
+      modified((MenuItem)widget);
     }
     else
     {
@@ -1272,7 +1279,7 @@ class Widgets
   {
     StringBuilder buffer = new StringBuilder();
 
-    if (accelerator != 0)
+    if (accelerator != SWT.NONE)
     {
       if (   ((accelerator & SWT.MOD1) == SWT.SHIFT)
           || ((accelerator & SWT.MOD2) == SWT.SHIFT)
@@ -1466,12 +1473,12 @@ class Widgets
    * @param keyCode key code
    * @param stateMask event state mask
    * @param character character
-   * @param accelerator accelerator key code
+   * @param accelerator accelerator key code or SWT.NONE
    * @return true iff key event is accelerator key
    */
   public static boolean isAccelerator(int keyCode, int stateMask, char character, int accelerator)
   {
-    if (accelerator != 0)
+    if (accelerator != SWT.NONE)
     {
       if      (keyCode == SWT.KEYPAD_ADD     ) keyCode = '+';
       else if (keyCode == SWT.KEYPAD_SUBTRACT) keyCode = '-';
@@ -1505,7 +1512,7 @@ class Widgets
 
   /** check if key event is accelerator key
    * @param keyEvent key event
-   * @param accelerator accelerator key code
+   * @param accelerator accelerator key code or SWT.NONE
    * @return true iff key event is accelerator key
    */
   public static boolean isAccelerator(KeyEvent keyEvent, int accelerator)
@@ -1515,7 +1522,7 @@ class Widgets
 
   /** check if key event is accelerator key
    * @param event event
-   * @param accelerator accelerator key code
+   * @param accelerator accelerator key code or SWT.NONE
    * @return true iff event is accelerator key
    */
   public static boolean isAccelerator(Event event, int accelerator)
@@ -1590,6 +1597,21 @@ class Widgets
         String     text   = widget.getText();
         widget.setSelection(text.length(),text.length());
       }
+      else if (control instanceof Combo)
+      {
+        Combo  widget = (Combo)control;
+
+/* do not work correct?
+        // no setSelection(n,m)-method, thus send key "end" event
+        Event event   = new Event();
+        event.type    = SWT.KeyDown;
+        event.widget  = widget;
+        event.keyCode = SWT.END;
+        Display display = widget.getDisplay();
+        display.post(event);
+        display.update();
+*/
+      }
     }
   }
 
@@ -1633,6 +1655,32 @@ class Widgets
         throw new Error("Internal error: unknown control");
       }
     }
+  }
+
+  /** set cursor for control
+   * @param control control
+   * @param cursor cursor to set or null
+   */
+  public static void setCursor(final Control control, final Cursor cursor)
+  {
+    if (!control.isDisposed())
+    {
+      control.getDisplay().syncExec(new Runnable()
+      {
+        public void run()
+        {
+          control.setCursor(cursor);
+        }
+      });
+    }
+  }
+
+    /** resset cursor for control to default cursor
+   * @param control control
+   */
+  public static void resetCursor(Control control)
+  {
+    setCursor(control,null);
   }
 
   /** set field in data structure
@@ -1696,10 +1744,17 @@ class Widgets
   {
     if (!button.isDisposed() && button.isEnabled())
     {
-      Event event = new Event();
-      event.widget = button;
+      if ((button.getStyle() & SWT.CHECK) != 0)
+      {
+        button.setSelection(!button.getSelection());
+      }
+      else
+      {
+        Event event = new Event();
+        event.widget = button;
 
-      button.notifyListeners(SWT.Selection,event);
+        button.notifyListeners(SWT.Selection,event);
+      }
     }
   }
 
@@ -1722,13 +1777,14 @@ class Widgets
    * @param composite composite widget
    * @param text label text
    * @param style label style
+   * @param accelerator accelerator key code or SWT.NONE
    * @return new label
    */
   public static Label newLabel(Composite composite, String text, int style, int accelerator)
   {
     Label label;
 
-    if (accelerator != 0)
+    if (accelerator != SWT.NONE)
     {
       char key = (char)(accelerator & SWT.KEY_MASK);
       int index = text.toLowerCase().indexOf(key);
@@ -1903,16 +1959,44 @@ class Widgets
 
   //-----------------------------------------------------------------------
 
+  /** create new text view
+   * @param composite composite widget
+   * @param style view style
+   * @return new text view
+   */
+  public static StyledText newTextView(Composite composite, int style)
+  {
+    StyledText styledText;
+
+    styledText = new StyledText(composite,style|SWT.READ_ONLY);
+    styledText.setBackground(composite.getBackground());
+    styledText.setText("");
+
+    return styledText;
+  }
+
+  /** create new string view
+   * @param composite composite widget
+   * @return new view
+   */
+  public static StyledText newTextView(Composite composite)
+  {
+    return newTextView(composite,SWT.LEFT|SWT.BORDER|SWT.MULTI|SWT.H_SCROLL|SWT.V_SCROLL);
+  }
+
+  //-----------------------------------------------------------------------
+
   /** create new button
    * @param composite composite widget
    * @param text text
+   * @param accelerator accelerator key code or SWT.NONE
    * @return new button
    */
   public static Button newButton(Composite composite, String text, int accelerator)
   {
     Button button;
 
-    if (accelerator != 0)
+    if (accelerator != SWT.NONE)
     {
       char key = (char)(accelerator & SWT.KEY_MASK);
       int index = text.toLowerCase().indexOf(key);
@@ -1994,12 +2078,26 @@ class Widgets
    * @param data data structure to store checkbox value or null
    * @param field field name in data structure to set on selection
    * @param value value for checkbox
+   * @param accelerator accelerator key code or SWT.NONE
    * @return new checkbox button
    */
-  public static Button newCheckbox(Composite composite, String text, final Object data, final String field, boolean value)
+  public static Button newCheckbox(Composite composite, String text, final Object data, final String field, boolean value, int accelerator)
   {
     Button button;
 
+    if (accelerator != SWT.NONE)
+    {
+      char key = (char)(accelerator & SWT.KEY_MASK);
+      int index = text.toLowerCase().indexOf(key);
+      if (index >= 0)
+      {
+        text = text.substring(0,index)+'&'+text.substring(index);
+      }
+      else
+      {
+        text = text+" ["+buttonAcceleratorToText(accelerator)+"]";
+      }
+    }
     button = new Button(composite,SWT.CHECK);
     if (text != null) button.setText(text);
     button.addSelectionListener(new SelectionListener()
@@ -2023,11 +2121,48 @@ class Widgets
    * @param text text
    * @param data data structure to store checkbox value or null
    * @param field field name in data structure to set on selection
+   * @param value value for checkbox
+   * @return new checkbox button
+   */
+  public static Button newCheckbox(Composite composite, String text, final Object data, final String field, boolean value)
+  {
+    return newCheckbox(composite,text,data,field,value,SWT.NONE);
+  }
+
+  /** create new checkbox
+   * @param composite composite widget
+   * @param text text
+   * @param data data structure to store checkbox value or null
+   * @param field field name in data structure to set on selection
+   * @param accelerator accelerator key code or SWT.NONE
+   * @return new checkbox button
+   */
+  public static Button newCheckbox(Composite composite, String text, final Object data, final String field, int accelerator)
+  {
+    return newCheckbox(composite,text,data,field,false,accelerator);
+  }
+
+  /** create new checkbox
+   * @param composite composite widget
+   * @param text text
+   * @param data data structure to store checkbox value or null
+   * @param field field name in data structure to set on selection
    * @return new checkbox button
    */
   public static Button newCheckbox(Composite composite, String text, final Object data, final String field)
   {
-    return newCheckbox(composite,text,data,field,false);
+    return newCheckbox(composite,text,data,field,SWT.NONE);
+  }
+
+  /** create new checkbox
+   * @param composite composite widget
+   * @param text text
+   * @param accelerator accelerator key code or SWT.NONE
+   * @return new checkbox button
+   */
+  public static Button newCheckbox(Composite composite, String text, int accelerator)
+  {
+    return newCheckbox(composite,text,null,null,accelerator);
   }
 
   /** create new checkbox
@@ -2037,7 +2172,7 @@ class Widgets
    */
   public static Button newCheckbox(Composite composite, String text)
   {
-    return newCheckbox(composite,text,null,null);
+    return newCheckbox(composite,text,SWT.NONE);
   }
 
   /** create new checkbox
@@ -2095,24 +2230,22 @@ class Widgets
 
   /** create new checkbox
    * @param composite composite widget
-   * @param imageOn,imageOf on/off image
-   * @param data data structure to store checkbox value or null
-   * @param field field name in data structure to set on selection
+   * @param accelerator accelerator key code or SWT.NONE
    * @return new checkbox button
    */
-  public static Button newCheckbox(Composite composite, Image imageOn, Image imageOff, final Object data, final String field)
+  public static Button newCheckbox(Composite composite, Image imageOff, Image imageOn, final Object data, final String field)
   {
-    return newCheckbox(composite,imageOn,imageOff,data,field,false);
+    return newCheckbox(composite,imageOff,imageOn,data,field,false);
   }
 
   /** create new checkbox
    * @param composite composite widget
-   * @param imageOn,imageOf on/off image
+   * @param imageOff,imageOn off/on image
    * @return new checkbox button
    */
-  public static Button newCheckbox(Composite composite, Image imageOn, Image imageOff)
+  public static Button newCheckbox(Composite composite, Image imageOff, Image imageOn)
   {
-    return newCheckbox(composite,imageOn,imageOff,null,null);
+    return newCheckbox(composite,imageOff,imageOn,null,null);
   }
 
   //-----------------------------------------------------------------------
@@ -2452,13 +2585,14 @@ class Widgets
    * @param data data structure to store combo value or null
    * @param field field name in data structure to set on selection
    * @param value value for checkbox
+   * @param style SWT style flags
    * @return new combo widget
    */
-  public static Combo newCombo(Composite composite, final Object data, final String field, String value)
+  public static Combo newCombo(Composite composite, final Object data, final String field, String value, int style)
   {
     Combo combo;
 
-    combo = new Combo(composite,SWT.BORDER);
+    combo = new Combo(composite,style);
     if      (value != null)
     {
       combo.setText(value);
@@ -2488,11 +2622,45 @@ class Widgets
    * @param composite composite widget
    * @param data data structure to store combo value or null
    * @param field field name in data structure to set on selection
+   * @param value value for checkbox
+   * @return new combo widget
+   */
+  public static Combo newCombo(Composite composite, final Object data, final String field, String value)
+  {
+    return newCombo(composite,data,field,value,SWT.BORDER);
+  }
+
+  /** new combo widget
+   * @param composite composite widget
+   * @param data data structure to store combo value or null
+   * @param field field name in data structure to set on selection
+   * @param style SWT style flags
+   * @return new combo widget
+   */
+  public static Combo newCombo(Composite composite, final Object data, final String field, int style)
+  {
+    return newCombo(composite,data,field,null,style);
+  }
+
+  /** new combo widget
+   * @param composite composite widget
+   * @param data data structure to store combo value or null
+   * @param field field name in data structure to set on selection
    * @return new combo widget
    */
   public static Combo newCombo(Composite composite, final Object data, final String field)
   {
-    return newCombo(composite,data,field,null);
+    return newCombo(composite,data,field,SWT.BORDER);
+  }
+
+  /** new combo widget
+   * @param composite composite widget
+   * @param style SWT style flags
+   * @return new combo widget
+   */
+  public static Combo newCombo(Composite composite, int style)
+  {
+    return newCombo(composite,null,null,style);
   }
 
   /** new combo widget
@@ -2501,7 +2669,7 @@ class Widgets
    */
   public static Combo newCombo(Composite composite)
   {
-    return newCombo(composite,null,null);
+    return newCombo(composite,SWT.BORDER);
   }
 
   //-----------------------------------------------------------------------
@@ -3498,6 +3666,18 @@ class Widgets
     }
   }
 
+  /** remove table entries
+   * @param table table
+   * @param tableItems table items to remove
+   */
+  public static void removeTableEntries(Table table, TableItem[] tableItems)
+  {
+    for (TableItem tableItem : tableItems)
+    {
+      removeTableEntry(table,tableItems);
+    }
+  }
+
   /** remove all table entries
    * @param table table
    */
@@ -4001,6 +4181,35 @@ private static void printTree(Tree tree)
     }
   }
 
+    /** get width of tree columns
+   * @param tree tree
+   * @return tree columns width array
+   */
+  public static int[] getTreeColumnWidth(Tree tree)
+  {
+    TreeColumn[] treeColumns = tree.getColumns();
+    int[] width = new int[treeColumns.length];
+    for (int z = 0; z < treeColumns.length; z++)
+    {
+      width[z] = treeColumns[z].getWidth();
+    }
+
+    return width;
+  }
+
+  /** set width of tree columns
+   * @param tree tree
+   * @param width column width array
+   */
+  public static void setTreeColumnWidth(Tree tree, int[] width)
+  {
+    TreeColumn[] treeColumns = tree.getColumns();
+    for (int z = 0; z < Math.min(treeColumns.length,width.length); z++)
+    {
+      treeColumns[z].setWidth(width[z]);
+    }
+  }
+
   //-----------------------------------------------------------------------
 
   /** create new sash widget (pane)
@@ -4398,12 +4607,12 @@ private static void printTree(Tree tree)
   /** add new menu item
    * @param menu menu
    * @param text menu item text
-   * @param accelerator accelerator key or 0
+   * @param accelerator accelerator key or SWT.NONE
    * @return new menu item
    */
   public static MenuItem addMenuItem(Menu menu, String text, int accelerator)
   {
-    if (accelerator != 0)
+    if (accelerator != SWT.NONE)
     {
       char key = (char)(accelerator & SWT.KEY_MASK);
       int index = text.indexOf(key);
@@ -4415,7 +4624,7 @@ private static void printTree(Tree tree)
     }
     MenuItem menuItem = new MenuItem(menu,SWT.DROP_DOWN);
     menuItem.setText(text);
-    if (accelerator != 0) menuItem.setAccelerator(accelerator);
+    if (accelerator != SWT.NONE) menuItem.setAccelerator(accelerator);
 
     return menuItem;
   }
@@ -4427,7 +4636,7 @@ private static void printTree(Tree tree)
    */
   public static MenuItem addMenuItem(Menu menu, String text)
   {
-    return addMenuItem(menu,text,0);
+    return addMenuItem(menu,text,SWT.NONE);
   }
 
   /** add new menu item
@@ -4436,12 +4645,12 @@ private static void printTree(Tree tree)
    * @param data data structure to store checkbox value or null
    * @param field field name in data structure to set on selection
    * @param value value for checkbox button
-   * @param accelerator accelerator key or 0
+   * @param accelerator accelerator key or SWT.NONE
    * @return new menu item
    */
   public static MenuItem addMenuCheckbox(Menu menu, String text, final Object data, final String field, final Object value, int accelerator)
   {
-    if (accelerator != 0)
+    if (accelerator != SWT.NONE)
     {
       char key = (char)(accelerator & SWT.KEY_MASK);
       int index = text.indexOf(key);
@@ -4479,12 +4688,12 @@ private static void printTree(Tree tree)
    * @param data data structure to store checkbox value or null
    * @param field field name in data structure to set on selection
    * @param value value for checkbox button
-   * @param accelerator accelerator key or 0
+   * @param accelerator accelerator key or SWT.NONE
    * @return new menu item
    */
   public static MenuItem addMenuCheckbox(Menu menu, String text, final Object data, final String field, final Object value)
   {
-    return addMenuCheckbox(menu,text,data,field,value,0);
+    return addMenuCheckbox(menu,text,data,field,value,SWT.NONE);
   }
 
   /** add new menu item
@@ -4516,12 +4725,12 @@ private static void printTree(Tree tree)
    * @param data data structure to store radio value or null
    * @param field field name in data structure to set on selection
    * @param value value for radio button
-   * @param accelerator accelerator key or 0
+   * @param accelerator accelerator key or SWT.NONE
    * @return new menu item
    */
   public static MenuItem addMenuRadio(Menu menu, String text, final Object data, final String field, final Object value, int accelerator)
   {
-    if (accelerator != 0)
+    if (accelerator != SWT.NONE)
     {
       char key = (char)(accelerator & SWT.KEY_MASK);
       int index = text.indexOf(key);
@@ -4548,7 +4757,7 @@ private static void printTree(Tree tree)
       });
       menuItem.setSelection((getField(data,field) == value));
     }
-    if (accelerator != 0) menuItem.setAccelerator(accelerator);
+    if (accelerator != SWT.NONE) menuItem.setAccelerator(accelerator);
 
     return menuItem;
   }
@@ -4563,7 +4772,7 @@ private static void printTree(Tree tree)
    */
   public static MenuItem addMenuRadio(Menu menu, String text, final Object data, final String field, final Object value)
   {
-    return addMenuRadio(menu,text,data,field,value,0);
+    return addMenuRadio(menu,text,data,field,value,SWT.NONE);
   }
 
   /** add new menu item
@@ -4928,11 +5137,12 @@ private static void printTree(Tree tree)
       Table table = tableItems[0].getParent();
 
       StringBuilder buffer = new StringBuilder();
+      String lineSeparator = System.getProperty("line.separator");
       if (columnNb >= 0)
       {
         for (int z = 0; z < tableItems.length ; z++)
         {
-          buffer.append(tableItems[z].getText(columnNb)); buffer.append('\n');
+          buffer.append(tableItems[z].getText(columnNb)); buffer.append(lineSeparator);
         }
       }
       else
@@ -4945,7 +5155,7 @@ private static void printTree(Tree tree)
             if (i > 0) buffer.append('\t');
             buffer.append(tableItems[z].getText(i));
           }
-          buffer.append('\n');
+          buffer.append(lineSeparator);
         }
       }
       setClipboard(clipboard,buffer.toString());
@@ -4959,6 +5169,52 @@ private static void printTree(Tree tree)
   public static void setClipboard(Clipboard clipboard, TableItem[] tableItems)
   {
     setClipboard(clipboard,tableItems,-1);
+  }
+
+  /** set clipboard with text from table item
+   * @param clipboard clipboard
+   * @param treeItems tree item
+   * @param columnNb or -1 for all columns
+   */
+  public static void setClipboard(Clipboard clipboard, TreeItem[] treeItems, int columnNb)
+  {
+    if (treeItems.length > 0)
+    {
+      Tree tree = treeItems[0].getParent();
+
+      StringBuilder buffer = new StringBuilder();
+      String lineSeparator = System.getProperty("line.separator");
+      if (columnNb >= 0)
+      {
+        for (int z = 0; z < treeItems.length ; z++)
+        {
+          buffer.append(treeItems[z].getText(columnNb)); buffer.append(lineSeparator);
+        }
+      }
+      else
+      {
+        int columnCount = Math.max(tree.getColumnCount(),1);
+        for (int z = 0; z < treeItems.length ; z++)
+        {
+          for (int i = 0; i < columnCount ; i++)
+          {
+            if (i > 0) buffer.append('\t');
+            buffer.append(treeItems[z].getText(i));
+          }
+          buffer.append(lineSeparator);
+        }
+      }
+      setClipboard(clipboard,buffer.toString());
+    }
+  }
+
+  /** set clipboard with text from table item
+   * @param clipboard clipboard
+   * @param treeItems tree item
+   */
+  public static void setClipboard(Clipboard clipboard, TreeItem[] treeItems)
+  {
+    setClipboard(clipboard,treeItems,-1);
   }
 
   /** add copy listener (copy content to clipboard on ctrl-c)
