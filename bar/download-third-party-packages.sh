@@ -200,7 +200,7 @@ if test $cleanFlag -eq 0; then
      fi
      fileName=`ls zlib-*.tar.gz 2>/dev/null`
      if test ! -f "$fileName"; then
-       fileName=`wget --quiet -O - 'http://www.zlib.net'|grep -E -e 'http://zlib.net/zlib-.*\.tar\.gz'|head -1|sed 's|.*http://zlib.net/\(.*\.tar\.gz\)".*|\1|g'`     
+       fileName=`wget --quiet -O - 'http://www.zlib.net'|grep -E -e 'http://zlib.net/zlib-.*\.tar\.gz'|head -1|sed 's|.*http://zlib.net/\(.*\.tar\.gz\)".*|\1|g'`
        $WGET "http://www.zlib.net/$fileName"
      fi
      if test $noDecompressFlag -eq 0; then
@@ -242,7 +242,7 @@ if test $cleanFlag -eq 0; then
      fi
      fileName=`ls xz-*.tar.gz 2>/dev/null`
      if test ! -f "$fileName"; then
-       fileName=`wget --quiet -O - 'http://tukaani.org/xz'|grep -E -e 'xz-.*\.tar\.gz'|head -1|sed 's|.*href="\(xz.*\.tar\.gz\)".*|\1|g'`     
+       fileName=`wget --quiet -O - 'http://tukaani.org/xz'|grep -E -e 'xz-.*\.tar\.gz'|head -1|sed 's|.*href="\(xz.*\.tar\.gz\)".*|\1|g'`
        $WGET "http://tukaani.org/xz/$fileName"
      fi
      if test $noDecompressFlag -eq 0; then
@@ -374,7 +374,7 @@ if test $cleanFlag -eq 0; then
      else
        cd $tmpDirectory
      fi
-     
+
      if test ! -f libcdio-0.82.tar.gz; then
        $WGET 'ftp://ftp.gnu.org/gnu/libcdio/libcdio-0.82.tar.gz'
      fi
