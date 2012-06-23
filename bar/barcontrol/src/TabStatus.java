@@ -1426,7 +1426,7 @@ class TabStatus
   {
     assert selectedJobData != null;
 
-    if (Dialogs.confirm(shell,"Abort job '"+selectedJobData.name+"'?",false))
+    if (!selectedJobData.state.equals("running") || Dialogs.confirm(shell,"Abort running job '"+selectedJobData.name+"'?",false))
     {
       String[] result = new String[1];
       if (BARServer.executeCommand("JOB_ABORT "+selectedJobData.id,result) != Errors.NONE)
