@@ -309,11 +309,11 @@ typedef struct
       uint         port;
       SocketHandle socketHandle;
 
-      // thread
+      // threads
       Semaphore    writeLock;                              // write synchronization lock
-      Thread       threads[MAX_NETWORK_CLIENT_THREADS];
-      MsgQueue     commandMsgQueue;
-      bool         exitFlag;
+      Thread       threads[MAX_NETWORK_CLIENT_THREADS];    // command processing threads
+      MsgQueue     commandMsgQueue;                        // commands send by client
+      bool         quitFlag;                               // TRUE if threads should terminate
     } network;
   };
 
@@ -2417,6 +2417,7 @@ LOCAL void indexUpdateThreadCode(void)
   int                        z;
   uint64                     now;
   String                     printableStorageName;
+  String                     dateTime;
   DatabaseQueryHandle        databaseQueryHandle;
   IndexModes                 indexMode;
 
@@ -2531,6 +2532,7 @@ LOCAL void indexUpdateThreadCode(void)
       now                  = Misc_getCurrentDateTime();
       storageName          = String_new();
       printableStorageName = String_new();
+      dateTime             = String_new();
       while (Index_getNextStorage(&databaseQueryHandle,
                                   &storageId,
                                   storageName,
@@ -2546,15 +2548,24 @@ LOCAL void indexUpdateThreadCode(void)
         Storage_getPrintableName(printableStorageName,storageName);
 
         if (   (indexMode == INDEX_MODE_AUTO)
+            && (indexState != INDEX_STATE_UPDATE_REQUESTED)
             && (now > (createdDateTime+globalOptions.indexDatabaseKeepTime))
             && (now > (lastCheckedDateTime+globalOptions.indexDatabaseKeepTime))
            )
         {
           Index_delete(indexDatabaseHandle,storageId);
-          plogMessage(LOG_TYPE_INDEX,"INDEX","Deleted index for '%s'",String_cString(printableStorageName));
+
+          Misc_formatDateTime(dateTime,lastCheckedDateTime,NULL);
+          plogMessage(LOG_TYPE_INDEX,
+                      "INDEX",
+                      "Deleted index for '%s', last checked %s\n",
+                      String_cString(printableStorageName),
+                      String_cString(dateTime)
+                     );
         }
       }
       Index_doneList(&databaseQueryHandle);
+      String_delete(dateTime);
       String_delete(printableStorageName);
       String_delete(storageName);
     }
@@ -2674,7 +2685,7 @@ LOCAL bool commandAborted(ClientInfo *clientInfo, uint commandId)
     case CLIENT_TYPE_BATCH:
       break;
     case CLIENT_TYPE_NETWORK:
-      if (clientInfo->network.exitFlag) abortedFlag = TRUE;
+      if (clientInfo->network.quitFlag) abortedFlag = TRUE;
       break;
     default:
       #ifndef NDEBUG
@@ -3922,7 +3933,9 @@ LOCAL void serverCommand_jobList(ClientInfo *clientInfo, uint id, const String a
   Semaphore_lock(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ);
   {
     jobNode = jobList.head;
-    while ((jobNode != NULL) && !commandAborted(clientInfo,id))
+    while (   (jobNode != NULL)
+           && !commandAborted(clientInfo,id)
+          )
     {
       sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
                        "%u %'S %'s %s %llu '%s+%s' %'s %'s %'s %llu %lu",
@@ -7428,7 +7441,7 @@ LOCAL IndexNode *getIndexEntryNode(IndexList *indexList, ArchiveEntryTypes type,
 * Output : -
 * Return : -
 * Notes  : Arguments:
-*            <all|tagged storage archives 0|1>
+*            <all=0|tagged storage archives=1>
 *            <max. count>
 *            <newestEntriesOnly 0|1>
 *            <name pattern>
@@ -7472,13 +7485,13 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
   // get max. count, new entires only, filter pattern
   if (argumentCount < 1)
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected max. number of entries to send");
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected checked storage only flag");
     return;
   }
   checkedStorageOnlyFlag = String_toBoolean(arguments[0],STRING_BEGIN,NULL,NULL,0,NULL,0);
   if (argumentCount < 2)
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected filter pattern");
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected max. number of entries to send");
     return;
   }
   entryMaxCount = String_toInteger64(arguments[1],STRING_BEGIN,NULL,NULL,0);
@@ -7538,6 +7551,7 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
         return;
       }
       while (   ((entryMaxCount == 0L) || (List_count(&indexList) < entryMaxCount))
+             && !commandAborted(clientInfo,id)
              && Index_getNextFile(&databaseQueryHandle,
                                   &storageId,
                                   storageName,
@@ -7605,6 +7619,7 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
         return;
       }
       while (   ((entryMaxCount == 0L) || (List_count(&indexList) < entryMaxCount))
+             && !commandAborted(clientInfo,id)
              && Index_getNextImage(&databaseQueryHandle,
                                    &storageId,
                                    storageName,
@@ -7665,6 +7680,7 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
         return;
       }
       while (   ((entryMaxCount == 0L) || (List_count(&indexList) < entryMaxCount))
+             && !commandAborted(clientInfo,id)
              && Index_getNextDirectory(&databaseQueryHandle,
                                        &storageId,
                                        storageName,
@@ -7726,6 +7742,7 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
         return;
       }
       while (   ((entryMaxCount == 0L) || (List_count(&indexList) < entryMaxCount))
+             && !commandAborted(clientInfo,id)
              && Index_getNextLink(&databaseQueryHandle,
                                   &storageId,
                                   storageName,
@@ -7789,6 +7806,7 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
         return;
       }
       while (   ((entryMaxCount == 0L) || (List_count(&indexList) < entryMaxCount))
+             && !commandAborted(clientInfo,id)
              && Index_getNextHardLink(&databaseQueryHandle,
                                       &storageId,
                                       storageName,
@@ -7856,6 +7874,7 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
         return;
       }
       while (   ((entryMaxCount == 0L) || (List_count(&indexList) < entryMaxCount))
+             && !commandAborted(clientInfo,id)
              && Index_getNextSpecial(&databaseQueryHandle,
                                      &storageId,
                                      storageName,
@@ -7889,7 +7908,9 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
     string1 = String_new();
     string2 = String_new();
     indexNode = indexList.head;
-    while ((indexNode != NULL) && !commandAborted(clientInfo,id))
+    while (   (indexNode != NULL)
+           && !commandAborted(clientInfo,id)
+          )
     {
       switch (indexNode->type)
       {
@@ -8323,7 +8344,7 @@ LOCAL void networkClientThreadCode(ClientInfo *clientInfo)
   assert(clientInfo != NULL);
 
   result = String_new();
-  while (   !clientInfo->network.exitFlag
+  while (   !clientInfo->network.quitFlag
          && MsgQueue_get(&clientInfo->network.commandMsgQueue,&commandMsg,NULL,sizeof(commandMsg))
         )
   {
@@ -8348,8 +8369,6 @@ LOCAL void networkClientThreadCode(ClientInfo *clientInfo)
     freeCommandMsg(&commandMsg,NULL);
   }
   String_delete(result);
-
-  clientInfo->network.exitFlag = TRUE;
 }
 
 /***********************************************************************\
@@ -8464,7 +8483,7 @@ LOCAL void initNetworkClient(ClientInfo   *clientInfo,
   clientInfo->network.name         = String_duplicate(name);
   clientInfo->network.port         = port;
   clientInfo->network.socketHandle = socketHandle;
-  clientInfo->network.exitFlag     = FALSE;
+  clientInfo->network.quitFlag     = FALSE;
   EntryList_init(&clientInfo->includeEntryList);
   PatternList_init(&clientInfo->excludePatternList);
   PatternList_init(&clientInfo->compressExcludePatternList);
@@ -8514,8 +8533,8 @@ LOCAL void doneClient(ClientInfo *clientInfo)
     case CLIENT_TYPE_BATCH:
       break;
     case CLIENT_TYPE_NETWORK:
-      // stop client thread
-      clientInfo->network.exitFlag = TRUE;
+      // stop client threads
+      clientInfo->network.quitFlag = TRUE;
       MsgQueue_setEndOfMsg(&clientInfo->network.commandMsgQueue);
       for (z = MAX_NETWORK_CLIENT_THREADS-1; z >= 0; z--)
       {
