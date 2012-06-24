@@ -7574,7 +7574,7 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
       String_mapCString(String_set(string2,name),STRING_BEGIN,FILENAME_MAP_FROM,FILENAME_MAP_TO,SIZE_OF_ARRAY(FILENAME_MAP_FROM)); \
       String_mapCString(String_set(string3,destinationName),STRING_BEGIN,FILENAME_MAP_FROM,FILENAME_MAP_TO,SIZE_OF_ARRAY(FILENAME_MAP_FROM)); \
       sendClientResult(clientInfo,id,FALSE,ERROR_NONE, \
-                       "LINK %llu %llu %u %u %u %'S %'S %'S", \
+                       "LINK %'S %llu %'S %'S %llu %u %u %u", \
                        string1, \
                        storageDateTime, \
                        string2, \
