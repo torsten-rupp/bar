@@ -249,13 +249,12 @@ typedef struct IndexNode
     } link;
     struct
     {
-      String   destinationName;
-      uint64   size;
-      uint32   userId;
-      uint32   groupId;
-      uint32   permission;
-      uint64   fragmentOffset;
-      uint64   fragmentSize;
+      uint64 size;
+      uint32 userId;
+      uint32 groupId;
+      uint32 permission;
+      uint64 fragmentOffset;
+      uint64 fragmentSize;
     } hardLink;
     struct
     {
@@ -7310,7 +7309,6 @@ LOCAL void freeIndexNode(IndexNode *indexNode, void *userData)
       String_delete(indexNode->link.destinationName);
       break;
     case ARCHIVE_ENTRY_TYPE_HARDLINK:
-      String_delete(indexNode->hardLink.destinationName);
       break;
     case ARCHIVE_ENTRY_TYPE_SPECIAL:
       break;
@@ -7371,7 +7369,6 @@ LOCAL IndexNode *newIndexEntryNode(IndexList *indexList, ArchiveEntryTypes archi
       indexNode->link.destinationName = String_new();
       break;
     case ARCHIVE_ENTRY_TYPE_HARDLINK:
-      indexNode->hardLink.destinationName = String_new();
       break;
     case ARCHIVE_ENTRY_TYPE_SPECIAL:
       break;
@@ -7497,17 +7494,16 @@ LOCAL IndexNode *findIndexEntryNode(IndexList         *indexList,
 *            <newestEntriesOnly 0|1>
 *            <name pattern>
 *          Result:
-*            FILE <storage> <create date/time> <name> <size> <time modified> \
+*            FILE <storage> <storage date/time> <name> <size> <time modified> \
 *            <user id> <group id> <permission> <fragment offset> <fragment size>
-*            IMAGE <storage> <create date/time> <name> <size> <time modified> \
+*            IMAGE <storage> <storage date/time> <name> <size> <time modified> \
 *            <block offset> <block count>
-*            DIRECTORY <storage> <create date/time> <name> <time modified> \
+*            DIRECTORY <storage> <storage date/time> <name> <time modified> \
 *            <user id> <group id> <permission>
-*            LINK <storage> <create date/time> <name> <destination name> \
+*            LINK <storage> <storage date/time> <name> <destination name> \
 *            <time modified> <user id> <group id> <permission>
-*            HARDLINK <storage> <create date/time> <name> <destination name> \
-*            <time modified> <user id> <group id> <permission>
-*            SPECIAL <storage> <create date/time> <name> <time modified> \
+*            HARDLINK <storage> <storage date/time> <name> <time modified> <user id> <group id> <permission>
+*            SPECIAL <storage> <storage date/time> <name> <time modified> \
 *            <user id> <group id> <permission>
 \***********************************************************************/
 
@@ -7586,18 +7582,16 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
                       ); \
     } \
     while (0)
-  #define SEND_HARDLINK_ENTRY(storageName,storageDateTime,name,destinationName,size,timeModified,userId,groupId,permission,fragmentOffset,fragmentSize) \
+  #define SEND_HARDLINK_ENTRY(storageName,storageDateTime,name,size,timeModified,userId,groupId,permission,fragmentOffset,fragmentSize) \
     do \
     { \
       String_mapCString(String_set(string1,storageName),STRING_BEGIN,FILENAME_MAP_FROM,FILENAME_MAP_TO,SIZE_OF_ARRAY(FILENAME_MAP_FROM)); \
       String_mapCString(String_set(string2,name),STRING_BEGIN,FILENAME_MAP_FROM,FILENAME_MAP_TO,SIZE_OF_ARRAY(FILENAME_MAP_FROM)); \
-      String_mapCString(String_set(string3,destinationName),STRING_BEGIN,FILENAME_MAP_FROM,FILENAME_MAP_TO,SIZE_OF_ARRAY(FILENAME_MAP_FROM)); \
       sendClientResult(clientInfo,id,FALSE,ERROR_NONE, \
-                       "HARDLINK %'S %llu %'S %'S %llu %u %u %u %llu %llu", \
+                       "HARDLINK %'S %llu %'S %llu %u %u %u %llu %llu", \
                        string1, \
                        storageDateTime, \
                        string2, \
-                       string3, \
                        size, \
                        timeModified, \
                        userId, \
@@ -8043,7 +8037,6 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
                                       storageName,
                                       &storageDateTime,
                                       name,
-                                      destinationName,
                                       &size,
                                       &timeModified,
                                       &userId,
@@ -8072,7 +8065,6 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
             String_set(indexNode->storageName,storageName);
             indexNode->storageDateTime         = storageDateTime;
             indexNode->timeModified            = timeModified;
-            String_set(indexNode->hardLink.destinationName,destinationName);
             indexNode->hardLink.size           = size;
             indexNode->hardLink.userId         = userId;
             indexNode->hardLink.groupId        = groupId;
@@ -8083,7 +8075,7 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
         }
         else
         {
-          SEND_HARDLINK_ENTRY(storageName,storageDateTime,name,size,destinationName,timeModified,userId,groupId,permission,fragmentOffset,fragmentSize);
+          SEND_HARDLINK_ENTRY(storageName,storageDateTime,name,size,timeModified,userId,groupId,permission,fragmentOffset,fragmentSize);
         }
       }
       Index_doneList(&databaseQueryHandle);
@@ -8223,7 +8215,6 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
                               indexNode->storageDateTime,
                               indexNode->name,
                               indexNode->hardLink.size,
-                              indexNode->hardLink.destinationName,
                               indexNode->timeModified,
                               indexNode->hardLink.userId,
                               indexNode->hardLink.groupId,
