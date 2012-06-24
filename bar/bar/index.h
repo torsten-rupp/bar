@@ -563,16 +563,17 @@ Errors Index_initListHardLinks(DatabaseQueryHandle *databaseQueryHandle,
 * Name   : Index_getNextHardLink
 * Purpose: get next hard link entry
 * Input  : databaseQueryHandle - database query handle
-* Output : databaseId     - database id of entry
-*          storageName    - storage name
-*          fileName       - name
-*          size           - size [bytes]
-*          timeModified   - modified date/time stamp [s]
-*          userId         - user id
-*          groupId        - group id
-*          permission     - permission flags
-*          fragmentOffset - fragment offset [bytes]
-*          fragmentSize   - fragment size [bytes]
+* Output : databaseId          - database id of entry
+*          storageName         - storage name
+*          fileName            - file name
+*          destinationFileName - destination file name
+*          size                - size [bytes]
+*          timeModified        - modified date/time stamp [s]
+*          userId              - user id
+*          groupId             - group id
+*          permission          - permission flags
+*          fragmentOffset      - fragment offset [bytes]
+*          fragmentSize        - fragment size [bytes]
 * Return : TRUE if entry read, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
@@ -582,6 +583,7 @@ bool Index_getNextHardLink(DatabaseQueryHandle *databaseQueryHandle,
                            String              storageName,
                            uint64              *storageDateTime,
                            String              fileName,
+                           String              destinationFileName,
                            uint64              *size,
                            uint64              *timeModified,
                            uint32              *userId,
