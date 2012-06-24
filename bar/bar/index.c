@@ -1237,7 +1237,6 @@ Errors Index_initListHardLinks(DatabaseQueryHandle *databaseQueryHandle,
                                    storage.name, \
                                    STRFTIME('%%s',storage.created), \
                                    hardlinks.name, \
-                                   hardlinks.destinationName, \
                                    hardlinks.size, \
                                    hardlinks.timeModified, \
                                    hardlinks.userId, \
@@ -1265,7 +1264,6 @@ bool Index_getNextHardLink(DatabaseQueryHandle *databaseQueryHandle,
                            String              storageName,
                            uint64              *storageDateTime,
                            String              fileName,
-                           String              destinationFileName,
                            uint64              *size,
                            uint64              *timeModified,
                            uint32              *userId,
@@ -1283,7 +1281,6 @@ bool Index_getNextHardLink(DatabaseQueryHandle *databaseQueryHandle,
                              &storageName,
                              storageDateTime,
                              &fileName,
-                             &destinationFileName,
                              size,
                              timeModified,
                              userId,
