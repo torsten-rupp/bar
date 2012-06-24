@@ -7588,7 +7588,7 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
       String_mapCString(String_set(string1,storageName),STRING_BEGIN,FILENAME_MAP_FROM,FILENAME_MAP_TO,SIZE_OF_ARRAY(FILENAME_MAP_FROM)); \
       String_mapCString(String_set(string2,name),STRING_BEGIN,FILENAME_MAP_FROM,FILENAME_MAP_TO,SIZE_OF_ARRAY(FILENAME_MAP_FROM)); \
       sendClientResult(clientInfo,id,FALSE,ERROR_NONE, \
-                       "HARDLINK %'S %llu %'S %llu %u %u %u %llu %llu", \
+                       "HARDLINK %'S %llu %'S %lld %llu %u %u %u %llu %llu", \
                        string1, \
                        storageDateTime, \
                        string2, \
