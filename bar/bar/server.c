@@ -249,6 +249,16 @@ typedef struct IndexNode
     } link;
     struct
     {
+      String   destinationName;
+      uint64   size;
+      uint32   userId;
+      uint32   groupId;
+      uint32   permission;
+      uint64   fragmentOffset;
+      uint64   fragmentSize;
+    } hardLink;
+    struct
+    {
       ulong  major;
       ulong  minor;
       uint32 userId;
@@ -7286,6 +7296,32 @@ LOCAL void freeIndexNode(IndexNode *indexNode, void *userData)
 
   UNUSED_VARIABLE(userData);
 
+  switch (indexNode->type)
+  {
+    case ARCHIVE_ENTRY_TYPE_NONE:
+      break;
+    case ARCHIVE_ENTRY_TYPE_FILE:
+      break;
+    case ARCHIVE_ENTRY_TYPE_IMAGE:
+      break;
+    case ARCHIVE_ENTRY_TYPE_DIRECTORY:
+      break;
+    case ARCHIVE_ENTRY_TYPE_LINK:
+      String_delete(indexNode->link.destinationName);
+      break;
+    case ARCHIVE_ENTRY_TYPE_HARDLINK:
+      String_delete(indexNode->hardLink.destinationName);
+      break;
+    case ARCHIVE_ENTRY_TYPE_SPECIAL:
+      break;
+    case ARCHIVE_ENTRY_TYPE_UNKNOWN:
+      break;
+    #ifndef NDEBUG
+      default:
+        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+        break;
+    #endif /* NDEBUG */
+  }
   String_delete(indexNode->name);
   String_delete(indexNode->storageName);
 }
@@ -7299,7 +7335,7 @@ LOCAL void freeIndexNode(IndexNode *indexNode, void *userData)
 *          name             - entry name
 *          timeModified     - modification time stamp [s]
 * Output : -
-* Return : -
+* Return : index node or NULL
 * Notes  : -
 \***********************************************************************/
 
@@ -7321,6 +7357,32 @@ LOCAL IndexNode *newIndexEntryNode(IndexList *indexList, ArchiveEntryTypes archi
   indexNode->storageName  = String_duplicate(storageName);
   indexNode->name         = String_duplicate(name);
   indexNode->timeModified = timeModified;
+  switch (indexNode->type)
+  {
+    case ARCHIVE_ENTRY_TYPE_NONE:
+      break;
+    case ARCHIVE_ENTRY_TYPE_FILE:
+      break;
+    case ARCHIVE_ENTRY_TYPE_IMAGE:
+      break;
+    case ARCHIVE_ENTRY_TYPE_DIRECTORY:
+      break;
+    case ARCHIVE_ENTRY_TYPE_LINK:
+      indexNode->link.destinationName = String_new();
+      break;
+    case ARCHIVE_ENTRY_TYPE_HARDLINK:
+      indexNode->hardLink.destinationName = String_new();
+      break;
+    case ARCHIVE_ENTRY_TYPE_SPECIAL:
+      break;
+    case ARCHIVE_ENTRY_TYPE_UNKNOWN:
+      break;
+    #ifndef NDEBUG
+      default:
+        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+        break;
+    #endif /* NDEBUG */
+  }
 
   // insert into list
   foundFlag     = FALSE;
@@ -7359,73 +7421,62 @@ LOCAL IndexNode *newIndexEntryNode(IndexList *indexList, ArchiveEntryTypes archi
 }
 
 /***********************************************************************\
-* Name   : getIndexEntryNode
-* Purpose: get index entry node (find existing or create new one)
-* Input  : indexList         - index list
-*          type              - archive entry type
-*          storageName       - storage name
-*          name              - entry name
-*          timeModified      - modification time stamp [s]
-*          newestEntriesOnly - TRUE for collecting newest entries only
+* Name   : findIndexEntryNode
+* Purpose: find index entry node
+* Input  : indexList - index list
+*          type      - archive entry type
+*          name      - entry name
 * Output : -
-* Return : index node or NULL if insufficient memory
+* Return : index node or NULL
 * Notes  : -
 \***********************************************************************/
 
-LOCAL IndexNode *getIndexEntryNode(IndexList *indexList, ArchiveEntryTypes type, const String storageName, const String name, uint64 timeModified, bool newestEntriesOnly)
+LOCAL IndexNode *findIndexEntryNode(IndexList         *indexList,
+                                    ArchiveEntryTypes type,
+                                    const String      name
+                                   )
 {
   IndexNode *foundIndexNode;
   IndexNode *indexNode;
 
   assert(indexList != NULL);
-  assert(storageName != NULL);
   assert(name != NULL);
 
-  // find node
   foundIndexNode = NULL;
-  if (newestEntriesOnly)
+  indexNode = indexList->head;
+  while (   (indexNode != NULL)
+         && (foundIndexNode == NULL)
+        )
   {
-    indexNode      = indexList->head;
-    while (   (indexNode != NULL)
-           && (foundIndexNode == NULL)
-          )
+    if      (indexNode->type < type)
     {
-      if      (indexNode->type < type)
+      // next
+      indexNode = indexNode->next;
+    }
+    else if (indexNode->type == type)
+    {
+      // compare
+      switch (String_compare(indexNode->name,name,NULL,NULL))
       {
-        // next
-        indexNode = indexNode->next;
-      }
-      else if (indexNode->type == type)
-      {
-        // compare
-        switch (String_compare(indexNode->name,name,NULL,NULL))
-        {
-          case -1:
-            // next
-            indexNode = indexNode->next;
-            break;
-          case  0:
-            // found
-            foundIndexNode = indexNode;
-            break;
-          case  1:
-            // not found
-            indexNode = NULL;
-            break;
-        }
-      }
-      else
-      {
-        // not found
-        indexNode = NULL;
+        case -1:
+          // next
+          indexNode = indexNode->next;
+          break;
+        case  0:
+          // found
+          foundIndexNode = indexNode;
+          break;
+        case  1:
+          // not found
+          indexNode = NULL;
+          break;
       }
     }
-  }
-
-  // allocate if not found or not only newest entries
-  if (foundIndexNode == NULL)
-  {
-    foundIndexNode = newIndexEntryNode(indexList,type,storageName,name,timeModified);
+    else
+    {
+      // not found
+      indexNode = NULL;
+    }
   }
 
   return foundIndexNode;
@@ -7446,11 +7497,135 @@ LOCAL IndexNode *getIndexEntryNode(IndexList *indexList, ArchiveEntryTypes type,
 *            <newestEntriesOnly 0|1>
 *            <name pattern>
 *          Result:
-*            <error text>
+*            FILE <storage> <create date/time> <name> <size> <time modified> \
+*            <user id> <group id> <permission> <fragment offset> <fragment size>
+*            IMAGE <storage> <create date/time> <name> <size> <time modified> \
+*            <block offset> <block count>
+*            DIRECTORY <storage> <create date/time> <name> <time modified> \
+*            <user id> <group id> <permission>
+*            LINK <storage> <create date/time> <name> <destination name> \
+*            <time modified> <user id> <group id> <permission>
+*            HARDLINK <storage> <create date/time> <name> <destination name> \
+*            <time modified> <user id> <group id> <permission>
+*            SPECIAL <storage> <create date/time> <name> <time modified> \
+*            <user id> <group id> <permission>
 \***********************************************************************/
 
 LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
 {
+  #define SEND_FILE_ENTRY(storageName,storageDateTime,name,size,timeModified,userId,groupId,permission,fragmentOffset,fragmentSize) \
+    do \
+    { \
+      String_mapCString(String_set(string1,storageName),STRING_BEGIN,FILENAME_MAP_FROM,FILENAME_MAP_TO,SIZE_OF_ARRAY(FILENAME_MAP_FROM)); \
+      String_mapCString(String_set(string2,name),STRING_BEGIN,FILENAME_MAP_FROM,FILENAME_MAP_TO,SIZE_OF_ARRAY(FILENAME_MAP_FROM)); \
+      sendClientResult(clientInfo,id,FALSE,ERROR_NONE, \
+                       "FILE %'S %llu %'S %llu %llu %u %u %u %llu %llu", \
+                       string1, \
+                       storageDateTime, \
+                       string2, \
+                       size, \
+                       timeModified, \
+                       userId, \
+                       groupId, \
+                       permission, \
+                       fragmentOffset, \
+                       fragmentSize \
+                      ); \
+    } \
+    while (0)
+  #define SEND_IMAGE_ENTRY(storageName,storageDateTime,name,size,blockOffset,blockCount) \
+    do \
+    { \
+      String_mapCString(String_set(string1,storageName),STRING_BEGIN,FILENAME_MAP_FROM,FILENAME_MAP_TO,SIZE_OF_ARRAY(FILENAME_MAP_FROM)); \
+      String_mapCString(String_set(string2,name),STRING_BEGIN,FILENAME_MAP_FROM,FILENAME_MAP_TO,SIZE_OF_ARRAY(FILENAME_MAP_FROM)); \
+      sendClientResult(clientInfo,id,FALSE,ERROR_NONE, \
+                       "IMAGE %'S %llu %'S %llu %ll %llu %llu", \
+                       string1, \
+                       storageDateTime, \
+                       string2, \
+                       size, \
+                       timeModified, \
+                       blockOffset, \
+                       blockCount \
+                      ); \
+    } \
+    while (0)
+  #define SEND_DIRECTORY_ENTRY(storageName,storageDateTime,name,timeModified,userId,groupId,permission) \
+    do \
+    { \
+      String_mapCString(String_set(string1,storageName),STRING_BEGIN,FILENAME_MAP_FROM,FILENAME_MAP_TO,SIZE_OF_ARRAY(FILENAME_MAP_FROM)); \
+      String_mapCString(String_set(string2,name),STRING_BEGIN,FILENAME_MAP_FROM,FILENAME_MAP_TO,SIZE_OF_ARRAY(FILENAME_MAP_FROM)); \
+      sendClientResult(clientInfo,id,FALSE,ERROR_NONE, \
+                       "DIRECTORY %'S %llu %'S %llu %u %u %u", \
+                       string1, \
+                       storageDateTime, \
+                       string2, \
+                       timeModified, \
+                       userId, \
+                       groupId, \
+                       permission \
+                      ); \
+    } \
+    while (0)
+  #define SEND_LINK_ENTRY(storageName,storageDateTime,name,destinationName,timeModified,userId,groupId,permission) \
+    do \
+    { \
+      String_mapCString(String_set(string1,storageName),STRING_BEGIN,FILENAME_MAP_FROM,FILENAME_MAP_TO,SIZE_OF_ARRAY(FILENAME_MAP_FROM)); \
+      String_mapCString(String_set(string2,name),STRING_BEGIN,FILENAME_MAP_FROM,FILENAME_MAP_TO,SIZE_OF_ARRAY(FILENAME_MAP_FROM)); \
+      String_mapCString(String_set(string3,destinationName),STRING_BEGIN,FILENAME_MAP_FROM,FILENAME_MAP_TO,SIZE_OF_ARRAY(FILENAME_MAP_FROM)); \
+      sendClientResult(clientInfo,id,FALSE,ERROR_NONE, \
+                       "LINK %llu %llu %u %u %u %'S %'S %'S", \
+                       string1, \
+                       storageDateTime, \
+                       string2, \
+                       string3, \
+                       timeModified, \
+                       userId, \
+                       groupId, \
+                       permission \
+                      ); \
+    } \
+    while (0)
+  #define SEND_HARDLINK_ENTRY(storageName,storageDateTime,name,destinationName,size,timeModified,userId,groupId,permission,fragmentOffset,fragmentSize) \
+    do \
+    { \
+      String_mapCString(String_set(string1,storageName),STRING_BEGIN,FILENAME_MAP_FROM,FILENAME_MAP_TO,SIZE_OF_ARRAY(FILENAME_MAP_FROM)); \
+      String_mapCString(String_set(string2,name),STRING_BEGIN,FILENAME_MAP_FROM,FILENAME_MAP_TO,SIZE_OF_ARRAY(FILENAME_MAP_FROM)); \
+      String_mapCString(String_set(string3,destinationName),STRING_BEGIN,FILENAME_MAP_FROM,FILENAME_MAP_TO,SIZE_OF_ARRAY(FILENAME_MAP_FROM)); \
+      sendClientResult(clientInfo,id,FALSE,ERROR_NONE, \
+                       "HARDLINK %'S %llu %'S %'S %llu %u %u %u %llu %llu", \
+                       string1, \
+                       storageDateTime, \
+                       string2, \
+                       string3, \
+                       size, \
+                       timeModified, \
+                       userId, \
+                       groupId, \
+                       permission, \
+                       fragmentOffset, \
+                       fragmentSize \
+                      ); \
+    } \
+    while (0)
+  #define SEND_SPECIAL_ENTRY(storageName,storageDateTime,name,timeModified,userId,groupId,permission) \
+    do \
+    { \
+      String_mapCString(String_set(string1,storageName),STRING_BEGIN,FILENAME_MAP_FROM,FILENAME_MAP_TO,SIZE_OF_ARRAY(FILENAME_MAP_FROM)); \
+      String_mapCString(String_set(string2,name),STRING_BEGIN,FILENAME_MAP_FROM,FILENAME_MAP_TO,SIZE_OF_ARRAY(FILENAME_MAP_FROM)); \
+      sendClientResult(clientInfo,id,FALSE,ERROR_NONE, \
+                       "SPECIAL %'S %llu %'S %llu %u %u %u", \
+                       string1, \
+                       storageDateTime, \
+                       string2, \
+                       timeModified, \
+                       userId, \
+                       groupId, \
+                       permission \
+                      ); \
+    } \
+    while (0)
+
   const char* PATTERN_MAP_FROM[]  = {"\\n","\\r","\\\\"};
   const char* PATTERN_MAP_TO[]    = {"\n","\r","\\"};
   const char* FILENAME_MAP_FROM[] = {"\n","\r","\\"};
@@ -7469,7 +7644,7 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
   uint64              storageDateTime;
   String              name;
   String              destinationName;
-  String              string1,string2;
+  String              string1,string2,string3;
   Errors              error;
   DatabaseQueryHandle databaseQueryHandle;
   uint64              size;
@@ -7511,12 +7686,14 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
   if (indexDatabaseHandle != NULL)
   {
     // initialise variables
-    pattern         = String_mapCString(String_duplicate(string),STRING_BEGIN,PATTERN_MAP_FROM,PATTERN_MAP_TO,SIZE_OF_ARRAY(PATTERN_MAP_FROM));
+    pattern      = String_mapCString(String_duplicate(string),STRING_BEGIN,PATTERN_MAP_FROM,PATTERN_MAP_TO,SIZE_OF_ARRAY(PATTERN_MAP_FROM));
     List_init(&indexList);
-    regexpString    = String_new();
-    storageName     = String_new();
-    name            = String_new();
-    destinationName = String_new();
+    regexpString = String_new();
+    storageName  = String_new();
+    name         = String_new();
+    string1      = String_new();
+    string2      = String_new();
+    string3      = String_new();
 
     // collect index data
     if ((entryMaxCount == 0L) || (List_count(&indexList) < entryMaxCount))
@@ -7542,7 +7719,6 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
       if (error != ERROR_NONE)
       {
         sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"%s",Errors_getText(error));
-        String_delete(destinationName);
         String_delete(name);
         String_delete(storageName);
         String_delete(regexpString);
@@ -7569,19 +7745,33 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
       {
         UNUSED_VARIABLE(storageId);
 
-        indexNode = getIndexEntryNode(&indexList,ARCHIVE_ENTRY_TYPE_FILE,storageName,name,timeModified,newestEntriesOnlyFlag);
-        if (indexNode == NULL) break;
-        if (timeModified >= indexNode->timeModified)
+        if (newestEntriesOnlyFlag)
         {
-          String_set(indexNode->storageName,storageName);
-          indexNode->storageDateTime     = storageDateTime;
-          indexNode->timeModified        = timeModified;
-          indexNode->file.size           = size;
-          indexNode->file.userId         = userId;
-          indexNode->file.groupId        = groupId;
-          indexNode->file.permission     = permission;
-          indexNode->file.fragmentOffset = fragmentOffset;
-          indexNode->file.fragmentSize   = fragmentSize;
+          // find/allocate index node
+          indexNode = findIndexEntryNode(&indexList,ARCHIVE_ENTRY_TYPE_FILE,name);
+          if (indexNode == NULL)
+          {
+            indexNode = newIndexEntryNode(&indexList,ARCHIVE_ENTRY_TYPE_FILE,storageName,name,timeModified);
+          }
+          if (indexNode == NULL) break;
+
+          // update index node
+          if (timeModified >= indexNode->timeModified)
+          {
+            String_set(indexNode->storageName,storageName);
+            indexNode->storageDateTime     = storageDateTime;
+            indexNode->timeModified        = timeModified;
+            indexNode->file.size           = size;
+            indexNode->file.userId         = userId;
+            indexNode->file.groupId        = groupId;
+            indexNode->file.permission     = permission;
+            indexNode->file.fragmentOffset = fragmentOffset;
+            indexNode->file.fragmentSize   = fragmentSize;
+          }
+        }
+        else
+        {
+          SEND_FILE_ENTRY(storageName,storageDateTime,name,size,timeModified,userId,groupId,permission,fragmentOffset,fragmentSize);
         }
       }
       Index_doneList(&databaseQueryHandle);
@@ -7610,7 +7800,6 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
       if (error != ERROR_NONE)
       {
         sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"%s",Errors_getText(error));
-        String_delete(destinationName);
         String_delete(name);
         String_delete(storageName);
         String_delete(regexpString);
@@ -7633,16 +7822,30 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
       {
         UNUSED_VARIABLE(storageId);
 
-        indexNode = getIndexEntryNode(&indexList,ARCHIVE_ENTRY_TYPE_IMAGE,storageName,name,timeModified,newestEntriesOnlyFlag);
-        if (indexNode == NULL) break;
-        if (timeModified >= indexNode->timeModified)
+        if (newestEntriesOnlyFlag)
         {
-          String_set(indexNode->storageName,storageName);
-          indexNode->storageDateTime   = storageDateTime;
-          indexNode->timeModified      = timeModified;
-          indexNode->image.size        = size;
-          indexNode->image.blockOffset = blockOffset;
-          indexNode->image.blockCount  = blockCount;
+          // find/allocate index node
+          indexNode = findIndexEntryNode(&indexList,ARCHIVE_ENTRY_TYPE_IMAGE,name);
+          if (indexNode == NULL)
+          {
+            indexNode = newIndexEntryNode(&indexList,ARCHIVE_ENTRY_TYPE_IMAGE,storageName,name,timeModified);
+          }
+          if (indexNode == NULL) break;
+
+          // update index node
+          if (timeModified >= indexNode->timeModified)
+          {
+            String_set(indexNode->storageName,storageName);
+            indexNode->storageDateTime   = storageDateTime;
+            indexNode->timeModified      = timeModified;
+            indexNode->image.size        = size;
+            indexNode->image.blockOffset = blockOffset;
+            indexNode->image.blockCount  = blockCount;
+          }
+        }
+        else
+        {
+          SEND_IMAGE_ENTRY(storageName,storageDateTime,name,size,blockOffset,blockCount);
         }
       }
       Index_doneList(&databaseQueryHandle);
@@ -7671,7 +7874,6 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
       if (error != ERROR_NONE)
       {
         sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"%s",Errors_getText(error));
-        String_delete(destinationName);
         String_delete(name);
         String_delete(storageName);
         String_delete(regexpString);
@@ -7695,16 +7897,30 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
       {
         UNUSED_VARIABLE(storageId);
 
-        indexNode = getIndexEntryNode(&indexList,ARCHIVE_ENTRY_TYPE_DIRECTORY,storageName,name,timeModified,newestEntriesOnlyFlag);
-        if (indexNode == NULL) break;
-        if (timeModified >= indexNode->timeModified)
+        if (newestEntriesOnlyFlag)
         {
-          String_set(indexNode->storageName,storageName);
-          indexNode->storageDateTime      = storageDateTime;
-          indexNode->timeModified         = timeModified;
-          indexNode->directory.userId     = userId;
-          indexNode->directory.groupId    = groupId;
-          indexNode->directory.permission = permission;
+          // find/allocate index node
+          indexNode = findIndexEntryNode(&indexList,ARCHIVE_ENTRY_TYPE_DIRECTORY,name);
+          if (indexNode == NULL)
+          {
+            indexNode = newIndexEntryNode(&indexList,ARCHIVE_ENTRY_TYPE_DIRECTORY,storageName,name,timeModified);
+          }
+          if (indexNode == NULL) break;
+
+          // update index node
+          if (timeModified >= indexNode->timeModified)
+          {
+            String_set(indexNode->storageName,storageName);
+            indexNode->storageDateTime      = storageDateTime;
+            indexNode->timeModified         = timeModified;
+            indexNode->directory.userId     = userId;
+            indexNode->directory.groupId    = groupId;
+            indexNode->directory.permission = permission;
+          }
+        }
+        else
+        {
+          SEND_DIRECTORY_ENTRY(storageName,storageDateTime,name,timeModified,userId,groupId,permission);
         }
       }
       Index_doneList(&databaseQueryHandle);
@@ -7733,7 +7949,6 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
       if (error != ERROR_NONE)
       {
         sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"%s",Errors_getText(error));
-        String_delete(destinationName);
         String_delete(name);
         String_delete(storageName);
         String_delete(regexpString);
@@ -7741,6 +7956,7 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
         String_delete(pattern);
         return;
       }
+      destinationName = String_new();
       while (   ((entryMaxCount == 0L) || (List_count(&indexList) < entryMaxCount))
              && !commandAborted(clientInfo,id)
              && Index_getNextLink(&databaseQueryHandle,
@@ -7758,20 +7974,35 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
       {
         UNUSED_VARIABLE(storageId);
 
-        indexNode = getIndexEntryNode(&indexList,ARCHIVE_ENTRY_TYPE_LINK,storageName,name,timeModified,newestEntriesOnlyFlag);
-        if (indexNode == NULL) break;
-        if (timeModified >= indexNode->timeModified)
+        if (newestEntriesOnlyFlag)
         {
-          String_set(indexNode->storageName,storageName);
-          indexNode->storageDateTime      = storageDateTime;
-          indexNode->timeModified         = timeModified;
-          indexNode->link.destinationName = destinationName;
-          indexNode->link.userId          = userId;
-          indexNode->link.groupId         = groupId;
-          indexNode->link.permission      = permission;
+          // find/allocate index node
+          indexNode = findIndexEntryNode(&indexList,ARCHIVE_ENTRY_TYPE_LINK,name);
+          if (indexNode == NULL)
+          {
+            indexNode = newIndexEntryNode(&indexList,ARCHIVE_ENTRY_TYPE_LINK,storageName,name,timeModified);
+          }
+          if (indexNode == NULL) break;
+
+          // update index node
+          if (timeModified >= indexNode->timeModified)
+          {
+            String_set(indexNode->storageName,storageName);
+            indexNode->storageDateTime      = storageDateTime;
+            indexNode->timeModified         = timeModified;
+            String_set(indexNode->link.destinationName,destinationName);
+            indexNode->link.userId          = userId;
+            indexNode->link.groupId         = groupId;
+            indexNode->link.permission      = permission;
+          }
+        }
+        else
+        {
+          SEND_LINK_ENTRY(storageName,storageDateTime,name,destinationName,timeModified,userId,groupId,permission);
         }
       }
       Index_doneList(&databaseQueryHandle);
+      String_delete(destinationName);
     }
 
     if ((entryMaxCount == 0L) || (List_count(&indexList) < entryMaxCount))
@@ -7797,7 +8028,6 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
       if (error != ERROR_NONE)
       {
         sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"%s",Errors_getText(error));
-        String_delete(destinationName);
         String_delete(name);
         String_delete(storageName);
         String_delete(regexpString);
@@ -7805,6 +8035,7 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
         String_delete(pattern);
         return;
       }
+      destinationName = String_new();
       while (   ((entryMaxCount == 0L) || (List_count(&indexList) < entryMaxCount))
              && !commandAborted(clientInfo,id)
              && Index_getNextHardLink(&databaseQueryHandle,
@@ -7812,6 +8043,7 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
                                       storageName,
                                       &storageDateTime,
                                       name,
+                                      destinationName,
                                       &size,
                                       &timeModified,
                                       &userId,
@@ -7824,22 +8056,38 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
       {
         UNUSED_VARIABLE(storageId);
 
-        indexNode = getIndexEntryNode(&indexList,ARCHIVE_ENTRY_TYPE_HARDLINK,storageName,name,timeModified,newestEntriesOnlyFlag);
-        if (indexNode == NULL) break;
-        if (timeModified >= indexNode->timeModified)
+        if (newestEntriesOnlyFlag)
         {
-          String_set(indexNode->storageName,storageName);
-          indexNode->storageDateTime     = storageDateTime;
-          indexNode->timeModified        = timeModified;
-          indexNode->file.size           = size;
-          indexNode->file.userId         = userId;
-          indexNode->file.groupId        = groupId;
-          indexNode->file.permission     = permission;
-          indexNode->file.fragmentOffset = fragmentOffset;
-          indexNode->file.fragmentSize   = fragmentSize;
+          // find/allocate index node
+          indexNode = findIndexEntryNode(&indexList,ARCHIVE_ENTRY_TYPE_HARDLINK,name);
+          if (indexNode == NULL)
+          {
+            indexNode = newIndexEntryNode(&indexList,ARCHIVE_ENTRY_TYPE_HARDLINK,storageName,name,timeModified);
+          }
+          if (indexNode == NULL) break;
+
+          // update index node
+          if (timeModified >= indexNode->timeModified)
+          {
+            String_set(indexNode->storageName,storageName);
+            indexNode->storageDateTime         = storageDateTime;
+            indexNode->timeModified            = timeModified;
+            String_set(indexNode->hardLink.destinationName,destinationName);
+            indexNode->hardLink.size           = size;
+            indexNode->hardLink.userId         = userId;
+            indexNode->hardLink.groupId        = groupId;
+            indexNode->hardLink.permission     = permission;
+            indexNode->hardLink.fragmentOffset = fragmentOffset;
+            indexNode->hardLink.fragmentSize   = fragmentSize;
+          }
+        }
+        else
+        {
+          SEND_HARDLINK_ENTRY(storageName,storageDateTime,name,size,destinationName,timeModified,userId,groupId,permission,fragmentOffset,fragmentSize);
         }
       }
       Index_doneList(&databaseQueryHandle);
+      String_delete(destinationName);
     }
 
     if ((entryMaxCount == 0L) || (List_count(&indexList) < entryMaxCount))
@@ -7865,7 +8113,6 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
       if (error != ERROR_NONE)
       {
         sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"%s",Errors_getText(error));
-        String_delete(destinationName);
         String_delete(name);
         String_delete(storageName);
         String_delete(regexpString);
@@ -7889,24 +8136,36 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
       {
         UNUSED_VARIABLE(storageId);
 
-        indexNode = getIndexEntryNode(&indexList,ARCHIVE_ENTRY_TYPE_SPECIAL,storageName,name,timeModified,newestEntriesOnlyFlag);
-        if (indexNode == NULL) break;
-        if (timeModified >= indexNode->timeModified)
+        if (newestEntriesOnlyFlag)
         {
-          String_set(indexNode->storageName,storageName);
-          indexNode->storageDateTime    = storageDateTime;
-          indexNode->timeModified       = timeModified;
-          indexNode->special.userId     = userId;
-          indexNode->special.groupId    = groupId;
-          indexNode->special.permission = permission;
+          // find/allocate index node
+          indexNode = findIndexEntryNode(&indexList,ARCHIVE_ENTRY_TYPE_SPECIAL,name);
+          if (indexNode == NULL)
+          {
+            indexNode = newIndexEntryNode(&indexList,ARCHIVE_ENTRY_TYPE_SPECIAL,storageName,name,timeModified);
+          }
+          if (indexNode == NULL) break;
+
+          // update index node
+          if (timeModified >= indexNode->timeModified)
+          {
+            String_set(indexNode->storageName,storageName);
+            indexNode->storageDateTime    = storageDateTime;
+            indexNode->timeModified       = timeModified;
+            indexNode->special.userId     = userId;
+            indexNode->special.groupId    = groupId;
+            indexNode->special.permission = permission;
+          }
+        }
+        else
+        {
+          SEND_SPECIAL_ENTRY(storageName,storageDateTime,name,timeModified,userId,groupId,permission);
         }
       }
       Index_doneList(&databaseQueryHandle);
     }
 
     // send data
-    string1 = String_new();
-    string2 = String_new();
     indexNode = indexList.head;
     while (   (indexNode != NULL)
            && !commandAborted(clientInfo,id)
@@ -7917,88 +8176,71 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
         case ARCHIVE_ENTRY_TYPE_NONE:
           break;
         case ARCHIVE_ENTRY_TYPE_FILE:
-          String_mapCString(String_set(string1,indexNode->name),STRING_BEGIN,FILENAME_MAP_FROM,FILENAME_MAP_TO,SIZE_OF_ARRAY(FILENAME_MAP_FROM));
-          sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
-                           "FILE %llu %llu %llu %u %u %u %llu %llu %'S %'S",
-                           indexNode->storageDateTime,
-                           indexNode->file.size,
-                           indexNode->timeModified,
-                           indexNode->file.userId,
-                           indexNode->file.groupId,
-                           indexNode->file.permission,
-                           indexNode->file.fragmentOffset,
-                           indexNode->file.fragmentSize,
-                           indexNode->storageName,
-                           string1
-                          );
+          SEND_FILE_ENTRY(indexNode->storageName,
+                          indexNode->storageDateTime,
+                          indexNode->name,
+                          indexNode->file.size,
+                          indexNode->timeModified,
+                          indexNode->file.userId,
+                          indexNode->file.groupId,
+                          indexNode->file.permission,
+                          indexNode->file.fragmentOffset,
+                          indexNode->file.fragmentSize
+                         );
           break;
         case ARCHIVE_ENTRY_TYPE_IMAGE:
-          String_mapCString(String_set(string1,indexNode->name),STRING_BEGIN,FILENAME_MAP_FROM,FILENAME_MAP_TO,SIZE_OF_ARRAY(FILENAME_MAP_FROM));
-          sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
-                           "IMAGE %llu %llu %ll %llu %'S %'S",
+          SEND_IMAGE_ENTRY(indexNode->storageName,
                            indexNode->storageDateTime,
+                           indexNode->name,
                            indexNode->image.size,
                            indexNode->image.blockOffset,
-                           indexNode->image.blockCount,
-                           indexNode->storageName,
-                           string1
+                           indexNode->image.blockCount
                           );
           break;
         case ARCHIVE_ENTRY_TYPE_DIRECTORY:
-          String_mapCString(String_set(string1,indexNode->name),STRING_BEGIN,FILENAME_MAP_FROM,FILENAME_MAP_TO,SIZE_OF_ARRAY(FILENAME_MAP_FROM));
-          sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
-                           "DIRECTORY %llu %llu %u %u %u %'S %'S",
-                           indexNode->storageDateTime,
-                           indexNode->timeModified,
-                           indexNode->directory.userId,
-                           indexNode->directory.groupId,
-                           indexNode->directory.permission,
-                           indexNode->storageName,
-                           string1
-                          );
+          SEND_DIRECTORY_ENTRY(indexNode->storageName,
+                               indexNode->storageDateTime,
+                               indexNode->name,
+                               indexNode->timeModified,
+                               indexNode->directory.userId,
+                               indexNode->directory.groupId,
+                               indexNode->directory.permission
+                              );
           break;
         case ARCHIVE_ENTRY_TYPE_LINK:
-          String_mapCString(String_set(string1,indexNode->name),STRING_BEGIN,FILENAME_MAP_FROM,FILENAME_MAP_TO,SIZE_OF_ARRAY(FILENAME_MAP_FROM));
-          String_mapCString(String_set(string2,indexNode->link.destinationName),STRING_BEGIN,FILENAME_MAP_FROM,FILENAME_MAP_TO,SIZE_OF_ARRAY(FILENAME_MAP_FROM));
-          sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
-                           "LINK %llu %llu %u %u %u %'S %'S %'S",
-                           indexNode->storageDateTime,
-                           indexNode->timeModified,
-                           indexNode->link.userId,
-                           indexNode->link.groupId,
-                           indexNode->link.permission,
-                           indexNode->storageName,
-                           string1,
-                           string2
-                          );
+          SEND_LINK_ENTRY(indexNode->storageName,
+                          indexNode->storageDateTime,
+                          indexNode->name,
+                          indexNode->link.destinationName,
+                          indexNode->timeModified,
+                          indexNode->link.userId,
+                          indexNode->link.groupId,
+                          indexNode->link.permission
+                         );
           break;
         case ARCHIVE_ENTRY_TYPE_HARDLINK:
-          String_mapCString(String_set(string1,indexNode->name),STRING_BEGIN,FILENAME_MAP_FROM,FILENAME_MAP_TO,SIZE_OF_ARRAY(FILENAME_MAP_FROM));
-          String_mapCString(String_set(string2,indexNode->link.destinationName),STRING_BEGIN,FILENAME_MAP_FROM,FILENAME_MAP_TO,SIZE_OF_ARRAY(FILENAME_MAP_FROM));
-          sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
-                           "HARDLINK %llu %llu %u %u %u %'S %'S %'S",
-                           indexNode->storageDateTime,
-                           indexNode->timeModified,
-                           indexNode->link.userId,
-                           indexNode->link.groupId,
-                           indexNode->link.permission,
-                           indexNode->storageName,
-                           string1,
-                           string2
-                          );
+          SEND_HARDLINK_ENTRY(indexNode->storageName,
+                              indexNode->storageDateTime,
+                              indexNode->name,
+                              indexNode->hardLink.size,
+                              indexNode->hardLink.destinationName,
+                              indexNode->timeModified,
+                              indexNode->hardLink.userId,
+                              indexNode->hardLink.groupId,
+                              indexNode->hardLink.permission,
+                              indexNode->hardLink.fragmentOffset,
+                              indexNode->hardLink.fragmentSize
+                             );
           break;
         case ARCHIVE_ENTRY_TYPE_SPECIAL:
-          String_mapCString(String_set(string1,indexNode->name),STRING_BEGIN,FILENAME_MAP_FROM,FILENAME_MAP_TO,SIZE_OF_ARRAY(FILENAME_MAP_FROM));
-          sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
-                           "SPECIAL %llu %llu %u %u %u %'S %'S",
-                           indexNode->storageDateTime,
-                           indexNode->timeModified,
-                           indexNode->special.userId,
-                           indexNode->special.groupId,
-                           indexNode->special.permission,
-                           indexNode->storageName,
-                           string1
-                          );
+          SEND_SPECIAL_ENTRY(indexNode->storageName,
+                             indexNode->storageDateTime,
+                             indexNode->name,
+                             indexNode->timeModified,
+                             indexNode->special.userId,
+                             indexNode->special.groupId,
+                             indexNode->special.permission
+                            );
           break;
         case ARCHIVE_ENTRY_TYPE_UNKNOWN:
           break;
@@ -8010,11 +8252,11 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
       }
       indexNode = indexNode->next;
     }
-    String_delete(string2);
-    String_delete(string1);
 
     // free resources
-    String_delete(destinationName);
+    String_delete(string3);
+    String_delete(string2);
+    String_delete(string1);
     String_delete(name);
     String_delete(storageName);
     String_delete(regexpString);

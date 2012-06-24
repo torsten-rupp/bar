@@ -1590,16 +1590,19 @@ public class BARControl
           // list storage index
           Command  command = BARServer.runCommand("INDEX_ENTRIES_LIST 0 * 0 "+StringUtils.escape(Settings.indexDatabaseEntriesListPattern));
           String   line;
-          Object[] data = new Object[9];
+          Object[] data = new Object[10];
           while (!command.endOfData())
           {
             line = command.getNextResult(5*1000);
             if (line != null)
             {
-              if      (StringParser.parse(line,"FILE %ld %ld %d %d %d %ld %ld %S %S",data,StringParser.QUOTE_CHARS))
+              if      (StringParser.parse(line,"FILE %S %ld %S %ld %ld %d %d %d %ld %ld",data,StringParser.QUOTE_CHARS))
               {
                 /* get data
                    format:
+                     storage name
+                     created date/time
+                     file name
                      size
                      date/time
                      user id
@@ -1607,15 +1610,13 @@ public class BARControl
                      permission
                      fragment offset
                      fragment size
-                     storage name
-                     file name
                 */
-                long   size           = (Long  )data[0];
-                long   datetime       = (Long  )data[1];
-                long   fragmentOffset = (Long  )data[5];
-                long   fragmentSize   = (Long  )data[6];
-                String storageName    = (String)data[7];
-                String fileName       = (String)data[8];
+                String storageName    = (String)data[0];
+                String fileName       = (String)data[2];
+                long   size           = (Long  )data[3];
+                long   datetime       = (Long  )data[4];
+                long   fragmentOffset = (Long  )data[8];
+                long   fragmentSize   = (Long  )data[9];
 
                 System.out.println(String.format("%s: FILE %-40s %12d",
                                                  storageName,
@@ -1624,21 +1625,22 @@ public class BARControl
                                                 )
                                   );
               }
-              else if (StringParser.parse(line,"IMAGE %ld %ld %ld %S %S",data,StringParser.QUOTE_CHARS))
+              else if (StringParser.parse(line,"IMAGE %S %ld %S %ld %ld %ld",data,StringParser.QUOTE_CHARS))
               {
                 /* get data
                    format:
+                     storage name
+                     created date/time
+                     name
                      size
                      blockOffset
                      blockCount
-                     storage name
-                     name
                 */
-                long   size        = (Long  )data[0];
-                long   blockOffset = (Long  )data[1];
-                long   blockCount  = (Long  )data[2];
-                String storageName = (String)data[3];
-                String imageName   = (String)data[4];
+                String storageName = (String)data[0];
+                String imageName   = (String)data[2];
+                long   size        = (Long  )data[3];
+                long   blockOffset = (Long  )data[4];
+                long   blockCount  = (Long  )data[5];
 
                 System.out.println(String.format("%s: IMAGE %-40s %12d",
                                                  storageName,
@@ -1647,20 +1649,21 @@ public class BARControl
                                                 )
                                   );
               }
-              else if (StringParser.parse(line,"DIRECTORY %ld %d %d %d %S %S",data,StringParser.QUOTE_CHARS))
+              else if (StringParser.parse(line,"DIRECTORY %S %ld %S %ld %d %d %d",data,StringParser.QUOTE_CHARS))
               {
                 /* get data
                    format:
+                     storage name
+                     created date/time
+                     directory name
                      date/time
                      user id
                      group id
                      permission
-                     storage name
-                     directory name
                 */
-                long   datetime      = (Long  )data[0];
-                String storageName   = (String)data[4];
-                String directoryName = (String)data[5];
+                String storageName   = (String)data[0];
+                String directoryName = (String)data[2];
+                long   datetime      = (Long  )data[3];
 
                 System.out.println(String.format("%s: DIR %-40s",
                                                  storageName,
@@ -1668,22 +1671,23 @@ public class BARControl
                                                 )
                                   );
               }
-              else if (StringParser.parse(line,"LINK %ld %d %d %d %S %S %S",data,StringParser.QUOTE_CHARS))
+              else if (StringParser.parse(line,"LINK %S %ld %S %S %ld %d %d %d",data,StringParser.QUOTE_CHARS))
               {
                 /* get data
                    format:
+                     storage name
+                     created date/time
+                     link name
+                     destination name
                      date/time
                      user id
                      group id
                      permission
-                     storage name
-                     link name
-                     destination name
                 */
-                long   datetime        = (Long  )data[0];
-                String storageName     = (String)data[4];
-                String linkName        = (String)data[5];
-                String destinationName = (String)data[6];
+                String storageName     = (String)data[0];
+                String linkName        = (String)data[2];
+                String destinationName = (String)data[3];
+                long   datetime        = (Long  )data[4];
 
                 System.out.println(String.format("%s: LINK %s -> %s",
                                                  storageName,
@@ -1692,26 +1696,36 @@ public class BARControl
                                                 )
                                   );
               }
-              else if (StringParser.parse(line,"SPECIAL %ld %d %d %d %S %S",data,StringParser.QUOTE_CHARS))
+              else if (StringParser.parse(line,"SPECIAL %S %ld %S %ld %d %d %d",data,StringParser.QUOTE_CHARS))
               {
                 /* get data
                    format:
+                     storage name
+                     created date/time
+                     name
                      date/time
                      user id
                      group id
                      permission
-                     storage name
-                     name
                 */
-                long   datetime    = (Long  )data[0];
-                String storageName = (String)data[4];
-                String name        = (String)data[5];
+                String storageName = (String)data[0];
+                String name        = (String)data[2];
+                long   datetime    = (Long  )data[3];
 
                 System.out.println(String.format("%s: SPECIAL %-40s",
                                                  storageName,
                                                  name
                                                 )
                                   );
+              }
+              else
+              {
+                if (Settings.debugFlag)
+                {
+                  printWarning("unknown server response '%s'",line);
+                  BARServer.disconnect();
+                  System.exit(1);
+                }
               }
             }
           }
