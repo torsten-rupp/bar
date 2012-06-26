@@ -144,6 +144,7 @@ LOCAL EntryList     includeEntryList;
 LOCAL PatternList   excludePatternList;
 LOCAL PatternList   deltaSourcePatternList;
 LOCAL PatternList   compressExcludePatternList;
+LOCAL ScheduleList  scheduleList;
 LOCAL FTPServer     defaultFTPServer;
 LOCAL SSHServer     defaultSSHServer;
 LOCAL Device        defaultDevice;
@@ -840,7 +841,7 @@ LOCAL const ConfigValue CONFIG_VALUES[] =
 
   // igored job settings (server only)
 
-  CONFIG_VALUE_SPECIAL  ("schedule",                     NULL,-1,                                                 configValueParseSchedule,configValueFormatInitSchedule,configValueFormatDoneSchedule,configValueFormatSchedule,NULL),
+  CONFIG_VALUE_SPECIAL  ("schedule",                     &scheduleList,-1,                                        configValueParseSchedule,configValueFormatInitSchedule,configValueFormatDoneSchedule,configValueFormatSchedule,NULL),
 
   // commands
 
@@ -2040,6 +2041,7 @@ LOCAL Errors initAll(void)
   PatternList_init(&excludePatternList);
   PatternList_init(&deltaSourcePatternList);
   PatternList_init(&compressExcludePatternList);
+  List_init(&scheduleList);
   defaultFTPServer.loginName            = NULL;
   defaultFTPServer.password             = NULL;
   defaultSSHServer.port                 = 22;
@@ -2163,6 +2165,7 @@ LOCAL void doneAll(void)
   if (defaultSSHServer.loginName != NULL) String_delete(defaultSSHServer.loginName);
   if (defaultFTPServer.password != NULL) Password_delete(defaultFTPServer.password);
   if (defaultFTPServer.loginName != NULL) String_delete(defaultFTPServer.loginName);
+  List_done(&scheduleList,NULL,NULL);
   PatternList_done(&compressExcludePatternList);
   PatternList_done(&deltaSourcePatternList);
   PatternList_done(&excludePatternList);
