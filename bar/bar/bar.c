@@ -4095,6 +4095,9 @@ int main(int argc, const char *argv[])
     }
   }
   String_delete(fileName);
+  currentFTPServer = &defaultFTPServer;
+  currentSSHServer = &defaultSSHServer;
+  currentDevice    = &defaultDevice;
 
   // read job file
   if (jobName != NULL)
