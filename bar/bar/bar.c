@@ -3931,8 +3931,6 @@ bool readJobFile(const String      fileName,
                    String_cString(fileName),
                    lineNb
                   );
-//        failFlag = TRUE;
-//        break;
       }
     }
     else
@@ -3942,8 +3940,6 @@ bool readJobFile(const String      fileName,
                  lineNb,
                  String_cString(line)
                 );
-//      failFlag = TRUE;
-//      break;
     }
   }
   String_delete(value);
