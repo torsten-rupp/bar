@@ -1308,26 +1308,78 @@ Errors File_readDirectoryList(DirectoryListHandle *directoryListHandle,
 
 uint32 File_userNameToUserId(const char *name)
 {
+  long          bufferSize;
+  char          *buffer;
   struct passwd passwordEntry;
-  char          buffer[1024];
   struct passwd *result;
+  uint32        userId;
 
   assert(name != NULL);
 
-  getpwnam_r(name,&passwordEntry,buffer,sizeof(buffer),&result);
-  return (result != NULL)?result->pw_uid:FILE_DEFAULT_USER_ID;
+  // allocate buffer
+  bufferSize = sysconf(_SC_GETPW_R_SIZE_MAX);
+  if (bufferSize == -1L)
+  {
+    return FILE_DEFAULT_USER_ID;
+  }
+  buffer = (char*)malloc(bufferSize);
+  if (buffer == NULL)
+  {
+    return FILE_DEFAULT_USER_ID;
+  }
+
+  // get user passwd entry
+  if (getpwnam_r(name,&passwordEntry,buffer,sizeof(buffer),&result) != 0)
+  {
+    free(buffer);
+    return FILE_DEFAULT_USER_ID;
+  }
+
+  // get user id
+  userId = (result != NULL) ? result->pw_uid : FILE_DEFAULT_USER_ID;
+
+  // free resources
+  free(buffer);
+
+  return userId;
 }
 
 uint32 File_groupNameToGroupId(const char *name)
 {
+  long         bufferSize;
+  char         buffer;
   struct group groupEntry;
-  char         buffer[1024];
   struct group *result;
+  uint32       groupId;
 
   assert(name != NULL);
 
-  getgrnam_r(name,&groupEntry,buffer,sizeof(buffer),&result);
-  return (result != NULL)?result->gr_gid:FILE_DEFAULT_GROUP_ID;
+  // allocate buffer
+  bufferSize = sysconf(_SC_GETGR_R_SIZE_MAX);
+  if (bufferSize == -1L)
+  {
+    return FILE_DEFAULT_GROUP_ID;
+  }
+  buffer = (char*)malloc(bufferSize);
+  if (buffer == NULL)
+  {
+    return FILE_DEFAULT_GROUP_ID;
+  }
+
+  // get user passwd entry
+  if (getgrnam_r(name,&groupEntry,buffer,sizeof(buffer),&result) != 0)
+  {
+    free(buffer);
+    return FILE_DEFAULT_GROUP_ID;
+  }
+
+  // get group id
+  groupId = (result != NULL) ? result->gr_gid : FILE_DEFAULT_GROUP_ID;
+
+  // free resources
+  free(buffer);
+
+  return groupId;
 }
 
 FileTypes File_getType(const String fileName)
