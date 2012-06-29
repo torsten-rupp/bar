@@ -1251,14 +1251,17 @@ LOCAL bool readConfigFile(const String fileName, bool printInfoFlag)
   {
     if ((globalOptions.verboseLevel >= 2) || printInfoFlag) printf("ok\n");
   }
+  currentFTPServer = &defaultFTPServer;
+  currentSSHServer = &defaultSSHServer;
+  currentDevice    = &defaultDevice;
+
+  // free resources
   String_delete(value);
   String_delete(name);
   String_delete(line);
 
   // close file
   File_close(&fileHandle);
-
-  // free resources
 
   return !failFlag;
 }
@@ -4095,9 +4098,6 @@ int main(int argc, const char *argv[])
     }
   }
   String_delete(fileName);
-  currentFTPServer = &defaultFTPServer;
-  currentSSHServer = &defaultSSHServer;
-  currentDevice    = &defaultDevice;
 
   // read job file
   if (jobName != NULL)
