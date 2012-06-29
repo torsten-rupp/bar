@@ -1329,7 +1329,7 @@ uint32 File_userNameToUserId(const char *name)
   }
 
   // get user passwd entry
-  if (getpwnam_r(name,&passwordEntry,buffer,sizeof(buffer),&result) != 0)
+  if (getpwnam_r(name,&passwordEntry,buffer,bufferSize,&result) != 0)
   {
     free(buffer);
     return FILE_DEFAULT_USER_ID;
@@ -1347,7 +1347,7 @@ uint32 File_userNameToUserId(const char *name)
 uint32 File_groupNameToGroupId(const char *name)
 {
   long         bufferSize;
-  char         buffer;
+  char         *buffer;
   struct group groupEntry;
   struct group *result;
   uint32       groupId;
@@ -1367,7 +1367,7 @@ uint32 File_groupNameToGroupId(const char *name)
   }
 
   // get user passwd entry
-  if (getgrnam_r(name,&groupEntry,buffer,sizeof(buffer),&result) != 0)
+  if (getgrnam_r(name,&groupEntry,buffer,bufferSize,&result) != 0)
   {
     free(buffer);
     return FILE_DEFAULT_GROUP_ID;
