@@ -231,32 +231,33 @@ LOCAL_INLINE struct __String* allocTmpString(void)
 /***********************************************************************\
 * Name   : assignTmpString
 * Purpose: assign data of string to string
-* Input  : toString   - to string
-*          fromString - from strong
+* Input  : string    - string
+*          tmpString - tmp strong
 * Output : -
 * Return : -
-* Notes  : fromString will become invalid after operation!
+* Notes  : tmpString will be freed and become invalid after operation!
 \***********************************************************************/
 
-LOCAL_INLINE void assignTmpString(struct __String *toString, struct __String *fromString)
+LOCAL_INLINE void assignTmpString(struct __String *string, struct __String *tmpString)
 {
-  assert(toString != NULL);
-  assert(toString->data != NULL);
-  assert(fromString != NULL);
-  assert(fromString->data != NULL);
+  assert(string != NULL);
+  assert(string->data != NULL);
+  assert(tmpString != NULL);
+  assert(tmpString->data != NULL);
 
-  free(toString->data);
+  free(string->data);
 
-  toString->length    = fromString->length;
-  toString->maxLength = fromString->maxLength;
-  toString->data      = fromString->data;
+  string->length    = tmpString->length;
+  string->maxLength = tmpString->maxLength;
+  string->data      = tmpString->data;
   #ifndef NDEBUG
-    fromString->length    = 0L;
-    fromString->maxLength = 0L;
-    fromString->data      = NULL;
+    tmpString->length    = 0L;
+    tmpString->maxLength = 0L;
+    tmpString->data      = NULL;
   #endif /* not NDEBUG */
+  free(tmpString);
 
-  STRING_UPDATE_VALID(toString);
+  STRING_UPDATE_VALID(string);
 }
 
 /***********************************************************************\
