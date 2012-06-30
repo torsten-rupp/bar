@@ -12,6 +12,7 @@
 import java.io.File;
 import java.io.IOException;
 import java.util.BitSet;
+import java.util.List;
 
 import org.eclipse.swt.events.TraverseEvent;
 import org.eclipse.swt.events.TraverseListener;
@@ -33,6 +34,7 @@ import org.eclipse.swt.widgets.Event;
 import org.eclipse.swt.widgets.FileDialog;
 import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.Listener;
+import org.eclipse.swt.widgets.Monitor;
 import org.eclipse.swt.widgets.Shell;
 import org.eclipse.swt.widgets.Text;
 
@@ -824,30 +826,48 @@ class Dialogs
    * @param dialog dialog shell
    * @param location top/left location or null
    * @param size size of dialog or null
+   * @param setLocationFlag TRUE iff location of dialog should be set
    */
-  public static void show(Shell dialog, Point location, Point size)
+  public static void show(Shell dialog, Point location, Point size, boolean setLocationFlag)
   {
     int x,y;
 
     if (!dialog.isVisible())
     {
+      Display display = dialog.getDisplay();
+
       // layout
       dialog.pack();
 
-      // get location for dialog (keep 16/64 pixel away form right/bottom)
-      Display display = dialog.getDisplay();
-      Rectangle displayBounds = display.getBounds();
-      Point cursorPoint = display.getCursorLocation();
-      Rectangle bounds = dialog.getBounds();
-      x = ((location != null) && (location.x != SWT.DEFAULT))
-            ? location.x
-            : Math.max(cursorPoint.x-bounds.width /2,0);
-      y = ((location != null) && (location.y != SWT.DEFAULT))
-            ? location.y
-            : Math.max(cursorPoint.y-bounds.height/2,0);
-      dialog.setLocation(Math.min(x,displayBounds.width -bounds.width -16),
-                         Math.min(y,displayBounds.height-bounds.height-64)
+      if (setLocationFlag)
+      {
+        // set location of dialog
+        Point cursorPoint = display.getCursorLocation();
+        Rectangle dialogBounds = dialog.getBounds();
+        for (Monitor monitor : display.getMonitors())
+        {
+          if (monitor.getBounds().contains(cursorPoint))
+          {
+            Rectangle monitorBounds = monitor.getClientArea();
+            x = ((location != null) && (location.x != SWT.DEFAULT))
+              ? location.x
+              : Math.max(monitorBounds.x,
+                         Math.min(monitorBounds.x+monitorBounds.width-dialogBounds.width,
+                                  cursorPoint.x-dialogBounds.width/2
+                                 )
                         );
+            y = ((location != null) && (location.y != SWT.DEFAULT))
+              ? location.y
+              : Math.max(monitorBounds.y,
+                         Math.min(monitorBounds.y+monitorBounds.height-dialogBounds.height,
+                                  cursorPoint.y-dialogBounds.height/2
+                                 )
+                        );
+            dialog.setLocation(x,y);
+            break;
+          }
+        }
+      }
 
       // set size (if given)
       if (size != null)
@@ -866,6 +886,26 @@ class Dialogs
     }
   }
 
+    /** show dialog
+   * @param dialog dialog shell
+   * @param location top/left location or null
+   * @param size size of dialog or null
+   */
+  public static void show(Shell dialog, Point location, Point size)
+  {
+    show(dialog,location,size,true);
+  }
+
+  /** show dialog
+   * @param dialog dialog shell
+   * @param size size of dialog or null
+   * @param setLocationFlag TRUE iff location of dialog should be set
+   */
+  public static void show(Shell dialog, Point size, boolean setLocationFlag)
+  {
+    show(dialog,null,size,setLocationFlag);
+  }
+
   /** show dialog
    * @param dialog dialog shell
    * @param size size of dialog or null
@@ -878,10 +918,29 @@ class Dialogs
   /** show dialog
    * @param dialog dialog shell
    * @param width,height width/height of dialog
+   * @param setLocationFlag TRUE iff location of dialog should be set
+   */
+  public static void show(Shell dialog, int width, int height, boolean setLocationFlag)
+  {
+    show(dialog,new Point(width,height),setLocationFlag);
+  }
+
+  /** show dialog
+   * @param dialog dialog shell
+   * @param width,height width/height of dialog
    */
   public static void show(Shell dialog, int width, int height)
   {
-    show(dialog,new Point(width,height));
+    show(dialog,new Point(width,height),true);
+  }
+
+  /** show dialog
+   * @param dialog dialog shell
+   * @param setLocationFlag TRUE iff location of dialog should be set
+   */
+  public static void show(Shell dialog, boolean setLocationFlag)
+  {
+    show(dialog,null,setLocationFlag);
   }
 
   /** show dialog
@@ -889,7 +948,7 @@ class Dialogs
    */
   public static void show(Shell dialog)
   {
-    show(dialog,null);
+    show(dialog,true);
   }
 
   /** run dialog
@@ -1077,17 +1136,21 @@ class Dialogs
 
   /** error dialog
    * @param parentShell parent shell
-   * @param message error message
    * @param extendedMessage extended message
+   * @param showAgainCheckbox TRUE to show again checkbox, FALSE otherwise
+   * @param message error message
+   * @return TRUE iff show checkbox again is selected, FALSE otherwise
    */
-  public static void error(Shell parentShell, String[] extendedMessage, String message)
+  public static boolean error(Shell parentShell, String[] extendedMessage, boolean showAgainCheckbox, String message)
   {
     final Image IMAGE = Widgets.loadImage(parentShell.getDisplay(),"error.png");
 
-    Composite composite;
-    Label     label;
-    Button    button;
-    Text      text;
+    final boolean[] result = new boolean[]{true};
+    Composite       composite;
+    Label           label;
+    Button          button;
+    Text            text;
+    final Button    widgetShowAgain;
 
     if (!parentShell.isDisposed())
     {
@@ -1107,15 +1170,29 @@ class Dialogs
         label.setText(message);
         label.setLayoutData(new TableLayoutData(0,1,TableLayoutData.NSWE,0,0,4));
 
+        int row = 1;
+
         if (extendedMessage != null)
         {
           label = new Label(composite,SWT.LEFT);
           label.setText("Extended error:");
-          label.setLayoutData(new TableLayoutData(1,1,TableLayoutData.NSWE,0,0,4));
+          label.setLayoutData(new TableLayoutData(row,1,TableLayoutData.NSWE,0,0,4)); row++;
 
           text = new Text(composite,SWT.LEFT|SWT.BORDER|SWT.V_SCROLL|SWT.READ_ONLY);
-          text.setLayoutData(new TableLayoutData(2,1,TableLayoutData.NSWE,0,0,0,0,SWT.DEFAULT,100));
+          text.setLayoutData(new TableLayoutData(row,1,TableLayoutData.NSWE,0,0,0,0,SWT.DEFAULT,100)); row++;
           text.setText(StringUtils.join(extendedMessage,text.DELIMITER));
+        }
+
+        if (showAgainCheckbox)
+        {
+          widgetShowAgain = new Button(composite,SWT.CHECK);
+          widgetShowAgain.setText("show again");
+          widgetShowAgain.setSelection(true);
+          widgetShowAgain.setLayoutData(new TableLayoutData(row,1,TableLayoutData.NSWE,0,0,4)); row++;
+        }
+        else
+        {
+          widgetShowAgain = null;
         }
       }
 
@@ -1140,8 +1217,39 @@ class Dialogs
         });
       }
 
-      run(dialog);
+      run(dialog,new DialogRunnable()
+      {
+        public void done(Object object)
+        {
+          result[0] = (widgetShowAgain != null) ? widgetShowAgain.getSelection() : true;
+        }
+      });
     }
+
+    return result[0];
+  }
+
+  /** error dialog
+   * @param parentShell parent shell
+   * @param extendedMessage extended message
+   * @param showAgainCheckbox TRUE to show again checkbox, FALSE otherwise
+   * @param message error message
+   * @return TRUE iff show checkbox again is selected, FALSE otherwise
+   */
+  public static boolean error(Shell parentShell, List<String> extendedMessage, boolean showAgainCheckbox, String message)
+  {
+    return error(parentShell,extendedMessage.toArray(new String[extendedMessage.size()]),showAgainCheckbox, message);
+  }
+
+  /** error dialog
+   * @param parentShell parent shell
+   * @param showAgainCheckbox TRUE to show again checkbox, FALSE otherwise
+   * @param message error message
+   * @return TRUE iff show checkbox again is selected, FALSE otherwise
+   */
+  public static boolean error(Shell parentShell, boolean showAgainCheckbox, String message)
+  {
+    return error(parentShell,(String[])null,showAgainCheckbox,message);
   }
 
   /** error dialog
@@ -1150,18 +1258,67 @@ class Dialogs
    */
   public static void error(Shell parentShell, String message)
   {
-    error(parentShell,null,message);
+    error(parentShell,false,message);
   }
 
   /** error dialog
    * @param parentShell parent shell
-   * @param format format string
    * @param extendedMessage extended message
+   * @param showAgainCheckbox TRUE to show again checkbox, FALSE otherwise
+   * @param format format string
+   * @param arguments optional arguments
+   * @return TRUE iff show checkbox again is selected, FALSE otherwise
+   */
+  public static boolean error(Shell parentShell, String[] extendedMessage, boolean showAgainCheckbox, String format, Object... arguments)
+  {
+    return error(parentShell,extendedMessage,showAgainCheckbox,String.format(format,arguments));
+  }
+
+  /** error dialog
+   * @param parentShell parent shell
+   * @param extendedMessage extended message
+   * @param showAgainCheckbox TRUE to show again checkbox, FALSE otherwise
+   * @param format format string
+   * @param arguments optional arguments
+   * @return TRUE iff show checkbox again is selected, FALSE otherwise
+   */
+  public static boolean error(Shell parentShell, List<String> extendedMessage, boolean showAgainCheckbox, String format, Object... arguments)
+  {
+    return error(parentShell,extendedMessage,showAgainCheckbox,String.format(format,arguments));
+  }
+
+  /** error dialog
+   * @param parentShell parent shell
+   * @param extendedMessage extended message
+   * @param format format string
    * @param arguments optional arguments
    */
   public static void error(Shell parentShell, String[] extendedMessage, String format, Object... arguments)
   {
-    error(parentShell,extendedMessage,String.format(format,arguments));
+    error(parentShell,extendedMessage,false,String.format(format,arguments));
+  }
+
+  /** error dialog
+   * @param parentShell parent shell
+   * @param extendedMessage extended message
+   * @param format format string
+   * @param arguments optional arguments
+   */
+  public static void error(Shell parentShell, List<String> extendedMessage, String format, Object... arguments)
+  {
+    error(parentShell,extendedMessage,false,String.format(format,arguments));
+  }
+
+  /** error dialog
+   * @param parentShell parent shell
+   * @param showAgainCheckbox TRUE to show again checkbox, FALSE otherwise
+   * @param format format string
+   * @param arguments optional arguments
+   * @return TRUE iff show checkbox again is selected, FALSE otherwise
+   */
+  public static boolean error(Shell parentShell, boolean showAgainCheckbox, String format, Object... arguments)
+  {
+    return error(parentShell,(String[])null,showAgainCheckbox,format,arguments);
   }
 
   /** error dialog
@@ -1171,7 +1328,93 @@ class Dialogs
    */
   public static void error(Shell parentShell, String format, Object... arguments)
   {
-    error(parentShell,null,format,arguments);
+    error(parentShell,false,format,arguments);
+  }
+
+  /** warning dialog
+   * @param parentShell parent shell
+   * @param showAgainCheckbox TRUE to show again checkbox, FALSE otherwise
+   * @param message error message
+   * @return TRUE iff show checkbox again is selected, FALSE otherwise
+   */
+  static boolean warning(Shell parentShell, boolean showAgainCheckbox, String message)
+  {
+    final Image IMAGE = Widgets.loadImage(parentShell.getDisplay(),"warning.png");
+
+    final boolean[] result = new boolean[]{true};
+    TableLayoutData tableLayoutData;
+    Composite       composite;
+    Label           label;
+    Button          button;
+    final Button    widgetShowAgain;
+
+    if (!parentShell.isDisposed())
+    {
+      final Shell dialog = open(parentShell,"Warning",200,70);
+      dialog.setLayout(new TableLayout(new double[]{1.0,0.0},1.0));
+
+
+      // message
+      composite = new Composite(dialog,SWT.NONE);
+      composite.setLayout(new TableLayout(null,new double[]{0.0,1.0},4));
+      composite.setLayoutData(new TableLayoutData(0,0,TableLayoutData.NSWE));
+      {
+        label = new Label(composite,SWT.LEFT);
+        label.setImage(IMAGE);
+        label.setLayoutData(new TableLayoutData(0,0,TableLayoutData.W,0,0,10));
+
+        label = new Label(composite,SWT.LEFT|SWT.WRAP);
+        label.setText(message);
+        label.setLayoutData(new TableLayoutData(0,1,TableLayoutData.NSWE,0,0,4));
+      }
+
+      int row = 1;
+
+      if (showAgainCheckbox)
+      {
+        widgetShowAgain = new Button(composite,SWT.CHECK);
+        widgetShowAgain.setText("show again");
+        widgetShowAgain.setSelection(true);
+        widgetShowAgain.setLayoutData(new TableLayoutData(row,1,TableLayoutData.NSWE,0,0,4)); row++;
+      }
+      else
+      {
+        widgetShowAgain = null;
+      }
+
+      // buttons
+      composite = new Composite(dialog,SWT.NONE);
+      composite.setLayout(new TableLayout(0.0,1.0));
+      composite.setLayoutData(new TableLayoutData(row,0,TableLayoutData.WE,0,0,4)); row++;
+      {
+        button = new Button(composite,SWT.CENTER);
+        button.setText("Close");
+        button.setFocus();
+        button.setLayoutData(new TableLayoutData(0,0,TableLayoutData.NONE,0,0,0,0,60,SWT.DEFAULT));
+        button.addSelectionListener(new SelectionListener()
+        {
+          public void widgetSelected(SelectionEvent selectionEvent)
+          {
+            Button widget = (Button)selectionEvent.widget;
+
+            close(dialog);
+          }
+          public void widgetDefaultSelected(SelectionEvent selectionEvent)
+          {
+          }
+        });
+      }
+
+      run(dialog,new DialogRunnable()
+      {
+        public void done(Object object)
+        {
+          result[0] = (widgetShowAgain != null) ? widgetShowAgain.getSelection() : true;
+        }
+      });
+    }
+
+    return result[0];
   }
 
   /** warning dialog
@@ -1180,54 +1423,19 @@ class Dialogs
    */
   static void warning(Shell parentShell, String message)
   {
-    TableLayoutData tableLayoutData;
-    Composite       composite;
-    Label           label;
-    Button          button;
+    warning(parentShell,false,message);
+  }
 
-    final Shell dialog = open(parentShell,"Warning",200,70);
-    dialog.setLayout(new TableLayout(new double[]{1.0,0.0},1.0));
-
-    Image image = Widgets.loadImage(parentShell.getDisplay(),"warning.png");
-
-    // message
-    composite = new Composite(dialog,SWT.NONE);
-    composite.setLayout(new TableLayout(null,new double[]{0.0,1.0},4));
-    composite.setLayoutData(new TableLayoutData(0,0,TableLayoutData.NSWE));
-    {
-      label = new Label(composite,SWT.LEFT);
-      label.setImage(image);
-      label.setLayoutData(new TableLayoutData(0,0,TableLayoutData.W,0,0,10));
-
-      label = new Label(composite,SWT.LEFT|SWT.WRAP);
-      label.setText(message);
-      label.setLayoutData(new TableLayoutData(0,1,TableLayoutData.NSWE,0,0,4));
-    }
-
-    // buttons
-    composite = new Composite(dialog,SWT.NONE);
-    composite.setLayout(new TableLayout(0.0,1.0));
-    composite.setLayoutData(new TableLayoutData(1,0,TableLayoutData.WE,0,0,4));
-    {
-      button = new Button(composite,SWT.CENTER);
-      button.setText("Close");
-      button.setFocus();
-      button.setLayoutData(new TableLayoutData(0,0,TableLayoutData.NONE,0,0,0,0,60,SWT.DEFAULT));
-      button.addSelectionListener(new SelectionListener()
-      {
-        public void widgetSelected(SelectionEvent selectionEvent)
-        {
-          Button widget = (Button)selectionEvent.widget;
-
-          close(dialog);
-        }
-        public void widgetDefaultSelected(SelectionEvent selectionEvent)
-        {
-        }
-      });
-    }
-
-    run(dialog);
+  /** warning dialog
+   * @param parentShell parent shell
+   * @param showAgainCheckbox TRUE to show again checkbox, FALSE otherwise
+   * @param format format string
+   * @param arguments optional arguments
+   * @return TRUE iff show checkbox again is selected, FALSE otherwise
+   */
+  static boolean warning(Shell parentShell, boolean showAgainCheckbox, String format, Object... arguments)
+  {
+    return warning(parentShell,showAgainCheckbox,String.format(format,arguments));
   }
 
   /** warning dialog
@@ -1237,7 +1445,7 @@ class Dialogs
    */
   static void warning(Shell parentShell, String format, Object... arguments)
   {
-    warning(parentShell,String.format(format,arguments));
+    warning(parentShell,false,format,arguments);
   }
 
   /** confirmation dialog
@@ -2003,9 +2211,10 @@ class Dialogs
    * @param title title text
    * @param fileName fileName or null
    * @param fileExtensions array with {name,pattern} or null
+   * @param defaultFileExtension default file extension pattern or null
    * @return file name or null
    */
-  private static String file(Shell parentShell, int type, String title, String oldFileName, String[] fileExtensions)
+  private static String file(Shell parentShell, int type, String title, String oldFileName, String[] fileExtensions, String defaultFileExtension)
   {
     File oldFile = (oldFileName != null)?new File(oldFileName):null;
 
@@ -2027,12 +2236,15 @@ class Dialogs
         fileExtensionNames[z] = fileExtensions[z*2+0]+" ("+fileExtensions[z*2+1]+")";
       }
       String[] fileExtensionPatterns = new String[(fileExtensions.length+1)/2];
+      int fileExtensionIndex = 0;
       for (int z = 0; z < fileExtensions.length/2; z++)
       {
         fileExtensionPatterns[z] = fileExtensions[z*2+1];
+        if ((defaultFileExtension != null) && defaultFileExtension.equalsIgnoreCase(fileExtensions[z*2+1])) fileExtensionIndex = z;
       }
       dialog.setFilterNames(fileExtensionNames);
       dialog.setFilterExtensions(fileExtensionPatterns);
+      dialog.setFilterIndex(fileExtensionIndex);
     }
 
     String fileName = dialog.open();
@@ -2063,11 +2275,24 @@ class Dialogs
    * @param title title text
    * @param fileName fileName or null
    * @param fileExtensions array with {name,pattern} or null
+   * @param defaultFileExtension default file extension pattern or null
+   * @return file name or null
+   */
+  public static String fileOpen(Shell parentShell, String title, String fileName, String[] fileExtensions, String defaultFileExtension)
+  {
+    return file(parentShell,SWT.OPEN,title,fileName,fileExtensions,defaultFileExtension);
+  }
+
+  /** file dialog for open file
+   * @param parentShell parent shell
+   * @param title title text
+   * @param fileName fileName or null
+   * @param fileExtensions array with {name,pattern} or null
    * @return file name or null
    */
   public static String fileOpen(Shell parentShell, String title, String fileName, String[] fileExtensions)
   {
-    return file(parentShell,SWT.OPEN,title,fileName,fileExtensions);
+    return fileOpen(parentShell,title,fileName,fileExtensions,null);
   }
 
   /** file dialog for open file
@@ -2096,11 +2321,36 @@ class Dialogs
    * @param title title text
    * @param fileName fileName or null
    * @param fileExtensions array with {name,pattern} or null
+   * @param defaultFileExtension default file extension pattern or null
+   * @return file name or null
+   */
+  public static String fileSave(Shell parentShell, String title, String fileName, String[] fileExtensions, String defaultFileExtension)
+  {
+    return file(parentShell,SWT.SAVE,title,fileName,fileExtensions,defaultFileExtension);
+  }
+
+  /** file dialog for save file
+   * @param parentShell parent shell
+   * @param title title text
+   * @param fileName fileName or null
+   * @param fileExtensions array with {name,pattern} or null
    * @return file name or null
    */
   public static String fileSave(Shell parentShell, String title, String fileName, String[] fileExtensions)
   {
-    return file(parentShell,SWT.SAVE,title,fileName,fileExtensions);
+    return fileSave(parentShell,title,fileName,fileExtensions,null);
+  }
+
+  /** file dialog for save file
+   * @param parentShell parent shell
+   * @param title title text
+   * @param fileName fileName or null
+   * @param defaultFileExtension default file extension pattern or null
+   * @return file name or null
+   */
+  public static String fileSave(Shell parentShell, String title, String fileName, String defaultFileExtension)
+  {
+    return fileSave(parentShell,title,fileName,null,defaultFileExtension);
   }
 
   /** file dialog for save file
@@ -2111,7 +2361,7 @@ class Dialogs
    */
   public static String fileSave(Shell parentShell, String title, String fileName)
   {
-    return fileSave(parentShell,title,fileName,null);
+    return fileSave(parentShell,title,fileName,(String)null);
   }
 
   /** file dialog for save file
@@ -2127,13 +2377,15 @@ class Dialogs
   /** directory dialog
    * @param parentShell parent shell
    * @param title title text
+   * @param text text or null
    * @param pathName path name or null
    * @return directory name or null
    */
-  public static String directory(Shell parentShell, String title, String pathName)
+  public static String directory(Shell parentShell, String title, String text, String pathName)
   {
     DirectoryDialog dialog = new DirectoryDialog(parentShell);
     dialog.setText(title);
+    if (text != null) dialog.setMessage(text);
     if (pathName != null)
     {
       dialog.setFilterPath(pathName);
@@ -2142,16 +2394,202 @@ class Dialogs
     return dialog.open();
   }
 
+  /** directory dialog
+   * @param parentShell parent shell
+   * @param title title text
+   * @param pathName path name or null
+   * @return directory name or null
+   */
+  public static String directory(Shell parentShell, String title, String pathName)
+  {
+    return directory(parentShell,title,null,pathName);
+  }
+
+  /** directory dialog
+   * @param parentShell parent shell
+   * @param title title text
+   * @return directory name or null
+   */
+  public static String directory(Shell parentShell, String title)
+  {
+    return directory(parentShell,title,null);
+  }
+
+  /** simple path dialog
+   * @param parentShell parent shell
+   * @param title title string
+   * @param text text before input element
+   * @param value value to edit (can be null)
+   * @param okText OK button text
+   * @param cancelText cancel button text
+   * @param toolTipText tooltip text (can be null)
+   * @return path or null on cancel
+   */
+  public static String path(Shell parentShell, String title, String text, String value, String okText, String cancelText, String toolTipText)
+  {
+    final Image IMAGE = Widgets.loadImage(parentShell.getDisplay(),"directory.png");
+
+    int             row;
+    Composite       composite;
+    Label           label;
+    Button          button;
+
+    if (!parentShell.isDisposed())
+    {
+      final String[] result = new String[1];
+
+      final Shell dialog = openModal(parentShell,title,450,SWT.DEFAULT);
+      dialog.setLayout(new TableLayout(new double[]{1.0,0.0},1.0));
+
+      final Text   widgetPath;
+      final Button widgetOkButton;
+      composite = new Composite(dialog,SWT.NONE);
+      composite.setLayout(new TableLayout(null,new double[]{0.0,1.0},4));
+      composite.setLayoutData(new TableLayoutData(0,0,TableLayoutData.WE));
+      {
+        int column = 0;
+        if (text != null)
+        {
+          label = new Label(composite,SWT.LEFT);
+          label.setText(text);
+          label.setLayoutData(new TableLayoutData(0,column,TableLayoutData.W));
+          column++;
+        }
+        widgetPath = new Text(composite,SWT.LEFT|SWT.BORDER);
+        if (value != null)
+        {
+          widgetPath.setText(value);
+          widgetPath.setSelection(value.length(),value.length());
+        }
+        widgetPath.setLayoutData(new TableLayoutData(0,column,TableLayoutData.WE,0,0,0,0,300,SWT.DEFAULT,SWT.DEFAULT,SWT.DEFAULT));
+        if (toolTipText != null) widgetPath.setToolTipText(toolTipText);
+        column++;
+
+        button = new Button(composite,SWT.CENTER);
+        button.setImage(IMAGE);
+        button.setLayoutData(new TableLayoutData(0,column,TableLayoutData.W,0,0,0,0,SWT.DEFAULT,SWT.DEFAULT,60,SWT.DEFAULT));
+        button.addSelectionListener(new SelectionListener()
+        {
+          public void widgetDefaultSelected(SelectionEvent selectionEvent)
+          {
+          }
+          public void widgetSelected(SelectionEvent selectionEvent)
+          {
+            String path = directory(dialog,"Select path");
+            if (path != null)
+            {
+              widgetPath.setText(path);
+            }
+          }
+        });
+        column++;
+      }
+
+      // buttons
+      composite = new Composite(dialog,SWT.NONE);
+      composite.setLayout(new TableLayout(0.0,1.0));
+      composite.setLayoutData(new TableLayoutData(1,0,TableLayoutData.WE,0,0,4));
+      {
+        widgetOkButton = new Button(composite,SWT.CENTER);
+        widgetOkButton.setText(okText);
+        widgetOkButton.setLayoutData(new TableLayoutData(0,0,TableLayoutData.W,0,0,0,0,SWT.DEFAULT,SWT.DEFAULT,60,SWT.DEFAULT));
+        widgetOkButton.addSelectionListener(new SelectionListener()
+        {
+          public void widgetDefaultSelected(SelectionEvent selectionEvent)
+          {
+          }
+          public void widgetSelected(SelectionEvent selectionEvent)
+          {
+            close(dialog,widgetPath.getText());
+          }
+        });
+
+        button = new Button(composite,SWT.CENTER);
+        button.setText(cancelText);
+        button.setLayoutData(new TableLayoutData(0,1,TableLayoutData.E,0,0,0,0,SWT.DEFAULT,SWT.DEFAULT,60,SWT.DEFAULT));
+        button.addSelectionListener(new SelectionListener()
+        {
+          public void widgetDefaultSelected(SelectionEvent selectionEvent)
+          {
+          }
+          public void widgetSelected(SelectionEvent selectionEvent)
+          {
+            close(dialog,null);
+          }
+        });
+      }
+
+      // install handlers
+      widgetPath.addSelectionListener(new SelectionListener()
+      {
+        public void widgetDefaultSelected(SelectionEvent selectionEvent)
+        {
+          Text widget = (Text)selectionEvent.widget;
+
+          widgetOkButton.setFocus();
+        }
+        public void widgetSelected(SelectionEvent selectionEvent)
+        {
+        }
+      });
+
+      widgetPath.setFocus();
+      return (String)run(dialog,null);
+    }
+    else
+    {
+      return null;
+    }
+  }
+
+  /** simple path dialog
+   * @param parentShell parent shell
+   * @param title title string
+   * @param text text before input element
+   * @param value value to edit (can be null)
+   * @param okText OK button text
+   * @param cancelText cancel button text
+   * @return path or null on cancel
+   */
+  public static String path(Shell parentShell, String title, String text, String value, String okText, String cancelText)
+  {
+    return path(parentShell,title,text,value,okText,cancelText,null);
+  }
+
+  /** simple path dialog
+   * @param parentShell parent shell
+   * @param title title string
+   * @param text text before input element
+   * @param value value to edit (can be null)
+   * @return path or null on cancel
+   */
+  public static String path(Shell parentShell, String title, String text, String value)
+  {
+    return path(parentShell,title,text,value,"OK","Cancel");
+  }
+
+  /** simple path dialog
+   * @param parentShell parent shell
+   * @param title title string
+   * @param text text before input element
+   * @return path or null on cancel
+   */
+  public static String path(Shell parentShell, String title, String text)
+  {
+    return path(parentShell,title,text,null);
+  }
+
   /** simple string dialog
    * @param parentShell parent shell
    * @param title title string
    * @param text text before input element
-   * @param value value to edit
+   * @param value value to edit (can be null)
    * @param okText OK button text
-   * @param CancelText cancel button text
+   * @param cancelText cancel button text
+   * @param toolTipText tooltip text (can be null)
    * @return string or null on cancel
    */
-  public static String string(Shell parentShell, String title, String text, String value, String okText, String cancelText)
+  public static String string(Shell parentShell, String title, String text, String value, String okText, String cancelText, String toolTipText)
   {
     int             row;
     Composite       composite;
@@ -2187,6 +2625,7 @@ class Dialogs
           widgetString.setSelection(value.length(),value.length());
         }
         widgetString.setLayoutData(new TableLayoutData(0,column,TableLayoutData.WE,0,0,0,0,300,SWT.DEFAULT,SWT.DEFAULT,SWT.DEFAULT));
+        if (toolTipText != null) widgetString.setToolTipText(toolTipText);
         column++;
       }
 
@@ -2251,7 +2690,21 @@ class Dialogs
    * @param parentShell parent shell
    * @param title title string
    * @param text text before input element
-   * @param value value to edit
+   * @param value value to edit (can be null)
+   * @param okText OK button text
+   * @param cancelText cancel button text
+   * @return string or null on cancel
+   */
+  public static String string(Shell parentShell, String title, String text, String value, String okText, String cancelText)
+  {
+    return string(parentShell,title,text,value,okText,cancelText,null);
+  }
+
+  /** simple string dialog
+   * @param parentShell parent shell
+   * @param title title string
+   * @param text text before input element
+   * @param value value to edit (can be null)
    * @return string or null on cancel
    */
   public static String string(Shell parentShell, String title, String text, String value)
