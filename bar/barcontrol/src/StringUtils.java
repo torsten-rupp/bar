@@ -308,7 +308,51 @@ public class StringUtils
     return map(string,0,from,to);
   }
 
-  /** join string array
+  /** join collection
+   * @param collection collection to join (convert to string with toString())
+   * @param joinString string used to join two strings
+   * @param quoteChar quote char
+   * @return string
+   */
+  public static String join(Collection collection, String joinString, char quoteChar)
+  {
+    StringBuilder buffer = new StringBuilder();
+    String        string;
+    if (collection != null)
+    {
+      for (Object object : collection)
+      {
+        if (buffer.length() > 0) buffer.append(joinString);
+        string = object.toString();
+        buffer.append((quoteChar != '\0') ? escape(string,true,quoteChar) : string);
+      }
+    }
+
+    return buffer.toString();
+  }
+
+  /** join collection
+   * @param collection collection to join (convert to string with toString())
+   * @param joinString string used to join two strings
+   * @param quote true iff escape strings
+   * @return string
+   */
+  public static String join(Collection collection, String joinString, boolean quote)
+  {
+    return join(collection,joinString,(quote) ? '"' : '\0');
+  }
+
+  /** join collection
+   * @param collection collection to join (convert to string with toString())
+   * @param joinString string used to join two strings
+   * @return string
+   */
+  public static String join(Collection collection, String joinString)
+  {
+    return join(collection,joinString,'\0');
+  }
+
+  /** join object array
    * @param objects objects to join (convert to string with toString())
    * @param joinString string used to join two strings
    * @param quoteChar quote char
@@ -331,7 +375,7 @@ public class StringUtils
     return buffer.toString();
   }
 
-  /** join string array
+  /** join object array
    * @param objects objects to join (convert to string with toString())
    * @param joinString string used to join two strings
    * @param quote true iff escape strings
@@ -342,7 +386,7 @@ public class StringUtils
     return join(objects,joinString,(quote) ? '"' : '\0');
   }
 
-  /** join string array
+  /** join object array
    * @param objects objects to join (convert to string with toString())
    * @param joinString string used to join two strings
    * @return string
@@ -352,7 +396,7 @@ public class StringUtils
     return join(objects,joinString,'\0');
   }
 
-  /** join string array with space
+  /** join string array with single space
    * @param strings strings to join
    * @return string
    */
@@ -382,7 +426,7 @@ public class StringUtils
     return buffer.toString();
   }
 
-  /** join boolean array with space
+  /** join boolean array with single space
    * @param strings strings to join
    * @return string
    */
@@ -412,7 +456,7 @@ public class StringUtils
     return buffer.toString();
   }
 
-  /** join integer array with space
+  /** join integer array with single space
    * @param strings strings to join
    * @return string
    */
@@ -442,7 +486,7 @@ public class StringUtils
     return buffer.toString();
   }
 
-  /** join long array with space
+  /** join long array with single space
    * @param strings strings to join
    * @return string
    */
@@ -472,7 +516,7 @@ public class StringUtils
     return buffer.toString();
   }
 
-  /** join float array with space
+  /** join float array with single space
    * @param strings strings to join
    * @return string
    */
@@ -502,7 +546,7 @@ public class StringUtils
     return buffer.toString();
   }
 
-  /** join double array with space
+  /** join double array with single space
    * @param strings strings to join
    * @return string
    */
@@ -511,8 +555,10 @@ public class StringUtils
     return join(array," ");
   }
 
-  /** join double array with space
-   * @param strings strings to join
+  /** join enum
+   * @param enumSet enums to join
+   * @param joinString string used to join two enums
+   * @param ordinal true for ordinal values (numbers)
    * @return string
    */
   public static String join(EnumSet enumSet, String joinString, boolean ordinal)
@@ -533,8 +579,9 @@ public class StringUtils
     return buffer.toString();
   }
 
-  /** join double array with space
-   * @param strings strings to join
+  /** join enum (names)
+   * @param enumSet enums to join
+   * @param joinString string used to join two enums
    * @return string
    */
   public static String join(EnumSet enumSet, String joinString)
@@ -542,8 +589,8 @@ public class StringUtils
     return join(enumSet,joinString,false);
   }
 
-  /** join double array with space
-   * @param strings strings to join
+  /** join enum (names) with single space
+   * @param enumSet enums to join
    * @return string
    */
   public static String join(EnumSet enumSet)
