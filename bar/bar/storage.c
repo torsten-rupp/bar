@@ -301,6 +301,8 @@ LOCAL Errors checkSSHLogin(const String loginName,
   SocketHandle socketHandle;
   Errors       error;
 
+  printInfo(5,"SSH: public key '%s'\n",String_cString(publicKeyFileName));
+  printInfo(5,"SSH: private key '%s'\n",String_cString(privateKeyFileName));
   error = Network_connect(&socketHandle,
                           SOCKET_TYPE_SSH,
                           hostName,
@@ -4511,42 +4513,30 @@ Errors Storage_read(StorageFileHandle *storageFileHandle,
     case STORAGE_TYPE_SCP:
       #ifdef HAVE_SSH2
         {
-          ulong   i;
-          ssize_t readBytes;
-          ulong   n;
+          ulong   index;
+          ulong   bytesAvail;
+          ssize_t n;
 
           if (!storageFileHandle->jobOptions->dryRunFlag)
           {
             assert(storageFileHandle->scp.channel != NULL);
             assert(storageFileHandle->scp.readAheadBuffer.data != NULL);
 
-#if 0
-            readBytes = libssh2_channel_read(storageFileHandle->scp.channel,
-                                             buffer,
-                                             size
-                                            );
-            if (readBytes < 0)
-            {
-              return ERROR(IO_ERROR,errno);
-            }
-            (*bytesRead) += n;
-            storageFileHandle->scp.index += (uint64)n;
-#else /* 0 */
             // copy as much as available from read-ahead buffer
             if (   (storageFileHandle->scp.index >= storageFileHandle->scp.readAheadBuffer.offset)
                 && (storageFileHandle->scp.index < (storageFileHandle->scp.readAheadBuffer.offset+storageFileHandle->scp.readAheadBuffer.length))
                )
             {
-              // copy data
-              i = (ulong)(storageFileHandle->scp.index-storageFileHandle->scp.readAheadBuffer.offset);
-              n = MIN(size,storageFileHandle->scp.readAheadBuffer.length-i);
-              memcpy(buffer,storageFileHandle->scp.readAheadBuffer.data+i,n);
+              // copy data from read-ahead buffer
+              index      = (ulong)(storageFileHandle->scp.index-storageFileHandle->scp.readAheadBuffer.offset);
+              bytesAvail = MIN(size,storageFileHandle->scp.readAheadBuffer.length-index);
+              memcpy(buffer,storageFileHandle->scp.readAheadBuffer.data+index,bytesAvail);
 
               // adjust buffer, size, bytes read, index
-              buffer = (byte*)buffer+n;
-              size -= n;
-              (*bytesRead) += n;
-              storageFileHandle->scp.index += (uint64)n;
+              buffer = (byte*)buffer+bytesAvail;
+              size -= bytesAvail;
+              (*bytesRead) += bytesAvail;
+              storageFileHandle->scp.index += (uint64)bytesAvail;
             }
 
             // read rest of data
@@ -4557,69 +4547,68 @@ Errors Storage_read(StorageFileHandle *storageFileHandle,
                 // read into read-ahead buffer
                 do
                 {
-                  readBytes = libssh2_channel_read(storageFileHandle->scp.channel,
-                                                   (char*)storageFileHandle->scp.readAheadBuffer.data,
-                                                   MIN((size_t)(storageFileHandle->scp.size-storageFileHandle->scp.index),MAX_BUFFER_SIZE)
-                                                 );
+                  n = libssh2_channel_read(storageFileHandle->scp.channel,
+                                           (char*)storageFileHandle->scp.readAheadBuffer.data,
+                                           MIN((size_t)(storageFileHandle->scp.size-storageFileHandle->scp.index),MAX_BUFFER_SIZE)
+                                         );
+                  if (n == LIBSSH2_ERROR_EAGAIN) Misc_udelay(100*1000);
                 }
-                while (readBytes == LIBSSH2_ERROR_EAGAIN);
-                if (readBytes < 0)
+                while (n == LIBSSH2_ERROR_EAGAIN);
+                if (n < 0)
                 {
                   error = ERROR(IO_ERROR,errno);
                   break;
                 }
                 storageFileHandle->scp.readAheadBuffer.offset = storageFileHandle->scp.index;
-                storageFileHandle->scp.readAheadBuffer.length = (ulong)readBytes;
+                storageFileHandle->scp.readAheadBuffer.length = (ulong)n;
 //fprintf(stderr,"%s,%d: n=%ld storageFileHandle->scp.bufferOffset=%llu storageFileHandle->scp.bufferLength=%lu\n",__FILE__,__LINE__,n,
 //storageFileHandle->scp.readAheadBuffer.offset,storageFileHandle->scp.readAheadBuffer.length);
 
-                // copy data
-                n = MIN(size,storageFileHandle->scp.readAheadBuffer.length);
-                memcpy(buffer,storageFileHandle->scp.readAheadBuffer.data,n);
+                // copy data from read-ahead buffer
+                bytesAvail = MIN(size,storageFileHandle->scp.readAheadBuffer.length);
+                memcpy(buffer,storageFileHandle->scp.readAheadBuffer.data,bytesAvail);
 
                 // adjust buffer, size, bytes read, index
-                buffer = (byte*)buffer+n;
-                size -= n;
-                (*bytesRead) += n;
-                storageFileHandle->scp.index += (uint64)n;
+                buffer = (byte*)buffer+bytesAvail;
+                size -= bytesAvail;
+                (*bytesRead) += bytesAvail;
+                storageFileHandle->scp.index += (uint64)bytesAvail;
               }
               else
               {
                 // read direct
                 do
                 {
-                  readBytes = libssh2_channel_read(storageFileHandle->scp.channel,
+                  n = libssh2_channel_read(storageFileHandle->scp.channel,
                                                    buffer,
                                                    size
                                                   );
+                  if (n == LIBSSH2_ERROR_EAGAIN) Misc_udelay(100*1000);
                 }
-                while (readBytes == LIBSSH2_ERROR_EAGAIN);
-                if (readBytes < 0)
+                while (n == LIBSSH2_ERROR_EAGAIN);
+                if (n < 0)
                 {
                   error = ERROR(IO_ERROR,errno);
                   break;
                 }
 
                 // adjust buffer, size, bytes read, index
-                buffer = (byte*)buffer+readBytes;
-                size -= (ulong)readBytes;
-                (*bytesRead) += (ulong)readBytes;
-                storageFileHandle->scp.index += (uint64)readBytes;
+                buffer = (byte*)buffer+(ulong)n;
+                size -= (ulong)n;
+                (*bytesRead) += (ulong)n;
+                storageFileHandle->scp.index += (uint64)n;
               }
             }
           }
 #endif /* 0 */
         }
-      #else /* not HAVE_SSH2 */
-        error = ERROR_FUNCTION_NOT_SUPPORTED;
-      #endif /* HAVE_SSH2 */
       break;
     case STORAGE_TYPE_SFTP:
       #ifdef HAVE_SSH2
         {
-          ulong   i;
-          ssize_t readBytes;
-          ulong   n;
+          ulong   index;
+          ulong   bytesAvail;
+          ssize_t n;
 
           if (!storageFileHandle->jobOptions->dryRunFlag)
           {
@@ -4631,16 +4620,16 @@ Errors Storage_read(StorageFileHandle *storageFileHandle,
                 && (storageFileHandle->sftp.index < (storageFileHandle->sftp.readAheadBuffer.offset+storageFileHandle->sftp.readAheadBuffer.length))
                )
             {
-              // copy data
-              i = (ulong)(storageFileHandle->sftp.index-storageFileHandle->sftp.readAheadBuffer.offset);
-              n = MIN(size,storageFileHandle->sftp.readAheadBuffer.length-i);
-              memcpy(buffer,storageFileHandle->sftp.readAheadBuffer.data+i,n);
+              // copy data from read-ahead buffer
+              index      = (ulong)(storageFileHandle->sftp.index-storageFileHandle->sftp.readAheadBuffer.offset);
+              bytesAvail = MIN(size,storageFileHandle->sftp.readAheadBuffer.length-index);
+              memcpy(buffer,storageFileHandle->sftp.readAheadBuffer.data+index,bytesAvail);
 
               // adjust buffer, size, bytes read, index
-              buffer = (byte*)buffer+n;
-              size -= n;
-              (*bytesRead) += n;
-              storageFileHandle->sftp.index += n;
+              buffer = (byte*)buffer+bytesAvail;
+              size -= bytesAvail;
+              (*bytesRead) += bytesAvail;
+              storageFileHandle->sftp.index += bytesAvail;
             }
 
             // read rest of data
@@ -4655,44 +4644,44 @@ Errors Storage_read(StorageFileHandle *storageFileHandle,
               if (size < MAX_BUFFER_SIZE)
               {
                 // read into read-ahead buffer
-                readBytes = libssh2_sftp_read(storageFileHandle->sftp.sftpHandle,
-                                              (char*)storageFileHandle->sftp.readAheadBuffer.data,
-                                              MIN((size_t)(storageFileHandle->sftp.size-storageFileHandle->sftp.index),MAX_BUFFER_SIZE)
-                                             );
-                if (readBytes < 0)
+                n = libssh2_sftp_read(storageFileHandle->sftp.sftpHandle,
+                                      (char*)storageFileHandle->sftp.readAheadBuffer.data,
+                                      MIN((size_t)(storageFileHandle->sftp.size-storageFileHandle->sftp.index),MAX_BUFFER_SIZE)
+                                     );
+                if (n < 0)
                 {
                   error = ERROR(IO_ERROR,errno);
                   break;
                 }
                 storageFileHandle->sftp.readAheadBuffer.offset = storageFileHandle->sftp.index;
-                storageFileHandle->sftp.readAheadBuffer.length = readBytes;
+                storageFileHandle->sftp.readAheadBuffer.length = (ulong)n;
 //fprintf(stderr,"%s,%d: n=%ld storageFileHandle->sftp.bufferOffset=%llu storageFileHandle->sftp.bufferLength=%lu\n",__FILE__,__LINE__,n,
 //storageFileHandle->sftp.readAheadBuffer.offset,storageFileHandle->sftp.readAheadBuffer.length);
 
-                // copy data
-                n = MIN(size,storageFileHandle->sftp.readAheadBuffer.length);
-                memcpy(buffer,storageFileHandle->sftp.readAheadBuffer.data,n);
+                // copy data from read-ahead buffer
+                bytesAvail = MIN(size,storageFileHandle->sftp.readAheadBuffer.length);
+                memcpy(buffer,storageFileHandle->sftp.readAheadBuffer.data,bytesAvail);
 
                 // adjust buffer, size, bytes read, index
-                (*bytesRead) += n;
-                storageFileHandle->sftp.index += (uint64)n;
+                (*bytesRead) += bytesAvail;
+                storageFileHandle->sftp.index += (uint64)bytesAvail;
               }
               else
               {
                 // read direct
-                readBytes = libssh2_sftp_read(storageFileHandle->sftp.sftpHandle,
-                                              buffer,
-                                              size
-                                             );
-                if (readBytes < 0)
+                n = libssh2_sftp_read(storageFileHandle->sftp.sftpHandle,
+                                      buffer,
+                                      size
+                                     );
+                if (n < 0)
                 {
                   error = ERROR(IO_ERROR,errno);
                   break;
                 }
 
                 // adjust buffer, size, bytes read, index
-                (*bytesRead) += readBytes;
-                storageFileHandle->sftp.index += (uint64)readBytes;
+                (*bytesRead) += (ulong)n;
+                storageFileHandle->sftp.index += (uint64)n;
               }
             }
           }
@@ -4870,10 +4859,10 @@ Errors Storage_write(StorageFileHandle *storageFileHandle,
     case STORAGE_TYPE_SCP:
       #ifdef HAVE_SSH2
         {
-          ulong  writtenBytes;
-          long   length;
-          long   n;
-          uint64 startTimestamp,endTimestamp;
+          ulong   writtenBytes;
+          long    length;
+          ssize_t n;
+          uint64  startTimestamp,endTimestamp;
 
           if (!storageFileHandle->jobOptions->dryRunFlag)
           {
@@ -4903,6 +4892,7 @@ Errors Storage_write(StorageFileHandle *storageFileHandle,
                                           buffer,
                                           length
                                          );
+                if (n == LIBSSH2_ERROR_EAGAIN) Misc_udelay(100*1000);
               }
               while (n == LIBSSH2_ERROR_EAGAIN);
 
@@ -4932,8 +4922,8 @@ Errors Storage_write(StorageFileHandle *storageFileHandle,
                 break;
               }
 #endif /* 0 */
-              buffer = (byte*)buffer+n;
-              writtenBytes += n;
+              buffer = (byte*)buffer+(ulong)n;
+              writtenBytes += (ulong)n;
 
 
               /* limit used band width if requested (note: when the system time is
@@ -4985,6 +4975,7 @@ Errors Storage_write(StorageFileHandle *storageFileHandle,
                                        buffer,
                                        length
                                       );
+                if (n == LIBSSH2_ERROR_EAGAIN) Misc_udelay(100*1000);
               }
               while (n == LIBSSH2_ERROR_EAGAIN);
 
