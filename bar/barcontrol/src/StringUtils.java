@@ -10,6 +10,9 @@
 
 /****************************** Imports ********************************/
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.EnumSet;
+import java.util.Iterator;
 
 /****************************** Classes ********************************/
 
@@ -20,7 +23,7 @@ public class StringUtils
   // --------------------------- constants --------------------------------
   /** quoting characters for string values
    */
-  public static String QUOTE_CHARS = "'\"";
+  public final static String QUOTE_CHARS = "'\"";
 
   /** white spaces
    */
@@ -32,7 +35,94 @@ public class StringUtils
 
   // ---------------------------- methods ---------------------------------
 
-  /** escape ' and \ in string, enclose in "
+  /** trim characters from string at string beginning
+   * @param string string
+   * @param chars characters to trim
+   * @return trimmed string
+   */
+  public static String trimBegin(String string, String chars)
+  {
+    int i = 0;
+    while (   (i < string.length())
+           && (chars.indexOf(string.charAt(i)) >= 0)
+          )
+    {
+      i++;
+    }
+
+    return string.substring(i);
+  }
+
+  /** trim characters from string at string beginning
+   * @param string string
+   * @return trimmed string
+   */
+  public static String trimBegin(String string)
+  {
+    return trimBegin(string,WHITE_SPACES);
+  }
+
+  /** trim characters from string at string end
+   * @param string string
+   * @param chars characters to trim
+   * @return trimmed string
+   */
+  public static String trimEnd(String string, String chars)
+  {
+    int i = string.length()-1;
+    while (   (i > 0)
+           && (chars.indexOf(string.charAt(i)) >= 0)
+          )
+    {
+      i--;
+    }
+
+    return string.substring(0,i+1);
+  }
+
+  /** trim characters from string at string beginning
+   * @param string string
+   * @return trimmed string
+   */
+  public static String trimEnd(String string)
+  {
+    return trimEnd(string,WHITE_SPACES);
+  }
+
+  /** trim characters from string
+   * @param string string
+   * @param chars characters to trim
+   */
+  public static String trim(String string, String chars)
+  {
+    int i0 = 0;
+    while (   (i0 < string.length())
+           && (chars.indexOf(string.charAt(i0)) >= 0)
+          )
+    {
+      i0++;
+    }
+    int i1 = string.length()-1;
+    while (   (i1 >= i0)
+           && (chars.indexOf(string.charAt(i1)) >= 0)
+          )
+    {
+      i1--;
+    }
+
+    return string.substring(i0,i1-i0+1);
+  }
+
+  /** trim characters from string at string beginning
+   * @param string string
+   * @return trimmed string
+   */
+  public static String trim(String string)
+  {
+    return trim(string,WHITE_SPACES);
+  }
+
+  /** escape quote character and \ in string, enclose in quote character
    * @param string string to escape
    * @param enclosingQuotes true to add enclosing quotes "
    * @param quoteChar quote character
@@ -421,6 +511,46 @@ public class StringUtils
     return join(array," ");
   }
 
+  /** join double array with space
+   * @param strings strings to join
+   * @return string
+   */
+  public static String join(EnumSet enumSet, String joinString, boolean ordinal)
+  {
+    StringBuilder buffer = new StringBuilder();
+    String        string;
+    if (enumSet != null)
+    {
+      Iterator iterator = enumSet.iterator();
+      while (iterator.hasNext())
+      {
+        Enum value = (Enum)iterator.next();
+        if (buffer.length() > 0) buffer.append(joinString);
+        buffer.append((ordinal) ? Integer.toString(value.ordinal()) : value.toString());
+      }
+    }
+
+    return buffer.toString();
+  }
+
+  /** join double array with space
+   * @param strings strings to join
+   * @return string
+   */
+  public static String join(EnumSet enumSet, String joinString)
+  {
+    return join(enumSet,joinString,false);
+  }
+
+  /** join double array with space
+   * @param strings strings to join
+   * @return string
+   */
+  public static String join(EnumSet enumSet)
+  {
+    return join(enumSet,",");
+  }
+
   /** split string
    * @param string string to split
    * @param splitChars characters used for splitting
@@ -601,20 +731,58 @@ public class StringUtils
     return split(string,splitChar,true);
   }
 
-  /** create n-concationation of string 
-   * @param string string to contact
+  /** split string (no quotes) at white-spaces
+   * @param string string to split
+   * @return string array
+   */
+  public static String[] split(String string)
+  {
+    return split(string,WHITE_SPACES);
+  }
+
+  /** replace string in stringn array
+   * @param strings string array
+   * @param from,to from/to string
+   */
+  public static void replace(String[] strings, String from, String to)
+  {
+    for (int z = 0; z < strings.length; z++)
+    {
+      strings[z] = strings[z].replace(from,to);
+    }
+  }
+
+  /** create n-concationation of string
+   * @param string string to repeat
    * @param number of concatations
    * @return string+...+string (count times)
    */
   public static String repeat(String string, int count)
   {
     StringBuilder buffer = new StringBuilder();
- 
+
     for (int z = 0; z < count; z++)
     {
       buffer.append(string);
     }
- 
+
+    return buffer.toString();
+  }
+
+  /** create n-concationation of string
+   * @param ch charater to repeat
+   * @param number of concatations
+   * @return string+...+string (count times)
+   */
+  public static String repeat(char ch, int count)
+  {
+    StringBuilder buffer = new StringBuilder();
+
+    for (int z = 0; z < count; z++)
+    {
+      buffer.append(ch);
+    }
+
     return buffer.toString();
   }
 
@@ -644,13 +812,8 @@ public class StringUtils
           z++;
           break;
         case '\\':
-          buffer.append('\\');
+          buffer.append("\\\\");
           z++;
-          if (z < string.length())
-          {
-            buffer.append(string.charAt(z));
-            z++;
-          }
           break;
         case '[':
         case ']':
@@ -682,7 +845,7 @@ public class StringUtils
    */
   public static boolean parseBoolean(String string)
   {
-    final String TRUE_STRINGS[] = 
+    final String TRUE_STRINGS[] =
     {
       "1",
       "true",
@@ -696,6 +859,70 @@ public class StringUtils
     }
 
     return false;
+  }
+
+  /** parse string with enum value
+   * @param enumClass enum class
+   * @param string string
+   * @return enum value or null
+   */
+  public static Enum parseEnum(Class enumClass, String string)
+  {
+    int n;
+    try
+    {
+      n = Integer.parseInt(string);
+    }
+    catch (NumberFormatException exception)
+    {
+      n = -1;
+    }
+    for (Enum enumConstant : (Enum[])enumClass.getEnumConstants())
+    {
+      if (   string.equalsIgnoreCase(enumConstant.toString())
+          || (enumConstant.ordinal() == n)
+         )
+      {
+        return enumConstant;
+      }
+    }
+
+    return null;
+  }
+
+  /** parse string with enum set value
+   * @param enumClass enum class
+   * @param string string
+   * @return enum set value or null
+   */
+  public static EnumSet parseEnumSet(Class enumClass, String string)
+  {
+    EnumSet enumSet = EnumSet.noneOf(enumClass);
+
+    Enum[] enumConstants = (Enum[])enumClass.getEnumConstants();
+    for (String value : split(string,",",false))
+    {
+      int n;
+      try
+      {
+        n = Integer.parseInt(value);
+      }
+      catch (NumberFormatException exception)
+      {
+        n = -1;
+      }
+      for (Enum enumConstant : enumConstants)
+      {
+        if (   value.equalsIgnoreCase(enumConstant.toString())
+            || (enumConstant.ordinal() == n)
+           )
+        {
+          enumSet.add(enumConstant);
+        }
+      }
+    }
+
+    return enumSet;
   }
 }
 
