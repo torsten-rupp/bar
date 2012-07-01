@@ -157,13 +157,13 @@ ERROR READ_KEY_FAIL
 ERROR INVALID_KEY                    "invalid key"
 ERROR INVALID_KEY_LENGTH             "invalid key length"
 ERROR INVALID_BLOCK_LENGTH           "invalid block length"
-ERROR NO_PUBLIC_KEY                  "no public key"
-ERROR NO_PRIVATE_KEY                 "no private key"
-ERROR NOT_A_PUBLIC_KEY               "key is not a public key"
-ERROR NOT_A_PRIVATE_KEY              "key is not a private key"
+ERROR NO_PUBLIC_KEY                  "no public encryption key"
+ERROR NO_PRIVATE_KEY                 "no private decryption key"
+ERROR NOT_A_PUBLIC_KEY               "key is not a public encryption key"
+ERROR NOT_A_PRIVATE_KEY              "key is not a private decryption key"
 ERROR KEY_ENCRYPT_FAIL               "key encryption fail"
 ERROR KEY_DECRYPT_FAIL               "key decryption fail"
-ERROR WRONG_PRIVATE_KEY              "wrong private key"
+ERROR WRONG_PRIVATE_KEY              "wrong private decryption key"
 
 // file i/o
 ERROR CREATE_FILE
