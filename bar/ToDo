@@ -4,7 +4,7 @@ ToDo
 - internal pipeling of commands for e. g. repacking, remove/add encryption
 - support ssh-agent (extend libssh2?)
 - improve logfile
-- ssl server: check common name? 
+- ssl server: check common name?
 - improve password quality checker
 - novice/expert mode in barcontrol.tcl
 - barconfig for creating/edit bar.cfg
@@ -18,12 +18,12 @@ ToDo
 - avoid negative bytes/s in performance monitor
 - multiple instances of backup threads
 - check ssl certificates
-- multi-threaded compression?
+- multi-threaded compression? multi-core usage
 - store partitions which are mounted ("on-the-fly-freeze")
 - md5 file check sum?
 - support sparse file when restoring
 - compile-info (what is included, which version)
-- delete temporary image directory when writing dvd
+- delete tempora ry image directory when writing dvd
 - support for config reload with SIGHUP
 - support lzo compression library
 - support for rmt? (tape control tool)
@@ -40,7 +40,14 @@ ToDo
 - progress bar when writing CDs
 - when writing a DVD do not write more data then given volume size, e. g. 4*1G<=4G, do not write 5*1G
 - dvd: eject last disk
-- barcontrol: command to clean stored passwords
 - schedule: add tag text which can be used in the archive file name
 - add debug version to packages
-- extract/test cd://..., dvd://..., bd://...
+- support SMB without mounting
+- disable CTS in crypt and fill last block with random data: this avoid that the
+  blocks are reordered because of CTS (block n and n-1 are exchanged!) and blocks
+  must be written and read with identically buffer sizes! For writting single blocks
+  CTS is not used anyway
+- -pedantic -std=gnu99
+- define max. number of concurrent connections to sftp/scp host
+  including background index thread; pause index thread on demand
+- execute VACUUM on database/enable auto-vacuum?
