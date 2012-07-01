@@ -2396,28 +2396,57 @@ void printError(const char *text, ...)
   String_delete(line);
 }
 
+/***********************************************************************\
+* Name   : executeIOlogPostProcess
+* Purpose: process log-post command stderr output
+* Input  : stringList - strerr string list
+*          line       - line
+* Output : -
+* Return : -
+* Notes  : string list will be shortend to last 5 entries
+\***********************************************************************/
+
+LOCAL void executeIOlogPostProcess(StringList   *stringList,
+                                   const String line
+                                  )
+{
+  assert(stringList != NULL);
+  assert(line != NULL);
+
+  StringList_append(stringList,line);
+  while (StringList_count(stringList) > 5)
+  {
+    String_delete(StringList_getFirst(stringList,NULL));
+  }
+}
+
 void logPostProcess(void)
 {
-  TextMacro textMacros[1];
-  Errors    error;
+  TextMacro  textMacros[1];
+  StringList stderrList;
+  Errors     error;
+  StringNode *stringNode;
+  String     string;
 
-  // flush logs
+  // flush log
   if (logFile != NULL) fflush(logFile);
-  if (tmpLogFile != NULL) fflush(tmpLogFile);
 
   // close temporary log file
   if (tmpLogFile != NULL) fclose(tmpLogFile); tmpLogFile = NULL;
 
-  // log post command
+  // log post command for temporary log file
   if (logPostCommand != NULL)
   {
     printInfo(2,"Log post process...");
+
     TEXT_MACRO_N_STRING(textMacros[0],"%file",tmpLogFileName);
+
+    StringList_init(&stderrList);
     error = Misc_executeCommand(logPostCommand,
                                 textMacros,SIZE_OF_ARRAY(textMacros),
                                 NULL,
-                                NULL,
-                                NULL
+                                (ExecuteIOFunction)executeIOlogPostProcess,
+                                &stderrList
                                );
     if (error == ERROR_NONE)
     {
@@ -2427,7 +2456,12 @@ void logPostProcess(void)
     {
       printInfo(2,"FAIL\n");
       printError("Cannot post-process log file (error: %s)\n",Errors_getText(error));
+      STRINGLIST_ITERATE(&stderrList,stringNode,string)
+      {
+        printError("  %s\n",String_cString(string));
+      }
     }
+    StringList_done(&stderrList);
   }
 
   // reset and reopen temporary log file
