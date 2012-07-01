@@ -81,6 +81,8 @@ typedef struct PasswordNode
 typedef struct
 {
   LIST_HEADER(PasswordNode);
+
+  Semaphore lock;
 } PasswordList;
 
 // password handle
@@ -2353,6 +2355,7 @@ LOCAL Errors readHardLinkDataBlock(ArchiveEntryInfo *archiveEntryInfo)
 Errors Archive_initAll(void)
 {
   // initialize variables
+  Semaphore_init(&decryptPasswordList.lock);
   List_init(&decryptPasswordList);
 
   return ERROR_NONE;
@@ -2361,6 +2364,7 @@ Errors Archive_initAll(void)
 void Archive_doneAll(void)
 {
   List_done(&decryptPasswordList,(ListNodeFreeFunction)freePasswordNode,NULL);
+  Semaphore_done(&decryptPasswordList.lock);
 }
 
 bool Archive_isArchiveFile(const String fileName)
@@ -2393,12 +2397,18 @@ bool Archive_isArchiveFile(const String fileName)
 
 void Archive_clearDecryptPasswords(void)
 {
-  List_clear(&decryptPasswordList,(ListNodeFreeFunction)freePasswordNode,NULL);
+  SemaphoreLock semaphoreLock;
+
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&decryptPasswordList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+  {
+    List_clear(&decryptPasswordList,(ListNodeFreeFunction)freePasswordNode,NULL);
+  }
 }
 
 const Password *Archive_appendDecryptPassword(const Password *password)
 {
-  PasswordNode *passwordNode;
+  PasswordNode  *passwordNode;
+  SemaphoreLock semaphoreLock;
 
   assert(password != NULL);
 
@@ -2409,7 +2419,10 @@ const Password *Archive_appendDecryptPassword(const Password *password)
   }
   passwordNode->password = Password_duplicate(password);
 
-  List_append(&decryptPasswordList,passwordNode);
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&decryptPasswordList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+  {
+    List_append(&decryptPasswordList,passwordNode);
+  }
 
   return passwordNode->password;
 }
