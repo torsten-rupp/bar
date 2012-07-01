@@ -1587,6 +1587,11 @@ public class BARControl
         }
         if (Settings.indexDatabaseEntriesListPattern != null)
         {
+          final String[] PATTERN_MAP_FROM  = new String[]{"\n","\r","\\"};
+          final String[] PATTERN_MAP_TO    = new String[]{"\\n","\\r","\\\\"};
+          final String[] FILENAME_MAP_FROM = new String[]{"\\n","\\r","\\\\"};
+          final String[] FILENAME_MAP_TO   = new String[]{"\n","\r","\\"};
+
           // list storage index
           Command  command = BARServer.runCommand("INDEX_ENTRIES_LIST 0 * 0 "+StringUtils.escape(Settings.indexDatabaseEntriesListPattern));
           String   line;
@@ -1601,7 +1606,7 @@ public class BARControl
                 /* get data
                    format:
                      storage name
-                     created date/time
+                     storage date/time
                      file name
                      size
                      date/time
@@ -1611,12 +1616,12 @@ public class BARControl
                      fragment offset
                      fragment size
                 */
-                String storageName    = (String)data[0];
-                String fileName       = (String)data[2];
-                long   size           = (Long  )data[3];
-                long   datetime       = (Long  )data[4];
-                long   fragmentOffset = (Long  )data[8];
-                long   fragmentSize   = (Long  )data[9];
+                String storageName    = StringUtils.map((String)data[0],FILENAME_MAP_FROM,FILENAME_MAP_TO);
+                String fileName       = StringUtils.map((String)data[2],FILENAME_MAP_FROM,FILENAME_MAP_TO);
+                long   size           = (Long)data[3];
+                long   datetime       = (Long)data[4];
+                long   fragmentOffset = (Long)data[8];
+                long   fragmentSize   = (Long)data[9];
 
                 System.out.println(String.format("%s: FILE %-40s %12d",
                                                  storageName,
@@ -1630,17 +1635,17 @@ public class BARControl
                 /* get data
                    format:
                      storage name
-                     created date/time
+                     storage date/time
                      name
                      size
                      blockOffset
                      blockCount
                 */
-                String storageName = (String)data[0];
-                String imageName   = (String)data[2];
-                long   size        = (Long  )data[3];
-                long   blockOffset = (Long  )data[4];
-                long   blockCount  = (Long  )data[5];
+                String storageName = StringUtils.map((String)data[0],FILENAME_MAP_FROM,FILENAME_MAP_TO);
+                String imageName   = StringUtils.map((String)data[2],FILENAME_MAP_FROM,FILENAME_MAP_TO);
+                long   size        = (Long)data[3];
+                long   blockOffset = (Long)data[4];
+                long   blockCount  = (Long)data[5];
 
                 System.out.println(String.format("%s: IMAGE %-40s %12d",
                                                  storageName,
@@ -1654,16 +1659,16 @@ public class BARControl
                 /* get data
                    format:
                      storage name
-                     created date/time
+                     storage date/time
                      directory name
                      date/time
                      user id
                      group id
                      permission
                 */
-                String storageName   = (String)data[0];
-                String directoryName = (String)data[2];
-                long   datetime      = (Long  )data[3];
+                String storageName   = StringUtils.map((String)data[0],FILENAME_MAP_FROM,FILENAME_MAP_TO);
+                String directoryName = StringUtils.map((String)data[2],FILENAME_MAP_FROM,FILENAME_MAP_TO);
+                long   datetime      = (Long)data[3];
 
                 System.out.println(String.format("%s: DIR %-40s",
                                                  storageName,
@@ -1676,7 +1681,7 @@ public class BARControl
                 /* get data
                    format:
                      storage name
-                     created date/time
+                     storage date/time
                      link name
                      destination name
                      date/time
@@ -1684,10 +1689,10 @@ public class BARControl
                      group id
                      permission
                 */
-                String storageName     = (String)data[0];
-                String linkName        = (String)data[2];
-                String destinationName = (String)data[3];
-                long   datetime        = (Long  )data[4];
+                String storageName     = StringUtils.map((String)data[0],FILENAME_MAP_FROM,FILENAME_MAP_TO);
+                String linkName        = StringUtils.map((String)data[2],FILENAME_MAP_FROM,FILENAME_MAP_TO);
+                String destinationName = StringUtils.map((String)data[3],FILENAME_MAP_FROM,FILENAME_MAP_TO);
+                long   datetime        = (Long)data[4];
 
                 System.out.println(String.format("%s: LINK %s -> %s",
                                                  storageName,
@@ -1696,21 +1701,50 @@ public class BARControl
                                                 )
                                   );
               }
+              else if (StringParser.parse(line,"HARDLINK %S %ld %S %ld %ld %d %d %d %ld %ld",data,StringParser.QUOTE_CHARS))
+              {
+                /* get data
+                   format:
+                     storage name
+                     storage date/time
+                     file name
+                     size
+                     date/time
+                     user id
+                     group id
+                     permission
+                     fragment offset
+                     fragment size
+                */
+                String storageName     = StringUtils.map((String)data[0],FILENAME_MAP_FROM,FILENAME_MAP_TO);
+                String fileName        = StringUtils.map((String)data[2],FILENAME_MAP_FROM,FILENAME_MAP_TO);
+                long   size            = (Long)data[3];
+                long   datetime        = (Long)data[4];
+                long   fragmentOffset  = (Long)data[8];
+                long   fragmentSize    = (Long)data[9];
+
+                System.out.println(String.format("%s: HARDLINK %-40s %12d",
+                                                 storageName,
+                                                 fileName,
+                                                 size
+                                                )
+                                  );
+              }
               else if (StringParser.parse(line,"SPECIAL %S %ld %S %ld %d %d %d",data,StringParser.QUOTE_CHARS))
               {
                 /* get data
                    format:
                      storage name
-                     created date/time
+                     storage date/time
                      name
                      date/time
                      user id
                      group id
                      permission
                 */
-                String storageName = (String)data[0];
-                String name        = (String)data[2];
-                long   datetime    = (Long  )data[3];
+                String storageName = StringUtils.map((String)data[0],FILENAME_MAP_FROM,FILENAME_MAP_TO);
+                String name        = StringUtils.map((String)data[2],FILENAME_MAP_FROM,FILENAME_MAP_TO);
+                long   datetime    = (Long)data[3];
 
                 System.out.println(String.format("%s: SPECIAL %-40s",
                                                  storageName,
@@ -1718,7 +1752,7 @@ public class BARControl
                                                 )
                                   );
               }
-              else
+              else if (!line.isEmpty())
               {
                 if (Settings.debugFlag)
                 {
