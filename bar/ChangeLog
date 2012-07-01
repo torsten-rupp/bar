@@ -49,6 +49,23 @@
     anymore by all Linux versions
   * if an encryption password is specified on the command
     line do not ask for another password if decryption fail
+  * clean-up of BAR manual
+  * improved console output with multiple threads: avoid
+    mixing output of lines in interactive mode
+  * renamed command line option --database-file -> --database-index
+  * renamed command line option --no-auto-update-database-index
+    -> --database-index-no-auto-update
+  * renamed config option database-file -> index-database
+  * renamed config option no-auto-update-database-index
+    -> index-database-no-auto-update
+  * added command line/config option --datbase-index-keep-time
+  * BARControl: renamed option --index-add -> --index-database-add,
+    renamed option --index-remove -> --index-database-move
+  * BARControl: renamed config option pause-index-update ->
+    pause-index-database-update
+  * fixed possible crash in logfile post processor
+  * upgraded used libssh2 to version 1.4.2
+  * BARControl: fix abort job. Set last executed time.
 
 2012-01-14 0.16g
   * fix restore: do not create empty parent directories
