@@ -300,7 +300,7 @@ typedef struct
   SessionId           sessionId;
   AuthorizationStates authorizationState;
 
-  uint                abortId;                             // command id to abort
+  uint                abortCommandId;                      // command id to abort
 
   union
   {
@@ -571,7 +571,7 @@ LOCAL const char *getCryptPasswordModeName(PasswordModes passwordMode)
 }
 
 /***********************************************************************\
-* Name   : copySchedule
+* Name   : copyScheduleNode
 * Purpose: copy allocated schedule node
 * Input  : scheduleNode - schedule node
 * Output : -
@@ -579,9 +579,9 @@ LOCAL const char *getCryptPasswordModeName(PasswordModes passwordMode)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL ScheduleNode *copySchedule(ScheduleNode *scheduleNode,
-                                 void         *userData
-                                )
+LOCAL ScheduleNode *copyScheduleNode(ScheduleNode *scheduleNode,
+                                     void         *userData
+                                    )
 {
   ScheduleNode *newScheduleNode;
 
@@ -764,7 +764,7 @@ LOCAL JobNode *copyJob(JobNode      *jobNode,
   PatternList_init(&newJobNode->excludePatternList); PatternList_copy(&jobNode->excludePatternList,&newJobNode->excludePatternList);
   PatternList_init(&newJobNode->deltaSourcePatternList); PatternList_copy(&jobNode->deltaSourcePatternList,&newJobNode->deltaSourcePatternList);
   PatternList_init(&newJobNode->compressExcludePatternList); PatternList_copy(&jobNode->compressExcludePatternList,&newJobNode->compressExcludePatternList);
-  List_init(&newJobNode->scheduleList); List_copy(&newJobNode->scheduleList,&jobNode->scheduleList,NULL,NULL,NULL,(ListNodeCopyFunction)copySchedule,NULL);
+  List_init(&newJobNode->scheduleList); List_copy(&newJobNode->scheduleList,&jobNode->scheduleList,NULL,NULL,NULL,(ListNodeCopyFunction)copyScheduleNode,NULL);
   initJobOptions(&newJobNode->jobOptions); copyJobOptions(&newJobNode->jobOptions,&newJobNode->jobOptions);
   newJobNode->modifiedFlag                   = TRUE;
 
@@ -880,7 +880,7 @@ LOCAL void doneJob(JobNode *jobNode)
 {
   assert(jobNode != NULL);
 
-  // set execution time, state
+  // set executed time, state
   jobNode->lastExecutedDateTime = Misc_getCurrentDateTime();
   if      (jobNode->requestedAbortFlag)
   {
@@ -2688,7 +2688,7 @@ LOCAL bool commandAborted(ClientInfo *clientInfo, uint commandId)
 
   assert(clientInfo != NULL);
 
-  abortedFlag = (clientInfo->abortId == commandId);
+  abortedFlag = (clientInfo->abortCommandId == commandId);
   switch (clientInfo->type)
   {
     case CLIENT_TYPE_BATCH:
@@ -3140,7 +3140,7 @@ LOCAL void serverCommand_abort(ClientInfo *clientInfo, uint id, const String arg
   commandId = String_toInteger(arguments[0],0,NULL,NULL,0);
 
   // abort command
-  clientInfo->abortId = commandId;
+  clientInfo->abortCommandId = commandId;
 
   // format result
   sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
@@ -3496,8 +3496,8 @@ LOCAL void serverCommand_deviceList(ClientInfo *clientInfo, uint id, const Strin
 
 LOCAL void serverCommand_fileList(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
 {
-  const char* FILENAME_MAP_FROM[] = {"\n","\r","\\"};
-  const char* FILENAME_MAP_TO[]   = {"\\n","\\r","\\\\"};
+  const char* MAP_BIN[]  = {"\n","\r","\\"};
+  const char* MAP_TEXT[] = {"\\n","\\r","\\\\"};
 
   Errors                     error;
   StorageDirectoryListHandle storageDirectoryListHandle;
@@ -3534,7 +3534,7 @@ LOCAL void serverCommand_fileList(ClientInfo *clientInfo, uint id, const String 
     error = Storage_readDirectoryList(&storageDirectoryListHandle,fileName,&fileInfo);
     if (error == ERROR_NONE)
     {
-      String_mapCString(String_set(string,fileName),STRING_BEGIN,FILENAME_MAP_FROM,FILENAME_MAP_TO,SIZE_OF_ARRAY(FILENAME_MAP_FROM));
+      String_mapCString(String_set(string,fileName),STRING_BEGIN,MAP_BIN,MAP_TEXT,SIZE_OF_ARRAY(MAP_BIN));
       switch (fileInfo.type)
       {
         case FILE_TYPE_FILE:
@@ -3998,8 +3998,8 @@ LOCAL void serverCommand_jobList(ClientInfo *clientInfo, uint id, const String a
 
 LOCAL void serverCommand_jobInfo(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
 {
-  const char* FILENAME_MAP_FROM[] = {"\n","\r","\\"};
-  const char* FILENAME_MAP_TO[]   = {"\\n","\\r","\\\\"};
+  const char* MAP_BIN[]  = {"\n","\r","\\"};
+  const char* MAP_TEXT[] = {"\\n","\\r","\\\\"};
 
   uint       jobId;
   JobNode    *jobNode;
@@ -4041,7 +4041,7 @@ LOCAL void serverCommand_jobInfo(ClientInfo *clientInfo, uint id, const String a
     {
       message = "";
     }
-    string = String_mapCString(String_duplicate(jobNode->runningInfo.name),STRING_BEGIN,FILENAME_MAP_FROM,FILENAME_MAP_TO,SIZE_OF_ARRAY(FILENAME_MAP_FROM));
+    string = String_mapCString(String_duplicate(jobNode->runningInfo.name),STRING_BEGIN,MAP_BIN,MAP_TEXT,SIZE_OF_ARRAY(MAP_BIN));
     sendClientResult(clientInfo,id,TRUE,ERROR_NONE,
                      "%'s %'s %lu %llu %lu %llu %lu %llu %lu %llu %f %f %f %llu %f %'S %llu %llu %'S %llu %llu %d %f %d",
                      getJobStateText(&jobNode->jobOptions,jobNode->state),
@@ -4556,7 +4556,8 @@ LOCAL void serverCommand_jobAbort(ClientInfo *clientInfo, uint id, const String 
     }
     else if (CHECK_JOB_IS_ACTIVE(jobNode))
     {
-      jobNode->state = JOB_STATE_NONE;
+      jobNode->lastExecutedDateTime = Misc_getCurrentDateTime();
+      jobNode->state                = JOB_STATE_NONE;
     }
 
     // store schedule info
@@ -4611,8 +4612,8 @@ LOCAL void serverCommand_jobFlush(ClientInfo *clientInfo, uint id, const String 
 
 LOCAL void serverCommand_includeList(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
 {
-  const char* PATTERN_MAP_FROM[] = {"\n","\r","\\"};
-  const char* PATTERN_MAP_TO[]   = {"\\n","\\r","\\\\"};
+  const char* MAP_BIN[]  = {"\n","\r","\\"};
+  const char* MAP_TEXT[] = {"\\n","\\r","\\\\"};
 
   uint       jobId;
   JobNode    *jobNode;
@@ -4669,7 +4670,7 @@ LOCAL void serverCommand_includeList(ClientInfo *clientInfo, uint id, const Stri
             break;
         #endif /* NDEBUG */
       }
-      String_mapCString(String_set(string,entryNode->string),STRING_BEGIN,PATTERN_MAP_FROM,PATTERN_MAP_TO,SIZE_OF_ARRAY(PATTERN_MAP_FROM));
+      String_mapCString(String_set(string,entryNode->string),STRING_BEGIN,MAP_BIN,MAP_TEXT,SIZE_OF_ARRAY(MAP_BIN));
       sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
                        "%s %s %'S",
                        entryType,
@@ -4754,8 +4755,8 @@ LOCAL void serverCommand_includeListClear(ClientInfo *clientInfo, uint id, const
 
 LOCAL void serverCommand_includeListAdd(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
 {
-  const char* PATTERN_MAP_FROM[] = {"\\n","\\r","\\\\"};
-  const char* PATTERN_MAP_TO[]   = {"\n","\r","\\"};
+  const char* MAP_TEXT[] = {"\\n","\\r","\\\\"};
+  const char* MAP_BIN[]   = {"\n","\r","\\"};
 
   uint          jobId;
   EntryTypes    entryType;
@@ -4822,7 +4823,7 @@ LOCAL void serverCommand_includeListAdd(ClientInfo *clientInfo, uint id, const S
   }
   string = arguments[3];
 
-  pattern = String_mapCString(String_duplicate(string),STRING_BEGIN,PATTERN_MAP_FROM,PATTERN_MAP_TO,SIZE_OF_ARRAY(PATTERN_MAP_FROM));
+  pattern = String_mapCString(String_duplicate(string),STRING_BEGIN,MAP_TEXT,MAP_BIN,SIZE_OF_ARRAY(MAP_TEXT));
   SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
   {
     // find job
@@ -4862,8 +4863,8 @@ LOCAL void serverCommand_includeListAdd(ClientInfo *clientInfo, uint id, const S
 
 LOCAL void serverCommand_excludeList(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
 {
-  const char* PATTERN_MAP_FROM[] = {"\n","\r","\\"};
-  const char* PATTERN_MAP_TO[]   = {"\\n","\\r","\\\\"};
+  const char* MAP_BIN[]  = {"\n","\r","\\"};
+  const char* MAP_TEXT[] = {"\\n","\\r","\\\\"};
 
   uint        jobId;
   JobNode     *jobNode;
@@ -4909,7 +4910,7 @@ LOCAL void serverCommand_excludeList(ClientInfo *clientInfo, uint id, const Stri
             break;
         #endif /* NDEBUG */
       }
-      String_mapCString(String_set(string,patternNode->string),STRING_BEGIN,PATTERN_MAP_FROM,PATTERN_MAP_TO,SIZE_OF_ARRAY(PATTERN_MAP_FROM));
+      String_mapCString(String_set(string,patternNode->string),STRING_BEGIN,MAP_BIN,MAP_TEXT,SIZE_OF_ARRAY(MAP_BIN));
       sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
                        "%s %'S",
                        type,
@@ -4992,8 +4993,8 @@ LOCAL void serverCommand_excludeListClear(ClientInfo *clientInfo, uint id, const
 
 LOCAL void serverCommand_excludeListAdd(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
 {
-  const char* PATTERN_MAP_FROM[] = {"\\n","\\r","\\\\"};
-  const char* PATTERN_MAP_TO[]   = {"\n","\r","\\"};
+  const char* MAP_BIN[]  = {"\n","\r","\\"};
+  const char* MAP_TEXT[] = {"\\n","\\r","\\\\"};
 
   uint          jobId;
   PatternTypes  patternType;
@@ -5041,7 +5042,7 @@ LOCAL void serverCommand_excludeListAdd(ClientInfo *clientInfo, uint id, const S
   }
   string = arguments[2];
 
-  pattern = String_mapCString(String_duplicate(string),STRING_BEGIN,PATTERN_MAP_FROM,PATTERN_MAP_TO,SIZE_OF_ARRAY(PATTERN_MAP_FROM));
+  pattern = String_mapCString(String_duplicate(string),STRING_BEGIN,MAP_TEXT,MAP_BIN,SIZE_OF_ARRAY(MAP_TEXT));
   SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
   {
     // find job
@@ -6549,8 +6550,8 @@ LOCAL bool updateRestoreCommandStatus(RestoreCommandInfo      *restoreCommandInf
                                       const RestoreStatusInfo *restoreStatusInfo
                                      )
 {
-  const char* FILENAME_MAP_FROM[] = {"\n","\r","\\"};
-  const char* FILENAME_MAP_TO[]   = {"\\n","\\r","\\\\"};
+  const char* MAP_BIN[]  = {"\n","\r","\\"};
+  const char* MAP_TEXT[] = {"\\n","\\r","\\\\"};
 
   String string;
 
@@ -6561,7 +6562,7 @@ LOCAL bool updateRestoreCommandStatus(RestoreCommandInfo      *restoreCommandInf
 
   UNUSED_VARIABLE(error);
 
-  string = String_mapCString(String_duplicate(restoreStatusInfo->name),STRING_BEGIN,FILENAME_MAP_FROM,FILENAME_MAP_TO,SIZE_OF_ARRAY(FILENAME_MAP_FROM));
+  string = String_mapCString(String_duplicate(restoreStatusInfo->name),STRING_BEGIN,MAP_BIN,MAP_TEXT,SIZE_OF_ARRAY(MAP_BIN));
   sendClientResult(restoreCommandInfo->clientInfo,
                    restoreCommandInfo->id,
                    FALSE,
@@ -6659,8 +6660,8 @@ LOCAL void serverCommand_storageListAdd(ClientInfo *clientInfo, uint id, const S
 
 LOCAL void serverCommand_restore(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
 {
-  const char* PATTERN_MAP_FROM[]  = {"\\n","\\r","\\\\"};
-  const char* PATTERN_MAP_TO[]    = {"\n","\r","\\"};
+  const char* MAP_BIN[]  = {"\n","\r","\\"};
+  const char* MAP_TEXT[] = {"\\n","\\r","\\\\"};
 
   StringList         archiveNameList;
   String             string;
@@ -6716,7 +6717,7 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, uint id, const String a
     EntryList_append(&includeEntryList,
 //???
 ENTRY_TYPE_FILE,
-                     String_mapCString(String_set(string,arguments[z]),STRING_BEGIN,PATTERN_MAP_FROM,PATTERN_MAP_TO,SIZE_OF_ARRAY(PATTERN_MAP_FROM)),
+                     String_mapCString(String_set(string,arguments[z]),STRING_BEGIN,MAP_TEXT,MAP_BIN,SIZE_OF_ARRAY(MAP_TEXT)),
                      PATTERN_TYPE_GLOB
                     );
   }
@@ -6845,6 +6846,9 @@ LOCAL void serverCommand_indexStorageInfo(ClientInfo *clientInfo, uint id, const
 
 LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
 {
+  const char* MAP_BIN[]  = {"\n","\r","\\"};
+  const char* MAP_TEXT[] = {"\\n","\\r","\\\\"};
+
   ulong               maxCount;
   String              indexStatusText;
   IndexStates         indexState;
@@ -6854,13 +6858,14 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const
   Errors              error;
   DatabaseQueryHandle databaseQueryHandle;
   ulong               n;
-  DatabaseId          storageId;
   String              storageName;
-  uint64              createdDateTime;
+  String              printableStorageName;
+  String              errorMessage;
+  String              string1,string2;
+  DatabaseId          storageId;
+  uint64              storageDateTime;
   uint64              size;
   uint64              lastCheckedDateTime;
-  String              errorMessage;
-  String              printableStorageName;
 
   assert(clientInfo != NULL);
   assert(arguments != NULL);
@@ -6904,6 +6909,8 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const
     storageName          = String_new();
     errorMessage         = String_new();
     printableStorageName = String_new();
+    string1              = String_new();
+    string2              = String_new();
 
     // list index
     error = Index_initListStorage(&databaseQueryHandle,
@@ -6913,6 +6920,8 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const
                                  );
     if (error != ERROR_NONE)
     {
+      String_delete(string2);
+      String_delete(string1);
       String_delete(printableStorageName);
       String_delete(errorMessage);
       String_delete(storageName);
@@ -6925,7 +6934,7 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const
            && Index_getNextStorage(&databaseQueryHandle,
                                    &storageId,
                                    storageName,
-                                   &createdDateTime,
+                                   &storageDateTime,
                                    &size,
                                    &indexState,
                                    &indexMode,
@@ -6939,22 +6948,26 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const
 
       Storage_getPrintableName(printableStorageName,storageName);
 
+      String_mapCString(String_set(string1,printableStorageName),STRING_BEGIN,MAP_BIN,MAP_TEXT,SIZE_OF_ARRAY(MAP_BIN)); \
+      String_mapCString(String_set(string2,errorMessage),STRING_BEGIN,MAP_BIN,MAP_TEXT,SIZE_OF_ARRAY(MAP_BIN)); \
       sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
                        "%llu %'S %llu %llu %'s %'s %llu %'S",
                        storageId,
-                       printableStorageName,
-                       createdDateTime,
+                       string1,
+                       storageDateTime,
                        size,
                        INDEX_STATE_STRINGS[indexState],
                        INDEX_MODE_STRINGS[indexMode],
                        lastCheckedDateTime,
-                       errorMessage
+                       string2
                       );
       n++;
     }
     Index_doneList(&databaseQueryHandle);
 
     // free resources
+    String_delete(string2);
+    String_delete(string1);
     String_delete(printableStorageName);
     String_delete(errorMessage);
     String_delete(storageName);
@@ -7512,8 +7525,8 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
   #define SEND_FILE_ENTRY(storageName,storageDateTime,name,size,timeModified,userId,groupId,permission,fragmentOffset,fragmentSize) \
     do \
     { \
-      String_mapCString(String_set(string1,storageName),STRING_BEGIN,FILENAME_MAP_FROM,FILENAME_MAP_TO,SIZE_OF_ARRAY(FILENAME_MAP_FROM)); \
-      String_mapCString(String_set(string2,name),STRING_BEGIN,FILENAME_MAP_FROM,FILENAME_MAP_TO,SIZE_OF_ARRAY(FILENAME_MAP_FROM)); \
+      String_mapCString(String_set(string1,storageName),STRING_BEGIN,MAP_BIN,MAP_BIN,SIZE_OF_ARRAY(MAP_BIN)); \
+      String_mapCString(String_set(string2,name),STRING_BEGIN,MAP_BIN,MAP_BIN,SIZE_OF_ARRAY(MAP_BIN)); \
       sendClientResult(clientInfo,id,FALSE,ERROR_NONE, \
                        "FILE %'S %llu %'S %llu %llu %u %u %u %llu %llu", \
                        string1, \
@@ -7532,8 +7545,8 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
   #define SEND_IMAGE_ENTRY(storageName,storageDateTime,name,size,blockOffset,blockCount) \
     do \
     { \
-      String_mapCString(String_set(string1,storageName),STRING_BEGIN,FILENAME_MAP_FROM,FILENAME_MAP_TO,SIZE_OF_ARRAY(FILENAME_MAP_FROM)); \
-      String_mapCString(String_set(string2,name),STRING_BEGIN,FILENAME_MAP_FROM,FILENAME_MAP_TO,SIZE_OF_ARRAY(FILENAME_MAP_FROM)); \
+      String_mapCString(String_set(string1,storageName),STRING_BEGIN,MAP_BIN,MAP_BIN,SIZE_OF_ARRAY(MAP_BIN)); \
+      String_mapCString(String_set(string2,name),STRING_BEGIN,MAP_BIN,MAP_BIN,SIZE_OF_ARRAY(MAP_BIN)); \
       sendClientResult(clientInfo,id,FALSE,ERROR_NONE, \
                        "IMAGE %'S %llu %'S %llu %ll %llu %llu", \
                        string1, \
@@ -7549,8 +7562,8 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
   #define SEND_DIRECTORY_ENTRY(storageName,storageDateTime,name,timeModified,userId,groupId,permission) \
     do \
     { \
-      String_mapCString(String_set(string1,storageName),STRING_BEGIN,FILENAME_MAP_FROM,FILENAME_MAP_TO,SIZE_OF_ARRAY(FILENAME_MAP_FROM)); \
-      String_mapCString(String_set(string2,name),STRING_BEGIN,FILENAME_MAP_FROM,FILENAME_MAP_TO,SIZE_OF_ARRAY(FILENAME_MAP_FROM)); \
+      String_mapCString(String_set(string1,storageName),STRING_BEGIN,MAP_BIN,MAP_BIN,SIZE_OF_ARRAY(MAP_BIN)); \
+      String_mapCString(String_set(string2,name),STRING_BEGIN,MAP_BIN,MAP_BIN,SIZE_OF_ARRAY(MAP_BIN)); \
       sendClientResult(clientInfo,id,FALSE,ERROR_NONE, \
                        "DIRECTORY %'S %llu %'S %llu %u %u %u", \
                        string1, \
@@ -7566,9 +7579,9 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
   #define SEND_LINK_ENTRY(storageName,storageDateTime,name,destinationName,timeModified,userId,groupId,permission) \
     do \
     { \
-      String_mapCString(String_set(string1,storageName),STRING_BEGIN,FILENAME_MAP_FROM,FILENAME_MAP_TO,SIZE_OF_ARRAY(FILENAME_MAP_FROM)); \
-      String_mapCString(String_set(string2,name),STRING_BEGIN,FILENAME_MAP_FROM,FILENAME_MAP_TO,SIZE_OF_ARRAY(FILENAME_MAP_FROM)); \
-      String_mapCString(String_set(string3,destinationName),STRING_BEGIN,FILENAME_MAP_FROM,FILENAME_MAP_TO,SIZE_OF_ARRAY(FILENAME_MAP_FROM)); \
+      String_mapCString(String_set(string1,storageName),STRING_BEGIN,MAP_BIN,MAP_BIN,SIZE_OF_ARRAY(MAP_BIN)); \
+      String_mapCString(String_set(string2,name),STRING_BEGIN,MAP_BIN,MAP_BIN,SIZE_OF_ARRAY(MAP_BIN)); \
+      String_mapCString(String_set(string3,destinationName),STRING_BEGIN,MAP_BIN,MAP_BIN,SIZE_OF_ARRAY(MAP_BIN)); \
       sendClientResult(clientInfo,id,FALSE,ERROR_NONE, \
                        "LINK %'S %llu %'S %'S %llu %u %u %u", \
                        string1, \
@@ -7585,8 +7598,8 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
   #define SEND_HARDLINK_ENTRY(storageName,storageDateTime,name,size,timeModified,userId,groupId,permission,fragmentOffset,fragmentSize) \
     do \
     { \
-      String_mapCString(String_set(string1,storageName),STRING_BEGIN,FILENAME_MAP_FROM,FILENAME_MAP_TO,SIZE_OF_ARRAY(FILENAME_MAP_FROM)); \
-      String_mapCString(String_set(string2,name),STRING_BEGIN,FILENAME_MAP_FROM,FILENAME_MAP_TO,SIZE_OF_ARRAY(FILENAME_MAP_FROM)); \
+      String_mapCString(String_set(string1,storageName),STRING_BEGIN,MAP_BIN,MAP_BIN,SIZE_OF_ARRAY(MAP_BIN)); \
+      String_mapCString(String_set(string2,name),STRING_BEGIN,MAP_BIN,MAP_BIN,SIZE_OF_ARRAY(MAP_BIN)); \
       sendClientResult(clientInfo,id,FALSE,ERROR_NONE, \
                        "HARDLINK %'S %llu %'S %lld %llu %u %u %u %llu %llu", \
                        string1, \
@@ -7605,8 +7618,8 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
   #define SEND_SPECIAL_ENTRY(storageName,storageDateTime,name,timeModified,userId,groupId,permission) \
     do \
     { \
-      String_mapCString(String_set(string1,storageName),STRING_BEGIN,FILENAME_MAP_FROM,FILENAME_MAP_TO,SIZE_OF_ARRAY(FILENAME_MAP_FROM)); \
-      String_mapCString(String_set(string2,name),STRING_BEGIN,FILENAME_MAP_FROM,FILENAME_MAP_TO,SIZE_OF_ARRAY(FILENAME_MAP_FROM)); \
+      String_mapCString(String_set(string1,storageName),STRING_BEGIN,MAP_BIN,MAP_BIN,SIZE_OF_ARRAY(MAP_BIN)); \
+      String_mapCString(String_set(string2,name),STRING_BEGIN,MAP_BIN,MAP_BIN,SIZE_OF_ARRAY(MAP_BIN)); \
       sendClientResult(clientInfo,id,FALSE,ERROR_NONE, \
                        "SPECIAL %'S %llu %'S %llu %u %u %u", \
                        string1, \
@@ -7620,10 +7633,8 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
     } \
     while (0)
 
-  const char* PATTERN_MAP_FROM[]  = {"\\n","\\r","\\\\"};
-  const char* PATTERN_MAP_TO[]    = {"\n","\r","\\"};
-  const char* FILENAME_MAP_FROM[] = {"\n","\r","\\"};
-  const char* FILENAME_MAP_TO[]   = {"\\n","\\r","\\\\"};
+  const char* MAP_BIN[]  = {"\n","\r","\\"};
+  const char* MAP_TEXT[] = {"\\n","\\r","\\\\"};
 
   bool                checkedStorageOnlyFlag;
   ulong               entryMaxCount;
@@ -7680,7 +7691,7 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
   if (indexDatabaseHandle != NULL)
   {
     // initialise variables
-    pattern      = String_mapCString(String_duplicate(string),STRING_BEGIN,PATTERN_MAP_FROM,PATTERN_MAP_TO,SIZE_OF_ARRAY(PATTERN_MAP_FROM));
+    pattern      = String_mapCString(String_duplicate(string),STRING_BEGIN,MAP_TEXT,MAP_BIN,SIZE_OF_ARRAY(MAP_TEXT));
     List_init(&indexList);
     regexpString = String_new();
     storageName  = String_new();
@@ -8667,7 +8678,7 @@ LOCAL void initBatchClient(ClientInfo *clientInfo,
   clientInfo->type               = CLIENT_TYPE_BATCH;
 //  clientInfo->authorizationState   = AUTHORIZATION_STATE_WAITING;
 clientInfo->authorizationState   = AUTHORIZATION_STATE_OK;
-  clientInfo->abortId            = 0;
+  clientInfo->abortCommandId     = 0;
   clientInfo->file.fileHandle    = fileHandle;
 
   EntryList_init(&clientInfo->includeEntryList);
@@ -8712,7 +8723,7 @@ LOCAL void initNetworkClient(ClientInfo   *clientInfo,
   // initialize
   clientInfo->type                 = CLIENT_TYPE_NETWORK;
   clientInfo->authorizationState   = AUTHORIZATION_STATE_WAITING;
-  clientInfo->abortId              = 0;
+  clientInfo->abortCommandId       = 0;
   clientInfo->network.name         = String_duplicate(name);
   clientInfo->network.port         = port;
   clientInfo->network.socketHandle = socketHandle;
