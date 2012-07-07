@@ -80,6 +80,8 @@ void debugDumpStackTrace(FILE *handle, const char *title, uint indent, void cons
   const char **functionNames;
   uint       i,z;
 
+  assert(handle != NULL);
+  assert(title != NULL);
   assert(stackTrace != NULL);
 
   for (i = 0; i < indent; i++) fprintf(handle," ");
@@ -102,6 +104,9 @@ void debugDumpCurrentStackTrace(FILE *handle, const char *title, uint indent)
 
   void *currentStackTrace;
   int  currentStackTraceSize;
+
+  assert(handle != NULL);
+  assert(title != NULL);
 
   currentStackTrace = malloc(sizeof(void*)*MAX_STACK_TRACE_SIZE);
   if (currentStackTrace == NULL) return;
