@@ -105,7 +105,7 @@ LOCAL_INLINE void listInsert(void *list,
 
   if      (nextNode != NULL)
   {
-    // insert in middle
+    // insert in middle of list
     ((Node*)node)->prev = ((Node*)nextNode)->prev;
     ((Node*)node)->next = ((Node*)nextNode);
     if (((Node*)nextNode)->prev != NULL) ((Node*)nextNode)->prev->next = node;
@@ -116,7 +116,7 @@ LOCAL_INLINE void listInsert(void *list,
   }
   else if (((List*)list)->head != NULL)
   {
-    // append to list
+    // append to end of list
     ((Node*)node)->prev = ((List*)list)->tail;
     ((Node*)node)->next = NULL;
 
@@ -126,7 +126,7 @@ LOCAL_INLINE void listInsert(void *list,
   }
   else
   {
-    // insert first node
+    // insert as first node
     ((Node*)node)->prev = NULL;
     ((Node*)node)->next = NULL;
 
@@ -319,6 +319,10 @@ Node * __List_newNode(const char *__fileName__, ulong __lineNb__, ulong size)
       debugListNode->fileName = __fileName__;
       debugListNode->lineNb   = __lineNb__;
       debugListNode->node     = node;
+      #ifdef HAVE_BACKTRACE
+        debugListNode->stackTraceSize       = backtrace((void*)debugListNode->stackTrace,SIZE_OF_ARRAY(debugListNode->stackTrace));
+        debugListNode->deleteStackTraceSize = 0;
+      #endif /* HAVE_BACKTRACE */
       listAppend(&debugListAllocNodeList,debugListNode);
     }
     pthread_mutex_unlock(&debugListLock);
