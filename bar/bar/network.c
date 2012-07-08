@@ -834,8 +834,10 @@ Errors Network_initServer(ServerSocketHandle *serverSocketHandle,
       {
         void              *certData;
         ulong             certDataSize;
-        gnutls_datum_t    datum;
         gnutls_x509_crt_t cert;
+        gnutls_datum_t    datum;
+        time_t            certActivationTime,certExpireTime;
+        char              buffer[64];
 
         // check if all key files exists and can be read
         if ((caFileName == NULL) || !File_isFileCString(caFileName) || !File_isReadableCString(caFileName))
@@ -871,21 +873,32 @@ Errors Network_initServer(ServerSocketHandle *serverSocketHandle,
         datum.size = certDataSize;
         if (gnutls_x509_crt_import(cert,&datum,GNUTLS_X509_FMT_PEM) != GNUTLS_E_SUCCESS)
         {
+          gnutls_x509_crt_deinit(cert);
           free(certData);
           close(serverSocketHandle->handle);
           return ERROR_INVALID_TLS_CERTIFICATE;
         }
-        if (time(NULL) > gnutls_x509_crt_get_expiration_time(cert))
+        certActivationTime = gnutls_x509_crt_get_activation_time(cert);
+        if (certActivationTime != (time_t)(-1))
         {
-          free(certData);
-          close(serverSocketHandle->handle);
-          return ERROR_TLS_CERTIFICATE_EXPIRED;
+          if (time(NULL) < certActivationTime)
+          {
+            gnutls_x509_crt_deinit(cert);
+            free(certData);
+            close(serverSocketHandle->handle);
+            return ERRORX(TLS_CERTIFICATE_NOT_ACTIVE,0,Misc_formatDateTimeCString(buffer,sizeof(buffer),(uint64)certActivationTime,DATE_TIME_FORMAT_LOCALE));
+          }
         }
-        if (time(NULL) < gnutls_x509_crt_get_activation_time(cert))
+        certExpireTime = gnutls_x509_crt_get_expiration_time(cert);
+        if (certExpireTime != (time_t)(-1))
         {
-          free(certData);
-          close(serverSocketHandle->handle);
-          return ERROR_TLS_CERTIFICATE_NOT_ACTIVE;
+          if (time(NULL) > certExpireTime)
+          {
+            gnutls_x509_crt_deinit(cert);
+            free(certData);
+            close(serverSocketHandle->handle);
+            return ERRORX(TLS_CERTIFICATE_EXPIRED,0,Misc_formatDateTimeCString(buffer,sizeof(buffer),(uint64)certExpireTime,DATE_TIME_FORMAT_LOCALE));
+          }
         }
 #if 0
 NYI: how to do certificate verification?
