@@ -38,8 +38,24 @@ ERROR NO_TLS_CERTIFICATE             "no TLS (SSL) certificate file 'bar-server-
 ERROR NO_TLS_KEY                     "no or unreadable TLS (SSL) key file 'bar-server-key.pem'"
 ERROR INVALID_TLS_CA                 "invalid TLS (SSL) certificate authority"
 ERROR INVALID_TLS_CERTIFICATE        "invalid TLS (SSL) certificate"
-ERROR TLS_CERTIFICATE_EXPIRED        "TLS (SSL) certificate expired"
-ERROR TLS_CERTIFICATE_NOT_ACTIVE     "TLS (SSL) certificate is still not active"
+ERROR TLS_CERTIFICATE_EXPIRED
+  strncpy(errorText,"TLS (SSL) certificate expired",sizeof(errorText));
+  if (ERROR_TEXT != NULL)
+  {
+    strncat(errorText,": ",sizeof(errorText)-1-strlen(errorText));
+    strncat(errorText,ERROR_TEXT,sizeof(errorText)-1-strlen(errorText));
+  }
+  errorText[sizeof(errorText)-1] = '\0';
+
+ERROR TLS_CERTIFICATE_NOT_ACTIVE
+  strncpy(errorText,"TLS (SSL) certificate is still not active",sizeof(errorText));
+  if (ERROR_TEXT != NULL)
+  {
+    strncat(errorText,": ",sizeof(errorText)-1-strlen(errorText));
+    strncat(errorText,ERROR_TEXT,sizeof(errorText)-1-strlen(errorText));
+  }
+  errorText[sizeof(errorText)-1] = '\0';
+
 ERROR TLS_HANDSHAKE                  "TLS (SSL) handshake failure"
 ERROR INVALID_SSH_SPECIFIER          "invalid SSH specifier"
 ERROR NO_SSH_PASSWORD                "no SSH password given"
