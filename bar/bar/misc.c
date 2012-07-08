@@ -196,6 +196,31 @@ String Misc_formatDateTime(String string, uint64 dateTime, const char *format)
   return string;
 }
 
+const char* Misc_formatDateTimeCString(char *buffer, uint bufferSize, uint64 dateTime, const char *format)
+{
+  time_t    n;
+  struct tm tmStruct;
+  int       length;
+
+  assert(buffer != NULL);
+  assert(bufferSize > 0);
+
+  n = (time_t)dateTime;
+  localtime_r(&n,&tmStruct);
+
+  if (format == NULL) format = "%c";
+
+  // allocate buffer and format date/time
+  length = strftime(buffer,bufferSize-1,format,&tmStruct);
+  if (length == 0)
+  {
+    return NULL;
+  }
+  buffer[length] = '\0';
+
+  return buffer;
+}
+
 uint64 Misc_makeDateTime(uint year,
                          uint month,
                          uint day,

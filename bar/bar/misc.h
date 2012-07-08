@@ -24,7 +24,9 @@
 /****************** Conditional compilation switches *******************/
 
 /***************************** Constants *******************************/
-#define DEFAULT_DATE_TIME_FORMAT "%Y-%m-%d %H:%M:%S %Z"
+#define DATE_TIME_FORMAT_DEFAULT "%Y-%m-%d %H:%M:%S %Z"
+#define DATE_TIME_FORMAT_ISO     "%F %T %Z"
+#define DATE_TIME_FORMAT_LOCALE  "%c"
 
 // month, day names
 typedef enum
@@ -229,9 +231,11 @@ uint64 Misc_makeDateTime(uint year,
                         );
 
 /***********************************************************************\
-* Name   : Misc_formatDateTime
+* Name   : Misc_formatDateTime, Misc_formatDateTimeCString
 * Purpose: format date/time
 * Input  : string     - string variable
+*          buffer     - buffer
+*          bufferSize - buffer size
 *          dateTime   - date/time (seconds since 1970-1-1 00:00:00)
 *          format     - format string (see strftime) or NULL for default
 * Output : -
@@ -240,6 +244,7 @@ uint64 Misc_makeDateTime(uint year,
 \***********************************************************************/
 
 String Misc_formatDateTime(String string, uint64 dateTime, const char *format);
+const char* Misc_formatDateTimeCString(char *buffer, uint bufferSize, uint64 dateTime, const char *format);
 
 /***********************************************************************\
 * Name   : udelay
