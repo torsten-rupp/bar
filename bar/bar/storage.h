@@ -429,10 +429,10 @@ void Storage_doneAll(void);
 * Output : -
 * Return : storage type
 * Notes  : storage types supported:
-*            ftp://[<user name>[:<password>]@]<host name>/<file name>
-*            ssh://[<user name>@]<host name>[:<port>]/<file name>
-*            scp://[<user name>@]<host name>[:<port>]/<file name>
-*            sftp://[<user name>@]<host name>[:<port>]/<file name>
+*            ftp://[<login name>[:<login password>]@]<host name>[:<host port>]/<file name>
+*            ssh://[<login name>@]<host name>[:<host port>]/<file name>
+*            scp://[<login name>@]<host name>[:<host port>]/<file name>
+*            sftp://[<login name>@]<host name>[:<hostport>]/<file name>
 *            cd://[<device name>:]<file name>
 *            dvd://[<device name>:]<file name>
 *            bd://[<device name>:]<file name>
@@ -454,10 +454,10 @@ StorageTypes Storage_getType(const String storageName);
 *          fileName         - storage file name (can be NULL)
 * Return : storage type
 * Notes  : storage types supported:
-*            ftp://[<user name>[:<password>]@]<host name>/<file name>
-*            ssh://[<user name>@]<host name>[:<port>]/<file name>
-*            scp://[<user name>@]<host name>[:<port>]/<file name>
-*            sftp://[<user name>@]<host name>[:<port>]/<file name>
+*            ftp://[<login name>[:<login password>]@]<host name>[:<host port>]/<file name>
+*            ssh://[<login name>@]<host name>[:<host port>]/<file name>
+*            scp://[<login name>@]<host name>[:<host port>]/<file name>
+*            sftp://[<login name>@]<host name>[:<host port>]/<file name>
 *            cd://[<device name>:]<file name>
 *            dvd://[<device name>:]<file name>
 *            bd://[<device name>:]<file name>
@@ -508,13 +508,13 @@ String Storage_getPrintableName(String       string,
 /***********************************************************************\
 * Name   : Storage_parseFTPSpecifier
 * Purpose: parse FTP specifier:
-*            [<user name>[:<password>]@]<host name>
+*            [<login name>[:<login password>]@]<host name>
 * Input  : ftpSpecifier  - FTP specifier string
-*          loginName     - login user name variable (can be NULL)
+*          loginName     - login name variable (can be NULL)
 *          password      - password variable (can be NULL)
 *          hostName      - host name variable (can be NULL)
 *          hostPort      - host port variable (can be NULL)
-* Output : loginName - login user name
+* Output : loginName - login name
 *          password  - password
 *          hostName  - host name
 *          hostPort  - host port
@@ -532,13 +532,13 @@ bool Storage_parseFTPSpecifier(const String ftpSpecifier,
 /***********************************************************************\
 * Name   : Storage_parseSSHSpecifier
 * Purpose: parse ssh specifier:
-*            [<user name>@]<host name>[:<port>]
+*            [<login name>@]<host name>[:<port>]
 * Input  : sshSpecifier - ssh specifier string
-*          loginName    - login user name variable (can be NULL)
+*          loginName    - login name variable (can be NULL)
 *          hostName     - host name variable (can be NULL)
 *          hostPort     - host port number variable (can be NULL)
 *          fileName     - file name variable (can be NULL)
-* Output : loginName    - login user name (can be NULL)
+* Output : loginName    - login name (can be NULL)
 *          hostName     - host name (can be NULL)
 *          hostPort     - host port number (can be NULL)
 *          fileName     - file name (can be NULL)
