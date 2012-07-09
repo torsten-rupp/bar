@@ -66,6 +66,13 @@
   * fixed possible crash in logfile post processor
   * upgraded used libssh2 to version 1.4.2
   * BARControl: fix abort job. Set last executed time.
+  * fix parsing configuration files: strings must not be quoted
+    explicitly
+  * set example for log-post-command to (removed quotes):
+    sh -c 'cat %file|mail -s "Backup log" root'
+  * improved error output when log-post command cannot be executed:
+    show last 5 lines of stderr
+  * BARControl: fix storage when login name is not given
 
 2012-01-14 0.16g
   * fix restore: do not create empty parent directories
