@@ -52,7 +52,9 @@ typedef struct
   #define StringList_append(stringList,string)                                   __StringList_append(__FILE__,__LINE__,stringList,string)
   #define StringList_appendCString(stringList,s)                                 __StringList_appendCString(__FILE__,__LINE__,stringList,s)
   #define StringList_appendChar(stringList,ch)                                   __StringList_appendChar(__FILE__,__LINE__,stringList,ch)
-  #define StringList_appendBuffer(tringList,buffer,bufferLength)                 __StringList_appendBuffer(__FILE__,__LINE__,stringList,buffer,bufferLength)
+  #define StringList_appendBuffer(stringList,buffer,bufferLength)                __StringList_appendBuffer(__FILE__,__LINE__,stringList,buffer,bufferLength)
+  #define StringList_getFirst(stringList,string)                                 __StringList_getFirst(__FILE__,__LINE__,stringList,string)
+  #define StringList_getLast(stringList,string)                                  __StringList_getLast(__FILE__,__LINE__,stringList,string)
 #endif /* not NDEBUG */
 
 /***********************************************************************\
@@ -341,7 +343,11 @@ INLINE String StringList_last(const StringList *stringList, String string)
 *          is returned directly and have to be freed
 \***********************************************************************/
 
+#ifdef NDEBUG
 String StringList_getFirst(StringList *stringList, String string);
+#else /* not NDEBUG */
+String __StringList_getFirst(const char *fileName, ulong lineNb, StringList *stringList, String string);
+#endif /* NDEBUG */
 
 /***********************************************************************\
 * Name   : StringList_getLast
@@ -354,7 +360,11 @@ String StringList_getFirst(StringList *stringList, String string);
 *          is returned directly and have to be freed
 \***********************************************************************/
 
+#ifdef NDEBUG
 String StringList_getLast(StringList *stringList, String string);
+#else /* not NDEBUG */
+String __StringList_getLast(const char *fileName, ulong lineNb, StringList *stringList, String string);
+#endif /* NDEBUG */
 
 /***********************************************************************\
 * Name   : StringList_find, StringList_findCString

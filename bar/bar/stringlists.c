@@ -42,21 +42,31 @@
 /***********************************************************************\
 * Name   : insertString
 * Purpose: insert string in string list
-* Input  : stringList - string list
-*          string     - string to insert
-*          nextNode   - next string list node
+* Input  : __fileName__ - file naem (debug only)
+*          __lineNb__   - line number (debug only)
+*          stringList   - string list
+*          string       - string to insert
+*          nextNode     - next string list node
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
+#ifdef NDEBUG
 LOCAL void insertString(StringList *stringList, const String string, StringNode *nextStringNode)
+#else /* not NDEBUG */
+LOCAL void insertString(const char *__fileName__, ulong __lineNb__, StringList *stringList, const String string, StringNode *nextStringNode)
+#endif /* NDEBUG */
 {
   StringNode *stringNode;
 
   assert(stringList != NULL);
 
-  stringNode = LIST_NEW_NODE(StringNode);
+  #ifdef NDEBUG
+    stringNode = LIST_NEW_NODE(StringNode);
+  #else /* not NDEBUG */
+    stringNode = __LIST_NEW_NODE(__fileName__,__lineNb__,StringNode);
+  #endif /* NDEBUG */
   if (stringNode == NULL)
   {
     HALT_INSUFFICIENT_MEMORY();
@@ -167,7 +177,7 @@ void __StringList_insert(const char *__fileName__, ulong __lineNb__, StringList 
   #ifdef NDEBUG
     insertString(stringList,String_duplicate(string),nextStringNode);
   #else /* not NDEBUG */
-    insertString(stringList,__String_duplicate(__fileName__,__lineNb__,string),nextStringNode);
+    insertString(__fileName__,__lineNb__,stringList,__String_duplicate(__fileName__,__lineNb__,string),nextStringNode);
   #endif /* NDEBUG */
 }
 
@@ -180,7 +190,7 @@ void __StringList_insertCString(const char *__fileName__, ulong __lineNb__, Stri
   #ifdef NDEBUG
     insertString(stringList,String_newCString(s),nextStringNode);
   #else /* not NDEBUG */
-    insertString(stringList,__String_newCString(__fileName__,__lineNb__,s),nextStringNode);
+    insertString(__fileName__,__lineNb__,stringList,__String_newCString(__fileName__,__lineNb__,s),nextStringNode);
   #endif /* NDEBUG */
 }
 
@@ -193,7 +203,7 @@ void __StringList_insertChar(const char *__fileName__, ulong __lineNb__, StringL
   #ifdef NDEBUG
     insertString(stringList,String_newChar(ch),nextStringNode);
   #else /* not NDEBUG */
-    insertString(stringList,__String_newChar(__fileName__,__lineNb__,ch),nextStringNode);
+    insertString(__fileName__,__lineNb__,stringList,__String_newChar(__fileName__,__lineNb__,ch),nextStringNode);
   #endif /* NDEBUG */
 }
 
@@ -206,7 +216,7 @@ void __StringList_insertBuffer(const char *__fileName__, ulong __lineNb__, Strin
   #ifdef NDEBUG
     insertString(stringList,String_newBuffer(buffer,bufferLength),nextStringNode);
   #else /* not NDEBUG */
-    insertString(stringList,__String_newBuffer(__fileName__,__lineNb__,buffer,bufferLength),nextStringNode);
+    insertString(__fileName__,__lineNb__,stringList,__String_newBuffer(__fileName__,__lineNb__,buffer,bufferLength),nextStringNode);
   #endif /* NDEBUG */
 }
 
@@ -219,7 +229,7 @@ void __StringList_append(const char *__fileName__, ulong __lineNb__, StringList 
   #ifdef NDEBUG
     insertString(stringList,String_duplicate(string),NULL);
   #else /* not NDEBUG */
-    insertString(stringList,__String_duplicate(__fileName__,__lineNb__,string),NULL);
+    insertString(__fileName__,__lineNb__,stringList,__String_duplicate(__fileName__,__lineNb__,string),NULL);
   #endif /* NDEBUG */
 }
 
@@ -232,7 +242,7 @@ void __StringList_appendCString(const char *__fileName__, ulong __lineNb__, Stri
   #ifdef NDEBUG
     insertString(stringList,String_newCString(s),NULL);
   #else /* not NDEBUG */
-    insertString(stringList,__String_newCString(__fileName__,__lineNb__,s),NULL);
+    insertString(__fileName__,__lineNb__,stringList,__String_newCString(__fileName__,__lineNb__,s),NULL);
   #endif /* NDEBUG */
 }
 
@@ -245,7 +255,7 @@ void __StringList_appendChar(const char *__fileName__, ulong __lineNb__, StringL
   #ifdef NDEBUG
     insertString(stringList,String_newChar(ch),NULL);
   #else /* not NDEBUG */
-    insertString(stringList,__String_newChar(__fileName__,__lineNb__,ch),NULL);
+    insertString(__fileName__,__lineNb__,stringList,__String_newChar(__fileName__,__lineNb__,ch),NULL);
   #endif /* NDEBUG */
 }
 
@@ -258,7 +268,7 @@ void __StringList_appendBuffer(const char *__fileName__, ulong __lineNb__, Strin
   #ifdef NDEBUG
     insertString(stringList,String_newBuffer(buffer,bufferLength),NULL);
   #else /* not NDEBUG */
-    insertString(stringList,__String_newBuffer(__fileName__,__lineNb__,buffer,bufferLength),NULL);
+    insertString(__fileName__,__lineNb__,stringList,__String_newBuffer(__fileName__,__lineNb__,buffer,bufferLength),NULL);
   #endif /* NDEBUG */
 }
 
@@ -270,7 +280,11 @@ StringNode *StringList_remove(StringList *stringList, StringNode *stringNode)
   return (StringNode*)List_remove(stringList,stringNode);
 }
 
+#ifdef NDEBUG
 String StringList_getFirst(StringList *stringList, String string)
+#else /* not NDEBUG */
+String __StringList_getFirst(const char *fileName, ulong lineNb, StringList *stringList, String string)
+#endif /* NDEBUG */
 {
   StringNode *stringNode;
 
@@ -288,7 +302,11 @@ String StringList_getFirst(StringList *stringList, String string)
     {
       string = stringNode->string;
     }
-    LIST_DELETE_NODE(stringNode);
+    #ifdef NDEBUG
+      LIST_DELETE_NODE(stringNode);
+    #else /* not NDEBUG */
+      __LIST_DELETE_NODE(fileName,lineNb,stringNode);
+    #endif /* NDEBUG */
 
     return string;
   }
@@ -303,7 +321,11 @@ String StringList_getFirst(StringList *stringList, String string)
   }
 }
 
+#ifdef NDEBUG
 String StringList_getLast(StringList *stringList, String string)
+#else /* not NDEBUG */
+String __StringList_getLast(const char *fileName, ulong lineNb, StringList *stringList, String string)
+#endif /* NDEBUG */
 {
   StringNode *stringNode;
 
@@ -321,7 +343,11 @@ String StringList_getLast(StringList *stringList, String string)
     {
       string = stringNode->string;
     }
-    LIST_DELETE_NODE(stringNode);
+    #ifdef NDEBUG
+      LIST_DELETE_NODE(stringNode);
+    #else /* not NDEBUG */
+      __LIST_DELETE_NODE(fileName,lineNb,stringNode);
+    #endif /* NDEBUG */
 
     return string;
   }
