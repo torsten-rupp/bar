@@ -908,20 +908,10 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
       executeCommand("JOB_FLUSH");
 //synchronized(output) { output.write("QUIT"); output.write('\n'); output.flush(); }
 
-      // stop read thread
+      // close connection, stop read thread
       readThread.quit();
-      try { readThread.join(); } catch (InterruptedException exception) { /* ignored */ }
-
-      // close connection, wait until read thread stopped
       socket.close();
-      try
-      {
-        readThread.join();
-      }
-      catch (InterruptedException exception)
-      {
-        // ignored
-      }
+      try { readThread.join(); } catch (InterruptedException exception) { /* ignored */ }
 
       // free resources
       input.close();
