@@ -1378,9 +1378,11 @@ AC_CHECK_FUNC(ftello64,,AC_ERROR([function ftello64() is not available]))
 AC_CHECK_FUNC(fdatasync,    AC_DEFINE(HAVE_FDATASYNC,1,[fdatasync() available]))
 AC_CHECK_FUNC(posix_fadvise,AC_DEFINE(HAVE_POSIX_FADVISE,1,[posix_fadvise() available]))
 
-AC_CHECK_CONST(FS_COMPR_FL, AC_DEFINE(HAVE_FS_COMPR_FL, 1,[FS_COMPR_FL available]), ,linux/fs.h)
-AC_CHECK_CONST(FS_NOCOMP_FL,AC_DEFINE(HAVE_FS_NOCOMP_FL,1,[FS_NOCOMP_FL available]),,linux/fs.h)
-AC_CHECK_CONST(FS_NODUMP_FL,AC_DEFINE(HAVE_FS_NODUMP_FL,1,[FS_NODUMP_FL available]),,linux/fs.h)
+
+AC_CHECK_CONST(FS_IOC_GETFLAGS,AC_DEFINE(HAVE_FS_IOC_GETFLAGS, 1,[FS_IOC_GETFLAGS available]), ,linux/fs.h)
+AC_CHECK_CONST(FS_COMPR_FL,    AC_DEFINE(HAVE_FS_COMPR_FL, 1,[FS_COMPR_FL available]), ,linux/fs.h)
+AC_CHECK_CONST(FS_NOCOMP_FL,   AC_DEFINE(HAVE_FS_NOCOMP_FL,1,[FS_NOCOMP_FL available]),,linux/fs.h)
+AC_CHECK_CONST(FS_NODUMP_FL,   AC_DEFINE(HAVE_FS_NODUMP_FL,1,[FS_NODUMP_FL available]),,linux/fs.h)
 
 AC_CHECK_FUNC(zlibVersion,,AC_ERROR([function zlibVersion() is not available]))
 
