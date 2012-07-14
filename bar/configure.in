@@ -16,6 +16,33 @@ AC_DEFUN([AC_MSG_COMPILE],
   _AS_ECHO_N([Compile $1... ])
 ])
 
+dnl --- check if C compiler support option
+AC_DEFUN([AC_C_OPTION],
+[
+  AC_CACHE_CHECK(
+    [if $CC support option $1],
+    ac_cv_c_option_`echo $1|tr -c -d a-zA-Z0-9_`,
+    [
+      cat << \EOF > test.c
+int main(void)
+{
+  return 0;
+}
+EOF
+      if AC_TRY_COMMAND($CC $1 test.c -o test.o); then
+        ac_supported=yes
+      else
+        ac_supported=no
+      fi
+      AS_IF([test "$ac_supported" = "yes"],[if test -n "${$2}"; then $2="${$2} "; fi; $2="${$2}$1"])
+      AS_VAR_SET(ac_cv_c_option_`echo $1|tr -c -d a-zA-Z0-9_`,$ac_supported)
+
+      rm -f test.c test.o
+    ]
+  )dnl
+  AC_PROVIDE([$0])dnl
+])
+
 dnl --- check 
 AC_DEFUN([AC_SEARCH_STATIC_LIBS],
 [
@@ -70,7 +97,7 @@ AC_DEFUN([AC_C_LONG_LONG],
   AC_PROVIDE([$0])dnl
 ])
 
-dnl extend C compiler defines for large files
+dnl --- extend C compiler defines for large files
 AC_DEFUN([AC_CHECK_LARGEFILE_DEFINES],
 [
   AC_SYS_LARGEFILE
@@ -106,7 +133,7 @@ EOF
   AC_PROVIDE([$0])dnl
 ])
 
-dnl check if variable attribute is supported
+dnl --- check if variable attribute is supported
 AC_DEFUN([AC_CHECK_VARIABLE_ATTRIBUTE],
 [
   AC_CACHE_CHECK(
@@ -122,7 +149,7 @@ AC_DEFUN([AC_CHECK_VARIABLE_ATTRIBUTE],
   AC_PROVIDE([$0])dnl
 ])
 
-dnl extend C compiler defines for pthreads
+dnl --- extend C compiler defines for pthreads
 AC_DEFUN([AC_CHECK_PTHREAD_DEFINES],
 [
   AC_CACHE_CHECK(
@@ -153,7 +180,7 @@ EOF
   AC_PROVIDE([$0])dnl
 ])
 
-dnl detect Java version
+dnl --- detect Java version
 AC_DEFUN([AC_JAVA_VERSION],
 [
   AC_CACHE_CHECK(
@@ -182,7 +209,7 @@ EOF
   AC_PROVIDE([$0])dnl
 ])
 
-dnl detect Java model (32/64 bit)
+dnl --- detect Java model (32/64 bit)
 AC_DEFUN([AC_JAVA_DATA_MODEL],
 [
   AC_CACHE_CHECK(
@@ -211,7 +238,7 @@ EOF
   AC_PROVIDE([$0])dnl
 ])
 
-# detect EPM version
+dnl --- detect EPM version
 AC_DEFUN([AC_PROG_EPM_VERSION],
 [
   AC_MSG_CHECKING([$EPM version])
@@ -340,6 +367,7 @@ AC_SUBST(EPM_VERSION_4)                     dnl 1 if EPM version 4, otherwise em
 dnl ----------------------- initialize variables -----------------------
 
 CC_FLAGS=""
+CC_WARN_FLAGS=""
 CC_DEFINES=""
 CC_OPTIMIZE=""
 CC_INCLUDES=""
@@ -558,6 +586,21 @@ if test -n "$EPM"; then
 fi
 
 AC_PATH_PROGS(MD5SUM,md5sum)
+
+CC_WARN_FLAGS="$CC_WARN_FLAGS"
+AC_C_OPTION(-Wall,                        CC_WARN_FLAGS)
+AC_C_OPTION(-Wpointer-arith,              CC_WARN_FLAGS)
+AC_C_OPTION(-Wunused-label,               CC_WARN_FLAGS)
+AC_C_OPTION(-Wunused-parameter,           CC_WARN_FLAGS)
+AC_C_OPTION(-Wunused-variable,            CC_WARN_FLAGS)
+AC_C_OPTION(-Wmissing-prototypes,         CC_WARN_FLAGS)
+AC_C_OPTION(-Wmissing-declarations,       CC_WARN_FLAGS)
+AC_C_OPTION(-Wextra,                      CC_WARN_FLAGS)
+AC_C_OPTION(-Wfloat-equal,                CC_WARN_FLAGS)
+AC_C_OPTION(-Wdeclaration-after-statement,CC_WARN_FLAGS)
+AC_C_OPTION(-Wbad-function-cast,          CC_WARN_FLAGS)
+AC_C_OPTION(-Wsign-compare,               CC_WARN_FLAGS)
+AC_C_OPTION(-Wstrict-prototypes,          CC_WARN_FLAGS)
 
 CC_DEFINES="$CC_DEFINES"
 if test "$ENABLE_DEBUG" = "yes"; then
@@ -1313,7 +1356,7 @@ AC_CHECK_FUNC(iso9660_close,             AC_DEFINE(HAVE_ISO9660_CLOSE,          
 AC_CHECK_FUNC(iso9660_ifs_stat_translate,AC_DEFINE(HAVE_ISO9660_IFS_STAT_TRANSLATE,1,[iso9660_ifs_stat_translate() available]))
 AC_CHECK_FUNC(iso9660_iso_seek_read,     AC_DEFINE(HAVE_ISO9660_ISO_SEEK_READ,     1,[iso9660_iso_seek_read() available]))
 
-AC_CHECK_FUNC(backtrace,AC_DEFINE(HAVE_BACKTRACE,1,[backtrace() available]) CC_DEFINES+=HAVE_BACKTRACE)
+AC_CHECK_FUNC(backtrace,AC_DEFINE(HAVE_BACKTRACE,1,[backtrace() available]))
 
 dnl -------------------------------- misc ------------------------------
 

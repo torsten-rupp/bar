@@ -2539,6 +2539,7 @@ case $host_os in *\ *) host_os=`echo "$host_os" | sed 's/ /-/g'`;; esac
 
 
 CC_FLAGS=""
+CC_WARN_FLAGS=""
 CC_DEFINES=""
 CC_OPTIMIZE=""
 CC_INCLUDES=""
@@ -3167,6 +3168,463 @@ fi
   test -n "$MD5SUM" && break
 done
 
+
+CC_WARN_FLAGS="$CC_WARN_FLAGS"
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking if $CC support option -Wall" >&5
+$as_echo_n "checking if $CC support option -Wall... " >&6; }
+if { as_var=ac_cv_c_option_`echo -Wall|tr -c -d a-zA-Z0-9_`; eval "test \"\${$as_var+set}\" = set"; }; then :
+  $as_echo_n "(cached) " >&6
+else
+
+      cat << \EOF > test.c
+int main(void)
+{
+  return 0;
+}
+EOF
+      if { ac_try='$CC -Wall test.c -o test.o'
+  { { eval echo "\"\$as_me\":${as_lineno-$LINENO}: \"$ac_try\""; } >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; }; then
+        ac_supported=yes
+      else
+        ac_supported=no
+      fi
+      if test "$ac_supported" = "yes"; then :
+  if test -n "${CC_WARN_FLAGS}"; then CC_WARN_FLAGS="${CC_WARN_FLAGS} "; fi; CC_WARN_FLAGS="${CC_WARN_FLAGS}-Wall"
+fi
+      eval "ac_cv_c_option_`echo -Wall|tr -c -d a-zA-Z0-9_`=\$ac_supported"
+
+      rm -f test.c test.o
+
+
+fi
+eval ac_res=\$ac_cv_c_option_`echo -Wall|tr -c -d a-zA-Z0-9_`
+	       { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_res" >&5
+$as_echo "$ac_res" >&6; }
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking if $CC support option -Wpointer-arith" >&5
+$as_echo_n "checking if $CC support option -Wpointer-arith... " >&6; }
+if { as_var=ac_cv_c_option_`echo -Wpointer-arith|tr -c -d a-zA-Z0-9_`; eval "test \"\${$as_var+set}\" = set"; }; then :
+  $as_echo_n "(cached) " >&6
+else
+
+      cat << \EOF > test.c
+int main(void)
+{
+  return 0;
+}
+EOF
+      if { ac_try='$CC -Wpointer-arith test.c -o test.o'
+  { { eval echo "\"\$as_me\":${as_lineno-$LINENO}: \"$ac_try\""; } >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; }; then
+        ac_supported=yes
+      else
+        ac_supported=no
+      fi
+      if test "$ac_supported" = "yes"; then :
+  if test -n "${CC_WARN_FLAGS}"; then CC_WARN_FLAGS="${CC_WARN_FLAGS} "; fi; CC_WARN_FLAGS="${CC_WARN_FLAGS}-Wpointer-arith"
+fi
+      eval "ac_cv_c_option_`echo -Wpointer-arith|tr -c -d a-zA-Z0-9_`=\$ac_supported"
+
+      rm -f test.c test.o
+
+
+fi
+eval ac_res=\$ac_cv_c_option_`echo -Wpointer-arith|tr -c -d a-zA-Z0-9_`
+	       { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_res" >&5
+$as_echo "$ac_res" >&6; }
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking if $CC support option -Wunused-label" >&5
+$as_echo_n "checking if $CC support option -Wunused-label... " >&6; }
+if { as_var=ac_cv_c_option_`echo -Wunused-label|tr -c -d a-zA-Z0-9_`; eval "test \"\${$as_var+set}\" = set"; }; then :
+  $as_echo_n "(cached) " >&6
+else
+
+      cat << \EOF > test.c
+int main(void)
+{
+  return 0;
+}
+EOF
+      if { ac_try='$CC -Wunused-label test.c -o test.o'
+  { { eval echo "\"\$as_me\":${as_lineno-$LINENO}: \"$ac_try\""; } >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; }; then
+        ac_supported=yes
+      else
+        ac_supported=no
+      fi
+      if test "$ac_supported" = "yes"; then :
+  if test -n "${CC_WARN_FLAGS}"; then CC_WARN_FLAGS="${CC_WARN_FLAGS} "; fi; CC_WARN_FLAGS="${CC_WARN_FLAGS}-Wunused-label"
+fi
+      eval "ac_cv_c_option_`echo -Wunused-label|tr -c -d a-zA-Z0-9_`=\$ac_supported"
+
+      rm -f test.c test.o
+
+
+fi
+eval ac_res=\$ac_cv_c_option_`echo -Wunused-label|tr -c -d a-zA-Z0-9_`
+	       { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_res" >&5
+$as_echo "$ac_res" >&6; }
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking if $CC support option -Wunused-parameter" >&5
+$as_echo_n "checking if $CC support option -Wunused-parameter... " >&6; }
+if { as_var=ac_cv_c_option_`echo -Wunused-parameter|tr -c -d a-zA-Z0-9_`; eval "test \"\${$as_var+set}\" = set"; }; then :
+  $as_echo_n "(cached) " >&6
+else
+
+      cat << \EOF > test.c
+int main(void)
+{
+  return 0;
+}
+EOF
+      if { ac_try='$CC -Wunused-parameter test.c -o test.o'
+  { { eval echo "\"\$as_me\":${as_lineno-$LINENO}: \"$ac_try\""; } >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; }; then
+        ac_supported=yes
+      else
+        ac_supported=no
+      fi
+      if test "$ac_supported" = "yes"; then :
+  if test -n "${CC_WARN_FLAGS}"; then CC_WARN_FLAGS="${CC_WARN_FLAGS} "; fi; CC_WARN_FLAGS="${CC_WARN_FLAGS}-Wunused-parameter"
+fi
+      eval "ac_cv_c_option_`echo -Wunused-parameter|tr -c -d a-zA-Z0-9_`=\$ac_supported"
+
+      rm -f test.c test.o
+
+
+fi
+eval ac_res=\$ac_cv_c_option_`echo -Wunused-parameter|tr -c -d a-zA-Z0-9_`
+	       { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_res" >&5
+$as_echo "$ac_res" >&6; }
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking if $CC support option -Wunused-variable" >&5
+$as_echo_n "checking if $CC support option -Wunused-variable... " >&6; }
+if { as_var=ac_cv_c_option_`echo -Wunused-variable|tr -c -d a-zA-Z0-9_`; eval "test \"\${$as_var+set}\" = set"; }; then :
+  $as_echo_n "(cached) " >&6
+else
+
+      cat << \EOF > test.c
+int main(void)
+{
+  return 0;
+}
+EOF
+      if { ac_try='$CC -Wunused-variable test.c -o test.o'
+  { { eval echo "\"\$as_me\":${as_lineno-$LINENO}: \"$ac_try\""; } >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; }; then
+        ac_supported=yes
+      else
+        ac_supported=no
+      fi
+      if test "$ac_supported" = "yes"; then :
+  if test -n "${CC_WARN_FLAGS}"; then CC_WARN_FLAGS="${CC_WARN_FLAGS} "; fi; CC_WARN_FLAGS="${CC_WARN_FLAGS}-Wunused-variable"
+fi
+      eval "ac_cv_c_option_`echo -Wunused-variable|tr -c -d a-zA-Z0-9_`=\$ac_supported"
+
+      rm -f test.c test.o
+
+
+fi
+eval ac_res=\$ac_cv_c_option_`echo -Wunused-variable|tr -c -d a-zA-Z0-9_`
+	       { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_res" >&5
+$as_echo "$ac_res" >&6; }
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking if $CC support option -Wmissing-prototypes" >&5
+$as_echo_n "checking if $CC support option -Wmissing-prototypes... " >&6; }
+if { as_var=ac_cv_c_option_`echo -Wmissing-prototypes|tr -c -d a-zA-Z0-9_`; eval "test \"\${$as_var+set}\" = set"; }; then :
+  $as_echo_n "(cached) " >&6
+else
+
+      cat << \EOF > test.c
+int main(void)
+{
+  return 0;
+}
+EOF
+      if { ac_try='$CC -Wmissing-prototypes test.c -o test.o'
+  { { eval echo "\"\$as_me\":${as_lineno-$LINENO}: \"$ac_try\""; } >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; }; then
+        ac_supported=yes
+      else
+        ac_supported=no
+      fi
+      if test "$ac_supported" = "yes"; then :
+  if test -n "${CC_WARN_FLAGS}"; then CC_WARN_FLAGS="${CC_WARN_FLAGS} "; fi; CC_WARN_FLAGS="${CC_WARN_FLAGS}-Wmissing-prototypes"
+fi
+      eval "ac_cv_c_option_`echo -Wmissing-prototypes|tr -c -d a-zA-Z0-9_`=\$ac_supported"
+
+      rm -f test.c test.o
+
+
+fi
+eval ac_res=\$ac_cv_c_option_`echo -Wmissing-prototypes|tr -c -d a-zA-Z0-9_`
+	       { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_res" >&5
+$as_echo "$ac_res" >&6; }
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking if $CC support option -Wmissing-declarations" >&5
+$as_echo_n "checking if $CC support option -Wmissing-declarations... " >&6; }
+if { as_var=ac_cv_c_option_`echo -Wmissing-declarations|tr -c -d a-zA-Z0-9_`; eval "test \"\${$as_var+set}\" = set"; }; then :
+  $as_echo_n "(cached) " >&6
+else
+
+      cat << \EOF > test.c
+int main(void)
+{
+  return 0;
+}
+EOF
+      if { ac_try='$CC -Wmissing-declarations test.c -o test.o'
+  { { eval echo "\"\$as_me\":${as_lineno-$LINENO}: \"$ac_try\""; } >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; }; then
+        ac_supported=yes
+      else
+        ac_supported=no
+      fi
+      if test "$ac_supported" = "yes"; then :
+  if test -n "${CC_WARN_FLAGS}"; then CC_WARN_FLAGS="${CC_WARN_FLAGS} "; fi; CC_WARN_FLAGS="${CC_WARN_FLAGS}-Wmissing-declarations"
+fi
+      eval "ac_cv_c_option_`echo -Wmissing-declarations|tr -c -d a-zA-Z0-9_`=\$ac_supported"
+
+      rm -f test.c test.o
+
+
+fi
+eval ac_res=\$ac_cv_c_option_`echo -Wmissing-declarations|tr -c -d a-zA-Z0-9_`
+	       { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_res" >&5
+$as_echo "$ac_res" >&6; }
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking if $CC support option -Wextra" >&5
+$as_echo_n "checking if $CC support option -Wextra... " >&6; }
+if { as_var=ac_cv_c_option_`echo -Wextra|tr -c -d a-zA-Z0-9_`; eval "test \"\${$as_var+set}\" = set"; }; then :
+  $as_echo_n "(cached) " >&6
+else
+
+      cat << \EOF > test.c
+int main(void)
+{
+  return 0;
+}
+EOF
+      if { ac_try='$CC -Wextra test.c -o test.o'
+  { { eval echo "\"\$as_me\":${as_lineno-$LINENO}: \"$ac_try\""; } >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; }; then
+        ac_supported=yes
+      else
+        ac_supported=no
+      fi
+      if test "$ac_supported" = "yes"; then :
+  if test -n "${CC_WARN_FLAGS}"; then CC_WARN_FLAGS="${CC_WARN_FLAGS} "; fi; CC_WARN_FLAGS="${CC_WARN_FLAGS}-Wextra"
+fi
+      eval "ac_cv_c_option_`echo -Wextra|tr -c -d a-zA-Z0-9_`=\$ac_supported"
+
+      rm -f test.c test.o
+
+
+fi
+eval ac_res=\$ac_cv_c_option_`echo -Wextra|tr -c -d a-zA-Z0-9_`
+	       { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_res" >&5
+$as_echo "$ac_res" >&6; }
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking if $CC support option -Wfloat-equal" >&5
+$as_echo_n "checking if $CC support option -Wfloat-equal... " >&6; }
+if { as_var=ac_cv_c_option_`echo -Wfloat-equal|tr -c -d a-zA-Z0-9_`; eval "test \"\${$as_var+set}\" = set"; }; then :
+  $as_echo_n "(cached) " >&6
+else
+
+      cat << \EOF > test.c
+int main(void)
+{
+  return 0;
+}
+EOF
+      if { ac_try='$CC -Wfloat-equal test.c -o test.o'
+  { { eval echo "\"\$as_me\":${as_lineno-$LINENO}: \"$ac_try\""; } >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; }; then
+        ac_supported=yes
+      else
+        ac_supported=no
+      fi
+      if test "$ac_supported" = "yes"; then :
+  if test -n "${CC_WARN_FLAGS}"; then CC_WARN_FLAGS="${CC_WARN_FLAGS} "; fi; CC_WARN_FLAGS="${CC_WARN_FLAGS}-Wfloat-equal"
+fi
+      eval "ac_cv_c_option_`echo -Wfloat-equal|tr -c -d a-zA-Z0-9_`=\$ac_supported"
+
+      rm -f test.c test.o
+
+
+fi
+eval ac_res=\$ac_cv_c_option_`echo -Wfloat-equal|tr -c -d a-zA-Z0-9_`
+	       { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_res" >&5
+$as_echo "$ac_res" >&6; }
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking if $CC support option -Wdeclaration-after-statement" >&5
+$as_echo_n "checking if $CC support option -Wdeclaration-after-statement... " >&6; }
+if { as_var=ac_cv_c_option_`echo -Wdeclaration-after-statement|tr -c -d a-zA-Z0-9_`; eval "test \"\${$as_var+set}\" = set"; }; then :
+  $as_echo_n "(cached) " >&6
+else
+
+      cat << \EOF > test.c
+int main(void)
+{
+  return 0;
+}
+EOF
+      if { ac_try='$CC -Wdeclaration-after-statement test.c -o test.o'
+  { { eval echo "\"\$as_me\":${as_lineno-$LINENO}: \"$ac_try\""; } >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; }; then
+        ac_supported=yes
+      else
+        ac_supported=no
+      fi
+      if test "$ac_supported" = "yes"; then :
+  if test -n "${CC_WARN_FLAGS}"; then CC_WARN_FLAGS="${CC_WARN_FLAGS} "; fi; CC_WARN_FLAGS="${CC_WARN_FLAGS}-Wdeclaration-after-statement"
+fi
+      eval "ac_cv_c_option_`echo -Wdeclaration-after-statement|tr -c -d a-zA-Z0-9_`=\$ac_supported"
+
+      rm -f test.c test.o
+
+
+fi
+eval ac_res=\$ac_cv_c_option_`echo -Wdeclaration-after-statement|tr -c -d a-zA-Z0-9_`
+	       { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_res" >&5
+$as_echo "$ac_res" >&6; }
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking if $CC support option -Wbad-function-cast" >&5
+$as_echo_n "checking if $CC support option -Wbad-function-cast... " >&6; }
+if { as_var=ac_cv_c_option_`echo -Wbad-function-cast|tr -c -d a-zA-Z0-9_`; eval "test \"\${$as_var+set}\" = set"; }; then :
+  $as_echo_n "(cached) " >&6
+else
+
+      cat << \EOF > test.c
+int main(void)
+{
+  return 0;
+}
+EOF
+      if { ac_try='$CC -Wbad-function-cast test.c -o test.o'
+  { { eval echo "\"\$as_me\":${as_lineno-$LINENO}: \"$ac_try\""; } >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; }; then
+        ac_supported=yes
+      else
+        ac_supported=no
+      fi
+      if test "$ac_supported" = "yes"; then :
+  if test -n "${CC_WARN_FLAGS}"; then CC_WARN_FLAGS="${CC_WARN_FLAGS} "; fi; CC_WARN_FLAGS="${CC_WARN_FLAGS}-Wbad-function-cast"
+fi
+      eval "ac_cv_c_option_`echo -Wbad-function-cast|tr -c -d a-zA-Z0-9_`=\$ac_supported"
+
+      rm -f test.c test.o
+
+
+fi
+eval ac_res=\$ac_cv_c_option_`echo -Wbad-function-cast|tr -c -d a-zA-Z0-9_`
+	       { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_res" >&5
+$as_echo "$ac_res" >&6; }
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking if $CC support option -Wsign-compare" >&5
+$as_echo_n "checking if $CC support option -Wsign-compare... " >&6; }
+if { as_var=ac_cv_c_option_`echo -Wsign-compare|tr -c -d a-zA-Z0-9_`; eval "test \"\${$as_var+set}\" = set"; }; then :
+  $as_echo_n "(cached) " >&6
+else
+
+      cat << \EOF > test.c
+int main(void)
+{
+  return 0;
+}
+EOF
+      if { ac_try='$CC -Wsign-compare test.c -o test.o'
+  { { eval echo "\"\$as_me\":${as_lineno-$LINENO}: \"$ac_try\""; } >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; }; then
+        ac_supported=yes
+      else
+        ac_supported=no
+      fi
+      if test "$ac_supported" = "yes"; then :
+  if test -n "${CC_WARN_FLAGS}"; then CC_WARN_FLAGS="${CC_WARN_FLAGS} "; fi; CC_WARN_FLAGS="${CC_WARN_FLAGS}-Wsign-compare"
+fi
+      eval "ac_cv_c_option_`echo -Wsign-compare|tr -c -d a-zA-Z0-9_`=\$ac_supported"
+
+      rm -f test.c test.o
+
+
+fi
+eval ac_res=\$ac_cv_c_option_`echo -Wsign-compare|tr -c -d a-zA-Z0-9_`
+	       { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_res" >&5
+$as_echo "$ac_res" >&6; }
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking if $CC support option -Wstrict-prototypes" >&5
+$as_echo_n "checking if $CC support option -Wstrict-prototypes... " >&6; }
+if { as_var=ac_cv_c_option_`echo -Wstrict-prototypes|tr -c -d a-zA-Z0-9_`; eval "test \"\${$as_var+set}\" = set"; }; then :
+  $as_echo_n "(cached) " >&6
+else
+
+      cat << \EOF > test.c
+int main(void)
+{
+  return 0;
+}
+EOF
+      if { ac_try='$CC -Wstrict-prototypes test.c -o test.o'
+  { { eval echo "\"\$as_me\":${as_lineno-$LINENO}: \"$ac_try\""; } >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; }; then
+        ac_supported=yes
+      else
+        ac_supported=no
+      fi
+      if test "$ac_supported" = "yes"; then :
+  if test -n "${CC_WARN_FLAGS}"; then CC_WARN_FLAGS="${CC_WARN_FLAGS} "; fi; CC_WARN_FLAGS="${CC_WARN_FLAGS}-Wstrict-prototypes"
+fi
+      eval "ac_cv_c_option_`echo -Wstrict-prototypes|tr -c -d a-zA-Z0-9_`=\$ac_supported"
+
+      rm -f test.c test.o
+
+
+fi
+eval ac_res=\$ac_cv_c_option_`echo -Wstrict-prototypes|tr -c -d a-zA-Z0-9_`
+	       { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_res" >&5
+$as_echo "$ac_res" >&6; }
 
 CC_DEFINES="$CC_DEFINES"
 if test "$ENABLE_DEBUG" = "yes"; then
@@ -8601,7 +9059,7 @@ ac_fn_c_check_func "$LINENO" "backtrace" "ac_cv_func_backtrace"
 if test "x$ac_cv_func_backtrace" = x""yes; then :
 
 $as_echo "#define HAVE_BACKTRACE 1" >>confdefs.h
- CC_DEFINES+=HAVE_BACKTRACE
+
 fi
 
 
