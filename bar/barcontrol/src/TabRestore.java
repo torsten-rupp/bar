@@ -181,7 +181,7 @@ class TabRestore
     long        id;                       // storage id
     String      name;                     // storage name
     long        size;                     // storage size [bytes]
-    long        createdDateTime;          // date/time when storage was created
+    long        dateTime;                 // date/time when storage was created
     String      title;                    // title to show
     IndexStates indexState;               // state of index
     IndexModes  indexMode;                // mode of index
@@ -193,19 +193,19 @@ class TabRestore
      * @param id database id
      * @param name name of storage
      * @param size size of storage [bytes]
-     * @param createdDateTime date/time (timestamp) when storage was created
+     * @param dateTime date/time (timestamp) when storage was created
      * @param title title to show
      * @param indexState storage index state
      * @param indexMode storage index mode
      * @param lastCheckedDateTime last checked date/time (timestamp)
      * @param errorMessage error message text
      */
-    StorageData(long id, String name, long size, long createdDateTime, String title, IndexStates indexState, IndexModes indexMode, long lastCheckedDateTime, String errorMessage)
+    StorageData(long id, String name, long size, long dateTime, String title, IndexStates indexState, IndexModes indexMode, long lastCheckedDateTime, String errorMessage)
     {
       this.id                  = id;
       this.name                = name;
       this.size                = size;
-      this.createdDateTime     = createdDateTime;
+      this.dateTime            = dateTime;
       this.title               = title;
       this.indexState          = indexState;
       this.indexMode           = indexMode;
@@ -218,13 +218,13 @@ class TabRestore
     /** create storage data
      * @param id database id
      * @param name name of storage
-     * @param createdDateTime date/time (timestamp) when storage was created
+     * @param dateTime date/time (timestamp) when storage was created
      * @param title title to show
      * @param lastCheckedDateTime last checked date/time (timestamp)
      */
-    StorageData(long id, String name, long createdDateTime, String title, long lastCheckedDateTime)
+    StorageData(long id, String name, long dateTime, String title, long lastCheckedDateTime)
     {
-      this(id,name,0,createdDateTime,title,IndexStates.OK,IndexModes.MANUAL,lastCheckedDateTime,null);
+      this(id,name,0,dateTime,title,IndexStates.OK,IndexModes.MANUAL,lastCheckedDateTime,null);
     }
 
     /** create storage data
@@ -258,7 +258,7 @@ class TabRestore
      */
     public String toString()
     {
-      return "Storage {"+name+", "+size+" bytes, created="+createdDateTime+", title="+title+", state="+indexState+", last checked="+lastCheckedDateTime+", checked="+checked+"}";
+      return "Storage {"+name+", "+size+" bytes, created="+dateTime+", title="+title+", state="+indexState+", last checked="+lastCheckedDateTime+", checked="+checked+"}";
     }
   };
 
@@ -368,9 +368,9 @@ class TabRestore
           else if (storageData1.size > storageData2.size) return  1;
           else                                            return  0;
         case SORTMODE_CREATED_DATETIME:
-          if      (storageData1.createdDateTime < storageData2.createdDateTime) return -1;
-          else if (storageData1.createdDateTime > storageData2.createdDateTime) return  1;
-          else                                                                  return  0;
+          if      (storageData1.dateTime < storageData2.dateTime) return -1;
+          else if (storageData1.dateTime > storageData2.dateTime) return  1;
+          else                                                    return  0;
         case SORTMODE_STATE:
           return storageData1.indexState.compareTo(storageData2.indexState);
         default:
@@ -410,6 +410,9 @@ class TabRestore
      */
     public void run()
     {
+      final String[] MAP_FROM = new String[]{"\\n","\\r","\\\\"};
+      final String[] MAP_TO   = new String[]{"\n","\r","\\"};
+
       for (;;)
       {
         if (setColorFlag)
@@ -473,8 +476,8 @@ class TabRestore
                      error message
                 */
                 long        storageId           = (Long)data[0];
-                String      name                = (String)data[1];
-                long        createdDateTime     = (Long)data[2];
+                String      name                = StringUtils.map((String)data[1],MAP_FROM,MAP_TO);
+                long        dateTime            = (Long)data[2];
                 long        size                = (Long)data[3];
                 IndexStates indexState          = Enum.valueOf(IndexStates.class,(String)data[4]);
                 IndexModes  indexMode           = Enum.valueOf(IndexModes.class,(String)data[5]);
@@ -489,7 +492,7 @@ class TabRestore
                   {
                     storageData.name                = name;
                     storageData.size                = size;
-                    storageData.createdDateTime     = createdDateTime;
+                    storageData.dateTime            = dateTime;
                     storageData.indexState          = indexState;
                     storageData.indexMode           = indexMode;
                     storageData.lastCheckedDateTime = lastCheckedDateTime;
@@ -500,7 +503,7 @@ class TabRestore
                     storageData = new StorageData(storageId,
                                                   name,
                                                   size,
-                                                  createdDateTime,
+                                                  dateTime,
                                                   new File(name).getName(),
                                                   indexState,
                                                   indexMode,
@@ -586,6 +589,7 @@ class TabRestore
     IMAGE,
     DIRECTORY,
     LINK,
+    HARDLINK,
     SPECIAL,
     DEVICE,
     SOCKET
@@ -739,12 +743,11 @@ class TabRestore
   class EntryDataComparator implements Comparator<EntryData>
   {
     // Note: enum in inner classes are not possible in Java, thus use the old way...
-    private final static int SORTMODE_ARCHIVE       = 0;
-    private final static int SORTMODE_NAME          = 1;
-    private final static int SORTMODE_TYPE          = 2;
-    private final static int SORTMODE_SIZE          = 3;
-    private final static int SORTMODE_DATE          = 4;
-//    private final static int SORTMODE_RESTORE_STATE = 5;
+    private final static int SORTMODE_ARCHIVE = 0;
+    private final static int SORTMODE_NAME    = 1;
+    private final static int SORTMODE_TYPE    = 2;
+    private final static int SORTMODE_SIZE    = 3;
+    private final static int SORTMODE_DATE    = 4;
 
     private int sortMode;
 
@@ -759,7 +762,6 @@ class TabRestore
       else if (table.getColumn(2) == sortColumn) sortMode = SORTMODE_TYPE;
       else if (table.getColumn(3) == sortColumn) sortMode = SORTMODE_SIZE;
       else if (table.getColumn(4) == sortColumn) sortMode = SORTMODE_DATE;
-//      else if (table.getColumn(5) == sortColumn) sortMode = SORTMODE_RESTORE_STATE;
       else                                       sortMode = SORTMODE_NAME;
     }
 
@@ -795,8 +797,6 @@ class TabRestore
           if      (entryData1.datetime < entryData2.datetime) return -1;
           else if (entryData1.datetime > entryData2.datetime) return  1;
           else                                                return  0;
-//        case SORTMODE_RESTORE_STATE:
-//          return entryData1.restoreState.compareTo(entryData2.restoreState);
         default:
           return 0;
       }
@@ -829,8 +829,8 @@ class TabRestore
     {
       final String[] PATTERN_MAP_FROM  = new String[]{"\n","\r","\\"};
       final String[] PATTERN_MAP_TO    = new String[]{"\\n","\\r","\\\\"};
-      final String[] FILENAME_MAP_FROM = new String[]{"\\n","\\r","\\\\"};
-      final String[] FILENAME_MAP_TO   = new String[]{"\n","\r","\\"};
+      final String[] MAP_FROM = new String[]{"\\n","\\r","\\\\"};
+      final String[] MAP_TO   = new String[]{"\n","\r","\\"};
 
       for (;;)
       {
@@ -867,8 +867,28 @@ class TabRestore
               Object data[] = new Object[10];
               for (String line : result)
               {
-                if      (StringParser.parse(line,"FILE %ld %ld %ld %d %d %d %ld %ld %S %S",data,StringParser.QUOTE_CHARS))
+                if      (StringParser.parse(line,"FILE %S %ld %S %ld %ld %d %d %d %ld %ld",data,StringParser.QUOTE_CHARS))
                 {
+                  /* get data
+                     format:
+                       storage name
+                       storage date/time
+                       file name
+                       size
+                       date/time
+                       user id
+                       group id
+                       permission
+                       fragment offset
+                       fragment size
+                  */
+                  String storageName     = StringUtils.map((String)data[0],MAP_FROM,MAP_TO);
+                  long   storageDateTime = (Long)data[1];
+                  String fileName        = StringUtils.map((String)data[2],MAP_FROM,MAP_TO);
+                  long   size            = (Long)data[3];
+                  long   datetime        = (Long)data[4];
+                  long   fragmentOffset  = (Long)data[8];
+                  long   fragmentSize    = (Long)data[9];
                   /* get data
                      format:
                        storage date/time
@@ -882,13 +902,6 @@ class TabRestore
                        storage name
                        file name
                   */
-                  long   storageDateTime = (Long  )data[0];
-                  long   size            = (Long  )data[1];
-                  long   datetime        = (Long  )data[2];
-                  long   fragmentOffset  = (Long  )data[6];
-                  long   fragmentSize    = (Long  )data[7];
-                  String storageName     = (String)data[8];
-                  String fileName        = StringUtils.map((String)data[9],FILENAME_MAP_FROM,FILENAME_MAP_TO);
 
                   EntryData entryData = entryDataMap.get(storageName,fileName,EntryTypes.FILE);
                   if (entryData != null)
@@ -902,23 +915,23 @@ class TabRestore
                     entryDataMap.put(entryData);
                   }
                 }
-                else if (StringParser.parse(line,"IMAGE %ld %ld %ld %ld %S %S",data,StringParser.QUOTE_CHARS))
+                else if (StringParser.parse(line,"IMAGE %S %ld %S %ld %ld %ld",data,StringParser.QUOTE_CHARS))
                 {
                   /* get data
                      format:
+                       storage name
                        storage date/time
+                       name
                        size
                        blockOffset
                        blockCount
-                       storage name
-                       name
                   */
-                  long   storageDateTime = (Long  )data[0];
-                  long   size            = (Long  )data[1];
-                  long   blockOffset     = (Long  )data[2];
-                  long   blockCount      = (Long  )data[3];
-                  String storageName     = (String)data[4];
-                  String imageName       = StringUtils.map((String)data[5],FILENAME_MAP_FROM,FILENAME_MAP_TO);
+                  String storageName     = StringUtils.map((String)data[0],MAP_FROM,MAP_TO);
+                  long   storageDateTime = (Long)data[1];
+                  String imageName       = StringUtils.map((String)data[2],MAP_FROM,MAP_TO);
+                  long   size            = (Long)data[3];
+                  long   blockOffset     = (Long)data[4];
+                  long   blockCount      = (Long)data[5];
 
                   EntryData entryData = entryDataMap.get(storageName,imageName,EntryTypes.IMAGE);
                   if (entryData != null)
@@ -931,22 +944,22 @@ class TabRestore
                     entryDataMap.put(entryData);
                   }
                 }
-                else if (StringParser.parse(line,"DIRECTORY %ld %ld %d %d %d %S %S",data,StringParser.QUOTE_CHARS))
+                else if (StringParser.parse(line,"DIRECTORY %S %ld %S %ld %d %d %d",data,StringParser.QUOTE_CHARS))
                 {
                   /* get data
                      format:
+                       storage name
                        storage date/time
+                       directory name
                        date/time
                        user id
                        group id
                        permission
-                       storage name
-                       directory name
                   */
-                  long   storageDateTime = (Long  )data[0];
-                  long   datetime        = (Long  )data[1];
-                  String storageName     = (String)data[5];
-                  String directoryName   = StringUtils.map((String)data[6],FILENAME_MAP_FROM,FILENAME_MAP_TO);
+                  String storageName     = StringUtils.map((String)data[0],MAP_FROM,MAP_TO);
+                  long   storageDateTime = (Long)data[1];
+                  String directoryName   = StringUtils.map((String)data[2],MAP_FROM,MAP_TO);
+                  long   datetime        = (Long)data[3];
 
                   EntryData entryData = entryDataMap.get(storageName,directoryName,EntryTypes.DIRECTORY);
                   if (entryData != null)
@@ -959,23 +972,24 @@ class TabRestore
                     entryDataMap.put(entryData);
                   }
                 }
-                else if (StringParser.parse(line,"LINK %ld %ld %d %d %d %S %S %S",data,StringParser.QUOTE_CHARS))
+                else if (StringParser.parse(line,"LINK %S %ld %S %S %ld %d %d %d",data,StringParser.QUOTE_CHARS))
                 {
                   /* get data
                      format:
+                       storage name
                        storage date/time
+                       link name
+                       destination name
                        date/time
                        user id
                        group id
                        permission
-                       storage name
-                       link name
-                       destination name
                   */
-                  long   storageDateTime = (Long  )data[0];
-                  long   datetime        = (Long  )data[1];
-                  String storageName     = StringUtils.map((String)data[5],FILENAME_MAP_FROM,FILENAME_MAP_TO);
-                  String linkName        = StringUtils.map((String)data[6],FILENAME_MAP_FROM,FILENAME_MAP_TO);
+                  String storageName     = StringUtils.map((String)data[0],MAP_FROM,MAP_TO);
+                  long   storageDateTime = (Long)data[1];
+                  String linkName        = StringUtils.map((String)data[2],MAP_FROM,MAP_TO);
+                  String destinationName = StringUtils.map((String)data[3],MAP_FROM,MAP_TO);
+                  long   datetime        = (Long)data[4];
 
                   EntryData entryData = entryDataMap.get(storageName,linkName,EntryTypes.LINK);
                   if (entryData != null)
@@ -988,22 +1002,56 @@ class TabRestore
                     entryDataMap.put(entryData);
                   }
                 }
-                else if (StringParser.parse(line,"SPECIAL %ld %ld %d %d %d %S %S",data,StringParser.QUOTE_CHARS))
+                else if (StringParser.parse(line,"HARDLINK %S %ld %S %ld %ld %d %d %d %ld %ld",data,StringParser.QUOTE_CHARS))
                 {
                   /* get data
                      format:
+                       storage name
                        storage date/time
+                       file name
+                       size
                        date/time
                        user id
                        group id
                        permission
-                       storage name
-                       name
+                       fragment offset
+                       fragment size
                   */
-                  long   storageDateTime = (Long  )data[0];
-                  long   datetime        = (Long  )data[1];
-                  String storageName     = StringUtils.map((String)data[5],FILENAME_MAP_FROM,FILENAME_MAP_TO);
-                  String name            = StringUtils.map((String)data[6],FILENAME_MAP_FROM,FILENAME_MAP_TO);
+                  String storageName     = StringUtils.map((String)data[0],MAP_FROM,MAP_TO);
+                  long   storageDateTime = (Long)data[1];
+                  String fileName        = StringUtils.map((String)data[2],MAP_FROM,MAP_TO);
+                  long   size            = (Long)data[3];
+                  long   datetime        = (Long)data[4];
+                  long   fragmentOffset  = (Long)data[8];
+                  long   fragmentSize    = (Long)data[9];
+
+                  EntryData entryData = entryDataMap.get(storageName,fileName,EntryTypes.HARDLINK);
+                  if (entryData != null)
+                  {
+                    entryData.datetime = datetime;
+                  }
+                  else
+                  {
+                    entryData = new EntryData(storageName,storageDateTime,fileName,EntryTypes.HARDLINK,datetime);
+                    entryDataMap.put(entryData);
+                  }
+                }
+                else if (StringParser.parse(line,"SPECIAL %S %ld %S %ld %d %d %d",data,StringParser.QUOTE_CHARS))
+                {
+                  /* get data
+                     format:
+                       storage name
+                       storage date/time
+                       name
+                       date/time
+                       user id
+                       group id
+                       permission
+                  */
+                  String storageName     = StringUtils.map((String)data[0],MAP_FROM,MAP_TO);
+                  long   storageDateTime = (Long)data[1];
+                  String name            = StringUtils.map((String)data[2],MAP_FROM,MAP_TO);
+                  long   datetime        = (Long)data[3];
 
                   EntryData entryData = entryDataMap.get(storageName,name,EntryTypes.SPECIAL);
                   if (entryData != null)
@@ -1091,14 +1139,6 @@ class TabRestore
 
   // images
   private final Image IMAGE_DIRECTORY;
-  private final Image IMAGE_DIRECTORY_INCLUDED;
-  private final Image IMAGE_DIRECTORY_EXCLUDED;
-  private final Image IMAGE_FILE;
-  private final Image IMAGE_FILE_INCLUDED;
-  private final Image IMAGE_FILE_EXCLUDED;
-  private final Image IMAGE_LINK;
-  private final Image IMAGE_LINK_INCLUDED;
-  private final Image IMAGE_LINK_EXCLUDED;
 
   private final Image IMAGE_CLEAR;
   private final Image IMAGE_MARK_ALL;
@@ -1185,22 +1225,14 @@ class TabRestore
     COLOR_MODIFIED = shell.getDisplay().getSystemColor(SWT.COLOR_GRAY);
 
     // get images
-    IMAGE_DIRECTORY          = Widgets.loadImage(display,"directory.png");
-    IMAGE_DIRECTORY_INCLUDED = Widgets.loadImage(display,"directoryIncluded.png");
-    IMAGE_DIRECTORY_EXCLUDED = Widgets.loadImage(display,"directoryExcluded.png");
-    IMAGE_FILE               = Widgets.loadImage(display,"file.png");
-    IMAGE_FILE_INCLUDED      = Widgets.loadImage(display,"fileIncluded.png");
-    IMAGE_FILE_EXCLUDED      = Widgets.loadImage(display,"fileExcluded.png");
-    IMAGE_LINK               = Widgets.loadImage(display,"link.png");
-    IMAGE_LINK_INCLUDED      = Widgets.loadImage(display,"linkIncluded.png");
-    IMAGE_LINK_EXCLUDED      = Widgets.loadImage(display,"linkExcluded.png");
+    IMAGE_DIRECTORY  = Widgets.loadImage(display,"directory.png");
 
-    IMAGE_CLEAR              = Widgets.loadImage(display,"clear.png");
-    IMAGE_MARK_ALL           = Widgets.loadImage(display,"mark.png");
-    IMAGE_UNMARK_ALL         = Widgets.loadImage(display,"unmark.png");
+    IMAGE_CLEAR      = Widgets.loadImage(display,"clear.png");
+    IMAGE_MARK_ALL   = Widgets.loadImage(display,"mark.png");
+    IMAGE_UNMARK_ALL = Widgets.loadImage(display,"unmark.png");
 
-    IMAGE_CONNECT0           = Widgets.loadImage(display,"connect0.png");
-    IMAGE_CONNECT1           = Widgets.loadImage(display,"connect1.png");
+    IMAGE_CONNECT0   = Widgets.loadImage(display,"connect0.png");
+    IMAGE_CONNECT1   = Widgets.loadImage(display,"connect1.png");
 
     // get cursors
     waitCursor = new Cursor(display,SWT.CURSOR_WAIT);
@@ -1372,7 +1404,7 @@ class TabRestore
             label.setBackground(COLOR_BACKGROUND);
             Widgets.layout(label,1,0,TableLayoutData.W);
 
-            label = Widgets.newLabel(widgetStorageListToolTip,simpleDateFormat.format(new Date(storageData.createdDateTime*1000)));
+            label = Widgets.newLabel(widgetStorageListToolTip,simpleDateFormat.format(new Date(storageData.dateTime*1000)));
             label.setForeground(COLOR_FORGROUND);
             label.setBackground(COLOR_BACKGROUND);
             Widgets.layout(label,1,1,TableLayoutData.WE);
@@ -2374,7 +2406,7 @@ class TabRestore
                                       (Object)storageData,
                                       storageData.name,
                                       Units.formatByteSize(storageData.size),
-                                      simpleDateFormat.format(new Date(storageData.createdDateTime*1000)),
+                                      simpleDateFormat.format(new Date(storageData.dateTime*1000)),
                                       storageData.indexState.toString()
                                      )
            )
@@ -2384,7 +2416,7 @@ class TabRestore
                                    (Object)storageData,
                                    storageData.name,
                                    Units.formatByteSize(storageData.size),
-                                   simpleDateFormat.format(new Date(storageData.createdDateTime*1000)),
+                                   simpleDateFormat.format(new Date(storageData.dateTime*1000)),
                                    storageData.indexState.toString()
                                   );
         }
@@ -3196,8 +3228,8 @@ Dprintf.dprintf("line=%s",line);
     {
       public void run(final BusyDialog busyDialog, Object userData)
       {
-        final String[] FILENAME_MAP_FROM = new String[]{"\n","\r","\\"};
-        final String[] FILENAME_MAP_TO   = new String[]{"\\n","\\r","\\\\"};
+        final String[] MAP_FROM = new String[]{"\n","\r","\\"};
+        final String[] MAP_TO   = new String[]{"\\n","\\r","\\\\"};
 
         final EntryData[] entryData_       = (EntryData[])((Object[])userData)[0];
         final String      directory        = (String     )((Object[])userData)[1];
@@ -3233,7 +3265,7 @@ Dprintf.dprintf("line=%s",line);
                                      StringUtils.escape(entryData.storageName)+" "+
                                      StringUtils.escape(directory)+" "+
                                      (overwriteEntries?"1":"0")+" "+
-                                     StringUtils.escape(StringUtils.map(entryData.name,FILENAME_MAP_FROM,FILENAME_MAP_TO))
+                                     StringUtils.escape(StringUtils.map(entryData.name,MAP_FROM,MAP_TO))
                                      ;
 //Dprintf.dprintf("command=%s",commandString);
               command = BARServer.runCommand(commandString);
@@ -3263,7 +3295,7 @@ Dprintf.dprintf("line=%s",line);
                     long   totalBytes        = (Long)data[1];
                     long   archiveDoneBytes  = (Long)data[2];
                     long   archiveTotalBytes = (Long)data[3];
-                    String name              = StringUtils.map((String)data[4],FILENAME_MAP_FROM,FILENAME_MAP_TO);
+                    String name              = StringUtils.map((String)data[4],MAP_FROM,MAP_TO);
 
                     busyDialog.updateText(1,name);
                     busyDialog.updateProgressBar(1,(totalBytes > 0) ? ((double)doneBytes*100.0)/(double)totalBytes : 0.0);
