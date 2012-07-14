@@ -165,6 +165,7 @@ BAR_SOURCES          = bar.c \
                        index.c \
                        network.c \
                        server.c \
+                       forward.h \
                        \
                        global.c \
                        cmdoptions.c \
