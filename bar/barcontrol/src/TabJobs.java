@@ -6183,8 +6183,33 @@ Dprintf.dprintf("name=%s %s",name,includeHashMap.containsKey(name));
       label = Widgets.newLabel(composite,"Pattern:");
       Widgets.layout(label,0,0,TableLayoutData.W);
 
-      widgetPattern = Widgets.newText(composite);
-      Widgets.layout(widgetPattern,0,1,TableLayoutData.WE);
+      subComposite = Widgets.newComposite(composite);
+      subComposite.setLayout(new TableLayout(0.0,new double[]{1.0,0.0}));
+      Widgets.layout(subComposite,0,1,TableLayoutData.WE);
+      {
+        widgetPattern = Widgets.newText(subComposite);
+        Widgets.layout(widgetPattern,0,0,TableLayoutData.WE);
+
+        button = Widgets.newButton(subComposite,IMAGE_DIRECTORY);
+        Widgets.layout(button,0,1,TableLayoutData.DEFAULT);
+        button.addSelectionListener(new SelectionListener()
+        {
+          public void widgetDefaultSelected(SelectionEvent selectionEvent)
+          {
+          }
+          public void widgetSelected(SelectionEvent selectionEvent)
+          {
+            String pathName = Dialogs.directory(shell,
+                                                "Select path",
+                                                widgetPattern.getText()
+                                               );
+            if (pathName != null)
+            {
+              widgetPattern.setText(pathName);
+            }
+          }
+        });
+      }
 
       label = Widgets.newLabel(composite,"Type:");
       Widgets.layout(label,1,0,TableLayoutData.W);
@@ -6295,7 +6320,7 @@ throw new Error("NYI");
     final Text   widgetPattern;
     final Button widgetAdd;
     composite = Widgets.newComposite(dialog,SWT.NONE,4);
-    composite.setLayout(new TableLayout(null,new double[]{0.0,1.0},4));
+    composite.setLayout(new TableLayout(null,new double[]{0.0,1.0,0.0},4));
     Widgets.layout(composite,0,0,TableLayoutData.WE,0,0,4);
     {
       label = Widgets.newLabel(composite,"Pattern:");
@@ -6303,6 +6328,26 @@ throw new Error("NYI");
 
       widgetPattern = Widgets.newText(composite);
       Widgets.layout(widgetPattern,0,1,TableLayoutData.WE);
+
+      button = Widgets.newButton(composite,IMAGE_DIRECTORY);
+      Widgets.layout(button,0,2,TableLayoutData.DEFAULT);
+      button.addSelectionListener(new SelectionListener()
+      {
+        public void widgetDefaultSelected(SelectionEvent selectionEvent)
+        {
+        }
+        public void widgetSelected(SelectionEvent selectionEvent)
+        {
+          String pathName = Dialogs.directory(shell,
+                                              "Select path",
+                                              widgetPattern.getText()
+                                             );
+          if (pathName != null)
+          {
+            widgetPattern.setText(pathName);
+          }
+        }
+      });
     }
 
     // buttons
@@ -6376,7 +6421,7 @@ throw new Error("NYI");
     final Text   widgetPattern;
     final Button widgetAdd;
     composite = Widgets.newComposite(dialog,SWT.NONE,4);
-    composite.setLayout(new TableLayout(null,new double[]{0.0,1.0},4));
+    composite.setLayout(new TableLayout(null,new double[]{0.0,1.0,0.0},4));
     Widgets.layout(composite,0,0,TableLayoutData.WE,0,0,4);
     {
       label = Widgets.newLabel(composite,"Pattern:");
@@ -6384,6 +6429,26 @@ throw new Error("NYI");
 
       widgetPattern = Widgets.newText(composite);
       Widgets.layout(widgetPattern,0,1,TableLayoutData.WE);
+
+      button = Widgets.newButton(composite,IMAGE_DIRECTORY);
+      Widgets.layout(button,0,2,TableLayoutData.DEFAULT);
+      button.addSelectionListener(new SelectionListener()
+      {
+        public void widgetDefaultSelected(SelectionEvent selectionEvent)
+        {
+        }
+        public void widgetSelected(SelectionEvent selectionEvent)
+        {
+          String pathName = Dialogs.directory(shell,
+                                              "Select path",
+                                              widgetPattern.getText()
+                                             );
+          if (pathName != null)
+          {
+            widgetPattern.setText(pathName);
+          }
+        }
+      });
     }
 
     // buttons
