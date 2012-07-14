@@ -31,6 +31,15 @@
 /* fdatasync() available */
 #undef HAVE_FDATASYNC
 
+/* FS_COMPR_FL available */
+#undef HAVE_FS_COMPR_FL
+
+/* FS_NOCOMP_FL available */
+#undef HAVE_FS_NOCOMP_FL
+
+/* FS_NODUMP_FL available */
+#undef HAVE_FS_NODUMP_FL
+
 /* FTP installed */
 #undef HAVE_FTP
 
