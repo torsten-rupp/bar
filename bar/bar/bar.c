@@ -2243,6 +2243,17 @@ void vprintInfo(uint verboseLevel, const char *prefix, const char *format, va_li
   }
 }
 
+void pprintInfo(uint verboseLevel, const char *prefix, const char *format, ...)
+{
+  va_list arguments;
+
+  assert(format != NULL);
+
+  va_start(arguments,format);
+  vprintInfo(verboseLevel,prefix,format,arguments);
+  va_end(arguments);
+}
+
 void printInfo(uint verboseLevel, const char *format, ...)
 {
   va_list arguments;

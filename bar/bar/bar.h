@@ -419,7 +419,7 @@ const char *getErrorText(Errors error);
 
 /***********************************************************************\
 * Name   : vprintInfo, printInfo
-* Purpose: output info
+* Purpose: output info to console
 * Input  : verboseLevel - verbosity level
 *          prefix       - prefix text
 *          format       - format string (like printf)
@@ -431,6 +431,7 @@ const char *getErrorText(Errors error);
 \***********************************************************************/
 
 void vprintInfo(uint verboseLevel, const char *prefix, const char *format, va_list arguments);
+void pprintInfo(uint verboseLevel, const char *prefix, const char *format, ...);
 void printInfo(uint verboseLevel, const char *format, ...);
 
 /***********************************************************************\
@@ -465,7 +466,7 @@ void printConsole(const char *format, ...);
 
 /***********************************************************************\
 * Name   : printWarning
-* Purpose: output warning
+* Purpose: output warning on console
 * Input  : text - format string (like printf)
 *          ...  - optional arguments (like printf)
 * Output : -
@@ -477,7 +478,7 @@ void printWarning(const char *text, ...);
 
 /***********************************************************************\
 * Name   : printError
-* Purpose: print error message
+* Purpose: print error message on stderr
 *          text - format string (like printf)
 *          ...  - optional arguments (like printf)
 * Output : -
