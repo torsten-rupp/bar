@@ -288,33 +288,42 @@ LOCAL const Password *getNextDecryptPassword(PasswordHandle *passwordHandle)
 
   if      (passwordHandle->passwordNode != NULL)
   {
-    // next password from list
+    // get next password from list
     password = passwordHandle->passwordNode->password;
     passwordHandle->passwordNode = passwordHandle->passwordNode->next;
   }
-  else if (   (passwordHandle->passwordMode == PASSWORD_MODE_CONFIG)
-           && (passwordHandle->cryptPassword != NULL)
-          )
+  else if (passwordHandle->passwordMode == PASSWORD_MODE_CONFIG)
   {
-    // get password
-    password = (Password*)passwordHandle->cryptPassword;
+    if (passwordHandle->cryptPassword != NULL)
+    {
+      // get password
+      password = (Password*)passwordHandle->cryptPassword;
+    }
+    else
+    {
+      password = NULL;
+    }
 
-    // next password is: default
+    // next password mode is: default
     passwordHandle->passwordMode = PASSWORD_MODE_DEFAULT;
   }
-  else if (   (passwordHandle->passwordMode == PASSWORD_MODE_DEFAULT)
-           && (globalOptions.cryptPassword != NULL)
-          )
+  else if (passwordHandle->passwordMode == PASSWORD_MODE_DEFAULT)
   {
-    // get password
-    password = globalOptions.cryptPassword;
+    if (globalOptions.cryptPassword != NULL)
+    {
+      // get password
+      password = globalOptions.cryptPassword;
+    }
+    else
+    {
+      password = NULL;
+    }
 
-    // next password is: ask
+    // next password mode is: ask
     passwordHandle->passwordMode = PASSWORD_MODE_ASK;
   }
-  else if (   !passwordHandle->inputFlag
-           && (passwordHandle->passwordMode == PASSWORD_MODE_ASK)
-           && (globalOptions.cryptPassword == NULL)
+  else if (   (passwordHandle->passwordMode == PASSWORD_MODE_ASK)
+           && !passwordHandle->inputFlag
           )
   {
     if (passwordHandle->archiveGetCryptPasswordFunction != NULL)
@@ -338,17 +347,17 @@ LOCAL const Password *getNextDecryptPassword(PasswordHandle *passwordHandle)
       // free resources
       Password_done(&newPassword);
 
-      // next password is: none
+      // next password mode is: none
       passwordHandle->inputFlag = TRUE;
     }
     else
     {
-      return NULL;
+      password = NULL;
     }
   }
   else
   {
-    return NULL;
+    password = NULL;
   }
 
   return password;
@@ -3841,6 +3850,7 @@ Errors Archive_newHardLinkEntry(ArchiveInfo      *archiveInfo,
   // get source for delta-compression
   if (deltaCompressFlag)
   {
+    error = ERROR_NONE;
     STRINGLIST_ITERATE(fileNameList,stringNode,fileName)
     {
       error = Source_openEntry(&archiveEntryInfo->hardLink.sourceHandle,
@@ -8651,16 +8661,19 @@ Errors Archive_updateIndex(DatabaseHandle               *databaseHandle,
                            void                         *abortUserData
                           )
 {
+  String            printableStorageName;
+  JobOptions        jobOptions;
   String            s,t;
   Errors            error;
-  JobOptions        jobOptions;
   ArchiveInfo       archiveInfo;
-  String            printableStorageName;
   ArchiveEntryInfo  archiveEntryInfo;
   ArchiveEntryTypes archiveEntryType;
 
   assert(databaseHandle != NULL);
   assert(storageName != NULL);
+
+  // init variables
+  printableStorageName = Storage_getPrintableName(String_new(),storageName);
 
   // init job options
   initJobOptions(&jobOptions);
@@ -8705,6 +8718,8 @@ Errors Archive_updateIndex(DatabaseHandle               *databaseHandle,
   }
   if (error != ERROR_NONE)
   {
+    printInfo(4,"Failed to create index for '%s' (error: %s)\n",String_cString(printableStorageName),Errors_getText(error));
+
     Index_setState(databaseHandle,
                    storageId,
                    INDEX_STATE_ERROR,
@@ -8714,6 +8729,7 @@ Errors Archive_updateIndex(DatabaseHandle               *databaseHandle,
                    Errors_getCode(error)
                   );
     freeJobOptions(&jobOptions);
+    String_delete(printableStorageName);
     return error;
   }
 
@@ -8723,6 +8739,8 @@ Errors Archive_updateIndex(DatabaseHandle               *databaseHandle,
                      );
   if (error != ERROR_NONE)
   {
+    printInfo(4,"Failed to create index for '%s' (error: %s)\n",String_cString(printableStorageName),Errors_getText(error));
+
     Archive_close(&archiveInfo);
     Index_setState(databaseHandle,
                    storageId,
@@ -8733,6 +8751,7 @@ Errors Archive_updateIndex(DatabaseHandle               *databaseHandle,
                    Errors_getCode(error)
                   );
     freeJobOptions(&jobOptions);
+    String_delete(printableStorageName);
     return error;
   }
 
@@ -8747,7 +8766,6 @@ Errors Archive_updateIndex(DatabaseHandle               *databaseHandle,
   // index archive contents
   printInfo(4,"Create index for '%s'\n",String_cString(printableStorageName));
   error = ERROR_NONE;
-  printableStorageName = Storage_getPrintableName(String_new(),storageName);
   while (   !Archive_eof(&archiveInfo,FALSE)
          && ((abortCallback == NULL) || !abortCallback(abortUserData))
          && (error == ERROR_NONE)
@@ -9101,7 +9119,7 @@ Errors Archive_updateIndex(DatabaseHandle               *databaseHandle,
   }
   else
   {
-    printInfo(4,"Error create index for '%s' (error: %s)\n",String_cString(printableStorageName),Errors_getText(error));
+    printInfo(4,"Failed to create index for '%s' (error: %s)\n",String_cString(printableStorageName),Errors_getText(error));
 
     if (Errors_getCode(error) == ERROR_NO_CRYPT_PASSWORD)
     {
@@ -9129,7 +9147,6 @@ Errors Archive_updateIndex(DatabaseHandle               *databaseHandle,
 
     return error;
   }
-  String_delete(printableStorageName);
 
   // set index state 'OK'
   Index_setState(databaseHandle,
@@ -9165,6 +9182,7 @@ Errors Archive_updateIndex(DatabaseHandle               *databaseHandle,
 
   // free resources
   freeJobOptions(&jobOptions);
+  String_delete(printableStorageName);
 
   return ERROR_NONE;
 }
