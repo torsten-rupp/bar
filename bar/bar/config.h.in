@@ -34,6 +34,9 @@
 /* FS_COMPR_FL available */
 #undef HAVE_FS_COMPR_FL
 
+/* FS_IOC_GETFLAGS available */
+#undef HAVE_FS_IOC_GETFLAGS
+
 /* FS_NOCOMP_FL available */
 #undef HAVE_FS_NOCOMP_FL
 
