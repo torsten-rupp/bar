@@ -186,10 +186,10 @@ BAR_OBJECTS          = $(foreach z,$(BAR_SOURCES),$(subst .c,.o,$z)) \
                        errors.o \
                        archive_format.o
 
-EXTERN_SOURCES       = $(if @HAVE_XDELTA@,../xdelta/xdelta3.c) \
-                       sqlite3.c
+EXTERN_SOURCES       = sqlite3.c
 
-EXTERN_OBJECTS       = $(foreach z,$(EXTERN_SOURCES),$(subst .c,.o,$z))
+EXTERN_OBJECTS       = $(foreach z,$(EXTERN_SOURCES),$(subst .c,.o,$z)) \
+                       $(if @HAVE_XDELTA@,xdelta3.o)
 
 DESTROYER_SOURCES    = destroyer.c \
                        global.c \
@@ -306,8 +306,8 @@ bar@EXEEXT@: $(BAR_OBJECTS) $(EXTERN_OBJECTS)
 sqlite3.o: sqlite3.c
 	$(CC) $(CC_FLAGS) $(CC_OPTIMIZE) -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" $(foreach z,$(CC_DEFINES),-D$z) $(foreach z,$(CC_INCLUDES),-I$z) -c $*.c -o $*.o
 ifeq (@HAVE_XDELTA@,1)
-xdelta3.o: xdelta3.c
-	$(CC) $(CC_FLAGS) $(CC_OPTIMIZE) -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" $(foreach z,$(CC_DEFINES),-D$z) $(foreach z,$(CC_INCLUDES),-I$z) -c $*.c -o $*.o
+xdelta3.o: ../xdelta3/xdelta3.c
+	$(CC) $(CC_FLAGS) $(CC_OPTIMIZE) -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" $(foreach z,$(CC_DEFINES),-D$z) $(foreach z,$(CC_INCLUDES),-I$z) -c ../xdelta3/$*.c -o $*.o
 endif
 
 # create bar-keygen script
