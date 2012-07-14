@@ -9,6 +9,8 @@
 \***********************************************************************/
 
 /****************************** Includes *******************************/
+#include "config.h"
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdarg.h>
@@ -86,7 +88,7 @@ void debugDumpStackTrace(FILE *handle, const char *title, uint indent, void cons
 
   for (i = 0; i < indent; i++) fprintf(handle," ");
   fprintf(handle,"C stack trace: %s\n",title);
-  functionNames = (const char **)backtrace_symbols(stackTrace,stackTraceSize);
+  functionNames = (const char **)backtrace_symbols((void *const*)stackTrace,stackTraceSize);
   if (functionNames != NULL)
   {
     for (z = 1; z < stackTraceSize; z++)
