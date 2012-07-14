@@ -674,7 +674,7 @@ class TabJobs
 
   /** schedule data
    */
-  class ScheduleData
+  class ScheduleData implements Cloneable
   {
     final static int ANY = -1;
     final static int MON = 0;
@@ -692,17 +692,32 @@ class TabJobs
     String  type;
 
     /** create schedule data
+     * @param year year
+     * @param month month
+     * @param day day
+     * @param weekDays week days
+     * @param hour hour
+     * @param minute minute
+     * @param enabled enabled state
+     * @param type type string
+     */
+    ScheduleData(int year, int month, int day, int weekDays, int hour, int minute, boolean enabled, String type)
+    {
+      this.year     = year;
+      this.month    = month;
+      this.day      = day;
+      this.weekDays = weekDays;
+      this.hour     = hour;
+      this.minute   = minute;
+      this.enabled  = enabled;
+      this.type     = type;
+    }
+
+    /** create schedule data
      */
     ScheduleData()
     {
-      this.year     = ScheduleData.ANY;
-      this.month    = ScheduleData.ANY;
-      this.day      = ScheduleData.ANY;
-      this.weekDays = ScheduleData.ANY;
-      this.hour     = ScheduleData.ANY;
-      this.minute   = ScheduleData.ANY;
-      this.enabled  = true;
-      this.type     = "*";
+      this(ScheduleData.ANY,ScheduleData.ANY,ScheduleData.ANY,ScheduleData.ANY,ScheduleData.ANY,ScheduleData.ANY,true,"*");
     }
 
     /** create schedule data
@@ -722,6 +737,22 @@ class TabJobs
       setTime(hour,minute);
       this.enabled = enabled;
       this.type    = getValidString(type,new String[]{"*","full","incremental","differential"},"*");;
+    }
+
+    /** clone schedule data object
+     * @return clone of object
+     */
+    public ScheduleData clone()
+    {
+      return new ScheduleData(year,
+                              month,
+                              day,
+                              weekDays,
+                              hour,
+                              minute,
+                              enabled,
+                              type
+                             );
     }
 
     /** get year value
@@ -1975,7 +2006,7 @@ class TabJobs
             }
           });
 
-          menuItem = Widgets.addMenuItem(menu,"Remove");
+          menuItem = Widgets.addMenuItem(menu,"Remove\u2026");
           menuItem.addSelectionListener(new SelectionListener()
           {
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -1999,7 +2030,7 @@ class TabJobs
         Widgets.layout(composite,1,1,TableLayoutData.W);
         {
           button = Widgets.newButton(composite,"Add\u2026");
-          Widgets.layout(button,0,0,TableLayoutData.DEFAULT,0,0,0,0,60,SWT.DEFAULT);
+          Widgets.layout(button,0,0,TableLayoutData.DEFAULT,0,0,0,0,90,SWT.DEFAULT);
           button.addSelectionListener(new SelectionListener()
           {
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -2016,8 +2047,8 @@ class TabJobs
           });
           button.setToolTipText("Add entry to included list.");
 
-          button = Widgets.newButton(composite,"Remove");
-          Widgets.layout(button,0,1,TableLayoutData.DEFAULT,0,0,0,0,60,SWT.DEFAULT);
+          button = Widgets.newButton(composite,"Remove\u2026");
+          Widgets.layout(button,0,1,TableLayoutData.DEFAULT,0,0,0,0,90,SWT.DEFAULT);
           button.addSelectionListener(new SelectionListener()
           {
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -2058,7 +2089,7 @@ class TabJobs
             }
           });
 
-          menuItem = Widgets.addMenuItem(menu,"Remove");
+          menuItem = Widgets.addMenuItem(menu,"Remove\u2026");
           menuItem.addSelectionListener(new SelectionListener()
           {
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -2082,7 +2113,7 @@ class TabJobs
         Widgets.layout(composite,3,1,TableLayoutData.W);
         {
           button = Widgets.newButton(composite,"Add\u2026");
-          Widgets.layout(button,0,0,TableLayoutData.DEFAULT,0,0,0,0,60,SWT.DEFAULT);
+          Widgets.layout(button,0,0,TableLayoutData.DEFAULT,0,0,0,0,90,SWT.DEFAULT);
           button.addSelectionListener(new SelectionListener()
           {
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -2099,8 +2130,8 @@ class TabJobs
           });
           button.setToolTipText("Add entry to excluded list.");
 
-          button = Widgets.newButton(composite,"Remove");
-          Widgets.layout(button,0,1,TableLayoutData.DEFAULT,0,0,0,0,60,SWT.DEFAULT);
+          button = Widgets.newButton(composite,"Remove\u2026");
+          Widgets.layout(button,0,1,TableLayoutData.DEFAULT,0,0,0,0,90,SWT.DEFAULT);
           button.addSelectionListener(new SelectionListener()
           {
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -2594,7 +2625,7 @@ class TabJobs
               }
             });
 
-            menuItem = Widgets.addMenuItem(menu,"Remove");
+            menuItem = Widgets.addMenuItem(menu,"Remove\u2026");
             menuItem.addSelectionListener(new SelectionListener()
             {
               public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -2618,7 +2649,7 @@ class TabJobs
           Widgets.layout(subComposite,1,0,TableLayoutData.W);
           {
             button = Widgets.newButton(subComposite,"Add\u2026");
-            Widgets.layout(button,0,0,TableLayoutData.DEFAULT,0,0,0,0,60,SWT.DEFAULT);
+            Widgets.layout(button,0,0,TableLayoutData.DEFAULT,0,0,0,0,90,SWT.DEFAULT);
             Widgets.addModifyListener(new WidgetModifyListener(button,new WidgetVariable[]{deltaCompressAlgorithm,byteCompressAlgorithm})
             {
               public void modified(Control control, WidgetVariable byteCompressAlgorithm)
@@ -2642,8 +2673,8 @@ class TabJobs
             });
             button.setToolTipText("Add entry to compress exclude list.");
 
-            button = Widgets.newButton(subComposite,"Remove");
-            Widgets.layout(button,0,1,TableLayoutData.DEFAULT,0,0,0,0,60,SWT.DEFAULT);
+            button = Widgets.newButton(subComposite,"Remove\u2026");
+            Widgets.layout(button,0,1,TableLayoutData.DEFAULT,0,0,0,0,90,SWT.DEFAULT);
             Widgets.addModifyListener(new WidgetModifyListener(button,new WidgetVariable[]{deltaCompressAlgorithm,byteCompressAlgorithm})
             {
               public void modified(Control control, WidgetVariable byteCompressAlgorithm)
@@ -4796,7 +4827,7 @@ class TabJobs
             }
           });
 
-          menuItem = Widgets.addMenuItem(menu,"Copy\u2026");
+          menuItem = Widgets.addMenuItem(menu,"Clone\u2026");
           menuItem.addSelectionListener(new SelectionListener()
           {
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -4805,7 +4836,7 @@ class TabJobs
             public void widgetSelected(SelectionEvent selectionEvent)
             {
               MenuItem widget = (MenuItem)selectionEvent.widget;
-              scheduleCopy();
+              scheduleClone();
             }
           });
 
@@ -4830,7 +4861,7 @@ class TabJobs
         Widgets.layout(composite,1,0,TableLayoutData.WE);
         {
           button = Widgets.newButton(composite,"Add\u2026");
-          Widgets.layout(button,0,0,TableLayoutData.DEFAULT,0,0,0,0,60,SWT.DEFAULT);
+          Widgets.layout(button,0,0,TableLayoutData.DEFAULT,0,0,0,0,90,SWT.DEFAULT);
           button.addSelectionListener(new SelectionListener()
           {
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -4845,7 +4876,7 @@ class TabJobs
           button.setToolTipText("Add new schedule entry.");
 
           button = Widgets.newButton(composite,"Edit\u2026");
-          Widgets.layout(button,0,1,TableLayoutData.DEFAULT,0,0,0,0,60,SWT.DEFAULT);
+          Widgets.layout(button,0,1,TableLayoutData.DEFAULT,0,0,0,0,90,SWT.DEFAULT);
           button.addSelectionListener(new SelectionListener()
           {
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -4859,8 +4890,8 @@ class TabJobs
           });
           button.setToolTipText("Edit schedule entry.");
 
-          button = Widgets.newButton(composite,"Copy\u2026");
-          Widgets.layout(button,0,2,TableLayoutData.DEFAULT,0,0,0,0,60,SWT.DEFAULT);
+          button = Widgets.newButton(composite,"Clone\u2026");
+          Widgets.layout(button,0,2,TableLayoutData.DEFAULT,0,0,0,0,90,SWT.DEFAULT);
           button.addSelectionListener(new SelectionListener()
           {
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -4869,13 +4900,13 @@ class TabJobs
             public void widgetSelected(SelectionEvent selectionEvent)
             {
               Button widget = (Button)selectionEvent.widget;
-              scheduleCopy();
+              scheduleClone();
             }
           });
-          button.setToolTipText("Copy schedule entry.");
+          button.setToolTipText("Clone schedule entry.");
 
           button = Widgets.newButton(composite,"Remove\u2026");
-          Widgets.layout(button,0,3,TableLayoutData.DEFAULT,0,0,0,0,60,SWT.DEFAULT);
+          Widgets.layout(button,0,3,TableLayoutData.DEFAULT,0,0,0,0,90,SWT.DEFAULT);
           button.addSelectionListener(new SelectionListener()
           {
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -5213,7 +5244,7 @@ throw new Error("NYI");
     Dialogs.run(dialog);
   }
 
-  /** copy job
+  /** clone job
    */
   private void jobCopy()
   {
@@ -5221,7 +5252,7 @@ throw new Error("NYI");
     Label     label;
     Button    button;
 
-    final Shell dialog = Dialogs.openModal(shell,"Copy job",300,SWT.DEFAULT,new double[]{1.0,0.0},1.0);
+    final Shell dialog = Dialogs.openModal(shell,"Clone job",300,SWT.DEFAULT,new double[]{1.0,0.0},1.0);
 
     // create widgets
     final Text   widgetJobName;
@@ -5242,7 +5273,7 @@ throw new Error("NYI");
     composite.setLayout(new TableLayout(0.0,1.0));
     Widgets.layout(composite,1,0,TableLayoutData.WE,0,0,4);
     {
-      widgetCopy = Widgets.newButton(composite,"Copy");
+      widgetCopy = Widgets.newButton(composite,"Clone");
       Widgets.layout(widgetCopy,0,0,TableLayoutData.W,0,0,0,0,60,SWT.DEFAULT);
 
       button = Widgets.newButton(composite,"Cancel");
@@ -6741,7 +6772,12 @@ throw new Error("NYI");
     int index = widgetIncludeTable.getSelectionIndex();
     if (index >= 0)
     {
-      includeListRemove(((EntryData)widgetIncludeTable.getItem(index).getData()).pattern);
+      EntryData entryData = (EntryData)widgetIncludeTable.getItem(index).getData();
+
+      if (Dialogs.confirm(shell,"Remove include pattern '"+entryData.pattern+"'?"))
+      {
+        includeListRemove(entryData.pattern);
+      }
     }
   }
 
@@ -6754,7 +6790,12 @@ throw new Error("NYI");
     int index = widgetExcludeList.getSelectionIndex();
     if (index >= 0)
     {
-      excludeListRemove(widgetExcludeList.getItem(index));
+      String pattern = widgetExcludeList.getItem(index);
+
+      if (Dialogs.confirm(shell,"Remove exclude pattern '"+pattern+"'?"))
+      {
+        excludeListRemove(pattern);
+      }
     }
   }
 
@@ -6767,7 +6808,12 @@ throw new Error("NYI");
     int index = widgetCompressExcludeList.getSelectionIndex();
     if (index >= 0)
     {
-      compressExcludeListRemove(widgetCompressExcludeList.getItem(index));
+      String pattern = widgetCompressExcludeList.getItem(index);
+
+      if (Dialogs.confirm(shell,"Remove compress exclude pattern '"+pattern+"'?"))
+      {
+        compressExcludeListRemove(pattern);
+      }
     }
   }
 
@@ -8032,11 +8078,20 @@ throw new Error("NYI");
     int index = widgetScheduleList.getSelectionIndex();
     if (index >= 0)
     {
-      TableItem tableItem = widgetScheduleList.getItem(index);
-
+      TableItem tableItem       = widgetScheduleList.getItem(index);
       ScheduleData scheduleData = (ScheduleData)tableItem.getData();
+
       if (scheduleEdit(scheduleData,"Edit schedule","Save"))
       {
+        tableItem.dispose();
+        tableItem = new TableItem(widgetScheduleList,SWT.NONE,findScheduleListIndex(scheduleData));
+        tableItem.setData(scheduleData);
+        tableItem.setText(0,scheduleData.getDate());
+        tableItem.setText(1,scheduleData.getWeekDays());
+        tableItem.setText(2,scheduleData.getTime());
+        tableItem.setText(3,scheduleData.getEnabled());
+        tableItem.setText(4,scheduleData.getType());
+
         BARServer.executeCommand("SCHEDULE_LIST_CLEAR "+selectedJobId);
         for (ScheduleData data : scheduleList)
         {
@@ -8049,55 +8104,43 @@ throw new Error("NYI");
                                    data.getType()
                                   );
         }
-
-        tableItem.dispose();
-        tableItem = new TableItem(widgetScheduleList,SWT.NONE,findScheduleListIndex(scheduleData));
-        tableItem.setData(scheduleData);
-        tableItem.setText(0,scheduleData.getDate());
-        tableItem.setText(1,scheduleData.getWeekDays());
-        tableItem.setText(2,scheduleData.getTime());
-        tableItem.setText(3,scheduleData.getEnabled());
-        tableItem.setText(4,scheduleData.getType());
       }
     }
   }
 
-  /** copy schedule entry
+  /** clone a schedule entry
    */
-  private void scheduleCopy()
+  private void scheduleClone()
   {
     assert selectedJobId != 0;
-Dprintf.dprintf("");
 
     int index = widgetScheduleList.getSelectionIndex();
     if (index >= 0)
     {
-      TableItem tableItem = widgetScheduleList.getItem(index);
-
+      TableItem    tableItem    = widgetScheduleList.getItem(index);
       ScheduleData scheduleData = (ScheduleData)tableItem.getData();
-      if (scheduleEdit(scheduleData,"Edit schedule","Save"))
-      {
-        BARServer.executeCommand("SCHEDULE_LIST_CLEAR "+selectedJobId);
-        for (ScheduleData data : scheduleList)
-        {
-          BARServer.executeCommand("SCHEDULE_LIST_ADD "+
-                                   selectedJobId+" "+
-                                   data.getDate()+" "+
-                                   data.getWeekDays()+" "+
-                                   data.getTime()+" "+
-                                   data.getEnabled()+" "+
-                                   data.getType()
-                                  );
-        }
 
-        tableItem.dispose();
-        tableItem = new TableItem(widgetScheduleList,SWT.NONE,findScheduleListIndex(scheduleData));
-        tableItem.setData(scheduleData);
-        tableItem.setText(0,scheduleData.getDate());
-        tableItem.setText(1,scheduleData.getWeekDays());
-        tableItem.setText(2,scheduleData.getTime());
-        tableItem.setText(3,scheduleData.getEnabled());
-        tableItem.setText(4,scheduleData.getType());
+      ScheduleData newScheduleData = scheduleData.clone();
+      if (scheduleEdit(newScheduleData,"New schedule","Add"))
+      {
+        scheduleList.add(newScheduleData);
+
+        tableItem = new TableItem(widgetScheduleList,SWT.NONE,findScheduleListIndex(newScheduleData));
+        tableItem.setData(newScheduleData);
+        tableItem.setText(0,newScheduleData.getDate());
+        tableItem.setText(1,newScheduleData.getWeekDays());
+        tableItem.setText(2,newScheduleData.getTime());
+        tableItem.setText(3,newScheduleData.getEnabled());
+        tableItem.setText(4,newScheduleData.getType());
+
+        BARServer.executeCommand("SCHEDULE_LIST_ADD "+
+                                 selectedJobId+" "+
+                                 newScheduleData.getDate()+" "+
+                                 newScheduleData.getWeekDays()+" "+
+                                 newScheduleData.getTime()+" "+
+                                 newScheduleData.getEnabled()+" "+
+                                 newScheduleData.getType()
+                                );
       }
     }
   }
@@ -8113,11 +8156,12 @@ Dprintf.dprintf("");
     {
       if (Dialogs.confirm(shell,"Delete schedule?"))
       {
-        TableItem tableItem = widgetScheduleList.getItem(index);
-
+        TableItem    tableItem    = widgetScheduleList.getItem(index);
         ScheduleData scheduleData = (ScheduleData)tableItem.getData();
 
         scheduleList.remove(scheduleData);
+
+        tableItem.dispose();
 
         BARServer.executeCommand("SCHEDULE_LIST_CLEAR "+selectedJobId);
         for (ScheduleData data : scheduleList)
@@ -8131,8 +8175,6 @@ Dprintf.dprintf("");
                                    data.getType()
                                   );
         }
-
-        tableItem.dispose();
       }
     }
   }
