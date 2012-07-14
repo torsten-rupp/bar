@@ -4613,8 +4613,10 @@ Errors Storage_read(StorageFileHandle *storageFileHandle,
               }
             }
           }
-#endif /* 0 */
         }
+      #else /* not HAVE_SSH2 */
+        error = ERROR_FUNCTION_NOT_SUPPORTED;
+      #endif /* HAVE_SSH2 */
       break;
     case STORAGE_TYPE_SFTP:
       #ifdef HAVE_SSH2
