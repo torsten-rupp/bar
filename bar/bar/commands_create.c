@@ -642,7 +642,7 @@ LOCAL_INLINE bool checkNoDumpAttribute(const FileInfo *fileInfo, const JobOption
   assert(fileInfo != NULL);
   assert(jobOptions != NULL);
 
-  return !jobOptions->ignoreNoDumpAttributeFlag && ((fileInfo->attributes & FILE_ATTRIBUTE_NO_DUMP) != 0);
+  return !jobOptions->ignoreNoDumpAttributeFlag && FILE_HAVE_ATTRIBUTE_NO_DUMP(fileInfo->attributes);
 }
 
 /***********************************************************************\

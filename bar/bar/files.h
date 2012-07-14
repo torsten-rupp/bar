@@ -109,10 +109,16 @@ typedef enum
 #define FILE_DEFAULT_PERMISSION 0xFFFFFFFF
 
 // attributes
-#define FILE_ATTRIBUTE_NONE        0LL
-#define FILE_ATTRIBUTE_COMPRESS    FS_COMPR_FL
-#define FILE_ATTRIBUTE_NO_COMPRESS FS_NOCOMP_FL
-#define FILE_ATTRIBUTE_NO_DUMP     FS_NODUMP_FL
+#define FILE_ATTRIBUTE_NONE 0LL
+#ifdef HAVE_FS_COMPR_FL
+  #define FILE_ATTRIBUTE_COMPRESS    FS_COMPR_FL
+#endif
+#ifdef HAVE_FS_NOCOMP_FL
+  #define FILE_ATTRIBUTE_NO_COMPRESS FS_NOCOMP_FL
+#endif
+#ifdef HAVE_FS_NODUMP_FL
+  #define FILE_ATTRIBUTE_NO_DUMP     FS_NODUMP_FL
+#endif
 
 /***************************** Datatypes *******************************/
 
@@ -179,6 +185,22 @@ typedef struct
   #define File_openDescriptor(fileHandle,fileDescriptor,fileMode) __File_openDescriptor(__FILE__,__LINE__,fileHandle,fileDescriptor,fileMode)
   #define File_close(fileHandle)                                  __File_close(__FILE__,__LINE__,fileHandle)
 #endif /* not NDEBUG */
+
+#ifdef HAVE_FS_COMPR_FL
+  #define FILE_HAVE_ATTRIBUTE_COMPRESS(attributes)    (((attributes) & FILE_ATTRIBUTE_COMPRESS) != 0)
+#else
+  #define FILE_HAVE_ATTRIBUTE_COMPRESS(attributes)    FALSE
+#endif
+#ifdef HAVE_FS_NOCOMP_FL
+  #define FILE_HAVE_ATTRIBUTE_NO_COMPRESS(attributes) (((attributes) & FILE_ATTRIBUTE_NO_COMPRESS) != 0)
+#else
+  #define FILE_HAVE_ATTRIBUTE_NO_COMPRESS(attributes) FALSE
+#endif
+#ifdef HAVE_FS_NODUMP_FL
+  #define FILE_HAVE_ATTRIBUTE_NO_DUMP(attributes)     (((attributes) & FILE_ATTRIBUTE_NO_DUMP) != 0)
+#else
+  #define FILE_HAVE_ATTRIBUTE_NO_DUMP(attributes)     FALSE
+#endif
 
 /***************************** Forwards ********************************/
 
