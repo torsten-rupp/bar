@@ -15,8 +15,6 @@
 #include <stdio.h>
 #include <assert.h>
 
-#include "forward.h"         // required for JobOptions
-
 #include "global.h"
 #include "strings.h"
 #include "patternlists.h"
