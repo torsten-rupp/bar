@@ -129,7 +129,7 @@ LOCAL const struct { const char *name; CompressAlgorithms compressAlgorithm; } C
 LOCAL Errors compressData(CompressInfo *compressInfo)
 {
   ulong maxCompressBytes,maxDataBytes;
-  ulong compressBytes,dataBytes;
+  ulong compressBytes;
 
   assert(compressInfo != NULL);
 
@@ -439,6 +439,7 @@ LOCAL Errors compressData(CompressInfo *compressInfo)
       // compress with xdelta
       #ifdef HAVE_XDELTA3
         {
+          ulong  dataBytes;
           bool   doneFlag;
           int    xdeltaResult;
           ulong  n;
@@ -735,7 +736,7 @@ close(h);
 LOCAL Errors decompressData(CompressInfo *compressInfo)
 {
   ulong maxCompressBytes,maxDataBytes;
-  ulong compressBytes,dataBytes;
+  ulong dataBytes;
 
   assert(compressInfo != NULL);
 
@@ -1064,6 +1065,7 @@ LOCAL Errors decompressData(CompressInfo *compressInfo)
       // decompress with xdelta
       #ifdef HAVE_XDELTA3
         {
+          ulong  compressBytes;
           bool   doneFlag;
           int    xdeltaResult;
           ulong  n;
@@ -1414,6 +1416,10 @@ Errors Compress_new(CompressInfo       *compressInfo,
                    )
 {
   assert(compressInfo != NULL);
+
+  #ifndef HAVE_XDELTA3
+    UNUSED_VARIABLE(sourceHandle);
+  #endif
 
   // init variables
   compressInfo->compressMode         = compressMode;
@@ -1814,7 +1820,7 @@ void Compress_delete(CompressInfo *compressInfo)
         RingBuffer_done(&compressInfo->xdelta.outputRingBuffer,NULL,NULL);
         free(compressInfo->xdelta.sourceBuffer);
       #else /* not HAVE_XDELTA3 */
-        return ERROR_FUNCTION_NOT_SUPPORTED;
+        return;
       #endif /* HAVE_XDELTA3 */
       break;
     default:
