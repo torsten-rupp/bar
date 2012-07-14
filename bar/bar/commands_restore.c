@@ -261,6 +261,7 @@ Errors Command_restore(const StringList                *archiveNameList,
   FragmentList_init(&fragmentList);
   printableArchiveName = String_new();
 
+  error     = ERROR_NONE;
   abortFlag = FALSE;
   STRINGLIST_ITERATE(archiveNameList,stringNode,archiveName)
   {
@@ -701,7 +702,8 @@ Errors Command_restore(const StringList                *archiveNameList,
             enum
             {
               DEVICE,
-              FILE
+              FILE,
+              UNKNOWN
             }            type;
             DeviceHandle deviceHandle;
             FileHandle   fileHandle;
@@ -855,6 +857,7 @@ Errors Command_restore(const StringList                *archiveNameList,
                 String_delete(parentDirectoryName);
               }
 
+              type = UNKNOWN;
               if (!jobOptions->dryRunFlag)
               {
                 if (File_isDevice(destinationDeviceName))
@@ -922,6 +925,11 @@ Errors Command_restore(const StringList                *archiveNameList,
                                 );
                     }
                     break;
+                  default:
+                    #ifndef NDEBUG
+                      HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+                    #endif /* NDEBUG */
+                    break;
                 }
                 if (error != ERROR_NONE)
                 {
@@ -929,6 +937,11 @@ Errors Command_restore(const StringList                *archiveNameList,
                   {
                     case DEVICE: Device_close(&deviceHandle); break;
                     case FILE:   File_close(&fileHandle); break;
+                    default:
+                      #ifndef NDEBUG
+                        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+                      #endif /* NDEBUG */
+                      break;
                   }
                   String_delete(destinationDeviceName);
                   Archive_closeEntry(&archiveEntryInfo);
@@ -995,6 +1008,11 @@ Errors Command_restore(const StringList                *archiveNameList,
                                   );
                       }
                       break;
+                    default:
+                      #ifndef NDEBUG
+                        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+                      #endif /* NDEBUG */
+                      break;
                   }
                   if (error != ERROR_NONE)
                   {
@@ -1020,6 +1038,11 @@ Errors Command_restore(const StringList                *archiveNameList,
                   {
                     case DEVICE: Device_close(&deviceHandle); break;
                     case FILE:   File_close(&fileHandle); break;
+                    default:
+                      #ifndef NDEBUG
+                        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+                      #endif /* NDEBUG */
+                      break;
                   }
                 }
                 String_delete(destinationDeviceName);
@@ -1036,6 +1059,11 @@ Errors Command_restore(const StringList                *archiveNameList,
                   {
                     case DEVICE: Device_close(&deviceHandle); break;
                     case FILE:   File_close(&fileHandle); break;
+                    default:
+                      #ifndef NDEBUG
+                        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+                      #endif /* NDEBUG */
+                      break;
                   }
                 }
                 String_delete(destinationDeviceName);
@@ -1052,6 +1080,11 @@ Errors Command_restore(const StringList                *archiveNameList,
                 {
                   case DEVICE: Device_close(&deviceHandle); break;
                   case FILE:   File_close(&fileHandle); break;
+                  default:
+                    #ifndef NDEBUG
+                      HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+                    #endif /* NDEBUG */
+                    break;
                 }
               }
 
