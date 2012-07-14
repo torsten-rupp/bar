@@ -470,11 +470,21 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
 
   CMD_OPTION_SPECIAL      ("compress-algorithm",           'z',0,1,&jobOptions.compressAlgorithm,              cmdOptionParseCompressAlgorithm,NULL,                  "select compress algorithms to use\n"
                                                                                                                                                                       "  none        : no compression (default)\n"
-                                                                                                                                                                      "  zip0..zip9  : ZIP compression level 0..9\n"
-                                                                                                                                                                      "  bzip1..bzip9: BZIP2 compression level 1..9\n"
-                                                                                                                                                                      "  lzma1..lzma9: LZMA compression level 1..9\n"
+                                                                                                                                                                      "  zip0..zip9  : ZIP compression level 0..9"
+                                                                                                                                                                      #ifdef HAVE_BZ2
+                                                                                                                                                                      "\n"
+                                                                                                                                                                      "  bzip1..bzip9: BZIP2 compression level 1..9"
+                                                                                                                                                                      #endif
+                                                                                                                                                                      #ifdef HAVE_LZMA
+                                                                                                                                                                      "\n"
+                                                                                                                                                                      "  lzma1..lzma9: LZMA compression level 1..9"
+                                                                                                                                                                      #endif
+                                                                                                                                                                      #ifdef HAVE_XDELTA
+                                                                                                                                                                      "\n"
                                                                                                                                                                       "additional select with '+':\n"
-                                                                                                                                                                      "  xdelta1..xdelta9: XDELTA compression level 1..9",
+                                                                                                                                                                      "  xdelta1..xdelta9: XDELTA compression level 1..9"
+                                                                                                                                                                      #endif
+                                                                                                                                                                      ,
                                                                                                                                                                       "algorithm|xdelta+algorithm"                            ),
   CMD_OPTION_INTEGER      ("compress-min-size",            0,  1,1,globalOptions.compressMinFileSize,          0,MAX_INT,COMMAND_LINE_BYTES_UNITS,                    "minimal size of file for compression"                                     ),
   CMD_OPTION_SPECIAL      ("compress-exclude",             0,  0,2,&compressExcludePatternList,                cmdOptionParsePattern,NULL,                            "exclude compression pattern","pattern"                                    ),
