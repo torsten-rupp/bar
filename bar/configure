@@ -8982,6 +8982,130 @@ $as_echo "#define HAVE_POSIX_FADVISE 1" >>confdefs.h
 fi
 
 
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking if constant FS_COMPR_FL is available" >&5
+$as_echo_n "checking if constant FS_COMPR_FL is available... " >&6; }
+if test "${ac_cv_const_FS_COMPR_FL+set}" = set; then :
+  $as_echo_n "(cached) " >&6
+else
+
+      cat << \EOF > conftest.c
+#include <stdlib.h>
+#include <stdio.h>
+EOF
+for ac_header in linux/fs.h ""; do
+  if test -n "$ac_header"; then
+    echo "#include <$ac_header>" >> conftest.c
+  fi
+done
+      cat << \EOF >> conftest.c
+int main(void) { printf("%d",FS_COMPR_FL); return 0; }
+EOF
+
+      ${CC} ${CFLAGS} -c conftest.c -o conftest.o 1>/dev/null 2>/dev/null; rc=$?
+      if test $rc -eq 0; then
+        ac_available=yes
+      else
+        ac_available=no
+      fi
+      if test "$ac_available" = "yes"; then :
+
+$as_echo "#define HAVE_FS_COMPR_FL 1" >>confdefs.h
+
+elif :; then :
+
+fi
+      ac_cv_const_FS_COMPR_FL=$ac_available
+
+      rm -f conftest.c conftest.o
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_const_FS_COMPR_FL" >&5
+$as_echo "$ac_cv_const_FS_COMPR_FL" >&6; }
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking if constant FS_NOCOMP_FL is available" >&5
+$as_echo_n "checking if constant FS_NOCOMP_FL is available... " >&6; }
+if test "${ac_cv_const_FS_NOCOMP_FL+set}" = set; then :
+  $as_echo_n "(cached) " >&6
+else
+
+      cat << \EOF > conftest.c
+#include <stdlib.h>
+#include <stdio.h>
+EOF
+for ac_header in linux/fs.h ""; do
+  if test -n "$ac_header"; then
+    echo "#include <$ac_header>" >> conftest.c
+  fi
+done
+      cat << \EOF >> conftest.c
+int main(void) { printf("%d",FS_NOCOMP_FL); return 0; }
+EOF
+
+      ${CC} ${CFLAGS} -c conftest.c -o conftest.o 1>/dev/null 2>/dev/null; rc=$?
+      if test $rc -eq 0; then
+        ac_available=yes
+      else
+        ac_available=no
+      fi
+      if test "$ac_available" = "yes"; then :
+
+$as_echo "#define HAVE_FS_NOCOMP_FL 1" >>confdefs.h
+
+elif :; then :
+
+fi
+      ac_cv_const_FS_NOCOMP_FL=$ac_available
+
+      rm -f conftest.c conftest.o
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_const_FS_NOCOMP_FL" >&5
+$as_echo "$ac_cv_const_FS_NOCOMP_FL" >&6; }
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking if constant FS_NODUMP_FL is available" >&5
+$as_echo_n "checking if constant FS_NODUMP_FL is available... " >&6; }
+if test "${ac_cv_const_FS_NODUMP_FL+set}" = set; then :
+  $as_echo_n "(cached) " >&6
+else
+
+      cat << \EOF > conftest.c
+#include <stdlib.h>
+#include <stdio.h>
+EOF
+for ac_header in linux/fs.h ""; do
+  if test -n "$ac_header"; then
+    echo "#include <$ac_header>" >> conftest.c
+  fi
+done
+      cat << \EOF >> conftest.c
+int main(void) { printf("%d",FS_NODUMP_FL); return 0; }
+EOF
+
+      ${CC} ${CFLAGS} -c conftest.c -o conftest.o 1>/dev/null 2>/dev/null; rc=$?
+      if test $rc -eq 0; then
+        ac_available=yes
+      else
+        ac_available=no
+      fi
+      if test "$ac_available" = "yes"; then :
+
+$as_echo "#define HAVE_FS_NODUMP_FL 1" >>confdefs.h
+
+elif :; then :
+
+fi
+      ac_cv_const_FS_NODUMP_FL=$ac_available
+
+      rm -f conftest.c conftest.o
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_const_FS_NODUMP_FL" >&5
+$as_echo "$ac_cv_const_FS_NODUMP_FL" >&6; }
+
 ac_fn_c_check_func "$LINENO" "zlibVersion" "ac_cv_func_zlibVersion"
 if test "x$ac_cv_func_zlibVersion" = x""yes; then :
 

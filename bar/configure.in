@@ -75,6 +75,41 @@ AC_DEFUN([AC_SEARCH_STATIC_LIBS],
   AS_VAR_POPDEF([ac_search_static])dnl
 ])
 
+dnl --- check if constant is available
+AC_DEFUN([AC_CHECK_CONST],
+[
+  AC_CACHE_CHECK(
+    [if constant $1 is available],
+    ac_cv_const_$1,
+    [
+      cat << \EOF > conftest.c
+#include <stdlib.h>
+#include <stdio.h>
+EOF
+for ac_header in $4 ""; do
+  if test -n "$ac_header"; then
+    echo "#include <$ac_header>" >> conftest.c
+  fi
+done
+      cat << \EOF >> conftest.c
+int main(void) { printf("%d",$1); return 0; }
+EOF
+
+      ${CC} ${CFLAGS} -c conftest.c -o conftest.o 1>/dev/null 2>/dev/null; rc=$?
+      if test $rc -eq 0; then
+        ac_available=yes
+      else
+        ac_available=no
+      fi
+      AS_IF([test "$ac_available" = "yes"],[$2],:,[$3])
+      ac_cv_const_$1=$ac_available
+
+      rm -f conftest.c conftest.o
+    ]
+  )dnl
+  AC_PROVIDE([$0])dnl
+])
+
 
 dnl --- check if C compiler long long data type available
 # (original macro from http://ac-archive.sourceforge.net/C_Support/ac_c_long_long.html)
@@ -1340,8 +1375,12 @@ AC_CHECK_FUNC(gethostbyaddr_r,AC_DEFINE(HAVE_GETHOSTBYADDR_R,1,[gethostbyname_r(
 
 AC_CHECK_FUNC(fseeko64,,AC_ERROR([function fseeko64() is not available]))
 AC_CHECK_FUNC(ftello64,,AC_ERROR([function ftello64() is not available]))
-AC_CHECK_FUNC(fdatasync,AC_DEFINE(HAVE_FDATASYNC,1,[fdatasync() available]))
+AC_CHECK_FUNC(fdatasync,    AC_DEFINE(HAVE_FDATASYNC,1,[fdatasync() available]))
 AC_CHECK_FUNC(posix_fadvise,AC_DEFINE(HAVE_POSIX_FADVISE,1,[posix_fadvise() available]))
+
+AC_CHECK_CONST(FS_COMPR_FL, AC_DEFINE(HAVE_FS_COMPR_FL, 1,[FS_COMPR_FL available]), ,linux/fs.h)
+AC_CHECK_CONST(FS_NOCOMP_FL,AC_DEFINE(HAVE_FS_NOCOMP_FL,1,[FS_NOCOMP_FL available]),,linux/fs.h)
+AC_CHECK_CONST(FS_NODUMP_FL,AC_DEFINE(HAVE_FS_NODUMP_FL,1,[FS_NODUMP_FL available]),,linux/fs.h)
 
 AC_CHECK_FUNC(zlibVersion,,AC_ERROR([function zlibVersion() is not available]))
 
