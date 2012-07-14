@@ -165,7 +165,6 @@ BAR_SOURCES          = bar.c \
                        index.c \
                        network.c \
                        server.c \
-                       forward.h \
                        \
                        global.c \
                        cmdoptions.c \
@@ -187,7 +186,7 @@ BAR_OBJECTS          = $(foreach z,$(BAR_SOURCES),$(subst .c,.o,$z)) \
                        errors.o \
                        archive_format.o
 
-EXTERN_SOURCES       = xdelta3.c \
+EXTERN_SOURCES       = $(if @HAVE_XDELTA@,../xdelta/xdelta3.c) \
                        sqlite3.c
 
 EXTERN_OBJECTS       = $(foreach z,$(EXTERN_SOURCES),$(subst .c,.o,$z))
@@ -200,7 +199,9 @@ DESTROYER_SOURCES    = destroyer.c \
 
 DESTROYER_OBJECTS    = $(foreach z,$(DESTROYER_SOURCES),$(subst .c,.o,$z)) \
 
-OTHER_SOURCES        = filesystems_ext.c \
+OTHER_SOURCES        = forward.h \
+                       \
+                       filesystems_ext.c \
                        filesystems_fat.c \
                        filesystems_reiserfs.c \
                        \
@@ -304,8 +305,10 @@ bar@EXEEXT@: $(BAR_OBJECTS) $(EXTERN_OBJECTS)
 # compile SQLite, xdelta C source without warning flags
 sqlite3.o: sqlite3.c
 	$(CC) $(CC_FLAGS) $(CC_OPTIMIZE) -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" $(foreach z,$(CC_DEFINES),-D$z) $(foreach z,$(CC_INCLUDES),-I$z) -c $*.c -o $*.o
+ifeq (@HAVE_XDELTA@,1)
 xdelta3.o: xdelta3.c
 	$(CC) $(CC_FLAGS) $(CC_OPTIMIZE) -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" $(foreach z,$(CC_DEFINES),-D$z) $(foreach z,$(CC_INCLUDES),-I$z) -c $*.c -o $*.o
+endif
 
 # create bar-keygen script
 bar-keygen: bar-keygen.in
@@ -664,7 +667,9 @@ test_parameters: \
 	$(call functionTestCheckExitcode,5,SSH_ASKPASS= $(TEST_BAR) --not-existing-option  $(if $(QUIET),1>/dev/null))
 	$(call functionTestCheckExitcode,5,SSH_ASKPASS= $(TEST_BAR) -c test/test.bar test/data --compress-algorithm=not-existing-compress  $(if $(QUIET),1>/dev/null))
 	$(call functionTestCheckExitcode,5,SSH_ASKPASS= $(TEST_BAR) -c test/test.bar test/data --crypt-algorithm=not-existing-compress $(if $(QUIET),1>/dev/null))
+ifeq (@HAVE_XDELTA@,1)
 	$(call functionTestCheckExitcode,1,SSH_ASKPASS= $(TEST_BAR) -c test/test.bar test/data --delta-source=does-not-exists --compress-algorithm=xdelta9 --force-delta-compression --overwrite-archive-files $(if $(QUIET),1>/dev/null))
+endif
 	$(call functionTestCheckExitcode,6,SSH_ASKPASS= $(TEST_BAR) --config=test/test-not-exists.cfg -l test/test*.bar $(if $(QUIET),1>/dev/null))
 	#
 	# test not implemented functions
@@ -2019,11 +2024,13 @@ test_image_operations_delta: \
 	SSH_ASKPASS= $(TEST_BAR) -m test/$(BAR_FILE)-A.bar $(DEVICE0) $(BAR_OPTIONS) --overwrite-archive-files --verbose=2 $(if $(QUIET),1>/dev/null)
 	$(call functionTestDeviceDelete,$(DEVICE0),test/dev0)
 	@
+ifeq (@HAVE_XDELTA@,1)
 	$(call functionTestDeviceCreate,$(DEVICE0),$(IMAGE0_B),test/dev0)
 	SSH_ASKPASS= $(TEST_BAR) -m test/$(BAR_FILE)-B.bar $(DEVICE0) --delta-source='test/$(BAR_PATTERN)-A.bar' $(BAR_OPTIONS) --compress-algorithm=xdelta9 --force-delta-compression --overwrite-archive-files --verbose=2 $(if $(QUIET),1>/dev/null)
 	SSH_ASKPASS= $(TEST_BAR) -t test/$(BAR_PATTERN)-B.bar $(BAR_OPTIONS) $(if $(QUIET),1>/dev/null)
 	SSH_ASKPASS= $(TEST_BAR) -d test/$(BAR_PATTERN)-B.bar $(BAR_OPTIONS) $(if $(QUIET),1>/dev/null)
 	$(call functionTestDeviceDelete,$(DEVICE0),test/dev0)
+endif
 	@
 	$(call functionTestDeviceCreate,$(DEVICE1),$(IMAGE1),test/dev1)
 	SSH_ASKPASS= $(TEST_BAR) -x test/$(BAR_PATTERN)-B.bar $(BAR_OPTIONS) --destination $(DEVICE1) $(if $(QUIET),1>/dev/null)
@@ -2036,11 +2043,13 @@ test_image_operations_delta: \
 	SSH_ASKPASS= $(TEST_BAR) -m test/$(BAR_FILE)-A.bar $(DEVICE0) $(BAR_OPTIONS) --compress-algorithm=zip9 --overwrite-archive-files --verbose=2 $(if $(QUIET),1>/dev/null)
 	$(call functionTestDeviceDelete,$(DEVICE0),test/dev0)
 	@
+ifeq (@HAVE_XDELTA@,1)
 	$(call functionTestDeviceCreate,$(DEVICE0),$(IMAGE0_B),test/dev0)
 	SSH_ASKPASS= $(TEST_BAR) -m test/$(BAR_FILE)-B.bar $(DEVICE0) --delta-source='test/$(BAR_PATTERN)-A.bar' $(BAR_OPTIONS) --compress-algorithm=xdelta9+zip9 --force-delta-compression --overwrite-archive-files --verbose=2 $(if $(QUIET),1>/dev/null)
 	SSH_ASKPASS= $(TEST_BAR) -t test/$(BAR_PATTERN)-B.bar $(BAR_OPTIONS) $(if $(QUIET),1>/dev/null)
 	SSH_ASKPASS= $(TEST_BAR) -d test/$(BAR_PATTERN)-B.bar $(BAR_OPTIONS) $(if $(QUIET),1>/dev/null)
 	$(call functionTestDeviceDelete,$(DEVICE0),test/dev0)
+endif
 	@
 	$(call functionTestDeviceCreate,$(DEVICE1),$(IMAGE1),test/dev1)
 	SSH_ASKPASS= $(TEST_BAR) -x test/$(BAR_PATTERN)-B.bar $(BAR_OPTIONS) --destination $(DEVICE1) $(if $(QUIET),1>/dev/null)
@@ -2390,6 +2399,7 @@ performance4 performance_lzma_compress: \
 performance5 performance_delta_compress: \
   $(PERFORMANCE_BAR) \
   $(PERFORMANCE_FILES)
+ifeq (@HAVE_XDELTA@,1)
 	@$(ECHO) "XDELTA (100M random):"
 	@($(CD) test/data/delta1; ../../../$(PERFORMANCE_BAR) -c ../../test-A.bar test100M.dat --overwrite-archive-files --compress-algorithm=none 1>/dev/null 2>/dev/null)
 	@$(ECHO_NO_LF) "  Create : "
@@ -2400,6 +2410,7 @@ performance5 performance_delta_compress: \
 	@($(CD) test/data/delta2; SSH_ASKPASS= $(TIME) --format="%E" sh -c "../../../$(PERFORMANCE_BAR) -d ../../test-B.bar --delta-source=../../test-A.bar 1>/dev/null 2>/dev/null")
 	@$(ECHO_NO_LF) "  Extract: "
 	@($(CD) test/data/delta2; SSH_ASKPASS= $(TIME) --format="%E" sh -c "../../../$(PERFORMANCE_BAR) -x ../../test-B.bar --delta-source=../../test-A.bar --destination=../../restore --overwrite-files 1>/dev/null 2>/dev/null")
+endif
 
 # ----------------------------------------------------------------------------
 
