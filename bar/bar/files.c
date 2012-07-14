@@ -122,25 +122,33 @@ LOCAL Errors getExtendedAttributes(const String fileName, uint64 *extendedAttrib
   assert(fileName != NULL);
   assert(extendedAttributes != NULL);
 
-  // get extended file attributes
-  handle = open(String_cString(fileName),O_RDONLY|O_NONBLOCK);
-  if (handle == -1)
-  {
-    return ERRORX(IO_ERROR,errno,String_cString(fileName));
-  }
   attributes = 0LL;
-  if (ioctl(handle,FS_IOC_GETFLAGS,&attributes) != 0)
-  {
-    error = ERRORX(IO_ERROR,errno,String_cString(fileName));
+  #ifdef FS_IOC_GETFLAGS
+    // get extended file attributes
+    handle = open(String_cString(fileName),O_RDONLY|O_NONBLOCK);
+    if (handle == -1)
+    {
+      return ERRORX(IO_ERROR,errno,String_cString(fileName));
+    }
+    if (ioctl(handle,FS_IOC_GETFLAGS,&attributes) != 0)
+    {
+      error = ERRORX(IO_ERROR,errno,String_cString(fileName));
+      close(handle);
+      return error;
+    }
     close(handle);
-    return error;
-  }
-  close(handle);
+  #endif
 
   (*extendedAttributes) = 0LL;
-  if ((attributes & FILE_ATTRIBUTE_COMPRESS   ) != 0LL) (*extendedAttributes) |= FILE_ATTRIBUTE_COMPRESS;
-  if ((attributes & FILE_ATTRIBUTE_NO_COMPRESS) != 0LL) (*extendedAttributes) |= FILE_ATTRIBUTE_NO_COMPRESS;
-  if ((attributes & FILE_ATTRIBUTE_NO_DUMP    ) != 0LL) (*extendedAttributes) |= FILE_ATTRIBUTE_NO_DUMP;
+  #ifdef HAVE_FS_COMPR_FL
+    if ((attributes & FILE_ATTRIBUTE_COMPRESS   ) != 0LL) (*extendedAttributes) |= FILE_ATTRIBUTE_COMPRESS;
+  #endif
+  #ifdef HAVE_FS_NOCOMP_FL
+    if ((attributes & FILE_ATTRIBUTE_NO_COMPRESS) != 0LL) (*extendedAttributes) |= FILE_ATTRIBUTE_NO_COMPRESS;
+  #endif
+  #ifdef HAVE_FS_NODUMP_FL
+    if ((attributes & FILE_ATTRIBUTE_NO_DUMP    ) != 0LL) (*extendedAttributes) |= FILE_ATTRIBUTE_NO_DUMP;
+  #endif
 
   return ERROR_NONE;
 }
