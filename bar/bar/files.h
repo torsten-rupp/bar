@@ -186,22 +186,6 @@ typedef struct
   #define File_close(fileHandle)                                  __File_close(__FILE__,__LINE__,fileHandle)
 #endif /* not NDEBUG */
 
-#ifdef HAVE_FS_COMPR_FL
-  #define FILE_HAVE_ATTRIBUTE_COMPRESS(attributes)    (((attributes) & FILE_ATTRIBUTE_COMPRESS) != 0)
-#else
-  #define FILE_HAVE_ATTRIBUTE_COMPRESS(attributes)    FALSE
-#endif
-#ifdef HAVE_FS_NOCOMP_FL
-  #define FILE_HAVE_ATTRIBUTE_NO_COMPRESS(attributes) (((attributes) & FILE_ATTRIBUTE_NO_COMPRESS) != 0)
-#else
-  #define FILE_HAVE_ATTRIBUTE_NO_COMPRESS(attributes) FALSE
-#endif
-#ifdef HAVE_FS_NODUMP_FL
-  #define FILE_HAVE_ATTRIBUTE_NO_DUMP(attributes)     (((attributes) & FILE_ATTRIBUTE_NO_DUMP) != 0)
-#else
-  #define FILE_HAVE_ATTRIBUTE_NO_DUMP(attributes)     FALSE
-#endif
-
 /***************************** Forwards ********************************/
 
 /***************************** Functions *******************************/
@@ -860,6 +844,64 @@ bool File_isWriteableCString(const char *fileName);
 Errors File_getFileInfo(FileInfo     *fileInfo,
                         const String fileName
                        );
+
+/***********************************************************************\
+* Name   : File_haveAttributeCompress, File_haveAttributeNoCompress,
+*          File_haveAttributeNoDump
+* Purpose: check if compress/no-compress/no-dump attribute is set
+* Input  : fileInfo - file info variable
+* Output : -
+* Return : TRUE if attribute is set, FALSE otherwise
+* Notes  : -
+\***********************************************************************/
+
+INLINE bool File_haveAttributeCompress(const FileInfo *fileInfo);
+#if defined(NDEBUG) || defined(__FILES_IMPLEMENATION__)
+INLINE bool File_haveAttributeCompress(const FileInfo *fileInfo)
+{
+  assert(fileInfo != NULL);
+
+  #ifdef HAVE_FS_COMPR_FL
+    return (fileInfo->attributes & FILE_ATTRIBUTE_COMPRESS) != 0;
+  #else
+    UNUSED_VARIABLE(fileInfo);
+
+    return FALSE;
+  #endif
+}
+#endif /* NDEBUG || __FILES_IMPLEMENATION__ */
+
+INLINE bool File_haveAttributeNoCompress(const FileInfo *fileInfo);
+#if defined(NDEBUG) || defined(__FILES_IMPLEMENATION__)
+INLINE bool File_haveAttributeNoCompress(const FileInfo *fileInfo)
+{
+  assert(fileInfo != NULL);
+
+  #ifdef HAVE_FS_COMPR_FL
+    return (fileInfo->attributes & FILE_ATTRIBUTE_NO_COMPRESS) != 0;
+  #else
+    UNUSED_VARIABLE(fileInfo);
+
+    return FALSE;
+  #endif
+}
+#endif /* NDEBUG || __FILES_IMPLEMENATION__ */
+
+INLINE bool File_haveAttributeNoDump(const FileInfo *fileInfo);
+#if defined(NDEBUG) || defined(__FILES_IMPLEMENATION__)
+INLINE bool File_haveAttributeNoDump(const FileInfo *fileInfo)
+{
+  assert(fileInfo != NULL);
+
+  #ifdef HAVE_FS_COMPR_FL
+    return (fileInfo->attributes & FILE_ATTRIBUTE_NO_DUMP) != 0;
+  #else
+    UNUSED_VARIABLE(fileInfo);
+
+    return FALSE;
+  #endif
+}
+#endif /* NDEBUG || __FILES_IMPLEMENATION__ */
 
 /***********************************************************************\
 * Name   : File_getFileTimeModified
