@@ -261,14 +261,14 @@ typedef struct
           iso9660_t      *iso9660Handle;               // ISO9660 image handle
           iso9660_stat_t *iso9660Stat;                 // ISO9660 file handle
           uint64         index;                        // current read/write index in ISO image [0..n-1]
-        #endif /* HAVE_ISO9660 */
 
-        struct                                         // read buffer
-        {
-          byte   *data;
-          uint64 blockIndex;
-          ulong  length;
-        } buffer;
+          struct                                         // read buffer
+          {
+            byte   *data;
+            uint64 blockIndex;
+            ulong  length;
+          } buffer;
+        #endif /* HAVE_ISO9660 */
       } read;
 
       // write cd/dvd/bd

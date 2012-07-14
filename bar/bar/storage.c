@@ -1985,12 +1985,13 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
         storageFileHandle->type                                     = storageType;
         storageFileHandle->opticalDisk.name                         = deviceName;
 
-        // allocate read-buffer
-        storageFileHandle->opticalDisk.read.buffer.data = (byte*)malloc(ISO_BLOCKSIZE);
-        if (storageFileHandle->opticalDisk.read.buffer.data == NULL)
-        {
-          HALT_INSUFFICIENT_MEMORY();
-        }
+        #ifdef HAVE_ISO9660
+          storageFileHandle->opticalDisk.read.buffer.data = (byte*)malloc(ISO_BLOCKSIZE);
+          if (storageFileHandle->opticalDisk.read.buffer.data == NULL)
+          {
+            HALT_INSUFFICIENT_MEMORY();
+          }
+        #endif /* HAVE_ISO9660 */
 
         storageFileHandle->opticalDisk.write.requestVolumeCommand   = opticalDisk.requestVolumeCommand;
         storageFileHandle->opticalDisk.write.unloadVolumeCommand    = opticalDisk.unloadVolumeCommand;
@@ -2027,7 +2028,9 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
         error = File_getTmpDirectoryName(storageFileHandle->opticalDisk.write.directory,NULL,tmpDirectory);
         if (error != ERROR_NONE)
         {
-          free(storageFileHandle->opticalDisk.read.buffer.data);
+          #ifdef HAVE_ISO9660
+            free(storageFileHandle->opticalDisk.read.buffer.data);
+          #endif /* HAVE_ISO9660 */
           String_delete(storageFileHandle->opticalDisk.write.fileName);
           String_delete(storageFileHandle->opticalDisk.write.directory);
           String_delete(deviceName);
@@ -2217,7 +2220,9 @@ Errors Storage_done(StorageFileHandle *storageFileHandle)
         File_delete(storageFileHandle->opticalDisk.write.directory,FALSE);
 
         // free resources
-        free(storageFileHandle->opticalDisk.read.buffer.data);
+        #ifdef HAVE_ISO9660
+          free(storageFileHandle->opticalDisk.read.buffer.data);
+        #endif /* HAVE_ISO9660 */
         String_delete(storageFileHandle->opticalDisk.write.fileName);
         String_delete(storageFileHandle->opticalDisk.write.directory);
         String_delete(storageFileHandle->opticalDisk.name);
@@ -4107,11 +4112,13 @@ void Storage_close(StorageFileHandle *storageFileHandle)
           StringList_append(&storageFileHandle->opticalDisk.write.fileNameList,storageFileHandle->opticalDisk.write.fileName);
           break;
         case STORAGE_MODE_READ:
-          assert(storageFileHandle->opticalDisk.read.iso9660Handle != NULL);
-          assert(storageFileHandle->opticalDisk.read.iso9660Stat != NULL);
+          #ifdef HAVE_ISO9660
+            assert(storageFileHandle->opticalDisk.read.iso9660Handle != NULL);
+            assert(storageFileHandle->opticalDisk.read.iso9660Stat != NULL);
 
-          free(storageFileHandle->opticalDisk.read.iso9660Stat);
-          iso9660_close(storageFileHandle->opticalDisk.read.iso9660Handle);
+            free(storageFileHandle->opticalDisk.read.iso9660Stat);
+            iso9660_close(storageFileHandle->opticalDisk.read.iso9660Handle);
+          #endif /* HAVE_ISO9660 */
           break;
         #ifndef NDEBUG
           default:
@@ -5779,11 +5786,22 @@ error = ERROR_FUNCTION_NOT_SUPPORTED;
     case STORAGE_TYPE_DVD:
     case STORAGE_TYPE_BD:
       // init variables
-      storageDirectoryListHandle->type                 = STORAGE_TYPE_DEVICE;
-      storageDirectoryListHandle->opticalDisk.pathName = String_duplicate(pathName);
+      switch (storageType)
+      {
+        case STORAGE_TYPE_CD : storageDirectoryListHandle->type = STORAGE_TYPE_CD;  break;
+        case STORAGE_TYPE_DVD: storageDirectoryListHandle->type = STORAGE_TYPE_DVD; break;
+        case STORAGE_TYPE_BD : storageDirectoryListHandle->type = STORAGE_TYPE_BD;  break;
+        default:
+          #ifndef NDEBUG
+            HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+          #endif /* NDEBUG */
+          break; /* not reached */
+      }
 
       #ifdef HAVE_ISO9660
         UNUSED_VARIABLE(jobOptions);
+
+        storageDirectoryListHandle->opticalDisk.pathName = String_duplicate(pathName);
 
         // check if device exists
         if (!File_exists(storageName))
@@ -5885,10 +5903,10 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
       #ifdef HAVE_ISO9660
         _cdio_list_free(storageDirectoryListHandle->opticalDisk.cdioList,true);
         iso9660_close(storageDirectoryListHandle->opticalDisk.iso9660Handle);
+        String_delete(storageDirectoryListHandle->opticalDisk.pathName);
       #else /* not HAVE_ISO9660 */
         File_closeDirectoryList(&storageDirectoryListHandle->opticalDisk.directoryListHandle);
       #endif /* HAVE_ISO9660 */
-      String_delete(storageDirectoryListHandle->opticalDisk.pathName);
       break;
     case STORAGE_TYPE_DEVICE:
       break;
