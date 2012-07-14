@@ -115,9 +115,11 @@ LOCAL void debugFileInit(void)
 
 LOCAL Errors getExtendedAttributes(const String fileName, uint64 *extendedAttributes)
 {
-  int    handle;
   long   attributes;
-  Errors error;
+  #ifdef FS_IOC_GETFLAGS
+    int    handle;
+    Errors error;
+  #endif /* FS_IOC_GETFLAGS */
 
   assert(fileName != NULL);
   assert(extendedAttributes != NULL);
@@ -137,7 +139,9 @@ LOCAL Errors getExtendedAttributes(const String fileName, uint64 *extendedAttrib
       return error;
     }
     close(handle);
-  #endif
+  #else /* FS_IOC_GETFLAGS */
+    UNUSED_VARIABLE(fileName);
+  #endif /* FS_IOC_GETFLAGS */
 
   (*extendedAttributes) = 0LL;
   #ifdef HAVE_FS_COMPR_FL
