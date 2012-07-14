@@ -381,14 +381,24 @@ void Misc_performanceFilterAdd(PerformanceFilter *performanceFilter,
 * Name   : Misc_performanceFilterGetValue
 * Purpose: get performance value
 * Input  : performanceFilter - performance filter variable
+*          seconds           - history seconds
 * Output : -
 * Return : performance value in x/s or 0
 * Notes  : -
 \***********************************************************************/
 
-double Misc_performanceFilterGetValue(PerformanceFilter *performanceFilter,
-                                      uint              seconds
+double Misc_performanceFilterGetValue(const PerformanceFilter *performanceFilter,
+                                      uint                    seconds
                                      );
+
+/***********************************************************************\
+* Name   : Misc_performanceFilterGetAverageValue
+* Purpose: get average performance value
+* Input  : performanceFilter - performance filter variable
+* Output : -
+* Return : average performance value in x/s or 0
+* Notes  : -
+\***********************************************************************/
 
 double Misc_performanceFilterGetAverageValue(PerformanceFilter *performanceFilter);
 

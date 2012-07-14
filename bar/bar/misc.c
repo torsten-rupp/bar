@@ -845,8 +845,8 @@ void Misc_performanceFilterAdd(PerformanceFilter *performanceFilter,
   }
 }
 
-double Misc_performanceFilterGetValue(PerformanceFilter *performanceFilter,
-                                      uint              seconds
+double Misc_performanceFilterGetValue(const PerformanceFilter *performanceFilter,
+                                      uint                    seconds
                                      )
 {
   uint   i0,i1;
