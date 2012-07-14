@@ -8745,6 +8745,7 @@ Errors Archive_updateIndex(DatabaseHandle               *databaseHandle,
                 );
 
   // index archive contents
+  printInfo(4,"Create index for '%s'\n",String_cString(printableStorageName));
   error = ERROR_NONE;
   printableStorageName = Storage_getPrintableName(String_new(),storageName);
   while (   !Archive_eof(&archiveInfo,FALSE)
@@ -9094,8 +9095,14 @@ Errors Archive_updateIndex(DatabaseHandle               *databaseHandle,
                   );
     }
   }
-  if      (error != ERROR_NONE)
+  if (error == ERROR_NONE)
   {
+    printInfo(4,"Done create index for '%s'\n",String_cString(printableStorageName));
+  }
+  else
+  {
+    printInfo(4,"Error create index for '%s' (error: %s)\n",String_cString(printableStorageName),Errors_getText(error));
+
     if (Errors_getCode(error) == ERROR_NO_CRYPT_PASSWORD)
     {
       Index_setState(databaseHandle,
