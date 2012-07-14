@@ -1111,7 +1111,7 @@ LOCAL bool readConfigFile(const String fileName, bool printInfoFlag)
   }
 
   // parse file
-  if ((globalOptions.verboseLevel >= 2) || printInfoFlag) printf("Reading config file '%s'...",String_cString(fileName));
+  if (((uint)globalOptions.verboseLevel >= 2) || printInfoFlag) printf("Reading config file '%s'...",String_cString(fileName));
   failFlag   = FALSE;
   lineNb     = 0;
   line       = String_new();
@@ -1237,7 +1237,7 @@ LOCAL bool readConfigFile(const String fileName, bool printInfoFlag)
     }
     else
     {
-      if ((globalOptions.verboseLevel >= 2) || printInfoFlag) printf("FAIL!\n");
+      if (((uint)globalOptions.verboseLevel >= 2) || printInfoFlag) printf("FAIL!\n");
       printError("Unknown config entry '%s' in %s, line %ld\n",
                  String_cString(line),
                  String_cString(fileName),
@@ -1249,7 +1249,7 @@ LOCAL bool readConfigFile(const String fileName, bool printInfoFlag)
   }
   if (!failFlag)
   {
-    if ((globalOptions.verboseLevel >= 2) || printInfoFlag) printf("ok\n");
+    if (((uint)globalOptions.verboseLevel >= 2) || printInfoFlag) printf("ok\n");
   }
   currentFTPServer = &defaultFTPServer;
   currentSSHServer = &defaultSSHServer;
@@ -2228,7 +2228,7 @@ void vprintInfo(uint verboseLevel, const char *prefix, const char *format, va_li
 
   assert(format != NULL);
 
-  if (!globalOptions.quietFlag && (globalOptions.verboseLevel >= verboseLevel))
+  if (!globalOptions.quietFlag && ((uint)globalOptions.verboseLevel >= verboseLevel))
   {
     line = String_new();
 
