@@ -4977,6 +4977,9 @@ Errors Archive_readFileEntry(ArchiveInfo        *archiveInfo,
     free(archiveEntryInfo->file.deltaBuffer);
     free(archiveEntryInfo->file.byteBuffer);
     Chunk_done(&archiveEntryInfo->file.chunkFile.info);
+
+    Chunk_skip(archiveInfo->chunkIO,archiveInfo->chunkIOUserData,&chunkHeader);
+
     return error;
   }
 
@@ -5468,6 +5471,9 @@ Errors Archive_readImageEntry(ArchiveInfo        *archiveInfo,
     free(archiveEntryInfo->image.deltaBuffer);
     free(archiveEntryInfo->image.byteBuffer);
     Chunk_done(&archiveEntryInfo->image.chunkImage.info);
+
+    Chunk_skip(archiveInfo->chunkIO,archiveInfo->chunkIOUserData,&chunkHeader);
+
     return error;
   }
 
@@ -5778,6 +5784,9 @@ Errors Archive_readDirectoryEntry(ArchiveInfo      *archiveInfo,
   if (error != ERROR_NONE)
   {
     Chunk_done(&archiveEntryInfo->directory.chunkDirectory.info);
+
+    Chunk_skip(archiveInfo->chunkIO,archiveInfo->chunkIOUserData,&chunkHeader);
+
     return error;
   }
 
@@ -6052,6 +6061,9 @@ Errors Archive_readLinkEntry(ArchiveInfo      *archiveInfo,
   if (error != ERROR_NONE)
   {
     Chunk_done(&archiveEntryInfo->link.chunkLink.info);
+
+    Chunk_skip(archiveInfo->chunkIO,archiveInfo->chunkIOUserData,&chunkHeader);
+
     return error;
   }
 
@@ -6567,6 +6579,9 @@ Errors Archive_readHardLinkEntry(ArchiveInfo        *archiveInfo,
     free(archiveEntryInfo->hardLink.deltaBuffer);
     free(archiveEntryInfo->hardLink.byteBuffer);
     Chunk_done(&archiveEntryInfo->hardLink.chunkHardLink.info);
+
+    Chunk_skip(archiveInfo->chunkIO,archiveInfo->chunkIOUserData,&chunkHeader);
+
     return error;
   }
 
@@ -6893,6 +6908,9 @@ Errors Archive_readSpecialEntry(ArchiveInfo      *archiveInfo,
   if (error != ERROR_NONE)
   {
     Chunk_done(&archiveEntryInfo->special.chunkSpecial.info);
+
+    Chunk_skip(archiveInfo->chunkIO,archiveInfo->chunkIOUserData,&chunkHeader);
+
     return error;
   }
 
@@ -7449,8 +7467,10 @@ fprintf(stderr,"%s, %d: %d\n",__FILE__,__LINE__,archiveEntryInfo->image.blockSiz
         case ARCHIVE_ENTRY_TYPE_FILE:
           {
             // close chunks
+fprintf(stderr,"%s, %d: error=%x\n",__FILE__,__LINE__,error);
             tmpError = Chunk_close(&archiveEntryInfo->file.chunkFileData.info);
             if ((error == ERROR_NONE) && (tmpError != ERROR_NONE)) error = tmpError;
+fprintf(stderr,"%s, %d: error=%x\n",__FILE__,__LINE__,error);
             if (Compress_isCompressed(archiveEntryInfo->file.deltaCompressAlgorithm))
             {
               assert(Compress_isXDeltaCompressed(archiveEntryInfo->file.deltaCompressAlgorithm));
@@ -7458,10 +7478,13 @@ fprintf(stderr,"%s, %d: %d\n",__FILE__,__LINE__,archiveEntryInfo->image.blockSiz
               tmpError = Chunk_close(&archiveEntryInfo->file.chunkFileDelta.info);
               if ((error == ERROR_NONE) && (tmpError != ERROR_NONE)) error = tmpError;
             }
+fprintf(stderr,"%s, %d: error=%x\n",__FILE__,__LINE__,error);
             tmpError = Chunk_close(&archiveEntryInfo->file.chunkFileEntry.info);
             if ((error == ERROR_NONE) && (tmpError != ERROR_NONE)) error = tmpError;
+fprintf(stderr,"%s, %d: error=%x\n",__FILE__,__LINE__,error);
             tmpError = Chunk_close(&archiveEntryInfo->file.chunkFile.info);
             if ((error == ERROR_NONE) && (tmpError != ERROR_NONE)) error = tmpError;
+fprintf(stderr,"%s, %d: error=%x\n",__FILE__,__LINE__,error);
 
             // free resources
             Compress_delete(&archiveEntryInfo->file.deltaCompressInfo);
