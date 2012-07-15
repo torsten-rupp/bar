@@ -56,6 +56,8 @@ typedef enum
   WEEKDAY_SUN = 6,
 } WeekDays;
 
+#define MISC_US_PER_SECOND (1000LL*1000LL)
+
 /***************************** Datatypes *******************************/
 // text macro definitions
 typedef enum
