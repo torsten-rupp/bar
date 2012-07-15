@@ -268,7 +268,7 @@ Errors Command_restore(const StringList                *archiveNameList,
     // pause
     while ((restoreInfo.pauseFlag != NULL) && (*restoreInfo.pauseFlag))
     {
-      Misc_udelay(500*1000);
+      Misc_udelay(500L*1000L);
     }
 
     Storage_getPrintableName(printableArchiveName,archiveName);
@@ -302,7 +302,7 @@ Errors Command_restore(const StringList                *archiveNameList,
       // pause
       while ((restoreInfo.pauseFlag != NULL) && (*restoreInfo.pauseFlag))
       {
-        Misc_udelay(500*1000);
+        Misc_udelay(500L*1000L);
       }
 
       // get next archive entry type
@@ -523,7 +523,7 @@ Errors Command_restore(const StringList                *archiveNameList,
                 // pause
                 while ((restoreInfo.pauseFlag != NULL) && (*restoreInfo.pauseFlag))
                 {
-                  Misc_udelay(500*1000);
+                  Misc_udelay(500L*1000L);
                 }
 
                 n = MIN(fragmentSize-length,BUFFER_SIZE);
@@ -963,7 +963,7 @@ Errors Command_restore(const StringList                *archiveNameList,
                 // pause
                 while ((restoreInfo.pauseFlag != NULL) && (*restoreInfo.pauseFlag))
                 {
-                  Misc_udelay(500*1000);
+                  Misc_udelay(500L*1000L);
                 }
 
                 bufferBlockCount = MIN(blockCount-block,BUFFER_SIZE/deviceInfo.blockSize);
@@ -1735,7 +1735,7 @@ Errors Command_restore(const StringList                *archiveNameList,
                     // pause
                     while ((restoreInfo.pauseFlag != NULL) && (*restoreInfo.pauseFlag))
                     {
-                      Misc_udelay(500*1000);
+                      Misc_udelay(500L*1000L);
                     }
 
                     n = MIN(fragmentSize-length,BUFFER_SIZE);
