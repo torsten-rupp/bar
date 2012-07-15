@@ -83,6 +83,7 @@
 
 //void tlslog(int level, char *s) { fprintf(stderr,"%s,%d: %d %s",__FILE__,__LINE__,level,s); }
 
+#ifdef HAVE_SSH2
 /***********************************************************************\
 * Name   : crpytoIdCallback
 * Purpose: libcrypto callback
@@ -128,6 +129,7 @@ LOCAL void crpytoLockingCallback(int mode, int n, const char *fileName, int line
     HALT_INTERNAL_ERROR("unknown mode 0x%x in libcrypto locking callback",mode);
   }
 }
+#endif /* HAVE_SSH2 */
 
 // ----------------------------------------------------------------------
 
