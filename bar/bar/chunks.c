@@ -773,10 +773,15 @@ Errors Chunk_skip(const ChunkIO     *io,
   assert(io->seek != NULL);
   assert(chunkHeader != NULL);
 
-  /* fseeko in File_seek() cause an SigSegV if "offset" is completely wrong;
-     thus use a valid offset only
-  */
   size = io->getSize(ioUserData);
+  if (chunkHeader->offset+CHUNK_HEADER_SIZE+chunkHeader->size > size)
+  {
+    return ERROR_INVALID_CHUNK_SIZE;
+  }
+
+  /* Note: fseeko in File_seek() cause an SigSegV if "offset" is
+     completely wrong; thus never call with an invalid offset
+  */
   offset = (chunkHeader->offset+CHUNK_HEADER_SIZE+chunkHeader->size <= size)
              ? chunkHeader->offset+CHUNK_HEADER_SIZE+chunkHeader->size
              : size+1;
@@ -1015,14 +1020,21 @@ Errors Chunk_close(ChunkInfo *chunkInfo)
       }
       break;
     case CHUNK_MODE_READ:
-      // chunk size value
+      // check chunk size value
       error = chunkInfo->io->tell(chunkInfo->ioUserData,&offset);
       if (error != ERROR_NONE)
       {
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
         return error;
       }
       if (chunkInfo->offset+CHUNK_HEADER_SIZE+chunkInfo->size > chunkInfo->io->getSize(chunkInfo->ioUserData))
       {
+fprintf(stderr,"%s, %d: %lu %lu - %lu %lu\n",__FILE__,__LINE__,
+chunkInfo->offset+CHUNK_HEADER_SIZE+chunkInfo->size,
+chunkInfo->io->getSize(chunkInfo->ioUserData),
+chunkInfo->offset,
+chunkInfo->size
+);
         return ERROR_INVALID_CHUNK_SIZE;
       }
 
@@ -1032,6 +1044,7 @@ Errors Chunk_close(ChunkInfo *chunkInfo)
         error = chunkInfo->io->seek(chunkInfo->ioUserData,chunkInfo->offset+CHUNK_HEADER_SIZE+chunkInfo->size);
         if (error != ERROR_NONE)
         {
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
           return error;
         }
       }
