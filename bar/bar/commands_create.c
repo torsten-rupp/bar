@@ -1232,7 +1232,7 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
     // pause
     while ((createInfo->pauseCreateFlag != NULL) && (*createInfo->pauseCreateFlag))
     {
-      Misc_udelay(500*1000);
+      Misc_udelay(500L*1000L);
     }
 
     // find base path
@@ -1266,7 +1266,7 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
       // pause
       while ((createInfo->pauseCreateFlag != NULL) && (*createInfo->pauseCreateFlag))
       {
-        Misc_udelay(500*1000);
+        Misc_udelay(500L*1000L);
       }
 
       // get next file/directory to process
@@ -1342,7 +1342,7 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
                     // pause
                     while ((createInfo->pauseCreateFlag != NULL) && (*createInfo->pauseCreateFlag))
                     {
-                      Misc_udelay(500*1000);
+                      Misc_udelay(500L*1000L);
                     }
 
                     // read next directory entry
@@ -1603,7 +1603,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
     // pause
     while ((createInfo->pauseCreateFlag != NULL) && (*createInfo->pauseCreateFlag))
     {
-      Misc_udelay(500*1000);
+      Misc_udelay(500L*1000L);
     }
 
     // find base path
@@ -1637,7 +1637,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
       // pause
       while ((createInfo->pauseCreateFlag != NULL) && (*createInfo->pauseCreateFlag))
       {
-        Misc_udelay(500*1000);
+        Misc_udelay(500L*1000L);
       }
 
       // get next directory to process
@@ -1717,7 +1717,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                     // pause
                     while ((createInfo->pauseCreateFlag != NULL) && (*createInfo->pauseCreateFlag))
                     {
-                      Misc_udelay(500*1000);
+                      Misc_udelay(500L*1000L);
                     }
 
                     // read next directory entry
@@ -2333,7 +2333,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
       // pause
       while ((createInfo->pauseStorageFlag != NULL) && (*createInfo->pauseStorageFlag))
       {
-        Misc_udelay(500*1000);
+        Misc_udelay(500L*1000L);
       }
 
       // initial pre-process
@@ -2361,7 +2361,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
         // pause
         while ((createInfo->pauseStorageFlag != NULL) && (*createInfo->pauseStorageFlag))
         {
-          Misc_udelay(500*1000);
+          Misc_udelay(500L*1000L);
         }
 
         // pre-process
@@ -2465,7 +2465,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
           // pause
           while ((createInfo->pauseStorageFlag != NULL) && (*createInfo->pauseStorageFlag))
           {
-            Misc_udelay(500*1000);
+            Misc_udelay(500L*1000L);
           }
 
           // next try
@@ -2511,7 +2511,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
             // pause
             while ((createInfo->pauseStorageFlag != NULL) && (*createInfo->pauseStorageFlag))
             {
-              Misc_udelay(500*1000);
+              Misc_udelay(500L*1000L);
             }
 
             error = File_read(&fileHandle,buffer,BUFFER_SIZE,&bufferLength);
@@ -2753,7 +2753,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
       // pause
       while ((createInfo->pauseStorageFlag != NULL) && (*createInfo->pauseStorageFlag))
       {
-        Misc_udelay(500*1000);
+        Misc_udelay(500L*1000L);
       }
 
       error = Storage_postProcess(&createInfo->storageFileHandle,TRUE);
@@ -2952,7 +2952,7 @@ LOCAL Errors storeFileEntry(ArchiveInfo       *archiveInfo,
       // pause
       while ((createInfo->pauseCreateFlag != NULL) && (*createInfo->pauseCreateFlag))
       {
-        Misc_udelay(500*1000);
+        Misc_udelay(500L*1000L);
       }
 
       // read file data
@@ -3216,7 +3216,7 @@ LOCAL Errors storeImageEntry(ArchiveInfo       *archiveInfo,
       // pause
       while ((createInfo->pauseCreateFlag != NULL) && (*createInfo->pauseCreateFlag))
       {
-        Misc_udelay(500*1000);
+        Misc_udelay(500L*1000L);
       }
 
       // read blocks from device
@@ -3731,7 +3731,7 @@ LOCAL Errors storeHardLinkEntry(ArchiveInfo       *archiveInfo,
       // pause
       while ((createInfo->pauseCreateFlag != NULL) && (*createInfo->pauseCreateFlag))
       {
-        Misc_udelay(500*1000);
+        Misc_udelay(500L*1000L);
       }
 
       // read file data
@@ -4245,7 +4245,7 @@ Errors Command_create(const char                      *storageName,
     // pause
     while ((createInfo.pauseCreateFlag != NULL) && (*createInfo.pauseCreateFlag))
     {
-      Misc_udelay(500*1000);
+      Misc_udelay(500L*1000L);
     }
 
     // check if own file (in temporary directory or storage file)
