@@ -23,6 +23,7 @@
 #include <sys/select.h>
 #include <signal.h>
 #ifdef HAVE_SSH2
+  #include <openssl/crypto.h>
   #include <libssh2.h>
 #endif /* HAVE_SSH2 */
 #ifdef HAVE_GNU_TLS
@@ -58,8 +59,12 @@
 
 /***************************** Variables *******************************/
 #ifdef HAVE_SSH2
-  LOCAL String defaultSSHPublicKeyFileName;
-  LOCAL String defaultSSHPrivateKeyFileName;
+  LOCAL String           defaultSSHPublicKeyFileName;
+  LOCAL String           defaultSSHPrivateKeyFileName;
+
+  LOCAL uint             cryptoMaxLocks;
+  LOCAL pthread_mutex_t* cryptoLocks;
+  LOCAL long*            cryptoLockCounters;
 #endif /* HAVE_SSH2 */
 
 #ifdef HAVE_GCRYPT
@@ -78,17 +83,92 @@
 
 //void tlslog(int level, char *s) { fprintf(stderr,"%s,%d: %d %s",__FILE__,__LINE__,level,s); }
 
+/***********************************************************************\
+* Name   : crpytoIdCallback
+* Purpose: libcrypto callback
+* Input  : -
+* Output : -
+* Return : see openssl/crypto.h
+* Notes  : -
+\***********************************************************************/
+
+LOCAL unsigned long crpytoIdCallback(void)
+{
+  return ((unsigned long)pthread_self());
+}
+
+/***********************************************************************\
+* Name   : crpytoLockingCallback
+* Purpose: libcrypto callback
+* Input  : mode     - see openssl/crypto.h
+*          n        - see openssl/crypto.h
+*          fileName - see openssl/crypto.h
+*          lineNb   - see openssl/crypto.h
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void crpytoLockingCallback(int mode, int n, const char *fileName, int lineNb)
+{
+  UNUSED_VARIABLE(fileName);
+  UNUSED_VARIABLE(lineNb);
+
+  if      ((mode & CRYPTO_LOCK) != 0)
+  {
+    pthread_mutex_lock(&cryptoLocks[n]);
+    cryptoLockCounters[n]++;
+  }
+  else if ((mode & CRYPTO_UNLOCK) != 0)
+  {
+    pthread_mutex_unlock(&cryptoLocks[n]);
+  }
+  else
+  {
+    HALT_INTERNAL_ERROR("unknown mode 0x%x in libcrypto locking callback",mode);
+  }
+}
+
+// ----------------------------------------------------------------------
+
 Errors Network_initAll(void)
 {
   #ifdef HAVE_SSH2
+    uint i;
+  #endif /* HAVE_SSH2 */
+
+  #ifdef HAVE_SSH2
+    // init variables
     defaultSSHPublicKeyFileName  = String_new();
     defaultSSHPrivateKeyFileName = String_new();
+
+    // set default public/private key file names
     File_setFileNameCString(defaultSSHPublicKeyFileName,getenv("HOME"));
     File_appendFileNameCString(defaultSSHPublicKeyFileName,".ssh");
     File_appendFileNameCString(defaultSSHPublicKeyFileName,"id_rsa.pub");
     File_setFileNameCString(defaultSSHPrivateKeyFileName,getenv("HOME"));
     File_appendFileNameCString(defaultSSHPrivateKeyFileName,".ssh");
     File_appendFileNameCString(defaultSSHPrivateKeyFileName,"id_rsa");
+
+    // initialise crypto multi-thread support
+    cryptoMaxLocks = (uint)CRYPTO_num_locks();
+    cryptoLocks = (pthread_mutex_t*)OPENSSL_malloc(cryptoMaxLocks*sizeof(pthread_mutex_t));
+    if (cryptoLocks == NULL)
+    {
+      HALT_INSUFFICIENT_MEMORY();
+    }
+    cryptoLockCounters = (long*)OPENSSL_malloc(cryptoMaxLocks*sizeof(long));
+    if (cryptoLockCounters == NULL)
+    {
+      HALT_INSUFFICIENT_MEMORY();
+    }
+    for (i = 0; i < cryptoMaxLocks; i++)
+    {
+      pthread_mutex_init(&cryptoLocks[i],NULL);
+      cryptoLockCounters[i] = 0L;
+    }
+    CRYPTO_set_id_callback(crpytoIdCallback);
+    CRYPTO_set_locking_callback(crpytoLockingCallback);
   #else /* not HAVE_SSH2 */
   #endif /* HAVE_SSH2 */
 
@@ -111,10 +191,23 @@ Errors Network_initAll(void)
 
 void Network_doneAll(void)
 {
+  #ifdef HAVE_SSH2
+    uint i;
+  #endif /* HAVE_SSH2 */
+
   #ifdef HAVE_GNU_TLS
     gnutls_global_deinit();
   #endif /* HAVE_GNU_TLS */
   #ifdef HAVE_SSH2
+    CRYPTO_set_locking_callback(NULL);
+    CRYPTO_set_id_callback(NULL);
+    for (i = 0; i < cryptoMaxLocks; i++)
+    {
+      pthread_mutex_destroy(&cryptoLocks[i]);
+    }
+    OPENSSL_free(cryptoLockCounters);
+    OPENSSL_free(cryptoLocks);
+
     String_delete(defaultSSHPublicKeyFileName); defaultSSHPublicKeyFileName=NULL;
     String_delete(defaultSSHPrivateKeyFileName); defaultSSHPrivateKeyFileName=NULL;
   #else /* not HAVE_SSH2 */
