@@ -19,6 +19,7 @@ AC_DEFUN([AC_MSG_COMPILE],
 dnl --- check if C compiler support option
 AC_DEFUN([AC_C_OPTION],
 [
+  AC_REQUIRE([AC_PROG_CC])
   AC_CACHE_CHECK(
     [if $CC support option $1],
     ac_cv_c_option_`echo $1|tr -c -d a-zA-Z0-9_`,
@@ -78,6 +79,7 @@ AC_DEFUN([AC_SEARCH_STATIC_LIBS],
 dnl --- check if constant is available
 AC_DEFUN([AC_CHECK_CONST],
 [
+  AC_REQUIRE([AC_PROG_CC])
   AC_CACHE_CHECK(
     [if constant $1 is available],
     ac_cv_const_$1,
@@ -135,6 +137,7 @@ AC_DEFUN([AC_C_LONG_LONG],
 dnl --- extend C compiler defines for large files
 AC_DEFUN([AC_CHECK_LARGEFILE_DEFINES],
 [
+  AC_REQUIRE([AC_PROG_CC])
   AC_SYS_LARGEFILE
   AC_CACHE_CHECK(
     [for needed large files defines],
@@ -187,6 +190,7 @@ AC_DEFUN([AC_CHECK_VARIABLE_ATTRIBUTE],
 dnl --- extend C compiler defines for pthreads
 AC_DEFUN([AC_CHECK_PTHREAD_DEFINES],
 [
+  AC_REQUIRE([AC_PROG_CC])
   AC_CACHE_CHECK(
     [for needed pthread defines],
     ac_cv_extended_pthread_defines,
@@ -218,6 +222,8 @@ EOF
 dnl --- detect Java version
 AC_DEFUN([AC_JAVA_VERSION],
 [
+  AC_REQUIRE([AC_PROG_JAVAC])
+  AC_REQUIRE([AC_PROG_JAVA])
   AC_CACHE_CHECK(
     [$JAVA version],
     ac_cv_prog_java_version,
@@ -247,6 +253,8 @@ EOF
 dnl --- detect Java model (32/64 bit)
 AC_DEFUN([AC_JAVA_DATA_MODEL],
 [
+  AC_REQUIRE([AC_PROG_JAVAC])
+  AC_REQUIRE([AC_PROG_JAVA])
   AC_CACHE_CHECK(
     [$JAVA data model],
     ac_cv_prog_java_data_model,
@@ -276,6 +284,7 @@ EOF
 dnl --- detect EPM version
 AC_DEFUN([AC_PROG_EPM_VERSION],
 [
+  AC_REQUIRE([AC_PROG_EPM])
   AC_MSG_CHECKING([$EPM version])
   AC_CACHE_VAL(
     ac_cv_prog_epm_version,
@@ -613,6 +622,7 @@ if test -d epm -o -d "`readlink epm`"; then
   fi
 
   EPM=$cwd/packages/bin/epm
+  AC_PROVIDE(AC_PROG_EPM)
 else
   AC_PATH_PROGS(EPM,epm)
 fi
@@ -659,16 +669,19 @@ LIBRARY_PATHS="$LIBRARY_PATHS /usr/local/lib"
 
 if test "$ENABLE_GUI" = "yes"; then
   AC_PATH_PROGS(JAVA,java)
+  AC_PROVIDE(AC_PROG_JAVA)
   if test -z "$JAVA"; then
     AC_MSG_WARN([No 'java' command found in path - cannot execute GUI])
     ENABLE_GUI="no"
   fi
   AC_PATH_PROGS(JAVAC,javac)
+  AC_PROVIDE(AC_PROG_JAVAC)
   if test -z "$JAVAC"; then
     AC_MSG_WARN([No 'javac' command found in path - cannot compile GUI])
     ENABLE_GUI="no"
   fi
   AC_PATH_PROGS(JAR,jar)
+  AC_PROVIDE(AC_PROG_JAR)
   if test -z "$JAVAC"; then
     AC_MSG_WARN([No 'jar' command found in path - cannot compile GUI])
     ENABLE_GUI="no"
