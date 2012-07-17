@@ -11,6 +11,8 @@
 #define __RINGBUFFER_IMPLEMENATION__
 
 /****************************** Includes *******************************/
+#include "config.h"
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <assert.h>
