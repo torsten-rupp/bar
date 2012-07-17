@@ -11,6 +11,8 @@
 #define __LISTS_IMPLEMENATION__
 
 /****************************** Includes *******************************/
+#include "config.h"
+
 #include <stdlib.h>
 #include <stdio.h>
 #ifndef NDEBUG
@@ -344,10 +346,6 @@ Node *__List_deleteNode(const char *__fileName__, ulong __lineNb__, Node *node)
 
   assert(node != NULL);
 
-  // get next node, free node
-  nextNode = node->next;
-  free(node);
-
   // remove from allocated node list, add to node free list, shorten list
   #ifndef NDEBUG
     pthread_once(&debugListInitFlag,debugListInit);
@@ -419,6 +417,10 @@ Node *__List_deleteNode(const char *__fileName__, ulong __lineNb__, Node *node)
     }
     pthread_mutex_unlock(&debugListLock);
   #endif /*NDEBUG */
+
+  // get next node, free node
+  nextNode = node->next;
+  free(node);
 
   return nextNode;
 }
