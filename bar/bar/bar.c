@@ -178,15 +178,14 @@ LOCAL uint          keyBits;
 
 /*---------------------------------------------------------------------*/
 
-LOCAL StringList    configFileNameList;  // list of configuration files to read
+LOCAL StringList         configFileNameList;  // list of configuration files to read
 
-LOCAL String        tmpLogFileName;      // file name of temporary log file
-LOCAL FILE          *logFile = NULL;     // log file handle
-LOCAL FILE          *tmpLogFile = NULL;  // temporary log file handle
+LOCAL String             tmpLogFileName;      // file name of temporary log file
+LOCAL FILE               *logFile = NULL;     // log file handle
+LOCAL FILE               *tmpLogFile = NULL;  // temporary log file handle
 
-LOCAL String        outputLine;
-LOCAL bool          outputNewLineFlag;
-LOCAL ThreadLocalStorage outputLineX;
+LOCAL Semaphore          outputLock;
+LOCAL ThreadLocalStorage outputLineHandle;
 LOCAL String             lastOutputLine;
 
 /****************************** Macros *********************************/
@@ -999,50 +998,53 @@ LOCAL void outputLineDone(void *variable, void *userData)
 
 LOCAL void output(FILE *file, const String string)
 {
-  String outputLine;
-  ulong  z;
+  SemaphoreLock semaphoreLock;
+  String        outputLine;
+  ulong         z;
 
-  outputLine = Thread_getLocalVariable(&outputLineX);
-
+  outputLine = Thread_getLocalVariable(&outputLineHandle);
   if (outputLine != NULL)
   {
     if (File_isTerminal(file))
     {
-      // restore and output line
-      if ((lastOutputLine != NULL) && (outputLine != lastOutputLine))
+      SEMAPHORE_LOCKED_DO(semaphoreLock,&outputLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
       {
-        // wipe-out current line
-        for (z = 0; z < String_length(lastOutputLine); z++)
+        // restore and output line
+        if ((lastOutputLine != NULL) && (outputLine != lastOutputLine))
         {
-          fwrite("\b",1,1,file);
+          // wipe-out current line
+          for (z = 0; z < String_length(lastOutputLine); z++)
+          {
+            fwrite("\b",1,1,file);
+          }
+          for (z = 0; z < String_length(lastOutputLine); z++)
+          {
+            fwrite(" ",1,1,file);
+          }
+          for (z = 0; z < String_length(lastOutputLine); z++)
+          {
+            fwrite("\b",1,1,file);
+          }
+
+          // restore line
+          fwrite(String_cString(outputLine),1,String_length(outputLine),file);
         }
-        for (z = 0; z < String_length(lastOutputLine); z++)
+
+        // output string
+        fwrite(String_cString(string),1,String_length(string),file);
+
+        // store string
+        if (String_index(string,STRING_END) == '\n')
         {
-          fwrite(" ",1,1,file);
+          String_clear(outputLine);
         }
-        for (z = 0; z < String_length(lastOutputLine); z++)
+        else
         {
-          fwrite("\b",1,1,file);
+          String_append(outputLine,string);
         }
 
-        // restore line
-        fwrite(String_cString(outputLine),1,String_length(outputLine),file);
+        lastOutputLine = outputLine;
       }
-
-      // output string
-      fwrite(String_cString(string),1,String_length(string),file);
-
-      // store string
-      if (String_index(string,STRING_END) == '\n')
-      {
-        String_clear(outputLine);
-      }
-      else
-      {
-        String_append(outputLine,string);
-      }
-
-      lastOutputLine = outputLine;
     }
     else
     {
@@ -2112,9 +2114,8 @@ LOCAL Errors initAll(void)
   logFile                               = NULL;
   tmpLogFile                            = NULL;
 
-  outputLine                            = String_new();
-  outputNewLineFlag                     = TRUE;
-  Thread_initLocalVariable(&outputLineX,outputLineInit,NULL);
+  Semaphore_init(&outputLock);
+  Thread_initLocalVariable(&outputLineHandle,outputLineInit,NULL);
   lastOutputLine                        = NULL;
 
   // initialize default ssh keys
@@ -2191,8 +2192,8 @@ LOCAL void doneAll(void)
   String_delete(archiveName);
   String_delete(jobName);
   doneGlobalOptions();
-  Thread_doneLocalVariable(&outputLineX,outputLineDone,NULL);
-  String_delete(outputLine);
+  Thread_doneLocalVariable(&outputLineHandle,outputLineDone,NULL);
+  Semaphore_done(&outputLock);
   String_delete(tmpLogFileName);
   String_delete(tmpDirectory);
   StringList_done(&configFileNameList);
