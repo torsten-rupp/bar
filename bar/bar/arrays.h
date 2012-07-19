@@ -22,8 +22,8 @@
 
 /***************************** Constants *******************************/
 
-#define ARRAY_BEGIN 0
-#define ARRAY_END   -1
+#define ARRAY_BEGIN 0L
+#define ARRAY_END   -1L
 
 /***************************** Datatypes *******************************/
 
@@ -136,7 +136,7 @@ void *Array_get(const Array array, ulong index, void *data);
 * Name   : Array_insert
 * Purpose: insert element into array
 * Input  : array     - array
-*          nextIndex - index of next element or ARRAY_END
+*          nextIndex - index of next element or ARRAY_BEGIN/ARRAY_END
 *          data      - element data
 * Output : -
 * Return : TRUE if element inserted, FALSE otherweise

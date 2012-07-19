@@ -28,8 +28,8 @@
 
 /***************************** Constants *******************************/
 
-#define DEFAULT_LENGTH 8
-#define DELTA_LENGTH   8
+#define DEFAULT_LENGTH 8L
+#define DELTA_LENGTH   8L
 
 /***************************** Datatypes *******************************/
 
@@ -146,7 +146,7 @@ Array __Array_new(const char *fileName, ulong lineNb, ulong elementSize, ulong l
       debugArrayNode->lineNb   = lineNb;
       debugArrayNode->array    = array;
       List_append(&debugArrayList,debugArrayNode);
-      debugArrayList.allocatedMemory += sizeof(DebugArrayNode)+sizeof(struct __Array)+array->elementSize*array->maxLength;
+      debugArrayList.allocatedMemory += sizeof(DebugArrayNode)+sizeof(struct __Array)+array->maxLength*array->elementSize;
     }
     pthread_mutex_unlock(&debugArrayLock);
   #endif /* not NDEBUG */
@@ -246,6 +246,7 @@ bool Array_put(Array array, ulong index, const void *data)
     if (index >= array->maxLength)
     {
       newMaxLength = index+1;
+
       newData = realloc(array->data,newMaxLength*array->elementSize);
       if (newData == NULL)
       {
@@ -307,39 +308,86 @@ void *Array_get(const Array array, ulong index, void *data)
 
 bool Array_insert(Array array, long nextIndex, const void *data)
 {
-  byte *newData;
+  ulong newMaxLength;
+  byte  *newData;
 
   if (array != NULL)
   {
     assert(array->data != NULL);
 
-    // extend array if needed
-    if      (nextIndex == ARRAY_END)
+    if      (nextIndex != ARRAY_END)
     {
-    }
-    else if ((ulong)nextIndex+1 >= array->maxLength)
-    {
-      newData = realloc(array->data,(nextIndex+1)*array->elementSize);
-      if (newData == NULL)
+      // extend array if needed
+      if ((ulong)nextIndex+1L >= array->maxLength)
       {
-        return FALSE;
+        newMaxLength = nextIndex+1L;
+
+        newData = realloc(array->data,newMaxLength*array->elementSize);
+        if (newData == NULL)
+        {
+          return FALSE;
+        }
+
+        #ifndef NDEBUG
+          pthread_once(&debugArrayInitFlag,debugArrayInit);
+
+          pthread_mutex_lock(&debugArrayLock);
+          {
+            debugArrayList.allocatedMemory += (newMaxLength-array->maxLength)*array->elementSize;
+          }
+          pthread_mutex_unlock(&debugArrayLock);
+        #endif /* not NDEBUG */
+
+        array->maxLength = newMaxLength;
+        array->data      = newData;
       }
-      array->maxLength = nextIndex+1;
-      array->data      = newData;
-    }
 
-    // insert element
-    if (nextIndex < (long)array->length)
+      // insert element
+      if (nextIndex < (long)array->length)
+      {
+        memmove(array->data+(nextIndex+1)*array->elementSize,
+                array->data+nextIndex*array->elementSize,
+                array->elementSize*(array->length-nextIndex)
+               );
+      }
+      memcpy(array->data+nextIndex*array->elementSize,data,array->elementSize);
+      if (nextIndex > (long)array->length) array->length = (ulong)nextIndex+1;
+
+      return TRUE;
+    }
+    else
     {
-      memmove(array->data+(nextIndex+1)*array->elementSize,
-              array->data+nextIndex*array->elementSize,
-              array->elementSize*(array->length-nextIndex)
-             );
-    }
-    memcpy(array->data+nextIndex*array->elementSize,data,array->elementSize);
-    if (nextIndex > (long)array->length) array->length = (ulong)nextIndex+1;
+      // extend array if needed
+      if (array->length >= array->maxLength)
+      {
+        newMaxLength = array->maxLength+DELTA_LENGTH;
 
-    return TRUE;
+        newData = realloc(array->data,newMaxLength*array->elementSize);
+        if (newData == NULL)
+        {
+          return FALSE;
+        }
+
+        #ifndef NDEBUG
+          pthread_once(&debugArrayInitFlag,debugArrayInit);
+
+          pthread_mutex_lock(&debugArrayLock);
+          {
+            debugArrayList.allocatedMemory += (newMaxLength-array->maxLength)*array->elementSize;
+          }
+          pthread_mutex_unlock(&debugArrayLock);
+        #endif /* not NDEBUG */
+
+        array->maxLength = newMaxLength;
+        array->data      = newData;
+      }
+
+      // store element
+      memcpy(array->data+array->length*array->elementSize,data,array->elementSize);
+      array->length++;
+
+      return TRUE;
+    }
   }
   else
   {
@@ -349,7 +397,8 @@ bool Array_insert(Array array, long nextIndex, const void *data)
 
 bool Array_append(Array array, const void *data)
 {
-  byte *newData;
+  ulong newMaxLength;
+  byte  *newData;
 
   if (array != NULL)
   {
@@ -358,12 +407,25 @@ bool Array_append(Array array, const void *data)
     // extend array if needed
     if (array->length >= array->maxLength)
     {
-      newData = realloc(array->data,(array->maxLength+DELTA_LENGTH)*array->elementSize);
+      newMaxLength = array->maxLength+DELTA_LENGTH;
+
+      newData = realloc(array->data,newMaxLength*array->elementSize);
       if (newData == NULL)
       {
         return FALSE;
       }
-      array->maxLength = array->maxLength+DELTA_LENGTH;
+
+      #ifndef NDEBUG
+        pthread_once(&debugArrayInitFlag,debugArrayInit);
+
+        pthread_mutex_lock(&debugArrayLock);
+        {
+          debugArrayList.allocatedMemory += (newMaxLength-array->maxLength)*array->elementSize;
+        }
+        pthread_mutex_unlock(&debugArrayLock);
+      #endif /* not NDEBUG */
+
+      array->maxLength = newMaxLength;
       array->data      = newData;
     }
 
@@ -385,15 +447,16 @@ void Array_remove(Array array, ulong index, ArrayElementFreeFunction arrayElemen
   {
     assert(array->data != NULL);
 
-    // remove element
     if (index < array->length)
     {
+      // fre element
       if (arrayElementFreeFunction != NULL)
       {
         arrayElementFreeFunction(array->data+index*array->elementSize,arrayElementFreeUserData);
       }
 
-      if (index < array->length-1)
+      // remove element
+      if (index < array->length-1L)
       {
         memmove(array->data+index*array->elementSize,
                 array->data+(index+1)*array->elementSize,
@@ -401,9 +464,6 @@ void Array_remove(Array array, ulong index, ArrayElementFreeFunction arrayElemen
                );
       }
       array->length--;
-    }
-    else
-    {
     }
   }
 }
