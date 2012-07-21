@@ -1460,7 +1460,7 @@ class TabRestore
 
       menu = Widgets.newPopupMenu(shell);
       {
-        menuItem = Widgets.addMenuItem(menu,"Add...");
+        menuItem = Widgets.addMenuItem(menu,"Add to index...");
         menuItem.addSelectionListener(new SelectionListener()
         {
           public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -1473,7 +1473,7 @@ class TabRestore
           }
         });
 
-        menuItem = Widgets.addMenuItem(menu,"Remove...");
+        menuItem = Widgets.addMenuItem(menu,"Remove from index...");
         menuItem.addSelectionListener(new SelectionListener()
         {
           public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -1486,7 +1486,7 @@ class TabRestore
           }
         });
 
-        menuItem = Widgets.addMenuItem(menu,"Remove all with error...");
+        menuItem = Widgets.addMenuItem(menu,"Remove all indizes with error...");
         menuItem.addSelectionListener(new SelectionListener()
         {
           public void widgetSelected(SelectionEvent selectionEvent)
@@ -1499,7 +1499,7 @@ class TabRestore
           }
         });
 
-        menuItem = Widgets.addMenuItem(menu,"Refresh...");
+        menuItem = Widgets.addMenuItem(menu,"Refresh index...");
         menuItem.addSelectionListener(new SelectionListener()
         {
           public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -1512,7 +1512,7 @@ class TabRestore
           }
         });
 
-        menuItem = Widgets.addMenuItem(menu,"Refresh all with error...");
+        menuItem = Widgets.addMenuItem(menu,"Refresh all indizes with error...");
         menuItem.addSelectionListener(new SelectionListener()
         {
           public void widgetDefaultSelected(SelectionEvent selectionEvent)
