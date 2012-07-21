@@ -4246,16 +4246,36 @@ whould this be a possible implementation?
             storageFileHandle->sftp.sftp = libssh2_sftp_init(Network_getSSHSession(&storageFileHandle->sftp.socketHandle));
             if (storageFileHandle->sftp.sftp != NULL)
             {
-              error = (libssh2_sftp_unlink(storageFileHandle->sftp.sftp,
-                                           String_cString(fileName)
-                                          ) != 0
-                      )?ERROR_NONE:ERROR_DELETE_FILE;
+              // delete file
+              if (libssh2_sftp_unlink(storageFileHandle->sftp.sftp,
+                                      String_cString(fileName)
+                                     ) == 0
+                 )
+              {
+                error = ERROR_NONE;
+              }
+              else
+              {
+                 char *sshErrorText;
+
+                 libssh2_session_last_error(Network_getSSHSession(&storageFileHandle->scp.socketHandle),&sshErrorText,NULL,0);
+                 error = ERRORX(SSH,
+                                libssh2_session_last_errno(Network_getSSHSession(&storageFileHandle->scp.socketHandle)),
+                                sshErrorText
+                               );
+              }
 
               libssh2_sftp_shutdown(storageFileHandle->sftp.sftp);
             }
             else
             {
-              error = ERROR(SSH,libssh2_session_last_errno(Network_getSSHSession(&storageFileHandle->sftp.socketHandle)));
+              char *sshErrorText;
+
+              libssh2_session_last_error(Network_getSSHSession(&storageFileHandle->scp.socketHandle),&sshErrorText,NULL,0);
+              error = ERRORX(SSH,
+                             libssh2_session_last_errno(Network_getSSHSession(&storageFileHandle->sftp.socketHandle)),
+                             sshErrorText
+                            );
               Network_disconnect(&storageFileHandle->sftp.socketHandle);
             }
           }
