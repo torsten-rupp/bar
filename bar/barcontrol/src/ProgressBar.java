@@ -53,7 +53,7 @@ class ProgressBar extends Canvas
    */
   ProgressBar(Composite composite, int style)
   {
-    super(composite,SWT.NONE);
+    super(composite,style);
 
     this.colorBlack           = getDisplay().getSystemColor(SWT.COLOR_BLACK);
     this.colorWhite           = getDisplay().getSystemColor(SWT.COLOR_WHITE);
