@@ -8836,7 +8836,7 @@ Errors Archive_updateIndex(DatabaseHandle               *databaseHandle,
               String_delete(fileName);
               break;
             }
-            pprintInfo(4,"INDEX","Added file '%s' to index for '%s'\n",String_cString(fileName),String_cString(printableStorageName));
+            pprintInfo(4,"INDEX: ","Added file '%s' to index for '%s'\n",String_cString(fileName),String_cString(printableStorageName));
 
             // close archive file, free resources
             Archive_closeEntry(&archiveEntryInfo);
@@ -8886,7 +8886,7 @@ Errors Archive_updateIndex(DatabaseHandle               *databaseHandle,
               String_delete(imageName);
               break;
             }
-            pprintInfo(4,"INDEX","Added image '%s' to index for '%s'\n",String_cString(imageName),String_cString(printableStorageName));
+            pprintInfo(4,"INDEX: ","Added image '%s' to index for '%s'\n",String_cString(imageName),String_cString(printableStorageName));
 
             // close archive file, free resources
             Archive_closeEntry(&archiveEntryInfo);
@@ -8930,7 +8930,7 @@ Errors Archive_updateIndex(DatabaseHandle               *databaseHandle,
               String_delete(directoryName);
               break;
             }
-            pprintInfo(4,"INDEX","Added directory '%s' to index for '%s'\n",String_cString(directoryName),String_cString(printableStorageName));
+            pprintInfo(4,"INDEX: ","Added directory '%s' to index for '%s'\n",String_cString(directoryName),String_cString(printableStorageName));
 
             // close archive file, free resources
             Archive_closeEntry(&archiveEntryInfo);
@@ -8980,7 +8980,7 @@ Errors Archive_updateIndex(DatabaseHandle               *databaseHandle,
               String_delete(linkName);
               break;
             }
-            pprintInfo(4,"INDEX",4,"Added link '%s' to index for '%s'\n",String_cString(linkName),String_cString(printableStorageName));
+            pprintInfo(4,"INDEX: ","Added link '%s' to index for '%s'\n",String_cString(linkName),String_cString(printableStorageName));
 
             // close archive file, free resources
             Archive_closeEntry(&archiveEntryInfo);
@@ -9045,7 +9045,7 @@ Errors Archive_updateIndex(DatabaseHandle               *databaseHandle,
               StringList_done(&fileNameList);
               break;
             }
-            pprintInfo(4,"INDEX","Added hardlink '%s' to index for '%s'\n",String_cString(StringList_first(&fileNameList,NULL)),String_cString(printableStorageName));
+            pprintInfo(4,"INDEX: ","Added hardlink '%s' to index for '%s'\n",String_cString(StringList_first(&fileNameList,NULL)),String_cString(printableStorageName));
 
             // close archive file, free resources
             Archive_closeEntry(&archiveEntryInfo);
@@ -9092,7 +9092,7 @@ Errors Archive_updateIndex(DatabaseHandle               *databaseHandle,
               String_delete(fileName);
               break;
             }
-            pprintInfo(4,"INDEX","Added special '%s' to index for '%s'\n",String_cString(fileName),String_cString(printableStorageName));
+            pprintInfo(4,"INDEX: ","Added special '%s' to index for '%s'\n",String_cString(fileName),String_cString(printableStorageName));
 
             // close archive file, free resources
             Archive_closeEntry(&archiveEntryInfo);
