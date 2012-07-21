@@ -5019,15 +5019,17 @@ class TabJobs
 
   //-----------------------------------------------------------------------
 
+  /** clear job data
+   */
   private void clearJobData()
   {
-// NYI: rest?
     widgetIncludeTable.removeAll();
     widgetExcludeList.removeAll();
+    widgetCompressExcludeList.removeAll();
+    widgetScheduleList.removeAll();
   }
 
-  /** update job data
-   * @param name name of job
+  /** update selected job data
    */
   private void updateJobData()
   {
@@ -5046,11 +5048,8 @@ class TabJobs
       archivePartSizeFlag.set(archivePartSize.getLong() > 0);
 
       String[] compressAlgorithms = StringUtils.split(BARServer.getStringOption(selectedJobId,"compress-algorithm"),"+");
-Dprintf.dprintf("x=%s",BARServer.getStringOption(selectedJobId,"compress-algorithm"));
-
-      assert compressAlgorithms.length == 2;
-      deltaCompressAlgorithm.set(compressAlgorithms[0]);
-      byteCompressAlgorithm.set(compressAlgorithms[1]);
+      deltaCompressAlgorithm.set((compressAlgorithms.length >= 1) ? compressAlgorithms[0] : "");
+      byteCompressAlgorithm.set((compressAlgorithms.length >= 2) ? compressAlgorithms[1] : "");
       cryptAlgorithm.set(BARServer.getStringOption(selectedJobId,"crypt-algorithm"));
       cryptType.set(BARServer.getStringOption(selectedJobId,"crypt-type"));
       cryptPublicKeyFileName.set(BARServer.getStringOption(selectedJobId,"crypt-public-key"));
@@ -5070,11 +5069,12 @@ Dprintf.dprintf("x=%s",BARServer.getStringOption(selectedJobId,"compress-algorit
       skipUnreadable.set(BARServer.getBooleanOption(selectedJobId,"skip-unreadable"));
       overwriteFiles.set(BARServer.getBooleanOption(selectedJobId,"overwrite-files"));
 
+      updateFileTreeImages();
+      updateDeviceImages();
       updateIncludeList();
       updateExcludeList();
       updateCompressExcludeList();
-      updateFileTreeImages();
-      updateDeviceImages();
+      updateScheduleList();
     }
   }
 
