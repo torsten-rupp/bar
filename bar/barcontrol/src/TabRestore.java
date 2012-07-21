@@ -1460,6 +1460,21 @@ class TabRestore
 
       menu = Widgets.newPopupMenu(shell);
       {
+        menuItem = Widgets.addMenuItem(menu,"Delete storage...");
+        menuItem.addSelectionListener(new SelectionListener()
+        {
+          public void widgetDefaultSelected(SelectionEvent selectionEvent)
+          {
+          }
+          public void widgetSelected(SelectionEvent selectionEvent)
+          {
+            MenuItem widget = (MenuItem)selectionEvent.widget;
+            deleteStorage();
+          }
+        });
+
+        Widgets.addMenuSeparator(menu);
+
         menuItem = Widgets.addMenuItem(menu,"Add to index...");
         menuItem.addSelectionListener(new SelectionListener()
         {
@@ -2464,6 +2479,124 @@ class TabRestore
     }
   }
 
+  /** delete storage
+   */
+  private void deleteStorage()
+  {
+    HashSet<StorageData> selectedStorageHashSet = new HashSet<StorageData>();
+
+    getCheckedStorageHashSet(selectedStorageHashSet);
+    getSelectedStorageHashSet(selectedStorageHashSet);
+    if (!selectedStorageHashSet.isEmpty())
+    {
+      if (Dialogs.confirm(shell,"Really delete "+selectedStorageHashSet.size()+" storage files?"))
+      {
+        final BusyDialog busyDialog = new BusyDialog(shell,"Delete storage files",500,100,null,BusyDialog.TEXT0|BusyDialog.PROGRESS_BAR0);
+        busyDialog.setMaximum(selectedStorageHashSet.size());
+
+        new BackgroundTask(busyDialog,new Object[]{selectedStorageHashSet})
+        {
+          public void run(final BusyDialog busyDialog, Object userData)
+          {
+            HashSet<StorageData> selectedStorageHashSet = (HashSet<StorageData>)((Object[])userData)[0];
+
+            try
+            {
+              boolean ignoreAllErrorsFlag = false;
+              boolean abortFlag           = false;
+              long    n                   = 0;
+              for (StorageData storageData : selectedStorageHashSet)
+              {
+                // get archive name parts
+                final ArchiveNameParts archiveNameParts = new ArchiveNameParts(storageData.name);
+
+                // update progress bar
+                busyDialog.updateText(archiveNameParts.getPrintableName());
+
+                // delete storage
+                final String[] result = new String[1];
+                int errorCode = BARServer.executeCommand("STORAGE_DELETE "+
+                                                         storageData.id,
+                                                         result
+                                                        );
+                if (errorCode == Errors.NONE)
+                {
+                  synchronized(storageDataMap)
+                  {
+                    storageDataMap.remove(storageData);
+                  }
+                  Widgets.removeTableEntry(widgetStorageList,storageData);
+                }
+                else
+                {
+                  if (!ignoreAllErrorsFlag)
+                  {
+                    final int[] selection = new int[1];
+                    display.syncExec(new Runnable()
+                    {
+                      public void run()
+                      {
+                        selection[0] = Dialogs.select(shell,
+                                                      "Confirmation",
+                                                      "Cannot delete strorage file\n\n'"+archiveNameParts.getPrintableName()+"'\n\n(error: "+result[0]+")",
+                                                      new String[]{"Continue","Continue with all","Abort"},
+                                                      0
+                                                     );
+                      }
+                    });
+                    switch (selection[0])
+                    {
+                      case 0:
+                        break;
+                      case 1:
+                        ignoreAllErrorsFlag = true;
+                        break;
+                      case 2:
+                        abortFlag = true;
+                        break;
+                      default:
+                        break;
+                    }
+                  }
+                }
+
+                // update progress bar
+                n++;
+                busyDialog.updateProgressBar(n);
+
+                // check for abort
+                if (abortFlag || busyDialog.isAborted()) break;
+              }
+
+              // close busy dialog, restore cursor
+              display.syncExec(new Runnable()
+              {
+                public void run()
+                {
+                  busyDialog.close();
+                }
+              });
+
+              updateStorageListThread.triggerUpdate(storagePattern,storageIndexState,storageMaxCount);
+            }
+            catch (CommunicationError error)
+            {
+              final String errorMessage = error.getMessage();
+              display.syncExec(new Runnable()
+              {
+                public void run()
+                {
+                  busyDialog.close();
+                  Dialogs.error(shell,"Communication error while deleting storage (error: "+errorMessage+")");
+                 }
+              });
+            }
+          }
+        };
+      }
+    }
+  }
+
   /** add storage to index database
    */
   private void addStorageIndex()
@@ -2580,7 +2713,7 @@ class TabRestore
     getSelectedStorageHashSet(selectedStorageHashSet);
     if (!selectedStorageHashSet.isEmpty())
     {
-      if (Dialogs.confirm(shell,"Really remove index for "+selectedStorageHashSet.size()+" entries?"))
+      if (Dialogs.confirm(shell,"Really remove index of "+selectedStorageHashSet.size()+" entries?"))
       {
         final BusyDialog busyDialog = new BusyDialog(shell,"Remove indizes",500,100,null,BusyDialog.TEXT0|BusyDialog.PROGRESS_BAR0);
         busyDialog.setMaximum(selectedStorageHashSet.size());
@@ -2597,10 +2730,10 @@ class TabRestore
               for (StorageData storageData : selectedStorageHashSet)
               {
                 // get archive name parts
-                ArchiveNameParts archiveNameParts = new ArchiveNameParts(storageData.name);
+                final ArchiveNameParts archiveNameParts = new ArchiveNameParts(storageData.name);
 
                 // remove entry
-                String[] result = new String[1];
+                final String[] result = new String[1];
                 int errorCode = BARServer.executeCommand("INDEX_STORAGE_REMOVE "+
                                                          "* "+
                                                          storageData.id,
@@ -2616,7 +2749,14 @@ class TabRestore
                 }
                 else
                 {
-                  Dialogs.error(shell,"Cannot remove index database for storage file\n\n'"+archiveNameParts.getPrintableName()+"'\n\n(error: "+result[0]+")");               }
+                  display.syncExec(new Runnable()
+                  {
+                    public void run()
+                    {
+                      Dialogs.error(shell,"Cannot remove index database for storage file\n\n'"+archiveNameParts.getPrintableName()+"'\n\n(error: "+result[0]+")");
+                    }
+                  });
+                }
 
                 // update progress bar
                 n++;
@@ -2682,8 +2822,8 @@ class TabRestore
               {
                 try
                 {
-                  int    errorCode;
-                  String result[] = new String[1];
+                  int          errorCode;
+                  final String result[] = new String[1];
 
                   long n = 0;
                   do
@@ -2705,8 +2845,8 @@ class TabRestore
                              last check date/time
                              error message
                         */
-                        long   storageId   = (Long)data[0];
-                        String storageName = (String)data[1];
+                        long         storageId   = (Long)data[0];
+                        final String storageName = (String)data[1];
 
                         busyDialog.updateText(0,"'"+storageName+"'");
 
@@ -2721,7 +2861,13 @@ class TabRestore
                         }
                         else
                         {
-                          Dialogs.error(shell,"Cannot remove database indizes for '"+storageName+"' (error: "+result[0]+")");
+                          display.syncExec(new Runnable()
+                          {
+                            public void run()
+                            {
+                              Dialogs.error(shell,"Cannot remove database indizes for '"+storageName+"' (error: "+result[0]+")");
+                            }
+                          });
                         }
 
                         // update progress bar
