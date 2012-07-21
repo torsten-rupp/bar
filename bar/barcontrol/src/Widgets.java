@@ -3707,7 +3707,7 @@ class Widgets
   {
     ProgressBar progressBar;
 
-    progressBar = new ProgressBar(composite,SWT.HORIZONTAL);
+    progressBar = new ProgressBar(composite);
     progressBar.setMinimum(min);
     progressBar.setMaximum(max);
     progressBar.setSelection(min);
