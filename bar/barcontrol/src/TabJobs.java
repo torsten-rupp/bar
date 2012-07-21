@@ -823,17 +823,17 @@ class TabJobs
       }
       else
       {
-        StringBuffer stringBuffer = new StringBuffer();
+        StringBuilder buffer = new StringBuilder();
 
-        if ((weekDays & (1 << ScheduleData.MON)) != 0) { if (stringBuffer.length() > 0) stringBuffer.append(','); stringBuffer.append("Mon"); }
-        if ((weekDays & (1 << ScheduleData.TUE)) != 0) { if (stringBuffer.length() > 0) stringBuffer.append(','); stringBuffer.append("Tue"); }
-        if ((weekDays & (1 << ScheduleData.WED)) != 0) { if (stringBuffer.length() > 0) stringBuffer.append(','); stringBuffer.append("Wed"); }
-        if ((weekDays & (1 << ScheduleData.THU)) != 0) { if (stringBuffer.length() > 0) stringBuffer.append(','); stringBuffer.append("Thu"); }
-        if ((weekDays & (1 << ScheduleData.FRI)) != 0) { if (stringBuffer.length() > 0) stringBuffer.append(','); stringBuffer.append("Fri"); }
-        if ((weekDays & (1 << ScheduleData.SAT)) != 0) { if (stringBuffer.length() > 0) stringBuffer.append(','); stringBuffer.append("Sat"); }
-        if ((weekDays & (1 << ScheduleData.SUN)) != 0) { if (stringBuffer.length() > 0) stringBuffer.append(','); stringBuffer.append("Sun"); }
+        if ((weekDays & (1 << ScheduleData.MON)) != 0) { if (buffer.length() > 0) buffer.append(','); buffer.append("Mon"); }
+        if ((weekDays & (1 << ScheduleData.TUE)) != 0) { if (buffer.length() > 0) buffer.append(','); buffer.append("Tue"); }
+        if ((weekDays & (1 << ScheduleData.WED)) != 0) { if (buffer.length() > 0) buffer.append(','); buffer.append("Wed"); }
+        if ((weekDays & (1 << ScheduleData.THU)) != 0) { if (buffer.length() > 0) buffer.append(','); buffer.append("Thu"); }
+        if ((weekDays & (1 << ScheduleData.FRI)) != 0) { if (buffer.length() > 0) buffer.append(','); buffer.append("Fri"); }
+        if ((weekDays & (1 << ScheduleData.SAT)) != 0) { if (buffer.length() > 0) buffer.append(','); buffer.append("Sat"); }
+        if ((weekDays & (1 << ScheduleData.SUN)) != 0) { if (buffer.length() > 0) buffer.append(','); buffer.append("Sun"); }
 
-        return stringBuffer.toString();
+        return buffer.toString();
       }
     }
 
@@ -842,15 +842,15 @@ class TabJobs
      */
     String getDate()
     {
-      StringBuffer date = new StringBuffer();
+      StringBuilder buffer = new StringBuilder();
 
-      date.append(getYear());
-      date.append('-');
-      date.append(getMonth());
-      date.append('-');
-      date.append(getDay());
+      buffer.append(getYear());
+      buffer.append('-');
+      buffer.append(getMonth());
+      buffer.append('-');
+      buffer.append(getDay());
 
-      return date.toString();
+      return buffer.toString();
     }
 
     /** get hour value
@@ -858,9 +858,9 @@ class TabJobs
      */
     String getHour()
     {
-      assert (hour   == ANY) || ((hour   >= 0) && (hour   <= 23));
+      assert (hour == ANY) || ((hour >= 0) && (hour <= 23));
 
-      return (hour != ANY)?String.format("%2d",hour):"*";
+      return (hour != ANY)?String.format("%02d",hour):"*";
     }
 
     /** get minute value
@@ -878,13 +878,13 @@ class TabJobs
      */
     String getTime()
     {
-      StringBuffer time = new StringBuffer();
+      StringBuilder buffer = new StringBuilder();
 
-      time.append(getHour());
-      time.append(':');
-      time.append(getMinute());
+      buffer.append(getHour());
+      buffer.append(':');
+      buffer.append(getMinute());
 
-      return time.toString();
+      return buffer.toString();
     }
 
     /** get enable value
@@ -5046,6 +5046,8 @@ class TabJobs
       archivePartSizeFlag.set(archivePartSize.getLong() > 0);
 
       String[] compressAlgorithms = StringUtils.split(BARServer.getStringOption(selectedJobId,"compress-algorithm"),"+");
+Dprintf.dprintf("x=%s",BARServer.getStringOption(selectedJobId,"compress-algorithm"));
+
       assert compressAlgorithms.length == 2;
       deltaCompressAlgorithm.set(compressAlgorithms[0]);
       byteCompressAlgorithm.set(compressAlgorithms[1]);
@@ -5584,14 +5586,14 @@ throw new Error("NYI");
 
       TreeItem[] treeItems = widgetFileTree.getItems();
 
-      StringBuffer name = new StringBuffer();
+      StringBuilder buffer = new StringBuilder();
       for (String part : StringUtils.split(entryData.pattern,BARServer.fileSeparator,true))
       {
         // expand name
-        if ((name.length() == 0) || (name.charAt(name.length()-1) != BARServer.fileSeparator)) name.append(BARServer.fileSeparator);
-        name.append(part);
+        if ((buffer.length() == 0) || (buffer.charAt(buffer.length()-1) != BARServer.fileSeparator)) buffer.append(BARServer.fileSeparator);
+        buffer.append(part);
 
-        TreeItem treeItem = findTreeItem(treeItems,name.toString());
+        TreeItem treeItem = findTreeItem(treeItems,buffer.toString());
         if (treeItem != null)
         {
           // open sub-directory
@@ -7255,18 +7257,18 @@ throw new Error("NYI");
         int z = 0;
         while (z < fileName.length())
         {
-          StringBuffer part;
+          StringBuilder buffer;
 
           // get next text part
-          part = new StringBuffer();
+          buffer = new StringBuilder();
           while (   (z < fileName.length())
                  && (fileName.charAt(z) != '%')
                  && (fileName.charAt(z) != '#')
                 )
           {
-            part.append(fileName.charAt(z)); z++;
+            buffer.append(fileName.charAt(z)); z++;
           }
-          storageNamePartList.add(new StorageNamePart(part.toString()));
+          storageNamePartList.add(new StorageNamePart(buffer.toString()));
           storageNamePartList.add(new StorageNamePart(null));
 
           if (z < fileName.length())
@@ -7275,30 +7277,30 @@ throw new Error("NYI");
             {
               case '%':
                 // add variable part
-                part = new StringBuffer();
-                part.append('%'); z++;
+                buffer = new StringBuilder();
+                buffer.append('%'); z++;
                 if ((z < fileName.length()) && (fileName.charAt(z) == '%'))
                 {
-                  part.append('%'); z++;
+                  buffer.append('%'); z++;
                 }
                 else
                 {
                   while ((z < fileName.length()) && (Character.isLetterOrDigit(fileName.charAt(z))))
                   {
-                    part.append(fileName.charAt(z)); z++;
+                    buffer.append(fileName.charAt(z)); z++;
                   }
                 }
-                storageNamePartList.add(new StorageNamePart(part.toString()));
+                storageNamePartList.add(new StorageNamePart(buffer.toString()));
                 storageNamePartList.add(new StorageNamePart(null));
                 break;
               case '#':
                 // add number part
-                part = new StringBuffer();
+                buffer = new StringBuilder();
                 while ((z < fileName.length()) && (fileName.charAt(z) == '#'))
                 {
-                  part.append(fileName.charAt(z)); z++;
+                  buffer.append(fileName.charAt(z)); z++;
                 }
-                storageNamePartList.add(new StorageNamePart(part.toString()));
+                storageNamePartList.add(new StorageNamePart(buffer.toString()));
                 storageNamePartList.add(new StorageNamePart(null));
                 break;
             }
@@ -7316,16 +7318,16 @@ throw new Error("NYI");
      */
     String getFileName()
     {
-      StringBuffer fileName = new StringBuffer();
+      StringBuilder buffer = new StringBuilder();
       for (StorageNamePart storageNamePart : storageNamePartList)
       {
         if (storageNamePart.string != null)
         {
-          fileName.append(storageNamePart.string);
+          buffer.append(storageNamePart.string);
         }
       }
 
-      return fileName.toString();
+      return buffer.toString();
     }
 
     //-----------------------------------------------------------------------
@@ -7530,7 +7532,7 @@ throw new Error("NYI");
      */
     private void updateExample()
     {
-      StringBuffer exampleName = new StringBuffer();
+      StringBuilder buffer = new StringBuilder();
 
       synchronized(storageNamePartList)
       {
@@ -7543,64 +7545,64 @@ throw new Error("NYI");
               int z = 0;
               while ((z < storageNamePart.string.length()) && (storageNamePart.string.charAt(z) == '#'))
               {
-                exampleName.append("1234567890".charAt(z%10));
+                buffer.append("1234567890".charAt(z%10));
                 z++;
               }
             }
             else if (storageNamePart.string.equals("%type"))
-              exampleName.append("full");
+              buffer.append("full");
             else if (storageNamePart.string.equals("%last"))
-              exampleName.append("-last");
+              buffer.append("-last");
             else if (storageNamePart.string.equals("%d"))
-              exampleName.append("24");
+              buffer.append("24");
             else if (storageNamePart.string.equals("%j"))
-              exampleName.append("354");
+              buffer.append("354");
             else if (storageNamePart.string.equals("%m"))
-              exampleName.append("12");
+              buffer.append("12");
             else if (storageNamePart.string.equals("%b"))
-              exampleName.append("Dec");
+              buffer.append("Dec");
             else if (storageNamePart.string.equals("%B"))
-              exampleName.append("December");
+              buffer.append("December");
             else if (storageNamePart.string.equals("%H"))
-              exampleName.append("23");
+              buffer.append("23");
             else if (storageNamePart.string.equals("%I"))
-              exampleName.append("11");
+              buffer.append("11");
             else if (storageNamePart.string.equals("%M"))
-              exampleName.append("55");
+              buffer.append("55");
             else if (storageNamePart.string.equals("%p"))
-              exampleName.append("PM");
+              buffer.append("PM");
             else if (storageNamePart.string.equals("%P"))
-              exampleName.append("pm");
+              buffer.append("pm");
             else if (storageNamePart.string.equals("%a"))
-              exampleName.append("Mon");
+              buffer.append("Mon");
             else if (storageNamePart.string.equals("%A"))
-              exampleName.append("Monday");
+              buffer.append("Monday");
             else if (storageNamePart.string.equals("%u"))
-              exampleName.append("1");
+              buffer.append("1");
             else if (storageNamePart.string.equals("%w"))
-              exampleName.append("0");
+              buffer.append("0");
             else if (storageNamePart.string.equals("%U"))
-              exampleName.append("51");
+              buffer.append("51");
             else if (storageNamePart.string.equals("%C"))
-              exampleName.append("20");
+              buffer.append("20");
             else if (storageNamePart.string.equals("%y"))
-              exampleName.append("07");
+              buffer.append("07");
             else if (storageNamePart.string.equals("%Y"))
-              exampleName.append("2007");
+              buffer.append("2007");
             else if (storageNamePart.string.equals("%S"))
-              exampleName.append("1198598100");
+              buffer.append("1198598100");
             else if (storageNamePart.string.equals("%Z"))
-              exampleName.append("JST");
+              buffer.append("JST");
             else if (storageNamePart.string.equals("%%"))
-              exampleName.append("%");
+              buffer.append("%");
             else if (storageNamePart.string.equals("%#"))
-              exampleName.append("#");
+              buffer.append("#");
             else
-              exampleName.append(storageNamePart.string);
+              buffer.append(storageNamePart.string);
           }
         }
       }
-      widgetExample.setText(exampleName.toString());
+      widgetExample.setText(buffer.toString());
     }
 
   /** find part at location x,y
@@ -7783,7 +7785,7 @@ throw new Error("NYI");
            <enabled>
            <type>
         */
-//System.err.println("BARControl.java"+", "+1357+": "+line);
+System.err.println("BARControl.java"+", "+1357+": "+line);
         if (StringParser.parse(line,"%S-%S-%S %S %S:%S %y %S",data,StringParser.QUOTE_CHARS))
         {
 //System.err.println("BARControl.java"+", "+747+": "+data[0]+"--"+data[5]+"--"+data[6]);
@@ -7915,7 +7917,7 @@ throw new Error("NYI");
       Widgets.layout(subComposite,2,1,TableLayoutData.WE);
       {
         widgetHour = Widgets.newOptionMenu(subComposite);
-        widgetHour.setItems(new String[]{"*","1","2","3","4","5","6","7","8","9","10","11","12","13","14","15","16","17","18","19","20","21","22","23"});
+        widgetHour.setItems(new String[]{"*","00","01","02","03","04","05","06","07","08","09","10","11","12","13","14","15","16","17","18","19","20","21","22","23"});
         widgetHour.setText(scheduleData.getHour()); if (widgetHour.getText().equals("")) widgetHour.setText("*");
         Widgets.layout(widgetHour,0,0,TableLayoutData.W);
         widgetHour.setToolTipText("Hour to execute job. Leave to '*' for every hour.");
