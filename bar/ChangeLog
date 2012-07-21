@@ -72,7 +72,13 @@
     sh -c 'cat %file|mail -s "Backup log" root'
   * improved error output when log-post command cannot be executed:
     show last 5 lines of stderr
-  * BARControl: fix storage when login name is not given
+  * BARControl: fix parsing storage name when login name is not given
+  * BARControl: fixed cloneing of schedule entries
+  * BARControl: added path selector in include/exclude dialogs
+  * BARControl: added confirmation dialog when include/exclude entry
+    should be removed
+  * fixed usage of libcrypt: enabled multithread-support
+  * BARControl: fixed schedule hour setting, show 00..23
 
 2012-01-14 0.16g
   * fix restore: do not create empty parent directories
