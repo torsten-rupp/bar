@@ -1333,11 +1333,12 @@ class Dialogs
 
   /** warning dialog
    * @param parentShell parent shell
-   * @param showAgainCheckbox TRUE to show again checkbox, FALSE otherwise
+   * @param showAgainCheckbox true to show again checkbox, FALSE otherwise
+   * @param showModal true to show warning dialog modal, false otherwise
    * @param message error message
    * @return TRUE iff show checkbox again is selected, FALSE otherwise
    */
-  static boolean warning(Shell parentShell, boolean showAgainCheckbox, String message)
+  static boolean warning(Shell parentShell, boolean showAgainCheckbox, boolean showModal, String message)
   {
     final Image IMAGE = Widgets.loadImage(parentShell.getDisplay(),"warning.png");
 
@@ -1350,7 +1351,7 @@ class Dialogs
 
     if (!parentShell.isDisposed())
     {
-      final Shell dialog = open(parentShell,"Warning",200,70);
+      final Shell dialog = showModal ? openModal(parentShell,"Warning",200,70) : open(parentShell,"Warning",200,70);
       dialog.setLayout(new TableLayout(new double[]{1.0,0.0},1.0));
 
 
@@ -1423,7 +1424,20 @@ class Dialogs
    */
   static void warning(Shell parentShell, String message)
   {
-    warning(parentShell,false,message);
+    warning(parentShell,false,false,message);
+  }
+
+  /** warning dialog
+   * @param parentShell parent shell
+   * @param showAgainCheckbox TRUE to show again checkbox, FALSE otherwise
+   * @param showModal true to show warning dialog modal, false otherwise
+   * @param format format string
+   * @param arguments optional arguments
+   * @return TRUE iff show checkbox again is selected, FALSE otherwise
+   */
+  static boolean warning(Shell parentShell, boolean showAgainCheckbox, boolean showModal, String format, Object... arguments)
+  {
+    return warning(parentShell,showAgainCheckbox,showModal,String.format(format,arguments));
   }
 
   /** warning dialog
@@ -1435,7 +1449,7 @@ class Dialogs
    */
   static boolean warning(Shell parentShell, boolean showAgainCheckbox, String format, Object... arguments)
   {
-    return warning(parentShell,showAgainCheckbox,String.format(format,arguments));
+    return warning(parentShell,showAgainCheckbox,false,format,arguments);
   }
 
   /** warning dialog
