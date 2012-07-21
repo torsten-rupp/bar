@@ -324,7 +324,7 @@ bool Index_findById(DatabaseHandle *databaseHandle,
                                    state, \
                                    STRFTIME('%%s',lastChecked) \
                             FROM storage \
-                            WHERE id=%ld \
+                            WHERE id=%lld \
                            ",
                            storageId
                           );
@@ -334,7 +334,7 @@ bool Index_findById(DatabaseHandle *databaseHandle,
   }
   result = Database_getNextRow(&databaseQueryHandle,
                                "%S %d %llu",
-                               name,
+                               &name,
                                indexState,
                                lastChecked
                               );
@@ -374,7 +374,7 @@ bool Index_findByName(DatabaseHandle *databaseHandle,
     return FALSE;
   }
   result = Database_getNextRow(&databaseQueryHandle,
-                               "%ld %d %llu",
+                               "%lld %d %llu",
                                storageId,
                                indexState,
                                lastChecked
@@ -417,7 +417,7 @@ bool Index_findByState(DatabaseHandle *databaseHandle,
     return FALSE;
   }
   result = Database_getNextRow(&databaseQueryHandle,
-                               "%ld %S %llu",
+                               "%lld %S %llu",
                                storageId,
                                &name,
                                lastChecked
