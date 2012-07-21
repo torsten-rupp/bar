@@ -892,7 +892,7 @@ LOCAL Errors closeArchiveFile(ArchiveInfo *archiveInfo,
     }
   }
 
-  // increament part number
+  // increment part number
   if (archiveInfo->jobOptions->archivePartSize > 0)
   {
     archiveInfo->partNumber++;
@@ -7448,10 +7448,8 @@ fprintf(stderr,"%s, %d: %d\n",__FILE__,__LINE__,archiveEntryInfo->image.blockSiz
         case ARCHIVE_ENTRY_TYPE_FILE:
           {
             // close chunks
-fprintf(stderr,"%s, %d: error=%x\n",__FILE__,__LINE__,error);
             tmpError = Chunk_close(&archiveEntryInfo->file.chunkFileData.info);
             if ((error == ERROR_NONE) && (tmpError != ERROR_NONE)) error = tmpError;
-fprintf(stderr,"%s, %d: error=%x\n",__FILE__,__LINE__,error);
             if (Compress_isCompressed(archiveEntryInfo->file.deltaCompressAlgorithm))
             {
               assert(Compress_isXDeltaCompressed(archiveEntryInfo->file.deltaCompressAlgorithm));
@@ -7459,13 +7457,10 @@ fprintf(stderr,"%s, %d: error=%x\n",__FILE__,__LINE__,error);
               tmpError = Chunk_close(&archiveEntryInfo->file.chunkFileDelta.info);
               if ((error == ERROR_NONE) && (tmpError != ERROR_NONE)) error = tmpError;
             }
-fprintf(stderr,"%s, %d: error=%x\n",__FILE__,__LINE__,error);
             tmpError = Chunk_close(&archiveEntryInfo->file.chunkFileEntry.info);
             if ((error == ERROR_NONE) && (tmpError != ERROR_NONE)) error = tmpError;
-fprintf(stderr,"%s, %d: error=%x\n",__FILE__,__LINE__,error);
             tmpError = Chunk_close(&archiveEntryInfo->file.chunkFile.info);
             if ((error == ERROR_NONE) && (tmpError != ERROR_NONE)) error = tmpError;
-fprintf(stderr,"%s, %d: error=%x\n",__FILE__,__LINE__,error);
 
             // free resources
             Compress_delete(&archiveEntryInfo->file.deltaCompressInfo);
@@ -8669,6 +8664,7 @@ Errors Archive_updateIndex(DatabaseHandle               *databaseHandle,
   JobOptions        jobOptions;
   String            s,t;
   Errors            error;
+  bool              abortedFlag;
   ArchiveInfo       archiveInfo;
   ArchiveEntryInfo  archiveEntryInfo;
   ArchiveEntryTypes archiveEntryType;
@@ -8722,7 +8718,7 @@ Errors Archive_updateIndex(DatabaseHandle               *databaseHandle,
   }
   if (error != ERROR_NONE)
   {
-    printInfo(4,"Failed to create index for '%s' (error: %s)\n",String_cString(printableStorageName),Errors_getText(error));
+    printInfo(4,"Failed to create index for '%s' (error: %s) 0x%x\n",String_cString(printableStorageName),Errors_getText(error),error);
 
     Index_setState(databaseHandle,
                    storageId,
@@ -8769,10 +8765,11 @@ Errors Archive_updateIndex(DatabaseHandle               *databaseHandle,
 
   // index archive contents
   printInfo(4,"Create index for '%s'\n",String_cString(printableStorageName));
-  error = ERROR_NONE;
+  error       = ERROR_NONE;
+  abortedFlag = (abortCallback != NULL) && abortCallback(abortUserData);;
   while (   !Archive_eof(&archiveInfo,FALSE)
-         && ((abortCallback == NULL) || !abortCallback(abortUserData))
          && (error == ERROR_NONE)
+         && !abortedFlag
         )
   {
     // pause
@@ -8839,7 +8836,7 @@ Errors Archive_updateIndex(DatabaseHandle               *databaseHandle,
               String_delete(fileName);
               break;
             }
-            printInfo(4,"Added file '%s' to index '%s'\n",String_cString(fileName),String_cString(printableStorageName));
+            pprintInfo(4,"INDEX","Added file '%s' to index for '%s'\n",String_cString(fileName),String_cString(printableStorageName));
 
             // close archive file, free resources
             Archive_closeEntry(&archiveEntryInfo);
@@ -8889,7 +8886,7 @@ Errors Archive_updateIndex(DatabaseHandle               *databaseHandle,
               String_delete(imageName);
               break;
             }
-            printInfo(4,"Added image '%s' to index '%s'\n",String_cString(imageName),String_cString(printableStorageName));
+            pprintInfo(4,"INDEX","Added image '%s' to index for '%s'\n",String_cString(imageName),String_cString(printableStorageName));
 
             // close archive file, free resources
             Archive_closeEntry(&archiveEntryInfo);
@@ -8933,7 +8930,7 @@ Errors Archive_updateIndex(DatabaseHandle               *databaseHandle,
               String_delete(directoryName);
               break;
             }
-            printInfo(4,"Added directory '%s' to index '%s'\n",String_cString(directoryName),String_cString(printableStorageName));
+            pprintInfo(4,"INDEX","Added directory '%s' to index for '%s'\n",String_cString(directoryName),String_cString(printableStorageName));
 
             // close archive file, free resources
             Archive_closeEntry(&archiveEntryInfo);
@@ -8983,7 +8980,7 @@ Errors Archive_updateIndex(DatabaseHandle               *databaseHandle,
               String_delete(linkName);
               break;
             }
-            printInfo(4,"Added link '%s' to index '%s'\n",String_cString(linkName),String_cString(printableStorageName));
+            pprintInfo(4,"INDEX",4,"Added link '%s' to index for '%s'\n",String_cString(linkName),String_cString(printableStorageName));
 
             // close archive file, free resources
             Archive_closeEntry(&archiveEntryInfo);
@@ -9048,7 +9045,7 @@ Errors Archive_updateIndex(DatabaseHandle               *databaseHandle,
               StringList_done(&fileNameList);
               break;
             }
-            printInfo(4,"Added hardlink '%s' to index '%s'\n",String_cString(StringList_first(&fileNameList,NULL)),String_cString(printableStorageName));
+            pprintInfo(4,"INDEX","Added hardlink '%s' to index for '%s'\n",String_cString(StringList_first(&fileNameList,NULL)),String_cString(printableStorageName));
 
             // close archive file, free resources
             Archive_closeEntry(&archiveEntryInfo);
@@ -9095,7 +9092,7 @@ Errors Archive_updateIndex(DatabaseHandle               *databaseHandle,
               String_delete(fileName);
               break;
             }
-            printInfo(4,"Added special '%s' to index '%s'\n",String_cString(fileName),String_cString(printableStorageName));
+            pprintInfo(4,"INDEX","Added special '%s' to index for '%s'\n",String_cString(fileName),String_cString(printableStorageName));
 
             // close archive file, free resources
             Archive_closeEntry(&archiveEntryInfo);
@@ -9116,40 +9113,62 @@ Errors Archive_updateIndex(DatabaseHandle               *databaseHandle,
                    Archive_tell(&archiveInfo)
                   );
     }
-  }
-  if (error == ERROR_NONE)
-  {
-    printInfo(4,"Done create index for '%s'\n",String_cString(printableStorageName));
-  }
-  else
-  {
-    printInfo(4,"Failed to create index for '%s' (error: %s)\n",String_cString(printableStorageName),Errors_getText(error));
 
-    if (Errors_getCode(error) == ERROR_NO_CRYPT_PASSWORD)
+    // check if aborted
+    abortedFlag = (abortCallback != NULL) && abortCallback(abortUserData);
+  }
+  if (!abortedFlag)
+  {
+    if (error == ERROR_NONE)
     {
-      Index_setState(databaseHandle,
-                     storageId,
-                     INDEX_STATE_UPDATE_REQUESTED,
-                     0LL,
-                     NULL
-                    );
+      printInfo(4,"Done create index for '%s'\n",String_cString(printableStorageName));
     }
     else
     {
-      Index_setState(databaseHandle,
-                     storageId,
-                     INDEX_STATE_ERROR,
-                     0LL,
-                     "%s (error code: %d)",
-                     Errors_getText(error),
-                     Errors_getCode(error)
-                    );
+      printInfo(4,"Failed to create index for '%s' (error: %s)\n",String_cString(printableStorageName),Errors_getText(error));
+
+      if (Errors_getCode(error) == ERROR_NO_CRYPT_PASSWORD)
+      {
+        Index_setState(databaseHandle,
+                       storageId,
+                       INDEX_STATE_UPDATE_REQUESTED,
+                       0LL,
+                       NULL
+                      );
+      }
+      else
+      {
+        Index_setState(databaseHandle,
+                       storageId,
+                       INDEX_STATE_ERROR,
+                       0LL,
+                       "%s (error code: %d)",
+                       Errors_getText(error),
+                       Errors_getCode(error)
+                      );
+      }
+
+      Archive_close(&archiveInfo);
+      freeJobOptions(&jobOptions);
+
+      return error;
     }
+  }
+  else
+  {
+    printInfo(4,"Aborted create index for '%s'\n",String_cString(printableStorageName));
+
+    Index_setState(databaseHandle,
+                   storageId,
+                   INDEX_STATE_UPDATE_REQUESTED,
+                   0LL,
+                   NULL
+                  );
 
     Archive_close(&archiveInfo);
     freeJobOptions(&jobOptions);
 
-    return error;
+    return ERROR_ABORTED;
   }
 
   // set index state 'OK'
@@ -9259,7 +9278,7 @@ Errors Archive_copy(const String                    storageName,
     // pause
     while ((restoreInfo.pauseFlag != NULL) && (*restoreInfo.pauseFlag))
     {
-      Misc_udelay(500*1000);
+      Misc_udelay(500L*1000L);
     }
 #endif /* 0 */
 
@@ -9363,7 +9382,7 @@ Errors Archive_copy(const String                    storageName,
             // pause
             while ((restoreInfo.pauseFlag != NULL) && (*restoreInfo.pauseFlag))
             {
-              Misc_udelay(500*1000);
+              Misc_udelay(500L*1000L);
             }
 #endif /* 0 */
 
@@ -9567,7 +9586,7 @@ Errors Archive_copy(const String                    storageName,
               // pause
               while ((restoreInfo.pauseFlag != NULL) && (*restoreInfo.pauseFlag))
               {
-                Misc_udelay(500*1000);
+                Misc_udelay(500L*1000L);
               }
 
               assert(deviceInfo.blockSize > 0);
@@ -10252,7 +10271,7 @@ Errors Archive_copy(const String                    storageName,
                   // pause
                   while ((restoreInfo.pauseFlag != NULL) && (*restoreInfo.pauseFlag))
                   {
-                    Misc_udelay(500*1000);
+                    Misc_udelay(500L*1000L);
                   }
 
                   n = MIN(fragmentSize-length,BUFFER_SIZE);
