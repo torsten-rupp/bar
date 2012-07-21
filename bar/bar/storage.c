@@ -4271,7 +4271,7 @@ whould this be a possible implementation?
       error = ERROR_FUNCTION_NOT_SUPPORTED;
       break;
     case STORAGE_TYPE_DEVICE:
-      error = ERROR_NONE;
+      error = ERROR_FUNCTION_NOT_SUPPORTED;
       break;
     #ifndef NDEBUG
       default:
