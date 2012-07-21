@@ -38,7 +38,7 @@ class StringParser
 
   /** boolean true/false values
    */
-  private static String trueStrings[] = 
+  private static String trueStrings[] =
   {
     "1",
     "true",
@@ -595,8 +595,8 @@ class StringParser
               }
 
               if (formatToken.enumClassName != null)
-              {          
-                // enum class      
+              {
+                // enum class
                 try
                 {
                   // find enum class
@@ -613,7 +613,7 @@ class StringParser
                 {
 //Dprintf.dprintf(""+exception);
                   throw new Error("Enumeration class '"+formatToken.enumClassName+"' not found",exception);
-                }               
+                }
                 catch (IllegalArgumentException exception)
                 {
 //Dprintf.dprintf(""+exception);
@@ -775,6 +775,12 @@ class StringParser
           formatIndex++;
         }
       }
+    }
+
+    // skip spaces at end of line
+    while ((index < string.length()) && Character.isSpaceChar(string.charAt(index)))
+    {
+      index++;
     }
 
     return index;
