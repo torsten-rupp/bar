@@ -79,6 +79,8 @@
     should be removed
   * fixed usage of libcrypt: enabled multithread-support
   * BARControl: fixed schedule hour setting, show 00..23
+  * BARControl: added function to delete storage files in context menu
+    in restore tab
 
 2012-01-14 0.16g
   * fix restore: do not create empty parent directories
