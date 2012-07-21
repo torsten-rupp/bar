@@ -2425,6 +2425,36 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
                              );
         Storage_getPrintableName(printableStorageName,storageName);
 
+        // set database storage name
+        if (   (indexDatabaseHandle != NULL)
+            && !createInfo->jobOptions->noIndexDatabaseFlag
+            && !createInfo->jobOptions->dryRunFlag
+            && !createInfo->jobOptions->noStorageFlag
+           )
+        {
+          error = Index_update(indexDatabaseHandle,
+                               storageMsg.storageId,
+                               printableStorageName,
+                               0LL
+                              );
+          if (error != ERROR_NONE)
+          {
+            printError("Cannot update index for storage '%s' (error: %s)!\n",
+                       String_cString(printableStorageName),
+                       Errors_getText(error)
+                      );
+
+            // delete index database
+            Index_delete(indexDatabaseHandle,storageMsg.storageId);
+
+            // free resources
+            File_delete(storageMsg.fileName,FALSE);
+            storageInfoDecrement(createInfo,storageMsg.fileSize);
+            freeStorageMsg(&storageMsg,NULL);
+            continue;
+          }
+        }
+
         // open file to store
         #ifndef NDEBUG
           printInfo(0,"Store '%s' to '%s'...",String_cString(storageMsg.fileName),String_cString(printableStorageName));
@@ -2624,12 +2654,12 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
               }
             }
 
-            // set database storage name, size
+            // set database storage size
             if (createInfo->failError == ERROR_NONE)
             {
               error = Index_update(indexDatabaseHandle,
                                    storageMsg.storageId,
-                                   printableStorageName,
+                                   NULL,
                                    fileInfo.size
                                   );
               if (error != ERROR_NONE)
