@@ -29,6 +29,10 @@ public class StringUtils
    */
   public final static String WHITE_SPACES = " \t\f\r\n";
 
+  /** escape character
+   */
+  public final static Character ESCAPE_CHAR = '\\';
+
   // --------------------------- variables --------------------------------
 
   // ------------------------ native functions ----------------------------
@@ -603,10 +607,11 @@ public class StringUtils
    * @param splitChars characters used for splitting
    * @param spaceChars spaces characters to skip (can be null)
    * @param quoteChars quote characters (can be null)
+   * @param escapeChar escape character (can be null)
    * @param emptyFlag true to return empty parts, false to skip empty parts
    * @return string array
    */
-  public static String[] split(String string, String splitChars, String spaceChars, String quoteChars, boolean emptyFlag)
+  public static String[] split(String string, String splitChars, String spaceChars, String quoteChars, Character escapeChar, boolean emptyFlag)
   {
     ArrayList<String> stringList = new ArrayList<String>();
 //Dprintf.dprintf("string=%s splitChars=%s spaceChars=%s quoteChars=%s em=%s",string,splitChars,spaceChars,quoteChars,emptyFlag);
@@ -630,7 +635,7 @@ public class StringUtils
       buffer.setLength(0);
       while ((i < n) && splitChars.indexOf(chars[i]) == -1)
       {
-        if      (chars[i] == '\\')
+        if      ((escapeChar != null) && (chars[i] == escapeChar))
         {
           // escaped character
           if (i+1 < n) buffer.append(chars[i+1]);
@@ -643,7 +648,7 @@ public class StringUtils
           i += 1;
           while ((i < n) && (chars[i] != quoteChar))
           {
-            if      (chars[i] == '\\')
+            if      ((escapeChar != null) && (chars[i] == escapeChar))
             {
               // escaped character
               if (i+1 < n) buffer.append(chars[i+1]);
@@ -675,6 +680,19 @@ public class StringUtils
     }
 
     return stringList.toArray(new String[0]);
+  }
+
+  /** split string
+   * @param string string to split
+   * @param splitChars characters used for splitting
+   * @param spaceChars spaces characters to skip (can be null)
+   * @param quoteChars quote characters (can be null)
+   * @param emptyFlag true to return empty parts, false to skip empty parts
+   * @return string array
+   */
+  public static String[] split(String string, String splitChars, String spaceChars, String quoteChars, boolean emptyFlag)
+  {
+    return split(string,splitChars,spaceChars,quoteChars,null,emptyFlag);
   }
 
   /** split string
