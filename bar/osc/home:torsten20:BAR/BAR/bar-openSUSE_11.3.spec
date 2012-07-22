@@ -15,6 +15,7 @@ BuildRequires: jre >= 1.6.0
 BuildRequires: java-devel >= 1.6.0
 BuildRequires: gnutls
 BuildRequires: openssl
+BuildRequires: openssl-devel
 BuildRequires: tar
 BuildRequires: unzip
 BuildRequires: patch
@@ -42,9 +43,14 @@ mkdir packages
   ln -s packages/bzip2-1.0.5 bzip2
 )
 (
-  cp %{_sourcedir}/xz-5.0.0.tar.gz packages
-  (cd packages; tar xzf xz-5.0.0.tar.gz)
-  ln -s packages/xz-5.0.0 xz
+  cp %{_sourcedir}/xz-5.0.4.tar.gz packages
+  (cd packages; tar xzf xz-5.0.4.tar.gz)
+  ln -s packages/xz-5.0.4 xz
+)
+(
+  cp %{_sourcedir}/xdelta3.0.0.tar.gz packages
+  (cd packages; tar xzf xdelta3.0.0.tar.gz)
+  ln -s packages/xdelta3.0.0 xdelta3
 )
 (
   cp %{_sourcedir}/libgpg-error-1.7.tar.bz2 packages
@@ -61,14 +67,19 @@ mkdir packages
   ln -s packages/ftplib-3.1 ftplib
 )
 (
-  cp %{_sourcedir}/libssh2-1.2.6.tar.gz packages
-  (cd packages; tar xzf libssh2-1.2.6.tar.gz)
-  ln -s packages/libssh2-1.2.6 libssh2
+  cp %{_sourcedir}/libssh2-1.4.2.tar.gz packages
+  (cd packages; tar xzf libssh2-1.4.2.tar.gz)
+  ln -s packages/libssh2-1.4.2 libssh2
 )
 (
   cp %{_sourcedir}/gnutls-2.10.2.tar.bz2 packages
   (cd packages; tar xjf gnutls-2.10.2.tar.bz2)
   ln -s packages/gnutls-2.10.2 gnutls
+)
+(
+  cp %{_sourcedir}/libcdio-0.82.tar.gz packages
+  (cd packages; tar xzf libcdio-0.82.tar.gz)
+  ln -s packages/libcdio-0.82 libcdio
 )
 %configure
 %{__make} OPTFLAGS="%{optflags}"
@@ -88,12 +99,7 @@ mkdir packages
 %{_bindir}/bar-keygen
 %doc ChangeLog doc/README doc/bar.pdf
 %{_mandir}/man7/bar.7.gz
-%dir /etc/bar
-%dir /etc/bar/jobs
 %config /etc/bar/bar.cfg
 /etc/init.d/barserver
-
-%post
-install -d /etc/bar/jobs
 
 %changelog
