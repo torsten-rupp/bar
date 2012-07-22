@@ -208,6 +208,8 @@ LOCAL Errors createLocalStorageArchive(String           localStorageName,
   return ERROR_NONE;
 }
 
+#if 0
+// NYI
 /***********************************************************************\
 * Name   :
 * Purpose:
@@ -222,6 +224,7 @@ LOCAL void deleteLocalStorageArchive(String localStorageName)
   File_delete(localStorageName,FALSE);
   String_delete(localStorageName);
 }
+#endif /* 0 */
 
 /***********************************************************************\
 * Name   : restoreFile
