@@ -276,7 +276,7 @@ StringNode *StringList_remove(StringList *stringList, StringNode *stringNode);
 
 /***********************************************************************\
 * Name   : StringList_first
-* Purpose: first string from list
+* Purpose: get first string from list
 * Input  : stringList - string list
 *          string     - string variable (can be NULL)
 * Output : -
@@ -293,12 +293,19 @@ INLINE String StringList_first(const StringList *stringList, String string)
 
   if (string != NULL)
   {
-    String_set(string,stringList->head->string);
+    if (stringList->head != NULL)
+    {
+      String_set(string,stringList->head->string);
+    }
+    else
+    {
+      String_clear(string);
+    }
     return string;
   }
   else
   {
-    return stringList->head->string;
+    return (stringList->head != NULL) ? stringList->head->string : NULL;
   }
 }
 #endif /* NDEBUG || __STRINGLISTS_IMPLEMENATION__ */
@@ -322,12 +329,19 @@ INLINE String StringList_last(const StringList *stringList, String string)
 
   if (string != NULL)
   {
-    String_set(string,stringList->tail->string);
+    if (stringList->head != NULL)
+    {
+      String_set(string,stringList->tail->string);
+    }
+    else
+    {
+      String_clear(string);
+    }
     return string;
   }
   else
   {
-    return stringList->tail->string;
+    return (stringList->head != NULL) ? stringList->tail->string : NULL;
   }
 }
 #endif /* NDEBUG || __STRINGLISTS_IMPLEMENATION__ */
