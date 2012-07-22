@@ -4038,7 +4038,7 @@ LOCAL void serverCommand_jobInfo(ClientInfo *clientInfo, uint id, const String a
   SemaphoreLock semaphoreLock;
   const JobNode *jobNode;
   const char    *message;
-  String        string;
+  String        string1,string2;
 
   assert(clientInfo != NULL);
   assert(arguments != NULL);
@@ -4075,7 +4075,8 @@ LOCAL void serverCommand_jobInfo(ClientInfo *clientInfo, uint id, const String a
     {
       message = "";
     }
-    string = String_mapCString(String_duplicate(jobNode->runningInfo.name),STRING_BEGIN,MAP_BIN,MAP_TEXT,SIZE_OF_ARRAY(MAP_BIN));
+    string1 = String_mapCString(String_duplicate(jobNode->runningInfo.name       ),STRING_BEGIN,MAP_BIN,MAP_TEXT,SIZE_OF_ARRAY(MAP_BIN));
+    string2 = String_mapCString(String_duplicate(jobNode->runningInfo.storageName),STRING_BEGIN,MAP_BIN,MAP_TEXT,SIZE_OF_ARRAY(MAP_BIN));
     sendClientResult(clientInfo,id,TRUE,ERROR_NONE,
                      "%'s %'s %lu %llu %lu %llu %lu %llu %lu %llu %f %f %f %llu %f %'S %llu %llu %'S %llu %llu %d %f %d",
                      getJobStateText(&jobNode->jobOptions,jobNode->state),
@@ -4093,18 +4094,18 @@ LOCAL void serverCommand_jobInfo(ClientInfo *clientInfo, uint id, const String a
                      Misc_performanceFilterGetValue(&jobNode->runningInfo.storageBytesPerSecond,60),
                      jobNode->runningInfo.archiveBytes,
                      jobNode->runningInfo.compressionRatio,
-                     string,
+                     string1,
                      jobNode->runningInfo.entryDoneBytes,
                      jobNode->runningInfo.entryTotalBytes,
-#warning todo map name
-                     jobNode->runningInfo.storageName,
+                     string2,
                      jobNode->runningInfo.archiveDoneBytes,
                      jobNode->runningInfo.archiveTotalBytes,
                      jobNode->runningInfo.volumeNumber,
                      jobNode->runningInfo.volumeProgress,
                      jobNode->requestedVolumeNumber
                     );
-    String_delete(string);
+    String_delete(string2);
+    String_delete(string1);
   }
 }
 
