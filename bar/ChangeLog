@@ -1,27 +1,19 @@
-2012-??-?? 0.17
+2012-07-22 0.17
   * finally: added support for xdelta compression!
-    Note: integrating ths was a _hard_ work.
+    Note: integrating this was really a _hard_ work.
   * added support for libcdio to read content of CD/DVD/BD
     devices/images without mounting
-  * updated integrated libssh2 to version 1.3.0
-  * added check for file permission of config files. Should
-    be 400 or 600.
-  * barcontrol: add ellipsis character to menus/buttons which
-    require further user input
-  * barcontrol: added schedule copy menu entry/button
-  * barcontrol: show tool tip in tree view only when mouse is
-    in the left side to avoid that tooltip is shown all the
-    time
+  * upgraded used libssh2 to version 1.4.2
   * use libssh2 send64() when available to be able to
     send large files, too
+  * added check for file permission of config files. Should
+    be 400 or 600.
   * improved error handling with public/private keys
   * fixed handling of error case when asymmetric encrypted
     archive cannot be read
   * print fragment info if file is incomplete on verbose
     level >= 2
   * fix header information in sources
-  * barcontrol: add warning when minor protocol version do
-    not match
   * improved logging for not stored files
   * support no-dump file attribute, add option
     --ignore-no-dump (see lsattr, chattr)
@@ -29,14 +21,14 @@
     $HOME/.ssh/id_rsa
   * fix string free bug in restore
   * fix file-seek bug in restore
+  * BARControl: add warning when minor protocol version do
+    not match
   * BARControl: ask for FTP/SSH password on restore if
     required
   * added internal debug code for list allocations
   * added hidden option --server-debug for automated test
     of server functions
   * improved valgrind tests
-  * BARControl: add functions to clear stored passwords on
-    server
   * output percentage info if verbose level >= 2
   * output test/compare/restore info if verbose level >= 1
   * improved processing speed: implemented ring buffers
@@ -59,25 +51,32 @@
   * renamed config option no-auto-update-database-index
     -> index-database-no-auto-update
   * added command line/config option --datbase-index-keep-time
+  * set example for log-post-command to (removed quotes):
+    sh -c 'cat %file|mail -s "Backup log" root'
+  * fix parsing configuration files: strings must not be quoted
+    explicitly
+  * improved error output when log-post command cannot be executed:
+    show last 5 lines of stderr
+  * fixed usage of libcrypt: enabled multithread-support
+  * BARControl: add ellipsis character to menus/buttons which
+    require further user input
+  * BARControl: added schedule copy menu entry/button
+  * BARControl: show tool tip in tree view only when mouse is
+    in the left side to avoid that tooltip is shown all the
+    time
+  * BARControl: add functions to clear stored passwords on
+    server
   * BARControl: renamed option --index-add -> --index-database-add,
     renamed option --index-remove -> --index-database-move
   * BARControl: renamed config option pause-index-update ->
     pause-index-database-update
   * fixed possible crash in logfile post processor
-  * upgraded used libssh2 to version 1.4.2
   * BARControl: fix abort job. Set last executed time.
-  * fix parsing configuration files: strings must not be quoted
-    explicitly
-  * set example for log-post-command to (removed quotes):
-    sh -c 'cat %file|mail -s "Backup log" root'
-  * improved error output when log-post command cannot be executed:
-    show last 5 lines of stderr
   * BARControl: fix parsing storage name when login name is not given
   * BARControl: fixed cloneing of schedule entries
   * BARControl: added path selector in include/exclude dialogs
   * BARControl: added confirmation dialog when include/exclude entry
     should be removed
-  * fixed usage of libcrypt: enabled multithread-support
   * BARControl: fixed schedule hour setting, show 00..23
   * BARControl: added function to delete storage files in context menu
     in restore tab
