@@ -2510,7 +2510,7 @@ class TabRestore
                 // get archive name parts
                 final ArchiveNameParts archiveNameParts = new ArchiveNameParts(storageData.name);
 
-                // update progress bar
+                // update busy dialog
                 busyDialog.updateText(archiveNameParts.getPrintableName());
 
                 // delete storage
@@ -2732,6 +2732,9 @@ class TabRestore
                 // get archive name parts
                 final ArchiveNameParts archiveNameParts = new ArchiveNameParts(storageData.name);
 
+                // update busy dialog
+                busyDialog.updateText(archiveNameParts.getPrintableName());
+
                 // remove entry
                 final String[] result = new String[1];
                 int errorCode = BARServer.executeCommand("INDEX_STORAGE_REMOVE "+
@@ -2848,18 +2851,16 @@ class TabRestore
                         long         storageId   = (Long)data[0];
                         final String storageName = (String)data[1];
 
-                        busyDialog.updateText(0,"'"+storageName+"'");
+                        // update busy dialog
+                        busyDialog.updateText("'"+storageName+"'");
 
+                        // remove storage index
                         errorCode = BARServer.executeCommand("INDEX_STORAGE_REMOVE "+
                                                              "* "+
                                                              storageId,
                                                              result
                                                             );
-                        if (errorCode == Errors.NONE)
-                        {
-                          busyDialog.updateText(0,"'"+storageName+"'");
-                        }
-                        else
+                        if (errorCode != Errors.NONE)
                         {
                           display.syncExec(new Runnable()
                           {

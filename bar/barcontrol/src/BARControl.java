@@ -1633,10 +1633,8 @@ public class BARControl
         }
         if (Settings.indexDatabaseEntriesListPattern != null)
         {
-          final String[] PATTERN_MAP_FROM  = new String[]{"\n","\r","\\"};
-          final String[] PATTERN_MAP_TO    = new String[]{"\\n","\\r","\\\\"};
-          final String[] FILENAME_MAP_FROM = new String[]{"\\n","\\r","\\\\"};
-          final String[] FILENAME_MAP_TO   = new String[]{"\n","\r","\\"};
+          final String[] MAP_TEXT = new String[]{"\\n","\\r","\\\\"};
+          final String[] MAP_BIN  = new String[]{"\n","\r","\\"};
 
           // list storage index
           Command  command = BARServer.runCommand("INDEX_ENTRIES_LIST 0 * 0 "+StringUtils.escape(Settings.indexDatabaseEntriesListPattern));
@@ -1662,8 +1660,8 @@ public class BARControl
                      fragment offset
                      fragment size
                 */
-                String storageName    = StringUtils.map((String)data[0],FILENAME_MAP_FROM,FILENAME_MAP_TO);
-                String fileName       = StringUtils.map((String)data[2],FILENAME_MAP_FROM,FILENAME_MAP_TO);
+                String storageName    = StringUtils.map((String)data[0],MAP_TEXT,MAP_BIN);
+                String fileName       = StringUtils.map((String)data[2],MAP_TEXT,MAP_BIN);
                 long   size           = (Long)data[3];
                 long   datetime       = (Long)data[4];
                 long   fragmentOffset = (Long)data[8];
@@ -1687,8 +1685,8 @@ public class BARControl
                      blockOffset
                      blockCount
                 */
-                String storageName = StringUtils.map((String)data[0],FILENAME_MAP_FROM,FILENAME_MAP_TO);
-                String imageName   = StringUtils.map((String)data[2],FILENAME_MAP_FROM,FILENAME_MAP_TO);
+                String storageName = StringUtils.map((String)data[0],MAP_TEXT,MAP_BIN);
+                String imageName   = StringUtils.map((String)data[2],MAP_TEXT,MAP_BIN);
                 long   size        = (Long)data[3];
                 long   blockOffset = (Long)data[4];
                 long   blockCount  = (Long)data[5];
@@ -1712,8 +1710,8 @@ public class BARControl
                      group id
                      permission
                 */
-                String storageName   = StringUtils.map((String)data[0],FILENAME_MAP_FROM,FILENAME_MAP_TO);
-                String directoryName = StringUtils.map((String)data[2],FILENAME_MAP_FROM,FILENAME_MAP_TO);
+                String storageName   = StringUtils.map((String)data[0],MAP_TEXT,MAP_BIN);
+                String directoryName = StringUtils.map((String)data[2],MAP_TEXT,MAP_BIN);
                 long   datetime      = (Long)data[3];
 
                 System.out.println(String.format("%s: DIR %-40s",
@@ -1735,9 +1733,9 @@ public class BARControl
                      group id
                      permission
                 */
-                String storageName     = StringUtils.map((String)data[0],FILENAME_MAP_FROM,FILENAME_MAP_TO);
-                String linkName        = StringUtils.map((String)data[2],FILENAME_MAP_FROM,FILENAME_MAP_TO);
-                String destinationName = StringUtils.map((String)data[3],FILENAME_MAP_FROM,FILENAME_MAP_TO);
+                String storageName     = StringUtils.map((String)data[0],MAP_TEXT,MAP_BIN);
+                String linkName        = StringUtils.map((String)data[2],MAP_TEXT,MAP_BIN);
+                String destinationName = StringUtils.map((String)data[3],MAP_TEXT,MAP_BIN);
                 long   datetime        = (Long)data[4];
 
                 System.out.println(String.format("%s: LINK %s -> %s",
@@ -1762,8 +1760,8 @@ public class BARControl
                      fragment offset
                      fragment size
                 */
-                String storageName     = StringUtils.map((String)data[0],FILENAME_MAP_FROM,FILENAME_MAP_TO);
-                String fileName        = StringUtils.map((String)data[2],FILENAME_MAP_FROM,FILENAME_MAP_TO);
+                String storageName     = StringUtils.map((String)data[0],MAP_TEXT,MAP_BIN);
+                String fileName        = StringUtils.map((String)data[2],MAP_TEXT,MAP_BIN);
                 long   size            = (Long)data[3];
                 long   datetime        = (Long)data[4];
                 long   fragmentOffset  = (Long)data[8];
@@ -1788,8 +1786,8 @@ public class BARControl
                      group id
                      permission
                 */
-                String storageName = StringUtils.map((String)data[0],FILENAME_MAP_FROM,FILENAME_MAP_TO);
-                String name        = StringUtils.map((String)data[2],FILENAME_MAP_FROM,FILENAME_MAP_TO);
+                String storageName = StringUtils.map((String)data[0],MAP_TEXT,MAP_BIN);
+                String name        = StringUtils.map((String)data[2],MAP_TEXT,MAP_BIN);
                 long   datetime    = (Long)data[3];
 
                 System.out.println(String.format("%s: SPECIAL %-40s",

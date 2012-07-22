@@ -1249,6 +1249,9 @@ class TabStatus
    */
   private void updateJobInfo()
   {
+    final String[] MAP_TEXT = new String[]{"\\n","\\r","\\\\"};
+    final String[] MAP_BIN  = new String[]{"\n","\r","\\"};
+
     if (selectedJobData != null)
     {
       // get job info
@@ -1307,9 +1310,9 @@ class TabStatus
 //             archiveBytes.set((Long)data[13]);
              ratio.set                ((Double)data[14]);
 
-             fileName.set             ((String)data[15]);
+             fileName.set             (StringUtils.map((String)data[15],MAP_TEXT,MAP_BIN));
              fileProgress.set         (getProgress((Long)data[16],(Long)data[17]));
-             storageName.set          ((String)data[18]);
+             storageName.set          (StringUtils.map((String)data[18],MAP_TEXT,MAP_BIN));
              storageProgress.set      (getProgress((Long)data[19],(Long)data[20]));
              volumeNumber.set         ((Long  )data[21]);
              volumeProgress.set       ((Double)data[22]*100.0);
