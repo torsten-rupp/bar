@@ -2254,7 +2254,9 @@ remoteBarFlag=FALSE;
             {
               Password_init(&sshPassword);
 
-              s = String_format(String_new(),"SSH login password for %S@%S",hostName,loginName);
+              s = String_newCString("SSH login password for ");
+              if (!String_isEmpty(loginName)) String_format(s,"%S@",loginName);
+              String_format(s,"%S",hostName);
               Password_input(&sshPassword,String_cString(s),PASSWORD_INPUT_MODE_ANY);
               String_delete(s);
 
