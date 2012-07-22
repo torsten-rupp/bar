@@ -85,7 +85,7 @@
 
 #ifdef HAVE_SSH2
 /***********************************************************************\
-* Name   : crpytoIdCallback
+* Name   : cryptoIdCallback
 * Purpose: libcrypto callback
 * Input  : -
 * Output : -
@@ -93,13 +93,13 @@
 * Notes  : -
 \***********************************************************************/
 
-LOCAL unsigned long crpytoIdCallback(void)
+LOCAL unsigned long cryptoIdCallback(void)
 {
   return ((unsigned long)pthread_self());
 }
 
 /***********************************************************************\
-* Name   : crpytoLockingCallback
+* Name   : cryptoLockingCallback
 * Purpose: libcrypto callback
 * Input  : mode     - see openssl/crypto.h
 *          n        - see openssl/crypto.h
@@ -110,7 +110,7 @@ LOCAL unsigned long crpytoIdCallback(void)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void crpytoLockingCallback(int mode, int n, const char *fileName, int lineNb)
+LOCAL void cryptoLockingCallback(int mode, int n, const char *fileName, int lineNb)
 {
   UNUSED_VARIABLE(fileName);
   UNUSED_VARIABLE(lineNb);
@@ -169,8 +169,8 @@ Errors Network_initAll(void)
       pthread_mutex_init(&cryptoLocks[i],NULL);
       cryptoLockCounters[i] = 0L;
     }
-    CRYPTO_set_id_callback(crpytoIdCallback);
-    CRYPTO_set_locking_callback(crpytoLockingCallback);
+    CRYPTO_set_id_callback(cryptoIdCallback);
+    CRYPTO_set_locking_callback(cryptoLockingCallback);
   #else /* not HAVE_SSH2 */
   #endif /* HAVE_SSH2 */
 
