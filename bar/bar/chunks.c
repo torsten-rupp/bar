@@ -1024,17 +1024,10 @@ Errors Chunk_close(ChunkInfo *chunkInfo)
       error = chunkInfo->io->tell(chunkInfo->ioUserData,&offset);
       if (error != ERROR_NONE)
       {
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
         return error;
       }
       if (chunkInfo->offset+CHUNK_HEADER_SIZE+chunkInfo->size > chunkInfo->io->getSize(chunkInfo->ioUserData))
       {
-fprintf(stderr,"%s, %d: %lu %lu - %lu %lu\n",__FILE__,__LINE__,
-chunkInfo->offset+CHUNK_HEADER_SIZE+chunkInfo->size,
-chunkInfo->io->getSize(chunkInfo->ioUserData),
-chunkInfo->offset,
-chunkInfo->size
-);
         return ERROR_INVALID_CHUNK_SIZE;
       }
 
@@ -1044,7 +1037,6 @@ chunkInfo->size
         error = chunkInfo->io->seek(chunkInfo->ioUserData,chunkInfo->offset+CHUNK_HEADER_SIZE+chunkInfo->size);
         if (error != ERROR_NONE)
         {
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
           return error;
         }
       }
