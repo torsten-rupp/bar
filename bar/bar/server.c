@@ -3507,13 +3507,21 @@ LOCAL void serverCommand_deviceList(ClientInfo *clientInfo, uint id, const Strin
 *            <directory>
 *          Result:
 *            FILE <size> <time modified> <name>
+*
 *            DIRECTORY <time modified> <name>
+*
 *            LINK <time modified> <name>
+*
 *            HARDLINK <time modified> <name>
+*
 *            DEVICE CHARACTER <time modified> <name>
+*
 *            DEVICE BLOCK <size> <time modified> <name>
+*
 *            FIFO <time modified> <name>
+*
 *            SOCKET <time modified> <name>
+*
 *            SPECIAL <time modified> <name>
 *            ...
 \***********************************************************************/
@@ -6153,17 +6161,22 @@ LOCAL void serverCommand_volumeUnload(ClientInfo *clientInfo, uint id, const Str
 * Notes  : Arguments:
 *            <storage name>
 *          Result:
-*            FILE <name> <size> <time modifed> <chunk size> <delta compress algorithm> \
+*            FILE <name> <size> <time modifed> <archive file size> <delta compress algorithm> \
 *            <byte compress algorithm> <crypt algorithm> <crypt type> <delta source name> \
 *            <delta source size> <fragment offest> <fragment size>
-*            IMAGE <name> <size> <chunk size> <delta compress algorithm> \
+*
+*            IMAGE <name> <size> <archive file size> <delta compress algorithm> \
 *            <byte compress algorithm> <crypt algorithm> <crypt type> <delta source name> \
 *            <delta source size> <block size> <block offest> <block size>
+*
 *            DIRECTORY <name> <time modified> <crypt algorithm> <crypt type>
+*
 *            LINK <link name> <name> <crypt algorithm> <crypt type>
+*
 *            HARDLINK <name> <size> <time modifed> <chunk size> <delta compress algorithm> \
 *            <byte compress algorithm> <crypt algorithm> <crypt type> <delta source name> \
 *            <delta source size> <fragment offest> <fragment size>
+*
 *            SPECIAL <name>
 *            ...
 \***********************************************************************/
@@ -6323,7 +6336,7 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const Stri
                )
             {
               sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
-                               "IMAGE %'S %llu %llu %d %d %d %d %u %llu %llu",
+                               "IMAGE %'S %llu %llu %d %d %d %d %'S %llu %u %llu %llu",
                                imageName,
                                deviceInfo.size,
                                archiveEntryInfo.image.chunkImageData.info.size,
@@ -6331,6 +6344,8 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const Stri
                                byteCompressAlgorithm,
                                cryptAlgorithm,
                                cryptType,
+                               deltaSourceName,
+                               deltaSourceSize,
                                deviceInfo.blockSize,
                                blockOffset,
                                blockCount

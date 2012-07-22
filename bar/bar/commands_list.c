@@ -2472,31 +2472,28 @@ remoteBarFlag=FALSE;
                   }
                   else if (strcmp(type,"IMAGE") == 0)
                   {
-#warning todo image
-                    String               imageName;
-                    uint64               imageSize;
-                    uint64               timeModified;
-                    uint64               archiveFileSize;
-                    CompressAlgorithms   deltaCompressAlgorithm;
-                    CompressAlgorithms   byteCompressAlgorithm;
-                    CryptAlgorithms      cryptAlgorithm;
-                    CryptTypes           cryptType;
-                    String               deltaSourceName;
-                    uint64               deltaSourceSize;
-                    uint                 blockSize;
-                    uint64               blockOffset,blockCount;
-fprintf(stderr,"%s, %d: type=#%s# arguments=%s\n",__FILE__,__LINE__,type,String_cString(arguments));
+                    String             imageName;
+                    uint64             imageSize;
+                    uint64             archiveFileSize;
+                    CompressAlgorithms deltaCompressAlgorithm;
+                    CompressAlgorithms byteCompressAlgorithm;
+                    CryptAlgorithms    cryptAlgorithm;
+                    CryptTypes         cryptType;
+                    String             deltaSourceName;
+                    uint64             deltaSourceSize;
+                    uint               blockSize;
+                    uint64             blockOffset,blockCount;
+//fprintf(stderr,"%s, %d: type=#%s# arguments=%s\n",__FILE__,__LINE__,type,String_cString(arguments));
 
-                    imageName        = String_new();
+                    imageName       = String_new();
                     deltaSourceName = String_new();
 
                     if (String_parse(arguments,
                                      STRING_BEGIN,
-                                     "%'S %llu %llu %d %d %d %d %d %'S %llu %d %llu %llu",
+                                     "%'S %llu %llu %d %d %d %d %'S %llu %d %llu %llu",
                                      NULL,
                                      imageName,
                                      &imageSize,
-                                     &timeModified,
                                      &archiveFileSize,
                                      &deltaCompressAlgorithm,
                                      &byteCompressAlgorithm,
@@ -2541,27 +2538,27 @@ fprintf(stderr,"%s, %d: type=#%s# arguments=%s\n",__FILE__,__LINE__,type,String_
                           }
 
                           // output file info
-                          printFileInfo(NULL,
-                                        imageName,
-                                        imageSize,
-                                        timeModified,
-                                        archiveFileSize,
-                                        deltaCompressAlgorithm,
-                                        byteCompressAlgorithm,
-                                        cryptAlgorithm,
-                                        cryptType,
-                                        deltaSourceName,
-                                        deltaSourceSize,
-                                        blockOffset,
-                                        blockCount
-                                       );
+                          printImageInfo(NULL,
+                                         imageName,
+                                         imageSize,
+                                         archiveFileSize,
+                                         deltaCompressAlgorithm,
+                                         byteCompressAlgorithm,
+                                         cryptAlgorithm,
+                                         cryptType,
+                                         deltaSourceName,
+                                         deltaSourceSize,
+                                         blockSize,
+                                         blockOffset,
+                                         blockCount
+                                        );
                         }
                         fileCount++;
                       }
                     }
                     else
                     {
-                      printWarning("Parsing 'file' entry '%s' fail\n",String_cString(arguments));
+                      printWarning("Parsing 'image' entry '%s' fail\n",String_cString(arguments));
                     }
 
                     String_delete(deltaSourceName);
