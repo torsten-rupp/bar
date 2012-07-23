@@ -3883,7 +3883,6 @@ Errors Archive_newHardLinkEntry(ArchiveInfo      *archiveInfo,
       {
         logMessage(LOG_TYPE_WARNING,
                    "File '%s' not delta compressed (no source file found)\n",
-#warning todo StringList_first
                    String_cString(StringList_first(fileNameList,NULL))
                   );
       }
@@ -7112,9 +7111,6 @@ Errors Archive_closeEntry(ArchiveEntryInfo *archiveEntryInfo)
               {
                 // update part block count
                 assert(archiveEntryInfo->image.blockSize > 0);
-#warning todo
-fprintf(stderr,"%s, %d: %d\n",__FILE__,__LINE__,Compress_getInputLength(&archiveEntryInfo->image.deltaCompressInfo));
-fprintf(stderr,"%s, %d: %d\n",__FILE__,__LINE__,archiveEntryInfo->image.blockSize);
                 assert((Compress_getInputLength(&archiveEntryInfo->image.deltaCompressInfo) % archiveEntryInfo->image.blockSize) == 0);
                 archiveEntryInfo->image.chunkImageData.blockCount = Compress_getInputLength(&archiveEntryInfo->image.deltaCompressInfo)/archiveEntryInfo->image.blockSize;
                 if (error == ERROR_NONE)
