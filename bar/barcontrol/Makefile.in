@@ -227,103 +227,103 @@ clean_jars:
 	$(RMF) barcontrol-windows_64.jar
 
 # create jars
-barcontrol.jar: jar.txt $(OBJECTS) images/*.gif
+barcontrol.jar: jar.txt $(OBJECTS) images/*.png
 ifneq ($(JAR),)
 	$(INSTALL) -d tmp/jar
 	$(CP) classes/*.class tmp/jar
 	$(INSTALL) -d tmp/jar/images
-	$(CP) images/*.gif tmp/jar/images
+	$(CP) images/*.png tmp/jar/images
 	($(CD) tmp/jar; $(JAR) cmf ../../jar.txt ../../$@ *)
 	$(RMRF) tmp/jar
 else
 	@$(ECHO) "ERROR: no 'jar' command - cannot create $@"
 endif
 
-barcontrol-linux.jar: jar.txt $(OBJECTS) src/Errors.java images/*.gif $(SWT_JAR_LINUX)
+barcontrol-linux.jar: jar.txt $(OBJECTS) src/Errors.java images/*.png $(SWT_JAR_LINUX)
 ifneq ($(JAR),)
 	$(INSTALL) -d tmp/jar
 	($(CD) tmp/jar; $(UNZIP) ../../$(SWT_JAR_LINUX) 1>/dev/null; $(RMRF) META-INF)
 	$(CP) classes/*.class tmp/jar
 	$(INSTALL) -d tmp/jar/images
-	$(CP) images/*.gif tmp/jar/images
+	$(CP) images/*.png tmp/jar/images
 	($(CD) tmp/jar; $(JAR) cmf ../../jar.txt ../../$@ *)
 	$(RMRF) tmp/jar
 else
 	@$(ECHO) "ERROR: no 'jar' command - cannot create $@"
 endif
 
-barcontrol-linux_64.jar: jar.txt $(OBJECTS) src/Errors.java images/*.gif $(SWT_JAR_LINUX_64)
+barcontrol-linux_64.jar: jar.txt $(OBJECTS) src/Errors.java images/*.png $(SWT_JAR_LINUX_64)
 ifneq ($(JAR),)
 	$(INSTALL) -d tmp/jar
 	($(CD) tmp/jar; $(UNZIP) ../../$(SWT_JAR_LINUX_64) 1>/dev/null; $(RMRF) META-INF)
 	$(CP) classes/*.class tmp/jar
 	$(INSTALL) -d tmp/jar/images
-	$(CP) images/*.gif tmp/jar/images
+	$(CP) images/*.png tmp/jar/images
 	($(CD) tmp/jar; $(JAR) cmf ../../jar.txt ../../$@ *)
 	$(RMRF) tmp/jar
 else
 	@$(ECHO) "ERROR: no 'jar' command - cannot create $@"
 endif
 
-barcontrol-solaris.jar: jar.txt $(OBJECTS) src/Errors.java images/*.gif $(SWT_JAR_SOLARIS)
+barcontrol-solaris.jar: jar.txt $(OBJECTS) src/Errors.java images/*.png $(SWT_JAR_SOLARIS)
 ifneq ($(JAR),)
 	$(INSTALL) -d tmp/jar
 	($(CD) tmp/jar; $(UNZIP) ../../$(SWT_JAR_SOLARIS) 1>/dev/null; $(RMRF) META-INF)
 	$(CP) classes/*.class tmp/jar
 	$(INSTALL) -d tmp/jar/images
-	$(CP) images/*.gif tmp/jar/images
+	$(CP) images/*.png tmp/jar/images
 	($(CD) tmp/jar; $(JAR) cmf ../../jar.txt ../../$@ *)
 	$(RMRF) tmp/jar
 else
 	@$(ECHO) "ERROR: no 'jar' command - cannot create $@"
 endif
 
-barcontrol-macosx.jar: jar.txt $(OBJECTS) src/Errors.java images/*.gif $(SWT_JAR_MACOSX)
+barcontrol-macosx.jar: jar.txt $(OBJECTS) src/Errors.java images/*.png $(SWT_JAR_MACOSX)
 ifneq ($(JAR),)
 	$(INSTALL) -d tmp/jar
 	($(CD) tmp/jar; $(UNZIP) ../../$(SWT_JAR_MACOSX) 1>/dev/null; $(RMRF) META-INF)
 	$(CP) classes/*.class tmp/jar
 	$(INSTALL) -d tmp/jar/images
-	$(CP) images/*.gif tmp/jar/images
+	$(CP) images/*.png tmp/jar/images
 	($(CD) tmp/jar; $(JAR) cmf ../../jar.txt ../../$@ *)
 	$(RMRF) tmp/jar
 else
 	@$(ECHO) "ERROR: no 'jar' command - cannot create $@"
 endif
 
-barcontrol-macosx_64.jar: jar.txt $(OBJECTS) src/Errors.java images/*.gif $(SWT_JAR_MACOSX_64)
+barcontrol-macosx_64.jar: jar.txt $(OBJECTS) src/Errors.java images/*.png $(SWT_JAR_MACOSX_64)
 ifneq ($(JAR),)
 	$(INSTALL) -d tmp/jar
 	($(CD) tmp/jar; $(UNZIP) ../../$(SWT_JAR_MACOSX_64) 1>/dev/null; $(RMRF) META-INF)
 	$(CP) classes/*.class tmp/jar
 	$(INSTALL) -d tmp/jar/images
-	$(CP) images/*.gif tmp/jar/images
+	$(CP) images/*.png tmp/jar/images
 	($(CD) tmp/jar; $(JAR) cmf ../../jar.txt ../../$@ *)
 	$(RMRF) tmp/jar
 else
 	@$(ECHO) "ERROR: no 'jar' command - cannot create $@"
 endif
 
-barcontrol-windows.jar: jar.txt $(OBJECTS) images/*.gif $(SWT_JAR_WINDOWS)
+barcontrol-windows.jar: jar.txt $(OBJECTS) images/*.png $(SWT_JAR_WINDOWS)
 ifneq ($(JAR),)
 	$(INSTALL) -d tmp/jar
 	($(CD) tmp/jar; $(UNZIP) ../../$(SWT_JAR_WINDOWS) 1>/dev/null; $(RMRF) META-INF)
 	$(CP) classes/*.class tmp/jar
 	$(INSTALL) -d tmp/jar/images
-	$(CP) images/*.gif tmp/jar/images
+	$(CP) images/*.png tmp/jar/images
 	($(CD) tmp/jar; $(JAR) cmf ../../jar.txt ../../$@ *)
 	$(RMRF) tmp/jar
 else
 	@$(ECHO) "ERROR: no 'jar' command - cannot create $@"
 endif
 
-barcontrol-windows_64.jar: jar.txt $(OBJECTS) images/*.gif $(SWT_JAR_WINDOWS_64)
+barcontrol-windows_64.jar: jar.txt $(OBJECTS) images/*.png $(SWT_JAR_WINDOWS_64)
 ifneq ($(JAR),)
 	$(INSTALL) -d tmp/jar
 	($(CD) tmp/jar; $(UNZIP) ../../$(SWT_JAR_WINDOWS_64) 1>/dev/null; $(RMRF) META-INF)
 	$(CP) classes/*.class tmp/jar
 	$(INSTALL) -d tmp/jar/images
-	$(CP) images/*.gif tmp/jar/images
+	$(CP) images/*.png tmp/jar/images
 	($(CD) tmp/jar; $(JAR) cmf ../../jar.txt ../../$@ *)
 	$(RMRF) tmp/jar
 else
@@ -431,7 +431,7 @@ ifneq ($(DIRECTORY),)
                    $(DIRECTORY)/barcontrol
 	$(INSTALL) -d $(DIRECTORY)/barcontrol/images
 	$(INSTALL) -m 664 \
-                   images/*.gif \
+                   images/*.png \
                    $(DIRECTORY)/barcontrol/images
 	$(INSTALL) -d $(DIRECTORY)/barcontrol/jars/linux
 	$(INSTALL) -m 664 \
