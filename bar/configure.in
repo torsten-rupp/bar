@@ -67,6 +67,7 @@ AC_DEFUN([AC_SEARCH_STATIC_LIBS],
      done
      AS_VAR_SET_IF([ac_search_static], , [AS_VAR_SET([ac_search_static], [no])])
      rm conftest.$ac_ext
+
      LIBS=$ac_func_search_save_LIBS
      CFLAGS=$ac_func_search_static_save_CFLAGS
    ]
@@ -104,7 +105,7 @@ EOF
         ac_available=no
       fi
       AS_IF([test "$ac_available" = "yes"],[$2],:,[$3])
-      ac_cv_const_$1=$ac_available
+      AS_VAR_SET(ac_cv_const_$1,$ac_available)
 
       rm -f conftest.c conftest.o
     ]
@@ -130,7 +131,7 @@ AC_DEFUN([AC_C_LONG_LONG],
       fi
     ]
   )
-  AS_IF([test $ac_cv_c_long_long = yes],[$1],[$2])dnl
+  AS_IF([test "$ac_cv_c_long_long" = "yes"],[$1],[$2])dnl
   AC_PROVIDE([$0])dnl
 ])
 

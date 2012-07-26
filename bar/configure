@@ -5765,7 +5765,7 @@ rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
 fi
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_c_long_long" >&5
 $as_echo "$ac_cv_c_long_long" >&6; }
-  if test $ac_cv_c_long_long = yes; then :
+  if test "$ac_cv_c_long_long" = "yes"; then :
 
 $as_echo "#define HAVE_LONG_LONG 1" >>confdefs.h
 
@@ -6471,6 +6471,7 @@ else
   ac_cv_search_static_zlibVersion=no
 fi
      rm conftest.$ac_ext
+
      LIBS=$ac_func_search_save_LIBS
      CFLAGS=$ac_func_search_static_save_CFLAGS
 
@@ -6706,6 +6707,7 @@ else
   ac_cv_search_static_BZ2_bzCompressInit=no
 fi
      rm conftest.$ac_ext
+
      LIBS=$ac_func_search_save_LIBS
      CFLAGS=$ac_func_search_static_save_CFLAGS
 
@@ -6950,6 +6952,7 @@ else
   ac_cv_search_static_lzma_easy_encoder=no
 fi
      rm conftest.$ac_ext
+
      LIBS=$ac_func_search_save_LIBS
      CFLAGS=$ac_func_search_static_save_CFLAGS
 
@@ -7249,6 +7252,7 @@ else
   ac_cv_search_static_gpg_strerror=no
 fi
      rm conftest.$ac_ext
+
      LIBS=$ac_func_search_save_LIBS
      CFLAGS=$ac_func_search_static_save_CFLAGS
 
@@ -7435,6 +7439,7 @@ else
   ac_cv_search_static_gcry_check_version=no
 fi
      rm conftest.$ac_ext
+
      LIBS=$ac_func_search_save_LIBS
      CFLAGS=$ac_func_search_static_save_CFLAGS
 
@@ -7686,6 +7691,7 @@ else
   ac_cv_search_static_FtpInit=no
 fi
      rm conftest.$ac_ext
+
      LIBS=$ac_func_search_save_LIBS
      CFLAGS=$ac_func_search_static_save_CFLAGS
 
@@ -7933,6 +7939,7 @@ else
   ac_cv_search_static_libssh2_session_init_ex=no
 fi
      rm conftest.$ac_ext
+
      LIBS=$ac_func_search_save_LIBS
      CFLAGS=$ac_func_search_static_save_CFLAGS
 
@@ -8121,6 +8128,7 @@ else
   ac_cv_search_static_MD5_Init=no
 fi
      rm conftest.$ac_ext
+
      LIBS=$ac_func_search_save_LIBS
      CFLAGS=$ac_func_search_static_save_CFLAGS
 
@@ -8431,6 +8439,7 @@ else
   ac_cv_search_static_gnutls_global_init=no
 fi
      rm conftest.$ac_ext
+
      LIBS=$ac_func_search_save_LIBS
      CFLAGS=$ac_func_search_static_save_CFLAGS
 
@@ -8557,6 +8566,7 @@ else
   ac_cv_search_static_asn1_length_der=no
 fi
      rm conftest.$ac_ext
+
      LIBS=$ac_func_search_save_LIBS
      CFLAGS=$ac_func_search_static_save_CFLAGS
 
@@ -8805,6 +8815,7 @@ else
   ac_cv_search_static_iso9660_open=no
 fi
      rm conftest.$ac_ext
+
      LIBS=$ac_func_search_save_LIBS
      CFLAGS=$ac_func_search_static_save_CFLAGS
 
