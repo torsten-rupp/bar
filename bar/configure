@@ -9008,7 +9008,6 @@ fi
 
 
 
-
   { $as_echo "$as_me:${as_lineno-$LINENO}: checking if constant FS_IOC_GETFLAGS is available" >&5
 $as_echo_n "checking if constant FS_IOC_GETFLAGS is available... " >&6; }
 if test "${ac_cv_const_FS_IOC_GETFLAGS+set}" = set; then :
@@ -9181,6 +9180,62 @@ if test "x$ac_cv_func_zlibVersion" = x""yes; then :
 
 else
   as_fn_error $? "function zlibVersion() is not available" "$LINENO" 5
+fi
+
+
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking if constant CRYPTO_LOCK is available" >&5
+$as_echo_n "checking if constant CRYPTO_LOCK is available... " >&6; }
+if test "${ac_cv_const_CRYPTO_LOCK+set}" = set; then :
+  $as_echo_n "(cached) " >&6
+else
+
+      cat << \EOF > conftest.c
+#include <stdlib.h>
+#include <stdio.h>
+EOF
+for ac_header in openssl/crypto.h ""; do
+  if test -n "$ac_header"; then
+    echo "#include <$ac_header>" >> conftest.c
+  fi
+done
+      cat << \EOF >> conftest.c
+int main(void) { printf("%d",CRYPTO_LOCK); return 0; }
+EOF
+
+      ${CC} ${CFLAGS} -c conftest.c -o conftest.o 1>/dev/null 2>/dev/null; rc=$?
+      if test $rc -eq 0; then
+        ac_available=yes
+      else
+        ac_available=no
+      fi
+      if test "$ac_available" = "yes"; then :
+
+elif :; then :
+  as_fn_error $? "constant CRYPTO_LOCK is not available" "$LINENO" 5
+fi
+      ac_cv_const_CRYPTO_LOCK=$ac_available
+
+      rm -f conftest.c conftest.o
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_const_CRYPTO_LOCK" >&5
+$as_echo "$ac_cv_const_CRYPTO_LOCK" >&6; }
+
+ac_fn_c_check_func "$LINENO" "CRYPTO_set_id_callback" "ac_cv_func_CRYPTO_set_id_callback"
+if test "x$ac_cv_func_CRYPTO_set_id_callback" = x""yes; then :
+
+else
+  as_fn_error $? "OpenSSL CRYPTO_set_id_callback() is not available" "$LINENO" 5
+fi
+
+ac_fn_c_check_func "$LINENO" "CRYPTO_set_locking_callback" "ac_cv_func_CRYPTO_set_locking_callback"
+if test "x$ac_cv_func_CRYPTO_set_locking_callback" = x""yes; then :
+
+else
+  as_fn_error $? "OpenSSL CRYPTO_set_locking_callback() is not available" "$LINENO" 5
 fi
 
 

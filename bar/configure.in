@@ -1205,7 +1205,7 @@ if test $ENABLE_SSH = "yes"; then
     fi
   fi
 
-  dnl link libcrypto, too, if available (may be needed by some libssh2 implemenations)
+  dnl link libcrypto, too, if available (may be needed by some libssh2 implementations)
   if test $ENABLE_LINK_DYNAMIC = "yes"; then
     AC_SEARCH_LIBS(MD5_Init,crypto,[HAVE_CRYPTO=1;LIBRARIES="$LIBRARIES crypto";AC_DEFINE(HAVE_CRYPTO,1,[crypto installed])])
   else
@@ -1388,9 +1388,8 @@ AC_CHECK_FUNC(gethostbyaddr_r,AC_DEFINE(HAVE_GETHOSTBYADDR_R,1,[gethostbyname_r(
 
 AC_CHECK_FUNC(fseeko64,,AC_ERROR([function fseeko64() is not available]))
 AC_CHECK_FUNC(ftello64,,AC_ERROR([function ftello64() is not available]))
-AC_CHECK_FUNC(fdatasync,    AC_DEFINE(HAVE_FDATASYNC,1,[fdatasync() available]))
+AC_CHECK_FUNC(fdatasync,    AC_DEFINE(HAVE_FDATASYNC,1,[fdatasync() available]        ))
 AC_CHECK_FUNC(posix_fadvise,AC_DEFINE(HAVE_POSIX_FADVISE,1,[posix_fadvise() available]))
-
 
 AC_CHECK_CONST(FS_IOC_GETFLAGS,AC_DEFINE(HAVE_FS_IOC_GETFLAGS, 1,[FS_IOC_GETFLAGS available]), ,linux/fs.h)
 AC_CHECK_CONST(FS_COMPR_FL,    AC_DEFINE(HAVE_FS_COMPR_FL, 1,[FS_COMPR_FL available]), ,linux/fs.h)
@@ -1398,6 +1397,11 @@ AC_CHECK_CONST(FS_NOCOMP_FL,   AC_DEFINE(HAVE_FS_NOCOMP_FL,1,[FS_NOCOMP_FL avail
 AC_CHECK_CONST(FS_NODUMP_FL,   AC_DEFINE(HAVE_FS_NODUMP_FL,1,[FS_NODUMP_FL available]),,linux/fs.h)
 
 AC_CHECK_FUNC(zlibVersion,,AC_ERROR([function zlibVersion() is not available]))
+
+AC_CHECK_CONST(CRYPTO_LOCK,,AC_ERROR([constant CRYPTO_LOCK is not available]),openssl/crypto.h)
+
+AC_CHECK_FUNC(CRYPTO_set_id_callback,     ,AC_ERROR([OpenSSL CRYPTO_set_id_callback() is not available]),openssl/crypto.h)
+AC_CHECK_FUNC(CRYPTO_set_locking_callback,,AC_ERROR([OpenSSL CRYPTO_set_locking_callback() is not available]),openssl/crypto.h)
 
 AC_CHECK_FUNC(libssh2_channel_send_keepalive,AC_DEFINE(HAVE_SSH2_CHANNEL_SEND_KEEPALIVE,1,[SSH2 has libssh2_channel_send_keepalive()]))
 AC_CHECK_FUNC(libssh2_keepalive_config,      AC_DEFINE(HAVE_SSH2_KEEPALIVE_CONFIG,      1,[SSH2 has libssh2_keepalive_config()]))
