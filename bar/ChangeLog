@@ -1,4 +1,4 @@
-2012-07-22 0.17
+2012-07-29 0.17
   * finally: added support for xdelta compression!
     Note: integrating this was really a _hard_ work.
   * added support for libcdio to read content of CD/DVD/BD
