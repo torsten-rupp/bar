@@ -6728,7 +6728,7 @@ LOCAL void serverCommand_storageDelete(ClientInfo *clientInfo, uint id, const St
        )
     {
       String_delete(storageName);
-      sendClientResult(clientInfo,id,TRUE,error,"storage not found");
+      sendClientResult(clientInfo,id,TRUE,ARCHIVE_NOT_FOUND,"storage not found");
       return;
     }
 
