@@ -43,7 +43,7 @@ while ($line=<STDIN>)
     if    ($line =~ /^\s*$/)
     {
       print "\n";
-      print " -- Torsten Rupp <torsten.rupp@gmx.net>  $date\n";
+      print " -- Torsten Rupp <torsten.rupp\@gmx.net>  $date\n";
       $changeLogFlag=0;
     }
     else
@@ -75,7 +75,7 @@ while ($line=<STDIN>)
 if ($changeLogFlag)
 {
   print "\n";
-  print " -- Torsten Rupp <torsten.rupp@gmx.net>  $date\n";
+  print " -- Torsten Rupp <torsten.rupp\@gmx.net>  $date\n";
 }
 
 exit 0;
