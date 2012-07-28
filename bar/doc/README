@@ -311,6 +311,7 @@ On SUSE system you may use the following packages (or newer versions):
   gnutls
   libgnutls26
   libgnutls-devel
+  openssl-devel
   java_1_0_6-openjdk
   java_1_0_6-openjdk-devel
 
