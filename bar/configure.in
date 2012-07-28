@@ -791,6 +791,7 @@ if test -d zlib -o -d "`readlink zlib`"; then
     mkdir packages 2>/dev/null
     mkdir packages/include 2>/dev/null
     mkdir packages/lib 2>/dev/null
+    (cd packages; rm -f lib64; ln -s lib lib64 2>/dev/null)
     cwd=`pwd`
 
     AC_MSG_COMPILE([zlib])
@@ -852,6 +853,7 @@ if test $ENABLE_BZIP2 = "yes"; then
       mkdir packages 2>/dev/null
       mkdir packages/include 2>/dev/null
       mkdir packages/lib 2>/dev/null
+      (cd packages; rm -f lib64; ln -s lib lib64 2>/dev/null)
       cwd=`pwd`
 
       AC_MSG_COMPILE([bzip2])
@@ -907,6 +909,7 @@ if test $ENABLE_LZMA = "yes"; then
       mkdir packages 2>/dev/null
       mkdir packages/include 2>/dev/null
       mkdir packages/lib 2>/dev/null
+      (cd packages; rm -f lib64; ln -s lib lib64 2>/dev/null)
       cwd=`pwd`
 
       AC_MSG_COMPILE([xz utils])
@@ -979,6 +982,7 @@ if test $ENABLE_GCRYPT = "yes"; then
       mkdir packages 2>/dev/null
       mkdir packages/include 2>/dev/null
       mkdir packages/lib 2>/dev/null
+      (cd packages; rm -f lib64; ln -s lib lib64 2>/dev/null)
       cwd=`pwd`
 
       AC_MSG_COMPILE([libgpg-error])
@@ -1091,6 +1095,7 @@ if test $ENABLE_FTP = "yes"; then
       mkdir packages 2>/dev/null
       mkdir packages/include 2>/dev/null
       mkdir packages/lib 2>/dev/null
+      (cd packages; rm -f lib64; ln -s lib lib64 2>/dev/null)
       cwd=`pwd`
 
       AC_MSG_COMPILE([ftplib])
@@ -1144,6 +1149,61 @@ if test $ENABLE_FTP = "yes"; then
 fi
 
 if test $ENABLE_SSH = "yes"; then
+  if test -d openssl -o -d "`readlink openssl`"; then
+    if test "$ENABLE_PACKAGE_COMPILE" = "yes"; then
+      dnl compile ssh2 library
+
+      mkdir packages 2>/dev/null
+      mkdir packages/include 2>/dev/null
+      mkdir packages/lib 2>/dev/null
+      (cd packages; rm -f lib64; ln -s lib lib64 2>/dev/null)
+      cwd=`pwd`
+
+      AC_MSG_COMPILE([openssl])
+      result=1
+      if test $result -eq 1; then
+        if test -n "`uname -m|grep x86_64`"; then
+          (cd openssl; ./Configure --prefix=$cwd/packages linux-generic64) 1>/dev/null 2>/dev/null
+          if test $? -ne 0; then 
+            AC_MSG_RESULT([fail (configure)])
+            result=0
+          fi
+        else
+          (cd openssl; ./Configure --prefix=$cwd/packages linux-generic32) 1>/dev/null 2>/dev/null
+          if test $? -ne 0; then 
+            AC_MSG_RESULT([fail (configure)])
+            result=0
+          fi
+        fi
+      fi
+      if test $result -eq 1; then
+        (cd openssl; make clean; make) 1>/dev/null 2>/dev/null
+        if test $? -ne 0; then 
+          AC_MSG_RESULT([fail (make)])
+          result=0
+        fi
+      fi
+      if test $result -eq 1; then
+        (cd openssl; make install) 1>/dev/null 2>/dev/null
+        if test $? -ne 0; then 
+          AC_MSG_RESULT([fail (install)])
+          result=0
+        fi
+      fi
+      if test $result -eq 1; then
+        AC_MSG_RESULT([done])
+      fi
+    else
+      result=1
+    fi
+
+    if test $result -eq 1; then
+      CC_INCLUDES="$CC_INCLUDES $cwd/packages/include"
+      LIBRARY_PATHS="$LIBRARY_PATHS $cwd/packages/lib"
+      STATIC_LIBRARIES="$STATIC_LIBRARIES openssl"
+    fi
+  fi
+
   if test -d libssh2 -o -d "`readlink libssh2`"; then
     if test "$ENABLE_PACKAGE_COMPILE" = "yes"; then
       dnl compile ssh2 library
@@ -1151,6 +1211,7 @@ if test $ENABLE_SSH = "yes"; then
       mkdir packages 2>/dev/null
       mkdir packages/include 2>/dev/null
       mkdir packages/lib 2>/dev/null
+      (cd packages; rm -f lib64; ln -s lib lib64 2>/dev/null)
       cwd=`pwd`
 
       AC_MSG_COMPILE([libssh2])
@@ -1227,12 +1288,13 @@ if test $ENABLE_TLS = "yes"; then
       mkdir packages 2>/dev/null
       mkdir packages/include 2>/dev/null
       mkdir packages/lib 2>/dev/null
+      (cd packages; rm -f lib64; ln -s lib lib64 2>/dev/null)
       cwd=`pwd`
 
       AC_MSG_COMPILE([gnutls])
       result=1
       if test $result -eq 1; then
-        (cd gnutls; ./configure --prefix=$cwd/packages --with-included-libtasn1) 1>/dev/null 2>/dev/null
+        (cd gnutls; ./configure --prefix=$cwd/packages --with-libgcrypt-prefix=$cwd/packages --with-included-libtasn1) 1>/dev/null 2>/dev/null
         if test $? -ne 0; then 
           AC_MSG_RESULT([fail (configure)])
           result=0
@@ -1297,6 +1359,7 @@ if test $ENABLE_ISO9660 = "yes"; then
       mkdir packages 2>/dev/null
       mkdir packages/include 2>/dev/null
       mkdir packages/lib 2>/dev/null
+      (cd packages; rm -f lib64; ln -s lib lib64 2>/dev/null)
       cwd=`pwd`
 
       AC_MSG_COMPILE([libcdio])

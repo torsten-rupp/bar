@@ -6313,6 +6313,7 @@ if test -d zlib -o -d "`readlink zlib`"; then
     mkdir packages 2>/dev/null
     mkdir packages/include 2>/dev/null
     mkdir packages/lib 2>/dev/null
+    (cd packages; rm -f lib64; ln -s lib lib64 2>/dev/null)
     cwd=`pwd`
 
 
@@ -6557,6 +6558,7 @@ if test $ENABLE_BZIP2 = "yes"; then
       mkdir packages 2>/dev/null
       mkdir packages/include 2>/dev/null
       mkdir packages/lib 2>/dev/null
+      (cd packages; rm -f lib64; ln -s lib lib64 2>/dev/null)
       cwd=`pwd`
 
 
@@ -6794,6 +6796,7 @@ if test $ENABLE_LZMA = "yes"; then
       mkdir packages 2>/dev/null
       mkdir packages/include 2>/dev/null
       mkdir packages/lib 2>/dev/null
+      (cd packages; rm -f lib64; ln -s lib lib64 2>/dev/null)
       cwd=`pwd`
 
 
@@ -7053,6 +7056,7 @@ if test $ENABLE_GCRYPT = "yes"; then
       mkdir packages 2>/dev/null
       mkdir packages/include 2>/dev/null
       mkdir packages/lib 2>/dev/null
+      (cd packages; rm -f lib64; ln -s lib lib64 2>/dev/null)
       cwd=`pwd`
 
 
@@ -7535,6 +7539,7 @@ if test $ENABLE_FTP = "yes"; then
       mkdir packages 2>/dev/null
       mkdir packages/include 2>/dev/null
       mkdir packages/lib 2>/dev/null
+      (cd packages; rm -f lib64; ln -s lib lib64 2>/dev/null)
       cwd=`pwd`
 
 
@@ -7772,12 +7777,74 @@ fi
 fi
 
 if test $ENABLE_SSH = "yes"; then
+  if test -d openssl -o -d "`readlink openssl`"; then
+    if test "$ENABLE_PACKAGE_COMPILE" = "yes"; then
+
+      mkdir packages 2>/dev/null
+      mkdir packages/include 2>/dev/null
+      mkdir packages/lib 2>/dev/null
+      (cd packages; rm -f lib64; ln -s lib lib64 2>/dev/null)
+      cwd=`pwd`
+
+
+  $as_echo_n "Compile openssl... " >&6
+
+      result=1
+      if test $result -eq 1; then
+        if test -n "`uname -m|grep x86_64`"; then
+          (cd openssl; ./Configure --prefix=$cwd/packages linux-generic64) 1>/dev/null 2>/dev/null
+          if test $? -ne 0; then
+            { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (configure)" >&5
+$as_echo "fail (configure)" >&6; }
+            result=0
+          fi
+        else
+          (cd openssl; ./Configure --prefix=$cwd/packages linux-generic32) 1>/dev/null 2>/dev/null
+          if test $? -ne 0; then
+            { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (configure)" >&5
+$as_echo "fail (configure)" >&6; }
+            result=0
+          fi
+        fi
+      fi
+      if test $result -eq 1; then
+        (cd openssl; make clean; make) 1>/dev/null 2>/dev/null
+        if test $? -ne 0; then
+          { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (make)" >&5
+$as_echo "fail (make)" >&6; }
+          result=0
+        fi
+      fi
+      if test $result -eq 1; then
+        (cd openssl; make install) 1>/dev/null 2>/dev/null
+        if test $? -ne 0; then
+          { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (install)" >&5
+$as_echo "fail (install)" >&6; }
+          result=0
+        fi
+      fi
+      if test $result -eq 1; then
+        { $as_echo "$as_me:${as_lineno-$LINENO}: result: done" >&5
+$as_echo "done" >&6; }
+      fi
+    else
+      result=1
+    fi
+
+    if test $result -eq 1; then
+      CC_INCLUDES="$CC_INCLUDES $cwd/packages/include"
+      LIBRARY_PATHS="$LIBRARY_PATHS $cwd/packages/lib"
+      STATIC_LIBRARIES="$STATIC_LIBRARIES openssl"
+    fi
+  fi
+
   if test -d libssh2 -o -d "`readlink libssh2`"; then
     if test "$ENABLE_PACKAGE_COMPILE" = "yes"; then
 
       mkdir packages 2>/dev/null
       mkdir packages/include 2>/dev/null
       mkdir packages/lib 2>/dev/null
+      (cd packages; rm -f lib64; ln -s lib lib64 2>/dev/null)
       cwd=`pwd`
 
 
@@ -8214,6 +8281,7 @@ if test $ENABLE_TLS = "yes"; then
       mkdir packages 2>/dev/null
       mkdir packages/include 2>/dev/null
       mkdir packages/lib 2>/dev/null
+      (cd packages; rm -f lib64; ln -s lib lib64 2>/dev/null)
       cwd=`pwd`
 
 
@@ -8221,7 +8289,7 @@ if test $ENABLE_TLS = "yes"; then
 
       result=1
       if test $result -eq 1; then
-        (cd gnutls; ./configure --prefix=$cwd/packages --with-included-libtasn1) 1>/dev/null 2>/dev/null
+        (cd gnutls; ./configure --prefix=$cwd/packages --with-libgcrypt-prefix=$cwd/packages --with-included-libtasn1) 1>/dev/null 2>/dev/null
         if test $? -ne 0; then
           { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (configure)" >&5
 $as_echo "fail (configure)" >&6; }
@@ -8653,6 +8721,7 @@ if test $ENABLE_ISO9660 = "yes"; then
       mkdir packages 2>/dev/null
       mkdir packages/include 2>/dev/null
       mkdir packages/lib 2>/dev/null
+      (cd packages; rm -f lib64; ln -s lib lib64 2>/dev/null)
       cwd=`pwd`
 
 
