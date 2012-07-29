@@ -1176,6 +1176,7 @@ class TabJobs
   private final Image  IMAGE_DEVICE;
   private final Image  IMAGE_DEVICE_INCLUDED;
   private final Image  IMAGE_DEVICE_EXCLUDED;
+  private final Image  IMAGE_TRASHCAN;
 
   // date/time format
   private final SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
@@ -1282,18 +1283,19 @@ class TabJobs
     COLOR_MODIFIED = new Color(null,0xFF,0xA0,0xA0);
 
     // get images
-    IMAGE_DIRECTORY          = Widgets.loadImage(display,"directory.gif");
-    IMAGE_DIRECTORY_INCLUDED = Widgets.loadImage(display,"directoryIncluded.gif");
-    IMAGE_DIRECTORY_EXCLUDED = Widgets.loadImage(display,"directoryExcluded.gif");
-    IMAGE_FILE               = Widgets.loadImage(display,"file.gif");
-    IMAGE_FILE_INCLUDED      = Widgets.loadImage(display,"fileIncluded.gif");
-    IMAGE_FILE_EXCLUDED      = Widgets.loadImage(display,"fileExcluded.gif");
-    IMAGE_LINK               = Widgets.loadImage(display,"link.gif");
-    IMAGE_LINK_INCLUDED      = Widgets.loadImage(display,"linkIncluded.gif");
-    IMAGE_LINK_EXCLUDED      = Widgets.loadImage(display,"linkExcluded.gif");
-    IMAGE_DEVICE             = Widgets.loadImage(display,"device.gif");
-    IMAGE_DEVICE_INCLUDED    = Widgets.loadImage(display,"deviceIncluded.gif");
-    IMAGE_DEVICE_EXCLUDED    = Widgets.loadImage(display,"deviceExcluded.gif");
+    IMAGE_DIRECTORY          = Widgets.loadImage(display,"directory.png");
+    IMAGE_DIRECTORY_INCLUDED = Widgets.loadImage(display,"directoryIncluded.png");
+    IMAGE_DIRECTORY_EXCLUDED = Widgets.loadImage(display,"directoryExcluded.png");
+    IMAGE_FILE               = Widgets.loadImage(display,"file.png");
+    IMAGE_FILE_INCLUDED      = Widgets.loadImage(display,"fileIncluded.png");
+    IMAGE_FILE_EXCLUDED      = Widgets.loadImage(display,"fileExcluded.png");
+    IMAGE_LINK               = Widgets.loadImage(display,"link.png");
+    IMAGE_LINK_INCLUDED      = Widgets.loadImage(display,"linkIncluded.png");
+    IMAGE_LINK_EXCLUDED      = Widgets.loadImage(display,"linkExcluded.png");
+    IMAGE_DEVICE             = Widgets.loadImage(display,"device.png");
+    IMAGE_DEVICE_INCLUDED    = Widgets.loadImage(display,"deviceIncluded.png");
+    IMAGE_DEVICE_EXCLUDED    = Widgets.loadImage(display,"deviceExcluded.png");
+    IMAGE_TRASHCAN           = Widgets.loadImage(display,"trashcan.png");
 
     // get cursors
     waitCursor = new Cursor(display,SWT.CURSOR_WAIT);
@@ -7148,7 +7150,7 @@ throw new Error("NYI");
           }
         });
 
-        control = Widgets.newImage(composite,Widgets.loadImage(display,"trashcan.gif"),SWT.BORDER);
+        control = Widgets.newImage(composite,IMAGE_TRASHCAN,SWT.BORDER);
         Widgets.layout(control,0,2,TableLayoutData.NONE);
         control.setToolTipText("Use drag&drop to remove name parts.");
         dropTarget = new DropTarget(control,DND.DROP_MOVE);
