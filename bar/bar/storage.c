@@ -468,12 +468,9 @@ LOCAL void executeIOOutput(void         *userData,
 
 LOCAL Errors requestNewMedium(StorageFileHandle *storageFileHandle, bool waitFlag)
 {
-  Errors                error;
   TextMacro             textMacros[2];
   bool                  mediumRequestedFlag;
   StorageRequestResults storageRequestResult;
-
-  error = ERROR_UNKNOWN;
 
   TEXT_MACRO_N_STRING (textMacros[0],"%device",storageFileHandle->opticalDisk.name     );
   TEXT_MACRO_N_INTEGER(textMacros[1],"%number",storageFileHandle->requestedVolumeNumber);
@@ -637,12 +634,9 @@ LOCAL Errors requestNewMedium(StorageFileHandle *storageFileHandle, bool waitFla
 
 LOCAL Errors requestNewVolume(StorageFileHandle *storageFileHandle, bool waitFlag)
 {
-  Errors                error;
   TextMacro             textMacros[2];
   bool                  volumeRequestedFlag;
   StorageRequestResults storageRequestResult;
-
-  error = ERROR_UNKNOWN;
 
   TEXT_MACRO_N_STRING (textMacros[0],"%device",storageFileHandle->device.name          );
   TEXT_MACRO_N_INTEGER(textMacros[1],"%number",storageFileHandle->requestedVolumeNumber);
