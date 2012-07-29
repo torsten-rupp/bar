@@ -350,7 +350,7 @@ LOCAL bool processValue(const ConfigValue *configValue,
         }
 
         // calculate value
-        data = strtod(value,0);
+        data = strtod(value,0)*factor;
         if (   (data < configValue->doubleValue.min)
             || (data > configValue->doubleValue.max)
            )
