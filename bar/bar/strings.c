@@ -3836,7 +3836,6 @@ String String_quote(String string, char quoteChar)
 String String_unquote(String string, const char *quoteChars)
 {
   const char *t0,*t1;
-  char       quoteChar;
   String     s;
   ulong      z;
 
@@ -3852,8 +3851,6 @@ String String_unquote(String string, const char *quoteChars)
       t1 = strchr(quoteChars,string->data[string->length-1]);
       if ((t0 != NULL) && (t1 != NULL) && ((*t0) == (*t1)))
       {
-        quoteChar = (*t0);
-
         s = allocTmpString();
         z = 1;
         while (z < string->length-1)
