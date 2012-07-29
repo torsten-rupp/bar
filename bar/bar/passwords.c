@@ -318,7 +318,7 @@ void Password_random(Password *password, uint length)
 {
   #ifdef HAVE_GCRYPT
   #else /* not HAVE_GCRYPT */
-    int z;
+    uint z;
   #endif /* HAVE_GCRYPT */
 
   assert(password != NULL);
