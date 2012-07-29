@@ -847,7 +847,6 @@ LOCAL Errors closeArchiveFile(ArchiveInfo *archiveInfo,
                               bool        lastPartFlag
                              )
 {
-  uint64 fileSize;
   Errors error;
 
   assert(archiveInfo != NULL);
@@ -857,9 +856,6 @@ LOCAL Errors closeArchiveFile(ArchiveInfo *archiveInfo,
   assert(archiveInfo->jobOptions != NULL);
   assert(archiveInfo->ioType == ARCHIVE_IO_TYPE_FILE);
   assert(archiveInfo->file.openFlag);
-
-  // get size of archive
-  fileSize = archiveInfo->chunkIO->getSize(archiveInfo->chunkIOUserData);
 
   if (archiveInfo->file.openFlag)
   {
