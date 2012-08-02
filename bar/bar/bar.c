@@ -1001,6 +1001,7 @@ LOCAL void output(FILE *file, const String string)
   SemaphoreLock semaphoreLock;
   String        outputLine;
   ulong         z;
+  char          ch;
 
   outputLine = Thread_getLocalVariable(&outputLineHandle);
   if (outputLine != NULL)
@@ -1040,7 +1041,17 @@ LOCAL void output(FILE *file, const String string)
         }
         else
         {
-          String_append(outputLine,string);
+          STRING_CHAR_ITERATE(string,z,ch)
+          {
+            if (ch == '\b')
+            {
+              String_remove(outputLine,STRING_END,1);
+            }
+            else
+            {
+              String_appendChar(outputLine,ch);
+            }
+          }
         }
 
         lastOutputLine = outputLine;
