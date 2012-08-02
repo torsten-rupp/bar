@@ -130,6 +130,28 @@ typedef struct
     while (0)
 #endif /* not NDEBUG */
 
+/***********************************************************************\
+* Name   : STRING_CHAR_ITERATE
+* Purpose: iterated over characters of string and execute block
+* Input  : string           - string
+*          iteratorVariable - iterator variable (type long)
+*          variable         - iteration variable
+* Output : -
+* Return : -
+* Notes  : variable will contain all characters in string
+*          usage:
+*            STRING_CHAR_ITERATE(list,iteratorVariable,variable)
+*            {
+*              ... = variable->...
+*            }
+\***********************************************************************/
+
+#define STRING_CHAR_ITERATE(string,iteratorVariable,variable) \
+  for (iteratorVariable = 0; \
+       (iteratorVariable) < String_length(string); \
+       iteratorVariable++, variable = String_index(string,iteratorVariable) \
+      )
+
 /***************************** Forwards ********************************/
 
 /***************************** Functions *******************************/
