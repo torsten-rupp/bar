@@ -2,7 +2,7 @@
 
 Name:          bar
 Version:       0.17
-Release:       0
+Release:       13.1
 Summary:       Backup ARchiver
 Source:        http://www.kigen.de/projects/bar/bar-%{version}.tar.bz2
 URL:           http://www.kigen.de/projects/bar/index.html
@@ -19,6 +19,7 @@ BuildRequires: openssl-devel
 BuildRequires: tar
 BuildRequires: unzip
 BuildRequires: patch
+BuildRequires: e2fsprogs
 
 %description
 BAR is backup archiver program. It can create compressed, encrypted
@@ -89,6 +90,9 @@ mkdir packages
 
 %clean
 %__rm -rf "%{buildroot}"
+
+%check
+%{__make} test1 test2 test3 test5
 
 %files
 %defattr(-,root,root)

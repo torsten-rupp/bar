@@ -11,7 +11,7 @@ License:       GPL v2
 BuildRoot:     %{_tmppath}/build-%{name}-%{version}
 
 BuildRequires: gcc gcc-c++ glibc-devel make
-BuildRequires: java >= 1.6.0
+BuildRequires: jre >= 1.6.0
 BuildRequires: java-devel >= 1.6.0
 BuildRequires: gnutls
 BuildRequires: openssl
@@ -19,6 +19,7 @@ BuildRequires: openssl-devel
 BuildRequires: tar
 BuildRequires: unzip
 BuildRequires: patch
+BuildRequires: e2fsprogs
 
 %description
 BAR is backup archiver program. It can create compressed, encrypted
@@ -90,6 +91,9 @@ export NO_BRP_CHECK_BYTECODE_VERSION=true
 
 %clean
 %__rm -rf "%{buildroot}"
+
+%check
+%{__make} test1 test2 test3 test5
 
 %files
 %defattr(-,root,root)

@@ -19,6 +19,7 @@ BuildRequires: openssl-devel
 BuildRequires: tar
 BuildRequires: unzip
 BuildRequires: patch
+BuildRequires: e2fsprogs
 
 %description
 BAR is backup archiver program. It can create compressed, encrypted
@@ -33,9 +34,9 @@ automated backups in the background.
 %build
 mkdir packages
 (
-  cp %{_sourcedir}/zlib-1.2.5.tar.gz packages
-  (cd packages; tar xzf zlib-1.2.5.tar.gz)
-  ln -s packages/zlib-1.2.5 zlib
+  cp %{_sourcedir}/zlib-1.2.7.tar.gz packages
+  (cd packages; tar xzf zlib-1.2.7.tar.gz)
+  ln -s packages/zlib-1.2.7 zlib
 )
 (
   cp %{_sourcedir}/bzip2-1.0.5.tar.gz packages
@@ -89,6 +90,9 @@ mkdir packages
 
 %clean
 %__rm -rf "%{buildroot}"
+
+%check
+%{__make} test1 test2 test3 test5
 
 %files
 %defattr(-,root,root)
