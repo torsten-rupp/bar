@@ -7812,7 +7812,7 @@ if test $ENABLE_SSH = "yes"; then
       result=1
       if test $result -eq 1; then
         if test -n "`uname -m|grep x86_64`"; then
-          (cd openssl; ./Configure --prefix=$cwd/packages linux-generic64) 1>/dev/null 2>$tmpFile
+          (cd openssl; ./config --prefix=$cwd/packages shared) 1>/dev/null 2>$tmpFile
           if test $? -ne 0; then
             { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (configure)" >&5
 $as_echo "fail (configure)" >&6; }
@@ -7858,7 +7858,7 @@ $as_echo "done" >&6; }
     if test $result -eq 1; then
       CC_INCLUDES="$CC_INCLUDES $cwd/packages/include"
       LIBRARY_PATHS="$LIBRARY_PATHS $cwd/packages/lib"
-      STATIC_LIBRARIES="$STATIC_LIBRARIES openssl"
+      STATIC_LIBRARIES="$STATIC_LIBRARIES ssl"
     fi
   fi
 
