@@ -20,14 +20,16 @@ build-stamp:
 	dh_testdir
 
 	# Add here commands to compile the package.
-	ln -s packages/zlib-1.2.5 zlib
+	ln -s packages/zlib-1.2.7 zlib
 	ln -s packages/bzip2-1.0.5 bzip2
-	ln -s packages/xz-5.0.0 xz
+	ln -s packages/xz-5.0.4 xz
+	ln -s packages/xdelta3.0.0 xdelta3
 	ln -s packages/libgpg-error-1.7 libgpg-error
 	ln -s packages/libgcrypt-1.4.4 libgcrypt
 	ln -s packages/ftplib-3.1 ftplib
-	ln -s packages/libssh2-1.3.0 libssh2
+	ln -s packages/libssh2-1.4.2 libssh2
 	ln -s packages/gnutls-2.10.2 gnutls
+	ln -s packages/libcdio-0.82 libcdio
 	./configure
 	make all
 	# --- end custom part for compiling
