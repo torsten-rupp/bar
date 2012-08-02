@@ -34,6 +34,7 @@ lzmaFlag=0
 xdeltaFlag=0
 gcryptFlag=0
 ftplibFlag=0
+opensslFlag=0
 libssh2Flag=0
 gnutlsFlag=0
 libcdioFlag=0
@@ -99,6 +100,10 @@ while test $# != 0; do
           allFlag=0
           ftplibFlag=1
           ;;
+        openssl)
+          allFlag=0
+          opensslFlag=1
+          ;;
         libssh2)
           allFlag=0
           libssh2Flag=1
@@ -153,6 +158,10 @@ while test $# != 0; do
       allFlag=0
       ftplibFlag=1
       ;;
+    openssl)
+      allFlag=0
+      opensslFlag=1
+      ;;
     libssh2)
       allFlag=0
       libssh2Flag=1
@@ -177,7 +186,7 @@ while test $# != 0; do
   shift
 done
 if test $helpFlag -eq 1; then
-  $ECHO "download-third-party-packages.sh [-d|--destination=<path>] [-n|--no-decompress] [-c|--clean] [--help] [all] [zlib] [bzip2] [lzma] [xdelta] [gcrypt] [ftplib] [libssh2] [gnutls] [libcdio] [epm]"
+  $ECHO "download-third-party-packages.sh [-d|--destination=<path>] [-n|--no-decompress] [-c|--clean] [--help] [all] [zlib] [bzip2] [lzma] [xdelta] [gcrypt] [ftplib] [openssl] [libssh2] [gnutls] [libcdio] [epm]"
   $ECHO ""
   $ECHO "Download additional third party packages."
   exit 0
@@ -326,6 +335,26 @@ if test $cleanFlag -eq 0; then
     fi
   fi
 
+  if test $allFlag -eq 1 -o $opensslFlag -eq 1; then
+    # openssl 1.0.1c
+    (
+     if test -n "$destination"; then
+       cd $destination
+     else
+       cd $tmpDirectory
+     fi
+     if test ! -f openssl-1.0.1c.tar.gz; then
+       $WGET 'http://www.openssl.org/source/openssl-1.0.1c.tar.gz'
+     fi
+     if test $noDecompressFlag -eq 0; then
+       $TAR xzf openssl-1.0.1c.tar.gz
+     fi
+    )
+    if test $noDecompressFlag -eq 0; then
+      $LN -f -s $tmpDirectory/openssl-1.0.1c openssl
+    fi
+  fi
+
   if test $allFlag -eq 1 -o $libssh2Flag -eq 1; then
     # libssh2 1.4.2
     (
@@ -450,6 +479,13 @@ else
     $RMF $tmpDirectory/ftplib-*-src.tar.gz $tmpDirectory/ftplib-*.patch
     $RMRF $tmpDirectory/ftplib-*
     $RMF ftplib
+  fi
+
+  if test $allFlag -eq 1 -o $opensslFlag -eq 1; then
+    # openssl
+    $RMF $tmpDirectory/openssl*.tar.gz
+    $RMRF $tmpDirectory/openssl*
+    $RMF openssl
   fi
 
   if test $allFlag -eq 1 -o $libssh2Flag -eq 1; then
