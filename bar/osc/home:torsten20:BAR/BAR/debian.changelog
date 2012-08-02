@@ -1,27 +1,19 @@
 bar (0.17) stable; urgency=low
   * finally: added support for xdelta compression!
-    Note: integrating ths was a _hard_ work.
+    Note: integrating this was really a _hard_ work.
   * added support for libcdio to read content of CD/DVD/BD
     devices/images without mounting
-  * updated integrated libssh2 to version 1.3.0
-  * added check for file permission of config files. Should
-    be 400 or 600.
-  * barcontrol: add ellipsis character to menus/buttons which
-    require further user input
-  * barcontrol: added schedule copy menu entry/button
-  * barcontrol: show tool tip in tree view only when mouse is
-    in the left side to avoid that tooltip is shown all the
-    time
+  * upgraded used libssh2 to version 1.4.2
   * use libssh2 send64() when available to be able to
     send large files, too
+  * added check for file permission of config files. Should
+    be 400 or 600.
   * improved error handling with public/private keys
   * fixed handling of error case when asymmetric encrypted
     archive cannot be read
   * print fragment info if file is incomplete on verbose
     level >= 2
   * fix header information in sources
-  * barcontrol: add warning when minor protocol version do
-    not match
   * improved logging for not stored files
   * support no-dump file attribute, add option
     --ignore-no-dump (see lsattr, chattr)
@@ -29,14 +21,14 @@ bar (0.17) stable; urgency=low
     $HOME/.ssh/id_rsa
   * fix string free bug in restore
   * fix file-seek bug in restore
+  * BARControl: add warning when minor protocol version do
+    not match
   * BARControl: ask for FTP/SSH password on restore if
     required
   * added internal debug code for list allocations
   * added hidden option --server-debug for automated test
     of server functions
   * improved valgrind tests
-  * BARControl: add functions to clear stored passwords on
-    server
   * output percentage info if verbose level >= 2
   * output test/compare/restore info if verbose level >= 1
   * improved processing speed: implemented ring buffers
@@ -59,30 +51,37 @@ bar (0.17) stable; urgency=low
   * renamed config option no-auto-update-database-index
     -> index-database-no-auto-update
   * added command line/config option --datbase-index-keep-time
+  * set example for log-post-command to (removed quotes):
+    sh -c 'cat %file|mail -s "Backup log" root'
+  * fix parsing configuration files: strings must not be quoted
+    explicitly
+  * improved error output when log-post command cannot be executed:
+    show last 5 lines of stderr
+  * fixed usage of libcrypt: enabled multithread-support
+  * BARControl: add ellipsis character to menus/buttons which
+    require further user input
+  * BARControl: added schedule copy menu entry/button
+  * BARControl: show tool tip in tree view only when mouse is
+    in the left side to avoid that tooltip is shown all the
+    time
+  * BARControl: add functions to clear stored passwords on
+    server
   * BARControl: renamed option --index-add -> --index-database-add,
     renamed option --index-remove -> --index-database-move
   * BARControl: renamed config option pause-index-update ->
     pause-index-database-update
   * fixed possible crash in logfile post processor
-  * upgraded used libssh2 to version 1.4.2
   * BARControl: fix abort job. Set last executed time.
-  * fix parsing configuration files: strings must not be quoted
-    explicitly
-  * set example for log-post-command to (removed quotes):
-    sh -c 'cat %file|mail -s "Backup log" root'
-  * improved error output when log-post command cannot be executed:
-    show last 5 lines of stderr
   * BARControl: fix parsing storage name when login name is not given
   * BARControl: fixed cloneing of schedule entries
   * BARControl: added path selector in include/exclude dialogs
   * BARControl: added confirmation dialog when include/exclude entry
     should be removed
-  * fixed usage of libcrypt: enabled multithread-support
   * BARControl: fixed schedule hour setting, show 00..23
   * BARControl: added function to delete storage files in context menu
     in restore tab
 
- -- Torsten Rupp <torsten.rupp.net>  Sun, 22 Jul 2012 00:00:00 +0200
+ -- Torsten Rupp <torsten.rupp@gmx.net>  Sun, 29 Jul 2012 00:00:00 +0200
 
 bar (0.16g) stable; urgency=low
   * fix restore: do not create empty parent directories
@@ -96,7 +95,7 @@ bar (0.16g) stable; urgency=low
     directly
   * fixed memory leaks
 
- -- Torsten Rupp <torsten.rupp.net>  Sat, 14 Jan 2012 00:00:00 +0100
+ -- Torsten Rupp <torsten.rupp@gmx.net>  Sat, 14 Jan 2012 00:00:00 +0100
 
 bar (0.16f) stable; urgency=low
   * re-added option --volume-size, fixed setting CD/DVD/BD
@@ -117,7 +116,7 @@ bar (0.16f) stable; urgency=low
   * fix bug in ftplib: listing directory did not close
     temporary file
 
- -- Torsten Rupp <torsten.rupp.net>  Sat, 10 Sep 2011 00:00:00 +0200
+ -- Torsten Rupp <torsten.rupp@gmx.net>  Sat, 10 Sep 2011 00:00:00 +0200
 
 bar (0.16e) stable; urgency=low
   * create sub-directories when storing to file system or
@@ -168,7 +167,7 @@ bar (0.16e) stable; urgency=low
     medium size/error correction codes may not fit to create a
     CD/DVD/BD
 
- -- Torsten Rupp <torsten.rupp.net>  Sun, 31 Jul 2011 00:00:00 +0200
+ -- Torsten Rupp <torsten.rupp@gmx.net>  Sun, 31 Jul 2011 00:00:00 +0200
 
 bar (0.16d) stable; urgency=low
   * barcontrol: fix parsing of ftp/scp/sftp archive names
@@ -179,7 +178,7 @@ bar (0.16d) stable; urgency=low
   * fixed numbers for compress/crypt type: must be a real
     constant (self-assigned enum may change)
 
- -- Torsten Rupp <torsten.rupp.net>  Tue, 31 May 2011 00:00:00 +0200
+ -- Torsten Rupp <torsten.rupp@gmx.net>  Tue, 31 May 2011 00:00:00 +0200
 
 bar (0.16c) stable; urgency=low
   * renamed macro %file -> %directory for cd/dvd/bd/device-commands
@@ -196,7 +195,7 @@ bar (0.16c) stable; urgency=low
   * add missing MacOSX JARs to distribution
   * renewed man page, improved manual
 
- -- Torsten Rupp <torsten.rupp.net>  Sun, 17 Apr 2011 00:00:00 +0200
+ -- Torsten Rupp <torsten.rupp@gmx.net>  Sun, 17 Apr 2011 00:00:00 +0200
 
 bar (0.16b) stable; urgency=low
   * fix error handling when password is wrong
@@ -216,7 +215,7 @@ bar (0.16b) stable; urgency=low
   * improved documentation: added archive file name macros, add more
     entries to faq, small fixes
 
- -- Torsten Rupp <torsten.rupp.net>  Sun, 10 Apr 2011 00:00:00 +0200
+ -- Torsten Rupp <torsten.rupp@gmx.net>  Sun, 10 Apr 2011 00:00:00 +0200
 
 bar (0.16a) stable; urgency=low
   * fix wrong storage name in database
@@ -225,7 +224,7 @@ bar (0.16a) stable; urgency=low
   * barcontrol: fix tab restore storage filter: edit+reset
   * clean-up
 
- -- Torsten Rupp <torsten.rupp.net>  Thu, 30 Dec 2010 00:00:00 +0100
+ -- Torsten Rupp <torsten.rupp@gmx.net>  Thu, 30 Dec 2010 00:00:00 +0100
 
 bar (0.16) stable; urgency=low
   * do not store content of directories and sub-directories
@@ -266,13 +265,13 @@ bar (0.16) stable; urgency=low
     too, when you created a job which should be scheduled in April!
   * fixed SigSegV with option -g: internal sorting of list was wrong
 
- -- Torsten Rupp <torsten.rupp.net>  Fri, 17 Dec 2010 00:00:00 +0100
+ -- Torsten Rupp <torsten.rupp@gmx.net>  Fri, 17 Dec 2010 00:00:00 +0100
 
 bar (0.15f) stable; urgency=low
   * fix SigSegV in string.c:formatString() which can occur on
     amd64 systems
 
- -- Torsten Rupp <torsten.rupp.net>  Sun, 05 Dec 2010 00:00:00 +0100
+ -- Torsten Rupp <torsten.rupp@gmx.net>  Sun, 05 Dec 2010 00:00:00 +0100
 
 bar (0.15e) stable; urgency=low
   * barcontrol: fix exception when running barcontrol under
@@ -289,13 +288,13 @@ bar (0.15e) stable; urgency=low
     seems to be different on Windows)
   * barcontrol: fix arguments in start script barcontrol.bat
 
- -- Torsten Rupp <torsten.rupp.net>  Thu, 02 Dec 2010 00:00:00 +0100
+ -- Torsten Rupp <torsten.rupp@gmx.net>  Thu, 02 Dec 2010 00:00:00 +0100
 
 bar (0.15d) stable; urgency=low
   * fix SigSegV when deleting a storage archive from
     the database via BARControl
 
- -- Torsten Rupp <torsten.rupp.net>  Mon, 29 Nov 2010 00:00:00 +0100
+ -- Torsten Rupp <torsten.rupp@gmx.net>  Mon, 29 Nov 2010 00:00:00 +0100
 
 bar (0.15c) stable; urgency=low
   * fixes for MacOSX:
@@ -306,7 +305,7 @@ bar (0.15c) stable; urgency=low
   * fix creation of barcontrol/barcontrol*.jar
   * fix error message when archive file already exists
 
- -- Torsten Rupp <torsten.rupp.net>  Thu, 18 Nov 2010 00:00:00 +0100
+ -- Torsten Rupp <torsten.rupp@gmx.net>  Thu, 18 Nov 2010 00:00:00 +0100
 
 bar (0.15b) stable; urgency=low
   * barcontrol: fix sorting of columns
@@ -318,7 +317,7 @@ bar (0.15b) stable; urgency=low
     file list in jobs tab)
   * fixed parsing of storage specification for cd/dvd/bd
 
- -- Torsten Rupp <torsten.rupp.net>  Wed, 17 Nov 2010 00:00:00 +0100
+ -- Torsten Rupp <torsten.rupp@gmx.net>  Wed, 17 Nov 2010 00:00:00 +0100
 
 bar (0.15a) stable; urgency=low
   * fix compilation problems with LONG_LONG_MAX
@@ -339,7 +338,7 @@ bar (0.15a) stable; urgency=low
   * enable dynamic linkage of system internal libraries
   * clean-up Makefile file
 
- -- Torsten Rupp <torsten.rupp.net>  Tue, 26 Oct 2010 00:00:00 +0200
+ -- Torsten Rupp <torsten.rupp@gmx.net>  Tue, 26 Oct 2010 00:00:00 +0200
 
 bar (0.15) stable; urgency=low
   * added command line option --job to execute a job from a job
@@ -381,7 +380,7 @@ bar (0.15) stable; urgency=low
     new options, fixed documentation of some options, clean-up
   * updated man-page
 
- -- Torsten Rupp <torsten.rupp.net>  Wed, 13 Oct 2010 00:00:00 +0200
+ -- Torsten Rupp <torsten.rupp@gmx.net>  Wed, 13 Oct 2010 00:00:00 +0200
 
 bar (0.14) stable; urgency=low
   * added command line control functions to barcontrol:
@@ -401,13 +400,13 @@ bar (0.14) stable; urgency=low
   * updated manual
   * clean-up
 
- -- Torsten Rupp <torsten.rupp.net>  Wed, 28 Jul 2010 00:00:00 +0200
+ -- Torsten Rupp <torsten.rupp@gmx.net>  Wed, 28 Jul 2010 00:00:00 +0200
 
 bar (0.13d) stable; urgency=low
   * fix wrong installation path "/man/man7" man pages: now
     /usr/share/man/man7
 
- -- Torsten Rupp <torsten.rupp.net>  Sat, 24 Jul 2010 00:00:00 +0200
+ -- Torsten Rupp <torsten.rupp@gmx.net>  Sat, 24 Jul 2010 00:00:00 +0200
 
 bar (0.13c) stable; urgency=low
   * fix bar-keygen which caused broken Debian package: wrong template
@@ -419,7 +418,7 @@ bar (0.13c) stable; urgency=low
   * fix some typing errors in manual
   * fix Makefile of barcontrol: SWT JAR version
 
- -- Torsten Rupp <torsten.rupp.net>  Fri, 11 Jun 2010 00:00:00 +0200
+ -- Torsten Rupp <torsten.rupp@gmx.net>  Fri, 11 Jun 2010 00:00:00 +0200
 
 bar (0.13b) stable; urgency=low
   * fix assert-error in options -#/-!
@@ -429,7 +428,7 @@ bar (0.13b) stable; urgency=low
   * fixed and improved download of zlib: download recent version
   * small fixes in manual
 
- -- Torsten Rupp <torsten.rupp.net>  Sun, 23 May 2010 00:00:00 +0200
+ -- Torsten Rupp <torsten.rupp@gmx.net>  Sun, 23 May 2010 00:00:00 +0200
 
 bar (0.13a) stable; urgency=low
   * fix typing error in "owner"
@@ -438,7 +437,7 @@ bar (0.13a) stable; urgency=low
   * barcontrol: fix opening directories in file tree
   * added epm to download third-party script
 
- -- Torsten Rupp <torsten.rupp.net>  Sat, 10 Apr 2010 00:00:00 +0200
+ -- Torsten Rupp <torsten.rupp@gmx.net>  Sat, 10 Apr 2010 00:00:00 +0200
 
 bar (0.13) stable; urgency=low
   * implemented device image functions: create images from devices
@@ -476,20 +475,20 @@ bar (0.13) stable; urgency=low
   * added first version of a manual!
   * improved configure checks for doc tools
 
- -- Torsten Rupp <torsten.rupp.net>  Sun, 21 Mar 2010 00:00:00 +0100
+ -- Torsten Rupp <torsten.rupp@gmx.net>  Sun, 21 Mar 2010 00:00:00 +0100
 
 bar (0.12d) stable; urgency=low
   * fixed wrong usage of vprintf in log function (caused SigSegV
     on 64bit systems)
 
- -- Torsten Rupp <torsten.rupp.net>  Fri, 01 Jan 2010 00:00:00 +0100
+ -- Torsten Rupp <torsten.rupp@gmx.net>  Fri, 01 Jan 2010 00:00:00 +0100
 
 bar (0.12c) stable; urgency=low
   * fixes in configure: fix large file support for some system
   * fixes in configure: add libcrypto only if available (required
     for some older libssh2 implemenations)
 
- -- Torsten Rupp <torsten.rupp.net>  Tue, 20 Oct 2009 00:00:00 +0200
+ -- Torsten Rupp <torsten.rupp@gmx.net>  Tue, 20 Oct 2009 00:00:00 +0200
 
 bar (0.12b) stable; urgency=low
   * added option --owner to overwritting settings for
@@ -502,13 +501,13 @@ bar (0.12b) stable; urgency=low
     version if no EPM installed
   * fixed configure check for gcrypt version
 
- -- Torsten Rupp <torsten.rupp.net>  Sat, 17 Oct 2009 00:00:00 +0200
+ -- Torsten Rupp <torsten.rupp@gmx.net>  Sat, 17 Oct 2009 00:00:00 +0200
 
 bar (0.12a) stable; urgency=low
   * clean-up design of progress bars
   * fixed layout of part-editor (canvas widget)
 
- -- Torsten Rupp <torsten.rupp.net>  Tue, 15 Sep 2009 00:00:00 +0200
+ -- Torsten Rupp <torsten.rupp@gmx.net>  Tue, 15 Sep 2009 00:00:00 +0200
 
 bar (0.12) stable; urgency=low
   * disabled -fschedule-insns2 optimization. This cause with my
@@ -535,7 +534,7 @@ bar (0.12) stable; urgency=low
   * barcontrol: added copy job button
   * barcontrol: check if job exists for new, copy, rename
 
- -- Torsten Rupp <torsten.rupp.net>  Sun, 19 Jul 2009 00:00:00 +0200
+ -- Torsten Rupp <torsten.rupp@gmx.net>  Sun, 19 Jul 2009 00:00:00 +0200
 
 bar (0.11b) stable; urgency=low
   * barcontrol: improved volume dialog: unload tray button
@@ -543,7 +542,7 @@ bar (0.11b) stable; urgency=low
   * barcontrol: fixed progress bar for volume
   * barcontrol/server: fixed writing crypt-type entry (was empty)
 
- -- Torsten Rupp <torsten.rupp.net>  Sun, 12 Apr 2009 00:00:00 +0200
+ -- Torsten Rupp <torsten.rupp@gmx.net>  Sun, 12 Apr 2009 00:00:00 +0200
 
 bar (0.11a) stable; urgency=low
   * fixed accidently removed save/cancel button in
@@ -551,7 +550,7 @@ bar (0.11a) stable; urgency=low
   * barcontrol: fixed URI parsing
   * fixed string-error in DVD functions
 
- -- Torsten Rupp <torsten.rupp.net>  Tue, 31 Mar 2009 00:00:00 +0200
+ -- Torsten Rupp <torsten.rupp@gmx.net>  Tue, 31 Mar 2009 00:00:00 +0200
 
 bar (0.11) stable; urgency=low
   * added selection of multiple days to schedule days
@@ -587,13 +586,13 @@ bar (0.11) stable; urgency=low
   * fixed generating Java SSL key
   * added creating RPM and DEB packages
 
- -- Torsten Rupp <torsten.rupp.net>  Sun, 22 Mar 2009 00:00:00 +0100
+ -- Torsten Rupp <torsten.rupp@gmx.net>  Sun, 22 Mar 2009 00:00:00 +0100
 
 bar (0.10a) stable; urgency=low
   * fixed layout of login dialog
   * fixed missing barcontrol.bat.in in distribution
 
- -- Torsten Rupp <torsten.rupp.net>  Sat, 14 Feb 2009 00:00:00 +0100
+ -- Torsten Rupp <torsten.rupp@gmx.net>  Sat, 14 Feb 2009 00:00:00 +0100
 
 bar (0.10) stable; urgency=low
   * fixed some not freed resources
@@ -637,14 +636,14 @@ bar (0.10) stable; urgency=low
   * added animated busy-dialogs to restore, added abort-function
   * added confirmation dialog to abort job button
 
- -- Torsten Rupp <torsten.rupp.net>  Wed, 11 Feb 2009 00:00:00 +0100
+ -- Torsten Rupp <torsten.rupp@gmx.net>  Wed, 11 Feb 2009 00:00:00 +0100
 
 bar (0.09i) stable; urgency=low
   * fixed creating pid file: when server is detached write pid of
     running process, not of terminated parent (thanks to Matthias
     Albert)
 
- -- Torsten Rupp <torsten.rupp.net>  Wed, 10 Dec 2008 00:00:00 +0100
+ -- Torsten Rupp <torsten.rupp@gmx.net>  Wed, 10 Dec 2008 00:00:00 +0100
 
 bar (0.09h) stable; urgency=low
   * fixed problem with internal data alignment on 64bit systems
@@ -652,17 +651,17 @@ bar (0.09h) stable; urgency=low
   * added chunk BAR0 to archive files as indicator for a bar file;
     chunk is skipped when reading an archive
 
- -- Torsten Rupp <torsten.rupp.net>  Tue, 09 Dec 2008 00:00:00 +0100
+ -- Torsten Rupp <torsten.rupp@gmx.net>  Tue, 09 Dec 2008 00:00:00 +0100
 
 bar (0.09g) stable; urgency=low
   * added option --pid-file
 
- -- Torsten Rupp <torsten.rupp.net>  Tue, 09 Dec 2008 00:00:00 +0100
+ -- Torsten Rupp <torsten.rupp@gmx.net>  Tue, 09 Dec 2008 00:00:00 +0100
 
 bar (0.09f) stable; urgency=low
   * small fix in "make install"
 
- -- Torsten Rupp <torsten.rupp.net>  Sun, 07 Dec 2008 00:00:00 +0100
+ -- Torsten Rupp <torsten.rupp@gmx.net>  Sun, 07 Dec 2008 00:00:00 +0100
 
 bar (0.09e) stable; urgency=low
   * changed FTP URL to <login name>:<password>@<host name>/<filename>
@@ -683,14 +682,14 @@ bar (0.09e) stable; urgency=low
     mode
   * fixed missing server result when new job cannot be created
 
- -- Torsten Rupp <torsten.rupp.net>  Thu, 04 Dec 2008 00:00:00 +0100
+ -- Torsten Rupp <torsten.rupp@gmx.net>  Thu, 04 Dec 2008 00:00:00 +0100
 
 bar (0.09d) stable; urgency=low
   * fixed missing server-jobs-directory in BAR server
   * fixed wrong path to bar+bar.cfg binary when installing
   * fix installation when barcontrol was not built
 
- -- Torsten Rupp <torsten.rupp.net>  Wed, 03 Dec 2008 00:00:00 +0100
+ -- Torsten Rupp <torsten.rupp@gmx.net>  Wed, 03 Dec 2008 00:00:00 +0100
 
 bar (0.09c) stable; urgency=low
   * barcontrol: fixed #-parsing in archive name editor
@@ -700,7 +699,7 @@ bar (0.09c) stable; urgency=low
   * no external SWT jar needed anymore to compile (but can still be used
     optional)
 
- -- Torsten Rupp <torsten.rupp.net>  Mon, 01 Dec 2008 00:00:00 +0100
+ -- Torsten Rupp <torsten.rupp@gmx.net>  Mon, 01 Dec 2008 00:00:00 +0100
 
 bar (0.09b) stable; urgency=low
   * fixed drag+drop in archive name editor
@@ -726,7 +725,7 @@ bar (0.09b) stable; urgency=low
   * improved error messages
   * fixed linker problem: link libdl, too
 
- -- Torsten Rupp <torsten.rupp.net>  Thu, 27 Nov 2008 00:00:00 +0100
+ -- Torsten Rupp <torsten.rupp@gmx.net>  Thu, 27 Nov 2008 00:00:00 +0100
 
 bar (0.09a) stable; urgency=low
   * small fixes in make files
@@ -736,7 +735,7 @@ bar (0.09a) stable; urgency=low
     a redirected file
   * fixed test
 
- -- Torsten Rupp <torsten.rupp.net>  Fri, 21 Nov 2008 00:00:00 +0100
+ -- Torsten Rupp <torsten.rupp@gmx.net>  Fri, 21 Nov 2008 00:00:00 +0100
 
 bar (0.09) stable; urgency=low
   * implemented a Java front end! This replaces the TclTk front end -
@@ -744,14 +743,14 @@ bar (0.09) stable; urgency=low
   * fixed bug in server password authorization: password was not
     checked until end
 
- -- Torsten Rupp <torsten.rupp.net>  Tue, 18 Nov 2008 00:00:00 +0100
+ -- Torsten Rupp <torsten.rupp@gmx.net>  Tue, 18 Nov 2008 00:00:00 +0100
 
 bar (0.08a) stable; urgency=low
   * fixed double usage of va_args variable
   * fixed problems with 64bit
   * fixed typing error in bar.cfg (thanx to Matthias)
 
- -- Torsten Rupp <torsten.rupp.net>  Tue, 23 Sep 2008 00:00:00 +0200
+ -- Torsten Rupp <torsten.rupp@gmx.net>  Tue, 23 Sep 2008 00:00:00 +0200
 
 bar (0.08) stable; urgency=low
   * added asymmetric encryption with public-key
@@ -760,14 +759,14 @@ bar (0.08) stable; urgency=low
   * fixed input of password via SSH_ASKPASS
   * fixed exit code on create archive
 
- -- Torsten Rupp <torsten.rupp.net>  Mon, 08 Sep 2008 00:00:00 +0200
+ -- Torsten Rupp <torsten.rupp@gmx.net>  Mon, 08 Sep 2008 00:00:00 +0200
 
 bar (0.07b) stable; urgency=low
   * added option --long-format
   * added date/time to -l
   * fixed file filters "*" and "-! ..."
 
- -- Torsten Rupp <torsten.rupp.net>  Sun, 17 Aug 2008 00:00:00 +0200
+ -- Torsten Rupp <torsten.rupp@gmx.net>  Sun, 17 Aug 2008 00:00:00 +0200
 
 bar (0.07a) stable; urgency=low
   * fixed executing of external programs: handle signals
@@ -775,7 +774,7 @@ bar (0.07a) stable; urgency=low
   * added storage bytes/s value to barcontrol.tcl
   * implemented rename job in barcontrol.tcl
 
- -- Torsten Rupp <torsten.rupp.net>  Sun, 29 Jun 2008 00:00:00 +0200
+ -- Torsten Rupp <torsten.rupp@gmx.net>  Sun, 29 Jun 2008 00:00:00 +0200
 
 bar (0.07) stable; urgency=low
   * integrated scheduler in bar
@@ -788,7 +787,7 @@ bar (0.07) stable; urgency=low
   * added FTP protocol
   * changed some option names for better consistency
 
- -- Torsten Rupp <torsten.rupp.net>  Sat, 24 May 2008 00:00:00 +0200
+ -- Torsten Rupp <torsten.rupp@gmx.net>  Sat, 24 May 2008 00:00:00 +0200
 
 bar (0.06) stable; urgency=low
   * added option --debug to barcontrol.tcl; output debug info
@@ -796,13 +795,13 @@ bar (0.06) stable; urgency=low
   * fixed memory leak in server
   * improved several error messages
 
- -- Torsten Rupp <torsten.rupp.net>  Sat, 08 Mar 2008 00:00:00 +0100
+ -- Torsten Rupp <torsten.rupp@gmx.net>  Sat, 08 Mar 2008 00:00:00 +0100
 
 bar (0.05c) stable; urgency=low
   * fixed SigSegV when reading broken/wrong archive
   * added retry (3) in storage via SSH
 
- -- Torsten Rupp <torsten.rupp.net>  Mon, 21 Jan 2008 00:00:00 +0100
+ -- Torsten Rupp <torsten.rupp@gmx.net>  Mon, 21 Jan 2008 00:00:00 +0100
 
 bar (0.05b) stable; urgency=low
   * fixed static linkage
@@ -813,14 +812,14 @@ bar (0.05b) stable; urgency=low
     executable on created DVDs
   * fixed wrong string when creating DVD
 
- -- Torsten Rupp <torsten.rupp.net>  Sat, 19 Jan 2008 00:00:00 +0100
+ -- Torsten Rupp <torsten.rupp@gmx.net>  Sat, 19 Jan 2008 00:00:00 +0100
 
 bar (0.05a) stable; urgency=low
   * improved checks in configure
   * added configure option --disable-ssh
   * fixed static linkage
 
- -- Torsten Rupp <torsten.rupp.net>  Fri, 18 Jan 2008 00:00:00 +0100
+ -- Torsten Rupp <torsten.rupp@gmx.net>  Fri, 18 Jan 2008 00:00:00 +0100
 
 bar (0.05 (New Years Eve edition)) stable; urgency=low
   * added macros %type, %last to archive file name
@@ -842,18 +841,18 @@ bar (0.05 (New Years Eve edition)) stable; urgency=low
   * added password input dialog in case password does not match
     or no password is defined in the configuration files
 
- -- Torsten Rupp <torsten.rupp.net>  Mon, 31 Dec 2007 00:00:00 +0100
+ -- Torsten Rupp <torsten.rupp@gmx.net>  Mon, 31 Dec 2007 00:00:00 +0100
 
 bar (0.04c) stable; urgency=low
   * fixed creating of directories on restore of single files
   * fixed DVD burn commands (removed option "-dry-run" - sorry)
 
- -- Torsten Rupp <torsten.rupp.net>  Tue, 18 Dec 2007 00:00:00 +0100
+ -- Torsten Rupp <torsten.rupp@gmx.net>  Tue, 18 Dec 2007 00:00:00 +0100
 
 bar (0.04b) stable; urgency=low
   * fixed typing error in secure password memory
 
- -- Torsten Rupp <torsten.rupp.net>  Sun, 16 Dec 2007 00:00:00 +0100
+ -- Torsten Rupp <torsten.rupp@gmx.net>  Sun, 16 Dec 2007 00:00:00 +0100
 
 bar (0.04a) stable; urgency=low
   * fixed double free of a string
@@ -861,7 +860,7 @@ bar (0.04a) stable; urgency=low
   * fixed abort
   * use base name of archive file name for incremental list file
 
- -- Torsten Rupp <torsten.rupp.net>  Sun, 16 Dec 2007 00:00:00 +0100
+ -- Torsten Rupp <torsten.rupp@gmx.net>  Sun, 16 Dec 2007 00:00:00 +0100
 
 bar (0.04) stable; urgency=low
   * added create-dialog to barcontrol.tcl
@@ -878,18 +877,18 @@ bar (0.04) stable; urgency=low
     my system partition and I could restore it with BAR!
     Nevertheless there is still a lot of work to do...
 
- -- Torsten Rupp <torsten.rupp.net>  Sat, 15 Dec 2007 00:00:00 +0100
+ -- Torsten Rupp <torsten.rupp@gmx.net>  Sat, 15 Dec 2007 00:00:00 +0100
 
 bar (0.03a) stable; urgency=low
   * fixed thread termination for "create" command
 
- -- Torsten Rupp <torsten.rupp.net>  Sat, 01 Dec 2007 00:00:00 +0100
+ -- Torsten Rupp <torsten.rupp@gmx.net>  Sat, 01 Dec 2007 00:00:00 +0100
 
 bar (0.03) stable; urgency=low
   * added option/configure value 'priority'
   * added log file support
 
- -- Torsten Rupp <torsten.rupp.net>  Sat, 01 Dec 2007 00:00:00 +0100
+ -- Torsten Rupp <torsten.rupp@gmx.net>  Sat, 01 Dec 2007 00:00:00 +0100
 
 bar (0.02c) stable; urgency=low
   * improved handling of DVDs
@@ -897,18 +896,18 @@ bar (0.02c) stable; urgency=low
   * improved making of distribution
   * added option --wait-first-volume
 
- -- Torsten Rupp <torsten.rupp.net>  Wed, 28 Nov 2007 00:00:00 +0100
+ -- Torsten Rupp <torsten.rupp@gmx.net>  Wed, 28 Nov 2007 00:00:00 +0100
 
 bar (0.02b) stable; urgency=low
   * improved handling of DVDs
   * started FAQ
 
- -- Torsten Rupp <torsten.rupp.net>  Tue, 27 Nov 2007 00:00:00 +0100
+ -- Torsten Rupp <torsten.rupp@gmx.net>  Tue, 27 Nov 2007 00:00:00 +0100
 
 bar (0.02a) stable; urgency=low
   * bug fix
 
- -- Torsten Rupp <torsten.rupp.net>  Mon, 26 Nov 2007 00:00:00 +0100
+ -- Torsten Rupp <torsten.rupp@gmx.net>  Mon, 26 Nov 2007 00:00:00 +0100
 
 bar (0.02) stable; urgency=low
   * implemented DVD support
@@ -923,10 +922,10 @@ bar (0.02) stable; urgency=low
     Before upgrading BAR restore all archives!
   * added input of ssh/crypt password if not specified in config
 
- -- Torsten Rupp <torsten.rupp.net>  Sun, 25 Nov 2007 00:00:00 +0100
+ -- Torsten Rupp <torsten.rupp@gmx.net>  Sun, 25 Nov 2007 00:00:00 +0100
 
 bar (0.01) stable; urgency=low
   * initial release
 
- -- Torsten Rupp <torsten.rupp.net>  Thu, 01 Nov 2007 00:00:00 +0100
+ -- Torsten Rupp <torsten.rupp@gmx.net>  Thu, 01 Nov 2007 00:00:00 +0100
 
