@@ -147,7 +147,7 @@ typedef struct
 \***********************************************************************/
 
 #define STRING_CHAR_ITERATE(string,iteratorVariable,variable) \
-  for (iteratorVariable = 0; \
+  for (iteratorVariable = 0, variable = String_index(string,0L); \
        (iteratorVariable) < String_length(string); \
        iteratorVariable++, variable = String_index(string,iteratorVariable) \
       )
