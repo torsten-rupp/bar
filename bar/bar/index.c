@@ -21,6 +21,7 @@
 #include "errors.h"
 
 #include "bar.h"
+#include "storage.h"
 #include "index_definition.h"
 
 #include "index.h"
@@ -344,7 +345,11 @@ bool Index_findById(DatabaseHandle *databaseHandle,
 }
 
 bool Index_findByName(DatabaseHandle *databaseHandle,
-                      const String   name,
+                      StorageTypes   findStorageType,
+                      const String   findHostName,
+                      const String   findLoginName,
+                      const String   findDeviceName,
+                      const String   findFileName,
                       int64          *storageId,
                       IndexStates    *indexState,
                       uint64         *lastChecked
@@ -352,7 +357,10 @@ bool Index_findByName(DatabaseHandle *databaseHandle,
 {
   DatabaseQueryHandle databaseQueryHandle;
   Errors              error;
-  bool                result;
+  String              storageName;
+  String              storageSpecifier;
+  String              hostName,loginName,deviceName,fileName;
+  bool                foundFlag;
 
   assert(storageId != NULL);
   assert(databaseHandle != NULL);
@@ -362,26 +370,98 @@ bool Index_findByName(DatabaseHandle *databaseHandle,
   error = Database_prepare(&databaseQueryHandle,
                            databaseHandle,
                            "SELECT id, \
+                                   name, \
                                    state, \
                                    STRFTIME('%%s',lastChecked) \
                             FROM storage \
-                            WHERE name=%'S \
-                           ",
-                           name
+                           "
                           );
   if (error != ERROR_NONE)
   {
     return FALSE;
   }
-  result = Database_getNextRow(&databaseQueryHandle,
-                               "%lld %d %llu",
-                               storageId,
-                               indexState,
-                               lastChecked
-                              );
+
+  storageName = String_new();
+  hostName    = String_new();
+  loginName   = String_new();
+  deviceName  = String_new();
+  fileName    = String_new();
+  foundFlag   = FALSE;
+  while (   Database_getNextRow(&databaseQueryHandle,
+                                "%lld %S %d %llu",
+                                 storageId,
+                                 &storageName,
+                                 indexState,
+                                 lastChecked
+                                )
+         && !foundFlag
+        )
+  {
+    switch (Storage_parseName(storageName,NULL,hostName,NULL,loginName,NULL,deviceName,fileName))
+    {
+      case STORAGE_TYPE_FILESYSTEM:
+        foundFlag =   (findStorageType == STORAGE_TYPE_FILESYSTEM)
+                    && ((findFileName == NULL) || String_equals(fileName,findFileName));
+        break;
+      case STORAGE_TYPE_FTP:
+        foundFlag =    ((findStorageType == STORAGE_TYPE_UNKNOWN) || (findStorageType == STORAGE_TYPE_FTP))
+                    && ((findHostName  == NULL) || String_equals(hostName, findHostName ))
+                    && ((findLoginName == NULL) || String_equals(loginName,findLoginName))
+                    && ((findFileName  == NULL) || String_equals(fileName, findFileName ));
+        break;
+      case STORAGE_TYPE_SSH:
+      case STORAGE_TYPE_SCP:
+        foundFlag =    ((findStorageType == STORAGE_TYPE_UNKNOWN) || (findStorageType == STORAGE_TYPE_SSH) || (findStorageType == STORAGE_TYPE_SCP))
+                    && ((findHostName  == NULL) || String_equals(hostName, findHostName ))
+                    && ((findLoginName == NULL) || String_equals(loginName,findLoginName))
+                    && ((findFileName  == NULL) || String_equals(fileName, findFileName ));
+        break;
+      case STORAGE_TYPE_SFTP:
+        foundFlag =    ((findStorageType == STORAGE_TYPE_UNKNOWN) || (findStorageType == STORAGE_TYPE_SFTP))
+                    && ((findHostName  == NULL) || String_equals(hostName, findHostName ))
+                    && ((findLoginName == NULL) || String_equals(loginName,findLoginName))
+                    && ((findFileName  == NULL) || String_equals(fileName, findFileName ));
+        break;
+      case STORAGE_TYPE_CD:
+        foundFlag =    ((findStorageType == STORAGE_TYPE_UNKNOWN) || (findStorageType == STORAGE_TYPE_CD))
+                    && ((findHostName  == NULL) || String_equals(hostName, findHostName ))
+                    && ((findLoginName == NULL) || String_equals(loginName,findLoginName))
+                    && ((findFileName  == NULL) || String_equals(fileName, findFileName ));
+        break;
+      case STORAGE_TYPE_DVD:
+        foundFlag =    ((findStorageType == STORAGE_TYPE_UNKNOWN) || (findStorageType == STORAGE_TYPE_DVD))
+                    && ((findHostName  == NULL) || String_equals(hostName, findHostName ))
+                    && ((findLoginName == NULL) || String_equals(loginName,findLoginName))
+                    && ((findFileName  == NULL) || String_equals(fileName, findFileName ));
+        break;
+      case STORAGE_TYPE_BD:
+        foundFlag =    ((findStorageType == STORAGE_TYPE_UNKNOWN) || (findStorageType == STORAGE_TYPE_BD))
+                    && ((findHostName  == NULL) || String_equals(hostName, findHostName ))
+                    && ((findLoginName == NULL) || String_equals(loginName,findLoginName))
+                    && ((findFileName  == NULL) || String_equals(fileName, findFileName ));
+        break;
+      case STORAGE_TYPE_DEVICE:
+        foundFlag =    ((findStorageType == STORAGE_TYPE_UNKNOWN) || (findStorageType == STORAGE_TYPE_DEVICE))
+                    && ((findDeviceName == NULL) || String_equals(deviceName,findDeviceName))
+                    && ((findFileName   == NULL) || String_equals(fileName,  findFileName  ));
+        break;
+      #ifndef NDEBUG
+        default:
+          HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+          break; /* not reached */
+      #endif /* NDEBUG */
+    }
+
+  }
+  String_delete(fileName);
+  String_delete(deviceName);
+  String_delete(loginName);
+  String_delete(hostName);
+  String_delete(storageName);
+
   Database_finalize(&databaseQueryHandle);
 
-  return result;
+  return foundFlag;
 }
 
 bool Index_findByState(DatabaseHandle *databaseHandle,

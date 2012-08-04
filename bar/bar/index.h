@@ -166,7 +166,11 @@ bool Index_findById(DatabaseHandle *databaseHandle,
 * Name   : Index_findByName
 * Purpose: find index by name
 * Input  : databaseHandle - database handle
-*          name           - name
+*          findStorageType - storage type to find or STORAGE_TYPE_UNKNOWN
+*          findHostName    - host naem to find or NULL
+*          findLoginName   - login name to find or NULL
+*          findDeviceName  - device naem to find or NULL
+*          findFileName    - file name to find or NULL
 * Output : storageId   - database id of index
 *          indexState  - index state (can be NULL)
 *          lastChecked - last checked date/time stamp [s] (can be NULL)
@@ -175,7 +179,11 @@ bool Index_findById(DatabaseHandle *databaseHandle,
 \***********************************************************************/
 
 bool Index_findByName(DatabaseHandle *databaseHandle,
-                      const String   name,
+                      StorageTypes   findStorageType,
+                      const String   findHostName,
+                      const String   findLoginName,
+                      const String   findDeviceName,
+                      const String   findFileName,
                       int64          *storageId,
                       IndexStates    *indexState,
                       uint64         *lastChecked
