@@ -1015,11 +1015,11 @@ public class BARControl
       }
       catch (FileNotFoundException exception)
       {
-        throw new Error("JKS file '"+Settings.serverKeyFileName+"' not found");
+        throw new Error("Java Key Store (JKS) file '"+Settings.serverKeyFileName+"' not found");
       }
       catch (IOException exception)
       {
-        throw new Error("not a JKS file '"+Settings.serverKeyFileName+"'");
+        throw new Error("not a Java Key Store (JKS) file '"+Settings.serverKeyFileName+"'");
       }
     }
   }
@@ -1041,19 +1041,27 @@ public class BARControl
          <state>
          <type>
          <archivePartSize>
-         <deltaCompressAlgorithm>
-         <byteCompressAlgorithm>
+         <compressAlgorithms>
          <cryptAlgorithm>
          <cryptType>
          <cryptPasswordMode>
          <lastExecutedDateTime>
          <estimatedRestTime>
       */
-      if (StringParser.parse(line,"%d %S %S %s %ld %S %S %S %S %S %ld %ld",data,StringParser.QUOTE_CHARS))
+      if (StringParser.parse(line,"%d %S %S %s %ld %S %S %S %S %ld %ld",data,StringParser.QUOTE_CHARS))
       {
         if (name.equalsIgnoreCase((String)data[1]))
         {
           return (Integer)data[0];
+        }
+      }
+      else
+      {
+        if (Settings.debugFlag)
+        {
+          printWarning("unknown server response '%s'",line);
+          BARServer.disconnect();
+          System.exit(1);
         }
       }
     }
@@ -1922,15 +1930,14 @@ public class BARControl
                <state>
                <type>
                <archivePartSize>
-               <deltaCompressAlgorithm>
-               <byteCompressAlgorithm>
+               <compressAlgorithm>
                <cryptAlgorithm>
                <cryptType>
                <cryptPasswordMode>
                <lastExecutedDateTime>
                <estimatedRestTime>
             */
-            if (StringParser.parse(line,"%d %S %S %s %ld %S %S %S %S %S %ld %ld",data,StringParser.QUOTE_CHARS))
+            if (StringParser.parse(line,"%d %S %S %s %ld %S %S %S %S %ld %ld",data,StringParser.QUOTE_CHARS))
             {
               // get data
               int    id                     = (Integer)data[ 0];
@@ -1938,22 +1945,20 @@ public class BARControl
               String state                  = (String) data[ 2];
               String type                   = (String) data[ 3];
               long   archivePartSize        = (Long)   data[ 4];
-              String deltaCompressAlgorithm = (String) data[ 5];
-              String byteCompressAlgorithm  = (String) data[ 6];
-              String cryptAlgorithm         = (String) data[ 7];
-              String cryptType              = (String) data[ 8];
-              String cryptPasswordMode      = (String) data[ 9];
-              Long   lastExecutedDateTime   = (Long)   data[10];
-              Long   estimatedRestTime      = (Long)   data[11];
+              String compressAlgorithms     = (String) data[ 5];
+              String cryptAlgorithm         = (String) data[ 6];
+              String cryptType              = (String) data[ 7];
+              String cryptPasswordMode      = (String) data[ 8];
+              Long   lastExecutedDateTime   = (Long)   data[ 9];
+              Long   estimatedRestTime      = (Long)   data[10];
 
-              System.out.println(String.format("%2d: %-40s %-10s %-11s %12d %-12s %-12s %-12s %-10s %-8s %s %8d",
+              System.out.println(String.format("%2d: %-40s %-10s %-11s %12d %-25s %-12s %-10s %-8s %s %8d",
                                                id,
                                                name,
                                                (serverState == null)?state:serverState,
                                                type,
                                                archivePartSize,
-                                               deltaCompressAlgorithm,
-                                               byteCompressAlgorithm,
+                                               compressAlgorithms,
                                                cryptAlgorithm,
                                                cryptType,
                                                cryptPasswordMode,
