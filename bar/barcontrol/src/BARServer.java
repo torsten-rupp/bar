@@ -802,7 +802,6 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
         throw new CommunicationError("Invalid response from server");
       }
       sessionId = decodeHex(data[1]);
-//System.err.print("BARControl.java"+", "+682+": sessionId=");for (byte b : sessionId) { System.err.print(String.format("%02x",b & 0xFF)); }; System.err.println();
 
       // authorize
       byte authorizeData[] = new byte[sessionId.length];
