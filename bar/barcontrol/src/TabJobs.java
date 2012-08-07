@@ -7787,10 +7787,8 @@ throw new Error("NYI");
            <enabled>
            <type>
         */
-System.err.println("BARControl.java"+", "+1357+": "+line);
         if (StringParser.parse(line,"%S-%S-%S %S %S:%S %y %S",data,StringParser.QUOTE_CHARS))
         {
-//System.err.println("BARControl.java"+", "+747+": "+data[0]+"--"+data[5]+"--"+data[6]);
           // get data
           String  year     = (String)data[0];
           String  month    = (String)data[1];
