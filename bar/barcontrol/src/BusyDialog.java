@@ -1,8 +1,8 @@
 /***********************************************************************\
 *
 * $Source: /home/torsten/cvs/bar/barcontrol/src/BusyDialog.java,v $
-* $Revision: 1.6 $
-* $Author: torsten $
+* $Revision: 1199 $
+* $Author: trupp $
 * Contents: busy dialog
 * Systems: all
 *
@@ -24,6 +24,7 @@ import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Event;
 import org.eclipse.swt.widgets.Label;
+import org.eclipse.swt.widgets.List;
 import org.eclipse.swt.widgets.Listener;
 import org.eclipse.swt.widgets.Shell;
 import org.eclipse.swt.widgets.Text;
@@ -42,23 +43,26 @@ class BusyDialog
   public final static int TEXT1         = 1 << 1;
   public final static int PROGRESS_BAR0 = 1 << 2;
   public final static int PROGRESS_BAR1 = 1 << 3;
+  public final static int LIST          = 1 << 4;
 
   // --------------------------- variables --------------------------------
   private Display     display;
 
-  private int         animationInterval;
-  private Image       animationImages[] = new Image[2];
-  private long        animationImageTimestamp;
-  private int         animationImageIndex;
+  private int         animateInterval;
+  private long        animateTimestamp;
+  private Image       animateImages[] = new Image[2];
+  private int         animateImageIndex;
+  private boolean     animationQuit;
 
   private Shell       dialog;
   private Label       widgetImage;
   private Label       widgetMessage;
   private Label       widgetText0,widgetText1;
   private ProgressBar widgetProgressBar0,widgetProgressBar1;
+  private List        widgetList;
   private Button      widgetAbortButton;
+  private int         maxListLength;
 
-  private boolean     quitFlag;
   private boolean     abortedFlag;
   private boolean     resizedFlag;
 
@@ -72,8 +76,9 @@ class BusyDialog
    * @param width,height width/height of dialog
    * @param message dialog message
    * @param flags busy dialog flags
+   * @param maxListLength max. list length
    */
-  public BusyDialog(Shell parentShell, String title, int width, int height, String message, int flags)
+  public BusyDialog(Shell parentShell, String title, int width, int height, String message, int flags, int maxListLength)
   {
     TableLayout     tableLayout;
     TableLayoutData tableLayoutData;
@@ -81,13 +86,15 @@ class BusyDialog
     Label           label;
     int             x,y;
 
+    this.maxListLength = maxListLength;
+
     display = parentShell.getDisplay();
 
-    // load images
-    animationImages[0] = Widgets.loadImage(display,"busy0.png");
-    animationImages[1] = Widgets.loadImage(display,"busy1.png");
-    animationImageTimestamp = System.currentTimeMillis();
-    animationImageIndex = 0;
+    // load animation images
+    animateImages[0] = Widgets.loadImage(display,"busy0.png");
+    animateImages[1] = Widgets.loadImage(display,"busy1.png");
+    animateTimestamp  = System.currentTimeMillis();
+    animateImageIndex = 0;
 
     // create dialog
     dialog = new Shell(parentShell,SWT.DIALOG_TRIM|SWT.RESIZE|SWT.APPLICATION_MODAL);
@@ -100,11 +107,11 @@ class BusyDialog
 
     // message
     composite = new Composite(dialog,SWT.NONE);
-    composite.setLayout(new TableLayout(0.0,new double[]{0.0,1.0},4));
+    composite.setLayout(new TableLayout(1.0,new double[]{0.0,1.0},4));
     composite.setLayoutData(new TableLayoutData(0,0,TableLayoutData.NSWE));
     {
       widgetImage = new Label(composite,SWT.LEFT);
-      widgetImage.setImage(animationImages[animationImageIndex]);
+      widgetImage.setImage(animateImages[animateImageIndex]);
       widgetImage.setLayoutData(new TableLayoutData(0,0,TableLayoutData.NW,0,0,4,4));
 
       subComposite = new Composite(composite,SWT.NONE);
@@ -167,6 +174,16 @@ class BusyDialog
         {
           widgetProgressBar1 = null;
         }
+
+        if ((flags & LIST) != 0)
+        {
+          widgetList = new List(subComposite,SWT.BORDER);
+          widgetList.setLayoutData(new TableLayoutData(row,0,TableLayoutData.NSWE)); row++;
+        }
+        else
+        {
+          widgetList = null;
+        }
       }
     }
 
@@ -177,7 +194,7 @@ class BusyDialog
     {
       widgetAbortButton = new Button(composite,SWT.CENTER|SWT.BORDER);
       widgetAbortButton.setText("Abort");
-      widgetAbortButton.setLayoutData(new TableLayoutData(0,0,TableLayoutData.NONE)); //,0,0,0,0,60,SWT.DEFAULT));
+      widgetAbortButton.setLayoutData(new TableLayoutData(0,0,TableLayoutData.NONE,0,0,0,0,60,SWT.DEFAULT));
       widgetAbortButton.addSelectionListener(new SelectionListener()
       {
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -244,7 +261,7 @@ class BusyDialog
     dialog.open();
 
     // start animation
-    animationInterval = 250;
+    animateInterval = 250;
     Thread thread = new Thread()
     {
       public void run()
@@ -252,11 +269,23 @@ class BusyDialog
         while (!dialog.isDisposed())
         {
           animate();
-          try { Thread.sleep(animationInterval); } catch (InterruptedException exception) { /* ignore */ }
+          try { Thread.sleep(animateInterval); } catch (InterruptedException exception) { /* ignore */ }
         }
       }
     };
     thread.start();
+  }
+
+  /** create busy dialog
+   * @param parentShell parent shell
+   * @param title dialog title
+   * @param width,height width/height of dialog
+   * @param message dialog message
+   * @param flags busy dialog flags
+   */
+  public BusyDialog(Shell parentShell, String title, int width, int height, String message, int flags)
+  {
+    this(parentShell,title,width,height,message,flags,10);
   }
 
   /** create busy dialog
@@ -274,10 +303,44 @@ class BusyDialog
    * @param parentShell parent shell
    * @param title dialog title
    * @param width,height width/height of dialog
+   * @param flags busy dialog flags
+   */
+  public BusyDialog(Shell parentShell, String title, int width, int height, int flags)
+  {
+    this(parentShell,title,width,height,null,flags);
+  }
+
+  /** create busy dialog
+   * @param parentShell parent shell
+   * @param title dialog title
+   * @param width,height width/height of dialog
    */
   public BusyDialog(Shell parentShell, String title, int width, int height)
   {
-    this(parentShell,title,width,height,null);
+    this(parentShell,title,width,height,NONE);
+  }
+
+  /** create busy dialog
+   * @param parentShell parent shell
+   * @param title dialog title
+   * @param message dialog message
+   * @param flags busy dialog flags
+   * @param maxListLength max. list length
+   */
+  public BusyDialog(Shell parentShell, String title, String message, int flags, int maxListLength)
+  {
+    this(parentShell,title,300,150,message,flags,maxListLength);
+  }
+
+  /** create busy dialog
+   * @param parentShell parent shell
+   * @param title dialog title
+   * @param message dialog message
+   * @param flags busy dialog flags
+   */
+  public BusyDialog(Shell parentShell, String title, String message, int flags)
+  {
+    this(parentShell,title,300,150,message,flags,10);
   }
 
   /** create busy dialog
@@ -287,7 +350,17 @@ class BusyDialog
    */
   public BusyDialog(Shell parentShell, String title, String message)
   {
-    this(parentShell,title,300,150,message);
+    this(parentShell,title,message,NONE);
+  }
+
+  /** create busy dialog
+   * @param parentShell parent shell
+   * @param title dialog title
+   * @param flags busy dialog flags
+   */
+  public BusyDialog(Shell parentShell, String title, int flags)
+  {
+    this(parentShell,title,null,flags,10);
   }
 
   /** create busy dialog
@@ -296,7 +369,7 @@ class BusyDialog
    */
   public BusyDialog(Shell parentShell, String title)
   {
-    this(parentShell,title,null);
+    this(parentShell,title,NONE);
   }
 
   /** close busy dialog
@@ -310,6 +383,14 @@ class BusyDialog
         dialog.dispose();
       }
     });
+  }
+
+  /** check if dialog is closed
+   * @return true iff closed
+   */
+  public boolean isClosed()
+  {
+    return dialog.isDisposed();
   }
 
   /** close busy dialog
@@ -328,40 +409,36 @@ class BusyDialog
     return abortedFlag;
   }
 
-  /** set auto animate interval
-   * @param animationInterval animate time interval [ms]
-   */
-  public void setAnimateInterval(int animationInterval)
-  {
-    this.animationInterval = animationInterval;
-  }
-
   /** set message
-   * @param message message to show
+   * @param format format string
+   * @param args optional arguments
    */
-  public void setMessage(final String message)
+  public void setMessage(final String format, final Object... args)
   {
-    display.syncExec(new Runnable()
+    if ((widgetMessage != null) && !dialog.isDisposed())
     {
-      public void run()
+      display.syncExec(new Runnable()
       {
-        if ((widgetMessage != null) && !widgetMessage.isDisposed())
+        public void run()
         {
-          widgetMessage.setText(message);
+          String text = String.format(format,args);
+
+          // set message text
+          widgetMessage.setText(text);
           display.update();
 
-          /* resize dialog (it not manually changed) */
+          // resize dialog (it not manually changed)
           if (!resizedFlag)
           {
             GC gc = new GC(widgetMessage);
-            int width = gc.stringExtent(message).x;
+            int width = gc.stringExtent(text).x;
             gc.dispose();
 
             if (widgetMessage.getSize().x < width) dialog.pack();
           }
         }
-      }
-    });
+      });
+    }
   }
 
   /** set minimal progress value
@@ -412,45 +489,45 @@ class BusyDialog
 
   /** update busy dialog text
    * @param i index 0|1
-   * @param text text to show (can be null)
+   * @param format format string
+   * @param args optional arguments
    * @return true if closed, false otherwise
    */
-  public boolean updateText(final int i, final String text)
+  public boolean updateText(final int i, final String format, final Object... args)
   {
-    if (   ((widgetText0 == null) || !widgetText0.isDisposed())
-        && ((widgetText1 == null) || !widgetText1.isDisposed())
-       )
+    if (!dialog.isDisposed())
     {
       display.syncExec(new Runnable()
       {
         public void run()
         {
-          Label widgetText = null;
-          switch (i)
-          {
-            case 0: widgetText = widgetText0; break;
-            case 1: widgetText = widgetText1; break;
-          }
+          animate();
 
-          if ((widgetText == null) || !widgetText.isDisposed())
+          if (format != null)
           {
-            if (text != null)
+            String text = String.format(format,args);
+
+            // set message text
+            Label widgetText = null;
+            switch (i)
             {
-              if ((text != null) && (widgetText != null)) widgetText.setText(text);
-
-              /* resize dialog (it not manually changed) */
-              if (!resizedFlag)
-              {
-                GC gc = new GC(widgetText);
-                int width = gc.stringExtent(text).x;
-                gc.dispose();
-
-                if (widgetText.getSize().x < width) dialog.pack();
-              }
+              case 0: widgetText = widgetText0; break;
+              case 1: widgetText = widgetText1; break;
             }
+            if (widgetText != null) widgetText.setText(text);
 
-            display.update();
+            // resize dialog (it not manually changed)
+            if (!resizedFlag)
+            {
+              GC gc = new GC(widgetText);
+              int width = gc.stringExtent(text).x;
+              gc.dispose();
+
+              if (widgetText.getSize().x < width) dialog.pack();
+            }
           }
+
+          display.update();
         }
       });
 
@@ -462,45 +539,7 @@ class BusyDialog
     }
   }
 
-  /** update busy dialog progress bar
-   * @param i index 0|1
-   * @param n progress value
-   * @return true if closed, false otherwise
-   */
-  public boolean updateProgressBar(final int i, final double n)
-  {
-    if (   ((widgetProgressBar0 == null) || !widgetProgressBar0.isDisposed())
-        && ((widgetProgressBar1 == null) || !widgetProgressBar1.isDisposed())
-       )
-    {
-      display.syncExec(new Runnable()
-      {
-        public void run()
-        {
-          ProgressBar widgetProgressBar = null;
-          switch (i)
-          {
-            case 0: widgetProgressBar = widgetProgressBar0; break;
-            case 1: widgetProgressBar = widgetProgressBar1; break;
-          }
-          if ((widgetProgressBar == null) || !widgetProgressBar.isDisposed())
-          {
-            if (widgetProgressBar != null) widgetProgressBar.setSelection(n);
-
-            display.update();
-          }
-        }
-      });
-
-      return true;
-    }
-    else
-    {
-      return false;
-    }
-  }
-
-  /** update busy dialog
+  /** update busy dialog text
    * @param i index 0|1
    * @param n number to show
    * @return true if closed, false otherwise
@@ -510,7 +549,7 @@ class BusyDialog
     return updateText(i,Long.toString(n));
   }
 
-  /** update busy dialog
+  /** update busy dialog text
    * @param i index 0|1
    * @return true if closed, false otherwise
    */
@@ -526,6 +565,42 @@ class BusyDialog
   public boolean updateText(String text)
   {
     return updateText(0,text);
+  }
+
+  /** update busy dialog progress bar
+   * @param i index 0|1
+   * @param n progress value
+   * @return true if closed, false otherwise
+   */
+  public boolean updateProgressBar(final int i, final double n)
+  {
+    if (!dialog.isDisposed())
+    {
+      display.syncExec(new Runnable()
+      {
+        public void run()
+        {
+          animate();
+
+          // set progress bar value
+          ProgressBar widgetProgressBar = null;
+          switch (i)
+          {
+            case 0: widgetProgressBar = widgetProgressBar0; break;
+            case 1: widgetProgressBar = widgetProgressBar1; break;
+          }
+          if (widgetProgressBar != null) widgetProgressBar.setSelection(n);
+
+          display.update();
+        }
+      });
+
+      return true;
+    }
+    else
+    {
+      return false;
+    }
   }
 
   /** update busy dialog progress bar
@@ -554,30 +629,119 @@ class BusyDialog
     return update(0);
   }
 
-  // ----------------------------------------------------------------------
-
-  /** animate dialog
+  /** update busy dialog list
+   * @param i index 0|1
+   * @param format format string
+   * @param args optional arguments
+   * @return true if closed, false otherwise
    */
-  public void animate()
+  public boolean updateList(final String format, final Object... args)
   {
-    display.syncExec(new Runnable()
+    if (!dialog.isDisposed())
+    {
+      display.syncExec(new Runnable()
+      {
+        public void run()
+        {
+          animate();
+
+          if (format != null)
+          {
+            String text = String.format(format,args);
+
+            // add list text
+            widgetList.add(text);
+            while (widgetList.getItemCount() > maxListLength)
+            {
+              widgetList.remove(0);
+            }
+
+            // resize dialog (it not manually changed)
+            if (!resizedFlag)
+            {
+              GC gc = new GC(widgetList);
+              int width = gc.stringExtent(text).x;
+              gc.dispose();
+
+              if (widgetList.getSize().x < width) dialog.pack();
+            }
+          }
+
+          display.update();
+        }
+      });
+
+      return true;
+    }
+    else
+    {
+      return false;
+    }
+  }
+
+  /** set animate interval
+   * @param interval animate time interval [ms]
+   */
+  public void setAnimateInterval(int interval)
+  {
+    this.animateInterval = interval;
+  }
+
+  /** auto animate dialog
+   * @param interval animate time interval [ms]
+   */
+  public void autoAnimate(int interval)
+  {
+    setAnimateInterval(interval);
+
+    animationQuit = false;
+    Thread thread = new Thread()
     {
       public void run()
       {
-        if (!widgetImage.isDisposed())
+        while (!animationQuit)
         {
-          long timestamp = System.currentTimeMillis();
-          if (timestamp > (animationImageTimestamp+250))
+          // animate
+          display.syncExec(new Runnable()
           {
-            animationImageTimestamp = timestamp;
-            animationImageIndex     = (animationImageIndex+1)%2;
-            widgetImage.setImage(animationImages[animationImageIndex]);
-          }
+            public void run()
+            {
+              animate();
+            }
+          });
+
+          // sleep
+          try { Thread.sleep(animateInterval); } catch (InterruptedException exception) { /* ignore */ }
         }
       }
-    });
+    };
+    thread.start();
   }
 
+  /** auto animate dialog
+   */
+  public void autoAnimate()
+  {
+    autoAnimate(250);
+  }
+
+  //-----------------------------------------------------------------------
+
+  /** animate dialog
+   */
+  private void animate()
+  {
+    if (!dialog.isDisposed())
+    {
+      long timestamp = System.currentTimeMillis();
+      if (timestamp > (animateTimestamp+animateInterval))
+      {
+        animateTimestamp  = timestamp;
+        animateImageIndex = (animateImageIndex+1)%2;
+        widgetImage.setImage(animateImages[animateImageIndex]);
+      }
+    }
+  }
 }
 
 /* end of file */
