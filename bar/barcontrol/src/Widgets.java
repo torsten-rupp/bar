@@ -351,6 +351,20 @@ class WidgetModifyListener
     this(widget,new WidgetVariable(object));
   }
 
+  /** create widget listener
+   * @param widget widget
+   * @param objects objects
+   */
+  WidgetModifyListener(Widget widget, Object[] objects)
+  {
+    this.widget    = widget;
+    this.variables = new WidgetVariable[objects.length];
+    for (int i = 0; i < objects.length; i++)
+    {
+      this.variables[i] = new WidgetVariable(objects[i]);
+    }
+  }
+
   /** set widget
    * @param widget widget
    */
@@ -1455,7 +1469,7 @@ class Widgets
     else if (text.equals("pageup"        )) keyCode |= SWT.PAGE_UP;
     else if (text.equals("pagedown"      )) keyCode |= SWT.PAGE_DOWN;
     else if (text.equals("bs"            )) keyCode |= SWT.BS;
-    else if (text.equals("delelte"       )) keyCode |= SWT.DEL;
+    else if (text.equals("delete"        )) keyCode |= SWT.DEL;
     else if (text.equals("insert"        )) keyCode |= SWT.INSERT;
     else if (text.equals("home"          )) keyCode |= SWT.HOME;
     else if (text.equals("end"           )) keyCode |= SWT.END;
@@ -4159,7 +4173,6 @@ private static void printTree(Tree tree)
       {
         getExpandedTreeData(expandedEntrySet,treeItem);
       }
-//System.err.println("BARControl.java"+", "+1627+": "+expandedEntrySet.toString());
 
       // sort column
 //printTree(tree);
