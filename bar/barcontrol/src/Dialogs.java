@@ -9,6 +9,7 @@
 \***********************************************************************/
 
 /****************************** Imports ********************************/
+import java.lang.reflect.Field;
 import java.io.File;
 import java.io.IOException;
 import java.util.BitSet;
@@ -36,6 +37,7 @@ import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.Listener;
 import org.eclipse.swt.widgets.Monitor;
 import org.eclipse.swt.widgets.Shell;
+import org.eclipse.swt.widgets.Spinner;
 import org.eclipse.swt.widgets.Text;
 
 /****************************** Classes ********************************/
@@ -411,6 +413,72 @@ abstract class DialogRunnable
    * @param result result
    */
   abstract public void done(Object result);
+}
+
+/** boolean field updater
+ */
+class BooleanFieldUpdater
+{
+  private Object object;
+  private Field  field;
+
+  /** create boolean field updater
+   * @param clazz class with boolean or Boolean field
+   * @param fieldName field name
+   */
+  BooleanFieldUpdater(Class clazz, String fieldName)
+  {
+    try
+    {
+      this.object = object;
+      this.field  = clazz.getDeclaredField(fieldName);
+    }
+    catch (NoSuchFieldException exception)
+    {
+      throw new Error(exception);
+    }
+    catch (SecurityException exception)
+    {
+      throw new Error(exception);
+    }
+  }
+
+  /** get boolean field value
+   * @return value
+   */
+  public boolean get()
+  {
+    try
+    {
+      if (field.getType() == Boolean.class)
+      {
+        return (Boolean)field.get(object);
+      }
+      else
+      {
+        return field.getBoolean(object);
+      }
+    }
+    catch (IllegalAccessException exception)
+    {
+      throw new Error(exception);
+    }
+  }
+
+  /** set boolean field value
+   * @param value value
+   */
+  public void set(boolean value)
+  {
+    try
+    {
+      field.set(object,new Boolean(value));
+    }
+    catch (IllegalAccessException exception)
+    {
+      throw new Error(exception);
+    }
+  }
 }
 
 /** dialog
@@ -1058,6 +1126,96 @@ class Dialogs
     return run(dialog,null);
   }
 
+  /** create boolean field updater
+   * @param clazz class with boolean or Boolean field
+   * @param fieldName field name
+   * @return boolean field updater
+   */
+  public static BooleanFieldUpdater booleanFieldUpdater(Class clazz, String fieldName)
+  {
+    return new BooleanFieldUpdater(clazz,fieldName);
+  }
+
+  /** info dialog
+   * @param parentShell parent shell
+   * @param title title text
+   * @param image image to show
+   * @param message info message
+   */
+  public static void info(Shell parentShell, String title, final BooleanFieldUpdater showAgainFieldFlag, Image image, String message)
+  {
+    Composite composite;
+    Label     label;
+    Button    button;
+
+    if ((showAgainFieldFlag == null) || showAgainFieldFlag.get())
+    {
+      if (!parentShell.isDisposed())
+      {
+        final Shell dialog = openModal(parentShell,title,300,70);
+        dialog.setLayout(new TableLayout(new double[]{1.0,0.0},1.0));
+
+        // message
+        final Button widgetShowAgain;
+        composite = new Composite(dialog,SWT.NONE);
+        composite.setLayout(new TableLayout(null,new double[]{0.0,1.0},4));
+        composite.setLayoutData(new TableLayoutData(0,0,TableLayoutData.NSWE));
+        {
+          label = new Label(composite,SWT.LEFT);
+          label.setImage(image);
+          label.setLayoutData(new TableLayoutData(0,0,TableLayoutData.W,0,0,10));
+
+          label = new Label(composite,SWT.LEFT|SWT.WRAP);
+          label.setText(message);
+          label.setLayoutData(new TableLayoutData(0,1,TableLayoutData.NS|TableLayoutData.W,0,0,4));
+
+          if (showAgainFieldFlag != null)
+          {
+            widgetShowAgain = new Button(composite,SWT.CHECK);
+            widgetShowAgain.setText("show again");
+            widgetShowAgain.setSelection(true);
+            widgetShowAgain.setLayoutData(new TableLayoutData(1,1,TableLayoutData.W));
+          }
+          else
+          {
+            widgetShowAgain = null;
+          }
+        }
+
+        // buttons
+        composite = new Composite(dialog,SWT.NONE);
+        composite.setLayout(new TableLayout(0.0,1.0));
+        composite.setLayoutData(new TableLayoutData(1,0,TableLayoutData.WE,0,0,4));
+        {
+          button = new Button(composite,SWT.CENTER);
+          button.setText("Close");
+          button.setLayoutData(new TableLayoutData(0,0,TableLayoutData.NONE,0,0,0,0,SWT.DEFAULT,SWT.DEFAULT,60,SWT.DEFAULT));
+          button.addSelectionListener(new SelectionListener()
+          {
+            public void widgetSelected(SelectionEvent selectionEvent)
+            {
+              close(dialog);
+            }
+            public void widgetDefaultSelected(SelectionEvent selectionEvent)
+            {
+            }
+          });
+        }
+
+        run(dialog,new DialogRunnable()
+        {
+          public void done(Object result)
+          {
+            if (showAgainFieldFlag != null)
+            {
+              showAgainFieldFlag.set(widgetShowAgain.getSelection());
+            }
+          }
+        });
+      }
+    }
+  }
+
   /** info dialog
    * @param parentShell parent shell
    * @param title title text
@@ -1066,51 +1224,19 @@ class Dialogs
    */
   public static void info(Shell parentShell, String title, Image image, String message)
   {
-    Composite composite;
-    Label     label;
-    Button    button;
+    info(parentShell,title,(BooleanFieldUpdater)null,image,message);
+  }
 
-    if (!parentShell.isDisposed())
-    {
-      final Shell dialog = openModal(parentShell,title,300,70);
-      dialog.setLayout(new TableLayout(new double[]{1.0,0.0},1.0));
+  /** info dialog
+   * @param parentShell parent shell
+   * @param title title text
+   * @param message info message
+   */
+  public static void info(Shell parentShell, String title, BooleanFieldUpdater showAgainFieldFlag, String message)
+  {
+    final Image IMAGE = Widgets.loadImage(parentShell.getDisplay(),"info.png");
 
-      // message
-      composite = new Composite(dialog,SWT.NONE);
-      composite.setLayout(new TableLayout(null,new double[]{0.0,1.0},4));
-      composite.setLayoutData(new TableLayoutData(0,0,TableLayoutData.NSWE));
-      {
-        label = new Label(composite,SWT.LEFT);
-        label.setImage(image);
-        label.setLayoutData(new TableLayoutData(0,0,TableLayoutData.W,0,0,10));
-
-        label = new Label(composite,SWT.LEFT|SWT.WRAP);
-        label.setText(message);
-        label.setLayoutData(new TableLayoutData(0,1,TableLayoutData.NS|TableLayoutData.W,0,0,4));
-      }
-
-      // buttons
-      composite = new Composite(dialog,SWT.NONE);
-      composite.setLayout(new TableLayout(0.0,1.0));
-      composite.setLayoutData(new TableLayoutData(1,0,TableLayoutData.WE,0,0,4));
-      {
-        button = new Button(composite,SWT.CENTER);
-        button.setText("Close");
-        button.setLayoutData(new TableLayoutData(0,0,TableLayoutData.NONE,0,0,0,0,SWT.DEFAULT,SWT.DEFAULT,60,SWT.DEFAULT));
-        button.addSelectionListener(new SelectionListener()
-        {
-          public void widgetSelected(SelectionEvent selectionEvent)
-          {
-            close(dialog);
-          }
-          public void widgetDefaultSelected(SelectionEvent selectionEvent)
-          {
-          }
-        });
-      }
-
-      run(dialog);
-    }
+    info(parentShell,title,showAgainFieldFlag,IMAGE,message);
   }
 
   /** info dialog
@@ -1120,9 +1246,16 @@ class Dialogs
    */
   public static void info(Shell parentShell, String title, String message)
   {
-    final Image IMAGE = Widgets.loadImage(parentShell.getDisplay(),"info.png");
+    info(parentShell,title,(BooleanFieldUpdater)null,message);
+  }
 
-    info(parentShell,title,IMAGE,message);
+  /** info dialog
+   * @param parentShell parent shell
+   * @param message info message
+   */
+  public static void info(Shell parentShell, BooleanFieldUpdater showAgainFieldFlag, String message)
+  {
+    info(parentShell,"Information",showAgainFieldFlag,message);
   }
 
   /** info dialog
@@ -1131,125 +1264,125 @@ class Dialogs
    */
   public static void info(Shell parentShell, String message)
   {
-    info(parentShell,"Information",message);
+    info(parentShell,(BooleanFieldUpdater)null,message);
   }
 
   /** error dialog
    * @param parentShell parent shell
+   * @param showAgainFieldFlag show again field updater or null
    * @param extendedMessage extended message
-   * @param showAgainCheckbox TRUE to show again checkbox, FALSE otherwise
    * @param message error message
-   * @return TRUE iff show checkbox again is selected, FALSE otherwise
    */
-  public static boolean error(Shell parentShell, String[] extendedMessage, boolean showAgainCheckbox, String message)
+  public static void error(Shell parentShell, final BooleanFieldUpdater showAgainFieldFlag, String[] extendedMessage, String message)
   {
     final Image IMAGE = Widgets.loadImage(parentShell.getDisplay(),"error.png");
 
-    final boolean[] result = new boolean[]{true};
-    Composite       composite;
-    Label           label;
-    Button          button;
-    Text            text;
-    final Button    widgetShowAgain;
+    Composite composite;
+    Label     label;
+    Button    button;
+    Text      text;
 
-    if (!parentShell.isDisposed())
+    if ((showAgainFieldFlag == null) || showAgainFieldFlag.get())
     {
-      final Shell dialog = openModal(parentShell,"Error",300,70);
-      dialog.setLayout(new TableLayout(new double[]{1.0,0.0},1.0));
-
-      // message
-      composite = new Composite(dialog,SWT.NONE);
-      composite.setLayout(new TableLayout(null,new double[]{0.0,1.0},4));
-      composite.setLayoutData(new TableLayoutData(0,0,TableLayoutData.NSWE));
+      if (!parentShell.isDisposed())
       {
-        label = new Label(composite,SWT.LEFT);
-        label.setImage(IMAGE);
-        label.setLayoutData(new TableLayoutData(0,0,TableLayoutData.W,0,0,10));
+        final Shell dialog = openModal(parentShell,"Error",300,70);
+        dialog.setLayout(new TableLayout(new double[]{1.0,0.0},1.0));
 
-        label = new Label(composite,SWT.LEFT|SWT.WRAP);
-        label.setText(message);
-        label.setLayoutData(new TableLayoutData(0,1,TableLayoutData.NSWE,0,0,4));
-
-        int row = 1;
-
-        if (extendedMessage != null)
+        // message
+        final Button widgetShowAgain;
+        composite = new Composite(dialog,SWT.NONE);
+        composite.setLayout(new TableLayout(null,new double[]{0.0,1.0},4));
+        composite.setLayoutData(new TableLayoutData(0,0,TableLayoutData.NSWE));
         {
           label = new Label(composite,SWT.LEFT);
-          label.setText("Extended error:");
-          label.setLayoutData(new TableLayoutData(row,1,TableLayoutData.NSWE,0,0,4)); row++;
+          label.setImage(IMAGE);
+          label.setLayoutData(new TableLayoutData(0,0,TableLayoutData.W,0,0,10));
 
-          text = new Text(composite,SWT.LEFT|SWT.BORDER|SWT.V_SCROLL|SWT.READ_ONLY);
-          text.setLayoutData(new TableLayoutData(row,1,TableLayoutData.NSWE,0,0,0,0,SWT.DEFAULT,100)); row++;
-          text.setText(StringUtils.join(extendedMessage,text.DELIMITER));
-        }
+          label = new Label(composite,SWT.LEFT|SWT.WRAP);
+          label.setText(message);
+          label.setLayoutData(new TableLayoutData(0,1,TableLayoutData.NSWE,0,0,4));
 
-        if (showAgainCheckbox)
-        {
-          widgetShowAgain = new Button(composite,SWT.CHECK);
-          widgetShowAgain.setText("show again");
-          widgetShowAgain.setSelection(true);
-          widgetShowAgain.setLayoutData(new TableLayoutData(row,1,TableLayoutData.NSWE,0,0,4)); row++;
-        }
-        else
-        {
-          widgetShowAgain = null;
-        }
-      }
+          int row = 1;
 
-      // buttons
-      composite = new Composite(dialog,SWT.NONE);
-      composite.setLayout(new TableLayout(0.0,1.0));
-      composite.setLayoutData(new TableLayoutData(1,0,TableLayoutData.WE,0,0,4));
-      {
-        button = new Button(composite,SWT.CENTER);
-        button.setText("Close");
-        button.setFocus();
-        button.setLayoutData(new TableLayoutData(0,0,TableLayoutData.NONE,0,0,0,0,SWT.DEFAULT,SWT.DEFAULT,60,SWT.DEFAULT));
-        button.addSelectionListener(new SelectionListener()
-        {
-          public void widgetSelected(SelectionEvent selectionEvent)
+          if (extendedMessage != null)
           {
-            close(dialog);
+            label = new Label(composite,SWT.LEFT);
+            label.setText("Extended error:");
+            label.setLayoutData(new TableLayoutData(row,1,TableLayoutData.NSWE,0,0,4)); row++;
+
+            text = new Text(composite,SWT.LEFT|SWT.BORDER|SWT.V_SCROLL|SWT.READ_ONLY);
+            text.setLayoutData(new TableLayoutData(row,1,TableLayoutData.NSWE,0,0,0,0,SWT.DEFAULT,100)); row++;
+            text.setText(StringUtils.join(extendedMessage,text.DELIMITER));
           }
-          public void widgetDefaultSelected(SelectionEvent selectionEvent)
+
+          if (showAgainFieldFlag != null)
           {
+            widgetShowAgain = new Button(composite,SWT.CHECK);
+            widgetShowAgain.setText("show again");
+            widgetShowAgain.setSelection(true);
+            widgetShowAgain.setLayoutData(new TableLayoutData(1,1,TableLayoutData.W));
+          }
+          else
+          {
+            widgetShowAgain = null;
+          }
+        }
+
+        // buttons
+        composite = new Composite(dialog,SWT.NONE);
+        composite.setLayout(new TableLayout(0.0,1.0));
+        composite.setLayoutData(new TableLayoutData(1,0,TableLayoutData.WE,0,0,4));
+        {
+          button = new Button(composite,SWT.CENTER);
+          button.setText("Close");
+          button.setFocus();
+          button.setLayoutData(new TableLayoutData(0,0,TableLayoutData.NONE,0,0,0,0,SWT.DEFAULT,SWT.DEFAULT,60,SWT.DEFAULT));
+          button.addSelectionListener(new SelectionListener()
+          {
+            public void widgetSelected(SelectionEvent selectionEvent)
+            {
+              close(dialog);
+            }
+            public void widgetDefaultSelected(SelectionEvent selectionEvent)
+            {
+            }
+          });
+        }
+
+        run(dialog,new DialogRunnable()
+        {
+          public void done(Object result)
+          {
+            if (showAgainFieldFlag != null)
+            {
+              showAgainFieldFlag.set(widgetShowAgain.getSelection());
+            }
           }
         });
       }
-
-      run(dialog,new DialogRunnable()
-      {
-        public void done(Object object)
-        {
-          result[0] = (widgetShowAgain != null) ? widgetShowAgain.getSelection() : true;
-        }
-      });
     }
-
-    return result[0];
   }
 
   /** error dialog
    * @param parentShell parent shell
+   * @param showAgainFieldFlag show again field updater or null
    * @param extendedMessage extended message
-   * @param showAgainCheckbox TRUE to show again checkbox, FALSE otherwise
    * @param message error message
-   * @return TRUE iff show checkbox again is selected, FALSE otherwise
    */
-  public static boolean error(Shell parentShell, List<String> extendedMessage, boolean showAgainCheckbox, String message)
+  public static void error(Shell parentShell, BooleanFieldUpdater showAgainFieldFlag, List<String> extendedMessage, String message)
   {
-    return error(parentShell,extendedMessage.toArray(new String[extendedMessage.size()]),showAgainCheckbox, message);
+    error(parentShell,showAgainFieldFlag,extendedMessage.toArray(new String[extendedMessage.size()]),message);
   }
 
   /** error dialog
    * @param parentShell parent shell
-   * @param showAgainCheckbox TRUE to show again checkbox, FALSE otherwise
+   * @param showAgainFieldFlag show again field updater or null
    * @param message error message
-   * @return TRUE iff show checkbox again is selected, FALSE otherwise
    */
-  public static boolean error(Shell parentShell, boolean showAgainCheckbox, String message)
+  public static void error(Shell parentShell, BooleanFieldUpdater showAgainFieldFlag, String message)
   {
-    return error(parentShell,(String[])null,showAgainCheckbox,message);
+    error(parentShell,showAgainFieldFlag,(String[])null,message);
   }
 
   /** error dialog
@@ -1258,33 +1391,31 @@ class Dialogs
    */
   public static void error(Shell parentShell, String message)
   {
-    error(parentShell,false,message);
+    error(parentShell,(BooleanFieldUpdater)null,message);
   }
 
   /** error dialog
    * @param parentShell parent shell
+   * @param showAgainFieldFlag show again field updater or null
    * @param extendedMessage extended message
-   * @param showAgainCheckbox TRUE to show again checkbox, FALSE otherwise
    * @param format format string
    * @param arguments optional arguments
-   * @return TRUE iff show checkbox again is selected, FALSE otherwise
    */
-  public static boolean error(Shell parentShell, String[] extendedMessage, boolean showAgainCheckbox, String format, Object... arguments)
+  public static void error(Shell parentShell, BooleanFieldUpdater showAgainFieldFlag, String[] extendedMessage, String format, Object... arguments)
   {
-    return error(parentShell,extendedMessage,showAgainCheckbox,String.format(format,arguments));
+    error(parentShell,showAgainFieldFlag,extendedMessage,String.format(format,arguments));
   }
 
   /** error dialog
    * @param parentShell parent shell
+   * @param showAgainFieldFlag show again field updater or null
    * @param extendedMessage extended message
-   * @param showAgainCheckbox TRUE to show again checkbox, FALSE otherwise
    * @param format format string
    * @param arguments optional arguments
-   * @return TRUE iff show checkbox again is selected, FALSE otherwise
    */
-  public static boolean error(Shell parentShell, List<String> extendedMessage, boolean showAgainCheckbox, String format, Object... arguments)
+  public static void error(Shell parentShell, BooleanFieldUpdater showAgainFieldFlag, List<String> extendedMessage, String format, Object... arguments)
   {
-    return error(parentShell,extendedMessage,showAgainCheckbox,String.format(format,arguments));
+    error(parentShell,showAgainFieldFlag,extendedMessage,String.format(format,arguments));
   }
 
   /** error dialog
@@ -1295,7 +1426,7 @@ class Dialogs
    */
   public static void error(Shell parentShell, String[] extendedMessage, String format, Object... arguments)
   {
-    error(parentShell,extendedMessage,false,String.format(format,arguments));
+    error(parentShell,(BooleanFieldUpdater)null,extendedMessage,String.format(format,arguments));
   }
 
   /** error dialog
@@ -1306,19 +1437,18 @@ class Dialogs
    */
   public static void error(Shell parentShell, List<String> extendedMessage, String format, Object... arguments)
   {
-    error(parentShell,extendedMessage,false,String.format(format,arguments));
+    error(parentShell,(BooleanFieldUpdater)null,extendedMessage,String.format(format,arguments));
   }
 
   /** error dialog
    * @param parentShell parent shell
-   * @param showAgainCheckbox TRUE to show again checkbox, FALSE otherwise
+   * @param showAgainFieldFlag show again field updater or null
    * @param format format string
    * @param arguments optional arguments
-   * @return TRUE iff show checkbox again is selected, FALSE otherwise
    */
-  public static boolean error(Shell parentShell, boolean showAgainCheckbox, String format, Object... arguments)
+  public static void error(Shell parentShell, BooleanFieldUpdater showAgainFieldFlag, String format, Object... arguments)
   {
-    return error(parentShell,(String[])null,showAgainCheckbox,format,arguments);
+    error(parentShell,showAgainFieldFlag,(String[])null,format,arguments);
   }
 
   /** error dialog
@@ -1328,17 +1458,15 @@ class Dialogs
    */
   public static void error(Shell parentShell, String format, Object... arguments)
   {
-    error(parentShell,false,format,arguments);
+    error(parentShell,(BooleanFieldUpdater)null,format,arguments);
   }
 
   /** warning dialog
    * @param parentShell parent shell
-   * @param showAgainCheckbox true to show again checkbox, FALSE otherwise
-   * @param showModal true to show warning dialog modal, false otherwise
+   * @param showAgainFieldFlag show again field updater or null
    * @param message error message
-   * @return TRUE iff show checkbox again is selected, FALSE otherwise
    */
-  static boolean warning(Shell parentShell, boolean showAgainCheckbox, boolean showModal, String message)
+  static void warning(Shell parentShell, final BooleanFieldUpdater showAgainFieldFlag, String message)
   {
     final Image IMAGE = Widgets.loadImage(parentShell.getDisplay(),"warning.png");
 
@@ -1347,75 +1475,76 @@ class Dialogs
     Composite       composite;
     Label           label;
     Button          button;
-    final Button    widgetShowAgain;
 
-    if (!parentShell.isDisposed())
+    if ((showAgainFieldFlag == null) || showAgainFieldFlag.get())
     {
-      final Shell dialog = showModal ? openModal(parentShell,"Warning",200,70) : open(parentShell,"Warning",200,70);
-      dialog.setLayout(new TableLayout(new double[]{1.0,0.0},1.0));
-
-
-      // message
-      composite = new Composite(dialog,SWT.NONE);
-      composite.setLayout(new TableLayout(null,new double[]{0.0,1.0},4));
-      composite.setLayoutData(new TableLayoutData(0,0,TableLayoutData.NSWE));
+      if (!parentShell.isDisposed())
       {
-        label = new Label(composite,SWT.LEFT);
-        label.setImage(IMAGE);
-        label.setLayoutData(new TableLayoutData(0,0,TableLayoutData.W,0,0,10));
+        final Shell dialog = open(parentShell,"Warning",200,70);
+        dialog.setLayout(new TableLayout(new double[]{1.0,0.0},1.0));
 
-        label = new Label(composite,SWT.LEFT|SWT.WRAP);
-        label.setText(message);
-        label.setLayoutData(new TableLayoutData(0,1,TableLayoutData.NSWE,0,0,4));
-      }
-
-      int row = 1;
-
-      if (showAgainCheckbox)
-      {
-        widgetShowAgain = new Button(composite,SWT.CHECK);
-        widgetShowAgain.setText("show again");
-        widgetShowAgain.setSelection(true);
-        widgetShowAgain.setLayoutData(new TableLayoutData(row,1,TableLayoutData.NSWE,0,0,4)); row++;
-      }
-      else
-      {
-        widgetShowAgain = null;
-      }
-
-      // buttons
-      composite = new Composite(dialog,SWT.NONE);
-      composite.setLayout(new TableLayout(0.0,1.0));
-      composite.setLayoutData(new TableLayoutData(row,0,TableLayoutData.WE,0,0,4)); row++;
-      {
-        button = new Button(composite,SWT.CENTER);
-        button.setText("Close");
-        button.setFocus();
-        button.setLayoutData(new TableLayoutData(0,0,TableLayoutData.NONE,0,0,0,0,60,SWT.DEFAULT));
-        button.addSelectionListener(new SelectionListener()
+        // message
+        final Button widgetShowAgain;
+        composite = new Composite(dialog,SWT.NONE);
+        composite.setLayout(new TableLayout(null,new double[]{0.0,1.0},4));
+        composite.setLayoutData(new TableLayoutData(0,0,TableLayoutData.NSWE));
         {
-          public void widgetSelected(SelectionEvent selectionEvent)
-          {
-            Button widget = (Button)selectionEvent.widget;
+          label = new Label(composite,SWT.LEFT);
+          label.setImage(IMAGE);
+          label.setLayoutData(new TableLayoutData(0,0,TableLayoutData.W,0,0,10));
 
-            close(dialog);
-          }
-          public void widgetDefaultSelected(SelectionEvent selectionEvent)
+          label = new Label(composite,SWT.LEFT|SWT.WRAP);
+          label.setText(message);
+          label.setLayoutData(new TableLayoutData(0,1,TableLayoutData.NSWE,0,0,4));
+
+          if (showAgainFieldFlag != null)
           {
+            widgetShowAgain = new Button(composite,SWT.CHECK);
+            widgetShowAgain.setText("show again");
+            widgetShowAgain.setSelection(true);
+            widgetShowAgain.setLayoutData(new TableLayoutData(1,1,TableLayoutData.W));
+          }
+          else
+          {
+            widgetShowAgain = null;
+          }
+        }
+
+        // buttons
+        composite = new Composite(dialog,SWT.NONE);
+        composite.setLayout(new TableLayout(0.0,1.0));
+        composite.setLayoutData(new TableLayoutData(1,0,TableLayoutData.WE,0,0,4));
+        {
+          button = new Button(composite,SWT.CENTER);
+          button.setText("Close");
+          button.setFocus();
+          button.setLayoutData(new TableLayoutData(0,0,TableLayoutData.NONE,0,0,0,0,60,SWT.DEFAULT));
+          button.addSelectionListener(new SelectionListener()
+          {
+            public void widgetSelected(SelectionEvent selectionEvent)
+            {
+              Button widget = (Button)selectionEvent.widget;
+
+              close(dialog);
+            }
+            public void widgetDefaultSelected(SelectionEvent selectionEvent)
+            {
+            }
+          });
+        }
+
+        run(dialog,new DialogRunnable()
+        {
+          public void done(Object result)
+          {
+            if (showAgainFieldFlag != null)
+            {
+              showAgainFieldFlag.set(widgetShowAgain.getSelection());
+            }
           }
         });
       }
-
-      run(dialog,new DialogRunnable()
-      {
-        public void done(Object object)
-        {
-          result[0] = (widgetShowAgain != null) ? widgetShowAgain.getSelection() : true;
-        }
-      });
     }
-
-    return result[0];
   }
 
   /** warning dialog
@@ -1424,32 +1553,18 @@ class Dialogs
    */
   static void warning(Shell parentShell, String message)
   {
-    warning(parentShell,false,false,message);
+    warning(parentShell,(BooleanFieldUpdater)null,message);
   }
 
   /** warning dialog
    * @param parentShell parent shell
-   * @param showAgainCheckbox TRUE to show again checkbox, FALSE otherwise
-   * @param showModal true to show warning dialog modal, false otherwise
+   * @param showAgainFieldFlag show again field updater or null
    * @param format format string
    * @param arguments optional arguments
-   * @return TRUE iff show checkbox again is selected, FALSE otherwise
    */
-  static boolean warning(Shell parentShell, boolean showAgainCheckbox, boolean showModal, String format, Object... arguments)
+  static void warning(Shell parentShell, BooleanFieldUpdater showAgainFieldFlag, String format, Object... arguments)
   {
-    return warning(parentShell,showAgainCheckbox,showModal,String.format(format,arguments));
-  }
-
-  /** warning dialog
-   * @param parentShell parent shell
-   * @param showAgainCheckbox TRUE to show again checkbox, FALSE otherwise
-   * @param format format string
-   * @param arguments optional arguments
-   * @return TRUE iff show checkbox again is selected, FALSE otherwise
-   */
-  static boolean warning(Shell parentShell, boolean showAgainCheckbox, String format, Object... arguments)
-  {
-    return warning(parentShell,showAgainCheckbox,false,format,arguments);
+    warning(parentShell,showAgainFieldFlag,String.format(format,arguments));
   }
 
   /** warning dialog
@@ -1459,7 +1574,121 @@ class Dialogs
    */
   static void warning(Shell parentShell, String format, Object... arguments)
   {
-    warning(parentShell,false,format,arguments);
+    warning(parentShell,(BooleanFieldUpdater)null,format,arguments);
+  }
+
+  /** confirmation dialog
+   * @param parentShell parent shell
+   * @param title title string
+   * @param showAgainFieldFlag show again field updater or null
+   * @param image image to show
+   * @param message confirmation message
+   * @param yesText yes-text
+   * @param noText no-text
+   * @param defaultValue default value
+   * @return value if no show-again field updater or show-again checkbox is true,
+             defaultValue otherwise
+   */
+  public static boolean confirm(Shell parentShell, String title, final BooleanFieldUpdater showAgainFieldFlag, Image image, String message, String yesText, String noText, boolean defaultValue)
+  {
+    Composite composite;
+    Label     label;
+    Button    button;
+
+    if ((showAgainFieldFlag == null) || showAgainFieldFlag.get())
+    {
+      if (!parentShell.isDisposed())
+      {
+        final boolean[] result = new boolean[1];
+
+        final Shell dialog = openModal(parentShell,title,300,70);
+        dialog.setLayout(new TableLayout(new double[]{1.0,0.0},1.0));
+
+        // message
+        final Button widgetShowAgain;
+        composite = new Composite(dialog,SWT.NONE);
+        composite.setLayout(new TableLayout(null,new double[]{0.0,1.0},4));
+        composite.setLayoutData(new TableLayoutData(0,0,TableLayoutData.NSWE));
+        {
+          label = new Label(composite,SWT.LEFT);
+          label.setImage(image);
+          label.setLayoutData(new TableLayoutData(0,0,TableLayoutData.W,0,0,10));
+
+          label = new Label(composite,SWT.LEFT|SWT.WRAP);
+          label.setText(message);
+          label.setLayoutData(new TableLayoutData(0,1,TableLayoutData.NSWE,0,0,4));
+
+          if (showAgainFieldFlag != null)
+          {
+            widgetShowAgain = new Button(composite,SWT.CHECK);
+            widgetShowAgain.setText("show again");
+            widgetShowAgain.setSelection(true);
+            widgetShowAgain.setLayoutData(new TableLayoutData(1,1,TableLayoutData.W));
+          }
+          else
+          {
+            widgetShowAgain = null;
+          }
+        }
+
+        // buttons
+        composite = new Composite(dialog,SWT.NONE);
+        composite.setLayout(new TableLayout(0.0,1.0));
+        composite.setLayoutData(new TableLayoutData(1,0,TableLayoutData.WE,0,0,4));
+        {
+          button = new Button(composite,SWT.CENTER);
+          button.setText(yesText);
+          if (defaultValue == true) button.setFocus();
+          button.setLayoutData(new TableLayoutData(0,0,TableLayoutData.W,0,0,0,0,SWT.DEFAULT,SWT.DEFAULT,60,SWT.DEFAULT));
+          button.addSelectionListener(new SelectionListener()
+          {
+            public void widgetSelected(SelectionEvent selectionEvent)
+            {
+              close(dialog,true);
+            }
+            public void widgetDefaultSelected(SelectionEvent selectionEvent)
+            {
+            }
+          });
+
+          button = new Button(composite,SWT.CENTER);
+          button.setText(noText);
+          if (defaultValue == false) button.setFocus();
+          button.setLayoutData(new TableLayoutData(0,1,TableLayoutData.E,0,0,0,0,SWT.DEFAULT,SWT.DEFAULT,60,SWT.DEFAULT));
+          button.addSelectionListener(new SelectionListener()
+          {
+            public void widgetSelected(SelectionEvent selectionEvent)
+            {
+              close(dialog,false);
+            }
+            public void widgetDefaultSelected(SelectionEvent selectionEvent)
+            {
+            }
+          });
+        }
+
+        return (Boolean)run(dialog,
+                            new DialogRunnable()
+                            {
+                              public void done(Object result)
+                              {
+                                if (showAgainFieldFlag != null)
+                                {
+                                  showAgainFieldFlag.set(widgetShowAgain.getSelection());
+                                }
+                              }
+                            }
+                           );
+      }
+      else
+      {
+        return false;
+      }
+    }
+    else
+    {
+      return defaultValue;
+    }
   }
 
   /** confirmation dialog
@@ -1474,73 +1703,22 @@ class Dialogs
    */
   public static boolean confirm(Shell parentShell, String title, Image image, String message, String yesText, String noText, boolean defaultValue)
   {
-    Composite composite;
-    Label     label;
-    Button    button;
+    return confirm(parentShell,title,null,image,message,yesText,noText,defaultValue);
+  }
 
-    if (!parentShell.isDisposed())
-    {
-      final boolean[] result = new boolean[1];
-
-      final Shell dialog = openModal(parentShell,title,300,70);
-      dialog.setLayout(new TableLayout(new double[]{1.0,0.0},1.0));
-
-      // message
-      composite = new Composite(dialog,SWT.NONE);
-      composite.setLayout(new TableLayout(null,new double[]{0.0,1.0},4));
-      composite.setLayoutData(new TableLayoutData(0,0,TableLayoutData.NSWE));
-      {
-        label = new Label(composite,SWT.LEFT);
-        label.setImage(image);
-        label.setLayoutData(new TableLayoutData(0,0,TableLayoutData.W,0,0,10));
-
-        label = new Label(composite,SWT.LEFT|SWT.WRAP);
-        label.setText(message);
-        label.setLayoutData(new TableLayoutData(0,1,TableLayoutData.NSWE,0,0,4));
-      }
-
-      // buttons
-      composite = new Composite(dialog,SWT.NONE);
-      composite.setLayout(new TableLayout(0.0,1.0));
-      composite.setLayoutData(new TableLayoutData(1,0,TableLayoutData.WE,0,0,4));
-      {
-        button = new Button(composite,SWT.CENTER);
-        button.setText(yesText);
-        if (defaultValue == true) button.setFocus();
-        button.setLayoutData(new TableLayoutData(0,0,TableLayoutData.W,0,0,0,0,SWT.DEFAULT,SWT.DEFAULT,60,SWT.DEFAULT));
-        button.addSelectionListener(new SelectionListener()
-        {
-          public void widgetSelected(SelectionEvent selectionEvent)
-          {
-            close(dialog,true);
-          }
-          public void widgetDefaultSelected(SelectionEvent selectionEvent)
-          {
-          }
-        });
-
-        button = new Button(composite,SWT.CENTER);
-        button.setText(noText);
-        if (defaultValue == false) button.setFocus();
-        button.setLayoutData(new TableLayoutData(0,1,TableLayoutData.E,0,0,0,0,SWT.DEFAULT,SWT.DEFAULT,60,SWT.DEFAULT));
-        button.addSelectionListener(new SelectionListener()
-        {
-          public void widgetSelected(SelectionEvent selectionEvent)
-          {
-            close(dialog,false);
-          }
-          public void widgetDefaultSelected(SelectionEvent selectionEvent)
-          {
-          }
-        });
-      }
-
-      return (Boolean)run(dialog,false);
-    }
-    else
-    {
-      return false;
-    }
+  /** confirmation dialog
+   * @param parentShell parent shell
+   * @param title title string
+   * @param showAgainFieldFlag show again field updater or null
+   * @param image image to show
+   * @param message confirmation message
+   * @param yesText yes-text
+   * @param noText no-text
+   * @return value
+   */
+  public static boolean confirm(Shell parentShell, String title, BooleanFieldUpdater showAgainFieldFlag, Image image, String message, String yesText, String noText)
+  {
+    return confirm(parentShell,title,showAgainFieldFlag,image,message,yesText,noText,true);
   }
 
   /** confirmation dialog
@@ -1554,7 +1732,24 @@ class Dialogs
    */
   public static boolean confirm(Shell parentShell, String title, Image image, String message, String yesText, String noText)
   {
-    return confirm(parentShell,title,image,message,yesText,noText,true);
+    return confirm(parentShell,title,null,image,message,yesText,noText);
+  }
+
+  /** confirmation dialog
+   * @param parentShell parent shell
+   * @param title title string
+   * @param showAgainFieldFlag show again field updater or null
+   * @param message confirmation message
+   * @param yesText yes-text
+   * @param noText no-text
+   * @param defaultValue default value
+   * @return value
+   */
+  public static boolean confirm(Shell parentShell, String title, BooleanFieldUpdater showAgainFieldFlag, String message, String yesText, String noText, boolean defaultValue)
+  {
+    final Image IMAGE = Widgets.loadImage(parentShell.getDisplay(),"question.png");
+
+    return confirm(parentShell,title,showAgainFieldFlag,IMAGE,message,yesText,noText,defaultValue);
   }
 
   /** confirmation dialog
@@ -1568,9 +1763,21 @@ class Dialogs
    */
   public static boolean confirm(Shell parentShell, String title, String message, String yesText, String noText, boolean defaultValue)
   {
-    final Image IMAGE = Widgets.loadImage(parentShell.getDisplay(),"question.png");
+    return confirm(parentShell,title,(BooleanFieldUpdater)null,message,yesText,noText,defaultValue);
+  }
 
-    return confirm(parentShell,title,IMAGE,message,yesText,noText,defaultValue);
+  /** confirmation dialog
+   * @param parentShell parent shell
+   * @param title title string
+   * @param showAgainFieldFlag show again field updater or null
+   * @param message confirmation message
+   * @param yesText yes-text
+   * @param noText no-text
+   * @return value
+   */
+  public static boolean confirm(Shell parentShell, String title, BooleanFieldUpdater showAgainFieldFlag, String message, String yesText, String noText)
+  {
+    return confirm(parentShell,title,showAgainFieldFlag,message,yesText,noText,true);
   }
 
   /** confirmation dialog
@@ -1583,7 +1790,19 @@ class Dialogs
    */
   public static boolean confirm(Shell parentShell, String title, String message, String yesText, String noText)
   {
-    return confirm(parentShell,title,message,yesText,noText,true);
+    return confirm(parentShell,title,(BooleanFieldUpdater)null,message,yesText,noText);
+  }
+
+  /** confirmation dialog
+   * @param parentShell parent shell
+   * @param title title string
+   * @param showAgainFieldFlag show again field updater or null
+   * @param message confirmation message
+   * @return value
+   */
+  public static boolean confirm(Shell parentShell, String title, BooleanFieldUpdater showAgainFieldFlag, String message, boolean defaultValue)
+  {
+    return confirm(parentShell,title,showAgainFieldFlag,message,"Yes","No",defaultValue);
   }
 
   /** confirmation dialog
@@ -1594,7 +1813,19 @@ class Dialogs
    */
   public static boolean confirm(Shell parentShell, String title, String message, boolean defaultValue)
   {
-    return confirm(parentShell,title,message,"Yes","No",defaultValue);
+    return confirm(parentShell,title,(BooleanFieldUpdater)null,message,defaultValue);
+  }
+
+  /** confirmation dialog
+   * @param parentShell parent shell
+   * @param title title string
+   * @param showAgainFieldFlag show again field updater or null
+   * @param message confirmation message
+   * @return value
+   */
+  public static boolean confirm(Shell parentShell, String title, BooleanFieldUpdater showAgainFieldFlag, String message)
+  {
+    return confirm(parentShell,title,showAgainFieldFlag,message,"Yes","No",false);
   }
 
   /** confirmation dialog
@@ -1605,7 +1836,18 @@ class Dialogs
    */
   public static boolean confirm(Shell parentShell, String title, String message)
   {
-    return confirm(parentShell,title,message,"Yes","No",false);
+    return confirm(parentShell,title,(BooleanFieldUpdater)null,message);
+  }
+
+  /** confirmation dialog
+   * @param parentShell parent shell
+   * @param showAgainFieldFlag show again field updater or null
+   * @param message confirmation message
+   * @return value
+   */
+  public static boolean confirm(Shell parentShell, BooleanFieldUpdater showAgainFieldFlag, String message, boolean defaultValue)
+  {
+    return confirm(parentShell,"Confirmation",showAgainFieldFlag,message,defaultValue);
   }
 
   /** confirmation dialog
@@ -1615,7 +1857,18 @@ class Dialogs
    */
   public static boolean confirm(Shell parentShell, String message, boolean defaultValue)
   {
-    return confirm(parentShell,"Confirmation",message,"Yes","No",defaultValue);
+    return confirm(parentShell,(BooleanFieldUpdater)null,message,defaultValue);
+  }
+
+  /** confirmation dialog
+   * @param parentShell parent shell
+   * @param showAgainFieldFlag show again field updater or null
+   * @param message confirmation message
+   * @return value
+   */
+  public static boolean confirm(Shell parentShell, BooleanFieldUpdater showAgainFieldFlag, String message)
+  {
+    return confirm(parentShell,showAgainFieldFlag,message,false);
   }
 
   /** confirmation dialog
@@ -1625,7 +1878,23 @@ class Dialogs
    */
   public static boolean confirm(Shell parentShell, String message)
   {
-    return confirm(parentShell,"Confirmation",message,"Yes","No",false);
+    return confirm(parentShell,(BooleanFieldUpdater)null,message);
+  }
+
+  /** confirmation error dialog
+   * @param parentShell parent shell
+   * @param title title string
+   * @param showAgainFieldFlag show again field updater or null
+   * @param message confirmation message
+   * @param yesText yes-text
+   * @param noText no-text
+   * @return value
+   */
+  public static boolean confirmError(Shell parentShell, String title, BooleanFieldUpdater showAgainFieldFlag, String message, String yesText, String noText)
+  {
+    final Image IMAGE = Widgets.loadImage(parentShell.getDisplay(),"error.png");
+
+    return confirm(parentShell,title,IMAGE,message,yesText,noText);
   }
 
   /** confirmation error dialog
@@ -1638,9 +1907,7 @@ class Dialogs
    */
   public static boolean confirmError(Shell parentShell, String title, String message, String yesText, String noText)
   {
-    final Image IMAGE = Widgets.loadImage(parentShell.getDisplay(),"error.png");
-
-    return confirm(parentShell,title,IMAGE,message,yesText,noText);
+    return confirmError(parentShell,title,(BooleanFieldUpdater)null,message,yesText,noText);
   }
 
   /** select dialog
@@ -2737,12 +3004,144 @@ class Dialogs
     return string(parentShell,title,text,"");
   }
 
+  /** simple integer dialog
+   * @param parentShell parent shell
+   * @param title title string
+   * @param text text before input element
+   * @param value value to edit
+   * @param minValue,maxValue min./max. value
+   * @param okText OK button text
+   * @param cancelText cancel button text
+   * @param toolTipText tooltip text (can be null)
+   * @return value or null on cancel
+   */
+  public static Integer integer(Shell parentShell, String title, String text, int value, int minValue, int maxValue, String okText, String cancelText, String toolTipText)
+  {
+    int             row;
+    Composite       composite;
+    Label           label;
+    Button          button;
+
+    if (!parentShell.isDisposed())
+    {
+      final String[] result = new String[1];
+
+      final Shell dialog = openModal(parentShell,title,100,SWT.DEFAULT);
+      dialog.setLayout(new TableLayout(new double[]{1.0,0.0},1.0));
+
+      // string
+      final Spinner widgetInteger;
+      final Button  widgetOkButton;
+      composite = new Composite(dialog,SWT.NONE);
+      composite.setLayout(new TableLayout(null,new double[]{0.0,1.0},4));
+      composite.setLayoutData(new TableLayoutData(0,0,TableLayoutData.WE));
+      {
+        int column = 0;
+        if (text != null)
+        {
+          label = new Label(composite,SWT.LEFT);
+          label.setText(text);
+          label.setLayoutData(new TableLayoutData(0,column,TableLayoutData.W));
+          column++;
+        }
+        widgetInteger = new Spinner(composite,SWT.RIGHT|SWT.BORDER);
+        widgetInteger.setMinimum(minValue);
+        widgetInteger.setMaximum(maxValue);
+        widgetInteger.setSelection(value);
+        widgetInteger.setLayoutData(new TableLayoutData(0,column,TableLayoutData.WE,0,0,0,0,300,SWT.DEFAULT,SWT.DEFAULT,SWT.DEFAULT));
+        if (toolTipText != null) widgetInteger.setToolTipText(toolTipText);
+        column++;
+      }
+
+      // buttons
+      composite = new Composite(dialog,SWT.NONE);
+      composite.setLayout(new TableLayout(0.0,1.0));
+      composite.setLayoutData(new TableLayoutData(1,0,TableLayoutData.WE,0,0,4));
+      {
+        widgetOkButton = new Button(composite,SWT.CENTER);
+        widgetOkButton.setText(okText);
+        widgetOkButton.setLayoutData(new TableLayoutData(0,0,TableLayoutData.W,0,0,0,0,SWT.DEFAULT,SWT.DEFAULT,60,SWT.DEFAULT));
+        widgetOkButton.addSelectionListener(new SelectionListener()
+        {
+          public void widgetDefaultSelected(SelectionEvent selectionEvent)
+          {
+          }
+          public void widgetSelected(SelectionEvent selectionEvent)
+          {
+            close(dialog,new Integer(widgetInteger.getSelection()));
+          }
+        });
+
+        button = new Button(composite,SWT.CENTER);
+        button.setText(cancelText);
+        button.setLayoutData(new TableLayoutData(0,1,TableLayoutData.E,0,0,0,0,SWT.DEFAULT,SWT.DEFAULT,60,SWT.DEFAULT));
+        button.addSelectionListener(new SelectionListener()
+        {
+          public void widgetDefaultSelected(SelectionEvent selectionEvent)
+          {
+          }
+          public void widgetSelected(SelectionEvent selectionEvent)
+          {
+            close(dialog,null);
+          }
+        });
+      }
+
+      // install handlers
+      widgetInteger.addSelectionListener(new SelectionListener()
+      {
+        public void widgetDefaultSelected(SelectionEvent selectionEvent)
+        {
+          widgetOkButton.setFocus();
+        }
+        public void widgetSelected(SelectionEvent selectionEvent)
+        {
+        }
+      });
+
+      widgetInteger.setFocus();
+      return (Integer)run(dialog,null);
+    }
+    else
+    {
+      return null;
+    }
+  }
+
+  /** simple integer dialog
+   * @param parentShell parent shell
+   * @param title title string
+   * @param text text before input element
+   * @param value value to edit
+   * @param minValue,maxValue min./max. value
+   * @param okText OK button text
+   * @param cancelText cancel button text
+   * @return value or null on cancel
+   */
+  public static Integer integer(Shell parentShell, String title, String text, int value, int minValue, int maxValue, String okText, String cancelText)
+  {
+    return integer(parentShell,title,text,value,minValue,maxValue,okText,cancelText,null);
+  }
+
+  /** simple integer dialog
+   * @param parentShell parent shell
+   * @param title title string
+   * @param text text before input element
+   * @param value value to edit
+   * @param minValue,maxValue min./max. value
+   * @return value or null on cancel
+   */
+  public static Integer integer(Shell parentShell, String title, String text, int value, int minValue, int maxValue)
+  {
+    return integer(parentShell,title,text,value,minValue,maxValue,"OK","Cancel");
+  }
+
   /** open simple busy dialog
    * @param parentShell parent shell
    * @param title title text
    * @param message info message
-   * @return simple busy dialog
    * @param abortButton true for abort-button, false otherwise
+   * @return simple busy dialog
    */
   public static SimpleBusyDialog openSimpleBusy(Shell parentShell, String title, String message, boolean abortButton)
   {
