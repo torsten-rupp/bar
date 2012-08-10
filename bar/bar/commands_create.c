@@ -2169,7 +2169,7 @@ LOCAL void storageInfoIncrement(CreateInfo *createInfo, uint64 size)
 
   assert(createInfo != NULL);
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->storageInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->storageInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,SEMAPHORE_WAIT_FOREVER)
   {
     createInfo->storageInfo.count += 1;
     createInfo->storageInfo.bytes += size;
@@ -2192,7 +2192,7 @@ LOCAL void storageInfoDecrement(CreateInfo *createInfo, uint64 size)
 
   assert(createInfo != NULL);
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->storageInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->storageInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,SEMAPHORE_WAIT_FOREVER)
   {
     assert(createInfo->storageInfo.count > 0);
     assert(createInfo->storageInfo.bytes >= size);
@@ -2270,12 +2270,14 @@ LOCAL Errors storeArchiveFile(void           *userData,
   // wait for space in temporary directory
   if (globalOptions.maxTmpSize > 0)
   {
-    SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->storageInfoLock,SEMAPHORE_LOCK_TYPE_READ)
+    SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->storageInfoLock,SEMAPHORE_LOCK_TYPE_READ,SEMAPHORE_WAIT_FOREVER)
     {
       while (   (createInfo->storageInfo.count > 2)                           // more than 2 archives are waiting
-             && (createInfo->storageInfo.bytes > globalOptions.maxTmpSize))   // temporary space above limit is used
+             && (createInfo->storageInfo.bytes > globalOptions.maxTmpSize)    // temporary space above limit is used
+             && ((createInfo->requestedAbortFlag == NULL) || !(*createInfo->requestedAbortFlag))
+            )
       {
-        Semaphore_waitModified(&createInfo->storageInfoLock);
+        Semaphore_waitModified(&createInfo->storageInfoLock,SEMAPHORE_WAIT_FOREVER);
       }
     }
   }
@@ -2300,6 +2302,8 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
 
   byte                       *buffer;
   String                     storageName;
+  StorageTypes               storageType;
+  String                     hostName,loginName,deviceName,fileName;
   String                     printableStorageName;
   bool                       abortFlag;
   StorageMsg                 storageMsg;
@@ -2310,7 +2314,6 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
   ulong                      bufferLength;
   String                     pattern;
   String                     storagePath;
-  String                     fileName;
   int64                      oldStorageId;
   StorageDirectoryListHandle storageDirectoryListHandle;
 
@@ -2323,6 +2326,10 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
     HALT_INSUFFICIENT_MEMORY();
   }
   storageName          = String_new();
+  hostName             = String_new();
+  loginName            = String_new();
+  deviceName           = String_new();
+  fileName             = String_new();
   printableStorageName = String_new();
 
   // initial pre-processing
@@ -2432,9 +2439,10 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
             && !createInfo->jobOptions->noStorageFlag
            )
         {
+          // set database storage name
           error = Index_update(indexDatabaseHandle,
                                storageMsg.storageId,
-                               printableStorageName,
+                               storageName,
                                0LL
                               );
           if (error != ERROR_NONE)
@@ -2633,24 +2641,29 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
             // delete old indizes for same storage file
             if (createInfo->failError == ERROR_NONE)
             {
-              while (Index_findByName(indexDatabaseHandle,
-                                      printableStorageName,
-                                      &oldStorageId,
-                                      NULL,
-                                      NULL
-                                     )
+              while (   Index_findByName(indexDatabaseHandle,
+                                         storageType,
+                                         hostName,
+                                         loginName,
+                                         deviceName,
+                                         fileName,
+                                         &oldStorageId,
+                                         NULL,
+                                         NULL
+                                        )
+                     && (oldStorageId != DATABASE_ID_NONE)
                     )
               {
-                Index_delete(indexDatabaseHandle,oldStorageId);
-              }
-              while ((error == ERROR_NONE) && (oldStorageId != DATABASE_ID_NONE));
-              if (error != ERROR_NONE)
-              {
-                printError("Cannot update index for storage '%s' (error: %s)!\n",
-                           String_cString(printableStorageName),
-                           Errors_getText(error)
-                          );
-                createInfo->failError = error;
+                error = Index_delete(indexDatabaseHandle,oldStorageId);
+                if (error != ERROR_NONE)
+                {
+                  printError("Cannot delete old index for storage '%s' (error: %s)!\n",
+                             String_cString(printableStorageName),
+                             Errors_getText(error)
+                            );
+                  createInfo->failError = error;
+                  break;
+                }
               }
             }
 
@@ -2846,6 +2859,10 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
 
   // free resoures
   String_delete(printableStorageName);
+  String_delete(fileName);
+  String_delete(deviceName);
+  String_delete(loginName);
+  String_delete(hostName);
   String_delete(storageName);
   free(buffer);
 
