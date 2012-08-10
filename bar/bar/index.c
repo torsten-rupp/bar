@@ -345,11 +345,11 @@ bool Index_findById(DatabaseHandle *databaseHandle,
 }
 
 bool Index_findByName(DatabaseHandle *databaseHandle,
-                      StorageTypes   findStorageType,
-                      const String   findHostName,
-                      const String   findLoginName,
-                      const String   findDeviceName,
-                      const String   findFileName,
+                      StorageTypes   storageType,
+                      const String   hostName,
+                      const String   loginName,
+                      const String   deviceName,
+                      const String   fileName,
                       int64          *storageId,
                       IndexStates    *indexState,
                       uint64         *lastChecked
@@ -358,8 +358,8 @@ bool Index_findByName(DatabaseHandle *databaseHandle,
   DatabaseQueryHandle databaseQueryHandle;
   Errors              error;
   String              storageName;
-  String              storageSpecifier;
-  String              hostName,loginName,deviceName,fileName;
+  StorageSpecifier    storageSpecifier;
+  String              storageFileName;
   bool                foundFlag;
 
   assert(storageId != NULL);
@@ -381,12 +381,10 @@ bool Index_findByName(DatabaseHandle *databaseHandle,
     return FALSE;
   }
 
-  storageName = String_new();
-  hostName    = String_new();
-  loginName   = String_new();
-  deviceName  = String_new();
-  fileName    = String_new();
-  foundFlag   = FALSE;
+  storageName     = String_new();
+  Storage_initSpecifier(&storageSpecifier);
+  storageFileName = String_new();
+  foundFlag       = FALSE;
   while (   Database_getNextRow(&databaseQueryHandle,
                                 "%lld %S %d %llu",
                                  storageId,
@@ -397,66 +395,63 @@ bool Index_findByName(DatabaseHandle *databaseHandle,
          && !foundFlag
         )
   {
-    switch (Storage_parseName(storageName,NULL,hostName,NULL,loginName,NULL,deviceName,fileName))
+    if (Storage_parseName(storageName,&storageSpecifier,storageFileName) == ERROR_NONE)
     {
-      case STORAGE_TYPE_FILESYSTEM:
-        foundFlag =   (findStorageType == STORAGE_TYPE_FILESYSTEM)
-                    && ((findFileName == NULL) || String_equals(fileName,findFileName));
-        break;
-      case STORAGE_TYPE_FTP:
-        foundFlag =    ((findStorageType == STORAGE_TYPE_UNKNOWN) || (findStorageType == STORAGE_TYPE_FTP))
-                    && ((findHostName  == NULL) || String_equals(hostName, findHostName ))
-                    && ((findLoginName == NULL) || String_equals(loginName,findLoginName))
-                    && ((findFileName  == NULL) || String_equals(fileName, findFileName ));
-        break;
-      case STORAGE_TYPE_SSH:
-      case STORAGE_TYPE_SCP:
-        foundFlag =    ((findStorageType == STORAGE_TYPE_UNKNOWN) || (findStorageType == STORAGE_TYPE_SSH) || (findStorageType == STORAGE_TYPE_SCP))
-                    && ((findHostName  == NULL) || String_equals(hostName, findHostName ))
-                    && ((findLoginName == NULL) || String_equals(loginName,findLoginName))
-                    && ((findFileName  == NULL) || String_equals(fileName, findFileName ));
-        break;
-      case STORAGE_TYPE_SFTP:
-        foundFlag =    ((findStorageType == STORAGE_TYPE_UNKNOWN) || (findStorageType == STORAGE_TYPE_SFTP))
-                    && ((findHostName  == NULL) || String_equals(hostName, findHostName ))
-                    && ((findLoginName == NULL) || String_equals(loginName,findLoginName))
-                    && ((findFileName  == NULL) || String_equals(fileName, findFileName ));
-        break;
-      case STORAGE_TYPE_CD:
-        foundFlag =    ((findStorageType == STORAGE_TYPE_UNKNOWN) || (findStorageType == STORAGE_TYPE_CD))
-                    && ((findHostName  == NULL) || String_equals(hostName, findHostName ))
-                    && ((findLoginName == NULL) || String_equals(loginName,findLoginName))
-                    && ((findFileName  == NULL) || String_equals(fileName, findFileName ));
-        break;
-      case STORAGE_TYPE_DVD:
-        foundFlag =    ((findStorageType == STORAGE_TYPE_UNKNOWN) || (findStorageType == STORAGE_TYPE_DVD))
-                    && ((findHostName  == NULL) || String_equals(hostName, findHostName ))
-                    && ((findLoginName == NULL) || String_equals(loginName,findLoginName))
-                    && ((findFileName  == NULL) || String_equals(fileName, findFileName ));
-        break;
-      case STORAGE_TYPE_BD:
-        foundFlag =    ((findStorageType == STORAGE_TYPE_UNKNOWN) || (findStorageType == STORAGE_TYPE_BD))
-                    && ((findHostName  == NULL) || String_equals(hostName, findHostName ))
-                    && ((findLoginName == NULL) || String_equals(loginName,findLoginName))
-                    && ((findFileName  == NULL) || String_equals(fileName, findFileName ));
-        break;
-      case STORAGE_TYPE_DEVICE:
-        foundFlag =    ((findStorageType == STORAGE_TYPE_UNKNOWN) || (findStorageType == STORAGE_TYPE_DEVICE))
-                    && ((findDeviceName == NULL) || String_equals(deviceName,findDeviceName))
-                    && ((findFileName   == NULL) || String_equals(fileName,  findFileName  ));
-        break;
-      #ifndef NDEBUG
-        default:
-          HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-          break; /* not reached */
-      #endif /* NDEBUG */
+      switch (storageSpecifier.type)
+      {
+        case STORAGE_TYPE_FILESYSTEM:
+          foundFlag =     ((storageType == STORAGE_TYPE_UNKNOWN) || (storageType == STORAGE_TYPE_FILESYSTEM))
+                      && ((fileName == NULL) || String_equals(fileName,storageFileName));
+          break;
+        case STORAGE_TYPE_FTP:
+          foundFlag =    ((storageType == STORAGE_TYPE_UNKNOWN) || (storageType == STORAGE_TYPE_FTP))
+                      && ((hostName  == NULL) || String_equals(hostName, storageSpecifier.hostName ))
+                      && ((loginName == NULL) || String_equals(loginName,storageSpecifier.loginName))
+                      && ((fileName  == NULL) || String_equals(fileName, storageFileName           ));
+          break;
+        case STORAGE_TYPE_SSH:
+        case STORAGE_TYPE_SCP:
+          foundFlag =    ((storageType == STORAGE_TYPE_UNKNOWN) || (storageType == STORAGE_TYPE_SSH) || (storageType == STORAGE_TYPE_SCP))
+                      && ((hostName  == NULL) || String_equals(hostName, storageSpecifier.hostName ))
+                      && ((loginName == NULL) || String_equals(loginName,storageSpecifier.loginName))
+                      && ((fileName  == NULL) || String_equals(fileName, storageFileName           ));
+          break;
+        case STORAGE_TYPE_SFTP:
+          foundFlag =    ((storageType == STORAGE_TYPE_UNKNOWN) || (storageType == STORAGE_TYPE_SFTP))
+                      && ((hostName  == NULL) || String_equals(hostName, storageSpecifier.hostName ))
+                      && ((loginName == NULL) || String_equals(loginName,storageSpecifier.loginName))
+                      && ((fileName  == NULL) || String_equals(fileName, storageFileName           ));
+          break;
+        case STORAGE_TYPE_CD:
+          foundFlag =    ((storageType == STORAGE_TYPE_UNKNOWN) || (storageType == STORAGE_TYPE_CD))
+                      && ((deviceName == NULL) || String_equals(deviceName,storageSpecifier.deviceName))
+                      && ((fileName   == NULL) || String_equals(fileName,  storageFileName            ));
+          break;
+        case STORAGE_TYPE_DVD:
+          foundFlag =    ((storageType == STORAGE_TYPE_UNKNOWN) || (storageType == STORAGE_TYPE_DVD))
+                      && ((deviceName == NULL) || String_equals(deviceName,storageSpecifier.deviceName))
+                      && ((fileName   == NULL) || String_equals(fileName,  storageFileName            ));
+          break;
+        case STORAGE_TYPE_BD:
+          foundFlag =    ((storageType == STORAGE_TYPE_UNKNOWN) || (storageType == STORAGE_TYPE_BD))
+                      && ((deviceName == NULL) || String_equals(deviceName,storageSpecifier.deviceName))
+                      && ((fileName   == NULL) || String_equals(fileName,  storageFileName            ));
+          break;
+        case STORAGE_TYPE_DEVICE:
+          foundFlag =    ((storageType == STORAGE_TYPE_UNKNOWN) || (storageType == STORAGE_TYPE_DEVICE))
+                      && ((deviceName == NULL) || String_equals(deviceName,storageSpecifier.deviceName))
+                      && ((fileName   == NULL) || String_equals(fileName,  storageFileName            ));
+          break;
+        #ifndef NDEBUG
+          default:
+            HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+            break; /* not reached */
+        #endif /* NDEBUG */
+      }
     }
-
   }
-  String_delete(fileName);
-  String_delete(deviceName);
-  String_delete(loginName);
-  String_delete(hostName);
+  String_delete(storageFileName);
+  Storage_doneSpecifier(&storageSpecifier);
   String_delete(storageName);
 
   Database_finalize(&databaseQueryHandle);
