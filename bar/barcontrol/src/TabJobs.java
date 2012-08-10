@@ -6224,6 +6224,7 @@ Dprintf.dprintf("name=%s %s",name,includeHashMap.containsKey(name));
       {
         widgetPattern = Widgets.newText(subComposite);
         Widgets.layout(widgetPattern,0,0,TableLayoutData.WE);
+        widgetPattern.setToolTipText("Include pattern. Use * and ? as wildcards.");
 
         button = Widgets.newButton(subComposite,IMAGE_DIRECTORY);
         Widgets.layout(button,0,1,TableLayoutData.DEFAULT);
@@ -6363,6 +6364,7 @@ throw new Error("NYI");
 
       widgetPattern = Widgets.newText(composite);
       Widgets.layout(widgetPattern,0,1,TableLayoutData.WE);
+      widgetPattern.setToolTipText("Exclude pattern. Use * and ? as wildcards.");
 
       button = Widgets.newButton(composite,IMAGE_DIRECTORY);
       Widgets.layout(button,0,2,TableLayoutData.DEFAULT);
