@@ -1561,14 +1561,15 @@ Errors Command_list(StringList                      *storageNameList,
                     void                            *archiveGetCryptPasswordUserData
                    )
 {
-  String       storageName;
-  String       printableStorageName;
-  String       storageSpecifier;
-  String       archiveFileName;
-  bool         printedInfoFlag;
-  ulong        fileCount;
-  Errors       failError;
-  bool         retryFlag;
+  String           storageName;
+  String           printableStorageName;
+  StorageSpecifier storageSpecifier;
+  String           storageFileName;
+  bool             printedInfoFlag;
+  ulong            fileCount;
+  Errors           failError;
+  Errors           error;
+  bool             retryFlag;
 bool         remoteBarFlag;
 //  SSHSocketList sshSocketList;
 //  SSHSocketNode *sshSocketNode;
@@ -1586,8 +1587,8 @@ remoteBarFlag=FALSE;
   List_init(&archiveContentList);
   storageName          = String_new();
   printableStorageName = String_new();
-  storageSpecifier     = String_new();
-  archiveFileName      = String_new();
+  Storage_initSpecifier(&storageSpecifier);
+  storageFileName      = String_new();
 
   // list archive content
   failError = ERROR_NONE;
@@ -1598,7 +1599,18 @@ remoteBarFlag=FALSE;
     printedInfoFlag = FALSE;
     fileCount       = 0L;
 
-    switch (Storage_parseName(storageName,storageSpecifier,archiveFileName))
+    error = Storage_parseName(storageName,&storageSpecifier,storageFileName);
+    if (error != ERROR_NONE)
+    {
+      printError("Cannot open storage '%s' (error: %s)!\n",
+                 String_cString(printableStorageName),
+                 Errors_getText(error)
+                );
+      if (failError == ERROR_NONE) failError = error;
+      continue;
+    }
+
+    switch (storageSpecifier.type)
     {
       case STORAGE_TYPE_FILESYSTEM:
       case STORAGE_TYPE_FTP:
@@ -1607,7 +1619,6 @@ remoteBarFlag=FALSE;
       case STORAGE_TYPE_DVD:
       case STORAGE_TYPE_BD:
         {
-          Errors            error;
           ArchiveInfo       archiveInfo;
           ArchiveEntryInfo  archiveEntryInfo;
           ArchiveEntryTypes archiveEntryType;
@@ -2195,9 +2206,6 @@ remoteBarFlag=FALSE;
       case STORAGE_TYPE_SSH:
       case STORAGE_TYPE_SCP:
         {
-          String               loginName;
-          String               hostName;
-          uint                 hostPort;
           SSHServer            sshServer;
           String               s;
           Password             sshPassword;
@@ -2211,40 +2219,20 @@ remoteBarFlag=FALSE;
           String               arguments;
           int                  exitcode;
 
-          // parse storage string
-          loginName = String_new();
-          hostName  = String_new();
-          hostPort  = 0;
-          if (!Storage_parseSSHSpecifier(storageSpecifier,
-                                         loginName,
-                                         hostName,
-                                         &hostPort
-                                        )
-             )
-          {
-            String_delete(hostName);
-            String_delete(loginName);
-            printError("Cannot parse storage name '%s'!\n",
-                       String_cString(storageSpecifier)
-                      );
-            if (failError == ERROR_NONE) failError = ERROR_INIT_TLS;
-            break;
-          }
-
           // start remote BAR via SSH (if not already started)
           if (!remoteBarFlag)
           {
             // get SSH server settings
-            getSSHServerSettings(hostName,jobOptions,&sshServer);
-            if (String_isEmpty(loginName)) String_set(loginName,sshServer.loginName);
-            if (hostPort == 0) hostPort = sshServer.port;
+            getSSHServerSettings(storageSpecifier.hostName,jobOptions,&sshServer);
+            if (storageSpecifier.hostPort == 0) storageSpecifier.hostPort = sshServer.port;
+            if (String_isEmpty(storageSpecifier.loginName)) String_set(storageSpecifier.loginName,sshServer.loginName);
 
             // connect to SSH server
             error = Network_connect(&socketHandle,
                                     SOCKET_TYPE_SSH,
-                                    hostName,
-                                    hostPort,
-                                    loginName,
+                                    storageSpecifier.hostName,
+                                    storageSpecifier.hostPort,
+                                    storageSpecifier.loginName,
                                     sshServer.password,
                                     sshServer.publicKeyFileName,
                                     sshServer.privateKeyFileName,
@@ -2255,16 +2243,16 @@ remoteBarFlag=FALSE;
               Password_init(&sshPassword);
 
               s = String_newCString("SSH login password for ");
-              if (!String_isEmpty(loginName)) String_format(s,"%S@",loginName);
-              String_format(s,"%S",hostName);
+              if (!String_isEmpty(storageSpecifier.loginName)) String_format(s,"%S@",storageSpecifier.loginName);
+              String_format(s,"%S",storageSpecifier.hostName);
               Password_input(&sshPassword,String_cString(s),PASSWORD_INPUT_MODE_ANY);
               String_delete(s);
 
               error = Network_connect(&socketHandle,
                                       SOCKET_TYPE_SSH,
-                                      hostName,
-                                      hostPort,
-                                      loginName,
+                                      storageSpecifier.hostName,
+                                      storageSpecifier.hostPort,
+                                      storageSpecifier.loginName,
                                       &sshPassword,
                                       sshServer.publicKeyFileName,
                                       sshServer.privateKeyFileName,
@@ -2276,12 +2264,10 @@ remoteBarFlag=FALSE;
             if (error != ERROR_NONE)
             {
               printError("Cannot connect to '%s:%d' (error: %s)!\n",
-                         String_cString(hostName),
-                         hostPort,
+                         String_cString(storageSpecifier.hostName),
+                         storageSpecifier.hostPort,
                          Errors_getText(error)
                         );
-              String_delete(hostName);
-              String_delete(loginName);
               if (failError == ERROR_NONE) failError = error;
               break;
             }
@@ -2303,8 +2289,6 @@ remoteBarFlag=FALSE;
                        Errors_getText(error)
                       );
             String_delete(line);
-            String_delete(hostName);
-            String_delete(loginName);
             if (failError == ERROR_NONE) failError = error;
             break;
           }
@@ -2314,8 +2298,6 @@ remoteBarFlag=FALSE;
             exitcode = Network_terminate(&networkExecuteHandle);
             printError("No response from remote BAR program (error: %s, exitcode %d)!\n",!String_isEmpty(line)?String_cString(line):"unknown",exitcode);
             String_delete(line);
-            String_delete(hostName);
-            String_delete(loginName);
             if (failError == ERROR_NONE) failError = ERROR_NO_RESPONSE;
             break;
           }
@@ -2326,8 +2308,6 @@ remoteBarFlag=FALSE;
             exitcode = Network_terminate(&networkExecuteHandle);
             printError("Invalid response from remote BAR program (error: %s, exitcode %d)!\n",!String_isEmpty(line)?String_cString(line):"unknown",exitcode);
             String_delete(line);
-            String_delete(hostName);
-            String_delete(loginName);
             if (failError == ERROR_NONE) failError = ERROR_INVALID_RESPONSE;
             break;
           }
@@ -2348,7 +2328,7 @@ remoteBarFlag=FALSE;
             }
 
             // send list archive command
-            String_format(String_clear(line),"2 ARCHIVE_LIST %S",archiveFileName);
+            String_format(String_clear(line),"2 ARCHIVE_LIST %S",storageFileName);
             Network_executeWriteLine(&networkExecuteHandle,line);
             Network_executeSendEOF(&networkExecuteHandle);
 
@@ -2891,10 +2871,6 @@ fprintf(stderr,"%s, %d: type=#%s# arguments=%s\n",__FILE__,__LINE__,type,String_
             printError("Remote BAR program return exitcode %d!\n",exitcode);
             if (failError == ERROR_NONE) failError = ERROR_NETWORK_EXECUTE_FAIL;
           }
-
-          // free resources
-          String_delete(hostName);
-          String_delete(loginName);
         }
         break;
       case STORAGE_TYPE_DEVICE:
@@ -2922,8 +2898,8 @@ fprintf(stderr,"%s, %d: type=#%s# arguments=%s\n",__FILE__,__LINE__,type,String_
   }
 
   // free resources
-  String_delete(archiveFileName);
-  String_delete(storageSpecifier);
+  String_delete(storageFileName);
+  Storage_doneSpecifier(&storageSpecifier);
   String_delete(printableStorageName);
   String_delete(storageName);
   List_done(&archiveContentList,(ListNodeFreeFunction)freeArchiveContentNode,NULL);
