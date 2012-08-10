@@ -38,7 +38,7 @@ endif
 LD                  = @CC@
 LD_FLAGS            = @LD_FLAGS@
 LD_LIBRARY_PATHS    = @LIBRARY_PATHS@
-LD_LIBRARIES        = @LIBRARIES@ pthread c m
+LD_LIBRARIES        = @LIBRARIES@ pthread c m rt
 LD_STATIC_LIBRARIES = @STATIC_LIBRARIES@
 LD_STATIC_PREFIX    = -Wl,-Bstatic
 LD_DYNAMIC_PREFIX   = -Wl,-Bdynamic
