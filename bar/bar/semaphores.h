@@ -23,9 +23,11 @@
 /****************** Conditional compilation switches *******************/
 
 /***************************** Constants *******************************/
+#define SEMAPHORE_WAIT_FOREVER -1
 
 /***************************** Datatypes *******************************/
 
+// lock types
 typedef enum
 {
   SEMAPHORE_LOCK_TYPE_NONE,
@@ -69,6 +71,7 @@ typedef struct Semaphore
   #endif /* not NDEBUG */
 } Semaphore;
 
+// semaphore lock flag variable
 typedef bool SemaphoreLock;
 
 /***************************** Variables *******************************/
@@ -81,6 +84,7 @@ typedef bool SemaphoreLock;
 * Input  : semaphoreLock     - lock flag variable (SemaphoreLock)
 *          semaphore         - semaphore
 *          semaphoreLockType - lock type; see SemaphoreLockTypes
+*          timeout           - timeout [ms] or SEMAPORE_WAIT_FOREVER
 * Output : -
 * Return : -
 * Notes  : usage:
@@ -91,22 +95,22 @@ typedef bool SemaphoreLock;
 *            }
 \***********************************************************************/
 
-#define SEMAPHORE_LOCKED_DO(semaphoreLock,semaphore,semaphoreLockType) \
-  for (semaphoreLock = TRUE, Semaphore_lock(semaphore,semaphoreLockType); \
+#define SEMAPHORE_LOCKED_DO(semaphoreLock,semaphore,semaphoreLockType,timeout) \
+  for (semaphoreLock = Semaphore_lock(semaphore,semaphoreLockType,timeout); \
        semaphoreLock; \
        Semaphore_unlock(semaphore), semaphoreLock = FALSE \
       )
 
 #ifndef NDEBUG
-  /* 2 macros necessary, because of "string"-construction */
+  // 2 macros necessary, because of "string"-construction
   #define _SEMAPHORE_NAME(variable) _SEMAPHORE_NAME_INTERN(variable)
   #define _SEMAPHORE_NAME_INTERN(variable) #variable
 
   #define Semaphore_init(semaphore) __Semaphore_init(_SEMAPHORE_NAME(semaphore),semaphore)
   #define Semaphore_new(semaphore) __Semaphore_new(_SEMAPHORE_NAME(semaphore),semaphore)
-  #define Semaphore_lock(semaphore,semaphoreLockType) __Semaphore_lock(__FILE__,__LINE__,semaphore,semaphoreLockType)
+  #define Semaphore_lock(semaphore,semaphoreLockType,timeout) __Semaphore_lock(__FILE__,__LINE__,semaphore,semaphoreLockType,timeout)
   #define Semaphore_unlock(semaphore) __Semaphore_unlock(__FILE__,__LINE__,semaphore)
-  #define Semaphore_waitModified(semaphore) __Semaphore_waitModified(__FILE__,__LINE__,semaphore)
+  #define Semaphore_waitModified(semaphore,timeout) __Semaphore_waitModified(__FILE__,__LINE__,semaphore,timeout)
 #endif /* not NDEBUG */
 
 /***************************** Forwards ********************************/
@@ -172,21 +176,25 @@ void Semaphore_delete(Semaphore *semaphore);
 /***********************************************************************\
 * Name   : Semaphore_lock
 * Purpose: lock semaphore
-* Input  : semaphore - semaphore
+* Input  : semaphore         - semaphore
+*          semaphoreLockType - lock type: READ, READ/WRITE
+*          timeout           - timeout [ms] or SEMAPHORE_WAIT_FOREVER
 * Output : -
-* Return : -
+* Return : TRUE if locked, FALSE on timeout
 * Notes  : -
 \***********************************************************************/
 
 #ifdef NDEBUG
-void Semaphore_lock(Semaphore          *semaphore,
-                    SemaphoreLockTypes semaphoreLockType
+bool Semaphore_lock(Semaphore          *semaphore,
+                    SemaphoreLockTypes semaphoreLockType,
+                    long               timeout
                    );
 #else /* not NDEBUG */
-void __Semaphore_lock(const char         *fileName,
+bool __Semaphore_lock(const char         *fileName,
                       ulong              lineNb,
                       Semaphore          *semaphore,
-                      SemaphoreLockTypes semaphoreLockType
+                      SemaphoreLockTypes semaphoreLockType,
+                      long               timeout
                      );
 #endif /* NDEBUG */
 
@@ -220,15 +228,22 @@ bool Semaphore_isLocked(Semaphore *semaphore);
 * Name   : Semaphore_waitModified
 * Purpose: wait until semaphore is modified
 * Input  : semaphore - semaphore
+*          timeout   - timeout [ms] or SEMAPHORE_WAIT_FOREVER
 * Output : -
-* Return : -
+* Return : TRUE if modified, FALSE on timeout
 * Notes  : -
 \***********************************************************************/
 
 #ifdef NDEBUG
-void Semaphore_waitModified(Semaphore *semaphore);
+bool Semaphore_waitModified(Semaphore *semaphore,
+                            long      timeout
+                           );
 #else /* not NDEBUG */
-void __Semaphore_waitModified(const char *fileName, ulong lineNb, Semaphore *semaphore);
+bool __Semaphore_waitModified(const char *fileName,
+                              ulong      lineNb,
+                              Semaphore  *semaphore,
+                              long       timeout
+                             );
 #endif /* NDEBUG */
 
 /***********************************************************************\

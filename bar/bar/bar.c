@@ -1008,7 +1008,7 @@ LOCAL void output(FILE *file, const String string)
   {
     if (File_isTerminal(file))
     {
-      SEMAPHORE_LOCKED_DO(semaphoreLock,&outputLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+      SEMAPHORE_LOCKED_DO(semaphoreLock,&outputLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,SEMAPHORE_WAIT_FOREVER)
       {
         // restore and output line
         if ((lastOutputLine != NULL) && (outputLine != lastOutputLine))
