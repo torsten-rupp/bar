@@ -2404,7 +2404,7 @@ void Archive_clearDecryptPasswords(void)
 {
   SemaphoreLock semaphoreLock;
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&decryptPasswordList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&decryptPasswordList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,SEMAPHORE_WAIT_FOREVER)
   {
     List_clear(&decryptPasswordList,(ListNodeFreeFunction)freePasswordNode,NULL);
   }
@@ -2424,7 +2424,7 @@ const Password *Archive_appendDecryptPassword(const Password *password)
   }
   passwordNode->password = Password_duplicate(password);
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&decryptPasswordList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&decryptPasswordList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,SEMAPHORE_WAIT_FOREVER)
   {
     List_append(&decryptPasswordList,passwordNode);
   }
