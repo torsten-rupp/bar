@@ -8,6 +8,8 @@
 *
 \***********************************************************************/
 
+#define __NETWORK_IMPLEMENATION__
+
 /****************************** Includes *******************************/
 #include "config.h"
 
@@ -559,16 +561,6 @@ int Network_getSocket(SocketHandle *socketHandle)
 
   return socketHandle->handle;
 }
-
-#ifdef HAVE_SSH2
-LIBSSH2_SESSION *Network_getSSHSession(SocketHandle *socketHandle)
-{
-  assert(socketHandle != NULL);
-  assert(socketHandle->type == SOCKET_TYPE_SSH);
-
-  return socketHandle->ssh2.session;
-}
-#endif /* HAVE_SSH2 */
 
 bool Network_eof(SocketHandle *socketHandle)
 {
