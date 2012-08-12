@@ -74,12 +74,6 @@
   extern "C" {
 #endif
 
-/*
-+--+--+--+--+--+--+--+--+--+--+
-|  |  |  |  |  |  |  |  |  |  |
-+--+--+--+--+--+--+--+--+--+--+
-*/
-
 /***********************************************************************\
 * Name   : debugRingBufferInit
 * Purpose: initialize debug functions
@@ -161,7 +155,6 @@ LOCAL void normalizeIn(RingBuffer *ringBuffer)
       && (ringBuffer->nextIn > ringBuffer->nextOut)
      )
   {
-//fprintf(stderr,"%s, %d: normalizeIn\n",__FILE__,__LINE__);
     /* non-contigous -> rearrange
 
        before:
@@ -221,7 +214,6 @@ LOCAL void normalizeOut(RingBuffer *ringBuffer)
       && (ringBuffer->nextIn < ringBuffer->nextOut)
      )
   {
-//fprintf(stderr,"%s, %d: normalizeOut\n",__FILE__,__LINE__);
     /* non-contigous -> rearrange
 
        before:
@@ -781,6 +773,43 @@ bool RingBuffer_move(RingBuffer *sourceRingBuffer, RingBuffer *destinationRingBu
   else
   {
     return FALSE;
+  }
+}
+
+void RingBuffer_discard(RingBuffer *ringBuffer, ulong n, RingBufferElementFreeFunction ringBufferElementFreeFunction, void *ringBufferElementFreeUserData)
+{
+  RINGBUFFER_CHECK_VALID(ringBuffer);
+
+  if (ringBuffer != NULL)
+  {
+    assert(ringBuffer->data != NULL);
+
+    // discard elements in ring buffer
+    if (ringBufferElementFreeFunction != NULL)
+    {
+      while (n > 0L)
+      {
+        ringBufferElementFreeFunction(ringBuffer->data+(ulong)ringBuffer->nextOut*(ulong)ringBuffer->elementSize,
+                                      ringBufferElementFreeUserData
+                                     );
+        ringBuffer->length--;
+        ringBuffer->nextOut = (ringBuffer->nextOut+1)%ringBuffer->size;
+
+        n--;
+      }
+    }
+    else
+    {
+      ringBuffer->length -= n;
+      ringBuffer->nextOut = (ringBuffer->nextOut+n)%ringBuffer->size;
+    }
+
+    // reset indizes if empty (optimization)
+    if (ringBuffer->nextOut == ringBuffer->nextIn)
+    {
+      ringBuffer->nextOut = 0L;
+      ringBuffer->nextIn  = 0L;
+    }
   }
 }
 

@@ -56,10 +56,11 @@ typedef char(*RingBufferElementIterateFunction)(void *userData, void *data);
 /***********************************************************************\
 * Name   : RINGBUFFER_INIT
 * Purpose: init new ring buffer with specific data type
-* Input  : type - data type
-*          size - size of ring buffer
+* Input  : ringBuffer - ring buffer variable
+*          type       - data type
+*          size       - size of ring buffer
 * Output : -
-* Return : ring buffer or NULL
+* Return : -
 * Notes  : -
 \***********************************************************************/
 
@@ -192,7 +193,8 @@ bool __RingBuffer_init(const char *__fileName__, ulong __lineNb__, RingBuffer *r
 * Name   : RingBuffer_done
 * Purpose: done ring buffer
 * Input  : ringBuffer                    - ring buffer to delete
-*          ringBufferElementFreeFunction - ring buffer element free function or NULL
+*          ringBufferElementFreeFunction - ring buffer element free
+*                                          function or NULL
 *          ringBufferElementFreeUserData - free function user data or NULL
 * Output : -
 * Return : -
@@ -225,7 +227,8 @@ RingBuffer* __RingBuffer_new(const char *__fileName__, ulong __lineNb__, uint el
 * Name   : RingBuffer_delete
 * Purpose: delete ring buffer
 * Input  : ringBuffer                    - ring buffer to delete
-*          ringBufferElementFreeFunction - ring buffer element free function or NULL
+*          ringBufferElementFreeFunction - ring buffer element free
+*                                          function or NULL
 *          ringBufferElementFreeUserData - free function user data or NULL
 * Output : -
 * Return : -
@@ -272,7 +275,8 @@ bool RingBuffer_resize(RingBuffer *ringBuffer, ulong newSize);
 * Name   : RingBuffer_clear
 * Purpose: clear ring buffer
 * Input  : ringBuffer                    - ring buffer to clear
-*          ringBufferElementFreeFunction - ring buffer element free function or NULL
+*          ringBufferElementFreeFunction - ring buffer element free
+*                                          function or NULL
 *          ringBufferElementFreeUserData - free function user data or NULL
 * Output : -
 * Return : -
@@ -397,6 +401,21 @@ void *RingBuffer_get(RingBuffer *ringBuffer, void *data, ulong n);
 \***********************************************************************/
 
 bool RingBuffer_move(RingBuffer *sourceRingBuffer, RingBuffer *destinationRingBuffer, ulong n);
+
+/***********************************************************************\
+* Name   : RingBuffer_discard
+* Purpose: discard elements in ring buffer
+* Input  : ringBuffer                    - ring buffer
+*          n                             - number of elements to discard
+*          ringBufferElementFreeFunction - ring buffer element free
+*                                          function or NULL
+*          ringBufferElementFreeUserData - free function user data or NULL
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void RingBuffer_discard(RingBuffer *ringBuffer, ulong n, RingBufferElementFreeFunction ringBufferElementFreeFunction, void *ringBufferElementFreeUserData);
 
 /***********************************************************************\
 * Name   : RingBuffer_cArrayIn
