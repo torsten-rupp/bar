@@ -2470,8 +2470,6 @@ void logPostProcess(void)
   // log post command for temporary log file
   if (logPostCommand != NULL)
   {
-    printInfo(2,"Log post process...");
-
     TEXT_MACRO_N_STRING(textMacros[0],"%file",tmpLogFileName);
 
     StringList_init(&stderrList);
@@ -2481,13 +2479,8 @@ void logPostProcess(void)
                                 (ExecuteIOFunction)executeIOlogPostProcess,
                                 &stderrList
                                );
-    if (error == ERROR_NONE)
+    if (error != ERROR_NONE)
     {
-      printInfo(2,"ok\n");
-    }
-    else
-    {
-      printInfo(2,"FAIL\n");
       printError("Cannot post-process log file (error: %s)\n",Errors_getText(error));
       STRINGLIST_ITERATE(&stderrList,stringNode,string)
       {
