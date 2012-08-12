@@ -241,37 +241,49 @@ class Command
    * @param timeout timeout [ms]
    * @return true if command completed, false otherwise
    */
-  public synchronized boolean waitCompleted(long timeout)
+  public boolean waitCompleted(long timeout)
   {
-    while (   !completedFlag
-           && (timeout != 0)
-          )
+    boolean timeoutFlag = false;
+    synchronized(this)
     {
-      if ((timeoutTimestamp == 0L) || (System.currentTimeMillis() < timeoutTimestamp))
+      while (   !completedFlag
+             && (timeout != 0)
+             && !timeoutFlag
+            )
       {
-        // wait for result
-        try
+        if ((timeoutTimestamp == 0L) || (System.currentTimeMillis() < timeoutTimestamp))
         {
-          if (timeout > 0)
+          // wait for result
+          try
           {
-            this.wait(timeout);
-            timeout = 0;
+            if (timeout > 0)
+            {
+              this.wait(timeout);
+              timeout = 0;
+            }
+            else
+            {
+              this.wait();
+            }
           }
-          else
+          catch (InterruptedException exception)
           {
-            this.wait();
+            /* ignored */
           }
         }
-        catch (InterruptedException exception)
+        else
         {
-          /* ignored */
+          // overall timeout (Note: do not handle here, because of syncronization)
+          timeoutFlag = true;
         }
       }
-      else
-      {
-        // overall timeout
-        timeout();
-      }
+    }
+
+    // check if timeout
+    if (timeoutFlag)
+    {
+Dprintf.dprintf("");
+      timeout();
     }
 
     return completedFlag;
