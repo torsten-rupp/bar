@@ -858,8 +858,8 @@ public class BARControl
     new Option("--abort",                      null,Options.Types.STRING,     "abortJobName"),
     new Option("--index-database-add",         null,Options.Types.STRING,     "indexDatabaseAddStorageName"),
     new Option("--index-database-remove",      null,Options.Types.STRING,     "indexDatabaseRemoveStorageName"),
-    new Option("--index-database-storage-list",null,Options.Types.STRING,     "indexDatabaseStorageListPattern"),
-    new Option("--index-database-entries-list",null,Options.Types.STRING,     "indexDatabaseEntriesListPattern"),
+    new Option("--index-database-storage-list","-a",Options.Types.STRING,     "indexDatabaseStorageListPattern"),
+    new Option("--index-database-entries-list","-e",Options.Types.STRING,     "indexDatabaseEntriesListPattern"),
     new Option("--pause",                      "-t",Options.Types.INTEGER,    "pauseTime"),
     new Option("--ping",                       "-i",Options.Types.BOOLEAN,    "pingFlag"),
     new Option("--suspend",                    "-s",Options.Types.BOOLEAN,    "suspendFlag"),
@@ -924,34 +924,34 @@ public class BARControl
   {
     System.out.println("barcontrol usage: <options> --");
     System.out.println("");
-    System.out.println("Options: -p|--port=<n>                           - server port (default: "+Settings.DEFAULT_SERVER_PORT+")");
-    System.out.println("         --tls-port=<n>                          - TLS server port (default: "+Settings.DEFAULT_SERVER_TLS_PORT+")");
-    System.out.println("         --select-job=<name>                     - select job <name>");
-    System.out.println("         --login-dialog                          - force to open login dialog");
-    System.out.println("         --key-file=<file name>                  - key file name (default: ");
-    System.out.println("                                                     ."+File.separator+BARServer.JAVA_SSL_KEY_FILE_NAME+" or ");
-    System.out.println("                                                     "+System.getProperty("user.home")+File.separator+".bar"+File.separator+BARServer.JAVA_SSL_KEY_FILE_NAME+" or ");
-    System.out.println("                                                     "+Config.CONFIG_DIR+File.separator+BARServer.JAVA_SSL_KEY_FILE_NAME);
-    System.out.println("                                                  )");
+    System.out.println("Options: -p|--port=<n>                              - server port (default: "+Settings.DEFAULT_SERVER_PORT+")");
+    System.out.println("         --tls-port=<n>                             - TLS server port (default: "+Settings.DEFAULT_SERVER_TLS_PORT+")");
+    System.out.println("         --select-job=<name>                        - select job <name>");
+    System.out.println("         --login-dialog                             - force to open login dialog");
+    System.out.println("         --key-file=<file name>                     - key file name (default: ");
+    System.out.println("                                                        ."+File.separator+BARServer.JAVA_SSL_KEY_FILE_NAME+" or ");
+    System.out.println("                                                        "+System.getProperty("user.home")+File.separator+".bar"+File.separator+BARServer.JAVA_SSL_KEY_FILE_NAME+" or ");
+    System.out.println("                                                        "+Config.CONFIG_DIR+File.separator+BARServer.JAVA_SSL_KEY_FILE_NAME);
+    System.out.println("                                                      )" );
     System.out.println("");
-    System.out.println("         -j|--job=<name>                         - start execution of job <name>");
-    System.out.println("         --archive-type=<mode>                   - archive type");
-    System.out.println("                                                     normal (default)");
-    System.out.println("                                                     full");
-    System.out.println("                                                     incremental");
-    System.out.println("                                                     differential");
-    System.out.println("         --abort=<name>                          - abort execution of job <name>");
-    System.out.println("         --index-database-add=<name>             - add storage archive <name> to index");
-    System.out.println("         --index-database-remove=<pattern>       - remove storage archive <name> from index");
-    System.out.println("         --index-database-storage-list=<pattern> - list storage archives matching pattern <pattern>");
-    System.out.println("         --index-database-entries-list=<pattern> - list entries matching pattern <pattern>");
-    System.out.println("         -p|--pause=<n>                          - pause job execution for <n> seconds");
-    System.out.println("         -i|--ping                               - check connection to server");
-    System.out.println("         -s|--suspend                            - suspend job execution");
-    System.out.println("         -c|--continue                           - continue job execution");
-    System.out.println("         -l|--list                               - list jobs");
+    System.out.println("         -j|--job=<name>                            - start execution of job <name>");
+    System.out.println("         --archive-type=<mode>                      - archive type");
+    System.out.println("                                                        normal (default)");
+    System.out.println("                                                        full");
+    System.out.println("                                                        incremental");
+    System.out.println("                                                        differential");
+    System.out.println("         --abort=<name>                             - abort execution of job <name>");
+    System.out.println("         --index-database-add=<name>                - add storage archive <name> to index");
+    System.out.println("         --index-database-remove=<pattern>          - remove storage archive <name> from index");
+    System.out.println("         -a|--index-database-storage-list=<pattern> - list storage archives matching pattern <pattern>");
+    System.out.println("         -e|--index-database-entries-list=<pattern> - list entries matching pattern <pattern>");
+    System.out.println("         -p|--pause=<n>                             - pause job execution for <n> seconds");
+    System.out.println("         -i|--ping                                  - check connection to server");
+    System.out.println("         -s|--suspend                               - suspend job execution");
+    System.out.println("         -c|--continue                              - continue job execution");
+    System.out.println("         -l|--list                                  - list jobs");
     System.out.println("");
-    System.out.println("         -h|--help                               - print this help");
+    System.out.println("         -h|--help                                  - print this help");
   }
 
   /** parse arguments
@@ -1599,36 +1599,55 @@ public class BARControl
         }
         if (Settings.indexDatabaseStorageListPattern != null)
         {
+          final String[] MAP_TEXT = new String[]{"\\n","\\r","\\\\"};
+          final String[] MAP_BIN  = new String[]{"\n","\r","\\"};
+
           // list storage index
-          Command command = BARServer.runCommand("INDEX_STORAGE_LIST 0 * "+StringUtils.escape(Settings.indexDatabaseStorageListPattern));
+          Command command = BARServer.runCommand("INDEX_STORAGE_LIST 0 * * "+StringUtils.escape(Settings.indexDatabaseStorageListPattern));
           String   line;
-          Object[] data = new Object[5];
+          Object[] data = new Object[8];
           while (!command.endOfData())
           {
             line = command.getNextResult(5*1000);
             if (line != null)
             {
-              if      (StringParser.parse(line,"%ld %ld %S %S %S",data,StringParser.QUOTE_CHARS))
+              if      (StringParser.parse(line,"%ld %S %ld %ld %S %S %ld %S",data,StringParser.QUOTE_CHARS))
               {
                 /* get data
                    format:
-                     size
-                     date/time
-                     state
+                     id
                      storage name
+                     date/time
+                     size
+                     state
+                     mode
+                     last checked date/time
                      error message
                 */
-                long   size        = (Long)data[0];
-                long   datetime    = (Long)data[1];
-                String storageName = (String)data[3];
+                String storageName = StringUtils.map((String)data[1],MAP_TEXT,MAP_BIN);
+                long   datetime    = (Long)data[2];
+                long   size        = (Long)data[3];
+                String state       = (String)data[4];
+                String mode        = (String)data[5];
 
-                System.out.println(String.format("%12d %s %s",
+                System.out.println(String.format("%12d %5s %5s %s %s",
                                                  size,
                                                  simpleDateFormat.format(new Date(datetime*1000)),
+                                                 state,
+                                                 mode,
                                                  storageName
                                                 )
                                   );
 
+              }
+              else if (!line.isEmpty())
+              {
+                if (Settings.debugFlag)
+                {
+                  printWarning("unknown server response '%s'",line);
+                  BARServer.disconnect();
+                  System.exit(1);
+                }
               }
             }
           }
