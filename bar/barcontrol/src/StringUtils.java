@@ -188,43 +188,54 @@ public class StringUtils
     return escape(string,true);
   }
 
-  /** remove enclosing ' or ", unescape
+  /** remove enclosing quote and unescape
    * @param string string to unescape
    * @param enclosingQuotes true to remove enclosing quotes ' or "
-   * @param quoteChar quote character
+   * @param quoteChars quote characters
    * @return unescaped string
    */
-  public static String unescape(String string, boolean enclosingQuotes, char quoteChar)
+  public static String unescape(String string, boolean enclosingQuotes, String quoteChars)
   {
+    boolean      quotedFlag;
+    char         quoteChar;
     int          startIndex,endIndex;
     StringBuffer buffer = new StringBuffer();
 
-    if  (   enclosingQuotes
-         && (string.length() >= 2)
-         && (string.charAt(0) == quoteChar)
-         && (string.charAt(string.length()-1) == quoteChar)
-        )
+    quotedFlag = false;
+    quoteChar  = '\0';
+    startIndex = 0;
+    endIndex   = string.length();
+
+    // check for outer quotes
+    if ((enclosingQuotes) && (string.length() >= 2))
     {
-      startIndex = 1;
-      endIndex   = string.length()-1;
-    }
-    else
-    {
-      startIndex = 0;
-      endIndex   = string.length();
+      for (int i = 0; i < quoteChars.length(); i++)
+      {
+        quoteChar = quoteChars.charAt(i);
+        if  (   (string.charAt(0) == quoteChar)
+             && (string.charAt(string.length()-1) == quoteChar)
+            )
+        {
+          quotedFlag = true;
+          startIndex = 1;
+          endIndex   = string.length()-1;
+          break;
+        }
+      }
     }
 
+    // unescape
     int index = startIndex;
     while (index < endIndex)
     {
       char ch = string.charAt(index);
 
-      if      ((ch == '\\') && ((index+1) < endIndex) && string.charAt(index+1) == quoteChar)
+      if      ((ch == '\\') && ((index+1) < endIndex) && quotedFlag && (string.charAt(index+1) == quoteChar))
       {
         buffer.append(quoteChar);
         index += 2;
       }
-      else if ((ch == '\\') && ((index+1) < endIndex) && string.charAt(index+1) == '\\')
+      else if ((ch == '\\') && ((index+1) < endIndex) && (string.charAt(index+1) == '\\'))
       {
         buffer.append('\\');
         index += 2;
@@ -246,7 +257,7 @@ public class StringUtils
    */
   public static String unescape(String string, boolean enclosingQuotes)
   {
-    return unescape(string,enclosingQuotes,'"');
+    return unescape(string,enclosingQuotes,"\"'");
   }
 
   /** remove enclosing ' or ", unescape
@@ -256,7 +267,7 @@ public class StringUtils
    */
   public static String unescape(String string, char quoteChar)
   {
-    return unescape(string,true,quoteChar);
+    return unescape(string,true,Character.toString(quoteChar));
   }
 
   /** remove enclosing ' or "
