@@ -2277,6 +2277,7 @@ LOCAL Errors storeArchiveFile(void           *userData,
              && ((createInfo->requestedAbortFlag == NULL) || !(*createInfo->requestedAbortFlag))
             )
       {
+#warning todo
         Semaphore_waitModified(&createInfo->storageInfoLock,SEMAPHORE_WAIT_FOREVER);
       }
     }
@@ -4116,6 +4117,7 @@ Errors Command_create(const char                      *storageName,
   error = Storage_init(&createInfo.storageFileHandle,
                        createInfo.storageName,
                        createInfo.jobOptions,
+                       globalOptions.maxBandWidth,
                        storageRequestVolumeFunction,
                        storageRequestVolumeUserData,
                        (StorageStatusInfoFunction)updateStorageStatusInfo,
@@ -4222,6 +4224,7 @@ Errors Command_create(const char                      *storageName,
   // create new archive
   error = Archive_create(&archiveInfo,
                          jobOptions,
+                         globalOptions.maxBandWidth,
                          storeArchiveFile,
                          &createInfo,
                          archiveGetCryptPasswordFunction,

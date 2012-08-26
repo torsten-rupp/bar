@@ -2434,6 +2434,7 @@ const Password *Archive_appendDecryptPassword(const Password *password)
 
 Errors Archive_create(ArchiveInfo                     *archiveInfo,
                       const JobOptions                *jobOptions,
+                      ulong                           maxBandWidth,
                       ArchiveNewFileFunction          archiveNewFileFunction,
                       void                            *archiveNewFileUserData,
                       ArchiveGetCryptPasswordFunction archiveGetCryptPasswordFunction,
@@ -2448,6 +2449,9 @@ Errors Archive_create(ArchiveInfo                     *archiveInfo,
   assert(archiveInfo != NULL);
   assert(archiveNewFileFunction != NULL);
   assert(jobOptions != NULL);
+
+#warning NYT: todo maxBandWidth
+UNUSED_VARIABLE(maxBandWidth);
 
   // detect block length of used crypt algorithm
   error = Crypt_getBlockLength(jobOptions->cryptAlgorithm,&archiveInfo->blockLength);
@@ -2568,6 +2572,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
 Errors Archive_open(ArchiveInfo                     *archiveInfo,
                     const String                    storageName,
                     const JobOptions                *jobOptions,
+                    ulong                           maxBandWidth,
                     ArchiveGetCryptPasswordFunction archiveGetCryptPasswordFunction,
                     void                            *archiveGetCryptPasswordUserData
                    )
@@ -2613,6 +2618,7 @@ Errors Archive_open(ArchiveInfo                     *archiveInfo,
   error = Storage_init(&archiveInfo->storage.storageFileHandle,
                        storageName,
                        jobOptions,
+                       maxBandWidth,
                        NULL,
                        NULL,
                        NULL,
@@ -8600,7 +8606,8 @@ Errors Archive_addIndex(DatabaseHandle *databaseHandle,
                         const String   storageName,
                         IndexModes     indexMode,
                         Password       *cryptPassword,
-                        String         cryptPrivateKeyFileName
+                        String         cryptPrivateKeyFileName,
+                        ulong          maxBandWidth
                        )
 {
   Errors error;
@@ -8627,6 +8634,7 @@ Errors Archive_addIndex(DatabaseHandle *databaseHandle,
                               storageName,
                               cryptPassword,
                               cryptPrivateKeyFileName,
+                              maxBandWidth,
                               NULL,
                               NULL,
                               NULL,
@@ -8646,6 +8654,7 @@ Errors Archive_updateIndex(DatabaseHandle               *databaseHandle,
                            const String                 storageName,
                            Password                     *cryptPassword,
                            String                       cryptPrivateKeyFileName,
+                           ulong                        maxBandWidth,
                            ArchivePauseCallbackFunction pauseCallback,
                            void                         *pauseUserData,
                            ArchiveAbortCallbackFunction abortCallback,
@@ -8681,6 +8690,7 @@ Errors Archive_updateIndex(DatabaseHandle               *databaseHandle,
     error = Archive_open(&archiveInfo,
                          t,
                          &jobOptions,
+                         maxBandWidth,
                          NULL,
                          NULL
                         );
@@ -8693,6 +8703,7 @@ Errors Archive_updateIndex(DatabaseHandle               *databaseHandle,
       error = Archive_open(&archiveInfo,
                            storageName,
                            &jobOptions,
+                           maxBandWidth,
                            NULL,
                            NULL
                           );
@@ -8704,13 +8715,14 @@ Errors Archive_updateIndex(DatabaseHandle               *databaseHandle,
     error = Archive_open(&archiveInfo,
                          storageName,
                          &jobOptions,
+                         maxBandWidth,
                          NULL,
                          NULL
                         );
   }
   if (error != ERROR_NONE)
   {
-    printInfo(4,"Failed to create index for '%s' (error: %s) 0x%x\n",String_cString(printableStorageName),Errors_getText(error),error);
+    printInfo(4,"Failed to create index for '%s' (error: %s)\n",String_cString(printableStorageName),Errors_getText(error));
 
     Index_setState(databaseHandle,
                    storageId,
