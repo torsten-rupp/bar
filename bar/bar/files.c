@@ -1356,6 +1356,45 @@ uint32 File_userNameToUserId(const char *name)
   return userId;
 }
 
+const char *File_userIdToUserName(char *name, uint nameSize, uint32 userId)
+{
+  long          bufferSize;
+  char          *buffer;
+  struct passwd groupEntry;
+  struct passwd *result;
+
+  assert(name != NULL);
+  assert(nameSize > 0);
+
+  // allocate buffer
+  bufferSize = sysconf(_SC_GETPW_R_SIZE_MAX);
+  if (bufferSize == -1L)
+  {
+    return NULL;
+  }
+  buffer = (char*)malloc(bufferSize);
+  if (buffer == NULL)
+  {
+    return NULL;
+  }
+
+  // get user passwd entry
+  if (getpwuid_r((uid_t)userId,&groupEntry,buffer,bufferSize,&result) != 0)
+  {
+    free(buffer);
+    return NULL;
+  }
+
+  // get group name
+  strncpy(name,result->pw_name,nameSize);
+  name[nameSize-1] = '\0';
+
+  // free resources
+  free(buffer);
+
+  return buffer;
+}
+
 uint32 File_groupNameToGroupId(const char *name)
 {
   long         bufferSize;
@@ -1392,6 +1431,45 @@ uint32 File_groupNameToGroupId(const char *name)
   free(buffer);
 
   return groupId;
+}
+
+const char *File_groupIdToGroupName(char *name, uint nameSize, uint32 groupId)
+{
+  long         bufferSize;
+  char         *buffer;
+  struct group groupEntry;
+  struct group *result;
+
+  assert(name != NULL);
+  assert(nameSize > 0);
+
+  // allocate buffer
+  bufferSize = sysconf(_SC_GETGR_R_SIZE_MAX);
+  if (bufferSize == -1L)
+  {
+    return NULL;
+  }
+  buffer = (char*)malloc(bufferSize);
+  if (buffer == NULL)
+  {
+    return NULL;
+  }
+
+  // get user passwd entry
+  if (getgrgid_r((gid_t)groupId,&groupEntry,buffer,bufferSize,&result) != 0)
+  {
+    free(buffer);
+    return NULL;
+  }
+
+  // get group name
+  strncpy(name,result->gr_name,nameSize);
+  name[nameSize-1] = '\0';
+
+  // free resources
+  free(buffer);
+
+  return buffer;
 }
 
 FileTypes File_getType(const String fileName)
