@@ -2572,7 +2572,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
 Errors Archive_open(ArchiveInfo                     *archiveInfo,
                     const String                    storageName,
                     const JobOptions                *jobOptions,
-                    ulong                           maxBandWidth,
+                    BandWidth                       *maxBandWidth,
                     ArchiveGetCryptPasswordFunction archiveGetCryptPasswordFunction,
                     void                            *archiveGetCryptPasswordUserData
                    )

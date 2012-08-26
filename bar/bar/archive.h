@@ -392,7 +392,6 @@ Errors Archive_create(ArchiveInfo                     *archiveInfo,
 *          storageName                 - storage name
 *          jobOptions                  - option settings
 *          maxBandWidth                - max. band width to use [bits/s]
-*                                        or STORAGE_BAND_WIDTH_UNLIMITED
 *          archiveGetCryptPassword     - get password call back
 *          archiveGetCryptPasswordData - user data for get password call
 *                                        back
@@ -404,7 +403,7 @@ Errors Archive_create(ArchiveInfo                     *archiveInfo,
 Errors Archive_open(ArchiveInfo                     *archiveInfo,
                     const String                    storageName,
                     const JobOptions                *jobOptions,
-                    ulong                           maxBandWidth,
+                    BandWidth                       *maxBandWidth,
                     ArchiveGetCryptPasswordFunction archiveGetCryptPassword,
                     void                            *archiveGetCryptPasswordData
                    );
