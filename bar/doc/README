@@ -35,7 +35,6 @@ automated backups in the background.
   jobs, start jobs and stop jobs.
 
 --- Requirements
-
 * Unix system
 * glibc 2.3.2 or higher (mandatory)
 * PTHREADs library (mandatory)
@@ -48,6 +47,7 @@ automated backups in the background.
 * gnutls library from http://www.gnu.org/software/gnutls
   (optional)
 * ftplib from http://nbpfaus.net/~pfau/ftplib (optional)
+* cdio library from www.gnu.org/software/libcdio/libcdio.html (optional)
 * long long datatype (because of large files)
 * perl (only for compiling)
 * external tools for DVD: mkisofs, dvdisaster, growisofs,
@@ -132,6 +132,11 @@ ssh2:
   http://www.libssh2.org/download/libssh2-1.2.2.tar.gz
 
   ln -s libssh2-1.2.2 libssh2
+
+cdio:
+  ftp://ftp.gnu.org/gnu/libcdio/libcdio-0.82.tar.gz
+
+  ln -s libcdio-0.82 libcdio
 
 epm:
   http://ftp.easysw.com/pub/epm/4.1/epm-4.1-source.tar.bz2
@@ -253,6 +258,17 @@ ssh2:
   Notes: - newer versions of libssh2 already include the seek-patch.
          - the keepalive patch is optional
 
+cdio:
+  ftp://ftp.gnu.org/gnu/libcdio/libcdio-0.82.tar.gz
+
+  tar xzf libcdio-0.82.tar.gz
+  cd libcdio-0.82
+  ./configure
+  make
+  make install
+
+  ldconfig
+
 epm:
   http://ftp.easysw.com/pub/epm/4.1/epm-4.1-source.tar.bz2
 
@@ -291,6 +307,8 @@ On a Debian system you can use the following packages (or newer versions):
   libgnutls-dev
   ftplib3
   ftplib-dev
+  libcdio10
+  libcdio-dev
 
 On SUSE system you may use the following packages (or newer versions):
 
@@ -329,7 +347,8 @@ On CentOS system you can use the following packages (or newer versions):
   bzip2-devel-1.0.3-4
   libgcrypt-devel-1.4.4-5
   libgpg-error-devel-1.4.2
-  gnutls-defvel-1.4.1-3
+  gnutls-devel-1.4.1-3
+  openssl-devel
 
   Note 1: download lzma, ftplib, libssh2
 
@@ -349,7 +368,7 @@ On a Ubuntu system you can use the following packages (or newer versions):
   liblzma-dev
   libxdelta2
   libxdelta2-dev
-  libssl0.9.8
+  libssl0.9.8  
   libssl-dev
   libssh2-1
   libssh2-1-dev
@@ -362,6 +381,8 @@ On a Ubuntu system you can use the following packages (or newer versions):
   libgnutls-dev
   ftplib3
   ftplib-dev
+  libcdio10
+  libcdio-dev
   patch
 
 2)
