@@ -189,6 +189,8 @@ LOCAL_INLINE void listRemove(void *list,
         );
 }
 
+#if 0
+// NYI: obsolete?
 /***********************************************************************\
 * Name   : listContains
 * Purpose: check if node is in list
@@ -216,6 +218,7 @@ LOCAL_INLINE bool listContains(void *list,
 
   return listNode != NULL;
 }
+#endif /* 0 */
 
 /***********************************************************************\
 * Name   : debugListInit
