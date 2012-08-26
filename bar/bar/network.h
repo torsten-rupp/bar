@@ -72,11 +72,6 @@ typedef struct
       } gnuTLS;
     #endif /* HAVE_GNU_TLS */
   };
-/* optimize ???
-  byte  *buffer;
-  ulong index;
-  ulong length;
-*/
 } SocketHandle;
 
 typedef enum

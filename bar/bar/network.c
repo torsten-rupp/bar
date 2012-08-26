@@ -279,7 +279,7 @@ Errors Network_connect(SocketHandle *socketHandle,
 
   assert(socketHandle != NULL);
 
-  /* initialize variables */
+  // initialize variables
   socketHandle->type = socketType;
 
   switch (socketType)
