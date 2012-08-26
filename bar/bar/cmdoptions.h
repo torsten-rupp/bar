@@ -763,6 +763,46 @@ bool CmdOption_parseString(const CommandLineOption *commandLineOption,
                            const char              *value
                           );
 
+/***********************************************************************\
+* Name   : CmdOption_getIntegerOption
+* Purpose: get integer option  value
+* Input  : value             - value variable
+*          string            - string
+*          option            - option name
+*          units             - units array or NULL
+*          unitCount         - size of unit array
+* Output : value - value
+* Return : TRUE if got integer, false otherwise
+* Notes  : -
+\***********************************************************************/
+
+bool CmdOption_getIntegerOption(int                   *value,
+                                const char            *string,
+                                const char            *option,
+                                const CommandLineUnit *units,
+                                uint                  unitCount
+                               );
+
+/***********************************************************************\
+* Name   : CmdOption_getInteger64Option
+* Purpose: get integer option value
+* Input  : value             - value variable
+*          string            - string
+*          option            - option name
+*          units             - units array or NULL
+*          unitCount         - size of unit array
+* Output : value - value
+* Return : TRUE if got integer, false otherwise
+* Notes  : -
+\***********************************************************************/
+
+bool CmdOption_getInteger64Option(int64                 *value,
+                                  const char            *string,
+                                  const char            *option,
+                                  const CommandLineUnit *units,
+                                  uint                  unitCount
+                                 );
+
 /***********************************************************************
 * Name   : CmdOption_printHelp
 * Purpose: print command line options help

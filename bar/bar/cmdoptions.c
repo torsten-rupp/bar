@@ -35,6 +35,224 @@ extern "C" {
 #endif
 
 /***********************************************************************\
+* Name   : getIntegerOption
+* Purpose: get integer option value
+* Input  : value             - value variable
+*          string            - string
+*          option            - option name
+*          units             - units array or NULL
+*          unitCount         - size of unit array
+* Output : value - value
+* Return : TRUE if got integer, false otherwise
+* Notes  : -
+\***********************************************************************/
+
+LOCAL bool getIntegerOption(int                   *value,
+                            const char            *string,
+                            const char            *option,
+                            const CommandLineUnit *units,
+                            uint                  unitCount,
+                            FILE                  *errorOutputHandle,
+                            const char            *errorPrefix
+                           )
+{
+  uint  i,j;
+  char  number[128],unit[32];
+  ulong factor;
+
+  assert(value != NULL);
+  assert(string != NULL);
+
+  // split number, unit
+  i = strlen(string);
+  if (i > 0)
+  {
+    while ((i > 0) && !isdigit(string[i-1])) { i--; }
+    j = MIN(i,               sizeof(number)-1); strncpy(number,&string[0],j); number[j] = '\0';
+    j = MIN(strlen(string)-i,sizeof(unit)  -1); strncpy(unit,  &string[i],j); unit[j]   = '\0';
+  }
+  else
+  {
+    number[0] = '\0';
+    unit[0]   = '\0';
+  }
+  if (number[0] == '\0')
+  {
+    if (errorOutputHandle != NULL)
+    {
+      fprintf(errorOutputHandle,
+              "%sValue '%s' for option '%s' is not a number!\n",
+              (errorPrefix != NULL) ? errorPrefix : "",
+              string,
+              option
+             );
+    }
+    return FALSE;
+  }
+
+  // find unit factor
+  if (unit[0] != '\0')
+  {
+    if (units != NULL)
+    {
+      i = 0;
+      while ((i < unitCount) && (strcmp(units[i].name,unit) != 0))
+      {
+        i++;
+      }
+      if (i >= unitCount)
+      {
+        if (errorOutputHandle != NULL)
+        {
+          fprintf(errorOutputHandle,
+                  "%sInvalid unit in integer value '%s'! Valid units:",
+                  (errorPrefix != NULL) ? errorPrefix : "",
+                  string
+                 );
+          for (i = 0; i < unitCount; i++)
+          {
+            fprintf(errorOutputHandle," %s",units[i].name);
+          }
+          fprintf(errorOutputHandle,".\n");
+        }
+        return FALSE;
+      }
+      factor = units[i].factor;
+    }
+    else
+    {
+      if (errorOutputHandle != NULL)
+      {
+        fprintf(errorOutputHandle,
+                "%sUnexpected unit in value '%s'!\n",
+                (errorPrefix != NULL) ? errorPrefix : "",
+                string
+               );
+      }
+      return FALSE;
+    }
+  }
+  else
+  {
+    factor = 1;
+  }
+
+  // calculate value
+  (*value) = (int)(strtol(number,NULL,0)*factor);
+
+  return TRUE;
+}
+
+/***********************************************************************\
+* Name   : getInteger64Option
+* Purpose: get integer64 option value
+* Input  : value             - value variable
+*          string            - string
+*          option            - option name
+*          units             - units array or NULL
+*          unitCount         - size of unit array
+* Output : value - value
+* Return : TRUE if got integer, false otherwise
+* Notes  : -
+\***********************************************************************/
+
+LOCAL bool getInteger64Option(int64                 *value,
+                              const char            *string,
+                              const char            *option,
+                              const CommandLineUnit *units,
+                              uint                  unitCount,
+                              FILE                  *errorOutputHandle,
+                              const char            *errorPrefix
+                             )
+{
+  uint  i,j;
+  char  number[128],unit[32];
+  ulong factor;
+
+  assert(value != NULL);
+  assert(string != NULL);
+
+  // split number, unit
+  i = strlen(string);
+  if (i > 0)
+  {
+    while ((i > 0) && !isdigit(string[i-1])) { i--; }
+    j = MIN(i,               sizeof(number)-1); strncpy(number,&string[0],j); number[j] = '\0';
+    j = MIN(strlen(string)-i,sizeof(unit)  -1); strncpy(unit,  &string[i],j); unit[j]   = '\0';
+  }
+  else
+  {
+    number[0] = '\0';
+    unit[0]   = '\0';
+  }
+  if (number[0] == '\0')
+  {
+    if (errorOutputHandle != NULL)
+    {
+      fprintf(errorOutputHandle,
+              "%sValue '%s' for option '%s' is not a number!\n",
+              (errorPrefix != NULL) ? errorPrefix : "",
+              string,
+              option
+             );
+    }
+    return FALSE;
+  }
+
+  // find unit factor
+  if (unit[0] != '\0')
+  {
+    if (units != NULL)
+    {
+      i = 0;
+      while ((i < unitCount) && (strcmp(units[i].name,unit) != 0))
+      {
+        i++;
+      }
+      if (i >= unitCount)
+      {
+        if (errorOutputHandle != NULL)
+        {
+          fprintf(errorOutputHandle,
+                  "%sInvalid unit in integer value '%s'! Valid units:",
+                  (errorPrefix != NULL) ? errorPrefix : "",
+                  string
+                 );
+          for (i = 0; i < unitCount; i++)
+          {
+            fprintf(errorOutputHandle," %s",units[i].name);
+          }
+          fprintf(errorOutputHandle,".\n");
+        }
+        return FALSE;
+      }
+      factor = units[i].factor;
+    }
+    else
+    {
+      if (errorOutputHandle != NULL)
+      {
+        fprintf(errorOutputHandle,
+                "%sUnexpected unit in value '%s'!\n",
+                (errorPrefix != NULL) ? errorPrefix : "",
+                string
+               );
+      }
+      return FALSE;
+    }
+  }
+  else
+  {
+    factor = 1;
+  }
+
+  // calculate value
+  (*value) = strtoll(number,NULL,0)*factor;
+
+  return TRUE;
+}
+
+/***********************************************************************\
 * Name   : processOption
 * Purpose: process single command line option
 * Input  : commandLineOption - command line option
@@ -61,88 +279,21 @@ LOCAL bool processOption(const CommandLineOption *commandLineOption,
   {
     case CMD_OPTION_TYPE_INTEGER:
       {
-        uint  i,n;
-        char  number[128],unit[32];
-        ulong factor;
-
         assert(commandLineOption->variable.i != NULL);
 
-        // split number, unit
-        i = strlen(value);
-        if (i > 0)
+        // get integer option value
+        if (!getIntegerOption(commandLineOption->variable.i,
+                              value,
+                              option,
+                              commandLineOption->integerOption.units,
+                              commandLineOption->integerOption.unitCount,
+                              errorOutputHandle,
+                              errorPrefix
+                             )
+           )
         {
-          while ((i > 0) && !isdigit(value[i-1])) { i--; }
-          n = MIN(i,              sizeof(number)-1); strncpy(number,&value[0],n); number[n] = '\0';
-          n = MIN(strlen(value)-i,sizeof(unit)  -1); strncpy(unit,  &value[i],n); unit[n]   = '\0';
-        }
-        else
-        {
-          number[0] = '\0';
-          unit[0]   = '\0';
-        }
-        if (number[0] == '\0')
-        {
-          if (errorOutputHandle != NULL)
-          {
-            fprintf(errorOutputHandle,
-                    "%sValue '%s' for option '%s' is not a number!\n",
-                    (errorPrefix != NULL)?errorPrefix:"",
-                    value,
-                    option
-                   );
-          }
           return FALSE;
         }
-
-        // find unit factor
-        if (unit[0] != '\0')
-        {
-          if (commandLineOption->integerOption.units != NULL)
-          {
-            i = 0;
-            while ((i < commandLineOption->integerOption.unitCount) && (strcmp(commandLineOption->integerOption.units[i].name,unit) != 0))
-            {
-              i++;
-            }
-            if (i >= commandLineOption->integerOption.unitCount)
-            {
-              if (errorOutputHandle != NULL)
-              {
-                fprintf(errorOutputHandle,
-                        "%sInvalid unit in integer value '%s'! Valid units:",
-                        (errorPrefix != NULL)?errorPrefix:"",
-                        value
-                       );
-                for (i = 0; i < commandLineOption->integerOption.unitCount; i++)
-                {
-                  fprintf(errorOutputHandle," %s",commandLineOption->integerOption.units[i].name);
-                }
-                fprintf(errorOutputHandle,".\n");
-              }
-              return FALSE;
-            }
-            factor = commandLineOption->integerOption.units[i].factor;
-          }
-          else
-          {
-            if (errorOutputHandle != NULL)
-            {
-              fprintf(errorOutputHandle,
-                      "%sUnexpected unit in value '%s'!\n",
-                      (errorPrefix != NULL)?errorPrefix:"",
-                      value
-                     );
-            }
-            return FALSE;
-          }
-        }
-        else
-        {
-          factor = 1;
-        }
-
-        // calculate value
-        (*commandLineOption->variable.i) = strtol(value,NULL,0)*factor;
 
         // check range
         if (   ((*commandLineOption->variable.i) < commandLineOption->integerOption.min)
@@ -151,7 +302,7 @@ LOCAL bool processOption(const CommandLineOption *commandLineOption,
         {
           if (errorOutputHandle != NULL) fprintf(errorOutputHandle,
                                                  "%sValue '%s' out of range %d..%d for option '%s'!\n",
-                                                 (errorPrefix != NULL)?errorPrefix:"",
+                                                 (errorPrefix != NULL) ? errorPrefix : "",
                                                  value,
                                                  commandLineOption->integerOption.min,
                                                  commandLineOption->integerOption.max,
@@ -163,96 +314,30 @@ LOCAL bool processOption(const CommandLineOption *commandLineOption,
       break;
     case CMD_OPTION_TYPE_INTEGER64:
       {
-        uint  i,n;
-        char  number[128],unit[32];
-        ulong factor;
-
         assert(commandLineOption->variable.l != NULL);
 
-        // split number, unit
-        i = strlen(value);
-        if (i > 0)
+        // get integer64 option value
+        if (!getInteger64Option(commandLineOption->variable.l,
+                                value,
+                                option,
+                                commandLineOption->integerOption.units,
+                                commandLineOption->integerOption.unitCount,
+                                errorOutputHandle,
+                                errorPrefix
+                               )
+           )
         {
-          while ((i > 0) && !isdigit(value[i-1])) { i--; }
-          n = MIN(i,              sizeof(number)-1); strncpy(number,&value[0],n); number[n] = '\0';
-          n = MIN(strlen(value)-i,sizeof(unit)  -1); strncpy(unit,  &value[i],n); unit[n]   = '\0';
-        }
-        else
-        {
-          number[0] = '\0';
-          unit[0]   = '\0';
-        }
-        if (number[0] == '\0')
-        {
-          if (errorOutputHandle != NULL)
-          {
-            fprintf(errorOutputHandle,
-                    "%sValue '%s' for option '%s' is not a number!\n",
-                    (errorPrefix != NULL)?errorPrefix:"",
-                    value,
-                    option
-                   );
-          }
           return FALSE;
         }
 
-        // find unit factor
-        if (unit[0] != '\0')
-        {
-          if (commandLineOption->integer64Option.units != NULL)
-          {
-            i = 0;
-            while ((i < commandLineOption->integer64Option.unitCount) && (strcmp(commandLineOption->integer64Option.units[i].name,unit) != 0))
-            {
-              i++;
-            }
-            if (i >= commandLineOption->integer64Option.unitCount)
-            {
-              if (errorOutputHandle != NULL)
-              {
-                fprintf(errorOutputHandle,
-                        "%sInvalid unit in integer value '%s'! Valid units:",
-                        (errorPrefix != NULL)?errorPrefix:"",
-                        value
-                       );
-                for (i = 0; i < commandLineOption->integer64Option.unitCount; i++)
-                {
-                  fprintf(errorOutputHandle," %s",commandLineOption->integer64Option.units[i].name);
-                }
-                fprintf(errorOutputHandle,".\n");
-              }
-              return FALSE;
-            }
-            factor = commandLineOption->integer64Option.units[i].factor;
-          }
-          else
-          {
-            if (errorOutputHandle != NULL)
-            {
-              fprintf(errorOutputHandle,
-                      "%sUnexpected unit in value '%s'!\n",
-                      (errorPrefix != NULL)?errorPrefix:"",
-                      value
-                     );
-            }
-            return FALSE;
-          }
-        }
-        else
-        {
-          factor = 1;
-        }
-
-        // calculate value
-        (*commandLineOption->variable.l) = strtoll(value,NULL,0)*factor;
-
+        // check range
         if (   ((*commandLineOption->variable.l) < commandLineOption->integer64Option.min)
             || ((*commandLineOption->variable.l) > commandLineOption->integer64Option.max)
            )
         {
           if (errorOutputHandle != NULL) fprintf(errorOutputHandle,
                                                  "%sValue '%s' out of range %lld..%lld for option '%s'!\n",
-                                                 (errorPrefix != NULL)?errorPrefix:"",
+                                                 (errorPrefix != NULL) ? errorPrefix : "",
                                                  value,
                                                  commandLineOption->integer64Option.min,
                                                  commandLineOption->integer64Option.max,
@@ -1018,6 +1103,27 @@ bool CmdOption_parseString(const CommandLineOption *commandLineOption,
   return processOption(commandLineOption,commandLineOption->name,value,NULL,NULL);
 }
 
+bool CmdOption_getIntegerOption(int                   *value,
+                                const char            *string,
+                                const char            *option,
+                                const CommandLineUnit *units,
+                                uint                  unitCount
+                               )
+{
+  return getIntegerOption(value,string,option,units,unitCount,NULL,NULL);
+}
+
+bool CmdOption_getInteger64Option(int64                 *value,
+                                  const char            *string,
+                                  const char            *option,
+                                  const CommandLineUnit *units,
+                                  uint                  unitCount
+                                 )
+{
+  return getInteger64Option(value,string,option,units,unitCount,NULL,NULL);
+}
+
+// try to avoid warning because of == operation on double/float (valid here, because it is the initial value)
 #ifdef __GNUC__
 #pragma GCC push_options
 #pragma GCC diagnostic ignored "-Wfloat-equal"
