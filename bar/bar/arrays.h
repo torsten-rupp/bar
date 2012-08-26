@@ -44,6 +44,27 @@ typedef char(*ArrayElementIterateFunction)(void *userData, void *data);
   #define Array_new(elementSize,length) __Array_new(__FILE__,__LINE__,elementSize,length)
 #endif /* not NDEBUG */
 
+/***********************************************************************\
+* Name   : ARRAY_ITERATE
+* Purpose: iterated over array and execute block
+* Input  : array     - array
+*          variable - iteration variable
+* Output : -
+* Return : -
+* Notes  : variable will contain all elements in array
+*          usage:
+*            ARRAY_ITERATE(array,variable)
+*            {
+*              ... = variable->...
+*            }
+\***********************************************************************/
+
+#define ARRAY_ITERATE(array,variable) \
+  for ((variable) = 0, Array_get(array,0,variable); \
+       (variable) < Array_length(array); \
+       (variable)++, Array_get(array,0,variable) \
+      )
+
 /***************************** Forwards ********************************/
 
 /***************************** Functions *******************************/
