@@ -550,7 +550,7 @@ LOCAL void limitBandWidth(StorageBandWidthLimiter *storageBandWidthLimiter,
   {
     storageBandWidthLimiter->measurementBytes += transmittedBytes;
     storageBandWidthLimiter->measurementTime += transmissionTime;
-fprintf(stderr,"%s, %d: sum %lu bytes %llu us\n",__FILE__,__LINE__,storageBandWidthLimiter->measurementBytes,storageBandWidthLimiter->measurementTime);
+//fprintf(stderr,"%s, %d: sum %lu bytes %llu us\n",__FILE__,__LINE__,storageBandWidthLimiter->measurementBytes,storageBandWidthLimiter->measurementTime);
 
     if (storageBandWidthLimiter->measurementTime > MS_TO_US(100LL))   // too small time values are not reliable, thus accumlate over time
     {
@@ -561,62 +561,71 @@ fprintf(stderr,"%s, %d: sum %lu bytes %llu us\n",__FILE__,__LINE__,storageBandWi
         for (z = 0; z < storageBandWidthLimiter->measurementCount; z++)
         {
           averageBandWidth += storageBandWidthLimiter->measurements[z];
-fprintf(stderr," %ld",storageBandWidthLimiter->measurements[z]);
         }
-fprintf(stderr,"\n");
         averageBandWidth /= storageBandWidthLimiter->measurementCount;
       }
       else
       {
         averageBandWidth = 0L;
       }
-fprintf(stderr,"%s, %d: averageBandWidth=%lu bits/s\n",__FILE__,__LINE__,averageBandWidth);
+//fprintf(stderr,"%s, %d: averageBandWidth=%lu bits/s\n",__FILE__,__LINE__,averageBandWidth);
 
-      // calculate delay time, recalculate optimal band width block size (hystersis: +-1024 bytes/s)
+      // get max. band width to use
       maxBandWidth = getBandWidth(storageBandWidthLimiter->maxBandWidth);
-fprintf(stderr,"%s, %d: maxBandWidth=%lu\n",__FILE__,__LINE__,maxBandWidth);
-      if     (   (maxBandWidth > 0L)
-              && (averageBandWidth > (maxBandWidth+BYTES_TO_BITS(1024)))
-             )
+//fprintf(stderr,"%s, %d: maxBandWidth=%lu\n",__FILE__,__LINE__,maxBandWidth);
+
+      // calculate delay time
+      if (maxBandWidth > 0L)
       {
-        // calculate delay time
         calculatedTime = (BYTES_TO_BITS(storageBandWidthLimiter->measurementBytes)*US_PER_SECOND)/maxBandWidth;
         delayTime      = (calculatedTime > storageBandWidthLimiter->measurementTime) ? calculatedTime-storageBandWidthLimiter->measurementTime : 0LL;
-
-        // recalculate max. block size to send to send a little less in a single step (if possible)
-        if      ((storageBandWidthLimiter->blockSize > 32*1024) && (delayTime > 1000*MS_PER_SECOND)) storageBandWidthLimiter->blockSize -= 32*1024;
-        else if ((storageBandWidthLimiter->blockSize > 16*1024) && (delayTime >  500*MS_PER_SECOND)) storageBandWidthLimiter->blockSize -= 16*1024;
-        else if ((storageBandWidthLimiter->blockSize >  8*1024) && (delayTime >  250*MS_PER_SECOND)) storageBandWidthLimiter->blockSize -=  8*1024;
-        else if ((storageBandWidthLimiter->blockSize >  4*1024)                                    ) storageBandWidthLimiter->blockSize -=  4*1024;
-//fprintf(stderr,"%s,%d: storageBandWidthLimiter->measurementBytes=%ld storageBandWidthLimiter->max=%ld calculated time=%llu us storageBandWidthLimiter->measurementTime=%lu us blockSize=%ld\n",__FILE__,__LINE__,storageBandWidthLimiter->measurementBytes,storageBandWidthLimiter->max,calculatedTime,storageBandWidthLimiter->measurementTime,storageBandWidthLimiter->blockSize);
-      }
-      else if (averageBandWidth < (maxBandWidth-BYTES_TO_BITS(1024)))
-      {
-        // below max. band width -> no delay
-        delayTime = 0LL;
-
-        // increase max. block size to send a little more in a single step (if possible)
-        if (storageBandWidthLimiter->blockSize < (storageBandWidthLimiter->maxBlockSize-4*1024)) storageBandWidthLimiter->blockSize += 4*1024;
-//fprintf(stderr,"%s,%d: ++ averageBandWidth=%lu bit/s storageBandWidthLimiter->max=%lu bit/s storageBandWidthLimiter->measurementTime=%llu us storageBandWidthLimiter->blockSize=%llu\n",__FILE__,__LINE__,averageBandWidth,storageBandWidthLimiter->max,storageBandWidthLimiter->measurementTime,storageBandWidthLimiter->blockSize);
       }
       else
       {
-        // in +-1024 bytes/s hystersis window -> no delay, keep max. block size
+        // no band width limit -> no delay
         delayTime = 0LL;
-//fprintf(stderr,"%s,%d: ++ averageBandWidth=%lu bit/s storageBandWidthLimiter->max=%lu bit/s storageBandWidthLimiter->measurementTime=%llu us storageBandWidthLimiter->blockSize=%llu\n",__FILE__,__LINE__,averageBandWidth,storageBandWidthLimiter->max,storageBandWidthLimiter->measurementTime,storageBandWidthLimiter->blockSize);
       }
+
+#if 0
+/* disabled 2012-08-26: it seems the underlaying libssh2 implementation
+   always transmit data in block sizes >32k? Thus it is not useful to
+   reduce the block size, because this only cause additional overhead
+   without any effect on the effectively used band width.
+*/
+
+      // recalculate optimal block size for band width limitation (hystersis: +-1024 bytes/s)
+      if (maxBandWidth > 0L)
+      {
+        if     (   (averageBandWidth > (maxBandWidth+BYTES_TO_BITS(1024)))
+                || (delayTime > 0LL)
+               )
+        {
+          // recalculate max. block size to send to send a little less in a single step (if possible)
+          if      ((storageBandWidthLimiter->blockSize > 32*1024) && (delayTime > 30000LL*MS_PER_SECOND)) storageBandWidthLimiter->blockSize -= 32*1024;
+          else if ((storageBandWidthLimiter->blockSize > 16*1024) && (delayTime > 10000LL*MS_PER_SECOND)) storageBandWidthLimiter->blockSize -= 16*1024;
+          else if ((storageBandWidthLimiter->blockSize >  8*1024) && (delayTime >  5000LL*MS_PER_SECOND)) storageBandWidthLimiter->blockSize -=  8*1024;
+          else if ((storageBandWidthLimiter->blockSize >  4*1024) && (delayTime >  1000LL*MS_PER_SECOND)) storageBandWidthLimiter->blockSize -=  4*1024;
+//fprintf(stderr,"%s,%d: storageBandWidthLimiter->measurementBytes=%ld storageBandWidthLimiter->max=%ld calculated time=%llu us storageBandWidthLimiter->measurementTime=%lu us blockSize=%ld\n",__FILE__,__LINE__,storageBandWidthLimiter->measurementBytes,storageBandWidthLimiter->max,calculatedTime,storageBandWidthLimiter->measurementTime,storageBandWidthLimiter->blockSize);
+        }
+        else if (averageBandWidth < (maxBandWidth-BYTES_TO_BITS(1024)))
+        {
+          // increase max. block size to send a little more in a single step (if possible)
+          if (storageBandWidthLimiter->blockSize < (storageBandWidthLimiter->maxBlockSize-4*1024)) storageBandWidthLimiter->blockSize += 4*1024;
+//fprintf(stderr,"%s,%d: ++ averageBandWidth=%lu bit/s storageBandWidthLimiter->max=%lu bit/s storageBandWidthLimiter->measurementTime=%llu us storageBandWidthLimiter->blockSize=%llu\n",__FILE__,__LINE__,averageBandWidth,storageBandWidthLimiter->max,storageBandWidthLimiter->measurementTime,storageBandWidthLimiter->blockSize);
+        }
+      }
+#endif /* 0 */
 
       // delay if needed
       if (delayTime > 0)
       {
-fprintf(stderr,"%s, %d: delayTime=%llu us %llu\n",__FILE__,__LINE__,delayTime,Misc_getCurrentDateTime());
-       Misc_udelay(delayTime);
-fprintf(stderr,"%s, %d: delay done%llu\n",__FILE__,__LINE__,Misc_getCurrentDateTime());
+//fprintf(stderr,"%s, %d: delayTime=%llu us %lu\n",__FILE__,__LINE__,delayTime,storageBandWidthLimiter->blockSize);
+        Misc_udelay(delayTime);
       }
 
       // calculate and store new current bandwidth
       storageBandWidthLimiter->measurements[storageBandWidthLimiter->measurementNextIndex] = (ulong)((BYTES_TO_BITS((uint64)storageBandWidthLimiter->measurementBytes)*US_PER_SECOND)/(storageBandWidthLimiter->measurementTime+delayTime));
-fprintf(stderr,"%s, %d: new measurement[%d] %lu bits/us\n",__FILE__,__LINE__,storageBandWidthLimiter->measurementNextIndex,storageBandWidthLimiter->measurements[storageBandWidthLimiter->measurementNextIndex]);
+//fprintf(stderr,"%s, %d: new measurement[%d] %lu bits/us\n",__FILE__,__LINE__,storageBandWidthLimiter->measurementNextIndex,storageBandWidthLimiter->measurements[storageBandWidthLimiter->measurementNextIndex]);
       storageBandWidthLimiter->measurementNextIndex = (storageBandWidthLimiter->measurementNextIndex+1)%SIZE_OF_ARRAY(storageBandWidthLimiter->measurements);
       if (storageBandWidthLimiter->measurementCount < SIZE_OF_ARRAY(storageBandWidthLimiter->measurements)) storageBandWidthLimiter->measurementCount++;
 
