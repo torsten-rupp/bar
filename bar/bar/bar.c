@@ -2697,10 +2697,12 @@ ulong getBandWidth(BandWidth *bandWidth)
     timestamp = Misc_getTimestamp();
     if (timestamp > (bandWidth->lastReadTimestamp+5*US_PER_SECOND))
     {
+      bandWidth->n = 0LL;
+
       // open file
       if (File_openCString(&fileHandle,bandWidth->fileName,FILE_OPEN_READ) == ERROR_NONE)
       {
-        // read first non comment line
+        // read first none-comment line
         readFlag = FALSE;
         line     = String_new();
         while (!File_eof(&fileHandle) && !readFlag)
