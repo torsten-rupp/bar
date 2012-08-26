@@ -255,8 +255,7 @@ typedef struct
   String                 tmpDirectory;                   // directory for temporary files
   uint64                 maxTmpSize;                     // max. size of temporary files
 
-  ulong                  maxBandWidth;                   // max. send/receive bandwidth to use [bits/s] or 0
-  BandWidth x;
+  BandWidth              maxBandWidth;                   // max. send/receive bandwidth to use [bits/s] or 0
 
   ulong                  compressMinFileSize;            // min. size of file for using compression
 
@@ -285,7 +284,7 @@ typedef struct
   Device                 *defaultDevice;                 // default device
 
   bool                   indexDatabaseAutoUpdateFlag;    // TRUE for automatic update of index datbase
-  ulong                  indexDatabaseMaxBandWidth;      // max. band width to use for index updates [bits/s]
+  BandWidth              indexDatabaseMaxBandWidth;      // max. band width to use for index updates [bits/s]
   uint                   indexDatabaseKeepTime;          // number of seconds to keep index data of not existing storage
 
   bool                   groupFlag;                      // TRUE iff entries in list should be grouped
@@ -545,7 +544,7 @@ void freeJobOptions(JobOptions *jobOptions);
 /***********************************************************************\
 * Name   : getBandWidth
 * Purpose: get band width from value or external file
-* Input  : bandWidth - band width settings
+* Input  : bandWidth - band width settings or NULL
 * Output : -
 * Return : return band width [bits/s] or 0
 * Notes  : -
