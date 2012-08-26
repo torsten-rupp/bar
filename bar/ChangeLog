@@ -1,4 +1,4 @@
-2012-07-29 0.17
+2012-08-12 0.17
   * finally: added support for xdelta compression!
     Note: integrating this was really a _hard_ work.
   * added support for libcdio to read content of CD/DVD/BD
@@ -46,10 +46,11 @@
     mixing output of lines in interactive mode
   * renamed command line option --database-file -> --database-index
   * renamed command line option --no-auto-update-database-index
-    -> --database-index-no-auto-update
+    -> --database-index-auto-update
   * renamed config option database-file -> index-database
   * renamed config option no-auto-update-database-index
-    -> index-database-no-auto-update
+    -> index-database-auto-update
+    WARNING: modify your bar.cfg file!
   * added command line/config option --datbase-index-keep-time
   * set example for log-post-command to (removed quotes):
     sh -c 'cat %file|mail -s "Backup log" root'
@@ -58,6 +59,9 @@
   * improved error output when log-post command cannot be executed:
     show last 5 lines of stderr
   * fixed usage of libcrypt: enabled multithread-support
+  * set read-timeout for SSH connections to avoid possible infinite
+    blocking in libssh2-code when remote side may close socket
+    unexpected
   * BARControl: add ellipsis character to menus/buttons which
     require further user input
   * BARControl: added schedule copy menu entry/button
@@ -80,6 +84,10 @@
   * BARControl: fixed schedule hour setting, show 00..23
   * BARControl: added function to delete storage files in context menu
     in restore tab
+  * added configuration option index-database-max-band-width: limit the
+    used band width for background index updates
+  * improved band width limitation: specify either a value or name of an
+    external file
 
 2012-01-14 0.16g
   * fix restore: do not create empty parent directories
