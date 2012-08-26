@@ -202,6 +202,7 @@ LOCAL bool cmdOptionParseString(void *userData, void *variable, const char *name
 LOCAL bool cmdOptionParseConfigFile(void *userData, void *variable, const char *name, const char *value, const void *defaultValue);
 LOCAL bool cmdOptionParseEntryPattern(void *userData, void *variable, const char *name, const char *value, const void *defaultValue);
 LOCAL bool cmdOptionParsePattern(void *userData, void *variable, const char *name, const char *value, const void *defaultValue);
+LOCAL bool cmdOptionParseBandWidth(void *userData, void *variable, const char *name, const char *value, const void *defaultValue);
 LOCAL bool cmdOptionParseOwner(void *userData, void *variable, const char *name, const char *value, const void *defaultValue);
 LOCAL bool cmdOptionParsePassword(void *userData, void *variable, const char *name, const char *value, const void *defaultValue);
 LOCAL bool cmdOptionParseCompressAlgorithm(void *userData, void *variable, const char *name, const char *value, const void *defaultValue);
@@ -454,7 +455,7 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
   CMD_OPTION_SPECIAL      ("include",                      '#',0,2,&includeEntryList,                          cmdOptionParseEntryPattern,NULL,                       "include pattern","pattern"                                                ),
   CMD_OPTION_SPECIAL      ("exclude",                      '!',0,2,&excludePatternList,                        cmdOptionParsePattern,NULL,                            "exclude pattern","pattern"                                                ),
 
-  CMD_OPTION_SPECIAL      ("delta-source",                 0,  0,2,&deltaSourcePatternList,                    cmdOptionParsePattern,NULL,                            "source pattern\ntest1\ntest2","pattern"                                                 ),
+  CMD_OPTION_SPECIAL      ("delta-source",                 0,  0,2,&deltaSourcePatternList,                    cmdOptionParsePattern,NULL,                            "source pattern\ntest1\ntest2","pattern"                                   ),
 
   CMD_OPTION_SPECIAL      ("config",                       0,  1,0,NULL,                                       cmdOptionParseConfigFile,NULL,                         "configuration file","file name"                                           ),
 
@@ -484,7 +485,7 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
                                                                                                                                                                       "  xdelta1..xdelta9: XDELTA compression level 1..9"
                                                                                                                                                                       #endif
                                                                                                                                                                       ,
-                                                                                                                                                                      "algorithm|xdelta+algorithm"                            ),
+                                                                                                                                                                      "algorithm|xdelta+algorithm"                                               ),
   CMD_OPTION_INTEGER      ("compress-min-size",            0,  1,1,globalOptions.compressMinFileSize,          0,MAX_INT,COMMAND_LINE_BYTES_UNITS,                    "minimal size of file for compression"                                     ),
   CMD_OPTION_SPECIAL      ("compress-exclude",             0,  0,2,&compressExcludePatternList,                cmdOptionParsePattern,NULL,                            "exclude compression pattern","pattern"                                    ),
 
@@ -516,7 +517,8 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
 
   CMD_OPTION_INTEGER      ("nice-level",                   0,  1,0,globalOptions.niceLevel,                    0,19,NULL,                                             "general nice level of processes/threads"                                  ),
 
-  CMD_OPTION_INTEGER      ("max-band-width",               0,  1,0,globalOptions.maxBandWidth,                 0,MAX_INT,COMMAND_LINE_BITS_UNITS2,                    "max. network band width to use [bits/s]"                                  ),
+//  CMD_OPTION_INTEGER      ("max-band-width",               0,  1,0,globalOptions.maxBandWidth,                 0,MAX_INT,COMMAND_LINE_BITS_UNITS2,                    "max. network band width to use [bits/s] or file name"                   ),
+  CMD_OPTION_SPECIAL      ("max-band-width",               0,  1,0,&globalOptions.maxBandWidth,                cmdOptionParseBandWidth,NULL,                          "max. network band width to use [bits/s]","number or file name"            ),
 
   CMD_OPTION_BOOLEAN      ("batch",                        0,  2,0,batchFlag,                                                                                         "run in batch mode"                                                        ),
   CMD_OPTION_SPECIAL      ("remote-bar-executable",        0,  1,0,&globalOptions.remoteBARExecutable,         cmdOptionParseString,NULL,                             "remote BAR executable","file name"                                        ),
@@ -549,7 +551,7 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
   CMD_OPTION_STRING       ("cd-write-command",             0,  1,0,globalOptions.cd.writeCommand,                                                                     "write CD command","command"                                               ),
   CMD_OPTION_STRING       ("cd-write-image-command",       0,  1,0,globalOptions.cd.writeImageCommand,                                                                "write CD image command","command"                                         ),
 
-  CMD_OPTION_STRING       ("dvd-device",                   0,  1,0,globalOptions.dvd.defaultDeviceName,                                                               "default DVD device","device name"                                          ),
+  CMD_OPTION_STRING       ("dvd-device",                   0,  1,0,globalOptions.dvd.defaultDeviceName,                                                               "default DVD device","device name"                                         ),
   CMD_OPTION_STRING       ("dvd-request-volume-command",   0,  1,0,globalOptions.dvd.requestVolumeCommand,                                                            "request new DVD volume command","command"                                 ),
   CMD_OPTION_STRING       ("dvd-unload-volume-command",    0,  1,0,globalOptions.dvd.unloadVolumeCommand,                                                             "unload DVD volume command","command"                                      ),
   CMD_OPTION_STRING       ("dvd-load-volume-command",      0,  1,0,globalOptions.dvd.loadVolumeCommand,                                                               "load DVD volume command","command"                                        ),
@@ -585,7 +587,7 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
   CMD_OPTION_STRING       ("device-request-volume-command",0,  1,0,defaultDevice.requestVolumeCommand,                                                                "request new volume command","command"                                     ),
   CMD_OPTION_STRING       ("device-load-volume-command",   0,  1,0,defaultDevice.loadVolumeCommand,                                                                   "load volume command","command"                                            ),
   CMD_OPTION_STRING       ("device-unload-volume-command", 0,  1,0,defaultDevice.unloadVolumeCommand,                                                                 "unload volume command","command"                                          ),
-  CMD_OPTION_INTEGER64    ("device-volume-size",           0,  1,0,defaultDevice.volumeSize,                   0LL,MAX_LONG_LONG,COMMAND_LINE_BYTES_UNITS,             "volume size"                                                              ),
+  CMD_OPTION_INTEGER64    ("device-volume-size",           0,  1,0,defaultDevice.volumeSize,                   0LL,MAX_LONG_LONG,COMMAND_LINE_BYTES_UNITS,            "volume size"                                                              ),
   CMD_OPTION_STRING       ("device-image-pre-command",     0,  1,0,defaultDevice.imagePreProcessCommand,                                                              "make image pre-process command","command"                                 ),
   CMD_OPTION_STRING       ("device-image-post-command",    0,  1,0,defaultDevice.imagePostProcessCommand,                                                             "make image post-process command","command"                                ),
   CMD_OPTION_STRING       ("device-image-command",         0,  1,0,defaultDevice.imageCommand,                                                                        "make image command","command"                                             ),
@@ -601,7 +603,9 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
   CMD_OPTION_BOOLEAN      ("always-create-image",          0,  1,1,jobOptions.alwaysCreateImageFlag,                                                                  "always create image for CD/DVD/BD/device"                                 ),
 
   CMD_OPTION_CSTRING      ("index-database",               0,  1,0,indexDatabaseFileName,                                                                             "index database file name","file name"                                     ),
-  CMD_OPTION_BOOLEAN      ("index-database-no-auto-update",0,  1,0,globalOptions.indexDatabaseNoAutoUpdateFlag,                                                       "disabled automatic update index database"                                 ),
+  CMD_OPTION_BOOLEAN      ("index-database-auto-update",   0,  1,0,globalOptions.indexDatabaseAutoUpdateFlag,                                                         "enabled automatic update index database"                                  ),
+//  CMD_OPTION_INTEGER      ("index-database-max-band-width",0,  1,0,globalOptions.indexDatabaseMaxBandWidth,    0,MAX_INT,COMMAND_LINE_BITS_UNITS2,                    "max. band width to use for index updates [bis/s]"                         ),
+  CMD_OPTION_SPECIAL      ("index-database-max-band-width",0,  1,0,&globalOptions.indexDatabaseMaxBandWidth,   cmdOptionParseBandWidth,NULL,                          "max. band width to use for index updates [bis/s]","number or file name"   ),
   CMD_OPTION_INTEGER      ("index-database-keep-time",     0,  1,0,globalOptions.indexDatabaseKeepTime,        0,MAX_INT,COMMAND_LINE_TIME_UNITS,                     "time to keep index data of not existing storage"                          ),
 
   CMD_OPTION_SET          ("log",                          0,  1,0,logTypes,                                   COMMAND_LINE_OPTIONS_LOG_TYPES,                        "log types"                                                                ),
@@ -654,8 +658,14 @@ LOCAL const ConfigValueUnit CONFIG_VALUE_BYTES_UNITS[] =
   {"T",1024LL*1024LL*1024LL*1024LL},
 };
 
-LOCAL const ConfigValueUnit CONFIG_VALUE_BITS_UNITS[] =
+LOCAL const ConfigValueUnit CONFIG_VALUE_BITS_UNITS1[] =
 {
+  {"K",1024LL},
+};
+
+LOCAL const ConfigValueUnit CONFIG_VALUE_BITS_UNITS2[] =
+{
+  {"M",1024LL*1024LL},
   {"K",1024LL},
 };
 
@@ -788,13 +798,16 @@ LOCAL const ConfigValue CONFIG_VALUES[] =
 
   CONFIG_VALUE_INTEGER  ("nice-level",                   &globalOptions.niceLevel,-1,                             0,19,NULL),
 
-  CONFIG_VALUE_INTEGER  ("max-band-width",               &globalOptions.maxBandWidth,-1,                          0,MAX_INT,CONFIG_VALUE_BITS_UNITS),
+//  CONFIG_VALUE_INTEGER  ("max-band-width",               &globalOptions.maxBandWidth,-1,                          0,MAX_INT,CONFIG_VALUE_BITS_UNITS),
+  CONFIG_VALUE_SPECIAL  ("max-band-width",               &globalOptions.maxBandWidth,-1,                          configValueParseBandWidth,NULL,NULL,NULL,&globalOptions.maxBandWidth),
 
   CONFIG_VALUE_INTEGER  ("compress-min-size",            &globalOptions.compressMinFileSize,-1,                   0,MAX_INT,CONFIG_VALUE_BYTES_UNITS),
   CONFIG_VALUE_SPECIAL  ("compress-exclude",             &compressExcludePatternList,-1,                          configValueParsePattern,NULL,NULL,NULL,NULL),
 
   CONFIG_VALUE_CSTRING  ("index-database",               &indexDatabaseFileName,-1                                ),
-  CONFIG_VALUE_BOOLEAN  ("index-database-no-auto-update",&globalOptions.indexDatabaseNoAutoUpdateFlag,-1          ),
+  CONFIG_VALUE_BOOLEAN  ("index-database-auto-update",   &globalOptions.indexDatabaseAutoUpdateFlag,-1            ),
+//  CONFIG_VALUE_INTEGER  ("index-database-max-band-width",&globalOptions.indexDatabaseMaxBandWidth,-1,             0,MAX_INT,COMMAND_LINE_BITS_UNITS2),
+  CONFIG_VALUE_SPECIAL  ("index-database-max-band-width",&globalOptions.indexDatabaseMaxBandWidth,-1,             configValueParseBandWidth,NULL,NULL,NULL,&globalOptions.indexDatabaseMaxBandWidth),
   CONFIG_VALUE_INTEGER  ("index-database-keep-time",     &globalOptions.indexDatabaseKeepTime,-1,                 0,MAX_INT,CONFIG_VALUE_TIME_UNITS),
 
   // global job settings
@@ -1437,6 +1450,44 @@ LOCAL bool cmdOptionParsePattern(void *userData, void *variable, const char *nam
 }
 
 /***********************************************************************\
+* Name   : cmdOptionParseBandWidth
+* Purpose: command line option call back for parsing band width settings
+* Input  : -
+* Output : -
+* Return : TRUE iff parsed, FALSE otherwise
+* Notes  : -
+\***********************************************************************/
+
+LOCAL bool cmdOptionParseBandWidth(void *userData, void *variable, const char *name, const char *value, const void *defaultValue)
+{
+  int64 n;
+
+  assert(variable != NULL);
+  assert(value != NULL);
+
+  UNUSED_VARIABLE(userData);
+  UNUSED_VARIABLE(name);
+  UNUSED_VARIABLE(defaultValue);
+
+  if (CmdOption_getInteger64Option(&n,(const char*)value,name,COMMAND_LINE_BITS_UNITS2,SIZE_OF_ARRAY(COMMAND_LINE_BITS_UNITS2)))
+  {
+    // value
+    ((BandWidth*)variable)->n                 = (ulong)n;
+    ((BandWidth*)variable)->fileName          = NULL;
+    ((BandWidth*)variable)->lastReadTimestamp = 0LL;
+  }
+  else
+  {
+    // external file
+    ((BandWidth*)variable)->n                 = 0L;
+    ((BandWidth*)variable)->fileName          = (const char*)value;
+    ((BandWidth*)variable)->lastReadTimestamp = 0LL;
+  }
+
+  return TRUE;
+}
+
+/***********************************************************************\
 * Name   : cmdOptionParseOwner
 * Purpose: command line option call back for parsing owner
 * Input  : -
@@ -1689,7 +1740,7 @@ LOCAL void initGlobalOptions(void)
   globalOptions.niceLevel                     = 0;
   globalOptions.tmpDirectory                  = String_newCString(DEFAULT_TMP_DIRECTORY);
   globalOptions.maxTmpSize                    = 0LL;
-  globalOptions.maxBandWidth                  = 0;
+  globalOptions.maxBandWidth                  = 0L;
   globalOptions.compressMinFileSize           = DEFAULT_COMPRESS_MIN_FILE_SIZE;
   globalOptions.cryptPassword                 = NULL;
   globalOptions.ftpServer                     = globalOptions.defaultFTPServer;
@@ -1764,7 +1815,7 @@ LOCAL void initGlobalOptions(void)
   globalOptions.deviceList                    = &deviceList;
   globalOptions.defaultDevice                 = &defaultDevice;
 
-  globalOptions.indexDatabaseNoAutoUpdateFlag = FALSE;
+  globalOptions.indexDatabaseAutoUpdateFlag   = TRUE;
   globalOptions.indexDatabaseKeepTime         = 24*60*60;
 
   globalOptions.groupFlag                     = FALSE;
@@ -2629,6 +2680,49 @@ void freeJobOptions(JobOptions *jobOptions)
   memset(jobOptions,0,sizeof(JobOptions));
 }
 
+ulong getBandWidth(BandWidth *bandWidth)
+{
+  uint64     timestamp;
+  FileHandle fileHandle;
+  String     line;
+  ulong      n;
+
+  assert(bandWidth != NULL);
+
+  n = 0L;
+
+  if (bandWidth->fileName != NULL)
+  {
+    // read from external file
+    timestamp = Misc_getTimestamp();
+    if (timestamp > (bandWidth->lastReadTimestamp+5*US_PER_SECOND))
+    {
+      if (File_openCString(&fileHandle,bandWidth->fileName,FILE_OPEN_READ) == ERROR_NONE)
+      {
+        line = String_new();
+        if (File_readLine(&fileHandle,line) == ERROR_NONE)
+        {
+          bandWidth->n = (ulong)String_toInteger64(line,STRING_BEGIN,NULL,NULL,0);
+        }
+        String_delete(line);
+
+        File_close(&fileHandle);
+
+        bandWidth->lastReadTimestamp = timestamp;
+      }
+    }
+
+    n = bandWidth->n;
+  }
+  else
+  {
+    // use value
+    n = bandWidth->n;
+  }
+
+  return n;
+}
+
 void getFTPServerSettings(const String     name,
                           const JobOptions *jobOptions,
                           FTPServer        *ftpServer
@@ -2866,10 +2960,74 @@ Errors inputCryptPassword(void         *userData,
   return error;
 }
 
+bool configValueParseBandWidth(void *userData, void *variable, const char *name, const char *value)
+{
+  int64 n;
+
+  assert(variable != NULL);
+  assert(value != NULL);
+
+  UNUSED_VARIABLE(userData);
+  UNUSED_VARIABLE(name);
+
+  if (ConfigValue_getInteger64Value(&n,(const char*)value,name,CONFIG_VALUE_BITS_UNITS2,SIZE_OF_ARRAY(CONFIG_VALUE_BITS_UNITS2)))
+  {
+    // value
+    ((BandWidth*)variable)->n                 = (ulong)n;
+    ((BandWidth*)variable)->fileName          = NULL;
+    ((BandWidth*)variable)->lastReadTimestamp = 0LL;
+  }
+  else
+  {
+    // external file
+    ((BandWidth*)variable)->n                 = 0L;
+    ((BandWidth*)variable)->fileName          = (const char*)value;
+    ((BandWidth*)variable)->lastReadTimestamp = 0LL;
+  }
+
+  return TRUE;
+}
+
+void configValueFormatInitBandWidth(void **formatUserData, void *userData, void *variable)
+{
+  assert(formatUserData != NULL);
+
+  UNUSED_VARIABLE(userData);
+
+  (*formatUserData) = (*(String**)variable);
+}
+
+void configValueFormatDoneBandWidth(void **formatUserData, void *userData)
+{
+  UNUSED_VARIABLE(formatUserData);
+  UNUSED_VARIABLE(userData);
+}
+
+bool configValueFormatBandWidth(void **formatUserData, void *userData, String line)
+{
+  BandWidth *bandWidth;
+
+  assert(formatUserData != NULL);
+
+  UNUSED_VARIABLE(userData);
+
+  bandWidth = (BandWidth*)(*formatUserData);
+  if (bandWidth->fileName != NULL)
+  {
+    String_format(line,"%s",bandWidth->fileName);
+  }
+  else
+  {
+    String_format(line,"%lu",bandWidth->n);
+  }
+
+  return TRUE;
+}
+
 bool configValueParseOwner(void *userData, void *variable, const char *name, const char *value)
 {
-  const char userName[256],groupName[256];
-  uint32     userId,groupId;
+  char   userName[256],groupName[256];
+  uint32 userId,groupId;
 
   assert(variable != NULL);
   assert(value != NULL);
@@ -2927,14 +3085,19 @@ void configValueFormatDoneOwner(void **formatUserData, void *userData)
 
 bool configValueFormatOwner(void **formatUserData, void *userData, String line)
 {
+  JobOptionsOwner *jobOptionsOwner;
+  char            userName[256],groupName[256];
+
   assert(formatUserData != NULL);
 
   UNUSED_VARIABLE(userData);
 
-  if ((*formatUserData) != NULL)
+  jobOptionsOwner = (JobOptionsOwner*)(*formatUserData);
+  if (jobOptionsOwner != NULL)
   {
-//???
-    String_format(line,"%d:%d",0,0);
+    if (File_userIdToUserName  (userName, sizeof(userName), jobOptionsOwner->userId )) return FALSE;
+    if (File_groupIdToGroupName(groupName,sizeof(groupName),jobOptionsOwner->groupId)) return FALSE;
+    String_format(line,"%s:%s",userName,groupName);
 
     (*formatUserData) = NULL;
 

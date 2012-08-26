@@ -123,6 +123,13 @@ typedef enum
 
 /***************************** Datatypes *******************************/
 
+typedef struct
+{
+  ulong      n;
+  const char *fileName;
+  uint64     lastReadTimestamp;
+} BandWidth;
+
 // password mode
 typedef enum
 {
@@ -248,7 +255,8 @@ typedef struct
   String                 tmpDirectory;                   // directory for temporary files
   uint64                 maxTmpSize;                     // max. size of temporary files
 
-  ulong                  maxBandWidth;                   // max. bandwidth to use [bits/s]
+  ulong                  maxBandWidth;                   // max. send/receive bandwidth to use [bits/s] or 0
+  BandWidth x;
 
   ulong                  compressMinFileSize;            // min. size of file for using compression
 
@@ -276,7 +284,8 @@ typedef struct
   const DeviceList       *deviceList;                    // list with devices
   Device                 *defaultDevice;                 // default device
 
-  bool                   indexDatabaseNoAutoUpdateFlag;  // TRUE for no automatic update of index datbase
+  bool                   indexDatabaseAutoUpdateFlag;    // TRUE for automatic update of index datbase
+  ulong                  indexDatabaseMaxBandWidth;      // max. band width to use for index updates [bits/s]
   uint                   indexDatabaseKeepTime;          // number of seconds to keep index data of not existing storage
 
   bool                   groupFlag;                      // TRUE iff entries in list should be grouped
@@ -534,6 +543,17 @@ void copyJobOptions(const JobOptions *fromJobOptions, JobOptions *toJobOptions);
 void freeJobOptions(JobOptions *jobOptions);
 
 /***********************************************************************\
+* Name   : getBandWidth
+* Purpose: get band width from value or external file
+* Input  : bandWidth - band width settings
+* Output : -
+* Return : return band width [bits/s] or 0
+* Notes  : -
+\***********************************************************************/
+
+ulong getBandWidth(BandWidth *bandWidth);
+
+/***********************************************************************\
 * Name   : getFTPServerSettings
 * Purpose: get FTP server settings
 * Input  : name       - FTP server name
@@ -643,14 +663,59 @@ Errors inputCryptPassword(void         *userData,
                          );
 
 /***********************************************************************\
-* Name   : cmdOptionParsePattern
-* Purpose: command line option call back for parsing pattern
+* Name   : configValueParseBandWidth
+* Purpose: config value call back for parsing band width setting
 *          patterns
-* Input  : -
+* Input  : userData - user data
+*          variable - config variable
+*          name     - config name
+*          value    - config value
 * Output : -
-* Return : TRUE iff parsed, FALSE otherwise
+* Return : TRUE if config value parsed and stored in variable, FALSE
+*          otherwise
 * Notes  : -
 \***********************************************************************/
+
+bool configValueParseBandWidth(void *userData, void *variable, const char *name, const char *value);
+
+/***********************************************************************\
+* Name   : configValueFormatInitOwner
+* Purpose: init format of config band width settings
+* Input  : userData - user data
+*          variable - config variable
+* Output : formatUserData - format user data
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void configValueFormatInitBandWidth(void **formatUserData, void *userData, void *variable);
+
+/***********************************************************************\
+* Name   : configValueFormatDoneBandWidth
+* Purpose: done format of config band width setting
+* Input  : formatUserData - format user data
+*          userData       - user data
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void configValueFormatDoneBandWidth(void **formatUserData, void *userData);
+
+/***********************************************************************\
+* Name   : configValueFormatBandWidth
+* Purpose: format next config band width setting
+* Input  : formatUserData - format user data
+*          userData       - user data
+*          line           - line variable
+*          name           - config name
+* Output : line - formated line
+* Return : TRUE if config statement formated, FALSE if end of data
+* Notes  : -
+\***********************************************************************/
+
+bool configValueFormatBandWidth(void **formatUserData, void *userData, String line);
 
 /***********************************************************************\
 * Name   : configValueParseOwner
