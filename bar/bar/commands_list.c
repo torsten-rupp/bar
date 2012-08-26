@@ -1627,7 +1627,7 @@ remoteBarFlag=FALSE;
           error = Archive_open(&archiveInfo,
                                storageName,
                                jobOptions,
-                               globalOptions.maxBandWidth,
+                               &globalOptions.maxBandWidth,
                                archiveGetCryptPasswordFunction,
                                archiveGetCryptPasswordUserData
                               );

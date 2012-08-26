@@ -193,7 +193,7 @@ LOCAL Errors createLocalStorageArchive(String           localStorageName,
 
   error = Storage_copy(storageName,
                        jobOptions,
-                       globalOptions.maxBandWidth,
+                       &globalOptions.maxBandWidth,
                        NULL,//StorageRequestVolumeFunction storageRequestVolumeFunction,
                        NULL,//void                         *storageRequestVolumeUserData,
                        NULL,//StorageStatusInfoFunction    storageStatusInfoFunction,
@@ -285,7 +285,7 @@ LOCAL Errors restoreFile(const String                    archiveName,
   error = Archive_open(&archiveInfo,
                        archiveName,
                        jobOptions,
-                       globalOptions.maxBandWidth,
+                       &globalOptions.maxBandWidth,
                        archiveGetCryptPasswordFunction,
                        archiveGetCryptPasswordUserData
                       );

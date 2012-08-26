@@ -142,7 +142,7 @@ Errors Command_compare(const StringList                *archiveNameList,
     error = Archive_open(&archiveInfo,
                          archiveName,
                          jobOptions,
-                         globalOptions.maxBandWidth,
+                         &globalOptions.maxBandWidth,
                          archiveGetCryptPasswordFunction,
                          archiveGetCryptPasswordUserData
                         );
