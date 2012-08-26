@@ -673,6 +673,45 @@ bool ConfigValue_parse(const char        *name,
                        void              *variable
                       );
 
+/***********************************************************************\
+* Name   : ConfigValue_getIntegerValue
+* Purpose: get integer value
+* Input  : value             - value variable
+*          string            - string
+*          name              - value name
+*          units             - units array or NULL
+*          unitCount         - size of unit array
+* Output : value - value
+* Return : TRUE if got integer, false otherwise
+* Notes  : -
+\***********************************************************************/
+
+bool ConfigValue_getIntegerValue(int                   *value,
+                                 const char            *string,
+                                 const char            *name,
+                                 const ConfigValueUnit *units,
+                                 uint                  unitCount
+                                );
+
+/***********************************************************************\
+* Name   : ConfigValue_getInteger64Value
+* Purpose: get integer value
+* Input  : value             - value variable
+*          string            - string
+*          name              - value name
+*          units             - units array or NULL
+*          unitCount         - size of unit array
+* Output : value - value
+* Return : TRUE if got integer, false otherwise
+* Notes  : -
+\***********************************************************************/
+
+bool ConfigValue_getInteger64Value(int64                 *value,
+                                   const char            *string,
+                                   const char            *name,
+                                   const ConfigValueUnit *units,
+                                   uint                  unitCount
+                                  );
 
 /***********************************************************************\
 * Name   : ConfigValue_formatInit

@@ -36,6 +36,196 @@ extern "C" {
 #endif
 
 /***********************************************************************\
+* Name   : getIntegerOption
+* Purpose: get integer value
+* Input  : value             - value variable
+*          string            - string
+*          option            - option name
+*          units             - units array or NULL
+*          unitCount         - size of unit array
+* Output : value - value
+* Return : TRUE if got integer, false otherwise
+* Notes  : -
+\***********************************************************************/
+
+LOCAL bool getIntegerValue(int                   *value,
+                           const char            *string,
+                           const char            *option,
+                           const ConfigValueUnit *units,
+                           uint                  unitCount,
+                           FILE                  *errorOutputHandle,
+                           const char            *errorPrefix
+                          )
+{
+  uint  i,j,z;
+  char  number[128],unit[32];
+  ulong factor;
+
+  assert(value != NULL);
+  assert(string != NULL);
+
+  // split number, unit
+  i = strlen(string);
+  if (i > 0)
+  {
+    while ((i > 1) && !isdigit(string[i-1])) { i--; }
+    j = MIN(i,               sizeof(number)-1); strncpy(number,&string[0],j); number[j] = '\0';
+    j = MIN(strlen(string)-i,sizeof(unit)  -1); strncpy(unit,  &string[i],j); unit[j]   = '\0';
+  }
+  else
+  {
+    number[0] = '\0';
+    unit[0]   = '\0';
+  }
+
+  // find factor
+  if (unit[0] != '\0')
+  {
+    if (units != NULL)
+    {
+      z = 0;
+      while (   (z < unitCount)
+             && (strcmp(units[z].name,unit) != 0)
+            )
+      {
+        z++;
+      }
+      if (z >= unitCount)
+      {
+        if (errorOutputHandle != NULL)
+        {
+          fprintf(errorOutputHandle,
+                  "%sInvalid unit in integer value '%s'! Valid units:",
+                  (errorPrefix != NULL) ? errorPrefix : "",
+                  string
+                 );
+          for (z = 0; z < unitCount; z++)
+          {
+            fprintf(errorOutputHandle," %s",units[z].name);
+          }
+          fprintf(errorOutputHandle,".\n");
+        }
+        return FALSE;
+      }
+      factor = units[z].factor;
+    }
+    else
+    {
+      if (errorOutputHandle != NULL) fprintf(errorOutputHandle,
+                                             "%sUnexpected unit in value '%s'!\n",
+                                             (errorPrefix != NULL) ? errorPrefix : "",
+                                             string
+                                            );
+      return FALSE;
+    }
+  }
+  else
+  {
+    factor = 1;
+  }
+
+  // calculate value
+  (*value) = strtoll(number,NULL,0)*factor;
+
+  return TRUE;
+}
+
+/***********************************************************************\
+* Name   : getInteger64Value
+* Purpose: get integer64 value
+* Input  : value             - value variable
+*          string            - string
+*          option            - option name
+*          units             - units array or NULL
+*          unitCount         - size of unit array
+* Output : value - value
+* Return : TRUE if got integer, false otherwise
+* Notes  : -
+\***********************************************************************/
+
+LOCAL bool getInteger64Value(int64                 *value,
+                             const char            *string,
+                             const char            *option,
+                             const ConfigValueUnit *units,
+                             uint                  unitCount,
+                             FILE                  *errorOutputHandle,
+                             const char            *errorPrefix
+                            )
+{
+  uint  i,j,z;
+  char  number[128],unit[32];
+  ulong factor;
+
+  assert(value != NULL);
+  assert(string != NULL);
+
+  // split number, unit
+  i = strlen(string);
+  if (i > 0)
+  {
+    while ((i > 1) && !isdigit(string[i-1])) { i--; }
+    j = MIN(i,               sizeof(number)-1); strncpy(number,&string[0],j); number[j] = '\0';
+    j = MIN(strlen(string)-i,sizeof(unit)  -1); strncpy(unit,  &string[i],j); unit[j]   = '\0';
+  }
+  else
+  {
+    number[0] = '\0';
+    unit[0]   = '\0';
+  }
+
+  // find factor
+  if (unit[0] != '\0')
+  {
+    if (units != NULL)
+    {
+      z = 0;
+      while (   (z < unitCount)
+             && (strcmp(units[z].name,unit) != 0)
+            )
+      {
+        z++;
+      }
+      if (z >= unitCount)
+      {
+        if (errorOutputHandle != NULL)
+        {
+          fprintf(errorOutputHandle,
+                  "%sInvalid unit in integer value '%s'! Valid units:",
+                  (errorPrefix != NULL) ? errorPrefix : "",
+                  string
+                 );
+          for (z = 0; z < unitCount; z++)
+          {
+            fprintf(errorOutputHandle," %s",units[z].name);
+          }
+          fprintf(errorOutputHandle,".\n");
+        }
+        return FALSE;
+      }
+      factor = units[z].factor;
+    }
+    else
+    {
+      if (errorOutputHandle != NULL) fprintf(errorOutputHandle,
+                                             "%sUnexpected unit in value '%s'!\n",
+                                             (errorPrefix != NULL) ? errorPrefix:"",
+                                             string
+                                            );
+      return FALSE;
+    }
+  }
+  else
+  {
+    factor = 1;
+  }
+
+  // calculate value
+  (*value) = strtoll(number,NULL,0)*factor;
+
+  return TRUE;
+}
+
+/***********************************************************************\
 * Name   : processValue
 * Purpose: process single config value
 * Input  : configValue       - config value
@@ -66,73 +256,23 @@ LOCAL bool processValue(const ConfigValue *configValue,
   {
     case CONFIG_VALUE_TYPE_INTEGER:
       {
-        uint  i,j,z;
-        char  number[128],unit[32];
-        ulong factor;
-        int   data;
+        int data;
 
-        // split number, unit
-        i = strlen(value);
-        if (i > 0)
+        // get integer option value
+        if (!getIntegerValue(&data,
+                             value,
+                             name,
+                             configValue->integerValue.units,
+                             configValue->integerValue.unitCount,
+                             errorOutputHandle,
+                             errorPrefix
+                            )
+           )
         {
-          while ((i > 1) && !isdigit(value[i-1])) { i--; }
-          j = MIN(i,              sizeof(number)-1); strncpy(number,&value[0],j);number[j] = '\0';
-          j = MIN(strlen(value)-i,sizeof(unit)  -1); strncpy(unit,  &value[i],j);unit[j]   = '\0';
-        }
-        else
-        {
-          number[0] = '\0';
-          unit[0]   = '\0';
+          return FALSE;
         }
 
-        // find factor
-        if (unit[0] != '\0')
-        {
-          if (configValue->integerValue.units != NULL)
-          {
-            z = 0;
-            while (   (z < configValue->integerValue.unitCount)
-                   && (strcmp(configValue->integerValue.units[z].name,unit) != 0)
-                  )
-            {
-              z++;
-            }
-            if (z >= configValue->integerValue.unitCount)
-            {
-              if (errorOutputHandle != NULL)
-              {
-                fprintf(errorOutputHandle,
-                        "%sInvalid unit in integer value '%s'! Valid units:",
-                        (errorPrefix != NULL)?errorPrefix:"",
-                        value
-                       );
-                for (z = 0; z < configValue->integerValue.unitCount; z++)
-                {
-                  fprintf(errorOutputHandle," %s",configValue->integerValue.units[z].name);
-                }
-                fprintf(errorOutputHandle,".\n");
-              }
-              return FALSE;
-            }
-            factor = configValue->integerValue.units[z].factor;
-          }
-          else
-          {
-            if (errorOutputHandle != NULL) fprintf(errorOutputHandle,
-                                                   "%sUnexpected unit in value '%s'!\n",
-                                                   (errorPrefix != NULL)?errorPrefix:"",
-                                                   value
-                                                  );
-            return FALSE;
-          }
-        }
-        else
-        {
-          factor = 1;
-        }
-
-        // calculate value
-        data = strtoll(value,NULL,0)*factor;
+        // check range
         if (   (data < configValue->integerValue.min)
             || (data > configValue->integerValue.max)
            )
@@ -175,73 +315,23 @@ LOCAL bool processValue(const ConfigValue *configValue,
       break;
     case CONFIG_VALUE_TYPE_INTEGER64:
       {
-        uint  i,j,z;
-        char  number[128],unit[32];
-        ulong factor;
         int64 data;
 
-        // split number, unit
-        i = strlen(value);
-        if (i > 0)
+        // get integer option value
+        if (!getInteger64Value(&data,
+                               value,
+                               name,
+                               configValue->integer64Value.units,
+                               configValue->integer64Value.unitCount,
+                               errorOutputHandle,
+                               errorPrefix
+                              )
+           )
         {
-          while ((i > 1) && !isdigit(value[i-1])) { i--; }
-          j = MIN(i,              sizeof(number)-1); strncpy(number,&value[0],j);number[j] = '\0';
-          j = MIN(strlen(value)-i,sizeof(unit)  -1); strncpy(unit,  &value[i],j);unit[j]   = '\0';
-        }
-        else
-        {
-          number[0] = '\0';
-          unit[0]   = '\0';
-        }
-
-        // find factor
-        if (unit[0] != '\0')
-        {
-          if (configValue->integer64Value.units != NULL)
-          {
-            z = 0;
-            while (   (z < configValue->integer64Value.unitCount)
-                   && (strcmp(configValue->integer64Value.units[z].name,unit) != 0)
-                  )
-            {
-              z++;
-            }
-            if (z >= configValue->integer64Value.unitCount)
-            {
-              if (errorOutputHandle != NULL)
-              {
-                fprintf(errorOutputHandle,
-                        "%sInvalid unit in integer value '%s'! Valid units:",
-                        (errorPrefix != NULL)?errorPrefix:"",
-                        value
-                       );
-                for (z = 0; z < configValue->integer64Value.unitCount; z++)
-                {
-                  fprintf(errorOutputHandle," %s",configValue->integer64Value.units[z].name);
-                }
-                fprintf(errorOutputHandle,".\n");
-              }
-              return FALSE;
-            }
-            factor = configValue->integer64Value.units[z].factor;
-          }
-          else
-          {
-            if (errorOutputHandle != NULL) fprintf(errorOutputHandle,
-                                                   "%sUnexpected unit in value '%s'!\n",
-                                                   (errorPrefix != NULL)?errorPrefix:"",
-                                                   value
-                                                  );
-            return FALSE;
-          }
-        }
-        else
-        {
-          factor = 1;
+          return FALSE;
         }
 
-        // calculate value
-        data = strtoll(value,NULL,0)*factor;
+        // check range
         if (   (data < configValue->integer64Value.min)
             || (data > configValue->integer64Value.max)
            )
@@ -714,7 +804,7 @@ LOCAL bool processValue(const ConfigValue *configValue,
   return TRUE;
 }
 
-/*---------------------------------------------------------------------*/
+// ----------------------------------------------------------------------
 
 bool ConfigValue_init(const ConfigValue configValues[],
                       uint              configValueCount
@@ -770,6 +860,26 @@ bool ConfigValue_parse(const char        *name,
   }
 
   return TRUE;
+}
+
+bool ConfigValue_getIntegerValue(int                   *value,
+                                 const char            *string,
+                                 const char            *name,
+                                 const ConfigValueUnit *units,
+                                 uint                  unitCount
+                                )
+{
+  return getIntegerValue(value,string,name,units,unitCount,NULL,NULL);
+}
+
+bool ConfigValue_getInteger64Value(int64                 *value,
+                                   const char            *string,
+                                   const char            *name,
+                                   const ConfigValueUnit *units,
+                                   uint                  unitCount
+                                  )
+{
+  return getInteger64Value(value,string,name,units,unitCount,NULL,NULL);
 }
 
 void ConfigValue_formatInit(ConfigValueFormat      *configValueFormat,
