@@ -53,6 +53,8 @@
 /* file data buffer size */
 #define BUFFER_SIZE (64*1024)
 
+#define READ_TIMEOUT (60*1000)
+
 #define MAX_BUFFER_SIZE     (64*1024)
 #define MAX_FILENAME_LENGTH (8*1024)
 
@@ -325,6 +327,130 @@ LOCAL Errors checkSSHLogin(const String loginName,
 
 #ifdef HAVE_SSH2
 /***********************************************************************\
+* Name   : sshSendCallback
+* Purpose: ssh send callback
+* Input  : socket   - libssh2 socket
+*          buffer   - buffer with data
+*          length   - length to send
+*          flags    - libssh2 flags
+*          abstract - pointer to user data
+* Output : -
+* Return : number of bytes sent
+* Notes  : -
+\***********************************************************************/
+
+LOCAL LIBSSH2_SEND_FUNC(sshSendCallback)
+{
+  StorageFileHandle *storageFileHandle;
+  ssize_t           n;
+
+  assert(abstract != NULL);
+
+  storageFileHandle = *((StorageFileHandle**)abstract);
+  assert(storageFileHandle != NULL);
+  assert(storageFileHandle->scp.oldSendCallback != NULL);
+
+  n = storageFileHandle->scp.oldSendCallback(socket,buffer,length,flags,abstract);
+  if (n > 0) storageFileHandle->scp.totalSentBytes += (uint64)n;
+
+  return n;
+}
+
+/***********************************************************************\
+* Name   : sshReceiveCallback
+* Purpose: ssh receive callback
+* Input  : socket   - libssh2 socket
+*          buffer   - buffer with data
+*          length   - length to receive
+*          flags    - libssh2 flags
+*          abstract - pointer to user data
+* Output : -
+* Return : number of bytes received
+* Notes  : -
+\***********************************************************************/
+
+LOCAL LIBSSH2_RECV_FUNC(sshReceiveCallback)
+{
+  StorageFileHandle *storageFileHandle;
+  ssize_t           n;
+
+  assert(abstract != NULL);
+
+  storageFileHandle = *((StorageFileHandle**)abstract);
+  assert(storageFileHandle != NULL);
+  assert(storageFileHandle->scp.oldReceiveCallback != NULL);
+
+  n = storageFileHandle->scp.oldReceiveCallback(socket,buffer,length,flags,abstract);
+  if (n > 0) storageFileHandle->scp.totalReceivedBytes += (uint64)n;
+
+  return n;
+}
+#endif /* HAVE_SSH2 */
+
+#ifdef HAVE_SSH2
+/***********************************************************************\
+* Name   : sftpSendCallback
+* Purpose: sftp send callback
+* Input  : socket   - libssh2 socket
+*          buffer   - buffer with data
+*          length   - length to send
+*          flags    - libssh2 flags
+*          abstract - pointer to user data
+* Output : -
+* Return : number of bytes sent
+* Notes  : -
+\***********************************************************************/
+
+LOCAL LIBSSH2_SEND_FUNC(sftpSendCallback)
+{
+  StorageFileHandle *storageFileHandle;
+  ssize_t           n;
+
+  assert(abstract != NULL);
+
+  storageFileHandle = *((StorageFileHandle**)abstract);
+  assert(storageFileHandle != NULL);
+  assert(storageFileHandle->sftp.oldSendCallback != NULL);
+
+  n = storageFileHandle->sftp.oldSendCallback(socket,buffer,length,flags,abstract);
+  if (n > 0) storageFileHandle->sftp.totalSentBytes += (uint64)n;
+
+  return n;
+}
+
+/***********************************************************************\
+* Name   : sftpReceiveCallback
+* Purpose: sftp receive callback
+* Input  : socket   - libssh2 socket
+*          buffer   - buffer with data
+*          length   - length to receive
+*          flags    - libssh2 flags
+*          abstract - pointer to user data
+* Output : -
+* Return : number of bytes received
+* Notes  : -
+\***********************************************************************/
+
+LOCAL LIBSSH2_RECV_FUNC(sftpReceiveCallback)
+{
+  StorageFileHandle *storageFileHandle;
+  ssize_t           n;
+
+  assert(abstract != NULL);
+
+  storageFileHandle = *((StorageFileHandle**)abstract);
+  assert(storageFileHandle != NULL);
+  assert(storageFileHandle->sftp.oldReceiveCallback != NULL);
+
+  n = storageFileHandle->sftp.oldReceiveCallback(socket,buffer,length,flags,abstract);
+  if (n > 0) storageFileHandle->sftp.totalReceivedBytes += (uint64)n;
+
+  return n;
+}
+#endif /* HAVE_SSH2 */
+
+#ifdef HAVE_SSH2
+/***********************************************************************\
 * Name   : waitSessionSocket
 * Purpose: wait a little until session socket can be read/write
 * Input  : socketHandle - socket handle
@@ -361,75 +487,142 @@ LOCAL bool waitSessionSocket(SocketHandle *socketHandle)
 }
 #endif /* HAVE_SSH2 */
 
-
+#if defined(HAVE_FTP) || defined(HAVE_SSH2)
 /***********************************************************************\
-* Name   : limitBandWidth
-* Purpose: limit used band width
-* Input  : storageBandWidth - storage band width
-*          transmittedBytes - transmitted bytes
-*          transmissionTime - time for transmission [us]
+* Name   : initBandWidthLimiter
+* Purpose: init band width limiter structure
+* Input  : storageBandWidthLimiter - storage band width limiter
+*          maxBandWidth            - max. band width to use [bit/s] or
+*                                    NULL
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
+LOCAL void initBandWidthLimiter(StorageBandWidthLimiter *storageBandWidthLimiter,
+                                BandWidth               *maxBandWidth
+                               )
+{
+  uint z;
+
+  assert(storageBandWidthLimiter != NULL);
+
+  storageBandWidthLimiter->maxBandWidth = maxBandWidth;
+  storageBandWidthLimiter->maxBlockSize = 64*1024;
+  storageBandWidthLimiter->blockSize    = 64*1024;
+  for (z = 0; z < SIZE_OF_ARRAY(storageBandWidthLimiter->measurements); z++)
+  {
+    storageBandWidthLimiter->measurements[z] = getBandWidth(maxBandWidth);
+  }
+  storageBandWidthLimiter->measurementCount     = 0;
+  storageBandWidthLimiter->measurementNextIndex = 0;
+  storageBandWidthLimiter->measurementBytes     = 0L;
+  storageBandWidthLimiter->measurementTime      = 0LL;
+}
+#endif /* defined(HAVE_FTP) || defined(HAVE_SSH2) */
+
 #if defined(HAVE_FTP) || defined(HAVE_SSH2)
-LOCAL void limitBandWidth(StorageBandWidth *storageBandWidth,
-                          ulong            transmittedBytes,
-                          uint64           transmissionTime
+/***********************************************************************\
+* Name   : limitBandWidth
+* Purpose: limit used band width
+* Input  : storageBandWidthLimiter - storage band width limiter
+*          transmittedBytes        - transmitted bytes
+*          transmissionTime        - time for transmission [us]
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void limitBandWidth(StorageBandWidthLimiter *storageBandWidthLimiter,
+                          ulong                   transmittedBytes,
+                          uint64                  transmissionTime
                          )
 {
   uint   z;
-  ulong  averageBandWidth;
-  uint64 delayTime;
+  ulong  averageBandWidth;   // average band width [bits/s]
+  ulong  maxBandWidth;
+  uint64 calculatedTime;
+  uint64 delayTime;          // delay time [us]
 
-  assert(storageBandWidth != NULL);
+  assert(storageBandWidthLimiter != NULL);
 
-  if (storageBandWidth->max > 0)
+  if (storageBandWidthLimiter->maxBandWidth != NULL)
   {
-    storageBandWidth->measurementBytes += transmittedBytes;
-    storageBandWidth->measurementTime += transmissionTime;
+    storageBandWidthLimiter->measurementBytes += transmittedBytes;
+    storageBandWidthLimiter->measurementTime += transmissionTime;
+fprintf(stderr,"%s, %d: sum %lu bytes %llu us\n",__FILE__,__LINE__,storageBandWidthLimiter->measurementBytes,storageBandWidthLimiter->measurementTime);
 
-    if ((ulong)(storageBandWidth->measurementTime/1000LL) > 100L)   // too small time values are not reliable, thus accumlate time
+    if (storageBandWidthLimiter->measurementTime > MS_TO_US(100LL))   // too small time values are not reliable, thus accumlate over time
     {
       // calculate average band width
       averageBandWidth = 0;
-      for (z = 0; z < MAX_BAND_WIDTH_MEASUREMENTS; z++)
+      if (storageBandWidthLimiter->measurementCount > 0)
       {
-        averageBandWidth += storageBandWidth->measurements[z];
-      }
-      averageBandWidth /= MAX_BAND_WIDTH_MEASUREMENTS;
-//fprintf(stderr,"%s,%d: averageBandWidth=%lu storageBandWidth->max=%lu deleta=%llu\n",__FILE__,__LINE__,averageBandWidth,storageBandWidth->max,storageBandWidth->measurementTime);
-
-      // delay if needed, recalculate optimal band width block size
-      if      (averageBandWidth > (storageBandWidth->max+1000*8))
-      {
-//fprintf(stderr,"%s,%d: -- averageBandWidth=%lu storageBandWidth->max=%lu deleta=%llu\n",__FILE__,__LINE__,averageBandWidth,storageBandWidth->max,storageBandWidth->measurementTime);
-        delayTime = ((uint64)(averageBandWidth-storageBandWidth->max)*1000000LL)/averageBandWidth;
-//fprintf(stderr,"%s,%d: %llu %llu\n",__FILE__,__LINE__,(storageBandWidth->measurementBytes*8LL*1000000LL)/storageBandWidth->max,storageBandWidth->measurementTime);
-        delayTime = (storageBandWidth->measurementBytes*8LL*1000000LL)/storageBandWidth->max-storageBandWidth->measurementTime;
-//        if (storageBandWidth->blockSize > 1024) storageBandWidth->blockSize -= 1024;
-      }
-      else if (averageBandWidth < (storageBandWidth->max-1000*8))
-      {
-        delayTime = 0LL;
-//fprintf(stderr,"%s,%d: ++ averageBandWidth=%lu storageBandWidth->max=%lu deleta=%llu\n",__FILE__,__LINE__,averageBandWidth,storageBandWidth->max,storageBandWidth->measurementTime);
-//        storageBandWidth->blockSize += 1024;
+        for (z = 0; z < storageBandWidthLimiter->measurementCount; z++)
+        {
+          averageBandWidth += storageBandWidthLimiter->measurements[z];
+fprintf(stderr," %ld",storageBandWidthLimiter->measurements[z]);
+        }
+fprintf(stderr,"\n");
+        averageBandWidth /= storageBandWidthLimiter->measurementCount;
       }
       else
       {
-        delayTime = 0LL;
-//fprintf(stderr,"%s,%d: == averageBandWidth=%lu storageBandWidth->max=%lu deleta=%llu\n",__FILE__,__LINE__,averageBandWidth,storageBandWidth->max,storageBandWidth->measurementTime);
+        averageBandWidth = 0L;
       }
-      if (delayTime > 0) Misc_udelay(delayTime);
+fprintf(stderr,"%s, %d: averageBandWidth=%lu bits/s\n",__FILE__,__LINE__,averageBandWidth);
 
-      // calculate bandwidth
-      storageBandWidth->measurements[storageBandWidth->measurementNextIndex] = (ulong)(((uint64)storageBandWidth->measurementBytes*8LL*1000000LL)/(storageBandWidth->measurementTime+delayTime));
-//fprintf(stderr,"%s,%d: %lu\n",__FILE__,__LINE__,storageBandWidth->measurements[storageBandWidth->measurementNextIndex]);
-      storageBandWidth->measurementNextIndex = (storageBandWidth->measurementNextIndex+1)%MAX_BAND_WIDTH_MEASUREMENTS;
+      // calculate delay time, recalculate optimal band width block size (hystersis: +-1024 bytes/s)
+      maxBandWidth = getBandWidth(storageBandWidthLimiter->maxBandWidth);
+fprintf(stderr,"%s, %d: maxBandWidth=%lu\n",__FILE__,__LINE__,maxBandWidth);
+      if     (   (maxBandWidth > 0L)
+              && (averageBandWidth > (maxBandWidth+BYTES_TO_BITS(1024)))
+             )
+      {
+        // calculate delay time
+        calculatedTime = (BYTES_TO_BITS(storageBandWidthLimiter->measurementBytes)*US_PER_SECOND)/maxBandWidth;
+        delayTime      = (calculatedTime > storageBandWidthLimiter->measurementTime) ? calculatedTime-storageBandWidthLimiter->measurementTime : 0LL;
 
-      storageBandWidth->measurementBytes = 0;
-      storageBandWidth->measurementTime  = 0;
+        // recalculate max. block size to send to send a little less in a single step (if possible)
+        if      ((storageBandWidthLimiter->blockSize > 32*1024) && (delayTime > 1000*MS_PER_SECOND)) storageBandWidthLimiter->blockSize -= 32*1024;
+        else if ((storageBandWidthLimiter->blockSize > 16*1024) && (delayTime >  500*MS_PER_SECOND)) storageBandWidthLimiter->blockSize -= 16*1024;
+        else if ((storageBandWidthLimiter->blockSize >  8*1024) && (delayTime >  250*MS_PER_SECOND)) storageBandWidthLimiter->blockSize -=  8*1024;
+        else if ((storageBandWidthLimiter->blockSize >  4*1024)                                    ) storageBandWidthLimiter->blockSize -=  4*1024;
+//fprintf(stderr,"%s,%d: storageBandWidthLimiter->measurementBytes=%ld storageBandWidthLimiter->max=%ld calculated time=%llu us storageBandWidthLimiter->measurementTime=%lu us blockSize=%ld\n",__FILE__,__LINE__,storageBandWidthLimiter->measurementBytes,storageBandWidthLimiter->max,calculatedTime,storageBandWidthLimiter->measurementTime,storageBandWidthLimiter->blockSize);
+      }
+      else if (averageBandWidth < (maxBandWidth-BYTES_TO_BITS(1024)))
+      {
+        // below max. band width -> no delay
+        delayTime = 0LL;
+
+        // increase max. block size to send a little more in a single step (if possible)
+        if (storageBandWidthLimiter->blockSize < (storageBandWidthLimiter->maxBlockSize-4*1024)) storageBandWidthLimiter->blockSize += 4*1024;
+//fprintf(stderr,"%s,%d: ++ averageBandWidth=%lu bit/s storageBandWidthLimiter->max=%lu bit/s storageBandWidthLimiter->measurementTime=%llu us storageBandWidthLimiter->blockSize=%llu\n",__FILE__,__LINE__,averageBandWidth,storageBandWidthLimiter->max,storageBandWidthLimiter->measurementTime,storageBandWidthLimiter->blockSize);
+      }
+      else
+      {
+        // in +-1024 bytes/s hystersis window -> no delay, keep max. block size
+        delayTime = 0LL;
+//fprintf(stderr,"%s,%d: ++ averageBandWidth=%lu bit/s storageBandWidthLimiter->max=%lu bit/s storageBandWidthLimiter->measurementTime=%llu us storageBandWidthLimiter->blockSize=%llu\n",__FILE__,__LINE__,averageBandWidth,storageBandWidthLimiter->max,storageBandWidthLimiter->measurementTime,storageBandWidthLimiter->blockSize);
+      }
+
+      // delay if needed
+      if (delayTime > 0)
+      {
+fprintf(stderr,"%s, %d: delayTime=%llu us %llu\n",__FILE__,__LINE__,delayTime,Misc_getCurrentDateTime());
+       Misc_udelay(delayTime);
+fprintf(stderr,"%s, %d: delay done%llu\n",__FILE__,__LINE__,Misc_getCurrentDateTime());
+      }
+
+      // calculate and store new current bandwidth
+      storageBandWidthLimiter->measurements[storageBandWidthLimiter->measurementNextIndex] = (ulong)((BYTES_TO_BITS((uint64)storageBandWidthLimiter->measurementBytes)*US_PER_SECOND)/(storageBandWidthLimiter->measurementTime+delayTime));
+fprintf(stderr,"%s, %d: new measurement[%d] %lu bits/us\n",__FILE__,__LINE__,storageBandWidthLimiter->measurementNextIndex,storageBandWidthLimiter->measurements[storageBandWidthLimiter->measurementNextIndex]);
+      storageBandWidthLimiter->measurementNextIndex = (storageBandWidthLimiter->measurementNextIndex+1)%SIZE_OF_ARRAY(storageBandWidthLimiter->measurements);
+      if (storageBandWidthLimiter->measurementCount < SIZE_OF_ARRAY(storageBandWidthLimiter->measurements)) storageBandWidthLimiter->measurementCount++;
+
+      // reset accumulated measurement
+      storageBandWidthLimiter->measurementBytes = 0L;
+      storageBandWidthLimiter->measurementTime  = 0LL;
     }
   }
 }
@@ -1552,6 +1745,7 @@ String Storage_getPrintableName(String       string,
 Errors Storage_init(StorageFileHandle            *storageFileHandle,
                     const String                 storageName,
                     const JobOptions             *jobOptions,
+                    BandWidth                    *maxBandWidth,
                     StorageRequestVolumeFunction storageRequestVolumeFunction,
                     void                         *storageRequestVolumeUserData,
                     StorageStatusInfoFunction    storageStatusInfoFunction,
@@ -1606,20 +1800,11 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
     case STORAGE_TYPE_FTP:
       #ifdef HAVE_FTP
         {
-          uint      z;
           FTPServer ftpServer;
 
           // init variables
-          storageFileHandle->type                    = STORAGE_TYPE_FTP;
-          storageFileHandle->ftp.bandWidth.max       = globalOptions.maxBandWidth;
-          storageFileHandle->ftp.bandWidth.blockSize = 64*1024;
-          for (z = 0; z < MAX_BAND_WIDTH_MEASUREMENTS; z++)
-          {
-            storageFileHandle->ftp.bandWidth.measurements[z] = globalOptions.maxBandWidth;
-          }
-          storageFileHandle->ftp.bandWidth.measurementNextIndex = 0;
-          storageFileHandle->ftp.bandWidth.measurementBytes     = 0;
-          storageFileHandle->ftp.bandWidth.measurementTime      = 0;
+          storageFileHandle->type = STORAGE_TYPE_FTP;
+          initBandWidthLimiter(&storageFileHandle->ftp.bandWidthLimiter,maxBandWidth);
 
           // allocate read-ahead buffer
           storageFileHandle->ftp.readAheadBuffer.data = (byte*)malloc(MAX_BUFFER_SIZE);
@@ -1704,7 +1889,6 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
     case STORAGE_TYPE_SCP:
       #ifdef HAVE_SSH2
         {
-          uint      z;
           Errors    error;
           SSHServer sshServer;
 
@@ -1712,15 +1896,7 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
           storageFileHandle->type                      = STORAGE_TYPE_SCP;
           storageFileHandle->scp.sshPublicKeyFileName  = NULL;
           storageFileHandle->scp.sshPrivateKeyFileName = NULL;
-          storageFileHandle->scp.bandWidth.max         = globalOptions.maxBandWidth;
-          storageFileHandle->scp.bandWidth.blockSize   = 64*1024;
-          for (z = 0; z < MAX_BAND_WIDTH_MEASUREMENTS; z++)
-          {
-            storageFileHandle->scp.bandWidth.measurements[z] = globalOptions.maxBandWidth;
-          }
-          storageFileHandle->scp.bandWidth.measurementNextIndex = 0;
-          storageFileHandle->scp.bandWidth.measurementBytes     = 0;
-          storageFileHandle->scp.bandWidth.measurementTime      = 0;
+          initBandWidthLimiter(&storageFileHandle->scp.bandWidthLimiter,maxBandWidth);
 
           // allocate read-ahead buffer
           storageFileHandle->scp.readAheadBuffer.data = (byte*)malloc(MAX_BUFFER_SIZE);
@@ -1790,7 +1966,6 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
     case STORAGE_TYPE_SFTP:
       #ifdef HAVE_SSH2
         {
-          uint      z;
           Errors    error;
           SSHServer sshServer;
 
@@ -1798,15 +1973,7 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
           storageFileHandle->type                       = STORAGE_TYPE_SFTP;
           storageFileHandle->sftp.sshPublicKeyFileName  = NULL;
           storageFileHandle->sftp.sshPrivateKeyFileName = NULL;
-          storageFileHandle->sftp.bandWidth.max         = globalOptions.maxBandWidth;
-          storageFileHandle->sftp.bandWidth.blockSize   = 64*1024;
-          for (z = 0; z < MAX_BAND_WIDTH_MEASUREMENTS; z++)
-          {
-            storageFileHandle->sftp.bandWidth.measurements[z] = globalOptions.maxBandWidth;
-          }
-          storageFileHandle->sftp.bandWidth.measurementNextIndex = 0;
-          storageFileHandle->sftp.bandWidth.measurementBytes     = 0;
-          storageFileHandle->sftp.bandWidth.measurementTime      = 0;
+          initBandWidthLimiter(&storageFileHandle->sftp.bandWidthLimiter,maxBandWidth);
 
           // allocate read-ahead buffer
           storageFileHandle->sftp.readAheadBuffer.data = (byte*)malloc(MAX_BUFFER_SIZE);
@@ -3394,6 +3561,14 @@ Errors Storage_create(StorageFileHandle *storageFileHandle,
           {
             return error;
           }
+          libssh2_session_set_timeout(Network_getSSHSession(&storageFileHandle->sftp.socketHandle),READ_TIMEOUT);
+
+          // install send/receive callback to track number of sent/received bytes
+          storageFileHandle->scp.totalSentBytes     = 0LL;
+          storageFileHandle->scp.totalReceivedBytes = 0LL;
+          (*(libssh2_session_abstract(Network_getSSHSession(&storageFileHandle->scp.socketHandle)))) = storageFileHandle;
+          storageFileHandle->scp.oldSendCallback    = libssh2_session_callback_set(Network_getSSHSession(&storageFileHandle->scp.socketHandle),LIBSSH2_CALLBACK_SEND,sshSendCallback   );
+          storageFileHandle->scp.oldReceiveCallback = libssh2_session_callback_set(Network_getSSHSession(&storageFileHandle->scp.socketHandle),LIBSSH2_CALLBACK_RECV,sshReceiveCallback);
 
           if (!storageFileHandle->jobOptions->dryRunFlag)
           {
@@ -3453,6 +3628,14 @@ Errors Storage_create(StorageFileHandle *storageFileHandle,
           {
             return error;
           }
+          libssh2_session_set_timeout(Network_getSSHSession(&storageFileHandle->sftp.socketHandle),READ_TIMEOUT);
+
+          // install send/receive callback to track number of sent/received bytes
+          storageFileHandle->sftp.totalSentBytes     = 0LL;
+          storageFileHandle->sftp.totalReceivedBytes = 0LL;
+          (*(libssh2_session_abstract(Network_getSSHSession(&storageFileHandle->sftp.socketHandle)))) = storageFileHandle;
+          storageFileHandle->sftp.oldSendCallback    = libssh2_session_callback_set(Network_getSSHSession(&storageFileHandle->sftp.socketHandle),LIBSSH2_CALLBACK_SEND,sftpSendCallback   );
+          storageFileHandle->sftp.oldReceiveCallback = libssh2_session_callback_set(Network_getSSHSession(&storageFileHandle->sftp.socketHandle),LIBSSH2_CALLBACK_RECV,sftpReceiveCallback);
 
           // init session
           storageFileHandle->sftp.sftp = libssh2_sftp_init(Network_getSSHSession(&storageFileHandle->sftp.socketHandle));
@@ -3460,9 +3643,9 @@ Errors Storage_create(StorageFileHandle *storageFileHandle,
           {
             char *sshErrorText;
 
-            libssh2_session_last_error(Network_getSSHSession(&storageFileHandle->scp.socketHandle),&sshErrorText,NULL,0);
+            libssh2_session_last_error(Network_getSSHSession(&storageFileHandle->sftp.socketHandle),&sshErrorText,NULL,0);
             error = ERRORX(SSH,
-                           libssh2_session_last_errno(Network_getSSHSession(&storageFileHandle->scp.socketHandle)),
+                           libssh2_session_last_errno(Network_getSSHSession(&storageFileHandle->sftp.socketHandle)),
                            sshErrorText
                           );
             Network_disconnect(&storageFileHandle->sftp.socketHandle);
@@ -3482,9 +3665,9 @@ LIBSSH2_SFTP_S_IRUSR|LIBSSH2_SFTP_S_IWUSR
             {
               char *sshErrorText;
 
-              libssh2_session_last_error(Network_getSSHSession(&storageFileHandle->scp.socketHandle),&sshErrorText,NULL,0);
+              libssh2_session_last_error(Network_getSSHSession(&storageFileHandle->sftp.socketHandle),&sshErrorText,NULL,0);
               error = ERRORX(SSH,
-                             libssh2_session_last_errno(Network_getSSHSession(&storageFileHandle->scp.socketHandle)),
+                             libssh2_session_last_errno(Network_getSSHSession(&storageFileHandle->sftp.socketHandle)),
                              sshErrorText
                             );
               libssh2_sftp_shutdown(storageFileHandle->sftp.sftp);
@@ -3762,7 +3945,6 @@ Errors Storage_open(StorageFileHandle *storageFileHandle,
           storageFileHandle->scp.index                  = 0LL;
           storageFileHandle->scp.readAheadBuffer.offset = 0LL;
           storageFileHandle->scp.readAheadBuffer.length = 0L;
-          storageFileHandle->scp.bandWidth.max          = globalOptions.maxBandWidth;
 
           // connect
           error = Network_connect(&storageFileHandle->scp.socketHandle,
@@ -3779,6 +3961,14 @@ Errors Storage_open(StorageFileHandle *storageFileHandle,
           {
             return error;
           }
+          libssh2_session_set_timeout(Network_getSSHSession(&storageFileHandle->scp.socketHandle),READ_TIMEOUT);
+
+          // install send/receive callback to track number of sent/received bytes
+          storageFileHandle->scp.totalSentBytes     = 0LL;
+          storageFileHandle->scp.totalReceivedBytes = 0LL;
+          (*(libssh2_session_abstract(Network_getSSHSession(&storageFileHandle->scp.socketHandle)))) = storageFileHandle;
+          storageFileHandle->scp.oldSendCallback    = libssh2_session_callback_set(Network_getSSHSession(&storageFileHandle->scp.socketHandle),LIBSSH2_CALLBACK_SEND,sshSendCallback   );
+          storageFileHandle->scp.oldReceiveCallback = libssh2_session_callback_set(Network_getSSHSession(&storageFileHandle->scp.socketHandle),LIBSSH2_CALLBACK_RECV,sshReceiveCallback);
 
           // open channel and file for reading
           storageFileHandle->scp.channel = libssh2_scp_recv(Network_getSSHSession(&storageFileHandle->scp.socketHandle),
@@ -3813,7 +4003,6 @@ Errors Storage_open(StorageFileHandle *storageFileHandle,
           storageFileHandle->sftp.index                  = 0LL;
           storageFileHandle->sftp.readAheadBuffer.offset = 0LL;
           storageFileHandle->sftp.readAheadBuffer.length = 0L;
-          storageFileHandle->sftp.bandWidth.max          = globalOptions.maxBandWidth;
 
           // connect
           error = Network_connect(&storageFileHandle->sftp.socketHandle,
@@ -3830,6 +4019,14 @@ Errors Storage_open(StorageFileHandle *storageFileHandle,
           {
             return error;
           }
+          libssh2_session_set_timeout(Network_getSSHSession(&storageFileHandle->sftp.socketHandle),READ_TIMEOUT);
+
+          // install send/receive callback to track number of sent/received bytes
+          storageFileHandle->sftp.totalSentBytes     = 0LL;
+          storageFileHandle->sftp.totalReceivedBytes = 0LL;
+          (*(libssh2_session_abstract(Network_getSSHSession(&storageFileHandle->sftp.socketHandle)))) = storageFileHandle;
+          storageFileHandle->sftp.oldSendCallback    = libssh2_session_callback_set(Network_getSSHSession(&storageFileHandle->sftp.socketHandle),LIBSSH2_CALLBACK_SEND,sftpSendCallback   );
+          storageFileHandle->sftp.oldReceiveCallback = libssh2_session_callback_set(Network_getSSHSession(&storageFileHandle->sftp.socketHandle),LIBSSH2_CALLBACK_RECV,sftpReceiveCallback);
 
           // init session
           storageFileHandle->sftp.sftp = libssh2_sftp_init(Network_getSSHSession(&storageFileHandle->sftp.socketHandle));
@@ -3850,9 +4047,9 @@ Errors Storage_open(StorageFileHandle *storageFileHandle,
           {
             char *sshErrorText;
 
-            libssh2_session_last_error(Network_getSSHSession(&storageFileHandle->scp.socketHandle),&sshErrorText,NULL,0);
+            libssh2_session_last_error(Network_getSSHSession(&storageFileHandle->sftp.socketHandle),&sshErrorText,NULL,0);
             error = ERRORX(SSH,
-                           libssh2_session_last_errno(Network_getSSHSession(&storageFileHandle->scp.socketHandle)),
+                           libssh2_session_last_errno(Network_getSSHSession(&storageFileHandle->sftp.socketHandle)),
                            sshErrorText
                           );
             libssh2_sftp_shutdown(storageFileHandle->sftp.sftp);
@@ -3868,9 +4065,9 @@ Errors Storage_open(StorageFileHandle *storageFileHandle,
           {
             char *sshErrorText;
 
-            libssh2_session_last_error(Network_getSSHSession(&storageFileHandle->scp.socketHandle),&sshErrorText,NULL,0);
+            libssh2_session_last_error(Network_getSSHSession(&storageFileHandle->sftp.socketHandle),&sshErrorText,NULL,0);
             error = ERRORX(SSH,
-                           libssh2_session_last_errno(Network_getSSHSession(&storageFileHandle->scp.socketHandle)),
+                           libssh2_session_last_errno(Network_getSSHSession(&storageFileHandle->sftp.socketHandle)),
                            sshErrorText
                           );
             libssh2_sftp_close(storageFileHandle->sftp.sftpHandle);
@@ -4218,6 +4415,8 @@ whould this be a possible implementation?
                                );
         if (error == ERROR_NONE)
         {
+          libssh2_session_set_timeout(Network_getSSHSession(&storageFileHandle->sftp.socketHandle),READ_TIMEOUT);
+
           if (!storageFileHandle->jobOptions->dryRunFlag)
           {
             // init session
@@ -4236,9 +4435,9 @@ whould this be a possible implementation?
               {
                  char *sshErrorText;
 
-                 libssh2_session_last_error(Network_getSSHSession(&storageFileHandle->scp.socketHandle),&sshErrorText,NULL,0);
+                 libssh2_session_last_error(Network_getSSHSession(&storageFileHandle->sftp.socketHandle),&sshErrorText,NULL,0);
                  error = ERRORX(SSH,
-                                libssh2_session_last_errno(Network_getSSHSession(&storageFileHandle->scp.socketHandle)),
+                                libssh2_session_last_errno(Network_getSSHSession(&storageFileHandle->sftp.socketHandle)),
                                 sshErrorText
                                );
               }
@@ -4249,7 +4448,7 @@ whould this be a possible implementation?
             {
               char *sshErrorText;
 
-              libssh2_session_last_error(Network_getSSHSession(&storageFileHandle->scp.socketHandle),&sshErrorText,NULL,0);
+              libssh2_session_last_error(Network_getSSHSession(&storageFileHandle->sftp.socketHandle),&sshErrorText,NULL,0);
               error = ERRORX(SSH,
                              libssh2_session_last_errno(Network_getSSHSession(&storageFileHandle->sftp.socketHandle)),
                              sshErrorText
@@ -4416,6 +4615,8 @@ Errors Storage_read(StorageFileHandle *storageFileHandle,
         {
           ulong   i;
           ssize_t readBytes;
+          ulong   length;
+          uint64  startTimestamp,endTimestamp;
           ulong   n;
 
           if (!storageFileHandle->jobOptions->dryRunFlag)
@@ -4445,7 +4646,20 @@ Errors Storage_read(StorageFileHandle *storageFileHandle,
             // read rest of data
             while (size > 0L)
             {
-              if (size < MAX_BUFFER_SIZE)
+              // get max. number of bytes to send in one step
+              if (storageFileHandle->ftp.bandWidthLimiter.maxBandWidth != NULL)
+              {
+                length = MIN(storageFileHandle->ftp.bandWidthLimiter.blockSize,size);
+              }
+              else
+              {
+                length = size;
+              }
+
+              // get start time
+              startTimestamp = Misc_getTimestamp();
+
+              if (length < MAX_BUFFER_SIZE)
               {
                 // read into read-ahead buffer
                 readBytes = FtpRead(storageFileHandle->ftp.readAheadBuffer.data,
@@ -4472,7 +4686,7 @@ Errors Storage_read(StorageFileHandle *storageFileHandle,
                 storageFileHandle->ftp.readAheadBuffer.length = (ulong)readBytes;
 
                 // copy data
-                n = MIN(size,storageFileHandle->ftp.readAheadBuffer.length);
+                n = MIN(length,storageFileHandle->ftp.readAheadBuffer.length);
                 memcpy(buffer,storageFileHandle->ftp.readAheadBuffer.data,n);
 
                 // adjust buffer, size, bytes read, index
@@ -4485,7 +4699,7 @@ Errors Storage_read(StorageFileHandle *storageFileHandle,
               {
                 // read direct
                 readBytes = FtpRead(buffer,
-                                    size,
+                                    length,
                                     storageFileHandle->ftp.data
                                    );
                 if (readBytes == 0)
@@ -4498,6 +4712,7 @@ Errors Storage_read(StorageFileHandle *storageFileHandle,
                                       size,
                                       storageFileHandle->ftp.data
                                      );
+
                 }
                 if (readBytes <= 0)
                 {
@@ -4510,6 +4725,21 @@ Errors Storage_read(StorageFileHandle *storageFileHandle,
                 size -= (ulong)readBytes;
                 (*bytesRead) += (ulong)readBytes;
                 storageFileHandle->ftp.index += (uint64)readBytes;
+              }
+
+              // get end time
+              endTimestamp = Misc_getTimestamp();
+
+              /* limit used band width if requested (note: when the system time is
+                 changing endTimestamp may become smaller than startTimestamp;
+                 thus do not check this with an assert())
+              */
+              if (endTimestamp >= startTimestamp)
+              {
+                limitBandWidth(&storageFileHandle->ftp.bandWidthLimiter,
+                               n,
+                               endTimestamp-startTimestamp
+                              );
               }
             }
           }
@@ -4526,6 +4756,9 @@ Errors Storage_read(StorageFileHandle *storageFileHandle,
         {
           ulong   index;
           ulong   bytesAvail;
+          ulong   length;
+          uint64  startTimestamp,endTimestamp;
+          uint64  startTotalReceivedBytes,endTotalReceivedBytes;
           ssize_t n;
 
           if (!storageFileHandle->jobOptions->dryRunFlag)
@@ -4553,7 +4786,21 @@ Errors Storage_read(StorageFileHandle *storageFileHandle,
             // read rest of data
             while (size > 0L)
             {
-              if (size < MAX_BUFFER_SIZE)
+              // get max. number of bytes to send in one step
+              if (storageFileHandle->ftp.bandWidthLimiter.maxBandWidth != NULL)
+              {
+                length = MIN(storageFileHandle->ftp.bandWidthLimiter.blockSize,size);
+              }
+              else
+              {
+                length = size;
+              }
+
+              // get start time, start received bytes
+              startTimestamp          = Misc_getTimestamp();
+              startTotalReceivedBytes = storageFileHandle->scp.totalReceivedBytes;
+
+              if (length < MAX_BUFFER_SIZE)
               {
                 // read into read-ahead buffer
                 do
@@ -4576,7 +4823,7 @@ Errors Storage_read(StorageFileHandle *storageFileHandle,
 //storageFileHandle->scp.readAheadBuffer.offset,storageFileHandle->scp.readAheadBuffer.length);
 
                 // copy data from read-ahead buffer
-                bytesAvail = MIN(size,storageFileHandle->scp.readAheadBuffer.length);
+                bytesAvail = MIN(length,storageFileHandle->scp.readAheadBuffer.length);
                 memcpy(buffer,storageFileHandle->scp.readAheadBuffer.data,bytesAvail);
 
                 // adjust buffer, size, bytes read, index
@@ -4592,7 +4839,7 @@ Errors Storage_read(StorageFileHandle *storageFileHandle,
                 {
                   n = libssh2_channel_read(storageFileHandle->scp.channel,
                                                    buffer,
-                                                   size
+                                                   length
                                                   );
                   if (n == LIBSSH2_ERROR_EAGAIN) Misc_udelay(100*1000);
                 }
@@ -4609,6 +4856,23 @@ Errors Storage_read(StorageFileHandle *storageFileHandle,
                 (*bytesRead) += (ulong)n;
                 storageFileHandle->scp.index += (uint64)n;
               }
+
+              // get end time, end received bytes
+              endTimestamp          = Misc_getTimestamp();
+              endTotalReceivedBytes = storageFileHandle->scp.totalReceivedBytes;
+              assert(endTotalReceivedBytes >= startTotalReceivedBytes);
+
+              /* limit used band width if requested (note: when the system time is
+                 changing endTimestamp may become smaller than startTimestamp;
+                 thus do not check this with an assert())
+              */
+              if (endTimestamp >= startTimestamp)
+              {
+                limitBandWidth(&storageFileHandle->scp.bandWidthLimiter,
+                               endTotalReceivedBytes-startTotalReceivedBytes,
+                               endTimestamp-startTimestamp
+                              );
+              }
             }
           }
         }
@@ -4621,6 +4885,9 @@ Errors Storage_read(StorageFileHandle *storageFileHandle,
         {
           ulong   index;
           ulong   bytesAvail;
+          ulong   length;
+          uint64  startTimestamp,endTimestamp;
+          uint64  startTotalReceivedBytes,endTotalReceivedBytes;
           ssize_t n;
 
           if (!storageFileHandle->jobOptions->dryRunFlag)
@@ -4648,13 +4915,27 @@ Errors Storage_read(StorageFileHandle *storageFileHandle,
             // read rest of data
             if (size > 0)
             {
+              // get max. number of bytes to send in one step
+              if (storageFileHandle->ftp.bandWidthLimiter.maxBandWidth != NULL)
+              {
+                length = MIN(storageFileHandle->ftp.bandWidthLimiter.blockSize,size);
+              }
+              else
+              {
+                length = size;
+              }
+
+              // get start time, start received bytes
+              startTimestamp          = Misc_getTimestamp();
+              startTotalReceivedBytes = storageFileHandle->sftp.totalReceivedBytes;
+
               #ifdef HAVE_SSH2_SFTP_SEEK2
                 libssh2_sftp_seek2(storageFileHandle->sftp.sftpHandle,storageFileHandle->sftp.index);
               #else
                 libssh2_sftp_seek(storageFileHandle->sftp.sftpHandle,storageFileHandle->sftp.index);
               #endif
 
-              if (size < MAX_BUFFER_SIZE)
+              if (length < MAX_BUFFER_SIZE)
               {
                 // read into read-ahead buffer
                 n = libssh2_sftp_read(storageFileHandle->sftp.sftpHandle,
@@ -4672,7 +4953,7 @@ Errors Storage_read(StorageFileHandle *storageFileHandle,
 //storageFileHandle->sftp.readAheadBuffer.offset,storageFileHandle->sftp.readAheadBuffer.length);
 
                 // copy data from read-ahead buffer
-                bytesAvail = MIN(size,storageFileHandle->sftp.readAheadBuffer.length);
+                bytesAvail = MIN(length,storageFileHandle->sftp.readAheadBuffer.length);
                 memcpy(buffer,storageFileHandle->sftp.readAheadBuffer.data,bytesAvail);
 
                 // adjust buffer, size, bytes read, index
@@ -4684,7 +4965,7 @@ Errors Storage_read(StorageFileHandle *storageFileHandle,
                 // read direct
                 n = libssh2_sftp_read(storageFileHandle->sftp.sftpHandle,
                                       buffer,
-                                      size
+                                      length
                                      );
                 if (n < 0)
                 {
@@ -4695,6 +4976,23 @@ Errors Storage_read(StorageFileHandle *storageFileHandle,
                 // adjust buffer, size, bytes read, index
                 (*bytesRead) += (ulong)n;
                 storageFileHandle->sftp.index += (uint64)n;
+              }
+
+              // get end time, end received bytes
+              endTimestamp          = Misc_getTimestamp();
+              endTotalReceivedBytes = storageFileHandle->sftp.totalReceivedBytes;
+              assert(endTotalReceivedBytes >= startTotalReceivedBytes);
+
+              /* limit used band width if requested (note: when the system time is
+                 changing endTimestamp may become smaller than startTimestamp;
+                 thus do not check this with an assert())
+              */
+              if (endTimestamp >= startTimestamp)
+              {
+                limitBandWidth(&storageFileHandle->sftp.bandWidthLimiter,
+                               endTotalReceivedBytes-startTotalReceivedBytes,
+                               endTimestamp-startTimestamp
+                              );
               }
             }
           }
@@ -4807,9 +5105,9 @@ Errors Storage_write(StorageFileHandle *storageFileHandle,
       #ifdef HAVE_FTP
         {
           ulong  writtenBytes;
-          long   length;
-          long   n;
+          ulong  length;
           uint64 startTimestamp,endTimestamp;
+          long   n;
 
           if (!storageFileHandle->jobOptions->dryRunFlag)
           {
@@ -4819,18 +5117,20 @@ Errors Storage_write(StorageFileHandle *storageFileHandle,
             writtenBytes = 0L;
             while (writtenBytes < size)
             {
-              // get start time
-              startTimestamp = Misc_getTimestamp();
-
-              // send data
-              if (storageFileHandle->ftp.bandWidth.max > 0)
+              // get max. number of bytes to send in one step
+              if (storageFileHandle->ftp.bandWidthLimiter.maxBandWidth != NULL)
               {
-                length = MIN(storageFileHandle->ftp.bandWidth.blockSize,size-writtenBytes);
+                length = MIN(storageFileHandle->ftp.bandWidthLimiter.blockSize,size-writtenBytes);
               }
               else
               {
                 length = size-writtenBytes;
               }
+
+              // get start time
+              startTimestamp = Misc_getTimestamp();
+
+              // send data
               n = FtpWrite((void*)buffer,length,storageFileHandle->ftp.data);
               if      (n < 0)
               {
@@ -4849,7 +5149,7 @@ Errors Storage_write(StorageFileHandle *storageFileHandle,
               buffer = (byte*)buffer+n;
               writtenBytes += n;
 
-              // get end time, transmission time
+              // get end time
               endTimestamp = Misc_getTimestamp();
 
               /* limit used band width if requested (note: when the system time is
@@ -4858,7 +5158,10 @@ Errors Storage_write(StorageFileHandle *storageFileHandle,
               */
               if (endTimestamp >= startTimestamp)
               {
-                limitBandWidth(&storageFileHandle->ftp.bandWidth,n,endTimestamp-startTimestamp);
+                limitBandWidth(&storageFileHandle->ftp.bandWidthLimiter,
+                               n,
+                               endTimestamp-startTimestamp
+                              );
               }
             }
           }
@@ -4873,9 +5176,10 @@ Errors Storage_write(StorageFileHandle *storageFileHandle,
       #ifdef HAVE_SSH2
         {
           ulong   writtenBytes;
-          long    length;
-          ssize_t n;
+          ulong   length;
           uint64  startTimestamp,endTimestamp;
+          uint64  startTotalSentBytes,endTotalSentBytes;
+          ssize_t n;
 
           if (!storageFileHandle->jobOptions->dryRunFlag)
           {
@@ -4884,21 +5188,24 @@ Errors Storage_write(StorageFileHandle *storageFileHandle,
             writtenBytes = 0L;
             while (writtenBytes < size)
             {
-              // send data
-              if (storageFileHandle->scp.bandWidth.max > 0)
+              // get max. number of bytes to send in one step
+              if (storageFileHandle->scp.bandWidthLimiter.maxBandWidth != NULL)
               {
-                length = MIN(storageFileHandle->scp.bandWidth.blockSize,size-writtenBytes);
+                length = MIN(storageFileHandle->scp.bandWidthLimiter.blockSize,size-writtenBytes);
               }
               else
               {
                 length = size-writtenBytes;
               }
 
-              // get start time
-              startTimestamp = Misc_getTimestamp();
-
-              // workaround for libssh2-problem: it seems sending of blocks >=8k cause problems, e. g. corrupt ssh MAC
+              // workaround for libssh2-problem: it seems sending of blocks >=4k cause problems, e. g. corrupt ssh MAC?
               length = MIN(length,4*1024);
+
+              // get start time, start received bytes
+              startTimestamp      = Misc_getTimestamp();
+              startTotalSentBytes = storageFileHandle->scp.totalSentBytes;
+
+              // send data
               do
               {
                 n = libssh2_channel_write(storageFileHandle->scp.channel,
@@ -4909,8 +5216,10 @@ Errors Storage_write(StorageFileHandle *storageFileHandle,
               }
               while (n == LIBSSH2_ERROR_EAGAIN);
 
-              // get end time, transmission time
-              endTimestamp = Misc_getTimestamp();
+              // get end time, end received bytes
+              endTimestamp      = Misc_getTimestamp();
+              endTotalSentBytes = storageFileHandle->scp.totalSentBytes;
+              assert(endTotalSentBytes >= startTotalSentBytes);
 
 // ??? is it possible in blocking-mode that write() return 0 and this is not an error?
 #if 1
@@ -4945,7 +5254,10 @@ Errors Storage_write(StorageFileHandle *storageFileHandle,
               */
               if (endTimestamp >= startTimestamp)
               {
-                limitBandWidth(&storageFileHandle->scp.bandWidth,n,endTimestamp-startTimestamp);
+                limitBandWidth(&storageFileHandle->scp.bandWidthLimiter,
+                               endTotalSentBytes-startTotalSentBytes,
+                               endTimestamp-startTimestamp
+                              );
               }
             }
           }
@@ -4957,10 +5269,11 @@ Errors Storage_write(StorageFileHandle *storageFileHandle,
     case STORAGE_TYPE_SFTP:
       #ifdef HAVE_SSH2
         {
-          ulong  writtenBytes;
-          long   length;
-          long   n;
-          uint64 startTimestamp,endTimestamp;
+          ulong   writtenBytes;
+          ulong   length;
+          uint64  startTimestamp,endTimestamp;
+          uint64  startTotalSentBytes,endTotalSentBytes;
+          ssize_t n;
 
           if (!storageFileHandle->jobOptions->dryRunFlag)
           {
@@ -4969,19 +5282,21 @@ Errors Storage_write(StorageFileHandle *storageFileHandle,
             writtenBytes = 0L;
             while (writtenBytes < size)
             {
-              // send data
-              if (storageFileHandle->sftp.bandWidth.max > 0)
+              // get max. number of bytes to send in one step
+              if (storageFileHandle->sftp.bandWidthLimiter.maxBandWidth != NULL)
               {
-                length = MIN(storageFileHandle->sftp.bandWidth.blockSize,size-writtenBytes);
+                length = MIN(storageFileHandle->sftp.bandWidthLimiter.blockSize,size-writtenBytes);
               }
               else
               {
                 length = size-writtenBytes;
               }
 
-              // get start time
-              startTimestamp = Misc_getTimestamp();
+              // get start time, start received bytes
+              startTimestamp      = Misc_getTimestamp();
+              startTotalSentBytes = storageFileHandle->sftp.totalSentBytes;
 
+              // send data
               do
               {
                 n = libssh2_sftp_write(storageFileHandle->sftp.sftpHandle,
@@ -4992,8 +5307,10 @@ Errors Storage_write(StorageFileHandle *storageFileHandle,
               }
               while (n == LIBSSH2_ERROR_EAGAIN);
 
-              // get end time, transmission time
-              endTimestamp = Misc_getTimestamp();
+              // get end time, end received bytes
+              endTimestamp      = Misc_getTimestamp();
+              endTotalSentBytes = storageFileHandle->sftp.totalSentBytes;
+              assert(endTotalSentBytes >= startTotalSentBytes);
 
 // ??? is it possible in blocking-mode that write() return 0 and this is not an error?
 #if 1
@@ -5027,7 +5344,10 @@ Errors Storage_write(StorageFileHandle *storageFileHandle,
               */
               if (endTimestamp >= startTimestamp)
               {
-                limitBandWidth(&storageFileHandle->sftp.bandWidth,n,endTimestamp-startTimestamp);
+                limitBandWidth(&storageFileHandle->sftp.bandWidthLimiter,
+                               endTotalSentBytes-startTotalSentBytes,
+                               endTimestamp-startTimestamp
+                              );
               }
             }
           }
@@ -5747,6 +6067,7 @@ error = ERROR_FUNCTION_NOT_SUPPORTED;
             String_delete(storageDirectoryListHandle->sftp.pathName);
             break;
           }
+          libssh2_session_set_timeout(Network_getSSHSession(&storageDirectoryListHandle->sftp.socketHandle),READ_TIMEOUT);
 
           // init FTP session
           storageDirectoryListHandle->sftp.sftp = libssh2_sftp_init(Network_getSSHSession(&storageDirectoryListHandle->sftp.socketHandle));
@@ -6366,6 +6687,7 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
 
 Errors Storage_copy(const String                 storageName,
                     const JobOptions             *jobOptions,
+                    BandWidth                    *maxBandWidth,
                     StorageRequestVolumeFunction storageRequestVolumeFunction,
                     void                         *storageRequestVolumeUserData,
                     StorageStatusInfoFunction    storageStatusInfoFunction,
@@ -6392,6 +6714,7 @@ Errors Storage_copy(const String                 storageName,
   error = Storage_init(&storageFileHandle,
                        storageName,
                        jobOptions,
+                       maxBandWidth,
                        storageRequestVolumeFunction,
                        storageRequestVolumeUserData,
                        storageStatusInfoFunction,

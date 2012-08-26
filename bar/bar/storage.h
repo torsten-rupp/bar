@@ -44,7 +44,8 @@
 /****************** Conditional compilation switches *******************/
 
 /***************************** Constants *******************************/
-#define MAX_BAND_WIDTH_MEASUREMENTS 256
+// unlimited storage band width
+#define STORAGE_BAND_WIDTH_UNLIMITED 0L
 
 /***************************** Datatypes *******************************/
 
@@ -147,13 +148,15 @@ typedef enum
 // bandwidth data
 typedef struct
 {
-  ulong  max;
-  ulong  blockSize;
-  ulong  measurements[MAX_BAND_WIDTH_MEASUREMENTS];
-  uint   measurementNextIndex;
-  ulong  measurementBytes;    // sum of transmitted bytes
-  uint64 measurementTime;     // time for transmission [us]
-} StorageBandWidth;
+  BandWidth *maxBandWidth;                                 // max. band width [bits/s] or NULL
+  ulong     maxBlockSize;                                  // max. block size [bytes]
+  ulong     blockSize;                                     // current block size [bytes]
+  ulong     measurements[16];                              // measured band width values [bis/s]
+  uint      measurementNextIndex;
+  uint      measurementCount; 
+  ulong     measurementBytes;                              // measurement sum of transmitted bytes
+  uint64    measurementTime;                               // measurement sum of time for transmission [us]
+} StorageBandWidthLimiter;
 
 typedef struct
 {
@@ -183,17 +186,17 @@ typedef struct
       // FTP storage
       struct
       {
-        netbuf           *control;
-        netbuf           *data;
-        uint64           index;                            // current read/write index in file [0..n-1]
-        uint64           size;                             // size of file [bytes]
+        netbuf                  *control;
+        netbuf                  *data;
+        uint64                  index;                     // current read/write index in file [0..n-1]
+        uint64                  size;                      // size of file [bytes]
         struct                                             // read-ahead buffer
         {
           byte   *data;
           uint64 offset;
           ulong  length;
         } readAheadBuffer;
-        StorageBandWidth bandWidth;                        // band width data
+        StorageBandWidthLimiter bandWidthLimiter;          // band width limit data
       } ftp;
     #endif /* HAVE_FTP */
 
@@ -201,55 +204,67 @@ typedef struct
       // ssh storage (remote BAR)
       struct
       {
-//        String           hostName;                         // ssh server host name
-//        uint             hostPort;                         // ssh server port number
-//        String           loginName;                        // ssh login name
-//        Password         *password;                        // ssh login password
-        String           sshPublicKeyFileName;             // ssh public key file name
-        String           sshPrivateKeyFileName;            // ssh private key file name
+//        String                  hostName;                  // ssh server host name
+//        uint                    hostPort;                  // ssh server port number
+//        String                  loginName;                 // ssh login name
+//        Password                *password;                 // ssh login password
+        String                  sshPublicKeyFileName;      // ssh public key file name
+        String                  sshPrivateKeyFileName;     // ssh private key file name
 
-        SocketHandle     socketHandle;
-        LIBSSH2_CHANNEL  *channel;                         // ssh channel
-        StorageBandWidth bandWidth;                        // band width data
+        SocketHandle            socketHandle;
+        LIBSSH2_CHANNEL         *channel;                  // ssh channel
+        LIBSSH2_SEND_FUNC((*oldSendCallback));             // libssh2 callback to send data (used to track sent bytes)
+        LIBSSH2_RECV_FUNC((*oldReceiveCallback));          // libssh2 callback to receive data (used to track received bytes)
+        uint64                  totalSentBytes;            // total sent bytes
+        uint64                  totalReceivedBytes;        // total received bytes
+        StorageBandWidthLimiter bandWidthLimiter;          // band width limiter data
       } ssh;
 
       // scp storage
       struct
       {
-        String           sshPublicKeyFileName;             // ssh public key file name
-        String           sshPrivateKeyFileName;            // ssh private key file name
+        String                  sshPublicKeyFileName;      // ssh public key file name
+        String                  sshPrivateKeyFileName;     // ssh private key file name
 
-        SocketHandle     socketHandle;
-        LIBSSH2_CHANNEL  *channel;                         // scp channel
-        uint64           index;                            // current read/write index in file [0..n-1]
-        uint64           size;                             // size of file [bytes]
+        SocketHandle            socketHandle;
+        LIBSSH2_CHANNEL         *channel;                  // scp channel
+        LIBSSH2_SEND_FUNC((*oldSendCallback));             // libssh2 callback to send data (used to track sent bytes)
+        LIBSSH2_RECV_FUNC((*oldReceiveCallback));          // libssh2 callback to receive data (used to track received bytes)
+        uint64                  totalSentBytes;            // total sent bytes
+        uint64                  totalReceivedBytes;        // total received bytes
+        uint64                  index;                     // current read/write index in file [0..n-1]
+        uint64                  size;                      // size of file [bytes]
         struct                                             // read-ahead buffer
         {
           byte   *data;
           uint64 offset;
           ulong  length;
         } readAheadBuffer;
-        StorageBandWidth bandWidth;                        // band width data
+        StorageBandWidthLimiter bandWidthLimiter;          // band width limiter data
       } scp;
 
       // sftp storage
       struct
       {
-        String              sshPublicKeyFileName;          // ssh public key file name
-        String              sshPrivateKeyFileName;         // ssh private key file name
+        String                  sshPublicKeyFileName;      // ssh public key file name
+        String                  sshPrivateKeyFileName;     // ssh private key file name
 
-        SocketHandle        socketHandle;
-        LIBSSH2_SFTP        *sftp;                         // sftp session
-        LIBSSH2_SFTP_HANDLE *sftpHandle;                   // sftp handle
-        uint64              index;                         // current read/write index in file [0..n-1]
-        uint64              size;                          // size of file [bytes]
+        SocketHandle            socketHandle;
+        LIBSSH2_SEND_FUNC((*oldSendCallback));             // libssh2 callback to send data (used to track sent bytes)
+        LIBSSH2_RECV_FUNC((*oldReceiveCallback));          // libssh2 callback to receive data (used to track received bytes)
+        uint64                  totalSentBytes;            // total sent bytes
+        uint64                  totalReceivedBytes;        // total received bytes
+        LIBSSH2_SFTP            *sftp;                     // sftp session
+        LIBSSH2_SFTP_HANDLE     *sftpHandle;               // sftp handle
+        uint64                  index;                     // current read/write index in file [0..n-1]
+        uint64                  size;                      // size of file [bytes]
         struct                                             // read-ahead buffer
         {
           byte   *data;
           uint64 offset;
           ulong  length;
         } readAheadBuffer;
-        StorageBandWidth bandWidth;                        // band width data
+        StorageBandWidthLimiter bandWidthLimiter;          // band width limiter data
       } sftp;
     #endif /* HAVE_SSH2 */
 
@@ -592,6 +607,7 @@ Errors Storage_prepare(const String     storageName,
 * Input  : storageFileHandle            - storage file handle variable
 *          storageName                  - storage name
 *          jobOptions                   - job options
+*          maxBandWidth                 - max. band width to use [bits/s]
 *          storageRequestVolumeFunction - volume request call back
 *          storageRequestVolumeUserData - user data for volume request
 *                                         call back
@@ -602,22 +618,23 @@ Errors Storage_prepare(const String     storageName,
 *          fileName          - file name (without storage specifier
 *                              prefix)
 * Return : ERROR_NONE or errorcode
-* Notes  : supported storage names:
-*            ftp://
-*            ssh://
-*            scp://
-*            sftp://
-*            cd://
-*            dvd://
-*            bd://
-*            device://
-*            file://
+* Notes  : storage types supported:
+*            ftp://[<login name>[:<login password>]@]<host name>[:<host port>]/<file name>
+*            ssh://[<login name>@]<host name>[:<host port>]/<file name>
+*            scp://[<login name>@]<host name>[:<host port>]/<file name>
+*            sftp://[<login name>@]<host name>[:<host port>]/<file name>
+*            cd://[<device name>:]<file name>
+*            dvd://[<device name>:]<file name>
+*            bd://[<device name>:]<file name>
+*            device://[<device name>:]<file name>
+*            file://<file name>
 *            plain file name
 \***********************************************************************/
 
 Errors Storage_init(StorageFileHandle            *storageFileHandle,
                     const String                 storageName,
                     const JobOptions             *jobOptions,
+                    BandWidth                    *maxBandWidth,
                     StorageRequestVolumeFunction storageRequestVolumeFunction,
                     void                         *storageRequestVolumeUserData,
                     StorageStatusInfoFunction    storageStatusInfoFunction,
@@ -921,6 +938,7 @@ Errors Storage_readDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
 * Input  : storageFileHandle            - storage file handle variable
 *          storageName                  - storage name
 *          jobOptions                   - job options
+*          maxBandWidth                 - max. band width to use [bits/s]
 *          storageRequestVolumeFunction - volume request call back
 *          storageRequestVolumeUserData - user data for volume request
 *                                         call back
@@ -945,6 +963,7 @@ Errors Storage_readDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
 
 Errors Storage_copy(const String                 storageName,
                     const JobOptions             *jobOptions,
+                    BandWidth                    *maxBandWidth,
                     StorageRequestVolumeFunction storageRequestVolumeFunction,
                     void                         *storageRequestVolumeUserData,
                     StorageStatusInfoFunction    storageStatusInfoFunction,
