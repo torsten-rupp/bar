@@ -153,7 +153,7 @@ typedef struct
   ulong     blockSize;                                     // current block size [bytes]
   ulong     measurements[16];                              // measured band width values [bis/s]
   uint      measurementNextIndex;
-  uint      measurementCount; 
+  uint      measurementCount;
   ulong     measurementBytes;                              // measurement sum of transmitted bytes
   uint64    measurementTime;                               // measurement sum of time for transmission [us]
 } StorageBandWidthLimiter;
@@ -443,7 +443,7 @@ void Storage_doneSpecifier(StorageSpecifier *storageSpecifier);
 /***********************************************************************\
 * Name   : Storage_parseFTPSpecifier
 * Purpose: parse FTP specifier:
-*            [<login name>[:<login password>]@]<host name>
+*            [<login name>[:<login password>]@]<host name>[:<host port>]
 * Input  : ftpSpecifier  - FTP specifier string
 *          hostName      - host name variable (can be NULL)
 *          hostPort      - host port variable (can be NULL)
@@ -514,7 +514,7 @@ bool Storage_parseDeviceSpecifier(const String deviceSpecifier,
 *            ftp://[<login name>[:<login password>]@]<host name>[:<host port>]/<file name>
 *            ssh://[<login name>@]<host name>[:<host port>]/<file name>
 *            scp://[<login name>@]<host name>[:<host port>]/<file name>
-*            sftp://[<login name>@]<host name>[:<hostport>]/<file name>
+*            sftp://[<login name>@]<host name>[:<host port>]/<file name>
 *            cd://[<device name>:]<file name>
 *            dvd://[<device name>:]<file name>
 *            bd://[<device name>:]<file name>
