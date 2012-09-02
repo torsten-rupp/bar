@@ -1385,8 +1385,15 @@ const char *File_userIdToUserName(char *name, uint nameSize, uint32 userId)
     return NULL;
   }
 
-  // get group name
-  strncpy(name,result->pw_name,nameSize);
+  // get user name
+  if (result != NULL)
+  {
+    strncpy(name,result->pw_name,nameSize);
+  }
+  else
+  {
+    strncpy(name,"NONE",nameSize);
+  }
   name[nameSize-1] = '\0';
 
   // free resources
@@ -1463,7 +1470,14 @@ const char *File_groupIdToGroupName(char *name, uint nameSize, uint32 groupId)
   }
 
   // get group name
-  strncpy(name,result->gr_name,nameSize);
+  if (result != NULL)
+  {
+    strncpy(name,result->gr_name,nameSize);
+  }
+  else
+  {
+    strncpy(name,"NONE",nameSize);
+  }
   name[nameSize-1] = '\0';
 
   // free resources
