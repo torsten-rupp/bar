@@ -218,6 +218,15 @@ class ArchiveNameParts
 
   /** parse archive name
    * @param archiveName archive name string
+   *   ftp://<login name>:<login password>@<host name>[:<host port>]/<file name>
+   *   scp://<login name>@<host name>:<host port>/<file name>
+   *   sftp://<login name>@<host name>:<host port>/<file name>
+   *   cd://<device name>/<file name>
+   *   dvd://<device name>/<file name>
+   *   bd://<device name>/<file name>
+   *   device://<device name>/<file name>
+   *   file://<file name>
+   *   <file name>
    */
   public ArchiveNameParts(String archiveName)
   {
@@ -240,7 +249,7 @@ class ArchiveNameParts
 //Dprintf.dprintf("specifier=%s",specifier);
       if      ((matcher = Pattern.compile("^([^:]*?):(([^@]|\\@)*?)@([^@:/]*?):(\\d*?)/(.*)$").matcher(specifier)).matches())
       {
-        // <login name>:<login password>@<host name>:<host port>/<file name>
+        // ftp://<login name>:<login password>@<host name>:<host port>/<file name>
         loginName     = StringUtils.map(matcher.group(1),new String[]{"\\@"},new String[]{"@"});
         loginPassword = matcher.group(2);
         hostName      = matcher.group(4);
@@ -250,7 +259,7 @@ class ArchiveNameParts
       }
       else if ((matcher = Pattern.compile("^([^:]*?):(([^@]|\\@)*?)@([^@/]*?)/(.*)$").matcher(specifier)).matches())
       {
-        // <login name>:<login password>@<host name>/<file name>
+        // ftp://<login name>:<login password>@<host name>/<file name>
         loginName     = StringUtils.map(matcher.group(1),new String[]{"\\@"},new String[]{"@"});
         loginPassword = matcher.group(2);
         hostName      = matcher.group(4);
@@ -259,7 +268,7 @@ class ArchiveNameParts
       }
       else if ((matcher = Pattern.compile("^(([^@]|\\@)*?)@([^@:/]*?):(\\d*?)/(.*)$").matcher(specifier)).matches())
       {
-        // <login name>@<host name>:<host port>/<file name>
+        // ftp://<login name>@<host name>:<host port>/<file name>
         loginName = StringUtils.map(matcher.group(1),new String[]{"\\@"},new String[]{"@"});
         hostName  = matcher.group(3);
         hostPort  = Integer.parseInt(matcher.group(4));
@@ -268,7 +277,7 @@ class ArchiveNameParts
       }
       else if ((matcher = Pattern.compile("^(([^@]|\\@)*?)@([^@/]*?)/(.*)$").matcher(specifier)).matches())
       {
-        // <login name>@<host name>/<file name>
+        // ftp://<login name>@<host name>/<file name>
         loginName = StringUtils.map(matcher.group(1),new String[]{"\\@"},new String[]{"@"});
         hostName  = matcher.group(3);
         fileName  = matcher.group(4);
@@ -276,7 +285,7 @@ class ArchiveNameParts
       }
       else if ((matcher = Pattern.compile("^([^@:/]*?):(\\d*?)/(.*)$").matcher(specifier)).matches())
       {
-        // <host name>:<host port>/<file name>
+        // ftp://<host name>:<host port>/<file name>
         hostName = matcher.group(1);
         hostPort = Integer.parseInt(matcher.group(2));
         fileName = matcher.group(3);
@@ -284,7 +293,7 @@ class ArchiveNameParts
       }
       else
       {
-        // <file name>
+        // ftp://<file name>
         fileName = specifier;
       }
     }
@@ -297,7 +306,7 @@ class ArchiveNameParts
 //Dprintf.dprintf("specifier=%s",specifier);
       if      ((matcher = Pattern.compile("^(([^@]|\\@)*?)@([^@:/]*?):(\\d*?)/(.*)$").matcher(specifier)).matches())
       {
-        // <login name>@<host name>:<host port>/<file name>
+        // scp://<login name>@<host name>:<host port>/<file name>
         loginName = StringUtils.map(matcher.group(1),new String[]{"\\@"},new String[]{"@"});
         hostName  = matcher.group(3);
         hostPort  = Integer.parseInt(matcher.group(4));
@@ -306,24 +315,31 @@ class ArchiveNameParts
       }
       else if ((matcher = Pattern.compile("^(([^@]|\\@)*?)@([^@/]*?)/(.*)$").matcher(specifier)).matches())
       {
-        // <login name>@<host name>/<file name>
+        // scp://<login name>@<host name>/<file name>
         loginName = StringUtils.map(matcher.group(1),new String[]{"\\@"},new String[]{"@"});
         hostName  = matcher.group(3);
         fileName  = matcher.group(4);
-//Dprintf.dprintf("%s: loginName=%s hostName=%s hostPort=%d fileName=%s",matcher.group(0),loginName,hostName,hostPort,fileName);
+//Dprintf.dprintf("%s: loginName=%s hostName=%s fileName=%s",matcher.group(0),loginName,hostName,fileName);
       }
       else if ((matcher = Pattern.compile("^([^@:/]*?):(\\d*?)/(.*)$").matcher(specifier)).matches())
       {
-        // <host name>:<host port>/<file name>
+        // scp://<host name>:<host port>/<file name>
         hostName  = matcher.group(1);
         hostPort  = Integer.parseInt(matcher.group(2));
         fileName  = matcher.group(3);
 //Dprintf.dprintf("%s: loginName=%s hostName=%s hostPort=%d fileName=%s",matcher.group(0),loginName,hostName,hostPort,fileName);
       }
+      else if ((matcher = Pattern.compile("^([^@:/]*?)/(.*)$").matcher(specifier)).matches())
+      {
+        // scp://<host name>/<file name>
+        hostName  = matcher.group(1);
+        fileName  = matcher.group(2);
+//Dprintf.dprintf("%s: loginName=%s hostName=%s fileName=%s",matcher.group(0),loginName,hostName,fileName);
+      }
       else
       {
 //Dprintf.dprintf("");
-        // <file name>
+        // scp://<file name>
         fileName = specifier;
       }
     }
@@ -336,17 +352,17 @@ class ArchiveNameParts
 //Dprintf.dprintf("specifier=%s",specifier);
       if      ((matcher = Pattern.compile("^([^:]*?):(([^@]|\\@)*?)@([^@:/]*?):(\\d*?)/(.*)$").matcher(specifier)).matches())
       {
-        // <login name>:<login password>@<host name>:<host port>/<file name>
+        // sftp://<login name>:<login password>@<host name>:<host port>/<file name>
         loginName     = StringUtils.map(matcher.group(1),new String[]{"\\@"},new String[]{"@"});
         loginPassword = matcher.group(2);
         hostName      = matcher.group(4);
         hostPort      = Integer.parseInt(matcher.group(5));
         fileName      = matcher.group(6);
-//Dprintf.dprintf("%s: loginName=%s loginPassword=%s hostName=%s fileName=%s",matcher.group(0),loginName,loginPassword,hostName,fileName);
+//Dprintf.dprintf("%s: loginName=%s loginPassword=%s hostName=%s hostPort=%d fileName=%s",matcher.group(0),loginName,loginPassword,hostName,hostPort,fileName);
       }
       else if ((matcher = Pattern.compile("^([^:]*?):(([^@]|\\@)*?)@([^@/]*?)/(.*)$").matcher(specifier)).matches())
       {
-        // <login name>:<login password>@<host name>/<file name>
+        // sftp://<login name>:<login password>@<host name>/<file name>
         loginName     = StringUtils.map(matcher.group(1),new String[]{"\\@"},new String[]{"@"});
         loginPassword = matcher.group(2);
         hostName      = matcher.group(4);
@@ -355,16 +371,16 @@ class ArchiveNameParts
       }
       else if ((matcher = Pattern.compile("^(([^@]|\\@)*?)@([^@:/]*?):(\\d*?)/(.*)$").matcher(specifier)).matches())
       {
-        // <login name>@<host name>:<host port>/<file name>
+        // sftp://<login name>@<host name>:<host port>/<file name>
         loginName = StringUtils.map(matcher.group(1),new String[]{"\\@"},new String[]{"@"});
         hostName  = matcher.group(3);
         hostPort  = Integer.parseInt(matcher.group(4));
         fileName  = matcher.group(5);
-//Dprintf.dprintf("%s: loginName=%s loginPassword=%s hostName=%s fileName=%s",matcher.group(0),loginName,loginPassword,hostName,fileName);
+//Dprintf.dprintf("%s: loginName=%s hostName=%s hostPort=%d fileName=%s",matcher.group(0),loginName,hostName,hostPort,fileName);
       }
       else if ((matcher = Pattern.compile("^(([^@]|\\@)*?)@([^@/]*?)/(.*)$").matcher(specifier)).matches())
       {
-        // <login name>@<host name>/<file name>
+        // sftp://<login name>@<host name>/<file name>
         loginName = StringUtils.map(matcher.group(1),new String[]{"\\@"},new String[]{"@"});
         hostName  = matcher.group(3);
         fileName  = matcher.group(4);
@@ -372,15 +388,22 @@ class ArchiveNameParts
       }
       else if ((matcher = Pattern.compile("^([^@:/]*?):(\\d*?)/(.*)$").matcher(specifier)).matches())
       {
-        // <host name>:<host port>/<file name>
+        // sftp://<host name>:<host port>/<file name>
         hostName = matcher.group(1);
         hostPort = Integer.parseInt(matcher.group(2));
         fileName = matcher.group(3);
-//Dprintf.dprintf("%s: loginName=%s loginPassword=%s hostName=%s fileName=%s",matcher.group(0),loginName,loginPassword,hostName,fileName);
+//Dprintf.dprintf("%s: hostName=%s hostPort=%d fileName=%s",matcher.group(0),hostName,hostPort,fileName);
+      }
+      else if ((matcher = Pattern.compile("^([^@:/]*?)/(.*)$").matcher(specifier)).matches())
+      {
+        // sftp://<host name>/<file name>
+        hostName = matcher.group(1);
+        fileName = matcher.group(2);
+//Dprintf.dprintf("%s: hostName=%s fileName=%s",matcher.group(0),hostName,fileName);
       }
       else
       {
-        // <file name>
+        // sftp://<file name>
         fileName = specifier;
       }
     }
@@ -394,14 +417,14 @@ class ArchiveNameParts
       Object[] data = new Object[2];
       if      ((matcher = Pattern.compile("^([^:]*?):(.*)$").matcher(specifier)).matches())
       {
-        // <device name>:<file name>
+        // cd://<device name>:<file name>
         deviceName = matcher.group(1);
         fileName   = matcher.group(2);
 //Dprintf.dprintf("%s: deviceName=%s fileName=%s",matcher.group(0),deviceName,fileName);
       }
       else
       {
-        // <file name>
+        // cd://<file name>
         fileName = specifier;
 //Dprintf.dprintf("%s: deviceName=%s fileName=%s",matcher.group(0),deviceName,fileName);
       }
@@ -414,14 +437,14 @@ class ArchiveNameParts
       String specifier = archiveName.substring(6);
       if      ((matcher = Pattern.compile("^([^:]*?):(.*)$").matcher(specifier)).matches())
       {
-        // <device name>:<file name>
+        // dvd://<device name>:<file name>
         deviceName = matcher.group(1);
         fileName   = matcher.group(2);
 //Dprintf.dprintf("%s: deviceName=%s fileName=%s",matcher.group(0),deviceName,fileName);
       }
       else
       {
-        // <file name>
+        // dvd://<file name>
         fileName = specifier;
 //Dprintf.dprintf("%s: deviceName=%s fileName=%s",matcher.group(0),deviceName,fileName);
       }
@@ -435,14 +458,14 @@ class ArchiveNameParts
 //Dprintf.dprintf("specifier=%s",specifier);
       if      ((matcher = Pattern.compile("^([^:]*?):(.*)$").matcher(specifier)).matches())
       {
-        // <device name>:<file name>
+        // bd://<device name>:<file name>
         deviceName = matcher.group(1);
         fileName   = matcher.group(2);
 //Dprintf.dprintf("%s: deviceName=%s fileName=%s",matcher.group(0),deviceName,fileName);
       }
       else
       {
-        // <file name>
+        // bd://<file name>
         fileName = specifier;
 //Dprintf.dprintf("%s: deviceName=%s fileName=%s",matcher.group(0),deviceName,fileName);
       }
@@ -456,14 +479,14 @@ class ArchiveNameParts
 //Dprintf.dprintf("specifier=%s",specifier);
       if      ((matcher = Pattern.compile("^([^:]*?):(.*)$").matcher(specifier)).matches())
       {
-        // <device name>:<file name>
+        // device://<device name>:<file name>
         deviceName = matcher.group(1);
         fileName   = matcher.group(2);
 //Dprintf.dprintf("%s: deviceName=%s fileName=%s",matcher.group(0),deviceName,fileName);
       }
       else
       {
-        // <file name>
+        // device://<file name>
         fileName = specifier;
 //Dprintf.dprintf("%s: deviceName=%s fileName=%s",matcher.group(0),deviceName,fileName);
       }
