@@ -242,7 +242,7 @@ LOCAL Errors checkFTPLogin(const String hostName,
   {
     Password_undeploy(loginPassword);
     FtpClose(ftpControl);
-    return ERROR_FTP_AUTHENTIFICATION;
+    return ERROR_FTP_AUTHENTICATION;
   }
   Password_undeploy(loginPassword);
   FtpQuit(ftpControl);
@@ -3491,7 +3491,7 @@ Errors Storage_create(StorageFileHandle *storageFileHandle,
           {
             Password_undeploy(storageFileHandle->storageSpecifier.loginPassword);
             FtpClose(storageFileHandle->ftp.control);
-            return ERROR_FTP_AUTHENTIFICATION;
+            return ERROR_FTP_AUTHENTICATION;
           }
           Password_undeploy(storageFileHandle->storageSpecifier.loginPassword);
 
@@ -3855,7 +3855,7 @@ Errors Storage_open(StorageFileHandle *storageFileHandle,
           {
             Password_undeploy(storageFileHandle->storageSpecifier.loginPassword);
             FtpClose(storageFileHandle->ftp.control);
-            return ERROR_FTP_AUTHENTIFICATION;
+            return ERROR_FTP_AUTHENTICATION;
           }
           Password_undeploy(storageFileHandle->storageSpecifier.loginPassword);
 
@@ -5979,7 +5979,7 @@ Errors Storage_openDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
                       ) != 1
              )
           {
-            error = ERROR_FTP_AUTHENTIFICATION;
+            error = ERROR_FTP_AUTHENTICATION;
             Password_undeploy(loginPassword);
             FtpClose(control);
             Password_delete(loginPassword);

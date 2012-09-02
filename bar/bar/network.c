@@ -468,7 +468,7 @@ Errors Network_connect(SocketHandle *socketHandle,
                                                ) != 0)
         {
           ssh2Error = libssh2_session_last_error(socketHandle->ssh2.session,&ssh2ErrorText,NULL,0);
-          error = ERRORX(SSH_AUTHENTIFICATION,ssh2Error,ssh2ErrorText);
+          error = ERRORX(SSH_AUTHENTICATION,ssh2Error,ssh2ErrorText);
           Password_undeploy(password);
           libssh2_session_disconnect(socketHandle->ssh2.session,"");
           libssh2_session_free(socketHandle->ssh2.session);
