@@ -61,8 +61,8 @@ ERROR INVALID_SSH_SPECIFIER          "invalid SSH specifier"
 ERROR NO_SSH_PASSWORD                "no SSH password given"
 ERROR INVALID_SSH_PASSWORD           "invalid SSH password"
 ERROR SSH_SESSION_FAIL               "initialize SSH session fail"
-ERROR SSH_AUTHENTIFICATION
-  strncpy(errorText,"SSH authentification fail",sizeof(errorText));
+ERROR SSH_AUTHENTICATION
+  strncpy(errorText,"SSH authentication fail",sizeof(errorText));
   if (ERROR_TEXT != NULL)
   {
     strncat(errorText,": ",sizeof(errorText)-1-strlen(errorText));
@@ -86,7 +86,7 @@ ERROR INVALID_FTP_SPECIFIER          "invalid FTP specifier"
 ERROR FTP_SESSION_FAIL               "initialize FTP session fail"
 ERROR NO_FTP_PASSWORD                "no FTP password given"
 ERROR INVALID_FTP_PASSWORD           "invalid FTP password"
-ERROR FTP_AUTHENTIFICATION           "invalid FTP user/password"
+ERROR FTP_AUTHENTICATION             "invalid FTP user/password"
 ERROR FTP_GET_SIZE                   "get FTP file size fail"
 //ERROR FTP_CREATE                     "create FTP file fail"
 //ERROR FTP_READ                       "read FTP file fail"
