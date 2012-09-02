@@ -3026,7 +3026,7 @@ void configValueFormatInitBandWidth(void **formatUserData, void *userData, void 
 
   UNUSED_VARIABLE(userData);
 
-  (*formatUserData) = (*(String**)variable);
+  (*formatUserData) = (BandWidth*)variable;
 }
 
 void configValueFormatDoneBandWidth(void **formatUserData, void *userData)
@@ -3106,7 +3106,7 @@ void configValueFormatInitOwner(void **formatUserData, void *userData, void *var
 
   UNUSED_VARIABLE(userData);
 
-  (*formatUserData) = (*(String**)variable);
+  (*formatUserData) = (JobOptionsOwner*)variable;
 }
 
 void configValueFormatDoneOwner(void **formatUserData, void *userData)
