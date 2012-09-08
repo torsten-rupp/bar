@@ -4975,12 +4975,14 @@ class TabJobs
 
   /** get archive name
    * @return archive name
-   *   ftp://<name>:<password>@<host>/<file name>
-   *   scp://<name>@<host>:<port>/<file name>
-   *   sftp://<name>@<host>:<port>/<file name>
-   *   dvd://<device>/<file name>
-   *   device://<device>/<file name>
-   *   <file name>
+   *   ftp://<login name>:<login password>@<host name>[:<host port>]/<file name>
+   *   scp://<login name>@<host name>:<host port>/<file name>
+   *   sftp://<login name>@<host name>:<host port>/<file name>
+   *   cd://<device name>/<file name>
+   *   dvd://<device name>/<file name>
+   *   bd://<device name>/<file name>
+   *   device://<device name>/<file name>
+   *   file://<file name>
    */
   private String getArchiveName()
   {
@@ -4998,11 +5000,13 @@ class TabJobs
 
   /** parse archive name
    * @param name archive name string
-   *   ftp://<name>:<password>@<host>/<file name>
-   *   scp://<name>@<host>:<port>/<file name>
-   *   sftp://<name>@<host>:<port>/<file name>
-   *   dvd://<device>/<file name>
-   *   device://<device>/<file name>
+   *   ftp://<login name>:<login password>@<host name>[:<host port>]/<file name>
+   *   scp://<login name>@<host name>:<host port>/<file name>
+   *   sftp://<login name>@<host name>:<host port>/<file name>
+   *   cd://<device name>/<file name>
+   *   dvd://<device name>/<file name>
+   *   bd://<device name>/<file name>
+   *   device://<device name>/<file name>
    *   file://<file name>
    *   <file name>
    */
