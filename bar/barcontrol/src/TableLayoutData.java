@@ -13,8 +13,6 @@ import org.eclipse.swt.SWT;
 
 /****************************** Classes ********************************/
 
-/* end of file */
-
 public class TableLayoutData
 {
   // --------------------------- constants --------------------------------
@@ -45,7 +43,7 @@ public class TableLayoutData
   public int     minHeight = SWT.DEFAULT;
   public int     maxWidth  = SWT.DEFAULT;  // max. size
   public int     maxHeight = SWT.DEFAULT;
-  public boolean exclude   = false;        // true iff widget should be excluded (not drawn)
+  public boolean hidden    = false;        // true iff widget is hidden (not drawn)
 
   protected int row,column;
   protected int style;
@@ -147,6 +145,9 @@ public class TableLayoutData
     this(row,column,DEFAULT);
   }
 
+  /** convert to string
+   * @return string
+   */
   public String toString()
   {
     StringBuffer s;
@@ -162,6 +163,7 @@ public class TableLayoutData
     s.append(")");
     s.append(" spawn=("+rowSpawn+","+columnSpawn+")");
     s.append(" pad=("+padX+","+padY+")");
+    s.append(" size=("+width+","+height+")");
     s.append(" min=("+minWidth+","+minHeight+")");
     s.append(" max=("+maxWidth+","+maxHeight+")");
 

@@ -876,24 +876,6 @@ class WidgetEventListener
   }
 }
 
-/** widget column table data
- */
-class WidgetTableColumnData
-{
-  public int     width;
-  public boolean resizable;
-
-  /** create column data
-   * @param width column width
-   * @param resizable true iff column is resiable
-   */
-  WidgetTableColumnData(int width, boolean resizable)
-  {
-    this.width     = width;
-    this.resizable = resizable;
-  }
-}
-
 class Widgets
 {
   //-----------------------------------------------------------------------
@@ -1580,7 +1562,7 @@ class Widgets
     if (!control.isDisposed())
     {
       TableLayoutData tableLayoutData = (TableLayoutData)control.getLayoutData();
-      tableLayoutData.exclude = !visibleFlag;
+      tableLayoutData.hidden = !visibleFlag;
       control.setVisible(visibleFlag);
       if (visibleFlag)
       {
@@ -2847,7 +2829,7 @@ class Widgets
   {
     TableColumn tableColumn = new TableColumn(table,style);
     tableColumn.setText(title);
-    tableColumn.setData(new WidgetTableColumnData(width,resizable));
+    tableColumn.setData(new TableLayoutData(0,0,0,0,0,0,0,width,0,resizable ? SWT.DEFAULT : width,resizable ? SWT.DEFAULT : width));
     tableColumn.setWidth(width);
     tableColumn.setResizable(resizable);
     if (width <= 0) tableColumn.pack();
@@ -2925,13 +2907,10 @@ class Widgets
   {
     if (showFlag)
     {
-      WidgetTableColumnData widgetTableColumnData = (WidgetTableColumnData)tableColumn.getData();
+      TableLayoutData tableLayoutData = (TableLayoutData)tableColumn.getData();
 
-      if (widgetTableColumnData != null)
-      {
-       tableColumn.setWidth(widgetTableColumnData.width);
-        tableColumn.setResizable(widgetTableColumnData.resizable);
-      }
+      tableColumn.setWidth(tableLayoutData.minWidth);
+      tableColumn.setResizable((tableLayoutData.minWidth != SWT.DEFAULT) || (tableLayoutData.maxWidth != SWT.DEFAULT));
     }
     else
     {
