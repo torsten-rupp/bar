@@ -413,6 +413,7 @@ class TabStatus
 
     // list with jobs
     widgetJobList = Widgets.newTable(widgetTab,SWT.NONE);
+    widgetJobList.setLayout(new TableLayout(null,new double[]{1.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0}));
     Widgets.layout(widgetJobList,0,0,TableLayoutData.NSWE);
     widgetJobList.addSelectionListener(new SelectionListener()
     {
@@ -464,7 +465,7 @@ class TabStatus
     tableColumn = Widgets.addTableColumn(widgetJobList,6,"Last executed", SWT.LEFT, 150,true );
     tableColumn.addSelectionListener(jobListColumnSelectionListener);
     tableColumn.setToolTipText("Click to sort for last date/time job was executed.");
-    tableColumn = Widgets.addTableColumn(widgetJobList,7,"Estimated time",SWT.LEFT, 120,true );
+    tableColumn = Widgets.addTableColumn(widgetJobList,7,"Estimated time",SWT.LEFT, 120,false);
     tableColumn.addSelectionListener(jobListColumnSelectionListener);
     tableColumn.setToolTipText("Click to sort for estimated rest time to execute job.");
 
