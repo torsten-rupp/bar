@@ -88,6 +88,13 @@
     used band width for background index updates
   * improved band width limitation: specify either a value or name of an
     external file
+  * fixed scheduler: do not start job immediately again when execution
+    time was longer than time periode of scheduling
+  * added optional time range to max-band-width,
+    index-database-max-band-width options to support different limits
+    depending on date/time
+  * support external file for max-band-width,
+    index-database-max-band-width options
 
 2012-01-14 0.16g
   * fix restore: do not create empty parent directories
