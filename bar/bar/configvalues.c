@@ -40,7 +40,6 @@ extern "C" {
 * Purpose: get integer value
 * Input  : value             - value variable
 *          string            - string
-*          option            - option name
 *          units             - units array or NULL
 *          unitCount         - size of unit array
 * Output : value - value
@@ -50,7 +49,6 @@ extern "C" {
 
 LOCAL bool getIntegerValue(int                   *value,
                            const char            *string,
-                           const char            *option,
                            const ConfigValueUnit *units,
                            uint                  unitCount,
                            FILE                  *errorOutputHandle,
@@ -135,7 +133,6 @@ LOCAL bool getIntegerValue(int                   *value,
 * Purpose: get integer64 value
 * Input  : value             - value variable
 *          string            - string
-*          option            - option name
 *          units             - units array or NULL
 *          unitCount         - size of unit array
 * Output : value - value
@@ -145,7 +142,6 @@ LOCAL bool getIntegerValue(int                   *value,
 
 LOCAL bool getInteger64Value(int64                 *value,
                              const char            *string,
-                             const char            *option,
                              const ConfigValueUnit *units,
                              uint                  unitCount,
                              FILE                  *errorOutputHandle,
@@ -261,7 +257,6 @@ LOCAL bool processValue(const ConfigValue *configValue,
         // get integer option value
         if (!getIntegerValue(&data,
                              value,
-                             name,
                              configValue->integerValue.units,
                              configValue->integerValue.unitCount,
                              errorOutputHandle,
@@ -320,7 +315,6 @@ LOCAL bool processValue(const ConfigValue *configValue,
         // get integer option value
         if (!getInteger64Value(&data,
                                value,
-                               name,
                                configValue->integer64Value.units,
                                configValue->integer64Value.unitCount,
                                errorOutputHandle,
@@ -864,22 +858,20 @@ bool ConfigValue_parse(const char        *name,
 
 bool ConfigValue_getIntegerValue(int                   *value,
                                  const char            *string,
-                                 const char            *name,
                                  const ConfigValueUnit *units,
                                  uint                  unitCount
                                 )
 {
-  return getIntegerValue(value,string,name,units,unitCount,NULL,NULL);
+  return getIntegerValue(value,string,units,unitCount,NULL,NULL);
 }
 
 bool ConfigValue_getInteger64Value(int64                 *value,
                                    const char            *string,
-                                   const char            *name,
                                    const ConfigValueUnit *units,
                                    uint                  unitCount
                                   )
 {
-  return getInteger64Value(value,string,name,units,unitCount,NULL,NULL);
+  return getInteger64Value(value,string,units,unitCount,NULL,NULL);
 }
 
 void ConfigValue_formatInit(ConfigValueFormat      *configValueFormat,

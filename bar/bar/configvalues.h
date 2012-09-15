@@ -678,7 +678,6 @@ bool ConfigValue_parse(const char        *name,
 * Purpose: get integer value
 * Input  : value             - value variable
 *          string            - string
-*          name              - value name
 *          units             - units array or NULL
 *          unitCount         - size of unit array
 * Output : value - value
@@ -688,7 +687,6 @@ bool ConfigValue_parse(const char        *name,
 
 bool ConfigValue_getIntegerValue(int                   *value,
                                  const char            *string,
-                                 const char            *name,
                                  const ConfigValueUnit *units,
                                  uint                  unitCount
                                 );
@@ -698,7 +696,6 @@ bool ConfigValue_getIntegerValue(int                   *value,
 * Purpose: get integer value
 * Input  : value             - value variable
 *          string            - string
-*          name              - value name
 *          units             - units array or NULL
 *          unitCount         - size of unit array
 * Output : value - value
@@ -708,7 +705,6 @@ bool ConfigValue_getIntegerValue(int                   *value,
 
 bool ConfigValue_getInteger64Value(int64                 *value,
                                    const char            *string,
-                                   const char            *name,
                                    const ConfigValueUnit *units,
                                    uint                  unitCount
                                   );
