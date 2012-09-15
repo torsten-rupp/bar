@@ -39,7 +39,7 @@ extern "C" {
 * Purpose: get integer option value
 * Input  : value             - value variable
 *          string            - string
-*          option            - option name
+*          name              - option name
 *          units             - units array or NULL
 *          unitCount         - size of unit array
 * Output : value - value
@@ -49,7 +49,7 @@ extern "C" {
 
 LOCAL bool getIntegerOption(int                   *value,
                             const char            *string,
-                            const char            *option,
+                            const char            *name,
                             const CommandLineUnit *units,
                             uint                  unitCount,
                             FILE                  *errorOutputHandle,
@@ -84,7 +84,7 @@ LOCAL bool getIntegerOption(int                   *value,
               "%sValue '%s' for option '%s' is not a number!\n",
               (errorPrefix != NULL) ? errorPrefix : "",
               string,
-              option
+              name
              );
     }
     return FALSE;
@@ -148,7 +148,7 @@ LOCAL bool getIntegerOption(int                   *value,
 * Purpose: get integer64 option value
 * Input  : value             - value variable
 *          string            - string
-*          option            - option name
+*          name              - option name
 *          units             - units array or NULL
 *          unitCount         - size of unit array
 * Output : value - value
@@ -158,7 +158,7 @@ LOCAL bool getIntegerOption(int                   *value,
 
 LOCAL bool getInteger64Option(int64                 *value,
                               const char            *string,
-                              const char            *option,
+                              const char            *name,
                               const CommandLineUnit *units,
                               uint                  unitCount,
                               FILE                  *errorOutputHandle,
@@ -193,7 +193,7 @@ LOCAL bool getInteger64Option(int64                 *value,
               "%sValue '%s' for option '%s' is not a number!\n",
               (errorPrefix != NULL) ? errorPrefix : "",
               string,
-              option
+              name
              );
     }
     return FALSE;
