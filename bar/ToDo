@@ -51,3 +51,8 @@ ToDo
 - define max. number of concurrent connections to sftp/scp host
   including background index thread; pause index thread on demand
 - execute VACUUM on database/enable auto-vacuum?
+- combine full-backup and incremental-backup into new full-backup
+- replace ftplib by curl
+- limit used bandwidth when creating index (all data is transmitted?)
+- add allocator of connection (ftp, scp, sftp) and limit number of connections
+- pre/post-script in barcontrol
