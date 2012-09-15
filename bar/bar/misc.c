@@ -256,8 +256,11 @@ void Misc_udelay(uint64 time)
 
   ts.tv_sec  = (ulong)(time/1000000LL);
   ts.tv_nsec = (ulong)((time%1000000LL)*1000);
-  while (nanosleep(&ts,&ts) == -1)
+  while (   (nanosleep(&ts,&ts) == -1)
+         && (errno == EINTR)
+        )
   {
+    // nothing to do
   }
 }
 
