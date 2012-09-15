@@ -362,8 +362,8 @@ const Password *Archive_appendDecryptPassword(const Password *password);
 * Purpose: create archive
 * Input  : archiveInfo                 - archive info block
 *          jobOptions                  - job option settings
-*          maxBandWidth                - max. band width to use [bits/s]
-*                                        or STORAGE_BAND_WIDTH_UNLIMITED
+*          maxBandWidthList            - list with max. band width to use [bits/s]
+*                                        or NULL
 *          archiveNewFileFunction      - call back for creating new
 *                                        archive file
 *          archiveNewFileUserData      - user data for call back
@@ -377,7 +377,7 @@ const Password *Archive_appendDecryptPassword(const Password *password);
 
 Errors Archive_create(ArchiveInfo                     *archiveInfo,
                       const JobOptions                *jobOptions,
-                      ulong                           maxBandWidth,
+                      BandWidthList                   *maxBandWidthList,
                       ArchiveNewFileFunction          archiveNewFileFunction,
                       void                            *archiveNewFileUserData,
                       ArchiveGetCryptPasswordFunction archiveGetCryptPassword,
@@ -391,7 +391,8 @@ Errors Archive_create(ArchiveInfo                     *archiveInfo,
 * Input  : archiveInfo                 - archive info block
 *          storageName                 - storage name
 *          jobOptions                  - option settings
-*          maxBandWidth                - max. band width to use [bits/s]
+*          maxBandWidthList            - list with max. band width to use
+*                                        [bits/s] or NULL
 *          archiveGetCryptPassword     - get password call back
 *          archiveGetCryptPasswordData - user data for get password call
 *                                        back
@@ -403,7 +404,7 @@ Errors Archive_create(ArchiveInfo                     *archiveInfo,
 Errors Archive_open(ArchiveInfo                     *archiveInfo,
                     const String                    storageName,
                     const JobOptions                *jobOptions,
-                    BandWidth                       *maxBandWidth,
+                    BandWidthList                   *maxBandWidthList,
                     ArchiveGetCryptPasswordFunction archiveGetCryptPassword,
                     void                            *archiveGetCryptPasswordData
                    );
@@ -860,13 +861,13 @@ uint64 Archive_getSize(ArchiveInfo *archiveInfo);
 /***********************************************************************\
 * Name   : Archive_addIndex
 * Purpose: add storage index
-* Input  : databaseHandle              - database handle
-*          storageName                 - storage name
-*          indexMode                   - index mode
-*          jobOptions                  - option settings
-*          archiveGetCryptPassword     - get password call back
-*          archiveGetCryptPasswordData - user data for get password call
-*                                        back
+* Input  : databaseHandle          - database handle
+*          storageName             - storage name
+*          indexMode               - index mode
+*          cryptPassword           - encryption password
+*          cryptPrivateKeyFileName - encryption private key file name
+*          maxBandWidthList        - list with max. band width to use
+*                                    [bits/s] or NULL
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -877,7 +878,7 @@ Errors Archive_addIndex(DatabaseHandle *databaseHandle,
                         IndexModes     indexMode,
                         Password       *cryptPassword,
                         String         cryptPrivateKeyFileName,
-                        ulong          maxBandWidth
+                        BandWidthList  *maxBandWidthList
                        );
 
 /***********************************************************************\
@@ -888,6 +889,8 @@ Errors Archive_addIndex(DatabaseHandle *databaseHandle,
 *          storageName             - storage name
 *          cryptPassword           - encryption password
 *          cryptPrivateKeyFileName - encryption private key file name
+*          maxBandWidthList        - list with max. band width to use
+*                                    [bits/s] or NULL
 *          pauseCallback           - pause check callback (can be NULL)
 *          pauseUserData           - pause user data
 *          abortCallback           - abort check callback (can be NULL)
@@ -902,7 +905,7 @@ Errors Archive_updateIndex(DatabaseHandle               *databaseHandle,
                            const String                 storageName,
                            Password                     *cryptPassword,
                            String                       cryptPrivateKeyFileName,
-                           ulong                        maxBandWidth,
+                           BandWidthList                *maxBandWidthList,
                            ArchivePauseCallbackFunction pauseCallback,
                            void                         *pauseUserData,
                            ArchiveAbortCallbackFunction abortCallback,

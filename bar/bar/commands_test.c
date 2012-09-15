@@ -110,7 +110,7 @@ Errors Command_test(const StringList                *archiveNameList,
     error = Archive_open(&archiveInfo,
                          archiveName,
                          jobOptions,
-                         &globalOptions.maxBandWidth,
+                         &globalOptions.maxBandWidthList,
                          archiveGetCryptPasswordFunction,
                          archiveGetCryptPasswordUserData
                         );

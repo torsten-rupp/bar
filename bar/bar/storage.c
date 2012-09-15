@@ -492,27 +492,30 @@ LOCAL bool waitSessionSocket(SocketHandle *socketHandle)
 * Name   : initBandWidthLimiter
 * Purpose: init band width limiter structure
 * Input  : storageBandWidthLimiter - storage band width limiter
-*          maxBandWidth            - max. band width to use [bit/s] or
-*                                    NULL
+*          maxBandWidthList        - list with max. band width to use
+*                                    [bit/s] or NULL
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
 LOCAL void initBandWidthLimiter(StorageBandWidthLimiter *storageBandWidthLimiter,
-                                BandWidth               *maxBandWidth
+                                BandWidthList           *maxBandWidthList
                                )
 {
-  uint z;
+  ulong maxBandWidth;
+  uint  z;
 
   assert(storageBandWidthLimiter != NULL);
 
-  storageBandWidthLimiter->maxBandWidth = maxBandWidth;
-  storageBandWidthLimiter->maxBlockSize = 64*1024;
-  storageBandWidthLimiter->blockSize    = 64*1024;
+  maxBandWidth = getBandWidth(maxBandWidthList);
+
+  storageBandWidthLimiter->maxBandWidthList     = maxBandWidthList;
+  storageBandWidthLimiter->maxBlockSize         = 64*1024;
+  storageBandWidthLimiter->blockSize            = 64*1024;
   for (z = 0; z < SIZE_OF_ARRAY(storageBandWidthLimiter->measurements); z++)
   {
-    storageBandWidthLimiter->measurements[z] = getBandWidth(maxBandWidth);
+    storageBandWidthLimiter->measurements[z] = maxBandWidth;
   }
   storageBandWidthLimiter->measurementCount     = 0;
   storageBandWidthLimiter->measurementNextIndex = 0;
@@ -546,7 +549,7 @@ LOCAL void limitBandWidth(StorageBandWidthLimiter *storageBandWidthLimiter,
 
   assert(storageBandWidthLimiter != NULL);
 
-  if (storageBandWidthLimiter->maxBandWidth != NULL)
+  if (storageBandWidthLimiter->maxBandWidthList != NULL)
   {
     storageBandWidthLimiter->measurementBytes += transmittedBytes;
     storageBandWidthLimiter->measurementTime += transmissionTime;
@@ -571,8 +574,7 @@ LOCAL void limitBandWidth(StorageBandWidthLimiter *storageBandWidthLimiter,
 //fprintf(stderr,"%s, %d: averageBandWidth=%lu bits/s\n",__FILE__,__LINE__,averageBandWidth);
 
       // get max. band width to use
-      maxBandWidth = getBandWidth(storageBandWidthLimiter->maxBandWidth);
-//fprintf(stderr,"%s, %d: maxBandWidth=%lu\n",__FILE__,__LINE__,maxBandWidth);
+      maxBandWidth = getBandWidth(storageBandWidthLimiter->maxBandWidthList);
 
       // calculate delay time
       if (maxBandWidth > 0L)
@@ -1162,7 +1164,7 @@ bool Storage_parseFTPSpecifier(const String ftpSpecifier,
 
   s = String_new();
   t = String_new();
-  if      (String_matchCString(ftpSpecifier,STRING_BEGIN,"^([^:]*?):(([^@]|\\@)*?)@([^@:/]*?):([:digit:]+)$",NULL,NULL,loginName,s,STRING_NO_ASSIGN,hostName,t,NULL))
+  if      (String_matchCString(ftpSpecifier,STRING_BEGIN,"^([^:]*?):(([^@]|\\@)*?)@([^@:/]*?):([[:digit:]]+)$",NULL,NULL,loginName,s,STRING_NO_ASSIGN,hostName,t,NULL))
   {
     // <login name>:<login password>@<host name>:<host port>
     String_mapCString(loginName,STRING_BEGIN,LOGINNAME_MAP_FROM,LOGINNAME_MAP_TO,SIZE_OF_ARRAY(LOGINNAME_MAP_FROM));
@@ -1179,7 +1181,7 @@ bool Storage_parseFTPSpecifier(const String ftpSpecifier,
 
     result = TRUE;
   }
-  else if (String_matchCString(ftpSpecifier,STRING_BEGIN,"^(([^@]|\\@)*?)@([^@:/]*?):([:digit:]+)$",NULL,NULL,loginName,STRING_NO_ASSIGN,hostName,s,NULL))
+  else if (String_matchCString(ftpSpecifier,STRING_BEGIN,"^(([^@]|\\@)*?)@([^@:/]*?):([[:digit:]]+)$",NULL,NULL,loginName,STRING_NO_ASSIGN,hostName,s,NULL))
   {
     // <login name>@<host name>:<host port>
     String_mapCString(loginName,STRING_BEGIN,LOGINNAME_MAP_FROM,LOGINNAME_MAP_TO,SIZE_OF_ARRAY(LOGINNAME_MAP_FROM));
@@ -1194,7 +1196,7 @@ bool Storage_parseFTPSpecifier(const String ftpSpecifier,
 
     result = TRUE;
   }
-  else if (String_matchCString(ftpSpecifier,STRING_BEGIN,"^([^@:/]*?):([:digit:]+)$",NULL,NULL,hostName,s,NULL))
+  else if (String_matchCString(ftpSpecifier,STRING_BEGIN,"^([^@:/]*?):([[:digit:]]+)$",NULL,NULL,hostName,s,NULL))
   {
     // <host name>:<host port>
     if (hostPort != NULL) (*hostPort) = (uint)String_toInteger(s,STRING_BEGIN,NULL,NULL,0);
@@ -1785,7 +1787,7 @@ String Storage_getPrintableName(String       string,
 Errors Storage_init(StorageFileHandle            *storageFileHandle,
                     const String                 storageName,
                     const JobOptions             *jobOptions,
-                    BandWidth                    *maxBandWidth,
+                    BandWidthList                *maxBandWidthList,
                     StorageRequestVolumeFunction storageRequestVolumeFunction,
                     void                         *storageRequestVolumeUserData,
                     StorageStatusInfoFunction    storageStatusInfoFunction,
@@ -1844,7 +1846,7 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
 
           // init variables
           storageFileHandle->type = STORAGE_TYPE_FTP;
-          initBandWidthLimiter(&storageFileHandle->ftp.bandWidthLimiter,maxBandWidth);
+          initBandWidthLimiter(&storageFileHandle->ftp.bandWidthLimiter,maxBandWidthList);
 
           // allocate read-ahead buffer
           storageFileHandle->ftp.readAheadBuffer.data = (byte*)malloc(MAX_BUFFER_SIZE);
@@ -1936,7 +1938,7 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
           storageFileHandle->type                      = STORAGE_TYPE_SCP;
           storageFileHandle->scp.sshPublicKeyFileName  = NULL;
           storageFileHandle->scp.sshPrivateKeyFileName = NULL;
-          initBandWidthLimiter(&storageFileHandle->scp.bandWidthLimiter,maxBandWidth);
+          initBandWidthLimiter(&storageFileHandle->scp.bandWidthLimiter,maxBandWidthList);
 
           // allocate read-ahead buffer
           storageFileHandle->scp.readAheadBuffer.data = (byte*)malloc(MAX_BUFFER_SIZE);
@@ -2013,7 +2015,7 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
           storageFileHandle->type                       = STORAGE_TYPE_SFTP;
           storageFileHandle->sftp.sshPublicKeyFileName  = NULL;
           storageFileHandle->sftp.sshPrivateKeyFileName = NULL;
-          initBandWidthLimiter(&storageFileHandle->sftp.bandWidthLimiter,maxBandWidth);
+          initBandWidthLimiter(&storageFileHandle->sftp.bandWidthLimiter,maxBandWidthList);
 
           // allocate read-ahead buffer
           storageFileHandle->sftp.readAheadBuffer.data = (byte*)malloc(MAX_BUFFER_SIZE);
@@ -4687,7 +4689,7 @@ Errors Storage_read(StorageFileHandle *storageFileHandle,
             while (size > 0L)
             {
               // get max. number of bytes to send in one step
-              if (storageFileHandle->ftp.bandWidthLimiter.maxBandWidth != NULL)
+              if (storageFileHandle->ftp.bandWidthLimiter.maxBandWidthList != NULL)
               {
                 length = MIN(storageFileHandle->ftp.bandWidthLimiter.blockSize,size);
               }
@@ -4827,7 +4829,7 @@ Errors Storage_read(StorageFileHandle *storageFileHandle,
             while (size > 0L)
             {
               // get max. number of bytes to send in one step
-              if (storageFileHandle->ftp.bandWidthLimiter.maxBandWidth != NULL)
+              if (storageFileHandle->ftp.bandWidthLimiter.maxBandWidthList != NULL)
               {
                 length = MIN(storageFileHandle->ftp.bandWidthLimiter.blockSize,size);
               }
@@ -4956,7 +4958,7 @@ Errors Storage_read(StorageFileHandle *storageFileHandle,
             if (size > 0)
             {
               // get max. number of bytes to send in one step
-              if (storageFileHandle->ftp.bandWidthLimiter.maxBandWidth != NULL)
+              if (storageFileHandle->ftp.bandWidthLimiter.maxBandWidthList != NULL)
               {
                 length = MIN(storageFileHandle->ftp.bandWidthLimiter.blockSize,size);
               }
@@ -5158,7 +5160,7 @@ Errors Storage_write(StorageFileHandle *storageFileHandle,
             while (writtenBytes < size)
             {
               // get max. number of bytes to send in one step
-              if (storageFileHandle->ftp.bandWidthLimiter.maxBandWidth != NULL)
+              if (storageFileHandle->ftp.bandWidthLimiter.maxBandWidthList != NULL)
               {
                 length = MIN(storageFileHandle->ftp.bandWidthLimiter.blockSize,size-writtenBytes);
               }
@@ -5229,7 +5231,7 @@ Errors Storage_write(StorageFileHandle *storageFileHandle,
             while (writtenBytes < size)
             {
               // get max. number of bytes to send in one step
-              if (storageFileHandle->scp.bandWidthLimiter.maxBandWidth != NULL)
+              if (storageFileHandle->scp.bandWidthLimiter.maxBandWidthList != NULL)
               {
                 length = MIN(storageFileHandle->scp.bandWidthLimiter.blockSize,size-writtenBytes);
               }
@@ -5323,7 +5325,7 @@ Errors Storage_write(StorageFileHandle *storageFileHandle,
             while (writtenBytes < size)
             {
               // get max. number of bytes to send in one step
-              if (storageFileHandle->sftp.bandWidthLimiter.maxBandWidth != NULL)
+              if (storageFileHandle->sftp.bandWidthLimiter.maxBandWidthList != NULL)
               {
                 length = MIN(storageFileHandle->sftp.bandWidthLimiter.blockSize,size-writtenBytes);
               }
@@ -6727,7 +6729,7 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
 
 Errors Storage_copy(const String                 storageName,
                     const JobOptions             *jobOptions,
-                    BandWidth                    *maxBandWidth,
+                    BandWidthList                *maxBandWidthList,
                     StorageRequestVolumeFunction storageRequestVolumeFunction,
                     void                         *storageRequestVolumeUserData,
                     StorageStatusInfoFunction    storageStatusInfoFunction,
@@ -6754,7 +6756,7 @@ Errors Storage_copy(const String                 storageName,
   error = Storage_init(&storageFileHandle,
                        storageName,
                        jobOptions,
-                       maxBandWidth,
+                       maxBandWidthList,
                        storageRequestVolumeFunction,
                        storageRequestVolumeUserData,
                        storageStatusInfoFunction,

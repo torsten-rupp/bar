@@ -278,7 +278,7 @@ Errors Command_restore(const StringList                *archiveNameList,
     error = Archive_open(&archiveInfo,
                          archiveName,
                          jobOptions,
-                         &globalOptions.maxBandWidth,
+                         &globalOptions.maxBandWidthList,
                          archiveGetCryptPasswordFunction,
                          archiveGetCryptPasswordUserData
                         );

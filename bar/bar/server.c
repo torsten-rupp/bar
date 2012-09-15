@@ -64,8 +64,9 @@
 // sleep times [s]
 #define SLEEP_TIME_SCHEDULER_THREAD    ( 1*60)
 #define SLEEP_TIME_PAUSE_THREAD        ( 1*60)
-#define SLEEP_TIME_INDEX_THREAD        (10*60)
-#define SLEEP_TIME_INDEX_UPDATE_THREAD (10*60)
+#warning todo
+#define SLEEP_TIME_INDEX_THREAD        (1*60)
+#define SLEEP_TIME_INDEX_UPDATE_THREAD (1*60)
 
 /***************************** Datatypes *******************************/
 
@@ -894,6 +895,8 @@ LOCAL void doneJob(JobNode *jobNode)
   {
     jobNode->state = JOB_STATE_DONE;
   }
+#warning todo
+fprintf(stderr,"%s, %d: lastExecutedDateTime=%llu jobNode->state=%d\n",__FILE__,__LINE__,jobNode->lastExecutedDateTime,jobNode->state);
 
   // clear passwords
   if (jobNode->cryptPassword != NULL)
@@ -977,6 +980,8 @@ LOCAL Errors readJobScheduleInfo(JobNode *jobNode)
   assert(jobNode != NULL);
 
   jobNode->lastExecutedDateTime = 0LL;
+#warning todo
+fprintf(stderr,"%s, %d: lastExecutedDateTime=%llu\n",__FILE__,__LINE__,jobNode->lastExecutedDateTime);
 
   /* get filename*/
   fileName = File_newFileName();
@@ -1016,6 +1021,8 @@ LOCAL Errors readJobScheduleInfo(JobNode *jobNode)
       {
         jobNode->lastExecutedDateTime = n;
         jobNode->lastCheckDateTime    = n;
+#warning todo
+fprintf(stderr,"%s, %d: lastExecutedDateTime=%llu\n",__FILE__,__LINE__,jobNode->lastExecutedDateTime);
       }
     }
     String_delete(line);
@@ -1071,15 +1078,15 @@ LOCAL Errors writeJobScheduleInfo(JobNode *jobNode)
 
   // write file
   error = File_printLine(&fileHandle,"%lld",jobNode->lastExecutedDateTime);
-
-  // close file
-  File_close(&fileHandle);
-
   if (error != ERROR_NONE)
   {
+    File_close(&fileHandle);
     File_deleteFileName(fileName);
     return error;
   }
+
+  // close file
+  File_close(&fileHandle);
 
   // free resources
   File_deleteFileName(fileName);
@@ -1755,6 +1762,8 @@ LOCAL void jobThreadCode(void)
       break;
     }
     assert(jobNode != NULL);
+#warning todo
+fprintf(stderr,"%s, %d: lastExecutedDateTime=%llu jobNode->state=%d\n",__FILE__,__LINE__,jobNode->lastExecutedDateTime,jobNode->state);
 
     // start job
     startJob(jobNode);
@@ -1810,7 +1819,7 @@ LOCAL void jobThreadCode(void)
     switch (jobNode->jobType)
     {
       case JOB_TYPE_CREATE:
-        logMessage(LOG_TYPE_ALWAYS,"start create archive '%s'\n",String_cString(printableStorageName));
+        logMessage(LOG_TYPE_ALWAYS,"start create archive '%s': '%s'\n",String_cString(jobNode->name),String_cString(printableStorageName));
 
         // try to pause background index thread, do short delay to make sure network connection is possible
         createFlag = TRUE;
@@ -1842,9 +1851,18 @@ LOCAL void jobThreadCode(void)
                                                     &pauseFlags.storage,
                                                     &jobNode->requestedAbortFlag
                                                    );
+
+        // allow background thread
         createFlag = FALSE;
 
-        logMessage(LOG_TYPE_ALWAYS,"done create archive '%s' (error: %s)\n",String_cString(printableStorageName),Errors_getText(jobNode->runningInfo.error));
+        if (!jobNode->requestedAbortFlag)
+        {
+          logMessage(LOG_TYPE_ALWAYS,"done create archive '%s': '%s' (error: %s)\n",String_cString(jobNode->name),String_cString(printableStorageName),Errors_getText(jobNode->runningInfo.error));
+        }
+        else
+        {
+          logMessage(LOG_TYPE_ALWAYS,"aborted create archive '%s': '%s'\n",String_cString(jobNode->name),String_cString(printableStorageName));
+        }
         break;
       case JOB_TYPE_RESTORE:
         logMessage(LOG_TYPE_ALWAYS,"start restore archive '%s'\n",String_cString(printableStorageName));
@@ -1877,6 +1895,8 @@ LOCAL void jobThreadCode(void)
                                                      &jobNode->requestedAbortFlag
                                                     );
         StringList_done(&archiveFileNameList);
+
+        // allow background threads
         restoreFlag = FALSE;
 
         logMessage(LOG_TYPE_ALWAYS,"done restore archive '%s' (error: %s)\n",String_cString(printableStorageName),Errors_getText(jobNode->runningInfo.error));
@@ -1968,6 +1988,7 @@ LOCAL void schedulerThreadCode(void)
         {
           dateTime = currentDateTime;
           while (   ((dateTime/60LL) > (jobNode->lastCheckDateTime/60LL))
+                 && ((dateTime/60LL) > (jobNode->lastExecutedDateTime/60LL))
                  && (executeScheduleNode == NULL)
                  && !pendingFlag
                  && !quitFlag
@@ -1991,9 +2012,9 @@ LOCAL void schedulerThreadCode(void)
               if (   ((scheduleNode->year     == SCHEDULE_ANY    ) || (scheduleNode->year   == (int)year  ) )
                   && ((scheduleNode->month    == SCHEDULE_ANY    ) || (scheduleNode->month  == (int)month ) )
                   && ((scheduleNode->day      == SCHEDULE_ANY    ) || (scheduleNode->day    == (int)day   ) )
+                  && ((scheduleNode->weekDays == SCHEDULE_ANY_DAY) || IN_SET(scheduleNode->weekDays,weekDay))
                   && ((scheduleNode->hour     == SCHEDULE_ANY    ) || (scheduleNode->hour   == (int)hour  ) )
                   && ((scheduleNode->minute   == SCHEDULE_ANY    ) || (scheduleNode->minute == (int)minute) )
-                  && ((scheduleNode->weekDays == SCHEDULE_ANY_DAY) || IN_SET(scheduleNode->weekDays,weekDay))
                   && scheduleNode->enabled
                  )
               {
@@ -2023,6 +2044,7 @@ LOCAL void schedulerThreadCode(void)
         {
           // set state
           jobNode->state              = JOB_STATE_WAITING;
+fprintf(stderr,"%s, %d: trigger job %s\n",__FILE__,__LINE__,String_cString(jobNode->name));
           jobNode->archiveType        = executeScheduleNode->archiveType;
           jobNode->requestedAbortFlag = FALSE;
           resetJobRunningInfo(jobNode);
@@ -2200,9 +2222,12 @@ LOCAL void indexThreadCode(void)
   printableStorageName = String_new();
   List_init(&indexCryptPasswordList);
 
+  error = ERROR_NONE;
+
+#warning remove
+#if 0
   // reset/delete incomplete database entries (ignore possible errors)
   plogMessage(LOG_TYPE_INDEX,"INDEX","start clean-up database\n");
-  error = ERROR_NONE;
   while (Index_findByState(indexDatabaseHandle,
                            INDEX_STATE_UPDATE,
                            &storageId,
@@ -2219,7 +2244,24 @@ LOCAL void indexThreadCode(void)
                            NULL
                           );
   }
-  if (globalOptions.indexDatabaseNoAutoUpdateFlag)
+  while (Index_findByState(indexDatabaseHandle,
+                           INDEX_STATE_CREATE,
+                           &storageId,
+                           storageName,
+                           NULL
+                          )
+         && (error == ERROR_NONE)
+        )
+  {
+    plogMessage(LOG_TYPE_INDEX,"INDEX","delete incomplete index #%lld\n",storageId);
+    error = Index_delete(indexDatabaseHandle,
+                         storageId
+                        );
+  }
+  plogMessage(LOG_TYPE_ALWAYS,"INDEX","done clean-up database\n");
+
+  // if no auto-update then set all requested updates to state "error"
+  if (!globalOptions.indexDatabaseAutoUpdateFlag)
   {
     while (Index_findByState(indexDatabaseHandle,
                              INDEX_STATE_UPDATE_REQUESTED,
@@ -2238,21 +2280,7 @@ LOCAL void indexThreadCode(void)
                             );
     }
   }
-  while (Index_findByState(indexDatabaseHandle,
-                           INDEX_STATE_CREATE,
-                           &storageId,
-                           storageName,
-                           NULL
-                          )
-         && (error == ERROR_NONE)
-        )
-  {
-    plogMessage(LOG_TYPE_INDEX,"INDEX","delete incomplete index #%lld\n",storageId);
-    error = Index_delete(indexDatabaseHandle,
-                         storageId
-                        );
-  }
-  plogMessage(LOG_TYPE_ALWAYS,"INDEX","done clean-up database\n");
+#endif
 
   // add/update index database
   while (!quitFlag)
@@ -2293,8 +2321,7 @@ LOCAL void indexThreadCode(void)
 
       plogMessage(LOG_TYPE_INDEX,
                   "INDEX",
-                  "create index #%lld for '%s'\n",
-                  storageId,
+                  "create index for '%s'\n",
                   String_cString(printableStorageName)
                  );
 
@@ -2310,6 +2337,7 @@ LOCAL void indexThreadCode(void)
                                     storageName,
                                     indexCryptPasswordNode->cryptPassword,
                                     indexCryptPasswordNode->cryptPrivateKeyFileName,
+                                    &globalOptions.indexDatabaseMaxBandWidthList,
                                     indexPauseCallback,
                                     NULL,
                                     indexAbortCallback,
@@ -2337,7 +2365,8 @@ LOCAL void indexThreadCode(void)
         {
           plogMessage(LOG_TYPE_INDEX,
                       "INDEX",
-                      "created storage index '%s'\n",
+                      "created index #%lld for '%s'\n",
+                      storageId,
                       String_cString(printableStorageName)
                      );
         }
@@ -2345,7 +2374,7 @@ LOCAL void indexThreadCode(void)
         {
           plogMessage(LOG_TYPE_ERROR,
                       "INDEX",
-                      "cannot create storage index '%s' (error: %s)\n",
+                      "cannot create index for '%s' (error: %s)\n",
                       String_cString(printableStorageName),
                       Errors_getText(error)
                      );
@@ -2509,7 +2538,7 @@ LOCAL void autoIndexUpdateThreadCode(void)
               }
 
               // get storage name
-#warning todo
+#warning todo Storage_getPrintableName
               Storage_getName(storageName,storageSpecifier.type,storageSpecifier.string,fileName);
               Storage_getPrintableName(printableStorageName,storageName);
 
@@ -2555,7 +2584,7 @@ LOCAL void autoIndexUpdateThreadCode(void)
                 {
                   continue;
                 }
-                printInfo(4,"Requested auto-index for '%s'\n",String_cString(printableStorageName));
+                pprintInfo(4,"INDEX: ","Requested auto-index for '%s'\n",String_cString(printableStorageName));
               }
             }
 
@@ -4542,6 +4571,7 @@ LOCAL void serverCommand_jobStart(ClientInfo *clientInfo, uint id, const String 
       jobNode->state                 = JOB_STATE_WAITING;
       jobNode->archiveType           = archiveType;
       jobNode->requestedAbortFlag    = FALSE;
+fprintf(stderr,"%s, %d: rigger job %s\n",__FILE__,__LINE__,String_cString(jobNode->name));
       resetJobRunningInfo(jobNode);
     }
   }
@@ -4605,6 +4635,8 @@ LOCAL void serverCommand_jobAbort(ClientInfo *clientInfo, uint id, const String 
       jobNode->lastExecutedDateTime = Misc_getCurrentDateTime();
       jobNode->state                = JOB_STATE_NONE;
     }
+#warning todo
+fprintf(stderr,"%s, %d: lastExecutedDateTime=%llu jobNode->state=%d\n",__FILE__,__LINE__,jobNode->lastExecutedDateTime,jobNode->state);
 
     // store schedule info
     writeJobScheduleInfo(jobNode);
@@ -6216,6 +6248,7 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const Stri
   error = Archive_open(&archiveInfo,
                        storageName,
                        &clientInfo->jobOptions,
+                       &globalOptions.maxBandWidthList,
                        NULL,
                        NULL
                       );
@@ -6754,6 +6787,7 @@ LOCAL void serverCommand_storageDelete(ClientInfo *clientInfo, uint id, const St
       error = Storage_init(&storageFileHandle,
                          t,
                          &clientInfo->jobOptions,
+                         &globalOptions.indexDatabaseMaxBandWidthList,
                          NULL,
                          NULL,
                          NULL,
@@ -6769,6 +6803,7 @@ LOCAL void serverCommand_storageDelete(ClientInfo *clientInfo, uint id, const St
         error = Storage_init(&storageFileHandle,
                              storageName,
                              &clientInfo->jobOptions,
+                             &globalOptions.indexDatabaseMaxBandWidthList,
                              NULL,
                              NULL,
                              NULL,
@@ -6783,6 +6818,7 @@ LOCAL void serverCommand_storageDelete(ClientInfo *clientInfo, uint id, const St
       error = Storage_init(&storageFileHandle,
                            storageName,
                            &clientInfo->jobOptions,
+                           &globalOptions.indexDatabaseMaxBandWidthList,
                            NULL,
                            NULL,
                            NULL,
@@ -7083,14 +7119,14 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const
   indexState = Index_stringToState(indexStatusText);
   if (indexState == INDEX_STATE_UNKNOWN)
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"invalid filter status '%S'",indexStatusText);
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"invalid filter status '%S'. Expected: OK, CREATE, UPDATE_REQUESTED, UPDATE, ERROR, or *.",indexStatusText);
     return;
   }
   indexModeText = arguments[2];
   indexMode = Index_stringToMode(indexModeText);
   if (indexMode == INDEX_MODE_UNKNOWN)
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"invalid filter mode '%S'",indexModeText);
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"invalid filter mode '%S'. Expected: MANUAL, AUTO, or *.",indexModeText);
     return;
   }
   if (argumentCount < 4)
@@ -9332,7 +9368,7 @@ Errors Server_run(uint             port,
     {
       HALT_FATAL_ERROR("Cannot initialise index thread!");
     }
-    if (!globalOptions.indexDatabaseNoAutoUpdateFlag)
+    if (globalOptions.indexDatabaseAutoUpdateFlag)
     {
       if (!Thread_init(&autoIndexUpdateThread,"BAR update index",globalOptions.niceLevel,autoIndexUpdateThreadCode,NULL))
       {
@@ -9494,7 +9530,7 @@ Errors Server_run(uint             port,
   Semaphore_setEnd(&jobList.lock);
   if (indexDatabaseHandle != NULL)
   {
-    if (!globalOptions.indexDatabaseNoAutoUpdateFlag)
+    if (globalOptions.indexDatabaseAutoUpdateFlag)
     {
       Thread_join(&autoIndexUpdateThread);
     }
@@ -9511,7 +9547,7 @@ Errors Server_run(uint             port,
   // free resources
   if (indexDatabaseHandle != NULL)
   {
-    if (!globalOptions.indexDatabaseNoAutoUpdateFlag)
+    if (globalOptions.indexDatabaseAutoUpdateFlag)
     {
       Thread_done(&autoIndexUpdateThread);
     }

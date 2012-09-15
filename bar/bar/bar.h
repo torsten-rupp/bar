@@ -123,12 +123,27 @@ typedef enum
 
 /***************************** Datatypes *******************************/
 
+// band width usage
+typedef struct BandWidthNode
+{
+  LIST_NODE_HEADER(struct BandWidthNode);
+
+  int    year;
+  int    month;
+  int    day;
+  int    hour;
+  int    minute;
+  long   weekDays;
+  ulong  n;
+  String fileName;
+} BandWidthNode;
+
 typedef struct
 {
-  ulong      n;
-  const char *fileName;
-  uint64     lastReadTimestamp;
-} BandWidth;
+  LIST_HEADER(BandWidthNode);
+  ulong  n;
+  uint64 lastReadTimestamp;
+} BandWidthList;
 
 // password mode
 typedef enum
@@ -255,7 +270,7 @@ typedef struct
   String                 tmpDirectory;                   // directory for temporary files
   uint64                 maxTmpSize;                     // max. size of temporary files
 
-  BandWidth              maxBandWidth;                   // max. send/receive bandwidth to use [bits/s] or 0
+  BandWidthList          maxBandWidthList;               // list of max. send/receive bandwidth to use [bits/s]
 
   ulong                  compressMinFileSize;            // min. size of file for using compression
 
@@ -284,7 +299,7 @@ typedef struct
   Device                 *defaultDevice;                 // default device
 
   bool                   indexDatabaseAutoUpdateFlag;    // TRUE for automatic update of index datbase
-  BandWidth              indexDatabaseMaxBandWidth;      // max. band width to use for index updates [bits/s]
+  BandWidthList          indexDatabaseMaxBandWidthList;  // list of max. band width to use for index updates [bits/s]
   uint                   indexDatabaseKeepTime;          // number of seconds to keep index data of not existing storage
 
   bool                   groupFlag;                      // TRUE iff entries in list should be grouped
@@ -544,13 +559,13 @@ void freeJobOptions(JobOptions *jobOptions);
 /***********************************************************************\
 * Name   : getBandWidth
 * Purpose: get band width from value or external file
-* Input  : bandWidth - band width settings or NULL
+* Input  : bandWidthList - band width list settings or NULL
 * Output : -
 * Return : return band width [bits/s] or 0
 * Notes  : -
 \***********************************************************************/
 
-ulong getBandWidth(BandWidth *bandWidth);
+ulong getBandWidth(BandWidthList *bandWidthList);
 
 /***********************************************************************\
 * Name   : getFTPServerSettings

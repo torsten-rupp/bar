@@ -148,14 +148,14 @@ typedef enum
 // bandwidth data
 typedef struct
 {
-  BandWidth *maxBandWidth;                                 // max. band width [bits/s] or NULL
-  ulong     maxBlockSize;                                  // max. block size [bytes]
-  ulong     blockSize;                                     // current block size [bytes]
-  ulong     measurements[16];                              // measured band width values [bis/s]
-  uint      measurementNextIndex;
-  uint      measurementCount;
-  ulong     measurementBytes;                              // measurement sum of transmitted bytes
-  uint64    measurementTime;                               // measurement sum of time for transmission [us]
+  BandWidthList *maxBandWidthList;                         // list with max. band width [bits/s] to use or NULL
+  ulong         maxBlockSize;                              // max. block size [bytes]
+  ulong         blockSize;                                 // current block size [bytes]
+  ulong         measurements[16];                          // measured band width values [bis/s]
+  uint          measurementNextIndex;
+  uint          measurementCount;
+  ulong         measurementBytes;                          // measurement sum of transmitted bytes
+  uint64        measurementTime;                           // measurement sum of time for transmission [us]
 } StorageBandWidthLimiter;
 
 typedef struct
@@ -607,7 +607,7 @@ Errors Storage_prepare(const String     storageName,
 * Input  : storageFileHandle            - storage file handle variable
 *          storageName                  - storage name
 *          jobOptions                   - job options
-*          maxBandWidth                 - max. band width to use [bits/s]
+*          maxBandWidthList             - list with max. band width to use [bits/s] or NULL
 *          storageRequestVolumeFunction - volume request call back
 *          storageRequestVolumeUserData - user data for volume request
 *                                         call back
@@ -634,7 +634,7 @@ Errors Storage_prepare(const String     storageName,
 Errors Storage_init(StorageFileHandle            *storageFileHandle,
                     const String                 storageName,
                     const JobOptions             *jobOptions,
-                    BandWidth                    *maxBandWidth,
+                    BandWidthList                *maxBandWidthList,
                     StorageRequestVolumeFunction storageRequestVolumeFunction,
                     void                         *storageRequestVolumeUserData,
                     StorageStatusInfoFunction    storageStatusInfoFunction,
@@ -938,7 +938,7 @@ Errors Storage_readDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
 * Input  : storageFileHandle            - storage file handle variable
 *          storageName                  - storage name
 *          jobOptions                   - job options
-*          maxBandWidth                 - max. band width to use [bits/s]
+*          maxBandWidthLIst             - list with max. band width to use [bits/s] or NULL
 *          storageRequestVolumeFunction - volume request call back
 *          storageRequestVolumeUserData - user data for volume request
 *                                         call back
@@ -963,7 +963,7 @@ Errors Storage_readDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
 
 Errors Storage_copy(const String                 storageName,
                     const JobOptions             *jobOptions,
-                    BandWidth                    *maxBandWidth,
+                    BandWidthList                *maxBandWidthList,
                     StorageRequestVolumeFunction storageRequestVolumeFunction,
                     void                         *storageRequestVolumeUserData,
                     StorageStatusInfoFunction    storageStatusInfoFunction,
