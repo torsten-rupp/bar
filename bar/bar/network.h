@@ -226,9 +226,9 @@ int Network_getSocket(SocketHandle *socketHandle);
 \***********************************************************************/
 
 #ifdef HAVE_SSH2
-LIBSSH2_SESSION *Network_getSSHSession(SocketHandle *socketHandle);
+INLINE LIBSSH2_SESSION *Network_getSSHSession(SocketHandle *socketHandle);
 #if defined(NDEBUG) || defined(__NETWORK_IMPLEMENATION__)
-LIBSSH2_SESSION *Network_getSSHSession(SocketHandle *socketHandle)
+INLINE LIBSSH2_SESSION *Network_getSSHSession(SocketHandle *socketHandle)
 {
   assert(socketHandle != NULL);
   assert(socketHandle->type == SOCKET_TYPE_SSH);
