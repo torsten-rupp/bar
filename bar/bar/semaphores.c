@@ -120,7 +120,7 @@ typedef struct
   #define WAIT_TIMEOUT(debugFlag,type,condition,semaphore,timeout,lockedFlag) \
     do \
     { \
-      if (pthread_cond_timedwait(condition,semaphore,timeout) == ETIMEOUT) lockedFlag = FALSE; \
+      if (pthread_cond_timedwait(condition,semaphore,timeout) == ETIMEDOUT) lockedFlag = FALSE; \
     } \
     while (0)
 
