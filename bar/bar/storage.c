@@ -177,7 +177,9 @@ LOCAL bool initSSHPassword(const String hostName, const String loginName, const 
   {
     if (globalOptions.runMode == RUN_MODE_INTERACTIVE)
     {
-      s = String_format(String_new(),"SSH login password for %S@%S",hostName,loginName);
+      s = !String_isEmpty(loginName)
+            ? String_format(String_new(),"SSH login password for %S@%S",loginName,hostName)
+            : String_format(String_new(),"SSH login password for %S",hostName);
       initFlag = Password_input(defaultSSHPassword,String_cString(s),PASSWORD_INPUT_MODE_ANY);
       String_delete(s);
     }
