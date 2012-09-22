@@ -124,8 +124,9 @@ LOCAL bool getIntegerOption(int                   *value,
       if (errorOutputHandle != NULL)
       {
         fprintf(errorOutputHandle,
-                "%sUnexpected unit in value '%s'!\n",
+                "%sUnexpected unit '%s' in value '%s'!\n",
                 (errorPrefix != NULL) ? errorPrefix : "",
+                unit,
                 string
                );
       }
@@ -202,6 +203,7 @@ LOCAL bool getInteger64Option(int64                 *value,
   // find unit factor
   if (unit[0] != '\0')
   {
+fprintf(stderr,"%s, %d: units=%p\n",__FILE__,__LINE__,units);
     if (units != NULL)
     {
       i = 0;
@@ -233,8 +235,9 @@ LOCAL bool getInteger64Option(int64                 *value,
       if (errorOutputHandle != NULL)
       {
         fprintf(errorOutputHandle,
-                "%sUnexpected unit in value '%s'!\n",
+                "%sUnexpected unit '%s' in value '%s'!\n",
                 (errorPrefix != NULL) ? errorPrefix : "",
+                unit,
                 string
                );
       }
@@ -320,8 +323,8 @@ LOCAL bool processOption(const CommandLineOption *commandLineOption,
         if (!getInteger64Option(commandLineOption->variable.l,
                                 value,
                                 option,
-                                commandLineOption->integerOption.units,
-                                commandLineOption->integerOption.unitCount,
+                                commandLineOption->integer64Option.units,
+                                commandLineOption->integer64Option.unitCount,
                                 errorOutputHandle,
                                 errorPrefix
                                )
@@ -416,8 +419,9 @@ LOCAL bool processOption(const CommandLineOption *commandLineOption,
             if (errorOutputHandle != NULL)
             {
               fprintf(errorOutputHandle,
-                      "%sUnexpected unit in value '%s'!\n",
+                      "%sUnexpected unit '%s' in value '%s'!\n",
                       (errorPrefix != NULL)?errorPrefix:"",
+                      unit,
                       value
                      );
             }
