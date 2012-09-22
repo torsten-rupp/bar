@@ -203,7 +203,6 @@ LOCAL bool getInteger64Option(int64                 *value,
   // find unit factor
   if (unit[0] != '\0')
   {
-fprintf(stderr,"%s, %d: units=%p\n",__FILE__,__LINE__,units);
     if (units != NULL)
     {
       i = 0;
