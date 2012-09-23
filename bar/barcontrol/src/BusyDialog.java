@@ -268,7 +268,13 @@ class BusyDialog
       {
         while (!dialog.isDisposed())
         {
-          animate();
+          display.syncExec(new Runnable()
+          {
+            public void run()
+            {
+              animate();
+            }
+          });
           try { Thread.sleep(animateInterval); } catch (InterruptedException exception) { /* ignore */ }
         }
       }
