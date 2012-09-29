@@ -287,9 +287,9 @@ StringNode *__StringList_remove(const char *__fileName__, ulong __lineNb__, Stri
 
   String_delete(stringNode->string);
   #ifdef NDEBUG
-    stringNode = LIST_DELETE_NODE(stringNode);
+    stringNode = (StringNode*)LIST_DELETE_NODE(stringNode);
   #else /* not NDEBUG */
-    stringNode = __LIST_DELETE_NODE(__fileName__,__lineNb__,stringNode);
+    stringNode = (StringNode*)__LIST_DELETE_NODE(__fileName__,__lineNb__,stringNode);
   #endif /* NDEBUG */
 
   return nextStringNode;
