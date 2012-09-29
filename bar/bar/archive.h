@@ -362,8 +362,6 @@ const Password *Archive_appendDecryptPassword(const Password *password);
 * Purpose: create archive
 * Input  : archiveInfo                 - archive info block
 *          jobOptions                  - job option settings
-*          maxBandWidthList            - list with max. band width to use [bits/s]
-*                                        or NULL
 *          archiveNewFileFunction      - call back for creating new
 *                                        archive file
 *          archiveNewFileUserData      - user data for call back
@@ -377,7 +375,6 @@ const Password *Archive_appendDecryptPassword(const Password *password);
 
 Errors Archive_create(ArchiveInfo                     *archiveInfo,
                       const JobOptions                *jobOptions,
-                      BandWidthList                   *maxBandWidthList,
                       ArchiveNewFileFunction          archiveNewFileFunction,
                       void                            *archiveNewFileUserData,
                       ArchiveGetCryptPasswordFunction archiveGetCryptPassword,

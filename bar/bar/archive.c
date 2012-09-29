@@ -2434,7 +2434,6 @@ const Password *Archive_appendDecryptPassword(const Password *password)
 
 Errors Archive_create(ArchiveInfo                     *archiveInfo,
                       const JobOptions                *jobOptions,
-                      BandWidthList                   *maxBandWidthList,
                       ArchiveNewFileFunction          archiveNewFileFunction,
                       void                            *archiveNewFileUserData,
                       ArchiveGetCryptPasswordFunction archiveGetCryptPasswordFunction,
@@ -2449,9 +2448,6 @@ Errors Archive_create(ArchiveInfo                     *archiveInfo,
   assert(archiveInfo != NULL);
   assert(archiveNewFileFunction != NULL);
   assert(jobOptions != NULL);
-
-#warning NYT: todo maxBandWidthList
-UNUSED_VARIABLE(maxBandWidthList);
 
   // detect block length of used crypt algorithm
   error = Crypt_getBlockLength(jobOptions->cryptAlgorithm,&archiveInfo->blockLength);
