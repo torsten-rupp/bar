@@ -934,6 +934,27 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
     }
   }
 
+  /** quit BAR server (for debug only)
+   * @param result result
+   * @return true if quit command sent, false otherwise
+   */
+  public static boolean quit(String[] result)
+  {
+    try
+    {
+      String line = "QUIT";
+      output.write(line); output.write('\n'); output.flush();
+      if (Settings.debugServerFlag) System.err.println("Network: sent '"+line+"'");
+    }
+    catch (IOException exception)
+    {
+      result[0] = BARControl.reniceIOException(exception).getMessage();
+      return false;
+    }
+
+    return true;
+  }
+
   /** start running command
    * @param commandString command to start
    * @param processResult process result handler

@@ -891,6 +891,7 @@ public class BARControl
 
     new Option("--debug",                      null,Options.Types.BOOLEAN,    "debugFlag"),
     new Option("--debug-server",               null,Options.Types.BOOLEAN,    "debugServerFlag"),
+    new Option("--debug-quit-server",          null,Options.Types.BOOLEAN,    "debugQuitServerFlag"),
 
     new Option("--help",                       "-h",Options.Types.BOOLEAN,    "helpFlag"),
 
@@ -935,6 +936,23 @@ public class BARControl
   public static void printInternalError(String format, Object... args)
   {
     System.err.println("INTERNAL ERROR: "+String.format(format,args));
+  }
+
+  /** renice i/o exception (remove java.io.IOExcpetion text from exception)
+   * @param exception i/o exception to renice
+   * @return reniced exception
+   */
+  public static IOException reniceIOException(IOException exception)
+  {
+    final Pattern PATTERN = Pattern.compile("^(.*?)\\s*java.io.IOException: error=\\d+,\\s*(.*)$",Pattern.CASE_INSENSITIVE);
+
+    Matcher matcher;
+    if ((matcher = PATTERN.matcher(exception.getMessage())).matches())
+    {
+      exception = new IOException(matcher.group(1)+" "+matcher.group(2));
+    }
+
+    return exception;
   }
 
   // ----------------------------------------------------------------------
@@ -1042,7 +1060,7 @@ public class BARControl
       }
       catch (IOException exception)
       {
-        throw new Error("not a Java Key Store (JKS) file '"+Settings.serverKeyFileName+"'");
+        throw new Error("not a Java Key Store (JKS) file '"+Settings.serverKeyFileName+"'",exception);
       }
     }
   }
@@ -1556,6 +1574,7 @@ public class BARControl
           || (Settings.suspendFlag)
           || (Settings.continueFlag)
           || (Settings.listFlag)
+          || (Settings.debugQuitServerFlag)
          )
       {
         // connect to server
@@ -2009,6 +2028,17 @@ public class BARControl
                                               )
                                 );
             }
+          }
+        }
+        if (Settings.debugQuitServerFlag)
+        {
+          // quit server
+          String[] result = new String[1];
+          if (!BARServer.quit(result))
+          {
+            printError("cannot quit server");
+            BARServer.disconnect();
+            System.exit(1);
           }
         }
 
