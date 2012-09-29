@@ -2277,8 +2277,7 @@ LOCAL Errors storeArchiveFile(void           *userData,
              && ((createInfo->requestedAbortFlag == NULL) || !(*createInfo->requestedAbortFlag))
             )
       {
-#warning todo
-        Semaphore_waitModified(&createInfo->storageInfoLock,SEMAPHORE_WAIT_FOREVER);
+        Semaphore_waitModified(&createInfo->storageInfoLock,30*1000);
       }
     }
   }
@@ -2303,7 +2302,6 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
 
   byte                       *buffer;
   String                     storageName;
-  StorageTypes               storageType;
   String                     hostName,loginName,deviceName,fileName;
   String                     printableStorageName;
   bool                       abortFlag;
@@ -2643,7 +2641,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
             if (createInfo->failError == ERROR_NONE)
             {
               while (   Index_findByName(indexDatabaseHandle,
-                                         storageType,
+                                         STORAGE_TYPE_UNKNOWN,
                                          hostName,
                                          loginName,
                                          deviceName,
@@ -4224,7 +4222,6 @@ Errors Command_create(const char                      *storageName,
   // create new archive
   error = Archive_create(&archiveInfo,
                          jobOptions,
-                         &globalOptions.maxBandWidthList,
                          storeArchiveFile,
                          &createInfo,
                          archiveGetCryptPasswordFunction,
