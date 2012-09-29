@@ -64,9 +64,8 @@
 // sleep times [s]
 #define SLEEP_TIME_SCHEDULER_THREAD    ( 1*60)
 #define SLEEP_TIME_PAUSE_THREAD        ( 1*60)
-#warning todo
-#define SLEEP_TIME_INDEX_THREAD        (1*60)
-#define SLEEP_TIME_INDEX_UPDATE_THREAD (1*60)
+#define SLEEP_TIME_INDEX_THREAD        (10*60)
+#define SLEEP_TIME_INDEX_UPDATE_THREAD (10*60)
 
 /***************************** Datatypes *******************************/
 
@@ -895,8 +894,6 @@ LOCAL void doneJob(JobNode *jobNode)
   {
     jobNode->state = JOB_STATE_DONE;
   }
-#warning todo
-fprintf(stderr,"%s, %d: lastExecutedDateTime=%llu jobNode->state=%d\n",__FILE__,__LINE__,jobNode->lastExecutedDateTime,jobNode->state);
 
   // clear passwords
   if (jobNode->cryptPassword != NULL)
@@ -980,8 +977,6 @@ LOCAL Errors readJobScheduleInfo(JobNode *jobNode)
   assert(jobNode != NULL);
 
   jobNode->lastExecutedDateTime = 0LL;
-#warning todo
-fprintf(stderr,"%s, %d: lastExecutedDateTime=%llu\n",__FILE__,__LINE__,jobNode->lastExecutedDateTime);
 
   /* get filename*/
   fileName = File_newFileName();
@@ -1021,8 +1016,6 @@ fprintf(stderr,"%s, %d: lastExecutedDateTime=%llu\n",__FILE__,__LINE__,jobNode->
       {
         jobNode->lastExecutedDateTime = n;
         jobNode->lastCheckDateTime    = n;
-#warning todo
-fprintf(stderr,"%s, %d: lastExecutedDateTime=%llu\n",__FILE__,__LINE__,jobNode->lastExecutedDateTime);
       }
     }
     String_delete(line);
@@ -1294,7 +1287,6 @@ LOCAL StringNode *deleteJobEntries(StringList *stringList,
   String     string;
 
   nextNode = NULL;
-#warning check if works
 
   line = String_new();
   string = String_new();
@@ -1350,6 +1342,7 @@ LOCAL Errors updateJob(JobNode *jobNode)
 
   assert(jobNode != NULL);
 
+  // init variables
   StringList_init(&jobFileList);
   line  = String_new();
 
@@ -1361,7 +1354,6 @@ LOCAL Errors updateJob(JobNode *jobNode)
     String_delete(line);
     return error;
   }
-  line  = String_new();
   while (!File_eof(&fileHandle))
   {
     // read line
@@ -1762,8 +1754,6 @@ LOCAL void jobThreadCode(void)
       break;
     }
     assert(jobNode != NULL);
-#warning todo
-fprintf(stderr,"%s, %d: lastExecutedDateTime=%llu jobNode->state=%d\n",__FILE__,__LINE__,jobNode->lastExecutedDateTime,jobNode->state);
 
     // start job
     startJob(jobNode);
@@ -2224,8 +2214,6 @@ LOCAL void indexThreadCode(void)
 
   error = ERROR_NONE;
 
-#warning remove
-#if 0
   // reset/delete incomplete database entries (ignore possible errors)
   plogMessage(LOG_TYPE_INDEX,"INDEX","start clean-up database\n");
   while (Index_findByState(indexDatabaseHandle,
@@ -2280,7 +2268,6 @@ LOCAL void indexThreadCode(void)
                             );
     }
   }
-#endif
 
   // add/update index database
   while (!quitFlag)
@@ -2538,7 +2525,6 @@ LOCAL void autoIndexUpdateThreadCode(void)
               }
 
               // get storage name
-#warning todo Storage_getPrintableName
               Storage_getName(storageName,storageSpecifier.type,storageSpecifier.string,fileName);
               Storage_getPrintableName(printableStorageName,storageName);
 
@@ -4635,8 +4621,6 @@ LOCAL void serverCommand_jobAbort(ClientInfo *clientInfo, uint id, const String 
       jobNode->lastExecutedDateTime = Misc_getCurrentDateTime();
       jobNode->state                = JOB_STATE_NONE;
     }
-#warning todo
-fprintf(stderr,"%s, %d: lastExecutedDateTime=%llu jobNode->state=%d\n",__FILE__,__LINE__,jobNode->lastExecutedDateTime,jobNode->state);
 
     // store schedule info
     writeJobScheduleInfo(jobNode);
