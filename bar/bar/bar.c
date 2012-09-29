@@ -1632,7 +1632,16 @@ LOCAL BandWidthNode *newBandWidthNode(void)
   return bandWidthNode;
 }
 
-BandWidthNode *parseBandWidth(const String s)
+/***********************************************************************\
+* Name   : parseBandWidth
+* Purpose: parse band width
+* Input  : s - band width string
+* Output : -
+* Return : band width node or NULL
+* Notes  : -
+\***********************************************************************/
+
+LOCAL BandWidthNode *parseBandWidth(const String s)
 {
   BandWidthNode *bandWidthNode;
   bool          errorFlag;
