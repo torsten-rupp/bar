@@ -272,12 +272,27 @@ void __StringList_appendBuffer(const char *__fileName__, ulong __lineNb__, Strin
   #endif /* NDEBUG */
 }
 
+#ifdef NDEBUG
 StringNode *StringList_remove(StringList *stringList, StringNode *stringNode)
+#else /* not NDEBUG */
+StringNode *__StringList_remove(const char *__fileName__, ulong __lineNb__, StringList *stringList, StringNode *stringNode)
+#endif /* NDEBUG */
 {
+  StringNode *nextStringNode;
+
   assert(stringList != NULL);
   assert(stringNode != NULL);
 
-  return (StringNode*)List_remove(stringList,stringNode);
+  nextStringNode = (StringNode*)List_remove(stringList,stringNode);
+
+  String_delete(stringNode->string);
+  #ifdef NDEBUG
+    stringNode = LIST_DELETE_NODE(stringNode);
+  #else /* not NDEBUG */
+    stringNode = __LIST_DELETE_NODE(__fileName__,__lineNb__,stringNode);
+  #endif /* NDEBUG */
+
+  return nextStringNode;
 }
 
 #ifdef NDEBUG

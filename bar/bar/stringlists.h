@@ -53,6 +53,7 @@ typedef struct
   #define StringList_appendCString(stringList,s)                                 __StringList_appendCString(__FILE__,__LINE__,stringList,s)
   #define StringList_appendChar(stringList,ch)                                   __StringList_appendChar(__FILE__,__LINE__,stringList,ch)
   #define StringList_appendBuffer(stringList,buffer,bufferLength)                __StringList_appendBuffer(__FILE__,__LINE__,stringList,buffer,bufferLength)
+  #define StringList_remove(stringList,stringNode)                               __StringList_remove(__FILE__,__LINE__,stringList,stringNode)
   #define StringList_getFirst(stringList,string)                                 __StringList_getFirst(__FILE__,__LINE__,stringList,string)
   #define StringList_getLast(stringList,string)                                  __StringList_getLast(__FILE__,__LINE__,stringList,string)
 #endif /* not NDEBUG */
@@ -272,7 +273,11 @@ void __StringList_appendBuffer(const char *fileName, ulong lineNb, StringList *s
 * Notes  : -
 \***********************************************************************/
 
+#ifdef NDEBUG
 StringNode *StringList_remove(StringList *stringList, StringNode *stringNode);
+#else /* not NDEBUG */
+StringNode *__StringList_remove(const char *__fileName__, ulong __lineNb__, StringList *stringList, StringNode *stringNode);
+#endif /* NDEBUG */
 
 /***********************************************************************\
 * Name   : StringList_first
