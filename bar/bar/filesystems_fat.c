@@ -261,10 +261,9 @@ LOCAL FileSystemTypes FAT_init(DeviceHandle *deviceHandle, FATHandle *fatHandle)
   fatHandle->sectorsPerCluster = FAT_READ_INT8 (bootSector,0x0D);
   fatHandle->reservedSectors   = FAT_READ_INT16(bootSector,0x0E);
   fatHandle->fatCount          = FAT_READ_INT8 (bootSector,0x10);
-  fatHandle->totalSectorsCount = (uint32)((FAT_READ_INT16(bootSector,0x13) != 0)
-                                            ? FAT_READ_INT16(bootSector,0x13)
-                                            : FAT_READ_INT32(bootSector,0x20)
-                                         );
+  fatHandle->totalSectorsCount = (FAT_READ_INT16(bootSector,0x13) != 0)
+                                   ? (uint32)FAT_READ_INT16(bootSector,0x13)
+                                   : (uint32)FAT_READ_INT32(bootSector,0x20);
   fatHandle->maxRootEntries    = FAT_READ_INT16(bootSector,0x11);
   fatHandle->sectorsPerFAT     = (FAT_READ_INT16(bootSector,0x16) != 0)?FAT_READ_INT16(bootSector,0x16):FAT_READ_INT32(bootSector,0x24);
   fatHandle->bitsPerFATEntry   = 0;
