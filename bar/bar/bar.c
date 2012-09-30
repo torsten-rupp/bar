@@ -2291,6 +2291,7 @@ LOCAL void freeScheduleNode(ScheduleNode *scheduleNode, void *userData)
 {
   assert(scheduleNode != NULL);
 
+  UNUSED_VARIABLE(scheduleNode);
   UNUSED_VARIABLE(userData);
 }
 
@@ -3002,9 +3003,6 @@ ulong getBandWidth(BandWidthList *bandWidthList)
   uint          currentWeekDay;
   uint          currentHour,currentMinute;
   BandWidthNode *matchingBandWidthNode;
-  int           year,month,day;
-  int           weekDays;
-  int           hour,minute;
   bool          dateMatchFlag,weekDayMatchFlag,timeMatchFlag;
   BandWidthNode *bandWidthNode;
   ulong         n;
@@ -3030,12 +3028,6 @@ ulong getBandWidth(BandWidthList *bandWidthList)
 
   // find best matching band width node
   matchingBandWidthNode = NULL;
-  year                  = SCHEDULE_ANY;
-  month                 = SCHEDULE_ANY;
-  day                   = SCHEDULE_ANY;
-  weekDays              = SCHEDULE_ANY_DAY;
-  hour                  = SCHEDULE_ANY;
-  minute                = SCHEDULE_ANY;
   LIST_ITERATE(bandWidthList,bandWidthNode)
   {
 
