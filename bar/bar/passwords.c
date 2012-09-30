@@ -534,7 +534,7 @@ bool Password_input(Password   *password,
     int            n;
     struct termios oldTermioSettings;
     struct termios termioSettings;
-    bool           eolFlag;
+    bool           eolFlag,eofFlag;
     char           ch;
 
     if (isatty(STDIN_FILENO) == 1)
@@ -561,6 +561,7 @@ bool Password_input(Password   *password,
 
       // input password
       eolFlag = FALSE;
+      eofFlag = FALSE;
       do
       {
         if (read(STDIN_FILENO,&ch,1) == 1)
@@ -579,10 +580,10 @@ bool Password_input(Password   *password,
         }
         else
         {
-          eolFlag = TRUE;
+          eofFlag = TRUE;
         }
       }
-      while (!eolFlag);
+      while (!eolFlag && !eofFlag);
 
       // restore console settings
       tcsetattr(STDIN_FILENO,TCSANOW,&oldTermioSettings);
@@ -596,9 +597,18 @@ bool Password_input(Password   *password,
     {
       // read data from non-interactive input
       eolFlag = FALSE;
+      eofFlag = FALSE;
       do
       {
+        /* Note: sometimes FIONREAD does not return available characters
+                 immediately. Thus delay program execution and try again.
+        */
         ioctl(STDIN_FILENO,FIONREAD,(char*)&n);
+        if (n <= 0)
+        {
+          Misc_udelay(1000);
+          ioctl(STDIN_FILENO,FIONREAD,(char*)&n);
+        }
         if (n > 0)
         {
           if (read(STDIN_FILENO,&ch,1) == 1)
@@ -617,11 +627,11 @@ bool Password_input(Password   *password,
           }
           else
           {
-            eolFlag = TRUE;
+            eofFlag = TRUE;
           }
         }
       }
-      while (!eolFlag && (n > 0));
+      while (!eolFlag && !eofFlag);
     }
 
     okFlag = TRUE;
