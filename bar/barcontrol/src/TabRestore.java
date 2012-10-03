@@ -461,7 +461,6 @@ class TabRestore
             line = command.getNextResult(5*1000);
             if (line != null)
             {
-//Dprintf.dprintf("line=%s",line);
               if      (StringParser.parse(line,"%ld %S %ld %ld %S %S %ld %S",data,StringParser.QUOTE_CHARS))
               {
                 /* get data
@@ -1265,6 +1264,7 @@ class TabRestore
     Widgets.layout(group,0,1,TableLayoutData.NSWE);
     {
       widgetStorageList = Widgets.newTable(group,SWT.CHECK);
+      widgetStorageList.setLayout(new TableLayout(null,new double[]{1.0,0.0,0.0,0.0}));
       Widgets.layout(widgetStorageList,0,0,TableLayoutData.NSWE);
       SelectionListener storageListColumnSelectionListener = new SelectionListener()
       {
@@ -1290,7 +1290,7 @@ class TabRestore
       tableColumn = Widgets.addTableColumn(widgetStorageList,2,"Modified",SWT.LEFT, 150,true);
       tableColumn.addSelectionListener(storageListColumnSelectionListener);
       tableColumn.setToolTipText("Click to sort for modification date/time.");
-      tableColumn = Widgets.addTableColumn(widgetStorageList,3,"State",   SWT.LEFT,  30,true);
+      tableColumn = Widgets.addTableColumn(widgetStorageList,3,"State",   SWT.LEFT,  60,true);
       tableColumn.addSelectionListener(storageListColumnSelectionListener);
       tableColumn.setToolTipText("Click to sort for state.");
       widgetStorageList.addListener(SWT.MouseDoubleClick,new Listener()
@@ -1769,6 +1769,7 @@ class TabRestore
     Widgets.layout(group,1,1,TableLayoutData.NSWE);
     {
       widgetEntryList = Widgets.newTable(group,SWT.CHECK);
+      widgetEntryList.setLayout(new TableLayout(null,new double[]{1.0,0.0,0.0,0.0,0.0}));
       Widgets.layout(widgetEntryList,0,0,TableLayoutData.NSWE);
       SelectionListener entryListColumnSelectionListener = new SelectionListener()
       {
@@ -2804,7 +2805,7 @@ class TabRestore
   {
     try
     {
-      if (true || Dialogs.confirm(shell,"Really remove all indizes with error state?"))
+      if (Dialogs.confirm(shell,"Really remove all indizes with error state?"))
       {
         int    errorCode;
         String result[] = new String[1];
