@@ -442,11 +442,11 @@ bool Index_findByName(DatabaseHandle *databaseHandle,
                       && ((deviceName == NULL) || String_equals(deviceName,storageSpecifier.deviceName))
                       && ((fileName   == NULL) || String_equals(fileName,  storageFileName            ));
           break;
-        #ifndef NDEBUG
-          default:
+        default:
+          #ifndef NDEBUG
             HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-            break; /* not reached */
-        #endif /* NDEBUG */
+          #endif /* NDEBUG */
+          break;
       }
     }
   }
