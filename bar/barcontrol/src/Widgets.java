@@ -2829,7 +2829,7 @@ class Widgets
   {
     TableColumn tableColumn = new TableColumn(table,style);
     tableColumn.setText(title);
-    tableColumn.setData(new TableLayoutData(0,0,0,0,0,0,0,width,0,resizable ? SWT.DEFAULT : width,resizable ? SWT.DEFAULT : width));
+    tableColumn.setData(new TableLayoutData(0,0,0,0,0,0,0,width,0,((width == SWT.DEFAULT) || resizable) ? SWT.DEFAULT : width,((width == SWT.DEFAULT) || resizable) ? SWT.DEFAULT : width));
     tableColumn.setWidth(width);
     tableColumn.setResizable(resizable);
     if (width <= 0) tableColumn.pack();
@@ -2855,11 +2855,24 @@ class Widgets
    * @param columnNb column number
    * @param title column title
    * @param style style
+   * @param width width of column
+   * @return new table column
+   */
+  public static TableColumn addTableColumn(Table table, int columnNb, String title, int style, int width)
+  {
+    return addTableColumn(table,columnNb,title,style,width,(width == SWT.DEFAULT) ? true : false);
+  }
+
+  /** add column to table widget
+   * @param table table widget
+   * @param columnNb column number
+   * @param title column title
+   * @param style style
    * @return new table column
    */
   public static TableColumn addTableColumn(Table table, int columnNb, String title, int style)
   {
-    return addTableColumn(table,columnNb,title,style,true);
+    return addTableColumn(table,columnNb,title,style,SWT.DEFAULT);
   }
 
   /** add column to table widget
@@ -2879,12 +2892,24 @@ class Widgets
    * @param table table widget
    * @param columnNb column number
    * @param style style
+   * @param resizable TRUE iff resizable column
+   * @return new table column
+   */
+  public static TableColumn addTableColumn(Table table, int columnNb, int style, boolean resizable)
+  {
+    return addTableColumn(table,columnNb,style,SWT.DEFAULT,resizable);
+  }
+
+  /** add column to table widget
+   * @param table table widget
+   * @param columnNb column number
+   * @param style style
    * @param width width of column
    * @return new table column
    */
   public static TableColumn addTableColumn(Table table, int columnNb, int style, int width)
   {
-    return addTableColumn(table,columnNb,style,width,true);
+    return addTableColumn(table,columnNb,style,width,(width == SWT.DEFAULT) ? true : false);
   }
 
   /** add column to table widget
@@ -3016,6 +3041,55 @@ class Widgets
     }
   };
 
+  /** swap table items
+   * @param table table
+   * @param i,j indizes of table items to swap
+   */
+  private static void swapTableItems(Table table, int i, int j)
+  {
+    // get table items
+    TableItem[] tableItems = table.getItems();
+
+    // save data
+    Object   data = tableItems[i].getData();
+    int columnCount = table.getColumnCount();
+    String[] texts;
+    if (columnCount > 0)
+    {
+      texts = new String[table.getColumnCount()];
+      for (int z = 0; z < table.getColumnCount(); z++)
+      {
+        texts[z] = tableItems[i].getText(z);
+      }
+    }
+    else
+    {
+      texts = new String[1];
+      texts[0] = tableItems[i].getText();
+    }
+    Color foregroundColor = tableItems[i].getForeground();
+    Color backgroundColor = tableItems[i].getBackground();
+    boolean checked = tableItems[i].getChecked();
+
+    // discard item
+    tableItems[i].dispose();
+
+    // create new item
+    TableItem tableItem = new TableItem(table,SWT.NONE,j);
+    tableItem.setData(data);
+    if (columnCount > 0)
+    {
+      tableItem.setText(texts);
+    }
+    else
+    {
+      tableItem.setText(texts[0]);
+    }
+    tableItem.setForeground(foregroundColor);
+    tableItem.setBackground(backgroundColor);
+    tableItem.setChecked(checked);
+  }
+
   /** select sort column and sort table
    * @param table table
    * @param tableColumn table column to sort by
@@ -3102,45 +3176,7 @@ class Widgets
           }
           if (sortedFlag)
           {
-            // save data
-            Object   data = tableItems[i].getData();
-            int columnCount = table.getColumnCount();
-            String[] texts;
-            if (columnCount > 0)
-            {
-              texts = new String[table.getColumnCount()];
-              for (int z = 0; z < table.getColumnCount(); z++)
-              {
-                texts[z] = tableItems[i].getText(z);
-              }
-            }
-            else
-            {
-              texts = new String[1];
-              texts[0] = tableItems[i].getText();
-            }
-            Color foregroundColor = tableItems[i].getForeground();
-            Color backgroundColor = tableItems[i].getBackground();
-            boolean checked = tableItems[i].getChecked();
-
-            // discard item
-            tableItems[i].dispose();
-
-            // create new item
-            TableItem tableItem = new TableItem(table,SWT.NONE,j);
-            tableItem.setData(data);
-            if (columnCount > 0)
-            {
-              tableItem.setText(texts);
-            }
-            else
-            {
-              tableItem.setText(texts[0]);
-            }
-            tableItem.setForeground(foregroundColor);
-            tableItem.setBackground(backgroundColor);
-            tableItem.setChecked(checked);
-
+            swapTableItems(table,i,j);
             tableItems = table.getItems();
           }
         }
@@ -3415,6 +3451,79 @@ class Widgets
     return tableRunnable.updatedFlag;
   }
 
+  /** move table entry
+   * @param table table
+   * @param data entry data
+   * @param offset move offset
+   */
+  public static void moveTableEntry(final Table table, final int index, final int offset)
+  {
+    if (!table.isDisposed())
+    {
+      table.getDisplay().syncExec(new Runnable()
+      {
+        public void run()
+        {
+          if (!table.isDisposed())
+          {
+            // get table items
+            TableItem[] tableItems = table.getItems();
+
+            int i = index;
+            int n = offset;
+
+            // move item down
+            while ((n > 0) && (i < tableItems.length-1))
+            {
+              swapTableItems(table,i,i+1);
+              i++;
+              n--;
+            }
+
+            // move imte up
+            while ((n < 0) && (i > 0))
+            {
+              swapTableItems(table,i,i-1);
+              i--;
+              n++;
+            }
+          }
+        }
+      });
+    }
+  }
+
+  /** move table entry
+   * @param table table
+   * @param data entry data
+   * @param offset move offset
+   */
+  public static void moveTableEntry(Table table, Object data, int offset)
+  {
+    // find index of item
+    TableItem[] tableItems = table.getItems();
+    int         i          = 0;
+    while ((i < tableItems.length) && (tableItems[i].getData() != data))
+    {
+      i++;
+    }
+
+    if (i >= 0)
+    {
+      moveTableEntry(table,i,offset);
+    }
+  }
+
+  /** move table entry
+   * @param table table
+   * @param data entry data
+   * @param offset move offset
+   */
+  public static void moveTableEntry(Table table, TableItem tableItem, int offset)
+  {
+    moveTableEntry(table,table.indexOf(tableItem),offset);
+  }
+
   /** set table entry color
    * @param table table
    * @param table entry data
@@ -3665,7 +3774,7 @@ class Widgets
   {
     for (TableItem tableItem : tableItems)
     {
-      removeTableEntry(table,tableItems);
+      removeTableEntry(table,tableItem);
     }
   }
 
