@@ -1,4 +1,4 @@
-2012-08-12 0.17
+2012-10-03 0.17
   * finally: added support for xdelta compression!
     Note: integrating this was really a _hard_ work.
   * added support for libcdio to read content of CD/DVD/BD
@@ -95,6 +95,7 @@
     depending on date/time
   * support external file for max-band-width,
     index-database-max-band-width options
+  * fixed memory leak in server
 
 2012-01-14 0.16g
   * fix restore: do not create empty parent directories
