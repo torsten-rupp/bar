@@ -15,6 +15,7 @@
 ECHO="echo"
 LN="ln"
 MKDIR="mkdir"
+PATCH="patch"
 RMF="rm -f"
 RMRF="rm -rf"
 TAR="tar"
@@ -192,10 +193,15 @@ if test $helpFlag -eq 1; then
   exit 0
 fi
 
-# check if wget is available
-type wget 1>/dev/null 2>/dev/null && wget --version 1>/dev/null 2>/dev/null
+# check if wget, patch are available
+type $WGET 1>/dev/null 2>/dev/null && $WGET --version 1>/dev/null 2>/dev/null
 if test $? -ne 0; then
-  $ECHO >&2 "ERROR: command wget is not available"
+  $ECHO >&2 "ERROR: command 'wget' is not available"
+  exit 1
+fi
+type $PATCH 1>/dev/null 2>/dev/null && $PATCH --version 1>/dev/null 2>/dev/null
+if test $? -ne 0; then
+  $ECHO >&2 "ERROR: command 'patch' is not available"
   exit 1
 fi
 
@@ -283,7 +289,7 @@ if test $cleanFlag -eq 0; then
      fi
      if test $noDecompressFlag -eq 0; then
        $TAR xzf xdelta3.0.0.tar.gz
-       (cd xdelta3.0.0; patch -p1 < ../../misc/xdelta3.0.patch)
+       (cd xdelta3.0.0; $PATCH -p1 < ../../misc/xdelta3.0.patch)
      fi
     )
     if test $noDecompressFlag -eq 0; then
@@ -334,7 +340,7 @@ if test $cleanFlag -eq 0; then
      fi
      if test $noDecompressFlag -eq 0; then
        $TAR xzf ftplib-3.1-src.tar.gz
-       (cd ftplib-3.1; patch -p3 < ../ftplib-3.1-1.patch) 1>/dev/null 2>/dev/null
+       (cd ftplib-3.1; $PATCH -p3 < ../ftplib-3.1-1.patch) 1>/dev/null 2>/dev/null
      fi
     )
     if test $noDecompressFlag -eq 0; then
@@ -436,7 +442,7 @@ if test $cleanFlag -eq 0; then
      fi
      if test $noDecompressFlag -eq 0; then
        $TAR xjf epm-4.1-source.tar.bz2
-       (cd epm-4.1; patch -p1 < ../../misc/epm-4.1-rpm.patch)
+       (cd epm-4.1; $PATCH -p1 < ../../misc/epm-4.1-rpm.patch)
      fi
     )
     if test $noDecompressFlag -eq 0; then
