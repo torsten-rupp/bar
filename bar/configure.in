@@ -1244,7 +1244,7 @@ if test $ENABLE_SSH = "yes"; then
         (cd packages; patch --batch -N -p0 <$cwd/misc/libssh2-1.1-keepalive.patch) 1>/dev/null 2>/dev/null
       fi
       if test $result -eq 1; then
-        (cd libssh2; ./configure --prefix=$cwd/packages --enable-debug) 1>/dev/null 2>$tmpFile
+        (cd libssh2; LIBS=-ldl ./configure --prefix=$cwd/packages --with-libssl-prefix=$cwd/packages --with-libgcrypt-prefix=$cwd/packages --enable-debug) 1>/dev/null 2>$tmpFile
         if test $? -ne 0; then 
           AC_MSG_RESULT([fail (configure)])
           cat $tmpFile
