@@ -2034,7 +2034,6 @@ LOCAL void schedulerThreadCode(void)
         {
           // set state
           jobNode->state              = JOB_STATE_WAITING;
-fprintf(stderr,"%s, %d: trigger job %s\n",__FILE__,__LINE__,String_cString(jobNode->name));
           jobNode->archiveType        = executeScheduleNode->archiveType;
           jobNode->requestedAbortFlag = FALSE;
           resetJobRunningInfo(jobNode);
@@ -2529,7 +2528,6 @@ LOCAL void autoIndexUpdateThreadCode(void)
               Storage_getPrintableName(printableStorageName,storageName);
 
               // get index id, request index update
-//fprintf(stderr,"%s, %d: h-%s l=%s d=%s f=%s\n",__FILE__,__LINE__,String_cString(hostName),String_cString(loginName),String_cString(deviceName),String_cString(fileName));
               if (Index_findByName(indexDatabaseHandle,
                                    storageSpecifier.type,
                                    storageSpecifier.hostName,
@@ -2658,7 +2656,6 @@ LOCAL void autoIndexUpdateThreadCode(void)
 
 LOCAL void sendClient(ClientInfo *clientInfo, String data)
 {
-  Errors        error;
   SemaphoreLock semaphoreLock;
 
   assert(clientInfo != NULL);
@@ -2668,17 +2665,16 @@ LOCAL void sendClient(ClientInfo *clientInfo, String data)
     fprintf(stderr,"%s,%d: result=%s",__FILE__,__LINE__,String_cString(data));
   #endif /* SERVER_DEBUG */
 
-//fprintf(stderr,"%s,%d: sent data: '%s'",__FILE__,__LINE__,String_cString(data));
   switch (clientInfo->type)
   {
     case CLIENT_TYPE_BATCH:
-      error = File_write(&clientInfo->file.fileHandle,String_cString(data),String_length(data));
+      (void)File_write(&clientInfo->file.fileHandle,String_cString(data),String_length(data));
       (void)File_flush(&clientInfo->file.fileHandle);
       break;
     case CLIENT_TYPE_NETWORK:
       SEMAPHORE_LOCKED_DO(semaphoreLock,&clientInfo->network.writeLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,SEMAPHORE_WAIT_FOREVER)
       {
-        error = Network_send(&clientInfo->network.socketHandle,String_cString(data),String_length(data));
+        (void)Network_send(&clientInfo->network.socketHandle,String_cString(data),String_length(data));
       }
       break;
     default:
@@ -2714,7 +2710,6 @@ LOCAL void sendClientResult(ClientInfo *clientInfo, uint id, bool completeFlag, 
   va_start(arguments,format);
   String_vformat(result,format,arguments);
   va_end(arguments);
-//fprintf(stderr,"%s,%d: result=%s\n",__FILE__,__LINE__,String_cString(result));
   String_appendChar(result,'\n');
 
   sendClient(clientInfo,result);
@@ -4557,7 +4552,6 @@ LOCAL void serverCommand_jobStart(ClientInfo *clientInfo, uint id, const String 
       jobNode->state                 = JOB_STATE_WAITING;
       jobNode->archiveType           = archiveType;
       jobNode->requestedAbortFlag    = FALSE;
-fprintf(stderr,"%s, %d: rigger job %s\n",__FILE__,__LINE__,String_cString(jobNode->name));
       resetJobRunningInfo(jobNode);
     }
   }
