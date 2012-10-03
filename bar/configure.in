@@ -1224,7 +1224,7 @@ if test $ENABLE_SSH = "yes"; then
     if test $result -eq 1; then
       CC_INCLUDES="$CC_INCLUDES $cwd/packages/include"
       LIBRARY_PATHS="$LIBRARY_PATHS $cwd/packages/lib"
-      STATIC_LIBRARIES="$STATIC_LIBRARIES ssl"
+      STATIC_LIBRARIES="$STATIC_LIBRARIES crypto ssl"
     fi
   fi
 
