@@ -1570,6 +1570,8 @@ String Storage_getName(String       storageName,
   String_clear(storageName);
   switch (storageType)
   {
+    case STORAGE_TYPE_NONE:
+      break;
     case STORAGE_TYPE_FILESYSTEM:
       if (!String_isEmpty(fileName))
       {
@@ -1645,11 +1647,11 @@ String Storage_getName(String       storageName,
         String_append(storageName,fileName);
       }
       break;
-    #ifndef NDEBUG
-      default:
+    default:
+      #ifndef NDEBUG
         HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-        break; /* not reached */
-    #endif /* NDEBUG */
+      #endif /* NDEBUG */
+      break;
   }
 
   return storageName;
@@ -1673,6 +1675,8 @@ String Storage_getPrintableName(String       string,
   {
     switch (storageSpecifier.type)
     {
+      case STORAGE_TYPE_NONE:
+        break;
       case STORAGE_TYPE_FILESYSTEM:
         if (!String_isEmpty(fileName))
         {
@@ -1773,11 +1777,11 @@ String Storage_getPrintableName(String       string,
           String_append(string,fileName);
         }
         break;
-      #ifndef NDEBUG
-        default:
+      default:
+        #ifndef NDEBUG
           HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-          break; /* not reached */
-      #endif /* NDEBUG */
+        #endif /* NDEBUG */
+        break;
     }
   }
   String_delete(fileName);
@@ -1837,6 +1841,8 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
   }
   switch (storageFileHandle->storageSpecifier.type)
   {
+    case STORAGE_TYPE_NONE:
+      break;
     case STORAGE_TYPE_FILESYSTEM:
       // init variables
       storageFileHandle->type = STORAGE_TYPE_FILESYSTEM;
@@ -2345,7 +2351,7 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
       #ifndef NDEBUG
         HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
       #endif /* NDEBUG */
-      break; /* not reached */
+      break;
   }
 
   storageFileHandle->runningInfo.volumeNumber   = 0;
@@ -2364,6 +2370,8 @@ Errors Storage_done(StorageFileHandle *storageFileHandle)
 
   switch (storageFileHandle->type)
   {
+    case STORAGE_TYPE_NONE:
+      break;
     case STORAGE_TYPE_FILESYSTEM:
       break;
     case STORAGE_TYPE_FTP:
@@ -2443,11 +2451,11 @@ Errors Storage_done(StorageFileHandle *storageFileHandle)
         String_delete(storageFileHandle->device.directory);
       }
       break;
-    #ifndef NDEBUG
-      default:
+    default:
+      #ifndef NDEBUG
         HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-        break; /* not reached */
-    #endif /* NDEBUG */
+      #endif /* NDEBUG */
+      break;
   }
   Storage_doneSpecifier(&storageFileHandle->storageSpecifier);
 
@@ -2470,6 +2478,8 @@ String Storage_getHandleName(String                  storageName,
   // format specifier
   switch (storageFileHandle->type)
   {
+    case STORAGE_TYPE_NONE:
+      break;
     case STORAGE_TYPE_FILESYSTEM:
       break;
     case STORAGE_TYPE_FTP:
@@ -2553,11 +2563,11 @@ String Storage_getHandleName(String                  storageName,
         String_appendChar(storageSpecifier,':');
       }
       break;
-    #ifndef NDEBUG
-      default:
+    default:
+      #ifndef NDEBUG
         HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-        break; /* not reached */
-    #endif /* NDEBUG */
+      #endif /* NDEBUG */
+      break;
   }
 
   // get name
@@ -2581,6 +2591,8 @@ Errors Storage_preProcess(StorageFileHandle *storageFileHandle,
   error = ERROR_NONE;
   switch (storageFileHandle->type)
   {
+    case STORAGE_TYPE_NONE:
+      break;
     case STORAGE_TYPE_FILESYSTEM:
       {
         TextMacro textMacros[2];
@@ -2777,11 +2789,11 @@ Errors Storage_preProcess(StorageFileHandle *storageFileHandle,
         }
       }
       break;
-    #ifndef NDEBUG
-      default:
+    default:
+      #ifndef NDEBUG
         HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-        break; /* not reached */
-    #endif /* NDEBUG */
+      #endif /* NDEBUG */
+      break;
   }
 
   return error;
@@ -2799,6 +2811,8 @@ Errors Storage_postProcess(StorageFileHandle *storageFileHandle,
   error = ERROR_NONE;
   switch (storageFileHandle->type)
   {
+    case STORAGE_TYPE_NONE:
+      break;
     case STORAGE_TYPE_FILESYSTEM:
       {
         TextMacro textMacros[2];
@@ -3330,11 +3344,11 @@ Errors Storage_postProcess(StorageFileHandle *storageFileHandle,
         }
       }
       break;
-    #ifndef NDEBUG
-      default:
+    default:
+      #ifndef NDEBUG
         HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-        break; /* not reached */
-    #endif /* NDEBUG */
+       #endif /* NDEBUG */
+      break;
   }
 
   return error;
@@ -3365,6 +3379,7 @@ Errors Storage_unloadVolume(StorageFileHandle *storageFileHandle)
   error = ERROR_UNKNOWN;
   switch (storageFileHandle->type)
   {
+    case STORAGE_TYPE_NONE:
     case STORAGE_TYPE_FILESYSTEM:
     case STORAGE_TYPE_FTP:
     case STORAGE_TYPE_SSH:
@@ -3400,11 +3415,11 @@ Errors Storage_unloadVolume(StorageFileHandle *storageFileHandle)
                                    );
       }
       break;
-    #ifndef NDEBUG
-      default:
+    default:
+      #ifndef NDEBUG
         HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-        break; /* not reached */
-    #endif /* NDEBUG */
+      #endif /* NDEBUG */
+      break;
   }
 
   return error;
@@ -3427,6 +3442,8 @@ Errors Storage_create(StorageFileHandle *storageFileHandle,
 
   switch (storageFileHandle->type)
   {
+    case STORAGE_TYPE_NONE:
+      break;
     case STORAGE_TYPE_FILESYSTEM:
       // check if archive file exists
       if (!storageFileHandle->jobOptions->overwriteArchiveFilesFlag && File_exists(fileName))
@@ -3780,11 +3797,11 @@ LIBSSH2_SFTP_S_IRUSR|LIBSSH2_SFTP_S_IWUSR
         }
       }
       break;
-    #ifndef NDEBUG
-      default:
+    default:
+      #ifndef NDEBUG
         HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-        break; /* not reached */
-    #endif /* NDEBUG */
+      #endif /* NDEBUG */
+      break;
   }
 
   return ERROR_NONE;
@@ -3804,6 +3821,8 @@ Errors Storage_open(StorageFileHandle *storageFileHandle,
 
   switch (storageFileHandle->type)
   {
+    case STORAGE_TYPE_NONE:
+      break;
     case STORAGE_TYPE_FILESYSTEM:
       // check if file exists
       if (!File_exists(fileName))
@@ -4190,11 +4209,11 @@ Errors Storage_open(StorageFileHandle *storageFileHandle,
       UNUSED_VARIABLE(fileName);
       return ERROR_FUNCTION_NOT_SUPPORTED;
       break;
-    #ifndef NDEBUG
-      default:
+    default:
+      #ifndef NDEBUG
         HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-        break; /* not reached */
-    #endif /* NDEBUG */
+      #endif /* NDEBUG */
+      break;
   }
 
   return ERROR_NONE;
@@ -4207,6 +4226,8 @@ void Storage_close(StorageFileHandle *storageFileHandle)
 
   switch (storageFileHandle->type)
   {
+    case STORAGE_TYPE_NONE:
+      break;
     case STORAGE_TYPE_FILESYSTEM:
       switch (storageFileHandle->mode)
       {
@@ -4370,11 +4391,11 @@ void Storage_close(StorageFileHandle *storageFileHandle)
       }
       StringList_append(&storageFileHandle->device.fileNameList,storageFileHandle->device.fileName);
       break;
-    #ifndef NDEBUG
-      default:
+    default:
+      #ifndef NDEBUG
         HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-        break; /* not reached */
-    #endif /* NDEBUG */
+      #endif /* NDEBUG */
+      break;
   }
 }
 
@@ -4390,6 +4411,8 @@ Errors Storage_delete(StorageFileHandle *storageFileHandle,
   error = ERROR_UNKNOWN;
   switch (storageFileHandle->type)
   {
+    case STORAGE_TYPE_NONE:
+      break;
     case STORAGE_TYPE_FILESYSTEM:
       if (!storageFileHandle->jobOptions->dryRunFlag)
       {
@@ -4514,11 +4537,11 @@ whould this be a possible implementation?
     case STORAGE_TYPE_DEVICE:
       error = ERROR_FUNCTION_NOT_SUPPORTED;
       break;
-    #ifndef NDEBUG
-      default:
+    default:
+      #ifndef NDEBUG
         HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-        break; /* not reached */
-    #endif /* NDEBUG */
+      #endif /* NDEBUG */
+      break;
   }
 
   return error;
@@ -4532,6 +4555,8 @@ bool Storage_eof(StorageFileHandle *storageFileHandle)
 
   switch (storageFileHandle->type)
   {
+    case STORAGE_TYPE_NONE:
+      break;
     case STORAGE_TYPE_FILESYSTEM:
       if (!storageFileHandle->jobOptions->dryRunFlag)
       {
@@ -4618,11 +4643,11 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
         return TRUE;
       }
       break;
-    #ifndef NDEBUG
-      default:
+    default:
+      #ifndef NDEBUG
         HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-        break; /* not reached */
-    #endif /* NDEBUG */
+      #endif /* NDEBUG */
+      break;
   }
 
   return TRUE;
@@ -4648,6 +4673,8 @@ Errors Storage_read(StorageFileHandle *storageFileHandle,
   error = ERROR_NONE;
   switch (storageFileHandle->type)
   {
+    case STORAGE_TYPE_NONE:
+      break;
     case STORAGE_TYPE_FILESYSTEM:
       if (!storageFileHandle->jobOptions->dryRunFlag)
       {
@@ -4763,12 +4790,13 @@ Errors Storage_read(StorageFileHandle *storageFileHandle,
                   error = ERROR(IO_ERROR,errno);
                   break;
                 }
+                n = (ulong)readBytes;
 
                 // adjust buffer, size, bytes read, index
-                buffer = (byte*)buffer+readBytes;
-                size -= (ulong)readBytes;
-                (*bytesRead) += (ulong)readBytes;
-                storageFileHandle->ftp.index += (uint64)readBytes;
+                buffer = (byte*)buffer+n;
+                size -= n;
+                (*bytesRead) += n;
+                storageFileHandle->ftp.index += (uint64)n;
               }
 
               // get end time
@@ -5114,11 +5142,11 @@ Errors Storage_read(StorageFileHandle *storageFileHandle,
         error = File_read(&storageFileHandle->device.fileHandle,buffer,size,bytesRead);
       }
       break;
-    #ifndef NDEBUG
-      default:
+    default:
+      #ifndef NDEBUG
         HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-        break; /* not reached */
-    #endif /* NDEBUG */
+      #endif /* NDEBUG */
+      break;
   }
 
   return error;
@@ -5139,6 +5167,8 @@ Errors Storage_write(StorageFileHandle *storageFileHandle,
   error = ERROR_NONE;
   switch (storageFileHandle->type)
   {
+    case STORAGE_TYPE_NONE:
+      break;
     case STORAGE_TYPE_FILESYSTEM:
       if (!storageFileHandle->jobOptions->dryRunFlag)
       {
@@ -5414,11 +5444,11 @@ Errors Storage_write(StorageFileHandle *storageFileHandle,
         error = File_write(&storageFileHandle->device.fileHandle,buffer,size);
       }
       break;
-    #ifndef NDEBUG
-      default:
+    default:
+      #ifndef NDEBUG
         HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-        break; /* not reached */
-    #endif /* NDEBUG */
+      #endif /* NDEBUG */
+      break;
   }
 
   return error;
@@ -5434,6 +5464,8 @@ uint64 Storage_getSize(StorageFileHandle *storageFileHandle)
   size = 0LL;
   switch (storageFileHandle->type)
   {
+    case STORAGE_TYPE_NONE:
+      break;
     case STORAGE_TYPE_FILESYSTEM:
       if (!storageFileHandle->jobOptions->dryRunFlag)
       {
@@ -5490,11 +5522,11 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
         size = File_getSize(&storageFileHandle->device.fileHandle);
       }
       break;
-    #ifndef NDEBUG
-      default:
+    default:
+      #ifndef NDEBUG
         HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-        break; /* not reached */
-    #endif /* NDEBUG */
+      #endif /* NDEBUG */
+      break;
   }
 
   return size;
@@ -5515,6 +5547,8 @@ Errors Storage_tell(StorageFileHandle *storageFileHandle,
   error = ERROR_NONE;
   switch (storageFileHandle->type)
   {
+    case STORAGE_TYPE_NONE:
+      break;
     case STORAGE_TYPE_FILESYSTEM:
       if (!storageFileHandle->jobOptions->dryRunFlag)
       {
@@ -5579,11 +5613,11 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
         error = File_tell(&storageFileHandle->device.fileHandle,offset);
       }
       break;
-    #ifndef NDEBUG
-      default:
+    default:
+      #ifndef NDEBUG
         HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-        break; /* not reached */
-    #endif /* NDEBUG */
+      #endif /* NDEBUG */
+      break;
   }
 
   return error;
@@ -5601,6 +5635,8 @@ Errors Storage_seek(StorageFileHandle *storageFileHandle,
   error = ERROR_NONE;
   switch (storageFileHandle->type)
   {
+    case STORAGE_TYPE_NONE:
+      break;
     case STORAGE_TYPE_FILESYSTEM:
       if (!storageFileHandle->jobOptions->dryRunFlag)
       {
@@ -5790,11 +5826,11 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
         error = File_seek(&storageFileHandle->device.fileHandle,offset);
       }
       break;
-    #ifndef NDEBUG
-      default:
+    default:
+      #ifndef NDEBUG
         HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-        break; /* not reached */
-    #endif /* NDEBUG */
+      #endif /* NDEBUG */
+      break;
   }
 
   return error;
@@ -5830,6 +5866,8 @@ Errors Storage_openDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
   error = ERROR_UNKNOWN;
   switch (storageSpecifier.type)
   {
+    case STORAGE_TYPE_NONE:
+      break;
     case STORAGE_TYPE_FILESYSTEM:
       UNUSED_VARIABLE(jobOptions);
 
@@ -6216,11 +6254,11 @@ error = ERROR_FUNCTION_NOT_SUPPORTED;
 
       error = ERROR_FUNCTION_NOT_SUPPORTED;
       break;
-    #ifndef NDEBUG
-      default:
+    default:
+      #ifndef NDEBUG
         HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-        break; /* not reached */
-    #endif /* NDEBUG */
+      #endif /* NDEBUG */
+      break;
   }
 
   // free resources
@@ -6236,6 +6274,8 @@ void Storage_closeDirectoryList(StorageDirectoryListHandle *storageDirectoryList
 
   switch (storageDirectoryListHandle->type)
   {
+    case STORAGE_TYPE_NONE:
+      break;
     case STORAGE_TYPE_FILESYSTEM:
       File_closeDirectoryList(&storageDirectoryListHandle->fileSystem.directoryListHandle);
       break;
@@ -6280,11 +6320,11 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
       break;
     case STORAGE_TYPE_DEVICE:
       break;
-    #ifndef NDEBUG
-      default:
+    default:
+      #ifndef NDEBUG
         HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-        break; /* not reached */
-    #endif /* NDEBUG */
+      #endif /* NDEBUG */
+      break;
   }
 }
 
@@ -6297,6 +6337,8 @@ bool Storage_endOfDirectoryList(StorageDirectoryListHandle *storageDirectoryList
   endOfDirectoryFlag = TRUE;
   switch (storageDirectoryListHandle->type)
   {
+    case STORAGE_TYPE_NONE:
+      break;
     case STORAGE_TYPE_FILESYSTEM:
       endOfDirectoryFlag = File_endOfDirectoryList(&storageDirectoryListHandle->fileSystem.directoryListHandle);
       break;
@@ -6362,11 +6404,11 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
     case STORAGE_TYPE_DEVICE:
       endOfDirectoryFlag = TRUE;
       break;
-    #ifndef NDEBUG
-      default:
+    default:
+      #ifndef NDEBUG
         HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-        break; /* not reached */
-    #endif /* NDEBUG */
+      #endif /* NDEBUG */
+      break;
   }
 
   return endOfDirectoryFlag;
@@ -6384,6 +6426,8 @@ Errors Storage_readDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
   error = ERROR_UNKNOWN;
   switch (storageDirectoryListHandle->type)
   {
+    case STORAGE_TYPE_NONE:
+      break;
     case STORAGE_TYPE_FILESYSTEM:
       error = File_readDirectoryList(&storageDirectoryListHandle->fileSystem.directoryListHandle,fileName);
       if (error == ERROR_NONE)
@@ -6719,11 +6763,11 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
     case STORAGE_TYPE_DEVICE:
       error = ERROR_FUNCTION_NOT_SUPPORTED;
       break;
-    #ifndef NDEBUG
-      default:
+    default:
+      #ifndef NDEBUG
         HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-        break; /* not reached */
-    #endif /* NDEBUG */
+      #endif /* NDEBUG */
+      break;
   }
 
   return error;
