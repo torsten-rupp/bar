@@ -104,7 +104,7 @@ while test $# != 0; do
           allFlag=0
           opensslFlag=1
           ;;
-        libssh2)
+        ssh2|libssh2)
           allFlag=0
           libssh2Flag=1
           ;;
@@ -112,7 +112,7 @@ while test $# != 0; do
           allFlag=0
           gnutlsFlag=1
           ;;
-        libcdio)
+        cdio|libcdio)
           allFlag=0
           libcdioFlag=1
           ;;
@@ -162,7 +162,7 @@ while test $# != 0; do
       allFlag=0
       opensslFlag=1
       ;;
-    libssh2)
+    ssh2|libssh2)
       allFlag=0
       libssh2Flag=1
       ;;
@@ -170,7 +170,7 @@ while test $# != 0; do
       allFlag=0
       gnutlsFlag=1
       ;;
-    libcdio)
+    cdio|libcdio)
       allFlag=0
       libcdioFlag=1
       ;;
@@ -190,6 +190,13 @@ if test $helpFlag -eq 1; then
   $ECHO ""
   $ECHO "Download additional third party packages."
   exit 0
+fi
+
+# check if wget is available
+type wget 1>/dev/null 2>/dev/null && wget --version 1>/dev/null 2>/dev/null
+if test $? -ne 0; then
+  $ECHO >&2 "ERROR: command wget is not available"
+  exit 1
 fi
 
 # run
