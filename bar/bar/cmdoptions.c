@@ -245,7 +245,7 @@ LOCAL bool getInteger64Option(int64                 *value,
   }
   else
   {
-    factor = 1;
+    factor = 1LL;
   }
 
   // calculate value
@@ -429,10 +429,10 @@ LOCAL bool processOption(const CommandLineOption *commandLineOption,
         }
         else
         {
-          factor = 1;
+          factor = 1L;
         }
 
-        (*commandLineOption->variable.d) = strtod(value,0);
+        (*commandLineOption->variable.d) = strtod(value,0)*(double)factor;
         if (   ((*commandLineOption->variable.d) < commandLineOption->doubleOption.min)
             || ((*commandLineOption->variable.d) > commandLineOption->doubleOption.max)
            )
