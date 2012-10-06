@@ -6170,7 +6170,7 @@ Errors Archive_readHardLinkEntry(ArchiveInfo        *archiveInfo,
     archiveInfo->pendingError = Chunk_skip(archiveInfo->chunkIO,archiveInfo->chunkIOUserData,&chunkHeader);
     return error;
   }
-  if (!Compress_isValidAlgorithm(archiveEntryInfo->hardLink.byteCompressAlgorithm))
+  if (!Compress_isValidAlgorithm(archiveEntryInfo->hardLink.chunkHardLink.compressAlgorithm))
   {
     Chunk_done(&archiveEntryInfo->hardLink.chunkHardLink.info);
     archiveInfo->pendingError = Chunk_skip(archiveInfo->chunkIO,archiveInfo->chunkIOUserData,&chunkHeader);
