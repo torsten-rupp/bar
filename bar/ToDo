@@ -56,3 +56,4 @@ ToDo
 - limit used bandwidth when creating index (all data is transmitted?)
 - add allocator of connection (ftp, scp, sftp) and limit number of connections
 - pre/post-script in barcontrol
+- valgrind-test for delta-compression
