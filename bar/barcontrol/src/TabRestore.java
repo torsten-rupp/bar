@@ -1460,7 +1460,7 @@ class TabRestore
 
       menu = Widgets.newPopupMenu(shell);
       {
-        menuItem = Widgets.addMenuItem(menu,"Delete storage...");
+        menuItem = Widgets.addMenuItem(menu,"Refresh index...");
         menuItem.addSelectionListener(new SelectionListener()
         {
           public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -1469,7 +1469,20 @@ class TabRestore
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             MenuItem widget = (MenuItem)selectionEvent.widget;
-            deleteStorage();
+            refreshStorageIndex();
+          }
+        });
+
+        menuItem = Widgets.addMenuItem(menu,"Refresh all indizes with error...");
+        menuItem.addSelectionListener(new SelectionListener()
+        {
+          public void widgetDefaultSelected(SelectionEvent selectionEvent)
+          {
+          }
+          public void widgetSelected(SelectionEvent selectionEvent)
+          {
+            MenuItem widget = (MenuItem)selectionEvent.widget;
+            refreshAllWithErrorStorageIndex();
           }
         });
 
@@ -1511,32 +1524,6 @@ class TabRestore
           }
           public void widgetDefaultSelected(SelectionEvent selectionEvent)
           {
-          }
-        });
-
-        menuItem = Widgets.addMenuItem(menu,"Refresh index...");
-        menuItem.addSelectionListener(new SelectionListener()
-        {
-          public void widgetDefaultSelected(SelectionEvent selectionEvent)
-          {
-          }
-          public void widgetSelected(SelectionEvent selectionEvent)
-          {
-            MenuItem widget = (MenuItem)selectionEvent.widget;
-            refreshStorageIndex();
-          }
-        });
-
-        menuItem = Widgets.addMenuItem(menu,"Refresh all indizes with error...");
-        menuItem.addSelectionListener(new SelectionListener()
-        {
-          public void widgetDefaultSelected(SelectionEvent selectionEvent)
-          {
-          }
-          public void widgetSelected(SelectionEvent selectionEvent)
-          {
-            MenuItem widget = (MenuItem)selectionEvent.widget;
-            refreshAllWithErrorStorageIndex();
           }
         });
 
@@ -1590,6 +1577,21 @@ class TabRestore
                             widgetRestoreTo.getSelection() ? widgetRestoreToDirectory.getText() : "",
                             widgetOverwriteEntries.getSelection()
                            );
+          }
+        });
+
+        Widgets.addMenuSeparator(menu);
+
+        menuItem = Widgets.addMenuItem(menu,"Delete storage...");
+        menuItem.addSelectionListener(new SelectionListener()
+        {
+          public void widgetDefaultSelected(SelectionEvent selectionEvent)
+          {
+          }
+          public void widgetSelected(SelectionEvent selectionEvent)
+          {
+            MenuItem widget = (MenuItem)selectionEvent.widget;
+            deleteStorage();
           }
         });
       }
