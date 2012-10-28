@@ -2195,11 +2195,14 @@ LOCAL bool indexAbortCallback(void *userData)
 
 LOCAL void indexThreadCode(void)
 {
+  int64                  storageId;
+  DatabaseQueryHandle    databaseQueryHandle1,databaseQueryHandle2;
   String                 storageName;
+  int64                  duplicateStorageId;
+  String                 duplicateStorageName;
   String                 printableStorageName;
   IndexCryptPasswordList indexCryptPasswordList;
   SemaphoreLock          semaphoreLock;
-  int64                  storageId;
   bool                   interruptFlag;
   Errors                 error;
   JobNode                *jobNode;
@@ -2240,12 +2243,80 @@ LOCAL void indexThreadCode(void)
          && (error == ERROR_NONE)
         )
   {
-    plogMessage(LOG_TYPE_INDEX,"INDEX","delete incomplete index #%lld\n",storageId);
+    Storage_getPrintableName(printableStorageName,storageName);
+
     error = Index_delete(indexDatabaseHandle,
                          storageId
                         );
+    if (error == ERROR_NONE)
+    {
+      plogMessage(LOG_TYPE_INDEX,
+                  "INDEX",
+                  "deleted incomplete index #%lld: %s\n",
+                  storageId,
+                  String_cString(printableStorageName)
+                 );
+    }
   }
-  plogMessage(LOG_TYPE_ALWAYS,"INDEX","done clean-up database\n");
+
+#if 1
+  // delete duplicate index entries
+  duplicateStorageName = String_new();
+  error = Index_initListStorage(&databaseQueryHandle1,
+                                indexDatabaseHandle,
+                                INDEX_STATE_ALL,
+                                NULL
+                               );
+  if (error == ERROR_NONE)
+  {
+    while (Index_getNextStorage(&databaseQueryHandle1,
+                                &storageId,
+                                storageName,
+                                NULL,
+                                NULL,
+                                NULL,
+                                NULL,
+                                NULL,
+                                NULL
+                               )
+          )
+    {
+      error = Index_initListStorage(&databaseQueryHandle2,
+                                    indexDatabaseHandle,
+                                    INDEX_STATE_ALL,
+                                    NULL
+                                   );
+      if (error == ERROR_NONE)
+      {
+        while (Index_getNextStorage(&databaseQueryHandle2,
+                                    &duplicateStorageId,
+                                    duplicateStorageName,
+                                    NULL,
+                                    NULL,
+                                    NULL,
+                                    NULL,
+                                    NULL,
+                                    NULL
+                                   )
+              )
+        {
+          if (   (storageId != duplicateStorageId)
+              && Storage_equalNames(storageName,duplicateStorageName)
+             )
+          {
+            Storage_getPrintableName(printableStorageName,duplicateStorageName);
+
+            error = Index_delete(indexDatabaseHandle,duplicateStorageId);
+            if (error == ERROR_NONE) plogMessage(LOG_TYPE_INDEX,"INDEX","deleted duplicate index #%lld: %s\n",duplicateStorageId,String_cString(printableStorageName));
+          }
+        }
+        Index_doneList(&databaseQueryHandle2);
+      }
+    }
+    Index_doneList(&databaseQueryHandle1);
+  }
+  String_delete(duplicateStorageName);
+#endif /* 0 */
 
   // if no auto-update then set all requested updates to state "error"
   if (!globalOptions.indexDatabaseAutoUpdateFlag)
@@ -2267,6 +2338,7 @@ LOCAL void indexThreadCode(void)
                             );
     }
   }
+  plogMessage(LOG_TYPE_ALWAYS,"INDEX","done clean-up database\n");
 
   // add/update index database
   while (!quitFlag)
@@ -2606,6 +2678,7 @@ LOCAL void autoIndexUpdateThreadCode(void)
 
         if (   (indexMode == INDEX_MODE_AUTO)
             && (indexState != INDEX_STATE_UPDATE_REQUESTED)
+            && (indexState != INDEX_STATE_UPDATE)
             && (now > (createdDateTime+globalOptions.indexDatabaseKeepTime))
             && (now > (lastCheckedDateTime+globalOptions.indexDatabaseKeepTime))
            )
@@ -2615,7 +2688,7 @@ LOCAL void autoIndexUpdateThreadCode(void)
           Misc_formatDateTime(dateTime,lastCheckedDateTime,NULL);
           plogMessage(LOG_TYPE_INDEX,
                       "INDEX",
-                      "Deleted index for '%s', last checked %s\n",
+                      "deleted index for '%s', last checked %s\n",
                       String_cString(printableStorageName),
                       String_cString(dateTime)
                      );
