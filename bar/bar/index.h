@@ -165,7 +165,7 @@ bool Index_findById(DatabaseHandle *databaseHandle,
 /***********************************************************************\
 * Name   : Index_findByName
 * Purpose: find index by name
-* Input  : databaseHandle - database handle
+* Input  : databaseHandle  - database handle
 *          findStorageType - storage type to find or STORAGE_TYPE_UNKNOWN
 *          findHostName    - host naem to find or NULL
 *          findLoginName   - login name to find or NULL

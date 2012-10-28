@@ -900,6 +900,7 @@ Errors Index_initListStorage(DatabaseQueryHandle *databaseQueryHandle,
                             WHERE %S \
                                   AND (%d=%d OR state=%d) \
                                   AND state!=%d \
+                            ORDER BY created DESC \
                            ",
                            getREGEXPString(regexpString,"name",pattern),
                            indexState,
