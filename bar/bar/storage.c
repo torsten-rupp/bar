@@ -1558,6 +1558,69 @@ Errors Storage_parseName(const String     storageName,
   return ERROR_NONE;
 }
 
+bool Storage_equalNames(const String storageName1,
+                        const String storageName2
+                       )
+{
+  StorageSpecifier storageSpecifier1,storageSpecifier2;
+  String           fileName1,fileName2;
+  bool             result;
+
+  // parse storage names
+  Storage_initSpecifier(&storageSpecifier1);
+  Storage_initSpecifier(&storageSpecifier2);
+  fileName1         = String_new();
+  fileName2         = String_new();
+  if (   (Storage_parseName(storageName1,&storageSpecifier1,fileName1) != ERROR_NONE)
+      || (Storage_parseName(storageName2,&storageSpecifier2,fileName2) != ERROR_NONE)
+     )
+  {
+    String_delete(fileName2);
+    String_delete(fileName1);
+    Storage_doneSpecifier(&storageSpecifier2);
+    Storage_doneSpecifier(&storageSpecifier1);
+    return FALSE;
+  }
+
+  // compare
+  result = FALSE;
+  if (storageSpecifier1.type == storageSpecifier2.type)
+  {
+    switch (storageSpecifier1.type)
+    {
+      case STORAGE_TYPE_FILESYSTEM:
+        result = String_equals(fileName1,fileName2);
+        break;
+      case STORAGE_TYPE_FTP:
+      case STORAGE_TYPE_SSH:
+      case STORAGE_TYPE_SCP:
+      case STORAGE_TYPE_SFTP:
+        result =    String_equals(storageSpecifier1.hostName,storageSpecifier2.hostName)
+                 && String_equals(storageSpecifier1.loginName,storageSpecifier2.loginName)
+                 && String_equals(fileName1,fileName2);
+        break;
+      case STORAGE_TYPE_CD:
+      case STORAGE_TYPE_DVD:
+      case STORAGE_TYPE_BD:
+      case STORAGE_TYPE_DEVICE:
+        result =    String_equals(storageSpecifier1.deviceName,storageSpecifier2.deviceName)
+                 && String_equals(fileName1,fileName2);
+        result = String_equals(fileName1,fileName2);
+        break;
+      default:
+        break;
+    }
+  }
+
+  // free resources
+  String_delete(fileName2);
+  String_delete(fileName1);
+  Storage_doneSpecifier(&storageSpecifier2);
+  Storage_doneSpecifier(&storageSpecifier1);
+
+  return result;
+}
+
 String Storage_getName(String       storageName,
                        StorageTypes storageType,
                        const String storageSpecifier,

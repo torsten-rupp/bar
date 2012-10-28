@@ -437,7 +437,26 @@ Errors Storage_initAll(void);
 
 void Storage_doneAll(void);
 
+/***********************************************************************\
+* Name   : Storage_initSpecifier
+* Purpose: initialize storage specifier
+* Input  : storageSpecifier - storage specifier variable
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
 void Storage_initSpecifier(StorageSpecifier *storageSpecifier);
+
+/***********************************************************************\
+* Name   : Storage_doneSpecifier
+* Purpose: done storage specifier
+* Input  : storageSpecifier - storage specifier variable
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
 void Storage_doneSpecifier(StorageSpecifier *storageSpecifier);
 
 /***********************************************************************\
@@ -555,6 +574,19 @@ Errors Storage_parseName(const String     storageName,
                          StorageSpecifier *storageSpecifier,
                          String           fileName
                         );
+
+/***********************************************************************\
+* Name   : Storage_equalNames
+* Purpose: check if storage names identifty the same archive
+* Input  : storageName1,storageName2 - storage names
+* Output : -
+* Return : TURE iff storage names identifty the same archive
+* Notes  : -
+\***********************************************************************/
+
+bool Storage_equalNames(const String storageName1,
+                        const String storageName2
+                       );
 
 /***********************************************************************\
 * Name   : Storage_getName
