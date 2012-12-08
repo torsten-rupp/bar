@@ -136,9 +136,17 @@ sub writeHPostfix()
   ".$PREFIX."UNKNOWN = ".($errorNumber+1)."
 } Errors;
 
+#ifdef __cplusplus
+  extern \"C\" {
+#endif
+
 int _Errors_textToIndex(const char *text);
 unsigned int Errors_getCode(Errors error);
 const char *Errors_getText(Errors error);
+
+#ifdef __cplusplus
+  }
+#endif
 
 #endif /* __ARCHIVE_FORMAT__ */
 ";
@@ -243,8 +251,8 @@ if ($hFileName ne "")
 #ifndef __ERRORS__
 #define __ERRORS__
 
-#define ERROR(code,errno)       ((((errno) << $ERROR_ERRNO_SHIFT) & $ERROR_ERRNO_MASK) |                                                                                   (((ERROR_ ## code) << $ERROR_CODE_SHIFT) & $ERROR_CODE_MASK))
-#define ERRORX(code,errno,text) ((((errno) << $ERROR_ERRNO_SHIFT) & $ERROR_ERRNO_MASK) | ((_Errors_textToIndex(text) << $ERROR_TEXTINDEX_SHIFT) & $ERROR_TEXTINDEX_MASK) | (((ERROR_ ## code) << $ERROR_CODE_SHIFT) & $ERROR_CODE_MASK))
+#define ERROR(code,errno)       ((Errors)((((errno) << $ERROR_ERRNO_SHIFT) & $ERROR_ERRNO_MASK) |                                                                                   (((ERROR_ ## code) << $ERROR_CODE_SHIFT) & $ERROR_CODE_MASK)))
+#define ERRORX(code,errno,text) ((Errors)((((errno) << $ERROR_ERRNO_SHIFT) & $ERROR_ERRNO_MASK) | ((_Errors_textToIndex(text) << $ERROR_TEXTINDEX_SHIFT) & $ERROR_TEXTINDEX_MASK) | (((ERROR_ ## code) << $ERROR_CODE_SHIFT) & $ERROR_CODE_MASK)))
 
 ";
   writeHPrefix();
