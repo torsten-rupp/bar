@@ -1,3 +1,10 @@
+2012-??-?? 0.18
+  * added automatic delete of duplicate index entries when
+    server is started
+  * fixed create index: do not delete index which is currently
+    updated
+  * added support for crash dump tool Breakpad
+
 2012-10-03 0.17
   * finally: added support for xdelta compression!
     Note: integrating this was really a _hard_ work.
