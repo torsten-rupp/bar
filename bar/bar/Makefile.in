@@ -27,6 +27,9 @@ SHELL               = bash
 CC                  = @CC@
 CC_FLAGS            = @CC_FLAGS@ -g -rdynamic
 CC_WARN_FLAGS       = @CC_WARN_FLAGS@
+CXX                 = @CXX@
+CXX_FLAGS           = @CXX_FLAGS@ -g -rdynamic
+CXX_WARN_FLAGS      = @CXX_WARN_FLAGS@
 CC_OPTIMIZE         = @CC_OPTIMIZE@
 CC_DEFINES          = @CC_DEFINES@ _LONG_LONG
 # -D_LONG_LONG
@@ -35,7 +38,7 @@ ifdef WERROR
   CC_FLAGS += -Werror
 endif
 
-LD                  = @CC@
+LD                  = $(if @CXX@,@CXX@,@CC@)
 LD_FLAGS            = @LD_FLAGS@
 LD_LIBRARY_PATHS    = @LIBRARY_PATHS@
 LD_LIBRARIES        = @LIBRARIES@ pthread c m rt
@@ -132,6 +135,10 @@ endif
 %.o: %.c
 	$(CC) $(CC_FLAGS) $(CC_OPTIMIZE) -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" $(foreach z,$(CC_DEFINES),-D$z) $(CC_WARN_FLAGS) $(foreach z,$(CC_INCLUDES),-I$z) -c $*.c -o $*.o
 
+# compile C++ source
+%.o: %.cpp
+	$(CXX) $(CXX_FLAGS) $(CC_OPTIMIZE) -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" $(foreach z,$(CC_DEFINES),-D$z) $(CXX_WARN_FLAGS) $(foreach z,$(CC_INCLUDES),-I$z) -c $*.cpp -o $*.o
+
 # link object files
 %: %.o
 	$(LD) $(LD_FLAGS) -o $@ $^ $(foreach z,$(LD_LIBRARY_PATHS),-L$z) \
@@ -165,6 +172,7 @@ BAR_SOURCES          = bar.c \
                        index.c \
                        network.c \
                        server.c \
+                       $(if @HAVE_BREAKPAD@,minidump.cpp) \
                        \
                        global.c \
                        cmdoptions.c \
@@ -182,13 +190,13 @@ BAR_SOURCES          = bar.c \
                        bitmaps.c \
                        database.c
 
-BAR_OBJECTS          = $(foreach z,$(BAR_SOURCES),$(subst .c,.o,$z)) \
+BAR_OBJECTS          = $(foreach z,$(BAR_SOURCES),$(patsubst %.c,%.o,$(patsubst %.cpp,%.o,$z))) \
                        errors.o \
                        archive_format.o
 
 EXTERN_SOURCES       = sqlite3.c
 
-EXTERN_OBJECTS       = $(foreach z,$(EXTERN_SOURCES),$(subst .c,.o,$z)) \
+EXTERN_OBJECTS       = $(foreach z,$(EXTERN_SOURCES),$(patsubst %.c,%.o,$(patsubst %.cpp,%.o,$z))) \
                        $(if @HAVE_XDELTA@,xdelta3.o)
 
 DESTROYER_SOURCES    = destroyer.c \
@@ -197,7 +205,7 @@ DESTROYER_SOURCES    = destroyer.c \
                        lists.c \
                        strings.c \
 
-DESTROYER_OBJECTS    = $(foreach z,$(DESTROYER_SOURCES),$(subst .c,.o,$z)) \
+DESTROYER_OBJECTS    = $(foreach z,$(DESTROYER_SOURCES),$(patsubst %.c,%.o,$(patsubst %.cpp,%.o,$z))) \
 
 OTHER_SOURCES        = forward.h \
                        \
