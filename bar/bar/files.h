@@ -30,6 +30,8 @@
 
 /***************************** Constants *******************************/
 
+#define FILE_TMP_DIRECTORY ((getenv("TMPDIR") != NULL) ? getenv("TMPDIR") : "/tmp")
+
 #ifdef FILE_SEPARAPTOR_CHAR
   #define _FILES_PATHNAME_SEPARATOR_CHARS_STRING1(z) _FILES_PATHNAME_SEPARATOR_CHARS_STRING2(z)
   #define _FILES_PATHNAME_SEPARATOR_CHARS_STRING2(z) #z
