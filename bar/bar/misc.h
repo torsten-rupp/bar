@@ -264,17 +264,17 @@ void Misc_udelay(uint64 time);
 /***********************************************************************\
 * Name   : Misc_expandMacrosCString
 * Purpose: expand macros %<name>:<format> in string
-* Input  : string     - string variable
-*          template   - string with macros
-*          macros     - array with macro definitions
-*          macroCount - number of macro definitions
+* Input  : string        - string variable
+*          macroTemplate - string with macros
+*          macros        - array with macro definitions
+*          macroCount    - number of macro definitions
 * Output : s - string with expanded macros
 * Return : expanded string
 * Notes  : -
 \***********************************************************************/
 
 String Misc_expandMacros(String          string,
-                         const char      *template,
+                         const char      *macroTemplate,
                          const TextMacro macros[],
                          uint            macroCount
                         );

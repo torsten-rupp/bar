@@ -267,12 +267,12 @@ void Misc_udelay(uint64 time)
 /*---------------------------------------------------------------------*/
 
 String Misc_expandMacros(String          string,
-                         const char      *template,
+                         const char      *macroTemplate,
                          const TextMacro macros[],
                          uint            macroCount
                         )
 {
-  long       templateLength;
+  long       macroTemplateLength;
   long       i0,i1;
   int        index;
   long       i;
@@ -280,10 +280,10 @@ String Misc_expandMacros(String          string,
   uint       z;
   char       format[128];
 
-  assert(template != NULL);
+  assert(macroTemplate != NULL);
   assert((macroCount == 0) || (macros != NULL));
 
-  templateLength = strlen(template);
+  macroTemplateLength = strlen(macroTemplate);
 
   String_clear(string);
   i0 = 0;
@@ -294,10 +294,10 @@ String Misc_expandMacros(String          string,
     index = -1;
     for (z = 0; z < macroCount; z++)
     {
-      s = strstr(&template[i0],macros[z].name);
+      s = strstr(&macroTemplate[i0],macros[z].name);
       if (s != NULL)
       {
-        i = (long)(s-template);
+        i = (long)(s-macroTemplate);
         if ((i1 < 0) || (i < i1))
         {
           i1    = i;
@@ -310,11 +310,11 @@ String Misc_expandMacros(String          string,
     if (index >= 0)
     {
       // add prefix string
-      String_appendBuffer(string,&template[i0],i1-i0);
+      String_appendBuffer(string,&macroTemplate[i0],i1-i0);
       i0 = i1+strlen(macros[index].name);
 
       // find format string (if any)
-      if ((i0 < templateLength) && (template[i0] == ':'))
+      if ((i0 < macroTemplateLength) && (macroTemplate[i0] == ':'))
       {
         // skip ':'
         i0++;
@@ -322,24 +322,24 @@ String Misc_expandMacros(String          string,
         // get format string
         i = 0;
         format[i] = '%'; i++;
-        while (   (i0 < templateLength)
-               && (   isdigit(template[i0])
-                   || (template[i0] == '-')
-                   || (template[i0] == '.')
+        while (   (i0 < macroTemplateLength)
+               && (   isdigit(macroTemplate[i0])
+                   || (macroTemplate[i0] == '-')
+                   || (macroTemplate[i0] == '.')
                   )
               )
         {
           if (i < (long)sizeof(format)-1)
           {
-            format[i] = template[i0]; i++;
+            format[i] = macroTemplate[i0]; i++;
           }
           i0++;
         }
-        if (i0 < templateLength)
+        if (i0 < macroTemplateLength)
         {
           if (i < (long)sizeof(format)-1)
           {
-            format[i] = template[i0]; i++;
+            format[i] = macroTemplate[i0]; i++;
           }
           i0++;
         }
@@ -395,7 +395,7 @@ String Misc_expandMacros(String          string,
   while (index >= 0);
 
   // add postfix string
-  String_appendBuffer(string,&template[i0],templateLength-i0);
+  String_appendBuffer(string,&macroTemplate[i0],macroTemplateLength-i0);
 
   return string;
 }
