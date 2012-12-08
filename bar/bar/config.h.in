@@ -22,6 +22,9 @@
 /* backtrace() available */
 #undef HAVE_BACKTRACE
 
+/* breakpad installed */
+#undef HAVE_BREAKPAD
+
 /* bzip2 installed */
 #undef HAVE_BZ2
 
