@@ -13,11 +13,13 @@
 # --------------------------------- constants --------------------------------
 
 ECHO="echo"
+ECHO_NO_NEW_LINE="echo -n"
 LN="ln"
 MKDIR="mkdir"
 PATCH="patch"
 RMF="rm -f"
 RMRF="rm -rf"
+SVN="svn"
 TAR="tar"
 WGET="wget"
 
@@ -39,6 +41,7 @@ opensslFlag=0
 libssh2Flag=0
 gnutlsFlag=0
 libcdioFlag=0
+breakpadFlag=0
 epmFlag=0
 destination=""
 noDecompressFlag=0
@@ -117,6 +120,10 @@ while test $# != 0; do
           allFlag=0
           libcdioFlag=1
           ;;
+        breakpad|minidump)
+          allFlag=0
+          breakpadFlag=1
+          ;;
         epm)
           allFlag=0
           epmFlag=1
@@ -175,6 +182,10 @@ while test $# != 0; do
       allFlag=0
       libcdioFlag=1
       ;;
+    breakpad|minidump)
+      allFlag=0
+      breakpadFlag=1
+      ;;
     epm)
       allFlag=0
       epmFlag=1
@@ -187,7 +198,7 @@ while test $# != 0; do
   shift
 done
 if test $helpFlag -eq 1; then
-  $ECHO "download-third-party-packages.sh [-d|--destination=<path>] [-n|--no-decompress] [-c|--clean] [--help] [all] [zlib] [bzip2] [lzma] [xdelta] [gcrypt] [ftplib] [openssl] [libssh2] [gnutls] [libcdio] [epm]"
+  $ECHO "download-third-party-packages.sh [-d|--destination=<path>] [-n|--no-decompress] [-c|--clean] [--help] [all] [zlib] [bzip2] [lzma] [xdelta] [gcrypt] [ftplib] [openssl] [libssh2] [gnutls] [libcdio] [breakpad] [epm]"
   $ECHO ""
   $ECHO "Download additional third party packages."
   exit 0
@@ -197,6 +208,11 @@ fi
 type $WGET 1>/dev/null 2>/dev/null && $WGET --version 1>/dev/null 2>/dev/null
 if test $? -ne 0; then
   $ECHO >&2 "ERROR: command 'wget' is not available"
+  exit 1
+fi
+type $SVN 1>/dev/null 2>/dev/null && $SVN --version 1>/dev/null 2>/dev/null
+if test $? -ne 0; then
+  $ECHO >&2 "ERROR: command 'svn' is not available"
   exit 1
 fi
 type $PATCH 1>/dev/null 2>/dev/null && $PATCH --version 1>/dev/null 2>/dev/null
@@ -429,6 +445,24 @@ if test $cleanFlag -eq 0; then
     fi
   fi
 
+  if test $allFlag -eq 1 -o $breakpadFlag -eq 1; then
+    # breakpad
+    (
+     if test -n "$destination"; then
+       cd $destination
+     else
+       cd $tmpDirectory
+     fi
+
+     if test ! -d breakpad; then
+       $ECHO_NO_NEW_LINE "Checkout 'http://google-breakpad.googlecode.com/svn/trunk'..."
+       $SVN checkout 'http://google-breakpad.googlecode.com/svn/trunk' breakpad >/dev/null
+       $ECHO "done"
+     fi
+    )
+    $LN -f -s $tmpDirectory/breakpad breakpad
+  fi
+
   if test $allFlag -eq 1 -o $epmFlag -eq 1; then
     # epm 4.1
     (
@@ -516,10 +550,16 @@ else
   fi
 
   if test $allFlag -eq 1 -o $libcdioFlag -eq 1; then
-    # gnutls
+    # libcdio
     $RMF $tmpDirectory/libcdio-*.tar.gz
     $RMRF $tmpDirectory/libcdio-*
     $RMF libcdio
+  fi
+
+  if test $allFlag -eq 1 -o $breakpadFlag -eq 1; then
+    # breakpad
+    $RMRF $tmpDirectory/breakpad
+    $RMF breakpad
   fi
 
   if test $allFlag -eq 1 -o $epmFlag -eq 1; then

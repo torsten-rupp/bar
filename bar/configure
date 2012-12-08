@@ -610,6 +610,7 @@ INSTALL_DATA
 INSTALL_SCRIPT
 INSTALL_PROGRAM
 PERL
+CXX
 EPM_VERSION_4
 EPM_VERSION_3
 EPM
@@ -641,6 +642,8 @@ LD_FLAGS
 CC_INCLUDES
 CC_DEFINES
 CC_OPTIMIZE
+CXX_WARN_FLAGS
+CXX_FLAGS
 CC_WARN_FLAGS
 CC_FLAGS
 STRIP
@@ -2540,6 +2543,8 @@ case $host_os in *\ *) host_os=`echo "$host_os" | sed 's/ /-/g'`;; esac
 
 CC_FLAGS=""
 CC_WARN_FLAGS=""
+CXX_FLAGS=""
+CXX_WARN_FLAGS=""
 CC_DEFINES=""
 CC_OPTIMIZE=""
 CC_INCLUDES=""
@@ -2559,6 +2564,7 @@ ENABLE_FTP="yes"
 ENABLE_SSH="yes"
 ENABLE_TLS="yes"
 ENABLE_ISO9660="yes"
+ENABLE_BREAKPAD="yes"
 ENABLE_GUI="yes"
 ENABLE_PACKAGE_COMPILE="yes"
 
@@ -2760,6 +2766,53 @@ fi
 
 
   test -n "$CC" && break
+done
+
+fi
+if test -z "$CXX"; then
+  for ac_prog in g++ c++
+do
+  # Extract the first word of "$ac_prog", so it can be a program name with args.
+set dummy $ac_prog; ac_word=$2
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
+$as_echo_n "checking for $ac_word... " >&6; }
+if test "${ac_cv_path_CXX+set}" = set; then :
+  $as_echo_n "(cached) " >&6
+else
+  case $CXX in
+  [\\/]* | ?:[\\/]*)
+  ac_cv_path_CXX="$CXX" # Let the user override the test with a path.
+  ;;
+  *)
+  as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+for as_dir in $PATH
+do
+  IFS=$as_save_IFS
+  test -z "$as_dir" && as_dir=.
+    for ac_exec_ext in '' $ac_executable_extensions; do
+  if { test -f "$as_dir/$ac_word$ac_exec_ext" && $as_test_x "$as_dir/$ac_word$ac_exec_ext"; }; then
+    ac_cv_path_CXX="$as_dir/$ac_word$ac_exec_ext"
+    $as_echo "$as_me:${as_lineno-$LINENO}: found $as_dir/$ac_word$ac_exec_ext" >&5
+    break 2
+  fi
+done
+  done
+IFS=$as_save_IFS
+
+  ;;
+esac
+fi
+CXX=$ac_cv_path_CXX
+if test -n "$CXX"; then
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $CXX" >&5
+$as_echo "$CXX" >&6; }
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+fi
+
+
+  test -n "$CXX" && break
 done
 
 fi
@@ -3174,7 +3227,6 @@ fi
 done
 
 
-CC_WARN_FLAGS="$CC_WARN_FLAGS"
 ac_ext=c
 ac_cpp='$CPP $CPPFLAGS'
 ac_compile='$CC -c $CFLAGS $CPPFLAGS conftest.$ac_ext >&5'
@@ -3986,12 +4038,13 @@ EOF
   $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
   test $ac_status = 0; }; }; then
         ac_supported=yes
+        for s in CC_WARN_FLAGS CXX_WARN_FLAGS; do
+          eval "if test -n \"\$$s\"; then $s=\"\$$s \"; fi"
+          eval "$s=\"\$$s-Wall\""
+        done
       else
         ac_supported=no
       fi
-      if test "$ac_supported" = "yes"; then :
-  if test -n "${CC_WARN_FLAGS}"; then CC_WARN_FLAGS="${CC_WARN_FLAGS} "; fi; CC_WARN_FLAGS="${CC_WARN_FLAGS}-Wall"
-fi
       eval "ac_cv_c_option_`echo -Wall|tr -c -d a-zA-Z0-9_`=\$ac_supported"
 
       rm -f test.c test.o
@@ -4022,12 +4075,13 @@ EOF
   $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
   test $ac_status = 0; }; }; then
         ac_supported=yes
+        for s in CC_WARN_FLAGS CXX_WARN_FLAGS; do
+          eval "if test -n \"\$$s\"; then $s=\"\$$s \"; fi"
+          eval "$s=\"\$$s-Wpointer-arith\""
+        done
       else
         ac_supported=no
       fi
-      if test "$ac_supported" = "yes"; then :
-  if test -n "${CC_WARN_FLAGS}"; then CC_WARN_FLAGS="${CC_WARN_FLAGS} "; fi; CC_WARN_FLAGS="${CC_WARN_FLAGS}-Wpointer-arith"
-fi
       eval "ac_cv_c_option_`echo -Wpointer-arith|tr -c -d a-zA-Z0-9_`=\$ac_supported"
 
       rm -f test.c test.o
@@ -4058,12 +4112,13 @@ EOF
   $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
   test $ac_status = 0; }; }; then
         ac_supported=yes
+        for s in CC_WARN_FLAGS CXX_WARN_FLAGS; do
+          eval "if test -n \"\$$s\"; then $s=\"\$$s \"; fi"
+          eval "$s=\"\$$s-Wunused-label\""
+        done
       else
         ac_supported=no
       fi
-      if test "$ac_supported" = "yes"; then :
-  if test -n "${CC_WARN_FLAGS}"; then CC_WARN_FLAGS="${CC_WARN_FLAGS} "; fi; CC_WARN_FLAGS="${CC_WARN_FLAGS}-Wunused-label"
-fi
       eval "ac_cv_c_option_`echo -Wunused-label|tr -c -d a-zA-Z0-9_`=\$ac_supported"
 
       rm -f test.c test.o
@@ -4094,12 +4149,13 @@ EOF
   $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
   test $ac_status = 0; }; }; then
         ac_supported=yes
+        for s in CC_WARN_FLAGS CXX_WARN_FLAGS; do
+          eval "if test -n \"\$$s\"; then $s=\"\$$s \"; fi"
+          eval "$s=\"\$$s-Wunused-parameter\""
+        done
       else
         ac_supported=no
       fi
-      if test "$ac_supported" = "yes"; then :
-  if test -n "${CC_WARN_FLAGS}"; then CC_WARN_FLAGS="${CC_WARN_FLAGS} "; fi; CC_WARN_FLAGS="${CC_WARN_FLAGS}-Wunused-parameter"
-fi
       eval "ac_cv_c_option_`echo -Wunused-parameter|tr -c -d a-zA-Z0-9_`=\$ac_supported"
 
       rm -f test.c test.o
@@ -4130,12 +4186,13 @@ EOF
   $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
   test $ac_status = 0; }; }; then
         ac_supported=yes
+        for s in CC_WARN_FLAGS CXX_WARN_FLAGS; do
+          eval "if test -n \"\$$s\"; then $s=\"\$$s \"; fi"
+          eval "$s=\"\$$s-Wunused-variable\""
+        done
       else
         ac_supported=no
       fi
-      if test "$ac_supported" = "yes"; then :
-  if test -n "${CC_WARN_FLAGS}"; then CC_WARN_FLAGS="${CC_WARN_FLAGS} "; fi; CC_WARN_FLAGS="${CC_WARN_FLAGS}-Wunused-variable"
-fi
       eval "ac_cv_c_option_`echo -Wunused-variable|tr -c -d a-zA-Z0-9_`=\$ac_supported"
 
       rm -f test.c test.o
@@ -4166,12 +4223,13 @@ EOF
   $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
   test $ac_status = 0; }; }; then
         ac_supported=yes
+        for s in CC_WARN_FLAGS; do
+          eval "if test -n \"\$$s\"; then $s=\"\$$s \"; fi"
+          eval "$s=\"\$$s-Wmissing-prototypes\""
+        done
       else
         ac_supported=no
       fi
-      if test "$ac_supported" = "yes"; then :
-  if test -n "${CC_WARN_FLAGS}"; then CC_WARN_FLAGS="${CC_WARN_FLAGS} "; fi; CC_WARN_FLAGS="${CC_WARN_FLAGS}-Wmissing-prototypes"
-fi
       eval "ac_cv_c_option_`echo -Wmissing-prototypes|tr -c -d a-zA-Z0-9_`=\$ac_supported"
 
       rm -f test.c test.o
@@ -4202,12 +4260,13 @@ EOF
   $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
   test $ac_status = 0; }; }; then
         ac_supported=yes
+        for s in CC_WARN_FLAGS CXX_WARN_FLAGS; do
+          eval "if test -n \"\$$s\"; then $s=\"\$$s \"; fi"
+          eval "$s=\"\$$s-Wmissing-declarations\""
+        done
       else
         ac_supported=no
       fi
-      if test "$ac_supported" = "yes"; then :
-  if test -n "${CC_WARN_FLAGS}"; then CC_WARN_FLAGS="${CC_WARN_FLAGS} "; fi; CC_WARN_FLAGS="${CC_WARN_FLAGS}-Wmissing-declarations"
-fi
       eval "ac_cv_c_option_`echo -Wmissing-declarations|tr -c -d a-zA-Z0-9_`=\$ac_supported"
 
       rm -f test.c test.o
@@ -4238,12 +4297,13 @@ EOF
   $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
   test $ac_status = 0; }; }; then
         ac_supported=yes
+        for s in CC_WARN_FLAGS CXX_WARN_FLAGS; do
+          eval "if test -n \"\$$s\"; then $s=\"\$$s \"; fi"
+          eval "$s=\"\$$s-Wextra\""
+        done
       else
         ac_supported=no
       fi
-      if test "$ac_supported" = "yes"; then :
-  if test -n "${CC_WARN_FLAGS}"; then CC_WARN_FLAGS="${CC_WARN_FLAGS} "; fi; CC_WARN_FLAGS="${CC_WARN_FLAGS}-Wextra"
-fi
       eval "ac_cv_c_option_`echo -Wextra|tr -c -d a-zA-Z0-9_`=\$ac_supported"
 
       rm -f test.c test.o
@@ -4274,12 +4334,13 @@ EOF
   $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
   test $ac_status = 0; }; }; then
         ac_supported=yes
+        for s in CC_WARN_FLAGS CXX_WARN_FLAGS; do
+          eval "if test -n \"\$$s\"; then $s=\"\$$s \"; fi"
+          eval "$s=\"\$$s-Wfloat-equal\""
+        done
       else
         ac_supported=no
       fi
-      if test "$ac_supported" = "yes"; then :
-  if test -n "${CC_WARN_FLAGS}"; then CC_WARN_FLAGS="${CC_WARN_FLAGS} "; fi; CC_WARN_FLAGS="${CC_WARN_FLAGS}-Wfloat-equal"
-fi
       eval "ac_cv_c_option_`echo -Wfloat-equal|tr -c -d a-zA-Z0-9_`=\$ac_supported"
 
       rm -f test.c test.o
@@ -4310,12 +4371,13 @@ EOF
   $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
   test $ac_status = 0; }; }; then
         ac_supported=yes
+        for s in CC_WARN_FLAGS; do
+          eval "if test -n \"\$$s\"; then $s=\"\$$s \"; fi"
+          eval "$s=\"\$$s-Wdeclaration-after-statement\""
+        done
       else
         ac_supported=no
       fi
-      if test "$ac_supported" = "yes"; then :
-  if test -n "${CC_WARN_FLAGS}"; then CC_WARN_FLAGS="${CC_WARN_FLAGS} "; fi; CC_WARN_FLAGS="${CC_WARN_FLAGS}-Wdeclaration-after-statement"
-fi
       eval "ac_cv_c_option_`echo -Wdeclaration-after-statement|tr -c -d a-zA-Z0-9_`=\$ac_supported"
 
       rm -f test.c test.o
@@ -4346,12 +4408,13 @@ EOF
   $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
   test $ac_status = 0; }; }; then
         ac_supported=yes
+        for s in CC_WARN_FLAGS; do
+          eval "if test -n \"\$$s\"; then $s=\"\$$s \"; fi"
+          eval "$s=\"\$$s-Wbad-function-cast\""
+        done
       else
         ac_supported=no
       fi
-      if test "$ac_supported" = "yes"; then :
-  if test -n "${CC_WARN_FLAGS}"; then CC_WARN_FLAGS="${CC_WARN_FLAGS} "; fi; CC_WARN_FLAGS="${CC_WARN_FLAGS}-Wbad-function-cast"
-fi
       eval "ac_cv_c_option_`echo -Wbad-function-cast|tr -c -d a-zA-Z0-9_`=\$ac_supported"
 
       rm -f test.c test.o
@@ -4382,12 +4445,13 @@ EOF
   $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
   test $ac_status = 0; }; }; then
         ac_supported=yes
+        for s in CC_WARN_FLAGS CXX_WARN_FLAGS; do
+          eval "if test -n \"\$$s\"; then $s=\"\$$s \"; fi"
+          eval "$s=\"\$$s-Wsign-compare\""
+        done
       else
         ac_supported=no
       fi
-      if test "$ac_supported" = "yes"; then :
-  if test -n "${CC_WARN_FLAGS}"; then CC_WARN_FLAGS="${CC_WARN_FLAGS} "; fi; CC_WARN_FLAGS="${CC_WARN_FLAGS}-Wsign-compare"
-fi
       eval "ac_cv_c_option_`echo -Wsign-compare|tr -c -d a-zA-Z0-9_`=\$ac_supported"
 
       rm -f test.c test.o
@@ -4418,12 +4482,13 @@ EOF
   $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
   test $ac_status = 0; }; }; then
         ac_supported=yes
+        for s in CC_WARN_FLAGS; do
+          eval "if test -n \"\$$s\"; then $s=\"\$$s \"; fi"
+          eval "$s=\"\$$s-Wstrict-prototypes\""
+        done
       else
         ac_supported=no
       fi
-      if test "$ac_supported" = "yes"; then :
-  if test -n "${CC_WARN_FLAGS}"; then CC_WARN_FLAGS="${CC_WARN_FLAGS} "; fi; CC_WARN_FLAGS="${CC_WARN_FLAGS}-Wstrict-prototypes"
-fi
       eval "ac_cv_c_option_`echo -Wstrict-prototypes|tr -c -d a-zA-Z0-9_`=\$ac_supported"
 
       rm -f test.c test.o
@@ -5307,6 +5372,7 @@ done
 
 # set variables for tests
 CFLAGS="$CC_FLAGS"
+CXXFLAGS="$CXX_FLAGS"
 for z in $CC_DEFINES ""; do
   if test -n "$z"; then
     CFLAGS="$CFLAGS -D$z"
@@ -8996,10 +9062,265 @@ fi
     fi
   fi
 fi
+
+if test $ENABLE_BREAKPAD = "yes"; then
+  if test -d breakpad -o -d "`readlink breakpad`"; then
+    if test "$ENABLE_PACKAGE_COMPILE" = "yes"; then
+
+      mkdir packages 2>/dev/null
+      mkdir packages/include 2>/dev/null
+      mkdir packages/lib 2>/dev/null
+      (cd packages; rm -f lib64; ln -s lib lib64 2>/dev/null)
+      cwd=`pwd`
+
+
+  $as_echo_n "Compile breakpad... " >&6
+
+      result=1
+      if test $result -eq 1; then
+        if test "$ENABLE_DEBUG" = "yes"; then
+          (cd breakpad; CFLAGS="-g -O0" CXXFLAGS="-g -O0" ./configure --prefix=$cwd/packages) 1>/dev/null 2>$tmpFile
+        else
+          (cd breakpad; ./configure --prefix=$cwd/packages) 1>/dev/null 2>$tmpFile
+        fi
+        if test $? -ne 0; then
+          { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (configure)" >&5
+$as_echo "fail (configure)" >&6; }
+          cat $tmpFile
+          result=0
+        fi
+      fi
+      if test $result -eq 1; then
+        (cd breakpad; make clean; make) 1>/dev/null 2>$tmpFile
+        if test $? -ne 0; then
+          { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (make)" >&5
+$as_echo "fail (make)" >&6; }
+          cat $tmpFile
+          result=0
+        fi
+      fi
+      if test $result -eq 1; then
+        (cd breakpad; make install PREFIX=$cwd/packages) 1>/dev/null 2>$tmpFile
+        if test $? -ne 0; then
+          { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (install)" >&5
+$as_echo "fail (install)" >&6; }
+          cat $tmpFile
+          result=0
+        fi
+      fi
+      if test $result -eq 1; then
+        { $as_echo "$as_me:${as_lineno-$LINENO}: result: done" >&5
+$as_echo "done" >&6; }
+      fi
+    else
+      result=1
+    fi
+
+    if test $result -eq 1; then
+      HAVE_BREAKPAD=1
+      CC_INCLUDES="$CC_INCLUDES $cwd/packages/breakpad/src"
+      LIBRARY_PATHS="$LIBRARY_PATHS $cwd/packages/lib"
+      STATIC_LIBRARIES="$STATIC_LIBRARIES breakpad_client"
+
+$as_echo "#define HAVE_BREAKPAD 1" >>confdefs.h
+
+    fi
+  else
+        if test $ENABLE_LINK_DYNAMIC = "yes"; then
+      { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing breakpad_client" >&5
+$as_echo_n "checking for library containing breakpad_client... " >&6; }
+if test "${ac_cv_search_breakpad_client+set}" = set; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_func_search_save_LIBS=$LIBS
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char breakpad_client ();
+int
+main ()
+{
+return breakpad_client ();
+  ;
+  return 0;
+}
+_ACEOF
+for ac_lib in '' ExceptionHandler; do
+  if test -z "$ac_lib"; then
+    ac_res="none required"
+  else
+    ac_res=-l$ac_lib
+    LIBS="-l$ac_lib  $ac_func_search_save_LIBS"
+  fi
+  if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_search_breakpad_client=$ac_res
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext
+  if test "${ac_cv_search_breakpad_client+set}" = set; then :
+  break
+fi
+done
+if test "${ac_cv_search_breakpad_client+set}" = set; then :
+
+else
+  ac_cv_search_breakpad_client=no
+fi
+rm conftest.$ac_ext
+LIBS=$ac_func_search_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_breakpad_client" >&5
+$as_echo "$ac_cv_search_breakpad_client" >&6; }
+ac_res=$ac_cv_search_breakpad_client
+if test "$ac_res" != no; then :
+  test "$ac_res" = "none required" || LIBS="$ac_res $LIBS"
+  HAVE_BREAKPAD=1;LIBRARIES="$LIBRARIES breakpad_client";
+$as_echo "#define HAVE_BREAKPAD 1" >>confdefs.h
+
+fi
+
+    else
+      if test -z "$HAVE_BREAKPAD"; then
+
+    { $as_echo "$as_me:${as_lineno-$LINENO}: checking for static library containing breakpad_client" >&5
+$as_echo_n "checking for static library containing breakpad_client... " >&6; }
+if test "${ac_cv_search_static_breakpad_client+set}" = set; then :
+  $as_echo_n "(cached) " >&6
+else
+
+     ac_func_search_static_save_CFLAGS="$CFLAGS"; CFLAGS="$CFLAGS -static"
+     ac_func_search_static_save_LIBS=$LIBS
+     cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char breakpad_client ();
+int
+main ()
+{
+return breakpad_client ();
+  ;
+  return 0;
+}
+_ACEOF
+     for ac_lib in '' ExceptionHandler; do
+       if test -z "$ac_lib"; then
+         ac_res="none required"
+       else
+         ac_res=-l$ac_lib
+         LIBS="-l$ac_lib  $ac_func_search_save_LIBS"
+       fi
+       if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_search_static_breakpad_client=$ac_res
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext
+       if test "${ac_cv_search_static_breakpad_client+set}" = set; then :
+  break
+fi
+     done
+     if test "${ac_cv_search_static_breakpad_client+set}" = set; then :
+
+else
+  ac_cv_search_static_breakpad_client=no
+fi
+     rm conftest.$ac_ext
+
+     LIBS=$ac_func_search_save_LIBS
+     CFLAGS=$ac_func_search_static_save_CFLAGS
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_static_breakpad_client" >&5
+$as_echo "$ac_cv_search_static_breakpad_client" >&6; }
+  ac_res=$ac_cv_search_static_breakpad_client
+  if test "$ac_res" != no; then :
+  test "$ac_res" = "none required" || LIBS="$ac_res $LIBS" HAVE_BREAKPAD=1;STATIC_LIBRARIES="$STATIC_LIBRARIES breakpad_client";
+$as_echo "#define HAVE_BREAKPAD 1" >>confdefs.h
+
+fi
+
+      fi
+      if test -z "$HAVE_BREAKPAD"; then
+        { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing breakpad_client" >&5
+$as_echo_n "checking for library containing breakpad_client... " >&6; }
+if test "${ac_cv_search_breakpad_client+set}" = set; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_func_search_save_LIBS=$LIBS
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char breakpad_client ();
+int
+main ()
+{
+return breakpad_client ();
+  ;
+  return 0;
+}
+_ACEOF
+for ac_lib in '' ExceptionHandler; do
+  if test -z "$ac_lib"; then
+    ac_res="none required"
+  else
+    ac_res=-l$ac_lib
+    LIBS="-l$ac_lib  $ac_func_search_save_LIBS"
+  fi
+  if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_search_breakpad_client=$ac_res
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext
+  if test "${ac_cv_search_breakpad_client+set}" = set; then :
+  break
+fi
+done
+if test "${ac_cv_search_breakpad_client+set}" = set; then :
+
+else
+  ac_cv_search_breakpad_client=no
+fi
+rm conftest.$ac_ext
+LIBS=$ac_func_search_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_breakpad_client" >&5
+$as_echo "$ac_cv_search_breakpad_client" >&6; }
+ac_res=$ac_cv_search_breakpad_client
+if test "$ac_res" != no; then :
+  test "$ac_res" = "none required" || LIBS="$ac_res $LIBS"
+  HAVE_BREAKPAD=1;LIBRARIES="$LIBRARIES breakpad_client";
+$as_echo "#define HAVE_BREAKPAD 1" >>confdefs.h
+
+fi
+
+      fi
+    fi
+  fi
+fi
+
 rm -f $tmpFile
 
 # set variables for tests
 CFLAGS="$CC_FLAGS"
+CXXFLAGS="$CXX_FLAGS"
 for z in $CC_DEFINES ""; do
   if test -n "$z"; then
     CFLAGS="$CFLAGS -D$z"
@@ -10197,6 +10518,7 @@ ENABLE_DEBUG=$ENABLE_DEBUG
                    HAVE_SSH2=$HAVE_SSH2
                    HAVE_GNU_TLS=$HAVE_GNU_TLS
                    HAVE_ISO9660=$HAVE_ISO9660
+                   HAVE_BREAKPAD=$HAVE_BREAKPAD
                    ENABLE_GUI=$ENABLE_GUI
                    SWT_DIR="$SWT_DIR"
                    INSTALL_DIR="$INSTALL_DIR"
@@ -10788,6 +11110,7 @@ $as_echo "$as_me: executing $ac_file commands" >&6;}
                     echo "  SCP/SFTP support  : `if test "$HAVE_SSH2"; then echo yes; else echo no; fi`";
                     echo "  TLS/SSL server    : `if test "$HAVE_GNU_TLS"; then echo yes; else echo no; fi`";
                     echo "  ISO 9660 support  : `if test "$HAVE_ISO9660"; then echo yes; else echo no; fi`";
+                    echo "  Crash dump support: `if test "$HAVE_BREAKPAD"; then echo yes; else echo no; fi`";
                     echo "  GUI support       : `if test "$ENABLE_GUI" = "yes"; then echo yes; else echo no; fi`";
                     echo "  SWT directory     : $SWT_DIR"
                     echo ""
