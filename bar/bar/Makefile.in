@@ -55,6 +55,7 @@ CHMOD         = chmod
 CP            = cp
 DD            = dd
 DIFF          = diff
+DUMP_SYMS     = @DUMP_SYMS@
 ECHO          = echo
 ECHO_NO_LF    = echo -n
 GREP          = grep
@@ -229,6 +230,7 @@ INTERMEDIATE         = errors.c \
                        index_definition.h \
 
 TARGETS              = bar \
+                       $(if @HAVE_BREAKPAD@,bar.symbols) \
                        bar-keygen \
                        destroyer \
 
@@ -310,12 +312,19 @@ Makefile.depend: $(BAR_SOURCES) $(EXTERN_SOURCES) $(DESTROYER_SOURCES) $(INTERME
 # create BAR
 bar@EXEEXT@: $(BAR_OBJECTS) $(EXTERN_OBJECTS)
 
+# create BAR symbol file
+ifeq (@HAVE_BREAKPAD@,1)
+bar.symbols: bar@EXEEXT@
+	$(DUMP_SYMS) bar@EXEEXT@ > $@
+endif
+
 # compile SQLite, xdelta C source without warning flags
 sqlite3.o: sqlite3.c
-	$(CC) $(CC_FLAGS) $(CC_OPTIMIZE) -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" $(foreach z,$(CC_DEFINES),-D$z) $(foreach z,$(CC_INCLUDES),-I$z) -c $*.c -o $*.o
+	$(CC) $(CC_FLAGS) $(CC_OPTIMIZE) -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" $(foreach z,$(CC_DEFINES),-D$z) $(foreach z,$(CC_INCLUDES),-I$z) -c $< -o $@
+
 ifeq (@HAVE_XDELTA@,1)
 xdelta3.o: ../xdelta3/xdelta3.c
-	$(CC) $(CC_FLAGS) $(CC_OPTIMIZE) -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" $(foreach z,$(CC_DEFINES),-D$z) $(foreach z,$(CC_INCLUDES),-I$z) -c ../xdelta3/$*.c -o $*.o
+	$(CC) $(CC_FLAGS) $(CC_OPTIMIZE) -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" $(foreach z,$(CC_DEFINES),-D$z) $(foreach z,$(CC_INCLUDES),-I$z) -c $< -o $@
 endif
 
 # create bar-keygen script
