@@ -367,6 +367,11 @@ AC_SUBST(HAVE_BZ2)                          dnl "1" for bzip2 support, "" otherw
 AC_SUBST(HAVE_LZMA)                         dnl "1" for lzma support, "" otherwise
 AC_SUBST(HAVE_XDELTA)                       dnl "1" for xdelta support, "" otherwise
 AC_SUBST(HAVE_GCRYPT)                       dnl "1" for gcrypt support, "" otherwise
+AC_SUBST(HAVE_FTP)                          dnl "1" for ftp support, "" otherwise
+AC_SUBST(HAVE_SSH2)                         dnl "1" for ssh2 support, "" otherwise
+AC_SUBST(HAVE_GNU_TLS)                      dnl "1" for GNU TLS support, "" otherwise
+AC_SUBST(HAVE_ISO9660)                      dnl "1" for ISO9660 support, "" otherwise
+AC_SUBST(HAVE_BREAKPAD)                     dnl "1" for BreakPad support, "" otherwise
 
 AC_SUBST(INSTALL_DIR)                       dnl installation directory
 AC_SUBST(INSTALL_BIN_DIR)                   dnl installation directory for binaries
@@ -403,6 +408,8 @@ AC_SUBST(JAVA_PATH_SEPARATOR_CHAR)          dnl java path separator (: or ;)
 
 AC_SUBST(SWT_DIR)                           dnl SWT directory
 AC_SUBST(LAUNCH4J_DIR)                      dnl launch4j directory
+
+AC_SUBST(DUMP_SYMS)                         dnl Breakpad dump symbols tool
 
 AC_SUBST(CERTOOL)                           dnl GNU TLS certtool
 AC_SUBST(OPENSSL)                           dnl OpenSSL key tool
@@ -1526,6 +1533,8 @@ if test $ENABLE_BREAKPAD = "yes"; then
       LIBRARY_PATHS="$LIBRARY_PATHS $cwd/packages/lib"
       STATIC_LIBRARIES="$STATIC_LIBRARIES breakpad_client"
       AC_DEFINE(HAVE_BREAKPAD,1,[breakpad installed (local)])
+
+      AC_PATH_PROGS(DUMP_SYMS,dump_syms,,,$cwd/packages/breakpad/src/tools/linux)    
     fi
   else
     dnl search for installed breakpad library
@@ -1539,6 +1548,8 @@ if test $ENABLE_BREAKPAD = "yes"; then
         AC_SEARCH_LIBS(breakpad_client,ExceptionHandler,[HAVE_BREAKPAD=1;LIBRARIES="$LIBRARIES breakpad_client";AC_DEFINE(HAVE_BREAKPAD,1,[breakpad installed])])
       fi
     fi
+
+    AC_PATH_PROGS(DUMP_SYMS,dump_syms)    
   fi
 fi
 
