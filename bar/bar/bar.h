@@ -441,7 +441,7 @@ extern DatabaseHandle *indexDatabaseHandle;   // index database handle
 const char *getErrorText(Errors error);
 
 /***********************************************************************\
-* Name   : vprintInfo, printInfo
+* Name   : vprintInfo, pprintInfo, printInfo
 * Purpose: output info to console
 * Input  : verboseLevel - verbosity level
 *          prefix       - prefix text

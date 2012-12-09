@@ -42,6 +42,9 @@
 #include "database.h"
 #include "index.h"
 #include "misc.h"
+#if HAVE_BREAKPAD
+  #include "minidump.h"
+#endif /* HAVE_BREAKPAD */
 
 #include "commands_create.h"
 #include "commands_list.h"
@@ -63,7 +66,7 @@
 #define VERSION_STRING VERSION_MAJOR_STRING "." VERSION_MINOR_STRING
 
 #define DEFAULT_CONFIG_FILE_NAME              "bar.cfg"
-#define DEFAULT_TMP_DIRECTORY                 "/tmp"
+#define DEFAULT_TMP_DIRECTORY                 FILE_TMP_DIRECTORY
 #define DEFAULT_COMPRESS_MIN_FILE_SIZE        32
 #define DEFAULT_SERVER_PORT                   38523
 #ifdef HAVE_GNU_TLS
@@ -1000,7 +1003,7 @@ LOCAL void output(FILE *file, const String string)
   ulong         z;
   char          ch;
 
-  outputLine = Thread_getLocalVariable(&outputLineHandle);
+  outputLine = (String)Thread_getLocalVariable(&outputLineHandle);
   if (outputLine != NULL)
   {
     if (File_isTerminal(file))
@@ -1770,8 +1773,8 @@ LOCAL bool cmdOptionParseBandWidth(void *userData, void *variable, const char *n
 
 LOCAL bool cmdOptionParseOwner(void *userData, void *variable, const char *name, const char *value, const void *defaultValue)
 {
-  const char userName[256],groupName[256];
-  uint32     userId,groupId;
+  char   userName[256],groupName[256];
+  uint32 userId,groupId;
 
   assert(variable != NULL);
   assert(value != NULL);
@@ -2309,6 +2312,14 @@ LOCAL Errors initAll(void)
   Errors error;
   String fileName;
 
+  // initialize crash dump handler
+  #if HAVE_BREAKPAD
+    if (!MiniDump_init())
+    {
+      fprintf(stderr,"Warning: Cannot initialize crash dump handler. No crash dumps will be created.\n");
+    }
+  #endif /* HAVE_BREAKPAD */
+
   // initialise modules
   error = Password_initAll();
   if (error != ERROR_NONE)
@@ -2590,6 +2601,11 @@ LOCAL void doneAll(void)
   Pattern_doneAll();
   Crypt_doneAll();
   Password_doneAll();
+
+  // deinitialize crash dump handler
+  #if HAVE_BREAKPAD
+    MiniDump_done();
+  #endif /* HAVE_BREAKPAD */
 }
 
 /***********************************************************************\
@@ -3000,7 +3016,7 @@ void freeJobOptions(JobOptions *jobOptions)
 ulong getBandWidth(BandWidthList *bandWidthList)
 {
   uint          currentYear,currentMonth,currentDay;
-  uint          currentWeekDay;
+  WeekDays      currentWeekDay;
   uint          currentHour,currentMinute;
   BandWidthNode *matchingBandWidthNode;
   bool          dateMatchFlag,weekDayMatchFlag,timeMatchFlag;
