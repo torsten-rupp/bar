@@ -94,7 +94,7 @@
 /* defined if LLONG_MIN is available */
 #undef HAVE_LLONG_MIN
 
-/* defined if long long data type available */
+/* defined if ulong is available */
 #undef HAVE_LONG_LONG
 
 /* lzma installed */
@@ -151,8 +151,14 @@
 /* TASN.1 installed */
 #undef HAVE_TASN1
 
+/* defined if uint is available */
+#undef HAVE_UINT
+
 /* defined if ULLONG_MAX is available */
 #undef HAVE_ULLONG_MAX
+
+/* defined if ulong is available */
+#undef HAVE_ULONG
 
 /* Define to 1 if you have the <unistd.h> header file. */
 #undef HAVE_UNISTD_H
