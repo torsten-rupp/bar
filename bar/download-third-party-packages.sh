@@ -293,7 +293,7 @@ if test $cleanFlag -eq 0; then
   fi
 
   if test $allFlag -eq 1 -o $xdeltaFlag -eq 1; then
-    # xdelta
+    # xdelta 3.0.0
     (
      if test -n "$destination"; then
        cd $destination
@@ -314,29 +314,29 @@ if test $cleanFlag -eq 0; then
   fi
 
   if test $allFlag -eq 1 -o $gcryptFlag -eq 1; then
-    # gpg-error 1.7, gcrypt 1.4.4
+    # gpg-error 1.10, gcrypt 1.5.0
     (
      if test -n "$destination"; then
        cd $destination
      else
        cd $tmpDirectory
      fi
-     if test ! -f libgpg-error-1.7.tar.bz2; then
-       $WGET 'ftp://ftp.gnupg.org/gcrypt/libgpg-error/libgpg-error-1.7.tar.bz2'
+     if test ! -f libgpg-error-1.10.tar.bz2; then
+       $WGET 'ftp://ftp.gnupg.org/gcrypt/libgpg-error/libgpg-error-1.10.tar.bz2'
      fi
      if test $noDecompressFlag -eq 0; then
-       $TAR xjf libgpg-error-1.7.tar.bz2
+       $TAR xjf libgpg-error-1.10.tar.bz2
      fi
-     if test ! -f libgcrypt-1.4.4.tar.bz2; then
-       $WGET 'ftp://ftp.gnupg.org/gcrypt/libgcrypt/libgcrypt-1.4.4.tar.bz2'
+     if test ! -f libgcrypt-1.5.0.tar.bz2; then
+       $WGET 'ftp://ftp.gnupg.org/gcrypt/libgcrypt/libgcrypt-1.5.0.tar.bz2'
      fi
      if test $noDecompressFlag -eq 0; then
-       $TAR xjf libgcrypt-1.4.4.tar.bz2
+       $TAR xjf libgcrypt-1.5.0.tar.bz2
      fi
     )
     if test $noDecompressFlag -eq 0; then
-      $LN -f -s $tmpDirectory/libgpg-error-1.7 libgpg-error
-      $LN -f -s $tmpDirectory/libgcrypt-1.4.4 libgcrypt
+      $LN -f -s $tmpDirectory/libgpg-error-1.10 libgpg-error
+      $LN -f -s $tmpDirectory/libgcrypt-1.5.0 libgcrypt
     fi
   fi
 
