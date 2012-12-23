@@ -48,6 +48,38 @@ EOF
   AC_PROVIDE([$0])dnl
 ])
 
+dnl --- check if linker support option
+dnl usage: AC_LINKER_OPTION(<option>,<variable>...)
+AC_DEFUN([AC_LINKER_OPTION],
+[
+  AC_CACHE_CHECK(
+    [if $LD support option $1],
+    ac_cv_linker_option_`echo $1|tr -c -d a-zA-Z0-9_`,
+    [
+      cat << \EOF > test.c
+int main(void)
+{
+  return 0;
+}
+EOF
+      $CC test.c -o test.o
+      if AC_TRY_COMMAND($LD $1 -o test test.o); then
+        ac_supported=yes
+        for s in $2; do
+          eval "if test -n \"\$$s\"; then $s=\"\$$s \"; fi"
+          eval "$s=\"\$$s$1\""
+        done
+      else
+        ac_supported=no
+      fi
+      AS_VAR_SET(ac_cv_linker_option_`echo $1|tr -c -d a-zA-Z0-9_`,$ac_supported)
+
+      rm -f test.c test.o test
+    ]
+  )dnl
+  AC_PROVIDE([$0])dnl
+])
+
 dnl --- check 
 dnl usage: AC_SEARCH_STATIC_LIBS(<library>,<symbol>,<if found>,<if not found>)
 AC_DEFUN([AC_SEARCH_STATIC_LIBS],
@@ -350,7 +382,7 @@ AC_SUBST(COPYRIGHT_DATE)                    dnl copyright date
 
 AC_SUBST(PLATFORM)                          dnl platform name
 
-AC_SUBST(FILE_SEPARATOR_CHAR)               dnl file separator path character (/ or \)
+AC_SUBST(FILE_SEPARATOR_CHAR)               dnl file separator path character (/ or \\\\)
 
 AC_SUBST(ENABLE_DEBUG)                      dnl "yes" for debug version, "no" otherwise
 AC_SUBST(ENABLE_BZIP2)                      dnl "yes" for bzip2 support, "no" otherwise
@@ -433,15 +465,15 @@ AC_SUBST(EPM_VERSION_4)                     dnl 1 if EPM version 4, otherwise em
 
 dnl ----------------------- initialize variables -----------------------
 
-CC_FLAGS=""
+CC_FLAGS="$CFLAGS"
 CC_WARN_FLAGS=""
-CXX_FLAGS=""
+CXX_FLAGS="$CFLAGS"
 CXX_WARN_FLAGS=""
 CC_DEFINES=""
 CC_OPTIMIZE=""
 CC_INCLUDES=""
 
-LD_FLAGS=""
+LD_FLAGS="$LDFLAGS"
 LIBRARY_PATHS=""
 LIBRARIES=""
 STATIC_LIBRARIES=""
@@ -462,6 +494,10 @@ ENABLE_PACKAGE_COMPILE="yes"
 
 dnl ---------------------------- check system --------------------------
 
+dnl AC_CANONICAL_SYSTEM
+dnl $host
+dnl $host_cpu
+dnl $host_os
 case "$host_os" in
   linux-*)
     PLATFORM=Linux
@@ -470,12 +506,12 @@ case "$host_os" in
     ;;
   windows*)
     PLATFORM=Windows
-    FILE_SEPARATOR_CHAR="\"
+    FILE_SEPARATOR_CHAR="\\\\"
     JAVA_PATH_SEPARATOR=";"
     ;;
   mingw*)
     PLATFORM=Windows
-    FILE_SEPARATOR_CHAR="\"
+    FILE_SEPARATOR_CHAR="\\\\"
     JAVA_PATH_SEPARATOR=";"
     ;;
   sunos | solaris*)
@@ -694,7 +730,8 @@ if test ! $ENABLE_LINK_DYNAMIC = "yes"; then
   LD_FLAGS="-static-libgcc"
 fi
 if test "$ENABLE_DEBUG" = "yes"; then
-  LD_FLAGS="$LD_FLAGS -rdynamic"
+  # required for stacktraces
+  AC_COMPILER_OPTION(-rdynamic,LD_FLAGS)
 fi
 LIBRARY_PATHS="$LIBRARY_PATHS /usr/local/lib"
 
@@ -790,9 +827,14 @@ for z in $LIBRARY_PATHS ""; do
   fi
 done
 
+# headers
 AC_CHECK_HEADERS(stdbool.h)
 
-AC_C_LONG_LONG(AC_DEFINE(HAVE_LONG_LONG,1,[defined if long long data type available]),AC_MSG_ERROR(long long data type not available))
+# defines, constants, types, variables
+AC_CHECK_TYPE(uint,AC_DEFINE(HAVE_UINT,1,[defined if uint is available]))
+AC_CHECK_TYPE(ulong,AC_DEFINE(HAVE_ULONG,1,[defined if ulong is available]))
+AC_CHECK_TYPE(long long int,AC_DEFINE(HAVE_LONG_LONG,1,[defined if ulong is available]))
+dnl AC_C_LONG_LONG(AC_DEFINE(HAVE_LONG_LONG,1,[defined if long long data type available]),AC_MSG_ERROR(long long data type not available))
 AC_TRY_COMPILE([#include <limits.h>],[long long int x=LLONG_MIN;],AC_DEFINE(HAVE_LLONG_MIN,1,[defined if LLONG_MIN is available]))
 AC_TRY_COMPILE([#include <limits.h>],[long long int x=LLONG_MAX;],AC_DEFINE(HAVE_LLONG_MAX,1,[defined if LLONG_MAX is available]))
 AC_TRY_COMPILE([#include <limits.h>],[unsigned long long int x=ULLONG_MAX;],AC_DEFINE(HAVE_ULLONG_MAX,1,[defined if ULLONG_MAX is available]))
@@ -807,7 +849,16 @@ AC_CHECK_LARGEFILE_DEFINES
 AC_CHECK_SIZEOF(void *)
 
 AC_SEARCH_LIBS(round,m,,AC_ERROR([m library not found]))
-AC_SEARCH_LIBS(pthread_create,pthread,,AC_ERROR([pthread library not found]))
+case $host_os in
+  linux*)
+    AC_SEARCH_LIBS(pthread_create,pthread,,AC_ERROR([pthread library not found]))
+    ;;
+  mingw*)
+    ;;
+  *)
+    AC_ERROR([Unsupported operating system '$host_os'])
+    ;;
+esac
 AC_SEARCH_LIBS(dlopen,dl,[LIBRARIES="$LIBRARIES dl"])
 
 # optional packages
@@ -829,7 +880,7 @@ if test -d zlib -o -d "`readlink zlib`"; then
     AC_MSG_COMPILE([zlib])
     result=1
     if test $result -eq 1; then
-      (cd zlib; ./configure --prefix=$cwd/packages) 1>/dev/null 2>$tmpFile
+      (cd zlib; ./configure --prefix=$cwd/packages --static) 1>/dev/null 2>$tmpFile
       if test $? -ne 0; then 
         AC_MSG_RESULT([fail (configure)])
         cat $tmpFile
@@ -952,7 +1003,7 @@ if test $ENABLE_LZMA = "yes"; then
       AC_MSG_COMPILE([xz utils])
       result=1
       if test $result -eq 1; then
-        (cd xz; ./configure --prefix=$cwd/packages) 1>/dev/null 2>$tmpFile
+        (cd xz; ./configure --host=$host_cpu-$host_os --prefix=$cwd/packages --disable-shared --enable-static) 1>/dev/null 2>$tmpFile
         if test $? -ne 0; then 
           AC_MSG_RESULT([fail (configure)])
           cat $tmpFile
@@ -1028,7 +1079,7 @@ if test $ENABLE_GCRYPT = "yes"; then
       AC_MSG_COMPILE([libgpg-error])
       result1=1
       if test $result1 -eq 1; then
-        (cd libgpg-error; ./configure --prefix=$cwd/packages) 1>/dev/null 2>$tmpFile
+        (cd libgpg-error; ./configure --prefix=$cwd/packages --disable-shared --enable-static) 1>/dev/null 2>$tmpFile
         if test $? -ne 0; then 
           AC_MSG_RESULT([fail (configure)])
           cat $tmpFile
@@ -1038,7 +1089,7 @@ if test $ENABLE_GCRYPT = "yes"; then
       if test $result1 -eq 1; then
         (cd libgpg-error; make clean; make) 1>/dev/null 2>$tmpFile
         if test $? -ne 0; then 
-          AC_MSG_RESULT([fail (configure)])
+          AC_MSG_RESULT([fail (make)])
           cat $tmpFile
           result1=0
         fi
@@ -1058,7 +1109,7 @@ if test $ENABLE_GCRYPT = "yes"; then
       AC_MSG_COMPILE([libgcrypt])
       result2=1
       if test $result2 -eq 1; then
-        (cd libgcrypt; LIBS="-L$cwd/packages/lib -lgpg-error" ./configure --prefix=$cwd/packages --with-gpg-error-prefix=$cwd/packages `if test "$ENABLE_DEBUG" = "yes"; then echo --disable-optimization; fi`) 1>/dev/null 2>$tmpFile
+        (cd libgcrypt; LIBS="-L$cwd/packages/lib -lgpg-error" ./configure --host=$host_cpu-$host_os --prefix=$cwd/packages --with-gpg-error-prefix=$cwd/packages --enable-maintainer-mode --disable-shared --enable-static `if test "$ENABLE_DEBUG" = "yes"; then echo --disable-optimization; fi`) 1>/dev/null 2>$tmpFile
         if test $? -ne 0; then 
           AC_MSG_RESULT([fail (configure)])
           cat $tmpFile
@@ -1210,21 +1261,36 @@ if test $ENABLE_SSH = "yes"; then
       AC_MSG_COMPILE([openssl])
       result=1
       if test $result -eq 1; then
-        if test -n "`uname -m|grep x86_64`"; then
-          (cd openssl; ./config --prefix=$cwd/packages shared) 1>/dev/null 2>$tmpFile
-          if test $? -ne 0; then 
-            AC_MSG_RESULT([fail (configure)])
-            cat $tmpFile
-            result=0
-          fi
-        else
-          (cd openssl; ./Configure --prefix=$cwd/packages linux-generic32) 1>/dev/null 2>$tmpFile
-          if test $? -ne 0; then 
-            AC_MSG_RESULT([fail (configure)])
-            cat $tmpFile
-            result=0
-          fi
-        fi
+        case "$host_os" in
+          linux-*)
+            if test -n "`uname -m|grep x86_64`"; then
+              (cd openssl; ./Configure --prefix=$cwd/packages linux-x86_64 -Wa,--noexecstack) 1>/dev/null 2>$tmpFile
+              if test $? -ne 0; then 
+                AC_MSG_RESULT([fail (configure)])
+                cat $tmpFile
+                result=0
+              fi
+            else
+              (cd openssl; ./Configure --prefix=$cwd/packages linux-generic32 -Wa,--noexecstack) 1>/dev/null 2>$tmpFile
+              if test $? -ne 0; then 
+                AC_MSG_RESULT([fail (configure)])
+                cat $tmpFile
+                result=0
+              fi
+            fi
+            ;;
+          mingw*)
+            (cd openssl; ./Configure --prefix=$cwd/packages mingw) 1>/dev/null 2>$tmpFile
+            if test $? -ne 0; then 
+              AC_MSG_RESULT([fail (configure)])
+              cat $tmpFile
+              result=0
+            fi
+            ;;
+          *)
+            AC_MSG_ERROR([Support for '$host_os' still not implemented])
+            ;;
+        esac
       fi
       if test $result -eq 1; then
         (cd openssl; make clean; make) 1>/dev/null 2>$tmpFile
@@ -1272,7 +1338,8 @@ if test $ENABLE_SSH = "yes"; then
         (cd packages; patch --batch -N -p0 <$cwd/misc/libssh2-1.1-keepalive.patch) 1>/dev/null 2>/dev/null
       fi
       if test $result -eq 1; then
-        (cd libssh2; LIBS=-ldl ./configure --prefix=$cwd/packages --with-libssl-prefix=$cwd/packages --with-libgcrypt-prefix=$cwd/packages --enable-debug) 1>/dev/null 2>$tmpFile
+#        (cd libssh2; LIBS=-ldl ./configure --host=$host_cpu-$host_os --prefix=$cwd/packages --with-libssl-prefix=$cwd/packages --with-libgcrypt-prefix=$cwd/packages --disable-shared --enable-static --enable-debug) 1>/dev/null 2>$tmpFile
+        (cd libssh2; ./configure --host=$host_cpu-$host_os --prefix=$cwd/packages --with-libssl-prefix=$cwd/packages --with-libgcrypt-prefix=$cwd/packages --disable-shared --enable-static --enable-debug) 1>/dev/null 2>$tmpFile
         if test $? -ne 0; then 
           AC_MSG_RESULT([fail (configure)])
           cat $tmpFile
@@ -1280,7 +1347,7 @@ if test $ENABLE_SSH = "yes"; then
         fi
       fi
       if test $result -eq 1; then
-        (cd libssh2; make clean; make) 1>/dev/null 2>$tmpFile
+        (cd libssh2; make clean; make -C src) 1>/dev/null 2>$tmpFile
         if test $? -ne 0; then 
           AC_MSG_RESULT([fail (make)])
           cat $tmpFile
@@ -1288,7 +1355,7 @@ if test $ENABLE_SSH = "yes"; then
         fi
       fi
       if test $result -eq 1; then
-        (cd libssh2; make install) 1>/dev/null 2>$tmpFile
+        (cd libssh2; make install-exec) 1>/dev/null 2>$tmpFile
         if test $? -ne 0; then 
           AC_MSG_RESULT([fail (install)])
           cat $tmpFile
@@ -1349,7 +1416,7 @@ if test $ENABLE_TLS = "yes"; then
       AC_MSG_COMPILE([gnutls])
       result=1
       if test $result -eq 1; then
-        (cd gnutls; ./configure --prefix=$cwd/packages --with-libgcrypt-prefix=$cwd/packages --with-included-libtasn1) 1>/dev/null 2>$tmpFile
+        (cd gnutls; ./configure --host=$host_cpu-$host_os --prefix=$cwd/packages --with-libgcrypt-prefix=$cwd/packages --with-included-libtasn1 --disable-shared --enable-static) 1>/dev/null 2>$tmpFile
         if test $? -ne 0; then 
           AC_MSG_RESULT([fail (configure)])
           cat $tmpFile
@@ -1410,6 +1477,50 @@ if test $ENABLE_TLS = "yes"; then
 fi
 
 if test $ENABLE_ISO9660 = "yes"; then
+  if test -d libiconv -o -d "`readlink libiconv`"; then
+    if test "$ENABLE_PACKAGE_COMPILE" = "yes"; then
+      dnl compile libiconv library
+
+      mkdir packages 2>/dev/null
+      mkdir packages/include 2>/dev/null
+      mkdir packages/lib 2>/dev/null
+      (cd packages; rm -f lib64; ln -s lib lib64 2>/dev/null)
+      cwd=`pwd`
+
+      AC_MSG_COMPILE([libiconv])
+      result1=1
+      if test $result1 -eq 1; then
+        (cd libiconv; ./configure --host=$host_cpu-$host_os --prefix=$cwd/packages --disable-shared --enable-static) 1>/dev/null 2>$tmpFile
+        if test $? -ne 0; then 
+          AC_MSG_RESULT([fail (configure)])
+          cat $tmpFile
+          result1=0
+        fi
+      fi
+      if test $result1 -eq 1; then
+        (cd libiconv; make clean; make) 1>/dev/null 2>$tmpFile
+        if test $? -ne 0; then 
+          AC_MSG_RESULT([fail (make)])
+          cat $tmpFile
+          result1=0
+        fi
+      fi
+      if test $result1 -eq 1; then
+        (cd libiconv; make install PREFIX=$cwd/packages) 1>/dev/null 2>$tmpFile
+        if test $? -ne 0; then 
+          AC_MSG_RESULT([fail (install)])
+          cat $tmpFile
+          result1=0
+        fi
+      fi
+      if test $result1 -eq 1; then
+        AC_MSG_RESULT([done])
+      fi
+    else
+      result1=1
+    fi
+  fi
+
   if test -d libcdio -o -d "`readlink libcdio`"; then
     if test "$ENABLE_PACKAGE_COMPILE" = "yes"; then
       dnl compile libcdio library
@@ -1421,43 +1532,43 @@ if test $ENABLE_ISO9660 = "yes"; then
       cwd=`pwd`
 
       AC_MSG_COMPILE([libcdio])
-      result=1
-      if test $result -eq 1; then
+      result2=1
+      if test $result2 -eq 1; then
         if test "$ENABLE_DEBUG" = "yes"; then
-          (cd libcdio; CFLAGS="-g -O0" CXXFLAGS="-g -O0" ./configure --prefix=$cwd/packages --disable-cxx --enable-static=iso9660 --disable-shared) 1>/dev/null 2>$tmpFile
+          (cd libcdio; CFLAGS="-g -O0" CXXFLAGS="-g -O0" ./configure --host=$host_cpu-$host_os --prefix=$cwd/packages --with-libiconv-prefix=$cwd/packages --disable-cxx --enable-static=iso9660 --disable-shared --enable-static) 1>/dev/null 2>$tmpFile
         else
-          (cd libcdio; ./configure --prefix=$cwd/packages --disable-cxx --enable-static=iso9660 --disable-shared) 1>/dev/null 2>$tmpFile
+          (cd libcdio; ./configure --host=$host_cpu-$host_os --prefix=$cwd/packages --disable-cxx --enable-static=iso9660 --disable-shared) 1>/dev/null 2>$tmpFile
         fi
         if test $? -ne 0; then 
           AC_MSG_RESULT([fail (configure)])
           cat $tmpFile
-          result=0
+          result2=0
         fi
       fi
-      if test $result -eq 1; then
+      if test $result2 -eq 1; then
         (cd libcdio; make clean; make) 1>/dev/null 2>$tmpFile
         if test $? -ne 0; then 
           AC_MSG_RESULT([fail (make)])
           cat $tmpFile
-          result=0
+          result2=0
         fi
       fi
-      if test $result -eq 1; then
+      if test $result2 -eq 1; then
         (cd libcdio; make install PREFIX=$cwd/packages) 1>/dev/null 2>$tmpFile
         if test $? -ne 0; then 
           AC_MSG_RESULT([fail (install)])
           cat $tmpFile
-          result=0
+          result2=0
         fi
       fi
-      if test $result -eq 1; then
+      if test $result2 -eq 1; then
         AC_MSG_RESULT([done])
       fi
     else
-      result=1
+      result2=1
     fi
 
-    if test $result -eq 1; then
+    if test $result1 -eq 1 -a $result2 -eq 1; then
       HAVE_ISO9660=1
       CC_INCLUDES="$CC_INCLUDES $cwd/packages/include"
       LIBRARY_PATHS="$LIBRARY_PATHS $cwd/packages/lib"
@@ -1600,7 +1711,9 @@ AC_CHECK_CONST(FS_NODUMP_FL,   AC_DEFINE(HAVE_FS_NODUMP_FL,1,[FS_NODUMP_FL avail
 
 AC_CHECK_FUNC(zlibVersion,,AC_ERROR([function zlibVersion() is not available]))
 
-AC_CHECK_CONST(CRYPTO_LOCK,,AC_ERROR([constant CRYPTO_LOCK is not available]),openssl/crypto.h)
+if test $ENABLE_SSH = "yes"; then
+  AC_CHECK_CONST(CRYPTO_LOCK,,AC_ERROR([constant CRYPTO_LOCK is not available]),openssl/crypto.h)
+fi
 
 AC_CHECK_FUNC(CRYPTO_set_id_callback,     ,AC_ERROR([OpenSSL CRYPTO_set_id_callback() is not available]),openssl/crypto.h)
 AC_CHECK_FUNC(CRYPTO_set_locking_callback,,AC_ERROR([OpenSSL CRYPTO_set_locking_callback() is not available]),openssl/crypto.h)
@@ -1690,6 +1803,7 @@ AC_CONFIG_FILES(epm.list)
 AC_CONFIG_COMMANDS(BUILD_NOTE,
                    [echo "";
                     echo "Configuration:";
+                    echo "  host              : $host";
                     echo "  debug version     : `if test "$ENABLE_DEBUG" = "yes"; then echo yes; else echo no; fi`";
                     echo "  dynamic linked    : `if test "$ENABLE_LINK_DYNAMIC" = "yes"; then echo yes; else echo no; fi`";
                     echo "  bzip2 compression : `if test "$HAVE_BZ2"; then echo yes; else echo no; fi`";
@@ -1717,6 +1831,7 @@ AC_CONFIG_COMMANDS(BUILD_NOTE,
                       echo "      after downloading."
                     fi
                    ],
+                   host="$host"
                    ENABLE_DEBUG=$ENABLE_DEBUG
                    ENABLE_LINK_DYNAMIC=$ENABLE_LINK_DYNAMIC
                    HAVE_BZ2=$HAVE_BZ2

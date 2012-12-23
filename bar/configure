@@ -1723,6 +1723,60 @@ $as_echo "$ac_res" >&6; }
 
 } # ac_fn_c_check_header_compile
 
+# ac_fn_c_check_type LINENO TYPE VAR INCLUDES
+# -------------------------------------------
+# Tests whether TYPE exists after having included INCLUDES, setting cache
+# variable VAR accordingly.
+ac_fn_c_check_type ()
+{
+  as_lineno=${as_lineno-"$1"} as_lineno_stack=as_lineno_stack=$as_lineno_stack
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for $2" >&5
+$as_echo_n "checking for $2... " >&6; }
+if eval "test \"\${$3+set}\"" = set; then :
+  $as_echo_n "(cached) " >&6
+else
+  eval "$3=no"
+  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+$4
+int
+main ()
+{
+if (sizeof ($2))
+	 return 0;
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+$4
+int
+main ()
+{
+if (sizeof (($2)))
+	    return 0;
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+
+else
+  eval "$3=yes"
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+fi
+eval ac_res=\$$3
+	       { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_res" >&5
+$as_echo "$ac_res" >&6; }
+  eval $as_lineno_stack; test "x$as_lineno_stack" = x && { as_lineno=; unset as_lineno;}
+
+} # ac_fn_c_check_type
+
 # ac_fn_c_compute_int LINENO EXPR VAR INCLUDES
 # --------------------------------------------
 # Tries to find the compile-time value of EXPR in a program that includes
@@ -1946,60 +2000,6 @@ fi
   as_fn_set_status $ac_retval
 
 } # ac_fn_c_try_link
-
-# ac_fn_c_check_type LINENO TYPE VAR INCLUDES
-# -------------------------------------------
-# Tests whether TYPE exists after having included INCLUDES, setting cache
-# variable VAR accordingly.
-ac_fn_c_check_type ()
-{
-  as_lineno=${as_lineno-"$1"} as_lineno_stack=as_lineno_stack=$as_lineno_stack
-  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for $2" >&5
-$as_echo_n "checking for $2... " >&6; }
-if eval "test \"\${$3+set}\"" = set; then :
-  $as_echo_n "(cached) " >&6
-else
-  eval "$3=no"
-  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-$4
-int
-main ()
-{
-if (sizeof ($2))
-	 return 0;
-  ;
-  return 0;
-}
-_ACEOF
-if ac_fn_c_try_compile "$LINENO"; then :
-  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-$4
-int
-main ()
-{
-if (sizeof (($2)))
-	    return 0;
-  ;
-  return 0;
-}
-_ACEOF
-if ac_fn_c_try_compile "$LINENO"; then :
-
-else
-  eval "$3=yes"
-fi
-rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
-fi
-rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
-fi
-eval ac_res=\$$3
-	       { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_res" >&5
-$as_echo "$ac_res" >&6; }
-  eval $as_lineno_stack; test "x$as_lineno_stack" = x && { as_lineno=; unset as_lineno;}
-
-} # ac_fn_c_check_type
 
 # ac_fn_c_check_func LINENO FUNC VAR
 # ----------------------------------
@@ -2548,15 +2548,15 @@ case $host_os in *\ *) host_os=`echo "$host_os" | sed 's/ /-/g'`;; esac
 
 
 
-CC_FLAGS=""
+CC_FLAGS="$CFLAGS"
 CC_WARN_FLAGS=""
-CXX_FLAGS=""
+CXX_FLAGS="$CFLAGS"
 CXX_WARN_FLAGS=""
 CC_DEFINES=""
 CC_OPTIMIZE=""
 CC_INCLUDES=""
 
-LD_FLAGS=""
+LD_FLAGS="$LDFLAGS"
 LIBRARY_PATHS=""
 LIBRARIES=""
 STATIC_LIBRARIES=""
@@ -2584,12 +2584,12 @@ case "$host_os" in
     ;;
   windows*)
     PLATFORM=Windows
-    FILE_SEPARATOR_CHAR="\"
+    FILE_SEPARATOR_CHAR="\\\\"
     JAVA_PATH_SEPARATOR=";"
     ;;
   mingw*)
     PLATFORM=Windows
-    FILE_SEPARATOR_CHAR="\"
+    FILE_SEPARATOR_CHAR="\\\\"
     JAVA_PATH_SEPARATOR=";"
     ;;
   sunos | solaris*)
@@ -4520,7 +4520,44 @@ if test ! $ENABLE_LINK_DYNAMIC = "yes"; then
   LD_FLAGS="-static-libgcc"
 fi
 if test "$ENABLE_DEBUG" = "yes"; then
-  LD_FLAGS="$LD_FLAGS -rdynamic"
+  # required for stacktraces
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking if $CC support option -rdynamic" >&5
+$as_echo_n "checking if $CC support option -rdynamic... " >&6; }
+if { as_var=ac_cv_c_option_`echo -rdynamic|tr -c -d a-zA-Z0-9_`; eval "test \"\${$as_var+set}\" = set"; }; then :
+  $as_echo_n "(cached) " >&6
+else
+
+      cat << \EOF > test.c
+int main(void)
+{
+  return 0;
+}
+EOF
+      if { ac_try='$CC -rdynamic test.c -o test.o'
+  { { eval echo "\"\$as_me\":${as_lineno-$LINENO}: \"$ac_try\""; } >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; }; then
+        ac_supported=yes
+        for s in LD_FLAGS; do
+          eval "if test -n \"\$$s\"; then $s=\"\$$s \"; fi"
+          eval "$s=\"\$$s-rdynamic\""
+        done
+      else
+        ac_supported=no
+      fi
+      eval "ac_cv_c_option_`echo -rdynamic|tr -c -d a-zA-Z0-9_`=\$ac_supported"
+
+      rm -f test.c test.o
+
+
+fi
+eval ac_res=\$ac_cv_c_option_`echo -rdynamic|tr -c -d a-zA-Z0-9_`
+	       { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_res" >&5
+$as_echo "$ac_res" >&6; }
 fi
 LIBRARY_PATHS="$LIBRARY_PATHS /usr/local/lib"
 
@@ -5397,6 +5434,7 @@ for z in $LIBRARY_PATHS ""; do
   fi
 done
 
+# headers
 
 ac_ext=c
 ac_cpp='$CPP $CPPFLAGS'
@@ -5808,46 +5846,28 @@ fi
 done
 
 
+# defines, constants, types, variables
+ac_fn_c_check_type "$LINENO" "uint" "ac_cv_type_uint" "$ac_includes_default"
+if test "x$ac_cv_type_uint" = x""yes; then :
 
-  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for long long int" >&5
-$as_echo_n "checking for long long int... " >&6; }
-if test "${ac_cv_c_long_long+set}" = set; then :
-  $as_echo_n "(cached) " >&6
-else
-
-      if test "$GCC" = yes; then
-        ac_cv_c_long_long=yes
-      else
-        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-
-int
-main ()
-{
-long long int i;
-  ;
-  return 0;
-}
-_ACEOF
-if ac_fn_c_try_compile "$LINENO"; then :
-  ac_cv_c_long_long=yes
-else
-  ac_cv_c_long_long=no
-fi
-rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
-      fi
-
+$as_echo "#define HAVE_UINT 1" >>confdefs.h
 
 fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_c_long_long" >&5
-$as_echo "$ac_cv_c_long_long" >&6; }
-  if test "$ac_cv_c_long_long" = "yes"; then :
+
+ac_fn_c_check_type "$LINENO" "ulong" "ac_cv_type_ulong" "$ac_includes_default"
+if test "x$ac_cv_type_ulong" = x""yes; then :
+
+$as_echo "#define HAVE_ULONG 1" >>confdefs.h
+
+fi
+
+ac_fn_c_check_type "$LINENO" "long long int" "ac_cv_type_long_long_int" "$ac_includes_default"
+if test "x$ac_cv_type_long_long_int" = x""yes; then :
 
 $as_echo "#define HAVE_LONG_LONG 1" >>confdefs.h
 
-else
-  as_fn_error $? "long long data type not available" "$LINENO" 5
 fi
+
 cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 #include <limits.h>
@@ -6263,7 +6283,9 @@ else
   as_fn_error $? "m library not found" "$LINENO" 5
 fi
 
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing pthread_create" >&5
+case $host_os in
+  linux*)
+    { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing pthread_create" >&5
 $as_echo_n "checking for library containing pthread_create... " >&6; }
 if test "${ac_cv_search_pthread_create+set}" = set; then :
   $as_echo_n "(cached) " >&6
@@ -6321,6 +6343,13 @@ else
   as_fn_error $? "pthread library not found" "$LINENO" 5
 fi
 
+    ;;
+  mingw*)
+    ;;
+  *)
+    as_fn_error $? "Unsupported operating system '$host_os'" "$LINENO" 5
+    ;;
+esac
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing dlopen" >&5
 $as_echo_n "checking for library containing dlopen... " >&6; }
 if test "${ac_cv_search_dlopen+set}" = set; then :
@@ -6398,7 +6427,7 @@ if test -d zlib -o -d "`readlink zlib`"; then
 
     result=1
     if test $result -eq 1; then
-      (cd zlib; ./configure --prefix=$cwd/packages) 1>/dev/null 2>$tmpFile
+      (cd zlib; ./configure --prefix=$cwd/packages --static) 1>/dev/null 2>$tmpFile
       if test $? -ne 0; then
         { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (configure)" >&5
 $as_echo "fail (configure)" >&6; }
@@ -6886,7 +6915,7 @@ if test $ENABLE_LZMA = "yes"; then
 
       result=1
       if test $result -eq 1; then
-        (cd xz; ./configure --prefix=$cwd/packages) 1>/dev/null 2>$tmpFile
+        (cd xz; ./configure --host=$host_cpu-$host_os --prefix=$cwd/packages --disable-shared --enable-static) 1>/dev/null 2>$tmpFile
         if test $? -ne 0; then
           { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (configure)" >&5
 $as_echo "fail (configure)" >&6; }
@@ -7149,7 +7178,7 @@ if test $ENABLE_GCRYPT = "yes"; then
 
       result1=1
       if test $result1 -eq 1; then
-        (cd libgpg-error; ./configure --prefix=$cwd/packages) 1>/dev/null 2>$tmpFile
+        (cd libgpg-error; ./configure --prefix=$cwd/packages --disable-shared --enable-static) 1>/dev/null 2>$tmpFile
         if test $? -ne 0; then
           { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (configure)" >&5
 $as_echo "fail (configure)" >&6; }
@@ -7160,8 +7189,8 @@ $as_echo "fail (configure)" >&6; }
       if test $result1 -eq 1; then
         (cd libgpg-error; make clean; make) 1>/dev/null 2>$tmpFile
         if test $? -ne 0; then
-          { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (configure)" >&5
-$as_echo "fail (configure)" >&6; }
+          { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (make)" >&5
+$as_echo "fail (make)" >&6; }
           cat $tmpFile
           result1=0
         fi
@@ -7185,7 +7214,7 @@ $as_echo "done" >&6; }
 
       result2=1
       if test $result2 -eq 1; then
-        (cd libgcrypt; LIBS="-L$cwd/packages/lib -lgpg-error" ./configure --prefix=$cwd/packages --with-gpg-error-prefix=$cwd/packages `if test "$ENABLE_DEBUG" = "yes"; then echo --disable-optimization; fi`) 1>/dev/null 2>$tmpFile
+        (cd libgcrypt; LIBS="-L$cwd/packages/lib -lgpg-error" ./configure --host=$host_cpu-$host_os --prefix=$cwd/packages --with-gpg-error-prefix=$cwd/packages --enable-maintainer-mode --disable-shared --enable-static `if test "$ENABLE_DEBUG" = "yes"; then echo --disable-optimization; fi`) 1>/dev/null 2>$tmpFile
         if test $? -ne 0; then
           { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (configure)" >&5
 $as_echo "fail (configure)" >&6; }
@@ -7884,23 +7913,39 @@ if test $ENABLE_SSH = "yes"; then
 
       result=1
       if test $result -eq 1; then
-        if test -n "`uname -m|grep x86_64`"; then
-          (cd openssl; ./config --prefix=$cwd/packages shared) 1>/dev/null 2>$tmpFile
-          if test $? -ne 0; then
-            { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (configure)" >&5
+        case "$host_os" in
+          linux-*)
+            if test -n "`uname -m|grep x86_64`"; then
+              (cd openssl; ./Configure --prefix=$cwd/packages linux-x86_64 -Wa,--noexecstack) 1>/dev/null 2>$tmpFile
+              if test $? -ne 0; then
+                { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (configure)" >&5
 $as_echo "fail (configure)" >&6; }
-            cat $tmpFile
-            result=0
-          fi
-        else
-          (cd openssl; ./Configure --prefix=$cwd/packages linux-generic32) 1>/dev/null 2>$tmpFile
-          if test $? -ne 0; then
-            { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (configure)" >&5
+                cat $tmpFile
+                result=0
+              fi
+            else
+              (cd openssl; ./Configure --prefix=$cwd/packages linux-generic32 -Wa,--noexecstack) 1>/dev/null 2>$tmpFile
+              if test $? -ne 0; then
+                { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (configure)" >&5
 $as_echo "fail (configure)" >&6; }
-            cat $tmpFile
-            result=0
-          fi
-        fi
+                cat $tmpFile
+                result=0
+              fi
+            fi
+            ;;
+          mingw*)
+            (cd openssl; ./Configure --prefix=$cwd/packages mingw) 1>/dev/null 2>$tmpFile
+            if test $? -ne 0; then
+              { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (configure)" >&5
+$as_echo "fail (configure)" >&6; }
+              cat $tmpFile
+              result=0
+            fi
+            ;;
+          *)
+            as_fn_error $? "Support for '$host_os' still not implemented" "$LINENO" 5
+            ;;
+        esac
       fi
       if test $result -eq 1; then
         (cd openssl; make clean; make) 1>/dev/null 2>$tmpFile
@@ -7952,7 +7997,8 @@ $as_echo "done" >&6; }
         (cd packages; patch --batch -N -p0 <$cwd/misc/libssh2-1.1-keepalive.patch) 1>/dev/null 2>/dev/null
       fi
       if test $result -eq 1; then
-        (cd libssh2; LIBS=-ldl ./configure --prefix=$cwd/packages --with-libssl-prefix=$cwd/packages --with-libgcrypt-prefix=$cwd/packages --enable-debug) 1>/dev/null 2>$tmpFile
+#        (cd libssh2; LIBS=-ldl ./configure --host=$host_cpu-$host_os --prefix=$cwd/packages --with-libssl-prefix=$cwd/packages --with-libgcrypt-prefix=$cwd/packages --disable-shared --enable-static --enable-debug) 1>/dev/null 2>$tmpFile
+        (cd libssh2; ./configure --host=$host_cpu-$host_os --prefix=$cwd/packages --with-libssl-prefix=$cwd/packages --with-libgcrypt-prefix=$cwd/packages --disable-shared --enable-static --enable-debug) 1>/dev/null 2>$tmpFile
         if test $? -ne 0; then
           { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (configure)" >&5
 $as_echo "fail (configure)" >&6; }
@@ -7961,7 +8007,7 @@ $as_echo "fail (configure)" >&6; }
         fi
       fi
       if test $result -eq 1; then
-        (cd libssh2; make clean; make) 1>/dev/null 2>$tmpFile
+        (cd libssh2; make clean; make -C src) 1>/dev/null 2>$tmpFile
         if test $? -ne 0; then
           { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (make)" >&5
 $as_echo "fail (make)" >&6; }
@@ -7970,7 +8016,7 @@ $as_echo "fail (make)" >&6; }
         fi
       fi
       if test $result -eq 1; then
-        (cd libssh2; make install) 1>/dev/null 2>$tmpFile
+        (cd libssh2; make install-exec) 1>/dev/null 2>$tmpFile
         if test $? -ne 0; then
           { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (install)" >&5
 $as_echo "fail (install)" >&6; }
@@ -8389,7 +8435,7 @@ if test $ENABLE_TLS = "yes"; then
 
       result=1
       if test $result -eq 1; then
-        (cd gnutls; ./configure --prefix=$cwd/packages --with-libgcrypt-prefix=$cwd/packages --with-included-libtasn1) 1>/dev/null 2>$tmpFile
+        (cd gnutls; ./configure --host=$host_cpu-$host_os --prefix=$cwd/packages --with-libgcrypt-prefix=$cwd/packages --with-included-libtasn1 --disable-shared --enable-static) 1>/dev/null 2>$tmpFile
         if test $? -ne 0; then
           { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (configure)" >&5
 $as_echo "fail (configure)" >&6; }
@@ -8818,6 +8864,55 @@ fi
 fi
 
 if test $ENABLE_ISO9660 = "yes"; then
+  if test -d libiconv -o -d "`readlink libiconv`"; then
+    if test "$ENABLE_PACKAGE_COMPILE" = "yes"; then
+
+      mkdir packages 2>/dev/null
+      mkdir packages/include 2>/dev/null
+      mkdir packages/lib 2>/dev/null
+      (cd packages; rm -f lib64; ln -s lib lib64 2>/dev/null)
+      cwd=`pwd`
+
+
+  $as_echo_n "Compile libiconv... " >&6
+
+      result1=1
+      if test $result1 -eq 1; then
+        (cd libiconv; ./configure --host=$host_cpu-$host_os --prefix=$cwd/packages --disable-shared --enable-static) 1>/dev/null 2>$tmpFile
+        if test $? -ne 0; then
+          { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (configure)" >&5
+$as_echo "fail (configure)" >&6; }
+          cat $tmpFile
+          result1=0
+        fi
+      fi
+      if test $result1 -eq 1; then
+        (cd libiconv; make clean; make) 1>/dev/null 2>$tmpFile
+        if test $? -ne 0; then
+          { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (make)" >&5
+$as_echo "fail (make)" >&6; }
+          cat $tmpFile
+          result1=0
+        fi
+      fi
+      if test $result1 -eq 1; then
+        (cd libiconv; make install PREFIX=$cwd/packages) 1>/dev/null 2>$tmpFile
+        if test $? -ne 0; then
+          { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (install)" >&5
+$as_echo "fail (install)" >&6; }
+          cat $tmpFile
+          result1=0
+        fi
+      fi
+      if test $result1 -eq 1; then
+        { $as_echo "$as_me:${as_lineno-$LINENO}: result: done" >&5
+$as_echo "done" >&6; }
+      fi
+    else
+      result1=1
+    fi
+  fi
+
   if test -d libcdio -o -d "`readlink libcdio`"; then
     if test "$ENABLE_PACKAGE_COMPILE" = "yes"; then
 
@@ -8830,47 +8925,47 @@ if test $ENABLE_ISO9660 = "yes"; then
 
   $as_echo_n "Compile libcdio... " >&6
 
-      result=1
-      if test $result -eq 1; then
+      result2=1
+      if test $result2 -eq 1; then
         if test "$ENABLE_DEBUG" = "yes"; then
-          (cd libcdio; CFLAGS="-g -O0" CXXFLAGS="-g -O0" ./configure --prefix=$cwd/packages --disable-cxx --enable-static=iso9660 --disable-shared) 1>/dev/null 2>$tmpFile
+          (cd libcdio; CFLAGS="-g -O0" CXXFLAGS="-g -O0" ./configure --host=$host_cpu-$host_os --prefix=$cwd/packages --with-libiconv-prefix=$cwd/packages --disable-cxx --enable-static=iso9660 --disable-shared --enable-static) 1>/dev/null 2>$tmpFile
         else
-          (cd libcdio; ./configure --prefix=$cwd/packages --disable-cxx --enable-static=iso9660 --disable-shared) 1>/dev/null 2>$tmpFile
+          (cd libcdio; ./configure --host=$host_cpu-$host_os --prefix=$cwd/packages --disable-cxx --enable-static=iso9660 --disable-shared) 1>/dev/null 2>$tmpFile
         fi
         if test $? -ne 0; then
           { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (configure)" >&5
 $as_echo "fail (configure)" >&6; }
           cat $tmpFile
-          result=0
+          result2=0
         fi
       fi
-      if test $result -eq 1; then
+      if test $result2 -eq 1; then
         (cd libcdio; make clean; make) 1>/dev/null 2>$tmpFile
         if test $? -ne 0; then
           { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (make)" >&5
 $as_echo "fail (make)" >&6; }
           cat $tmpFile
-          result=0
+          result2=0
         fi
       fi
-      if test $result -eq 1; then
+      if test $result2 -eq 1; then
         (cd libcdio; make install PREFIX=$cwd/packages) 1>/dev/null 2>$tmpFile
         if test $? -ne 0; then
           { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (install)" >&5
 $as_echo "fail (install)" >&6; }
           cat $tmpFile
-          result=0
+          result2=0
         fi
       fi
-      if test $result -eq 1; then
+      if test $result2 -eq 1; then
         { $as_echo "$as_me:${as_lineno-$LINENO}: result: done" >&5
 $as_echo "done" >&6; }
       fi
     else
-      result=1
+      result2=1
     fi
 
-    if test $result -eq 1; then
+    if test $result1 -eq 1 -a $result2 -eq 1; then
       HAVE_ISO9660=1
       CC_INCLUDES="$CC_INCLUDES $cwd/packages/include"
       LIBRARY_PATHS="$LIBRARY_PATHS $cwd/packages/lib"
@@ -9717,6 +9812,7 @@ else
 fi
 
 
+if test $ENABLE_SSH = "yes"; then
 
 
   { $as_echo "$as_me:${as_lineno-$LINENO}: checking if constant CRYPTO_LOCK is available" >&5
@@ -9757,6 +9853,7 @@ fi
 fi
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_const_CRYPTO_LOCK" >&5
 $as_echo "$ac_cv_const_CRYPTO_LOCK" >&6; }
+fi
 
 ac_fn_c_check_func "$LINENO" "CRYPTO_set_id_callback" "ac_cv_func_CRYPTO_set_id_callback"
 if test "x$ac_cv_func_CRYPTO_set_id_callback" = x""yes; then :
@@ -10607,7 +10704,8 @@ cat >>$CONFIG_STATUS <<_ACEOF || ac_write_fail=1
 #
 # INIT-COMMANDS
 #
-ENABLE_DEBUG=$ENABLE_DEBUG
+host="$host"
+                   ENABLE_DEBUG=$ENABLE_DEBUG
                    ENABLE_LINK_DYNAMIC=$ENABLE_LINK_DYNAMIC
                    HAVE_BZ2=$HAVE_BZ2
                    HAVE_LZMA=$HAVE_LZMA
@@ -11199,6 +11297,7 @@ $as_echo "$as_me: executing $ac_file commands" >&6;}
                    ;;
     "BUILD_NOTE":C) echo "";
                     echo "Configuration:";
+                    echo "  host              : $host";
                     echo "  debug version     : `if test "$ENABLE_DEBUG" = "yes"; then echo yes; else echo no; fi`";
                     echo "  dynamic linked    : `if test "$ENABLE_LINK_DYNAMIC" = "yes"; then echo yes; else echo no; fi`";
                     echo "  bzip2 compression : `if test "$HAVE_BZ2"; then echo yes; else echo no; fi`";
