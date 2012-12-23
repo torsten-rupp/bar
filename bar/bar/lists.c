@@ -16,7 +16,11 @@
 #include <stdlib.h>
 #include <stdio.h>
 #ifndef NDEBUG
-  #include <pthread.h>
+  #if   defined(HAVE_PTHREAD)
+    #include <pthread.h>
+  #elif defined(WIN32)
+    #include <windows.h>
+  #endif /* HAVE_PTHREAD || WIN32 */
 #endif /* not NDEBUG */
 #ifdef HAVE_BACKTRACE
   #include <execinfo.h>
@@ -64,14 +68,60 @@
 
 /***************************** Variables *******************************/
 #ifndef NDEBUG
-  LOCAL pthread_once_t      debugListInitFlag = PTHREAD_ONCE_INIT;
-  LOCAL pthread_mutexattr_t debugListLockAttributes;
-  LOCAL pthread_mutex_t     debugListLock;
+  #if   defined(HAVE_PTHREAD)
+    LOCAL pthread_once_t      debugListInitFlag = PTHREAD_ONCE_INIT;
+    LOCAL pthread_mutexattr_t debugListLockAttributes;
+    LOCAL pthread_mutex_t     debugListLock;
+  #elif defined(WIN32)
+    // still not implemented
+  #endif /* HAVE_PTHREAD || WIN32 */
   LOCAL DebugListNodeList   debugListAllocNodeList;
   LOCAL DebugListNodeList   debugListFreeNodeList;
 #endif /* not NDEBUG */
 
 /****************************** Macros *********************************/
+
+#ifndef NDEBUG
+  #if   defined(HAVE_PTHREAD)
+    #define DEBUG_INIT() \
+      do \
+      { \
+        pthread_once(&debugListInitFlag,debugListInit); \
+      } \
+      while (0)
+    #define DEBUG_LOCK() \
+      do \
+      { \
+        pthread_mutex_lock(&debugListLock); \
+      } \
+      while (0)
+    #define DEBUG_UNLOCK() \
+      do \
+      { \
+        pthread_mutex_unlock(&debugListLock); \
+      } \
+      while (0)
+  #elif defined(WIN32)
+    #define DEBUG_INIT() \
+      do \
+      { \
+        /* still not implemented */ \
+      } \
+      while (0)
+    #define DEBUG_LOCK() \
+      do \
+      { \
+        /* still not implemented */ \
+      } \
+      while (0)
+    #define DEBUG_UNLOCK() \
+      do \
+      { \
+        /* still not implemented */ \
+      } \
+      while (0)
+  #endif /* HAVE_PTHREAD || WIN32 */
+#endif
 
 /***************************** Forwards ********************************/
 
@@ -232,9 +282,12 @@ LOCAL_INLINE bool listContains(void *list,
 #ifndef NDEBUG
 LOCAL void debugListInit(void)
 {
-  pthread_mutexattr_init(&debugListLockAttributes);
-  pthread_mutexattr_settype(&debugListLockAttributes,PTHREAD_MUTEX_RECURSIVE);
-  pthread_mutex_init(&debugListLock,&debugListLockAttributes);
+  #if   defined(HAVE_PTHREAD)
+    pthread_mutexattr_init(&debugListLockAttributes);
+    pthread_mutexattr_settype(&debugListLockAttributes,PTHREAD_MUTEX_RECURSIVE);
+    pthread_mutex_init(&debugListLock,&debugListLockAttributes);
+  #elif defined(WIN32)
+  #endif /* HAVE_PTHREAD || WIN32 */
   List_init(&debugListAllocNodeList);
   List_init(&debugListFreeNodeList);
 }
@@ -297,9 +350,9 @@ Node * __List_newNode(const char *__fileName__, ulong __lineNb__, ulong size)
 
   // add to allocated node list
   #ifndef NDEBUG
-    pthread_once(&debugListInitFlag,debugListInit);
+    DEBUG_INIT();
 
-    pthread_mutex_lock(&debugListLock);
+    DEBUG_LOCK();
     {
       // find node in free-list; reuse or allocate new debug node
       debugListNode = debugListFreeNodeList.head;
@@ -330,7 +383,7 @@ Node * __List_newNode(const char *__fileName__, ulong __lineNb__, ulong size)
       #endif /* HAVE_BACKTRACE */
       listAppend(&debugListAllocNodeList,debugListNode);
     }
-    pthread_mutex_unlock(&debugListLock);
+    DEBUG_UNLOCK();
   #endif /*NDEBUG */
 
   return node;
@@ -351,9 +404,9 @@ Node *__List_deleteNode(const char *__fileName__, ulong __lineNb__, Node *node)
 
   // remove from allocated node list, add to node free list, shorten list
   #ifndef NDEBUG
-    pthread_once(&debugListInitFlag,debugListInit);
+    DEBUG_INIT();
 
-    pthread_mutex_lock(&debugListLock);
+    DEBUG_LOCK();
     {
       // find node in free-list to check for duplicate free
       debugListNode = debugListFreeNodeList.head;
@@ -418,7 +471,7 @@ Node *__List_deleteNode(const char *__fileName__, ulong __lineNb__, Node *node)
         HALT_INTERNAL_ERROR("");
       }
     }
-    pthread_mutex_unlock(&debugListLock);
+    DEBUG_UNLOCK();
   #endif /*NDEBUG */
 
   // get next node, free node
@@ -833,11 +886,11 @@ void List_sort(void                    *list,
 #ifndef NDEBUG
 void List_debugDone(void)
 {
-  pthread_once(&debugListInitFlag,debugListInit);
+  DEBUG_INIT();
 
   List_debugCheck();
 
-  pthread_mutex_lock(&debugListLock);
+  DEBUG_LOCK();
   {
     while (!List_isEmpty(&debugListFreeNodeList))
     {
@@ -848,16 +901,16 @@ void List_debugDone(void)
       free(List_getFirst(&debugListFreeNodeList));
     }
   }
-  pthread_mutex_unlock(&debugListLock);
+  DEBUG_UNLOCK();
 }
 
 void List_debugDumpInfo(FILE *handle)
 {
   DebugListNode *debugListNode;
 
-  pthread_once(&debugListInitFlag,debugListInit);
+  DEBUG_INIT();
 
-  pthread_mutex_lock(&debugListLock);
+  DEBUG_LOCK();
   {
     LIST_ITERATE(&debugListAllocNodeList,debugListNode)
     {
@@ -871,7 +924,7 @@ void List_debugDumpInfo(FILE *handle)
       #endif /* HAVE_BACKTRACE */
     }
   }
-  pthread_mutex_unlock(&debugListLock);
+  DEBUG_UNLOCK();
 }
 
 void List_debugPrintInfo()
@@ -881,9 +934,9 @@ void List_debugPrintInfo()
 
 void List_debugPrintStatistics(void)
 {
-  pthread_once(&debugListInitFlag,debugListInit);
+  DEBUG_INIT();
 
-  pthread_mutex_lock(&debugListLock);
+  DEBUG_LOCK();
   {
     fprintf(stderr,"DEBUG: %lu list node(s) allocated\n",
             List_count(&debugListAllocNodeList)
@@ -892,24 +945,24 @@ void List_debugPrintStatistics(void)
             List_count(&debugListFreeNodeList)
            );
   }
-  pthread_mutex_unlock(&debugListLock);
+  DEBUG_UNLOCK();
 }
 
 void List_debugCheck()
 {
-  pthread_once(&debugListInitFlag,debugListInit);
+  DEBUG_INIT();
 
   List_debugPrintInfo();
   List_debugPrintStatistics();
 
-  pthread_mutex_lock(&debugListLock);
+  DEBUG_LOCK();
   {
     if (!List_isEmpty(&debugListAllocNodeList))
     {
       HALT_INTERNAL_ERROR_LOST_RESOURCE();
     }
   }
-  pthread_mutex_unlock(&debugListLock);
+  DEBUG_UNLOCK();
 }
 #endif /* not NDEBUG */
 
