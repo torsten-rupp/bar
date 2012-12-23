@@ -137,6 +137,12 @@
 typedef unsigned char       uchar;
 typedef short int           shortint;
 typedef unsigned short int  ushortint;
+#ifndef HAVE_UINT
+  typedef unsigned int        uint;
+#endif
+#ifndef HAVE_ULONG
+  typedef unsigned long       ulong;
+#endif
 typedef unsigned long long  ulonglong;
 
 typedef enum
