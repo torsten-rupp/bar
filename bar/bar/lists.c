@@ -16,11 +16,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #ifndef NDEBUG
-  #if   defined(HAVE_PTHREAD)
-    #include <pthread.h>
-  #elif defined(WIN32)
-    #include <windows.h>
-  #endif /* HAVE_PTHREAD || WIN32 */
+  #include <pthread.h>
 #endif /* not NDEBUG */
 #ifdef HAVE_BACKTRACE
   #include <execinfo.h>
@@ -68,13 +64,9 @@
 
 /***************************** Variables *******************************/
 #ifndef NDEBUG
-  #if   defined(HAVE_PTHREAD)
-    LOCAL pthread_once_t      debugListInitFlag = PTHREAD_ONCE_INIT;
-    LOCAL pthread_mutexattr_t debugListLockAttributes;
-    LOCAL pthread_mutex_t     debugListLock;
-  #elif defined(WIN32)
-    // still not implemented
-  #endif /* HAVE_PTHREAD || WIN32 */
+  LOCAL pthread_once_t      debugListInitFlag = PTHREAD_ONCE_INIT;
+  LOCAL pthread_mutexattr_t debugListLockAttributes;
+  LOCAL pthread_mutex_t     debugListLock;
   LOCAL DebugListNodeList   debugListAllocNodeList;
   LOCAL DebugListNodeList   debugListFreeNodeList;
 #endif /* not NDEBUG */
@@ -82,53 +74,26 @@
 /****************************** Macros *********************************/
 
 #ifndef NDEBUG
-  #if   defined(HAVE_PTHREAD)
+  #define DEBUG_INIT() \
+    do \
+    { \
+      pthread_once(&debugListInitFlag,debugListInit); \
+    } \
+    while (0)
 
-    #define DEBUG_INIT() \
-      do \
-      { \
-        pthread_once(&debugListInitFlag,debugListInit); \
-      } \
-      while (0)
+  #define DEBUG_LOCK() \
+    do \
+    { \
+      pthread_mutex_lock(&debugListLock); \
+    } \
+    while (0)
 
-    #define DEBUG_LOCK() \
-      do \
-      { \
-        pthread_mutex_lock(&debugListLock); \
-      } \
-      while (0)
-
-    #define DEBUG_UNLOCK() \
-      do \
-      { \
-        pthread_mutex_unlock(&debugListLock); \
-      } \
-      while (0)
-
-  #elif defined(WIN32)
-
-    #define DEBUG_INIT() \
-      do \
-      { \
-        /* still not implemented */ \
-      } \
-      while (0)
-
-    #define DEBUG_LOCK() \
-      do \
-      { \
-        /* still not implemented */ \
-      } \
-      while (0)
-
-    #define DEBUG_UNLOCK() \
-      do \
-      { \
-        /* still not implemented */ \
-      } \
-      while (0)
-
-  #endif /* HAVE_PTHREAD || WIN32 */
+  #define DEBUG_UNLOCK() \
+    do \
+    { \
+      pthread_mutex_unlock(&debugListLock); \
+    } \
+    while (0)
 #endif
 
 /***************************** Forwards ********************************/
@@ -290,12 +255,9 @@ LOCAL_INLINE bool listContains(void *list,
 #ifndef NDEBUG
 LOCAL void debugListInit(void)
 {
-  #if   defined(HAVE_PTHREAD)
-    pthread_mutexattr_init(&debugListLockAttributes);
-    pthread_mutexattr_settype(&debugListLockAttributes,PTHREAD_MUTEX_RECURSIVE);
-    pthread_mutex_init(&debugListLock,&debugListLockAttributes);
-  #elif defined(WIN32)
-  #endif /* HAVE_PTHREAD || WIN32 */
+  pthread_mutexattr_init(&debugListLockAttributes);
+  pthread_mutexattr_settype(&debugListLockAttributes,PTHREAD_MUTEX_RECURSIVE);
+  pthread_mutex_init(&debugListLock,&debugListLockAttributes);
   List_init(&debugListAllocNodeList);
   List_init(&debugListFreeNodeList);
 }
