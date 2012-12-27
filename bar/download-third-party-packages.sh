@@ -41,6 +41,8 @@ opensslFlag=0
 libssh2Flag=0
 gnutlsFlag=0
 libcdioFlag=0
+pcreFlag=0
+pthreadsW32Flag=0
 breakpadFlag=0
 epmFlag=0
 destination=""
@@ -124,6 +126,14 @@ while test $# != 0; do
           allFlag=0
           breakpadFlag=1
           ;;
+        pcre)
+          allFlag=0
+          pcreFlag=1
+          ;;
+        pthreads-w32|pthreads-W32|pthreadsw32|pthreadsW32)
+          allFlag=0
+          pthreadsW32Flag=1
+          ;;
         epm)
           allFlag=0
           epmFlag=1
@@ -186,6 +196,14 @@ while test $# != 0; do
       allFlag=0
       breakpadFlag=1
       ;;
+    pcre)
+      allFlag=0
+      pcreFlag=1
+      ;;
+    pthreads-w32|pthreads-W32|pthreadsw32|pthreadsW32)
+      allFlag=0
+      pthreadsW32Flag=1
+      ;;
     epm)
       allFlag=0
       epmFlag=1
@@ -198,7 +216,7 @@ while test $# != 0; do
   shift
 done
 if test $helpFlag -eq 1; then
-  $ECHO "download-third-party-packages.sh [-d|--destination=<path>] [-n|--no-decompress] [-c|--clean] [--help] [all] [zlib] [bzip2] [lzma] [xdelta] [gcrypt] [ftplib] [openssl] [libssh2] [gnutls] [libcdio] [breakpad] [epm]"
+  $ECHO "download-third-party-packages.sh [-d|--destination=<path>] [-n|--no-decompress] [-c|--clean] [--help] [all] [zlib] [bzip2] [lzma] [xdelta] [gcrypt] [ftplib] [openssl] [libssh2] [gnutls] [libcdio] [breakpad] [pcre] [epm]"
   $ECHO ""
   $ECHO "Download additional third party packages."
   exit 0
@@ -463,6 +481,44 @@ if test $cleanFlag -eq 0; then
     $LN -f -s $tmpDirectory/breakpad breakpad
   fi
 
+  if test $allFlag -eq 1 -o $pcreFlag -eq 1; then
+    # pcre 8.32
+    (
+     if test -n "$destination"; then
+       cd $destination
+     else
+       cd $tmpDirectory
+     fi
+
+     if test ! -f pcre-8.32.tar.bz2; then
+       $WGET 'ftp://ftp.csx.cam.ac.uk/pub/software/programming/pcre/pcre-8.32.tar.bz2'
+     fi
+     if test $noDecompressFlag -eq 0; then
+       $TAR xjf pcre-8.32.tar.bz2
+     fi
+    )
+    $LN -f -s $tmpDirectory/pcre-8.32 pcre
+  fi
+
+  if test $allFlag -eq 1 -o $pthreadsW32Flag -eq 1; then
+    # pthreads-w32 2.9.1
+    (
+     if test -n "$destination"; then
+       cd $destination
+     else
+       cd $tmpDirectory
+     fi
+
+     if test ! -f pthreads-w32-2-9-1-release.tar.gz; then
+       $WGET 'ftp://sourceware.org/pub/pthreads-win32/pthreads-w32-2-9-1-release.tar.gz'
+     fi
+     if test $noDecompressFlag -eq 0; then
+       $TAR xzf pthreads-w32-2-9-1-release.tar.gz
+     fi
+    )
+    $LN -f -s $tmpDirectory/pthreads-w32-2-9-1-release pthreads-w32
+  fi
+
   if test $allFlag -eq 1 -o $epmFlag -eq 1; then
     # epm 4.1
     (
@@ -560,6 +616,18 @@ else
     # breakpad
     $RMRF $tmpDirectory/breakpad
     $RMF breakpad
+  fi
+
+  if test $allFlag -eq 1 -o $pcreFlag -eq 1; then
+    # breakpad
+    $RMRF $tmpDirectory/pcre-*
+    $RMF pcre
+  fi
+
+  if test $allFlag -eq 1 -o $pthreadsW32Flag -eq 1; then
+    # breakpad
+    $RMRF $tmpDirectory/pthreads-w32-*
+    $RMF pcre
   fi
 
   if test $allFlag -eq 1 -o $epmFlag -eq 1; then
