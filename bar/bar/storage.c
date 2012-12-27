@@ -623,7 +623,6 @@ LOCAL void limitBandWidth(StorageBandWidthLimiter *storageBandWidthLimiter,
       // delay if needed
       if (delayTime > 0)
       {
-//fprintf(stderr,"%s, %d: delayTime=%llu us %lu\n",__FILE__,__LINE__,delayTime,storageBandWidthLimiter->blockSize);
         Misc_udelay(delayTime);
       }
 
@@ -4922,9 +4921,9 @@ Errors Storage_read(StorageFileHandle *storageFileHandle,
             while (size > 0L)
             {
               // get max. number of bytes to send in one step
-              if (storageFileHandle->ftp.bandWidthLimiter.maxBandWidthList != NULL)
+              if (storageFileHandle->scp.bandWidthLimiter.maxBandWidthList != NULL)
               {
-                length = MIN(storageFileHandle->ftp.bandWidthLimiter.blockSize,size);
+                length = MIN(storageFileHandle->scp.bandWidthLimiter.blockSize,size);
               }
               else
               {
@@ -5051,9 +5050,9 @@ Errors Storage_read(StorageFileHandle *storageFileHandle,
             if (size > 0)
             {
               // get max. number of bytes to send in one step
-              if (storageFileHandle->ftp.bandWidthLimiter.maxBandWidthList != NULL)
+              if (storageFileHandle->sftp.bandWidthLimiter.maxBandWidthList != NULL)
               {
-                length = MIN(storageFileHandle->ftp.bandWidthLimiter.blockSize,size);
+                length = MIN(storageFileHandle->sftp.bandWidthLimiter.blockSize,size);
               }
               else
               {
