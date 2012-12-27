@@ -19,7 +19,13 @@
 #include <stdarg.h>
 #include <sys/types.h>
 #include <unistd.h>
-#include <regex.h>
+#if defined(HAVE_PCRE)
+  #include <pcreposix.h>
+#elif defined(HAVE_REGEX_H)
+  #include <regex.h>
+#else
+  #error No regular expression library available!
+#endif /* HAVE_PCRE || HAVE_REGEX_H */
 #ifdef HAVE_BACKTRACE
   #include <execinfo.h>
 #endif
@@ -1672,8 +1678,8 @@ LOCAL bool matchString(const String  string,
   regex_t    regex;
   va_list    arguments;
   String     matchedSubString;
-  uint       subMatchCount;
   regmatch_t *subMatches;
+  uint       subMatchCount;
   bool       matchFlag;
   uint       z;
 
@@ -1708,7 +1714,13 @@ LOCAL bool matchString(const String  string,
   }
 
   // match
-  matchFlag = (regexec(&regex,&string->data[index],subMatchCount,subMatches,0) == 0);
+  matchFlag = (regexec(&regex,
+                       &string->data[index],
+                       subMatchCount,
+                       subMatches,
+                       0
+                      ) == 0
+              );
 
   // get sub-matches
   if (matchFlag)
