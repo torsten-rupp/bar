@@ -11,7 +11,9 @@
 /****************************** Includes *******************************/
 #include <stdlib.h>
 #include <stdio.h>
-#include <features.h>
+#ifdef HAVE_FEATURES_H
+  #include <features.h>
+#endif
 #include <errno.h>
 #include <assert.h>
 
