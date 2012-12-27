@@ -15,7 +15,13 @@
 #include <stdio.h>
 #include <string.h>
 #include <sys/types.h>
-#include <regex.h>
+#if defined(HAVE_PCRE)
+  #include <pcreposix.h>
+#elif defined(HAVE_REGEX_H)
+  #include <regex.h>
+#else
+  #error No regular expression library available!
+#endif /* HAVE_PCRE || HAVE_REGEX_H */
 #include <assert.h>
 
 #include "global.h"
