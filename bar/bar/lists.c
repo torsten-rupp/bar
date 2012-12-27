@@ -83,43 +83,51 @@
 
 #ifndef NDEBUG
   #if   defined(HAVE_PTHREAD)
+
     #define DEBUG_INIT() \
       do \
       { \
         pthread_once(&debugListInitFlag,debugListInit); \
       } \
       while (0)
+
     #define DEBUG_LOCK() \
       do \
       { \
         pthread_mutex_lock(&debugListLock); \
       } \
       while (0)
+
     #define DEBUG_UNLOCK() \
       do \
       { \
         pthread_mutex_unlock(&debugListLock); \
       } \
       while (0)
+
   #elif defined(WIN32)
+
     #define DEBUG_INIT() \
       do \
       { \
         /* still not implemented */ \
       } \
       while (0)
+
     #define DEBUG_LOCK() \
       do \
       { \
         /* still not implemented */ \
       } \
       while (0)
+
     #define DEBUG_UNLOCK() \
       do \
       { \
         /* still not implemented */ \
       } \
       while (0)
+
   #endif /* HAVE_PTHREAD || WIN32 */
 #endif
 
