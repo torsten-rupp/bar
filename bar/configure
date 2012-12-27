@@ -656,6 +656,8 @@ CONFIG_DIR
 INSTALL_BIN_DIR
 INSTALL_DIR
 HAVE_BREAKPAD
+HAVE_PTHREADS_W32
+HAVE_PCRE
 HAVE_ISO9660
 HAVE_GNU_TLS
 HAVE_SSH2
@@ -2000,73 +2002,6 @@ fi
   as_fn_set_status $ac_retval
 
 } # ac_fn_c_try_link
-
-# ac_fn_c_check_func LINENO FUNC VAR
-# ----------------------------------
-# Tests whether FUNC exists, setting the cache variable VAR accordingly
-ac_fn_c_check_func ()
-{
-  as_lineno=${as_lineno-"$1"} as_lineno_stack=as_lineno_stack=$as_lineno_stack
-  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for $2" >&5
-$as_echo_n "checking for $2... " >&6; }
-if eval "test \"\${$3+set}\"" = set; then :
-  $as_echo_n "(cached) " >&6
-else
-  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-/* Define $2 to an innocuous variant, in case <limits.h> declares $2.
-   For example, HP-UX 11i <limits.h> declares gettimeofday.  */
-#define $2 innocuous_$2
-
-/* System header to define __stub macros and hopefully few prototypes,
-    which can conflict with char $2 (); below.
-    Prefer <limits.h> to <assert.h> if __STDC__ is defined, since
-    <limits.h> exists even on freestanding compilers.  */
-
-#ifdef __STDC__
-# include <limits.h>
-#else
-# include <assert.h>
-#endif
-
-#undef $2
-
-/* Override any GCC internal prototype to avoid an error.
-   Use char because int might match the return type of a GCC
-   builtin and then its argument prototype would still apply.  */
-#ifdef __cplusplus
-extern "C"
-#endif
-char $2 ();
-/* The GNU C library defines this for functions which it implements
-    to always fail with ENOSYS.  Some functions are actually named
-    something starting with __ and the normal name is an alias.  */
-#if defined __stub_$2 || defined __stub___$2
-choke me
-#endif
-
-int
-main ()
-{
-return $2 ();
-  ;
-  return 0;
-}
-_ACEOF
-if ac_fn_c_try_link "$LINENO"; then :
-  eval "$3=yes"
-else
-  eval "$3=no"
-fi
-rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext conftest.$ac_ext
-fi
-eval ac_res=\$$3
-	       { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_res" >&5
-$as_echo "$ac_res" >&6; }
-  eval $as_lineno_stack; test "x$as_lineno_stack" = x && { as_lineno=; unset as_lineno;}
-
-} # ac_fn_c_check_func
 cat >config.log <<_ACEOF
 This file contains any messages produced by compilers while
 running configure, to aid debugging if configure makes a mistake.
@@ -2571,6 +2506,8 @@ ENABLE_FTP="yes"
 ENABLE_SSH="yes"
 ENABLE_TLS="yes"
 ENABLE_ISO9660="yes"
+ENABLE_PCRE="yes"
+ENABLE_PTHREADS_W32="yes"
 ENABLE_BREAKPAD="yes"
 ENABLE_GUI="yes"
 ENABLE_PACKAGE_COMPILE="yes"
@@ -2578,27 +2515,27 @@ ENABLE_PACKAGE_COMPILE="yes"
 
 case "$host_os" in
   linux-*)
-    PLATFORM=Linux
+    PLATFORM=LINUX
     FILE_SEPARATOR_CHAR="/"
     JAVA_PATH_SEPARATOR=":"
     ;;
   windows*)
-    PLATFORM=Windows
+    PLATFORM=WINDOWS
     FILE_SEPARATOR_CHAR="\\\\"
     JAVA_PATH_SEPARATOR=";"
     ;;
   mingw*)
-    PLATFORM=Windows
+    PLATFORM=WINDOWS
     FILE_SEPARATOR_CHAR="\\\\"
     JAVA_PATH_SEPARATOR=";"
     ;;
   sunos | solaris*)
-    PLATFORM=Solaris
+    PLATFORM=SOLARIS
     FILE_SEPARATOR_CHAR="/"
     JAVA_PATH_SEPARATOR=":"
     ;;
   darwin*)
-    PLATFORM=MacOSX
+    PLATFORM=MAC_OSX
     FILE_SEPARATOR_CHAR="/"
     JAVA_PATH_SEPARATOR=":"
     ;;
@@ -4520,7 +4457,9 @@ if test ! $ENABLE_LINK_DYNAMIC = "yes"; then
   LD_FLAGS="-static-libgcc"
 fi
 if test "$ENABLE_DEBUG" = "yes"; then
-  # required for stacktraces
+  case "$host_os" in
+    linux-*)
+      # required for stacktraces
 
 
   { $as_echo "$as_me:${as_lineno-$LINENO}: checking if $CC support option -rdynamic" >&5
@@ -4542,7 +4481,7 @@ EOF
   $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
   test $ac_status = 0; }; }; then
         ac_supported=yes
-        for s in LD_FLAGS; do
+        for s in CC_FLAGS CXX_FLAGS LD_FLAGS; do
           eval "if test -n \"\$$s\"; then $s=\"\$$s \"; fi"
           eval "$s=\"\$$s-rdynamic\""
         done
@@ -4558,6 +4497,10 @@ fi
 eval ac_res=\$ac_cv_c_option_`echo -rdynamic|tr -c -d a-zA-Z0-9_`
 	       { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_res" >&5
 $as_echo "$ac_res" >&6; }
+      ;;
+    *)
+      ;;
+  esac
 fi
 LIBRARY_PATHS="$LIBRARY_PATHS /usr/local/lib"
 
@@ -5833,12 +5776,28 @@ fi
 done
 
 
-for ac_header in stdbool.h
+for ac_header in \
+                 arpa/inet.h \
+                 grp.h \
+                 linux/fs.h \
+                 linux/tcp.h \
+                 netdb.h \
+                 netinet/in.h \
+                 pwd.h \
+                 regex.h \
+                 stdbool.h \
+                 sys/ioctl.h \
+                 sys/resource.h \
+                 sys/select.h \
+                 sys/socket.h \
+                 sys/statvfs.h \
+
 do :
-  ac_fn_c_check_header_mongrel "$LINENO" "stdbool.h" "ac_cv_header_stdbool_h" "$ac_includes_default"
-if test "x$ac_cv_header_stdbool_h" = x""yes; then :
+  as_ac_Header=`$as_echo "ac_cv_header_$ac_header" | $as_tr_sh`
+ac_fn_c_check_header_mongrel "$LINENO" "$ac_header" "$as_ac_Header" "$ac_includes_default"
+if eval test \"x\$"$as_ac_Header"\" = x"yes"; then :
   cat >>confdefs.h <<_ACEOF
-#define HAVE_STDBOOL_H 1
+#define `$as_echo "HAVE_$ac_header" | $as_tr_cpp` 1
 _ACEOF
 
 fi
@@ -6283,73 +6242,6 @@ else
   as_fn_error $? "m library not found" "$LINENO" 5
 fi
 
-case $host_os in
-  linux*)
-    { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing pthread_create" >&5
-$as_echo_n "checking for library containing pthread_create... " >&6; }
-if test "${ac_cv_search_pthread_create+set}" = set; then :
-  $as_echo_n "(cached) " >&6
-else
-  ac_func_search_save_LIBS=$LIBS
-cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-
-/* Override any GCC internal prototype to avoid an error.
-   Use char because int might match the return type of a GCC
-   builtin and then its argument prototype would still apply.  */
-#ifdef __cplusplus
-extern "C"
-#endif
-char pthread_create ();
-int
-main ()
-{
-return pthread_create ();
-  ;
-  return 0;
-}
-_ACEOF
-for ac_lib in '' pthread; do
-  if test -z "$ac_lib"; then
-    ac_res="none required"
-  else
-    ac_res=-l$ac_lib
-    LIBS="-l$ac_lib  $ac_func_search_save_LIBS"
-  fi
-  if ac_fn_c_try_link "$LINENO"; then :
-  ac_cv_search_pthread_create=$ac_res
-fi
-rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext
-  if test "${ac_cv_search_pthread_create+set}" = set; then :
-  break
-fi
-done
-if test "${ac_cv_search_pthread_create+set}" = set; then :
-
-else
-  ac_cv_search_pthread_create=no
-fi
-rm conftest.$ac_ext
-LIBS=$ac_func_search_save_LIBS
-fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_pthread_create" >&5
-$as_echo "$ac_cv_search_pthread_create" >&6; }
-ac_res=$ac_cv_search_pthread_create
-if test "$ac_res" != no; then :
-  test "$ac_res" = "none required" || LIBS="$ac_res $LIBS"
-
-else
-  as_fn_error $? "pthread library not found" "$LINENO" 5
-fi
-
-    ;;
-  mingw*)
-    ;;
-  *)
-    as_fn_error $? "Unsupported operating system '$host_os'" "$LINENO" 5
-    ;;
-esac
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing dlopen" >&5
 $as_echo_n "checking for library containing dlopen... " >&6; }
 if test "${ac_cv_search_dlopen+set}" = set; then :
@@ -6407,20 +6299,205 @@ if test "$ac_res" != no; then :
 fi
 
 
+case $host_os in
+  linux*)
+
+
+    ac_result=""
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing pthread_create" >&5
+$as_echo_n "checking for library containing pthread_create... " >&6; }
+if test "${ac_cv_search_libraries_pthread_create+set}" = set; then :
+  $as_echo_n "(cached) " >&6
+else
+
+            ac_func_search_libraries_save_CFLAGS="$CFLAGS";
+      ac_func_search_libraries_save_LIBS=$LIBS
+
+      cat << \EOF > conftest.$ac_ext
+EOF
+      for ac_header in  ""; do
+        if test -n "$ac_header"; then
+          echo "#include <$ac_header>" >> conftest.$ac_ext
+        fi
+      done
+      cat << \EOF >> conftest.$ac_ext
+int main(void) { return (int)pthread_create; }
+EOF
+
+            for ac_library in pthread ""; do
+        if test -z "$ac_library"; then
+          ac_result="none required"
+        else
+          ac_result=-l$ac_library
+          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+        fi
+
+#cat conftest.$ac_ext
+#set -x
+        ${CC} ${CFLAGS} -c conftest.c -o conftest.o 1>/dev/null 2>/dev/null; rc=$?
+        if test $rc -eq 0; then
+          ${LD} ${LDFLAGS} -o conftest conftest.o ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
+          if test $rc -eq 0; then
+            ac_cv_search_libraries_pthread_create=$ac_result
+            if test "${ac_cv_search_libraries_pthread_create+set}" = set; then :
+  break
+fi
+          fi
+        fi
+      done
+      if test "${ac_cv_search_libraries_pthread_create+set}" = set; then :
+
+else
+  ac_cv_search_libraries_pthread_create=no
+fi
+      rm -f conftest.$ac_ext conftest.$ac_objext conftest$ac_exeext
+
+            LIBS=$ac_func_search_libraries_save_LIBS
+      CFLAGS=$ac_func_search_libraries_save_CFLAGS
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_libraries_pthread_create" >&5
+$as_echo "$ac_cv_search_libraries_pthread_create" >&6; }
+  ac_result=$ac_cv_search_libraries_pthread_create
+  if test "$ac_result" != no; then :
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS"
+else
+  as_fn_error $? "pthread library not found" "$LINENO" 5
+fi
+
+    ;;
+  mingw*)
+
+
+    { $as_echo "$as_me:${as_lineno-$LINENO}: checking for static library containing pthread_create" >&5
+$as_echo_n "checking for static library containing pthread_create... " >&6; }
+if test "${ac_cv_search_static_pthread_create+set}" = set; then :
+  $as_echo_n "(cached) " >&6
+else
+
+            ac_func_search_static_libraries_save_LIBS=$LIBS
+
+            for ac_library in pthreadGC2 ""; do
+        if test -z "$ac_library"; then
+          ac_result="none required"
+        else
+          ac_result=-l$ac_library
+          LIBS="-l$ac_library $ac_func_search_static_libraries_save_LIBS"
+        fi
+
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo pthread.h|sed 's/ /\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
+int
+main ()
+{
+return (int)pthread_create;
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_search_static_pthread_create=$ac_result; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+
+      done
+      if test "${ac_cv_search_static_pthread_create+set}" = set; then :
+
+else
+  ac_cv_search_static_pthread_create=no
+fi
+
+            LIBS=$ac_func_search_libraries_save_LIBS
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_static_pthread_create" >&5
+$as_echo "$ac_cv_search_static_pthread_create" >&6; }
+  ac_result=$ac_cv_search_static_pthread_create
+  if test "$ac_result" != no; then :
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" STATIC_LIBRARIES="$STATIC_LIBRARIES pthreadGC2"
+fi
+
+
+
+    { $as_echo "$as_me:${as_lineno-$LINENO}: checking for static library containing WSAStartup" >&5
+$as_echo_n "checking for static library containing WSAStartup... " >&6; }
+if test "${ac_cv_search_static_WSAStartup+set}" = set; then :
+  $as_echo_n "(cached) " >&6
+else
+
+            ac_func_search_static_libraries_save_LIBS=$LIBS
+
+            for ac_library in wsock32 ""; do
+        if test -z "$ac_library"; then
+          ac_result="none required"
+        else
+          ac_result=-l$ac_library
+          LIBS="-l$ac_library $ac_func_search_static_libraries_save_LIBS"
+        fi
+
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo winsock2.h|sed 's/ /\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
+int
+main ()
+{
+return (int)WSAStartup;
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_search_static_WSAStartup=$ac_result; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+
+      done
+      if test "${ac_cv_search_static_WSAStartup+set}" = set; then :
+
+else
+  ac_cv_search_static_WSAStartup=no
+fi
+
+            LIBS=$ac_func_search_libraries_save_LIBS
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_static_WSAStartup" >&5
+$as_echo "$ac_cv_search_static_WSAStartup" >&6; }
+  ac_result=$ac_cv_search_static_WSAStartup
+  if test "$ac_result" != no; then :
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" STATIC_LIBRARIES="$STATIC_LIBRARIES wsock32"
+fi
+
+    ;;
+  *)
+    as_fn_error $? "Unsupported operating system '$host_os'" "$LINENO" 5
+    ;;
+esac
+
 # optional packages
 tmpFile=`mktemp configure-XXXXXX`
 cwd=`pwd`
+mkdir packages 2>/dev/null
+(cd packages; rm -rf include; mkdir include 2>/dev/null)
+(cd packages; rm -rf lib; mkdir lib 2>/dev/null)
+(cd packages; rm -f lib64; ln -s lib lib64 2>/dev/null)
 CC_INCLUDES="$CC_INCLUDES $cwd/packages/include"
 LIBRARY_PATHS="$LIBRARY_PATHS $cwd/packages/lib"
 
 if test -d zlib -o -d "`readlink zlib`"; then
   if test "$ENABLE_PACKAGE_COMPILE" = "yes"; then
-
-    mkdir packages 2>/dev/null
-    mkdir packages/include 2>/dev/null
-    mkdir packages/lib 2>/dev/null
-    (cd packages; rm -f lib64; ln -s lib lib64 2>/dev/null)
-    cwd=`pwd`
 
 
   $as_echo_n "Compile zlib... " >&6
@@ -6463,8 +6540,6 @@ $as_echo "done" >&6; }
 
   if test $result -eq 1; then
     HAVE_Z=1
-    CC_INCLUDES="$CC_INCLUDES $cwd/packages/include"
-    LIBRARY_PATHS="$LIBRARY_PATHS $cwd/packages/lib"
     STATIC_LIBRARIES="$STATIC_LIBRARIES z"
 
 $as_echo "#define HAVE_Z 1" >>confdefs.h
@@ -6533,65 +6608,59 @@ fi
   else
     if test -z "$HAVE_Z"; then
 
+
     { $as_echo "$as_me:${as_lineno-$LINENO}: checking for static library containing zlibVersion" >&5
 $as_echo_n "checking for static library containing zlibVersion... " >&6; }
 if test "${ac_cv_search_static_zlibVersion+set}" = set; then :
   $as_echo_n "(cached) " >&6
 else
 
-     ac_func_search_static_save_CFLAGS="$CFLAGS"; CFLAGS="$CFLAGS -static"
-     ac_func_search_static_save_LIBS=$LIBS
-     cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
+            ac_func_search_static_libraries_save_LIBS=$LIBS
 
-/* Override any GCC internal prototype to avoid an error.
-   Use char because int might match the return type of a GCC
-   builtin and then its argument prototype would still apply.  */
-#ifdef __cplusplus
-extern "C"
-#endif
-char zlibVersion ();
+            for ac_library in z ""; do
+        if test -z "$ac_library"; then
+          ac_result="none required"
+        else
+          ac_result=-l$ac_library
+          LIBS="-l$ac_library $ac_func_search_static_libraries_save_LIBS"
+        fi
+
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo |sed 's/ /\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
 int
 main ()
 {
-return zlibVersion ();
+return (int)zlibVersion;
+
   ;
   return 0;
 }
+
 _ACEOF
-     for ac_lib in '' z; do
-       if test -z "$ac_lib"; then
-         ac_res="none required"
-       else
-         ac_res=-l$ac_lib
-         LIBS="-l$ac_lib  $ac_func_search_save_LIBS"
-       fi
-       if ac_fn_c_try_link "$LINENO"; then :
-  ac_cv_search_static_zlibVersion=$ac_res
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_search_static_zlibVersion=$ac_result; break
+
 fi
 rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext
-       if test "${ac_cv_search_static_zlibVersion+set}" = set; then :
-  break
-fi
-     done
-     if test "${ac_cv_search_static_zlibVersion+set}" = set; then :
+    conftest$ac_exeext conftest.$ac_ext
+
+      done
+      if test "${ac_cv_search_static_zlibVersion+set}" = set; then :
 
 else
   ac_cv_search_static_zlibVersion=no
 fi
-     rm conftest.$ac_ext
 
-     LIBS=$ac_func_search_save_LIBS
-     CFLAGS=$ac_func_search_static_save_CFLAGS
+            LIBS=$ac_func_search_libraries_save_LIBS
 
 
 fi
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_static_zlibVersion" >&5
 $as_echo "$ac_cv_search_static_zlibVersion" >&6; }
-  ac_res=$ac_cv_search_static_zlibVersion
-  if test "$ac_res" != no; then :
-  test "$ac_res" = "none required" || LIBS="$ac_res $LIBS" HAVE_Z=1;STATIC_LIBRARIES="$STATIC_LIBRARIES z";
+  ac_result=$ac_cv_search_static_zlibVersion
+  if test "$ac_result" != no; then :
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" HAVE_Z=1;STATIC_LIBRARIES="$STATIC_LIBRARIES z";
 $as_echo "#define HAVE_Z 1" >>confdefs.h
 
 fi
@@ -6664,12 +6733,6 @@ if test $ENABLE_BZIP2 = "yes"; then
   if test -d bzip2 -o -d "`readlink bzip2`"; then
     if test "$ENABLE_PACKAGE_COMPILE" = "yes"; then
 
-      mkdir packages 2>/dev/null
-      mkdir packages/include 2>/dev/null
-      mkdir packages/lib 2>/dev/null
-      (cd packages; rm -f lib64; ln -s lib lib64 2>/dev/null)
-      cwd=`pwd`
-
 
   $as_echo_n "Compile bzip2... " >&6
 
@@ -6702,8 +6765,6 @@ $as_echo "done" >&6; }
 
     if test $result -eq 1; then
       HAVE_BZ2=1
-      CC_INCLUDES="$CC_INCLUDES $cwd/packages/include"
-      LIBRARY_PATHS="$LIBRARY_PATHS $cwd/packages/lib"
       STATIC_LIBRARIES="$STATIC_LIBRARIES bz2"
 
 $as_echo "#define HAVE_BZ2 1" >>confdefs.h
@@ -6772,65 +6833,59 @@ fi
     else
       if test -z "$HAVE_BZ2"; then
 
+
     { $as_echo "$as_me:${as_lineno-$LINENO}: checking for static library containing BZ2_bzCompressInit" >&5
 $as_echo_n "checking for static library containing BZ2_bzCompressInit... " >&6; }
 if test "${ac_cv_search_static_BZ2_bzCompressInit+set}" = set; then :
   $as_echo_n "(cached) " >&6
 else
 
-     ac_func_search_static_save_CFLAGS="$CFLAGS"; CFLAGS="$CFLAGS -static"
-     ac_func_search_static_save_LIBS=$LIBS
-     cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
+            ac_func_search_static_libraries_save_LIBS=$LIBS
 
-/* Override any GCC internal prototype to avoid an error.
-   Use char because int might match the return type of a GCC
-   builtin and then its argument prototype would still apply.  */
-#ifdef __cplusplus
-extern "C"
-#endif
-char BZ2_bzCompressInit ();
+            for ac_library in bz2 ""; do
+        if test -z "$ac_library"; then
+          ac_result="none required"
+        else
+          ac_result=-l$ac_library
+          LIBS="-l$ac_library $ac_func_search_static_libraries_save_LIBS"
+        fi
+
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo |sed 's/ /\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
 int
 main ()
 {
-return BZ2_bzCompressInit ();
+return (int)BZ2_bzCompressInit;
+
   ;
   return 0;
 }
+
 _ACEOF
-     for ac_lib in '' bz2; do
-       if test -z "$ac_lib"; then
-         ac_res="none required"
-       else
-         ac_res=-l$ac_lib
-         LIBS="-l$ac_lib  $ac_func_search_save_LIBS"
-       fi
-       if ac_fn_c_try_link "$LINENO"; then :
-  ac_cv_search_static_BZ2_bzCompressInit=$ac_res
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_search_static_BZ2_bzCompressInit=$ac_result; break
+
 fi
 rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext
-       if test "${ac_cv_search_static_BZ2_bzCompressInit+set}" = set; then :
-  break
-fi
-     done
-     if test "${ac_cv_search_static_BZ2_bzCompressInit+set}" = set; then :
+    conftest$ac_exeext conftest.$ac_ext
+
+      done
+      if test "${ac_cv_search_static_BZ2_bzCompressInit+set}" = set; then :
 
 else
   ac_cv_search_static_BZ2_bzCompressInit=no
 fi
-     rm conftest.$ac_ext
 
-     LIBS=$ac_func_search_save_LIBS
-     CFLAGS=$ac_func_search_static_save_CFLAGS
+            LIBS=$ac_func_search_libraries_save_LIBS
 
 
 fi
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_static_BZ2_bzCompressInit" >&5
 $as_echo "$ac_cv_search_static_BZ2_bzCompressInit" >&6; }
-  ac_res=$ac_cv_search_static_BZ2_bzCompressInit
-  if test "$ac_res" != no; then :
-  test "$ac_res" = "none required" || LIBS="$ac_res $LIBS" HAVE_BZ2=1;STATIC_LIBRARIES="$STATIC_LIBRARIES bz2";
+  ac_result=$ac_cv_search_static_BZ2_bzCompressInit
+  if test "$ac_result" != no; then :
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" HAVE_BZ2=1;STATIC_LIBRARIES="$STATIC_LIBRARIES bz2";
 $as_echo "#define HAVE_BZ2 1" >>confdefs.h
 
 fi
@@ -6904,12 +6959,6 @@ if test $ENABLE_LZMA = "yes"; then
   if test -d xz -o -d "`readlink xz`"; then
     if test "$ENABLE_PACKAGE_COMPILE" = "yes"; then
 
-      mkdir packages 2>/dev/null
-      mkdir packages/include 2>/dev/null
-      mkdir packages/lib 2>/dev/null
-      (cd packages; rm -f lib64; ln -s lib lib64 2>/dev/null)
-      cwd=`pwd`
-
 
   $as_echo_n "Compile xz utils... " >&6
 
@@ -6951,8 +7000,6 @@ $as_echo "done" >&6; }
 
     if test $result -eq 1; then
       HAVE_LZMA=1
-      CC_INCLUDES="$CC_INCLUDES $cwd/packages/include"
-      LIBRARY_PATHS="$LIBRARY_PATHS $cwd/packages/lib"
       STATIC_LIBRARIES="$STATIC_LIBRARIES lzma"
 
 $as_echo "#define HAVE_LZMA 1" >>confdefs.h
@@ -7021,65 +7068,59 @@ fi
     else
       if test -z "$HAVE_LZMA"; then
 
+
     { $as_echo "$as_me:${as_lineno-$LINENO}: checking for static library containing lzma_easy_encoder" >&5
 $as_echo_n "checking for static library containing lzma_easy_encoder... " >&6; }
 if test "${ac_cv_search_static_lzma_easy_encoder+set}" = set; then :
   $as_echo_n "(cached) " >&6
 else
 
-     ac_func_search_static_save_CFLAGS="$CFLAGS"; CFLAGS="$CFLAGS -static"
-     ac_func_search_static_save_LIBS=$LIBS
-     cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
+            ac_func_search_static_libraries_save_LIBS=$LIBS
 
-/* Override any GCC internal prototype to avoid an error.
-   Use char because int might match the return type of a GCC
-   builtin and then its argument prototype would still apply.  */
-#ifdef __cplusplus
-extern "C"
-#endif
-char lzma_easy_encoder ();
+            for ac_library in lzma ""; do
+        if test -z "$ac_library"; then
+          ac_result="none required"
+        else
+          ac_result=-l$ac_library
+          LIBS="-l$ac_library $ac_func_search_static_libraries_save_LIBS"
+        fi
+
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo |sed 's/ /\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
 int
 main ()
 {
-return lzma_easy_encoder ();
+return (int)lzma_easy_encoder;
+
   ;
   return 0;
 }
+
 _ACEOF
-     for ac_lib in '' lzma; do
-       if test -z "$ac_lib"; then
-         ac_res="none required"
-       else
-         ac_res=-l$ac_lib
-         LIBS="-l$ac_lib  $ac_func_search_save_LIBS"
-       fi
-       if ac_fn_c_try_link "$LINENO"; then :
-  ac_cv_search_static_lzma_easy_encoder=$ac_res
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_search_static_lzma_easy_encoder=$ac_result; break
+
 fi
 rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext
-       if test "${ac_cv_search_static_lzma_easy_encoder+set}" = set; then :
-  break
-fi
-     done
-     if test "${ac_cv_search_static_lzma_easy_encoder+set}" = set; then :
+    conftest$ac_exeext conftest.$ac_ext
+
+      done
+      if test "${ac_cv_search_static_lzma_easy_encoder+set}" = set; then :
 
 else
   ac_cv_search_static_lzma_easy_encoder=no
 fi
-     rm conftest.$ac_ext
 
-     LIBS=$ac_func_search_save_LIBS
-     CFLAGS=$ac_func_search_static_save_CFLAGS
+            LIBS=$ac_func_search_libraries_save_LIBS
 
 
 fi
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_static_lzma_easy_encoder" >&5
 $as_echo "$ac_cv_search_static_lzma_easy_encoder" >&6; }
-  ac_res=$ac_cv_search_static_lzma_easy_encoder
-  if test "$ac_res" != no; then :
-  test "$ac_res" = "none required" || LIBS="$ac_res $LIBS" HAVE_LZMA=1;STATIC_LIBRARIES="$STATIC_LIBRARIES lzma";
+  ac_result=$ac_cv_search_static_lzma_easy_encoder
+  if test "$ac_result" != no; then :
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" HAVE_LZMA=1;STATIC_LIBRARIES="$STATIC_LIBRARIES lzma";
 $as_echo "#define HAVE_LZMA 1" >>confdefs.h
 
 fi
@@ -7167,12 +7208,6 @@ if test $ENABLE_GCRYPT = "yes"; then
   if test \( -d libgpg-error -o -d "`readlink libgpg-error`" \) -a \( -d libgcrypt -o -d "`readlink libgcrypt`" \); then
     if test "$ENABLE_PACKAGE_COMPILE" = "yes"; then
 
-      mkdir packages 2>/dev/null
-      mkdir packages/include 2>/dev/null
-      mkdir packages/lib 2>/dev/null
-      (cd packages; rm -f lib64; ln -s lib lib64 2>/dev/null)
-      cwd=`pwd`
-
 
   $as_echo_n "Compile libgpg-error... " >&6
 
@@ -7214,6 +7249,25 @@ $as_echo "done" >&6; }
 
       result2=1
       if test $result2 -eq 1; then
+        case $host_os in
+          mingw*)
+            # patch to disable usage of lib-command when RANLIB is set
+            # patch created with:
+            #   diff -u libgcrypt-1.5.0.org/m4/libtool.m4 libgcrypt-1.5.0/m4/libtool.m4 >  libgcrypt-1.5.0-libtool.patch
+            #   diff -u libgcrypt-1.5.0.org/aclocal.m4 libgcrypt-1.5.0/aclocal.m4       >> libgcrypt-1.5.0-libtool.patch
+            #   diff -u libgcrypt-1.5.0.org/configure libgcrypt-1.5.0/configure         >> libgcrypt-1.5.0-libtool.patch
+            if test -d packages/libgcrypt-1.5.0; then
+              (cd packages/libgcrypt-1.5.0; patch --batch -N -p1 <$cwd/misc/libgcrypt-1.5.0-libtool.patch) 1>/dev/null 2>/dev/null
+            else
+              { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: libgcrypt-1.5.0 not available - skipped libtool patch!" >&5
+$as_echo "$as_me: WARNING: libgcrypt-1.5.0 not available - skipped libtool patch!" >&2;}
+            fi
+            ;;
+          *)
+            ;;
+        esac
+      fi
+      if test $result2 -eq 1; then
         (cd libgcrypt; LIBS="-L$cwd/packages/lib -lgpg-error" ./configure --host=$host_cpu-$host_os --prefix=$cwd/packages --with-gpg-error-prefix=$cwd/packages --enable-maintainer-mode --disable-shared --enable-static `if test "$ENABLE_DEBUG" = "yes"; then echo --disable-optimization; fi`) 1>/dev/null 2>$tmpFile
         if test $? -ne 0; then
           { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (configure)" >&5
@@ -7239,6 +7293,13 @@ $as_echo "fail (install)" >&6; }
           cat $tmpFile
           result2=0
         fi
+        case $host_os in
+          mingw*)
+            (cd packages/lib; ln -s libgcrypt.lib libgcrypt.a) 1>/dev/null 2>/dev/null
+            ;;
+          *)
+            ;;
+        esac
       fi
       if test $result2 -eq 1; then
         { $as_echo "$as_me:${as_lineno-$LINENO}: result: done" >&5
@@ -7252,8 +7313,6 @@ $as_echo "done" >&6; }
     if test $result1 -eq 1 -a $result2 -eq 1; then
       HAVE_GCRYPT=1
       HAVE_GPG_ERROR=1
-      CC_INCLUDES="$CC_INCLUDES $cwd/packages/include"
-      LIBRARY_PATHS="$LIBRARY_PATHS $cwd/packages/lib"
       STATIC_LIBRARIES="$STATIC_LIBRARIES gpg-error gcrypt"
 
 $as_echo "#define HAVE_GCRYPT 1" >>confdefs.h
@@ -7328,65 +7387,59 @@ fi
         else
           if test -z "$HAVE_GPG_ERROR"; then
 
+
     { $as_echo "$as_me:${as_lineno-$LINENO}: checking for static library containing gpg_strerror" >&5
 $as_echo_n "checking for static library containing gpg_strerror... " >&6; }
 if test "${ac_cv_search_static_gpg_strerror+set}" = set; then :
   $as_echo_n "(cached) " >&6
 else
 
-     ac_func_search_static_save_CFLAGS="$CFLAGS"; CFLAGS="$CFLAGS -static"
-     ac_func_search_static_save_LIBS=$LIBS
-     cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
+            ac_func_search_static_libraries_save_LIBS=$LIBS
 
-/* Override any GCC internal prototype to avoid an error.
-   Use char because int might match the return type of a GCC
-   builtin and then its argument prototype would still apply.  */
-#ifdef __cplusplus
-extern "C"
-#endif
-char gpg_strerror ();
+            for ac_library in gpg-error ""; do
+        if test -z "$ac_library"; then
+          ac_result="none required"
+        else
+          ac_result=-l$ac_library
+          LIBS="-l$ac_library $ac_func_search_static_libraries_save_LIBS"
+        fi
+
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo |sed 's/ /\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
 int
 main ()
 {
-return gpg_strerror ();
+return (int)gpg_strerror;
+
   ;
   return 0;
 }
+
 _ACEOF
-     for ac_lib in '' gpg-error; do
-       if test -z "$ac_lib"; then
-         ac_res="none required"
-       else
-         ac_res=-l$ac_lib
-         LIBS="-l$ac_lib  $ac_func_search_save_LIBS"
-       fi
-       if ac_fn_c_try_link "$LINENO"; then :
-  ac_cv_search_static_gpg_strerror=$ac_res
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_search_static_gpg_strerror=$ac_result; break
+
 fi
 rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext
-       if test "${ac_cv_search_static_gpg_strerror+set}" = set; then :
-  break
-fi
-     done
-     if test "${ac_cv_search_static_gpg_strerror+set}" = set; then :
+    conftest$ac_exeext conftest.$ac_ext
+
+      done
+      if test "${ac_cv_search_static_gpg_strerror+set}" = set; then :
 
 else
   ac_cv_search_static_gpg_strerror=no
 fi
-     rm conftest.$ac_ext
 
-     LIBS=$ac_func_search_save_LIBS
-     CFLAGS=$ac_func_search_static_save_CFLAGS
+            LIBS=$ac_func_search_libraries_save_LIBS
 
 
 fi
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_static_gpg_strerror" >&5
 $as_echo "$ac_cv_search_static_gpg_strerror" >&6; }
-  ac_res=$ac_cv_search_static_gpg_strerror
-  if test "$ac_res" != no; then :
-  test "$ac_res" = "none required" || LIBS="$ac_res $LIBS" HAVE_GPG_ERROR=1;STATIC_LIBRARIES="$STATIC_LIBRARIES gpg-error";
+  ac_result=$ac_cv_search_static_gpg_strerror
+  if test "$ac_result" != no; then :
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" HAVE_GPG_ERROR=1;STATIC_LIBRARIES="$STATIC_LIBRARIES gpg-error";
 $as_echo "#define HAVE_GPG_ERROR 1" >>confdefs.h
 
 fi
@@ -7515,65 +7568,59 @@ fi
         else
           if test -z "$HAVE_GCRYPT"; then
 
+
     { $as_echo "$as_me:${as_lineno-$LINENO}: checking for static library containing gcry_check_version" >&5
 $as_echo_n "checking for static library containing gcry_check_version... " >&6; }
 if test "${ac_cv_search_static_gcry_check_version+set}" = set; then :
   $as_echo_n "(cached) " >&6
 else
 
-     ac_func_search_static_save_CFLAGS="$CFLAGS"; CFLAGS="$CFLAGS -static"
-     ac_func_search_static_save_LIBS=$LIBS
-     cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
+            ac_func_search_static_libraries_save_LIBS=$LIBS
 
-/* Override any GCC internal prototype to avoid an error.
-   Use char because int might match the return type of a GCC
-   builtin and then its argument prototype would still apply.  */
-#ifdef __cplusplus
-extern "C"
-#endif
-char gcry_check_version ();
+            for ac_library in gcrypt ""; do
+        if test -z "$ac_library"; then
+          ac_result="none required"
+        else
+          ac_result=-l$ac_library
+          LIBS="-l$ac_library $ac_func_search_static_libraries_save_LIBS"
+        fi
+
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo |sed 's/ /\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
 int
 main ()
 {
-return gcry_check_version ();
+return (int)gcry_check_version;
+
   ;
   return 0;
 }
+
 _ACEOF
-     for ac_lib in '' gcrypt; do
-       if test -z "$ac_lib"; then
-         ac_res="none required"
-       else
-         ac_res=-l$ac_lib
-         LIBS="-l$ac_lib  $ac_func_search_save_LIBS"
-       fi
-       if ac_fn_c_try_link "$LINENO"; then :
-  ac_cv_search_static_gcry_check_version=$ac_res
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_search_static_gcry_check_version=$ac_result; break
+
 fi
 rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext
-       if test "${ac_cv_search_static_gcry_check_version+set}" = set; then :
-  break
-fi
-     done
-     if test "${ac_cv_search_static_gcry_check_version+set}" = set; then :
+    conftest$ac_exeext conftest.$ac_ext
+
+      done
+      if test "${ac_cv_search_static_gcry_check_version+set}" = set; then :
 
 else
   ac_cv_search_static_gcry_check_version=no
 fi
-     rm conftest.$ac_ext
 
-     LIBS=$ac_func_search_save_LIBS
-     CFLAGS=$ac_func_search_static_save_CFLAGS
+            LIBS=$ac_func_search_libraries_save_LIBS
 
 
 fi
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_static_gcry_check_version" >&5
 $as_echo "$ac_cv_search_static_gcry_check_version" >&6; }
-  ac_res=$ac_cv_search_static_gcry_check_version
-  if test "$ac_res" != no; then :
-  test "$ac_res" = "none required" || LIBS="$ac_res $LIBS" HAVE_GCRYPT=1;STATIC_LIBRARIES="$STATIC_LIBRARIES gcrypt";
+  ac_result=$ac_cv_search_static_gcry_check_version
+  if test "$ac_result" != no; then :
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" HAVE_GCRYPT=1;STATIC_LIBRARIES="$STATIC_LIBRARIES gcrypt";
 $as_echo "#define HAVE_GCRYPT 1" >>confdefs.h
 
 fi
@@ -7656,12 +7703,6 @@ if test $ENABLE_FTP = "yes"; then
   if test -d ftplib -o -d "`readlink ftplib`"; then
     if test "$ENABLE_PACKAGE_COMPILE" = "yes"; then
 
-      mkdir packages 2>/dev/null
-      mkdir packages/include 2>/dev/null
-      mkdir packages/lib 2>/dev/null
-      (cd packages; rm -f lib64; ln -s lib lib64 2>/dev/null)
-      cwd=`pwd`
-
 
   $as_echo_n "Compile ftplib... " >&6
 
@@ -7700,8 +7741,6 @@ $as_echo "done" >&6; }
 
     if test $result -eq 1; then
       HAVE_FTP=1
-      CC_INCLUDES="$CC_INCLUDES $cwd/packages/include"
-      LIBRARY_PATHS="$LIBRARY_PATHS $cwd/packages/lib"
       STATIC_LIBRARIES="$STATIC_LIBRARIES ftp"
 
 $as_echo "#define HAVE_FTP 1" >>confdefs.h
@@ -7770,65 +7809,59 @@ fi
     else
       if test -z "$HAVE_FTP"; then
 
+
     { $as_echo "$as_me:${as_lineno-$LINENO}: checking for static library containing FtpInit" >&5
 $as_echo_n "checking for static library containing FtpInit... " >&6; }
 if test "${ac_cv_search_static_FtpInit+set}" = set; then :
   $as_echo_n "(cached) " >&6
 else
 
-     ac_func_search_static_save_CFLAGS="$CFLAGS"; CFLAGS="$CFLAGS -static"
-     ac_func_search_static_save_LIBS=$LIBS
-     cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
+            ac_func_search_static_libraries_save_LIBS=$LIBS
 
-/* Override any GCC internal prototype to avoid an error.
-   Use char because int might match the return type of a GCC
-   builtin and then its argument prototype would still apply.  */
-#ifdef __cplusplus
-extern "C"
-#endif
-char FtpInit ();
+            for ac_library in ftp ""; do
+        if test -z "$ac_library"; then
+          ac_result="none required"
+        else
+          ac_result=-l$ac_library
+          LIBS="-l$ac_library $ac_func_search_static_libraries_save_LIBS"
+        fi
+
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo |sed 's/ /\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
 int
 main ()
 {
-return FtpInit ();
+return (int)FtpInit;
+
   ;
   return 0;
 }
+
 _ACEOF
-     for ac_lib in '' ftp; do
-       if test -z "$ac_lib"; then
-         ac_res="none required"
-       else
-         ac_res=-l$ac_lib
-         LIBS="-l$ac_lib  $ac_func_search_save_LIBS"
-       fi
-       if ac_fn_c_try_link "$LINENO"; then :
-  ac_cv_search_static_FtpInit=$ac_res
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_search_static_FtpInit=$ac_result; break
+
 fi
 rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext
-       if test "${ac_cv_search_static_FtpInit+set}" = set; then :
-  break
-fi
-     done
-     if test "${ac_cv_search_static_FtpInit+set}" = set; then :
+    conftest$ac_exeext conftest.$ac_ext
+
+      done
+      if test "${ac_cv_search_static_FtpInit+set}" = set; then :
 
 else
   ac_cv_search_static_FtpInit=no
 fi
-     rm conftest.$ac_ext
 
-     LIBS=$ac_func_search_save_LIBS
-     CFLAGS=$ac_func_search_static_save_CFLAGS
+            LIBS=$ac_func_search_libraries_save_LIBS
 
 
 fi
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_static_FtpInit" >&5
 $as_echo "$ac_cv_search_static_FtpInit" >&6; }
-  ac_res=$ac_cv_search_static_FtpInit
-  if test "$ac_res" != no; then :
-  test "$ac_res" = "none required" || LIBS="$ac_res $LIBS" HAVE_FTP=1;STATIC_LIBRARIES="$STATIC_LIBRARIES ftp";
+  ac_result=$ac_cv_search_static_FtpInit
+  if test "$ac_result" != no; then :
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" HAVE_FTP=1;STATIC_LIBRARIES="$STATIC_LIBRARIES ftp";
 $as_echo "#define HAVE_FTP 1" >>confdefs.h
 
 fi
@@ -7902,12 +7935,6 @@ if test $ENABLE_SSH = "yes"; then
   if test -d openssl -o -d "`readlink openssl`"; then
     if test "$ENABLE_PACKAGE_COMPILE" = "yes"; then
 
-      mkdir packages 2>/dev/null
-      mkdir packages/include 2>/dev/null
-      mkdir packages/lib 2>/dev/null
-      (cd packages; rm -f lib64; ln -s lib lib64 2>/dev/null)
-      cwd=`pwd`
-
 
   $as_echo_n "Compile openssl... " >&6
 
@@ -7974,8 +8001,6 @@ $as_echo "done" >&6; }
     fi
 
     if test $result -eq 1; then
-      CC_INCLUDES="$CC_INCLUDES $cwd/packages/include"
-      LIBRARY_PATHS="$LIBRARY_PATHS $cwd/packages/lib"
       STATIC_LIBRARIES="$STATIC_LIBRARIES crypto ssl"
     fi
   fi
@@ -7983,17 +8008,30 @@ $as_echo "done" >&6; }
   if test -d libssh2 -o -d "`readlink libssh2`"; then
     if test "$ENABLE_PACKAGE_COMPILE" = "yes"; then
 
-      mkdir packages 2>/dev/null
-      mkdir packages/include 2>/dev/null
-      mkdir packages/lib 2>/dev/null
-      (cd packages; rm -f lib64; ln -s lib lib64 2>/dev/null)
-      cwd=`pwd`
-
 
   $as_echo_n "Compile libssh2... " >&6
 
       result=1
       if test $result -eq 1; then
+        case $host_os in
+          mingw*)
+            # patch to disable usage of lib-command when RANLIB is set
+            # patch created with:
+            #   diff -u libssh2-1.4.2.org/m4/libtool.m4 libssh2-1.4.2/m4/libtool.m4 >  libssh2-1.4.2-libtool.patch
+            #   diff -u libssh2-1.4.2.org/aclocal.m4 libssh2-1.4.2/aclocal.m4       >> libssh2-1.4.2-libtool.patch
+            #   diff -u libssh2-1.4.2.org/configure libssh2-1.4.2/configure         >> libssh2-1.4.2-libtool.patch
+            if test -d packages/libssh2-1.4.2; then
+              (cd packages/libssh2-1.4.2; patch --batch -N -p1 <$cwd/misc/libssh2-1.4.2-libtool.patch) 1>/dev/null 2>/dev/null
+            else
+              { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: libssh2-1.4.2 not available - skipped libtool patch!" >&5
+$as_echo "$as_me: WARNING: libssh2-1.4.2 not available - skipped libtool patch!" >&2;}
+            fi
+            ;;
+          *)
+            ;;
+        esac
+        # patch created with:
+        #   diff -u ???
         (cd packages; patch --batch -N -p0 <$cwd/misc/libssh2-1.1-keepalive.patch) 1>/dev/null 2>/dev/null
       fi
       if test $result -eq 1; then
@@ -8016,13 +8054,20 @@ $as_echo "fail (make)" >&6; }
         fi
       fi
       if test $result -eq 1; then
-        (cd libssh2; make install-exec) 1>/dev/null 2>$tmpFile
+        (cd libssh2; make install-exec install-data) 1>/dev/null 2>$tmpFile
         if test $? -ne 0; then
           { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (install)" >&5
 $as_echo "fail (install)" >&6; }
           cat $tmpFile
           result=0
         fi
+        case $host_os in
+          mingw*)
+            (cd packages/lib; ln -s libssh2.lib libssh2.a) 1>/dev/null 2>/dev/null
+            ;;
+          *)
+            ;;
+        esac
       fi
       if test $result -eq 1; then
         { $as_echo "$as_me:${as_lineno-$LINENO}: result: done" >&5
@@ -8034,8 +8079,6 @@ $as_echo "done" >&6; }
 
     if test $result -eq 1; then
       HAVE_SSH2=1
-      CC_INCLUDES="$CC_INCLUDES $cwd/packages/include"
-      LIBRARY_PATHS="$LIBRARY_PATHS $cwd/packages/lib"
       STATIC_LIBRARIES="$STATIC_LIBRARIES ssh2"
 
 $as_echo "#define HAVE_SSH2 1" >>confdefs.h
@@ -8104,65 +8147,59 @@ fi
     else
       if test -z "$HAVE_SSH2"; then
 
+
     { $as_echo "$as_me:${as_lineno-$LINENO}: checking for static library containing libssh2_session_init_ex" >&5
 $as_echo_n "checking for static library containing libssh2_session_init_ex... " >&6; }
 if test "${ac_cv_search_static_libssh2_session_init_ex+set}" = set; then :
   $as_echo_n "(cached) " >&6
 else
 
-     ac_func_search_static_save_CFLAGS="$CFLAGS"; CFLAGS="$CFLAGS -static"
-     ac_func_search_static_save_LIBS=$LIBS
-     cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
+            ac_func_search_static_libraries_save_LIBS=$LIBS
 
-/* Override any GCC internal prototype to avoid an error.
-   Use char because int might match the return type of a GCC
-   builtin and then its argument prototype would still apply.  */
-#ifdef __cplusplus
-extern "C"
-#endif
-char libssh2_session_init_ex ();
+            for ac_library in ssh2 ""; do
+        if test -z "$ac_library"; then
+          ac_result="none required"
+        else
+          ac_result=-l$ac_library
+          LIBS="-l$ac_library $ac_func_search_static_libraries_save_LIBS"
+        fi
+
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo |sed 's/ /\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
 int
 main ()
 {
-return libssh2_session_init_ex ();
+return (int)libssh2_session_init_ex;
+
   ;
   return 0;
 }
+
 _ACEOF
-     for ac_lib in '' ssh2; do
-       if test -z "$ac_lib"; then
-         ac_res="none required"
-       else
-         ac_res=-l$ac_lib
-         LIBS="-l$ac_lib  $ac_func_search_save_LIBS"
-       fi
-       if ac_fn_c_try_link "$LINENO"; then :
-  ac_cv_search_static_libssh2_session_init_ex=$ac_res
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_search_static_libssh2_session_init_ex=$ac_result; break
+
 fi
 rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext
-       if test "${ac_cv_search_static_libssh2_session_init_ex+set}" = set; then :
-  break
-fi
-     done
-     if test "${ac_cv_search_static_libssh2_session_init_ex+set}" = set; then :
+    conftest$ac_exeext conftest.$ac_ext
+
+      done
+      if test "${ac_cv_search_static_libssh2_session_init_ex+set}" = set; then :
 
 else
   ac_cv_search_static_libssh2_session_init_ex=no
 fi
-     rm conftest.$ac_ext
 
-     LIBS=$ac_func_search_save_LIBS
-     CFLAGS=$ac_func_search_static_save_CFLAGS
+            LIBS=$ac_func_search_libraries_save_LIBS
 
 
 fi
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_static_libssh2_session_init_ex" >&5
 $as_echo "$ac_cv_search_static_libssh2_session_init_ex" >&6; }
-  ac_res=$ac_cv_search_static_libssh2_session_init_ex
-  if test "$ac_res" != no; then :
-  test "$ac_res" = "none required" || LIBS="$ac_res $LIBS" HAVE_SSH2=1;STATIC_LIBRARIES="$STATIC_LIBRARIES ssh2";
+  ac_result=$ac_cv_search_static_libssh2_session_init_ex
+  if test "$ac_result" != no; then :
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" HAVE_SSH2=1;STATIC_LIBRARIES="$STATIC_LIBRARIES ssh2";
 $as_echo "#define HAVE_SSH2 1" >>confdefs.h
 
 fi
@@ -8293,65 +8330,59 @@ fi
   else
     if test -z "$HAVE_CRYPTO"; then
 
+
     { $as_echo "$as_me:${as_lineno-$LINENO}: checking for static library containing MD5_Init" >&5
 $as_echo_n "checking for static library containing MD5_Init... " >&6; }
 if test "${ac_cv_search_static_MD5_Init+set}" = set; then :
   $as_echo_n "(cached) " >&6
 else
 
-     ac_func_search_static_save_CFLAGS="$CFLAGS"; CFLAGS="$CFLAGS -static"
-     ac_func_search_static_save_LIBS=$LIBS
-     cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
+            ac_func_search_static_libraries_save_LIBS=$LIBS
 
-/* Override any GCC internal prototype to avoid an error.
-   Use char because int might match the return type of a GCC
-   builtin and then its argument prototype would still apply.  */
-#ifdef __cplusplus
-extern "C"
-#endif
-char MD5_Init ();
+            for ac_library in crypto ""; do
+        if test -z "$ac_library"; then
+          ac_result="none required"
+        else
+          ac_result=-l$ac_library
+          LIBS="-l$ac_library $ac_func_search_static_libraries_save_LIBS"
+        fi
+
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo |sed 's/ /\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
 int
 main ()
 {
-return MD5_Init ();
+return (int)MD5_Init;
+
   ;
   return 0;
 }
+
 _ACEOF
-     for ac_lib in '' crypto; do
-       if test -z "$ac_lib"; then
-         ac_res="none required"
-       else
-         ac_res=-l$ac_lib
-         LIBS="-l$ac_lib  $ac_func_search_save_LIBS"
-       fi
-       if ac_fn_c_try_link "$LINENO"; then :
-  ac_cv_search_static_MD5_Init=$ac_res
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_search_static_MD5_Init=$ac_result; break
+
 fi
 rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext
-       if test "${ac_cv_search_static_MD5_Init+set}" = set; then :
-  break
-fi
-     done
-     if test "${ac_cv_search_static_MD5_Init+set}" = set; then :
+    conftest$ac_exeext conftest.$ac_ext
+
+      done
+      if test "${ac_cv_search_static_MD5_Init+set}" = set; then :
 
 else
   ac_cv_search_static_MD5_Init=no
 fi
-     rm conftest.$ac_ext
 
-     LIBS=$ac_func_search_save_LIBS
-     CFLAGS=$ac_func_search_static_save_CFLAGS
+            LIBS=$ac_func_search_libraries_save_LIBS
 
 
 fi
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_static_MD5_Init" >&5
 $as_echo "$ac_cv_search_static_MD5_Init" >&6; }
-  ac_res=$ac_cv_search_static_MD5_Init
-  if test "$ac_res" != no; then :
-  test "$ac_res" = "none required" || LIBS="$ac_res $LIBS" HAVE_CRYPTO=1;STATIC_LIBRARIES="$STATIC_LIBRARIES crypto";
+  ac_result=$ac_cv_search_static_MD5_Init
+  if test "$ac_result" != no; then :
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" HAVE_CRYPTO=1;STATIC_LIBRARIES="$STATIC_LIBRARIES crypto";
 $as_echo "#define HAVE_CRYPTO 1" >>confdefs.h
 
 fi
@@ -8424,12 +8455,6 @@ if test $ENABLE_TLS = "yes"; then
   if test -d gnutls -o -d "`readlink gnutls`"; then
     if test "$ENABLE_PACKAGE_COMPILE" = "yes"; then
 
-      mkdir packages 2>/dev/null
-      mkdir packages/include 2>/dev/null
-      mkdir packages/lib 2>/dev/null
-      (cd packages; rm -f lib64; ln -s lib lib64 2>/dev/null)
-      cwd=`pwd`
-
 
   $as_echo_n "Compile gnutls... " >&6
 
@@ -8471,8 +8496,6 @@ $as_echo "done" >&6; }
 
     if test $result -eq 1; then
       HAVE_GNU_TLS=1
-      CC_INCLUDES="$CC_INCLUDES $cwd/packages/include"
-      LIBRARY_PATHS="$LIBRARY_PATHS $cwd/packages/lib"
       STATIC_LIBRARIES="$STATIC_LIBRARIES gnutls"
 
 $as_echo "#define HAVE_GNU_TLS 1" >>confdefs.h
@@ -8608,65 +8631,59 @@ fi
     else
       if test -z "$HAVE_GNU_TLS"; then
 
+
     { $as_echo "$as_me:${as_lineno-$LINENO}: checking for static library containing gnutls_global_init" >&5
 $as_echo_n "checking for static library containing gnutls_global_init... " >&6; }
 if test "${ac_cv_search_static_gnutls_global_init+set}" = set; then :
   $as_echo_n "(cached) " >&6
 else
 
-     ac_func_search_static_save_CFLAGS="$CFLAGS"; CFLAGS="$CFLAGS -static"
-     ac_func_search_static_save_LIBS=$LIBS
-     cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
+            ac_func_search_static_libraries_save_LIBS=$LIBS
 
-/* Override any GCC internal prototype to avoid an error.
-   Use char because int might match the return type of a GCC
-   builtin and then its argument prototype would still apply.  */
-#ifdef __cplusplus
-extern "C"
-#endif
-char gnutls_global_init ();
+            for ac_library in gnutls ""; do
+        if test -z "$ac_library"; then
+          ac_result="none required"
+        else
+          ac_result=-l$ac_library
+          LIBS="-l$ac_library $ac_func_search_static_libraries_save_LIBS"
+        fi
+
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo |sed 's/ /\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
 int
 main ()
 {
-return gnutls_global_init ();
+return (int)gnutls_global_init;
+
   ;
   return 0;
 }
+
 _ACEOF
-     for ac_lib in '' gnutls; do
-       if test -z "$ac_lib"; then
-         ac_res="none required"
-       else
-         ac_res=-l$ac_lib
-         LIBS="-l$ac_lib  $ac_func_search_save_LIBS"
-       fi
-       if ac_fn_c_try_link "$LINENO"; then :
-  ac_cv_search_static_gnutls_global_init=$ac_res
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_search_static_gnutls_global_init=$ac_result; break
+
 fi
 rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext
-       if test "${ac_cv_search_static_gnutls_global_init+set}" = set; then :
-  break
-fi
-     done
-     if test "${ac_cv_search_static_gnutls_global_init+set}" = set; then :
+    conftest$ac_exeext conftest.$ac_ext
+
+      done
+      if test "${ac_cv_search_static_gnutls_global_init+set}" = set; then :
 
 else
   ac_cv_search_static_gnutls_global_init=no
 fi
-     rm conftest.$ac_ext
 
-     LIBS=$ac_func_search_save_LIBS
-     CFLAGS=$ac_func_search_static_save_CFLAGS
+            LIBS=$ac_func_search_libraries_save_LIBS
 
 
 fi
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_static_gnutls_global_init" >&5
 $as_echo "$ac_cv_search_static_gnutls_global_init" >&6; }
-  ac_res=$ac_cv_search_static_gnutls_global_init
-  if test "$ac_res" != no; then :
-  test "$ac_res" = "none required" || LIBS="$ac_res $LIBS" HAVE_GNU_TLS=1;STATIC_LIBRARIES="$STATIC_LIBRARIES gnutls";
+  ac_result=$ac_cv_search_static_gnutls_global_init
+  if test "$ac_result" != no; then :
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" HAVE_GNU_TLS=1;STATIC_LIBRARIES="$STATIC_LIBRARIES gnutls";
 $as_echo "#define HAVE_GNU_TLS 1" >>confdefs.h
 
 fi
@@ -8735,65 +8752,59 @@ fi
 
       if test -z "$HAVE_TASN1"; then
 
+
     { $as_echo "$as_me:${as_lineno-$LINENO}: checking for static library containing asn1_length_der" >&5
 $as_echo_n "checking for static library containing asn1_length_der... " >&6; }
 if test "${ac_cv_search_static_asn1_length_der+set}" = set; then :
   $as_echo_n "(cached) " >&6
 else
 
-     ac_func_search_static_save_CFLAGS="$CFLAGS"; CFLAGS="$CFLAGS -static"
-     ac_func_search_static_save_LIBS=$LIBS
-     cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
+            ac_func_search_static_libraries_save_LIBS=$LIBS
 
-/* Override any GCC internal prototype to avoid an error.
-   Use char because int might match the return type of a GCC
-   builtin and then its argument prototype would still apply.  */
-#ifdef __cplusplus
-extern "C"
-#endif
-char asn1_length_der ();
+            for ac_library in tasn1 ""; do
+        if test -z "$ac_library"; then
+          ac_result="none required"
+        else
+          ac_result=-l$ac_library
+          LIBS="-l$ac_library $ac_func_search_static_libraries_save_LIBS"
+        fi
+
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo |sed 's/ /\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
 int
 main ()
 {
-return asn1_length_der ();
+return (int)asn1_length_der;
+
   ;
   return 0;
 }
+
 _ACEOF
-     for ac_lib in '' tasn1; do
-       if test -z "$ac_lib"; then
-         ac_res="none required"
-       else
-         ac_res=-l$ac_lib
-         LIBS="-l$ac_lib  $ac_func_search_save_LIBS"
-       fi
-       if ac_fn_c_try_link "$LINENO"; then :
-  ac_cv_search_static_asn1_length_der=$ac_res
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_search_static_asn1_length_der=$ac_result; break
+
 fi
 rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext
-       if test "${ac_cv_search_static_asn1_length_der+set}" = set; then :
-  break
-fi
-     done
-     if test "${ac_cv_search_static_asn1_length_der+set}" = set; then :
+    conftest$ac_exeext conftest.$ac_ext
+
+      done
+      if test "${ac_cv_search_static_asn1_length_der+set}" = set; then :
 
 else
   ac_cv_search_static_asn1_length_der=no
 fi
-     rm conftest.$ac_ext
 
-     LIBS=$ac_func_search_save_LIBS
-     CFLAGS=$ac_func_search_static_save_CFLAGS
+            LIBS=$ac_func_search_libraries_save_LIBS
 
 
 fi
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_static_asn1_length_der" >&5
 $as_echo "$ac_cv_search_static_asn1_length_der" >&6; }
-  ac_res=$ac_cv_search_static_asn1_length_der
-  if test "$ac_res" != no; then :
-  test "$ac_res" = "none required" || LIBS="$ac_res $LIBS" HAVE_TASN1=1;STATIC_LIBRARIES="$STATIC_LIBRARIES tasn1";
+  ac_result=$ac_cv_search_static_asn1_length_der
+  if test "$ac_result" != no; then :
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" HAVE_TASN1=1;STATIC_LIBRARIES="$STATIC_LIBRARIES tasn1";
 $as_echo "#define HAVE_TASN1 1" >>confdefs.h
 
 fi
@@ -8867,12 +8878,6 @@ if test $ENABLE_ISO9660 = "yes"; then
   if test -d libiconv -o -d "`readlink libiconv`"; then
     if test "$ENABLE_PACKAGE_COMPILE" = "yes"; then
 
-      mkdir packages 2>/dev/null
-      mkdir packages/include 2>/dev/null
-      mkdir packages/lib 2>/dev/null
-      (cd packages; rm -f lib64; ln -s lib lib64 2>/dev/null)
-      cwd=`pwd`
-
 
   $as_echo_n "Compile libiconv... " >&6
 
@@ -8915,12 +8920,6 @@ $as_echo "done" >&6; }
 
   if test -d libcdio -o -d "`readlink libcdio`"; then
     if test "$ENABLE_PACKAGE_COMPILE" = "yes"; then
-
-      mkdir packages 2>/dev/null
-      mkdir packages/include 2>/dev/null
-      mkdir packages/lib 2>/dev/null
-      (cd packages; rm -f lib64; ln -s lib lib64 2>/dev/null)
-      cwd=`pwd`
 
 
   $as_echo_n "Compile libcdio... " >&6
@@ -8967,8 +8966,6 @@ $as_echo "done" >&6; }
 
     if test $result1 -eq 1 -a $result2 -eq 1; then
       HAVE_ISO9660=1
-      CC_INCLUDES="$CC_INCLUDES $cwd/packages/include"
-      LIBRARY_PATHS="$LIBRARY_PATHS $cwd/packages/lib"
       STATIC_LIBRARIES="$STATIC_LIBRARIES iso9660 cdio"
 
 $as_echo "#define HAVE_ISO9660 1" >>confdefs.h
@@ -9037,65 +9034,59 @@ fi
     else
       if test -z "$HAVE_ISO9660"; then
 
+
     { $as_echo "$as_me:${as_lineno-$LINENO}: checking for static library containing iso9660_open" >&5
 $as_echo_n "checking for static library containing iso9660_open... " >&6; }
 if test "${ac_cv_search_static_iso9660_open+set}" = set; then :
   $as_echo_n "(cached) " >&6
 else
 
-     ac_func_search_static_save_CFLAGS="$CFLAGS"; CFLAGS="$CFLAGS -static"
-     ac_func_search_static_save_LIBS=$LIBS
-     cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
+            ac_func_search_static_libraries_save_LIBS=$LIBS
 
-/* Override any GCC internal prototype to avoid an error.
-   Use char because int might match the return type of a GCC
-   builtin and then its argument prototype would still apply.  */
-#ifdef __cplusplus
-extern "C"
-#endif
-char iso9660_open ();
+            for ac_library in iso9660 ""; do
+        if test -z "$ac_library"; then
+          ac_result="none required"
+        else
+          ac_result=-l$ac_library
+          LIBS="-l$ac_library $ac_func_search_static_libraries_save_LIBS"
+        fi
+
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo |sed 's/ /\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
 int
 main ()
 {
-return iso9660_open ();
+return (int)iso9660_open;
+
   ;
   return 0;
 }
+
 _ACEOF
-     for ac_lib in '' iso9660; do
-       if test -z "$ac_lib"; then
-         ac_res="none required"
-       else
-         ac_res=-l$ac_lib
-         LIBS="-l$ac_lib  $ac_func_search_save_LIBS"
-       fi
-       if ac_fn_c_try_link "$LINENO"; then :
-  ac_cv_search_static_iso9660_open=$ac_res
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_search_static_iso9660_open=$ac_result; break
+
 fi
 rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext
-       if test "${ac_cv_search_static_iso9660_open+set}" = set; then :
-  break
-fi
-     done
-     if test "${ac_cv_search_static_iso9660_open+set}" = set; then :
+    conftest$ac_exeext conftest.$ac_ext
+
+      done
+      if test "${ac_cv_search_static_iso9660_open+set}" = set; then :
 
 else
   ac_cv_search_static_iso9660_open=no
 fi
-     rm conftest.$ac_ext
 
-     LIBS=$ac_func_search_save_LIBS
-     CFLAGS=$ac_func_search_static_save_CFLAGS
+            LIBS=$ac_func_search_libraries_save_LIBS
 
 
 fi
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_static_iso9660_open" >&5
 $as_echo "$ac_cv_search_static_iso9660_open" >&6; }
-  ac_res=$ac_cv_search_static_iso9660_open
-  if test "$ac_res" != no; then :
-  test "$ac_res" = "none required" || LIBS="$ac_res $LIBS" HAVE_ISO9660=1;STATIC_LIBRARIES="$STATIC_LIBRARIES iso9660 cdio";
+  ac_result=$ac_cv_search_static_iso9660_open
+  if test "$ac_result" != no; then :
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" HAVE_ISO9660=1;STATIC_LIBRARIES="$STATIC_LIBRARIES iso9660 cdio";
 $as_echo "#define HAVE_ISO9660 1" >>confdefs.h
 
 fi
@@ -9165,15 +9156,320 @@ fi
   fi
 fi
 
+if test $ENABLE_PCRE = "yes"; then
+  if test -d pcre -o -d "`readlink pcre`"; then
+    if test "$ENABLE_PACKAGE_COMPILE" = "yes"; then
+
+
+  $as_echo_n "Compile pcre... " >&6
+
+      result=1
+      if test $result -eq 1; then
+        case $host_os in
+          mingw*)
+            # patch to disable usage of lib-command when RANLIB is set
+            # patch created with:
+            #   diff -u pcre-8.32.org/m4/libtool.m4 pcre-8.32/m4/libtool.m4 >  pcre-8.32-libtool.patch
+            #   diff -u pcre-8.32.org/aclocal.m4 pcre-8.32/aclocal.m4       >> pcre-8.32-libtool.patch
+            #   diff -u pcre-8.32.org/Makefile.in pcre-8.32/Makefile.in     >> pcre-8.32-libtool.patch
+            #   diff -u pcre-8.32.org/configure pcre-8.32/configure         >> pcre-8.32-libtool.patch
+            if test -d packages/pcre-8.32; then
+              (cd packages/pcre-8.32; patch --batch -N -p1 <$cwd/misc/pcre-8.32-libtool.patch) 1>/dev/null 2>/dev/null
+            else
+              { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: pcre-8.32 not available - skipped libtool patch!" >&5
+$as_echo "$as_me: WARNING: pcre-8.32 not available - skipped libtool patch!" >&2;}
+            fi
+            ;;
+          *)
+            ;;
+        esac
+      fi
+      if test $result -eq 1; then
+        (cd pcre; ./configure --host=$host_cpu-$host_os --prefix=$cwd/packages --disable-shared --enable-static --enable-utf8) 1>/dev/null 2>$tmpFile
+        if test $? -ne 0; then
+          { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (configure)" >&5
+$as_echo "fail (configure)" >&6; }
+          cat $tmpFile
+          result=0
+        fi
+      fi
+      if test $result -eq 1; then
+        (cd pcre; make clean; make) 1>/dev/null 2>$tmpFile
+        if test $? -ne 0; then
+          { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (make)" >&5
+$as_echo "fail (make)" >&6; }
+          cat $tmpFile
+          result=0
+        fi
+      fi
+      if test $result -eq 1; then
+        (cd pcre; make install PREFIX=$cwd/packages) 1>/dev/null 2>$tmpFile
+        if test $? -ne 0; then
+          { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (install)" >&5
+$as_echo "fail (install)" >&6; }
+          cat $tmpFile
+          result=0
+        fi
+        case $host_os in
+          mingw*)
+            (cd packages/lib; ln -s libpcre.lib libpcre.a) 1>/dev/null 2>/dev/null
+            ;;
+          *)
+            ;;
+        esac
+      fi
+      if test $result -eq 1; then
+        { $as_echo "$as_me:${as_lineno-$LINENO}: result: done" >&5
+$as_echo "done" >&6; }
+      fi
+    else
+      result=1
+    fi
+
+    if test $result -eq 1; then
+      HAVE_PCRE=1
+      STATIC_LIBRARIES="$STATIC_LIBRARIES pcre"
+
+$as_echo "#define HAVE_PCRE 1" >>confdefs.h
+
+    fi
+  else
+        if test $ENABLE_LINK_DYNAMIC = "yes"; then
+      { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing pcre" >&5
+$as_echo_n "checking for library containing pcre... " >&6; }
+if test "${ac_cv_search_pcre+set}" = set; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_func_search_save_LIBS=$LIBS
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char pcre ();
+int
+main ()
+{
+return pcre ();
+  ;
+  return 0;
+}
+_ACEOF
+for ac_lib in '' pcre_compile; do
+  if test -z "$ac_lib"; then
+    ac_res="none required"
+  else
+    ac_res=-l$ac_lib
+    LIBS="-l$ac_lib  $ac_func_search_save_LIBS"
+  fi
+  if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_search_pcre=$ac_res
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext
+  if test "${ac_cv_search_pcre+set}" = set; then :
+  break
+fi
+done
+if test "${ac_cv_search_pcre+set}" = set; then :
+
+else
+  ac_cv_search_pcre=no
+fi
+rm conftest.$ac_ext
+LIBS=$ac_func_search_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_pcre" >&5
+$as_echo "$ac_cv_search_pcre" >&6; }
+ac_res=$ac_cv_search_pcre
+if test "$ac_res" != no; then :
+  test "$ac_res" = "none required" || LIBS="$ac_res $LIBS"
+  HAVE_PCRE=1;LIBRARIES="$LIBRARIES pcre";
+$as_echo "#define HAVE_PCRE 1" >>confdefs.h
+
+fi
+
+    else
+      if test -z "$HAVE_PCRE"; then
+
+
+    { $as_echo "$as_me:${as_lineno-$LINENO}: checking for static library containing pcre" >&5
+$as_echo_n "checking for static library containing pcre... " >&6; }
+if test "${ac_cv_search_static_pcre+set}" = set; then :
+  $as_echo_n "(cached) " >&6
+else
+
+            ac_func_search_static_libraries_save_LIBS=$LIBS
+
+            for ac_library in pcre_compile ""; do
+        if test -z "$ac_library"; then
+          ac_result="none required"
+        else
+          ac_result=-l$ac_library
+          LIBS="-l$ac_library $ac_func_search_static_libraries_save_LIBS"
+        fi
+
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo |sed 's/ /\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
+int
+main ()
+{
+return (int)pcre;
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_search_static_pcre=$ac_result; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+
+      done
+      if test "${ac_cv_search_static_pcre+set}" = set; then :
+
+else
+  ac_cv_search_static_pcre=no
+fi
+
+            LIBS=$ac_func_search_libraries_save_LIBS
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_static_pcre" >&5
+$as_echo "$ac_cv_search_static_pcre" >&6; }
+  ac_result=$ac_cv_search_static_pcre
+  if test "$ac_result" != no; then :
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" HAVE_PCRE=1;STATIC_LIBRARIES="$STATIC_LIBRARIES pcre";
+$as_echo "#define HAVE_PCRE 1" >>confdefs.h
+
+fi
+
+      fi
+      if test -z "$HAVE_PCRE"; then
+        { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing pcre" >&5
+$as_echo_n "checking for library containing pcre... " >&6; }
+if test "${ac_cv_search_pcre+set}" = set; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_func_search_save_LIBS=$LIBS
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char pcre ();
+int
+main ()
+{
+return pcre ();
+  ;
+  return 0;
+}
+_ACEOF
+for ac_lib in '' pcre_compile; do
+  if test -z "$ac_lib"; then
+    ac_res="none required"
+  else
+    ac_res=-l$ac_lib
+    LIBS="-l$ac_lib  $ac_func_search_save_LIBS"
+  fi
+  if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_search_pcre=$ac_res
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext
+  if test "${ac_cv_search_pcre+set}" = set; then :
+  break
+fi
+done
+if test "${ac_cv_search_pcre+set}" = set; then :
+
+else
+  ac_cv_search_pcre=no
+fi
+rm conftest.$ac_ext
+LIBS=$ac_func_search_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_pcre" >&5
+$as_echo "$ac_cv_search_pcre" >&6; }
+ac_res=$ac_cv_search_pcre
+if test "$ac_res" != no; then :
+  test "$ac_res" = "none required" || LIBS="$ac_res $LIBS"
+  HAVE_PCRE=1;LIBRARIES="$LIBRARIES pcre";
+$as_echo "#define HAVE_PCRE 1" >>confdefs.h
+
+fi
+
+      fi
+    fi
+  fi
+fi
+
+case "$host_os" in
+  windows*|mingw*)
+    if test $ENABLE_PTHREADS_W32 = "yes"; then
+      if test -d pthreads-w32 -o -d "`readlink pthreads-w32`"; then
+        if test "$ENABLE_PACKAGE_COMPILE" = "yes"; then
+
+
+  $as_echo_n "Compile pthreads-w32... " >&6
+
+          result=1
+          if test $result -eq 1; then
+            if test "$ENABLE_DEBUG" = "yes"; then
+              (cd pthreads-w32; make clean; make CC="$CC" AS="$AS" AR="$AR" RANLIB="$RANLIB" RC="$RC" GC-static-debug) 1>/dev/null 2>$tmpFile
+            else
+              (cd pthreads-w32; make clean; make CC="$CC" AS="$AS" AR="$AR" RANLIB="$RANLIB" RC="$RC" GC-static) 1>/dev/null 2>$tmpFile
+            fi
+            if test $? -ne 0; then
+              { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (make)" >&5
+$as_echo "fail (make)" >&6; }
+              cat $tmpFile
+              result=0
+            fi
+          fi
+          if test $result -eq 1; then
+            (cd pthreads-w32; cp pthread.h sched.h semaphore.h $cwd/packages/include) 1>/dev/null
+            (cd pthreads-w32; cp libpthreadGC2.a $cwd/packages/lib) 1>/dev/null
+          fi
+          if test $result -eq 1; then
+            { $as_echo "$as_me:${as_lineno-$LINENO}: result: done" >&5
+$as_echo "done" >&6; }
+          fi
+        else
+          result=1
+        fi
+
+        if test $result -eq 1; then
+          HAVE_PCRE=1
+          STATIC_LIBRARIES="$STATIC_LIBRARIES pthreadGC2"
+
+$as_echo "#define HAVE_PTHREADS_W32 1" >>confdefs.h
+
+        fi
+      fi
+    fi
+    ;;
+  *)
+    ;;
+esac
+
 if test $ENABLE_BREAKPAD = "yes"; then
   if test -d breakpad -o -d "`readlink breakpad`"; then
     if test "$ENABLE_PACKAGE_COMPILE" = "yes"; then
-
-      mkdir packages 2>/dev/null
-      mkdir packages/include 2>/dev/null
-      mkdir packages/lib 2>/dev/null
-      (cd packages; rm -f lib64; ln -s lib lib64 2>/dev/null)
-      cwd=`pwd`
 
 
   $as_echo_n "Compile breakpad... " >&6
@@ -9220,8 +9516,6 @@ $as_echo "done" >&6; }
 
     if test $result -eq 1; then
       HAVE_BREAKPAD=1
-      CC_INCLUDES="$CC_INCLUDES $cwd/packages/breakpad/src"
-      LIBRARY_PATHS="$LIBRARY_PATHS $cwd/packages/lib"
       STATIC_LIBRARIES="$STATIC_LIBRARIES breakpad_client"
 
 $as_echo "#define HAVE_BREAKPAD 1" >>confdefs.h
@@ -9336,65 +9630,59 @@ fi
     else
       if test -z "$HAVE_BREAKPAD"; then
 
+
     { $as_echo "$as_me:${as_lineno-$LINENO}: checking for static library containing breakpad_client" >&5
 $as_echo_n "checking for static library containing breakpad_client... " >&6; }
 if test "${ac_cv_search_static_breakpad_client+set}" = set; then :
   $as_echo_n "(cached) " >&6
 else
 
-     ac_func_search_static_save_CFLAGS="$CFLAGS"; CFLAGS="$CFLAGS -static"
-     ac_func_search_static_save_LIBS=$LIBS
-     cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
+            ac_func_search_static_libraries_save_LIBS=$LIBS
 
-/* Override any GCC internal prototype to avoid an error.
-   Use char because int might match the return type of a GCC
-   builtin and then its argument prototype would still apply.  */
-#ifdef __cplusplus
-extern "C"
-#endif
-char breakpad_client ();
+            for ac_library in ExceptionHandler ""; do
+        if test -z "$ac_library"; then
+          ac_result="none required"
+        else
+          ac_result=-l$ac_library
+          LIBS="-l$ac_library $ac_func_search_static_libraries_save_LIBS"
+        fi
+
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo |sed 's/ /\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
 int
 main ()
 {
-return breakpad_client ();
+return (int)breakpad_client;
+
   ;
   return 0;
 }
+
 _ACEOF
-     for ac_lib in '' ExceptionHandler; do
-       if test -z "$ac_lib"; then
-         ac_res="none required"
-       else
-         ac_res=-l$ac_lib
-         LIBS="-l$ac_lib  $ac_func_search_save_LIBS"
-       fi
-       if ac_fn_c_try_link "$LINENO"; then :
-  ac_cv_search_static_breakpad_client=$ac_res
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_search_static_breakpad_client=$ac_result; break
+
 fi
 rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext
-       if test "${ac_cv_search_static_breakpad_client+set}" = set; then :
-  break
-fi
-     done
-     if test "${ac_cv_search_static_breakpad_client+set}" = set; then :
+    conftest$ac_exeext conftest.$ac_ext
+
+      done
+      if test "${ac_cv_search_static_breakpad_client+set}" = set; then :
 
 else
   ac_cv_search_static_breakpad_client=no
 fi
-     rm conftest.$ac_ext
 
-     LIBS=$ac_func_search_save_LIBS
-     CFLAGS=$ac_func_search_static_save_CFLAGS
+            LIBS=$ac_func_search_libraries_save_LIBS
 
 
 fi
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_static_breakpad_client" >&5
 $as_echo "$ac_cv_search_static_breakpad_client" >&6; }
-  ac_res=$ac_cv_search_static_breakpad_client
-  if test "$ac_res" != no; then :
-  test "$ac_res" = "none required" || LIBS="$ac_res $LIBS" HAVE_BREAKPAD=1;STATIC_LIBRARIES="$STATIC_LIBRARIES breakpad_client";
+  ac_result=$ac_cv_search_static_breakpad_client
+  if test "$ac_result" != no; then :
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" HAVE_BREAKPAD=1;STATIC_LIBRARIES="$STATIC_LIBRARIES breakpad_client";
 $as_echo "#define HAVE_BREAKPAD 1" >>confdefs.h
 
 fi
@@ -9537,6 +9825,7 @@ for z in $LIBRARIES $STATIC_LIBRARIES ""; do
   fi
 done
 
+# check required defines
 
 
   { $as_echo "$as_me:${as_lineno-$LINENO}: checking for needed pthread defines" >&5
@@ -9569,72 +9858,323 @@ EOF
 fi
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_extended_pthread_defines" >&5
 $as_echo "$ac_cv_extended_pthread_defines" >&6; }
-ac_fn_c_check_func "$LINENO" "pthread_attr_setname" "ac_cv_func_pthread_attr_setname"
-if test "x$ac_cv_func_pthread_attr_setname" = x""yes; then :
 
-$as_echo "#define HAVE_PTHREAD_ATTR_SETNAME 1" >>confdefs.h
-
-fi
+# check constants
 
 
-ac_fn_c_check_func "$LINENO" "gethostbyname" "ac_cv_func_gethostbyname"
-if test "x$ac_cv_func_gethostbyname" = x""yes; then :
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking if constant S_IRUSR is available" >&5
+$as_echo_n "checking if constant S_IRUSR is available... " >&6; }
+if test "${ac_cv_const_S_IRUSR+set}" = set; then :
+  $as_echo_n "(cached) " >&6
+else
 
-$as_echo "#define HAVE_GETHOSTBYNAME 1" >>confdefs.h
+      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo sys/stat.h|sed 's/ /\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
+int
+main ()
+{
+printf("%d",S_IRUSR); return 0;
 
-fi
+  ;
+  return 0;
+}
 
-ac_fn_c_check_func "$LINENO" "gethostbyaddr" "ac_cv_func_gethostbyaddr"
-if test "x$ac_cv_func_gethostbyaddr" = x""yes; then :
-
-$as_echo "#define HAVE_GETHOSTBYADDR 1" >>confdefs.h
-
-fi
-
-ac_fn_c_check_func "$LINENO" "gethostbyname_r" "ac_cv_func_gethostbyname_r"
-if test "x$ac_cv_func_gethostbyname_r" = x""yes; then :
-
-$as_echo "#define HAVE_GETHOSTBYNAME_R 1" >>confdefs.h
-
-fi
-
-ac_fn_c_check_func "$LINENO" "gethostbyaddr_r" "ac_cv_func_gethostbyaddr_r"
-if test "x$ac_cv_func_gethostbyaddr_r" = x""yes; then :
-
-$as_echo "#define HAVE_GETHOSTBYADDR_R 1" >>confdefs.h
-
-fi
-
-
-ac_fn_c_check_func "$LINENO" "fseeko64" "ac_cv_func_fseeko64"
-if test "x$ac_cv_func_fseeko64" = x""yes; then :
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  ac_cv_const_S_IRUSR=yes;
+$as_echo "#define HAVE_S_IRUSR 1" >>confdefs.h
 
 else
-  as_fn_error $? "function fseeko64() is not available" "$LINENO" 5
-fi
+  ac_cv_const_S_IRUSR=no;
 
-ac_fn_c_check_func "$LINENO" "ftello64" "ac_cv_func_ftello64"
-if test "x$ac_cv_func_ftello64" = x""yes; then :
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_const_S_IRUSR" >&5
+$as_echo "$ac_cv_const_S_IRUSR" >&6; }
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking if constant S_IWUSR is available" >&5
+$as_echo_n "checking if constant S_IWUSR is available... " >&6; }
+if test "${ac_cv_const_S_IWUSR+set}" = set; then :
+  $as_echo_n "(cached) " >&6
+else
+
+      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo sys/stat.h|sed 's/ /\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
+int
+main ()
+{
+printf("%d",S_IWUSR); return 0;
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  ac_cv_const_S_IWUSR=yes;
+$as_echo "#define HAVE_S_IWUSR 1" >>confdefs.h
 
 else
-  as_fn_error $? "function ftello64() is not available" "$LINENO" 5
-fi
-
-ac_fn_c_check_func "$LINENO" "fdatasync" "ac_cv_func_fdatasync"
-if test "x$ac_cv_func_fdatasync" = x""yes; then :
-
-$as_echo "#define HAVE_FDATASYNC 1" >>confdefs.h
+  ac_cv_const_S_IWUSR=no;
 
 fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
 
-ac_fn_c_check_func "$LINENO" "posix_fadvise" "ac_cv_func_posix_fadvise"
-if test "x$ac_cv_func_posix_fadvise" = x""yes; then :
-
-$as_echo "#define HAVE_POSIX_FADVISE 1" >>confdefs.h
 
 fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_const_S_IWUSR" >&5
+$as_echo "$ac_cv_const_S_IWUSR" >&6; }
 
 
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking if constant S_IXUSR is available" >&5
+$as_echo_n "checking if constant S_IXUSR is available... " >&6; }
+if test "${ac_cv_const_S_IXUSR+set}" = set; then :
+  $as_echo_n "(cached) " >&6
+else
+
+      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo sys/stat.h|sed 's/ /\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
+int
+main ()
+{
+printf("%d",S_IXUSR); return 0;
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  ac_cv_const_S_IXUSR=yes;
+$as_echo "#define HAVE_S_IXUSR 1" >>confdefs.h
+
+else
+  ac_cv_const_S_IXUSR=no;
+
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_const_S_IXUSR" >&5
+$as_echo "$ac_cv_const_S_IXUSR" >&6; }
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking if constant S_IRGRP is available" >&5
+$as_echo_n "checking if constant S_IRGRP is available... " >&6; }
+if test "${ac_cv_const_S_IRGRP+set}" = set; then :
+  $as_echo_n "(cached) " >&6
+else
+
+      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo sys/stat.h|sed 's/ /\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
+int
+main ()
+{
+printf("%d",S_IRGRP); return 0;
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  ac_cv_const_S_IRGRP=yes;
+$as_echo "#define HAVE_S_IRGRP 1" >>confdefs.h
+
+else
+  ac_cv_const_S_IRGRP=no;
+
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_const_S_IRGRP" >&5
+$as_echo "$ac_cv_const_S_IRGRP" >&6; }
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking if constant S_IWGRP is available" >&5
+$as_echo_n "checking if constant S_IWGRP is available... " >&6; }
+if test "${ac_cv_const_S_IWGRP+set}" = set; then :
+  $as_echo_n "(cached) " >&6
+else
+
+      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo sys/stat.h|sed 's/ /\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
+int
+main ()
+{
+printf("%d",S_IWGRP); return 0;
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  ac_cv_const_S_IWGRP=yes;
+$as_echo "#define HAVE_S_IWGRP 1" >>confdefs.h
+
+else
+  ac_cv_const_S_IWGRP=no;
+
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_const_S_IWGRP" >&5
+$as_echo "$ac_cv_const_S_IWGRP" >&6; }
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking if constant S_IXGRP is available" >&5
+$as_echo_n "checking if constant S_IXGRP is available... " >&6; }
+if test "${ac_cv_const_S_IXGRP+set}" = set; then :
+  $as_echo_n "(cached) " >&6
+else
+
+      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo sys/stat.h|sed 's/ /\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
+int
+main ()
+{
+printf("%d",S_IXGRP); return 0;
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  ac_cv_const_S_IXGRP=yes;
+$as_echo "#define HAVE_S_IXGRP 1" >>confdefs.h
+
+else
+  ac_cv_const_S_IXGRP=no;
+
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_const_S_IXGRP" >&5
+$as_echo "$ac_cv_const_S_IXGRP" >&6; }
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking if constant S_IROTH is available" >&5
+$as_echo_n "checking if constant S_IROTH is available... " >&6; }
+if test "${ac_cv_const_S_IROTH+set}" = set; then :
+  $as_echo_n "(cached) " >&6
+else
+
+      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo sys/stat.h|sed 's/ /\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
+int
+main ()
+{
+printf("%d",S_IROTH); return 0;
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  ac_cv_const_S_IROTH=yes;
+$as_echo "#define HAVE_S_IROTH 1" >>confdefs.h
+
+else
+  ac_cv_const_S_IROTH=no;
+
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_const_S_IROTH" >&5
+$as_echo "$ac_cv_const_S_IROTH" >&6; }
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking if constant S_IWOTH is available" >&5
+$as_echo_n "checking if constant S_IWOTH is available... " >&6; }
+if test "${ac_cv_const_S_IWOTH+set}" = set; then :
+  $as_echo_n "(cached) " >&6
+else
+
+      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo sys/stat.h|sed 's/ /\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
+int
+main ()
+{
+printf("%d",S_IWOTH); return 0;
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  ac_cv_const_S_IWOTH=yes;
+$as_echo "#define HAVE_S_IWOTH 1" >>confdefs.h
+
+else
+  ac_cv_const_S_IWOTH=no;
+
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_const_S_IWOTH" >&5
+$as_echo "$ac_cv_const_S_IWOTH" >&6; }
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking if constant S_IXOTH is available" >&5
+$as_echo_n "checking if constant S_IXOTH is available... " >&6; }
+if test "${ac_cv_const_S_IXOTH+set}" = set; then :
+  $as_echo_n "(cached) " >&6
+else
+
+      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo sys/stat.h|sed 's/ /\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
+int
+main ()
+{
+printf("%d",S_IXOTH); return 0;
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  ac_cv_const_S_IXOTH=yes;
+$as_echo "#define HAVE_S_IXOTH 1" >>confdefs.h
+
+else
+  ac_cv_const_S_IXOTH=no;
+
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_const_S_IXOTH" >&5
+$as_echo "$ac_cv_const_S_IXOTH" >&6; }
 
 
   { $as_echo "$as_me:${as_lineno-$LINENO}: checking if constant FS_IOC_GETFLAGS is available" >&5
@@ -9643,35 +10183,28 @@ if test "${ac_cv_const_FS_IOC_GETFLAGS+set}" = set; then :
   $as_echo_n "(cached) " >&6
 else
 
-      cat << \EOF > conftest.c
-#include <stdlib.h>
-#include <stdio.h>
-EOF
-for ac_header in linux/fs.h ""; do
-  if test -n "$ac_header"; then
-    echo "#include <$ac_header>" >> conftest.c
-  fi
-done
-      cat << \EOF >> conftest.c
-int main(void) { printf("%d",FS_IOC_GETFLAGS); return 0; }
-EOF
+      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo linux/fs.h|sed 's/ /\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
+int
+main ()
+{
+printf("%d",FS_IOC_GETFLAGS); return 0;
 
-      ${CC} ${CFLAGS} -c conftest.c -o conftest.o 1>/dev/null 2>/dev/null; rc=$?
-      if test $rc -eq 0; then
-        ac_available=yes
-      else
-        ac_available=no
-      fi
-      if test "$ac_available" = "yes"; then :
+  ;
+  return 0;
+}
 
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  ac_cv_const_FS_IOC_GETFLAGS=yes;
 $as_echo "#define HAVE_FS_IOC_GETFLAGS 1" >>confdefs.h
 
-elif :; then :
+else
+  ac_cv_const_FS_IOC_GETFLAGS=no;
 
 fi
-      ac_cv_const_FS_IOC_GETFLAGS=$ac_available
-
-      rm -f conftest.c conftest.o
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
 
 
 fi
@@ -9685,35 +10218,28 @@ if test "${ac_cv_const_FS_COMPR_FL+set}" = set; then :
   $as_echo_n "(cached) " >&6
 else
 
-      cat << \EOF > conftest.c
-#include <stdlib.h>
-#include <stdio.h>
-EOF
-for ac_header in linux/fs.h ""; do
-  if test -n "$ac_header"; then
-    echo "#include <$ac_header>" >> conftest.c
-  fi
-done
-      cat << \EOF >> conftest.c
-int main(void) { printf("%d",FS_COMPR_FL); return 0; }
-EOF
+      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo linux/fs.h|sed 's/ /\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
+int
+main ()
+{
+printf("%d",FS_COMPR_FL); return 0;
 
-      ${CC} ${CFLAGS} -c conftest.c -o conftest.o 1>/dev/null 2>/dev/null; rc=$?
-      if test $rc -eq 0; then
-        ac_available=yes
-      else
-        ac_available=no
-      fi
-      if test "$ac_available" = "yes"; then :
+  ;
+  return 0;
+}
 
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  ac_cv_const_FS_COMPR_FL=yes;
 $as_echo "#define HAVE_FS_COMPR_FL 1" >>confdefs.h
 
-elif :; then :
+else
+  ac_cv_const_FS_COMPR_FL=no;
 
 fi
-      ac_cv_const_FS_COMPR_FL=$ac_available
-
-      rm -f conftest.c conftest.o
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
 
 
 fi
@@ -9727,35 +10253,28 @@ if test "${ac_cv_const_FS_NOCOMP_FL+set}" = set; then :
   $as_echo_n "(cached) " >&6
 else
 
-      cat << \EOF > conftest.c
-#include <stdlib.h>
-#include <stdio.h>
-EOF
-for ac_header in linux/fs.h ""; do
-  if test -n "$ac_header"; then
-    echo "#include <$ac_header>" >> conftest.c
-  fi
-done
-      cat << \EOF >> conftest.c
-int main(void) { printf("%d",FS_NOCOMP_FL); return 0; }
-EOF
+      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo linux/fs.h|sed 's/ /\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
+int
+main ()
+{
+printf("%d",FS_NOCOMP_FL); return 0;
 
-      ${CC} ${CFLAGS} -c conftest.c -o conftest.o 1>/dev/null 2>/dev/null; rc=$?
-      if test $rc -eq 0; then
-        ac_available=yes
-      else
-        ac_available=no
-      fi
-      if test "$ac_available" = "yes"; then :
+  ;
+  return 0;
+}
 
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  ac_cv_const_FS_NOCOMP_FL=yes;
 $as_echo "#define HAVE_FS_NOCOMP_FL 1" >>confdefs.h
 
-elif :; then :
+else
+  ac_cv_const_FS_NOCOMP_FL=no;
 
 fi
-      ac_cv_const_FS_NOCOMP_FL=$ac_available
-
-      rm -f conftest.c conftest.o
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
 
 
 fi
@@ -9769,48 +10288,139 @@ if test "${ac_cv_const_FS_NODUMP_FL+set}" = set; then :
   $as_echo_n "(cached) " >&6
 else
 
-      cat << \EOF > conftest.c
-#include <stdlib.h>
-#include <stdio.h>
-EOF
-for ac_header in linux/fs.h ""; do
-  if test -n "$ac_header"; then
-    echo "#include <$ac_header>" >> conftest.c
-  fi
-done
-      cat << \EOF >> conftest.c
-int main(void) { printf("%d",FS_NODUMP_FL); return 0; }
-EOF
+      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo linux/fs.h|sed 's/ /\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
+int
+main ()
+{
+printf("%d",FS_NODUMP_FL); return 0;
 
-      ${CC} ${CFLAGS} -c conftest.c -o conftest.o 1>/dev/null 2>/dev/null; rc=$?
-      if test $rc -eq 0; then
-        ac_available=yes
-      else
-        ac_available=no
-      fi
-      if test "$ac_available" = "yes"; then :
+  ;
+  return 0;
+}
 
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  ac_cv_const_FS_NODUMP_FL=yes;
 $as_echo "#define HAVE_FS_NODUMP_FL 1" >>confdefs.h
 
-elif :; then :
+else
+  ac_cv_const_FS_NODUMP_FL=no;
 
 fi
-      ac_cv_const_FS_NODUMP_FL=$ac_available
-
-      rm -f conftest.c conftest.o
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
 
 
 fi
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_const_FS_NODUMP_FL" >&5
 $as_echo "$ac_cv_const_FS_NODUMP_FL" >&6; }
 
-ac_fn_c_check_func "$LINENO" "zlibVersion" "ac_cv_func_zlibVersion"
-if test "x$ac_cv_func_zlibVersion" = x""yes; then :
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking if constant BLKSSZGET is available" >&5
+$as_echo_n "checking if constant BLKSSZGET is available... " >&6; }
+if test "${ac_cv_const_BLKSSZGET+set}" = set; then :
+  $as_echo_n "(cached) " >&6
+else
+
+      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo sys/ioctl.h|sed 's/ /\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
+int
+main ()
+{
+printf("%d",BLKSSZGET); return 0;
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  ac_cv_const_BLKSSZGET=yes;
+$as_echo "#define HAVE_BLKSSZGET 1" >>confdefs.h
 
 else
-  as_fn_error $? "function zlibVersion() is not available" "$LINENO" 5
-fi
+  ac_cv_const_BLKSSZGET=no;
 
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_const_BLKSSZGET" >&5
+$as_echo "$ac_cv_const_BLKSSZGET" >&6; }
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking if constant BLKGETSIZE is available" >&5
+$as_echo_n "checking if constant BLKGETSIZE is available... " >&6; }
+if test "${ac_cv_const_BLKGETSIZE+set}" = set; then :
+  $as_echo_n "(cached) " >&6
+else
+
+      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo sys/ioctl.h|sed 's/ /\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
+int
+main ()
+{
+printf("%d",BLKGETSIZE); return 0;
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  ac_cv_const_BLKGETSIZE=yes;
+$as_echo "#define HAVE_BLKGETSIZE 1" >>confdefs.h
+
+else
+  ac_cv_const_BLKGETSIZE=no;
+
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_const_BLKGETSIZE" >&5
+$as_echo "$ac_cv_const_BLKGETSIZE" >&6; }
+
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking if constant SIGPIPE is available" >&5
+$as_echo_n "checking if constant SIGPIPE is available... " >&6; }
+if test "${ac_cv_const_SIGPIPE+set}" = set; then :
+  $as_echo_n "(cached) " >&6
+else
+
+      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo signal.h|sed 's/ /\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
+int
+main ()
+{
+printf("%d",SIGPIPE); return 0;
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  ac_cv_const_SIGPIPE=yes;
+$as_echo "#define HAVE_SIGPIPE 1" >>confdefs.h
+
+else
+  ac_cv_const_SIGPIPE=no;
+
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_const_SIGPIPE" >&5
+$as_echo "$ac_cv_const_SIGPIPE" >&6; }
 
 if test $ENABLE_SSH = "yes"; then
 
@@ -9821,33 +10431,26 @@ if test "${ac_cv_const_CRYPTO_LOCK+set}" = set; then :
   $as_echo_n "(cached) " >&6
 else
 
-      cat << \EOF > conftest.c
-#include <stdlib.h>
-#include <stdio.h>
-EOF
-for ac_header in openssl/crypto.h ""; do
-  if test -n "$ac_header"; then
-    echo "#include <$ac_header>" >> conftest.c
-  fi
-done
-      cat << \EOF >> conftest.c
-int main(void) { printf("%d",CRYPTO_LOCK); return 0; }
-EOF
+      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo openssl/crypto.h|sed 's/ /\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
+int
+main ()
+{
+printf("%d",CRYPTO_LOCK); return 0;
 
-      ${CC} ${CFLAGS} -c conftest.c -o conftest.o 1>/dev/null 2>/dev/null; rc=$?
-      if test $rc -eq 0; then
-        ac_available=yes
-      else
-        ac_available=no
-      fi
-      if test "$ac_available" = "yes"; then :
+  ;
+  return 0;
+}
 
-elif :; then :
-  as_fn_error $? "constant CRYPTO_LOCK is not available" "$LINENO" 5
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  ac_cv_const_CRYPTO_LOCK=yes;
+else
+  ac_cv_const_CRYPTO_LOCK=no; as_fn_error $? "constant CRYPTO_LOCK is not available" "$LINENO" 5
+
 fi
-      ac_cv_const_CRYPTO_LOCK=$ac_available
-
-      rm -f conftest.c conftest.o
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
 
 
 fi
@@ -9855,90 +10458,3647 @@ fi
 $as_echo "$ac_cv_const_CRYPTO_LOCK" >&6; }
 fi
 
-ac_fn_c_check_func "$LINENO" "CRYPTO_set_id_callback" "ac_cv_func_CRYPTO_set_id_callback"
-if test "x$ac_cv_func_CRYPTO_set_id_callback" = x""yes; then :
+# check types
+ac_fn_c_check_type "$LINENO" "struct stat64" "ac_cv_type_struct_stat64" "#include <sys/stat.h>
+"
+if test "x$ac_cv_type_struct_stat64" = x""yes; then :
 
+$as_echo "#define HAVE_STAT64 1" >>confdefs.h
+
+fi
+
+ac_fn_c_check_type "$LINENO" "struct __stat64" "ac_cv_type_struct___stat64" "#include <sys/stat.h>
+"
+if test "x$ac_cv_type_struct___stat64" = x""yes; then :
+
+$as_echo "#define HAVE___STAT64 1" >>confdefs.h
+
+fi
+
+ac_fn_c_check_type "$LINENO" "struct _stati64" "ac_cv_type_struct__stati64" "#include <sys/stat.h>
+"
+if test "x$ac_cv_type_struct__stati64" = x""yes; then :
+
+$as_echo "#define HAVE__STATI64 1" >>confdefs.h
+
+fi
+
+
+# check functions
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for pthread_attr_setname" >&5
+$as_echo_n "checking for pthread_attr_setname... " >&6; }
+if test "${ac_cv_func_pthread_attr_setname+set}" = set; then :
+  $as_echo_n "(cached) " >&6
 else
+
+#set -x
+      ac_cv_func_pthread_attr_setname="no"
+      echo > conftest.log
+      for ac_headers in  ""; do
+if false; then
+        cat << \EOF > conftest.c
+EOF
+        if test -n "$ac_headers"; then
+          for ac_header in `echo $ac_headers|sed 's/+/ /g'` ""; do
+            if test -n "$ac_header"; then
+              echo "#include <$ac_header>" >> conftest.c
+            fi
+          done
+        else
+          echo "extern int pthread_attr_setname();" >> conftest.c
+        fi
+        cat << \EOF >> conftest.c
+int main(void) { return (int)pthread_attr_setname; }
+EOF
+
+#cat conftest.$ac_ext
+        ${CC} ${CFLAGS} -o conftest$ac_exeext conftest.$ac_ext ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
+        if test $rc -eq 0; then
+          ac_cv_func_pthread_attr_setname=yes
+          break
+        fi
+else
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo $ac_headers|sed 's/+/\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
+int
+main ()
+{
+return (int)pthread_attr_setname;
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  ac_cv_func_pthread_attr_setname=yes; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+fi
+      done
+      rm -f conftest.$ac_ext conftest$ac_exeext
+#set +x
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_func_pthread_attr_setname" >&5
+$as_echo "$ac_cv_func_pthread_attr_setname" >&6; }
+  if test "$ac_cv_func_pthread_attr_setname" != no; then :
+
+$as_echo "#define HAVE_PTHREAD_ATTR_SETNAME 1" >>confdefs.h
+
+elif :; then :
+
+fi
+
+
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for gethostbyaddr" >&5
+$as_echo_n "checking for gethostbyaddr... " >&6; }
+if test "${ac_cv_func_gethostbyaddr+set}" = set; then :
+  $as_echo_n "(cached) " >&6
+else
+
+#set -x
+      ac_cv_func_gethostbyaddr="no"
+      echo > conftest.log
+      for ac_headers in winsock2.h ""; do
+if false; then
+        cat << \EOF > conftest.c
+EOF
+        if test -n "$ac_headers"; then
+          for ac_header in `echo $ac_headers|sed 's/+/ /g'` ""; do
+            if test -n "$ac_header"; then
+              echo "#include <$ac_header>" >> conftest.c
+            fi
+          done
+        else
+          echo "extern int gethostbyaddr();" >> conftest.c
+        fi
+        cat << \EOF >> conftest.c
+int main(void) { return (int)gethostbyaddr; }
+EOF
+
+#cat conftest.$ac_ext
+        ${CC} ${CFLAGS} -o conftest$ac_exeext conftest.$ac_ext ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
+        if test $rc -eq 0; then
+          ac_cv_func_gethostbyaddr=yes
+          break
+        fi
+else
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo $ac_headers|sed 's/+/\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
+int
+main ()
+{
+return (int)gethostbyaddr;
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  ac_cv_func_gethostbyaddr=yes; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+fi
+      done
+      rm -f conftest.$ac_ext conftest$ac_exeext
+#set +x
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_func_gethostbyaddr" >&5
+$as_echo "$ac_cv_func_gethostbyaddr" >&6; }
+  if test "$ac_cv_func_gethostbyaddr" != no; then :
+
+$as_echo "#define HAVE_GETHOSTBYADDR 1" >>confdefs.h
+
+elif :; then :
+
+fi
+
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for gethostbyaddr_r" >&5
+$as_echo_n "checking for gethostbyaddr_r... " >&6; }
+if test "${ac_cv_func_gethostbyaddr_r+set}" = set; then :
+  $as_echo_n "(cached) " >&6
+else
+
+#set -x
+      ac_cv_func_gethostbyaddr_r="no"
+      echo > conftest.log
+      for ac_headers in winsock2.h ""; do
+if false; then
+        cat << \EOF > conftest.c
+EOF
+        if test -n "$ac_headers"; then
+          for ac_header in `echo $ac_headers|sed 's/+/ /g'` ""; do
+            if test -n "$ac_header"; then
+              echo "#include <$ac_header>" >> conftest.c
+            fi
+          done
+        else
+          echo "extern int gethostbyaddr_r();" >> conftest.c
+        fi
+        cat << \EOF >> conftest.c
+int main(void) { return (int)gethostbyaddr_r; }
+EOF
+
+#cat conftest.$ac_ext
+        ${CC} ${CFLAGS} -o conftest$ac_exeext conftest.$ac_ext ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
+        if test $rc -eq 0; then
+          ac_cv_func_gethostbyaddr_r=yes
+          break
+        fi
+else
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo $ac_headers|sed 's/+/\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
+int
+main ()
+{
+return (int)gethostbyaddr_r;
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  ac_cv_func_gethostbyaddr_r=yes; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+fi
+      done
+      rm -f conftest.$ac_ext conftest$ac_exeext
+#set +x
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_func_gethostbyaddr_r" >&5
+$as_echo "$ac_cv_func_gethostbyaddr_r" >&6; }
+  if test "$ac_cv_func_gethostbyaddr_r" != no; then :
+
+$as_echo "#define HAVE_GETHOSTBYADDR_R 1" >>confdefs.h
+
+elif :; then :
+
+fi
+
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for gethostbyname" >&5
+$as_echo_n "checking for gethostbyname... " >&6; }
+if test "${ac_cv_func_gethostbyname+set}" = set; then :
+  $as_echo_n "(cached) " >&6
+else
+
+#set -x
+      ac_cv_func_gethostbyname="no"
+      echo > conftest.log
+      for ac_headers in winsock2.h ""; do
+if false; then
+        cat << \EOF > conftest.c
+EOF
+        if test -n "$ac_headers"; then
+          for ac_header in `echo $ac_headers|sed 's/+/ /g'` ""; do
+            if test -n "$ac_header"; then
+              echo "#include <$ac_header>" >> conftest.c
+            fi
+          done
+        else
+          echo "extern int gethostbyname();" >> conftest.c
+        fi
+        cat << \EOF >> conftest.c
+int main(void) { return (int)gethostbyname; }
+EOF
+
+#cat conftest.$ac_ext
+        ${CC} ${CFLAGS} -o conftest$ac_exeext conftest.$ac_ext ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
+        if test $rc -eq 0; then
+          ac_cv_func_gethostbyname=yes
+          break
+        fi
+else
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo $ac_headers|sed 's/+/\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
+int
+main ()
+{
+return (int)gethostbyname;
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  ac_cv_func_gethostbyname=yes; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+fi
+      done
+      rm -f conftest.$ac_ext conftest$ac_exeext
+#set +x
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_func_gethostbyname" >&5
+$as_echo "$ac_cv_func_gethostbyname" >&6; }
+  if test "$ac_cv_func_gethostbyname" != no; then :
+
+$as_echo "#define HAVE_GETHOSTBYNAME 1" >>confdefs.h
+
+elif :; then :
+
+fi
+
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for gethostbyname_r" >&5
+$as_echo_n "checking for gethostbyname_r... " >&6; }
+if test "${ac_cv_func_gethostbyname_r+set}" = set; then :
+  $as_echo_n "(cached) " >&6
+else
+
+#set -x
+      ac_cv_func_gethostbyname_r="no"
+      echo > conftest.log
+      for ac_headers in winsock2.h ""; do
+if false; then
+        cat << \EOF > conftest.c
+EOF
+        if test -n "$ac_headers"; then
+          for ac_header in `echo $ac_headers|sed 's/+/ /g'` ""; do
+            if test -n "$ac_header"; then
+              echo "#include <$ac_header>" >> conftest.c
+            fi
+          done
+        else
+          echo "extern int gethostbyname_r();" >> conftest.c
+        fi
+        cat << \EOF >> conftest.c
+int main(void) { return (int)gethostbyname_r; }
+EOF
+
+#cat conftest.$ac_ext
+        ${CC} ${CFLAGS} -o conftest$ac_exeext conftest.$ac_ext ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
+        if test $rc -eq 0; then
+          ac_cv_func_gethostbyname_r=yes
+          break
+        fi
+else
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo $ac_headers|sed 's/+/\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
+int
+main ()
+{
+return (int)gethostbyname_r;
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  ac_cv_func_gethostbyname_r=yes; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+fi
+      done
+      rm -f conftest.$ac_ext conftest$ac_exeext
+#set +x
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_func_gethostbyname_r" >&5
+$as_echo "$ac_cv_func_gethostbyname_r" >&6; }
+  if test "$ac_cv_func_gethostbyname_r" != no; then :
+
+$as_echo "#define HAVE_GETHOSTBYNAME_R 1" >>confdefs.h
+
+elif :; then :
+
+fi
+
+
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for chmod" >&5
+$as_echo_n "checking for chmod... " >&6; }
+if test "${ac_cv_func_chmod+set}" = set; then :
+  $as_echo_n "(cached) " >&6
+else
+
+#set -x
+      ac_cv_func_chmod="no"
+      echo > conftest.log
+      for ac_headers in  ""; do
+if false; then
+        cat << \EOF > conftest.c
+EOF
+        if test -n "$ac_headers"; then
+          for ac_header in `echo $ac_headers|sed 's/+/ /g'` ""; do
+            if test -n "$ac_header"; then
+              echo "#include <$ac_header>" >> conftest.c
+            fi
+          done
+        else
+          echo "extern int chmod();" >> conftest.c
+        fi
+        cat << \EOF >> conftest.c
+int main(void) { return (int)chmod; }
+EOF
+
+#cat conftest.$ac_ext
+        ${CC} ${CFLAGS} -o conftest$ac_exeext conftest.$ac_ext ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
+        if test $rc -eq 0; then
+          ac_cv_func_chmod=yes
+          break
+        fi
+else
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo $ac_headers|sed 's/+/\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
+int
+main ()
+{
+return (int)chmod;
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  ac_cv_func_chmod=yes; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+fi
+      done
+      rm -f conftest.$ac_ext conftest$ac_exeext
+#set +x
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_func_chmod" >&5
+$as_echo "$ac_cv_func_chmod" >&6; }
+  if test "$ac_cv_func_chmod" != no; then :
+
+$as_echo "#define HAVE_CHMOD 1" >>confdefs.h
+
+elif :; then :
+
+fi
+
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for chown" >&5
+$as_echo_n "checking for chown... " >&6; }
+if test "${ac_cv_func_chown+set}" = set; then :
+  $as_echo_n "(cached) " >&6
+else
+
+#set -x
+      ac_cv_func_chown="no"
+      echo > conftest.log
+      for ac_headers in  ""; do
+if false; then
+        cat << \EOF > conftest.c
+EOF
+        if test -n "$ac_headers"; then
+          for ac_header in `echo $ac_headers|sed 's/+/ /g'` ""; do
+            if test -n "$ac_header"; then
+              echo "#include <$ac_header>" >> conftest.c
+            fi
+          done
+        else
+          echo "extern int chown();" >> conftest.c
+        fi
+        cat << \EOF >> conftest.c
+int main(void) { return (int)chown; }
+EOF
+
+#cat conftest.$ac_ext
+        ${CC} ${CFLAGS} -o conftest$ac_exeext conftest.$ac_ext ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
+        if test $rc -eq 0; then
+          ac_cv_func_chown=yes
+          break
+        fi
+else
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo $ac_headers|sed 's/+/\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
+int
+main ()
+{
+return (int)chown;
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  ac_cv_func_chown=yes; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+fi
+      done
+      rm -f conftest.$ac_ext conftest$ac_exeext
+#set +x
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_func_chown" >&5
+$as_echo "$ac_cv_func_chown" >&6; }
+  if test "$ac_cv_func_chown" != no; then :
+
+$as_echo "#define HAVE_CHOWN 1" >>confdefs.h
+
+elif :; then :
+
+fi
+
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for fdatasync" >&5
+$as_echo_n "checking for fdatasync... " >&6; }
+if test "${ac_cv_func_fdatasync+set}" = set; then :
+  $as_echo_n "(cached) " >&6
+else
+
+#set -x
+      ac_cv_func_fdatasync="no"
+      echo > conftest.log
+      for ac_headers in  ""; do
+if false; then
+        cat << \EOF > conftest.c
+EOF
+        if test -n "$ac_headers"; then
+          for ac_header in `echo $ac_headers|sed 's/+/ /g'` ""; do
+            if test -n "$ac_header"; then
+              echo "#include <$ac_header>" >> conftest.c
+            fi
+          done
+        else
+          echo "extern int fdatasync();" >> conftest.c
+        fi
+        cat << \EOF >> conftest.c
+int main(void) { return (int)fdatasync; }
+EOF
+
+#cat conftest.$ac_ext
+        ${CC} ${CFLAGS} -o conftest$ac_exeext conftest.$ac_ext ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
+        if test $rc -eq 0; then
+          ac_cv_func_fdatasync=yes
+          break
+        fi
+else
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo $ac_headers|sed 's/+/\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
+int
+main ()
+{
+return (int)fdatasync;
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  ac_cv_func_fdatasync=yes; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+fi
+      done
+      rm -f conftest.$ac_ext conftest$ac_exeext
+#set +x
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_func_fdatasync" >&5
+$as_echo "$ac_cv_func_fdatasync" >&6; }
+  if test "$ac_cv_func_fdatasync" != no; then :
+
+$as_echo "#define HAVE_FDATASYNC 1" >>confdefs.h
+
+elif :; then :
+
+fi
+
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for _fseeki64" >&5
+$as_echo_n "checking for _fseeki64... " >&6; }
+if test "${ac_cv_func__fseeki64+set}" = set; then :
+  $as_echo_n "(cached) " >&6
+else
+
+#set -x
+      ac_cv_func__fseeki64="no"
+      echo > conftest.log
+      for ac_headers in  ""; do
+if false; then
+        cat << \EOF > conftest.c
+EOF
+        if test -n "$ac_headers"; then
+          for ac_header in `echo $ac_headers|sed 's/+/ /g'` ""; do
+            if test -n "$ac_header"; then
+              echo "#include <$ac_header>" >> conftest.c
+            fi
+          done
+        else
+          echo "extern int _fseeki64();" >> conftest.c
+        fi
+        cat << \EOF >> conftest.c
+int main(void) { return (int)_fseeki64; }
+EOF
+
+#cat conftest.$ac_ext
+        ${CC} ${CFLAGS} -o conftest$ac_exeext conftest.$ac_ext ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
+        if test $rc -eq 0; then
+          ac_cv_func__fseeki64=yes
+          break
+        fi
+else
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo $ac_headers|sed 's/+/\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
+int
+main ()
+{
+return (int)_fseeki64;
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  ac_cv_func__fseeki64=yes; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+fi
+      done
+      rm -f conftest.$ac_ext conftest$ac_exeext
+#set +x
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_func__fseeki64" >&5
+$as_echo "$ac_cv_func__fseeki64" >&6; }
+  if test "$ac_cv_func__fseeki64" != no; then :
+
+$as_echo "#define HAVE__FSEEKI64 1" >>confdefs.h
+
+elif :; then :
+
+fi
+
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for fseeko64" >&5
+$as_echo_n "checking for fseeko64... " >&6; }
+if test "${ac_cv_func_fseeko64+set}" = set; then :
+  $as_echo_n "(cached) " >&6
+else
+
+#set -x
+      ac_cv_func_fseeko64="no"
+      echo > conftest.log
+      for ac_headers in  ""; do
+if false; then
+        cat << \EOF > conftest.c
+EOF
+        if test -n "$ac_headers"; then
+          for ac_header in `echo $ac_headers|sed 's/+/ /g'` ""; do
+            if test -n "$ac_header"; then
+              echo "#include <$ac_header>" >> conftest.c
+            fi
+          done
+        else
+          echo "extern int fseeko64();" >> conftest.c
+        fi
+        cat << \EOF >> conftest.c
+int main(void) { return (int)fseeko64; }
+EOF
+
+#cat conftest.$ac_ext
+        ${CC} ${CFLAGS} -o conftest$ac_exeext conftest.$ac_ext ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
+        if test $rc -eq 0; then
+          ac_cv_func_fseeko64=yes
+          break
+        fi
+else
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo $ac_headers|sed 's/+/\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
+int
+main ()
+{
+return (int)fseeko64;
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  ac_cv_func_fseeko64=yes; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+fi
+      done
+      rm -f conftest.$ac_ext conftest$ac_exeext
+#set +x
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_func_fseeko64" >&5
+$as_echo "$ac_cv_func_fseeko64" >&6; }
+  if test "$ac_cv_func_fseeko64" != no; then :
+
+$as_echo "#define HAVE_FSEEKO64 1" >>confdefs.h
+
+elif :; then :
+
+fi
+
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for fseeko" >&5
+$as_echo_n "checking for fseeko... " >&6; }
+if test "${ac_cv_func_fseeko+set}" = set; then :
+  $as_echo_n "(cached) " >&6
+else
+
+#set -x
+      ac_cv_func_fseeko="no"
+      echo > conftest.log
+      for ac_headers in  ""; do
+if false; then
+        cat << \EOF > conftest.c
+EOF
+        if test -n "$ac_headers"; then
+          for ac_header in `echo $ac_headers|sed 's/+/ /g'` ""; do
+            if test -n "$ac_header"; then
+              echo "#include <$ac_header>" >> conftest.c
+            fi
+          done
+        else
+          echo "extern int fseeko();" >> conftest.c
+        fi
+        cat << \EOF >> conftest.c
+int main(void) { return (int)fseeko; }
+EOF
+
+#cat conftest.$ac_ext
+        ${CC} ${CFLAGS} -o conftest$ac_exeext conftest.$ac_ext ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
+        if test $rc -eq 0; then
+          ac_cv_func_fseeko=yes
+          break
+        fi
+else
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo $ac_headers|sed 's/+/\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
+int
+main ()
+{
+return (int)fseeko;
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  ac_cv_func_fseeko=yes; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+fi
+      done
+      rm -f conftest.$ac_ext conftest$ac_exeext
+#set +x
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_func_fseeko" >&5
+$as_echo "$ac_cv_func_fseeko" >&6; }
+  if test "$ac_cv_func_fseeko" != no; then :
+
+$as_echo "#define HAVE_FSEEKO 1" >>confdefs.h
+
+elif :; then :
+
+fi
+
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for _ftelli64" >&5
+$as_echo_n "checking for _ftelli64... " >&6; }
+if test "${ac_cv_func__ftelli64+set}" = set; then :
+  $as_echo_n "(cached) " >&6
+else
+
+#set -x
+      ac_cv_func__ftelli64="no"
+      echo > conftest.log
+      for ac_headers in  ""; do
+if false; then
+        cat << \EOF > conftest.c
+EOF
+        if test -n "$ac_headers"; then
+          for ac_header in `echo $ac_headers|sed 's/+/ /g'` ""; do
+            if test -n "$ac_header"; then
+              echo "#include <$ac_header>" >> conftest.c
+            fi
+          done
+        else
+          echo "extern int _ftelli64();" >> conftest.c
+        fi
+        cat << \EOF >> conftest.c
+int main(void) { return (int)_ftelli64; }
+EOF
+
+#cat conftest.$ac_ext
+        ${CC} ${CFLAGS} -o conftest$ac_exeext conftest.$ac_ext ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
+        if test $rc -eq 0; then
+          ac_cv_func__ftelli64=yes
+          break
+        fi
+else
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo $ac_headers|sed 's/+/\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
+int
+main ()
+{
+return (int)_ftelli64;
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  ac_cv_func__ftelli64=yes; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+fi
+      done
+      rm -f conftest.$ac_ext conftest$ac_exeext
+#set +x
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_func__ftelli64" >&5
+$as_echo "$ac_cv_func__ftelli64" >&6; }
+  if test "$ac_cv_func__ftelli64" != no; then :
+
+$as_echo "#define HAVE__FTELLI64 1" >>confdefs.h
+
+elif :; then :
+
+fi
+
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for ftello64" >&5
+$as_echo_n "checking for ftello64... " >&6; }
+if test "${ac_cv_func_ftello64+set}" = set; then :
+  $as_echo_n "(cached) " >&6
+else
+
+#set -x
+      ac_cv_func_ftello64="no"
+      echo > conftest.log
+      for ac_headers in  ""; do
+if false; then
+        cat << \EOF > conftest.c
+EOF
+        if test -n "$ac_headers"; then
+          for ac_header in `echo $ac_headers|sed 's/+/ /g'` ""; do
+            if test -n "$ac_header"; then
+              echo "#include <$ac_header>" >> conftest.c
+            fi
+          done
+        else
+          echo "extern int ftello64();" >> conftest.c
+        fi
+        cat << \EOF >> conftest.c
+int main(void) { return (int)ftello64; }
+EOF
+
+#cat conftest.$ac_ext
+        ${CC} ${CFLAGS} -o conftest$ac_exeext conftest.$ac_ext ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
+        if test $rc -eq 0; then
+          ac_cv_func_ftello64=yes
+          break
+        fi
+else
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo $ac_headers|sed 's/+/\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
+int
+main ()
+{
+return (int)ftello64;
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  ac_cv_func_ftello64=yes; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+fi
+      done
+      rm -f conftest.$ac_ext conftest$ac_exeext
+#set +x
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_func_ftello64" >&5
+$as_echo "$ac_cv_func_ftello64" >&6; }
+  if test "$ac_cv_func_ftello64" != no; then :
+
+$as_echo "#define HAVE_FTELLO64 1" >>confdefs.h
+
+elif :; then :
+
+fi
+
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for ftello" >&5
+$as_echo_n "checking for ftello... " >&6; }
+if test "${ac_cv_func_ftello+set}" = set; then :
+  $as_echo_n "(cached) " >&6
+else
+
+#set -x
+      ac_cv_func_ftello="no"
+      echo > conftest.log
+      for ac_headers in  ""; do
+if false; then
+        cat << \EOF > conftest.c
+EOF
+        if test -n "$ac_headers"; then
+          for ac_header in `echo $ac_headers|sed 's/+/ /g'` ""; do
+            if test -n "$ac_header"; then
+              echo "#include <$ac_header>" >> conftest.c
+            fi
+          done
+        else
+          echo "extern int ftello();" >> conftest.c
+        fi
+        cat << \EOF >> conftest.c
+int main(void) { return (int)ftello; }
+EOF
+
+#cat conftest.$ac_ext
+        ${CC} ${CFLAGS} -o conftest$ac_exeext conftest.$ac_ext ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
+        if test $rc -eq 0; then
+          ac_cv_func_ftello=yes
+          break
+        fi
+else
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo $ac_headers|sed 's/+/\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
+int
+main ()
+{
+return (int)ftello;
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  ac_cv_func_ftello=yes; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+fi
+      done
+      rm -f conftest.$ac_ext conftest$ac_exeext
+#set +x
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_func_ftello" >&5
+$as_echo "$ac_cv_func_ftello" >&6; }
+  if test "$ac_cv_func_ftello" != no; then :
+
+$as_echo "#define HAVE_FTELLO 1" >>confdefs.h
+
+elif :; then :
+
+fi
+
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for getgrgid_r" >&5
+$as_echo_n "checking for getgrgid_r... " >&6; }
+if test "${ac_cv_func_getgrgid_r+set}" = set; then :
+  $as_echo_n "(cached) " >&6
+else
+
+#set -x
+      ac_cv_func_getgrgid_r="no"
+      echo > conftest.log
+      for ac_headers in  ""; do
+if false; then
+        cat << \EOF > conftest.c
+EOF
+        if test -n "$ac_headers"; then
+          for ac_header in `echo $ac_headers|sed 's/+/ /g'` ""; do
+            if test -n "$ac_header"; then
+              echo "#include <$ac_header>" >> conftest.c
+            fi
+          done
+        else
+          echo "extern int getgrgid_r();" >> conftest.c
+        fi
+        cat << \EOF >> conftest.c
+int main(void) { return (int)getgrgid_r; }
+EOF
+
+#cat conftest.$ac_ext
+        ${CC} ${CFLAGS} -o conftest$ac_exeext conftest.$ac_ext ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
+        if test $rc -eq 0; then
+          ac_cv_func_getgrgid_r=yes
+          break
+        fi
+else
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo $ac_headers|sed 's/+/\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
+int
+main ()
+{
+return (int)getgrgid_r;
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  ac_cv_func_getgrgid_r=yes; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+fi
+      done
+      rm -f conftest.$ac_ext conftest$ac_exeext
+#set +x
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_func_getgrgid_r" >&5
+$as_echo "$ac_cv_func_getgrgid_r" >&6; }
+  if test "$ac_cv_func_getgrgid_r" != no; then :
+
+$as_echo "#define HAVE_GETGRGID_R 1" >>confdefs.h
+
+elif :; then :
+
+fi
+
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for getgrnam_r" >&5
+$as_echo_n "checking for getgrnam_r... " >&6; }
+if test "${ac_cv_func_getgrnam_r+set}" = set; then :
+  $as_echo_n "(cached) " >&6
+else
+
+#set -x
+      ac_cv_func_getgrnam_r="no"
+      echo > conftest.log
+      for ac_headers in  ""; do
+if false; then
+        cat << \EOF > conftest.c
+EOF
+        if test -n "$ac_headers"; then
+          for ac_header in `echo $ac_headers|sed 's/+/ /g'` ""; do
+            if test -n "$ac_header"; then
+              echo "#include <$ac_header>" >> conftest.c
+            fi
+          done
+        else
+          echo "extern int getgrnam_r();" >> conftest.c
+        fi
+        cat << \EOF >> conftest.c
+int main(void) { return (int)getgrnam_r; }
+EOF
+
+#cat conftest.$ac_ext
+        ${CC} ${CFLAGS} -o conftest$ac_exeext conftest.$ac_ext ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
+        if test $rc -eq 0; then
+          ac_cv_func_getgrnam_r=yes
+          break
+        fi
+else
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo $ac_headers|sed 's/+/\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
+int
+main ()
+{
+return (int)getgrnam_r;
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  ac_cv_func_getgrnam_r=yes; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+fi
+      done
+      rm -f conftest.$ac_ext conftest$ac_exeext
+#set +x
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_func_getgrnam_r" >&5
+$as_echo "$ac_cv_func_getgrnam_r" >&6; }
+  if test "$ac_cv_func_getgrnam_r" != no; then :
+
+$as_echo "#define HAVE_GETGRNAM_R 1" >>confdefs.h
+
+elif :; then :
+
+fi
+
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for getpwnam_r" >&5
+$as_echo_n "checking for getpwnam_r... " >&6; }
+if test "${ac_cv_func_getpwnam_r+set}" = set; then :
+  $as_echo_n "(cached) " >&6
+else
+
+#set -x
+      ac_cv_func_getpwnam_r="no"
+      echo > conftest.log
+      for ac_headers in  ""; do
+if false; then
+        cat << \EOF > conftest.c
+EOF
+        if test -n "$ac_headers"; then
+          for ac_header in `echo $ac_headers|sed 's/+/ /g'` ""; do
+            if test -n "$ac_header"; then
+              echo "#include <$ac_header>" >> conftest.c
+            fi
+          done
+        else
+          echo "extern int getpwnam_r();" >> conftest.c
+        fi
+        cat << \EOF >> conftest.c
+int main(void) { return (int)getpwnam_r; }
+EOF
+
+#cat conftest.$ac_ext
+        ${CC} ${CFLAGS} -o conftest$ac_exeext conftest.$ac_ext ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
+        if test $rc -eq 0; then
+          ac_cv_func_getpwnam_r=yes
+          break
+        fi
+else
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo $ac_headers|sed 's/+/\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
+int
+main ()
+{
+return (int)getpwnam_r;
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  ac_cv_func_getpwnam_r=yes; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+fi
+      done
+      rm -f conftest.$ac_ext conftest$ac_exeext
+#set +x
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_func_getpwnam_r" >&5
+$as_echo "$ac_cv_func_getpwnam_r" >&6; }
+  if test "$ac_cv_func_getpwnam_r" != no; then :
+
+$as_echo "#define HAVE_GETPWNAM_R 1" >>confdefs.h
+
+elif :; then :
+
+fi
+
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for getpwuid_r" >&5
+$as_echo_n "checking for getpwuid_r... " >&6; }
+if test "${ac_cv_func_getpwuid_r+set}" = set; then :
+  $as_echo_n "(cached) " >&6
+else
+
+#set -x
+      ac_cv_func_getpwuid_r="no"
+      echo > conftest.log
+      for ac_headers in  ""; do
+if false; then
+        cat << \EOF > conftest.c
+EOF
+        if test -n "$ac_headers"; then
+          for ac_header in `echo $ac_headers|sed 's/+/ /g'` ""; do
+            if test -n "$ac_header"; then
+              echo "#include <$ac_header>" >> conftest.c
+            fi
+          done
+        else
+          echo "extern int getpwuid_r();" >> conftest.c
+        fi
+        cat << \EOF >> conftest.c
+int main(void) { return (int)getpwuid_r; }
+EOF
+
+#cat conftest.$ac_ext
+        ${CC} ${CFLAGS} -o conftest$ac_exeext conftest.$ac_ext ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
+        if test $rc -eq 0; then
+          ac_cv_func_getpwuid_r=yes
+          break
+        fi
+else
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo $ac_headers|sed 's/+/\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
+int
+main ()
+{
+return (int)getpwuid_r;
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  ac_cv_func_getpwuid_r=yes; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+fi
+      done
+      rm -f conftest.$ac_ext conftest$ac_exeext
+#set +x
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_func_getpwuid_r" >&5
+$as_echo "$ac_cv_func_getpwuid_r" >&6; }
+  if test "$ac_cv_func_getpwuid_r" != no; then :
+
+$as_echo "#define HAVE_GETPWUID_R 1" >>confdefs.h
+
+elif :; then :
+
+fi
+
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for ioctl" >&5
+$as_echo_n "checking for ioctl... " >&6; }
+if test "${ac_cv_func_ioctl+set}" = set; then :
+  $as_echo_n "(cached) " >&6
+else
+
+#set -x
+      ac_cv_func_ioctl="no"
+      echo > conftest.log
+      for ac_headers in  ""; do
+if false; then
+        cat << \EOF > conftest.c
+EOF
+        if test -n "$ac_headers"; then
+          for ac_header in `echo $ac_headers|sed 's/+/ /g'` ""; do
+            if test -n "$ac_header"; then
+              echo "#include <$ac_header>" >> conftest.c
+            fi
+          done
+        else
+          echo "extern int ioctl();" >> conftest.c
+        fi
+        cat << \EOF >> conftest.c
+int main(void) { return (int)ioctl; }
+EOF
+
+#cat conftest.$ac_ext
+        ${CC} ${CFLAGS} -o conftest$ac_exeext conftest.$ac_ext ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
+        if test $rc -eq 0; then
+          ac_cv_func_ioctl=yes
+          break
+        fi
+else
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo $ac_headers|sed 's/+/\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
+int
+main ()
+{
+return (int)ioctl;
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  ac_cv_func_ioctl=yes; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+fi
+      done
+      rm -f conftest.$ac_ext conftest$ac_exeext
+#set +x
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_func_ioctl" >&5
+$as_echo "$ac_cv_func_ioctl" >&6; }
+  if test "$ac_cv_func_ioctl" != no; then :
+
+$as_echo "#define HAVE_IOCTL 1" >>confdefs.h
+
+elif :; then :
+
+fi
+
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for lchmod" >&5
+$as_echo_n "checking for lchmod... " >&6; }
+if test "${ac_cv_func_lchmod+set}" = set; then :
+  $as_echo_n "(cached) " >&6
+else
+
+#set -x
+      ac_cv_func_lchmod="no"
+      echo > conftest.log
+      for ac_headers in  ""; do
+if false; then
+        cat << \EOF > conftest.c
+EOF
+        if test -n "$ac_headers"; then
+          for ac_header in `echo $ac_headers|sed 's/+/ /g'` ""; do
+            if test -n "$ac_header"; then
+              echo "#include <$ac_header>" >> conftest.c
+            fi
+          done
+        else
+          echo "extern int lchmod();" >> conftest.c
+        fi
+        cat << \EOF >> conftest.c
+int main(void) { return (int)lchmod; }
+EOF
+
+#cat conftest.$ac_ext
+        ${CC} ${CFLAGS} -o conftest$ac_exeext conftest.$ac_ext ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
+        if test $rc -eq 0; then
+          ac_cv_func_lchmod=yes
+          break
+        fi
+else
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo $ac_headers|sed 's/+/\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
+int
+main ()
+{
+return (int)lchmod;
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  ac_cv_func_lchmod=yes; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+fi
+      done
+      rm -f conftest.$ac_ext conftest$ac_exeext
+#set +x
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_func_lchmod" >&5
+$as_echo "$ac_cv_func_lchmod" >&6; }
+  if test "$ac_cv_func_lchmod" != no; then :
+
+$as_echo "#define HAVE_LCHMOD 1" >>confdefs.h
+
+elif :; then :
+
+fi
+
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for link" >&5
+$as_echo_n "checking for link... " >&6; }
+if test "${ac_cv_func_link+set}" = set; then :
+  $as_echo_n "(cached) " >&6
+else
+
+#set -x
+      ac_cv_func_link="no"
+      echo > conftest.log
+      for ac_headers in  ""; do
+if false; then
+        cat << \EOF > conftest.c
+EOF
+        if test -n "$ac_headers"; then
+          for ac_header in `echo $ac_headers|sed 's/+/ /g'` ""; do
+            if test -n "$ac_header"; then
+              echo "#include <$ac_header>" >> conftest.c
+            fi
+          done
+        else
+          echo "extern int link();" >> conftest.c
+        fi
+        cat << \EOF >> conftest.c
+int main(void) { return (int)link; }
+EOF
+
+#cat conftest.$ac_ext
+        ${CC} ${CFLAGS} -o conftest$ac_exeext conftest.$ac_ext ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
+        if test $rc -eq 0; then
+          ac_cv_func_link=yes
+          break
+        fi
+else
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo $ac_headers|sed 's/+/\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
+int
+main ()
+{
+return (int)link;
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  ac_cv_func_link=yes; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+fi
+      done
+      rm -f conftest.$ac_ext conftest$ac_exeext
+#set +x
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_func_link" >&5
+$as_echo "$ac_cv_func_link" >&6; }
+  if test "$ac_cv_func_link" != no; then :
+
+$as_echo "#define HAVE_LINK 1" >>confdefs.h
+
+elif :; then :
+
+fi
+
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for lstat64" >&5
+$as_echo_n "checking for lstat64... " >&6; }
+if test "${ac_cv_func_lstat64+set}" = set; then :
+  $as_echo_n "(cached) " >&6
+else
+
+#set -x
+      ac_cv_func_lstat64="no"
+      echo > conftest.log
+      for ac_headers in  ""; do
+if false; then
+        cat << \EOF > conftest.c
+EOF
+        if test -n "$ac_headers"; then
+          for ac_header in `echo $ac_headers|sed 's/+/ /g'` ""; do
+            if test -n "$ac_header"; then
+              echo "#include <$ac_header>" >> conftest.c
+            fi
+          done
+        else
+          echo "extern int lstat64();" >> conftest.c
+        fi
+        cat << \EOF >> conftest.c
+int main(void) { return (int)lstat64; }
+EOF
+
+#cat conftest.$ac_ext
+        ${CC} ${CFLAGS} -o conftest$ac_exeext conftest.$ac_ext ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
+        if test $rc -eq 0; then
+          ac_cv_func_lstat64=yes
+          break
+        fi
+else
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo $ac_headers|sed 's/+/\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
+int
+main ()
+{
+return (int)lstat64;
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  ac_cv_func_lstat64=yes; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+fi
+      done
+      rm -f conftest.$ac_ext conftest$ac_exeext
+#set +x
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_func_lstat64" >&5
+$as_echo "$ac_cv_func_lstat64" >&6; }
+  if test "$ac_cv_func_lstat64" != no; then :
+
+$as_echo "#define HAVE_LSTAT64 1" >>confdefs.h
+
+elif :; then :
+
+fi
+
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for lstat" >&5
+$as_echo_n "checking for lstat... " >&6; }
+if test "${ac_cv_func_lstat+set}" = set; then :
+  $as_echo_n "(cached) " >&6
+else
+
+#set -x
+      ac_cv_func_lstat="no"
+      echo > conftest.log
+      for ac_headers in  ""; do
+if false; then
+        cat << \EOF > conftest.c
+EOF
+        if test -n "$ac_headers"; then
+          for ac_header in `echo $ac_headers|sed 's/+/ /g'` ""; do
+            if test -n "$ac_header"; then
+              echo "#include <$ac_header>" >> conftest.c
+            fi
+          done
+        else
+          echo "extern int lstat();" >> conftest.c
+        fi
+        cat << \EOF >> conftest.c
+int main(void) { return (int)lstat; }
+EOF
+
+#cat conftest.$ac_ext
+        ${CC} ${CFLAGS} -o conftest$ac_exeext conftest.$ac_ext ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
+        if test $rc -eq 0; then
+          ac_cv_func_lstat=yes
+          break
+        fi
+else
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo $ac_headers|sed 's/+/\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
+int
+main ()
+{
+return (int)lstat;
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  ac_cv_func_lstat=yes; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+fi
+      done
+      rm -f conftest.$ac_ext conftest$ac_exeext
+#set +x
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_func_lstat" >&5
+$as_echo "$ac_cv_func_lstat" >&6; }
+  if test "$ac_cv_func_lstat" != no; then :
+
+$as_echo "#define HAVE_LSTAT 1" >>confdefs.h
+
+elif :; then :
+
+fi
+
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for major" >&5
+$as_echo_n "checking for major... " >&6; }
+if test "${ac_cv_func_major+set}" = set; then :
+  $as_echo_n "(cached) " >&6
+else
+
+#set -x
+      ac_cv_func_major="no"
+      echo > conftest.log
+      for ac_headers in  ""; do
+if false; then
+        cat << \EOF > conftest.c
+EOF
+        if test -n "$ac_headers"; then
+          for ac_header in `echo $ac_headers|sed 's/+/ /g'` ""; do
+            if test -n "$ac_header"; then
+              echo "#include <$ac_header>" >> conftest.c
+            fi
+          done
+        else
+          echo "extern int major();" >> conftest.c
+        fi
+        cat << \EOF >> conftest.c
+int main(void) { return (int)major; }
+EOF
+
+#cat conftest.$ac_ext
+        ${CC} ${CFLAGS} -o conftest$ac_exeext conftest.$ac_ext ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
+        if test $rc -eq 0; then
+          ac_cv_func_major=yes
+          break
+        fi
+else
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo $ac_headers|sed 's/+/\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
+int
+main ()
+{
+return (int)major;
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  ac_cv_func_major=yes; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+fi
+      done
+      rm -f conftest.$ac_ext conftest$ac_exeext
+#set +x
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_func_major" >&5
+$as_echo "$ac_cv_func_major" >&6; }
+  if test "$ac_cv_func_major" != no; then :
+
+$as_echo "#define HAVE_MAJOR 1" >>confdefs.h
+
+elif :; then :
+
+fi
+
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for makedev" >&5
+$as_echo_n "checking for makedev... " >&6; }
+if test "${ac_cv_func_makedev+set}" = set; then :
+  $as_echo_n "(cached) " >&6
+else
+
+#set -x
+      ac_cv_func_makedev="no"
+      echo > conftest.log
+      for ac_headers in  ""; do
+if false; then
+        cat << \EOF > conftest.c
+EOF
+        if test -n "$ac_headers"; then
+          for ac_header in `echo $ac_headers|sed 's/+/ /g'` ""; do
+            if test -n "$ac_header"; then
+              echo "#include <$ac_header>" >> conftest.c
+            fi
+          done
+        else
+          echo "extern int makedev();" >> conftest.c
+        fi
+        cat << \EOF >> conftest.c
+int main(void) { return (int)makedev; }
+EOF
+
+#cat conftest.$ac_ext
+        ${CC} ${CFLAGS} -o conftest$ac_exeext conftest.$ac_ext ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
+        if test $rc -eq 0; then
+          ac_cv_func_makedev=yes
+          break
+        fi
+else
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo $ac_headers|sed 's/+/\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
+int
+main ()
+{
+return (int)makedev;
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  ac_cv_func_makedev=yes; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+fi
+      done
+      rm -f conftest.$ac_ext conftest$ac_exeext
+#set +x
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_func_makedev" >&5
+$as_echo "$ac_cv_func_makedev" >&6; }
+  if test "$ac_cv_func_makedev" != no; then :
+
+$as_echo "#define HAVE_MAKEDEV 1" >>confdefs.h
+
+elif :; then :
+
+fi
+
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for minor" >&5
+$as_echo_n "checking for minor... " >&6; }
+if test "${ac_cv_func_minor+set}" = set; then :
+  $as_echo_n "(cached) " >&6
+else
+
+#set -x
+      ac_cv_func_minor="no"
+      echo > conftest.log
+      for ac_headers in  ""; do
+if false; then
+        cat << \EOF > conftest.c
+EOF
+        if test -n "$ac_headers"; then
+          for ac_header in `echo $ac_headers|sed 's/+/ /g'` ""; do
+            if test -n "$ac_header"; then
+              echo "#include <$ac_header>" >> conftest.c
+            fi
+          done
+        else
+          echo "extern int minor();" >> conftest.c
+        fi
+        cat << \EOF >> conftest.c
+int main(void) { return (int)minor; }
+EOF
+
+#cat conftest.$ac_ext
+        ${CC} ${CFLAGS} -o conftest$ac_exeext conftest.$ac_ext ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
+        if test $rc -eq 0; then
+          ac_cv_func_minor=yes
+          break
+        fi
+else
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo $ac_headers|sed 's/+/\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
+int
+main ()
+{
+return (int)minor;
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  ac_cv_func_minor=yes; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+fi
+      done
+      rm -f conftest.$ac_ext conftest$ac_exeext
+#set +x
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_func_minor" >&5
+$as_echo "$ac_cv_func_minor" >&6; }
+  if test "$ac_cv_func_minor" != no; then :
+
+$as_echo "#define HAVE_MINOR 1" >>confdefs.h
+
+elif :; then :
+
+fi
+
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for mknod" >&5
+$as_echo_n "checking for mknod... " >&6; }
+if test "${ac_cv_func_mknod+set}" = set; then :
+  $as_echo_n "(cached) " >&6
+else
+
+#set -x
+      ac_cv_func_mknod="no"
+      echo > conftest.log
+      for ac_headers in  ""; do
+if false; then
+        cat << \EOF > conftest.c
+EOF
+        if test -n "$ac_headers"; then
+          for ac_header in `echo $ac_headers|sed 's/+/ /g'` ""; do
+            if test -n "$ac_header"; then
+              echo "#include <$ac_header>" >> conftest.c
+            fi
+          done
+        else
+          echo "extern int mknod();" >> conftest.c
+        fi
+        cat << \EOF >> conftest.c
+int main(void) { return (int)mknod; }
+EOF
+
+#cat conftest.$ac_ext
+        ${CC} ${CFLAGS} -o conftest$ac_exeext conftest.$ac_ext ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
+        if test $rc -eq 0; then
+          ac_cv_func_mknod=yes
+          break
+        fi
+else
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo $ac_headers|sed 's/+/\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
+int
+main ()
+{
+return (int)mknod;
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  ac_cv_func_mknod=yes; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+fi
+      done
+      rm -f conftest.$ac_ext conftest$ac_exeext
+#set +x
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_func_mknod" >&5
+$as_echo "$ac_cv_func_mknod" >&6; }
+  if test "$ac_cv_func_mknod" != no; then :
+
+$as_echo "#define HAVE_MKNOD 1" >>confdefs.h
+
+elif :; then :
+
+fi
+
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for posix_fadvise" >&5
+$as_echo_n "checking for posix_fadvise... " >&6; }
+if test "${ac_cv_func_posix_fadvise+set}" = set; then :
+  $as_echo_n "(cached) " >&6
+else
+
+#set -x
+      ac_cv_func_posix_fadvise="no"
+      echo > conftest.log
+      for ac_headers in  ""; do
+if false; then
+        cat << \EOF > conftest.c
+EOF
+        if test -n "$ac_headers"; then
+          for ac_header in `echo $ac_headers|sed 's/+/ /g'` ""; do
+            if test -n "$ac_header"; then
+              echo "#include <$ac_header>" >> conftest.c
+            fi
+          done
+        else
+          echo "extern int posix_fadvise();" >> conftest.c
+        fi
+        cat << \EOF >> conftest.c
+int main(void) { return (int)posix_fadvise; }
+EOF
+
+#cat conftest.$ac_ext
+        ${CC} ${CFLAGS} -o conftest$ac_exeext conftest.$ac_ext ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
+        if test $rc -eq 0; then
+          ac_cv_func_posix_fadvise=yes
+          break
+        fi
+else
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo $ac_headers|sed 's/+/\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
+int
+main ()
+{
+return (int)posix_fadvise;
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  ac_cv_func_posix_fadvise=yes; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+fi
+      done
+      rm -f conftest.$ac_ext conftest$ac_exeext
+#set +x
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_func_posix_fadvise" >&5
+$as_echo "$ac_cv_func_posix_fadvise" >&6; }
+  if test "$ac_cv_func_posix_fadvise" != no; then :
+
+$as_echo "#define HAVE_POSIX_FADVISE 1" >>confdefs.h
+
+elif :; then :
+
+fi
+
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for readlink" >&5
+$as_echo_n "checking for readlink... " >&6; }
+if test "${ac_cv_func_readlink+set}" = set; then :
+  $as_echo_n "(cached) " >&6
+else
+
+#set -x
+      ac_cv_func_readlink="no"
+      echo > conftest.log
+      for ac_headers in  ""; do
+if false; then
+        cat << \EOF > conftest.c
+EOF
+        if test -n "$ac_headers"; then
+          for ac_header in `echo $ac_headers|sed 's/+/ /g'` ""; do
+            if test -n "$ac_header"; then
+              echo "#include <$ac_header>" >> conftest.c
+            fi
+          done
+        else
+          echo "extern int readlink();" >> conftest.c
+        fi
+        cat << \EOF >> conftest.c
+int main(void) { return (int)readlink; }
+EOF
+
+#cat conftest.$ac_ext
+        ${CC} ${CFLAGS} -o conftest$ac_exeext conftest.$ac_ext ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
+        if test $rc -eq 0; then
+          ac_cv_func_readlink=yes
+          break
+        fi
+else
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo $ac_headers|sed 's/+/\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
+int
+main ()
+{
+return (int)readlink;
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  ac_cv_func_readlink=yes; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+fi
+      done
+      rm -f conftest.$ac_ext conftest$ac_exeext
+#set +x
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_func_readlink" >&5
+$as_echo "$ac_cv_func_readlink" >&6; }
+  if test "$ac_cv_func_readlink" != no; then :
+
+$as_echo "#define HAVE_READLINK 1" >>confdefs.h
+
+elif :; then :
+
+fi
+
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for stat64" >&5
+$as_echo_n "checking for stat64... " >&6; }
+if test "${ac_cv_func_stat64+set}" = set; then :
+  $as_echo_n "(cached) " >&6
+else
+
+#set -x
+      ac_cv_func_stat64="no"
+      echo > conftest.log
+      for ac_headers in  ""; do
+if false; then
+        cat << \EOF > conftest.c
+EOF
+        if test -n "$ac_headers"; then
+          for ac_header in `echo $ac_headers|sed 's/+/ /g'` ""; do
+            if test -n "$ac_header"; then
+              echo "#include <$ac_header>" >> conftest.c
+            fi
+          done
+        else
+          echo "extern int stat64();" >> conftest.c
+        fi
+        cat << \EOF >> conftest.c
+int main(void) { return (int)stat64; }
+EOF
+
+#cat conftest.$ac_ext
+        ${CC} ${CFLAGS} -o conftest$ac_exeext conftest.$ac_ext ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
+        if test $rc -eq 0; then
+          ac_cv_func_stat64=yes
+          break
+        fi
+else
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo $ac_headers|sed 's/+/\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
+int
+main ()
+{
+return (int)stat64;
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  ac_cv_func_stat64=yes; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+fi
+      done
+      rm -f conftest.$ac_ext conftest$ac_exeext
+#set +x
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_func_stat64" >&5
+$as_echo "$ac_cv_func_stat64" >&6; }
+  if test "$ac_cv_func_stat64" != no; then :
+
+$as_echo "#define HAVE_STAT64 1" >>confdefs.h
+
+elif :; then :
+
+fi
+
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for stat" >&5
+$as_echo_n "checking for stat... " >&6; }
+if test "${ac_cv_func_stat+set}" = set; then :
+  $as_echo_n "(cached) " >&6
+else
+
+#set -x
+      ac_cv_func_stat="no"
+      echo > conftest.log
+      for ac_headers in  ""; do
+if false; then
+        cat << \EOF > conftest.c
+EOF
+        if test -n "$ac_headers"; then
+          for ac_header in `echo $ac_headers|sed 's/+/ /g'` ""; do
+            if test -n "$ac_header"; then
+              echo "#include <$ac_header>" >> conftest.c
+            fi
+          done
+        else
+          echo "extern int stat();" >> conftest.c
+        fi
+        cat << \EOF >> conftest.c
+int main(void) { return (int)stat; }
+EOF
+
+#cat conftest.$ac_ext
+        ${CC} ${CFLAGS} -o conftest$ac_exeext conftest.$ac_ext ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
+        if test $rc -eq 0; then
+          ac_cv_func_stat=yes
+          break
+        fi
+else
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo $ac_headers|sed 's/+/\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
+int
+main ()
+{
+return (int)stat;
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  ac_cv_func_stat=yes; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+fi
+      done
+      rm -f conftest.$ac_ext conftest$ac_exeext
+#set +x
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_func_stat" >&5
+$as_echo "$ac_cv_func_stat" >&6; }
+  if test "$ac_cv_func_stat" != no; then :
+
+$as_echo "#define HAVE_STAT 1" >>confdefs.h
+
+elif :; then :
+
+fi
+
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for _stati64" >&5
+$as_echo_n "checking for _stati64... " >&6; }
+if test "${ac_cv_func__stati64+set}" = set; then :
+  $as_echo_n "(cached) " >&6
+else
+
+#set -x
+      ac_cv_func__stati64="no"
+      echo > conftest.log
+      for ac_headers in  ""; do
+if false; then
+        cat << \EOF > conftest.c
+EOF
+        if test -n "$ac_headers"; then
+          for ac_header in `echo $ac_headers|sed 's/+/ /g'` ""; do
+            if test -n "$ac_header"; then
+              echo "#include <$ac_header>" >> conftest.c
+            fi
+          done
+        else
+          echo "extern int _stati64();" >> conftest.c
+        fi
+        cat << \EOF >> conftest.c
+int main(void) { return (int)_stati64; }
+EOF
+
+#cat conftest.$ac_ext
+        ${CC} ${CFLAGS} -o conftest$ac_exeext conftest.$ac_ext ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
+        if test $rc -eq 0; then
+          ac_cv_func__stati64=yes
+          break
+        fi
+else
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo $ac_headers|sed 's/+/\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
+int
+main ()
+{
+return (int)_stati64;
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  ac_cv_func__stati64=yes; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+fi
+      done
+      rm -f conftest.$ac_ext conftest$ac_exeext
+#set +x
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_func__stati64" >&5
+$as_echo "$ac_cv_func__stati64" >&6; }
+  if test "$ac_cv_func__stati64" != no; then :
+
+$as_echo "#define HAVE__STATI64 1" >>confdefs.h
+
+elif :; then :
+
+fi
+
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for statvfs" >&5
+$as_echo_n "checking for statvfs... " >&6; }
+if test "${ac_cv_func_statvfs+set}" = set; then :
+  $as_echo_n "(cached) " >&6
+else
+
+#set -x
+      ac_cv_func_statvfs="no"
+      echo > conftest.log
+      for ac_headers in  ""; do
+if false; then
+        cat << \EOF > conftest.c
+EOF
+        if test -n "$ac_headers"; then
+          for ac_header in `echo $ac_headers|sed 's/+/ /g'` ""; do
+            if test -n "$ac_header"; then
+              echo "#include <$ac_header>" >> conftest.c
+            fi
+          done
+        else
+          echo "extern int statvfs();" >> conftest.c
+        fi
+        cat << \EOF >> conftest.c
+int main(void) { return (int)statvfs; }
+EOF
+
+#cat conftest.$ac_ext
+        ${CC} ${CFLAGS} -o conftest$ac_exeext conftest.$ac_ext ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
+        if test $rc -eq 0; then
+          ac_cv_func_statvfs=yes
+          break
+        fi
+else
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo $ac_headers|sed 's/+/\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
+int
+main ()
+{
+return (int)statvfs;
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  ac_cv_func_statvfs=yes; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+fi
+      done
+      rm -f conftest.$ac_ext conftest$ac_exeext
+#set +x
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_func_statvfs" >&5
+$as_echo "$ac_cv_func_statvfs" >&6; }
+  if test "$ac_cv_func_statvfs" != no; then :
+
+$as_echo "#define HAVE_STATVFS 1" >>confdefs.h
+
+elif :; then :
+
+fi
+
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for symlink" >&5
+$as_echo_n "checking for symlink... " >&6; }
+if test "${ac_cv_func_symlink+set}" = set; then :
+  $as_echo_n "(cached) " >&6
+else
+
+#set -x
+      ac_cv_func_symlink="no"
+      echo > conftest.log
+      for ac_headers in  ""; do
+if false; then
+        cat << \EOF > conftest.c
+EOF
+        if test -n "$ac_headers"; then
+          for ac_header in `echo $ac_headers|sed 's/+/ /g'` ""; do
+            if test -n "$ac_header"; then
+              echo "#include <$ac_header>" >> conftest.c
+            fi
+          done
+        else
+          echo "extern int symlink();" >> conftest.c
+        fi
+        cat << \EOF >> conftest.c
+int main(void) { return (int)symlink; }
+EOF
+
+#cat conftest.$ac_ext
+        ${CC} ${CFLAGS} -o conftest$ac_exeext conftest.$ac_ext ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
+        if test $rc -eq 0; then
+          ac_cv_func_symlink=yes
+          break
+        fi
+else
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo $ac_headers|sed 's/+/\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
+int
+main ()
+{
+return (int)symlink;
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  ac_cv_func_symlink=yes; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+fi
+      done
+      rm -f conftest.$ac_ext conftest$ac_exeext
+#set +x
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_func_symlink" >&5
+$as_echo "$ac_cv_func_symlink" >&6; }
+  if test "$ac_cv_func_symlink" != no; then :
+
+$as_echo "#define HAVE_SYMLINK 1" >>confdefs.h
+
+elif :; then :
+
+fi
+
+
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for mkdtemp" >&5
+$as_echo_n "checking for mkdtemp... " >&6; }
+if test "${ac_cv_func_mkdtemp+set}" = set; then :
+  $as_echo_n "(cached) " >&6
+else
+
+#set -x
+      ac_cv_func_mkdtemp="no"
+      echo > conftest.log
+      for ac_headers in io.h ""; do
+if false; then
+        cat << \EOF > conftest.c
+EOF
+        if test -n "$ac_headers"; then
+          for ac_header in `echo $ac_headers|sed 's/+/ /g'` ""; do
+            if test -n "$ac_header"; then
+              echo "#include <$ac_header>" >> conftest.c
+            fi
+          done
+        else
+          echo "extern int mkdtemp();" >> conftest.c
+        fi
+        cat << \EOF >> conftest.c
+int main(void) { return (int)mkdtemp; }
+EOF
+
+#cat conftest.$ac_ext
+        ${CC} ${CFLAGS} -o conftest$ac_exeext conftest.$ac_ext ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
+        if test $rc -eq 0; then
+          ac_cv_func_mkdtemp=yes
+          break
+        fi
+else
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo $ac_headers|sed 's/+/\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
+int
+main ()
+{
+return (int)mkdtemp;
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  ac_cv_func_mkdtemp=yes; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+fi
+      done
+      rm -f conftest.$ac_ext conftest$ac_exeext
+#set +x
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_func_mkdtemp" >&5
+$as_echo "$ac_cv_func_mkdtemp" >&6; }
+  if test "$ac_cv_func_mkdtemp" != no; then :
+
+$as_echo "#define HAVE_MKDTEMP 1" >>confdefs.h
+
+elif :; then :
+
+fi
+
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for mkstemp" >&5
+$as_echo_n "checking for mkstemp... " >&6; }
+if test "${ac_cv_func_mkstemp+set}" = set; then :
+  $as_echo_n "(cached) " >&6
+else
+
+#set -x
+      ac_cv_func_mkstemp="no"
+      echo > conftest.log
+      for ac_headers in io.h ""; do
+if false; then
+        cat << \EOF > conftest.c
+EOF
+        if test -n "$ac_headers"; then
+          for ac_header in `echo $ac_headers|sed 's/+/ /g'` ""; do
+            if test -n "$ac_header"; then
+              echo "#include <$ac_header>" >> conftest.c
+            fi
+          done
+        else
+          echo "extern int mkstemp();" >> conftest.c
+        fi
+        cat << \EOF >> conftest.c
+int main(void) { return (int)mkstemp; }
+EOF
+
+#cat conftest.$ac_ext
+        ${CC} ${CFLAGS} -o conftest$ac_exeext conftest.$ac_ext ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
+        if test $rc -eq 0; then
+          ac_cv_func_mkstemp=yes
+          break
+        fi
+else
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo $ac_headers|sed 's/+/\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
+int
+main ()
+{
+return (int)mkstemp;
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  ac_cv_func_mkstemp=yes; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+fi
+      done
+      rm -f conftest.$ac_ext conftest$ac_exeext
+#set +x
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_func_mkstemp" >&5
+$as_echo "$ac_cv_func_mkstemp" >&6; }
+  if test "$ac_cv_func_mkstemp" != no; then :
+
+$as_echo "#define HAVE_MKSTEMP 1" >>confdefs.h
+
+elif :; then :
+
+fi
+
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for mktemp" >&5
+$as_echo_n "checking for mktemp... " >&6; }
+if test "${ac_cv_func_mktemp+set}" = set; then :
+  $as_echo_n "(cached) " >&6
+else
+
+#set -x
+      ac_cv_func_mktemp="no"
+      echo > conftest.log
+      for ac_headers in io.h ""; do
+if false; then
+        cat << \EOF > conftest.c
+EOF
+        if test -n "$ac_headers"; then
+          for ac_header in `echo $ac_headers|sed 's/+/ /g'` ""; do
+            if test -n "$ac_header"; then
+              echo "#include <$ac_header>" >> conftest.c
+            fi
+          done
+        else
+          echo "extern int mktemp();" >> conftest.c
+        fi
+        cat << \EOF >> conftest.c
+int main(void) { return (int)mktemp; }
+EOF
+
+#cat conftest.$ac_ext
+        ${CC} ${CFLAGS} -o conftest$ac_exeext conftest.$ac_ext ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
+        if test $rc -eq 0; then
+          ac_cv_func_mktemp=yes
+          break
+        fi
+else
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo $ac_headers|sed 's/+/\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
+int
+main ()
+{
+return (int)mktemp;
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  ac_cv_func_mktemp=yes; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+fi
+      done
+      rm -f conftest.$ac_ext conftest$ac_exeext
+#set +x
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_func_mktemp" >&5
+$as_echo "$ac_cv_func_mktemp" >&6; }
+  if test "$ac_cv_func_mktemp" != no; then :
+
+$as_echo "#define HAVE_MKTEMP 1" >>confdefs.h
+
+elif :; then :
+
+fi
+
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking number of arguments of mkdir()" >&5
+$as_echo_n "checking number of arguments of mkdir()... " >&6; }
+if test "${ac_cv_mkdir_arguments_count+set}" = set; then :
+  $as_echo_n "(cached) " >&6
+else
+
+      ac_cv_mkdir_arguments_count=""
+
+      if test -z "$ac_cv_mkdir_arguments_count"; then
+        cat << \EOF > conftest.c
+#include <io.h>
+int main(void) { mkdir("."); return 0; }
+EOF
+        ${CC} ${CFLAGS} -Wall -Werror -c conftest.c -o conftest.o 1>/dev/null 2>/dev/null; rc=$?
+        if test $rc -eq 0; then
+          ac_cv_mkdir_arguments_count=1
+        fi
+        rm -f conftest.c conftest.o
+      fi
+      if test -z "$ac_cv_mkdir_arguments_count"; then
+        cat << \EOF > conftest.c
+#include <sys/stat.h>
+#include <sys/types.h>
+int main(void) { mkdir(".",0); return 0; }
+EOF
+        ${CC} ${CFLAGS} -Wall -Werror -c conftest.c -o conftest.o 1>/dev/null 2>/dev/null; rc=$?
+        if test $rc -eq 0; then
+          ac_cv_mkdir_arguments_count=2
+        fi
+        rm -f conftest.c conftest.o
+      fi
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_mkdir_arguments_count" >&5
+$as_echo "$ac_cv_mkdir_arguments_count" >&6; }
+
+cat >>confdefs.h <<_ACEOF
+#define MKDIR_ARGUMENTS_COUNT $ac_cv_mkdir_arguments_count
+_ACEOF
+
+
+
+
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for zlibVersion" >&5
+$as_echo_n "checking for zlibVersion... " >&6; }
+if test "${ac_cv_func_zlibVersion+set}" = set; then :
+  $as_echo_n "(cached) " >&6
+else
+
+#set -x
+      ac_cv_func_zlibVersion="no"
+      echo > conftest.log
+      for ac_headers in zlib.h ""; do
+if false; then
+        cat << \EOF > conftest.c
+EOF
+        if test -n "$ac_headers"; then
+          for ac_header in `echo $ac_headers|sed 's/+/ /g'` ""; do
+            if test -n "$ac_header"; then
+              echo "#include <$ac_header>" >> conftest.c
+            fi
+          done
+        else
+          echo "extern int zlibVersion();" >> conftest.c
+        fi
+        cat << \EOF >> conftest.c
+int main(void) { return (int)zlibVersion; }
+EOF
+
+#cat conftest.$ac_ext
+        ${CC} ${CFLAGS} -o conftest$ac_exeext conftest.$ac_ext ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
+        if test $rc -eq 0; then
+          ac_cv_func_zlibVersion=yes
+          break
+        fi
+else
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo $ac_headers|sed 's/+/\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
+int
+main ()
+{
+return (int)zlibVersion;
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  ac_cv_func_zlibVersion=yes; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+fi
+      done
+      rm -f conftest.$ac_ext conftest$ac_exeext
+#set +x
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_func_zlibVersion" >&5
+$as_echo "$ac_cv_func_zlibVersion" >&6; }
+  if test "$ac_cv_func_zlibVersion" != no; then :
+
+elif :; then :
+  as_fn_error $? "mandatory function zlibVersion() is not available" "$LINENO" 5
+fi
+
+
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for CRYPTO_set_id_callback" >&5
+$as_echo_n "checking for CRYPTO_set_id_callback... " >&6; }
+if test "${ac_cv_func_CRYPTO_set_id_callback+set}" = set; then :
+  $as_echo_n "(cached) " >&6
+else
+
+#set -x
+      ac_cv_func_CRYPTO_set_id_callback="no"
+      echo > conftest.log
+      for ac_headers in openssl/crypto.h ""; do
+if false; then
+        cat << \EOF > conftest.c
+EOF
+        if test -n "$ac_headers"; then
+          for ac_header in `echo $ac_headers|sed 's/+/ /g'` ""; do
+            if test -n "$ac_header"; then
+              echo "#include <$ac_header>" >> conftest.c
+            fi
+          done
+        else
+          echo "extern int CRYPTO_set_id_callback();" >> conftest.c
+        fi
+        cat << \EOF >> conftest.c
+int main(void) { return (int)CRYPTO_set_id_callback; }
+EOF
+
+#cat conftest.$ac_ext
+        ${CC} ${CFLAGS} -o conftest$ac_exeext conftest.$ac_ext ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
+        if test $rc -eq 0; then
+          ac_cv_func_CRYPTO_set_id_callback=yes
+          break
+        fi
+else
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo $ac_headers|sed 's/+/\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
+int
+main ()
+{
+return (int)CRYPTO_set_id_callback;
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  ac_cv_func_CRYPTO_set_id_callback=yes; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+fi
+      done
+      rm -f conftest.$ac_ext conftest$ac_exeext
+#set +x
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_func_CRYPTO_set_id_callback" >&5
+$as_echo "$ac_cv_func_CRYPTO_set_id_callback" >&6; }
+  if test "$ac_cv_func_CRYPTO_set_id_callback" != no; then :
+
+elif :; then :
   as_fn_error $? "OpenSSL CRYPTO_set_id_callback() is not available" "$LINENO" 5
 fi
 
-ac_fn_c_check_func "$LINENO" "CRYPTO_set_locking_callback" "ac_cv_func_CRYPTO_set_locking_callback"
-if test "x$ac_cv_func_CRYPTO_set_locking_callback" = x""yes; then :
 
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for CRYPTO_set_locking_callback" >&5
+$as_echo_n "checking for CRYPTO_set_locking_callback... " >&6; }
+if test "${ac_cv_func_CRYPTO_set_locking_callback+set}" = set; then :
+  $as_echo_n "(cached) " >&6
 else
+
+#set -x
+      ac_cv_func_CRYPTO_set_locking_callback="no"
+      echo > conftest.log
+      for ac_headers in openssl/crypto.h ""; do
+if false; then
+        cat << \EOF > conftest.c
+EOF
+        if test -n "$ac_headers"; then
+          for ac_header in `echo $ac_headers|sed 's/+/ /g'` ""; do
+            if test -n "$ac_header"; then
+              echo "#include <$ac_header>" >> conftest.c
+            fi
+          done
+        else
+          echo "extern int CRYPTO_set_locking_callback();" >> conftest.c
+        fi
+        cat << \EOF >> conftest.c
+int main(void) { return (int)CRYPTO_set_locking_callback; }
+EOF
+
+#cat conftest.$ac_ext
+        ${CC} ${CFLAGS} -o conftest$ac_exeext conftest.$ac_ext ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
+        if test $rc -eq 0; then
+          ac_cv_func_CRYPTO_set_locking_callback=yes
+          break
+        fi
+else
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo $ac_headers|sed 's/+/\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
+int
+main ()
+{
+return (int)CRYPTO_set_locking_callback;
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  ac_cv_func_CRYPTO_set_locking_callback=yes; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+fi
+      done
+      rm -f conftest.$ac_ext conftest$ac_exeext
+#set +x
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_func_CRYPTO_set_locking_callback" >&5
+$as_echo "$ac_cv_func_CRYPTO_set_locking_callback" >&6; }
+  if test "$ac_cv_func_CRYPTO_set_locking_callback" != no; then :
+
+elif :; then :
   as_fn_error $? "OpenSSL CRYPTO_set_locking_callback() is not available" "$LINENO" 5
 fi
 
 
-ac_fn_c_check_func "$LINENO" "libssh2_channel_send_keepalive" "ac_cv_func_libssh2_channel_send_keepalive"
-if test "x$ac_cv_func_libssh2_channel_send_keepalive" = x""yes; then :
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for libssh2_channel_send_keepalive" >&5
+$as_echo_n "checking for libssh2_channel_send_keepalive... " >&6; }
+if test "${ac_cv_func_libssh2_channel_send_keepalive+set}" = set; then :
+  $as_echo_n "(cached) " >&6
+else
+
+#set -x
+      ac_cv_func_libssh2_channel_send_keepalive="no"
+      echo > conftest.log
+      for ac_headers in  ""; do
+if false; then
+        cat << \EOF > conftest.c
+EOF
+        if test -n "$ac_headers"; then
+          for ac_header in `echo $ac_headers|sed 's/+/ /g'` ""; do
+            if test -n "$ac_header"; then
+              echo "#include <$ac_header>" >> conftest.c
+            fi
+          done
+        else
+          echo "extern int libssh2_channel_send_keepalive();" >> conftest.c
+        fi
+        cat << \EOF >> conftest.c
+int main(void) { return (int)libssh2_channel_send_keepalive; }
+EOF
+
+#cat conftest.$ac_ext
+        ${CC} ${CFLAGS} -o conftest$ac_exeext conftest.$ac_ext ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
+        if test $rc -eq 0; then
+          ac_cv_func_libssh2_channel_send_keepalive=yes
+          break
+        fi
+else
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo $ac_headers|sed 's/+/\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
+int
+main ()
+{
+return (int)libssh2_channel_send_keepalive;
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  ac_cv_func_libssh2_channel_send_keepalive=yes; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+fi
+      done
+      rm -f conftest.$ac_ext conftest$ac_exeext
+#set +x
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_func_libssh2_channel_send_keepalive" >&5
+$as_echo "$ac_cv_func_libssh2_channel_send_keepalive" >&6; }
+  if test "$ac_cv_func_libssh2_channel_send_keepalive" != no; then :
 
 $as_echo "#define HAVE_SSH2_CHANNEL_SEND_KEEPALIVE 1" >>confdefs.h
 
+elif :; then :
+
 fi
 
-ac_fn_c_check_func "$LINENO" "libssh2_keepalive_config" "ac_cv_func_libssh2_keepalive_config"
-if test "x$ac_cv_func_libssh2_keepalive_config" = x""yes; then :
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for libssh2_keepalive_config" >&5
+$as_echo_n "checking for libssh2_keepalive_config... " >&6; }
+if test "${ac_cv_func_libssh2_keepalive_config+set}" = set; then :
+  $as_echo_n "(cached) " >&6
+else
+
+#set -x
+      ac_cv_func_libssh2_keepalive_config="no"
+      echo > conftest.log
+      for ac_headers in  ""; do
+if false; then
+        cat << \EOF > conftest.c
+EOF
+        if test -n "$ac_headers"; then
+          for ac_header in `echo $ac_headers|sed 's/+/ /g'` ""; do
+            if test -n "$ac_header"; then
+              echo "#include <$ac_header>" >> conftest.c
+            fi
+          done
+        else
+          echo "extern int libssh2_keepalive_config();" >> conftest.c
+        fi
+        cat << \EOF >> conftest.c
+int main(void) { return (int)libssh2_keepalive_config; }
+EOF
+
+#cat conftest.$ac_ext
+        ${CC} ${CFLAGS} -o conftest$ac_exeext conftest.$ac_ext ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
+        if test $rc -eq 0; then
+          ac_cv_func_libssh2_keepalive_config=yes
+          break
+        fi
+else
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo $ac_headers|sed 's/+/\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
+int
+main ()
+{
+return (int)libssh2_keepalive_config;
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  ac_cv_func_libssh2_keepalive_config=yes; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+fi
+      done
+      rm -f conftest.$ac_ext conftest$ac_exeext
+#set +x
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_func_libssh2_keepalive_config" >&5
+$as_echo "$ac_cv_func_libssh2_keepalive_config" >&6; }
+  if test "$ac_cv_func_libssh2_keepalive_config" != no; then :
 
 $as_echo "#define HAVE_SSH2_KEEPALIVE_CONFIG 1" >>confdefs.h
 
+elif :; then :
+
 fi
 
-ac_fn_c_check_func "$LINENO" "libssh2_keepalive_send" "ac_cv_func_libssh2_keepalive_send"
-if test "x$ac_cv_func_libssh2_keepalive_send" = x""yes; then :
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for libssh2_keepalive_send" >&5
+$as_echo_n "checking for libssh2_keepalive_send... " >&6; }
+if test "${ac_cv_func_libssh2_keepalive_send+set}" = set; then :
+  $as_echo_n "(cached) " >&6
+else
+
+#set -x
+      ac_cv_func_libssh2_keepalive_send="no"
+      echo > conftest.log
+      for ac_headers in  ""; do
+if false; then
+        cat << \EOF > conftest.c
+EOF
+        if test -n "$ac_headers"; then
+          for ac_header in `echo $ac_headers|sed 's/+/ /g'` ""; do
+            if test -n "$ac_header"; then
+              echo "#include <$ac_header>" >> conftest.c
+            fi
+          done
+        else
+          echo "extern int libssh2_keepalive_send();" >> conftest.c
+        fi
+        cat << \EOF >> conftest.c
+int main(void) { return (int)libssh2_keepalive_send; }
+EOF
+
+#cat conftest.$ac_ext
+        ${CC} ${CFLAGS} -o conftest$ac_exeext conftest.$ac_ext ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
+        if test $rc -eq 0; then
+          ac_cv_func_libssh2_keepalive_send=yes
+          break
+        fi
+else
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo $ac_headers|sed 's/+/\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
+int
+main ()
+{
+return (int)libssh2_keepalive_send;
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  ac_cv_func_libssh2_keepalive_send=yes; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+fi
+      done
+      rm -f conftest.$ac_ext conftest$ac_exeext
+#set +x
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_func_libssh2_keepalive_send" >&5
+$as_echo "$ac_cv_func_libssh2_keepalive_send" >&6; }
+  if test "$ac_cv_func_libssh2_keepalive_send" != no; then :
 
 $as_echo "#define HAVE_SSH2_KEEPALIVE_SEND 1" >>confdefs.h
 
+elif :; then :
+
 fi
 
-ac_fn_c_check_func "$LINENO" "libssh2_scp_send64" "ac_cv_func_libssh2_scp_send64"
-if test "x$ac_cv_func_libssh2_scp_send64" = x""yes; then :
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for libssh2_scp_send64" >&5
+$as_echo_n "checking for libssh2_scp_send64... " >&6; }
+if test "${ac_cv_func_libssh2_scp_send64+set}" = set; then :
+  $as_echo_n "(cached) " >&6
+else
+
+#set -x
+      ac_cv_func_libssh2_scp_send64="no"
+      echo > conftest.log
+      for ac_headers in  ""; do
+if false; then
+        cat << \EOF > conftest.c
+EOF
+        if test -n "$ac_headers"; then
+          for ac_header in `echo $ac_headers|sed 's/+/ /g'` ""; do
+            if test -n "$ac_header"; then
+              echo "#include <$ac_header>" >> conftest.c
+            fi
+          done
+        else
+          echo "extern int libssh2_scp_send64();" >> conftest.c
+        fi
+        cat << \EOF >> conftest.c
+int main(void) { return (int)libssh2_scp_send64; }
+EOF
+
+#cat conftest.$ac_ext
+        ${CC} ${CFLAGS} -o conftest$ac_exeext conftest.$ac_ext ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
+        if test $rc -eq 0; then
+          ac_cv_func_libssh2_scp_send64=yes
+          break
+        fi
+else
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo $ac_headers|sed 's/+/\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
+int
+main ()
+{
+return (int)libssh2_scp_send64;
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  ac_cv_func_libssh2_scp_send64=yes; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+fi
+      done
+      rm -f conftest.$ac_ext conftest$ac_exeext
+#set +x
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_func_libssh2_scp_send64" >&5
+$as_echo "$ac_cv_func_libssh2_scp_send64" >&6; }
+  if test "$ac_cv_func_libssh2_scp_send64" != no; then :
 
 $as_echo "#define HAVE_SSH2_SCP_SEND64 1" >>confdefs.h
 
+elif :; then :
+
 fi
 
-ac_fn_c_check_func "$LINENO" "libssh2_sftp_seek2" "ac_cv_func_libssh2_sftp_seek2"
-if test "x$ac_cv_func_libssh2_sftp_seek2" = x""yes; then :
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for libssh2_sftp_seek2" >&5
+$as_echo_n "checking for libssh2_sftp_seek2... " >&6; }
+if test "${ac_cv_func_libssh2_sftp_seek2+set}" = set; then :
+  $as_echo_n "(cached) " >&6
+else
+
+#set -x
+      ac_cv_func_libssh2_sftp_seek2="no"
+      echo > conftest.log
+      for ac_headers in  ""; do
+if false; then
+        cat << \EOF > conftest.c
+EOF
+        if test -n "$ac_headers"; then
+          for ac_header in `echo $ac_headers|sed 's/+/ /g'` ""; do
+            if test -n "$ac_header"; then
+              echo "#include <$ac_header>" >> conftest.c
+            fi
+          done
+        else
+          echo "extern int libssh2_sftp_seek2();" >> conftest.c
+        fi
+        cat << \EOF >> conftest.c
+int main(void) { return (int)libssh2_sftp_seek2; }
+EOF
+
+#cat conftest.$ac_ext
+        ${CC} ${CFLAGS} -o conftest$ac_exeext conftest.$ac_ext ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
+        if test $rc -eq 0; then
+          ac_cv_func_libssh2_sftp_seek2=yes
+          break
+        fi
+else
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo $ac_headers|sed 's/+/\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
+int
+main ()
+{
+return (int)libssh2_sftp_seek2;
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  ac_cv_func_libssh2_sftp_seek2=yes; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+fi
+      done
+      rm -f conftest.$ac_ext conftest$ac_exeext
+#set +x
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_func_libssh2_sftp_seek2" >&5
+$as_echo "$ac_cv_func_libssh2_sftp_seek2" >&6; }
+  if test "$ac_cv_func_libssh2_sftp_seek2" != no; then :
 
 $as_echo "#define HAVE_SSH2_SFTP_SEEK2 1" >>confdefs.h
 
+elif :; then :
+
 fi
 
 
-ac_fn_c_check_func "$LINENO" "iso9660_open" "ac_cv_func_iso9660_open"
-if test "x$ac_cv_func_iso9660_open" = x""yes; then :
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for iso9660_open" >&5
+$as_echo_n "checking for iso9660_open... " >&6; }
+if test "${ac_cv_func_iso9660_open+set}" = set; then :
+  $as_echo_n "(cached) " >&6
+else
+
+#set -x
+      ac_cv_func_iso9660_open="no"
+      echo > conftest.log
+      for ac_headers in  ""; do
+if false; then
+        cat << \EOF > conftest.c
+EOF
+        if test -n "$ac_headers"; then
+          for ac_header in `echo $ac_headers|sed 's/+/ /g'` ""; do
+            if test -n "$ac_header"; then
+              echo "#include <$ac_header>" >> conftest.c
+            fi
+          done
+        else
+          echo "extern int iso9660_open();" >> conftest.c
+        fi
+        cat << \EOF >> conftest.c
+int main(void) { return (int)iso9660_open; }
+EOF
+
+#cat conftest.$ac_ext
+        ${CC} ${CFLAGS} -o conftest$ac_exeext conftest.$ac_ext ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
+        if test $rc -eq 0; then
+          ac_cv_func_iso9660_open=yes
+          break
+        fi
+else
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo $ac_headers|sed 's/+/\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
+int
+main ()
+{
+return (int)iso9660_open;
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  ac_cv_func_iso9660_open=yes; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+fi
+      done
+      rm -f conftest.$ac_ext conftest$ac_exeext
+#set +x
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_func_iso9660_open" >&5
+$as_echo "$ac_cv_func_iso9660_open" >&6; }
+  if test "$ac_cv_func_iso9660_open" != no; then :
 
 $as_echo "#define HAVE_ISO9660_OPEN 1" >>confdefs.h
 
+elif :; then :
+
 fi
 
-ac_fn_c_check_func "$LINENO" "iso9660_close" "ac_cv_func_iso9660_close"
-if test "x$ac_cv_func_iso9660_close" = x""yes; then :
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for iso9660_close" >&5
+$as_echo_n "checking for iso9660_close... " >&6; }
+if test "${ac_cv_func_iso9660_close+set}" = set; then :
+  $as_echo_n "(cached) " >&6
+else
+
+#set -x
+      ac_cv_func_iso9660_close="no"
+      echo > conftest.log
+      for ac_headers in  ""; do
+if false; then
+        cat << \EOF > conftest.c
+EOF
+        if test -n "$ac_headers"; then
+          for ac_header in `echo $ac_headers|sed 's/+/ /g'` ""; do
+            if test -n "$ac_header"; then
+              echo "#include <$ac_header>" >> conftest.c
+            fi
+          done
+        else
+          echo "extern int iso9660_close();" >> conftest.c
+        fi
+        cat << \EOF >> conftest.c
+int main(void) { return (int)iso9660_close; }
+EOF
+
+#cat conftest.$ac_ext
+        ${CC} ${CFLAGS} -o conftest$ac_exeext conftest.$ac_ext ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
+        if test $rc -eq 0; then
+          ac_cv_func_iso9660_close=yes
+          break
+        fi
+else
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo $ac_headers|sed 's/+/\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
+int
+main ()
+{
+return (int)iso9660_close;
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  ac_cv_func_iso9660_close=yes; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+fi
+      done
+      rm -f conftest.$ac_ext conftest$ac_exeext
+#set +x
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_func_iso9660_close" >&5
+$as_echo "$ac_cv_func_iso9660_close" >&6; }
+  if test "$ac_cv_func_iso9660_close" != no; then :
 
 $as_echo "#define HAVE_ISO9660_CLOSE 1" >>confdefs.h
 
+elif :; then :
+
 fi
 
-ac_fn_c_check_func "$LINENO" "iso9660_ifs_stat_translate" "ac_cv_func_iso9660_ifs_stat_translate"
-if test "x$ac_cv_func_iso9660_ifs_stat_translate" = x""yes; then :
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for iso9660_ifs_stat_translate" >&5
+$as_echo_n "checking for iso9660_ifs_stat_translate... " >&6; }
+if test "${ac_cv_func_iso9660_ifs_stat_translate+set}" = set; then :
+  $as_echo_n "(cached) " >&6
+else
+
+#set -x
+      ac_cv_func_iso9660_ifs_stat_translate="no"
+      echo > conftest.log
+      for ac_headers in  ""; do
+if false; then
+        cat << \EOF > conftest.c
+EOF
+        if test -n "$ac_headers"; then
+          for ac_header in `echo $ac_headers|sed 's/+/ /g'` ""; do
+            if test -n "$ac_header"; then
+              echo "#include <$ac_header>" >> conftest.c
+            fi
+          done
+        else
+          echo "extern int iso9660_ifs_stat_translate();" >> conftest.c
+        fi
+        cat << \EOF >> conftest.c
+int main(void) { return (int)iso9660_ifs_stat_translate; }
+EOF
+
+#cat conftest.$ac_ext
+        ${CC} ${CFLAGS} -o conftest$ac_exeext conftest.$ac_ext ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
+        if test $rc -eq 0; then
+          ac_cv_func_iso9660_ifs_stat_translate=yes
+          break
+        fi
+else
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo $ac_headers|sed 's/+/\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
+int
+main ()
+{
+return (int)iso9660_ifs_stat_translate;
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  ac_cv_func_iso9660_ifs_stat_translate=yes; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+fi
+      done
+      rm -f conftest.$ac_ext conftest$ac_exeext
+#set +x
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_func_iso9660_ifs_stat_translate" >&5
+$as_echo "$ac_cv_func_iso9660_ifs_stat_translate" >&6; }
+  if test "$ac_cv_func_iso9660_ifs_stat_translate" != no; then :
 
 $as_echo "#define HAVE_ISO9660_IFS_STAT_TRANSLATE 1" >>confdefs.h
 
+elif :; then :
+
 fi
 
-ac_fn_c_check_func "$LINENO" "iso9660_iso_seek_read" "ac_cv_func_iso9660_iso_seek_read"
-if test "x$ac_cv_func_iso9660_iso_seek_read" = x""yes; then :
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for iso9660_iso_seek_read" >&5
+$as_echo_n "checking for iso9660_iso_seek_read... " >&6; }
+if test "${ac_cv_func_iso9660_iso_seek_read+set}" = set; then :
+  $as_echo_n "(cached) " >&6
+else
+
+#set -x
+      ac_cv_func_iso9660_iso_seek_read="no"
+      echo > conftest.log
+      for ac_headers in  ""; do
+if false; then
+        cat << \EOF > conftest.c
+EOF
+        if test -n "$ac_headers"; then
+          for ac_header in `echo $ac_headers|sed 's/+/ /g'` ""; do
+            if test -n "$ac_header"; then
+              echo "#include <$ac_header>" >> conftest.c
+            fi
+          done
+        else
+          echo "extern int iso9660_iso_seek_read();" >> conftest.c
+        fi
+        cat << \EOF >> conftest.c
+int main(void) { return (int)iso9660_iso_seek_read; }
+EOF
+
+#cat conftest.$ac_ext
+        ${CC} ${CFLAGS} -o conftest$ac_exeext conftest.$ac_ext ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
+        if test $rc -eq 0; then
+          ac_cv_func_iso9660_iso_seek_read=yes
+          break
+        fi
+else
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo $ac_headers|sed 's/+/\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
+int
+main ()
+{
+return (int)iso9660_iso_seek_read;
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  ac_cv_func_iso9660_iso_seek_read=yes; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+fi
+      done
+      rm -f conftest.$ac_ext conftest$ac_exeext
+#set +x
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_func_iso9660_iso_seek_read" >&5
+$as_echo "$ac_cv_func_iso9660_iso_seek_read" >&6; }
+  if test "$ac_cv_func_iso9660_iso_seek_read" != no; then :
 
 $as_echo "#define HAVE_ISO9660_ISO_SEEK_READ 1" >>confdefs.h
 
+elif :; then :
+
 fi
 
 
-ac_fn_c_check_func "$LINENO" "backtrace" "ac_cv_func_backtrace"
-if test "x$ac_cv_func_backtrace" = x""yes; then :
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for sysconf" >&5
+$as_echo_n "checking for sysconf... " >&6; }
+if test "${ac_cv_func_sysconf+set}" = set; then :
+  $as_echo_n "(cached) " >&6
+else
+
+#set -x
+      ac_cv_func_sysconf="no"
+      echo > conftest.log
+      for ac_headers in  ""; do
+if false; then
+        cat << \EOF > conftest.c
+EOF
+        if test -n "$ac_headers"; then
+          for ac_header in `echo $ac_headers|sed 's/+/ /g'` ""; do
+            if test -n "$ac_header"; then
+              echo "#include <$ac_header>" >> conftest.c
+            fi
+          done
+        else
+          echo "extern int sysconf();" >> conftest.c
+        fi
+        cat << \EOF >> conftest.c
+int main(void) { return (int)sysconf; }
+EOF
+
+#cat conftest.$ac_ext
+        ${CC} ${CFLAGS} -o conftest$ac_exeext conftest.$ac_ext ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
+        if test $rc -eq 0; then
+          ac_cv_func_sysconf=yes
+          break
+        fi
+else
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo $ac_headers|sed 's/+/\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
+int
+main ()
+{
+return (int)sysconf;
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  ac_cv_func_sysconf=yes; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+fi
+      done
+      rm -f conftest.$ac_ext conftest$ac_exeext
+#set +x
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_func_sysconf" >&5
+$as_echo "$ac_cv_func_sysconf" >&6; }
+  if test "$ac_cv_func_sysconf" != no; then :
+
+$as_echo "#define HAVE_SYSCONF 1" >>confdefs.h
+
+elif :; then :
+
+fi
+
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for backtrace" >&5
+$as_echo_n "checking for backtrace... " >&6; }
+if test "${ac_cv_func_backtrace+set}" = set; then :
+  $as_echo_n "(cached) " >&6
+else
+
+#set -x
+      ac_cv_func_backtrace="no"
+      echo > conftest.log
+      for ac_headers in  ""; do
+if false; then
+        cat << \EOF > conftest.c
+EOF
+        if test -n "$ac_headers"; then
+          for ac_header in `echo $ac_headers|sed 's/+/ /g'` ""; do
+            if test -n "$ac_header"; then
+              echo "#include <$ac_header>" >> conftest.c
+            fi
+          done
+        else
+          echo "extern int backtrace();" >> conftest.c
+        fi
+        cat << \EOF >> conftest.c
+int main(void) { return (int)backtrace; }
+EOF
+
+#cat conftest.$ac_ext
+        ${CC} ${CFLAGS} -o conftest$ac_exeext conftest.$ac_ext ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
+        if test $rc -eq 0; then
+          ac_cv_func_backtrace=yes
+          break
+        fi
+else
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo $ac_headers|sed 's/+/\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
+int
+main ()
+{
+return (int)backtrace;
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  ac_cv_func_backtrace=yes; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+fi
+      done
+      rm -f conftest.$ac_ext conftest$ac_exeext
+#set +x
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_func_backtrace" >&5
+$as_echo "$ac_cv_func_backtrace" >&6; }
+  if test "$ac_cv_func_backtrace" != no; then :
 
 $as_echo "#define HAVE_BACKTRACE 1" >>confdefs.h
+
+elif :; then :
 
 fi
 
@@ -10715,6 +14875,7 @@ host="$host"
                    HAVE_SSH2=$HAVE_SSH2
                    HAVE_GNU_TLS=$HAVE_GNU_TLS
                    HAVE_ISO9660=$HAVE_ISO9660
+                   HAVE_PCRE=$HAVE_PCRE
                    HAVE_BREAKPAD=$HAVE_BREAKPAD
                    ENABLE_GUI=$ENABLE_GUI
                    SWT_DIR="$SWT_DIR"
@@ -11308,6 +15469,7 @@ $as_echo "$as_me: executing $ac_file commands" >&6;}
                     echo "  SCP/SFTP support  : `if test "$HAVE_SSH2"; then echo yes; else echo no; fi`";
                     echo "  TLS/SSL server    : `if test "$HAVE_GNU_TLS"; then echo yes; else echo no; fi`";
                     echo "  ISO 9660 support  : `if test "$HAVE_ISO9660"; then echo yes; else echo no; fi`";
+                    echo "  PCRE support      : `if test "$HAVE_PCRE"; then echo yes; else echo no; fi`";
                     echo "  Crash dump support: `if test "$HAVE_BREAKPAD"; then echo yes; else echo no; fi`";
                     echo "  GUI support       : `if test "$ENABLE_GUI" = "yes"; then echo yes; else echo no; fi`";
                     echo "  SWT directory     : $SWT_DIR"

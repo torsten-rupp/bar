@@ -80,75 +80,177 @@ EOF
   AC_PROVIDE([$0])dnl
 ])
 
-dnl --- check 
-dnl usage: AC_SEARCH_STATIC_LIBS(<library>,<symbol>,<if found>,<if not found>)
-AC_DEFUN([AC_SEARCH_STATIC_LIBS],
-[
-  AS_VAR_PUSHDEF([ac_search_static], [ac_cv_search_static_$1])dnl
-  AC_CACHE_CHECK(
-    [for static library containing $1],
-    [ac_search_static],
-    [
-     ac_func_search_static_save_CFLAGS="$CFLAGS"; CFLAGS="$CFLAGS -static"
-     ac_func_search_static_save_LIBS=$LIBS
-     AC_LANG_CONFTEST([AC_LANG_CALL([], [$1])])
-     for ac_lib in '' $2; do
-       if test -z "$ac_lib"; then
-         ac_res="none required"
-       else
-         ac_res=-l$ac_lib
-         LIBS="-l$ac_lib $5 $ac_func_search_save_LIBS"
-       fi
-       AC_LINK_IFELSE([], [AS_VAR_SET([ac_search_static], [$ac_res])])
-       AS_VAR_SET_IF([ac_search_static], [break])
-     done
-     AS_VAR_SET_IF([ac_search_static], , [AS_VAR_SET([ac_search_static], [no])])
-     rm conftest.$ac_ext
-
-     LIBS=$ac_func_search_save_LIBS
-     CFLAGS=$ac_func_search_static_save_CFLAGS
-   ]
-  )
-  AS_VAR_COPY([ac_res], [ac_search_static])
-  AS_IF([test "$ac_res" != no],[test "$ac_res" = "none required" || LIBS="$ac_res $LIBS" $3],[$4])
-  AS_VAR_POPDEF([ac_search_static])dnl
-])
-
 dnl --- check if constant is available
-dnl usage: AC_CHECK_CONST(<constant>,<if found>,<if not found>)
-AC_DEFUN([AC_CHECK_CONST],
+dnl usage: AC_CHECK_CONSTANT(<constant>,<if found>,<if not found>,<headers>)
+AC_DEFUN([AC_CHECK_CONSTANT],
 [
   AC_REQUIRE([AC_PROG_CC])
   AC_CACHE_CHECK(
     [if constant $1 is available],
     ac_cv_const_$1,
     [
-      cat << \EOF > conftest.c
-#include <stdlib.h>
-#include <stdio.h>
-EOF
-for ac_header in $4 ""; do
-  if test -n "$ac_header"; then
-    echo "#include <$ac_header>" >> conftest.c
-  fi
-done
-      cat << \EOF >> conftest.c
-int main(void) { printf("%d",$1); return 0; }
-EOF
-
-      ${CC} ${CFLAGS} -c conftest.c -o conftest.o 1>/dev/null 2>/dev/null; rc=$?
-      if test $rc -eq 0; then
-        ac_available=yes
-      else
-        ac_available=no
-      fi
-      AS_IF([test "$ac_available" = "yes"],[$2],:,[$3])
-      AS_VAR_SET(ac_cv_const_$1,$ac_available)
-
-      rm -f conftest.c conftest.o
+      AC_COMPILE_IFELSE([AC_LANG_PROGRAM([`echo $4|sed 's/ /\n/g'|sed 's/\(.*\)/#include <\\1>/g'`],
+                                         [printf("%d",$1); return 0;]
+                                        )
+                        ],
+                        [AS_VAR_SET([ac_cv_const_$1],[yes]); $2],
+                        [AS_VAR_SET([ac_cv_const_$1],[no]); $3]
+                       )
     ]
   )dnl
   AC_PROVIDE([$0])dnl
+])
+
+dnl --- check if function is available
+dnl usage: AC_CHECK_FUNCTION(<function>,<if found>,<if not found>,<headers>)
+AC_DEFUN([AC_CHECK_FUNCTION],
+[
+  AC_REQUIRE([AC_PROG_CC])
+  AC_CACHE_CHECK(
+    [for $1],
+    ac_cv_func_$1,
+    [
+#set -x
+      ac_cv_func_$1="no"
+      echo > conftest.log
+      for ac_headers in $4 ""; do
+if false; then
+        cat << \EOF > conftest.c
+EOF
+        if test -n "$ac_headers"; then
+          for ac_header in `echo $ac_headers|sed 's/+/ /g'` ""; do
+            if test -n "$ac_header"; then
+              echo "#include <$ac_header>" >> conftest.c
+            fi
+          done
+        else
+          echo "extern int $1();" >> conftest.c
+        fi
+        cat << \EOF >> conftest.c
+int main(void) { return (int)$1; }
+EOF
+
+#cat conftest.$ac_ext
+        ${CC} ${CFLAGS} -o conftest$ac_exeext conftest.$ac_ext ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
+        if test $rc -eq 0; then
+          AS_VAR_SET([ac_cv_func_$1],[yes])
+          break
+        fi
+else
+        AC_COMPILE_IFELSE([AC_LANG_PROGRAM([`echo $ac_headers|sed 's/+/\n/g'|sed 's/\(.*\)/#include <\\1>/g'`],
+                                           [return (int)$1;]
+                                          )
+                          ],
+                          [AS_VAR_SET([ac_cv_func_$1],[yes]); break]
+                         )
+fi
+      done
+      rm -f conftest.$ac_ext conftest$ac_exeext
+#set +x
+    ]
+  )
+  AS_IF([test "$ac_cv_func_$1" != no],[$2],:,[$3])
+  AC_PROVIDE([$0])dnl
+])
+
+dnl --- check if function is available in library (Note: do not use AC_SEARCH_LIBS; it does not work with Windows functions)
+dnl usage: AC_SEARCH_LIBRARIES(<symbol>,<libraries>,<if found>,<if not found>,<headers>)
+AC_DEFUN([AC_SEARCH_LIBRARIES],
+[
+  AC_REQUIRE([AC_PROG_CC])
+  AS_VAR_PUSHDEF([ac_search_libraries], [ac_cv_search_libraries_$1])dnl
+  ac_result=""
+  AC_CACHE_CHECK(
+    [for library containing $1],
+    ac_search_libraries,
+    [
+      dnl save C compiler settings
+      ac_func_search_libraries_save_CFLAGS="$CFLAGS";
+      ac_func_search_libraries_save_LIBS=$LIBS
+
+      cat << \EOF > conftest.$ac_ext
+EOF
+      for ac_header in $5 ""; do
+        if test -n "$ac_header"; then
+          echo "#include <$ac_header>" >> conftest.$ac_ext
+        fi
+      done
+      cat << \EOF >> conftest.$ac_ext
+int main(void) { return (int)$1; }
+EOF
+
+      dnl test linkage     
+      for ac_library in $2 ""; do
+        if test -z "$ac_library"; then
+          ac_result="none required"
+        else
+          ac_result=-l$ac_library
+          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+        fi
+
+#cat conftest.$ac_ext
+#set -x
+        ${CC} ${CFLAGS} -c conftest.c -o conftest.o 1>/dev/null 2>/dev/null; rc=$?
+        if test $rc -eq 0; then
+          ${LD} ${LDFLAGS} -o conftest conftest.o ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
+          if test $rc -eq 0; then
+            AS_VAR_SET([ac_search_libraries],[$ac_result])
+            AS_VAR_SET_IF([ac_search_libraries],[break])
+          fi
+        fi
+      done
+      AS_VAR_SET_IF([ac_search_libraries],,[AS_VAR_SET([ac_search_libraries],[no])])
+      rm -f conftest.$ac_ext conftest.$ac_objext conftest$ac_exeext
+
+      dnl restore C compiler settings
+      LIBS=$ac_func_search_libraries_save_LIBS
+      CFLAGS=$ac_func_search_libraries_save_CFLAGS
+    ]
+  )
+  AS_VAR_COPY([ac_result],[ac_search_libraries])
+  AS_IF([test "$ac_result" != no],[test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" $3],[$4])
+  AS_VAR_POPDEF([ac_search_libraries])dnl
+])
+
+dnl --- check if function is available in static library (Note: do not use AC_SEARCH_LIBS; it does not work with Windows functions)
+dnl usage: AC_SEARCH_STATIC_LIBRARIES(<symbol>,<libraries>,<if found>,<if not found>,<headers>)
+AC_DEFUN([AC_SEARCH_STATIC_LIBRARIES],
+[
+  AC_REQUIRE([AC_PROG_CC])
+  AS_VAR_PUSHDEF([ac_search_static_libraries], [ac_cv_search_static_$1])dnl
+  AC_CACHE_CHECK(
+    [for static library containing $1],
+    [ac_search_static_libraries],
+    [
+      dnl save C compiler settings
+      ac_func_search_static_libraries_save_LIBS=$LIBS
+
+      dnl test static linkage     
+      for ac_library in $2 ""; do
+        if test -z "$ac_library"; then
+          ac_result="none required"
+        else
+          ac_result=-l$ac_library
+          LIBS="-l$ac_library $ac_func_search_static_libraries_save_LIBS"
+        fi
+
+        AC_LINK_IFELSE([AC_LANG_PROGRAM([`echo $5|sed 's/ /\n/g'|sed 's/\(.*\)/#include <\\1>/g'`],
+                                        [return (int)$1;]
+                                       )
+                          ],
+                          [AS_VAR_SET([ac_search_static_libraries],[$ac_result]); break]
+                         )
+
+      done
+      AS_VAR_SET_IF([ac_search_static_libraries],,[AS_VAR_SET([ac_search_static_libraries],[no])])
+
+      dnl restore C compiler settings
+      LIBS=$ac_func_search_libraries_save_LIBS
+    ]
+  )
+  AS_VAR_COPY([ac_result],[ac_search_static_libraries])
+  AS_IF([test "$ac_result" != no],[test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" $3],[$4])
+  AS_VAR_POPDEF([ac_search_static_libraries])dnl
 ])
 
 
@@ -223,7 +325,7 @@ AC_DEFUN([AC_CHECK_VARIABLE_ATTRIBUTE],
       ac_supported=no
       AC_TRY_COMPILE([$1 int x;],,ac_supported=yes,ac_supported=no)
       AS_IF([test "$ac_supported" = "yes"],[$2],:,[$3])
-      ac_cv_variable_attribute_$1=$ac_supported
+      AS_VAR_SET(ac_cv_variable_attribute_$1,$ac_supported)
     ]
   )dnl
   AC_PROVIDE([$0])dnl
@@ -259,6 +361,48 @@ EOF
       CC_DEFINES="$CC_DEFINES $ac_cv_extended_pthread_defines"
     ]
   )dnl
+  AC_PROVIDE([$0])dnl
+])
+
+dnl --- check number of arguments of mkdir
+dnl usage: AC_CHECK_MKDIR_ARGUMENTS
+AC_DEFUN([AC_CHECK_MKDIR_ARGUMENTS],
+[
+  AC_REQUIRE([AC_PROG_CC])
+  AC_CACHE_CHECK(
+    [number of arguments of mkdir()],
+    ac_cv_mkdir_arguments_count,
+    [
+      ac_cv_mkdir_arguments_count=""
+
+      if test -z "$ac_cv_mkdir_arguments_count"; then
+        cat << \EOF > conftest.c
+#include <io.h>
+int main(void) { mkdir("."); return 0; }
+EOF
+        ${CC} ${CFLAGS} -Wall -Werror -c conftest.c -o conftest.o 1>/dev/null 2>/dev/null; rc=$?
+        if test $rc -eq 0; then
+          ac_cv_mkdir_arguments_count=1
+        fi
+        rm -f conftest.c conftest.o
+      fi
+      if test -z "$ac_cv_mkdir_arguments_count"; then
+        cat << \EOF > conftest.c
+#include <sys/stat.h>
+#include <sys/types.h>
+int main(void) { mkdir(".",0); return 0; }
+EOF
+        ${CC} ${CFLAGS} -Wall -Werror -c conftest.c -o conftest.o 1>/dev/null 2>/dev/null; rc=$?
+        if test $rc -eq 0; then
+          ac_cv_mkdir_arguments_count=2
+        fi
+        rm -f conftest.c conftest.o
+      fi
+    ]
+  )dnl
+
+  AC_DEFINE_UNQUOTED(MKDIR_ARGUMENTS_COUNT,$ac_cv_mkdir_arguments_count,[number of mkdir() arguments])
+
   AC_PROVIDE([$0])dnl
 ])
 
@@ -403,6 +547,8 @@ AC_SUBST(HAVE_FTP)                          dnl "1" for ftp support, "" otherwis
 AC_SUBST(HAVE_SSH2)                         dnl "1" for ssh2 support, "" otherwise
 AC_SUBST(HAVE_GNU_TLS)                      dnl "1" for GNU TLS support, "" otherwise
 AC_SUBST(HAVE_ISO9660)                      dnl "1" for ISO9660 support, "" otherwise
+AC_SUBST(HAVE_PCRE)                         dnl "1" for pcre support, "" otherwise
+AC_SUBST(HAVE_PTHREADS_W32)                 dnl "1" for pthreads-w32 support, "" otherwise
 AC_SUBST(HAVE_BREAKPAD)                     dnl "1" for BreakPad support, "" otherwise
 
 AC_SUBST(INSTALL_DIR)                       dnl installation directory
@@ -488,6 +634,8 @@ ENABLE_FTP="yes"
 ENABLE_SSH="yes"
 ENABLE_TLS="yes"
 ENABLE_ISO9660="yes"
+ENABLE_PCRE="yes"
+ENABLE_PTHREADS_W32="yes"
 ENABLE_BREAKPAD="yes"
 ENABLE_GUI="yes"
 ENABLE_PACKAGE_COMPILE="yes"   
@@ -500,27 +648,27 @@ dnl $host_cpu
 dnl $host_os
 case "$host_os" in
   linux-*)
-    PLATFORM=Linux
+    PLATFORM=LINUX
     FILE_SEPARATOR_CHAR="/"
     JAVA_PATH_SEPARATOR=":"
     ;;
   windows*)
-    PLATFORM=Windows
+    PLATFORM=WINDOWS
     FILE_SEPARATOR_CHAR="\\\\"
     JAVA_PATH_SEPARATOR=";"
     ;;
   mingw*)
-    PLATFORM=Windows
+    PLATFORM=WINDOWS
     FILE_SEPARATOR_CHAR="\\\\"
     JAVA_PATH_SEPARATOR=";"
     ;;
   sunos | solaris*)
-    PLATFORM=Solaris
+    PLATFORM=SOLARIS
     FILE_SEPARATOR_CHAR="/"
     JAVA_PATH_SEPARATOR=":"
     ;;
   darwin*)
-    PLATFORM=MacOSX
+    PLATFORM=MAC_OSX
     FILE_SEPARATOR_CHAR="/"
     JAVA_PATH_SEPARATOR=":"
     ;;
@@ -730,8 +878,14 @@ if test ! $ENABLE_LINK_DYNAMIC = "yes"; then
   LD_FLAGS="-static-libgcc"
 fi
 if test "$ENABLE_DEBUG" = "yes"; then
-  # required for stacktraces
-  AC_COMPILER_OPTION(-rdynamic,LD_FLAGS)
+  case "$host_os" in
+    linux-*)
+      # required for stacktraces
+      AC_COMPILER_OPTION(-rdynamic,CC_FLAGS CXX_FLAGS LD_FLAGS)
+      ;;
+    *)
+      ;;
+  esac
 fi
 LIBRARY_PATHS="$LIBRARY_PATHS /usr/local/lib"
 
@@ -828,7 +982,23 @@ for z in $LIBRARY_PATHS ""; do
 done
 
 # headers
-AC_CHECK_HEADERS(stdbool.h)
+AC_CHECK_HEADERS(\
+                 arpa/inet.h \
+                 features.h \
+                 grp.h \
+                 linux/fs.h \
+                 linux/tcp.h \
+                 netdb.h \
+                 netinet/in.h \
+                 pwd.h \
+                 regex.h \
+                 stdbool.h \
+                 sys/ioctl.h \
+                 sys/resource.h \
+                 sys/select.h \
+                 sys/socket.h \
+                 sys/statvfs.h \
+                )
 
 # defines, constants, types, variables
 AC_CHECK_TYPE(uint,AC_DEFINE(HAVE_UINT,1,[defined if uint is available]))
@@ -849,33 +1019,43 @@ AC_CHECK_LARGEFILE_DEFINES
 AC_CHECK_SIZEOF(void *)
 
 AC_SEARCH_LIBS(round,m,,AC_ERROR([m library not found]))
+AC_SEARCH_LIBS(dlopen,dl,[LIBRARIES="$LIBRARIES dl"])
+
 case $host_os in
   linux*)
-    AC_SEARCH_LIBS(pthread_create,pthread,,AC_ERROR([pthread library not found]))
+    AC_SEARCH_LIBRARIES(pthread_create,pthread,,AC_ERROR([pthread library not found]))
     ;;
   mingw*)
+    AC_SEARCH_STATIC_LIBRARIES(pthread_create,pthreadGC2,[STATIC_LIBRARIES="$STATIC_LIBRARIES pthreadGC2"],,pthread.h)
+dnl    AC_SEARCH_LIBRARIES(WSAStartup,wsock32,[STATIC_LIBRARIES="$STATIC_LIBRARIES wsock32"],,winsock2.h)
+    AC_SEARCH_STATIC_LIBRARIES(WSAStartup,wsock32,[STATIC_LIBRARIES="$STATIC_LIBRARIES wsock32"],,winsock2.h)
     ;;
   *)
     AC_ERROR([Unsupported operating system '$host_os'])
     ;;
 esac
-AC_SEARCH_LIBS(dlopen,dl,[LIBRARIES="$LIBRARIES dl"])
+dnl for debug/test only
+dnl AC_CHECK_FUNCTION(gethostbyname,AC_DEFINE(HAVE_GETHOSTBYNAME,  1,[gethostbyname() available]),,winsock2.h)
+dnl AC_CHECK_FUNCTION(gethostbyname,AC_DEFINE(HAVE_GETHOSTBYNAME,  1,[gethostbyname() available]),,winsock2.h)
+dnl AC_CHECK_FUNCTION(gethostbynamex,AC_DEFINE(HAVE_GETHOSTBYNAME,  1,[gethostbyname() available]),,winsock2.h)
+dnl AC_CHECK_FUNCTION(gethostbyname,  AC_DEFINE(HAVE_GETHOSTBYNAME,  1,[gethostbyname() available])  ,,winsock2.h)
+dnl AC_CHECK_FUNCTION(gethostbyname_r,AC_DEFINE(HAVE_GETHOSTBYNAME_R,1,[gethostbyname_r() available]),,winsock2.h)
+dnl AC_SEARCH_STATIC_LIBRARIES(zlibVersion,z,[HAVE_Z=1;STATIC_LIBRARIES="$STATIC_LIBRARIES z";AC_DEFINE(HAVE_Z,1,[z installed])])
+dnl AC_MSG_ERROR([stop])
 
 # optional packages
 tmpFile=`mktemp configure-XXXXXX`
 cwd=`pwd`
+mkdir packages 2>/dev/null
+(cd packages; rm -rf include; mkdir include 2>/dev/null)
+(cd packages; rm -rf lib; mkdir lib 2>/dev/null)
+(cd packages; rm -f lib64; ln -s lib lib64 2>/dev/null)
 CC_INCLUDES="$CC_INCLUDES $cwd/packages/include"
 LIBRARY_PATHS="$LIBRARY_PATHS $cwd/packages/lib"
 
 if test -d zlib -o -d "`readlink zlib`"; then
   if test "$ENABLE_PACKAGE_COMPILE" = "yes"; then
     dnl compile zlib library
-
-    mkdir packages 2>/dev/null
-    mkdir packages/include 2>/dev/null
-    mkdir packages/lib 2>/dev/null
-    (cd packages; rm -f lib64; ln -s lib lib64 2>/dev/null)
-    cwd=`pwd`
 
     AC_MSG_COMPILE([zlib])
     result=1
@@ -912,8 +1092,6 @@ if test -d zlib -o -d "`readlink zlib`"; then
 
   if test $result -eq 1; then
     HAVE_Z=1
-    CC_INCLUDES="$CC_INCLUDES $cwd/packages/include"
-    LIBRARY_PATHS="$LIBRARY_PATHS $cwd/packages/lib"
     STATIC_LIBRARIES="$STATIC_LIBRARIES z"
     AC_DEFINE(HAVE_Z,1,[zlib installed (local)])
   fi
@@ -923,7 +1101,7 @@ else
     AC_SEARCH_LIBS(zlibVersion,z,[HAVE_Z=1;LIBRARIES="$LIBRARIES z";AC_DEFINE(HAVE_Z,1,[z installed])])
   else
     if test -z "$HAVE_Z"; then
-      AC_SEARCH_STATIC_LIBS(zlibVersion,z,[HAVE_Z=1;STATIC_LIBRARIES="$STATIC_LIBRARIES z";AC_DEFINE(HAVE_Z,1,[z installed])])
+      AC_SEARCH_STATIC_LIBRARIES(zlibVersion,z,[HAVE_Z=1;STATIC_LIBRARIES="$STATIC_LIBRARIES z";AC_DEFINE(HAVE_Z,1,[z installed])])
     fi
     if test -z "$HAVE_Z"; then
       AC_SEARCH_LIBS(zlibVersion,z,[HAVE_Z=1;LIBRARIES="$LIBRARIES z";AC_DEFINE(HAVE_Z,1,[z installed])])
@@ -935,12 +1113,6 @@ if test $ENABLE_BZIP2 = "yes"; then
   if test -d bzip2 -o -d "`readlink bzip2`"; then
     if test "$ENABLE_PACKAGE_COMPILE" = "yes"; then
       dnl compile bzip2 library
-
-      mkdir packages 2>/dev/null
-      mkdir packages/include 2>/dev/null
-      mkdir packages/lib 2>/dev/null
-      (cd packages; rm -f lib64; ln -s lib lib64 2>/dev/null)
-      cwd=`pwd`
 
       AC_MSG_COMPILE([bzip2])
       result=1
@@ -969,8 +1141,6 @@ if test $ENABLE_BZIP2 = "yes"; then
 
     if test $result -eq 1; then
       HAVE_BZ2=1
-      CC_INCLUDES="$CC_INCLUDES $cwd/packages/include"
-      LIBRARY_PATHS="$LIBRARY_PATHS $cwd/packages/lib"
       STATIC_LIBRARIES="$STATIC_LIBRARIES bz2"
       AC_DEFINE(HAVE_BZ2,1,[bzip2 installed (local)])
     fi
@@ -980,7 +1150,7 @@ if test $ENABLE_BZIP2 = "yes"; then
       AC_SEARCH_LIBS(BZ2_bzCompressInit,bz2,[HAVE_BZ2=1;LIBRARIES="$LIBRARIES bz2";AC_DEFINE(HAVE_BZ2,1,[bzip2 installed])])
     else
       if test -z "$HAVE_BZ2"; then
-        AC_SEARCH_STATIC_LIBS(BZ2_bzCompressInit,bz2,[HAVE_BZ2=1;STATIC_LIBRARIES="$STATIC_LIBRARIES bz2";AC_DEFINE(HAVE_BZ2,1,[static bzip2 installed])])
+        AC_SEARCH_STATIC_LIBRARIES(BZ2_bzCompressInit,bz2,[HAVE_BZ2=1;STATIC_LIBRARIES="$STATIC_LIBRARIES bz2";AC_DEFINE(HAVE_BZ2,1,[static bzip2 installed])])
       fi
       if test -z "$HAVE_BZ2"; then
         AC_SEARCH_LIBS(BZ2_bzCompressInit,bz2,[HAVE_BZ2=1;LIBRARIES="$LIBRARIES bz2";AC_DEFINE(HAVE_BZ2,1,[bzip2 installed])])
@@ -993,12 +1163,6 @@ if test $ENABLE_LZMA = "yes"; then
   if test -d xz -o -d "`readlink xz`"; then
     if test "$ENABLE_PACKAGE_COMPILE" = "yes"; then
       dnl compile lzma library
-
-      mkdir packages 2>/dev/null
-      mkdir packages/include 2>/dev/null
-      mkdir packages/lib 2>/dev/null
-      (cd packages; rm -f lib64; ln -s lib lib64 2>/dev/null)
-      cwd=`pwd`
 
       AC_MSG_COMPILE([xz utils])
       result=1
@@ -1035,8 +1199,6 @@ if test $ENABLE_LZMA = "yes"; then
 
     if test $result -eq 1; then
       HAVE_LZMA=1
-      CC_INCLUDES="$CC_INCLUDES $cwd/packages/include"
-      LIBRARY_PATHS="$LIBRARY_PATHS $cwd/packages/lib"
       STATIC_LIBRARIES="$STATIC_LIBRARIES lzma"
       AC_DEFINE(HAVE_LZMA,1,[lzma installed (local)])
     fi
@@ -1046,7 +1208,7 @@ if test $ENABLE_LZMA = "yes"; then
       AC_SEARCH_LIBS(lzma_easy_encoder,lzma,[HAVE_LZMA=1;LIBRARIES="$LIBRARIES lzma";AC_DEFINE(HAVE_LZMA,1,[lzma installed])])
     else
       if test -z "$HAVE_LZMA"; then
-        AC_SEARCH_STATIC_LIBS(lzma_easy_encoder,lzma,[HAVE_LZMA=1;STATIC_LIBRARIES="$STATIC_LIBRARIES lzma";AC_DEFINE(HAVE_LZMA,1,[static lzma installed])])
+        AC_SEARCH_STATIC_LIBRARIES(lzma_easy_encoder,lzma,[HAVE_LZMA=1;STATIC_LIBRARIES="$STATIC_LIBRARIES lzma";AC_DEFINE(HAVE_LZMA,1,[static lzma installed])])
       fi
       if test -z "$HAVE_LZMA"; then
         AC_SEARCH_LIBS(lzma_easy_encoder,lzma,[HAVE_LZMA=1;LIBRARIES="$LIBRARIES lzma";AC_DEFINE(HAVE_LZMA,1,[lzma installed])])
@@ -1069,12 +1231,6 @@ if test $ENABLE_GCRYPT = "yes"; then
   if test \( -d libgpg-error -o -d "`readlink libgpg-error`" \) -a \( -d libgcrypt -o -d "`readlink libgcrypt`" \); then
     if test "$ENABLE_PACKAGE_COMPILE" = "yes"; then
       dnl compile libgcrypt library
-
-      mkdir packages 2>/dev/null
-      mkdir packages/include 2>/dev/null
-      mkdir packages/lib 2>/dev/null
-      (cd packages; rm -f lib64; ln -s lib lib64 2>/dev/null)
-      cwd=`pwd`
 
       AC_MSG_COMPILE([libgpg-error])
       result1=1
@@ -1109,6 +1265,24 @@ if test $ENABLE_GCRYPT = "yes"; then
       AC_MSG_COMPILE([libgcrypt])
       result2=1
       if test $result2 -eq 1; then
+        case $host_os in
+          mingw*)
+            # patch to disable usage of lib-command when RANLIB is set
+            # patch created with:
+            #   diff -u libgcrypt-1.5.0.org/m4/libtool.m4 libgcrypt-1.5.0/m4/libtool.m4 >  libgcrypt-1.5.0-libtool.patch
+            #   diff -u libgcrypt-1.5.0.org/aclocal.m4 libgcrypt-1.5.0/aclocal.m4       >> libgcrypt-1.5.0-libtool.patch
+            #   diff -u libgcrypt-1.5.0.org/configure libgcrypt-1.5.0/configure         >> libgcrypt-1.5.0-libtool.patch
+            if test -d packages/libgcrypt-1.5.0; then
+              (cd packages/libgcrypt-1.5.0; patch --batch -N -p1 <$cwd/misc/libgcrypt-1.5.0-libtool.patch) 1>/dev/null 2>/dev/null
+            else
+              AC_MSG_WARN([libgcrypt-1.5.0 not available - skipped libtool patch!])
+            fi
+            ;;
+          *)
+            ;;
+        esac
+      fi
+      if test $result2 -eq 1; then
         (cd libgcrypt; LIBS="-L$cwd/packages/lib -lgpg-error" ./configure --host=$host_cpu-$host_os --prefix=$cwd/packages --with-gpg-error-prefix=$cwd/packages --enable-maintainer-mode --disable-shared --enable-static `if test "$ENABLE_DEBUG" = "yes"; then echo --disable-optimization; fi`) 1>/dev/null 2>$tmpFile
         if test $? -ne 0; then 
           AC_MSG_RESULT([fail (configure)])
@@ -1131,6 +1305,13 @@ if test $ENABLE_GCRYPT = "yes"; then
           cat $tmpFile
           result2=0
         fi
+        case $host_os in
+          mingw*)
+            (cd packages/lib; ln -s libgcrypt.lib libgcrypt.a) 1>/dev/null 2>/dev/null
+            ;;
+          *)
+            ;;
+        esac
       fi
       if test $result2 -eq 1; then
         AC_MSG_RESULT([done])
@@ -1143,8 +1324,6 @@ if test $ENABLE_GCRYPT = "yes"; then
     if test $result1 -eq 1 -a $result2 -eq 1; then
       HAVE_GCRYPT=1
       HAVE_GPG_ERROR=1
-      CC_INCLUDES="$CC_INCLUDES $cwd/packages/include"
-      LIBRARY_PATHS="$LIBRARY_PATHS $cwd/packages/lib"
       STATIC_LIBRARIES="$STATIC_LIBRARIES gpg-error gcrypt"
       AC_DEFINE(HAVE_GCRYPT,1,[gcrypt installed (local)])
     fi
@@ -1158,7 +1337,7 @@ if test $ENABLE_GCRYPT = "yes"; then
           AC_SEARCH_LIBS(gpg_strerror,gpg-error,[HAVE_GPG_ERROR=1;LIBRARIES="$LIBRARIES gpg-error";AC_DEFINE(HAVE_GPG_ERROR,1,[GPG error installed])])
         else
           if test -z "$HAVE_GPG_ERROR"; then
-            AC_SEARCH_STATIC_LIBS(gpg_strerror,gpg-error,[HAVE_GPG_ERROR=1;STATIC_LIBRARIES="$STATIC_LIBRARIES gpg-error";AC_DEFINE(HAVE_GPG_ERROR,1,[static GPG error installed])])
+            AC_SEARCH_STATIC_LIBRARIES(gpg_strerror,gpg-error,[HAVE_GPG_ERROR=1;STATIC_LIBRARIES="$STATIC_LIBRARIES gpg-error";AC_DEFINE(HAVE_GPG_ERROR,1,[static GPG error installed])])
           fi
           if test -z "$HAVE_GPG_ERROR"; then
             AC_SEARCH_LIBS(gpg_strerror,gpg-error,[HAVE_GPG_ERROR=1;LIBRARIES="$LIBRARIES gpg-error";AC_DEFINE(HAVE_GPG_ERROR,1,[GPG error installed])])
@@ -1168,7 +1347,7 @@ if test $ENABLE_GCRYPT = "yes"; then
           AC_SEARCH_LIBS(gcry_check_version,gcrypt,[HAVE_GCRYPT=1;LIBRARIES="$LIBRARIES gcrypt";AC_DEFINE(HAVE_GCRYPT,1,[gcrypt installed])])
         else
           if test -z "$HAVE_GCRYPT"; then
-            AC_SEARCH_STATIC_LIBS(gcry_check_version,gcrypt,[HAVE_GCRYPT=1;STATIC_LIBRARIES="$STATIC_LIBRARIES gcrypt";AC_DEFINE(HAVE_GCRYPT,1,[static gcrypt installed])])
+            AC_SEARCH_STATIC_LIBRARIES(gcry_check_version,gcrypt,[HAVE_GCRYPT=1;STATIC_LIBRARIES="$STATIC_LIBRARIES gcrypt";AC_DEFINE(HAVE_GCRYPT,1,[static gcrypt installed])])
           fi
           if test -z "$HAVE_GCRYPT"; then
             AC_SEARCH_LIBS(gcry_check_version,gcrypt,[HAVE_GCRYPT=1;LIBRARIES="$LIBRARIES gcrypt";AC_DEFINE(HAVE_GCRYPT,1,[gcrypt installed])])
@@ -1188,12 +1367,6 @@ if test $ENABLE_FTP = "yes"; then
   if test -d ftplib -o -d "`readlink ftplib`"; then
     if test "$ENABLE_PACKAGE_COMPILE" = "yes"; then
       dnl compile ftp library
-
-      mkdir packages 2>/dev/null
-      mkdir packages/include 2>/dev/null
-      mkdir packages/lib 2>/dev/null
-      (cd packages; rm -f lib64; ln -s lib lib64 2>/dev/null)
-      cwd=`pwd`
 
       AC_MSG_COMPILE([ftplib])
       result=1
@@ -1228,8 +1401,6 @@ if test $ENABLE_FTP = "yes"; then
 
     if test $result -eq 1; then
       HAVE_FTP=1
-      CC_INCLUDES="$CC_INCLUDES $cwd/packages/include"
-      LIBRARY_PATHS="$LIBRARY_PATHS $cwd/packages/lib"
       STATIC_LIBRARIES="$STATIC_LIBRARIES ftp"
       AC_DEFINE(HAVE_FTP,1,[ftplib installed (local)])
     fi
@@ -1238,7 +1409,7 @@ if test $ENABLE_FTP = "yes"; then
       AC_SEARCH_LIBS(FtpInit,ftp,[HAVE_FTP=1;LIBRARIES="$LIBRARIES ftp";AC_DEFINE(HAVE_FTP,1,[FTP installed])])
     else
       if test -z "$HAVE_FTP"; then
-        AC_SEARCH_STATIC_LIBS(FtpInit,ftp,[HAVE_FTP=1;STATIC_LIBRARIES="$STATIC_LIBRARIES ftp";AC_DEFINE(HAVE_FTP,1,[static FTP installed])])
+        AC_SEARCH_STATIC_LIBRARIES(FtpInit,ftp,[HAVE_FTP=1;STATIC_LIBRARIES="$STATIC_LIBRARIES ftp";AC_DEFINE(HAVE_FTP,1,[static FTP installed])])
       fi
       if test -z "$HAVE_FTP"; then
         AC_SEARCH_LIBS(FtpInit,ftp,[HAVE_FTP=1;LIBRARIES="$LIBRARIES ftp";AC_DEFINE(HAVE_FTP,1,[FTP installed])])
@@ -1250,13 +1421,7 @@ fi
 if test $ENABLE_SSH = "yes"; then
   if test -d openssl -o -d "`readlink openssl`"; then
     if test "$ENABLE_PACKAGE_COMPILE" = "yes"; then
-      dnl compile ssh2 library
-
-      mkdir packages 2>/dev/null
-      mkdir packages/include 2>/dev/null
-      mkdir packages/lib 2>/dev/null
-      (cd packages; rm -f lib64; ln -s lib lib64 2>/dev/null)
-      cwd=`pwd`
+      dnl compile openssl library
 
       AC_MSG_COMPILE([openssl])
       result=1
@@ -1316,8 +1481,6 @@ if test $ENABLE_SSH = "yes"; then
     fi
 
     if test $result -eq 1; then
-      CC_INCLUDES="$CC_INCLUDES $cwd/packages/include"
-      LIBRARY_PATHS="$LIBRARY_PATHS $cwd/packages/lib"
       STATIC_LIBRARIES="$STATIC_LIBRARIES crypto ssl"
     fi
   fi
@@ -1326,15 +1489,27 @@ if test $ENABLE_SSH = "yes"; then
     if test "$ENABLE_PACKAGE_COMPILE" = "yes"; then
       dnl compile ssh2 library
 
-      mkdir packages 2>/dev/null
-      mkdir packages/include 2>/dev/null
-      mkdir packages/lib 2>/dev/null
-      (cd packages; rm -f lib64; ln -s lib lib64 2>/dev/null)
-      cwd=`pwd`
-
       AC_MSG_COMPILE([libssh2])
       result=1
       if test $result -eq 1; then
+        case $host_os in
+          mingw*)
+            # patch to disable usage of lib-command when RANLIB is set
+            # patch created with:
+            #   diff -u libssh2-1.4.2.org/m4/libtool.m4 libssh2-1.4.2/m4/libtool.m4 >  libssh2-1.4.2-libtool.patch
+            #   diff -u libssh2-1.4.2.org/aclocal.m4 libssh2-1.4.2/aclocal.m4       >> libssh2-1.4.2-libtool.patch
+            #   diff -u libssh2-1.4.2.org/configure libssh2-1.4.2/configure         >> libssh2-1.4.2-libtool.patch
+            if test -d packages/libssh2-1.4.2; then
+              (cd packages/libssh2-1.4.2; patch --batch -N -p1 <$cwd/misc/libssh2-1.4.2-libtool.patch) 1>/dev/null 2>/dev/null
+            else
+              AC_MSG_WARN([libssh2-1.4.2 not available - skipped libtool patch!])
+            fi
+            ;;
+          *)
+            ;;
+        esac
+        # patch created with:
+        #   diff -u ???
         (cd packages; patch --batch -N -p0 <$cwd/misc/libssh2-1.1-keepalive.patch) 1>/dev/null 2>/dev/null
       fi
       if test $result -eq 1; then
@@ -1355,12 +1530,19 @@ if test $ENABLE_SSH = "yes"; then
         fi
       fi
       if test $result -eq 1; then
-        (cd libssh2; make install-exec) 1>/dev/null 2>$tmpFile
+        (cd libssh2; make install-exec install-data) 1>/dev/null 2>$tmpFile
         if test $? -ne 0; then 
           AC_MSG_RESULT([fail (install)])
           cat $tmpFile
           result=0
         fi
+        case $host_os in
+          mingw*)
+            (cd packages/lib; ln -s libssh2.lib libssh2.a) 1>/dev/null 2>/dev/null
+            ;;
+          *)
+            ;;
+        esac
       fi
       if test $result -eq 1; then
         AC_MSG_RESULT([done])
@@ -1371,8 +1553,6 @@ if test $ENABLE_SSH = "yes"; then
 
     if test $result -eq 1; then
       HAVE_SSH2=1
-      CC_INCLUDES="$CC_INCLUDES $cwd/packages/include"
-      LIBRARY_PATHS="$LIBRARY_PATHS $cwd/packages/lib"
       STATIC_LIBRARIES="$STATIC_LIBRARIES ssh2"
       AC_DEFINE(HAVE_SSH2,1,[ssh2 installed (local)])
     fi
@@ -1381,7 +1561,7 @@ if test $ENABLE_SSH = "yes"; then
       AC_SEARCH_LIBS(libssh2_session_init_ex,ssh2,[HAVE_SSH2=1;LIBRARIES="$LIBRARIES ssh2";AC_DEFINE(HAVE_SSH2,1,[SSH2 installed])])
     else
       if test -z "$HAVE_SSH2"; then
-        AC_SEARCH_STATIC_LIBS(libssh2_session_init_ex,ssh2,[HAVE_SSH2=1;STATIC_LIBRARIES="$STATIC_LIBRARIES ssh2";AC_DEFINE(HAVE_SSH2,1,[static SSH2 installed])])
+        AC_SEARCH_STATIC_LIBRARIES(libssh2_session_init_ex,ssh2,[HAVE_SSH2=1;STATIC_LIBRARIES="$STATIC_LIBRARIES ssh2";AC_DEFINE(HAVE_SSH2,1,[static SSH2 installed])])
       fi
       if test -z "$HAVE_SSH2"; then
         AC_SEARCH_LIBS(libssh2_session_init_ex,ssh2,[HAVE_SSH2=1;LIBRARIES="$LIBRARIES ssh2";AC_DEFINE(HAVE_SSH2,1,[SSH2 installed])])
@@ -1394,7 +1574,7 @@ if test $ENABLE_SSH = "yes"; then
     AC_SEARCH_LIBS(MD5_Init,crypto,[HAVE_CRYPTO=1;LIBRARIES="$LIBRARIES crypto";AC_DEFINE(HAVE_CRYPTO,1,[crypto installed])])
   else
     if test -z "$HAVE_CRYPTO"; then
-      AC_SEARCH_STATIC_LIBS(MD5_Init,crypto,[HAVE_CRYPTO=1;STATIC_LIBRARIES="$STATIC_LIBRARIES crypto";AC_DEFINE(HAVE_CRYPTO,1,[static crypto installed])])
+      AC_SEARCH_STATIC_LIBRARIES(MD5_Init,crypto,[HAVE_CRYPTO=1;STATIC_LIBRARIES="$STATIC_LIBRARIES crypto";AC_DEFINE(HAVE_CRYPTO,1,[static crypto installed])])
     fi
     if test -z "$HAVE_CRYPTO"; then
       AC_SEARCH_LIBS(MD5_Init,crypto,[HAVE_CRYPTO=1;LIBRARIES="$LIBRARIES crypto";AC_DEFINE(HAVE_CRYPTO,1,[crypto installed])])
@@ -1406,12 +1586,6 @@ if test $ENABLE_TLS = "yes"; then
   if test -d gnutls -o -d "`readlink gnutls`"; then
     if test "$ENABLE_PACKAGE_COMPILE" = "yes"; then
       dnl compile gnutls library
-
-      mkdir packages 2>/dev/null
-      mkdir packages/include 2>/dev/null
-      mkdir packages/lib 2>/dev/null
-      (cd packages; rm -f lib64; ln -s lib lib64 2>/dev/null)
-      cwd=`pwd`
 
       AC_MSG_COMPILE([gnutls])
       result=1
@@ -1448,8 +1622,6 @@ if test $ENABLE_TLS = "yes"; then
 
     if test $result -eq 1; then
       HAVE_GNU_TLS=1
-      CC_INCLUDES="$CC_INCLUDES $cwd/packages/include"
-      LIBRARY_PATHS="$LIBRARY_PATHS $cwd/packages/lib"
       STATIC_LIBRARIES="$STATIC_LIBRARIES gnutls"
       AC_DEFINE(HAVE_GNU_TLS,1,[gnutls installed (local)])
     fi
@@ -1460,14 +1632,14 @@ if test $ENABLE_TLS = "yes"; then
       AC_SEARCH_LIBS(asn1_length_der,tasn1,[HAVE_TASN1=1;LIBRARIES="$LIBRARIES tasn1";AC_DEFINE(HAVE_TASN1,1,[TASN.1 installed])])
     else
       if test -z "$HAVE_GNU_TLS"; then
-        AC_SEARCH_STATIC_LIBS(gnutls_global_init,gnutls,[HAVE_GNU_TLS=1;STATIC_LIBRARIES="$STATIC_LIBRARIES gnutls";AC_DEFINE(HAVE_GNU_TLS,1,[static GNU TLS installed])])
+        AC_SEARCH_STATIC_LIBRARIES(gnutls_global_init,gnutls,[HAVE_GNU_TLS=1;STATIC_LIBRARIES="$STATIC_LIBRARIES gnutls";AC_DEFINE(HAVE_GNU_TLS,1,[static GNU TLS installed])])
       fi
       if test -z "$HAVE_GNU_TLS"; then
         AC_SEARCH_LIBS(gnutls_global_init,gnutls,[HAVE_GNU_TLS=1;LIBRARIES="$LIBRARIES gnutls";AC_DEFINE(HAVE_GNU_TLS,1,[GNU TLS installed])])
       fi
 
       if test -z "$HAVE_TASN1"; then
-        AC_SEARCH_STATIC_LIBS(asn1_length_der,tasn1,[HAVE_TASN1=1;STATIC_LIBRARIES="$STATIC_LIBRARIES tasn1";AC_DEFINE(HAVE_TASN1,1,[static TASN.1 installed])])
+        AC_SEARCH_STATIC_LIBRARIES(asn1_length_der,tasn1,[HAVE_TASN1=1;STATIC_LIBRARIES="$STATIC_LIBRARIES tasn1";AC_DEFINE(HAVE_TASN1,1,[static TASN.1 installed])])
       fi
       if test -z "$HAVE_TASN1"; then
         AC_SEARCH_LIBS(asn1_length_der,tasn1,[HAVE_TASN1=1;LIBRARIES="$LIBRARIES tasn1";AC_DEFINE(HAVE_TASN1,1,[TASN.1 installed])])
@@ -1480,12 +1652,6 @@ if test $ENABLE_ISO9660 = "yes"; then
   if test -d libiconv -o -d "`readlink libiconv`"; then
     if test "$ENABLE_PACKAGE_COMPILE" = "yes"; then
       dnl compile libiconv library
-
-      mkdir packages 2>/dev/null
-      mkdir packages/include 2>/dev/null
-      mkdir packages/lib 2>/dev/null
-      (cd packages; rm -f lib64; ln -s lib lib64 2>/dev/null)
-      cwd=`pwd`
 
       AC_MSG_COMPILE([libiconv])
       result1=1
@@ -1524,12 +1690,6 @@ if test $ENABLE_ISO9660 = "yes"; then
   if test -d libcdio -o -d "`readlink libcdio`"; then
     if test "$ENABLE_PACKAGE_COMPILE" = "yes"; then
       dnl compile libcdio library
-
-      mkdir packages 2>/dev/null
-      mkdir packages/include 2>/dev/null
-      mkdir packages/lib 2>/dev/null
-      (cd packages; rm -f lib64; ln -s lib lib64 2>/dev/null)
-      cwd=`pwd`
 
       AC_MSG_COMPILE([libcdio])
       result2=1
@@ -1570,8 +1730,6 @@ if test $ENABLE_ISO9660 = "yes"; then
 
     if test $result1 -eq 1 -a $result2 -eq 1; then
       HAVE_ISO9660=1
-      CC_INCLUDES="$CC_INCLUDES $cwd/packages/include"
-      LIBRARY_PATHS="$LIBRARY_PATHS $cwd/packages/lib"
       STATIC_LIBRARIES="$STATIC_LIBRARIES iso9660 cdio"
       AC_DEFINE(HAVE_ISO9660,1,[iso9660 installed (local)])
     fi
@@ -1581,7 +1739,7 @@ if test $ENABLE_ISO9660 = "yes"; then
       AC_SEARCH_LIBS(iso9660_open,iso9660,[HAVE_ISO9660=1;LIBRARIES="$LIBRARIES iso9660 cdio";AC_DEFINE(HAVE_ISO9660,1,[iso9660 installed])])
     else
       if test -z "$HAVE_ISO9660"; then
-        AC_SEARCH_STATIC_LIBS(iso9660_open,iso9660,[HAVE_ISO9660=1;STATIC_LIBRARIES="$STATIC_LIBRARIES iso9660 cdio";AC_DEFINE(HAVE_ISO9660,1,[static iso9660 installed])])
+        AC_SEARCH_STATIC_LIBRARIES(iso9660_open,iso9660,[HAVE_ISO9660=1;STATIC_LIBRARIES="$STATIC_LIBRARIES iso9660 cdio";AC_DEFINE(HAVE_ISO9660,1,[static iso9660 installed])])
       fi
       if test -z "$HAVE_ISO9660"; then
         AC_SEARCH_LIBS(iso9660_open,iso9660,[HAVE_ISO9660=1;LIBRARIES="$LIBRARIES iso9660 cdio";AC_DEFINE(HAVE_ISO9660,1,[iso9660 installed])])
@@ -1590,16 +1748,138 @@ if test $ENABLE_ISO9660 = "yes"; then
   fi
 fi
 
+if test $ENABLE_PCRE = "yes"; then
+  if test -d pcre -o -d "`readlink pcre`"; then
+    if test "$ENABLE_PACKAGE_COMPILE" = "yes"; then
+      dnl compile pcre library
+
+      AC_MSG_COMPILE([pcre])
+      result=1
+      if test $result -eq 1; then
+        case $host_os in
+          mingw*)
+            # patch to disable usage of lib-command when RANLIB is set
+            # patch created with:
+            #   diff -u pcre-8.32.org/m4/libtool.m4 pcre-8.32/m4/libtool.m4 >  pcre-8.32-libtool.patch
+            #   diff -u pcre-8.32.org/aclocal.m4 pcre-8.32/aclocal.m4       >> pcre-8.32-libtool.patch
+            #   diff -u pcre-8.32.org/Makefile.in pcre-8.32/Makefile.in     >> pcre-8.32-libtool.patch
+            #   diff -u pcre-8.32.org/configure pcre-8.32/configure         >> pcre-8.32-libtool.patch
+            if test -d packages/pcre-8.32; then
+              (cd packages/pcre-8.32; patch --batch -N -p1 <$cwd/misc/pcre-8.32-libtool.patch) 1>/dev/null 2>/dev/null
+            else
+              AC_MSG_WARN([pcre-8.32 not available - skipped libtool patch!])
+            fi
+            ;;
+          *)
+            ;;
+        esac
+      fi
+      if test $result -eq 1; then
+        (cd pcre; ./configure --host=$host_cpu-$host_os --prefix=$cwd/packages --disable-shared --enable-static --enable-utf8) 1>/dev/null 2>$tmpFile
+        if test $? -ne 0; then 
+          AC_MSG_RESULT([fail (configure)])
+          cat $tmpFile
+          result=0
+        fi
+      fi
+      if test $result -eq 1; then
+        (cd pcre; make clean; make) 1>/dev/null 2>$tmpFile
+        if test $? -ne 0; then 
+          AC_MSG_RESULT([fail (make)])
+          cat $tmpFile
+          result=0
+        fi
+      fi
+      if test $result -eq 1; then
+        (cd pcre; make install PREFIX=$cwd/packages) 1>/dev/null 2>$tmpFile
+        if test $? -ne 0; then 
+          AC_MSG_RESULT([fail (install)])
+          cat $tmpFile
+          result=0
+        fi
+        case $host_os in
+          mingw*)
+            (cd packages/lib; ln -s libpcre.lib libpcre.a) 1>/dev/null 2>/dev/null
+            ;;
+          *)
+            ;;
+        esac
+      fi
+      if test $result -eq 1; then
+        AC_MSG_RESULT([done])
+      fi
+    else
+      result=1
+    fi
+
+    if test $result -eq 1; then
+      HAVE_PCRE=1
+      STATIC_LIBRARIES="$STATIC_LIBRARIES pcre"
+      AC_DEFINE(HAVE_PCRE,1,[pcre installed (local)])
+    fi
+  else
+    dnl search for installed pcre library
+    if test $ENABLE_LINK_DYNAMIC = "yes"; then
+      AC_SEARCH_LIBS(pcre,pcre_compile,[HAVE_PCRE=1;LIBRARIES="$LIBRARIES pcre";AC_DEFINE(HAVE_PCRE,1,[pcre installed])])
+    else
+      if test -z "$HAVE_PCRE"; then
+        AC_SEARCH_STATIC_LIBRARIES(pcre,pcre_compile,[HAVE_PCRE=1;STATIC_LIBRARIES="$STATIC_LIBRARIES pcre";AC_DEFINE(HAVE_PCRE,1,[static pcre installed])])
+      fi
+      if test -z "$HAVE_PCRE"; then
+        AC_SEARCH_LIBS(pcre,pcre_compile,[HAVE_PCRE=1;LIBRARIES="$LIBRARIES pcre";AC_DEFINE(HAVE_PCRE,1,[pcre installed])])
+      fi
+    fi
+  fi
+fi
+
+case "$host_os" in
+  windows*|mingw*)
+    if test $ENABLE_PTHREADS_W32 = "yes"; then
+      if test -d pthreads-w32 -o -d "`readlink pthreads-w32`"; then
+        if test "$ENABLE_PACKAGE_COMPILE" = "yes"; then
+          dnl compile pthreads-w32 library
+
+          AC_MSG_COMPILE([pthreads-w32])
+          result=1
+          if test $result -eq 1; then
+            if test "$ENABLE_DEBUG" = "yes"; then
+              (cd pthreads-w32; make clean; make CC="$CC" AS="$AS" AR="$AR" RANLIB="$RANLIB" RC="$RC" GC-static-debug) 1>/dev/null 2>$tmpFile
+            else
+              (cd pthreads-w32; make clean; make CC="$CC" AS="$AS" AR="$AR" RANLIB="$RANLIB" RC="$RC" GC-static) 1>/dev/null 2>$tmpFile
+            fi
+            if test $? -ne 0; then 
+              AC_MSG_RESULT([fail (make)])
+              cat $tmpFile
+              result=0
+            fi
+          fi
+          if test $result -eq 1; then
+            (cd pthreads-w32; cp pthread.h sched.h semaphore.h $cwd/packages/include) 1>/dev/null
+            (cd pthreads-w32; cp libpthreadGC2.a $cwd/packages/lib) 1>/dev/null
+          fi
+          if test $result -eq 1; then
+            AC_MSG_RESULT([done])
+          fi
+        else
+          result=1
+        fi
+
+        if test $result -eq 1; then
+          HAVE_PCRE=1
+          STATIC_LIBRARIES="$STATIC_LIBRARIES pthreadGC2"
+          AC_DEFINE(HAVE_PTHREADS_W32,1,[pthreads-w32 installed (local)])
+        fi
+      fi
+    fi
+    ;;
+  *)
+    ;;
+esac
+
 if test $ENABLE_BREAKPAD = "yes"; then
   if test -d breakpad -o -d "`readlink breakpad`"; then
     if test "$ENABLE_PACKAGE_COMPILE" = "yes"; then
       dnl compile breakpad library
-
-      mkdir packages 2>/dev/null
-      mkdir packages/include 2>/dev/null
-      mkdir packages/lib 2>/dev/null
-      (cd packages; rm -f lib64; ln -s lib lib64 2>/dev/null)
-      cwd=`pwd`
 
       AC_MSG_COMPILE([breakpad])
       result=1
@@ -1640,8 +1920,6 @@ if test $ENABLE_BREAKPAD = "yes"; then
 
     if test $result -eq 1; then
       HAVE_BREAKPAD=1
-      CC_INCLUDES="$CC_INCLUDES $cwd/packages/breakpad/src"
-      LIBRARY_PATHS="$LIBRARY_PATHS $cwd/packages/lib"
       STATIC_LIBRARIES="$STATIC_LIBRARIES breakpad_client"
       AC_DEFINE(HAVE_BREAKPAD,1,[breakpad installed (local)])
 
@@ -1653,7 +1931,7 @@ if test $ENABLE_BREAKPAD = "yes"; then
       AC_SEARCH_LIBS(breakpad_client,ExceptionHandler,[HAVE_BREAKPAD=1;LIBRARIES="$LIBRARIES breakpad_client";AC_DEFINE(HAVE_BREAKPAD,1,[breakpad installed])])
     else
       if test -z "$HAVE_BREAKPAD"; then
-        AC_SEARCH_STATIC_LIBS(breakpad_client,ExceptionHandler,[HAVE_BREAKPAD=1;STATIC_LIBRARIES="$STATIC_LIBRARIES breakpad_client";AC_DEFINE(HAVE_BREAKPAD,1,[static breakpad installed])])
+        AC_SEARCH_STATIC_LIBRARIES(breakpad_client,ExceptionHandler,[HAVE_BREAKPAD=1;STATIC_LIBRARIES="$STATIC_LIBRARIES breakpad_client";AC_DEFINE(HAVE_BREAKPAD,1,[static breakpad installed])])
       fi
       if test -z "$HAVE_BREAKPAD"; then
         AC_SEARCH_LIBS(breakpad_client,ExceptionHandler,[HAVE_BREAKPAD=1;LIBRARIES="$LIBRARIES breakpad_client";AC_DEFINE(HAVE_BREAKPAD,1,[breakpad installed])])
@@ -1691,45 +1969,99 @@ for z in $LIBRARIES $STATIC_LIBRARIES ""; do
   fi
 done
 
+# check required defines
 AC_CHECK_PTHREAD_DEFINES
-AC_CHECK_FUNC(pthread_attr_setname,AC_DEFINE(HAVE_PTHREAD_ATTR_SETNAME,1,[pthread_attr_setname() available]))
 
-AC_CHECK_FUNC(gethostbyname,  AC_DEFINE(HAVE_GETHOSTBYNAME,  1,[gethostbyname() available]))
-AC_CHECK_FUNC(gethostbyaddr,  AC_DEFINE(HAVE_GETHOSTBYADDR,  1,[gethostbyname() available]))
-AC_CHECK_FUNC(gethostbyname_r,AC_DEFINE(HAVE_GETHOSTBYNAME_R,1,[gethostbyname_r() available]))
-AC_CHECK_FUNC(gethostbyaddr_r,AC_DEFINE(HAVE_GETHOSTBYADDR_R,1,[gethostbyname_r() available]))
+# check constants
+AC_CHECK_CONSTANT(S_IRUSR,        AC_DEFINE(HAVE_S_IRUSR,        1,[S_IRUSR available]),        ,sys/stat.h)
+AC_CHECK_CONSTANT(S_IWUSR,        AC_DEFINE(HAVE_S_IWUSR,        1,[S_IWUSR available]),        ,sys/stat.h)
+AC_CHECK_CONSTANT(S_IXUSR,        AC_DEFINE(HAVE_S_IXUSR,        1,[S_IXUSR available]),        ,sys/stat.h)
+AC_CHECK_CONSTANT(S_IRGRP,        AC_DEFINE(HAVE_S_IRGRP,        1,[S_IRGRP available]),        ,sys/stat.h)
+AC_CHECK_CONSTANT(S_IWGRP,        AC_DEFINE(HAVE_S_IWGRP,        1,[S_IWGRP available]),        ,sys/stat.h)
+AC_CHECK_CONSTANT(S_IXGRP,        AC_DEFINE(HAVE_S_IXGRP,        1,[S_IXGRP available]),        ,sys/stat.h)
+AC_CHECK_CONSTANT(S_IROTH,        AC_DEFINE(HAVE_S_IROTH,        1,[S_IROTH available]),        ,sys/stat.h)
+AC_CHECK_CONSTANT(S_IWOTH,        AC_DEFINE(HAVE_S_IWOTH,        1,[S_IWOTH available]),        ,sys/stat.h)
+AC_CHECK_CONSTANT(S_IXOTH,        AC_DEFINE(HAVE_S_IXOTH,        1,[S_IXOTH available]),        ,sys/stat.h)
+AC_CHECK_CONSTANT(FS_IOC_GETFLAGS,AC_DEFINE(HAVE_FS_IOC_GETFLAGS,1,[FS_IOC_GETFLAGS available]),,linux/fs.h)
+AC_CHECK_CONSTANT(FS_COMPR_FL,    AC_DEFINE(HAVE_FS_COMPR_FL,    1,[FS_COMPR_FL available]),    ,linux/fs.h)
+AC_CHECK_CONSTANT(FS_NOCOMP_FL,   AC_DEFINE(HAVE_FS_NOCOMP_FL,   1,[FS_NOCOMP_FL available]),   ,linux/fs.h)
+AC_CHECK_CONSTANT(FS_NODUMP_FL,   AC_DEFINE(HAVE_FS_NODUMP_FL,   1,[FS_NODUMP_FL available]),   ,linux/fs.h)
+AC_CHECK_CONSTANT(BLKSSZGET,      AC_DEFINE(HAVE_BLKSSZGET,      1,[BLKSSZGET available]),      ,sys/ioctl.h)
+AC_CHECK_CONSTANT(BLKGETSIZE,     AC_DEFINE(HAVE_BLKGETSIZE,     1,[BLKGETSIZE available]),     ,sys/ioctl.h)
 
-AC_CHECK_FUNC(fseeko64,,AC_ERROR([function fseeko64() is not available]))
-AC_CHECK_FUNC(ftello64,,AC_ERROR([function ftello64() is not available]))
-AC_CHECK_FUNC(fdatasync,    AC_DEFINE(HAVE_FDATASYNC,1,[fdatasync() available]        ))
-AC_CHECK_FUNC(posix_fadvise,AC_DEFINE(HAVE_POSIX_FADVISE,1,[posix_fadvise() available]))
-
-AC_CHECK_CONST(FS_IOC_GETFLAGS,AC_DEFINE(HAVE_FS_IOC_GETFLAGS, 1,[FS_IOC_GETFLAGS available]), ,linux/fs.h)
-AC_CHECK_CONST(FS_COMPR_FL,    AC_DEFINE(HAVE_FS_COMPR_FL, 1,[FS_COMPR_FL available]), ,linux/fs.h)
-AC_CHECK_CONST(FS_NOCOMP_FL,   AC_DEFINE(HAVE_FS_NOCOMP_FL,1,[FS_NOCOMP_FL available]),,linux/fs.h)
-AC_CHECK_CONST(FS_NODUMP_FL,   AC_DEFINE(HAVE_FS_NODUMP_FL,1,[FS_NODUMP_FL available]),,linux/fs.h)
-
-AC_CHECK_FUNC(zlibVersion,,AC_ERROR([function zlibVersion() is not available]))
+AC_CHECK_CONSTANT(SIGPIPE,AC_DEFINE(HAVE_SIGPIPE,1,[SIGPIPE available]),,signal.h)
 
 if test $ENABLE_SSH = "yes"; then
-  AC_CHECK_CONST(CRYPTO_LOCK,,AC_ERROR([constant CRYPTO_LOCK is not available]),openssl/crypto.h)
+  AC_CHECK_CONSTANT(CRYPTO_LOCK,,AC_ERROR([constant CRYPTO_LOCK is not available]),openssl/crypto.h)
 fi
 
-AC_CHECK_FUNC(CRYPTO_set_id_callback,     ,AC_ERROR([OpenSSL CRYPTO_set_id_callback() is not available]),openssl/crypto.h)
-AC_CHECK_FUNC(CRYPTO_set_locking_callback,,AC_ERROR([OpenSSL CRYPTO_set_locking_callback() is not available]),openssl/crypto.h)
+# check types
+AC_CHECK_TYPE(struct stat64,  AC_DEFINE(HAVE_STAT64,  1,[defined if struct stat64 is available]),  ,[#include <sys/stat.h>])
+AC_CHECK_TYPE(struct __stat64,AC_DEFINE(HAVE___STAT64,1,[defined if struct __stat64 is available]),,[#include <sys/stat.h>])
+AC_CHECK_TYPE(struct _stati64,AC_DEFINE(HAVE__STATI64,1,[defined if struct _stati64 is available]),,[#include <sys/stat.h>])
 
-AC_CHECK_FUNC(libssh2_channel_send_keepalive,AC_DEFINE(HAVE_SSH2_CHANNEL_SEND_KEEPALIVE,1,[SSH2 has libssh2_channel_send_keepalive()]))
-AC_CHECK_FUNC(libssh2_keepalive_config,      AC_DEFINE(HAVE_SSH2_KEEPALIVE_CONFIG,      1,[SSH2 has libssh2_keepalive_config()]))
-AC_CHECK_FUNC(libssh2_keepalive_send,        AC_DEFINE(HAVE_SSH2_KEEPALIVE_SEND,        1,[SSH2 has libssh2_keepalive_send()]))
-AC_CHECK_FUNC(libssh2_scp_send64,            AC_DEFINE(HAVE_SSH2_SCP_SEND64,            1,[SSH2 has libssh2_scp_send64() function]))
-AC_CHECK_FUNC(libssh2_sftp_seek2,            AC_DEFINE(HAVE_SSH2_SFTP_SEEK2,            1,[SSH2 has libssh2_sftp_seek2() function]))
+# check functions
+AC_CHECK_FUNCTION(pthread_attr_setname,AC_DEFINE(HAVE_PTHREAD_ATTR_SETNAME,1,[pthread_attr_setname() available]))
 
-AC_CHECK_FUNC(iso9660_open,              AC_DEFINE(HAVE_ISO9660_OPEN,              1,[iso9660_open() available]))
-AC_CHECK_FUNC(iso9660_close,             AC_DEFINE(HAVE_ISO9660_CLOSE,             1,[iso9660_close() available]))
-AC_CHECK_FUNC(iso9660_ifs_stat_translate,AC_DEFINE(HAVE_ISO9660_IFS_STAT_TRANSLATE,1,[iso9660_ifs_stat_translate() available]))
-AC_CHECK_FUNC(iso9660_iso_seek_read,     AC_DEFINE(HAVE_ISO9660_ISO_SEEK_READ,     1,[iso9660_iso_seek_read() available]))
+AC_CHECK_FUNCTION(gethostbyaddr,  AC_DEFINE(HAVE_GETHOSTBYADDR,  1,[gethostbyaddr() available])  ,,winsock2.h)
+AC_CHECK_FUNCTION(gethostbyaddr_r,AC_DEFINE(HAVE_GETHOSTBYADDR_R,1,[gethostbyaddr_r() available]),,winsock2.h)
+AC_CHECK_FUNCTION(gethostbyname,  AC_DEFINE(HAVE_GETHOSTBYNAME,  1,[gethostbyname() available])  ,,winsock2.h)
+AC_CHECK_FUNCTION(gethostbyname_r,AC_DEFINE(HAVE_GETHOSTBYNAME_R,1,[gethostbyname_r() available]),,winsock2.h)
 
-AC_CHECK_FUNC(backtrace,AC_DEFINE(HAVE_BACKTRACE,1,[backtrace() available]))
+AC_CHECK_FUNCTION(chmod,        AC_DEFINE(HAVE_CHMOD,        1,[chmod() available]))
+AC_CHECK_FUNCTION(chown,        AC_DEFINE(HAVE_CHOWN,        1,[chown() available]))
+AC_CHECK_FUNCTION(fdatasync,    AC_DEFINE(HAVE_FDATASYNC,    1,[fdatasync() available]))
+AC_CHECK_FUNCTION(_fseeki64,    AC_DEFINE(HAVE__FSEEKI64,    1,[_fseeki64() available]))
+AC_CHECK_FUNCTION(fseeko64,     AC_DEFINE(HAVE_FSEEKO64,     1,[fseeko64() available]))
+AC_CHECK_FUNCTION(fseeko,       AC_DEFINE(HAVE_FSEEKO,       1,[fseeko() available]))
+AC_CHECK_FUNCTION(_ftelli64,    AC_DEFINE(HAVE__FTELLI64,    1,[_ftelli64() available]))
+AC_CHECK_FUNCTION(ftello64,     AC_DEFINE(HAVE_FTELLO64,     1,[ftello64() available]))
+AC_CHECK_FUNCTION(ftello,       AC_DEFINE(HAVE_FTELLO,       1,[ftello() available]))
+AC_CHECK_FUNCTION(getgrgid_r,   AC_DEFINE(HAVE_GETGRGID_R,   1,[getgrgid_r() available]))
+AC_CHECK_FUNCTION(getgrnam_r,   AC_DEFINE(HAVE_GETGRNAM_R,   1,[getgrnam_r() available]))
+AC_CHECK_FUNCTION(getpwnam_r,   AC_DEFINE(HAVE_GETPWNAM_R,   1,[getpwnam_r() available]))
+AC_CHECK_FUNCTION(getpwuid_r,   AC_DEFINE(HAVE_GETPWUID_R,   1,[getpwuid_r() available]))
+AC_CHECK_FUNCTION(ioctl,        AC_DEFINE(HAVE_IOCTL,        1,[ioctl() available]))
+AC_CHECK_FUNCTION(lchmod,       AC_DEFINE(HAVE_LCHMOD,       1,[lchmod() available]))
+AC_CHECK_FUNCTION(link,         AC_DEFINE(HAVE_LINK,         1,[link() available]))
+AC_CHECK_FUNCTION(lstat64,      AC_DEFINE(HAVE_LSTAT64,      1,[lstat64() available]))
+AC_CHECK_FUNCTION(lstat,        AC_DEFINE(HAVE_LSTAT,        1,[lstat() available]))
+AC_CHECK_FUNCTION(major,        AC_DEFINE(HAVE_MAJOR,        1,[major() available]))
+AC_CHECK_FUNCTION(makedev,      AC_DEFINE(HAVE_MAKEDEV,      1,[makedev() available]))
+AC_CHECK_FUNCTION(minor,        AC_DEFINE(HAVE_MINOR,        1,[minor() available]))
+AC_CHECK_FUNCTION(mknod,        AC_DEFINE(HAVE_MKNOD,        1,[mknod() available]))
+AC_CHECK_FUNCTION(posix_fadvise,AC_DEFINE(HAVE_POSIX_FADVISE,1,[posix_fadvise() available]))
+AC_CHECK_FUNCTION(readlink,     AC_DEFINE(HAVE_READLINK,     1,[readlink() available]))
+AC_CHECK_FUNCTION(stat64,       AC_DEFINE(HAVE_STAT64,       1,[stat64() available]))
+AC_CHECK_FUNCTION(stat,         AC_DEFINE(HAVE_STAT,         1,[stat() available]))
+AC_CHECK_FUNCTION(_stati64,     AC_DEFINE(HAVE__STATI64,     1,[_stati64() available]))
+AC_CHECK_FUNCTION(statvfs,      AC_DEFINE(HAVE_STATVFS,      1,[statvfs() available]))
+AC_CHECK_FUNCTION(symlink,      AC_DEFINE(HAVE_SYMLINK,      1,[symlink() available]))
+
+AC_CHECK_FUNCTION(mkdtemp,      AC_DEFINE(HAVE_MKDTEMP,      1,[mkdtemp() available]),,io.h)
+AC_CHECK_FUNCTION(mkstemp,      AC_DEFINE(HAVE_MKSTEMP,      1,[mkstemp() available]),,io.h)
+AC_CHECK_FUNCTION(mktemp,       AC_DEFINE(HAVE_MKTEMP,       1,[mktemp() available]) ,,io.h)
+AC_CHECK_MKDIR_ARGUMENTS
+
+AC_CHECK_FUNCTION(zlibVersion,,AC_ERROR([mandatory function zlibVersion() is not available]),zlib.h)
+
+AC_CHECK_FUNCTION(CRYPTO_set_id_callback,     ,AC_ERROR([OpenSSL CRYPTO_set_id_callback() is not available]),openssl/crypto.h)
+AC_CHECK_FUNCTION(CRYPTO_set_locking_callback,,AC_ERROR([OpenSSL CRYPTO_set_locking_callback() is not available]),openssl/crypto.h)
+dnl AC_CHECK_FUNCTION(CRYPTO_THREADID_set_callback,AC_DEFINE(HAVE_CRYPTO_THREADID_SET_CALLBACK,1,[OpenSSL has CRYPTO_THREADID_set_callback()]),,openssl/crypto.h)
+
+AC_CHECK_FUNCTION(libssh2_channel_send_keepalive,AC_DEFINE(HAVE_SSH2_CHANNEL_SEND_KEEPALIVE,1,[SSH2 has libssh2_channel_send_keepalive()]))
+AC_CHECK_FUNCTION(libssh2_keepalive_config,      AC_DEFINE(HAVE_SSH2_KEEPALIVE_CONFIG,      1,[SSH2 has libssh2_keepalive_config()]))
+AC_CHECK_FUNCTION(libssh2_keepalive_send,        AC_DEFINE(HAVE_SSH2_KEEPALIVE_SEND,        1,[SSH2 has libssh2_keepalive_send()]))
+AC_CHECK_FUNCTION(libssh2_scp_send64,            AC_DEFINE(HAVE_SSH2_SCP_SEND64,            1,[SSH2 has libssh2_scp_send64() function]))
+AC_CHECK_FUNCTION(libssh2_sftp_seek2,            AC_DEFINE(HAVE_SSH2_SFTP_SEEK2,            1,[SSH2 has libssh2_sftp_seek2() function]))
+
+AC_CHECK_FUNCTION(iso9660_open,              AC_DEFINE(HAVE_ISO9660_OPEN,              1,[iso9660_open() available]))
+AC_CHECK_FUNCTION(iso9660_close,             AC_DEFINE(HAVE_ISO9660_CLOSE,             1,[iso9660_close() available]))
+AC_CHECK_FUNCTION(iso9660_ifs_stat_translate,AC_DEFINE(HAVE_ISO9660_IFS_STAT_TRANSLATE,1,[iso9660_ifs_stat_translate() available]))
+AC_CHECK_FUNCTION(iso9660_iso_seek_read,     AC_DEFINE(HAVE_ISO9660_ISO_SEEK_READ,     1,[iso9660_iso_seek_read() available]))
+
+AC_CHECK_FUNCTION(sysconf,  AC_DEFINE(HAVE_SYSCONF,  1,[sysconf() available]))
+AC_CHECK_FUNCTION(backtrace,AC_DEFINE(HAVE_BACKTRACE,1,[backtrace() available]))
 
 dnl -------------------------------- misc ------------------------------
 
@@ -1814,6 +2146,7 @@ AC_CONFIG_COMMANDS(BUILD_NOTE,
                     echo "  SCP/SFTP support  : `if test "$HAVE_SSH2"; then echo yes; else echo no; fi`";
                     echo "  TLS/SSL server    : `if test "$HAVE_GNU_TLS"; then echo yes; else echo no; fi`";
                     echo "  ISO 9660 support  : `if test "$HAVE_ISO9660"; then echo yes; else echo no; fi`";
+                    echo "  PCRE support      : `if test "$HAVE_PCRE"; then echo yes; else echo no; fi`";
                     echo "  Crash dump support: `if test "$HAVE_BREAKPAD"; then echo yes; else echo no; fi`";
                     echo "  GUI support       : `if test "$ENABLE_GUI" = "yes"; then echo yes; else echo no; fi`";
                     echo "  SWT directory     : $SWT_DIR"
@@ -1842,6 +2175,7 @@ AC_CONFIG_COMMANDS(BUILD_NOTE,
                    HAVE_SSH2=$HAVE_SSH2
                    HAVE_GNU_TLS=$HAVE_GNU_TLS
                    HAVE_ISO9660=$HAVE_ISO9660
+                   HAVE_PCRE=$HAVE_PCRE
                    HAVE_BREAKPAD=$HAVE_BREAKPAD
                    ENABLE_GUI=$ENABLE_GUI
                    SWT_DIR="$SWT_DIR"
