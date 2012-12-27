@@ -15,14 +15,27 @@
 
 #include <stdlib.h>
 #include <stdio.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include <netdb.h>
+#include <pthread.h>
+#ifdef HAVE_SYS_SOCKET_H
+  #include <sys/socket.h>
+#endif /* HAVE_SYS_SOCKET_H */
+#ifdef HAVE_NETINET_IN_H
+  #include <netinet/in.h>
+#endif /* HAVE_NETINET_IN_H */
+#ifdef HAVE_ARPA_INET_H
+  #include <arpa/inet.h>
+#endif /* HAVE_ARPA_INET_H */
+#ifdef HAVE_NETDB_H
+  #include <netdb.h>
+#endif /* HAVE_NETDB_H */
 #include <fcntl.h>
 #include <unistd.h>
-#include <sys/ioctl.h>
-#include <sys/select.h>
+#ifdef HAVE_SYS_IOCTL_H
+  #include <sys/ioctl.h>
+#endif /* HAVE_SYS_IOCTL_H */
+#ifdef HAVE_SYS_SELECT_H
+  #include <sys/select.h>
+#endif /* HAVE_SYS_SELECT_H */
 #include <signal.h>
 #ifdef HAVE_SSH2
   #include <openssl/crypto.h>
@@ -35,11 +48,17 @@
 #include <errno.h>
 #include <assert.h>
 
-#include <linux/tcp.h>
+#if   defined(PLATFORM_LINUX)
+  #include <linux/tcp.h>
+#elif defined(PLATFORM_WINDOWS)
+  #include <windows.h>
+  #include <winsock2.h>
+#endif /* PLATFORM_... */
 
 #include "global.h"
 #include "strings.h"
 #include "files.h"
+#include "misc.h"
 #include "errors.h"
 
 #include "bar.h"
@@ -97,7 +116,12 @@
 
 LOCAL unsigned long cryptoIdCallback(void)
 {
-  return ((unsigned long)pthread_self());
+  #if  defined(PLATFORM_LINUX)
+    return ((unsigned long)pthread_self());
+  #elif defined(PLATFORM_WINDOWS)
+    // nothing to return?
+    return 0;
+  #endif /* PLATFORM_... */
 }
 
 /***********************************************************************\
@@ -185,10 +209,12 @@ Errors Network_initAll(void)
 //gnutls_global_set_log_function(tlslog);
   #endif /* HAVE_GNU_TLS */
 
-  /* ignore SIGPIPE which may triggered in some socket read/write
-     operations if the socket is closed
-  */
-  signal(SIGPIPE,SIG_IGN);
+  #ifdef HAVE_SIGPIP
+    /* ignore SIGPIPE which may triggered in some socket read/write
+       operations if the socket is closed
+    */
+    signal(SIGPIPE,SIG_IGN);
+  #endif
 
   return ERROR_NONE;
 }
@@ -230,9 +256,7 @@ bool Network_hostExistsCString(const char *hostName)
     struct hostent bufferAddressEntry;
     struct hostent *hostAddressEntry;
     int            getHostByNameError;
-  #elif defined(HAVE_GETHOSTBYNAME)
-    const struct hostent *hostAddressEntry;
-  #endif /* HAVE_GETHOSTBYNAME* */
+  #endif /* HAVE_GETHOSTBYNAME_R */
 
   #if   defined(HAVE_GETHOSTBYNAME_R)
     return    (gethostbyname_r(hostName,
@@ -245,9 +269,9 @@ bool Network_hostExistsCString(const char *hostName)
            && (hostAddressEntry != NULL);
   #elif defined(HAVE_GETHOSTBYNAME)
     return gethostbyname(hostName) != NULL;
-  #else /* not HAVE_GETHOSTBYNAME* */
+  #else /* not HAVE_GETHOSTBYNAME... */
     return FALSE;
-  #endif /* HAVE_GETHOSTBYNAME_R */
+  #endif /* HAVE_GETHOSTBYNAME... */
 }
 
 Errors Network_connect(SocketHandle *socketHandle,
@@ -268,14 +292,17 @@ Errors Network_connect(SocketHandle *socketHandle,
   #elif defined(HAVE_GETHOSTBYNAME)
   #endif /* HAVE_GETHOSTBYNAME* */
   struct hostent     *hostAddressEntry;
-  in_addr_t          ipAddress;
+  #ifdef PLATFORM_LINUX
+    in_addr_t          ipAddress;
+  #else /* not PLATFORM_LINUX */
+    unsigned long      ipAddress;
+  #endif /* PLATFORM_LINUX */
   struct sockaddr_in socketAddress;
   #ifdef HAVE_SSH2
     int                ssh2Error;
     char               *ssh2ErrorText;
   #endif /* HAVE_SSH2 */
   Errors             error;
-  long               socketFlags;
 
   assert(socketHandle != NULL);
 
@@ -285,72 +312,92 @@ Errors Network_connect(SocketHandle *socketHandle,
   switch (socketType)
   {
     case SOCKET_TYPE_PLAIN:
-      // get host IP address
-      #if   defined(HAVE_GETHOSTBYNAME_R)
-        if (   (gethostbyname_r(String_cString(hostName),
-                                &bufferAddressEntry,
-                                buffer,
-                                sizeof(buffer),
-                                 &hostAddressEntry,
-                                &getHostByNameError
-                               ) != 0)
-            && (hostAddressEntry != NULL)
+      {
+        #if  defined(PLATFORM_LINUX)
+          long   socketFlags;
+        #elif defined(PLATFORM_WINDOWS)
+          u_long n;
+        #endif /* PLATFORM_... */
+
+        // get host IP address
+        #if   defined(HAVE_GETHOSTBYNAME_R)
+          if (   (gethostbyname_r(String_cString(hostName),
+                                  &bufferAddressEntry,
+                                  buffer,
+                                  sizeof(buffer),
+                                  &hostAddressEntry,
+                                  &getHostByNameError
+                                 ) != 0)
+              && (hostAddressEntry != NULL)
+             )
+          {
+            hostAddressEntry = NULL;
+          }
+        #elif defined(HAVE_GETHOSTBYNAME)
+          hostAddressEntry = gethostbyname(String_cString(hostName));
+        #else /* not HAVE_GETHOSTBYNAME_R */
+          hostAddressEntry = NULL;
+        #endif /* HAVE_GETHOSTBYNAME_R */
+        if (hostAddressEntry != NULL)
+        {
+          assert(hostAddressEntry->h_length > 0);
+          #ifdef PLATFORM_LINUX
+            ipAddress = (*((in_addr_t*)hostAddressEntry->h_addr_list[0]));
+          #else /* not PLATFORM_LINUX */
+            ipAddress = (*((unsigned long*)hostAddressEntry->h_addr_list[0]));
+          #endif /* PLATFORM_LINUX */
+        }
+        else
+        {
+          ipAddress = inet_addr(String_cString(hostName));
+        }
+        if (ipAddress == INADDR_NONE)
+        {
+          return ERROR_HOST_NOT_FOUND;
+        }
+
+        // connect
+        socketHandle->handle = socket(AF_INET,SOCK_STREAM,0);
+        if (socketHandle->handle == -1)
+        {
+          return ERROR(CONNECT_FAIL,errno);
+        }
+        socketAddress.sin_family      = AF_INET;
+        socketAddress.sin_addr.s_addr = ipAddress;
+        socketAddress.sin_port        = htons(hostPort);
+        if (connect(socketHandle->handle,
+                    (struct sockaddr*)&socketAddress,
+                    sizeof(socketAddress)
+                   ) != 0
            )
         {
-          hostAddressEntry = NULL;
+          error = ERROR(CONNECT_FAIL,errno);
+          close(socketHandle->handle);
+          return error;
         }
-      #elif defined(HAVE_GETHOSTBYNAME)
-        hostAddressEntry = gethostbyname(String_cString(hostName));
-      #else /* not HAVE_GETHOSTBYNAME_R */
-        hostAddressEntry = NULL;
-      #endif /* HAVE_GETHOSTBYNAME_R */
-      if (hostAddressEntry != NULL)
-      {
-        assert(hostAddressEntry->h_length > 0);
-        ipAddress = (*((in_addr_t*)hostAddressEntry->h_addr_list[0]));
-      }
-      else
-      {
-        ipAddress = inet_addr(String_cString(hostName));
-      }
-      if (ipAddress == INADDR_NONE)
-      {
-        return ERROR_HOST_NOT_FOUND;
-      }
 
-      // connect
-      socketHandle->handle = socket(AF_INET,SOCK_STREAM,0);
-      if (socketHandle->handle == -1)
-      {
-        return ERROR(CONNECT_FAIL,errno);
+        if ((flags & SOCKET_FLAG_NON_BLOCKING) != 0)
+        {
+          // enable non-blocking
+          #if  defined(PLATFORM_LINUX)
+            socketFlags = fcntl(socketHandle->handle,F_GETFL,0);
+            fcntl(socketHandle->handle,F_SETFL,socketFlags | O_NONBLOCK);
+          #elif defined(PLATFORM_WINDOWS)
+            n = 1;
+            ioctlsocket(socketHandle->handle,FIONBIO,&n);
+          #endif /* PLATFORM_... */
+        }
       }
-      socketAddress.sin_family      = AF_INET;
-      socketAddress.sin_addr.s_addr = ipAddress;
-      socketAddress.sin_port        = htons(hostPort);
-      if (connect(socketHandle->handle,
-                  (struct sockaddr*)&socketAddress,
-                  sizeof(socketAddress)
-                 ) != 0
-         )
-      {
-        error = ERROR(CONNECT_FAIL,errno);
-        close(socketHandle->handle);
-        return error;
-      }
-
-      if ((flags & SOCKET_FLAG_NON_BLOCKING) != 0)
-      {
-        // enable non-blocking
-        socketFlags = fcntl(socketHandle->handle,F_GETFL,0);
-        fcntl(socketHandle->handle,F_SETFL,socketFlags | O_NONBLOCK);
-      }
-
       break;
     case SOCKET_TYPE_SSH:
       #ifdef HAVE_SSH2
       {
         const char *plainPassword;
-        long       socketFlags;
+        #if  defined(PLATFORM_LINUX)
+          long       socketFlags;
+        #elif defined(PLATFORM_WINDOWS)
+          u_long     n;
+        #endif /* PLATFORM_... */
 
         assert(loginName != NULL);
 
@@ -378,7 +425,11 @@ Errors Network_connect(SocketHandle *socketHandle,
         if (hostAddressEntry != NULL)
         {
           assert(hostAddressEntry->h_length > 0);
-          ipAddress = (*((in_addr_t*)hostAddressEntry->h_addr_list[0]));
+          #ifdef PLATFORM_LINUX
+            ipAddress = (*((in_addr_t*)hostAddressEntry->h_addr_list[0]));
+          #else /* not PLATFORM_LINUX */
+            ipAddress = (*((unsigned long*)hostAddressEntry->h_addr_list[0]));
+          #endif /* PLATFORM_LINUX */
         }
         else
         {
@@ -496,8 +547,13 @@ Errors Network_connect(SocketHandle *socketHandle,
         if ((flags & SOCKET_FLAG_NON_BLOCKING) != 0)
         {
           // enable non-blocking
-          socketFlags = fcntl(socketHandle->handle,F_GETFL,0);
-          fcntl(socketHandle->handle,F_SETFL,socketFlags | O_NONBLOCK);
+          #if  defined(PLATFORM_LINUX)
+            socketFlags = fcntl(socketHandle->handle,F_GETFL,0);
+            fcntl(socketHandle->handle,F_SETFL,socketFlags | O_NONBLOCK);
+          #elif defined(PLATFORM_WINDOWS)
+            n = 1;
+            ioctlsocket(socketHandle->handle,FIONBIO,&n);
+          #endif /* PLATFORM_... */
         }
       }
       #else /* not HAVE_SSH2 */
@@ -536,7 +592,7 @@ void Network_disconnect(SocketHandle *socketHandle)
       #ifdef HAVE_SSH2
         libssh2_session_disconnect(socketHandle->ssh2.session,"");
         libssh2_session_free(socketHandle->ssh2.session);
-        sleep(1);
+        Misc_udelay(1000*1000);
       #else /* not HAVE_SSH2 */
       #endif /* HAVE_SSH2 */
       break;
@@ -573,9 +629,17 @@ bool Network_eof(SocketHandle *socketHandle)
   {
     case SOCKET_TYPE_PLAIN:
       {
-        int n;
+        #if  defined(PLATFORM_LINUX)
+          int    n;
+        #elif defined(PLATFORM_WINDOWS)
+          u_long n;
+        #endif /* PLATFORM_... */
 
-        eofFlag = (ioctl(socketHandle->handle,FIONREAD,&n,sizeof(int)) != 0) || (n == 0);
+        #if  defined(PLATFORM_LINUX)
+          eofFlag = (ioctl(socketHandle->handle,FIONREAD,&n,sizeof(int)) != 0) || (n == 0);
+        #elif defined(PLATFORM_WINDOWS)
+          eofFlag = (ioctlsocket(socketHandle->handle,FIONREAD,&n) != 0) || (n == 0);
+        #endif /* PLATFORM_... */
       }
       break;
     case SOCKET_TYPE_SSH:
@@ -611,12 +675,23 @@ ulong Network_getAvaibleBytes(SocketHandle *socketHandle)
   {
     case SOCKET_TYPE_PLAIN:
       {
-        int n;
+        #if  defined(PLATFORM_LINUX)
+          int    n;
+        #elif defined(PLATFORM_WINDOWS)
+          u_long n;
+        #endif /* PLATFORM_... */
 
-        if (ioctl(socketHandle->handle,FIONREAD,&n,sizeof(int)) == 0)
-        {
-          bytesAvailable = n;
-        }
+        #if  defined(PLATFORM_LINUX)
+          if (ioctl(socketHandle->handle,FIONREAD,&n,sizeof(int)) == 0)
+          {
+            bytesAvailable = (ulong)n;
+          }
+        #elif defined(PLATFORM_WINDOWS)
+          if (ioctlsocket(socketHandle->handle,FIONREAD,&n) == 0)
+          {
+            bytesAvailable = (ulong)n;
+          }
+        #endif /* PLATFORM_... */
       }
       break;
     case SOCKET_TYPE_SSH:
@@ -889,7 +964,7 @@ Errors Network_initServer(ServerSocketHandle *serverSocketHandle,
 
   // reuse address
   n = 1;
-  if (setsockopt(serverSocketHandle->handle,SOL_SOCKET,SO_REUSEADDR,&n,sizeof(int)) != 0)
+  if (setsockopt(serverSocketHandle->handle,SOL_SOCKET,SO_REUSEADDR,(void*)&n,sizeof(int)) != 0)
   {
     error = ERROR(CONNECT_FAIL,errno);
     close(serverSocketHandle->handle);
@@ -1098,10 +1173,18 @@ Errors Network_accept(SocketHandle             *socketHandle,
                      )
 {
   struct sockaddr_in socketAddress;
-  socklen_t          socketAddressLength;
+  #if   defined(PLATFORM_LINUX)
+    socklen_t          socketAddressLength;
+  #elif defined(PLATFORM_WINDOWS)
+    int                socketAddressLength;
+  #endif /* PLATFORM_... */
   Errors             error;
   int                result;
-  long               socketFlags;
+  #if  defined(PLATFORM_LINUX)
+    long               socketFlags;
+  #elif defined(PLATFORM_WINDOWS)
+    u_long             n;
+  #endif /* PLATFORM_... */
 
 //unsigned int status;
 
@@ -1206,8 +1289,13 @@ NYI: how to enable client authentication?
   if ((flags & SOCKET_FLAG_NON_BLOCKING) != 0)
   {
     // enable non-blocking
-    socketFlags = fcntl(socketHandle->handle,F_GETFL,0);
-    fcntl(socketHandle->handle,F_SETFL,socketFlags | O_NONBLOCK);
+    #if  defined(PLATFORM_LINUX)
+      socketFlags = fcntl(socketHandle->handle,F_GETFL,0);
+      fcntl(socketHandle->handle,F_SETFL,socketFlags | O_NONBLOCK);
+    #elif defined(PLATFORM_WINDOWS)
+      n = 1;
+      ioctlsocket(socketHandle->handle,FIONBIO,&n);
+    #endif /* PLATFORM_... */
   }
 
   return ERROR_NONE;
@@ -1219,8 +1307,14 @@ void Network_getLocalInfo(SocketHandle *socketHandle,
                          )
 {
   struct sockaddr_in   socketAddress;
-  socklen_t            socketAddressLength;
-  const struct hostent *hostEntry;
+  #if   defined(PLATFORM_LINUX)
+    socklen_t            socketAddressLength;
+  #elif defined(PLATFORM_WINDOWS)
+    int                  socketAddressLength;
+  #endif /* PLATFORM_... */
+  #ifdef HAVE_GETHOSTBYADDR
+    const struct hostent *hostEntry;
+  #endif
 
   assert(socketHandle != NULL);
   assert(name != NULL);
@@ -1234,7 +1328,7 @@ void Network_getLocalInfo(SocketHandle *socketHandle,
      )
   {
     #ifdef HAVE_GETHOSTBYADDR
-      hostEntry = gethostbyaddr(&socketAddress.sin_addr,
+      hostEntry = gethostbyaddr((const char*)&socketAddress.sin_addr,
                                 sizeof(socketAddress.sin_addr),
                                 AF_INET
                                );
@@ -1264,8 +1358,14 @@ void Network_getRemoteInfo(SocketHandle *socketHandle,
                           )
 {
   struct sockaddr_in   socketAddress;
-  socklen_t            socketAddressLength;
-  const struct hostent *hostEntry;
+  #if   defined(PLATFORM_LINUX)
+    socklen_t            socketAddressLength;
+  #elif defined(PLATFORM_WINDOWS)
+    int                  socketAddressLength;
+  #endif /* PLATFORM_... */
+  #ifdef HAVE_GETHOSTBYADDR_R
+    const struct hostent *hostEntry;
+  #endif
 
   assert(socketHandle != NULL);
   assert(name != NULL);
@@ -1312,7 +1412,11 @@ Errors Network_execute(NetworkExecuteHandle *networkExecuteHandle,
                       )
 {
   #ifdef HAVE_SSH2
-    long socketFlags;
+    #if  defined(PLATFORM_LINUX)
+      long   socketFlags;
+    #elif defined(PLATFORM_WINDOWS)
+      u_long n;
+    #endif /* PLATFORM_... */
   #endif /* HAVE_SSH2 */
 
   assert(networkExecuteHandle != NULL);
@@ -1347,8 +1451,13 @@ Errors Network_execute(NetworkExecuteHandle *networkExecuteHandle,
     }
 
     // enable non-blocking
-    socketFlags = fcntl(socketHandle->handle,F_GETFL,0);
-    fcntl(socketHandle->handle,F_SETFL,socketFlags | O_NONBLOCK);
+    #if  defined(PLATFORM_LINUX)
+      socketFlags = fcntl(socketHandle->handle,F_GETFL,0);
+      fcntl(socketHandle->handle,F_SETFL,socketFlags | O_NONBLOCK);
+    #elif defined(PLATFORM_WINDOWS)
+      n = 1;
+      ioctlsocket(socketHandle->handle,FIONBIO,&n);
+    #endif /* PLATFORM_... */
     libssh2_channel_set_blocking(networkExecuteHandle->channel,0);
 
     // disable stderr if not requested
