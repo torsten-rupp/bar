@@ -18,12 +18,17 @@
 #include <dirent.h>
 #include <utime.h>
 #include <fcntl.h>
-#include <sys/ioctl.h>
+#ifdef HAVE_SYS_IOCTL_H
+  #include <sys/ioctl.h>
+#endif
 #include <errno.h>
 #include <assert.h>
 
-#include <linux/types.h>
-#include <linux/fs.h>
+#if   defined(PLATFORM_LINUX)
+  #include <linux/types.h>
+  #include <linux/fs.h>
+#elif defined(PLATFORM_WINDOWS)
+#endif /* PLATFORM_... */
 
 #include "global.h"
 #include "strings.h"
@@ -42,6 +47,41 @@
 /***************************** Variables *******************************/
 
 /****************************** Macros *********************************/
+#ifdef HAVE_FSEEKO
+  #define FSEEK fseeko
+#elif HAVE__FSEEKI64
+  #define FSEEK _fseeki64
+#else
+  #define FSEEK fseek
+#endif
+
+#ifdef HAVE_FTELLO
+  #define FTELL ftello
+#elif HAVE__FTELLI64
+  #define FTELL _ftelli64
+#else
+  #define FTELL ftell
+#endif
+
+#ifdef HAVE_STAT64
+  #define STAT  stat64
+  #define LSTAT lstat64
+  typedef struct stat64 FileStat;
+#elif HAVE___STAT64
+  #define STAT  stat64
+  #define LSTAT lstat64
+  typedef struct __stat64 FileStat;
+#elif HAVE__STATI64
+  #define STAT  _stati64
+  #define LSTAT _stati64
+  typedef struct _stati64 FileStat;
+#elif HAVE_STAT
+  #define STAT  stat
+  #define LSTAT lstat
+  typedef struct stat FileStat;
+#else
+  #error No struct stat64 nor struct __stat64
+#endif
 
 /***************************** Forwards ********************************/
 
@@ -89,20 +129,20 @@ Errors Device_open(DeviceHandle *deviceHandle,
   }
 
   // get device size
-  if (fseeko(deviceHandle->file,(off_t)0,SEEK_END) == -1)
+  if (FSEEK(deviceHandle->file,(off_t)0,SEEK_END) == -1)
   {
     error = ERRORX(IO_ERROR,errno,String_cString(deviceName));
     fclose(deviceHandle->file);
     return error;
   }
-  n = ftello(deviceHandle->file);
+  n = FTELL(deviceHandle->file);
   if (n == (off_t)(-1))
   {
     error = ERRORX(IO_ERROR,errno,String_cString(deviceName));
     fclose(deviceHandle->file);
     return error;
   }
-  if (fseeko(deviceHandle->file,(off_t)0,SEEK_SET) == -1)
+  if (FSEEK(deviceHandle->file,(off_t)0,SEEK_SET) == -1)
   {
     error = ERRORX(IO_ERROR,errno,String_cString(deviceName));
     fclose(deviceHandle->file);
@@ -215,7 +255,7 @@ Errors Device_tell(DeviceHandle *deviceHandle, uint64 *offset)
   assert(deviceHandle->file != NULL);
   assert(offset != NULL);
 
-  n = ftello(deviceHandle->file);
+  n = FTELL(deviceHandle->file);
   if (n == (off_t)(-1))
   {
     return ERRORX(IO_ERROR,errno,String_cString(deviceHandle->name));
@@ -236,7 +276,7 @@ Errors Device_seek(DeviceHandle *deviceHandle,
   assert(deviceHandle != NULL);
   assert(deviceHandle->file != NULL);
 
-  if (fseeko(deviceHandle->file,(off_t)offset,SEEK_SET) == -1)
+  if (FSEEK(deviceHandle->file,(off_t)offset,SEEK_SET) == -1)
   {
     return ERRORX(IO_ERROR,errno,String_cString(deviceHandle->name));
   }
@@ -384,10 +424,14 @@ Errors Device_getDeviceInfo(DeviceInfo   *deviceInfo,
                             const String deviceName
                            )
 {
-  struct stat64 fileStat;
-  int           handle;
-  int           i;
-  long          l;
+  FileStat fileStat;
+  int      handle;
+  #if defined(HAVE_IOCTL) && defined(HAVE_BLKSSZGET)
+    int      i;
+  #endif
+  #if defined(HAVE_IOCTL) && defined(HAVE_BLKGETSIZE)
+    long     l;
+  #endif
 
   assert(deviceName != NULL);
   assert(deviceInfo != NULL);
@@ -401,7 +445,7 @@ Errors Device_getDeviceInfo(DeviceInfo   *deviceInfo,
 //  deviceInfo->mountedFlag = FALSE;
 
   // get device meta data
-  if (lstat64(String_cString(deviceName),&fileStat) == 0)
+  if (LSTAT(String_cString(deviceName),&fileStat) == 0)
   {
     deviceInfo->timeLastAccess  = fileStat.st_atime;
     deviceInfo->timeModified    = fileStat.st_mtime;
@@ -409,8 +453,16 @@ Errors Device_getDeviceInfo(DeviceInfo   *deviceInfo,
     deviceInfo->userId          = fileStat.st_uid;
     deviceInfo->groupId         = fileStat.st_gid;
     deviceInfo->permission      = (DevicePermission)fileStat.st_mode;
-    deviceInfo->major           = major(fileStat.st_rdev);
-    deviceInfo->minor           = minor(fileStat.st_rdev);
+    #ifdef HAVE_MAJOR
+      deviceInfo->major         = major(fileStat.st_rdev);
+    #else
+      deviceInfo->major         = 0;
+    #endif
+    #ifdef HAVE_MINOR
+      deviceInfo->minor         = minor(fileStat.st_rdev);
+    #else
+      deviceInfo->minor         = 0;
+    #endif
     deviceInfo->id              = (uint64)fileStat.st_ino;
 
     if      (S_ISCHR(fileStat.st_mode)) deviceInfo->type = DEVICE_TYPE_CHARACTER;
@@ -423,8 +475,12 @@ Errors Device_getDeviceInfo(DeviceInfo   *deviceInfo,
     handle = open(String_cString(deviceName),O_RDONLY);
     if (handle != -1)
     {
-      if (ioctl(handle,BLKSSZGET, &i) == 0) deviceInfo->blockSize = (ulong)i;
-      if (ioctl(handle,BLKGETSIZE,&l) == 0) deviceInfo->size      = (int64)l*512;
+      #if defined(HAVE_IOCTL) && defined(HAVE_BLKSSZGET)
+        if (ioctl(handle,BLKSSZGET, &i) == 0) deviceInfo->blockSize = (ulong)i;
+      #endif
+      #if defined(HAVE_IOCTL) && defined(HAVE_BLKGETSIZE)
+        if (ioctl(handle,BLKGETSIZE,&l) == 0) deviceInfo->size      = (int64)l*512;
+      #endif
       close(handle);
     }
     else
