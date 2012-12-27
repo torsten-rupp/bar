@@ -186,9 +186,9 @@ ERROR CREATE_FILE
 ERROR OPEN_FILE
 ERROR OPEN_DIRECTORY
   // Note: do not add error text to error message if error number is set; file name should be part of error text
-  if (ERRNO != 0)
+  if (ERROR_ERRNO != 0)
   {
-    strncpy(errorText,strerror(ERRNO),sizeof(errorText)-1);
+    strncpy(errorText,strerror(ERROR_ERRNO),sizeof(errorText)-1);
   }
   else
   {
@@ -210,7 +210,7 @@ ERROR OPEN_DIRECTORY
   errorText[sizeof(errorText)-1] = '\0';
 
 ERROR IO_ERROR
-  strncpy(errorText,(ERRNO != 0)?strerror(ERRNO):"i/o error",sizeof(errorText)-1);
+  strncpy(errorText,(ERROR_ERRNO != 0)?strerror(ERROR_ERRNO):"i/o error",sizeof(errorText)-1);
   if (ERROR_TEXT != NULL)
   {
     strncat(errorText,": ",sizeof(errorText)-1-strlen(errorText));
@@ -291,7 +291,7 @@ ERROR OPEN_ISO9660_FILE
 
 // device i/o
 ERROR OPEN_DEVICE
-  strncpy(errorText,strerror(ERRNO),sizeof(errorText)-1);
+  strncpy(errorText,strerror(ERROR_ERRNO),sizeof(errorText)-1);
   if (ERROR_TEXT != NULL)
   {
     strncat(errorText,": ",sizeof(errorText)-1-strlen(errorText));
@@ -351,7 +351,7 @@ ERROR CORRUPT_INCREMENTAL_FILE       "corrupt incremental file"
 // network
 ERROR HOST_NOT_FOUND                 "host not found"
 ERROR CONNECT_FAIL
-  strncpy(errorText,strerror(ERRNO),sizeof(errorText)-1);
+  strncpy(errorText,strerror(ERROR_ERRNO),sizeof(errorText)-1);
   if (ERROR_TEXT != NULL)
   {
     strncat(errorText,": ",sizeof(errorText)-1-strlen(errorText));
@@ -389,7 +389,7 @@ ERROR EXEC_FAIL
   {
     char s[64];
     \
-    snprintf(s,sizeof(s),"%d",ERRNO);
+    snprintf(s,sizeof(s),"%d",ERROR_ERRNO);
     \
     strncat(errorText," '",sizeof(errorText)-1-strlen(errorText));
     strncat(errorText,ERROR_TEXT,sizeof(errorText)-1-strlen(errorText));

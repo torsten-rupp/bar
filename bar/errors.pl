@@ -31,17 +31,17 @@ use Getopt::Long;
 
 # ---------------------------- constants/variables ---------------------------
 
-my $ERROR_CODE_MASK           = "0x000003FF";
-my $ERROR_CODE_SHIFT          = 0;
-my $ERROR_TEXTINDEX_MASK      = "0x0000FC00";
-my $ERROR_TEXTINDEX_SHIFT     = 10;
-my $ERROR_ERRNO_MASK          = "0xFFFF0000";
-my $ERROR_ERRNO_SHIFT         = 16;
+my $ERRORS_CODE_MASK           = "0x000003FF";
+my $ERRORS_CODE_SHIFT          = 0;
+my $ERRORS_TEXTINDEX_MASK      = "0x0000FC00";
+my $ERRORS_TEXTINDEX_SHIFT     = 10;
+my $ERRORS_ERRNO_MASK          = "0xFFFF0000";
+my $ERRORS_ERRNO_SHIFT         = 16;
 
-my $MAX_ERRORTEXT_LENGTH      = 512;
-my $ERROR_TEXTINDEX_MAX_COUNT = 63;;
+my $ERRORS_MAX_TEXT_LENGTH     = 512;
+my $ERRORS_TEXTINDEX_MAX_COUNT = 63;
 
-my $PREFIX                    = "ERROR_";
+my $PREFIX                     = "ERROR_";
 
 my $cFileName,$hFileName,$javaFileName;
 my $errorNumber=0;
@@ -83,26 +83,26 @@ sub writeJavaFile($)
 sub writeCPrefix()
 {
   print CFILE_HANDLE "\
-#define GET_ERROR_CODE(error)      (((error) & $ERROR_CODE_MASK) >> $ERROR_CODE_SHIFT)
-#define GET_ERROR_TEXTINDEX(error) (((error) & $ERROR_TEXTINDEX_MASK) >> $ERROR_TEXTINDEX_SHIFT)
-#define GET_ERROR_TEXT(error)      ((GET_ERROR_TEXTINDEX(error) > 0)?errorTexts[GET_ERROR_TEXTINDEX(error)-1].text:NONE)
-#define GET_ERRNO(error)           ((int)((error) & $ERROR_ERRNO_MASK) >> $ERROR_ERRNO_SHIFT)
+#define ERRORS_GET_CODE(error)      (((error) & $ERRORS_CODE_MASK) >> $ERRORS_CODE_SHIFT)
+#define ERRORS_GET_TEXTINDEX(error) (((error) & $ERRORS_TEXTINDEX_MASK) >> $ERRORS_TEXTINDEX_SHIFT)
+#define ERRORS_GET_TEXT(error)      ((ERRORS_GET_TEXTINDEX(error) > 0)?errorTexts[ERRORS_GET_TEXTINDEX(error)-1].text:NONE)
+#define ERRORS_GET_ERRNO(error)     ((int)((error) & $ERRORS_ERRNO_MASK) >> $ERRORS_ERRNO_SHIFT)
 
-#define ERROR_CODE GET_ERROR_CODE(error)
-#define ERROR_TEXT GET_ERROR_TEXT(error)
-#define ERRNO      GET_ERRNO(error)
+#define ERROR_CODE  ERRORS_GET_CODE(error)
+#define ERROR_TEXT  ERRORS_GET_TEXT(error)
+#define ERROR_ERRNO ERRORS_GET_ERRNO(error)
 
 unsigned int Errors_getCode(Errors error)
 {
-  return GET_ERROR_CODE(error);
+  return ERRORS_GET_CODE(error);
 }
 
 const char *Errors_getText(Errors error)
 {
-  static char errorText[$MAX_ERRORTEXT_LENGTH];
+  static char errorText[$ERRORS_MAX_TEXT_LENGTH];
 
   strcpy(errorText,\"unknown\");
-  switch (GET_ERROR_CODE(error))
+  switch (ERRORS_GET_CODE(error))
   {
 ";
 }
@@ -183,9 +183,10 @@ if ($cFileName ne "")
 #include <ctype.h>
 #include <errno.h>
 
+#include \"global.h\"
 #include \"errors.h\"
 
-// use NONE to avoid warning in strn*-functions which do not accept NULL (this case must be checked before calling s
+// use NONE to avoid warning in strn*-functions which do not accept NULL (this case must be checked before calling strn*
 static const char *NONE = NULL;
 
 typedef struct
@@ -194,7 +195,7 @@ typedef struct
   char text[$MAX_ERRORTEXT_LENGTH];
 } ErrorText;
 
-static ErrorText errorTexts[$ERROR_TEXTINDEX_MAX_COUNT];
+static ErrorText errorTexts[$ERRORS_TEXTINDEX_MAX_COUNT];
 static int       errorTextCount = 0;
 static int       errorTextId    = 0;
 
@@ -207,7 +208,7 @@ int _Errors_textToIndex(const char *text)
   if (text != NULL)
   {
     errorTextId++;
-    if (errorTextCount < $ERROR_TEXTINDEX_MAX_COUNT)
+    if (errorTextCount < $ERRORS_TEXTINDEX_MAX_COUNT)
     {
       index = errorTextCount;
       errorTextCount++;
@@ -216,7 +217,7 @@ int _Errors_textToIndex(const char *text)
     {
       index = 0;
       minId = INT_MAX;
-      for (z = 0; z < $ERROR_TEXTINDEX_MAX_COUNT; z++)
+      for (z = 0; z < $ERRORS_TEXTINDEX_MAX_COUNT; z++)
       {
         if (errorTexts[z].id < minId)
         {
@@ -251,8 +252,8 @@ if ($hFileName ne "")
 #ifndef __ERRORS__
 #define __ERRORS__
 
-#define ERROR(code,errno)       ((Errors)((((errno) << $ERROR_ERRNO_SHIFT) & $ERROR_ERRNO_MASK) |                                                                                   (((ERROR_ ## code) << $ERROR_CODE_SHIFT) & $ERROR_CODE_MASK)))
-#define ERRORX(code,errno,text) ((Errors)((((errno) << $ERROR_ERRNO_SHIFT) & $ERROR_ERRNO_MASK) | ((_Errors_textToIndex(text) << $ERROR_TEXTINDEX_SHIFT) & $ERROR_TEXTINDEX_MASK) | (((ERROR_ ## code) << $ERROR_CODE_SHIFT) & $ERROR_CODE_MASK)))
+#define ERROR_(code,errno)       ((Errors)((((errno) << $ERRORS_ERRNO_SHIFT) & $ERRORS_ERRNO_MASK) |                                                                                     (((ERROR_ ## code) << $ERRORS_CODE_SHIFT) & $ERRORS_CODE_MASK)))
+#define ERRORX_(code,errno,text) ((Errors)((((errno) << $ERRORS_ERRNO_SHIFT) & $ERRORS_ERRNO_MASK) | ((_Errors_textToIndex(text) << $ERRORS_TEXTINDEX_SHIFT) & $ERRORS_TEXTINDEX_MASK) | (((ERROR_ ## code) << $ERRORS_CODE_SHIFT) & $ERRORS_CODE_MASK)))
 
 ";
   writeHPrefix();
