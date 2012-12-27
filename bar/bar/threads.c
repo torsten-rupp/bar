@@ -75,10 +75,12 @@ LOCAL void threadStart(ThreadStartInfo *startInfo)
   userData      = startInfo->userData;
   sem_post(&startInfo->lock);
 
-  if (nice(niceLevel) == -1)
-  {
-    // ignore error
-  }
+  #ifdef LINUX
+    if (nice(niceLevel) == -1)
+    {
+      // ignore error
+    }
+  #endif /* LINUX */
 
   assert(entryFunction != NULL);
   entryFunction(userData);
@@ -194,7 +196,7 @@ void *Thread_getLocalVariable(ThreadLocalStorage *threadLocalStorage)
     threadLocalStorageInstanceNode = (ThreadLocalStorageInstanceNode*)List_first(&threadLocalStorage->instanceList);
     currentThreadId = Thread_getCurrentId();
     while (   (threadLocalStorageInstanceNode != NULL)
-           && (threadLocalStorageInstanceNode->threadId != currentThreadId)
+           && (pthread_equal(threadLocalStorageInstanceNode->threadId,currentThreadId) == 0)
           )
     {
       threadLocalStorageInstanceNode = threadLocalStorageInstanceNode->next;
