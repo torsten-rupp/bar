@@ -19,8 +19,17 @@
 /* file separator char */
 #undef FILE_SEPARATOR_CHAR
 
+/* Define to 1 if you have the <arpa/inet.h> header file. */
+#undef HAVE_ARPA_INET_H
+
 /* backtrace() available */
 #undef HAVE_BACKTRACE
+
+/* BLKGETSIZE available */
+#undef HAVE_BLKGETSIZE
+
+/* BLKSSZGET available */
+#undef HAVE_BLKSSZGET
 
 /* breakpad installed */
 #undef HAVE_BREAKPAD
@@ -28,11 +37,23 @@
 /* bzip2 installed */
 #undef HAVE_BZ2
 
+/* chmod() available */
+#undef HAVE_CHMOD
+
+/* chown() available */
+#undef HAVE_CHOWN
+
 /* crypto installed */
 #undef HAVE_CRYPTO
 
 /* fdatasync() available */
 #undef HAVE_FDATASYNC
+
+/* fseeko() available */
+#undef HAVE_FSEEKO
+
+/* fseeko64() available */
+#undef HAVE_FSEEKO64
 
 /* FS_COMPR_FL available */
 #undef HAVE_FS_COMPR_FL
@@ -46,16 +67,28 @@
 /* FS_NODUMP_FL available */
 #undef HAVE_FS_NODUMP_FL
 
+/* ftello() available */
+#undef HAVE_FTELLO
+
+/* ftello64() available */
+#undef HAVE_FTELLO64
+
 /* FTP installed */
 #undef HAVE_FTP
 
 /* gcrypt installed */
 #undef HAVE_GCRYPT
 
-/* gethostbyname() available */
+/* getgrgid_r() available */
+#undef HAVE_GETGRGID_R
+
+/* getgrnam_r() available */
+#undef HAVE_GETGRNAM_R
+
+/* gethostbyaddr() available */
 #undef HAVE_GETHOSTBYADDR
 
-/* gethostbyname_r() available */
+/* gethostbyaddr_r() available */
 #undef HAVE_GETHOSTBYADDR_R
 
 /* gethostbyname() available */
@@ -64,14 +97,26 @@
 /* gethostbyname_r() available */
 #undef HAVE_GETHOSTBYNAME_R
 
+/* getpwnam_r() available */
+#undef HAVE_GETPWNAM_R
+
+/* getpwuid_r() available */
+#undef HAVE_GETPWUID_R
+
 /* GNU TLS installed */
 #undef HAVE_GNU_TLS
 
 /* GPG error installed */
 #undef HAVE_GPG_ERROR
 
+/* Define to 1 if you have the <grp.h> header file. */
+#undef HAVE_GRP_H
+
 /* Define to 1 if you have the <inttypes.h> header file. */
 #undef HAVE_INTTYPES_H
+
+/* ioctl() available */
+#undef HAVE_IOCTL
 
 /* iso9660 installed */
 #undef HAVE_ISO9660
@@ -88,6 +133,18 @@
 /* iso9660_open() available */
 #undef HAVE_ISO9660_OPEN
 
+/* lchmod() available */
+#undef HAVE_LCHMOD
+
+/* link() available */
+#undef HAVE_LINK
+
+/* Define to 1 if you have the <linux/fs.h> header file. */
+#undef HAVE_LINUX_FS_H
+
+/* Define to 1 if you have the <linux/tcp.h> header file. */
+#undef HAVE_LINUX_TCP_H
+
 /* defined if LLONG_MAX is available */
 #undef HAVE_LLONG_MAX
 
@@ -97,17 +154,68 @@
 /* defined if ulong is available */
 #undef HAVE_LONG_LONG
 
+/* lstat() available */
+#undef HAVE_LSTAT
+
+/* lstat64() available */
+#undef HAVE_LSTAT64
+
 /* lzma installed */
 #undef HAVE_LZMA
+
+/* major() available */
+#undef HAVE_MAJOR
+
+/* makedev() available */
+#undef HAVE_MAKEDEV
 
 /* Define to 1 if you have the <memory.h> header file. */
 #undef HAVE_MEMORY_H
 
+/* minor() available */
+#undef HAVE_MINOR
+
+/* mkdtemp() available */
+#undef HAVE_MKDTEMP
+
+/* mknod() available */
+#undef HAVE_MKNOD
+
+/* mkstemp() available */
+#undef HAVE_MKSTEMP
+
+/* mktemp() available */
+#undef HAVE_MKTEMP
+
+/* Define to 1 if you have the <netdb.h> header file. */
+#undef HAVE_NETDB_H
+
+/* Define to 1 if you have the <netinet/in.h> header file. */
+#undef HAVE_NETINET_IN_H
+
+/* pcre installed */
+#undef HAVE_PCRE
+
 /* posix_fadvise() available */
 #undef HAVE_POSIX_FADVISE
 
+/* pthreads-w32 installed (local) */
+#undef HAVE_PTHREADS_W32
+
 /* pthread_attr_setname() available */
 #undef HAVE_PTHREAD_ATTR_SETNAME
+
+/* Define to 1 if you have the <pwd.h> header file. */
+#undef HAVE_PWD_H
+
+/* readlink() available */
+#undef HAVE_READLINK
+
+/* Define to 1 if you have the <regex.h> header file. */
+#undef HAVE_REGEX_H
+
+/* SIGPIPE available */
+#undef HAVE_SIGPIPE
 
 /* SSH2 installed */
 #undef HAVE_SSH2
@@ -127,6 +235,15 @@
 /* SSH2 has libssh2_sftp_seek2() function */
 #undef HAVE_SSH2_SFTP_SEEK2
 
+/* stat() available */
+#undef HAVE_STAT
+
+/* stat64() available */
+#undef HAVE_STAT64
+
+/* statvfs() available */
+#undef HAVE_STATVFS
+
 /* Define to 1 if you have the <stdbool.h> header file. */
 #undef HAVE_STDBOOL_H
 
@@ -142,11 +259,59 @@
 /* Define to 1 if you have the <string.h> header file. */
 #undef HAVE_STRING_H
 
+/* symlink() available */
+#undef HAVE_SYMLINK
+
+/* sysconf() available */
+#undef HAVE_SYSCONF
+
+/* Define to 1 if you have the <sys/ioctl.h> header file. */
+#undef HAVE_SYS_IOCTL_H
+
+/* Define to 1 if you have the <sys/resource.h> header file. */
+#undef HAVE_SYS_RESOURCE_H
+
+/* Define to 1 if you have the <sys/select.h> header file. */
+#undef HAVE_SYS_SELECT_H
+
+/* Define to 1 if you have the <sys/socket.h> header file. */
+#undef HAVE_SYS_SOCKET_H
+
+/* Define to 1 if you have the <sys/statvfs.h> header file. */
+#undef HAVE_SYS_STATVFS_H
+
 /* Define to 1 if you have the <sys/stat.h> header file. */
 #undef HAVE_SYS_STAT_H
 
 /* Define to 1 if you have the <sys/types.h> header file. */
 #undef HAVE_SYS_TYPES_H
+
+/* S_IRGRP available */
+#undef HAVE_S_IRGRP
+
+/* S_IROTH available */
+#undef HAVE_S_IROTH
+
+/* S_IRUSR available */
+#undef HAVE_S_IRUSR
+
+/* S_IWGRP available */
+#undef HAVE_S_IWGRP
+
+/* S_IWOTH available */
+#undef HAVE_S_IWOTH
+
+/* S_IWUSR available */
+#undef HAVE_S_IWUSR
+
+/* S_IXGRP available */
+#undef HAVE_S_IXGRP
+
+/* S_IXOTH available */
+#undef HAVE_S_IXOTH
+
+/* S_IXUSR available */
+#undef HAVE_S_IXUSR
 
 /* TASN.1 installed */
 #undef HAVE_TASN1
@@ -172,8 +337,23 @@
 /* z installed */
 #undef HAVE_Z
 
+/* _fseeki64() available */
+#undef HAVE__FSEEKI64
+
+/* _ftelli64() available */
+#undef HAVE__FTELLI64
+
+/* _stati64() available */
+#undef HAVE__STATI64
+
+/* defined if struct __stat64 is available */
+#undef HAVE___STAT64
+
 /* defined if __thread is available */
 #undef HAVE___THREAD
+
+/* number of mkdir() arguments */
+#undef MKDIR_ARGUMENTS_COUNT
 
 /* Define to the address where bug reports for this package should be sent. */
 #undef PACKAGE_BUGREPORT
