@@ -21,17 +21,29 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <dirent.h>
-#include <linux/fs.h>
-#include <sys/ioctl.h>
+#ifdef HAVE_SYS_IOCTL_H
+  #include <sys/ioctl.h>
+#endif
 #include <utime.h>
-#include <sys/statvfs.h>
-#include <pwd.h>
-#include <grp.h>
+#ifdef HAVE_SYS_STATVFS_H
+  #include <sys/statvfs.h>
+#endif
+#ifdef HAVE_PWD_H
+  #include <pwd.h>
+#endif
+#ifdef HAVE_GRP_H
+  #include <grp.h>
+#endif
 #include <errno.h>
 #ifdef HAVE_BACKTRACE
   #include <execinfo.h>
 #endif
 #include <assert.h>
+
+#if   defined(PLATFORM_LINUX)
+  #include <linux/fs.h>
+#elif defined(PLATFORM_WINDOWS)
+#endif /* PLATFORM_... */
 
 #include "global.h"
 #include "strings.h"
@@ -51,6 +63,42 @@
 #define DEBUG_MAX_CLOSED_LIST 100
 
 /***************************** Datatypes *******************************/
+#ifdef HAVE_FSEEKO
+  #define FSEEK fseeko
+#elif HAVE__FSEEKI64
+  #define FSEEK _fseeki64
+#else
+  #define FSEEK fseek
+#endif
+
+#ifdef HAVE_FTELLO
+  #define FTELL ftello
+#elif HAVE__FTELLI64
+  #define FTELL _ftelli64
+#else
+  #define FTELL ftell
+#endif
+
+#ifdef HAVE_STAT64
+  #define STAT  stat64
+  #define LSTAT lstat64
+  typedef struct stat64 FileStat;
+#elif HAVE___STAT64
+  #define STAT  stat64
+  #define LSTAT lstat64
+  typedef struct __stat64 FileStat;
+#elif HAVE__STATI64
+  #define STAT  _stati64
+  #define LSTAT _stati64
+  typedef struct _stati64 FileStat;
+#elif HAVE_STAT
+  #define STAT  stat
+  #define LSTAT lstat
+  typedef struct stat FileStat;
+#else
+  #error No struct stat64 nor struct __stat64 
+#endif
+
 #ifndef NDEBUG
   typedef struct DebugFileNode
   {
@@ -404,14 +452,34 @@ Errors File_getTmpFileNameCString(String fileName, char const *pattern, const St
     HALT_INSUFFICIENT_MEMORY();
   }
 
-  handle = mkstemp(s);
-  if (handle == -1)
-  {
-    error = ERRORX(IO_ERROR,errno,s);
-    free(s);
-    return error;
-  }
-  close(handle);
+  #ifdef HAVE_MKSTEMP
+    handle = mkstemp(s);
+    if (handle == -1)
+    {
+      error = ERRORX(IO_ERROR,errno,s);
+      free(s);
+      return error;
+    }
+    close(handle);
+  #elif HAVE_MKTEMP
+    // Note: there is a race-condition when mktemp() and open() is used!
+    if (strcmp(mktemp(s),"") == 0)
+    {
+      error = ERRORX(IO_ERROR,errno,s);
+      free(s);
+      return error;
+    }
+    handle = open(s,O_CREAT|O_EXCL);
+    if (handle == -1)
+    {
+      error = ERRORX(IO_ERROR,errno,s);
+      free(s);
+      return error;
+    }
+    close(handle);
+  #else /* not HAVE_MKSTEMP || HAVE_MKTEMP */
+    #error mkstemp() nor mktemp() available
+  #endif /* HAVE_MKSTEMP || HAVE_MKTEMP */
 
   String_setBuffer(fileName,s,strlen(s));
 
@@ -428,6 +496,12 @@ Errors File_getTmpDirectoryName(String directoryName, const String pattern, cons
 Errors File_getTmpDirectoryNameCString(String directoryName, char const *pattern, const String directory)
 {
   char   *s;
+  #ifdef HAVE_MKDTEMP
+  #elif HAVE_MKTEMP
+    #if (MKDIR_ARGUMENTS_COUNT == 2)
+      mode_t currentCreationMask;
+    #endif /* MKDIR_ARGUMENTS_COUNT == 2 */
+  #endif /* HAVE_MKSTEMP || HAVE_MKTEMP */
   Errors error;
 
   assert(directoryName != NULL);
@@ -449,12 +523,46 @@ Errors File_getTmpDirectoryNameCString(String directoryName, char const *pattern
     HALT_INSUFFICIENT_MEMORY();
   }
 
-  if (mkdtemp(s) == NULL)
-  {
-    error = ERRORX(IO_ERROR,errno,s);
-    free(s);
-    return error;
-  }
+  #ifdef HAVE_MKDTEMP
+    if (mkdtemp(s) == NULL)
+    {
+      error = ERRORX(IO_ERROR,errno,s);
+      free(s);
+      return error;
+    }
+  #elif HAVE_MKTEMP
+    // Note: there is a race-condition when mktemp() and mkdir() is used!
+    if (strcmp(mktemp(s),"") == 0)
+    {
+      error = ERRORX(IO_ERROR,errno,s);
+      free(s);
+      return error;
+    }
+
+    #if   (MKDIR_ARGUMENTS_COUNT == 1)
+      // create directory
+      if (mkdir(s) != 0)
+      {
+        error = ERRORX(IO_ERROR,errno,s);
+        free(s);
+        return error;
+      }
+    #elif (MKDIR_ARGUMENTS_COUNT == 2)
+      // get current umask (get and restore current value)
+      currentCreationMask = umask(0);
+      umask(currentCreationMask);
+
+      // create directory
+      if (mkdir(s,0777 & ~currentCreationMask) != 0)
+      {
+        error = ERRORX(IO_ERROR,errno,s);
+        free(s);
+        return error;
+      }
+    #endif /* MKDIR_ARGUMENTS_COUNT == ... */
+  #else /* not HAVE_MKSTEMP || HAVE_MKTEMP */
+    #error mkstemp() nor mktemp() available
+  #endif /* HAVE_MKSTEMP || HAVE_MKTEMP */
 
   String_setBuffer(directoryName,s,strlen(s));
 
@@ -541,20 +649,20 @@ Errors __File_openCString(const char *__fileName__,
       }
 
       // get file size
-      if (fseeko(fileHandle->file,(off_t)0,SEEK_END) == -1)
+      if (FSEEK(fileHandle->file,(off_t)0,SEEK_END) == -1)
       {
         error = ERRORX(IO_ERROR,errno,fileName);
         fclose(fileHandle->file);
         return error;
       }
-      n = ftello(fileHandle->file);
+      n = FTELL(fileHandle->file);
       if (n == (off_t)(-1))
       {
         error = ERRORX(IO_ERROR,errno,fileName);
         fclose(fileHandle->file);
         return error;
       }
-      if (fseeko(fileHandle->file,(off_t)0,SEEK_SET) == -1)
+      if (FSEEK(fileHandle->file,(off_t)0,SEEK_SET) == -1)
       {
         error = ERRORX(IO_ERROR,errno,fileName);
         fclose(fileHandle->file);
@@ -631,7 +739,7 @@ Errors __File_openCString(const char *__fileName__,
       }
 
       // get file size
-      n = ftello(fileHandle->file);
+      n = FTELL(fileHandle->file);
       if (n == (off_t)(-1))
       {
         error = ERRORX(IO_ERROR,errno,fileName);
@@ -767,7 +875,7 @@ Errors __File_openDescriptor(const char *__fileName__,
       }
 
       // get file size
-      n = ftello(fileHandle->file);
+      n = FTELL(fileHandle->file);
       if (n == (off_t)(-1))
       {
         error = ERROR(IO_ERROR,errno);
@@ -1121,7 +1229,7 @@ Errors File_tell(FileHandle *fileHandle, uint64 *offset)
   assert(fileHandle->file != NULL);
   assert(offset != NULL);
 
-  n = ftello(fileHandle->file);
+  n = FTELL(fileHandle->file);
   if (n == (off_t)(-1))
   {
     return ERRORX(IO_ERROR,errno,String_cString(fileHandle->name));
@@ -1142,7 +1250,7 @@ Errors File_seek(FileHandle *fileHandle,
   assert(fileHandle != NULL);
   assert(fileHandle->file != NULL);
 
-  if (fseeko(fileHandle->file,(off_t)offset,SEEK_SET) == -1)
+  if (FSEEK(fileHandle->file,(off_t)offset,SEEK_SET) == -1)
   {
     return ERRORX(IO_ERROR,errno,String_cString(fileHandle->name));
   }
@@ -1176,20 +1284,26 @@ Errors File_dropCaches(FileHandle *fileHandle,
                        bool       syncFlag
                       )
 {
-  #ifdef HAVE_POSIX_FADVISE
+  #if defined(HAVE_FDATASYNC) || defined(HAVE_POSIX_FADVISE)
     int handle;
-  #endif /* HAVE_POSIX_FADVISE */
+  #endif /* defined(HAVE_FDATASYNC) || defined(HAVE_POSIX_FADVISE) */
 
   assert(fileHandle != NULL);
   assert(fileHandle->file != NULL);
 
-  handle = fileno(fileHandle->file);
+  #if defined(HAVE_FDATASYNC) || defined(HAVE_POSIX_FADVISE)
+    handle = fileno(fileHandle->file);
+  #else
+    UNUSED_VARIABLE(fileHandle);
+  #endif /* defined(HAVE_FDATASYNC) || defined(HAVE_POSIX_FADVISE) */
 
   #ifdef HAVE_FDATASYNC
     if (syncFlag)
     {
       (void)fdatasync(handle);
     }
+  #else
+    UNUSED_VARIABLE(syncFlag);
   #endif /* HAVE_FDATASYNC */
 
   #ifdef HAVE_POSIX_FADVISE
@@ -1197,6 +1311,9 @@ Errors File_dropCaches(FileHandle *fileHandle,
     {
       return ERRORX(IO_ERROR,errno,String_cString(fileHandle->name));
     }
+  #else
+    UNUSED_VARIABLE(offset);
+    UNUSED_VARIABLE(length);
   #endif /* HAVE_POSIX_FADVISE */
 
   return ERROR_NONE;
@@ -1320,187 +1437,225 @@ Errors File_readDirectoryList(DirectoryListHandle *directoryListHandle,
 
 uint32 File_userNameToUserId(const char *name)
 {
-  long          bufferSize;
-  char          *buffer;
-  struct passwd passwordEntry;
-  struct passwd *result;
+  #if defined(HAVE_SYSCONF) && defined(HAVE_GETPWNAM_R)
+    long          bufferSize;
+    char          *buffer;
+    struct passwd passwordEntry;
+    struct passwd *result;
+  #endif /* defined(HAVE_SYSCONF) && defined(HAVE_GETPWNAM_R) */
   uint32        userId;
 
   assert(name != NULL);
 
-  // allocate buffer
-  bufferSize = sysconf(_SC_GETPW_R_SIZE_MAX);
-  if (bufferSize == -1L)
-  {
-    return FILE_DEFAULT_USER_ID;
-  }
-  buffer = (char*)malloc(bufferSize);
-  if (buffer == NULL)
-  {
-    return FILE_DEFAULT_USER_ID;
-  }
+  #if defined(HAVE_SYSCONF) && defined(HAVE_GETPWNAM_R)
+    // allocate buffer
+    bufferSize = sysconf(_SC_GETPW_R_SIZE_MAX);
+    if (bufferSize == -1L)
+    {
+      return FILE_DEFAULT_USER_ID;
+    }
+    buffer = (char*)malloc(bufferSize);
+    if (buffer == NULL)
+    {
+      return FILE_DEFAULT_USER_ID;
+    }
 
-  // get user passwd entry
-  if (getpwnam_r(name,&passwordEntry,buffer,bufferSize,&result) != 0)
-  {
+    // get user passwd entry
+    if (getpwnam_r(name,&passwordEntry,buffer,bufferSize,&result) != 0)
+    {
+      free(buffer);
+      return FILE_DEFAULT_USER_ID;
+    }
+
+    // get user id
+    userId = (result != NULL) ? result->pw_uid : FILE_DEFAULT_USER_ID;
+
+    // free resources
     free(buffer);
-    return FILE_DEFAULT_USER_ID;
-  }
+  #else /* not defined(HAVE_SYSCONF) && defined(HAVE_GETPWNAM_R) */
+    UNUSED_VARIABLE(name);
 
-  // get user id
-  userId = (result != NULL) ? result->pw_uid : FILE_DEFAULT_USER_ID;
-
-  // free resources
-  free(buffer);
+    userId = FILE_DEFAULT_USER_ID;
+  #endif /* defined(HAVE_SYSCONF) && defined(HAVE_GETPWNAM_R) */
 
   return userId;
 }
 
 const char *File_userIdToUserName(char *name, uint nameSize, uint32 userId)
 {
-  long          bufferSize;
-  char          *buffer;
-  struct passwd groupEntry;
-  struct passwd *result;
+  #if defined(HAVE_SYSCONF) && defined(HAVE_GETPWUID_R)
+    long          bufferSize;
+    char          *buffer;
+    struct passwd groupEntry;
+    struct passwd *result;
+  #endif /* defined(HAVE_SYSCONF) && defined(HAVE_GETPWUID_R) */
 
   assert(name != NULL);
   assert(nameSize > 0);
 
-  // allocate buffer
-  bufferSize = sysconf(_SC_GETPW_R_SIZE_MAX);
-  if (bufferSize == -1L)
-  {
-    return NULL;
-  }
-  buffer = (char*)malloc(bufferSize);
-  if (buffer == NULL)
-  {
-    return NULL;
-  }
+  #if defined(HAVE_SYSCONF) && defined(HAVE_GETPWUID_R)
+    // allocate buffer
+    bufferSize = sysconf(_SC_GETPW_R_SIZE_MAX);
+    if (bufferSize == -1L)
+    {
+      return NULL;
+    }
+    buffer = (char*)malloc(bufferSize);
+    if (buffer == NULL)
+    {
+      return NULL;
+    }
 
-  // get user passwd entry
-  if (getpwuid_r((uid_t)userId,&groupEntry,buffer,bufferSize,&result) != 0)
-  {
+    // get user passwd entry
+    if (getpwuid_r((uid_t)userId,&groupEntry,buffer,bufferSize,&result) != 0)
+    {
+      free(buffer);
+      return NULL;
+    }
+
+    // get user name
+    if (result != NULL)
+    {
+      strncpy(name,result->pw_name,nameSize);
+    }
+    else
+    {
+      strncpy(name,"NONE",nameSize);
+    }
+    name[nameSize-1] = '\0';
+
+    // free resources
     free(buffer);
-    return NULL;
-  }
+  #else /* not defined(HAVE_SYSCONF) && defined(HAVE_GETPWUID_R) */
+    UNUSED_VARIABLE(userId);
 
-  // get user name
-  if (result != NULL)
-  {
-    strncpy(name,result->pw_name,nameSize);
-  }
-  else
-  {
     strncpy(name,"NONE",nameSize);
-  }
-  name[nameSize-1] = '\0';
+    name[nameSize-1] = '\0';
+  #endif /* defined(HAVE_SYSCONF) && defined(HAVE_GETPWUID_R) */
 
-  // free resources
-  free(buffer);
-
-  return buffer;
+  return name;
 }
 
 uint32 File_groupNameToGroupId(const char *name)
 {
-  long         bufferSize;
-  char         *buffer;
-  struct group groupEntry;
-  struct group *result;
+  #if defined(HAVE_SYSCONF) && defined(HAVE_GETGRNAM_R)
+    long         bufferSize;
+    char         *buffer;
+    struct group groupEntry;
+    struct group *result;
+  #endif /* defined(HAVE_SYSCONF) && defined(HAVE_GETPWUID_R) */
   uint32       groupId;
 
   assert(name != NULL);
 
-  // allocate buffer
-  bufferSize = sysconf(_SC_GETGR_R_SIZE_MAX);
-  if (bufferSize == -1L)
-  {
-    return FILE_DEFAULT_GROUP_ID;
-  }
-  buffer = (char*)malloc(bufferSize);
-  if (buffer == NULL)
-  {
-    return FILE_DEFAULT_GROUP_ID;
-  }
+  #if defined(HAVE_SYSCONF) && defined(HAVE_GETGRNAM_R)
+    // allocate buffer
+    bufferSize = sysconf(_SC_GETGR_R_SIZE_MAX);
+    if (bufferSize == -1L)
+    {
+      return FILE_DEFAULT_GROUP_ID;
+    }
+    buffer = (char*)malloc(bufferSize);
+    if (buffer == NULL)
+    {
+      return FILE_DEFAULT_GROUP_ID;
+    }
 
-  // get user passwd entry
-  if (getgrnam_r(name,&groupEntry,buffer,bufferSize,&result) != 0)
-  {
+    // get user passwd entry
+    if (getgrnam_r(name,&groupEntry,buffer,bufferSize,&result) != 0)
+    {
+      free(buffer);
+      return FILE_DEFAULT_GROUP_ID;
+    }
+
+    // get group id
+    groupId = (result != NULL) ? result->gr_gid : FILE_DEFAULT_GROUP_ID;
+
+    // free resources
     free(buffer);
-    return FILE_DEFAULT_GROUP_ID;
-  }
+  #else /* not defined(HAVE_SYSCONF) && defined(HAVE_GETGRNAM_R) */
+    UNUSED_VARIABLE(name);
 
-  // get group id
-  groupId = (result != NULL) ? result->gr_gid : FILE_DEFAULT_GROUP_ID;
-
-  // free resources
-  free(buffer);
+    groupId = FILE_DEFAULT_GROUP_ID;
+  #endif /* defined(HAVE_SYSCONF) && defined(HAVE_GETGRNAM_R) */
 
   return groupId;
 }
 
 const char *File_groupIdToGroupName(char *name, uint nameSize, uint32 groupId)
 {
-  long         bufferSize;
-  char         *buffer;
-  struct group groupEntry;
-  struct group *result;
+  #if defined(HAVE_SYSCONF) && defined(HAVE_GETPWUID_R)
+    long         bufferSize;
+    char         *buffer;
+    struct group groupEntry;
+    struct group *result;
+  #endif /* defined(HAVE_SYSCONF) && defined(HAVE_GETGRGID_R) */
 
   assert(name != NULL);
   assert(nameSize > 0);
 
-  // allocate buffer
-  bufferSize = sysconf(_SC_GETGR_R_SIZE_MAX);
-  if (bufferSize == -1L)
-  {
-    return NULL;
-  }
-  buffer = (char*)malloc(bufferSize);
-  if (buffer == NULL)
-  {
-    return NULL;
-  }
+  #if defined(HAVE_SYSCONF) && defined(HAVE_GETGRGID_R)
+    // allocate buffer
+    bufferSize = sysconf(_SC_GETGR_R_SIZE_MAX);
+    if (bufferSize == -1L)
+    {
+      return NULL;
+    }
+    buffer = (char*)malloc(bufferSize);
+    if (buffer == NULL)
+    {
+      return NULL;
+    }
 
-  // get user passwd entry
-  if (getgrgid_r((gid_t)groupId,&groupEntry,buffer,bufferSize,&result) != 0)
-  {
+    // get user passwd entry
+    if (getgrgid_r((gid_t)groupId,&groupEntry,buffer,bufferSize,&result) != 0)
+    {
+      free(buffer);
+      return NULL;
+    }
+
+    // get group name
+    if (result != NULL)
+    {
+      strncpy(name,result->gr_name,nameSize);
+    }
+    else
+    {
+      strncpy(name,"NONE",nameSize);
+    }
+    name[nameSize-1] = '\0';
+
+    // free resources
     free(buffer);
-    return NULL;
-  }
+  #else /* not defined(HAVE_SYSCONF) && defined(HAVE_GETGRGID_R) */
+    UNUSED_VARIABLE(groupId);
 
-  // get group name
-  if (result != NULL)
-  {
-    strncpy(name,result->gr_name,nameSize);
-  }
-  else
-  {
     strncpy(name,"NONE",nameSize);
-  }
-  name[nameSize-1] = '\0';
+    name[nameSize-1] = '\0';
+  #endif /* defined(HAVE_SYSCONF) && defined(HAVE_GETGRGID_R) */
 
-  // free resources
-  free(buffer);
-
-  return buffer;
+  return name;
 }
 
 FileTypes File_getType(const String fileName)
 {
-  struct stat64 fileStat;
+  FileStat fileStat;
 
   assert(fileName != NULL);
 
-  if (lstat64(String_cString(fileName),&fileStat) == 0)
+  if (LSTAT(String_cString(fileName),&fileStat) == 0)
   {
     if      (S_ISREG(fileStat.st_mode))  return (fileStat.st_nlink > 1)?FILE_TYPE_HARDLINK:FILE_TYPE_FILE;
     else if (S_ISDIR(fileStat.st_mode))  return FILE_TYPE_DIRECTORY;
+    #ifdef S_ISLNK
     else if (S_ISLNK(fileStat.st_mode))  return FILE_TYPE_LINK;
+    #endif /* S_ISLNK */
     else if (S_ISCHR(fileStat.st_mode))  return FILE_TYPE_SPECIAL;
     else if (S_ISBLK(fileStat.st_mode))  return FILE_TYPE_SPECIAL;
     else if (S_ISFIFO(fileStat.st_mode)) return FILE_TYPE_SPECIAL;
+    #ifdef S_ISSOCK
     else if (S_ISSOCK(fileStat.st_mode)) return FILE_TYPE_SPECIAL;
+    #endif /* S_ISSOCK */
     else                                 return FILE_TYPE_UNKNOWN;
   }
   else
@@ -1576,7 +1731,7 @@ Errors File_getDataCString(const char *fileName,
 
 Errors File_delete(const String fileName, bool recursiveFlag)
 {
-  struct stat64 fileStat;
+  FileStat      fileStat;
   Errors        error;
   StringList    directoryList;
   DIR           *dir;
@@ -1587,13 +1742,15 @@ Errors File_delete(const String fileName, bool recursiveFlag)
 
   assert(fileName != NULL);
 
-  if (lstat64(String_cString(fileName),&fileStat) != 0)
+  if (LSTAT(String_cString(fileName),&fileStat) != 0)
   {
     return ERRORX(IO_ERROR,errno,String_cString(fileName));
   }
 
   if      (   S_ISREG(fileStat.st_mode)
+           #ifdef S_ISLNK
            || S_ISLNK(fileStat.st_mode)
+           #endif /* S_ISLNK */
           )
   {
     if (unlink(String_cString(fileName)) != 0)
@@ -1628,10 +1785,12 @@ Errors File_delete(const String fileName, bool recursiveFlag)
               String_set(name,directoryName);
               File_appendFileNameCString(name,entry->d_name);
 
-              if (lstat64(String_cString(name),&fileStat) == 0)
+              if (LSTAT(String_cString(name),&fileStat) == 0)
               {
                 if      (   S_ISREG(fileStat.st_mode)
+                         #ifdef S_ISLNK
                          || S_ISLNK(fileStat.st_mode)
+                         #endif /* S_ISLNK */
                         )
                 {
                   if (unlink(String_cString(name)) != 0)
@@ -1715,11 +1874,11 @@ Errors File_copy(const String sourceFileName,
 {
   #define BUFFER_SIZE (1024*1024)
 
-  byte          *buffer;
-  Errors        error;
-  FILE          *sourceFile,*destinationFile;
-  size_t        n;
-  struct stat64 fileStat;
+  byte     *buffer;
+  Errors   error;
+  FILE     *sourceFile,*destinationFile;
+  size_t   n;
+  FileStat fileStat;
 
   assert(sourceFileName != NULL);
   assert(destinationFileName != NULL);
@@ -1785,18 +1944,22 @@ Errors File_copy(const String sourceFileName,
   free(buffer);
 
   // copy permissions
-  if (lstat64(String_cString(sourceFileName),&fileStat) != 0)
+  if (LSTAT(String_cString(sourceFileName),&fileStat) != 0)
   {
     return ERRORX(IO_ERROR,errno,String_cString(sourceFileName));
   }
-  if (chown(String_cString(destinationFileName),fileStat.st_uid,fileStat.st_gid) != 0)
-  {
-    return ERRORX(IO_ERROR,errno,String_cString(destinationFileName));
-  }
-  if (chmod(String_cString(destinationFileName),fileStat.st_mode) != 0)
-  {
-    return ERRORX(IO_ERROR,errno,String_cString(destinationFileName));
-  }
+  #ifdef HAVE_CHOWN
+    if (chown(String_cString(destinationFileName),fileStat.st_uid,fileStat.st_gid) != 0)
+    {
+      return ERRORX(IO_ERROR,errno,String_cString(destinationFileName));
+    }
+  #endif /* HAVE_CHOWN */
+  #ifdef HAVE_CHMOD
+    if (chmod(String_cString(destinationFileName),fileStat.st_mode) != 0)
+    {
+      return ERRORX(IO_ERROR,errno,String_cString(destinationFileName));
+    }
+  #endif /* HAVE_CHMOD */
 
   return ERROR_NONE;
 
@@ -1805,84 +1968,84 @@ Errors File_copy(const String sourceFileName,
 
 bool File_exists(const String fileName)
 {
-  struct stat fileStat;
+  FileStat fileStat;
 
   assert(fileName != NULL);
 
-  return (lstat(String_cString(fileName),&fileStat) == 0);
+  return (LSTAT(String_cString(fileName),&fileStat) == 0);
 }
 
 bool File_existsCString(const char *fileName)
 {
-  struct stat fileStat;
+  FileStat fileStat;
 
   assert(fileName != NULL);
 
-  return (lstat((strlen(fileName) > 0)?fileName:"",&fileStat) == 0);
+  return (LSTAT((strlen(fileName) > 0)?fileName:"",&fileStat) == 0);
 }
 
 bool File_isFile(const String fileName)
 {
-  struct stat fileStat;
+  FileStat fileStat;
 
   assert(fileName != NULL);
 
-  return (   (stat(String_cString(fileName),&fileStat) == 0)
+  return (   (STAT(String_cString(fileName),&fileStat) == 0)
           && S_ISREG(fileStat.st_mode)
          );
 }
 
 bool File_isFileCString(const char *fileName)
 {
-  struct stat fileStat;
+  FileStat fileStat;
 
   assert(fileName != NULL);
 
-  return (   (stat(fileName,&fileStat) == 0)
+  return (   (STAT(fileName,&fileStat) == 0)
           && S_ISREG(fileStat.st_mode)
          );
 }
 
 bool File_isDirectory(const String fileName)
 {
-  struct stat fileStat;
+  FileStat fileStat;
 
   assert(fileName != NULL);
 
-  return (   (stat(String_cString(fileName),&fileStat) == 0)
+  return (   (STAT(String_cString(fileName),&fileStat) == 0)
           && S_ISDIR(fileStat.st_mode)
          );
 }
 
 bool File_isDirectoryCString(const char *fileName)
 {
-  struct stat fileStat;
+  FileStat fileStat;
 
   assert(fileName != NULL);
 
-  return (   (stat(fileName,&fileStat) == 0)
+  return (   (STAT(fileName,&fileStat) == 0)
           && S_ISDIR(fileStat.st_mode)
          );
 }
 
 bool File_isDevice(const String fileName)
 {
-  struct stat fileStat;
+  FileStat fileStat;
 
   assert(fileName != NULL);
 
-  return (   (stat(String_cString(fileName),&fileStat) == 0)
+  return (   (STAT(String_cString(fileName),&fileStat) == 0)
           && (S_ISCHR(fileStat.st_mode) || S_ISBLK(fileStat.st_mode))
          );
 }
 
 bool File_isDeviceCString(const char *fileName)
 {
-  struct stat fileStat;
+  FileStat fileStat;
 
   assert(fileName != NULL);
 
-  return (   (stat(fileName,&fileStat) == 0)
+  return (   (STAT(fileName,&fileStat) == 0)
           && (S_ISCHR(fileStat.st_mode) || S_ISBLK(fileStat.st_mode))
          );
 }
@@ -1915,20 +2078,20 @@ Errors File_getFileInfo(FileInfo     *fileInfo,
                         const String fileName
                        )
 {
-  struct stat64 fileStat;
-  DeviceInfo    deviceInfo;
+  FileStat   fileStat;
+  DeviceInfo deviceInfo;
   struct
   {
     time_t d0;
     time_t d1;
   } cast;
-  Errors        error;
+  Errors     error;
 
   assert(fileName != NULL);
   assert(fileInfo != NULL);
 
   // get file meta data
-  if (lstat64(String_cString(fileName),&fileStat) != 0)
+  if (LSTAT(String_cString(fileName),&fileStat) != 0)
   {
     return ERRORX(IO_ERROR,errno,String_cString(fileName));
   }
@@ -1938,8 +2101,16 @@ Errors File_getFileInfo(FileInfo     *fileInfo,
   fileInfo->userId          = fileStat.st_uid;
   fileInfo->groupId         = fileStat.st_gid;
   fileInfo->permission      = (FilePermission)fileStat.st_mode;
-  fileInfo->major           = major(fileStat.st_rdev);
-  fileInfo->minor           = minor(fileStat.st_rdev);
+  #ifdef HAVE_MAJOR
+    fileInfo->major         = major(fileStat.st_rdev);
+  #else
+    fileInfo->major         = 0;
+  #endif
+  #ifdef HAVE_MINOR
+    fileInfo->minor         = minor(fileStat.st_rdev);
+  #else
+    fileInfo->minor         = 0;
+  #endif
   fileInfo->attributes      = FILE_ATTRIBUTE_NONE;
   fileInfo->id              = (uint64)fileStat.st_ino;
   fileInfo->linkCount       = (uint)fileStat.st_nlink;
@@ -1972,11 +2143,13 @@ Errors File_getFileInfo(FileInfo     *fileInfo,
       return error;
     }
   }
+  #ifdef S_ISLNK
   else if (S_ISLNK(fileStat.st_mode))
   {
     fileInfo->type = FILE_TYPE_LINK;
     fileInfo->size = 0LL;
   }
+  #endif /* S_ISLNK */
   else if (S_ISCHR(fileStat.st_mode))
   {
     fileInfo->type        = FILE_TYPE_SPECIAL;
@@ -2003,12 +2176,14 @@ Errors File_getFileInfo(FileInfo     *fileInfo,
     fileInfo->size        = 0LL;
     fileInfo->specialType = FILE_SPECIAL_TYPE_FIFO;
   }
+  #ifdef S_ISSOCK
   else if (S_ISSOCK(fileStat.st_mode))
   {
     fileInfo->type        = FILE_TYPE_SPECIAL;
     fileInfo->size        = 0LL;
     fileInfo->specialType = FILE_SPECIAL_TYPE_SOCKET;
   }
+  #endif /* S_ISSOCK */
   else
   {
     fileInfo->type        = FILE_TYPE_UNKNOWN;
@@ -2021,11 +2196,11 @@ Errors File_getFileInfo(FileInfo     *fileInfo,
 
 uint64 File_getFileTimeModified(const String fileName)
 {
-  struct stat64 fileStat;
+  FileStat fileStat;
 
   assert(fileName != NULL);
 
-  if (lstat64(String_cString(fileName),&fileStat) != 0)
+  if (LSTAT(String_cString(fileName),&fileStat) != 0)
   {
     return 0LL;
   }
@@ -2054,16 +2229,24 @@ Errors File_setOwner(const String fileName,
 {
   assert(fileName != NULL);
 
-  if (chown(String_cString(fileName),
-            (userId  != FILE_DEFAULT_USER_ID ) ? (uid_t)userId  : (uid_t)(-1),
-            (groupId != FILE_DEFAULT_GROUP_ID) ? (gid_t)groupId : (gid_t)(-1)
-           ) != 0
-     )
-  {
-    return ERRORX(IO_ERROR,errno,String_cString(fileName));
-  }
+  #ifdef HAVE_CHOWN
+    if (chown(String_cString(fileName),
+              (userId  != FILE_DEFAULT_USER_ID ) ? (uid_t)userId  : (uid_t)(-1),
+              (groupId != FILE_DEFAULT_GROUP_ID) ? (gid_t)groupId : (gid_t)(-1)
+             ) != 0
+       )
+    {
+      return ERRORX(IO_ERROR,errno,String_cString(fileName));
+    }
 
-  return ERROR_NONE;
+    return ERROR_NONE;
+  #else /* not HAVE_CHOWN */
+    UNUSED_VARIABLE(fileName);
+    UNUSED_VARIABLE(userId);
+    UNUSED_VARIABLE(groupId);
+
+    return ERROR_FUNCTION_NOT_SUPPORTED;
+  #endif /* HAVE_CHOWN */
 }
 
 Errors File_setFileInfo(const String fileName,
@@ -2087,20 +2270,26 @@ Errors File_setFileInfo(const String fileName,
       {
         return ERRORX(IO_ERROR,errno,String_cString(fileName));
       }
-      if (chown(String_cString(fileName),fileInfo->userId,fileInfo->groupId) != 0)
-      {
-        return ERRORX(IO_ERROR,errno,String_cString(fileName));
-      }
-      if (chmod(String_cString(fileName),(mode_t)fileInfo->permission) != 0)
-      {
-        return ERRORX(IO_ERROR,errno,String_cString(fileName));
-      }
+      #ifdef HAVE_CHOWN
+        if (chown(String_cString(fileName),fileInfo->userId,fileInfo->groupId) != 0)
+        {
+          return ERRORX(IO_ERROR,errno,String_cString(fileName));
+        }
+      #endif /* HAVE_CHOWN */
+      #ifdef HAVE_CHMOD
+        if (chmod(String_cString(fileName),(mode_t)fileInfo->permission) != 0)
+        {
+          return ERRORX(IO_ERROR,errno,String_cString(fileName));
+        }
+      #endif /* HAVE_CHMOD */
       break;
     case FILE_TYPE_LINK:
-      if (lchown(String_cString(fileName),fileInfo->userId,fileInfo->groupId) != 0)
-      {
-        return ERRORX(IO_ERROR,errno,String_cString(fileName));
-      }
+      #ifdef HAVE_LCHMOD
+        if (lchown(String_cString(fileName),fileInfo->userId,fileInfo->groupId) != 0)
+        {
+          return ERRORX(IO_ERROR,errno,String_cString(fileName));
+        }
+      #endif /* HAVE_LCHMOD */
       break;
     default:
       #ifndef NDEBUG
@@ -2118,13 +2307,17 @@ Errors File_makeDirectory(const String   pathName,
                           FilePermission permission
                          )
 {
-  mode_t          currentCreationMask;
-  StringTokenizer pathNameTokenizer;
+  #define PERMISSION_DIRECTORY (FILE_PERMISSION_USER_EXECUTE|FILE_PERMISSION_GROUP_EXECUTE|FILE_PERMISSION_OTHER_EXECUTE)
+
   String          directoryName;
   String          parentDirectoryName;
-  struct stat64   fileStat;
-  uid_t           uid;
-  gid_t           gid;
+  mode_t          currentCreationMask;
+  StringTokenizer pathNameTokenizer;
+  FileStat        fileStat;
+  #ifdef HAVE_CHOWN
+    uid_t           uid;
+    gid_t           gid;
+  #endif /* HAVE_CHOWN */
   Errors          error;
   String          name;
 
@@ -2134,7 +2327,7 @@ Errors File_makeDirectory(const String   pathName,
   directoryName = File_newFileName();
   parentDirectoryName = File_newFileName();
 
-  // get current umask
+  // get current umask (get and restore current value)
   currentCreationMask = umask(0);
   umask(currentCreationMask);
 
@@ -2154,23 +2347,8 @@ Errors File_makeDirectory(const String   pathName,
   if      (!File_exists(directoryName))
   {
     // create root-directory
-    if (mkdir(String_cString(directoryName),0777 & ~currentCreationMask) != 0)
-    {
-      error = ERRORX(IO_ERROR,errno,String_cString(directoryName));
-      File_doneSplitFileName(&pathNameTokenizer);
-      File_deleteFileName(parentDirectoryName);
-      File_deleteFileName(directoryName);
-      return error;
-    }
-
-    // set owner/group
-    if (   (userId  != FILE_DEFAULT_USER_ID)
-        || (groupId != FILE_DEFAULT_GROUP_ID)
-       )
-    {
-      uid = (userId  != FILE_DEFAULT_USER_ID ) ? (uid_t)userId  : (uid_t)(-1);
-      gid = (groupId != FILE_DEFAULT_GROUP_ID) ? (gid_t)groupId : (gid_t)(-1);
-      if (chown(String_cString(directoryName),uid,gid) != 0)
+    #if   (MKDIR_ARGUMENTS_COUNT == 1)
+      if (mkdir(String_cString(directoryName)) != 0)
       {
         error = ERRORX(IO_ERROR,errno,String_cString(directoryName));
         File_doneSplitFileName(&pathNameTokenizer);
@@ -2178,19 +2356,52 @@ Errors File_makeDirectory(const String   pathName,
         File_deleteFileName(directoryName);
         return error;
       }
-    }
-
-    // set permission
-    if (permission != FILE_DEFAULT_PERMISSION)
-    {
-      if (chmod(String_cString(directoryName),((mode_t)permission|S_IXUSR|S_IXGRP|S_IXOTH) & ~currentCreationMask) != 0)
+    #elif (MKDIR_ARGUMENTS_COUNT == 2)
+      if (mkdir(String_cString(directoryName),0777 & ~currentCreationMask) != 0)
       {
-        error = ERROR(IO_ERROR,errno);
+        error = ERRORX(IO_ERROR,errno,String_cString(directoryName));
         File_doneSplitFileName(&pathNameTokenizer);
         File_deleteFileName(parentDirectoryName);
         File_deleteFileName(directoryName);
         return error;
       }
+    #endif /* MKDIR_ARGUMENTS_COUNT == ... */
+
+    // set owner/group
+    if (   (userId  != FILE_DEFAULT_USER_ID)
+        || (groupId != FILE_DEFAULT_GROUP_ID)
+       )
+    {
+      #ifdef HAVE_CHOWN
+        uid = (userId  != FILE_DEFAULT_USER_ID ) ? (uid_t)userId  : (uid_t)(-1);
+        gid = (groupId != FILE_DEFAULT_GROUP_ID) ? (gid_t)groupId : (gid_t)(-1);
+        if (chown(String_cString(directoryName),uid,gid) != 0)
+        {
+          error = ERRORX(IO_ERROR,errno,String_cString(directoryName));
+          File_doneSplitFileName(&pathNameTokenizer);
+          File_deleteFileName(parentDirectoryName);
+          File_deleteFileName(directoryName);
+          return error;
+        }
+      #endif /* HAVE_CHOWN */
+    }
+
+    // set permission
+    if (permission != FILE_DEFAULT_PERMISSION)
+    {
+      #ifdef HAVE_CHMOD
+        if (chmod(String_cString(directoryName),
+                  ((mode_t)permission|PERMISSION_DIRECTORY) & ~currentCreationMask
+                 ) != 0
+           )
+        {
+          error = ERROR(IO_ERROR,errno);
+          File_doneSplitFileName(&pathNameTokenizer);
+          File_deleteFileName(parentDirectoryName);
+          File_deleteFileName(directoryName);
+          return error;
+        }
+      #endif /* HAVE_CHOWN */
     }
   }
   else if (!File_isDirectory(directoryName))
@@ -2215,7 +2426,7 @@ Errors File_makeDirectory(const String   pathName,
       if      (!File_exists(directoryName))
       {
         // set read/write/execute-access in parent directory
-        if (lstat64(String_cString(parentDirectoryName),&fileStat) != 0)
+        if (LSTAT(String_cString(parentDirectoryName),&fileStat) != 0)
         {
           error = ERRORX(IO_ERROR,errno,String_cString(parentDirectoryName));
           File_doneSplitFileName(&pathNameTokenizer);
@@ -2223,8 +2434,11 @@ Errors File_makeDirectory(const String   pathName,
           File_deleteFileName(directoryName);
           return error;
         }
-        if (   ((fileStat.st_mode & (S_IRUSR|S_IWUSR|S_IXUSR)) != (S_IRUSR|S_IWUSR|S_IXUSR))
-            && (chmod(String_cString(parentDirectoryName),fileStat.st_mode|S_IRUSR|S_IWUSR|S_IXUSR) != 0)
+        if (   ((fileStat.st_mode & PERMISSION_DIRECTORY) != PERMISSION_DIRECTORY)
+            && (chmod(String_cString(parentDirectoryName),
+                      (fileStat.st_mode|PERMISSION_DIRECTORY) & ~currentCreationMask
+                     ) != 0
+               )
            )
         {
           error = ERRORX(IO_ERROR,errno,String_cString(parentDirectoryName));
@@ -2235,14 +2449,25 @@ Errors File_makeDirectory(const String   pathName,
         }
 
         // create sub-directory
-        if (mkdir(String_cString(directoryName),0777 & ~currentCreationMask) != 0)
-        {
-          error = ERRORX(IO_ERROR,errno,String_cString(directoryName));
-          File_doneSplitFileName(&pathNameTokenizer);
-          File_deleteFileName(parentDirectoryName);
-          File_deleteFileName(directoryName);
-          return error;
-        }
+        #if   (MKDIR_ARGUMENTS_COUNT == 1)
+          if (mkdir(String_cString(directoryName)) != 0)
+          {
+            error = ERRORX(IO_ERROR,errno,String_cString(directoryName));
+            File_doneSplitFileName(&pathNameTokenizer);
+            File_deleteFileName(parentDirectoryName);
+            File_deleteFileName(directoryName);
+            return error;
+          }
+        #elif (MKDIR_ARGUMENTS_COUNT == 2)
+          if (mkdir(String_cString(directoryName),0777 & ~currentCreationMask) != 0)
+          {
+            error = ERRORX(IO_ERROR,errno,String_cString(directoryName));
+            File_doneSplitFileName(&pathNameTokenizer);
+            File_deleteFileName(parentDirectoryName);
+            File_deleteFileName(directoryName);
+            return error;
+          }
+        #endif /* MKDIR_ARGUMENTS_COUNT == ... */
 
         // set owner/group
         if (   (userId  != FILE_DEFAULT_USER_ID)
@@ -2250,30 +2475,37 @@ Errors File_makeDirectory(const String   pathName,
            )
         {
           // set owner
-          uid = (userId  != FILE_DEFAULT_USER_ID ) ? (uid_t)userId  : (uid_t)(-1);
-          gid = (groupId != FILE_DEFAULT_GROUP_ID) ? (gid_t)groupId : (gid_t)(-1);
-          if (chown(String_cString(directoryName),uid,gid) != 0)
-          {
-            error = ERRORX(IO_ERROR,errno,String_cString(directoryName));
-            File_doneSplitFileName(&pathNameTokenizer);
-            File_deleteFileName(parentDirectoryName);
-            File_deleteFileName(directoryName);
-            return error;
-          }
+          #ifdef HAVE_CHOWN
+            uid = (userId  != FILE_DEFAULT_USER_ID ) ? (uid_t)userId  : (uid_t)(-1);
+            gid = (groupId != FILE_DEFAULT_GROUP_ID) ? (gid_t)groupId : (gid_t)(-1);
+            if (chown(String_cString(directoryName),uid,gid) != 0)
+            {
+              error = ERRORX(IO_ERROR,errno,String_cString(directoryName));
+              File_doneSplitFileName(&pathNameTokenizer);
+              File_deleteFileName(parentDirectoryName);
+              File_deleteFileName(directoryName);
+              return error;
+            }
+          #endif /* HAVE_CHOWN */
         }
 
         // set permission
         if (permission != FILE_DEFAULT_PERMISSION)
         {
           // set permission
-          if (chmod(String_cString(directoryName),((mode_t)permission|S_IXUSR|S_IXGRP|S_IXOTH) & ~currentCreationMask) != 0)
-          {
-            error = ERRORX(IO_ERROR,errno,String_cString(directoryName));
-            File_doneSplitFileName(&pathNameTokenizer);
-            File_deleteFileName(parentDirectoryName);
-            File_deleteFileName(directoryName);
-            return error;
-          }
+          #ifdef HAVE_CHMOD
+            if (chmod(String_cString(directoryName),
+                      ((mode_t)permission|PERMISSION_DIRECTORY) & ~currentCreationMask
+                     ) != 0
+               )
+            {
+              error = ERRORX(IO_ERROR,errno,String_cString(directoryName));
+              File_doneSplitFileName(&pathNameTokenizer);
+              File_deleteFileName(parentDirectoryName);
+              File_deleteFileName(directoryName);
+              return error;
+            }
+          #endif /* HAVE_CHMOD */
         }
       }
       else if (!File_isDirectory(directoryName))
@@ -2293,6 +2525,8 @@ Errors File_makeDirectory(const String   pathName,
   File_deleteFileName(directoryName);
 
   return ERROR_NONE;
+
+  #undef PERMISSION_DIRECTORY
 }
 
 Errors File_makeDirectoryCString(const char     *pathName,
@@ -2318,45 +2552,54 @@ Errors File_readLink(String       fileName,
   #define BUFFER_SIZE  256
   #define BUFFER_DELTA 128
 
-  char    *buffer;
-  ssize_t bufferSize;
-  int     result;
-  Errors  error;
+  #ifdef HAVE_READLINK
+    char    *buffer;
+    ssize_t bufferSize;
+    int     result;
+    Errors  error;
+  #endif /* HAVE_READLINK */
 
   assert(linkName != NULL);
   assert(fileName != NULL);
 
-  // allocate initial buffer for name
-  buffer = (char*)malloc(BUFFER_SIZE);
-  if (buffer == NULL)
-  {
-    HALT_INSUFFICIENT_MEMORY();
-  }
-  bufferSize = BUFFER_SIZE;
-
-  // try to read link, increase buffer if needed
-  while ((result = readlink(String_cString(linkName),buffer,bufferSize)) == bufferSize)
-  {
-    bufferSize += BUFFER_DELTA;
-    buffer = realloc(buffer,bufferSize);
+  #ifdef HAVE_READLINK
+    // allocate initial buffer for name
+    buffer = (char*)malloc(BUFFER_SIZE);
     if (buffer == NULL)
     {
       HALT_INSUFFICIENT_MEMORY();
     }
-  }
+    bufferSize = BUFFER_SIZE;
 
-  if (result != -1)
-  {
-    String_setBuffer(fileName,buffer,result);
-    free(buffer);
-    return ERROR_NONE;
-  }
-  else
-  {
-    error = ERRORX(IO_ERROR,errno,String_cString(linkName));
-    free(buffer);
-    return error;
-  }
+    // try to read link, increase buffer if needed
+    while ((result = readlink(String_cString(linkName),buffer,bufferSize)) == bufferSize)
+    {
+      bufferSize += BUFFER_DELTA;
+      buffer = realloc(buffer,bufferSize);
+      if (buffer == NULL)
+      {
+        HALT_INSUFFICIENT_MEMORY();
+      }
+    }
+
+    if (result != -1)
+    {
+      String_setBuffer(fileName,buffer,result);
+      free(buffer);
+      return ERROR_NONE;
+    }
+    else
+    {
+      error = ERRORX(IO_ERROR,errno,String_cString(linkName));
+      free(buffer);
+      return error;
+    }
+  #else /* not HAVE_READLINK */
+    UNUSED_VARIABLE(fileName);
+    UNUSED_VARIABLE(linkName);
+
+    return ERROR_FUNCTION_NOT_SUPPORTED;
+  #endif /* HAVE_READLINK */
 }
 
 Errors File_makeLink(const String linkName,
@@ -2366,13 +2609,20 @@ Errors File_makeLink(const String linkName,
   assert(linkName != NULL);
   assert(fileName != NULL);
 
-  unlink(String_cString(linkName));
-  if (symlink(String_cString(fileName),String_cString(linkName)) != 0)
-  {
-    return ERRORX(IO_ERROR,errno,String_cString(linkName));
-  }
+  #ifdef HAVE_SYMLINK
+    unlink(String_cString(linkName));
+    if (symlink(String_cString(fileName),String_cString(linkName)) != 0)
+    {
+      return ERRORX(IO_ERROR,errno,String_cString(linkName));
+    }
 
-  return ERROR_NONE;
+    return ERROR_NONE;
+  #else /* not HAVE_SYMLINK */
+    UNUSED_VARIABLE(linkName);
+    UNUSED_VARIABLE(fileName);
+
+    return ERROR_FUNCTION_NOT_SUPPORTED;
+  #endif /* HAVE_SYMLINK */
 }
 
 Errors File_makeHardLink(const String linkName,
@@ -2382,13 +2632,20 @@ Errors File_makeHardLink(const String linkName,
   assert(linkName != NULL);
   assert(fileName != NULL);
 
-  unlink(String_cString(linkName));
-  if (link(String_cString(fileName),String_cString(linkName)) != 0)
-  {
-    return ERRORX(IO_ERROR,errno,String_cString(linkName));
-  }
+  #ifdef HAVE_LINK
+    unlink(String_cString(linkName));
+    if (link(String_cString(fileName),String_cString(linkName)) != 0)
+    {
+      return ERRORX(IO_ERROR,errno,String_cString(linkName));
+    }
 
-  return ERROR_NONE;
+    return ERROR_NONE;
+  #else /* not HAVE_LINK */
+    UNUSED_VARIABLE(linkName);
+    UNUSED_VARIABLE(fileName);
+
+    return ERROR_FUNCTION_NOT_SUPPORTED;
+  #endif /* HAVE_LINK */
 }
 
 Errors File_makeSpecial(const String     name,
@@ -2399,61 +2656,79 @@ Errors File_makeSpecial(const String     name,
 {
   assert(name != NULL);
 
-  unlink(String_cString(name));
-  switch (type)
-  {
-    case FILE_SPECIAL_TYPE_CHARACTER_DEVICE:
-      if (mknod(String_cString(name),S_IFCHR|0600,makedev(major,minor)) != 0)
-      {
-        return ERRORX(IO_ERROR,errno,String_cString(name));
-      }
-      break;
-    case FILE_SPECIAL_TYPE_BLOCK_DEVICE:
-      if (mknod(String_cString(name),S_IFBLK|0600,makedev(major,minor)) != 0)
-      {
-        return ERRORX(IO_ERROR,errno,String_cString(name));
-      }
-      break;
-    case FILE_SPECIAL_TYPE_FIFO:
-      if (mknod(String_cString(name),S_IFIFO|0666,0) != 0)
-      {
-        return ERRORX(IO_ERROR,errno,String_cString(name));
-      }
-      break;
-    case FILE_SPECIAL_TYPE_SOCKET:
-      if (mknod(String_cString(name),S_IFSOCK|0600,0) != 0)
-      {
-        return ERRORX(IO_ERROR,errno,String_cString(name));
-      }
-      break;
-    #ifndef NDEBUG
-      default:
-        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-        break; /* not reached */
-    #endif /* NDEBUG */
-  }
+  #ifdef HAVE_MKNOD
+    unlink(String_cString(name));
+    switch (type)
+    {
+      case FILE_SPECIAL_TYPE_CHARACTER_DEVICE:
+        if (mknod(String_cString(name),S_IFCHR|0600,makedev(major,minor)) != 0)
+        {
+          return ERRORX(IO_ERROR,errno,String_cString(name));
+        }
+        break;
+      case FILE_SPECIAL_TYPE_BLOCK_DEVICE:
+        if (mknod(String_cString(name),S_IFBLK|0600,makedev(major,minor)) != 0)
+        {
+          return ERRORX(IO_ERROR,errno,String_cString(name));
+        }
+        break;
+      case FILE_SPECIAL_TYPE_FIFO:
+        if (mknod(String_cString(name),S_IFIFO|0666,0) != 0)
+        {
+          return ERRORX(IO_ERROR,errno,String_cString(name));
+        }
+        break;
+      case FILE_SPECIAL_TYPE_SOCKET:
+        if (mknod(String_cString(name),S_IFSOCK|0600,0) != 0)
+        {
+          return ERRORX(IO_ERROR,errno,String_cString(name));
+        }
+        break;
+      #ifndef NDEBUG
+        default:
+          HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+          break; /* not reached */
+      #endif /* NDEBUG */
+    }
 
-  return ERROR_NONE;
+    return ERROR_NONE;
+  #else /* not HAVE_MKNOD */
+    UNUSED_VARIABLE(name);
+    UNUSED_VARIABLE(type);
+    UNUSED_VARIABLE(major);
+    UNUSED_VARIABLE(minor);
+
+    return ERROR_FUNCTION_NOT_SUPPORTED;
+  #endif /* HAVE_MKNOD */
 }
 
 Errors File_getFileSystemInfo(FileSystemInfo *fileSystemInfo,
-                              const          String pathName
+                              const String   pathName
                              )
 {
-  struct statvfs fileSystemStat;
+  #ifdef HAVE_STATVFS
+    struct statvfs fileSystemStat;
+  #endif /* HAVE_STATVFS */
 
   assert(pathName != NULL);
   assert(fileSystemInfo != NULL);
 
-  if (statvfs(String_cString(pathName),&fileSystemStat) != 0)
-  {
-    return ERRORX(IO_ERROR,errno,String_cString(pathName));
-  }
+  #ifdef HAVE_STATVFS
+    if (statvfs(String_cString(pathName),&fileSystemStat) != 0)
+    {
+      return ERRORX(IO_ERROR,errno,String_cString(pathName));
+    }
 
-  fileSystemInfo->blockSize         = fileSystemStat.f_bsize;
-  fileSystemInfo->freeBytes         = (uint64)fileSystemStat.f_bavail*(uint64)fileSystemStat.f_bsize;
-  fileSystemInfo->totalBytes        = (uint64)fileSystemStat.f_blocks*(uint64)fileSystemStat.f_frsize;
-  fileSystemInfo->maxFileNameLength = (uint64)fileSystemStat.f_namemax;
+    fileSystemInfo->blockSize         = fileSystemStat.f_bsize;
+    fileSystemInfo->freeBytes         = (uint64)fileSystemStat.f_bavail*(uint64)fileSystemStat.f_bsize;
+    fileSystemInfo->totalBytes        = (uint64)fileSystemStat.f_blocks*(uint64)fileSystemStat.f_frsize;
+    fileSystemInfo->maxFileNameLength = (uint64)fileSystemStat.f_namemax;
+  #else /* not HAVE_STATVFS */
+    UNUSED_VARIABLE(fileSystemInfo);
+    UNUSED_VARIABLE(pathName);
+
+    return ERROR_FUNCTION_NOT_SUPPORTED;
+  #endif /* HAVE_STATVFS */
 
   return ERROR_NONE;
 }
