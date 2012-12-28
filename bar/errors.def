@@ -172,7 +172,8 @@ ERROR READ_KEY_FAIL
 
 ERROR INVALID_KEY                    "invalid key"
 ERROR INVALID_KEY_LENGTH             "invalid key length"
-ERROR INVALID_BLOCK_LENGTH           "invalid block length"
+// Note: because of name collisions with Windows include use INVALID_BLOCK_LENGTH_ instead of INVALID_BLOCK_LENGTH
+ERROR INVALID_BLOCK_LENGTH_          "invalid block length"
 ERROR NO_PUBLIC_KEY                  "no public encryption key"
 ERROR NO_PRIVATE_KEY                 "no private decryption key"
 ERROR NOT_A_PUBLIC_KEY               "key is not a public encryption key"
@@ -222,7 +223,8 @@ ERROR READ_FILE                      "read file fail"
 ERROR WRITE_FILE                     "write file fail"
 ERROR DELETE_FILE                    "delete file fail"
 
-ERROR FILE_EXISTS
+// Note: because of name collisions with Windows include use FILE_EXISTS_ instead of FILE_EXISTS
+ERROR FILE_EXISTS_
   if (ERROR_TEXT != NULL)
   {
     snprintf(errorText,sizeof(errorText)-1,"file '%s' already exists",ERROR_TEXT);
@@ -233,7 +235,8 @@ ERROR FILE_EXISTS
   }
   errorText[sizeof(errorText)-1] = '\0';
 
-ERROR FILE_NOT_FOUND
+// Note: because of name collisions with Windows include use FILE_NOT_FOUND_ instead of FILE_NOT_FOUND
+ERROR FILE_NOT_FOUND_
   if (ERROR_TEXT != NULL)
   {
     snprintf(errorText,sizeof(errorText)-1,"file '%s' not found",ERROR_TEXT);
@@ -318,7 +321,9 @@ ERROR NO_SPECIAL_ENTRY               "no special entry"
 ERROR NO_IMAGE_ENTRY                 "no image entry"
 ERROR NO_IMAGE_DATA                  "no image data entry"
 ERROR END_OF_DATA                    "end of data"
-ERROR CRC
+
+// Note: because of name collisions with Windows include use CRC_ instead of CRC
+ERROR CRC_
   strncpy(errorText,"wrong CRC",sizeof(errorText)-1);
   if (ERROR_TEXT != NULL)
   {
