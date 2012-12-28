@@ -984,7 +984,6 @@ done
 # headers
 AC_CHECK_HEADERS(\
                  arpa/inet.h \
-                 features.h \
                  grp.h \
                  linux/fs.h \
                  linux/tcp.h \
@@ -998,6 +997,7 @@ AC_CHECK_HEADERS(\
                  sys/select.h \
                  sys/socket.h \
                  sys/statvfs.h \
+                 sys/wait.h \
                 )
 
 # defines, constants, types, variables
@@ -1018,12 +1018,12 @@ dnl echo -----------
 AC_CHECK_LARGEFILE_DEFINES
 AC_CHECK_SIZEOF(void *)
 
-AC_SEARCH_LIBS(round,m,,AC_ERROR([m library not found]))
-AC_SEARCH_LIBS(dlopen,dl,[LIBRARIES="$LIBRARIES dl"])
-
 case $host_os in
   linux*)
-    AC_SEARCH_LIBRARIES(pthread_create,pthread,,AC_ERROR([pthread library not found]))
+    AC_SEARCH_LIBRARIES(round,m,,AC_ERROR([m library not found]))
+    AC_SEARCH_LIBRARIES(dlopen,dl,[LIBRARIES="$LIBRARIES dl"])
+    AC_SEARCH_LIBRARIES(pthread_create,pthread,[LIBRARIES="$LIBRARIES pthread"],AC_ERROR([pthread library not found]))
+dnl???    AC_SEARCH_LIBRARIES(pthread_create,rt,[LIBRARIES="$LIBRARIES rt"],AC_ERROR([rt library not found]))
     ;;
   mingw*)
     AC_SEARCH_STATIC_LIBRARIES(pthread_create,pthreadGC2,[STATIC_LIBRARIES="$STATIC_LIBRARIES pthreadGC2"],,pthread.h)
@@ -1098,13 +1098,13 @@ if test -d zlib -o -d "`readlink zlib`"; then
 else
   dnl search for installed zlib library
   if test $ENABLE_LINK_DYNAMIC = "yes"; then
-    AC_SEARCH_LIBS(zlibVersion,z,[HAVE_Z=1;LIBRARIES="$LIBRARIES z";AC_DEFINE(HAVE_Z,1,[z installed])])
+    AC_SEARCH_LIBRARIES(zlibVersion,z,[HAVE_Z=1;LIBRARIES="$LIBRARIES z";AC_DEFINE(HAVE_Z,1,[z installed])])
   else
     if test -z "$HAVE_Z"; then
       AC_SEARCH_STATIC_LIBRARIES(zlibVersion,z,[HAVE_Z=1;STATIC_LIBRARIES="$STATIC_LIBRARIES z";AC_DEFINE(HAVE_Z,1,[z installed])])
     fi
     if test -z "$HAVE_Z"; then
-      AC_SEARCH_LIBS(zlibVersion,z,[HAVE_Z=1;LIBRARIES="$LIBRARIES z";AC_DEFINE(HAVE_Z,1,[z installed])])
+      AC_SEARCH_LIBRARIES(zlibVersion,z,[HAVE_Z=1;LIBRARIES="$LIBRARIES z";AC_DEFINE(HAVE_Z,1,[z installed])])
     fi
   fi
 fi
@@ -1147,13 +1147,13 @@ if test $ENABLE_BZIP2 = "yes"; then
   else
     dnl search for installed bzip2 library
     if test $ENABLE_LINK_DYNAMIC = "yes"; then
-      AC_SEARCH_LIBS(BZ2_bzCompressInit,bz2,[HAVE_BZ2=1;LIBRARIES="$LIBRARIES bz2";AC_DEFINE(HAVE_BZ2,1,[bzip2 installed])])
+      AC_SEARCH_LIBRARIES(BZ2_bzCompressInit,bz2,[HAVE_BZ2=1;LIBRARIES="$LIBRARIES bz2";AC_DEFINE(HAVE_BZ2,1,[bzip2 installed])])
     else
       if test -z "$HAVE_BZ2"; then
         AC_SEARCH_STATIC_LIBRARIES(BZ2_bzCompressInit,bz2,[HAVE_BZ2=1;STATIC_LIBRARIES="$STATIC_LIBRARIES bz2";AC_DEFINE(HAVE_BZ2,1,[static bzip2 installed])])
       fi
       if test -z "$HAVE_BZ2"; then
-        AC_SEARCH_LIBS(BZ2_bzCompressInit,bz2,[HAVE_BZ2=1;LIBRARIES="$LIBRARIES bz2";AC_DEFINE(HAVE_BZ2,1,[bzip2 installed])])
+        AC_SEARCH_LIBRARIES(BZ2_bzCompressInit,bz2,[HAVE_BZ2=1;LIBRARIES="$LIBRARIES bz2";AC_DEFINE(HAVE_BZ2,1,[bzip2 installed])])
       fi
     fi
   fi
@@ -1205,13 +1205,13 @@ if test $ENABLE_LZMA = "yes"; then
   else
     dnl search for installed lzma library
     if test $ENABLE_LINK_DYNAMIC = "yes"; then
-      AC_SEARCH_LIBS(lzma_easy_encoder,lzma,[HAVE_LZMA=1;LIBRARIES="$LIBRARIES lzma";AC_DEFINE(HAVE_LZMA,1,[lzma installed])])
+      AC_SEARCH_LIBRARIES(lzma_easy_encoder,lzma,[HAVE_LZMA=1;LIBRARIES="$LIBRARIES lzma";AC_DEFINE(HAVE_LZMA,1,[lzma installed])])
     else
       if test -z "$HAVE_LZMA"; then
         AC_SEARCH_STATIC_LIBRARIES(lzma_easy_encoder,lzma,[HAVE_LZMA=1;STATIC_LIBRARIES="$STATIC_LIBRARIES lzma";AC_DEFINE(HAVE_LZMA,1,[static lzma installed])])
       fi
       if test -z "$HAVE_LZMA"; then
-        AC_SEARCH_LIBS(lzma_easy_encoder,lzma,[HAVE_LZMA=1;LIBRARIES="$LIBRARIES lzma";AC_DEFINE(HAVE_LZMA,1,[lzma installed])])
+        AC_SEARCH_LIBRARIES(lzma_easy_encoder,lzma,[HAVE_LZMA=1;LIBRARIES="$LIBRARIES lzma";AC_DEFINE(HAVE_LZMA,1,[lzma installed])])
       fi
     fi
   fi
@@ -1334,23 +1334,23 @@ if test $ENABLE_GCRYPT = "yes"; then
         dnl search for installed gpg-error/gcrypt library
         LIBRARIES="$LIBRARIES dl"
         if test $ENABLE_LINK_DYNAMIC = "yes"; then
-          AC_SEARCH_LIBS(gpg_strerror,gpg-error,[HAVE_GPG_ERROR=1;LIBRARIES="$LIBRARIES gpg-error";AC_DEFINE(HAVE_GPG_ERROR,1,[GPG error installed])])
+          AC_SEARCH_LIBRARIES(gpg_strerror,gpg-error,[HAVE_GPG_ERROR=1;LIBRARIES="$LIBRARIES gpg-error";AC_DEFINE(HAVE_GPG_ERROR,1,[GPG error installed])])
         else
           if test -z "$HAVE_GPG_ERROR"; then
             AC_SEARCH_STATIC_LIBRARIES(gpg_strerror,gpg-error,[HAVE_GPG_ERROR=1;STATIC_LIBRARIES="$STATIC_LIBRARIES gpg-error";AC_DEFINE(HAVE_GPG_ERROR,1,[static GPG error installed])])
           fi
           if test -z "$HAVE_GPG_ERROR"; then
-            AC_SEARCH_LIBS(gpg_strerror,gpg-error,[HAVE_GPG_ERROR=1;LIBRARIES="$LIBRARIES gpg-error";AC_DEFINE(HAVE_GPG_ERROR,1,[GPG error installed])])
+            AC_SEARCH_LIBRARIES(gpg_strerror,gpg-error,[HAVE_GPG_ERROR=1;LIBRARIES="$LIBRARIES gpg-error";AC_DEFINE(HAVE_GPG_ERROR,1,[GPG error installed])])
           fi
         fi
         if test $ENABLE_LINK_DYNAMIC = "yes"; then
-          AC_SEARCH_LIBS(gcry_check_version,gcrypt,[HAVE_GCRYPT=1;LIBRARIES="$LIBRARIES gcrypt";AC_DEFINE(HAVE_GCRYPT,1,[gcrypt installed])])
+          AC_SEARCH_LIBRARIES(gcry_check_version,gcrypt,[HAVE_GCRYPT=1;LIBRARIES="$LIBRARIES gcrypt";AC_DEFINE(HAVE_GCRYPT,1,[gcrypt installed])])
         else
           if test -z "$HAVE_GCRYPT"; then
             AC_SEARCH_STATIC_LIBRARIES(gcry_check_version,gcrypt,[HAVE_GCRYPT=1;STATIC_LIBRARIES="$STATIC_LIBRARIES gcrypt";AC_DEFINE(HAVE_GCRYPT,1,[static gcrypt installed])])
           fi
           if test -z "$HAVE_GCRYPT"; then
-            AC_SEARCH_LIBS(gcry_check_version,gcrypt,[HAVE_GCRYPT=1;LIBRARIES="$LIBRARIES gcrypt";AC_DEFINE(HAVE_GCRYPT,1,[gcrypt installed])])
+            AC_SEARCH_LIBRARIES(gcry_check_version,gcrypt,[HAVE_GCRYPT=1;LIBRARIES="$LIBRARIES gcrypt";AC_DEFINE(HAVE_GCRYPT,1,[gcrypt installed])])
           fi
         fi
       ],
@@ -1406,13 +1406,13 @@ if test $ENABLE_FTP = "yes"; then
     fi
   else
     if test $ENABLE_LINK_DYNAMIC = "yes"; then
-      AC_SEARCH_LIBS(FtpInit,ftp,[HAVE_FTP=1;LIBRARIES="$LIBRARIES ftp";AC_DEFINE(HAVE_FTP,1,[FTP installed])])
+      AC_SEARCH_LIBRARIES(FtpInit,ftp,[HAVE_FTP=1;LIBRARIES="$LIBRARIES ftp";AC_DEFINE(HAVE_FTP,1,[FTP installed])])
     else
       if test -z "$HAVE_FTP"; then
         AC_SEARCH_STATIC_LIBRARIES(FtpInit,ftp,[HAVE_FTP=1;STATIC_LIBRARIES="$STATIC_LIBRARIES ftp";AC_DEFINE(HAVE_FTP,1,[static FTP installed])])
       fi
       if test -z "$HAVE_FTP"; then
-        AC_SEARCH_LIBS(FtpInit,ftp,[HAVE_FTP=1;LIBRARIES="$LIBRARIES ftp";AC_DEFINE(HAVE_FTP,1,[FTP installed])])
+        AC_SEARCH_LIBRARIES(FtpInit,ftp,[HAVE_FTP=1;LIBRARIES="$LIBRARIES ftp";AC_DEFINE(HAVE_FTP,1,[FTP installed])])
       fi
     fi
   fi
@@ -1558,26 +1558,26 @@ if test $ENABLE_SSH = "yes"; then
     fi
   else
     if test $ENABLE_LINK_DYNAMIC = "yes"; then
-      AC_SEARCH_LIBS(libssh2_session_init_ex,ssh2,[HAVE_SSH2=1;LIBRARIES="$LIBRARIES ssh2";AC_DEFINE(HAVE_SSH2,1,[SSH2 installed])])
+      AC_SEARCH_LIBRARIES(libssh2_session_init_ex,ssh2,[HAVE_SSH2=1;LIBRARIES="$LIBRARIES ssh2";AC_DEFINE(HAVE_SSH2,1,[SSH2 installed])])
     else
       if test -z "$HAVE_SSH2"; then
         AC_SEARCH_STATIC_LIBRARIES(libssh2_session_init_ex,ssh2,[HAVE_SSH2=1;STATIC_LIBRARIES="$STATIC_LIBRARIES ssh2";AC_DEFINE(HAVE_SSH2,1,[static SSH2 installed])])
       fi
       if test -z "$HAVE_SSH2"; then
-        AC_SEARCH_LIBS(libssh2_session_init_ex,ssh2,[HAVE_SSH2=1;LIBRARIES="$LIBRARIES ssh2";AC_DEFINE(HAVE_SSH2,1,[SSH2 installed])])
+        AC_SEARCH_LIBRARIES(libssh2_session_init_ex,ssh2,[HAVE_SSH2=1;LIBRARIES="$LIBRARIES ssh2";AC_DEFINE(HAVE_SSH2,1,[SSH2 installed])])
       fi
     fi
   fi
 
   dnl link libcrypto, too, if available (may be needed by some libssh2 implementations)
   if test $ENABLE_LINK_DYNAMIC = "yes"; then
-    AC_SEARCH_LIBS(MD5_Init,crypto,[HAVE_CRYPTO=1;LIBRARIES="$LIBRARIES crypto";AC_DEFINE(HAVE_CRYPTO,1,[crypto installed])])
+    AC_SEARCH_LIBRARIES(MD5_Init,crypto,[HAVE_CRYPTO=1;LIBRARIES="$LIBRARIES crypto";AC_DEFINE(HAVE_CRYPTO,1,[crypto installed])])
   else
     if test -z "$HAVE_CRYPTO"; then
       AC_SEARCH_STATIC_LIBRARIES(MD5_Init,crypto,[HAVE_CRYPTO=1;STATIC_LIBRARIES="$STATIC_LIBRARIES crypto";AC_DEFINE(HAVE_CRYPTO,1,[static crypto installed])])
     fi
     if test -z "$HAVE_CRYPTO"; then
-      AC_SEARCH_LIBS(MD5_Init,crypto,[HAVE_CRYPTO=1;LIBRARIES="$LIBRARIES crypto";AC_DEFINE(HAVE_CRYPTO,1,[crypto installed])])
+      AC_SEARCH_LIBRARIES(MD5_Init,crypto,[HAVE_CRYPTO=1;LIBRARIES="$LIBRARIES crypto";AC_DEFINE(HAVE_CRYPTO,1,[crypto installed])])
     fi
   fi
 fi
@@ -1628,21 +1628,21 @@ if test $ENABLE_TLS = "yes"; then
   else
     AC_CHECK_TYPE(gnutls_session_t,,AC_MSG_WARN([no or wrong version of gnutls. gnutls version >=2.0.1 needed. Disabled TLS support.]); ENABLE_TLS=no,[#include <gnutls/gnutls.h>])
     if test $ENABLE_LINK_DYNAMIC = "yes"; then
-      AC_SEARCH_LIBS(gnutls_global_init,gnutls,[HAVE_GNU_TLS=1;LIBRARIES="$LIBRARIES gnutls";AC_DEFINE(HAVE_GNU_TLS,1,[GNU TLS installed])])
-      AC_SEARCH_LIBS(asn1_length_der,tasn1,[HAVE_TASN1=1;LIBRARIES="$LIBRARIES tasn1";AC_DEFINE(HAVE_TASN1,1,[TASN.1 installed])])
+      AC_SEARCH_LIBRARIES(gnutls_global_init,gnutls,[HAVE_GNU_TLS=1;LIBRARIES="$LIBRARIES gnutls";AC_DEFINE(HAVE_GNU_TLS,1,[GNU TLS installed])])
+      AC_SEARCH_LIBRARIES(asn1_length_der,tasn1,[HAVE_TASN1=1;LIBRARIES="$LIBRARIES tasn1";AC_DEFINE(HAVE_TASN1,1,[TASN.1 installed])])
     else
       if test -z "$HAVE_GNU_TLS"; then
         AC_SEARCH_STATIC_LIBRARIES(gnutls_global_init,gnutls,[HAVE_GNU_TLS=1;STATIC_LIBRARIES="$STATIC_LIBRARIES gnutls";AC_DEFINE(HAVE_GNU_TLS,1,[static GNU TLS installed])])
       fi
       if test -z "$HAVE_GNU_TLS"; then
-        AC_SEARCH_LIBS(gnutls_global_init,gnutls,[HAVE_GNU_TLS=1;LIBRARIES="$LIBRARIES gnutls";AC_DEFINE(HAVE_GNU_TLS,1,[GNU TLS installed])])
+        AC_SEARCH_LIBRARIES(gnutls_global_init,gnutls,[HAVE_GNU_TLS=1;LIBRARIES="$LIBRARIES gnutls";AC_DEFINE(HAVE_GNU_TLS,1,[GNU TLS installed])])
       fi
 
       if test -z "$HAVE_TASN1"; then
         AC_SEARCH_STATIC_LIBRARIES(asn1_length_der,tasn1,[HAVE_TASN1=1;STATIC_LIBRARIES="$STATIC_LIBRARIES tasn1";AC_DEFINE(HAVE_TASN1,1,[static TASN.1 installed])])
       fi
       if test -z "$HAVE_TASN1"; then
-        AC_SEARCH_LIBS(asn1_length_der,tasn1,[HAVE_TASN1=1;LIBRARIES="$LIBRARIES tasn1";AC_DEFINE(HAVE_TASN1,1,[TASN.1 installed])])
+        AC_SEARCH_LIBRARIES(asn1_length_der,tasn1,[HAVE_TASN1=1;LIBRARIES="$LIBRARIES tasn1";AC_DEFINE(HAVE_TASN1,1,[TASN.1 installed])])
       fi
     fi
   fi
@@ -1736,13 +1736,13 @@ if test $ENABLE_ISO9660 = "yes"; then
   else
     dnl search for installed iso9660 library
     if test $ENABLE_LINK_DYNAMIC = "yes"; then
-      AC_SEARCH_LIBS(iso9660_open,iso9660,[HAVE_ISO9660=1;LIBRARIES="$LIBRARIES iso9660 cdio";AC_DEFINE(HAVE_ISO9660,1,[iso9660 installed])])
+      AC_SEARCH_LIBRARIES(iso9660_open,iso9660,[HAVE_ISO9660=1;LIBRARIES="$LIBRARIES iso9660 cdio";AC_DEFINE(HAVE_ISO9660,1,[iso9660 installed])])
     else
       if test -z "$HAVE_ISO9660"; then
         AC_SEARCH_STATIC_LIBRARIES(iso9660_open,iso9660,[HAVE_ISO9660=1;STATIC_LIBRARIES="$STATIC_LIBRARIES iso9660 cdio";AC_DEFINE(HAVE_ISO9660,1,[static iso9660 installed])])
       fi
       if test -z "$HAVE_ISO9660"; then
-        AC_SEARCH_LIBS(iso9660_open,iso9660,[HAVE_ISO9660=1;LIBRARIES="$LIBRARIES iso9660 cdio";AC_DEFINE(HAVE_ISO9660,1,[iso9660 installed])])
+        AC_SEARCH_LIBRARIES(iso9660_open,iso9660,[HAVE_ISO9660=1;LIBRARIES="$LIBRARIES iso9660 cdio";AC_DEFINE(HAVE_ISO9660,1,[iso9660 installed])])
       fi
     fi
   fi
@@ -1800,6 +1800,7 @@ if test $ENABLE_PCRE = "yes"; then
         case $host_os in
           mingw*)
             (cd packages/lib; ln -s libpcre.lib libpcre.a) 1>/dev/null 2>/dev/null
+            (cd packages/lib; ln -s libpcreposix.lib libpcreposix.a) 1>/dev/null 2>/dev/null
             ;;
           *)
             ;;
@@ -1814,19 +1815,20 @@ if test $ENABLE_PCRE = "yes"; then
 
     if test $result -eq 1; then
       HAVE_PCRE=1
-      STATIC_LIBRARIES="$STATIC_LIBRARIES pcre"
+      CC_DEFINES="$CC_DEFINES PCRE_STATIC"
+      STATIC_LIBRARIES="$STATIC_LIBRARIES pcre pcreposix"
       AC_DEFINE(HAVE_PCRE,1,[pcre installed (local)])
     fi
   else
     dnl search for installed pcre library
     if test $ENABLE_LINK_DYNAMIC = "yes"; then
-      AC_SEARCH_LIBS(pcre,pcre_compile,[HAVE_PCRE=1;LIBRARIES="$LIBRARIES pcre";AC_DEFINE(HAVE_PCRE,1,[pcre installed])])
+      AC_SEARCH_LIBRARIES(pcre,pcre_compile,[HAVE_PCRE=1;LIBRARIES="$LIBRARIES pcre";AC_DEFINE(HAVE_PCRE,1,[pcre installed])])
     else
       if test -z "$HAVE_PCRE"; then
-        AC_SEARCH_STATIC_LIBRARIES(pcre,pcre_compile,[HAVE_PCRE=1;STATIC_LIBRARIES="$STATIC_LIBRARIES pcre";AC_DEFINE(HAVE_PCRE,1,[static pcre installed])])
+        AC_SEARCH_STATIC_LIBRARIES(pcre,pcre_compile,[HAVE_PCRE=1;CC_DEFINES="$CC_DEFINES PCRE_STATIC";STATIC_LIBRARIES="$STATIC_LIBRARIES pcre";AC_DEFINE(HAVE_PCRE,1,[static pcre installed])])
       fi
       if test -z "$HAVE_PCRE"; then
-        AC_SEARCH_LIBS(pcre,pcre_compile,[HAVE_PCRE=1;LIBRARIES="$LIBRARIES pcre";AC_DEFINE(HAVE_PCRE,1,[pcre installed])])
+        AC_SEARCH_LIBRARIES(pcre,pcre_compile,[HAVE_PCRE=1;LIBRARIES="$LIBRARIES pcre";AC_DEFINE(HAVE_PCRE,1,[pcre installed])])
       fi
     fi
   fi
@@ -1865,7 +1867,8 @@ case "$host_os" in
         fi
 
         if test $result -eq 1; then
-          HAVE_PCRE=1
+          HAVE_PTHREADS_W32=1
+          CC_DEFINES="$CC_DEFINES PTW32_STATIC_LIB"
           STATIC_LIBRARIES="$STATIC_LIBRARIES pthreadGC2"
           AC_DEFINE(HAVE_PTHREADS_W32,1,[pthreads-w32 installed (local)])
         fi
@@ -1928,13 +1931,13 @@ if test $ENABLE_BREAKPAD = "yes"; then
   else
     dnl search for installed breakpad library
     if test $ENABLE_LINK_DYNAMIC = "yes"; then
-      AC_SEARCH_LIBS(breakpad_client,ExceptionHandler,[HAVE_BREAKPAD=1;LIBRARIES="$LIBRARIES breakpad_client";AC_DEFINE(HAVE_BREAKPAD,1,[breakpad installed])])
+      AC_SEARCH_LIBRARIES(breakpad_client,ExceptionHandler,[HAVE_BREAKPAD=1;LIBRARIES="$LIBRARIES breakpad_client";AC_DEFINE(HAVE_BREAKPAD,1,[breakpad installed])])
     else
       if test -z "$HAVE_BREAKPAD"; then
         AC_SEARCH_STATIC_LIBRARIES(breakpad_client,ExceptionHandler,[HAVE_BREAKPAD=1;STATIC_LIBRARIES="$STATIC_LIBRARIES breakpad_client";AC_DEFINE(HAVE_BREAKPAD,1,[static breakpad installed])])
       fi
       if test -z "$HAVE_BREAKPAD"; then
-        AC_SEARCH_LIBS(breakpad_client,ExceptionHandler,[HAVE_BREAKPAD=1;LIBRARIES="$LIBRARIES breakpad_client";AC_DEFINE(HAVE_BREAKPAD,1,[breakpad installed])])
+        AC_SEARCH_LIBRARIES(breakpad_client,ExceptionHandler,[HAVE_BREAKPAD=1;LIBRARIES="$LIBRARIES breakpad_client";AC_DEFINE(HAVE_BREAKPAD,1,[breakpad installed])])
       fi
     fi
 
@@ -2042,6 +2045,13 @@ AC_CHECK_FUNCTION(mkdtemp,      AC_DEFINE(HAVE_MKDTEMP,      1,[mkdtemp() availa
 AC_CHECK_FUNCTION(mkstemp,      AC_DEFINE(HAVE_MKSTEMP,      1,[mkstemp() available]),,io.h)
 AC_CHECK_FUNCTION(mktemp,       AC_DEFINE(HAVE_MKTEMP,       1,[mktemp() available]) ,,io.h)
 AC_CHECK_MKDIR_ARGUMENTS
+
+AC_CHECK_FUNCTION(localtime_r,AC_DEFINE(HAVE_LOCALTIME_R,1,[localtime_r() available]))
+AC_CHECK_FUNCTION(nanosleep,  AC_DEFINE(HAVE_NANOSLEEP,  1,[nanosleep() available]))
+
+AC_CHECK_FUNCTION(pipe,   AC_DEFINE(HAVE_PIPE,   1,[pipe() available]))
+AC_CHECK_FUNCTION(fork,   AC_DEFINE(HAVE_FORK,   1,[fork() available]))
+AC_CHECK_FUNCTION(waitpid,AC_DEFINE(HAVE_WAITPID,1,[waitpid() available]))
 
 AC_CHECK_FUNCTION(zlibVersion,,AC_ERROR([mandatory function zlibVersion() is not available]),zlib.h)
 

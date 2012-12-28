@@ -5791,6 +5791,7 @@ for ac_header in \
                  sys/select.h \
                  sys/socket.h \
                  sys/statvfs.h \
+                 sys/wait.h \
 
 do :
   as_ac_Header=`$as_echo "ac_cv_header_$ac_header" | $as_tr_sh`
@@ -6184,123 +6185,136 @@ _ACEOF
 
 
 
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing round" >&5
+case $host_os in
+  linux*)
+
+
+    ac_result=""
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing round" >&5
 $as_echo_n "checking for library containing round... " >&6; }
-if test "${ac_cv_search_round+set}" = set; then :
+if test "${ac_cv_search_libraries_round+set}" = set; then :
   $as_echo_n "(cached) " >&6
 else
-  ac_func_search_save_LIBS=$LIBS
-cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
 
-/* Override any GCC internal prototype to avoid an error.
-   Use char because int might match the return type of a GCC
-   builtin and then its argument prototype would still apply.  */
-#ifdef __cplusplus
-extern "C"
-#endif
-char round ();
-int
-main ()
-{
-return round ();
-  ;
-  return 0;
-}
-_ACEOF
-for ac_lib in '' m; do
-  if test -z "$ac_lib"; then
-    ac_res="none required"
-  else
-    ac_res=-l$ac_lib
-    LIBS="-l$ac_lib  $ac_func_search_save_LIBS"
-  fi
-  if ac_fn_c_try_link "$LINENO"; then :
-  ac_cv_search_round=$ac_res
-fi
-rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext
-  if test "${ac_cv_search_round+set}" = set; then :
+            ac_func_search_libraries_save_CFLAGS="$CFLAGS";
+      ac_func_search_libraries_save_LIBS=$LIBS
+
+      cat << \EOF > conftest.$ac_ext
+EOF
+      for ac_header in  ""; do
+        if test -n "$ac_header"; then
+          echo "#include <$ac_header>" >> conftest.$ac_ext
+        fi
+      done
+      cat << \EOF >> conftest.$ac_ext
+int main(void) { return (int)round; }
+EOF
+
+            for ac_library in m ""; do
+        if test -z "$ac_library"; then
+          ac_result="none required"
+        else
+          ac_result=-l$ac_library
+          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+        fi
+
+#cat conftest.$ac_ext
+#set -x
+        ${CC} ${CFLAGS} -c conftest.c -o conftest.o 1>/dev/null 2>/dev/null; rc=$?
+        if test $rc -eq 0; then
+          ${LD} ${LDFLAGS} -o conftest conftest.o ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
+          if test $rc -eq 0; then
+            ac_cv_search_libraries_round=$ac_result
+            if test "${ac_cv_search_libraries_round+set}" = set; then :
   break
 fi
-done
-if test "${ac_cv_search_round+set}" = set; then :
+          fi
+        fi
+      done
+      if test "${ac_cv_search_libraries_round+set}" = set; then :
 
 else
-  ac_cv_search_round=no
+  ac_cv_search_libraries_round=no
 fi
-rm conftest.$ac_ext
-LIBS=$ac_func_search_save_LIBS
-fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_round" >&5
-$as_echo "$ac_cv_search_round" >&6; }
-ac_res=$ac_cv_search_round
-if test "$ac_res" != no; then :
-  test "$ac_res" = "none required" || LIBS="$ac_res $LIBS"
+      rm -f conftest.$ac_ext conftest.$ac_objext conftest$ac_exeext
 
+            LIBS=$ac_func_search_libraries_save_LIBS
+      CFLAGS=$ac_func_search_libraries_save_CFLAGS
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_libraries_round" >&5
+$as_echo "$ac_cv_search_libraries_round" >&6; }
+  ac_result=$ac_cv_search_libraries_round
+  if test "$ac_result" != no; then :
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS"
 else
   as_fn_error $? "m library not found" "$LINENO" 5
 fi
 
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing dlopen" >&5
+
+
+    ac_result=""
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing dlopen" >&5
 $as_echo_n "checking for library containing dlopen... " >&6; }
-if test "${ac_cv_search_dlopen+set}" = set; then :
+if test "${ac_cv_search_libraries_dlopen+set}" = set; then :
   $as_echo_n "(cached) " >&6
 else
-  ac_func_search_save_LIBS=$LIBS
-cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
 
-/* Override any GCC internal prototype to avoid an error.
-   Use char because int might match the return type of a GCC
-   builtin and then its argument prototype would still apply.  */
-#ifdef __cplusplus
-extern "C"
-#endif
-char dlopen ();
-int
-main ()
-{
-return dlopen ();
-  ;
-  return 0;
-}
-_ACEOF
-for ac_lib in '' dl; do
-  if test -z "$ac_lib"; then
-    ac_res="none required"
-  else
-    ac_res=-l$ac_lib
-    LIBS="-l$ac_lib  $ac_func_search_save_LIBS"
-  fi
-  if ac_fn_c_try_link "$LINENO"; then :
-  ac_cv_search_dlopen=$ac_res
-fi
-rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext
-  if test "${ac_cv_search_dlopen+set}" = set; then :
+            ac_func_search_libraries_save_CFLAGS="$CFLAGS";
+      ac_func_search_libraries_save_LIBS=$LIBS
+
+      cat << \EOF > conftest.$ac_ext
+EOF
+      for ac_header in  ""; do
+        if test -n "$ac_header"; then
+          echo "#include <$ac_header>" >> conftest.$ac_ext
+        fi
+      done
+      cat << \EOF >> conftest.$ac_ext
+int main(void) { return (int)dlopen; }
+EOF
+
+            for ac_library in dl ""; do
+        if test -z "$ac_library"; then
+          ac_result="none required"
+        else
+          ac_result=-l$ac_library
+          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+        fi
+
+#cat conftest.$ac_ext
+#set -x
+        ${CC} ${CFLAGS} -c conftest.c -o conftest.o 1>/dev/null 2>/dev/null; rc=$?
+        if test $rc -eq 0; then
+          ${LD} ${LDFLAGS} -o conftest conftest.o ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
+          if test $rc -eq 0; then
+            ac_cv_search_libraries_dlopen=$ac_result
+            if test "${ac_cv_search_libraries_dlopen+set}" = set; then :
   break
 fi
-done
-if test "${ac_cv_search_dlopen+set}" = set; then :
+          fi
+        fi
+      done
+      if test "${ac_cv_search_libraries_dlopen+set}" = set; then :
 
 else
-  ac_cv_search_dlopen=no
+  ac_cv_search_libraries_dlopen=no
 fi
-rm conftest.$ac_ext
-LIBS=$ac_func_search_save_LIBS
-fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_dlopen" >&5
-$as_echo "$ac_cv_search_dlopen" >&6; }
-ac_res=$ac_cv_search_dlopen
-if test "$ac_res" != no; then :
-  test "$ac_res" = "none required" || LIBS="$ac_res $LIBS"
-  LIBRARIES="$LIBRARIES dl"
-fi
+      rm -f conftest.$ac_ext conftest.$ac_objext conftest$ac_exeext
+
+            LIBS=$ac_func_search_libraries_save_LIBS
+      CFLAGS=$ac_func_search_libraries_save_CFLAGS
 
 
-case $host_os in
-  linux*)
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_libraries_dlopen" >&5
+$as_echo "$ac_cv_search_libraries_dlopen" >&6; }
+  ac_result=$ac_cv_search_libraries_dlopen
+  if test "$ac_result" != no; then :
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" LIBRARIES="$LIBRARIES dl"
+fi
+
 
 
     ac_result=""
@@ -6361,7 +6375,7 @@ fi
 $as_echo "$ac_cv_search_libraries_pthread_create" >&6; }
   ac_result=$ac_cv_search_libraries_pthread_create
   if test "$ac_result" != no; then :
-  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS"
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" LIBRARIES="$LIBRARIES pthread"
 else
   as_fn_error $? "pthread library not found" "$LINENO" 5
 fi
@@ -6547,60 +6561,67 @@ $as_echo "#define HAVE_Z 1" >>confdefs.h
   fi
 else
     if test $ENABLE_LINK_DYNAMIC = "yes"; then
-    { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing zlibVersion" >&5
+
+
+    ac_result=""
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing zlibVersion" >&5
 $as_echo_n "checking for library containing zlibVersion... " >&6; }
-if test "${ac_cv_search_zlibVersion+set}" = set; then :
+if test "${ac_cv_search_libraries_zlibVersion+set}" = set; then :
   $as_echo_n "(cached) " >&6
 else
-  ac_func_search_save_LIBS=$LIBS
-cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
 
-/* Override any GCC internal prototype to avoid an error.
-   Use char because int might match the return type of a GCC
-   builtin and then its argument prototype would still apply.  */
-#ifdef __cplusplus
-extern "C"
-#endif
-char zlibVersion ();
-int
-main ()
-{
-return zlibVersion ();
-  ;
-  return 0;
-}
-_ACEOF
-for ac_lib in '' z; do
-  if test -z "$ac_lib"; then
-    ac_res="none required"
-  else
-    ac_res=-l$ac_lib
-    LIBS="-l$ac_lib  $ac_func_search_save_LIBS"
-  fi
-  if ac_fn_c_try_link "$LINENO"; then :
-  ac_cv_search_zlibVersion=$ac_res
-fi
-rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext
-  if test "${ac_cv_search_zlibVersion+set}" = set; then :
+            ac_func_search_libraries_save_CFLAGS="$CFLAGS";
+      ac_func_search_libraries_save_LIBS=$LIBS
+
+      cat << \EOF > conftest.$ac_ext
+EOF
+      for ac_header in  ""; do
+        if test -n "$ac_header"; then
+          echo "#include <$ac_header>" >> conftest.$ac_ext
+        fi
+      done
+      cat << \EOF >> conftest.$ac_ext
+int main(void) { return (int)zlibVersion; }
+EOF
+
+            for ac_library in z ""; do
+        if test -z "$ac_library"; then
+          ac_result="none required"
+        else
+          ac_result=-l$ac_library
+          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+        fi
+
+#cat conftest.$ac_ext
+#set -x
+        ${CC} ${CFLAGS} -c conftest.c -o conftest.o 1>/dev/null 2>/dev/null; rc=$?
+        if test $rc -eq 0; then
+          ${LD} ${LDFLAGS} -o conftest conftest.o ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
+          if test $rc -eq 0; then
+            ac_cv_search_libraries_zlibVersion=$ac_result
+            if test "${ac_cv_search_libraries_zlibVersion+set}" = set; then :
   break
 fi
-done
-if test "${ac_cv_search_zlibVersion+set}" = set; then :
+          fi
+        fi
+      done
+      if test "${ac_cv_search_libraries_zlibVersion+set}" = set; then :
 
 else
-  ac_cv_search_zlibVersion=no
+  ac_cv_search_libraries_zlibVersion=no
 fi
-rm conftest.$ac_ext
-LIBS=$ac_func_search_save_LIBS
+      rm -f conftest.$ac_ext conftest.$ac_objext conftest$ac_exeext
+
+            LIBS=$ac_func_search_libraries_save_LIBS
+      CFLAGS=$ac_func_search_libraries_save_CFLAGS
+
+
 fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_zlibVersion" >&5
-$as_echo "$ac_cv_search_zlibVersion" >&6; }
-ac_res=$ac_cv_search_zlibVersion
-if test "$ac_res" != no; then :
-  test "$ac_res" = "none required" || LIBS="$ac_res $LIBS"
-  HAVE_Z=1;LIBRARIES="$LIBRARIES z";
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_libraries_zlibVersion" >&5
+$as_echo "$ac_cv_search_libraries_zlibVersion" >&6; }
+  ac_result=$ac_cv_search_libraries_zlibVersion
+  if test "$ac_result" != no; then :
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" HAVE_Z=1;LIBRARIES="$LIBRARIES z";
 $as_echo "#define HAVE_Z 1" >>confdefs.h
 
 fi
@@ -6667,60 +6688,67 @@ fi
 
     fi
     if test -z "$HAVE_Z"; then
-      { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing zlibVersion" >&5
+
+
+    ac_result=""
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing zlibVersion" >&5
 $as_echo_n "checking for library containing zlibVersion... " >&6; }
-if test "${ac_cv_search_zlibVersion+set}" = set; then :
+if test "${ac_cv_search_libraries_zlibVersion+set}" = set; then :
   $as_echo_n "(cached) " >&6
 else
-  ac_func_search_save_LIBS=$LIBS
-cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
 
-/* Override any GCC internal prototype to avoid an error.
-   Use char because int might match the return type of a GCC
-   builtin and then its argument prototype would still apply.  */
-#ifdef __cplusplus
-extern "C"
-#endif
-char zlibVersion ();
-int
-main ()
-{
-return zlibVersion ();
-  ;
-  return 0;
-}
-_ACEOF
-for ac_lib in '' z; do
-  if test -z "$ac_lib"; then
-    ac_res="none required"
-  else
-    ac_res=-l$ac_lib
-    LIBS="-l$ac_lib  $ac_func_search_save_LIBS"
-  fi
-  if ac_fn_c_try_link "$LINENO"; then :
-  ac_cv_search_zlibVersion=$ac_res
-fi
-rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext
-  if test "${ac_cv_search_zlibVersion+set}" = set; then :
+            ac_func_search_libraries_save_CFLAGS="$CFLAGS";
+      ac_func_search_libraries_save_LIBS=$LIBS
+
+      cat << \EOF > conftest.$ac_ext
+EOF
+      for ac_header in  ""; do
+        if test -n "$ac_header"; then
+          echo "#include <$ac_header>" >> conftest.$ac_ext
+        fi
+      done
+      cat << \EOF >> conftest.$ac_ext
+int main(void) { return (int)zlibVersion; }
+EOF
+
+            for ac_library in z ""; do
+        if test -z "$ac_library"; then
+          ac_result="none required"
+        else
+          ac_result=-l$ac_library
+          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+        fi
+
+#cat conftest.$ac_ext
+#set -x
+        ${CC} ${CFLAGS} -c conftest.c -o conftest.o 1>/dev/null 2>/dev/null; rc=$?
+        if test $rc -eq 0; then
+          ${LD} ${LDFLAGS} -o conftest conftest.o ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
+          if test $rc -eq 0; then
+            ac_cv_search_libraries_zlibVersion=$ac_result
+            if test "${ac_cv_search_libraries_zlibVersion+set}" = set; then :
   break
 fi
-done
-if test "${ac_cv_search_zlibVersion+set}" = set; then :
+          fi
+        fi
+      done
+      if test "${ac_cv_search_libraries_zlibVersion+set}" = set; then :
 
 else
-  ac_cv_search_zlibVersion=no
+  ac_cv_search_libraries_zlibVersion=no
 fi
-rm conftest.$ac_ext
-LIBS=$ac_func_search_save_LIBS
+      rm -f conftest.$ac_ext conftest.$ac_objext conftest$ac_exeext
+
+            LIBS=$ac_func_search_libraries_save_LIBS
+      CFLAGS=$ac_func_search_libraries_save_CFLAGS
+
+
 fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_zlibVersion" >&5
-$as_echo "$ac_cv_search_zlibVersion" >&6; }
-ac_res=$ac_cv_search_zlibVersion
-if test "$ac_res" != no; then :
-  test "$ac_res" = "none required" || LIBS="$ac_res $LIBS"
-  HAVE_Z=1;LIBRARIES="$LIBRARIES z";
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_libraries_zlibVersion" >&5
+$as_echo "$ac_cv_search_libraries_zlibVersion" >&6; }
+  ac_result=$ac_cv_search_libraries_zlibVersion
+  if test "$ac_result" != no; then :
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" HAVE_Z=1;LIBRARIES="$LIBRARIES z";
 $as_echo "#define HAVE_Z 1" >>confdefs.h
 
 fi
@@ -6772,60 +6800,67 @@ $as_echo "#define HAVE_BZ2 1" >>confdefs.h
     fi
   else
         if test $ENABLE_LINK_DYNAMIC = "yes"; then
-      { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing BZ2_bzCompressInit" >&5
+
+
+    ac_result=""
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing BZ2_bzCompressInit" >&5
 $as_echo_n "checking for library containing BZ2_bzCompressInit... " >&6; }
-if test "${ac_cv_search_BZ2_bzCompressInit+set}" = set; then :
+if test "${ac_cv_search_libraries_BZ2_bzCompressInit+set}" = set; then :
   $as_echo_n "(cached) " >&6
 else
-  ac_func_search_save_LIBS=$LIBS
-cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
 
-/* Override any GCC internal prototype to avoid an error.
-   Use char because int might match the return type of a GCC
-   builtin and then its argument prototype would still apply.  */
-#ifdef __cplusplus
-extern "C"
-#endif
-char BZ2_bzCompressInit ();
-int
-main ()
-{
-return BZ2_bzCompressInit ();
-  ;
-  return 0;
-}
-_ACEOF
-for ac_lib in '' bz2; do
-  if test -z "$ac_lib"; then
-    ac_res="none required"
-  else
-    ac_res=-l$ac_lib
-    LIBS="-l$ac_lib  $ac_func_search_save_LIBS"
-  fi
-  if ac_fn_c_try_link "$LINENO"; then :
-  ac_cv_search_BZ2_bzCompressInit=$ac_res
-fi
-rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext
-  if test "${ac_cv_search_BZ2_bzCompressInit+set}" = set; then :
+            ac_func_search_libraries_save_CFLAGS="$CFLAGS";
+      ac_func_search_libraries_save_LIBS=$LIBS
+
+      cat << \EOF > conftest.$ac_ext
+EOF
+      for ac_header in  ""; do
+        if test -n "$ac_header"; then
+          echo "#include <$ac_header>" >> conftest.$ac_ext
+        fi
+      done
+      cat << \EOF >> conftest.$ac_ext
+int main(void) { return (int)BZ2_bzCompressInit; }
+EOF
+
+            for ac_library in bz2 ""; do
+        if test -z "$ac_library"; then
+          ac_result="none required"
+        else
+          ac_result=-l$ac_library
+          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+        fi
+
+#cat conftest.$ac_ext
+#set -x
+        ${CC} ${CFLAGS} -c conftest.c -o conftest.o 1>/dev/null 2>/dev/null; rc=$?
+        if test $rc -eq 0; then
+          ${LD} ${LDFLAGS} -o conftest conftest.o ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
+          if test $rc -eq 0; then
+            ac_cv_search_libraries_BZ2_bzCompressInit=$ac_result
+            if test "${ac_cv_search_libraries_BZ2_bzCompressInit+set}" = set; then :
   break
 fi
-done
-if test "${ac_cv_search_BZ2_bzCompressInit+set}" = set; then :
+          fi
+        fi
+      done
+      if test "${ac_cv_search_libraries_BZ2_bzCompressInit+set}" = set; then :
 
 else
-  ac_cv_search_BZ2_bzCompressInit=no
+  ac_cv_search_libraries_BZ2_bzCompressInit=no
 fi
-rm conftest.$ac_ext
-LIBS=$ac_func_search_save_LIBS
+      rm -f conftest.$ac_ext conftest.$ac_objext conftest$ac_exeext
+
+            LIBS=$ac_func_search_libraries_save_LIBS
+      CFLAGS=$ac_func_search_libraries_save_CFLAGS
+
+
 fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_BZ2_bzCompressInit" >&5
-$as_echo "$ac_cv_search_BZ2_bzCompressInit" >&6; }
-ac_res=$ac_cv_search_BZ2_bzCompressInit
-if test "$ac_res" != no; then :
-  test "$ac_res" = "none required" || LIBS="$ac_res $LIBS"
-  HAVE_BZ2=1;LIBRARIES="$LIBRARIES bz2";
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_libraries_BZ2_bzCompressInit" >&5
+$as_echo "$ac_cv_search_libraries_BZ2_bzCompressInit" >&6; }
+  ac_result=$ac_cv_search_libraries_BZ2_bzCompressInit
+  if test "$ac_result" != no; then :
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" HAVE_BZ2=1;LIBRARIES="$LIBRARIES bz2";
 $as_echo "#define HAVE_BZ2 1" >>confdefs.h
 
 fi
@@ -6892,60 +6927,67 @@ fi
 
       fi
       if test -z "$HAVE_BZ2"; then
-        { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing BZ2_bzCompressInit" >&5
+
+
+    ac_result=""
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing BZ2_bzCompressInit" >&5
 $as_echo_n "checking for library containing BZ2_bzCompressInit... " >&6; }
-if test "${ac_cv_search_BZ2_bzCompressInit+set}" = set; then :
+if test "${ac_cv_search_libraries_BZ2_bzCompressInit+set}" = set; then :
   $as_echo_n "(cached) " >&6
 else
-  ac_func_search_save_LIBS=$LIBS
-cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
 
-/* Override any GCC internal prototype to avoid an error.
-   Use char because int might match the return type of a GCC
-   builtin and then its argument prototype would still apply.  */
-#ifdef __cplusplus
-extern "C"
-#endif
-char BZ2_bzCompressInit ();
-int
-main ()
-{
-return BZ2_bzCompressInit ();
-  ;
-  return 0;
-}
-_ACEOF
-for ac_lib in '' bz2; do
-  if test -z "$ac_lib"; then
-    ac_res="none required"
-  else
-    ac_res=-l$ac_lib
-    LIBS="-l$ac_lib  $ac_func_search_save_LIBS"
-  fi
-  if ac_fn_c_try_link "$LINENO"; then :
-  ac_cv_search_BZ2_bzCompressInit=$ac_res
-fi
-rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext
-  if test "${ac_cv_search_BZ2_bzCompressInit+set}" = set; then :
+            ac_func_search_libraries_save_CFLAGS="$CFLAGS";
+      ac_func_search_libraries_save_LIBS=$LIBS
+
+      cat << \EOF > conftest.$ac_ext
+EOF
+      for ac_header in  ""; do
+        if test -n "$ac_header"; then
+          echo "#include <$ac_header>" >> conftest.$ac_ext
+        fi
+      done
+      cat << \EOF >> conftest.$ac_ext
+int main(void) { return (int)BZ2_bzCompressInit; }
+EOF
+
+            for ac_library in bz2 ""; do
+        if test -z "$ac_library"; then
+          ac_result="none required"
+        else
+          ac_result=-l$ac_library
+          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+        fi
+
+#cat conftest.$ac_ext
+#set -x
+        ${CC} ${CFLAGS} -c conftest.c -o conftest.o 1>/dev/null 2>/dev/null; rc=$?
+        if test $rc -eq 0; then
+          ${LD} ${LDFLAGS} -o conftest conftest.o ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
+          if test $rc -eq 0; then
+            ac_cv_search_libraries_BZ2_bzCompressInit=$ac_result
+            if test "${ac_cv_search_libraries_BZ2_bzCompressInit+set}" = set; then :
   break
 fi
-done
-if test "${ac_cv_search_BZ2_bzCompressInit+set}" = set; then :
+          fi
+        fi
+      done
+      if test "${ac_cv_search_libraries_BZ2_bzCompressInit+set}" = set; then :
 
 else
-  ac_cv_search_BZ2_bzCompressInit=no
+  ac_cv_search_libraries_BZ2_bzCompressInit=no
 fi
-rm conftest.$ac_ext
-LIBS=$ac_func_search_save_LIBS
+      rm -f conftest.$ac_ext conftest.$ac_objext conftest$ac_exeext
+
+            LIBS=$ac_func_search_libraries_save_LIBS
+      CFLAGS=$ac_func_search_libraries_save_CFLAGS
+
+
 fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_BZ2_bzCompressInit" >&5
-$as_echo "$ac_cv_search_BZ2_bzCompressInit" >&6; }
-ac_res=$ac_cv_search_BZ2_bzCompressInit
-if test "$ac_res" != no; then :
-  test "$ac_res" = "none required" || LIBS="$ac_res $LIBS"
-  HAVE_BZ2=1;LIBRARIES="$LIBRARIES bz2";
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_libraries_BZ2_bzCompressInit" >&5
+$as_echo "$ac_cv_search_libraries_BZ2_bzCompressInit" >&6; }
+  ac_result=$ac_cv_search_libraries_BZ2_bzCompressInit
+  if test "$ac_result" != no; then :
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" HAVE_BZ2=1;LIBRARIES="$LIBRARIES bz2";
 $as_echo "#define HAVE_BZ2 1" >>confdefs.h
 
 fi
@@ -7007,60 +7049,67 @@ $as_echo "#define HAVE_LZMA 1" >>confdefs.h
     fi
   else
         if test $ENABLE_LINK_DYNAMIC = "yes"; then
-      { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing lzma_easy_encoder" >&5
+
+
+    ac_result=""
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing lzma_easy_encoder" >&5
 $as_echo_n "checking for library containing lzma_easy_encoder... " >&6; }
-if test "${ac_cv_search_lzma_easy_encoder+set}" = set; then :
+if test "${ac_cv_search_libraries_lzma_easy_encoder+set}" = set; then :
   $as_echo_n "(cached) " >&6
 else
-  ac_func_search_save_LIBS=$LIBS
-cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
 
-/* Override any GCC internal prototype to avoid an error.
-   Use char because int might match the return type of a GCC
-   builtin and then its argument prototype would still apply.  */
-#ifdef __cplusplus
-extern "C"
-#endif
-char lzma_easy_encoder ();
-int
-main ()
-{
-return lzma_easy_encoder ();
-  ;
-  return 0;
-}
-_ACEOF
-for ac_lib in '' lzma; do
-  if test -z "$ac_lib"; then
-    ac_res="none required"
-  else
-    ac_res=-l$ac_lib
-    LIBS="-l$ac_lib  $ac_func_search_save_LIBS"
-  fi
-  if ac_fn_c_try_link "$LINENO"; then :
-  ac_cv_search_lzma_easy_encoder=$ac_res
-fi
-rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext
-  if test "${ac_cv_search_lzma_easy_encoder+set}" = set; then :
+            ac_func_search_libraries_save_CFLAGS="$CFLAGS";
+      ac_func_search_libraries_save_LIBS=$LIBS
+
+      cat << \EOF > conftest.$ac_ext
+EOF
+      for ac_header in  ""; do
+        if test -n "$ac_header"; then
+          echo "#include <$ac_header>" >> conftest.$ac_ext
+        fi
+      done
+      cat << \EOF >> conftest.$ac_ext
+int main(void) { return (int)lzma_easy_encoder; }
+EOF
+
+            for ac_library in lzma ""; do
+        if test -z "$ac_library"; then
+          ac_result="none required"
+        else
+          ac_result=-l$ac_library
+          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+        fi
+
+#cat conftest.$ac_ext
+#set -x
+        ${CC} ${CFLAGS} -c conftest.c -o conftest.o 1>/dev/null 2>/dev/null; rc=$?
+        if test $rc -eq 0; then
+          ${LD} ${LDFLAGS} -o conftest conftest.o ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
+          if test $rc -eq 0; then
+            ac_cv_search_libraries_lzma_easy_encoder=$ac_result
+            if test "${ac_cv_search_libraries_lzma_easy_encoder+set}" = set; then :
   break
 fi
-done
-if test "${ac_cv_search_lzma_easy_encoder+set}" = set; then :
+          fi
+        fi
+      done
+      if test "${ac_cv_search_libraries_lzma_easy_encoder+set}" = set; then :
 
 else
-  ac_cv_search_lzma_easy_encoder=no
+  ac_cv_search_libraries_lzma_easy_encoder=no
 fi
-rm conftest.$ac_ext
-LIBS=$ac_func_search_save_LIBS
+      rm -f conftest.$ac_ext conftest.$ac_objext conftest$ac_exeext
+
+            LIBS=$ac_func_search_libraries_save_LIBS
+      CFLAGS=$ac_func_search_libraries_save_CFLAGS
+
+
 fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_lzma_easy_encoder" >&5
-$as_echo "$ac_cv_search_lzma_easy_encoder" >&6; }
-ac_res=$ac_cv_search_lzma_easy_encoder
-if test "$ac_res" != no; then :
-  test "$ac_res" = "none required" || LIBS="$ac_res $LIBS"
-  HAVE_LZMA=1;LIBRARIES="$LIBRARIES lzma";
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_libraries_lzma_easy_encoder" >&5
+$as_echo "$ac_cv_search_libraries_lzma_easy_encoder" >&6; }
+  ac_result=$ac_cv_search_libraries_lzma_easy_encoder
+  if test "$ac_result" != no; then :
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" HAVE_LZMA=1;LIBRARIES="$LIBRARIES lzma";
 $as_echo "#define HAVE_LZMA 1" >>confdefs.h
 
 fi
@@ -7127,60 +7176,67 @@ fi
 
       fi
       if test -z "$HAVE_LZMA"; then
-        { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing lzma_easy_encoder" >&5
+
+
+    ac_result=""
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing lzma_easy_encoder" >&5
 $as_echo_n "checking for library containing lzma_easy_encoder... " >&6; }
-if test "${ac_cv_search_lzma_easy_encoder+set}" = set; then :
+if test "${ac_cv_search_libraries_lzma_easy_encoder+set}" = set; then :
   $as_echo_n "(cached) " >&6
 else
-  ac_func_search_save_LIBS=$LIBS
-cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
 
-/* Override any GCC internal prototype to avoid an error.
-   Use char because int might match the return type of a GCC
-   builtin and then its argument prototype would still apply.  */
-#ifdef __cplusplus
-extern "C"
-#endif
-char lzma_easy_encoder ();
-int
-main ()
-{
-return lzma_easy_encoder ();
-  ;
-  return 0;
-}
-_ACEOF
-for ac_lib in '' lzma; do
-  if test -z "$ac_lib"; then
-    ac_res="none required"
-  else
-    ac_res=-l$ac_lib
-    LIBS="-l$ac_lib  $ac_func_search_save_LIBS"
-  fi
-  if ac_fn_c_try_link "$LINENO"; then :
-  ac_cv_search_lzma_easy_encoder=$ac_res
-fi
-rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext
-  if test "${ac_cv_search_lzma_easy_encoder+set}" = set; then :
+            ac_func_search_libraries_save_CFLAGS="$CFLAGS";
+      ac_func_search_libraries_save_LIBS=$LIBS
+
+      cat << \EOF > conftest.$ac_ext
+EOF
+      for ac_header in  ""; do
+        if test -n "$ac_header"; then
+          echo "#include <$ac_header>" >> conftest.$ac_ext
+        fi
+      done
+      cat << \EOF >> conftest.$ac_ext
+int main(void) { return (int)lzma_easy_encoder; }
+EOF
+
+            for ac_library in lzma ""; do
+        if test -z "$ac_library"; then
+          ac_result="none required"
+        else
+          ac_result=-l$ac_library
+          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+        fi
+
+#cat conftest.$ac_ext
+#set -x
+        ${CC} ${CFLAGS} -c conftest.c -o conftest.o 1>/dev/null 2>/dev/null; rc=$?
+        if test $rc -eq 0; then
+          ${LD} ${LDFLAGS} -o conftest conftest.o ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
+          if test $rc -eq 0; then
+            ac_cv_search_libraries_lzma_easy_encoder=$ac_result
+            if test "${ac_cv_search_libraries_lzma_easy_encoder+set}" = set; then :
   break
 fi
-done
-if test "${ac_cv_search_lzma_easy_encoder+set}" = set; then :
+          fi
+        fi
+      done
+      if test "${ac_cv_search_libraries_lzma_easy_encoder+set}" = set; then :
 
 else
-  ac_cv_search_lzma_easy_encoder=no
+  ac_cv_search_libraries_lzma_easy_encoder=no
 fi
-rm conftest.$ac_ext
-LIBS=$ac_func_search_save_LIBS
+      rm -f conftest.$ac_ext conftest.$ac_objext conftest$ac_exeext
+
+            LIBS=$ac_func_search_libraries_save_LIBS
+      CFLAGS=$ac_func_search_libraries_save_CFLAGS
+
+
 fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_lzma_easy_encoder" >&5
-$as_echo "$ac_cv_search_lzma_easy_encoder" >&6; }
-ac_res=$ac_cv_search_lzma_easy_encoder
-if test "$ac_res" != no; then :
-  test "$ac_res" = "none required" || LIBS="$ac_res $LIBS"
-  HAVE_LZMA=1;LIBRARIES="$LIBRARIES lzma";
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_libraries_lzma_easy_encoder" >&5
+$as_echo "$ac_cv_search_libraries_lzma_easy_encoder" >&6; }
+  ac_result=$ac_cv_search_libraries_lzma_easy_encoder
+  if test "$ac_result" != no; then :
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" HAVE_LZMA=1;LIBRARIES="$LIBRARIES lzma";
 $as_echo "#define HAVE_LZMA 1" >>confdefs.h
 
 fi
@@ -7326,60 +7382,67 @@ if test "x$ac_cv_type_gcry_cipher_hd_t" = x""yes; then :
 
                 LIBRARIES="$LIBRARIES dl"
         if test $ENABLE_LINK_DYNAMIC = "yes"; then
-          { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing gpg_strerror" >&5
+
+
+    ac_result=""
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing gpg_strerror" >&5
 $as_echo_n "checking for library containing gpg_strerror... " >&6; }
-if test "${ac_cv_search_gpg_strerror+set}" = set; then :
+if test "${ac_cv_search_libraries_gpg_strerror+set}" = set; then :
   $as_echo_n "(cached) " >&6
 else
-  ac_func_search_save_LIBS=$LIBS
-cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
 
-/* Override any GCC internal prototype to avoid an error.
-   Use char because int might match the return type of a GCC
-   builtin and then its argument prototype would still apply.  */
-#ifdef __cplusplus
-extern "C"
-#endif
-char gpg_strerror ();
-int
-main ()
-{
-return gpg_strerror ();
-  ;
-  return 0;
-}
-_ACEOF
-for ac_lib in '' gpg-error; do
-  if test -z "$ac_lib"; then
-    ac_res="none required"
-  else
-    ac_res=-l$ac_lib
-    LIBS="-l$ac_lib  $ac_func_search_save_LIBS"
-  fi
-  if ac_fn_c_try_link "$LINENO"; then :
-  ac_cv_search_gpg_strerror=$ac_res
-fi
-rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext
-  if test "${ac_cv_search_gpg_strerror+set}" = set; then :
+            ac_func_search_libraries_save_CFLAGS="$CFLAGS";
+      ac_func_search_libraries_save_LIBS=$LIBS
+
+      cat << \EOF > conftest.$ac_ext
+EOF
+      for ac_header in  ""; do
+        if test -n "$ac_header"; then
+          echo "#include <$ac_header>" >> conftest.$ac_ext
+        fi
+      done
+      cat << \EOF >> conftest.$ac_ext
+int main(void) { return (int)gpg_strerror; }
+EOF
+
+            for ac_library in gpg-error ""; do
+        if test -z "$ac_library"; then
+          ac_result="none required"
+        else
+          ac_result=-l$ac_library
+          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+        fi
+
+#cat conftest.$ac_ext
+#set -x
+        ${CC} ${CFLAGS} -c conftest.c -o conftest.o 1>/dev/null 2>/dev/null; rc=$?
+        if test $rc -eq 0; then
+          ${LD} ${LDFLAGS} -o conftest conftest.o ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
+          if test $rc -eq 0; then
+            ac_cv_search_libraries_gpg_strerror=$ac_result
+            if test "${ac_cv_search_libraries_gpg_strerror+set}" = set; then :
   break
 fi
-done
-if test "${ac_cv_search_gpg_strerror+set}" = set; then :
+          fi
+        fi
+      done
+      if test "${ac_cv_search_libraries_gpg_strerror+set}" = set; then :
 
 else
-  ac_cv_search_gpg_strerror=no
+  ac_cv_search_libraries_gpg_strerror=no
 fi
-rm conftest.$ac_ext
-LIBS=$ac_func_search_save_LIBS
+      rm -f conftest.$ac_ext conftest.$ac_objext conftest$ac_exeext
+
+            LIBS=$ac_func_search_libraries_save_LIBS
+      CFLAGS=$ac_func_search_libraries_save_CFLAGS
+
+
 fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_gpg_strerror" >&5
-$as_echo "$ac_cv_search_gpg_strerror" >&6; }
-ac_res=$ac_cv_search_gpg_strerror
-if test "$ac_res" != no; then :
-  test "$ac_res" = "none required" || LIBS="$ac_res $LIBS"
-  HAVE_GPG_ERROR=1;LIBRARIES="$LIBRARIES gpg-error";
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_libraries_gpg_strerror" >&5
+$as_echo "$ac_cv_search_libraries_gpg_strerror" >&6; }
+  ac_result=$ac_cv_search_libraries_gpg_strerror
+  if test "$ac_result" != no; then :
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" HAVE_GPG_ERROR=1;LIBRARIES="$LIBRARIES gpg-error";
 $as_echo "#define HAVE_GPG_ERROR 1" >>confdefs.h
 
 fi
@@ -7446,60 +7509,67 @@ fi
 
           fi
           if test -z "$HAVE_GPG_ERROR"; then
-            { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing gpg_strerror" >&5
+
+
+    ac_result=""
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing gpg_strerror" >&5
 $as_echo_n "checking for library containing gpg_strerror... " >&6; }
-if test "${ac_cv_search_gpg_strerror+set}" = set; then :
+if test "${ac_cv_search_libraries_gpg_strerror+set}" = set; then :
   $as_echo_n "(cached) " >&6
 else
-  ac_func_search_save_LIBS=$LIBS
-cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
 
-/* Override any GCC internal prototype to avoid an error.
-   Use char because int might match the return type of a GCC
-   builtin and then its argument prototype would still apply.  */
-#ifdef __cplusplus
-extern "C"
-#endif
-char gpg_strerror ();
-int
-main ()
-{
-return gpg_strerror ();
-  ;
-  return 0;
-}
-_ACEOF
-for ac_lib in '' gpg-error; do
-  if test -z "$ac_lib"; then
-    ac_res="none required"
-  else
-    ac_res=-l$ac_lib
-    LIBS="-l$ac_lib  $ac_func_search_save_LIBS"
-  fi
-  if ac_fn_c_try_link "$LINENO"; then :
-  ac_cv_search_gpg_strerror=$ac_res
-fi
-rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext
-  if test "${ac_cv_search_gpg_strerror+set}" = set; then :
+            ac_func_search_libraries_save_CFLAGS="$CFLAGS";
+      ac_func_search_libraries_save_LIBS=$LIBS
+
+      cat << \EOF > conftest.$ac_ext
+EOF
+      for ac_header in  ""; do
+        if test -n "$ac_header"; then
+          echo "#include <$ac_header>" >> conftest.$ac_ext
+        fi
+      done
+      cat << \EOF >> conftest.$ac_ext
+int main(void) { return (int)gpg_strerror; }
+EOF
+
+            for ac_library in gpg-error ""; do
+        if test -z "$ac_library"; then
+          ac_result="none required"
+        else
+          ac_result=-l$ac_library
+          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+        fi
+
+#cat conftest.$ac_ext
+#set -x
+        ${CC} ${CFLAGS} -c conftest.c -o conftest.o 1>/dev/null 2>/dev/null; rc=$?
+        if test $rc -eq 0; then
+          ${LD} ${LDFLAGS} -o conftest conftest.o ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
+          if test $rc -eq 0; then
+            ac_cv_search_libraries_gpg_strerror=$ac_result
+            if test "${ac_cv_search_libraries_gpg_strerror+set}" = set; then :
   break
 fi
-done
-if test "${ac_cv_search_gpg_strerror+set}" = set; then :
+          fi
+        fi
+      done
+      if test "${ac_cv_search_libraries_gpg_strerror+set}" = set; then :
 
 else
-  ac_cv_search_gpg_strerror=no
+  ac_cv_search_libraries_gpg_strerror=no
 fi
-rm conftest.$ac_ext
-LIBS=$ac_func_search_save_LIBS
+      rm -f conftest.$ac_ext conftest.$ac_objext conftest$ac_exeext
+
+            LIBS=$ac_func_search_libraries_save_LIBS
+      CFLAGS=$ac_func_search_libraries_save_CFLAGS
+
+
 fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_gpg_strerror" >&5
-$as_echo "$ac_cv_search_gpg_strerror" >&6; }
-ac_res=$ac_cv_search_gpg_strerror
-if test "$ac_res" != no; then :
-  test "$ac_res" = "none required" || LIBS="$ac_res $LIBS"
-  HAVE_GPG_ERROR=1;LIBRARIES="$LIBRARIES gpg-error";
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_libraries_gpg_strerror" >&5
+$as_echo "$ac_cv_search_libraries_gpg_strerror" >&6; }
+  ac_result=$ac_cv_search_libraries_gpg_strerror
+  if test "$ac_result" != no; then :
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" HAVE_GPG_ERROR=1;LIBRARIES="$LIBRARIES gpg-error";
 $as_echo "#define HAVE_GPG_ERROR 1" >>confdefs.h
 
 fi
@@ -7507,60 +7577,67 @@ fi
           fi
         fi
         if test $ENABLE_LINK_DYNAMIC = "yes"; then
-          { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing gcry_check_version" >&5
+
+
+    ac_result=""
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing gcry_check_version" >&5
 $as_echo_n "checking for library containing gcry_check_version... " >&6; }
-if test "${ac_cv_search_gcry_check_version+set}" = set; then :
+if test "${ac_cv_search_libraries_gcry_check_version+set}" = set; then :
   $as_echo_n "(cached) " >&6
 else
-  ac_func_search_save_LIBS=$LIBS
-cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
 
-/* Override any GCC internal prototype to avoid an error.
-   Use char because int might match the return type of a GCC
-   builtin and then its argument prototype would still apply.  */
-#ifdef __cplusplus
-extern "C"
-#endif
-char gcry_check_version ();
-int
-main ()
-{
-return gcry_check_version ();
-  ;
-  return 0;
-}
-_ACEOF
-for ac_lib in '' gcrypt; do
-  if test -z "$ac_lib"; then
-    ac_res="none required"
-  else
-    ac_res=-l$ac_lib
-    LIBS="-l$ac_lib  $ac_func_search_save_LIBS"
-  fi
-  if ac_fn_c_try_link "$LINENO"; then :
-  ac_cv_search_gcry_check_version=$ac_res
-fi
-rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext
-  if test "${ac_cv_search_gcry_check_version+set}" = set; then :
+            ac_func_search_libraries_save_CFLAGS="$CFLAGS";
+      ac_func_search_libraries_save_LIBS=$LIBS
+
+      cat << \EOF > conftest.$ac_ext
+EOF
+      for ac_header in  ""; do
+        if test -n "$ac_header"; then
+          echo "#include <$ac_header>" >> conftest.$ac_ext
+        fi
+      done
+      cat << \EOF >> conftest.$ac_ext
+int main(void) { return (int)gcry_check_version; }
+EOF
+
+            for ac_library in gcrypt ""; do
+        if test -z "$ac_library"; then
+          ac_result="none required"
+        else
+          ac_result=-l$ac_library
+          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+        fi
+
+#cat conftest.$ac_ext
+#set -x
+        ${CC} ${CFLAGS} -c conftest.c -o conftest.o 1>/dev/null 2>/dev/null; rc=$?
+        if test $rc -eq 0; then
+          ${LD} ${LDFLAGS} -o conftest conftest.o ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
+          if test $rc -eq 0; then
+            ac_cv_search_libraries_gcry_check_version=$ac_result
+            if test "${ac_cv_search_libraries_gcry_check_version+set}" = set; then :
   break
 fi
-done
-if test "${ac_cv_search_gcry_check_version+set}" = set; then :
+          fi
+        fi
+      done
+      if test "${ac_cv_search_libraries_gcry_check_version+set}" = set; then :
 
 else
-  ac_cv_search_gcry_check_version=no
+  ac_cv_search_libraries_gcry_check_version=no
 fi
-rm conftest.$ac_ext
-LIBS=$ac_func_search_save_LIBS
+      rm -f conftest.$ac_ext conftest.$ac_objext conftest$ac_exeext
+
+            LIBS=$ac_func_search_libraries_save_LIBS
+      CFLAGS=$ac_func_search_libraries_save_CFLAGS
+
+
 fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_gcry_check_version" >&5
-$as_echo "$ac_cv_search_gcry_check_version" >&6; }
-ac_res=$ac_cv_search_gcry_check_version
-if test "$ac_res" != no; then :
-  test "$ac_res" = "none required" || LIBS="$ac_res $LIBS"
-  HAVE_GCRYPT=1;LIBRARIES="$LIBRARIES gcrypt";
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_libraries_gcry_check_version" >&5
+$as_echo "$ac_cv_search_libraries_gcry_check_version" >&6; }
+  ac_result=$ac_cv_search_libraries_gcry_check_version
+  if test "$ac_result" != no; then :
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" HAVE_GCRYPT=1;LIBRARIES="$LIBRARIES gcrypt";
 $as_echo "#define HAVE_GCRYPT 1" >>confdefs.h
 
 fi
@@ -7627,60 +7704,67 @@ fi
 
           fi
           if test -z "$HAVE_GCRYPT"; then
-            { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing gcry_check_version" >&5
+
+
+    ac_result=""
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing gcry_check_version" >&5
 $as_echo_n "checking for library containing gcry_check_version... " >&6; }
-if test "${ac_cv_search_gcry_check_version+set}" = set; then :
+if test "${ac_cv_search_libraries_gcry_check_version+set}" = set; then :
   $as_echo_n "(cached) " >&6
 else
-  ac_func_search_save_LIBS=$LIBS
-cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
 
-/* Override any GCC internal prototype to avoid an error.
-   Use char because int might match the return type of a GCC
-   builtin and then its argument prototype would still apply.  */
-#ifdef __cplusplus
-extern "C"
-#endif
-char gcry_check_version ();
-int
-main ()
-{
-return gcry_check_version ();
-  ;
-  return 0;
-}
-_ACEOF
-for ac_lib in '' gcrypt; do
-  if test -z "$ac_lib"; then
-    ac_res="none required"
-  else
-    ac_res=-l$ac_lib
-    LIBS="-l$ac_lib  $ac_func_search_save_LIBS"
-  fi
-  if ac_fn_c_try_link "$LINENO"; then :
-  ac_cv_search_gcry_check_version=$ac_res
-fi
-rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext
-  if test "${ac_cv_search_gcry_check_version+set}" = set; then :
+            ac_func_search_libraries_save_CFLAGS="$CFLAGS";
+      ac_func_search_libraries_save_LIBS=$LIBS
+
+      cat << \EOF > conftest.$ac_ext
+EOF
+      for ac_header in  ""; do
+        if test -n "$ac_header"; then
+          echo "#include <$ac_header>" >> conftest.$ac_ext
+        fi
+      done
+      cat << \EOF >> conftest.$ac_ext
+int main(void) { return (int)gcry_check_version; }
+EOF
+
+            for ac_library in gcrypt ""; do
+        if test -z "$ac_library"; then
+          ac_result="none required"
+        else
+          ac_result=-l$ac_library
+          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+        fi
+
+#cat conftest.$ac_ext
+#set -x
+        ${CC} ${CFLAGS} -c conftest.c -o conftest.o 1>/dev/null 2>/dev/null; rc=$?
+        if test $rc -eq 0; then
+          ${LD} ${LDFLAGS} -o conftest conftest.o ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
+          if test $rc -eq 0; then
+            ac_cv_search_libraries_gcry_check_version=$ac_result
+            if test "${ac_cv_search_libraries_gcry_check_version+set}" = set; then :
   break
 fi
-done
-if test "${ac_cv_search_gcry_check_version+set}" = set; then :
+          fi
+        fi
+      done
+      if test "${ac_cv_search_libraries_gcry_check_version+set}" = set; then :
 
 else
-  ac_cv_search_gcry_check_version=no
+  ac_cv_search_libraries_gcry_check_version=no
 fi
-rm conftest.$ac_ext
-LIBS=$ac_func_search_save_LIBS
+      rm -f conftest.$ac_ext conftest.$ac_objext conftest$ac_exeext
+
+            LIBS=$ac_func_search_libraries_save_LIBS
+      CFLAGS=$ac_func_search_libraries_save_CFLAGS
+
+
 fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_gcry_check_version" >&5
-$as_echo "$ac_cv_search_gcry_check_version" >&6; }
-ac_res=$ac_cv_search_gcry_check_version
-if test "$ac_res" != no; then :
-  test "$ac_res" = "none required" || LIBS="$ac_res $LIBS"
-  HAVE_GCRYPT=1;LIBRARIES="$LIBRARIES gcrypt";
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_libraries_gcry_check_version" >&5
+$as_echo "$ac_cv_search_libraries_gcry_check_version" >&6; }
+  ac_result=$ac_cv_search_libraries_gcry_check_version
+  if test "$ac_result" != no; then :
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" HAVE_GCRYPT=1;LIBRARIES="$LIBRARIES gcrypt";
 $as_echo "#define HAVE_GCRYPT 1" >>confdefs.h
 
 fi
@@ -7748,60 +7832,67 @@ $as_echo "#define HAVE_FTP 1" >>confdefs.h
     fi
   else
     if test $ENABLE_LINK_DYNAMIC = "yes"; then
-      { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing FtpInit" >&5
+
+
+    ac_result=""
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing FtpInit" >&5
 $as_echo_n "checking for library containing FtpInit... " >&6; }
-if test "${ac_cv_search_FtpInit+set}" = set; then :
+if test "${ac_cv_search_libraries_FtpInit+set}" = set; then :
   $as_echo_n "(cached) " >&6
 else
-  ac_func_search_save_LIBS=$LIBS
-cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
 
-/* Override any GCC internal prototype to avoid an error.
-   Use char because int might match the return type of a GCC
-   builtin and then its argument prototype would still apply.  */
-#ifdef __cplusplus
-extern "C"
-#endif
-char FtpInit ();
-int
-main ()
-{
-return FtpInit ();
-  ;
-  return 0;
-}
-_ACEOF
-for ac_lib in '' ftp; do
-  if test -z "$ac_lib"; then
-    ac_res="none required"
-  else
-    ac_res=-l$ac_lib
-    LIBS="-l$ac_lib  $ac_func_search_save_LIBS"
-  fi
-  if ac_fn_c_try_link "$LINENO"; then :
-  ac_cv_search_FtpInit=$ac_res
-fi
-rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext
-  if test "${ac_cv_search_FtpInit+set}" = set; then :
+            ac_func_search_libraries_save_CFLAGS="$CFLAGS";
+      ac_func_search_libraries_save_LIBS=$LIBS
+
+      cat << \EOF > conftest.$ac_ext
+EOF
+      for ac_header in  ""; do
+        if test -n "$ac_header"; then
+          echo "#include <$ac_header>" >> conftest.$ac_ext
+        fi
+      done
+      cat << \EOF >> conftest.$ac_ext
+int main(void) { return (int)FtpInit; }
+EOF
+
+            for ac_library in ftp ""; do
+        if test -z "$ac_library"; then
+          ac_result="none required"
+        else
+          ac_result=-l$ac_library
+          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+        fi
+
+#cat conftest.$ac_ext
+#set -x
+        ${CC} ${CFLAGS} -c conftest.c -o conftest.o 1>/dev/null 2>/dev/null; rc=$?
+        if test $rc -eq 0; then
+          ${LD} ${LDFLAGS} -o conftest conftest.o ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
+          if test $rc -eq 0; then
+            ac_cv_search_libraries_FtpInit=$ac_result
+            if test "${ac_cv_search_libraries_FtpInit+set}" = set; then :
   break
 fi
-done
-if test "${ac_cv_search_FtpInit+set}" = set; then :
+          fi
+        fi
+      done
+      if test "${ac_cv_search_libraries_FtpInit+set}" = set; then :
 
 else
-  ac_cv_search_FtpInit=no
+  ac_cv_search_libraries_FtpInit=no
 fi
-rm conftest.$ac_ext
-LIBS=$ac_func_search_save_LIBS
+      rm -f conftest.$ac_ext conftest.$ac_objext conftest$ac_exeext
+
+            LIBS=$ac_func_search_libraries_save_LIBS
+      CFLAGS=$ac_func_search_libraries_save_CFLAGS
+
+
 fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_FtpInit" >&5
-$as_echo "$ac_cv_search_FtpInit" >&6; }
-ac_res=$ac_cv_search_FtpInit
-if test "$ac_res" != no; then :
-  test "$ac_res" = "none required" || LIBS="$ac_res $LIBS"
-  HAVE_FTP=1;LIBRARIES="$LIBRARIES ftp";
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_libraries_FtpInit" >&5
+$as_echo "$ac_cv_search_libraries_FtpInit" >&6; }
+  ac_result=$ac_cv_search_libraries_FtpInit
+  if test "$ac_result" != no; then :
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" HAVE_FTP=1;LIBRARIES="$LIBRARIES ftp";
 $as_echo "#define HAVE_FTP 1" >>confdefs.h
 
 fi
@@ -7868,60 +7959,67 @@ fi
 
       fi
       if test -z "$HAVE_FTP"; then
-        { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing FtpInit" >&5
+
+
+    ac_result=""
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing FtpInit" >&5
 $as_echo_n "checking for library containing FtpInit... " >&6; }
-if test "${ac_cv_search_FtpInit+set}" = set; then :
+if test "${ac_cv_search_libraries_FtpInit+set}" = set; then :
   $as_echo_n "(cached) " >&6
 else
-  ac_func_search_save_LIBS=$LIBS
-cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
 
-/* Override any GCC internal prototype to avoid an error.
-   Use char because int might match the return type of a GCC
-   builtin and then its argument prototype would still apply.  */
-#ifdef __cplusplus
-extern "C"
-#endif
-char FtpInit ();
-int
-main ()
-{
-return FtpInit ();
-  ;
-  return 0;
-}
-_ACEOF
-for ac_lib in '' ftp; do
-  if test -z "$ac_lib"; then
-    ac_res="none required"
-  else
-    ac_res=-l$ac_lib
-    LIBS="-l$ac_lib  $ac_func_search_save_LIBS"
-  fi
-  if ac_fn_c_try_link "$LINENO"; then :
-  ac_cv_search_FtpInit=$ac_res
-fi
-rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext
-  if test "${ac_cv_search_FtpInit+set}" = set; then :
+            ac_func_search_libraries_save_CFLAGS="$CFLAGS";
+      ac_func_search_libraries_save_LIBS=$LIBS
+
+      cat << \EOF > conftest.$ac_ext
+EOF
+      for ac_header in  ""; do
+        if test -n "$ac_header"; then
+          echo "#include <$ac_header>" >> conftest.$ac_ext
+        fi
+      done
+      cat << \EOF >> conftest.$ac_ext
+int main(void) { return (int)FtpInit; }
+EOF
+
+            for ac_library in ftp ""; do
+        if test -z "$ac_library"; then
+          ac_result="none required"
+        else
+          ac_result=-l$ac_library
+          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+        fi
+
+#cat conftest.$ac_ext
+#set -x
+        ${CC} ${CFLAGS} -c conftest.c -o conftest.o 1>/dev/null 2>/dev/null; rc=$?
+        if test $rc -eq 0; then
+          ${LD} ${LDFLAGS} -o conftest conftest.o ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
+          if test $rc -eq 0; then
+            ac_cv_search_libraries_FtpInit=$ac_result
+            if test "${ac_cv_search_libraries_FtpInit+set}" = set; then :
   break
 fi
-done
-if test "${ac_cv_search_FtpInit+set}" = set; then :
+          fi
+        fi
+      done
+      if test "${ac_cv_search_libraries_FtpInit+set}" = set; then :
 
 else
-  ac_cv_search_FtpInit=no
+  ac_cv_search_libraries_FtpInit=no
 fi
-rm conftest.$ac_ext
-LIBS=$ac_func_search_save_LIBS
+      rm -f conftest.$ac_ext conftest.$ac_objext conftest$ac_exeext
+
+            LIBS=$ac_func_search_libraries_save_LIBS
+      CFLAGS=$ac_func_search_libraries_save_CFLAGS
+
+
 fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_FtpInit" >&5
-$as_echo "$ac_cv_search_FtpInit" >&6; }
-ac_res=$ac_cv_search_FtpInit
-if test "$ac_res" != no; then :
-  test "$ac_res" = "none required" || LIBS="$ac_res $LIBS"
-  HAVE_FTP=1;LIBRARIES="$LIBRARIES ftp";
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_libraries_FtpInit" >&5
+$as_echo "$ac_cv_search_libraries_FtpInit" >&6; }
+  ac_result=$ac_cv_search_libraries_FtpInit
+  if test "$ac_result" != no; then :
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" HAVE_FTP=1;LIBRARIES="$LIBRARIES ftp";
 $as_echo "#define HAVE_FTP 1" >>confdefs.h
 
 fi
@@ -8086,60 +8184,67 @@ $as_echo "#define HAVE_SSH2 1" >>confdefs.h
     fi
   else
     if test $ENABLE_LINK_DYNAMIC = "yes"; then
-      { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing libssh2_session_init_ex" >&5
+
+
+    ac_result=""
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing libssh2_session_init_ex" >&5
 $as_echo_n "checking for library containing libssh2_session_init_ex... " >&6; }
-if test "${ac_cv_search_libssh2_session_init_ex+set}" = set; then :
+if test "${ac_cv_search_libraries_libssh2_session_init_ex+set}" = set; then :
   $as_echo_n "(cached) " >&6
 else
-  ac_func_search_save_LIBS=$LIBS
-cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
 
-/* Override any GCC internal prototype to avoid an error.
-   Use char because int might match the return type of a GCC
-   builtin and then its argument prototype would still apply.  */
-#ifdef __cplusplus
-extern "C"
-#endif
-char libssh2_session_init_ex ();
-int
-main ()
-{
-return libssh2_session_init_ex ();
-  ;
-  return 0;
-}
-_ACEOF
-for ac_lib in '' ssh2; do
-  if test -z "$ac_lib"; then
-    ac_res="none required"
-  else
-    ac_res=-l$ac_lib
-    LIBS="-l$ac_lib  $ac_func_search_save_LIBS"
-  fi
-  if ac_fn_c_try_link "$LINENO"; then :
-  ac_cv_search_libssh2_session_init_ex=$ac_res
-fi
-rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext
-  if test "${ac_cv_search_libssh2_session_init_ex+set}" = set; then :
+            ac_func_search_libraries_save_CFLAGS="$CFLAGS";
+      ac_func_search_libraries_save_LIBS=$LIBS
+
+      cat << \EOF > conftest.$ac_ext
+EOF
+      for ac_header in  ""; do
+        if test -n "$ac_header"; then
+          echo "#include <$ac_header>" >> conftest.$ac_ext
+        fi
+      done
+      cat << \EOF >> conftest.$ac_ext
+int main(void) { return (int)libssh2_session_init_ex; }
+EOF
+
+            for ac_library in ssh2 ""; do
+        if test -z "$ac_library"; then
+          ac_result="none required"
+        else
+          ac_result=-l$ac_library
+          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+        fi
+
+#cat conftest.$ac_ext
+#set -x
+        ${CC} ${CFLAGS} -c conftest.c -o conftest.o 1>/dev/null 2>/dev/null; rc=$?
+        if test $rc -eq 0; then
+          ${LD} ${LDFLAGS} -o conftest conftest.o ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
+          if test $rc -eq 0; then
+            ac_cv_search_libraries_libssh2_session_init_ex=$ac_result
+            if test "${ac_cv_search_libraries_libssh2_session_init_ex+set}" = set; then :
   break
 fi
-done
-if test "${ac_cv_search_libssh2_session_init_ex+set}" = set; then :
+          fi
+        fi
+      done
+      if test "${ac_cv_search_libraries_libssh2_session_init_ex+set}" = set; then :
 
 else
-  ac_cv_search_libssh2_session_init_ex=no
+  ac_cv_search_libraries_libssh2_session_init_ex=no
 fi
-rm conftest.$ac_ext
-LIBS=$ac_func_search_save_LIBS
+      rm -f conftest.$ac_ext conftest.$ac_objext conftest$ac_exeext
+
+            LIBS=$ac_func_search_libraries_save_LIBS
+      CFLAGS=$ac_func_search_libraries_save_CFLAGS
+
+
 fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_libssh2_session_init_ex" >&5
-$as_echo "$ac_cv_search_libssh2_session_init_ex" >&6; }
-ac_res=$ac_cv_search_libssh2_session_init_ex
-if test "$ac_res" != no; then :
-  test "$ac_res" = "none required" || LIBS="$ac_res $LIBS"
-  HAVE_SSH2=1;LIBRARIES="$LIBRARIES ssh2";
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_libraries_libssh2_session_init_ex" >&5
+$as_echo "$ac_cv_search_libraries_libssh2_session_init_ex" >&6; }
+  ac_result=$ac_cv_search_libraries_libssh2_session_init_ex
+  if test "$ac_result" != no; then :
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" HAVE_SSH2=1;LIBRARIES="$LIBRARIES ssh2";
 $as_echo "#define HAVE_SSH2 1" >>confdefs.h
 
 fi
@@ -8206,60 +8311,67 @@ fi
 
       fi
       if test -z "$HAVE_SSH2"; then
-        { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing libssh2_session_init_ex" >&5
+
+
+    ac_result=""
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing libssh2_session_init_ex" >&5
 $as_echo_n "checking for library containing libssh2_session_init_ex... " >&6; }
-if test "${ac_cv_search_libssh2_session_init_ex+set}" = set; then :
+if test "${ac_cv_search_libraries_libssh2_session_init_ex+set}" = set; then :
   $as_echo_n "(cached) " >&6
 else
-  ac_func_search_save_LIBS=$LIBS
-cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
 
-/* Override any GCC internal prototype to avoid an error.
-   Use char because int might match the return type of a GCC
-   builtin and then its argument prototype would still apply.  */
-#ifdef __cplusplus
-extern "C"
-#endif
-char libssh2_session_init_ex ();
-int
-main ()
-{
-return libssh2_session_init_ex ();
-  ;
-  return 0;
-}
-_ACEOF
-for ac_lib in '' ssh2; do
-  if test -z "$ac_lib"; then
-    ac_res="none required"
-  else
-    ac_res=-l$ac_lib
-    LIBS="-l$ac_lib  $ac_func_search_save_LIBS"
-  fi
-  if ac_fn_c_try_link "$LINENO"; then :
-  ac_cv_search_libssh2_session_init_ex=$ac_res
-fi
-rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext
-  if test "${ac_cv_search_libssh2_session_init_ex+set}" = set; then :
+            ac_func_search_libraries_save_CFLAGS="$CFLAGS";
+      ac_func_search_libraries_save_LIBS=$LIBS
+
+      cat << \EOF > conftest.$ac_ext
+EOF
+      for ac_header in  ""; do
+        if test -n "$ac_header"; then
+          echo "#include <$ac_header>" >> conftest.$ac_ext
+        fi
+      done
+      cat << \EOF >> conftest.$ac_ext
+int main(void) { return (int)libssh2_session_init_ex; }
+EOF
+
+            for ac_library in ssh2 ""; do
+        if test -z "$ac_library"; then
+          ac_result="none required"
+        else
+          ac_result=-l$ac_library
+          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+        fi
+
+#cat conftest.$ac_ext
+#set -x
+        ${CC} ${CFLAGS} -c conftest.c -o conftest.o 1>/dev/null 2>/dev/null; rc=$?
+        if test $rc -eq 0; then
+          ${LD} ${LDFLAGS} -o conftest conftest.o ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
+          if test $rc -eq 0; then
+            ac_cv_search_libraries_libssh2_session_init_ex=$ac_result
+            if test "${ac_cv_search_libraries_libssh2_session_init_ex+set}" = set; then :
   break
 fi
-done
-if test "${ac_cv_search_libssh2_session_init_ex+set}" = set; then :
+          fi
+        fi
+      done
+      if test "${ac_cv_search_libraries_libssh2_session_init_ex+set}" = set; then :
 
 else
-  ac_cv_search_libssh2_session_init_ex=no
+  ac_cv_search_libraries_libssh2_session_init_ex=no
 fi
-rm conftest.$ac_ext
-LIBS=$ac_func_search_save_LIBS
+      rm -f conftest.$ac_ext conftest.$ac_objext conftest$ac_exeext
+
+            LIBS=$ac_func_search_libraries_save_LIBS
+      CFLAGS=$ac_func_search_libraries_save_CFLAGS
+
+
 fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_libssh2_session_init_ex" >&5
-$as_echo "$ac_cv_search_libssh2_session_init_ex" >&6; }
-ac_res=$ac_cv_search_libssh2_session_init_ex
-if test "$ac_res" != no; then :
-  test "$ac_res" = "none required" || LIBS="$ac_res $LIBS"
-  HAVE_SSH2=1;LIBRARIES="$LIBRARIES ssh2";
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_libraries_libssh2_session_init_ex" >&5
+$as_echo "$ac_cv_search_libraries_libssh2_session_init_ex" >&6; }
+  ac_result=$ac_cv_search_libraries_libssh2_session_init_ex
+  if test "$ac_result" != no; then :
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" HAVE_SSH2=1;LIBRARIES="$LIBRARIES ssh2";
 $as_echo "#define HAVE_SSH2 1" >>confdefs.h
 
 fi
@@ -8269,60 +8381,67 @@ fi
   fi
 
     if test $ENABLE_LINK_DYNAMIC = "yes"; then
-    { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing MD5_Init" >&5
+
+
+    ac_result=""
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing MD5_Init" >&5
 $as_echo_n "checking for library containing MD5_Init... " >&6; }
-if test "${ac_cv_search_MD5_Init+set}" = set; then :
+if test "${ac_cv_search_libraries_MD5_Init+set}" = set; then :
   $as_echo_n "(cached) " >&6
 else
-  ac_func_search_save_LIBS=$LIBS
-cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
 
-/* Override any GCC internal prototype to avoid an error.
-   Use char because int might match the return type of a GCC
-   builtin and then its argument prototype would still apply.  */
-#ifdef __cplusplus
-extern "C"
-#endif
-char MD5_Init ();
-int
-main ()
-{
-return MD5_Init ();
-  ;
-  return 0;
-}
-_ACEOF
-for ac_lib in '' crypto; do
-  if test -z "$ac_lib"; then
-    ac_res="none required"
-  else
-    ac_res=-l$ac_lib
-    LIBS="-l$ac_lib  $ac_func_search_save_LIBS"
-  fi
-  if ac_fn_c_try_link "$LINENO"; then :
-  ac_cv_search_MD5_Init=$ac_res
-fi
-rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext
-  if test "${ac_cv_search_MD5_Init+set}" = set; then :
+            ac_func_search_libraries_save_CFLAGS="$CFLAGS";
+      ac_func_search_libraries_save_LIBS=$LIBS
+
+      cat << \EOF > conftest.$ac_ext
+EOF
+      for ac_header in  ""; do
+        if test -n "$ac_header"; then
+          echo "#include <$ac_header>" >> conftest.$ac_ext
+        fi
+      done
+      cat << \EOF >> conftest.$ac_ext
+int main(void) { return (int)MD5_Init; }
+EOF
+
+            for ac_library in crypto ""; do
+        if test -z "$ac_library"; then
+          ac_result="none required"
+        else
+          ac_result=-l$ac_library
+          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+        fi
+
+#cat conftest.$ac_ext
+#set -x
+        ${CC} ${CFLAGS} -c conftest.c -o conftest.o 1>/dev/null 2>/dev/null; rc=$?
+        if test $rc -eq 0; then
+          ${LD} ${LDFLAGS} -o conftest conftest.o ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
+          if test $rc -eq 0; then
+            ac_cv_search_libraries_MD5_Init=$ac_result
+            if test "${ac_cv_search_libraries_MD5_Init+set}" = set; then :
   break
 fi
-done
-if test "${ac_cv_search_MD5_Init+set}" = set; then :
+          fi
+        fi
+      done
+      if test "${ac_cv_search_libraries_MD5_Init+set}" = set; then :
 
 else
-  ac_cv_search_MD5_Init=no
+  ac_cv_search_libraries_MD5_Init=no
 fi
-rm conftest.$ac_ext
-LIBS=$ac_func_search_save_LIBS
+      rm -f conftest.$ac_ext conftest.$ac_objext conftest$ac_exeext
+
+            LIBS=$ac_func_search_libraries_save_LIBS
+      CFLAGS=$ac_func_search_libraries_save_CFLAGS
+
+
 fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_MD5_Init" >&5
-$as_echo "$ac_cv_search_MD5_Init" >&6; }
-ac_res=$ac_cv_search_MD5_Init
-if test "$ac_res" != no; then :
-  test "$ac_res" = "none required" || LIBS="$ac_res $LIBS"
-  HAVE_CRYPTO=1;LIBRARIES="$LIBRARIES crypto";
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_libraries_MD5_Init" >&5
+$as_echo "$ac_cv_search_libraries_MD5_Init" >&6; }
+  ac_result=$ac_cv_search_libraries_MD5_Init
+  if test "$ac_result" != no; then :
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" HAVE_CRYPTO=1;LIBRARIES="$LIBRARIES crypto";
 $as_echo "#define HAVE_CRYPTO 1" >>confdefs.h
 
 fi
@@ -8389,60 +8508,67 @@ fi
 
     fi
     if test -z "$HAVE_CRYPTO"; then
-      { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing MD5_Init" >&5
+
+
+    ac_result=""
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing MD5_Init" >&5
 $as_echo_n "checking for library containing MD5_Init... " >&6; }
-if test "${ac_cv_search_MD5_Init+set}" = set; then :
+if test "${ac_cv_search_libraries_MD5_Init+set}" = set; then :
   $as_echo_n "(cached) " >&6
 else
-  ac_func_search_save_LIBS=$LIBS
-cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
 
-/* Override any GCC internal prototype to avoid an error.
-   Use char because int might match the return type of a GCC
-   builtin and then its argument prototype would still apply.  */
-#ifdef __cplusplus
-extern "C"
-#endif
-char MD5_Init ();
-int
-main ()
-{
-return MD5_Init ();
-  ;
-  return 0;
-}
-_ACEOF
-for ac_lib in '' crypto; do
-  if test -z "$ac_lib"; then
-    ac_res="none required"
-  else
-    ac_res=-l$ac_lib
-    LIBS="-l$ac_lib  $ac_func_search_save_LIBS"
-  fi
-  if ac_fn_c_try_link "$LINENO"; then :
-  ac_cv_search_MD5_Init=$ac_res
-fi
-rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext
-  if test "${ac_cv_search_MD5_Init+set}" = set; then :
+            ac_func_search_libraries_save_CFLAGS="$CFLAGS";
+      ac_func_search_libraries_save_LIBS=$LIBS
+
+      cat << \EOF > conftest.$ac_ext
+EOF
+      for ac_header in  ""; do
+        if test -n "$ac_header"; then
+          echo "#include <$ac_header>" >> conftest.$ac_ext
+        fi
+      done
+      cat << \EOF >> conftest.$ac_ext
+int main(void) { return (int)MD5_Init; }
+EOF
+
+            for ac_library in crypto ""; do
+        if test -z "$ac_library"; then
+          ac_result="none required"
+        else
+          ac_result=-l$ac_library
+          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+        fi
+
+#cat conftest.$ac_ext
+#set -x
+        ${CC} ${CFLAGS} -c conftest.c -o conftest.o 1>/dev/null 2>/dev/null; rc=$?
+        if test $rc -eq 0; then
+          ${LD} ${LDFLAGS} -o conftest conftest.o ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
+          if test $rc -eq 0; then
+            ac_cv_search_libraries_MD5_Init=$ac_result
+            if test "${ac_cv_search_libraries_MD5_Init+set}" = set; then :
   break
 fi
-done
-if test "${ac_cv_search_MD5_Init+set}" = set; then :
+          fi
+        fi
+      done
+      if test "${ac_cv_search_libraries_MD5_Init+set}" = set; then :
 
 else
-  ac_cv_search_MD5_Init=no
+  ac_cv_search_libraries_MD5_Init=no
 fi
-rm conftest.$ac_ext
-LIBS=$ac_func_search_save_LIBS
+      rm -f conftest.$ac_ext conftest.$ac_objext conftest$ac_exeext
+
+            LIBS=$ac_func_search_libraries_save_LIBS
+      CFLAGS=$ac_func_search_libraries_save_CFLAGS
+
+
 fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_MD5_Init" >&5
-$as_echo "$ac_cv_search_MD5_Init" >&6; }
-ac_res=$ac_cv_search_MD5_Init
-if test "$ac_res" != no; then :
-  test "$ac_res" = "none required" || LIBS="$ac_res $LIBS"
-  HAVE_CRYPTO=1;LIBRARIES="$LIBRARIES crypto";
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_libraries_MD5_Init" >&5
+$as_echo "$ac_cv_search_libraries_MD5_Init" >&6; }
+  ac_result=$ac_cv_search_libraries_MD5_Init
+  if test "$ac_result" != no; then :
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" HAVE_CRYPTO=1;LIBRARIES="$LIBRARIES crypto";
 $as_echo "#define HAVE_CRYPTO 1" >>confdefs.h
 
 fi
@@ -8512,118 +8638,132 @@ $as_echo "$as_me: WARNING: no or wrong version of gnutls. gnutls version >=2.0.1
 fi
 
     if test $ENABLE_LINK_DYNAMIC = "yes"; then
-      { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing gnutls_global_init" >&5
+
+
+    ac_result=""
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing gnutls_global_init" >&5
 $as_echo_n "checking for library containing gnutls_global_init... " >&6; }
-if test "${ac_cv_search_gnutls_global_init+set}" = set; then :
+if test "${ac_cv_search_libraries_gnutls_global_init+set}" = set; then :
   $as_echo_n "(cached) " >&6
 else
-  ac_func_search_save_LIBS=$LIBS
-cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
 
-/* Override any GCC internal prototype to avoid an error.
-   Use char because int might match the return type of a GCC
-   builtin and then its argument prototype would still apply.  */
-#ifdef __cplusplus
-extern "C"
-#endif
-char gnutls_global_init ();
-int
-main ()
-{
-return gnutls_global_init ();
-  ;
-  return 0;
-}
-_ACEOF
-for ac_lib in '' gnutls; do
-  if test -z "$ac_lib"; then
-    ac_res="none required"
-  else
-    ac_res=-l$ac_lib
-    LIBS="-l$ac_lib  $ac_func_search_save_LIBS"
-  fi
-  if ac_fn_c_try_link "$LINENO"; then :
-  ac_cv_search_gnutls_global_init=$ac_res
-fi
-rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext
-  if test "${ac_cv_search_gnutls_global_init+set}" = set; then :
+            ac_func_search_libraries_save_CFLAGS="$CFLAGS";
+      ac_func_search_libraries_save_LIBS=$LIBS
+
+      cat << \EOF > conftest.$ac_ext
+EOF
+      for ac_header in  ""; do
+        if test -n "$ac_header"; then
+          echo "#include <$ac_header>" >> conftest.$ac_ext
+        fi
+      done
+      cat << \EOF >> conftest.$ac_ext
+int main(void) { return (int)gnutls_global_init; }
+EOF
+
+            for ac_library in gnutls ""; do
+        if test -z "$ac_library"; then
+          ac_result="none required"
+        else
+          ac_result=-l$ac_library
+          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+        fi
+
+#cat conftest.$ac_ext
+#set -x
+        ${CC} ${CFLAGS} -c conftest.c -o conftest.o 1>/dev/null 2>/dev/null; rc=$?
+        if test $rc -eq 0; then
+          ${LD} ${LDFLAGS} -o conftest conftest.o ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
+          if test $rc -eq 0; then
+            ac_cv_search_libraries_gnutls_global_init=$ac_result
+            if test "${ac_cv_search_libraries_gnutls_global_init+set}" = set; then :
   break
 fi
-done
-if test "${ac_cv_search_gnutls_global_init+set}" = set; then :
+          fi
+        fi
+      done
+      if test "${ac_cv_search_libraries_gnutls_global_init+set}" = set; then :
 
 else
-  ac_cv_search_gnutls_global_init=no
+  ac_cv_search_libraries_gnutls_global_init=no
 fi
-rm conftest.$ac_ext
-LIBS=$ac_func_search_save_LIBS
+      rm -f conftest.$ac_ext conftest.$ac_objext conftest$ac_exeext
+
+            LIBS=$ac_func_search_libraries_save_LIBS
+      CFLAGS=$ac_func_search_libraries_save_CFLAGS
+
+
 fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_gnutls_global_init" >&5
-$as_echo "$ac_cv_search_gnutls_global_init" >&6; }
-ac_res=$ac_cv_search_gnutls_global_init
-if test "$ac_res" != no; then :
-  test "$ac_res" = "none required" || LIBS="$ac_res $LIBS"
-  HAVE_GNU_TLS=1;LIBRARIES="$LIBRARIES gnutls";
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_libraries_gnutls_global_init" >&5
+$as_echo "$ac_cv_search_libraries_gnutls_global_init" >&6; }
+  ac_result=$ac_cv_search_libraries_gnutls_global_init
+  if test "$ac_result" != no; then :
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" HAVE_GNU_TLS=1;LIBRARIES="$LIBRARIES gnutls";
 $as_echo "#define HAVE_GNU_TLS 1" >>confdefs.h
 
 fi
 
-      { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing asn1_length_der" >&5
+
+
+    ac_result=""
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing asn1_length_der" >&5
 $as_echo_n "checking for library containing asn1_length_der... " >&6; }
-if test "${ac_cv_search_asn1_length_der+set}" = set; then :
+if test "${ac_cv_search_libraries_asn1_length_der+set}" = set; then :
   $as_echo_n "(cached) " >&6
 else
-  ac_func_search_save_LIBS=$LIBS
-cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
 
-/* Override any GCC internal prototype to avoid an error.
-   Use char because int might match the return type of a GCC
-   builtin and then its argument prototype would still apply.  */
-#ifdef __cplusplus
-extern "C"
-#endif
-char asn1_length_der ();
-int
-main ()
-{
-return asn1_length_der ();
-  ;
-  return 0;
-}
-_ACEOF
-for ac_lib in '' tasn1; do
-  if test -z "$ac_lib"; then
-    ac_res="none required"
-  else
-    ac_res=-l$ac_lib
-    LIBS="-l$ac_lib  $ac_func_search_save_LIBS"
-  fi
-  if ac_fn_c_try_link "$LINENO"; then :
-  ac_cv_search_asn1_length_der=$ac_res
-fi
-rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext
-  if test "${ac_cv_search_asn1_length_der+set}" = set; then :
+            ac_func_search_libraries_save_CFLAGS="$CFLAGS";
+      ac_func_search_libraries_save_LIBS=$LIBS
+
+      cat << \EOF > conftest.$ac_ext
+EOF
+      for ac_header in  ""; do
+        if test -n "$ac_header"; then
+          echo "#include <$ac_header>" >> conftest.$ac_ext
+        fi
+      done
+      cat << \EOF >> conftest.$ac_ext
+int main(void) { return (int)asn1_length_der; }
+EOF
+
+            for ac_library in tasn1 ""; do
+        if test -z "$ac_library"; then
+          ac_result="none required"
+        else
+          ac_result=-l$ac_library
+          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+        fi
+
+#cat conftest.$ac_ext
+#set -x
+        ${CC} ${CFLAGS} -c conftest.c -o conftest.o 1>/dev/null 2>/dev/null; rc=$?
+        if test $rc -eq 0; then
+          ${LD} ${LDFLAGS} -o conftest conftest.o ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
+          if test $rc -eq 0; then
+            ac_cv_search_libraries_asn1_length_der=$ac_result
+            if test "${ac_cv_search_libraries_asn1_length_der+set}" = set; then :
   break
 fi
-done
-if test "${ac_cv_search_asn1_length_der+set}" = set; then :
+          fi
+        fi
+      done
+      if test "${ac_cv_search_libraries_asn1_length_der+set}" = set; then :
 
 else
-  ac_cv_search_asn1_length_der=no
+  ac_cv_search_libraries_asn1_length_der=no
 fi
-rm conftest.$ac_ext
-LIBS=$ac_func_search_save_LIBS
+      rm -f conftest.$ac_ext conftest.$ac_objext conftest$ac_exeext
+
+            LIBS=$ac_func_search_libraries_save_LIBS
+      CFLAGS=$ac_func_search_libraries_save_CFLAGS
+
+
 fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_asn1_length_der" >&5
-$as_echo "$ac_cv_search_asn1_length_der" >&6; }
-ac_res=$ac_cv_search_asn1_length_der
-if test "$ac_res" != no; then :
-  test "$ac_res" = "none required" || LIBS="$ac_res $LIBS"
-  HAVE_TASN1=1;LIBRARIES="$LIBRARIES tasn1";
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_libraries_asn1_length_der" >&5
+$as_echo "$ac_cv_search_libraries_asn1_length_der" >&6; }
+  ac_result=$ac_cv_search_libraries_asn1_length_der
+  if test "$ac_result" != no; then :
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" HAVE_TASN1=1;LIBRARIES="$LIBRARIES tasn1";
 $as_echo "#define HAVE_TASN1 1" >>confdefs.h
 
 fi
@@ -8690,60 +8830,67 @@ fi
 
       fi
       if test -z "$HAVE_GNU_TLS"; then
-        { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing gnutls_global_init" >&5
+
+
+    ac_result=""
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing gnutls_global_init" >&5
 $as_echo_n "checking for library containing gnutls_global_init... " >&6; }
-if test "${ac_cv_search_gnutls_global_init+set}" = set; then :
+if test "${ac_cv_search_libraries_gnutls_global_init+set}" = set; then :
   $as_echo_n "(cached) " >&6
 else
-  ac_func_search_save_LIBS=$LIBS
-cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
 
-/* Override any GCC internal prototype to avoid an error.
-   Use char because int might match the return type of a GCC
-   builtin and then its argument prototype would still apply.  */
-#ifdef __cplusplus
-extern "C"
-#endif
-char gnutls_global_init ();
-int
-main ()
-{
-return gnutls_global_init ();
-  ;
-  return 0;
-}
-_ACEOF
-for ac_lib in '' gnutls; do
-  if test -z "$ac_lib"; then
-    ac_res="none required"
-  else
-    ac_res=-l$ac_lib
-    LIBS="-l$ac_lib  $ac_func_search_save_LIBS"
-  fi
-  if ac_fn_c_try_link "$LINENO"; then :
-  ac_cv_search_gnutls_global_init=$ac_res
-fi
-rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext
-  if test "${ac_cv_search_gnutls_global_init+set}" = set; then :
+            ac_func_search_libraries_save_CFLAGS="$CFLAGS";
+      ac_func_search_libraries_save_LIBS=$LIBS
+
+      cat << \EOF > conftest.$ac_ext
+EOF
+      for ac_header in  ""; do
+        if test -n "$ac_header"; then
+          echo "#include <$ac_header>" >> conftest.$ac_ext
+        fi
+      done
+      cat << \EOF >> conftest.$ac_ext
+int main(void) { return (int)gnutls_global_init; }
+EOF
+
+            for ac_library in gnutls ""; do
+        if test -z "$ac_library"; then
+          ac_result="none required"
+        else
+          ac_result=-l$ac_library
+          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+        fi
+
+#cat conftest.$ac_ext
+#set -x
+        ${CC} ${CFLAGS} -c conftest.c -o conftest.o 1>/dev/null 2>/dev/null; rc=$?
+        if test $rc -eq 0; then
+          ${LD} ${LDFLAGS} -o conftest conftest.o ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
+          if test $rc -eq 0; then
+            ac_cv_search_libraries_gnutls_global_init=$ac_result
+            if test "${ac_cv_search_libraries_gnutls_global_init+set}" = set; then :
   break
 fi
-done
-if test "${ac_cv_search_gnutls_global_init+set}" = set; then :
+          fi
+        fi
+      done
+      if test "${ac_cv_search_libraries_gnutls_global_init+set}" = set; then :
 
 else
-  ac_cv_search_gnutls_global_init=no
+  ac_cv_search_libraries_gnutls_global_init=no
 fi
-rm conftest.$ac_ext
-LIBS=$ac_func_search_save_LIBS
+      rm -f conftest.$ac_ext conftest.$ac_objext conftest$ac_exeext
+
+            LIBS=$ac_func_search_libraries_save_LIBS
+      CFLAGS=$ac_func_search_libraries_save_CFLAGS
+
+
 fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_gnutls_global_init" >&5
-$as_echo "$ac_cv_search_gnutls_global_init" >&6; }
-ac_res=$ac_cv_search_gnutls_global_init
-if test "$ac_res" != no; then :
-  test "$ac_res" = "none required" || LIBS="$ac_res $LIBS"
-  HAVE_GNU_TLS=1;LIBRARIES="$LIBRARIES gnutls";
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_libraries_gnutls_global_init" >&5
+$as_echo "$ac_cv_search_libraries_gnutls_global_init" >&6; }
+  ac_result=$ac_cv_search_libraries_gnutls_global_init
+  if test "$ac_result" != no; then :
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" HAVE_GNU_TLS=1;LIBRARIES="$LIBRARIES gnutls";
 $as_echo "#define HAVE_GNU_TLS 1" >>confdefs.h
 
 fi
@@ -8811,60 +8958,67 @@ fi
 
       fi
       if test -z "$HAVE_TASN1"; then
-        { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing asn1_length_der" >&5
+
+
+    ac_result=""
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing asn1_length_der" >&5
 $as_echo_n "checking for library containing asn1_length_der... " >&6; }
-if test "${ac_cv_search_asn1_length_der+set}" = set; then :
+if test "${ac_cv_search_libraries_asn1_length_der+set}" = set; then :
   $as_echo_n "(cached) " >&6
 else
-  ac_func_search_save_LIBS=$LIBS
-cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
 
-/* Override any GCC internal prototype to avoid an error.
-   Use char because int might match the return type of a GCC
-   builtin and then its argument prototype would still apply.  */
-#ifdef __cplusplus
-extern "C"
-#endif
-char asn1_length_der ();
-int
-main ()
-{
-return asn1_length_der ();
-  ;
-  return 0;
-}
-_ACEOF
-for ac_lib in '' tasn1; do
-  if test -z "$ac_lib"; then
-    ac_res="none required"
-  else
-    ac_res=-l$ac_lib
-    LIBS="-l$ac_lib  $ac_func_search_save_LIBS"
-  fi
-  if ac_fn_c_try_link "$LINENO"; then :
-  ac_cv_search_asn1_length_der=$ac_res
-fi
-rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext
-  if test "${ac_cv_search_asn1_length_der+set}" = set; then :
+            ac_func_search_libraries_save_CFLAGS="$CFLAGS";
+      ac_func_search_libraries_save_LIBS=$LIBS
+
+      cat << \EOF > conftest.$ac_ext
+EOF
+      for ac_header in  ""; do
+        if test -n "$ac_header"; then
+          echo "#include <$ac_header>" >> conftest.$ac_ext
+        fi
+      done
+      cat << \EOF >> conftest.$ac_ext
+int main(void) { return (int)asn1_length_der; }
+EOF
+
+            for ac_library in tasn1 ""; do
+        if test -z "$ac_library"; then
+          ac_result="none required"
+        else
+          ac_result=-l$ac_library
+          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+        fi
+
+#cat conftest.$ac_ext
+#set -x
+        ${CC} ${CFLAGS} -c conftest.c -o conftest.o 1>/dev/null 2>/dev/null; rc=$?
+        if test $rc -eq 0; then
+          ${LD} ${LDFLAGS} -o conftest conftest.o ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
+          if test $rc -eq 0; then
+            ac_cv_search_libraries_asn1_length_der=$ac_result
+            if test "${ac_cv_search_libraries_asn1_length_der+set}" = set; then :
   break
 fi
-done
-if test "${ac_cv_search_asn1_length_der+set}" = set; then :
+          fi
+        fi
+      done
+      if test "${ac_cv_search_libraries_asn1_length_der+set}" = set; then :
 
 else
-  ac_cv_search_asn1_length_der=no
+  ac_cv_search_libraries_asn1_length_der=no
 fi
-rm conftest.$ac_ext
-LIBS=$ac_func_search_save_LIBS
+      rm -f conftest.$ac_ext conftest.$ac_objext conftest$ac_exeext
+
+            LIBS=$ac_func_search_libraries_save_LIBS
+      CFLAGS=$ac_func_search_libraries_save_CFLAGS
+
+
 fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_asn1_length_der" >&5
-$as_echo "$ac_cv_search_asn1_length_der" >&6; }
-ac_res=$ac_cv_search_asn1_length_der
-if test "$ac_res" != no; then :
-  test "$ac_res" = "none required" || LIBS="$ac_res $LIBS"
-  HAVE_TASN1=1;LIBRARIES="$LIBRARIES tasn1";
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_libraries_asn1_length_der" >&5
+$as_echo "$ac_cv_search_libraries_asn1_length_der" >&6; }
+  ac_result=$ac_cv_search_libraries_asn1_length_der
+  if test "$ac_result" != no; then :
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" HAVE_TASN1=1;LIBRARIES="$LIBRARIES tasn1";
 $as_echo "#define HAVE_TASN1 1" >>confdefs.h
 
 fi
@@ -8973,60 +9127,67 @@ $as_echo "#define HAVE_ISO9660 1" >>confdefs.h
     fi
   else
         if test $ENABLE_LINK_DYNAMIC = "yes"; then
-      { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing iso9660_open" >&5
+
+
+    ac_result=""
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing iso9660_open" >&5
 $as_echo_n "checking for library containing iso9660_open... " >&6; }
-if test "${ac_cv_search_iso9660_open+set}" = set; then :
+if test "${ac_cv_search_libraries_iso9660_open+set}" = set; then :
   $as_echo_n "(cached) " >&6
 else
-  ac_func_search_save_LIBS=$LIBS
-cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
 
-/* Override any GCC internal prototype to avoid an error.
-   Use char because int might match the return type of a GCC
-   builtin and then its argument prototype would still apply.  */
-#ifdef __cplusplus
-extern "C"
-#endif
-char iso9660_open ();
-int
-main ()
-{
-return iso9660_open ();
-  ;
-  return 0;
-}
-_ACEOF
-for ac_lib in '' iso9660; do
-  if test -z "$ac_lib"; then
-    ac_res="none required"
-  else
-    ac_res=-l$ac_lib
-    LIBS="-l$ac_lib  $ac_func_search_save_LIBS"
-  fi
-  if ac_fn_c_try_link "$LINENO"; then :
-  ac_cv_search_iso9660_open=$ac_res
-fi
-rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext
-  if test "${ac_cv_search_iso9660_open+set}" = set; then :
+            ac_func_search_libraries_save_CFLAGS="$CFLAGS";
+      ac_func_search_libraries_save_LIBS=$LIBS
+
+      cat << \EOF > conftest.$ac_ext
+EOF
+      for ac_header in  ""; do
+        if test -n "$ac_header"; then
+          echo "#include <$ac_header>" >> conftest.$ac_ext
+        fi
+      done
+      cat << \EOF >> conftest.$ac_ext
+int main(void) { return (int)iso9660_open; }
+EOF
+
+            for ac_library in iso9660 ""; do
+        if test -z "$ac_library"; then
+          ac_result="none required"
+        else
+          ac_result=-l$ac_library
+          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+        fi
+
+#cat conftest.$ac_ext
+#set -x
+        ${CC} ${CFLAGS} -c conftest.c -o conftest.o 1>/dev/null 2>/dev/null; rc=$?
+        if test $rc -eq 0; then
+          ${LD} ${LDFLAGS} -o conftest conftest.o ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
+          if test $rc -eq 0; then
+            ac_cv_search_libraries_iso9660_open=$ac_result
+            if test "${ac_cv_search_libraries_iso9660_open+set}" = set; then :
   break
 fi
-done
-if test "${ac_cv_search_iso9660_open+set}" = set; then :
+          fi
+        fi
+      done
+      if test "${ac_cv_search_libraries_iso9660_open+set}" = set; then :
 
 else
-  ac_cv_search_iso9660_open=no
+  ac_cv_search_libraries_iso9660_open=no
 fi
-rm conftest.$ac_ext
-LIBS=$ac_func_search_save_LIBS
+      rm -f conftest.$ac_ext conftest.$ac_objext conftest$ac_exeext
+
+            LIBS=$ac_func_search_libraries_save_LIBS
+      CFLAGS=$ac_func_search_libraries_save_CFLAGS
+
+
 fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_iso9660_open" >&5
-$as_echo "$ac_cv_search_iso9660_open" >&6; }
-ac_res=$ac_cv_search_iso9660_open
-if test "$ac_res" != no; then :
-  test "$ac_res" = "none required" || LIBS="$ac_res $LIBS"
-  HAVE_ISO9660=1;LIBRARIES="$LIBRARIES iso9660 cdio";
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_libraries_iso9660_open" >&5
+$as_echo "$ac_cv_search_libraries_iso9660_open" >&6; }
+  ac_result=$ac_cv_search_libraries_iso9660_open
+  if test "$ac_result" != no; then :
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" HAVE_ISO9660=1;LIBRARIES="$LIBRARIES iso9660 cdio";
 $as_echo "#define HAVE_ISO9660 1" >>confdefs.h
 
 fi
@@ -9093,60 +9254,67 @@ fi
 
       fi
       if test -z "$HAVE_ISO9660"; then
-        { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing iso9660_open" >&5
+
+
+    ac_result=""
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing iso9660_open" >&5
 $as_echo_n "checking for library containing iso9660_open... " >&6; }
-if test "${ac_cv_search_iso9660_open+set}" = set; then :
+if test "${ac_cv_search_libraries_iso9660_open+set}" = set; then :
   $as_echo_n "(cached) " >&6
 else
-  ac_func_search_save_LIBS=$LIBS
-cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
 
-/* Override any GCC internal prototype to avoid an error.
-   Use char because int might match the return type of a GCC
-   builtin and then its argument prototype would still apply.  */
-#ifdef __cplusplus
-extern "C"
-#endif
-char iso9660_open ();
-int
-main ()
-{
-return iso9660_open ();
-  ;
-  return 0;
-}
-_ACEOF
-for ac_lib in '' iso9660; do
-  if test -z "$ac_lib"; then
-    ac_res="none required"
-  else
-    ac_res=-l$ac_lib
-    LIBS="-l$ac_lib  $ac_func_search_save_LIBS"
-  fi
-  if ac_fn_c_try_link "$LINENO"; then :
-  ac_cv_search_iso9660_open=$ac_res
-fi
-rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext
-  if test "${ac_cv_search_iso9660_open+set}" = set; then :
+            ac_func_search_libraries_save_CFLAGS="$CFLAGS";
+      ac_func_search_libraries_save_LIBS=$LIBS
+
+      cat << \EOF > conftest.$ac_ext
+EOF
+      for ac_header in  ""; do
+        if test -n "$ac_header"; then
+          echo "#include <$ac_header>" >> conftest.$ac_ext
+        fi
+      done
+      cat << \EOF >> conftest.$ac_ext
+int main(void) { return (int)iso9660_open; }
+EOF
+
+            for ac_library in iso9660 ""; do
+        if test -z "$ac_library"; then
+          ac_result="none required"
+        else
+          ac_result=-l$ac_library
+          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+        fi
+
+#cat conftest.$ac_ext
+#set -x
+        ${CC} ${CFLAGS} -c conftest.c -o conftest.o 1>/dev/null 2>/dev/null; rc=$?
+        if test $rc -eq 0; then
+          ${LD} ${LDFLAGS} -o conftest conftest.o ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
+          if test $rc -eq 0; then
+            ac_cv_search_libraries_iso9660_open=$ac_result
+            if test "${ac_cv_search_libraries_iso9660_open+set}" = set; then :
   break
 fi
-done
-if test "${ac_cv_search_iso9660_open+set}" = set; then :
+          fi
+        fi
+      done
+      if test "${ac_cv_search_libraries_iso9660_open+set}" = set; then :
 
 else
-  ac_cv_search_iso9660_open=no
+  ac_cv_search_libraries_iso9660_open=no
 fi
-rm conftest.$ac_ext
-LIBS=$ac_func_search_save_LIBS
+      rm -f conftest.$ac_ext conftest.$ac_objext conftest$ac_exeext
+
+            LIBS=$ac_func_search_libraries_save_LIBS
+      CFLAGS=$ac_func_search_libraries_save_CFLAGS
+
+
 fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_iso9660_open" >&5
-$as_echo "$ac_cv_search_iso9660_open" >&6; }
-ac_res=$ac_cv_search_iso9660_open
-if test "$ac_res" != no; then :
-  test "$ac_res" = "none required" || LIBS="$ac_res $LIBS"
-  HAVE_ISO9660=1;LIBRARIES="$LIBRARIES iso9660 cdio";
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_libraries_iso9660_open" >&5
+$as_echo "$ac_cv_search_libraries_iso9660_open" >&6; }
+  ac_result=$ac_cv_search_libraries_iso9660_open
+  if test "$ac_result" != no; then :
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" HAVE_ISO9660=1;LIBRARIES="$LIBRARIES iso9660 cdio";
 $as_echo "#define HAVE_ISO9660 1" >>confdefs.h
 
 fi
@@ -9213,6 +9381,7 @@ $as_echo "fail (install)" >&6; }
         case $host_os in
           mingw*)
             (cd packages/lib; ln -s libpcre.lib libpcre.a) 1>/dev/null 2>/dev/null
+            (cd packages/lib; ln -s libpcreposix.lib libpcreposix.a) 1>/dev/null 2>/dev/null
             ;;
           *)
             ;;
@@ -9228,67 +9397,75 @@ $as_echo "done" >&6; }
 
     if test $result -eq 1; then
       HAVE_PCRE=1
-      STATIC_LIBRARIES="$STATIC_LIBRARIES pcre"
+      CC_DEFINES="$CC_DEFINES PCRE_STATIC"
+      STATIC_LIBRARIES="$STATIC_LIBRARIES pcre pcreposix"
 
 $as_echo "#define HAVE_PCRE 1" >>confdefs.h
 
     fi
   else
         if test $ENABLE_LINK_DYNAMIC = "yes"; then
-      { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing pcre" >&5
+
+
+    ac_result=""
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing pcre" >&5
 $as_echo_n "checking for library containing pcre... " >&6; }
-if test "${ac_cv_search_pcre+set}" = set; then :
+if test "${ac_cv_search_libraries_pcre+set}" = set; then :
   $as_echo_n "(cached) " >&6
 else
-  ac_func_search_save_LIBS=$LIBS
-cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
 
-/* Override any GCC internal prototype to avoid an error.
-   Use char because int might match the return type of a GCC
-   builtin and then its argument prototype would still apply.  */
-#ifdef __cplusplus
-extern "C"
-#endif
-char pcre ();
-int
-main ()
-{
-return pcre ();
-  ;
-  return 0;
-}
-_ACEOF
-for ac_lib in '' pcre_compile; do
-  if test -z "$ac_lib"; then
-    ac_res="none required"
-  else
-    ac_res=-l$ac_lib
-    LIBS="-l$ac_lib  $ac_func_search_save_LIBS"
-  fi
-  if ac_fn_c_try_link "$LINENO"; then :
-  ac_cv_search_pcre=$ac_res
-fi
-rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext
-  if test "${ac_cv_search_pcre+set}" = set; then :
+            ac_func_search_libraries_save_CFLAGS="$CFLAGS";
+      ac_func_search_libraries_save_LIBS=$LIBS
+
+      cat << \EOF > conftest.$ac_ext
+EOF
+      for ac_header in  ""; do
+        if test -n "$ac_header"; then
+          echo "#include <$ac_header>" >> conftest.$ac_ext
+        fi
+      done
+      cat << \EOF >> conftest.$ac_ext
+int main(void) { return (int)pcre; }
+EOF
+
+            for ac_library in pcre_compile ""; do
+        if test -z "$ac_library"; then
+          ac_result="none required"
+        else
+          ac_result=-l$ac_library
+          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+        fi
+
+#cat conftest.$ac_ext
+#set -x
+        ${CC} ${CFLAGS} -c conftest.c -o conftest.o 1>/dev/null 2>/dev/null; rc=$?
+        if test $rc -eq 0; then
+          ${LD} ${LDFLAGS} -o conftest conftest.o ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
+          if test $rc -eq 0; then
+            ac_cv_search_libraries_pcre=$ac_result
+            if test "${ac_cv_search_libraries_pcre+set}" = set; then :
   break
 fi
-done
-if test "${ac_cv_search_pcre+set}" = set; then :
+          fi
+        fi
+      done
+      if test "${ac_cv_search_libraries_pcre+set}" = set; then :
 
 else
-  ac_cv_search_pcre=no
+  ac_cv_search_libraries_pcre=no
 fi
-rm conftest.$ac_ext
-LIBS=$ac_func_search_save_LIBS
+      rm -f conftest.$ac_ext conftest.$ac_objext conftest$ac_exeext
+
+            LIBS=$ac_func_search_libraries_save_LIBS
+      CFLAGS=$ac_func_search_libraries_save_CFLAGS
+
+
 fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_pcre" >&5
-$as_echo "$ac_cv_search_pcre" >&6; }
-ac_res=$ac_cv_search_pcre
-if test "$ac_res" != no; then :
-  test "$ac_res" = "none required" || LIBS="$ac_res $LIBS"
-  HAVE_PCRE=1;LIBRARIES="$LIBRARIES pcre";
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_libraries_pcre" >&5
+$as_echo "$ac_cv_search_libraries_pcre" >&6; }
+  ac_result=$ac_cv_search_libraries_pcre
+  if test "$ac_result" != no; then :
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" HAVE_PCRE=1;LIBRARIES="$LIBRARIES pcre";
 $as_echo "#define HAVE_PCRE 1" >>confdefs.h
 
 fi
@@ -9348,67 +9525,74 @@ fi
 $as_echo "$ac_cv_search_static_pcre" >&6; }
   ac_result=$ac_cv_search_static_pcre
   if test "$ac_result" != no; then :
-  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" HAVE_PCRE=1;STATIC_LIBRARIES="$STATIC_LIBRARIES pcre";
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" HAVE_PCRE=1;CC_DEFINES="$CC_DEFINES PCRE_STATIC";STATIC_LIBRARIES="$STATIC_LIBRARIES pcre";
 $as_echo "#define HAVE_PCRE 1" >>confdefs.h
 
 fi
 
       fi
       if test -z "$HAVE_PCRE"; then
-        { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing pcre" >&5
+
+
+    ac_result=""
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing pcre" >&5
 $as_echo_n "checking for library containing pcre... " >&6; }
-if test "${ac_cv_search_pcre+set}" = set; then :
+if test "${ac_cv_search_libraries_pcre+set}" = set; then :
   $as_echo_n "(cached) " >&6
 else
-  ac_func_search_save_LIBS=$LIBS
-cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
 
-/* Override any GCC internal prototype to avoid an error.
-   Use char because int might match the return type of a GCC
-   builtin and then its argument prototype would still apply.  */
-#ifdef __cplusplus
-extern "C"
-#endif
-char pcre ();
-int
-main ()
-{
-return pcre ();
-  ;
-  return 0;
-}
-_ACEOF
-for ac_lib in '' pcre_compile; do
-  if test -z "$ac_lib"; then
-    ac_res="none required"
-  else
-    ac_res=-l$ac_lib
-    LIBS="-l$ac_lib  $ac_func_search_save_LIBS"
-  fi
-  if ac_fn_c_try_link "$LINENO"; then :
-  ac_cv_search_pcre=$ac_res
-fi
-rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext
-  if test "${ac_cv_search_pcre+set}" = set; then :
+            ac_func_search_libraries_save_CFLAGS="$CFLAGS";
+      ac_func_search_libraries_save_LIBS=$LIBS
+
+      cat << \EOF > conftest.$ac_ext
+EOF
+      for ac_header in  ""; do
+        if test -n "$ac_header"; then
+          echo "#include <$ac_header>" >> conftest.$ac_ext
+        fi
+      done
+      cat << \EOF >> conftest.$ac_ext
+int main(void) { return (int)pcre; }
+EOF
+
+            for ac_library in pcre_compile ""; do
+        if test -z "$ac_library"; then
+          ac_result="none required"
+        else
+          ac_result=-l$ac_library
+          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+        fi
+
+#cat conftest.$ac_ext
+#set -x
+        ${CC} ${CFLAGS} -c conftest.c -o conftest.o 1>/dev/null 2>/dev/null; rc=$?
+        if test $rc -eq 0; then
+          ${LD} ${LDFLAGS} -o conftest conftest.o ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
+          if test $rc -eq 0; then
+            ac_cv_search_libraries_pcre=$ac_result
+            if test "${ac_cv_search_libraries_pcre+set}" = set; then :
   break
 fi
-done
-if test "${ac_cv_search_pcre+set}" = set; then :
+          fi
+        fi
+      done
+      if test "${ac_cv_search_libraries_pcre+set}" = set; then :
 
 else
-  ac_cv_search_pcre=no
+  ac_cv_search_libraries_pcre=no
 fi
-rm conftest.$ac_ext
-LIBS=$ac_func_search_save_LIBS
+      rm -f conftest.$ac_ext conftest.$ac_objext conftest$ac_exeext
+
+            LIBS=$ac_func_search_libraries_save_LIBS
+      CFLAGS=$ac_func_search_libraries_save_CFLAGS
+
+
 fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_pcre" >&5
-$as_echo "$ac_cv_search_pcre" >&6; }
-ac_res=$ac_cv_search_pcre
-if test "$ac_res" != no; then :
-  test "$ac_res" = "none required" || LIBS="$ac_res $LIBS"
-  HAVE_PCRE=1;LIBRARIES="$LIBRARIES pcre";
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_libraries_pcre" >&5
+$as_echo "$ac_cv_search_libraries_pcre" >&6; }
+  ac_result=$ac_cv_search_libraries_pcre
+  if test "$ac_result" != no; then :
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" HAVE_PCRE=1;LIBRARIES="$LIBRARIES pcre";
 $as_echo "#define HAVE_PCRE 1" >>confdefs.h
 
 fi
@@ -9454,7 +9638,8 @@ $as_echo "done" >&6; }
         fi
 
         if test $result -eq 1; then
-          HAVE_PCRE=1
+          HAVE_PTHREADS_W32=1
+          CC_DEFINES="$CC_DEFINES PTW32_STATIC_LIB"
           STATIC_LIBRARIES="$STATIC_LIBRARIES pthreadGC2"
 
 $as_echo "#define HAVE_PTHREADS_W32 1" >>confdefs.h
@@ -9569,60 +9754,67 @@ done
     fi
   else
         if test $ENABLE_LINK_DYNAMIC = "yes"; then
-      { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing breakpad_client" >&5
+
+
+    ac_result=""
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing breakpad_client" >&5
 $as_echo_n "checking for library containing breakpad_client... " >&6; }
-if test "${ac_cv_search_breakpad_client+set}" = set; then :
+if test "${ac_cv_search_libraries_breakpad_client+set}" = set; then :
   $as_echo_n "(cached) " >&6
 else
-  ac_func_search_save_LIBS=$LIBS
-cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
 
-/* Override any GCC internal prototype to avoid an error.
-   Use char because int might match the return type of a GCC
-   builtin and then its argument prototype would still apply.  */
-#ifdef __cplusplus
-extern "C"
-#endif
-char breakpad_client ();
-int
-main ()
-{
-return breakpad_client ();
-  ;
-  return 0;
-}
-_ACEOF
-for ac_lib in '' ExceptionHandler; do
-  if test -z "$ac_lib"; then
-    ac_res="none required"
-  else
-    ac_res=-l$ac_lib
-    LIBS="-l$ac_lib  $ac_func_search_save_LIBS"
-  fi
-  if ac_fn_c_try_link "$LINENO"; then :
-  ac_cv_search_breakpad_client=$ac_res
-fi
-rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext
-  if test "${ac_cv_search_breakpad_client+set}" = set; then :
+            ac_func_search_libraries_save_CFLAGS="$CFLAGS";
+      ac_func_search_libraries_save_LIBS=$LIBS
+
+      cat << \EOF > conftest.$ac_ext
+EOF
+      for ac_header in  ""; do
+        if test -n "$ac_header"; then
+          echo "#include <$ac_header>" >> conftest.$ac_ext
+        fi
+      done
+      cat << \EOF >> conftest.$ac_ext
+int main(void) { return (int)breakpad_client; }
+EOF
+
+            for ac_library in ExceptionHandler ""; do
+        if test -z "$ac_library"; then
+          ac_result="none required"
+        else
+          ac_result=-l$ac_library
+          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+        fi
+
+#cat conftest.$ac_ext
+#set -x
+        ${CC} ${CFLAGS} -c conftest.c -o conftest.o 1>/dev/null 2>/dev/null; rc=$?
+        if test $rc -eq 0; then
+          ${LD} ${LDFLAGS} -o conftest conftest.o ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
+          if test $rc -eq 0; then
+            ac_cv_search_libraries_breakpad_client=$ac_result
+            if test "${ac_cv_search_libraries_breakpad_client+set}" = set; then :
   break
 fi
-done
-if test "${ac_cv_search_breakpad_client+set}" = set; then :
+          fi
+        fi
+      done
+      if test "${ac_cv_search_libraries_breakpad_client+set}" = set; then :
 
 else
-  ac_cv_search_breakpad_client=no
+  ac_cv_search_libraries_breakpad_client=no
 fi
-rm conftest.$ac_ext
-LIBS=$ac_func_search_save_LIBS
+      rm -f conftest.$ac_ext conftest.$ac_objext conftest$ac_exeext
+
+            LIBS=$ac_func_search_libraries_save_LIBS
+      CFLAGS=$ac_func_search_libraries_save_CFLAGS
+
+
 fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_breakpad_client" >&5
-$as_echo "$ac_cv_search_breakpad_client" >&6; }
-ac_res=$ac_cv_search_breakpad_client
-if test "$ac_res" != no; then :
-  test "$ac_res" = "none required" || LIBS="$ac_res $LIBS"
-  HAVE_BREAKPAD=1;LIBRARIES="$LIBRARIES breakpad_client";
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_libraries_breakpad_client" >&5
+$as_echo "$ac_cv_search_libraries_breakpad_client" >&6; }
+  ac_result=$ac_cv_search_libraries_breakpad_client
+  if test "$ac_result" != no; then :
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" HAVE_BREAKPAD=1;LIBRARIES="$LIBRARIES breakpad_client";
 $as_echo "#define HAVE_BREAKPAD 1" >>confdefs.h
 
 fi
@@ -9689,60 +9881,67 @@ fi
 
       fi
       if test -z "$HAVE_BREAKPAD"; then
-        { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing breakpad_client" >&5
+
+
+    ac_result=""
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing breakpad_client" >&5
 $as_echo_n "checking for library containing breakpad_client... " >&6; }
-if test "${ac_cv_search_breakpad_client+set}" = set; then :
+if test "${ac_cv_search_libraries_breakpad_client+set}" = set; then :
   $as_echo_n "(cached) " >&6
 else
-  ac_func_search_save_LIBS=$LIBS
-cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
 
-/* Override any GCC internal prototype to avoid an error.
-   Use char because int might match the return type of a GCC
-   builtin and then its argument prototype would still apply.  */
-#ifdef __cplusplus
-extern "C"
-#endif
-char breakpad_client ();
-int
-main ()
-{
-return breakpad_client ();
-  ;
-  return 0;
-}
-_ACEOF
-for ac_lib in '' ExceptionHandler; do
-  if test -z "$ac_lib"; then
-    ac_res="none required"
-  else
-    ac_res=-l$ac_lib
-    LIBS="-l$ac_lib  $ac_func_search_save_LIBS"
-  fi
-  if ac_fn_c_try_link "$LINENO"; then :
-  ac_cv_search_breakpad_client=$ac_res
-fi
-rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext
-  if test "${ac_cv_search_breakpad_client+set}" = set; then :
+            ac_func_search_libraries_save_CFLAGS="$CFLAGS";
+      ac_func_search_libraries_save_LIBS=$LIBS
+
+      cat << \EOF > conftest.$ac_ext
+EOF
+      for ac_header in  ""; do
+        if test -n "$ac_header"; then
+          echo "#include <$ac_header>" >> conftest.$ac_ext
+        fi
+      done
+      cat << \EOF >> conftest.$ac_ext
+int main(void) { return (int)breakpad_client; }
+EOF
+
+            for ac_library in ExceptionHandler ""; do
+        if test -z "$ac_library"; then
+          ac_result="none required"
+        else
+          ac_result=-l$ac_library
+          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+        fi
+
+#cat conftest.$ac_ext
+#set -x
+        ${CC} ${CFLAGS} -c conftest.c -o conftest.o 1>/dev/null 2>/dev/null; rc=$?
+        if test $rc -eq 0; then
+          ${LD} ${LDFLAGS} -o conftest conftest.o ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
+          if test $rc -eq 0; then
+            ac_cv_search_libraries_breakpad_client=$ac_result
+            if test "${ac_cv_search_libraries_breakpad_client+set}" = set; then :
   break
 fi
-done
-if test "${ac_cv_search_breakpad_client+set}" = set; then :
+          fi
+        fi
+      done
+      if test "${ac_cv_search_libraries_breakpad_client+set}" = set; then :
 
 else
-  ac_cv_search_breakpad_client=no
+  ac_cv_search_libraries_breakpad_client=no
 fi
-rm conftest.$ac_ext
-LIBS=$ac_func_search_save_LIBS
+      rm -f conftest.$ac_ext conftest.$ac_objext conftest$ac_exeext
+
+            LIBS=$ac_func_search_libraries_save_LIBS
+      CFLAGS=$ac_func_search_libraries_save_CFLAGS
+
+
 fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_breakpad_client" >&5
-$as_echo "$ac_cv_search_breakpad_client" >&6; }
-ac_res=$ac_cv_search_breakpad_client
-if test "$ac_res" != no; then :
-  test "$ac_res" = "none required" || LIBS="$ac_res $LIBS"
-  HAVE_BREAKPAD=1;LIBRARIES="$LIBRARIES breakpad_client";
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_libraries_breakpad_client" >&5
+$as_echo "$ac_cv_search_libraries_breakpad_client" >&6; }
+  ac_result=$ac_cv_search_libraries_breakpad_client
+  if test "$ac_result" != no; then :
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" HAVE_BREAKPAD=1;LIBRARIES="$LIBRARIES breakpad_client";
 $as_echo "#define HAVE_BREAKPAD 1" >>confdefs.h
 
 fi
@@ -13122,6 +13321,358 @@ cat >>confdefs.h <<_ACEOF
 _ACEOF
 
 
+
+
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for localtime_r" >&5
+$as_echo_n "checking for localtime_r... " >&6; }
+if test "${ac_cv_func_localtime_r+set}" = set; then :
+  $as_echo_n "(cached) " >&6
+else
+
+#set -x
+      ac_cv_func_localtime_r="no"
+      echo > conftest.log
+      for ac_headers in  ""; do
+if false; then
+        cat << \EOF > conftest.c
+EOF
+        if test -n "$ac_headers"; then
+          for ac_header in `echo $ac_headers|sed 's/+/ /g'` ""; do
+            if test -n "$ac_header"; then
+              echo "#include <$ac_header>" >> conftest.c
+            fi
+          done
+        else
+          echo "extern int localtime_r();" >> conftest.c
+        fi
+        cat << \EOF >> conftest.c
+int main(void) { return (int)localtime_r; }
+EOF
+
+#cat conftest.$ac_ext
+        ${CC} ${CFLAGS} -o conftest$ac_exeext conftest.$ac_ext ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
+        if test $rc -eq 0; then
+          ac_cv_func_localtime_r=yes
+          break
+        fi
+else
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo $ac_headers|sed 's/+/\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
+int
+main ()
+{
+return (int)localtime_r;
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  ac_cv_func_localtime_r=yes; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+fi
+      done
+      rm -f conftest.$ac_ext conftest$ac_exeext
+#set +x
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_func_localtime_r" >&5
+$as_echo "$ac_cv_func_localtime_r" >&6; }
+  if test "$ac_cv_func_localtime_r" != no; then :
+
+$as_echo "#define HAVE_LOCALTIME_R 1" >>confdefs.h
+
+elif :; then :
+
+fi
+
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for nanosleep" >&5
+$as_echo_n "checking for nanosleep... " >&6; }
+if test "${ac_cv_func_nanosleep+set}" = set; then :
+  $as_echo_n "(cached) " >&6
+else
+
+#set -x
+      ac_cv_func_nanosleep="no"
+      echo > conftest.log
+      for ac_headers in  ""; do
+if false; then
+        cat << \EOF > conftest.c
+EOF
+        if test -n "$ac_headers"; then
+          for ac_header in `echo $ac_headers|sed 's/+/ /g'` ""; do
+            if test -n "$ac_header"; then
+              echo "#include <$ac_header>" >> conftest.c
+            fi
+          done
+        else
+          echo "extern int nanosleep();" >> conftest.c
+        fi
+        cat << \EOF >> conftest.c
+int main(void) { return (int)nanosleep; }
+EOF
+
+#cat conftest.$ac_ext
+        ${CC} ${CFLAGS} -o conftest$ac_exeext conftest.$ac_ext ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
+        if test $rc -eq 0; then
+          ac_cv_func_nanosleep=yes
+          break
+        fi
+else
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo $ac_headers|sed 's/+/\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
+int
+main ()
+{
+return (int)nanosleep;
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  ac_cv_func_nanosleep=yes; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+fi
+      done
+      rm -f conftest.$ac_ext conftest$ac_exeext
+#set +x
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_func_nanosleep" >&5
+$as_echo "$ac_cv_func_nanosleep" >&6; }
+  if test "$ac_cv_func_nanosleep" != no; then :
+
+$as_echo "#define HAVE_NANOSLEEP 1" >>confdefs.h
+
+elif :; then :
+
+fi
+
+
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for pipe" >&5
+$as_echo_n "checking for pipe... " >&6; }
+if test "${ac_cv_func_pipe+set}" = set; then :
+  $as_echo_n "(cached) " >&6
+else
+
+#set -x
+      ac_cv_func_pipe="no"
+      echo > conftest.log
+      for ac_headers in  ""; do
+if false; then
+        cat << \EOF > conftest.c
+EOF
+        if test -n "$ac_headers"; then
+          for ac_header in `echo $ac_headers|sed 's/+/ /g'` ""; do
+            if test -n "$ac_header"; then
+              echo "#include <$ac_header>" >> conftest.c
+            fi
+          done
+        else
+          echo "extern int pipe();" >> conftest.c
+        fi
+        cat << \EOF >> conftest.c
+int main(void) { return (int)pipe; }
+EOF
+
+#cat conftest.$ac_ext
+        ${CC} ${CFLAGS} -o conftest$ac_exeext conftest.$ac_ext ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
+        if test $rc -eq 0; then
+          ac_cv_func_pipe=yes
+          break
+        fi
+else
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo $ac_headers|sed 's/+/\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
+int
+main ()
+{
+return (int)pipe;
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  ac_cv_func_pipe=yes; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+fi
+      done
+      rm -f conftest.$ac_ext conftest$ac_exeext
+#set +x
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_func_pipe" >&5
+$as_echo "$ac_cv_func_pipe" >&6; }
+  if test "$ac_cv_func_pipe" != no; then :
+
+$as_echo "#define HAVE_PIPE 1" >>confdefs.h
+
+elif :; then :
+
+fi
+
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for fork" >&5
+$as_echo_n "checking for fork... " >&6; }
+if test "${ac_cv_func_fork+set}" = set; then :
+  $as_echo_n "(cached) " >&6
+else
+
+#set -x
+      ac_cv_func_fork="no"
+      echo > conftest.log
+      for ac_headers in  ""; do
+if false; then
+        cat << \EOF > conftest.c
+EOF
+        if test -n "$ac_headers"; then
+          for ac_header in `echo $ac_headers|sed 's/+/ /g'` ""; do
+            if test -n "$ac_header"; then
+              echo "#include <$ac_header>" >> conftest.c
+            fi
+          done
+        else
+          echo "extern int fork();" >> conftest.c
+        fi
+        cat << \EOF >> conftest.c
+int main(void) { return (int)fork; }
+EOF
+
+#cat conftest.$ac_ext
+        ${CC} ${CFLAGS} -o conftest$ac_exeext conftest.$ac_ext ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
+        if test $rc -eq 0; then
+          ac_cv_func_fork=yes
+          break
+        fi
+else
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo $ac_headers|sed 's/+/\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
+int
+main ()
+{
+return (int)fork;
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  ac_cv_func_fork=yes; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+fi
+      done
+      rm -f conftest.$ac_ext conftest$ac_exeext
+#set +x
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_func_fork" >&5
+$as_echo "$ac_cv_func_fork" >&6; }
+  if test "$ac_cv_func_fork" != no; then :
+
+$as_echo "#define HAVE_FORK 1" >>confdefs.h
+
+elif :; then :
+
+fi
+
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for waitpid" >&5
+$as_echo_n "checking for waitpid... " >&6; }
+if test "${ac_cv_func_waitpid+set}" = set; then :
+  $as_echo_n "(cached) " >&6
+else
+
+#set -x
+      ac_cv_func_waitpid="no"
+      echo > conftest.log
+      for ac_headers in  ""; do
+if false; then
+        cat << \EOF > conftest.c
+EOF
+        if test -n "$ac_headers"; then
+          for ac_header in `echo $ac_headers|sed 's/+/ /g'` ""; do
+            if test -n "$ac_header"; then
+              echo "#include <$ac_header>" >> conftest.c
+            fi
+          done
+        else
+          echo "extern int waitpid();" >> conftest.c
+        fi
+        cat << \EOF >> conftest.c
+int main(void) { return (int)waitpid; }
+EOF
+
+#cat conftest.$ac_ext
+        ${CC} ${CFLAGS} -o conftest$ac_exeext conftest.$ac_ext ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
+        if test $rc -eq 0; then
+          ac_cv_func_waitpid=yes
+          break
+        fi
+else
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo $ac_headers|sed 's/+/\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
+int
+main ()
+{
+return (int)waitpid;
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  ac_cv_func_waitpid=yes; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+fi
+      done
+      rm -f conftest.$ac_ext conftest$ac_exeext
+#set +x
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_func_waitpid" >&5
+$as_echo "$ac_cv_func_waitpid" >&6; }
+  if test "$ac_cv_func_waitpid" != no; then :
+
+$as_echo "#define HAVE_WAITPID 1" >>confdefs.h
+
+elif :; then :
+
+fi
 
 
 
