@@ -5792,6 +5792,7 @@ for ac_header in \
                  sys/socket.h \
                  sys/statvfs.h \
                  sys/wait.h \
+                 termios.h \
 
 do :
   as_ac_Header=`$as_echo "ac_cv_header_$ac_header" | $as_tr_sh`
@@ -6196,21 +6197,9 @@ if test "${ac_cv_search_libraries_round+set}" = set; then :
   $as_echo_n "(cached) " >&6
 else
 
-            ac_func_search_libraries_save_CFLAGS="$CFLAGS";
-      ac_func_search_libraries_save_LIBS=$LIBS
+            ac_func_search_libraries_save_LIBS=$LIBS
 
-      cat << \EOF > conftest.$ac_ext
-EOF
-      for ac_header in  ""; do
-        if test -n "$ac_header"; then
-          echo "#include <$ac_header>" >> conftest.$ac_ext
-        fi
-      done
-      cat << \EOF >> conftest.$ac_ext
-int main(void) { return (int)round; }
-EOF
-
-            for ac_library in m ""; do
+      for ac_library in m ""; do
         if test -z "$ac_library"; then
           ac_result="none required"
         else
@@ -6218,28 +6207,33 @@ EOF
           LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
         fi
 
-#cat conftest.$ac_ext
-#set -x
-        ${CC} ${CFLAGS} -c conftest.c -o conftest.o 1>/dev/null 2>/dev/null; rc=$?
-        if test $rc -eq 0; then
-          ${LD} ${LDFLAGS} -o conftest conftest.o ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
-          if test $rc -eq 0; then
-            ac_cv_search_libraries_round=$ac_result
-            if test "${ac_cv_search_libraries_round+set}" = set; then :
-  break
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main ()
+{
+`if test -z ""; then echo "extern void round();"; fi` return (int)round;
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_search_libraries_round=$ac_result; break
+
 fi
-          fi
-        fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
       done
       if test "${ac_cv_search_libraries_round+set}" = set; then :
 
 else
   ac_cv_search_libraries_round=no
 fi
-      rm -f conftest.$ac_ext conftest.$ac_objext conftest$ac_exeext
 
             LIBS=$ac_func_search_libraries_save_LIBS
-      CFLAGS=$ac_func_search_libraries_save_CFLAGS
 
 
 fi
@@ -6261,21 +6255,9 @@ if test "${ac_cv_search_libraries_dlopen+set}" = set; then :
   $as_echo_n "(cached) " >&6
 else
 
-            ac_func_search_libraries_save_CFLAGS="$CFLAGS";
-      ac_func_search_libraries_save_LIBS=$LIBS
+            ac_func_search_libraries_save_LIBS=$LIBS
 
-      cat << \EOF > conftest.$ac_ext
-EOF
-      for ac_header in  ""; do
-        if test -n "$ac_header"; then
-          echo "#include <$ac_header>" >> conftest.$ac_ext
-        fi
-      done
-      cat << \EOF >> conftest.$ac_ext
-int main(void) { return (int)dlopen; }
-EOF
-
-            for ac_library in dl ""; do
+      for ac_library in dl ""; do
         if test -z "$ac_library"; then
           ac_result="none required"
         else
@@ -6283,28 +6265,33 @@ EOF
           LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
         fi
 
-#cat conftest.$ac_ext
-#set -x
-        ${CC} ${CFLAGS} -c conftest.c -o conftest.o 1>/dev/null 2>/dev/null; rc=$?
-        if test $rc -eq 0; then
-          ${LD} ${LDFLAGS} -o conftest conftest.o ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
-          if test $rc -eq 0; then
-            ac_cv_search_libraries_dlopen=$ac_result
-            if test "${ac_cv_search_libraries_dlopen+set}" = set; then :
-  break
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main ()
+{
+`if test -z ""; then echo "extern void dlopen();"; fi` return (int)dlopen;
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_search_libraries_dlopen=$ac_result; break
+
 fi
-          fi
-        fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
       done
       if test "${ac_cv_search_libraries_dlopen+set}" = set; then :
 
 else
   ac_cv_search_libraries_dlopen=no
 fi
-      rm -f conftest.$ac_ext conftest.$ac_objext conftest$ac_exeext
 
             LIBS=$ac_func_search_libraries_save_LIBS
-      CFLAGS=$ac_func_search_libraries_save_CFLAGS
 
 
 fi
@@ -6318,27 +6305,15 @@ fi
 
 
     ac_result=""
-  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing pthread_create" >&5
-$as_echo_n "checking for library containing pthread_create... " >&6; }
-if test "${ac_cv_search_libraries_pthread_create+set}" = set; then :
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing clock_gettime" >&5
+$as_echo_n "checking for library containing clock_gettime... " >&6; }
+if test "${ac_cv_search_libraries_clock_gettime+set}" = set; then :
   $as_echo_n "(cached) " >&6
 else
 
-            ac_func_search_libraries_save_CFLAGS="$CFLAGS";
-      ac_func_search_libraries_save_LIBS=$LIBS
+            ac_func_search_libraries_save_LIBS=$LIBS
 
-      cat << \EOF > conftest.$ac_ext
-EOF
-      for ac_header in  ""; do
-        if test -n "$ac_header"; then
-          echo "#include <$ac_header>" >> conftest.$ac_ext
-        fi
-      done
-      cat << \EOF >> conftest.$ac_ext
-int main(void) { return (int)pthread_create; }
-EOF
-
-            for ac_library in pthread ""; do
+      for ac_library in rt ""; do
         if test -z "$ac_library"; then
           ac_result="none required"
         else
@@ -6346,28 +6321,91 @@ EOF
           LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
         fi
 
-#cat conftest.$ac_ext
-#set -x
-        ${CC} ${CFLAGS} -c conftest.c -o conftest.o 1>/dev/null 2>/dev/null; rc=$?
-        if test $rc -eq 0; then
-          ${LD} ${LDFLAGS} -o conftest conftest.o ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
-          if test $rc -eq 0; then
-            ac_cv_search_libraries_pthread_create=$ac_result
-            if test "${ac_cv_search_libraries_pthread_create+set}" = set; then :
-  break
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main ()
+{
+`if test -z ""; then echo "extern void clock_gettime();"; fi` return (int)clock_gettime;
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_search_libraries_clock_gettime=$ac_result; break
+
 fi
-          fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+      done
+      if test "${ac_cv_search_libraries_clock_gettime+set}" = set; then :
+
+else
+  ac_cv_search_libraries_clock_gettime=no
+fi
+
+            LIBS=$ac_func_search_libraries_save_LIBS
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_libraries_clock_gettime" >&5
+$as_echo "$ac_cv_search_libraries_clock_gettime" >&6; }
+  ac_result=$ac_cv_search_libraries_clock_gettime
+  if test "$ac_result" != no; then :
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" LIBRARIES="$LIBRARIES rt"
+else
+  as_fn_error $? "rt library not found" "$LINENO" 5
+fi
+
+
+
+    ac_result=""
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing pthread_create" >&5
+$as_echo_n "checking for library containing pthread_create... " >&6; }
+if test "${ac_cv_search_libraries_pthread_create+set}" = set; then :
+  $as_echo_n "(cached) " >&6
+else
+
+            ac_func_search_libraries_save_LIBS=$LIBS
+
+      for ac_library in pthread ""; do
+        if test -z "$ac_library"; then
+          ac_result="none required"
+        else
+          ac_result=-l$ac_library
+          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
         fi
+
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main ()
+{
+`if test -z ""; then echo "extern void pthread_create();"; fi` return (int)pthread_create;
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_search_libraries_pthread_create=$ac_result; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
       done
       if test "${ac_cv_search_libraries_pthread_create+set}" = set; then :
 
 else
   ac_cv_search_libraries_pthread_create=no
 fi
-      rm -f conftest.$ac_ext conftest.$ac_objext conftest$ac_exeext
 
             LIBS=$ac_func_search_libraries_save_LIBS
-      CFLAGS=$ac_func_search_libraries_save_CFLAGS
 
 
 fi
@@ -6390,9 +6428,11 @@ if test "${ac_cv_search_static_pthread_create+set}" = set; then :
   $as_echo_n "(cached) " >&6
 else
 
-            ac_func_search_static_libraries_save_LIBS=$LIBS
+            ac_func_search_static_libraries_save_CFLAGS="$CFLAGS"
+      ac_func_search_static_libraries_save_LIBS="$LIBS"
 
-            for ac_library in pthreadGC2 ""; do
+            CFLAGS="$CFLAGS -static"
+      for ac_library in pthreadGC2 ""; do
         if test -z "$ac_library"; then
           ac_result="none required"
         else
@@ -6402,11 +6442,11 @@ else
 
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo pthread.h|sed 's/ /\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
+`echo pthread.h|sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
 int
 main ()
 {
-return (int)pthread_create;
+`if test -z "pthread.h"; then echo "extern void pthread_create();"; fi` return (int)pthread_create;
 
   ;
   return 0;
@@ -6419,7 +6459,6 @@ if ac_fn_c_try_link "$LINENO"; then :
 fi
 rm -f core conftest.err conftest.$ac_objext \
     conftest$ac_exeext conftest.$ac_ext
-
       done
       if test "${ac_cv_search_static_pthread_create+set}" = set; then :
 
@@ -6428,6 +6467,7 @@ else
 fi
 
             LIBS=$ac_func_search_libraries_save_LIBS
+      CFLAGS=$ac_func_search_static_libraries_save_CFLAGS
 
 
 fi
@@ -6446,9 +6486,11 @@ if test "${ac_cv_search_static_WSAStartup+set}" = set; then :
   $as_echo_n "(cached) " >&6
 else
 
-            ac_func_search_static_libraries_save_LIBS=$LIBS
+            ac_func_search_static_libraries_save_CFLAGS="$CFLAGS"
+      ac_func_search_static_libraries_save_LIBS="$LIBS"
 
-            for ac_library in wsock32 ""; do
+            CFLAGS="$CFLAGS -static"
+      for ac_library in wsock32 ""; do
         if test -z "$ac_library"; then
           ac_result="none required"
         else
@@ -6458,11 +6500,11 @@ else
 
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo winsock2.h|sed 's/ /\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
+`echo winsock2.h|sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
 int
 main ()
 {
-return (int)WSAStartup;
+`if test -z "winsock2.h"; then echo "extern void WSAStartup();"; fi` return (int)WSAStartup;
 
   ;
   return 0;
@@ -6475,7 +6517,6 @@ if ac_fn_c_try_link "$LINENO"; then :
 fi
 rm -f core conftest.err conftest.$ac_objext \
     conftest$ac_exeext conftest.$ac_ext
-
       done
       if test "${ac_cv_search_static_WSAStartup+set}" = set; then :
 
@@ -6484,6 +6525,7 @@ else
 fi
 
             LIBS=$ac_func_search_libraries_save_LIBS
+      CFLAGS=$ac_func_search_static_libraries_save_CFLAGS
 
 
 fi
@@ -6570,21 +6612,9 @@ if test "${ac_cv_search_libraries_zlibVersion+set}" = set; then :
   $as_echo_n "(cached) " >&6
 else
 
-            ac_func_search_libraries_save_CFLAGS="$CFLAGS";
-      ac_func_search_libraries_save_LIBS=$LIBS
+            ac_func_search_libraries_save_LIBS=$LIBS
 
-      cat << \EOF > conftest.$ac_ext
-EOF
-      for ac_header in  ""; do
-        if test -n "$ac_header"; then
-          echo "#include <$ac_header>" >> conftest.$ac_ext
-        fi
-      done
-      cat << \EOF >> conftest.$ac_ext
-int main(void) { return (int)zlibVersion; }
-EOF
-
-            for ac_library in z ""; do
+      for ac_library in z ""; do
         if test -z "$ac_library"; then
           ac_result="none required"
         else
@@ -6592,28 +6622,33 @@ EOF
           LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
         fi
 
-#cat conftest.$ac_ext
-#set -x
-        ${CC} ${CFLAGS} -c conftest.c -o conftest.o 1>/dev/null 2>/dev/null; rc=$?
-        if test $rc -eq 0; then
-          ${LD} ${LDFLAGS} -o conftest conftest.o ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
-          if test $rc -eq 0; then
-            ac_cv_search_libraries_zlibVersion=$ac_result
-            if test "${ac_cv_search_libraries_zlibVersion+set}" = set; then :
-  break
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main ()
+{
+`if test -z ""; then echo "extern void zlibVersion();"; fi` return (int)zlibVersion;
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_search_libraries_zlibVersion=$ac_result; break
+
 fi
-          fi
-        fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
       done
       if test "${ac_cv_search_libraries_zlibVersion+set}" = set; then :
 
 else
   ac_cv_search_libraries_zlibVersion=no
 fi
-      rm -f conftest.$ac_ext conftest.$ac_objext conftest$ac_exeext
 
             LIBS=$ac_func_search_libraries_save_LIBS
-      CFLAGS=$ac_func_search_libraries_save_CFLAGS
 
 
 fi
@@ -6636,9 +6671,11 @@ if test "${ac_cv_search_static_zlibVersion+set}" = set; then :
   $as_echo_n "(cached) " >&6
 else
 
-            ac_func_search_static_libraries_save_LIBS=$LIBS
+            ac_func_search_static_libraries_save_CFLAGS="$CFLAGS"
+      ac_func_search_static_libraries_save_LIBS="$LIBS"
 
-            for ac_library in z ""; do
+            CFLAGS="$CFLAGS -static"
+      for ac_library in z ""; do
         if test -z "$ac_library"; then
           ac_result="none required"
         else
@@ -6648,11 +6685,11 @@ else
 
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo |sed 's/ /\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
+`echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
 int
 main ()
 {
-return (int)zlibVersion;
+`if test -z ""; then echo "extern void zlibVersion();"; fi` return (int)zlibVersion;
 
   ;
   return 0;
@@ -6665,7 +6702,6 @@ if ac_fn_c_try_link "$LINENO"; then :
 fi
 rm -f core conftest.err conftest.$ac_objext \
     conftest$ac_exeext conftest.$ac_ext
-
       done
       if test "${ac_cv_search_static_zlibVersion+set}" = set; then :
 
@@ -6674,6 +6710,7 @@ else
 fi
 
             LIBS=$ac_func_search_libraries_save_LIBS
+      CFLAGS=$ac_func_search_static_libraries_save_CFLAGS
 
 
 fi
@@ -6697,21 +6734,9 @@ if test "${ac_cv_search_libraries_zlibVersion+set}" = set; then :
   $as_echo_n "(cached) " >&6
 else
 
-            ac_func_search_libraries_save_CFLAGS="$CFLAGS";
-      ac_func_search_libraries_save_LIBS=$LIBS
+            ac_func_search_libraries_save_LIBS=$LIBS
 
-      cat << \EOF > conftest.$ac_ext
-EOF
-      for ac_header in  ""; do
-        if test -n "$ac_header"; then
-          echo "#include <$ac_header>" >> conftest.$ac_ext
-        fi
-      done
-      cat << \EOF >> conftest.$ac_ext
-int main(void) { return (int)zlibVersion; }
-EOF
-
-            for ac_library in z ""; do
+      for ac_library in z ""; do
         if test -z "$ac_library"; then
           ac_result="none required"
         else
@@ -6719,28 +6744,33 @@ EOF
           LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
         fi
 
-#cat conftest.$ac_ext
-#set -x
-        ${CC} ${CFLAGS} -c conftest.c -o conftest.o 1>/dev/null 2>/dev/null; rc=$?
-        if test $rc -eq 0; then
-          ${LD} ${LDFLAGS} -o conftest conftest.o ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
-          if test $rc -eq 0; then
-            ac_cv_search_libraries_zlibVersion=$ac_result
-            if test "${ac_cv_search_libraries_zlibVersion+set}" = set; then :
-  break
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main ()
+{
+`if test -z ""; then echo "extern void zlibVersion();"; fi` return (int)zlibVersion;
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_search_libraries_zlibVersion=$ac_result; break
+
 fi
-          fi
-        fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
       done
       if test "${ac_cv_search_libraries_zlibVersion+set}" = set; then :
 
 else
   ac_cv_search_libraries_zlibVersion=no
 fi
-      rm -f conftest.$ac_ext conftest.$ac_objext conftest$ac_exeext
 
             LIBS=$ac_func_search_libraries_save_LIBS
-      CFLAGS=$ac_func_search_libraries_save_CFLAGS
 
 
 fi
@@ -6809,21 +6839,9 @@ if test "${ac_cv_search_libraries_BZ2_bzCompressInit+set}" = set; then :
   $as_echo_n "(cached) " >&6
 else
 
-            ac_func_search_libraries_save_CFLAGS="$CFLAGS";
-      ac_func_search_libraries_save_LIBS=$LIBS
+            ac_func_search_libraries_save_LIBS=$LIBS
 
-      cat << \EOF > conftest.$ac_ext
-EOF
-      for ac_header in  ""; do
-        if test -n "$ac_header"; then
-          echo "#include <$ac_header>" >> conftest.$ac_ext
-        fi
-      done
-      cat << \EOF >> conftest.$ac_ext
-int main(void) { return (int)BZ2_bzCompressInit; }
-EOF
-
-            for ac_library in bz2 ""; do
+      for ac_library in bz2 ""; do
         if test -z "$ac_library"; then
           ac_result="none required"
         else
@@ -6831,28 +6849,33 @@ EOF
           LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
         fi
 
-#cat conftest.$ac_ext
-#set -x
-        ${CC} ${CFLAGS} -c conftest.c -o conftest.o 1>/dev/null 2>/dev/null; rc=$?
-        if test $rc -eq 0; then
-          ${LD} ${LDFLAGS} -o conftest conftest.o ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
-          if test $rc -eq 0; then
-            ac_cv_search_libraries_BZ2_bzCompressInit=$ac_result
-            if test "${ac_cv_search_libraries_BZ2_bzCompressInit+set}" = set; then :
-  break
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main ()
+{
+`if test -z ""; then echo "extern void BZ2_bzCompressInit();"; fi` return (int)BZ2_bzCompressInit;
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_search_libraries_BZ2_bzCompressInit=$ac_result; break
+
 fi
-          fi
-        fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
       done
       if test "${ac_cv_search_libraries_BZ2_bzCompressInit+set}" = set; then :
 
 else
   ac_cv_search_libraries_BZ2_bzCompressInit=no
 fi
-      rm -f conftest.$ac_ext conftest.$ac_objext conftest$ac_exeext
 
             LIBS=$ac_func_search_libraries_save_LIBS
-      CFLAGS=$ac_func_search_libraries_save_CFLAGS
 
 
 fi
@@ -6875,9 +6898,11 @@ if test "${ac_cv_search_static_BZ2_bzCompressInit+set}" = set; then :
   $as_echo_n "(cached) " >&6
 else
 
-            ac_func_search_static_libraries_save_LIBS=$LIBS
+            ac_func_search_static_libraries_save_CFLAGS="$CFLAGS"
+      ac_func_search_static_libraries_save_LIBS="$LIBS"
 
-            for ac_library in bz2 ""; do
+            CFLAGS="$CFLAGS -static"
+      for ac_library in bz2 ""; do
         if test -z "$ac_library"; then
           ac_result="none required"
         else
@@ -6887,11 +6912,11 @@ else
 
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo |sed 's/ /\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
+`echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
 int
 main ()
 {
-return (int)BZ2_bzCompressInit;
+`if test -z ""; then echo "extern void BZ2_bzCompressInit();"; fi` return (int)BZ2_bzCompressInit;
 
   ;
   return 0;
@@ -6904,7 +6929,6 @@ if ac_fn_c_try_link "$LINENO"; then :
 fi
 rm -f core conftest.err conftest.$ac_objext \
     conftest$ac_exeext conftest.$ac_ext
-
       done
       if test "${ac_cv_search_static_BZ2_bzCompressInit+set}" = set; then :
 
@@ -6913,6 +6937,7 @@ else
 fi
 
             LIBS=$ac_func_search_libraries_save_LIBS
+      CFLAGS=$ac_func_search_static_libraries_save_CFLAGS
 
 
 fi
@@ -6936,21 +6961,9 @@ if test "${ac_cv_search_libraries_BZ2_bzCompressInit+set}" = set; then :
   $as_echo_n "(cached) " >&6
 else
 
-            ac_func_search_libraries_save_CFLAGS="$CFLAGS";
-      ac_func_search_libraries_save_LIBS=$LIBS
+            ac_func_search_libraries_save_LIBS=$LIBS
 
-      cat << \EOF > conftest.$ac_ext
-EOF
-      for ac_header in  ""; do
-        if test -n "$ac_header"; then
-          echo "#include <$ac_header>" >> conftest.$ac_ext
-        fi
-      done
-      cat << \EOF >> conftest.$ac_ext
-int main(void) { return (int)BZ2_bzCompressInit; }
-EOF
-
-            for ac_library in bz2 ""; do
+      for ac_library in bz2 ""; do
         if test -z "$ac_library"; then
           ac_result="none required"
         else
@@ -6958,28 +6971,33 @@ EOF
           LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
         fi
 
-#cat conftest.$ac_ext
-#set -x
-        ${CC} ${CFLAGS} -c conftest.c -o conftest.o 1>/dev/null 2>/dev/null; rc=$?
-        if test $rc -eq 0; then
-          ${LD} ${LDFLAGS} -o conftest conftest.o ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
-          if test $rc -eq 0; then
-            ac_cv_search_libraries_BZ2_bzCompressInit=$ac_result
-            if test "${ac_cv_search_libraries_BZ2_bzCompressInit+set}" = set; then :
-  break
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main ()
+{
+`if test -z ""; then echo "extern void BZ2_bzCompressInit();"; fi` return (int)BZ2_bzCompressInit;
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_search_libraries_BZ2_bzCompressInit=$ac_result; break
+
 fi
-          fi
-        fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
       done
       if test "${ac_cv_search_libraries_BZ2_bzCompressInit+set}" = set; then :
 
 else
   ac_cv_search_libraries_BZ2_bzCompressInit=no
 fi
-      rm -f conftest.$ac_ext conftest.$ac_objext conftest$ac_exeext
 
             LIBS=$ac_func_search_libraries_save_LIBS
-      CFLAGS=$ac_func_search_libraries_save_CFLAGS
 
 
 fi
@@ -7058,21 +7076,9 @@ if test "${ac_cv_search_libraries_lzma_easy_encoder+set}" = set; then :
   $as_echo_n "(cached) " >&6
 else
 
-            ac_func_search_libraries_save_CFLAGS="$CFLAGS";
-      ac_func_search_libraries_save_LIBS=$LIBS
+            ac_func_search_libraries_save_LIBS=$LIBS
 
-      cat << \EOF > conftest.$ac_ext
-EOF
-      for ac_header in  ""; do
-        if test -n "$ac_header"; then
-          echo "#include <$ac_header>" >> conftest.$ac_ext
-        fi
-      done
-      cat << \EOF >> conftest.$ac_ext
-int main(void) { return (int)lzma_easy_encoder; }
-EOF
-
-            for ac_library in lzma ""; do
+      for ac_library in lzma ""; do
         if test -z "$ac_library"; then
           ac_result="none required"
         else
@@ -7080,28 +7086,33 @@ EOF
           LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
         fi
 
-#cat conftest.$ac_ext
-#set -x
-        ${CC} ${CFLAGS} -c conftest.c -o conftest.o 1>/dev/null 2>/dev/null; rc=$?
-        if test $rc -eq 0; then
-          ${LD} ${LDFLAGS} -o conftest conftest.o ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
-          if test $rc -eq 0; then
-            ac_cv_search_libraries_lzma_easy_encoder=$ac_result
-            if test "${ac_cv_search_libraries_lzma_easy_encoder+set}" = set; then :
-  break
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main ()
+{
+`if test -z ""; then echo "extern void lzma_easy_encoder();"; fi` return (int)lzma_easy_encoder;
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_search_libraries_lzma_easy_encoder=$ac_result; break
+
 fi
-          fi
-        fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
       done
       if test "${ac_cv_search_libraries_lzma_easy_encoder+set}" = set; then :
 
 else
   ac_cv_search_libraries_lzma_easy_encoder=no
 fi
-      rm -f conftest.$ac_ext conftest.$ac_objext conftest$ac_exeext
 
             LIBS=$ac_func_search_libraries_save_LIBS
-      CFLAGS=$ac_func_search_libraries_save_CFLAGS
 
 
 fi
@@ -7124,9 +7135,11 @@ if test "${ac_cv_search_static_lzma_easy_encoder+set}" = set; then :
   $as_echo_n "(cached) " >&6
 else
 
-            ac_func_search_static_libraries_save_LIBS=$LIBS
+            ac_func_search_static_libraries_save_CFLAGS="$CFLAGS"
+      ac_func_search_static_libraries_save_LIBS="$LIBS"
 
-            for ac_library in lzma ""; do
+            CFLAGS="$CFLAGS -static"
+      for ac_library in lzma ""; do
         if test -z "$ac_library"; then
           ac_result="none required"
         else
@@ -7136,11 +7149,11 @@ else
 
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo |sed 's/ /\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
+`echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
 int
 main ()
 {
-return (int)lzma_easy_encoder;
+`if test -z ""; then echo "extern void lzma_easy_encoder();"; fi` return (int)lzma_easy_encoder;
 
   ;
   return 0;
@@ -7153,7 +7166,6 @@ if ac_fn_c_try_link "$LINENO"; then :
 fi
 rm -f core conftest.err conftest.$ac_objext \
     conftest$ac_exeext conftest.$ac_ext
-
       done
       if test "${ac_cv_search_static_lzma_easy_encoder+set}" = set; then :
 
@@ -7162,6 +7174,7 @@ else
 fi
 
             LIBS=$ac_func_search_libraries_save_LIBS
+      CFLAGS=$ac_func_search_static_libraries_save_CFLAGS
 
 
 fi
@@ -7185,21 +7198,9 @@ if test "${ac_cv_search_libraries_lzma_easy_encoder+set}" = set; then :
   $as_echo_n "(cached) " >&6
 else
 
-            ac_func_search_libraries_save_CFLAGS="$CFLAGS";
-      ac_func_search_libraries_save_LIBS=$LIBS
+            ac_func_search_libraries_save_LIBS=$LIBS
 
-      cat << \EOF > conftest.$ac_ext
-EOF
-      for ac_header in  ""; do
-        if test -n "$ac_header"; then
-          echo "#include <$ac_header>" >> conftest.$ac_ext
-        fi
-      done
-      cat << \EOF >> conftest.$ac_ext
-int main(void) { return (int)lzma_easy_encoder; }
-EOF
-
-            for ac_library in lzma ""; do
+      for ac_library in lzma ""; do
         if test -z "$ac_library"; then
           ac_result="none required"
         else
@@ -7207,28 +7208,33 @@ EOF
           LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
         fi
 
-#cat conftest.$ac_ext
-#set -x
-        ${CC} ${CFLAGS} -c conftest.c -o conftest.o 1>/dev/null 2>/dev/null; rc=$?
-        if test $rc -eq 0; then
-          ${LD} ${LDFLAGS} -o conftest conftest.o ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
-          if test $rc -eq 0; then
-            ac_cv_search_libraries_lzma_easy_encoder=$ac_result
-            if test "${ac_cv_search_libraries_lzma_easy_encoder+set}" = set; then :
-  break
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main ()
+{
+`if test -z ""; then echo "extern void lzma_easy_encoder();"; fi` return (int)lzma_easy_encoder;
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_search_libraries_lzma_easy_encoder=$ac_result; break
+
 fi
-          fi
-        fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
       done
       if test "${ac_cv_search_libraries_lzma_easy_encoder+set}" = set; then :
 
 else
   ac_cv_search_libraries_lzma_easy_encoder=no
 fi
-      rm -f conftest.$ac_ext conftest.$ac_objext conftest$ac_exeext
 
             LIBS=$ac_func_search_libraries_save_LIBS
-      CFLAGS=$ac_func_search_libraries_save_CFLAGS
 
 
 fi
@@ -7391,21 +7397,9 @@ if test "${ac_cv_search_libraries_gpg_strerror+set}" = set; then :
   $as_echo_n "(cached) " >&6
 else
 
-            ac_func_search_libraries_save_CFLAGS="$CFLAGS";
-      ac_func_search_libraries_save_LIBS=$LIBS
+            ac_func_search_libraries_save_LIBS=$LIBS
 
-      cat << \EOF > conftest.$ac_ext
-EOF
-      for ac_header in  ""; do
-        if test -n "$ac_header"; then
-          echo "#include <$ac_header>" >> conftest.$ac_ext
-        fi
-      done
-      cat << \EOF >> conftest.$ac_ext
-int main(void) { return (int)gpg_strerror; }
-EOF
-
-            for ac_library in gpg-error ""; do
+      for ac_library in gpg-error ""; do
         if test -z "$ac_library"; then
           ac_result="none required"
         else
@@ -7413,28 +7407,33 @@ EOF
           LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
         fi
 
-#cat conftest.$ac_ext
-#set -x
-        ${CC} ${CFLAGS} -c conftest.c -o conftest.o 1>/dev/null 2>/dev/null; rc=$?
-        if test $rc -eq 0; then
-          ${LD} ${LDFLAGS} -o conftest conftest.o ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
-          if test $rc -eq 0; then
-            ac_cv_search_libraries_gpg_strerror=$ac_result
-            if test "${ac_cv_search_libraries_gpg_strerror+set}" = set; then :
-  break
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main ()
+{
+`if test -z ""; then echo "extern void gpg_strerror();"; fi` return (int)gpg_strerror;
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_search_libraries_gpg_strerror=$ac_result; break
+
 fi
-          fi
-        fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
       done
       if test "${ac_cv_search_libraries_gpg_strerror+set}" = set; then :
 
 else
   ac_cv_search_libraries_gpg_strerror=no
 fi
-      rm -f conftest.$ac_ext conftest.$ac_objext conftest$ac_exeext
 
             LIBS=$ac_func_search_libraries_save_LIBS
-      CFLAGS=$ac_func_search_libraries_save_CFLAGS
 
 
 fi
@@ -7457,9 +7456,11 @@ if test "${ac_cv_search_static_gpg_strerror+set}" = set; then :
   $as_echo_n "(cached) " >&6
 else
 
-            ac_func_search_static_libraries_save_LIBS=$LIBS
+            ac_func_search_static_libraries_save_CFLAGS="$CFLAGS"
+      ac_func_search_static_libraries_save_LIBS="$LIBS"
 
-            for ac_library in gpg-error ""; do
+            CFLAGS="$CFLAGS -static"
+      for ac_library in gpg-error ""; do
         if test -z "$ac_library"; then
           ac_result="none required"
         else
@@ -7469,11 +7470,11 @@ else
 
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo |sed 's/ /\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
+`echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
 int
 main ()
 {
-return (int)gpg_strerror;
+`if test -z ""; then echo "extern void gpg_strerror();"; fi` return (int)gpg_strerror;
 
   ;
   return 0;
@@ -7486,7 +7487,6 @@ if ac_fn_c_try_link "$LINENO"; then :
 fi
 rm -f core conftest.err conftest.$ac_objext \
     conftest$ac_exeext conftest.$ac_ext
-
       done
       if test "${ac_cv_search_static_gpg_strerror+set}" = set; then :
 
@@ -7495,6 +7495,7 @@ else
 fi
 
             LIBS=$ac_func_search_libraries_save_LIBS
+      CFLAGS=$ac_func_search_static_libraries_save_CFLAGS
 
 
 fi
@@ -7518,21 +7519,9 @@ if test "${ac_cv_search_libraries_gpg_strerror+set}" = set; then :
   $as_echo_n "(cached) " >&6
 else
 
-            ac_func_search_libraries_save_CFLAGS="$CFLAGS";
-      ac_func_search_libraries_save_LIBS=$LIBS
+            ac_func_search_libraries_save_LIBS=$LIBS
 
-      cat << \EOF > conftest.$ac_ext
-EOF
-      for ac_header in  ""; do
-        if test -n "$ac_header"; then
-          echo "#include <$ac_header>" >> conftest.$ac_ext
-        fi
-      done
-      cat << \EOF >> conftest.$ac_ext
-int main(void) { return (int)gpg_strerror; }
-EOF
-
-            for ac_library in gpg-error ""; do
+      for ac_library in gpg-error ""; do
         if test -z "$ac_library"; then
           ac_result="none required"
         else
@@ -7540,28 +7529,33 @@ EOF
           LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
         fi
 
-#cat conftest.$ac_ext
-#set -x
-        ${CC} ${CFLAGS} -c conftest.c -o conftest.o 1>/dev/null 2>/dev/null; rc=$?
-        if test $rc -eq 0; then
-          ${LD} ${LDFLAGS} -o conftest conftest.o ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
-          if test $rc -eq 0; then
-            ac_cv_search_libraries_gpg_strerror=$ac_result
-            if test "${ac_cv_search_libraries_gpg_strerror+set}" = set; then :
-  break
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main ()
+{
+`if test -z ""; then echo "extern void gpg_strerror();"; fi` return (int)gpg_strerror;
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_search_libraries_gpg_strerror=$ac_result; break
+
 fi
-          fi
-        fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
       done
       if test "${ac_cv_search_libraries_gpg_strerror+set}" = set; then :
 
 else
   ac_cv_search_libraries_gpg_strerror=no
 fi
-      rm -f conftest.$ac_ext conftest.$ac_objext conftest$ac_exeext
 
             LIBS=$ac_func_search_libraries_save_LIBS
-      CFLAGS=$ac_func_search_libraries_save_CFLAGS
 
 
 fi
@@ -7586,21 +7580,9 @@ if test "${ac_cv_search_libraries_gcry_check_version+set}" = set; then :
   $as_echo_n "(cached) " >&6
 else
 
-            ac_func_search_libraries_save_CFLAGS="$CFLAGS";
-      ac_func_search_libraries_save_LIBS=$LIBS
+            ac_func_search_libraries_save_LIBS=$LIBS
 
-      cat << \EOF > conftest.$ac_ext
-EOF
-      for ac_header in  ""; do
-        if test -n "$ac_header"; then
-          echo "#include <$ac_header>" >> conftest.$ac_ext
-        fi
-      done
-      cat << \EOF >> conftest.$ac_ext
-int main(void) { return (int)gcry_check_version; }
-EOF
-
-            for ac_library in gcrypt ""; do
+      for ac_library in gcrypt ""; do
         if test -z "$ac_library"; then
           ac_result="none required"
         else
@@ -7608,28 +7590,33 @@ EOF
           LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
         fi
 
-#cat conftest.$ac_ext
-#set -x
-        ${CC} ${CFLAGS} -c conftest.c -o conftest.o 1>/dev/null 2>/dev/null; rc=$?
-        if test $rc -eq 0; then
-          ${LD} ${LDFLAGS} -o conftest conftest.o ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
-          if test $rc -eq 0; then
-            ac_cv_search_libraries_gcry_check_version=$ac_result
-            if test "${ac_cv_search_libraries_gcry_check_version+set}" = set; then :
-  break
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main ()
+{
+`if test -z ""; then echo "extern void gcry_check_version();"; fi` return (int)gcry_check_version;
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_search_libraries_gcry_check_version=$ac_result; break
+
 fi
-          fi
-        fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
       done
       if test "${ac_cv_search_libraries_gcry_check_version+set}" = set; then :
 
 else
   ac_cv_search_libraries_gcry_check_version=no
 fi
-      rm -f conftest.$ac_ext conftest.$ac_objext conftest$ac_exeext
 
             LIBS=$ac_func_search_libraries_save_LIBS
-      CFLAGS=$ac_func_search_libraries_save_CFLAGS
 
 
 fi
@@ -7652,9 +7639,11 @@ if test "${ac_cv_search_static_gcry_check_version+set}" = set; then :
   $as_echo_n "(cached) " >&6
 else
 
-            ac_func_search_static_libraries_save_LIBS=$LIBS
+            ac_func_search_static_libraries_save_CFLAGS="$CFLAGS"
+      ac_func_search_static_libraries_save_LIBS="$LIBS"
 
-            for ac_library in gcrypt ""; do
+            CFLAGS="$CFLAGS -static"
+      for ac_library in gcrypt ""; do
         if test -z "$ac_library"; then
           ac_result="none required"
         else
@@ -7664,11 +7653,11 @@ else
 
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo |sed 's/ /\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
+`echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
 int
 main ()
 {
-return (int)gcry_check_version;
+`if test -z ""; then echo "extern void gcry_check_version();"; fi` return (int)gcry_check_version;
 
   ;
   return 0;
@@ -7681,7 +7670,6 @@ if ac_fn_c_try_link "$LINENO"; then :
 fi
 rm -f core conftest.err conftest.$ac_objext \
     conftest$ac_exeext conftest.$ac_ext
-
       done
       if test "${ac_cv_search_static_gcry_check_version+set}" = set; then :
 
@@ -7690,6 +7678,7 @@ else
 fi
 
             LIBS=$ac_func_search_libraries_save_LIBS
+      CFLAGS=$ac_func_search_static_libraries_save_CFLAGS
 
 
 fi
@@ -7713,21 +7702,9 @@ if test "${ac_cv_search_libraries_gcry_check_version+set}" = set; then :
   $as_echo_n "(cached) " >&6
 else
 
-            ac_func_search_libraries_save_CFLAGS="$CFLAGS";
-      ac_func_search_libraries_save_LIBS=$LIBS
+            ac_func_search_libraries_save_LIBS=$LIBS
 
-      cat << \EOF > conftest.$ac_ext
-EOF
-      for ac_header in  ""; do
-        if test -n "$ac_header"; then
-          echo "#include <$ac_header>" >> conftest.$ac_ext
-        fi
-      done
-      cat << \EOF >> conftest.$ac_ext
-int main(void) { return (int)gcry_check_version; }
-EOF
-
-            for ac_library in gcrypt ""; do
+      for ac_library in gcrypt ""; do
         if test -z "$ac_library"; then
           ac_result="none required"
         else
@@ -7735,28 +7712,33 @@ EOF
           LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
         fi
 
-#cat conftest.$ac_ext
-#set -x
-        ${CC} ${CFLAGS} -c conftest.c -o conftest.o 1>/dev/null 2>/dev/null; rc=$?
-        if test $rc -eq 0; then
-          ${LD} ${LDFLAGS} -o conftest conftest.o ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
-          if test $rc -eq 0; then
-            ac_cv_search_libraries_gcry_check_version=$ac_result
-            if test "${ac_cv_search_libraries_gcry_check_version+set}" = set; then :
-  break
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main ()
+{
+`if test -z ""; then echo "extern void gcry_check_version();"; fi` return (int)gcry_check_version;
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_search_libraries_gcry_check_version=$ac_result; break
+
 fi
-          fi
-        fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
       done
       if test "${ac_cv_search_libraries_gcry_check_version+set}" = set; then :
 
 else
   ac_cv_search_libraries_gcry_check_version=no
 fi
-      rm -f conftest.$ac_ext conftest.$ac_objext conftest$ac_exeext
 
             LIBS=$ac_func_search_libraries_save_LIBS
-      CFLAGS=$ac_func_search_libraries_save_CFLAGS
 
 
 fi
@@ -7841,21 +7823,9 @@ if test "${ac_cv_search_libraries_FtpInit+set}" = set; then :
   $as_echo_n "(cached) " >&6
 else
 
-            ac_func_search_libraries_save_CFLAGS="$CFLAGS";
-      ac_func_search_libraries_save_LIBS=$LIBS
+            ac_func_search_libraries_save_LIBS=$LIBS
 
-      cat << \EOF > conftest.$ac_ext
-EOF
-      for ac_header in  ""; do
-        if test -n "$ac_header"; then
-          echo "#include <$ac_header>" >> conftest.$ac_ext
-        fi
-      done
-      cat << \EOF >> conftest.$ac_ext
-int main(void) { return (int)FtpInit; }
-EOF
-
-            for ac_library in ftp ""; do
+      for ac_library in ftp ""; do
         if test -z "$ac_library"; then
           ac_result="none required"
         else
@@ -7863,28 +7833,33 @@ EOF
           LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
         fi
 
-#cat conftest.$ac_ext
-#set -x
-        ${CC} ${CFLAGS} -c conftest.c -o conftest.o 1>/dev/null 2>/dev/null; rc=$?
-        if test $rc -eq 0; then
-          ${LD} ${LDFLAGS} -o conftest conftest.o ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
-          if test $rc -eq 0; then
-            ac_cv_search_libraries_FtpInit=$ac_result
-            if test "${ac_cv_search_libraries_FtpInit+set}" = set; then :
-  break
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main ()
+{
+`if test -z ""; then echo "extern void FtpInit();"; fi` return (int)FtpInit;
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_search_libraries_FtpInit=$ac_result; break
+
 fi
-          fi
-        fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
       done
       if test "${ac_cv_search_libraries_FtpInit+set}" = set; then :
 
 else
   ac_cv_search_libraries_FtpInit=no
 fi
-      rm -f conftest.$ac_ext conftest.$ac_objext conftest$ac_exeext
 
             LIBS=$ac_func_search_libraries_save_LIBS
-      CFLAGS=$ac_func_search_libraries_save_CFLAGS
 
 
 fi
@@ -7907,9 +7882,11 @@ if test "${ac_cv_search_static_FtpInit+set}" = set; then :
   $as_echo_n "(cached) " >&6
 else
 
-            ac_func_search_static_libraries_save_LIBS=$LIBS
+            ac_func_search_static_libraries_save_CFLAGS="$CFLAGS"
+      ac_func_search_static_libraries_save_LIBS="$LIBS"
 
-            for ac_library in ftp ""; do
+            CFLAGS="$CFLAGS -static"
+      for ac_library in ftp ""; do
         if test -z "$ac_library"; then
           ac_result="none required"
         else
@@ -7919,11 +7896,11 @@ else
 
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo |sed 's/ /\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
+`echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
 int
 main ()
 {
-return (int)FtpInit;
+`if test -z ""; then echo "extern void FtpInit();"; fi` return (int)FtpInit;
 
   ;
   return 0;
@@ -7936,7 +7913,6 @@ if ac_fn_c_try_link "$LINENO"; then :
 fi
 rm -f core conftest.err conftest.$ac_objext \
     conftest$ac_exeext conftest.$ac_ext
-
       done
       if test "${ac_cv_search_static_FtpInit+set}" = set; then :
 
@@ -7945,6 +7921,7 @@ else
 fi
 
             LIBS=$ac_func_search_libraries_save_LIBS
+      CFLAGS=$ac_func_search_static_libraries_save_CFLAGS
 
 
 fi
@@ -7968,21 +7945,9 @@ if test "${ac_cv_search_libraries_FtpInit+set}" = set; then :
   $as_echo_n "(cached) " >&6
 else
 
-            ac_func_search_libraries_save_CFLAGS="$CFLAGS";
-      ac_func_search_libraries_save_LIBS=$LIBS
+            ac_func_search_libraries_save_LIBS=$LIBS
 
-      cat << \EOF > conftest.$ac_ext
-EOF
-      for ac_header in  ""; do
-        if test -n "$ac_header"; then
-          echo "#include <$ac_header>" >> conftest.$ac_ext
-        fi
-      done
-      cat << \EOF >> conftest.$ac_ext
-int main(void) { return (int)FtpInit; }
-EOF
-
-            for ac_library in ftp ""; do
+      for ac_library in ftp ""; do
         if test -z "$ac_library"; then
           ac_result="none required"
         else
@@ -7990,28 +7955,33 @@ EOF
           LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
         fi
 
-#cat conftest.$ac_ext
-#set -x
-        ${CC} ${CFLAGS} -c conftest.c -o conftest.o 1>/dev/null 2>/dev/null; rc=$?
-        if test $rc -eq 0; then
-          ${LD} ${LDFLAGS} -o conftest conftest.o ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
-          if test $rc -eq 0; then
-            ac_cv_search_libraries_FtpInit=$ac_result
-            if test "${ac_cv_search_libraries_FtpInit+set}" = set; then :
-  break
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main ()
+{
+`if test -z ""; then echo "extern void FtpInit();"; fi` return (int)FtpInit;
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_search_libraries_FtpInit=$ac_result; break
+
 fi
-          fi
-        fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
       done
       if test "${ac_cv_search_libraries_FtpInit+set}" = set; then :
 
 else
   ac_cv_search_libraries_FtpInit=no
 fi
-      rm -f conftest.$ac_ext conftest.$ac_objext conftest$ac_exeext
 
             LIBS=$ac_func_search_libraries_save_LIBS
-      CFLAGS=$ac_func_search_libraries_save_CFLAGS
 
 
 fi
@@ -8193,21 +8163,9 @@ if test "${ac_cv_search_libraries_libssh2_session_init_ex+set}" = set; then :
   $as_echo_n "(cached) " >&6
 else
 
-            ac_func_search_libraries_save_CFLAGS="$CFLAGS";
-      ac_func_search_libraries_save_LIBS=$LIBS
+            ac_func_search_libraries_save_LIBS=$LIBS
 
-      cat << \EOF > conftest.$ac_ext
-EOF
-      for ac_header in  ""; do
-        if test -n "$ac_header"; then
-          echo "#include <$ac_header>" >> conftest.$ac_ext
-        fi
-      done
-      cat << \EOF >> conftest.$ac_ext
-int main(void) { return (int)libssh2_session_init_ex; }
-EOF
-
-            for ac_library in ssh2 ""; do
+      for ac_library in ssh2 ""; do
         if test -z "$ac_library"; then
           ac_result="none required"
         else
@@ -8215,28 +8173,33 @@ EOF
           LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
         fi
 
-#cat conftest.$ac_ext
-#set -x
-        ${CC} ${CFLAGS} -c conftest.c -o conftest.o 1>/dev/null 2>/dev/null; rc=$?
-        if test $rc -eq 0; then
-          ${LD} ${LDFLAGS} -o conftest conftest.o ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
-          if test $rc -eq 0; then
-            ac_cv_search_libraries_libssh2_session_init_ex=$ac_result
-            if test "${ac_cv_search_libraries_libssh2_session_init_ex+set}" = set; then :
-  break
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main ()
+{
+`if test -z ""; then echo "extern void libssh2_session_init_ex();"; fi` return (int)libssh2_session_init_ex;
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_search_libraries_libssh2_session_init_ex=$ac_result; break
+
 fi
-          fi
-        fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
       done
       if test "${ac_cv_search_libraries_libssh2_session_init_ex+set}" = set; then :
 
 else
   ac_cv_search_libraries_libssh2_session_init_ex=no
 fi
-      rm -f conftest.$ac_ext conftest.$ac_objext conftest$ac_exeext
 
             LIBS=$ac_func_search_libraries_save_LIBS
-      CFLAGS=$ac_func_search_libraries_save_CFLAGS
 
 
 fi
@@ -8259,9 +8222,11 @@ if test "${ac_cv_search_static_libssh2_session_init_ex+set}" = set; then :
   $as_echo_n "(cached) " >&6
 else
 
-            ac_func_search_static_libraries_save_LIBS=$LIBS
+            ac_func_search_static_libraries_save_CFLAGS="$CFLAGS"
+      ac_func_search_static_libraries_save_LIBS="$LIBS"
 
-            for ac_library in ssh2 ""; do
+            CFLAGS="$CFLAGS -static"
+      for ac_library in ssh2 ""; do
         if test -z "$ac_library"; then
           ac_result="none required"
         else
@@ -8271,11 +8236,11 @@ else
 
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo |sed 's/ /\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
+`echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
 int
 main ()
 {
-return (int)libssh2_session_init_ex;
+`if test -z ""; then echo "extern void libssh2_session_init_ex();"; fi` return (int)libssh2_session_init_ex;
 
   ;
   return 0;
@@ -8288,7 +8253,6 @@ if ac_fn_c_try_link "$LINENO"; then :
 fi
 rm -f core conftest.err conftest.$ac_objext \
     conftest$ac_exeext conftest.$ac_ext
-
       done
       if test "${ac_cv_search_static_libssh2_session_init_ex+set}" = set; then :
 
@@ -8297,6 +8261,7 @@ else
 fi
 
             LIBS=$ac_func_search_libraries_save_LIBS
+      CFLAGS=$ac_func_search_static_libraries_save_CFLAGS
 
 
 fi
@@ -8320,21 +8285,9 @@ if test "${ac_cv_search_libraries_libssh2_session_init_ex+set}" = set; then :
   $as_echo_n "(cached) " >&6
 else
 
-            ac_func_search_libraries_save_CFLAGS="$CFLAGS";
-      ac_func_search_libraries_save_LIBS=$LIBS
+            ac_func_search_libraries_save_LIBS=$LIBS
 
-      cat << \EOF > conftest.$ac_ext
-EOF
-      for ac_header in  ""; do
-        if test -n "$ac_header"; then
-          echo "#include <$ac_header>" >> conftest.$ac_ext
-        fi
-      done
-      cat << \EOF >> conftest.$ac_ext
-int main(void) { return (int)libssh2_session_init_ex; }
-EOF
-
-            for ac_library in ssh2 ""; do
+      for ac_library in ssh2 ""; do
         if test -z "$ac_library"; then
           ac_result="none required"
         else
@@ -8342,28 +8295,33 @@ EOF
           LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
         fi
 
-#cat conftest.$ac_ext
-#set -x
-        ${CC} ${CFLAGS} -c conftest.c -o conftest.o 1>/dev/null 2>/dev/null; rc=$?
-        if test $rc -eq 0; then
-          ${LD} ${LDFLAGS} -o conftest conftest.o ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
-          if test $rc -eq 0; then
-            ac_cv_search_libraries_libssh2_session_init_ex=$ac_result
-            if test "${ac_cv_search_libraries_libssh2_session_init_ex+set}" = set; then :
-  break
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main ()
+{
+`if test -z ""; then echo "extern void libssh2_session_init_ex();"; fi` return (int)libssh2_session_init_ex;
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_search_libraries_libssh2_session_init_ex=$ac_result; break
+
 fi
-          fi
-        fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
       done
       if test "${ac_cv_search_libraries_libssh2_session_init_ex+set}" = set; then :
 
 else
   ac_cv_search_libraries_libssh2_session_init_ex=no
 fi
-      rm -f conftest.$ac_ext conftest.$ac_objext conftest$ac_exeext
 
             LIBS=$ac_func_search_libraries_save_LIBS
-      CFLAGS=$ac_func_search_libraries_save_CFLAGS
 
 
 fi
@@ -8390,21 +8348,9 @@ if test "${ac_cv_search_libraries_MD5_Init+set}" = set; then :
   $as_echo_n "(cached) " >&6
 else
 
-            ac_func_search_libraries_save_CFLAGS="$CFLAGS";
-      ac_func_search_libraries_save_LIBS=$LIBS
+            ac_func_search_libraries_save_LIBS=$LIBS
 
-      cat << \EOF > conftest.$ac_ext
-EOF
-      for ac_header in  ""; do
-        if test -n "$ac_header"; then
-          echo "#include <$ac_header>" >> conftest.$ac_ext
-        fi
-      done
-      cat << \EOF >> conftest.$ac_ext
-int main(void) { return (int)MD5_Init; }
-EOF
-
-            for ac_library in crypto ""; do
+      for ac_library in crypto ""; do
         if test -z "$ac_library"; then
           ac_result="none required"
         else
@@ -8412,28 +8358,33 @@ EOF
           LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
         fi
 
-#cat conftest.$ac_ext
-#set -x
-        ${CC} ${CFLAGS} -c conftest.c -o conftest.o 1>/dev/null 2>/dev/null; rc=$?
-        if test $rc -eq 0; then
-          ${LD} ${LDFLAGS} -o conftest conftest.o ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
-          if test $rc -eq 0; then
-            ac_cv_search_libraries_MD5_Init=$ac_result
-            if test "${ac_cv_search_libraries_MD5_Init+set}" = set; then :
-  break
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main ()
+{
+`if test -z ""; then echo "extern void MD5_Init();"; fi` return (int)MD5_Init;
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_search_libraries_MD5_Init=$ac_result; break
+
 fi
-          fi
-        fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
       done
       if test "${ac_cv_search_libraries_MD5_Init+set}" = set; then :
 
 else
   ac_cv_search_libraries_MD5_Init=no
 fi
-      rm -f conftest.$ac_ext conftest.$ac_objext conftest$ac_exeext
 
             LIBS=$ac_func_search_libraries_save_LIBS
-      CFLAGS=$ac_func_search_libraries_save_CFLAGS
 
 
 fi
@@ -8456,9 +8407,11 @@ if test "${ac_cv_search_static_MD5_Init+set}" = set; then :
   $as_echo_n "(cached) " >&6
 else
 
-            ac_func_search_static_libraries_save_LIBS=$LIBS
+            ac_func_search_static_libraries_save_CFLAGS="$CFLAGS"
+      ac_func_search_static_libraries_save_LIBS="$LIBS"
 
-            for ac_library in crypto ""; do
+            CFLAGS="$CFLAGS -static"
+      for ac_library in crypto ""; do
         if test -z "$ac_library"; then
           ac_result="none required"
         else
@@ -8468,11 +8421,11 @@ else
 
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo |sed 's/ /\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
+`echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
 int
 main ()
 {
-return (int)MD5_Init;
+`if test -z ""; then echo "extern void MD5_Init();"; fi` return (int)MD5_Init;
 
   ;
   return 0;
@@ -8485,7 +8438,6 @@ if ac_fn_c_try_link "$LINENO"; then :
 fi
 rm -f core conftest.err conftest.$ac_objext \
     conftest$ac_exeext conftest.$ac_ext
-
       done
       if test "${ac_cv_search_static_MD5_Init+set}" = set; then :
 
@@ -8494,6 +8446,7 @@ else
 fi
 
             LIBS=$ac_func_search_libraries_save_LIBS
+      CFLAGS=$ac_func_search_static_libraries_save_CFLAGS
 
 
 fi
@@ -8517,21 +8470,9 @@ if test "${ac_cv_search_libraries_MD5_Init+set}" = set; then :
   $as_echo_n "(cached) " >&6
 else
 
-            ac_func_search_libraries_save_CFLAGS="$CFLAGS";
-      ac_func_search_libraries_save_LIBS=$LIBS
+            ac_func_search_libraries_save_LIBS=$LIBS
 
-      cat << \EOF > conftest.$ac_ext
-EOF
-      for ac_header in  ""; do
-        if test -n "$ac_header"; then
-          echo "#include <$ac_header>" >> conftest.$ac_ext
-        fi
-      done
-      cat << \EOF >> conftest.$ac_ext
-int main(void) { return (int)MD5_Init; }
-EOF
-
-            for ac_library in crypto ""; do
+      for ac_library in crypto ""; do
         if test -z "$ac_library"; then
           ac_result="none required"
         else
@@ -8539,28 +8480,33 @@ EOF
           LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
         fi
 
-#cat conftest.$ac_ext
-#set -x
-        ${CC} ${CFLAGS} -c conftest.c -o conftest.o 1>/dev/null 2>/dev/null; rc=$?
-        if test $rc -eq 0; then
-          ${LD} ${LDFLAGS} -o conftest conftest.o ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
-          if test $rc -eq 0; then
-            ac_cv_search_libraries_MD5_Init=$ac_result
-            if test "${ac_cv_search_libraries_MD5_Init+set}" = set; then :
-  break
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main ()
+{
+`if test -z ""; then echo "extern void MD5_Init();"; fi` return (int)MD5_Init;
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_search_libraries_MD5_Init=$ac_result; break
+
 fi
-          fi
-        fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
       done
       if test "${ac_cv_search_libraries_MD5_Init+set}" = set; then :
 
 else
   ac_cv_search_libraries_MD5_Init=no
 fi
-      rm -f conftest.$ac_ext conftest.$ac_objext conftest$ac_exeext
 
             LIBS=$ac_func_search_libraries_save_LIBS
-      CFLAGS=$ac_func_search_libraries_save_CFLAGS
 
 
 fi
@@ -8647,21 +8593,9 @@ if test "${ac_cv_search_libraries_gnutls_global_init+set}" = set; then :
   $as_echo_n "(cached) " >&6
 else
 
-            ac_func_search_libraries_save_CFLAGS="$CFLAGS";
-      ac_func_search_libraries_save_LIBS=$LIBS
+            ac_func_search_libraries_save_LIBS=$LIBS
 
-      cat << \EOF > conftest.$ac_ext
-EOF
-      for ac_header in  ""; do
-        if test -n "$ac_header"; then
-          echo "#include <$ac_header>" >> conftest.$ac_ext
-        fi
-      done
-      cat << \EOF >> conftest.$ac_ext
-int main(void) { return (int)gnutls_global_init; }
-EOF
-
-            for ac_library in gnutls ""; do
+      for ac_library in gnutls ""; do
         if test -z "$ac_library"; then
           ac_result="none required"
         else
@@ -8669,28 +8603,33 @@ EOF
           LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
         fi
 
-#cat conftest.$ac_ext
-#set -x
-        ${CC} ${CFLAGS} -c conftest.c -o conftest.o 1>/dev/null 2>/dev/null; rc=$?
-        if test $rc -eq 0; then
-          ${LD} ${LDFLAGS} -o conftest conftest.o ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
-          if test $rc -eq 0; then
-            ac_cv_search_libraries_gnutls_global_init=$ac_result
-            if test "${ac_cv_search_libraries_gnutls_global_init+set}" = set; then :
-  break
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main ()
+{
+`if test -z ""; then echo "extern void gnutls_global_init();"; fi` return (int)gnutls_global_init;
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_search_libraries_gnutls_global_init=$ac_result; break
+
 fi
-          fi
-        fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
       done
       if test "${ac_cv_search_libraries_gnutls_global_init+set}" = set; then :
 
 else
   ac_cv_search_libraries_gnutls_global_init=no
 fi
-      rm -f conftest.$ac_ext conftest.$ac_objext conftest$ac_exeext
 
             LIBS=$ac_func_search_libraries_save_LIBS
-      CFLAGS=$ac_func_search_libraries_save_CFLAGS
 
 
 fi
@@ -8712,21 +8651,9 @@ if test "${ac_cv_search_libraries_asn1_length_der+set}" = set; then :
   $as_echo_n "(cached) " >&6
 else
 
-            ac_func_search_libraries_save_CFLAGS="$CFLAGS";
-      ac_func_search_libraries_save_LIBS=$LIBS
+            ac_func_search_libraries_save_LIBS=$LIBS
 
-      cat << \EOF > conftest.$ac_ext
-EOF
-      for ac_header in  ""; do
-        if test -n "$ac_header"; then
-          echo "#include <$ac_header>" >> conftest.$ac_ext
-        fi
-      done
-      cat << \EOF >> conftest.$ac_ext
-int main(void) { return (int)asn1_length_der; }
-EOF
-
-            for ac_library in tasn1 ""; do
+      for ac_library in tasn1 ""; do
         if test -z "$ac_library"; then
           ac_result="none required"
         else
@@ -8734,28 +8661,33 @@ EOF
           LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
         fi
 
-#cat conftest.$ac_ext
-#set -x
-        ${CC} ${CFLAGS} -c conftest.c -o conftest.o 1>/dev/null 2>/dev/null; rc=$?
-        if test $rc -eq 0; then
-          ${LD} ${LDFLAGS} -o conftest conftest.o ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
-          if test $rc -eq 0; then
-            ac_cv_search_libraries_asn1_length_der=$ac_result
-            if test "${ac_cv_search_libraries_asn1_length_der+set}" = set; then :
-  break
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main ()
+{
+`if test -z ""; then echo "extern void asn1_length_der();"; fi` return (int)asn1_length_der;
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_search_libraries_asn1_length_der=$ac_result; break
+
 fi
-          fi
-        fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
       done
       if test "${ac_cv_search_libraries_asn1_length_der+set}" = set; then :
 
 else
   ac_cv_search_libraries_asn1_length_der=no
 fi
-      rm -f conftest.$ac_ext conftest.$ac_objext conftest$ac_exeext
 
             LIBS=$ac_func_search_libraries_save_LIBS
-      CFLAGS=$ac_func_search_libraries_save_CFLAGS
 
 
 fi
@@ -8778,9 +8710,11 @@ if test "${ac_cv_search_static_gnutls_global_init+set}" = set; then :
   $as_echo_n "(cached) " >&6
 else
 
-            ac_func_search_static_libraries_save_LIBS=$LIBS
+            ac_func_search_static_libraries_save_CFLAGS="$CFLAGS"
+      ac_func_search_static_libraries_save_LIBS="$LIBS"
 
-            for ac_library in gnutls ""; do
+            CFLAGS="$CFLAGS -static"
+      for ac_library in gnutls ""; do
         if test -z "$ac_library"; then
           ac_result="none required"
         else
@@ -8790,11 +8724,11 @@ else
 
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo |sed 's/ /\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
+`echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
 int
 main ()
 {
-return (int)gnutls_global_init;
+`if test -z ""; then echo "extern void gnutls_global_init();"; fi` return (int)gnutls_global_init;
 
   ;
   return 0;
@@ -8807,7 +8741,6 @@ if ac_fn_c_try_link "$LINENO"; then :
 fi
 rm -f core conftest.err conftest.$ac_objext \
     conftest$ac_exeext conftest.$ac_ext
-
       done
       if test "${ac_cv_search_static_gnutls_global_init+set}" = set; then :
 
@@ -8816,6 +8749,7 @@ else
 fi
 
             LIBS=$ac_func_search_libraries_save_LIBS
+      CFLAGS=$ac_func_search_static_libraries_save_CFLAGS
 
 
 fi
@@ -8839,21 +8773,9 @@ if test "${ac_cv_search_libraries_gnutls_global_init+set}" = set; then :
   $as_echo_n "(cached) " >&6
 else
 
-            ac_func_search_libraries_save_CFLAGS="$CFLAGS";
-      ac_func_search_libraries_save_LIBS=$LIBS
+            ac_func_search_libraries_save_LIBS=$LIBS
 
-      cat << \EOF > conftest.$ac_ext
-EOF
-      for ac_header in  ""; do
-        if test -n "$ac_header"; then
-          echo "#include <$ac_header>" >> conftest.$ac_ext
-        fi
-      done
-      cat << \EOF >> conftest.$ac_ext
-int main(void) { return (int)gnutls_global_init; }
-EOF
-
-            for ac_library in gnutls ""; do
+      for ac_library in gnutls ""; do
         if test -z "$ac_library"; then
           ac_result="none required"
         else
@@ -8861,28 +8783,33 @@ EOF
           LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
         fi
 
-#cat conftest.$ac_ext
-#set -x
-        ${CC} ${CFLAGS} -c conftest.c -o conftest.o 1>/dev/null 2>/dev/null; rc=$?
-        if test $rc -eq 0; then
-          ${LD} ${LDFLAGS} -o conftest conftest.o ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
-          if test $rc -eq 0; then
-            ac_cv_search_libraries_gnutls_global_init=$ac_result
-            if test "${ac_cv_search_libraries_gnutls_global_init+set}" = set; then :
-  break
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main ()
+{
+`if test -z ""; then echo "extern void gnutls_global_init();"; fi` return (int)gnutls_global_init;
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_search_libraries_gnutls_global_init=$ac_result; break
+
 fi
-          fi
-        fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
       done
       if test "${ac_cv_search_libraries_gnutls_global_init+set}" = set; then :
 
 else
   ac_cv_search_libraries_gnutls_global_init=no
 fi
-      rm -f conftest.$ac_ext conftest.$ac_objext conftest$ac_exeext
 
             LIBS=$ac_func_search_libraries_save_LIBS
-      CFLAGS=$ac_func_search_libraries_save_CFLAGS
 
 
 fi
@@ -8906,9 +8833,11 @@ if test "${ac_cv_search_static_asn1_length_der+set}" = set; then :
   $as_echo_n "(cached) " >&6
 else
 
-            ac_func_search_static_libraries_save_LIBS=$LIBS
+            ac_func_search_static_libraries_save_CFLAGS="$CFLAGS"
+      ac_func_search_static_libraries_save_LIBS="$LIBS"
 
-            for ac_library in tasn1 ""; do
+            CFLAGS="$CFLAGS -static"
+      for ac_library in tasn1 ""; do
         if test -z "$ac_library"; then
           ac_result="none required"
         else
@@ -8918,11 +8847,11 @@ else
 
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo |sed 's/ /\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
+`echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
 int
 main ()
 {
-return (int)asn1_length_der;
+`if test -z ""; then echo "extern void asn1_length_der();"; fi` return (int)asn1_length_der;
 
   ;
   return 0;
@@ -8935,7 +8864,6 @@ if ac_fn_c_try_link "$LINENO"; then :
 fi
 rm -f core conftest.err conftest.$ac_objext \
     conftest$ac_exeext conftest.$ac_ext
-
       done
       if test "${ac_cv_search_static_asn1_length_der+set}" = set; then :
 
@@ -8944,6 +8872,7 @@ else
 fi
 
             LIBS=$ac_func_search_libraries_save_LIBS
+      CFLAGS=$ac_func_search_static_libraries_save_CFLAGS
 
 
 fi
@@ -8967,21 +8896,9 @@ if test "${ac_cv_search_libraries_asn1_length_der+set}" = set; then :
   $as_echo_n "(cached) " >&6
 else
 
-            ac_func_search_libraries_save_CFLAGS="$CFLAGS";
-      ac_func_search_libraries_save_LIBS=$LIBS
+            ac_func_search_libraries_save_LIBS=$LIBS
 
-      cat << \EOF > conftest.$ac_ext
-EOF
-      for ac_header in  ""; do
-        if test -n "$ac_header"; then
-          echo "#include <$ac_header>" >> conftest.$ac_ext
-        fi
-      done
-      cat << \EOF >> conftest.$ac_ext
-int main(void) { return (int)asn1_length_der; }
-EOF
-
-            for ac_library in tasn1 ""; do
+      for ac_library in tasn1 ""; do
         if test -z "$ac_library"; then
           ac_result="none required"
         else
@@ -8989,28 +8906,33 @@ EOF
           LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
         fi
 
-#cat conftest.$ac_ext
-#set -x
-        ${CC} ${CFLAGS} -c conftest.c -o conftest.o 1>/dev/null 2>/dev/null; rc=$?
-        if test $rc -eq 0; then
-          ${LD} ${LDFLAGS} -o conftest conftest.o ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
-          if test $rc -eq 0; then
-            ac_cv_search_libraries_asn1_length_der=$ac_result
-            if test "${ac_cv_search_libraries_asn1_length_der+set}" = set; then :
-  break
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main ()
+{
+`if test -z ""; then echo "extern void asn1_length_der();"; fi` return (int)asn1_length_der;
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_search_libraries_asn1_length_der=$ac_result; break
+
 fi
-          fi
-        fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
       done
       if test "${ac_cv_search_libraries_asn1_length_der+set}" = set; then :
 
 else
   ac_cv_search_libraries_asn1_length_der=no
 fi
-      rm -f conftest.$ac_ext conftest.$ac_objext conftest$ac_exeext
 
             LIBS=$ac_func_search_libraries_save_LIBS
-      CFLAGS=$ac_func_search_libraries_save_CFLAGS
 
 
 fi
@@ -9136,21 +9058,9 @@ if test "${ac_cv_search_libraries_iso9660_open+set}" = set; then :
   $as_echo_n "(cached) " >&6
 else
 
-            ac_func_search_libraries_save_CFLAGS="$CFLAGS";
-      ac_func_search_libraries_save_LIBS=$LIBS
+            ac_func_search_libraries_save_LIBS=$LIBS
 
-      cat << \EOF > conftest.$ac_ext
-EOF
-      for ac_header in  ""; do
-        if test -n "$ac_header"; then
-          echo "#include <$ac_header>" >> conftest.$ac_ext
-        fi
-      done
-      cat << \EOF >> conftest.$ac_ext
-int main(void) { return (int)iso9660_open; }
-EOF
-
-            for ac_library in iso9660 ""; do
+      for ac_library in iso9660 ""; do
         if test -z "$ac_library"; then
           ac_result="none required"
         else
@@ -9158,28 +9068,33 @@ EOF
           LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
         fi
 
-#cat conftest.$ac_ext
-#set -x
-        ${CC} ${CFLAGS} -c conftest.c -o conftest.o 1>/dev/null 2>/dev/null; rc=$?
-        if test $rc -eq 0; then
-          ${LD} ${LDFLAGS} -o conftest conftest.o ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
-          if test $rc -eq 0; then
-            ac_cv_search_libraries_iso9660_open=$ac_result
-            if test "${ac_cv_search_libraries_iso9660_open+set}" = set; then :
-  break
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main ()
+{
+`if test -z ""; then echo "extern void iso9660_open();"; fi` return (int)iso9660_open;
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_search_libraries_iso9660_open=$ac_result; break
+
 fi
-          fi
-        fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
       done
       if test "${ac_cv_search_libraries_iso9660_open+set}" = set; then :
 
 else
   ac_cv_search_libraries_iso9660_open=no
 fi
-      rm -f conftest.$ac_ext conftest.$ac_objext conftest$ac_exeext
 
             LIBS=$ac_func_search_libraries_save_LIBS
-      CFLAGS=$ac_func_search_libraries_save_CFLAGS
 
 
 fi
@@ -9202,9 +9117,11 @@ if test "${ac_cv_search_static_iso9660_open+set}" = set; then :
   $as_echo_n "(cached) " >&6
 else
 
-            ac_func_search_static_libraries_save_LIBS=$LIBS
+            ac_func_search_static_libraries_save_CFLAGS="$CFLAGS"
+      ac_func_search_static_libraries_save_LIBS="$LIBS"
 
-            for ac_library in iso9660 ""; do
+            CFLAGS="$CFLAGS -static"
+      for ac_library in iso9660 ""; do
         if test -z "$ac_library"; then
           ac_result="none required"
         else
@@ -9214,11 +9131,11 @@ else
 
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo |sed 's/ /\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
+`echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
 int
 main ()
 {
-return (int)iso9660_open;
+`if test -z ""; then echo "extern void iso9660_open();"; fi` return (int)iso9660_open;
 
   ;
   return 0;
@@ -9231,7 +9148,6 @@ if ac_fn_c_try_link "$LINENO"; then :
 fi
 rm -f core conftest.err conftest.$ac_objext \
     conftest$ac_exeext conftest.$ac_ext
-
       done
       if test "${ac_cv_search_static_iso9660_open+set}" = set; then :
 
@@ -9240,6 +9156,7 @@ else
 fi
 
             LIBS=$ac_func_search_libraries_save_LIBS
+      CFLAGS=$ac_func_search_static_libraries_save_CFLAGS
 
 
 fi
@@ -9263,21 +9180,9 @@ if test "${ac_cv_search_libraries_iso9660_open+set}" = set; then :
   $as_echo_n "(cached) " >&6
 else
 
-            ac_func_search_libraries_save_CFLAGS="$CFLAGS";
-      ac_func_search_libraries_save_LIBS=$LIBS
+            ac_func_search_libraries_save_LIBS=$LIBS
 
-      cat << \EOF > conftest.$ac_ext
-EOF
-      for ac_header in  ""; do
-        if test -n "$ac_header"; then
-          echo "#include <$ac_header>" >> conftest.$ac_ext
-        fi
-      done
-      cat << \EOF >> conftest.$ac_ext
-int main(void) { return (int)iso9660_open; }
-EOF
-
-            for ac_library in iso9660 ""; do
+      for ac_library in iso9660 ""; do
         if test -z "$ac_library"; then
           ac_result="none required"
         else
@@ -9285,28 +9190,33 @@ EOF
           LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
         fi
 
-#cat conftest.$ac_ext
-#set -x
-        ${CC} ${CFLAGS} -c conftest.c -o conftest.o 1>/dev/null 2>/dev/null; rc=$?
-        if test $rc -eq 0; then
-          ${LD} ${LDFLAGS} -o conftest conftest.o ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
-          if test $rc -eq 0; then
-            ac_cv_search_libraries_iso9660_open=$ac_result
-            if test "${ac_cv_search_libraries_iso9660_open+set}" = set; then :
-  break
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main ()
+{
+`if test -z ""; then echo "extern void iso9660_open();"; fi` return (int)iso9660_open;
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_search_libraries_iso9660_open=$ac_result; break
+
 fi
-          fi
-        fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
       done
       if test "${ac_cv_search_libraries_iso9660_open+set}" = set; then :
 
 else
   ac_cv_search_libraries_iso9660_open=no
 fi
-      rm -f conftest.$ac_ext conftest.$ac_objext conftest$ac_exeext
 
             LIBS=$ac_func_search_libraries_save_LIBS
-      CFLAGS=$ac_func_search_libraries_save_CFLAGS
 
 
 fi
@@ -9414,21 +9324,9 @@ if test "${ac_cv_search_libraries_pcre+set}" = set; then :
   $as_echo_n "(cached) " >&6
 else
 
-            ac_func_search_libraries_save_CFLAGS="$CFLAGS";
-      ac_func_search_libraries_save_LIBS=$LIBS
+            ac_func_search_libraries_save_LIBS=$LIBS
 
-      cat << \EOF > conftest.$ac_ext
-EOF
-      for ac_header in  ""; do
-        if test -n "$ac_header"; then
-          echo "#include <$ac_header>" >> conftest.$ac_ext
-        fi
-      done
-      cat << \EOF >> conftest.$ac_ext
-int main(void) { return (int)pcre; }
-EOF
-
-            for ac_library in pcre_compile ""; do
+      for ac_library in pcre_compile ""; do
         if test -z "$ac_library"; then
           ac_result="none required"
         else
@@ -9436,28 +9334,33 @@ EOF
           LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
         fi
 
-#cat conftest.$ac_ext
-#set -x
-        ${CC} ${CFLAGS} -c conftest.c -o conftest.o 1>/dev/null 2>/dev/null; rc=$?
-        if test $rc -eq 0; then
-          ${LD} ${LDFLAGS} -o conftest conftest.o ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
-          if test $rc -eq 0; then
-            ac_cv_search_libraries_pcre=$ac_result
-            if test "${ac_cv_search_libraries_pcre+set}" = set; then :
-  break
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main ()
+{
+`if test -z ""; then echo "extern void pcre();"; fi` return (int)pcre;
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_search_libraries_pcre=$ac_result; break
+
 fi
-          fi
-        fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
       done
       if test "${ac_cv_search_libraries_pcre+set}" = set; then :
 
 else
   ac_cv_search_libraries_pcre=no
 fi
-      rm -f conftest.$ac_ext conftest.$ac_objext conftest$ac_exeext
 
             LIBS=$ac_func_search_libraries_save_LIBS
-      CFLAGS=$ac_func_search_libraries_save_CFLAGS
 
 
 fi
@@ -9480,9 +9383,11 @@ if test "${ac_cv_search_static_pcre+set}" = set; then :
   $as_echo_n "(cached) " >&6
 else
 
-            ac_func_search_static_libraries_save_LIBS=$LIBS
+            ac_func_search_static_libraries_save_CFLAGS="$CFLAGS"
+      ac_func_search_static_libraries_save_LIBS="$LIBS"
 
-            for ac_library in pcre_compile ""; do
+            CFLAGS="$CFLAGS -static"
+      for ac_library in pcre_compile ""; do
         if test -z "$ac_library"; then
           ac_result="none required"
         else
@@ -9492,11 +9397,11 @@ else
 
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo |sed 's/ /\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
+`echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
 int
 main ()
 {
-return (int)pcre;
+`if test -z ""; then echo "extern void pcre();"; fi` return (int)pcre;
 
   ;
   return 0;
@@ -9509,7 +9414,6 @@ if ac_fn_c_try_link "$LINENO"; then :
 fi
 rm -f core conftest.err conftest.$ac_objext \
     conftest$ac_exeext conftest.$ac_ext
-
       done
       if test "${ac_cv_search_static_pcre+set}" = set; then :
 
@@ -9518,6 +9422,7 @@ else
 fi
 
             LIBS=$ac_func_search_libraries_save_LIBS
+      CFLAGS=$ac_func_search_static_libraries_save_CFLAGS
 
 
 fi
@@ -9541,21 +9446,9 @@ if test "${ac_cv_search_libraries_pcre+set}" = set; then :
   $as_echo_n "(cached) " >&6
 else
 
-            ac_func_search_libraries_save_CFLAGS="$CFLAGS";
-      ac_func_search_libraries_save_LIBS=$LIBS
+            ac_func_search_libraries_save_LIBS=$LIBS
 
-      cat << \EOF > conftest.$ac_ext
-EOF
-      for ac_header in  ""; do
-        if test -n "$ac_header"; then
-          echo "#include <$ac_header>" >> conftest.$ac_ext
-        fi
-      done
-      cat << \EOF >> conftest.$ac_ext
-int main(void) { return (int)pcre; }
-EOF
-
-            for ac_library in pcre_compile ""; do
+      for ac_library in pcre_compile ""; do
         if test -z "$ac_library"; then
           ac_result="none required"
         else
@@ -9563,28 +9456,33 @@ EOF
           LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
         fi
 
-#cat conftest.$ac_ext
-#set -x
-        ${CC} ${CFLAGS} -c conftest.c -o conftest.o 1>/dev/null 2>/dev/null; rc=$?
-        if test $rc -eq 0; then
-          ${LD} ${LDFLAGS} -o conftest conftest.o ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
-          if test $rc -eq 0; then
-            ac_cv_search_libraries_pcre=$ac_result
-            if test "${ac_cv_search_libraries_pcre+set}" = set; then :
-  break
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main ()
+{
+`if test -z ""; then echo "extern void pcre();"; fi` return (int)pcre;
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_search_libraries_pcre=$ac_result; break
+
 fi
-          fi
-        fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
       done
       if test "${ac_cv_search_libraries_pcre+set}" = set; then :
 
 else
   ac_cv_search_libraries_pcre=no
 fi
-      rm -f conftest.$ac_ext conftest.$ac_objext conftest$ac_exeext
 
             LIBS=$ac_func_search_libraries_save_LIBS
-      CFLAGS=$ac_func_search_libraries_save_CFLAGS
 
 
 fi
@@ -9763,21 +9661,9 @@ if test "${ac_cv_search_libraries_breakpad_client+set}" = set; then :
   $as_echo_n "(cached) " >&6
 else
 
-            ac_func_search_libraries_save_CFLAGS="$CFLAGS";
-      ac_func_search_libraries_save_LIBS=$LIBS
+            ac_func_search_libraries_save_LIBS=$LIBS
 
-      cat << \EOF > conftest.$ac_ext
-EOF
-      for ac_header in  ""; do
-        if test -n "$ac_header"; then
-          echo "#include <$ac_header>" >> conftest.$ac_ext
-        fi
-      done
-      cat << \EOF >> conftest.$ac_ext
-int main(void) { return (int)breakpad_client; }
-EOF
-
-            for ac_library in ExceptionHandler ""; do
+      for ac_library in ExceptionHandler ""; do
         if test -z "$ac_library"; then
           ac_result="none required"
         else
@@ -9785,28 +9671,33 @@ EOF
           LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
         fi
 
-#cat conftest.$ac_ext
-#set -x
-        ${CC} ${CFLAGS} -c conftest.c -o conftest.o 1>/dev/null 2>/dev/null; rc=$?
-        if test $rc -eq 0; then
-          ${LD} ${LDFLAGS} -o conftest conftest.o ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
-          if test $rc -eq 0; then
-            ac_cv_search_libraries_breakpad_client=$ac_result
-            if test "${ac_cv_search_libraries_breakpad_client+set}" = set; then :
-  break
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main ()
+{
+`if test -z ""; then echo "extern void breakpad_client();"; fi` return (int)breakpad_client;
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_search_libraries_breakpad_client=$ac_result; break
+
 fi
-          fi
-        fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
       done
       if test "${ac_cv_search_libraries_breakpad_client+set}" = set; then :
 
 else
   ac_cv_search_libraries_breakpad_client=no
 fi
-      rm -f conftest.$ac_ext conftest.$ac_objext conftest$ac_exeext
 
             LIBS=$ac_func_search_libraries_save_LIBS
-      CFLAGS=$ac_func_search_libraries_save_CFLAGS
 
 
 fi
@@ -9829,9 +9720,11 @@ if test "${ac_cv_search_static_breakpad_client+set}" = set; then :
   $as_echo_n "(cached) " >&6
 else
 
-            ac_func_search_static_libraries_save_LIBS=$LIBS
+            ac_func_search_static_libraries_save_CFLAGS="$CFLAGS"
+      ac_func_search_static_libraries_save_LIBS="$LIBS"
 
-            for ac_library in ExceptionHandler ""; do
+            CFLAGS="$CFLAGS -static"
+      for ac_library in ExceptionHandler ""; do
         if test -z "$ac_library"; then
           ac_result="none required"
         else
@@ -9841,11 +9734,11 @@ else
 
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo |sed 's/ /\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
+`echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
 int
 main ()
 {
-return (int)breakpad_client;
+`if test -z ""; then echo "extern void breakpad_client();"; fi` return (int)breakpad_client;
 
   ;
   return 0;
@@ -9858,7 +9751,6 @@ if ac_fn_c_try_link "$LINENO"; then :
 fi
 rm -f core conftest.err conftest.$ac_objext \
     conftest$ac_exeext conftest.$ac_ext
-
       done
       if test "${ac_cv_search_static_breakpad_client+set}" = set; then :
 
@@ -9867,6 +9759,7 @@ else
 fi
 
             LIBS=$ac_func_search_libraries_save_LIBS
+      CFLAGS=$ac_func_search_static_libraries_save_CFLAGS
 
 
 fi
@@ -9890,21 +9783,9 @@ if test "${ac_cv_search_libraries_breakpad_client+set}" = set; then :
   $as_echo_n "(cached) " >&6
 else
 
-            ac_func_search_libraries_save_CFLAGS="$CFLAGS";
-      ac_func_search_libraries_save_LIBS=$LIBS
+            ac_func_search_libraries_save_LIBS=$LIBS
 
-      cat << \EOF > conftest.$ac_ext
-EOF
-      for ac_header in  ""; do
-        if test -n "$ac_header"; then
-          echo "#include <$ac_header>" >> conftest.$ac_ext
-        fi
-      done
-      cat << \EOF >> conftest.$ac_ext
-int main(void) { return (int)breakpad_client; }
-EOF
-
-            for ac_library in ExceptionHandler ""; do
+      for ac_library in ExceptionHandler ""; do
         if test -z "$ac_library"; then
           ac_result="none required"
         else
@@ -9912,28 +9793,33 @@ EOF
           LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
         fi
 
-#cat conftest.$ac_ext
-#set -x
-        ${CC} ${CFLAGS} -c conftest.c -o conftest.o 1>/dev/null 2>/dev/null; rc=$?
-        if test $rc -eq 0; then
-          ${LD} ${LDFLAGS} -o conftest conftest.o ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
-          if test $rc -eq 0; then
-            ac_cv_search_libraries_breakpad_client=$ac_result
-            if test "${ac_cv_search_libraries_breakpad_client+set}" = set; then :
-  break
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main ()
+{
+`if test -z ""; then echo "extern void breakpad_client();"; fi` return (int)breakpad_client;
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_search_libraries_breakpad_client=$ac_result; break
+
 fi
-          fi
-        fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
       done
       if test "${ac_cv_search_libraries_breakpad_client+set}" = set; then :
 
 else
   ac_cv_search_libraries_breakpad_client=no
 fi
-      rm -f conftest.$ac_ext conftest.$ac_objext conftest$ac_exeext
 
             LIBS=$ac_func_search_libraries_save_LIBS
-      CFLAGS=$ac_func_search_libraries_save_CFLAGS
 
 
 fi
@@ -10069,7 +9955,7 @@ else
 
       cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo sys/stat.h|sed 's/ /\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
+`echo sys/stat.h|sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
 int
 main ()
 {
@@ -10104,7 +9990,7 @@ else
 
       cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo sys/stat.h|sed 's/ /\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
+`echo sys/stat.h|sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
 int
 main ()
 {
@@ -10139,7 +10025,7 @@ else
 
       cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo sys/stat.h|sed 's/ /\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
+`echo sys/stat.h|sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
 int
 main ()
 {
@@ -10174,7 +10060,7 @@ else
 
       cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo sys/stat.h|sed 's/ /\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
+`echo sys/stat.h|sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
 int
 main ()
 {
@@ -10209,7 +10095,7 @@ else
 
       cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo sys/stat.h|sed 's/ /\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
+`echo sys/stat.h|sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
 int
 main ()
 {
@@ -10244,7 +10130,7 @@ else
 
       cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo sys/stat.h|sed 's/ /\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
+`echo sys/stat.h|sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
 int
 main ()
 {
@@ -10279,7 +10165,7 @@ else
 
       cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo sys/stat.h|sed 's/ /\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
+`echo sys/stat.h|sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
 int
 main ()
 {
@@ -10314,7 +10200,7 @@ else
 
       cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo sys/stat.h|sed 's/ /\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
+`echo sys/stat.h|sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
 int
 main ()
 {
@@ -10349,7 +10235,7 @@ else
 
       cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo sys/stat.h|sed 's/ /\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
+`echo sys/stat.h|sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
 int
 main ()
 {
@@ -10384,7 +10270,7 @@ else
 
       cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo linux/fs.h|sed 's/ /\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
+`echo linux/fs.h|sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
 int
 main ()
 {
@@ -10419,7 +10305,7 @@ else
 
       cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo linux/fs.h|sed 's/ /\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
+`echo linux/fs.h|sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
 int
 main ()
 {
@@ -10454,7 +10340,7 @@ else
 
       cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo linux/fs.h|sed 's/ /\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
+`echo linux/fs.h|sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
 int
 main ()
 {
@@ -10489,7 +10375,7 @@ else
 
       cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo linux/fs.h|sed 's/ /\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
+`echo linux/fs.h|sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
 int
 main ()
 {
@@ -10524,7 +10410,7 @@ else
 
       cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo sys/ioctl.h|sed 's/ /\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
+`echo sys/ioctl.h|sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
 int
 main ()
 {
@@ -10559,7 +10445,7 @@ else
 
       cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo sys/ioctl.h|sed 's/ /\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
+`echo sys/ioctl.h|sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
 int
 main ()
 {
@@ -10595,7 +10481,7 @@ else
 
       cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo signal.h|sed 's/ /\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
+`echo signal.h|sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
 int
 main ()
 {
@@ -10632,7 +10518,7 @@ else
 
       cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo openssl/crypto.h|sed 's/ /\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
+`echo openssl/crypto.h|sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
 int
 main ()
 {
@@ -10696,50 +10582,31 @@ else
       ac_cv_func_pthread_attr_setname="no"
       echo > conftest.log
       for ac_headers in  ""; do
-if false; then
-        cat << \EOF > conftest.c
-EOF
-        if test -n "$ac_headers"; then
-          for ac_header in `echo $ac_headers|sed 's/+/ /g'` ""; do
-            if test -n "$ac_header"; then
-              echo "#include <$ac_header>" >> conftest.c
-            fi
-          done
-        else
-          echo "extern int pthread_attr_setname();" >> conftest.c
-        fi
-        cat << \EOF >> conftest.c
-int main(void) { return (int)pthread_attr_setname; }
-EOF
-
-#cat conftest.$ac_ext
-        ${CC} ${CFLAGS} -o conftest$ac_exeext conftest.$ac_ext ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
-        if test $rc -eq 0; then
-          ac_cv_func_pthread_attr_setname=yes
-          break
-        fi
-else
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo $ac_headers|sed 's/+/\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
+`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
 int
 main ()
 {
-return (int)pthread_attr_setname;
+`if test -z "$ac_headers"; then echo "extern void pthread_attr_setname();"; fi`
+                                         #ifdef pthread_attr_setname
+                                         #else
+                                           return (int)pthread_attr_setname;
+                                         #endif
+
 
   ;
   return 0;
 }
 
 _ACEOF
-if ac_fn_c_try_compile "$LINENO"; then :
+if ac_fn_c_try_link "$LINENO"; then :
   ac_cv_func_pthread_attr_setname=yes; break
 
 fi
-rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
-fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
       done
-      rm -f conftest.$ac_ext conftest$ac_exeext
 #set +x
 
 
@@ -10767,50 +10634,31 @@ else
       ac_cv_func_gethostbyaddr="no"
       echo > conftest.log
       for ac_headers in winsock2.h ""; do
-if false; then
-        cat << \EOF > conftest.c
-EOF
-        if test -n "$ac_headers"; then
-          for ac_header in `echo $ac_headers|sed 's/+/ /g'` ""; do
-            if test -n "$ac_header"; then
-              echo "#include <$ac_header>" >> conftest.c
-            fi
-          done
-        else
-          echo "extern int gethostbyaddr();" >> conftest.c
-        fi
-        cat << \EOF >> conftest.c
-int main(void) { return (int)gethostbyaddr; }
-EOF
-
-#cat conftest.$ac_ext
-        ${CC} ${CFLAGS} -o conftest$ac_exeext conftest.$ac_ext ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
-        if test $rc -eq 0; then
-          ac_cv_func_gethostbyaddr=yes
-          break
-        fi
-else
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo $ac_headers|sed 's/+/\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
+`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
 int
 main ()
 {
-return (int)gethostbyaddr;
+`if test -z "$ac_headers"; then echo "extern void gethostbyaddr();"; fi`
+                                         #ifdef gethostbyaddr
+                                         #else
+                                           return (int)gethostbyaddr;
+                                         #endif
+
 
   ;
   return 0;
 }
 
 _ACEOF
-if ac_fn_c_try_compile "$LINENO"; then :
+if ac_fn_c_try_link "$LINENO"; then :
   ac_cv_func_gethostbyaddr=yes; break
 
 fi
-rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
-fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
       done
-      rm -f conftest.$ac_ext conftest$ac_exeext
 #set +x
 
 
@@ -10837,50 +10685,31 @@ else
       ac_cv_func_gethostbyaddr_r="no"
       echo > conftest.log
       for ac_headers in winsock2.h ""; do
-if false; then
-        cat << \EOF > conftest.c
-EOF
-        if test -n "$ac_headers"; then
-          for ac_header in `echo $ac_headers|sed 's/+/ /g'` ""; do
-            if test -n "$ac_header"; then
-              echo "#include <$ac_header>" >> conftest.c
-            fi
-          done
-        else
-          echo "extern int gethostbyaddr_r();" >> conftest.c
-        fi
-        cat << \EOF >> conftest.c
-int main(void) { return (int)gethostbyaddr_r; }
-EOF
-
-#cat conftest.$ac_ext
-        ${CC} ${CFLAGS} -o conftest$ac_exeext conftest.$ac_ext ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
-        if test $rc -eq 0; then
-          ac_cv_func_gethostbyaddr_r=yes
-          break
-        fi
-else
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo $ac_headers|sed 's/+/\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
+`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
 int
 main ()
 {
-return (int)gethostbyaddr_r;
+`if test -z "$ac_headers"; then echo "extern void gethostbyaddr_r();"; fi`
+                                         #ifdef gethostbyaddr_r
+                                         #else
+                                           return (int)gethostbyaddr_r;
+                                         #endif
+
 
   ;
   return 0;
 }
 
 _ACEOF
-if ac_fn_c_try_compile "$LINENO"; then :
+if ac_fn_c_try_link "$LINENO"; then :
   ac_cv_func_gethostbyaddr_r=yes; break
 
 fi
-rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
-fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
       done
-      rm -f conftest.$ac_ext conftest$ac_exeext
 #set +x
 
 
@@ -10907,50 +10736,31 @@ else
       ac_cv_func_gethostbyname="no"
       echo > conftest.log
       for ac_headers in winsock2.h ""; do
-if false; then
-        cat << \EOF > conftest.c
-EOF
-        if test -n "$ac_headers"; then
-          for ac_header in `echo $ac_headers|sed 's/+/ /g'` ""; do
-            if test -n "$ac_header"; then
-              echo "#include <$ac_header>" >> conftest.c
-            fi
-          done
-        else
-          echo "extern int gethostbyname();" >> conftest.c
-        fi
-        cat << \EOF >> conftest.c
-int main(void) { return (int)gethostbyname; }
-EOF
-
-#cat conftest.$ac_ext
-        ${CC} ${CFLAGS} -o conftest$ac_exeext conftest.$ac_ext ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
-        if test $rc -eq 0; then
-          ac_cv_func_gethostbyname=yes
-          break
-        fi
-else
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo $ac_headers|sed 's/+/\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
+`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
 int
 main ()
 {
-return (int)gethostbyname;
+`if test -z "$ac_headers"; then echo "extern void gethostbyname();"; fi`
+                                         #ifdef gethostbyname
+                                         #else
+                                           return (int)gethostbyname;
+                                         #endif
+
 
   ;
   return 0;
 }
 
 _ACEOF
-if ac_fn_c_try_compile "$LINENO"; then :
+if ac_fn_c_try_link "$LINENO"; then :
   ac_cv_func_gethostbyname=yes; break
 
 fi
-rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
-fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
       done
-      rm -f conftest.$ac_ext conftest$ac_exeext
 #set +x
 
 
@@ -10977,50 +10787,31 @@ else
       ac_cv_func_gethostbyname_r="no"
       echo > conftest.log
       for ac_headers in winsock2.h ""; do
-if false; then
-        cat << \EOF > conftest.c
-EOF
-        if test -n "$ac_headers"; then
-          for ac_header in `echo $ac_headers|sed 's/+/ /g'` ""; do
-            if test -n "$ac_header"; then
-              echo "#include <$ac_header>" >> conftest.c
-            fi
-          done
-        else
-          echo "extern int gethostbyname_r();" >> conftest.c
-        fi
-        cat << \EOF >> conftest.c
-int main(void) { return (int)gethostbyname_r; }
-EOF
-
-#cat conftest.$ac_ext
-        ${CC} ${CFLAGS} -o conftest$ac_exeext conftest.$ac_ext ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
-        if test $rc -eq 0; then
-          ac_cv_func_gethostbyname_r=yes
-          break
-        fi
-else
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo $ac_headers|sed 's/+/\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
+`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
 int
 main ()
 {
-return (int)gethostbyname_r;
+`if test -z "$ac_headers"; then echo "extern void gethostbyname_r();"; fi`
+                                         #ifdef gethostbyname_r
+                                         #else
+                                           return (int)gethostbyname_r;
+                                         #endif
+
 
   ;
   return 0;
 }
 
 _ACEOF
-if ac_fn_c_try_compile "$LINENO"; then :
+if ac_fn_c_try_link "$LINENO"; then :
   ac_cv_func_gethostbyname_r=yes; break
 
 fi
-rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
-fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
       done
-      rm -f conftest.$ac_ext conftest$ac_exeext
 #set +x
 
 
@@ -11048,50 +10839,31 @@ else
       ac_cv_func_chmod="no"
       echo > conftest.log
       for ac_headers in  ""; do
-if false; then
-        cat << \EOF > conftest.c
-EOF
-        if test -n "$ac_headers"; then
-          for ac_header in `echo $ac_headers|sed 's/+/ /g'` ""; do
-            if test -n "$ac_header"; then
-              echo "#include <$ac_header>" >> conftest.c
-            fi
-          done
-        else
-          echo "extern int chmod();" >> conftest.c
-        fi
-        cat << \EOF >> conftest.c
-int main(void) { return (int)chmod; }
-EOF
-
-#cat conftest.$ac_ext
-        ${CC} ${CFLAGS} -o conftest$ac_exeext conftest.$ac_ext ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
-        if test $rc -eq 0; then
-          ac_cv_func_chmod=yes
-          break
-        fi
-else
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo $ac_headers|sed 's/+/\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
+`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
 int
 main ()
 {
-return (int)chmod;
+`if test -z "$ac_headers"; then echo "extern void chmod();"; fi`
+                                         #ifdef chmod
+                                         #else
+                                           return (int)chmod;
+                                         #endif
+
 
   ;
   return 0;
 }
 
 _ACEOF
-if ac_fn_c_try_compile "$LINENO"; then :
+if ac_fn_c_try_link "$LINENO"; then :
   ac_cv_func_chmod=yes; break
 
 fi
-rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
-fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
       done
-      rm -f conftest.$ac_ext conftest$ac_exeext
 #set +x
 
 
@@ -11118,50 +10890,31 @@ else
       ac_cv_func_chown="no"
       echo > conftest.log
       for ac_headers in  ""; do
-if false; then
-        cat << \EOF > conftest.c
-EOF
-        if test -n "$ac_headers"; then
-          for ac_header in `echo $ac_headers|sed 's/+/ /g'` ""; do
-            if test -n "$ac_header"; then
-              echo "#include <$ac_header>" >> conftest.c
-            fi
-          done
-        else
-          echo "extern int chown();" >> conftest.c
-        fi
-        cat << \EOF >> conftest.c
-int main(void) { return (int)chown; }
-EOF
-
-#cat conftest.$ac_ext
-        ${CC} ${CFLAGS} -o conftest$ac_exeext conftest.$ac_ext ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
-        if test $rc -eq 0; then
-          ac_cv_func_chown=yes
-          break
-        fi
-else
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo $ac_headers|sed 's/+/\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
+`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
 int
 main ()
 {
-return (int)chown;
+`if test -z "$ac_headers"; then echo "extern void chown();"; fi`
+                                         #ifdef chown
+                                         #else
+                                           return (int)chown;
+                                         #endif
+
 
   ;
   return 0;
 }
 
 _ACEOF
-if ac_fn_c_try_compile "$LINENO"; then :
+if ac_fn_c_try_link "$LINENO"; then :
   ac_cv_func_chown=yes; break
 
 fi
-rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
-fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
       done
-      rm -f conftest.$ac_ext conftest$ac_exeext
 #set +x
 
 
@@ -11188,50 +10941,31 @@ else
       ac_cv_func_fdatasync="no"
       echo > conftest.log
       for ac_headers in  ""; do
-if false; then
-        cat << \EOF > conftest.c
-EOF
-        if test -n "$ac_headers"; then
-          for ac_header in `echo $ac_headers|sed 's/+/ /g'` ""; do
-            if test -n "$ac_header"; then
-              echo "#include <$ac_header>" >> conftest.c
-            fi
-          done
-        else
-          echo "extern int fdatasync();" >> conftest.c
-        fi
-        cat << \EOF >> conftest.c
-int main(void) { return (int)fdatasync; }
-EOF
-
-#cat conftest.$ac_ext
-        ${CC} ${CFLAGS} -o conftest$ac_exeext conftest.$ac_ext ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
-        if test $rc -eq 0; then
-          ac_cv_func_fdatasync=yes
-          break
-        fi
-else
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo $ac_headers|sed 's/+/\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
+`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
 int
 main ()
 {
-return (int)fdatasync;
+`if test -z "$ac_headers"; then echo "extern void fdatasync();"; fi`
+                                         #ifdef fdatasync
+                                         #else
+                                           return (int)fdatasync;
+                                         #endif
+
 
   ;
   return 0;
 }
 
 _ACEOF
-if ac_fn_c_try_compile "$LINENO"; then :
+if ac_fn_c_try_link "$LINENO"; then :
   ac_cv_func_fdatasync=yes; break
 
 fi
-rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
-fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
       done
-      rm -f conftest.$ac_ext conftest$ac_exeext
 #set +x
 
 
@@ -11258,50 +10992,31 @@ else
       ac_cv_func__fseeki64="no"
       echo > conftest.log
       for ac_headers in  ""; do
-if false; then
-        cat << \EOF > conftest.c
-EOF
-        if test -n "$ac_headers"; then
-          for ac_header in `echo $ac_headers|sed 's/+/ /g'` ""; do
-            if test -n "$ac_header"; then
-              echo "#include <$ac_header>" >> conftest.c
-            fi
-          done
-        else
-          echo "extern int _fseeki64();" >> conftest.c
-        fi
-        cat << \EOF >> conftest.c
-int main(void) { return (int)_fseeki64; }
-EOF
-
-#cat conftest.$ac_ext
-        ${CC} ${CFLAGS} -o conftest$ac_exeext conftest.$ac_ext ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
-        if test $rc -eq 0; then
-          ac_cv_func__fseeki64=yes
-          break
-        fi
-else
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo $ac_headers|sed 's/+/\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
+`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
 int
 main ()
 {
-return (int)_fseeki64;
+`if test -z "$ac_headers"; then echo "extern void _fseeki64();"; fi`
+                                         #ifdef _fseeki64
+                                         #else
+                                           return (int)_fseeki64;
+                                         #endif
+
 
   ;
   return 0;
 }
 
 _ACEOF
-if ac_fn_c_try_compile "$LINENO"; then :
+if ac_fn_c_try_link "$LINENO"; then :
   ac_cv_func__fseeki64=yes; break
 
 fi
-rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
-fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
       done
-      rm -f conftest.$ac_ext conftest$ac_exeext
 #set +x
 
 
@@ -11328,50 +11043,31 @@ else
       ac_cv_func_fseeko64="no"
       echo > conftest.log
       for ac_headers in  ""; do
-if false; then
-        cat << \EOF > conftest.c
-EOF
-        if test -n "$ac_headers"; then
-          for ac_header in `echo $ac_headers|sed 's/+/ /g'` ""; do
-            if test -n "$ac_header"; then
-              echo "#include <$ac_header>" >> conftest.c
-            fi
-          done
-        else
-          echo "extern int fseeko64();" >> conftest.c
-        fi
-        cat << \EOF >> conftest.c
-int main(void) { return (int)fseeko64; }
-EOF
-
-#cat conftest.$ac_ext
-        ${CC} ${CFLAGS} -o conftest$ac_exeext conftest.$ac_ext ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
-        if test $rc -eq 0; then
-          ac_cv_func_fseeko64=yes
-          break
-        fi
-else
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo $ac_headers|sed 's/+/\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
+`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
 int
 main ()
 {
-return (int)fseeko64;
+`if test -z "$ac_headers"; then echo "extern void fseeko64();"; fi`
+                                         #ifdef fseeko64
+                                         #else
+                                           return (int)fseeko64;
+                                         #endif
+
 
   ;
   return 0;
 }
 
 _ACEOF
-if ac_fn_c_try_compile "$LINENO"; then :
+if ac_fn_c_try_link "$LINENO"; then :
   ac_cv_func_fseeko64=yes; break
 
 fi
-rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
-fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
       done
-      rm -f conftest.$ac_ext conftest$ac_exeext
 #set +x
 
 
@@ -11398,50 +11094,31 @@ else
       ac_cv_func_fseeko="no"
       echo > conftest.log
       for ac_headers in  ""; do
-if false; then
-        cat << \EOF > conftest.c
-EOF
-        if test -n "$ac_headers"; then
-          for ac_header in `echo $ac_headers|sed 's/+/ /g'` ""; do
-            if test -n "$ac_header"; then
-              echo "#include <$ac_header>" >> conftest.c
-            fi
-          done
-        else
-          echo "extern int fseeko();" >> conftest.c
-        fi
-        cat << \EOF >> conftest.c
-int main(void) { return (int)fseeko; }
-EOF
-
-#cat conftest.$ac_ext
-        ${CC} ${CFLAGS} -o conftest$ac_exeext conftest.$ac_ext ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
-        if test $rc -eq 0; then
-          ac_cv_func_fseeko=yes
-          break
-        fi
-else
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo $ac_headers|sed 's/+/\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
+`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
 int
 main ()
 {
-return (int)fseeko;
+`if test -z "$ac_headers"; then echo "extern void fseeko();"; fi`
+                                         #ifdef fseeko
+                                         #else
+                                           return (int)fseeko;
+                                         #endif
+
 
   ;
   return 0;
 }
 
 _ACEOF
-if ac_fn_c_try_compile "$LINENO"; then :
+if ac_fn_c_try_link "$LINENO"; then :
   ac_cv_func_fseeko=yes; break
 
 fi
-rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
-fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
       done
-      rm -f conftest.$ac_ext conftest$ac_exeext
 #set +x
 
 
@@ -11468,50 +11145,31 @@ else
       ac_cv_func__ftelli64="no"
       echo > conftest.log
       for ac_headers in  ""; do
-if false; then
-        cat << \EOF > conftest.c
-EOF
-        if test -n "$ac_headers"; then
-          for ac_header in `echo $ac_headers|sed 's/+/ /g'` ""; do
-            if test -n "$ac_header"; then
-              echo "#include <$ac_header>" >> conftest.c
-            fi
-          done
-        else
-          echo "extern int _ftelli64();" >> conftest.c
-        fi
-        cat << \EOF >> conftest.c
-int main(void) { return (int)_ftelli64; }
-EOF
-
-#cat conftest.$ac_ext
-        ${CC} ${CFLAGS} -o conftest$ac_exeext conftest.$ac_ext ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
-        if test $rc -eq 0; then
-          ac_cv_func__ftelli64=yes
-          break
-        fi
-else
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo $ac_headers|sed 's/+/\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
+`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
 int
 main ()
 {
-return (int)_ftelli64;
+`if test -z "$ac_headers"; then echo "extern void _ftelli64();"; fi`
+                                         #ifdef _ftelli64
+                                         #else
+                                           return (int)_ftelli64;
+                                         #endif
+
 
   ;
   return 0;
 }
 
 _ACEOF
-if ac_fn_c_try_compile "$LINENO"; then :
+if ac_fn_c_try_link "$LINENO"; then :
   ac_cv_func__ftelli64=yes; break
 
 fi
-rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
-fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
       done
-      rm -f conftest.$ac_ext conftest$ac_exeext
 #set +x
 
 
@@ -11538,50 +11196,31 @@ else
       ac_cv_func_ftello64="no"
       echo > conftest.log
       for ac_headers in  ""; do
-if false; then
-        cat << \EOF > conftest.c
-EOF
-        if test -n "$ac_headers"; then
-          for ac_header in `echo $ac_headers|sed 's/+/ /g'` ""; do
-            if test -n "$ac_header"; then
-              echo "#include <$ac_header>" >> conftest.c
-            fi
-          done
-        else
-          echo "extern int ftello64();" >> conftest.c
-        fi
-        cat << \EOF >> conftest.c
-int main(void) { return (int)ftello64; }
-EOF
-
-#cat conftest.$ac_ext
-        ${CC} ${CFLAGS} -o conftest$ac_exeext conftest.$ac_ext ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
-        if test $rc -eq 0; then
-          ac_cv_func_ftello64=yes
-          break
-        fi
-else
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo $ac_headers|sed 's/+/\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
+`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
 int
 main ()
 {
-return (int)ftello64;
+`if test -z "$ac_headers"; then echo "extern void ftello64();"; fi`
+                                         #ifdef ftello64
+                                         #else
+                                           return (int)ftello64;
+                                         #endif
+
 
   ;
   return 0;
 }
 
 _ACEOF
-if ac_fn_c_try_compile "$LINENO"; then :
+if ac_fn_c_try_link "$LINENO"; then :
   ac_cv_func_ftello64=yes; break
 
 fi
-rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
-fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
       done
-      rm -f conftest.$ac_ext conftest$ac_exeext
 #set +x
 
 
@@ -11608,50 +11247,31 @@ else
       ac_cv_func_ftello="no"
       echo > conftest.log
       for ac_headers in  ""; do
-if false; then
-        cat << \EOF > conftest.c
-EOF
-        if test -n "$ac_headers"; then
-          for ac_header in `echo $ac_headers|sed 's/+/ /g'` ""; do
-            if test -n "$ac_header"; then
-              echo "#include <$ac_header>" >> conftest.c
-            fi
-          done
-        else
-          echo "extern int ftello();" >> conftest.c
-        fi
-        cat << \EOF >> conftest.c
-int main(void) { return (int)ftello; }
-EOF
-
-#cat conftest.$ac_ext
-        ${CC} ${CFLAGS} -o conftest$ac_exeext conftest.$ac_ext ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
-        if test $rc -eq 0; then
-          ac_cv_func_ftello=yes
-          break
-        fi
-else
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo $ac_headers|sed 's/+/\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
+`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
 int
 main ()
 {
-return (int)ftello;
+`if test -z "$ac_headers"; then echo "extern void ftello();"; fi`
+                                         #ifdef ftello
+                                         #else
+                                           return (int)ftello;
+                                         #endif
+
 
   ;
   return 0;
 }
 
 _ACEOF
-if ac_fn_c_try_compile "$LINENO"; then :
+if ac_fn_c_try_link "$LINENO"; then :
   ac_cv_func_ftello=yes; break
 
 fi
-rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
-fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
       done
-      rm -f conftest.$ac_ext conftest$ac_exeext
 #set +x
 
 
@@ -11678,50 +11298,31 @@ else
       ac_cv_func_getgrgid_r="no"
       echo > conftest.log
       for ac_headers in  ""; do
-if false; then
-        cat << \EOF > conftest.c
-EOF
-        if test -n "$ac_headers"; then
-          for ac_header in `echo $ac_headers|sed 's/+/ /g'` ""; do
-            if test -n "$ac_header"; then
-              echo "#include <$ac_header>" >> conftest.c
-            fi
-          done
-        else
-          echo "extern int getgrgid_r();" >> conftest.c
-        fi
-        cat << \EOF >> conftest.c
-int main(void) { return (int)getgrgid_r; }
-EOF
-
-#cat conftest.$ac_ext
-        ${CC} ${CFLAGS} -o conftest$ac_exeext conftest.$ac_ext ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
-        if test $rc -eq 0; then
-          ac_cv_func_getgrgid_r=yes
-          break
-        fi
-else
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo $ac_headers|sed 's/+/\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
+`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
 int
 main ()
 {
-return (int)getgrgid_r;
+`if test -z "$ac_headers"; then echo "extern void getgrgid_r();"; fi`
+                                         #ifdef getgrgid_r
+                                         #else
+                                           return (int)getgrgid_r;
+                                         #endif
+
 
   ;
   return 0;
 }
 
 _ACEOF
-if ac_fn_c_try_compile "$LINENO"; then :
+if ac_fn_c_try_link "$LINENO"; then :
   ac_cv_func_getgrgid_r=yes; break
 
 fi
-rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
-fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
       done
-      rm -f conftest.$ac_ext conftest$ac_exeext
 #set +x
 
 
@@ -11748,50 +11349,31 @@ else
       ac_cv_func_getgrnam_r="no"
       echo > conftest.log
       for ac_headers in  ""; do
-if false; then
-        cat << \EOF > conftest.c
-EOF
-        if test -n "$ac_headers"; then
-          for ac_header in `echo $ac_headers|sed 's/+/ /g'` ""; do
-            if test -n "$ac_header"; then
-              echo "#include <$ac_header>" >> conftest.c
-            fi
-          done
-        else
-          echo "extern int getgrnam_r();" >> conftest.c
-        fi
-        cat << \EOF >> conftest.c
-int main(void) { return (int)getgrnam_r; }
-EOF
-
-#cat conftest.$ac_ext
-        ${CC} ${CFLAGS} -o conftest$ac_exeext conftest.$ac_ext ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
-        if test $rc -eq 0; then
-          ac_cv_func_getgrnam_r=yes
-          break
-        fi
-else
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo $ac_headers|sed 's/+/\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
+`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
 int
 main ()
 {
-return (int)getgrnam_r;
+`if test -z "$ac_headers"; then echo "extern void getgrnam_r();"; fi`
+                                         #ifdef getgrnam_r
+                                         #else
+                                           return (int)getgrnam_r;
+                                         #endif
+
 
   ;
   return 0;
 }
 
 _ACEOF
-if ac_fn_c_try_compile "$LINENO"; then :
+if ac_fn_c_try_link "$LINENO"; then :
   ac_cv_func_getgrnam_r=yes; break
 
 fi
-rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
-fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
       done
-      rm -f conftest.$ac_ext conftest$ac_exeext
 #set +x
 
 
@@ -11818,50 +11400,31 @@ else
       ac_cv_func_getpwnam_r="no"
       echo > conftest.log
       for ac_headers in  ""; do
-if false; then
-        cat << \EOF > conftest.c
-EOF
-        if test -n "$ac_headers"; then
-          for ac_header in `echo $ac_headers|sed 's/+/ /g'` ""; do
-            if test -n "$ac_header"; then
-              echo "#include <$ac_header>" >> conftest.c
-            fi
-          done
-        else
-          echo "extern int getpwnam_r();" >> conftest.c
-        fi
-        cat << \EOF >> conftest.c
-int main(void) { return (int)getpwnam_r; }
-EOF
-
-#cat conftest.$ac_ext
-        ${CC} ${CFLAGS} -o conftest$ac_exeext conftest.$ac_ext ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
-        if test $rc -eq 0; then
-          ac_cv_func_getpwnam_r=yes
-          break
-        fi
-else
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo $ac_headers|sed 's/+/\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
+`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
 int
 main ()
 {
-return (int)getpwnam_r;
+`if test -z "$ac_headers"; then echo "extern void getpwnam_r();"; fi`
+                                         #ifdef getpwnam_r
+                                         #else
+                                           return (int)getpwnam_r;
+                                         #endif
+
 
   ;
   return 0;
 }
 
 _ACEOF
-if ac_fn_c_try_compile "$LINENO"; then :
+if ac_fn_c_try_link "$LINENO"; then :
   ac_cv_func_getpwnam_r=yes; break
 
 fi
-rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
-fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
       done
-      rm -f conftest.$ac_ext conftest$ac_exeext
 #set +x
 
 
@@ -11888,50 +11451,31 @@ else
       ac_cv_func_getpwuid_r="no"
       echo > conftest.log
       for ac_headers in  ""; do
-if false; then
-        cat << \EOF > conftest.c
-EOF
-        if test -n "$ac_headers"; then
-          for ac_header in `echo $ac_headers|sed 's/+/ /g'` ""; do
-            if test -n "$ac_header"; then
-              echo "#include <$ac_header>" >> conftest.c
-            fi
-          done
-        else
-          echo "extern int getpwuid_r();" >> conftest.c
-        fi
-        cat << \EOF >> conftest.c
-int main(void) { return (int)getpwuid_r; }
-EOF
-
-#cat conftest.$ac_ext
-        ${CC} ${CFLAGS} -o conftest$ac_exeext conftest.$ac_ext ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
-        if test $rc -eq 0; then
-          ac_cv_func_getpwuid_r=yes
-          break
-        fi
-else
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo $ac_headers|sed 's/+/\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
+`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
 int
 main ()
 {
-return (int)getpwuid_r;
+`if test -z "$ac_headers"; then echo "extern void getpwuid_r();"; fi`
+                                         #ifdef getpwuid_r
+                                         #else
+                                           return (int)getpwuid_r;
+                                         #endif
+
 
   ;
   return 0;
 }
 
 _ACEOF
-if ac_fn_c_try_compile "$LINENO"; then :
+if ac_fn_c_try_link "$LINENO"; then :
   ac_cv_func_getpwuid_r=yes; break
 
 fi
-rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
-fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
       done
-      rm -f conftest.$ac_ext conftest$ac_exeext
 #set +x
 
 
@@ -11958,50 +11502,31 @@ else
       ac_cv_func_ioctl="no"
       echo > conftest.log
       for ac_headers in  ""; do
-if false; then
-        cat << \EOF > conftest.c
-EOF
-        if test -n "$ac_headers"; then
-          for ac_header in `echo $ac_headers|sed 's/+/ /g'` ""; do
-            if test -n "$ac_header"; then
-              echo "#include <$ac_header>" >> conftest.c
-            fi
-          done
-        else
-          echo "extern int ioctl();" >> conftest.c
-        fi
-        cat << \EOF >> conftest.c
-int main(void) { return (int)ioctl; }
-EOF
-
-#cat conftest.$ac_ext
-        ${CC} ${CFLAGS} -o conftest$ac_exeext conftest.$ac_ext ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
-        if test $rc -eq 0; then
-          ac_cv_func_ioctl=yes
-          break
-        fi
-else
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo $ac_headers|sed 's/+/\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
+`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
 int
 main ()
 {
-return (int)ioctl;
+`if test -z "$ac_headers"; then echo "extern void ioctl();"; fi`
+                                         #ifdef ioctl
+                                         #else
+                                           return (int)ioctl;
+                                         #endif
+
 
   ;
   return 0;
 }
 
 _ACEOF
-if ac_fn_c_try_compile "$LINENO"; then :
+if ac_fn_c_try_link "$LINENO"; then :
   ac_cv_func_ioctl=yes; break
 
 fi
-rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
-fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
       done
-      rm -f conftest.$ac_ext conftest$ac_exeext
 #set +x
 
 
@@ -12028,50 +11553,31 @@ else
       ac_cv_func_lchmod="no"
       echo > conftest.log
       for ac_headers in  ""; do
-if false; then
-        cat << \EOF > conftest.c
-EOF
-        if test -n "$ac_headers"; then
-          for ac_header in `echo $ac_headers|sed 's/+/ /g'` ""; do
-            if test -n "$ac_header"; then
-              echo "#include <$ac_header>" >> conftest.c
-            fi
-          done
-        else
-          echo "extern int lchmod();" >> conftest.c
-        fi
-        cat << \EOF >> conftest.c
-int main(void) { return (int)lchmod; }
-EOF
-
-#cat conftest.$ac_ext
-        ${CC} ${CFLAGS} -o conftest$ac_exeext conftest.$ac_ext ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
-        if test $rc -eq 0; then
-          ac_cv_func_lchmod=yes
-          break
-        fi
-else
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo $ac_headers|sed 's/+/\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
+`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
 int
 main ()
 {
-return (int)lchmod;
+`if test -z "$ac_headers"; then echo "extern void lchmod();"; fi`
+                                         #ifdef lchmod
+                                         #else
+                                           return (int)lchmod;
+                                         #endif
+
 
   ;
   return 0;
 }
 
 _ACEOF
-if ac_fn_c_try_compile "$LINENO"; then :
+if ac_fn_c_try_link "$LINENO"; then :
   ac_cv_func_lchmod=yes; break
 
 fi
-rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
-fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
       done
-      rm -f conftest.$ac_ext conftest$ac_exeext
 #set +x
 
 
@@ -12098,50 +11604,31 @@ else
       ac_cv_func_link="no"
       echo > conftest.log
       for ac_headers in  ""; do
-if false; then
-        cat << \EOF > conftest.c
-EOF
-        if test -n "$ac_headers"; then
-          for ac_header in `echo $ac_headers|sed 's/+/ /g'` ""; do
-            if test -n "$ac_header"; then
-              echo "#include <$ac_header>" >> conftest.c
-            fi
-          done
-        else
-          echo "extern int link();" >> conftest.c
-        fi
-        cat << \EOF >> conftest.c
-int main(void) { return (int)link; }
-EOF
-
-#cat conftest.$ac_ext
-        ${CC} ${CFLAGS} -o conftest$ac_exeext conftest.$ac_ext ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
-        if test $rc -eq 0; then
-          ac_cv_func_link=yes
-          break
-        fi
-else
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo $ac_headers|sed 's/+/\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
+`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
 int
 main ()
 {
-return (int)link;
+`if test -z "$ac_headers"; then echo "extern void link();"; fi`
+                                         #ifdef link
+                                         #else
+                                           return (int)link;
+                                         #endif
+
 
   ;
   return 0;
 }
 
 _ACEOF
-if ac_fn_c_try_compile "$LINENO"; then :
+if ac_fn_c_try_link "$LINENO"; then :
   ac_cv_func_link=yes; break
 
 fi
-rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
-fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
       done
-      rm -f conftest.$ac_ext conftest$ac_exeext
 #set +x
 
 
@@ -12168,50 +11655,31 @@ else
       ac_cv_func_lstat64="no"
       echo > conftest.log
       for ac_headers in  ""; do
-if false; then
-        cat << \EOF > conftest.c
-EOF
-        if test -n "$ac_headers"; then
-          for ac_header in `echo $ac_headers|sed 's/+/ /g'` ""; do
-            if test -n "$ac_header"; then
-              echo "#include <$ac_header>" >> conftest.c
-            fi
-          done
-        else
-          echo "extern int lstat64();" >> conftest.c
-        fi
-        cat << \EOF >> conftest.c
-int main(void) { return (int)lstat64; }
-EOF
-
-#cat conftest.$ac_ext
-        ${CC} ${CFLAGS} -o conftest$ac_exeext conftest.$ac_ext ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
-        if test $rc -eq 0; then
-          ac_cv_func_lstat64=yes
-          break
-        fi
-else
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo $ac_headers|sed 's/+/\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
+`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
 int
 main ()
 {
-return (int)lstat64;
+`if test -z "$ac_headers"; then echo "extern void lstat64();"; fi`
+                                         #ifdef lstat64
+                                         #else
+                                           return (int)lstat64;
+                                         #endif
+
 
   ;
   return 0;
 }
 
 _ACEOF
-if ac_fn_c_try_compile "$LINENO"; then :
+if ac_fn_c_try_link "$LINENO"; then :
   ac_cv_func_lstat64=yes; break
 
 fi
-rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
-fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
       done
-      rm -f conftest.$ac_ext conftest$ac_exeext
 #set +x
 
 
@@ -12238,50 +11706,31 @@ else
       ac_cv_func_lstat="no"
       echo > conftest.log
       for ac_headers in  ""; do
-if false; then
-        cat << \EOF > conftest.c
-EOF
-        if test -n "$ac_headers"; then
-          for ac_header in `echo $ac_headers|sed 's/+/ /g'` ""; do
-            if test -n "$ac_header"; then
-              echo "#include <$ac_header>" >> conftest.c
-            fi
-          done
-        else
-          echo "extern int lstat();" >> conftest.c
-        fi
-        cat << \EOF >> conftest.c
-int main(void) { return (int)lstat; }
-EOF
-
-#cat conftest.$ac_ext
-        ${CC} ${CFLAGS} -o conftest$ac_exeext conftest.$ac_ext ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
-        if test $rc -eq 0; then
-          ac_cv_func_lstat=yes
-          break
-        fi
-else
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo $ac_headers|sed 's/+/\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
+`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
 int
 main ()
 {
-return (int)lstat;
+`if test -z "$ac_headers"; then echo "extern void lstat();"; fi`
+                                         #ifdef lstat
+                                         #else
+                                           return (int)lstat;
+                                         #endif
+
 
   ;
   return 0;
 }
 
 _ACEOF
-if ac_fn_c_try_compile "$LINENO"; then :
+if ac_fn_c_try_link "$LINENO"; then :
   ac_cv_func_lstat=yes; break
 
 fi
-rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
-fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
       done
-      rm -f conftest.$ac_ext conftest$ac_exeext
 #set +x
 
 
@@ -12307,51 +11756,32 @@ else
 #set -x
       ac_cv_func_major="no"
       echo > conftest.log
-      for ac_headers in  ""; do
-if false; then
-        cat << \EOF > conftest.c
-EOF
-        if test -n "$ac_headers"; then
-          for ac_header in `echo $ac_headers|sed 's/+/ /g'` ""; do
-            if test -n "$ac_header"; then
-              echo "#include <$ac_header>" >> conftest.c
-            fi
-          done
-        else
-          echo "extern int major();" >> conftest.c
-        fi
-        cat << \EOF >> conftest.c
-int main(void) { return (int)major; }
-EOF
-
-#cat conftest.$ac_ext
-        ${CC} ${CFLAGS} -o conftest$ac_exeext conftest.$ac_ext ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
-        if test $rc -eq 0; then
-          ac_cv_func_major=yes
-          break
-        fi
-else
+      for ac_headers in sys/types.h ""; do
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo $ac_headers|sed 's/+/\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
+`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
 int
 main ()
 {
-return (int)major;
+`if test -z "$ac_headers"; then echo "extern void major();"; fi`
+                                         #ifdef major
+                                         #else
+                                           return (int)major;
+                                         #endif
+
 
   ;
   return 0;
 }
 
 _ACEOF
-if ac_fn_c_try_compile "$LINENO"; then :
+if ac_fn_c_try_link "$LINENO"; then :
   ac_cv_func_major=yes; break
 
 fi
-rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
-fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
       done
-      rm -f conftest.$ac_ext conftest$ac_exeext
 #set +x
 
 
@@ -12377,51 +11807,32 @@ else
 #set -x
       ac_cv_func_makedev="no"
       echo > conftest.log
-      for ac_headers in  ""; do
-if false; then
-        cat << \EOF > conftest.c
-EOF
-        if test -n "$ac_headers"; then
-          for ac_header in `echo $ac_headers|sed 's/+/ /g'` ""; do
-            if test -n "$ac_header"; then
-              echo "#include <$ac_header>" >> conftest.c
-            fi
-          done
-        else
-          echo "extern int makedev();" >> conftest.c
-        fi
-        cat << \EOF >> conftest.c
-int main(void) { return (int)makedev; }
-EOF
-
-#cat conftest.$ac_ext
-        ${CC} ${CFLAGS} -o conftest$ac_exeext conftest.$ac_ext ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
-        if test $rc -eq 0; then
-          ac_cv_func_makedev=yes
-          break
-        fi
-else
+      for ac_headers in sys/types.h ""; do
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo $ac_headers|sed 's/+/\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
+`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
 int
 main ()
 {
-return (int)makedev;
+`if test -z "$ac_headers"; then echo "extern void makedev();"; fi`
+                                         #ifdef makedev
+                                         #else
+                                           return (int)makedev;
+                                         #endif
+
 
   ;
   return 0;
 }
 
 _ACEOF
-if ac_fn_c_try_compile "$LINENO"; then :
+if ac_fn_c_try_link "$LINENO"; then :
   ac_cv_func_makedev=yes; break
 
 fi
-rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
-fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
       done
-      rm -f conftest.$ac_ext conftest$ac_exeext
 #set +x
 
 
@@ -12447,51 +11858,32 @@ else
 #set -x
       ac_cv_func_minor="no"
       echo > conftest.log
-      for ac_headers in  ""; do
-if false; then
-        cat << \EOF > conftest.c
-EOF
-        if test -n "$ac_headers"; then
-          for ac_header in `echo $ac_headers|sed 's/+/ /g'` ""; do
-            if test -n "$ac_header"; then
-              echo "#include <$ac_header>" >> conftest.c
-            fi
-          done
-        else
-          echo "extern int minor();" >> conftest.c
-        fi
-        cat << \EOF >> conftest.c
-int main(void) { return (int)minor; }
-EOF
-
-#cat conftest.$ac_ext
-        ${CC} ${CFLAGS} -o conftest$ac_exeext conftest.$ac_ext ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
-        if test $rc -eq 0; then
-          ac_cv_func_minor=yes
-          break
-        fi
-else
+      for ac_headers in sys/types.h ""; do
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo $ac_headers|sed 's/+/\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
+`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
 int
 main ()
 {
-return (int)minor;
+`if test -z "$ac_headers"; then echo "extern void minor();"; fi`
+                                         #ifdef minor
+                                         #else
+                                           return (int)minor;
+                                         #endif
+
 
   ;
   return 0;
 }
 
 _ACEOF
-if ac_fn_c_try_compile "$LINENO"; then :
+if ac_fn_c_try_link "$LINENO"; then :
   ac_cv_func_minor=yes; break
 
 fi
-rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
-fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
       done
-      rm -f conftest.$ac_ext conftest$ac_exeext
 #set +x
 
 
@@ -12518,50 +11910,31 @@ else
       ac_cv_func_mknod="no"
       echo > conftest.log
       for ac_headers in  ""; do
-if false; then
-        cat << \EOF > conftest.c
-EOF
-        if test -n "$ac_headers"; then
-          for ac_header in `echo $ac_headers|sed 's/+/ /g'` ""; do
-            if test -n "$ac_header"; then
-              echo "#include <$ac_header>" >> conftest.c
-            fi
-          done
-        else
-          echo "extern int mknod();" >> conftest.c
-        fi
-        cat << \EOF >> conftest.c
-int main(void) { return (int)mknod; }
-EOF
-
-#cat conftest.$ac_ext
-        ${CC} ${CFLAGS} -o conftest$ac_exeext conftest.$ac_ext ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
-        if test $rc -eq 0; then
-          ac_cv_func_mknod=yes
-          break
-        fi
-else
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo $ac_headers|sed 's/+/\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
+`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
 int
 main ()
 {
-return (int)mknod;
+`if test -z "$ac_headers"; then echo "extern void mknod();"; fi`
+                                         #ifdef mknod
+                                         #else
+                                           return (int)mknod;
+                                         #endif
+
 
   ;
   return 0;
 }
 
 _ACEOF
-if ac_fn_c_try_compile "$LINENO"; then :
+if ac_fn_c_try_link "$LINENO"; then :
   ac_cv_func_mknod=yes; break
 
 fi
-rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
-fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
       done
-      rm -f conftest.$ac_ext conftest$ac_exeext
 #set +x
 
 
@@ -12588,50 +11961,31 @@ else
       ac_cv_func_posix_fadvise="no"
       echo > conftest.log
       for ac_headers in  ""; do
-if false; then
-        cat << \EOF > conftest.c
-EOF
-        if test -n "$ac_headers"; then
-          for ac_header in `echo $ac_headers|sed 's/+/ /g'` ""; do
-            if test -n "$ac_header"; then
-              echo "#include <$ac_header>" >> conftest.c
-            fi
-          done
-        else
-          echo "extern int posix_fadvise();" >> conftest.c
-        fi
-        cat << \EOF >> conftest.c
-int main(void) { return (int)posix_fadvise; }
-EOF
-
-#cat conftest.$ac_ext
-        ${CC} ${CFLAGS} -o conftest$ac_exeext conftest.$ac_ext ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
-        if test $rc -eq 0; then
-          ac_cv_func_posix_fadvise=yes
-          break
-        fi
-else
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo $ac_headers|sed 's/+/\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
+`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
 int
 main ()
 {
-return (int)posix_fadvise;
+`if test -z "$ac_headers"; then echo "extern void posix_fadvise();"; fi`
+                                         #ifdef posix_fadvise
+                                         #else
+                                           return (int)posix_fadvise;
+                                         #endif
+
 
   ;
   return 0;
 }
 
 _ACEOF
-if ac_fn_c_try_compile "$LINENO"; then :
+if ac_fn_c_try_link "$LINENO"; then :
   ac_cv_func_posix_fadvise=yes; break
 
 fi
-rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
-fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
       done
-      rm -f conftest.$ac_ext conftest$ac_exeext
 #set +x
 
 
@@ -12658,50 +12012,31 @@ else
       ac_cv_func_readlink="no"
       echo > conftest.log
       for ac_headers in  ""; do
-if false; then
-        cat << \EOF > conftest.c
-EOF
-        if test -n "$ac_headers"; then
-          for ac_header in `echo $ac_headers|sed 's/+/ /g'` ""; do
-            if test -n "$ac_header"; then
-              echo "#include <$ac_header>" >> conftest.c
-            fi
-          done
-        else
-          echo "extern int readlink();" >> conftest.c
-        fi
-        cat << \EOF >> conftest.c
-int main(void) { return (int)readlink; }
-EOF
-
-#cat conftest.$ac_ext
-        ${CC} ${CFLAGS} -o conftest$ac_exeext conftest.$ac_ext ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
-        if test $rc -eq 0; then
-          ac_cv_func_readlink=yes
-          break
-        fi
-else
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo $ac_headers|sed 's/+/\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
+`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
 int
 main ()
 {
-return (int)readlink;
+`if test -z "$ac_headers"; then echo "extern void readlink();"; fi`
+                                         #ifdef readlink
+                                         #else
+                                           return (int)readlink;
+                                         #endif
+
 
   ;
   return 0;
 }
 
 _ACEOF
-if ac_fn_c_try_compile "$LINENO"; then :
+if ac_fn_c_try_link "$LINENO"; then :
   ac_cv_func_readlink=yes; break
 
 fi
-rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
-fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
       done
-      rm -f conftest.$ac_ext conftest$ac_exeext
 #set +x
 
 
@@ -12728,50 +12063,31 @@ else
       ac_cv_func_stat64="no"
       echo > conftest.log
       for ac_headers in  ""; do
-if false; then
-        cat << \EOF > conftest.c
-EOF
-        if test -n "$ac_headers"; then
-          for ac_header in `echo $ac_headers|sed 's/+/ /g'` ""; do
-            if test -n "$ac_header"; then
-              echo "#include <$ac_header>" >> conftest.c
-            fi
-          done
-        else
-          echo "extern int stat64();" >> conftest.c
-        fi
-        cat << \EOF >> conftest.c
-int main(void) { return (int)stat64; }
-EOF
-
-#cat conftest.$ac_ext
-        ${CC} ${CFLAGS} -o conftest$ac_exeext conftest.$ac_ext ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
-        if test $rc -eq 0; then
-          ac_cv_func_stat64=yes
-          break
-        fi
-else
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo $ac_headers|sed 's/+/\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
+`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
 int
 main ()
 {
-return (int)stat64;
+`if test -z "$ac_headers"; then echo "extern void stat64();"; fi`
+                                         #ifdef stat64
+                                         #else
+                                           return (int)stat64;
+                                         #endif
+
 
   ;
   return 0;
 }
 
 _ACEOF
-if ac_fn_c_try_compile "$LINENO"; then :
+if ac_fn_c_try_link "$LINENO"; then :
   ac_cv_func_stat64=yes; break
 
 fi
-rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
-fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
       done
-      rm -f conftest.$ac_ext conftest$ac_exeext
 #set +x
 
 
@@ -12798,50 +12114,31 @@ else
       ac_cv_func_stat="no"
       echo > conftest.log
       for ac_headers in  ""; do
-if false; then
-        cat << \EOF > conftest.c
-EOF
-        if test -n "$ac_headers"; then
-          for ac_header in `echo $ac_headers|sed 's/+/ /g'` ""; do
-            if test -n "$ac_header"; then
-              echo "#include <$ac_header>" >> conftest.c
-            fi
-          done
-        else
-          echo "extern int stat();" >> conftest.c
-        fi
-        cat << \EOF >> conftest.c
-int main(void) { return (int)stat; }
-EOF
-
-#cat conftest.$ac_ext
-        ${CC} ${CFLAGS} -o conftest$ac_exeext conftest.$ac_ext ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
-        if test $rc -eq 0; then
-          ac_cv_func_stat=yes
-          break
-        fi
-else
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo $ac_headers|sed 's/+/\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
+`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
 int
 main ()
 {
-return (int)stat;
+`if test -z "$ac_headers"; then echo "extern void stat();"; fi`
+                                         #ifdef stat
+                                         #else
+                                           return (int)stat;
+                                         #endif
+
 
   ;
   return 0;
 }
 
 _ACEOF
-if ac_fn_c_try_compile "$LINENO"; then :
+if ac_fn_c_try_link "$LINENO"; then :
   ac_cv_func_stat=yes; break
 
 fi
-rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
-fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
       done
-      rm -f conftest.$ac_ext conftest$ac_exeext
 #set +x
 
 
@@ -12868,50 +12165,31 @@ else
       ac_cv_func__stati64="no"
       echo > conftest.log
       for ac_headers in  ""; do
-if false; then
-        cat << \EOF > conftest.c
-EOF
-        if test -n "$ac_headers"; then
-          for ac_header in `echo $ac_headers|sed 's/+/ /g'` ""; do
-            if test -n "$ac_header"; then
-              echo "#include <$ac_header>" >> conftest.c
-            fi
-          done
-        else
-          echo "extern int _stati64();" >> conftest.c
-        fi
-        cat << \EOF >> conftest.c
-int main(void) { return (int)_stati64; }
-EOF
-
-#cat conftest.$ac_ext
-        ${CC} ${CFLAGS} -o conftest$ac_exeext conftest.$ac_ext ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
-        if test $rc -eq 0; then
-          ac_cv_func__stati64=yes
-          break
-        fi
-else
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo $ac_headers|sed 's/+/\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
+`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
 int
 main ()
 {
-return (int)_stati64;
+`if test -z "$ac_headers"; then echo "extern void _stati64();"; fi`
+                                         #ifdef _stati64
+                                         #else
+                                           return (int)_stati64;
+                                         #endif
+
 
   ;
   return 0;
 }
 
 _ACEOF
-if ac_fn_c_try_compile "$LINENO"; then :
+if ac_fn_c_try_link "$LINENO"; then :
   ac_cv_func__stati64=yes; break
 
 fi
-rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
-fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
       done
-      rm -f conftest.$ac_ext conftest$ac_exeext
 #set +x
 
 
@@ -12938,50 +12216,31 @@ else
       ac_cv_func_statvfs="no"
       echo > conftest.log
       for ac_headers in  ""; do
-if false; then
-        cat << \EOF > conftest.c
-EOF
-        if test -n "$ac_headers"; then
-          for ac_header in `echo $ac_headers|sed 's/+/ /g'` ""; do
-            if test -n "$ac_header"; then
-              echo "#include <$ac_header>" >> conftest.c
-            fi
-          done
-        else
-          echo "extern int statvfs();" >> conftest.c
-        fi
-        cat << \EOF >> conftest.c
-int main(void) { return (int)statvfs; }
-EOF
-
-#cat conftest.$ac_ext
-        ${CC} ${CFLAGS} -o conftest$ac_exeext conftest.$ac_ext ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
-        if test $rc -eq 0; then
-          ac_cv_func_statvfs=yes
-          break
-        fi
-else
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo $ac_headers|sed 's/+/\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
+`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
 int
 main ()
 {
-return (int)statvfs;
+`if test -z "$ac_headers"; then echo "extern void statvfs();"; fi`
+                                         #ifdef statvfs
+                                         #else
+                                           return (int)statvfs;
+                                         #endif
+
 
   ;
   return 0;
 }
 
 _ACEOF
-if ac_fn_c_try_compile "$LINENO"; then :
+if ac_fn_c_try_link "$LINENO"; then :
   ac_cv_func_statvfs=yes; break
 
 fi
-rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
-fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
       done
-      rm -f conftest.$ac_ext conftest$ac_exeext
 #set +x
 
 
@@ -13008,50 +12267,31 @@ else
       ac_cv_func_symlink="no"
       echo > conftest.log
       for ac_headers in  ""; do
-if false; then
-        cat << \EOF > conftest.c
-EOF
-        if test -n "$ac_headers"; then
-          for ac_header in `echo $ac_headers|sed 's/+/ /g'` ""; do
-            if test -n "$ac_header"; then
-              echo "#include <$ac_header>" >> conftest.c
-            fi
-          done
-        else
-          echo "extern int symlink();" >> conftest.c
-        fi
-        cat << \EOF >> conftest.c
-int main(void) { return (int)symlink; }
-EOF
-
-#cat conftest.$ac_ext
-        ${CC} ${CFLAGS} -o conftest$ac_exeext conftest.$ac_ext ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
-        if test $rc -eq 0; then
-          ac_cv_func_symlink=yes
-          break
-        fi
-else
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo $ac_headers|sed 's/+/\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
+`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
 int
 main ()
 {
-return (int)symlink;
+`if test -z "$ac_headers"; then echo "extern void symlink();"; fi`
+                                         #ifdef symlink
+                                         #else
+                                           return (int)symlink;
+                                         #endif
+
 
   ;
   return 0;
 }
 
 _ACEOF
-if ac_fn_c_try_compile "$LINENO"; then :
+if ac_fn_c_try_link "$LINENO"; then :
   ac_cv_func_symlink=yes; break
 
 fi
-rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
-fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
       done
-      rm -f conftest.$ac_ext conftest$ac_exeext
 #set +x
 
 
@@ -13079,50 +12319,31 @@ else
       ac_cv_func_mkdtemp="no"
       echo > conftest.log
       for ac_headers in io.h ""; do
-if false; then
-        cat << \EOF > conftest.c
-EOF
-        if test -n "$ac_headers"; then
-          for ac_header in `echo $ac_headers|sed 's/+/ /g'` ""; do
-            if test -n "$ac_header"; then
-              echo "#include <$ac_header>" >> conftest.c
-            fi
-          done
-        else
-          echo "extern int mkdtemp();" >> conftest.c
-        fi
-        cat << \EOF >> conftest.c
-int main(void) { return (int)mkdtemp; }
-EOF
-
-#cat conftest.$ac_ext
-        ${CC} ${CFLAGS} -o conftest$ac_exeext conftest.$ac_ext ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
-        if test $rc -eq 0; then
-          ac_cv_func_mkdtemp=yes
-          break
-        fi
-else
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo $ac_headers|sed 's/+/\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
+`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
 int
 main ()
 {
-return (int)mkdtemp;
+`if test -z "$ac_headers"; then echo "extern void mkdtemp();"; fi`
+                                         #ifdef mkdtemp
+                                         #else
+                                           return (int)mkdtemp;
+                                         #endif
+
 
   ;
   return 0;
 }
 
 _ACEOF
-if ac_fn_c_try_compile "$LINENO"; then :
+if ac_fn_c_try_link "$LINENO"; then :
   ac_cv_func_mkdtemp=yes; break
 
 fi
-rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
-fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
       done
-      rm -f conftest.$ac_ext conftest$ac_exeext
 #set +x
 
 
@@ -13149,50 +12370,31 @@ else
       ac_cv_func_mkstemp="no"
       echo > conftest.log
       for ac_headers in io.h ""; do
-if false; then
-        cat << \EOF > conftest.c
-EOF
-        if test -n "$ac_headers"; then
-          for ac_header in `echo $ac_headers|sed 's/+/ /g'` ""; do
-            if test -n "$ac_header"; then
-              echo "#include <$ac_header>" >> conftest.c
-            fi
-          done
-        else
-          echo "extern int mkstemp();" >> conftest.c
-        fi
-        cat << \EOF >> conftest.c
-int main(void) { return (int)mkstemp; }
-EOF
-
-#cat conftest.$ac_ext
-        ${CC} ${CFLAGS} -o conftest$ac_exeext conftest.$ac_ext ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
-        if test $rc -eq 0; then
-          ac_cv_func_mkstemp=yes
-          break
-        fi
-else
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo $ac_headers|sed 's/+/\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
+`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
 int
 main ()
 {
-return (int)mkstemp;
+`if test -z "$ac_headers"; then echo "extern void mkstemp();"; fi`
+                                         #ifdef mkstemp
+                                         #else
+                                           return (int)mkstemp;
+                                         #endif
+
 
   ;
   return 0;
 }
 
 _ACEOF
-if ac_fn_c_try_compile "$LINENO"; then :
+if ac_fn_c_try_link "$LINENO"; then :
   ac_cv_func_mkstemp=yes; break
 
 fi
-rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
-fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
       done
-      rm -f conftest.$ac_ext conftest$ac_exeext
 #set +x
 
 
@@ -13219,50 +12421,31 @@ else
       ac_cv_func_mktemp="no"
       echo > conftest.log
       for ac_headers in io.h ""; do
-if false; then
-        cat << \EOF > conftest.c
-EOF
-        if test -n "$ac_headers"; then
-          for ac_header in `echo $ac_headers|sed 's/+/ /g'` ""; do
-            if test -n "$ac_header"; then
-              echo "#include <$ac_header>" >> conftest.c
-            fi
-          done
-        else
-          echo "extern int mktemp();" >> conftest.c
-        fi
-        cat << \EOF >> conftest.c
-int main(void) { return (int)mktemp; }
-EOF
-
-#cat conftest.$ac_ext
-        ${CC} ${CFLAGS} -o conftest$ac_exeext conftest.$ac_ext ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
-        if test $rc -eq 0; then
-          ac_cv_func_mktemp=yes
-          break
-        fi
-else
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo $ac_headers|sed 's/+/\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
+`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
 int
 main ()
 {
-return (int)mktemp;
+`if test -z "$ac_headers"; then echo "extern void mktemp();"; fi`
+                                         #ifdef mktemp
+                                         #else
+                                           return (int)mktemp;
+                                         #endif
+
 
   ;
   return 0;
 }
 
 _ACEOF
-if ac_fn_c_try_compile "$LINENO"; then :
+if ac_fn_c_try_link "$LINENO"; then :
   ac_cv_func_mktemp=yes; break
 
 fi
-rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
-fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
       done
-      rm -f conftest.$ac_ext conftest$ac_exeext
 #set +x
 
 
@@ -13335,50 +12518,31 @@ else
       ac_cv_func_localtime_r="no"
       echo > conftest.log
       for ac_headers in  ""; do
-if false; then
-        cat << \EOF > conftest.c
-EOF
-        if test -n "$ac_headers"; then
-          for ac_header in `echo $ac_headers|sed 's/+/ /g'` ""; do
-            if test -n "$ac_header"; then
-              echo "#include <$ac_header>" >> conftest.c
-            fi
-          done
-        else
-          echo "extern int localtime_r();" >> conftest.c
-        fi
-        cat << \EOF >> conftest.c
-int main(void) { return (int)localtime_r; }
-EOF
-
-#cat conftest.$ac_ext
-        ${CC} ${CFLAGS} -o conftest$ac_exeext conftest.$ac_ext ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
-        if test $rc -eq 0; then
-          ac_cv_func_localtime_r=yes
-          break
-        fi
-else
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo $ac_headers|sed 's/+/\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
+`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
 int
 main ()
 {
-return (int)localtime_r;
+`if test -z "$ac_headers"; then echo "extern void localtime_r();"; fi`
+                                         #ifdef localtime_r
+                                         #else
+                                           return (int)localtime_r;
+                                         #endif
+
 
   ;
   return 0;
 }
 
 _ACEOF
-if ac_fn_c_try_compile "$LINENO"; then :
+if ac_fn_c_try_link "$LINENO"; then :
   ac_cv_func_localtime_r=yes; break
 
 fi
-rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
-fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
       done
-      rm -f conftest.$ac_ext conftest$ac_exeext
 #set +x
 
 
@@ -13405,50 +12569,31 @@ else
       ac_cv_func_nanosleep="no"
       echo > conftest.log
       for ac_headers in  ""; do
-if false; then
-        cat << \EOF > conftest.c
-EOF
-        if test -n "$ac_headers"; then
-          for ac_header in `echo $ac_headers|sed 's/+/ /g'` ""; do
-            if test -n "$ac_header"; then
-              echo "#include <$ac_header>" >> conftest.c
-            fi
-          done
-        else
-          echo "extern int nanosleep();" >> conftest.c
-        fi
-        cat << \EOF >> conftest.c
-int main(void) { return (int)nanosleep; }
-EOF
-
-#cat conftest.$ac_ext
-        ${CC} ${CFLAGS} -o conftest$ac_exeext conftest.$ac_ext ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
-        if test $rc -eq 0; then
-          ac_cv_func_nanosleep=yes
-          break
-        fi
-else
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo $ac_headers|sed 's/+/\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
+`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
 int
 main ()
 {
-return (int)nanosleep;
+`if test -z "$ac_headers"; then echo "extern void nanosleep();"; fi`
+                                         #ifdef nanosleep
+                                         #else
+                                           return (int)nanosleep;
+                                         #endif
+
 
   ;
   return 0;
 }
 
 _ACEOF
-if ac_fn_c_try_compile "$LINENO"; then :
+if ac_fn_c_try_link "$LINENO"; then :
   ac_cv_func_nanosleep=yes; break
 
 fi
-rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
-fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
       done
-      rm -f conftest.$ac_ext conftest$ac_exeext
 #set +x
 
 
@@ -13476,50 +12621,31 @@ else
       ac_cv_func_pipe="no"
       echo > conftest.log
       for ac_headers in  ""; do
-if false; then
-        cat << \EOF > conftest.c
-EOF
-        if test -n "$ac_headers"; then
-          for ac_header in `echo $ac_headers|sed 's/+/ /g'` ""; do
-            if test -n "$ac_header"; then
-              echo "#include <$ac_header>" >> conftest.c
-            fi
-          done
-        else
-          echo "extern int pipe();" >> conftest.c
-        fi
-        cat << \EOF >> conftest.c
-int main(void) { return (int)pipe; }
-EOF
-
-#cat conftest.$ac_ext
-        ${CC} ${CFLAGS} -o conftest$ac_exeext conftest.$ac_ext ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
-        if test $rc -eq 0; then
-          ac_cv_func_pipe=yes
-          break
-        fi
-else
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo $ac_headers|sed 's/+/\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
+`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
 int
 main ()
 {
-return (int)pipe;
+`if test -z "$ac_headers"; then echo "extern void pipe();"; fi`
+                                         #ifdef pipe
+                                         #else
+                                           return (int)pipe;
+                                         #endif
+
 
   ;
   return 0;
 }
 
 _ACEOF
-if ac_fn_c_try_compile "$LINENO"; then :
+if ac_fn_c_try_link "$LINENO"; then :
   ac_cv_func_pipe=yes; break
 
 fi
-rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
-fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
       done
-      rm -f conftest.$ac_ext conftest$ac_exeext
 #set +x
 
 
@@ -13546,50 +12672,31 @@ else
       ac_cv_func_fork="no"
       echo > conftest.log
       for ac_headers in  ""; do
-if false; then
-        cat << \EOF > conftest.c
-EOF
-        if test -n "$ac_headers"; then
-          for ac_header in `echo $ac_headers|sed 's/+/ /g'` ""; do
-            if test -n "$ac_header"; then
-              echo "#include <$ac_header>" >> conftest.c
-            fi
-          done
-        else
-          echo "extern int fork();" >> conftest.c
-        fi
-        cat << \EOF >> conftest.c
-int main(void) { return (int)fork; }
-EOF
-
-#cat conftest.$ac_ext
-        ${CC} ${CFLAGS} -o conftest$ac_exeext conftest.$ac_ext ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
-        if test $rc -eq 0; then
-          ac_cv_func_fork=yes
-          break
-        fi
-else
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo $ac_headers|sed 's/+/\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
+`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
 int
 main ()
 {
-return (int)fork;
+`if test -z "$ac_headers"; then echo "extern void fork();"; fi`
+                                         #ifdef fork
+                                         #else
+                                           return (int)fork;
+                                         #endif
+
 
   ;
   return 0;
 }
 
 _ACEOF
-if ac_fn_c_try_compile "$LINENO"; then :
+if ac_fn_c_try_link "$LINENO"; then :
   ac_cv_func_fork=yes; break
 
 fi
-rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
-fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
       done
-      rm -f conftest.$ac_ext conftest$ac_exeext
 #set +x
 
 
@@ -13616,50 +12723,31 @@ else
       ac_cv_func_waitpid="no"
       echo > conftest.log
       for ac_headers in  ""; do
-if false; then
-        cat << \EOF > conftest.c
-EOF
-        if test -n "$ac_headers"; then
-          for ac_header in `echo $ac_headers|sed 's/+/ /g'` ""; do
-            if test -n "$ac_header"; then
-              echo "#include <$ac_header>" >> conftest.c
-            fi
-          done
-        else
-          echo "extern int waitpid();" >> conftest.c
-        fi
-        cat << \EOF >> conftest.c
-int main(void) { return (int)waitpid; }
-EOF
-
-#cat conftest.$ac_ext
-        ${CC} ${CFLAGS} -o conftest$ac_exeext conftest.$ac_ext ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
-        if test $rc -eq 0; then
-          ac_cv_func_waitpid=yes
-          break
-        fi
-else
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo $ac_headers|sed 's/+/\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
+`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
 int
 main ()
 {
-return (int)waitpid;
+`if test -z "$ac_headers"; then echo "extern void waitpid();"; fi`
+                                         #ifdef waitpid
+                                         #else
+                                           return (int)waitpid;
+                                         #endif
+
 
   ;
   return 0;
 }
 
 _ACEOF
-if ac_fn_c_try_compile "$LINENO"; then :
+if ac_fn_c_try_link "$LINENO"; then :
   ac_cv_func_waitpid=yes; break
 
 fi
-rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
-fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
       done
-      rm -f conftest.$ac_ext conftest$ac_exeext
 #set +x
 
 
@@ -13687,50 +12775,31 @@ else
       ac_cv_func_zlibVersion="no"
       echo > conftest.log
       for ac_headers in zlib.h ""; do
-if false; then
-        cat << \EOF > conftest.c
-EOF
-        if test -n "$ac_headers"; then
-          for ac_header in `echo $ac_headers|sed 's/+/ /g'` ""; do
-            if test -n "$ac_header"; then
-              echo "#include <$ac_header>" >> conftest.c
-            fi
-          done
-        else
-          echo "extern int zlibVersion();" >> conftest.c
-        fi
-        cat << \EOF >> conftest.c
-int main(void) { return (int)zlibVersion; }
-EOF
-
-#cat conftest.$ac_ext
-        ${CC} ${CFLAGS} -o conftest$ac_exeext conftest.$ac_ext ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
-        if test $rc -eq 0; then
-          ac_cv_func_zlibVersion=yes
-          break
-        fi
-else
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo $ac_headers|sed 's/+/\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
+`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
 int
 main ()
 {
-return (int)zlibVersion;
+`if test -z "$ac_headers"; then echo "extern void zlibVersion();"; fi`
+                                         #ifdef zlibVersion
+                                         #else
+                                           return (int)zlibVersion;
+                                         #endif
+
 
   ;
   return 0;
 }
 
 _ACEOF
-if ac_fn_c_try_compile "$LINENO"; then :
+if ac_fn_c_try_link "$LINENO"; then :
   ac_cv_func_zlibVersion=yes; break
 
 fi
-rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
-fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
       done
-      rm -f conftest.$ac_ext conftest$ac_exeext
 #set +x
 
 
@@ -13756,50 +12825,31 @@ else
       ac_cv_func_CRYPTO_set_id_callback="no"
       echo > conftest.log
       for ac_headers in openssl/crypto.h ""; do
-if false; then
-        cat << \EOF > conftest.c
-EOF
-        if test -n "$ac_headers"; then
-          for ac_header in `echo $ac_headers|sed 's/+/ /g'` ""; do
-            if test -n "$ac_header"; then
-              echo "#include <$ac_header>" >> conftest.c
-            fi
-          done
-        else
-          echo "extern int CRYPTO_set_id_callback();" >> conftest.c
-        fi
-        cat << \EOF >> conftest.c
-int main(void) { return (int)CRYPTO_set_id_callback; }
-EOF
-
-#cat conftest.$ac_ext
-        ${CC} ${CFLAGS} -o conftest$ac_exeext conftest.$ac_ext ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
-        if test $rc -eq 0; then
-          ac_cv_func_CRYPTO_set_id_callback=yes
-          break
-        fi
-else
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo $ac_headers|sed 's/+/\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
+`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
 int
 main ()
 {
-return (int)CRYPTO_set_id_callback;
+`if test -z "$ac_headers"; then echo "extern void CRYPTO_set_id_callback();"; fi`
+                                         #ifdef CRYPTO_set_id_callback
+                                         #else
+                                           return (int)CRYPTO_set_id_callback;
+                                         #endif
+
 
   ;
   return 0;
 }
 
 _ACEOF
-if ac_fn_c_try_compile "$LINENO"; then :
+if ac_fn_c_try_link "$LINENO"; then :
   ac_cv_func_CRYPTO_set_id_callback=yes; break
 
 fi
-rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
-fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
       done
-      rm -f conftest.$ac_ext conftest$ac_exeext
 #set +x
 
 
@@ -13824,50 +12874,31 @@ else
       ac_cv_func_CRYPTO_set_locking_callback="no"
       echo > conftest.log
       for ac_headers in openssl/crypto.h ""; do
-if false; then
-        cat << \EOF > conftest.c
-EOF
-        if test -n "$ac_headers"; then
-          for ac_header in `echo $ac_headers|sed 's/+/ /g'` ""; do
-            if test -n "$ac_header"; then
-              echo "#include <$ac_header>" >> conftest.c
-            fi
-          done
-        else
-          echo "extern int CRYPTO_set_locking_callback();" >> conftest.c
-        fi
-        cat << \EOF >> conftest.c
-int main(void) { return (int)CRYPTO_set_locking_callback; }
-EOF
-
-#cat conftest.$ac_ext
-        ${CC} ${CFLAGS} -o conftest$ac_exeext conftest.$ac_ext ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
-        if test $rc -eq 0; then
-          ac_cv_func_CRYPTO_set_locking_callback=yes
-          break
-        fi
-else
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo $ac_headers|sed 's/+/\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
+`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
 int
 main ()
 {
-return (int)CRYPTO_set_locking_callback;
+`if test -z "$ac_headers"; then echo "extern void CRYPTO_set_locking_callback();"; fi`
+                                         #ifdef CRYPTO_set_locking_callback
+                                         #else
+                                           return (int)CRYPTO_set_locking_callback;
+                                         #endif
+
 
   ;
   return 0;
 }
 
 _ACEOF
-if ac_fn_c_try_compile "$LINENO"; then :
+if ac_fn_c_try_link "$LINENO"; then :
   ac_cv_func_CRYPTO_set_locking_callback=yes; break
 
 fi
-rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
-fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
       done
-      rm -f conftest.$ac_ext conftest$ac_exeext
 #set +x
 
 
@@ -13893,50 +12924,31 @@ else
       ac_cv_func_libssh2_channel_send_keepalive="no"
       echo > conftest.log
       for ac_headers in  ""; do
-if false; then
-        cat << \EOF > conftest.c
-EOF
-        if test -n "$ac_headers"; then
-          for ac_header in `echo $ac_headers|sed 's/+/ /g'` ""; do
-            if test -n "$ac_header"; then
-              echo "#include <$ac_header>" >> conftest.c
-            fi
-          done
-        else
-          echo "extern int libssh2_channel_send_keepalive();" >> conftest.c
-        fi
-        cat << \EOF >> conftest.c
-int main(void) { return (int)libssh2_channel_send_keepalive; }
-EOF
-
-#cat conftest.$ac_ext
-        ${CC} ${CFLAGS} -o conftest$ac_exeext conftest.$ac_ext ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
-        if test $rc -eq 0; then
-          ac_cv_func_libssh2_channel_send_keepalive=yes
-          break
-        fi
-else
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo $ac_headers|sed 's/+/\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
+`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
 int
 main ()
 {
-return (int)libssh2_channel_send_keepalive;
+`if test -z "$ac_headers"; then echo "extern void libssh2_channel_send_keepalive();"; fi`
+                                         #ifdef libssh2_channel_send_keepalive
+                                         #else
+                                           return (int)libssh2_channel_send_keepalive;
+                                         #endif
+
 
   ;
   return 0;
 }
 
 _ACEOF
-if ac_fn_c_try_compile "$LINENO"; then :
+if ac_fn_c_try_link "$LINENO"; then :
   ac_cv_func_libssh2_channel_send_keepalive=yes; break
 
 fi
-rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
-fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
       done
-      rm -f conftest.$ac_ext conftest$ac_exeext
 #set +x
 
 
@@ -13963,50 +12975,31 @@ else
       ac_cv_func_libssh2_keepalive_config="no"
       echo > conftest.log
       for ac_headers in  ""; do
-if false; then
-        cat << \EOF > conftest.c
-EOF
-        if test -n "$ac_headers"; then
-          for ac_header in `echo $ac_headers|sed 's/+/ /g'` ""; do
-            if test -n "$ac_header"; then
-              echo "#include <$ac_header>" >> conftest.c
-            fi
-          done
-        else
-          echo "extern int libssh2_keepalive_config();" >> conftest.c
-        fi
-        cat << \EOF >> conftest.c
-int main(void) { return (int)libssh2_keepalive_config; }
-EOF
-
-#cat conftest.$ac_ext
-        ${CC} ${CFLAGS} -o conftest$ac_exeext conftest.$ac_ext ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
-        if test $rc -eq 0; then
-          ac_cv_func_libssh2_keepalive_config=yes
-          break
-        fi
-else
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo $ac_headers|sed 's/+/\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
+`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
 int
 main ()
 {
-return (int)libssh2_keepalive_config;
+`if test -z "$ac_headers"; then echo "extern void libssh2_keepalive_config();"; fi`
+                                         #ifdef libssh2_keepalive_config
+                                         #else
+                                           return (int)libssh2_keepalive_config;
+                                         #endif
+
 
   ;
   return 0;
 }
 
 _ACEOF
-if ac_fn_c_try_compile "$LINENO"; then :
+if ac_fn_c_try_link "$LINENO"; then :
   ac_cv_func_libssh2_keepalive_config=yes; break
 
 fi
-rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
-fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
       done
-      rm -f conftest.$ac_ext conftest$ac_exeext
 #set +x
 
 
@@ -14033,50 +13026,31 @@ else
       ac_cv_func_libssh2_keepalive_send="no"
       echo > conftest.log
       for ac_headers in  ""; do
-if false; then
-        cat << \EOF > conftest.c
-EOF
-        if test -n "$ac_headers"; then
-          for ac_header in `echo $ac_headers|sed 's/+/ /g'` ""; do
-            if test -n "$ac_header"; then
-              echo "#include <$ac_header>" >> conftest.c
-            fi
-          done
-        else
-          echo "extern int libssh2_keepalive_send();" >> conftest.c
-        fi
-        cat << \EOF >> conftest.c
-int main(void) { return (int)libssh2_keepalive_send; }
-EOF
-
-#cat conftest.$ac_ext
-        ${CC} ${CFLAGS} -o conftest$ac_exeext conftest.$ac_ext ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
-        if test $rc -eq 0; then
-          ac_cv_func_libssh2_keepalive_send=yes
-          break
-        fi
-else
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo $ac_headers|sed 's/+/\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
+`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
 int
 main ()
 {
-return (int)libssh2_keepalive_send;
+`if test -z "$ac_headers"; then echo "extern void libssh2_keepalive_send();"; fi`
+                                         #ifdef libssh2_keepalive_send
+                                         #else
+                                           return (int)libssh2_keepalive_send;
+                                         #endif
+
 
   ;
   return 0;
 }
 
 _ACEOF
-if ac_fn_c_try_compile "$LINENO"; then :
+if ac_fn_c_try_link "$LINENO"; then :
   ac_cv_func_libssh2_keepalive_send=yes; break
 
 fi
-rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
-fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
       done
-      rm -f conftest.$ac_ext conftest$ac_exeext
 #set +x
 
 
@@ -14103,50 +13077,31 @@ else
       ac_cv_func_libssh2_scp_send64="no"
       echo > conftest.log
       for ac_headers in  ""; do
-if false; then
-        cat << \EOF > conftest.c
-EOF
-        if test -n "$ac_headers"; then
-          for ac_header in `echo $ac_headers|sed 's/+/ /g'` ""; do
-            if test -n "$ac_header"; then
-              echo "#include <$ac_header>" >> conftest.c
-            fi
-          done
-        else
-          echo "extern int libssh2_scp_send64();" >> conftest.c
-        fi
-        cat << \EOF >> conftest.c
-int main(void) { return (int)libssh2_scp_send64; }
-EOF
-
-#cat conftest.$ac_ext
-        ${CC} ${CFLAGS} -o conftest$ac_exeext conftest.$ac_ext ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
-        if test $rc -eq 0; then
-          ac_cv_func_libssh2_scp_send64=yes
-          break
-        fi
-else
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo $ac_headers|sed 's/+/\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
+`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
 int
 main ()
 {
-return (int)libssh2_scp_send64;
+`if test -z "$ac_headers"; then echo "extern void libssh2_scp_send64();"; fi`
+                                         #ifdef libssh2_scp_send64
+                                         #else
+                                           return (int)libssh2_scp_send64;
+                                         #endif
+
 
   ;
   return 0;
 }
 
 _ACEOF
-if ac_fn_c_try_compile "$LINENO"; then :
+if ac_fn_c_try_link "$LINENO"; then :
   ac_cv_func_libssh2_scp_send64=yes; break
 
 fi
-rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
-fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
       done
-      rm -f conftest.$ac_ext conftest$ac_exeext
 #set +x
 
 
@@ -14156,6 +13111,57 @@ $as_echo "$ac_cv_func_libssh2_scp_send64" >&6; }
   if test "$ac_cv_func_libssh2_scp_send64" != no; then :
 
 $as_echo "#define HAVE_SSH2_SCP_SEND64 1" >>confdefs.h
+
+elif :; then :
+
+fi
+
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for libssh2_sftp_seek64" >&5
+$as_echo_n "checking for libssh2_sftp_seek64... " >&6; }
+if test "${ac_cv_func_libssh2_sftp_seek64+set}" = set; then :
+  $as_echo_n "(cached) " >&6
+else
+
+#set -x
+      ac_cv_func_libssh2_sftp_seek64="no"
+      echo > conftest.log
+      for ac_headers in  ""; do
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main ()
+{
+`if test -z "$ac_headers"; then echo "extern void libssh2_sftp_seek64();"; fi`
+                                         #ifdef libssh2_sftp_seek64
+                                         #else
+                                           return (int)libssh2_sftp_seek64;
+                                         #endif
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_func_libssh2_sftp_seek64=yes; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+      done
+#set +x
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_func_libssh2_sftp_seek64" >&5
+$as_echo "$ac_cv_func_libssh2_sftp_seek64" >&6; }
+  if test "$ac_cv_func_libssh2_sftp_seek64" != no; then :
+
+$as_echo "#define HAVE_SSH2_SFTP_SEEK64 1" >>confdefs.h
 
 elif :; then :
 
@@ -14173,50 +13179,31 @@ else
       ac_cv_func_libssh2_sftp_seek2="no"
       echo > conftest.log
       for ac_headers in  ""; do
-if false; then
-        cat << \EOF > conftest.c
-EOF
-        if test -n "$ac_headers"; then
-          for ac_header in `echo $ac_headers|sed 's/+/ /g'` ""; do
-            if test -n "$ac_header"; then
-              echo "#include <$ac_header>" >> conftest.c
-            fi
-          done
-        else
-          echo "extern int libssh2_sftp_seek2();" >> conftest.c
-        fi
-        cat << \EOF >> conftest.c
-int main(void) { return (int)libssh2_sftp_seek2; }
-EOF
-
-#cat conftest.$ac_ext
-        ${CC} ${CFLAGS} -o conftest$ac_exeext conftest.$ac_ext ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
-        if test $rc -eq 0; then
-          ac_cv_func_libssh2_sftp_seek2=yes
-          break
-        fi
-else
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo $ac_headers|sed 's/+/\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
+`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
 int
 main ()
 {
-return (int)libssh2_sftp_seek2;
+`if test -z "$ac_headers"; then echo "extern void libssh2_sftp_seek2();"; fi`
+                                         #ifdef libssh2_sftp_seek2
+                                         #else
+                                           return (int)libssh2_sftp_seek2;
+                                         #endif
+
 
   ;
   return 0;
 }
 
 _ACEOF
-if ac_fn_c_try_compile "$LINENO"; then :
+if ac_fn_c_try_link "$LINENO"; then :
   ac_cv_func_libssh2_sftp_seek2=yes; break
 
 fi
-rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
-fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
       done
-      rm -f conftest.$ac_ext conftest$ac_exeext
 #set +x
 
 
@@ -14244,50 +13231,31 @@ else
       ac_cv_func_iso9660_open="no"
       echo > conftest.log
       for ac_headers in  ""; do
-if false; then
-        cat << \EOF > conftest.c
-EOF
-        if test -n "$ac_headers"; then
-          for ac_header in `echo $ac_headers|sed 's/+/ /g'` ""; do
-            if test -n "$ac_header"; then
-              echo "#include <$ac_header>" >> conftest.c
-            fi
-          done
-        else
-          echo "extern int iso9660_open();" >> conftest.c
-        fi
-        cat << \EOF >> conftest.c
-int main(void) { return (int)iso9660_open; }
-EOF
-
-#cat conftest.$ac_ext
-        ${CC} ${CFLAGS} -o conftest$ac_exeext conftest.$ac_ext ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
-        if test $rc -eq 0; then
-          ac_cv_func_iso9660_open=yes
-          break
-        fi
-else
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo $ac_headers|sed 's/+/\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
+`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
 int
 main ()
 {
-return (int)iso9660_open;
+`if test -z "$ac_headers"; then echo "extern void iso9660_open();"; fi`
+                                         #ifdef iso9660_open
+                                         #else
+                                           return (int)iso9660_open;
+                                         #endif
+
 
   ;
   return 0;
 }
 
 _ACEOF
-if ac_fn_c_try_compile "$LINENO"; then :
+if ac_fn_c_try_link "$LINENO"; then :
   ac_cv_func_iso9660_open=yes; break
 
 fi
-rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
-fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
       done
-      rm -f conftest.$ac_ext conftest$ac_exeext
 #set +x
 
 
@@ -14314,50 +13282,31 @@ else
       ac_cv_func_iso9660_close="no"
       echo > conftest.log
       for ac_headers in  ""; do
-if false; then
-        cat << \EOF > conftest.c
-EOF
-        if test -n "$ac_headers"; then
-          for ac_header in `echo $ac_headers|sed 's/+/ /g'` ""; do
-            if test -n "$ac_header"; then
-              echo "#include <$ac_header>" >> conftest.c
-            fi
-          done
-        else
-          echo "extern int iso9660_close();" >> conftest.c
-        fi
-        cat << \EOF >> conftest.c
-int main(void) { return (int)iso9660_close; }
-EOF
-
-#cat conftest.$ac_ext
-        ${CC} ${CFLAGS} -o conftest$ac_exeext conftest.$ac_ext ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
-        if test $rc -eq 0; then
-          ac_cv_func_iso9660_close=yes
-          break
-        fi
-else
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo $ac_headers|sed 's/+/\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
+`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
 int
 main ()
 {
-return (int)iso9660_close;
+`if test -z "$ac_headers"; then echo "extern void iso9660_close();"; fi`
+                                         #ifdef iso9660_close
+                                         #else
+                                           return (int)iso9660_close;
+                                         #endif
+
 
   ;
   return 0;
 }
 
 _ACEOF
-if ac_fn_c_try_compile "$LINENO"; then :
+if ac_fn_c_try_link "$LINENO"; then :
   ac_cv_func_iso9660_close=yes; break
 
 fi
-rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
-fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
       done
-      rm -f conftest.$ac_ext conftest$ac_exeext
 #set +x
 
 
@@ -14384,50 +13333,31 @@ else
       ac_cv_func_iso9660_ifs_stat_translate="no"
       echo > conftest.log
       for ac_headers in  ""; do
-if false; then
-        cat << \EOF > conftest.c
-EOF
-        if test -n "$ac_headers"; then
-          for ac_header in `echo $ac_headers|sed 's/+/ /g'` ""; do
-            if test -n "$ac_header"; then
-              echo "#include <$ac_header>" >> conftest.c
-            fi
-          done
-        else
-          echo "extern int iso9660_ifs_stat_translate();" >> conftest.c
-        fi
-        cat << \EOF >> conftest.c
-int main(void) { return (int)iso9660_ifs_stat_translate; }
-EOF
-
-#cat conftest.$ac_ext
-        ${CC} ${CFLAGS} -o conftest$ac_exeext conftest.$ac_ext ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
-        if test $rc -eq 0; then
-          ac_cv_func_iso9660_ifs_stat_translate=yes
-          break
-        fi
-else
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo $ac_headers|sed 's/+/\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
+`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
 int
 main ()
 {
-return (int)iso9660_ifs_stat_translate;
+`if test -z "$ac_headers"; then echo "extern void iso9660_ifs_stat_translate();"; fi`
+                                         #ifdef iso9660_ifs_stat_translate
+                                         #else
+                                           return (int)iso9660_ifs_stat_translate;
+                                         #endif
+
 
   ;
   return 0;
 }
 
 _ACEOF
-if ac_fn_c_try_compile "$LINENO"; then :
+if ac_fn_c_try_link "$LINENO"; then :
   ac_cv_func_iso9660_ifs_stat_translate=yes; break
 
 fi
-rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
-fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
       done
-      rm -f conftest.$ac_ext conftest$ac_exeext
 #set +x
 
 
@@ -14454,50 +13384,31 @@ else
       ac_cv_func_iso9660_iso_seek_read="no"
       echo > conftest.log
       for ac_headers in  ""; do
-if false; then
-        cat << \EOF > conftest.c
-EOF
-        if test -n "$ac_headers"; then
-          for ac_header in `echo $ac_headers|sed 's/+/ /g'` ""; do
-            if test -n "$ac_header"; then
-              echo "#include <$ac_header>" >> conftest.c
-            fi
-          done
-        else
-          echo "extern int iso9660_iso_seek_read();" >> conftest.c
-        fi
-        cat << \EOF >> conftest.c
-int main(void) { return (int)iso9660_iso_seek_read; }
-EOF
-
-#cat conftest.$ac_ext
-        ${CC} ${CFLAGS} -o conftest$ac_exeext conftest.$ac_ext ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
-        if test $rc -eq 0; then
-          ac_cv_func_iso9660_iso_seek_read=yes
-          break
-        fi
-else
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo $ac_headers|sed 's/+/\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
+`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
 int
 main ()
 {
-return (int)iso9660_iso_seek_read;
+`if test -z "$ac_headers"; then echo "extern void iso9660_iso_seek_read();"; fi`
+                                         #ifdef iso9660_iso_seek_read
+                                         #else
+                                           return (int)iso9660_iso_seek_read;
+                                         #endif
+
 
   ;
   return 0;
 }
 
 _ACEOF
-if ac_fn_c_try_compile "$LINENO"; then :
+if ac_fn_c_try_link "$LINENO"; then :
   ac_cv_func_iso9660_iso_seek_read=yes; break
 
 fi
-rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
-fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
       done
-      rm -f conftest.$ac_ext conftest$ac_exeext
 #set +x
 
 
@@ -14525,50 +13436,31 @@ else
       ac_cv_func_sysconf="no"
       echo > conftest.log
       for ac_headers in  ""; do
-if false; then
-        cat << \EOF > conftest.c
-EOF
-        if test -n "$ac_headers"; then
-          for ac_header in `echo $ac_headers|sed 's/+/ /g'` ""; do
-            if test -n "$ac_header"; then
-              echo "#include <$ac_header>" >> conftest.c
-            fi
-          done
-        else
-          echo "extern int sysconf();" >> conftest.c
-        fi
-        cat << \EOF >> conftest.c
-int main(void) { return (int)sysconf; }
-EOF
-
-#cat conftest.$ac_ext
-        ${CC} ${CFLAGS} -o conftest$ac_exeext conftest.$ac_ext ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
-        if test $rc -eq 0; then
-          ac_cv_func_sysconf=yes
-          break
-        fi
-else
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo $ac_headers|sed 's/+/\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
+`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
 int
 main ()
 {
-return (int)sysconf;
+`if test -z "$ac_headers"; then echo "extern void sysconf();"; fi`
+                                         #ifdef sysconf
+                                         #else
+                                           return (int)sysconf;
+                                         #endif
+
 
   ;
   return 0;
 }
 
 _ACEOF
-if ac_fn_c_try_compile "$LINENO"; then :
+if ac_fn_c_try_link "$LINENO"; then :
   ac_cv_func_sysconf=yes; break
 
 fi
-rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
-fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
       done
-      rm -f conftest.$ac_ext conftest$ac_exeext
 #set +x
 
 
@@ -14595,50 +13487,31 @@ else
       ac_cv_func_backtrace="no"
       echo > conftest.log
       for ac_headers in  ""; do
-if false; then
-        cat << \EOF > conftest.c
-EOF
-        if test -n "$ac_headers"; then
-          for ac_header in `echo $ac_headers|sed 's/+/ /g'` ""; do
-            if test -n "$ac_header"; then
-              echo "#include <$ac_header>" >> conftest.c
-            fi
-          done
-        else
-          echo "extern int backtrace();" >> conftest.c
-        fi
-        cat << \EOF >> conftest.c
-int main(void) { return (int)backtrace; }
-EOF
-
-#cat conftest.$ac_ext
-        ${CC} ${CFLAGS} -o conftest$ac_exeext conftest.$ac_ext ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
-        if test $rc -eq 0; then
-          ac_cv_func_backtrace=yes
-          break
-        fi
-else
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo $ac_headers|sed 's/+/\n/g'|sed 's/\(.*\)/#include <\\1>/g'`
+`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
 int
 main ()
 {
-return (int)backtrace;
+`if test -z "$ac_headers"; then echo "extern void backtrace();"; fi`
+                                         #ifdef backtrace
+                                         #else
+                                           return (int)backtrace;
+                                         #endif
+
 
   ;
   return 0;
 }
 
 _ACEOF
-if ac_fn_c_try_compile "$LINENO"; then :
+if ac_fn_c_try_link "$LINENO"; then :
   ac_cv_func_backtrace=yes; break
 
 fi
-rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
-fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
       done
-      rm -f conftest.$ac_ext conftest$ac_exeext
 #set +x
 
 

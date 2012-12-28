@@ -89,8 +89,10 @@ AC_DEFUN([AC_CHECK_CONSTANT],
     [if constant $1 is available],
     ac_cv_const_$1,
     [
-      AC_COMPILE_IFELSE([AC_LANG_PROGRAM([`echo $4|sed 's/ /\n/g'|sed 's/\(.*\)/#include <\\1>/g'`],
-                                         [printf("%d",$1); return 0;]
+      AC_COMPILE_IFELSE([AC_LANG_PROGRAM([`echo $4|sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`],
+                                         [printf("%d",$1);
+                                          return 0;
+                                         ]
                                         )
                         ],
                         [AS_VAR_SET([ac_cv_const_$1],[yes]); $2],
@@ -114,38 +116,18 @@ AC_DEFUN([AC_CHECK_FUNCTION],
       ac_cv_func_$1="no"
       echo > conftest.log
       for ac_headers in $4 ""; do
-if false; then
-        cat << \EOF > conftest.c
-EOF
-        if test -n "$ac_headers"; then
-          for ac_header in `echo $ac_headers|sed 's/+/ /g'` ""; do
-            if test -n "$ac_header"; then
-              echo "#include <$ac_header>" >> conftest.c
-            fi
-          done
-        else
-          echo "extern int $1();" >> conftest.c
-        fi
-        cat << \EOF >> conftest.c
-int main(void) { return (int)$1; }
-EOF
-
-#cat conftest.$ac_ext
-        ${CC} ${CFLAGS} -o conftest$ac_exeext conftest.$ac_ext ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
-        if test $rc -eq 0; then
-          AS_VAR_SET([ac_cv_func_$1],[yes])
-          break
-        fi
-else
-        AC_COMPILE_IFELSE([AC_LANG_PROGRAM([`echo $ac_headers|sed 's/+/\n/g'|sed 's/\(.*\)/#include <\\1>/g'`],
-                                           [return (int)$1;]
-                                          )
-                          ],
-                          [AS_VAR_SET([ac_cv_func_$1],[yes]); break]
-                         )
-fi
+        AC_LINK_IFELSE([AC_LANG_PROGRAM([`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`],
+                                        [`if test -z "$ac_headers"; then echo "extern void $1();"; fi`
+                                         #ifdef $1
+                                         #else
+                                           return (int)$1;
+                                         #endif
+                                        ]
+                                       )
+                       ],
+                       [AS_VAR_SET([ac_cv_func_$1],[yes]); break]
+                      )
       done
-      rm -f conftest.$ac_ext conftest$ac_exeext
 #set +x
     ]
   )
@@ -165,21 +147,8 @@ AC_DEFUN([AC_SEARCH_LIBRARIES],
     ac_search_libraries,
     [
       dnl save C compiler settings
-      ac_func_search_libraries_save_CFLAGS="$CFLAGS";
       ac_func_search_libraries_save_LIBS=$LIBS
 
-      cat << \EOF > conftest.$ac_ext
-EOF
-      for ac_header in $5 ""; do
-        if test -n "$ac_header"; then
-          echo "#include <$ac_header>" >> conftest.$ac_ext
-        fi
-      done
-      cat << \EOF >> conftest.$ac_ext
-int main(void) { return (int)$1; }
-EOF
-
-      dnl test linkage     
       for ac_library in $2 ""; do
         if test -z "$ac_library"; then
           ac_result="none required"
@@ -188,23 +157,19 @@ EOF
           LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
         fi
 
-#cat conftest.$ac_ext
-#set -x
-        ${CC} ${CFLAGS} -c conftest.c -o conftest.o 1>/dev/null 2>/dev/null; rc=$?
-        if test $rc -eq 0; then
-          ${LD} ${LDFLAGS} -o conftest conftest.o ${LDFLAGS} ${LIBS} ${LIBS} 1>/dev/null 2>/dev/null; rc=$?
-          if test $rc -eq 0; then
-            AS_VAR_SET([ac_search_libraries],[$ac_result])
-            AS_VAR_SET_IF([ac_search_libraries],[break])
-          fi
-        fi
+        AC_LINK_IFELSE([AC_LANG_PROGRAM([`echo $5|sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`],
+                                        [`if test -z "$5"; then echo "extern void $1();"; fi`
+                                         return (int)$1;
+                                        ]
+                                       )
+                          ],
+                          [AS_VAR_SET([ac_search_libraries],[$ac_result]); break]
+                         )
       done
       AS_VAR_SET_IF([ac_search_libraries],,[AS_VAR_SET([ac_search_libraries],[no])])
-      rm -f conftest.$ac_ext conftest.$ac_objext conftest$ac_exeext
 
       dnl restore C compiler settings
       LIBS=$ac_func_search_libraries_save_LIBS
-      CFLAGS=$ac_func_search_libraries_save_CFLAGS
     ]
   )
   AS_VAR_COPY([ac_result],[ac_search_libraries])
@@ -223,9 +188,11 @@ AC_DEFUN([AC_SEARCH_STATIC_LIBRARIES],
     [ac_search_static_libraries],
     [
       dnl save C compiler settings
-      ac_func_search_static_libraries_save_LIBS=$LIBS
+      ac_func_search_static_libraries_save_CFLAGS="$CFLAGS"
+      ac_func_search_static_libraries_save_LIBS="$LIBS"
 
-      dnl test static linkage     
+      dnl test static linkage    
+      CFLAGS="$CFLAGS -static"
       for ac_library in $2 ""; do
         if test -z "$ac_library"; then
           ac_result="none required"
@@ -234,18 +201,20 @@ AC_DEFUN([AC_SEARCH_STATIC_LIBRARIES],
           LIBS="-l$ac_library $ac_func_search_static_libraries_save_LIBS"
         fi
 
-        AC_LINK_IFELSE([AC_LANG_PROGRAM([`echo $5|sed 's/ /\n/g'|sed 's/\(.*\)/#include <\\1>/g'`],
-                                        [return (int)$1;]
+        AC_LINK_IFELSE([AC_LANG_PROGRAM([`echo $5|sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`],
+                                        [`if test -z "$5"; then echo "extern void $1();"; fi`
+                                         return (int)$1;
+                                        ]
                                        )
                           ],
                           [AS_VAR_SET([ac_search_static_libraries],[$ac_result]); break]
                          )
-
       done
       AS_VAR_SET_IF([ac_search_static_libraries],,[AS_VAR_SET([ac_search_static_libraries],[no])])
 
       dnl restore C compiler settings
       LIBS=$ac_func_search_libraries_save_LIBS
+      CFLAGS=$ac_func_search_static_libraries_save_CFLAGS
     ]
   )
   AS_VAR_COPY([ac_result],[ac_search_static_libraries])
@@ -998,6 +967,7 @@ AC_CHECK_HEADERS(\
                  sys/socket.h \
                  sys/statvfs.h \
                  sys/wait.h \
+                 termios.h \
                 )
 
 # defines, constants, types, variables
@@ -1022,12 +992,11 @@ case $host_os in
   linux*)
     AC_SEARCH_LIBRARIES(round,m,,AC_ERROR([m library not found]))
     AC_SEARCH_LIBRARIES(dlopen,dl,[LIBRARIES="$LIBRARIES dl"])
+    AC_SEARCH_LIBRARIES(clock_gettime,rt,[LIBRARIES="$LIBRARIES rt"],AC_ERROR([rt library not found]))
     AC_SEARCH_LIBRARIES(pthread_create,pthread,[LIBRARIES="$LIBRARIES pthread"],AC_ERROR([pthread library not found]))
-dnl???    AC_SEARCH_LIBRARIES(pthread_create,rt,[LIBRARIES="$LIBRARIES rt"],AC_ERROR([rt library not found]))
     ;;
   mingw*)
     AC_SEARCH_STATIC_LIBRARIES(pthread_create,pthreadGC2,[STATIC_LIBRARIES="$STATIC_LIBRARIES pthreadGC2"],,pthread.h)
-dnl    AC_SEARCH_LIBRARIES(WSAStartup,wsock32,[STATIC_LIBRARIES="$STATIC_LIBRARIES wsock32"],,winsock2.h)
     AC_SEARCH_STATIC_LIBRARIES(WSAStartup,wsock32,[STATIC_LIBRARIES="$STATIC_LIBRARIES wsock32"],,winsock2.h)
     ;;
   *)
@@ -2029,9 +1998,9 @@ AC_CHECK_FUNCTION(lchmod,       AC_DEFINE(HAVE_LCHMOD,       1,[lchmod() availab
 AC_CHECK_FUNCTION(link,         AC_DEFINE(HAVE_LINK,         1,[link() available]))
 AC_CHECK_FUNCTION(lstat64,      AC_DEFINE(HAVE_LSTAT64,      1,[lstat64() available]))
 AC_CHECK_FUNCTION(lstat,        AC_DEFINE(HAVE_LSTAT,        1,[lstat() available]))
-AC_CHECK_FUNCTION(major,        AC_DEFINE(HAVE_MAJOR,        1,[major() available]))
-AC_CHECK_FUNCTION(makedev,      AC_DEFINE(HAVE_MAKEDEV,      1,[makedev() available]))
-AC_CHECK_FUNCTION(minor,        AC_DEFINE(HAVE_MINOR,        1,[minor() available]))
+AC_CHECK_FUNCTION(major,        AC_DEFINE(HAVE_MAJOR,        1,[major() available]),,sys/types.h)
+AC_CHECK_FUNCTION(makedev,      AC_DEFINE(HAVE_MAKEDEV,      1,[makedev() available]),,sys/types.h)
+AC_CHECK_FUNCTION(minor,        AC_DEFINE(HAVE_MINOR,        1,[minor() available]),,sys/types.h)
 AC_CHECK_FUNCTION(mknod,        AC_DEFINE(HAVE_MKNOD,        1,[mknod() available]))
 AC_CHECK_FUNCTION(posix_fadvise,AC_DEFINE(HAVE_POSIX_FADVISE,1,[posix_fadvise() available]))
 AC_CHECK_FUNCTION(readlink,     AC_DEFINE(HAVE_READLINK,     1,[readlink() available]))
@@ -2063,6 +2032,7 @@ AC_CHECK_FUNCTION(libssh2_channel_send_keepalive,AC_DEFINE(HAVE_SSH2_CHANNEL_SEN
 AC_CHECK_FUNCTION(libssh2_keepalive_config,      AC_DEFINE(HAVE_SSH2_KEEPALIVE_CONFIG,      1,[SSH2 has libssh2_keepalive_config()]))
 AC_CHECK_FUNCTION(libssh2_keepalive_send,        AC_DEFINE(HAVE_SSH2_KEEPALIVE_SEND,        1,[SSH2 has libssh2_keepalive_send()]))
 AC_CHECK_FUNCTION(libssh2_scp_send64,            AC_DEFINE(HAVE_SSH2_SCP_SEND64,            1,[SSH2 has libssh2_scp_send64() function]))
+AC_CHECK_FUNCTION(libssh2_sftp_seek64,           AC_DEFINE(HAVE_SSH2_SFTP_SEEK64,           1,[SSH2 has libssh2_sftp_seek64() function]))
 AC_CHECK_FUNCTION(libssh2_sftp_seek2,            AC_DEFINE(HAVE_SSH2_SFTP_SEEK2,            1,[SSH2 has libssh2_sftp_seek2() function]))
 
 AC_CHECK_FUNCTION(iso9660_open,              AC_DEFINE(HAVE_ISO9660_OPEN,              1,[iso9660_open() available]))
