@@ -192,7 +192,7 @@ static const char *NONE = NULL;
 typedef struct
 {
   int  id;
-  char text[$MAX_ERRORTEXT_LENGTH];
+  char text[$ERRORS_MAX_TEXT_LENGTH];
 } ErrorText;
 
 static ErrorText errorTexts[$ERRORS_TEXTINDEX_MAX_COUNT];
