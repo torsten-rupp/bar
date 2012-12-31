@@ -231,7 +231,7 @@ Errors Command_compare(const StringList                *archiveNameList,
                 printError("File '%s' not found!\n",String_cString(fileName));
                 Archive_closeEntry(&archiveEntryInfo);
                 String_delete(fileName);
-                if (jobOptions->stopOnErrorFlag) failError = ERROR_FILE_NOT_FOUND;
+                if (jobOptions->stopOnErrorFlag) failError = ERROR_FILE_NOT_FOUND_;
                 break;
               }
               if (File_getType(fileName) != FILE_TYPE_FILE)
@@ -485,7 +485,7 @@ Errors Command_compare(const StringList                *archiveNameList,
                 printError("Device '%s' not found!\n",String_cString(deviceName));
                 Archive_closeEntry(&archiveEntryInfo);
                 String_delete(deviceName);
-                if (jobOptions->stopOnErrorFlag) failError = ERROR_FILE_NOT_FOUND;
+                if (jobOptions->stopOnErrorFlag) failError = ERROR_FILE_NOT_FOUND_;
                 break;
               }
 
@@ -774,7 +774,7 @@ Errors Command_compare(const StringList                *archiveNameList,
                 printError("Directory '%s' does not exists!\n",String_cString(directoryName));
                 Archive_closeEntry(&archiveEntryInfo);
                 String_delete(directoryName);
-                if (jobOptions->stopOnErrorFlag) failError = ERROR_FILE_NOT_FOUND;
+                if (jobOptions->stopOnErrorFlag) failError = ERROR_FILE_NOT_FOUND_;
                 break;
               }
               if (File_getType(directoryName) != FILE_TYPE_DIRECTORY)
@@ -881,7 +881,7 @@ Errors Command_compare(const StringList                *archiveNameList,
                 Archive_closeEntry(&archiveEntryInfo);
                 String_delete(fileName);
                 String_delete(linkName);
-                if (jobOptions->stopOnErrorFlag) failError = ERROR_FILE_NOT_FOUND;
+                if (jobOptions->stopOnErrorFlag) failError = ERROR_FILE_NOT_FOUND_;
                 break;
               }
               if (File_getType(linkName) != FILE_TYPE_LINK)
@@ -1034,7 +1034,7 @@ Errors Command_compare(const StringList                *archiveNameList,
                   printError("File '%s' not found!\n",String_cString(fileName));
                   if (jobOptions->stopOnErrorFlag)
                   {
-                    failError = ERROR_FILE_NOT_FOUND;
+                    failError = ERROR_FILE_NOT_FOUND_;
                     break;
                   }
                   else
@@ -1306,7 +1306,7 @@ Errors Command_compare(const StringList                *archiveNameList,
                           );
                 Archive_closeEntry(&archiveEntryInfo);
                 String_delete(fileName);
-                if (jobOptions->stopOnErrorFlag) failError = ERROR_FILE_NOT_FOUND;
+                if (jobOptions->stopOnErrorFlag) failError = ERROR_FILE_NOT_FOUND_;
                 break;
               }
               if (File_getType(fileName) != FILE_TYPE_SPECIAL)
