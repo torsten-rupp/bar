@@ -82,10 +82,17 @@ LOCAL EntryNode *copyEntryNode(EntryNode *entryNode,
   // create entry
   newEntryNode->type   = entryNode->type;
   newEntryNode->string = String_duplicate(entryNode->string);
-  error = Pattern_init(&newEntryNode->pattern,
-                       entryNode->string,
-                       entryNode->pattern.type
-                      );
+  #if   defined(PLATFORM_LINUX)
+    error = Pattern_init(&newEntryNode->pattern,
+                         entryNode->string,
+                         entryNode->pattern.type
+                        );
+  #elif defined(PLATFORM_WINDOWS)
+    error = Pattern_init(&newEntryNode->pattern,
+                         entryNode->string,
+                         entryNode->pattern.type|PATTERN_OPTION_IGNORE_CASE
+                        );
+  #endif /* PLATFORM_... */
   if (error != ERROR_NONE)
   {
     String_delete(newEntryNode->string);
@@ -200,10 +207,17 @@ Errors EntryList_appendCString(EntryList    *entryList,
   entryNode->string = String_newCString(pattern);
 
   // init pattern
-  error = Pattern_initCString(&entryNode->pattern,
-                              pattern,
-                              patternType
-                             );
+  #if   defined(PLATFORM_LINUX)
+    error = Pattern_initCString(&entryNode->pattern,
+                                pattern,
+                                patternType
+                               );
+  #elif defined(PLATFORM_WINDOWS)
+    error = Pattern_initCString(&entryNode->pattern,
+                                pattern,
+                                patternType|PATTERN_OPTION_IGNORE_CASE
+                               );
+  #endif /* PLATFORM_... */
   if (error != ERROR_NONE)
   {
     String_delete(entryNode->string);
