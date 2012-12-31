@@ -18,9 +18,10 @@
 #include <errno.h>
 #include <assert.h>
 
-#ifdef WIN32
+#if   defined(PLATFORM_LINUX)
+#elif defined(PLATFORM_WINDOWS)
   #include <windows.h>
-#endif
+#endif /* PLATFORM_... */
 
 #include "global.h"
 #include "lists.h"
