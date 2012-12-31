@@ -81,8 +81,9 @@ LOCAL Errors compilePattern(const char   *pattern,
   matchString = String_new();
   regexString = String_new();
 
-  regexFlags = REG_ICASE|REG_NOSUB;
-  switch (patternType)
+  regexFlags = REG_NOSUB;
+  if ((patternType & PATTERN_OPTION_IGNORE_CASE) == PATTERN_OPTION_IGNORE_CASE) regexFlags |= REG_ICASE;
+  switch (patternType & PATTERN_TYPE_MASK)
   {
     case PATTERN_TYPE_GLOB:
       z = 0;

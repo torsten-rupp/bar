@@ -40,12 +40,16 @@
 #define PATTERN_CHAR_SET_EXTENDED_REGEX "*+?{}():[].^$|"
 
 // pattern types
-typedef enum
-{
-  PATTERN_TYPE_GLOB,                    // * and ?
-  PATTERN_TYPE_REGEX,                   // regular expressions
-  PATTERN_TYPE_EXTENDED_REGEX           // extended regular expressions
-} PatternTypes;
+#define PATTERN_TYPE_GLOB           0x00  // * and ?
+#define PATTERN_TYPE_REGEX          0x01  // regular expressions
+#define PATTERN_TYPE_EXTENDED_REGEX 0x02  // extended regular expressions
+
+#define PATTERN_TYPE_MASK 0x0F
+
+// pattern options
+#define PATTERN_OPTION_IGNORE_CASE  0x10  // ignore upper/lower case
+
+#define PATTERN_OPTIONS_MASK 0xF0
 
 // match modes
 typedef enum
@@ -57,6 +61,11 @@ typedef enum
 
 /***************************** Datatypes *******************************/
 
+// pattern types
+#warning remove and rename PatternTypes -> patternFlags
+typedef uint PatternTypes;
+
+// pattern
 typedef struct
 {
   PatternTypes type;
