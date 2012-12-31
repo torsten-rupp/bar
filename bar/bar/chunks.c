@@ -20,7 +20,13 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <unistd.h>
-#include <netinet/in.h>
+#ifdef HAVE_NETINET_IN_H
+  #include <netinet/in.h>
+#endif
+#ifdef WIN32
+  #include <windows.h>
+  #include <winsock2.h>
+#endif
 #include <zlib.h>
 #include <errno.h>
 #include <assert.h>
@@ -273,7 +279,7 @@ LOCAL Errors readDefinition(const ChunkIO *io,
               io->seek(ioUserData,offset);
               free(buffer);
               snprintf(errorText,sizeof(errorText),"at offset %llu",offset+(p-buffer));
-              return ERRORX(CORRUPT_DATA,0,errorText);
+              return ERRORX_(CORRUPT_DATA,0,errorText);
             }
             crc = crc32(crc,p,1);
             n = (*((uint8*)p));
@@ -292,7 +298,7 @@ LOCAL Errors readDefinition(const ChunkIO *io,
               io->seek(ioUserData,offset);
               free(buffer);
               snprintf(errorText,sizeof(errorText),"at offset %llu",offset+(p-buffer));
-              return ERRORX(CORRUPT_DATA,0,errorText);
+              return ERRORX_(CORRUPT_DATA,0,errorText);
             }
             crc = crc32(crc,p,2);
             n = ntohs(*((uint16*)p));
@@ -311,7 +317,7 @@ LOCAL Errors readDefinition(const ChunkIO *io,
               io->seek(ioUserData,offset);
               free(buffer);
               snprintf(errorText,sizeof(errorText),"at offset %llu",offset+(p-buffer));
-              return ERRORX(CORRUPT_DATA,0,errorText);
+              return ERRORX_(CORRUPT_DATA,0,errorText);
             }
             crc = crc32(crc,p,4);
             n = ntohl(*((uint32*)p));
@@ -331,7 +337,7 @@ LOCAL Errors readDefinition(const ChunkIO *io,
               io->seek(ioUserData,offset);
               free(buffer);
               snprintf(errorText,sizeof(errorText),"at offset %llu",offset+(p-buffer));
-              return ERRORX(CORRUPT_DATA,0,errorText);
+              return ERRORX_(CORRUPT_DATA,0,errorText);
             }
             crc = crc32(crc,p,4);
             h = ntohl(*((uint32*)p));
@@ -353,7 +359,7 @@ LOCAL Errors readDefinition(const ChunkIO *io,
             {
               io->seek(ioUserData,offset);
               snprintf(errorText,sizeof(errorText),"at offset %llu",offset+(p-buffer));
-              return ERRORX(CORRUPT_DATA,0,errorText);
+              return ERRORX_(CORRUPT_DATA,0,errorText);
             }
             crc = crc32(crc,p,2);
             length = ntohs(*((uint16*)p));
@@ -363,7 +369,7 @@ LOCAL Errors readDefinition(const ChunkIO *io,
               io->seek(ioUserData,offset);
               free(buffer);
               snprintf(errorText,sizeof(errorText),"at offset %llu",offset+(p-buffer));
-              return ERRORX(CORRUPT_DATA,0,errorText);
+              return ERRORX_(CORRUPT_DATA,0,errorText);
             }
             crc = crc32(crc,p,length);
 
@@ -383,7 +389,7 @@ LOCAL Errors readDefinition(const ChunkIO *io,
               io->seek(ioUserData,offset);
               free(buffer);
               snprintf(errorText,sizeof(errorText),"at offset %llu",offset+(p-buffer));
-              return ERRORX(CORRUPT_DATA,0,errorText);
+              return ERRORX_(CORRUPT_DATA,0,errorText);
             }
             n = ntohl(*(uint32*)p);
             p += 4;
@@ -393,7 +399,7 @@ LOCAL Errors readDefinition(const ChunkIO *io,
               io->seek(ioUserData,offset);
               free(buffer);
               snprintf(errorText,sizeof(errorText),"at offset %llu",offset);
-              return ERRORX(CRC,0,errorText);
+              return ERRORX_(CRC_,0,errorText);
             }
 
             crc = crc32(0,Z_NULL,0);
@@ -1214,7 +1220,7 @@ Errors Chunk_readData(ChunkInfo *chunkInfo,
     // check if requested all data read
     if (size != n)
     {
-      return ERROR(IO_ERROR,errno);
+      return ERROR_(IO_ERROR,errno);
     }
   }
 
@@ -1243,7 +1249,7 @@ Errors Chunk_writeData(ChunkInfo  *chunkInfo,
   error = chunkInfo->io->write(chunkInfo->ioUserData,data,size);
   if (error != ERROR_NONE)
   {
-    return ERROR(IO_ERROR,errno);
+    return ERROR_(IO_ERROR,errno);
   }
 
   // increment indizes and increase sizes
