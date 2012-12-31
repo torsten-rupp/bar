@@ -690,7 +690,7 @@ Errors inputCryptPassword(void         *userData,
 * Notes  : -
 \***********************************************************************/
 
-bool configValueParseBandWidth(void *userData, void *variable, const char *name, const char *value);
+bool configValueParseBandWidth(void *userData, void *variable, const char *name, const char *value, char *errorMessage, uint maxErrorMessageLength);
 
 /***********************************************************************\
 * Name   : configValueFormatInitOwner
@@ -745,7 +745,7 @@ bool configValueFormatBandWidth(void **formatUserData, void *userData, String li
 * Notes  : -
 \***********************************************************************/
 
-bool configValueParseOwner(void *userData, void *variable, const char *name, const char *value);
+bool configValueParseOwner(void *userData, void *variable, const char *name, const char *value, char *errorMessage, uint maxErrorMessageLength);
 
 /***********************************************************************\
 * Name   : configValueFormatInitOwner
@@ -800,8 +800,8 @@ bool configValueFormatOwner(void **formatUserData, void *userData, String line);
 * Notes  : -
 \***********************************************************************/
 
-bool configValueParseFileEntry(void *userData, void *variable, const char *name, const char *value);
-bool configValueParseImageEntry(void *userData, void *variable, const char *name, const char *value);
+bool configValueParseFileEntry(void *userData, void *variable, const char *name, const char *value, char *errorMessage, uint maxErrorMessageLength);
+bool configValueParseImageEntry(void *userData, void *variable, const char *name, const char *value, char *errorMessage, uint maxErrorMessageLength);
 
 /***********************************************************************\
 * Name   : configValueFormatInitEntry
@@ -856,7 +856,7 @@ bool configValueFormatImageEntry(void **formatUserData, void *userData, String l
 * Notes  : -
 \***********************************************************************/
 
-bool configValueParsePattern(void *userData, void *variable, const char *name, const char *value);
+bool configValueParsePattern(void *userData, void *variable, const char *name, const char *value, char *errorMessage, uint maxErrorMessageLength);
 
 /***********************************************************************\
 * Name   : configValueFormatInitPattern
@@ -910,7 +910,7 @@ bool configValueFormatPattern(void **formatUserData, void *userData, String line
 * Notes  : -
 \***********************************************************************/
 
-bool configValueParseString(void *userData, void *variable, const char *name, const char *value);
+bool configValueParseString(void *userData, void *variable, const char *name, const char *value, char *errorMessage, uint maxErrorMessageLength);
 
 /***********************************************************************\
 * Name   : configValueParsePassword
@@ -925,7 +925,7 @@ bool configValueParseString(void *userData, void *variable, const char *name, co
 * Notes  : -
 \***********************************************************************/
 
-bool configValueParsePassword(void *userData, void *variable, const char *name, const char *value);
+bool configValueParsePassword(void *userData, void *variable, const char *name, const char *value, char *errorMessage, uint maxErrorMessageLength);
 
 /***********************************************************************\
 * Name   : configValueFormatInitPassord
