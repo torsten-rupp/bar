@@ -212,7 +212,7 @@ LOCAL Errors compressData(CompressInfo *compressInfo)
                      && (zlibError != Z_BUF_ERROR)
                    )
                 {
-                  return ERROR(DEFLATE_FAIL,zlibError);
+                  return ERROR_(DEFLATE_FAIL,zlibError);
                 }
                 RingBuffer_decrement(&compressInfo->dataRingBuffer,
                                      maxDataBytes-compressInfo->zlib.stream.avail_in
@@ -250,7 +250,7 @@ LOCAL Errors compressData(CompressInfo *compressInfo)
                          && (zlibError != Z_BUF_ERROR)
                         )
                 {
-                  return ERROR(DEFLATE_FAIL,zlibError);
+                  return ERROR_(DEFLATE_FAIL,zlibError);
                 }
                 RingBuffer_increment(&compressInfo->compressRingBuffer,
                                      maxCompressBytes-compressInfo->zlib.stream.avail_out
@@ -296,7 +296,7 @@ LOCAL Errors compressData(CompressInfo *compressInfo)
                 bzlibError = BZ2_bzCompress(&compressInfo->bzlib.stream,BZ_RUN);
                 if (bzlibError != BZ_RUN_OK)
                 {
-                  return ERROR(DEFLATE_FAIL,bzlibError);
+                  return ERROR_(DEFLATE_FAIL,bzlibError);
                 }
                 RingBuffer_decrement(&compressInfo->dataRingBuffer,
                                      maxDataBytes-compressInfo->bzlib.stream.avail_in
@@ -332,7 +332,7 @@ LOCAL Errors compressData(CompressInfo *compressInfo)
                 }
                 else if (bzlibError != BZ_FINISH_OK)
                 {
-                  return ERROR(DEFLATE_FAIL,bzlibError);
+                  return ERROR_(DEFLATE_FAIL,bzlibError);
                 }
                 RingBuffer_increment(&compressInfo->compressRingBuffer,
                                      maxCompressBytes-compressInfo->bzlib.stream.avail_out
@@ -378,7 +378,7 @@ LOCAL Errors compressData(CompressInfo *compressInfo)
                 lzmaResult = lzma_code(&compressInfo->lzmalib.stream,LZMA_RUN);
                 if (lzmaResult != LZMA_OK)
                 {
-                  return ERROR(DEFLATE_FAIL,lzmaResult);
+                  return ERROR_(DEFLATE_FAIL,lzmaResult);
                 }
                 RingBuffer_decrement(&compressInfo->dataRingBuffer,
                                      maxDataBytes-compressInfo->lzmalib.stream.avail_in
@@ -414,7 +414,7 @@ LOCAL Errors compressData(CompressInfo *compressInfo)
                 }
                 else if (lzmaResult != LZMA_OK)
                 {
-                  return ERROR(DEFLATE_FAIL,lzmaResult);
+                  return ERROR_(DEFLATE_FAIL,lzmaResult);
                 }
                 RingBuffer_increment(&compressInfo->compressRingBuffer,
                                      maxCompressBytes-compressInfo->lzmalib.stream.avail_out
@@ -550,7 +550,7 @@ close(h);
 //fprintf(stderr,"%s,%d: XD3_WINFINISH\n",__FILE__,__LINE__);
                       break;
                     default:
-                      return ERRORX(DEFLATE_FAIL,xdeltaResult,xd3_errstring(&compressInfo->xdelta.stream));
+                      return ERRORX_(DEFLATE_FAIL,xdeltaResult,xd3_errstring(&compressInfo->xdelta.stream));
                       break;
                   }
                 }
@@ -674,7 +674,7 @@ close(h);
 //fprintf(stderr,"%s,%d: XD3_WINFINISH\n",__FILE__,__LINE__);
                       break;
                     default:
-                      return ERRORX(DEFLATE_FAIL,xdeltaResult,xd3_errstring(&compressInfo->xdelta.stream));
+                      return ERRORX_(DEFLATE_FAIL,xdeltaResult,xd3_errstring(&compressInfo->xdelta.stream));
                       break;
                   }
                 }
@@ -824,7 +824,7 @@ LOCAL Errors decompressData(CompressInfo *compressInfo)
                          && (zlibResult != Z_BUF_ERROR)
                         )
                 {
-                  return ERROR(INFLATE_FAIL,zlibResult);
+                  return ERROR_(INFLATE_FAIL,zlibResult);
                 }
                 RingBuffer_decrement(&compressInfo->compressRingBuffer,
                                      maxCompressBytes-compressInfo->zlib.stream.avail_in
@@ -862,7 +862,7 @@ LOCAL Errors decompressData(CompressInfo *compressInfo)
                          && (zlibResult != Z_BUF_ERROR)
                         )
                 {
-                  return ERROR(INFLATE_FAIL,zlibResult);
+                  return ERROR_(INFLATE_FAIL,zlibResult);
                 }
                 RingBuffer_increment(&compressInfo->dataRingBuffer,
                                      maxDataBytes-compressInfo->zlib.stream.avail_out
@@ -912,7 +912,7 @@ LOCAL Errors decompressData(CompressInfo *compressInfo)
                 }
                 else if (bzlibResult != BZ_OK)
                 {
-                  return ERROR(INFLATE_FAIL,bzlibResult);
+                  return ERROR_(INFLATE_FAIL,bzlibResult);
                 }
                 RingBuffer_decrement(&compressInfo->compressRingBuffer,
                                      maxCompressBytes-compressInfo->bzlib.stream.avail_in
@@ -951,7 +951,7 @@ LOCAL Errors decompressData(CompressInfo *compressInfo)
                 }
                 else if (bzlibResult != BZ_RUN_OK)
                 {
-                  return ERROR(INFLATE_FAIL,bzlibResult);
+                  return ERROR_(INFLATE_FAIL,bzlibResult);
                 }
                 RingBuffer_increment(&compressInfo->dataRingBuffer,
                                      maxDataBytes-compressInfo->bzlib.stream.avail_out
@@ -1001,7 +1001,7 @@ LOCAL Errors decompressData(CompressInfo *compressInfo)
                 }
                 else if (lzmaResult != LZMA_OK)
                 {
-                  return ERROR(INFLATE_FAIL,lzmaResult);
+                  return ERROR_(INFLATE_FAIL,lzmaResult);
                 }
                 RingBuffer_decrement(&compressInfo->compressRingBuffer,
                                      maxCompressBytes-compressInfo->lzmalib.stream.avail_in
@@ -1040,7 +1040,7 @@ LOCAL Errors decompressData(CompressInfo *compressInfo)
                 }
                 else if (lzmaResult != LZMA_OK)
                 {
-                  return ERROR(INFLATE_FAIL,lzmaResult);
+                  return ERROR_(INFLATE_FAIL,lzmaResult);
                 }
                 RingBuffer_increment(&compressInfo->dataRingBuffer,
                                      maxDataBytes-compressInfo->lzmalib.stream.avail_out
@@ -1184,7 +1184,7 @@ LOCAL Errors decompressData(CompressInfo *compressInfo)
 //fprintf(stderr,"%s,%d: XD3_WINFINISH\n",__FILE__,__LINE__);
                       break;
                     default:
-                      return ERRORX(INFLATE_FAIL,xdeltaResult,xd3_errstring(&compressInfo->xdelta.stream));
+                      return ERRORX_(INFLATE_FAIL,xdeltaResult,xd3_errstring(&compressInfo->xdelta.stream));
                       break;
                   }
                 }
@@ -1290,7 +1290,7 @@ LOCAL Errors decompressData(CompressInfo *compressInfo)
 //fprintf(stderr,"%s,%d: \n",__FILE__,__LINE__);
                       break;
                     default:
-                      return ERRORX(INFLATE_FAIL,xdeltaResult,xd3_errstring(&compressInfo->xdelta.stream));
+                      return ERRORX_(INFLATE_FAIL,xdeltaResult,xd3_errstring(&compressInfo->xdelta.stream));
                       break;
                   }
                 }
@@ -1870,14 +1870,14 @@ Errors Compress_reset(CompressInfo *compressInfo)
               zlibResult = deflateReset(&compressInfo->zlib.stream);
               if ((zlibResult != Z_OK) && (zlibResult != Z_STREAM_END))
               {
-                return ERROR(DEFLATE_FAIL,zlibResult);
+                return ERROR_(DEFLATE_FAIL,zlibResult);
               }
               break;
             case COMPRESS_MODE_INFLATE:
               zlibResult = inflateReset(&compressInfo->zlib.stream);
               if ((zlibResult != Z_OK) && (zlibResult != Z_STREAM_END))
               {
-                return ERROR(INFLATE_FAIL,zlibResult);
+                return ERROR_(INFLATE_FAIL,zlibResult);
               }
               break;
             #ifndef NDEBUG
@@ -1912,7 +1912,7 @@ Errors Compress_reset(CompressInfo *compressInfo)
               bzlibResult = BZ2_bzCompressInit(&compressInfo->bzlib.stream,compressInfo->bzlib.compressionLevel,0,0);
               if (bzlibResult != BZ_OK)
               {
-                return ERROR(DEFLATE_FAIL,bzlibResult);
+                return ERROR_(DEFLATE_FAIL,bzlibResult);
               }
               break;
             case COMPRESS_MODE_INFLATE:
@@ -1920,7 +1920,7 @@ Errors Compress_reset(CompressInfo *compressInfo)
               bzlibResult = BZ2_bzDecompressInit(&compressInfo->bzlib.stream,0,0);
               if (bzlibResult != BZ_OK)
               {
-                return ERROR(INFLATE_FAIL,bzlibResult);
+                return ERROR_(INFLATE_FAIL,bzlibResult);
               }
               break;
             #ifndef NDEBUG
@@ -1957,7 +1957,7 @@ Errors Compress_reset(CompressInfo *compressInfo)
               lzmalibResult = lzma_easy_encoder(&compressInfo->lzmalib.stream,compressInfo->lzmalib.compressionLevel,LZMA_CHECK_NONE);
               if (lzmalibResult != LZMA_OK)
               {
-                return ERROR(DEFLATE_FAIL,lzmalibResult);;
+                return ERROR_(DEFLATE_FAIL,lzmalibResult);;
               }
               break;
             case COMPRESS_MODE_INFLATE:
@@ -1966,7 +1966,7 @@ Errors Compress_reset(CompressInfo *compressInfo)
               lzmalibResult = lzma_auto_decoder(&compressInfo->lzmalib.stream,0xFFFffffFFFFffffLL,0);
               if (lzmalibResult != LZMA_OK)
               {
-                return ERROR(INFLATE_FAIL,lzmalibResult);
+                return ERROR_(INFLATE_FAIL,lzmalibResult);
               }
               break;
             #ifndef NDEBUG
@@ -2014,10 +2014,10 @@ Errors Compress_reset(CompressInfo *compressInfo)
             switch (compressInfo->compressMode)
             {
               case COMPRESS_MODE_DEFLATE:
-                return ERRORX(DEFLATE_FAIL,0,xd3_errstring(&compressInfo->xdelta.stream));
+                return ERRORX_(DEFLATE_FAIL,0,xd3_errstring(&compressInfo->xdelta.stream));
                 break;
               case COMPRESS_MODE_INFLATE:
-                return ERRORX(INFLATE_FAIL,0,xd3_errstring(&compressInfo->xdelta.stream));
+                return ERRORX)(INFLATE_FAIL,0,xd3_errstring(&compressInfo->xdelta.stream));
                 break;
               #ifndef NDEBUG
                 default:
@@ -2038,10 +2038,10 @@ Errors Compress_reset(CompressInfo *compressInfo)
             switch (compressInfo->compressMode)
             {
               case COMPRESS_MODE_DEFLATE:
-                return ERRORX(DEFLATE_FAIL,0,xd3_errstring(&compressInfo->xdelta.stream));
+                return ERRORX_(DEFLATE_FAIL,0,xd3_errstring(&compressInfo->xdelta.stream));
                 break;
               case COMPRESS_MODE_INFLATE:
-                return ERRORX(INFLATE_FAIL,0,xd3_errstring(&compressInfo->xdelta.stream));
+                return ERRORX_(INFLATE_FAIL,0,xd3_errstring(&compressInfo->xdelta.stream));
                 break;
               #ifndef NDEBUG
                 default:
