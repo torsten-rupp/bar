@@ -190,6 +190,21 @@ typedef void                void32;
   #define ATTRIBUTE_WARN_UNUSED_RESULT
 #endif
 
+#if   defined(PLATFORM_LINUX)
+#elif defined(PLATFORM_WINDOWS)
+  /* Work-around for Windows: Windows does not support %ll format token,
+     instead it tries - as usual according to the MS principle: ignore
+     any standard whenever possible - its own way (and of course fail...).
+     Thus use the MinGW implementation of printf/fprintf.
+  */
+  #ifndef printf
+    #define printf __mingw_printf
+  #endif
+  #ifndef fprintf
+    #define fprintf __mingw_fprintf
+  #endif
+#endif /* PLATFORM_... */
+
 /***********************************************************************\
 * Name   : UNUSED_VARIABLE
 * Purpose: avoid compiler warning for unused variables/parameters
