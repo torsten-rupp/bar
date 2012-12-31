@@ -207,14 +207,14 @@ LOCAL String             lastOutputLine;
   extern "C" {
 #endif
 
-LOCAL bool cmdOptionParseString(void *userData, void *variable, const char *name, const char *value, const void *defaultValue);
-LOCAL bool cmdOptionParseConfigFile(void *userData, void *variable, const char *name, const char *value, const void *defaultValue);
-LOCAL bool cmdOptionParseEntryPattern(void *userData, void *variable, const char *name, const char *value, const void *defaultValue);
-LOCAL bool cmdOptionParsePattern(void *userData, void *variable, const char *name, const char *value, const void *defaultValue);
-LOCAL bool cmdOptionParseBandWidth(void *userData, void *variable, const char *name, const char *value, const void *defaultValue);
-LOCAL bool cmdOptionParseOwner(void *userData, void *variable, const char *name, const char *value, const void *defaultValue);
-LOCAL bool cmdOptionParsePassword(void *userData, void *variable, const char *name, const char *value, const void *defaultValue);
-LOCAL bool cmdOptionParseCompressAlgorithm(void *userData, void *variable, const char *name, const char *value, const void *defaultValue);
+LOCAL bool cmdOptionParseString(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize);
+LOCAL bool cmdOptionParseConfigFile(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize);
+LOCAL bool cmdOptionParseEntryPattern(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize);
+LOCAL bool cmdOptionParsePattern(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize);
+LOCAL bool cmdOptionParseBandWidth(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize);
+LOCAL bool cmdOptionParseOwner(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize);
+LOCAL bool cmdOptionParsePassword(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize);
+LOCAL bool cmdOptionParseCompressAlgorithm(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize);
 
 LOCAL const CommandLineUnit COMMAND_LINE_BYTES_UNITS[] =
 {
@@ -649,7 +649,7 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
   CMD_OPTION_BOOLEAN      ("help-internal",                0,  1,0,helpInternalFlag,                                                                                   "output help to internal options"                                          ),
 };
 
-LOCAL bool configValueParseConfigFile(void *userData, void *variable, const char *name, const char *value);
+LOCAL bool configValueParseConfigFile(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
 
 LOCAL const ConfigValueUnit CONFIG_VALUE_BYTES_UNITS[] =
 {
@@ -1304,7 +1304,7 @@ LOCAL bool readConfigFile(const String fileName, bool printInfoFlag)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool cmdOptionParseString(void *userData, void *variable, const char *name, const char *value, const void *defaultValue)
+LOCAL bool cmdOptionParseString(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize)
 {
   assert(variable != NULL);
   assert(value != NULL);
@@ -1334,7 +1334,7 @@ LOCAL bool cmdOptionParseString(void *userData, void *variable, const char *name
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool cmdOptionParseConfigFile(void *userData, void *variable, const char *name, const char *value, const void *defaultValue)
+LOCAL bool cmdOptionParseConfigFile(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize)
 {
   assert(value != NULL);
 
@@ -1358,10 +1358,11 @@ LOCAL bool cmdOptionParseConfigFile(void *userData, void *variable, const char *
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool cmdOptionParseEntryPattern(void *userData, void *variable, const char *name, const char *value, const void *defaultValue)
+LOCAL bool cmdOptionParseEntryPattern(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize)
 {
   EntryTypes   entryType;
   PatternTypes patternType;
+  Errors       error;
 
   assert(variable != NULL);
   assert(value != NULL);
@@ -1397,8 +1398,10 @@ LOCAL bool cmdOptionParseEntryPattern(void *userData, void *variable, const char
   else                                 { patternType = PATTERN_TYPE_GLOB;                       }
 
   // append to list
-  if (EntryList_appendCString((EntryList*)variable,entryType,value,patternType) != ERROR_NONE)
+  error = EntryList_appendCString((EntryList*)variable,entryType,value,patternType);
+  if (error != ERROR_NONE)
   {
+    strncpy(errorMessage,Errors_getText(error),errorMessageSize); errorMessage[errorMessageSize-1] = '\0';
     return FALSE;
   }
 
@@ -1415,7 +1418,7 @@ LOCAL bool cmdOptionParseEntryPattern(void *userData, void *variable, const char
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool cmdOptionParsePattern(void *userData, void *variable, const char *name, const char *value, const void *defaultValue)
+LOCAL bool cmdOptionParsePattern(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize)
 {
   PatternTypes patternType;
 
@@ -1739,7 +1742,7 @@ LOCAL BandWidthNode *parseBandWidth(const String s)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool cmdOptionParseBandWidth(void *userData, void *variable, const char *name, const char *value, const void *defaultValue)
+LOCAL bool cmdOptionParseBandWidth(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize)
 {
   BandWidthNode *bandWidthNode;
   String        s;
@@ -1776,7 +1779,7 @@ LOCAL bool cmdOptionParseBandWidth(void *userData, void *variable, const char *n
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool cmdOptionParseOwner(void *userData, void *variable, const char *name, const char *value, const void *defaultValue)
+LOCAL bool cmdOptionParseOwner(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize)
 {
   char   userName[256],groupName[256];
   uint32 userId,groupId;
@@ -1830,7 +1833,7 @@ LOCAL bool cmdOptionParseOwner(void *userData, void *variable, const char *name,
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool cmdOptionParsePassword(void *userData, void *variable, const char *name, const char *value, const void *defaultValue)
+LOCAL bool cmdOptionParsePassword(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize)
 {
   assert(variable != NULL);
   assert(value != NULL);
@@ -1857,7 +1860,7 @@ LOCAL bool cmdOptionParsePassword(void *userData, void *variable, const char *na
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool cmdOptionParseCompressAlgorithm(void *userData, void *variable, const char *name, const char *value, const void *defaultValue)
+LOCAL bool cmdOptionParseCompressAlgorithm(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize)
 {
   char               algorithm1[256],algorithm2[256];
   CompressAlgorithms compressAlgorithmDelta,compressAlgorithmByte;
@@ -1961,7 +1964,7 @@ LOCAL bool cmdOptionParseCompressAlgorithm(void *userData, void *variable, const
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool configValueParseConfigFile(void *userData, void *variable, const char *name, const char *value)
+LOCAL bool configValueParseConfigFile(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
 {
   assert(value != NULL);
 
@@ -3421,7 +3424,7 @@ Errors inputCryptPassword(void         *userData,
   return error;
 }
 
-bool configValueParseBandWidth(void *userData, void *variable, const char *name, const char *value)
+bool configValueParseBandWidth(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
 {
   BandWidthNode *bandWidthNode;
   String        s;
@@ -3484,7 +3487,7 @@ bool configValueFormatBandWidth(void **formatUserData, void *userData, String li
   return TRUE;
 }
 
-bool configValueParseOwner(void *userData, void *variable, const char *name, const char *value)
+bool configValueParseOwner(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
 {
   char   userName[256],groupName[256];
   uint32 userId,groupId;
@@ -3569,7 +3572,7 @@ bool configValueFormatOwner(void **formatUserData, void *userData, String line)
   }
 }
 
-LOCAL bool configValueParseEntry(EntryTypes entryType, void *userData, void *variable, const char *name, const char *value)
+LOCAL bool configValueParseEntry(EntryTypes entryType, void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
 {
   const char* FILENAME_MAP_FROM[] = {"\\n","\\r","\\\\"};
   const char* FILENAME_MAP_TO[]   = {"\n","\r","\\"};
@@ -3593,7 +3596,8 @@ LOCAL bool configValueParseEntry(EntryTypes entryType, void *userData, void *var
 
   // append to list
   pattern = String_mapCString(String_newCString(value),STRING_BEGIN,FILENAME_MAP_FROM,FILENAME_MAP_TO,SIZE_OF_ARRAY(FILENAME_MAP_FROM));
-  if (EntryList_append((EntryList*)variable,entryType,pattern,patternType) != ERROR_NONE)
+  error = EntryList_append((EntryList*)variable,entryType,pattern,patternType);
+  if (error != ERROR_NONE)
   {
     fprintf(stderr,"Cannot parse varlue '%s' of option '%s'!\n",String_cString(pattern),name);
     String_delete(pattern);
@@ -3604,14 +3608,14 @@ LOCAL bool configValueParseEntry(EntryTypes entryType, void *userData, void *var
   return TRUE;
 }
 
-bool configValueParseFileEntry(void *userData, void *variable, const char *name, const char *value)
+bool configValueParseFileEntry(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
 {
-  return configValueParseEntry(ENTRY_TYPE_FILE,userData,variable,name,value);
+  return configValueParseEntry(ENTRY_TYPE_FILE,userData,variable,name,value,errorMessage,errorMessageSize);
 }
 
-bool configValueParseImageEntry(void *userData, void *variable, const char *name, const char *value)
+bool configValueParseImageEntry(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
 {
-  return configValueParseEntry(ENTRY_TYPE_IMAGE,userData,variable,name,value);
+  return configValueParseEntry(ENTRY_TYPE_IMAGE,userData,variable,name,value,errorMessage,errorMessageSize);
 }
 
 void configValueFormatInitEntry(void **formatUserData, void *userData, void *variable)
@@ -3721,7 +3725,7 @@ bool configValueFormatImageEntry(void **formatUserData, void *userData, String l
   }
 }
 
-bool configValueParsePattern(void *userData, void *variable, const char *name, const char *value)
+bool configValueParsePattern(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
 {
   PatternTypes patternType;
 
@@ -3801,7 +3805,7 @@ bool configValueFormatPattern(void **formatUserData, void *userData, String line
   }
 }
 
-bool configValueParseString(void *userData, void *variable, const char *name, const char *value)
+bool configValueParseString(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
 {
   assert(variable != NULL);
   assert(value != NULL);
@@ -3821,7 +3825,7 @@ bool configValueParseString(void *userData, void *variable, const char *name, co
   return TRUE;
 }
 
-bool configValueParsePassword(void *userData, void *variable, const char *name, const char *value)
+bool configValueParsePassword(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
 {
   assert(variable != NULL);
   assert(value != NULL);
