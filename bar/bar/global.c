@@ -133,7 +133,6 @@ void debugDumpMemory(bool printAddress, const void *address, uint length)
     if (printAddress) fprintf(stderr,"%08lx:",(unsigned long)p);
     fprintf(stderr,"%08lx  ",(unsigned long)(p-(byte*)address));
 
-
     for (i = 0; i < 16; i++)
     {
       if ((z+i) < length)
