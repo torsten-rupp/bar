@@ -406,7 +406,7 @@ Errors Database_open(DatabaseHandle    *databaseHandle,
   // create lock
   if (!Semaphore_init(&databaseHandle->lock))
   {
-    return ERRORX(DATABASE,errno,"create database lock fail");
+    return ERRORX_(DATABASE,errno,"create database lock fail");
   }
 
   // create directory if needed
@@ -443,7 +443,7 @@ Errors Database_open(DatabaseHandle    *databaseHandle,
   if (sqliteResult != SQLITE_OK)
   {
     Semaphore_done(&databaseHandle->lock);
-    return ERRORX(DATABASE,sqlite3_errcode(databaseHandle->handle),sqlite3_errmsg(databaseHandle->handle));
+    return ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->handle),sqlite3_errmsg(databaseHandle->handle));
   }
 
   // register REGEXP functions
@@ -535,7 +535,7 @@ Errors Database_execute(DatabaseHandle   *databaseHandle,
     }
     else
     {
-      error = ERRORX(DATABASE,sqlite3_errcode(databaseHandle->handle),sqlite3_errmsg(databaseHandle->handle));
+      error = ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->handle),sqlite3_errmsg(databaseHandle->handle));
     }
   }
   if (error != ERROR_NONE)
@@ -596,7 +596,7 @@ Errors Database_prepare(DatabaseQueryHandle *databaseQueryHandle,
     }
     else
     {
-      error = ERRORX(DATABASE,sqlite3_errcode(databaseHandle->handle),sqlite3_errmsg(databaseHandle->handle));
+      error = ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->handle),sqlite3_errmsg(databaseHandle->handle));
     }
   }
   if (error != ERROR_NONE)
@@ -919,7 +919,7 @@ Errors Database_getInteger64(DatabaseHandle *databaseHandle,
     }
     else
     {
-      error = ERRORX(DATABASE,sqlite3_errcode(databaseHandle->handle),sqlite3_errmsg(databaseHandle->handle));
+      error = ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->handle),sqlite3_errmsg(databaseHandle->handle));
     }
 
     if (sqlite3_step(handle) == SQLITE_ROW)
@@ -1003,7 +1003,7 @@ Errors Database_getString(DatabaseHandle *databaseHandle,
     }
     else
     {
-      error = ERRORX(DATABASE,sqlite3_errcode(databaseHandle->handle),sqlite3_errmsg(databaseHandle->handle));
+      error = ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->handle),sqlite3_errmsg(databaseHandle->handle));
     }
 
     if (sqlite3_step(handle) == SQLITE_ROW)
@@ -1082,7 +1082,7 @@ Errors Database_setInteger64(DatabaseHandle *databaseHandle,
     }
     else
     {
-      error = ERRORX(DATABASE,sqlite3_errcode(databaseHandle->handle),sqlite3_errmsg(databaseHandle->handle));
+      error = ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->handle),sqlite3_errmsg(databaseHandle->handle));
     }
   }
   if (error != ERROR_NONE)
@@ -1154,7 +1154,7 @@ Errors Database_setString(DatabaseHandle *databaseHandle,
     }
     else
     {
-      error = ERRORX(DATABASE,sqlite3_errcode(databaseHandle->handle),sqlite3_errmsg(databaseHandle->handle));
+      error = ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->handle),sqlite3_errmsg(databaseHandle->handle));
     }
   }
   if (error != ERROR_NONE)
