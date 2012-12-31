@@ -66,7 +66,11 @@ LOCAL EntryNode *copyEntryNode(EntryNode *entryNode,
                               )
 {
   EntryNode *newEntryNode;
-  Errors      error;
+  #if   defined(PLATFORM_LINUX)
+  #elif defined(PLATFORM_WINDOWS)
+    String    string;
+  #endif /* PLATFORM_... */
+  Errors    error;
 
   assert(entryNode != NULL);
 
@@ -88,10 +92,17 @@ LOCAL EntryNode *copyEntryNode(EntryNode *entryNode,
                          entryNode->pattern.type
                         );
   #elif defined(PLATFORM_WINDOWS)
+    // escape all '\' by '\\'
+    string = String_duplicate(entryNode->string);
+    String_replaceAllCString(string,STRING_BEGIN,"\\","\\\\");
+
     error = Pattern_init(&newEntryNode->pattern,
-                         entryNode->string,
+                         string,
                          entryNode->pattern.type|PATTERN_OPTION_IGNORE_CASE
                         );
+
+    // free resources
+    String_delete(string);
   #endif /* PLATFORM_... */
   if (error != ERROR_NONE)
   {
@@ -192,7 +203,11 @@ Errors EntryList_appendCString(EntryList    *entryList,
                               )
 {
   EntryNode *entryNode;
-  Errors      error;
+  #if   defined(PLATFORM_LINUX)
+  #elif defined(PLATFORM_WINDOWS)
+    String    string;
+  #endif /* PLATFORM_... */
+  Errors    error;
 
   assert(entryList != NULL);
   assert(pattern != NULL);
@@ -213,10 +228,17 @@ Errors EntryList_appendCString(EntryList    *entryList,
                                 patternType
                                );
   #elif defined(PLATFORM_WINDOWS)
-    error = Pattern_initCString(&entryNode->pattern,
-                                pattern,
-                                patternType|PATTERN_OPTION_IGNORE_CASE
-                               );
+    // escape all '\' by '\\'
+    string = String_newCString(pattern);
+    String_replaceAllCString(string,STRING_BEGIN,"\\","\\\\");
+
+    error = Pattern_init(&entryNode->pattern,
+                         string,
+                         patternType|PATTERN_OPTION_IGNORE_CASE
+                        );
+
+    // free resources
+    String_delete(string);
   #endif /* PLATFORM_... */
   if (error != ERROR_NONE)
   {
