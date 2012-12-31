@@ -34,14 +34,15 @@
 
 /***************************** Constants *******************************/
 
-#define FILE_TMP_DIRECTORY ((getenv("TMPDIR") != NULL) ? getenv("TMPDIR") : "/tmp")
+#define FILE_TMP_DIRECTORY File_getSystemTmpDirectory()
 
-#ifdef FILE_SEPARAPTOR_CHAR
+#if defined(FILE_SEPARATOR_STRING) && defined(FILE_SEPARATOR_STRING)
   #define _FILES_PATHNAME_SEPARATOR_CHARS_STRING1(z) _FILES_PATHNAME_SEPARATOR_CHARS_STRING2(z)
   #define _FILES_PATHNAME_SEPARATOR_CHARS_STRING2(z) #z
 
-  #define FILES_PATHNAME_SEPARATOR_CHAR FILE_SEPARAPTOR_CHAR
-  #define FILES_PATHNAME_SEPARATOR_CHARS _FILES_PATHNAME_SEPARATOR_CHARS_STRING1(FILE_SEPARAPTOR_CHAR)
+  #define FILES_PATHNAME_SEPARATOR_CHAR FILE_SEPARATOR_CHAR
+//  #define FILES_PATHNAME_SEPARATOR_CHARS "/" _FILES_PATHNAME_SEPARATOR_CHARS_STRING1(FILE_SEPARAPTOR_CHAR)
+  #define FILES_PATHNAME_SEPARATOR_CHARS "/" FILE_SEPARATOR_STRING
 #else
   #define FILES_PATHNAME_SEPARATOR_CHAR '/'
   #define FILES_PATHNAME_SEPARATOR_CHARS "/"
@@ -388,6 +389,17 @@ void File_doneSplitFileName(StringTokenizer *stringTokenizer);
 bool File_getNextSplitFileName(StringTokenizer *stringTokenizer, String *const name);
 
 /*---------------------------------------------------------------------*/
+
+/***********************************************************************\
+* Name   : File_getSystemTmpDirectory
+* Purpose: get system temporary directory name
+* Input  : -
+* Output : -
+* Return : temporary directory name
+* Notes  : -
+\***********************************************************************/
+
+const char *File_getSystemTmpDirectory(void);
 
 /***********************************************************************\
 * Name   : File_getTmpFileName
