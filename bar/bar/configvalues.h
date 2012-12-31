@@ -130,7 +130,7 @@ typedef struct
   } stringValue;
   struct
   {
-    bool(*parse)(void *userData, void *variable, const char *name, const char *value);
+    bool(*parse)(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
     void(*formatInit)(void **formatUserData, void *userData, void *variable);
     void(*formatDone)(void **formatUserData, void *userData);
     bool(*format)(void **formatUserData, void *userData, String line);

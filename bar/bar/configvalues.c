@@ -244,6 +244,7 @@ LOCAL bool processValue(const ConfigValue *configValue,
                        )
 {
   ConfigVariable configVariable;
+  char           errorMessage[256];
 
   assert(configValue != NULL);
   assert(name != NULL);
@@ -747,28 +748,81 @@ LOCAL bool processValue(const ConfigValue *configValue,
       {
         if (variable != NULL)
         {
+          errorMessage[0] = '\0';
           if (!configValue->specialValue.parse(configValue->specialValue.userData,
                                                (byte*)variable+configValue->offset,
                                                configValue->name,
-                                               value
+                                               value,
+                                               errorMessage,
+                                               sizeof(errorMessage)
                                               )
              )
           {
+            if (errorOutputHandle != NULL)
+            {
+              errorMessage[sizeof(errorMessage)-1] = '\0';
+              if (strlen(errorMessage) > 0)
+              {
+                fprintf(errorOutputHandle,
+                        "%sInvalid value '%s' for config value '%s' (error: %s)!\n",
+                        (errorPrefix != NULL)?errorPrefix:"",
+                        value,
+                        configValue->name,
+                        errorMessage
+                       );
+              }
+              else
+              {
+                fprintf(errorOutputHandle,
+                        "%sInvalid value '%s' for config value '%s'!\n",
+                        (errorPrefix != NULL)?errorPrefix:"",
+                        value,
+                        configValue->name
+                       );
+              }
+            }
             return FALSE;
           }
         }
         else
         {
           assert(configValue->variable.reference != NULL);
+
           if ((*configValue->variable.reference) != NULL)
           {
+            errorMessage[0] = '\0';
             if (!configValue->specialValue.parse(configValue->specialValue.userData,
                                                  (byte*)(*configValue->variable.reference)+configValue->offset,
                                                  configValue->name,
-                                                 value
+                                                 value,
+                                                 errorMessage,
+                                                 sizeof(errorMessage)
                                                 )
                )
             {
+              if (errorOutputHandle != NULL)
+              {
+                errorMessage[sizeof(errorMessage)-1] = '\0';
+                if (strlen(errorMessage) > 0)
+                {
+                  fprintf(errorOutputHandle,
+                          "%sInvalid value '%s' for config value '%s' (error: %s)!\n",
+                          (errorPrefix != NULL)?errorPrefix:"",
+                          value,
+                          configValue->name,
+                          errorMessage
+                         );
+                }
+                else
+                {
+                  fprintf(errorOutputHandle,
+                          "%sInvalid value '%s' for config value '%s'!\n",
+                          (errorPrefix != NULL)?errorPrefix:"",
+                          value,
+                          configValue->name
+                         );
+                }
+              }
               return FALSE;
             }
           }
@@ -777,13 +831,40 @@ LOCAL bool processValue(const ConfigValue *configValue,
       else
       {
         assert(configValue->variable.special != NULL);
+
+        errorMessage[0] = '\0';
         if (!configValue->specialValue.parse(configValue->specialValue.userData,
                                              configValue->variable.special,
                                              configValue->name,
-                                             value
+                                             value,
+                                             errorMessage,
+                                             sizeof(errorMessage)
                                             )
            )
         {
+          if (errorOutputHandle != NULL)
+          {
+            errorMessage[sizeof(errorMessage)-1] = '\0';
+            if (strlen(errorMessage) > 0)
+            {
+              fprintf(errorOutputHandle,
+                      "%sInvalid value '%s' for config value '%s' (error: %s)!\n",
+                      (errorPrefix != NULL)?errorPrefix:"",
+                      value,
+                      configValue->name,
+                      errorMessage
+                     );
+            }
+            else
+            {
+              fprintf(errorOutputHandle,
+                      "%sInvalid value '%s' for config value '%s'!\n",
+                      (errorPrefix != NULL)?errorPrefix:"",
+                      value,
+                      configValue->name
+                     );
+            }
+          }
           return FALSE;
         }
       }
