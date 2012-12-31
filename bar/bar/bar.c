@@ -16,9 +16,15 @@
 #include <stdarg.h>
 #include <unistd.h>
 #include <sys/time.h>
-#include <sys/resource.h>
+#ifdef HAVE_SYS_RESOURCE_H
+  #include <sys/resource.h>
+#endif
 #include <errno.h>
 #include <assert.h>
+
+#if   defined(PLATFORM_LINUX)
+#elif defined(PLATFORM_WINDOWS)
+#endif /* PLATFORM_... */
 
 #include "global.h"
 #include "cmdoptions.h"
@@ -452,7 +458,7 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
   CMD_OPTION_SPECIAL      ("include",                      '#',0,2,&includeEntryList,                           cmdOptionParseEntryPattern,NULL,                       "include pattern","pattern"                                                ),
   CMD_OPTION_SPECIAL      ("exclude",                      '!',0,2,&excludePatternList,                         cmdOptionParsePattern,NULL,                            "exclude pattern","pattern"                                                ),
 
-  CMD_OPTION_SPECIAL      ("delta-source",                 0,  0,2,&deltaSourcePatternList,                     cmdOptionParsePattern,NULL,                            "source pattern\ntest1\ntest2","pattern"                                   ),
+  CMD_OPTION_SPECIAL      ("delta-source",                 0,  0,2,&deltaSourcePatternList,                     cmdOptionParsePattern,NULL,                            "source pattern","pattern"                                                 ),
 
   CMD_OPTION_SPECIAL      ("config",                       0,  1,0,NULL,                                        cmdOptionParseConfigFile,NULL,                         "configuration file","file name"                                           ),
 
@@ -1393,7 +1399,6 @@ LOCAL bool cmdOptionParseEntryPattern(void *userData, void *variable, const char
   // append to list
   if (EntryList_appendCString((EntryList*)variable,entryType,value,patternType) != ERROR_NONE)
   {
-    fprintf(stderr,"Cannot parse varlue '%s' of option '%s'!\n",value,name);
     return FALSE;
   }
 
@@ -3571,6 +3576,7 @@ LOCAL bool configValueParseEntry(EntryTypes entryType, void *userData, void *var
 
   PatternTypes patternType;
   String       pattern;
+  Errors       error;
 
   assert(variable != NULL);
   assert(value != NULL);
@@ -4599,7 +4605,7 @@ int main(int argc, const char *argv[])
   {
     fileName = File_newFileName();
 
-    // read default configuration from /CONFIG_DIR/bar.cfg (ignore errors)
+    // read default configuration from <CONFIG_DIR>/bar.cfg (ignore errors)
     File_setFileNameCString(fileName,CONFIG_DIR);
     File_appendFileNameCString(fileName,DEFAULT_CONFIG_FILE_NAME);
     if (File_isFile(fileName) && File_isReadable(fileName))
@@ -4809,71 +4815,76 @@ int main(int argc, const char *argv[])
     if (!noDetachFlag)
     {
       // run server (detached)
-      if (daemon(1,0) == 0)
-      {
-        if (pidFileName != NULL)
+      #if   defined(PLATFORM_LINUX)
+        if (daemon(1,0) == 0)
         {
-          // create pid file
-          error = createPIDFile();
-        }
+          if (pidFileName != NULL)
+          {
+            // create pid file
+            error = createPIDFile();
+          }
 
-        if (error == ERROR_NONE)
+          if (error == ERROR_NONE)
+          {
+            // run server
+            error = Server_run(serverPort,
+                               serverTLSPort,
+                               serverCAFileName,
+                               serverCertFileName,
+                               serverKeyFileName,
+                               serverPassword,
+                               serverJobsDirectory,
+                               &jobOptions
+                              );
+          }
+
+          if (pidFileName != NULL)
+          {
+            // delete pid file
+            deletePIDFile();
+          }
+
+          // close log files
+          if (logFile != NULL) fclose(logFile);
+          fclose(tmpLogFile); (void)unlink(String_cString(tmpLogFileName));
+          File_delete(tmpLogFileName,FALSE);
+
+          // free resources
+          CmdOption_done(COMMAND_LINE_OPTIONS,SIZE_OF_ARRAY(COMMAND_LINE_OPTIONS));
+          doneAll();
+          #ifndef NDEBUG
+            File_debugDone();
+            Array_debugDone();
+            String_debugDone();
+            List_debugDone();
+          #endif /* not NDEBUG */
+
+          switch (error)
+          {
+            case ERROR_NONE:
+              return EXITCODE_OK;
+              break;
+            case ERROR_INVALID_ARGUMENT:
+              return EXITCODE_INVALID_ARGUMENT;
+              break;
+            case ERROR_CONFIG:
+              return EXITCODE_CONFIG_ERROR;
+            case ERROR_FUNCTION_NOT_SUPPORTED:
+              return EXITCODE_FUNCTION_NOT_SUPPORTED;
+              break;
+            default:
+              return EXITCODE_FAIL;
+              break;
+          }
+        }
+        else
         {
-          // run server
-          error = Server_run(serverPort,
-                             serverTLSPort,
-                             serverCAFileName,
-                             serverCertFileName,
-                             serverKeyFileName,
-                             serverPassword,
-                             serverJobsDirectory,
-                             &jobOptions
-                            );
+          error = ERROR_DAEMON_FAIL;
         }
-
-        if (pidFileName != NULL)
-        {
-          // delete pid file
-          deletePIDFile();
-        }
-
-        // close log files
-        if (logFile != NULL) fclose(logFile);
-        fclose(tmpLogFile); (void)unlink(String_cString(tmpLogFileName));
-        File_delete(tmpLogFileName,FALSE);
-
-        // free resources
-        CmdOption_done(COMMAND_LINE_OPTIONS,SIZE_OF_ARRAY(COMMAND_LINE_OPTIONS));
-        doneAll();
-        #ifndef NDEBUG
-          File_debugDone();
-          Array_debugDone();
-          String_debugDone();
-          List_debugDone();
-        #endif /* not NDEBUG */
-
-        switch (error)
-        {
-          case ERROR_NONE:
-            return EXITCODE_OK;
-            break;
-          case ERROR_INVALID_ARGUMENT:
-            return EXITCODE_INVALID_ARGUMENT;
-            break;
-          case ERROR_CONFIG:
-            return EXITCODE_CONFIG_ERROR;
-          case ERROR_FUNCTION_NOT_SUPPORTED:
-            return EXITCODE_FUNCTION_NOT_SUPPORTED;
-            break;
-          default:
-            return EXITCODE_FAIL;
-            break;
-        }
-      }
-      else
-      {
-        error = ERROR_DAEMON_FAIL;
-      }
+      #elif defined(PLATFORM_WINDOWS)
+// NYI ???
+error = ERROR_STILL_NOT_IMPLEMENTED;
+      #endif /* PLATFORM_... */
     }
     else
     {
