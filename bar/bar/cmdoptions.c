@@ -274,6 +274,8 @@ LOCAL bool processOption(const CommandLineOption *commandLineOption,
                          const char              *errorPrefix
                         )
 {
+  char errorMessage[256];
+
   assert(commandLineOption != NULL);
   assert(option != NULL);
 
@@ -604,22 +606,39 @@ LOCAL bool processOption(const CommandLineOption *commandLineOption,
       }
       break;
     case CMD_OPTION_TYPE_SPECIAL:
+      errorMessage[0] = '\0';
       if (!commandLineOption->specialOption.parseSpecial(commandLineOption->specialOption.userData,
                                                          commandLineOption->variable.special,
                                                          option,
                                                          value,
-                                                         commandLineOption->defaultValue.special
+                                                         commandLineOption->defaultValue.special,
+                                                         errorMessage,
+                                                         sizeof(errorMessage)
                                                         )
          )
       {
         if (errorOutputHandle != NULL)
         {
-          fprintf(errorOutputHandle,
-                  "%sInvalid value '%s' for option '%s'!\n",
-                  (errorPrefix != NULL)?errorPrefix:"",
-                  value,
-                  option
-                 );
+          errorMessage[sizeof(errorMessage)-1] = '\0';
+          if (strlen(errorMessage) > 0)
+          {
+            fprintf(errorOutputHandle,
+                    "%sInvalid value '%s' for option '%s' (error: %s)!\n",
+                    (errorPrefix != NULL)?errorPrefix:"",
+                    value,
+                    option,
+                    errorMessage
+                   );
+          }
+          else
+          {
+            fprintf(errorOutputHandle,
+                    "%sInvalid value '%s' for option '%s'!\n",
+                    (errorPrefix != NULL)?errorPrefix:"",
+                    value,
+                    option
+                   );
+          }
         }
         return FALSE;
       }

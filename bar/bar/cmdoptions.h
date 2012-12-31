@@ -151,11 +151,18 @@ typedef struct CommandLineOption
   } stringOption;
   struct
   {
-    bool(*parseSpecial)(void *userData, void *variable, const char *option, const char *value, const void *defaultValue);
+    bool(*parseSpecial)(void       *userData,
+                        void       *variable,
+                        const char *option,
+                        const char *value,
+                        const void *defaultValue,
+                        char       *errorMessage,       // must be NUL-terminated!
+                        uint       errorMessageSize
+                       );
     void                          *userData;            // user data for parse special
     const char                    *helpArgument;        // text for help argument
   } specialOption;
-  const char                    *description;
+  const char             *description;
 } CommandLineOption;
 
 /* example
