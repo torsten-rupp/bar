@@ -360,7 +360,7 @@ Errors Network_connect(SocketHandle *socketHandle,
         socketHandle->handle = socket(AF_INET,SOCK_STREAM,0);
         if (socketHandle->handle == -1)
         {
-          return ERROR(CONNECT_FAIL,errno);
+          return ERROR_(CONNECT_FAIL,errno);
         }
         socketAddress.sin_family      = AF_INET;
         socketAddress.sin_addr.s_addr = ipAddress;
@@ -371,7 +371,7 @@ Errors Network_connect(SocketHandle *socketHandle,
                    ) != 0
            )
         {
-          error = ERROR(CONNECT_FAIL,errno);
+          error = ERROR_(CONNECT_FAIL,errno);
           close(socketHandle->handle);
           return error;
         }
@@ -444,7 +444,7 @@ Errors Network_connect(SocketHandle *socketHandle,
         socketHandle->handle = socket(AF_INET,SOCK_STREAM,0);
         if (socketHandle->handle == -1)
         {
-          return ERROR(CONNECT_FAIL,errno);
+          return ERROR_(CONNECT_FAIL,errno);
         }
         socketAddress.sin_family      = AF_INET;
         socketAddress.sin_addr.s_addr = ipAddress;
@@ -455,7 +455,7 @@ Errors Network_connect(SocketHandle *socketHandle,
                    ) != 0
            )
         {
-          error = ERROR(CONNECT_FAIL,errno);
+          error = ERROR_(CONNECT_FAIL,errno);
           close(socketHandle->handle);
           return error;
         }
@@ -519,7 +519,7 @@ Errors Network_connect(SocketHandle *socketHandle,
                                                ) != 0)
         {
           ssh2Error = libssh2_session_last_error(socketHandle->ssh2.session,&ssh2ErrorText,NULL,0);
-          error = ERRORX(SSH_AUTHENTICATION,ssh2Error,ssh2ErrorText);
+          error = ERRORX_(SSH_AUTHENTICATION,ssh2Error,ssh2ErrorText);
           Password_undeploy(password);
           libssh2_session_disconnect(socketHandle->ssh2.session,"");
           libssh2_session_free(socketHandle->ssh2.session);
@@ -536,7 +536,7 @@ Errors Network_connect(SocketHandle *socketHandle,
            )
         {
           ssh2Error = libssh2_session_last_error(socketHandle->ssh2.session,&ssh2ErrorText,NULL,0);
-          error = ERRORX(SSH_AUTHENTICATION,ssh2Error,ssh2ErrorText);
+          error = ERRORX_(SSH_AUTHENTICATION,ssh2Error,ssh2ErrorText);
           libssh2_session_disconnect(socketHandle->ssh2.session,"");
           libssh2_session_free(socketHandle->ssh2.session);
           close(socketHandle->handle);
@@ -959,14 +959,14 @@ Errors Network_initServer(ServerSocketHandle *serverSocketHandle,
   serverSocketHandle->handle = socket(AF_INET,SOCK_STREAM,0);
   if (serverSocketHandle->handle == -1)
   {
-    return ERROR(CONNECT_FAIL,errno);
+    return ERROR_(CONNECT_FAIL,errno);
   }
 
   // reuse address
   n = 1;
   if (setsockopt(serverSocketHandle->handle,SOL_SOCKET,SO_REUSEADDR,(void*)&n,sizeof(int)) != 0)
   {
-    error = ERROR(CONNECT_FAIL,errno);
+    error = ERROR_(CONNECT_FAIL,errno);
     close(serverSocketHandle->handle);
     return error;
   }
@@ -981,7 +981,7 @@ Errors Network_initServer(ServerSocketHandle *serverSocketHandle,
           ) != 0
      )
   {
-    error = ERROR(CONNECT_FAIL,errno);
+    error = ERROR_(CONNECT_FAIL,errno);
     close(serverSocketHandle->handle);
     return error;
   }
@@ -1048,7 +1048,7 @@ Errors Network_initServer(ServerSocketHandle *serverSocketHandle,
             gnutls_x509_crt_deinit(cert);
             free(certData);
             close(serverSocketHandle->handle);
-            return ERRORX(TLS_CERTIFICATE_NOT_ACTIVE,0,Misc_formatDateTimeCString(buffer,sizeof(buffer),(uint64)certActivationTime,DATE_TIME_FORMAT_LOCALE));
+            return ERRORX_(TLS_CERTIFICATE_NOT_ACTIVE,0,Misc_formatDateTimeCString(buffer,sizeof(buffer),(uint64)certActivationTime,DATE_TIME_FORMAT_LOCALE));
           }
         }
         certExpireTime = gnutls_x509_crt_get_expiration_time(cert);
@@ -1059,7 +1059,7 @@ Errors Network_initServer(ServerSocketHandle *serverSocketHandle,
             gnutls_x509_crt_deinit(cert);
             free(certData);
             close(serverSocketHandle->handle);
-            return ERRORX(TLS_CERTIFICATE_EXPIRED,0,Misc_formatDateTimeCString(buffer,sizeof(buffer),(uint64)certExpireTime,DATE_TIME_FORMAT_LOCALE));
+            return ERRORX_(TLS_CERTIFICATE_EXPIRED,0,Misc_formatDateTimeCString(buffer,sizeof(buffer),(uint64)certExpireTime,DATE_TIME_FORMAT_LOCALE));
           }
         }
 #if 0
@@ -1199,7 +1199,7 @@ Errors Network_accept(SocketHandle             *socketHandle,
                                );
   if (socketHandle->handle == -1)
   {
-    error = ERROR(CONNECT_FAIL,errno);
+    error = ERROR_(CONNECT_FAIL,errno);
     close(socketHandle->handle);
     return error;
   }
@@ -1261,7 +1261,7 @@ NYI: how to do certificate verification?
         {
           gnutls_deinit(socketHandle->gnuTLS.session);
           close(socketHandle->handle);
-          return ERRORX(TLS_HANDSHAKE,result,gnutls_strerror(result));
+          return ERRORX_(TLS_HANDSHAKE,result,gnutls_strerror(result));
         }
 
 #if 0
@@ -1271,7 +1271,7 @@ NYI: how to enable client authentication?
         {
           gnutls_deinit(socketHandle->gnuTLS.session);
           close(socketHandle->handle);
-          return ERRORX(TLS_HANDSHAKE,result,gnutls_strerror(result));
+          return ERRORX_(TLS_HANDSHAKE,result,gnutls_strerror(result));
         }
 #endif /* 0 */
       #else /* not HAVE_GNU_TLS */
