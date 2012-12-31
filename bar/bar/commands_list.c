@@ -296,7 +296,7 @@ LOCAL void printFooter(ulong fileCount)
     {
       printInfo(0,"--------------------------------------------------------------------------------------------------------------\n");
     }
-    printInfo(0,"%lu %s\n",fileCount,(fileCount == 1)?"entry":"entries");
+    printInfo(0,"%lu %s\n",fileCount,(fileCount == 1) ? "entry" : "entries");
     printInfo(0,"\n");
   }
 }
@@ -405,16 +405,17 @@ LOCAL void printFileInfo(const String       storageName,
                                      Compress_getAlgorithmName(deltaCompressAlgorithm)
                                     );
     }
-    cryptString = String_format(String_new(),"%s%c",Crypt_getAlgorithmName(cryptAlgorithm),(cryptType==CRYPT_TYPE_ASYMMETRIC)?'*':' ');
+    cryptString = String_format(String_new(),"%s%c",Crypt_getAlgorithmName(cryptAlgorithm),(cryptType==CRYPT_TYPE_ASYMMETRIC) ? '*' : ' ');
     printf(" %-25s %10llu..%10llu %-15s %6.1f%% %-10s %s\n",
            String_cString(dateTime),
            fragmentOffset,
-           (fragmentSize > 0LL)?fragmentOffset+fragmentSize-1:fragmentOffset,
+           (fragmentSize > 0LL) ? fragmentOffset+fragmentSize-1 : fragmentOffset,
            String_cString(compressString),
            ratio,
            String_cString(cryptString),
            String_cString(fileName)
           );
+
     String_delete(cryptString);
     String_delete(compressString);
 
@@ -535,10 +536,10 @@ LOCAL void printImageInfo(const String       storageName,
                                      Compress_getAlgorithmName(deltaCompressAlgorithm)
                                     );
     }
-    cryptString = String_format(String_new(),"%s%c",Crypt_getAlgorithmName(cryptAlgorithm),(cryptType==CRYPT_TYPE_ASYMMETRIC)?'*':' ');
+    cryptString = String_format(String_new(),"%s%c",Crypt_getAlgorithmName(cryptAlgorithm),(cryptType==CRYPT_TYPE_ASYMMETRIC) ? '*' : ' ');
     printf("                           %10llu..%10llu %-15s %6.1f%% %-10s %s\n",
            blockOffset*(uint64)blockSize,
-           (blockOffset+blockCount)*(uint64)blockSize-((blockCount > 0)?1:0),
+           (blockOffset+blockCount)*(uint64)blockSize-((blockCount > 0) ? 1 : 0),
            String_cString(compressString),
            ratio,
            String_cString(cryptString),
@@ -594,7 +595,7 @@ LOCAL void printDirectoryInfo(const String    storageName,
   }
   if (globalOptions.longFormatFlag)
   {
-    cryptString = String_format(String_new(),"%s%c",Crypt_getAlgorithmName(cryptAlgorithm),(cryptType==CRYPT_TYPE_ASYMMETRIC)?'*':' ');
+    cryptString = String_format(String_new(),"%s%c",Crypt_getAlgorithmName(cryptAlgorithm),(cryptType==CRYPT_TYPE_ASYMMETRIC) ? '*' : ' ');
     printf("DIR                 %-25s                                                %-10s %s\n",
            String_cString(dateTime),
            String_cString(cryptString),
@@ -645,7 +646,7 @@ LOCAL void printLinkInfo(const String    storageName,
   }
   if (globalOptions.longFormatFlag)
   {
-    cryptString = String_format(String_new(),"%s%c",Crypt_getAlgorithmName(cryptAlgorithm),(cryptType==CRYPT_TYPE_ASYMMETRIC)?'*':' ');
+    cryptString = String_format(String_new(),"%s%c",Crypt_getAlgorithmName(cryptAlgorithm),(cryptType==CRYPT_TYPE_ASYMMETRIC) ? '*' : ' ');
     printf("LINK                                                                                         %-10s %s -> %s\n",
            String_cString(cryptString),
            String_cString(linkName),
@@ -766,11 +767,11 @@ LOCAL void printHardLinkInfo(const String       storageName,
                                      Compress_getAlgorithmName(deltaCompressAlgorithm)
                                     );
     }
-    cryptString = String_format(String_new(),"%s%c",Crypt_getAlgorithmName(cryptAlgorithm),(cryptType==CRYPT_TYPE_ASYMMETRIC)?'*':' ');
+    cryptString = String_format(String_new(),"%s%c",Crypt_getAlgorithmName(cryptAlgorithm),(cryptType==CRYPT_TYPE_ASYMMETRIC) ? '*' : ' ');
     printf(" %-25s %10llu..%10llu %-15s %6.1f%% %-10s %s\n",
            String_cString(dateTime),
            fragmentOffset,
-           (fragmentSize > 0LL)?fragmentOffset+fragmentSize-1:fragmentOffset,
+           (fragmentSize > 0LL) ? fragmentOffset+fragmentSize-1 : fragmentOffset,
            String_cString(compressString),
            ratio,
            String_cString(cryptString),
@@ -832,7 +833,7 @@ LOCAL void printSpecialInfo(const String     storageName,
     case FILE_SPECIAL_TYPE_CHARACTER_DEVICE:
       if (globalOptions.longFormatFlag)
       {
-        cryptString = String_format(String_new(),"%s%c",Crypt_getAlgorithmName(cryptAlgorithm),(cryptType==CRYPT_TYPE_ASYMMETRIC)?'*':' ');
+        cryptString = String_format(String_new(),"%s%c",Crypt_getAlgorithmName(cryptAlgorithm),(cryptType==CRYPT_TYPE_ASYMMETRIC) ? '*' : ' ');
         printf("CHAR                                                                                         %-10s %s, %lu %lu\n",
                String_cString(cryptString),
                String_cString(fileName),
@@ -851,7 +852,7 @@ LOCAL void printSpecialInfo(const String     storageName,
     case FILE_SPECIAL_TYPE_BLOCK_DEVICE:
       if (globalOptions.longFormatFlag)
       {
-        cryptString = String_format(String_new(),"%s%c",Crypt_getAlgorithmName(cryptAlgorithm),(cryptType==CRYPT_TYPE_ASYMMETRIC)?'*':' ');
+        cryptString = String_format(String_new(),"%s%c",Crypt_getAlgorithmName(cryptAlgorithm),(cryptType==CRYPT_TYPE_ASYMMETRIC) ? '*' : ' ');
         printf("BLOCK                                                                                       %-10s %s, %lu %lu\n",
                String_cString(cryptString),
                String_cString(fileName),
@@ -870,7 +871,7 @@ LOCAL void printSpecialInfo(const String     storageName,
     case FILE_SPECIAL_TYPE_FIFO:
       if (globalOptions.longFormatFlag)
       {
-        cryptString = String_format(String_new(),"%s%c",Crypt_getAlgorithmName(cryptAlgorithm),(cryptType==CRYPT_TYPE_ASYMMETRIC)?'*':' ');
+        cryptString = String_format(String_new(),"%s%c",Crypt_getAlgorithmName(cryptAlgorithm),(cryptType==CRYPT_TYPE_ASYMMETRIC) ? '*' : ' ');
         printf("FIFO                                                                                         %-10s %s\n",
                String_cString(cryptString),
                String_cString(fileName)
@@ -887,7 +888,7 @@ LOCAL void printSpecialInfo(const String     storageName,
     case FILE_SPECIAL_TYPE_SOCKET:
       if (globalOptions.longFormatFlag)
       {
-        cryptString = String_format(String_new(),"%s%c",Crypt_getAlgorithmName(cryptAlgorithm),(cryptType==CRYPT_TYPE_ASYMMETRIC)?'*':' ');
+        cryptString = String_format(String_new(),"%s%c",Crypt_getAlgorithmName(cryptAlgorithm),(cryptType==CRYPT_TYPE_ASYMMETRIC) ? '*' : ' ');
         printf("SOCKET                                                                                      %-10s %s\n",
                String_cString(cryptString),
                String_cString(fileName)
@@ -1602,7 +1603,7 @@ remoteBarFlag=FALSE;
     error = Storage_parseName(storageName,&storageSpecifier,storageFileName);
     if (error != ERROR_NONE)
     {
-      printError("Cannot open storage '%s' (error: %s)!\n",
+      printError("Invalid storage '%s' (error: %s)!\n",
                  String_cString(printableStorageName),
                  Errors_getText(error)
                 );
@@ -2277,7 +2278,7 @@ remoteBarFlag=FALSE;
           }
 
           // start remote BAR in batch mode
-          line = String_format(String_new(),"%s --batch",!String_isEmpty(globalOptions.remoteBARExecutable)?String_cString(globalOptions.remoteBARExecutable):"bar");
+          line = String_format(String_new(),"%s --batch",!String_isEmpty(globalOptions.remoteBARExecutable) ? String_cString(globalOptions.remoteBARExecutable) : "bar");
           error = Network_execute(&networkExecuteHandle,
                                   &socketHandle,
                                   NETWORK_EXECUTE_IO_MASK_STDOUT|NETWORK_EXECUTE_IO_MASK_STDERR,
@@ -2297,7 +2298,7 @@ remoteBarFlag=FALSE;
           {
             Network_executeReadLine(&networkExecuteHandle,NETWORK_EXECUTE_IO_TYPE_STDERR,line,0);
             exitcode = Network_terminate(&networkExecuteHandle);
-            printError("No response from remote BAR program (error: %s, exitcode %d)!\n",!String_isEmpty(line)?String_cString(line):"unknown",exitcode);
+            printError("No response from remote BAR program (error: %s, exitcode %d)!\n",!String_isEmpty(line) ? String_cString(line) : "unknown",exitcode);
             String_delete(line);
             if (failError == ERROR_NONE) failError = ERROR_NO_RESPONSE;
             break;
@@ -2307,7 +2308,7 @@ remoteBarFlag=FALSE;
           {
             Network_executeReadLine(&networkExecuteHandle,NETWORK_EXECUTE_IO_TYPE_STDERR,line,0);
             exitcode = Network_terminate(&networkExecuteHandle);
-            printError("Invalid response from remote BAR program (error: %s, exitcode %d)!\n",!String_isEmpty(line)?String_cString(line):"unknown",exitcode);
+            printError("Invalid response from remote BAR program (error: %s, exitcode %d)!\n",!String_isEmpty(line) ? String_cString(line) : "unknown",exitcode);
             String_delete(line);
             if (failError == ERROR_NONE) failError = ERROR_INVALID_RESPONSE;
             break;
