@@ -16,13 +16,24 @@
 #include <stdarg.h>
 #include <unistd.h>
 #include <sys/types.h>
-#include <sys/wait.h>
+#ifdef HAVE_SYS_WAIT_H
+  #include <sys/wait.h>
+#endif /* HAVE_SYS_WAIT_H */
 #include <sys/time.h>
 #include <time.h>
-#include <sys/ioctl.h>
-#include <termios.h>
+#ifdef HAVE_SYS_IOCTL_H
+  #include <sys/ioctl.h>
+#endif /* HAVE_SYS_IOCTL_H */
+#ifdef HAVE_TERMIOS_H
+  #include <termios.h>
+#endif /* HAVE_TERMIOS */
 #include <errno.h>
 #include <assert.h>
+
+#if   defined(PLATFORM_LINUX)
+#elif defined(PLATFORM_WINDOWS)
+  #include <windows.h>
+#endif /* PLATFORM_... */
 
 #include "global.h"
 #include "errors.h"
@@ -52,6 +63,10 @@
   extern "C" {
 #endif
 
+#if   defined(PLATFORM_LINUX)
+#elif defined(PLATFORM_WINDOWS)
+#endif /* PLATFORM_... */
+
 /***********************************************************************\
 * Name   : readProcessIO
 * Purpose: read process i/o, EOL at LF/CR/BS, skip empty lines
@@ -64,13 +79,23 @@
 
 LOCAL bool readProcessIO(int fd, String line)
 {
-  int  n;
+  #if   defined(PLATFORM_LINUX)
+    int    n;
+  #elif defined(PLATFORM_WINDOWS)
+    u_long n;
+  #endif /* PLATFORM_... */
   char ch;
 
   do
   {
     // check if data available
-    ioctl(fd,FIONREAD,&n);
+    #if   defined(PLATFORM_LINUX)
+      ioctl(fd,FIONREAD,&n);
+    #elif defined(PLATFORM_WINDOWS)
+// NYI ???
+#warning not implemented
+    #endif /* PLATFORM_... */
+
 
     // read data until EOL found
     while (n > 0)
@@ -137,17 +162,26 @@ void Misc_splitDateTime(uint64   dateTime,
                        )
 {
   time_t    n;
-  struct tm tmStruct;
+  #ifdef HAVE_LOCALTIME_R
+    struct tm tmBuffer;
+  #endif /* HAVE_LOCALTIME_R */
+  struct tm *tm;
 
   n = (time_t)dateTime;
-  localtime_r(&n,&tmStruct);
-  if (year    != NULL) (*year)    = tmStruct.tm_year + 1900;
-  if (month   != NULL) (*month)   = tmStruct.tm_mon + 1;
-  if (day     != NULL) (*day)     = tmStruct.tm_mday;
-  if (hour    != NULL) (*hour)    = tmStruct.tm_hour;
-  if (minute  != NULL) (*minute)  = tmStruct.tm_min;
-  if (second  != NULL) (*second)  = tmStruct.tm_sec;
-  if (weekDay != NULL) (*weekDay) = (tmStruct.tm_wday + WEEKDAY_SUN) % 7;
+  #ifdef HAVE_LOCALTIME_R
+    tm = localtime_r(&n,&tmBuffer);
+  #else /* not HAVE_LOCALTIME_R */
+    tm = localtime(&n);
+  #endif /* HAVE_LOCALTIME_R */
+  assert(tm != NULL);
+
+  if (year    != NULL) (*year)    = tm->tm_year + 1900;
+  if (month   != NULL) (*month)   = tm->tm_mon + 1;
+  if (day     != NULL) (*day)     = tm->tm_mday;
+  if (hour    != NULL) (*hour)    = tm->tm_hour;
+  if (minute  != NULL) (*minute)  = tm->tm_min;
+  if (second  != NULL) (*second)  = tm->tm_sec;
+  if (weekDay != NULL) (*weekDay) = (tm->tm_wday + WEEKDAY_SUN) % 7;
 }
 
 String Misc_formatDateTime(String string, uint64 dateTime, const char *format)
@@ -156,7 +190,10 @@ String Misc_formatDateTime(String string, uint64 dateTime, const char *format)
   #define DELTA_BUFFER_SIZE 64
 
   time_t    n;
-  struct tm tmStruct;
+  #ifdef HAVE_LOCALTIME_R
+    struct tm tmBuffer;
+  #endif /* HAVE_LOCALTIME_R */
+  struct tm *tm;
   char      *buffer;
   uint      bufferSize;
   int       length;
@@ -164,7 +201,12 @@ String Misc_formatDateTime(String string, uint64 dateTime, const char *format)
   assert(string != NULL);
 
   n = (time_t)dateTime;
-  localtime_r(&n,&tmStruct);
+  #ifdef HAVE_LOCALTIME_R
+    tm = localtime_r(&n,&tmBuffer);
+  #else /* not HAVE_LOCALTIME_R */
+    tm = localtime(&n);
+  #endif /* HAVE_LOCALTIME_R */
+  assert(tm != NULL);
 
   if (format == NULL) format = "%c";
 
@@ -177,7 +219,7 @@ String Misc_formatDateTime(String string, uint64 dateTime, const char *format)
     {
       return NULL;
     }
-    length = strftime(buffer,bufferSize-1,format,&tmStruct);
+    length = strftime(buffer,bufferSize-1,format,tm);
     if (length == 0)
     {
       free(buffer);
@@ -199,19 +241,27 @@ String Misc_formatDateTime(String string, uint64 dateTime, const char *format)
 const char* Misc_formatDateTimeCString(char *buffer, uint bufferSize, uint64 dateTime, const char *format)
 {
   time_t    n;
-  struct tm tmStruct;
+  #ifdef HAVE_LOCALTIME_R
+    struct tm tmBuffer;
+  #endif /* HAVE_LOCALTIME_R */
+  struct tm *tm;
   int       length;
 
   assert(buffer != NULL);
   assert(bufferSize > 0);
 
   n = (time_t)dateTime;
-  localtime_r(&n,&tmStruct);
+  #ifdef HAVE_LOCALTIME_R
+    tm = localtime_r(&n,&tmBuffer);
+  #else /* not HAVE_LOCALTIME_R */
+    tm = localtime(&n);
+  #endif /* HAVE_LOCALTIME_R */
+  assert(tm != NULL);
 
   if (format == NULL) format = "%c";
 
   // allocate buffer and format date/time
-  length = strftime(buffer,bufferSize-1,format,&tmStruct);
+  length = strftime(buffer,bufferSize-1,format,tm);
   if (length == 0)
   {
     return NULL;
@@ -252,16 +302,24 @@ uint64 Misc_makeDateTime(uint year,
 
 void Misc_udelay(uint64 time)
 {
-  struct timespec ts;
+  #ifdef HAVE_NANOSLEEP
+    struct timespec ts;
+  #endif /* HAVE_NANOSLEEP */
 
-  ts.tv_sec  = (ulong)(time/1000000LL);
-  ts.tv_nsec = (ulong)((time%1000000LL)*1000);
-  while (   (nanosleep(&ts,&ts) == -1)
-         && (errno == EINTR)
-        )
-  {
-    // nothing to do
-  }
+  #if   defined(HAVE_NANOSLEEP)
+    ts.tv_sec  = (ulong)(time/1000000LL);
+    ts.tv_nsec = (ulong)((time%1000000LL)*1000);
+    while (   (nanosleep(&ts,&ts) == -1)
+           && (errno == EINTR)
+          )
+    {
+      // nothing to do
+    }
+  #elif defined(WIN32)
+    Sleep(time/1000LL);
+  #else
+    #error nanosleep() not available nor Win32 system!
+  #endif
 }
 
 /*---------------------------------------------------------------------*/
@@ -449,7 +507,7 @@ Errors Misc_executeCommand(const char        *commandTemplate,
       StringList_done(&argumentList);
       String_delete(command);
       String_delete(commandLine);
-      return ERRORX(PARSE_COMMAND,0,String_cString(commandLine));
+      return ERRORX_(PARSE_COMMAND,0,String_cString(commandLine));
     }
     File_setFileName(command,token);
 
@@ -491,183 +549,289 @@ stringNode = stringNode->next;
 }
 #endif /* 0 */
 
+    #if defined(HAVE_PIPE) && defined(HAVE_FORK) && defined(HAVE_WAITPID)
 #if 1
-    // create i/o pipes
-    if (pipe(pipeStdin) != 0)
-    {
-      error = ERRORX(IO_REDIRECT_FAIL,errno,String_cString(commandLine));
-      StringList_done(&argumentList);
-      String_delete(command);
-      String_delete(commandLine);
-      return error;
-    }
-    if (pipe(pipeStdout) != 0)
-    {
-      error = ERRORX(IO_REDIRECT_FAIL,errno,String_cString(commandLine));
-      close(pipeStdin[0]);
-      close(pipeStdin[1]);
-      StringList_done(&argumentList);
-      String_delete(command);
-      String_delete(commandLine);
-      return error;
-    }
-    if (pipe(pipeStderr) != 0)
-    {
-      error = ERRORX(IO_REDIRECT_FAIL,errno,String_cString(commandLine));
-      close(pipeStdout[0]);
-      close(pipeStdout[1]);
-      close(pipeStdin[0]);
-      close(pipeStdin[1]);
-      StringList_done(&argumentList);
-      String_delete(command);
-      String_delete(commandLine);
-      return error;
-    }
-
-    // do fork to start separated process
-    pid = fork();
-    if      (pid == 0)
-    {
-#if 1
-      // close stdin, stdout, and stderr and reassign them to the pipes
-      close(STDERR_FILENO);
-      close(STDOUT_FILENO);
-      close(STDIN_FILENO);
-
-      // redirect stdin/stdout/stderr to pipe
-      dup2(pipeStdin[0],STDIN_FILENO);
-      dup2(pipeStdout[1],STDOUT_FILENO);
-      dup2(pipeStderr[1],STDERR_FILENO);
-
-      /* close unused pipe handles (the pipes are duplicated by fork(), thus
-         there are two open ends of the pipes)
-      */
-      close(pipeStderr[0]);
-      close(pipeStdout[0]);
-      close(pipeStdin[1]);
-#endif /* 0 */
-
-      // execute of external program
-      n = 1+StringList_count(&argumentList)+1;
-      arguments = (char const**)malloc(n*sizeof(char*));
-      if (arguments == NULL)
+      // create i/o pipes
+      if (pipe(pipeStdin) != 0)
       {
-        HALT_INSUFFICIENT_MEMORY();
-      }
-      z = 0;
-      arguments[z] = String_cString(command); z++;
-      stringNode = argumentList.head;
-      while (stringNode != NULL)
-      {
-        assert(z < n);
-        arguments[z] = String_cString(stringNode->string); z++;
-        stringNode = stringNode->next;
-      }
-      assert(z < n);
-      arguments[z] = NULL; z++;
-      execvp(String_cString(command),(char**)arguments);
-
-      // in case exec() fail, return a default exitcode
-      HALT_INTERNAL_ERROR("execvp() returned");
-    }
-    else if (pid < 0)
-    {
-      error = ERRORX(EXEC_FAIL,errno,String_cString(commandLine));
-      printInfo(3,"FAIL!\n");
-
-      close(pipeStderr[0]);
-      close(pipeStderr[1]);
-      close(pipeStdout[0]);
-      close(pipeStdout[1]);
-      close(pipeStdin[0]);
-      close(pipeStdin[1]);
-      StringList_done(&argumentList);
-      String_delete(command);
-      String_delete(commandLine);
-      return error;
-    }
-
-    // close unused pipe handles (the pipe is duplicated by fork(), thus there are two open ends of the pipe)
-    close(pipeStderr[1]);
-    close(pipeStdout[1]);
-    close(pipeStdin[0]);
-#else /* 0 */
-error = ERROR_NONE;
-#endif /* 0 */
-
-    // wait until process terminate and read stdout/stderr
-    stdoutLine = String_new();
-    stderrLine = String_new();
-    status = 0;
-    while ((waitpid(pid,&status,WNOHANG) == 0) || (!WIFEXITED(status) && !WIFSIGNALED(status)))
-    {
-      sleepFlag = TRUE;
-
-      if (readProcessIO(pipeStdout[0],stdoutLine))
-      {
-        if (stdoutExecuteIOFunction != NULL) stdoutExecuteIOFunction(executeIOUserData,stdoutLine);
-        String_clear(stdoutLine);
-        sleepFlag = FALSE;
-      }
-      if (readProcessIO(pipeStderr[0],stderrLine))
-      {
-        if (stderrExecuteIOFunction != NULL) stderrExecuteIOFunction(executeIOUserData,stderrLine);
-        String_clear(stderrLine);
-        sleepFlag = FALSE;
-      }
-
-      if (sleepFlag)
-      {
-        Misc_udelay(500LL*1000LL);
-      }
-    }
-    while (readProcessIO(pipeStdout[0],stdoutLine))
-    {
-      if (stdoutExecuteIOFunction != NULL) stdoutExecuteIOFunction(executeIOUserData,stdoutLine);
-      String_clear(stdoutLine);
-    }
-    while (readProcessIO(pipeStderr[0],stderrLine))
-    {
-      if (stderrExecuteIOFunction != NULL) stderrExecuteIOFunction(executeIOUserData,stderrLine);
-      String_clear(stderrLine);
-    }
-    String_delete(stderrLine);
-    String_delete(stdoutLine);
-
-    // close i/o
-    close(pipeStderr[0]);
-    close(pipeStdout[0]);
-    close(pipeStdin[1]);
-
-    // check exit code
-    exitcode = -1;
-    if      (WIFEXITED(status))
-    {
-      exitcode = WEXITSTATUS(status);
-      printInfo(3,"ok (exitcode %d)\n",exitcode);
-      if (exitcode != 0)
-      {
-        error = ERRORX(EXEC_FAIL,exitcode,String_cString(commandLine));
+        error = ERRORX_(IO_REDIRECT_FAIL,errno,String_cString(commandLine));
         StringList_done(&argumentList);
         String_delete(command);
         String_delete(commandLine);
         return error;
       }
-    }
-    else if (WIFSIGNALED(status))
-    {
-      terminateSignal = WTERMSIG(status);
-      error = ERRORX(EXEC_FAIL,terminateSignal,String_cString(commandLine));
-      printInfo(3,"FAIL (signal %d)\n",terminateSignal);
-      StringList_done(&argumentList);
-      String_delete(command);
-      String_delete(commandLine);
-      return error;
-    }
-    else
-    {
-      printInfo(3,"ok (unknown exit)\n");
-    }
+      if (pipe(pipeStdout) != 0)
+      {
+        error = ERRORX_(IO_REDIRECT_FAIL,errno,String_cString(commandLine));
+        close(pipeStdin[0]);
+        close(pipeStdin[1]);
+        StringList_done(&argumentList);
+        String_delete(command);
+        String_delete(commandLine);
+        return error;
+      }
+      if (pipe(pipeStderr) != 0)
+      {
+        error = ERRORX_(IO_REDIRECT_FAIL,errno,String_cString(commandLine));
+        close(pipeStdout[0]);
+        close(pipeStdout[1]);
+        close(pipeStdin[0]);
+        close(pipeStdin[1]);
+        StringList_done(&argumentList);
+        String_delete(command);
+        String_delete(commandLine);
+        return error;
+      }
+
+      // do fork to start separated process
+      pid = fork();
+      if      (pid == 0)
+      {
+  #if 1
+        // close stdin, stdout, and stderr and reassign them to the pipes
+        close(STDERR_FILENO);
+        close(STDOUT_FILENO);
+        close(STDIN_FILENO);
+
+        // redirect stdin/stdout/stderr to pipe
+        dup2(pipeStdin[0],STDIN_FILENO);
+        dup2(pipeStdout[1],STDOUT_FILENO);
+        dup2(pipeStderr[1],STDERR_FILENO);
+
+        /* close unused pipe handles (the pipes are duplicated by fork(), thus
+           there are two open ends of the pipes)
+        */
+        close(pipeStderr[0]);
+        close(pipeStdout[0]);
+        close(pipeStdin[1]);
+  #endif /* 0 */
+
+        // execute of external program
+        n = 1+StringList_count(&argumentList)+1;
+        arguments = (char const**)malloc(n*sizeof(char*));
+        if (arguments == NULL)
+        {
+          HALT_INSUFFICIENT_MEMORY();
+        }
+        z = 0;
+        arguments[z] = String_cString(command); z++;
+        stringNode = argumentList.head;
+        while (stringNode != NULL)
+        {
+          assert(z < n);
+          arguments[z] = String_cString(stringNode->string); z++;
+          stringNode = stringNode->next;
+        }
+        assert(z < n);
+        arguments[z] = NULL; z++;
+        execvp(String_cString(command),(char**)arguments);
+
+        // in case exec() fail, return a default exitcode
+        HALT_INTERNAL_ERROR("execvp() returned");
+      }
+      else if (pid < 0)
+      {
+        error = ERRORX_(EXEC_FAIL,errno,String_cString(commandLine));
+        printInfo(3,"FAIL!\n");
+
+        close(pipeStderr[0]);
+        close(pipeStderr[1]);
+        close(pipeStdout[0]);
+        close(pipeStdout[1]);
+        close(pipeStdin[0]);
+        close(pipeStdin[1]);
+        StringList_done(&argumentList);
+        String_delete(command);
+        String_delete(commandLine);
+        return error;
+      }
+
+      // close unused pipe handles (the pipe is duplicated by fork(), thus there are two open ends of the pipe)
+      close(pipeStderr[1]);
+      close(pipeStdout[1]);
+      close(pipeStdin[0]);
+  #else /* 0 */
+  error = ERROR_NONE;
+  #endif /* 0 */
+
+      // wait until process terminate and read stdout/stderr
+      stdoutLine = String_new();
+      stderrLine = String_new();
+      status = 0;
+      while ((waitpid(pid,&status,WNOHANG) == 0) || (!WIFEXITED(status) && !WIFSIGNALED(status)))
+      {
+        sleepFlag = TRUE;
+
+        if (readProcessIO(pipeStdout[0],stdoutLine))
+        {
+          if (stdoutExecuteIOFunction != NULL) stdoutExecuteIOFunction(executeIOUserData,stdoutLine);
+          String_clear(stdoutLine);
+          sleepFlag = FALSE;
+        }
+        if (readProcessIO(pipeStderr[0],stderrLine))
+        {
+          if (stderrExecuteIOFunction != NULL) stderrExecuteIOFunction(executeIOUserData,stderrLine);
+          String_clear(stderrLine);
+          sleepFlag = FALSE;
+        }
+
+        if (sleepFlag)
+        {
+          Misc_udelay(500LL*1000LL);
+        }
+      }
+      while (readProcessIO(pipeStdout[0],stdoutLine))
+      {
+        if (stdoutExecuteIOFunction != NULL) stdoutExecuteIOFunction(executeIOUserData,stdoutLine);
+        String_clear(stdoutLine);
+      }
+      while (readProcessIO(pipeStderr[0],stderrLine))
+      {
+        if (stderrExecuteIOFunction != NULL) stderrExecuteIOFunction(executeIOUserData,stderrLine);
+        String_clear(stderrLine);
+      }
+      String_delete(stderrLine);
+      String_delete(stdoutLine);
+
+      // close i/o
+      close(pipeStderr[0]);
+      close(pipeStdout[0]);
+      close(pipeStdin[1]);
+
+      // check exit code
+      exitcode = -1;
+      if      (WIFEXITED(status))
+      {
+        exitcode = WEXITSTATUS(status);
+        printInfo(3,"ok (exitcode %d)\n",exitcode);
+        if (exitcode != 0)
+        {
+          error = ERRORX_(EXEC_FAIL,exitcode,String_cString(commandLine));
+          StringList_done(&argumentList);
+          String_delete(command);
+          String_delete(commandLine);
+          return error;
+        }
+      }
+      else if (WIFSIGNALED(status))
+      {
+        terminateSignal = WTERMSIG(status);
+        error = ERRORX_(EXEC_FAIL,terminateSignal,String_cString(commandLine));
+        printInfo(3,"FAIL (signal %d)\n",terminateSignal);
+        StringList_done(&argumentList);
+        String_delete(command);
+        String_delete(commandLine);
+        return error;
+      }
+      else
+      {
+        printInfo(3,"ok (unknown exit)\n");
+      }
+    #elif defined(WIN32)
+#if 0
+HANDLE hOutputReadTmp,hOutputRead,hOutputWrite;
+      HANDLE hInputWriteTmp,hInputRead,hInputWrite;
+      HANDLE hErrorWrite;
+      HANDLE hThread;
+      DWORD ThreadId;
+      SECURITY_ATTRIBUTES sa;
+
+
+      // Set up the security attributes struct.
+      sa.nLength= sizeof(SECURITY_ATTRIBUTES);
+      sa.lpSecurityDescriptor = NULL;
+      sa.bInheritHandle = TRUE;
+
+
+      // Create the child output pipe.
+      if (!CreatePipe(&hOutputReadTmp,&hOutputWrite,&sa,0))
+         DisplayError("CreatePipe");
+
+
+      // Create a duplicate of the output write handle for the std error
+      // write handle. This is necessary in case the child application
+      // closes one of its std output handles.
+      if (!DuplicateHandle(GetCurrentProcess(),hOutputWrite,
+                           GetCurrentProcess(),&hErrorWrite,0,
+                           TRUE,DUPLICATE_SAME_ACCESS))
+         DisplayError("DuplicateHandle");
+
+
+      // Create the child input pipe.
+      if (!CreatePipe(&hInputRead,&hInputWriteTmp,&sa,0))
+         DisplayError("CreatePipe");
+
+
+      // Create new output read handle and the input write handles. Set
+      // the Properties to FALSE. Otherwise, the child inherits the
+      // properties and, as a result, non-closeable handles to the pipes
+      // are created.
+      if (!DuplicateHandle(GetCurrentProcess(),hOutputReadTmp,
+                           GetCurrentProcess(),
+                           &hOutputRead, // Address of new handle.
+                           0,FALSE, // Make it uninheritable.
+                           DUPLICATE_SAME_ACCESS))
+         DisplayError("DupliateHandle");
+
+      if (!DuplicateHandle(GetCurrentProcess(),hInputWriteTmp,
+                           GetCurrentProcess(),
+                           &hInputWrite, // Address of new handle.
+                           0,FALSE, // Make it uninheritable.
+                           DUPLICATE_SAME_ACCESS))
+      DisplayError("DupliateHandle");
+
+
+      // Close inheritable copies of the handles you do not want to be
+      // inherited.
+      if (!CloseHandle(hOutputReadTmp)) DisplayError("CloseHandle");
+      if (!CloseHandle(hInputWriteTmp)) DisplayError("CloseHandle");
+
+
+      // Get std input handle so you can close it and force the ReadFile to
+      // fail when you want the input thread to exit.
+      if ( (hStdIn = GetStdHandle(STD_INPUT_HANDLE)) ==
+                                                INVALID_HANDLE_VALUE )
+         DisplayError("GetStdHandle");
+
+      PrepAndLaunchRedirectedChild(hOutputWrite,hInputRead,hErrorWrite);
+
+
+      // Close pipe handles (do not continue to modify the parent).
+      // You need to make sure that no handles to the write end of the
+      // output pipe are maintained in this process or else the pipe will
+      // not close when the child process exits and the ReadFile will hang.
+      if (!CloseHandle(hOutputWrite)) DisplayError("CloseHandle");
+      if (!CloseHandle(hInputRead )) DisplayError("CloseHandle");
+      if (!CloseHandle(hErrorWrite)) DisplayError("CloseHandle");
+
+
+      // Launch the thread that gets the input and sends it to the child.
+      hThread = CreateThread(NULL,0,GetAndSendInputThread,
+                              (LPVOID)hInputWrite,0,&ThreadId);
+      if (hThread == NULL) DisplayError("CreateThread");
+
+
+      // Read the child's output.
+      ReadAndHandleOutput(hOutputRead);
+      // Redirection is complete
+
+
+      // Force the read on the input to return by closing the stdin handle.
+      if (!CloseHandle(hStdIn)) DisplayError("CloseHandle");
+
+
+      // Tell the thread to exit and wait for thread to die.
+      bRunThread = FALSE;
+
+      if (WaitForSingleObject(hThread,INFINITE) == WAIT_FAILED)
+         DisplayError("WaitForSingleObject");
+
+      if (!CloseHandle(hOutputRead)) DisplayError("CloseHandle");
+      if (!CloseHandle(hInputWrite)) DisplayError("CloseHandle");
+#endif
+    #else /* not defined(HAVE_PIPE) && defined(HAVE_FORK) && defined(HAVE_WAITPID) || WIN32 */
+      #error pipe()/fork()/waitpid() not available nor Win32 system!
+    #endif /* defined(HAVE_PIPE) && defined(HAVE_FORK) && defined(HAVE_WAITPID) || WIN32 */
 
     // free resources
     StringList_done(&argumentList);
@@ -682,67 +846,86 @@ error = ERROR_NONE;
 
 void Misc_waitEnter(void)
 {
-  struct termios oldTermioSettings;
-  struct termios termioSettings;
-  char           s[2];
+  #if   defined(PLATFORM_LINUX)
+    struct termios oldTermioSettings;
+    struct termios termioSettings;
+    char           s[2];
+  #elif defined(PLATFORM_WINDOWS)
+  #endif /* PLATFORM_... */
 
-  if (isatty(File_getDescriptor(stdin)) != 0)
-  {
-    // save current console settings
-    tcgetattr(File_getDescriptor(stdin),&oldTermioSettings);
-
-    // disable echo
-    memcpy(&termioSettings,&oldTermioSettings,sizeof(struct termios));
-    termioSettings.c_lflag &= ~ECHO;
-    tcsetattr(File_getDescriptor(stdin),TCSANOW,&termioSettings);
-
-    // read line
-    if (fgets(s,2,stdin) == NULL)
+  #if   defined(PLATFORM_LINUX)
+    if (isatty(File_getDescriptor(stdin)) != 0)
     {
-      // ignore error
-    }
+      // save current console settings
+      tcgetattr(File_getDescriptor(stdin),&oldTermioSettings);
 
-    // restore console settings
-    tcsetattr(File_getDescriptor(stdin),TCSANOW,&oldTermioSettings);
-  }
+      // disable echo
+      memcpy(&termioSettings,&oldTermioSettings,sizeof(struct termios));
+      termioSettings.c_lflag &= ~ECHO;
+      tcsetattr(File_getDescriptor(stdin),TCSANOW,&termioSettings);
+
+      // read line
+      if (fgets(s,2,stdin) == NULL)
+      {
+        // ignore error
+      }
+
+      // restore console settings
+      tcsetattr(File_getDescriptor(stdin),TCSANOW,&oldTermioSettings);
+    }
+  #elif defined(PLATFORM_WINDOWS)
+// NYI ???
+#warning no console input on windows
+  #endif /* PLATFORM_... */
 }
 
 bool Misc_getYesNo(const char *message)
 {
-  struct termios oldTermioSettings;
-  struct termios termioSettings;
-  char           ch;
+  #if   defined(PLATFORM_LINUX)
+    struct termios oldTermioSettings;
+    struct termios termioSettings;
+    char           ch;
+  #elif defined(PLATFORM_WINDOWS)
+  #endif /* PLATFORM_... */
 
-  if (isatty(File_getDescriptor(stdin)) != 0)
-  {
-    fputs(message,stdout); fputs(" [y/N]",stdout); fflush(stdout);
-
-    // save current console settings
-    tcgetattr(File_getDescriptor(stdin),&oldTermioSettings);
-
-    // set raw mode
-    memcpy(&termioSettings,&oldTermioSettings,sizeof(struct termios));
-    cfmakeraw(&termioSettings);
-    tcsetattr(File_getDescriptor(stdin),TCSANOW,&termioSettings);
-
-    // read yes/no
-    do
+  #if   defined(PLATFORM_LINUX)
+    if (isatty(File_getDescriptor(stdin)) != 0)
     {
-      ch = toupper(fgetc(stdin));
+      fputs(message,stdout); fputs(" [y/N]",stdout); fflush(stdout);
+
+      // save current console settings
+      tcgetattr(File_getDescriptor(stdin),&oldTermioSettings);
+
+      // set raw mode
+      memcpy(&termioSettings,&oldTermioSettings,sizeof(struct termios));
+      cfmakeraw(&termioSettings);
+      tcsetattr(File_getDescriptor(stdin),TCSANOW,&termioSettings);
+
+      // read yes/no
+      do
+      {
+        ch = toupper(fgetc(stdin));
+      }
+      while ((ch != 'Y') && (ch != 'N'));
+
+      // restore console settings
+      tcsetattr(File_getDescriptor(stdin),TCSANOW,&oldTermioSettings);
+
+      fputc('\n',stdout);
+
+      return (ch == 'Y');
     }
-    while ((ch != 'Y') && (ch != 'N'));
+    else
+    {
+      return FALSE;
+    }
+  #elif defined(PLATFORM_WINDOWS)
+// NYI ???
+#warning no console input on windows
+    UNUSED_VARIABLE(message);
 
-    // restore console settings
-    tcsetattr(File_getDescriptor(stdin),TCSANOW,&oldTermioSettings);
-
-    fputc('\n',stdout);
-
-    return (ch == 'Y');
-  }
-  else
-  {
     return FALSE;
-  }
+  #endif /* PLATFORM_... */
 }
 
 /*---------------------------------------------------------------------*/
