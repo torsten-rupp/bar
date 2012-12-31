@@ -1148,7 +1148,7 @@ Errors Source_openEntry(SourceHandle     *sourceHandle,
 
   if (!restoredFlag)
   {
-    return ERRORX(DELTA_SOURCE_NOT_FOUND,0,String_cString(sourceStorageName));
+    return ERRORX_(DELTA_SOURCE_NOT_FOUND,0,String_cString(sourceStorageName));
   }
 
   return ERROR_NONE;
