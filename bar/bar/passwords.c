@@ -17,9 +17,13 @@
 #ifdef HAVE_GCRYPT
   #include <gcrypt.h>
 #endif /* HAVE_GCRYPT */
-#include <termios.h>
+#ifdef HAVE_TERMIOS_H
+  #include <termios.h>
+#endif /* HAVE_TERMIOS */
 #include <unistd.h>
-#include <sys/ioctl.h>
+#ifdef HAVE_SYS_IOCTL_H
+  #include <sys/ioctl.h>
+#endif /* HAVE_SYS_IOCTL_H */
 #include <errno.h>
 #include <assert.h>
 
@@ -529,87 +533,41 @@ bool Password_input(Password   *password,
   }
 
   // input via console
-  if (((modes & PASSWORD_INPUT_MODE_CONSOLE) != 0) && !okFlag)
-  {
-    int            n;
-    struct termios oldTermioSettings;
-    struct termios termioSettings;
-    bool           eolFlag,eofFlag;
-    char           ch;
-
-    if (isatty(STDIN_FILENO) == 1)
+  #if   defined(PLATFORM_LINUX)
+    if (((modes & PASSWORD_INPUT_MODE_CONSOLE) != 0) && !okFlag)
     {
-      // read data from interactive input
-      if (message != NULL)
-      {
-        fprintf(stderr,"%s: ",message); fflush(stderr);
-      }
+      int            n;
+      struct termios oldTermioSettings;
+      struct termios termioSettings;
+      bool           eolFlag,eofFlag;
+      char           ch;
 
-      // save current console settings
-      if (tcgetattr(STDIN_FILENO,&oldTermioSettings) != 0)
+      if (isatty(STDIN_FILENO) == 1)
       {
-        return FALSE;
-      }
-
-      // disable echo
-      memcpy(&termioSettings,&oldTermioSettings,sizeof(struct termios));
-      termioSettings.c_lflag &= ~ECHO;
-      if (tcsetattr(STDIN_FILENO,TCSANOW,&termioSettings) != 0)
-      {
-        return FALSE;
-      }
-
-      // input password
-      eolFlag = FALSE;
-      eofFlag = FALSE;
-      do
-      {
-        if (read(STDIN_FILENO,&ch,1) == 1)
+        // read data from interactive input
+        if (message != NULL)
         {
-          switch (ch)
-          {
-            case '\r':
-              break;
-            case '\n':
-              eolFlag = TRUE;
-              break;
-            default:
-              Password_appendChar(password,ch);
-              break;
-          }
+          fprintf(stderr,"%s: ",message); fflush(stderr);
         }
-        else
-        {
-          eofFlag = TRUE;
-        }
-      }
-      while (!eolFlag && !eofFlag);
 
-      // restore console settings
-      tcsetattr(STDIN_FILENO,TCSANOW,&oldTermioSettings);
-
-      if (message != NULL)
-      {
-        fprintf(stderr,"\n");
-      }
-    }
-    else
-    {
-      // read data from non-interactive input
-      eolFlag = FALSE;
-      eofFlag = FALSE;
-      do
-      {
-        /* Note: sometimes FIONREAD does not return available characters
-                 immediately. Thus delay program execution and try again.
-        */
-        ioctl(STDIN_FILENO,FIONREAD,(char*)&n);
-        if (n <= 0)
+        // save current console settings
+        if (tcgetattr(STDIN_FILENO,&oldTermioSettings) != 0)
         {
-          Misc_udelay(1000);
-          ioctl(STDIN_FILENO,FIONREAD,(char*)&n);
+          return FALSE;
         }
-        if (n > 0)
+
+        // disable echo
+        memcpy(&termioSettings,&oldTermioSettings,sizeof(struct termios));
+        termioSettings.c_lflag &= ~ECHO;
+        if (tcsetattr(STDIN_FILENO,TCSANOW,&termioSettings) != 0)
+        {
+          return FALSE;
+        }
+
+        // input password
+        eolFlag = FALSE;
+        eofFlag = FALSE;
+        do
         {
           if (read(STDIN_FILENO,&ch,1) == 1)
           {
@@ -630,12 +588,62 @@ bool Password_input(Password   *password,
             eofFlag = TRUE;
           }
         }
-      }
-      while (!eolFlag && !eofFlag);
-    }
+        while (!eolFlag && !eofFlag);
 
-    okFlag = TRUE;
-  }
+        // restore console settings
+        tcsetattr(STDIN_FILENO,TCSANOW,&oldTermioSettings);
+
+        if (message != NULL)
+        {
+          fprintf(stderr,"\n");
+        }
+      }
+      else
+      {
+        // read data from non-interactive input
+        eolFlag = FALSE;
+        eofFlag = FALSE;
+        do
+        {
+          /* Note: sometimes FIONREAD does not return available characters
+                   immediately. Thus delay program execution and try again.
+          */
+          ioctl(STDIN_FILENO,FIONREAD,(char*)&n);
+          if (n <= 0)
+          {
+            Misc_udelay(1000);
+            ioctl(STDIN_FILENO,FIONREAD,(char*)&n);
+          }
+          if (n > 0)
+          {
+            if (read(STDIN_FILENO,&ch,1) == 1)
+            {
+              switch (ch)
+              {
+                case '\r':
+                  break;
+                case '\n':
+                  eolFlag = TRUE;
+                  break;
+                default:
+                  Password_appendChar(password,ch);
+                  break;
+              }
+            }
+            else
+            {
+              eofFlag = TRUE;
+            }
+          }
+        }
+        while (!eolFlag && !eofFlag);
+      }
+      okFlag = TRUE;
+    }
+  #elif defined(PLATFORM_WINDOWS)
+// NYI ???
+#warning no console input on windows
+  #endif /* PLATFORM_... */
 
   return okFlag;
 }
