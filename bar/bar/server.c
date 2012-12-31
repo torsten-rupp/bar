@@ -13,7 +13,9 @@
 
 #include <stdlib.h>
 #include <stdio.h>
-#include <sys/select.h>
+#ifdef HAVE_SYS_SELECT_H
+  #include <sys/select.h>
+#endif /* HAVE_SYS_SELECT_H */
 #include <pthread.h>
 #include <time.h>
 #include <assert.h>
@@ -2163,7 +2165,9 @@ LOCAL bool indexPauseCallback(void *userData)
 {
   UNUSED_VARIABLE(userData);
 
-  return pauseFlags.indexUpdate;
+  return    (createFlag  && !pauseFlags.create )
+         || (restoreFlag && !pauseFlags.restore)
+         || pauseFlags.indexUpdate;
 }
 
 /***********************************************************************\
@@ -2411,30 +2415,43 @@ LOCAL void indexThreadCode(void)
         indexFlag = FALSE;
 
         // check if interrupted by create or restore
+// ??? entfernen wenn interrupt index geht
         if (createFlag || restoreFlag)
         {
           interruptFlag = TRUE;
           break;
         }
       }
-      if (!interruptFlag && !quitFlag)
+      if (!quitFlag)
       {
-        if (error == ERROR_NONE)
+        if (!interruptFlag)
         {
-          plogMessage(LOG_TYPE_INDEX,
-                      "INDEX",
-                      "created index #%lld for '%s'\n",
-                      storageId,
-                      String_cString(printableStorageName)
-                     );
+          if (error == ERROR_NONE)
+          {
+            plogMessage(LOG_TYPE_INDEX,
+                        "INDEX",
+                        "created index #%lld for '%s'\n",
+                        storageId,
+                        String_cString(printableStorageName)
+                       );
+          }
+          else
+          {
+            plogMessage(LOG_TYPE_ERROR,
+                        "INDEX",
+                        "cannot create index for '%s' (error: %s)\n",
+                        String_cString(printableStorageName),
+                        Errors_getText(error)
+                       );
+          }
         }
         else
         {
-          plogMessage(LOG_TYPE_ERROR,
+          plogMessage(LOG_TYPE_INDEX,
                       "INDEX",
-                      "cannot create index for '%s' (error: %s)\n",
-                      String_cString(printableStorageName),
-                      Errors_getText(error)
+                      "interrupted created index #%lld for '%s'\n",
+                      storageId,
+                      String_cString(printableStorageName)
                      );
         }
       }
