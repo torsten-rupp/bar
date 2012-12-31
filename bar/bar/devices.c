@@ -111,14 +111,14 @@ Errors Device_open(DeviceHandle *deviceHandle,
       deviceHandle->file = fopen(String_cString(deviceName),"rb");
       if (deviceHandle->file == NULL)
       {
-        return ERRORX(OPEN_DEVICE,errno,String_cString(deviceName));
+        return ERRORX_(OPEN_DEVICE,errno,String_cString(deviceName));
       }
       break;
     case DEVICE_OPEN_WRITE:
       deviceHandle->file = fopen(String_cString(deviceName),"r+b");
       if (deviceHandle->file == NULL)
       {
-        return ERRORX(OPEN_DEVICE,errno,String_cString(deviceName));
+        return ERRORX_(OPEN_DEVICE,errno,String_cString(deviceName));
       }
       break;
     #ifndef NDEBUG
@@ -131,20 +131,20 @@ Errors Device_open(DeviceHandle *deviceHandle,
   // get device size
   if (FSEEK(deviceHandle->file,(off_t)0,SEEK_END) == -1)
   {
-    error = ERRORX(IO_ERROR,errno,String_cString(deviceName));
+    error = ERRORX_(IO_ERROR,errno,String_cString(deviceName));
     fclose(deviceHandle->file);
     return error;
   }
   n = FTELL(deviceHandle->file);
   if (n == (off_t)(-1))
   {
-    error = ERRORX(IO_ERROR,errno,String_cString(deviceName));
+    error = ERRORX_(IO_ERROR,errno,String_cString(deviceName));
     fclose(deviceHandle->file);
     return error;
   }
   if (FSEEK(deviceHandle->file,(off_t)0,SEEK_SET) == -1)
   {
-    error = ERRORX(IO_ERROR,errno,String_cString(deviceName));
+    error = ERRORX_(IO_ERROR,errno,String_cString(deviceName));
     fclose(deviceHandle->file);
     return error;
   }
@@ -209,7 +209,7 @@ Errors Device_read(DeviceHandle *deviceHandle,
       || ((n < (ssize_t)bufferLength) && (bytesRead == NULL))
      )
   {
-    return ERRORX(IO_ERROR,errno,String_cString(deviceHandle->name));
+    return ERRORX_(IO_ERROR,errno,String_cString(deviceHandle->name));
   }
   deviceHandle->index += n;
 
@@ -234,7 +234,7 @@ Errors Device_write(DeviceHandle *deviceHandle,
   if (deviceHandle->index > deviceHandle->size) deviceHandle->size = deviceHandle->index;
   if (n != (ssize_t)bufferLength)
   {
-    return ERRORX(IO_ERROR,errno,String_cString(deviceHandle->name));
+    return ERRORX_(IO_ERROR,errno,String_cString(deviceHandle->name));
   }
 
   return ERROR_NONE;
@@ -258,7 +258,7 @@ Errors Device_tell(DeviceHandle *deviceHandle, uint64 *offset)
   n = FTELL(deviceHandle->file);
   if (n == (off_t)(-1))
   {
-    return ERRORX(IO_ERROR,errno,String_cString(deviceHandle->name));
+    return ERRORX_(IO_ERROR,errno,String_cString(deviceHandle->name));
   }
 // NYI
 //assert(sizeof(off_t)==8);
@@ -278,7 +278,7 @@ Errors Device_seek(DeviceHandle *deviceHandle,
 
   if (FSEEK(deviceHandle->file,(off_t)offset,SEEK_SET) == -1)
   {
-    return ERRORX(IO_ERROR,errno,String_cString(deviceHandle->name));
+    return ERRORX_(IO_ERROR,errno,String_cString(deviceHandle->name));
   }
   deviceHandle->index = offset;
 
@@ -295,7 +295,7 @@ Errors Device_openDeviceList(DeviceListHandle *deviceListHandle)
   deviceListHandle->file = fopen("/proc/partitions","r");
   if (deviceListHandle->file == NULL)
   {
-    return ERROR(OPEN_FILE,errno);
+    return ERROR_(OPEN_FILE,errno);
   }
 
   // skip first line (header line)
@@ -404,7 +404,7 @@ Errors Device_readDeviceList(DeviceListHandle *deviceListHandle,
     // parse and get device name
     if (!String_scanCString(deviceListHandle->line,"%* %* %* %256s %*",buffer))
     {
-      return ERRORX(IO_ERROR,0,"invalid format");
+      return ERRORX_(IO_ERROR,0,"invalid format");
     }
     String_setCString(deviceName,"/dev");
     File_appendFileNameCString(deviceName,buffer);
@@ -485,7 +485,7 @@ Errors Device_getDeviceInfo(DeviceInfo   *deviceInfo,
     }
     else
     {
-      return ERRORX(OPEN_DEVICE,errno,String_cString(deviceName));
+      return ERRORX_(OPEN_DEVICE,errno,String_cString(deviceName));
     }
   }
 
