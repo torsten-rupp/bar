@@ -390,7 +390,7 @@ Errors Command_restore(const StringList                *archiveNameList,
                               "  Restore file '%s'...skipped (file part %llu..%llu exists)\n",
                               String_cString(destinationFileName),
                               fragmentOffset,
-                              (fragmentSize > 0LL)?fragmentOffset+fragmentSize-1:fragmentOffset
+                              (fragmentSize > 0LL) ? fragmentOffset+fragmentSize-1 : fragmentOffset
                              );
                     String_delete(destinationFileName);
                     Archive_closeEntry(&archiveEntryInfo);
@@ -777,7 +777,7 @@ Errors Command_restore(const StringList                *archiveNameList,
                               "  Restore image '%s'...skipped (image part %llu..%llu exists)\n",
                               String_cString(destinationDeviceName),
                               blockOffset*(uint64)deviceInfo.blockSize,
-                              ((blockCount > 0)?blockOffset+blockCount-1:blockOffset)*(uint64)deviceInfo.blockSize
+                              ((blockCount > 0) ? blockOffset+blockCount-1:blockOffset)*(uint64)deviceInfo.blockSize
                              );
                     String_delete(destinationDeviceName);
                     Archive_closeEntry(&archiveEntryInfo);
@@ -1420,7 +1420,7 @@ Errors Command_restore(const StringList                *archiveNameList,
                 String_delete(linkName);
                 if (jobOptions->stopOnErrorFlag)
                 {
-                  restoreInfo.failError = ERRORX(FILE_EXISTS,0,String_cString(destinationFileName));
+                  restoreInfo.failError = ERRORX_(FILE_EXISTS_,0,String_cString(destinationFileName));
                 }
                 continue;
               }
@@ -1661,7 +1661,7 @@ Errors Command_restore(const StringList                *archiveNameList,
                         printInfo(1,"skipped (file part %llu..%llu exists)\n",
                                   String_cString(destinationFileName),
                                   fragmentOffset,
-                                  (fragmentSize > 0LL)?fragmentOffset+fragmentSize-1:fragmentOffset
+                                  (fragmentSize > 0LL) ? fragmentOffset+fragmentSize-1:fragmentOffset
                                  );
                         continue;
                       }
@@ -2065,7 +2065,7 @@ Errors Command_restore(const StringList                *archiveNameList,
                 String_delete(fileName);
                 if (jobOptions->stopOnErrorFlag)
                 {
-                  restoreInfo.failError = ERRORX(FILE_EXISTS,0,String_cString(destinationFileName));
+                  restoreInfo.failError = ERRORX_(FILE_EXISTS_,0,String_cString(destinationFileName));
                 }
                 continue;
               }
