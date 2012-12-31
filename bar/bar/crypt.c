@@ -19,7 +19,6 @@
   #include <gcrypt.h>
 #endif /* HAVE_GCRYPT */
 #include <zlib.h>
-#include <netinet/in.h>
 #include <errno.h>
 #include <assert.h>
 
@@ -1205,7 +1204,7 @@ Errors Crypt_setKeyData(CryptKey       *cryptKey,
     error = Crypt_getBlockLength(SECRET_KEY_CRYPT_ALGORITHM,&blockLength);
     if (error != ERROR_NONE)
     {
-      return ERROR_INVALID_BLOCK_LENGTH;
+      return ERROR_INVALID_BLOCK_LENGTH_;
     }
 
     // allocate file key
@@ -1315,7 +1314,7 @@ Errors Crypt_readKeyFile(CryptKey       *cryptKey,
   // check if read is available
   if (!File_exists(fileName))
   {
-    return ERRORX(KEY_NOT_FOUND,0,String_cString(fileName));
+    return ERRORX_(KEY_NOT_FOUND,0,String_cString(fileName));
   }
 
   // read file contents
@@ -1424,7 +1423,7 @@ Errors Crypt_createKeys(CryptKey *publicCryptKey,
       String_delete(description);
       Crypt_doneKey(privateCryptKey);
       Crypt_doneKey(publicCryptKey);
-      return ERRORX(CREATE_KEY_FAIL,gcryptError,gpg_strerror(gcryptError));
+      return ERRORX_(CREATE_KEY_FAIL,gcryptError,gpg_strerror(gcryptError));
     }
 
     // generate keys
@@ -1435,7 +1434,7 @@ Errors Crypt_createKeys(CryptKey *publicCryptKey,
       String_delete(description);
       Crypt_doneKey(privateCryptKey);
       Crypt_doneKey(publicCryptKey);
-      return ERRORX(CREATE_KEY_FAIL,gcryptError,gpg_strerror(gcryptError));
+      return ERRORX_(CREATE_KEY_FAIL,gcryptError,gpg_strerror(gcryptError));
     }
     gcry_sexp_release(sexpKeyParameters);
     String_delete(description);
