@@ -289,7 +289,7 @@ LOCAL_INLINE void ensureStringLength(struct __String *string, ulong newLength)
 //??? error message?
     if (newData == NULL)
     {
-      perror("insufficient memory for allocating string - program halted");
+      fprintf(stderr,"FATAL ERROR: insufficient memory for allocating string (%d bytes) - program halted: %s\n",newMaxLength,strerror(errno));
       exit(128);
     }
     #ifndef NDEBUG
