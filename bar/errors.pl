@@ -287,7 +287,7 @@ while ($line=<STDIN>)
     if (!$writeCPrefixFlag) { writeCPrefix(); $writeCPrefixFlag = 1; }
     writeCFile("    case $PREFIX$name: return \"$text\";\n");
   }
-  elsif ($line =~ /^ERROR\s+(\w+)\s+(.*)\s*$/)
+  elsif ($line =~ /^ERROR\s+(\w+)\s+(\S.*)\s*$/)
   {
     # error <name> <function>
     my $name    =$1;
@@ -333,7 +333,7 @@ while ($line=<STDIN>)
     # code
     if (scalar(@names) <= 0)
     {
-      print STDERR "Unknown data '$line' in line $lineNb\n";
+      print STDERR "ERROR: Unknown data '$line' in line $lineNb\n";
       exit 1;
     }
 
