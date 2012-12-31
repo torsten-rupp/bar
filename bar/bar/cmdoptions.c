@@ -1397,6 +1397,21 @@ void CmdOption_printHelp(FILE                    *outputHandle,
             if (commandLineOptions[i].defaultValue.i != 0)
             {
               fprintf(outputHandle,", default: ");
+              j = 0;
+              while (   (j < commandLineOptions[i].integerOption.unitCount)
+                     && ((commandLineOptions[i].defaultValue.i % commandLineOptions[i].integerOption.units[j].factor) != 0)
+                    )
+              {
+                j++;
+              }
+              if (j < commandLineOptions[i].integerOption.unitCount)
+              {
+                fprintf(outputHandle,"%d%s",commandLineOptions[i].defaultValue.i/(int)commandLineOptions[i].integerOption.units[j].factor,commandLineOptions[i].integerOption.units[j].name);
+              }
+              else
+              {
+                fprintf(outputHandle,"%d",commandLineOptions[i].defaultValue.i);
+              }
             }
             (void)fputc(')',outputHandle);
           }
