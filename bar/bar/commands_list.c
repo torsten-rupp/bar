@@ -311,7 +311,7 @@ LOCAL void printFooter(ulong fileCount)
 *          timeModified           - file modified time
 *          archiveSize            - archive size [bytes]
 *          deltaCompressAlgorithm - used delta compress algorithm
-*          deltaCompressAlgorithm - used data compress algorithm
+*          byteCompressAlgorithm  - used data compress algorithm
 *          cryptAlgorithm         - used crypt algorithm
 *          cryptType              - crypt type; see CRYPT_TYPES
 *          deltaSourceName        - delta source name
@@ -444,7 +444,7 @@ LOCAL void printFileInfo(const String       storageName,
 *          size                   - image size [bytes]
 *          archiveSize            - archive size [bytes]
 *          deltaCompressAlgorithm - used delta compress algorithm
-*          deltaCompressAlgorithm - used data compress algorithm
+*          byteCompressAlgorithm  - used data compress algorithm
 *          cryptAlgorithm         - used crypt algorithm
 *          cryptType              - crypt type; see CRYPT_TYPES
 *          deltaSourceName        - delta source name
@@ -673,7 +673,7 @@ LOCAL void printLinkInfo(const String    storageName,
 *          timeModified           - file modified time
 *          archiveSize            - archive size [bytes]
 *          deltaCompressAlgorithm - used delta compress algorithm
-*          deltaCompressAlgorithm - used data compress algorithm
+*          byteCompressAlgorithm  - used data compress algorithm
 *          cryptAlgorithm         - used crypt algorithm
 *          cryptType              - crypt type; see CRYPT_TYPES
 *          deltaSourceName        - delta source name
@@ -919,7 +919,7 @@ LOCAL void printSpecialInfo(const String     storageName,
 *          timeModified           - file modified time
 *          archiveSize            - archive size [bytes]
 *          deltaCompressAlgorithm - used delta compress algorithm
-*          deltaCompressAlgorithm - used data compress algorithm
+*          byteCompressAlgorithm  - used data compress algorithm
 *          cryptAlgorithm         - used crypt algorithm
 *          cryptType              - crypt type; see CRYPT_TYPES
 *          deltaSourceName        - delta source name
@@ -983,7 +983,7 @@ LOCAL void addListFileInfo(const String       storageName,
 *          imageSize              - image size [bytes]
 *          archiveSize            - archive size [bytes]
 *          deltaCompressAlgorithm - used delta compress algorithm
-*          deltaCompressAlgorithm - used data compress algorithm
+*          byteCompressAlgorithm  - used data compress algorithm
 *          cryptAlgorithm         - used crypt algorithm
 *          cryptType              - crypt type; see CRYPT_TYPES
 *          deltaSourceName        - delta source name
@@ -1131,7 +1131,7 @@ LOCAL void addListLinkInfo(const String    storageName,
 *          timeModified           - file modified time
 *          archiveSize            - archive size [bytes]
 *          deltaCompressAlgorithm - used delta compress algorithm
-*          deltaCompressAlgorithm - used data compress algorithm
+*          byteCompressAlgorithm  - used data compress algorithm
 *          cryptAlgorithm         - used crypt algorithm
 *          cryptType              - crypt type; see CRYPT_TYPES
 *          deltaSourceName        - delta source name
