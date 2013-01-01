@@ -495,7 +495,8 @@ AC_SUBST(COPYRIGHT_DATE)                    dnl copyright date
 
 AC_SUBST(PLATFORM)                          dnl platform name
 
-AC_SUBST(FILE_SEPARATOR_CHAR)               dnl file separator path character (/ or \\\\)
+AC_SUBST(FILE_SEPARATOR_CHAR)               dnl file separator path character (/ or \\)
+AC_SUBST(FILE_SEPARATOR_STRING)             dnl file separator path character as string (/ or \\)
 
 AC_SUBST(ENABLE_DEBUG)                      dnl "yes" for debug version, "no" otherwise
 AC_SUBST(ENABLE_BZIP2)                      dnl "yes" for bzip2 support, "no" otherwise
@@ -503,6 +504,7 @@ AC_SUBST(ENABLE_LZMA)                       dnl "yes" for lzma support, "no" oth
 AC_SUBST(ENABLE_XDELTA3)                    dnl "yes" for xdelta3 support, "no" otherwise
 AC_SUBST(ENABLE_GCRYPT)                     dnl "yes" for gcrypt support, "no" otherwise
 AC_SUBST(ENABLE_FTP)                        dnl "yes" for ftp support, "no" otherwise
+AC_SUBST(ENABLE_CURL)                       dnl "yes" for curl support, "no" otherwise
 AC_SUBST(ENABLE_SSH)                        dnl "yes" for ssh support, "no" otherwise
 AC_SUBST(ENABLE_TLS)                        dnl "yes" for tls support, "no" otherwise
 AC_SUBST(ENABLE_ISO9660)                    dnl "yes" for iso9660 support, "no" otherwise
@@ -600,6 +602,7 @@ ENABLE_LZMA="yes"
 ENABLE_XDELTA3="yes"
 ENABLE_GCRYPT="yes"
 ENABLE_FTP="yes"
+ENABLE_CURL="yes"
 ENABLE_SSH="yes"
 ENABLE_TLS="yes"
 ENABLE_ISO9660="yes"
@@ -714,6 +717,11 @@ AC_ARG_ENABLE(
   ftp,
   AC_HELP_STRING([--disable-ftp],[disable FTP support]),
   [ENABLE_FTP=$enableval]
+)
+AC_ARG_ENABLE(
+  curl,
+  AC_HELP_STRING([--disable-curl],[disable curl support]),
+  [ENABLE_CURL=$enableval]
 )
 AC_ARG_ENABLE(
   ssh,
@@ -841,22 +849,30 @@ else
   CC_DEFINES="$CC_DEFINES NDEBUG"
 fi
 CC_INCLUDES="$CC_INCLUDES"
+case "$host_os" in
+  linux-*)
+    ;;
+  *)
+    # Windows does not support %ll format and go its own way (and fail...); use MinGW implementation for printf/fprintf
+    CC_DEFINES="$CC_DEFINES printf=__mingw_printf fprintf=__mingw_fprintf"
+    ;;
+esac
 
 LD_FLAGS=""
 if test ! $ENABLE_LINK_DYNAMIC = "yes"; then
   LD_FLAGS="-static-libgcc"
 fi
-if test "$ENABLE_DEBUG" = "yes"; then
-  case "$host_os" in
-    linux-*)
-      # required for stacktraces
-      AC_COMPILER_OPTION(-rdynamic,CC_FLAGS CXX_FLAGS LD_FLAGS)
-      ;;
-    *)
-      ;;
-  esac
-fi
 LIBRARY_PATHS="$LIBRARY_PATHS /usr/local/lib"
+case "$host_os" in
+  linux-*)
+    if test "$ENABLE_DEBUG" = "yes"; then
+      # required for printing stacktraces
+      AC_COMPILER_OPTION(-rdynamic,CC_FLAGS CXX_FLAGS LD_FLAGS)
+    fi
+    ;;
+  *)
+    ;;
+esac
 
 if test "$ENABLE_GUI" = "yes"; then
   AC_PATH_PROGS(JAVA,java)
@@ -1382,6 +1398,90 @@ if test $ENABLE_FTP = "yes"; then
       fi
       if test -z "$HAVE_FTP"; then
         AC_SEARCH_LIBRARIES(FtpInit,ftp,[HAVE_FTP=1;LIBRARIES="$LIBRARIES ftp";AC_DEFINE(HAVE_FTP,1,[FTP installed])])
+      fi
+    fi
+  fi
+fi
+
+if test $ENABLE_CURL = "yes"; then
+  if test -d curl -o -d "`readlink curl`"; then
+    if test "$ENABLE_PACKAGE_COMPILE" = "yes"; then
+      dnl compile curl library
+
+      AC_MSG_COMPILE([curl])
+      result=1
+      if test $result -eq 1; then
+        case $host_os in
+          mingw*)
+            # patch to disable usage of lib-command when RANLIB is set
+            # patch created with:
+            #   diff -u curl-7.28.1.org/m4/libtool.m4 curl-7.28.1/m4/libtool.m4 >  curl-7.28.1-libtool.patch
+            #   diff -u curl-7.28.1.org/aclocal.m4 curl-7.28.1/aclocal.m4       >> curl-7.28.1-libtool.patch
+            #   diff -u curl-7.28.1.org/Makefile.in curl-7.28.1/Makefile.in     >> curl-7.28.1-libtool.patch
+            #   diff -u curl-7.28.1.org/configure curl-7.28.1/configure         >> curl-7.28.1-libtool.patch
+            if test -d packages/curl-7.28.1; then
+              (cd packages/curl-7.28.1; patch --batch -N -p1 <$cwd/misc/curl-7.28.1-libtool.patch) 1>/dev/null 2>/dev/null
+            else
+              AC_MSG_WARN([curl-7.28.1 not available - skipped libtool patch!])
+            fi
+            ;;
+          *)
+            ;;
+        esac
+      fi
+      if test $result -eq 1; then
+        (cd curl; ./configure --host=$host_cpu-$host_os --prefix=$cwd/packages --disable-shared --enable-static) 1>/dev/null 2>$tmpFile
+        if test $? -ne 0; then 
+          AC_MSG_RESULT([fail (configure)])
+          cat $tmpFile
+          result1=0
+        fi
+      fi
+      if test $result -eq 1; then
+        (cd curl; make clean; make) 1>/dev/null 2>$tmpFile
+        if test $? -ne 0; then 
+          AC_MSG_RESULT([fail (make)])
+          cat $tmpFile
+          result=0
+        fi
+      fi
+      if test $result -eq 1; then
+        (cd curl; make install) 1>/dev/null 2>$tmpFile
+        if test $? -ne 0; then 
+          AC_MSG_RESULT([fail (install)])
+          cat $tmpFile
+          result=0
+        fi
+        case $host_os in
+          mingw*)
+            (cd packages/lib; ln -s libcurl.lib libcurl.a) 1>/dev/null 2>/dev/null
+            ;;
+          *)
+            ;;
+        esac
+      fi
+      if test $result -eq 1; then
+        AC_MSG_RESULT([done])
+      fi
+    else
+      result=1
+    fi
+
+    if test $result -eq 1; then
+      HAVE_CURL=1
+      CC_DEFINES="$CC_DEFINES CURL_STATICLIB"
+      STATIC_LIBRARIES="$STATIC_LIBRARIES curl"
+      AC_DEFINE(HAVE_CURL,1,[curl installed (local)])
+    fi
+  else
+    if test $ENABLE_LINK_DYNAMIC = "yes"; then
+      AC_SEARCH_LIBRARIES(curl_global_init,curl,[HAVE_CURL=1;LIBRARIES="$LIBRARIES curl";AC_DEFINE(HAVE_CURL,1,[curl installed])])
+    else
+      if test -z "$HAVE_CURL"; then
+        AC_SEARCH_STATIC_LIBRARIES(curl_global_init,curl,[HAVE_CURL=1;STATIC_LIBRARIES="$STATIC_LIBRARIES curl";AC_DEFINE(HAVE_CURL,1,[static curl installed])])
+      fi
+      if test -z "$HAVE_CURL"; then
+        AC_SEARCH_LIBRARIES(curl_global_init,curl,[HAVE_CURL=1;LIBRARIES="$LIBRARIES curl";AC_DEFINE(HAVE_CURL,1,[curl installed])])
       fi
     fi
   fi
@@ -2050,7 +2150,8 @@ VERSION_MINOR=`cat version|grep MINOR|sed 's/.*=//g'`
 
 COPYRIGHT_DATE="2007-2011"
 
-AC_DEFINE_UNQUOTED(FILE_SEPARATOR_CHAR,'$FILE_SEPARATOR_CHAR',[file separator char])
+AC_DEFINE_UNQUOTED(FILE_SEPARATOR_CHAR,  '$FILE_SEPARATOR_CHAR',[file separator char])
+AC_DEFINE_UNQUOTED(FILE_SEPARATOR_STRING,"$FILE_SEPARATOR_CHAR",[file separator string])
 
 AC_DEFINE_UNQUOTED(CONFIG_DIR,"$CONFIG_DIR",[configuration directory])
 AC_DEFINE_UNQUOTED(TLS_DIR,   "$TLS_DIR",   [TLS directory])
@@ -2123,6 +2224,7 @@ AC_CONFIG_COMMANDS(BUILD_NOTE,
                     echo "  xdelta compression: `if test "$HAVE_XDELTA"; then echo yes; else echo no; fi`";
                     echo "  crypto support    : `if test "$HAVE_GCRYPT"; then echo yes; else echo no; fi`";
                     echo "  FTP support       : `if test "$HAVE_FTP"; then echo yes; else echo no; fi`";
+                    echo "  curl support      : `if test "$HAVE_CURL"; then echo yes; else echo no; fi`";
                     echo "  SCP/SFTP support  : `if test "$HAVE_SSH2"; then echo yes; else echo no; fi`";
                     echo "  TLS/SSL server    : `if test "$HAVE_GNU_TLS"; then echo yes; else echo no; fi`";
                     echo "  ISO 9660 support  : `if test "$HAVE_ISO9660"; then echo yes; else echo no; fi`";
@@ -2152,6 +2254,7 @@ AC_CONFIG_COMMANDS(BUILD_NOTE,
                    HAVE_XDELTA=$HAVE_XDELTA
                    HAVE_GCRYPT=$HAVE_GCRYPT
                    HAVE_FTP=$HAVE_FTP
+                   HAVE_CURL=$HAVE_CURL
                    HAVE_SSH2=$HAVE_SSH2
                    HAVE_GNU_TLS=$HAVE_GNU_TLS
                    HAVE_ISO9660=$HAVE_ISO9660

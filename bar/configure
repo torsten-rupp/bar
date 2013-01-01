@@ -670,12 +670,14 @@ ENABLE_GUI
 ENABLE_ISO9660
 ENABLE_TLS
 ENABLE_SSH
+ENABLE_CURL
 ENABLE_FTP
 ENABLE_GCRYPT
 ENABLE_XDELTA3
 ENABLE_LZMA
 ENABLE_BZIP2
 ENABLE_DEBUG
+FILE_SEPARATOR_STRING
 FILE_SEPARATOR_CHAR
 PLATFORM
 COPYRIGHT_DATE
@@ -742,6 +744,7 @@ enable_lzma
 enable_xdelta3
 enable_gcrypt
 enable_ftp
+enable_curl
 enable_ssh
 enable_tls
 enable_iso9660
@@ -1381,6 +1384,7 @@ Optional Features:
   --disable-xdelta3       disable xdelta3 support
   --disable-gcrypt        disable gcrypt support
   --disable-ftp           disable FTP support
+  --disable-curl          disable curl support
   --disable-ssh           disable SSH support
   --disable-tls           disable TLS support
   --disable-iso9660       disable ISO 9660 support (barcontrol)
@@ -2503,6 +2507,7 @@ ENABLE_LZMA="yes"
 ENABLE_XDELTA3="yes"
 ENABLE_GCRYPT="yes"
 ENABLE_FTP="yes"
+ENABLE_CURL="yes"
 ENABLE_SSH="yes"
 ENABLE_TLS="yes"
 ENABLE_ISO9660="yes"
@@ -2625,6 +2630,12 @@ fi
 # Check whether --enable-ftp was given.
 if test "${enable_ftp+set}" = set; then :
   enableval=$enable_ftp; ENABLE_FTP=$enableval
+
+fi
+
+# Check whether --enable-curl was given.
+if test "${enable_curl+set}" = set; then :
+  enableval=$enable_curl; ENABLE_CURL=$enableval
 
 fi
 
@@ -4451,15 +4462,24 @@ else
   CC_DEFINES="$CC_DEFINES NDEBUG"
 fi
 CC_INCLUDES="$CC_INCLUDES"
+case "$host_os" in
+  linux-*)
+    ;;
+  *)
+    # Windows does not support %ll format and go its own way (and fail...); use MinGW implementation for printf/fprintf
+    CC_DEFINES="$CC_DEFINES printf=__mingw_printf fprintf=__mingw_fprintf"
+    ;;
+esac
 
 LD_FLAGS=""
 if test ! $ENABLE_LINK_DYNAMIC = "yes"; then
   LD_FLAGS="-static-libgcc"
 fi
-if test "$ENABLE_DEBUG" = "yes"; then
-  case "$host_os" in
-    linux-*)
-      # required for stacktraces
+LIBRARY_PATHS="$LIBRARY_PATHS /usr/local/lib"
+case "$host_os" in
+  linux-*)
+    if test "$ENABLE_DEBUG" = "yes"; then
+      # required for printing stacktraces
 
 
   { $as_echo "$as_me:${as_lineno-$LINENO}: checking if $CC support option -rdynamic" >&5
@@ -4497,12 +4517,11 @@ fi
 eval ac_res=\$ac_cv_c_option_`echo -rdynamic|tr -c -d a-zA-Z0-9_`
 	       { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_res" >&5
 $as_echo "$ac_res" >&6; }
-      ;;
-    *)
-      ;;
-  esac
-fi
-LIBRARY_PATHS="$LIBRARY_PATHS /usr/local/lib"
+    fi
+    ;;
+  *)
+    ;;
+esac
 
 if test "$ENABLE_GUI" = "yes"; then
   for ac_prog in java
@@ -6213,7 +6232,9 @@ else
 int
 main ()
 {
-`if test -z ""; then echo "extern void round();"; fi` return (int)round;
+`if test -z ""; then echo "extern void round();"; fi`
+                                         return (int)round;
+
 
   ;
   return 0;
@@ -6271,7 +6292,9 @@ else
 int
 main ()
 {
-`if test -z ""; then echo "extern void dlopen();"; fi` return (int)dlopen;
+`if test -z ""; then echo "extern void dlopen();"; fi`
+                                         return (int)dlopen;
+
 
   ;
   return 0;
@@ -6327,7 +6350,9 @@ else
 int
 main ()
 {
-`if test -z ""; then echo "extern void clock_gettime();"; fi` return (int)clock_gettime;
+`if test -z ""; then echo "extern void clock_gettime();"; fi`
+                                         return (int)clock_gettime;
+
 
   ;
   return 0;
@@ -6385,7 +6410,9 @@ else
 int
 main ()
 {
-`if test -z ""; then echo "extern void pthread_create();"; fi` return (int)pthread_create;
+`if test -z ""; then echo "extern void pthread_create();"; fi`
+                                         return (int)pthread_create;
+
 
   ;
   return 0;
@@ -6446,7 +6473,9 @@ else
 int
 main ()
 {
-`if test -z "pthread.h"; then echo "extern void pthread_create();"; fi` return (int)pthread_create;
+`if test -z "pthread.h"; then echo "extern void pthread_create();"; fi`
+                                         return (int)pthread_create;
+
 
   ;
   return 0;
@@ -6504,7 +6533,9 @@ else
 int
 main ()
 {
-`if test -z "winsock2.h"; then echo "extern void WSAStartup();"; fi` return (int)WSAStartup;
+`if test -z "winsock2.h"; then echo "extern void WSAStartup();"; fi`
+                                         return (int)WSAStartup;
+
 
   ;
   return 0;
@@ -6628,7 +6659,9 @@ else
 int
 main ()
 {
-`if test -z ""; then echo "extern void zlibVersion();"; fi` return (int)zlibVersion;
+`if test -z ""; then echo "extern void zlibVersion();"; fi`
+                                         return (int)zlibVersion;
+
 
   ;
   return 0;
@@ -6689,7 +6722,9 @@ else
 int
 main ()
 {
-`if test -z ""; then echo "extern void zlibVersion();"; fi` return (int)zlibVersion;
+`if test -z ""; then echo "extern void zlibVersion();"; fi`
+                                         return (int)zlibVersion;
+
 
   ;
   return 0;
@@ -6750,7 +6785,9 @@ else
 int
 main ()
 {
-`if test -z ""; then echo "extern void zlibVersion();"; fi` return (int)zlibVersion;
+`if test -z ""; then echo "extern void zlibVersion();"; fi`
+                                         return (int)zlibVersion;
+
 
   ;
   return 0;
@@ -6855,7 +6892,9 @@ else
 int
 main ()
 {
-`if test -z ""; then echo "extern void BZ2_bzCompressInit();"; fi` return (int)BZ2_bzCompressInit;
+`if test -z ""; then echo "extern void BZ2_bzCompressInit();"; fi`
+                                         return (int)BZ2_bzCompressInit;
+
 
   ;
   return 0;
@@ -6916,7 +6955,9 @@ else
 int
 main ()
 {
-`if test -z ""; then echo "extern void BZ2_bzCompressInit();"; fi` return (int)BZ2_bzCompressInit;
+`if test -z ""; then echo "extern void BZ2_bzCompressInit();"; fi`
+                                         return (int)BZ2_bzCompressInit;
+
 
   ;
   return 0;
@@ -6977,7 +7018,9 @@ else
 int
 main ()
 {
-`if test -z ""; then echo "extern void BZ2_bzCompressInit();"; fi` return (int)BZ2_bzCompressInit;
+`if test -z ""; then echo "extern void BZ2_bzCompressInit();"; fi`
+                                         return (int)BZ2_bzCompressInit;
+
 
   ;
   return 0;
@@ -7092,7 +7135,9 @@ else
 int
 main ()
 {
-`if test -z ""; then echo "extern void lzma_easy_encoder();"; fi` return (int)lzma_easy_encoder;
+`if test -z ""; then echo "extern void lzma_easy_encoder();"; fi`
+                                         return (int)lzma_easy_encoder;
+
 
   ;
   return 0;
@@ -7153,7 +7198,9 @@ else
 int
 main ()
 {
-`if test -z ""; then echo "extern void lzma_easy_encoder();"; fi` return (int)lzma_easy_encoder;
+`if test -z ""; then echo "extern void lzma_easy_encoder();"; fi`
+                                         return (int)lzma_easy_encoder;
+
 
   ;
   return 0;
@@ -7214,7 +7261,9 @@ else
 int
 main ()
 {
-`if test -z ""; then echo "extern void lzma_easy_encoder();"; fi` return (int)lzma_easy_encoder;
+`if test -z ""; then echo "extern void lzma_easy_encoder();"; fi`
+                                         return (int)lzma_easy_encoder;
+
 
   ;
   return 0;
@@ -7413,7 +7462,9 @@ else
 int
 main ()
 {
-`if test -z ""; then echo "extern void gpg_strerror();"; fi` return (int)gpg_strerror;
+`if test -z ""; then echo "extern void gpg_strerror();"; fi`
+                                         return (int)gpg_strerror;
+
 
   ;
   return 0;
@@ -7474,7 +7525,9 @@ else
 int
 main ()
 {
-`if test -z ""; then echo "extern void gpg_strerror();"; fi` return (int)gpg_strerror;
+`if test -z ""; then echo "extern void gpg_strerror();"; fi`
+                                         return (int)gpg_strerror;
+
 
   ;
   return 0;
@@ -7535,7 +7588,9 @@ else
 int
 main ()
 {
-`if test -z ""; then echo "extern void gpg_strerror();"; fi` return (int)gpg_strerror;
+`if test -z ""; then echo "extern void gpg_strerror();"; fi`
+                                         return (int)gpg_strerror;
+
 
   ;
   return 0;
@@ -7596,7 +7651,9 @@ else
 int
 main ()
 {
-`if test -z ""; then echo "extern void gcry_check_version();"; fi` return (int)gcry_check_version;
+`if test -z ""; then echo "extern void gcry_check_version();"; fi`
+                                         return (int)gcry_check_version;
+
 
   ;
   return 0;
@@ -7657,7 +7714,9 @@ else
 int
 main ()
 {
-`if test -z ""; then echo "extern void gcry_check_version();"; fi` return (int)gcry_check_version;
+`if test -z ""; then echo "extern void gcry_check_version();"; fi`
+                                         return (int)gcry_check_version;
+
 
   ;
   return 0;
@@ -7718,7 +7777,9 @@ else
 int
 main ()
 {
-`if test -z ""; then echo "extern void gcry_check_version();"; fi` return (int)gcry_check_version;
+`if test -z ""; then echo "extern void gcry_check_version();"; fi`
+                                         return (int)gcry_check_version;
+
 
   ;
   return 0;
@@ -7839,7 +7900,9 @@ else
 int
 main ()
 {
-`if test -z ""; then echo "extern void FtpInit();"; fi` return (int)FtpInit;
+`if test -z ""; then echo "extern void FtpInit();"; fi`
+                                         return (int)FtpInit;
+
 
   ;
   return 0;
@@ -7900,7 +7963,9 @@ else
 int
 main ()
 {
-`if test -z ""; then echo "extern void FtpInit();"; fi` return (int)FtpInit;
+`if test -z ""; then echo "extern void FtpInit();"; fi`
+                                         return (int)FtpInit;
+
 
   ;
   return 0;
@@ -7961,7 +8026,9 @@ else
 int
 main ()
 {
-`if test -z ""; then echo "extern void FtpInit();"; fi` return (int)FtpInit;
+`if test -z ""; then echo "extern void FtpInit();"; fi`
+                                         return (int)FtpInit;
+
 
   ;
   return 0;
@@ -7991,6 +8058,277 @@ $as_echo "$ac_cv_search_libraries_FtpInit" >&6; }
   if test "$ac_result" != no; then :
   test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" HAVE_FTP=1;LIBRARIES="$LIBRARIES ftp";
 $as_echo "#define HAVE_FTP 1" >>confdefs.h
+
+fi
+
+      fi
+    fi
+  fi
+fi
+
+if test $ENABLE_CURL = "yes"; then
+  if test -d curl -o -d "`readlink curl`"; then
+    if test "$ENABLE_PACKAGE_COMPILE" = "yes"; then
+
+
+  $as_echo_n "Compile curl... " >&6
+
+      result=1
+      if test $result -eq 1; then
+        case $host_os in
+          mingw*)
+            # patch to disable usage of lib-command when RANLIB is set
+            # patch created with:
+            #   diff -u curl-7.28.1.org/m4/libtool.m4 curl-7.28.1/m4/libtool.m4 >  curl-7.28.1-libtool.patch
+            #   diff -u curl-7.28.1.org/aclocal.m4 curl-7.28.1/aclocal.m4       >> curl-7.28.1-libtool.patch
+            #   diff -u curl-7.28.1.org/Makefile.in curl-7.28.1/Makefile.in     >> curl-7.28.1-libtool.patch
+            #   diff -u curl-7.28.1.org/configure curl-7.28.1/configure         >> curl-7.28.1-libtool.patch
+            if test -d packages/curl-7.28.1; then
+              (cd packages/curl-7.28.1; patch --batch -N -p1 <$cwd/misc/curl-7.28.1-libtool.patch) 1>/dev/null 2>/dev/null
+            else
+              { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: curl-7.28.1 not available - skipped libtool patch!" >&5
+$as_echo "$as_me: WARNING: curl-7.28.1 not available - skipped libtool patch!" >&2;}
+            fi
+            ;;
+          *)
+            ;;
+        esac
+      fi
+      if test $result -eq 1; then
+        (cd curl; ./configure --host=$host_cpu-$host_os --prefix=$cwd/packages --disable-shared --enable-static) 1>/dev/null 2>$tmpFile
+        if test $? -ne 0; then
+          { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (configure)" >&5
+$as_echo "fail (configure)" >&6; }
+          cat $tmpFile
+          result1=0
+        fi
+      fi
+      if test $result -eq 1; then
+        (cd curl; make clean; make) 1>/dev/null 2>$tmpFile
+        if test $? -ne 0; then
+          { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (make)" >&5
+$as_echo "fail (make)" >&6; }
+          cat $tmpFile
+          result=0
+        fi
+      fi
+      if test $result -eq 1; then
+        (cd curl; make install) 1>/dev/null 2>$tmpFile
+        if test $? -ne 0; then
+          { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (install)" >&5
+$as_echo "fail (install)" >&6; }
+          cat $tmpFile
+          result=0
+        fi
+        case $host_os in
+          mingw*)
+            (cd packages/lib; ln -s libcurl.lib libcurl.a) 1>/dev/null 2>/dev/null
+            ;;
+          *)
+            ;;
+        esac
+      fi
+      if test $result -eq 1; then
+        { $as_echo "$as_me:${as_lineno-$LINENO}: result: done" >&5
+$as_echo "done" >&6; }
+      fi
+    else
+      result=1
+    fi
+
+    if test $result -eq 1; then
+      HAVE_CURL=1
+      CC_DEFINES="$CC_DEFINES CURL_STATICLIB"
+      STATIC_LIBRARIES="$STATIC_LIBRARIES curl"
+
+$as_echo "#define HAVE_CURL 1" >>confdefs.h
+
+    fi
+  else
+    if test $ENABLE_LINK_DYNAMIC = "yes"; then
+
+
+    ac_result=""
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing curl_global_init" >&5
+$as_echo_n "checking for library containing curl_global_init... " >&6; }
+if test "${ac_cv_search_libraries_curl_global_init+set}" = set; then :
+  $as_echo_n "(cached) " >&6
+else
+
+            ac_func_search_libraries_save_LIBS=$LIBS
+
+      for ac_library in curl ""; do
+        if test -z "$ac_library"; then
+          ac_result="none required"
+        else
+          ac_result=-l$ac_library
+          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+        fi
+
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main ()
+{
+`if test -z ""; then echo "extern void curl_global_init();"; fi`
+                                         return (int)curl_global_init;
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_search_libraries_curl_global_init=$ac_result; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+      done
+      if test "${ac_cv_search_libraries_curl_global_init+set}" = set; then :
+
+else
+  ac_cv_search_libraries_curl_global_init=no
+fi
+
+            LIBS=$ac_func_search_libraries_save_LIBS
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_libraries_curl_global_init" >&5
+$as_echo "$ac_cv_search_libraries_curl_global_init" >&6; }
+  ac_result=$ac_cv_search_libraries_curl_global_init
+  if test "$ac_result" != no; then :
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" HAVE_CURL=1;LIBRARIES="$LIBRARIES curl";
+$as_echo "#define HAVE_CURL 1" >>confdefs.h
+
+fi
+
+    else
+      if test -z "$HAVE_CURL"; then
+
+
+    { $as_echo "$as_me:${as_lineno-$LINENO}: checking for static library containing curl_global_init" >&5
+$as_echo_n "checking for static library containing curl_global_init... " >&6; }
+if test "${ac_cv_search_static_curl_global_init+set}" = set; then :
+  $as_echo_n "(cached) " >&6
+else
+
+            ac_func_search_static_libraries_save_CFLAGS="$CFLAGS"
+      ac_func_search_static_libraries_save_LIBS="$LIBS"
+
+            CFLAGS="$CFLAGS -static"
+      for ac_library in curl ""; do
+        if test -z "$ac_library"; then
+          ac_result="none required"
+        else
+          ac_result=-l$ac_library
+          LIBS="-l$ac_library $ac_func_search_static_libraries_save_LIBS"
+        fi
+
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main ()
+{
+`if test -z ""; then echo "extern void curl_global_init();"; fi`
+                                         return (int)curl_global_init;
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_search_static_curl_global_init=$ac_result; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+      done
+      if test "${ac_cv_search_static_curl_global_init+set}" = set; then :
+
+else
+  ac_cv_search_static_curl_global_init=no
+fi
+
+            LIBS=$ac_func_search_libraries_save_LIBS
+      CFLAGS=$ac_func_search_static_libraries_save_CFLAGS
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_static_curl_global_init" >&5
+$as_echo "$ac_cv_search_static_curl_global_init" >&6; }
+  ac_result=$ac_cv_search_static_curl_global_init
+  if test "$ac_result" != no; then :
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" HAVE_CURL=1;STATIC_LIBRARIES="$STATIC_LIBRARIES curl";
+$as_echo "#define HAVE_CURL 1" >>confdefs.h
+
+fi
+
+      fi
+      if test -z "$HAVE_CURL"; then
+
+
+    ac_result=""
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing curl_global_init" >&5
+$as_echo_n "checking for library containing curl_global_init... " >&6; }
+if test "${ac_cv_search_libraries_curl_global_init+set}" = set; then :
+  $as_echo_n "(cached) " >&6
+else
+
+            ac_func_search_libraries_save_LIBS=$LIBS
+
+      for ac_library in curl ""; do
+        if test -z "$ac_library"; then
+          ac_result="none required"
+        else
+          ac_result=-l$ac_library
+          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+        fi
+
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main ()
+{
+`if test -z ""; then echo "extern void curl_global_init();"; fi`
+                                         return (int)curl_global_init;
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_search_libraries_curl_global_init=$ac_result; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+      done
+      if test "${ac_cv_search_libraries_curl_global_init+set}" = set; then :
+
+else
+  ac_cv_search_libraries_curl_global_init=no
+fi
+
+            LIBS=$ac_func_search_libraries_save_LIBS
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_libraries_curl_global_init" >&5
+$as_echo "$ac_cv_search_libraries_curl_global_init" >&6; }
+  ac_result=$ac_cv_search_libraries_curl_global_init
+  if test "$ac_result" != no; then :
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" HAVE_CURL=1;LIBRARIES="$LIBRARIES curl";
+$as_echo "#define HAVE_CURL 1" >>confdefs.h
 
 fi
 
@@ -8179,7 +8517,9 @@ else
 int
 main ()
 {
-`if test -z ""; then echo "extern void libssh2_session_init_ex();"; fi` return (int)libssh2_session_init_ex;
+`if test -z ""; then echo "extern void libssh2_session_init_ex();"; fi`
+                                         return (int)libssh2_session_init_ex;
+
 
   ;
   return 0;
@@ -8240,7 +8580,9 @@ else
 int
 main ()
 {
-`if test -z ""; then echo "extern void libssh2_session_init_ex();"; fi` return (int)libssh2_session_init_ex;
+`if test -z ""; then echo "extern void libssh2_session_init_ex();"; fi`
+                                         return (int)libssh2_session_init_ex;
+
 
   ;
   return 0;
@@ -8301,7 +8643,9 @@ else
 int
 main ()
 {
-`if test -z ""; then echo "extern void libssh2_session_init_ex();"; fi` return (int)libssh2_session_init_ex;
+`if test -z ""; then echo "extern void libssh2_session_init_ex();"; fi`
+                                         return (int)libssh2_session_init_ex;
+
 
   ;
   return 0;
@@ -8364,7 +8708,9 @@ else
 int
 main ()
 {
-`if test -z ""; then echo "extern void MD5_Init();"; fi` return (int)MD5_Init;
+`if test -z ""; then echo "extern void MD5_Init();"; fi`
+                                         return (int)MD5_Init;
+
 
   ;
   return 0;
@@ -8425,7 +8771,9 @@ else
 int
 main ()
 {
-`if test -z ""; then echo "extern void MD5_Init();"; fi` return (int)MD5_Init;
+`if test -z ""; then echo "extern void MD5_Init();"; fi`
+                                         return (int)MD5_Init;
+
 
   ;
   return 0;
@@ -8486,7 +8834,9 @@ else
 int
 main ()
 {
-`if test -z ""; then echo "extern void MD5_Init();"; fi` return (int)MD5_Init;
+`if test -z ""; then echo "extern void MD5_Init();"; fi`
+                                         return (int)MD5_Init;
+
 
   ;
   return 0;
@@ -8609,7 +8959,9 @@ else
 int
 main ()
 {
-`if test -z ""; then echo "extern void gnutls_global_init();"; fi` return (int)gnutls_global_init;
+`if test -z ""; then echo "extern void gnutls_global_init();"; fi`
+                                         return (int)gnutls_global_init;
+
 
   ;
   return 0;
@@ -8667,7 +9019,9 @@ else
 int
 main ()
 {
-`if test -z ""; then echo "extern void asn1_length_der();"; fi` return (int)asn1_length_der;
+`if test -z ""; then echo "extern void asn1_length_der();"; fi`
+                                         return (int)asn1_length_der;
+
 
   ;
   return 0;
@@ -8728,7 +9082,9 @@ else
 int
 main ()
 {
-`if test -z ""; then echo "extern void gnutls_global_init();"; fi` return (int)gnutls_global_init;
+`if test -z ""; then echo "extern void gnutls_global_init();"; fi`
+                                         return (int)gnutls_global_init;
+
 
   ;
   return 0;
@@ -8789,7 +9145,9 @@ else
 int
 main ()
 {
-`if test -z ""; then echo "extern void gnutls_global_init();"; fi` return (int)gnutls_global_init;
+`if test -z ""; then echo "extern void gnutls_global_init();"; fi`
+                                         return (int)gnutls_global_init;
+
 
   ;
   return 0;
@@ -8851,7 +9209,9 @@ else
 int
 main ()
 {
-`if test -z ""; then echo "extern void asn1_length_der();"; fi` return (int)asn1_length_der;
+`if test -z ""; then echo "extern void asn1_length_der();"; fi`
+                                         return (int)asn1_length_der;
+
 
   ;
   return 0;
@@ -8912,7 +9272,9 @@ else
 int
 main ()
 {
-`if test -z ""; then echo "extern void asn1_length_der();"; fi` return (int)asn1_length_der;
+`if test -z ""; then echo "extern void asn1_length_der();"; fi`
+                                         return (int)asn1_length_der;
+
 
   ;
   return 0;
@@ -9074,7 +9436,9 @@ else
 int
 main ()
 {
-`if test -z ""; then echo "extern void iso9660_open();"; fi` return (int)iso9660_open;
+`if test -z ""; then echo "extern void iso9660_open();"; fi`
+                                         return (int)iso9660_open;
+
 
   ;
   return 0;
@@ -9135,7 +9499,9 @@ else
 int
 main ()
 {
-`if test -z ""; then echo "extern void iso9660_open();"; fi` return (int)iso9660_open;
+`if test -z ""; then echo "extern void iso9660_open();"; fi`
+                                         return (int)iso9660_open;
+
 
   ;
   return 0;
@@ -9196,7 +9562,9 @@ else
 int
 main ()
 {
-`if test -z ""; then echo "extern void iso9660_open();"; fi` return (int)iso9660_open;
+`if test -z ""; then echo "extern void iso9660_open();"; fi`
+                                         return (int)iso9660_open;
+
 
   ;
   return 0;
@@ -9340,7 +9708,9 @@ else
 int
 main ()
 {
-`if test -z ""; then echo "extern void pcre();"; fi` return (int)pcre;
+`if test -z ""; then echo "extern void pcre();"; fi`
+                                         return (int)pcre;
+
 
   ;
   return 0;
@@ -9401,7 +9771,9 @@ else
 int
 main ()
 {
-`if test -z ""; then echo "extern void pcre();"; fi` return (int)pcre;
+`if test -z ""; then echo "extern void pcre();"; fi`
+                                         return (int)pcre;
+
 
   ;
   return 0;
@@ -9462,7 +9834,9 @@ else
 int
 main ()
 {
-`if test -z ""; then echo "extern void pcre();"; fi` return (int)pcre;
+`if test -z ""; then echo "extern void pcre();"; fi`
+                                         return (int)pcre;
+
 
   ;
   return 0;
@@ -9677,7 +10051,9 @@ else
 int
 main ()
 {
-`if test -z ""; then echo "extern void breakpad_client();"; fi` return (int)breakpad_client;
+`if test -z ""; then echo "extern void breakpad_client();"; fi`
+                                         return (int)breakpad_client;
+
 
   ;
   return 0;
@@ -9738,7 +10114,9 @@ else
 int
 main ()
 {
-`if test -z ""; then echo "extern void breakpad_client();"; fi` return (int)breakpad_client;
+`if test -z ""; then echo "extern void breakpad_client();"; fi`
+                                         return (int)breakpad_client;
+
 
   ;
   return 0;
@@ -9799,7 +10177,9 @@ else
 int
 main ()
 {
-`if test -z ""; then echo "extern void breakpad_client();"; fi` return (int)breakpad_client;
+`if test -z ""; then echo "extern void breakpad_client();"; fi`
+                                         return (int)breakpad_client;
+
 
   ;
   return 0;
@@ -9959,7 +10339,9 @@ else
 int
 main ()
 {
-printf("%d",S_IRUSR); return 0;
+printf("%d",S_IRUSR);
+                                          return 0;
+
 
   ;
   return 0;
@@ -9994,7 +10376,9 @@ else
 int
 main ()
 {
-printf("%d",S_IWUSR); return 0;
+printf("%d",S_IWUSR);
+                                          return 0;
+
 
   ;
   return 0;
@@ -10029,7 +10413,9 @@ else
 int
 main ()
 {
-printf("%d",S_IXUSR); return 0;
+printf("%d",S_IXUSR);
+                                          return 0;
+
 
   ;
   return 0;
@@ -10064,7 +10450,9 @@ else
 int
 main ()
 {
-printf("%d",S_IRGRP); return 0;
+printf("%d",S_IRGRP);
+                                          return 0;
+
 
   ;
   return 0;
@@ -10099,7 +10487,9 @@ else
 int
 main ()
 {
-printf("%d",S_IWGRP); return 0;
+printf("%d",S_IWGRP);
+                                          return 0;
+
 
   ;
   return 0;
@@ -10134,7 +10524,9 @@ else
 int
 main ()
 {
-printf("%d",S_IXGRP); return 0;
+printf("%d",S_IXGRP);
+                                          return 0;
+
 
   ;
   return 0;
@@ -10169,7 +10561,9 @@ else
 int
 main ()
 {
-printf("%d",S_IROTH); return 0;
+printf("%d",S_IROTH);
+                                          return 0;
+
 
   ;
   return 0;
@@ -10204,7 +10598,9 @@ else
 int
 main ()
 {
-printf("%d",S_IWOTH); return 0;
+printf("%d",S_IWOTH);
+                                          return 0;
+
 
   ;
   return 0;
@@ -10239,7 +10635,9 @@ else
 int
 main ()
 {
-printf("%d",S_IXOTH); return 0;
+printf("%d",S_IXOTH);
+                                          return 0;
+
 
   ;
   return 0;
@@ -10274,7 +10672,9 @@ else
 int
 main ()
 {
-printf("%d",FS_IOC_GETFLAGS); return 0;
+printf("%d",FS_IOC_GETFLAGS);
+                                          return 0;
+
 
   ;
   return 0;
@@ -10309,7 +10709,9 @@ else
 int
 main ()
 {
-printf("%d",FS_COMPR_FL); return 0;
+printf("%d",FS_COMPR_FL);
+                                          return 0;
+
 
   ;
   return 0;
@@ -10344,7 +10746,9 @@ else
 int
 main ()
 {
-printf("%d",FS_NOCOMP_FL); return 0;
+printf("%d",FS_NOCOMP_FL);
+                                          return 0;
+
 
   ;
   return 0;
@@ -10379,7 +10783,9 @@ else
 int
 main ()
 {
-printf("%d",FS_NODUMP_FL); return 0;
+printf("%d",FS_NODUMP_FL);
+                                          return 0;
+
 
   ;
   return 0;
@@ -10414,7 +10820,9 @@ else
 int
 main ()
 {
-printf("%d",BLKSSZGET); return 0;
+printf("%d",BLKSSZGET);
+                                          return 0;
+
 
   ;
   return 0;
@@ -10449,7 +10857,9 @@ else
 int
 main ()
 {
-printf("%d",BLKGETSIZE); return 0;
+printf("%d",BLKGETSIZE);
+                                          return 0;
+
 
   ;
   return 0;
@@ -10485,7 +10895,9 @@ else
 int
 main ()
 {
-printf("%d",SIGPIPE); return 0;
+printf("%d",SIGPIPE);
+                                          return 0;
+
 
   ;
   return 0;
@@ -10522,7 +10934,9 @@ else
 int
 main ()
 {
-printf("%d",CRYPTO_LOCK); return 0;
+printf("%d",CRYPTO_LOCK);
+                                          return 0;
+
 
   ;
   return 0;
@@ -13539,6 +13953,11 @@ cat >>confdefs.h <<_ACEOF
 _ACEOF
 
 
+cat >>confdefs.h <<_ACEOF
+#define FILE_SEPARATOR_STRING "$FILE_SEPARATOR_CHAR"
+_ACEOF
+
+
 
 cat >>confdefs.h <<_ACEOF
 #define CONFIG_DIR "$CONFIG_DIR"
@@ -14296,6 +14715,7 @@ host="$host"
                    HAVE_XDELTA=$HAVE_XDELTA
                    HAVE_GCRYPT=$HAVE_GCRYPT
                    HAVE_FTP=$HAVE_FTP
+                   HAVE_CURL=$HAVE_CURL
                    HAVE_SSH2=$HAVE_SSH2
                    HAVE_GNU_TLS=$HAVE_GNU_TLS
                    HAVE_ISO9660=$HAVE_ISO9660
@@ -14890,6 +15310,7 @@ $as_echo "$as_me: executing $ac_file commands" >&6;}
                     echo "  xdelta compression: `if test "$HAVE_XDELTA"; then echo yes; else echo no; fi`";
                     echo "  crypto support    : `if test "$HAVE_GCRYPT"; then echo yes; else echo no; fi`";
                     echo "  FTP support       : `if test "$HAVE_FTP"; then echo yes; else echo no; fi`";
+                    echo "  curl support      : `if test "$HAVE_CURL"; then echo yes; else echo no; fi`";
                     echo "  SCP/SFTP support  : `if test "$HAVE_SSH2"; then echo yes; else echo no; fi`";
                     echo "  TLS/SSL server    : `if test "$HAVE_GNU_TLS"; then echo yes; else echo no; fi`";
                     echo "  ISO 9660 support  : `if test "$HAVE_ISO9660"; then echo yes; else echo no; fi`";
