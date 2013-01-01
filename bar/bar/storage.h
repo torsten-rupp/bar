@@ -16,6 +16,9 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#ifdef HAVE_CURL
+  #include <curl/curl.h>
+#endif /* HAVE_CURL */
 #ifdef HAVE_FTP
   #include <ftplib.h>
 #endif /* HAVE_FTP */
@@ -182,7 +185,28 @@ typedef struct
       FileHandle fileHandle;                               // file handle
     } fileSystem;
 
-    #ifdef HAVE_FTP
+    #if defined(HAVE_CURL)
+      // curl storage (FTP, TFTP, HTTP...)
+      struct
+      {
+        CURLM                   *curlMultiHandle;
+        CURL                    *curlHandle;
+        int                     runningHandles;            // curl number of active handles (1 or 0)
+        uint64                  index;                     // current read/write index in file [0..n-1]
+        uint64                  size;                      // size of file [bytes]
+        struct                                             // read-ahead buffer
+        {
+          byte   *data;
+          uint64 offset;
+          ulong  length;
+        } readAheadBuffer;
+        StorageBandWidthLimiter bandWidthLimiter;          // band width limit data
+        void                    *buffer;                   // next data to write/read
+        ulong                   length;                    // length of data to write/read
+        ulong                   n;                         // number of data bytes written/read
+        Errors                  error;
+      } ftp;
+    #elif defined(HAVE_FTP)
       // FTP storage
       struct
       {
@@ -198,7 +222,7 @@ typedef struct
         } readAheadBuffer;
         StorageBandWidthLimiter bandWidthLimiter;          // band width limit data
       } ftp;
-    #endif /* HAVE_FTP */
+    #endif /* HAVE_CURL || HAVE_FTP */
 
     #ifdef HAVE_SSH2
       // ssh storage (remote BAR)
@@ -362,7 +386,9 @@ typedef struct
     {
       DirectoryListHandle directoryListHandle;
     } fileSystem;
-    #ifdef HAVE_FTP
+    #if   defined(HAVE_CURL)
+#warning todo: curl
+    #elif defined(HAVE_FTP)
       struct
       {
         String                  pathName;                  // directory name
@@ -371,7 +397,7 @@ typedef struct
         FileHandle              fileHandle;
         String                  line;
       } ftp;
-    #endif /* HAVE_FTP */
+    #endif /* HAVE_CURL || HAVE_FTP */
     #ifdef HAVE_SSH2
       struct
       {

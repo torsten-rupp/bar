@@ -19,6 +19,9 @@
 #ifdef HAVE_FTP
   #include <ftplib.h>
 #endif /* HAVE_FTP */
+#ifdef HAVE_CURL
+  #include <curl/curl.h>
+#endif /* HAVE_CURL */
 #ifdef HAVE_SSH2
   #include <libssh2.h>
   #include <libssh2_sftp.h>
@@ -75,9 +78,9 @@
 /***************************** Datatypes *******************************/
 
 /***************************** Variables *******************************/
-#ifdef HAVE_FTP
+#if defined(HAVE_CURL) || defined(HAVE_FTP)
   LOCAL Password *defaultFTPPassword;
-#endif /* HAVE_FTP */
+#endif /* defined(HAVE_CURL) || defined(HAVE_FTP) */
 #ifdef HAVE_SSH2
   LOCAL Password *defaultSSHPassword;
 #endif /* HAVE_SSH2 */
@@ -113,6 +116,7 @@ LOCAL void updateStatusInfo(const StorageFileHandle *storageFileHandle)
   }
 }
 
+#if defined(HAVE_CURL) || defined(HAVE_FTP)
 /***********************************************************************\
 * Name   : initFTPPassword
 * Purpose: init FTP password
@@ -124,7 +128,6 @@ LOCAL void updateStatusInfo(const StorageFileHandle *storageFileHandle)
 * Notes  : -
 \***********************************************************************/
 
-#ifdef HAVE_FTP
 LOCAL bool initFTPPassword(const String hostName, const String loginName, const JobOptions *jobOptions)
 {
   String s;
@@ -152,8 +155,9 @@ LOCAL bool initFTPPassword(const String hostName, const String loginName, const 
 
   return initFlag;
 }
-#endif /* HAVE_FTP */
+#endif /* defined(HAVE_CURL) || defined(HAVE_FTP) */
 
+#ifdef HAVE_SSH2
 /***********************************************************************\
 * Name   : initSSHPassword
 * Purpose: init SSH password
@@ -165,7 +169,6 @@ LOCAL bool initFTPPassword(const String hostName, const String loginName, const 
 * Notes  : -
 \***********************************************************************/
 
-#ifdef HAVE_SSH2
 LOCAL bool initSSHPassword(const String hostName, const String loginName, const JobOptions *jobOptions)
 {
   String s;
@@ -197,7 +200,7 @@ LOCAL bool initSSHPassword(const String hostName, const String loginName, const 
 }
 #endif /* HAVE_SSH2 */
 
-#ifdef HAVE_FTP
+#if defined(HAVE_CURL) || defined(HAVE_FTP)
 /***********************************************************************\
 * Name   : checkFTPLogin
 * Purpose: check if FTP login is possible
@@ -216,42 +219,206 @@ LOCAL Errors checkFTPLogin(const String hostName,
                            Password     *loginPassword
                           )
 {
-  netbuf     *ftpControl;
-  const char *plainLoginPassword;
+  #if   defined(HAVE_CURL)
+    CURL       *curlHandle;
+    String     url;
+    CURLcode   curlCode;
+    const char *plainLoginPassword;
+  #elif defined(HAVE_FTP)
+    netbuf     *ftpControl;
+    const char *plainLoginPassword;
+  #endif
 
-// NYI: TODO: support different FTP port
-  UNUSED_VARIABLE(hostPort);
+  #if   defined(HAVE_CURL)
+    // init handle
+    curlHandle = curl_easy_init();
+    if (curlHandle == NULL)
+    {
+      return ERROR_FTP_SESSION_FAIL;
+    }
+    if (globalOptions.verboseLevel >= 6)
+    {
+      (void)curl_easy_setopt(curlHandle,CURLOPT_VERBOSE,1L);
+    }
 
-  // check host name (Note: FTP library crash if host name is not valid!)
-  if (!Network_hostExists(hostName))
-  {
-    return ERROR_HOST_NOT_FOUND;
-  }
+    // set connect
+    url = String_new();
+    String_format(url,"ftp://%S",hostName);
+    if (hostPort != 0) String_format(url,":%d",hostPort);
+    curlCode = curl_easy_setopt(curlHandle,CURLOPT_URL,String_cString(url));
+    if (curlCode != CURLE_OK)
+    {
+      curl_easy_cleanup(curlHandle);
+      return ERRORX_(FTP_SESSION_FAIL,0,curl_easy_strerror(curlCode));
+    }
+    (void)curl_easy_setopt(curlHandle,CURLOPT_CONNECT_ONLY,1L);
+    String_delete(url);
 
-  // connect
-  if (FtpConnect(String_cString(hostName),&ftpControl) != 1)
-  {
-    return ERROR_FTP_SESSION_FAIL;
-  }
-
-  // login
-  plainLoginPassword = Password_deploy(loginPassword);
-  if (FtpLogin(String_cString(loginName),
-               plainLoginPassword,
-               ftpControl
-              ) != 1
-     )
-  {
+    // set login
+    (void)curl_easy_setopt(curlHandle,CURLOPT_USERNAME,String_cString(loginName));
+    plainLoginPassword = Password_deploy(loginPassword);
+    (void)curl_easy_setopt(curlHandle,CURLOPT_PASSWORD,plainLoginPassword);
     Password_undeploy(loginPassword);
-    FtpClose(ftpControl);
-    return ERROR_FTP_AUTHENTICATION;
-  }
-  Password_undeploy(loginPassword);
-  FtpQuit(ftpControl);
+
+    // login
+    curlCode = curl_easy_perform(curlHandle);
+    if (curlCode != CURLE_OK)
+    {
+      curl_easy_cleanup(curlHandle);
+      return ERRORX_(FTP_AUTHENTICATION,0,curl_easy_strerror(curlCode));
+    }
+
+    // free resources
+    curl_easy_cleanup(curlHandle);
+  #elif defined(HAVE_FTP)
+// NYI: TODO: support different FTP port
+    UNUSED_VARIABLE(hostPort);
+
+    // check host name (Note: FTP library crash if host name is not valid!)
+    if (!Network_hostExists(hostName))
+    {
+      return ERROR_HOST_NOT_FOUND;
+    }
+
+    // connect
+    if (FtpConnect(String_cString(hostName),&ftpControl) != 1)
+    {
+      return ERROR_FTP_SESSION_FAIL;
+    }
+
+    // login
+    plainLoginPassword = Password_deploy(loginPassword);
+    if (FtpLogin(String_cString(loginName),
+                 plainLoginPassword,
+                 ftpControl
+                ) != 1
+       )
+    {
+      Password_undeploy(loginPassword);
+      FtpClose(ftpControl);
+      return ERROR_FTP_AUTHENTICATION;
+    }
+    Password_undeploy(loginPassword);
+    FtpQuit(ftpControl);
+  #endif
 
   return ERROR_NONE;
 }
-#endif /* HAVE_FTP */
+#endif /* defined(HAVE_CURL) || defined(HAVE_FTP) */
+
+#ifdef HAVE_CURL
+/***********************************************************************\
+* Name   : curlFTPNopDataCallback
+* Purpose: curl nop data callback
+* Input  : buffer   - buffer for data
+*          size     - size of element
+*          n        - number of elements
+*          userData - user data
+* Output : -
+* Return : always size*n
+* Notes  : -
+\***********************************************************************/
+
+LOCAL size_t curlFTPNopDataCallback(void   *buffer,
+                                    size_t size,
+                                    size_t n,
+                                    void   *userData
+                                   )
+{
+  UNUSED_VARIABLE(buffer);
+  UNUSED_VARIABLE(userData);
+
+  return size*n;
+}
+
+/***********************************************************************\
+* Name   : curlFTPReadDataCallback
+* Purpose: curl FTP read data callback
+* Input  : buffer   - buffer for data
+*          size     - size of element
+*          n        - number of elements
+*          userData - user data
+* Output : -
+* Return : number of read bytes or 0
+* Notes  : -
+\***********************************************************************/
+
+LOCAL size_t curlFTPReadDataCallback(void   *buffer,
+                                     size_t size,
+                                     size_t n,
+                                     void   *userData
+                                    )
+{
+  StorageFileHandle *storageFileHandle = (StorageFileHandle*)userData;
+  size_t            readBytes;
+
+  assert(buffer != NULL);
+  assert(size > 0);
+  assert(storageFileHandle != NULL);
+  assert(storageFileHandle->ftp.buffer != NULL);
+
+  if (storageFileHandle->ftp.n < storageFileHandle->ftp.length)
+  {
+    readBytes = MIN(n,(size_t)storageFileHandle->ftp.length-storageFileHandle->ftp.n/size)*size;
+
+    memcpy(buffer,storageFileHandle->ftp.buffer,readBytes);
+
+    storageFileHandle->ftp.buffer = (byte*)storageFileHandle->ftp.buffer+readBytes;
+    storageFileHandle->ftp.n += readBytes;
+  }
+  else
+  {
+    readBytes = 0;
+  }
+//fprintf(stderr,"%s, %d: readBytes=%d\n",__FILE__,__LINE__,readBytes);
+
+  return readBytes;
+}
+
+/***********************************************************************\
+* Name   : curlFTPWriteDataCallback
+* Purpose: curl FTP write data callback
+* Input  : buffer   - buffer with data
+*          size     - size of element
+*          n        - number of elements
+*          userData - user data
+* Output : -
+* Return : number of written bytes or 0
+* Notes  : -
+\***********************************************************************/
+
+LOCAL size_t curlFTPWriteDataCallback(const void *buffer,
+                                      size_t     size,
+                                      size_t     n,
+                                      void       *userData
+                                     )
+{
+  StorageFileHandle *storageFileHandle = (StorageFileHandle*)userData;
+  size_t            writtenBytes;
+
+  assert(buffer != NULL);
+  assert(size > 0);
+  assert(storageFileHandle != NULL);
+  assert(storageFileHandle->ftp.buffer != NULL);
+
+  if (storageFileHandle->ftp.n < storageFileHandle->ftp.length)
+  {
+    writtenBytes = MIN(n,(size_t)storageFileHandle->ftp.length-storageFileHandle->ftp.n/size)*size;
+
+    memcpy(storageFileHandle->ftp.buffer,buffer,writtenBytes);
+
+    storageFileHandle->ftp.buffer = (byte*)storageFileHandle->ftp.buffer+writtenBytes;
+    storageFileHandle->ftp.n += writtenBytes;
+  }
+  else
+  {
+    writtenBytes = 0;
+  }
+//fprintf(stderr,"%s, %d: writtenBytes=%d\n",__FILE__,__LINE__,writtenBytes);
+
+  return writtenBytes;
+}
+#endif /* HAVE_CURL */
 
 #ifdef HAVE_FTP
 /***********************************************************************\
@@ -276,7 +443,6 @@ LOCAL int ftpTimeoutCallback(netbuf *control,
 
   return 0;
 }
-
 #endif /* HAVE_FTP */
 
 #ifdef HAVE_SSH2
@@ -489,7 +655,7 @@ LOCAL bool waitSessionSocket(SocketHandle *socketHandle)
 }
 #endif /* HAVE_SSH2 */
 
-#if defined(HAVE_FTP) || defined(HAVE_SSH2)
+#if defined(HAVE_CURL) || defined(HAVE_FTP) || defined(HAVE_SSH2)
 /***********************************************************************\
 * Name   : initBandWidthLimiter
 * Purpose: init band width limiter structure
@@ -524,9 +690,9 @@ LOCAL void initBandWidthLimiter(StorageBandWidthLimiter *storageBandWidthLimiter
   storageBandWidthLimiter->measurementBytes     = 0L;
   storageBandWidthLimiter->measurementTime      = 0LL;
 }
-#endif /* defined(HAVE_FTP) || defined(HAVE_SSH2) */
+#endif /* defined(HAVE_CURL) || defined(HAVE_FTP) || defined(HAVE_SSH2) */
 
-#if defined(HAVE_FTP) || defined(HAVE_SSH2)
+#if defined(HAVE_CURL) || defined(HAVE_FTP) || defined(HAVE_SSH2)
 /***********************************************************************\
 * Name   : limitBandWidth
 * Purpose: limit used band width
@@ -638,7 +804,7 @@ LOCAL void limitBandWidth(StorageBandWidthLimiter *storageBandWidthLimiter,
     }
   }
 }
-#endif /* defined(HAVE_FTP) || defined(HAVE_SSH2) */
+#endif /* defined(HAVE_CURL) || defined(HAVE_FTP) || defined(HAVE_SSH2) */
 
 /***********************************************************************\
 * Name   : executeIOOutput
@@ -1099,10 +1265,17 @@ LOCAL void executeIOgrowisofs(StorageFileHandle *storageFileHandle,
 
 Errors Storage_initAll(void)
 {
-  #ifdef HAVE_FTP
+  #if   defined(HAVE_CURL)
+    if (curl_global_init(CURL_GLOBAL_ALL) != 0)
+    {
+      return ERROR_INIT_STORAGE;
+    }
+  #elif defined(HAVE_FTP)
     FtpInit();
+  #endif /* HAVE_CURL || HAVE_FTP */
+  #if defined(HAVE_CURL) || defined(HAVE_FTP)
     defaultFTPPassword = Password_new();
-  #endif /* HAVE_FTP */
+  #endif /* HAVE_CURL */
   #ifdef HAVE_SSH2
     defaultSSHPassword = Password_new();
   #endif /* HAVE_SSH2 */
@@ -1115,9 +1288,13 @@ void Storage_doneAll(void)
   #ifdef HAVE_SSH2
     Password_delete(defaultSSHPassword);
   #endif /* HAVE_SSH2 */
-  #ifdef HAVE_FTP
+  #if defined(HAVE_CURL) || defined(HAVE_FTP)
     Password_delete(defaultFTPPassword);
-  #endif /* HAVE_FTP */
+  #endif /* defined(HAVE_CURL) || defined(HAVE_FTP) */
+  #if   defined(HAVE_CURL)
+    curl_global_cleanup();
+  #elif defined(HAVE_FTP)
+  #endif /* HAVE_CURL || HAVE_FTP */
 }
 
 void Storage_initSpecifier(StorageSpecifier *storageSpecifier)
@@ -1904,13 +2081,17 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
   switch (storageFileHandle->storageSpecifier.type)
   {
     case STORAGE_TYPE_NONE:
+      UNUSED_VARIABLE(maxBandWidthList);
+
       break;
     case STORAGE_TYPE_FILESYSTEM:
+      UNUSED_VARIABLE(maxBandWidthList);
+
       // init variables
       storageFileHandle->type = STORAGE_TYPE_FILESYSTEM;
       break;
     case STORAGE_TYPE_FTP:
-      #ifdef HAVE_FTP
+      #if   defined(HAVE_CURL)
         {
           FTPServer ftpServer;
 
@@ -1989,12 +2170,93 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
             return error;
           }
         }
-      #else /* not HAVE_FTP */
+      #elif defined(HAVE_FTP)
+        {
+          FTPServer ftpServer;
+
+          // init variables
+          storageFileHandle->type = STORAGE_TYPE_FTP;
+          initBandWidthLimiter(&storageFileHandle->ftp.bandWidthLimiter,maxBandWidthList);
+
+          // allocate read-ahead buffer
+          storageFileHandle->ftp.readAheadBuffer.data = (byte*)malloc(MAX_BUFFER_SIZE);
+          if (storageFileHandle->ftp.readAheadBuffer.data == NULL)
+          {
+            HALT_INSUFFICIENT_MEMORY();
+          }
+
+          // get FTP server settings
+          getFTPServerSettings(storageFileHandle->storageSpecifier.hostName,jobOptions,&ftpServer);
+          if (String_isEmpty(storageFileHandle->storageSpecifier.loginName)) String_set(storageFileHandle->storageSpecifier.loginName,ftpServer.loginName);
+
+          // check FTP login, get correct password
+          error = ERROR_FTP_SESSION_FAIL;
+          if ((error != ERROR_NONE) && !Password_empty(storageFileHandle->storageSpecifier.loginPassword))
+          {
+            error = checkFTPLogin(storageFileHandle->storageSpecifier.hostName,
+                                  storageFileHandle->storageSpecifier.hostPort,
+                                  storageFileHandle->storageSpecifier.loginName,
+                                  storageFileHandle->storageSpecifier.loginPassword
+                                 );
+          }
+          if ((error != ERROR_NONE) && (ftpServer.password != NULL))
+          {
+            error = checkFTPLogin(storageFileHandle->storageSpecifier.hostName,
+                                  storageFileHandle->storageSpecifier.hostPort,
+                                  storageFileHandle->storageSpecifier.loginName,
+                                  ftpServer.password
+                                 );
+            if (error == ERROR_NONE)
+            {
+              Password_set(storageFileHandle->storageSpecifier.loginPassword,ftpServer.password);
+            }
+          }
+          if ((error != ERROR_NONE) && !Password_empty(defaultFTPPassword))
+          {
+            error = checkFTPLogin(storageFileHandle->storageSpecifier.hostName,
+                                  storageFileHandle->storageSpecifier.hostPort,
+                                  storageFileHandle->storageSpecifier.loginName,
+                                  defaultFTPPassword
+                                 );
+            if (error == ERROR_NONE)
+            {
+              Password_set(storageFileHandle->storageSpecifier.loginPassword,defaultFTPPassword);
+            }
+          }
+          if (error != ERROR_NONE)
+          {
+            // initialize default password
+            if (initFTPPassword(storageFileHandle->storageSpecifier.hostName,storageFileHandle->storageSpecifier.loginName,jobOptions))
+            {
+              error = checkFTPLogin(storageFileHandle->storageSpecifier.hostName,
+                                    storageFileHandle->storageSpecifier.hostPort,
+                                    storageFileHandle->storageSpecifier.loginName,
+                                    defaultFTPPassword
+                                   );
+              if (error == ERROR_NONE)
+              {
+                Password_set(storageFileHandle->storageSpecifier.loginPassword,defaultFTPPassword);
+              }
+            }
+            else
+            {
+              error = !Password_empty(defaultFTPPassword) ? ERROR_INVALID_FTP_PASSWORD : ERROR_NO_FTP_PASSWORD;
+            }
+          }
+          if (error != ERROR_NONE)
+          {
+            Storage_doneSpecifier(&storageFileHandle->storageSpecifier);
+            return error;
+          }
+        }
+      #else /* not HAVE_CURL || HAVE_FTP */
         Storage_doneSpecifier(&storageFileHandle->storageSpecifier);
         return ERROR_FUNCTION_NOT_SUPPORTED;
-      #endif /* HAVE_FTP */
+      #endif /* HAVE_CURL || HAVE_FTP */
       break;
     case STORAGE_TYPE_SSH:
+      UNUSED_VARIABLE(maxBandWidthList);
+
       Storage_doneSpecifier(&storageFileHandle->storageSpecifier);
       return ERROR_FUNCTION_NOT_SUPPORTED;
       break;
@@ -2071,6 +2333,8 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
           // free resources
         }
       #else /* not HAVE_SSH2 */
+        UNUSED_VARIABLE(maxBandWidthList);
+
         Storage_doneSpecifier(&storageFileHandle->storageSpecifier);
         return ERROR_FUNCTION_NOT_SUPPORTED;
       #endif /* HAVE_SSH2 */
@@ -2148,6 +2412,8 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
           // free resources
         }
       #else /* not HAVE_SSH2 */
+        UNUSED_VARIABLE(maxBandWidthList);
+
         Storage_doneSpecifier(&storageFileHandle->storageSpecifier);
         return ERROR_FUNCTION_NOT_SUPPORTED;
       #endif /* HAVE_SSH2 */
@@ -2161,6 +2427,8 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
         FileSystemInfo fileSystemInfo;
         Errors         error;
         String         sourceFileName,fileBaseName,destinationFileName;
+
+        UNUSED_VARIABLE(maxBandWidthList);
 
         // get device name
         if (String_isEmpty(storageFileHandle->storageSpecifier.deviceName))
@@ -2346,6 +2614,8 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
         FileSystemInfo fileSystemInfo;
         Errors         error;
 
+        UNUSED_VARIABLE(maxBandWidthList);
+
         // get device settings
         getDeviceSettings(storageFileHandle->storageSpecifier.deviceName,jobOptions,&device);
 
@@ -2410,6 +2680,8 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
       }
       break;
     default:
+      UNUSED_VARIABLE(maxBandWidthList);
+
       #ifndef NDEBUG
         HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
       #endif /* NDEBUG */
@@ -2437,10 +2709,12 @@ Errors Storage_done(StorageFileHandle *storageFileHandle)
     case STORAGE_TYPE_FILESYSTEM:
       break;
     case STORAGE_TYPE_FTP:
-      #ifdef HAVE_FTP
+      #if   defined(HAVE_CURL)
         free(storageFileHandle->ftp.readAheadBuffer.data);
-      #else /* not HAVE_FTP */
-      #endif /* HAVE_FTP */
+      #elif defined(HAVE_FTP)
+        free(storageFileHandle->ftp.readAheadBuffer.data);
+      #else /* not HAVE_CURL || HAVE_FTP */
+      #endif /* HAVE_CURL || HAVE_FTP */
       break;
     case STORAGE_TYPE_SSH:
       break;
@@ -2545,7 +2819,7 @@ String Storage_getHandleName(String                  storageName,
     case STORAGE_TYPE_FILESYSTEM:
       break;
     case STORAGE_TYPE_FTP:
-      #ifdef HAVE_FTP
+      #if   defined(HAVE_CURL) || defined(HAVE_FTP)
         if (!String_isEmpty(storageFileHandle->storageSpecifier.hostName))
         {
           if (!String_isEmpty(storageFileHandle->storageSpecifier.loginName))
@@ -2558,8 +2832,8 @@ String Storage_getHandleName(String                  storageName,
             String_format(storageSpecifier,":%d",storageFileHandle->storageSpecifier.hostPort);
           }
         }
-      #else /* not HAVE_FTP */
-      #endif /* HAVE_FTP */
+      #else /* not HAVE_CURL || HAVE_FTP */
+      #endif /* HAVE_CURL || HAVE_FTP */
       break;
     case STORAGE_TYPE_SSH:
       break;
@@ -2680,7 +2954,7 @@ Errors Storage_preProcess(StorageFileHandle *storageFileHandle,
                                             (ExecuteIOFunction)executeIOOutput,
                                             NULL
                                            );
-                printInfo(0,(error == ERROR_NONE)?"ok\n":"FAIL\n");
+                printInfo(0,(error == ERROR_NONE) ? "ok\n" : "FAIL\n");
               }
             }
             if (error != ERROR_NONE)
@@ -2692,7 +2966,7 @@ Errors Storage_preProcess(StorageFileHandle *storageFileHandle,
       }
       break;
     case STORAGE_TYPE_FTP:
-      #ifdef HAVE_FTP
+      #if   defined(HAVE_CURL) || defined(HAVE_FTP)
         {
           TextMacro textMacros[1];
 
@@ -2716,7 +2990,7 @@ Errors Storage_preProcess(StorageFileHandle *storageFileHandle,
                                               (ExecuteIOFunction)executeIOOutput,
                                               NULL
                                              );
-                  printInfo(0,(error == ERROR_NONE)?"ok\n":"FAIL\n");
+                  printInfo(0,(error == ERROR_NONE) ? "ok\n" : "FAIL\n");
                 }
               }
               if (error != ERROR_NONE)
@@ -2726,9 +3000,9 @@ Errors Storage_preProcess(StorageFileHandle *storageFileHandle,
             }
           }
         }
-      #else /* not HAVE_FTP */
+      #else /* not HAVE_CURL || HAVE_FTP */
         error = ERROR_FUNCTION_NOT_SUPPORTED;
-      #endif /* HAVE_FTP */
+      #endif /* HAVE_CURL || HAVE_FTP */
       break;
     case STORAGE_TYPE_SSH:
       break;
@@ -2757,7 +3031,7 @@ Errors Storage_preProcess(StorageFileHandle *storageFileHandle,
                                               (ExecuteIOFunction)executeIOOutput,
                                               NULL
                                              );
-                  printInfo(0,(error == ERROR_NONE)?"ok\n":"FAIL\n");
+                  printInfo(0,(error == ERROR_NONE) ? "ok\n" : "FAIL\n");
                 }
               }
               if (error != ERROR_NONE)
@@ -2796,7 +3070,7 @@ Errors Storage_preProcess(StorageFileHandle *storageFileHandle,
                                               (ExecuteIOFunction)executeIOOutput,
                                               NULL
                                              );
-                  printInfo(0,(error == ERROR_NONE)?"ok\n":"FAIL\n");
+                  printInfo(0,(error == ERROR_NONE) ? "ok\n" : "FAIL\n");
                 }
               }
               if (error != ERROR_NONE)
@@ -2900,7 +3174,7 @@ Errors Storage_postProcess(StorageFileHandle *storageFileHandle,
                                             (ExecuteIOFunction)executeIOOutput,
                                             NULL
                                            );
-                printInfo(0,(error == ERROR_NONE)?"ok\n":"FAIL\n");
+                printInfo(0,(error == ERROR_NONE) ? "ok\n" : "FAIL\n");
               }
             }
             if (error != ERROR_NONE)
@@ -2912,7 +3186,7 @@ Errors Storage_postProcess(StorageFileHandle *storageFileHandle,
       }
       break;
     case STORAGE_TYPE_FTP:
-      #ifdef HAVE_FTP
+      #if   defined(HAVE_CURL) || defined(HAVE_FTP)
         {
           TextMacro textMacros[1];
 
@@ -2936,7 +3210,7 @@ Errors Storage_postProcess(StorageFileHandle *storageFileHandle,
                                               (ExecuteIOFunction)executeIOOutput,
                                               NULL
                                              );
-                  printInfo(0,(error == ERROR_NONE)?"ok\n":"FAIL\n");
+                  printInfo(0,(error == ERROR_NONE) ? "ok\n" : "FAIL\n");
                 }
               }
               if (error != ERROR_NONE)
@@ -2946,9 +3220,9 @@ Errors Storage_postProcess(StorageFileHandle *storageFileHandle,
             }
           }
         }
-      #else /* not HAVE_FTP */
+      #else /* not HAVE_CURL || HAVE_FTP */
         error = ERROR_FUNCTION_NOT_SUPPORTED;
-      #endif /* HAVE_FTP */
+      #endif /* HAVE_CURL || HAVE_FTP */
       break;
     case STORAGE_TYPE_SSH:
       break;
@@ -2977,7 +3251,7 @@ Errors Storage_postProcess(StorageFileHandle *storageFileHandle,
                                               (ExecuteIOFunction)executeIOOutput,
                                               NULL
                                              );
-                  printInfo(0,(error == ERROR_NONE)?"ok\n":"FAIL\n");
+                  printInfo(0,(error == ERROR_NONE) ? "ok\n" : "FAIL\n");
                 }
               }
               if (error != ERROR_NONE)
@@ -3016,7 +3290,7 @@ Errors Storage_postProcess(StorageFileHandle *storageFileHandle,
                                               (ExecuteIOFunction)executeIOOutput,
                                               NULL
                                              );
-                  printInfo(0,(error == ERROR_NONE)?"ok\n":"FAIL\n");
+                  printInfo(0,(error == ERROR_NONE) ? "ok\n" : "FAIL\n");
                 }
               }
               if (error != ERROR_NONE)
@@ -3302,7 +3576,7 @@ Errors Storage_postProcess(StorageFileHandle *storageFileHandle,
                                           (ExecuteIOFunction)executeIOOutput,
                                           NULL
                                          );
-              printInfo(0,(error == ERROR_NONE)?"ok\n":"FAIL\n");
+              printInfo(0,(error == ERROR_NONE) ? "ok\n" : "FAIL\n");
             }
             if (error == ERROR_NONE)
             {
@@ -3314,7 +3588,7 @@ Errors Storage_postProcess(StorageFileHandle *storageFileHandle,
                                           (ExecuteIOFunction)executeIOOutput,
                                           NULL
                                          );
-              printInfo(0,(error == ERROR_NONE)?"ok\n":"FAIL\n");
+              printInfo(0,(error == ERROR_NONE) ? "ok\n" : "FAIL\n");
             }
             if (error == ERROR_NONE)
             {
@@ -3326,7 +3600,7 @@ Errors Storage_postProcess(StorageFileHandle *storageFileHandle,
                                           (ExecuteIOFunction)executeIOOutput,
                                           NULL
                                          );
-              printInfo(0,(error == ERROR_NONE)?"ok\n":"FAIL\n");
+              printInfo(0,(error == ERROR_NONE) ? "ok\n" : "FAIL\n");
             }
 
             // write to device
@@ -3340,7 +3614,7 @@ Errors Storage_postProcess(StorageFileHandle *storageFileHandle,
                                           (ExecuteIOFunction)executeIOOutput,
                                           NULL
                                          );
-              printInfo(0,(error == ERROR_NONE)?"ok\n":"FAIL\n");
+              printInfo(0,(error == ERROR_NONE) ? "ok\n" : "FAIL\n");
             }
             if (error == ERROR_NONE)
             {
@@ -3352,7 +3626,7 @@ Errors Storage_postProcess(StorageFileHandle *storageFileHandle,
                                           (ExecuteIOFunction)executeIOOutput,
                                           NULL
                                          );
-              printInfo(0,(error == ERROR_NONE)?"ok\n":"FAIL\n");
+              printInfo(0,(error == ERROR_NONE) ? "ok\n" : "FAIL\n");
             }
             if (error == ERROR_NONE)
             {
@@ -3364,7 +3638,7 @@ Errors Storage_postProcess(StorageFileHandle *storageFileHandle,
                                           (ExecuteIOFunction)executeIOOutput,
                                           NULL
                                          );
-              printInfo(0,(error == ERROR_NONE)?"ok\n":"FAIL\n");
+              printInfo(0,(error == ERROR_NONE) ? "ok\n" : "FAIL\n");
             }
 
             if (error != ERROR_NONE)
@@ -3510,7 +3784,7 @@ Errors Storage_create(StorageFileHandle *storageFileHandle,
       // check if archive file exists
       if (!storageFileHandle->jobOptions->overwriteArchiveFilesFlag && File_exists(fileName))
       {
-        return ERRORX(FILE_EXISTS,0,String_cString(fileName));
+        return ERRORX_(FILE_EXISTS_,0,String_cString(fileName));
       }
 
       if (!storageFileHandle->jobOptions->dryRunFlag)
@@ -3544,7 +3818,111 @@ Errors Storage_create(StorageFileHandle *storageFileHandle,
       }
       break;
     case STORAGE_TYPE_FTP:
-      #ifdef HAVE_FTP
+      #if   defined(HAVE_CURL)
+        {
+          String     url;
+          CURLcode   curlCode;
+          const char *plainLoginPassword;
+          CURLMcode  curlMCode;
+
+          // initialise variables
+          storageFileHandle->ftp.curlMultiHandle = curl_multi_init();
+          if (storageFileHandle->ftp.curlMultiHandle == NULL)
+          {
+            return ERROR_FTP_SESSION_FAIL;
+          }
+          storageFileHandle->ftp.curlHandle = curl_easy_init();
+          if (storageFileHandle->ftp.curlHandle == NULL)
+          {
+            curl_multi_cleanup(storageFileHandle->ftp.curlMultiHandle);
+            return ERROR_FTP_SESSION_FAIL;
+          }
+          if (globalOptions.verboseLevel >= 6)
+          {
+            // enable debug mode
+            (void)curl_easy_setopt(storageFileHandle->ftp.curlHandle,CURLOPT_VERBOSE,1L);
+          }
+
+          // set FTP connect
+          url = String_new();
+          String_format(url,"ftp://%S",storageFileHandle->storageSpecifier.hostName,fileName);
+          if (storageFileHandle->storageSpecifier.hostPort != 0) String_format(url,":d",storageFileHandle->storageSpecifier.hostPort);
+          String_format(url,"/%S",fileName);
+          curlCode = curl_easy_setopt(storageFileHandle->ftp.curlHandle,CURLOPT_URL,String_cString(url));
+          if (curlCode != CURLE_OK)
+          {
+            curl_easy_cleanup(storageFileHandle->ftp.curlHandle);
+            curl_multi_cleanup(storageFileHandle->ftp.curlMultiHandle);
+            return ERRORX_(FTP_SESSION_FAIL,0,curl_easy_strerror(curlCode));
+          }
+          String_delete(url);
+
+          // set FTP login
+          (void)curl_easy_setopt(storageFileHandle->ftp.curlHandle,CURLOPT_USERNAME,String_cString(storageFileHandle->storageSpecifier.loginName));
+          plainLoginPassword = Password_deploy(storageFileHandle->storageSpecifier.loginPassword);
+          (void)curl_easy_setopt(storageFileHandle->ftp.curlHandle,CURLOPT_PASSWORD,plainLoginPassword);
+          Password_undeploy(storageFileHandle->storageSpecifier.loginPassword);
+
+          if (!storageFileHandle->jobOptions->dryRunFlag)
+          {
+            // create directories if necessary
+            curlCode = curl_easy_setopt(storageFileHandle->ftp.curlHandle,CURLOPT_FTP_CREATE_MISSING_DIRS,1L);
+            if (curlCode != CURLE_OK)
+            {
+              curl_easy_cleanup(storageFileHandle->ftp.curlHandle);
+              curl_multi_cleanup(storageFileHandle->ftp.curlMultiHandle);
+              return ERRORX_(CREATE_DIRECTORY,0,curl_easy_strerror(curlCode));
+            }
+
+            // init FTP upload (Note: by default curl use passive FTP)
+            curlCode = curl_easy_setopt(storageFileHandle->ftp.curlHandle,CURLOPT_READFUNCTION,curlFTPReadDataCallback);
+            if (curlCode != CURLE_OK)
+            {
+              curl_easy_cleanup(storageFileHandle->ftp.curlHandle);
+              curl_multi_cleanup(storageFileHandle->ftp.curlMultiHandle);
+              return ERRORX_(FTP_SESSION_FAIL,0,curl_easy_strerror(curlCode));
+            }
+            curlCode = curl_easy_setopt(storageFileHandle->ftp.curlHandle,CURLOPT_READDATA,storageFileHandle);
+            if (curlCode != CURLE_OK)
+            {
+              curl_easy_cleanup(storageFileHandle->ftp.curlHandle);
+              curl_multi_cleanup(storageFileHandle->ftp.curlMultiHandle);
+              return ERRORX_(FTP_SESSION_FAIL,0,curl_easy_strerror(curlCode));
+            }
+            curlCode = curl_easy_setopt(storageFileHandle->ftp.curlHandle,CURLOPT_UPLOAD,1L);
+            if (curlCode != CURLE_OK)
+            {
+              curl_easy_cleanup(storageFileHandle->ftp.curlHandle);
+              curl_multi_cleanup(storageFileHandle->ftp.curlMultiHandle);
+              return ERRORX_(FTP_SESSION_FAIL,0,curl_easy_strerror(curlCode));
+            }
+            curlCode=curl_easy_setopt(storageFileHandle->ftp.curlHandle,CURLOPT_INFILESIZE_LARGE,(curl_off_t)storageFileHandle->ftp.size);
+fprintf(stderr,"%s, %d: curlCode=%d\n",__FILE__,__LINE__,curlCode);
+
+            curlMCode = curl_multi_add_handle(storageFileHandle->ftp.curlMultiHandle,storageFileHandle->ftp.curlHandle);
+            if (curlMCode != CURLM_OK)
+            {
+              curl_easy_cleanup(storageFileHandle->ftp.curlHandle);
+              curl_multi_cleanup(storageFileHandle->ftp.curlMultiHandle);
+              return ERRORX_(FTP_SESSION_FAIL,0,curl_multi_strerror(curlMCode));
+            }
+
+            // start FTP upload
+            do
+            {
+              curlMCode = curl_multi_perform(storageFileHandle->ftp.curlMultiHandle,&storageFileHandle->ftp.runningHandles);
+            }
+            while (curlMCode == CURLM_CALL_MULTI_PERFORM);
+//fprintf(stderr,"%s, %d: storageFileHandle->ftp.runningHandles=%d\n",__FILE__,__LINE__,storageFileHandle->ftp.runningHandles);
+            if (curlMCode != CURLM_OK)
+            {
+              curl_easy_cleanup(storageFileHandle->ftp.curlHandle);
+              curl_multi_cleanup(storageFileHandle->ftp.curlMultiHandle);
+              return ERRORX_(FTP_SESSION_FAIL,0,curl_multi_strerror(curlMCode));
+            }
+          }
+        }
+      #elif defined(HAVE_FTP)
         {
           String          pathName;
           String          directoryName;
@@ -3622,7 +4000,7 @@ Errors Storage_create(StorageFileHandle *storageFileHandle,
                )
             {
               FtpClose(storageFileHandle->ftp.control);
-              return ERRORX(CREATE_FILE,0,"ftp access");
+              return ERRORX_(CREATE_FILE,0,"ftp access");
             }
             if (FtpOptions(FTPLIB_CALLBACK,
                            (long)ftpTimeoutCallback,
@@ -3631,7 +4009,7 @@ Errors Storage_create(StorageFileHandle *storageFileHandle,
                )
             {
               FtpClose(storageFileHandle->ftp.control);
-              return ERRORX(CREATE_FILE,0,"ftp access");
+              return ERRORX_(CREATE_FILE,0,"ftp access");
             }
 
             // create file: first try non-passive, then passive mode
@@ -3654,14 +4032,14 @@ Errors Storage_create(StorageFileHandle *storageFileHandle,
                  )
               {
                 FtpClose(storageFileHandle->ftp.control);
-                return ERRORX(CREATE_FILE,0,"ftp access");
+                return ERRORX_(CREATE_FILE,0,"ftp access");
               }
             }
           }
         }
-      #else /* not HAVE_FTP */
+      #else /* not HAVE_CURL || HAVE_FTP */
         return ERROR_FUNCTION_NOT_SUPPORTED;
-      #endif /* HAVE_FTP */
+      #endif /* HAVE_CURL || HAVE_FTP */
       break;
     case STORAGE_TYPE_SSH:
       return ERROR_FUNCTION_NOT_SUPPORTED;
@@ -3719,10 +4097,10 @@ Errors Storage_create(StorageFileHandle *storageFileHandle,
               char *sshErrorText;
 
               libssh2_session_last_error(Network_getSSHSession(&storageFileHandle->scp.socketHandle),&sshErrorText,NULL,0);
-              error = ERRORX(SSH,
-                             libssh2_session_last_errno(Network_getSSHSession(&storageFileHandle->scp.socketHandle)),
-                             sshErrorText
-                            );
+              error = ERRORX_(SSH,
+                              libssh2_session_last_errno(Network_getSSHSession(&storageFileHandle->scp.socketHandle)),
+                              sshErrorText
+                             );
               Network_disconnect(&storageFileHandle->scp.socketHandle);
               return error;
             }
@@ -3767,10 +4145,10 @@ Errors Storage_create(StorageFileHandle *storageFileHandle,
             char *sshErrorText;
 
             libssh2_session_last_error(Network_getSSHSession(&storageFileHandle->sftp.socketHandle),&sshErrorText,NULL,0);
-            error = ERRORX(SSH,
-                           libssh2_session_last_errno(Network_getSSHSession(&storageFileHandle->sftp.socketHandle)),
-                           sshErrorText
-                          );
+            error = ERRORX_(SSH,
+                            libssh2_session_last_errno(Network_getSSHSession(&storageFileHandle->sftp.socketHandle)),
+                            sshErrorText
+                           );
             Network_disconnect(&storageFileHandle->sftp.socketHandle);
             return error;
           }
@@ -3789,10 +4167,10 @@ LIBSSH2_SFTP_S_IRUSR|LIBSSH2_SFTP_S_IWUSR
               char *sshErrorText;
 
               libssh2_session_last_error(Network_getSSHSession(&storageFileHandle->sftp.socketHandle),&sshErrorText,NULL,0);
-              error = ERRORX(SSH,
-                             libssh2_session_last_errno(Network_getSSHSession(&storageFileHandle->sftp.socketHandle)),
-                             sshErrorText
-                            );
+              error = ERRORX_(SSH,
+                              libssh2_session_last_errno(Network_getSSHSession(&storageFileHandle->sftp.socketHandle)),
+                              sshErrorText
+                             );
               libssh2_sftp_shutdown(storageFileHandle->sftp.sftp);
               Network_disconnect(&storageFileHandle->sftp.socketHandle);
               return error;
@@ -3889,7 +4267,7 @@ Errors Storage_open(StorageFileHandle *storageFileHandle,
       // check if file exists
       if (!File_exists(fileName))
       {
-        return ERRORX(FILE_NOT_FOUND,0,String_cString(fileName));
+        return ERRORX_(FILE_NOT_FOUND_,0,String_cString(fileName));
       }
 
       // open file
@@ -3903,9 +4281,122 @@ Errors Storage_open(StorageFileHandle *storageFileHandle,
       }
       break;
     case STORAGE_TYPE_FTP:
-      #ifdef HAVE_FTP
+      #if   defined(HAVE_CURL)
         {
-          const char *plainPassword;
+          String     url;
+          CURLcode   curlCode;
+          const char *plainLoginPassword;
+          double     size;
+          CURLMcode  curlMCode;
+
+          // initialise variables
+          storageFileHandle->ftp.curlMultiHandle = curl_multi_init();
+          if (storageFileHandle->ftp.curlMultiHandle == NULL)
+          {
+            return ERROR_FTP_SESSION_FAIL;
+          }
+          storageFileHandle->ftp.curlHandle = curl_easy_init();
+          if (storageFileHandle->ftp.curlHandle == NULL)
+          {
+            curl_multi_cleanup(storageFileHandle->ftp.curlMultiHandle);
+            return ERROR_FTP_SESSION_FAIL;
+          }
+          if (globalOptions.verboseLevel >= 6)
+          {
+            // enable debug mode
+            (void)curl_easy_setopt(storageFileHandle->ftp.curlHandle,CURLOPT_VERBOSE,1L);
+          }
+          storageFileHandle->ftp.index                  = 0LL;
+          storageFileHandle->ftp.readAheadBuffer.offset = 0LL;
+          storageFileHandle->ftp.readAheadBuffer.length = 0L;
+
+          // set FTP connect
+          url = String_new();
+          String_format(url,"ftp://%S",storageFileHandle->storageSpecifier.hostName,fileName);
+          if (storageFileHandle->storageSpecifier.hostPort != 0) String_format(url,":d",storageFileHandle->storageSpecifier.hostPort);
+          String_format(url,"/%S",fileName);
+          curlCode = curl_easy_setopt(storageFileHandle->ftp.curlHandle,CURLOPT_URL,String_cString(url));
+          if (curlCode != CURLE_OK)
+          {
+            curl_easy_cleanup(storageFileHandle->ftp.curlHandle);
+            curl_multi_cleanup(storageFileHandle->ftp.curlMultiHandle);
+            return ERRORX_(FTP_SESSION_FAIL,0,curl_easy_strerror(curlCode));
+          }
+          String_delete(url);
+
+          // set FTP login
+          (void)curl_easy_setopt(storageFileHandle->ftp.curlHandle,CURLOPT_USERNAME,String_cString(storageFileHandle->storageSpecifier.loginName));
+          plainLoginPassword = Password_deploy(storageFileHandle->storageSpecifier.loginPassword);
+          (void)curl_easy_setopt(storageFileHandle->ftp.curlHandle,CURLOPT_PASSWORD,plainLoginPassword);
+          Password_undeploy(storageFileHandle->storageSpecifier.loginPassword);
+
+          // check if file exists (Note: by default curl use passive FTP)
+          (void)curl_easy_setopt(storageFileHandle->ftp.curlHandle,CURLOPT_NOBODY,1L);
+          (void)curl_easy_setopt(storageFileHandle->ftp.curlHandle,CURLOPT_HEADERFUNCTION,curlFTPNopDataCallback);
+          (void)curl_easy_setopt(storageFileHandle->ftp.curlHandle,CURLOPT_HEADER,0L);
+          (void)curl_easy_setopt(storageFileHandle->ftp.curlHandle,CURLOPT_WRITEFUNCTION,curlFTPNopDataCallback);
+          (void)curl_easy_setopt(storageFileHandle->ftp.curlHandle,CURLOPT_WRITEDATA,0L);
+          curlCode = curl_easy_perform(storageFileHandle->ftp.curlHandle);
+          if (curlCode != CURLE_OK)
+          {
+            curl_easy_cleanup(storageFileHandle->ftp.curlHandle);
+            curl_multi_cleanup(storageFileHandle->ftp.curlMultiHandle);
+            return ERRORX_(FILE_NOT_FOUND_,0,String_cString(fileName));
+          }
+
+          // get file size
+          curlCode = curl_easy_getinfo(storageFileHandle->ftp.curlHandle,CURLINFO_CONTENT_LENGTH_DOWNLOAD,&size);
+          if (curlCode != CURLE_OK)
+          {
+            curl_easy_cleanup(storageFileHandle->ftp.curlHandle);
+            curl_multi_cleanup(storageFileHandle->ftp.curlMultiHandle);
+            return ERROR_FTP_GET_SIZE;
+          }
+          storageFileHandle->ftp.size = (uint64)size;
+//fprintf(stderr,"%s, %d: storageFileHandle->ftp.size=%llu\n",__FILE__,__LINE__,storageFileHandle->ftp.size);
+
+          // init FTP download (Note: by default curl use passive FTP)
+          (void)curl_easy_setopt(storageFileHandle->ftp.curlHandle,CURLOPT_NOBODY,0L);
+          curlCode = curl_easy_setopt(storageFileHandle->ftp.curlHandle,CURLOPT_WRITEFUNCTION,curlFTPWriteDataCallback);
+          if (curlCode != CURLE_OK)
+          {
+            curl_easy_cleanup(storageFileHandle->ftp.curlHandle);
+            curl_multi_cleanup(storageFileHandle->ftp.curlMultiHandle);
+            return ERRORX_(FTP_SESSION_FAIL,0,curl_easy_strerror(curlCode));
+          }
+          curlCode = curl_easy_setopt(storageFileHandle->ftp.curlHandle,CURLOPT_WRITEDATA,storageFileHandle);
+          if (curlCode != CURLE_OK)
+          {
+            curl_easy_cleanup(storageFileHandle->ftp.curlHandle);
+            curl_multi_cleanup(storageFileHandle->ftp.curlMultiHandle);
+            return ERRORX_(FTP_SESSION_FAIL,0,curl_easy_strerror(curlCode));
+          }
+
+          curlMCode = curl_multi_add_handle(storageFileHandle->ftp.curlMultiHandle,storageFileHandle->ftp.curlHandle);
+          if (curlMCode != CURLM_OK)
+          {
+            curl_easy_cleanup(storageFileHandle->ftp.curlHandle);
+            curl_multi_cleanup(storageFileHandle->ftp.curlMultiHandle);
+            return ERRORX_(FTP_SESSION_FAIL,0,curl_multi_strerror(curlMCode));
+          }
+
+          // start FTP download
+          do
+          {
+            curlMCode = curl_multi_perform(storageFileHandle->ftp.curlMultiHandle,&storageFileHandle->ftp.runningHandles);
+          }
+          while (curlMCode == CURLM_CALL_MULTI_PERFORM);
+//fprintf(stderr,"%s, %d: storageFileHandle->ftp.runningHandles=%d\n",__FILE__,__LINE__,storageFileHandle->ftp.runningHandles);
+          if (curlMCode != CURLM_OK)
+          {
+            curl_easy_cleanup(storageFileHandle->ftp.curlHandle);
+            curl_multi_cleanup(storageFileHandle->ftp.curlMultiHandle);
+            return ERRORX_(FTP_SESSION_FAIL,0,curl_multi_strerror(curlMCode));
+          }
+        }
+      #elif defined(HAVE_FTP)
+        {
+          const char *plainLoginPassword;
           String     tmpFileName;
           FileHandle fileHandle;
           bool       foundFlag;
@@ -3919,7 +4410,7 @@ Errors Storage_open(StorageFileHandle *storageFileHandle,
           storageFileHandle->ftp.readAheadBuffer.offset = 0LL;
           storageFileHandle->ftp.readAheadBuffer.length = 0L;
 
-          // connect
+          // FTP connect
           if (!Network_hostExists(storageFileHandle->storageSpecifier.hostName))
           {
             return ERROR_HOST_NOT_FOUND;
@@ -3927,13 +4418,12 @@ Errors Storage_open(StorageFileHandle *storageFileHandle,
           if (FtpConnect(String_cString(storageFileHandle->storageSpecifier.hostName),&storageFileHandle->ftp.control) != 1)
           {
             return ERROR_FTP_SESSION_FAIL;
-
           }
 
-          // login
-          plainPassword = Password_deploy(storageFileHandle->storageSpecifier.loginPassword);
+          // FTP login
+          plainLoginPassword = Password_deploy(storageFileHandle->storageSpecifier.loginPassword);
           if (FtpLogin(String_cString(storageFileHandle->storageSpecifier.loginName),
-                       plainPassword,
+                       plainLoginPassword,
                        storageFileHandle->ftp.control
                       ) != 1
              )
@@ -3961,7 +4451,7 @@ Errors Storage_open(StorageFileHandle *storageFileHandle,
               File_delete(tmpFileName,FALSE);
               File_deleteFileName(tmpFileName);
               FtpClose(storageFileHandle->ftp.control);
-              return ERRORX(FILE_NOT_FOUND,0,String_cString(fileName));
+              return ERRORX_(FILE_NOT_FOUND_,0,String_cString(fileName));
             }
           }
           error = File_open(&fileHandle,tmpFileName,FILE_OPEN_READ);
@@ -4014,7 +4504,7 @@ Errors Storage_open(StorageFileHandle *storageFileHandle,
           if (!foundFlag)
           {
             FtpClose(storageFileHandle->ftp.control);
-            return ERRORX(FILE_NOT_FOUND,0,String_cString(fileName));
+            return ERRORX_(FILE_NOT_FOUND_,0,String_cString(fileName));
           }
 
           // get file size
@@ -4030,7 +4520,7 @@ Errors Storage_open(StorageFileHandle *storageFileHandle,
           }
           storageFileHandle->ftp.size = (uint64)size;
 
-          // open file for reading: first try non-passive, then passive mode
+          // init FTP download: first try non-passive, then passive mode
           FtpOptions(FTPLIB_CONNMODE,FTPLIB_PORT,storageFileHandle->ftp.control);
           if (FtpAccess(String_cString(fileName),
                         FTPLIB_FILE_READ,
@@ -4050,13 +4540,13 @@ Errors Storage_open(StorageFileHandle *storageFileHandle,
                )
             {
               FtpClose(storageFileHandle->ftp.control);
-              return ERRORX(OPEN_FILE,0,"ftp access");
+              return ERRORX_(OPEN_FILE,0,"ftp access");
             }
           }
         }
-      #else /* not HAVE_FTP */
+      #else /* not HAVE_CURL || HAVE_FTP */
         return ERROR_FUNCTION_NOT_SUPPORTED;
-      #endif /* HAVE_FTP */
+      #endif /* HAVE_CURL || HAVE_FTP */
       break;
     case STORAGE_TYPE_SSH:
       return ERROR_FUNCTION_NOT_SUPPORTED;
@@ -4105,10 +4595,10 @@ Errors Storage_open(StorageFileHandle *storageFileHandle,
             char *sshErrorText;
 
             libssh2_session_last_error(Network_getSSHSession(&storageFileHandle->scp.socketHandle),&sshErrorText,NULL,0);
-            error = ERRORX(SSH,
-                           libssh2_session_last_errno(Network_getSSHSession(&storageFileHandle->scp.socketHandle)),
-                           sshErrorText
-                          );
+            error = ERRORX_(SSH,
+                            libssh2_session_last_errno(Network_getSSHSession(&storageFileHandle->scp.socketHandle)),
+                            sshErrorText
+                           );
             Network_disconnect(&storageFileHandle->scp.socketHandle);
             return error;
           }
@@ -4157,7 +4647,7 @@ Errors Storage_open(StorageFileHandle *storageFileHandle,
           storageFileHandle->sftp.sftp = libssh2_sftp_init(Network_getSSHSession(&storageFileHandle->sftp.socketHandle));
           if (storageFileHandle->sftp.sftp == NULL)
           {
-            error = ERROR(SSH,libssh2_session_last_errno(Network_getSSHSession(&storageFileHandle->sftp.socketHandle)));
+            error = ERROR_(SSH,libssh2_session_last_errno(Network_getSSHSession(&storageFileHandle->sftp.socketHandle)));
             Network_disconnect(&storageFileHandle->sftp.socketHandle);
             return error;
           }
@@ -4173,10 +4663,10 @@ Errors Storage_open(StorageFileHandle *storageFileHandle,
             char *sshErrorText;
 
             libssh2_session_last_error(Network_getSSHSession(&storageFileHandle->sftp.socketHandle),&sshErrorText,NULL,0);
-            error = ERRORX(SSH,
-                           libssh2_session_last_errno(Network_getSSHSession(&storageFileHandle->sftp.socketHandle)),
-                           sshErrorText
-                          );
+            error = ERRORX_(SSH,
+                            libssh2_session_last_errno(Network_getSSHSession(&storageFileHandle->sftp.socketHandle)),
+                            sshErrorText
+                           );
             libssh2_sftp_shutdown(storageFileHandle->sftp.sftp);
             Network_disconnect(&storageFileHandle->sftp.socketHandle);
             return error;
@@ -4191,10 +4681,10 @@ Errors Storage_open(StorageFileHandle *storageFileHandle,
             char *sshErrorText;
 
             libssh2_session_last_error(Network_getSSHSession(&storageFileHandle->sftp.socketHandle),&sshErrorText,NULL,0);
-            error = ERRORX(SSH,
-                           libssh2_session_last_errno(Network_getSSHSession(&storageFileHandle->sftp.socketHandle)),
-                           sshErrorText
-                          );
+            error = ERRORX_(SSH,
+                            libssh2_session_last_errno(Network_getSSHSession(&storageFileHandle->sftp.socketHandle)),
+                            sshErrorText
+                           );
             libssh2_sftp_close(storageFileHandle->sftp.sftpHandle);
             libssh2_sftp_shutdown(storageFileHandle->sftp.sftp);
             Network_disconnect(&storageFileHandle->sftp.socketHandle);
@@ -4220,7 +4710,7 @@ Errors Storage_open(StorageFileHandle *storageFileHandle,
           // check if device exists
           if (!File_exists(storageFileHandle->storageSpecifier.deviceName))
           {
-            return ERRORX(OPTICAL_DISK_NOT_FOUND,0,String_cString(storageFileHandle->storageSpecifier.deviceName));
+            return ERRORX_(OPTICAL_DISK_NOT_FOUND,0,String_cString(storageFileHandle->storageSpecifier.deviceName));
           }
 
           // open optical disk/ISO 9660 file
@@ -4229,11 +4719,11 @@ Errors Storage_open(StorageFileHandle *storageFileHandle,
           {
             if (File_isFile(storageFileHandle->storageSpecifier.deviceName))
             {
-              return ERRORX(OPEN_ISO9660_FILE,errno,String_cString(storageFileHandle->storageSpecifier.deviceName));
+              return ERRORX_(OPEN_ISO9660_FILE,errno,String_cString(storageFileHandle->storageSpecifier.deviceName));
             }
             else
             {
-              return ERRORX(OPEN_OPTICAL_DISK,errno,String_cString(storageFileHandle->storageSpecifier.deviceName));
+              return ERRORX_(OPEN_OPTICAL_DISK,errno,String_cString(storageFileHandle->storageSpecifier.deviceName));
             }
           }
 
@@ -4244,7 +4734,7 @@ Errors Storage_open(StorageFileHandle *storageFileHandle,
           if (storageFileHandle->opticalDisk.read.iso9660Stat == NULL)
           {
             iso9660_close(storageFileHandle->opticalDisk.read.iso9660Handle);
-            return ERRORX(FILE_NOT_FOUND,errno,String_cString(fileName));
+            return ERRORX_(FILE_NOT_FOUND_,errno,String_cString(fileName));
           }
         }
       #else /* not HAVE_ISO9660 */
@@ -4312,7 +4802,16 @@ void Storage_close(StorageFileHandle *storageFileHandle)
       }
       break;
     case STORAGE_TYPE_FTP:
-      #ifdef HAVE_FTP
+      #if   defined(HAVE_CURL)
+        assert(storageFileHandle->ftp.curlHandle != NULL);
+        assert(storageFileHandle->ftp.curlMultiHandle != NULL);
+
+        curl_multi_remove_handle(storageFileHandle->ftp.curlMultiHandle,storageFileHandle->ftp.curlHandle);
+        curl_easy_cleanup(storageFileHandle->ftp.curlHandle);
+        curl_multi_cleanup(storageFileHandle->ftp.curlMultiHandle);
+      #elif defined(HAVE_FTP)
+        assert(storageFileHandle->ftp.control != NULL);
+
         switch (storageFileHandle->mode)
         {
           case STORAGE_MODE_UNKNOWN:
@@ -4334,10 +4833,9 @@ void Storage_close(StorageFileHandle *storageFileHandle)
               break; /* not reached */
           #endif /* NDEBUG */
         }
-        assert(storageFileHandle->ftp.control != NULL);
         FtpClose(storageFileHandle->ftp.control);
-      #else /* not HAVE_FTP */
-      #endif /* HAVE_FTP */
+      #else /* not HAVE_CURL || HAVE_FTP */
+      #endif /* HAVE_CURL || HAVE_FTP */
       break;
     case STORAGE_TYPE_SSH:
       break;
@@ -4482,14 +4980,43 @@ Errors Storage_delete(StorageFileHandle *storageFileHandle,
       }
       break;
     case STORAGE_TYPE_FTP:
-      #ifdef HAVE_FTP
+      #if   defined(HAVE_CURL)
+        {
+          String            ftpCommand;
+          struct curl_slist *curlSList;
+          CURLcode          curlCode;
+#warning todo curl
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+          if (!storageFileHandle->jobOptions->dryRunFlag)
+          {
+            ftpCommand = String_format(String_new(),"*DELE %S",fileName);
+            curlSList = curl_slist_append(NULL,String_cString(ftpCommand));
+            curlCode = curl_easy_setopt(storageFileHandle->ftp.curlHandle,CURLOPT_QUOTE,curlSList);
+            if (curlCode == CURLE_OK)
+            {
+              curlCode = curl_easy_perform(storageFileHandle->ftp.curlHandle);
+              if (curlCode != CURLE_OK)
+              {
+                error = ERROR_DELETE_FILE;
+              }
+            }
+            else
+            {
+              error = ERROR_DELETE_FILE;
+            }
+            curl_easy_setopt(storageFileHandle->ftp.curlHandle,CURLOPT_QUOTE,NULL);
+            curl_slist_free_all(curlSList);
+            String_delete(ftpCommand);
+          }
+        }
+      #elif defined(HAVE_FTP)
         if (!storageFileHandle->jobOptions->dryRunFlag)
         {
-          error = (FtpDelete(String_cString(fileName),storageFileHandle->ftp.data) == 1)?ERROR_NONE:ERROR_DELETE_FILE;
+          error = (FtpDelete(String_cString(fileName),storageFileHandle->ftp.data) == 1) ? ERROR_NONE : ERROR_DELETE_FILE;
         }
-      #else /* not HAVE_FTP */
+      #else /* not HAVE_CURL || HAVE_FTP */
         error = ERROR_FUNCTION_NOT_SUPPORTED;
-      #endif /* HAVE_FTP */
+      #endif /* HAVE_CURL || HAVE_FTP */
       break;
     case STORAGE_TYPE_SSH:
       #ifdef HAVE_SSH2
@@ -4512,7 +5039,7 @@ whould this be a possible implementation?
             error = (libssh2_channel_exec(storageFileHandle->scp.channel,
                                           String_cString(command)
                                          ) != 0
-                    )?ERROR_NONE:ERROR_DELETE_FILE;
+                    ) ? ERROR_NONE : ERROR_DELETE_FILE;
           }
           if (error != ERROR_NONE)
           {
@@ -4520,7 +5047,7 @@ whould this be a possible implementation?
             error = (libssh2_channel_exec(storageFileHandle->scp.channel,
                                           String_cString(command)
                                          ) != 0
-                    )?ERROR_NONE:ERROR_DELETE_FILE;
+                    ) ? ERROR_NONE : ERROR_DELETE_FILE;
           }
           String_delete(command);
         }
@@ -4565,10 +5092,10 @@ whould this be a possible implementation?
                  char *sshErrorText;
 
                  libssh2_session_last_error(Network_getSSHSession(&storageFileHandle->sftp.socketHandle),&sshErrorText,NULL,0);
-                 error = ERRORX(SSH,
-                                libssh2_session_last_errno(Network_getSSHSession(&storageFileHandle->sftp.socketHandle)),
-                                sshErrorText
-                               );
+                 error = ERRORX_(SSH,
+                                 libssh2_session_last_errno(Network_getSSHSession(&storageFileHandle->sftp.socketHandle)),
+                                 sshErrorText
+                                );
               }
 
               libssh2_sftp_shutdown(storageFileHandle->sftp.sftp);
@@ -4578,10 +5105,10 @@ whould this be a possible implementation?
               char *sshErrorText;
 
               libssh2_session_last_error(Network_getSSHSession(&storageFileHandle->sftp.socketHandle),&sshErrorText,NULL,0);
-              error = ERRORX(SSH,
-                             libssh2_session_last_errno(Network_getSSHSession(&storageFileHandle->sftp.socketHandle)),
-                             sshErrorText
-                            );
+              error = ERRORX_(SSH,
+                              libssh2_session_last_errno(Network_getSSHSession(&storageFileHandle->sftp.socketHandle)),
+                              sshErrorText
+                             );
               Network_disconnect(&storageFileHandle->sftp.socketHandle);
             }
           }
@@ -4630,7 +5157,7 @@ bool Storage_eof(StorageFileHandle *storageFileHandle)
       }
       break;
     case STORAGE_TYPE_FTP:
-      #ifdef HAVE_FTP
+      #if defined(HAVE_CURL) || defined(HAVE_FTP)
         if (!storageFileHandle->jobOptions->dryRunFlag)
         {
           return storageFileHandle->ftp.index >= storageFileHandle->ftp.size;
@@ -4639,8 +5166,8 @@ bool Storage_eof(StorageFileHandle *storageFileHandle)
         {
           return TRUE;
         }
-      #else /* not HAVE_FTP */
-      #endif /* HAVE_FTP */
+      #else /* not HAVE_CURL || HAVE_FTP */
+      #endif /* HAVE_CURL || HAVE_FTP */
       break;
     case STORAGE_TYPE_SSH:
       #ifdef HAVE_SSH2
@@ -4744,20 +5271,247 @@ Errors Storage_read(StorageFileHandle *storageFileHandle,
       }
       break;
     case STORAGE_TYPE_FTP:
-      #ifdef HAVE_FTP
+      #if   defined(HAVE_CURL)
+        {
+          ulong          i;
+          ulong          length;
+          uint64         startTimestamp,endTimestamp;
+          fd_set         fdSetRead,fdSetWrite,fdSetException;
+          int            maxFD;
+          long           curlTimeout;
+          struct timeval timeout;
+          CURLMcode      curlmCode;
+          ulong          n;
+
+          if (!storageFileHandle->jobOptions->dryRunFlag)
+          {
+            assert(storageFileHandle->ftp.curlMultiHandle != NULL);
+            assert(storageFileHandle->ftp.readAheadBuffer.data != NULL);
+
+            // copy as much as available from read-ahead buffer
+            if (   (storageFileHandle->ftp.index >= storageFileHandle->ftp.readAheadBuffer.offset)
+                && (storageFileHandle->ftp.index < (storageFileHandle->ftp.readAheadBuffer.offset+storageFileHandle->ftp.readAheadBuffer.length))
+               )
+            {
+              // copy data
+              i = (ulong)(storageFileHandle->ftp.index-storageFileHandle->ftp.readAheadBuffer.offset);
+              n = MIN(size,storageFileHandle->ftp.readAheadBuffer.length-i);
+              memcpy(buffer,storageFileHandle->ftp.readAheadBuffer.data+i,n);
+
+              // adjust buffer, size, bytes read, index
+              buffer = (byte*)buffer+n;
+              size -= n;
+              (*bytesRead) += n;
+              storageFileHandle->ftp.index += (uint64)n;
+            }
+
+            // read rest of data
+            while (size > 0L)
+            {
+              // get max. number of bytes to send in one step
+              if (storageFileHandle->ftp.bandWidthLimiter.maxBandWidthList != NULL)
+              {
+                length = MIN(storageFileHandle->ftp.bandWidthLimiter.blockSize,size);
+              }
+              else
+              {
+                length = size;
+              }
+
+              // get start time
+              startTimestamp = Misc_getTimestamp();
+
+              if (length < MAX_BUFFER_SIZE)
+              {
+//fprintf(stderr,"%s, %d: storageFileHandle->ftp.runningHandles=%d\n",__FILE__,__LINE__,storageFileHandle->ftp.runningHandles);
+                // read into read-ahead buffer
+                storageFileHandle->ftp.buffer = storageFileHandle->ftp.readAheadBuffer.data;
+                storageFileHandle->ftp.length = MIN((size_t)(storageFileHandle->ftp.size-storageFileHandle->ftp.index),MAX_BUFFER_SIZE);
+                storageFileHandle->ftp.n      = 0;
+                storageFileHandle->ftp.error  = ERROR_NONE;
+                while (   (storageFileHandle->ftp.runningHandles > 0)
+                       && (storageFileHandle->ftp.n < storageFileHandle->ftp.length)
+                       && (storageFileHandle->ftp.error == ERROR_NONE)
+                      )
+                {
+                  // get file descriptors from the transfers
+                  FD_ZERO(&fdSetRead);
+                  FD_ZERO(&fdSetWrite);
+                  FD_ZERO(&fdSetException);
+                  curl_multi_fdset(storageFileHandle->ftp.curlMultiHandle,&fdSetRead,&fdSetWrite,&fdSetException,&maxFD);
+
+                  // get a suitable timeout
+                  curl_multi_timeout(storageFileHandle->ftp.curlMultiHandle,&curlTimeout);
+                  if (curlTimeout >= 0)
+                  {
+                    timeout.tv_sec  = curlTimeout / 1000L;
+                    timeout.tv_usec = (curlTimeout % 1000L) * 1000L;
+                  }
+                  else
+                  {
+                    timeout.tv_sec  = 1L;
+                    timeout.tv_usec = 0L;
+                  }
+
+                  // wait for sockets
+                  switch (select(maxFD+1,&fdSetRead,&fdSetWrite,&fdSetException,&timeout))
+                  {
+                    case -1:
+                      // error
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+                      storageFileHandle->ftp.error = ERROR_NETWORK_SEND;
+                      break;
+                    case 0:
+                      // timeout
+  //fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+  //                    storageFileHandle->ftp.error = CURLE_OPERATION_TIMEOUT;
+                      break;
+                    default:
+                      do
+                      {
+                        curlmCode = curl_multi_perform(storageFileHandle->ftp.curlMultiHandle,&storageFileHandle->ftp.runningHandles);
+//fprintf(stderr,"%s, %d: %ld %ld\n",__FILE__,__LINE__,storageFileHandle->ftp.n,storageFileHandle->ftp.length);
+                      }
+                      while (curlmCode == CURLM_CALL_MULTI_PERFORM);
+                      if (curlmCode != CURLM_OK)
+                      {
+                        storageFileHandle->ftp.error = ERRORX_(NETWORK_SEND,0,curl_multi_strerror(curlmCode));
+                      }
+                      break;
+                  }
+                }
+                if (storageFileHandle->ftp.error != ERROR_NONE)
+                {
+                  error = storageFileHandle->ftp.error;
+                  break;
+                }
+                if (storageFileHandle->ftp.n <= 0)
+                {
+                  error = ERROR_IO_ERROR;
+                  break;
+                }
+//fprintf(stderr,"%s, %d: storageFileHandle->ftp.index=%llu storageFileHandle->ftp.n=%lu\n",__FILE__,__LINE__,storageFileHandle->ftp.index,storageFileHandle->ftp.n);
+                storageFileHandle->ftp.readAheadBuffer.offset = storageFileHandle->ftp.index;
+                storageFileHandle->ftp.readAheadBuffer.length = storageFileHandle->ftp.n;
+
+                // copy data
+                n = MIN(length,storageFileHandle->ftp.readAheadBuffer.length);
+                memcpy(buffer,storageFileHandle->ftp.readAheadBuffer.data,n);
+
+                // adjust buffer, size, bytes read, index
+                buffer = (byte*)buffer+n;
+                size -= n;
+                (*bytesRead) += n;
+                storageFileHandle->ftp.index += (uint64)n;
+              }
+              else
+              {
+                // read direct
+                storageFileHandle->ftp.buffer = buffer;
+                storageFileHandle->ftp.length = length;
+                storageFileHandle->ftp.n      = 0;
+                storageFileHandle->ftp.error  = ERROR_NONE;
+                while (   (storageFileHandle->ftp.runningHandles > 0)
+                       && (storageFileHandle->ftp.n < storageFileHandle->ftp.length)
+                       && (storageFileHandle->ftp.error == ERROR_NONE)
+                      )
+                {
+                  // get file descriptors from the transfers
+                  FD_ZERO(&fdSetRead);
+                  FD_ZERO(&fdSetWrite);
+                  FD_ZERO(&fdSetException);
+                  curl_multi_fdset(storageFileHandle->ftp.curlMultiHandle,&fdSetRead,&fdSetWrite,&fdSetException,&maxFD);
+
+                  // get a suitable timeout
+                  curl_multi_timeout(storageFileHandle->ftp.curlMultiHandle,&curlTimeout);
+                  if (curlTimeout >= 0)
+                  {
+                    timeout.tv_sec  = curlTimeout / 1000L;
+                    timeout.tv_usec = (curlTimeout % 1000L) * 1000L;
+                  }
+                  else
+                  {
+                    timeout.tv_sec  = 1L;
+                    timeout.tv_usec = 0L;
+                  }
+
+                  // wait for sockets
+                  switch (select(maxFD+1,&fdSetRead,&fdSetWrite,&fdSetException,&timeout))
+                  {
+                    case -1:
+                      // error
+  //fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+                      storageFileHandle->ftp.error = ERROR_NETWORK_SEND;
+                      break;
+                    case 0:
+                      // timeout
+  //fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+  //                    storageFileHandle->ftp.error = CURLE_OPERATION_TIMEOUT;
+                      break;
+                    default:
+                      do
+                      {
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+                        curlmCode = curl_multi_perform(storageFileHandle->ftp.curlMultiHandle,&storageFileHandle->ftp.runningHandles);
+fprintf(stderr,"%s, %d: %ld %ld\n",__FILE__,__LINE__,storageFileHandle->ftp.n,storageFileHandle->ftp.length);
+                      }
+                      while (curlmCode == CURLM_CALL_MULTI_PERFORM);
+                      if (curlmCode != CURLM_OK)
+                      {
+                        storageFileHandle->ftp.error = ERRORX_(NETWORK_SEND,0,curl_multi_strerror(curlmCode));
+                      }
+                      break;
+                  }
+                }
+                if (storageFileHandle->ftp.error != ERROR_NONE)
+                {
+                  error = storageFileHandle->ftp.error;
+                  break;
+                }
+                if (storageFileHandle->ftp.n <= 0)
+                {
+                  error = ERROR_IO_ERROR;
+                  break;
+                }
+                n = storageFileHandle->ftp.n;
+
+                // adjust buffer, size, bytes read, index
+                buffer = (byte*)buffer+n;
+                size -= n;
+                (*bytesRead) += n;
+                storageFileHandle->ftp.index += (uint64)n;
+              }
+
+              // get end time
+              endTimestamp = Misc_getTimestamp();
+
+              /* limit used band width if requested (note: when the system time is
+                 changing endTimestamp may become smaller than startTimestamp;
+                 thus do not check this with an assert())
+              */
+              if (endTimestamp >= startTimestamp)
+              {
+                limitBandWidth(&storageFileHandle->ftp.bandWidthLimiter,
+                               n,
+                               endTimestamp-startTimestamp
+                              );
+              }
+            }
+          }
+        }
+      #elif defined(HAVE_FTP)
         {
           ulong   i;
-          ssize_t readBytes;
+          ulong   n;
           ulong   length;
           uint64  startTimestamp,endTimestamp;
-          ulong   n;
+          ssize_t readBytes;
 
           if (!storageFileHandle->jobOptions->dryRunFlag)
           {
             assert(storageFileHandle->ftp.control != NULL);
             assert(storageFileHandle->ftp.data != NULL);
             assert(storageFileHandle->ftp.readAheadBuffer.data != NULL);
-
 
             // copy as much as available from read-ahead buffer
             if (   (storageFileHandle->ftp.index >= storageFileHandle->ftp.readAheadBuffer.offset)
@@ -4812,7 +5566,7 @@ Errors Storage_read(StorageFileHandle *storageFileHandle,
                 }
                 if (readBytes <= 0)
                 {
-                  error = ERROR(IO_ERROR,errno);
+                  error = ERROR_(IO_ERROR,errno);
                   break;
                 }
                 storageFileHandle->ftp.readAheadBuffer.offset = storageFileHandle->ftp.index;
@@ -4878,9 +5632,9 @@ Errors Storage_read(StorageFileHandle *storageFileHandle,
             }
           }
         }
-      #else /* not HAVE_FTP */
+      #else /* not HAVE_CURL || HAVE_FTP */
         error = ERROR_FUNCTION_NOT_SUPPORTED;
-      #endif /* HAVE_FTP */
+      #endif /* HAVE_CURL || HAVE_FTP */
       break;
     case STORAGE_TYPE_SSH:
       error = ERROR_FUNCTION_NOT_SUPPORTED;
@@ -4948,7 +5702,7 @@ Errors Storage_read(StorageFileHandle *storageFileHandle,
                 while (n == LIBSSH2_ERROR_EAGAIN);
                 if (n < 0)
                 {
-                  error = ERROR(IO_ERROR,errno);
+                  error = ERROR_(IO_ERROR,errno);
                   break;
                 }
                 storageFileHandle->scp.readAheadBuffer.offset = storageFileHandle->scp.index;
@@ -4980,7 +5734,7 @@ Errors Storage_read(StorageFileHandle *storageFileHandle,
                 while (n == LIBSSH2_ERROR_EAGAIN);
                 if (n < 0)
                 {
-                  error = ERROR(IO_ERROR,errno);
+                  error = ERROR_(IO_ERROR,errno);
                   break;
                 }
 
@@ -5063,11 +5817,13 @@ Errors Storage_read(StorageFileHandle *storageFileHandle,
               startTimestamp          = Misc_getTimestamp();
               startTotalReceivedBytes = storageFileHandle->sftp.totalReceivedBytes;
 
-              #ifdef HAVE_SSH2_SFTP_SEEK2
+              #if   defined(HAVE_SSH2_SFTP_SEEK64)
+                libssh2_sftp_seek64(storageFileHandle->sftp.sftpHandle,storageFileHandle->sftp.index);
+              #elif defined(HAVE_SSH2_SFTP_SEEK2)
                 libssh2_sftp_seek2(storageFileHandle->sftp.sftpHandle,storageFileHandle->sftp.index);
-              #else
+              #else /* not HAVE_SSH2_SFTP_SEEK64 || HAVE_SSH2_SFTP_SEEK2 */
                 libssh2_sftp_seek(storageFileHandle->sftp.sftpHandle,storageFileHandle->sftp.index);
-              #endif
+              #endif /* HAVE_SSH2_SFTP_SEEK64 || HAVE_SSH2_SFTP_SEEK2 */
 
               if (length < MAX_BUFFER_SIZE)
               {
@@ -5078,7 +5834,7 @@ Errors Storage_read(StorageFileHandle *storageFileHandle,
                                      );
                 if (n < 0)
                 {
-                  error = ERROR(IO_ERROR,errno);
+                  error = ERROR_(IO_ERROR,errno);
                   break;
                 }
                 storageFileHandle->sftp.readAheadBuffer.offset = storageFileHandle->sftp.index;
@@ -5103,7 +5859,7 @@ Errors Storage_read(StorageFileHandle *storageFileHandle,
                                      );
                 if (n < 0)
                 {
-                  error = ERROR(IO_ERROR,errno);
+                  error = ERROR_(IO_ERROR,errno);
                   break;
                 }
 
@@ -5173,7 +5929,7 @@ Errors Storage_read(StorageFileHandle *storageFileHandle,
                                                  );
                 if (readBytes < ISO_BLOCKSIZE)
                 {
-                  error = ERROR(IO_ERROR,errno);
+                  error = ERROR_(IO_ERROR,errno);
                   break;
                 }
                 storageFileHandle->opticalDisk.read.buffer.blockIndex = blockIndex;
@@ -5238,7 +5994,125 @@ Errors Storage_write(StorageFileHandle *storageFileHandle,
       }
       break;
     case STORAGE_TYPE_FTP:
-      #ifdef HAVE_FTP
+      #if   defined(HAVE_CURL)
+        {
+          ulong          writtenBytes;
+          ulong          length;
+          uint64         startTimestamp,endTimestamp;
+          fd_set         fdSetRead,fdSetWrite,fdSetException;
+          int            maxFD;
+          long           curlTimeout;
+          struct timeval timeout;
+          CURLMcode      curlmCode;
+
+          if (!storageFileHandle->jobOptions->dryRunFlag)
+          {
+            assert(storageFileHandle->ftp.curlMultiHandle != NULL);
+
+            writtenBytes = 0L;
+            while (writtenBytes < size)
+            {
+              // get max. number of bytes to send in one step
+              if (storageFileHandle->ftp.bandWidthLimiter.maxBandWidthList != NULL)
+              {
+                length = MIN(storageFileHandle->ftp.bandWidthLimiter.blockSize,size-writtenBytes);
+              }
+              else
+              {
+                length = size-writtenBytes;
+              }
+
+              // get start time
+              startTimestamp = Misc_getTimestamp();
+
+              // send data
+//fprintf(stderr,"%s, %d: storageFileHandle->ftp.runningHandles=%d\n",__FILE__,__LINE__,storageFileHandle->ftp.runningHandles);
+              storageFileHandle->ftp.buffer = buffer;
+              storageFileHandle->ftp.length = length;
+              storageFileHandle->ftp.n      = 0;
+              storageFileHandle->ftp.error  = ERROR_NONE;
+              while (   (storageFileHandle->ftp.runningHandles > 0)
+                     && (storageFileHandle->ftp.n < storageFileHandle->ftp.length)
+                     && (storageFileHandle->ftp.error == ERROR_NONE)
+                    )
+              {
+                // get file descriptors from the transfers
+                FD_ZERO(&fdSetRead);
+                FD_ZERO(&fdSetWrite);
+                FD_ZERO(&fdSetException);
+                curl_multi_fdset(storageFileHandle->ftp.curlMultiHandle,&fdSetRead,&fdSetWrite,&fdSetException,&maxFD);
+
+                // get a suitable timeout
+                curl_multi_timeout(storageFileHandle->ftp.curlMultiHandle,&curlTimeout);
+                if (curlTimeout >= 0)
+                {
+                  timeout.tv_sec  = curlTimeout / 1000L;
+                  timeout.tv_usec = (curlTimeout % 1000L) * 1000L;
+                }
+                else
+                {
+                  timeout.tv_sec  = 1L;
+                  timeout.tv_usec = 0L;
+                }
+
+                // wait for sockets
+                switch (select(maxFD+1,&fdSetRead,&fdSetWrite,&fdSetException,&timeout))
+                {
+                  case -1:
+                    // error
+//fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+                    storageFileHandle->ftp.error = ERROR_NETWORK_SEND;
+                    break;
+                  case 0:
+                    // timeout
+//fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+//                    storageFileHandle->ftp.error = CURLE_OPERATION_TIMEOUT;
+                    break;
+                  default:
+                    do
+                    {
+                      curlmCode = curl_multi_perform(storageFileHandle->ftp.curlMultiHandle,&storageFileHandle->ftp.runningHandles);
+//fprintf(stderr,"%s, %d: %ld %ld\n",__FILE__,__LINE__,storageFileHandle->ftp.n,storageFileHandle->ftp.length);
+                    }
+                    while (curlmCode == CURLM_CALL_MULTI_PERFORM);
+                    if (curlmCode != CURLM_OK)
+                    {
+                      storageFileHandle->ftp.error = ERRORX_(NETWORK_SEND,0,curl_multi_strerror(curlmCode));
+                    }
+                    break;
+                }
+              }
+              if (storageFileHandle->ftp.error != ERROR_NONE)
+              {
+                error = storageFileHandle->ftp.error;
+                break;
+              }
+              if      (storageFileHandle->ftp.n <= 0)
+              {
+                error = ERROR_NETWORK_SEND;
+                break;
+              }
+              buffer = (byte*)buffer+storageFileHandle->ftp.n;
+              writtenBytes += storageFileHandle->ftp.n;
+
+              // get end time
+              endTimestamp = Misc_getTimestamp();
+
+              /* limit used band width if requested (note: when the system time is
+                 changing endTimestamp may become smaller than startTimestamp;
+                 thus do not check this with an assert())
+              */
+              if (endTimestamp >= startTimestamp)
+              {
+                limitBandWidth(&storageFileHandle->ftp.bandWidthLimiter,
+                               storageFileHandle->ftp.n,
+                               endTimestamp-startTimestamp
+                              );
+              }
+            }
+          }
+        }
+      #elif defined(HAVE_FTP)
         {
           ulong  writtenBytes;
           ulong  length;
@@ -5302,8 +6176,8 @@ Errors Storage_write(StorageFileHandle *storageFileHandle,
             }
           }
         }
-      #else /* not HAVE_FTP */
-      #endif /* HAVE_FTP */
+      #else /* not HAVE_CURL || HAVE_FTP */
+      #endif /* HAVE_CURL || HAVE_FTP */
       break;
     case STORAGE_TYPE_SSH:
       error = ERROR_FUNCTION_NOT_SUPPORTED;
@@ -5535,13 +6409,13 @@ uint64 Storage_getSize(StorageFileHandle *storageFileHandle)
       }
       break;
     case STORAGE_TYPE_FTP:
-      #ifdef HAVE_FTP
+      #if defined(HAVE_CURL) || defined(HAVE_FTP)
         if (!storageFileHandle->jobOptions->dryRunFlag)
         {
           size = storageFileHandle->ftp.size;
         }
-      #else /* not HAVE_FTP */
-      #endif /* HAVE_FTP */
+      #else /* not HAVE_CURL || HAVE_FTP */
+      #endif /* HAVE_CURL || HAVE_FTP */
       break;
     case STORAGE_TYPE_SSH:
       #ifdef HAVE_SSH2
@@ -5618,15 +6492,15 @@ Errors Storage_tell(StorageFileHandle *storageFileHandle,
       }
       break;
     case STORAGE_TYPE_FTP:
-      #ifdef HAVE_FTP
+      #if defined(HAVE_CURL) || defined(HAVE_FTP)
         if (!storageFileHandle->jobOptions->dryRunFlag)
         {
           (*offset) = storageFileHandle->ftp.index;
           error     = ERROR_NONE;
         }
-      #else /* not HAVE_FTP */
+      #else /* not HAVE_CURL || HAVE_FTP */
         error = ERROR_FUNCTION_NOT_SUPPORTED;
-      #endif /* HAVE_FTP */
+      #endif /* HAVE_CURL || HAVE_FTP */
       break;
     case STORAGE_TYPE_SSH:
       #ifdef HAVE_SSH2
@@ -5706,7 +6580,122 @@ Errors Storage_seek(StorageFileHandle *storageFileHandle,
       }
       break;
     case STORAGE_TYPE_FTP:
-      #ifdef HAVE_FTP
+      #if   defined(HAVE_CURL)
+        {
+          CURLcode  curlCode;
+          CURLMcode curlMCode;
+#warning todo curl
+
+        if (!storageFileHandle->jobOptions->dryRunFlag)
+        {
+          assert(storageFileHandle->ftp.readAheadBuffer.data != NULL);
+
+          if      (offset > storageFileHandle->ftp.index)
+          {
+            uint64         skip;
+            uint64         i;
+            uint64         n;
+            fd_set         fdSetRead,fdSetWrite,fdSetException;
+            int            maxFD;
+            long           curlTimeout;
+            struct timeval timeout;
+            CURLMcode      curlmCode;
+
+            skip = offset-storageFileHandle->ftp.index;
+
+            while (skip > 0LL)
+            {
+              // skip data in read-ahead buffer
+              if (   (storageFileHandle->ftp.index >= storageFileHandle->ftp.readAheadBuffer.offset)
+                  && (storageFileHandle->ftp.index < (storageFileHandle->ftp.readAheadBuffer.offset+storageFileHandle->ftp.readAheadBuffer.length))
+                 )
+              {
+                i = storageFileHandle->ftp.index-storageFileHandle->ftp.readAheadBuffer.offset;
+                n = MIN(skip,storageFileHandle->ftp.readAheadBuffer.length-i);
+                skip -= n;
+                storageFileHandle->ftp.index += n;
+              }
+
+              if (skip > 0LL)
+              {
+                // read data
+                storageFileHandle->ftp.buffer = storageFileHandle->ftp.readAheadBuffer.data;
+                storageFileHandle->ftp.length = MIN((size_t)skip,MAX_BUFFER_SIZE);
+                storageFileHandle->ftp.n      = 0;
+                storageFileHandle->ftp.error  = ERROR_NONE;
+                while (   (storageFileHandle->ftp.runningHandles > 0)
+                       && (storageFileHandle->ftp.n < storageFileHandle->ftp.length)
+                       && (storageFileHandle->ftp.error == ERROR_NONE)
+                      )
+                {
+                  // get file descriptors from the transfers
+                  FD_ZERO(&fdSetRead);
+                  FD_ZERO(&fdSetWrite);
+                  FD_ZERO(&fdSetException);
+                  curl_multi_fdset(storageFileHandle->ftp.curlMultiHandle,&fdSetRead,&fdSetWrite,&fdSetException,&maxFD);
+
+                  // get a suitable timeout
+                  curl_multi_timeout(storageFileHandle->ftp.curlMultiHandle,&curlTimeout);
+                  if (curlTimeout >= 0)
+                  {
+                    timeout.tv_sec  = curlTimeout / 1000L;
+                    timeout.tv_usec = (curlTimeout % 1000L) * 1000L;
+                  }
+                  else
+                  {
+                    timeout.tv_sec  = 1L;
+                    timeout.tv_usec = 0L;
+                  }
+
+                  // wait for sockets
+                  switch (select(maxFD+1,&fdSetRead,&fdSetWrite,&fdSetException,&timeout))
+                  {
+                    case -1:
+                      // error
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+                      storageFileHandle->ftp.error = ERROR_NETWORK_SEND;
+                      break;
+                    case 0:
+                      // timeout
+  //fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+  //                    storageFileHandle->ftp.error = CURLE_OPERATION_TIMEOUT;
+                      break;
+                    default:
+                      do
+                      {
+                        curlmCode = curl_multi_perform(storageFileHandle->ftp.curlMultiHandle,&storageFileHandle->ftp.runningHandles);
+//fprintf(stderr,"%s, %d: %ld %ld\n",__FILE__,__LINE__,storageFileHandle->ftp.n,storageFileHandle->ftp.length);
+                      }
+                      while (curlmCode == CURLM_CALL_MULTI_PERFORM);
+                      if (curlmCode != CURLM_OK)
+                      {
+                        storageFileHandle->ftp.error = ERRORX_(NETWORK_SEND,0,curl_multi_strerror(curlmCode));
+                      }
+                      break;
+                  }
+                }
+                if (storageFileHandle->ftp.error != ERROR_NONE)
+                {
+                  error = storageFileHandle->ftp.error;
+                  break;
+                }
+                if (storageFileHandle->ftp.n <= 0)
+                {
+                  error = ERROR_IO_ERROR;
+                  break;
+                }
+                storageFileHandle->ftp.readAheadBuffer.offset = storageFileHandle->ftp.index;
+                storageFileHandle->ftp.readAheadBuffer.length = (uint64)storageFileHandle->ftp.n;
+              }
+            }
+          }
+          else if (offset < storageFileHandle->ftp.index)
+          {
+            error = ERROR_FUNCTION_NOT_SUPPORTED;
+          }
+        }
+        }
+      #elif defined(HAVE_FTP)
         /* ftp protocol does not support a seek-function. Thus try to
            read and discard data to position the read index to the
            requested offset.
@@ -5759,7 +6748,7 @@ Errors Storage_seek(StorageFileHandle *storageFileHandle,
                 }
                 if (readBytes <= 0)
                 {
-                  error = ERROR(IO_ERROR,errno);
+                  error = ERROR_(IO_ERROR,errno);
                   break;
                 }
                 storageFileHandle->ftp.readAheadBuffer.offset = storageFileHandle->ftp.index;
@@ -5772,9 +6761,9 @@ Errors Storage_seek(StorageFileHandle *storageFileHandle,
             error = ERROR_FUNCTION_NOT_SUPPORTED;
           }
         }
-      #else /* not HAVE_FTP */
+      #else /* not HAVE_CURL || HAVE_FTP */
         error = ERROR_FUNCTION_NOT_SUPPORTED;
-      #endif /* HAVE_FTP */
+      #endif /* HAVE_CURL || HAVE_FTP */
       break;
     case STORAGE_TYPE_SSH:
       #ifdef HAVE_SSH2
@@ -5823,7 +6812,7 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
                 // wait for data
                 if (!waitSessionSocket(&storageFileHandle->scp.socketHandle))
                 {
-                  error = ERROR(IO_ERROR,errno);
+                  error = ERROR_(IO_ERROR,errno);
                   break;
                 }
 
@@ -5834,7 +6823,7 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
                                                 );
                 if (readBytes < 0)
                 {
-                  error = ERROR(IO_ERROR,errno);
+                  error = ERROR_(IO_ERROR,errno);
                   break;
                 }
                 storageFileHandle->scp.readAheadBuffer.offset = storageFileHandle->scp.index;
@@ -5855,15 +6844,13 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
       #ifdef HAVE_SSH2
         if (!storageFileHandle->jobOptions->dryRunFlag)
         {
-          #ifdef HAVE_SSH2_SFTP_SEEK2
-            libssh2_sftp_seek2(storageFileHandle->sftp.sftpHandle,
-                               offset
-                              );
-          #else
-            libssh2_sftp_seek(storageFileHandle->sftp.sftpHandle,
-                              (size_t)offset
-                             );
-          #endif
+          #if   defined(HAVE_SSH2_SFTP_SEEK64)
+            libssh2_sftp_seek64(storageFileHandle->sftp.sftpHandle,offset);
+          #elif defined(HAVE_SSH2_SFTP_SEEK2)
+            libssh2_sftp_seek2(storageFileHandle->sftp.sftpHandle,offset);
+          #else /* not HAVE_SSH2_SFTP_SEEK64 || HAVE_SSH2_SFTP_SEEK2 */
+            libssh2_sftp_seek(storageFileHandle->sftp.sftpHandle,(size_t)offset);
+          #endif /* HAVE_SSH2_SFTP_SEEK64 || HAVE_SSH2_SFTP_SEEK2 */
           storageFileHandle->sftp.index = offset;
         }
       #else /* not HAVE_SSH2 */
@@ -5942,7 +6929,9 @@ Errors Storage_openDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
                                     );
       break;
     case STORAGE_TYPE_FTP:
-      #ifdef HAVE_FTP
+      #if   defined(HAVE_CURL)
+#warning todo curl
+      #elif defined(HAVE_FTP)
         {
           String     hostName;
           uint       hostPort;
@@ -6054,7 +7043,7 @@ Errors Storage_openDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
           // connect
           if (!Network_hostExists(hostName))
           {
-            error = ERRORX(HOST_NOT_FOUND,0,String_cString(hostName));
+            error = ERRORX_(HOST_NOT_FOUND,0,String_cString(hostName));
             Password_delete(loginPassword);
             String_delete(loginName);
             String_delete(hostName);
@@ -6103,7 +7092,7 @@ Errors Storage_openDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
             FtpOptions(FTPLIB_CONNMODE,FTPLIB_PASSIVE,control);
             if (FtpDir(String_cString(storageDirectoryListHandle->ftp.fileListFileName),String_cString(pathName),control) != 1)
             {
-              error = ERRORX(OPEN_DIRECTORY,0,String_cString(pathName));
+              error = ERRORX_(OPEN_DIRECTORY,0,String_cString(pathName));
               FtpClose(control);
               Password_delete(loginPassword);
               String_delete(loginName);
@@ -6136,11 +7125,11 @@ Errors Storage_openDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
           String_delete(loginName);
           String_delete(hostName);
         }
-      #else /* not HAVE_FTP */
+      #else /* not HAVE_CURL || HAVE_FTP */
         UNUSED_VARIABLE(jobOptions);
 
         error = ERROR_FUNCTION_NOT_SUPPORTED;
-      #endif /* HAVE_FTP */
+      #endif /* HAVE_CURL || HAVE_FTP */
       break;
     case STORAGE_TYPE_SSH:
       #ifdef HAVE_SSH2
@@ -6196,9 +7185,9 @@ error = ERROR_FUNCTION_NOT_SUPPORTED;
           error = Network_connect(&storageDirectoryListHandle->sftp.socketHandle,
                                   SOCKET_TYPE_SSH,
                                   hostName,
-                                  (hostPort != 0)?hostPort:sshServer.port,
+                                  (hostPort != 0) ? hostPort : sshServer.port,
                                   loginName,
-                                  (sshServer.password != NULL)?sshServer.password:defaultSSHPassword,
+                                  (sshServer.password != NULL) ? sshServer.password : defaultSSHPassword,
                                   sshServer.publicKeyFileName,
                                   sshServer.privateKeyFileName,
                                   0
@@ -6217,7 +7206,7 @@ error = ERROR_FUNCTION_NOT_SUPPORTED;
           storageDirectoryListHandle->sftp.sftp = libssh2_sftp_init(Network_getSSHSession(&storageDirectoryListHandle->sftp.socketHandle));
           if (storageDirectoryListHandle->sftp.sftp == NULL)
           {
-            error = ERROR(SSH,libssh2_session_last_errno(Network_getSSHSession(&storageDirectoryListHandle->sftp.socketHandle)));
+            error = ERROR_(SSH,libssh2_session_last_errno(Network_getSSHSession(&storageDirectoryListHandle->sftp.socketHandle)));
             Network_disconnect(&storageDirectoryListHandle->sftp.socketHandle);
             String_delete(hostName);
             String_delete(loginName);
@@ -6232,7 +7221,7 @@ error = ERROR_FUNCTION_NOT_SUPPORTED;
                                                                             );
           if (storageDirectoryListHandle->sftp.sftpHandle == NULL)
           {
-            error = ERROR(SSH,libssh2_session_last_errno(Network_getSSHSession(&storageDirectoryListHandle->sftp.socketHandle)));
+            error = ERROR_(SSH,libssh2_session_last_errno(Network_getSSHSession(&storageDirectoryListHandle->sftp.socketHandle)));
             libssh2_sftp_shutdown(storageDirectoryListHandle->sftp.sftp);
             Network_disconnect(&storageDirectoryListHandle->sftp.socketHandle);
             String_delete(hostName);
@@ -6276,7 +7265,7 @@ error = ERROR_FUNCTION_NOT_SUPPORTED;
         // check if device exists
         if (!File_exists(storageName))
         {
-          return ERRORX(OPTICAL_DISK_NOT_FOUND,0,String_cString(storageName));
+          return ERRORX_(OPTICAL_DISK_NOT_FOUND,0,String_cString(storageName));
         }
 
         // open optical disk/ISO 9660 file
@@ -6285,11 +7274,11 @@ error = ERROR_FUNCTION_NOT_SUPPORTED;
         {
           if (File_isFile(storageName))
           {
-            error = ERRORX(OPEN_ISO9660_FILE,errno,String_cString(storageName));
+            error = ERRORX_(OPEN_ISO9660_FILE,errno,String_cString(storageName));
           }
           else
           {
-            error = ERRORX(OPEN_OPTICAL_DISK,errno,String_cString(storageName));
+            error = ERRORX_(OPEN_OPTICAL_DISK,errno,String_cString(storageName));
           }
         }
 
@@ -6300,7 +7289,7 @@ error = ERROR_FUNCTION_NOT_SUPPORTED;
         if (storageDirectoryListHandle->opticalDisk.cdioList == NULL)
         {
           iso9660_close(storageDirectoryListHandle->opticalDisk.iso9660Handle);
-          return ERRORX(FILE_NOT_FOUND,errno,String_cString(pathName));
+          return ERRORX_(FILE_NOT_FOUND_,errno,String_cString(pathName));
         }
 
         storageDirectoryListHandle->opticalDisk.cdioNextNode = _cdio_list_begin(storageDirectoryListHandle->opticalDisk.cdioList);
@@ -6342,13 +7331,15 @@ void Storage_closeDirectoryList(StorageDirectoryListHandle *storageDirectoryList
       File_closeDirectoryList(&storageDirectoryListHandle->fileSystem.directoryListHandle);
       break;
     case STORAGE_TYPE_FTP:
-      #ifdef HAVE_FTP
+      #if   defined(HAVE_CURL)
+#warning todo curl
+      #elif defined(HAVE_FTP)
         File_close(&storageDirectoryListHandle->ftp.fileHandle);
         File_delete(storageDirectoryListHandle->ftp.fileListFileName,FALSE);
         String_delete(storageDirectoryListHandle->ftp.line);
         String_delete(storageDirectoryListHandle->ftp.fileListFileName);
-      #else /* not HAVE_FTP */
-      #endif /* HAVE_FTP */
+      #else /* not HAVE_CURL || HAVE_FTP */
+      #endif /* HAVE_CURL || HAVE_FTP */
       break;
     case STORAGE_TYPE_SSH:
       #ifdef HAVE_SSH2
@@ -6405,10 +7396,12 @@ bool Storage_endOfDirectoryList(StorageDirectoryListHandle *storageDirectoryList
       endOfDirectoryFlag = File_endOfDirectoryList(&storageDirectoryListHandle->fileSystem.directoryListHandle);
       break;
     case STORAGE_TYPE_FTP:
-      #ifdef HAVE_FTP
+      #if   defined(HAVE_CURL)
+#warning todo curl
+      #elif defined(HAVE_FTP)
         endOfDirectoryFlag = File_eof(&storageDirectoryListHandle->ftp.fileHandle);
-      #else /* not HAVE_FTP */
-      #endif /* HAVE_FTP */
+      #else /* not HAVE_CURL || HAVE_FTP */
+      #endif /* HAVE_CURL || HAVE_FTP */
       break;
     case STORAGE_TYPE_SSH:
       #ifdef HAVE_SSH2
@@ -6501,7 +7494,9 @@ Errors Storage_readDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
       }
       break;
     case STORAGE_TYPE_FTP:
-      #ifdef HAVE_FTP
+      #if   defined(HAVE_CURL)
+#warning todo curl
+      #elif defined(HAVE_FTP)
         {
           bool   readFlag;
           char   permission[32];
@@ -6651,8 +7646,8 @@ Errors Storage_readDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
             }
           }
         }
-      #else /* not HAVE_FTP */
-      #endif /* HAVE_FTP */
+      #else /* not HAVE_CURL || HAVE_FTP */
+      #endif /* HAVE_CURL || HAVE_FTP */
       break;
     case STORAGE_TYPE_SSH:
       #ifdef HAVE_SSH2
@@ -6690,7 +7685,7 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
               }
               else
               {
-                error = ERROR(IO_ERROR,errno);
+                error = ERROR_(IO_ERROR,errno);
               }
             }
             while (!storageDirectoryListHandle->sftp.entryReadFlag && (error == ERROR_NONE));
@@ -6715,10 +7710,12 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
               {
                 fileInfo->type        = FILE_TYPE_DIRECTORY;
               }
+              #ifdef HAVE_S_ISLNK
               else if (S_ISLNK(storageDirectoryListHandle->sftp.attributes.permissions))
               {
                 fileInfo->type        = FILE_TYPE_LINK;
               }
+              #endif /* HAVE_S_ISLNK */
               else if (S_ISCHR(storageDirectoryListHandle->sftp.attributes.permissions))
               {
                 fileInfo->type        = FILE_TYPE_SPECIAL;
@@ -6734,11 +7731,13 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
                 fileInfo->type        = FILE_TYPE_SPECIAL;
                 fileInfo->specialType = FILE_SPECIAL_TYPE_FIFO;
               }
+              #ifdef HAVE_S_ISSOCK
               else if (S_ISSOCK(storageDirectoryListHandle->sftp.attributes.permissions))
               {
                 fileInfo->type        = FILE_TYPE_SPECIAL;
                 fileInfo->specialType = FILE_SPECIAL_TYPE_SOCKET;
               }
+              #endif /* HAVE_S_ISSOCK */
               else
               {
                 fileInfo->type        = FILE_TYPE_UNKNOWN;
