@@ -29,7 +29,14 @@ ERROR DAEMON_FAIL                    "run as daemon fail"
 ERROR IPC                            "inter-process communication fail"
 
 // patterns
-ERROR INVALID_PATTERN                "init pattern matching"
+ERROR INVALID_PATTERN
+  strncpy(errorText,"invalid pattern",sizeof(errorText));
+  if (ERROR_TEXT != NULL)
+  {
+    strncat(errorText,": ",sizeof(errorText)-1-strlen(errorText));
+    strncat(errorText,ERROR_TEXT,sizeof(errorText)-1-strlen(errorText));
+  }
+  errorText[sizeof(errorText)-1] = '\0';
 
 // TLS/SSL
 ERROR INIT_TLS                       "init TLS (SSL) fail"
@@ -80,6 +87,9 @@ ERROR SSH
     strncpy(errorText,"ssh protocol error",sizeof(errorText));
   }
   errorText[sizeof(errorText)-1] = '\0';
+
+// storage
+ERROR INIT_STORAGE                   "init storage fail"
 
 // FTP
 ERROR INVALID_FTP_SPECIFIER          "invalid FTP specifier"
@@ -185,6 +195,7 @@ ERROR WRONG_PRIVATE_KEY              "wrong private decryption key"
 // file i/o
 ERROR CREATE_FILE
 ERROR OPEN_FILE
+ERROR CREATE_DIRECTORY
 ERROR OPEN_DIRECTORY
   // Note: do not add error text to error message if error number is set; file name should be part of error text
   if (ERROR_ERRNO != 0)
@@ -201,6 +212,9 @@ ERROR OPEN_DIRECTORY
         break;
       case ERROR_OPEN_FILE:
         strncat(errorText,"open file: ",sizeof(errorText)-1-strlen(errorText));
+        break;
+      case ERROR_CREATE_DIRECTORY:
+        strncat(errorText,"create directory: ",sizeof(errorText)-1-strlen(errorText));
         break;
       case ERROR_OPEN_DIRECTORY:
         strncat(errorText,"open directory: ",sizeof(errorText)-1-strlen(errorText));
