@@ -312,7 +312,15 @@ typedef struct
 
   bool                   noDefaultConfigFlag;            // TRUE iff default config should not be read
   bool                   quietFlag;                      // TRUE iff suppress any output
-  long                   verboseLevel;
+  long                   verboseLevel;                   /* verbosity level
+                                                              0 - none
+                                                              1 - fatal errors
+                                                              2 - processing information
+                                                              3 - external programs
+                                                              4 - stdout+stderr of external programs
+                                                              5 - some SSH debug debug
+                                                              6 - all SSH/FTP debug
+                                                         */
 
   bool                   serverDebugFlag;                // TRUE iff server debug enabled (for debug only)
 } GlobalOptions;
