@@ -19,6 +19,9 @@
 /* file separator char */
 #undef FILE_SEPARATOR_CHAR
 
+/* file separator string */
+#undef FILE_SEPARATOR_STRING
+
 /* Define to 1 if you have the <arpa/inet.h> header file. */
 #undef HAVE_ARPA_INET_H
 
@@ -46,8 +49,14 @@
 /* crypto installed */
 #undef HAVE_CRYPTO
 
+/* curl installed */
+#undef HAVE_CURL
+
 /* fdatasync() available */
 #undef HAVE_FDATASYNC
+
+/* fork() available */
+#undef HAVE_FORK
 
 /* fseeko() available */
 #undef HAVE_FSEEKO
@@ -151,6 +160,9 @@
 /* defined if LLONG_MIN is available */
 #undef HAVE_LLONG_MIN
 
+/* localtime_r() available */
+#undef HAVE_LOCALTIME_R
+
 /* defined if ulong is available */
 #undef HAVE_LONG_LONG
 
@@ -187,6 +199,9 @@
 /* mktemp() available */
 #undef HAVE_MKTEMP
 
+/* nanosleep() available */
+#undef HAVE_NANOSLEEP
+
 /* Define to 1 if you have the <netdb.h> header file. */
 #undef HAVE_NETDB_H
 
@@ -195,6 +210,9 @@
 
 /* pcre installed */
 #undef HAVE_PCRE
+
+/* pipe() available */
+#undef HAVE_PIPE
 
 /* posix_fadvise() available */
 #undef HAVE_POSIX_FADVISE
@@ -234,6 +252,9 @@
 
 /* SSH2 has libssh2_sftp_seek2() function */
 #undef HAVE_SSH2_SFTP_SEEK2
+
+/* SSH2 has libssh2_sftp_seek64() function */
+#undef HAVE_SSH2_SFTP_SEEK64
 
 /* stat() available */
 #undef HAVE_STAT
@@ -286,6 +307,9 @@
 /* Define to 1 if you have the <sys/types.h> header file. */
 #undef HAVE_SYS_TYPES_H
 
+/* Define to 1 if you have the <sys/wait.h> header file. */
+#undef HAVE_SYS_WAIT_H
+
 /* S_IRGRP available */
 #undef HAVE_S_IRGRP
 
@@ -316,6 +340,9 @@
 /* TASN.1 installed */
 #undef HAVE_TASN1
 
+/* Define to 1 if you have the <termios.h> header file. */
+#undef HAVE_TERMIOS_H
+
 /* defined if uint is available */
 #undef HAVE_UINT
 
@@ -327,6 +354,9 @@
 
 /* Define to 1 if you have the <unistd.h> header file. */
 #undef HAVE_UNISTD_H
+
+/* waitpid() available */
+#undef HAVE_WAITPID
 
 /* xdelta installed */
 #undef HAVE_XDELTA
