@@ -354,7 +354,7 @@ String String_remove(String string, ulong index, ulong length);
 *          String_replaceBuffer
 * Purpose: replace part of string with other string
 * Input  : string         - string
-*          index          - index where to insert
+*          index          - index where to replace
 *          length         - length to replace
 *          insertString/s - string to insert
 *          ch             - character to insert
@@ -369,6 +369,22 @@ String String_replace(String string, ulong index, ulong length, const String ins
 String String_replaceCString(String string, ulong index, ulong length, const char *s);
 String String_replaceChar(String string, ulong index, ulong length, char ch);
 String String_replaceBuffer(String string, ulong index, ulong length, const char *buffer, ulong bufferLength);
+
+/***********************************************************************\
+* Name   : String_replaceAll, String_replaceAllCString, String_replaceAllChar
+* Purpose: replace all strings with other string
+* Input  : string                 - string
+*          index                  - index where to replace
+*          fromString/from/fromCh - string/character to replace
+*          toString/to/toCh       - new string/character
+* Output : -
+* Return : string
+* Notes  : -
+\***********************************************************************/
+
+String String_replaceAll(String string, ulong index, const String fromString, const String toString);
+String String_replaceAllCString(String string, ulong index, const char *from, const char *to);
+String String_replaceAllChar(String string, ulong index, ulong length, char fromCh, char toCh);
 
 /***********************************************************************\
 * Name   : String_map, String_mapCString, String_mapChar,

@@ -26,6 +26,7 @@
 #else
   #error No regular expression library available!
 #endif /* HAVE_PCRE || HAVE_REGEX_H */
+#include <errno.h>
 #ifdef HAVE_BACKTRACE
   #include <execinfo.h>
 #endif
@@ -886,7 +887,7 @@ HALT_NOT_YET_IMPLEMENTED();
 #endif /* 0 */
         case 'y':
           data.i = va_arg(arguments,int);
-          String_appendChar(string,(data.i != 0)?'1':'0');
+          String_appendChar(string,(data.i != 0) ? '1' : '0');
           break;
         case '%':
           String_appendChar(string,'%');
@@ -1594,7 +1595,7 @@ LOCAL bool parseString(const char    *string,
   }
   if (nextIndex != NULL)
   {
-    (*nextIndex) = (index >= length)?STRING_END:index;
+    (*nextIndex) = (index >= length) ? STRING_END : index;
   }
   else
   {
@@ -2677,6 +2678,27 @@ String String_replaceBuffer(String string, ulong index, ulong length, const char
   return string;
 }
 
+String String_replaceAll(String string, ulong index, const String fromString, const String toString)
+{
+  STRING_CHECK_VALID(string);
+
+  return String_map(string,index,&fromString,&toString,1);
+}
+
+String String_replaceAllCString(String string, ulong index, const char *from, const char *to)
+{
+  STRING_CHECK_VALID(string);
+
+  return String_mapCString(string,index,&from,&to,1);
+}
+
+String String_replaceAllChar(String string, ulong index, ulong length, char fromCh, char toCh)
+{
+  STRING_CHECK_VALID(string);
+
+  return String_mapChar(string,index,&fromCh,&toCh,1);
+}
+
 String String_map(String string, ulong index, const String from[], const String to[], uint count)
 {
   uint  z;
@@ -3132,7 +3154,7 @@ bool String_subEqualsBuffer(const String string, const char *buffer, ulong buffe
   {
     STRING_CHECK_VALID(string);
 
-    i = (index != STRING_END)?index:(long)string->length-(long)length;
+    i = (index != STRING_END) ? index : (long)string->length-(long)length;
     if (   (i >= 0)
         && ((i+length) <= string->length)
         && (length <= bufferLength)
@@ -3240,7 +3262,7 @@ bool String_subEqualsIgnoreCaseBuffer(const String string, const char *buffer, u
   {
     STRING_CHECK_VALID(string);
 
-    i = (index != STRING_END)?index:(long)string->length-(long)length;
+    i = (index != STRING_END) ? index : (long)string->length-(long)length;
     if (   (i >= 0)
         && ((i+length) <= string->length)
         && (length <= bufferLength)
@@ -3604,7 +3626,7 @@ long String_findLastChar(const String string, long index, char ch)
     i--;
   }
 
-  return (i >= 0)?i:-1;
+  return (i >= 0) ? i : -1;
 }
 
 String String_iterate(                      String string,
@@ -4407,7 +4429,7 @@ String String_toString(String string, const String convertString, ulong index, l
   {
     while ((index < convertString->length) && !isspace(convertString->data[index]))
     {
-      stringQuote = (stringQuotes != NULL)?strchr(stringQuotes,convertString->data[index]):NULL;
+      stringQuote = (stringQuotes != NULL) ? strchr(stringQuotes,convertString->data[index]) : NULL;
       if (stringQuote != NULL)
       {
         do
@@ -4434,7 +4456,7 @@ String String_toString(String string, const String convertString, ulong index, l
           // skip string-char
           index++;
           // next string char
-          stringQuote = ((stringQuotes != NULL) && (index < convertString->length))?strchr(stringQuotes,convertString->data[index]):NULL;
+          stringQuote = ((stringQuotes != NULL) && (index < convertString->length)) ? strchr(stringQuotes,convertString->data[index]) : NULL;
         }
         while (stringQuote != NULL);
       }
