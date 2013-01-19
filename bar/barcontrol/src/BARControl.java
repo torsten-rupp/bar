@@ -1991,7 +1991,7 @@ public class BARControl
                <state>
                <type>
                <archivePartSize>
-               <compressAlgorithm>
+               <compressAlgorithms>
                <cryptAlgorithm>
                <cryptType>
                <cryptPasswordMode>
@@ -2012,6 +2012,18 @@ public class BARControl
               String cryptPasswordMode      = (String) data[ 8];
               Long   lastExecutedDateTime   = (Long)   data[ 9];
               Long   estimatedRestTime      = (Long)   data[10];
+
+              String s[] = StringUtils.split(compressAlgorithms,"+");
+              if      (!s[0].equalsIgnoreCase("none") && !s[1].equalsIgnoreCase("none")) compressAlgorithms = s[0]+"+"+s[1];
+              else if (!s[0].equalsIgnoreCase("none")                                  ) compressAlgorithms = s[0];
+              else if (!s[1].equalsIgnoreCase("none")                                  ) compressAlgorithms = s[1];
+              else                                                                       compressAlgorithms = "-";
+              if (cryptAlgorithm.equalsIgnoreCase("none"))
+              {
+                cryptAlgorithm    = "-";
+                cryptType         = "-";
+                cryptPasswordMode = "-";
+              }
 
               System.out.println(String.format("%2d: %-40s %-10s %-11s %12d %-25s %-12s %-10s %-8s %s %8d",
                                                id,
