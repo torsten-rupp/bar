@@ -2520,27 +2520,27 @@ ENABLE_PACKAGE_COMPILE="yes"
 
 case "$host_os" in
   linux-*)
-    PLATFORM=Linux
+    PLATFORM=LINUX
     FILE_SEPARATOR_CHAR="/"
     JAVA_PATH_SEPARATOR=":"
     ;;
   windows*)
-    PLATFORM=Windows
+    PLATFORM=WINDOWS
     FILE_SEPARATOR_CHAR="\\\\"
     JAVA_PATH_SEPARATOR=";"
     ;;
   mingw*)
-    PLATFORM=Windows
+    PLATFORM=WINDOWS
     FILE_SEPARATOR_CHAR="\\\\"
     JAVA_PATH_SEPARATOR=";"
     ;;
   sunos | solaris*)
-    PLATFORM=Solaris
+    PLATFORM=SOLARIS
     FILE_SEPARATOR_CHAR="/"
     JAVA_PATH_SEPARATOR=":"
     ;;
   darwin*)
-    PLATFORM=MacOSX
+    PLATFORM=MAC_OSX
     FILE_SEPARATOR_CHAR="/"
     JAVA_PATH_SEPARATOR=":"
     ;;
