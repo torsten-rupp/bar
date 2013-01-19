@@ -4075,6 +4075,7 @@ LOCAL void serverCommand_optionDelete(ClientInfo *clientInfo, uint id, const Str
 
 LOCAL void serverCommand_jobList(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
 {
+  String        compressAlgorithms;
   SemaphoreLock semaphoreLock;
   const JobNode *jobNode;
 
@@ -4084,6 +4085,7 @@ LOCAL void serverCommand_jobList(ClientInfo *clientInfo, uint id, const String a
   UNUSED_VARIABLE(arguments);
   UNUSED_VARIABLE(argumentCount);
 
+  compressAlgorithms = String_new();
   SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ,SEMAPHORE_WAIT_FOREVER)
   {
     jobNode = jobList.head;
@@ -4091,8 +4093,25 @@ LOCAL void serverCommand_jobList(ClientInfo *clientInfo, uint id, const String a
            && !commandAborted(clientInfo,id)
           )
     {
+      if ((jobNode->jobOptions.compressAlgorithm.delta != COMPRESS_ALGORITHM_NONE) && (jobNode->jobOptions.compressAlgorithm.byte != COMPRESS_ALGORITHM_NONE))
+      {
+        String_format(compressAlgorithms,"%s+%s",Compress_getAlgorithmName(jobNode->jobOptions.compressAlgorithm.delta),Compress_getAlgorithmName(jobNode->jobOptions.compressAlgorithm.byte));
+      }
+      else if (jobNode->jobOptions.compressAlgorithm.delta != COMPRESS_ALGORITHM_NONE)
+      {
+        String_setCString(compressAlgorithms,Compress_getAlgorithmName(jobNode->jobOptions.compressAlgorithm.delta));
+      }
+      else if (jobNode->jobOptions.compressAlgorithm.byte != COMPRESS_ALGORITHM_NONE)
+      {
+        String_setCString(compressAlgorithms,Compress_getAlgorithmName(jobNode->jobOptions.compressAlgorithm.byte));
+      }
+      else
+      {
+        String_setCString(compressAlgorithms,"-");
+      }
+
       sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
-                       "%u %'S %'s %s %llu '%s+%s' %'s %'s %'s %llu %lu",
+                       "%u %'S %'s %s %llu '%s' %'s %'s %'s %llu %lu",
                        jobNode->id,
                        jobNode->name,
                        getJobStateText(&jobNode->jobOptions,jobNode->state),
@@ -4104,10 +4123,9 @@ LOCAL void serverCommand_jobList(ClientInfo *clientInfo, uint id, const String a
                                           :jobNode->jobOptions.archiveType
                                          ),
                        jobNode->jobOptions.archivePartSize,
-                       Compress_getAlgorithmName(jobNode->jobOptions.compressAlgorithm.delta),
-                       Compress_getAlgorithmName(jobNode->jobOptions.compressAlgorithm.byte),
-                       Crypt_getAlgorithmName(jobNode->jobOptions.cryptAlgorithm),
-                       Crypt_getTypeName(jobNode->jobOptions.cryptType),
+                       String_cString(compressAlgorithms),
+                       (jobNode->jobOptions.cryptAlgorithm != CRYPT_ALGORITHM_NONE) ? Crypt_getAlgorithmName(jobNode->jobOptions.cryptAlgorithm) : "-",
+                       (jobNode->jobOptions.cryptAlgorithm != CRYPT_ALGORITHM_NONE) ? Crypt_getTypeName(jobNode->jobOptions.cryptType) : "-",
                        getCryptPasswordModeName(jobNode->jobOptions.cryptPasswordMode),
                        jobNode->lastExecutedDateTime,
                        jobNode->runningInfo.estimatedRestTime
@@ -4116,6 +4134,7 @@ LOCAL void serverCommand_jobList(ClientInfo *clientInfo, uint id, const String a
       jobNode = jobNode->next;
     }
   }
+  String_delete(compressAlgorithms);
 
   sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
 }
