@@ -2520,27 +2520,27 @@ ENABLE_PACKAGE_COMPILE="yes"
 
 case "$host_os" in
   linux-*)
-    PLATFORM=LINUX
+    PLATFORM=Linux
     FILE_SEPARATOR_CHAR="/"
     JAVA_PATH_SEPARATOR=":"
     ;;
   windows*)
-    PLATFORM=WINDOWS
+    PLATFORM=Windows
     FILE_SEPARATOR_CHAR="\\\\"
     JAVA_PATH_SEPARATOR=";"
     ;;
   mingw*)
-    PLATFORM=WINDOWS
+    PLATFORM=Windows
     FILE_SEPARATOR_CHAR="\\\\"
     JAVA_PATH_SEPARATOR=";"
     ;;
   sunos | solaris*)
-    PLATFORM=SOLARIS
+    PLATFORM=Solaris
     FILE_SEPARATOR_CHAR="/"
     JAVA_PATH_SEPARATOR=":"
     ;;
   darwin*)
-    PLATFORM=MAC_OSX
+    PLATFORM=MacOSX
     FILE_SEPARATOR_CHAR="/"
     JAVA_PATH_SEPARATOR=":"
     ;;
@@ -4466,8 +4466,6 @@ case "$host_os" in
   linux-*)
     ;;
   *)
-    # Windows does not support %ll format and go its own way (and fail...); use MinGW implementation for printf/fprintf
-    CC_DEFINES="$CC_DEFINES printf=__mingw_printf fprintf=__mingw_fprintf"
     ;;
 esac
 
@@ -7362,6 +7360,10 @@ $as_echo "done" >&6; }
       if test $result2 -eq 1; then
         case $host_os in
           mingw*)
+            # patch to disable wrong deprecated warnings
+            # patch created with:
+            # diff -u libgcrypt-1.5.0.org/src/gcrypt.h libgcrypt-1.5.0/src/gcrypt.h > libgcrypt-warning.patch
+            (cd packages/libgcrypt-1.5.0; patch --batch -N -p1 <$cwd/misc/libgcrypt-warning.patch) 1>/dev/null 2>/dev/null
             # patch to disable usage of lib-command when RANLIB is set
             # patch created with:
             #   diff -u libgcrypt-1.5.0.org/m4/libtool.m4 libgcrypt-1.5.0/m4/libtool.m4 >  libgcrypt-1.5.0-libtool.patch
@@ -7424,6 +7426,7 @@ $as_echo "done" >&6; }
     if test $result1 -eq 1 -a $result2 -eq 1; then
       HAVE_GCRYPT=1
       HAVE_GPG_ERROR=1
+      CC_DEFINES="$CC_DEFINES GCRYPT_NO_DEPRECATED"
       STATIC_LIBRARIES="$STATIC_LIBRARIES gpg-error gcrypt"
 
 $as_echo "#define HAVE_GCRYPT 1" >>confdefs.h
@@ -8095,7 +8098,7 @@ $as_echo "$as_me: WARNING: curl-7.28.1 not available - skipped libtool patch!" >
         esac
       fi
       if test $result -eq 1; then
-        (cd curl; ./configure --host=$host_cpu-$host_os --prefix=$cwd/packages --disable-shared --enable-static) 1>/dev/null 2>$tmpFile
+        (cd curl; ./configure --host=$host_cpu-$host_os --prefix=$cwd/packages --disable-shared --enable-static --disable-ldap) 1>/dev/null 2>$tmpFile
         if test $? -ne 0; then
           { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (configure)" >&5
 $as_echo "fail (configure)" >&6; }
