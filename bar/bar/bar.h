@@ -688,11 +688,12 @@ Errors inputCryptPassword(void         *userData,
 * Name   : configValueParseBandWidth
 * Purpose: config value call back for parsing band width setting
 *          patterns
-* Input  : userData - user data
-*          variable - config variable
-*          name     - config name
-*          value    - config value
-* Output : -
+* Input  : userData              - user data
+*          variable              - config variable
+*          name                  - config name
+*          value                 - config value
+*          maxErrorMessageLength - max. length of error message text
+* Output : errorMessage - error message text
 * Return : TRUE if config value parsed and stored in variable, FALSE
 *          otherwise
 * Notes  : -
@@ -743,11 +744,12 @@ bool configValueFormatBandWidth(void **formatUserData, void *userData, String li
 * Name   : configValueParseOwner
 * Purpose: config value call back for parsing owner
 *          patterns
-* Input  : userData - user data
-*          variable - config variable
-*          name     - config name
-*          value    - config value
-* Output : -
+* Input  : userData              - user data
+*          variable              - config variable
+*          name                  - config name
+*          value                 - config value
+*          maxErrorMessageLength - max. length of error message text
+* Output : errorMessage - error message text
 * Return : TRUE if config value parsed and stored in variable, FALSE
 *          otherwise
 * Notes  : -
@@ -798,11 +800,12 @@ bool configValueFormatOwner(void **formatUserData, void *userData, String line);
 * Name   : configValueParseFileEntry, configValueParseImageEntry
 * Purpose: config value option call back for parsing include/exclude
 *          patterns
-* Input  : userData - user data
-*          variable - config variable
-*          name     - config name
-*          value    - config value
-* Output : -
+* Input  : userData              - user data
+*          variable              - config variable
+*          name                  - config name
+*          value                 - config value
+*          maxErrorMessageLength - max. length of error message text
+* Output : errorMessage - error message text
 * Return : TRUE if config value parsed and stored in variable, FALSE
 *          otherwise
 * Notes  : -
@@ -854,11 +857,12 @@ bool configValueFormatImageEntry(void **formatUserData, void *userData, String l
 * Name   : configValueParsePattern
 * Purpose: config value option call back for parsing pattern
 *          patterns
-* Input  : userData - user data
-*          variable - config variable
-*          name     - config name
-*          value    - config value
-* Output : -
+* Input  : userData              - user data
+*          variable              - config variable
+*          name                  - config name
+*          value                 - config value
+*          maxErrorMessageLength - max. length of error message text
+* Output : errorMessage - error message text
 * Return : TRUE if config value parsed and stored in variable, FALSE
 *          otherwise
 * Notes  : -
@@ -908,10 +912,12 @@ bool configValueFormatPattern(void **formatUserData, void *userData, String line
 /***********************************************************************\
 * Name   : configValueParseString
 * Purpose: config value option call back for parsing string
-* Input  : userData - user data
-*          variable - config variable
-*          name     - config name
-*          value    - config value
+* Input  : userData              - user data
+*          variable              - config variable
+*          name                  - config name
+*          value                 - config value
+*          maxErrorMessageLength - max. length of error message text
+* Output : errorMessage - error message text
 * Output : -
 * Return : TRUE if config value parsed and stored in variable, FALSE
 *          otherwise
@@ -923,11 +929,12 @@ bool configValueParseString(void *userData, void *variable, const char *name, co
 /***********************************************************************\
 * Name   : configValueParsePassword
 * Purpose: config value option call back for parsing password
-* Input  : userData - user data
-*          variable - config variable
-*          name     - config name
-*          value    - config value
-* Output : -
+* Input  : userData              - user data
+*          variable              - config variable
+*          name                  - config name
+*          value                 - config value
+*          maxErrorMessageLength - max. length of error message text
+* Output : errorMessage - error message text
 * Return : TRUE if config value parsed and stored in variable, FALSE
 *          otherwise
 * Notes  : -
@@ -1090,7 +1097,7 @@ bool configValueFormatByteCompressAlgorithm(void **formatUserData, void *userDat
 * Notes  : -
 \***********************************************************************/
 
-bool configValueParseCompressAlgorithm(void *userData, void *variable, const char *name, const char *value);
+bool configValueParseCompressAlgorithm(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
 
 /***********************************************************************\
 * Name   : configValueFormatInitCompressAlgorithm
@@ -1174,17 +1181,18 @@ ScheduleNode *parseSchedule(const String s);
 /***********************************************************************\
 * Name   : configValueParseSchedule
 * Purpose: config value option call back for parsing schedule
-* Input  : userData - user data
-*          variable - config variable
-*          name     - config name
-*          value    - config value
-* Output : -
+* Input  : userData              - user data
+*          variable              - config variable
+*          name                  - config name
+*          value                 - config value
+*          maxErrorMessageLength - max. length of error message text
+* Output : errorMessage - error message text
 * Return : TRUE if config value parsed and stored in variable, FALSE
 *          otherwise
 * Notes  : -
 \***********************************************************************/
 
-bool configValueParseSchedule(void *userData, void *variable, const char *name, const char *value);
+bool configValueParseSchedule(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
 
 /***********************************************************************\
 * Name   : configValueFormatInitSchedule

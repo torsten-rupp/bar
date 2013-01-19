@@ -1312,6 +1312,9 @@ LOCAL bool cmdOptionParseString(void *userData, void *variable, const char *name
   UNUSED_VARIABLE(userData);
   UNUSED_VARIABLE(name);
   UNUSED_VARIABLE(defaultValue);
+  UNUSED_VARIABLE(errorMessage);
+  UNUSED_VARIABLE(errorMessageSize);
+#warning use errorMessage?
 
   if ((*(String*)variable) != NULL)
   {
@@ -1342,6 +1345,9 @@ LOCAL bool cmdOptionParseConfigFile(void *userData, void *variable, const char *
   UNUSED_VARIABLE(variable);
   UNUSED_VARIABLE(name);
   UNUSED_VARIABLE(defaultValue);
+  UNUSED_VARIABLE(errorMessage);
+  UNUSED_VARIABLE(errorMessageSize);
+#warning use errorMessage?
 
   StringList_appendCString(&configFileNameList,value);
 
@@ -1427,6 +1433,9 @@ LOCAL bool cmdOptionParsePattern(void *userData, void *variable, const char *nam
 
   UNUSED_VARIABLE(userData);
   UNUSED_VARIABLE(defaultValue);
+  UNUSED_VARIABLE(errorMessage);
+  UNUSED_VARIABLE(errorMessageSize);
+#warning use errorMessage?
 
   // detect pattern type, get pattern
   if      (strncmp(value,"r:",2) == 0) { patternType = PATTERN_TYPE_REGEX;          value += 2; }
@@ -1753,6 +1762,9 @@ LOCAL bool cmdOptionParseBandWidth(void *userData, void *variable, const char *n
   UNUSED_VARIABLE(userData);
   UNUSED_VARIABLE(name);
   UNUSED_VARIABLE(defaultValue);
+  UNUSED_VARIABLE(errorMessage);
+  UNUSED_VARIABLE(errorMessageSize);
+#warning use errorMessage?
 
   // parse band width node
   s = String_newCString(value);
@@ -1790,6 +1802,9 @@ LOCAL bool cmdOptionParseOwner(void *userData, void *variable, const char *name,
   UNUSED_VARIABLE(userData);
   UNUSED_VARIABLE(name);
   UNUSED_VARIABLE(defaultValue);
+  UNUSED_VARIABLE(errorMessage);
+  UNUSED_VARIABLE(errorMessageSize);
+#warning use errorMessage?
 
   // parse
   if      (String_scanCString(value,"%256s:%256s",userName,groupName))
@@ -1841,6 +1856,9 @@ LOCAL bool cmdOptionParsePassword(void *userData, void *variable, const char *na
   UNUSED_VARIABLE(userData);
   UNUSED_VARIABLE(name);
   UNUSED_VARIABLE(defaultValue);
+  UNUSED_VARIABLE(errorMessage);
+  UNUSED_VARIABLE(errorMessageSize);
+#warning use errorMessage?
 
   if ((*(Password**)variable) == NULL)
   {
@@ -1873,6 +1891,9 @@ LOCAL bool cmdOptionParseCompressAlgorithm(void *userData, void *variable, const
   UNUSED_VARIABLE(userData);
   UNUSED_VARIABLE(name);
   UNUSED_VARIABLE(defaultValue);
+  UNUSED_VARIABLE(errorMessage);
+  UNUSED_VARIABLE(errorMessageSize);
+#warning use errorMessage?
 
   compressAlgorithmDelta = COMPRESS_ALGORITHM_NONE;
   compressAlgorithmByte  = COMPRESS_ALGORITHM_NONE;
@@ -1971,6 +1992,9 @@ LOCAL bool configValueParseConfigFile(void *userData, void *variable, const char
   UNUSED_VARIABLE(userData);
   UNUSED_VARIABLE(variable);
   UNUSED_VARIABLE(name);
+  UNUSED_VARIABLE(errorMessage);
+  UNUSED_VARIABLE(errorMessageSize);
+#warning use errorMessage?
 
   StringList_appendCString(&configFileNameList,value);
 
@@ -3434,6 +3458,9 @@ bool configValueParseBandWidth(void *userData, void *variable, const char *name,
 
   UNUSED_VARIABLE(userData);
   UNUSED_VARIABLE(name);
+  UNUSED_VARIABLE(errorMessage);
+  UNUSED_VARIABLE(errorMessageSize);
+#warning use errorMessage?
 
   // parse band width node
   s = String_newCString(value);
@@ -3497,6 +3524,9 @@ bool configValueParseOwner(void *userData, void *variable, const char *name, con
 
   UNUSED_VARIABLE(userData);
   UNUSED_VARIABLE(name);
+  UNUSED_VARIABLE(errorMessage);
+  UNUSED_VARIABLE(errorMessageSize);
+#warning use errorMessage?
 
   // parse
   if      (String_scanCString(value,"%256s:%256s",userName,groupName))
@@ -3587,6 +3617,9 @@ LOCAL bool configValueParseEntry(EntryTypes entryType, void *userData, void *var
   UNUSED_VARIABLE(userData);
 //??? userData = default patterType?
   UNUSED_VARIABLE(name);
+  UNUSED_VARIABLE(errorMessage);
+  UNUSED_VARIABLE(errorMessageSize);
+#warning use errorMessage?
 
   // detect pattern type, get pattern
   if      (strncmp(value,"r:",2) == 0) { patternType = PATTERN_TYPE_REGEX;          value += 2; }
@@ -3734,6 +3767,9 @@ bool configValueParsePattern(void *userData, void *variable, const char *name, c
 
   UNUSED_VARIABLE(userData);
   UNUSED_VARIABLE(name);
+  UNUSED_VARIABLE(errorMessage);
+  UNUSED_VARIABLE(errorMessageSize);
+#warning use errorMessage?
 
   // detect pattern type, get pattern
   if      (strncmp(value,"r:",2) == 0) { patternType = PATTERN_TYPE_REGEX;          value += 2; }
@@ -3812,6 +3848,9 @@ bool configValueParseString(void *userData, void *variable, const char *name, co
 
   UNUSED_VARIABLE(userData);
   UNUSED_VARIABLE(name);
+  UNUSED_VARIABLE(errorMessage);
+  UNUSED_VARIABLE(errorMessageSize);
+#warning use errorMessage?
 
   if ((*(String*)variable) != NULL)
   {
@@ -3832,6 +3871,9 @@ bool configValueParsePassword(void *userData, void *variable, const char *name, 
 
   UNUSED_VARIABLE(userData);
   UNUSED_VARIABLE(name);
+  UNUSED_VARIABLE(errorMessage);
+  UNUSED_VARIABLE(errorMessageSize);
+#warning use errorMessage?
 
   if ((*(Password**)variable) == NULL)
   {
@@ -3878,7 +3920,7 @@ bool configValueFormatPassword(void **formatUserData, void *userData, String lin
   }
 }
 
-bool configValueParseCompressAlgorithm(void *userData, void *variable, const char *name, const char *value)
+bool configValueParseCompressAlgorithm(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
 {
   char               algorithm1[256],algorithm2[256];
   CompressAlgorithms compressAlgorithmDelta,compressAlgorithmByte;
@@ -3890,6 +3932,9 @@ bool configValueParseCompressAlgorithm(void *userData, void *variable, const cha
 
   UNUSED_VARIABLE(userData);
   UNUSED_VARIABLE(name);
+  UNUSED_VARIABLE(errorMessage);
+  UNUSED_VARIABLE(errorMessageSize);
+#warning use errorMessage?
 
   compressAlgorithmDelta = COMPRESS_ALGORITHM_NONE;
   compressAlgorithmByte  = COMPRESS_ALGORITHM_NONE;
@@ -4242,7 +4287,7 @@ if ((b != FALSE) && (b != TRUE)) HALT_INTERNAL_ERROR("parsing boolean string val
   return scheduleNode;
 }
 
-bool configValueParseSchedule(void *userData, void *variable, const char *name, const char *value)
+bool configValueParseSchedule(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
 {
   ScheduleNode *scheduleNode;
   String       s;
@@ -4252,6 +4297,9 @@ bool configValueParseSchedule(void *userData, void *variable, const char *name, 
 
   UNUSED_VARIABLE(userData);
   UNUSED_VARIABLE(name);
+  UNUSED_VARIABLE(errorMessage);
+  UNUSED_VARIABLE(errorMessageSize);
+#warning use errorMessage?
 
   // parse schedule node
   s = String_newCString(value);
