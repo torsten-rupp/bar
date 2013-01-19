@@ -44,24 +44,24 @@ SWT_JAR_WINDOWS_64 = jars/windows/swt-3.6.1_64.jar
 ifneq ($(SWT_DIR),)
 SWT_JAR          = $(SWT_DIR)/swt.jar
 else
-ifeq ($(PLATFORM),Linux)
+ifeq ($(PLATFORM),LINUX)
 ifeq ($(JAVA_DATA_MODEL),64)
 SWT_JAR          = $(SWT_JAR_LINUX_64)
 else
 SWT_JAR          = $(SWT_JAR_LINUX)
 endif
 endif
-ifeq ($(PLATFORM),Solaris)
+ifeq ($(PLATFORM),SOLARIS)
 SWT_JAR          = $(SWT_JAR_SOLARIS)
 endif
-ifeq ($(PLATFORM),MacOSX)
+ifeq ($(PLATFORM),MAC_OSX)
 ifeq ($(JAVA_DATA_MODEL),64)
 SWT_JAR          = $(SWT_JAR_MACOSX_64)
 else
 SWT_JAR          = $(SWT_JAR_MACOSX)
 endif
 endif
-ifeq ($(PLATFORM),Windows)
+ifeq ($(PLATFORM),WINDOWS)
 ifeq ($(JAVA_DATA_MODEL),64)
 SWT_JAR          = $(SWT_JAR_WINDOWS_64)
 else

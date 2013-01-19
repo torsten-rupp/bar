@@ -25,13 +25,13 @@ TLS_DIR             = @TLS_DIR@
 SHELL               = bash
 
 CC                  = @CC@
-CC_FLAGS            = @CC_FLAGS@ -g -rdynamic
+CC_FLAGS            = @CC_FLAGS@ -g
 CC_WARN_FLAGS       = @CC_WARN_FLAGS@
 CXX                 = @CXX@
-CXX_FLAGS           = @CXX_FLAGS@ -g -rdynamic
+CXX_FLAGS           = @CXX_FLAGS@ -g
 CXX_WARN_FLAGS      = @CXX_WARN_FLAGS@
 CC_OPTIMIZE         = @CC_OPTIMIZE@
-CC_DEFINES          = @CC_DEFINES@ _LONG_LONG
+CC_DEFINES          = PLATFORM_$(PLATFORM) @CC_DEFINES@ _LONG_LONG
 # -D_LONG_LONG
 CC_INCLUDES         = @CC_INCLUDES@
 ifdef WERROR
@@ -41,7 +41,7 @@ endif
 LD                  = $(if @CXX@,@CXX@,@CC@)
 LD_FLAGS            = @LD_FLAGS@
 LD_LIBRARY_PATHS    = @LIBRARY_PATHS@
-LD_LIBRARIES        = @LIBRARIES@ pthread c m rt
+LD_LIBRARIES        = @LIBRARIES@
 LD_STATIC_LIBRARIES = @STATIC_LIBRARIES@
 LD_STATIC_PREFIX    = -Wl,-Bstatic
 LD_DYNAMIC_PREFIX   = -Wl,-Bdynamic
@@ -141,7 +141,7 @@ endif
 	$(CXX) $(CXX_FLAGS) $(CC_OPTIMIZE) -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" $(foreach z,$(CC_DEFINES),-D$z) $(CXX_WARN_FLAGS) $(foreach z,$(CC_INCLUDES),-I$z) -c $*.cpp -o $*.o
 
 # link object files
-%: %.o
+%@EXEEXT@: %.o
 	$(LD) $(LD_FLAGS) -o $@ $^ $(foreach z,$(LD_LIBRARY_PATHS),-L$z) \
           $(if $(LD_STATIC_LIBRARIES),$(LD_STATIC_PREFIX) $(foreach z,$(LD_STATIC_LIBRARIES),-l$z) $(foreach z,$(LD_STATIC_LIBRARIES),-l$z) $(LD_DYNAMIC_PREFIX)) \
           $(foreach z,$(LD_LIBRARIES), -l$z) $(foreach z,$(LD_LIBRARIES), -l$z)
@@ -229,10 +229,10 @@ INTERMEDIATE         = errors.c \
                        archive_format_const.h \
                        index_definition.h \
 
-TARGETS              = bar \
+TARGETS              = bar@EXEEXT@ \
                        $(if @HAVE_BREAKPAD@,bar.symbols) \
                        bar-keygen \
-                       destroyer \
+                       destroyer@EXEEXT@ \
 
 #------------------------------ dependencies ---------------------------------
 
@@ -369,11 +369,9 @@ index_definition.h: index_definition.sql
 
 # create destroyer (for testing only!)
 destroyer@EXEEXT@: $(DESTROYER_OBJECTS) 
-	$(LD) $(LD_FLAGS) -o $@ $^ -lc -lpthread
 
 # show chunks program
 showchunks@EXEEXT@: showchunks.o
-	$(LD) $(LD_FLAGS) -o $@ $^ -lc
 
 # ----------------------------------------------------------------------------
 
@@ -503,6 +501,10 @@ test:
 
 clean_test:
 	$(RMRF) $(TEST_FILES_CLEAN)
+
+test_win: $(TEST_BAR)
+	$(TEST_BAR) -o -c c:\\tmp\\x.bar -# c:\\users\\torsten
+	$(TEST_BAR) -L c:\\tmp\\x.bar 
 
 test1 test_basic: $(TEST_BAR)
 	@$(ECHO_NO_LF) "Test 1: basic..."

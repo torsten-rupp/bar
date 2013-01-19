@@ -349,33 +349,33 @@ install_base: \
 # Note: prefix is used for temporary installations
 install_gui: \
   $(TARGETS) \
-  $(if $(findstring $(ENABLE_GUI),yes),$(if $(findstring $(PLATFORM),Linux),barcontrol/barcontrol-linux.jar barcontrol/barcontrol-linux_64.jar) \
-                                       $(if $(findstring $(PLATFORM),Windows),$(if $(LAUNCH4J),barcontrol/barcontrol.exe) barcontrol/barcontrol-windows.jar barcontrol/barcontrol-windows_64.jar) \
-                                       $(if $(findstring $(PLATFORM),Solaris),barcontrol/barcontrol-solaris.jar) \
-                                       $(if $(findstring $(PLATFORM),MacOSX),barcontrol/barcontrol-macosx.jar barcontrol/barcontrol-macosx_64.jar) \
+  $(if $(findstring $(ENABLE_GUI),yes),$(if $(findstring $(PLATFORM),LINUX),barcontrol/barcontrol-linux.jar barcontrol/barcontrol-linux_64.jar) \
+                                       $(if $(findstring $(PLATFORM),WINDOWS),$(if $(LAUNCH4J),barcontrol/barcontrol.exe) barcontrol/barcontrol-windows.jar barcontrol/barcontrol-windows_64.jar) \
+                                       $(if $(findstring $(PLATFORM),SOLARIS),barcontrol/barcontrol-solaris.jar) \
+                                       $(if $(findstring $(PLATFORM),MAC_OSX),barcontrol/barcontrol-macosx.jar barcontrol/barcontrol-macosx_64.jar) \
   )
 	$(INSTALL) -d "$(DESTDIR)$(INSTALL_BIN_DIR)"
 ifeq ($(ENABLE_GUI),yes)
 	$(INSTALL) bar/bar-keygen "$(DESTDIR)$(INSTALL_BIN_DIR)"
-ifeq ($(PLATFORM),Linux)
+ifeq ($(PLATFORM),LINUX)
 	$(INSTALL) barcontrol/barcontrol \
                    barcontrol/barcontrol-linux.jar \
                    barcontrol/barcontrol-linux_64.jar \
                    "$(DESTDIR)$(INSTALL_BIN_DIR)"
 endif
-ifeq ($(PLATFORM),Windows)
+ifeq ($(PLATFORM),WINDOWS)
 	$(INSTALL) $(if $(LAUNCH4J),barcontrol/barcontrol.exe,\
                                     barcontrol/barcontrol.bat barcontrol/barcontrol-windows.jar \
                                     barcontrol/barcontrol.bat barcontrol/barcontrol-windows_64.jar \
                     ) \
                    "$(DESTDIR)$(INSTALL_BIN_DIR)"
 endif
-ifeq ($(PLATFORM),Solaris)
+ifeq ($(PLATFORM),SOLARIS)
 	$(INSTALL) barcontrol/barcontrol \
                    barcontrol/barcontrol-solaris.jar \
                    "$(DESTDIR)$(INSTALL_BIN_DIR)"
 endif
-ifeq ($(PLATFORM),MacOSX)
+ifeq ($(PLATFORM),MAC_OSX)
 	$(INSTALL) barcontrol/barcontrol \
                    barcontrol/barcontrol-macosx.jar \
                    barcontrol/barcontrol-macosx_64.jar \
@@ -706,8 +706,8 @@ clean_debian_package:
 .PHONY: debian_install
 debian_package_install: \
   $(TARGETS) \
-  $(if $(findstring $(ENABLE_GUI),yes),$(if $(findstring $(PLATFORM),Linux),barcontrol/barcontrol barcontrol/barcontrol-linux.jar) \
-                                       $(if $(findstring $(PLATFORM),Windows),$(if $(LAUNCH4J),barcontrol/barcontrol.exe,barcontrol/barcontrol.bat barcontrol/barcontrol-windows.jar)) \
+  $(if $(findstring $(ENABLE_GUI),yes),$(if $(findstring $(PLATFORM),LINUX),barcontrol/barcontrol barcontrol/barcontrol-linux.jar) \
+                                       $(if $(findstring $(PLATFORM),WINDOWS),$(if $(LAUNCH4J),barcontrol/barcontrol.exe,barcontrol/barcontrol.bat barcontrol/barcontrol-windows.jar)) \
   ) \
   $(SCRIPTS)
 	$(INSTALL) -d "$(prefix)/$(INSTALL_DIR)"
@@ -723,18 +723,18 @@ debian_package_install: \
 .PHONY: debian_install_gui
 debian_package_install_gui: \
   $(TARGETS) \
-  $(if $(findstring $(ENABLE_GUI),yes),$(if $(findstring $(PLATFORM),Linux),barcontrol/barcontrol barcontrol/barcontrol-linux.jar) \
-                                       $(if $(findstring $(PLATFORM),Windows),$(if $(LAUNCH4J),barcontrol/barcontrol.exe,barcontrol/barcontrol.bat barcontrol/barcontrol-windows.jar)) \
+  $(if $(findstring $(ENABLE_GUI),yes),$(if $(findstring $(PLATFORM),LINUX),barcontrol/barcontrol barcontrol/barcontrol-linux.jar) \
+                                       $(if $(findstring $(PLATFORM),WINDOWS),$(if $(LAUNCH4J),barcontrol/barcontrol.exe,barcontrol/barcontrol.bat barcontrol/barcontrol-windows.jar)) \
   ) \
   $(SCRIPTS)
 	$(INSTALL) -d "$(prefix)/$(INSTALL_BIN_DIR)"
 ifeq ($(ENABLE_GUI),yes)
-ifeq ($(PLATFORM),Linux)
+ifeq ($(PLATFORM),LINUX)
 	$(INSTALL) barcontrol/barcontrol \
                    barcontrol/barcontrol-linux.jar \
                    "$(prefix)/$(INSTALL_BIN_DIR)"
 endif
-ifeq ($(PLATFORM),Windows)
+ifeq ($(PLATFORM),WINDOWS)
 	$(INSTALL) $(if $(LAUNCH4J),barcontrol/barcontrol.exe,\
                                     barcontrol/barcontrol.bat barcontrol/barcontrol-windows.jar \
                     ) \
