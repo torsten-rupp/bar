@@ -1475,12 +1475,14 @@ bool Storage_parseDeviceSpecifier(const String deviceSpecifier,
   if (String_matchCString(deviceSpecifier,STRING_BEGIN,"^([^:]*):$",NULL,NULL,deviceName,NULL))
   {
     // <device name>
+
+    result = TRUE;
   }
   else
   {
     if (deviceName != NULL) String_set(deviceName,defaultDeviceName);
 
-    result =TRUE;
+    result = TRUE;
   }
 
   return result;
@@ -2577,13 +2579,13 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
         storageFileHandle->opticalDisk.write.step                   = 0;
         if (jobOptions->waitFirstVolumeFlag)
         {
-          storageFileHandle->opticalDisk.write.number  = 0;
-          storageFileHandle->opticalDisk.write.newFlag = TRUE;
+          storageFileHandle->opticalDisk.write.number        = 0;
+          storageFileHandle->opticalDisk.write.newVolumeFlag = TRUE;
         }
         else
         {
-          storageFileHandle->opticalDisk.write.number  = 1;
-          storageFileHandle->opticalDisk.write.newFlag = FALSE;
+          storageFileHandle->opticalDisk.write.number        = 1;
+          storageFileHandle->opticalDisk.write.newVolumeFlag = FALSE;
         }
         StringList_init(&storageFileHandle->opticalDisk.write.fileNameList);
         storageFileHandle->opticalDisk.write.fileName               = String_new();
@@ -2664,13 +2666,13 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
         storageFileHandle->device.directory              = String_new();
         if (jobOptions->waitFirstVolumeFlag)
         {
-          storageFileHandle->device.number  = 0;
-          storageFileHandle->device.newFlag = TRUE;
+          storageFileHandle->device.number        = 0;
+          storageFileHandle->device.newVolumeFlag = TRUE;
         }
         else
         {
-          storageFileHandle->device.number  = 1;
-          storageFileHandle->device.newFlag = FALSE;
+          storageFileHandle->device.number        = 1;
+          storageFileHandle->device.newVolumeFlag = FALSE;
         }
         StringList_init(&storageFileHandle->device.fileNameList);
         storageFileHandle->device.fileName  = String_new();
@@ -3101,10 +3103,10 @@ Errors Storage_preProcess(StorageFileHandle *storageFileHandle,
       if (!storageFileHandle->jobOptions->dryRunFlag)
       {
         // request next medium
-        if (storageFileHandle->opticalDisk.write.newFlag)
+        if (storageFileHandle->opticalDisk.write.newVolumeFlag)
         {
           storageFileHandle->opticalDisk.write.number++;
-          storageFileHandle->opticalDisk.write.newFlag = FALSE;
+          storageFileHandle->opticalDisk.write.newVolumeFlag = FALSE;
 
           storageFileHandle->requestedVolumeNumber = storageFileHandle->opticalDisk.write.number;
         }
@@ -3121,10 +3123,10 @@ Errors Storage_preProcess(StorageFileHandle *storageFileHandle,
       if (!storageFileHandle->jobOptions->dryRunFlag)
       {
         // request next volume
-        if (storageFileHandle->device.newFlag)
+        if (storageFileHandle->device.newVolumeFlag)
         {
           storageFileHandle->device.number++;
-          storageFileHandle->device.newFlag = FALSE;
+          storageFileHandle->device.newVolumeFlag = FALSE;
 
           storageFileHandle->requestedVolumeNumber = storageFileHandle->device.number;
         }
@@ -3206,7 +3208,7 @@ Errors Storage_postProcess(StorageFileHandle *storageFileHandle,
             if (!finalFlag)
             {
               // init macros
-              TEXT_MACRO_N_INTEGER(textMacros[0],"%number",storageFileHandle->volumeNumber              );
+              TEXT_MACRO_N_INTEGER(textMacros[0],"%number",storageFileHandle->volumeNumber);
 
               if (globalOptions.ftp.writePostProcessCommand != NULL)
               {
@@ -3247,7 +3249,7 @@ Errors Storage_postProcess(StorageFileHandle *storageFileHandle,
             if (!finalFlag)
             {
               // init macros
-              TEXT_MACRO_N_INTEGER(textMacros[0],"%number",storageFileHandle->volumeNumber              );
+              TEXT_MACRO_N_INTEGER(textMacros[0],"%number",storageFileHandle->volumeNumber);
 
               if (globalOptions.scp.writePostProcessCommand != NULL)
               {
@@ -3286,7 +3288,7 @@ Errors Storage_postProcess(StorageFileHandle *storageFileHandle,
             if (!finalFlag)
             {
               // init macros
-              TEXT_MACRO_N_INTEGER(textMacros[0],"%number",storageFileHandle->volumeNumber              );
+              TEXT_MACRO_N_INTEGER(textMacros[0],"%number",storageFileHandle->volumeNumber);
 
               if (globalOptions.sftp.writePostProcessCommand != NULL)
               {
@@ -3327,9 +3329,11 @@ Errors Storage_postProcess(StorageFileHandle *storageFileHandle,
 
         if (!storageFileHandle->jobOptions->dryRunFlag)
         {
-          if (finalFlag || (storageFileHandle->opticalDisk.write.totalSize > storageFileHandle->opticalDisk.write.volumeSize))
+          if (   (storageFileHandle->opticalDisk.write.totalSize > storageFileHandle->opticalDisk.write.volumeSize)
+              || (finalFlag && (storageFileHandle->opticalDisk.write.totalSize > 0LL))
+             )
           {
-            // medium size limit reached -> create medium and request new volume
+            // medium size limit reached or final medium -> create medium and request new volume
 
             // update info
             storageFileHandle->runningInfo.volumeProgress = 0.0;
@@ -3353,7 +3357,7 @@ Errors Storage_postProcess(StorageFileHandle *storageFileHandle,
             if (storageFileHandle->jobOptions->alwaysCreateImageFlag || storageFileHandle->jobOptions->errorCorrectionCodesFlag)
             {
               // create medium image
-              printInfo(0,"Make medium image #%d with %d file(s)...",storageFileHandle->opticalDisk.write.number,StringList_count(&storageFileHandle->opticalDisk.write.fileNameList));
+              printInfo(0,"Make medium image #%d with %d part(s)...",storageFileHandle->opticalDisk.write.number,StringList_count(&storageFileHandle->opticalDisk.write.fileNameList));
               storageFileHandle->opticalDisk.write.step = 0;
               error = Misc_executeCommand(String_cString(storageFileHandle->opticalDisk.write.imageCommand),
                                           textMacros,SIZE_OF_ARRAY(textMacros),
@@ -3468,7 +3472,7 @@ Errors Storage_postProcess(StorageFileHandle *storageFileHandle,
                 retryFlag = FALSE;
 
                 // write to medium
-                printInfo(0,"Write medium #%d with %d file(s)...",storageFileHandle->opticalDisk.write.number,StringList_count(&storageFileHandle->opticalDisk.write.fileNameList));
+                printInfo(0,"Write medium #%d with %d part(s)...",storageFileHandle->opticalDisk.write.number,StringList_count(&storageFileHandle->opticalDisk.write.fileNameList));
                 storageFileHandle->opticalDisk.write.step = 0;
                 error = Misc_executeCommand(String_cString(storageFileHandle->opticalDisk.write.writeCommand),
                                             textMacros,SIZE_OF_ARRAY(textMacros),
@@ -3496,7 +3500,7 @@ Errors Storage_postProcess(StorageFileHandle *storageFileHandle,
             }
 
             // delete image
-//            File_delete(imageFileName,FALSE);
+            File_delete(imageFileName,FALSE);
             String_delete(imageFileName);
 
             // update info
@@ -3521,14 +3525,14 @@ Errors Storage_postProcess(StorageFileHandle *storageFileHandle,
             }
 
             // reset
-            storageFileHandle->opticalDisk.write.newFlag   = TRUE;
-            storageFileHandle->opticalDisk.write.totalSize = 0;
+            storageFileHandle->opticalDisk.write.newVolumeFlag = TRUE;
+            storageFileHandle->opticalDisk.write.totalSize     = 0;
           }
         }
         else
         {
           // update info
-          storageFileHandle->opticalDisk.write.step = 3;
+          storageFileHandle->opticalDisk.write.step     = 3;
           storageFileHandle->runningInfo.volumeProgress = 1.0;
           updateStatusInfo(storageFileHandle);
         }
@@ -3547,7 +3551,9 @@ Errors Storage_postProcess(StorageFileHandle *storageFileHandle,
 
         if (!storageFileHandle->jobOptions->dryRunFlag)
         {
-          if (finalFlag || (storageFileHandle->device.totalSize > storageFileHandle->device.volumeSize))
+          if (   (storageFileHandle->device.totalSize > storageFileHandle->device.volumeSize)
+              || (finalFlag && storageFileHandle->device.totalSize > 0LL)
+             )
           {
             // device size limit reached -> write to device volume and request new volume
 
@@ -3679,8 +3685,8 @@ Errors Storage_postProcess(StorageFileHandle *storageFileHandle,
             }
 
             // reset
-            storageFileHandle->device.newFlag   = TRUE;
-            storageFileHandle->device.totalSize = 0;
+            storageFileHandle->device.newVolumeFlag = TRUE;
+            storageFileHandle->device.totalSize     = 0;
           }
         }
         else

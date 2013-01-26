@@ -338,7 +338,7 @@ typedef struct
         double     progress;                               // progress of current step
 
         uint       number;                                 // current cd/dvd/bd number
-        bool       newFlag;                                // TRUE iff new cd/dvd/bd needed
+        bool       newVolumeFlag;                          // TRUE iff new cd/dvd/bd volume needed
         StringList fileNameList;                           // list with file names
         String     fileName;                               // current file name
         FileHandle fileHandle;
@@ -366,7 +366,7 @@ typedef struct
       String     directory;                                // temporary directory for files
 
       uint       number;                                   // volume number
-      bool       newFlag;                                  // TRUE iff new volume needed
+      bool       newVolumeFlag;                            // TRUE iff new volume needed
       StringList fileNameList;                             // list with file names
       String     fileName;                                 // current file name
       FileHandle fileHandle;
