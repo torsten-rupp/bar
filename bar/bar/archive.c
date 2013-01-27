@@ -781,6 +781,7 @@ LOCAL Errors createArchiveFile(ArchiveInfo *archiveInfo)
                    );
   if (error != ERROR_NONE)
   {
+fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,String_cString(archiveInfo->file.fileName));
     File_delete(archiveInfo->file.fileName,FALSE);
     return error;
   }
@@ -789,6 +790,7 @@ LOCAL Errors createArchiveFile(ArchiveInfo *archiveInfo)
   error = writeFileInfo(archiveInfo);
   if (error != ERROR_NONE)
   {
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     File_close(&archiveInfo->file.fileHandle);
     File_delete(archiveInfo->file.fileName,FALSE);
     return error;
@@ -2705,6 +2707,81 @@ Errors Archive_close(ArchiveInfo *archiveInfo)
       break;
     case ARCHIVE_IO_TYPE_STORAGE_FILE:
       if (archiveInfo->storage.storageName != NULL) String_delete(archiveInfo->storage.storageName);
+      break;
+  }
+
+  return ERROR_NONE;
+}
+
+Errors Archive_storageInterrupt(ArchiveInfo *archiveInfo)
+{
+  Errors error;
+
+  assert(archiveInfo != NULL);
+
+  switch (archiveInfo->ioType)
+  {
+    case ARCHIVE_IO_TYPE_FILE:
+      archiveInfo->interrupt.openFlag = archiveInfo->file.openFlag;
+      if (archiveInfo->file.openFlag)
+      {
+        error = File_tell(&archiveInfo->file.fileHandle,&archiveInfo->interrupt.offset);
+        if (error != ERROR_NONE)
+        {
+          return error;
+        }
+        File_close(&archiveInfo->file.fileHandle);
+        archiveInfo->file.openFlag = FALSE;
+      }
+      break;
+    case ARCHIVE_IO_TYPE_STORAGE_FILE:
+      error = Storage_tell(&archiveInfo->storage.storageFileHandle,&archiveInfo->interrupt.offset);
+      if (error != ERROR_NONE)
+      {
+        return error;
+      }
+      Storage_close(&archiveInfo->storage.storageFileHandle);
+      break;
+  }
+
+  return ERROR_NONE;
+}
+
+Errors Archive_storageContinue(ArchiveInfo *archiveInfo)
+{
+  Errors error;
+
+  assert(archiveInfo != NULL);
+
+  switch (archiveInfo->ioType)
+  {
+    case ARCHIVE_IO_TYPE_FILE:
+      if (archiveInfo->interrupt.openFlag)
+      {
+        error = File_open(&archiveInfo->file.fileHandle,archiveInfo->file.fileName,FILE_OPEN_WRITE);
+        if (error != ERROR_NONE)
+        {
+          return error;
+        }
+        error = File_seek(&archiveInfo->file.fileHandle,archiveInfo->interrupt.offset);
+        if (error != ERROR_NONE)
+        {
+          return error;
+        }
+      }
+      archiveInfo->file.openFlag = archiveInfo->interrupt.openFlag;
+      break;
+    case ARCHIVE_IO_TYPE_STORAGE_FILE:
+      error = Storage_open(&archiveInfo->storage.storageFileHandle,archiveInfo->storage.storageName);
+      if (error != ERROR_NONE)
+      {
+        return error;
+      }
+      error = Storage_tell(&archiveInfo->storage.storageFileHandle,&archiveInfo->interrupt.offset);
+      if (error != ERROR_NONE)
+      {
+        return error;
+      }
       break;
   }
 
@@ -8773,9 +8850,31 @@ Errors Archive_updateIndex(DatabaseHandle               *databaseHandle,
         )
   {
     // pause
-    while ((pauseCallback != NULL) && pauseCallback(pauseUserData))
+    if ((pauseCallback != NULL) && pauseCallback(pauseUserData))
     {
-      Misc_udelay(5000*1000);
+#if 0
+      // temporarly close storage
+      error = Archive_storageInterrupt(&archiveInfo);
+      if (error != ERROR_NONE)
+      {
+        break;
+      }
+#endif /* 0 */
+
+      // wait
+      while ((pauseCallback != NULL) && pauseCallback(pauseUserData))
+      {
+        Misc_udelay(5000*1000);
+      }
+      
+      // reopen storage
+#if 0
+      error = Archive_storageContinue(&archiveInfo);
+      if (error != ERROR_NONE)
+      {
+        break;
+      }
+#endif /* 0 */
     }
 
     // get next file type
@@ -9148,6 +9247,7 @@ Errors Archive_updateIndex(DatabaseHandle               *databaseHandle,
                       );
       }
 
+      // free resources
       Archive_close(&archiveInfo);
       freeJobOptions(&jobOptions);
 
@@ -9165,6 +9265,7 @@ Errors Archive_updateIndex(DatabaseHandle               *databaseHandle,
                    NULL
                   );
 
+    // free resources
     Archive_close(&archiveInfo);
     freeJobOptions(&jobOptions);
 
@@ -9964,7 +10065,7 @@ Errors Archive_copy(const String                    storageName,
               String_delete(linkName);
               if (jobOptions->stopOnErrorFlag)
               {
-                restoreInfo.failError = ERRORX(FILE_EXISTS,0,String_cString(destinationFileName));
+                restoreInfo.failError = ERRORX(FILE_EXISTS_,0,String_cString(destinationFileName));
               }
               continue;
             }
@@ -10583,7 +10684,7 @@ Errors Archive_copy(const String                    storageName,
               String_delete(fileName);
               if (jobOptions->stopOnErrorFlag)
               {
-                restoreInfo.failError = ERRORX(FILE_EXISTS,0,String_cString(destinationFileName));
+                restoreInfo.failError = ERRORX(FILE_EXISTS_,0,String_cString(destinationFileName));
               }
               continue;
             }
