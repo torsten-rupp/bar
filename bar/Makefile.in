@@ -22,6 +22,8 @@ PLATFORM        = @PLATFORM@
 
 #------------------------------------ paths ----------------------------------
 
+SOURCE_DIR          = @srcdir@
+
 ETC_DIR            = /etc
 
 INSTALL_DIR        = $(if $(prefix),$(prefix),@INSTALL_DIR@)
@@ -66,8 +68,8 @@ ZIP        = zip
 
 #------------------------ specific variables/settings ------------------------
 
-VERSION_MAJOR := $(shell $(CAT) version|$(GREP) MAJOR|$(SED) 's/MAJOR=//g')
-VERSION_MINOR := $(shell $(CAT) version|$(GREP) MINOR|$(SED) 's/MINOR=//g')
+VERSION_MAJOR := $(shell $(CAT) $(SOURCE_DIR)/version|$(GREP) MAJOR|$(SED) 's/MAJOR=//g')
+VERSION_MINOR := $(shell $(CAT) $(SOURCE_DIR)/version|$(GREP) MINOR|$(SED) 's/MINOR=//g')
 
 CRYPT_NAMES    = none 3DES CAST5 BLOWFISH AES128 AES192 AES256 TWOFISH128 TWOFISH256
 COMPRESS_NAMES = none zip0 zip1 zip2 zip3 zip4 zip5 zip6 zip7 zip8 zip9 bzip1 bzip2 bzip3 bzip4 bzip5 bzip6 bzip7 bzip8 bzip9
@@ -238,13 +240,15 @@ clean_keys:
 
 $(KEY_FILES):
 	$(MAKE) -C bar bar-keygen
-	bar/bar-keygen \
-          --private-directory=. \
-          --certs-directory=. \
-          --java-private-directory=. \
-          $(if $(findstring $(KEYTOOL),certtool),--certtool) \
-          $(if $(findstring $(KEYTOOL),openssl),--openssl) \
-          --force \
+	($(CD) bar; \
+         ./bar-keygen \
+           --private-directory=.. \
+           --certs-directory=.. \
+           --java-private-directory=.. \
+           $(if $(CERTTOOL),--certtool) \
+           $(if $(OPENSSL),--openssl) \
+           --force \
+        )
 
 # ----------------------------------------------------------------------------
 # create documentation
@@ -272,16 +276,17 @@ clean_man:
 	$(RMF) doc/bar.7
 
 doc/bar.7: \
-  doc/bar.txt
+  $(SOURCE_DIR)/doc/bar.txt
 ifneq ($(TXT2MAN),)
-	$(CAT) doc/bar.txt | $(TXT2MAN) -t bar -r $(VERSION_MAJOR).$(VERSION_MINOR) -s 7 -v "Linux User's Manual" > $@
+	$(INSTALL) -d $(@D)
+	$(CAT) $(SOURCE_DIR)/doc/bar.txt | $(TXT2MAN) -t bar -r $(VERSION_MAJOR).$(VERSION_MINOR) -s 7 -v "Linux User's Manual" > $@
 else
 	@$(ECHO) "ERROR: no 'txt2man' tool available! Cannot create man page."
 endif
 
 showman:
 ifneq ($(TXT2MAN),)
-	$(CAT) doc/bar.txt | $(TXT2MAN) -t bar -r $(VERSION_MAJOR).$(VERSION_MINOR) -s 7 -v "Linux User's Manual" -T
+	$(CAT) $(SOURCE_DIR)/doc/bar.txt | $(TXT2MAN) -t bar -r $(VERSION_MAJOR).$(VERSION_MINOR) -s 7 -v "Linux User's Manual" -T
 else
 	@$(ECHO) "ERROR: no 'txt2man' tool available! Cannot create man page."
 endif
@@ -289,9 +294,10 @@ endif
 # create manual
 
 doc/bar.pdf: \
-  doc/bar.odt
+  $(SOURCE_DIR)/doc/bar.odt
 ifneq ($(UNOCONV),)
-	$(UNOCONV) -f pdf doc/bar.odt
+	$(INSTALL) -d $(@D)
+	($(UNOCONV) -f pdf --stdout $(SOURCE_DIR)/doc/bar.odt > $@; if test $$? -ne 0; then $(RMF) $@; fi)
 else
 	@$(ECHO) "ERROR: no 'unoconv' tool available! Cannot create PDF manual."
 endif
