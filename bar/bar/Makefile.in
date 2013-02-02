@@ -14,6 +14,8 @@ PLATFORM            = @PLATFORM@
 
 #------------------------------------ paths ----------------------------------
 
+SOURCE_DIR          = @srcdir@
+
 INSTALL_DIR         = @INSTALL_DIR@
 INSTALL_BIN_DIR     = @INSTALL_BIN_DIR@
 CONFIG_DIR          = @CONFIG_DIR@
@@ -92,8 +94,8 @@ DEVICE_RANDOM = /dev/urandom
 #------------------------ specific variables/settings ------------------------
 
 # major, minor version number
-VERSION_MAJOR := $(shell $(CAT) ../version|$(GREP) MAJOR|$(SED) 's/MAJOR=//g')
-VERSION_MINOR := $(shell $(CAT) ../version|$(GREP) MINOR|$(SED) 's/MINOR=//g')
+VERSION_MAJOR := $(shell $(CAT) $(SOURCE_DIR)/../version|$(GREP) MAJOR|$(SED) 's/MAJOR=//g')
+VERSION_MINOR := $(shell $(CAT) $(SOURCE_DIR)/../version|$(GREP) MINOR|$(SED) 's/MINOR=//g')
 
 # supported compress algorithms
 COMPRESS_NAMES = none zip0 zip1 zip2 zip3 zip4 zip5 zip6 zip7 zip8 zip9
@@ -129,16 +131,20 @@ endif
 
 #---------------------------------- rules ------------------------------------
 
+# source search paths
+vpath %.c   $(SOURCE_DIR)
+vpath %.cpp $(SOURCE_DIR)
+
 # disable implicit rule for *.y -> *.c
 %.c: %.y
 
 # compile C source
-%.o: %.c
-	$(CC) $(CC_FLAGS) $(CC_OPTIMIZE) -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" $(foreach z,$(CC_DEFINES),-D$z) $(CC_WARN_FLAGS) $(foreach z,$(CC_INCLUDES),-I$z) -c $*.c -o $*.o
+%.o: $(SOURCE_DIR)/%.c
+	$(CC) $(CC_FLAGS) $(CC_OPTIMIZE) -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" $(foreach z,$(CC_DEFINES),-D$z) $(CC_WARN_FLAGS) -I. $(foreach z,$(CC_INCLUDES),-I$z) -c $(SOURCE_DIR)/$*.c -o $*.o
 
 # compile C++ source
 %.o: %.cpp
-	$(CXX) $(CXX_FLAGS) $(CC_OPTIMIZE) -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" $(foreach z,$(CC_DEFINES),-D$z) $(CXX_WARN_FLAGS) $(foreach z,$(CC_INCLUDES),-I$z) -c $*.cpp -o $*.o
+	$(CXX) $(CXX_FLAGS) $(CC_OPTIMIZE) -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" $(foreach z,$(CC_DEFINES),-D$z) $(CXX_WARN_FLAGS) -I. $(foreach z,$(CC_INCLUDES),-I$z) -c $(SOURCE_DIR)/$*.cpp -o $*.o
 
 # link object files
 %@EXEEXT@: %.o
@@ -304,7 +310,7 @@ depend: Makefile.depend
 Makefile.depend: $(BAR_SOURCES) $(EXTERN_SOURCES) $(DESTROYER_SOURCES) $(INTERMEDIATE)
 	$(ECHO) > Makefile.depend
 	for z in $(BAR_SOURCES) $(EXTERN_SOURCES) $(DESTROYER_SOURCES); do \
-          $(CC) $(CC_FLAGS) $(foreach z,$(CC_DEFINES),-D$z) $(CC_WARN_FLAGS) $(foreach z,$(CC_INCLUDES),-I$z) -MM >> Makefile.depend $$z; \
+          $(CC) $(CC_FLAGS) $(foreach z,$(CC_DEFINES),-D$z) $(CC_WARN_FLAGS) -I. $(foreach z,$(CC_INCLUDES),-I$z) -MM >> Makefile.depend $$z; \
         done;
 
 # ----------------------------------------------------------------------------
@@ -328,18 +334,18 @@ xdelta3.o: ../xdelta3/xdelta3.c
 endif
 
 # create bar-keygen script
-bar-keygen: bar-keygen.in
-	$(CAT) bar-keygen.in | \
+bar-keygen: $(SOURCE_DIR)/bar-keygen.in
+	$(CAT) $(SOURCE_DIR)/bar-keygen.in | \
         ( \
           while IFS="" read -r line; do \
             if   test "$$line" = "@CERTTOOL/CA.TEMPL@"; then \
-              $(CAT) ../ssl/certtool/ca.tmpl; \
+              $(CAT) $(SOURCE_DIR)/../ssl/certtool/ca.tmpl; \
             elif test "$$line" = "@CERTTOOL/SERVER.TEMPL@"; then \
-              $(CAT) ../ssl/certtool/server.tmpl; \
+              $(CAT) $(SOURCE_DIR)/../ssl/certtool/server.tmpl; \
             elif test "$$line" = "@OPENSSL/CA.TEMPL@"; then \
-              $(CAT) ../ssl/openssl/ca.tmpl; \
+              $(CAT) $(SOURCE_DIR)/../ssl/openssl/ca.tmpl; \
             elif test "$$line" = "@OPENSSL/SERVER.TEMPL@"; then \
-              $(CAT) ../ssl/openssl/server.tmpl; \
+              $(CAT) $(SOURCE_DIR)/../ssl/openssl/server.tmpl; \
             else \
               line=`$(ECHO) "$$line"|$(SED) 's|\@TLS_DIR\@|$(DESTDIR)$(TLS_DIR)|g'`; \
               line=`$(ECHO) "$$line"|$(SED) 's|\@CONFIG_DIR\@|$(DESTDIR)$(CONFIG_DIR)|g'`; \
@@ -350,22 +356,22 @@ bar-keygen: bar-keygen.in
 	$(CHMOD) 775 $@
 
 # error definition
-errors.h: ../errors.def ../errors.pl
-	$(PERL) ../errors.pl < $^ -h $@
-errors.c: ../errors.def ../errors.pl
-	$(PERL) ../errors.pl < $^ -c $@
+errors.h: $(SOURCE_DIR)/../errors.def $(SOURCE_DIR)/../errors.pl
+	$(PERL) $(SOURCE_DIR)/../errors.pl < $^ -h $@
+errors.c: $(SOURCE_DIR)/../errors.def $(SOURCE_DIR)/../errors.pl
+	$(PERL) $(SOURCE_DIR)/../errors.pl < $^ -c $@
 
 # archive format definition
-archive_format.h: archive_format.def
-	$(PERL) archive_format.pl < $^ -h $@
-archive_format_const.h: archive_format.def
-	$(PERL) archive_format.pl < $^ -n $@
-archive_format.c: archive_format.def
-	$(PERL) archive_format.pl < $^ -c $@ -i archive_format.h
+archive_format.h: $(SOURCE_DIR)/archive_format.def
+	$(PERL) $(SOURCE_DIR)/archive_format.pl < $^ -h $@
+archive_format_const.h: $(SOURCE_DIR)/archive_format.def
+	$(PERL) $(SOURCE_DIR)/archive_format.pl < $^ -n $@
+archive_format.c: $(SOURCE_DIR)/archive_format.def
+	$(PERL) $(SOURCE_DIR)/archive_format.pl < $^ -c $@ -i archive_format.h
 
 # index database definition
-index_definition.h: index_definition.sql
-	$(PERL) index_definition.pl < $^ > $@
+index_definition.h: $(SOURCE_DIR)/index_definition.sql
+	$(PERL) $(SOURCE_DIR)/index_definition.pl < $^ > $@
 
 # create destroyer (for testing only!)
 destroyer@EXEEXT@: $(DESTROYER_OBJECTS) 
@@ -2132,9 +2138,13 @@ test_dvd_operations: \
 	$(RMRF) $(TEST_FILES_CLEAN)
 	$(SLEEP) 30
 	SSH_ASKPASS= $(TEST_BAR) -c dvd://$(BAR_FILE).bar test/data $(if $(BAR_OPTIONS),$(BAR_OPTIONS),--compress-algorithm=none --crypt-algorithm=none) $(if $(QUIET),1>/dev/null)
+	SSH_ASKPASS= $(TEST_BAR) -t dvd://$(BAR_FILE).bar $(if $(QUIET),1>/dev/null)
+	SSH_ASKPASS= $(TEST_BAR) -d dvd://$(BAR_FILE).bar $(if $(QUIET),1>/dev/null)
 	SSH_ASKPASS= $(TEST_BAR) -L dvd://$(BAR_FILE).bar $(if $(QUIET),1>/dev/null)
 	$(SLEEP) 30
 	SSH_ASKPASS= $(TEST_BAR) -c dvd://$(BAR_FILE).bar test/data $(if $(BAR_OPTIONS),$(BAR_OPTIONS),--compress-algorithm=none --crypt-algorithm=none) --ecc $(if $(QUIET),1>/dev/null)
+	SSH_ASKPASS= $(TEST_BAR) -t dvd://$(BAR_FILE).bar $(if $(QUIET),1>/dev/null)
+	SSH_ASKPASS= $(TEST_BAR) -d dvd://$(BAR_FILE).bar $(if $(QUIET),1>/dev/null)
 	SSH_ASKPASS= $(TEST_BAR) -L dvd://$(BAR_FILE).bar $(if $(QUIET),1>/dev/null)
 	#
 
