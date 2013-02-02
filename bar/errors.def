@@ -8,7 +8,7 @@
 //
 //***********************************************************************
 
-INCLUDE "config.h"
+INCLUDE <config.h>
 
 #ifdef HAVE_LIBSSH2
 INCLUDE "libssh2.h"
@@ -65,8 +65,24 @@ ERROR TLS_CERTIFICATE_NOT_ACTIVE
 
 ERROR TLS_HANDSHAKE                  "TLS (SSL) handshake failure"
 ERROR INVALID_SSH_SPECIFIER          "invalid SSH specifier"
-ERROR NO_SSH_PASSWORD                "no SSH password given"
-ERROR INVALID_SSH_PASSWORD           "invalid SSH password"
+ERROR NO_SSH_PASSWORD
+  strncpy(errorText,"no SSH password given",sizeof(errorText));
+  if (ERROR_TEXT != NULL)
+  {
+    strncat(errorText,": ",sizeof(errorText)-1-strlen(errorText));
+    strncat(errorText,ERROR_TEXT,sizeof(errorText)-1-strlen(errorText));
+  }
+  errorText[sizeof(errorText)-1] = '\0';
+
+ERROR INVALID_SSH_PASSWORD
+  strncpy(errorText,"invalid SSH password",sizeof(errorText));
+  if (ERROR_TEXT != NULL)
+  {
+    strncat(errorText,": ",sizeof(errorText)-1-strlen(errorText));
+    strncat(errorText,ERROR_TEXT,sizeof(errorText)-1-strlen(errorText));
+  }
+  errorText[sizeof(errorText)-1] = '\0';
+
 ERROR SSH_SESSION_FAIL               "initialize SSH session fail"
 ERROR SSH_AUTHENTICATION
   strncpy(errorText,"SSH authentication fail",sizeof(errorText));
