@@ -17,6 +17,7 @@
 # syntax of error definition file
 #
 # INCLUDE "<file>"
+# INCLUDE <<file>>
 # ERROR <name> "<text>"
 # ERROR <name>
 #   <code>
@@ -312,6 +313,12 @@ while ($line=<STDIN>)
     # include "<file>"
     my $file=$1;
     writeCFile("#include \"$file\"\n");
+  }
+  elsif ($line =~ /^INCLUDE\s+<(.*)>\s*$/)
+  {
+    # include <<file>>
+    my $file=$1;
+    writeCFile("#include <$file>\n");
   }
   elsif ($line =~ /^NONE\s+"(.*)"\s*$/)
   {
