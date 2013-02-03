@@ -11,7 +11,7 @@
 #define __STRINGS_IMPLEMENATION__
 
 /****************************** Includes *******************************/
-#include "config.h"
+#include <config.h>  // use <...> to support separated build directory
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -290,7 +290,7 @@ LOCAL_INLINE void ensureStringLength(struct __String *string, ulong newLength)
 //??? error message?
     if (newData == NULL)
     {
-      fprintf(stderr,"FATAL ERROR: insufficient memory for allocating string (%d bytes) - program halted: %s\n",newMaxLength,strerror(errno));
+      fprintf(stderr,"FATAL ERROR: insufficient memory for allocating string (%lu bytes) - program halted: %s\n",newMaxLength,strerror(errno));
       exit(128);
     }
     #ifndef NDEBUG
@@ -2698,7 +2698,7 @@ String String_replaceAllCString(String string, ulong index, const char *from, co
   return String_mapCString(string,index,&from,&to,1);
 }
 
-String String_replaceAllChar(String string, ulong index, ulong length, char fromCh, char toCh)
+String String_replaceAllChar(String string, ulong index, char fromCh, char toCh)
 {
   STRING_CHECK_VALID(string);
 

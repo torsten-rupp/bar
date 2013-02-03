@@ -12,6 +12,8 @@
 #define __STRINGS__
 
 /****************************** Includes *******************************/
+#include <config.h>  // use <...> to support separated build directory 
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdarg.h>
@@ -384,7 +386,7 @@ String String_replaceBuffer(String string, ulong index, ulong length, const char
 
 String String_replaceAll(String string, ulong index, const String fromString, const String toString);
 String String_replaceAllCString(String string, ulong index, const char *from, const char *to);
-String String_replaceAllChar(String string, ulong index, ulong length, char fromCh, char toCh);
+String String_replaceAllChar(String string, ulong index, char fromCh, char toCh);
 
 /***********************************************************************\
 * Name   : String_map, String_mapCString, String_mapChar,
