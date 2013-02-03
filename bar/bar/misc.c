@@ -9,7 +9,7 @@
 \***********************************************************************/
 
 /****************************** Includes *******************************/
-#include "config.h"
+#include <config.h>  // use <...> to support separated build directory
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -906,7 +906,7 @@ bool Misc_getYesNo(const char *message)
       {
         ch = toupper(fgetc(stdin));
       }
-      while ((ch != 'Y') && (ch != 'N'));
+      while ((ch != 'Y') && (ch != 'N') && (ch != '\n'));
 
       // restore console settings
       tcsetattr(File_getDescriptor(stdin),TCSANOW,&oldTermioSettings);
