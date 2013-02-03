@@ -9,7 +9,7 @@
 \***********************************************************************/
 
 /****************************** Includes *******************************/
-#include "config.h"
+#include <config.h>  // use <...> to support separated build directory
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -17,7 +17,11 @@
 #include <assert.h>
 
 #ifdef HAVE_BREAKPAD
-  #include "client/linux/handler/exception_handler.h"
+  #if   defined(PLATFORM_LINUX)
+    #include "client/linux/handler/exception_handler.h"
+  #elif defined(PLATFORM_WINDOWS)
+    #include "client/windows/handler/exception_handler.h"
+  #endif
 #endif /* HAVE_BREAKPAD */
 
 #include "global.h"
