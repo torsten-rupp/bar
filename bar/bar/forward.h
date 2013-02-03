@@ -12,7 +12,7 @@
 #define __FORWARD__
 
 /****************************** Includes *******************************/
-#include "config.h"
+#include <config.h>  // use <...> to support separated build directory 
 
 /****************** Conditional compilation switches *******************/
 

@@ -11,7 +11,7 @@
 #define __CHUNK_IMPLEMENATION__
 
 /****************************** Includes *******************************/
-#include "config.h"
+#include <config.h>  // use <...> to support separated build directory 
 
 #include <stdlib.h>
 #include <stdio.h>
