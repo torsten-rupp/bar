@@ -498,6 +498,9 @@ AC_SUBST(PLATFORM)                          dnl platform name
 AC_SUBST(FILE_SEPARATOR_CHAR)               dnl file separator path character (/ or \\)
 AC_SUBST(FILE_SEPARATOR_STRING)             dnl file separator path character as string (/ or \\)
 
+AC_SUBST(EXEEXT)                            dnl executable extension
+AC_SUBST(SHELLEXT)                          dnl shell extension
+
 AC_SUBST(ENABLE_DEBUG)                      dnl "yes" for debug version, "no" otherwise
 AC_SUBST(ENABLE_BZIP2)                      dnl "yes" for bzip2 support, "no" otherwise
 AC_SUBST(ENABLE_LZMA)                       dnl "yes" for lzma support, "no" otherwise
@@ -623,26 +626,31 @@ case "$host_os" in
     PLATFORM=LINUX
     FILE_SEPARATOR_CHAR="/"
     JAVA_PATH_SEPARATOR=":"
+    SHELLEXT=""
     ;;
   windows*)
     PLATFORM=WINDOWS
     FILE_SEPARATOR_CHAR="\\\\"
     JAVA_PATH_SEPARATOR=";"
+    SHELLEXT=".cmd"
     ;;
   mingw*)
     PLATFORM=WINDOWS
     FILE_SEPARATOR_CHAR="\\\\"
     JAVA_PATH_SEPARATOR=";"
+    SHELLEXT=".cmd"
     ;;
   sunos | solaris*)
     PLATFORM=SOLARIS
     FILE_SEPARATOR_CHAR="/"
     JAVA_PATH_SEPARATOR=":"
+    SHELLEXT=""
     ;;
   darwin*)
     PLATFORM=MAC_OSX
     FILE_SEPARATOR_CHAR="/"
     JAVA_PATH_SEPARATOR=":"
+    SHELLEXT=""
     ;;
   *)
     AC_MSG_ERROR([unknown host operation system '$host_os'. Please specify host as (cpu-vendor-os or cpu-os). Supported host operating systems: $host_supported_os])
@@ -2148,10 +2156,10 @@ AC_CHECK_FUNCTION(backtrace,AC_DEFINE(HAVE_BACKTRACE,1,[backtrace() available]))
 
 dnl -------------------------------- misc ------------------------------
 
-VERSION_MAJOR=`cat version|grep MAJOR|sed 's/.*=//g'`
-VERSION_MINOR=`cat version|grep MINOR|sed 's/.*=//g'`
+VERSION_MAJOR=`cat $srcdir/version|grep MAJOR|sed 's/.*=//g'`
+VERSION_MINOR=`cat $srcdir/version|grep MINOR|sed 's/.*=//g'`
 
-COPYRIGHT_DATE="2007-2011"
+COPYRIGHT_DATE="2007-`date +%Y`"
 
 AC_DEFINE_UNQUOTED(FILE_SEPARATOR_CHAR,  '$FILE_SEPARATOR_CHAR',[file separator char])
 AC_DEFINE_UNQUOTED(FILE_SEPARATOR_STRING,"$FILE_SEPARATOR_CHAR",[file separator string])

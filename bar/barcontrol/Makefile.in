@@ -140,7 +140,7 @@ SOURCES        = src/BARControl.java \
                  src/DataModel.java \
 
 OTHER_SOURCES  = barcontrol.in \
-                 barcontrol.bat.in \
+                 barcontrol.cmd.in \
                  barcontrol.xml \
                  jar.txt \
 
@@ -159,7 +159,7 @@ INTERMEDIATE   = src/Errors.java \
                  barcontrol-windows_64.jar
 
 TARGETS        = barcontrol \
-                 $(if $(LAUNCH4J),barcontrol.exe,barcontrol.bat) \
+                 $(if $(LAUNCH4J),barcontrol@EXEEXT@,barcontrol@SHELLEXT@) \
 
 #------------------------------ dependencies ---------------------------------
 
@@ -179,7 +179,7 @@ distclean: \
 	$(RMF) Makefile
 	$(RMF) src/Config.java
 	$(RMF) barcontrol
-	$(RMF) barcontrol.bat
+	$(RMF) barcontrol@EXEEXT@ barcontrol@SHELLEXT@
 
 help:
 	@$(ECHO) "Help:"
@@ -351,12 +351,12 @@ barcontrol: $(SOURCE_DIR)/barcontrol.in barcontrol-linux.jar barcontrol-linux_64
 
 ifneq ($(LAUNCH4J),)
 # create Windows executable
-barcontrol.exe: barcontrol-windows.jar
+barcontrol@EXEEXT@: barcontrol-windows.jar
 	$(LAUNCH4J) barcontrol.xml
 else
 # create Windows start script
-barcontrol.bat: $(SOURCE_DIR)/barcontrol.bat.in barcontrol-windows.jar
-	$(CAT) $(SOURCE_DIR)/barcontrol.bat.in | \
+barcontrol.cmd: $(SOURCE_DIR)/barcontrol.cmd.in barcontrol-windows.jar
+	$(CAT) $(SOURCE_DIR)/barcontrol.cmd.in | \
         ( \
           while IFS="" read line; do \
             line=`$(ECHO) "$$line"|$(SED) 's|\@JAVA\@|$(JAVA)|g'`; \

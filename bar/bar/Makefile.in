@@ -334,7 +334,7 @@ xdelta3.o: ../xdelta3/xdelta3.c
 endif
 
 # create bar-keygen script
-bar-keygen: $(SOURCE_DIR)/bar-keygen.in
+bar-keygen@SHELLEXT@: $(SOURCE_DIR)/bar-keygen.in
 	$(CAT) $(SOURCE_DIR)/bar-keygen.in | \
         ( \
           while IFS="" read -r line; do \
