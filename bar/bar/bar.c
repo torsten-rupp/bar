@@ -9,7 +9,7 @@
 \***********************************************************************/
 
 /****************************** Includes *******************************/
-#include "config.h"
+#include <config.h>  // use <...> to support separated build directory
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -5252,7 +5252,8 @@ fprintf(stderr,"%s,%d: t=%s\n",__FILE__,__LINE__,t);
   }
 
   // delete temporary directory
-  File_delete(tmpDirectory,TRUE);
+#warning remove
+//  File_delete(tmpDirectory,TRUE);
 
   // close index database (if open)
   if (indexDatabaseHandle != NULL)
