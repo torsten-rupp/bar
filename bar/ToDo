@@ -57,3 +57,5 @@ ToDo
 - add allocator of connection (ftp, scp, sftp) and limit number of connections
 - pre/post-script in barcontrol
 - valgrind-test for delta-compression
+- configure check for LIBSSH2_SEND_FUNC, LIBSSH2_RECV_FUNC
+- read corrupted archive files, e. g. scan for next valid entry
