@@ -9,7 +9,7 @@
 \***********************************************************************/
 
 /****************************** Includes *******************************/
-#include "config.h"
+#include <config.h>  // use <...> to support separated build directory
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -8866,7 +8866,7 @@ Errors Archive_updateIndex(DatabaseHandle               *databaseHandle,
       {
         Misc_udelay(5000*1000);
       }
-      
+
       // reopen storage
 #if 0
       error = Archive_storageContinue(&archiveInfo);
