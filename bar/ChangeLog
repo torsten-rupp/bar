@@ -4,6 +4,16 @@
   * fixed create index: do not delete index which is currently
     updated
   * added support for crash dump tool Breakpad
+  * upgrade gpg-error 1.10, gcrypt 1.5.0
+  * support cross-compilation Linux -> Windows
+  * replaced FTPLib by curl
+
+2013-01-26 0.17a
+  * fixed writing CD/DVD/BD: do not write an empty last medium
+  * improved database index
+  * fixed parsing CD/DVD/BD/device specifier: last character was
+    missing
+  * fixed logging of skipped own files
 
 2012-10-03 0.17
   * finally: added support for xdelta compression!
