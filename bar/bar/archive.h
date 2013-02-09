@@ -12,7 +12,7 @@
 #define __ARCHIVE__
 
 /****************************** Includes *******************************/
-#include "config.h"
+#include <config.h>  // use <...> to support separated build directory
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -158,8 +158,8 @@ typedef struct
   };
   String                          printableName;                     // printable file/storage name (without password)
 
-  DatabaseHandle                  *databaseHandle;
-  int64                           storageId;
+  DatabaseHandle                  *databaseHandle;                   // database handle
+  int64                           storageId;                         // index storage id in database
 
   const ChunkIO                   *chunkIO;                          // chunk i/o functions
   void                            *chunkIOUserData;                  // chunk i/o functions data
@@ -169,6 +169,12 @@ typedef struct
   Errors                          pendingError;                      // pending error or ERROR_NONE
   bool                            nextChunkHeaderReadFlag;           // TRUE iff next chunk header read
   ChunkHeader                     nextChunkHeader;                   // next chunk header
+
+  struct
+  {
+    bool                          openFlag;                          // TRUE iff archive is opend
+    uint64                        offset;                            // interrupt offset
+  } interrupt;
 } ArchiveInfo;
 
 typedef struct
@@ -416,6 +422,28 @@ Errors Archive_open(ArchiveInfo                     *archiveInfo,
 \***********************************************************************/
 
 Errors Archive_close(ArchiveInfo *archiveInfo);
+
+/***********************************************************************\
+* Name   : Archive_storageInterrupt
+* Purpose: interrupt create archive and close storage
+* Input  : archiveInfo - archive info block
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors Archive_storageInterrupt(ArchiveInfo *archiveInfo);
+
+/***********************************************************************\
+* Name   : Archive_storageContinue
+* Purpose: continue interrupted archive and reopen storage
+* Input  : archiveInfo - archive info block
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors Archive_storageContinue(ArchiveInfo *archiveInfo);
 
 /***********************************************************************\
 * Name   : Archive_eof
