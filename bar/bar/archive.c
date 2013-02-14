@@ -2657,12 +2657,19 @@ Errors Archive_open(ArchiveInfo                     *archiveInfo,
   }
   if (chunkHeader.id != CHUNK_ID_BAR)
   {
-    Storage_close(&archiveInfo->storage.storageFileHandle);
-    Storage_done(&archiveInfo->storage.storageFileHandle);
-    String_delete(archiveInfo->printableName);
-    String_delete(archiveInfo->storage.storageName);
-    String_delete(fileName);
-    return ERROR_NOT_AN_ARCHIVE_FILE;
+    if (jobOptions->stopOnErrorFlag)
+    {
+      Storage_close(&archiveInfo->storage.storageFileHandle);
+      Storage_done(&archiveInfo->storage.storageFileHandle);
+      String_delete(archiveInfo->printableName);
+      String_delete(archiveInfo->storage.storageName);
+      String_delete(fileName);
+      return ERROR_NOT_AN_ARCHIVE_FILE;
+    }
+    else
+    {
+      printWarning("No BAR header found! This may be a broken archive or not an archive.\n");
+    }
   }
   ungetNextChunkHeader(archiveInfo,&chunkHeader);
 
@@ -2793,6 +2800,7 @@ bool Archive_eof(ArchiveInfo *archiveInfo,
                 )
 {
   bool           chunkHeaderFoundFlag;
+  bool           scanFlag;
   ChunkHeader    chunkHeader;
   bool           decryptedFlag;
   PasswordHandle passwordHandle;
@@ -2809,6 +2817,7 @@ bool Archive_eof(ArchiveInfo *archiveInfo,
 
   // find next file, image, directory, link, hard link, special chunk
   chunkHeaderFoundFlag = FALSE;
+  scanFlag             = FALSE;
   while (   !chunkHeaderFoundFlag
          && !chunkHeaderEOF(archiveInfo)
         )
@@ -2830,6 +2839,7 @@ bool Archive_eof(ArchiveInfo *archiveInfo,
         {
           return FALSE;
         }
+        scanFlag = FALSE;
         break;
       case CHUNK_ID_KEY:
         // check if private key available
@@ -2896,6 +2906,8 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
 }
 #endif /* 0 */
         archiveInfo->cryptType = CRYPT_TYPE_ASYMMETRIC;
+
+        scanFlag = FALSE;
         break;
       case CHUNK_ID_FILE:
       case CHUNK_ID_IMAGE:
@@ -2904,22 +2916,33 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
       case CHUNK_ID_HARDLINK:
       case CHUNK_ID_SPECIAL:
         chunkHeaderFoundFlag = TRUE;
+
+        scanFlag = FALSE;
         break;
       default:
         if (skipUnknownChunksFlag)
         {
-          archiveInfo->pendingError = Chunk_skip(archiveInfo->chunkIO,archiveInfo->chunkIOUserData,&chunkHeader);
+          // unknown chunk -> switch to scan mode
+          if (!scanFlag)
+          {
+            if (globalOptions.verboseLevel >= 3)
+            {
+              printWarning("Skipped unknown chunk '%s' (offset %ld). Switch to scan mode.\n",Chunk_idToString(chunkHeader.id),chunkHeader.offset);
+            }
+
+            scanFlag = TRUE;
+          }
+
+          // skip 1 byte
+          archiveInfo->pendingError = archiveInfo->chunkIO->seek(archiveInfo->chunkIOUserData,chunkHeader.offset+1LL);
           if (archiveInfo->pendingError != ERROR_NONE)
           {
             return FALSE;
           }
-          if (globalOptions.verboseLevel >= 3)
-          {
-            printWarning("Skipped unexpected chunk '%s' (offset %ld)\n",Chunk_idToString(chunkHeader.id),chunkHeader.offset);
-          }
         }
         else
         {
+          // report unknown         chunk
           archiveInfo->pendingError = ERROR_UNKNOWN_CHUNK;
           return FALSE;
         }
@@ -4426,6 +4449,7 @@ Errors Archive_getNextArchiveEntryType(ArchiveInfo       *archiveInfo,
                                       )
 {
   Errors         error;
+  bool           scanMode;
   ChunkHeader    chunkHeader;
   bool           decryptedFlag;
   PasswordHandle passwordHandle;
@@ -4444,6 +4468,7 @@ Errors Archive_getNextArchiveEntryType(ArchiveInfo       *archiveInfo,
   }
 
   // find next file, image, directory, link, special chunk
+  scanMode = FALSE;
   do
   {
     // get next chunk
@@ -4462,6 +4487,8 @@ Errors Archive_getNextArchiveEntryType(ArchiveInfo       *archiveInfo,
         {
           return error;
         }
+
+        scanMode = FALSE;
         break;
       case CHUNK_ID_KEY:
         // check if private key available
@@ -4526,6 +4553,8 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
 }
 #endif /* 0 */
         archiveInfo->cryptType = CRYPT_TYPE_ASYMMETRIC;
+
+        scanMode = FALSE;
         break;
       case CHUNK_ID_FILE:
       case CHUNK_ID_IMAGE:
@@ -4533,24 +4562,32 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
       case CHUNK_ID_LINK:
       case CHUNK_ID_HARDLINK:
       case CHUNK_ID_SPECIAL:
+        scanMode = FALSE;
         break;
       default:
         if (skipUnknownChunksFlag)
         {
-          // skip unknown chunks
-          error = Chunk_skip(archiveInfo->chunkIO,archiveInfo->chunkIOUserData,&chunkHeader);
+          // unknown chunk -> switch to scan mode
+          if (!scanMode)
+          {
+            if (globalOptions.verboseLevel >= 3)
+            {
+              printWarning("Skipped unknown chunk '%s' (offset %ld). Switch to scan mode.\n",Chunk_idToString(chunkHeader.id),chunkHeader.offset);
+            }
+
+            scanMode = TRUE;
+          }
+
+          // skip 1 byte
+          error = archiveInfo->chunkIO->seek(archiveInfo->chunkIOUserData,chunkHeader.offset+1LL);
           if (error != ERROR_NONE)
           {
             return error;
           }
-          if (globalOptions.verboseLevel >= 3)
-          {
-            printWarning("Skipped unexpected chunk '%s'\n",Chunk_idToString(chunkHeader.id));
-          }
         }
         else
         {
-          // unknown chunk
+          // report unknown chunk
           return ERROR_UNKNOWN_CHUNK;
         }
         break;
