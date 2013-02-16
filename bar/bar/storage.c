@@ -1955,8 +1955,11 @@ String Storage_getPrintableName(String       string,
           String_appendCString(string,"ftp://");
           if (Storage_parseFTPSpecifier(storageSpecifier.string,hostName,&hostPort,loginName,NULL))
           {
-            String_append(string,loginName);
-            String_appendChar(string,'@');
+            if (!String_isEmpty(loginName))
+            {
+              String_append(string,loginName);
+              String_appendChar(string,'@');
+            }
             String_append(string,hostName);
             if ((hostPort != 0) && (hostPort != 21))
             {
