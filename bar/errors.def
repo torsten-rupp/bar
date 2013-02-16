@@ -384,6 +384,7 @@ ERROR WRONG_INCREMENTAL_FILE_VERSION "wrong incremental file version"
 ERROR CORRUPT_INCREMENTAL_FILE       "corrupt incremental file"
 
 // network
+ERROR NO_HOST_NAME                   "no host name given"
 ERROR HOST_NOT_FOUND                 "host not found"
 ERROR CONNECT_FAIL
   strncpy(errorText,strerror(ERROR_ERRNO),sizeof(errorText)-1);
