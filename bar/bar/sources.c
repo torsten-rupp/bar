@@ -9,7 +9,7 @@
 \***********************************************************************/
 
 /****************************** Includes *******************************/
-#include <config.h>  // use <...> to support separated build directory 
+#include <config.h>  // use <...> to support separated build directory
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -786,14 +786,34 @@ void Source_doneAll(void)
 
 Errors Source_addSource(const String storageName)
 {
+  #if   defined(PLATFORM_LINUX)
+  #elif defined(PLATFORM_WINDOWS)
+    String    string;
+  #endif /* PLATFORM_... */
   Pattern storagePattern;
   Errors  error;
 
   // init pattern
-  error = Pattern_init(&storagePattern,
-                       storageName,
-                       PATTERN_TYPE_GLOB
-                      );
+  #if   defined(PLATFORM_LINUX)
+    error = Pattern_init(&storagePattern,
+                         storageName,
+                         PATTERN_TYPE_GLOB,
+                         PATTERN_FLAG_NONE
+                        );
+  #elif defined(PLATFORM_WINDOWS)
+    // escape all '\' by '\\'
+    string = String_duplicate(storageName);
+    String_replaceAllCString(string,STRING_BEGIN,"\\","\\\\");
+
+    error = Pattern_init(&storagePattern,
+                         string,
+                         PATTERN_TYPE_GLOB,
+                         PATTERN_FLAG_IGNORE_CASE
+                        );
+
+    // free resources
+    String_delete(string);
+  #endif /* PLATFORM_... */
   if (error != ERROR_NONE)
   {
     return error;
