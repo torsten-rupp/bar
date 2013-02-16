@@ -229,15 +229,15 @@ void Password_random(Password *password, uint length);
 uint Password_length(const Password *password);
 
 /***********************************************************************\
-* Name   : Password_empty
+* Name   : Password_isEmpty
 * Purpose: check if password is empty
 * Input  : password - password
 * Output : -
-* Return : TRUE iff password is empty, FALSE otherwise
+* Return : TRUE iff password is NULL or empty, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
 
-bool Password_empty(const Password *password);
+bool Password_isEmpty(const Password *password);
 
 /***********************************************************************\
 * Name   : Password_getQualityLevel

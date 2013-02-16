@@ -9,7 +9,7 @@
 \***********************************************************************/
 
 /****************************** Includes *******************************/
-#include <config.h>  // use <...> to support separated build directory 
+#include <config.h>  // use <...> to support separated build directory
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -344,7 +344,7 @@ uint Password_length(const Password *password)
   return (password != NULL)?password->length:0;
 }
 
-bool Password_empty(const Password *password)
+bool Password_isEmpty(const Password *password)
 {
   return (password == NULL) || (password->length == 0);
 }
