@@ -1256,12 +1256,12 @@ if test $ENABLE_GCRYPT = "yes"; then
       AC_MSG_COMPILE([libgcrypt])
       result2=1
       if test $result2 -eq 1; then
+        # patch to disable wrong deprecated warnings
+        # patch created with:
+        # diff -u libgcrypt-1.5.0.org/src/gcrypt.h libgcrypt-1.5.0/src/gcrypt.h > libgcrypt-warning.patch
+        (cd packages/libgcrypt-1.5.0; patch --batch -N -p1 <$cwd/misc/libgcrypt-warning.patch) 1>/dev/null 2>/dev/null
         case $host_os in
           mingw*)
-            # patch to disable wrong deprecated warnings
-            # patch created with:
-            # diff -u libgcrypt-1.5.0.org/src/gcrypt.h libgcrypt-1.5.0/src/gcrypt.h > libgcrypt-warning.patch
-            (cd packages/libgcrypt-1.5.0; patch --batch -N -p1 <$cwd/misc/libgcrypt-warning.patch) 1>/dev/null 2>/dev/null
             # patch to disable usage of lib-command when RANLIB is set
             # patch created with:
             #   diff -u libgcrypt-1.5.0.org/m4/libtool.m4 libgcrypt-1.5.0/m4/libtool.m4 >  libgcrypt-1.5.0-libtool.patch
