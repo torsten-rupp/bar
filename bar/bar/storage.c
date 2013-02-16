@@ -337,7 +337,7 @@ LOCAL size_t curlFTPNopDataCallback(void   *buffer,
 * Name   : curlFTPReadDataCallback
 * Purpose: curl FTP read data callback
 * Input  : buffer   - buffer for data
-*          size     - size of element
+*          size     - size of an element
 *          n        - number of elements
 *          userData - user data
 * Output : -
@@ -359,14 +359,14 @@ LOCAL size_t curlFTPReadDataCallback(void   *buffer,
   assert(storageFileHandle != NULL);
   assert(storageFileHandle->ftp.buffer != NULL);
 
-  if (storageFileHandle->ftp.n < storageFileHandle->ftp.length)
+  if (storageFileHandle->ftp.transferedBytes < storageFileHandle->ftp.length)
   {
-    readBytes = MIN(n,(size_t)storageFileHandle->ftp.length-storageFileHandle->ftp.n/size)*size;
+    readBytes = MIN(n,(size_t)(storageFileHandle->ftp.length-storageFileHandle->ftp.transferedBytes)/size)*size;
 
     memcpy(buffer,storageFileHandle->ftp.buffer,readBytes);
 
-    storageFileHandle->ftp.buffer = (byte*)storageFileHandle->ftp.buffer+readBytes;
-    storageFileHandle->ftp.n += readBytes;
+    storageFileHandle->ftp.buffer          = (byte*)storageFileHandle->ftp.buffer+readBytes;
+    storageFileHandle->ftp.transferedBytes += (ulong)readBytes;
   }
   else
   {
@@ -381,7 +381,7 @@ LOCAL size_t curlFTPReadDataCallback(void   *buffer,
 * Name   : curlFTPWriteDataCallback
 * Purpose: curl FTP write data callback
 * Input  : buffer   - buffer with data
-*          size     - size of element
+*          size     - size of an element
 *          n        - number of elements
 *          userData - user data
 * Output : -
@@ -403,14 +403,14 @@ LOCAL size_t curlFTPWriteDataCallback(const void *buffer,
   assert(storageFileHandle != NULL);
   assert(storageFileHandle->ftp.buffer != NULL);
 
-  if (storageFileHandle->ftp.n < storageFileHandle->ftp.length)
+  if (storageFileHandle->ftp.transferedBytes < storageFileHandle->ftp.length)
   {
-    writtenBytes = MIN(n,(size_t)storageFileHandle->ftp.length-storageFileHandle->ftp.n/size)*size;
+    writtenBytes = MIN(n,(size_t)(storageFileHandle->ftp.length-storageFileHandle->ftp.transferedBytes)/size)*size;
 
     memcpy(storageFileHandle->ftp.buffer,buffer,writtenBytes);
 
-    storageFileHandle->ftp.buffer = (byte*)storageFileHandle->ftp.buffer+writtenBytes;
-    storageFileHandle->ftp.n += writtenBytes;
+    storageFileHandle->ftp.buffer          = (byte*)storageFileHandle->ftp.buffer+writtenBytes;
+    storageFileHandle->ftp.transferedBytes += (ulong)writtenBytes;
   }
   else
   {
@@ -5327,6 +5327,7 @@ Errors Storage_read(StorageFileHandle *storageFileHandle,
       #if   defined(HAVE_CURL)
         {
           ulong          i;
+          ulong          n;
           ulong          length;
           uint64         startTimestamp,endTimestamp;
           fd_set         fdSetRead,fdSetWrite,fdSetException;
@@ -5334,7 +5335,6 @@ Errors Storage_read(StorageFileHandle *storageFileHandle,
           long           curlTimeout;
           struct timeval timeout;
           CURLMcode      curlmCode;
-          ulong          n;
 
           if (!storageFileHandle->jobOptions->dryRunFlag)
           {
@@ -5361,7 +5361,9 @@ Errors Storage_read(StorageFileHandle *storageFileHandle,
             // read rest of data
             while (size > 0L)
             {
-              // get max. number of bytes to send in one step
+              assert(storageFileHandle->ftp.index >= (storageFileHandle->ftp.readAheadBuffer.offset+storageFileHandle->ftp.readAheadBuffer.length));
+
+              // get max. number of bytes to receive in one step
               if (storageFileHandle->ftp.bandWidthLimiter.maxBandWidthList != NULL)
               {
                 length = MIN(storageFileHandle->ftp.bandWidthLimiter.blockSize,size);
@@ -5378,13 +5380,12 @@ Errors Storage_read(StorageFileHandle *storageFileHandle,
               {
 //fprintf(stderr,"%s, %d: storageFileHandle->ftp.runningHandles=%d\n",__FILE__,__LINE__,storageFileHandle->ftp.runningHandles);
                 // read into read-ahead buffer
-                storageFileHandle->ftp.buffer = storageFileHandle->ftp.readAheadBuffer.data;
-                storageFileHandle->ftp.length = MIN((size_t)(storageFileHandle->ftp.size-storageFileHandle->ftp.index),MAX_BUFFER_SIZE);
-                storageFileHandle->ftp.n      = 0;
-                storageFileHandle->ftp.error  = ERROR_NONE;
+                storageFileHandle->ftp.buffer          = storageFileHandle->ftp.readAheadBuffer.data;
+                storageFileHandle->ftp.length          = MIN((size_t)(storageFileHandle->ftp.size-storageFileHandle->ftp.index),MAX_BUFFER_SIZE);
+                storageFileHandle->ftp.transferedBytes = 0L;
                 while (   (storageFileHandle->ftp.runningHandles > 0)
-                       && (storageFileHandle->ftp.n < storageFileHandle->ftp.length)
-                       && (storageFileHandle->ftp.error == ERROR_NONE)
+                       && (storageFileHandle->ftp.transferedBytes < storageFileHandle->ftp.length)
+                       && (error == ERROR_NONE)
                       )
                 {
                   // get file descriptors from the transfers
@@ -5412,40 +5413,38 @@ Errors Storage_read(StorageFileHandle *storageFileHandle,
                     case -1:
                       // error
 fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-                      storageFileHandle->ftp.error = ERROR_NETWORK_SEND;
+                      error = ERROR_NETWORK_RECEIVE;
                       break;
                     case 0:
                       // timeout
   //fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-  //                    storageFileHandle->ftp.error = CURLE_OPERATION_TIMEOUT;
+  //                    error = CURLE_OPERATION_TIMEOUT;
                       break;
                     default:
                       do
                       {
                         curlmCode = curl_multi_perform(storageFileHandle->ftp.curlMultiHandle,&storageFileHandle->ftp.runningHandles);
-//fprintf(stderr,"%s, %d: %ld %ld\n",__FILE__,__LINE__,storageFileHandle->ftp.n,storageFileHandle->ftp.length);
+//fprintf(stderr,"%s, %d: %ld %ld\n",__FILE__,__LINE__,storageFileHandle->ftp.transferedBytes,storageFileHandle->ftp.length);
                       }
                       while (curlmCode == CURLM_CALL_MULTI_PERFORM);
                       if (curlmCode != CURLM_OK)
                       {
-                        storageFileHandle->ftp.error = ERRORX_(NETWORK_SEND,0,curl_multi_strerror(curlmCode));
+                        error = ERRORX_(NETWORK_RECEIVE,0,curl_multi_strerror(curlmCode));
                       }
                       break;
                   }
                 }
-                if (storageFileHandle->ftp.error != ERROR_NONE)
+                if (error != ERROR_NONE)
                 {
-                  error = storageFileHandle->ftp.error;
                   break;
                 }
-                if (storageFileHandle->ftp.n <= 0)
+                if (storageFileHandle->ftp.transferedBytes <= 0L)
                 {
                   error = ERROR_IO_ERROR;
                   break;
                 }
-//fprintf(stderr,"%s, %d: storageFileHandle->ftp.index=%llu storageFileHandle->ftp.n=%lu\n",__FILE__,__LINE__,storageFileHandle->ftp.index,storageFileHandle->ftp.n);
                 storageFileHandle->ftp.readAheadBuffer.offset = storageFileHandle->ftp.index;
-                storageFileHandle->ftp.readAheadBuffer.length = storageFileHandle->ftp.n;
+                storageFileHandle->ftp.readAheadBuffer.length = storageFileHandle->ftp.transferedBytes;
 
                 // copy data
                 n = MIN(length,storageFileHandle->ftp.readAheadBuffer.length);
@@ -5460,13 +5459,12 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
               else
               {
                 // read direct
-                storageFileHandle->ftp.buffer = buffer;
-                storageFileHandle->ftp.length = length;
-                storageFileHandle->ftp.n      = 0;
-                storageFileHandle->ftp.error  = ERROR_NONE;
+                storageFileHandle->ftp.buffer          = buffer;
+                storageFileHandle->ftp.length          = length;
+                storageFileHandle->ftp.transferedBytes = 0L;
                 while (   (storageFileHandle->ftp.runningHandles > 0)
-                       && (storageFileHandle->ftp.n < storageFileHandle->ftp.length)
-                       && (storageFileHandle->ftp.error == ERROR_NONE)
+                       && (storageFileHandle->ftp.transferedBytes < storageFileHandle->ftp.length)
+                       && (error == ERROR_NONE)
                       )
                 {
                   // get file descriptors from the transfers
@@ -5494,39 +5492,37 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                     case -1:
                       // error
   //fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-                      storageFileHandle->ftp.error = ERROR_NETWORK_SEND;
+                      error = ERROR_NETWORK_RECEIVE;
                       break;
                     case 0:
                       // timeout
   //fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-  //                    storageFileHandle->ftp.error = CURLE_OPERATION_TIMEOUT;
+  //                    error = CURLE_OPERATION_TIMEOUT;
                       break;
                     default:
                       do
                       {
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                         curlmCode = curl_multi_perform(storageFileHandle->ftp.curlMultiHandle,&storageFileHandle->ftp.runningHandles);
-fprintf(stderr,"%s, %d: %ld %ld\n",__FILE__,__LINE__,storageFileHandle->ftp.n,storageFileHandle->ftp.length);
                       }
                       while (curlmCode == CURLM_CALL_MULTI_PERFORM);
                       if (curlmCode != CURLM_OK)
                       {
-                        storageFileHandle->ftp.error = ERRORX_(NETWORK_SEND,0,curl_multi_strerror(curlmCode));
+                        error = ERRORX_(NETWORK_RECEIVE,0,curl_multi_strerror(curlmCode));
                       }
                       break;
                   }
                 }
-                if (storageFileHandle->ftp.error != ERROR_NONE)
+                if (error != ERROR_NONE)
                 {
-                  error = storageFileHandle->ftp.error;
                   break;
                 }
-                if (storageFileHandle->ftp.n <= 0)
+                if (storageFileHandle->ftp.transferedBytes <= 0L)
                 {
                   error = ERROR_IO_ERROR;
                   break;
                 }
-                n = storageFileHandle->ftp.n;
+fprintf(stderr,"%s, %d: read %ld\n",__FILE__,__LINE__,n);
+                n = storageFileHandle->ftp.transferedBytes;
 
                 // adjust buffer, size, bytes read, index
                 buffer = (byte*)buffer+n;
@@ -5586,7 +5582,9 @@ fprintf(stderr,"%s, %d: %ld %ld\n",__FILE__,__LINE__,storageFileHandle->ftp.n,st
             // read rest of data
             while (size > 0L)
             {
-              // get max. number of bytes to send in one step
+              assert(storageFileHandle->ftp.index >= (storageFileHandle->ftp.readAheadBuffer.offset+storageFileHandle->ftp.readAheadBuffer.length));
+
+              // get max. number of bytes to receive in one step
               if (storageFileHandle->ftp.bandWidthLimiter.maxBandWidthList != NULL)
               {
                 length = MIN(storageFileHandle->ftp.bandWidthLimiter.blockSize,size);
@@ -5727,7 +5725,9 @@ fprintf(stderr,"%s, %d: %ld %ld\n",__FILE__,__LINE__,storageFileHandle->ftp.n,st
             // read rest of data
             while (size > 0L)
             {
-              // get max. number of bytes to send in one step
+              assert(storageFileHandle->scp.index >= (storageFileHandle->scp.readAheadBuffer.offset+storageFileHandle->scp.readAheadBuffer.length));
+
+              // get max. number of bytes to receive in one step
               if (storageFileHandle->scp.bandWidthLimiter.maxBandWidthList != NULL)
               {
                 length = MIN(storageFileHandle->scp.bandWidthLimiter.blockSize,size);
@@ -5856,7 +5856,9 @@ fprintf(stderr,"%s, %d: %ld %ld\n",__FILE__,__LINE__,storageFileHandle->ftp.n,st
             // read rest of data
             if (size > 0)
             {
-              // get max. number of bytes to send in one step
+              assert(storageFileHandle->sftp.index >= (storageFileHandle->sftp.readAheadBuffer.offset+storageFileHandle->sftp.readAheadBuffer.length));
+
+              // get max. number of bytes to receive in one step
               if (storageFileHandle->sftp.bandWidthLimiter.maxBandWidthList != NULL)
               {
                 length = MIN(storageFileHandle->sftp.bandWidthLimiter.blockSize,size);
@@ -6080,13 +6082,12 @@ Errors Storage_write(StorageFileHandle *storageFileHandle,
 
               // send data
 //fprintf(stderr,"%s, %d: storageFileHandle->ftp.runningHandles=%d\n",__FILE__,__LINE__,storageFileHandle->ftp.runningHandles);
-              storageFileHandle->ftp.buffer = (void*)buffer;
-              storageFileHandle->ftp.length = length;
-              storageFileHandle->ftp.n      = 0;
-              storageFileHandle->ftp.error  = ERROR_NONE;
+              storageFileHandle->ftp.buffer          = buffer;
+              storageFileHandle->ftp.length          = length;
+              storageFileHandle->ftp.transferedBytes = 0L;
               while (   (storageFileHandle->ftp.runningHandles > 0)
-                     && (storageFileHandle->ftp.n < storageFileHandle->ftp.length)
-                     && (storageFileHandle->ftp.error == ERROR_NONE)
+                     && (storageFileHandle->ftp.transferedBytes < storageFileHandle->ftp.length)
+                     && (error == ERROR_NONE)
                     )
               {
                 // get file descriptors from the transfers
@@ -6114,39 +6115,38 @@ Errors Storage_write(StorageFileHandle *storageFileHandle,
                   case -1:
                     // error
 //fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-                    storageFileHandle->ftp.error = ERROR_NETWORK_SEND;
+                    error = ERROR_NETWORK_SEND;
                     break;
                   case 0:
                     // timeout
 //fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-//                    storageFileHandle->ftp.error = CURLE_OPERATION_TIMEOUT;
+//                    error = CURLE_OPERATION_TIMEOUT;
                     break;
                   default:
                     do
                     {
                       curlmCode = curl_multi_perform(storageFileHandle->ftp.curlMultiHandle,&storageFileHandle->ftp.runningHandles);
-//fprintf(stderr,"%s, %d: %ld %ld\n",__FILE__,__LINE__,storageFileHandle->ftp.n,storageFileHandle->ftp.length);
+//fprintf(stderr,"%s, %d: %ld %ld\n",__FILE__,__LINE__,storageFileHandle->ftp.transferedBytes,storageFileHandle->ftp.length);
                     }
                     while (curlmCode == CURLM_CALL_MULTI_PERFORM);
                     if (curlmCode != CURLM_OK)
                     {
-                      storageFileHandle->ftp.error = ERRORX_(NETWORK_SEND,0,curl_multi_strerror(curlmCode));
+                      error = ERRORX_(NETWORK_SEND,0,curl_multi_strerror(curlmCode));
                     }
                     break;
                 }
               }
-              if (storageFileHandle->ftp.error != ERROR_NONE)
+              if (error != ERROR_NONE)
               {
-                error = storageFileHandle->ftp.error;
                 break;
               }
-              if      (storageFileHandle->ftp.n <= 0)
+              if      (storageFileHandle->ftp.transferedBytes <= 0L)
               {
                 error = ERROR_NETWORK_SEND;
                 break;
               }
-              buffer = (byte*)buffer+storageFileHandle->ftp.n;
-              writtenBytes += storageFileHandle->ftp.n;
+              buffer = (byte*)buffer+storageFileHandle->ftp.transferedBytes;
+              writtenBytes += storageFileHandle->ftp.transferedBytes;
 
               // get end time
               endTimestamp = Misc_getTimestamp();
@@ -6158,7 +6158,7 @@ Errors Storage_write(StorageFileHandle *storageFileHandle,
               if (endTimestamp >= startTimestamp)
               {
                 limitBandWidth(&storageFileHandle->ftp.bandWidthLimiter,
-                               storageFileHandle->ftp.n,
+                               storageFileHandle->ftp.transferedBytes,
                                endTimestamp-startTimestamp
                               );
               }
@@ -6209,8 +6209,8 @@ Errors Storage_write(StorageFileHandle *storageFileHandle,
                   break;
                 }
               }
-              buffer = (byte*)buffer+n;
-              writtenBytes += n;
+              buffer = (byte*)buffer+(ulong)n;
+              writtenBytes += (ulong)n;
 
               // get end time
               endTimestamp = Misc_getTimestamp();
@@ -6222,7 +6222,7 @@ Errors Storage_write(StorageFileHandle *storageFileHandle,
               if (endTimestamp >= startTimestamp)
               {
                 limitBandWidth(&storageFileHandle->ftp.bandWidthLimiter,
-                               n,
+                               (ulong)n,
                                endTimestamp-startTimestamp
                               );
               }
@@ -6633,141 +6633,139 @@ Errors Storage_seek(StorageFileHandle *storageFileHandle,
       }
       break;
     case STORAGE_TYPE_FTP:
+      /* ftp protocol does not support a seek-function. Thus try to
+         read and discard data to position the read index to the
+         requested offset.
+         Note: this is slow!
+      */
       #if   defined(HAVE_CURL)
         {
           CURLcode  curlCode;
           CURLMcode curlMCode;
 #warning todo curl
 
-        if (!storageFileHandle->jobOptions->dryRunFlag)
-        {
-          assert(storageFileHandle->ftp.readAheadBuffer.data != NULL);
-
-          if      (offset > storageFileHandle->ftp.index)
+          if (!storageFileHandle->jobOptions->dryRunFlag)
           {
-            uint64         skip;
-            uint64         i;
-            uint64         n;
-            fd_set         fdSetRead,fdSetWrite,fdSetException;
-            int            maxFD;
-            long           curlTimeout;
-            struct timeval timeout;
-            CURLMcode      curlmCode;
+            assert(storageFileHandle->ftp.readAheadBuffer.data != NULL);
 
-            skip = offset-storageFileHandle->ftp.index;
-
-            while (skip > 0LL)
+            if      (offset > storageFileHandle->ftp.index)
             {
-              // skip data in read-ahead buffer
-              if (   (storageFileHandle->ftp.index >= storageFileHandle->ftp.readAheadBuffer.offset)
-                  && (storageFileHandle->ftp.index < (storageFileHandle->ftp.readAheadBuffer.offset+storageFileHandle->ftp.readAheadBuffer.length))
-                 )
+              uint64         skip;
+              ulong          i;
+              ulong          n;
+              fd_set         fdSetRead,fdSetWrite,fdSetException;
+              int            maxFD;
+              long           curlTimeout;
+              struct timeval timeout;
+              CURLMcode      curlmCode;
+
+              skip = offset-storageFileHandle->ftp.index;
+
+              while (skip > 0LL)
               {
-                i = storageFileHandle->ftp.index-storageFileHandle->ftp.readAheadBuffer.offset;
-                n = MIN(skip,storageFileHandle->ftp.readAheadBuffer.length-i);
-                skip -= n;
-                storageFileHandle->ftp.index += n;
-              }
-
-              if (skip > 0LL)
-              {
-                // read data
-                storageFileHandle->ftp.buffer = storageFileHandle->ftp.readAheadBuffer.data;
-                storageFileHandle->ftp.length = MIN((size_t)skip,MAX_BUFFER_SIZE);
-                storageFileHandle->ftp.n      = 0;
-                storageFileHandle->ftp.error  = ERROR_NONE;
-                while (   (storageFileHandle->ftp.runningHandles > 0)
-                       && (storageFileHandle->ftp.n < storageFileHandle->ftp.length)
-                       && (storageFileHandle->ftp.error == ERROR_NONE)
-                      )
+                // skip data in read-ahead buffer
+                if (   (storageFileHandle->ftp.index >= storageFileHandle->ftp.readAheadBuffer.offset)
+                    && (storageFileHandle->ftp.index < (storageFileHandle->ftp.readAheadBuffer.offset+storageFileHandle->ftp.readAheadBuffer.length))
+                   )
                 {
-                  // get file descriptors from the transfers
-                  FD_ZERO(&fdSetRead);
-                  FD_ZERO(&fdSetWrite);
-                  FD_ZERO(&fdSetException);
-                  curl_multi_fdset(storageFileHandle->ftp.curlMultiHandle,&fdSetRead,&fdSetWrite,&fdSetException,&maxFD);
+                  i = (ulong)storageFileHandle->ftp.index-storageFileHandle->ftp.readAheadBuffer.offset;
+                  n = MIN(skip,storageFileHandle->ftp.readAheadBuffer.length-i);
+                  skip -= (uint64)n;
+                  storageFileHandle->ftp.index += (uint64)n;
+                }
 
-                  // get a suitable timeout
-                  curl_multi_timeout(storageFileHandle->ftp.curlMultiHandle,&curlTimeout);
-                  if (curlTimeout >= 0)
-                  {
-                    timeout.tv_sec  = curlTimeout / 1000L;
-                    timeout.tv_usec = (curlTimeout % 1000L) * 1000L;
-                  }
-                  else
-                  {
-                    timeout.tv_sec  = 1L;
-                    timeout.tv_usec = 0L;
-                  }
+                if (skip > 0LL)
+                {
+                  assert(storageFileHandle->ftp.index >= (storageFileHandle->ftp.readAheadBuffer.offset+storageFileHandle->ftp.readAheadBuffer.length));
 
-                  // wait for sockets
-                  switch (select(maxFD+1,&fdSetRead,&fdSetWrite,&fdSetException,&timeout))
+                  // read data into read-ahread buffer
+                  storageFileHandle->ftp.buffer          = storageFileHandle->ftp.readAheadBuffer.data;
+                  storageFileHandle->ftp.length          = MIN((size_t)(storageFileHandle->ftp.size-storageFileHandle->ftp.index),MAX_BUFFER_SIZE);
+                  storageFileHandle->ftp.transferedBytes = 0L;
+                  while (   (storageFileHandle->ftp.runningHandles > 0)
+                         && (storageFileHandle->ftp.transferedBytes < storageFileHandle->ftp.length)
+                         && (error == ERROR_NONE)
+                        )
                   {
-                    case -1:
-                      // error
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-                      storageFileHandle->ftp.error = ERROR_NETWORK_SEND;
-                      break;
-                    case 0:
-                      // timeout
-  //fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-  //                    storageFileHandle->ftp.error = CURLE_OPERATION_TIMEOUT;
-                      break;
-                    default:
-                      do
-                      {
-                        curlmCode = curl_multi_perform(storageFileHandle->ftp.curlMultiHandle,&storageFileHandle->ftp.runningHandles);
-//fprintf(stderr,"%s, %d: %ld %ld\n",__FILE__,__LINE__,storageFileHandle->ftp.n,storageFileHandle->ftp.length);
-                      }
-                      while (curlmCode == CURLM_CALL_MULTI_PERFORM);
-                      if (curlmCode != CURLM_OK)
-                      {
-                        storageFileHandle->ftp.error = ERRORX_(NETWORK_SEND,0,curl_multi_strerror(curlmCode));
-                      }
-                      break;
+                    // get file descriptors from the transfers
+                    FD_ZERO(&fdSetRead);
+                    FD_ZERO(&fdSetWrite);
+                    FD_ZERO(&fdSetException);
+                    curl_multi_fdset(storageFileHandle->ftp.curlMultiHandle,&fdSetRead,&fdSetWrite,&fdSetException,&maxFD);
+
+                    // get a suitable timeout
+                    curl_multi_timeout(storageFileHandle->ftp.curlMultiHandle,&curlTimeout);
+                    if (curlTimeout >= 0)
+                    {
+                      timeout.tv_sec  = curlTimeout / 1000L;
+                      timeout.tv_usec = (curlTimeout % 1000L) * 1000L;
+                    }
+                    else
+                    {
+                      timeout.tv_sec  = 1L;
+                      timeout.tv_usec = 0L;
+                    }
+
+                    // wait for sockets
+                    switch (select(maxFD+1,&fdSetRead,&fdSetWrite,&fdSetException,&timeout))
+                    {
+                      case -1:
+                        // error
+//fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+                        error = ERROR_NETWORK_RECEIVE;
+                        break;
+                      case 0:
+                        // timeout
+//fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+//                        error = CURLE_OPERATION_TIMEOUT;
+                        break;
+                      default:
+                        do
+                        {
+                          curlmCode = curl_multi_perform(storageFileHandle->ftp.curlMultiHandle,&storageFileHandle->ftp.runningHandles);
+//fprintf(stderr,"%s, %d: %ld %ld\n",__FILE__,__LINE__,storageFileHandle->ftp.transferedBytes,storageFileHandle->ftp.length);
+                        }
+                        while (curlmCode == CURLM_CALL_MULTI_PERFORM);
+                        if (curlmCode != CURLM_OK)
+                        {
+                          error = ERRORX_(NETWORK_RECEIVE,0,curl_multi_strerror(curlmCode));
+                        }
+                        break;
+                    }
                   }
+                  if (error != ERROR_NONE)
+                  {
+                    break;
+                  }
+                  if (storageFileHandle->ftp.transferedBytes <= 0L)
+                  {
+                    error = ERROR_IO_ERROR;
+                    break;
+                  }
+                  storageFileHandle->ftp.readAheadBuffer.offset = storageFileHandle->ftp.index;
+                  storageFileHandle->ftp.readAheadBuffer.length = (uint64)storageFileHandle->ftp.transferedBytes;
                 }
-                if (storageFileHandle->ftp.error != ERROR_NONE)
-                {
-                  error = storageFileHandle->ftp.error;
-                  break;
-                }
-                if (storageFileHandle->ftp.n <= 0)
-                {
-                  error = ERROR_IO_ERROR;
-                  break;
-                }
-                storageFileHandle->ftp.readAheadBuffer.offset = storageFileHandle->ftp.index;
-                storageFileHandle->ftp.readAheadBuffer.length = (uint64)storageFileHandle->ftp.n;
               }
             }
+            else if (offset < storageFileHandle->ftp.index)
+            {
+              error = ERROR_FUNCTION_NOT_SUPPORTED;
+            }
           }
-          else if (offset < storageFileHandle->ftp.index)
-          {
-            error = ERROR_FUNCTION_NOT_SUPPORTED;
-          }
-        }
         }
       #elif defined(HAVE_FTP)
-        /* ftp protocol does not support a seek-function. Thus try to
-           read and discard data to position the read index to the
-           requested offset.
-           Note: this is slow!
-        */
-
         if (!storageFileHandle->jobOptions->dryRunFlag)
         {
           assert(storageFileHandle->ftp.readAheadBuffer.data != NULL);
 
           if      (offset > storageFileHandle->ftp.index)
           {
-            uint64  skip;
-            uint64  i;
-            uint64  n;
-            ssize_t readBytes;
+            uint64 skip;
+            ulong  i;
+            ulong  n;
+            int    readBytes;
 
             skip = offset-storageFileHandle->ftp.index;
-
             while (skip > 0LL)
             {
               // skip data in read-ahead buffer
@@ -6775,14 +6773,16 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                   && (storageFileHandle->ftp.index < (storageFileHandle->ftp.readAheadBuffer.offset+storageFileHandle->ftp.readAheadBuffer.length))
                  )
               {
-                i = storageFileHandle->ftp.index-storageFileHandle->ftp.readAheadBuffer.offset;
+                i = (ulong)storageFileHandle->ftp.index-storageFileHandle->ftp.readAheadBuffer.offset;
                 n = MIN(skip,storageFileHandle->ftp.readAheadBuffer.length-i);
-                skip -= n;
-                storageFileHandle->ftp.index += n;
+                skip -= (uint64)n;
+                storageFileHandle->ftp.index += (uint64)n;
               }
 
               if (skip > 0LL)
               {
+                assert(storageFileHandle->ftp.index >= (storageFileHandle->ftp.readAheadBuffer.offset+storageFileHandle->ftp.readAheadBuffer.length));
+
                 // read data
                 readBytes = FtpRead(storageFileHandle->ftp.readAheadBuffer.data,
                                     MIN((size_t)skip,MAX_BUFFER_SIZE),
@@ -6846,7 +6846,6 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
             ssize_t readBytes;
 
             skip = offset-storageFileHandle->scp.index;
-
             while (skip > 0LL)
             {
               // skip data in read-ahead buffer
@@ -6862,6 +6861,8 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
 
               if (skip > 0LL)
               {
+                assert(storageFileHandle->scp.index >= (storageFileHandle->scp.readAheadBuffer.offset+storageFileHandle->scp.readAheadBuffer.length));
+
                 // wait for data
                 if (!waitSessionSocket(&storageFileHandle->scp.socketHandle))
                 {
@@ -6897,14 +6898,48 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
       #ifdef HAVE_SSH2
         if (!storageFileHandle->jobOptions->dryRunFlag)
         {
-          #if   defined(HAVE_SSH2_SFTP_SEEK64)
-            libssh2_sftp_seek64(storageFileHandle->sftp.sftpHandle,offset);
-          #elif defined(HAVE_SSH2_SFTP_SEEK2)
-            libssh2_sftp_seek2(storageFileHandle->sftp.sftpHandle,offset);
-          #else /* not HAVE_SSH2_SFTP_SEEK64 || HAVE_SSH2_SFTP_SEEK2 */
-            libssh2_sftp_seek(storageFileHandle->sftp.sftpHandle,(size_t)offset);
-          #endif /* HAVE_SSH2_SFTP_SEEK64 || HAVE_SSH2_SFTP_SEEK2 */
-          storageFileHandle->sftp.index = offset;
+          assert(storageFileHandle->sftp.sftpHandle != NULL);
+          assert(storageFileHandle->sftp.readAheadBuffer.data != NULL);
+
+          if      (offset > storageFileHandle->sftp.index)
+          {
+            uint64  skip;
+            uint64  i;
+            uint64  n;
+            ssize_t readBytes;
+
+            skip = offset-storageFileHandle->sftp.index;
+            if (skip > 0LL)
+            {
+              // skip data in read-ahead buffer
+              if (   (storageFileHandle->sftp.index >= storageFileHandle->sftp.readAheadBuffer.offset)
+                  && (storageFileHandle->sftp.index < (storageFileHandle->sftp.readAheadBuffer.offset+storageFileHandle->sftp.readAheadBuffer.length))
+                 )
+              {
+                i = storageFileHandle->sftp.index-storageFileHandle->sftp.readAheadBuffer.offset;
+                n = MIN(skip,storageFileHandle->sftp.readAheadBuffer.length-i);
+                skip -= n;
+                storageFileHandle->sftp.index += n;
+              }
+
+              if (skip > 0LL)
+              {
+                #if   defined(HAVE_SSH2_SFTP_SEEK64)
+                  libssh2_sftp_seek64(storageFileHandle->sftp.sftpHandle,offset);
+                #elif defined(HAVE_SSH2_SFTP_SEEK2)
+                  libssh2_sftp_seek2(storageFileHandle->sftp.sftpHandle,offset);
+                #else /* not HAVE_SSH2_SFTP_SEEK64 || HAVE_SSH2_SFTP_SEEK2 */
+                  libssh2_sftp_seek(storageFileHandle->sftp.sftpHandle,(size_t)offset);
+                #endif /* HAVE_SSH2_SFTP_SEEK64 || HAVE_SSH2_SFTP_SEEK2 */
+                storageFileHandle->sftp.index = offset;
+              }
+            }
+          }
+          else if (offset < storageFileHandle->sftp.index)
+          {
+// NYI: ??? support seek backward
+            error = ERROR_FUNCTION_NOT_SUPPORTED;
+          }
         }
       #else /* not HAVE_SSH2 */
         error = ERROR_FUNCTION_NOT_SUPPORTED;

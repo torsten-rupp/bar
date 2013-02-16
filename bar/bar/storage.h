@@ -203,8 +203,7 @@ typedef struct
         StorageBandWidthLimiter bandWidthLimiter;          // band width limit data
         void                    *buffer;                   // next data to write/read
         ulong                   length;                    // length of data to write/read
-        ulong                   n;                         // number of data bytes written/read
-        Errors                  error;
+        ulong                   transferedBytes;           // number of data bytes read/written
       } ftp;
     #elif defined(HAVE_FTP)
       // FTP storage
