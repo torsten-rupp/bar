@@ -2324,7 +2324,7 @@ remoteBarFlag=FALSE;
           do
           {
             // send decrypt password
-            if (!Password_empty(jobOptions->cryptPassword))
+            if (!Password_isEmpty(jobOptions->cryptPassword))
             {
               String_format(String_clear(line),"1 SET crypt-password %'s",jobOptions->cryptPassword);
               Network_executeWriteLine(&networkExecuteHandle,line);

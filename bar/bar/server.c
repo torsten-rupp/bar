@@ -9,7 +9,7 @@
 \***********************************************************************/
 
 /****************************** Includes *******************************/
-#include <config.h>  // use <...> to support separated build directory 
+#include <config.h>  // use <...> to support separated build directory
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -9413,7 +9413,7 @@ Errors Server_run(uint             port,
     }
     return ERROR_INVALID_ARGUMENT;
   }
-  if (Password_empty(password))
+  if (Password_isEmpty(password))
   {
     printWarning("No server password set!\n");
   }
