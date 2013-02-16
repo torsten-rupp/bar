@@ -139,7 +139,9 @@ LOCAL bool initFTPPassword(const String hostName, const String loginName, const 
   {
     if (globalOptions.runMode == RUN_MODE_INTERACTIVE)
     {
-      s = String_format(String_new(),"FTP login password for %S@%S",hostName,loginName);
+      s = !String_isEmpty(loginName)
+            ? String_format(String_new(),"FTP login password for %S@%S",loginName,hostName)
+            : String_format(String_new(),"FTP login password for %S",hostName);
       initFlag = Password_input(defaultFTPPassword,String_cString(s),PASSWORD_INPUT_MODE_ANY);
       String_delete(s);
     }
@@ -2120,6 +2122,11 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
           // get FTP server settings
           getFTPServerSettings(storageFileHandle->storageSpecifier.hostName,jobOptions,&ftpServer);
           if (String_isEmpty(storageFileHandle->storageSpecifier.loginName)) String_set(storageFileHandle->storageSpecifier.loginName,ftpServer.loginName);
+          if (String_isEmpty(storageFileHandle->storageSpecifier.hostName))
+          {
+            Storage_doneSpecifier(&storageFileHandle->storageSpecifier);
+            return ERROR_NO_HOST_NAME;
+          }
 
           // check FTP login, get correct password
           error = ERROR_FTP_SESSION_FAIL;
@@ -2199,6 +2206,11 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
           // get FTP server settings
           getFTPServerSettings(storageFileHandle->storageSpecifier.hostName,jobOptions,&ftpServer);
           if (String_isEmpty(storageFileHandle->storageSpecifier.loginName)) String_set(storageFileHandle->storageSpecifier.loginName,ftpServer.loginName);
+          if (String_isEmpty(storageFileHandle->storageSpecifier.hostName))
+          {
+            Storage_doneSpecifier(&storageFileHandle->storageSpecifier);
+            return ERROR_NO_HOST_NAME;
+          }
 
           // check FTP login, get correct password
           error = ERROR_FTP_SESSION_FAIL;
@@ -2274,7 +2286,6 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
     case STORAGE_TYPE_SCP:
       #ifdef HAVE_SSH2
         {
-          Errors    error;
           SSHServer sshServer;
 
           // init variables
@@ -2296,6 +2307,11 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
           if (storageFileHandle->storageSpecifier.hostPort == 0) storageFileHandle->storageSpecifier.hostPort = sshServer.port;
           storageFileHandle->scp.sshPublicKeyFileName  = sshServer.publicKeyFileName;
           storageFileHandle->scp.sshPrivateKeyFileName = sshServer.privateKeyFileName;
+          if (String_isEmpty(storageFileHandle->storageSpecifier.hostName))
+          {
+            Storage_doneSpecifier(&storageFileHandle->storageSpecifier);
+            return ERROR_NO_HOST_NAME;
+          }
 
           // check if SSH login is possible
           error = ERROR_UNKNOWN;
@@ -2355,7 +2371,6 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
     case STORAGE_TYPE_SFTP:
       #ifdef HAVE_SSH2
         {
-          Errors    error;
           SSHServer sshServer;
 
           // init variables
@@ -2377,6 +2392,11 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
           if (storageFileHandle->storageSpecifier.hostPort == 0) storageFileHandle->storageSpecifier.hostPort = sshServer.port;
           storageFileHandle->sftp.sshPublicKeyFileName  = sshServer.publicKeyFileName;
           storageFileHandle->sftp.sshPrivateKeyFileName = sshServer.privateKeyFileName;
+          if (String_isEmpty(storageFileHandle->storageSpecifier.hostName))
+          {
+            Storage_doneSpecifier(&storageFileHandle->storageSpecifier);
+            return ERROR_NO_HOST_NAME;
+          }
 
           // check if SSH login is possible
           error = ERROR_UNKNOWN;
@@ -2438,7 +2458,6 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
         OpticalDisk    opticalDisk;
         uint64         volumeSize,maxMediumSize;
         FileSystemInfo fileSystemInfo;
-        Errors         error;
         String         sourceFileName,fileBaseName,destinationFileName;
 
         UNUSED_VARIABLE(maxBandWidthList);
@@ -2625,7 +2644,6 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
       {
         Device         device;
         FileSystemInfo fileSystemInfo;
-        Errors         error;
 
         UNUSED_VARIABLE(maxBandWidthList);
 
