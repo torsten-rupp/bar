@@ -1534,6 +1534,7 @@ Errors Storage_parseName(const String     storageName,
        )
     {
       String_sub(storageSpecifier->string,storageName,6,nextIndex);
+      String_trimRight(storageSpecifier->string,"/");
       if (!Storage_parseFTPSpecifier(storageSpecifier->string,
                                      storageSpecifier->hostName,
                                      &storageSpecifier->hostPort,
@@ -1562,6 +1563,7 @@ Errors Storage_parseName(const String     storageName,
        )
     {
       String_sub(storageSpecifier->string,storageName,6,nextIndex);
+      String_trimRight(storageSpecifier->string,"/");
       if (!Storage_parseSSHSpecifier(storageSpecifier->string,
                                      storageSpecifier->hostName,
                                      &storageSpecifier->hostPort,
@@ -1589,6 +1591,7 @@ Errors Storage_parseName(const String     storageName,
        )
     {
       String_sub(storageSpecifier->string,storageName,6,nextIndex);
+      String_trimRight(storageSpecifier->string,"/");
       if (!Storage_parseSSHSpecifier(storageSpecifier->string,
                                      storageSpecifier->hostName,
                                      &storageSpecifier->hostPort,
@@ -1616,6 +1619,7 @@ Errors Storage_parseName(const String     storageName,
        )
     {
       String_sub(storageSpecifier->string,storageName,7,nextIndex);
+      String_trimRight(storageSpecifier->string,"/");
       if (!Storage_parseSSHSpecifier(storageSpecifier->string,
                                      storageSpecifier->hostName,
                                      &storageSpecifier->hostPort,
@@ -1641,6 +1645,7 @@ Errors Storage_parseName(const String     storageName,
     {
       // cd://<device name>:<file name>
       String_sub(storageSpecifier->string,storageName,5,nextIndex);
+      String_trimRight(storageSpecifier->string,"/");
       if (!Storage_parseDeviceSpecifier(storageSpecifier->string,
                                         NULL,
                                         storageSpecifier->deviceName
@@ -1665,6 +1670,7 @@ Errors Storage_parseName(const String     storageName,
     {
       // dvd://<device name>:<file name>
       String_sub(storageSpecifier->string,storageName,6,nextIndex);
+      String_trimRight(storageSpecifier->string,"/");
       if (!Storage_parseDeviceSpecifier(storageSpecifier->string,
                                         NULL,
                                         storageSpecifier->deviceName
@@ -1689,6 +1695,7 @@ Errors Storage_parseName(const String     storageName,
     {
       // bd://<device name>:<file name>
       String_sub(storageSpecifier->string,storageName,5,nextIndex);
+      String_trimRight(storageSpecifier->string,"/");
       if (!Storage_parseDeviceSpecifier(storageSpecifier->string,
                                         NULL,
                                         storageSpecifier->deviceName
@@ -1713,6 +1720,7 @@ Errors Storage_parseName(const String     storageName,
     {
       // device://<device name>:<file name>
       String_sub(storageSpecifier->string,storageName,9,nextIndex);
+      String_trimRight(storageSpecifier->string,"/");
       if (!Storage_parseDeviceSpecifier(storageSpecifier->string,
                                         NULL,
                                         storageSpecifier->deviceName
@@ -2122,6 +2130,7 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
           // get FTP server settings
           getFTPServerSettings(storageFileHandle->storageSpecifier.hostName,jobOptions,&ftpServer);
           if (String_isEmpty(storageFileHandle->storageSpecifier.loginName)) String_set(storageFileHandle->storageSpecifier.loginName,ftpServer.loginName);
+          if (String_isEmpty(storageFileHandle->storageSpecifier.loginName)) String_setCString(storageFileHandle->storageSpecifier.loginName,getenv("LOGNAME"));
           if (String_isEmpty(storageFileHandle->storageSpecifier.hostName))
           {
             Storage_doneSpecifier(&storageFileHandle->storageSpecifier);
@@ -2130,7 +2139,7 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
 
           // check FTP login, get correct password
           error = ERROR_FTP_SESSION_FAIL;
-          if ((error != ERROR_NONE) && !Password_empty(storageFileHandle->storageSpecifier.loginPassword))
+          if ((error != ERROR_NONE) && !Password_isEmpty(storageFileHandle->storageSpecifier.loginPassword))
           {
             error = checkFTPLogin(storageFileHandle->storageSpecifier.hostName,
                                   storageFileHandle->storageSpecifier.hostPort,
@@ -2138,7 +2147,7 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
                                   storageFileHandle->storageSpecifier.loginPassword
                                  );
           }
-          if ((error != ERROR_NONE) && (ftpServer.password != NULL))
+          if ((error != ERROR_NONE) && !Password_isEmpty(ftpServer.password))
           {
             error = checkFTPLogin(storageFileHandle->storageSpecifier.hostName,
                                   storageFileHandle->storageSpecifier.hostPort,
@@ -2150,7 +2159,7 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
               Password_set(storageFileHandle->storageSpecifier.loginPassword,ftpServer.password);
             }
           }
-          if ((error != ERROR_NONE) && !Password_empty(defaultFTPPassword))
+          if ((error != ERROR_NONE) && !Password_isEmpty(defaultFTPPassword))
           {
             error = checkFTPLogin(storageFileHandle->storageSpecifier.hostName,
                                   storageFileHandle->storageSpecifier.hostPort,
@@ -2179,7 +2188,7 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
             }
             else
             {
-              error = !Password_empty(defaultFTPPassword) ? ERROR_INVALID_FTP_PASSWORD : ERROR_NO_FTP_PASSWORD;
+              error = !Password_isEmpty(defaultFTPPassword) ? ERROR_INVALID_FTP_PASSWORD : ERROR_NO_FTP_PASSWORD;
             }
           }
           if (error != ERROR_NONE)
@@ -2206,6 +2215,7 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
           // get FTP server settings
           getFTPServerSettings(storageFileHandle->storageSpecifier.hostName,jobOptions,&ftpServer);
           if (String_isEmpty(storageFileHandle->storageSpecifier.loginName)) String_set(storageFileHandle->storageSpecifier.loginName,ftpServer.loginName);
+          if (String_isEmpty(storageFileHandle->storageSpecifier.loginName)) String_setCString(storageFileHandle->storageSpecifier.loginName,getenv("LOGNAME"));
           if (String_isEmpty(storageFileHandle->storageSpecifier.hostName))
           {
             Storage_doneSpecifier(&storageFileHandle->storageSpecifier);
@@ -2214,7 +2224,7 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
 
           // check FTP login, get correct password
           error = ERROR_FTP_SESSION_FAIL;
-          if ((error != ERROR_NONE) && !Password_empty(storageFileHandle->storageSpecifier.loginPassword))
+          if ((error != ERROR_NONE) && !Password_isEmpty(storageFileHandle->storageSpecifier.loginPassword))
           {
             error = checkFTPLogin(storageFileHandle->storageSpecifier.hostName,
                                   storageFileHandle->storageSpecifier.hostPort,
@@ -2222,7 +2232,7 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
                                   storageFileHandle->storageSpecifier.loginPassword
                                  );
           }
-          if ((error != ERROR_NONE) && (ftpServer.password != NULL))
+          if ((error != ERROR_NONE) && !Password_isEmpty(ftpServer.password))
           {
             error = checkFTPLogin(storageFileHandle->storageSpecifier.hostName,
                                   storageFileHandle->storageSpecifier.hostPort,
@@ -2234,7 +2244,7 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
               Password_set(storageFileHandle->storageSpecifier.loginPassword,ftpServer.password);
             }
           }
-          if ((error != ERROR_NONE) && !Password_empty(defaultFTPPassword))
+          if ((error != ERROR_NONE) && !Password_isEmpty(defaultFTPPassword))
           {
             error = checkFTPLogin(storageFileHandle->storageSpecifier.hostName,
                                   storageFileHandle->storageSpecifier.hostPort,
@@ -2263,7 +2273,7 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
             }
             else
             {
-              error = !Password_empty(defaultFTPPassword) ? ERROR_INVALID_FTP_PASSWORD : ERROR_NO_FTP_PASSWORD;
+              error = !Password_isEmpty(defaultFTPPassword) ? ERROR_INVALID_FTP_PASSWORD : ERROR_NO_FTP_PASSWORD;
             }
           }
           if (error != ERROR_NONE)
@@ -2304,6 +2314,7 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
           // get SSH server settings
           getSSHServerSettings(storageFileHandle->storageSpecifier.hostName,jobOptions,&sshServer);
           if (String_isEmpty(storageFileHandle->storageSpecifier.loginName)) String_set(storageFileHandle->storageSpecifier.loginName,sshServer.loginName);
+          if (String_isEmpty(storageFileHandle->storageSpecifier.loginName)) String_setCString(storageFileHandle->storageSpecifier.loginName,getenv("LOGNAME"));
           if (storageFileHandle->storageSpecifier.hostPort == 0) storageFileHandle->storageSpecifier.hostPort = sshServer.port;
           storageFileHandle->scp.sshPublicKeyFileName  = sshServer.publicKeyFileName;
           storageFileHandle->scp.sshPrivateKeyFileName = sshServer.privateKeyFileName;
@@ -2315,7 +2326,7 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
 
           // check if SSH login is possible
           error = ERROR_UNKNOWN;
-          if ((error == ERROR_UNKNOWN) && (sshServer.password != NULL))
+          if ((error == ERROR_UNKNOWN) && !Password_isEmpty(sshServer.password))
           {
             error = checkSSHLogin(storageFileHandle->storageSpecifier.loginName,
                                   sshServer.password,
@@ -2332,7 +2343,9 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
           if (error == ERROR_UNKNOWN)
           {
             // initialize default password
-            if (initSSHPassword(storageFileHandle->storageSpecifier.hostName,storageFileHandle->storageSpecifier.loginName,jobOptions))
+            if (   initSSHPassword(storageFileHandle->storageSpecifier.hostName,storageFileHandle->storageSpecifier.loginName,jobOptions)
+                && !Password_isEmpty(defaultSSHPassword)
+               )
             {
               error = checkSSHLogin(storageFileHandle->storageSpecifier.loginName,
                                     defaultSSHPassword,
@@ -2348,7 +2361,7 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
             }
             else
             {
-              error = !Password_empty(defaultSSHPassword)
+              error = !Password_isEmpty(defaultSSHPassword)
                         ? ERRORX_(INVALID_SSH_PASSWORD,0,String_cString(storageFileHandle->storageSpecifier.hostName))
                         : ERRORX_(NO_SSH_PASSWORD,0,String_cString(storageFileHandle->storageSpecifier.hostName));
             }
@@ -2389,6 +2402,7 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
           // get SSH server settings
           getSSHServerSettings(storageFileHandle->storageSpecifier.hostName,jobOptions,&sshServer);
           if (String_isEmpty(storageFileHandle->storageSpecifier.loginName)) String_set(storageFileHandle->storageSpecifier.loginName,sshServer.loginName);
+          if (String_isEmpty(storageFileHandle->storageSpecifier.loginName)) String_setCString(storageFileHandle->storageSpecifier.loginName,getenv("LOGNAME"));
           if (storageFileHandle->storageSpecifier.hostPort == 0) storageFileHandle->storageSpecifier.hostPort = sshServer.port;
           storageFileHandle->sftp.sshPublicKeyFileName  = sshServer.publicKeyFileName;
           storageFileHandle->sftp.sshPrivateKeyFileName = sshServer.privateKeyFileName;
@@ -2417,7 +2431,9 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
           if (error != ERROR_NONE)
           {
             // initialize default password
-            if (initSSHPassword(storageFileHandle->storageSpecifier.hostName,storageFileHandle->storageSpecifier.loginName,jobOptions))
+            if (   initSSHPassword(storageFileHandle->storageSpecifier.hostName,storageFileHandle->storageSpecifier.loginName,jobOptions)
+                && !Password_isEmpty(defaultSSHPassword)
+               )
             {
               error = checkSSHLogin(storageFileHandle->storageSpecifier.loginName,
                                     defaultSSHPassword,
@@ -2433,7 +2449,7 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
             }
             else
             {
-              error = !Password_empty(defaultSSHPassword) ? ERROR_INVALID_SSH_PASSWORD : ERROR_NO_SSH_PASSWORD;
+              error = !Password_isEmpty(defaultSSHPassword) ? ERROR_INVALID_SSH_PASSWORD : ERROR_NO_SSH_PASSWORD;
             }
           }
           if (error != ERROR_NONE)
@@ -7011,7 +7027,7 @@ Errors Storage_openDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
 
           // check FTP login, get correct password
           error = ERROR_UNKNOWN;
-          if ((error != ERROR_NONE) && !Password_empty(loginPassword))
+          if ((error != ERROR_NONE) && !Password_isEmpty(loginPassword))
           {
             error = checkFTPLogin(hostName,
                                   hostPort,
@@ -7031,7 +7047,7 @@ Errors Storage_openDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
               Password_set(loginPassword,ftpServer.password);
             }
           }
-          if ((error != ERROR_NONE) && !Password_empty(defaultFTPPassword))
+          if ((error != ERROR_NONE) && !Password_isEmpty(defaultFTPPassword))
           {
             error = checkFTPLogin(hostName,
                                   hostPort,
@@ -7060,7 +7076,7 @@ Errors Storage_openDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
             }
             else
             {
-              error = !Password_empty(ftpServer.password) ? ERROR_INVALID_FTP_PASSWORD : ERROR_NO_FTP_PASSWORD;
+              error = !Password_isEmpty(ftpServer.password) ? ERROR_INVALID_FTP_PASSWORD : ERROR_NO_FTP_PASSWORD;
             }
           }
           if (error != ERROR_NONE)
