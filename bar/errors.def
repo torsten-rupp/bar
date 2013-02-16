@@ -17,7 +17,7 @@ INCLUDE "libssh2.h"
 NONE    "none"
 DEFAULT "unknown"
 
-// general
+// --- general ----------------------------------------------------------
 ERROR INSUFFICIENT_MEMORY            "insufficient memory"
 ERROR INIT                           "init fail"
 ERROR INVALID_ARGUMENT               "invalid argument"
@@ -28,6 +28,7 @@ ERROR STILL_NOT_IMPLEMENTED          "function still not implemented"
 ERROR DAEMON_FAIL                    "run as daemon fail"
 ERROR IPC                            "inter-process communication fail"
 
+// --- patterns ---------------------------------------------------------
 // patterns
 ERROR INVALID_PATTERN
   strncpy(errorText,"invalid pattern",sizeof(errorText));
@@ -38,7 +39,28 @@ ERROR INVALID_PATTERN
   }
   errorText[sizeof(errorText)-1] = '\0';
 
-// TLS/SSL
+// --- network ----------------------------------------------------------
+ERROR NO_HOST_NAME                   "no host name given"
+ERROR HOST_NOT_FOUND                 "host not found"
+ERROR CONNECT_FAIL
+  strncpy(errorText,strerror(ERROR_ERRNO),sizeof(errorText)-1);
+  if (ERROR_TEXT != NULL)
+  {
+    strncat(errorText,": ",sizeof(errorText)-1-strlen(errorText));
+    strncat(errorText,ERROR_TEXT,sizeof(errorText)-1-strlen(errorText));
+  }
+  errorText[sizeof(errorText)-1] = '\0';
+
+ERROR TOO_MANY_CONNECTIONS           "too many concurrent connections"
+ERROR NO_LOGIN_NAME                  "no login name given"
+ERROR NO_PASSWORD                    "no password given"
+ERROR NETWORK_SEND                   "sending data fail"
+ERROR NETWORK_RECEIVE                "receiving data fail"
+ERROR NETWORK_EXECUTE_FAIL           "execute command fail"
+ERROR NO_RESPONSE                    "no response from remote program"
+ERROR INVALID_RESPONSE               "invalid response from remote program"
+
+// --- TLS/SSL ----------------------------------------------------------
 ERROR INIT_TLS                       "init TLS (SSL) fail"
 ERROR NO_TLS_CA                      "no TLS (SSL) certificate authority file 'bar-ca.pem'"
 ERROR NO_TLS_CERTIFICATE             "no TLS (SSL) certificate file 'bar-server-cert.pem'"
@@ -104,10 +126,10 @@ ERROR SSH
   }
   errorText[sizeof(errorText)-1] = '\0';
 
-// storage
+// --- storage ----------------------------------------------------------
 ERROR INIT_STORAGE                   "init storage fail"
 
-// FTP
+// --- FTP --------------------------------------------------------------
 ERROR INVALID_FTP_SPECIFIER          "invalid FTP specifier"
 ERROR FTP_SESSION_FAIL               "initialize FTP session fail"
 ERROR NO_FTP_PASSWORD                "no FTP password given"
@@ -119,7 +141,7 @@ ERROR FTP_GET_SIZE                   "get FTP file size fail"
 //ERROR FTP_WRITE                      "write FTP file fail"
 //ERROR FTP_DELETE                     "delete FTP file fail"
 
-// compress
+// --- compress ---------------------------------------------------------
 ERROR INIT_COMPRESS                  "init compress fail"
 ERROR DEFLATE_FAIL
   strncpy(errorText,"compress fail",sizeof(errorText)-1);
@@ -154,7 +176,7 @@ ERROR DELTA_SOURCE_NOT_FOUND
 ERROR INVALID_COMPRESS_ALGORITHM     "invalid compress algorithm"
 ERROR UNKNOWN_COMPRESS_ALGORITHM     "unknown compress algorithm"
 
-// crypt
+// --- crypt ------------------------------------------------------------
 ERROR UNSUPPORTED_BLOCK_SIZE         "unsupported block size"
 ERROR INIT_CRYPT                     "init crypt fail"
 ERROR NO_CRYPT_PASSWORD              "no password given for cipher"
@@ -208,7 +230,7 @@ ERROR KEY_ENCRYPT_FAIL               "key encryption fail"
 ERROR KEY_DECRYPT_FAIL               "key decryption fail"
 ERROR WRONG_PRIVATE_KEY              "wrong private decryption key"
 
-// file i/o
+// --- file i/o ---------------------------------------------------------
 ERROR CREATE_FILE
 ERROR OPEN_FILE
 ERROR CREATE_DIRECTORY
@@ -288,7 +310,7 @@ ERROR NOT_A_DIRECTORY
 
 ERROR END_OF_DIRECTORY               "end of directory list"
 
-// optical disk i/o
+// --- optical disk i/o -------------------------------------------------
 ERROR OPTICAL_DISK_NOT_FOUND
   strncpy(errorText,"CD/DVD/BD device",sizeof(errorText)-1);
   if (ERROR_TEXT != NULL)
@@ -322,7 +344,7 @@ ERROR OPEN_ISO9660_FILE
   strncat(errorText," fail",sizeof(errorText)-1-strlen(errorText));
   errorText[sizeof(errorText)-1] = '\0';
 
-// device i/o
+// --- device i/o -------------------------------------------------------
 ERROR OPEN_DEVICE
   strncpy(errorText,strerror(ERROR_ERRNO),sizeof(errorText)-1);
   if (ERROR_TEXT != NULL)
@@ -337,7 +359,7 @@ ERROR READ_DEVICE                    "read device fail"
 ERROR WRITE_DEVICE                   "write device fail"
 ERROR PARSE_DEVICE_LIST              "error parsing device list"
 
-// archive
+// --- archive ----------------------------------------------------------
 ERROR NO_ARCHIVE_FILE_NAME           "no archive file name given"
 ERROR NOT_AN_ARCHIVE_FILE            "not an archive file"
 ERROR ARCHIVE_NOT_FOUND              "archive not found"
@@ -378,36 +400,16 @@ ERROR CORRUPT_DATA
 ERROR INVALID_CHUNK_SIZE             "invalid chunk size"
 ERROR UNKNOWN_CHUNK                  "unknown chunk"
 
-// incremental files
+// --- incremental files ------------------------------------------------
 ERROR NOT_AN_INCREMENTAL_FILE        "invalid incremental file"
 ERROR WRONG_INCREMENTAL_FILE_VERSION "wrong incremental file version"
 ERROR CORRUPT_INCREMENTAL_FILE       "corrupt incremental file"
 
-// network
-ERROR NO_HOST_NAME                   "no host name given"
-ERROR HOST_NOT_FOUND                 "host not found"
-ERROR CONNECT_FAIL
-  strncpy(errorText,strerror(ERROR_ERRNO),sizeof(errorText)-1);
-  if (ERROR_TEXT != NULL)
-  {
-    strncat(errorText,": ",sizeof(errorText)-1-strlen(errorText));
-    strncat(errorText,ERROR_TEXT,sizeof(errorText)-1-strlen(errorText));
-  }
-  errorText[sizeof(errorText)-1] = '\0';
-
-ERROR NO_LOGIN_NAME                  "no login name given"
-ERROR NO_PASSWORD                    "no password given"
-ERROR NETWORK_SEND                   "sending data fail"
-ERROR NETWORK_RECEIVE                "receiving data fail"
-ERROR NETWORK_EXECUTE_FAIL           "execute command fail"
-ERROR NO_RESPONSE                    "no response from remote program"
-ERROR INVALID_RESPONSE               "invalid response from remote program"
-
-// device
+// --- device -----------------------------------------------------------
 ERROR INVALID_DEVICE_SPECIFIER       "invalid device specifier"
 ERROR LOAD_VOLUME_FAIL               "load volume fail"
 
-// exec
+// --- exec -------------------------------------------------------------
 ERROR PARSE_COMMAND                  "parse command fail"
 ERROR FORK_FAIL                      "fork for execute external program fail"
 ERROR IO_REDIRECT_FAIL
@@ -434,7 +436,7 @@ ERROR EXEC_FAIL
   }
   errorText[sizeof(errorText)-1] = '\0';
 
-// BARControl protocol
+// --- BARControl protocol ----------------------------------------------
 ERROR PARSING                        "error parsing data"
 ERROR EXPECTED_PARAMETER             "expected parameter"
 ERROR UNKNOWN_VALUE                  "unknown value"
@@ -442,7 +444,7 @@ ERROR AUTHORIZATION                  "authorization error"
 ERROR JOB_NOT_FOUND                  "job not found"
 ERROR JOB                            "job error"
 
-// database (SQLite3)
+// --- database (SQLite3) -----------------------------------------------
 ERROR DATABASE
   if (ERROR_TEXT != NULL)
   {
