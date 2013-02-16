@@ -9,7 +9,7 @@
 \***********************************************************************/
 
 /****************************** Includes *******************************/
-#include "config.h"
+#include <config.h>  // use <...> to support separated build directory
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -312,7 +312,7 @@ LOCAL Errors writeIncrementalList(const String     fileName,
     }
     else if (!File_isDirectory(directoryName))
     {
-      error = ERRORX(NOT_A_DIRECTORY,0,String_cString(directoryName));
+      error = ERRORX_(NOT_A_DIRECTORY,0,String_cString(directoryName));
       String_delete(directoryName);
       return error;
     }
@@ -880,7 +880,10 @@ LOCAL String formatArchiveFileName(String       fileName,
   TextMacro textMacros[2];
 
   bool      partNumberFlag;
-  struct tm tmStruct;
+  #ifdef HAVE_LOCALTIME_R
+    struct tm tmBuffer;
+  #endif /* HAVE_LOCALTIME_R */
+  struct tm *tm;
   ulong     i,j;
   char      format[4];
   char      buffer[256];
@@ -921,7 +924,12 @@ LOCAL String formatArchiveFileName(String       fileName,
   }
 
   // expand time macros, part number
-  localtime_r(&time,&tmStruct);
+  #ifdef HAVE_LOCALTIME_R
+    tm = localtime_r(&time,&tmBuffer);
+  #else /* not HAVE_LOCALTIME_R */
+    tm = localtime(&time);
+  #endif /* HAVE_LOCALTIME_R */
+  assert(tm != NULL);
   partNumberFlag = FALSE;
   i = 0L;
   while (i < String_length(fileName))
@@ -966,7 +974,7 @@ LOCAL String formatArchiveFileName(String       fileName,
                   String_remove(fileName,i,2);
                   break;
               }
-              length = strftime(buffer,sizeof(buffer)-1,format,&tmStruct);
+              length = strftime(buffer,sizeof(buffer)-1,format,tm);
 
               // insert in string
               switch (formatMode)
@@ -1200,11 +1208,11 @@ LOCAL String formatIncrementalFileName(String       fileName,
 LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
 {
   StringList          nameList;
+  String              basePath;
   String              name;
   bool                abortFlag;
   EntryNode           *includeEntryNode;
   StringTokenizer     fileNameTokenizer;
-  String              basePath;
   String              string;
   Errors              error;
   String              fileName;
@@ -1217,10 +1225,13 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
   assert(createInfo->excludePatternList != NULL);
   assert(createInfo->jobOptions != NULL);
 
+  // initialize variables
   StringList_init(&nameList);
-  name = String_new();
+  basePath = String_new();
+  name     = String_new();
 
-  abortFlag = FALSE;
+  // process include entries
+  abortFlag        = FALSE;
   includeEntryNode = createInfo->includeEntryList->head;
   while (   !createInfo->collectorSumThreadExitFlag
          && !abortFlag
@@ -1236,7 +1247,6 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
     }
 
     // find base path
-    basePath = String_new();
     File_initSplitFileName(&fileNameTokenizer,includeEntryNode->string);
     if (File_getNextSplitFileName(&fileNameTokenizer,&string) && !Pattern_checkIsPattern(string))
     {
@@ -1272,6 +1282,7 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
       // get next file/directory to process
       name = StringList_getLast(&nameList,name);
 
+#warning check all include entries?
       if (   checkIsIncluded(includeEntryNode,name)
           && !checkIsExcluded(createInfo->excludePatternList,name)
          )
@@ -1535,15 +1546,13 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
       }
     }
 
-    // free resources
-    String_delete(basePath);
-
     // next include entry
     includeEntryNode = includeEntryNode->next;
   }
 
   // free resoures
   String_delete(name);
+  String_delete(basePath);
   StringList_done(&nameList);
 
   // terminate
@@ -1562,13 +1571,13 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
 LOCAL void collectorThreadCode(CreateInfo *createInfo)
 {
   StringList          nameList;
+  String              basePath;
   String              name;
   String              fileName;
   Dictionary          hardLinkDictionary;
   bool                abortFlag;
   EntryNode           *includeEntryNode;
   StringTokenizer     fileNameTokenizer;
-  String              basePath;
   String              string;
   Errors              error;
   FileInfo            fileInfo;
@@ -1584,7 +1593,9 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
   assert(createInfo->excludePatternList != NULL);
   assert(createInfo->jobOptions != NULL);
 
+  // initialize variables
   StringList_init(&nameList);
+  basePath = String_new();
   name     = String_new();
   fileName = String_new();
   if (!Dictionary_init(&hardLinkDictionary,NULL,NULL))
@@ -1592,7 +1603,8 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
     HALT_INSUFFICIENT_MEMORY();
   }
 
-  abortFlag = FALSE;
+  // process include entries
+  abortFlag        = FALSE;
   includeEntryNode = createInfo->includeEntryList->head;
   while (   !abortFlag
          && ((createInfo->requestedAbortFlag == NULL) || !(*createInfo->requestedAbortFlag))
@@ -1607,7 +1619,6 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
     }
 
     // find base path
-    basePath = String_new();
     File_initSplitFileName(&fileNameTokenizer,includeEntryNode->string);
     if (File_getNextSplitFileName(&fileNameTokenizer,&string) && !Pattern_checkIsPattern(string))
     {
@@ -1642,7 +1653,9 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
 
       // get next directory to process
       name = StringList_getLast(&nameList,name);
+//fprintf(stderr,"%s, %d: %s %d %d\n",__FILE__,__LINE__,String_cString(name),checkIsIncluded(includeEntryNode,name),checkIsExcluded(createInfo->excludePatternList,name));
 
+#warning check all include entries?
       if (   checkIsIncluded(includeEntryNode,name)
           && !checkIsExcluded(createInfo->excludePatternList,name)
          )
@@ -2096,9 +2109,6 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
       }
     }
 
-    // free resources
-    String_delete(basePath);
-
     // next include entry
     includeEntryNode = includeEntryNode->next;
   }
@@ -2126,6 +2136,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
   Dictionary_done(&hardLinkDictionary,NULL,NULL); //???(DictionaryFreeFunction)freeHardLinkEntry,NULL);
   String_delete(fileName);
   String_delete(name);
+  String_delete(basePath);
   StringList_done(&nameList);
 
   createInfo->collectorThreadExitFlag = TRUE;
@@ -4422,8 +4433,7 @@ Errors Command_create(const char                      *storageName,
     }
     else
     {
-      printInfo(1,"skipped (reason: own created file)\n");
-      logMessage(LOG_TYPE_ENTRY_ACCESS_DENIED,"skipped '%s'\n",String_cString(entryMsg.name));
+      printInfo(1,"Add '%s'...skipped (reason: own created file)\n",String_cString(entryMsg.name));
       createInfo.statusInfo.skippedEntries++;
       abortFlag |= !updateStatusInfo(&createInfo);
     }
