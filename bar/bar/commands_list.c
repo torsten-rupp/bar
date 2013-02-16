@@ -9,7 +9,7 @@
 \***********************************************************************/
 
 /****************************** Includes *******************************/
-#include <config.h>  // use <...> to support separated build directory 
+#include <config.h>  // use <...> to support separated build directory
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -1799,6 +1799,7 @@ remoteBarFlag=FALSE;
                                String_cString(printableStorageName),
                                Errors_getText(error)
                               );
+                    String_delete(deltaSourceName);
                     String_delete(deviceName);
                     if (failError == ERROR_NONE) failError = error;
                     break;
