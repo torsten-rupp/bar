@@ -12,7 +12,7 @@
 #define __CHUNKS__
 
 /****************************** Includes *******************************/
-#include <config.h>  // use <...> to support separated build directory 
+#include <config.h>  // use <...> to support separated build directory
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -225,7 +225,7 @@ Errors Chunk_next(const ChunkIO *chunkIO,
 
 /***********************************************************************\
 * Name   : Chunk_skip
-* Purpose: skip chink
+* Purpose: skip chunk
 * Input  : chunkIO         - i/o functions
 *          chunkIOUserData - user data for file i/o
 *          chunkHeader     - chunk header
