@@ -52,8 +52,9 @@
 /***********************************************************************\
 * Name   : compilePattern
 * Purpose: compile pattern
-* Input  : pattern     - pattern to compile
-*          patternType - pattern type
+* Input  : pattern      - pattern to compile
+*          patternType  - pattern type
+*          patternFlags - pattern flags
 * Output : regexBegin - regular expression for matching begin
 *          regexEnd   - regular expression for matching end
 *          regexExact - regular expression for exact matching
@@ -63,6 +64,7 @@
 
 LOCAL Errors compilePattern(const char   *pattern,
                             PatternTypes patternType,
+                            uint         patternFlags,
                             regex_t      *regexBegin,
                             regex_t      *regexEnd,
                             regex_t      *regexExact
@@ -84,8 +86,8 @@ LOCAL Errors compilePattern(const char   *pattern,
   regexString = String_new();
 
   regexFlags = REG_NOSUB;
-  if ((patternType & PATTERN_OPTION_IGNORE_CASE) == PATTERN_OPTION_IGNORE_CASE) regexFlags |= REG_ICASE;
-  switch (patternType & PATTERN_TYPE_MASK)
+  if ((patternFlags & PATTERN_FLAG_IGNORE_CASE) == PATTERN_FLAG_IGNORE_CASE) regexFlags |= REG_ICASE;
+  switch (patternType)
   {
     case PATTERN_TYPE_GLOB:
       z = 0;
@@ -202,12 +204,12 @@ void Pattern_doneAll(void)
 {
 }
 
-Errors Pattern_init(Pattern *pattern, const String string, PatternTypes patternType)
+Errors Pattern_init(Pattern *pattern, const String string, PatternTypes patternType, uint patternFlags)
 {
-  return Pattern_initCString(pattern,String_cString(string),patternType);
+  return Pattern_initCString(pattern,String_cString(string),patternType,patternFlags);
 }
 
-Errors Pattern_initCString(Pattern *pattern, const char *string, PatternTypes patternType)
+Errors Pattern_initCString(Pattern *pattern, const char *string, PatternTypes patternType, uint patternFlags)
 {
   Errors error;
 
@@ -219,6 +221,7 @@ Errors Pattern_initCString(Pattern *pattern, const char *string, PatternTypes pa
   // compile pattern
   error = compilePattern(string,
                          patternType,
+                         patternFlags,
                          &pattern->regexBegin,
                          &pattern->regexEnd,
                          &pattern->regexExact
@@ -240,7 +243,7 @@ void Pattern_done(Pattern *pattern)
   regfree(&pattern->regexBegin);
 }
 
-Pattern *Pattern_new(const String string, PatternTypes patternType)
+Pattern *Pattern_new(const String string, PatternTypes patternType, uint patternFlags)
 {
   Pattern *pattern;
   Errors  error;
@@ -253,7 +256,7 @@ Pattern *Pattern_new(const String string, PatternTypes patternType)
     return NULL;
   }
 
-  error = Pattern_init(pattern,string,patternType);
+  error = Pattern_init(pattern,string,patternType,patternFlags);
   if (error != ERROR_NONE)
   {
     free(pattern);

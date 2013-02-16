@@ -40,16 +40,16 @@
 #define PATTERN_CHAR_SET_EXTENDED_REGEX "*+?{}():[].^$|"
 
 // pattern types
-#define PATTERN_TYPE_GLOB           0x00  // * and ?
-#define PATTERN_TYPE_REGEX          0x01  // regular expressions
-#define PATTERN_TYPE_EXTENDED_REGEX 0x02  // extended regular expressions
+typedef enum
+{
+  PATTERN_TYPE_GLOB,                    // * and ?
+  PATTERN_TYPE_REGEX,                   // regular expressions
+  PATTERN_TYPE_EXTENDED_REGEX           // extended regular expressions
+} PatternTypes;
 
-#define PATTERN_TYPE_MASK 0x0F
-
-// pattern options
-#define PATTERN_OPTION_IGNORE_CASE  0x10  // ignore upper/lower case
-
-#define PATTERN_OPTIONS_MASK 0xF0
+// pattern flags
+#define PATTERN_FLAG_NONE        0x00   // no flags 
+#define PATTERN_FLAG_IGNORE_CASE 0x01   // ignore upper/lower case
 
 // match modes
 typedef enum
@@ -61,14 +61,11 @@ typedef enum
 
 /***************************** Datatypes *******************************/
 
-// pattern types
-#warning remove and rename PatternTypes -> patternFlags
-typedef uint PatternTypes;
-
 // pattern
 typedef struct
 {
   PatternTypes type;
+  uint         flags;
   regex_t      regexBegin;              // regular expression for matching begin
   regex_t      regexEnd;                // regular expression for matching end
   regex_t      regexExact;              // regular expression for matching exact
@@ -111,16 +108,17 @@ void Pattern_doneAll(void);
 /***********************************************************************\
 * Name   : Pattern_init
 * Purpose: init pattern
-* Input  : pattern     - pattern variable
-*          string      - pattern
-*          patternType - pattern type; see PATTERN_TYPE_*
+* Input  : pattern      - pattern variable
+*          string       - pattern
+*          patternType  - pattern type; see PATTERN_TYPE_*
+*          patternFlags - pattern flags; see PATTERN_FLAG_*
 * Output : pattern - initialzied variable
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-Errors Pattern_init(Pattern *pattern, const String string, PatternTypes patternType);
-Errors Pattern_initCString(Pattern *pattern, const char *string, PatternTypes patternType);
+Errors Pattern_init(Pattern *pattern, const String string, PatternTypes patternType, uint patternFlags);
+Errors Pattern_initCString(Pattern *pattern, const char *string, PatternTypes patternType, uint patternFlags);
 
 /***********************************************************************\
 * Name   : Pattern_done
@@ -136,14 +134,15 @@ void Pattern_done(Pattern *pattern);
 /***********************************************************************\
 * Name   : Pattern_new
 * Purpose: create new pattern
-* Input  : string      - pattern
-*          patternType - pattern type; see PATTERN_TYPE_*
+* Input  : string       - pattern
+*          patternType  - pattern type; see PATTERN_TYPE_*
+*          patternFlags - pattern flags; see PATTERN_FLAG_*
 * Output : -
 * Return : pattern or NULL
 * Notes  : -
 \***********************************************************************/
 
-Pattern *Pattern_new(const String string, PatternTypes patternType);
+Pattern *Pattern_new(const String string, PatternTypes patternType, uint patternFlags);
 
 /***********************************************************************\
 * Name   : Pattern_delete

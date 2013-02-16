@@ -83,7 +83,8 @@ LOCAL PatternNode *copyPatternNode(PatternNode *patternNode,
   // create pattern
   error = Pattern_init(&newPatternNode->pattern,
                        patternNode->string,
-                       patternNode->pattern.type
+                       patternNode->pattern.type,
+                       patternNode->pattern.flags
                       );
   if (error != ERROR_NONE)
   {
@@ -198,7 +199,8 @@ Errors PatternList_appendCString(PatternList  *patternList,
   // init pattern
   error = Pattern_initCString(&patternNode->pattern,
                               pattern,
-                              patternType
+                              patternType,
+                              PATTERN_FLAG_IGNORE_CASE
                              );
   if (error != ERROR_NONE)
   {

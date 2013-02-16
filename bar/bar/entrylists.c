@@ -9,7 +9,7 @@
 \***********************************************************************/
 
 /****************************** Includes *******************************/
-#include <config.h>  // use <...> to support separated build directory 
+#include <config.h>  // use <...> to support separated build directory
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -89,7 +89,8 @@ LOCAL EntryNode *copyEntryNode(EntryNode *entryNode,
   #if   defined(PLATFORM_LINUX)
     error = Pattern_init(&newEntryNode->pattern,
                          entryNode->string,
-                         entryNode->pattern.type
+                         entryNode->pattern.type,
+                         PATTERN_FLAG_NONE
                         );
   #elif defined(PLATFORM_WINDOWS)
     // escape all '\' by '\\'
@@ -98,7 +99,8 @@ LOCAL EntryNode *copyEntryNode(EntryNode *entryNode,
 
     error = Pattern_init(&newEntryNode->pattern,
                          string,
-                         entryNode->pattern.type|PATTERN_OPTION_IGNORE_CASE
+                         entryNode->pattern.type|,
+                         PATTERN_FLAG_IGNORE_CASE
                         );
 
     // free resources
@@ -225,7 +227,8 @@ Errors EntryList_appendCString(EntryList    *entryList,
   #if   defined(PLATFORM_LINUX)
     error = Pattern_initCString(&entryNode->pattern,
                                 pattern,
-                                patternType
+                                patternType,
+                                PATTERN_FLAG_NONE
                                );
   #elif defined(PLATFORM_WINDOWS)
     // escape all '\' by '\\'
@@ -234,7 +237,8 @@ Errors EntryList_appendCString(EntryList    *entryList,
 
     error = Pattern_init(&entryNode->pattern,
                          string,
-                         patternType|PATTERN_OPTION_IGNORE_CASE
+                         patternType,
+                         PATTERN_FLAG_IGNORE_CASE
                         );
 
     // free resources

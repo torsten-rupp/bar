@@ -2140,6 +2140,13 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
             return ERROR_NO_HOST_NAME;
           }
 
+          // allocate FTP server connection
+          if (!allocateFTPServerConnection(storageFileHandle->storageSpecifier.hostName))
+          {
+            Storage_doneSpecifier(&storageFileHandle->storageSpecifier);
+            return ERROR_TOO_MANY_CONNECTIONS;
+          }
+
           // check FTP login, get correct password
           error = ERROR_FTP_SESSION_FAIL;
           if ((error != ERROR_NONE) && !Password_isEmpty(storageFileHandle->storageSpecifier.loginPassword))
@@ -6082,7 +6089,7 @@ Errors Storage_write(StorageFileHandle *storageFileHandle,
 
               // send data
 //fprintf(stderr,"%s, %d: storageFileHandle->ftp.runningHandles=%d\n",__FILE__,__LINE__,storageFileHandle->ftp.runningHandles);
-              storageFileHandle->ftp.buffer          = buffer;
+              storageFileHandle->ftp.buffer          = (void*)buffer;
               storageFileHandle->ftp.length          = length;
               storageFileHandle->ftp.transferedBytes = 0L;
               while (   (storageFileHandle->ftp.runningHandles > 0)
