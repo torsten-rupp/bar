@@ -2017,7 +2017,7 @@ Errors Compress_reset(CompressInfo *compressInfo)
                 return ERRORX_(DEFLATE_FAIL,0,xd3_errstring(&compressInfo->xdelta.stream));
                 break;
               case COMPRESS_MODE_INFLATE:
-                return ERRORX)(INFLATE_FAIL,0,xd3_errstring(&compressInfo->xdelta.stream));
+                return ERRORX_(INFLATE_FAIL,0,xd3_errstring(&compressInfo->xdelta.stream));
                 break;
               #ifndef NDEBUG
                 default:
