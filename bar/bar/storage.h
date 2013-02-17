@@ -8,11 +8,25 @@
 *
 \***********************************************************************/
 
+/* Supported storage types:
+
+     ftp://[<login name>[:<login password>]@]<host name>[:<host port>]/<file name>
+     ssh://[<login name>@]<host name>[:<host port>]/<file name>
+     scp://[<login name>@]<host name>[:<host port>]/<file name>
+     sftp://[<login name>@]<host name>[:<host port>]/<file name>
+     cd://[<device name>:]<file name>
+     dvd://[<device name>:]<file name>
+     bd://[<device name>:]<file name>
+     device://[<device name>:]<file name>
+     file://<file name>
+     plain file name
+*/
+
 #ifndef __STORAGE__
 #define __STORAGE__
 
 /****************************** Includes *******************************/
-#include <config.h>  // use <...> to support separated build directory 
+#include <config.h>  // use <...> to support separated build directory
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -511,7 +525,7 @@ bool Storage_parseFTPSpecifier(const String ftpSpecifier,
 /***********************************************************************\
 * Name   : Storage_parseSSHSpecifier
 * Purpose: parse ssh specifier:
-*            [<login name>@]<host name>[:<port>]
+*            [<login name>@]<host name>[:<host port>]
 * Input  : sshSpecifier - ssh specifier string
 *          hostName     - host name variable (can be NULL)
 *          hostPort     - host port number variable (can be NULL)
@@ -554,19 +568,7 @@ bool Storage_parseDeviceSpecifier(const String deviceSpecifier,
 * Input  : storageName - storage name
 * Output : -
 * Return : storage type
-* Notes  : storage types supported:
-*            ftp://[<login name>[:<login password>]@]<host name>[:<host port>]/<file name>
-*            ssh://[<login name>@]<host name>[:<host port>]/<file name>
-*            scp://[<login name>@]<host name>[:<host port>]/<file name>
-*            sftp://[<login name>@]<host name>[:<host port>]/<file name>
-*            cd://[<device name>:]<file name>
-*            dvd://[<device name>:]<file name>
-*            bd://[<device name>:]<file name>
-*            device://[<device name>:]<file name>
-*            file://<file name>
-*            plain file name
-*
-*          name structure:
+* Notes  : name structure:
 *            <type>://<storage specifier>/<filename>
 \***********************************************************************/
 
@@ -579,19 +581,7 @@ StorageTypes Storage_getType(const String storageName);
 * Output : storageSpecifier - storage specific data (can be NULL)
 *          fileName         - storage file name (can be NULL)
 * Return : ERROR_NONE or error code
-* Notes  : storage types supported:
-*            ftp://[<login name>[:<login password>]@]<host name>[:<host port>]/<file name>
-*            ssh://[<login name>@]<host name>[:<host port>]/<file name>
-*            scp://[<login name>@]<host name>[:<host port>]/<file name>
-*            sftp://[<login name>@]<host name>[:<host port>]/<file name>
-*            cd://[<device name>:]<file name>
-*            dvd://[<device name>:]<file name>
-*            bd://[<device name>:]<file name>
-*            device://[<device name>:]<file name>
-*            file://<file name>
-*            plain file name
-*
-*          name structure:
+* Notes  : name structure:
 *            <type>://<storage specifier>/<filename>
 \***********************************************************************/
 
@@ -675,17 +665,7 @@ Errors Storage_prepare(const String     storageName,
 *          fileName          - file name (without storage specifier
 *                              prefix)
 * Return : ERROR_NONE or errorcode
-* Notes  : storage types supported:
-*            ftp://[<login name>[:<login password>]@]<host name>[:<host port>]/<file name>
-*            ssh://[<login name>@]<host name>[:<host port>]/<file name>
-*            scp://[<login name>@]<host name>[:<host port>]/<file name>
-*            sftp://[<login name>@]<host name>[:<host port>]/<file name>
-*            cd://[<device name>:]<file name>
-*            dvd://[<device name>:]<file name>
-*            bd://[<device name>:]<file name>
-*            device://[<device name>:]<file name>
-*            file://<file name>
-*            plain file name
+* Notes  : -
 \***********************************************************************/
 
 Errors Storage_init(StorageFileHandle            *storageFileHandle,
@@ -1005,17 +985,7 @@ Errors Storage_readDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
 *          localFileName                - local archive file name
 * Output : -
 * Return : ERROR_NONE or errorcode
-* Notes  : supported storage names:
-*            ftp://
-*            ssh://
-*            scp://
-*            sftp://
-*            cd://
-*            dvd://
-*            bd://
-*            device://
-*            file://
-*            plain file name
+* Notes  : -
 \***********************************************************************/
 
 Errors Storage_copy(const String                 storageName,
