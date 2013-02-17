@@ -6992,10 +6992,9 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
 
           if      (offset > storageFileHandle->sftp.index)
           {
-            uint64  skip;
-            uint64  i;
-            uint64  n;
-            ssize_t readBytes;
+            uint64 skip;
+            uint64 i;
+            uint64 n;
 
             skip = offset-storageFileHandle->sftp.index;
             if (skip > 0LL)
