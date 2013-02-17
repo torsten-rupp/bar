@@ -302,10 +302,10 @@ typedef struct
           iso9660_stat_t *iso9660Stat;                     // ISO9660 file handle
           uint64         index;                            // current read/write index in ISO image [0..n-1]
 
-          struct                                             // read buffer
+          struct                                           // read buffer
           {
             byte   *data;
-            uint64 blockIndex;
+            uint64 blockIndex;                             // ISO9660 block index
             ulong  length;
           } buffer;
         #endif /* HAVE_ISO9660 */

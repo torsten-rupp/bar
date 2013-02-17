@@ -56,6 +56,8 @@
 /* file data buffer size */
 #define BUFFER_SIZE (64*1024)
 
+#define FTP_TIMEOUT  (30*1000)
+#define SSH_TIMEOUT  (30*1000)
 #define READ_TIMEOUT (60*1000)
 
 #define MAX_BUFFER_SIZE     (64*1024)
@@ -238,6 +240,7 @@ LOCAL Errors checkFTPLogin(const String hostName,
     {
       return ERROR_FTP_SESSION_FAIL;
     }
+    (void)curl_easy_setopt(curlHandle,CURLOPT_FTP_RESPONSE_TIMEOUT,FTP_TIMEOUT/1000);
     if (globalOptions.verboseLevel >= 6)
     {
       (void)curl_easy_setopt(curlHandle,CURLOPT_VERBOSE,1L);
@@ -2071,10 +2074,10 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
   assert(jobOptions != NULL);
   assert(fileName != NULL);
 
-  storageFileHandle->mode                      = STORAGE_MODE_UNKNOWN;
-  storageFileHandle->jobOptions                = jobOptions;
-  storageFileHandle->requestVolumeFunction     = storageRequestVolumeFunction;
-  storageFileHandle->requestVolumeUserData     = storageRequestVolumeUserData;
+  storageFileHandle->mode                   = STORAGE_MODE_UNKNOWN;
+  storageFileHandle->jobOptions             = jobOptions;
+  storageFileHandle->requestVolumeFunction  = storageRequestVolumeFunction;
+  storageFileHandle->requestVolumeUserData  = storageRequestVolumeUserData;
   if (jobOptions->waitFirstVolumeFlag)
   {
     storageFileHandle->volumeNumber          = 0;
@@ -2120,7 +2123,17 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
           FTPServer ftpServer;
 
           // init variables
-          storageFileHandle->type = STORAGE_TYPE_FTP;
+          storageFileHandle->type                       = STORAGE_TYPE_FTP;
+          storageFileHandle->ftp.curlMultiHandle        = NULL;
+          storageFileHandle->ftp.curlHandle             = NULL;
+          storageFileHandle->ftp.runningHandles         = 0;
+          storageFileHandle->ftp.index                  = 0LL;
+          storageFileHandle->ftp.size                   = 0LL;
+          storageFileHandle->ftp.readAheadBuffer.offset = 0LL;
+          storageFileHandle->ftp.readAheadBuffer.length = 0L;
+          storageFileHandle->ftp.buffer                 = NULL;
+          storageFileHandle->ftp.length                 = 0L;
+          storageFileHandle->ftp.transferedBytes        = 0L;
           initBandWidthLimiter(&storageFileHandle->ftp.bandWidthLimiter,maxBandWidthList);
 
           // allocate read-ahead buffer
@@ -2212,7 +2225,13 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
           FTPServer ftpServer;
 
           // init variables
-          storageFileHandle->type = STORAGE_TYPE_FTP;
+          storageFileHandle->type                       = STORAGE_TYPE_FTP;
+          storageFileHandle->ftp.control                = NULL;
+          storageFileHandle->ftp.data                   = NULL;
+          storageFileHandle->ftp.index                  = 0LL;
+          storageFileHandle->ftp.size                   = 0LL;
+          storageFileHandle->ftp.readAheadBuffer.offset = 0LL;
+          storageFileHandle->ftp.readAheadBuffer.length = 0L;
           initBandWidthLimiter(&storageFileHandle->ftp.bandWidthLimiter,maxBandWidthList);
 
           // allocate read-ahead buffer
@@ -2309,9 +2328,16 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
           SSHServer sshServer;
 
           // init variables
-          storageFileHandle->type                      = STORAGE_TYPE_SCP;
-          storageFileHandle->scp.sshPublicKeyFileName  = NULL;
-          storageFileHandle->scp.sshPrivateKeyFileName = NULL;
+          storageFileHandle->type                       = STORAGE_TYPE_SCP;
+          storageFileHandle->scp.sshPublicKeyFileName   = NULL;
+          storageFileHandle->scp.sshPrivateKeyFileName  = NULL;
+          storageFileHandle->scp.channel                = NULL;
+          storageFileHandle->scp.oldSendCallback        = NULL;
+          storageFileHandle->scp.oldReceiveCallback     = NULL;
+          storageFileHandle->scp.totalSentBytes         = 0LL;
+          storageFileHandle->scp.totalReceivedBytes     = 0LL;
+          storageFileHandle->scp.readAheadBuffer.offset = 0LL;
+          storageFileHandle->scp.readAheadBuffer.length = 0L;
           initBandWidthLimiter(&storageFileHandle->scp.bandWidthLimiter,maxBandWidthList);
 
           // allocate read-ahead buffer
@@ -2397,9 +2423,17 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
           SSHServer sshServer;
 
           // init variables
-          storageFileHandle->type                       = STORAGE_TYPE_SFTP;
-          storageFileHandle->sftp.sshPublicKeyFileName  = NULL;
-          storageFileHandle->sftp.sshPrivateKeyFileName = NULL;
+          storageFileHandle->type                        = STORAGE_TYPE_SFTP;
+          storageFileHandle->sftp.sshPublicKeyFileName   = NULL;
+          storageFileHandle->sftp.sshPrivateKeyFileName  = NULL;
+          storageFileHandle->sftp.oldSendCallback        = NULL;
+          storageFileHandle->sftp.oldReceiveCallback     = NULL;
+          storageFileHandle->sftp.totalSentBytes         = 0LL;
+          storageFileHandle->sftp.totalReceivedBytes     = 0LL;
+          storageFileHandle->sftp.sftp                   = NULL;
+          storageFileHandle->sftp.sftpHandle             = NULL;
+          storageFileHandle->sftp.readAheadBuffer.offset = 0LL;
+          storageFileHandle->sftp.readAheadBuffer.length = 0L;
           initBandWidthLimiter(&storageFileHandle->sftp.bandWidthLimiter,maxBandWidthList);
 
           // allocate read-ahead buffer
@@ -2596,8 +2630,13 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
 
         // init variables
         storageFileHandle->type                                     = storageFileHandle->storageSpecifier.type;
-
         #ifdef HAVE_ISO9660
+          storageFileHandle->opticalDisk.read.iso9660Handle     = NULL;
+          storageFileHandle->opticalDisk.read.iso9660Stat       = NULL;
+          storageFileHandle->opticalDisk.read.index             = 0LL;
+          storageFileHandle->opticalDisk.read.buffer.blockIndex = 0LL;
+          storageFileHandle->opticalDisk.read.buffer.length     = 0L;
+
           storageFileHandle->opticalDisk.read.buffer.data = (byte*)malloc(ISO_BLOCKSIZE);
           if (storageFileHandle->opticalDisk.read.buffer.data == NULL)
           {
@@ -2719,8 +2758,8 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
           storageFileHandle->device.newVolumeFlag = FALSE;
         }
         StringList_init(&storageFileHandle->device.fileNameList);
-        storageFileHandle->device.fileName  = String_new();
-        storageFileHandle->device.totalSize = 0LL;
+        storageFileHandle->device.fileName               = String_new();
+        storageFileHandle->device.totalSize              = 0LL;
 
         // create temporary directory for device files
         error = File_getTmpDirectoryName(storageFileHandle->device.directory,NULL,tmpDirectory);
@@ -3898,6 +3937,7 @@ Errors Storage_create(StorageFileHandle *storageFileHandle,
             curl_multi_cleanup(storageFileHandle->ftp.curlMultiHandle);
             return ERROR_FTP_SESSION_FAIL;
           }
+          (void)curl_easy_setopt(storageFileHandle->ftp.curlHandle,CURLOPT_FTP_RESPONSE_TIMEOUT,FTP_TIMEOUT/1000);
           if (globalOptions.verboseLevel >= 6)
           {
             // enable debug mode
@@ -4361,6 +4401,7 @@ Errors Storage_open(StorageFileHandle *storageFileHandle,
             curl_multi_cleanup(storageFileHandle->ftp.curlMultiHandle);
             return ERROR_FTP_SESSION_FAIL;
           }
+          (void)curl_easy_setopt(storageFileHandle->ftp.curlHandle,CURLOPT_FTP_RESPONSE_TIMEOUT,FTP_TIMEOUT/1000);
           if (globalOptions.verboseLevel >= 6)
           {
             // enable debug mode
@@ -5042,13 +5083,48 @@ Errors Storage_delete(StorageFileHandle *storageFileHandle,
     case STORAGE_TYPE_FTP:
       #if   defined(HAVE_CURL)
         {
+          String            url;
           String            ftpCommand;
           struct curl_slist *curlSList;
+          const char        *plainLoginPassword;
           CURLcode          curlCode;
-#warning todo curl
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+
           if (!storageFileHandle->jobOptions->dryRunFlag)
           {
+            // initialise variables
+            storageFileHandle->ftp.curlHandle = curl_easy_init();
+            if (storageFileHandle->ftp.curlHandle == NULL)
+            {
+              return ERROR_FTP_SESSION_FAIL;
+            }
+            (void)curl_easy_setopt(storageFileHandle->ftp.curlHandle,CURLOPT_FTP_RESPONSE_TIMEOUT,FTP_TIMEOUT/1000);
+            if (globalOptions.verboseLevel >= 6)
+            {
+              // enable debug mode
+              (void)curl_easy_setopt(storageFileHandle->ftp.curlHandle,CURLOPT_VERBOSE,1L);
+            }
+
+            // set FTP connect
+            url = String_new();
+            String_format(url,"ftp://%S",storageFileHandle->storageSpecifier.hostName,fileName);
+            if (storageFileHandle->storageSpecifier.hostPort != 0) String_format(url,":d",storageFileHandle->storageSpecifier.hostPort);
+            String_format(url,"/%S",fileName);
+            curlCode = curl_easy_setopt(storageFileHandle->ftp.curlHandle,CURLOPT_URL,String_cString(url));
+            if (curlCode != CURLE_OK)
+            {
+              curl_easy_cleanup(storageFileHandle->ftp.curlHandle);
+              return ERRORX_(FTP_SESSION_FAIL,0,curl_easy_strerror(curlCode));
+            }
+            String_delete(url);
+
+            // set FTP login
+            (void)curl_easy_setopt(storageFileHandle->ftp.curlHandle,CURLOPT_USERNAME,String_cString(storageFileHandle->storageSpecifier.loginName));
+            plainLoginPassword = Password_deploy(storageFileHandle->storageSpecifier.loginPassword);
+            (void)curl_easy_setopt(storageFileHandle->ftp.curlHandle,CURLOPT_PASSWORD,plainLoginPassword);
+            Password_undeploy(storageFileHandle->storageSpecifier.loginPassword);
+
+            // delete file
+            (void)curl_easy_setopt(storageFileHandle->ftp.curlHandle,CURLOPT_NOBODY,1L);
             ftpCommand = String_format(String_new(),"*DELE %S",fileName);
             curlSList = curl_slist_append(NULL,String_cString(ftpCommand));
             curlCode = curl_easy_setopt(storageFileHandle->ftp.curlHandle,CURLOPT_QUOTE,curlSList);
@@ -5067,9 +5143,14 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
             curl_easy_setopt(storageFileHandle->ftp.curlHandle,CURLOPT_QUOTE,NULL);
             curl_slist_free_all(curlSList);
             String_delete(ftpCommand);
+
+            // free resources
+            curl_easy_cleanup(storageFileHandle->ftp.curlHandle);
           }
         }
       #elif defined(HAVE_FTP)
+        assert(storageFileHandle->ftp.data != NULL);
+
         if (!storageFileHandle->jobOptions->dryRunFlag)
         {
           error = (FtpDelete(String_cString(fileName),storageFileHandle->ftp.data) == 1) ? ERROR_NONE : ERROR_DELETE_FILE;
@@ -5090,6 +5171,8 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
 whould this be a possible implementation?
         {
           String command;
+
+          assert(storageFileHandle->scp.channel != NULL);
 
           // there is no unlink command for scp: execute either 'rm' or 'del' on remote server
           command = String_new();
@@ -5977,7 +6060,6 @@ fprintf(stderr,"%s, %d: read %ld\n",__FILE__,__LINE__,n);
               // get ISO9660 block index, offset
               blockIndex  = (int64)(storageFileHandle->opticalDisk.read.index/ISO_BLOCKSIZE);
               blockOffset = (uint)(storageFileHandle->opticalDisk.read.index%ISO_BLOCKSIZE);
-//fprintf(stderr,"%s, %d: blockIndex=%ld blockOffset=%d\n",__FILE__,__LINE__,blockIndex,blockOffset);
 
               if (   (blockIndex != storageFileHandle->opticalDisk.read.buffer.blockIndex)
                   || (blockOffset >= storageFileHandle->opticalDisk.read.buffer.length)
@@ -6644,13 +6726,13 @@ Errors Storage_seek(StorageFileHandle *storageFileHandle,
          read and discard data to position the read index to the
          requested offset.
          Note: this is slow!
+
+         Idea: Can ftp REST be used to implement a seek-function?
+               With curl: CURLOPT_RESUME_FROM_LARGE?
+               http://tools.ietf.org/html/rfc959
       */
       #if   defined(HAVE_CURL)
         {
-          CURLcode  curlCode;
-          CURLMcode curlMCode;
-#warning todo curl
-
           if (!storageFileHandle->jobOptions->dryRunFlag)
           {
             assert(storageFileHandle->ftp.readAheadBuffer.data != NULL);
