@@ -70,8 +70,6 @@ LOCAL void addSourceNodes(const String storageName, const Pattern *storagePatter
   String                     baseStorageName;
   String                     basePath;
   String                     fileName;
-  StringTokenizer            fileNameTokenizer;
-  String                     string;
   Errors                     error;
   StorageDirectoryListHandle storageDirectoryListHandle;
   SourceNode                 *sourceNode;
@@ -95,25 +93,6 @@ LOCAL void addSourceNodes(const String storageName, const Pattern *storagePatter
     return;
   }
   File_getFilePathName(basePath,fileName);
-#if 0
-  File_initSplitFileName(&fileNameTokenizer,fileName);
-  if (File_getNextSplitFileName(&fileNameTokenizer,&string) && !Pattern_checkIsPattern(string))
-  {
-    if (String_length(string) > 0L)
-    {
-      File_setFileName(basePath,string);
-    }
-    else
-    {
-      File_setFileNameChar(basePath,FILES_PATHNAME_SEPARATOR_CHAR);
-    }
-  }
-  while (File_getNextSplitFileName(&fileNameTokenizer,&string) && !Pattern_checkIsPattern(string))
-  {
-    File_appendFileName(basePath,string);
-  }
-  File_doneSplitFileName(&fileNameTokenizer);
-#endif
   Storage_getName(baseStorageName,&storageSpecifier,basePath);
 
   // open directory list

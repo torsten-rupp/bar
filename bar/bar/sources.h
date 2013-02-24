@@ -55,7 +55,7 @@ typedef struct
 // source handle
 typedef struct
 {
-#warning is there a list of names required?
+// NYI: is there a list of names required?
   String     name;             // source name
 //  StringList nameList;
   uint64     size;             // size of source
