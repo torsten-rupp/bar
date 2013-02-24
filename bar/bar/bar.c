@@ -1384,6 +1384,7 @@ LOCAL bool cmdOptionParseEntryPattern(void *userData, void *variable, const char
   assert(value != NULL);
 
   UNUSED_VARIABLE(userData);
+  UNUSED_VARIABLE(name);
   UNUSED_VARIABLE(defaultValue);
 
   // get entry type
