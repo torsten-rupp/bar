@@ -60,7 +60,7 @@
 
 /*---------------------------------------------------------------------*/
 
-Errors Command_test(const StringList                *archiveNameList,
+Errors Command_test(const StringList                *storageNameList,
                     const EntryList                 *includeEntryList,
                     const PatternList               *excludePatternList,
                     JobOptions                      *jobOptions,
@@ -70,9 +70,11 @@ Errors Command_test(const StringList                *archiveNameList,
 {
   byte              *archiveBuffer,*fileBuffer;
   FragmentList      fragmentList;
+  StorageSpecifier  storageSpecifier;
+  String            storageFileName;
+  String            printableStorageName;
   StringNode        *stringNode;
-  String            archiveName;
-  String            printableArchiveName;
+  String            storageName;
   Errors            failError;
   Errors            error;
   ArchiveInfo       archiveInfo;
@@ -80,7 +82,7 @@ Errors Command_test(const StringList                *archiveNameList,
   ArchiveEntryTypes archiveEntryType;
   FragmentNode      *fragmentNode;
 
-  assert(archiveNameList != NULL);
+  assert(storageNameList != NULL);
   assert(includeEntryList != NULL);
   assert(excludePatternList != NULL);
   assert(jobOptions != NULL);
@@ -98,17 +100,31 @@ Errors Command_test(const StringList                *archiveNameList,
     HALT_INSUFFICIENT_MEMORY();
   }
   FragmentList_init(&fragmentList);
-  printableArchiveName = String_new();
+  Storage_initSpecifier(&storageSpecifier);
+  storageFileName      = String_new();
+  printableStorageName = String_new();
 
   failError = ERROR_NONE;
-  STRINGLIST_ITERATE(archiveNameList,stringNode,archiveName)
+  STRINGLIST_ITERATE(storageNameList,stringNode,storageName)
   {
-    Storage_getPrintableName(printableArchiveName,archiveName);
-    printInfo(0,"Testing archive '%s':\n",String_cString(printableArchiveName));
+    // parse storage name, get printable name
+    error = Storage_parseName(storageName,&storageSpecifier,storageFileName);
+    if (error != ERROR_NONE)
+    {
+      printError("Invalid storage '%s' (error: %s)!\n",
+                 String_cString(storageName),
+                 Errors_getText(error)
+                );
+      if (failError == ERROR_NONE) failError = error;
+      continue;
+    }
+    Storage_getPrintableName(printableStorageName,&storageSpecifier,storageFileName);
+
+    printInfo(0,"Testing archive '%s':\n",String_cString(printableStorageName));
 
     // open archive
     error = Archive_open(&archiveInfo,
-                         archiveName,
+                         storageName,
                          jobOptions,
                          &globalOptions.maxBandWidthList,
                          archiveGetCryptPasswordFunction,
@@ -117,7 +133,7 @@ Errors Command_test(const StringList                *archiveNameList,
     if (error != ERROR_NONE)
     {
       printError("Cannot open archive file '%s' (error: %s)!\n",
-                 String_cString(printableArchiveName),
+                 String_cString(printableStorageName),
                  Errors_getText(error)
                 );
       if (failError == ERROR_NONE) failError = error;
@@ -135,7 +151,7 @@ Errors Command_test(const StringList                *archiveNameList,
       if (error != ERROR_NONE)
       {
         printError("Cannot read next entry in archive '%s' (error: %s)!\n",
-                   String_cString(printableArchiveName),
+                   String_cString(printableStorageName),
                    Errors_getText(error)
                   );
         if (failError == ERROR_NONE) failError = error;
@@ -171,7 +187,7 @@ Errors Command_test(const StringList                *archiveNameList,
             if (error != ERROR_NONE)
             {
               printError("Cannot read 'file' content of archive '%s' (error: %s)!\n",
-                         String_cString(printableArchiveName),
+                         String_cString(printableStorageName),
                          Errors_getText(error)
                         );
               String_delete(fileName);
@@ -213,7 +229,7 @@ Errors Command_test(const StringList                *archiveNameList,
                 {
                   printInfo(1,"FAIL!\n");
                   printError("Cannot read content of archive '%s' (error: %s)!\n",
-                             String_cString(printableArchiveName),
+                             String_cString(printableStorageName),
                              Errors_getText(error)
                             );
                   break;
@@ -314,7 +330,7 @@ Errors Command_test(const StringList                *archiveNameList,
             if (error != ERROR_NONE)
             {
               printError("Cannot read 'image' content of archive '%s' (error: %s)!\n",
-                         String_cString(printableArchiveName),
+                         String_cString(printableStorageName),
                          Errors_getText(error)
                         );
               String_delete(deviceName);
@@ -371,7 +387,7 @@ Errors Command_test(const StringList                *archiveNameList,
                 {
                   printInfo(1,"FAIL!\n");
                   printError("Cannot read content of archive '%s' (error: %s)!\n",
-                             String_cString(printableArchiveName),
+                             String_cString(printableStorageName),
                              Errors_getText(error)
                             );
                   break;
@@ -461,7 +477,7 @@ Errors Command_test(const StringList                *archiveNameList,
             if (error != ERROR_NONE)
             {
               printError("Cannot read 'directory' content of archive '%s' (error: %s)!\n",
-                         String_cString(printableArchiveName),
+                         String_cString(printableStorageName),
                          Errors_getText(error)
                         );
               String_delete(directoryName);
@@ -532,7 +548,7 @@ Errors Command_test(const StringList                *archiveNameList,
             if (error != ERROR_NONE)
             {
               printError("Cannot read 'link' content of archive '%s' (error: %s)!\n",
-                         String_cString(printableArchiveName),
+                         String_cString(printableStorageName),
                          Errors_getText(error)
                         );
               String_delete(fileName);
@@ -617,7 +633,7 @@ Errors Command_test(const StringList                *archiveNameList,
             if (error != ERROR_NONE)
             {
               printError("Cannot read 'hard link' content of archive '%s' (error: %s)!\n",
-                         String_cString(printableArchiveName),
+                         String_cString(printableStorageName),
                          Errors_getText(error)
                         );
               StringList_done(&fileNameList);
@@ -666,7 +682,7 @@ Errors Command_test(const StringList                *archiveNameList,
                     {
                       printInfo(1,"FAIL!\n");
                       printError("Cannot read content of archive '%s' (error: %s)!\n",
-                                 String_cString(printableArchiveName),
+                                 String_cString(printableStorageName),
                                  Errors_getText(error)
                                 );
                       break;
@@ -772,7 +788,7 @@ Errors Command_test(const StringList                *archiveNameList,
             if (error != ERROR_NONE)
             {
               printError("Cannot read 'special' content of archive '%s' (error: %s)!\n",
-                         String_cString(printableArchiveName),
+                         String_cString(printableStorageName),
                          Errors_getText(error)
                         );
               String_delete(fileName);
@@ -856,7 +872,9 @@ Errors Command_test(const StringList                *archiveNameList,
   }
 
   // free resources
-  String_delete(printableArchiveName);
+  String_delete(printableStorageName);
+  String_delete(storageFileName);
+  Storage_doneSpecifier(&storageSpecifier);
   FragmentList_done(&fragmentList);
   free(fileBuffer);
   free(archiveBuffer);

@@ -1563,8 +1563,8 @@ Errors Command_list(StringList                      *storageNameList,
                    )
 {
   String           storageName;
-  String           printableStorageName;
   StorageSpecifier storageSpecifier;
+  String           printableStorageName;
   String           storageFileName;
   bool             printedInfoFlag;
   ulong            fileCount;
@@ -1587,30 +1587,31 @@ remoteBarFlag=FALSE;
   // init variables
   List_init(&archiveContentList);
   storageName          = String_new();
-  printableStorageName = String_new();
   Storage_initSpecifier(&storageSpecifier);
   storageFileName      = String_new();
+  printableStorageName = String_new();
 
   // list archive content
   failError = ERROR_NONE;
   while (!StringList_isEmpty(storageNameList))
   {
     StringList_getFirst(storageNameList,storageName);
-    Storage_getPrintableName(printableStorageName,storageName);
-    printedInfoFlag = FALSE;
-    fileCount       = 0L;
 
+    // parse storage name, get printable name
     error = Storage_parseName(storageName,&storageSpecifier,storageFileName);
     if (error != ERROR_NONE)
     {
       printError("Invalid storage '%s' (error: %s)!\n",
-                 String_cString(printableStorageName),
+                 String_cString(storageName),
                  Errors_getText(error)
                 );
       if (failError == ERROR_NONE) failError = error;
       continue;
     }
+    Storage_getPrintableName(printableStorageName,&storageSpecifier,storageFileName);
 
+    printedInfoFlag = FALSE;
+    fileCount       = 0L;
     switch (storageSpecifier.type)
     {
       case STORAGE_TYPE_FILESYSTEM:
@@ -2901,9 +2902,9 @@ fprintf(stderr,"%s, %d: type=#%s# arguments=%s\n",__FILE__,__LINE__,type,String_
   }
 
   // free resources
+  String_delete(printableStorageName);
   String_delete(storageFileName);
   Storage_doneSpecifier(&storageSpecifier);
-  String_delete(printableStorageName);
   String_delete(storageName);
   List_done(&archiveContentList,(ListNodeFreeFunction)freeArchiveContentNode,NULL);
 
