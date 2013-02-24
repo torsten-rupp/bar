@@ -179,7 +179,6 @@ typedef struct
 {
   StorageModes                 mode;                       // storage mode: READ, WRITE
   StorageSpecifier             storageSpecifier;           // storage specifier data
-  StorageTypes                 type;                       // storage type; see StorageTypes
   const JobOptions             *jobOptions;
 
   StorageRequestVolumeFunction requestVolumeFunction;      // call back for request new volume
@@ -400,7 +399,21 @@ typedef struct
       DirectoryListHandle directoryListHandle;
     } fileSystem;
     #if   defined(HAVE_CURL)
-#warning todo: curl
+      struct
+      {
+        String                  pathName;                  // directory name
+        String                  line;
+        StringList              lineList;
+
+        String                  fileName;                  // last parsed entry
+        FileTypes               type;
+        int64                   size;
+        uint64                  timeModified;
+        uint32                  userId;
+        uint32                  groupId;
+        FilePermission          permission;
+        bool                    entryReadFlag;             // TRUE if entry read
+      } ftp;
     #elif defined(HAVE_FTP)
       struct
       {
@@ -408,7 +421,15 @@ typedef struct
 
         String                  fileListFileName;
         FileHandle              fileHandle;
-        String                  line;
+
+        String                  fileName;                  // last parsed entry
+        FileTypes               type;
+        int64                   size;
+        uint64                  timeModified;
+        uint32                  userId;
+        uint32                  groupId;
+        FilePermission          permission;
+        bool                    entryReadFlag;             // TRUE if entry read
       } ftp;
     #endif /* HAVE_CURL || HAVE_FTP */
     #ifdef HAVE_SSH2
@@ -606,32 +627,33 @@ bool Storage_equalNames(const String storageName1,
 /***********************************************************************\
 * Name   : Storage_getName
 * Purpose: get storage name
-* Input  : storageName      - storage name variable
-*          storageType      - storage type; see StorageTypes
-*          storageSpecifier - storage specifier
-*          fileName         - file name (can be NULL)
+* Input  : storageName            - storage name variable
+*          storageSpecifierString - storage specifier string
+*          fileName               - file name (can be NULL)
 * Output : storageName - storage name
 * Return : storage name variable
 * Notes  : -
 \***********************************************************************/
 
-String Storage_getName(String       storageName,
-                       StorageTypes storageType,
-                       const String storageSpecifier,
-                       const String fileName
+String Storage_getName(String                 storageName,
+                       const StorageSpecifier *storageSpecifier,
+                       const String           fileName
                       );
 
 /***********************************************************************\
 * Name   : Storage_getPrintableName
 * Purpose: get printable storage name (without password)
-* Input  : storageName - storage name variable
-* Output : string - string
-* Return : string
+* Input  : storageName            - storage name variable
+*          storageSpecifierString - storage specifier string
+*          fileName               - file name (can be NULL)
+* Output : storageName - storage name
+* Return : storage name variable
 * Notes  : -
 \***********************************************************************/
 
-String Storage_getPrintableName(String       string,
-                                const String storageName
+String Storage_getPrintableName(String                 storageName,
+                                const StorageSpecifier *storageSpecifier,
+                                const String           fileName
                                );
 
 /***********************************************************************\
