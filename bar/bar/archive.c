@@ -2579,11 +2579,20 @@ Errors Archive_open(ArchiveInfo                     *archiveInfo,
   Errors      error;
   ChunkHeader chunkHeader;
 
+#warning change
+StorageSpecifier storageSpecifier;
+String storageFileName;
+
   assert(archiveInfo != NULL);
   assert(storageName != NULL);
 
   // init variables
   fileName = String_new();
+
+#warning change
+Storage_initSpecifier(&storageSpecifier);
+storageFileName      = String_new();
+error = Storage_parseName(storageName,&storageSpecifier,storageFileName);
 
   // init
   archiveInfo->jobOptions                      = jobOptions;
@@ -2599,7 +2608,7 @@ Errors Archive_open(ArchiveInfo                     *archiveInfo,
 
   archiveInfo->ioType                          = ARCHIVE_IO_TYPE_STORAGE_FILE;
   archiveInfo->storage.storageName             = String_duplicate(storageName);
-  archiveInfo->printableName                   = Storage_getPrintableName(String_new(),storageName);
+  archiveInfo->printableName                   = Storage_getPrintableName(String_new(),&storageSpecifier,storageFileName);
 
   archiveInfo->databaseHandle                  = NULL;
   archiveInfo->storageId                       = DATABASE_ID_NONE;
@@ -2611,6 +2620,11 @@ Errors Archive_open(ArchiveInfo                     *archiveInfo,
 
   archiveInfo->pendingError                    = ERROR_NONE;
   archiveInfo->nextChunkHeaderReadFlag         = FALSE;
+
+#warning change
+String_delete(storageFileName);
+Storage_doneSpecifier(&storageSpecifier);
+
 
   // init storage
   error = Storage_init(&archiveInfo->storage.storageFileHandle,
@@ -8779,12 +8793,22 @@ Errors Archive_updateIndex(DatabaseHandle               *databaseHandle,
   ArchiveInfo       archiveInfo;
   ArchiveEntryInfo  archiveEntryInfo;
   ArchiveEntryTypes archiveEntryType;
+#warning change
+StorageSpecifier storageSpecifier;
+String storageFileName;
 
   assert(databaseHandle != NULL);
   assert(storageName != NULL);
 
   // init variables
-  printableStorageName = Storage_getPrintableName(String_new(),storageName);
+#warning change
+Storage_initSpecifier(&storageSpecifier);
+storageFileName      = String_new();
+error = Storage_parseName(storageName,&storageSpecifier,storageFileName);
+  printableStorageName = Storage_getPrintableName(String_new(),&storageSpecifier,storageFileName);
+#warning change
+String_delete(storageFileName);
+Storage_doneSpecifier(&storageSpecifier);
 
   // init job options
   initJobOptions(&jobOptions);
