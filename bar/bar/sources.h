@@ -12,7 +12,7 @@
 #define __SOURCES__
 
 /****************************** Includes *******************************/
-#include <config.h>  // use <...> to support separated build directory 
+#include <config.h>  // use <...> to support separated build directory
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -55,11 +55,12 @@ typedef struct
 // source handle
 typedef struct
 {
+#warning is there a list of names required?
   String     name;             // source name
+//  StringList nameList;
   uint64     size;             // size of source
   String     tmpFileName;      // temporary file name
   FileHandle tmpFileHandle;    // temporary file handle
-  bool       tmpFileOpenFlag;  // TRUE iff temporary file is open
   uint64     baseOffset;       // block read base offset in source
 } SourceHandle;
 
@@ -126,7 +127,7 @@ Errors Source_addSourceList(const PatternList *sourcePatternList);
 *          sourceStorageName - storage name
 *          name              - entry name to open (file, image,
 *                              hard link)
-*          size              - size of entry
+*          size              - size of entry [bytes]
 *          jobOptions        - job option settings
 * Output : sourceHandle - source handle
 * Return : ERROR_NONE or error code
