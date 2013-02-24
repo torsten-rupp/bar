@@ -9,12 +9,15 @@
 \***********************************************************************/
 
 /****************************** Includes *******************************/
-#include <config.h>  // use <...> to support separated build directory 
+#include <config.h>  // use <...> to support separated build directory
 
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 #include <pthread.h>
+#ifdef HAVE_ARPA_INET_H
+  #include <arpa/inet.h>
+#endif /* HAVE_ARPA_INET_H */
 #ifdef HAVE_GCRYPT
   #include <gcrypt.h>
 #endif /* HAVE_GCRYPT */
