@@ -1714,20 +1714,24 @@ LOCAL StorageRequestResults storageRequestVolume(JobNode *jobNode,
 
 LOCAL void jobThreadCode(void)
 {
-  JobNode      *jobNode;
-  String       storageName;
-  String       printableStorageName;
-  EntryList    includeEntryList;
-  PatternList  excludePatternList;
-  PatternList  deltaSourcePatternList;
-  PatternList  compressExcludePatternList;
-  JobOptions   jobOptions;
-  ArchiveTypes archiveType;
-  StringList   archiveFileNameList;
-  int          z;
+  StorageSpecifier storageSpecifier;
+  String           storageName;
+  String           storageFileName;
+  String           printableStorageName;
+  EntryList        includeEntryList;
+  PatternList      excludePatternList;
+  PatternList      deltaSourcePatternList;
+  PatternList      compressExcludePatternList;
+  JobNode          *jobNode;
+  JobOptions       jobOptions;
+  ArchiveTypes     archiveType;
+  StringList       archiveFileNameList;
+  int              z;
 
   // initialize variables
+  Storage_initSpecifier(&storageSpecifier);
   storageName          = String_new();
+  storageFileName      = String_new();
   printableStorageName = String_new();
   EntryList_init(&includeEntryList);
   PatternList_init(&excludePatternList);
@@ -1762,7 +1766,6 @@ LOCAL void jobThreadCode(void)
 
     // get copy of mandatory job data
     String_set(storageName,jobNode->archiveName);
-    Storage_getPrintableName(printableStorageName,storageName);
     EntryList_clear(&includeEntryList); EntryList_copy(&jobNode->includeEntryList,&includeEntryList);
     PatternList_clear(&excludePatternList); PatternList_copy(&jobNode->excludePatternList,&excludePatternList);
     PatternList_clear(&deltaSourcePatternList); PatternList_copy(&jobNode->deltaSourcePatternList,&deltaSourcePatternList);
@@ -1773,135 +1776,151 @@ LOCAL void jobThreadCode(void)
     // unlock (Note: job is now protected by running state)
     Semaphore_unlock(&jobList.lock);
 
-    // run job
-#ifdef SIMULATOR
-{
-  int z;
-
-  jobNode->runningInfo.estimatedRestTime=120;
-
-  jobNode->runningInfo.totalEntries += 60;
-  jobNode->runningInfo.totalBytes += 6000;
-
-  for (z=0;z<120;z++)
-  {
-    extern void sleep(int);
-    if (jobNode->requestedAbortFlag) break;
-
-    fprintf(stderr,"%s,%d: z=%d\n",__FILE__,__LINE__,z);
-    sleep(1);
-
-    if (z==40) {
-      jobNode->runningInfo.totalEntries += 80;
-      jobNode->runningInfo.totalBytes += 8000;
-    }
-
-    jobNode->runningInfo.doneEntries++;
-    jobNode->runningInfo.doneBytes += 100;
-  //  jobNode->runningInfo.totalEntries += 3;
-  //  jobNode->runningInfo.totalBytes += 181;
-    jobNode->runningInfo.estimatedRestTime=120-z;
-    String_clear(jobNode->runningInfo.fileName);String_format(jobNode->runningInfo.fileName,"file %d",z);
-    String_clear(jobNode->runningInfo.storageName);String_format(jobNode->runningInfo.storageName,"storage %d%d",z,z);
-  }
-}
-#else
-    // run job
-    logMessage(LOG_TYPE_ALWAYS,"------------------------------------------------------------\n");
-    switch (jobNode->jobType)
+    // parse storage name
+    jobNode->runningInfo.error = Storage_parseName(storageName,&storageSpecifier,storageFileName);
+    if (jobNode->runningInfo.error == ERROR_NONE)
     {
-      case JOB_TYPE_CREATE:
-        logMessage(LOG_TYPE_ALWAYS,"start create archive '%s': '%s'\n",String_cString(jobNode->name),String_cString(printableStorageName));
+      // get printable name
+      Storage_getPrintableName(printableStorageName,&storageSpecifier,storageFileName);
 
-        // try to pause background index thread, do short delay to make sure network connection is possible
-        createFlag = TRUE;
-        if (indexFlag)
+      // run job
+      #ifdef SIMULATOR
+      {
+        int z;
+
+        jobNode->runningInfo.estimatedRestTime=120;
+
+        jobNode->runningInfo.totalEntries += 60;
+        jobNode->runningInfo.totalBytes += 6000;
+
+        for (z=0;z<120;z++)
         {
-          z = 0;
-          while ((z < 5*60) && indexFlag)
-          {
-            Misc_udelay(10LL*MISC_US_PER_SECOND);
-            z += 10;
+          extern void sleep(int);
+          if (jobNode->requestedAbortFlag) break;
+
+          fprintf(stderr,"%s,%d: z=%d\n",__FILE__,__LINE__,z);
+          sleep(1);
+
+          if (z==40) {
+            jobNode->runningInfo.totalEntries += 80;
+            jobNode->runningInfo.totalBytes += 8000;
           }
-          Misc_udelay(30LL*MISC_US_PER_SECOND);
+
+          jobNode->runningInfo.doneEntries++;
+          jobNode->runningInfo.doneBytes += 100;
+        //  jobNode->runningInfo.totalEntries += 3;
+        //  jobNode->runningInfo.totalBytes += 181;
+          jobNode->runningInfo.estimatedRestTime=120-z;
+          String_clear(jobNode->runningInfo.fileName);String_format(jobNode->runningInfo.fileName,"file %d",z);
+          String_clear(jobNode->runningInfo.storageName);String_format(jobNode->runningInfo.storageName,"storage %d%d",z,z);
         }
-
-        // create archive
-        jobNode->runningInfo.error = Command_create(String_cString(storageName),
-                                                    &includeEntryList,
-                                                    &excludePatternList,
-                                                    &compressExcludePatternList,
-                                                    &jobOptions,
-                                                    archiveType,
-                                                    getCryptPassword,
-                                                    jobNode,
-                                                    (CreateStatusInfoFunction)updateCreateJobStatus,
-                                                    jobNode,
-                                                    (StorageRequestVolumeFunction)storageRequestVolume,
-                                                    jobNode,
-                                                    &pauseFlags.create,
-                                                    &pauseFlags.storage,
-                                                    &jobNode->requestedAbortFlag
-                                                   );
-
-        // allow background thread
-        createFlag = FALSE;
-
-        if (!jobNode->requestedAbortFlag)
+      }
+      #else
+        // run job
+        logMessage(LOG_TYPE_ALWAYS,"------------------------------------------------------------\n");
+        switch (jobNode->jobType)
         {
-          logMessage(LOG_TYPE_ALWAYS,"done create archive '%s': '%s' (error: %s)\n",String_cString(jobNode->name),String_cString(printableStorageName),Errors_getText(jobNode->runningInfo.error));
+          case JOB_TYPE_CREATE:
+            logMessage(LOG_TYPE_ALWAYS,"start create archive '%s': '%s'\n",String_cString(jobNode->name),String_cString(printableStorageName));
+
+            // try to pause background index thread, do short delay to make sure network connection is possible
+            createFlag = TRUE;
+            if (indexFlag)
+            {
+              z = 0;
+              while ((z < 5*60) && indexFlag)
+              {
+                Misc_udelay(10LL*MISC_US_PER_SECOND);
+                z += 10;
+              }
+              Misc_udelay(30LL*MISC_US_PER_SECOND);
+            }
+
+            // create archive
+            jobNode->runningInfo.error = Command_create(String_cString(storageName),
+                                                        &includeEntryList,
+                                                        &excludePatternList,
+                                                        &compressExcludePatternList,
+                                                        &jobOptions,
+                                                        archiveType,
+                                                        getCryptPassword,
+                                                        jobNode,
+                                                        (CreateStatusInfoFunction)updateCreateJobStatus,
+                                                        jobNode,
+                                                        (StorageRequestVolumeFunction)storageRequestVolume,
+                                                        jobNode,
+                                                        &pauseFlags.create,
+                                                        &pauseFlags.storage,
+                                                        &jobNode->requestedAbortFlag
+                                                       );
+
+            // allow background thread
+            createFlag = FALSE;
+
+            if (!jobNode->requestedAbortFlag)
+            {
+              logMessage(LOG_TYPE_ALWAYS,"done create archive '%s': '%s' (error: %s)\n",String_cString(jobNode->name),String_cString(printableStorageName),Errors_getText(jobNode->runningInfo.error));
+            }
+            else
+            {
+              logMessage(LOG_TYPE_ALWAYS,"aborted create archive '%s': '%s'\n",String_cString(jobNode->name),String_cString(printableStorageName));
+            }
+            break;
+          case JOB_TYPE_RESTORE:
+            logMessage(LOG_TYPE_ALWAYS,"start restore archive '%s'\n",String_cString(printableStorageName));
+
+            // try to pause background index thread, do short delay to make sure network connection is possible
+            restoreFlag = TRUE;
+            if (indexFlag)
+            {
+              z = 0;
+              while ((z < 5*60) && indexFlag)
+              {
+                Misc_udelay(10LL*MISC_US_PER_SECOND);
+                z += 10;
+              }
+              Misc_udelay(30LL*MISC_US_PER_SECOND);
+            }
+
+            // restore archive
+            StringList_init(&archiveFileNameList);
+            StringList_append(&archiveFileNameList,storageName);
+            jobNode->runningInfo.error = Command_restore(&archiveFileNameList,
+                                                         &includeEntryList,
+                                                         &excludePatternList,
+                                                         &jobOptions,
+                                                         getCryptPassword,
+                                                         jobNode,
+                                                         (RestoreStatusInfoFunction)updateRestoreJobStatus,
+                                                         jobNode,
+                                                         &pauseFlags.restore,
+                                                         &jobNode->requestedAbortFlag
+                                                        );
+            StringList_done(&archiveFileNameList);
+
+            // allow background threads
+            restoreFlag = FALSE;
+
+            logMessage(LOG_TYPE_ALWAYS,"done restore archive '%s' (error: %s)\n",String_cString(printableStorageName),Errors_getText(jobNode->runningInfo.error));
+            break;
+          #ifndef NDEBUG
+            default:
+              HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+              break;
+          #endif /* NDEBUG */
         }
-        else
-        {
-          logMessage(LOG_TYPE_ALWAYS,"aborted create archive '%s': '%s'\n",String_cString(jobNode->name),String_cString(printableStorageName));
-        }
-        break;
-      case JOB_TYPE_RESTORE:
-        logMessage(LOG_TYPE_ALWAYS,"start restore archive '%s'\n",String_cString(printableStorageName));
-
-        // try to pause background index thread, do short delay to make sure network connection is possible
-        restoreFlag = TRUE;
-        if (indexFlag)
-        {
-          z = 0;
-          while ((z < 5*60) && indexFlag)
-          {
-            Misc_udelay(10LL*MISC_US_PER_SECOND);
-            z += 10;
-          }
-          Misc_udelay(30LL*MISC_US_PER_SECOND);
-        }
-
-        // restore archive
-        StringList_init(&archiveFileNameList);
-        StringList_append(&archiveFileNameList,storageName);
-        jobNode->runningInfo.error = Command_restore(&archiveFileNameList,
-                                                     &includeEntryList,
-                                                     &excludePatternList,
-                                                     &jobOptions,
-                                                     getCryptPassword,
-                                                     jobNode,
-                                                     (RestoreStatusInfoFunction)updateRestoreJobStatus,
-                                                     jobNode,
-                                                     &pauseFlags.restore,
-                                                     &jobNode->requestedAbortFlag
-                                                    );
-        StringList_done(&archiveFileNameList);
-
-        // allow background threads
-        restoreFlag = FALSE;
-
-        logMessage(LOG_TYPE_ALWAYS,"done restore archive '%s' (error: %s)\n",String_cString(printableStorageName),Errors_getText(jobNode->runningInfo.error));
-        break;
-      #ifndef NDEBUG
-        default:
-          HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-          break;
-      #endif /* NDEBUG */
+        logPostProcess();
+      #endif /* SIMULATOR */
     }
-    logPostProcess();
-
-#endif /* SIMULATOR */
+    else
+    {
+      logMessage(LOG_TYPE_ALWAYS,
+                 "aborted job '%s': invalid storage '%s' (error: %s)\n",
+                 String_cString(jobNode->name),
+                 String_cString(printableStorageName),
+                 Errors_getText(jobNode->runningInfo.error)
+                );
+    }
 
     // free resources
     freeJobOptions(&jobOptions);
@@ -1932,7 +1951,9 @@ LOCAL void jobThreadCode(void)
   PatternList_done(&excludePatternList);
   EntryList_done(&includeEntryList);
   String_delete(printableStorageName);
+  String_delete(storageFileName);
   String_delete(storageName);
+  Storage_doneSpecifier(&storageSpecifier);
 }
 
 /*---------------------------------------------------------------------*/
@@ -2201,7 +2222,9 @@ LOCAL void indexThreadCode(void)
 {
   int64                  storageId;
   DatabaseQueryHandle    databaseQueryHandle1,databaseQueryHandle2;
+  StorageSpecifier       storageSpecifier;
   String                 storageName;
+  String                 storageFileName;
   int64                  duplicateStorageId;
   String                 duplicateStorageName;
   String                 printableStorageName;
@@ -2214,7 +2237,9 @@ LOCAL void indexThreadCode(void)
   int                    z;
 
   // initialize variables
+  Storage_initSpecifier(&storageSpecifier);
   storageName          = String_new();
+  storageFileName      = String_new();
   printableStorageName = String_new();
   List_init(&indexCryptPasswordList);
 
@@ -2247,7 +2272,16 @@ LOCAL void indexThreadCode(void)
          && (error == ERROR_NONE)
         )
   {
-    Storage_getPrintableName(printableStorageName,storageName);
+    // get printable name (if possible)
+    error = Storage_parseName(storageName,&storageSpecifier,storageFileName);
+    if (error == ERROR_NONE)
+    {
+      Storage_getPrintableName(printableStorageName,&storageSpecifier,storageFileName);
+    }
+    else
+    {
+      String_set(printableStorageName,storageName);
+    }
 
     error = Index_delete(indexDatabaseHandle,
                          storageId
@@ -2308,7 +2342,16 @@ LOCAL void indexThreadCode(void)
               && Storage_equalNames(storageName,duplicateStorageName)
              )
           {
-            Storage_getPrintableName(printableStorageName,duplicateStorageName);
+            // get printable name (if possible)
+            error = Storage_parseName(storageName,&storageSpecifier,storageFileName);
+            if (error == ERROR_NONE)
+            {
+              Storage_getPrintableName(printableStorageName,&storageSpecifier,storageFileName);
+            }
+            else
+            {
+              String_set(printableStorageName,storageName);
+            }
 
             error = Index_delete(indexDatabaseHandle,duplicateStorageId);
             if (error == ERROR_NONE) plogMessage(LOG_TYPE_INDEX,"INDEX","deleted duplicate index #%lld: %s\n",duplicateStorageId,String_cString(printableStorageName));
@@ -2379,7 +2422,16 @@ LOCAL void indexThreadCode(void)
            && !quitFlag
           )
     {
-      Storage_getPrintableName(printableStorageName,storageName);
+      // get printable name (if possible)
+      error = Storage_parseName(storageName,&storageSpecifier,storageFileName);
+      if (error == ERROR_NONE)
+      {
+        Storage_getPrintableName(printableStorageName,&storageSpecifier,storageFileName);
+      }
+      else
+      {
+        String_set(printableStorageName,storageName);
+      }
 
       plogMessage(LOG_TYPE_INDEX,
                   "INDEX",
@@ -2486,6 +2538,7 @@ LOCAL void indexThreadCode(void)
   List_done(&indexCryptPasswordList,(ListNodeFreeFunction)freeIndexCryptPasswordNode,NULL);
   String_delete(printableStorageName);
   String_delete(storageName);
+  Storage_doneSpecifier(&storageSpecifier);
 }
 
 /***********************************************************************\
@@ -2536,6 +2589,7 @@ LOCAL void autoIndexUpdateThreadCode(void)
   StorageSpecifier           storageSpecifier;
   String                     fileName;
   String                     storageName;
+  String                     storageFileName;
   String                     printableStorageName;
   StringList                 storageDirectoryList;
   String                     storageDirectoryName;
@@ -2561,6 +2615,7 @@ LOCAL void autoIndexUpdateThreadCode(void)
   Storage_initSpecifier(&storageSpecifier);
   fileName             = String_new();
   storageName          = String_new();
+  storageFileName      = String_new();
   printableStorageName = String_new();
   while (!quitFlag)
   {
@@ -2613,8 +2668,8 @@ LOCAL void autoIndexUpdateThreadCode(void)
               }
 
               // get storage name
-              Storage_getName(storageName,storageSpecifier.type,storageSpecifier.string,fileName);
-              Storage_getPrintableName(printableStorageName,storageName);
+              Storage_getName(storageName,&storageSpecifier,fileName);
+              Storage_getPrintableName(printableStorageName,&storageSpecifier,fileName);
 
               // get index id, request index update
               if (Index_findByName(indexDatabaseHandle,
@@ -2691,7 +2746,16 @@ LOCAL void autoIndexUpdateThreadCode(void)
                                  )
             )
       {
-        Storage_getPrintableName(printableStorageName,storageName);
+        // get printable name (if possible)
+        error = Storage_parseName(storageName,&storageSpecifier,storageFileName);
+        if (error == ERROR_NONE)
+        {
+          Storage_getPrintableName(printableStorageName,&storageSpecifier,storageFileName);
+        }
+        else
+        {
+          String_set(printableStorageName,storageName);
+        }
 
         if (   (indexMode == INDEX_MODE_AUTO)
             && (indexState != INDEX_STATE_UPDATE_REQUESTED)
@@ -7160,7 +7224,9 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const
   Errors              error;
   DatabaseQueryHandle databaseQueryHandle;
   ulong               n;
+  StorageSpecifier    storageSpecifier;
   String              storageName;
+  String              storageFileName;
   String              printableStorageName;
   String              errorMessage;
   String              string1,string2;
@@ -7208,7 +7274,9 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const
   if (indexDatabaseHandle != NULL)
   {
     // initialise variables
+    Storage_initSpecifier(&storageSpecifier);
     storageName          = String_new();
+    storageFileName      = String_new();
     errorMessage         = String_new();
     printableStorageName = String_new();
     string1              = String_new();
@@ -7226,7 +7294,9 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const
       String_delete(string1);
       String_delete(printableStorageName);
       String_delete(errorMessage);
+      String_delete(storageFileName);
       String_delete(storageName);
+      Storage_doneSpecifier(&storageSpecifier);
 
       sendClientResult(clientInfo,id,TRUE,ERROR_DATABASE,"init storage list fail: %s",Errors_getText(error));
       return;
@@ -7248,7 +7318,16 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const
       assert(indexState < SIZE_OF_ARRAY(INDEX_STATE_STRINGS));
       assert(indexMode < SIZE_OF_ARRAY(INDEX_MODE_STRINGS));
 
-      Storage_getPrintableName(printableStorageName,storageName);
+      // get printable name (if possible)
+      error = Storage_parseName(storageName,&storageSpecifier,storageFileName);
+      if (error == ERROR_NONE)
+      {
+        Storage_getPrintableName(printableStorageName,&storageSpecifier,storageFileName);
+      }
+      else
+      {
+        String_set(printableStorageName,storageName);
+      }
 
       String_mapCString(String_set(string1,printableStorageName),STRING_BEGIN,MAP_BIN,MAP_TEXT,SIZE_OF_ARRAY(MAP_BIN)); \
       String_mapCString(String_set(string2,errorMessage),STRING_BEGIN,MAP_BIN,MAP_TEXT,SIZE_OF_ARRAY(MAP_BIN)); \
@@ -7273,6 +7352,7 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const
     String_delete(printableStorageName);
     String_delete(errorMessage);
     String_delete(storageName);
+    Storage_doneSpecifier(&storageSpecifier);
 
     sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
   }
