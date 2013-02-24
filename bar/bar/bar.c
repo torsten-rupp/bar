@@ -147,7 +147,9 @@ LOCAL String        jobName;
 LOCAL JobOptions    jobOptions;
 LOCAL String        archiveName;
 LOCAL FTPServerList ftpServerList;
+LOCAL Semaphore     ftpServerListLock;
 LOCAL SSHServerList sshServerList;
+LOCAL Semaphore     sshServerListLock;
 LOCAL DeviceList    deviceList;
 LOCAL EntryList     includeEntryList;
 LOCAL PatternList   excludePatternList;
@@ -501,12 +503,14 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
 
   CMD_OPTION_STRING       ("ftp-login-name",               0,  0,1,defaultFTPServer.loginName,                                                                         "ftp login name","name"                                                    ),
   CMD_OPTION_SPECIAL      ("ftp-password",                 0,  0,1,&defaultFTPServer.password,                  cmdOptionParsePassword,NULL,                           "ftp password (use with care!)","password"                                 ),
+  CMD_OPTION_INTEGER      ("ftp-max-connections",          0,  0,1,defaultFTPServer.maxConnectionCount,         -1,MAX_INT,NULL,                                       "max. number of concurrent ftp connections"                                ),
 
   CMD_OPTION_INTEGER      ("ssh-port",                     0,  0,1,defaultSSHServer.port,                       0,65535,NULL,                                          "ssh port"                                                                 ),
   CMD_OPTION_STRING       ("ssh-login-name",               0,  0,1,defaultSSHServer.loginName,                                                                         "ssh login name","name"                                                    ),
   CMD_OPTION_SPECIAL      ("ssh-password",                 0,  0,1,&defaultSSHServer.password,                  cmdOptionParsePassword,NULL,                           "ssh password (use with care!)","password"                                 ),
   CMD_OPTION_STRING       ("ssh-public-key",               0,  1,1,defaultSSHServer.publicKeyFileName,                                                                 "ssh public key file name","file name"                                     ),
   CMD_OPTION_STRING       ("ssh-private-key",              0,  1,1,defaultSSHServer.privateKeyFileName,                                                                "ssh private key file name","file name"                                    ),
+  CMD_OPTION_INTEGER      ("ssh-max-connections",          0,  0,1,defaultSSHServer.maxConnectionCount,         -1,MAX_INT,NULL,                                       "max. number of concurrent ssh connections"                                ),
 
   CMD_OPTION_BOOLEAN      ("daemon",                       0,  1,0,daemonFlag,                                                                                         "run in daemon mode"                                                       ),
   CMD_OPTION_BOOLEAN      ("no-detach",                    'D',1,0,noDetachFlag,                                                                                       "do not detach in daemon mode"                                             ),
@@ -828,12 +832,14 @@ LOCAL const ConfigValue CONFIG_VALUES[] =
 
   CONFIG_VALUE_STRING   ("ftp-login-name",               &currentFTPServer,offsetof(FTPServer,loginName)          ),
   CONFIG_VALUE_SPECIAL  ("ftp-password",                 &currentFTPServer,offsetof(FTPServer,password),          configValueParsePassword,NULL,NULL,NULL,NULL),
+  CONFIG_VALUE_INTEGER  ("ftp-max-connections",          &defaultFTPServer.maxConnectionCount,-1,                 -1,MAX_INT,NULL),
 
   CONFIG_VALUE_INTEGER  ("ssh-port",                     &currentSSHServer,offsetof(SSHServer,port),              0,65535,NULL),
   CONFIG_VALUE_STRING   ("ssh-login-name",               &currentSSHServer,offsetof(SSHServer,loginName)          ),
   CONFIG_VALUE_SPECIAL  ("ssh-password",                 &currentSSHServer,offsetof(SSHServer,password),          configValueParsePassword,NULL,NULL,NULL,NULL),
   CONFIG_VALUE_STRING   ("ssh-public-key",               &currentSSHServer,offsetof(SSHServer,publicKeyFileName)  ),
   CONFIG_VALUE_STRING   ("ssh-private-key",              &currentSSHServer,offsetof(SSHServer,privateKeyFileName) ),
+  CONFIG_VALUE_INTEGER  ("ssh-max-connections",          &defaultSSHServer.maxConnectionCount,-1,                 -1,MAX_INT,NULL),
 
   CONFIG_VALUE_SPECIAL  ("include-file",                 &includeEntryList,-1,                                    configValueParseFileEntry,NULL,NULL,NULL,&jobOptions.patternType),
   CONFIG_VALUE_SPECIAL  ("include-image",                &includeEntryList,-1,                                    configValueParseImageEntry,NULL,NULL,NULL,&jobOptions.patternType),
@@ -1179,9 +1185,11 @@ LOCAL bool readConfigFile(const String fileName, bool printInfoFlag)
       {
         HALT_INSUFFICIENT_MEMORY();
       }
-      ftpServerNode->name                = String_duplicate(name);
-      ftpServerNode->ftpServer.loginName = NULL;
-      ftpServerNode->ftpServer.password  = NULL;
+      ftpServerNode->name                         = String_duplicate(name);
+      ftpServerNode->connectionCount              = 0;
+      ftpServerNode->ftpServer.loginName          = NULL;
+      ftpServerNode->ftpServer.password           = NULL;
+      ftpServerNode->ftpServer.maxConnectionCount = -1;
 
       List_append(&ftpServerList,ftpServerNode);
 
@@ -1197,11 +1205,13 @@ LOCAL bool readConfigFile(const String fileName, bool printInfoFlag)
         HALT_INSUFFICIENT_MEMORY();
       }
       sshServerNode->name                         = String_duplicate(name);
+      sshServerNode->connectionCount              = 0;
       sshServerNode->sshServer.port               = 22;
       sshServerNode->sshServer.loginName          = NULL;
       sshServerNode->sshServer.password           = NULL;
       sshServerNode->sshServer.publicKeyFileName  = NULL;
       sshServerNode->sshServer.privateKeyFileName = NULL;
+      sshServerNode->sshServer.maxConnectionCount = -1;
 
       List_append(&sshServerList,sshServerNode);
 
@@ -2472,7 +2482,9 @@ LOCAL Errors initAll(void)
   archiveName                           = NULL;
   initJobOptions(&jobOptions);
   List_init(&ftpServerList);
+  Semaphore_init(&ftpServerListLock);
   List_init(&sshServerList);
+  Semaphore_init(&sshServerListLock);
   List_init(&deviceList);
   EntryList_init(&includeEntryList);
   PatternList_init(&excludePatternList);
@@ -2583,6 +2595,7 @@ LOCAL void doneAll(void)
   ConfigValue_done(CONFIG_VALUES,SIZE_OF_ARRAY(CONFIG_VALUES));
 
   // deinitialise variables
+  Semaphore_done(&outputLock);
   if (defaultDevice.writeCommand != NULL) String_delete(defaultDevice.writeCommand);
   if (defaultDevice.writePostProcessCommand != NULL) String_delete(defaultDevice.writePostProcessCommand);
   if (defaultDevice.writePreProcessCommand != NULL) String_delete(defaultDevice.writePreProcessCommand);
@@ -2608,14 +2621,15 @@ LOCAL void doneAll(void)
   EntryList_done(&includeEntryList);
   Password_delete(serverPassword);
   List_done(&deviceList,(ListNodeFreeFunction)freeDeviceNode,NULL);
+  Semaphore_done(&sshServerListLock);
   List_done(&sshServerList,(ListNodeFreeFunction)freeSSHServerNode,NULL);
+  Semaphore_done(&ftpServerListLock);
   List_done(&ftpServerList,(ListNodeFreeFunction)freeFTPServerNode,NULL);
   freeJobOptions(&jobOptions);
   String_delete(archiveName);
   String_delete(jobName);
   doneGlobalOptions();
   Thread_doneLocalVariable(&outputLineHandle,outputLineDone,NULL);
-  Semaphore_done(&outputLock);
   String_delete(tmpLogFileName);
   String_delete(tmpDirectory);
   StringList_done(&configFileNameList);
@@ -3211,47 +3225,47 @@ ulong getBandWidth(BandWidthList *bandWidthList)
   return n;
 }
 
-void getFTPServerSettings(const String     name,
+void getFTPServerSettings(const String     hostName,
                           const JobOptions *jobOptions,
                           FTPServer        *ftpServer
                          )
 {
   FTPServerNode *ftpServerNode;
 
-  assert(name != NULL);
+  assert(hostName != NULL);
   assert(jobOptions != NULL);
   assert(ftpServer != NULL);
 
   ftpServerNode = globalOptions.ftpServerList->head;
-  while ((ftpServerNode != NULL) && !String_equals(ftpServerNode->name,name))
+  while ((ftpServerNode != NULL) && !String_equals(ftpServerNode->name,hostName))
   {
     ftpServerNode = ftpServerNode->next;
   }
-  ftpServer->loginName = !String_isEmpty(jobOptions->ftpServer.loginName )?jobOptions->ftpServer.loginName:((ftpServerNode != NULL)?ftpServerNode->ftpServer.loginName:globalOptions.defaultFTPServer->loginName);
-  ftpServer->password  = !Password_isEmpty(jobOptions->ftpServer.password)?jobOptions->ftpServer.password :((ftpServerNode != NULL)?ftpServerNode->ftpServer.password :globalOptions.defaultFTPServer->password );
+  ftpServer->loginName = !String_isEmpty(jobOptions->ftpServer.loginName ) ? jobOptions->ftpServer.loginName      : ((ftpServerNode != NULL) ? ftpServerNode->ftpServer.loginName      : globalOptions.defaultFTPServer->loginName     );
+  ftpServer->password  = !Password_isEmpty(jobOptions->ftpServer.password) ? jobOptions->ftpServer.password       : ((ftpServerNode != NULL) ? ftpServerNode->ftpServer.password       : globalOptions.defaultFTPServer->password      );
 }
 
-void getSSHServerSettings(const String     name,
+void getSSHServerSettings(const String     hostName,
                           const JobOptions *jobOptions,
                           SSHServer        *sshServer
                          )
 {
   SSHServerNode *sshServerNode;
 
-  assert(name != NULL);
+  assert(hostName != NULL);
   assert(jobOptions != NULL);
   assert(sshServer != NULL);
 
   sshServerNode = globalOptions.sshServerList->head;
-  while ((sshServerNode != NULL) && !String_equals(sshServerNode->name,name))
+  while ((sshServerNode != NULL) && !String_equals(sshServerNode->name,hostName))
   {
     sshServerNode = sshServerNode->next;
   }
-  sshServer->port               = (jobOptions->sshServer.port != 0                      )?jobOptions->sshServer.port              :((sshServerNode != NULL)?sshServerNode->sshServer.port              :globalOptions.defaultSSHServer->port              );
-  sshServer->loginName          = !String_isEmpty(jobOptions->sshServer.loginName         )?jobOptions->sshServer.loginName         :((sshServerNode != NULL)?sshServerNode->sshServer.loginName         :globalOptions.defaultSSHServer->loginName         );
-  sshServer->password           = !Password_isEmpty(jobOptions->sshServer.password        )?jobOptions->sshServer.password          :((sshServerNode != NULL)?sshServerNode->sshServer.password          :globalOptions.defaultSSHServer->password          );
-  sshServer->publicKeyFileName  = !String_isEmpty(jobOptions->sshServer.publicKeyFileName )?jobOptions->sshServer.publicKeyFileName :((sshServerNode != NULL)?sshServerNode->sshServer.publicKeyFileName :globalOptions.defaultSSHServer->publicKeyFileName );
-  sshServer->privateKeyFileName = !String_isEmpty(jobOptions->sshServer.privateKeyFileName)?jobOptions->sshServer.privateKeyFileName:((sshServerNode != NULL)?sshServerNode->sshServer.privateKeyFileName:globalOptions.defaultSSHServer->privateKeyFileName);
+  sshServer->port               = (jobOptions->sshServer.port != 0                        ) ? jobOptions->sshServer.port               : ((sshServerNode != NULL) ? sshServerNode->sshServer.port               : globalOptions.defaultSSHServer->port              );
+  sshServer->loginName          = !String_isEmpty(jobOptions->sshServer.loginName         ) ? jobOptions->sshServer.loginName          : ((sshServerNode != NULL) ? sshServerNode->sshServer.loginName          : globalOptions.defaultSSHServer->loginName         );
+  sshServer->password           = !Password_isEmpty(jobOptions->sshServer.password        ) ? jobOptions->sshServer.password           : ((sshServerNode != NULL) ? sshServerNode->sshServer.password           : globalOptions.defaultSSHServer->password          );
+  sshServer->publicKeyFileName  = !String_isEmpty(jobOptions->sshServer.publicKeyFileName ) ? jobOptions->sshServer.publicKeyFileName  : ((sshServerNode != NULL) ? sshServerNode->sshServer.publicKeyFileName  : globalOptions.defaultSSHServer->publicKeyFileName );
+  sshServer->privateKeyFileName = !String_isEmpty(jobOptions->sshServer.privateKeyFileName) ? jobOptions->sshServer.privateKeyFileName : ((sshServerNode != NULL) ? sshServerNode->sshServer.privateKeyFileName : globalOptions.defaultSSHServer->privateKeyFileName);
 }
 
 void getCDSettings(const JobOptions *jobOptions,
@@ -3356,6 +3370,58 @@ void getDeviceSettings(const String     name,
   device->writePreProcessCommand  = (jobOptions->device.writePreProcessCommand  != NULL)?jobOptions->device.writePreProcessCommand :((deviceNode != NULL)?deviceNode->device.writePreProcessCommand :globalOptions.defaultDevice->writePreProcessCommand );
   device->writePostProcessCommand = (jobOptions->device.writePostProcessCommand != NULL)?jobOptions->device.writePostProcessCommand:((deviceNode != NULL)?deviceNode->device.writePostProcessCommand:globalOptions.defaultDevice->writePostProcessCommand);
   device->writeCommand            = (jobOptions->device.writeCommand            != NULL)?jobOptions->device.writeCommand           :((deviceNode != NULL)?deviceNode->device.writeCommand           :globalOptions.defaultDevice->writeCommand           );
+}
+
+bool allocateFTPServerConnection(const String hostName)
+{
+  bool          allocatedFlag;
+  SemaphoreLock semaphoreLock;
+  FTPServerNode *ftpServerNode;
+
+  assert(hostName != NULL);
+
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&ftpServerListLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,SEMAPHORE_WAIT_FOREVER)
+  {
+    ftpServerNode = globalOptions.ftpServerList->head;
+    while ((ftpServerNode != NULL) && !String_equals(ftpServerNode->name,hostName))
+    {
+      ftpServerNode = ftpServerNode->next;
+    }
+
+    if (   (ftpServerNode != NULL)
+        && (   (ftpServerNode->ftpServer.maxConnectionCount < 0)
+            || (ftpServerNode->connectionCount < (uint)ftpServerNode->ftpServer.maxConnectionCount)
+           )
+       )
+    {
+      ftpServerNode->connectionCount++;
+      allocatedFlag = TRUE;
+    }
+    else
+    {
+      allocatedFlag = FALSE;
+    }
+  }
+
+//  return allocatedFlag;
+#warning todo
+return TRUE;
+}
+
+void freeFTPServerConnection(const String hostName)
+{
+#warning NYI
+}
+
+bool allocateSSHServerConnection(const String hostName)
+{
+#warning NYI
+return TRUE;
+}
+
+void freeSSHServerConnection(const String hostName)
+{
+#warning NYI
 }
 
 Errors inputCryptPassword(void         *userData,

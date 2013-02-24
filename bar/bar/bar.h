@@ -159,14 +159,16 @@ typedef struct
 {
   String   loginName;                   // login name
   Password *password;                   // login password
+  int      maxConnectionCount;          // max. number of concurrent connections or -1 for unlimited
 } FTPServer;
 
 typedef struct FTPServerNode
 {
   LIST_NODE_HEADER(struct FTPServerNode);
 
-  String    name;                      // ftp server name
+  String    name;                       // ftp server name
   FTPServer ftpServer;
+  uint      connectionCount;            // number of connections
 } FTPServerNode;
 
 typedef struct
@@ -182,6 +184,7 @@ typedef struct
   Password *password;                   // login password
   String   publicKeyFileName;           // public key file name (ssh,scp,sftp)
   String   privateKeyFileName;          // private key file name (ssh,scp,sftp)
+  int      maxConnectionCount;          // max. number of concurrent connections or -1 for unlimited
 } SSHServer;
 
 typedef struct SSHServerNode
@@ -190,6 +193,7 @@ typedef struct SSHServerNode
 
   String    name;                       // ssh server name
   SSHServer sshServer;
+  uint      connectionCount;            // number of connections
 } SSHServerNode;
 
 typedef struct
@@ -371,7 +375,7 @@ struct JobOptions
   String                      destination;                       // destination for restore
   JobOptionsOwner             owner;                             // restore owner
 
-  PatternTypes                patternType;
+  PatternTypes                patternType;                       // pattern type
 
   JobOptionsCompressAlgorithm compressAlgorithm;                 // compress algorithms
 
@@ -578,7 +582,7 @@ ulong getBandWidth(BandWidthList *bandWidthList);
 /***********************************************************************\
 * Name   : getFTPServerSettings
 * Purpose: get FTP server settings
-* Input  : name       - FTP server name
+* Input  : hostName   - FTP server host name
 *          jobOptions - job options
 * Output : ftperver   - FTP server settings from job options, server
 *                       list or default FTP server values
@@ -586,7 +590,7 @@ ulong getBandWidth(BandWidthList *bandWidthList);
 * Notes  : -
 \***********************************************************************/
 
-void getFTPServerSettings(const String     name,
+void getFTPServerSettings(const String     hostName,
                           const JobOptions *jobOptions,
                           FTPServer        *ftpServer
                          );
@@ -594,7 +598,7 @@ void getFTPServerSettings(const String     name,
 /***********************************************************************\
 * Name   : getSSHServerSettings
 * Purpose: get SSH server settings
-* Input  : name       - SSH server name
+* Input  : hostName   - SSH server host name
 *          jobOptions - job options
 * Output : sshServer  - SSH server settings from job options, server
 *                       list or default SSH server values
@@ -602,7 +606,7 @@ void getFTPServerSettings(const String     name,
 * Notes  : -
 \***********************************************************************/
 
-void getSSHServerSettings(const String     name,
+void getSSHServerSettings(const String     hostName,
                           const JobOptions *jobOptions,
                           SSHServer        *sshServer
                          );
@@ -661,6 +665,50 @@ void getDeviceSettings(const String     name,
                        const JobOptions *jobOptions,
                        Device           *device
                       );
+
+/***********************************************************************\
+* Name   : allocateFTPServerConnection
+* Purpose: allocate FTP server connection
+* Input  : hostName - FTP server host name
+* Output : -
+* Return : TRUE iff connected allocated
+* Notes  : -
+\***********************************************************************/
+
+bool allocateFTPServerConnection(const String hostName);
+
+/***********************************************************************\
+* Name   : freeFTPServerConnection
+* Purpose: free allocated FTP server connection
+* Input  : hostName - FTP server host name
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void freeFTPServerConnection(const String hostName);
+
+/***********************************************************************\
+* Name   : allocateSSHServerConnection
+* Purpose: allocate SSH server connection
+* Input  : hostName - SSH server host name
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+bool allocateSSHServerConnection(const String hostName);
+
+/***********************************************************************\
+* Name   : freeSSHServerConnection
+* Purpose: free allocated SSH server connection
+* Input  : hostName - SSH server host name
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void freeSSHServerConnection(const String hostName);
 
 /***********************************************************************\
 * Name   : inputCryptPassword
