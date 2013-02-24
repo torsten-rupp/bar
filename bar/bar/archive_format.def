@@ -84,7 +84,7 @@
 # Current version notes:
 #   - encrypted meta data is read/written with cipher block chaining
 #     mode enabled.
-#   - encrypted meta data (all excepted "data") is read/written with
+#   - encrypted meta data (all except "data") is read/written with
 #     cipher text stealing (CTS) mode enabled. Encrypted data is
 #     read/written _without_ cipher text stealing mode enabled!
 
@@ -164,11 +164,11 @@ CHUNK BAR "BAR0" Bar
 # the specified symmetric entryption. A random generated key
 # for symmetric encryption is encrypted itself with the
 # asymmetric RSA entryption and the public key (hybrid
-# encryption). To decrypt the random key and with that the
-# data the private key is required.
+# encryption). To decrypt the random key the private key is
+# required.
 #
 # Asymmetric encryption keys may be stored multiple times to
-# change key for the following chunks.
+# change the key for the following chunks.
 #
 # parent: none
 # never compress/encrypted
