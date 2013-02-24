@@ -4139,7 +4139,6 @@ LOCAL void serverCommand_optionDelete(ClientInfo *clientInfo, uint id, const Str
 
 LOCAL void serverCommand_jobList(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
 {
-  String        compressAlgorithms;
   SemaphoreLock semaphoreLock;
   const JobNode *jobNode;
 
