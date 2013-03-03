@@ -7350,6 +7350,7 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const
     String_delete(string1);
     String_delete(printableStorageName);
     String_delete(errorMessage);
+    String_delete(storageFileName);
     String_delete(storageName);
     Storage_doneSpecifier(&storageSpecifier);
 
