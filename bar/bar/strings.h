@@ -12,7 +12,7 @@
 #define __STRINGS__
 
 /****************************** Includes *******************************/
-#include <config.h>  // use <...> to support separated build directory 
+#include <config.h>  // use <...> to support separated build directory
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -790,7 +790,8 @@ String String_vformat(String string, const char *format, va_list arguments);
 *                            also empty tokens
 * Output : -
 * Return : -
-* Notes  : -
+* Notes  : string must be unchanged until String_doneTokenizer() is
+*          called!
 \***********************************************************************/
 
 void String_initTokenizer(StringTokenizer *stringTokenizer,
