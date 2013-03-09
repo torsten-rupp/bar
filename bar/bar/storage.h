@@ -14,6 +14,7 @@
      ssh://[<login name>@]<host name>[:<host port>]/<file name>
      scp://[<login name>@]<host name>[:<host port>]/<file name>
      sftp://[<login name>@]<host name>[:<host port>]/<file name>
+     webdav://[<login name>[:<login password>]@]<host name>/<file name>
      cd://[<device name>:]<file name>
      dvd://[<device name>:]<file name>
      bd://[<device name>:]<file name>
@@ -133,6 +134,7 @@ typedef enum
   STORAGE_TYPE_SSH,
   STORAGE_TYPE_SCP,
   STORAGE_TYPE_SFTP,
+  STORAGE_TYPE_WEBDAV,
   STORAGE_TYPE_CD,
   STORAGE_TYPE_DVD,
   STORAGE_TYPE_BD,
@@ -199,7 +201,7 @@ typedef struct
     } fileSystem;
 
     #if defined(HAVE_CURL)
-      // curl storage (FTP, TFTP, HTTP...)
+      // FTP storage
       struct
       {
         CURLM                   *curlMultiHandle;
@@ -218,6 +220,25 @@ typedef struct
         ulong                   length;                    // length of data to write/read
         ulong                   transferedBytes;           // number of data bytes read/written
       } ftp;
+      // Webdav storage
+      struct
+      {
+        CURLM                   *curlMultiHandle;
+        CURL                    *curlHandle;
+        int                     runningHandles;            // curl number of active handles (1 or 0)
+        uint64                  index;                     // current read/write index in file [0..n-1]
+        uint64                  size;                      // size of file [bytes]
+        struct                                             // read-ahead buffer
+        {
+          byte   *data;
+          uint64 offset;
+          ulong  length;
+        } readAheadBuffer;
+        StorageBandWidthLimiter bandWidthLimiter;          // band width limit data
+        void                    *buffer;                   // next data to write/read
+        ulong                   length;                    // length of data to write/read
+        ulong                   transferedBytes;           // number of data bytes read/written
+      } webdav;
     #elif defined(HAVE_FTP)
       // FTP storage
       struct
@@ -414,6 +435,21 @@ typedef struct
         FilePermission          permission;
         bool                    entryReadFlag;             // TRUE if entry read
       } ftp;
+      struct
+      {
+        String                  pathName;                  // directory name
+        String                  line;
+        StringList              lineList;
+
+        String                  fileName;                  // last parsed entry
+        FileTypes               type;
+        int64                   size;
+        uint64                  timeModified;
+        uint32                  userId;
+        uint32                  groupId;
+        FilePermission          permission;
+        bool                    entryReadFlag;             // TRUE if entry read
+      } webdav;
     #elif defined(HAVE_FTP)
       struct
       {
@@ -563,6 +599,27 @@ bool Storage_parseSSHSpecifier(const String sshSpecifier,
                                uint         *hostPort,
                                String       loginName
                               );
+
+/***********************************************************************\
+* Name   : Storage_parseWebdavSpecifier
+* Purpose: parse Webdav specifier:
+*            [<login name>@]<host name>
+* Input  : webdavSpecifier - Webdav specifier string
+*          hostName        - host name variable (can be NULL)
+*          loginName       - login name variable (can be NULL)
+*          loginPassword   - login password variable (can be NULL)
+* Output : hostName      - host name (can be NULL)
+*          loginName     - login name (can be NULL)
+*          loginPassword - login password
+* Return : TRUE if Webdav specifier parsed, FALSE if specifier invalid
+* Notes  : -
+\***********************************************************************/
+
+bool Storage_parseWebdavSpecifier(const String webdavSpecifier,
+                                  String       hostName,
+                                  String       loginName,
+                                  Password     *loginPassword
+                                 );
 
 /***********************************************************************\
 * Name   : Storage_parseDeviceSpecifier
