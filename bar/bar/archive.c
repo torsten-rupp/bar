@@ -8785,6 +8785,8 @@ Errors Archive_updateIndex(DatabaseHandle               *databaseHandle,
                            void                         *abortUserData
                           )
 {
+  StorageSpecifier  storageSpecifier;
+  String            storageFileName;
   String            printableStorageName;
   JobOptions        jobOptions;
   String            s,t;
@@ -8793,25 +8795,27 @@ Errors Archive_updateIndex(DatabaseHandle               *databaseHandle,
   ArchiveInfo       archiveInfo;
   ArchiveEntryInfo  archiveEntryInfo;
   ArchiveEntryTypes archiveEntryType;
-#warning change
-StorageSpecifier storageSpecifier;
-String storageFileName;
 
   assert(databaseHandle != NULL);
   assert(storageName != NULL);
 
   // init variables
-#warning change
-Storage_initSpecifier(&storageSpecifier);
-storageFileName      = String_new();
-error = Storage_parseName(storageName,&storageSpecifier,storageFileName);
-  printableStorageName = Storage_getPrintableName(String_new(),&storageSpecifier,storageFileName);
-#warning change
-String_delete(storageFileName);
-Storage_doneSpecifier(&storageSpecifier);
+  Storage_initSpecifier(&storageSpecifier);
+  storageFileName      = String_new();
+  printableStorageName = String_new();
+  initJobOptions(&jobOptions);
+
+  // get printable name (if possible)
+  if (Storage_parseName(storageName,&storageSpecifier,storageFileName) == ERROR_NONE)
+  {
+    Storage_getPrintableName(printableStorageName,&storageSpecifier,storageFileName);
+  }
+  else
+  {
+    String_set(printableStorageName,storageName);
+  }
 
   // init job options
-  initJobOptions(&jobOptions);
   jobOptions.cryptPassword           = Password_duplicate(cryptPassword);
   jobOptions.cryptPrivateKeyFileName = String_duplicate(cryptPrivateKeyFileName);
 
@@ -8867,7 +8871,9 @@ Storage_doneSpecifier(&storageSpecifier);
                    Errors_getCode(error)
                   );
     freeJobOptions(&jobOptions);
+    String_delete(storageFileName);
     String_delete(printableStorageName);
+    Storage_doneSpecifier(&storageSpecifier);
     return error;
   }
 
@@ -8889,7 +8895,9 @@ Storage_doneSpecifier(&storageSpecifier);
                    Errors_getCode(error)
                   );
     freeJobOptions(&jobOptions);
+    String_delete(storageFileName);
     String_delete(printableStorageName);
+    Storage_doneSpecifier(&storageSpecifier);
     return error;
   }
 
@@ -9311,6 +9319,9 @@ Storage_doneSpecifier(&storageSpecifier);
       // free resources
       Archive_close(&archiveInfo);
       freeJobOptions(&jobOptions);
+      String_delete(storageFileName);
+      String_delete(printableStorageName);
+      Storage_doneSpecifier(&storageSpecifier);
 
       return error;
     }
@@ -9329,6 +9340,9 @@ Storage_doneSpecifier(&storageSpecifier);
     // free resources
     Archive_close(&archiveInfo);
     freeJobOptions(&jobOptions);
+    String_delete(storageFileName);
+    String_delete(printableStorageName);
+    Storage_doneSpecifier(&storageSpecifier);
 
     return ERROR_ABORTED;
   }
@@ -9359,6 +9373,9 @@ Storage_doneSpecifier(&storageSpecifier);
                    Errors_getCode(error)
                   );
     freeJobOptions(&jobOptions);
+    String_delete(storageFileName);
+    String_delete(printableStorageName);
+    Storage_doneSpecifier(&storageSpecifier);
     return error;
   }
 
@@ -9367,7 +9384,9 @@ Storage_doneSpecifier(&storageSpecifier);
 
   // free resources
   freeJobOptions(&jobOptions);
+  String_delete(storageFileName);
   String_delete(printableStorageName);
+  Storage_doneSpecifier(&storageSpecifier);
 
   return ERROR_NONE;
 }
