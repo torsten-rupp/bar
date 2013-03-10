@@ -201,7 +201,7 @@ typedef struct
   LIST_HEADER(SSHServerNode);
 } SSHServerList;
 
-// Webdav server settings
+// WebDAV server settings
 typedef struct
 {
   String   loginName;                   // login name
@@ -209,23 +209,23 @@ typedef struct
   String   publicKeyFileName;           // public key file name
   String   privateKeyFileName;          // private key file name
   int      maxConnectionCount;          // max. number of concurrent connections or -1 for unlimited
-} WebdavServer;
+} WebDAVServer;
 
-typedef struct WebdavServerNode
+typedef struct WebDAVServerNode
 {
-  LIST_NODE_HEADER(struct WebdavServerNode);
+  LIST_NODE_HEADER(struct WebDAVServerNode);
 
-  String       name;                    // Webdav server name
-  WebdavServer webdavServer;
+  String       name;                    // WebDAV server name
+  WebDAVServer webdavServer;
   uint         connectionCount;         // number of connections
-} WebdavServerNode;
+} WebDAVServerNode;
 
 typedef struct
 {
-  LIST_HEADER(WebdavServerNode);
-} WebdavServerList;
+  LIST_HEADER(WebDAVServerNode);
+} WebDAVServerList;
 
-// file/FTP/SCP/SFTP/Webdav settings
+// file/FTP/SCP/SFTP/WebDAV settings
 typedef struct
 {
   String writePreProcessCommand;        // command to execute before writing
@@ -312,9 +312,9 @@ typedef struct
   const SSHServerList    *sshServerList;                 // list with SSH servers
   SSHServer              *defaultSSHServer;              // default SSH server
 
-  WebdavServer           *webdavServer;                  // current selected Webdav server
-  const WebdavServerList *webdavServerList;              // list with Webdav servers
-  WebdavServer           *defaultWebdavServer;           // default Webdav server
+  WebDAVServer           *webdavServer;                  // current selected WebDAV server
+  const WebDAVServerList *webdavServerList;              // list with WebDAV servers
+  WebDAVServer           *defaultWebDAVServer;           // default WebDAV server
 
   String                 remoteBARExecutable;
 
@@ -322,7 +322,7 @@ typedef struct
   File                   ftp;                            // ftp settings
   File                   scp;                            // scp settings
   File                   sftp;                           // sftp settings
-  File                   webdav;                         // Webdav settings
+  File                   webdav;                         // WebDAV settings
   OpticalDisk            cd;                             // CD settings
   OpticalDisk            dvd;                            // DVD settings
   OpticalDisk            bd;                             // BD settings
@@ -417,7 +417,7 @@ struct JobOptions
 
   FTPServer                   ftpServer;                         // job specific FTP server settings
   SSHServer                   sshServer;                         // job specific SSH server settings
-  WebdavServer                webdavServer;                      // job specific Webdav server settings
+  WebDAVServer                webdavServer;                      // job specific WebDAV server settings
 
   OpticalDisk                 opticalDisk;                       // job specific optical disk settings
 
@@ -640,6 +640,22 @@ void getSSHServerSettings(const String     hostName,
                           const JobOptions *jobOptions,
                           SSHServer        *sshServer
                          );
+
+/***********************************************************************\
+* Name   : getWebDAVServerSettings
+* Purpose: get WebDAV server settings
+* Input  : hostName   - WebDAV server host name
+*          jobOptions - job options
+* Output : sshServer  - WebDAV server settings from job options, server
+*                       list or default WebDAV server values
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void getWebDAVServerSettings(const String     hostName,
+                             const JobOptions *jobOptions,
+                             WebDAVServer     *webdavServer
+                            );
 
 /***********************************************************************\
 * Name   : getCDSettings
