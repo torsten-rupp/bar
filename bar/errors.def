@@ -57,6 +57,7 @@ ERROR NO_PASSWORD                    "no password given"
 ERROR NETWORK_SEND                   "sending data fail"
 ERROR NETWORK_RECEIVE                "receiving data fail"
 ERROR NETWORK_EXECUTE_FAIL           "execute command fail"
+ERROR NETWORK_TIMEOUT                "timeout receive/send data"
 ERROR NO_RESPONSE                    "no response from remote program"
 ERROR INVALID_RESPONSE               "invalid response from remote program"
 
@@ -140,6 +141,14 @@ ERROR FTP_GET_SIZE                   "get FTP file size fail"
 //ERROR FTP_READ                       "read FTP file fail"
 //ERROR FTP_WRITE                      "write FTP file fail"
 //ERROR FTP_DELETE                     "delete FTP file fail"
+
+// --- Webdav -----------------------------------------------------------
+ERROR INVALID_WEBDAV_SPECIFIER       "invalid Webdav specifier"
+ERROR WEBDAV_SESSION_FAIL            "initialize Webdav session fail"
+ERROR NO_WEBDAV_PASSWORD             "no Webdav password given"
+ERROR INVALID_WEBDAV_PASSWORD        "invalid Webdav password"
+ERROR WEBDAV_AUTHENTICATION          "invalid Webdav user/password"
+ERROR WEBDAV_GET_SIZE                "get Webdav file size fail"
 
 // --- compress ---------------------------------------------------------
 ERROR INIT_COMPRESS                  "init compress fail"
@@ -234,6 +243,20 @@ ERROR WRONG_PRIVATE_KEY              "wrong private decryption key"
 ERROR CREATE_FILE
 ERROR OPEN_FILE
 ERROR CREATE_DIRECTORY
+
+ERROR IO_ERROR
+  strncpy(errorText,(ERROR_ERRNO != 0)?strerror(ERROR_ERRNO):"i/o error",sizeof(errorText)-1);
+  if (ERROR_TEXT != NULL)
+  {
+    strncat(errorText,": ",sizeof(errorText)-1-strlen(errorText));
+    strncat(errorText,ERROR_TEXT,sizeof(errorText)-1-strlen(errorText));
+  }
+  errorText[sizeof(errorText)-1] = '\0';
+
+ERROR READ_FILE                      "read file fail"
+ERROR WRITE_FILE                     "write file fail"
+ERROR DELETE_FILE                    "delete file fail"
+
 ERROR OPEN_DIRECTORY
   // Note: do not add error text to error message if error number is set; file name should be part of error text
   if (ERROR_ERRNO != 0)
@@ -262,18 +285,7 @@ ERROR OPEN_DIRECTORY
   }
   errorText[sizeof(errorText)-1] = '\0';
 
-ERROR IO_ERROR
-  strncpy(errorText,(ERROR_ERRNO != 0)?strerror(ERROR_ERRNO):"i/o error",sizeof(errorText)-1);
-  if (ERROR_TEXT != NULL)
-  {
-    strncat(errorText,": ",sizeof(errorText)-1-strlen(errorText));
-    strncat(errorText,ERROR_TEXT,sizeof(errorText)-1-strlen(errorText));
-  }
-  errorText[sizeof(errorText)-1] = '\0';
-
-ERROR READ_FILE                      "read file fail"
-ERROR WRITE_FILE                     "write file fail"
-ERROR DELETE_FILE                    "delete file fail"
+ERROR READ_DIRECTORY                 "read directory fail"
 
 // Note: because of name collisions with Windows include use FILE_EXISTS_ instead of FILE_EXISTS
 ERROR FILE_EXISTS_
