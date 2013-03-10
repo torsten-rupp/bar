@@ -104,6 +104,7 @@ enum StorageTypes
   FTP,
   SCP,
   SFTP,
+  WEBDAV,
   CD,
   DVD,
   BD,
@@ -132,6 +133,10 @@ enum StorageTypes
     else if (string.equalsIgnoreCase("sftp"))
     {
       type = StorageTypes.SFTP;
+    }
+    else if (string.equalsIgnoreCase("webdav"))
+    {
+      type = StorageTypes.WEBDAV;
     }
     else if (string.equalsIgnoreCase("cd"))
     {
@@ -168,6 +173,7 @@ enum StorageTypes
       case FTP:        return "ftp";
       case SCP:        return "scp";
       case SFTP:       return "sftp";
+      case WEBDAV:     return "webdav";
       case CD:         return "cd";
       case DVD:        return "dvd";
       case BD:         return "bd";
@@ -221,6 +227,7 @@ class ArchiveNameParts
    *   ftp://<login name>:<login password>@<host name>[:<host port>]/<file name>
    *   scp://<login name>@<host name>:<host port>/<file name>
    *   sftp://<login name>@<host name>:<host port>/<file name>
+   *   webdav://<login name>@<host name>/<file name>
    *   cd://<device name>/<file name>
    *   dvd://<device name>/<file name>
    *   bd://<device name>/<file name>
@@ -407,6 +414,43 @@ class ArchiveNameParts
         fileName = specifier;
       }
     }
+    else if (archiveName.startsWith("webdav://"))
+    {
+      // webdav
+      type = StorageTypes.WEBDAV;
+
+      String specifier = archiveName.substring(7);
+//Dprintf.dprintf("specifier=%s",specifier);
+      if      ((matcher = Pattern.compile("^([^:]*?):(([^@]|\\@)*?)@([^@/]*?)/(.*)$").matcher(specifier)).matches())
+      {
+        // webdav://<login name>:<login password>@<host name>/<file name>
+        loginName     = StringUtils.map(matcher.group(1),new String[]{"\\@"},new String[]{"@"});
+        loginPassword = matcher.group(2);
+        hostName      = matcher.group(4);
+        fileName      = matcher.group(5);
+//Dprintf.dprintf("%s: loginName=%s loginPassword=%s hostName=%s fileName=%s",matcher.group(0),loginName,loginPassword,hostName,fileName);
+      }
+      else if ((matcher = Pattern.compile("^(([^@]|\\@)*?)@([^@/]*?)/(.*)$").matcher(specifier)).matches())
+      {
+        // webdav://<login name>@<host name>/<file name>
+        loginName = StringUtils.map(matcher.group(1),new String[]{"\\@"},new String[]{"@"});
+        hostName  = matcher.group(3);
+        fileName  = matcher.group(4);
+//Dprintf.dprintf("%s: loginName=%s loginPassword=%s hostName=%s fileName=%s",matcher.group(0),loginName,loginPassword,hostName,fileName);
+      }
+      else if ((matcher = Pattern.compile("^([^@:/]*?)/(.*)$").matcher(specifier)).matches())
+      {
+        // webdav://<host name>/<file name>
+        hostName = matcher.group(1);
+        fileName = matcher.group(2);
+//Dprintf.dprintf("%s: hostName=%s fileName=%s",matcher.group(0),hostName,fileName);
+      }
+      else
+      {
+        // webdav://<file name>
+        fileName = specifier;
+      }
+    }
     else if (archiveName.startsWith("cd://"))
     {
       // cd
@@ -554,6 +598,15 @@ class ArchiveNameParts
           archiveNameBuffer.append('/');
         }
         break;
+      case WEBDAV:
+        archiveNameBuffer.append("webdav://");
+        if (!loginName.equals("") || !hostName.equals(""))
+        {
+          if (!loginName.equals("")) { archiveNameBuffer.append(StringUtils.map(loginName,new String[]{"@"},new String[]{"\\@"})); archiveNameBuffer.append('@'); }
+          if (!hostName.equals("")) { archiveNameBuffer.append(hostName); }
+          archiveNameBuffer.append('/');
+        }
+        break;
       case CD:
         archiveNameBuffer.append("cd://");
         if (!deviceName.equals(""))
@@ -654,6 +707,15 @@ class ArchiveNameParts
           if (!loginName.equals("")) { archiveNameBuffer.append(StringUtils.map(loginName,new String[]{"@"},new String[]{"\\@"})); archiveNameBuffer.append('@'); }
           if (!hostName.equals("")) { archiveNameBuffer.append(hostName); }
           if (hostPort > 0) { archiveNameBuffer.append(':'); archiveNameBuffer.append(hostPort); }
+          archiveNameBuffer.append('/');
+        }
+        break;
+      case WEBDAV:
+        archiveNameBuffer.append("webdav://");
+        if (!loginName.equals("") || !hostName.equals(""))
+        {
+          if (!loginName.equals("")) { archiveNameBuffer.append(StringUtils.map(loginName,new String[]{"@"},new String[]{"\\@"})); archiveNameBuffer.append('@'); }
+          if (!hostName.equals("")) { archiveNameBuffer.append(hostName); }
           archiveNameBuffer.append('/');
         }
         break;

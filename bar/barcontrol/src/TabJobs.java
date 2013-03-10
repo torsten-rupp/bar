@@ -1202,6 +1202,7 @@ class TabJobs
   private Text         widgetCryptPassword1,widgetCryptPassword2;
   private Combo        widgetFTPMaxBandWidth;
   private Combo        widgetSCPSFTPMaxBandWidth;
+  private Combo        widgetWebdavMaxBandWidth;
   private Table        widgetScheduleList;
 
   // BAR variables
@@ -1218,7 +1219,7 @@ class TabJobs
   private WidgetVariable  cryptPasswordMode       = new WidgetVariable(new String[]{"default","ask","config"});
   private WidgetVariable  cryptPassword           = new WidgetVariable("");
   private WidgetVariable  incrementalListFileName = new WidgetVariable("");
-  private WidgetVariable  storageType             = new WidgetVariable(new String[]{"filesystem","ftp","scp","sftp","cd","dvd","bd","device"});
+  private WidgetVariable  storageType             = new WidgetVariable(new String[]{"filesystem","ftp","scp","sftp","webdav","cd","dvd","bd","device"});
   private WidgetVariable  storageHostName         = new WidgetVariable("");
   private WidgetVariable  storageHostPort         = new WidgetVariable(0);
   private WidgetVariable  storageLoginName        = new WidgetVariable("");
@@ -3463,8 +3464,31 @@ class TabJobs
           });
           button.setToolTipText("Store created storage files on SSH server via SFTP protocol.");
 
-          button = Widgets.newRadio(composite,"CD");
+          button = Widgets.newRadio(composite,"webdav");
           Widgets.layout(button,0,4,TableLayoutData.W);
+          button.addSelectionListener(new SelectionListener()
+          {
+            public void widgetDefaultSelected(SelectionEvent selectionEvent)
+            {
+            }
+            public void widgetSelected(SelectionEvent selectionEvent)
+            {
+              Button widget = (Button)selectionEvent.widget;
+              storageType.set("webdav");
+              BARServer.setOption(selectedJobId,"archive-name",getArchiveName());
+            }
+          });
+          Widgets.addModifyListener(new WidgetModifyListener(button,storageType)
+          {
+            public void modified(Control control, WidgetVariable storageType)
+            {
+              ((Button)control).setSelection(storageType.equals("webdav"));
+            }
+          });
+          button.setToolTipText("Store created storage files on Webdav server.");
+
+          button = Widgets.newRadio(composite,"CD");
+          Widgets.layout(button,0,5,TableLayoutData.W);
           button.addSelectionListener(new SelectionListener()
           {
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -3511,7 +3535,7 @@ class TabJobs
           button.setToolTipText("Store created storage files on CD.");
 
           button = Widgets.newRadio(composite,"DVD");
-          Widgets.layout(button,0,5,TableLayoutData.W);
+          Widgets.layout(button,0,6,TableLayoutData.W);
           button.addSelectionListener(new SelectionListener()
           {
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -3558,7 +3582,7 @@ class TabJobs
           button.setToolTipText("Store created storage files on DVD.");
 
           button = Widgets.newRadio(composite,"BD");
-          Widgets.layout(button,0,6,TableLayoutData.W);
+          Widgets.layout(button,0,7,TableLayoutData.W);
           button.addSelectionListener(new SelectionListener()
           {
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -3605,7 +3629,7 @@ class TabJobs
           button.setToolTipText("Store created storage files on BD.");
 
           button = Widgets.newRadio(composite,"device");
-          Widgets.layout(button,0,7,TableLayoutData.W);
+          Widgets.layout(button,0,8,TableLayoutData.W);
           button.addSelectionListener(new SelectionListener()
           {
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -4280,6 +4304,424 @@ class TabJobs
             widgetSCPSFTPMaxBandWidth = Widgets.newCombo(subComposite,null);
             widgetSCPSFTPMaxBandWidth.setItems(new String[]{"32K","64K","128K","256K","512K"});
             Widgets.layout(widgetSCPSFTPMaxBandWidth,0,2,TableLayoutData.W);
+          }
+*/
+        }
+
+        // destination Webdav
+        composite = Widgets.newComposite(tab,SWT.BORDER);
+        composite.setLayout(new TableLayout(0.0,new double[]{0.0,1.0}));
+        Widgets.layout(composite,11,1,TableLayoutData.WE|TableLayoutData.N);
+        Widgets.addModifyListener(new WidgetModifyListener(composite,storageType)
+        {
+          public void modified(Control control, WidgetVariable variable)
+          {
+            Widgets.setVisible(control,variable.equals("webdav"));
+          }
+        });
+        Widgets.setVisible(composite,false);
+        {
+          label = Widgets.newLabel(composite,"Server");
+          Widgets.layout(label,0,0,TableLayoutData.W);
+          subComposite = Widgets.newComposite(composite,SWT.NONE|SWT.BORDER);
+          subComposite.setLayout(new TableLayout(0.0,new double[]{0.0,1.0,0.0,1.0,0.0,1.0}));
+          Widgets.layout(subComposite,0,1,TableLayoutData.WE);
+          {
+            label = Widgets.newLabel(subComposite,"Login:");
+            Widgets.layout(label,0,0,TableLayoutData.W);
+
+            text = Widgets.newText(subComposite);
+            Widgets.layout(text,0,1,TableLayoutData.WE);
+            text.addModifyListener(new ModifyListener()
+            {
+              public void modifyText(ModifyEvent modifyEvent)
+              {
+                Text   widget = (Text)modifyEvent.widget;
+                Color  color  = COLOR_MODIFIED;
+                String string = widget.getText();
+                if (storageLoginName.getString().equals(string)) color = COLOR_WHITE;
+                widget.setBackground(color);
+              }
+            });
+            text.addSelectionListener(new SelectionListener()
+            {
+              public void widgetDefaultSelected(SelectionEvent selectionEvent)
+              {
+                Text widget = (Text)selectionEvent.widget;
+                storageLoginName.set(widget.getText());
+                BARServer.setOption(selectedJobId,"archive-name",getArchiveName());
+              }
+              public void widgetSelected(SelectionEvent selectionEvent)
+              {
+              }
+            });
+            text.addFocusListener(new FocusListener()
+            {
+              public void focusGained(FocusEvent focusEvent)
+              {
+              }
+              public void focusLost(FocusEvent focusEvent)
+              {
+                Text widget = (Text)focusEvent.widget;
+                storageLoginName.set(widget.getText());
+                BARServer.setOption(selectedJobId,"archive-name",getArchiveName());
+              }
+            });
+            Widgets.addModifyListener(new WidgetModifyListener(text,storageLoginName));
+            text.setToolTipText("SSH login name. Leave it empty to use the default login name from the configuration file.");
+
+            label = Widgets.newLabel(subComposite,"Host:");
+            Widgets.layout(label,0,2,TableLayoutData.W);
+
+            text = Widgets.newText(subComposite);
+            Widgets.layout(text,0,3,TableLayoutData.WE);
+            text.addModifyListener(new ModifyListener()
+            {
+              public void modifyText(ModifyEvent modifyEvent)
+              {
+                Text   widget = (Text)modifyEvent.widget;
+                Color  color  = COLOR_MODIFIED;
+                String string = widget.getText();
+                if (storageHostName.getString().equals(string)) color = COLOR_WHITE;
+                widget.setBackground(color);
+              }
+            });
+            text.addSelectionListener(new SelectionListener()
+            {
+              public void widgetDefaultSelected(SelectionEvent selectionEvent)
+              {
+                Text widget = (Text)selectionEvent.widget;
+                storageHostName.set(widget.getText());
+                BARServer.setOption(selectedJobId,"archive-name",getArchiveName());
+              }
+              public void widgetSelected(SelectionEvent selectionEvent)
+              {
+              }
+            });
+            text.addFocusListener(new FocusListener()
+            {
+              public void focusGained(FocusEvent focusEvent)
+              {
+              }
+              public void focusLost(FocusEvent focusEvent)
+              {
+                Text widget = (Text)focusEvent.widget;
+                storageHostName.set(widget.getText());
+                BARServer.setOption(selectedJobId,"archive-name",getArchiveName());
+              }
+            });
+            Widgets.addModifyListener(new WidgetModifyListener(text,storageHostName));
+            text.setToolTipText("SSH login host name.");
+
+            label = Widgets.newLabel(subComposite,"Port:");
+            Widgets.layout(label,0,4,TableLayoutData.W);
+
+            text = Widgets.newText(subComposite);
+            text.setData("showedErrorDialog",false);
+            Widgets.layout(text,0,5,TableLayoutData.WE);
+            text.addModifyListener(new ModifyListener()
+            {
+              public void modifyText(ModifyEvent modifyEvent)
+              {
+                Text   widget = (Text)modifyEvent.widget;
+                Color  color  = COLOR_MODIFIED;
+                String string = widget.getText();
+                try
+                {
+                  long n = !string.equals("") ? Long.parseLong(string) : 0;
+                  if (storageHostPort.getLong() == n) color = COLOR_WHITE;
+                }
+                catch (NumberFormatException exception)
+                {
+                }
+                widget.setBackground(color);
+                widget.setData("showedErrorDialog",false);
+              }
+            });
+            text.addSelectionListener(new SelectionListener()
+            {
+              public void widgetDefaultSelected(SelectionEvent selectionEvent)
+              {
+                Text   widget = (Text)selectionEvent.widget;
+                String string = widget.getText();
+                try
+                {
+                  long n = !string.equals("") ? Long.parseLong(string) : 0;
+                  if ((n >= 0) && (n <= 65535))
+                  {
+                    storageHostPort.set(n);
+                    BARServer.setOption(selectedJobId,"archive-name",getArchiveName());
+                  }
+                  else
+                  {
+                    if (!(Boolean)widget.getData("showedErrorDialog"))
+                    {
+                      widget.setData("showedErrorDialog",true);
+                      Dialogs.error(shell,"'"+n+"' is out of range!\n\nEnter a number between 0 and 65535.");
+                      widget.forceFocus();
+                    }
+                  }
+                }
+                catch (NumberFormatException exception)
+                {
+                  if (!(Boolean)widget.getData("showedErrorDialog"))
+                  {
+                    widget.setData("showedErrorDialog",true);
+                    Dialogs.error(shell,"'"+string+"' is not valid port number!\n\nEnter a number between 0 and 65535.");
+                    widget.forceFocus();
+                  }
+                }
+              }
+              public void widgetSelected(SelectionEvent selectionEvent)
+              {
+              }
+            });
+            text.addFocusListener(new FocusListener()
+            {
+              public void focusGained(FocusEvent focusEvent)
+              {
+                Text widget = (Text)focusEvent.widget;
+                widget.setData("showedErrorDialog",false);
+              }
+              public void focusLost(FocusEvent focusEvent)
+              {
+                Text   widget = (Text)focusEvent.widget;
+                String string = widget.getText();
+                try
+                {
+                  long n = !string.equals("") ? Long.parseLong(string) : 0;
+                  if ((n >= 0) && (n <= 65535))
+                  {
+                    storageHostPort.set(n);
+                    BARServer.setOption(selectedJobId,"archive-name",getArchiveName());
+                  }
+                  else
+                  {
+                    if (!(Boolean)widget.getData("showedErrorDialog"))
+                    {
+                      widget.setData("showedErrorDialog",true);
+                      Dialogs.error(shell,"'"+n+"' is out of range!\n\nEnter a number between 0 and 65535.");
+                      widget.forceFocus();
+                    }
+                  }
+                }
+                catch (NumberFormatException exception)
+                {
+                  if (!(Boolean)widget.getData("showedErrorDialog"))
+                  {
+                    widget.setData("showedErrorDialog",true);
+                    Dialogs.error(shell,"'"+string+"' is not valid port number!\n\nEnter a number between 0 and 65535.");
+                    widget.forceFocus();
+                  }
+                }
+              }
+            });
+            Widgets.addModifyListener(new WidgetModifyListener(text,storageHostPort));
+            text.setToolTipText("SSH login port number. Set to 0 to use default port number from configuration file.");
+          }
+
+          label = Widgets.newLabel(composite,"SSH public key:");
+          Widgets.layout(label,1,0,TableLayoutData.W);
+          subComposite = Widgets.newComposite(composite,SWT.NONE);
+          subComposite.setLayout(new TableLayout(1.0,new double[]{1.0,0.0}));
+          Widgets.layout(subComposite,1,1,TableLayoutData.WE);
+          {
+            text = Widgets.newText(subComposite);
+            Widgets.layout(text,0,0,TableLayoutData.WE);
+            text.addModifyListener(new ModifyListener()
+            {
+              public void modifyText(ModifyEvent modifyEvent)
+              {
+                Text   widget = (Text)modifyEvent.widget;
+                Color  color  = COLOR_MODIFIED;
+                String string = widget.getText();
+                if (sshPublicKeyFileName.getString().equals(string)) color = COLOR_WHITE;
+                widget.setBackground(color);
+              }
+            });
+            text.addSelectionListener(new SelectionListener()
+            {
+              public void widgetDefaultSelected(SelectionEvent selectionEvent)
+              {
+                Text   widget = (Text)selectionEvent.widget;
+                String string = widget.getText();
+                sshPublicKeyFileName.set(string);
+                BARServer.setOption(selectedJobId,"ssh-public-key",string);
+              }
+              public void widgetSelected(SelectionEvent selectionEvent)
+              {
+              }
+            });
+            text.addFocusListener(new FocusListener()
+            {
+              public void focusGained(FocusEvent focusEvent)
+              {
+              }
+              public void focusLost(FocusEvent focusEvent)
+              {
+                Text   widget = (Text)focusEvent.widget;
+                String string = widget.getText();
+                sshPublicKeyFileName.set(string);
+                BARServer.setOption(selectedJobId,"ssh-public-key",string);
+              }
+            });
+            Widgets.addModifyListener(new WidgetModifyListener(text,sshPublicKeyFileName));
+            text.setToolTipText("SSH public key file name. Leave it empty to use the default key file from the configuration file.");
+
+            button = Widgets.newButton(subComposite,IMAGE_DIRECTORY);
+            Widgets.layout(button,0,1,TableLayoutData.DEFAULT);
+            button.addSelectionListener(new SelectionListener()
+            {
+              public void widgetDefaultSelected(SelectionEvent selectionEvent)
+              {
+              }
+              public void widgetSelected(SelectionEvent selectionEvent)
+              {
+                Button widget   = (Button)selectionEvent.widget;
+                String fileName = Dialogs.fileOpen(shell,
+                                                   "Select SSH public key file",
+                                                   incrementalListFileName.getString(),
+                                                   new String[]{"Public key files","*.pub",
+                                                                "All files","*",
+                                                               }
+                                                  );
+                if (fileName != null)
+                {
+                  sshPublicKeyFileName.set(fileName);
+                }
+              }
+            });
+          }
+
+          label = Widgets.newLabel(composite,"SSH private key:");
+          Widgets.layout(label,2,0,TableLayoutData.W);
+          subComposite = Widgets.newComposite(composite,SWT.NONE);
+          subComposite.setLayout(new TableLayout(1.0,new double[]{1.0,0.0}));
+          Widgets.layout(subComposite,2,1,TableLayoutData.WE);
+          {
+            text = Widgets.newText(subComposite);
+            Widgets.layout(text,0,0,TableLayoutData.WE);
+            text.addModifyListener(new ModifyListener()
+            {
+              public void modifyText(ModifyEvent modifyEvent)
+              {
+                Text   widget = (Text)modifyEvent.widget;
+                Color  color  = COLOR_MODIFIED;
+                String string = widget.getText();
+                if (sshPrivateKeyFileName.getString().equals(string)) color = COLOR_WHITE;
+                widget.setBackground(color);
+              }
+            });
+            text.addSelectionListener(new SelectionListener()
+            {
+              public void widgetDefaultSelected(SelectionEvent selectionEvent)
+              {
+                Text   widget = (Text)selectionEvent.widget;
+                String string = widget.getText();
+                sshPrivateKeyFileName.set(string);
+                BARServer.setOption(selectedJobId,"ssh-private-key",string);
+              }
+              public void widgetSelected(SelectionEvent selectionEvent)
+              {
+              }
+            });
+            text.addFocusListener(new FocusListener()
+            {
+              public void focusGained(FocusEvent focusEvent)
+              {
+              }
+              public void focusLost(FocusEvent focusEvent)
+              {
+                Text   widget = (Text)focusEvent.widget;
+                String string = widget.getText();
+                sshPrivateKeyFileName.set(string);
+                BARServer.setOption(selectedJobId,"ssh-private-key",string);
+              }
+            });
+            Widgets.addModifyListener(new WidgetModifyListener(text,sshPrivateKeyFileName));
+            text.setToolTipText("SSH private key file name. Leave it empty to use the default key file from the configuration file.");
+
+            button = Widgets.newButton(subComposite,IMAGE_DIRECTORY);
+            Widgets.layout(button,0,1,TableLayoutData.DEFAULT);
+            button.addSelectionListener(new SelectionListener()
+            {
+              public void widgetDefaultSelected(SelectionEvent selectionEvent)
+              {
+              }
+              public void widgetSelected(SelectionEvent selectionEvent)
+              {
+                Button widget   = (Button)selectionEvent.widget;
+                String fileName = Dialogs.fileOpen(shell,
+                                                   "Select SSH private key file",
+                                                   incrementalListFileName.getString(),
+                                                   new String[]{"All files","*",
+                                                               }
+                                                  );
+                if (fileName != null)
+                {
+                  sshPrivateKeyFileName.set(fileName);
+                }
+              }
+            });
+          }
+
+/*
+          label = Widgets.newLabel(composite,"Max. band width:");
+          Widgets.layout(label,3,0,TableLayoutData.W);
+          subComposite = Widgets.newComposite(composite,SWT.NONE);
+          Widgets.layout(subComposite,3,1,TableLayoutData.WE);
+          {
+            button = Widgets.newRadio(subComposite,"unlimited");
+            Widgets.layout(button,0,0,TableLayoutData.W);
+            button.addSelectionListener(new SelectionListener()
+            {
+              public void widgetDefaultSelected(SelectionEvent selectionEvent)
+              {
+              }
+              public void widgetSelected(SelectionEvent selectionEvent)
+              {
+                Button widget = (Button)selectionEvent.widget;
+                maxBandWidthFlag.set(false);
+                maxBandWidth.set(0);
+                BARServer.setOption(selectedJobId,"max-band-width",0);
+              }
+            });
+            Widgets.addModifyListener(new WidgetModifyListener(button,archivePartSizeFlag)
+            {
+              public void modified(Control control, WidgetVariable archivePartSizeFlag)
+              {
+                ((Button)control).setSelection(!maxBandWidthFlag.getBoolean());
+                widgetWebdavMaxBandWidth.setEnabled(!maxBandWidthFlag.getBoolean());
+              }
+            });
+
+            button = Widgets.newRadio(subComposite,"limit to");
+            Widgets.layout(button,0,1,TableLayoutData.W);
+            button.addSelectionListener(new SelectionListener()
+            {
+              public void widgetDefaultSelected(SelectionEvent selectionEvent)
+              {
+              }
+              public void widgetSelected(SelectionEvent selectionEvent)
+              {
+                Button widget = (Button)selectionEvent.widget;
+                maxBandWidthFlag.set(false);
+                maxBandWidth.set(0);
+                BARServer.setOption(selectedJobId,"max-band-width",0);
+              }
+            });
+            Widgets.addModifyListener(new WidgetModifyListener(button,archivePartSizeFlag)
+            {
+              public void modified(Control control, WidgetVariable archivePartSizeFlag)
+              {
+                ((Button)control).setSelection(!maxBandWidthFlag.getBoolean());
+                widgetWebdavMaxBandWidth.setEnabled(!maxBandWidthFlag.getBoolean());
+              }
+            });
+
+            widgetWebdavMaxBandWidth = Widgets.newCombo(subComposite,null);
+            widgetWebdavMaxBandWidth.setItems(new String[]{"32K","64K","128K","256K","512K"});
+            Widgets.layout(widgetWebdavMaxBandWidth,0,2,TableLayoutData.W);
           }
 */
         }
@@ -4978,6 +5420,7 @@ class TabJobs
    *   ftp://<login name>:<login password>@<host name>[:<host port>]/<file name>
    *   scp://<login name>@<host name>:<host port>/<file name>
    *   sftp://<login name>@<host name>:<host port>/<file name>
+   *   webdav://<login name>@<host name>/<file name>
    *   cd://<device name>/<file name>
    *   dvd://<device name>/<file name>
    *   bd://<device name>/<file name>
@@ -5003,6 +5446,7 @@ class TabJobs
    *   ftp://<login name>:<login password>@<host name>[:<host port>]/<file name>
    *   scp://<login name>@<host name>:<host port>/<file name>
    *   sftp://<login name>@<host name>:<host port>/<file name>
+   *   webdav://<login name>@<host name>/<file name>
    *   cd://<device name>/<file name>
    *   dvd://<device name>/<file name>
    *   bd://<device name>/<file name>
