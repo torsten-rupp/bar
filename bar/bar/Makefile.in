@@ -622,6 +622,7 @@ test7 test_storage: $(TEST_BAR)
           BAR_OPTIONS="--compress-algorithm=none --crypt-algorithm=none" \
           test_file_operations_base \
           ;
+# delta test?
 	$(MAKE) \
           BAR_STORAGE="ftp://localhost/test/" \
           BAR_FILE="test" \
@@ -638,6 +639,13 @@ test7 test_storage: $(TEST_BAR)
           ;
 	$(MAKE) \
           BAR_STORAGE="sftp://localhost/test/" \
+          BAR_FILE="test" \
+          BAR_PATTERN="test" \
+          BAR_OPTIONS="--compress-algorithm=none --crypt-algorithm=none --ssh-password='$(PASSWORD)'" \
+          test_file_operations_base \
+          ;
+	$(MAKE) \
+          BAR_STORAGE="webdav://localhost/webdav/" \
           BAR_FILE="test" \
           BAR_PATTERN="test" \
           BAR_OPTIONS="--compress-algorithm=none --crypt-algorithm=none --ssh-password='$(PASSWORD)'" \
