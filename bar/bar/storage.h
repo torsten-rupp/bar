@@ -206,7 +206,7 @@ typedef struct
       {
         CURLM                   *curlMultiHandle;
         CURL                    *curlHandle;
-        int                     runningHandles;            // curl number of active handles (1 or 0)
+//        int                     runningHandles;            // curl number of active handles (1 or 0)
         uint64                  index;                     // current read/write index in file [0..n-1]
         uint64                  size;                      // size of file [bytes]
         struct                                             // read-ahead buffer
@@ -225,19 +225,22 @@ typedef struct
       {
         CURLM                   *curlMultiHandle;
         CURL                    *curlHandle;
-        int                     runningHandles;            // curl number of active handles (1 or 0)
         uint64                  index;                     // current read/write index in file [0..n-1]
         uint64                  size;                      // size of file [bytes]
-        struct                                             // read-ahead buffer
+        struct                                             // receive buffer
         {
-          byte   *data;
-          uint64 offset;
-          ulong  length;
-        } readAheadBuffer;
+          byte   *data;                                    // data received
+          ulong  size;                                     // buffer size [bytes]
+          uint64 offset;                                   // data offset
+          ulong  length;                                   // length of data received
+        } receiveBuffer;
+        struct                                             // send buffer
+        {
+          const byte *data;                                // data to send
+          ulong      index;                                // data index
+          ulong      length;                               // length of data to send
+        } sendBuffer;
         StorageBandWidthLimiter bandWidthLimiter;          // band width limit data
-        void                    *buffer;                   // next data to write/read
-        ulong                   length;                    // length of data to write/read
-        ulong                   transferedBytes;           // number of data bytes read/written
       } webdav;
     #elif defined(HAVE_FTP)
       // FTP storage
