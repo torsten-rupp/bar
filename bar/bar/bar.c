@@ -137,55 +137,59 @@ typedef enum
 } Commands;
 
 /***************************** Variables *******************************/
-GlobalOptions       globalOptions;
-String              tmpDirectory;
-DatabaseHandle      *indexDatabaseHandle;
+GlobalOptions          globalOptions;
+String                 tmpDirectory;
+DatabaseHandle         *indexDatabaseHandle;
 
-LOCAL Commands      command;
-LOCAL String        jobName;
+LOCAL Commands         command;
+LOCAL String           jobName;
 
-LOCAL JobOptions    jobOptions;
-LOCAL String        archiveName;
-LOCAL FTPServerList ftpServerList;
-LOCAL Semaphore     ftpServerListLock;
-LOCAL SSHServerList sshServerList;
-LOCAL Semaphore     sshServerListLock;
-LOCAL DeviceList    deviceList;
-LOCAL EntryList     includeEntryList;
-LOCAL PatternList   excludePatternList;
-LOCAL PatternList   deltaSourcePatternList;
-LOCAL PatternList   compressExcludePatternList;
-LOCAL ScheduleList  scheduleList;
-LOCAL FTPServer     defaultFTPServer;
-LOCAL SSHServer     defaultSSHServer;
-LOCAL Device        defaultDevice;
-LOCAL FTPServer     *currentFTPServer;
-LOCAL SSHServer     *currentSSHServer;
-LOCAL Device        *currentDevice;
-LOCAL bool          daemonFlag;
-LOCAL bool          noDetachFlag;
-LOCAL uint          serverPort;
-LOCAL uint          serverTLSPort;
-LOCAL const char    *serverCAFileName;
-LOCAL const char    *serverCertFileName;
-LOCAL const char    *serverKeyFileName;
-LOCAL Password      *serverPassword;
-LOCAL const char    *serverJobsDirectory;
+LOCAL JobOptions       jobOptions;
+LOCAL String           archiveName;
+LOCAL FTPServerList    ftpServerList;
+LOCAL Semaphore        ftpServerListLock;
+LOCAL SSHServerList    sshServerList;
+LOCAL Semaphore        sshServerListLock;
+LOCAL WebdavServerList webdavServerList;
+LOCAL Semaphore        webdavServerListLock;
+LOCAL DeviceList       deviceList;
+LOCAL EntryList        includeEntryList;
+LOCAL PatternList      excludePatternList;
+LOCAL PatternList      deltaSourcePatternList;
+LOCAL PatternList      compressExcludePatternList;
+LOCAL ScheduleList     scheduleList;
+LOCAL FTPServer        defaultFTPServer;
+LOCAL SSHServer        defaultSSHServer;
+LOCAL WebdavServer     defaultWebdavServer;
+LOCAL Device           defaultDevice;
+LOCAL FTPServer        *currentFTPServer;
+LOCAL SSHServer        *currentSSHServer;
+LOCAL WebdavServer     *currentWebdavServer;
+LOCAL Device           *currentDevice;
+LOCAL bool             daemonFlag;
+LOCAL bool             noDetachFlag;
+LOCAL uint             serverPort;
+LOCAL uint             serverTLSPort;
+LOCAL const char       *serverCAFileName;
+LOCAL const char       *serverCertFileName;
+LOCAL const char       *serverKeyFileName;
+LOCAL Password         *serverPassword;
+LOCAL const char       *serverJobsDirectory;
 
-LOCAL const char    *indexDatabaseFileName;
+LOCAL const char       *indexDatabaseFileName;
 
-LOCAL ulong         logTypes;
-LOCAL const char    *logFileName;
-LOCAL const char    *logPostCommand;
+LOCAL ulong            logTypes;
+LOCAL const char       *logFileName;
+LOCAL const char       *logPostCommand;
 
-LOCAL bool          batchFlag;
-LOCAL bool          versionFlag;
-LOCAL bool          helpFlag,xhelpFlag,helpInternalFlag;
+LOCAL bool             batchFlag;
+LOCAL bool             versionFlag;
+LOCAL bool             helpFlag,xhelpFlag,helpInternalFlag;
 
-LOCAL const char    *pidFileName;
+LOCAL const char       *pidFileName;
 
-LOCAL String        keyFileName;
-LOCAL uint          keyBits;
+LOCAL String           keyFileName;
+LOCAL uint             keyBits;
 
 /*---------------------------------------------------------------------*/
 
@@ -511,6 +515,10 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
   CMD_OPTION_STRING       ("ssh-public-key",               0,  1,1,defaultSSHServer.publicKeyFileName,                                                                 "ssh public key file name","file name"                                     ),
   CMD_OPTION_STRING       ("ssh-private-key",              0,  1,1,defaultSSHServer.privateKeyFileName,                                                                "ssh private key file name","file name"                                    ),
   CMD_OPTION_INTEGER      ("ssh-max-connections",          0,  0,1,defaultSSHServer.maxConnectionCount,         -1,MAX_INT,NULL,                                       "max. number of concurrent ssh connections"                                ),
+
+//  CMD_OPTION_INTEGER      ("webdav-port",                  0,  0,1,defaultWebdavServer.port,                    0,65535,NULL,                                          "Webdav port"                                                              ),
+  CMD_OPTION_STRING       ("webdav-login-name",            0,  0,1,defaultWebdavServer.loginName,                                                                      "Webdav login name","name"                                                 ),
+  CMD_OPTION_SPECIAL      ("webdav-password",              0,  0,1,&defaultWebdavServer.password,               cmdOptionParsePassword,NULL,                           "Webdav password (use with care!)","password"                              ),
 
   CMD_OPTION_BOOLEAN      ("daemon",                       0,  1,0,daemonFlag,                                                                                         "run in daemon mode"                                                       ),
   CMD_OPTION_BOOLEAN      ("no-detach",                    'D',1,0,noDetachFlag,                                                                                       "do not detach in daemon mode"                                             ),
@@ -840,6 +848,10 @@ LOCAL const ConfigValue CONFIG_VALUES[] =
   CONFIG_VALUE_STRING   ("ssh-public-key",               &currentSSHServer,offsetof(SSHServer,publicKeyFileName)  ),
   CONFIG_VALUE_STRING   ("ssh-private-key",              &currentSSHServer,offsetof(SSHServer,privateKeyFileName) ),
   CONFIG_VALUE_INTEGER  ("ssh-max-connections",          &defaultSSHServer.maxConnectionCount,-1,                 -1,MAX_INT,NULL),
+
+//  CONFIG_VALUE_INTEGER  ("webdav-port",                  &currentWebdavServer,offsetof(WebdavServer,port),        0,65535,NULL),
+  CONFIG_VALUE_STRING   ("webdav-login-name",            &currentWebdavServer,offsetof(WebdavServer,loginName)    ),
+  CONFIG_VALUE_SPECIAL  ("webdav-password",              &currentWebdavServer,offsetof(WebdavServer,password),    configValueParsePassword,NULL,NULL,NULL,NULL),
 
   CONFIG_VALUE_SPECIAL  ("include-file",                 &includeEntryList,-1,                                    configValueParseFileEntry,NULL,NULL,NULL,&jobOptions.patternType),
   CONFIG_VALUE_SPECIAL  ("include-image",                &includeEntryList,-1,                                    configValueParseImageEntry,NULL,NULL,NULL,&jobOptions.patternType),
@@ -1217,6 +1229,28 @@ LOCAL bool readConfigFile(const String fileName, bool printInfoFlag)
 
       currentSSHServer = &sshServerNode->sshServer;
     }
+    else if (String_parse(line,STRING_BEGIN,"[webdav-server %S]",NULL,name))
+    {
+      WebdavServerNode *webdavServerNode;
+
+      webdavServerNode = LIST_NEW_NODE(WebdavServerNode);
+      if (webdavServerNode == NULL)
+      {
+        HALT_INSUFFICIENT_MEMORY();
+      }
+      webdavServerNode->name                            = String_duplicate(name);
+      webdavServerNode->connectionCount                 = 0;
+//      webdavServerNode->webdavServer.port               = 80;
+      webdavServerNode->webdavServer.loginName          = NULL;
+      webdavServerNode->webdavServer.password           = NULL;
+      webdavServerNode->webdavServer.publicKeyFileName  = NULL;
+      webdavServerNode->webdavServer.privateKeyFileName = NULL;
+      webdavServerNode->webdavServer.maxConnectionCount = -1;
+
+      List_append(&webdavServerList,webdavServerNode);
+
+      currentWebdavServer = &webdavServerNode->webdavServer;
+    }
     else if (String_parse(line,STRING_BEGIN,"[device %S]",NULL,name))
     {
       DeviceNode *deviceNode;
@@ -1247,9 +1281,10 @@ LOCAL bool readConfigFile(const String fileName, bool printInfoFlag)
     }
     else if (String_parse(line,STRING_BEGIN,"[global]",NULL))
     {
-      currentFTPServer = &defaultFTPServer;
-      currentSSHServer = &defaultSSHServer;
-      currentDevice    = &defaultDevice;
+      currentFTPServer    = &defaultFTPServer;
+      currentSSHServer    = &defaultSSHServer;
+      currentWebdavServer = &defaultWebdavServer;
+      currentDevice       = &defaultDevice;
     }
     else if (String_parse(line,STRING_BEGIN,"%S=% S",&nextIndex,name,value))
     {
@@ -1290,9 +1325,10 @@ LOCAL bool readConfigFile(const String fileName, bool printInfoFlag)
   {
     if (((uint)globalOptions.verboseLevel >= 2) || printInfoFlag) printf("ok\n");
   }
-  currentFTPServer = &defaultFTPServer;
-  currentSSHServer = &defaultSSHServer;
-  currentDevice    = &defaultDevice;
+  currentFTPServer    = &defaultFTPServer;
+  currentSSHServer    = &defaultSSHServer;
+  currentWebdavServer = &defaultWebdavServer;
+  currentDevice       = &defaultDevice;
 
   // free resources
   String_delete(value);
@@ -2089,6 +2125,9 @@ LOCAL void initGlobalOptions(void)
   globalOptions.sshServer                                       = globalOptions.defaultSSHServer;
   globalOptions.sshServerList                                   = &sshServerList;
   globalOptions.defaultSSHServer                                = &defaultSSHServer;
+  globalOptions.webdavServer                                    = globalOptions.defaultWebdavServer;
+  globalOptions.webdavServerList                                = &webdavServerList;
+  globalOptions.defaultWebdavServer                             = &defaultWebdavServer;
   globalOptions.remoteBARExecutable                             = NULL;
 
   globalOptions.file.writePreProcessCommand                     = NULL;
@@ -2292,6 +2331,29 @@ LOCAL void freeSSHServerNode(SSHServerNode *sshServerNode, void *userData)
 }
 
 /***********************************************************************\
+* Name   : freeWebdavServerNode
+* Purpose: free Webdav server node
+* Input  : webdavServerNode - Webdav server node
+*          userData         - user data
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void freeWebdavServerNode(WebdavServerNode *webdavServerNode, void *userData)
+{
+  assert(webdavServerNode != NULL);
+
+  UNUSED_VARIABLE(userData);
+
+  String_delete(webdavServerNode->webdavServer.privateKeyFileName);
+  String_delete(webdavServerNode->webdavServer.publicKeyFileName);
+  Password_delete(webdavServerNode->webdavServer.password);
+  String_delete(webdavServerNode->webdavServer.loginName);
+  String_delete(webdavServerNode->name);
+}
+
+/***********************************************************************\
 * Name   : freeDeviceNode
 * Purpose: free device node
 * Input  : deviceNode - device node
@@ -2486,72 +2548,79 @@ LOCAL Errors initAll(void)
   Semaphore_init(&ftpServerListLock);
   List_init(&sshServerList);
   Semaphore_init(&sshServerListLock);
+  List_init(&webdavServerList);
+  Semaphore_init(&webdavServerListLock);
   List_init(&deviceList);
   EntryList_init(&includeEntryList);
   PatternList_init(&excludePatternList);
   PatternList_init(&deltaSourcePatternList);
   PatternList_init(&compressExcludePatternList);
   List_init(&scheduleList);
-  defaultFTPServer.loginName            = NULL;
-  defaultFTPServer.password             = NULL;
-  defaultSSHServer.port                 = 22;
-  defaultSSHServer.loginName            = NULL;
-  defaultSSHServer.password             = NULL;
-  defaultSSHServer.publicKeyFileName    = NULL;
-  defaultSSHServer.privateKeyFileName   = NULL;
-  defaultDevice.requestVolumeCommand    = NULL;
-  defaultDevice.unloadVolumeCommand     = NULL;
-  defaultDevice.loadVolumeCommand       = NULL;
-  defaultDevice.volumeSize              = 0LL;
-  defaultDevice.imagePreProcessCommand  = NULL;
-  defaultDevice.imagePostProcessCommand = NULL;
-  defaultDevice.imageCommand            = NULL;
-  defaultDevice.eccPreProcessCommand    = NULL;
-  defaultDevice.eccPostProcessCommand   = NULL;
-  defaultDevice.eccCommand              = NULL;
-  defaultDevice.writePreProcessCommand  = NULL;
-  defaultDevice.writePostProcessCommand = NULL;
-  defaultDevice.writeCommand            = NULL;
-  currentFTPServer                      = &defaultFTPServer;
-  currentSSHServer                      = &defaultSSHServer;
-  currentDevice                         = &defaultDevice;
-  daemonFlag                            = FALSE;
-  noDetachFlag                          = FALSE;
-  serverPort                            = DEFAULT_SERVER_PORT;
-  serverTLSPort                         = DEFAULT_TLS_SERVER_PORT;
-  serverCAFileName                      = DEFAULT_TLS_SERVER_CA_FILE;
-  serverCertFileName                    = DEFAULT_TLS_SERVER_CERTIFICATE_FILE;
-  serverKeyFileName                     = DEFAULT_TLS_SERVER_KEY_FILE;
-  serverPassword                        = Password_new();
-  serverJobsDirectory                   = DEFAULT_JOBS_DIRECTORY;
+  defaultFTPServer.loginName             = NULL;
+  defaultFTPServer.password              = NULL;
+  defaultSSHServer.port                  = 22;
+  defaultSSHServer.loginName             = NULL;
+  defaultSSHServer.password              = NULL;
+  defaultSSHServer.publicKeyFileName     = NULL;
+  defaultSSHServer.privateKeyFileName    = NULL;
+//  defaultWebdavServer.port               = 80;
+  defaultWebdavServer.loginName          = NULL;
+  defaultWebdavServer.password           = NULL;
+  defaultWebdavServer.publicKeyFileName  = NULL;
+  defaultWebdavServer.privateKeyFileName = NULL;
+  defaultDevice.requestVolumeCommand     = NULL;
+  defaultDevice.unloadVolumeCommand      = NULL;
+  defaultDevice.loadVolumeCommand        = NULL;
+  defaultDevice.volumeSize               = 0LL;
+  defaultDevice.imagePreProcessCommand   = NULL;
+  defaultDevice.imagePostProcessCommand  = NULL;
+  defaultDevice.imageCommand             = NULL;
+  defaultDevice.eccPreProcessCommand     = NULL;
+  defaultDevice.eccPostProcessCommand    = NULL;
+  defaultDevice.eccCommand               = NULL;
+  defaultDevice.writePreProcessCommand   = NULL;
+  defaultDevice.writePostProcessCommand  = NULL;
+  defaultDevice.writeCommand             = NULL;
+  currentFTPServer                       = &defaultFTPServer;
+  currentSSHServer                       = &defaultSSHServer;
+  currentDevice                          = &defaultDevice;
+  daemonFlag                             = FALSE;
+  noDetachFlag                           = FALSE;
+  serverPort                             = DEFAULT_SERVER_PORT;
+  serverTLSPort                          = DEFAULT_TLS_SERVER_PORT;
+  serverCAFileName                       = DEFAULT_TLS_SERVER_CA_FILE;
+  serverCertFileName                     = DEFAULT_TLS_SERVER_CERTIFICATE_FILE;
+  serverKeyFileName                      = DEFAULT_TLS_SERVER_KEY_FILE;
+  serverPassword                         = Password_new();
+  serverJobsDirectory                    = DEFAULT_JOBS_DIRECTORY;
 
-  indexDatabaseFileName                 = NULL;
+  indexDatabaseFileName                  = NULL;
 
-  logTypes                              = 0;
-  logFileName                           = NULL;
-  logPostCommand                        = NULL;
+  logTypes                               = 0;
+  logFileName                            = NULL;
+  logPostCommand                         = NULL;
 
-  batchFlag                             = FALSE;
-  versionFlag                           = FALSE;
-  helpFlag                              = FALSE;
-  xhelpFlag                             = FALSE;
-  helpInternalFlag                      = FALSE;
+  batchFlag                              = FALSE;
+  versionFlag                            = FALSE;
+  helpFlag                               = FALSE;
+  xhelpFlag                              = FALSE;
+  helpInternalFlag                       = FALSE;
 
-  pidFileName                           = NULL;
+  pidFileName                            = NULL;
 
-  keyFileName                           = NULL;
-  keyBits                               = MIN_ASYMMETRIC_CRYPT_KEY_BITS;
+  keyFileName                            = NULL;
+  keyBits                                = MIN_ASYMMETRIC_CRYPT_KEY_BITS;
 
   StringList_init(&configFileNameList);
 
-  tmpDirectory                          = String_new();
-  tmpLogFileName                        = String_new();
-  logFile                               = NULL;
-  tmpLogFile                            = NULL;
+  tmpDirectory                           = String_new();
+  tmpLogFileName                         = String_new();
+  logFile                                = NULL;
+  tmpLogFile                             = NULL;
 
   Semaphore_init(&outputLock);
   Thread_initLocalVariable(&outputLineHandle,outputLineInit,NULL);
-  lastOutputLine                        = NULL;
+  lastOutputLine                         = NULL;
 
   // initialize default ssh keys
   fileName = File_appendFileNameCString(String_newCString(getenv("HOME")),".ssh/id_rsa.pub");
@@ -2609,9 +2678,13 @@ LOCAL void doneAll(void)
   if (defaultDevice.unloadVolumeCommand != NULL) String_delete(defaultDevice.unloadVolumeCommand);
   if (defaultDevice.loadVolumeCommand != NULL) String_delete(defaultDevice.loadVolumeCommand);
   if (defaultDevice.requestVolumeCommand != NULL) String_delete(defaultDevice.requestVolumeCommand);
+  if (defaultWebdavServer.privateKeyFileName != NULL) String_delete(defaultWebdavServer.privateKeyFileName);
+  if (defaultWebdavServer.publicKeyFileName != NULL) String_delete(defaultWebdavServer.publicKeyFileName);
+  if (defaultWebdavServer.password != NULL) Password_delete(defaultWebdavServer.password);
+  if (defaultWebdavServer.loginName != NULL) String_delete(defaultWebdavServer.loginName);
   if (defaultSSHServer.privateKeyFileName != NULL) String_delete(defaultSSHServer.privateKeyFileName);
   if (defaultSSHServer.publicKeyFileName != NULL) String_delete(defaultSSHServer.publicKeyFileName);
-  if (defaultSSHServer.loginName != NULL) Password_delete(defaultSSHServer.password);
+  if (defaultSSHServer.password != NULL) Password_delete(defaultSSHServer.password);
   if (defaultSSHServer.loginName != NULL) String_delete(defaultSSHServer.loginName);
   if (defaultFTPServer.password != NULL) Password_delete(defaultFTPServer.password);
   if (defaultFTPServer.loginName != NULL) String_delete(defaultFTPServer.loginName);
@@ -2622,6 +2695,8 @@ LOCAL void doneAll(void)
   EntryList_done(&includeEntryList);
   Password_delete(serverPassword);
   List_done(&deviceList,(ListNodeFreeFunction)freeDeviceNode,NULL);
+  Semaphore_done(&webdavServerListLock);
+  List_done(&webdavServerList,(ListNodeFreeFunction)freeWebdavServerNode,NULL);
   Semaphore_done(&sshServerListLock);
   List_done(&sshServerList,(ListNodeFreeFunction)freeSSHServerNode,NULL);
   Semaphore_done(&ftpServerListLock);
@@ -2987,6 +3062,11 @@ void copyJobOptions(const JobOptions *fromJobOptions, JobOptions *toJobOptions)
   toJobOptions->sshServer.publicKeyFileName         = String_duplicate(fromJobOptions->sshServer.publicKeyFileName);
   toJobOptions->sshServer.privateKeyFileName        = String_duplicate(fromJobOptions->sshServer.privateKeyFileName);
 
+  toJobOptions->webdavServer.loginName              = String_duplicate(fromJobOptions->webdavServer.loginName);
+  toJobOptions->webdavServer.password               = Password_duplicate(fromJobOptions->webdavServer.password);
+  toJobOptions->webdavServer.publicKeyFileName      = String_duplicate(fromJobOptions->webdavServer.publicKeyFileName);
+  toJobOptions->webdavServer.privateKeyFileName     = String_duplicate(fromJobOptions->webdavServer.privateKeyFileName);
+
   toJobOptions->opticalDisk.requestVolumeCommand    = String_duplicate(fromJobOptions->opticalDisk.requestVolumeCommand);
   toJobOptions->opticalDisk.unloadVolumeCommand     = String_duplicate(fromJobOptions->opticalDisk.unloadVolumeCommand);
   toJobOptions->opticalDisk.imagePreProcessCommand  = String_duplicate(fromJobOptions->opticalDisk.imagePreProcessCommand);
@@ -3041,6 +3121,11 @@ void freeJobOptions(JobOptions *jobOptions)
   String_delete(jobOptions->opticalDisk.imagePreProcessCommand);
   String_delete(jobOptions->opticalDisk.unloadVolumeCommand);
   String_delete(jobOptions->opticalDisk.requestVolumeCommand);
+
+  String_delete(jobOptions->webdavServer.privateKeyFileName);
+  String_delete(jobOptions->webdavServer.publicKeyFileName);
+  Password_delete(jobOptions->webdavServer.password);
+  String_delete(jobOptions->webdavServer.loginName);
 
   String_delete(jobOptions->sshServer.privateKeyFileName);
   String_delete(jobOptions->sshServer.publicKeyFileName);
@@ -3269,6 +3354,29 @@ void getSSHServerSettings(const String     hostName,
   sshServer->privateKeyFileName = !String_isEmpty(jobOptions->sshServer.privateKeyFileName) ? jobOptions->sshServer.privateKeyFileName : ((sshServerNode != NULL) ? sshServerNode->sshServer.privateKeyFileName : globalOptions.defaultSSHServer->privateKeyFileName);
 }
 
+void getWebdavServerSettings(const String     hostName,
+                             const JobOptions *jobOptions,
+                             WebdavServer     *webdavServer
+                            )
+{
+  WebdavServerNode *webdavServerNode;
+
+  assert(hostName != NULL);
+  assert(jobOptions != NULL);
+  assert(webdavServer != NULL);
+
+  webdavServerNode = globalOptions.webdavServerList->head;
+  while ((webdavServerNode != NULL) && !String_equals(webdavServerNode->name,hostName))
+  {
+    webdavServerNode = webdavServerNode->next;
+  }
+//  webdavServer->port               = (jobOptions->webdavServer.port != 0                        ) ? jobOptions->webdavServer.port               : ((webdavServerNode != NULL) ? webdavServerNode->webdavServer.port               : globalOptions.defaultWebdavServer->port              );
+  webdavServer->loginName          = !String_isEmpty(jobOptions->webdavServer.loginName         ) ? jobOptions->webdavServer.loginName          : ((webdavServerNode != NULL) ? webdavServerNode->webdavServer.loginName          : globalOptions.defaultWebdavServer->loginName         );
+  webdavServer->password           = !Password_isEmpty(jobOptions->webdavServer.password        ) ? jobOptions->webdavServer.password           : ((webdavServerNode != NULL) ? webdavServerNode->webdavServer.password           : globalOptions.defaultWebdavServer->password          );
+  webdavServer->publicKeyFileName  = !String_isEmpty(jobOptions->webdavServer.publicKeyFileName ) ? jobOptions->webdavServer.publicKeyFileName  : ((webdavServerNode != NULL) ? webdavServerNode->webdavServer.publicKeyFileName  : globalOptions.defaultWebdavServer->publicKeyFileName );
+  webdavServer->privateKeyFileName = !String_isEmpty(jobOptions->webdavServer.privateKeyFileName) ? jobOptions->webdavServer.privateKeyFileName : ((webdavServerNode != NULL) ? webdavServerNode->webdavServer.privateKeyFileName : globalOptions.defaultWebdavServer->privateKeyFileName);
+}
+
 void getCDSettings(const JobOptions *jobOptions,
                    OpticalDisk      *opticalDisk
                   )
@@ -3421,6 +3529,17 @@ return TRUE;
 }
 
 void freeSSHServerConnection(const String hostName)
+{
+#warning NYI
+}
+
+bool allocateWebdavServerConnection(const String hostName)
+{
+#warning NYI
+return TRUE;
+}
+
+void freeWebdavServerConnection(const String hostName)
 {
 #warning NYI
 }

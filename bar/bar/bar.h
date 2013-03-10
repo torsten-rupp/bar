@@ -201,7 +201,31 @@ typedef struct
   LIST_HEADER(SSHServerNode);
 } SSHServerList;
 
-// file/FTP/SCP/SFTP settings
+// Webdav server settings
+typedef struct
+{
+  String   loginName;                   // login name
+  Password *password;                   // login password
+  String   publicKeyFileName;           // public key file name
+  String   privateKeyFileName;          // private key file name
+  int      maxConnectionCount;          // max. number of concurrent connections or -1 for unlimited
+} WebdavServer;
+
+typedef struct WebdavServerNode
+{
+  LIST_NODE_HEADER(struct WebdavServerNode);
+
+  String       name;                    // Webdav server name
+  WebdavServer webdavServer;
+  uint         connectionCount;         // number of connections
+} WebdavServerNode;
+
+typedef struct
+{
+  LIST_HEADER(WebdavServerNode);
+} WebdavServerList;
+
+// file/FTP/SCP/SFTP/Webdav settings
 typedef struct
 {
   String writePreProcessCommand;        // command to execute before writing
@@ -288,12 +312,17 @@ typedef struct
   const SSHServerList    *sshServerList;                 // list with SSH servers
   SSHServer              *defaultSSHServer;              // default SSH server
 
+  WebdavServer           *webdavServer;                  // current selected Webdav server
+  const WebdavServerList *webdavServerList;              // list with Webdav servers
+  WebdavServer           *defaultWebdavServer;           // default Webdav server
+
   String                 remoteBARExecutable;
 
   File                   file;                           // file settings
   File                   ftp;                            // ftp settings
   File                   scp;                            // scp settings
   File                   sftp;                           // sftp settings
+  File                   webdav;                         // Webdav settings
   OpticalDisk            cd;                             // CD settings
   OpticalDisk            dvd;                            // DVD settings
   OpticalDisk            bd;                             // BD settings
@@ -388,6 +417,7 @@ struct JobOptions
 
   FTPServer                   ftpServer;                         // job specific FTP server settings
   SSHServer                   sshServer;                         // job specific SSH server settings
+  WebdavServer                webdavServer;                      // job specific Webdav server settings
 
   OpticalDisk                 opticalDisk;                       // job specific optical disk settings
 
