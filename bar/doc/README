@@ -23,6 +23,7 @@ automated backups in the background.
   TWOFISH, AES, a. o.),
 * asymmetric encryption with RSA
 * store archives directly on external server via ftp or scp,
+  sftp, webdav,
 * with external tools: store archives on CD/DVD/BD including
   error correction codes,
 * support storage on a generic device,

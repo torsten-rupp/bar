@@ -9,6 +9,7 @@ SYNOPSIS
                  ftp:// [<login name>[:<password>]@]<host name>[:<port>]/<file name>
                  scp:// [<login name>[:<password>]@]<host name>[:<port>]/<file name>
                  sftp:// [<login name>[:<password>]@]<host name>[:<port>]/<file name>
+                 webdav:// [<login name>[:<password>]@]<host name>/<file name>
                  cd:// [<device name>:]<file name>
                  dvd:// [<device name>:]<file name>
                  bd:// [<device name>:]<file name>
@@ -95,11 +96,15 @@ OPTIONS
          --crypt-private-key=<file name>                           private key for decryption
          --ftp-login-name=<name>                                   ftp login name
          --ftp-password=<password>                                 ftp password (use with care!)
+         --ftp-max-connections=<n>                                 max. number of concurrent ftp connections
          --ssh-port=<n>                                            ssh port (default: 22)
          --ssh-login-name=<name>                                   ssh login name
          --ssh-password=<password>                                 ssh password (use with care!)
          --ssh-public-key=<file name>                              ssh public key file name
          --ssh-private-key=<file name>                             ssh private key file name
+         --ssh-max-connections=<n>                                 max. number of concurrent ssh connections
+         --webdav-login-name=<name>                                Webdav login name
+         --webdav-password=<password>                              Webdav password (use with care!)
          --daemon                                                  run in daemon mode
          -D|--no-detach                                            do not detach in daemon mode
          --server-port=<n>                                         server port (default: 38523)
