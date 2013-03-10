@@ -99,7 +99,7 @@ while test $# != 0; do
           allFlag=0
           xdeltaFlag=1
           ;;
-        gcrypt)
+        gcrypt|libgcrypt)
           allFlag=0
           gcryptFlag=1
           ;;
@@ -173,7 +173,7 @@ while test $# != 0; do
       allFlag=0
       xdeltaFlag=1
       ;;
-    gcrypt)
+    gcrypt|libgcrypt)
       allFlag=0
       gcryptFlag=1
       ;;
@@ -332,7 +332,12 @@ if test $cleanFlag -eq 0; then
      fi
      if test $noDecompressFlag -eq 0; then
        $TAR xzf xdelta3.0.0.tar.gz
-       (cd xdelta3.0.0; $PATCH -p1 < ../../misc/xdelta3.0.patch)
+
+       # patch to fix warnings:
+       #   diff -u xdelta3.0.0.org/xdelta3.c        xdelta3.0.0/xdelta3.c        >  xdelta3.0.patch
+       #   diff -u xdelta3.0.0.org/xdelta3-decode.h xdelta3.0.0/xdelta3-decode.h >> xdelta3.0.patch
+       #   diff -u xdelta3.0.0.org/xdelta3-hash.h   xdelta3.0.0/xdelta3-hash.h   >> xdelta3.0.patch
+       (cd xdelta3.0.0; $PATCH --batch -N -p1 < ../../misc/xdelta3.0.patch) 1>/dev/null 2>/dev/null
      fi
     )
     if test $noDecompressFlag -eq 0; then
@@ -359,6 +364,10 @@ if test $cleanFlag -eq 0; then
      fi
      if test $noDecompressFlag -eq 0; then
        $TAR xjf libgcrypt-1.5.0.tar.bz2
+
+       # patch to disable wrong deprecated warnings:
+       #   diff -u libgcrypt-1.5.0.org/src/gcrypt.h libgcrypt-1.5.0/src/gcrypt.h > libgcrypt-warning.patch
+       (cd libgcrypt-1.5.0; $PATCH --batch -N -p1 < ../../misc/libgcrypt-warning.patch) 1>/dev/null 2>/dev/null
      fi
     )
     if test $noDecompressFlag -eq 0; then
@@ -383,7 +392,22 @@ if test $cleanFlag -eq 0; then
      fi
      if test $noDecompressFlag -eq 0; then
        $TAR xzf ftplib-3.1-src.tar.gz
-       (cd ftplib-3.1; $PATCH -p3 < ../ftplib-3.1-1.patch) 1>/dev/null 2>/dev/null
+
+       # FTPLib patch version 3.1 (from author)
+       (cd ftplib-3.1; $PATCH --batch -N -p3 < ../ftplib-3.1-1.patch) 1>/dev/null 2>/dev/null
+
+       # patch to disable output via perror():
+       #   diff -u ftplib-3.1.org/linux/Makefile ftplib-3.1/linux/Makefile > ftplib-3.1-without-perror.patch
+       (cd ftplib-3.1; $PATCH --batch -N -p1 < ../../misc/ftplib-3.1-without-perror.patch   ) 1>/dev/null 2>/dev/null
+       # patch to fix bug in FTPAccess:
+       #   diff -u ftplib-3.1.org/inux/ftplib.c ftplib-3.1/inux/ftplib.c > ftplib-3.1-ftpaccess.patch
+       (cd ftplib-3.1; $PATCH --batch -N -p1 < ../../misc/ftplib-3.1-ftpaccess.patch        ) 1>/dev/null 2>/dev/null
+       # patch to support timeout in receive:
+       #   diff -u ftplib-3.1.org/linux/ftplib.c ftplib-3.1/linux/ftplib.c > ftplib-3.1-receive-timeout.patch
+       (cd ftplib-3.1; $PATCH --batch -N -p1 < ../../misc/ftplib-3.1-receive-timeout.patch  ) 1>/dev/null 2>/dev/null
+       # patch to fix not closed file in FtpXfer:
+       #   diff -u ftplib-3.1.org/linux/ftplib.c ftplib-3.1/linux/ftplib.c > ftplib-3.1-ftpdir-file-close.patch
+       (cd ftplib-3.1; $PATCH --batch -N -p1 < ../../misc/ftplib-3.1-ftpdir-file-close.patch) 1>/dev/null 2>/dev/null
      fi
     )
     if test $noDecompressFlag -eq 0; then
@@ -444,6 +468,11 @@ if test $cleanFlag -eq 0; then
      fi
      if test $noDecompressFlag -eq 0; then
        $TAR xzf libssh2-1.4.2.tar.gz
+
+       # patch to support keep alive for libssh 2.1.1 (ignore errors):
+       #   diff -u libssh2-1.1.org/include/libssh2.h libssh2-1.1/include/libssh2.h >  libssh2-1.1-keepalive.patch
+       #   diff -u libssh2-1.1.org/src/channel.c     libssh2-1.1/src/channel.c     >> libssh2-1.1-keepalive.patch
+       (cd packages; patch --batch -N -p0 < ../misc/libssh2-1.1-keepalive.patch) 1>/dev/null 2>/dev/null
      fi
     )
     if test $noDecompressFlag -eq 0; then
@@ -561,7 +590,10 @@ if test $cleanFlag -eq 0; then
      fi
      if test $noDecompressFlag -eq 0; then
        $TAR xjf epm-4.1-source.tar.bz2
-       (cd epm-4.1; $PATCH -p1 < ../../misc/epm-4.1-rpm.patch)
+
+       # patch to support creating RPM packages on different machines:
+       #   diff -u epm-4.1.org/rpm.c epm-4.1/rpm.c > epm-4.1-rpm.patch
+       (cd epm-4.1; $PATCH --batch -N -p1 < ../../misc/epm-4.1-rpm.patch) 1>/dev/null 2>/dev/null
      fi
     )
     if test $noDecompressFlag -eq 0; then
