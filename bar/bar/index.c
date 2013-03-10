@@ -9,7 +9,7 @@
 \***********************************************************************/
 
 /****************************** Includes *******************************/
-#include <config.h>  // use <...> to support separated build directory 
+#include <config.h>  // use <...> to support separated build directory
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -418,6 +418,12 @@ bool Index_findByName(DatabaseHandle *databaseHandle,
           break;
         case STORAGE_TYPE_SFTP:
           foundFlag =    ((storageType == STORAGE_TYPE_UNKNOWN) || (storageType == STORAGE_TYPE_SFTP))
+                      && ((hostName  == NULL) || String_equals(hostName, storageSpecifier.hostName ))
+                      && ((loginName == NULL) || String_equals(loginName,storageSpecifier.loginName))
+                      && ((fileName  == NULL) || String_equals(fileName, storageFileName           ));
+          break;
+        case STORAGE_TYPE_WEBDAV:
+          foundFlag =    ((storageType == STORAGE_TYPE_UNKNOWN) || (storageType == STORAGE_TYPE_WEBDAV))
                       && ((hostName  == NULL) || String_equals(hostName, storageSpecifier.hostName ))
                       && ((loginName == NULL) || String_equals(loginName,storageSpecifier.loginName))
                       && ((fileName  == NULL) || String_equals(fileName, storageFileName           ));
