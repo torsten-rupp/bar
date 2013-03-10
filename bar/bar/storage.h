@@ -220,7 +220,7 @@ typedef struct
         ulong                   length;                    // length of data to write/read
         ulong                   transferedBytes;           // number of data bytes read/written
       } ftp;
-      // Webdav storage
+      // WebDAV storage
       struct
       {
         CURLM                   *curlMultiHandle;
@@ -604,21 +604,21 @@ bool Storage_parseSSHSpecifier(const String sshSpecifier,
                               );
 
 /***********************************************************************\
-* Name   : Storage_parseWebdavSpecifier
-* Purpose: parse Webdav specifier:
+* Name   : Storage_parseWebDAVSpecifier
+* Purpose: parse WebDAV specifier:
 *            [<login name>@]<host name>
-* Input  : webdavSpecifier - Webdav specifier string
+* Input  : webdavSpecifier - WebDAV specifier string
 *          hostName        - host name variable (can be NULL)
 *          loginName       - login name variable (can be NULL)
 *          loginPassword   - login password variable (can be NULL)
 * Output : hostName      - host name (can be NULL)
 *          loginName     - login name (can be NULL)
 *          loginPassword - login password
-* Return : TRUE if Webdav specifier parsed, FALSE if specifier invalid
+* Return : TRUE if WebDAV specifier parsed, FALSE if specifier invalid
 * Notes  : -
 \***********************************************************************/
 
-bool Storage_parseWebdavSpecifier(const String webdavSpecifier,
+bool Storage_parseWebDAVSpecifier(const String webdavSpecifier,
                                   String       hostName,
                                   String       loginName,
                                   Password     *loginPassword
