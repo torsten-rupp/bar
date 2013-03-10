@@ -1,4 +1,4 @@
-2012-??-?? 0.18
+2013-??-?? 0.18
   * added automatic delete of duplicate index entries when
     server is started
   * fixed create index: do not delete index which is currently
@@ -6,7 +6,11 @@
   * added support for crash dump tool Breakpad
   * upgrade gpg-error 1.10, gcrypt 1.5.0
   * support cross-compilation Linux -> Windows
-  * replaced FTPLib by curl
+  * replaced FTPLib by curl (FTPLib is optional when curl is
+    not available)
+  * added support for WebDAV protocol
+  * integrated a scan-node which will scan partiallly broken
+    archives for still readable parts
 
 2013-01-26 0.17a
   * fixed writing CD/DVD/BD: do not write an empty last medium
