@@ -2500,6 +2500,8 @@ String Storage_getName(String                 storageName,
                        const String           fileName
                       )
 {
+  const char *plainLoginPassword;
+
   assert(storageName != NULL);
   assert(storageSpecifier != NULL);
 
@@ -2519,6 +2521,13 @@ String Storage_getName(String                 storageName,
       if (!String_isEmpty(storageSpecifier->loginName))
       {
         String_append(storageName,storageSpecifier->loginName);
+        if (!Password_isEmpty(storageSpecifier->loginPassword))
+        {
+          String_appendChar(storageName,':');
+          plainLoginPassword = Password_deploy(storageSpecifier->loginPassword);
+          String_appendCString(storageName,plainLoginPassword);
+          Password_undeploy(storageSpecifier->loginPassword);
+        }
         String_appendChar(storageName,'@');
       }
       String_append(storageName,storageSpecifier->hostName);
@@ -2540,8 +2549,19 @@ String Storage_getName(String                 storageName,
       break;
     case STORAGE_TYPE_SCP:
       String_appendCString(storageName,"scp://");
-#warning loginname/password/port instead of stirng?
-      String_append(storageName,storageSpecifier->string);
+      if (!String_isEmpty(storageSpecifier->loginName))
+      {
+        String_append(storageName,storageSpecifier->loginName);
+        if (!Password_isEmpty(storageSpecifier->loginPassword))
+        {
+          String_appendChar(storageName,':');
+          plainLoginPassword = Password_deploy(storageSpecifier->loginPassword);
+          String_appendCString(storageName,plainLoginPassword);
+          Password_undeploy(storageSpecifier->loginPassword);
+        }
+        String_appendChar(storageName,'@');
+      }
+      String_append(storageName,storageSpecifier->hostName);
       if (!String_isEmpty(fileName))
       {
         String_appendChar(storageName,'/');
@@ -2550,8 +2570,19 @@ String Storage_getName(String                 storageName,
       break;
     case STORAGE_TYPE_SFTP:
       String_appendCString(storageName,"sftp://");
-#warning loginname/password/port instead of stirng?
-      String_append(storageName,storageSpecifier->string);
+      if (!String_isEmpty(storageSpecifier->loginName))
+      {
+        String_append(storageName,storageSpecifier->loginName);
+        if (!Password_isEmpty(storageSpecifier->loginPassword))
+        {
+          String_appendChar(storageName,':');
+          plainLoginPassword = Password_deploy(storageSpecifier->loginPassword);
+          String_appendCString(storageName,plainLoginPassword);
+          Password_undeploy(storageSpecifier->loginPassword);
+        }
+        String_appendChar(storageName,'@');
+      }
+      String_append(storageName,storageSpecifier->hostName);
       if (!String_isEmpty(fileName))
       {
         String_appendChar(storageName,'/');
@@ -2563,6 +2594,13 @@ String Storage_getName(String                 storageName,
       if (!String_isEmpty(storageSpecifier->loginName))
       {
         String_append(storageName,storageSpecifier->loginName);
+        if (!Password_isEmpty(storageSpecifier->loginPassword))
+        {
+          String_appendChar(storageName,':');
+          plainLoginPassword = Password_deploy(storageSpecifier->loginPassword);
+          String_appendCString(storageName,plainLoginPassword);
+          Password_undeploy(storageSpecifier->loginPassword);
+        }
         String_appendChar(storageName,'@');
       }
       String_append(storageName,storageSpecifier->hostName);
@@ -3310,6 +3348,8 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
           }
           if (error != ERROR_NONE)
           {
+#warning webdav
+            freeFTPServerConnection(storageFileHandle->storageSpecifier.hostName);
             Storage_doneSpecifier(&storageFileHandle->storageSpecifier);
             return error;
           }
@@ -5567,7 +5607,7 @@ fprintf(stderr,"%s, %d: httpCode=%ld\n",__FILE__,__LINE__,httpCode);
           // get file size
           curlCode = curl_easy_getinfo(storageFileHandle->ftp.curlHandle,CURLINFO_CONTENT_LENGTH_DOWNLOAD,&fileSize);
           if (   (curlCode != CURLE_OK)
-              || (fileSize == -1.0)
+              || (fileSize < 0.0)
              )
           {
             String_delete(url);
@@ -6062,7 +6102,7 @@ fprintf(stderr,"%s, %d: httpCode=%ld\n",__FILE__,__LINE__,httpCode);
           // get file size
           curlCode = curl_easy_getinfo(storageFileHandle->webdav.curlHandle,CURLINFO_CONTENT_LENGTH_DOWNLOAD,&fileSize);
           if (   (curlCode != CURLE_OK)
-              || (fileSize == -1.0)
+              || (fileSize < 0.0)
              )
           {
             String_delete(baseName);
@@ -7000,7 +7040,6 @@ Errors Storage_read(StorageFileHandle *storageFileHandle,
                   {
                     case -1:
                       // error
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                       error = ERROR_NETWORK_RECEIVE;
                       break;
                     case 0:
@@ -7081,7 +7120,6 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                   {
                     case -1:
                       // error
-  //fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                       error = ERROR_NETWORK_RECEIVE;
                       break;
                     case 0:
@@ -7866,7 +7904,6 @@ Errors Storage_write(StorageFileHandle *storageFileHandle,
                 {
                   case -1:
                     // error
-//fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                     error = ERROR_NETWORK_SEND;
                     break;
                   case 0:
@@ -9584,10 +9621,10 @@ error = ERROR_FUNCTION_NOT_SUPPORTED;
           String          name;
 
           // init variables
-          storageDirectoryListHandle->type         = STORAGE_TYPE_WEBDAV;
-          storageDirectoryListHandle->webdav.line  = String_new();
+          storageDirectoryListHandle->type            = STORAGE_TYPE_WEBDAV;
+          storageDirectoryListHandle->webdav.line     = String_new();
           StringList_init(&storageDirectoryListHandle->webdav.lineList);
-          storageDirectoryListHandle->ftp.fileName = String_new();
+          storageDirectoryListHandle->webdav.fileName = String_new();
 
           // get WebDAV server settings
           getWebDAVServerSettings(storageSpecifier.hostName,jobOptions,&webdavServer);
@@ -9604,7 +9641,7 @@ error = ERROR_FUNCTION_NOT_SUPPORTED;
 
           // allocate WebDAV server connection
 #warning webdav
-          if (!allocateFTPServerConnection(storageSpecifier.hostName))
+          if (!allocateWebDAVServerConnection(storageSpecifier.hostName))
           {
             error = ERROR_TOO_MANY_CONNECTIONS;
             String_delete(storageDirectoryListHandle->webdav.fileName);
@@ -9685,9 +9722,10 @@ error = ERROR_FUNCTION_NOT_SUPPORTED;
             error = ERROR_WEBDAV_SESSION_FAIL;
             break;
           }
-          (void)curl_easy_setopt(curlHandle,CURLOPT_FTP_RESPONSE_TIMEOUT,FTP_TIMEOUT/1000);
+          (void)curl_easy_setopt(curlHandle,CURLOPT_CONNECTTIMEOUT_MS,WEBDAV_TIMEOUT);
           if (globalOptions.verboseLevel >= 6)
           {
+            // enable debug mode
             (void)curl_easy_setopt(curlHandle,CURLOPT_VERBOSE,1L);
           }
 

@@ -146,6 +146,7 @@ typedef enum
 // storage specifier
 typedef struct
 {
+#warning string required?
   String       string;
   StorageTypes type;
   String       hostName;
