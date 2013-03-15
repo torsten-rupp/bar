@@ -1312,7 +1312,7 @@ LOCAL void limitBandWidth(StorageBandWidthLimiter *storageBandWidthLimiter,
 
 xbytes += transmittedBytes;
 xtime  += transmissionTime;
-fprintf(stderr,"%s, %d: %llu bytes/s\n",__FILE__,__LINE__,(xbytes*1000000LL)/xtime);
+//fprintf(stderr,"%s, %d: %llu bytes/s\n",__FILE__,__LINE__,(xbytes*1000000LL)/xtime);
 
 
   if (storageBandWidthLimiter->maxBandWidthList != NULL)
@@ -3645,7 +3645,6 @@ Errors Storage_done(StorageFileHandle *storageFileHandle)
 #warning todo webdav
       freeFTPServerConnection(storageFileHandle->storageSpecifier.hostName);
       #if   defined(HAVE_CURL)
-        free(storageFileHandle->webdav.receiveBuffer.data);
       #else /* not HAVE_CURL || HAVE_FTP */
       #endif /* HAVE_CURL || HAVE_FTP */
       break;
@@ -5465,6 +5464,7 @@ Errors Storage_open(StorageFileHandle *storageFileHandle,
           CURLMcode       curlMCode;
           StringTokenizer nameTokenizer;
           String          name;
+          long            httpCode;
           uint64          fileSize;
           int             runningHandles;
 
@@ -5548,6 +5548,10 @@ Errors Storage_open(StorageFileHandle *storageFileHandle,
           {
             curlCode = curl_easy_perform(storageFileHandle->ftp.curlHandle);
           }
+          if (curlCode == CURLE_OK)
+          {
+            curlCode = curl_easy_getinfo(storageFileHandle->ftp.curlHandle,CURLINFO_RESPONSE_CODE,&httpCode);
+          }
           if (curlCode != CURLE_OK)
           {
             String_delete(url);
@@ -5557,10 +5561,14 @@ Errors Storage_open(StorageFileHandle *storageFileHandle,
             (void)curl_multi_cleanup(storageFileHandle->ftp.curlMultiHandle);
             return ERRORX_(FILE_NOT_FOUND_,0,String_cString(fileName));
           }
+#warning todo
+fprintf(stderr,"%s, %d: httpCode=%ld\n",__FILE__,__LINE__,httpCode);
 
           // get file size
           curlCode = curl_easy_getinfo(storageFileHandle->ftp.curlHandle,CURLINFO_CONTENT_LENGTH_DOWNLOAD,&fileSize);
-          if (curlCode != CURLE_OK)
+          if (   (curlCode != CURLE_OK)
+              || (fileSize == -1.0)
+             )
           {
             String_delete(url);
             String_delete(baseName);
@@ -5933,6 +5941,7 @@ Errors Storage_open(StorageFileHandle *storageFileHandle,
           String          pathName,baseName;
           StringTokenizer nameTokenizer;
           String          name;
+          long            httpCode;
           double          fileSize;
           int             runningHandles;
 
@@ -6031,7 +6040,13 @@ Errors Storage_open(StorageFileHandle *storageFileHandle,
           {
             curlCode = curl_easy_perform(storageFileHandle->webdav.curlHandle);
           }
-          if (curlCode != CURLE_OK)
+          if (curlCode == CURLE_OK)
+          {
+            curlCode = curl_easy_getinfo(storageFileHandle->ftp.curlHandle,CURLINFO_RESPONSE_CODE,&httpCode);
+          }
+          if (   (curlCode != CURLE_OK)
+              || (httpCode != 200)  // HTTP OK
+             )
           {
             String_delete(url);
             String_delete(baseName);
@@ -6040,14 +6055,18 @@ Errors Storage_open(StorageFileHandle *storageFileHandle,
             (void)curl_easy_cleanup(storageFileHandle->webdav.curlHandle);
             (void)curl_multi_cleanup(storageFileHandle->webdav.curlMultiHandle);
             free(storageFileHandle->webdav.receiveBuffer.data);
-            return ERRORX_(FILE_NOT_FOUND_,0,String_cString(fileName));
+            return ERROR_FILE_NOT_FOUND_;
           }
           String_delete(url);
 
           // get file size
           curlCode = curl_easy_getinfo(storageFileHandle->webdav.curlHandle,CURLINFO_CONTENT_LENGTH_DOWNLOAD,&fileSize);
-          if (curlCode != CURLE_OK)
+          if (   (curlCode != CURLE_OK)
+              || (fileSize == -1.0)
+             )
           {
+            String_delete(baseName);
+            String_delete(pathName);
             String_delete(baseURL);
             (void)curl_easy_cleanup(storageFileHandle->webdav.curlHandle);
             (void)curl_multi_cleanup(storageFileHandle->webdav.curlMultiHandle);
@@ -6090,7 +6109,6 @@ Errors Storage_open(StorageFileHandle *storageFileHandle,
           }
           if (curlMCode != CURLM_OK)
           {
-            String_delete(url);
             String_delete(baseName);
             String_delete(pathName);
             String_delete(baseURL);
@@ -7615,7 +7633,6 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                 {
                   case -1:
                     // error
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                     error = ERROR_NETWORK_RECEIVE;
                     break;
                   case 0:
@@ -7626,7 +7643,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                     do
                     {
                       curlmCode = curl_multi_perform(storageFileHandle->webdav.curlMultiHandle,&runningHandles);
-fprintf(stderr,"%s, %d: curlmCode=%d %ld %ld runningHandles=%d\n",__FILE__,__LINE__,curlmCode,storageFileHandle->webdav.sendBuffer.index,storageFileHandle->webdav.sendBuffer.length,runningHandles);
+//fprintf(stderr,"%s, %d: curlmCode=%d %ld %ld runningHandles=%d\n",__FILE__,__LINE__,curlmCode,storageFileHandle->webdav.sendBuffer.index,storageFileHandle->webdav.sendBuffer.length,runningHandles);
                     }
                     while (   (curlmCode == CURLM_CALL_MULTI_PERFORM)
                            && (runningHandles > 0)
@@ -8967,7 +8984,13 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
                 }
               }
             }
-            else if (offset < storageFileHandle->webdav.index)
+            else if (   (offset >= storageFileHandle->webdav.receiveBuffer.offset)
+                     && (offset < storageFileHandle->webdav.receiveBuffer.offset+(uint64)storageFileHandle->webdav.receiveBuffer.length)
+                    )
+            {
+              storageFileHandle->webdav.index = offset;
+            }
+            else
             {
               error = ERROR_FUNCTION_NOT_SUPPORTED;
             }
