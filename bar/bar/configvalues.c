@@ -1081,8 +1081,8 @@ void ConfigValue_formatDone(ConfigValueFormat *configValueFormat)
 }
 
 #ifdef __GNUC__
-#pragma GCC push_options
-#pragma GCC diagnostic ignored "-Wfloat-equal"
+  #pragma GCC push_options
+  #pragma GCC diagnostic ignored "-Wfloat-equal"
 #endif /* __GNUC__ */
 
 bool ConfigValue_format(ConfigValueFormat *configValueFormat,
@@ -1548,7 +1548,7 @@ bool ConfigValue_format(ConfigValueFormat *configValueFormat,
 }
 
 #ifdef __GNUC__
-#pragma GCC pop_options
+  #pragma GCC pop_options
 #endif /* __GNUC__ */
 
 #ifdef __GNUG__
