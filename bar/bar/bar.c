@@ -3455,14 +3455,14 @@ void allocateServer(ServerAllocation *serverAllocation, ServerAllocationPrioriti
     {
       case SERVER_ALLOCATION_PRIORITY_LOW:
         if (   (maxConnectionCount != MAX_CONNECTION_COUNT_UNLIMITED)
-            && (serverAllocation->connectionCount >= maxConnectionCount)
+            && (serverAllocation->connectionCount >= (uint)maxConnectionCount)
            )
         {
           // request low priority connection
           serverAllocation->lowPriorityRequestCount++;
 
           // wait for free connection
-          while (serverAllocation->connectionCount >= maxConnectionCount)
+          while (serverAllocation->connectionCount >= (uint)maxConnectionCount)
           {
             Semaphore_waitModified(&serverAllocation->lock,SEMAPHORE_WAIT_FOREVER);
           }
@@ -3474,14 +3474,14 @@ void allocateServer(ServerAllocation *serverAllocation, ServerAllocationPrioriti
         break;
       case SERVER_ALLOCATION_PRIORITY_HIGH:
         if (   (maxConnectionCount != MAX_CONNECTION_COUNT_UNLIMITED)
-            && (serverAllocation->connectionCount >= maxConnectionCount)
+            && (serverAllocation->connectionCount >= (uint)maxConnectionCount)
            )
         {
           // request high priority connection
           serverAllocation->highPriorityRequestCount++;
 
           // wait for free connection
-          while (serverAllocation->connectionCount >= maxConnectionCount)
+          while (serverAllocation->connectionCount >= (uint)maxConnectionCount)
           {
             Semaphore_waitModified(&serverAllocation->lock,SEMAPHORE_WAIT_FOREVER);
           }
