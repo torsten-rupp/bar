@@ -47,16 +47,22 @@
 
 LOCAL const struct { const char *name; CryptAlgorithms cryptAlgorithm; } CRYPT_ALGORITHMS[] =
 {
-  { "none",      CRYPT_ALGORITHM_NONE       },
+  { "none",       CRYPT_ALGORITHM_NONE        },
 
-  { "3DES",      CRYPT_ALGORITHM_3DES       },
-  { "CAST5",     CRYPT_ALGORITHM_CAST5      },
-  { "BLOWFISH",  CRYPT_ALGORITHM_BLOWFISH   },
-  { "AES128",    CRYPT_ALGORITHM_AES128     },
-  { "AES192",    CRYPT_ALGORITHM_AES192     },
-  { "AES256",    CRYPT_ALGORITHM_AES256     },
-  { "TWOFISH128",CRYPT_ALGORITHM_TWOFISH128 },
-  { "TWOFISH256",CRYPT_ALGORITHM_TWOFISH256 },
+  { "3DES",       CRYPT_ALGORITHM_3DES        },
+  { "CAST5",      CRYPT_ALGORITHM_CAST5       },
+  { "BLOWFISH",   CRYPT_ALGORITHM_BLOWFISH    },
+  { "AES128",     CRYPT_ALGORITHM_AES128      },
+  { "AES192",     CRYPT_ALGORITHM_AES192      },
+  { "AES256",     CRYPT_ALGORITHM_AES256      },
+  { "TWOFISH128", CRYPT_ALGORITHM_TWOFISH128  },
+  { "TWOFISH256", CRYPT_ALGORITHM_TWOFISH256  },
+  { "SERPENT128", CRYPT_ALGORITHM_SERPENT128  },
+  { "SERPENT192", CRYPT_ALGORITHM_SERPENT192  },
+  { "SERPENT256", CRYPT_ALGORITHM_SERPENT256  },
+  { "CAMELLIA128",CRYPT_ALGORITHM_CAMELLIA128 },
+  { "CAMELLIA192",CRYPT_ALGORITHM_CAMELLIA192 },
+  { "CAMELLIA256",CRYPT_ALGORITHM_CAMELLIA256 },
 };
 
 // PKCS1 encoded message buffer for RSA encryption/decryption
@@ -377,6 +383,12 @@ Errors Crypt_getKeyLength(CryptAlgorithms cryptAlgorithm,
     case CRYPT_ALGORITHM_AES256:
     case CRYPT_ALGORITHM_TWOFISH128:
     case CRYPT_ALGORITHM_TWOFISH256:
+    case CRYPT_ALGORITHM_SERPENT128:
+    case CRYPT_ALGORITHM_SERPENT192:
+    case CRYPT_ALGORITHM_SERPENT256:
+    case CRYPT_ALGORITHM_CAMELLIA128:
+    case CRYPT_ALGORITHM_CAMELLIA192:
+    case CRYPT_ALGORITHM_CAMELLIA256:
       #ifdef HAVE_GCRYPT
         {
           int          gcryptAlgorithm;
@@ -386,14 +398,20 @@ Errors Crypt_getKeyLength(CryptAlgorithms cryptAlgorithm,
           gcryptAlgorithm = 0;
           switch (cryptAlgorithm)
           {
-            case CRYPT_ALGORITHM_3DES:       gcryptAlgorithm = GCRY_CIPHER_3DES;       break;
-            case CRYPT_ALGORITHM_CAST5:      gcryptAlgorithm = GCRY_CIPHER_CAST5;      break;
-            case CRYPT_ALGORITHM_BLOWFISH:   gcryptAlgorithm = GCRY_CIPHER_BLOWFISH;   break;
-            case CRYPT_ALGORITHM_AES128:     gcryptAlgorithm = GCRY_CIPHER_AES;        break;
-            case CRYPT_ALGORITHM_AES192:     gcryptAlgorithm = GCRY_CIPHER_AES192;     break;
-            case CRYPT_ALGORITHM_AES256:     gcryptAlgorithm = GCRY_CIPHER_AES256;     break;
-            case CRYPT_ALGORITHM_TWOFISH128: gcryptAlgorithm = GCRY_CIPHER_TWOFISH128; break;
-            case CRYPT_ALGORITHM_TWOFISH256: gcryptAlgorithm = GCRY_CIPHER_TWOFISH;    break;
+            case CRYPT_ALGORITHM_3DES:        gcryptAlgorithm = GCRY_CIPHER_3DES;        break;
+            case CRYPT_ALGORITHM_CAST5:       gcryptAlgorithm = GCRY_CIPHER_CAST5;       break;
+            case CRYPT_ALGORITHM_BLOWFISH:    gcryptAlgorithm = GCRY_CIPHER_BLOWFISH;    break;
+            case CRYPT_ALGORITHM_AES128:      gcryptAlgorithm = GCRY_CIPHER_AES;         break;
+            case CRYPT_ALGORITHM_AES192:      gcryptAlgorithm = GCRY_CIPHER_AES192;      break;
+            case CRYPT_ALGORITHM_AES256:      gcryptAlgorithm = GCRY_CIPHER_AES256;      break;
+            case CRYPT_ALGORITHM_TWOFISH128:  gcryptAlgorithm = GCRY_CIPHER_TWOFISH128;  break;
+            case CRYPT_ALGORITHM_TWOFISH256:  gcryptAlgorithm = GCRY_CIPHER_TWOFISH;     break;
+            case CRYPT_ALGORITHM_SERPENT128:  gcryptAlgorithm = GCRY_CIPHER_SERPENT128;  break;
+            case CRYPT_ALGORITHM_SERPENT192:  gcryptAlgorithm = GCRY_CIPHER_SERPENT192;  break;
+            case CRYPT_ALGORITHM_SERPENT256:  gcryptAlgorithm = GCRY_CIPHER_SERPENT256;  break;
+            case CRYPT_ALGORITHM_CAMELLIA128: gcryptAlgorithm = GCRY_CIPHER_CAMELLIA128; break;
+            case CRYPT_ALGORITHM_CAMELLIA192: gcryptAlgorithm = GCRY_CIPHER_CAMELLIA192; break;
+            case CRYPT_ALGORITHM_CAMELLIA256: gcryptAlgorithm = GCRY_CIPHER_CAMELLIA256; break;
             default:
               #ifndef NDEBUG
                 HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
@@ -448,6 +466,12 @@ Errors Crypt_getBlockLength(CryptAlgorithms cryptAlgorithm,
     case CRYPT_ALGORITHM_AES256:
     case CRYPT_ALGORITHM_TWOFISH128:
     case CRYPT_ALGORITHM_TWOFISH256:
+    case CRYPT_ALGORITHM_SERPENT128:
+    case CRYPT_ALGORITHM_SERPENT192:
+    case CRYPT_ALGORITHM_SERPENT256:
+    case CRYPT_ALGORITHM_CAMELLIA128:
+    case CRYPT_ALGORITHM_CAMELLIA192:
+    case CRYPT_ALGORITHM_CAMELLIA256:
       #ifdef HAVE_GCRYPT
         {
           int          gcryptAlgorithm;
@@ -457,14 +481,20 @@ Errors Crypt_getBlockLength(CryptAlgorithms cryptAlgorithm,
           gcryptAlgorithm = 0;
           switch (cryptAlgorithm)
           {
-            case CRYPT_ALGORITHM_3DES:       gcryptAlgorithm = GCRY_CIPHER_3DES;       break;
-            case CRYPT_ALGORITHM_CAST5:      gcryptAlgorithm = GCRY_CIPHER_CAST5;      break;
-            case CRYPT_ALGORITHM_BLOWFISH:   gcryptAlgorithm = GCRY_CIPHER_BLOWFISH;   break;
-            case CRYPT_ALGORITHM_AES128:     gcryptAlgorithm = GCRY_CIPHER_AES;        break;
-            case CRYPT_ALGORITHM_AES192:     gcryptAlgorithm = GCRY_CIPHER_AES192;     break;
-            case CRYPT_ALGORITHM_AES256:     gcryptAlgorithm = GCRY_CIPHER_AES256;     break;
-            case CRYPT_ALGORITHM_TWOFISH128: gcryptAlgorithm = GCRY_CIPHER_TWOFISH128; break;
-            case CRYPT_ALGORITHM_TWOFISH256: gcryptAlgorithm = GCRY_CIPHER_TWOFISH;    break;
+            case CRYPT_ALGORITHM_3DES:        gcryptAlgorithm = GCRY_CIPHER_3DES;        break;
+            case CRYPT_ALGORITHM_CAST5:       gcryptAlgorithm = GCRY_CIPHER_CAST5;       break;
+            case CRYPT_ALGORITHM_BLOWFISH:    gcryptAlgorithm = GCRY_CIPHER_BLOWFISH;    break;
+            case CRYPT_ALGORITHM_AES128:      gcryptAlgorithm = GCRY_CIPHER_AES;         break;
+            case CRYPT_ALGORITHM_AES192:      gcryptAlgorithm = GCRY_CIPHER_AES192;      break;
+            case CRYPT_ALGORITHM_AES256:      gcryptAlgorithm = GCRY_CIPHER_AES256;      break;
+            case CRYPT_ALGORITHM_TWOFISH128:  gcryptAlgorithm = GCRY_CIPHER_TWOFISH128;  break;
+            case CRYPT_ALGORITHM_TWOFISH256:  gcryptAlgorithm = GCRY_CIPHER_TWOFISH;     break;
+            case CRYPT_ALGORITHM_SERPENT128:  gcryptAlgorithm = GCRY_CIPHER_SERPENT128;  break;
+            case CRYPT_ALGORITHM_SERPENT192:  gcryptAlgorithm = GCRY_CIPHER_SERPENT192;  break;
+            case CRYPT_ALGORITHM_SERPENT256:  gcryptAlgorithm = GCRY_CIPHER_SERPENT256;  break;
+            case CRYPT_ALGORITHM_CAMELLIA128: gcryptAlgorithm = GCRY_CIPHER_CAMELLIA128; break;
+            case CRYPT_ALGORITHM_CAMELLIA192: gcryptAlgorithm = GCRY_CIPHER_CAMELLIA192; break;
+            case CRYPT_ALGORITHM_CAMELLIA256: gcryptAlgorithm = GCRY_CIPHER_CAMELLIA256; break;
             default:
               #ifndef NDEBUG
                 HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
@@ -523,6 +553,12 @@ Errors Crypt_init(CryptInfo       *cryptInfo,
     case CRYPT_ALGORITHM_AES256:
     case CRYPT_ALGORITHM_TWOFISH128:
     case CRYPT_ALGORITHM_TWOFISH256:
+    case CRYPT_ALGORITHM_SERPENT128:
+    case CRYPT_ALGORITHM_SERPENT192:
+    case CRYPT_ALGORITHM_SERPENT256:
+    case CRYPT_ALGORITHM_CAMELLIA128:
+    case CRYPT_ALGORITHM_CAMELLIA192:
+    case CRYPT_ALGORITHM_CAMELLIA256:
       #ifdef HAVE_GCRYPT
         {
           uint         passwordLength;
@@ -547,14 +583,20 @@ Errors Crypt_init(CryptInfo       *cryptInfo,
           gcryptAlgorithm = 0;
           switch (cryptAlgorithm)
           {
-            case CRYPT_ALGORITHM_3DES:       gcryptAlgorithm = GCRY_CIPHER_3DES;       break;
-            case CRYPT_ALGORITHM_CAST5:      gcryptAlgorithm = GCRY_CIPHER_CAST5;      break;
-            case CRYPT_ALGORITHM_BLOWFISH:   gcryptAlgorithm = GCRY_CIPHER_BLOWFISH;   break;
-            case CRYPT_ALGORITHM_AES128:     gcryptAlgorithm = GCRY_CIPHER_AES;        break;
-            case CRYPT_ALGORITHM_AES192:     gcryptAlgorithm = GCRY_CIPHER_AES192;     break;
-            case CRYPT_ALGORITHM_AES256:     gcryptAlgorithm = GCRY_CIPHER_AES256;     break;
-            case CRYPT_ALGORITHM_TWOFISH128: gcryptAlgorithm = GCRY_CIPHER_TWOFISH128; break;
-            case CRYPT_ALGORITHM_TWOFISH256: gcryptAlgorithm = GCRY_CIPHER_TWOFISH;    break;
+            case CRYPT_ALGORITHM_3DES:        gcryptAlgorithm = GCRY_CIPHER_3DES;        break;
+            case CRYPT_ALGORITHM_CAST5:       gcryptAlgorithm = GCRY_CIPHER_CAST5;       break;
+            case CRYPT_ALGORITHM_BLOWFISH:    gcryptAlgorithm = GCRY_CIPHER_BLOWFISH;    break;
+            case CRYPT_ALGORITHM_AES128:      gcryptAlgorithm = GCRY_CIPHER_AES;         break;
+            case CRYPT_ALGORITHM_AES192:      gcryptAlgorithm = GCRY_CIPHER_AES192;      break;
+            case CRYPT_ALGORITHM_AES256:      gcryptAlgorithm = GCRY_CIPHER_AES256;      break;
+            case CRYPT_ALGORITHM_TWOFISH128:  gcryptAlgorithm = GCRY_CIPHER_TWOFISH128;  break;
+            case CRYPT_ALGORITHM_TWOFISH256:  gcryptAlgorithm = GCRY_CIPHER_TWOFISH;     break;
+            case CRYPT_ALGORITHM_SERPENT128:  gcryptAlgorithm = GCRY_CIPHER_SERPENT128;  break;
+            case CRYPT_ALGORITHM_SERPENT192:  gcryptAlgorithm = GCRY_CIPHER_SERPENT192;  break;
+            case CRYPT_ALGORITHM_SERPENT256:  gcryptAlgorithm = GCRY_CIPHER_SERPENT256;  break;
+            case CRYPT_ALGORITHM_CAMELLIA128: gcryptAlgorithm = GCRY_CIPHER_CAMELLIA128; break;
+            case CRYPT_ALGORITHM_CAMELLIA192: gcryptAlgorithm = GCRY_CIPHER_CAMELLIA192; break;
+            case CRYPT_ALGORITHM_CAMELLIA256: gcryptAlgorithm = GCRY_CIPHER_CAMELLIA256; break;
             default:
               #ifndef NDEBUG
                 HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
@@ -596,14 +638,20 @@ Errors Crypt_init(CryptInfo       *cryptInfo,
           keyLength = 0;
           switch (cryptAlgorithm)
           {
-            case CRYPT_ALGORITHM_3DES:       keyLength = 192; break;
-            case CRYPT_ALGORITHM_CAST5:      keyLength = 128; break;
-            case CRYPT_ALGORITHM_BLOWFISH:   keyLength = 128; break;
-            case CRYPT_ALGORITHM_AES128:     keyLength = 128; break;
-            case CRYPT_ALGORITHM_AES192:     keyLength = 192; break;
-            case CRYPT_ALGORITHM_AES256:     keyLength = 256; break;
-            case CRYPT_ALGORITHM_TWOFISH128: keyLength = 128; break;
-            case CRYPT_ALGORITHM_TWOFISH256: keyLength = 256; break;
+            case CRYPT_ALGORITHM_3DES:        keyLength = 192; break;
+            case CRYPT_ALGORITHM_CAST5:       keyLength = 128; break;
+            case CRYPT_ALGORITHM_BLOWFISH:    keyLength = 128; break;
+            case CRYPT_ALGORITHM_AES128:      keyLength = 128; break;
+            case CRYPT_ALGORITHM_AES192:      keyLength = 192; break;
+            case CRYPT_ALGORITHM_AES256:      keyLength = 256; break;
+            case CRYPT_ALGORITHM_TWOFISH128:  keyLength = 128; break;
+            case CRYPT_ALGORITHM_TWOFISH256:  keyLength = 256; break;
+            case CRYPT_ALGORITHM_SERPENT128:  keyLength = 128; break;
+            case CRYPT_ALGORITHM_SERPENT192:  keyLength = 192; break;
+            case CRYPT_ALGORITHM_SERPENT256:  keyLength = 256; break;
+            case CRYPT_ALGORITHM_CAMELLIA128: keyLength = 128; break;
+            case CRYPT_ALGORITHM_CAMELLIA192: keyLength = 192; break;
+            case CRYPT_ALGORITHM_CAMELLIA256: keyLength = 256; break;
             default:
               #ifndef NDEBUG
                 HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
@@ -705,6 +753,12 @@ void Crypt_done(CryptInfo *cryptInfo)
     case CRYPT_ALGORITHM_AES256:
     case CRYPT_ALGORITHM_TWOFISH128:
     case CRYPT_ALGORITHM_TWOFISH256:
+    case CRYPT_ALGORITHM_SERPENT128:
+    case CRYPT_ALGORITHM_SERPENT192:
+    case CRYPT_ALGORITHM_SERPENT256:
+    case CRYPT_ALGORITHM_CAMELLIA128:
+    case CRYPT_ALGORITHM_CAMELLIA192:
+    case CRYPT_ALGORITHM_CAMELLIA256:
       #ifdef HAVE_GCRYPT
         gcry_cipher_close(cryptInfo->gcry_cipher_hd);
       #endif /* HAVE_GCRYPT */
@@ -734,6 +788,12 @@ Errors Crypt_reset(CryptInfo *cryptInfo, uint64 seed)
     case CRYPT_ALGORITHM_AES256:
     case CRYPT_ALGORITHM_TWOFISH128:
     case CRYPT_ALGORITHM_TWOFISH256:
+    case CRYPT_ALGORITHM_SERPENT128:
+    case CRYPT_ALGORITHM_SERPENT192:
+    case CRYPT_ALGORITHM_SERPENT256:
+    case CRYPT_ALGORITHM_CAMELLIA128:
+    case CRYPT_ALGORITHM_CAMELLIA192:
+    case CRYPT_ALGORITHM_CAMELLIA256:
       #ifdef HAVE_GCRYPT
         {
           uint         ivLength;
@@ -749,14 +809,20 @@ Errors Crypt_reset(CryptInfo *cryptInfo, uint64 seed)
             ivLength = 0;
             switch (cryptInfo->cryptAlgorithm)
             {
-              case CRYPT_ALGORITHM_3DES:       ivLength = 192; break;
-              case CRYPT_ALGORITHM_CAST5:      ivLength = 128; break;
-              case CRYPT_ALGORITHM_BLOWFISH:   ivLength = 128; break;
-              case CRYPT_ALGORITHM_AES128:     ivLength = 128; break;
-              case CRYPT_ALGORITHM_AES192:     ivLength = 192; break;
-              case CRYPT_ALGORITHM_AES256:     ivLength = 256; break;
-              case CRYPT_ALGORITHM_TWOFISH128: ivLength = 128; break;
-              case CRYPT_ALGORITHM_TWOFISH256: ivLength = 256; break;
+              case CRYPT_ALGORITHM_3DES:        ivLength = 192; break;
+              case CRYPT_ALGORITHM_CAST5:       ivLength = 128; break;
+              case CRYPT_ALGORITHM_BLOWFISH:    ivLength = 128; break;
+              case CRYPT_ALGORITHM_AES128:      ivLength = 128; break;
+              case CRYPT_ALGORITHM_AES192:      ivLength = 192; break;
+              case CRYPT_ALGORITHM_AES256:      ivLength = 256; break;
+              case CRYPT_ALGORITHM_TWOFISH128:  ivLength = 128; break;
+              case CRYPT_ALGORITHM_TWOFISH256:  ivLength = 256; break;
+              case CRYPT_ALGORITHM_SERPENT128:  ivLength = 128; break;
+              case CRYPT_ALGORITHM_SERPENT192:  ivLength = 192; break;
+              case CRYPT_ALGORITHM_SERPENT256:  ivLength = 256; break;
+              case CRYPT_ALGORITHM_CAMELLIA128: ivLength = 128; break;
+              case CRYPT_ALGORITHM_CAMELLIA192: ivLength = 192; break;
+              case CRYPT_ALGORITHM_CAMELLIA256: ivLength = 256; break;
               default:
                 #ifndef NDEBUG
                   HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
@@ -822,6 +888,12 @@ Errors Crypt_encrypt(CryptInfo *cryptInfo,
     case CRYPT_ALGORITHM_AES256:
     case CRYPT_ALGORITHM_TWOFISH128:
     case CRYPT_ALGORITHM_TWOFISH256:
+    case CRYPT_ALGORITHM_SERPENT128:
+    case CRYPT_ALGORITHM_SERPENT192:
+    case CRYPT_ALGORITHM_SERPENT256:
+    case CRYPT_ALGORITHM_CAMELLIA128:
+    case CRYPT_ALGORITHM_CAMELLIA192:
+    case CRYPT_ALGORITHM_CAMELLIA256:
       #ifdef HAVE_GCRYPT
         assert(cryptInfo->blockLength > 0);
         assert((bufferLength%cryptInfo->blockLength) == 0);
@@ -883,6 +955,12 @@ Errors Crypt_decrypt(CryptInfo *cryptInfo,
     case CRYPT_ALGORITHM_AES256:
     case CRYPT_ALGORITHM_TWOFISH128:
     case CRYPT_ALGORITHM_TWOFISH256:
+    case CRYPT_ALGORITHM_SERPENT128:
+    case CRYPT_ALGORITHM_SERPENT192:
+    case CRYPT_ALGORITHM_SERPENT256:
+    case CRYPT_ALGORITHM_CAMELLIA128:
+    case CRYPT_ALGORITHM_CAMELLIA192:
+    case CRYPT_ALGORITHM_CAMELLIA256:
       #ifdef HAVE_GCRYPT
         assert(cryptInfo->blockLength > 0);
         assert((bufferLength%cryptInfo->blockLength) == 0);
@@ -944,6 +1022,12 @@ Errors Crypt_encryptBytes(CryptInfo *cryptInfo,
     case CRYPT_ALGORITHM_AES256:
     case CRYPT_ALGORITHM_TWOFISH128:
     case CRYPT_ALGORITHM_TWOFISH256:
+    case CRYPT_ALGORITHM_SERPENT128:
+    case CRYPT_ALGORITHM_SERPENT192:
+    case CRYPT_ALGORITHM_SERPENT256:
+    case CRYPT_ALGORITHM_CAMELLIA128:
+    case CRYPT_ALGORITHM_CAMELLIA192:
+    case CRYPT_ALGORITHM_CAMELLIA256:
       #ifdef HAVE_GCRYPT
         assert(cryptInfo->blockLength > 0);
         assert((bufferLength%cryptInfo->blockLength) == 0);
@@ -1005,6 +1089,12 @@ Errors Crypt_decryptBytes(CryptInfo *cryptInfo,
     case CRYPT_ALGORITHM_AES256:
     case CRYPT_ALGORITHM_TWOFISH128:
     case CRYPT_ALGORITHM_TWOFISH256:
+    case CRYPT_ALGORITHM_SERPENT128:
+    case CRYPT_ALGORITHM_SERPENT192:
+    case CRYPT_ALGORITHM_SERPENT256:
+    case CRYPT_ALGORITHM_CAMELLIA128:
+    case CRYPT_ALGORITHM_CAMELLIA192:
+    case CRYPT_ALGORITHM_CAMELLIA256:
       #ifdef HAVE_GCRYPT
         assert(cryptInfo->blockLength > 0);
         assert((bufferLength%cryptInfo->blockLength) == 0);
