@@ -938,7 +938,7 @@ Errors Network_writeLine(SocketHandle *socketHandle,
 
 Errors Network_initServer(ServerSocketHandle *serverSocketHandle,
                           uint               serverPort,
-                          ServerTypes        serverType,
+                          ServerSocketTypes  serverSocketType,
                           const char         *caFileName,
                           const char         *certFileName,
                           const char         *keyFileName
@@ -953,7 +953,7 @@ Errors Network_initServer(ServerSocketHandle *serverSocketHandle,
 
   assert(serverSocketHandle != NULL);
 
-  serverSocketHandle->type = serverType;
+  serverSocketHandle->socketType = serverSocketType;
 
   // create socket
   serverSocketHandle->handle = socket(AF_INET,SOCK_STREAM,0);
@@ -987,11 +987,11 @@ Errors Network_initServer(ServerSocketHandle *serverSocketHandle,
   }
   listen(serverSocketHandle->handle,5);
 
-  switch (serverType)
+  switch (serverSocketType)
   {
-    case SERVER_TYPE_PLAIN:
+    case SERVER_SOCKET_TYPE_PLAIN:
       break;
-    case SERVER_TYPE_TLS:
+    case SERVER_SOCKET_TYPE_TLS:
       #ifdef HAVE_GNU_TLS
       {
         void              *certData;
@@ -1140,11 +1140,11 @@ void Network_doneServer(ServerSocketHandle *serverSocketHandle)
 {
   assert(serverSocketHandle != NULL);
 
-  switch (serverSocketHandle->type)
+  switch (serverSocketHandle->socketType)
   {
-    case SERVER_TYPE_PLAIN:
+    case SERVER_SOCKET_TYPE_PLAIN:
       break;
-    case SERVER_TYPE_TLS:
+    case SERVER_SOCKET_TYPE_TLS:
       #ifdef HAVE_GNU_TLS
         gnutls_dh_params_deinit(serverSocketHandle->gnuTLSDHParams);
         gnutls_certificate_free_credentials(serverSocketHandle->gnuTLSCredentials);
@@ -1205,12 +1205,12 @@ Errors Network_accept(SocketHandle             *socketHandle,
   }
 
   // initialise TLS session
-  switch (serverSocketHandle->type)
+  switch (serverSocketHandle->socketType)
   {
-    case SERVER_TYPE_PLAIN:
+    case SERVER_SOCKET_TYPE_PLAIN:
       socketHandle->type = SOCKET_TYPE_PLAIN;
       break;
-    case SERVER_TYPE_TLS:
+    case SERVER_SOCKET_TYPE_TLS:
       #ifdef HAVE_GNU_TLS
         socketHandle->type = SOCKET_TYPE_TLS;
 

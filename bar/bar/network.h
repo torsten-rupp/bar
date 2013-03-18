@@ -12,7 +12,7 @@
 #define __NETWORK__
 
 /****************************** Includes *******************************/
-#include <config.h>  // use <...> to support separated build directory 
+#include <config.h>  // use <...> to support separated build directory
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -76,14 +76,14 @@ typedef struct
 
 typedef enum
 {
-  SERVER_TYPE_PLAIN,
-  SERVER_TYPE_TLS,
-} ServerTypes;
+  SERVER_SOCKET_TYPE_PLAIN,
+  SERVER_SOCKET_TYPE_TLS,
+} ServerSocketTypes;
 
 typedef struct
 {
-  ServerTypes type;
-  int         handle;
+  ServerSocketTypes socketType;
+  int               handle;
   #ifdef HAVE_GNU_TLS
     bool                             initTLSFlag;
     gnutls_certificate_credentials_t gnuTLSCredentials;
@@ -329,18 +329,19 @@ Errors Network_writeLine(SocketHandle *socketHandle,
 /***********************************************************************\
 * Name   : Network_initServer
 * Purpose: initialize a server socket
-* Input  : serverPort  - server port (host byte order)
-*          ServerTypes - server type; see SERVER_TYPE_*
-*          caFileName   - file with TLS CA or NULL
-*          certFileName - file with TLS cerificate or NULL
-*          keyFileName  - file with TLS key or NULL
+* Input  : serverPort        - server port (host byte order)
+*          ServerSocketTypes - server socket type; see
+*                              SERVER_SOCKET_TYPE_*
+*          caFileName        - file with TLS CA or NULL
+*          certFileName      - file with TLS cerificate or NULL
+*          keyFileName       - file with TLS key or NULL
 * Output : serverSocketHandle - server socket handle
 * Return : ERROR_NONE or errorcode
 * Notes  : -
 \***********************************************************************/
 
 Errors Network_initServer(ServerSocketHandle *serverSocketHandle,
-                          ServerTypes        serverType,
+                          ServerSocketTypes  serverSocketType,
                           uint               serverPort,
                           const char         *caFileName,
                           const char         *certFileName,
