@@ -2358,74 +2358,6 @@ LOCAL void doneGlobalOptions(void)
 }
 
 /***********************************************************************\
-* Name   : freeFTPServerNode
-* Purpose: free FTP server node
-* Input  : ftpServerNode - FTP server node
-*          userData      - user data
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void freeFTPServerNode(FTPServerNode *ftpServerNode, void *userData)
-{
-  assert(ftpServerNode != NULL);
-
-  UNUSED_VARIABLE(userData);
-
-  Password_delete(ftpServerNode->ftpServer.password);
-  String_delete(ftpServerNode->ftpServer.loginName);
-  String_delete(ftpServerNode->name);
-}
-
-/***********************************************************************\
-* Name   : freeSSHServerNode
-* Purpose: free SSH server node
-* Input  : sshServerNode - SSH server node
-*          userData      - user data
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void freeSSHServerNode(SSHServerNode *sshServerNode, void *userData)
-{
-  assert(sshServerNode != NULL);
-
-  UNUSED_VARIABLE(userData);
-
-  String_delete(sshServerNode->sshServer.privateKeyFileName);
-  String_delete(sshServerNode->sshServer.publicKeyFileName);
-  Password_delete(sshServerNode->sshServer.password);
-  String_delete(sshServerNode->sshServer.loginName);
-  String_delete(sshServerNode->name);
-}
-
-/***********************************************************************\
-* Name   : freeWebDAVServerNode
-* Purpose: free WebDAV server node
-* Input  : webdavServerNode - WebDAV server node
-*          userData         - user data
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void freeWebDAVServerNode(WebDAVServerNode *webdavServerNode, void *userData)
-{
-  assert(webdavServerNode != NULL);
-
-  UNUSED_VARIABLE(userData);
-
-  String_delete(webdavServerNode->webdavServer.privateKeyFileName);
-  String_delete(webdavServerNode->webdavServer.publicKeyFileName);
-  Password_delete(webdavServerNode->webdavServer.password);
-  String_delete(webdavServerNode->webdavServer.loginName);
-  doneServerAllocate(&webdavServerNode->serverAllocation);
-  String_delete(webdavServerNode->name);
-}
-
-/***********************************************************************\
 * Name   : freeServerNode
 * Purpose: free server node
 * Input  : serverNode - server node
@@ -3443,7 +3375,7 @@ ulong getBandWidth(BandWidthList *bandWidthList)
   return n;
 }
 
-void allocateServer(ServerAllocation *serverAllocation, ServerAllocationPriorities priority, int maxConnectionCount)
+bool allocateServer(ServerAllocation *serverAllocation, ServerAllocationPriorities priority, int maxConnectionCount)
 {
   SemaphoreLock semaphoreLock;
 
@@ -3501,6 +3433,8 @@ void allocateServer(ServerAllocation *serverAllocation, ServerAllocationPrioriti
     // allocated connection
     serverAllocation->connectionCount++;
   }
+
+  return TRUE;
 }
 
 void freeServer(ServerAllocation *serverAllocation)
@@ -3744,22 +3678,6 @@ void getDeviceSettings(const String     name,
   device->writePreProcessCommand  = (jobOptions->device.writePreProcessCommand  != NULL)?jobOptions->device.writePreProcessCommand :((deviceNode != NULL)?deviceNode->device.writePreProcessCommand :globalOptions.defaultDevice->writePreProcessCommand );
   device->writePostProcessCommand = (jobOptions->device.writePostProcessCommand != NULL)?jobOptions->device.writePostProcessCommand:((deviceNode != NULL)?deviceNode->device.writePostProcessCommand:globalOptions.defaultDevice->writePostProcessCommand);
   device->writeCommand            = (jobOptions->device.writeCommand            != NULL)?jobOptions->device.writeCommand           :((deviceNode != NULL)?deviceNode->device.writeCommand           :globalOptions.defaultDevice->writeCommand           );
-}
-
-bool allocateServerConnection(ServerAllocation *serverAllocation, ServerAllocationPriorities priority, int maxConnectionCount)
-{
-  assert(serverAllocation != NULL);
-
-  allocateServer(serverAllocation,priority,maxConnectionCount);
-
-  return TRUE;
-}
-
-void freeServerConnection(ServerAllocation *serverAllocation)
-{
-  assert(serverAllocation != NULL);
-
-  freeServer(serverAllocation);
 }
 
 Errors inputCryptPassword(void         *userData,

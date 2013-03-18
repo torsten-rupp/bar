@@ -779,7 +779,7 @@ void getDeviceSettings(const String     name,
 * Notes  : -
 \***********************************************************************/
 
-void allocateServer(ServerAllocation *serverAllocation, ServerAllocationPriorities priority, int maxConnectionCount);
+bool allocateServer(ServerAllocation *serverAllocation, ServerAllocationPriorities priority, int maxConnectionCount);
 
 /***********************************************************************\
 * Name   : freeServer
