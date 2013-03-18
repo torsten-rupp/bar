@@ -12,10 +12,17 @@
 #define __SEMAPHORES__
 
 /****************************** Includes *******************************/
+#include "config.h"
+
 #include <stdlib.h>
 #include <stdio.h>
-#include <pthread.h>
 #include <assert.h>
+
+#if   defined(PLATFORM_LINUX)
+  #include <pthread.h>
+#elif defined(PLATFORM_WINDOWS)
+  #include <windows.h>
+#endif /* PLATFORM_... */
 
 #include "global.h"
 #include "lists.h"
@@ -41,21 +48,35 @@ typedef struct Semaphore
     LIST_NODE_HEADER(struct Semaphore);
   #endif /* not NDEBUG */
 
-  pthread_mutex_t     requestLock;           // lock to update request counters
+
+  #if   defined(PLATFORM_LINUX)
+    pthread_mutex_t     requestLock;         // lock to update request counters
+  #elif defined(PLATFORM_WINDOWS)
+    HANDLE              requestLock;
+  #endif /* PLATFORM_... */
   uint                readRequestCount;      // number of pending read locks
   uint                readWriteRequestCount; // number of pending read/write locks
 
-  pthread_mutex_t     lock;                  /* lock (thread who own lock is allowed
+  #if   defined(PLATFORM_LINUX)
+    pthread_mutex_t     lock;                /* lock (thread who own lock is allowed
                                                 to change the following semaphore
                                                 variables)
                                              */
+  #elif defined(PLATFORM_WINDOWS)
+    HANDLE              lock;
+  #endif /* PLATFORM_... */
 //  pthread_mutexattr_t lockAttributes;
 
   SemaphoreLockTypes  lockType;              // current lock type
   uint                readLockCount;         // number of read locks
   uint                readWriteLockCount;    // number of read/write locks
-  pthread_cond_t      readLockZero;          // signal read-lock become 0
-  pthread_cond_t      modified;              // signal values are modified
+  #if   defined(PLATFORM_LINUX)
+    pthread_cond_t      readLockZero;        // signal read-lock became 0
+    pthread_cond_t      modified;            // signal values are modified
+  #elif defined(PLATFORM_WINDOWS)
+//    pthread_cond_t      readLockZero;        // signal read-lock beaome 0
+//    pthread_cond_t      modified;            // signal values are modified
+  #endif /* PLATFORM_... */
   bool                endFlag;
 
   // debug data
@@ -89,7 +110,7 @@ typedef bool SemaphoreLock;
 * Return : -
 * Notes  : usage:
 *            SemaphoreLock semaphoreLock;
-*            SEMAPHORE_LOCKED_DO(semaphoreLock,semaphore,semaphoreLockType)
+*            SEMAPHORE_LOCKED_DO(semaphoreLock,semaphore,semaphoreLockType,timeout)
 *            {
 *              ...
 *            }
@@ -126,7 +147,7 @@ typedef bool SemaphoreLock;
 * Purpose: initialize semaphore
 * Input  : -
 * Output : semaphore - initialized semaphore
-* Return : -
+* Return : TRUE if semaphore initialized, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
 
@@ -247,16 +268,17 @@ bool __Semaphore_waitModified(const char *fileName,
 #endif /* NDEBUG */
 
 /***********************************************************************\
-* Name   : Semaphore_checkPending
-* Purpose: check if thread is pending for semaphore
-* Input  : semaphore - semaphore
+* Name   : Semaphore_isLockPending
+* Purpose: check if another thread is pending for semaphore lock
+* Input  : semaphore         - semaphore
+*          semaphoreLockType - lock type: READ, READ/WRITE
 * Output : -
-* Return : TRUE iff other thread is pending for semaphore, FALSE
+* Return : TRUE iff another thread is pending for semaphore lock, FALSE
 *          otherwise
 * Notes  : -
 \***********************************************************************/
 
-bool Semaphore_checkPending(Semaphore *semaphore);
+bool Semaphore_isLockPending(Semaphore *semaphore, SemaphoreLockTypes semaphoreLockType);
 
 /***********************************************************************\
 * Name   : Semaphore_setEnd
