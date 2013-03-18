@@ -47,6 +47,8 @@
 #endif /* HAVE_ISO9660 */
 #include <assert.h>
 
+#include "mxml.h"
+
 #include "global.h"
 #include "strings.h"
 #include "stringlists.h"
@@ -205,6 +207,7 @@ typedef struct
       // FTP storage
       struct
       {
+        ServerAllocation        *serverAllocation;
         CURLM                   *curlMultiHandle;
         CURL                    *curlHandle;
 //        int                     runningHandles;            // curl number of active handles (1 or 0)
@@ -221,9 +224,11 @@ typedef struct
         ulong                   length;                    // length of data to write/read
         ulong                   transferedBytes;           // number of data bytes read/written
       } ftp;
+
       // WebDAV storage
       struct
       {
+        ServerAllocation        *serverAllocation;
         CURLM                   *curlMultiHandle;
         CURL                    *curlHandle;
         uint64                  index;                     // current read/write index in file [0..n-1]
@@ -247,6 +252,7 @@ typedef struct
       // FTP storage
       struct
       {
+        ServerAllocation        *serverAllocation;
         netbuf                  *control;
         netbuf                  *data;
         uint64                  index;                     // current read/write index in file [0..n-1]
@@ -265,6 +271,7 @@ typedef struct
       // ssh storage (remote BAR)
       struct
       {
+        ServerAllocation        *serverAllocation;
 //        String                  hostName;                  // ssh server host name
 //        uint                    hostPort;                  // ssh server port number
 //        String                  loginName;                 // ssh login name
@@ -284,6 +291,7 @@ typedef struct
       // scp storage
       struct
       {
+        ServerAllocation        *serverAllocation;
         String                  sshPublicKeyFileName;      // ssh public key file name
         String                  sshPrivateKeyFileName;     // ssh private key file name
 
@@ -307,6 +315,7 @@ typedef struct
       // sftp storage
       struct
       {
+        ServerAllocation        *serverAllocation;
         String                  sshPublicKeyFileName;      // ssh public key file name
         String                  sshPrivateKeyFileName;     // ssh private key file name
 
@@ -426,8 +435,8 @@ typedef struct
     #if   defined(HAVE_CURL)
       struct
       {
+        ServerAllocation        *serverAllocation;
         String                  pathName;                  // directory name
-        String                  line;
         StringList              lineList;
 
         String                  fileName;                  // last parsed entry
@@ -439,12 +448,17 @@ typedef struct
         FilePermission          permission;
         bool                    entryReadFlag;             // TRUE if entry read
       } ftp;
+
       struct
       {
+        ServerAllocation        *serverAllocation;
         String                  pathName;                  // directory name
-        String                  line;
-        StringList              lineList;
 
+        mxml_node_t             *rootNode;
+        mxml_node_t             *lastNode;
+        mxml_node_t             *currentNode;
+
+/*
         String                  fileName;                  // last parsed entry
         FileTypes               type;
         int64                   size;
@@ -453,10 +467,12 @@ typedef struct
         uint32                  groupId;
         FilePermission          permission;
         bool                    entryReadFlag;             // TRUE if entry read
+*/
       } webdav;
     #elif defined(HAVE_FTP)
       struct
       {
+        ServerAllocation        *serverAllocation;
         String                  pathName;                  // directory name
 
         String                  fileListFileName;
@@ -491,6 +507,7 @@ typedef struct
     struct
     {
       #ifdef HAVE_ISO9660
+        ServerAllocation        *serverAllocation;
         String                  pathName;                  // directory name
 
         iso9660_t               *iso9660Handle;            // ISO9660 image handle

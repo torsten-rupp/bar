@@ -33,6 +33,8 @@
 #include <errno.h>
 #include <assert.h>
 
+#include "mxml.h"
+
 #include "global.h"
 #include "strings.h"
 #include "stringlists.h"
@@ -449,31 +451,33 @@ LOCAL size_t curlFTPParseDirectoryListCallback(const void *buffer,
                                               )
 {
   StorageDirectoryListHandle *storageDirectoryListHandle = (StorageDirectoryListHandle*)userData;
+  String                     line;
   const char                 *s;
   size_t                     i;
 
   assert(buffer != NULL);
   assert(size > 0);
   assert(storageDirectoryListHandle != NULL);
-  assert(storageDirectoryListHandle != NULL);
 
-  s = (const char*)buffer;
+  line = String_new();
+  s    = (const char*)buffer;
   for (i = 0; i < n; i++)
   {
     switch (*s)
     {
       case '\n':
-        StringList_append(&storageDirectoryListHandle->ftp.lineList,storageDirectoryListHandle->ftp.line);
-        String_clear(storageDirectoryListHandle->ftp.line);
+        StringList_append(&storageDirectoryListHandle->ftp.lineList,line);
+        String_clear(line);
         break;
       case '\r':
         break;
       default:
-        String_appendChar(storageDirectoryListHandle->ftp.line,(*s));
+        String_appendChar(line,(*s));
         break;
     }
     s++;
   }
+  String_delete(line);
 
   return size*n;
 }
@@ -1239,6 +1243,35 @@ LOCAL size_t curlWebDAVWriteDataCallback(const void *buffer,
 //fprintf(stderr,"%s, %d: storageFileHandle->webdav.receiveBuffer.length=%d bytesReceived=%d %d\n",__FILE__,__LINE__,storageFileHandle->webdav.receiveBuffer.length,bytesReceived,totalReceived);
 
   return bytesReceived;
+}
+
+/***********************************************************************\
+* Name   : curlWebDAVReadDirectoryDataCallback
+* Purpose: curl WebDAV parse directory list callback
+* Input  : buffer   - buffer with data: receive data from remote
+*          size     - size of an element
+*          n        - number of elements
+*          userData - user data
+* Output : -
+* Return : number of processed bytes or 0
+* Notes  : -
+\***********************************************************************/
+
+LOCAL size_t curlWebDAVReadDirectoryDataCallback(const void *buffer,
+                                                 size_t     size,
+                                                 size_t     n,
+                                                 void       *userData
+                                                )
+{
+  String directoryData = (String*)userData;
+
+  assert(buffer != NULL);
+  assert(size > 0);
+  assert(directoryData != NULL);
+
+  String_appendBuffer(directoryData,buffer,size*n);
+
+  return size*n;
 }
 #endif /* HAVE_CURL */
 
@@ -2874,7 +2907,7 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
           }
 
           // get FTP server settings
-          getFTPServerSettings(storageFileHandle->storageSpecifier.hostName,jobOptions,&ftpServer);
+          storageFileHandle->ftp.serverAllocation = getFTPServerSettings(storageFileHandle->storageSpecifier.hostName,jobOptions,&ftpServer);
           if (String_isEmpty(storageFileHandle->storageSpecifier.loginName)) String_set(storageFileHandle->storageSpecifier.loginName,ftpServer.loginName);
           if (String_isEmpty(storageFileHandle->storageSpecifier.loginName)) String_setCString(storageFileHandle->storageSpecifier.loginName,getenv("LOGNAME"));
           if (String_isEmpty(storageFileHandle->storageSpecifier.hostName))
@@ -2884,7 +2917,7 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
           }
 
           // allocate FTP server connection
-          if (!allocateFTPServerConnection(storageFileHandle->storageSpecifier.hostName))
+          if (!allocateServerConnection(storageFileHandle->ftp.serverAllocation,SERVER_ALLOCATION_PRIORITY_HIGH,ftpServer.maxConnectionCount))
           {
             Storage_doneSpecifier(&storageFileHandle->storageSpecifier);
             return ERROR_TOO_MANY_CONNECTIONS;
@@ -3083,7 +3116,7 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
           }
 
           // get SSH server settings
-          getSSHServerSettings(storageFileHandle->storageSpecifier.hostName,jobOptions,&sshServer);
+          storageFileHandle->scp.serverAllocation = getSSHServerSettings(storageFileHandle->storageSpecifier.hostName,jobOptions,&sshServer);
           if (String_isEmpty(storageFileHandle->storageSpecifier.loginName)) String_set(storageFileHandle->storageSpecifier.loginName,sshServer.loginName);
           if (String_isEmpty(storageFileHandle->storageSpecifier.loginName)) String_setCString(storageFileHandle->storageSpecifier.loginName,getenv("LOGNAME"));
           if (storageFileHandle->storageSpecifier.hostPort == 0) storageFileHandle->storageSpecifier.hostPort = sshServer.port;
@@ -3096,7 +3129,7 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
           }
 
           // allocate SSH server connection
-          if (!allocateSSHServerConnection(storageFileHandle->storageSpecifier.hostName))
+          if (!allocateServerConnection(storageFileHandle->scp.serverAllocation,SERVER_ALLOCATION_PRIORITY_HIGH,sshServer.maxConnectionCount))
           {
             Storage_doneSpecifier(&storageFileHandle->storageSpecifier);
             return ERROR_TOO_MANY_CONNECTIONS;
@@ -3185,7 +3218,7 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
           }
 
           // get SSH server settings
-          getSSHServerSettings(storageFileHandle->storageSpecifier.hostName,jobOptions,&sshServer);
+          storageFileHandle->sftp.serverAllocation = getSSHServerSettings(storageFileHandle->storageSpecifier.hostName,jobOptions,&sshServer);
           if (String_isEmpty(storageFileHandle->storageSpecifier.loginName)) String_set(storageFileHandle->storageSpecifier.loginName,sshServer.loginName);
           if (String_isEmpty(storageFileHandle->storageSpecifier.loginName)) String_setCString(storageFileHandle->storageSpecifier.loginName,getenv("LOGNAME"));
           if (storageFileHandle->storageSpecifier.hostPort == 0) storageFileHandle->storageSpecifier.hostPort = sshServer.port;
@@ -3198,7 +3231,7 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
           }
 
           // allocate SSH server connection
-          if (!allocateSSHServerConnection(storageFileHandle->storageSpecifier.hostName))
+          if (!allocateServerConnection(storageFileHandle->sftp.serverAllocation,SERVER_ALLOCATION_PRIORITY_HIGH,sshServer.maxConnectionCount))
           {
             Storage_doneSpecifier(&storageFileHandle->storageSpecifier);
             return ERROR_TOO_MANY_CONNECTIONS;
@@ -3279,7 +3312,7 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
           initBandWidthLimiter(&storageFileHandle->webdav.bandWidthLimiter,maxBandWidthList);
 
           // get WebDAV server settings
-          getWebDAVServerSettings(storageFileHandle->storageSpecifier.hostName,jobOptions,&webdavServer);
+          storageFileHandle->webdav.serverAllocation = getWebDAVServerSettings(storageFileHandle->storageSpecifier.hostName,jobOptions,&webdavServer);
           if (String_isEmpty(storageFileHandle->storageSpecifier.loginName)) String_set(storageFileHandle->storageSpecifier.loginName,webdavServer.loginName);
           if (String_isEmpty(storageFileHandle->storageSpecifier.loginName)) String_setCString(storageFileHandle->storageSpecifier.loginName,getenv("LOGNAME"));
           if (String_isEmpty(storageFileHandle->storageSpecifier.hostName))
@@ -3289,8 +3322,7 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
           }
 
           // allocate WebDAV server connection
-#warning todo webdav
-          if (!allocateFTPServerConnection(storageFileHandle->storageSpecifier.hostName))
+          if (!allocateServerConnection(storageFileHandle->webdav.serverAllocation,SERVER_ALLOCATION_PRIORITY_HIGH,webdavServer.maxConnectionCount))
           {
             Storage_doneSpecifier(&storageFileHandle->storageSpecifier);
             return ERROR_TOO_MANY_CONNECTIONS;
@@ -3348,8 +3380,7 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
           }
           if (error != ERROR_NONE)
           {
-#warning webdav
-            freeFTPServerConnection(storageFileHandle->storageSpecifier.hostName);
+            freeServerConnection(storageFileHandle->webdav.serverAllocation);
             Storage_doneSpecifier(&storageFileHandle->storageSpecifier);
             return error;
           }
@@ -3652,7 +3683,7 @@ Errors Storage_done(StorageFileHandle *storageFileHandle)
       break;
     case STORAGE_TYPE_FTP:
       // free FTP server connection
-      freeFTPServerConnection(storageFileHandle->storageSpecifier.hostName);
+      freeServerConnection(storageFileHandle->ftp.serverAllocation);
       #if   defined(HAVE_CURL)
         free(storageFileHandle->ftp.readAheadBuffer.data);
       #elif defined(HAVE_FTP)
@@ -3662,11 +3693,11 @@ Errors Storage_done(StorageFileHandle *storageFileHandle)
       break;
     case STORAGE_TYPE_SSH:
       // free SSH server connection
-      freeSSHServerConnection(storageFileHandle->storageSpecifier.hostName);
+      freeServerConnection(storageFileHandle->ssh.serverAllocation);
       break;
     case STORAGE_TYPE_SCP:
       // free SSH server connection
-      freeSSHServerConnection(storageFileHandle->storageSpecifier.hostName);
+      freeServerConnection(storageFileHandle->scp.serverAllocation);
       #ifdef HAVE_SSH2
         free(storageFileHandle->scp.readAheadBuffer.data);
       #else /* not HAVE_SSH2 */
@@ -3674,7 +3705,7 @@ Errors Storage_done(StorageFileHandle *storageFileHandle)
       break;
     case STORAGE_TYPE_SFTP:
       // free SSH server connection
-      freeSSHServerConnection(storageFileHandle->storageSpecifier.hostName);
+      freeServerConnection(storageFileHandle->sftp.serverAllocation);
       #ifdef HAVE_SSH2
         free(storageFileHandle->sftp.readAheadBuffer.data);
       #else /* not HAVE_SSH2 */
@@ -3682,8 +3713,7 @@ Errors Storage_done(StorageFileHandle *storageFileHandle)
       break;
     case STORAGE_TYPE_WEBDAV:
       // free WebDAV server connection
-#warning todo webdav
-      freeFTPServerConnection(storageFileHandle->storageSpecifier.hostName);
+      freeServerConnection(storageFileHandle->webdav.serverAllocation);
       #if   defined(HAVE_CURL)
       #else /* not HAVE_CURL || HAVE_FTP */
       #endif /* HAVE_CURL || HAVE_FTP */
@@ -9121,12 +9151,11 @@ Errors Storage_openDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
 
           // init variables
           storageDirectoryListHandle->type         = STORAGE_TYPE_FTP;
-          storageDirectoryListHandle->ftp.line     = String_new();
           StringList_init(&storageDirectoryListHandle->ftp.lineList);
           storageDirectoryListHandle->ftp.fileName = String_new();
 
           // get FTP server settings
-          getFTPServerSettings(storageSpecifier.hostName,jobOptions,&ftpServer);
+          storageDirectoryListHandle->ftp.serverAllocation = getFTPServerSettings(storageSpecifier.hostName,jobOptions,&ftpServer);
           if (String_isEmpty(storageSpecifier.loginName)) String_set(storageSpecifier.loginName,ftpServer.loginName);
           if (String_isEmpty(storageSpecifier.loginName)) String_setCString(storageSpecifier.loginName,getenv("LOGNAME"));
           if (String_isEmpty(storageSpecifier.hostName))
@@ -9134,17 +9163,15 @@ Errors Storage_openDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
             error = ERROR_NO_HOST_NAME;
             String_delete(storageDirectoryListHandle->ftp.fileName);
             StringList_done(&storageDirectoryListHandle->ftp.lineList);
-            String_delete(storageDirectoryListHandle->ftp.line);
             break;
           }
 
           // allocate FTP server connection
-          if (!allocateFTPServerConnection(storageSpecifier.hostName))
+          if (!allocateServerConnection(storageDirectoryListHandle->ftp.serverAllocation,SERVER_ALLOCATION_PRIORITY_HIGH,ftpServer.maxConnectionCount))
           {
             error = ERROR_TOO_MANY_CONNECTIONS;
             String_delete(storageDirectoryListHandle->ftp.fileName);
             StringList_done(&storageDirectoryListHandle->ftp.lineList);
-            String_delete(storageDirectoryListHandle->ftp.line);
             break;
           }
 
@@ -9204,10 +9231,9 @@ Errors Storage_openDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
           }
           if (error != ERROR_NONE)
           {
-            freeFTPServerConnection(storageSpecifier.hostName);
+            freeServerConnection(storageDirectoryListHandle->ftp.serverAllocation);
             String_delete(storageDirectoryListHandle->ftp.fileName);
             StringList_done(&storageDirectoryListHandle->ftp.lineList);
-            String_delete(storageDirectoryListHandle->ftp.line);
             break;
           }
 
@@ -9215,10 +9241,9 @@ Errors Storage_openDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
           curlHandle = curl_easy_init();
           if (curlHandle == NULL)
           {
-            freeFTPServerConnection(storageSpecifier.hostName);
+            freeServerConnection(storageDirectoryListHandle->ftp.serverAllocation);
             String_delete(storageDirectoryListHandle->ftp.fileName);
             StringList_done(&storageDirectoryListHandle->ftp.lineList);
-            String_delete(storageDirectoryListHandle->ftp.line);
             error = ERROR_FTP_SESSION_FAIL;
             break;
           }
@@ -9246,10 +9271,9 @@ Errors Storage_openDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
             error = ERRORX_(FTP_SESSION_FAIL,0,curl_easy_strerror(curlCode));
             String_delete(url);
             (void)curl_easy_cleanup(curlHandle);
-            freeFTPServerConnection(storageSpecifier.hostName);
+            freeServerConnection(storageDirectoryListHandle->ftp.serverAllocation);
             String_delete(storageDirectoryListHandle->ftp.fileName);
             StringList_done(&storageDirectoryListHandle->ftp.lineList);
-            String_delete(storageDirectoryListHandle->ftp.line);
             break;
           }
 
@@ -9266,10 +9290,9 @@ Errors Storage_openDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
             error = ERRORX_(FTP_SESSION_FAIL,0,curl_easy_strerror(curlCode));
             String_delete(url);
             (void)curl_easy_cleanup(curlHandle);
-            freeFTPServerConnection(storageSpecifier.hostName);
+            freeServerConnection(storageDirectoryListHandle->ftp.serverAllocation);
             String_delete(storageDirectoryListHandle->ftp.fileName);
             StringList_done(&storageDirectoryListHandle->ftp.lineList);
-            String_delete(storageDirectoryListHandle->ftp.line);
             break;
           }
           curlCode = curl_easy_setopt(curlHandle,CURLOPT_WRITEFUNCTION,curlFTPParseDirectoryListCallback);
@@ -9286,17 +9309,16 @@ Errors Storage_openDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
             error = ERRORX_(FTP_SESSION_FAIL,0,curl_easy_strerror(curlCode));
             String_delete(url);
             (void)curl_easy_cleanup(curlHandle);
-            freeFTPServerConnection(storageSpecifier.hostName);
+            freeServerConnection(storageDirectoryListHandle->ftp.serverAllocation);
             String_delete(storageDirectoryListHandle->ftp.fileName);
             StringList_done(&storageDirectoryListHandle->ftp.lineList);
-            String_delete(storageDirectoryListHandle->ftp.line);
             break;
           }
 
           // free resources
           String_delete(url);
           (void)curl_easy_cleanup(curlHandle);
-          freeFTPServerConnection(storageSpecifier.hostName);
+          freeServerConnection(storageDirectoryListHandle->ftp.serverAllocation);
         }
       #elif defined(HAVE_FTP)
         {
@@ -9612,41 +9634,37 @@ error = ERROR_FUNCTION_NOT_SUPPORTED;
 #warning todo webdav
       #ifdef HAVE_CURL
         {
-          WebDAVServer    webdavServer;
-          CURL            *curlHandle;
-          String          url;
-          CURLcode        curlCode;
-          const char      *plainLoginPassword;
-          StringTokenizer nameTokenizer;
-          String          name;
+          WebDAVServer      webdavServer;
+          CURL              *curlHandle;
+          String            url;
+          CURLcode          curlCode;
+          const char        *plainLoginPassword;
+          StringTokenizer   nameTokenizer;
+          String            name;
+          String            directoryData;
+          struct curl_slist *curlSList;
 
           // init variables
-          storageDirectoryListHandle->type            = STORAGE_TYPE_WEBDAV;
-          storageDirectoryListHandle->webdav.line     = String_new();
-          StringList_init(&storageDirectoryListHandle->webdav.lineList);
-          storageDirectoryListHandle->webdav.fileName = String_new();
+          storageDirectoryListHandle->type               = STORAGE_TYPE_WEBDAV;
+          storageDirectoryListHandle->webdav.rootNode    = NULL;
+          storageDirectoryListHandle->webdav.lastNode    = NULL;
+          storageDirectoryListHandle->webdav.currentNode = NULL;
 
           // get WebDAV server settings
-          getWebDAVServerSettings(storageSpecifier.hostName,jobOptions,&webdavServer);
+          storageDirectoryListHandle->webdav.serverAllocation = getWebDAVServerSettings(storageSpecifier.hostName,jobOptions,&webdavServer);
           if (String_isEmpty(storageSpecifier.loginName)) String_set(storageSpecifier.loginName,webdavServer.loginName);
           if (String_isEmpty(storageSpecifier.loginName)) String_setCString(storageSpecifier.loginName,getenv("LOGNAME"));
           if (String_isEmpty(storageSpecifier.hostName))
           {
             error = ERROR_NO_HOST_NAME;
-            String_delete(storageDirectoryListHandle->webdav.fileName);
-            StringList_done(&storageDirectoryListHandle->webdav.lineList);
-            String_delete(storageDirectoryListHandle->webdav.line);
             break;
           }
 
           // allocate WebDAV server connection
 #warning webdav
-          if (!allocateWebDAVServerConnection(storageSpecifier.hostName))
+          if (!allocateServerConnection(storageDirectoryListHandle->webdav.serverAllocation,SERVER_ALLOCATION_PRIORITY_LOW,webdavServer.maxConnectionCount))
           {
             error = ERROR_TOO_MANY_CONNECTIONS;
-            String_delete(storageDirectoryListHandle->webdav.fileName);
-            StringList_done(&storageDirectoryListHandle->webdav.lineList);
-            String_delete(storageDirectoryListHandle->webdav.line);
             break;
           }
 
@@ -9703,10 +9721,7 @@ error = ERROR_FUNCTION_NOT_SUPPORTED;
           if (error != ERROR_NONE)
           {
 #warning webdav
-            freeFTPServerConnection(storageSpecifier.hostName);
-            String_delete(storageDirectoryListHandle->webdav.fileName);
-            StringList_done(&storageDirectoryListHandle->webdav.lineList);
-            String_delete(storageDirectoryListHandle->webdav.line);
+            freeServerConnection(storageDirectoryListHandle->webdav.serverAllocation);
             break;
           }
 
@@ -9715,10 +9730,7 @@ error = ERROR_FUNCTION_NOT_SUPPORTED;
           if (curlHandle == NULL)
           {
 #warning webdav
-            freeFTPServerConnection(storageSpecifier.hostName);
-            String_delete(storageDirectoryListHandle->webdav.fileName);
-            StringList_done(&storageDirectoryListHandle->webdav.lineList);
-            String_delete(storageDirectoryListHandle->webdav.line);
+            freeServerConnection(storageDirectoryListHandle->webdav.serverAllocation);
             error = ERROR_WEBDAV_SESSION_FAIL;
             break;
           }
@@ -9739,6 +9751,7 @@ error = ERROR_FUNCTION_NOT_SUPPORTED;
             String_append(url,name);
           }
           File_doneSplitFileName(&nameTokenizer);
+          String_appendChar(url,'/');
 
           // set WebDAV connect
           curlCode = curl_easy_setopt(curlHandle,CURLOPT_URL,String_cString(url));
@@ -9748,10 +9761,7 @@ error = ERROR_FUNCTION_NOT_SUPPORTED;
             String_delete(url);
             (void)curl_easy_cleanup(curlHandle);
 #warning webdav
-            freeFTPServerConnection(storageSpecifier.hostName);
-            String_delete(storageDirectoryListHandle->webdav.fileName);
-            StringList_done(&storageDirectoryListHandle->webdav.lineList);
-            String_delete(storageDirectoryListHandle->webdav.line);
+            freeServerConnection(storageDirectoryListHandle->webdav.serverAllocation);
             break;
           }
 
@@ -9761,35 +9771,65 @@ error = ERROR_FUNCTION_NOT_SUPPORTED;
           (void)curl_easy_setopt(curlHandle,CURLOPT_PASSWORD,plainLoginPassword);
           Password_undeploy(storageSpecifier.loginPassword);
 
-          // read directory
+          // read directory data
+          directoryData = String_new();
+          curlSList = curl_slist_append(NULL,"Depth: 1");
 #warning webdav
-          curlCode = curl_easy_setopt(curlHandle,CURLOPT_WRITEFUNCTION,curlFTPParseDirectoryListCallback);
+          curlCode = curl_easy_setopt(curlHandle,CURLOPT_CUSTOMREQUEST,"PROPFIND");
           if (curlCode == CURLE_OK)
           {
-            curlCode = curl_easy_setopt(curlHandle,CURLOPT_WRITEDATA,storageDirectoryListHandle);
+            curlCode = curl_easy_setopt(curlHandle,CURLOPT_HTTPHEADER,curlSList);
+          }
+          if (curlCode == CURLE_OK)
+          {
+            curlCode = curl_easy_setopt(curlHandle,CURLOPT_WRITEFUNCTION,curlWebDAVReadDirectoryDataCallback);
+          }
+          if (curlCode == CURLE_OK)
+          {
+            curlCode = curl_easy_setopt(curlHandle,CURLOPT_WRITEDATA,directoryData);
           }
           if (curlCode == CURLE_OK)
           {
             curlCode = curl_easy_perform(curlHandle);
           }
-          if (curlCode == CURLE_OK)
+          (void)curl_easy_setopt(curlHandle,CURLOPT_HTTPHEADER,NULL);
+          curl_slist_free_all(curlSList);
+          if (curlCode != CURLE_OK)
           {
-            error = ERRORX_(WEBDAV_SESSION_FAIL,0,curl_easy_strerror(curlCode));
+            error = ERROR_READ_DIRECTORY;
+            String_delete(directoryData);
+            curl_slist_free_all(curlSList);
             String_delete(url);
             (void)curl_easy_cleanup(curlHandle);
 #warning webdav
-            freeFTPServerConnection(storageSpecifier.hostName);
-            String_delete(storageDirectoryListHandle->webdav.fileName);
-            StringList_done(&storageDirectoryListHandle->webdav.lineList);
-            String_delete(storageDirectoryListHandle->webdav.line);
+            freeServerConnection(storageDirectoryListHandle->webdav.serverAllocation);
             break;
           }
+//fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,String_cString(directoryData));
+
+          // parse directory entries
+          storageDirectoryListHandle->webdav.rootNode = mxmlLoadString(NULL,
+                                                                       String_cString(directoryData),
+                                                                       MXML_OPAQUE_CALLBACK
+                                                                      );
+          if (storageDirectoryListHandle->webdav.rootNode == NULL)
+          {
+            error = ERROR_READ_DIRECTORY;
+            String_delete(directoryData);
+            String_delete(url);
+            (void)curl_easy_cleanup(curlHandle);
+#warning webdav
+            freeServerConnection(storageDirectoryListHandle->webdav.serverAllocation);
+            break;
+          }
+          storageDirectoryListHandle->webdav.lastNode = storageDirectoryListHandle->webdav.rootNode;
 
           // free resources
+          String_delete(directoryData);
           String_delete(url);
           (void)curl_easy_cleanup(curlHandle);
 #warning webdav
-          freeFTPServerConnection(storageSpecifier.hostName);
+          freeServerConnection(storageDirectoryListHandle->webdav.serverAllocation);
         }
       #else /* not HAVE_CURL */
         UNUSED_VARIABLE(jobOptions);
@@ -9890,7 +9930,6 @@ void Storage_closeDirectoryList(StorageDirectoryListHandle *storageDirectoryList
       #if   defined(HAVE_CURL)
         String_delete(storageDirectoryListHandle->ftp.fileName);
         StringList_done(&storageDirectoryListHandle->ftp.lineList);
-        String_delete(storageDirectoryListHandle->ftp.line);
       #elif defined(HAVE_FTP)
         File_close(&storageDirectoryListHandle->ftp.fileHandle);
         File_delete(storageDirectoryListHandle->ftp.fileListFileName,FALSE);
@@ -9920,9 +9959,7 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
       break;
     case STORAGE_TYPE_WEBDAV:
       #ifdef HAVE_CURL
-        String_delete(storageDirectoryListHandle->webdav.fileName);
-        StringList_done(&storageDirectoryListHandle->webdav.lineList);
-        String_delete(storageDirectoryListHandle->webdav.line);
+        mxmlDelete(storageDirectoryListHandle->webdav.rootNode);
       #else /* not HAVE_CURL */
       #endif /* HAVE_CURL */
       break;
@@ -10068,29 +10105,17 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
 #warning todo webdav
       #ifdef HAVE_CURL
         {
-          String line;
-
-          while (!storageDirectoryListHandle->webdav.entryReadFlag && !StringList_isEmpty(&storageDirectoryListHandle->webdav.lineList))
+          if (storageDirectoryListHandle->webdav.currentNode == NULL)
           {
-            // get next line
-            line = StringList_getFirst(&storageDirectoryListHandle->webdav.lineList,NULL);
-
-            // parse
-            storageDirectoryListHandle->webdav.entryReadFlag = parseFTPDirectoryLine(line,
-                                                                                  storageDirectoryListHandle->webdav.fileName,
-                                                                                  &storageDirectoryListHandle->webdav.type,
-                                                                                  &storageDirectoryListHandle->webdav.size,
-                                                                                  &storageDirectoryListHandle->webdav.timeModified,
-                                                                                  &storageDirectoryListHandle->webdav.userId,
-                                                                                  &storageDirectoryListHandle->webdav.groupId,
-                                                                                  &storageDirectoryListHandle->webdav.permission
-                                                                                 );
-
-            // free resources
-            String_delete(line);
+            storageDirectoryListHandle->webdav.currentNode = mxmlFindElement(storageDirectoryListHandle->webdav.lastNode,
+                                                                             storageDirectoryListHandle->webdav.rootNode,
+                                                                             "D:href",
+                                                                             NULL,
+                                                                             NULL,
+                                                                             MXML_DESCEND
+                                                                            );
           }
-
-          endOfDirectoryFlag = !storageDirectoryListHandle->webdav.entryReadFlag;
+          endOfDirectoryFlag = (storageDirectoryListHandle->webdav.currentNode == NULL);
         }
       #else /* not HAVE_CURL */
       #endif /* HAVE_CURL */
@@ -10365,50 +10390,64 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
     case STORAGE_TYPE_WEBDAV:
       #ifdef HAVE_CURL
         {
-          String line;
+          mxml_node_t *node;
 
-          if (!storageDirectoryListHandle->webdav.entryReadFlag)
+          if (storageDirectoryListHandle->webdav.currentNode == NULL)
           {
-            while (!storageDirectoryListHandle->webdav.entryReadFlag && !StringList_isEmpty(&storageDirectoryListHandle->webdav.lineList))
-            {
-              // get next line
-              line = StringList_getFirst(&storageDirectoryListHandle->webdav.lineList,NULL);
-
-              // parse
-              storageDirectoryListHandle->webdav.entryReadFlag = parseFTPDirectoryLine(line,
-                                                                                    fileName,
-                                                                                    &storageDirectoryListHandle->webdav.type,
-                                                                                    &storageDirectoryListHandle->webdav.size,
-                                                                                    &storageDirectoryListHandle->webdav.timeModified,
-                                                                                    &storageDirectoryListHandle->webdav.userId,
-                                                                                    &storageDirectoryListHandle->webdav.groupId,
-                                                                                    &storageDirectoryListHandle->webdav.permission
-                                                                                   );
-
-              // free resources
-              String_delete(line);
-            }
+            storageDirectoryListHandle->webdav.currentNode = mxmlFindElement(storageDirectoryListHandle->webdav.lastNode,
+                                                                             storageDirectoryListHandle->webdav.rootNode,
+                                                                             "D:href",
+                                                                             NULL,
+                                                                             NULL,
+                                                                             MXML_DESCEND
+                                                                            );
           }
 
-          if (storageDirectoryListHandle->webdav.entryReadFlag)
+          if (storageDirectoryListHandle->webdav.currentNode != NULL)
           {
-            String_set(fileName,storageDirectoryListHandle->webdav.fileName);
+            // get file name
+            assert(storageDirectoryListHandle->webdav.currentNode->type == MXML_ELEMENT);
+            assert(storageDirectoryListHandle->webdav.currentNode->child != NULL);
+            assert(storageDirectoryListHandle->webdav.currentNode->child->type == MXML_OPAQUE);
+            assert(storageDirectoryListHandle->webdav.currentNode->child->value.opaque != NULL);
+            String_setCString(fileName,storageDirectoryListHandle->webdav.currentNode->child->value.opaque);
+
+            // get file info
             if (fileInfo != NULL)
             {
-              fileInfo->type            = storageDirectoryListHandle->webdav.type;
-              fileInfo->size            = storageDirectoryListHandle->webdav.size;
+              fileInfo->type            = FILE_TYPE_FILE;
+              fileInfo->size            = 0LL;
               fileInfo->timeLastAccess  = 0LL;
-              fileInfo->timeModified    = storageDirectoryListHandle->webdav.timeModified;
+              fileInfo->timeModified    = 0LL;
               fileInfo->timeLastChanged = 0LL;
-              fileInfo->userId          = storageDirectoryListHandle->webdav.userId;
-              fileInfo->groupId         = storageDirectoryListHandle->webdav.groupId;
-              fileInfo->permission      = storageDirectoryListHandle->webdav.permission;
+              fileInfo->userId          = FILE_DEFAULT_USER_ID;
+              fileInfo->groupId         = FILE_DEFAULT_GROUP_ID;
+              fileInfo->permission      = 0;
               fileInfo->major           = 0;
               fileInfo->minor           = 0;
-            }
-            storageDirectoryListHandle->webdav.entryReadFlag = FALSE;
 
-            error = ERROR_NONE;
+              node = mxmlFindElement(storageDirectoryListHandle->webdav.currentNode,
+                                     storageDirectoryListHandle->webdav.rootNode,
+                                     "lp1:getlastmodified",
+                                     NULL,
+                                     NULL,
+                                     MXML_DESCEND
+                                    );
+              if (node != NULL)
+              {
+                assert(node->type == MXML_ELEMENT);
+                assert(node->child != NULL);
+                assert(node->child->type == MXML_OPAQUE);
+                assert(node->child->value.opaque != NULL);
+
+                fileInfo->timeModified = Misc_parseDateTime(node->child->value.opaque);
+              }
+            }
+
+            // next file
+            storageDirectoryListHandle->webdav.lastNode    = storageDirectoryListHandle->webdav.currentNode;
+            storageDirectoryListHandle->webdav.currentNode = NULL;
+//fprintf(stderr,"%s, %d: fileName=%s\n",__FILE__,__LINE__,String_cString(fileName));
           }
           else
           {
