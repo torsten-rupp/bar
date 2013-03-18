@@ -184,6 +184,84 @@ void Misc_splitDateTime(uint64   dateTime,
   if (weekDay != NULL) (*weekDay) = (tm->tm_wday + WEEKDAY_SUN) % 7;
 }
 
+uint64 Misc_parseDateTime(const char *string)
+{
+  const char *DATE_TIME_FORMATS[] =
+  {
+    "%Y-%m-%dT%H:%i:%s%Q",       // 2011-03-11T14:46:23-06:00
+
+    "%A, %d %b %y %H:%M:%S %z",  // Fri, 11 Mar 11 14:46:23 -0500
+    "%a, %d %b %y %H:%M:%S %z",  // Friday, 11 Mar 11 14:46:23 -0500
+    "%A, %d %B %y %H:%M:%S %z",  // Fri, 11 Mar 11 14:46:23 -0500
+    "%a, %d %B %y %H:%M:%S %z",  // Friday, 11 Mar 11 14:46:23 -0500
+    "%A, %d %b %Y %H:%M:%S %z",  // Fri, 11 Mar 2011 14:46:23 -0500
+    "%a, %d %b %Y %H:%M:%S %z",  // Friday, 11 Mar 2011 14:46:23 -0500
+    "%A, %d %B %Y %H:%M:%S %z",  // Fri, 11 Mar 2011 14:46:23 -0500
+    "%a, %d %B %Y %H:%M:%S %z",  // Friday, 11 Mar 2011 14:46:23 -0500
+
+    "%A, %d-%b-%y %H:%M:%S UTC", // Fri, 11-Mar-11 14:46:23 UTC
+    "%a, %d-%b-%y %H:%M:%S UTC", // Friday, 11-Mar-11 14:46:23 UTC
+    "%A, %d-%B-%y %H:%M:%S UTC", // Fri, 11-March-11 14:46:23 UTC
+    "%a, %d-%B-%y %H:%M:%S UTC", // Friday, 11-March-11 14:46:23 UTC
+    "%A, %d-%b-%Y %H:%M:%S UTC", // Fri, 11-Mar-2011 14:46:23 UTC
+    "%a, %d-%b-%Y %H:%M:%S UTC", // Friday, 11-Mar-2-11 14:46:23 UTC
+    "%A, %d-%B-%Y %H:%M:%S UTC", // Fri, 11-March-2011 14:46:23 UTC
+    "%a, %d-%B-%Y %H:%M:%S UTC", // Friday, 11-March-2011 14:46:23 UTC
+
+    "%A, %d %b %y %H:%M:%S GMT",  // Fri, 11 Mar 11 14:46:23 GMT
+    "%a, %d %b %y %H:%M:%S GMT",  // Friday, 11 Mar 11 14:46:23 GMT
+    "%A, %d %B %y %H:%M:%S GMT",  // Fri, 11 March 11 14:46:23 GMT
+    "%a, %d %B %y %H:%M:%S GMT",  // Friday, 11 March 11 14:46:23 GMT
+    "%A, %d %b %Y %H:%M:%S GMT",  // Fri, 11 Mar 2011 14:46:23 GMT
+    "%a, %d %b %Y %H:%M:%S GMT",  // Friday, 11 Mar 2011 14:46:23 GMT
+    "%A, %d %B %Y %H:%M:%S GMT",  // Fri, 11 March 2011 14:46:23 GMT
+    "%a, %d %B %Y %H:%M:%S GMT",  // Friday, 11 March 2011 14:46:23 GMT
+
+     DATE_TIME_FORMAT_DEFAULT
+  };
+
+  #ifdef HAVE_GETDATE_R
+    struct tm tmBuffer;
+  #endif /* HAVE_GETDATE_R */
+  struct tm  *tm;
+  uint       z;
+  const char *s;
+  uint64     dateTime;
+
+  assert(string != NULL);
+
+  #ifdef HAVE_GETDATE_R
+    tm = (getdate_r(string,&tmBuffer) == 0) ? &tmBuffer : NULL;
+  #else /* not HAVE_GETDATE_R */
+    tm = getdate(string);
+  #endif /* HAVE_GETDATE_R */
+
+  if (tm == NULL)
+  {
+    z = 0;
+    while ((z < SIZE_OF_ARRAY(DATE_TIME_FORMATS)) && (tm == NULL))
+    {
+      s = strptime(string,DATE_TIME_FORMATS[z],&tmBuffer);
+      if ((s != NULL) && ((*s) == '\0'))
+      {
+        tm = &tmBuffer;
+      }
+      z++;
+    }
+  }
+
+  if (tm != NULL)
+  {
+    dateTime = (uint64)mktime(tm);
+  }
+  else
+  {
+    dateTime = 0LL;
+  }
+
+  return dateTime;
+}
+
 String Misc_formatDateTime(String string, uint64 dateTime, const char *format)
 {
   #define START_BUFFER_SIZE 256

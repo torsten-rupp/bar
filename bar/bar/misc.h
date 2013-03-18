@@ -188,7 +188,7 @@ uint64 Misc_getCurrentDateTime(void);
 /***********************************************************************\
 * Name   : Misc_splitDateTime
 * Purpose: split date/time into parts
-* Input  : dateTime - date/time
+* Input  : dateTime - date/time (seconds since 1970-1-1 00:00:00)
 * Output : year    - year, YYYY (could be NULL)
 *          month   - month, 1..12 (could be NULL)
 *          day     - day, 1..31 (could be NULL)
@@ -231,6 +231,8 @@ uint64 Misc_makeDateTime(uint year,
                          uint minute,
                          uint second
                         );
+
+uint64 Misc_parseDateTime(const char *string);
 
 /***********************************************************************\
 * Name   : Misc_formatDateTime, Misc_formatDateTimeCString
