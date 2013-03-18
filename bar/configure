@@ -7072,6 +7072,23 @@ if test $ENABLE_LZMA = "yes"; then
 
       result=1
       if test $result -eq 1; then
+        case $host_os in
+          mingw*)
+            # patch to disable usage of lib-command when RANLIB is set
+            # patch created with:
+            #   diff -u xz-5.0.4.org/m4/libtool.m4 xz-5.0.4/m4/libtool.m4 xz-5.0.4-libtool.patch
+            if test -d packages/xz-5.0.4; then
+              (cd packages/xz-5.0.4; patch --batch -N -p1 <$cwd/misc/xz-5.0.4-libtool.patch) 1>/dev/null 2>/dev/null
+            else
+              { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: xz-5.0.4 not available - skipped libtool patch!" >&5
+$as_echo "$as_me: WARNING: xz-5.0.4 not available - skipped libtool patch!" >&2;}
+            fi
+            ;;
+          *)
+            ;;
+        esac
+      fi
+      if test $result -eq 1; then
         (cd xz; ./configure --host=$host_cpu-$host_os --prefix=$cwd/packages --disable-shared --enable-static) 1>/dev/null 2>$tmpFile
         if test $? -ne 0; then
           { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (configure)" >&5
@@ -7365,10 +7382,6 @@ $as_echo "done" >&6; }
 
       result2=1
       if test $result2 -eq 1; then
-        # patch to disable wrong deprecated warnings
-        # patch created with:
-        # diff -u libgcrypt-1.5.0.org/src/gcrypt.h libgcrypt-1.5.0/src/gcrypt.h > libgcrypt-warning.patch
-        (cd packages/libgcrypt-1.5.0; patch --batch -N -p1 <$cwd/misc/libgcrypt-warning.patch) 1>/dev/null 2>/dev/null
         case $host_os in
           mingw*)
             # patch to disable usage of lib-command when RANLIB is set
@@ -7843,13 +7856,6 @@ if test $ENABLE_FTP = "yes"; then
 
   $as_echo_n "Compile ftplib... " >&6
 
-      result=1
-      if test $result -eq 1; then
-        (cd packages/ftplib-3.1; patch --batch -N -p1 <$cwd/misc/ftplib-3.1-without-perror.patch) 1>/dev/null 2>/dev/null
-        (cd packages/ftplib-3.1; patch --batch -N -p1 <$cwd/misc/ftplib-3.1-ftpaccess.patch) 1>/dev/null 2>/dev/null
-        (cd packages/ftplib-3.1; patch --batch -N -p1 <$cwd/misc/ftplib-3.1-receive-timeout.patch) 1>/dev/null 2>/dev/null
-        (cd packages/ftplib-3.1; patch --batch -N -p1 <$cwd/misc/ftplib-3.1-ftpdir-file-close.patch) 1>/dev/null 2>/dev/null
-      fi
       if test $result -eq 1; then
         (cd ftplib/linux; make clean; make) 1>/dev/null 2>$tmpFile
         if test $? -ne 0; then
@@ -8077,7 +8083,7 @@ fi
 fi
 
 if test $ENABLE_CURL = "yes"; then
-  if test -d curl -o -d "`readlink curl`"; then
+  if test \( -d curl -o -d "`readlink curl`" \) -a \( -d mxml -o -d "`readlink mxml`" \); then
     if test "$ENABLE_PACKAGE_COMPILE" = "yes"; then
 
 
@@ -8142,16 +8148,82 @@ $as_echo "fail (install)" >&6; }
         { $as_echo "$as_me:${as_lineno-$LINENO}: result: done" >&5
 $as_echo "done" >&6; }
       fi
+
+
+  $as_echo_n "Compile mxml... " >&6
+
+      result=1
+      if test $result -eq 1; then
+        case $host_os in
+          mingw*)
+            # patch to disable usage of lib-command when RANLIB is set
+            # patch created with:
+            #   diff -u curl-7.28.1.org/m4/libtool.m4 curl-7.28.1/m4/libtool.m4 >  curl-7.28.1-libtool.patch
+            #   diff -u curl-7.28.1.org/aclocal.m4 curl-7.28.1/aclocal.m4       >> curl-7.28.1-libtool.patch
+            #   diff -u curl-7.28.1.org/Makefile.in curl-7.28.1/Makefile.in     >> curl-7.28.1-libtool.patch
+            #   diff -u curl-7.28.1.org/configure curl-7.28.1/configure         >> curl-7.28.1-libtool.patch
+#              if test -d packages/curl-7.28.1; then
+#                (cd packages/curl-7.28.1; patch --batch -N -p1 <$cwd/misc/curl-7.28.1-libtool.patch) 1>/dev/null 2>/dev/null
+#              else
+#                AC_MSG_WARN([curl-7.28.1 not available - skipped libtool patch!])
+#              fi
+            ;;
+          *)
+            ;;
+        esac
+      fi
+      if test $result -eq 1; then
+        (cd mxml; ./configure --host=$host_cpu-$host_os --prefix=$cwd/packages --disable-shared --enable-static) 1>/dev/null 2>$tmpFile
+        if test $? -ne 0; then
+          { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (configure)" >&5
+$as_echo "fail (configure)" >&6; }
+          cat $tmpFile
+          result1=0
+        fi
+      fi
+      if test $result -eq 1; then
+        (cd mxml; make clean; make) 1>/dev/null 2>$tmpFile
+        if test $? -ne 0; then
+          { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (make)" >&5
+$as_echo "fail (make)" >&6; }
+          cat $tmpFile
+          result=0
+        fi
+      fi
+      if test $result -eq 1; then
+        (cd mxml; make install) 1>/dev/null 2>$tmpFile
+        if test $? -ne 0; then
+          { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (install)" >&5
+$as_echo "fail (install)" >&6; }
+          cat $tmpFile
+          result=0
+        fi
+        case $host_os in
+          mingw*)
+            (cd packages/lib; ln -s libmxml.lib libmxml.a) 1>/dev/null 2>/dev/null
+            ;;
+          *)
+            ;;
+        esac
+      fi
+      if test $result -eq 1; then
+        { $as_echo "$as_me:${as_lineno-$LINENO}: result: done" >&5
+$as_echo "done" >&6; }
+      fi
     else
       result=1
     fi
 
     if test $result -eq 1; then
       HAVE_CURL=1
+      HAVE_MXML=1
       CC_DEFINES="$CC_DEFINES CURL_STATICLIB"
-      STATIC_LIBRARIES="$STATIC_LIBRARIES curl"
+      STATIC_LIBRARIES="$STATIC_LIBRARIES curl mxml"
 
 $as_echo "#define HAVE_CURL 1" >>confdefs.h
+
+
+$as_echo "#define HAVE_MXML 1" >>confdefs.h
 
     fi
   else
@@ -8213,6 +8285,66 @@ $as_echo "$ac_cv_search_libraries_curl_global_init" >&6; }
   if test "$ac_result" != no; then :
   test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" HAVE_CURL=1;LIBRARIES="$LIBRARIES curl";
 $as_echo "#define HAVE_CURL 1" >>confdefs.h
+
+fi
+
+
+
+    ac_result=""
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing mxmlNewXML" >&5
+$as_echo_n "checking for library containing mxmlNewXML... " >&6; }
+if test "${ac_cv_search_libraries_mxmlNewXML+set}" = set; then :
+  $as_echo_n "(cached) " >&6
+else
+
+            ac_func_search_libraries_save_LIBS=$LIBS
+
+      for ac_library in mxml ""; do
+        if test -z "$ac_library"; then
+          ac_result="none required"
+        else
+          ac_result=-l$ac_library
+          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+        fi
+
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main ()
+{
+`if test -z ""; then echo "extern void mxmlNewXML();"; fi`
+                                         return (int)mxmlNewXML;
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_search_libraries_mxmlNewXML=$ac_result; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+      done
+      if test "${ac_cv_search_libraries_mxmlNewXML+set}" = set; then :
+
+else
+  ac_cv_search_libraries_mxmlNewXML=no
+fi
+
+            LIBS=$ac_func_search_libraries_save_LIBS
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_libraries_mxmlNewXML" >&5
+$as_echo "$ac_cv_search_libraries_mxmlNewXML" >&6; }
+  ac_result=$ac_cv_search_libraries_mxmlNewXML
+  if test "$ac_result" != no; then :
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" HAVE_MXML=1;LIBRARIES="$LIBRARIES mxml";
+$as_echo "#define HAVE_MXML 1" >>confdefs.h
 
 fi
 
@@ -8343,6 +8475,132 @@ $as_echo "#define HAVE_CURL 1" >>confdefs.h
 fi
 
       fi
+      if test -z "$HAVE_MXML"; then
+
+
+    { $as_echo "$as_me:${as_lineno-$LINENO}: checking for static library containing mxmlNewXML" >&5
+$as_echo_n "checking for static library containing mxmlNewXML... " >&6; }
+if test "${ac_cv_search_static_mxmlNewXML+set}" = set; then :
+  $as_echo_n "(cached) " >&6
+else
+
+            ac_func_search_static_libraries_save_CFLAGS="$CFLAGS"
+      ac_func_search_static_libraries_save_LIBS="$LIBS"
+
+            CFLAGS="$CFLAGS -static"
+      for ac_library in mxml ""; do
+        if test -z "$ac_library"; then
+          ac_result="none required"
+        else
+          ac_result=-l$ac_library
+          LIBS="-l$ac_library $ac_func_search_static_libraries_save_LIBS"
+        fi
+
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main ()
+{
+`if test -z ""; then echo "extern void mxmlNewXML();"; fi`
+                                         return (int)mxmlNewXML;
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_search_static_mxmlNewXML=$ac_result; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+      done
+      if test "${ac_cv_search_static_mxmlNewXML+set}" = set; then :
+
+else
+  ac_cv_search_static_mxmlNewXML=no
+fi
+
+            LIBS=$ac_func_search_libraries_save_LIBS
+      CFLAGS=$ac_func_search_static_libraries_save_CFLAGS
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_static_mxmlNewXML" >&5
+$as_echo "$ac_cv_search_static_mxmlNewXML" >&6; }
+  ac_result=$ac_cv_search_static_mxmlNewXML
+  if test "$ac_result" != no; then :
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" HAVE_MXML=1;STATIC_LIBRARIES="$STATIC_LIBRARIES mxml";
+$as_echo "#define HAVE_MXML 1" >>confdefs.h
+
+fi
+
+      fi
+      if test -z "$HAVE_MXML"; then
+
+
+    ac_result=""
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing mxmlNewXML" >&5
+$as_echo_n "checking for library containing mxmlNewXML... " >&6; }
+if test "${ac_cv_search_libraries_mxmlNewXML+set}" = set; then :
+  $as_echo_n "(cached) " >&6
+else
+
+            ac_func_search_libraries_save_LIBS=$LIBS
+
+      for ac_library in mxml ""; do
+        if test -z "$ac_library"; then
+          ac_result="none required"
+        else
+          ac_result=-l$ac_library
+          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+        fi
+
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main ()
+{
+`if test -z ""; then echo "extern void mxmlNewXML();"; fi`
+                                         return (int)mxmlNewXML;
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_search_libraries_mxmlNewXML=$ac_result; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+      done
+      if test "${ac_cv_search_libraries_mxmlNewXML+set}" = set; then :
+
+else
+  ac_cv_search_libraries_mxmlNewXML=no
+fi
+
+            LIBS=$ac_func_search_libraries_save_LIBS
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_libraries_mxmlNewXML" >&5
+$as_echo "$ac_cv_search_libraries_mxmlNewXML" >&6; }
+  ac_result=$ac_cv_search_libraries_mxmlNewXML
+  if test "$ac_result" != no; then :
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" HAVE_MXML=1;LIBRARIES="$LIBRARIES mxml";
+$as_echo "#define HAVE_MXML 1" >>confdefs.h
+
+fi
+
+      fi
     fi
   fi
 fi
@@ -8446,9 +8704,6 @@ $as_echo "$as_me: WARNING: libssh2-1.4.2 not available - skipped libtool patch!"
           *)
             ;;
         esac
-        # patch created with:
-        #   diff -u ???
-        (cd packages; patch --batch -N -p0 <$cwd/misc/libssh2-1.1-keepalive.patch) 1>/dev/null 2>/dev/null
       fi
       if test $result -eq 1; then
 #        (cd libssh2; LIBS=-ldl ./configure --host=$host_cpu-$host_os --prefix=$cwd/packages --with-libssl-prefix=$cwd/packages --with-libgcrypt-prefix=$cwd/packages --disable-shared --enable-static --enable-debug) 1>/dev/null 2>$tmpFile
@@ -12983,6 +13238,57 @@ fi
 
 
 
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for getdate_r" >&5
+$as_echo_n "checking for getdate_r... " >&6; }
+if test "${ac_cv_func_getdate_r+set}" = set; then :
+  $as_echo_n "(cached) " >&6
+else
+
+#set -x
+      ac_cv_func_getdate_r="no"
+      echo > conftest.log
+      for ac_headers in  ""; do
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main ()
+{
+`if test -z "$ac_headers"; then echo "extern void getdate_r();"; fi`
+                                         #ifdef getdate_r
+                                         #else
+                                           return (int)getdate_r;
+                                         #endif
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_func_getdate_r=yes; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+      done
+#set +x
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_func_getdate_r" >&5
+$as_echo "$ac_cv_func_getdate_r" >&6; }
+  if test "$ac_cv_func_getdate_r" != no; then :
+
+$as_echo "#define HAVE_GETDATE_R 1" >>confdefs.h
+
+elif :; then :
+
+fi
+
+
+
   { $as_echo "$as_me:${as_lineno-$LINENO}: checking for nanosleep" >&5
 $as_echo_n "checking for nanosleep... " >&6; }
 if test "${ac_cv_func_nanosleep+set}" = set; then :
@@ -14726,6 +15032,7 @@ host="$host"
                    HAVE_GCRYPT=$HAVE_GCRYPT
                    HAVE_FTP=$HAVE_FTP
                    HAVE_CURL=$HAVE_CURL
+                   HAVE_MXML=$HAVE_MXML
                    HAVE_SSH2=$HAVE_SSH2
                    HAVE_GNU_TLS=$HAVE_GNU_TLS
                    HAVE_ISO9660=$HAVE_ISO9660
@@ -15320,7 +15627,7 @@ $as_echo "$as_me: executing $ac_file commands" >&6;}
                     echo "  xdelta compression: `if test "$HAVE_XDELTA"; then echo yes; else echo no; fi`";
                     echo "  crypto support    : `if test "$HAVE_GCRYPT"; then echo yes; else echo no; fi`";
                     echo "  FTP support       : `if test "$HAVE_FTP"; then echo yes; else echo no; fi`";
-                    echo "  curl support      : `if test "$HAVE_CURL"; then echo yes; else echo no; fi`";
+                    echo "  curl support      : `if test "$HAVE_CURL" -a "$HAVE_MXML"; then echo yes; else echo no; fi`";
                     echo "  SCP/SFTP support  : `if test "$HAVE_SSH2"; then echo yes; else echo no; fi`";
                     echo "  TLS/SSL server    : `if test "$HAVE_GNU_TLS"; then echo yes; else echo no; fi`";
                     echo "  ISO 9660 support  : `if test "$HAVE_ISO9660"; then echo yes; else echo no; fi`";

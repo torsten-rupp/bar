@@ -1158,6 +1158,22 @@ if test $ENABLE_LZMA = "yes"; then
       AC_MSG_COMPILE([xz utils])
       result=1
       if test $result -eq 1; then
+        case $host_os in
+          mingw*)
+            # patch to disable usage of lib-command when RANLIB is set
+            # patch created with:
+            #   diff -u xz-5.0.4.org/m4/libtool.m4 xz-5.0.4/m4/libtool.m4 xz-5.0.4-libtool.patch
+            if test -d packages/xz-5.0.4; then
+              (cd packages/xz-5.0.4; patch --batch -N -p1 <$cwd/misc/xz-5.0.4-libtool.patch) 1>/dev/null 2>/dev/null
+            else
+              AC_MSG_WARN([xz-5.0.4 not available - skipped libtool patch!])
+            fi
+            ;;
+          *)
+            ;;
+        esac
+      fi
+      if test $result -eq 1; then
         (cd xz; ./configure --host=$host_cpu-$host_os --prefix=$cwd/packages --disable-shared --enable-static) 1>/dev/null 2>$tmpFile
         if test $? -ne 0; then 
           AC_MSG_RESULT([fail (configure)])
@@ -1256,10 +1272,6 @@ if test $ENABLE_GCRYPT = "yes"; then
       AC_MSG_COMPILE([libgcrypt])
       result2=1
       if test $result2 -eq 1; then
-        # patch to disable wrong deprecated warnings
-        # patch created with:
-        # diff -u libgcrypt-1.5.0.org/src/gcrypt.h libgcrypt-1.5.0/src/gcrypt.h > libgcrypt-warning.patch
-        (cd packages/libgcrypt-1.5.0; patch --batch -N -p1 <$cwd/misc/libgcrypt-warning.patch) 1>/dev/null 2>/dev/null
         case $host_os in
           mingw*)
             # patch to disable usage of lib-command when RANLIB is set
@@ -1365,13 +1377,6 @@ if test $ENABLE_FTP = "yes"; then
       dnl compile ftp library
 
       AC_MSG_COMPILE([ftplib])
-      result=1
-      if test $result -eq 1; then
-        (cd packages/ftplib-3.1; patch --batch -N -p1 <$cwd/misc/ftplib-3.1-without-perror.patch) 1>/dev/null 2>/dev/null
-        (cd packages/ftplib-3.1; patch --batch -N -p1 <$cwd/misc/ftplib-3.1-ftpaccess.patch) 1>/dev/null 2>/dev/null
-        (cd packages/ftplib-3.1; patch --batch -N -p1 <$cwd/misc/ftplib-3.1-receive-timeout.patch) 1>/dev/null 2>/dev/null
-        (cd packages/ftplib-3.1; patch --batch -N -p1 <$cwd/misc/ftplib-3.1-ftpdir-file-close.patch) 1>/dev/null 2>/dev/null
-      fi
       if test $result -eq 1; then
         (cd ftplib/linux; make clean; make) 1>/dev/null 2>$tmpFile
         if test $? -ne 0; then 
@@ -1415,9 +1420,9 @@ if test $ENABLE_FTP = "yes"; then
 fi
 
 if test $ENABLE_CURL = "yes"; then
-  if test -d curl -o -d "`readlink curl`"; then
+  if test \( -d curl -o -d "`readlink curl`" \) -a \( -d mxml -o -d "`readlink mxml`" \); then
     if test "$ENABLE_PACKAGE_COMPILE" = "yes"; then
-      dnl compile curl library
+      dnl compile curl, mxml libraries
 
       AC_MSG_COMPILE([curl])
       result=1
@@ -1474,25 +1479,90 @@ if test $ENABLE_CURL = "yes"; then
       if test $result -eq 1; then
         AC_MSG_RESULT([done])
       fi
+
+      AC_MSG_COMPILE([mxml])
+      result=1
+      if test $result -eq 1; then
+        case $host_os in
+          mingw*)
+            # patch to disable usage of lib-command when RANLIB is set
+            # patch created with:
+            #   diff -u curl-7.28.1.org/m4/libtool.m4 curl-7.28.1/m4/libtool.m4 >  curl-7.28.1-libtool.patch
+            #   diff -u curl-7.28.1.org/aclocal.m4 curl-7.28.1/aclocal.m4       >> curl-7.28.1-libtool.patch
+            #   diff -u curl-7.28.1.org/Makefile.in curl-7.28.1/Makefile.in     >> curl-7.28.1-libtool.patch
+            #   diff -u curl-7.28.1.org/configure curl-7.28.1/configure         >> curl-7.28.1-libtool.patch
+#              if test -d packages/curl-7.28.1; then
+#                (cd packages/curl-7.28.1; patch --batch -N -p1 <$cwd/misc/curl-7.28.1-libtool.patch) 1>/dev/null 2>/dev/null
+#              else
+#                AC_MSG_WARN([curl-7.28.1 not available - skipped libtool patch!])
+#              fi
+            ;;
+          *)
+            ;;
+        esac
+      fi
+      if test $result -eq 1; then
+        (cd mxml; ./configure --host=$host_cpu-$host_os --prefix=$cwd/packages --disable-shared --enable-static) 1>/dev/null 2>$tmpFile
+        if test $? -ne 0; then 
+          AC_MSG_RESULT([fail (configure)])
+          cat $tmpFile
+          result1=0
+        fi
+      fi
+      if test $result -eq 1; then
+        (cd mxml; make clean; make) 1>/dev/null 2>$tmpFile
+        if test $? -ne 0; then 
+          AC_MSG_RESULT([fail (make)])
+          cat $tmpFile
+          result=0
+        fi
+      fi
+      if test $result -eq 1; then
+        (cd mxml; make install) 1>/dev/null 2>$tmpFile
+        if test $? -ne 0; then 
+          AC_MSG_RESULT([fail (install)])
+          cat $tmpFile
+          result=0
+        fi
+        case $host_os in
+          mingw*)
+            (cd packages/lib; ln -s libmxml.lib libmxml.a) 1>/dev/null 2>/dev/null
+            ;;
+          *)
+            ;;
+        esac
+      fi
+      if test $result -eq 1; then
+        AC_MSG_RESULT([done])
+      fi
     else
       result=1
     fi
 
     if test $result -eq 1; then
       HAVE_CURL=1
+      HAVE_MXML=1
       CC_DEFINES="$CC_DEFINES CURL_STATICLIB"
-      STATIC_LIBRARIES="$STATIC_LIBRARIES curl"
+      STATIC_LIBRARIES="$STATIC_LIBRARIES curl mxml"
       AC_DEFINE(HAVE_CURL,1,[curl installed (local)])
+      AC_DEFINE(HAVE_MXML,1,[mxml installed (local)])
     fi
   else
     if test $ENABLE_LINK_DYNAMIC = "yes"; then
       AC_SEARCH_LIBRARIES(curl_global_init,curl,[HAVE_CURL=1;LIBRARIES="$LIBRARIES curl";AC_DEFINE(HAVE_CURL,1,[curl installed])])
+      AC_SEARCH_LIBRARIES(mxmlNewXML,mxml,[HAVE_MXML=1;LIBRARIES="$LIBRARIES mxml";AC_DEFINE(HAVE_MXML,1,[mxml installed])])
     else
       if test -z "$HAVE_CURL"; then
         AC_SEARCH_STATIC_LIBRARIES(curl_global_init,curl,[HAVE_CURL=1;STATIC_LIBRARIES="$STATIC_LIBRARIES curl";AC_DEFINE(HAVE_CURL,1,[static curl installed])])
       fi
       if test -z "$HAVE_CURL"; then
         AC_SEARCH_LIBRARIES(curl_global_init,curl,[HAVE_CURL=1;LIBRARIES="$LIBRARIES curl";AC_DEFINE(HAVE_CURL,1,[curl installed])])
+      fi
+      if test -z "$HAVE_MXML"; then
+        AC_SEARCH_STATIC_LIBRARIES(mxmlNewXML,mxml,[HAVE_MXML=1;STATIC_LIBRARIES="$STATIC_LIBRARIES mxml";AC_DEFINE(HAVE_MXML,1,[static mxml installed])])
+      fi
+      if test -z "$HAVE_MXML"; then
+        AC_SEARCH_LIBRARIES(mxmlNewXML,mxml,[HAVE_MXML=1;LIBRARIES="$LIBRARIES mxml";AC_DEFINE(HAVE_MXML,1,[mxml installed])])
       fi
     fi
   fi
@@ -1588,9 +1658,6 @@ if test $ENABLE_SSH = "yes"; then
           *)
             ;;
         esac
-        # patch created with:
-        #   diff -u ???
-        (cd packages; patch --batch -N -p0 <$cwd/misc/libssh2-1.1-keepalive.patch) 1>/dev/null 2>/dev/null
       fi
       if test $result -eq 1; then
 #        (cd libssh2; LIBS=-ldl ./configure --host=$host_cpu-$host_os --prefix=$cwd/packages --with-libssl-prefix=$cwd/packages --with-libgcrypt-prefix=$cwd/packages --disable-shared --enable-static --enable-debug) 1>/dev/null 2>$tmpFile
@@ -2127,6 +2194,7 @@ AC_CHECK_FUNCTION(mktemp,       AC_DEFINE(HAVE_MKTEMP,       1,[mktemp() availab
 AC_CHECK_MKDIR_ARGUMENTS
 
 AC_CHECK_FUNCTION(localtime_r,AC_DEFINE(HAVE_LOCALTIME_R,1,[localtime_r() available]))
+AC_CHECK_FUNCTION(getdate_r,  AC_DEFINE(HAVE_GETDATE_R,  1,[getdate_r() available]))
 AC_CHECK_FUNCTION(nanosleep,  AC_DEFINE(HAVE_NANOSLEEP,  1,[nanosleep() available]))
 
 AC_CHECK_FUNCTION(pipe,   AC_DEFINE(HAVE_PIPE,   1,[pipe() available]))
@@ -2235,7 +2303,7 @@ AC_CONFIG_COMMANDS(BUILD_NOTE,
                     echo "  xdelta compression: `if test "$HAVE_XDELTA"; then echo yes; else echo no; fi`";
                     echo "  crypto support    : `if test "$HAVE_GCRYPT"; then echo yes; else echo no; fi`";
                     echo "  FTP support       : `if test "$HAVE_FTP"; then echo yes; else echo no; fi`";
-                    echo "  curl support      : `if test "$HAVE_CURL"; then echo yes; else echo no; fi`";
+                    echo "  curl support      : `if test "$HAVE_CURL" -a "$HAVE_MXML"; then echo yes; else echo no; fi`";
                     echo "  SCP/SFTP support  : `if test "$HAVE_SSH2"; then echo yes; else echo no; fi`";
                     echo "  TLS/SSL server    : `if test "$HAVE_GNU_TLS"; then echo yes; else echo no; fi`";
                     echo "  ISO 9660 support  : `if test "$HAVE_ISO9660"; then echo yes; else echo no; fi`";
@@ -2266,6 +2334,7 @@ AC_CONFIG_COMMANDS(BUILD_NOTE,
                    HAVE_GCRYPT=$HAVE_GCRYPT
                    HAVE_FTP=$HAVE_FTP
                    HAVE_CURL=$HAVE_CURL
+                   HAVE_MXML=$HAVE_MXML
                    HAVE_SSH2=$HAVE_SSH2
                    HAVE_GNU_TLS=$HAVE_GNU_TLS
                    HAVE_ISO9660=$HAVE_ISO9660
