@@ -88,6 +88,9 @@
 /* gcrypt installed */
 #undef HAVE_GCRYPT
 
+/* getdate_r() available */
+#undef HAVE_GETDATE_R
+
 /* getgrgid_r() available */
 #undef HAVE_GETGRGID_R
 
@@ -198,6 +201,9 @@
 
 /* mktemp() available */
 #undef HAVE_MKTEMP
+
+/* mxml installed */
+#undef HAVE_MXML
 
 /* nanosleep() available */
 #undef HAVE_NANOSLEEP
