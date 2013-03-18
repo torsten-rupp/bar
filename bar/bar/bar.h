@@ -231,9 +231,9 @@ typedef struct WebDAVServerNode
 {
   LIST_NODE_HEADER(struct WebDAVServerNode);
 
-  String           name;                                 // WebDAV server name                
+  String           name;                                 // WebDAV server name
   ServerAllocation serverAllocation;
-  WebDAVServer     webdavServer; 
+  WebDAVServer     webdavServer;
 } WebDAVServerNode;
 
 typedef struct
@@ -278,8 +278,8 @@ typedef struct
 // file/FTP/SCP/SFTP/WebDAV settings
 typedef struct
 {
-  String writePreProcessCommand;                         // command to execute before writing 
-  String writePostProcessCommand;                        // command to execute after writing  
+  String writePreProcessCommand;                         // command to execute before writing
+  String writePostProcessCommand;                        // command to execute after writing
 } File;
 
 // optical disk settings
@@ -355,15 +355,12 @@ typedef struct
   Password               *cryptPassword;                 // default password for encryption/decryption
 
   FTPServer              *ftpServer;                     // current selected FTP server
-//  const FTPServerList    *ftpServerList;                 // list with FTP servers
   FTPServer              *defaultFTPServer;              // default FTP server
 
   SSHServer              *sshServer;                     // current selected SSH server
-  const SSHServerList    *sshServerList;                 // list with SSH servers
   SSHServer              *defaultSSHServer;              // default SSH server
 
   WebDAVServer           *webdavServer;                  // current selected WebDAV server
-//  const WebDAVServerList *webdavServerList;              // list with WebDAV servers
   WebDAVServer           *defaultWebDAVServer;           // default WebDAV server
 
   const ServerList       *serverList;                    // list with FTP/SSH/WebDAV servers

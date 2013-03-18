@@ -3588,7 +3588,7 @@ ServerAllocation *getSSHServerSettings(const String     hostName,
   assert(sshServer != NULL);
 
   // find SSH server
-  serverNode = globalOptions.sshServerList->head;
+  serverNode = globalOptions.serverList->head;
   while (   (serverNode != NULL)
          && (   (serverNode->type != SERVER_TYPE_SSH)
              || !String_equals(serverNode->name,hostName)
