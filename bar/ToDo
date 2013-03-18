@@ -59,3 +59,7 @@ ToDo
 - valgrind-test for delta-compression
 - configure check for LIBSSH2_SEND_FUNC, LIBSSH2_RECV_FUNC
 - read corrupted archive files, e. g. scan for next valid entry
+- support for password wallet KWallet, GnomeKeyring
+- support Windows Volume Shadow Copy Service
+- rsync protocol
+- split storage.c
