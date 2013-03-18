@@ -419,7 +419,7 @@ class ArchiveNameParts
       // webdav
       type = StorageTypes.WEBDAV;
 
-      String specifier = archiveName.substring(7);
+      String specifier = archiveName.substring(9);
 //Dprintf.dprintf("specifier=%s",specifier);
       if      ((matcher = Pattern.compile("^([^:]*?):(([^@]|\\@)*?)@([^@/]*?)/(.*)$").matcher(specifier)).matches())
       {
