@@ -2036,8 +2036,8 @@ LOCAL void schedulerThreadCode(void)
               scheduleNode = scheduleNode->next;
             }
 
-            // check if other thread pending for job list
-            pendingFlag = Semaphore_checkPending(&jobList.lock);
+            // check if another thread is pending for job list
+            pendingFlag = Semaphore_isLockPending(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ);
 
             // next time
             dateTime -= 60LL;
@@ -9422,7 +9422,7 @@ Errors Server_run(uint             port,
   {
     error = Network_initServer(&serverSocketHandle,
                                port,
-                               SERVER_TYPE_PLAIN,
+                               SERVER_SOCKET_TYPE_PLAIN,
                                NULL,
                                NULL,
                                NULL
@@ -9448,7 +9448,7 @@ Errors Server_run(uint             port,
       #ifdef HAVE_GNU_TLS
         error = Network_initServer(&serverTLSSocketHandle,
                                    tlsPort,
-                                   SERVER_TYPE_TLS,
+                                   SERVER_SOCKET_TYPE_TLS,
                                    caFileName,
                                    certFileName,
                                    keyFileName
