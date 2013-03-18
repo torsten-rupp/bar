@@ -38,6 +38,7 @@ xdeltaFlag=0
 gcryptFlag=0
 ftplibFlag=0
 curlFlag=0
+mxmlFlag=0
 opensslFlag=0
 libssh2Flag=0
 gnutlsFlag=0
@@ -110,6 +111,11 @@ while test $# != 0; do
         curl)
           allFlag=0
           curlFlag=1
+          mxmlFlag=1
+          ;;
+        mxml)
+          allFlag=0
+          mxmlFlag=1
           ;;
         openssl)
           allFlag=0
@@ -184,6 +190,11 @@ while test $# != 0; do
     curl)
       allFlag=0
       curlFlag=1
+      mxmlFlag=1
+      ;;
+    mxml)
+      allFlag=0
+      mxmlFlag=1
       ;;
     openssl)
       allFlag=0
@@ -225,7 +236,7 @@ while test $# != 0; do
   shift
 done
 if test $helpFlag -eq 1; then
-  $ECHO "download-third-party-packages.sh [-d|--destination=<path>] [-n|--no-decompress] [-c|--clean] [--help] [all] [zlib] [bzip2] [lzma] [xdelta] [gcrypt] [ftplib] [curl] [openssl] [libssh2] [gnutls] [libcdio] [breakpad] [pcre] [epm]"
+  $ECHO "download-third-party-packages.sh [-d|--destination=<path>] [-n|--no-decompress] [-c|--clean] [--help] [all] [zlib] [bzip2] [lzma] [xdelta] [gcrypt] [ftplib] [curl] [mxml] [openssl] [libssh2] [gnutls] [libcdio] [breakpad] [pcre] [epm]"
   $ECHO ""
   $ECHO "Download additional third party packages."
   exit 0
@@ -432,6 +443,26 @@ if test $cleanFlag -eq 0; then
     )
     if test $noDecompressFlag -eq 0; then
       $LN -f -s $tmpDirectory/curl-7.28.1 curl
+    fi
+  fi
+
+  if test $allFlag -eq 1 -o $mxmlFlag -eq 1; then
+    # mxml 2.7
+    (
+     if test -n "$destination"; then
+       cd $destination
+     else
+       cd $tmpDirectory
+     fi
+     if test ! -f mxml-2.7.tar.gz; then
+       $WGET 'http://ftp.easysw.com/pub/mxml/2.7/mxml-2.7.tar.gz'
+     fi
+     if test $noDecompressFlag -eq 0; then
+       $TAR xzf mxml-2.7.tar.gz
+     fi
+    )
+    if test $noDecompressFlag -eq 0; then
+      $LN -f -s $tmpDirectory/mxml-2.7 mxml
     fi
   fi
 
@@ -650,6 +681,13 @@ else
     $RMF $tmpDirectory/curl-*-.tar.bz2
     $RMRF $tmpDirectory/curl-*
     $RMF curl
+  fi
+
+  if test $allFlag -eq 1 -o $mxmlFlag -eq 1; then
+    # mxml
+    $RMF $tmpDirectory/mxml-*-.tar.bz2
+    $RMRF $tmpDirectory/mxml-*
+    $RMF mxml
   fi
 
   if test $allFlag -eq 1 -o $opensslFlag -eq 1; then
