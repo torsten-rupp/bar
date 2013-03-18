@@ -117,6 +117,8 @@
 
 #define MIN_PASSWORD_QUALITY_LEVEL            0.6
 
+#define MAX_CONNECTION_COUNT_UNLIMITED        -1
+
 /***************************** Datatypes *******************************/
 
 typedef enum
@@ -146,12 +148,14 @@ LOCAL String           jobName;
 
 LOCAL JobOptions       jobOptions;
 LOCAL String           archiveName;
-LOCAL FTPServerList    ftpServerList;
-LOCAL Semaphore        ftpServerListLock;
-LOCAL SSHServerList    sshServerList;
-LOCAL Semaphore        sshServerListLock;
-LOCAL WebDAVServerList webdavServerList;
-LOCAL Semaphore        webdavServerListLock;
+//LOCAL FTPServerList    ftpServerList;
+//LOCAL Semaphore        ftpServerListLock;
+//LOCAL SSHServerList    sshServerList;
+//LOCAL Semaphore        sshServerListLock;
+//LOCAL WebDAVServerList webdavServerList;
+//LOCAL Semaphore        webdavServerListLock;
+LOCAL ServerList       serverList;
+LOCAL Semaphore        serverListLock;
 LOCAL DeviceList       deviceList;
 LOCAL EntryList        includeEntryList;
 LOCAL PatternList      excludePatternList;
@@ -159,8 +163,11 @@ LOCAL PatternList      deltaSourcePatternList;
 LOCAL PatternList      compressExcludePatternList;
 LOCAL ScheduleList     scheduleList;
 LOCAL FTPServer        defaultFTPServer;
+LOCAL ServerAllocation defaultFTPServerAllocation;
 LOCAL SSHServer        defaultSSHServer;
+LOCAL ServerAllocation defaultSSHServerAllocation;
 LOCAL WebDAVServer     defaultWebDAVServer;
+LOCAL ServerAllocation defaultWebDAVServerAllocation;
 LOCAL Device           defaultDevice;
 LOCAL FTPServer        *currentFTPServer;
 LOCAL SSHServer        *currentSSHServer;
@@ -392,6 +399,12 @@ LOCAL const CommandLineOptionSelect COMMAND_LINE_OPTIONS_CRYPT_ALGORITHMS[] =
     {"AES256",    CRYPT_ALGORITHM_AES256,    "AES cipher 256bit"    },
     {"TWOFISH128",CRYPT_ALGORITHM_TWOFISH128,"Twofish cipher 128bit"},
     {"TWOFISH256",CRYPT_ALGORITHM_TWOFISH256,"Twofish cipher 256bit"},
+    {"SERPENT128",CRYPT_ALGORITHM_SERPENT128,"Serpent cipher 128bit"},
+    {"SERPENT192",CRYPT_ALGORITHM_SERPENT192,"Serpent cipher 192bit"},
+    {"SERPENT256",CRYPT_ALGORITHM_SERPENT256,"Serpent cipher 256bit"},
+    {"CAMELLIA128",CRYPT_ALGORITHM_CAMELLIA128,"Camellia cipher 128bit"},
+    {"CAMELLIA192",CRYPT_ALGORITHM_CAMELLIA192,"Camellia cipher 192bit"},
+    {"CAMELLIA256",CRYPT_ALGORITHM_CAMELLIA256,"Camellia cipher 256bit"},
   #endif /* HAVE_GCRYPT */
 };
 
@@ -519,6 +532,7 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
 //  CMD_OPTION_INTEGER      ("webdav-port",                  0,  0,1,defaultWebDAVServer.port,                    0,65535,NULL,                                          "WebDAV port"                                                              ),
   CMD_OPTION_STRING       ("webdav-login-name",            0,  0,1,defaultWebDAVServer.loginName,                                                                      "WebDAV login name","name"                                                 ),
   CMD_OPTION_SPECIAL      ("webdav-password",              0,  0,1,&defaultWebDAVServer.password,               cmdOptionParsePassword,NULL,                           "WebDAV password (use with care!)","password"                              ),
+  CMD_OPTION_INTEGER      ("webdav-max-connections",       0,  0,1,defaultWebDAVServer.maxConnectionCount,      -1,MAX_INT,NULL,                                       "max. number of concurrent WebDAV connections"                             ),
 
   CMD_OPTION_BOOLEAN      ("daemon",                       0,  1,0,daemonFlag,                                                                                         "run in daemon mode"                                                       ),
   CMD_OPTION_BOOLEAN      ("no-detach",                    'D',1,0,noDetachFlag,                                                                                       "do not detach in daemon mode"                                             ),
@@ -758,6 +772,12 @@ LOCAL const ConfigValueSelect CONFIG_VALUE_CRYPT_ALGORITHMS[] =
     {"AES256",    CRYPT_ALGORITHM_AES256,   },
     {"TWOFISH128",CRYPT_ALGORITHM_TWOFISH128},
     {"TWOFISH256",CRYPT_ALGORITHM_TWOFISH256},
+    {"SERPENT128",CRYPT_ALGORITHM_SERPENT128},
+    {"SERPENT192",CRYPT_ALGORITHM_SERPENT192},
+    {"SERPENT256",CRYPT_ALGORITHM_SERPENT256},
+    {"CAMELLIA128",CRYPT_ALGORITHM_CAMELLIA128},
+    {"CAMELLIA192",CRYPT_ALGORITHM_CAMELLIA192},
+    {"CAMELLIA256",CRYPT_ALGORITHM_CAMELLIA256},
   #endif /* HAVE_GCRYPT */
 };
 
@@ -855,6 +875,7 @@ LOCAL const ConfigValue CONFIG_VALUES[] =
 //  CONFIG_VALUE_INTEGER  ("webdav-port",                  &currentWebDAVServer,offsetof(WebDAVServer,port),        0,65535,NULL),
   CONFIG_VALUE_STRING   ("webdav-login-name",            &currentWebDAVServer,offsetof(WebDAVServer,loginName)    ),
   CONFIG_VALUE_SPECIAL  ("webdav-password",              &currentWebDAVServer,offsetof(WebDAVServer,password),    configValueParsePassword,NULL,NULL,NULL,NULL),
+  CONFIG_VALUE_INTEGER  ("webdav-max-connections",       &defaultWebDAVServer.maxConnectionCount,-1,              -1,MAX_INT,NULL),
 
   CONFIG_VALUE_SPECIAL  ("include-file",                 &includeEntryList,-1,                                    configValueParseFileEntry,NULL,NULL,NULL,&jobOptions.patternType),
   CONFIG_VALUE_SPECIAL  ("include-image",                &includeEntryList,-1,                                    configValueParseImageEntry,NULL,NULL,NULL,&jobOptions.patternType),
@@ -1110,6 +1131,44 @@ LOCAL void output(FILE *file, const String string)
 }
 
 /***********************************************************************\
+* Name   : initServerAllocate
+* Purpose: init server allocation handle
+* Input  : serverAllocation - server allocation handle
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void initServerAllocate(ServerAllocation *serverAllocation)
+{
+  assert(serverAllocation != NULL);
+
+  if (!Semaphore_init(&serverAllocation->lock))
+  {
+    HALT_FATAL_ERROR("cannot initialise semaphore");
+  }
+  serverAllocation->lowPriorityRequestCount  = 0;
+  serverAllocation->highPriorityRequestCount = 0;
+  serverAllocation->connectionCount          = 0;
+}
+
+/***********************************************************************\
+* Name   : doneServerAllocate
+* Purpose: done server allocation handle
+* Input  : serverAllocation - server allocation handle
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void doneServerAllocate(ServerAllocation *serverAllocation)
+{
+  assert(serverAllocation != NULL);
+
+  Semaphore_done(&serverAllocation->lock);
+}
+
+/***********************************************************************\
 * Name   : readConfigFile
 * Purpose: read configuration from file
 * Input  : fileName      - file name
@@ -1196,66 +1255,69 @@ LOCAL bool readConfigFile(const String fileName, bool printInfoFlag)
     // parse line
     if      (String_parse(line,STRING_BEGIN,"[ftp-server %S]",NULL,name))
     {
-      FTPServerNode *ftpServerNode;
+      ServerNode *serverNode;
 
-      ftpServerNode = LIST_NEW_NODE(FTPServerNode);
-      if (ftpServerNode == NULL)
+      serverNode = LIST_NEW_NODE(ServerNode);
+      if (serverNode == NULL)
       {
         HALT_INSUFFICIENT_MEMORY();
       }
-      ftpServerNode->name                         = String_duplicate(name);
-      ftpServerNode->connectionCount              = 0;
-      ftpServerNode->ftpServer.loginName          = NULL;
-      ftpServerNode->ftpServer.password           = NULL;
-      ftpServerNode->ftpServer.maxConnectionCount = -1;
+      serverNode->type                         = SERVER_TYPE_FTP;
+      serverNode->name                         = String_duplicate(name);
+      initServerAllocate(&serverNode->serverAllocation);
+      serverNode->ftpServer.loginName          = NULL;
+      serverNode->ftpServer.password           = NULL;
+      serverNode->ftpServer.maxConnectionCount = MAX_CONNECTION_COUNT_UNLIMITED;
 
-      List_append(&ftpServerList,ftpServerNode);
+      List_append(&serverList,serverNode);
 
-      currentFTPServer = &ftpServerNode->ftpServer;
+      currentFTPServer = &serverNode->ftpServer;
     }
     else if (String_parse(line,STRING_BEGIN,"[ssh-server %S]",NULL,name))
     {
-      SSHServerNode *sshServerNode;
+      ServerNode *serverNode;
 
-      sshServerNode = LIST_NEW_NODE(SSHServerNode);
-      if (sshServerNode == NULL)
+      serverNode = LIST_NEW_NODE(ServerNode);
+      if (serverNode == NULL)
       {
         HALT_INSUFFICIENT_MEMORY();
       }
-      sshServerNode->name                         = String_duplicate(name);
-      sshServerNode->connectionCount              = 0;
-      sshServerNode->sshServer.port               = 22;
-      sshServerNode->sshServer.loginName          = NULL;
-      sshServerNode->sshServer.password           = NULL;
-      sshServerNode->sshServer.publicKeyFileName  = NULL;
-      sshServerNode->sshServer.privateKeyFileName = NULL;
-      sshServerNode->sshServer.maxConnectionCount = -1;
+      serverNode->type                         = SERVER_TYPE_SSH;
+      serverNode->name                         = String_duplicate(name);
+      initServerAllocate(&serverNode->serverAllocation);
+      serverNode->sshServer.port               = 22;
+      serverNode->sshServer.loginName          = NULL;
+      serverNode->sshServer.password           = NULL;
+      serverNode->sshServer.publicKeyFileName  = NULL;
+      serverNode->sshServer.privateKeyFileName = NULL;
+      serverNode->sshServer.maxConnectionCount = MAX_CONNECTION_COUNT_UNLIMITED;
 
-      List_append(&sshServerList,sshServerNode);
+      List_append(&serverList,serverNode);
 
-      currentSSHServer = &sshServerNode->sshServer;
+      currentSSHServer = &serverNode->sshServer;
     }
     else if (String_parse(line,STRING_BEGIN,"[webdav-server %S]",NULL,name))
     {
-      WebDAVServerNode *webdavServerNode;
+      ServerNode *serverNode;
 
-      webdavServerNode = LIST_NEW_NODE(WebDAVServerNode);
-      if (webdavServerNode == NULL)
+      serverNode = LIST_NEW_NODE(ServerNode);
+      if (serverNode == NULL)
       {
         HALT_INSUFFICIENT_MEMORY();
       }
-      webdavServerNode->name                            = String_duplicate(name);
-      webdavServerNode->connectionCount                 = 0;
-//      webdavServerNode->webdavServer.port               = 80;
-      webdavServerNode->webdavServer.loginName          = NULL;
-      webdavServerNode->webdavServer.password           = NULL;
-      webdavServerNode->webdavServer.publicKeyFileName  = NULL;
-      webdavServerNode->webdavServer.privateKeyFileName = NULL;
-      webdavServerNode->webdavServer.maxConnectionCount = -1;
+      serverNode->type                            = SERVER_TYPE_WEBDAV;
+      serverNode->name                            = String_duplicate(name);
+      initServerAllocate(&serverNode->serverAllocation);
+//      serverNode->webdavServer.port               = 80;
+      serverNode->webdavServer.loginName          = NULL;
+      serverNode->webdavServer.password           = NULL;
+      serverNode->webdavServer.publicKeyFileName  = NULL;
+      serverNode->webdavServer.privateKeyFileName = NULL;
+      serverNode->webdavServer.maxConnectionCount = MAX_CONNECTION_COUNT_UNLIMITED;
 
-      List_append(&webdavServerList,webdavServerNode);
+      List_append(&serverList,serverNode);
 
-      currentWebDAVServer = &webdavServerNode->webdavServer;
+      currentWebDAVServer = &serverNode->webdavServer;
     }
     else if (String_parse(line,STRING_BEGIN,"[device %S]",NULL,name))
     {
@@ -2126,14 +2188,17 @@ LOCAL void initGlobalOptions(void)
   globalOptions.compressMinFileSize                             = DEFAULT_COMPRESS_MIN_FILE_SIZE;
   globalOptions.cryptPassword                                   = NULL;
   globalOptions.ftpServer                                       = globalOptions.defaultFTPServer;
-  globalOptions.ftpServerList                                   = &ftpServerList;
+//  globalOptions.ftpServerList                                   = &ftpServerList;
   globalOptions.defaultFTPServer                                = &defaultFTPServer;
   globalOptions.sshServer                                       = globalOptions.defaultSSHServer;
-  globalOptions.sshServerList                                   = &sshServerList;
+//  globalOptions.sshServerList                                   = &sshServerList;
   globalOptions.defaultSSHServer                                = &defaultSSHServer;
   globalOptions.webdavServer                                    = globalOptions.defaultWebDAVServer;
-  globalOptions.webdavServerList                                = &webdavServerList;
+//  globalOptions.webdavServerList                                = &webdavServerList;
   globalOptions.defaultWebDAVServer                             = &defaultWebDAVServer;
+
+  globalOptions.serverList                                      = &serverList;
+
   globalOptions.remoteBARExecutable                             = NULL;
 
   globalOptions.file.writePreProcessCommand                     = NULL;
@@ -2356,7 +2421,52 @@ LOCAL void freeWebDAVServerNode(WebDAVServerNode *webdavServerNode, void *userDa
   String_delete(webdavServerNode->webdavServer.publicKeyFileName);
   Password_delete(webdavServerNode->webdavServer.password);
   String_delete(webdavServerNode->webdavServer.loginName);
+  doneServerAllocate(&webdavServerNode->serverAllocation);
   String_delete(webdavServerNode->name);
+}
+
+/***********************************************************************\
+* Name   : freeServerNode
+* Purpose: free server node
+* Input  : serverNode - server node
+*          userData   - user data
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void freeServerNode(ServerNode *serverNode, void *userData)
+{
+  assert(serverNode != NULL);
+
+  UNUSED_VARIABLE(userData);
+
+  switch (serverNode->type)
+  {
+    case SERVER_TYPE_FTP:
+      Password_delete(serverNode->ftpServer.password);
+      String_delete(serverNode->ftpServer.loginName);
+      break;
+    case SERVER_TYPE_SSH:
+      String_delete(serverNode->sshServer.privateKeyFileName);
+      String_delete(serverNode->sshServer.publicKeyFileName);
+      Password_delete(serverNode->sshServer.password);
+      String_delete(serverNode->sshServer.loginName);
+      break;
+    case SERVER_TYPE_WEBDAV:
+      String_delete(serverNode->webdavServer.privateKeyFileName);
+      String_delete(serverNode->webdavServer.publicKeyFileName);
+      Password_delete(serverNode->webdavServer.password);
+      String_delete(serverNode->webdavServer.loginName);
+      break;
+    #ifndef NDEBUG
+      default:
+        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+        break;
+    #endif /* NDEBUG */
+  }
+  doneServerAllocate(&serverNode->serverAllocation);
+  String_delete(serverNode->name);
 }
 
 /***********************************************************************\
@@ -2550,12 +2660,16 @@ LOCAL Errors initAll(void)
   jobName                               = NULL;
   archiveName                           = NULL;
   initJobOptions(&jobOptions);
-  List_init(&ftpServerList);
-  Semaphore_init(&ftpServerListLock);
-  List_init(&sshServerList);
-  Semaphore_init(&sshServerListLock);
-  List_init(&webdavServerList);
-  Semaphore_init(&webdavServerListLock);
+//  List_init(&ftpServerList);
+//  Semaphore_init(&ftpServerListLock);
+//  List_init(&sshServerList);
+//  Semaphore_init(&sshServerListLock);
+//  List_init(&webdavServerList);
+//  Semaphore_init(&webdavServerListLock);
+
+  List_init(&serverList);
+  Semaphore_init(&serverListLock);
+
   List_init(&deviceList);
   EntryList_init(&includeEntryList);
   PatternList_init(&excludePatternList);
@@ -2564,16 +2678,20 @@ LOCAL Errors initAll(void)
   List_init(&scheduleList);
   defaultFTPServer.loginName             = NULL;
   defaultFTPServer.password              = NULL;
+  defaultFTPServer.maxConnectionCount    = MAX_CONNECTION_COUNT_UNLIMITED;
   defaultSSHServer.port                  = 22;
   defaultSSHServer.loginName             = NULL;
   defaultSSHServer.password              = NULL;
   defaultSSHServer.publicKeyFileName     = NULL;
   defaultSSHServer.privateKeyFileName    = NULL;
+  defaultSSHServer.maxConnectionCount    = MAX_CONNECTION_COUNT_UNLIMITED;
 //  defaultWebDAVServer.port               = 80;
   defaultWebDAVServer.loginName          = NULL;
   defaultWebDAVServer.password           = NULL;
   defaultWebDAVServer.publicKeyFileName  = NULL;
   defaultWebDAVServer.privateKeyFileName = NULL;
+  defaultWebDAVServer.maxConnectionCount = MAX_CONNECTION_COUNT_UNLIMITED;
+  initServerAllocate(&defaultWebDAVServerAllocation);
   defaultDevice.requestVolumeCommand     = NULL;
   defaultDevice.unloadVolumeCommand      = NULL;
   defaultDevice.loadVolumeCommand        = NULL;
@@ -2684,6 +2802,7 @@ LOCAL void doneAll(void)
   if (defaultDevice.unloadVolumeCommand != NULL) String_delete(defaultDevice.unloadVolumeCommand);
   if (defaultDevice.loadVolumeCommand != NULL) String_delete(defaultDevice.loadVolumeCommand);
   if (defaultDevice.requestVolumeCommand != NULL) String_delete(defaultDevice.requestVolumeCommand);
+  doneServerAllocate(&defaultWebDAVServerAllocation);
   if (defaultWebDAVServer.privateKeyFileName != NULL) String_delete(defaultWebDAVServer.privateKeyFileName);
   if (defaultWebDAVServer.publicKeyFileName != NULL) String_delete(defaultWebDAVServer.publicKeyFileName);
   if (defaultWebDAVServer.password != NULL) Password_delete(defaultWebDAVServer.password);
@@ -2701,12 +2820,16 @@ LOCAL void doneAll(void)
   EntryList_done(&includeEntryList);
   Password_delete(serverPassword);
   List_done(&deviceList,(ListNodeFreeFunction)freeDeviceNode,NULL);
-  Semaphore_done(&webdavServerListLock);
-  List_done(&webdavServerList,(ListNodeFreeFunction)freeWebDAVServerNode,NULL);
-  Semaphore_done(&sshServerListLock);
-  List_done(&sshServerList,(ListNodeFreeFunction)freeSSHServerNode,NULL);
-  Semaphore_done(&ftpServerListLock);
-  List_done(&ftpServerList,(ListNodeFreeFunction)freeFTPServerNode,NULL);
+
+  Semaphore_done(&serverListLock);
+  List_done(&serverList,(ListNodeFreeFunction)freeServerNode,NULL);
+
+//  Semaphore_done(&webdavServerListLock);
+//  List_done(&webdavServerList,(ListNodeFreeFunction)freeWebDAVServerNode,NULL);
+//  Semaphore_done(&sshServerListLock);
+//  List_done(&sshServerList,(ListNodeFreeFunction)freeSSHServerNode,NULL);
+//  Semaphore_done(&ftpServerListLock);
+//  List_done(&ftpServerList,(ListNodeFreeFunction)freeFTPServerNode,NULL);
   freeJobOptions(&jobOptions);
   String_delete(archiveName);
   String_delete(jobName);
@@ -3011,39 +3134,42 @@ void initJobOptions(JobOptions *jobOptions)
   assert(jobOptions != NULL);
 
   memset(jobOptions,0,sizeof(JobOptions));
-  jobOptions->archiveType               = ARCHIVE_TYPE_NORMAL;
-  jobOptions->archivePartSize           = 0LL;
-  jobOptions->directoryStripCount       = 0;
-  jobOptions->owner.userId              = FILE_DEFAULT_USER_ID;
-  jobOptions->owner.groupId             = FILE_DEFAULT_GROUP_ID;
-  jobOptions->patternType               = PATTERN_TYPE_GLOB;
-  jobOptions->compressAlgorithm.delta   = COMPRESS_ALGORITHM_NONE;
-  jobOptions->compressAlgorithm.byte    = COMPRESS_ALGORITHM_NONE;
-  jobOptions->cryptAlgorithm            = CRYPT_ALGORITHM_NONE;
+  jobOptions->archiveType                     = ARCHIVE_TYPE_NORMAL;
+  jobOptions->archivePartSize                 = 0LL;
+  jobOptions->directoryStripCount             = 0;
+  jobOptions->owner.userId                    = FILE_DEFAULT_USER_ID;
+  jobOptions->owner.groupId                   = FILE_DEFAULT_GROUP_ID;
+  jobOptions->patternType                     = PATTERN_TYPE_GLOB;
+  jobOptions->compressAlgorithm.delta         = COMPRESS_ALGORITHM_NONE;
+  jobOptions->compressAlgorithm.byte          = COMPRESS_ALGORITHM_NONE;
+  jobOptions->cryptAlgorithm                  = CRYPT_ALGORITHM_NONE;
   #ifdef HAVE_GCRYPT
-    jobOptions->cryptType               = CRYPT_TYPE_SYMMETRIC;
+    jobOptions->cryptType                     = CRYPT_TYPE_SYMMETRIC;
   #else /* not HAVE_GCRYPT */
-    jobOptions->cryptType               = CRYPT_TYPE_NONE;
+    jobOptions->cryptType                     = CRYPT_TYPE_NONE;
   #endif /* HAVE_GCRYPT */
-  jobOptions->cryptPasswordMode         = PASSWORD_MODE_DEFAULT;
-  jobOptions->cryptPublicKeyFileName    = NULL;
-  jobOptions->cryptPrivateKeyFileName   = NULL;
-  jobOptions->volumeSize                = 0LL;
-  jobOptions->skipUnreadableFlag        = TRUE;
-  jobOptions->forceDeltaCompressionFlag = FALSE;
-  jobOptions->ignoreNoDumpAttributeFlag = FALSE;
-  jobOptions->overwriteArchiveFilesFlag = FALSE;
-  jobOptions->overwriteFilesFlag        = FALSE;
-  jobOptions->errorCorrectionCodesFlag  = FALSE;
-  jobOptions->alwaysCreateImageFlag     = FALSE;
-  jobOptions->waitFirstVolumeFlag       = FALSE;
-  jobOptions->rawImagesFlag             = FALSE;
-  jobOptions->noFragmentsCheckFlag      = FALSE;
-  jobOptions->noIndexDatabaseFlag       = FALSE;
-  jobOptions->dryRunFlag                = FALSE;
-  jobOptions->noStorageFlag             = FALSE;
-  jobOptions->noBAROnMediumFlag         = FALSE;
-  jobOptions->stopOnErrorFlag           = FALSE;
+  jobOptions->cryptPasswordMode               = PASSWORD_MODE_DEFAULT;
+  jobOptions->cryptPublicKeyFileName          = NULL;
+  jobOptions->cryptPrivateKeyFileName         = NULL;
+  jobOptions->ftpServer.maxConnectionCount    = MAX_CONNECTION_COUNT_UNLIMITED;
+  jobOptions->sshServer.maxConnectionCount    = MAX_CONNECTION_COUNT_UNLIMITED;
+  jobOptions->webdavServer.maxConnectionCount = MAX_CONNECTION_COUNT_UNLIMITED;
+  jobOptions->volumeSize                      = 0LL;
+  jobOptions->skipUnreadableFlag              = TRUE;
+  jobOptions->forceDeltaCompressionFlag       = FALSE;
+  jobOptions->ignoreNoDumpAttributeFlag       = FALSE;
+  jobOptions->overwriteArchiveFilesFlag       = FALSE;
+  jobOptions->overwriteFilesFlag              = FALSE;
+  jobOptions->errorCorrectionCodesFlag        = FALSE;
+  jobOptions->alwaysCreateImageFlag           = FALSE;
+  jobOptions->waitFirstVolumeFlag             = FALSE;
+  jobOptions->rawImagesFlag                   = FALSE;
+  jobOptions->noFragmentsCheckFlag            = FALSE;
+  jobOptions->noIndexDatabaseFlag             = FALSE;
+  jobOptions->dryRunFlag                      = FALSE;
+  jobOptions->noStorageFlag                   = FALSE;
+  jobOptions->noBAROnMediumFlag               = FALSE;
+  jobOptions->stopOnErrorFlag                 = FALSE;
 }
 
 void copyJobOptions(const JobOptions *fromJobOptions, JobOptions *toJobOptions)
@@ -3317,70 +3443,203 @@ ulong getBandWidth(BandWidthList *bandWidthList)
   return n;
 }
 
-void getFTPServerSettings(const String     hostName,
-                          const JobOptions *jobOptions,
-                          FTPServer        *ftpServer
-                         )
+void allocateServer(ServerAllocation *serverAllocation, ServerAllocationPriorities priority, int maxConnectionCount)
 {
-  FTPServerNode *ftpServerNode;
+  SemaphoreLock semaphoreLock;
+
+  assert(serverAllocation != NULL);
+
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&serverAllocation->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,SEMAPHORE_WAIT_FOREVER)
+  {
+    switch (priority)
+    {
+      case SERVER_ALLOCATION_PRIORITY_LOW:
+        if (   (maxConnectionCount != MAX_CONNECTION_COUNT_UNLIMITED)
+            && (serverAllocation->connectionCount >= maxConnectionCount)
+           )
+        {
+          // request low priority connection
+          serverAllocation->lowPriorityRequestCount++;
+
+          // wait for free connection
+          while (serverAllocation->connectionCount >= maxConnectionCount)
+          {
+            Semaphore_waitModified(&serverAllocation->lock,SEMAPHORE_WAIT_FOREVER);
+          }
+
+          // low priority request done
+          assert(serverAllocation->lowPriorityRequestCount > 0);
+          serverAllocation->lowPriorityRequestCount--;
+        }
+        break;
+      case SERVER_ALLOCATION_PRIORITY_HIGH:
+        if (   (maxConnectionCount != MAX_CONNECTION_COUNT_UNLIMITED)
+            && (serverAllocation->connectionCount >= maxConnectionCount)
+           )
+        {
+          // request high priority connection
+          serverAllocation->highPriorityRequestCount++;
+
+          // wait for free connection
+          while (serverAllocation->connectionCount >= maxConnectionCount)
+          {
+            Semaphore_waitModified(&serverAllocation->lock,SEMAPHORE_WAIT_FOREVER);
+          }
+
+          // high priority request done
+          assert(serverAllocation->highPriorityRequestCount > 0);
+          serverAllocation->highPriorityRequestCount--;
+        }
+        break;
+      #ifndef NDEBUG
+        default:
+          HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+          break;
+      #endif /* NDEBUG */
+    }
+
+    // allocated connection
+    serverAllocation->connectionCount++;
+  }
+}
+
+void freeServer(ServerAllocation *serverAllocation)
+{
+  SemaphoreLock semaphoreLock;
+
+  assert(serverAllocation != NULL);
+  assert(serverAllocation->connectionCount > 0);
+
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&serverAllocation->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,SEMAPHORE_WAIT_FOREVER)
+  {
+    // free connection
+    serverAllocation->connectionCount--;
+  }
+}
+
+bool isServerAllocationPending(ServerAllocation *serverAllocation, ServerAllocationPriorities priority)
+{
+  SemaphoreLock semaphoreLock;
+  bool          pendingFlag;
+
+  assert(serverAllocation != NULL);
+
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&serverAllocation->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,SEMAPHORE_WAIT_FOREVER)
+  {
+    pendingFlag = FALSE;
+    switch (priority)
+    {
+      case SERVER_ALLOCATION_PRIORITY_LOW:
+        pendingFlag = (serverAllocation->lowPriorityRequestCount);
+        break;
+      case SERVER_ALLOCATION_PRIORITY_HIGH:
+        pendingFlag = (serverAllocation->highPriorityRequestCount);
+        break;
+      #ifndef NDEBUG
+        default:
+          HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+          break;
+      #endif /* NDEBUG */
+    }
+  }
+
+  return pendingFlag;
+}
+
+ServerAllocation *getFTPServerSettings(const String     hostName,
+                                       const JobOptions *jobOptions,
+                                       FTPServer        *ftpServer
+                                      )
+{
+  ServerNode *serverNode;
 
   assert(hostName != NULL);
   assert(jobOptions != NULL);
   assert(ftpServer != NULL);
 
-  ftpServerNode = globalOptions.ftpServerList->head;
-  while ((ftpServerNode != NULL) && !String_equals(ftpServerNode->name,hostName))
+  // find FTP server
+  serverNode = globalOptions.serverList->head;
+  while (   (serverNode != NULL)
+         && (   (serverNode->type != SERVER_TYPE_FTP)
+             || !String_equals(serverNode->name,hostName)
+            )
+        )
   {
-    ftpServerNode = ftpServerNode->next;
+    serverNode = serverNode->next;
   }
-  ftpServer->loginName = !String_isEmpty(jobOptions->ftpServer.loginName ) ? jobOptions->ftpServer.loginName      : ((ftpServerNode != NULL) ? ftpServerNode->ftpServer.loginName      : globalOptions.defaultFTPServer->loginName     );
-  ftpServer->password  = !Password_isEmpty(jobOptions->ftpServer.password) ? jobOptions->ftpServer.password       : ((ftpServerNode != NULL) ? ftpServerNode->ftpServer.password       : globalOptions.defaultFTPServer->password      );
+
+  // get FTP server settings
+  ftpServer->loginName          = !String_isEmpty(jobOptions->ftpServer.loginName                            ) ? jobOptions->ftpServer.loginName          : ((serverNode != NULL) ? serverNode->ftpServer.loginName          : globalOptions.defaultFTPServer->loginName         );
+  ftpServer->password           = !Password_isEmpty(jobOptions->ftpServer.password                           ) ? jobOptions->ftpServer.password           : ((serverNode != NULL) ? serverNode->ftpServer.password           : globalOptions.defaultFTPServer->password          );
+  ftpServer->maxConnectionCount = (jobOptions->ftpServer.maxConnectionCount != MAX_CONNECTION_COUNT_UNLIMITED) ? jobOptions->ftpServer.maxConnectionCount : ((serverNode != NULL) ? serverNode->ftpServer.maxConnectionCount : globalOptions.defaultFTPServer->maxConnectionCount);
+
+  return (serverNode != NULL) ? &serverNode->serverAllocation : &defaultFTPServerAllocation;
 }
 
-void getSSHServerSettings(const String     hostName,
-                          const JobOptions *jobOptions,
-                          SSHServer        *sshServer
-                         )
+ServerAllocation *getSSHServerSettings(const String     hostName,
+                                       const JobOptions *jobOptions,
+                                       SSHServer        *sshServer
+                                      )
 {
-  SSHServerNode *sshServerNode;
+  ServerNode *serverNode;
 
   assert(hostName != NULL);
   assert(jobOptions != NULL);
   assert(sshServer != NULL);
 
-  sshServerNode = globalOptions.sshServerList->head;
-  while ((sshServerNode != NULL) && !String_equals(sshServerNode->name,hostName))
+  // find SSH server
+  serverNode = globalOptions.sshServerList->head;
+  while (   (serverNode != NULL)
+         && (   (serverNode->type != SERVER_TYPE_SSH)
+             || !String_equals(serverNode->name,hostName)
+            )
+        )
   {
-    sshServerNode = sshServerNode->next;
+    serverNode = serverNode->next;
   }
-  sshServer->port               = (jobOptions->sshServer.port != 0                        ) ? jobOptions->sshServer.port               : ((sshServerNode != NULL) ? sshServerNode->sshServer.port               : globalOptions.defaultSSHServer->port              );
-  sshServer->loginName          = !String_isEmpty(jobOptions->sshServer.loginName         ) ? jobOptions->sshServer.loginName          : ((sshServerNode != NULL) ? sshServerNode->sshServer.loginName          : globalOptions.defaultSSHServer->loginName         );
-  sshServer->password           = !Password_isEmpty(jobOptions->sshServer.password        ) ? jobOptions->sshServer.password           : ((sshServerNode != NULL) ? sshServerNode->sshServer.password           : globalOptions.defaultSSHServer->password          );
-  sshServer->publicKeyFileName  = !String_isEmpty(jobOptions->sshServer.publicKeyFileName ) ? jobOptions->sshServer.publicKeyFileName  : ((sshServerNode != NULL) ? sshServerNode->sshServer.publicKeyFileName  : globalOptions.defaultSSHServer->publicKeyFileName );
-  sshServer->privateKeyFileName = !String_isEmpty(jobOptions->sshServer.privateKeyFileName) ? jobOptions->sshServer.privateKeyFileName : ((sshServerNode != NULL) ? sshServerNode->sshServer.privateKeyFileName : globalOptions.defaultSSHServer->privateKeyFileName);
+
+  // get SSH server settings
+  sshServer->port               = (jobOptions->sshServer.port != 0                                           ) ? jobOptions->sshServer.port               : ((serverNode != NULL) ? serverNode->sshServer.port               : globalOptions.defaultSSHServer->port              );
+  sshServer->loginName          = !String_isEmpty(jobOptions->sshServer.loginName                            ) ? jobOptions->sshServer.loginName          : ((serverNode != NULL) ? serverNode->sshServer.loginName          : globalOptions.defaultSSHServer->loginName         );
+  sshServer->password           = !Password_isEmpty(jobOptions->sshServer.password                           ) ? jobOptions->sshServer.password           : ((serverNode != NULL) ? serverNode->sshServer.password           : globalOptions.defaultSSHServer->password          );
+  sshServer->publicKeyFileName  = !String_isEmpty(jobOptions->sshServer.publicKeyFileName                    ) ? jobOptions->sshServer.publicKeyFileName  : ((serverNode != NULL) ? serverNode->sshServer.publicKeyFileName  : globalOptions.defaultSSHServer->publicKeyFileName );
+  sshServer->privateKeyFileName = !String_isEmpty(jobOptions->sshServer.privateKeyFileName                   ) ? jobOptions->sshServer.privateKeyFileName : ((serverNode != NULL) ? serverNode->sshServer.privateKeyFileName : globalOptions.defaultSSHServer->privateKeyFileName);
+  sshServer->maxConnectionCount = (jobOptions->sshServer.maxConnectionCount != MAX_CONNECTION_COUNT_UNLIMITED) ? jobOptions->sshServer.maxConnectionCount : ((serverNode != NULL) ? serverNode->sshServer.maxConnectionCount : globalOptions.defaultSSHServer->maxConnectionCount);
+
+  return (serverNode != NULL) ? &serverNode->serverAllocation : &defaultSSHServerAllocation;
 }
 
-void getWebDAVServerSettings(const String     hostName,
-                             const JobOptions *jobOptions,
-                             WebDAVServer     *webdavServer
-                            )
+ServerAllocation *getWebDAVServerSettings(const String     hostName,
+                                          const JobOptions *jobOptions,
+                                          WebDAVServer     *webdavServer
+                                         )
 {
-  WebDAVServerNode *webdavServerNode;
+  ServerNode *serverNode;
 
   assert(hostName != NULL);
   assert(jobOptions != NULL);
   assert(webdavServer != NULL);
 
-  webdavServerNode = globalOptions.webdavServerList->head;
-  while ((webdavServerNode != NULL) && !String_equals(webdavServerNode->name,hostName))
+  // find WebDAV server
+  serverNode = globalOptions.serverList->head;
+  while (   (serverNode != NULL)
+         && (   (serverNode->type != SERVER_TYPE_WEBDAV)
+             || !String_equals(serverNode->name,hostName)
+            )
+        )
   {
-    webdavServerNode = webdavServerNode->next;
+    serverNode = serverNode->next;
   }
-//  webdavServer->port               = (jobOptions->webdavServer.port != 0                        ) ? jobOptions->webdavServer.port               : ((webdavServerNode != NULL) ? webdavServerNode->webdavServer.port               : globalOptions.defaultWebDAVServer->port              );
-  webdavServer->loginName          = !String_isEmpty(jobOptions->webdavServer.loginName         ) ? jobOptions->webdavServer.loginName          : ((webdavServerNode != NULL) ? webdavServerNode->webdavServer.loginName          : globalOptions.defaultWebDAVServer->loginName         );
-  webdavServer->password           = !Password_isEmpty(jobOptions->webdavServer.password        ) ? jobOptions->webdavServer.password           : ((webdavServerNode != NULL) ? webdavServerNode->webdavServer.password           : globalOptions.defaultWebDAVServer->password          );
-  webdavServer->publicKeyFileName  = !String_isEmpty(jobOptions->webdavServer.publicKeyFileName ) ? jobOptions->webdavServer.publicKeyFileName  : ((webdavServerNode != NULL) ? webdavServerNode->webdavServer.publicKeyFileName  : globalOptions.defaultWebDAVServer->publicKeyFileName );
-  webdavServer->privateKeyFileName = !String_isEmpty(jobOptions->webdavServer.privateKeyFileName) ? jobOptions->webdavServer.privateKeyFileName : ((webdavServerNode != NULL) ? webdavServerNode->webdavServer.privateKeyFileName : globalOptions.defaultWebDAVServer->privateKeyFileName);
+
+  // get WebDAV server settings
+//  webdavServer->port               = (jobOptions->webdavServer.port != 0                                           ) ? jobOptions->webdavServer.port               : ((serverNode != NULL) ? serverNode->webdavServer.port               : globalOptions.defaultWebDAVServer->port              );
+  webdavServer->loginName          = !String_isEmpty(jobOptions->webdavServer.loginName                            ) ? jobOptions->webdavServer.loginName          : ((serverNode != NULL) ? serverNode->webdavServer.loginName          : globalOptions.defaultWebDAVServer->loginName         );
+  webdavServer->password           = !Password_isEmpty(jobOptions->webdavServer.password                           ) ? jobOptions->webdavServer.password           : ((serverNode != NULL) ? serverNode->webdavServer.password           : globalOptions.defaultWebDAVServer->password          );
+  webdavServer->publicKeyFileName  = !String_isEmpty(jobOptions->webdavServer.publicKeyFileName                    ) ? jobOptions->webdavServer.publicKeyFileName  : ((serverNode != NULL) ? serverNode->webdavServer.publicKeyFileName  : globalOptions.defaultWebDAVServer->publicKeyFileName );
+  webdavServer->privateKeyFileName = !String_isEmpty(jobOptions->webdavServer.privateKeyFileName                   ) ? jobOptions->webdavServer.privateKeyFileName : ((serverNode != NULL) ? serverNode->webdavServer.privateKeyFileName : globalOptions.defaultWebDAVServer->privateKeyFileName);
+  webdavServer->maxConnectionCount = (jobOptions->webdavServer.maxConnectionCount != MAX_CONNECTION_COUNT_UNLIMITED) ? jobOptions->webdavServer.maxConnectionCount : ((serverNode != NULL) ? serverNode->webdavServer.maxConnectionCount : globalOptions.defaultWebDAVServer->maxConnectionCount);
+
+  return (serverNode != NULL) ? &serverNode->serverAllocation : &defaultWebDAVServerAllocation;
 }
 
 void getCDSettings(const JobOptions *jobOptions,
@@ -3487,67 +3746,20 @@ void getDeviceSettings(const String     name,
   device->writeCommand            = (jobOptions->device.writeCommand            != NULL)?jobOptions->device.writeCommand           :((deviceNode != NULL)?deviceNode->device.writeCommand           :globalOptions.defaultDevice->writeCommand           );
 }
 
-bool allocateFTPServerConnection(const String hostName)
+bool allocateServerConnection(ServerAllocation *serverAllocation, ServerAllocationPriorities priority, int maxConnectionCount)
 {
-  bool          allocatedFlag;
-  SemaphoreLock semaphoreLock;
-  FTPServerNode *ftpServerNode;
+  assert(serverAllocation != NULL);
 
-  assert(hostName != NULL);
+  allocateServer(serverAllocation,priority,maxConnectionCount);
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&ftpServerListLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,SEMAPHORE_WAIT_FOREVER)
-  {
-    ftpServerNode = globalOptions.ftpServerList->head;
-    while ((ftpServerNode != NULL) && !String_equals(ftpServerNode->name,hostName))
-    {
-      ftpServerNode = ftpServerNode->next;
-    }
-
-    if (   (ftpServerNode != NULL)
-        && (   (ftpServerNode->ftpServer.maxConnectionCount < 0)
-            || (ftpServerNode->connectionCount < (uint)ftpServerNode->ftpServer.maxConnectionCount)
-           )
-       )
-    {
-      ftpServerNode->connectionCount++;
-      allocatedFlag = TRUE;
-    }
-    else
-    {
-      allocatedFlag = FALSE;
-    }
-  }
-
-//  return allocatedFlag;
-#warning todo
-return TRUE;
+  return TRUE;
 }
 
-void freeFTPServerConnection(const String hostName)
+void freeServerConnection(ServerAllocation *serverAllocation)
 {
-#warning NYI
-}
+  assert(serverAllocation != NULL);
 
-bool allocateSSHServerConnection(const String hostName)
-{
-#warning NYI
-return TRUE;
-}
-
-void freeSSHServerConnection(const String hostName)
-{
-#warning NYI
-}
-
-bool allocateWebDAVServerConnection(const String hostName)
-{
-#warning NYI
-return TRUE;
-}
-
-void freeWebDAVServerConnection(const String hostName)
-{
-#warning NYI
+  freeServer(serverAllocation);
 }
 
 Errors inputCryptPassword(void         *userData,
@@ -5479,7 +5691,7 @@ fprintf(stderr,"%s,%d: t=%s\n",__FILE__,__LINE__,t);
       return EXITCODE_FAIL;
       break;
   }
- }
+}
 
 #ifdef __cplusplus
   }

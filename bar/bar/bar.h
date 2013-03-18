@@ -148,27 +148,43 @@ typedef struct
 // password mode
 typedef enum
 {
-  PASSWORD_MODE_DEFAULT,                // use global password
-  PASSWORD_MODE_ASK,                    // ask for password
-  PASSWORD_MODE_CONFIG,                 // use password from config
+  PASSWORD_MODE_DEFAULT,                                 // use global password
+  PASSWORD_MODE_ASK,                                     // ask for password
+  PASSWORD_MODE_CONFIG,                                  // use password from config
   PASSWORD_MODE_UNKNOWN,
 } PasswordModes;
+
+// server allocation priority
+typedef enum
+{
+  SERVER_ALLOCATION_PRIORITY_LOW,
+  SERVER_ALLOCATION_PRIORITY_HIGH,
+} ServerAllocationPriorities;
+
+// server allocation
+typedef struct
+{
+  Semaphore    lock;
+  uint         lowPriorityRequestCount;                  // number of waiting low priority connection requests
+  uint         highPriorityRequestCount;                 // number of waiting high priority connection requests
+  uint         connectionCount;                          // number of connections
+} ServerAllocation;
 
 // FTP server settings
 typedef struct
 {
-  String   loginName;                   // login name
-  Password *password;                   // login password
-  int      maxConnectionCount;          // max. number of concurrent connections or -1 for unlimited
+  String   loginName;                                    // login name
+  Password *password;                                    // login password
+  int      maxConnectionCount;                           // max. number of concurrent connections or -1 for unlimited
 } FTPServer;
 
 typedef struct FTPServerNode
 {
   LIST_NODE_HEADER(struct FTPServerNode);
 
-  String    name;                       // ftp server name
+  String    name;                                        // ftp server name
   FTPServer ftpServer;
-  uint      connectionCount;            // number of connections
+  uint      connectionCount;                             // number of connections
 } FTPServerNode;
 
 typedef struct
@@ -179,21 +195,21 @@ typedef struct
 // SSH server settings
 typedef struct
 {
-  uint     port;                        // server port (ssh,scp,sftp)
-  String   loginName;                   // login name
-  Password *password;                   // login password
-  String   publicKeyFileName;           // public key file name (ssh,scp,sftp)
-  String   privateKeyFileName;          // private key file name (ssh,scp,sftp)
-  int      maxConnectionCount;          // max. number of concurrent connections or -1 for unlimited
+  uint     port;                                         // server port (ssh,scp,sftp)
+  String   loginName;                                    // login name
+  Password *password;                                    // login password
+  String   publicKeyFileName;                            // public key file name (ssh,scp,sftp)
+  String   privateKeyFileName;                           // private key file name (ssh,scp,sftp)
+  int      maxConnectionCount;                           // max. number of concurrent connections or -1 for unlimited
 } SSHServer;
 
 typedef struct SSHServerNode
 {
   LIST_NODE_HEADER(struct SSHServerNode);
 
-  String    name;                       // ssh server name
+  String    name;                                        // ssh server name
   SSHServer sshServer;
-  uint      connectionCount;            // number of connections
+  uint      connectionCount;                             // number of connections
 } SSHServerNode;
 
 typedef struct
@@ -204,20 +220,20 @@ typedef struct
 // WebDAV server settings
 typedef struct
 {
-  String   loginName;                   // login name
-  Password *password;                   // login password
-  String   publicKeyFileName;           // public key file name
-  String   privateKeyFileName;          // private key file name
-  int      maxConnectionCount;          // max. number of concurrent connections or -1 for unlimited
+  String   loginName;                                    // login name
+  Password *password;                                    // login password
+  String   publicKeyFileName;                            // public key file name
+  String   privateKeyFileName;                           // private key file name
+  int      maxConnectionCount;                           // max. number of concurrent connections or -1 for unlimited
 } WebDAVServer;
 
 typedef struct WebDAVServerNode
 {
   LIST_NODE_HEADER(struct WebDAVServerNode);
 
-  String       name;                    // WebDAV server name
-  WebDAVServer webdavServer;
-  uint         connectionCount;         // number of connections
+  String           name;                                 // WebDAV server name                
+  ServerAllocation serverAllocation;
+  WebDAVServer     webdavServer; 
 } WebDAVServerNode;
 
 typedef struct
@@ -225,59 +241,93 @@ typedef struct
   LIST_HEADER(WebDAVServerNode);
 } WebDAVServerList;
 
+// server types
+typedef enum
+{
+  SERVER_TYPE_NONE,
+
+  SERVER_TYPE_FTP,
+  SERVER_TYPE_SSH,
+  SERVER_TYPE_WEBDAV,
+
+  SERVER_TYPE_UNKNOWN
+} ServerTypes;
+
+// server node
+typedef struct ServerNode
+{
+  LIST_NODE_HEADER(struct ServerNode);
+
+  ServerTypes      type;                                 // server type
+  String           name;                                 // server name
+  union
+  {
+    FTPServer    ftpServer;
+    SSHServer    sshServer;
+    WebDAVServer webdavServer;
+  };
+  ServerAllocation serverAllocation;                     // server allocation
+} ServerNode;
+
+// server list
+typedef struct
+{
+  LIST_HEADER(ServerNode);
+} ServerList;
+
 // file/FTP/SCP/SFTP/WebDAV settings
 typedef struct
 {
-  String writePreProcessCommand;        // command to execute before writing
-  String writePostProcessCommand;       // command to execute after writing
+  String writePreProcessCommand;                         // command to execute before writing 
+  String writePostProcessCommand;                        // command to execute after writing  
 } File;
 
 // optical disk settings
 typedef struct
 {
-  String defaultDeviceName;             // default device name
-  String requestVolumeCommand;          // command to request new medium
-  String unloadVolumeCommand;           // command to unload medium
-  String loadVolumeCommand;             // command to load medium
-  uint64 volumeSize;                    // size of medium [bytes] (0 for default)
+  String defaultDeviceName;                              // default device name
+  String requestVolumeCommand;                           // command to request new medium
+  String unloadVolumeCommand;                            // command to unload medium
+  String loadVolumeCommand;                              // command to load medium
+  uint64 volumeSize;                                     // size of medium [bytes] (0 for default)
 
-  String imagePreProcessCommand;        // command to execute before creating image
-  String imagePostProcessCommand;       // command to execute after created image
-  String imageCommand;                  // command to create medium image
-  String eccPreProcessCommand;          // command to execute before ECC calculation
-  String eccPostProcessCommand;         // command to execute after ECC calculation
-  String eccCommand;                    // command for ECC calculation
-  String writePreProcessCommand;        // command to execute before writing medium
-  String writePostProcessCommand;       // command to execute after writing medium
-  String writeCommand;                  // command to write medium
-  String writeImageCommand;             // command to write image on medium
+  String imagePreProcessCommand;                         // command to execute before creating image
+  String imagePostProcessCommand;                        // command to execute after created image
+  String imageCommand;                                   // command to create medium image
+  String eccPreProcessCommand;                           // command to execute before ECC calculation
+  String eccPostProcessCommand;                          // command to execute after ECC calculation
+  String eccCommand;                                     // command for ECC calculation
+  String writePreProcessCommand;                         // command to execute before writing medium
+  String writePostProcessCommand;                        // command to execute after writing medium
+  String writeCommand;                                   // command to write medium
+  String writeImageCommand;                              // command to write image on medium
 } OpticalDisk;
 
 // device settings
 typedef struct
 {
-  String defaultDeviceName;             // default device name
-  String requestVolumeCommand;          // command to request new volume
-  String unloadVolumeCommand;           // command to unload volume
-  String loadVolumeCommand;             // command to load volume
-  uint64 volumeSize;                    // size of volume [bytes]
+  String defaultDeviceName;                              // default device name
+  String requestVolumeCommand;                           // command to request new volume
+  String unloadVolumeCommand;                            // command to unload volume
+  String loadVolumeCommand;                              // command to load volume
+  uint64 volumeSize;                                     // size of volume [bytes]
 
-  String imagePreProcessCommand;        // command to execute before creating image
-  String imagePostProcessCommand;       // command to execute after created image
-  String imageCommand;                  // command to create volume image
-  String eccPreProcessCommand;          // command to execute before ECC calculation
-  String eccPostProcessCommand;         // command to execute after ECC calculation
-  String eccCommand;                    // command for ECC calculation
-  String writePreProcessCommand;        // command to execute before writing volume
-  String writePostProcessCommand;       // command to execute after writing volume
-  String writeCommand;                  // command to write volume
+  String imagePreProcessCommand;                         // command to execute before creating image
+  String imagePostProcessCommand;                        // command to execute after created image
+  String imageCommand;                                   // command to create volume image
+  String eccPreProcessCommand;                           // command to execute before ECC calculation
+  String eccPostProcessCommand;                          // command to execute after ECC calculation
+  String eccCommand;                                     // command for ECC calculation
+  String writePreProcessCommand;                         // command to execute before writing volume
+  String writePostProcessCommand;                        // command to execute after writing volume
+  String writeCommand;                                   // command to write volume
 } Device;
 
 typedef struct DeviceNode
 {
   LIST_NODE_HEADER(struct DeviceNode);
 
-  String name;                          // device name
+  String name;                                           // device name
   Device device;
 } DeviceNode;
 
@@ -305,7 +355,7 @@ typedef struct
   Password               *cryptPassword;                 // default password for encryption/decryption
 
   FTPServer              *ftpServer;                     // current selected FTP server
-  const FTPServerList    *ftpServerList;                 // list with FTP servers
+//  const FTPServerList    *ftpServerList;                 // list with FTP servers
   FTPServer              *defaultFTPServer;              // default FTP server
 
   SSHServer              *sshServer;                     // current selected SSH server
@@ -313,8 +363,10 @@ typedef struct
   SSHServer              *defaultSSHServer;              // default SSH server
 
   WebDAVServer           *webdavServer;                  // current selected WebDAV server
-  const WebDAVServerList *webdavServerList;              // list with WebDAV servers
+//  const WebDAVServerList *webdavServerList;              // list with WebDAV servers
   WebDAVServer           *defaultWebDAVServer;           // default WebDAV server
+
+  const ServerList       *serverList;                    // list with FTP/SSH/WebDAV servers
 
   String                 remoteBARExecutable;
 
@@ -471,6 +523,12 @@ extern DatabaseHandle *indexDatabaseHandle;   // index database handle
   extern "C" {
 #endif
 
+//void initServerAllocate(ServerAllocation *serverAllocation);
+//void doneServerAllocate(ServerAllocation *serverAllocation);
+//bool allocateServer(ServerAllocation *serverAllocation, ServerAllocationPriorities priority, uint maxConnectionCount);
+//void freeServer(ServerAllocation *serverAllocation);
+//bool isServerAllocationPending(ServerAllocation *serverAllocation, ServerAllocationPriorities priority);
+
 /***********************************************************************\
 * Name   : getErrorText
 * Purpose: get errror text of error code
@@ -616,14 +674,14 @@ ulong getBandWidth(BandWidthList *bandWidthList);
 *          jobOptions - job options
 * Output : ftperver   - FTP server settings from job options, server
 *                       list or default FTP server values
-* Return : -
+* Return : server allocation
 * Notes  : -
 \***********************************************************************/
 
-void getFTPServerSettings(const String     hostName,
-                          const JobOptions *jobOptions,
-                          FTPServer        *ftpServer
-                         );
+ServerAllocation *getFTPServerSettings(const String     hostName,
+                                       const JobOptions *jobOptions,
+                                       FTPServer        *ftpServer
+                                      );
 
 /***********************************************************************\
 * Name   : getSSHServerSettings
@@ -632,30 +690,30 @@ void getFTPServerSettings(const String     hostName,
 *          jobOptions - job options
 * Output : sshServer  - SSH server settings from job options, server
 *                       list or default SSH server values
-* Return : -
+* Return : server allocation
 * Notes  : -
 \***********************************************************************/
 
-void getSSHServerSettings(const String     hostName,
-                          const JobOptions *jobOptions,
-                          SSHServer        *sshServer
-                         );
+ServerAllocation *getSSHServerSettings(const String     hostName,
+                                       const JobOptions *jobOptions,
+                                       SSHServer        *sshServer
+                                      );
 
 /***********************************************************************\
 * Name   : getWebDAVServerSettings
 * Purpose: get WebDAV server settings
 * Input  : hostName   - WebDAV server host name
 *          jobOptions - job options
-* Output : sshServer  - WebDAV server settings from job options, server
-*                       list or default WebDAV server values
-* Return : -
+* Output : webDAVServer - WebDAV server settings from job options,
+*                         server list or default WebDAV server values
+* Return : server allocation
 * Notes  : -
 \***********************************************************************/
 
-void getWebDAVServerSettings(const String     hostName,
-                             const JobOptions *jobOptions,
-                             WebDAVServer     *webdavServer
-                            );
+ServerAllocation *getWebDAVServerSettings(const String     hostName,
+                                          const JobOptions *jobOptions,
+                                          WebDAVServer     *webDAVServer
+                                         );
 
 /***********************************************************************\
 * Name   : getCDSettings
@@ -713,48 +771,41 @@ void getDeviceSettings(const String     name,
                       );
 
 /***********************************************************************\
-* Name   : allocateFTPServerConnection
-* Purpose: allocate FTP server connection
-* Input  : hostName - FTP server host name
+* Name   : allocateServer
+* Purpose: allocate server
+* Input  : serverNode         - server node
+*          priority           - server allocation priority; see
+*                               SERVER_ALLOCATION_PRIORITY_...
+*          maxConnectionCount - nax. number of concurrent connections
 * Output : -
-* Return : TRUE iff connected allocated
+* Return : TRUE iff connected allocated, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
 
-bool allocateFTPServerConnection(const String hostName);
+void allocateServer(ServerAllocation *serverAllocation, ServerAllocationPriorities priority, int maxConnectionCount);
 
 /***********************************************************************\
-* Name   : freeFTPServerConnection
-* Purpose: free allocated FTP server connection
-* Input  : hostName - FTP server host name
+* Name   : freeServer
+* Purpose: free allocated server
+* Input  : serverNode - server node
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-void freeFTPServerConnection(const String hostName);
+void freeServer(ServerAllocation *serverAllocation);
 
 /***********************************************************************\
-* Name   : allocateSSHServerConnection
-* Purpose: allocate SSH server connection
-* Input  : hostName - SSH server host name
+* Name   : isServerAllocationPending
+* Purpose: check if another server allocation is pending
+* Input  : serverAllocation - server allocation handle
+*          priority         - priority of other server allocation
 * Output : -
-* Return : -
+* Return : TRUE if another server allocation is pending, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
 
-bool allocateSSHServerConnection(const String hostName);
-
-/***********************************************************************\
-* Name   : freeSSHServerConnection
-* Purpose: free allocated SSH server connection
-* Input  : hostName - SSH server host name
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-void freeSSHServerConnection(const String hostName);
+bool isServerAllocationPending(ServerAllocation *serverAllocation, ServerAllocationPriorities priority);
 
 /***********************************************************************\
 * Name   : inputCryptPassword
