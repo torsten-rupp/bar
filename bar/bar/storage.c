@@ -10148,6 +10148,7 @@ Errors Storage_readDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
   switch (storageDirectoryListHandle->type)
   {
     case STORAGE_TYPE_NONE:
+      error = ERROR_NONE;
       break;
     case STORAGE_TYPE_FILESYSTEM:
       error = File_readDirectoryList(&storageDirectoryListHandle->fileSystem.directoryListHandle,fileName);
@@ -10442,6 +10443,8 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
             storageDirectoryListHandle->webdav.lastNode    = storageDirectoryListHandle->webdav.currentNode;
             storageDirectoryListHandle->webdav.currentNode = NULL;
 //fprintf(stderr,"%s, %d: fileName=%s\n",__FILE__,__LINE__,String_cString(fileName));
+
+            error = ERROR_NONE;
           }
           else
           {
