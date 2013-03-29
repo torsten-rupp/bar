@@ -1172,7 +1172,6 @@ public class BARControl
     return -1;
   }
 
-
   /** server/password dialog
    * @param loginData server login data
    * @return true iff login data ok, false otherwise
@@ -2152,6 +2151,7 @@ public class BARControl
             }
             catch (ConnectionError error)
             {
+              // ignored
             }
           }
           if (!connectOkFlag)
@@ -2169,6 +2169,7 @@ public class BARControl
             }
             catch (ConnectionError error)
             {
+              // ignored
             }
           }
         }
