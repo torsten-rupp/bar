@@ -117,8 +117,6 @@
 
 #define MIN_PASSWORD_QUALITY_LEVEL            0.6
 
-#define MAX_CONNECTION_COUNT_UNLIMITED        -1
-
 /***************************** Datatypes *******************************/
 
 typedef enum
@@ -520,19 +518,19 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
 
   CMD_OPTION_STRING       ("ftp-login-name",               0,  0,1,defaultFTPServer.loginName,                                                                         "ftp login name","name"                                                    ),
   CMD_OPTION_SPECIAL      ("ftp-password",                 0,  0,1,&defaultFTPServer.password,                  cmdOptionParsePassword,NULL,                           "ftp password (use with care!)","password"                                 ),
-  CMD_OPTION_INTEGER      ("ftp-max-connections",          0,  0,1,defaultFTPServer.maxConnectionCount,         -1,MAX_INT,NULL,                                       "max. number of concurrent ftp connections"                                ),
+  CMD_OPTION_INTEGER      ("ftp-max-connections",          0,  0,1,defaultFTPServer.maxConnectionCount,         MAX_CONNECTION_COUNT_UNLIMITED,MAX_INT,NULL,           "max. number of concurrent ftp connections"                                ),
 
   CMD_OPTION_INTEGER      ("ssh-port",                     0,  0,1,defaultSSHServer.port,                       0,65535,NULL,                                          "ssh port"                                                                 ),
   CMD_OPTION_STRING       ("ssh-login-name",               0,  0,1,defaultSSHServer.loginName,                                                                         "ssh login name","name"                                                    ),
   CMD_OPTION_SPECIAL      ("ssh-password",                 0,  0,1,&defaultSSHServer.password,                  cmdOptionParsePassword,NULL,                           "ssh password (use with care!)","password"                                 ),
   CMD_OPTION_STRING       ("ssh-public-key",               0,  1,1,defaultSSHServer.publicKeyFileName,                                                                 "ssh public key file name","file name"                                     ),
   CMD_OPTION_STRING       ("ssh-private-key",              0,  1,1,defaultSSHServer.privateKeyFileName,                                                                "ssh private key file name","file name"                                    ),
-  CMD_OPTION_INTEGER      ("ssh-max-connections",          0,  0,1,defaultSSHServer.maxConnectionCount,         -1,MAX_INT,NULL,                                       "max. number of concurrent ssh connections"                                ),
+  CMD_OPTION_INTEGER      ("ssh-max-connections",          0,  0,1,defaultSSHServer.maxConnectionCount,         MAX_CONNECTION_COUNT_UNLIMITED,MAX_INT,NULL,           "max. number of concurrent ssh connections"                                ),
 
 //  CMD_OPTION_INTEGER      ("webdav-port",                  0,  0,1,defaultWebDAVServer.port,                    0,65535,NULL,                                          "WebDAV port"                                                              ),
   CMD_OPTION_STRING       ("webdav-login-name",            0,  0,1,defaultWebDAVServer.loginName,                                                                      "WebDAV login name","name"                                                 ),
   CMD_OPTION_SPECIAL      ("webdav-password",              0,  0,1,&defaultWebDAVServer.password,               cmdOptionParsePassword,NULL,                           "WebDAV password (use with care!)","password"                              ),
-  CMD_OPTION_INTEGER      ("webdav-max-connections",       0,  0,1,defaultWebDAVServer.maxConnectionCount,      -1,MAX_INT,NULL,                                       "max. number of concurrent WebDAV connections"                             ),
+  CMD_OPTION_INTEGER      ("webdav-max-connections",       0,  0,1,defaultWebDAVServer.maxConnectionCount,      MAX_CONNECTION_COUNT_UNLIMITED,MAX_INT,NULL,           "max. number of concurrent WebDAV connections"                             ),
 
   CMD_OPTION_BOOLEAN      ("daemon",                       0,  1,0,daemonFlag,                                                                                         "run in daemon mode"                                                       ),
   CMD_OPTION_BOOLEAN      ("no-detach",                    'D',1,0,noDetachFlag,                                                                                       "do not detach in daemon mode"                                             ),
