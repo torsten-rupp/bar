@@ -121,6 +121,8 @@ typedef enum
    | SET_VALUE(WEEKDAY_SUN) \
   )
 
+#define MAX_CONNECTION_COUNT_UNLIMITED -1
+
 /***************************** Datatypes *******************************/
 
 // band width usage
@@ -175,7 +177,7 @@ typedef struct
 {
   String   loginName;                                    // login name
   Password *password;                                    // login password
-  int      maxConnectionCount;                           // max. number of concurrent connections or -1 for unlimited
+  int      maxConnectionCount;                           // max. number of concurrent connections or MAX_CONNECTION_COUNT_UNLIMITED
 } FTPServer;
 
 typedef struct FTPServerNode
@@ -200,7 +202,7 @@ typedef struct
   Password *password;                                    // login password
   String   publicKeyFileName;                            // public key file name (ssh,scp,sftp)
   String   privateKeyFileName;                           // private key file name (ssh,scp,sftp)
-  int      maxConnectionCount;                           // max. number of concurrent connections or -1 for unlimited
+  int      maxConnectionCount;                           // max. number of concurrent connections or MAX_CONNECTION_COUNT_UNLIMITED
 } SSHServer;
 
 typedef struct SSHServerNode
@@ -224,7 +226,7 @@ typedef struct
   Password *password;                                    // login password
   String   publicKeyFileName;                            // public key file name
   String   privateKeyFileName;                           // private key file name
-  int      maxConnectionCount;                           // max. number of concurrent connections or -1 for unlimited
+  int      maxConnectionCount;                           // max. number of concurrent connections or MAX_CONNECTION_COUNT_UNLIMITED
 } WebDAVServer;
 
 typedef struct WebDAVServerNode
