@@ -67,7 +67,8 @@
 #define SLEEP_TIME_SCHEDULER_THREAD    ( 1*60)
 #define SLEEP_TIME_PAUSE_THREAD        ( 1*60)
 #define SLEEP_TIME_INDEX_THREAD        (10*60)
-#define SLEEP_TIME_INDEX_UPDATE_THREAD (10*60)
+//#define SLEEP_TIME_INDEX_UPDATE_THREAD (10*60)
+#define SLEEP_TIME_INDEX_UPDATE_THREAD (10)
 
 /***************************** Datatypes *******************************/
 
@@ -2641,6 +2642,7 @@ LOCAL void autoIndexUpdateThreadCode(void)
             || (storageSpecifier.type == STORAGE_TYPE_SSH       )
             || (storageSpecifier.type == STORAGE_TYPE_SCP       )
             || (storageSpecifier.type == STORAGE_TYPE_SFTP      )
+            || (storageSpecifier.type == STORAGE_TYPE_WEBDAV    )
            )
         {
           // list directory, update index checked/request create index
