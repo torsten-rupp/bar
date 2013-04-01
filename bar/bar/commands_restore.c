@@ -2216,7 +2216,7 @@ Errors Command_restore(const StringList                *storageNameList,
         if (!FragmentList_isEntryComplete(fragmentNode))
         {
           printInfo(0,"Warning: incomplete entry '%s'\n",String_cString(fragmentNode->name));
-          if (globalOptions.verboseLevel >= 2)
+          if (isPrintInfo(2))
           {
             printInfo(2,"  Fragments:\n");
             FragmentList_print(stdout,4,fragmentNode);
