@@ -2809,13 +2809,18 @@ LOCAL bool validateOptions(void)
 
 /*---------------------------------------------------------------------*/
 
+bool isPrintInfo(uint verboseLevel)
+{
+  return !globalOptions.quietFlag && ((uint)globalOptions.verboseLevel >= verboseLevel);
+}
+
 void vprintInfo(uint verboseLevel, const char *prefix, const char *format, va_list arguments)
 {
   String line;
 
   assert(format != NULL);
 
-  if (!globalOptions.quietFlag && ((uint)globalOptions.verboseLevel >= verboseLevel))
+  if (isPrintInfo(verboseLevel))
   {
     line = String_new();
 

@@ -540,6 +540,17 @@ extern DatabaseHandle *indexDatabaseHandle;   // index database handle
 const char *getErrorText(Errors error);
 
 /***********************************************************************\
+* Name   : isPrintInfo
+* Purpose: check if info should be printed
+* Input  : verboseLevel - verbosity level
+* Output : -
+* Return : true iff info should be printed
+* Notes  : -
+\***********************************************************************/
+
+bool isPrintInfo(uint verboseLevel);
+
+/***********************************************************************\
 * Name   : vprintInfo, pprintInfo, printInfo
 * Purpose: output info to console
 * Input  : verboseLevel - verbosity level
