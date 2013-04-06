@@ -74,6 +74,17 @@ typedef struct
 #endif
 
 /***********************************************************************\
+* Name   : Thread_getNumberOfCores
+* Purpose: get number of cpu cores
+* Input  : -
+* Output : -
+* Return : number of cpu cores
+* Notes  : -
+\***********************************************************************/
+
+uint Thread_getNumberOfCores(void);
+
+/***********************************************************************\
 * Name   : Thread_init
 * Purpose: init thread
 * Input  : thread        - thread variable
