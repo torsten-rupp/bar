@@ -379,6 +379,12 @@
 /* _ftelli64() available */
 #undef HAVE__FTELLI64
 
+/* _SC_GETPW_R_SIZE_MAX available */
+#undef HAVE__SC_GETPW_R_SIZE_MAX
+
+/* _SC_NPROCESSORS_CONF available */
+#undef HAVE__SC_NPROCESSORS_CONF
+
 /* _stati64() available */
 #undef HAVE__STATI64
 
