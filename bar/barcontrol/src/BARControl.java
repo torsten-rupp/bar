@@ -1587,6 +1587,7 @@ public class BARControl
     // set window size, manage window (approximate height according to height of a text line)
     shell.setSize(840,600+5*(Widgets.getTextHeight(shell)+4));
     shell.open();
+    shell.setSize(840,600+5*(Widgets.getTextHeight(shell)+4));
 
     // add close listener
     shell.addListener(SWT.Close,new Listener()
@@ -1613,7 +1614,8 @@ public class BARControl
    */
   BARControl(String[] args)
   {
-    final SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+    final SimpleDateFormat DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+    final char             MAIL_AT     = '@';
 
     try
     {
@@ -1735,7 +1737,7 @@ public class BARControl
 
                 System.out.println(String.format("%12d %5s %5s %s %s",
                                                  size,
-                                                 simpleDateFormat.format(new Date(datetime*1000)),
+                                                 DATE_FORMAT.format(new Date(datetime*1000)),
                                                  state,
                                                  mode,
                                                  storageName
@@ -2096,7 +2098,7 @@ public class BARControl
                                                cryptAlgorithm,
                                                cryptType,
                                                cryptPasswordMode,
-                                               simpleDateFormat.format(new Date(lastExecutedDateTime*1000)),
+                                               DATE_FORMAT.format(new Date(lastExecutedDateTime*1000)),
                                                estimatedRestTime
                                               )
                                 );
@@ -2244,7 +2246,7 @@ public class BARControl
         System.err.println("  "+stackTraceElement);
       }
       System.err.println("");
-      System.err.println("Please report this assertion error to torsten.rupp@gmx.net.");
+      System.err.println("Please report this assertion error to torsten.rupp"+MAIL_AT+"gmx.net."); // use MAIL_AT to avoid SPAM
     }
     catch (InternalError error)
     {
@@ -2254,7 +2256,7 @@ public class BARControl
         System.err.println("  "+stackTraceElement);
       }
       System.err.println("");
-      System.err.println("Please report this internal error to torsten.rupp@gmx.net.");
+      System.err.println("Please report this internal error to torsten.rupp"+MAIL_AT+"gmx.net."); // use MAIL_AT to avoid SPAM
     }
     catch (Error error)
     {
