@@ -11184,6 +11184,81 @@ fi
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_const_SIGPIPE" >&5
 $as_echo "$ac_cv_const_SIGPIPE" >&6; }
 
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking if constant _SC_GETPW_R_SIZE_MAX is available" >&5
+$as_echo_n "checking if constant _SC_GETPW_R_SIZE_MAX is available... " >&6; }
+if test "${ac_cv_const__SC_GETPW_R_SIZE_MAX+set}" = set; then :
+  $as_echo_n "(cached) " >&6
+else
+
+      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo unistd.h limits.h|sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main ()
+{
+printf("%d",_SC_GETPW_R_SIZE_MAX);
+                                          return 0;
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  ac_cv_const__SC_GETPW_R_SIZE_MAX=yes;
+$as_echo "#define HAVE__SC_GETPW_R_SIZE_MAX 1" >>confdefs.h
+
+else
+  ac_cv_const__SC_GETPW_R_SIZE_MAX=no;
+
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_const__SC_GETPW_R_SIZE_MAX" >&5
+$as_echo "$ac_cv_const__SC_GETPW_R_SIZE_MAX" >&6; }
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking if constant _SC_NPROCESSORS_CONF is available" >&5
+$as_echo_n "checking if constant _SC_NPROCESSORS_CONF is available... " >&6; }
+if test "${ac_cv_const__SC_NPROCESSORS_CONF+set}" = set; then :
+  $as_echo_n "(cached) " >&6
+else
+
+      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo unistd.h limits.h|sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main ()
+{
+printf("%d",_SC_NPROCESSORS_CONF);
+                                          return 0;
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  ac_cv_const__SC_NPROCESSORS_CONF=yes;
+$as_echo "#define HAVE__SC_NPROCESSORS_CONF 1" >>confdefs.h
+
+else
+  ac_cv_const__SC_NPROCESSORS_CONF=no;
+
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_const__SC_NPROCESSORS_CONF" >&5
+$as_echo "$ac_cv_const__SC_NPROCESSORS_CONF" >&6; }
+
 if test $ENABLE_SSH = "yes"; then
 
 
