@@ -121,6 +121,50 @@ LOCAL PasswordList decryptPasswordList;
 #endif
 
 /***********************************************************************\
+* Name   : registerArchiveEntry
+* Purpose: register archive entry as open
+* Input  : archiveEntryInfo - archive file entry info
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void registerArchiveEntry(ArchiveEntryInfo *archiveEntryInfo)
+{
+  SemaphoreLock semaphoreLock;
+
+#warning temporary
+while (!List_isEmpty(&archiveEntryInfo->archiveInfo->archiveEntryList))
+{
+  Misc_udelay(1000);
+}
+
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveEntryInfo->archiveInfo->archiveEntryList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,SEMAPHORE_WAIT_FOREVER)
+  {
+    List_append(&archiveEntryInfo->archiveInfo->archiveEntryList,archiveEntryInfo);
+  }
+}
+
+/***********************************************************************\
+* Name   : unregisterArchiveEntry
+* Purpose: remove registration of open archive entry
+* Input  : archiveEntryInfo - archive file entry info
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void unregisterArchiveEntry(ArchiveEntryInfo *archiveEntryInfo)
+{
+  SemaphoreLock semaphoreLock;
+
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveEntryInfo->archiveInfo->archiveEntryList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,SEMAPHORE_WAIT_FOREVER)
+  {
+    List_remove(&archiveEntryInfo->archiveInfo->archiveEntryList,archiveEntryInfo);
+  }
+}
+
+/***********************************************************************\
 * Name   : freePasswordNode
 * Purpose: free password node
 * Input  : passwordNode - password node
@@ -781,7 +825,6 @@ LOCAL Errors createArchiveFile(ArchiveInfo *archiveInfo)
                    );
   if (error != ERROR_NONE)
   {
-fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,String_cString(archiveInfo->file.fileName));
     File_delete(archiveInfo->file.fileName,FALSE);
     return error;
   }
@@ -790,7 +833,6 @@ fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,String_cString(archiveInfo->file
   error = writeFileInfo(archiveInfo);
   if (error != ERROR_NONE)
   {
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     File_close(&archiveInfo->file.fileHandle);
     File_delete(archiveInfo->file.fileName,FALSE);
     return error;
@@ -947,7 +989,7 @@ LOCAL Errors ensureArchiveSpace(ArchiveInfo *archiveInfo,
 /***********************************************************************\
 * Name   : writeFileChunks
 * Purpose: write file chunks
-* Input  : archiveEntryInfo  - archive file entry info block
+* Input  : archiveEntryInfo - archive file entry info
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -967,7 +1009,7 @@ LOCAL Errors writeFileChunks(ArchiveEntryInfo *archiveEntryInfo)
       return error;
     }
 
-    // initialise variables
+    // initialize variables
     archiveEntryInfo->file.headerWrittenFlag = FALSE;
 
     archiveEntryInfo->file.chunkFileData.fragmentOffset = archiveEntryInfo->file.chunkFileData.fragmentOffset+archiveEntryInfo->file.chunkFileData.fragmentSize;
@@ -1437,7 +1479,7 @@ LOCAL Errors writeImageChunks(ArchiveEntryInfo *archiveEntryInfo)
       return error;
     }
 
-    // initialise variables
+    // initialize variables
     archiveEntryInfo->image.headerWrittenFlag = FALSE;
 
     archiveEntryInfo->image.chunkImageData.blockOffset = archiveEntryInfo->image.chunkImageData.blockOffset+archiveEntryInfo->image.chunkImageData.blockCount;
@@ -1900,7 +1942,7 @@ LOCAL Errors writeHardLinkChunks(ArchiveEntryInfo *archiveEntryInfo)
       return error;
     }
 
-    // initialise variables
+    // initialize variables
     archiveEntryInfo->hardLink.headerWrittenFlag = FALSE;
 
     archiveEntryInfo->hardLink.chunkHardLinkData.fragmentOffset = archiveEntryInfo->hardLink.chunkHardLinkData.fragmentOffset+archiveEntryInfo->hardLink.chunkHardLinkData.fragmentSize;
@@ -2470,6 +2512,8 @@ Errors Archive_create(ArchiveInfo                     *archiveInfo,
   archiveInfo->archiveGetCryptPasswordFunction = archiveGetCryptPasswordFunction;
   archiveInfo->archiveGetCryptPasswordUserData = archiveGetCryptPasswordUserData;
 
+  archiveInfo->printableName                   = String_new();
+
   archiveInfo->cryptType                       = (jobOptions->cryptAlgorithm != CRYPT_ALGORITHM_NONE)?jobOptions->cryptType:CRYPT_TYPE_NONE;
   archiveInfo->cryptPassword                   = NULL;
   archiveInfo->cryptKeyData                    = NULL;
@@ -2478,18 +2522,22 @@ Errors Archive_create(ArchiveInfo                     *archiveInfo,
   archiveInfo->ioType                          = ARCHIVE_IO_TYPE_FILE;
   archiveInfo->file.fileName                   = String_new();
   archiveInfo->file.openFlag                   = FALSE;
-  archiveInfo->printableName                   = String_new();
+  archiveInfo->chunkIO                         = &CHUNK_IO_FILE;
+  archiveInfo->chunkIOUserData                 = &archiveInfo->file.fileHandle;
 
   archiveInfo->databaseHandle                  = databaseHandle;
   archiveInfo->storageId                       = DATABASE_ID_NONE;
-
-  archiveInfo->chunkIO                         = &CHUNK_IO_FILE;
-  archiveInfo->chunkIOUserData                 = &archiveInfo->file.fileHandle;
 
   archiveInfo->partNumber                      = 0;
 
   archiveInfo->pendingError                    = ERROR_NONE;
   archiveInfo->nextChunkHeaderReadFlag         = FALSE;
+
+  archiveInfo->interrupt.openFlag              = FALSE;
+  archiveInfo->interrupt.offset                = 0LL;
+
+  List_init(&archiveInfo->archiveEntryList);
+  Semaphore_init(&archiveInfo->archiveEntryList.lock);
 
   // init key (if asymmetric encryption used)
   if (archiveInfo->cryptType == CRYPT_TYPE_ASYMMETRIC)
@@ -2601,6 +2649,8 @@ error = Storage_parseName(storageName,&storageSpecifier,storageFileName);
   archiveInfo->archiveGetCryptPasswordFunction = archiveGetCryptPasswordFunction;
   archiveInfo->archiveGetCryptPasswordUserData = archiveGetCryptPasswordUserData;
 
+  archiveInfo->printableName                   = Storage_getPrintableName(String_new(),&storageSpecifier,storageFileName);
+
   archiveInfo->cryptPassword                   = NULL;
   archiveInfo->cryptType                       = CRYPT_TYPE_NONE;
   archiveInfo->cryptKeyData                    = NULL;
@@ -2608,18 +2658,22 @@ error = Storage_parseName(storageName,&storageSpecifier,storageFileName);
 
   archiveInfo->ioType                          = ARCHIVE_IO_TYPE_STORAGE_FILE;
   archiveInfo->storage.storageName             = String_duplicate(storageName);
-  archiveInfo->printableName                   = Storage_getPrintableName(String_new(),&storageSpecifier,storageFileName);
+  archiveInfo->chunkIO                         = &CHUNK_IO_STORAGE_FILE;
+  archiveInfo->chunkIOUserData                 = &archiveInfo->storage.storageFileHandle;
 
   archiveInfo->databaseHandle                  = NULL;
   archiveInfo->storageId                       = DATABASE_ID_NONE;
-
-  archiveInfo->chunkIO                         = &CHUNK_IO_STORAGE_FILE;
-  archiveInfo->chunkIOUserData                 = &archiveInfo->storage.storageFileHandle;
 
   archiveInfo->partNumber                      = 0;
 
   archiveInfo->pendingError                    = ERROR_NONE;
   archiveInfo->nextChunkHeaderReadFlag         = FALSE;
+
+  archiveInfo->interrupt.openFlag              = FALSE;
+  archiveInfo->interrupt.offset                = 0LL;
+
+  List_init(&archiveInfo->archiveEntryList);
+  Semaphore_init(&archiveInfo->archiveEntryList.lock);
 
 #warning change
 String_delete(storageFileName);
@@ -2696,6 +2750,7 @@ Storage_doneSpecifier(&storageSpecifier);
 Errors Archive_close(ArchiveInfo *archiveInfo)
 {
   assert(archiveInfo != NULL);
+  assert(List_isEmpty(&archiveInfo->archiveEntryList));
 
   switch (archiveInfo->ioType)
   {
@@ -2710,6 +2765,8 @@ Errors Archive_close(ArchiveInfo *archiveInfo)
       Storage_done(&archiveInfo->storage.storageFileHandle);
       break;
   }
+
+  Semaphore_done(&archiveInfo->archiveEntryList.lock);
 
   if (archiveInfo->cryptType == CRYPT_TYPE_ASYMMETRIC)
   {
@@ -2956,25 +3013,26 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
         }
         else
         {
-          // report unknown         chunk
+          // report unknown chunk
           archiveInfo->pendingError = ERROR_UNKNOWN_CHUNK;
+          printWarning("Skipped unknown chunk '%s' (offset %ld). Switch to scan mode.\n",Chunk_idToString(chunkHeader.id),chunkHeader.offset);
           return FALSE;
         }
         break;
     }
   }
 
+  // store chunk header for read
   if (chunkHeaderFoundFlag)
   {
-    // store chunk header for read
     ungetNextChunkHeader(archiveInfo,&chunkHeader);
   }
 
   return !chunkHeaderFoundFlag;
 }
 
-Errors Archive_newFileEntry(ArchiveInfo      *archiveInfo,
-                            ArchiveEntryInfo *archiveEntryInfo,
+Errors Archive_newFileEntry(ArchiveEntryInfo *archiveEntryInfo,
+                            ArchiveInfo      *archiveInfo,
                             const String     fileName,
                             const FileInfo   *fileInfo,
                             const bool       deltaCompressFlag,
@@ -2983,9 +3041,9 @@ Errors Archive_newFileEntry(ArchiveInfo      *archiveInfo,
 {
   Errors error;
 
+  assert(archiveEntryInfo != NULL);
   assert(archiveInfo != NULL);
   assert(archiveInfo->jobOptions != NULL);
-  assert(archiveEntryInfo != NULL);
   assert(fileInfo != NULL);
 
   // init crypt password
@@ -3298,11 +3356,14 @@ Errors Archive_newFileEntry(ArchiveInfo      *archiveInfo,
   // create new part
   writeFileChunks(archiveEntryInfo);
 
+  // registers as open archive entry
+  registerArchiveEntry(archiveEntryInfo);
+
   return ERROR_NONE;
 }
 
-Errors Archive_newImageEntry(ArchiveInfo      *archiveInfo,
-                             ArchiveEntryInfo *archiveEntryInfo,
+Errors Archive_newImageEntry(ArchiveEntryInfo *archiveEntryInfo,
+                             ArchiveInfo      *archiveInfo,
                              const String     deviceName,
                              const DeviceInfo *deviceInfo,
                              const bool       deltaCompressFlag,
@@ -3311,9 +3372,9 @@ Errors Archive_newImageEntry(ArchiveInfo      *archiveInfo,
 {
   Errors error;
 
+  assert(archiveEntryInfo != NULL);
   assert(archiveInfo != NULL);
   assert(archiveInfo->jobOptions != NULL);
-  assert(archiveEntryInfo != NULL);
   assert(deviceInfo != NULL);
   assert(deviceInfo->blockSize > 0);
 
@@ -3626,11 +3687,14 @@ Errors Archive_newImageEntry(ArchiveInfo      *archiveInfo,
   // create new part
   writeImageChunks(archiveEntryInfo);
 
+  // registers as open archive entry
+  registerArchiveEntry(archiveEntryInfo);
+
   return ERROR_NONE;
 }
 
-Errors Archive_newDirectoryEntry(ArchiveInfo      *archiveInfo,
-                                 ArchiveEntryInfo *archiveEntryInfo,
+Errors Archive_newDirectoryEntry(ArchiveEntryInfo *archiveEntryInfo,
+                                 ArchiveInfo      *archiveInfo,
                                  const String     directoryName,
                                  const FileInfo   *fileInfo
                                 )
@@ -3638,9 +3702,9 @@ Errors Archive_newDirectoryEntry(ArchiveInfo      *archiveInfo,
   Errors error;
   ulong  length;
 
+  assert(archiveEntryInfo != NULL);
   assert(archiveInfo != NULL);
   assert(archiveInfo->jobOptions != NULL);
-  assert(archiveEntryInfo != NULL);
   assert(fileInfo != NULL);
 
   // init crypt password
@@ -3755,11 +3819,14 @@ Errors Archive_newDirectoryEntry(ArchiveInfo      *archiveInfo,
     }
   }
 
+  // registers as open archive entry
+  registerArchiveEntry(archiveEntryInfo);
+
   return ERROR_NONE;
 }
 
-Errors Archive_newLinkEntry(ArchiveInfo      *archiveInfo,
-                            ArchiveEntryInfo *archiveEntryInfo,
+Errors Archive_newLinkEntry(ArchiveEntryInfo *archiveEntryInfo,
+                            ArchiveInfo      *archiveInfo,
                             const String     linkName,
                             const String     destinationName,
                             const FileInfo   *fileInfo
@@ -3768,9 +3835,9 @@ Errors Archive_newLinkEntry(ArchiveInfo      *archiveInfo,
   Errors error;
   ulong  length;
 
+  assert(archiveEntryInfo != NULL);
   assert(archiveInfo != NULL);
   assert(archiveInfo->jobOptions != NULL);
-  assert(archiveEntryInfo != NULL);
   assert(fileInfo != NULL);
 
   // init crypt password
@@ -3885,11 +3952,14 @@ Errors Archive_newLinkEntry(ArchiveInfo      *archiveInfo,
     }
   }
 
+  // registers as open archive entry
+  registerArchiveEntry(archiveEntryInfo);
+
   return ERROR_NONE;
 }
 
-Errors Archive_newHardLinkEntry(ArchiveInfo      *archiveInfo,
-                                ArchiveEntryInfo *archiveEntryInfo,
+Errors Archive_newHardLinkEntry(ArchiveEntryInfo *archiveEntryInfo,
+                                ArchiveInfo      *archiveInfo,
                                 const StringList *fileNameList,
                                 const FileInfo   *fileInfo,
                                 const bool       deltaCompressFlag,
@@ -3901,9 +3971,9 @@ Errors Archive_newHardLinkEntry(ArchiveInfo      *archiveInfo,
   String            fileName;
   ChunkHardLinkName *chunkHardLinkName;
 
+  assert(archiveEntryInfo != NULL);
   assert(archiveInfo != NULL);
   assert(archiveInfo->jobOptions != NULL);
-  assert(archiveEntryInfo != NULL);
   assert(fileInfo != NULL);
 
   // init crypt password
@@ -4322,11 +4392,14 @@ Errors Archive_newHardLinkEntry(ArchiveInfo      *archiveInfo,
   // create new part
   writeHardLinkChunks(archiveEntryInfo);
 
+  // registers as open archive entry
+  registerArchiveEntry(archiveEntryInfo);
+
   return ERROR_NONE;
 }
 
-Errors Archive_newSpecialEntry(ArchiveInfo      *archiveInfo,
-                               ArchiveEntryInfo *archiveEntryInfo,
+Errors Archive_newSpecialEntry(ArchiveEntryInfo *archiveEntryInfo,
+                               ArchiveInfo      *archiveInfo,
                                const String     specialName,
                                const FileInfo   *fileInfo
                               )
@@ -4334,9 +4407,9 @@ Errors Archive_newSpecialEntry(ArchiveInfo      *archiveInfo,
   Errors error;
   ulong  length;
 
+  assert(archiveEntryInfo != NULL);
   assert(archiveInfo != NULL);
   assert(archiveInfo->jobOptions != NULL);
-  assert(archiveEntryInfo != NULL);
   assert(fileInfo != NULL);
 
   // init crypt password
@@ -4453,6 +4526,9 @@ Errors Archive_newSpecialEntry(ArchiveInfo      *archiveInfo,
       return error;
     }
   }
+
+  // registers as open archive entry
+  registerArchiveEntry(archiveEntryInfo);
 
   return ERROR_NONE;
 }
@@ -4669,8 +4745,8 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
   return ERROR_NONE;
 }
 
-Errors Archive_readFileEntry(ArchiveInfo        *archiveInfo,
-                             ArchiveEntryInfo   *archiveEntryInfo,
+Errors Archive_readFileEntry(ArchiveEntryInfo   *archiveEntryInfo,
+                             ArchiveInfo        *archiveInfo,
                              CompressAlgorithms *deltaCompressAlgorithm,
                              CompressAlgorithms *byteCompressAlgorithm,
                              CryptAlgorithms    *cryptAlgorithm,
@@ -4693,9 +4769,9 @@ Errors Archive_readFileEntry(ArchiveInfo        *archiveInfo,
   ChunkHeader    subChunkHeader;
   bool           foundFileEntryFlag,foundFileDataFlag;
 
+  assert(archiveEntryInfo != NULL);
   assert(archiveInfo != NULL);
   assert(archiveInfo->jobOptions != NULL);
-  assert(archiveEntryInfo != NULL);
   assert(fileName != NULL);
 
   // check for pending error
@@ -5161,11 +5237,14 @@ Errors Archive_readFileEntry(ArchiveInfo        *archiveInfo,
   if (cryptAlgorithm         != NULL) (*cryptAlgorithm)         = archiveEntryInfo->cryptAlgorithm;
   if (cryptType              != NULL) (*cryptType)              = archiveInfo->cryptType;
 
+  // registers as open archive entry
+  registerArchiveEntry(archiveEntryInfo);
+
   return ERROR_NONE;
 }
 
-Errors Archive_readImageEntry(ArchiveInfo        *archiveInfo,
-                              ArchiveEntryInfo   *archiveEntryInfo,
+Errors Archive_readImageEntry(ArchiveEntryInfo   *archiveEntryInfo,
+                              ArchiveInfo        *archiveInfo,
                               CompressAlgorithms *deltaCompressAlgorithm,
                               CompressAlgorithms *byteCompressAlgorithm,
                               CryptAlgorithms    *cryptAlgorithm,
@@ -5188,9 +5267,9 @@ Errors Archive_readImageEntry(ArchiveInfo        *archiveInfo,
   ChunkHeader    subChunkHeader;
   bool           foundImageEntryFlag,foundImageDataFlag;
 
+  assert(archiveEntryInfo != NULL);
   assert(archiveInfo != NULL);
   assert(archiveInfo->jobOptions != NULL);
-  assert(archiveEntryInfo != NULL);
   assert(deviceInfo != NULL);
 
   // check for pending error
@@ -5649,11 +5728,14 @@ Errors Archive_readImageEntry(ArchiveInfo        *archiveInfo,
   if (cryptAlgorithm         != NULL) (*cryptAlgorithm)         = archiveEntryInfo->cryptAlgorithm;
   if (cryptType              != NULL) (*cryptType)              = archiveInfo->cryptType;
 
+  // registers as open archive entry
+  registerArchiveEntry(archiveEntryInfo);
+
   return ERROR_NONE;
 }
 
-Errors Archive_readDirectoryEntry(ArchiveInfo      *archiveInfo,
-                                  ArchiveEntryInfo *archiveEntryInfo,
+Errors Archive_readDirectoryEntry(ArchiveEntryInfo *archiveEntryInfo,
+                                  ArchiveInfo      *archiveInfo,
                                   CryptAlgorithms  *cryptAlgorithm,
                                   CryptTypes       *cryptType,
                                   String           directoryName,
@@ -5670,9 +5752,9 @@ Errors Archive_readDirectoryEntry(ArchiveInfo      *archiveInfo,
   bool           foundDirectoryEntryFlag;
   ChunkHeader    subChunkHeader;
 
+  assert(archiveEntryInfo != NULL);
   assert(archiveInfo != NULL);
   assert(archiveInfo->jobOptions != NULL);
-  assert(archiveEntryInfo != NULL);
 
   // check for pending error
   if (archiveInfo->pendingError != ERROR_NONE)
@@ -5920,11 +6002,14 @@ Errors Archive_readDirectoryEntry(ArchiveInfo      *archiveInfo,
   if (cryptAlgorithm != NULL) (*cryptAlgorithm) = archiveEntryInfo->cryptAlgorithm;
   if (cryptType      != NULL) (*cryptType)      = archiveInfo->cryptType;
 
+  // registers as open archive entry
+  registerArchiveEntry(archiveEntryInfo);
+
   return ERROR_NONE;
 }
 
-Errors Archive_readLinkEntry(ArchiveInfo      *archiveInfo,
-                             ArchiveEntryInfo *archiveEntryInfo,
+Errors Archive_readLinkEntry(ArchiveEntryInfo *archiveEntryInfo,
+                             ArchiveInfo      *archiveInfo,
                              CryptAlgorithms  *cryptAlgorithm,
                              CryptTypes       *cryptType,
                              String           linkName,
@@ -5942,9 +6027,9 @@ Errors Archive_readLinkEntry(ArchiveInfo      *archiveInfo,
   bool           foundLinkEntryFlag;
   ChunkHeader    subChunkHeader;
 
+  assert(archiveEntryInfo != NULL);
   assert(archiveInfo != NULL);
   assert(archiveInfo->jobOptions != NULL);
-  assert(archiveEntryInfo != NULL);
 
   // check for pending error
   if (archiveInfo->pendingError != ERROR_NONE)
@@ -6195,11 +6280,14 @@ Errors Archive_readLinkEntry(ArchiveInfo      *archiveInfo,
   if (cryptAlgorithm != NULL) (*cryptAlgorithm) = archiveEntryInfo->cryptAlgorithm;
   if (cryptType      != NULL) (*cryptType)      = archiveInfo->cryptType;
 
+  // registers as open archive entry
+  registerArchiveEntry(archiveEntryInfo);
+
   return ERROR_NONE;
 }
 
-Errors Archive_readHardLinkEntry(ArchiveInfo        *archiveInfo,
-                                 ArchiveEntryInfo   *archiveEntryInfo,
+Errors Archive_readHardLinkEntry(ArchiveEntryInfo   *archiveEntryInfo,
+                                 ArchiveInfo        *archiveInfo,
                                  CompressAlgorithms *deltaCompressAlgorithm,
                                  CompressAlgorithms *byteCompressAlgorithm,
                                  CryptAlgorithms    *cryptAlgorithm,
@@ -6223,9 +6311,9 @@ Errors Archive_readHardLinkEntry(ArchiveInfo        *archiveInfo,
   bool              foundHardLinkEntryFlag,foundHardLinkDataFlag;
   ChunkHardLinkName *chunkHardLinkName;
 
+  assert(archiveEntryInfo != NULL);
   assert(archiveInfo != NULL);
   assert(archiveInfo->jobOptions != NULL);
-  assert(archiveEntryInfo != NULL);
   assert(fileNameList != NULL);
 
   // check for pending error
@@ -6760,11 +6848,14 @@ Errors Archive_readHardLinkEntry(ArchiveInfo        *archiveInfo,
   if (cryptAlgorithm         != NULL) (*cryptAlgorithm)         = archiveEntryInfo->cryptAlgorithm;
   if (cryptType              != NULL) (*cryptType)              = archiveInfo->cryptType;
 
+  // registers as open archive entry
+  registerArchiveEntry(archiveEntryInfo);
+
   return ERROR_NONE;
 }
 
-Errors Archive_readSpecialEntry(ArchiveInfo      *archiveInfo,
-                                ArchiveEntryInfo *archiveEntryInfo,
+Errors Archive_readSpecialEntry(ArchiveEntryInfo *archiveEntryInfo,
+                                ArchiveInfo      *archiveInfo,
                                 CryptAlgorithms  *cryptAlgorithm,
                                 CryptTypes       *cryptType,
                                 String           specialName,
@@ -6781,9 +6872,9 @@ Errors Archive_readSpecialEntry(ArchiveInfo      *archiveInfo,
   bool           foundSpecialEntryFlag;
   ChunkHeader    subChunkHeader;
 
+  assert(archiveEntryInfo != NULL);
   assert(archiveInfo != NULL);
   assert(archiveInfo->jobOptions != NULL);
-  assert(archiveEntryInfo != NULL);
 
   // check for pending error
   if (archiveInfo->pendingError != ERROR_NONE)
@@ -7035,6 +7126,9 @@ Errors Archive_readSpecialEntry(ArchiveInfo      *archiveInfo,
 
   if (cryptAlgorithm != NULL) (*cryptAlgorithm) = archiveEntryInfo->cryptAlgorithm;
   if (cryptType      != NULL) (*cryptType)      = archiveInfo->cryptType;
+
+  // registers as open archive entry
+  registerArchiveEntry(archiveEntryInfo);
 
   return ERROR_NONE;
 }
@@ -7742,6 +7836,9 @@ Errors Archive_closeEntry(ArchiveEntryInfo *archiveEntryInfo)
         break; /* not reached */
     #endif /* NDEBUG */
   }
+
+  // remove registration as open archive entry
+  unregisterArchiveEntry(archiveEntryInfo);
 
   return error;
 }
@@ -8965,8 +9062,8 @@ Errors Archive_updateIndex(DatabaseHandle               *databaseHandle,
 
             // open archive file
             fileName = String_new();
-            error = Archive_readFileEntry(&archiveInfo,
-                                          &archiveEntryInfo,
+            error = Archive_readFileEntry(&archiveEntryInfo,
+                                          &archiveInfo,
                                           NULL,  // deltaCompressAlgorithm
                                           NULL,  // byteCompressAlgorithm
                                           NULL,  // cryptAlgorithm
@@ -9020,8 +9117,8 @@ Errors Archive_updateIndex(DatabaseHandle               *databaseHandle,
 
             // open archive file
             imageName = String_new();
-            error = Archive_readImageEntry(&archiveInfo,
-                                           &archiveEntryInfo,
+            error = Archive_readImageEntry(&archiveEntryInfo,
+                                           &archiveInfo,
                                            NULL,  // deltaCompressAlgorithm
                                            NULL,  // byteCompressAlgorithm
                                            NULL,  // cryptAlgorithm
@@ -9068,8 +9165,8 @@ Errors Archive_updateIndex(DatabaseHandle               *databaseHandle,
 
             // open archive directory
             directoryName = String_new();
-            error = Archive_readDirectoryEntry(&archiveInfo,
-                                               &archiveEntryInfo,
+            error = Archive_readDirectoryEntry(&archiveEntryInfo,
+                                               &archiveInfo,
                                                NULL,
                                                NULL,
                                                directoryName,
@@ -9114,8 +9211,8 @@ Errors Archive_updateIndex(DatabaseHandle               *databaseHandle,
             // open archive link
             linkName        = String_new();
             destinationName = String_new();
-            error = Archive_readLinkEntry(&archiveInfo,
-                                          &archiveEntryInfo,
+            error = Archive_readLinkEntry(&archiveEntryInfo,
+                                          &archiveInfo,
                                           NULL,
                                           NULL,
                                           linkName,
@@ -9167,19 +9264,19 @@ Errors Archive_updateIndex(DatabaseHandle               *databaseHandle,
 
             // open archive file
             StringList_init(&fileNameList);
-            error = Archive_readHardLinkEntry(&archiveInfo,
-                                          &archiveEntryInfo,
-                                          NULL,  // deltaCompressAlgorithm
-                                          NULL,  // byteCompressAlgorithm
-                                          NULL,  // cryptAlgorithm
-                                          NULL,  // cryptType
-                                          &fileNameList,
-                                          &fileInfo,
-                                          NULL,  // deltaSourceName
-                                          NULL,  // deltaSourceSize
-                                          &fragmentOffset,
-                                          &fragmentSize
-                                         );
+            error = Archive_readHardLinkEntry(&archiveEntryInfo,
+                                              &archiveInfo,
+                                              NULL,  // deltaCompressAlgorithm
+                                              NULL,  // byteCompressAlgorithm
+                                              NULL,  // cryptAlgorithm
+                                              NULL,  // cryptType
+                                              &fileNameList,
+                                              &fileInfo,
+                                              NULL,  // deltaSourceName
+                                              NULL,  // deltaSourceSize
+                                              &fragmentOffset,
+                                              &fragmentSize
+                                             );
             if (error != ERROR_NONE)
             {
               StringList_done(&fileNameList);
@@ -9227,8 +9324,8 @@ Errors Archive_updateIndex(DatabaseHandle               *databaseHandle,
 
             // open archive link
             fileName = String_new();
-            error = Archive_readSpecialEntry(&archiveInfo,
-                                             &archiveEntryInfo,
+            error = Archive_readSpecialEntry(&archiveEntryInfo,
+                                             &archiveInfo,
                                              NULL,
                                              NULL,
                                              fileName,
@@ -9490,8 +9587,8 @@ Errors Archive_copy(const String                    storageName,
 
           // read file
           fileName = String_new();
-          error = Archive_readFileEntry(&archiveInfo,
-                                        &archiveEntryInfo,
+          error = Archive_readFileEntry(&archiveEntryInfo,
+                                        &archiveInfo,
                                         NULL,
                                         NULL,
                                         NULL,
@@ -9655,11 +9752,9 @@ Errors Archive_copy(const String                    storageName,
 
           // read image
           imageName = String_new();
-          error = Archive_readImageEntry(&archiveInfo,
-                                         &archiveEntryInfo,
+          error = Archive_readImageEntry(&archiveEntryInfo,
+                                         &archiveInfo,
                                          NULL,
-//                                         NULL,
-//                                         NULL,
                                          imageName,
                                          &deviceInfo,
                                          NULL,
@@ -9878,8 +9973,8 @@ Errors Archive_copy(const String                    storageName,
 
           // read directory
           directoryName = String_new();
-          error = Archive_readDirectoryEntry(&archiveInfo,
-                                             &archiveEntryInfo,
+          error = Archive_readDirectoryEntry(&archiveEntryInfo,
+                                             &archiveInfo,
                                              NULL,
                                              NULL,
                                              directoryName,
@@ -10035,8 +10130,8 @@ Errors Archive_copy(const String                    storageName,
           // read link
           linkName = String_new();
           fileName = String_new();
-          error = Archive_readLinkEntry(&archiveInfo,
-                                        &archiveEntryInfo,
+          error = Archive_readLinkEntry(&archiveEntryInfo,
+                                        &archiveInfo,
                                         NULL,
                                         NULL,
                                         linkName,
@@ -10266,8 +10361,8 @@ Errors Archive_copy(const String                    storageName,
 
           // read hard link
           StringList_init(&fileNameList);
-          error = Archive_readHardLinkEntry(&archiveInfo,
-                                            &archiveEntryInfo,
+          error = Archive_readHardLinkEntry(&archiveEntryInfo,
+                                            &archiveInfo,
                                             NULL,
                                             NULL,
                                             NULL,
@@ -10658,8 +10753,8 @@ Errors Archive_copy(const String                    storageName,
 
           // read special device
           fileName = String_new();
-          error = Archive_readSpecialEntry(&archiveInfo,
-                                           &archiveEntryInfo,
+          error = Archive_readSpecialEntry(&archiveEntryInfo,
+                                           &archiveInfo,
                                            NULL,
                                            NULL,
                                            fileName,
