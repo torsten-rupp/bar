@@ -60,6 +60,7 @@ DIFF          = diff
 DUMP_SYMS     = @DUMP_SYMS@
 ECHO          = echo
 ECHO_NO_LF    = echo -n
+FIND          = find
 GREP          = grep
 INSTALL       = @INSTALL@
 LN            = ln
@@ -275,6 +276,8 @@ help:
 	@$(ECHO) "  rundev_ssl"
 	@$(ECHO) ""
 	@$(ECHO) "  test"
+	@$(ECHO) "  show_debug_test_code"
+	@$(ECHO) "  run_debug_test_code"
 	@$(ECHO) "  test1, test_basic"
 	@$(ECHO) "  test2, test_compress, test_delta_compress"
 	@$(ECHO) "  test3, test_crypt"
@@ -428,6 +431,11 @@ rundev_ssl: bar ../bar-ca.pem ../bar-server-cert.pem ../bar-server-key.pem
 
 # ----------------------------------------------------------------------------
 
+# helper function to check valid exitcode
+# call functionTestCheckExitcode,<min. valid exitcode>,<max. valid exitcode>,<command>
+functionTestCheckExitcode = \
+  $3 2>/dev/null; if test $$? -lt $1 -o $$? -gt $2; then false; fi
+
 # do tests
 #
 # Tests:
@@ -500,18 +508,39 @@ TEST_DESTROYER = ./destroyer@EXEEXT@
 TEST_KEYS = test/key.public \
             test/key.private
 
-.PHONY: test clean_test
+.PHONY: test test_win clean_test show_debug_test_code run_debug_test_code
 .PHONY: test1 test2 test3 test4 test5 test6 test7 test8 test_combined
 .PHONY: test_basic test_compress test_crypt test_asymmetric_crypt test_split test_image test_storage test_dvd test_combined test_parameters
 test:
 	@$(MAKE) QUIET=1 --no-print-directory -s test_basic test_compress test_crypt test_asymmetric_crypt test_split test_image test_combined test_parameters
 
-clean_test:
-	$(RMRF) $(TEST_FILES_CLEAN)
-
 test_win: $(TEST_BAR)
 	$(TEST_BAR) -o -c c:\\tmp\\x.bar -# c:\\users\\torsten
 	$(TEST_BAR) -L c:\\tmp\\x.bar 
+
+clean_test:
+	$(RMRF) $(TEST_FILES_CLEAN)
+
+show_debug_test_code test_code:
+	@$(FIND) . -maxdepth 1 -type f -a \( -name "*.c" -o -name "*.cpp" -o -name "*.h" -o -name "*.hpp" \) -print | \
+          ( \
+            while read fileName; do \
+              cat $$fileName | $(PERL) -n -e 'if (/DEBUG_TEST_CODE\("(.*)"\)/) { print "'$$fileName': $$1=1\n"; };'; \
+            done; \
+          )
+
+run_debug_test_code:
+	$(call functionTestCheckExitcode,125,125,initAll1=1 $(TEST_BAR))
+	$(call functionTestCheckExitcode,125,125,initAll2=1 $(TEST_BAR))
+	$(call functionTestCheckExitcode,125,125,initAll3=1 $(TEST_BAR))
+	$(call functionTestCheckExitcode,125,125,initAll4=1 $(TEST_BAR))
+	$(call functionTestCheckExitcode,125,125,initAll5=1 $(TEST_BAR))
+	$(call functionTestCheckExitcode,125,125,initAll6=1 $(TEST_BAR))
+	$(call functionTestCheckExitcode,125,125,initAll7=1 $(TEST_BAR))
+	$(call functionTestCheckExitcode,125,125,initAll8=1 $(TEST_BAR))
+	$(call functionTestCheckExitcode,125,125,initAll9=1 $(TEST_BAR))
+	$(call functionTestCheckExitcode,125,125,initAll10=1 $(TEST_BAR))
+	$(call functionTestCheckExitcode,125,125,initAll11=1 $(TEST_BAR))
 
 test1 test_basic: $(TEST_BAR)
 	@$(ECHO_NO_LF) "Test 1: basic..."
@@ -700,11 +729,6 @@ test_combined: $(TEST_BAR)
         fi
 	@$(ECHO) "ok"
 
-# helper function to check valid exitcode
-# call functionTestCheckExitcode,<max. valid exitcode>,<command>
-functionTestCheckExitcode = \
-  $2 2>/dev/null; if test $$? -gt $1; then false; fi
-
 test_parameters: \
   $(TEST_BAR) \
   $(TEST_FILES)
@@ -713,37 +737,37 @@ test_parameters: \
 	@$(ECHO) "# test config" > test/test.cfg
 	#
 	# help
-	$(call functionTestCheckExitcode,1,SSH_ASKPASS= $(TEST_BAR) -h 1>/dev/null $(if $(QUIET),1>/dev/null))
-	$(call functionTestCheckExitcode,1,SSH_ASKPASS= $(TEST_BAR) --help 1>/dev/null $(if $(QUIET),1>/dev/null))
+	$(call functionTestCheckExitcode,1,1,SSH_ASKPASS= $(TEST_BAR) -h 1>/dev/null $(if $(QUIET),1>/dev/null))
+	$(call functionTestCheckExitcode,1,1,SSH_ASKPASS= $(TEST_BAR) --help 1>/dev/null $(if $(QUIET),1>/dev/null))
 	#
 	# different options
-	$(call functionTestCheckExitcode,0,SSH_ASKPASS= $(TEST_BAR) -c test/test.bar test/data --overwrite-archive-files --verbose=2 $(if $(QUIET),1>/dev/null))
-	$(call functionTestCheckExitcode,0,SSH_ASKPASS= $(TEST_BAR) -l test/test*.bar -g $(if $(QUIET),1>/dev/null))
-	$(call functionTestCheckExitcode,0,SSH_ASKPASS= $(TEST_BAR) -l test/test*.bar -H $(if $(QUIET),1>/dev/null))
-	$(call functionTestCheckExitcode,0,SSH_ASKPASS= $(TEST_BAR) -l test/test*.bar -L $(if $(QUIET),1>/dev/null))
-	$(call functionTestCheckExitcode,0,SSH_ASKPASS= $(TEST_BAR) -l test/test*.bar -g -H -L $(if $(QUIET),1>/dev/null))
-	$(call functionTestCheckExitcode,0,SSH_ASKPASS= $(TEST_BAR) -l test/test*.bar -# '*rand*' -! '*512*' $(if $(QUIET),1>/dev/null))
-	$(call functionTestCheckExitcode,0,SSH_ASKPASS= $(TEST_BAR) -l test/test*.bar -g -# '*rand*' -! '*512*' $(if $(QUIET),1>/dev/null))
-	$(call functionTestCheckExitcode,0,SSH_ASKPASS= $(TEST_BAR) -l test/test*.bar -H -# '*rand*' -! '*512*' $(if $(QUIET),1>/dev/null))
-	$(call functionTestCheckExitcode,0,SSH_ASKPASS= $(TEST_BAR) -l test/test*.bar -L -# '*rand*' -! '*512*' $(if $(QUIET),1>/dev/null))
-	$(call functionTestCheckExitcode,0,SSH_ASKPASS= $(TEST_BAR) -l test/test*.bar -g -H -L -# '*rand*' -! '*512*' $(if $(QUIET),1>/dev/null))
-	$(call functionTestCheckExitcode,0,SSH_ASKPASS= $(TEST_BAR) --config=test/test.cfg -l test/test*.bar $(if $(QUIET),1>/dev/null))
-	$(call functionTestCheckExitcode,0,SSH_ASKPASS= $(TEST_BAR) -c test/test.bar test/data --overwrite-archive-files --verbose=2 --dry-run $(if $(QUIET),1>/dev/null))
+	$(call functionTestCheckExitcode,0,0,SSH_ASKPASS= $(TEST_BAR) -c test/test.bar test/data --overwrite-archive-files --verbose=2 $(if $(QUIET),1>/dev/null))
+	$(call functionTestCheckExitcode,0,0,SSH_ASKPASS= $(TEST_BAR) -l test/test*.bar -g $(if $(QUIET),1>/dev/null))
+	$(call functionTestCheckExitcode,0,0,SSH_ASKPASS= $(TEST_BAR) -l test/test*.bar -H $(if $(QUIET),1>/dev/null))
+	$(call functionTestCheckExitcode,0,0,SSH_ASKPASS= $(TEST_BAR) -l test/test*.bar -L $(if $(QUIET),1>/dev/null))
+	$(call functionTestCheckExitcode,0,0,SSH_ASKPASS= $(TEST_BAR) -l test/test*.bar -g -H -L $(if $(QUIET),1>/dev/null))
+	$(call functionTestCheckExitcode,0,0,SSH_ASKPASS= $(TEST_BAR) -l test/test*.bar -# '*rand*' -! '*512*' $(if $(QUIET),1>/dev/null))
+	$(call functionTestCheckExitcode,0,0,SSH_ASKPASS= $(TEST_BAR) -l test/test*.bar -g -# '*rand*' -! '*512*' $(if $(QUIET),1>/dev/null))
+	$(call functionTestCheckExitcode,0,0,SSH_ASKPASS= $(TEST_BAR) -l test/test*.bar -H -# '*rand*' -! '*512*' $(if $(QUIET),1>/dev/null))
+	$(call functionTestCheckExitcode,0,0,SSH_ASKPASS= $(TEST_BAR) -l test/test*.bar -L -# '*rand*' -! '*512*' $(if $(QUIET),1>/dev/null))
+	$(call functionTestCheckExitcode,0,0,SSH_ASKPASS= $(TEST_BAR) -l test/test*.bar -g -H -L -# '*rand*' -! '*512*' $(if $(QUIET),1>/dev/null))
+	$(call functionTestCheckExitcode,0,0,SSH_ASKPASS= $(TEST_BAR) --config=test/test.cfg -l test/test*.bar $(if $(QUIET),1>/dev/null))
+	$(call functionTestCheckExitcode,0,0,SSH_ASKPASS= $(TEST_BAR) -c test/test.bar test/data --overwrite-archive-files --verbose=2 --dry-run $(if $(QUIET),1>/dev/null))
 	#
 	# wrong options
-	$(call functionTestCheckExitcode,5,SSH_ASKPASS= $(TEST_BAR) --not-existing-option  $(if $(QUIET),1>/dev/null))
-	$(call functionTestCheckExitcode,5,SSH_ASKPASS= $(TEST_BAR) -c test/test.bar test/data --compress-algorithm=not-existing-compress  $(if $(QUIET),1>/dev/null))
-	$(call functionTestCheckExitcode,5,SSH_ASKPASS= $(TEST_BAR) -c test/test.bar test/data --crypt-algorithm=not-existing-compress $(if $(QUIET),1>/dev/null))
+	$(call functionTestCheckExitcode,5,5,SSH_ASKPASS= $(TEST_BAR) --not-existing-option  $(if $(QUIET),1>/dev/null))
+	$(call functionTestCheckExitcode,5,5,SSH_ASKPASS= $(TEST_BAR) -c test/test.bar test/data --compress-algorithm=not-existing-compress  $(if $(QUIET),1>/dev/null))
+	$(call functionTestCheckExitcode,5,5,SSH_ASKPASS= $(TEST_BAR) -c test/test.bar test/data --crypt-algorithm=not-existing-compress $(if $(QUIET),1>/dev/null))
 ifeq (@HAVE_XDELTA@,1)
-	$(call functionTestCheckExitcode,1,SSH_ASKPASS= $(TEST_BAR) -c test/test.bar test/data --delta-source=does-not-exists --compress-algorithm=xdelta9 --force-delta-compression --overwrite-archive-files $(if $(QUIET),1>/dev/null))
+	$(call functionTestCheckExitcode,1,1,SSH_ASKPASS= $(TEST_BAR) -c test/test.bar test/data --delta-source=does-not-exists --compress-algorithm=xdelta9 --force-delta-compression --overwrite-archive-files $(if $(QUIET),1>/dev/null))
 endif
-	$(call functionTestCheckExitcode,6,SSH_ASKPASS= $(TEST_BAR) --config=test/test-not-exists.cfg -l test/test*.bar $(if $(QUIET),1>/dev/null))
+	$(call functionTestCheckExitcode,6,6,SSH_ASKPASS= $(TEST_BAR) --config=test/test-not-exists.cfg -l test/test*.bar $(if $(QUIET),1>/dev/null))
 	#
 	# test not implemented functions
-	$(call functionTestCheckExitcode,127,SSH_ASKPASS= $(TEST_BAR) device://test/test.bar $(if $(QUIET),1>/dev/null))
-	$(call functionTestCheckExitcode,127,SSH_ASKPASS= $(TEST_BAR) -t device://test/test.bar $(if $(QUIET),1>/dev/null))
-	$(call functionTestCheckExitcode,127,SSH_ASKPASS= $(TEST_BAR) -d device://test/test.bar $(if $(QUIET),1>/dev/null))
-	$(call functionTestCheckExitcode,127,SSH_ASKPASS= $(TEST_BAR) -x device://test/test.bar $(if $(QUIET),1>/dev/null))
+	$(call functionTestCheckExitcode,127,127,SSH_ASKPASS= $(TEST_BAR) device://test/test.bar $(if $(QUIET),1>/dev/null))
+	$(call functionTestCheckExitcode,127,127,SSH_ASKPASS= $(TEST_BAR) -t device://test/test.bar $(if $(QUIET),1>/dev/null))
+	$(call functionTestCheckExitcode,127,127,SSH_ASKPASS= $(TEST_BAR) -d device://test/test.bar $(if $(QUIET),1>/dev/null))
+	$(call functionTestCheckExitcode,127,127,SSH_ASKPASS= $(TEST_BAR) -x device://test/test.bar $(if $(QUIET),1>/dev/null))
 	#
 	@$(RMF) test/test.cfg
 	@$(ECHO) "ok"
