@@ -12,7 +12,7 @@
 #define __FILES__
 
 /****************************** Includes *******************************/
-#include <config.h>  // use <...> to support separated build directory 
+#include <config.h>  // use <...> to support separated build directory
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -398,7 +398,21 @@ bool File_getNextSplitFileName(StringTokenizer *stringTokenizer, String *const n
 const char *File_getSystemTmpDirectory(void);
 
 /***********************************************************************\
-* Name   : File_getTmpFileName
+* Name   : File_getTmpFile, File_getTmpFileCString
+* Purpose: create and get a temporary file name
+* Input  : fileName  - variable for temporary file name
+*          pattern   - pattern with XXXXXX or NULL
+*          directory - directory to create temporary file (can be NULL)
+* Output : fileName - temporary file name
+* Return : TRUE iff temporary file created, FALSE otherwise
+* Notes  : -
+\***********************************************************************/
+
+Errors File_getTmpFile(FileHandle *fileHandle, const String pattern, const String directory);
+Errors File_getTmpFileCString(FileHandle *fileHandle, char const *pattern, const String directory);
+
+/***********************************************************************\
+* Name   : File_getTmpFileName, File_getTmpFileNameCString
 * Purpose: create and get a temporary file name
 * Input  : fileName  - variable for temporary file name
 *          pattern   - pattern with XXXXXX or NULL
@@ -412,7 +426,7 @@ Errors File_getTmpFileName(String fileName, const String pattern, const String d
 Errors File_getTmpFileNameCString(String fileName, char const *pattern, const String directory);
 
 /***********************************************************************\
-* Name   : File_getTmpDirectoryName
+* Name   : File_getTmpDirectoryName, File_getTmpDirectoryNameCString
 * Purpose: create and get a temporary directory name
 * Input  : directoryName - variable for temporary directory name
 *          pattern       - pattern with XXXXXX or NULL

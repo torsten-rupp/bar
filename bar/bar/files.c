@@ -469,6 +469,89 @@ const char *File_getSystemTmpDirectory()
   return tmpDirectory;
 }
 
+Errors File_getTmpFile(FileHandle *fileHandle, const String pattern, const String directory)
+{
+  return File_getTmpFileCString(fileHandle,String_cString(pattern),directory);
+}
+
+Errors File_getTmpFileCString(FileHandle *fileHandle, char const *pattern, const String directory)
+{
+  char   *s;
+  int    handle;
+  Errors error;
+
+  assert(fileHandle != NULL);
+
+  if (pattern == NULL) pattern = "tmp-XXXXXX";
+
+  if (directory != NULL)
+  {
+    s = (char*)malloc(String_length(directory)+strlen(FILE_SEPARATOR_STRING)+strlen(pattern)+1);
+    if (s == NULL)
+    {
+      HALT_INSUFFICIENT_MEMORY();
+    }
+    strcpy(s,String_cString(directory));
+    strcat(s,FILE_SEPARATOR_STRING);
+    strcat(s,pattern);
+  }
+  else
+  {
+    s = (char*)malloc(strlen(pattern)+1);
+    if (s == NULL)
+    {
+      HALT_INSUFFICIENT_MEMORY();
+    }
+    strcpy(s,pattern);
+  }
+
+  #ifdef HAVE_MKSTEMP
+    fileHandle->file = mkstemp(s);
+    if (fileHandle->file == -1)
+    {
+      error = ERRORX_(IO_ERROR,errno,s);
+      free(s);
+      return error;
+    }
+    if (unlink(s) != 0)
+    {
+      error = ERRORX_(IO_ERROR,errno,s);
+      free(s);
+      return error;
+    }
+    fileHandle->name  = NULL;
+    fileHandle->index = 0LL;
+    fileHandle->size  = 0LL;
+  #elif HAVE_MKTEMP
+    // Note: there is a race-condition when mktemp() and open() is used!
+    if (strcmp(mktemp(s),"") == 0)
+    {
+      error = ERRORX_(IO_ERROR,errno,s);
+      free(s);
+      return error;
+    }
+    fileHandle->file = open(s,O_CREAT|O_EXCL);
+    if (fileHandle->file == -1)
+    {
+      error = ERRORX_(IO_ERROR,errno,s);
+      free(s);
+      return error;
+    }
+    if (unlink(s) != 0)
+    {
+      error = ERRORX_(IO_ERROR,errno,s);
+      free(s);
+      return error;
+    }
+  #else /* not HAVE_MKSTEMP || HAVE_MKTEMP */
+    #error mkstemp() nor mktemp() available
+  #endif /* HAVE_MKSTEMP || HAVE_MKTEMP */
+
+  free(s);
+
+  return ERROR_NONE;
+}
+
 Errors File_getTmpFileName(String fileName, const String pattern, const String directory)
 {
   return File_getTmpFileNameCString(fileName,String_cString(pattern),directory);
@@ -486,17 +569,23 @@ Errors File_getTmpFileNameCString(String fileName, char const *pattern, const St
 
   if (directory != NULL)
   {
-    String_set(fileName,directory);
-    File_appendFileNameCString(fileName,pattern);
+    s = (char*)malloc(String_length(directory)+strlen(FILE_SEPARATOR_STRING)+strlen(pattern)+1);
+    if (s == NULL)
+    {
+      HALT_INSUFFICIENT_MEMORY();
+    }
+    strcpy(s,String_cString(directory));
+    strcat(s,FILE_SEPARATOR_STRING);
+    strcat(s,pattern);
   }
   else
   {
-    String_setCString(fileName,pattern);
-  }
-  s = String_toCString(fileName);
-  if (s == NULL)
-  {
-    HALT_INSUFFICIENT_MEMORY();
+    s = (char*)malloc(strlen(pattern)+1);
+    if (s == NULL)
+    {
+      HALT_INSUFFICIENT_MEMORY();
+    }
+    strcpy(s,pattern);
   }
 
   #ifdef HAVE_MKSTEMP
@@ -1753,7 +1842,7 @@ Errors File_getDataCString(const char *fileName,
   (*data) = malloc(*size);
   if ((*data) == NULL)
   {
-    File_close(&fileHandle);
+    (void)File_close(&fileHandle);
     return ERROR_INSUFFICIENT_MEMORY;
   }
 
@@ -1761,17 +1850,17 @@ Errors File_getDataCString(const char *fileName,
   error = File_read(&fileHandle,*data,*size,&bytesRead);
   if (error != ERROR_NONE)
   {
-    File_close(&fileHandle);
+    (void)File_close(&fileHandle);
     return error;
   }
   if (bytesRead != (*size))
   {
-    File_close(&fileHandle);
+    (void)File_close(&fileHandle);
     return ERROR_(IO_ERROR,errno);
   }
 
   // close file
-  File_close(&fileHandle);
+  (void)File_close(&fileHandle);
 
   return ERROR_NONE;
 }
