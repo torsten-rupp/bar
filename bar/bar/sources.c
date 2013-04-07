@@ -336,8 +336,8 @@ LOCAL Errors restoreFile(const String                    archiveName,
 
           // read file
           fileName = String_new();
-          error = Archive_readFileEntry(&archiveInfo,
-                                        &archiveEntryInfo,
+          error = Archive_readFileEntry(&archiveEntryInfo,
+                                        &archiveInfo,
                                         NULL,  // deltaCompressAlgorithm
                                         NULL,  // byteCompressAlgorithm
                                         NULL,  // cryptAlgorithm
@@ -475,8 +475,8 @@ LOCAL Errors restoreFile(const String                    archiveName,
 
           // read image
           imageName = String_new();
-          error = Archive_readImageEntry(&archiveInfo,
-                                         &archiveEntryInfo,
+          error = Archive_readImageEntry(&archiveEntryInfo,
+                                         &archiveInfo,
                                          NULL,  // deltaCompressAlgorithm
                                          NULL,  // byteCompressAlgorithm
                                          NULL,  // cryptAlgorithm
@@ -608,8 +608,8 @@ LOCAL Errors restoreFile(const String                    archiveName,
 
           // read hard link
           StringList_init(&fileNameList);
-          error = Archive_readHardLinkEntry(&archiveInfo,
-                                            &archiveEntryInfo,
+          error = Archive_readHardLinkEntry(&archiveEntryInfo,
+                                            &archiveInfo,
                                             NULL,  // deltaCompressAlgorithm
                                             NULL,  // byteCompressAlgorithm
                                             NULL,  // cryptAlgorithm
