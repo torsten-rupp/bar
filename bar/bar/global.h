@@ -711,6 +711,9 @@ typedef void                void32;
   } \
   while (0)
 
+#define DEBUG_TEST_CODE(condition) \
+  if (getenv(condition) != NULL)
+
 #else /* not NDEBUG */
 
 #define DEBUG_MEMORY_FENCE(name)
@@ -724,6 +727,9 @@ typedef void                void32;
   { \
   } \
   while (0)
+
+#define DEBUG_TEST_CODE(condition) \
+  if (FALSE)
 
 #endif /* NDEBUG */
 
