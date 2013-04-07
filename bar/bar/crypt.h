@@ -343,7 +343,7 @@ Errors Crypt_decryptBytes(CryptInfo *cryptInfo,
 
 /***********************************************************************\
 * Name   : Crypt_initKey
-* Purpose: initialise public/private key
+* Purpose: initialize public/private key
 * Input  : cryptKey - crypt key
 * Output : -
 * Return : -
@@ -354,7 +354,7 @@ void Crypt_initKey(CryptKey *cryptKey);
 
 /***********************************************************************\
 * Name   : public/private
-* Purpose: deinitialise public/private key
+* Purpose: deinitialize public/private key
 * Input  : cryptKey - crypt key
 * Output : -
 * Return : -
