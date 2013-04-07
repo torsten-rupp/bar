@@ -551,12 +551,6 @@ Errors __File_getTmpFileCString(const char *__fileName__,
       free(s);
       return error;
     }
-    if (unlink(s) != 0)
-    {
-      error = ERRORX_(IO_ERROR,errno,s);
-      free(s);
-      return error;
-    }
   #elif HAVE_MKTEMP
     // Note: there is a race-condition when mktemp() and open() is used!
     if (strcmp(mktemp(s),"") == 0)
@@ -572,16 +566,15 @@ Errors __File_getTmpFileCString(const char *__fileName__,
       free(s);
       return error;
     }
-    if (unlink(s) != 0)
-    {
-      error = ERRORX_(IO_ERROR,errno,s);
-      free(s);
-      return error;
-    }
   #else /* not HAVE_MKSTEMP || HAVE_MKTEMP */
     #error mkstemp() nor mktemp() available
   #endif /* HAVE_MKSTEMP || HAVE_MKTEMP */
-
+  if (unlink(s) != 0)
+  {
+    error = ERRORX_(IO_ERROR,errno,s);
+    free(s);
+    return error;
+  }
   #ifndef NDEBUG
     fileHandle->name = String_newCString(s);
   #else /* not NDEBUG */
