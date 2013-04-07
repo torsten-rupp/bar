@@ -5907,7 +5907,7 @@ LOCAL void serverCommand_scheduleListAdd(ClientInfo *clientInfo, uint id, const 
   assert(clientInfo != NULL);
   assert(arguments != NULL);
 
-  // initialise variables
+  // initialize variables
 
   // get job id, date, weekday, time, enable, type
   if (argumentCount < 1)
@@ -6424,8 +6424,8 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const Stri
             // open archive file
             fileName        = String_new();
             deltaSourceName = String_new();
-            error = Archive_readFileEntry(&archiveInfo,
-                                          &archiveEntryInfo,
+            error = Archive_readFileEntry(&archiveEntryInfo,
+                                          &archiveInfo,
                                           &deltaCompressAlgorithm,
                                           &byteCompressAlgorithm,
                                           &cryptAlgorithm,
@@ -6488,8 +6488,8 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const Stri
             // open archive file
             imageName       = String_new();
             deltaSourceName = String_new();
-            error = Archive_readImageEntry(&archiveInfo,
-                                           &archiveEntryInfo,
+            error = Archive_readImageEntry(&archiveEntryInfo,
+                                           &archiveInfo,
                                            &deltaCompressAlgorithm,
                                            &byteCompressAlgorithm,
                                            &cryptAlgorithm,
@@ -6546,8 +6546,8 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const Stri
 
             // open archive directory
             directoryName = String_new();
-            error = Archive_readDirectoryEntry(&archiveInfo,
-                                               &archiveEntryInfo,
+            error = Archive_readDirectoryEntry(&archiveEntryInfo,
+                                               &archiveInfo,
                                                &cryptAlgorithm,
                                                &cryptType,
                                                directoryName,
@@ -6589,8 +6589,8 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const Stri
             // open archive link
             linkName = String_new();
             name     = String_new();
-            error = Archive_readLinkEntry(&archiveInfo,
-                                          &archiveEntryInfo,
+            error = Archive_readLinkEntry(&archiveEntryInfo,
+                                          &archiveInfo,
                                           &cryptAlgorithm,
                                           &cryptType,
                                           linkName,
@@ -6640,8 +6640,8 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const Stri
             // open archive hardlink
             StringList_init(&fileNameList);
             deltaSourceName = String_new();
-            error = Archive_readHardLinkEntry(&archiveInfo,
-                                              &archiveEntryInfo,
+            error = Archive_readHardLinkEntry(&archiveEntryInfo,
+                                              &archiveInfo,
                                               &deltaCompressAlgorithm,
                                               &byteCompressAlgorithm,
                                               &cryptAlgorithm,
@@ -6696,8 +6696,8 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const Stri
 
             // open archive link
             name = String_new();
-            error = Archive_readSpecialEntry(&archiveInfo,
-                                             &archiveEntryInfo,
+            error = Archive_readSpecialEntry(&archiveEntryInfo,
+                                             &archiveInfo,
                                              NULL,
                                              NULL,
                                              name,
@@ -7274,7 +7274,7 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const
 
   if (indexDatabaseHandle != NULL)
   {
-    // initialise variables
+    // initialize variables
     Storage_initSpecifier(&storageSpecifier);
     storageName          = String_new();
     storageFileName      = String_new();
@@ -8074,7 +8074,7 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
 
   if (indexDatabaseHandle != NULL)
   {
-    // initialise variables
+    // initialize variables
     pattern      = String_mapCString(String_duplicate(string),STRING_BEGIN,MAP_TEXT,MAP_BIN,SIZE_OF_ARRAY(MAP_TEXT));
     List_init(&indexList);
     regexpString = String_new();
@@ -9127,14 +9127,14 @@ LOCAL void initNetworkClient(ClientInfo   *clientInfo,
 
   if (!MsgQueue_init(&clientInfo->network.commandMsgQueue,0))
   {
-    HALT_FATAL_ERROR("Cannot initialise client command message queue!");
+    HALT_FATAL_ERROR("Cannot initialize client command message queue!");
   }
   Semaphore_init(&clientInfo->network.writeLock);
   for (z = 0; z < MAX_NETWORK_CLIENT_THREADS; z++)
   {
     if (!Thread_init(&clientInfo->network.threads[z],"Client",0,networkClientThreadCode,clientInfo))
     {
-      HALT_FATAL_ERROR("Cannot initialise client thread!");
+      HALT_FATAL_ERROR("Cannot initialize client thread!");
     }
   }
 
@@ -9376,7 +9376,7 @@ Errors Server_run(uint             port,
   ulong              z;
   ClientNode         *deleteClientNode;
 
-  // initialise variables
+  // initialize variables
   serverPassword          = password;
   serverJobsDirectory     = jobsDirectory;
   serverDefaultJobOptions = defaultJobOptions;
@@ -9503,27 +9503,27 @@ Errors Server_run(uint             port,
   // start threads
   if (!Thread_init(&jobThread,"BAR job",globalOptions.niceLevel,jobThreadCode,NULL))
   {
-    HALT_FATAL_ERROR("Cannot initialise job thread!");
+    HALT_FATAL_ERROR("Cannot initialize job thread!");
   }
   if (!Thread_init(&schedulerThread,"BAR scheduler",globalOptions.niceLevel,schedulerThreadCode,NULL))
   {
-    HALT_FATAL_ERROR("Cannot initialise scheduler thread!");
+    HALT_FATAL_ERROR("Cannot initialize scheduler thread!");
   }
   if (!Thread_init(&pauseThread,"BAR pause",globalOptions.niceLevel,pauseThreadCode,NULL))
   {
-    HALT_FATAL_ERROR("Cannot initialise pause thread!");
+    HALT_FATAL_ERROR("Cannot initialize pause thread!");
   }
   if (indexDatabaseHandle != NULL)
   {
     if (!Thread_init(&indexThread,"BAR index",globalOptions.niceLevel,indexThreadCode,NULL))
     {
-      HALT_FATAL_ERROR("Cannot initialise index thread!");
+      HALT_FATAL_ERROR("Cannot initialize index thread!");
     }
     if (globalOptions.indexDatabaseAutoUpdateFlag)
     {
       if (!Thread_init(&autoIndexUpdateThread,"BAR update index",globalOptions.niceLevel,autoIndexUpdateThreadCode,NULL))
       {
-        HALT_FATAL_ERROR("Cannot initialise index update thread!");
+        HALT_FATAL_ERROR("Cannot initialize index update thread!");
       }
     }
   }
