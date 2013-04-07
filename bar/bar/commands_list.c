@@ -1656,6 +1656,7 @@ remoteBarFlag=FALSE;
                                                    );
             if (error != ERROR_NONE)
             {
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
               printError("Cannot read next entry from storage '%s' (error: %s)!\n",
                          String_cString(printableStorageName),
                          Errors_getText(error)
@@ -1681,8 +1682,8 @@ remoteBarFlag=FALSE;
                   // read archive file
                   fileName        = String_new();
                   deltaSourceName = String_new();
-                  error = Archive_readFileEntry(&archiveInfo,
-                                                &archiveEntryInfo,
+                  error = Archive_readFileEntry(&archiveEntryInfo,
+                                                &archiveInfo,
                                                 &deltaCompressAlgorithm,
                                                 &byteCompressAlgorithm,
                                                 &cryptAlgorithm,
@@ -1782,8 +1783,8 @@ remoteBarFlag=FALSE;
                   // read archive image
                   deviceName      = String_new();
                   deltaSourceName = String_new();
-                  error = Archive_readImageEntry(&archiveInfo,
-                                                 &archiveEntryInfo,
+                  error = Archive_readImageEntry(&archiveEntryInfo,
+                                                 &archiveInfo,
                                                  &deltaCompressAlgorithm,
                                                  &byteCompressAlgorithm,
                                                  &cryptAlgorithm,
@@ -1877,8 +1878,8 @@ remoteBarFlag=FALSE;
 
                   // read archive directory entry
                   directoryName = String_new();
-                  error = Archive_readDirectoryEntry(&archiveInfo,
-                                                     &archiveEntryInfo,
+                  error = Archive_readDirectoryEntry(&archiveEntryInfo,
+                                                     &archiveInfo,
                                                      &cryptAlgorithm,
                                                      &cryptType,
                                                      directoryName,
@@ -1950,8 +1951,8 @@ remoteBarFlag=FALSE;
                   // read archive link
                   linkName = String_new();
                   fileName = String_new();
-                  error = Archive_readLinkEntry(&archiveInfo,
-                                                &archiveEntryInfo,
+                  error = Archive_readLinkEntry(&archiveEntryInfo,
+                                                &archiveInfo,
                                                 &cryptAlgorithm,
                                                 &cryptType,
                                                 linkName,
@@ -2032,8 +2033,8 @@ remoteBarFlag=FALSE;
                   // read archive hard link
                   StringList_init(&fileNameList);
                   deltaSourceName = String_new();
-                  error = Archive_readHardLinkEntry(&archiveInfo,
-                                                    &archiveEntryInfo,
+                  error = Archive_readHardLinkEntry(&archiveEntryInfo,
+                                                    &archiveInfo,
                                                     &deltaCompressAlgorithm,
                                                     &byteCompressAlgorithm,
                                                     &cryptAlgorithm,
@@ -2130,8 +2131,8 @@ remoteBarFlag=FALSE;
 
                   // open archive lin
                   fileName = String_new();
-                  error = Archive_readSpecialEntry(&archiveInfo,
-                                                   &archiveEntryInfo,
+                  error = Archive_readSpecialEntry(&archiveEntryInfo,
+                                                   &archiveInfo,
                                                    &cryptAlgorithm,
                                                    &cryptType,
                                                    fileName,

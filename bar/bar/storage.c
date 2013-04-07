@@ -4796,7 +4796,7 @@ Errors Storage_create(StorageFileHandle *storageFileHandle,
           String          name;
           int             runningHandles;
 
-          // initialise variables
+          // initialize variables
           storageFileHandle->ftp.index                  = 0LL;
           storageFileHandle->ftp.size                   = fileSize;
           storageFileHandle->ftp.readAheadBuffer.offset = 0LL;
@@ -4930,7 +4930,7 @@ Errors Storage_create(StorageFileHandle *storageFileHandle,
           String          name;
           const char      *plainPassword;
 
-          // initialise variables
+          // initialize variables
           storageFileHandle->ftp.index                  = 0LL;
           storageFileHandle->ftp.size                   = fileSize;
           storageFileHandle->ftp.readAheadBuffer.offset = 0LL;
@@ -5202,7 +5202,7 @@ LIBSSH2_SFTP_S_IRUSR|LIBSSH2_SFTP_S_IWUSR
           String          name;
           int             runningHandles;
 
-          // initialise variables
+          // initialize variables
           storageFileHandle->webdav.index             = 0LL;
           storageFileHandle->webdav.size              = fileSize;
           storageFileHandle->webdav.sendBuffer.index  = 0L;
@@ -5538,7 +5538,7 @@ Errors Storage_open(StorageFileHandle *storageFileHandle,
           uint64          fileSize;
           int             runningHandles;
 
-          // initialise variables
+          // initialize variables
           storageFileHandle->ftp.index                  = 0LL;
           storageFileHandle->ftp.readAheadBuffer.offset = 0LL;
           storageFileHandle->ftp.readAheadBuffer.length = 0L;
@@ -5705,7 +5705,7 @@ fprintf(stderr,"%s, %d: httpCode=%ld\n",__FILE__,__LINE__,httpCode);
           String     line;
           int        size;
 
-          // initialise variables
+          // initialize variables
           storageFileHandle->ftp.control                = NULL;
           storageFileHandle->ftp.data                   = NULL;
           storageFileHandle->ftp.index                  = 0LL;
@@ -6015,7 +6015,7 @@ fprintf(stderr,"%s, %d: httpCode=%ld\n",__FILE__,__LINE__,httpCode);
           double          fileSize;
           int             runningHandles;
 
-          // initialise variables
+          // initialize variables
           storageFileHandle->webdav.index                = 0LL;
           storageFileHandle->webdav.receiveBuffer.size   = INITIAL_BUFFER_SIZE;
           storageFileHandle->webdav.receiveBuffer.offset = 0LL;
@@ -6224,7 +6224,7 @@ fprintf(stderr,"%s, %d: httpCode=%ld\n",__FILE__,__LINE__,httpCode);
     case STORAGE_TYPE_BD:
       #ifdef HAVE_ISO9660
         {
-          // initialise variables
+          // initialize variables
           storageFileHandle->opticalDisk.read.index             = 0LL;
           storageFileHandle->opticalDisk.read.buffer.blockIndex = 0LL;
           storageFileHandle->opticalDisk.read.buffer.length     = 0L;
@@ -6527,7 +6527,7 @@ Errors Storage_delete(StorageFileHandle *storageFileHandle,
 
           if (!storageFileHandle->jobOptions->dryRunFlag)
           {
-            // initialise variables
+            // initialize variables
 
             // open Curl handles
             curlHandle = curl_easy_init();
@@ -6730,7 +6730,7 @@ whould this be a possible implementation?
 
           if (!storageFileHandle->jobOptions->dryRunFlag)
           {
-            // initialise variables
+            // initialize variables
             curlHandle = curl_easy_init();
             if (curlHandle == NULL)
             {

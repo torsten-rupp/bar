@@ -89,7 +89,7 @@ typedef bool(*CreateStatusInfoFunction)(void                   *userData,
 * Input  : storageName                      - storage name
 *          includeEntryList                 - include entry list
 *          excludePatternList               - exclude pattern list
-*          excludeCompressPatternList       - exclude compression pattern
+*          compressExcludePatternList       - exclude compression pattern
 *                                             list
 *          jobOptions                       - job options
 *          archiveType                      - archive type; see
@@ -120,7 +120,7 @@ typedef bool(*CreateStatusInfoFunction)(void                   *userData,
 Errors Command_create(const char                      *storageName,
                       const EntryList                 *includeEntryList,
                       const PatternList               *excludePatternList,
-                      const PatternList               *excludeCompressPatternList,
+                      const PatternList               *compressExcludePatternList,
                       JobOptions                      *jobOptions,
                       ArchiveTypes                    archiveType,
                       ArchiveGetCryptPasswordFunction archiveGetCryptPasswordFunction,

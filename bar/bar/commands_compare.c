@@ -210,8 +210,8 @@ Errors Command_compare(const StringList                *storageNameList,
 
             // read file
             fileName = String_new();
-            error = Archive_readFileEntry(&archiveInfo,
-                                          &archiveEntryInfo,
+            error = Archive_readFileEntry(&archiveEntryInfo,
+                                          &archiveInfo,
                                           &deltaCompressAlgorithm,
                                           &byteCompressAlgorithm,
                                           NULL,
@@ -452,8 +452,8 @@ Errors Command_compare(const StringList                *storageNameList,
 
             // read image
             deviceName = String_new();
-            error = Archive_readImageEntry(&archiveInfo,
-                                           &archiveEntryInfo,
+            error = Archive_readImageEntry(&archiveEntryInfo,
+                                           &archiveInfo,
                                            &deltaCompressAlgorithm,
                                            &byteCompressAlgorithm,
                                            NULL,
@@ -759,8 +759,8 @@ Errors Command_compare(const StringList                *storageNameList,
 
             // read directory
             directoryName = String_new();
-            error = Archive_readDirectoryEntry(&archiveInfo,
-                                               &archiveEntryInfo,
+            error = Archive_readDirectoryEntry(&archiveEntryInfo,
+                                               &archiveInfo,
                                                NULL,
                                                NULL,
                                                directoryName,
@@ -860,8 +860,8 @@ Errors Command_compare(const StringList                *storageNameList,
             // read link
             linkName = String_new();
             fileName = String_new();
-            error = Archive_readLinkEntry(&archiveInfo,
-                                          &archiveEntryInfo,
+            error = Archive_readLinkEntry(&archiveEntryInfo,
+                                          &archiveInfo,
                                           NULL,
                                           NULL,
                                           linkName,
@@ -1010,8 +1010,8 @@ Errors Command_compare(const StringList                *storageNameList,
 
             // read hard link
             StringList_init(&fileNameList);
-            error = Archive_readHardLinkEntry(&archiveInfo,
-                                              &archiveEntryInfo,
+            error = Archive_readHardLinkEntry(&archiveEntryInfo,
+                                              &archiveInfo,
                                               &deltaCompressAlgorithm,
                                               &byteCompressAlgorithm,
                                               NULL,
@@ -1289,8 +1289,8 @@ Errors Command_compare(const StringList                *storageNameList,
 
             // read special
             fileName = String_new();
-            error = Archive_readSpecialEntry(&archiveInfo,
-                                             &archiveEntryInfo,
+            error = Archive_readSpecialEntry(&archiveEntryInfo,
+                                             &archiveInfo,
                                              NULL,
                                              NULL,
                                              fileName,
