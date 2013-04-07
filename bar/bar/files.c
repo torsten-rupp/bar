@@ -11,7 +11,7 @@
 #define __FILES_IMPLEMENATION__
 
 /****************************** Includes *******************************/
-#include <config.h>  // use <...> to support separated build directory 
+#include <config.h>  // use <...> to support separated build directory
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -1220,7 +1220,7 @@ Errors File_printLine(FileHandle *fileHandle,
   assert(fileHandle->file != NULL);
   assert(format != NULL);
 
-  // initialise variables
+  // initialize variables
   line = String_new();
 
   // format line
