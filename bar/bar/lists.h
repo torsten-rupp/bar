@@ -170,7 +170,7 @@ Node *__List_deleteNode(const char *__fileName__, ulong __lineNb__, Node *node);
 
 /***********************************************************************\
 * Name   : List_init
-* Purpose: initialise list
+* Purpose: initialize list
 * Input  : list - list to initialize
 * Output : -
 * Return : -
