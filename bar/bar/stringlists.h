@@ -12,7 +12,7 @@
 #define __STRING_LISTS__
 
 /****************************** Includes *******************************/
-#include <config.h>  // use <...> to support separated build directory 
+#include <config.h>  // use <...> to support separated build directory
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -92,7 +92,7 @@ typedef struct
 
 /***********************************************************************\
 * Name   : StringList_init
-* Purpose: initialise string list
+* Purpose: initialize string list
 * Input  : stringList - string list to initialize
 * Output : -
 * Return : -
