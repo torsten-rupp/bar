@@ -345,7 +345,8 @@ typedef struct
 
   const char             *barExecutable;                 // name of BAR executable
 
-  uint                   niceLevel;
+  uint                   niceLevel;                      // nice level 0..19
+  uint                   maxThreads;                     // max. number of concurrent compress/encryption threads or 0
 
   String                 tmpDirectory;                   // directory for temporary files
   uint64                 maxTmpSize;                     // max. size of temporary files
@@ -403,7 +404,7 @@ typedef struct
                                                               3 - external programs
                                                               4 - stdout+stderr of external programs
                                                               5 - some SSH debug debug
-                                                              6 - all SSH/FTP debug
+                                                              6 - all SSH/FTP/WebDAV debug
                                                          */
 
   bool                   serverDebugFlag;                // TRUE iff server debug enabled (for debug only)

@@ -509,7 +509,6 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
   CMD_OPTION_INTEGER      ("compress-min-size",            0,  1,1,globalOptions.compressMinFileSize,           0,MAX_INT,COMMAND_LINE_BYTES_UNITS,                    "minimal size of file for compression"                                     ),
   CMD_OPTION_SPECIAL      ("compress-exclude",             0,  0,2,&compressExcludePatternList,                 cmdOptionParsePattern,NULL,                            "exclude compression pattern","pattern"                                    ),
 
-
   CMD_OPTION_SELECT       ("crypt-algorithm",              'y',0,1,jobOptions.cryptAlgorithm,                   COMMAND_LINE_OPTIONS_CRYPT_ALGORITHMS,                 "select crypt algorithm to use"                                            ),
   CMD_OPTION_SELECT       ("crypt-type",                   0,  0,1,jobOptions.cryptType,                        COMMAND_LINE_OPTIONS_CRYPT_TYPES,                      "select crypt type"                                                        ),
   CMD_OPTION_SPECIAL      ("crypt-password",               0,  0,1,&globalOptions.cryptPassword,                cmdOptionParsePassword,NULL,                           "crypt password (use with care!)","password"                               ),
@@ -543,6 +542,7 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
   CMD_OPTION_CSTRING      ("server-jobs-directory",        0,  1,0,serverJobsDirectory,                                                                                "server job directory","path name"                                         ),
 
   CMD_OPTION_INTEGER      ("nice-level",                   0,  1,0,globalOptions.niceLevel,                     0,19,NULL,                                             "general nice level of processes/threads"                                  ),
+  CMD_OPTION_INTEGER      ("max-threads",                  0,  1,0,globalOptions.maxThreads,                    0,65535,NULL,                                          "max. number of concurrent compress/encryption threads"                    ),
 
   CMD_OPTION_SPECIAL      ("max-band-width",               0,  1,0,&globalOptions.maxBandWidthList,             cmdOptionParseBandWidth,NULL,                          "max. network band width to use [bits/s]","number or file name"            ),
 
@@ -825,6 +825,7 @@ LOCAL const ConfigValue CONFIG_VALUES[] =
   CONFIG_VALUE_INTEGER64("max-tmp-size",                 &globalOptions.maxTmpSize,-1,                            0LL,MAX_LONG_LONG,CONFIG_VALUE_BYTES_UNITS),
 
   CONFIG_VALUE_INTEGER  ("nice-level",                   &globalOptions.niceLevel,-1,                             0,19,NULL),
+  CONFIG_VALUE_INTEGER  ("max-threads",                  &globalOptions.maxThreads,-1,                            0,65535,NULL),
 
   CONFIG_VALUE_SPECIAL  ("max-band-width",               &globalOptions.maxBandWidthList,-1,                      configValueParseBandWidth,NULL,NULL,NULL,&globalOptions.maxBandWidthList),
 
@@ -1143,7 +1144,7 @@ LOCAL void initServerAllocate(ServerAllocation *serverAllocation)
 
   if (!Semaphore_init(&serverAllocation->lock))
   {
-    HALT_FATAL_ERROR("cannot initialise semaphore");
+    HALT_FATAL_ERROR("cannot initialize semaphore");
   }
   serverAllocation->lowPriorityRequestCount  = 0;
   serverAllocation->highPriorityRequestCount = 0;
@@ -2178,6 +2179,7 @@ LOCAL void initGlobalOptions(void)
   globalOptions.runMode                                         = RUN_MODE_INTERACTIVE;;
   globalOptions.barExecutable                                   = NULL;
   globalOptions.niceLevel                                       = 0;
+  globalOptions.maxThreads                                      = 0;
   globalOptions.tmpDirectory                                    = String_newCString(DEFAULT_TMP_DIRECTORY);
   globalOptions.maxTmpSize                                      = 0LL;
   List_init(&globalOptions.maxBandWidthList);
@@ -2471,7 +2473,7 @@ LOCAL Errors initAll(void)
     }
   #endif /* HAVE_BREAKPAD */
 
-  // initialise modules
+  // initialize modules
   error = Password_initAll();
   if (error != ERROR_NONE)
   {
@@ -2583,7 +2585,7 @@ LOCAL Errors initAll(void)
     return error;
   }
 
-  // initialise variables
+  // initialize variables
   initGlobalOptions();
 
   command                               = COMMAND_LIST;
@@ -2718,7 +2720,7 @@ LOCAL void doneAll(void)
   CmdOption_done(COMMAND_LINE_OPTIONS,SIZE_OF_ARRAY(COMMAND_LINE_OPTIONS));
   ConfigValue_done(CONFIG_VALUES,SIZE_OF_ARRAY(CONFIG_VALUES));
 
-  // deinitialise variables
+  // deinitialize variables
   Semaphore_done(&outputLock);
   if (defaultDevice.writeCommand != NULL) String_delete(defaultDevice.writeCommand);
   if (defaultDevice.writePostProcessCommand != NULL) String_delete(defaultDevice.writePostProcessCommand);
@@ -2770,7 +2772,7 @@ LOCAL void doneAll(void)
   StringList_done(&configFileNameList);
   String_delete(keyFileName);
 
-  // deinitialise modules
+  // deinitialize modules
   Server_doneAll();
   Network_doneAll();
   Index_doneAll();
@@ -3703,7 +3705,7 @@ Errors inputCryptPassword(void         *userData,
     case RUN_MODE_INTERACTIVE:
       {
         String title;
-        // initialise variables
+        // initialize variables
         title = String_new();
 
         // input password
@@ -4798,7 +4800,7 @@ bool readJobFile(const String      fileName,
   assert(fileName != NULL);
   assert(configValues != NULL);
 
-  // initialise variables
+  // initialize variables
   line = String_new();
 
   // open file
@@ -5472,7 +5474,7 @@ error = ERROR_STILL_NOT_IMPLEMENTED;
           }
           keyFileName = argv[1];
 
-          // initialise variables
+          // initialize variables
           publicKeyFileName  = File_newFileName();
           privateKeyFileName = File_newFileName();
 
