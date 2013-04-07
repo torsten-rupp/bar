@@ -11,6 +11,8 @@
 #define __THREADS_IMPLEMENATION__
 
 /****************************** Includes *******************************/
+#include <config.h>  // use <...> to support separated build directory
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <pthread.h>
@@ -98,7 +100,7 @@ uint Thread_getNumberOfCores(void)
   #endif /* PLATFORM_... */
 
   #if   defined(PLATFORM_LINUX)
-    #if defined(HAVE_SYS_CONF) && defined(HAVE__SC_NPROCESSORS_CONF)
+    #if defined(HAVE_SYSCONF) && defined(HAVE__SC_NPROCESSORS_CONF)
       return (uint)sysconf(_SC_NPROCESSORS_CONF);
     #else
       return 1;

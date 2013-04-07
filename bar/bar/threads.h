@@ -12,6 +12,8 @@
 #define __TRHEADS__
 
 /****************************** Includes *******************************/
+#include <config.h>  // use <...> to support separated build directory
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <pthread.h>
