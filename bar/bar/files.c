@@ -557,9 +557,6 @@ Errors __File_getTmpFileCString(const char *__fileName__,
       free(s);
       return error;
     }
-    fileHandle->name  = NULL;
-    fileHandle->index = 0LL;
-    fileHandle->size  = 0LL;
   #elif HAVE_MKTEMP
     // Note: there is a race-condition when mktemp() and open() is used!
     if (strcmp(mktemp(s),"") == 0)
@@ -584,6 +581,14 @@ Errors __File_getTmpFileCString(const char *__fileName__,
   #else /* not HAVE_MKSTEMP || HAVE_MKTEMP */
     #error mkstemp() nor mktemp() available
   #endif /* HAVE_MKSTEMP || HAVE_MKTEMP */
+
+  #ifndef NDEBUG
+    fileHandle->name = String_newCString(s);
+  #else /* not NDEBUG */
+    fileHandle->name = NULL;
+  #endif /* not NDEBUG */
+  fileHandle->index = 0LL;
+  fileHandle->size  = 0LL;
 
   free(s);
 
