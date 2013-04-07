@@ -235,6 +235,8 @@ typedef struct
 /****************************** Macros *********************************/
 
 #ifndef NDEBUG
+  #define File_getTmpFile(fileHandle,pattern,directory)           __File_getTmpFile(__FILE__,__LINE__,fileHandle,pattern,directory)
+  #define File_getTmpFileCString(fileHandle,pattern,directory)    __File_getTmpFileCString(__FILE__,__LINE__,fileHandle,pattern,directory)
   #define File_open(fileHandle,fileName,fileMode)                 __File_open(__FILE__,__LINE__,fileHandle,fileName,fileMode)
   #define File_openCString(fileHandle,fileName,fileMode)          __File_openCString(__FILE__,__LINE__,fileHandle,fileName,fileMode)
   #define File_openDescriptor(fileHandle,fileDescriptor,fileMode) __File_openDescriptor(__FILE__,__LINE__,fileHandle,fileDescriptor,fileMode)
@@ -408,8 +410,29 @@ const char *File_getSystemTmpDirectory(void);
 * Notes  : -
 \***********************************************************************/
 
-Errors File_getTmpFile(FileHandle *fileHandle, const String pattern, const String directory);
-Errors File_getTmpFileCString(FileHandle *fileHandle, char const *pattern, const String directory);
+#ifdef NDEBUG
+  Errors File_getTmpFile(FileHandle   *fileHandle,
+                         const String pattern,
+                         const String directory
+                        );
+  Errors File_getTmpFileCString(FileHandle   *fileHandle,
+                                char const   *pattern,
+                                const String directory
+                               );
+#else /* not NDEBUG */
+  Errors __File_getTmpFile(const char    *__fileName__,
+                           ulong        __lineNb__,
+                           FileHandle   *fileHandle,
+                           const String pattern,
+                           const String directory
+                          );
+  Errors __File_getTmpFileCString(const char *__fileName__,
+                                  ulong      __lineNb__,
+                                  FileHandle  *fileHandle,
+                                  char const  *pattern,
+                                  const String directory
+                                 );
+#endif /* NDEBUG */
 
 /***********************************************************************\
 * Name   : File_getTmpFileName, File_getTmpFileNameCString
