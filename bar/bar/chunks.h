@@ -177,8 +177,8 @@ ulong Chunk_getSize(const int  *definition,
 * Purpose: init chunk info block
 * Input  : chunkInfo       - chunk info block to initialize
 *          parentChunkInfo - parent chunk info block
-*          chunkIO         - i/o functions
-*          chunkIOUserData - user data for i/o
+*          chunkIO         - i/o functions or NULL
+*          chunkIOUserData - user data for i/o or NULL
 *          alignment       - alignment to use
 *          cryptInfo       - crypt info
 * Output : -

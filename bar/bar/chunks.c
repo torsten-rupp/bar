@@ -11,7 +11,7 @@
 #define __CHUNK_IMPLEMENATION__
 
 /****************************** Includes *******************************/
-#include <config.h>  // use <...> to support separated build directory 
+#include <config.h>  // use <...> to support separated build directory
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -613,10 +613,10 @@ const char *Chunk_idToString(ChunkId chunkId)
   static char s[5];
   char   ch;
 
-  ch = (char)((chunkId & 0xFF000000) >> 24); s[0] = (isprint(ch))?ch:'.';
-  ch = (char)((chunkId & 0x00FF0000) >> 16); s[1] = (isprint(ch))?ch:'.';
-  ch = (char)((chunkId & 0x0000FF00) >>  8); s[2] = (isprint(ch))?ch:'.';
-  ch = (char)((chunkId & 0x000000FF) >>  0); s[3] = (isprint(ch))?ch:'.';
+  ch = (char)((chunkId & 0xFF000000) >> 24); s[0] = (isprint(ch)) ? ch : '.';
+  ch = (char)((chunkId & 0x00FF0000) >> 16); s[1] = (isprint(ch)) ? ch : '.';
+  ch = (char)((chunkId & 0x0000FF00) >>  8); s[2] = (isprint(ch)) ? ch : '.';
+  ch = (char)((chunkId & 0x000000FF) >>  0); s[3] = (isprint(ch)) ? ch : '.';
   s[4] = '\0';
 
   return s;
@@ -695,8 +695,8 @@ Errors Chunk_init(ChunkInfo     *chunkInfo,
   assert(chunkInfo != NULL);
 
   chunkInfo->parentChunkInfo = parentChunkInfo;
-  chunkInfo->io              = (parentChunkInfo != NULL)?parentChunkInfo->io:io;
-  chunkInfo->ioUserData      = (parentChunkInfo != NULL)?parentChunkInfo->ioUserData:ioUserData;
+  chunkInfo->io              = (parentChunkInfo != NULL) ? parentChunkInfo->io         : io;
+  chunkInfo->ioUserData      = (parentChunkInfo != NULL) ? parentChunkInfo->ioUserData : ioUserData;
 
   chunkInfo->mode            = CHUNK_MODE_UNKNOWN;
   chunkInfo->alignment       = alignment;
