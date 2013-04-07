@@ -15,6 +15,7 @@
 #include <stdio.h>
 #include <pthread.h>
 #include <semaphore.h>
+#include <limits.h>
 #include <unistd.h>
 #include <assert.h>
 
@@ -97,7 +98,11 @@ uint Thread_getNumberOfCores(void)
   #endif /* PLATFORM_... */
 
   #if   defined(PLATFORM_LINUX)
-    return (uint)sysconf(_SC_NPROCESSORS_CONF);
+    #if defined(HAVE_SYS_CONF) && defined(HAVE__SC_NPROCESSORS_CONF)
+      return (uint)sysconf(_SC_NPROCESSORS_CONF);
+    #else
+      return 1;
+    #endif
   #elif defined(PLATFORM_WINDOWS)
     GetSystemInfo(&info);
     return (uint)info.dwNumberOfProcessors;
