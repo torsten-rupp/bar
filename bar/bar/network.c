@@ -178,7 +178,7 @@ Errors Network_initAll(void)
     File_appendFileNameCString(defaultSSHPrivateKeyFileName,".ssh");
     File_appendFileNameCString(defaultSSHPrivateKeyFileName,"id_rsa");
 
-    // initialise crypto multi-thread support
+    // initialize crypto multi-thread support
     cryptoMaxLocks = (uint)CRYPTO_num_locks();
     cryptoLocks = (pthread_mutex_t*)OPENSSL_malloc(cryptoMaxLocks*sizeof(pthread_mutex_t));
     if (cryptoLocks == NULL)
@@ -401,7 +401,7 @@ Errors Network_connect(SocketHandle *socketHandle,
 
         assert(loginName != NULL);
 
-        // initialise variables
+        // initialize variables
 
         // get host IP address
         #if   defined(HAVE_GETHOSTBYNAME_R)
@@ -1204,7 +1204,7 @@ Errors Network_accept(SocketHandle             *socketHandle,
     return error;
   }
 
-  // initialise TLS session
+  // initialize TLS session
   switch (serverSocketHandle->socketType)
   {
     case SERVER_SOCKET_TYPE_PLAIN:
@@ -1214,7 +1214,7 @@ Errors Network_accept(SocketHandle             *socketHandle,
       #ifdef HAVE_GNU_TLS
         socketHandle->type = SOCKET_TYPE_TLS;
 
-        // initialise session
+        // initialize session
         if (gnutls_init(&socketHandle->gnuTLS.session,GNUTLS_SERVER) != 0)
         {
           close(socketHandle->handle);
