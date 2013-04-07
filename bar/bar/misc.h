@@ -12,7 +12,7 @@
 #define __MISC__
 
 /****************************** Includes *******************************/
-#include <config.h>  // use <...> to support separated build directory 
+#include <config.h>  // use <...> to support separated build directory
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -251,7 +251,7 @@ String Misc_formatDateTime(String string, uint64 dateTime, const char *format);
 const char* Misc_formatDateTimeCString(char *buffer, uint bufferSize, uint64 dateTime, const char *format);
 
 /***********************************************************************\
-* Name   : udelay
+* Name   : Misc_udelay
 * Purpose: delay program execution
 * Input  : time - delay time [us]
 * Output : -
