@@ -333,7 +333,7 @@ bool Misc_getYesNo(const char *message);
 
 /***********************************************************************\
 * Name   : Misc_performanceFilterInit
-* Purpose: initialise performance filter
+* Purpose: initialize performance filter
 * Input  : performanceFilter - performance filter variable
 *          seconds           - filter time window size in seconds
 * Output : -
@@ -347,7 +347,7 @@ void Misc_performanceFilterInit(PerformanceFilter *performanceFilter,
 
 /***********************************************************************\
 * Name   : Misc_performanceFilterDone
-* Purpose: deinitialise performance filter
+* Purpose: deinitialize performance filter
 * Input  : performanceFilter - performance filter variable
 * Output : -
 * Return : -
