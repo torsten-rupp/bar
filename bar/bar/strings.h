@@ -781,7 +781,7 @@ String String_vformat(String string, const char *format, va_list arguments);
 /***********************************************************************\
 * Name   : String_initTokenizer, String_initTokenizerCString,
 *          String_doneTokenizer
-* Purpose: initialise/deinitialise string tokenizer
+* Purpose: initialize/deinitialize string tokenizer
 * Input  : stringTokenizer - string tokenizer
 *          string          - string
 *          separatorChars  - token seperator characters, e. g. " "
