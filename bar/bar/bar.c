@@ -2475,17 +2475,20 @@ LOCAL Errors initAll(void)
 
   // initialize modules
   error = Password_initAll();
+  DEBUG_TEST_CODE("initAll1") { Password_doneAll(); error = ERROR_UNKNOWN; }
   if (error != ERROR_NONE)
   {
     return error;
   }
   error = Crypt_initAll();
+  DEBUG_TEST_CODE("initAll2") { Crypt_doneAll(); error = ERROR_UNKNOWN; }
   if (error != ERROR_NONE)
   {
     Password_doneAll();
     return error;
   }
   error = Pattern_initAll();
+  DEBUG_TEST_CODE("initAll3") { Password_doneAll(); error = ERROR_UNKNOWN; }
   if (error != ERROR_NONE)
   {
     Crypt_doneAll();
@@ -2493,6 +2496,7 @@ LOCAL Errors initAll(void)
     return error;
   }
   error = PatternList_initAll();
+  DEBUG_TEST_CODE("initAll4") { PatternList_doneAll(); error = ERROR_UNKNOWN; }
   if (error != ERROR_NONE)
   {
     Pattern_doneAll();
@@ -2501,6 +2505,7 @@ LOCAL Errors initAll(void)
     return error;
   }
   error = Chunk_initAll();
+  DEBUG_TEST_CODE("initAll5") { Chunk_doneAll(); error = ERROR_UNKNOWN; }
   if (error != ERROR_NONE)
   {
     PatternList_doneAll();
@@ -2510,6 +2515,7 @@ LOCAL Errors initAll(void)
     return error;
   }
   error = Source_initAll();
+  DEBUG_TEST_CODE("initAll6") { Source_doneAll(); error = ERROR_UNKNOWN; }
   if (error != ERROR_NONE)
   {
     Chunk_doneAll();
@@ -2520,6 +2526,7 @@ LOCAL Errors initAll(void)
     return error;
   }
   error = Archive_initAll();
+  DEBUG_TEST_CODE("initAll7") { Archive_doneAll(); error = ERROR_UNKNOWN; }
   if (error != ERROR_NONE)
   {
     Source_doneAll();
@@ -2531,6 +2538,7 @@ LOCAL Errors initAll(void)
     return error;
   }
   error = Storage_initAll();
+  DEBUG_TEST_CODE("initAll8") { Storage_doneAll(); error = ERROR_UNKNOWN; }
   if (error != ERROR_NONE)
   {
     Archive_doneAll();
@@ -2543,6 +2551,7 @@ LOCAL Errors initAll(void)
     return error;
   }
   error = Index_initAll();
+  DEBUG_TEST_CODE("initAll9") { Index_doneAll(); error = ERROR_UNKNOWN; }
   if (error != ERROR_NONE)
   {
     Storage_doneAll();
@@ -2556,6 +2565,7 @@ LOCAL Errors initAll(void)
     return error;
   }
   error = Network_initAll();
+  DEBUG_TEST_CODE("initAll10") { Network_doneAll(); error = ERROR_UNKNOWN; }
   if (error != ERROR_NONE)
   {
     Index_doneAll();
@@ -2570,6 +2580,7 @@ LOCAL Errors initAll(void)
     return error;
   }
   error = Server_initAll();
+  DEBUG_TEST_CODE("initAll11") { Server_doneAll(); error = ERROR_UNKNOWN; }
   if (error != ERROR_NONE)
   {
     Network_doneAll();
@@ -4949,9 +4960,7 @@ int main(int argc, const char *argv[])
   error = initAll();
   if (error != ERROR_NONE)
   {
-    printError("Cannot initialize program resources (error: %s)\n",
-               Errors_getText(error)
-              );
+    fprintf(stderr,"ERROR: Cannot initialize program resources (error: %s)\n",Errors_getText(error));
     #ifndef NDEBUG
       File_debugDone();
       Array_debugDone();
