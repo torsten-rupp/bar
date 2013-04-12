@@ -544,7 +544,7 @@ Errors __File_getTmpFileCString(const char *__fileName__,
       free(s);
       return error;
     }
-    fileHandle->file = fdopen(handle,"wb");
+    fileHandle->file = fdopen(handle,"w+b");
     if (fileHandle->file == NULL)
     {
       error = ERRORX_(CREATE_FILE,errno,s);
@@ -559,7 +559,7 @@ Errors __File_getTmpFileCString(const char *__fileName__,
       free(s);
       return error;
     }
-    fileHandle->file = fopen(s,"wb");
+    fileHandle->file = fopen(s,"w+b");
       if (fileHandle->file == NULL)
     {
       error = ERRORX_(CREATE_FILE,errno,s);
@@ -569,19 +569,21 @@ Errors __File_getTmpFileCString(const char *__fileName__,
   #else /* not HAVE_MKSTEMP || HAVE_MKTEMP */
     #error mkstemp() nor mktemp() available
   #endif /* HAVE_MKSTEMP || HAVE_MKTEMP */
-  if (unlink(s) != 0)
-  {
-    error = ERRORX_(IO_ERROR,errno,s);
-    free(s);
-    return error;
-  }
-  #ifndef NDEBUG
-    fileHandle->name = String_newCString(s);
-  #else /* not NDEBUG */
+  #ifdef NDEBUG
+    if (unlink(s) != 0)
+    {
+      error = ERRORX_(IO_ERROR,errno,s);
+      free(s);
+      return error;
+    }
     fileHandle->name = NULL;
-  #endif /* not NDEBUG */
+  #else /* not NDEBUG */
+    fileHandle->name              = String_newCString(s);
+    fileHandle->deleteOnCloseFlag = TRUE;
+  #endif /* NDEBUG */
   fileHandle->index = 0LL;
   fileHandle->size  = 0LL;
+  fileHandle->mode  = 0;
 
   free(s);
 
@@ -845,7 +847,7 @@ Errors __File_openCString(const char *__fileName__,
   {
     case FILE_OPEN_CREATE:
       // create file
-      fileHandle->file = fopen(fileName,"wb");
+      fileHandle->file = fopen(fileName,"w+b");
       if (fileHandle->file == NULL)
       {
         return ERRORX_(CREATE_FILE,errno,fileName);
@@ -854,6 +856,9 @@ Errors __File_openCString(const char *__fileName__,
       fileHandle->name  = String_newCString(fileName);
       fileHandle->index = 0LL;
       fileHandle->size  = 0LL;
+      #ifndef NDEBUG
+        fileHandle->deleteOnCloseFlag = FALSE;
+      #endif /* not NDEBUG */
       break;
     case FILE_OPEN_READ:
       // open file for reading
@@ -887,6 +892,9 @@ Errors __File_openCString(const char *__fileName__,
       fileHandle->name  = String_newCString(fileName);
       fileHandle->index = 0LL;
       fileHandle->size  = (uint64)n;
+      #ifndef NDEBUG
+        fileHandle->deleteOnCloseFlag = FALSE;
+      #endif /* not NDEBUG */
       break;
     case FILE_OPEN_WRITE:
       // create directory if needed
@@ -927,6 +935,9 @@ Errors __File_openCString(const char *__fileName__,
       fileHandle->name  = String_newCString(fileName);
       fileHandle->index = 0LL;
       fileHandle->size  = 0LL;
+      #ifndef NDEBUG
+        fileHandle->deleteOnCloseFlag = FALSE;
+      #endif /* not NDEBUG */
       break;
     case FILE_OPEN_APPEND:
       // create directory if needed
@@ -965,6 +976,9 @@ Errors __File_openCString(const char *__fileName__,
       fileHandle->name  = String_newCString(fileName);
       fileHandle->index = (uint64)n;
       fileHandle->size  = (uint64)n;
+      #ifndef NDEBUG
+        fileHandle->deleteOnCloseFlag = FALSE;
+      #endif /* not NDEBUG */
       break;
     #ifndef NDEBUG
       default:
@@ -1170,6 +1184,16 @@ Errors __File_close(const char *__fileName__, ulong __lineNb__, FileHandle *file
   assert(fileHandle->file != NULL);
 
   #ifndef NDEBUG
+    if (fileHandle->deleteOnCloseFlag)
+    {
+      if (unlink(String_cString(fileHandle->name)) != 0)
+      {
+        return ERRORX_(IO_ERROR,errno,String_cString(fileHandle->name));
+      }
+    }
+  #endif /* not NDEBUG */
+
+  #ifndef NDEBUG
     pthread_once(&debugFileInitFlag,debugFileInit);
 
     pthread_mutex_lock(&debugFileLock);
@@ -1261,26 +1285,45 @@ Errors File_read(FileHandle *fileHandle,
                 )
 {
   ssize_t n;
+  ulong   length;
 
   assert(fileHandle != NULL);
   assert(fileHandle->file != NULL);
   assert(buffer != NULL);
 
-  n = fread(buffer,1,bufferLength,fileHandle->file);
-  if (   ((n <= 0) && ferror(fileHandle->file))
-      || ((n < (ssize_t)bufferLength) && (bytesRead == NULL))
-     )
+  if (bytesRead != NULL)
   {
-    return ERRORX_(IO_ERROR,errno,String_cString(fileHandle->name));
+    // read a much data as possible
+    n = fread(buffer,1,bufferLength,fileHandle->file);
+//fprintf(stderr,"%s, %d: much %x bufferLength=%lu n=%ld %d\n",__FILE__,__LINE__,fileHandle->file,bufferLength,n,ferror(fileHandle->file));
+    if ((n <= 0) && ferror(fileHandle->file))
+    {
+      return ERRORX_(IO_ERROR,errno,String_cString(fileHandle->name));
+    }
+    fileHandle->index += (uint64)n;
+    (*bytesRead) = n;
   }
-  fileHandle->index += n;
+  else
+  {
+    // read all requested data
+    while (bufferLength > 0L)
+    {
+      n = fread(buffer,1,bufferLength,fileHandle->file);
+//fprintf(stderr,"%s, %d: all bufferLength=%lu n=%ld %d\n",__FILE__,__LINE__,bufferLength,n,ferror(fileHandle->file));
+      if ((n <= 0) && ferror(fileHandle->file))
+      {
+        return ERRORX_(IO_ERROR,errno,String_cString(fileHandle->name));
+      }
+      buffer = (byte*)buffer+n;
+      bufferLength -= (ulong)n;
+      fileHandle->index += (uint64)n;
+    }
+  }
 
   if ((fileHandle->mode & FILE_OPEN_NO_CACHE) != 0)
   {
     File_dropCaches(fileHandle,0LL,fileHandle->index,FALSE);
   }
-
-  if (bytesRead != NULL) (*bytesRead) = n;
 
   return ERROR_NONE;
 }
@@ -1298,6 +1341,7 @@ Errors File_write(FileHandle *fileHandle,
 
   n = fwrite(buffer,1,bufferLength,fileHandle->file);
   if (n > 0) fileHandle->index += n;
+//fprintf(stderr,"%s, %d: write %x bufferLength=%lu n=%ld %d fileHandle->index=%llu\n",__FILE__,__LINE__,fileHandle->file,bufferLength,n,ferror(fileHandle->file),fileHandle->index);
   if (fileHandle->index > fileHandle->size) fileHandle->size = fileHandle->index;
   if (n != (ssize_t)bufferLength)
   {
@@ -1416,6 +1460,60 @@ Errors File_printLine(FileHandle *fileHandle,
   return ERROR_NONE;
 }
 
+Errors File_transfer(FileHandle *sourceFileHandle,
+                     FileHandle *destinationFileHandle,
+                     uint64     length,
+                     uint64     *bytesTransfered
+                    )
+{
+  #define BUFFER_SIZE (1024*1024)
+
+  void    *buffer;
+  ulong   bufferLength;
+  ssize_t n;
+  Errors  error;
+
+  // allocate transfer buffer
+  buffer = (char*)malloc(BUFFER_SIZE);
+  if (buffer == NULL)
+  {
+    HALT_INSUFFICIENT_MEMORY();
+  }
+
+  // transfer data
+  if (bytesTransfered != NULL) (*bytesTransfered) = 0LL;
+  while (length > 0LL)
+  {
+    bufferLength = MIN(length,BUFFER_SIZE);
+
+    n = fread(buffer,1,bufferLength,sourceFileHandle->file);
+    if (n != (ssize_t)bufferLength)
+    {
+      error = ERRORX_(IO_ERROR,errno,String_cString(sourceFileHandle->name));
+      free(buffer);
+      return error;
+    }
+
+    n = fwrite(buffer,1,bufferLength,destinationFileHandle->file);
+    if (n != (ssize_t)bufferLength)
+    {
+      error = ERRORX_(IO_ERROR,errno,String_cString(destinationFileHandle->name));
+      free(buffer);
+      return error;
+    }
+
+    length -= bufferLength;
+    if (bytesTransfered != NULL) (*bytesTransfered) += bufferLength;
+  }
+
+  // free resources
+  free(buffer);
+
+  return ERROR_NONE;
+
+  #undef BUFFER_SIZE
+}
+
 Errors File_flush(FileHandle *fileHandle)
 {
   assert(fileHandle != NULL);
@@ -1449,7 +1547,7 @@ Errors File_tell(FileHandle *fileHandle, uint64 *offset)
   {
     return ERRORX_(IO_ERROR,errno,String_cString(fileHandle->name));
   }
-// NYI
+#warning TODO
 //assert(sizeof(off_t)==8);
 assert(n == (off_t)fileHandle->index);
 
@@ -1483,6 +1581,7 @@ Errors File_truncate(FileHandle *fileHandle,
 
   if (size < fileHandle->size)
   {
+    (void)fflush(fileHandle->file);
     if (ftruncate(fileno(fileHandle->file),(off_t)size) != 0)
     {
       return ERRORX_(IO_ERROR,errno,String_cString(fileHandle->name));
@@ -1506,6 +1605,7 @@ Errors File_dropCaches(FileHandle *fileHandle,
   assert(fileHandle != NULL);
   assert(fileHandle->file != NULL);
 
+  (void)fflush(fileHandle->file);
   #if defined(HAVE_FDATASYNC) || defined(HAVE_POSIX_FADVISE)
     handle = fileno(fileHandle->file);
   #else

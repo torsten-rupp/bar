@@ -185,6 +185,9 @@ typedef struct
   FILE   *file;
   uint64 index;
   uint64 size;
+  #ifndef NDEBUG
+    bool deleteOnCloseFlag;
+  #endif /* not NDEBUG */
 } FileHandle;
 
 // directory list handle
@@ -628,6 +631,23 @@ Errors File_printLine(FileHandle *fileHandle,
                       const char *format,
                       ...
                      );
+
+/***********************************************************************\
+* Name   : File_transfer
+* Purpose: transfer data from file to file
+* Input  : sourceFileHandle      - file handle
+*          destinationFileHandle - file handle
+*          length                - number of bytes to transfer
+* Output : bytesTransfered - bytes transfered (can be NULL)
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors File_transfer(FileHandle *sourceFileHandle,
+                     FileHandle *destinationFileHandle,
+                     uint64     length,
+                     uint64     *bytesTransfered
+                    );
 
 /***********************************************************************\
 * Name   : File_flush
