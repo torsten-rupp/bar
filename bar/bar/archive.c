@@ -2681,7 +2681,8 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
 }
 
 Errors Archive_open(ArchiveInfo                     *archiveInfo,
-                    const String                    storageName,
+                    const StorageSpecifier          *storageSpecifier,
+                    const String                    storageFileName,
                     const JobOptions                *jobOptions,
                     BandWidthList                   *maxBandWidthList,
                     ArchiveGetCryptPasswordFunction archiveGetCryptPasswordFunction,
@@ -2692,29 +2693,21 @@ Errors Archive_open(ArchiveInfo                     *archiveInfo,
   Errors      error;
   ChunkHeader chunkHeader;
 
-#warning change
-StorageSpecifier storageSpecifier;
-String storageFileName;
-
   assert(archiveInfo != NULL);
-  assert(storageName != NULL);
+  assert(storageSpecifier != NULL);
+  assert(storageFileName != NULL);
 
   // init variables
   fileName = String_new();
 
-#warning change
-Storage_initSpecifier(&storageSpecifier);
-storageFileName      = String_new();
-error = Storage_parseName(storageName,&storageSpecifier,storageFileName);
-
-  // init
+  // initstorageSpecifier
   archiveInfo->jobOptions                      = jobOptions;
   archiveInfo->archiveNewFileFunction          = NULL;
   archiveInfo->archiveNewFileUserData          = NULL;
   archiveInfo->archiveGetCryptPasswordFunction = archiveGetCryptPasswordFunction;
   archiveInfo->archiveGetCryptPasswordUserData = archiveGetCryptPasswordUserData;
 
-  archiveInfo->printableName                   = Storage_getPrintableName(String_new(),&storageSpecifier,storageFileName);
+  archiveInfo->printableName                   = Storage_getPrintableName(String_new(),storageSpecifier,storageFileName);
 
   archiveInfo->cryptPassword                   = NULL;
   archiveInfo->cryptType                       = CRYPT_TYPE_NONE;
@@ -2722,7 +2715,8 @@ error = Storage_parseName(storageName,&storageSpecifier,storageFileName);
   archiveInfo->cryptKeyDataLength              = 0;
 
   archiveInfo->ioType                          = ARCHIVE_IO_TYPE_STORAGE_FILE;
-  archiveInfo->storage.storageName             = String_duplicate(storageName);
+  Storage_duplicateSpecifier(&archiveInfo->storage.storageSpecifier,storageSpecifier);
+  archiveInfo->storage.storageFileName         = String_duplicate(storageFileName);
   archiveInfo->chunkIO                         = &CHUNK_IO_STORAGE_FILE;
   archiveInfo->chunkIOUserData                 = &archiveInfo->storage.storageFileHandle;
   Semaphore_init(& archiveInfo->chunkIOLock);
@@ -2741,39 +2735,35 @@ error = Storage_parseName(storageName,&storageSpecifier,storageFileName);
   List_init(&archiveInfo->archiveEntryList);
   Semaphore_init(&archiveInfo->archiveEntryList.lock);
 
-#warning change
-String_delete(storageFileName);
-Storage_doneSpecifier(&storageSpecifier);
-
-
   // init storage
   error = Storage_init(&archiveInfo->storage.storageFileHandle,
-                       storageName,
+                       &archiveInfo->storage.storageSpecifier,
+                       archiveInfo->storage.storageFileName,
                        jobOptions,
                        maxBandWidthList,
-                       NULL,
-                       NULL,
-                       NULL,
-                       NULL,
-                       fileName
+                       CALLBACK(NULL,NULL),
+                       CALLBACK(NULL,NULL)
                       );
   if (error != ERROR_NONE)
   {
     String_delete(archiveInfo->printableName);
-    String_delete(archiveInfo->storage.storageName);
+    String_delete(archiveInfo->storage.storageFileName);
+    Storage_doneSpecifier(&archiveInfo->storage.storageSpecifier);
     String_delete(fileName);
     return error;
   }
 
   // open storage file
   error = Storage_open(&archiveInfo->storage.storageFileHandle,
-                       fileName
+                       &archiveInfo->storage.storageSpecifier,
+                       archiveInfo->storage.storageFileName
                       );
   if (error != ERROR_NONE)
   {
     Storage_done(&archiveInfo->storage.storageFileHandle);
     String_delete(archiveInfo->printableName);
-    String_delete(archiveInfo->storage.storageName);
+    String_delete(archiveInfo->storage.storageFileName);
+    Storage_doneSpecifier(&archiveInfo->storage.storageSpecifier);
     String_delete(fileName);
     return error;
   }
@@ -2785,7 +2775,8 @@ Storage_doneSpecifier(&storageSpecifier);
     Storage_close(&archiveInfo->storage.storageFileHandle);
     Storage_done(&archiveInfo->storage.storageFileHandle);
     String_delete(archiveInfo->printableName);
-    String_delete(archiveInfo->storage.storageName);
+    String_delete(archiveInfo->storage.storageFileName);
+    Storage_doneSpecifier(&archiveInfo->storage.storageSpecifier);
     String_delete(fileName);
     return error;
   }
@@ -2796,7 +2787,8 @@ Storage_doneSpecifier(&storageSpecifier);
       Storage_close(&archiveInfo->storage.storageFileHandle);
       Storage_done(&archiveInfo->storage.storageFileHandle);
       String_delete(archiveInfo->printableName);
-      String_delete(archiveInfo->storage.storageName);
+    String_delete(archiveInfo->storage.storageFileName);
+    Storage_doneSpecifier(&archiveInfo->storage.storageSpecifier);
       String_delete(fileName);
       return ERROR_NOT_AN_ARCHIVE_FILE;
     }
@@ -2818,6 +2810,7 @@ Errors Archive_close(ArchiveInfo *archiveInfo)
   assert(archiveInfo != NULL);
   assert(List_isEmpty(&archiveInfo->archiveEntryList));
 
+  // close file/storage
   switch (archiveInfo->ioType)
   {
     case ARCHIVE_IO_TYPE_FILE:
@@ -2832,8 +2825,8 @@ Errors Archive_close(ArchiveInfo *archiveInfo)
       break;
   }
 
+  // free resources
   Semaphore_done(&archiveInfo->archiveEntryList.lock);
-
   Semaphore_done(&archiveInfo->chunkIOLock);
 
   if (archiveInfo->cryptType == CRYPT_TYPE_ASYMMETRIC)
@@ -2852,7 +2845,8 @@ Errors Archive_close(ArchiveInfo *archiveInfo)
       if (archiveInfo->file.fileName != NULL) String_delete(archiveInfo->file.fileName);
       break;
     case ARCHIVE_IO_TYPE_STORAGE_FILE:
-      if (archiveInfo->storage.storageName != NULL) String_delete(archiveInfo->storage.storageName);
+      String_delete(archiveInfo->storage.storageFileName);
+      Storage_doneSpecifier(&archiveInfo->storage.storageSpecifier);
       break;
   }
 
@@ -2918,7 +2912,10 @@ Errors Archive_storageContinue(ArchiveInfo *archiveInfo)
       archiveInfo->file.openFlag = archiveInfo->interrupt.openFlag;
       break;
     case ARCHIVE_IO_TYPE_STORAGE_FILE:
-      error = Storage_open(&archiveInfo->storage.storageFileHandle,archiveInfo->storage.storageName);
+      error = Storage_open(&archiveInfo->storage.storageFileHandle,
+                           &archiveInfo->storage.storageSpecifier,
+                           archiveInfo->storage.storageFileName
+                          );
       if (error != ERROR_NONE)
       {
         return error;
@@ -8984,7 +8981,6 @@ Errors Archive_updateIndex(DatabaseHandle               *databaseHandle,
   String            storageFileName;
   String            printableStorageName;
   JobOptions        jobOptions;
-  String            s,t;
   Errors            error;
   bool              abortedFlag;
   ArchiveInfo       archiveInfo;
@@ -9014,27 +9010,27 @@ Errors Archive_updateIndex(DatabaseHandle               *databaseHandle,
   jobOptions.cryptPassword           = Password_duplicate(cryptPassword);
   jobOptions.cryptPrivateKeyFileName = String_duplicate(cryptPrivateKeyFileName);
 
-  // open archive
-  if (String_startsWithCString(storageName,"scp:"))
+  // open archive (Note optimization: try sftp for scp protocol, because sftp support seek()-operation)
+  if (storageSpecifier.type == STORAGE_TYPE_SCP)
   {
     // try to open scp-storage first with sftp
-    s = String_sub(String_new(),storageName,4,STRING_END);
-    t = String_format(String_new(),"sftp:%S",s);
+    storageSpecifier.type = STORAGE_TYPE_SFTP;
     error = Archive_open(&archiveInfo,
-                         t,
+                         &storageSpecifier,
+                         storageFileName,
                          &jobOptions,
                          maxBandWidthList,
                          NULL,
                          NULL
                         );
-    String_delete(t);
-    String_delete(s);
 
     if (error != ERROR_NONE)
     {
       // open scp-storage
+      storageSpecifier.type = STORAGE_TYPE_SCP;
       error = Archive_open(&archiveInfo,
-                           storageName,
+                           &storageSpecifier,
+                           storageFileName,
                            &jobOptions,
                            maxBandWidthList,
                            NULL,
@@ -9046,7 +9042,8 @@ Errors Archive_updateIndex(DatabaseHandle               *databaseHandle,
   {
     // open other storage types
     error = Archive_open(&archiveInfo,
-                         storageName,
+                         &storageSpecifier,
+                         storageFileName,
                          &jobOptions,
                          maxBandWidthList,
                          NULL,
@@ -9618,7 +9615,8 @@ Errors Archive_copy(const String                    storageName,
 
   // open source
   error = Archive_open(&sourceArchiveInfo,
-                       storageName,
+                       &storageSpecifier,
+                       storageFileName,
                        jobOptions,
                        archiveGetCryptPassword,
                        archiveGetCryptPasswordData

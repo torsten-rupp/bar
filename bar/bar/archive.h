@@ -139,7 +139,8 @@ typedef struct
     } file;
     struct
     {
-      String                      storageName;                       // storage name
+      StorageSpecifier            storageSpecifier;                  // storage specifier structure
+      String                      storageFileName;                   // storage file name
       StorageFileHandle           storageFileHandle;                 // storage file handle
     } storage;
   };
@@ -388,6 +389,8 @@ Errors Archive_create(ArchiveInfo                     *archiveInfo,
 * Name   : Archive_open
 * Purpose: open archive
 * Input  : archiveInfo                 - archive info data
+*          storageSpecifier            - storage specifier structure
+*          storageFileName             - storage file name
 *          storageName                 - storage name
 *          jobOptions                  - option settings
 *          maxBandWidthList            - list with max. band width to use
@@ -401,7 +404,8 @@ Errors Archive_create(ArchiveInfo                     *archiveInfo,
 \***********************************************************************/
 
 Errors Archive_open(ArchiveInfo                     *archiveInfo,
-                    const String                    storageName,
+                    const StorageSpecifier          *storageSpecifier,
+                    const String                    storageFileName,
                     const JobOptions                *jobOptions,
                     BandWidthList                   *maxBandWidthList,
                     ArchiveGetCryptPasswordFunction archiveGetCryptPassword,
