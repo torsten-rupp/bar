@@ -1838,7 +1838,7 @@ LOCAL void jobThreadCode(void)
             }
 
             // create archive
-            jobNode->runningInfo.error = Command_create(String_cString(storageName),
+            jobNode->runningInfo.error = Command_create(storageName,
                                                         &includeEntryList,
                                                         &excludePatternList,
                                                         &compressExcludePatternList,
@@ -6362,6 +6362,8 @@ LOCAL void serverCommand_volumeUnload(ClientInfo *clientInfo, uint id, const Str
 LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const String arguments[], uint argumentCount)
 {
   String            storageName;
+  StorageSpecifier  storageSpecifier;
+  String            storageFileName;
   Errors            error;
   ArchiveInfo       archiveInfo;
   ArchiveEntryInfo  archiveEntryInfo;
@@ -6370,7 +6372,7 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const Stri
   assert(clientInfo != NULL);
   assert(arguments != NULL);
 
-  // get archive name, pattern
+  // get storage name, pattern
   if (argumentCount < 1)
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected storage name");
@@ -6378,9 +6380,24 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const Stri
   }
   storageName = arguments[0];
 
+  // parse storage name
+  storageFileName = String_new();
+  error = Storage_parseName(storageName,&storageSpecifier,storageFileName);
+  if (error != ERROR_NONE)
+  {
+    printError("Cannot initialize storage '%s' (error: %s)\n",
+               String_cString(storageName),
+               Errors_getText(error)
+              );
+    String_delete(storageFileName);
+    sendClientResult(clientInfo,id,TRUE,error,"%s",Errors_getText(error));
+    return;
+  }
+
   // open archive
   error = Archive_open(&archiveInfo,
-                       storageName,
+                       &storageSpecifier,
+                       storageFileName,
                        &clientInfo->jobOptions,
                        &globalOptions.maxBandWidthList,
                        NULL,
@@ -6388,6 +6405,8 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const Stri
                       );
   if (error != ERROR_NONE)
   {
+    String_delete(storageFileName);
+    Storage_doneSpecifier(&storageSpecifier);
     sendClientResult(clientInfo,id,TRUE,error,"%s",Errors_getText(error));
     return;
   }
@@ -6743,6 +6762,10 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const Stri
   // close archive
   Archive_close(&archiveInfo);
 
+  // free resources
+  String_delete(storageFileName);
+  Storage_doneSpecifier(&storageSpecifier);
+
   sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
 }
 
@@ -6877,7 +6900,8 @@ LOCAL void serverCommand_storageDelete(ClientInfo *clientInfo, uint id, const St
 {
   DatabaseId        storageId;
   String            storageName;
-  String            s,t;
+  StorageSpecifier  storageSpecifier;
+  String            storageFileName;
   String            fileName;
   Errors            error;
   StorageFileHandle storageFileHandle;
@@ -6910,39 +6934,42 @@ LOCAL void serverCommand_storageDelete(ClientInfo *clientInfo, uint id, const St
       return;
     }
 
+    // parse storage name
+    storageFileName = String_new();
+    error = Storage_parseName(storageName,&storageSpecifier,storageFileName);
+    if (error != ERROR_NONE)
+    {
+      String_delete(storageName);
+      sendClientResult(clientInfo,id,TRUE,ERROR_ARCHIVE_NOT_FOUND,"storage not found");
+      return;
+    }
+
 // NYI: move this special handling of limited scp into Storage_delete()?
     // init storage
     fileName = String_new();
-    if (String_startsWithCString(storageName,"scp:"))
+    if (storageSpecifier.type == STORAGE_TYPE_SCP)
     {
       // try to init scp-storage first with sftp
-      s = String_sub(String_new(),storageName,4,STRING_END);
-      t = String_format(String_new(),"sftp:%S",s);
+      storageSpecifier.type = STORAGE_TYPE_SFTP;
       error = Storage_init(&storageFileHandle,
-                         t,
-                         &clientInfo->jobOptions,
-                         &globalOptions.indexDatabaseMaxBandWidthList,
-                         NULL,
-                         NULL,
-                         NULL,
-                         NULL,
-                         fileName
-                        );
-      String_delete(t);
-      String_delete(s);
-
+                           &storageSpecifier,
+                           storageFileName,
+                           &clientInfo->jobOptions,
+                           &globalOptions.indexDatabaseMaxBandWidthList,
+                           CALLBACK(NULL,NULL),
+                           CALLBACK(NULL,NULL)
+                          );
       if (error != ERROR_NONE)
       {
         // init scp-storage
+        storageSpecifier.type = STORAGE_TYPE_SCP;
         error = Storage_init(&storageFileHandle,
-                             storageName,
+                             &storageSpecifier,
+                             storageFileName,
                              &clientInfo->jobOptions,
                              &globalOptions.indexDatabaseMaxBandWidthList,
-                             NULL,
-                             NULL,
-                             NULL,
-                             NULL,
-                             fileName
+                             CALLBACK(NULL,NULL),
+                             CALLBACK(NULL,NULL)
                             );
       }
     }
@@ -6950,19 +6977,19 @@ LOCAL void serverCommand_storageDelete(ClientInfo *clientInfo, uint id, const St
     {
       // init other storage types
       error = Storage_init(&storageFileHandle,
-                           storageName,
+                           &storageSpecifier,
+                           storageFileName,
                            &clientInfo->jobOptions,
                            &globalOptions.indexDatabaseMaxBandWidthList,
-                           NULL,
-                           NULL,
-                           NULL,
-                           NULL,
-                           fileName
+                           CALLBACK(NULL,NULL),
+                           CALLBACK(NULL,NULL)
                           );
     }
     if (error != ERROR_NONE)
     {
       String_delete(fileName);
+      String_delete(storageFileName);
+      Storage_doneSpecifier(&storageSpecifier);
       String_delete(storageName);
       sendClientResult(clientInfo,id,TRUE,error,"init storage fail: %s",Errors_getText(error));
       return;
@@ -6975,6 +7002,8 @@ LOCAL void serverCommand_storageDelete(ClientInfo *clientInfo, uint id, const St
     if (error != ERROR_NONE)
     {
       String_delete(fileName);
+      String_delete(storageFileName);
+      Storage_doneSpecifier(&storageSpecifier);
       String_delete(storageName);
       sendClientResult(clientInfo,id,TRUE,error,"delete storage file fail: %s",Errors_getText(error));
       return;
@@ -6990,6 +7019,8 @@ LOCAL void serverCommand_storageDelete(ClientInfo *clientInfo, uint id, const St
     if (error != ERROR_NONE)
     {
       String_delete(fileName);
+      String_delete(storageFileName);
+      Storage_doneSpecifier(&storageSpecifier);
       String_delete(storageName);
       sendClientResult(clientInfo,id,TRUE,error,"remove index fail: %s",Errors_getText(error));
       return;
@@ -6997,6 +7028,8 @@ LOCAL void serverCommand_storageDelete(ClientInfo *clientInfo, uint id, const St
 
     // free resources
     String_delete(fileName);
+    String_delete(storageFileName);
+    Storage_doneSpecifier(&storageSpecifier);
     String_delete(storageName);
   }
   else
