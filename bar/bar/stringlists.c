@@ -73,7 +73,7 @@ LOCAL void insertString(const char *__fileName__, ulong __lineNb__, StringList *
   #ifdef NDEBUG
     stringNode = LIST_NEW_NODE(StringNode);
   #else /* not NDEBUG */
-    stringNode = __LIST_NEW_NODE(__fileName__,__lineNb__,StringNode);
+    stringNode = LIST_NEW_NODEX(__fileName__,__lineNb__,StringNode);
   #endif /* NDEBUG */
   if (stringNode == NULL)
   {
@@ -297,7 +297,7 @@ StringNode *__StringList_remove(const char *__fileName__, ulong __lineNb__, Stri
   #ifdef NDEBUG
     stringNode = (StringNode*)LIST_DELETE_NODE(stringNode);
   #else /* not NDEBUG */
-    stringNode = (StringNode*)__LIST_DELETE_NODE(__fileName__,__lineNb__,stringNode);
+    stringNode = (StringNode*)LIST_DELETE_NODEX(__fileName__,__lineNb__,stringNode);
   #endif /* NDEBUG */
 
   return nextStringNode;
@@ -328,7 +328,7 @@ String __StringList_getFirst(const char *fileName, ulong lineNb, StringList *str
     #ifdef NDEBUG
       LIST_DELETE_NODE(stringNode);
     #else /* not NDEBUG */
-      __LIST_DELETE_NODE(fileName,lineNb,stringNode);
+      LIST_DELETE_NODEX(fileName,lineNb,stringNode);
     #endif /* NDEBUG */
 
     return string;
@@ -369,7 +369,7 @@ String __StringList_getLast(const char *fileName, ulong lineNb, StringList *stri
     #ifdef NDEBUG
       LIST_DELETE_NODE(stringNode);
     #else /* not NDEBUG */
-      __LIST_DELETE_NODE(fileName,lineNb,stringNode);
+      LIST_DELETE_NODEX(fileName,lineNb,stringNode);
     #endif /* NDEBUG */
 
     return string;
