@@ -1006,7 +1006,8 @@ LOCAL Errors transferArchiveFileData(const ArchiveInfo *archiveInfo,
   ulong   n;
   Errors  error;
 
-  assert(chunkIO != NULL);
+  assert(archiveInfo != NULL);
+  assert(archiveInfo->chunkIO != NULL);
   assert(fileHandle != NULL);
 
   // allocate transfer buffer
@@ -1031,7 +1032,7 @@ LOCAL Errors transferArchiveFileData(const ArchiveInfo *archiveInfo,
       return error;
     }
 
-    error = chunkIO->write(chunkIOUserData,buffer,n);
+    error = archiveInfo->chunkIO->write(archiveInfo->chunkIOUserData,buffer,n);
     if (error != ERROR_NONE)
     {
       free(buffer);
