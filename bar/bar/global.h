@@ -691,50 +691,120 @@ typedef void                void32;
 
 #ifndef NDEBUG
 
-#define DEBUG_MEMORY_FENCE(name) byte name[0]
-#define DEBUG_MEMORY_FENCE_INIT(name) \
-  do \
-  { \
-    unsigned int __z; \
-    \
-    for (__z = 0; __z < sizeof(name); __z++) \
+  #define DEBUG_MEMORY_FENCE(name) byte name[0]
+  #define DEBUG_MEMORY_FENCE_INIT(name) \
+    do \
     { \
-      name[__z] = 0xED; \
+      unsigned int __z; \
+      \
+      for (__z = 0; __z < sizeof(name); __z++) \
+      { \
+        name[__z] = 0xED; \
+      } \
     } \
-  } \
-  while (0)
-#define DEBUG_MEMORY_FENCE_CHECK(name) \
-  do \
-  { \
-    unsigned int __z; \
-    for (__z = 0; __z < sizeof(name); __z++) \
+    while (0)
+  #define DEBUG_MEMORY_FENCE_CHECK(name) \
+    do \
     { \
-      assert(name[__z] == 0xED); \
+      unsigned int __z; \
+      for (__z = 0; __z < sizeof(name); __z++) \
+      { \
+        assert(name[__z] == 0xED); \
+      } \
     } \
-  } \
-  while (0)
+    while (0)
 
-#define DEBUG_TEST_CODE(condition) \
-  if (getenv(condition) != NULL)
+  #define DEBUG_TEST_CODE(condition) \
+    if (getenv(condition) != NULL)
 
 #else /* not NDEBUG */
 
-#define DEBUG_MEMORY_FENCE(name)
-#define DEBUG_MEMORY_FENCE_INIT(name) \
-  do \
-  { \
-  } \
-  while (0)
-#define DEBUG_MEMORY_FENCE_CHECK(name) \
-  do \
-  { \
-  } \
-  while (0)
+  #define DEBUG_MEMORY_FENCE(name)
+  #define DEBUG_MEMORY_FENCE_INIT(name) \
+    do \
+    { \
+    } \
+    while (0)
+  #define DEBUG_MEMORY_FENCE_CHECK(name) \
+    do \
+    { \
+    } \
+    while (0)
 
-#define DEBUG_TEST_CODE(condition) \
-  if (FALSE)
+  #define DEBUG_TEST_CODE(condition) \
+    if (FALSE)
 
 #endif /* NDEBUG */
+
+/***********************************************************************\
+* Name   : DEBUG_ADD_RESOURCE_TRACE, DEBUG_REMOVE_RESOURCE_TRACE,
+*          DEBUG_ADD_RESOURCE_TRACEX, DEBUG_REMOVE_RESOURCE_TRACEX,
+* Purpose: add/remove debug trace allocated resource functions
+* Input  : fileName - file name
+*          lineNb   - line number
+*          resource - resource
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+#ifndef NDEBUG
+
+  #define DEBUG_ADD_RESOURCE_TRACE(typeName,resource) \
+    do \
+    { \
+      debugAddResourceTrace(__FILE__,__LINE__,typeName,resource); \
+    } \
+    while (0)
+  
+  #define DEBUG_REMOVE_RESOURCE_TRACE(resource) \
+    do \
+    { \
+      debugRemoveResourceTrace(__FILE__,__LINE__,resource); \
+    } \
+    while (0)
+
+  #define DEBUG_ADD_RESOURCE_TRACEX(fileName,lineNb,typeName,resource) \
+    do \
+    { \
+      debugAddResourceTrace(fileName,lineNb,typeName,resource); \
+    } \
+    while (0)
+  
+  #define DEBUG_REMOVE_RESOURCE_TRACEX(fileName,lineNb,resource) \
+    do \
+    { \
+      debugRemoveResourceTrace(fileName,lineNb,resource); \
+    } \
+    while (0)
+
+#else /* NDEBUG */
+
+  #define DEBUG_ADD_RESOURCE_TRACE(typeName,resource) \
+    do \
+    { \
+    } \
+    while (0)
+  
+  #define DEBUG_REMOVE_RESOURCE_TRACE(resource) \
+    do \
+    { \
+    } \
+    while (0)
+
+  #define DEBUG_ADD_RESOURCE_TRACEX(fileName,lineNb,typeName,resource) \
+    do \
+    { \
+    } \
+    while (0)
+  
+  #define DEBUG_REMOVE_RESOURCE_TRACEX(fileName,lineNb,resource) \
+    do \
+    { \
+    } \
+    while (0)
+
+#endif /* not NDEBUG */
 
 /**************************** Functions ********************************/
 
@@ -746,7 +816,7 @@ extern "C" {
 /***********************************************************************\
 * Name   : __dprintf
 * Purpose: debug printf
-* Input  : filename - filename
+* Input  : fileName - file name
 *          lineNb   - line number
 *          format   - format string (like printf)
 *          ...      - optional arguments
@@ -755,7 +825,7 @@ extern "C" {
 * Notes  : -
 \***********************************************************************/
 
-void __dprintf(const char *filename, unsigned int lineNb, const char *format, ...);
+void __dprintf(const char *fileName, unsigned int lineNb, const char *format, ...);
 #endif /* NDEBUG */
 
 #ifdef __cplusplus
@@ -1013,7 +1083,7 @@ inline ulong swapLONG(ulong n)
 /***********************************************************************\
 * Name   : __halt
 * Purpose: halt program
-* Input  : filename - filename
+* Input  : fileName - file name
 *          lineNb   - line number
 *          exitcode - exitcode
 *          format   - format string (like printf)
@@ -1023,7 +1093,7 @@ inline ulong swapLONG(ulong n)
 * Notes  : -
 \***********************************************************************/
 
-void __halt(const char   *filename,
+void __halt(const char   *fileName,
             unsigned int lineNb,
             int          exitcode,
             const char   *format,
@@ -1033,7 +1103,7 @@ void __halt(const char   *filename,
 /***********************************************************************\
 * Name   : __abort
 * Purpose: abort program
-* Input  : filename - filename
+* Input  : fileName - file name
 *          lineNb   - line number
 *          prefix   - prefix text
 *          format   - format string (like printf)
@@ -1043,13 +1113,98 @@ void __halt(const char   *filename,
 * Notes  : -
 \***********************************************************************/
 
-void __abort(const char   *filename,
+void __abort(const char   *fileName,
              unsigned int lineNb,
              const char   *prefix,
              const char   *format,
              ...
             );
 
+#ifndef NDEBUG
+/***********************************************************************\
+* Name   : debugAddResourceTrace
+* Purpose: add resource to debug trace list
+* Input  : fileName - file name
+*          lineNb   - line number
+*          typeName - type name
+*          resource - resource
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void debugAddResourceTrace(const char *fileName, ulong lineNb, const char *typeName, const void *resource);
+
+/***********************************************************************\
+* Name   : debugRemoveResourceTrace
+* Purpose: remove resource from debug trace list
+* Input  : fileName - file name
+*          lineNb   - line number
+*          resource - resource
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void debugRemResourceTrace(const char *fileName, ulong lineNb, const void *resource);
+
+/***********************************************************************\
+* Name   : debugResourceDone
+* Purpose: done resource debug trace list
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void debugResourceDone(void);
+
+/***********************************************************************\
+* Name   : debugResourceDumpInfo
+* Purpose: dump resource debug trace list to file
+* Input  : handle - file handle
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void debugResourceDumpInfo(FILE *handle);
+
+/***********************************************************************\
+* Name   : debugResourcePrintInfo
+* Purpose: print resource debug trace list
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void debugResourcePrintInfo(void);
+
+/***********************************************************************\
+* Name   : debugResourcePrintStatistics
+* Purpose: done resource debug trace statistics
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void debugResourcePrintStatistics(void);
+
+/***********************************************************************\
+* Name   : debugResourceCheck
+* Purpose: do resource debug trace check
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void debugResourceCheck(void);
+#endif /* not NDEBUG */
+
+#if !defined(NDEBUG) && defined(HAVE_BACKTRACE)
 /***********************************************************************\
 * Name   : debugDumpStackTrace, debugDumpCurrentStackTrace
 * Purpose: print function names of stack trace
@@ -1063,11 +1218,11 @@ void __abort(const char   *filename,
 * Notes  : -
 \***********************************************************************/
 
-#if !defined(NDEBUG) && defined(HAVE_BACKTRACE)
 void debugDumpStackTrace(FILE *handle, const char *title, uint indent, void const *stackTrace[], uint stackTraceSize);
 void debugDumpCurrentStackTrace(FILE *handle, const char *title, uint indent);
 #endif /* !defined(NDEBUG) && defined(HAVE_BACKTRACE) */
 
+#ifndef NDEBUG
 /***********************************************************************\
 * Name   : debugDumpMemory
 * Purpose: dump memory content (hex dump)
@@ -1079,7 +1234,6 @@ void debugDumpCurrentStackTrace(FILE *handle, const char *title, uint indent);
 * Notes  : -
 \***********************************************************************/
 
-#ifndef NDEBUG
 void debugDumpMemory(bool printAddress, const void *address, uint length);
 #endif /* NDEBUG */
 
