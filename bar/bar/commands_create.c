@@ -83,7 +83,8 @@ typedef struct
 // create info
 typedef struct
 {
-  String                      storageName;                        //
+  StorageSpecifier            *storageSpecifier;                  // storage specifier structure
+  String                      storageFileName;                    // storage file name
   const EntryList             *includeEntryList;                  // list of included entries
   const PatternList           *excludePatternList;                // list of exclude patterns
   const PatternList           *compressExcludePatternList;        // exclude compression pattern list
@@ -97,7 +98,6 @@ typedef struct
   Dictionary                  filesDictionary;                    // dictionary with files (used for incremental/differental backup)
   bool                        storeIncrementalFileInfoFlag;       // TRUE to store incremental file data
   StorageFileHandle           storageFileHandle;                  // storage handle
-  String                      archiveFileName;                    // archive file name
   time_t                      startTime;                          // start time [ms] (unix time)
 
   MsgQueue                    entryMsgQueue;                      // queue with entries to store
@@ -203,7 +203,8 @@ LOCAL void freeEntryMsg(EntryMsg *entryMsg, void *userData)
 * Name   : initCreateInfo
 * Purpose: initialize create info
 * Input  : createInfo                 - create info variable
-*          storageName                - storage name
+*          storageSpecifier           - storage specifier structure
+*          storageFileName            - storage file name
 *          includeEntryList           - include entry list
 *          excludePatternList         - exclude pattern list
 *          compressExcludePatternList - exclude compression pattern list
@@ -224,7 +225,8 @@ LOCAL void freeEntryMsg(EntryMsg *entryMsg, void *userData)
 \***********************************************************************/
 
 LOCAL void initCreateInfo(CreateInfo               *createInfo,
-                          const char               *storageName,
+                          StorageSpecifier         *storageSpecifier,
+                          const String             storageFileName,
                           const EntryList          *includeEntryList,
                           const PatternList        *excludePatternList,
                           const PatternList        *compressExcludePatternList,
@@ -240,7 +242,8 @@ LOCAL void initCreateInfo(CreateInfo               *createInfo,
   assert(createInfo != NULL);
 
   // init variables
-  createInfo->storageName                  = String_newCString(storageName);
+  createInfo->storageSpecifier             = storageSpecifier;
+  createInfo->storageFileName              = storageFileName;
   createInfo->includeEntryList             = includeEntryList;
   createInfo->excludePatternList           = excludePatternList;
   createInfo->compressExcludePatternList   = compressExcludePatternList;
@@ -249,7 +252,6 @@ LOCAL void initCreateInfo(CreateInfo               *createInfo,
   createInfo->pauseStorageFlag             = pauseStorageFlag;
   createInfo->requestedAbortFlag           = requestedAbortFlag;
   createInfo->storeIncrementalFileInfoFlag = FALSE;
-  createInfo->archiveFileName              = String_new();
   createInfo->startTime                    = time(NULL);
   createInfo->collectorSumThreadExitFlag   = FALSE;
   createInfo->collectorSumThreadExitedFlag = FALSE;
@@ -330,8 +332,6 @@ LOCAL void doneCreateInfo(CreateInfo *createInfo)
   String_delete(createInfo->statusInfo.storageName);
   String_delete(createInfo->statusInfo.name);
   StringList_done(&createInfo->storageFileList);
-  String_delete(createInfo->archiveFileName);
-  String_delete(createInfo->storageName);
 }
 
 /***********************************************************************\
@@ -2380,6 +2380,7 @@ LOCAL Errors storeArchiveFile(void           *userData,
 
   assert(createInfo != NULL);
   assert(fileName != NULL);
+  assert(!String_isEmpty(fileName));
 
   // get file info
   error = File_getFileInfo(&fileInfo,fileName);
@@ -2392,11 +2393,12 @@ LOCAL Errors storeArchiveFile(void           *userData,
   destinationFileName = formatArchiveFileName(String_new(),
                                               FORMAT_MODE_ARCHIVE_FILE_NAME,
                                               createInfo->archiveType,
-                                              createInfo->archiveFileName,
+                                              createInfo->storageFileName,
                                               createInfo->startTime,
                                               partNumber,
                                               lastPartFlag
                                              );
+  assert(!String_isEmpty(destinationFileName));
 
   // send to storage controller
   storageMsg.databaseHandle      = databaseHandle;
@@ -2970,13 +2972,13 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
         pattern = formatArchiveFileName(String_new(),
                                         FORMAT_MODE_PATTERN,
                                         createInfo->archiveType,
-                                        createInfo->archiveFileName,
+                                        createInfo->storageFileName,
                                         createInfo->startTime,
                                         ARCHIVE_PART_NUMBER_NONE,
                                         FALSE
                                        );
 
-        storagePath = File_getFilePathName(String_new(),createInfo->storageName);
+        storagePath = File_getFilePathName(String_new(),createInfo->storageFileName);
         error = Storage_openDirectoryList(&storageDirectoryListHandle,
                                           storagePath,
                                           createInfo->jobOptions
@@ -4257,7 +4259,7 @@ LOCAL void createThreadCode(CreateInfo *createInfo)
 
 /*---------------------------------------------------------------------*/
 
-Errors Command_create(const char                      *storageName,
+Errors Command_create(const String                    storageName,
                       const EntryList                 *includeEntryList,
                       const PatternList               *excludePatternList,
                       const PatternList               *compressExcludePatternList,
@@ -4274,9 +4276,9 @@ Errors Command_create(const char                      *storageName,
                       bool                            *requestedAbortFlag
                      )
 {
-  CreateInfo       createInfo;
-  StorageSpecifier storageSpecifier;
   String           storageFileName;
+  StorageSpecifier storageSpecifier;
+  CreateInfo       createInfo;
   String           printableStorageName;
   Thread           collectorSumThread;                 // files collector sum thread
   Thread           collectorThread;                    // files collector thread
@@ -4293,70 +4295,60 @@ Errors Command_create(const char                      *storageName,
   assert(includeEntryList != NULL);
   assert(excludePatternList != NULL);
 
-  // initialize variables
-  if (globalOptions.maxThreads == 0)
-  {
-    createThreadCount = Thread_getNumberOfCores();
-  }
-  else
-  {
-    createThreadCount = globalOptions.maxThreads;
-  }
-  createThreads = (Thread*)malloc(createThreadCount*sizeof(Thread));
-  if (createThreads == NULL)
-  {
-    HALT_INSUFFICIENT_MEMORY();
-  }
-  initCreateInfo(&createInfo,
-                 storageName,
-                 includeEntryList,
-                 excludePatternList,
-                 compressExcludePatternList,
-                 jobOptions,
-                 archiveType,
-                 createStatusInfoFunction,
-                 createStatusInfoUserData,
-                 pauseCreateFlag,
-                 pauseStorageFlag,
-                 requestedAbortFlag
-                );
+  // parse storage name
   Storage_initSpecifier(&storageSpecifier);
-  storageFileName              = String_new();
-  printableStorageName         = String_new();
-  incrementalListFileName      = NULL;
-  useIncrementalFileInfoFlag   = FALSE;
-  incrementalFileInfoExistFlag = FALSE;
-
-  // get printable storage name
-  error = Storage_parseName(createInfo.storageName,
+  storageFileName = String_new();
+  error = Storage_parseName(storageName,
                             &storageSpecifier,
                             storageFileName
                            );
   if (error != ERROR_NONE)
   {
     printError("Cannot initialize storage '%s' (error: %s)\n",
-               String_cString(createInfo.storageName),
+               String_cString(storageName),
                Errors_getText(error)
               );
     String_delete(storageFileName);
     Storage_doneSpecifier(&storageSpecifier);
-    doneCreateInfo(&createInfo);
-    free(createThreads);
-
     return error;
   }
-  Storage_getPrintableName(printableStorageName,&storageSpecifier,storageFileName);
+
+  // initialize variables
+  initCreateInfo(&createInfo,
+                 &storageSpecifier,
+                 storageFileName,
+                 includeEntryList,
+                 excludePatternList,
+                 compressExcludePatternList,
+                 jobOptions,
+                 archiveType,
+                 CALLBACK(createStatusInfoFunction,createStatusInfoUserData),
+                 pauseCreateFlag,
+                 pauseStorageFlag,
+                 requestedAbortFlag
+                );
+  createThreadCount = (globalOptions.maxThreads != 0) ? globalOptions.maxThreads : Thread_getNumberOfCores();
+  createThreads = (Thread*)malloc(createThreadCount*sizeof(Thread));
+  if (createThreads == NULL)
+  {
+    HALT_INSUFFICIENT_MEMORY();
+  }
+  printableStorageName         = String_new();
+  incrementalListFileName      = NULL;
+  useIncrementalFileInfoFlag   = FALSE;
+  incrementalFileInfoExistFlag = FALSE;
+
+  // get printable storage name
+  Storage_getPrintableName(printableStorageName,createInfo.storageSpecifier,createInfo.storageFileName);
 
   // init storage
   error = Storage_init(&createInfo.storageFileHandle,
-                       createInfo.storageName,
+                       createInfo.storageSpecifier,
+                       createInfo.storageFileName,
                        createInfo.jobOptions,
                        &globalOptions.maxBandWidthList,
-                       storageRequestVolumeFunction,
-                       storageRequestVolumeUserData,
-                       (StorageStatusInfoFunction)updateStorageStatusInfo,
-                       &createInfo,
-                       createInfo.archiveFileName
+                       CALLBACK(storageRequestVolumeFunction,storageRequestVolumeUserData),
+                       CALLBACK((StorageStatusInfoFunction)updateStorageStatusInfo,&createInfo)
                       );
   if (error != ERROR_NONE)
   {
@@ -4365,10 +4357,10 @@ Errors Command_create(const char                      *storageName,
                Errors_getText(error)
               );
     String_delete(printableStorageName);
-    String_delete(storageFileName);
-    Storage_doneSpecifier(&storageSpecifier);
     doneCreateInfo(&createInfo);
     free(createThreads);
+    String_delete(storageFileName);
+    Storage_doneSpecifier(&storageSpecifier);
 
     return error;
   }
@@ -4388,7 +4380,7 @@ Errors Command_create(const char                      *storageName,
     else
     {
       formatIncrementalFileName(incrementalListFileName,
-                                createInfo.archiveFileName
+                                createInfo.storageFileName
                                );
     }
     Dictionary_init(&createInfo.filesDictionary,NULL,NULL);
@@ -4427,10 +4419,10 @@ Errors Command_create(const char                      *storageName,
         Dictionary_done(&createInfo.filesDictionary,NULL,NULL);
         Storage_done(&createInfo.storageFileHandle);
         String_delete(printableStorageName);
-        String_delete(storageFileName);
-        Storage_doneSpecifier(&storageSpecifier);
         doneCreateInfo(&createInfo);
         free(createThreads);
+        String_delete(storageFileName);
+        Storage_doneSpecifier(&storageSpecifier);
 
         return error;
       }
@@ -4464,10 +4456,10 @@ Errors Command_create(const char                      *storageName,
                          jobOptions,
                          storeArchiveFile,
                          &createInfo,
-                         archiveGetCryptPasswordFunction,
-                         archiveGetCryptPasswordUserData,
+                         CALLBACK(archiveGetCryptPasswordFunction,archiveGetCryptPasswordUserData),
                          indexDatabaseHandle
                         );
+  DEBUG_TEST_CODE("command_create") { Archive_close(&createInfo.archiveInfo); error = ERROR_UNKNOWN; }
   if (error != ERROR_NONE)
   {
     printError("Cannot create archive file '%s' (error: %s)\n",
@@ -4499,15 +4491,16 @@ Errors Command_create(const char                      *storageName,
     Thread_join(&collectorSumThread);
     Storage_done(&createInfo.storageFileHandle);
     String_delete(printableStorageName);
-    String_delete(storageFileName);
-    Storage_doneSpecifier(&storageSpecifier);
     doneCreateInfo(&createInfo);
     free(createThreads);
+    String_delete(storageFileName);
+    Storage_doneSpecifier(&storageSpecifier);
 
     return error;
   }
 
   // run create threads
+#if 1
   for (z = 0; z < createThreadCount; z++)
   {
     if (!Thread_init(&createThreads[z],"BAR create",globalOptions.niceLevel,createThreadCode,&createInfo))
@@ -4519,6 +4512,10 @@ Errors Command_create(const char                      *storageName,
   {
     Thread_join(&createThreads[z]);
   }
+#else
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+createThreadCode(&createInfo);
+#endif
 
   // close archive
   Archive_close(&createInfo.archiveInfo);
@@ -4532,9 +4529,6 @@ Errors Command_create(const char                      *storageName,
   Thread_join(&storageThread);
   Thread_join(&collectorThread);
   Thread_join(&collectorSumThread);
-
-  // done storage
-  Storage_done(&createInfo.storageFileHandle);
 
   // final update of status info
   (void)updateStatusInfo(&createInfo);
@@ -4560,11 +4554,12 @@ Errors Command_create(const char                      *storageName,
       if (!incrementalFileInfoExistFlag) File_delete(incrementalListFileName,FALSE);
       String_delete(incrementalListFileName);
       Dictionary_done(&createInfo.filesDictionary,NULL,NULL);
+      Storage_done(&createInfo.storageFileHandle);
       String_delete(printableStorageName);
-      String_delete(storageFileName);
-      Storage_doneSpecifier(&storageSpecifier);
       doneCreateInfo(&createInfo);
       free(createThreads);
+      String_delete(storageFileName);
+      Storage_doneSpecifier(&storageSpecifier);
 
       return error;
     }
@@ -4600,11 +4595,12 @@ Errors Command_create(const char                      *storageName,
   Thread_done(&storageThread);
   Thread_done(&collectorThread);
   Thread_done(&collectorSumThread);
+  Storage_done(&createInfo.storageFileHandle);
   String_delete(printableStorageName);
-  String_delete(storageFileName);
-  Storage_doneSpecifier(&storageSpecifier);
   doneCreateInfo(&createInfo);
   free(createThreads);
+  String_delete(storageFileName);
+  Storage_doneSpecifier(&storageSpecifier);
 
   return error;
 }

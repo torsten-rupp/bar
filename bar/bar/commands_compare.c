@@ -156,7 +156,8 @@ Errors Command_compare(const StringList                *storageNameList,
 
     // open archive
     error = Archive_open(&archiveInfo,
-                         storageName,
+                         &storageSpecifier,
+                         storageFileName,
                          jobOptions,
                          &globalOptions.maxBandWidthList,
                          archiveGetCryptPasswordFunction,

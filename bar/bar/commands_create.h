@@ -12,7 +12,7 @@
 #define __COMMANDS_CREATE__
 
 /****************************** Includes *******************************/
-#include <config.h>  // use <...> to support separated build directory 
+#include <config.h>  // use <...> to support separated build directory
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -117,7 +117,7 @@ typedef bool(*CreateStatusInfoFunction)(void                   *userData,
 * Notes  : -
 \***********************************************************************/
 
-Errors Command_create(const char                      *storageName,
+Errors Command_create(const String                    storageName,
                       const EntryList                 *includeEntryList,
                       const PatternList               *excludePatternList,
                       const PatternList               *compressExcludePatternList,
