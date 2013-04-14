@@ -156,8 +156,7 @@ void debugAddResourceTrace(const char *fileName, ulong lineNb, const char *typeN
     }
     else
     {
-      // Note: allocate node without list-debug functions to avoid infinite recursion
-      debugResourceNode = (DebugResourceNode*)__List_newNode(fileName,lineNb,sizeof(DebugResourceNode));
+      debugResourceNode = LIST_NEW_NODEX(fileName,lineNb,DebugResourceNode);
       if (debugResourceNode == NULL)
       {
         HALT_INSUFFICIENT_MEMORY();
@@ -243,6 +242,7 @@ void debugResourceDone(void)
   pthread_mutex_lock(&debugResourceLock);
   {
     List_done(&debugResourceAllocList,NULL,NULL);
+    List_done(&debugResourceFreeList,NULL,NULL);
   }
   pthread_mutex_unlock(&debugResourceLock);
 }
