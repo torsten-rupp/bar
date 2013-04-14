@@ -172,44 +172,73 @@ LOCAL void freeSourceNode(SourceNode *sourceNode, void *userData)
 /***********************************************************************\
 * Name   : createLocalStorageArchive
 * Purpose: create local copy of storage file
-* Input  : localStorageName - local storage name
-*          storageName      - storage name
-*          jobOptions       - job options
+* Input  : localFileName - local file name
+*          storageName   - storage name
+*          jobOptions    - job options
 * Output : -
 * Return : ERROR_NONE if local copy created, otherwise error code
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors createLocalStorageArchive(String           localStorageName,
+LOCAL Errors createLocalStorageArchive(String           localFileName,
                                        const String     storageName,
                                        const JobOptions *jobOptions
                                       )
 {
-  Errors error;
+  StorageSpecifier storageSpecifier;
+  String           storageFileName;
+  Errors           error;
 
-  assert(localStorageName != NULL);
+  assert(localFileName != NULL);
   assert(storageName != NULL);
 
-  error = File_getTmpFileName(localStorageName,NULL,tmpDirectory);
+  // parse storage name
+  storageFileName = String_new();
+  error = Storage_parseName(storageName,
+                            &storageSpecifier,
+                            storageFileName
+                           );
   if (error != ERROR_NONE)
   {
+    printError("Cannot initialize storage '%s' (error: %s)\n",
+               String_cString(storageName),
+               Errors_getText(error)
+              );
+    String_delete(storageFileName);
     return error;
   }
 
-  error = Storage_copy(storageName,
+  // create temporary file
+  error = File_getTmpFileName(localFileName,NULL,tmpDirectory);
+  if (error != ERROR_NONE)
+  {
+    Storage_doneSpecifier(&storageSpecifier);
+    String_delete(storageFileName);
+    return error;
+  }
+
+  // copy storage to local file
+  error = Storage_copy(&storageSpecifier,
+                       storageFileName,
                        jobOptions,
                        &globalOptions.maxBandWidthList,
                        NULL,//StorageRequestVolumeFunction storageRequestVolumeFunction,
                        NULL,//void                         *storageRequestVolumeUserData,
                        NULL,//StorageStatusInfoFunction    storageStatusInfoFunction,
                        NULL,//void                         *storageStatusInfoUserData,
-                       localStorageName
+                       localFileName
                       );
   if (error != ERROR_NONE)
   {
-    File_delete(localStorageName,FALSE);
+    File_delete(localFileName,FALSE);
+    Storage_doneSpecifier(&storageSpecifier);
+    String_delete(storageFileName);
     return error;
   }
+
+  // free resources
+  Storage_doneSpecifier(&storageSpecifier);
+  String_delete(storageFileName);
 
   return ERROR_NONE;
 }
@@ -251,7 +280,7 @@ LOCAL void deleteLocalStorageArchive(String localStorageName)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors restoreFile(const String                    archiveName,
+LOCAL Errors restoreFile(const String                    storageName,
                          const String                    name,
                          const JobOptions                *jobOptions,
                          const String                    destinationFileName,
@@ -263,6 +292,8 @@ LOCAL Errors restoreFile(const String                    archiveName,
                         )
 {
   bool              restoredFlag;
+  StorageSpecifier  storageSpecifier;
+  String            storageFileName;
   byte              *buffer;
 //  bool              abortFlag;
   Errors            error;
@@ -271,7 +302,7 @@ LOCAL Errors restoreFile(const String                    archiveName,
   ArchiveEntryInfo  archiveEntryInfo;
   ArchiveEntryTypes archiveEntryType;
 
-  assert(archiveName != NULL);
+  assert(storageName != NULL);
   assert(name != NULL);
   assert(jobOptions != NULL);
   assert(destinationFileName != NULL);
@@ -286,9 +317,28 @@ LOCAL Errors restoreFile(const String                    archiveName,
     HALT_INSUFFICIENT_MEMORY();
   }
 
+  // parse storage name
+  Storage_initSpecifier(&storageSpecifier);
+  storageFileName = String_new();
+  error = Storage_parseName(storageName,
+                            &storageSpecifier,
+                            storageFileName
+                           );
+  if (error != ERROR_NONE)
+  {
+    printError("Cannot initialize storage '%s' (error: %s)\n",
+               String_cString(storageName),
+               Errors_getText(error)
+              );
+    String_delete(storageFileName);
+    Storage_doneSpecifier(&storageSpecifier);
+    return error;
+  }
+
   // open archive
   error = Archive_open(&archiveInfo,
-                       archiveName,
+                       &storageSpecifier,
+                       storageFileName,
                        jobOptions,
                        &globalOptions.maxBandWidthList,
                        archiveGetCryptPasswordFunction,
@@ -296,6 +346,8 @@ LOCAL Errors restoreFile(const String                    archiveName,
                       );
   if (error != ERROR_NONE)
   {
+    String_delete(storageFileName);
+    Storage_doneSpecifier(&storageSpecifier);
     return error;
   }
 
@@ -759,6 +811,8 @@ LOCAL Errors restoreFile(const String                    archiveName,
   Archive_close(&archiveInfo);
 
   // free resources
+  Storage_doneSpecifier(&storageSpecifier);
+  String_delete(storageFileName);
   free(buffer);
 
   if      (failError != ERROR_NONE)
@@ -989,6 +1043,7 @@ Errors Source_openEntry(SourceHandle     *sourceHandle,
           // create local copy of storage file
           localStorageName = String_new();
           error = createLocalStorageArchive(localStorageName,
+#warning umbauen in storageSpecifier, storageFIlename?
                                             sourceNode->storageName,
                                             jobOptions
                                           );
