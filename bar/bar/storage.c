@@ -1934,7 +1934,7 @@ void Storage_initSpecifier(StorageSpecifier *storageSpecifier)
 {
   assert(storageSpecifier != NULL);
 
-  storageSpecifier->string        = String_new();
+//  storageSpecifier->string        = String_new();
   storageSpecifier->hostName      = String_new();
   storageSpecifier->hostPort      = 0;
   storageSpecifier->loginName     = String_new();
@@ -1952,7 +1952,7 @@ void Storage_doneSpecifier(StorageSpecifier *storageSpecifier)
   Password_delete(storageSpecifier->loginPassword);
   String_delete(storageSpecifier->loginName);
   String_delete(storageSpecifier->hostName);
-  String_delete(storageSpecifier->string);
+//  String_delete(storageSpecifier->string);
 
   DEBUG_REMOVE_RESOURCE_TRACE(storageSpecifier);
 }
@@ -1965,7 +1965,7 @@ void Storage_duplicateSpecifier(StorageSpecifier       *destinationStorageSpecif
   assert(sourceStorageSpecifier != NULL);
 
   destinationStorageSpecifier->type          = sourceStorageSpecifier->type;
-  destinationStorageSpecifier->string        = String_duplicate(sourceStorageSpecifier->string);
+//  destinationStorageSpecifier->string        = String_duplicate(sourceStorageSpecifier->string);
   destinationStorageSpecifier->hostName      = String_duplicate(sourceStorageSpecifier->hostName);
   destinationStorageSpecifier->hostPort      = sourceStorageSpecifier->hostPort;
   destinationStorageSpecifier->loginName     = String_duplicate(sourceStorageSpecifier->loginName);
@@ -2217,11 +2217,15 @@ Errors Storage_parseName(const String     storageName,
                          String           fileName
                         )
 {
-  long nextIndex;
+  String string;
+  long   nextIndex;
 
   assert(storageSpecifier != NULL);
 
-  String_clear(storageSpecifier->string);
+  // initialise variables
+  string = String_new();
+
+//  String_clear(storageSpecifier->string);
   String_clear(storageSpecifier->hostName);
   storageSpecifier->hostPort = 0;
   String_clear(storageSpecifier->loginName);
@@ -2236,9 +2240,9 @@ Errors Storage_parseName(const String     storageName,
         || String_matchCString(storageName,6,"^[^/]+/{0,1}",&nextIndex,NULL,NULL)                     // ftp://<host name>[:<host port>]/<file name>
        )
     {
-      String_sub(storageSpecifier->string,storageName,6,nextIndex);
-      String_trimRight(storageSpecifier->string,"/");
-      if (!Storage_parseFTPSpecifier(storageSpecifier->string,
+      String_sub(string,storageName,6,nextIndex);
+      String_trimRight(string,"/");
+      if (!Storage_parseFTPSpecifier(string,
                                      storageSpecifier->hostName,
                                      &storageSpecifier->hostPort,
                                      storageSpecifier->loginName,
@@ -2265,9 +2269,9 @@ Errors Storage_parseName(const String     storageName,
         || String_matchCString(storageName,6,"^[^/]+/{0,1}",&nextIndex,NULL,NULL)                     // ssh://<host name>/<file name>
        )
     {
-      String_sub(storageSpecifier->string,storageName,6,nextIndex);
-      String_trimRight(storageSpecifier->string,"/");
-      if (!Storage_parseSSHSpecifier(storageSpecifier->string,
+      String_sub(string,storageName,6,nextIndex);
+      String_trimRight(string,"/");
+      if (!Storage_parseSSHSpecifier(string,
                                      storageSpecifier->hostName,
                                      &storageSpecifier->hostPort,
                                      storageSpecifier->loginName
@@ -2293,9 +2297,9 @@ Errors Storage_parseName(const String     storageName,
         || String_matchCString(storageName,6,"^[^/]+/{0,1}",&nextIndex,NULL,NULL)                     // scp://<host name>/<file name>
        )
     {
-      String_sub(storageSpecifier->string,storageName,6,nextIndex);
-      String_trimRight(storageSpecifier->string,"/");
-      if (!Storage_parseSSHSpecifier(storageSpecifier->string,
+      String_sub(string,storageName,6,nextIndex);
+      String_trimRight(string,"/");
+      if (!Storage_parseSSHSpecifier(string,
                                      storageSpecifier->hostName,
                                      &storageSpecifier->hostPort,
                                      storageSpecifier->loginName
@@ -2321,9 +2325,9 @@ Errors Storage_parseName(const String     storageName,
         || String_matchCString(storageName,7,"^[^/]+/{0,1}",&nextIndex,NULL,NULL)                     // sftp://<host name>/<file name>
        )
     {
-      String_sub(storageSpecifier->string,storageName,7,nextIndex);
-      String_trimRight(storageSpecifier->string,"/");
-      if (!Storage_parseSSHSpecifier(storageSpecifier->string,
+      String_sub(string,storageName,7,nextIndex);
+      String_trimRight(string,"/");
+      if (!Storage_parseSSHSpecifier(string,
                                      storageSpecifier->hostName,
                                      &storageSpecifier->hostPort,
                                      storageSpecifier->loginName
@@ -2349,9 +2353,9 @@ Errors Storage_parseName(const String     storageName,
         || String_matchCString(storageName,9,"^[^/]+/{0,1}",&nextIndex,NULL,NULL)                     // webdav://<host name>/<file name>
        )
     {
-      String_sub(storageSpecifier->string,storageName,9,nextIndex);
-      String_trimRight(storageSpecifier->string,"/");
-      if (!Storage_parseWebDAVSpecifier(storageSpecifier->string,
+      String_sub(string,storageName,9,nextIndex);
+      String_trimRight(string,"/");
+      if (!Storage_parseWebDAVSpecifier(string,
                                         storageSpecifier->hostName,
                                         storageSpecifier->loginName,
                                         storageSpecifier->loginPassword
@@ -2375,9 +2379,9 @@ Errors Storage_parseName(const String     storageName,
     if (String_matchCString(storageName,5,"^[^:]+:[^/]*/{0,1}",&nextIndex,NULL,NULL))
     {
       // cd://<device name>:<file name>
-      String_sub(storageSpecifier->string,storageName,5,nextIndex);
-      String_trimRight(storageSpecifier->string,"/");
-      if (!Storage_parseDeviceSpecifier(storageSpecifier->string,
+      String_sub(string,storageName,5,nextIndex);
+      String_trimRight(string,"/");
+      if (!Storage_parseDeviceSpecifier(string,
                                         NULL,
                                         storageSpecifier->deviceName
                                        )
@@ -2400,9 +2404,9 @@ Errors Storage_parseName(const String     storageName,
     if (String_matchCString(storageName,6,"^[^:]+:[^/]*/{0,1}",&nextIndex,NULL,NULL))
     {
       // dvd://<device name>:<file name>
-      String_sub(storageSpecifier->string,storageName,6,nextIndex);
-      String_trimRight(storageSpecifier->string,"/");
-      if (!Storage_parseDeviceSpecifier(storageSpecifier->string,
+      String_sub(string,storageName,6,nextIndex);
+      String_trimRight(string,"/");
+      if (!Storage_parseDeviceSpecifier(string,
                                         NULL,
                                         storageSpecifier->deviceName
                                        )
@@ -2425,9 +2429,9 @@ Errors Storage_parseName(const String     storageName,
     if (String_matchCString(storageName,5,"^[^:]+:[^/]*/{0,1}",&nextIndex,NULL,NULL))
     {
       // bd://<device name>:<file name>
-      String_sub(storageSpecifier->string,storageName,5,nextIndex);
-      String_trimRight(storageSpecifier->string,"/");
-      if (!Storage_parseDeviceSpecifier(storageSpecifier->string,
+      String_sub(string,storageName,5,nextIndex);
+      String_trimRight(string,"/");
+      if (!Storage_parseDeviceSpecifier(string,
                                         NULL,
                                         storageSpecifier->deviceName
                                        )
@@ -2450,9 +2454,9 @@ Errors Storage_parseName(const String     storageName,
     if (String_matchCString(storageName,9,"^[^:]+:[^/]*/{0,1}",&nextIndex,NULL,NULL))
     {
       // device://<device name>:<file name>
-      String_sub(storageSpecifier->string,storageName,9,nextIndex);
-      String_trimRight(storageSpecifier->string,"/");
-      if (!Storage_parseDeviceSpecifier(storageSpecifier->string,
+      String_sub(string,storageName,9,nextIndex);
+      String_trimRight(string,"/");
+      if (!Storage_parseDeviceSpecifier(string,
                                         NULL,
                                         storageSpecifier->deviceName
                                        )
@@ -2482,6 +2486,9 @@ Errors Storage_parseName(const String     storageName,
 
     storageSpecifier->type = STORAGE_TYPE_FILESYSTEM;
   }
+
+  // free resources
+  String_delete(string);
 
   return ERROR_NONE;
 }
@@ -2667,7 +2674,11 @@ String Storage_getName(String                 storageName,
       break;
     case STORAGE_TYPE_CD:
       String_appendCString(storageName,"cd://");
-      String_append(storageName,storageSpecifier->string);
+      if (!String_isEmpty(storageSpecifier->deviceName))
+      {
+        String_append(storageName,storageSpecifier->deviceName);
+        String_appendChar(storageName,':');
+      }
       if (!String_isEmpty(fileName))
       {
         String_appendChar(storageName,'/');
@@ -2676,7 +2687,11 @@ String Storage_getName(String                 storageName,
       break;
     case STORAGE_TYPE_DVD:
       String_appendCString(storageName,"dvd://");
-      String_append(storageName,storageSpecifier->string);
+      if (!String_isEmpty(storageSpecifier->deviceName))
+      {
+        String_append(storageName,storageSpecifier->deviceName);
+        String_appendChar(storageName,':');
+      }
       if (!String_isEmpty(fileName))
       {
         String_appendChar(storageName,'/');
@@ -2685,7 +2700,11 @@ String Storage_getName(String                 storageName,
       break;
     case STORAGE_TYPE_BD:
       String_appendCString(storageName,"bd://");
-      String_append(storageName,storageSpecifier->string);
+      if (!String_isEmpty(storageSpecifier->deviceName))
+      {
+        String_append(storageName,storageSpecifier->deviceName);
+        String_appendChar(storageName,':');
+      }
       if (!String_isEmpty(fileName))
       {
         String_appendChar(storageName,'/');
@@ -2694,7 +2713,11 @@ String Storage_getName(String                 storageName,
       break;
     case STORAGE_TYPE_DEVICE:
       String_appendCString(storageName,"device://");
-      String_append(storageName,storageSpecifier->string);
+      if (!String_isEmpty(storageSpecifier->deviceName))
+      {
+        String_append(storageName,storageSpecifier->deviceName);
+        String_appendChar(storageName,':');
+      }
       if (!String_isEmpty(fileName))
       {
         String_appendChar(storageName,'/');
@@ -2796,8 +2819,11 @@ String Storage_getPrintableName(String                 storageName,
       break;
     case STORAGE_TYPE_CD:
       String_appendCString(storageName,"cd://");
-#warning devicename?
-      String_append(storageName,storageSpecifier->string);
+      if (!String_isEmpty(storageSpecifier->deviceName))
+      {
+        String_append(storageName,storageSpecifier->deviceName);
+        String_appendChar(storageName,':');
+      }
       if (!String_isEmpty(fileName))
       {
         String_appendChar(storageName,'/');
@@ -2806,8 +2832,11 @@ String Storage_getPrintableName(String                 storageName,
       break;
     case STORAGE_TYPE_DVD:
       String_appendCString(storageName,"dvd://");
-#warning devicename?
-      String_append(storageName,storageSpecifier->string);
+      if (!String_isEmpty(storageSpecifier->deviceName))
+      {
+        String_append(storageName,storageSpecifier->deviceName);
+        String_appendChar(storageName,':');
+      }
       if (!String_isEmpty(fileName))
       {
         String_appendChar(storageName,'/');
@@ -2816,8 +2845,11 @@ String Storage_getPrintableName(String                 storageName,
       break;
     case STORAGE_TYPE_BD:
       String_appendCString(storageName,"bd://");
-#warning devicename?
-      String_append(storageName,storageSpecifier->string);
+      if (!String_isEmpty(storageSpecifier->deviceName))
+      {
+        String_append(storageName,storageSpecifier->deviceName);
+        String_appendChar(storageName,':');
+      }
       if (!String_isEmpty(fileName))
       {
         String_appendChar(storageName,'/');
@@ -2826,8 +2858,11 @@ String Storage_getPrintableName(String                 storageName,
       break;
     case STORAGE_TYPE_DEVICE:
       String_appendCString(storageName,"device://");
-#warning devicename?
-      String_append(storageName,storageSpecifier->string);
+      if (!String_isEmpty(storageSpecifier->deviceName))
+      {
+        String_append(storageName,storageSpecifier->deviceName);
+        String_appendChar(storageName,':');
+      }
       if (!String_isEmpty(fileName))
       {
         String_appendChar(storageName,'/');
@@ -9440,10 +9475,6 @@ Errors Storage_openDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
         }
       #elif defined(HAVE_FTP)
         {
-          String     hostName;
-          uint       hostPort;
-          String     loginName;
-          Password   *loginPassword;
           FTPServer  ftpServer;
           const char *plainLoginPassword;
           netbuf     *control;
@@ -9462,41 +9493,25 @@ Errors Storage_openDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
             break;
           }
 
-          // parse storage specifier string
-          hostName      = String_new();
-          loginName     = String_new();
-          loginPassword = Password_new();
-          if (!Storage_parseFTPSpecifier(storageSpecifier.string,hostName,&hostPort,loginName,loginPassword))
-          {
-            error = ERROR_FTP_SESSION_FAIL;
-            Password_delete(loginPassword);
-            String_delete(loginName);
-            String_delete(hostName);
-            File_delete(storageDirectoryListHandle->ftp.fileListFileName,FALSE);
-            String_delete(storageDirectoryListHandle->ftp.line);
-            String_delete(storageDirectoryListHandle->ftp.fileListFileName);
-            break;
-          }
-
           // get FTP server settings
           getFTPServerSettings(hostName,jobOptions,&ftpServer);
-          if (String_isEmpty(loginName)) String_set(loginName,ftpServer.loginName);
+          if (String_isEmpty(storageSpecifier.loginName)) String_set(storageSpecifier.loginName,ftpServer.loginName);
 
           // check FTP login, get correct password
           error = ERROR_UNKNOWN;
           if ((error != ERROR_NONE) && !Password_isEmpty(loginPassword))
           {
-            error = checkFTPLogin(hostName,
-                                  hostPort,
-                                  loginName,
-                                  loginPassword
+            error = checkFTPLogin(storageSpecifier.hostName,
+                                  storageSpecifier.hostPort,
+                                  storageSpecifier.loginName,
+                                  storageSpecifier.loginPassword
                                  );
           }
           if ((error != ERROR_NONE) && (ftpServer.password != NULL))
           {
-            error = checkFTPLogin(hostName,
-                                  hostPort,
-                                  loginName,
+            error = checkFTPLogin(storageSpecifier.hostName,
+                                  storageSpecifier.hostPort,
+                                  storageSpecifier.loginName,
                                   ftpServer.password
                                  );
             if (error == ERROR_NONE)
@@ -9506,9 +9521,9 @@ Errors Storage_openDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
           }
           if ((error != ERROR_NONE) && !Password_isEmpty(defaultFTPPassword))
           {
-            error = checkFTPLogin(hostName,
-                                  hostPort,
-                                  loginName,
+            error = checkFTPLogin(storageSpecifier.hostName,
+                                  storageSpecifier.hostPort,
+                                  storageSpecifier.loginName,
                                   defaultFTPPassword
                                  );
             if (error == ERROR_NONE)
@@ -9519,11 +9534,11 @@ Errors Storage_openDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
           if (error != ERROR_NONE)
           {
             // initialize default password
-            if (initFTPPassword(hostName,loginName,jobOptions))
+            if (initFTPPassword(storageSpecifier.hostName,storageSpecifier.loginName,jobOptions))
             {
-              error = checkFTPLogin(hostName,
-                                    hostPort,
-                                    loginName,
+              error = checkFTPLogin(storageSpecifier.hostName,
+                                    storageSpecifier.hostPort,
+                                    storageSpecifier.loginName,
                                     defaultFTPPassword
                                    );
               if (error == ERROR_NONE)
@@ -9538,9 +9553,6 @@ Errors Storage_openDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
           }
           if (error != ERROR_NONE)
           {
-            Password_delete(loginPassword);
-            String_delete(loginName);
-            String_delete(hostName);
             File_delete(storageDirectoryListHandle->ftp.fileListFileName,FALSE);
             String_delete(storageDirectoryListHandle->ftp.line);
             String_delete(storageDirectoryListHandle->ftp.fileListFileName);
@@ -9551,9 +9563,6 @@ Errors Storage_openDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
           if (!Network_hostExists(hostName))
           {
             error = ERRORX_(HOST_NOT_FOUND,0,String_cString(hostName));
-            Password_delete(loginPassword);
-            String_delete(loginName);
-            String_delete(hostName);
             File_delete(storageDirectoryListHandle->ftp.fileListFileName,FALSE);
             String_delete(storageDirectoryListHandle->ftp.line);
             String_delete(storageDirectoryListHandle->ftp.fileListFileName);
@@ -9562,9 +9571,6 @@ Errors Storage_openDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
           if (FtpConnect(String_cString(hostName),&control) != 1)
           {
             error = ERROR_FTP_SESSION_FAIL;
-            Password_delete(loginPassword);
-            String_delete(loginName);
-            String_delete(hostName);
             File_delete(storageDirectoryListHandle->ftp.fileListFileName,FALSE);
             String_delete(storageDirectoryListHandle->ftp.line);
             String_delete(storageDirectoryListHandle->ftp.fileListFileName);
@@ -9572,8 +9578,8 @@ Errors Storage_openDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
           }
 
           // login
-          plainLoginPassword = Password_deploy(loginPassword);
-          if (FtpLogin(String_cString(loginName),
+          plainLoginPassword = Password_deploy(storageSpecifier.loginPassword);
+          if (FtpLogin(String_cString(storageSpecifierloginName),
                        plainLoginPassword,
                        control
                       ) != 1
@@ -9582,9 +9588,6 @@ Errors Storage_openDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
             error = ERROR_FTP_AUTHENTICATION;
             Password_undeploy(loginPassword);
             FtpClose(control);
-            Password_delete(loginPassword);
-            String_delete(loginName);
-            String_delete(hostName);
             File_delete(storageDirectoryListHandle->ftp.fileListFileName,FALSE);
             String_delete(storageDirectoryListHandle->ftp.line);
             String_delete(storageDirectoryListHandle->ftp.fileListFileName);
@@ -9601,9 +9604,6 @@ Errors Storage_openDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
             {
               error = ERRORX_(OPEN_DIRECTORY,0,String_cString(pathName));
               FtpClose(control);
-              Password_delete(loginPassword);
-              String_delete(loginName);
-              String_delete(hostName);
               File_delete(storageDirectoryListHandle->ftp.fileListFileName,FALSE);
               String_delete(storageDirectoryListHandle->ftp.line);
               String_delete(storageDirectoryListHandle->ftp.fileListFileName);
@@ -9618,9 +9618,6 @@ Errors Storage_openDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
           error = File_open(&storageDirectoryListHandle->ftp.fileHandle,storageDirectoryListHandle->ftp.fileListFileName,FILE_OPEN_READ);
           if (error != ERROR_NONE)
           {
-            Password_delete(loginPassword);
-            String_delete(loginName);
-            String_delete(hostName);
             File_delete(storageDirectoryListHandle->ftp.fileListFileName,FALSE);
             String_delete(storageDirectoryListHandle->ftp.line);
             String_delete(storageDirectoryListHandle->ftp.fileListFileName);
@@ -9628,9 +9625,6 @@ Errors Storage_openDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
           }
 
           // free resources
-          Password_delete(loginPassword);
-          String_delete(loginName);
-          String_delete(hostName);
         }
       #else /* not HAVE_CURL || HAVE_FTP */
         UNUSED_VARIABLE(jobOptions);
@@ -9653,9 +9647,6 @@ error = ERROR_FUNCTION_NOT_SUPPORTED;
     case STORAGE_TYPE_SFTP:
       #ifdef HAVE_SSH2
         {
-          String    loginName;
-          String    hostName;
-          uint      hostPort;
           SSHServer sshServer;
 
           // init variables
@@ -9670,30 +9661,19 @@ error = ERROR_FUNCTION_NOT_SUPPORTED;
           storageDirectoryListHandle->sftp.bufferLength  = 0;
           storageDirectoryListHandle->sftp.entryReadFlag = FALSE;
 
-          // parse storage specifier string
-          loginName = String_new();
-          hostName  = String_new();
-          if (!Storage_parseSSHSpecifier(storageSpecifier.string,hostName,&hostPort,loginName))
-          {
-            error = ERROR_SSH_SESSION_FAIL;
-            String_delete(hostName);
-            String_delete(loginName);
-            free(storageDirectoryListHandle->sftp.buffer);
-            String_delete(storageDirectoryListHandle->sftp.pathName);
-            break;
-          }
+          // set pathname
           String_set(storageDirectoryListHandle->sftp.pathName,pathName);
 
           // get SSH server settings
-          getSSHServerSettings(hostName,jobOptions,&sshServer);
-          if (String_isEmpty(loginName)) String_set(loginName,sshServer.loginName);
+          getSSHServerSettings(storageSpecifier.hostName,jobOptions,&sshServer);
+          if (String_isEmpty(storageSpecifier.loginName)) String_set(storageSpecifier.loginName,sshServer.loginName);
 
           // open network connection
           error = Network_connect(&storageDirectoryListHandle->sftp.socketHandle,
                                   SOCKET_TYPE_SSH,
-                                  hostName,
-                                  (hostPort != 0) ? hostPort : sshServer.port,
-                                  loginName,
+                                  storageSpecifier.hostName,
+                                  (storageSpecifier.hostPort != 0) ? storageSpecifier.hostPort : sshServer.port,
+                                  storageSpecifier.loginName,
                                   (sshServer.password != NULL) ? sshServer.password : defaultSSHPassword,
                                   sshServer.publicKeyFileName,
                                   sshServer.privateKeyFileName,
@@ -9701,8 +9681,6 @@ error = ERROR_FUNCTION_NOT_SUPPORTED;
                                  );
           if (error != ERROR_NONE)
           {
-            String_delete(hostName);
-            String_delete(loginName);
             free(storageDirectoryListHandle->sftp.buffer);
             String_delete(storageDirectoryListHandle->sftp.pathName);
             break;
@@ -9715,8 +9693,6 @@ error = ERROR_FUNCTION_NOT_SUPPORTED;
           {
             error = ERROR_(SSH,libssh2_session_last_errno(Network_getSSHSession(&storageDirectoryListHandle->sftp.socketHandle)));
             Network_disconnect(&storageDirectoryListHandle->sftp.socketHandle);
-            String_delete(hostName);
-            String_delete(loginName);
             free(storageDirectoryListHandle->sftp.buffer);
             String_delete(storageDirectoryListHandle->sftp.pathName);
             break;
@@ -9731,16 +9707,12 @@ error = ERROR_FUNCTION_NOT_SUPPORTED;
             error = ERROR_(SSH,libssh2_session_last_errno(Network_getSSHSession(&storageDirectoryListHandle->sftp.socketHandle)));
             libssh2_sftp_shutdown(storageDirectoryListHandle->sftp.sftp);
             Network_disconnect(&storageDirectoryListHandle->sftp.socketHandle);
-            String_delete(hostName);
-            String_delete(loginName);
             free(storageDirectoryListHandle->sftp.buffer);
             String_delete(storageDirectoryListHandle->sftp.pathName);
             break;
           }
 
           // free resources
-          String_delete(hostName);
-          String_delete(loginName);
         }
       #else /* not HAVE_SSH2 */
         UNUSED_VARIABLE(jobOptions);
