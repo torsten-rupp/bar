@@ -190,6 +190,9 @@ typedef void                void32;
   #define ATTRIBUTE_WARN_UNUSED_RESULT
 #endif
 
+// only for better reading
+#define CALLBACK(code,argument) code,argument
+
 #if   defined(PLATFORM_LINUX)
 #elif defined(PLATFORM_WINDOWS)
   /* Work-around for Windows: Windows does not support %ll format token,
