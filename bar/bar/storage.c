@@ -1263,7 +1263,7 @@ LOCAL size_t curlWebDAVReadDirectoryDataCallback(const void *buffer,
                                                  void       *userData
                                                 )
 {
-  String directoryData = (String*)userData;
+  String directoryData = (String)userData;
 
   assert(buffer != NULL);
   assert(size > 0);
@@ -1940,6 +1940,8 @@ void Storage_initSpecifier(StorageSpecifier *storageSpecifier)
   storageSpecifier->loginName     = String_new();
   storageSpecifier->loginPassword = Password_new();
   storageSpecifier->deviceName    = String_new();
+
+  DEBUG_ADD_RESOURCE_TRACE("storage specifier",storageSpecifier);
 }
 
 void Storage_doneSpecifier(StorageSpecifier *storageSpecifier)
@@ -1951,6 +1953,26 @@ void Storage_doneSpecifier(StorageSpecifier *storageSpecifier)
   String_delete(storageSpecifier->loginName);
   String_delete(storageSpecifier->hostName);
   String_delete(storageSpecifier->string);
+
+  DEBUG_REMOVE_RESOURCE_TRACE(storageSpecifier);
+}
+
+void Storage_duplicateSpecifier(StorageSpecifier       *destinationStorageSpecifier,
+                                const StorageSpecifier *sourceStorageSpecifier
+                               )
+{
+  assert(destinationStorageSpecifier != NULL);
+  assert(sourceStorageSpecifier != NULL);
+
+  destinationStorageSpecifier->type          = sourceStorageSpecifier->type;
+  destinationStorageSpecifier->string        = String_duplicate(sourceStorageSpecifier->string);
+  destinationStorageSpecifier->hostName      = String_duplicate(sourceStorageSpecifier->hostName);
+  destinationStorageSpecifier->hostPort      = sourceStorageSpecifier->hostPort;
+  destinationStorageSpecifier->loginName     = String_duplicate(sourceStorageSpecifier->loginName);
+  destinationStorageSpecifier->loginPassword = Password_duplicate(sourceStorageSpecifier->loginPassword);
+  destinationStorageSpecifier->deviceName    = String_duplicate(sourceStorageSpecifier->deviceName);
+
+  DEBUG_ADD_RESOURCE_TRACE("duplicated storage specifier",destinationStorageSpecifier);
 }
 
 bool Storage_parseFTPSpecifier(const String ftpSpecifier,
@@ -2823,54 +2845,52 @@ String Storage_getPrintableName(String                 storageName,
 }
 
 Errors Storage_init(StorageFileHandle            *storageFileHandle,
-                    const String                 storageName,
+                    const StorageSpecifier       *storageSpecifier,
+                    const String                 storageFileName,
                     const JobOptions             *jobOptions,
                     BandWidthList                *maxBandWidthList,
                     StorageRequestVolumeFunction storageRequestVolumeFunction,
                     void                         *storageRequestVolumeUserData,
                     StorageStatusInfoFunction    storageStatusInfoFunction,
-                    void                         *storageStatusInfoUserData,
-                    String                       fileName
+                    void                         *storageStatusInfoUserData
                    )
 {
   Errors error;
 
   assert(storageFileHandle != NULL);
-  assert(storageName != NULL);
+  assert(storageSpecifier != NULL);
+  assert(storageFileName != NULL);
   assert(jobOptions != NULL);
-  assert(fileName != NULL);
 
-  storageFileHandle->mode                   = STORAGE_MODE_UNKNOWN;
-  storageFileHandle->jobOptions             = jobOptions;
-  storageFileHandle->requestVolumeFunction  = storageRequestVolumeFunction;
-  storageFileHandle->requestVolumeUserData  = storageRequestVolumeUserData;
+  // initialize variables
+  storageFileHandle->mode                      = STORAGE_MODE_UNKNOWN;
+  Storage_duplicateSpecifier(&storageFileHandle->storageSpecifier,storageSpecifier);
+  storageFileHandle->jobOptions                = jobOptions;
+  storageFileHandle->requestVolumeFunction     = storageRequestVolumeFunction;
+  storageFileHandle->requestVolumeUserData     = storageRequestVolumeUserData;
   if (jobOptions->waitFirstVolumeFlag)
   {
-    storageFileHandle->volumeNumber          = 0;
-    storageFileHandle->requestedVolumeNumber = 0;
-    storageFileHandle->volumeState           = STORAGE_VOLUME_STATE_UNKNOWN;
+    storageFileHandle->volumeNumber            = 0;
+    storageFileHandle->requestedVolumeNumber   = 0;
+    storageFileHandle->volumeState             = STORAGE_VOLUME_STATE_UNKNOWN;
   }
   else
   {
-    storageFileHandle->volumeNumber          = 1;
-    storageFileHandle->requestedVolumeNumber = 1;
-    storageFileHandle->volumeState           = STORAGE_VOLUME_STATE_LOADED;
+    storageFileHandle->volumeNumber            = 1;
+    storageFileHandle->requestedVolumeNumber   = 1;
+    storageFileHandle->volumeState             = STORAGE_VOLUME_STATE_LOADED;
   }
   storageFileHandle->storageStatusInfoFunction = storageStatusInfoFunction;
   storageFileHandle->storageStatusInfoUserData = storageStatusInfoUserData;
 
-  Storage_initSpecifier(&storageFileHandle->storageSpecifier);
-  error = Storage_parseName(storageName,&storageFileHandle->storageSpecifier,fileName);
-  if (error != ERROR_NONE)
-  {
-    Storage_doneSpecifier(&storageFileHandle->storageSpecifier);
-    return error;
-  }
-  if (String_isEmpty(fileName))
+  // check parameters
+  if (String_isEmpty(storageFileName))
   {
     Storage_doneSpecifier(&storageFileHandle->storageSpecifier);
     return ERROR_NO_ARCHIVE_FILE_NAME;
   }
+
+  // init prootocol specific values
   switch (storageFileHandle->storageSpecifier.type)
   {
     case STORAGE_TYPE_NONE:
@@ -3664,6 +3684,8 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
   storageFileHandle->runningInfo.volumeNumber   = 0;
   storageFileHandle->runningInfo.volumeProgress = 0;
 
+  DEBUG_ADD_RESOURCE_TRACE("storage file handle",storageFileHandle);
+
   return ERROR_NONE;
 }
 
@@ -3672,6 +3694,8 @@ Errors Storage_done(StorageFileHandle *storageFileHandle)
   Errors error;
 
   assert(storageFileHandle != NULL);
+
+  DEBUG_REMOVE_RESOURCE_TRACE(storageFileHandle);
 
   error = ERROR_NONE;
 
@@ -5491,32 +5515,35 @@ LIBSSH2_SFTP_S_IRUSR|LIBSSH2_SFTP_S_IWUSR
   return ERROR_NONE;
 }
 
+#warning storageSpecifier needed? see create
 Errors Storage_open(StorageFileHandle *storageFileHandle,
-                    const String      fileName
+                    const StorageSpecifier *storageSpecifier,
+                    const String           storageFileName
                    )
 {
   Errors error;
 
   assert(storageFileHandle != NULL);
-  assert(fileName != NULL);
+  assert(storageSpecifier != NULL);
+  assert(storageFileName != NULL);
 
   // init variables
   storageFileHandle->mode = STORAGE_MODE_READ;
 
-  switch (storageFileHandle->storageSpecifier.type)
+  switch (storageSpecifier->type)
   {
     case STORAGE_TYPE_NONE:
       break;
     case STORAGE_TYPE_FILESYSTEM:
       // check if file exists
-      if (!File_exists(fileName))
+      if (!File_exists(storageFileName))
       {
-        return ERRORX_(FILE_NOT_FOUND_,0,String_cString(fileName));
+        return ERRORX_(FILE_NOT_FOUND_,0,String_cString(storageFileName));
       }
 
       // open file
       error = File_open(&storageFileHandle->fileSystem.fileHandle,
-                        fileName,
+                        storageFileName,
                         FILE_OPEN_READ
                        );
       if (error != ERROR_NONE)
@@ -5563,11 +5590,11 @@ Errors Storage_open(StorageFileHandle *storageFileHandle,
           }
 
           // get pathname, basename
-          pathName = File_getFilePathName(String_new(),fileName);
-          baseName = File_getFileBaseName(String_new(),fileName);
+          pathName = File_getFilePathName(String_new(),storageFileName);
+          baseName = File_getFileBaseName(String_new(),storageFileName);
 
           // get URL
-          url = String_format(String_new(),"ftp://%S",storageFileHandle->storageSpecifier.hostName);
+          url = String_format(String_new(),"ftp://%S",storageSpecifier->hostName);
           if (storageFileHandle->storageSpecifier.hostPort != 0) String_format(url,":d",storageFileHandle->storageSpecifier.hostPort);
           File_initSplitFileName(&nameTokenizer,pathName);
           while (File_getNextSplitFileName(&nameTokenizer,&name))
@@ -5629,7 +5656,7 @@ Errors Storage_open(StorageFileHandle *storageFileHandle,
             String_delete(pathName);
             (void)curl_easy_cleanup(storageFileHandle->ftp.curlHandle);
             (void)curl_multi_cleanup(storageFileHandle->ftp.curlMultiHandle);
-            return ERRORX_(FILE_NOT_FOUND_,0,String_cString(fileName));
+            return ERRORX_(FILE_NOT_FOUND_,0,String_cString(storageFileName));
           }
 #warning todo
 fprintf(stderr,"%s, %d: httpCode=%ld\n",__FILE__,__LINE__,httpCode);
@@ -5745,15 +5772,15 @@ fprintf(stderr,"%s, %d: httpCode=%ld\n",__FILE__,__LINE__,httpCode);
             return error;
           }
           FtpOptions(FTPLIB_CONNMODE,FTPLIB_PORT,storageFileHandle->ftp.control);
-          if (FtpDir(String_cString(tmpFileName),String_cString(fileName),storageFileHandle->ftp.control) != 1)
+          if (FtpDir(String_cString(tmpFileName),String_cString(storageFileName),storageFileHandle->ftp.control) != 1)
           {
             FtpOptions(FTPLIB_CONNMODE,FTPLIB_PASSIVE,storageFileHandle->ftp.control);
-            if (FtpDir(String_cString(tmpFileName),String_cString(fileName),storageFileHandle->ftp.control) != 1)
+            if (FtpDir(String_cString(tmpFileName),String_cString(storageFileName),storageFileHandle->ftp.control) != 1)
             {
               File_delete(tmpFileName,FALSE);
               File_deleteFileName(tmpFileName);
               FtpClose(storageFileHandle->ftp.control);
-              return ERRORX_(FILE_NOT_FOUND_,0,String_cString(fileName));
+              return ERRORX_(FILE_NOT_FOUND_,0,String_cString(storageFileName));
             }
           }
           error = File_open(&fileHandle,tmpFileName,FILE_OPEN_READ);
@@ -5806,11 +5833,11 @@ fprintf(stderr,"%s, %d: httpCode=%ld\n",__FILE__,__LINE__,httpCode);
           if (!foundFlag)
           {
             FtpClose(storageFileHandle->ftp.control);
-            return ERRORX_(FILE_NOT_FOUND_,0,String_cString(fileName));
+            return ERRORX_(FILE_NOT_FOUND_,0,String_cString(storageFileName));
           }
 
           // get file size
-          if (FtpSize(String_cString(fileName),
+          if (FtpSize(String_cString(storageFileName),
                       &size,
                       FTPLIB_IMAGE,
                       storageFileHandle->ftp.control
@@ -5824,7 +5851,7 @@ fprintf(stderr,"%s, %d: httpCode=%ld\n",__FILE__,__LINE__,httpCode);
 
           // init FTP download: first try non-passive, then passive mode
           FtpOptions(FTPLIB_CONNMODE,FTPLIB_PORT,storageFileHandle->ftp.control);
-          if (FtpAccess(String_cString(fileName),
+          if (FtpAccess(String_cString(storageFileName),
                         FTPLIB_FILE_READ,
                         FTPLIB_IMAGE,
                         storageFileHandle->ftp.control,
@@ -5833,7 +5860,7 @@ fprintf(stderr,"%s, %d: httpCode=%ld\n",__FILE__,__LINE__,httpCode);
              )
           {
             FtpOptions(FTPLIB_CONNMODE,FTPLIB_PASSIVE,storageFileHandle->ftp.control);
-            if (FtpAccess(String_cString(fileName),
+            if (FtpAccess(String_cString(storageFileName),
                           FTPLIB_FILE_READ,
                           FTPLIB_IMAGE,
                           storageFileHandle->ftp.control,
@@ -5889,7 +5916,7 @@ fprintf(stderr,"%s, %d: httpCode=%ld\n",__FILE__,__LINE__,httpCode);
 
           // open channel and file for reading
           storageFileHandle->scp.channel = libssh2_scp_recv(Network_getSSHSession(&storageFileHandle->scp.socketHandle),
-                                                            String_cString(fileName),
+                                                            String_cString(storageFileName),
                                                             &fileInfo
                                                            );
           if (storageFileHandle->scp.channel == NULL)
@@ -5907,7 +5934,9 @@ fprintf(stderr,"%s, %d: httpCode=%ld\n",__FILE__,__LINE__,httpCode);
           storageFileHandle->scp.size = (uint64)fileInfo.st_size;
         }
       #else /* not HAVE_SSH2 */
-        UNUSED_VARIABLE(fileName);
+        UNUSED_VARIABLE(storageFileName);
+        UNUSED_VARIABLE(storageSpecifier);
+
         return ERROR_FUNCTION_NOT_SUPPORTED;
       #endif /* HAVE_SSH2 */
       break;
@@ -5956,7 +5985,7 @@ fprintf(stderr,"%s, %d: httpCode=%ld\n",__FILE__,__LINE__,httpCode);
 
           // open file
           storageFileHandle->sftp.sftpHandle = libssh2_sftp_open(storageFileHandle->sftp.sftp,
-                                                                 String_cString(fileName),
+                                                                 String_cString(storageFileName),
                                                                  LIBSSH2_FXF_READ,
                                                                  0
                                                                 );
@@ -5995,7 +6024,9 @@ fprintf(stderr,"%s, %d: httpCode=%ld\n",__FILE__,__LINE__,httpCode);
           storageFileHandle->sftp.size = sftpAttributes.filesize;
         }
       #else /* not HAVE_SSH2 */
-        UNUSED_VARIABLE(fileName);
+        UNUSED_VARIABLE(storageFileName);
+        UNUSED_VARIABLE(storageSpecifier);
+
         return ERROR_FUNCTION_NOT_SUPPORTED;
       #endif /* HAVE_SSH2 */
       break;
@@ -6071,8 +6102,8 @@ fprintf(stderr,"%s, %d: httpCode=%ld\n",__FILE__,__LINE__,httpCode);
           Password_undeploy(storageFileHandle->storageSpecifier.loginPassword);
 
           // get pathname, basename
-          pathName = File_getFilePathName(String_new(),fileName);
-          baseName = File_getFileBaseName(String_new(),fileName);
+          pathName = File_getFilePathName(String_new(),storageFileName);
+          baseName = File_getFileBaseName(String_new(),storageFileName);
 
           // check if file exists
           url = String_format(String_duplicate(baseURL),"/");
@@ -6251,16 +6282,18 @@ fprintf(stderr,"%s, %d: httpCode=%ld\n",__FILE__,__LINE__,httpCode);
 
           // prepare file for reading
           storageFileHandle->opticalDisk.read.iso9660Stat = iso9660_ifs_stat_translate(storageFileHandle->opticalDisk.read.iso9660Handle,
-                                                                                       String_cString(fileName)
+                                                                                       String_cString(storageFileName)
                                                                                       );
           if (storageFileHandle->opticalDisk.read.iso9660Stat == NULL)
           {
             iso9660_close(storageFileHandle->opticalDisk.read.iso9660Handle);
-            return ERRORX_(FILE_NOT_FOUND_,errno,String_cString(fileName));
+            return ERRORX_(FILE_NOT_FOUND_,errno,String_cString(storageFileName));
           }
         }
       #else /* not HAVE_ISO9660 */
-        UNUSED_VARIABLE(fileName);
+        UNUSED_VARIABLE(storageFileName);
+        UNUSED_VARIABLE(storageSpecifier);
+
         return ERROR_FUNCTION_NOT_SUPPORTED;
       #endif /* HAVE_ISO9660 */
       break;
@@ -6280,7 +6313,9 @@ fprintf(stderr,"%s, %d: httpCode=%ld\n",__FILE__,__LINE__,httpCode);
         return error;
       }
 #endif /* 0 */
-      UNUSED_VARIABLE(fileName);
+      UNUSED_VARIABLE(storageFileName);
+      UNUSED_VARIABLE(storageSpecifier);
+
       return ERROR_FUNCTION_NOT_SUPPORTED;
       break;
     default:
@@ -6493,7 +6528,7 @@ void Storage_close(StorageFileHandle *storageFileHandle)
 }
 
 Errors Storage_delete(StorageFileHandle *storageFileHandle,
-                      const String      fileName
+                      const String      storageFileName
                      )
 {
   Errors error;
@@ -6509,7 +6544,7 @@ Errors Storage_delete(StorageFileHandle *storageFileHandle,
     case STORAGE_TYPE_FILESYSTEM:
       if (!storageFileHandle->jobOptions->dryRunFlag)
       {
-        error = File_delete(fileName,FALSE);
+        error = File_delete(storageFileName,FALSE);
       }
       break;
     case STORAGE_TYPE_FTP:
@@ -6543,8 +6578,8 @@ Errors Storage_delete(StorageFileHandle *storageFileHandle,
             }
 
             // get pathname, basename
-            pathName = File_getFilePathName(String_new(),fileName);
-            baseName = File_getFileBaseName(String_new(),fileName);
+            pathName = File_getFilePathName(String_new(),storageFileName);
+            baseName = File_getFileBaseName(String_new(),storageFileName);
 
             // get URL
             url = String_format(String_new(),"ftp://%S",storageFileHandle->storageSpecifier.hostName);
@@ -6576,7 +6611,7 @@ Errors Storage_delete(StorageFileHandle *storageFileHandle,
             Password_undeploy(storageFileHandle->storageSpecifier.loginPassword);
 
             // delete file
-            ftpCommand = String_format(String_new(),"*DELE %S",fileName);
+            ftpCommand = String_format(String_new(),"*DELE %S",storageFileName);
             curlSList = curl_slist_append(NULL,String_cString(ftpCommand));
             curlCode = curl_easy_setopt(curlHandle,CURLOPT_NOBODY,1L);
             if (curlCode == CURLE_OK)
@@ -6608,7 +6643,7 @@ Errors Storage_delete(StorageFileHandle *storageFileHandle,
 
         if (!storageFileHandle->jobOptions->dryRunFlag)
         {
-          error = (FtpDelete(String_cString(fileName),storageFileHandle->ftp.data) == 1) ? ERROR_NONE : ERROR_DELETE_FILE;
+          error = (FtpDelete(String_cString(storageFileName),storageFileHandle->ftp.data) == 1) ? ERROR_NONE : ERROR_DELETE_FILE;
         }
       #else /* not HAVE_CURL || HAVE_FTP */
         error = ERROR_FUNCTION_NOT_SUPPORTED;
@@ -6633,7 +6668,7 @@ whould this be a possible implementation?
           command = String_new();
           if (error != ERROR_NONE)
           {
-            String_format(String_clear(command),"rm %'S",fileName);
+            String_format(String_clear(command),"rm %'S",storageFileName);
             error = (libssh2_channel_exec(storageFileHandle->scp.channel,
                                           String_cString(command)
                                          ) != 0
@@ -6641,7 +6676,7 @@ whould this be a possible implementation?
           }
           if (error != ERROR_NONE)
           {
-            String_format(String_clear(command),"del %'S",fileName);
+            String_format(String_clear(command),"del %'S",storageFileName);
             error = (libssh2_channel_exec(storageFileHandle->scp.channel,
                                           String_cString(command)
                                          ) != 0
@@ -6679,7 +6714,7 @@ whould this be a possible implementation?
             {
               // delete file
               if (libssh2_sftp_unlink(storageFileHandle->sftp.sftp,
-                                      String_cString(fileName)
+                                      String_cString(storageFileName)
                                      ) == 0
                  )
               {
@@ -6763,8 +6798,8 @@ whould this be a possible implementation?
             Password_undeploy(storageFileHandle->storageSpecifier.loginPassword);
 
             // get pathname, basename
-            pathName = File_getFilePathName(String_new(),fileName);
-            baseName = File_getFileBaseName(String_new(),fileName);
+            pathName = File_getFilePathName(String_new(),storageFileName);
+            baseName = File_getFileBaseName(String_new(),storageFileName);
 
             // delete file
             url = String_format(String_duplicate(baseURL),"/");
@@ -10591,7 +10626,8 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
   return error;
 }
 
-Errors Storage_copy(const String                 storageName,
+Errors Storage_copy(const StorageSpecifier       *storageSpecifier,
+                    const String                 storageFileName,
                     const JobOptions             *jobOptions,
                     BandWidthList                *maxBandWidthList,
                     StorageRequestVolumeFunction storageRequestVolumeFunction,
@@ -10608,6 +10644,11 @@ Errors Storage_copy(const String                 storageName,
   FileHandle        fileHandle;
   ulong             bytesRead;
 
+  assert(storageSpecifier != NULL);
+  assert(storageFileName != NULL);
+  assert(jobOptions != NULL);
+  assert(localFileName != NULL);
+
   // initialize variables
   buffer   = (byte*)malloc(BUFFER_SIZE);
   if (buffer == NULL)
@@ -10618,14 +10659,12 @@ Errors Storage_copy(const String                 storageName,
   // open storage
   fileName = String_new();
   error = Storage_init(&storageFileHandle,
-                       storageName,
+                       storageSpecifier,
+                       storageFileName,
                        jobOptions,
                        maxBandWidthList,
-                       storageRequestVolumeFunction,
-                       storageRequestVolumeUserData,
-                       storageStatusInfoFunction,
-                       storageStatusInfoUserData,
-                       fileName
+                       CALLBACK(storageRequestVolumeFunction,storageRequestVolumeUserData),
+                       CALLBACK(storageStatusInfoFunction,storageStatusInfoUserData)
                       );
   if (error != ERROR_NONE)
   {
@@ -10634,7 +10673,8 @@ Errors Storage_copy(const String                 storageName,
     return error;
   }
   error = Storage_open(&storageFileHandle,
-                       fileName
+                       storageSpecifier,
+                       storageFileName
                       );
   if (error != ERROR_NONE)
   {

@@ -577,6 +577,20 @@ void Storage_initSpecifier(StorageSpecifier *storageSpecifier);
 void Storage_doneSpecifier(StorageSpecifier *storageSpecifier);
 
 /***********************************************************************\
+* Name   : Storage_duplicateSpecifier
+* Purpose: duplicate storage specifier structure
+* Input  : destinationStorageSpecifier - storage specifier variable
+*          sourceStorageSpecifier      - source storage specifier
+* Output : destinationStorageSpecifier - duplicated storage specifier
+* Return : duplicated storage specifier
+* Notes  : -
+\***********************************************************************/
+
+void Storage_duplicateSpecifier(StorageSpecifier       *destinationStorageSpecifier,
+                                const StorageSpecifier *sourceStorageSpecifier
+                               );
+
+/***********************************************************************\
 * Name   : Storage_parseFTPSpecifier
 * Purpose: parse FTP specifier:
 *            [<login name>[:<login password>]@]<host name>[:<host port>]
@@ -752,7 +766,8 @@ Errors Storage_prepare(const String     storageName,
 * Name   : Storage_init
 * Purpose: init new storage
 * Input  : storageFileHandle            - storage file handle variable
-*          storageName                  - storage name
+*          storageSpecifier             - storage specifier structure
+*          storageFileName              - storage file name
 *          jobOptions                   - job options
 *          maxBandWidthList             - list with max. band width to use [bits/s] or NULL
 *          storageRequestVolumeFunction - volume request call back
@@ -762,21 +777,19 @@ Errors Storage_prepare(const String     storageName,
 *          storageStatusInfoUserData    - user data for status info
 *                                         call back
 * Output : storageFileHandle - initialized storage file handle
-*          fileName          - file name (without storage specifier
-*                              prefix)
 * Return : ERROR_NONE or errorcode
 * Notes  : -
 \***********************************************************************/
 
 Errors Storage_init(StorageFileHandle            *storageFileHandle,
-                    const String                 storageName,
+                    const StorageSpecifier       *storageSpecifier,
+                    const String                 storageFileName,
                     const JobOptions             *jobOptions,
                     BandWidthList                *maxBandWidthList,
                     StorageRequestVolumeFunction storageRequestVolumeFunction,
                     void                         *storageRequestVolumeUserData,
                     StorageStatusInfoFunction    storageStatusInfoFunction,
-                    void                         *storageStatusInfoUserData,
-                    String                       fileName
+                    void                         *storageStatusInfoUserData
                    );
 
 /***********************************************************************\
@@ -890,14 +903,16 @@ Errors Storage_create(StorageFileHandle *storageFileHandle,
 * Name   : Storage_open
 * Purpose: open storage file
 * Input  : storageFileHandle - storage file handle
-*          fileName          - archive file name
+*          storageSpecifier  - storage specifier structure
+*          storageFileName   - storage file name
 * Output : -
 * Return : ERROR_NONE or errorcode
 * Notes  : -
 \***********************************************************************/
 
-Errors Storage_open(StorageFileHandle *storageFileHandle,
-                    const String      fileName
+Errors Storage_open(StorageFileHandle      *storageFileHandle,
+                    const StorageSpecifier *storageSpecifier,
+                    const String           storageFileName
                    );
 
 /***********************************************************************\
@@ -1072,8 +1087,8 @@ Errors Storage_readDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
 /***********************************************************************\
 * Name   : Storage_copy
 * Purpose: copy storage file to local file
-* Input  : storageFileHandle            - storage file handle variable
-*          storageName                  - storage name
+* Input  : storageSpecifier             - storage specifier structure
+*          storageFileName              - storage file name
 *          jobOptions                   - job options
 *          maxBandWidthLIst             - list with max. band width to use [bits/s] or NULL
 *          storageRequestVolumeFunction - volume request call back
@@ -1088,7 +1103,8 @@ Errors Storage_readDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
 * Notes  : -
 \***********************************************************************/
 
-Errors Storage_copy(const String                 storageName,
+Errors Storage_copy(const StorageSpecifier       *storageSpecifier,
+                    const String                 storageFileName,
                     const JobOptions             *jobOptions,
                     BandWidthList                *maxBandWidthList,
                     StorageRequestVolumeFunction storageRequestVolumeFunction,
