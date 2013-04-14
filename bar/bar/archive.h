@@ -20,8 +20,10 @@
 
 #include "global.h"
 #include "strings.h"
+#include "lists.h"
 #include "files.h"
 #include "devices.h"
+#include "semaphores.h"
 
 #include "errors.h"
 #include "chunks.h"
@@ -107,6 +109,7 @@ typedef Errors(*ArchiveGetCryptPasswordFunction)(void         *userData,
                                                 );
 
 
+// archive info
 typedef struct
 {
   const JobOptions                *jobOptions;
@@ -142,6 +145,7 @@ typedef struct
   };
   const ChunkIO                   *chunkIO;                          // chunk i/o functions
   void                            *chunkIOUserData;                  // chunk i/o functions data
+  Semaphore                       chunkIOLock;                       // chunk i/o functions lock
 
   DatabaseHandle                  *databaseHandle;                   // database handle
   int64                           storageId;                         // index storage id in database
@@ -166,6 +170,7 @@ typedef struct
   } archiveEntryList;
 } ArchiveInfo;
 
+// archive entry info
 typedef struct ArchiveEntryInfo
 {
   LIST_NODE_HEADER(struct ArchiveEntryInfo);
@@ -177,6 +182,7 @@ typedef struct ArchiveEntryInfo
     ARCHIVE_MODE_READ,
     ARCHIVE_MODE_WRITE,
   } mode;                                                            // read/write archive mode
+  FileHandle                      tmpFileHandle;                     // temporary file handle
 
   CryptAlgorithms                 cryptAlgorithm;                    // crypt algorithm for entry
   uint                            blockLength;                       /* block length for file entry/file
@@ -356,7 +362,7 @@ const Password *Archive_appendDecryptPassword(const Password *password);
 /***********************************************************************\
 * Name   : Archive_create
 * Purpose: create archive
-* Input  : archiveInfo                 - archive info block
+* Input  : archiveInfo                 - archive info data
 *          jobOptions                  - job option settings
 *          archiveNewFileFunction      - call back for creating new
 *                                        archive file
@@ -381,7 +387,7 @@ Errors Archive_create(ArchiveInfo                     *archiveInfo,
 /***********************************************************************\
 * Name   : Archive_open
 * Purpose: open archive
-* Input  : archiveInfo                 - archive info block
+* Input  : archiveInfo                 - archive info data
 *          storageName                 - storage name
 *          jobOptions                  - option settings
 *          maxBandWidthList            - list with max. band width to use
@@ -405,7 +411,7 @@ Errors Archive_open(ArchiveInfo                     *archiveInfo,
 /***********************************************************************\
 * Name   : Archive_close
 * Purpose: close archive
-* Input  : archiveInfo - archive info block
+* Input  : archiveInfo - archive info data
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -416,7 +422,7 @@ Errors Archive_close(ArchiveInfo *archiveInfo);
 /***********************************************************************\
 * Name   : Archive_storageInterrupt
 * Purpose: interrupt create archive and close storage
-* Input  : archiveInfo - archive info block
+* Input  : archiveInfo - archive info data
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -427,7 +433,7 @@ Errors Archive_storageInterrupt(ArchiveInfo *archiveInfo);
 /***********************************************************************\
 * Name   : Archive_storageContinue
 * Purpose: continue interrupted archive and reopen storage
-* Input  : archiveInfo - archive info block
+* Input  : archiveInfo - archive info data
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -438,7 +444,7 @@ Errors Archive_storageContinue(ArchiveInfo *archiveInfo);
 /***********************************************************************\
 * Name   : Archive_eof
 * Purpose: check if end-of-archive file
-* Input  : archiveInfo           - archive info block
+* Input  : archiveInfo           - archive info data
 *          skipUnknownChunksFlag - TRUE to skip unknown chunks
 * Output : -
 * Return : TRUE if end-of-archive, FALSE otherwise
@@ -581,7 +587,7 @@ Errors Archive_newSpecialEntry(ArchiveEntryInfo *archiveEntryInfo,
 /***********************************************************************\
 * Name   : Archive_getNextArchiveEntryType
 * Purpose: get type of next entry in archive
-* Input  : archiveInfo           - archive info block
+* Input  : archiveInfo           - archive info data
 *          skipUnknownChunksFlag - TRUE to skip unknown chunks
 * Output : archiveEntryType - archive entry type
 * Return : ERROR_NONE or error code
@@ -596,7 +602,7 @@ Errors Archive_getNextArchiveEntryType(ArchiveInfo       *archiveInfo,
 /***********************************************************************\
 * Name   : Archive_skipNextEntry
 * Purpose: skip next entry in archive
-* Input  : archiveInfo - archive info block
+* Input  : archiveInfo - archive info data
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -840,7 +846,7 @@ bool Archive_eofData(ArchiveEntryInfo *archiveEntryInfo);
 /***********************************************************************\
 * Name   : Archive_tell
 * Purpose: get current read/write position in archive file
-* Input  : archiveInfo - archive info block
+* Input  : archiveInfo - archive info data
 * Output : -
 * Return : current position in archive [bytes]
 * Notes  : -
@@ -851,7 +857,7 @@ uint64 Archive_tell(ArchiveInfo *archiveInfo);
 /***********************************************************************\
 * Name   : Archive_seek
 * Purpose: seek to position in archive file
-* Input  : archiveInfo - archive info block
+* Input  : archiveInfo - archive info data
 *          offset      - offset in archive
 * Output : -
 * Return : ERROR_NONE or error code
@@ -865,7 +871,7 @@ Errors Archive_seek(ArchiveInfo *archiveInfo,
 /***********************************************************************\
 * Name   : Archive_getSize
 * Purpose: get size of archive file
-* Input  : archiveInfo - archive info block
+* Input  : archiveInfo - archive info data
 * Output : -
 * Return : size of archive [bytes]
 * Notes  : -
