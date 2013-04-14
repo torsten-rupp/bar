@@ -5402,10 +5402,17 @@ LIBSSH2_SFTP_S_IRUSR|LIBSSH2_SFTP_S_IWUSR
             {
               curlCode = curl_easy_setopt(storageFileHandle->webdav.curlHandle,CURLOPT_INFILESIZE_LARGE,(curl_off_t)storageFileHandle->webdav.size);
             }
-            if (curlCode == CURLE_OK)
+            if (curlCode != CURLE_OK)
             {
-              curlMCode = curl_multi_add_handle(storageFileHandle->webdav.curlMultiHandle,storageFileHandle->webdav.curlHandle);
+              String_delete(url);
+              String_delete(baseName);
+              String_delete(pathName);
+              String_delete(baseURL);
+              (void)curl_easy_cleanup(storageFileHandle->webdav.curlHandle);
+              (void)curl_multi_cleanup(storageFileHandle->webdav.curlMultiHandle);
+              return ERRORX_(WEBDAV_SESSION_FAIL,0,curl_easy_strerror(curlCode));
             }
+            curlMCode = curl_multi_add_handle(storageFileHandle->webdav.curlMultiHandle,storageFileHandle->webdav.curlHandle);
             if (curlMCode != CURLM_OK)
             {
               String_delete(url);
@@ -5562,7 +5569,7 @@ Errors Storage_open(StorageFileHandle *storageFileHandle,
           StringTokenizer nameTokenizer;
           String          name;
           long            httpCode;
-          uint64          fileSize;
+          double          fileSize;
           int             runningHandles;
 
           // initialize variables
@@ -5684,10 +5691,16 @@ fprintf(stderr,"%s, %d: httpCode=%ld\n",__FILE__,__LINE__,httpCode);
           {
             curlCode = curl_easy_setopt(storageFileHandle->ftp.curlHandle,CURLOPT_WRITEDATA,storageFileHandle);
           }
-          if (curlCode == CURLE_OK)
+          if (curlCode != CURLE_OK)
           {
-            curlMCode = curl_multi_add_handle(storageFileHandle->ftp.curlMultiHandle,storageFileHandle->ftp.curlHandle);
+            String_delete(url);
+            String_delete(baseName);
+            String_delete(pathName);
+            (void)curl_easy_cleanup(storageFileHandle->ftp.curlHandle);
+            (void)curl_multi_cleanup(storageFileHandle->ftp.curlMultiHandle);
+            return ERRORX_(FTP_SESSION_FAIL,0,curl_easy_strerror(curlCode));
           }
+          curlMCode = curl_multi_add_handle(storageFileHandle->ftp.curlMultiHandle,storageFileHandle->ftp.curlHandle);
           if (curlMCode != CURLM_OK)
           {
             String_delete(url);
@@ -6204,10 +6217,17 @@ fprintf(stderr,"%s, %d: httpCode=%ld\n",__FILE__,__LINE__,httpCode);
           {
             curlCode = curl_easy_setopt(storageFileHandle->webdav.curlHandle,CURLOPT_WRITEDATA,storageFileHandle);
           }
-          if (curlCode == CURLE_OK)
+          if (curlCode != CURLE_OK)
           {
-            curlMCode = curl_multi_add_handle(storageFileHandle->webdav.curlMultiHandle,storageFileHandle->webdav.curlHandle);
+            String_delete(baseName);
+            String_delete(pathName);
+            String_delete(baseURL);
+            (void)curl_easy_cleanup(storageFileHandle->webdav.curlHandle);
+            (void)curl_multi_cleanup(storageFileHandle->webdav.curlMultiHandle);
+            free(storageFileHandle->webdav.receiveBuffer.data);
+            return ERRORX_(WEBDAV_SESSION_FAIL,0,curl_easy_strerror(curlCode));
           }
+          curlMCode = curl_multi_add_handle(storageFileHandle->webdav.curlMultiHandle,storageFileHandle->webdav.curlHandle);
           if (curlMCode != CURLM_OK)
           {
             String_delete(baseName);
@@ -9142,7 +9162,7 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
                   if (endTimestamp >= startTimestamp)
                   {
                     limitBandWidth(&storageFileHandle->webdav.bandWidthLimiter,
-                                   n,
+                                   length,
                                    endTimestamp-startTimestamp
                                   );
                   }
@@ -10243,10 +10263,10 @@ Errors Storage_readDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
 
   assert(storageDirectoryListHandle != NULL);
 
+  error = ERROR_NONE;
   switch (storageDirectoryListHandle->type)
   {
     case STORAGE_TYPE_NONE:
-      error = ERROR_NONE;
       break;
     case STORAGE_TYPE_FILESYSTEM:
       error = File_readDirectoryList(&storageDirectoryListHandle->fileSystem.directoryListHandle,fileName);
@@ -10367,12 +10387,14 @@ Errors Storage_readDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
           }
         }
       #else /* not HAVE_CURL || HAVE_FTP */
+        error = FUNCTION_NOT_SUPPORTED;
       #endif /* HAVE_CURL || HAVE_FTP */
       break;
     case STORAGE_TYPE_SSH:
       #ifdef HAVE_SSH2
 HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
       #else /* not HAVE_SSH2 */
+        error = FUNCTION_NOT_SUPPORTED;
       #endif /* HAVE_SSH2 */
       break;
     case STORAGE_TYPE_SCP:
@@ -10478,6 +10500,7 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
           }
         }
       #else /* not HAVE_SSH2 */
+        error = FUNCTION_NOT_SUPPORTED;
       #endif /* HAVE_SSH2 */
       break;
     case STORAGE_TYPE_WEBDAV:
@@ -10550,6 +10573,7 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
           }
         }
       #else /* not HAVE_CURL */
+        error = FUNCTION_NOT_SUPPORTED;
       #endif /* HAVE_CURL */
       break;
     case STORAGE_TYPE_CD:
