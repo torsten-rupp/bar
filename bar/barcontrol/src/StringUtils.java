@@ -212,13 +212,13 @@ public class StringUtils
     int          startIndex,endIndex;
     StringBuffer buffer = new StringBuffer();
 
-    quotedFlag = false;
-    quoteChar  = '\0';
-    startIndex = 0;
-    endIndex   = string.length();
-
     if (string != null)
     {
+      quotedFlag = false;
+      quoteChar  = '\0';
+      startIndex = 0;
+      endIndex   = string.length();
+
       // check for outer quotes
       if ((enclosingQuotes) && (string.length() >= 2))
       {
@@ -237,26 +237,27 @@ public class StringUtils
         }
       }
 
-    // unescape
-    int index = startIndex;
-    while (index < endIndex)
-    {
-      char ch = string.charAt(index);
+      // unescape
+      int index = startIndex;
+      while (index < endIndex)
+      {
+        char ch = string.charAt(index);
 
-      if      ((ch == '\\') && ((index+1) < endIndex) && quotedFlag && (string.charAt(index+1) == quoteChar))
-      {
-        buffer.append(quoteChar);
-        index += 2;
-      }
-      else if ((ch == '\\') && ((index+1) < endIndex) && (string.charAt(index+1) == '\\'))
-      {
-        buffer.append('\\');
-        index += 2;
-      }
-      else
-      {
-        buffer.append(ch);
-        index += 1;
+        if      ((ch == '\\') && ((index+1) < endIndex) && quotedFlag && (string.charAt(index+1) == quoteChar))
+        {
+          buffer.append(quoteChar);
+          index += 2;
+        }
+        else if ((ch == '\\') && ((index+1) < endIndex) && (string.charAt(index+1) == '\\'))
+        {
+          buffer.append('\\');
+          index += 2;
+        }
+        else
+        {
+          buffer.append(ch);
+          index += 1;
+        }
       }
     }
 
