@@ -4962,6 +4962,7 @@ int main(int argc, const char *argv[])
   {
     fprintf(stderr,"ERROR: Cannot initialize program resources (error: %s)\n",Error_getText(error));
     #ifndef NDEBUG
+      debugResourceDone();
       File_debugDone();
       Array_debugDone();
       String_debugDone();
@@ -4981,6 +4982,7 @@ int main(int argc, const char *argv[])
   {
     doneAll();
     #ifndef NDEBUG
+      debugResourceDone();
       File_debugDone();
       Array_debugDone();
       String_debugDone();
@@ -5023,6 +5025,7 @@ int main(int argc, const char *argv[])
       String_delete(fileName);
       doneAll();
       #ifndef NDEBUG
+        debugResourceDone();
         File_debugDone();
         Array_debugDone();
         String_debugDone();
@@ -5065,6 +5068,7 @@ int main(int argc, const char *argv[])
   {
     doneAll();
     #ifndef NDEBUG
+      debugResourceDone();
       File_debugDone();
       Array_debugDone();
       String_debugDone();
@@ -5084,6 +5088,7 @@ int main(int argc, const char *argv[])
 
     doneAll();
     #ifndef NDEBUG
+      debugResourceDone();
       File_debugDone();
       Array_debugDone();
       String_debugDone();
@@ -5099,6 +5104,7 @@ int main(int argc, const char *argv[])
 
     doneAll();
     #ifndef NDEBUG
+      debugResourceDone();
       File_debugDone();
       Array_debugDone();
       String_debugDone();
@@ -5112,6 +5118,7 @@ int main(int argc, const char *argv[])
   {
     doneAll();
     #ifndef NDEBUG
+      debugResourceDone();
       File_debugDone();
       Array_debugDone();
       String_debugDone();
@@ -5127,6 +5134,7 @@ int main(int argc, const char *argv[])
     printError("Cannot add delta sources (error: %s)!\n",Error_getText(error));
     doneAll();
     #ifndef NDEBUG
+      debugResourceDone();
       File_debugDone();
       Array_debugDone();
       String_debugDone();
@@ -5149,6 +5157,7 @@ int main(int argc, const char *argv[])
                 );
       doneAll();
       #ifndef NDEBUG
+        debugResourceDone();
         File_debugDone();
         Array_debugDone();
         String_debugDone();
@@ -5174,6 +5183,7 @@ int main(int argc, const char *argv[])
     printError("Cannot create temporary directory in '%s' (error: %s)!\n",String_cString(globalOptions.tmpDirectory),Error_getText(error));
     doneAll();
     #ifndef NDEBUG
+      debugResourceDone();
       File_debugDone();
       Array_debugDone();
       String_debugDone();
@@ -5241,6 +5251,7 @@ int main(int argc, const char *argv[])
           CmdOption_done(COMMAND_LINE_OPTIONS,SIZE_OF_ARRAY(COMMAND_LINE_OPTIONS));
           doneAll();
           #ifndef NDEBUG
+            debugResourceDone();
             File_debugDone();
             Array_debugDone();
             String_debugDone();
