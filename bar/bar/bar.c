@@ -145,7 +145,7 @@ LOCAL Commands         command;
 LOCAL String           jobName;
 
 LOCAL JobOptions       jobOptions;
-LOCAL String           archiveName;
+LOCAL String           storageName;
 //LOCAL FTPServerList    ftpServerList;
 //LOCAL Semaphore        ftpServerListLock;
 //LOCAL SSHServerList    sshServerList;
@@ -838,7 +838,7 @@ LOCAL const ConfigValue CONFIG_VALUES[] =
   CONFIG_VALUE_INTEGER  ("index-database-keep-time",     &globalOptions.indexDatabaseKeepTime,-1,                 0,MAX_INT,CONFIG_VALUE_TIME_UNITS),
 
   // global job settings
-  CONFIG_VALUE_STRING   ("archive-name",                 &archiveName,-1                                          ),
+  CONFIG_VALUE_STRING   ("archive-name",                 &storageName,-1                                          ),
   CONFIG_VALUE_SELECT   ("archive-type",                 &jobOptions.archiveType,-1,                              CONFIG_VALUE_ARCHIVE_TYPES),
 
   CONFIG_VALUE_STRING   ("incremental-list-file",        &jobOptions.incrementalListFileName,-1                   ),
@@ -1206,7 +1206,7 @@ LOCAL bool readConfigFile(const String fileName, bool printInfoFlag)
   {
     printWarning("Cannot get file info for config file '%s' (error: %s)\n",
                  String_cString(fileName),
-                 Errors_getText(error)
+                 Error_getText(error)
                 );
   }
 
@@ -1216,7 +1216,7 @@ LOCAL bool readConfigFile(const String fileName, bool printInfoFlag)
   {
     printError("Cannot open file '%s' (error: %s)!\n",
                String_cString(fileName),
-               Errors_getText(error)
+               Error_getText(error)
               );
     return FALSE;
   }
@@ -1237,7 +1237,7 @@ LOCAL bool readConfigFile(const String fileName, bool printInfoFlag)
       if (printInfoFlag) printf("FAIL!\n");
       printError("Cannot read file '%s' (error: %s)!\n",
                  String_cString(fileName),
-                 Errors_getText(error)
+                 Error_getText(error)
                 );
       failFlag = TRUE;
       break;
@@ -1521,7 +1521,7 @@ LOCAL bool cmdOptionParseEntryPattern(void *userData, void *variable, const char
   error = EntryList_appendCString((EntryList*)variable,entryType,value,patternType);
   if (error != ERROR_NONE)
   {
-    strncpy(errorMessage,Errors_getText(error),errorMessageSize); errorMessage[errorMessageSize-1] = '\0';
+    strncpy(errorMessage,Error_getText(error),errorMessageSize); errorMessage[errorMessageSize-1] = '\0';
     return FALSE;
   }
 
@@ -2601,7 +2601,7 @@ LOCAL Errors initAll(void)
 
   command                               = COMMAND_LIST;
   jobName                               = NULL;
-  archiveName                           = NULL;
+  storageName                           = NULL;
   initJobOptions(&jobOptions);
 //  List_init(&ftpServerList);
 //  Semaphore_init(&ftpServerListLock);
@@ -2774,7 +2774,7 @@ LOCAL void doneAll(void)
 //  Semaphore_done(&ftpServerListLock);
 //  List_done(&ftpServerList,(ListNodeFreeFunction)freeFTPServerNode,NULL);
   freeJobOptions(&jobOptions);
-  String_delete(archiveName);
+  String_delete(storageName);
   String_delete(jobName);
   doneGlobalOptions();
   Thread_doneLocalVariable(&outputLineHandle,outputLineDone,NULL);
@@ -3064,7 +3064,7 @@ void logPostProcess(void)
                                );
     if (error != ERROR_NONE)
     {
-      printError("Cannot post-process log file (error: %s)\n",Errors_getText(error));
+      printError("Cannot post-process log file (error: %s)\n",Error_getText(error));
       STRINGLIST_ITERATE(&stderrList,stringNode,string)
       {
         printError("  %s\n",String_cString(string));
@@ -4820,7 +4820,7 @@ bool readJobFile(const String      fileName,
   {
     printError("Cannot open file '%s' (error: %s)!\n",
                String_cString(fileName),
-               Errors_getText(error)
+               Error_getText(error)
               );
     String_delete(line);
     return FALSE;
@@ -4839,7 +4839,7 @@ bool readJobFile(const String      fileName,
     {
       printError("Cannot read file '%s' (error: %s)!\n",
                  String_cString(fileName),
-                 Errors_getText(error)
+                 Error_getText(error)
                 );
       failFlag = TRUE;
       break;
@@ -4915,7 +4915,7 @@ LOCAL Errors createPIDFile(void)
     error = File_open(&fileHandle,File_setFileNameCString(fileName,pidFileName),FILE_OPEN_CREATE);
     if (error != ERROR_NONE)
     {
-      printError("Cannot create process id file '%s' (error: %s)\n",pidFileName,Errors_getText(error));
+      printError("Cannot create process id file '%s' (error: %s)\n",pidFileName,Error_getText(error));
       return error;
     }
     File_printLine(&fileHandle,"%d",(int)getpid());
@@ -4960,7 +4960,7 @@ int main(int argc, const char *argv[])
   error = initAll();
   if (error != ERROR_NONE)
   {
-    fprintf(stderr,"ERROR: Cannot initialize program resources (error: %s)\n",Errors_getText(error));
+    fprintf(stderr,"ERROR: Cannot initialize program resources (error: %s)\n",Error_getText(error));
     #ifndef NDEBUG
       File_debugDone();
       Array_debugDone();
@@ -5124,7 +5124,7 @@ int main(int argc, const char *argv[])
   error = Source_addSourceList(&deltaSourcePatternList);
   if (error != ERROR_NONE)
   {
-    printError("Cannot add delta sources (error: %s)!\n",Errors_getText(error));
+    printError("Cannot add delta sources (error: %s)!\n",Error_getText(error));
     doneAll();
     #ifndef NDEBUG
       File_debugDone();
@@ -5145,7 +5145,7 @@ int main(int argc, const char *argv[])
       if (printInfoFlag) printf("fail!\n");
       printError("Cannot open indexd database '%s' (error: %s)!\n",
                  indexDatabaseFileName,
-                 Errors_getText(error)
+                 Error_getText(error)
                 );
       doneAll();
       #ifndef NDEBUG
@@ -5171,7 +5171,7 @@ int main(int argc, const char *argv[])
   error = File_getTmpDirectoryNameCString(tmpDirectory,"bar-XXXXXX",globalOptions.tmpDirectory);
   if (error != ERROR_NONE)
   {
-    printError("Cannot create temporary directory in '%s' (error: %s)!\n",String_cString(globalOptions.tmpDirectory),Errors_getText(error));
+    printError("Cannot create temporary directory in '%s' (error: %s)!\n",String_cString(globalOptions.tmpDirectory),Error_getText(error));
     doneAll();
     #ifndef NDEBUG
       File_debugDone();
@@ -5282,7 +5282,7 @@ error = ERROR_STILL_NOT_IMPLEMENTED;
         error = createPIDFile();
         if (error != ERROR_NONE)
         {
-          printError("Cannot create process id file '%s' (error: %s)\n",pidFileName,Errors_getText(error));
+          printError("Cannot create process id file '%s' (error: %s)\n",pidFileName,Error_getText(error));
         }
       }
 
@@ -5328,7 +5328,7 @@ error = ERROR_STILL_NOT_IMPLEMENTED;
     globalOptions.runMode = RUN_MODE_INTERACTIVE;
 
     // create archive
-    error = Command_create(String_cString(archiveName),
+    error = Command_create(storageName,
                            &includeEntryList,
                            &excludePatternList,
                            &compressExcludePatternList,
@@ -5356,7 +5356,7 @@ error = ERROR_STILL_NOT_IMPLEMENTED;
       case COMMAND_CREATE_FILES:
       case COMMAND_CREATE_IMAGES:
         {
-          const char *archiveName;
+          String     storageName;
           EntryTypes entryType;
           int        z;
 
@@ -5367,7 +5367,7 @@ error = ERROR_STILL_NOT_IMPLEMENTED;
             error = ERROR_INVALID_ARGUMENT;
             break;
           }
-          archiveName = argv[1];
+          storageName = String_newCString(argv[1]);
 
           // get include patterns
           switch (command)
@@ -5382,7 +5382,7 @@ error = ERROR_STILL_NOT_IMPLEMENTED;
           }
 
           // create archive
-          error = Command_create(archiveName,
+          error = Command_create(storageName,
                                  &includeEntryList,
                                  &excludePatternList,
                                  &compressExcludePatternList,
@@ -5398,6 +5398,9 @@ error = ERROR_STILL_NOT_IMPLEMENTED;
                                  NULL,
                                  NULL
                                 );
+
+          // free resources
+          String_delete(storageName);
         }
         break;
       case COMMAND_LIST:
@@ -5527,7 +5530,7 @@ error = ERROR_STILL_NOT_IMPLEMENTED;
           error = Crypt_createKeys(&publicKey,&privateKey,keyBits);
           if (error != ERROR_NONE)
           {
-            printError("Cannot create key pair (error: %s)!\n",Errors_getText(error));
+            printError("Cannot create key pair (error: %s)!\n",Error_getText(error));
             Crypt_doneKey(&privateKey);
             Crypt_doneKey(&publicKey);
             Password_done(&cryptPassword);
@@ -5600,6 +5603,7 @@ fprintf(stderr,"%s,%d: t=%s\n",__FILE__,__LINE__,t);
   // free resources
   doneAll();
   #ifndef NDEBUG
+    debugResourceDone();
     File_debugDone();
     Array_debugDone();
     String_debugDone();
