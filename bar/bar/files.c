@@ -1285,7 +1285,6 @@ Errors File_read(FileHandle *fileHandle,
                 )
 {
   ssize_t n;
-  ulong   length;
 
   assert(fileHandle != NULL);
   assert(fileHandle->file != NULL);
