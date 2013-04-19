@@ -568,7 +568,7 @@ test2 test_compress: $(TEST_BAR)
           rc=$$?; \
           if test $$rc -ne 0; then \
             exit $$rc; \
-          fi \
+          fi; \
           $(MAKE) \
             BAR_FILE="test" \
             BAR_PATTERN="test" \
@@ -578,7 +578,7 @@ test2 test_compress: $(TEST_BAR)
           rc=$$?; \
           if test $$rc -ne 0; then \
             exit $$rc; \
-          fi \
+          fi; \
         done
 	@$(ECHO) "ok"
 
@@ -594,7 +594,7 @@ test_delta_compress: $(TEST_BAR)
           rc=$$?; \
           if test $$rc -ne 0; then \
             exit $$rc; \
-          fi \
+          fi; \
           $(MAKE) \
             BAR_FILE="test" \
             BAR_PATTERN="test" \
@@ -604,7 +604,7 @@ test_delta_compress: $(TEST_BAR)
           rc=$$?; \
           if test $$rc -ne 0; then \
             exit $$rc; \
-          fi \
+          fi; \
         done
 	@$(ECHO) "ok"
 
@@ -620,7 +620,7 @@ test3 test_crypt: $(TEST_BAR)
           rc=$$?; \
           if test $$rc -ne 0; then \
             exit $$rc; \
-          fi \
+          fi; \
           $(MAKE) \
             BAR_FILE="test" \
             BAR_PATTERN="test" \
@@ -630,7 +630,7 @@ test3 test_crypt: $(TEST_BAR)
           rc=$$?; \
           if test $$rc -ne 0; then \
             exit $$rc; \
-          fi \
+          fi; \
         done
 	@$(ECHO) "ok"
 
@@ -647,7 +647,7 @@ test4 test_asymmetric_crypt: $(TEST_BAR)
           rc=$$?; \
           if test $$rc -ne 0; then \
             exit $$rc; \
-          fi \
+          fi; \
           $(MAKE) \
             BAR_FILE="test" \
             BAR_PATTERN="test" \
@@ -657,7 +657,7 @@ test4 test_asymmetric_crypt: $(TEST_BAR)
           rc=$$?; \
           if test $$rc -ne 0; then \
             exit $$rc; \
-          fi \
+          fi; \
         done
 	@$(ECHO) "ok"
 
@@ -687,7 +687,7 @@ test6 test_image: $(TEST_BAR)
           rc=$$?; \
           if test $$rc -ne 0; then \
             exit $$rc; \
-          fi \
+          fi; \
           $(MAKE) \
             BAR_FILE="test" \
             BAR_PATTERN="test" \
@@ -697,7 +697,7 @@ test6 test_image: $(TEST_BAR)
           rc=$$?; \
           if test $$rc -ne 0; then \
             exit $$rc; \
-          fi \
+          fi; \
         done
 	@$(ECHO) "ok"
 
@@ -816,7 +816,7 @@ test_combined: $(TEST_BAR)
           rc=$$?; \
           if test $$rc -ne 0; then \
             exit $$rc; \
-          fi \
+          fi; \
         done; \
         rc=$$?; \
         if test $$rc -ne 0; then \
