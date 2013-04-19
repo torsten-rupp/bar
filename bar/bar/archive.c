@@ -7369,6 +7369,7 @@ Errors Archive_closeEntry(ArchiveEntryInfo *archiveEntryInfo)
                 if ((error == ERROR_NONE) && (tmpError != ERROR_NONE)) error = tmpError;
               }
 
+              // append to archive
               SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveEntryInfo->archiveInfo->chunkIOLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,SEMAPHORE_WAIT_FOREVER)
               {
                 tmpError = File_seek(&archiveEntryInfo->tmpFileHandle,0LL);
@@ -7393,7 +7394,6 @@ Errors Archive_closeEntry(ArchiveEntryInfo *archiveEntryInfo)
 
               if (   (archiveEntryInfo->archiveInfo->databaseHandle != NULL)
                   && !archiveEntryInfo->archiveInfo->jobOptions->noIndexDatabaseFlag
-                  && !archiveEntryInfo->archiveInfo->jobOptions->dryRunFlag
                   && !archiveEntryInfo->archiveInfo->jobOptions->noStorageFlag
                  )
               {
@@ -7521,7 +7521,6 @@ Errors Archive_closeEntry(ArchiveEntryInfo *archiveEntryInfo)
 
               if (   (archiveEntryInfo->archiveInfo->databaseHandle != NULL)
                   && !archiveEntryInfo->archiveInfo->jobOptions->noIndexDatabaseFlag
-                  && !archiveEntryInfo->archiveInfo->jobOptions->dryRunFlag
                   && !archiveEntryInfo->archiveInfo->jobOptions->noStorageFlag
                  )
               {
@@ -7718,9 +7717,31 @@ Errors Archive_closeEntry(ArchiveEntryInfo *archiveEntryInfo)
                 if ((error == ERROR_NONE) && (tmpError != ERROR_NONE)) error = tmpError;
               }
 
+              // append to archive
+              SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveEntryInfo->archiveInfo->chunkIOLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,SEMAPHORE_WAIT_FOREVER)
+              {
+                tmpError = File_seek(&archiveEntryInfo->tmpFileHandle,0LL);
+                if (tmpError != ERROR_NONE)
+                {
+                  if (error == ERROR_NONE) error = tmpError;
+                  Semaphore_unlock(&archiveEntryInfo->archiveInfo->chunkIOLock);
+                  break;
+                }
+                tmpError = transferArchiveFileData(archiveEntryInfo->archiveInfo,
+                                                   &archiveEntryInfo->tmpFileHandle
+                                                  );
+                if (tmpError != ERROR_NONE)
+                {
+                  if (error == ERROR_NONE) error = tmpError;
+                  Semaphore_unlock(&archiveEntryInfo->archiveInfo->chunkIOLock);
+                  break;
+                }
+
+                File_truncate(&archiveEntryInfo->tmpFileHandle,0LL);
+              }
+
               if (   (archiveEntryInfo->archiveInfo->databaseHandle != NULL)
                   && !archiveEntryInfo->archiveInfo->jobOptions->noIndexDatabaseFlag
-                  && !archiveEntryInfo->archiveInfo->jobOptions->dryRunFlag
                   && !archiveEntryInfo->archiveInfo->jobOptions->noStorageFlag
                  )
               {
