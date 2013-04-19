@@ -96,6 +96,7 @@ typedef bool(*CreateStatusInfoFunction)(void                   *userData,
 *                                             ArchiveTypes (normal/full/
 *                                             incremental)
 *          archiveGetCryptPasswordFunction  - get password call back
+*                                              (can be NULL)
 *          archiveGetCryptPasswordUserData  - user data for get password
 *                                             call back
 *          createStatusInfoFunction         - status info call back
@@ -103,7 +104,7 @@ typedef bool(*CreateStatusInfoFunction)(void                   *userData,
 *          createStatusInfoUserData         - user data for status info
 *                                             function
 *          storageRequestVolumeFunction     - request volume call back
-*                                             function
+*                                             function (can be NULL)
 *          storageRequestVolumeUserData     - user data for request
 *                                             volume
 *          pauseCreateFlag                  - pause creation flag (can
