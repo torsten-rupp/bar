@@ -3474,9 +3474,9 @@ bool isServerAllocationPending(ServerAllocation *serverAllocation, ServerAllocat
 
   assert(serverAllocation != NULL);
 
+  pendingFlag = FALSE;
   SEMAPHORE_LOCKED_DO(semaphoreLock,&serverAllocation->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,SEMAPHORE_WAIT_FOREVER)
   {
-    pendingFlag = FALSE;
     switch (priority)
     {
       case SERVER_ALLOCATION_PRIORITY_LOW:
@@ -5345,12 +5345,9 @@ error = ERROR_STILL_NOT_IMPLEMENTED;
                            &compressExcludePatternList,
                            &jobOptions,
                            ARCHIVE_TYPE_NORMAL,
-                           inputCryptPassword,
-                           NULL,
-                           NULL,
-                           NULL,
-                           NULL,
-                           NULL,
+                           CALLBACK(inputCryptPassword,NULL),
+                           CALLBACK(NULL,NULL),
+                           CALLBACK(NULL,NULL),
                            NULL,
                            NULL,
                            NULL
@@ -5399,12 +5396,9 @@ error = ERROR_STILL_NOT_IMPLEMENTED;
                                  &compressExcludePatternList,
                                  &jobOptions,
                                  ARCHIVE_TYPE_NORMAL,
-                                 inputCryptPassword,
-                                 NULL,
-                                 NULL,
-                                 NULL,
-                                 NULL,
-                                 NULL,
+                                 CALLBACK(inputCryptPassword,NULL),
+                                 CALLBACK(NULL,NULL),
+                                 CALLBACK(NULL,NULL),
                                  NULL,
                                  NULL,
                                  NULL
