@@ -3079,6 +3079,7 @@ LOCAL Errors storeFileEntry(CreateInfo   *createInfo,
 {
   Errors           error;
   SemaphoreLock    semaphoreLock;
+  bool             nameSemaphoreLocked;
   FileInfo         fileInfo;
   FileHandle       fileHandle;
   bool             byteCompressFlag;
@@ -3120,32 +3121,44 @@ LOCAL Errors storeFileEntry(CreateInfo   *createInfo,
     }
   }
 
+  // open file
+  error = File_open(&fileHandle,fileName,FILE_OPEN_READ|FILE_OPEN_NO_CACHE);
+  if (error != ERROR_NONE)
+  {
+    if (createInfo->jobOptions->skipUnreadableFlag)
+    {
+      printInfo(1,"skipped (reason: %s)\n",Errors_getText(error));
+      logMessage(LOG_TYPE_ENTRY_ACCESS_DENIED,"open file failed '%s'\n",String_cString(fileName));
+      SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,SEMAPHORE_WAIT_FOREVER)
+      {
+        createInfo->statusInfo.errorEntries++;
+        createInfo->statusInfo.errorBytes += (uint64)fileInfo.size;
+      }
+      return ERROR_NONE;
+    }
+    else
+    {
+      printInfo(1,"FAIL\n");
+      printError("Cannot open file '%s' (error: %s)\n",
+                 String_cString(fileName),
+                 Errors_getText(error)
+                );
+      return error;
+    }
+  }
+
   if (!createInfo->jobOptions->noStorageFlag)
   {
-    // open file
-    error = File_open(&fileHandle,fileName,FILE_OPEN_READ|FILE_OPEN_NO_CACHE);
-    if (error != ERROR_NONE)
+    nameSemaphoreLocked = Semaphore_lock(&createInfo->statusInfoNameLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,SEMAPHORE_NO_WAIT);
+    if (nameSemaphoreLocked)
     {
-      if (createInfo->jobOptions->skipUnreadableFlag)
-      {
-        printInfo(1,"skipped (reason: %s)\n",Errors_getText(error));
-        logMessage(LOG_TYPE_ENTRY_ACCESS_DENIED,"open file failed '%s'\n",String_cString(fileName));
-        SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,SEMAPHORE_WAIT_FOREVER)
-        {
-          createInfo->statusInfo.errorEntries++;
-          createInfo->statusInfo.errorBytes += (uint64)fileInfo.size;
-        }
-        return ERROR_NONE;
-      }
-      else
-      {
-        printInfo(1,"FAIL\n");
-        printError("Cannot open file '%s' (error: %s)\n",
-                   String_cString(fileName),
-                   Errors_getText(error)
-                  );
-        return error;
-      }
+      String_set(createInfo->statusInfo.name,fileName);
+    }
+    SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,SEMAPHORE_WAIT_FOREVER)
+    {
+      createInfo->statusInfo.entryDoneBytes  = 0LL;
+      createInfo->statusInfo.entryTotalBytes = fileInfo.size;
+      updateStatusInfo(createInfo);
     }
 
     // check if file data should be compressed
@@ -3170,16 +3183,9 @@ LOCAL Errors storeFileEntry(CreateInfo   *createInfo,
                  String_cString(fileName),
                  Errors_getText(error)
                 );
+      if (nameSemaphoreLocked) Semaphore_unlock(&createInfo->statusInfoNameLock);
       File_close(&fileHandle);
       return error;
-    }
-#warning lock?
-    String_set(createInfo->statusInfo.name,fileName);
-    SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,SEMAPHORE_WAIT_FOREVER)
-    {
-      createInfo->statusInfo.entryDoneBytes  = 0LL;
-      createInfo->statusInfo.entryTotalBytes = fileInfo.size;
-      updateStatusInfo(createInfo);
     }
 
     // write file content to archive
@@ -3228,8 +3234,9 @@ LOCAL Errors storeFileEntry(CreateInfo   *createInfo,
     if ((createInfo->requestedAbortFlag != NULL) && (*createInfo->requestedAbortFlag))
     {
       printInfo(1,"ABORTED\n");
-      File_close(&fileHandle);
       Archive_closeEntry(&archiveEntryInfo);
+      if (nameSemaphoreLocked) Semaphore_unlock(&createInfo->statusInfoNameLock);
+      File_close(&fileHandle);
       return FALSE;
     }
     if (error != ERROR_NONE)
@@ -3238,8 +3245,9 @@ LOCAL Errors storeFileEntry(CreateInfo   *createInfo,
       printError("Cannot store archive file (error: %s)!\n",
                  Errors_getText(error)
                 );
-      File_close(&fileHandle);
       Archive_closeEntry(&archiveEntryInfo);
+      if (nameSemaphoreLocked) Semaphore_unlock(&createInfo->statusInfoNameLock);
+      File_close(&fileHandle);
       return error;
     }
     printInfo(2,"    \b\b\b\b");
@@ -3255,6 +3263,9 @@ LOCAL Errors storeFileEntry(CreateInfo   *createInfo,
       File_close(&fileHandle);
       return error;
     }
+
+    // unlock
+    if (nameSemaphoreLocked) Semaphore_unlock(&createInfo->statusInfoNameLock);
 
     // close file
     File_close(&fileHandle);
@@ -3320,6 +3331,7 @@ LOCAL Errors storeImageEntry(CreateInfo   *createInfo,
 {
   Errors           error;
   SemaphoreLock    semaphoreLock;
+  bool             nameSemaphoreLocked;
   DeviceInfo       deviceInfo;
   uint             maxBufferBlockCount;
   DeviceHandle     deviceHandle;
@@ -3338,6 +3350,8 @@ LOCAL Errors storeImageEntry(CreateInfo   *createInfo,
   assert(createInfo->jobOptions != NULL);
   assert(deviceName != NULL);
   assert(buffer != NULL);
+
+  printInfo(1,"Add '%s'...",String_cString(deviceName));
 
   // get device info
   error = Device_getDeviceInfo(&deviceInfo,deviceName);
@@ -3403,29 +3417,31 @@ LOCAL Errors storeImageEntry(CreateInfo   *createInfo,
       return error;
     }
   }
-#warning lcok?
-  String_set(createInfo->statusInfo.name,deviceName);
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,SEMAPHORE_WAIT_FOREVER)
-  {
-    createInfo->statusInfo.entryDoneBytes  = 0LL;
-    createInfo->statusInfo.entryTotalBytes = deviceInfo.size;
-    updateStatusInfo(createInfo);
-  }
-
-  // check if device contain a known file system or a raw image should be stored
-  if (!createInfo->jobOptions->rawImagesFlag)
-  {
-    fileSystemFlag = (FileSystem_init(&fileSystemHandle,&deviceHandle) == ERROR_NONE);
-  }
-  else
-  {
-    fileSystemFlag = FALSE;
-  }
-
-  printInfo(1,"Add '%s'...",String_cString(deviceName));
 
   if (!createInfo->jobOptions->noStorageFlag)
   {
+    nameSemaphoreLocked = Semaphore_lock(&createInfo->statusInfoNameLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,SEMAPHORE_NO_WAIT);
+    if (nameSemaphoreLocked)
+    {
+      String_set(createInfo->statusInfo.name,deviceName);
+    }
+    SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,SEMAPHORE_WAIT_FOREVER)
+    {
+      createInfo->statusInfo.entryDoneBytes  = 0LL;
+      createInfo->statusInfo.entryTotalBytes = deviceInfo.size;
+      updateStatusInfo(createInfo);
+    }
+
+    // check if device contain a known file system or a raw image should be stored
+    if (!createInfo->jobOptions->rawImagesFlag)
+    {
+      fileSystemFlag = (FileSystem_init(&fileSystemHandle,&deviceHandle) == ERROR_NONE);
+    }
+    else
+    {
+      fileSystemFlag = FALSE;
+    }
+
     // check if image data should be compressed
     byteCompressFlag =    (deviceInfo.size > (int64)globalOptions.compressMinFileSize)
                        && !PatternList_match(createInfo->compressExcludePatternList,deviceName,PATTERN_MATCH_MODE_EXACT);
@@ -3449,6 +3465,7 @@ LOCAL Errors storeImageEntry(CreateInfo   *createInfo,
                  Errors_getText(error)
                 );
       if (fileSystemFlag) FileSystem_done(&fileSystemHandle);
+      if (nameSemaphoreLocked) Semaphore_unlock(&createInfo->statusInfoNameLock);
       Device_close(&deviceHandle);
       return error;
     }
@@ -3523,6 +3540,7 @@ LOCAL Errors storeImageEntry(CreateInfo   *createInfo,
       printInfo(1,"ABORTED\n");
       Archive_closeEntry(&archiveEntryInfo);
       if (fileSystemFlag) FileSystem_done(&fileSystemHandle);
+      if (nameSemaphoreLocked) Semaphore_unlock(&createInfo->statusInfoNameLock);
       Device_close(&deviceHandle);
       return error;
     }
@@ -3534,6 +3552,7 @@ LOCAL Errors storeImageEntry(CreateInfo   *createInfo,
                 );
       Archive_closeEntry(&archiveEntryInfo);
       if (fileSystemFlag) FileSystem_done(&fileSystemHandle);
+      if (nameSemaphoreLocked) Semaphore_unlock(&createInfo->statusInfoNameLock);
       Device_close(&deviceHandle);
       return error;
     }
@@ -3548,9 +3567,19 @@ LOCAL Errors storeImageEntry(CreateInfo   *createInfo,
                  Errors_getText(error)
                 );
       if (fileSystemFlag) FileSystem_done(&fileSystemHandle);
+      if (nameSemaphoreLocked) Semaphore_unlock(&createInfo->statusInfoNameLock);
       Device_close(&deviceHandle);
       return error;
     }
+
+    // done file system
+    if (fileSystemFlag)
+    {
+      FileSystem_done(&fileSystemHandle);
+    }
+
+    // unlock
+    if (nameSemaphoreLocked) Semaphore_unlock(&createInfo->statusInfoNameLock);
 
     // get compression ratio
     if (archiveEntryInfo.image.chunkImageData.blockCount > 0)
@@ -3592,12 +3621,6 @@ LOCAL Errors storeImageEntry(CreateInfo   *createInfo,
               fileSystemFlag?FileSystem_getName(fileSystemHandle.type):"raw",
               deviceInfo.size
              );
-  }
-
-  // done file system
-  if (fileSystemFlag)
-  {
-    FileSystem_done(&fileSystemHandle);
   }
 
   // close device
@@ -3979,8 +4002,10 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
       File_close(&fileHandle);
       return error;
     }
-#warning lock?
-    String_set(createInfo->statusInfo.name,nameList->head->string);
+    SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoNameLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,SEMAPHORE_WAIT_FOREVER)
+    {
+      String_set(createInfo->statusInfo.name,nameList->head->string);
+    }
     SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,SEMAPHORE_WAIT_FOREVER)
     {
       createInfo->statusInfo.entryDoneBytes  = 0LL;
