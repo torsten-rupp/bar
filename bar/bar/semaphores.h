@@ -30,7 +30,8 @@
 /****************** Conditional compilation switches *******************/
 
 /***************************** Constants *******************************/
-#define SEMAPHORE_WAIT_FOREVER -1
+#define SEMAPHORE_NO_WAIT      0L
+#define SEMAPHORE_WAIT_FOREVER -1L
 
 /***************************** Datatypes *******************************/
 
@@ -74,8 +75,8 @@ typedef struct Semaphore
     pthread_cond_t      readLockZero;        // signal read-lock became 0
     pthread_cond_t      modified;            // signal values are modified
   #elif defined(PLATFORM_WINDOWS)
-//    pthread_cond_t      readLockZero;        // signal read-lock beaome 0
-//    pthread_cond_t      modified;            // signal values are modified
+    pthread_cond_t      readLockZero;        // signal read-lock beaome 0
+    pthread_cond_t      modified;            // signal values are modified
   #endif /* PLATFORM_... */
   bool                endFlag;
 
@@ -132,6 +133,31 @@ typedef bool SemaphoreLock;
   #define Semaphore_lock(semaphore,semaphoreLockType,timeout) __Semaphore_lock(__FILE__,__LINE__,semaphore,semaphoreLockType,timeout)
   #define Semaphore_unlock(semaphore) __Semaphore_unlock(__FILE__,__LINE__,semaphore)
   #define Semaphore_waitModified(semaphore,timeout) __Semaphore_waitModified(__FILE__,__LINE__,semaphore,timeout)
+#endif /* not NDEBUG */
+
+/***********************************************************************\
+* Name   : SEMAPHORE_ASSERT_OWNERSHIP
+* Purpose: check ownership of semaphore
+* Input  : semaphore - semaphore to check
+* Output : -
+* Return : -
+* Notes  : in debug mode stop if calling thread does not own semaphore
+\***********************************************************************/
+
+#ifndef NDEBUG
+  #define SEMAPHORE_ASSERT_OWNERSHIP(semaphore) \
+    do \
+    { \
+      assert((semaphore)->lockedByCount > 0); \
+      assert(pthread_equal((semaphore)->lockedBy[(semaphore)->lockedByCount-1].thread,pthread_self()) != 0); \
+    } \
+    while (0)
+#else /* NDEBUG */
+  #define SEMAPHORE_ASSERT_OWNERSHIP(sempahore) \
+    do \
+    { \
+    } \
+    while (0)
 #endif /* not NDEBUG */
 
 /***************************** Forwards ********************************/
