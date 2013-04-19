@@ -592,6 +592,27 @@ Errors __File_getTmpFileCString(const char *__fileName__,
 
     pthread_mutex_lock(&debugFileLock);
     {
+      // check if file is already in open-list
+      debugFileNode = debugOpenFileList.head;
+      while ((debugFileNode != NULL) && (debugFileNode->fileHandle != fileHandle))
+      {
+        debugFileNode = debugFileNode->next;
+      }
+      if (debugFileNode != NULL)
+      {
+        fprintf(stderr,"DEBUG WARNING: file '%s' at %s, line %lu opened again at %s, %lu\n",
+                String_cString(debugFileNode->fileHandle->name),
+                debugFileNode->fileName,
+                debugFileNode->lineNb,
+                __fileName__,
+                __lineNb__
+               );
+        #ifdef HAVE_BACKTRACE
+          debugDumpCurrentStackTrace(stderr,"",0);
+        #endif /* HAVE_BACKTRACE */
+        HALT_INTERNAL_ERROR("");
+      }
+
       // find file in closed-list; reuse or allocate new debug node
       debugFileNode = debugClosedFileList.head;
       while ((debugFileNode != NULL) && (debugFileNode->fileHandle != fileHandle))
@@ -993,6 +1014,27 @@ Errors __File_openCString(const char *__fileName__,
 
     pthread_mutex_lock(&debugFileLock);
     {
+      // check if file is already in open-list
+      debugFileNode = debugOpenFileList.head;
+      while ((debugFileNode != NULL) && (debugFileNode->fileHandle != fileHandle))
+      {
+        debugFileNode = debugFileNode->next;
+      }
+      if (debugFileNode != NULL)
+      {
+        fprintf(stderr,"DEBUG WARNING: file '%s' at %s, line %lu opened again at %s, %lu\n",
+                String_cString(debugFileNode->fileHandle->name),
+                debugFileNode->fileName,
+                debugFileNode->lineNb,
+                __fileName__,
+                __lineNb__
+               );
+        #ifdef HAVE_BACKTRACE
+          debugDumpCurrentStackTrace(stderr,"",0);
+        #endif /* HAVE_BACKTRACE */
+        HALT_INTERNAL_ERROR("");
+      }
+
       // find file in closed-list; reuse or allocate new debug node
       debugFileNode = debugClosedFileList.head;
       while ((debugFileNode != NULL) && (debugFileNode->fileHandle != fileHandle))
@@ -1129,6 +1171,27 @@ Errors __File_openDescriptor(const char *__fileName__,
 
     pthread_mutex_lock(&debugFileLock);
     {
+      // check if file is already in open-list
+      debugFileNode = debugOpenFileList.head;
+      while ((debugFileNode != NULL) && (debugFileNode->fileHandle != fileHandle))
+      {
+        debugFileNode = debugFileNode->next;
+      }
+      if (debugFileNode != NULL)
+      {
+        fprintf(stderr,"DEBUG WARNING: file '%s' at %s, line %lu opened again at %s, %lu\n",
+                String_cString(debugFileNode->fileHandle->name),
+                debugFileNode->fileName,
+                debugFileNode->lineNb,
+                __fileName__,
+                __lineNb__
+               );
+        #ifdef HAVE_BACKTRACE
+          debugDumpCurrentStackTrace(stderr,"",0);
+        #endif /* HAVE_BACKTRACE */
+        HALT_INTERNAL_ERROR("");
+      }
+
       // find file in closed-list; reuse or allocate new debug node
       debugFileNode = debugClosedFileList.head;
       while ((debugFileNode != NULL) && (debugFileNode->fileHandle != fileHandle))
@@ -1248,7 +1311,6 @@ Errors __File_close(const char *__fileName__, ulong __lineNb__, FileHandle *file
 
   // close file
   fclose(fileHandle->file);
-  fileHandle->file = NULL;
 
   // free resources
   if (fileHandle->name != NULL) String_delete(fileHandle->name);
@@ -3104,6 +3166,9 @@ void File_debugDumpInfo(FILE *handle)
   {
     LIST_ITERATE(&debugOpenFileList,debugFileNode)
     {
+      assert(debugFileNode->fileHandle != NULL);
+      assert(debugFileNode->fileHandle->name != NULL);
+
       fprintf(handle,"DEBUG: file '%s' opened at %s, line %lu\n",
               String_cString(debugFileNode->fileHandle->name),
               debugFileNode->fileName,
