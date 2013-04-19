@@ -368,7 +368,8 @@ const Password *Archive_appendDecryptPassword(const Password *password);
 *          archiveNewFileFunction      - call back for creating new
 *                                        archive file
 *          archiveNewFileUserData      - user data for call back
-*          archiveGetCryptPassword     - get password call back
+*          archiveGetCryptPassword     - get password call back (can be
+*                                        NULL)
 *          archiveGetCryptPasswordData - user data for get password call
 *                                        back
 * Output : -
@@ -395,7 +396,8 @@ Errors Archive_create(ArchiveInfo                     *archiveInfo,
 *          jobOptions                  - option settings
 *          maxBandWidthList            - list with max. band width to use
 *                                        [bits/s] or NULL
-*          archiveGetCryptPassword     - get password call back
+*          archiveGetCryptPassword     - get password call back (can be
+*                                        NULL)
 *          archiveGetCryptPasswordData - user data for get password call
 *                                        back
 * Output : -
