@@ -746,6 +746,7 @@ LOCAL Errors writeEncryptionKey(ArchiveInfo *archiveInfo)
   ChunkKey  chunkKey;
 
   assert(archiveInfo != NULL);
+  SEMAPHORE_ASSERT_OWNERSHIP(&archiveInfo->chunkIOLock);
 
   // create key chunk
   error = Chunk_init(&chunkInfoKey,
@@ -959,6 +960,7 @@ LOCAL Errors ensureArchiveSpace(ArchiveInfo *archiveInfo,
 
   assert(archiveInfo != NULL);
   assert(archiveInfo->ioType == ARCHIVE_IO_TYPE_FILE);
+  SEMAPHORE_ASSERT_OWNERSHIP(&archiveInfo->chunkIOLock);
 
   // check if split necessary
   if (checkNewPartNeeded(archiveInfo,
@@ -1010,6 +1012,7 @@ LOCAL Errors transferArchiveFileData(const ArchiveInfo *archiveInfo,
   assert(archiveInfo != NULL);
   assert(archiveInfo->chunkIO != NULL);
   assert(fileHandle != NULL);
+  SEMAPHORE_ASSERT_OWNERSHIP(&archiveInfo->chunkIOLock);
 
   // allocate transfer buffer
   buffer = (char*)malloc(BUFFER_SIZE);
@@ -1140,6 +1143,9 @@ LOCAL Errors flushFileDataBlocks(ArchiveEntryInfo   *archiveEntryInfo,
   uint   blockCount;
   ulong  maxBlockCount;
   ulong  byteLength;
+
+  assert(archiveEntryInfo != NULL);
+  assert(archiveEntryInfo->archiveInfo != NULL);
 
   // flush data
   do
@@ -1534,6 +1540,10 @@ LOCAL Errors writeImageChunks(ArchiveEntryInfo *archiveEntryInfo)
 {
   Errors error;
 
+  assert(archiveEntryInfo != NULL);
+  assert(archiveEntryInfo->archiveInfo != NULL);
+  SEMAPHORE_ASSERT_OWNERSHIP(&archiveEntryInfo->archiveInfo->chunkIOLock);
+
   // open archive file if needed
   if (!archiveEntryInfo->archiveInfo->file.openFlag)
   {
@@ -1610,6 +1620,10 @@ LOCAL Errors flushImageDataBlocks(ArchiveEntryInfo   *archiveEntryInfo,
   uint   blockCount;
   ulong  maxBlockCount;
   ulong  byteLength;
+
+  assert(archiveEntryInfo != NULL);
+  assert(archiveEntryInfo->archiveInfo != NULL);
+  SEMAPHORE_ASSERT_OWNERSHIP(&archiveEntryInfo->archiveInfo->chunkIOLock);
 
   // flush data
   do
@@ -1702,6 +1716,7 @@ LOCAL Errors writeImageDataBlock(ArchiveEntryInfo *archiveEntryInfo,
   assert(archiveEntryInfo != NULL);
   assert(archiveEntryInfo->archiveInfo != NULL);
   assert(archiveEntryInfo->archiveInfo->ioType == ARCHIVE_IO_TYPE_FILE);
+  SEMAPHORE_ASSERT_OWNERSHIP(&archiveEntryInfo->archiveInfo->chunkIOLock);
 
   // get next byte-compressed data block (only 1 block, because of splitting)
   assert(archiveEntryInfo->image.byteBufferSize >= archiveEntryInfo->image.byteCompressInfo.blockLength);
@@ -1997,6 +2012,9 @@ LOCAL Errors writeHardLinkChunks(ArchiveEntryInfo *archiveEntryInfo)
   Errors            error;
   ChunkHardLinkName *chunkHardLinkName;
 
+  assert(archiveEntryInfo != NULL);
+  assert(archiveEntryInfo->archiveInfo != NULL);
+
   // open archive file if needed
   if (!archiveEntryInfo->archiveInfo->file.openFlag)
   {
@@ -2083,6 +2101,9 @@ LOCAL Errors flushHardLinkDataBlocks(ArchiveEntryInfo   *archiveEntryInfo,
   uint   blockCount;
   ulong  maxBlockCount;
   ulong  byteLength;
+
+  assert(archiveEntryInfo != NULL);
+  assert(archiveEntryInfo->archiveInfo != NULL);
 
   // flush data
   do
@@ -7557,6 +7578,7 @@ Errors Archive_closeEntry(ArchiveEntryInfo *archiveEntryInfo)
             free(archiveEntryInfo->image.byteBuffer);
             Crypt_done(&archiveEntryInfo->image.chunkImageEntry.cryptInfo);
             Chunk_done(&archiveEntryInfo->image.chunkImage.info);
+            File_close(&archiveEntryInfo->tmpFileHandle);
           }
           break;
         case ARCHIVE_ENTRY_TYPE_DIRECTORY:
@@ -7792,6 +7814,7 @@ Errors Archive_closeEntry(ArchiveEntryInfo *archiveEntryInfo)
             Chunk_done(&archiveEntryInfo->hardLink.chunkHardLink.info);
             free(archiveEntryInfo->hardLink.deltaBuffer);
             free(archiveEntryInfo->hardLink.byteBuffer);
+            File_close(&archiveEntryInfo->tmpFileHandle);
           }
           break;
         case ARCHIVE_ENTRY_TYPE_SPECIAL:
