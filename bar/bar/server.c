@@ -1844,12 +1844,9 @@ LOCAL void jobThreadCode(void)
                                                         &compressExcludePatternList,
                                                         &jobOptions,
                                                         archiveType,
-                                                        getCryptPassword,
-                                                        jobNode,
-                                                        (CreateStatusInfoFunction)updateCreateJobStatus,
-                                                        jobNode,
-                                                        (StorageRequestVolumeFunction)storageRequestVolume,
-                                                        jobNode,
+                                                        CALLBACK(getCryptPassword,jobNode),
+                                                        CALLBACK((CreateStatusInfoFunction)updateCreateJobStatus,jobNode),
+                                                        CALLBACK((StorageRequestVolumeFunction)storageRequestVolume,jobNode),
                                                         &pauseFlags.create,
                                                         &pauseFlags.storage,
                                                         &jobNode->requestedAbortFlag
@@ -1870,7 +1867,7 @@ LOCAL void jobThreadCode(void)
           case JOB_TYPE_RESTORE:
             logMessage(LOG_TYPE_ALWAYS,"start restore archive '%s'\n",String_cString(printableStorageName));
 
-            // try to pause background index thread, do short delay to make sure network connection is possible
+            // try to pause background index thread, make a short delay to make sure network connection is possible
             restoreFlag = TRUE;
             if (indexFlag)
             {
