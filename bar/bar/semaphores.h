@@ -66,7 +66,7 @@ typedef struct Semaphore
   #elif defined(PLATFORM_WINDOWS)
     HANDLE              lock;
   #endif /* PLATFORM_... */
-//  pthread_mutexattr_t lockAttributes;
+  pthread_mutexattr_t lockAttributes;
 
   SemaphoreLockTypes  lockType;              // current lock type
   uint                readLockCount;         // number of read locks

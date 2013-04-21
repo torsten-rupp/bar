@@ -659,10 +659,10 @@ LOCAL void unlock(const char *fileName, ulong lineNb, Semaphore *semaphore)
 
         // send modified signal
         __SEMAPHORE_SIGNAL(DEBUG_READ_WRITE,"MODIFIED",&semaphore->modified);
-
-        // unlock
-        __SEMAPHORE_UNLOCK(DEBUG_READ_WRITE,"RW",semaphore,semaphore->readLockCount);
       }
+
+      // unlock
+      __SEMAPHORE_UNLOCK(DEBUG_READ_WRITE,"RW",semaphore,semaphore->readLockCount);
       break;
     #ifndef NDEBUG
       default:
@@ -870,18 +870,18 @@ bool __Semaphore_init(const char *name, Semaphore *semaphore)
   semaphore->readRequestCount      = 0;
   semaphore->readWriteRequestCount = 0;
 
-#if 0
   pthread_mutexattr_init(&semaphore->lockAttributes);
   pthread_mutexattr_settype(&semaphore->lockAttributes,PTHREAD_MUTEX_RECURSIVE);
-#endif /* 0 */
-  if (pthread_mutex_init(&semaphore->lock,NULL) != 0)
+  if (pthread_mutex_init(&semaphore->lock,&semaphore->lockAttributes) != 0)
   {
+    pthread_mutexattr_destroy(&semaphore->lockAttributes);
     pthread_mutex_destroy(&semaphore->requestLock);
     return FALSE;
   }
   if (pthread_cond_init(&semaphore->readLockZero,NULL) != 0)
   {
     pthread_mutex_destroy(&semaphore->lock);
+    pthread_mutexattr_destroy(&semaphore->lockAttributes);
     pthread_mutex_destroy(&semaphore->requestLock);
     return FALSE;
   }
@@ -889,7 +889,7 @@ bool __Semaphore_init(const char *name, Semaphore *semaphore)
   {
     pthread_cond_destroy(&semaphore->readLockZero);
     pthread_mutex_destroy(&semaphore->lock);
-//    pthread_mutexattr_destroy(&semaphore->lockAttributes);
+    pthread_mutexattr_destroy(&semaphore->lockAttributes);
     pthread_mutex_destroy(&semaphore->requestLock);
     return FALSE;
   }
@@ -943,7 +943,7 @@ void Semaphore_done(Semaphore *semaphore)
   pthread_cond_destroy(&semaphore->modified);
   pthread_cond_destroy(&semaphore->readLockZero);
   pthread_mutex_destroy(&semaphore->lock);
-//  pthread_mutexattr_destroy(&semaphore->lockAttributes);
+  pthread_mutexattr_destroy(&semaphore->lockAttributes);
   pthread_mutex_destroy(&semaphore->requestLock);
 }
 
