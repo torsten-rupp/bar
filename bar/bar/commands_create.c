@@ -3720,7 +3720,7 @@ LOCAL Errors storeDirectoryEntry(CreateInfo   *createInfo,
       printInfo(1,"ok (dry-run)\n");
     }
 
-    // update done entires
+    // update done entries
     SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,SEMAPHORE_WAIT_FOREVER)
     {
       createInfo->statusInfo.doneEntries++;
