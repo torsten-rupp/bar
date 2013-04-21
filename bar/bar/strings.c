@@ -1632,6 +1632,10 @@ LOCAL ulong getUnitFactor(const StringUnit stringUnits[],
   uint  z;
   ulong factor;
 
+  assert(stringUnits != NULL);
+  assert(string != NULL);
+  assert(unitString != NULL);
+
   z = 0;
   while ((z < stringUnitCount) && (strcmp(unitString,stringUnits[z].name) != 0))
   {
