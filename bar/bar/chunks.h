@@ -45,12 +45,16 @@
 #define CHUNK_DATATYPE_DATA    10
 #define CHUNK_DATATYPE_CRC32   11
 
+// chunk i/o modes
 typedef enum
 {
   CHUNK_MODE_UNKNOWN,
   CHUNK_MODE_WRITE,
   CHUNK_MODE_READ,
 } ChunkModes;
+
+// indicate to use data from parent chunk
+#define CHUNK_USE_PARENT NULL
 
 /***************************** Datatypes *******************************/
 
