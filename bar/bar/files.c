@@ -139,7 +139,7 @@
   #define FILE_CHECK_VALID(fileHandle) \
     do \
     { \
-      fileCheckValid(fileHandle); \
+      fileCheckValid(__FILE__,__LINE__,fileHandle); \
     } \
     while (0)
 #else /* NDEBUG */
@@ -168,7 +168,10 @@ LOCAL void debugFileInit(void)
 #endif /* NDEBUG */
 
 #ifndef NDEBUG
-LOCAL void fileCheckValid(FileHandle *fileHandle)
+LOCAL void fileCheckValid(const char *fileName,
+                          ulong      lineNb,
+                          FileHandle *fileHandle
+                         )
 {
   DebugFileNode *debugFileNode;
 
@@ -189,11 +192,13 @@ LOCAL void fileCheckValid(FileHandle *fileHandle)
       #ifdef HAVE_BACKTRACE
         debugDumpCurrentStackTrace(stderr,"",0);
       #endif /* HAVE_BACKTRACE */
-      HALT_INTERNAL_ERROR("File 0x%08x was closed at %s, %lu",
-                          fileHandle,
-                          debugFileNode->closeFileName,
-                          debugFileNode->closeLineNb
-                         );
+      HALT_INTERNAL_ERROR_AT(fileName,
+                             lineNb,
+                             "File 0x%08x was closed at %s, %lu",
+                             fileHandle,
+                             debugFileNode->closeFileName,
+                             debugFileNode->closeLineNb
+                            );
     }
 
     // check if file is open
