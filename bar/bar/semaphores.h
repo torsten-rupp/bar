@@ -131,6 +131,7 @@ typedef bool SemaphoreLock;
   #define Semaphore_init(semaphore) __Semaphore_init(_SEMAPHORE_NAME(semaphore),semaphore)
   #define Semaphore_new(semaphore) __Semaphore_new(_SEMAPHORE_NAME(semaphore),semaphore)
   #define Semaphore_lock(semaphore,semaphoreLockType,timeout) __Semaphore_lock(__FILE__,__LINE__,semaphore,semaphoreLockType,timeout)
+  #define Semaphore_forceLock(semaphore,semaphoreLockType) __Semaphore_forceLock(__FILE__,__LINE__,semaphore,semaphoreLockType)
   #define Semaphore_unlock(semaphore) __Semaphore_unlock(__FILE__,__LINE__,semaphore)
   #define Semaphore_waitModified(semaphore,timeout) __Semaphore_waitModified(__FILE__,__LINE__,semaphore,timeout)
 #endif /* not NDEBUG */
@@ -243,6 +244,57 @@ bool __Semaphore_lock(const char         *fileName,
                       SemaphoreLockTypes semaphoreLockType,
                       long               timeout
                      );
+#endif /* NDEBUG */
+
+/***********************************************************************\
+* Name   : Semaphore_forceLock
+* Purpose: foce locking semaphore
+* Input  : semaphore         - semaphore
+*          semaphoreLockType - lock type: READ, READ/WRITE
+* Output : -
+* Return : -
+* Notes  : if semaphore cannot be locked halt program with internal
+*          error
+\***********************************************************************/
+
+#ifdef NDEBUG
+INLINE void Semaphore_forceLock(Semaphore          *semaphore,
+                                SemaphoreLockTypes semaphoreLockType
+                               );
+#if defined(NDEBUG) || defined(__SEMAPHORES_IMPLEMENATION__)
+INLINE void Semaphore_forceLock(Semaphore          *semaphore,
+                                SemaphoreLockTypes semaphoreLockType
+                               )
+{
+  assert(semaphore != NULL);
+
+  if (!Semaphore_lock(semaphore,semaphoreLockType,SEMAPHORE_WAIT_FOREVER))
+  {
+    HALT_INTERNAL_ERROR("Cannot lock semaphore at %s, %lu",__FILE__,__LINE__);
+  }
+}
+#endif /* NDEBUG || __SEMAPHORES_IMPLEMENATION__ */
+#else /* not NDEBUG */
+INLINE void __Semaphore_forceLock(const char         *fileName,
+                                  ulong              lineNb,
+                                  Semaphore          *semaphore,
+                                  SemaphoreLockTypes semaphoreLockType
+                                 );
+#if defined(NDEBUG) || defined(__SEMAPHORES_IMPLEMENATION__)
+INLINE void __Semaphore_forceLock(const char         *fileName,
+                                  ulong              lineNb,
+                                  Semaphore          *semaphore,
+                                  SemaphoreLockTypes semaphoreLockType
+                                 )
+{
+  assert(semaphore != NULL);
+
+  if (!__Semaphore_lock(fileName,lineNb,semaphore,semaphoreLockType,SEMAPHORE_WAIT_FOREVER))
+  {
+    HALT_INTERNAL_ERROR("Cannot lock semaphore at %s, %lu",fileName,lineNb);
+  }
+}
+#endif /* NDEBUG || __SEMAPHORES_IMPLEMENATION__ */
 #endif /* NDEBUG */
 
 /***********************************************************************\
