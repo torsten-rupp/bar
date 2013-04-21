@@ -1318,6 +1318,18 @@ Errors __File_close(const char *__fileName__, ulong __lineNb__, FileHandle *file
     }
   #endif /* not NDEBUG */
 
+  // free caches if requested
+  if ((fileHandle->mode & FILE_OPEN_NO_CACHE) != 0)
+  {
+    File_dropCaches(fileHandle,0LL,0LL,FALSE);
+  }
+
+  // close file
+  fclose(fileHandle->file);
+
+  // free resources
+  if (fileHandle->name != NULL) String_delete(fileHandle->name);
+
   #ifndef NDEBUG
     pthread_once(&debugFileInitFlag,debugFileInit);
 
@@ -1363,18 +1375,6 @@ Errors __File_close(const char *__fileName__, ulong __lineNb__, FileHandle *file
     }
     pthread_mutex_unlock(&debugFileLock);
   #endif /* not NDEBUG */
-
-  // free caches if requested
-  if ((fileHandle->mode & FILE_OPEN_NO_CACHE) != 0)
-  {
-    File_dropCaches(fileHandle,0LL,0LL,FALSE);
-  }
-
-  // close file
-  fclose(fileHandle->file);
-
-  // free resources
-  if (fileHandle->name != NULL) String_delete(fileHandle->name);
 
   return ERROR_NONE;
 }
