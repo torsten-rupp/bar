@@ -2134,7 +2134,7 @@ LOCAL void printUsage(const char *programName, uint level)
   printf("\n");
   printf("Archive name:  <file name>\n");
   printf("               file://<file name>\n");
-  printf("               ftp|scp|sftp://[<login name>[:<password>]@]<host name>[:<port>]/<file name>\n");
+  printf("               ftp|scp|sftp|webdav://[<login name>[:<password>]@]<host name>[:<port>]/<file name>\n");
   printf("               cd|dvd|bd|device://[<device name>:]<file name>\n");
   printf("\n");
   CmdOption_printHelp(stdout,
