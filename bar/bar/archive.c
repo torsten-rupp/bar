@@ -534,32 +534,38 @@ LOCAL bool checkNewPartNeeded(ArchiveInfo *archiveInfo,
                               ulong       minBytes
                              )
 {
-  bool   newPartFlag;
-  uint64 fileSize;
+  SemaphoreLock semaphoreLock;
+  bool          newPartFlag;
+  uint64        fileSize;
 
   assert(archiveInfo != NULL);
+  assert(archiveInfo->chunkIO != NULL);
+  assert(archiveInfo->chunkIO->getSize != NULL);
   assert(archiveInfo->jobOptions != NULL);
   assert(archiveInfo->ioType == ARCHIVE_IO_TYPE_FILE);
 
   newPartFlag = FALSE;
-  if (archiveInfo->jobOptions->archivePartSize > 0)
+  if (archiveInfo->jobOptions->archivePartSize > 0LL)
   {
-    if (archiveInfo->file.openFlag)
+    SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveInfo->chunkIOLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,SEMAPHORE_WAIT_FOREVER)
     {
-      // get file size
-      fileSize = archiveInfo->chunkIO->getSize(archiveInfo->chunkIOUserData);
+      if (archiveInfo->file.openFlag)
+      {
+        // get file size
+        fileSize = archiveInfo->chunkIO->getSize(archiveInfo->chunkIOUserData);
 
-      if      (   !headerWrittenFlag
-               && (fileSize+headerLength >= archiveInfo->jobOptions->archivePartSize)
-              )
-      {
-        // file header cannot be written without fragmentation -> new part
-        newPartFlag = TRUE;
-      }
-      else if ((fileSize+minBytes) >= archiveInfo->jobOptions->archivePartSize)
-      {
-        // less than min. number of bytes left in part -> create new part
-        newPartFlag = TRUE;
+        if      (   !headerWrittenFlag
+                 && (fileSize+headerLength >= archiveInfo->jobOptions->archivePartSize)
+                )
+        {
+          // file header cannot be written without fragmentation -> new part
+          newPartFlag = TRUE;
+        }
+        else if ((fileSize+minBytes) >= archiveInfo->jobOptions->archivePartSize)
+        {
+          // less than min. number of bytes left in part -> create new part
+          newPartFlag = TRUE;
+        }
       }
     }
   }
@@ -804,75 +810,86 @@ LOCAL Errors writeEncryptionKey(ArchiveInfo *archiveInfo)
 
 LOCAL Errors createArchiveFile(ArchiveInfo *archiveInfo)
 {
-  Errors error;
+  SemaphoreLock semaphoreLock;
+  Errors        error;
 
   assert(archiveInfo != NULL);
   assert(archiveInfo->jobOptions != NULL);
   assert(archiveInfo->ioType == ARCHIVE_IO_TYPE_FILE);
-  assert(!archiveInfo->file.openFlag);
 
-  // get output filename
-  error = File_getTmpFileName(archiveInfo->file.fileName,NULL,tmpDirectory);
-  if (error != ERROR_NONE)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveInfo->chunkIOLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,SEMAPHORE_WAIT_FOREVER)
   {
-    return error;
-  }
-
-  // create file
-  error = File_open(&archiveInfo->file.fileHandle,
-                    archiveInfo->file.fileName,
-                    FILE_OPEN_CREATE
-                   );
-  if (error != ERROR_NONE)
-  {
-    File_delete(archiveInfo->file.fileName,FALSE);
-    return error;
-  }
-
-  // write BAR file info
-  error = writeFileInfo(archiveInfo);
-  if (error != ERROR_NONE)
-  {
-    File_close(&archiveInfo->file.fileHandle);
-    File_delete(archiveInfo->file.fileName,FALSE);
-    return error;
-  }
-
-  // write encrypted key if asymmetric encryption enabled
-  if (archiveInfo->cryptType == CRYPT_TYPE_ASYMMETRIC)
-  {
-    error = writeEncryptionKey(archiveInfo);
-    if (error != ERROR_NONE)
+    if (!archiveInfo->file.openFlag)
     {
-      File_close(&archiveInfo->file.fileHandle);
-      File_delete(archiveInfo->file.fileName,FALSE);
-      return error;
+      // get output filename
+      error = File_getTmpFileName(archiveInfo->file.fileName,NULL,tmpDirectory);
+      if (error != ERROR_NONE)
+      {
+        Semaphore_unlock(&archiveInfo->chunkIOLock);
+        return error;
+      }
+
+      // create file
+      error = File_open(&archiveInfo->file.fileHandle,
+                        archiveInfo->file.fileName,
+                        FILE_OPEN_CREATE
+                       );
+      if (error != ERROR_NONE)
+      {
+        File_delete(archiveInfo->file.fileName,FALSE);
+        Semaphore_unlock(&archiveInfo->chunkIOLock);
+        return error;
+      }
+
+      // write BAR file info
+      error = writeFileInfo(archiveInfo);
+      if (error != ERROR_NONE)
+      {
+        File_close(&archiveInfo->file.fileHandle);
+        File_delete(archiveInfo->file.fileName,FALSE);
+        Semaphore_unlock(&archiveInfo->chunkIOLock);
+        return error;
+      }
+
+      // write encrypted key if asymmetric encryption enabled
+      if (archiveInfo->cryptType == CRYPT_TYPE_ASYMMETRIC)
+      {
+        error = writeEncryptionKey(archiveInfo);
+        if (error != ERROR_NONE)
+        {
+          File_close(&archiveInfo->file.fileHandle);
+          File_delete(archiveInfo->file.fileName,FALSE);
+          Semaphore_unlock(&archiveInfo->chunkIOLock);
+          return error;
+        }
+      }
+
+      // init index
+      if (   (archiveInfo->databaseHandle != NULL)
+          && !archiveInfo->jobOptions->noIndexDatabaseFlag
+          && !archiveInfo->jobOptions->dryRunFlag
+          && !archiveInfo->jobOptions->noStorageFlag
+         )
+      {
+        error = Index_create(archiveInfo->databaseHandle,
+                             NULL,
+                             INDEX_STATE_CREATE,
+                             INDEX_MODE_MANUAL,
+                             &archiveInfo->storageId
+                            );
+        if (error != ERROR_NONE)
+        {
+          File_close(&archiveInfo->file.fileHandle);
+          File_delete(archiveInfo->file.fileName,FALSE);
+          Semaphore_unlock(&archiveInfo->chunkIOLock);
+          return error;
+        }
+      }
+
+      // mark archive file "open"
+      archiveInfo->file.openFlag = TRUE;
     }
   }
-
-  // init index
-  if (   (archiveInfo->databaseHandle != NULL)
-      && !archiveInfo->jobOptions->noIndexDatabaseFlag
-      && !archiveInfo->jobOptions->dryRunFlag
-      && !archiveInfo->jobOptions->noStorageFlag
-     )
-  {
-    error = Index_create(archiveInfo->databaseHandle,
-                         NULL,
-                         INDEX_STATE_CREATE,
-                         INDEX_MODE_MANUAL,
-                         &archiveInfo->storageId
-                        );
-    if (error != ERROR_NONE)
-    {
-      File_close(&archiveInfo->file.fileHandle);
-      File_delete(archiveInfo->file.fileName,FALSE);
-      return error;
-    }
-  }
-
-  // mark archive file "open"
-  archiveInfo->file.openFlag = TRUE;
 
   return ERROR_NONE;
 }
@@ -891,51 +908,54 @@ LOCAL Errors closeArchiveFile(ArchiveInfo *archiveInfo,
                               bool        lastPartFlag
                              )
 {
-  Errors error;
+  SemaphoreLock semaphoreLock;
+  Errors        error;
 
   assert(archiveInfo != NULL);
   assert(archiveInfo->jobOptions != NULL);
-  assert(archiveInfo->chunkIO != NULL);
-  assert(archiveInfo->chunkIO->getSize != NULL);
-  assert(archiveInfo->jobOptions != NULL);
   assert(archiveInfo->ioType == ARCHIVE_IO_TYPE_FILE);
-  assert(archiveInfo->file.openFlag);
 
-  if (archiveInfo->file.openFlag)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveInfo->chunkIOLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,SEMAPHORE_WAIT_FOREVER)
   {
-    // close file
-    File_close(&archiveInfo->file.fileHandle);
-    archiveInfo->file.openFlag = FALSE;
-  }
-
-  // call back new archive created
-  if (archiveInfo->archiveNewFileFunction != NULL)
-  {
-    error = archiveInfo->archiveNewFileFunction(archiveInfo->archiveNewFileUserData,
-                                                (   (archiveInfo->databaseHandle != NULL)
-                                                 && !archiveInfo->jobOptions->noIndexDatabaseFlag
-                                                 && !archiveInfo->jobOptions->dryRunFlag
-                                                 && !archiveInfo->jobOptions->noStorageFlag
-                                                )
-                                                  ? archiveInfo->databaseHandle
-                                                  : NULL,
-                                                archiveInfo->storageId,
-                                                archiveInfo->file.fileName,
-                                                (archiveInfo->jobOptions->archivePartSize > 0)
-                                                  ? (int)archiveInfo->partNumber
-                                                  : ARCHIVE_PART_NUMBER_NONE,
-                                                lastPartFlag
-                                               );
-    if (error != ERROR_NONE)
+    if (archiveInfo->file.openFlag)
     {
-      return error;
-    }
-  }
+      // close file
+      (void)File_close(&archiveInfo->file.fileHandle);
 
-  // increment part number
-  if (archiveInfo->jobOptions->archivePartSize > 0)
-  {
-    archiveInfo->partNumber++;
+      // call back new archive created
+      if (archiveInfo->archiveCreatedFunction != NULL)
+      {
+        error = archiveInfo->archiveCreatedFunction(archiveInfo->archiveNewFileUserData,
+                                                    (   (archiveInfo->databaseHandle != NULL)
+                                                     && !archiveInfo->jobOptions->noIndexDatabaseFlag
+                                                     && !archiveInfo->jobOptions->dryRunFlag
+                                                     && !archiveInfo->jobOptions->noStorageFlag
+                                                    )
+                                                      ? archiveInfo->databaseHandle
+                                                      : NULL,
+                                                    archiveInfo->storageId,
+                                                    archiveInfo->file.fileName,
+                                                    (archiveInfo->jobOptions->archivePartSize > 0LL)
+                                                      ? (int)archiveInfo->partNumber
+                                                      : ARCHIVE_PART_NUMBER_NONE,
+                                                    lastPartFlag
+                                                   );
+        if (error != ERROR_NONE)
+        {
+          Semaphore_unlock(&archiveInfo->chunkIOLock);
+          return error;
+        }
+      }
+
+      // increment part number
+      if (archiveInfo->jobOptions->archivePartSize > 0LL)
+      {
+        archiveInfo->partNumber++;
+      }
+
+      // mark archive file "closed"
+      archiveInfo->file.openFlag = FALSE;
+    }
   }
 
   return ERROR_NONE;
@@ -971,18 +991,15 @@ LOCAL Errors ensureArchiveSpace(ArchiveInfo *archiveInfo,
      )
   {
     // split needed -> close archive file
+#warning transfer data
     closeArchiveFile(archiveInfo,FALSE);
   }
 
   // create new file if needed
-  if (!archiveInfo->file.openFlag)
+  error = createArchiveFile(archiveInfo);
+  if (error != ERROR_NONE)
   {
-    // create file
-    error = createArchiveFile(archiveInfo);
-    if (error != ERROR_NONE)
-    {
-      return error;
-    }
+    return error;
   }
 
   return ERROR_NONE;
@@ -1005,12 +1022,13 @@ LOCAL Errors transferArchiveFileData(const ArchiveInfo *archiveInfo,
   #define BUFFER_SIZE (1024*1024)
 
   void    *buffer;
+  Errors  error;
   uint64  length;
   ulong   n;
-  Errors  error;
 
   assert(archiveInfo != NULL);
   assert(archiveInfo->chunkIO != NULL);
+  assert(archiveInfo->chunkIO->write != NULL);
   assert(fileHandle != NULL);
   SEMAPHORE_ASSERT_OWNERSHIP(&archiveInfo->chunkIOLock);
 
@@ -1021,10 +1039,16 @@ LOCAL Errors transferArchiveFileData(const ArchiveInfo *archiveInfo,
     HALT_INSUFFICIENT_MEMORY();
   }
 
-  // get number of bytes to transfer
-  length = File_getSize(fileHandle);
+  // seek to begin of file
+  error = File_seek(fileHandle,0LL);
+  if (error != ERROR_NONE)
+  {
+    free(buffer);
+    return error;
+  }
 
   // transfer data
+  length = File_getSize(fileHandle);
   while (length > 0LL)
   {
     n = MIN(length,BUFFER_SIZE);
@@ -1067,15 +1091,20 @@ LOCAL Errors writeFileChunks(ArchiveEntryInfo *archiveEntryInfo)
 {
   Errors error;
 
+  assert(archiveEntryInfo != NULL);
+  assert(archiveEntryInfo->archiveInfo != NULL);
+
   // open archive file if needed
-  if (!archiveEntryInfo->archiveInfo->file.openFlag)
-  {
+//  if (!archiveEntryInfo->archiveInfo->file.openFlag)
+//  {
+#if 0
     // create archive file
     error = createArchiveFile(archiveEntryInfo->archiveInfo);
     if (error != ERROR_NONE)
     {
       return error;
     }
+#endif
 
     // initialize variables
     archiveEntryInfo->file.headerWrittenFlag = FALSE;
@@ -1085,7 +1114,7 @@ LOCAL Errors writeFileChunks(ArchiveEntryInfo *archiveEntryInfo)
 
     // reset data crypt
     Crypt_reset(&archiveEntryInfo->file.cryptInfo,0);
-  }
+//  }
 
   // create file chunk
   error = Chunk_create(&archiveEntryInfo->file.chunkFile.info);
@@ -1229,11 +1258,13 @@ LOCAL Errors writeFileDataBlock(ArchiveEntryInfo *archiveEntryInfo,
                                 bool             allowNewPartFlag
                                )
 {
-  ulong  byteLength;
-  bool   newPartFlag;
-  Errors error;
-  bool   eofDelta;
-  ulong  deltaLength;
+  ulong         byteLength;
+  ulong         minBytes;
+  bool          newPartFlag;
+  Errors        error;
+  bool          eofDelta;
+  ulong         deltaLength;
+  SemaphoreLock semaphoreLock;
 
   assert(archiveEntryInfo != NULL);
   assert(archiveEntryInfo->archiveInfo != NULL);
@@ -1254,14 +1285,19 @@ close(h);
 }
 #endif /* DEBUG_XDELTA_ENCODED_DATA */
 
+  // calculate min. bytes to write to archive
+  minBytes =   (ulong)File_getSize(&archiveEntryInfo->tmpFileHandle)
+             + (((byteLength > 0L) || (blockMode == BLOCK_MODE_WRITE))
+                  ? archiveEntryInfo->archiveInfo->blockLength
+                  : 0L
+               );
+
   // check if split is allowed and necessary
   newPartFlag =    allowNewPartFlag
                 && checkNewPartNeeded(archiveEntryInfo->archiveInfo,
                                       archiveEntryInfo->file.headerLength,
                                       archiveEntryInfo->file.headerWrittenFlag,
-                                      ((byteLength > 0L) || (blockMode == BLOCK_MODE_WRITE))
-                                        ? archiveEntryInfo->archiveInfo->blockLength
-                                        : 0L
+                                      minBytes
                                      );
 
   // split
@@ -1388,7 +1424,11 @@ close(h);
     archiveEntryInfo->file.headerWrittenFlag = FALSE;
 
     // close archive file
-    closeArchiveFile(archiveEntryInfo->archiveInfo,FALSE);
+    SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveEntryInfo->archiveInfo->chunkIOLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,SEMAPHORE_WAIT_FOREVER)
+    {
+#warning transfer data
+      closeArchiveFile(archiveEntryInfo->archiveInfo,FALSE);
+    }
 
     // set new delta base-offset
     if (archiveEntryInfo->image.sourceHandleInitFlag)
@@ -1542,8 +1582,8 @@ LOCAL Errors writeImageChunks(ArchiveEntryInfo *archiveEntryInfo)
 
   assert(archiveEntryInfo != NULL);
   assert(archiveEntryInfo->archiveInfo != NULL);
-  SEMAPHORE_ASSERT_OWNERSHIP(&archiveEntryInfo->archiveInfo->chunkIOLock);
 
+#if 0
   // open archive file if needed
   if (!archiveEntryInfo->archiveInfo->file.openFlag)
   {
@@ -1563,6 +1603,9 @@ LOCAL Errors writeImageChunks(ArchiveEntryInfo *archiveEntryInfo)
     // reset data crypt
     Crypt_reset(&archiveEntryInfo->image.cryptInfo,0);
   }
+#else
+    Crypt_reset(&archiveEntryInfo->image.cryptInfo,0);
+#endif
 
   // create file chunk
   error = Chunk_create(&archiveEntryInfo->image.chunkImage.info);
@@ -1707,11 +1750,13 @@ LOCAL Errors writeImageDataBlock(ArchiveEntryInfo *archiveEntryInfo,
                                  bool             allowNewPartFlag
                                 )
 {
-  ulong  byteLength;
-  bool   newPartFlag;
-  Errors error;
-  bool   eofDelta;
-  ulong  deltaLength;
+  ulong         byteLength;
+  ulong         minBytes;
+  bool          newPartFlag;
+  Errors        error;
+  bool          eofDelta;
+  ulong         deltaLength;
+  SemaphoreLock semaphoreLock;
 
   assert(archiveEntryInfo != NULL);
   assert(archiveEntryInfo->archiveInfo != NULL);
@@ -1726,12 +1771,19 @@ LOCAL Errors writeImageDataBlock(ArchiveEntryInfo *archiveEntryInfo,
                              &byteLength
                             );
 
+  // calculate min. bytes to write to archive
+  minBytes =   (ulong)File_getSize(&archiveEntryInfo->tmpFileHandle)
+             + (((byteLength > 0L) || (blockMode == BLOCK_MODE_WRITE))
+                  ? archiveEntryInfo->archiveInfo->blockLength
+                  : 0L
+               );
+
   // check if split is allowed and necessary
   newPartFlag =    allowNewPartFlag
                 && checkNewPartNeeded(archiveEntryInfo->archiveInfo,
                                       archiveEntryInfo->image.headerLength,
                                       archiveEntryInfo->image.headerWrittenFlag,
-                                      ((byteLength > 0L) || (blockMode == BLOCK_MODE_WRITE))?archiveEntryInfo->archiveInfo->blockLength:0
+                                      minBytes
                                      );
 
   // split
@@ -1859,7 +1911,11 @@ LOCAL Errors writeImageDataBlock(ArchiveEntryInfo *archiveEntryInfo,
     archiveEntryInfo->image.headerWrittenFlag = FALSE;
 
     // close archive file
-    closeArchiveFile(archiveEntryInfo->archiveInfo,FALSE);
+    SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveEntryInfo->archiveInfo->chunkIOLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,SEMAPHORE_WAIT_FOREVER)
+    {
+#warning transfer data
+      closeArchiveFile(archiveEntryInfo->archiveInfo,FALSE);
+    }
 
     // set new delta base-offset
     if (archiveEntryInfo->image.sourceHandleInitFlag)
@@ -2015,6 +2071,7 @@ LOCAL Errors writeHardLinkChunks(ArchiveEntryInfo *archiveEntryInfo)
   assert(archiveEntryInfo != NULL);
   assert(archiveEntryInfo->archiveInfo != NULL);
 
+#if 1
   // open archive file if needed
   if (!archiveEntryInfo->archiveInfo->file.openFlag)
   {
@@ -2034,6 +2091,9 @@ LOCAL Errors writeHardLinkChunks(ArchiveEntryInfo *archiveEntryInfo)
     // reset data crypt
     Crypt_reset(&archiveEntryInfo->hardLink.cryptInfo,0);
   }
+#else
+    Crypt_reset(&archiveEntryInfo->hardLink.cryptInfo,0);
+#endif
 
   // create hard link chunk
   error = Chunk_create(&archiveEntryInfo->hardLink.chunkHardLink.info);
@@ -2188,11 +2248,13 @@ LOCAL Errors writeHardLinkDataBlock(ArchiveEntryInfo *archiveEntryInfo,
                                    )
 {
   ulong             byteLength;
+  ulong             minBytes;
   bool              newPartFlag;
   Errors            error;
   bool              eofDelta;
   ulong             deltaLength;
   ChunkHardLinkName *chunkHardLinkName;
+  SemaphoreLock     semaphoreLock;
 
   assert(archiveEntryInfo != NULL);
   assert(archiveEntryInfo->archiveInfo != NULL);
@@ -2206,12 +2268,19 @@ LOCAL Errors writeHardLinkDataBlock(ArchiveEntryInfo *archiveEntryInfo,
                              &byteLength
                             );
 
+  // calculate min. bytes to write to archive
+  minBytes =   (ulong)File_getSize(&archiveEntryInfo->tmpFileHandle)
+             + (((byteLength > 0L) || (blockMode == BLOCK_MODE_WRITE))
+                  ? archiveEntryInfo->archiveInfo->blockLength
+                  : 0L
+               );
+
   // check if split is allowed and necessary
   newPartFlag =    allowNewPartFlag
                 && checkNewPartNeeded(archiveEntryInfo->archiveInfo,
                                       archiveEntryInfo->hardLink.headerLength,
                                       archiveEntryInfo->hardLink.headerWrittenFlag,
-                                      ((byteLength > 0L) || (blockMode == BLOCK_MODE_WRITE))?archiveEntryInfo->archiveInfo->blockLength:0
+                                      minBytes
                                      );
 
   // split
@@ -2346,7 +2415,11 @@ LOCAL Errors writeHardLinkDataBlock(ArchiveEntryInfo *archiveEntryInfo,
     archiveEntryInfo->hardLink.headerWrittenFlag = FALSE;
 
     // close archive file
-    closeArchiveFile(archiveEntryInfo->archiveInfo,FALSE);
+    SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveEntryInfo->archiveInfo->chunkIOLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,SEMAPHORE_WAIT_FOREVER)
+    {
+#warning transfer data
+      closeArchiveFile(archiveEntryInfo->archiveInfo,FALSE);
+    }
 
     // set new delta base-offset
     if (archiveEntryInfo->image.sourceHandleInitFlag)
@@ -2564,7 +2637,7 @@ const Password *Archive_appendDecryptPassword(const Password *password)
 
 Errors Archive_create(ArchiveInfo                     *archiveInfo,
                       const JobOptions                *jobOptions,
-                      ArchiveNewFileFunction          archiveNewFileFunction,
+                      ArchiveCreatedFunction          archiveCreatedFunction,
                       void                            *archiveNewFileUserData,
                       ArchiveGetCryptPasswordFunction archiveGetCryptPasswordFunction,
                       void                            *archiveGetCryptPasswordUserData,
@@ -2576,7 +2649,7 @@ Errors Archive_create(ArchiveInfo                     *archiveInfo,
   ulong  maxCryptKeyDataLength;
 
   assert(archiveInfo != NULL);
-  assert(archiveNewFileFunction != NULL);
+  assert(archiveCreatedFunction != NULL);
   assert(jobOptions != NULL);
 
   // detect block length of used crypt algorithm
@@ -2593,7 +2666,7 @@ Errors Archive_create(ArchiveInfo                     *archiveInfo,
 
   // init archive info
   archiveInfo->jobOptions                      = jobOptions;
-  archiveInfo->archiveNewFileFunction          = archiveNewFileFunction;
+  archiveInfo->archiveCreatedFunction          = archiveCreatedFunction;
   archiveInfo->archiveNewFileUserData          = archiveNewFileUserData;
   archiveInfo->archiveGetCryptPasswordFunction = archiveGetCryptPasswordFunction;
   archiveInfo->archiveGetCryptPasswordUserData = archiveGetCryptPasswordUserData;
@@ -2724,7 +2797,7 @@ Errors Archive_open(ArchiveInfo                     *archiveInfo,
 
   // initstorageSpecifier
   archiveInfo->jobOptions                      = jobOptions;
-  archiveInfo->archiveNewFileFunction          = NULL;
+  archiveInfo->archiveCreatedFunction          = NULL;
   archiveInfo->archiveNewFileUserData          = NULL;
   archiveInfo->archiveGetCryptPasswordFunction = archiveGetCryptPasswordFunction;
   archiveInfo->archiveGetCryptPasswordUserData = archiveGetCryptPasswordUserData;
@@ -2836,10 +2909,7 @@ Errors Archive_close(ArchiveInfo *archiveInfo)
   switch (archiveInfo->ioType)
   {
     case ARCHIVE_IO_TYPE_FILE:
-      if (archiveInfo->file.openFlag)
-      {
-        closeArchiveFile(archiveInfo,TRUE);
-      }
+      closeArchiveFile(archiveInfo,TRUE);
       break;
     case ARCHIVE_IO_TYPE_STORAGE_FILE:
       Storage_close(&archiveInfo->storage.storageFileHandle);
@@ -2877,23 +2947,27 @@ Errors Archive_close(ArchiveInfo *archiveInfo)
 
 Errors Archive_storageInterrupt(ArchiveInfo *archiveInfo)
 {
-  Errors error;
+  SemaphoreLock semaphoreLock;
+  Errors        error;
 
   assert(archiveInfo != NULL);
 
   switch (archiveInfo->ioType)
   {
     case ARCHIVE_IO_TYPE_FILE:
-      archiveInfo->interrupt.openFlag = archiveInfo->file.openFlag;
-      if (archiveInfo->file.openFlag)
+      SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveInfo->chunkIOLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,SEMAPHORE_WAIT_FOREVER)
       {
-        error = File_tell(&archiveInfo->file.fileHandle,&archiveInfo->interrupt.offset);
-        if (error != ERROR_NONE)
+        archiveInfo->interrupt.openFlag = archiveInfo->file.openFlag;
+        if (archiveInfo->file.openFlag)
         {
-          return error;
+          error = File_tell(&archiveInfo->file.fileHandle,&archiveInfo->interrupt.offset);
+          if (error != ERROR_NONE)
+          {
+            return error;
+          }
+          File_close(&archiveInfo->file.fileHandle);
+          archiveInfo->file.openFlag = FALSE;
         }
-        File_close(&archiveInfo->file.fileHandle);
-        archiveInfo->file.openFlag = FALSE;
       }
       break;
     case ARCHIVE_IO_TYPE_STORAGE_FILE:
@@ -2911,27 +2985,31 @@ Errors Archive_storageInterrupt(ArchiveInfo *archiveInfo)
 
 Errors Archive_storageContinue(ArchiveInfo *archiveInfo)
 {
-  Errors error;
+  SemaphoreLock semaphoreLock;
+  Errors        error;
 
   assert(archiveInfo != NULL);
 
   switch (archiveInfo->ioType)
   {
     case ARCHIVE_IO_TYPE_FILE:
-      if (archiveInfo->interrupt.openFlag)
+      SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveInfo->chunkIOLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,SEMAPHORE_WAIT_FOREVER)
       {
-        error = File_open(&archiveInfo->file.fileHandle,archiveInfo->file.fileName,FILE_OPEN_WRITE);
-        if (error != ERROR_NONE)
+        if (archiveInfo->interrupt.openFlag)
         {
-          return error;
+          error = File_open(&archiveInfo->file.fileHandle,archiveInfo->file.fileName,FILE_OPEN_WRITE);
+          if (error != ERROR_NONE)
+          {
+            return error;
+          }
+          error = File_seek(&archiveInfo->file.fileHandle,archiveInfo->interrupt.offset);
+          if (error != ERROR_NONE)
+          {
+            return error;
+          }
         }
-        error = File_seek(&archiveInfo->file.fileHandle,archiveInfo->interrupt.offset);
-        if (error != ERROR_NONE)
-        {
-          return error;
-        }
+        archiveInfo->file.openFlag = archiveInfo->interrupt.openFlag;
       }
-      archiveInfo->file.openFlag = archiveInfo->interrupt.openFlag;
       break;
     case ARCHIVE_IO_TYPE_STORAGE_FILE:
       error = Storage_open(&archiveInfo->storage.storageFileHandle,
@@ -2965,6 +3043,8 @@ bool Archive_eof(ArchiveInfo *archiveInfo,
   const Password *password;
 
   assert(archiveInfo != NULL);
+  assert(archiveInfo->chunkIO != NULL);
+  assert(archiveInfo->chunkIO->seek != NULL);
   assert(archiveInfo->jobOptions != NULL);
 
   // check for pending error
@@ -3263,8 +3343,8 @@ Errors Archive_newFileEntry(ArchiveEntryInfo *archiveEntryInfo,
   }
   error = Chunk_init(&archiveEntryInfo->file.chunkFileEntry.info,
                      &archiveEntryInfo->file.chunkFile.info,
-                     NULL,
-                     NULL,
+                     CHUNK_USE_PARENT,
+                     CHUNK_USE_PARENT,
                      CHUNK_ID_FILE_ENTRY,
                      CHUNK_DEFINITION_FILE_ENTRY,
                      archiveEntryInfo->blockLength,
@@ -3310,8 +3390,8 @@ Errors Archive_newFileEntry(ArchiveEntryInfo *archiveEntryInfo,
   }
   error = Chunk_init(&archiveEntryInfo->file.chunkFileDelta.info,
                      &archiveEntryInfo->file.chunkFile.info,
-                     NULL,
-                     NULL,
+                     CHUNK_USE_PARENT,
+                     CHUNK_USE_PARENT,
                      CHUNK_ID_FILE_DELTA,
                      CHUNK_DEFINITION_FILE_DELTA,
                      archiveEntryInfo->blockLength,
@@ -3361,8 +3441,8 @@ Errors Archive_newFileEntry(ArchiveEntryInfo *archiveEntryInfo,
   }
   error = Chunk_init(&archiveEntryInfo->file.chunkFileData.info,
                      &archiveEntryInfo->file.chunkFile.info,
-                     NULL,
-                     NULL,
+                     CHUNK_USE_PARENT,
+                     CHUNK_USE_PARENT,
                      CHUNK_ID_FILE_DATA,
                      CHUNK_DEFINITION_FILE_DATA,
                      archiveEntryInfo->blockLength,
@@ -3460,7 +3540,7 @@ Errors Archive_newFileEntry(ArchiveEntryInfo *archiveEntryInfo,
     return error;
   }
 
-  // calculate header length
+  // calculate header size
   archiveEntryInfo->file.headerLength = Chunk_getSize(CHUNK_DEFINITION_FILE,      0,                            &archiveEntryInfo->file.chunkFile     )+
                                         Chunk_getSize(CHUNK_DEFINITION_FILE_ENTRY,archiveEntryInfo->blockLength,&archiveEntryInfo->file.chunkFileEntry)+
                                         ((Compress_isCompressed(archiveEntryInfo->file.deltaCompressAlgorithm))
@@ -3615,8 +3695,8 @@ Errors Archive_newImageEntry(ArchiveEntryInfo *archiveEntryInfo,
   }
   error = Chunk_init(&archiveEntryInfo->image.chunkImageEntry.info,
                      &archiveEntryInfo->image.chunkImage.info,
-                     NULL,
-                     NULL,
+                     CHUNK_USE_PARENT,
+                     CHUNK_USE_PARENT,
                      CHUNK_ID_IMAGE_ENTRY,
                      CHUNK_DEFINITION_IMAGE_ENTRY,
                      archiveEntryInfo->blockLength,
@@ -3653,8 +3733,8 @@ Errors Archive_newImageEntry(ArchiveEntryInfo *archiveEntryInfo,
   }
   error = Chunk_init(&archiveEntryInfo->image.chunkImageDelta.info,
                      &archiveEntryInfo->image.chunkImage.info,
-                     NULL,
-                     NULL,
+                     CHUNK_USE_PARENT,
+                     CHUNK_USE_PARENT,
                      CHUNK_ID_IMAGE_DELTA,
                      CHUNK_DEFINITION_IMAGE_DELTA,
                      archiveEntryInfo->blockLength,
@@ -3700,8 +3780,8 @@ Errors Archive_newImageEntry(ArchiveEntryInfo *archiveEntryInfo,
   }
   error = Chunk_init(&archiveEntryInfo->image.chunkImageData.info,
                      &archiveEntryInfo->image.chunkImage.info,
-                     NULL,
-                     NULL,
+                     CHUNK_USE_PARENT,
+                     CHUNK_USE_PARENT,
                      CHUNK_ID_IMAGE_DATA,
                      CHUNK_DEFINITION_IMAGE_DATA,
                      archiveEntryInfo->blockLength,
@@ -3791,7 +3871,7 @@ Errors Archive_newImageEntry(ArchiveEntryInfo *archiveEntryInfo,
     return error;
   }
 
-  // calculate header length
+  // calculate header size
   archiveEntryInfo->image.headerLength = Chunk_getSize(CHUNK_DEFINITION_IMAGE,      0,                           &archiveEntryInfo->image.chunkImage     )+
                                         Chunk_getSize(CHUNK_DEFINITION_IMAGE_ENTRY,archiveEntryInfo->blockLength,&archiveEntryInfo->image.chunkImageEntry)+
                                         ((Compress_isCompressed(archiveEntryInfo->image.deltaCompressAlgorithm))
@@ -3877,8 +3957,8 @@ Errors Archive_newDirectoryEntry(ArchiveEntryInfo *archiveEntryInfo,
   }
   error = Chunk_init(&archiveEntryInfo->directory.chunkDirectoryEntry.info,
                      &archiveEntryInfo->directory.chunkDirectory.info,
-                     NULL,
-                     NULL,
+                     CHUNK_USE_PARENT,
+                     CHUNK_USE_PARENT,
                      CHUNK_ID_DIRECTORY_ENTRY,
                      CHUNK_DEFINITION_DIRECTORY_ENTRY,
                      archiveEntryInfo->blockLength,
@@ -3899,46 +3979,47 @@ Errors Archive_newDirectoryEntry(ArchiveEntryInfo *archiveEntryInfo,
   archiveEntryInfo->directory.chunkDirectoryEntry.permission      = fileInfo->permission;
   String_set(archiveEntryInfo->directory.chunkDirectoryEntry.name,directoryName);
 
-  // calculate header length
+  // calculate header size
   length = Chunk_getSize(CHUNK_DEFINITION_DIRECTORY,      0,                           &archiveEntryInfo->directory.chunkDirectory     )+
            Chunk_getSize(CHUNK_DEFINITION_DIRECTORY_ENTRY,archiveEntryInfo->blockLength,&archiveEntryInfo->directory.chunkDirectoryEntry);
 
+  // lock archive
+  Semaphore_forceLock(&archiveEntryInfo->archiveInfo->chunkIOLock,SEMAPHORE_LOCK_TYPE_READ_WRITE);
+
   if (!archiveEntryInfo->archiveInfo->jobOptions->dryRunFlag)
   {
-    SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveEntryInfo->archiveInfo->chunkIOLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,SEMAPHORE_WAIT_FOREVER)
-    {
-      // ensure space in archive
-      error = ensureArchiveSpace(archiveEntryInfo->archiveInfo,
-                                 length
-                                );
-      if (error != ERROR_NONE)
-      {
-        Semaphore_unlock(&archiveEntryInfo->archiveInfo->chunkIOLock);
-        Chunk_done(&archiveEntryInfo->directory.chunkDirectoryEntry.info);
-        Crypt_done(&archiveEntryInfo->directory.chunkDirectoryEntry.cryptInfo);
-        Chunk_done(&archiveEntryInfo->directory.chunkDirectory.info);
-        return error;
-      }
 
-      // write directory chunk
-      error = Chunk_create(&archiveEntryInfo->directory.chunkDirectory.info);
-      if (error != ERROR_NONE)
-      {
-        Semaphore_unlock(&archiveEntryInfo->archiveInfo->chunkIOLock);
-        Chunk_done(&archiveEntryInfo->directory.chunkDirectoryEntry.info);
-        Crypt_done(&archiveEntryInfo->directory.chunkDirectoryEntry.cryptInfo);
-        Chunk_done(&archiveEntryInfo->directory.chunkDirectory.info);
-        return error;
-      }
-      error = Chunk_create(&archiveEntryInfo->directory.chunkDirectoryEntry.info);
-      if (error != ERROR_NONE)
-      {
-        Semaphore_unlock(&archiveEntryInfo->archiveInfo->chunkIOLock);
-        Chunk_done(&archiveEntryInfo->directory.chunkDirectoryEntry.info);
-        Crypt_done(&archiveEntryInfo->directory.chunkDirectoryEntry.cryptInfo);
-        Chunk_done(&archiveEntryInfo->directory.chunkDirectory.info);
-        return error;
-      }
+    // ensure space in archive
+    error = ensureArchiveSpace(archiveEntryInfo->archiveInfo,
+                               length
+                              );
+    if (error != ERROR_NONE)
+    {
+      Semaphore_unlock(&archiveEntryInfo->archiveInfo->chunkIOLock);
+      Chunk_done(&archiveEntryInfo->directory.chunkDirectoryEntry.info);
+      Crypt_done(&archiveEntryInfo->directory.chunkDirectoryEntry.cryptInfo);
+      Chunk_done(&archiveEntryInfo->directory.chunkDirectory.info);
+      return error;
+    }
+
+    // write directory chunk
+    error = Chunk_create(&archiveEntryInfo->directory.chunkDirectory.info);
+    if (error != ERROR_NONE)
+    {
+      Semaphore_unlock(&archiveEntryInfo->archiveInfo->chunkIOLock);
+      Chunk_done(&archiveEntryInfo->directory.chunkDirectoryEntry.info);
+      Crypt_done(&archiveEntryInfo->directory.chunkDirectoryEntry.cryptInfo);
+      Chunk_done(&archiveEntryInfo->directory.chunkDirectory.info);
+      return error;
+    }
+    error = Chunk_create(&archiveEntryInfo->directory.chunkDirectoryEntry.info);
+    if (error != ERROR_NONE)
+    {
+      Semaphore_unlock(&archiveEntryInfo->archiveInfo->chunkIOLock);
+      Chunk_done(&archiveEntryInfo->directory.chunkDirectoryEntry.info);
+      Crypt_done(&archiveEntryInfo->directory.chunkDirectoryEntry.cryptInfo);
+      Chunk_done(&archiveEntryInfo->directory.chunkDirectory.info);
+      return error;
     }
   }
 
@@ -4016,8 +4097,8 @@ Errors Archive_newLinkEntry(ArchiveEntryInfo *archiveEntryInfo,
   }
   error = Chunk_init(&archiveEntryInfo->link.chunkLinkEntry.info,
                      &archiveEntryInfo->link.chunkLink.info,
-                     NULL,
-                     NULL,
+                     CHUNK_USE_PARENT,
+                     CHUNK_USE_PARENT,
                      CHUNK_ID_LINK_ENTRY,
                      CHUNK_DEFINITION_LINK_ENTRY,
                      archiveEntryInfo->blockLength,
@@ -4045,37 +4126,46 @@ Errors Archive_newLinkEntry(ArchiveEntryInfo *archiveEntryInfo,
 
   if (!archiveEntryInfo->archiveInfo->jobOptions->dryRunFlag)
   {
-    SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveEntryInfo->archiveInfo->chunkIOLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,SEMAPHORE_WAIT_FOREVER)
+    // lock archive
+    if (!Semaphore_lock(&archiveEntryInfo->archiveInfo->chunkIOLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,SEMAPHORE_WAIT_FOREVER))
     {
-      // ensure space in archive
-      error = ensureArchiveSpace(archiveEntryInfo->archiveInfo,
-                                 length
-                                );
-      if (error != ERROR_NONE)
-      {
-        Chunk_done(&archiveEntryInfo->link.chunkLinkEntry.info);
-        Crypt_done(&archiveEntryInfo->link.chunkLinkEntry.cryptInfo);
-        Chunk_done(&archiveEntryInfo->link.chunkLink.info);
-        return error;
-      }
+      Chunk_done(&archiveEntryInfo->link.chunkLinkEntry.info);
+      Crypt_done(&archiveEntryInfo->link.chunkLinkEntry.cryptInfo);
+      Chunk_done(&archiveEntryInfo->link.chunkLink.info);
+      return ERROR_IPC;
+    }
 
-      // write link chunks
-      error = Chunk_create(&archiveEntryInfo->link.chunkLink.info);
-      if (error != ERROR_NONE)
-      {
-        Chunk_done(&archiveEntryInfo->link.chunkLinkEntry.info);
-        Crypt_done(&archiveEntryInfo->link.chunkLinkEntry.cryptInfo);
-        Chunk_done(&archiveEntryInfo->link.chunkLink.info);
-        return error;
-      }
-      error = Chunk_create(&archiveEntryInfo->link.chunkLinkEntry.info);
-      if (error != ERROR_NONE)
-      {
-        Chunk_done(&archiveEntryInfo->link.chunkLinkEntry.info);
-        Crypt_done(&archiveEntryInfo->link.chunkLinkEntry.cryptInfo);
-        Chunk_done(&archiveEntryInfo->link.chunkLink.info);
-        return error;
-      }
+    // ensure space in archive
+    error = ensureArchiveSpace(archiveEntryInfo->archiveInfo,
+                               length
+                              );
+    if (error != ERROR_NONE)
+    {
+      Semaphore_unlock(&archiveEntryInfo->archiveInfo->chunkIOLock);
+      Chunk_done(&archiveEntryInfo->link.chunkLinkEntry.info);
+      Crypt_done(&archiveEntryInfo->link.chunkLinkEntry.cryptInfo);
+      Chunk_done(&archiveEntryInfo->link.chunkLink.info);
+      return error;
+    }
+
+    // write link chunks
+    error = Chunk_create(&archiveEntryInfo->link.chunkLink.info);
+    if (error != ERROR_NONE)
+    {
+      Semaphore_unlock(&archiveEntryInfo->archiveInfo->chunkIOLock);
+      Chunk_done(&archiveEntryInfo->link.chunkLinkEntry.info);
+      Crypt_done(&archiveEntryInfo->link.chunkLinkEntry.cryptInfo);
+      Chunk_done(&archiveEntryInfo->link.chunkLink.info);
+      return error;
+    }
+    error = Chunk_create(&archiveEntryInfo->link.chunkLinkEntry.info);
+    if (error != ERROR_NONE)
+    {
+      Semaphore_unlock(&archiveEntryInfo->archiveInfo->chunkIOLock);
+      Chunk_done(&archiveEntryInfo->link.chunkLinkEntry.info);
+      Crypt_done(&archiveEntryInfo->link.chunkLinkEntry.cryptInfo);
+      Chunk_done(&archiveEntryInfo->link.chunkLink.info);
+      return error;
     }
   }
 
@@ -4242,8 +4332,8 @@ Errors Archive_newHardLinkEntry(ArchiveEntryInfo *archiveEntryInfo,
   }
   error = Chunk_init(&archiveEntryInfo->hardLink.chunkHardLinkEntry.info,
                      &archiveEntryInfo->hardLink.chunkHardLink.info,
-                     NULL,
-                     NULL,
+                     CHUNK_USE_PARENT,
+                     CHUNK_USE_PARENT,
                      CHUNK_ID_HARDLINK_ENTRY,
                      CHUNK_DEFINITION_HARDLINK_ENTRY,
                      archiveEntryInfo->blockLength,
@@ -4302,8 +4392,8 @@ Errors Archive_newHardLinkEntry(ArchiveEntryInfo *archiveEntryInfo,
     }
     error = Chunk_init(&chunkHardLinkName->info,
                        &archiveEntryInfo->hardLink.chunkHardLink.info,
-                       NULL,
-                       NULL,
+                       CHUNK_USE_PARENT,
+                       CHUNK_USE_PARENT,
                        CHUNK_ID_HARDLINK_NAME,
                        CHUNK_DEFINITION_HARDLINK_NAME,
                        archiveEntryInfo->blockLength,
@@ -4356,8 +4446,8 @@ Errors Archive_newHardLinkEntry(ArchiveEntryInfo *archiveEntryInfo,
   }
   error = Chunk_init(&archiveEntryInfo->hardLink.chunkHardLinkDelta.info,
                      &archiveEntryInfo->hardLink.chunkHardLink.info,
-                     NULL,
-                     NULL,
+                     CHUNK_USE_PARENT,
+                     CHUNK_USE_PARENT,
                      CHUNK_ID_HARDLINK_DELTA,
                      CHUNK_DEFINITION_HARDLINK_DELTA,
                      archiveEntryInfo->blockLength,
@@ -4415,8 +4505,8 @@ Errors Archive_newHardLinkEntry(ArchiveEntryInfo *archiveEntryInfo,
   }
   error = Chunk_init(&archiveEntryInfo->hardLink.chunkHardLinkData.info,
                      &archiveEntryInfo->hardLink.chunkHardLink.info,
-                     NULL,
-                     NULL,
+                     CHUNK_USE_PARENT,
+                     CHUNK_USE_PARENT,
                      CHUNK_ID_HARDLINK_DATA,
                      CHUNK_DEFINITION_HARDLINK_DATA,
                      archiveEntryInfo->blockLength,
@@ -4533,7 +4623,7 @@ Errors Archive_newHardLinkEntry(ArchiveEntryInfo *archiveEntryInfo,
     return error;
   }
 
-  // calculate header length
+  // calculate header size
   archiveEntryInfo->hardLink.headerLength = Chunk_getSize(CHUNK_DEFINITION_HARDLINK,      0,                           &archiveEntryInfo->hardLink.chunkHardLink     )+
                                             Chunk_getSize(CHUNK_DEFINITION_HARDLINK_ENTRY,archiveEntryInfo->blockLength,&archiveEntryInfo->hardLink.chunkHardLinkEntry)+
                                             ((Compress_isCompressed(archiveEntryInfo->hardLink.deltaCompressAlgorithm))
@@ -4623,8 +4713,8 @@ Errors Archive_newSpecialEntry(ArchiveEntryInfo *archiveEntryInfo,
   }
   error = Chunk_init(&archiveEntryInfo->special.chunkSpecialEntry.info,
                      &archiveEntryInfo->special.chunkSpecial.info,
-                     NULL,
-                     NULL,
+                     CHUNK_USE_PARENT,
+                     CHUNK_USE_PARENT,
                      CHUNK_ID_SPECIAL_ENTRY,
                      CHUNK_DEFINITION_SPECIAL_ENTRY,
                      archiveEntryInfo->blockLength,
@@ -4654,37 +4744,46 @@ Errors Archive_newSpecialEntry(ArchiveEntryInfo *archiveEntryInfo,
 
   if (!archiveEntryInfo->archiveInfo->jobOptions->dryRunFlag)
   {
-    SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveEntryInfo->archiveInfo->chunkIOLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,SEMAPHORE_WAIT_FOREVER)
+    // lock archive
+    if (!Semaphore_lock(&archiveEntryInfo->archiveInfo->chunkIOLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,SEMAPHORE_WAIT_FOREVER))
     {
-      // ensure space in archive
-      error = ensureArchiveSpace(archiveEntryInfo->archiveInfo,
-                                 length
-                                );
-      if (error != ERROR_NONE)
-      {
-        Chunk_done(&archiveEntryInfo->special.chunkSpecialEntry.info);
-        Crypt_done(&archiveEntryInfo->special.chunkSpecialEntry.cryptInfo);
-        Chunk_done(&archiveEntryInfo->special.chunkSpecial.info);
-        return error;
-      }
+      Chunk_done(&archiveEntryInfo->special.chunkSpecialEntry.info);
+      Crypt_done(&archiveEntryInfo->special.chunkSpecialEntry.cryptInfo);
+      Chunk_done(&archiveEntryInfo->special.chunkSpecial.info);
+      return ERROR_IPC;
+    }
 
-      // write special chunks
-      error = Chunk_create(&archiveEntryInfo->special.chunkSpecial.info);
-      if (error != ERROR_NONE)
-      {
-        Chunk_done(&archiveEntryInfo->special.chunkSpecialEntry.info);
-        Crypt_done(&archiveEntryInfo->special.chunkSpecialEntry.cryptInfo);
-        Chunk_done(&archiveEntryInfo->special.chunkSpecial.info);
-        return error;
-      }
-      error = Chunk_create(&archiveEntryInfo->special.chunkSpecialEntry.info);
-      if (error != ERROR_NONE)
-      {
-        Chunk_done(&archiveEntryInfo->special.chunkSpecialEntry.info);
-        Crypt_done(&archiveEntryInfo->special.chunkSpecialEntry.cryptInfo);
-        Chunk_done(&archiveEntryInfo->special.chunkSpecial.info);
-        return error;
-      }
+    // ensure space in archive
+    error = ensureArchiveSpace(archiveEntryInfo->archiveInfo,
+                               length
+                              );
+    if (error != ERROR_NONE)
+    {
+      Semaphore_unlock(&archiveEntryInfo->archiveInfo->chunkIOLock);
+      Chunk_done(&archiveEntryInfo->special.chunkSpecialEntry.info);
+      Crypt_done(&archiveEntryInfo->special.chunkSpecialEntry.cryptInfo);
+      Chunk_done(&archiveEntryInfo->special.chunkSpecial.info);
+      return error;
+    }
+
+    // write special chunks
+    error = Chunk_create(&archiveEntryInfo->special.chunkSpecial.info);
+    if (error != ERROR_NONE)
+    {
+      Semaphore_unlock(&archiveEntryInfo->archiveInfo->chunkIOLock);
+      Chunk_done(&archiveEntryInfo->special.chunkSpecialEntry.info);
+      Crypt_done(&archiveEntryInfo->special.chunkSpecialEntry.cryptInfo);
+      Chunk_done(&archiveEntryInfo->special.chunkSpecial.info);
+      return error;
+    }
+    error = Chunk_create(&archiveEntryInfo->special.chunkSpecialEntry.info);
+    if (error != ERROR_NONE)
+    {
+      Semaphore_unlock(&archiveEntryInfo->archiveInfo->chunkIOLock);
+      Chunk_done(&archiveEntryInfo->special.chunkSpecialEntry.info);
+      Crypt_done(&archiveEntryInfo->special.chunkSpecialEntry.cryptInfo);
+      Chunk_done(&archiveEntryInfo->special.chunkSpecial.info);
+      return error;
     }
   }
 
@@ -5147,8 +5246,8 @@ Errors Archive_readFileEntry(ArchiveEntryInfo   *archiveEntryInfo,
     {
       error = Chunk_init(&archiveEntryInfo->file.chunkFileEntry.info,
                          &archiveEntryInfo->file.chunkFile.info,
-                         NULL,
-                         NULL,
+                         CHUNK_USE_PARENT,
+                         CHUNK_USE_PARENT,
                          CHUNK_ID_FILE_ENTRY,
                          CHUNK_DEFINITION_FILE_ENTRY,
                          archiveEntryInfo->blockLength,
@@ -5167,8 +5266,8 @@ Errors Archive_readFileEntry(ArchiveEntryInfo   *archiveEntryInfo,
     {
       error = Chunk_init(&archiveEntryInfo->file.chunkFileDelta.info,
                          &archiveEntryInfo->file.chunkFile.info,
-                         NULL,
-                         NULL,
+                         CHUNK_USE_PARENT,
+                         CHUNK_USE_PARENT,
                          CHUNK_ID_FILE_DELTA,
                          CHUNK_DEFINITION_FILE_DELTA,
                          archiveEntryInfo->blockLength,
@@ -5188,8 +5287,8 @@ Errors Archive_readFileEntry(ArchiveEntryInfo   *archiveEntryInfo,
     {
       error = Chunk_init(&archiveEntryInfo->file.chunkFileData.info,
                          &archiveEntryInfo->file.chunkFile.info,
-                         NULL,
-                         NULL,
+                         CHUNK_USE_PARENT,
+                         CHUNK_USE_PARENT,
                          CHUNK_ID_FILE_DATA,
                          CHUNK_DEFINITION_FILE_DATA,
                          archiveEntryInfo->blockLength,
@@ -5647,8 +5746,8 @@ Errors Archive_readImageEntry(ArchiveEntryInfo   *archiveEntryInfo,
     {
       error = Chunk_init(&archiveEntryInfo->image.chunkImageEntry.info,
                          &archiveEntryInfo->image.chunkImage.info,
-                         NULL,
-                         NULL,
+                         CHUNK_USE_PARENT,
+                         CHUNK_USE_PARENT,
                          CHUNK_ID_IMAGE_ENTRY,
                          CHUNK_DEFINITION_IMAGE_ENTRY,
                          archiveEntryInfo->blockLength,
@@ -5667,8 +5766,8 @@ Errors Archive_readImageEntry(ArchiveEntryInfo   *archiveEntryInfo,
     {
       error = Chunk_init(&archiveEntryInfo->image.chunkImageDelta.info,
                          &archiveEntryInfo->image.chunkImage.info,
-                         NULL,
-                         NULL,
+                         CHUNK_USE_PARENT,
+                         CHUNK_USE_PARENT,
                          CHUNK_ID_IMAGE_DELTA,
                          CHUNK_DEFINITION_IMAGE_DELTA,
                          archiveEntryInfo->blockLength,
@@ -5688,8 +5787,8 @@ Errors Archive_readImageEntry(ArchiveEntryInfo   *archiveEntryInfo,
     {
       error = Chunk_init(&archiveEntryInfo->image.chunkImageData.info,
                          &archiveEntryInfo->image.chunkImage.info,
-                         NULL,
-                         NULL,
+                         CHUNK_USE_PARENT,
+                         CHUNK_USE_PARENT,
                          CHUNK_ID_IMAGE_DATA,
                          CHUNK_DEFINITION_IMAGE_DATA,
                          archiveEntryInfo->blockLength,
@@ -6046,8 +6145,8 @@ Errors Archive_readDirectoryEntry(ArchiveEntryInfo *archiveEntryInfo,
     {
       error = Chunk_init(&archiveEntryInfo->directory.chunkDirectoryEntry.info,
                          &archiveEntryInfo->directory.chunkDirectory.info,
-                         NULL,
-                         NULL,
+                         CHUNK_USE_PARENT,
+                         CHUNK_USE_PARENT,
                          CHUNK_ID_DIRECTORY_ENTRY,
                          CHUNK_DEFINITION_DIRECTORY_ENTRY,
                          archiveEntryInfo->blockLength,
@@ -6324,8 +6423,8 @@ Errors Archive_readLinkEntry(ArchiveEntryInfo *archiveEntryInfo,
     {
       error = Chunk_init(&archiveEntryInfo->link.chunkLinkEntry.info,
                          &archiveEntryInfo->link.chunkLink.info,
-                         NULL,
-                         NULL,
+                         CHUNK_USE_PARENT,
+                         CHUNK_USE_PARENT,
                          CHUNK_ID_LINK_ENTRY,
                          CHUNK_DEFINITION_LINK_ENTRY,
                          archiveEntryInfo->blockLength,
@@ -6691,8 +6790,8 @@ Errors Archive_readHardLinkEntry(ArchiveEntryInfo   *archiveEntryInfo,
     {
       error = Chunk_init(&archiveEntryInfo->hardLink.chunkHardLinkEntry.info,
                          &archiveEntryInfo->hardLink.chunkHardLink.info,
-                         NULL,
-                         NULL,
+                         CHUNK_USE_PARENT,
+                         CHUNK_USE_PARENT,
                          CHUNK_ID_HARDLINK_ENTRY,
                          CHUNK_DEFINITION_HARDLINK_ENTRY,
                          archiveEntryInfo->blockLength,
@@ -6711,8 +6810,8 @@ Errors Archive_readHardLinkEntry(ArchiveEntryInfo   *archiveEntryInfo,
     {
       error = Chunk_init(&archiveEntryInfo->hardLink.chunkHardLinkDelta.info,
                          &archiveEntryInfo->hardLink.chunkHardLink.info,
-                         NULL,
-                         NULL,
+                         CHUNK_USE_PARENT,
+                         CHUNK_USE_PARENT,
                          CHUNK_ID_HARDLINK_DELTA,
                          CHUNK_DEFINITION_HARDLINK_DELTA,
                          archiveEntryInfo->blockLength,
@@ -6732,8 +6831,8 @@ Errors Archive_readHardLinkEntry(ArchiveEntryInfo   *archiveEntryInfo,
     {
       error = Chunk_init(&archiveEntryInfo->hardLink.chunkHardLinkData.info,
                          &archiveEntryInfo->hardLink.chunkHardLink.info,
-                         NULL,
-                         NULL,
+                         CHUNK_USE_PARENT,
+                         CHUNK_USE_PARENT,
                          CHUNK_ID_HARDLINK_DATA,
                          CHUNK_DEFINITION_HARDLINK_DATA,
                          archiveEntryInfo->blockLength,
@@ -6814,8 +6913,8 @@ Errors Archive_readHardLinkEntry(ArchiveEntryInfo   *archiveEntryInfo,
             }
             error = Chunk_init(&chunkHardLinkName->info,
                                &archiveEntryInfo->hardLink.chunkHardLink.info,
-                               NULL,
-                               NULL,
+                               CHUNK_USE_PARENT,
+                               CHUNK_USE_PARENT,
                                CHUNK_ID_HARDLINK_NAME,
                                CHUNK_DEFINITION_HARDLINK_NAME,
                                archiveEntryInfo->blockLength,
@@ -7169,8 +7268,8 @@ Errors Archive_readSpecialEntry(ArchiveEntryInfo *archiveEntryInfo,
     {
       error = Chunk_init(&archiveEntryInfo->special.chunkSpecialEntry.info,
                          &archiveEntryInfo->special.chunkSpecial.info,
-                         NULL,
-                         NULL,
+                         CHUNK_USE_PARENT,
+                         CHUNK_USE_PARENT,
                          CHUNK_ID_SPECIAL_ENTRY,
                          CHUNK_DEFINITION_SPECIAL_ENTRY,
                          archiveEntryInfo->blockLength,
@@ -7393,13 +7492,20 @@ Errors Archive_closeEntry(ArchiveEntryInfo *archiveEntryInfo)
               // append to archive
               SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveEntryInfo->archiveInfo->chunkIOLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,SEMAPHORE_WAIT_FOREVER)
               {
-                tmpError = File_seek(&archiveEntryInfo->tmpFileHandle,0LL);
-                if (tmpError != ERROR_NONE)
+                // open archive file if needed
+                if (!archiveEntryInfo->archiveInfo->file.openFlag)
                 {
-                  if (error == ERROR_NONE) error = tmpError;
-                  Semaphore_unlock(&archiveEntryInfo->archiveInfo->chunkIOLock);
-                  break;
+                  // create archive file
+                  tmpError = createArchiveFile(archiveEntryInfo->archiveInfo);
+                  if (tmpError != ERROR_NONE)
+                  {
+                    if (error == ERROR_NONE) error = tmpError;
+                    Semaphore_unlock(&archiveEntryInfo->archiveInfo->chunkIOLock);
+                    break;
+                  }
                 }
+
+                // transfer data
                 tmpError = transferArchiveFileData(archiveEntryInfo->archiveInfo,
                                                    &archiveEntryInfo->tmpFileHandle
                                                   );
@@ -7409,8 +7515,6 @@ Errors Archive_closeEntry(ArchiveEntryInfo *archiveEntryInfo)
                   Semaphore_unlock(&archiveEntryInfo->archiveInfo->chunkIOLock);
                   break;
                 }
-
-                File_truncate(&archiveEntryInfo->tmpFileHandle,0LL);
               }
 
               if (   (archiveEntryInfo->archiveInfo->databaseHandle != NULL)
@@ -7593,7 +7697,6 @@ Errors Archive_closeEntry(ArchiveEntryInfo *archiveEntryInfo)
 
               if (   (archiveEntryInfo->archiveInfo->databaseHandle != NULL)
                   && !archiveEntryInfo->archiveInfo->jobOptions->noIndexDatabaseFlag
-                  && !archiveEntryInfo->archiveInfo->jobOptions->dryRunFlag
                   && !archiveEntryInfo->archiveInfo->jobOptions->noStorageFlag
                  )
               {
@@ -7614,6 +7717,9 @@ Errors Archive_closeEntry(ArchiveEntryInfo *archiveEntryInfo)
               }
             }
 
+            // unlock archive
+            Semaphore_unlock(&archiveEntryInfo->archiveInfo->chunkIOLock);
+
             // free resources
             Chunk_done(&archiveEntryInfo->directory.chunkDirectoryEntry.info);
             Crypt_done(&archiveEntryInfo->directory.chunkDirectoryEntry.cryptInfo);
@@ -7630,9 +7736,11 @@ Errors Archive_closeEntry(ArchiveEntryInfo *archiveEntryInfo)
               tmpError = Chunk_close(&archiveEntryInfo->link.chunkLink.info);
               if ((error == ERROR_NONE) && (tmpError != ERROR_NONE)) error = tmpError;
 
+              // unlock archive
+              Semaphore_unlock(&archiveEntryInfo->archiveInfo->chunkIOLock);
+
               if (   (archiveEntryInfo->archiveInfo->databaseHandle != NULL)
                   && !archiveEntryInfo->archiveInfo->jobOptions->noIndexDatabaseFlag
-                  && !archiveEntryInfo->archiveInfo->jobOptions->dryRunFlag
                   && !archiveEntryInfo->archiveInfo->jobOptions->noStorageFlag
                  )
               {
@@ -7742,13 +7850,26 @@ Errors Archive_closeEntry(ArchiveEntryInfo *archiveEntryInfo)
               // append to archive
               SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveEntryInfo->archiveInfo->chunkIOLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,SEMAPHORE_WAIT_FOREVER)
               {
-                tmpError = File_seek(&archiveEntryInfo->tmpFileHandle,0LL);
-                if (tmpError != ERROR_NONE)
+                // open archive file if needed
+                if (!archiveEntryInfo->archiveInfo->file.openFlag)
                 {
-                  if (error == ERROR_NONE) error = tmpError;
-                  Semaphore_unlock(&archiveEntryInfo->archiveInfo->chunkIOLock);
-                  break;
+                  // create archive file
+                  tmpError = createArchiveFile(archiveEntryInfo->archiveInfo);
+                  if (tmpError != ERROR_NONE)
+                  {
+                    if (error == ERROR_NONE) error = tmpError;
+                    Semaphore_unlock(&archiveEntryInfo->archiveInfo->chunkIOLock);
+                    break;
+                  }
+
+                  // initialize variables
+                  archiveEntryInfo->hardLink.headerWrittenFlag = FALSE;
+
+                  archiveEntryInfo->hardLink.chunkHardLinkData.fragmentOffset = archiveEntryInfo->hardLink.chunkHardLinkData.fragmentOffset+archiveEntryInfo->hardLink.chunkHardLinkData.fragmentSize;
+                  archiveEntryInfo->hardLink.chunkHardLinkData.fragmentSize   = 0LL;
                 }
+
+                // transfer data
                 tmpError = transferArchiveFileData(archiveEntryInfo->archiveInfo,
                                                    &archiveEntryInfo->tmpFileHandle
                                                   );
@@ -7827,9 +7948,11 @@ Errors Archive_closeEntry(ArchiveEntryInfo *archiveEntryInfo)
               tmpError = Chunk_close(&archiveEntryInfo->special.chunkSpecial.info);
               if ((error == ERROR_NONE) && (tmpError != ERROR_NONE)) error = tmpError;
 
+              // unlock archive
+              Semaphore_unlock(&archiveEntryInfo->archiveInfo->chunkIOLock);
+
               if (   (archiveEntryInfo->archiveInfo->databaseHandle != NULL)
                   && !archiveEntryInfo->archiveInfo->jobOptions->noIndexDatabaseFlag
-                  && !archiveEntryInfo->archiveInfo->jobOptions->dryRunFlag
                   && !archiveEntryInfo->archiveInfo->jobOptions->noStorageFlag
                  )
               {
@@ -8070,6 +8193,7 @@ Errors Archive_writeData(ArchiveEntryInfo *archiveEntryInfo,
   assert(archiveEntryInfo != NULL);
   assert(archiveEntryInfo->archiveInfo != NULL);
   assert(archiveEntryInfo->archiveInfo->jobOptions != NULL);
+  assert(elementSize > 0);
 
   if (!archiveEntryInfo->archiveInfo->jobOptions->dryRunFlag)
   {
@@ -8088,6 +8212,7 @@ Errors Archive_writeData(ArchiveEntryInfo *archiveEntryInfo,
       {
         blockLength = length;
       }
+      assert(blockLength > 0L);
 
       // write data block
       writtenBlockBytes = 0L;
@@ -8150,8 +8275,8 @@ Errors Archive_writeData(ArchiveEntryInfo *archiveEntryInfo,
                    && (blockCount <= 0)
                   );
 
-            // check if compressed data blocks are available and can be encrypted and written to file
-            allowNewPartFlag = ((elementSize <= 1) || (writtenBlockBytes >= blockLength));
+            // check if new part is allowed: only when block is completed
+            allowNewPartFlag = (writtenBlockBytes >= blockLength);
 
             // write compressed data
             do
@@ -8892,9 +9017,12 @@ bool Archive_eofData(ArchiveEntryInfo *archiveEntryInfo)
 
 uint64 Archive_tell(ArchiveInfo *archiveInfo)
 {
-  uint64 offset;
+  SemaphoreLock semaphoreLock;
+  uint64        offset;
 
   assert(archiveInfo != NULL);
+  assert(archiveInfo->chunkIO != NULL);
+  assert(archiveInfo->chunkIO->tell != NULL);
   assert(archiveInfo->jobOptions != NULL);
 
   offset = 0LL;
@@ -8903,13 +9031,16 @@ uint64 Archive_tell(ArchiveInfo *archiveInfo)
     switch (archiveInfo->ioType)
     {
       case ARCHIVE_IO_TYPE_FILE:
-        if (archiveInfo->file.openFlag)
+        SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveInfo->chunkIOLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,SEMAPHORE_WAIT_FOREVER)
         {
-          archiveInfo->chunkIO->tell(archiveInfo->chunkIOUserData,&offset);
-        }
-        else
-        {
-          offset = 0LL;
+          if (archiveInfo->file.openFlag)
+          {
+            archiveInfo->chunkIO->tell(archiveInfo->chunkIOUserData,&offset);
+          }
+          else
+          {
+            offset = 0LL;
+          }
         }
         break;
       case ARCHIVE_IO_TYPE_STORAGE_FILE:
@@ -8931,9 +9062,12 @@ Errors Archive_seek(ArchiveInfo *archiveInfo,
                     uint64      offset
                    )
 {
-  Errors error;
+  SemaphoreLock semaphoreLock;
+  Errors        error;
 
   assert(archiveInfo != NULL);
+  assert(archiveInfo->chunkIO != NULL);
+  assert(archiveInfo->chunkIO->seek != NULL);
 
   error = ERROR_NONE;
 
@@ -8942,9 +9076,12 @@ Errors Archive_seek(ArchiveInfo *archiveInfo,
     switch (archiveInfo->ioType)
     {
       case ARCHIVE_IO_TYPE_FILE:
-        if (archiveInfo->file.openFlag)
+        SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveInfo->chunkIOLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,SEMAPHORE_WAIT_FOREVER)
         {
-          error = archiveInfo->chunkIO->seek(archiveInfo->chunkIOUserData,offset);
+          if (archiveInfo->file.openFlag)
+          {
+            error = archiveInfo->chunkIO->seek(archiveInfo->chunkIOUserData,offset);
+          }
         }
         break;
       case ARCHIVE_IO_TYPE_STORAGE_FILE:
@@ -8963,9 +9100,12 @@ Errors Archive_seek(ArchiveInfo *archiveInfo,
 
 uint64 Archive_getSize(ArchiveInfo *archiveInfo)
 {
-  uint64 size;
+  SemaphoreLock semaphoreLock;
+  uint64        size;
 
   assert(archiveInfo != NULL);
+  assert(archiveInfo->chunkIO != NULL);
+  assert(archiveInfo->chunkIO->getSize != NULL);
   assert(archiveInfo->jobOptions != NULL);
 
   size = 0LL;
@@ -8974,9 +9114,12 @@ uint64 Archive_getSize(ArchiveInfo *archiveInfo)
     switch (archiveInfo->ioType)
     {
       case ARCHIVE_IO_TYPE_FILE:
-        size = (archiveInfo->file.openFlag)
-                 ?archiveInfo->chunkIO->getSize(archiveInfo->chunkIOUserData)
-                 :0LL;
+        SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveInfo->chunkIOLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,SEMAPHORE_WAIT_FOREVER)
+        {
+          size = (archiveInfo->file.openFlag)
+                   ? archiveInfo->chunkIO->getSize(archiveInfo->chunkIOUserData)
+                   : 0LL;
+        }
         break;
       case ARCHIVE_IO_TYPE_STORAGE_FILE:
         size = archiveInfo->chunkIO->getSize(archiveInfo->chunkIOUserData);
@@ -9704,7 +9847,7 @@ Errors Archive_copy(const String                    storageName,
   // create destination
   error = Archive_create(&destinationArchiveInfo,
                          jobOptions,
-                         ArchiveNewFileFunction          archiveNewFileFunction,
+                         ArchiveCreatedFunction          archiveCreatedFunction,
                          void                            *archiveNewFileUserData,
                          NULL,
                          NULL,

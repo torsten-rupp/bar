@@ -65,7 +65,7 @@ typedef enum
 } ArchiveEntryTypes;
 
 /***********************************************************************\
-* Name   : ArchiveNewFileFunction
+* Name   : ArchiveCreatedFunction
 * Purpose: call back when archive file is created/written
 * Input  : userData       - user data
 *          databaseHandle - database handle or NULL if no database
@@ -78,7 +78,7 @@ typedef enum
 * Notes  : -
 \***********************************************************************/
 
-typedef Errors(*ArchiveNewFileFunction)(void           *userData,
+typedef Errors(*ArchiveCreatedFunction)(void           *userData,
                                         DatabaseHandle *databaseHandle,
                                         int64          storageId,
                                         String         fileName,
@@ -113,7 +113,7 @@ typedef Errors(*ArchiveGetCryptPasswordFunction)(void         *userData,
 typedef struct
 {
   const JobOptions                *jobOptions;
-  ArchiveNewFileFunction          archiveNewFileFunction;            // call back for new archive file
+  ArchiveCreatedFunction          archiveCreatedFunction;            // call back for new archive file
   void                            *archiveNewFileUserData;           // user data for call back for new archive file
   ArchiveGetCryptPasswordFunction archiveGetCryptPasswordFunction;   // call back to get crypt password
   void                            *archiveGetCryptPasswordUserData;  // user data for call back to get crypt password
@@ -365,7 +365,7 @@ const Password *Archive_appendDecryptPassword(const Password *password);
 * Purpose: create archive
 * Input  : archiveInfo                 - archive info data
 *          jobOptions                  - job option settings
-*          archiveNewFileFunction      - call back for creating new
+*          archiveCreatedFunction      - call back for creating new
 *                                        archive file
 *          archiveNewFileUserData      - user data for call back
 *          archiveGetCryptPassword     - get password call back (can be
@@ -379,7 +379,7 @@ const Password *Archive_appendDecryptPassword(const Password *password);
 
 Errors Archive_create(ArchiveInfo                     *archiveInfo,
                       const JobOptions                *jobOptions,
-                      ArchiveNewFileFunction          archiveNewFileFunction,
+                      ArchiveCreatedFunction          archiveCreatedFunction,
                       void                            *archiveNewFileUserData,
                       ArchiveGetCryptPasswordFunction archiveGetCryptPassword,
                       void                            *archiveGetCryptPasswordData,
