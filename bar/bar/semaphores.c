@@ -59,28 +59,28 @@ typedef struct
 /****************************** Macros *********************************/
 
 #if   defined(PLATFORM_LINUX)
-  #define SEMAPHORE_REQUEST_LOCK(semaphore) \
+  #define __SEMAPHORE_REQUEST_LOCK(semaphore) \
     do \
     { \
       pthread_mutex_lock(&semaphore->requestLock); \
     } \
     while (0)
 
-  #define SEMAPHORE_REQUEST_UNLOCK(semaphore) \
+  #define __SEMAPHORE_REQUEST_UNLOCK(semaphore) \
     do \
     { \
       pthread_mutex_unlock(&semaphore->requestLock); \
     } \
     while (0)
 #elif defined(PLATFORM_WINDOWS)
-  #define SEMAPHORE_REQUEST_LOCK(semaphore) \
+  #define __SEMAPHORE_REQUEST_LOCK(semaphore) \
     do \
     { \
       WaitForSingleObject(semaphore->requestLock,INFINITE); \
     } \
     while (0)
 
-  #define SEMAPHORE_REQUEST_UNLOCK(semaphore) \
+  #define __SEMAPHORE_REQUEST_UNLOCK(semaphore) \
     do \
     { \
       ReleaseMutex(semaphore->requestLock); \
@@ -398,11 +398,11 @@ LOCAL bool lock(const char         *fileName,
       break;
     case SEMAPHORE_LOCK_TYPE_READ:
       // request read lock
-      SEMAPHORE_REQUEST_LOCK(semaphore);
+      __SEMAPHORE_REQUEST_LOCK(semaphore);
       {
         semaphore->readRequestCount++;
       }
-      SEMAPHORE_REQUEST_UNLOCK(semaphore);
+      __SEMAPHORE_REQUEST_UNLOCK(semaphore);
 
       __SEMAPHORE_LOCK(DEBUG_READ,"R",semaphore);
       {
@@ -454,22 +454,22 @@ LOCAL bool lock(const char         *fileName,
         semaphore->lockType = SEMAPHORE_LOCK_TYPE_READ;
 
         // decrement read request counter
-        SEMAPHORE_REQUEST_LOCK(semaphore);
+        __SEMAPHORE_REQUEST_LOCK(semaphore);
         {
           assert(semaphore->readRequestCount > 0);
           semaphore->readRequestCount--;
         }
-        SEMAPHORE_REQUEST_UNLOCK(semaphore);
+        __SEMAPHORE_REQUEST_UNLOCK(semaphore);
       }
       __SEMAPHORE_UNLOCK(DEBUG_READ,"R",semaphore,semaphore->readLockCount);
       break;
     case SEMAPHORE_LOCK_TYPE_READ_WRITE:
       // request write lock
-      SEMAPHORE_REQUEST_LOCK(semaphore);
+      __SEMAPHORE_REQUEST_LOCK(semaphore);
       {
         semaphore->readWriteRequestCount++;
       }
-      SEMAPHORE_REQUEST_UNLOCK(semaphore);
+      __SEMAPHORE_REQUEST_UNLOCK(semaphore);
 
       // lock
       __SEMAPHORE_LOCK(DEBUG_READ_WRITE,"RW",semaphore);
@@ -520,12 +520,12 @@ LOCAL bool lock(const char         *fileName,
       semaphore->lockType = SEMAPHORE_LOCK_TYPE_READ_WRITE;
 
       // decrement write request counter
-      SEMAPHORE_REQUEST_LOCK(semaphore);
+      __SEMAPHORE_REQUEST_LOCK(semaphore);
       {
         assert(semaphore->readWriteRequestCount > 0);
         semaphore->readWriteRequestCount--;
       }
-      SEMAPHORE_REQUEST_UNLOCK(semaphore);
+      __SEMAPHORE_REQUEST_UNLOCK(semaphore);
       break;
     #ifndef NDEBUG
       default:
@@ -804,11 +804,11 @@ LOCAL bool waitModified(const char *fileName,
       }
 
       // request write-lock
-      SEMAPHORE_REQUEST_LOCK(semaphore);
+      __SEMAPHORE_REQUEST_LOCK(semaphore);
       {
         semaphore->readWriteRequestCount++;
       }
-      SEMAPHORE_REQUEST_UNLOCK(semaphore);
+      __SEMAPHORE_REQUEST_UNLOCK(semaphore);
 
       // wait until no more read-locks
       if (timeout != SEMAPHORE_WAIT_FOREVER)
@@ -831,12 +831,12 @@ LOCAL bool waitModified(const char *fileName,
       assert(semaphore->readLockCount == 0);
 
       // decrement write request counter
-      SEMAPHORE_REQUEST_LOCK(semaphore);
+      __SEMAPHORE_REQUEST_LOCK(semaphore);
       {
         assert(semaphore->readWriteRequestCount > 0);
         semaphore->readWriteRequestCount--;
       }
-      SEMAPHORE_REQUEST_UNLOCK(semaphore);
+      __SEMAPHORE_REQUEST_UNLOCK(semaphore);
 
       // restore temporary reverted write-lock
       assert(semaphore->readWriteLockCount == 0);
