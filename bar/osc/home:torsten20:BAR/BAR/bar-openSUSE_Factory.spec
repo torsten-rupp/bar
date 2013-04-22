@@ -1,7 +1,7 @@
 # norootforbuild
 
 Name:          bar
-Version:       0.17
+Version:       0.17a
 Release:       53.1
 Summary:       Backup ARchiver
 Source:        http://www.kigen.de/projects/bar/bar-%{version}.tar.bz2

@@ -1,3 +1,12 @@
+bar (0.17a) stable; urgency=low
+  * fixed writing CD/DVD/BD: do not write an empty last medium
+  * improved database index
+  * fixed parsing CD/DVD/BD/device specifier: last character was
+    missing
+  * fixed logging of skipped own files
+
+ -- Torsten Rupp <torsten.rupp@gmx.net>  Sat, 26 Jan 2013 00:00:00 +0100
+
 bar (0.17) stable; urgency=low
   * finally: added support for xdelta compression!
     Note: integrating this was really a _hard_ work.
