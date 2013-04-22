@@ -1724,6 +1724,14 @@ Errors File_truncate(FileHandle *fileHandle,
     {
       return ERRORX_(IO_ERROR,errno,String_cString(fileHandle->name));
     }
+    if (fileHandle->index > size)
+    {
+      if (FSEEK(fileHandle->file,(off_t)size,SEEK_SET) == -1)
+      {
+        return ERRORX_(IO_ERROR,errno,String_cString(fileHandle->name));
+      }
+      fileHandle->index = size;
+    }
     fileHandle->size = size;
   }
 
