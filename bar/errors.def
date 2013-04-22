@@ -385,6 +385,7 @@ ERROR NO_SPECIAL_ENTRY               "no special entry"
 ERROR NO_IMAGE_ENTRY                 "no image entry"
 ERROR NO_IMAGE_DATA                  "no image data entry"
 ERROR END_OF_DATA                    "end of data"
+ERROR INSUFFICIENT_SPLIT_NUMBERS     "insufficient split number digits in name"
 
 // Note: because of name collisions with Windows include use CRC_ instead of CRC
 ERROR CRC_
