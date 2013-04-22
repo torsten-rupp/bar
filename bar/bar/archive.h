@@ -183,7 +183,6 @@ typedef struct ArchiveEntryInfo
     ARCHIVE_MODE_READ,
     ARCHIVE_MODE_WRITE,
   } mode;                                                            // read/write archive mode
-  FileHandle                      tmpFileHandle;                     // temporary file handle
 
   CryptAlgorithms                 cryptAlgorithm;                    // crypt algorithm for entry
   uint                            blockLength;                       /* block length for file entry/file
@@ -214,6 +213,7 @@ typedef struct ArchiveEntryInfo
       uint                        headerLength;                      // length of header
       bool                        headerWrittenFlag;                 // TRUE iff header written
 
+      FileHandle                  tmpFileHandle;                     // temporary file handle
       byte                        *byteBuffer;                       // buffer for processing byte data
       ulong                       byteBufferSize;                    // size of byte buffer
       byte                        *deltaBuffer;                      // buffer for processing delta data
@@ -241,6 +241,7 @@ typedef struct ArchiveEntryInfo
       uint                        headerLength;                      // length of header
       bool                        headerWrittenFlag;                 // TRUE iff header written
 
+      FileHandle                  tmpFileHandle;                     // temporary file handle
       byte                        *byteBuffer;                       // buffer for processing byte data
       ulong                       byteBufferSize;                    // size of byte buffer
       byte                        *deltaBuffer;                      // buffer for processing delta data
@@ -277,6 +278,7 @@ typedef struct ArchiveEntryInfo
       uint                        headerLength;                      // length of header
       bool                        headerWrittenFlag;                 // TRUE iff header written
 
+      FileHandle                  tmpFileHandle;                     // temporary file handle
       byte                        *byteBuffer;                       // buffer for processing byte data
       ulong                       byteBufferSize;                    // size of byte buffer
       byte                        *deltaBuffer;                      // buffer for processing delta data
