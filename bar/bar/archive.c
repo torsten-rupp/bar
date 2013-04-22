@@ -135,7 +135,7 @@ LOCAL void registerArchiveEntry(ArchiveEntryInfo *archiveEntryInfo)
 {
   SemaphoreLock semaphoreLock;
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveEntryInfo->archiveInfo->archiveEntryList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,SEMAPHORE_WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveEntryInfo->archiveInfo->archiveEntryList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
   {
     List_append(&archiveEntryInfo->archiveInfo->archiveEntryList,archiveEntryInfo);
 //fprintf(stderr,"%s, %d: count=%d\n",__FILE__,__LINE__,List_count(&archiveEntryInfo->archiveInfo->archiveEntryList));
@@ -156,7 +156,7 @@ LOCAL void unregisterArchiveEntry(ArchiveEntryInfo *archiveEntryInfo)
 {
   SemaphoreLock semaphoreLock;
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveEntryInfo->archiveInfo->archiveEntryList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,SEMAPHORE_WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveEntryInfo->archiveInfo->archiveEntryList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
   {
     List_remove(&archiveEntryInfo->archiveInfo->archiveEntryList,archiveEntryInfo);
   }
@@ -547,7 +547,7 @@ LOCAL bool isNewPartNeeded(ArchiveInfo *archiveInfo,
   newPartFlag = FALSE;
   if (archiveInfo->jobOptions->archivePartSize > 0LL)
   {
-    SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveInfo->chunkIOLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,SEMAPHORE_WAIT_FOREVER)
+    SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveInfo->chunkIOLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
     {
       if (archiveInfo->file.openFlag)
       {
@@ -817,7 +817,7 @@ LOCAL Errors createArchiveFile(ArchiveInfo *archiveInfo)
   assert(archiveInfo->jobOptions != NULL);
   assert(archiveInfo->ioType == ARCHIVE_IO_TYPE_FILE);
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveInfo->chunkIOLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,SEMAPHORE_WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveInfo->chunkIOLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
   {
     if (!archiveInfo->file.openFlag)
     {
@@ -915,7 +915,7 @@ LOCAL Errors closeArchiveFile(ArchiveInfo *archiveInfo,
   assert(archiveInfo->jobOptions != NULL);
   assert(archiveInfo->ioType == ARCHIVE_IO_TYPE_FILE);
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveInfo->chunkIOLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,SEMAPHORE_WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveInfo->chunkIOLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
   {
     if (archiveInfo->file.openFlag)
     {
@@ -1424,7 +1424,7 @@ close(h);
     archiveEntryInfo->file.headerWrittenFlag = FALSE;
 
     // close archive file
-    SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveEntryInfo->archiveInfo->chunkIOLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,SEMAPHORE_WAIT_FOREVER)
+    SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveEntryInfo->archiveInfo->chunkIOLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
     {
 #warning transfer data
       closeArchiveFile(archiveEntryInfo->archiveInfo,FALSE);
@@ -1911,7 +1911,7 @@ LOCAL Errors writeImageDataBlock(ArchiveEntryInfo *archiveEntryInfo,
     archiveEntryInfo->image.headerWrittenFlag = FALSE;
 
     // close archive file
-    SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveEntryInfo->archiveInfo->chunkIOLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,SEMAPHORE_WAIT_FOREVER)
+    SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveEntryInfo->archiveInfo->chunkIOLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
     {
 #warning transfer data
       closeArchiveFile(archiveEntryInfo->archiveInfo,FALSE);
@@ -2415,7 +2415,7 @@ LOCAL Errors writeHardLinkDataBlock(ArchiveEntryInfo *archiveEntryInfo,
     archiveEntryInfo->hardLink.headerWrittenFlag = FALSE;
 
     // close archive file
-    SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveEntryInfo->archiveInfo->chunkIOLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,SEMAPHORE_WAIT_FOREVER)
+    SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveEntryInfo->archiveInfo->chunkIOLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
     {
 #warning transfer data
       closeArchiveFile(archiveEntryInfo->archiveInfo,FALSE);
@@ -2607,7 +2607,7 @@ void Archive_clearDecryptPasswords(void)
 {
   SemaphoreLock semaphoreLock;
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&decryptPasswordList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,SEMAPHORE_WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&decryptPasswordList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
   {
     List_clear(&decryptPasswordList,(ListNodeFreeFunction)freePasswordNode,NULL);
   }
@@ -2627,7 +2627,7 @@ const Password *Archive_appendDecryptPassword(const Password *password)
   }
   passwordNode->password = Password_duplicate(password);
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&decryptPasswordList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,SEMAPHORE_WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&decryptPasswordList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
   {
     List_append(&decryptPasswordList,passwordNode);
   }
@@ -2955,7 +2955,7 @@ Errors Archive_storageInterrupt(ArchiveInfo *archiveInfo)
   switch (archiveInfo->ioType)
   {
     case ARCHIVE_IO_TYPE_FILE:
-      SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveInfo->chunkIOLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,SEMAPHORE_WAIT_FOREVER)
+      SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveInfo->chunkIOLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
       {
         archiveInfo->interrupt.openFlag = archiveInfo->file.openFlag;
         if (archiveInfo->file.openFlag)
@@ -2993,7 +2993,7 @@ Errors Archive_storageContinue(ArchiveInfo *archiveInfo)
   switch (archiveInfo->ioType)
   {
     case ARCHIVE_IO_TYPE_FILE:
-      SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveInfo->chunkIOLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,SEMAPHORE_WAIT_FOREVER)
+      SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveInfo->chunkIOLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
       {
         if (archiveInfo->interrupt.openFlag)
         {
@@ -7490,7 +7490,7 @@ Errors Archive_closeEntry(ArchiveEntryInfo *archiveEntryInfo)
               }
 
               // append to archive
-              SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveEntryInfo->archiveInfo->chunkIOLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,SEMAPHORE_WAIT_FOREVER)
+              SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveEntryInfo->archiveInfo->chunkIOLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
               {
                 // create archive file if needed
                 if (!archiveEntryInfo->archiveInfo->file.openFlag)
@@ -7847,7 +7847,7 @@ Errors Archive_closeEntry(ArchiveEntryInfo *archiveEntryInfo)
               }
 
               // append to archive
-              SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveEntryInfo->archiveInfo->chunkIOLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,SEMAPHORE_WAIT_FOREVER)
+              SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveEntryInfo->archiveInfo->chunkIOLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
               {
                 // create archive file if needed
                 if (!archiveEntryInfo->archiveInfo->file.openFlag)
@@ -9029,7 +9029,7 @@ uint64 Archive_tell(ArchiveInfo *archiveInfo)
     switch (archiveInfo->ioType)
     {
       case ARCHIVE_IO_TYPE_FILE:
-        SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveInfo->chunkIOLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,SEMAPHORE_WAIT_FOREVER)
+        SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveInfo->chunkIOLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
         {
           if (archiveInfo->file.openFlag)
           {
@@ -9074,7 +9074,7 @@ Errors Archive_seek(ArchiveInfo *archiveInfo,
     switch (archiveInfo->ioType)
     {
       case ARCHIVE_IO_TYPE_FILE:
-        SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveInfo->chunkIOLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,SEMAPHORE_WAIT_FOREVER)
+        SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveInfo->chunkIOLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
         {
           if (archiveInfo->file.openFlag)
           {
@@ -9112,7 +9112,7 @@ uint64 Archive_getSize(ArchiveInfo *archiveInfo)
     switch (archiveInfo->ioType)
     {
       case ARCHIVE_IO_TYPE_FILE:
-        SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveInfo->chunkIOLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,SEMAPHORE_WAIT_FOREVER)
+        SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveInfo->chunkIOLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
         {
           size = (archiveInfo->file.openFlag)
                    ? archiveInfo->chunkIO->getSize(archiveInfo->chunkIOUserData)

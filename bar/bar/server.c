@@ -1205,7 +1205,7 @@ LOCAL Errors rereadAllJobs(const char *jobsDirectory)
     // check if readable file and not ".*"
     if (File_isFile(fileName) && File_isReadable(fileName) && !String_startsWithChar(baseName,'.'))
     {
-      SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,SEMAPHORE_WAIT_FOREVER)
+      SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
       {
         // find/create job
         jobNode = jobList.head;
@@ -1233,7 +1233,7 @@ LOCAL Errors rereadAllJobs(const char *jobsDirectory)
   File_closeDirectoryList(&directoryListHandle);
 
   // remove not existing jobs
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,SEMAPHORE_WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
   {
     jobNode = jobList.head;
     while (jobNode != NULL)
@@ -1450,7 +1450,7 @@ LOCAL void updateAllJobs(void)
   SemaphoreLock semaphoreLock;
   JobNode       *jobNode;
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,SEMAPHORE_WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
   {
     LIST_ITERATE(&jobList,jobNode)
     {
@@ -1529,7 +1529,7 @@ LOCAL bool updateCreateJobStatus(JobNode                *jobNode,
   assert(createStatusInfo->name != NULL);
   assert(createStatusInfo->storageName != NULL);
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,SEMAPHORE_WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
   {
     // calculate estimated rest time
     Misc_performanceFilterAdd(&jobNode->runningInfo.entriesPerSecond,     createStatusInfo->doneEntries);
@@ -1605,7 +1605,7 @@ LOCAL bool updateRestoreJobStatus(JobNode                 *jobNode,
   assert(restoreStatusInfo->name != NULL);
   assert(restoreStatusInfo->storageName != NULL);
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,SEMAPHORE_WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
   {
     // calculate estimated rest time
     Misc_performanceFilterAdd(&jobNode->runningInfo.entriesPerSecond,     restoreStatusInfo->doneEntries);
@@ -1668,7 +1668,7 @@ LOCAL StorageRequestResults storageRequestVolume(JobNode *jobNode,
 
   storageRequestResult = STORAGE_REQUEST_VOLUME_NONE;
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,SEMAPHORE_WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
   {
     // request volume
     jobNode->requestedVolumeNumber = volumeNumber;
@@ -2096,7 +2096,7 @@ LOCAL void pauseThreadCode(void)
   while (!quitFlag)
   {
     // decrement pause time, continue
-    SEMAPHORE_LOCKED_DO(semaphoreLock,&serverStateLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,SEMAPHORE_WAIT_FOREVER)
+    SEMAPHORE_LOCKED_DO(semaphoreLock,&serverStateLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
     {
       if (serverState == SERVER_STATE_PAUSE)
       {
@@ -2397,7 +2397,7 @@ LOCAL void indexThreadCode(void)
     // get all job crypt passwords and crypt private keys (including no password and default crypt password)
     addIndexCryptPasswordNode(&indexCryptPasswordList,NULL,NULL);
     addIndexCryptPasswordNode(&indexCryptPasswordList,globalOptions.cryptPassword,NULL);
-    SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ,SEMAPHORE_WAIT_FOREVER)
+    SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ)
     {
       LIST_ITERATE(&jobList,jobNode)
       {
@@ -2556,7 +2556,7 @@ LOCAL void getStorageDirectories(StringList *storageDirectoryList)
 
   // collect storage locations to check for BAR files
   storagePathName = String_new();
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ,SEMAPHORE_WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ)
   {
     LIST_ITERATE(&jobList,jobNode)
     {
@@ -2825,7 +2825,7 @@ LOCAL void sendClient(ClientInfo *clientInfo, String data)
       (void)File_flush(&clientInfo->file.fileHandle);
       break;
     case CLIENT_TYPE_NETWORK:
-      SEMAPHORE_LOCKED_DO(semaphoreLock,&clientInfo->network.writeLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,SEMAPHORE_WAIT_FOREVER)
+      SEMAPHORE_LOCKED_DO(semaphoreLock,&clientInfo->network.writeLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
       {
         (void)Network_send(&clientInfo->network.socketHandle,String_cString(data),String_length(data));
       }
@@ -3431,7 +3431,7 @@ LOCAL void serverCommand_pause(ClientInfo *clientInfo, uint id, const String arg
   }
 
   // set pause time
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&serverStateLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,SEMAPHORE_WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&serverStateLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
   {
     serverState = SERVER_STATE_PAUSE;
     if (modeMask == NULL)
@@ -3510,7 +3510,7 @@ LOCAL void serverCommand_suspend(ClientInfo *clientInfo, uint id, const String a
   }
 
   // set suspend
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&serverStateLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,SEMAPHORE_WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&serverStateLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
   {
     serverState = SERVER_STATE_SUSPENDED;
     if (modeMask == NULL)
@@ -3574,7 +3574,7 @@ LOCAL void serverCommand_continue(ClientInfo *clientInfo, uint id, const String 
   UNUSED_VARIABLE(argumentCount);
 
   // clear pause/suspend
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&serverStateLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,SEMAPHORE_WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&serverStateLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
   {
     serverState            = SERVER_STATE_RUNNING;
     pauseFlags.create      = FALSE;
@@ -3931,7 +3931,7 @@ LOCAL void serverCommand_optionGet(ClientInfo *clientInfo, uint id, const String
   }
   name = arguments[1];
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ,SEMAPHORE_WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ)
   {
     // find job
     jobNode = findJobById(jobId);
@@ -4017,7 +4017,7 @@ LOCAL void serverCommand_optionSet(ClientInfo *clientInfo, uint id, const String
   }
   value = arguments[2];
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,SEMAPHORE_WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
   {
     // find job
     jobNode = findJobById(jobId);
@@ -4088,7 +4088,7 @@ LOCAL void serverCommand_optionDelete(ClientInfo *clientInfo, uint id, const Str
   }
   name = arguments[1];
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,SEMAPHORE_WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
   {
     // find job
     jobNode = findJobById(jobId);
@@ -4147,7 +4147,7 @@ LOCAL void serverCommand_jobList(ClientInfo *clientInfo, uint id, const String a
   UNUSED_VARIABLE(arguments);
   UNUSED_VARIABLE(argumentCount);
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ,SEMAPHORE_WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ)
   {
     jobNode = jobList.head;
     while (   (jobNode != NULL)
@@ -4225,7 +4225,7 @@ LOCAL void serverCommand_jobInfo(ClientInfo *clientInfo, uint id, const String a
   }
   jobId = String_toInteger(arguments[0],0,NULL,NULL,0);
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ,SEMAPHORE_WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ)
   {
     // find job
     jobNode = findJobById(jobId);
@@ -4320,7 +4320,7 @@ LOCAL void serverCommand_jobNew(ClientInfo *clientInfo, uint id, const String ar
 
   jobNode = NULL;
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,SEMAPHORE_WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
   {
     // check if job already exists
     if (findJobByName(name) != NULL)
@@ -4413,7 +4413,7 @@ LOCAL void serverCommand_jobCopy(ClientInfo *clientInfo, uint id, const String a
   }
   name = arguments[1];
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,SEMAPHORE_WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
   {
     // check if job already exists
     if (findJobByName(name) != NULL)
@@ -4509,7 +4509,7 @@ LOCAL void serverCommand_jobRename(ClientInfo *clientInfo, uint id, const String
   }
   name = arguments[1];
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,SEMAPHORE_WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
   {
     // check if job already exists
     if (findJobByName(name) != NULL)
@@ -4582,7 +4582,7 @@ LOCAL void serverCommand_jobDelete(ClientInfo *clientInfo, uint id, const String
   }
   jobId = String_toInteger(arguments[0],0,NULL,NULL,0);
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,SEMAPHORE_WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
   {
     // find job
     jobNode = findJobById(jobId);
@@ -4686,7 +4686,7 @@ LOCAL void serverCommand_jobStart(ClientInfo *clientInfo, uint id, const String 
     return;
   }
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,SEMAPHORE_WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
   {
     // find job
     jobNode = findJobById(jobId);
@@ -4743,7 +4743,7 @@ LOCAL void serverCommand_jobAbort(ClientInfo *clientInfo, uint id, const String 
   }
   jobId = String_toInteger(arguments[0],0,NULL,NULL,0);
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,SEMAPHORE_WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
   {
     // find job
     jobNode = findJobById(jobId);
@@ -4842,7 +4842,7 @@ LOCAL void serverCommand_includeList(ClientInfo *clientInfo, uint id, const Stri
   }
   jobId = String_toInteger(arguments[0],0,NULL,NULL,0);
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ,SEMAPHORE_WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ)
   {
     // find job
     jobNode = findJobById(jobId);
@@ -4926,7 +4926,7 @@ LOCAL void serverCommand_includeListClear(ClientInfo *clientInfo, uint id, const
   }
   jobId = String_toInteger(arguments[0],0,NULL,NULL,0);
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,SEMAPHORE_WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
   {
     // find job
     jobNode = findJobById(jobId);
@@ -5033,7 +5033,7 @@ LOCAL void serverCommand_includeListAdd(ClientInfo *clientInfo, uint id, const S
   string = arguments[3];
 
   pattern = String_mapCString(String_duplicate(string),STRING_BEGIN,MAP_TEXT,MAP_BIN,SIZE_OF_ARRAY(MAP_TEXT));
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,SEMAPHORE_WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
   {
     // find job
     jobNode = findJobById(jobId);
@@ -5093,7 +5093,7 @@ LOCAL void serverCommand_excludeList(ClientInfo *clientInfo, uint id, const Stri
   }
   jobId = String_toInteger(arguments[0],0,NULL,NULL,0);
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ,SEMAPHORE_WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ)
   {
     // find job
     jobNode = findJobById(jobId);
@@ -5164,7 +5164,7 @@ LOCAL void serverCommand_excludeListClear(ClientInfo *clientInfo, uint id, const
   }
   jobId = String_toInteger(arguments[0],0,NULL,NULL,0);
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,SEMAPHORE_WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
   {
     // find job
     jobNode = findJobById(jobId);
@@ -5252,7 +5252,7 @@ LOCAL void serverCommand_excludeListAdd(ClientInfo *clientInfo, uint id, const S
   string = arguments[2];
 
   pattern = String_mapCString(String_duplicate(string),STRING_BEGIN,MAP_TEXT,MAP_BIN,SIZE_OF_ARRAY(MAP_TEXT));
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,SEMAPHORE_WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
   {
     // find job
     jobNode = findJobById(jobId);
@@ -5308,7 +5308,7 @@ LOCAL void serverCommand_sourceList(ClientInfo *clientInfo, uint id, const Strin
   }
   jobId = String_toInteger(arguments[0],0,NULL,NULL,0);
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ,SEMAPHORE_WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ)
   {
     // find job
     jobNode = findJobById(jobId);
@@ -5376,7 +5376,7 @@ LOCAL void serverCommand_sourceListClear(ClientInfo *clientInfo, uint id, const 
   }
   jobId = String_toInteger(arguments[0],0,NULL,NULL,0);
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,SEMAPHORE_WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
   {
     // find job
     jobNode = findJobById(jobId);
@@ -5459,7 +5459,7 @@ LOCAL void serverCommand_sourceListAdd(ClientInfo *clientInfo, uint id, const St
   }
   pattern = arguments[2];
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,SEMAPHORE_WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
   {
     // find job
     jobNode = findJobById(jobId);
@@ -5513,7 +5513,7 @@ LOCAL void serverCommand_excludeCompressList(ClientInfo *clientInfo, uint id, co
   }
   jobId = String_toInteger(arguments[0],0,NULL,NULL,0);
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ,SEMAPHORE_WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ)
   {
     // find job
     jobNode = findJobById(jobId);
@@ -5581,7 +5581,7 @@ LOCAL void serverCommand_excludeCompressListClear(ClientInfo *clientInfo, uint i
   }
   jobId = String_toInteger(arguments[0],0,NULL,NULL,0);
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,SEMAPHORE_WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
   {
     // find job
     jobNode = findJobById(jobId);
@@ -5664,7 +5664,7 @@ LOCAL void serverCommand_excludeCompressListAdd(ClientInfo *clientInfo, uint id,
   }
   pattern = arguments[2];
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,SEMAPHORE_WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
   {
     // find job
     jobNode = findJobById(jobId);
@@ -5719,7 +5719,7 @@ LOCAL void serverCommand_scheduleList(ClientInfo *clientInfo, uint id, const Str
   }
   jobId = String_toInteger(arguments[0],0,NULL,NULL,0);
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ,SEMAPHORE_WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ)
   {
     // find job
     jobNode = findJobById(jobId);
@@ -5856,7 +5856,7 @@ LOCAL void serverCommand_scheduleListClear(ClientInfo *clientInfo, uint id, cons
   }
   jobId = String_toInteger(arguments[0],0,NULL,NULL,0);
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,SEMAPHORE_WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
   {
     // find job
     jobNode = findJobById(jobId);
@@ -5962,7 +5962,7 @@ LOCAL void serverCommand_scheduleListAdd(ClientInfo *clientInfo, uint id, const 
     return;
   }
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,SEMAPHORE_WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
   {
     // find job
     jobNode = findJobById(jobId);
@@ -6164,7 +6164,7 @@ LOCAL void serverCommand_cryptPassword(ClientInfo *clientInfo, uint id, const St
 
   if (jobId != 0)
   {
-    SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,SEMAPHORE_WAIT_FOREVER)
+    SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
     {
       // find job
       jobNode = findJobById(jobId);
@@ -6257,7 +6257,7 @@ LOCAL void serverCommand_volumeLoad(ClientInfo *clientInfo, uint id, const Strin
   }
   volumeNumber = String_toInteger(arguments[1],0,NULL,NULL,0);
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,SEMAPHORE_WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
   {
     // find job
     jobNode = findJobById(jobId);
@@ -6306,7 +6306,7 @@ LOCAL void serverCommand_volumeUnload(ClientInfo *clientInfo, uint id, const Str
   }
   jobId = String_toInteger(arguments[0],0,NULL,NULL,0);
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,SEMAPHORE_WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
   {
     // find job
     jobNode = findJobById(jobId);

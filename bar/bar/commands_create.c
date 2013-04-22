@@ -744,7 +744,7 @@ LOCAL bool updateStorageStatusInfo(CreateInfo              *createInfo,
   assert(createInfo != NULL);
   assert(storageStatusInfo != NULL);
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,SEMAPHORE_WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
   {
     createInfo->statusInfo.volumeNumber   = storageStatusInfo->volumeNumber;
     createInfo->statusInfo.volumeProgress = storageStatusInfo->volumeProgress;
@@ -2351,7 +2351,7 @@ LOCAL void storageInfoIncrement(CreateInfo *createInfo, uint64 size)
 
   assert(createInfo != NULL);
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->storageInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,SEMAPHORE_WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->storageInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
   {
     createInfo->storageInfo.count += 1;
     createInfo->storageInfo.bytes += size;
@@ -2374,7 +2374,7 @@ LOCAL void storageInfoDecrement(CreateInfo *createInfo, uint64 size)
 
   assert(createInfo != NULL);
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->storageInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,SEMAPHORE_WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->storageInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
   {
     assert(createInfo->storageInfo.count > 0);
     assert(createInfo->storageInfo.bytes >= size);
@@ -2449,7 +2449,7 @@ LOCAL Errors storeArchiveFile(void           *userData,
 
   // update info
 #warning lock?
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,SEMAPHORE_WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
   {
     createInfo->statusInfo.archiveTotalBytes += fileInfo.size;
     updateStatusInfo(createInfo);
@@ -2458,7 +2458,7 @@ LOCAL Errors storeArchiveFile(void           *userData,
   // wait for space in temporary directory
   if (globalOptions.maxTmpSize > 0)
   {
-    SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->storageInfoLock,SEMAPHORE_LOCK_TYPE_READ,SEMAPHORE_WAIT_FOREVER)
+    SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->storageInfoLock,SEMAPHORE_LOCK_TYPE_READ)
     {
       while (   (createInfo->storageInfo.count > 2)                           // more than 2 archives are waiting
              && (createInfo->storageInfo.bytes > globalOptions.maxTmpSize)    // temporary space above limit is used
@@ -3104,7 +3104,7 @@ LOCAL Errors storeFileEntry(CreateInfo   *createInfo,
     {
       printInfo(1,"skipped (reason: %s)\n",Errors_getText(error));
       logMessage(LOG_TYPE_ENTRY_ACCESS_DENIED,"access denied '%s'\n",String_cString(fileName));
-      SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,SEMAPHORE_WAIT_FOREVER)
+      SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
       {
         createInfo->statusInfo.errorEntries++;
       }
@@ -3129,7 +3129,7 @@ LOCAL Errors storeFileEntry(CreateInfo   *createInfo,
     {
       printInfo(1,"skipped (reason: %s)\n",Errors_getText(error));
       logMessage(LOG_TYPE_ENTRY_ACCESS_DENIED,"open file failed '%s'\n",String_cString(fileName));
-      SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,SEMAPHORE_WAIT_FOREVER)
+      SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
       {
         createInfo->statusInfo.errorEntries++;
         createInfo->statusInfo.errorBytes += (uint64)fileInfo.size;
@@ -3154,7 +3154,7 @@ LOCAL Errors storeFileEntry(CreateInfo   *createInfo,
     {
       String_set(createInfo->statusInfo.name,fileName);
     }
-    SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,SEMAPHORE_WAIT_FOREVER)
+    SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
     {
       createInfo->statusInfo.entryDoneBytes  = 0LL;
       createInfo->statusInfo.entryTotalBytes = fileInfo.size;
@@ -3208,7 +3208,7 @@ LOCAL Errors storeFileEntry(CreateInfo   *createInfo,
           error = Archive_writeData(&archiveEntryInfo,buffer,bufferLength,1);
           if (error == ERROR_NONE)
           {
-            SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,SEMAPHORE_WAIT_FOREVER)
+            SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
             {
               createInfo->statusInfo.doneBytes        += (uint64)bufferLength;
               createInfo->statusInfo.entryDoneBytes   += (uint64)bufferLength;
@@ -3218,7 +3218,7 @@ LOCAL Errors storeFileEntry(CreateInfo   *createInfo,
             }
           }
 
-          SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ,SEMAPHORE_WAIT_FOREVER)
+          SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ)
           {
             percentageDone = (createInfo->statusInfo.entryTotalBytes > 0LL) ? (uint)((createInfo->statusInfo.entryDoneBytes*100LL)/createInfo->statusInfo.entryTotalBytes) : 100;
           }
@@ -3291,7 +3291,7 @@ LOCAL Errors storeFileEntry(CreateInfo   *createInfo,
     }
 
     // update done entries
-    SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,SEMAPHORE_WAIT_FOREVER)
+    SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
     {
       createInfo->statusInfo.doneEntries++;
       updateStatusInfo(createInfo);
@@ -3361,7 +3361,7 @@ LOCAL Errors storeImageEntry(CreateInfo   *createInfo,
     {
       printInfo(1,"skipped (reason: %s)\n",Errors_getText(error));
       logMessage(LOG_TYPE_ENTRY_ACCESS_DENIED,"access denied '%s'\n",String_cString(deviceName));
-      SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,SEMAPHORE_WAIT_FOREVER)
+      SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
       {
         createInfo->statusInfo.errorEntries++;
       }
@@ -3400,7 +3400,7 @@ LOCAL Errors storeImageEntry(CreateInfo   *createInfo,
     {
       printInfo(1,"skipped (reason: %s)\n",Errors_getText(error));
       logMessage(LOG_TYPE_ENTRY_ACCESS_DENIED,"open device failed '%s'\n",String_cString(deviceName));
-      SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,SEMAPHORE_WAIT_FOREVER)
+      SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
       {
         createInfo->statusInfo.errorEntries++;
         createInfo->statusInfo.errorBytes += (uint64)deviceInfo.size;
@@ -3425,7 +3425,7 @@ LOCAL Errors storeImageEntry(CreateInfo   *createInfo,
     {
       String_set(createInfo->statusInfo.name,deviceName);
     }
-    SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,SEMAPHORE_WAIT_FOREVER)
+    SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
     {
       createInfo->statusInfo.entryDoneBytes  = 0LL;
       createInfo->statusInfo.entryTotalBytes = deviceInfo.size;
@@ -3518,7 +3518,7 @@ LOCAL Errors storeImageEntry(CreateInfo   *createInfo,
         error = Archive_writeData(&archiveEntryInfo,buffer,bufferBlockCount*deviceInfo.blockSize,deviceInfo.blockSize);
         if (error == ERROR_NONE)
         {
-          SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,SEMAPHORE_WAIT_FOREVER)
+          SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
           {
             createInfo->statusInfo.doneBytes        += (uint64)bufferBlockCount*(uint64)deviceInfo.blockSize;
             createInfo->statusInfo.entryDoneBytes   += (uint64)bufferBlockCount*(uint64)deviceInfo.blockSize;
@@ -3528,7 +3528,7 @@ LOCAL Errors storeImageEntry(CreateInfo   *createInfo,
           }
         }
 
-        SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ,SEMAPHORE_WAIT_FOREVER)
+        SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ)
         {
           percentageDone = (createInfo->statusInfo.entryTotalBytes > 0LL) ?  (uint)((createInfo->statusInfo.entryDoneBytes*100LL)/createInfo->statusInfo.entryTotalBytes) : 100;
         }
@@ -3609,7 +3609,7 @@ LOCAL Errors storeImageEntry(CreateInfo   *createInfo,
     }
 
     // update done entries
-    SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,SEMAPHORE_WAIT_FOREVER)
+    SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
     {
       createInfo->statusInfo.doneEntries++;
       updateStatusInfo(createInfo);
@@ -3663,7 +3663,7 @@ LOCAL Errors storeDirectoryEntry(CreateInfo   *createInfo,
     {
       printInfo(1,"skipped (reason: %s)\n",Errors_getText(error));
       logMessage(LOG_TYPE_ENTRY_ACCESS_DENIED,"access denied '%s'\n",String_cString(directoryName));
-      SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,SEMAPHORE_WAIT_FOREVER)
+      SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
       {
         createInfo->statusInfo.errorEntries++;
       }
@@ -3721,7 +3721,7 @@ LOCAL Errors storeDirectoryEntry(CreateInfo   *createInfo,
     }
 
     // update done entries
-    SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,SEMAPHORE_WAIT_FOREVER)
+    SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
     {
       createInfo->statusInfo.doneEntries++;
       updateStatusInfo(createInfo);
@@ -3774,7 +3774,7 @@ LOCAL Errors storeLinkEntry(CreateInfo   *createInfo,
     {
       printInfo(1,"skipped (reason: %s)\n",Errors_getText(error));
       logMessage(LOG_TYPE_ENTRY_ACCESS_DENIED,"access denied '%s'\n",String_cString(linkName));
-      SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,SEMAPHORE_WAIT_FOREVER)
+      SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
       {
         createInfo->statusInfo.errorEntries++;
       }
@@ -3802,7 +3802,7 @@ LOCAL Errors storeLinkEntry(CreateInfo   *createInfo,
       {
         printInfo(1,"skipped (reason: %s)\n",Errors_getText(error));
         logMessage(LOG_TYPE_ENTRY_ACCESS_DENIED,"open failed '%s'\n",String_cString(linkName));
-        SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,SEMAPHORE_WAIT_FOREVER)
+        SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
         {
           createInfo->statusInfo.errorEntries++;
           createInfo->statusInfo.errorBytes += (uint64)fileInfo.size;
@@ -3863,7 +3863,7 @@ LOCAL Errors storeLinkEntry(CreateInfo   *createInfo,
     }
 
     // update done entries
-    SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,SEMAPHORE_WAIT_FOREVER)
+    SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
     {
       createInfo->statusInfo.doneEntries++;
       updateStatusInfo(createInfo);
@@ -3932,7 +3932,7 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
     {
       printInfo(1,"skipped (reason: %s)\n",Errors_getText(error));
       logMessage(LOG_TYPE_ENTRY_ACCESS_DENIED,"access denied '%s'\n",String_cString(nameList->head->string));
-      SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,SEMAPHORE_WAIT_FOREVER)
+      SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
       {
         createInfo->statusInfo.errorEntries += StringList_count(nameList);
       }
@@ -3959,7 +3959,7 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
       {
         printInfo(1,"skipped (reason: %s)\n",Errors_getText(error));
         logMessage(LOG_TYPE_ENTRY_ACCESS_DENIED,"open file failed '%s'\n",String_cString(nameList->head->string));
-        SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,SEMAPHORE_WAIT_FOREVER)
+        SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
         {
           createInfo->statusInfo.errorEntries += StringList_count(nameList);
           createInfo->statusInfo.errorBytes += (uint64)StringList_count(nameList)*(uint64)fileInfo.size;
@@ -4002,11 +4002,11 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
       File_close(&fileHandle);
       return error;
     }
-    SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoNameLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,SEMAPHORE_WAIT_FOREVER)
+    SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoNameLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
     {
       String_set(createInfo->statusInfo.name,nameList->head->string);
     }
-    SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,SEMAPHORE_WAIT_FOREVER)
+    SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
     {
       createInfo->statusInfo.entryDoneBytes  = 0LL;
       createInfo->statusInfo.entryTotalBytes = fileInfo.size;
@@ -4033,7 +4033,7 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
           error = Archive_writeData(&archiveEntryInfo,buffer,bufferLength,1);
           if (error == ERROR_NONE)
           {
-            SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,SEMAPHORE_WAIT_FOREVER)
+            SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
             {
               createInfo->statusInfo.doneBytes        += (uint64)StringList_count(nameList)*(uint64)bufferLength;
               createInfo->statusInfo.entryDoneBytes   += (uint64)StringList_count(nameList)*(uint64)bufferLength;
@@ -4043,7 +4043,7 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
             }
           }
 
-          SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ,SEMAPHORE_WAIT_FOREVER)
+          SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ)
           {
             percentageDone = (createInfo->statusInfo.entryTotalBytes > 0LL) ? (uint)((createInfo->statusInfo.entryDoneBytes*100LL)/createInfo->statusInfo.entryTotalBytes) : 100;
           }
@@ -4111,7 +4111,7 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
     }
 
     // update done entries
-    SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,SEMAPHORE_WAIT_FOREVER)
+    SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
     {
       createInfo->statusInfo.doneEntries += StringList_count(nameList);
       updateStatusInfo(createInfo);
@@ -4167,7 +4167,7 @@ LOCAL Errors storeSpecialEntry(CreateInfo   *createInfo,
     {
       printInfo(1,"skipped (reason: %s)\n",Errors_getText(error));
       logMessage(LOG_TYPE_ENTRY_ACCESS_DENIED,"access denied '%s'\n",String_cString(fileName));
-      SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,SEMAPHORE_WAIT_FOREVER)
+      SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
       {
         createInfo->statusInfo.errorEntries++;
       }
@@ -4224,7 +4224,7 @@ LOCAL Errors storeSpecialEntry(CreateInfo   *createInfo,
     }
 
     // update done entries
-    SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,SEMAPHORE_WAIT_FOREVER)
+    SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
     {
       createInfo->statusInfo.doneEntries++;
       updateStatusInfo(createInfo);
@@ -4396,7 +4396,7 @@ LOCAL void createThreadCode(CreateInfo *createInfo)
     else
     {
       printInfo(1,"Add '%s'...skipped (reason: own created file)\n",String_cString(entryMsg.name));
-      SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,SEMAPHORE_WAIT_FOREVER)
+      SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
       {
         createInfo->statusInfo.skippedEntries++;
         abortFlag |= !updateStatusInfo(createInfo);

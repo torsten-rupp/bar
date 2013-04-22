@@ -106,19 +106,20 @@ typedef bool SemaphoreLock;
 * Input  : semaphoreLock     - lock flag variable (SemaphoreLock)
 *          semaphore         - semaphore
 *          semaphoreLockType - lock type; see SemaphoreLockTypes
-*          timeout           - timeout [ms] or SEMAPORE_WAIT_FOREVER
 * Output : -
 * Return : -
 * Notes  : usage:
 *            SemaphoreLock semaphoreLock;
-*            SEMAPHORE_LOCKED_DO(semaphoreLock,semaphore,semaphoreLockType,timeout)
+*            SEMAPHORE_LOCKED_DO(semaphoreLock,semaphore,semaphoreLockType)
 *            {
 *              ...
 *            }
+*
+*          semaphore must be unlocked manually if break is used!
 \***********************************************************************/
 
-#define SEMAPHORE_LOCKED_DO(semaphoreLock,semaphore,semaphoreLockType,timeout) \
-  for (semaphoreLock = Semaphore_lock(semaphore,semaphoreLockType,timeout); \
+#define SEMAPHORE_LOCKED_DO(semaphoreLock,semaphore,semaphoreLockType) \
+  for (semaphoreLock = Semaphore_lock(semaphore,semaphoreLockType,SEMAPHORE_WAIT_FOREVER); \
        semaphoreLock; \
        Semaphore_unlock(semaphore), semaphoreLock = FALSE \
       )

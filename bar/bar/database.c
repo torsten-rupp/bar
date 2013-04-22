@@ -9,7 +9,7 @@
 \***********************************************************************/
 
 /****************************** Includes *******************************/
-#include <config.h>  // use <...> to support separated build directory 
+#include <config.h>  // use <...> to support separated build directory
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -516,7 +516,7 @@ Errors Database_execute(DatabaseHandle   *databaseHandle,
 
   // execute SQL command
   error = ERROR_NONE;
-  SEMAPHORE_LOCKED_DO(lockFlag,&databaseHandle->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,SEMAPHORE_WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(lockFlag,&databaseHandle->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
   {
     #ifdef DATABASE_DEBUG
       fprintf(stderr,"Database debug: execute command: %s\n",String_cString(sqlString));
@@ -579,7 +579,7 @@ Errors Database_prepare(DatabaseQueryHandle *databaseQueryHandle,
 
   // prepare SQL command execution
   error = ERROR_NONE;
-  SEMAPHORE_LOCKED_DO(lockFlag,&databaseHandle->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,SEMAPHORE_WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(lockFlag,&databaseHandle->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
   {
     #ifdef DATABASE_DEBUG
       fprintf(stderr,"Database debug: prepare command: %s\n",String_cString(sqlString));
@@ -641,7 +641,7 @@ bool Database_getNextRow(DatabaseQueryHandle *databaseQueryHandle,
   assert(format != NULL);
 
   result = FALSE;
-  SEMAPHORE_LOCKED_DO(lockFlag,&databaseQueryHandle->databaseHandle->lock,SEMAPHORE_LOCK_TYPE_READ,SEMAPHORE_WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(lockFlag,&databaseQueryHandle->databaseHandle->lock,SEMAPHORE_LOCK_TYPE_READ)
   {
     if (sqlite3_step(databaseQueryHandle->handle) == SQLITE_ROW)
     {
@@ -851,7 +851,7 @@ void Database_finalize(DatabaseQueryHandle *databaseQueryHandle)
 
   assert(databaseQueryHandle != NULL);
 
-  SEMAPHORE_LOCKED_DO(lockFlag,&databaseQueryHandle->databaseHandle->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,SEMAPHORE_WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(lockFlag,&databaseQueryHandle->databaseHandle->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
   {
     sqlite3_finalize(databaseQueryHandle->handle);
   }
@@ -902,7 +902,7 @@ Errors Database_getInteger64(DatabaseHandle *databaseHandle,
 
   // execute SQL command
   error = ERROR_NONE;
-  SEMAPHORE_LOCKED_DO(lockFlag,&databaseHandle->lock,SEMAPHORE_LOCK_TYPE_READ,SEMAPHORE_WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(lockFlag,&databaseHandle->lock,SEMAPHORE_LOCK_TYPE_READ)
   {
     #ifdef DATABASE_DEBUG
       fprintf(stderr,"Database debug: get integer 64: %s\n",__FILE__,__LINE__,String_cString(sqlString));
@@ -986,7 +986,7 @@ Errors Database_getString(DatabaseHandle *databaseHandle,
 
   // execute SQL command
   error = ERROR_NONE;
-  SEMAPHORE_LOCKED_DO(lockFlag,&databaseHandle->lock,SEMAPHORE_LOCK_TYPE_READ,SEMAPHORE_WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(lockFlag,&databaseHandle->lock,SEMAPHORE_LOCK_TYPE_READ)
   {
     #ifdef DATABASE_DEBUG
       fprintf(stderr,"Database debug: get integer 64: %s\n",__FILE__,__LINE__,String_cString(sqlString));
@@ -1065,7 +1065,7 @@ Errors Database_setInteger64(DatabaseHandle *databaseHandle,
 
   // execute SQL command
   error = ERROR_NONE;
-  SEMAPHORE_LOCKED_DO(lockFlag,&databaseHandle->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,SEMAPHORE_WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(lockFlag,&databaseHandle->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
   {
     #ifdef DATABASE_DEBUG
       fprintf(stderr,"Database debug: set integer 64: %s\n",__FILE__,__LINE__,String_cString(sqlString));
@@ -1137,7 +1137,7 @@ Errors Database_setString(DatabaseHandle *databaseHandle,
 
   // execute SQL command
   error = ERROR_NONE;
-  SEMAPHORE_LOCKED_DO(lockFlag,&databaseHandle->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,SEMAPHORE_WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(lockFlag,&databaseHandle->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
   {
     #ifdef DATABASE_DEBUG
       fprintf(stderr,"Database debug: set string 64: %s\n",__FILE__,__LINE__,String_cString(sqlString));
@@ -1177,7 +1177,7 @@ int64 Database_getLastRowId(DatabaseHandle *databaseHandle)
   assert(databaseHandle != NULL);
 
   databaseId = DATABASE_ID_NONE;
-  SEMAPHORE_LOCKED_DO(lockFlag,&databaseHandle->lock,SEMAPHORE_LOCK_TYPE_READ,SEMAPHORE_WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(lockFlag,&databaseHandle->lock,SEMAPHORE_LOCK_TYPE_READ)
   {
     databaseId = (uint64)sqlite3_last_insert_rowid(databaseHandle->handle);
   }

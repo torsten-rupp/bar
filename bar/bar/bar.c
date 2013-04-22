@@ -1058,7 +1058,7 @@ LOCAL void output(FILE *file, const String string)
   {
     if (File_isTerminal(file))
     {
-      SEMAPHORE_LOCKED_DO(semaphoreLock,&outputLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,SEMAPHORE_WAIT_FOREVER)
+      SEMAPHORE_LOCKED_DO(semaphoreLock,&outputLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
       {
         // restore and output line
         if ((lastOutputLine != NULL) && (outputLine != lastOutputLine))
@@ -3397,7 +3397,7 @@ bool allocateServer(ServerAllocation *serverAllocation, ServerAllocationPrioriti
 
   assert(serverAllocation != NULL);
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&serverAllocation->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,SEMAPHORE_WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&serverAllocation->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
   {
     switch (priority)
     {
@@ -3460,7 +3460,7 @@ void freeServer(ServerAllocation *serverAllocation)
   assert(serverAllocation != NULL);
   assert(serverAllocation->connectionCount > 0);
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&serverAllocation->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,SEMAPHORE_WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&serverAllocation->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
   {
     // free connection
     serverAllocation->connectionCount--;
@@ -3475,7 +3475,7 @@ bool isServerAllocationPending(ServerAllocation *serverAllocation, ServerAllocat
   assert(serverAllocation != NULL);
 
   pendingFlag = FALSE;
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&serverAllocation->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,SEMAPHORE_WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&serverAllocation->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
   {
     switch (priority)
     {
