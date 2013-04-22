@@ -193,6 +193,7 @@ LOCAL Errors createLocalStorageArchive(String           localFileName,
   assert(storageName != NULL);
 
   // parse storage name
+  Storage_initSpecifier(&storageSpecifier);
   storageFileName = String_new();
   error = Storage_parseName(storageName,
                             &storageSpecifier,
@@ -205,6 +206,7 @@ LOCAL Errors createLocalStorageArchive(String           localFileName,
                Errors_getText(error)
               );
     String_delete(storageFileName);
+    Storage_doneSpecifier(&storageSpecifier);
     return error;
   }
 
@@ -212,8 +214,8 @@ LOCAL Errors createLocalStorageArchive(String           localFileName,
   error = File_getTmpFileName(localFileName,NULL,tmpDirectory);
   if (error != ERROR_NONE)
   {
-    Storage_doneSpecifier(&storageSpecifier);
     String_delete(storageFileName);
+    Storage_doneSpecifier(&storageSpecifier);
     return error;
   }
 
@@ -231,14 +233,14 @@ LOCAL Errors createLocalStorageArchive(String           localFileName,
   if (error != ERROR_NONE)
   {
     File_delete(localFileName,FALSE);
-    Storage_doneSpecifier(&storageSpecifier);
     String_delete(storageFileName);
+    Storage_doneSpecifier(&storageSpecifier);
     return error;
   }
 
   // free resources
-  Storage_doneSpecifier(&storageSpecifier);
   String_delete(storageFileName);
+  Storage_doneSpecifier(&storageSpecifier);
 
   return ERROR_NONE;
 }
