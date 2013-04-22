@@ -516,7 +516,7 @@ LOCAL void ungetNextChunkHeader(ArchiveInfo *archiveInfo, ChunkHeader *chunkHead
 }
 
 /***********************************************************************\
-* Name   : checkNewPartNeeded
+* Name   : isNewPartNeeded
 * Purpose: check if new file part should be created
 * Input  : archiveInfo - archive info data
 *          headerLength      - length of header data to write
@@ -528,11 +528,11 @@ LOCAL void ungetNextChunkHeader(ArchiveInfo *archiveInfo, ChunkHeader *chunkHead
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool checkNewPartNeeded(ArchiveInfo *archiveInfo,
-                              ulong       headerLength,
-                              bool        headerWrittenFlag,
-                              ulong       minBytes
-                             )
+LOCAL bool isNewPartNeeded(ArchiveInfo *archiveInfo,
+                           ulong       headerLength,
+                           bool        headerWrittenFlag,
+                           ulong       minBytes
+                          )
 {
   SemaphoreLock semaphoreLock;
   bool          newPartFlag;
@@ -983,11 +983,11 @@ LOCAL Errors ensureArchiveSpace(ArchiveInfo *archiveInfo,
   SEMAPHORE_ASSERT_OWNERSHIP(&archiveInfo->chunkIOLock);
 
   // check if split necessary
-  if (checkNewPartNeeded(archiveInfo,
-                         0,
-                         FALSE,
-                         minBytes
-                        )
+  if (isNewPartNeeded(archiveInfo,
+                      0,
+                      FALSE,
+                      minBytes
+                     )
      )
   {
     // split needed -> close archive file
@@ -1109,8 +1109,8 @@ LOCAL Errors writeFileChunks(ArchiveEntryInfo *archiveEntryInfo)
     // initialize variables
     archiveEntryInfo->file.headerWrittenFlag = FALSE;
 
-    archiveEntryInfo->file.chunkFileData.fragmentOffset = archiveEntryInfo->file.chunkFileData.fragmentOffset+archiveEntryInfo->file.chunkFileData.fragmentSize;
-    archiveEntryInfo->file.chunkFileData.fragmentSize   = 0LL;
+    archiveEntryInfo->file.chunkFileData.fragmentOffset += archiveEntryInfo->file.chunkFileData.fragmentSize;
+    archiveEntryInfo->file.chunkFileData.fragmentSize   =  0LL;
 
     // reset data crypt
     Crypt_reset(&archiveEntryInfo->file.cryptInfo,0);
@@ -1294,11 +1294,11 @@ close(h);
 
   // check if split is allowed and necessary
   newPartFlag =    allowNewPartFlag
-                && checkNewPartNeeded(archiveEntryInfo->archiveInfo,
-                                      archiveEntryInfo->file.headerLength,
-                                      archiveEntryInfo->file.headerWrittenFlag,
-                                      minBytes
-                                     );
+                && isNewPartNeeded(archiveEntryInfo->archiveInfo,
+                                   archiveEntryInfo->file.headerLength,
+                                   archiveEntryInfo->file.headerWrittenFlag,
+                                   minBytes
+                                  );
 
   // split
   if (newPartFlag)
@@ -1780,11 +1780,11 @@ LOCAL Errors writeImageDataBlock(ArchiveEntryInfo *archiveEntryInfo,
 
   // check if split is allowed and necessary
   newPartFlag =    allowNewPartFlag
-                && checkNewPartNeeded(archiveEntryInfo->archiveInfo,
-                                      archiveEntryInfo->image.headerLength,
-                                      archiveEntryInfo->image.headerWrittenFlag,
-                                      minBytes
-                                     );
+                && isNewPartNeeded(archiveEntryInfo->archiveInfo,
+                                   archiveEntryInfo->image.headerLength,
+                                   archiveEntryInfo->image.headerWrittenFlag,
+                                   minBytes
+                                  );
 
   // split
   if (newPartFlag)
@@ -2085,8 +2085,8 @@ LOCAL Errors writeHardLinkChunks(ArchiveEntryInfo *archiveEntryInfo)
     // initialize variables
     archiveEntryInfo->hardLink.headerWrittenFlag = FALSE;
 
-    archiveEntryInfo->hardLink.chunkHardLinkData.fragmentOffset = archiveEntryInfo->hardLink.chunkHardLinkData.fragmentOffset+archiveEntryInfo->hardLink.chunkHardLinkData.fragmentSize;
-    archiveEntryInfo->hardLink.chunkHardLinkData.fragmentSize   = 0LL;
+    archiveEntryInfo->hardLink.chunkHardLinkData.fragmentOffset += archiveEntryInfo->hardLink.chunkHardLinkData.fragmentSize;
+    archiveEntryInfo->hardLink.chunkHardLinkData.fragmentSize   =  0LL;
 
     // reset data crypt
     Crypt_reset(&archiveEntryInfo->hardLink.cryptInfo,0);
@@ -2277,11 +2277,11 @@ LOCAL Errors writeHardLinkDataBlock(ArchiveEntryInfo *archiveEntryInfo,
 
   // check if split is allowed and necessary
   newPartFlag =    allowNewPartFlag
-                && checkNewPartNeeded(archiveEntryInfo->archiveInfo,
-                                      archiveEntryInfo->hardLink.headerLength,
-                                      archiveEntryInfo->hardLink.headerWrittenFlag,
-                                      minBytes
-                                     );
+                && isNewPartNeeded(archiveEntryInfo->archiveInfo,
+                                   archiveEntryInfo->hardLink.headerLength,
+                                   archiveEntryInfo->hardLink.headerWrittenFlag,
+                                   minBytes
+                                  );
 
   // split
   if (newPartFlag)
@@ -3980,7 +3980,7 @@ Errors Archive_newDirectoryEntry(ArchiveEntryInfo *archiveEntryInfo,
   String_set(archiveEntryInfo->directory.chunkDirectoryEntry.name,directoryName);
 
   // calculate header size
-  length = Chunk_getSize(CHUNK_DEFINITION_DIRECTORY,      0,                           &archiveEntryInfo->directory.chunkDirectory     )+
+  length = Chunk_getSize(CHUNK_DEFINITION_DIRECTORY,      0,                            &archiveEntryInfo->directory.chunkDirectory     )+
            Chunk_getSize(CHUNK_DEFINITION_DIRECTORY_ENTRY,archiveEntryInfo->blockLength,&archiveEntryInfo->directory.chunkDirectoryEntry);
 
   // lock archive
@@ -7492,10 +7492,9 @@ Errors Archive_closeEntry(ArchiveEntryInfo *archiveEntryInfo)
               // append to archive
               SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveEntryInfo->archiveInfo->chunkIOLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,SEMAPHORE_WAIT_FOREVER)
               {
-                // open archive file if needed
+                // create archive file if needed
                 if (!archiveEntryInfo->archiveInfo->file.openFlag)
                 {
-                  // create archive file
                   tmpError = createArchiveFile(archiveEntryInfo->archiveInfo);
                   if (tmpError != ERROR_NONE)
                   {
@@ -7850,10 +7849,9 @@ Errors Archive_closeEntry(ArchiveEntryInfo *archiveEntryInfo)
               // append to archive
               SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveEntryInfo->archiveInfo->chunkIOLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,SEMAPHORE_WAIT_FOREVER)
               {
-                // open archive file if needed
+                // create archive file if needed
                 if (!archiveEntryInfo->archiveInfo->file.openFlag)
                 {
-                  // create archive file
                   tmpError = createArchiveFile(archiveEntryInfo->archiveInfo);
                   if (tmpError != ERROR_NONE)
                   {
@@ -7865,8 +7863,8 @@ Errors Archive_closeEntry(ArchiveEntryInfo *archiveEntryInfo)
                   // initialize variables
                   archiveEntryInfo->hardLink.headerWrittenFlag = FALSE;
 
-                  archiveEntryInfo->hardLink.chunkHardLinkData.fragmentOffset = archiveEntryInfo->hardLink.chunkHardLinkData.fragmentOffset+archiveEntryInfo->hardLink.chunkHardLinkData.fragmentSize;
-                  archiveEntryInfo->hardLink.chunkHardLinkData.fragmentSize   = 0LL;
+                  archiveEntryInfo->hardLink.chunkHardLinkData.fragmentOffset += archiveEntryInfo->hardLink.chunkHardLinkData.fragmentSize;
+                  archiveEntryInfo->hardLink.chunkHardLinkData.fragmentSize   =  0LL;
                 }
 
                 // transfer data
