@@ -10674,6 +10674,7 @@ Errors Storage_copy(const StorageSpecifier       *storageSpecifier,
                       );
   if (error != ERROR_NONE)
   {
+    (void)Storage_done(&storageFileHandle);
     String_delete(fileName);
     free(buffer);
     return error;
@@ -10687,7 +10688,7 @@ Errors Storage_copy(const StorageSpecifier       *storageSpecifier,
   if (error != ERROR_NONE)
   {
     Storage_close(&storageFileHandle);
-    Storage_done(&storageFileHandle);
+    (void)Storage_done(&storageFileHandle);
     String_delete(fileName);
     free(buffer);
     return error;
@@ -10716,7 +10717,7 @@ Errors Storage_copy(const StorageSpecifier       *storageSpecifier,
     File_close(&fileHandle);
     (void)File_delete(localFileName,FALSE);
     Storage_close(&storageFileHandle);
-    Storage_done(&storageFileHandle);
+    (void)Storage_done(&storageFileHandle);
     String_delete(fileName);
     free(buffer);
     return error;
@@ -10727,7 +10728,7 @@ Errors Storage_copy(const StorageSpecifier       *storageSpecifier,
 
   // close archive
   Storage_close(&storageFileHandle);
-  Storage_done(&storageFileHandle);
+  (void)Storage_done(&storageFileHandle);
   String_delete(fileName);
 
   // free resources
