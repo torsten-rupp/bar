@@ -1024,11 +1024,11 @@ LOCAL void appendSpecialToEntryList(MsgQueue     *entryMsgQueue,
 *                             archive)
 *          lastPartFlag     - TRUE iff last part
 * Output : -
-* Return : formated file name
+* Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-LOCAL String formatArchiveFileName(String       fileName,
+LOCAL Errors formatArchiveFileName(String       fileName,
                                    FormatModes  formatMode,
                                    ArchiveTypes archiveType,
                                    const String templateFileName,
@@ -1136,7 +1136,7 @@ LOCAL String formatArchiveFileName(String       fileName,
               }
               length = strftime(buffer,sizeof(buffer)-1,format,tm);
 
-              // insert in string
+              // insert into string
               switch (formatMode)
               {
                 case FORMAT_MODE_ARCHIVE_FILE_NAME:
@@ -1178,18 +1178,22 @@ LOCAL String formatArchiveFileName(String       fileName,
             if (partNumber != ARCHIVE_PART_NUMBER_NONE)
             {
               // find #...# and get max. divisor for part number
-              divisor = 1;
+              divisor = 1L;
               j = i+1L;
               while ((j < String_length(fileName) && String_index(fileName,j) == '#'))
               {
                 j++;
-                if (divisor < 1000000000) divisor*=10;
+                if (divisor < 1000000000L) divisor*=10;
+              }
+              if (partNumber >= (divisor*10L))
+              {
+                return ERROR_INSUFFICIENT_SPLIT_NUMBERS;
               }
 
               // replace #...# by part number
               n = partNumber;
               z = 0;
-              while (divisor > 0)
+              while (divisor > 0L)
               {
                 d = n/divisor; n = n%divisor; divisor = divisor/10;
                 if (z < sizeof(buffer)-1)
@@ -1245,7 +1249,7 @@ LOCAL String formatArchiveFileName(String       fileName,
     }
   }
 
-  return fileName;
+  return ERROR_NONE;
 }
 
 /***********************************************************************\
@@ -2424,15 +2428,20 @@ LOCAL Errors storeArchiveFile(void           *userData,
   }
 
   // get destination file name
-  destinationFileName = formatArchiveFileName(String_new(),
-                                              FORMAT_MODE_ARCHIVE_FILE_NAME,
-                                              createInfo->archiveType,
-                                              createInfo->storageFileName,
-                                              createInfo->startTime,
-                                              partNumber,
-                                              lastPartFlag
-                                             );
-  assert(!String_isEmpty(destinationFileName));
+  destinationFileName = String_new();
+  error = formatArchiveFileName(destinationFileName,
+                                FORMAT_MODE_ARCHIVE_FILE_NAME,
+                                createInfo->archiveType,
+                                createInfo->storageFileName,
+                                createInfo->startTime,
+                                partNumber,
+                                lastPartFlag
+                               );
+  if (error != ERROR_NONE)
+  {
+    String_delete(destinationFileName);
+    return error;
+  }
 
   // send to storage controller
   storageMsg.databaseHandle      = databaseHandle;
@@ -3007,41 +3016,48 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
     {
       if (globalOptions.deleteOldArchiveFilesFlag)
       {
-        pattern = formatArchiveFileName(String_new(),
-                                        FORMAT_MODE_PATTERN,
-                                        createInfo->archiveType,
-                                        createInfo->storageFileName,
-                                        createInfo->startTime,
-                                        ARCHIVE_PART_NUMBER_NONE,
-                                        FALSE
-                                       );
-
-        storagePath = File_getFilePathName(String_new(),createInfo->storageFileName);
-        error = Storage_openDirectoryList(&storageDirectoryListHandle,
-                                          storagePath,
-                                          createInfo->jobOptions
-                                         );
+        // get archive name pattern
+        pattern = String_new();
+        error = formatArchiveFileName(pattern,
+                                      FORMAT_MODE_PATTERN,
+                                      createInfo->archiveType,
+                                      createInfo->storageFileName,
+                                      createInfo->startTime,
+                                      ARCHIVE_PART_NUMBER_NONE,
+                                      FALSE
+                                     );
         if (error == ERROR_NONE)
         {
-          fileName = String_new();
-          while (   !Storage_endOfDirectoryList(&storageDirectoryListHandle)
-                 && (Storage_readDirectoryList(&storageDirectoryListHandle,fileName,NULL) == ERROR_NONE)
-                )
+          // open directory
+          storagePath = File_getFilePathName(String_new(),createInfo->storageFileName);
+          error = Storage_openDirectoryList(&storageDirectoryListHandle,
+                                            storagePath,
+                                            createInfo->jobOptions
+                                           );
+          if (error == ERROR_NONE)
           {
-            // find in storage list
-            if (String_match(fileName,STRING_BEGIN,pattern,NULL,NULL))
+            // read directory
+            fileName = String_new();
+            while (   !Storage_endOfDirectoryList(&storageDirectoryListHandle)
+                   && (Storage_readDirectoryList(&storageDirectoryListHandle,fileName,NULL) == ERROR_NONE)
+                  )
             {
-              if (StringList_find(&createInfo->storageFileList,fileName) == NULL)
+              // find in storage list
+              if (String_match(fileName,STRING_BEGIN,pattern,NULL,NULL))
               {
-                Storage_delete(&createInfo->storageFileHandle,fileName);
+                if (StringList_find(&createInfo->storageFileList,fileName) == NULL)
+                {
+                  Storage_delete(&createInfo->storageFileHandle,fileName);
+                }
               }
             }
-          }
-          String_delete(fileName);
+            String_delete(fileName);
 
-          Storage_closeDirectoryList(&storageDirectoryListHandle);
+            // close directory
+            Storage_closeDirectoryList(&storageDirectoryListHandle);
+          }
+          String_delete(storagePath);
         }
-        String_delete(storagePath);
         String_delete(pattern);
       }
     }
