@@ -3093,8 +3093,9 @@ LOCAL Errors storeFileEntry(CreateInfo   *createInfo,
   bool             deltaCompressFlag;
   ArchiveEntryInfo archiveEntryInfo;
   ulong            bufferLength;
+  uint64           archiveBytes;
+  double           compressionRatio;
   uint             percentageDone;
-  double           ratio;
 
   assert(createInfo != NULL);
   assert(createInfo->jobOptions != NULL);
@@ -3215,12 +3216,15 @@ LOCAL Errors storeFileEntry(CreateInfo   *createInfo,
           error = Archive_writeData(&archiveEntryInfo,buffer,bufferLength,1);
           if (error == ERROR_NONE)
           {
+            archiveBytes     = createInfo->statusInfo.archiveTotalBytes+Archive_getSize(&createInfo->archiveInfo);
+            compressionRatio = 100.0-(createInfo->statusInfo.archiveTotalBytes+Archive_getSize(&createInfo->archiveInfo))*100.0/createInfo->statusInfo.doneBytes;
+
             SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
             {
               createInfo->statusInfo.doneBytes        += (uint64)bufferLength;
               createInfo->statusInfo.entryDoneBytes   += (uint64)bufferLength;
-              createInfo->statusInfo.archiveBytes     = createInfo->statusInfo.archiveTotalBytes+Archive_getSize(&createInfo->archiveInfo);
-              createInfo->statusInfo.compressionRatio = 100.0-(createInfo->statusInfo.archiveTotalBytes+Archive_getSize(&createInfo->archiveInfo))*100.0/createInfo->statusInfo.doneBytes;
+              createInfo->statusInfo.archiveBytes     = archiveBytes;
+              createInfo->statusInfo.compressionRatio = compressionRatio;
               updateStatusInfo(createInfo);
             }
           }
@@ -3280,16 +3284,16 @@ LOCAL Errors storeFileEntry(CreateInfo   *createInfo,
     // get compression ratio
     if (archiveEntryInfo.file.chunkFileData.fragmentSize > 0LL)
     {
-      ratio = 100.0-archiveEntryInfo.file.chunkFileData.info.size*100.0/archiveEntryInfo.file.chunkFileData.fragmentSize;
+      compressionRatio = 100.0-archiveEntryInfo.file.chunkFileData.info.size*100.0/archiveEntryInfo.file.chunkFileData.fragmentSize;
     }
     else
     {
-      ratio = 0.0;
+      compressionRatio = 0.0;
     }
 
     if (!createInfo->jobOptions->dryRunFlag)
     {
-      printInfo(1,"ok (%llu bytes, ratio %.1f%%)\n",fileInfo.size,ratio);
+      printInfo(1,"ok (%llu bytes, ratio %.1f%%)\n",fileInfo.size,compressionRatio);
       logMessage(LOG_TYPE_ENTRY_OK,"added '%s'\n",String_cString(fileName));
     }
     else
@@ -3349,8 +3353,9 @@ LOCAL Errors storeImageEntry(CreateInfo   *createInfo,
   uint64           block;
   uint64           blockCount;
   uint             bufferBlockCount;
+  uint64           archiveBytes;
+  double           compressionRatio;
   uint             percentageDone;
-  double           ratio;
   ArchiveEntryInfo archiveEntryInfo;
 
   assert(createInfo != NULL);
@@ -3525,12 +3530,15 @@ LOCAL Errors storeImageEntry(CreateInfo   *createInfo,
         error = Archive_writeData(&archiveEntryInfo,buffer,bufferBlockCount*deviceInfo.blockSize,deviceInfo.blockSize);
         if (error == ERROR_NONE)
         {
+          archiveBytes     = createInfo->statusInfo.archiveTotalBytes+Archive_getSize(&createInfo->archiveInfo);
+          compressionRatio = 100.0-(createInfo->statusInfo.archiveTotalBytes+Archive_getSize(&createInfo->archiveInfo))*100.0/createInfo->statusInfo.doneBytes;
+
           SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
           {
             createInfo->statusInfo.doneBytes        += (uint64)bufferBlockCount*(uint64)deviceInfo.blockSize;
             createInfo->statusInfo.entryDoneBytes   += (uint64)bufferBlockCount*(uint64)deviceInfo.blockSize;
-            createInfo->statusInfo.archiveBytes     = createInfo->statusInfo.archiveTotalBytes+Archive_getSize(&createInfo->archiveInfo);
-            createInfo->statusInfo.compressionRatio = 100.0-(createInfo->statusInfo.archiveTotalBytes+Archive_getSize(&createInfo->archiveInfo))*100.0/createInfo->statusInfo.doneBytes;
+            createInfo->statusInfo.archiveBytes     = archiveBytes;
+            createInfo->statusInfo.compressionRatio = compressionRatio;
             updateStatusInfo(createInfo);
           }
         }
@@ -3591,11 +3599,11 @@ LOCAL Errors storeImageEntry(CreateInfo   *createInfo,
     // get compression ratio
     if (archiveEntryInfo.image.chunkImageData.blockCount > 0)
     {
-      ratio = 100.0-archiveEntryInfo.image.chunkImageData.info.size*100.0/(archiveEntryInfo.image.chunkImageData.blockCount*(uint64)deviceInfo.blockSize);
+      compressionRatio = 100.0-archiveEntryInfo.image.chunkImageData.info.size*100.0/(archiveEntryInfo.image.chunkImageData.blockCount*(uint64)deviceInfo.blockSize);
     }
     else
     {
-      ratio = 0.0;
+      compressionRatio = 0.0;
     }
 
     if (!createInfo->jobOptions->dryRunFlag)
@@ -3603,7 +3611,7 @@ LOCAL Errors storeImageEntry(CreateInfo   *createInfo,
       printInfo(1,"ok (%s, %llu bytes, ratio %.1f%%)\n",
                 fileSystemFlag?FileSystem_getName(fileSystemHandle.type):"raw",
                 deviceInfo.size,
-                ratio
+                compressionRatio
                );
       logMessage(LOG_TYPE_ENTRY_OK,"added '%s'\n",String_cString(deviceName));
     }
@@ -3919,8 +3927,9 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
   bool             deltaCompressFlag;
   ArchiveEntryInfo archiveEntryInfo;
   ulong            bufferLength;
+  uint64           archiveBytes;
+  double           compressionRatio;
   uint             percentageDone;
-  double           ratio;
   const StringNode *stringNode;
   String           name;
 
@@ -4040,12 +4049,15 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
           error = Archive_writeData(&archiveEntryInfo,buffer,bufferLength,1);
           if (error == ERROR_NONE)
           {
+            archiveBytes     = createInfo->statusInfo.archiveTotalBytes+Archive_getSize(&createInfo->archiveInfo);
+            compressionRatio = 100.0-(createInfo->statusInfo.archiveTotalBytes+Archive_getSize(&createInfo->archiveInfo))*100.0/createInfo->statusInfo.doneBytes;
+
             SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
             {
               createInfo->statusInfo.doneBytes        += (uint64)StringList_count(nameList)*(uint64)bufferLength;
               createInfo->statusInfo.entryDoneBytes   += (uint64)StringList_count(nameList)*(uint64)bufferLength;
-              createInfo->statusInfo.archiveBytes     = createInfo->statusInfo.archiveTotalBytes+Archive_getSize(&createInfo->archiveInfo);
-              createInfo->statusInfo.compressionRatio = 100.0-(createInfo->statusInfo.archiveTotalBytes+Archive_getSize(&createInfo->archiveInfo))*100.0/createInfo->statusInfo.doneBytes;
+              createInfo->statusInfo.archiveBytes     = archiveBytes;
+              createInfo->statusInfo.compressionRatio = compressionRatio;
               updateStatusInfo(createInfo);
             }
           }
@@ -4100,16 +4112,19 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
     // get compression ratio
     if (archiveEntryInfo.hardLink.chunkHardLinkData.fragmentSize > 0LL)
     {
-      ratio = 100.0-archiveEntryInfo.hardLink.chunkHardLinkData.info.size*100.0/archiveEntryInfo.hardLink.chunkHardLinkData.fragmentSize;
+      compressionRatio = 100.0-archiveEntryInfo.hardLink.chunkHardLinkData.info.size*100.0/archiveEntryInfo.hardLink.chunkHardLinkData.fragmentSize;
     }
     else
     {
-      ratio = 0.0;
+      compressionRatio = 0.0;
     }
 
     if (!createInfo->jobOptions->dryRunFlag)
     {
-      printInfo(1,"ok (%llu bytes, ratio %.1f%%)\n",fileInfo.size,ratio);
+      printInfo(1,"ok (%llu bytes, ratio %.1f%%)\n",
+                fileInfo.size,
+                compressionRatio
+               );
       logMessage(LOG_TYPE_ENTRY_OK,"added '%s'\n",String_cString(nameList->head->string));
     }
     else
