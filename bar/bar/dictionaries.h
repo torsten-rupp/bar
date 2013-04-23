@@ -58,6 +58,7 @@ typedef struct
 // dictionary
 typedef struct
 {
+  Semaphore                 lock;
   DictionaryEntryTable      *entryTables;                // tables array
   uint                      entryTableCount;             // number of tables
   DictionaryCompareFunction dictionaryCompareFunction;
