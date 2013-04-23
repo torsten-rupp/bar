@@ -106,9 +106,7 @@ typedef struct
 
   ArchiveInfo                 archiveInfo;
 
-  bool                        collectorSumThreadExitFlag;
-  bool                        collectorSumThreadExitedFlag;
-  bool                        collectorThreadExitFlag;            // TRUE iff collector thread exited
+  bool                        collectorSumThreadExitedFlag;       // TRUE iff collector sum thread exited
 
   MsgQueue                    storageMsgQueue;                    // queue with waiting storage files
   Semaphore                   storageInfoLock;                    // lock semaphore for storage info
@@ -257,9 +255,7 @@ LOCAL void initCreateInfo(CreateInfo               *createInfo,
   createInfo->requestedAbortFlag           = requestedAbortFlag;
   createInfo->storeIncrementalFileInfoFlag = FALSE;
   createInfo->startTime                    = time(NULL);
-  createInfo->collectorSumThreadExitFlag   = FALSE;
   createInfo->collectorSumThreadExitedFlag = FALSE;
-  createInfo->collectorThreadExitFlag      = FALSE;
   createInfo->storageInfo.count            = 0;
   createInfo->storageInfo.bytes            = 0LL;
   createInfo->storageThreadExitFlag        = FALSE;
@@ -1397,8 +1393,7 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
   // process include entries
   abortFlag        = FALSE;
   includeEntryNode = createInfo->includeEntryList->head;
-  while (   !createInfo->collectorSumThreadExitFlag
-         && !abortFlag
+  while (   !abortFlag
          && ((createInfo->requestedAbortFlag == NULL) || !(*createInfo->requestedAbortFlag))
          && (createInfo->failError == ERROR_NONE)
          && (includeEntryNode != NULL)
@@ -1431,8 +1426,7 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
 
     // find files
     StringList_append(&nameList,basePath);
-    while (   !createInfo->collectorSumThreadExitFlag
-           && (createInfo->failError == ERROR_NONE)
+    while (   (createInfo->failError == ERROR_NONE)
            && ((createInfo->requestedAbortFlag == NULL) || !(*createInfo->requestedAbortFlag))
            && !StringList_isEmpty(&nameList)
           )
@@ -1508,8 +1502,7 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
                 {
                   // read directory contents
                   fileName = String_new();
-                  while (   !createInfo->collectorSumThreadExitFlag
-                         && (createInfo->failError == ERROR_NONE)
+                  while (   (createInfo->failError == ERROR_NONE)
                          && ((createInfo->requestedAbortFlag == NULL) || !(*createInfo->requestedAbortFlag))
                          && !File_endOfDirectoryList(&directoryListHandle)
                         )
@@ -2313,8 +2306,6 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
   String_delete(name);
   String_delete(basePath);
   StringList_done(&nameList);
-
-  createInfo->collectorThreadExitFlag = TRUE;
 }
 
 /*---------------------------------------------------------------------*/
@@ -4662,7 +4653,6 @@ Errors Command_create(const String                    storageName,
       Storage_closeIndex(&createInfo.storageIndexHandle);
     }
 #endif /* 0 */
-    createInfo.collectorSumThreadExitFlag = TRUE;
     MsgQueue_setEndOfMsg(&createInfo.entryMsgQueue);
     MsgQueue_setEndOfMsg(&createInfo.storageMsgQueue);
     Thread_join(&storageThread);
@@ -4700,7 +4690,6 @@ createThreadCode(&createInfo);
   Archive_close(&createInfo.archiveInfo);
 
   // signal end of data
-  createInfo.collectorSumThreadExitFlag = TRUE;
   MsgQueue_setEndOfMsg(&createInfo.entryMsgQueue);
   MsgQueue_setEndOfMsg(&createInfo.storageMsgQueue);
 
