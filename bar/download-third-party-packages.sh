@@ -22,7 +22,7 @@ RMRF="rm -rf"
 SVN="svn"
 TAR="tar"
 WGET="wget"
-WGET_OPTIONS="--timeout=30"
+WGET_OPTIONS="--timeout=30 --tries=3"
 
 # --------------------------------- variables --------------------------------
 
