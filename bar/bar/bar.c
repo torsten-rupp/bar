@@ -664,7 +664,7 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
   CMD_OPTION_BOOLEAN      ("no-bar-on-medium",             0,  1,1,jobOptions.noBAROnMediumFlag,                                                                       "do not store a copy of BAR on medium"                                     ),
   CMD_OPTION_BOOLEAN      ("stop-on-error",                0,  1,1,jobOptions.stopOnErrorFlag,                                                                         "immediately stop on error"                                                ),
 
-  CMD_OPTION_BOOLEAN      ("no-default-config",            0,  1,0,globalOptions.noDefaultConfigFlag,                                                                  "do not read personal config file ~/.bar/" DEFAULT_CONFIG_FILE_NAME        ),
+  CMD_OPTION_BOOLEAN      ("no-default-config",            0,  1,0,globalOptions.noDefaultConfigFlag,                                                                  "do not read personal configuration file ~/.bar/" DEFAULT_CONFIG_FILE_NAME ),
   CMD_OPTION_BOOLEAN      ("quiet",                        0,  1,0,globalOptions.quietFlag,                                                                            "suppress any output"                                                      ),
   CMD_OPTION_INTEGER_RANGE("verbose",                      'v',1,0,globalOptions.verboseLevel,                  0,6,NULL,                                              "verbosity level"                                                          ),
 
@@ -1196,7 +1196,7 @@ LOCAL bool readConfigFile(const String fileName, bool printInfoFlag)
   {
     if ((fileInfo.permission & (FILE_PERMISSION_GROUP_READ|FILE_PERMISSION_OTHER_READ)) != 0)
     {
-      printWarning("Config file '%s' has wrong file permission %03o. Please make sure read permissions are limited to file owner (mode 600).\n",
+      printWarning("Configuration file '%s' has wrong file permission %03o. Please make sure read permissions are limited to file owner (mode 600).\n",
                    String_cString(fileName),
                    fileInfo.permission & FILE_PERMISSION_MASK
                   );
@@ -1204,7 +1204,7 @@ LOCAL bool readConfigFile(const String fileName, bool printInfoFlag)
   }
   else
   {
-    printWarning("Cannot get file info for config file '%s' (error: %s)\n",
+    printWarning("Cannot get file info for configuration file '%s' (error: %s)\n",
                  String_cString(fileName),
                  Error_getText(error)
                 );
@@ -1214,7 +1214,7 @@ LOCAL bool readConfigFile(const String fileName, bool printInfoFlag)
   error = File_open(&fileHandle,fileName,FILE_OPEN_READ);
   if (error != ERROR_NONE)
   {
-    printError("Cannot open file '%s' (error: %s)!\n",
+    printError("Cannot open configuration file '%s' (error: %s)!\n",
                String_cString(fileName),
                Error_getText(error)
               );
@@ -1222,7 +1222,7 @@ LOCAL bool readConfigFile(const String fileName, bool printInfoFlag)
   }
 
   // parse file
-  if (isPrintInfo(2) || printInfoFlag) printf("Reading config file '%s'...",String_cString(fileName));
+  if (isPrintInfo(2) || printInfoFlag) printf("Reading configuration file '%s'...",String_cString(fileName));
   failFlag   = FALSE;
   lineNb     = 0;
   line       = String_new();
@@ -1443,7 +1443,7 @@ LOCAL bool cmdOptionParseString(void *userData, void *variable, const char *name
 
 /***********************************************************************\
 * Name   : cmdOptionParseConfigFile
-* Purpose: command line option call back for parsing config file
+* Purpose: command line option call back for parsing configuration file
 * Input  : -
 * Output : -
 * Return : TRUE iff parsed, FALSE otherwise
@@ -2092,7 +2092,7 @@ LOCAL bool cmdOptionParseCompressAlgorithm(void *userData, void *variable, const
 
 /***********************************************************************\
 * Name   : configValueParseConfigFile
-* Purpose: command line option call back for parsing config file
+* Purpose: command line option call back for parsing configuration file
 * Input  : -
 * Output : -
 * Return : -
@@ -4818,7 +4818,7 @@ bool readJobFile(const String      fileName,
   error = File_open(&fileHandle,fileName,FILE_OPEN_READ);
   if (error != ERROR_NONE)
   {
-    printError("Cannot open file '%s' (error: %s)!\n",
+    printError("Cannot open job file '%s' (error: %s)!\n",
                String_cString(fileName),
                Error_getText(error)
               );
@@ -5151,7 +5151,7 @@ int main(int argc, const char *argv[])
     if (error != ERROR_NONE)
     {
       if (printInfoFlag) printf("fail!\n");
-      printError("Cannot open indexd database '%s' (error: %s)!\n",
+      printError("Cannot open index database '%s' (error: %s)!\n",
                  indexDatabaseFileName,
                  Error_getText(error)
                 );
