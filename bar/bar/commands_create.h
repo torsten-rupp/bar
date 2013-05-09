@@ -35,7 +35,7 @@
 /* status info data */
 typedef struct
 {
-  ulong  doneEntries;                      // number of enttries processed
+  ulong  doneEntries;                      // number of entries processed
   uint64 doneBytes;                        // number of bytes processed
   ulong  totalEntries;                     // total number of enttries
   uint64 totalBytes;                       // total bytes
