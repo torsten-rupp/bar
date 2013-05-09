@@ -2378,9 +2378,11 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                     uint64               fragmentOffset,fragmentLength;
 //fprintf(stderr,"%s, %d: type=#%s# arguments=%s\n",__FILE__,__LINE__,type,String_cString(arguments));
 
+                    // initialize variables
                     fileName        = String_new();
                     deltaSourceName = String_new();
 
+                    // parse file entry
                     if (String_parse(arguments,
                                      STRING_BEGIN,
                                      "%'S %llu %llu %d %d %d %d %d %'S %llu %llu %llu",
@@ -2454,6 +2456,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                       printWarning("Parsing 'file' entry '%s' fail\n",String_cString(arguments));
                     }
 
+                    // free resources
                     String_delete(deltaSourceName);
                     String_delete(fileName);
                   }
@@ -2472,9 +2475,11 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                     uint64             blockOffset,blockCount;
 //fprintf(stderr,"%s, %d: type=#%s# arguments=%s\n",__FILE__,__LINE__,type,String_cString(arguments));
 
+                    // initialize variables
                     imageName       = String_new();
                     deltaSourceName = String_new();
 
+                    // parse image entry
                     if (String_parse(arguments,
                                      STRING_BEGIN,
                                      "%'S %llu %llu %d %d %d %d %'S %llu %d %llu %llu",
@@ -2548,6 +2553,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                       printWarning("Parsing 'image' entry '%s' fail\n",String_cString(arguments));
                     }
 
+                    // free resources
                     String_delete(deltaSourceName);
                     String_delete(imageName);
                   }
@@ -2559,8 +2565,10 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                     CryptTypes      cryptType;
 //fprintf(stderr,"%s, %d: type=#%s# arguments=%s\n",__FILE__,__LINE__,type,String_cString(arguments));
 
+                    // initialize variables
                     directoryName = String_new();
 
+                    // parse directory entry
                     if (String_parse(arguments,
                                      STRING_BEGIN,
                                      "%'S %llu %d %d",
@@ -2610,6 +2618,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                       printWarning("Parsing 'file' entry '%s' fail\n",String_cString(arguments));
                     }
 
+                    // free resources
                     String_delete(directoryName);
                   }
                   else if (strcmp(type,"LINK") == 0)
@@ -2619,9 +2628,11 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                     CryptTypes      cryptType;
 //fprintf(stderr,"%s, %d: type=#%s# arguments=%s\n",__FILE__,__LINE__,type,String_cString(arguments));
 
+                    // initialize variables
                     linkName = String_new();
                     fileName = String_new();
 
+                    // parse symbolic link entry
                     if (String_parse(arguments,
                                      STRING_BEGIN,
                                      "%'S %'S %d %d",
@@ -2671,6 +2682,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                       printWarning("Parsing 'file' entry '%s' fail\n",String_cString(arguments));
                     }
 
+                    // free resources
                     String_delete(fileName);
                     String_delete(linkName);
                   }
@@ -2689,9 +2701,11 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                     uint64               fragmentOffset,fragmentLength;
 //fprintf(stderr,"%s, %d: type=#%s# arguments=%s\n",__FILE__,__LINE__,type,String_cString(arguments));
 
+                    // initialize variables
                     fileName        = String_new();
                     deltaSourceName = String_new();
 
+                    // parse hard link entry
                     if (String_parse(arguments,
                                      STRING_BEGIN,
                                      "%'S %llu %llu %d %d %d %d %d %'S %llu %llu %llu",
@@ -2765,6 +2779,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                       printWarning("Parsing 'file' entry '%s' fail\n",String_cString(arguments));
                     }
 
+                    // free resources
                     String_delete(deltaSourceName);
                     String_delete(fileName);
                   }
@@ -2776,10 +2791,12 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                     FileSpecialTypes fileSpecialType;
                     ulong            major;
                     ulong            minor;
-fprintf(stderr,"%s, %d: type=#%s# arguments=%s\n",__FILE__,__LINE__,type,String_cString(arguments));
+//fprintf(stderr,"%s, %d: type=#%s# arguments=%s\n",__FILE__,__LINE__,type,String_cString(arguments));
 
+                    // initialize variables
                     fileName = String_new();
 
+                    // parse special entry
                     if (String_parse(arguments,
                                      STRING_BEGIN,
                                      "%'S %d %d %d %ld %ld",
@@ -2835,6 +2852,7 @@ fprintf(stderr,"%s, %d: type=#%s# arguments=%s\n",__FILE__,__LINE__,type,String_
                       printWarning("Parsing 'file' entry '%s' fail\n",String_cString(arguments));
                     }
 
+                    // free resources
                     String_delete(fileName);
                   }
                   else
