@@ -677,6 +677,29 @@ Node *List_getLast(void *list)
   return node;
 }
 
+bool List_contains(const void             *list,
+                   const void             *node,
+                   ListNodeEqualsFunction listNodeEqualsFunction,
+                   void                   *listNodeEqualsUserData
+                  )
+{
+  Node *findNode;
+
+  assert(list != NULL);
+
+  findNode = ((List*)list)->head;
+  while (   (findNode != NULL)
+         && (   ((listNodeEqualsFunction == NULL) && (findNode != node))
+             || ((listNodeEqualsFunction != NULL) && (listNodeEqualsFunction(findNode,listNodeEqualsUserData) != 0))
+            )
+        )
+  {
+    findNode = findNode->next;
+  }
+
+  return findNode != NULL;
+}
+
 const Node *List_findFirst(const void             *list,
                            ListNodeEqualsFunction listNodeEqualsFunction,
                            void                   *listNodeEqualsUserData

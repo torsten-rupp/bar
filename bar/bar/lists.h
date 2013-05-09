@@ -490,6 +490,24 @@ Node *List_getFirst(void *list);
 Node *List_getLast(void *list);
 
 /***********************************************************************\
+* Name   : List_contains
+* Purpose: check if list contain node
+* Input  : list                   - list
+*          node                   - node
+*          listNodeEqualsFunction - equals function or NULL
+*          listNodeEqualsUserData - user data for equals function
+* Output : -
+* Return : TRUE if list contain node, FALSE otherwise
+* Notes  : -
+\***********************************************************************/
+
+bool List_contains(const void             *list,
+                   const void             *node,
+                   ListNodeEqualsFunction listNodeEqualsFunction,
+                   void                   *listNodeEqualsUserData
+                  );
+
+/***********************************************************************\
 * Name   : List_findFirst
 * Purpose: find node in list
 * Input  : list                   - list
