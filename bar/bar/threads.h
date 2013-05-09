@@ -29,12 +29,12 @@
 
 /***************************** Datatypes *******************************/
 
+typedef pthread_t ThreadId;
+
 typedef struct
 {
   pthread_t handle;
 } Thread;
-
-typedef pthread_t ThreadId;
 
 // thread local storage
 typedef struct ThreadLocalStorageInstanceNode
