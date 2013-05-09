@@ -567,8 +567,7 @@ void Dictionary_done(Dictionary             *dictionary,
   assert(dictionary != NULL);
   assert(dictionary->entryTables != NULL);
 
-  Semaphore_forceLock(&dictionary->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE);
-
+  // free resources
   for (z = 0; z < dictionary->entryTableCount; z++)
   {
     assert(dictionary->entryTables[z].entries != NULL);
@@ -633,7 +632,7 @@ void Dictionary_clear(Dictionary             *dictionary,
   }
 }
 
-ulong Dictionary_count(const Dictionary *dictionary)
+ulong Dictionary_count(Dictionary *dictionary)
 {
   SemaphoreLock semaphoreLock;
   ulong         count;
@@ -976,7 +975,7 @@ bool Dictionary_contain(Dictionary *dictionary,
 }
 
 void Dictionary_initIterator(DictionaryIterator *dictionaryIterator,
-                             const Dictionary   *dictionary
+                             Dictionary         *dictionary
                             )
 {
   assert(dictionaryIterator != NULL);
@@ -1093,7 +1092,7 @@ bool Dictionary_iterate(Dictionary                *dictionary,
 }
 
 #ifndef NDEBUG
-void Dictionary_printStatistic(const Dictionary *dictionary)
+void Dictionary_printStatistic(Dictionary *dictionary)
 {
   SemaphoreLock semaphoreLock;
   ulong         totalEntryCount,totalIndexCount;

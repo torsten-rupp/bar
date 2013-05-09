@@ -177,7 +177,7 @@ void Dictionary_clear(Dictionary             *dictionary,
 * Notes  : -
 \***********************************************************************/
 
-ulong Dictionary_count(const Dictionary *dictionary);
+ulong Dictionary_count(Dictionary *dictionary);
 
 /***********************************************************************\
 * Name   : Dictionary_add
@@ -267,7 +267,7 @@ bool Dictionary_contain(Dictionary *dictionary,
 \***********************************************************************/
 
 void Dictionary_initIterator(DictionaryIterator *dictionaryIterator,
-                             const Dictionary   *dictionary
+                             Dictionary         *dictionary
                             );
 
 /***********************************************************************\
@@ -316,8 +316,17 @@ bool Dictionary_iterate(Dictionary                *dictionary,
                         void                      *dictionaryIterateUserData
                        );
 
+/***********************************************************************\
+* Name   : Dictionary_printStatistic
+* Purpose: print statistics (debug only)
+* Input  : dictionary - dictionary
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
 #ifndef NDEBUG
-void Dictionary_printStatistic(const Dictionary *dictionary);
+void Dictionary_printStatistic(Dictionary *dictionary);
 #endif /* NDEBUG */
 
 #ifdef __cplusplus
