@@ -25,7 +25,9 @@
 #endif /* PLATFORM_... */
 
 #include "global.h"
-#include "lists.h"
+#ifndef NDEBUG
+  #include "lists.h"
+#endif /* not NDEBUG */
 
 /****************** Conditional compilation switches *******************/
 
@@ -82,6 +84,8 @@ typedef struct Semaphore
 
   // debug data
   #ifndef NDEBUG
+    const char *fileName;
+    ulong      lineNb;
     const char *name;
     struct
     {
@@ -129,8 +133,8 @@ typedef bool SemaphoreLock;
   #define _SEMAPHORE_NAME(variable) _SEMAPHORE_NAME_INTERN(variable)
   #define _SEMAPHORE_NAME_INTERN(variable) #variable
 
-  #define Semaphore_init(semaphore) __Semaphore_init(_SEMAPHORE_NAME(semaphore),semaphore)
-  #define Semaphore_new(semaphore) __Semaphore_new(_SEMAPHORE_NAME(semaphore),semaphore)
+  #define Semaphore_init(semaphore) __Semaphore_init(__FILE__,__LINE__,_SEMAPHORE_NAME(semaphore),semaphore)
+  #define Semaphore_new(semaphore) __Semaphore_new(__FILE__,__LINE__,_SEMAPHORE_NAME(semaphore),semaphore)
   #define Semaphore_lock(semaphore,semaphoreLockType,timeout) __Semaphore_lock(__FILE__,__LINE__,semaphore,semaphoreLockType,timeout)
   #define Semaphore_forceLock(semaphore,semaphoreLockType) __Semaphore_forceLock(__FILE__,__LINE__,semaphore,semaphoreLockType)
   #define Semaphore_unlock(semaphore) __Semaphore_unlock(__FILE__,__LINE__,semaphore)
@@ -182,7 +186,10 @@ typedef bool SemaphoreLock;
 #ifdef NDEBUG
 bool Semaphore_init(Semaphore *semaphore);
 #else /* not NDEBUG */
-bool __Semaphore_init(const char *name, Semaphore *semaphore);
+bool __Semaphore_init(const char *fileName,
+                      ulong      lineNb,
+                      const char *name,
+                      Semaphore  *semaphore);
 #endif /* NDEBUG */
 
 /***********************************************************************\
@@ -208,7 +215,10 @@ void Semaphore_done(Semaphore *semaphore);
 #ifdef NDEBUG
 Semaphore *Semaphore_new(void);
 #else /* not NDEBUG */
-Semaphore *__Semaphore_new(const char *name);
+Semaphore *__Semaphore_new(const char *fileName,
+                           ulong      lineNb,
+                           const char *name
+                          );
 #endif /* NDEBUG */
 
 /***********************************************************************\
@@ -322,7 +332,33 @@ void __Semaphore_unlock(const char *fileName, ulong lineNb, Semaphore *semaphore
 * Notes  : -
 \***********************************************************************/
 
-bool Semaphore_isLocked(Semaphore *semaphore);
+INLINE bool Semaphore_isLocked(Semaphore *semaphore);
+#if defined(NDEBUG) || defined(__SEMAPHORES_IMPLEMENATION__)
+INLINE bool Semaphore_isLocked(Semaphore *semaphore)
+{
+  assert(semaphore != NULL);
+
+  return semaphore->lockType != SEMAPHORE_LOCK_TYPE_NONE;
+}
+#endif /* NDEBUG || __SEMAPHORES_IMPLEMENATION__ */
+
+/***********************************************************************\
+* Name   : Semaphore_isOwnedBy
+* Purpose: check if semaphore is owned by thread
+* Input  : semaphore - semaphore
+*          threadId  - thread id
+* Output : -
+* Return : TRUE iff semaphore is owned by thread
+* Notes  : -
+\***********************************************************************/
+
+INLINE bool Semaphore_isOwned(Semaphore *semaphore);
+#if defined(NDEBUG) || defined(__SEMAPHORES_IMPLEMENATION__)
+INLINE bool Semaphore_isOwned(Semaphore *semaphore)
+{
+  return pthread_equal(semaphore->lockedBy[semaphore->lockedByCount-1].thread,pthread_self()) != 0;
+}
+#endif /* NDEBUG || __SEMAPHORES_IMPLEMENATION__ */
 
 /***********************************************************************\
 * Name   : Semaphore_waitModified
