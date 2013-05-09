@@ -194,7 +194,7 @@ LOCAL void fileCheckValid(const char *fileName,
       #endif /* HAVE_BACKTRACE */
       HALT_INTERNAL_ERROR_AT(fileName,
                              lineNb,
-                             "File 0x%08x was closed at %s, %lu",
+                             "File 0x%08x was closed at %s, line %lu",
                              fileHandle,
                              debugFileNode->closeFileName,
                              debugFileNode->closeLineNb
@@ -668,7 +668,7 @@ Errors __File_getTmpFileCString(const char *__fileName__,
       }
       if (debugFileNode != NULL)
       {
-        fprintf(stderr,"DEBUG WARNING: file '%s' at %s, line %lu opened again at %s, %lu\n",
+        fprintf(stderr,"DEBUG WARNING: file '%s' at %s, line %lu opened again at %s, line %lu\n",
                 String_cString(debugFileNode->fileHandle->name),
                 debugFileNode->fileName,
                 debugFileNode->lineNb,
@@ -1093,7 +1093,7 @@ Errors __File_openCString(const char *__fileName__,
         #ifdef HAVE_BACKTRACE
           debugDumpCurrentStackTrace(stderr,"",0);
         #endif /* HAVE_BACKTRACE */
-        HALT_INTERNAL_ERROR("File '%s' at %s, line %lu opened again at %s, %lu",
+        HALT_INTERNAL_ERROR("File '%s' at %s, line %lu opened again at %s, line %lu",
                             String_cString(debugFileNode->fileHandle->name),
                             debugFileNode->fileName,
                             debugFileNode->lineNb,
@@ -1249,7 +1249,7 @@ Errors __File_openDescriptor(const char *__fileName__,
         #ifdef HAVE_BACKTRACE
           debugDumpCurrentStackTrace(stderr,"",0);
         #endif /* HAVE_BACKTRACE */
-        HALT_INTERNAL_ERROR("File '%s' at %s, line %lu opened again at %s, %lu",
+        HALT_INTERNAL_ERROR("File '%s' at %s, line %lu opened again at %s, line %lu",
                             String_cString(debugFileNode->fileHandle->name),
                             debugFileNode->fileName,
                             debugFileNode->lineNb,
