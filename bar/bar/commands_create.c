@@ -706,20 +706,16 @@ LOCAL void addIncrementalList(Dictionary     *filesDictionary,
 
 LOCAL bool updateStatusInfo(CreateInfo *createInfo)
 {
-  SemaphoreLock semaphoreLock;
-  bool          continueFlag;
+  bool continueFlag;
 
   assert(createInfo != NULL);
 
   if (createInfo->statusInfoFunction != NULL)
   {
-    SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ)
-    {
-      continueFlag = createInfo->statusInfoFunction(createInfo->statusInfoUserData,
-                                                    createInfo->failError,
-                                                    &createInfo->statusInfo
-                                                   );
-    }
+    continueFlag = createInfo->statusInfoFunction(createInfo->statusInfoUserData,
+                                                  createInfo->failError,
+                                                  &createInfo->statusInfo
+                                                 );
   }
   else
   {
@@ -1388,6 +1384,7 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
   Errors              error;
   String              fileName;
   FileInfo            fileInfo;
+  SemaphoreLock       semaphoreLock;
   DirectoryListHandle directoryListHandle;
   DeviceInfo          deviceInfo;
 
@@ -1478,9 +1475,12 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
                       || checkFileChanged(&createInfo->filesDictionary,name,&fileInfo)
                      )
                   {
-                    createInfo->statusInfo.totalEntries++;
-                    createInfo->statusInfo.totalBytes += fileInfo.size;
-                    abortFlag |= !updateStatusInfo(createInfo);
+                    SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+                    {
+                      createInfo->statusInfo.totalEntries++;
+                      createInfo->statusInfo.totalBytes += fileInfo.size;
+                      abortFlag |= !updateStatusInfo(createInfo);
+                    }
                   }
                   break;
                 case ENTRY_TYPE_IMAGE:
@@ -1499,8 +1499,11 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
                         || checkFileChanged(&createInfo->filesDictionary,name,&fileInfo)
                        )
                     {
-                      createInfo->statusInfo.totalEntries++;
-                      abortFlag |= !updateStatusInfo(createInfo);
+                      SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+                      {
+                        createInfo->statusInfo.totalEntries++;
+                        abortFlag |= !updateStatusInfo(createInfo);
+                      }
                     }
                     break;
                   case ENTRY_TYPE_IMAGE:
@@ -1556,9 +1559,12 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
                                     || checkFileChanged(&createInfo->filesDictionary,fileName,&fileInfo)
                                    )
                                 {
-                                  createInfo->statusInfo.totalEntries++;
-                                  createInfo->statusInfo.totalBytes += fileInfo.size;
-                                  abortFlag |= !updateStatusInfo(createInfo);
+                                  SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+                                  {
+                                    createInfo->statusInfo.totalEntries++;
+                                    createInfo->statusInfo.totalBytes += fileInfo.size;
+                                    abortFlag |= !updateStatusInfo(createInfo);
+                                  }
                                 }
                                 break;
                               case ENTRY_TYPE_IMAGE:
@@ -1577,8 +1583,11 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
                                     || checkFileChanged(&createInfo->filesDictionary,fileName,&fileInfo)
                                    )
                                 {
-                                  createInfo->statusInfo.totalEntries++;
-                                  abortFlag |= !updateStatusInfo(createInfo);
+                                  SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+                                  {
+                                    createInfo->statusInfo.totalEntries++;
+                                    abortFlag |= !updateStatusInfo(createInfo);
+                                  }
                                 }
                                 break;
                               case ENTRY_TYPE_IMAGE:
@@ -1593,9 +1602,12 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
                                     || checkFileChanged(&createInfo->filesDictionary,fileName,&fileInfo)
                                    )
                                 {
-                                  createInfo->statusInfo.totalEntries++;
-                                  createInfo->statusInfo.totalBytes += fileInfo.size;
-                                  abortFlag |= !updateStatusInfo(createInfo);
+                                  SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+                                  {
+                                    createInfo->statusInfo.totalEntries++;
+                                    createInfo->statusInfo.totalBytes += fileInfo.size;
+                                    abortFlag |= !updateStatusInfo(createInfo);
+                                  }
                                 }
                                 break;
                               case ENTRY_TYPE_IMAGE:
@@ -1610,23 +1622,29 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
                                     || checkFileChanged(&createInfo->filesDictionary,fileName,&fileInfo)
                                    )
                                 {
-                                  createInfo->statusInfo.totalEntries++;
-                                  if (   (includeEntryNode->type == ENTRY_TYPE_IMAGE)
-                                      && (fileInfo.specialType == FILE_SPECIAL_TYPE_BLOCK_DEVICE)
-                                      && (fileInfo.size >= 0LL)
-                                     )
+                                  SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
                                   {
-                                    createInfo->statusInfo.totalBytes += fileInfo.size;
+                                    createInfo->statusInfo.totalEntries++;
+                                    if (   (includeEntryNode->type == ENTRY_TYPE_IMAGE)
+                                        && (fileInfo.specialType == FILE_SPECIAL_TYPE_BLOCK_DEVICE)
+                                        && (fileInfo.size >= 0LL)
+                                       )
+                                    {
+                                      createInfo->statusInfo.totalBytes += fileInfo.size;
+                                    }
+                                    abortFlag |= !updateStatusInfo(createInfo);
                                   }
-                                  abortFlag |= !updateStatusInfo(createInfo);
                                 }
                                 break;
                               case ENTRY_TYPE_IMAGE:
                                 if (fileInfo.specialType == FILE_SPECIAL_TYPE_BLOCK_DEVICE)
                                 {
-                                  createInfo->statusInfo.totalEntries++;
-                                  if (fileInfo.size >= 0LL) createInfo->statusInfo.totalBytes += fileInfo.size;
-                                  abortFlag |= !updateStatusInfo(createInfo);
+                                  SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+                                  {
+                                    createInfo->statusInfo.totalEntries++;
+                                    if (fileInfo.size >= 0LL) createInfo->statusInfo.totalBytes += fileInfo.size;
+                                    abortFlag |= !updateStatusInfo(createInfo);
+                                  }
                                 }
                                 break;
                             }
@@ -1652,8 +1670,11 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
                       || checkFileChanged(&createInfo->filesDictionary,name,&fileInfo)
                      )
                   {
-                    createInfo->statusInfo.totalEntries++;
-                    abortFlag |= !updateStatusInfo(createInfo);
+                    SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+                    {
+                      createInfo->statusInfo.totalEntries++;
+                      abortFlag |= !updateStatusInfo(createInfo);
+                    }
                   }
                   break;
                 case ENTRY_TYPE_IMAGE:
@@ -1668,9 +1689,12 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
                       || checkFileChanged(&createInfo->filesDictionary,name,&fileInfo)
                      )
                   {
-                    createInfo->statusInfo.totalEntries++;
-                    createInfo->statusInfo.totalBytes += fileInfo.size;
-                    abortFlag |= !updateStatusInfo(createInfo);
+                    SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+                    {
+                      createInfo->statusInfo.totalEntries++;
+                      createInfo->statusInfo.totalBytes += fileInfo.size;
+                      abortFlag |= !updateStatusInfo(createInfo);
+                    }
                   }
                   break;
                 case ENTRY_TYPE_IMAGE:
@@ -1685,8 +1709,11 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
                       || checkFileChanged(&createInfo->filesDictionary,name,&fileInfo)
                      )
                   {
-                    createInfo->statusInfo.totalEntries++;
-                    abortFlag |= !updateStatusInfo(createInfo);
+                    SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+                    {
+                      createInfo->statusInfo.totalEntries++;
+                      abortFlag |= !updateStatusInfo(createInfo);
+                    }
                   }
                   break;
                 case ENTRY_TYPE_IMAGE:
@@ -1700,9 +1727,12 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
                     }
                     UNUSED_VARIABLE(deviceInfo);
 
-                    createInfo->statusInfo.totalEntries++;
-                    if (fileInfo.size >= 0LL) createInfo->statusInfo.totalBytes += fileInfo.size;
-                    abortFlag |= !updateStatusInfo(createInfo);
+                    SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+                    {
+                      createInfo->statusInfo.totalEntries++;
+                      if (fileInfo.size >= 0LL) createInfo->statusInfo.totalBytes += fileInfo.size;
+                      abortFlag |= !updateStatusInfo(createInfo);
+                    }
                   }
                   break;
               }
@@ -2777,8 +2807,11 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
           }
 
           // update status info, check for abort
-          String_set(createInfo->statusInfo.storageName,printableStorageName);
-          abortFlag |= !updateStatusInfo(createInfo);
+          SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+          {
+            String_set(createInfo->statusInfo.storageName,printableStorageName);
+            abortFlag |= !updateStatusInfo(createInfo);
+          }
 
           // store data
           File_seek(&fileHandle,0);
@@ -3276,9 +3309,9 @@ LOCAL Errors storeFileEntry(CreateInfo   *createInfo,
               archiveBytes     = createInfo->statusInfo.archiveTotalBytes+archiveSize;
               compressionRatio = 100.0-(createInfo->statusInfo.archiveTotalBytes+archiveSize)*100.0/createInfo->statusInfo.doneBytes;
 
+              createInfo->statusInfo.doneBytes += (uint64)bufferLength;
               if (nameSemaphoreLocked)
               {
-                createInfo->statusInfo.doneBytes      += (uint64)bufferLength;
                 createInfo->statusInfo.entryDoneBytes += (uint64)bufferLength;
               }
               createInfo->statusInfo.archiveBytes     = archiveBytes;
@@ -3601,9 +3634,9 @@ LOCAL Errors storeImageEntry(CreateInfo   *createInfo,
             archiveBytes     = createInfo->statusInfo.archiveTotalBytes+archiveSize;
             compressionRatio = 100.0-(createInfo->statusInfo.archiveTotalBytes+archiveSize)*100.0/createInfo->statusInfo.doneBytes;
 
+            createInfo->statusInfo.doneBytes += (uint64)bufferBlockCount*(uint64)deviceInfo.blockSize;
             if (nameSemaphoreLocked)
             {
-              createInfo->statusInfo.doneBytes      += (uint64)bufferBlockCount*(uint64)deviceInfo.blockSize;
               createInfo->statusInfo.entryDoneBytes += (uint64)bufferBlockCount*(uint64)deviceInfo.blockSize;
             }
             createInfo->statusInfo.archiveBytes     = archiveBytes;
@@ -4133,9 +4166,9 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
               archiveBytes     = createInfo->statusInfo.archiveTotalBytes+archiveSize;
               compressionRatio = 100.0-(createInfo->statusInfo.archiveTotalBytes+archiveSize)*100.0/createInfo->statusInfo.doneBytes;
 
+              createInfo->statusInfo.doneBytes += (uint64)StringList_count(nameList)*(uint64)bufferLength;
               if (nameSemaphoreLocked)
               {
-                createInfo->statusInfo.doneBytes      += (uint64)StringList_count(nameList)*(uint64)bufferLength;
                 createInfo->statusInfo.entryDoneBytes += (uint64)StringList_count(nameList)*(uint64)bufferLength;
               }
               createInfo->statusInfo.archiveBytes     = archiveBytes;
