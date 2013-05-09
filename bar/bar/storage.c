@@ -174,9 +174,15 @@ LOCAL bool initFTPPassword(const String hostName, const String loginName, const 
   {
     if (globalOptions.runMode == RUN_MODE_INTERACTIVE)
     {
-      s = !String_isEmpty(loginName)
-            ? String_format(String_new(),"FTP login password for '%S@%S'",loginName,hostName)
-            : String_format(String_new(),"FTP login password for '%S'",hostName);
+      s = String_newCString("FTP login password for ");
+      if (!String_isEmpty(loginName))
+      {
+        String_format(s,"'%S@%S'",loginName,hostName);
+      }
+      else
+      {
+        String_format(s,"'%S'",hostName);
+      }
       initFlag = Password_input(defaultFTPPassword,String_cString(s),PASSWORD_INPUT_MODE_ANY);
       String_delete(s);
     }
@@ -217,9 +223,15 @@ LOCAL bool initSSHPassword(const String hostName, const String loginName, const 
   {
     if (globalOptions.runMode == RUN_MODE_INTERACTIVE)
     {
-      s = !String_isEmpty(loginName)
-            ? String_format(String_new(),"SSH login password for '%S@%S'",loginName,hostName)
-            : String_format(String_new(),"SSH login password for '%S'",hostName);
+      s = String_newCString("SSH login password for ");
+      if (!String_isEmpty(loginName))
+      {
+        String_format(s,"'%S@%S'",loginName,hostName);
+      }
+      else
+      {
+        String_format(s,"'%S'",hostName);
+      }
       initFlag = Password_input(defaultSSHPassword,String_cString(s),PASSWORD_INPUT_MODE_ANY);
       String_delete(s);
     }
@@ -9496,6 +9508,12 @@ Errors Storage_openDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
           // get FTP server settings
           getFTPServerSettings(hostName,jobOptions,&ftpServer);
           if (String_isEmpty(storageSpecifier.loginName)) String_set(storageSpecifier.loginName,ftpServer.loginName);
+          if (String_isEmpty(storageSpecifier.loginName)) String_setCString(storageSpecifier.loginName,getenv("LOGNAME"));
+          if (String_isEmpty(storageSpecifier.hostName))
+          {
+            error = ERROR_NO_HOST_NAME;
+            break;
+          }
 
           // check FTP login, get correct password
           error = ERROR_UNKNOWN;
@@ -9559,7 +9577,7 @@ Errors Storage_openDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
             break;
           }
 
-          // connect
+          // FTP connect
           if (!Network_hostExists(hostName))
           {
             error = ERRORX_(HOST_NOT_FOUND,0,String_cString(hostName));
@@ -9577,7 +9595,7 @@ Errors Storage_openDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
             break;
           }
 
-          // login
+          // FTP login
           plainLoginPassword = Password_deploy(storageSpecifier.loginPassword);
           if (FtpLogin(String_cString(storageSpecifierloginName),
                        plainLoginPassword,
@@ -9667,6 +9685,12 @@ error = ERROR_FUNCTION_NOT_SUPPORTED;
           // get SSH server settings
           getSSHServerSettings(storageSpecifier.hostName,jobOptions,&sshServer);
           if (String_isEmpty(storageSpecifier.loginName)) String_set(storageSpecifier.loginName,sshServer.loginName);
+          if (String_isEmpty(storageSpecifier.loginName)) String_setCString(storageSpecifier.loginName,getenv("LOGNAME"));
+          if (String_isEmpty(storageSpecifier.hostName))
+          {
+            error = ERROR_NO_HOST_NAME;
+            break;
+          }
 
           // open network connection
           error = Network_connect(&storageDirectoryListHandle->sftp.socketHandle,
@@ -9687,7 +9711,7 @@ error = ERROR_FUNCTION_NOT_SUPPORTED;
           }
           libssh2_session_set_timeout(Network_getSSHSession(&storageDirectoryListHandle->sftp.socketHandle),READ_TIMEOUT);
 
-          // init FTP session
+          // init SFTP session
           storageDirectoryListHandle->sftp.sftp = libssh2_sftp_init(Network_getSSHSession(&storageDirectoryListHandle->sftp.socketHandle));
           if (storageDirectoryListHandle->sftp.sftp == NULL)
           {
