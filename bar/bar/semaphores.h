@@ -60,11 +60,9 @@ typedef struct Semaphore
   uint                readRequestCount;      // number of pending read locks
   uint                readWriteRequestCount; // number of pending read/write locks
 
+  // lock (thread who own lock is allowed to change the following semaphore variables)
   #if   defined(PLATFORM_LINUX)
-    pthread_mutex_t     lock;                /* lock (thread who own lock is allowed
-                                                to change the following semaphore
-                                                variables)
-                                             */
+    pthread_mutex_t     lock;
   #elif defined(PLATFORM_WINDOWS)
     HANDLE              lock;
   #endif /* PLATFORM_... */
@@ -82,18 +80,18 @@ typedef struct Semaphore
   #endif /* PLATFORM_... */
   bool                endFlag;
 
-  // debug data
+
   #ifndef NDEBUG
-    const char *fileName;
+    const char *fileName;                    // file+line number of creation
     ulong      lineNb;
-    const char *name;
+    const char *name;                        // semaphore name (variable)
     struct
     {
-      pthread_t  thread;
-      const char *fileName;
+      pthread_t  thread;                     // id of thread who locked semaphore
+      const char *fileName;                  // file+line number of lock
       ulong      lineNb;
-    } lockedBy[16];                          // threads who locked semaphore
-    uint       lockedByCount;                // number of threadds who locked semaphore
+    } lockedBy[16];
+    uint       lockedByCount;                // number of threads who locked semaphore
   #endif /* not NDEBUG */
 } Semaphore;
 
@@ -139,31 +137,6 @@ typedef bool SemaphoreLock;
   #define Semaphore_forceLock(semaphore,semaphoreLockType) __Semaphore_forceLock(__FILE__,__LINE__,semaphore,semaphoreLockType)
   #define Semaphore_unlock(semaphore) __Semaphore_unlock(__FILE__,__LINE__,semaphore)
   #define Semaphore_waitModified(semaphore,timeout) __Semaphore_waitModified(__FILE__,__LINE__,semaphore,timeout)
-#endif /* not NDEBUG */
-
-/***********************************************************************\
-* Name   : SEMAPHORE_ASSERT_OWNERSHIP
-* Purpose: check ownership of semaphore
-* Input  : semaphore - semaphore to check
-* Output : -
-* Return : -
-* Notes  : in debug mode stop if calling thread does not own semaphore
-\***********************************************************************/
-
-#ifndef NDEBUG
-  #define SEMAPHORE_ASSERT_OWNERSHIP(semaphore) \
-    do \
-    { \
-      assert((semaphore)->lockedByCount > 0); \
-      assert(pthread_equal((semaphore)->lockedBy[(semaphore)->lockedByCount-1].thread,pthread_self()) != 0); \
-    } \
-    while (0)
-#else /* NDEBUG */
-  #define SEMAPHORE_ASSERT_OWNERSHIP(sempahore) \
-    do \
-    { \
-    } \
-    while (0)
 #endif /* not NDEBUG */
 
 /***************************** Forwards ********************************/
@@ -343,22 +316,26 @@ INLINE bool Semaphore_isLocked(Semaphore *semaphore)
 #endif /* NDEBUG || __SEMAPHORES_IMPLEMENATION__ */
 
 /***********************************************************************\
-* Name   : Semaphore_isOwnedBy
-* Purpose: check if semaphore is owned by thread
+* Name   : Semaphore_isOwned
+* Purpose: check if semaphore is owned by calling thread
 * Input  : semaphore - semaphore
 *          threadId  - thread id
 * Output : -
-* Return : TRUE iff semaphore is owned by thread
-* Notes  : -
+* Return : TRUE iff semaphore is owned by calling thread
+* Notes  : for debugging only!
 \***********************************************************************/
 
-INLINE bool Semaphore_isOwned(Semaphore *semaphore);
+#ifndef NDEBUG
+INLINE bool Semaphore_isOwned(const Semaphore *semaphore);
 #if defined(NDEBUG) || defined(__SEMAPHORES_IMPLEMENATION__)
-INLINE bool Semaphore_isOwned(Semaphore *semaphore)
+INLINE bool Semaphore_isOwned(const Semaphore *semaphore)
 {
-  return pthread_equal(semaphore->lockedBy[semaphore->lockedByCount-1].thread,pthread_self()) != 0;
+  assert(semaphore != NULL);
+
+  return (semaphore->lockedByCount > 0) && (pthread_equal(semaphore->lockedBy[semaphore->lockedByCount-1].thread,pthread_self()) != 0);
 }
 #endif /* NDEBUG || __SEMAPHORES_IMPLEMENATION__ */
+#endif /* not NDEBUG */
 
 /***********************************************************************\
 * Name   : Semaphore_waitModified
