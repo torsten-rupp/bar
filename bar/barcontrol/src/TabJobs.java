@@ -1608,8 +1608,6 @@ class TabJobs
             }
             public void widgetSelected(SelectionEvent selectionEvent)
             {
-              MenuItem widget = (MenuItem)selectionEvent.widget;
-
               for (TreeItem treeItem : widgetFileTree.getSelection())
               {
                 FileTreeData fileTreeData = (FileTreeData)treeItem.getData();
@@ -1637,8 +1635,6 @@ class TabJobs
             }
             public void widgetSelected(SelectionEvent selectionEvent)
             {
-              MenuItem widget = (MenuItem)selectionEvent.widget;
-
               for (TreeItem treeItem : widgetFileTree.getSelection())
               {
                 FileTreeData fileTreeData = (FileTreeData)treeItem.getData();
@@ -1725,7 +1721,6 @@ class TabJobs
             }
             public void widgetSelected(SelectionEvent selectionEvent)
             {
-              Button widget = (Button)selectionEvent.widget;
               for (TreeItem treeItem : widgetFileTree.getSelection())
               {
                 FileTreeData fileTreeData = (FileTreeData)treeItem.getData();
@@ -1755,7 +1750,6 @@ class TabJobs
             }
             public void widgetSelected(SelectionEvent selectionEvent)
             {
-              Button widget = (Button)selectionEvent.widget;
               for (TreeItem treeItem : widgetFileTree.getSelection())
               {
                 FileTreeData fileTreeData = (FileTreeData)treeItem.getData();
@@ -1868,8 +1862,6 @@ class TabJobs
             }
             public void widgetSelected(SelectionEvent selectionEvent)
             {
-              MenuItem widget = (MenuItem)selectionEvent.widget;
-
               for (TreeItem treeItem : widgetDeviceTree.getSelection())
               {
                 DeviceTreeData deviceTreeData = (DeviceTreeData)treeItem.getData();
@@ -1888,8 +1880,6 @@ class TabJobs
             }
             public void widgetSelected(SelectionEvent selectionEvent)
             {
-              MenuItem widget = (MenuItem)selectionEvent.widget;
-
               for (TreeItem treeItem : widgetDeviceTree.getSelection())
               {
                 DeviceTreeData deviceTreeData = (DeviceTreeData)treeItem.getData();
@@ -1938,7 +1928,6 @@ class TabJobs
             }
             public void widgetSelected(SelectionEvent selectionEvent)
             {
-              Button widget = (Button)selectionEvent.widget;
               for (TreeItem treeItem : widgetDeviceTree.getSelection())
               {
                 DeviceTreeData deviceTreeData = (DeviceTreeData)treeItem.getData();
@@ -1959,7 +1948,6 @@ class TabJobs
             }
             public void widgetSelected(SelectionEvent selectionEvent)
             {
-              Button widget = (Button)selectionEvent.widget;
               for (TreeItem treeItem : widgetDeviceTree.getSelection())
               {
                 DeviceTreeData deviceTreeData = (DeviceTreeData)treeItem.getData();
@@ -2015,7 +2003,6 @@ class TabJobs
             }
             public void widgetSelected(SelectionEvent selectionEvent)
             {
-              MenuItem widget = (MenuItem)selectionEvent.widget;
               if (selectedJobId > 0)
               {
                 includeListRemove();
@@ -2057,7 +2044,6 @@ class TabJobs
             }
             public void widgetSelected(SelectionEvent selectionEvent)
             {
-              Button widget = (Button)selectionEvent.widget;
               if (selectedJobId > 0)
               {
                 includeListRemove();
@@ -2591,6 +2577,7 @@ class TabJobs
                 {
                   "*.jpg",
                   "*.jpeg",
+                  "*.mkv",
                   "*.mp3",
                   "*.mp4",
                   "*.mpeg",
@@ -7141,14 +7128,17 @@ throw new Error("NYI");
   /** remove include entry
    * @param pattern pattern to remove from include/exclude list
    */
-  private void includeListRemove(String pattern)
+  private void includeListRemove(String[] patterns)
   {
     final String[] PATTERN_MAP_FROM = new String[]{"\n","\r","\\"};
     final String[] PATTERN_MAP_TO   = new String[]{"\\n","\\r","\\\\"};
 
     assert selectedJobId != 0;
 
-    includeHashMap.remove(pattern);
+    for (String pattern : patterns)
+    {
+      includeHashMap.remove(pattern);
+    }
 
     BARServer.executeCommand("INCLUDE_LIST_CLEAR "+selectedJobId);
     widgetIncludeTable.removeAll();
@@ -7165,6 +7155,11 @@ throw new Error("NYI");
 
     updateFileTreeImages();
     updateDeviceImages();
+  }
+
+  private void includeListRemove(String pattern)
+  {
+    includeListRemove(new String[]{pattern});
   }
 
   /** remove exclude pattern
@@ -7221,14 +7216,19 @@ throw new Error("NYI");
   {
     assert selectedJobId != 0;
 
-    int index = widgetIncludeTable.getSelectionIndex();
-    if (index >= 0)
+    ArrayList<EntryData> entryDataList = new ArrayList<EntryData>();
+    for (TableItem tableItem : widgetIncludeTable.getSelection())
     {
-      EntryData entryData = (EntryData)widgetIncludeTable.getItem(index).getData();
-
-      if (Dialogs.confirm(shell,"Remove include pattern '"+entryData.pattern+"'?"))
+      entryDataList.add((EntryData)tableItem.getData());
+    }
+    if (entryDataList.size() > 0)
+    {
+      if ((entryDataList.size() == 1) || Dialogs.confirm(shell,"Remove "+entryDataList.size()+" include patterns?"))
       {
-        includeListRemove(entryData.pattern);
+        for (EntryData entryData : entryDataList)
+        {
+          includeListRemove(entryData.pattern);
+        }
       }
     }
   }
@@ -7239,14 +7239,15 @@ throw new Error("NYI");
   {
     assert selectedJobId != 0;
 
-    int index = widgetExcludeList.getSelectionIndex();
-    if (index >= 0)
+    String[] patterns = widgetExcludeList.getSelection();
+    if (patterns.length > 0)
     {
-      String pattern = widgetExcludeList.getItem(index);
-
-      if (Dialogs.confirm(shell,"Remove exclude pattern '"+pattern+"'?"))
+      if ((patterns.length == 1) || Dialogs.confirm(shell,"Remove "+patterns.length+" exclude patterns?"))
       {
-        excludeListRemove(pattern);
+        for (String pattern : patterns)
+        {
+          excludeListRemove(pattern);
+        }
       }
     }
   }
