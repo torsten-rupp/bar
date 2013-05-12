@@ -282,7 +282,6 @@ class Command
     // check if timeout
     if (timeoutFlag)
     {
-Dprintf.dprintf("");
       timeout();
     }
 
