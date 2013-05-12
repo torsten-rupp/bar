@@ -858,7 +858,6 @@ class TabRestore
                                    entryMaxCount+" "+
                                    (newestEntriesOnlyFlag ? "1" : "0")+" "+
                                    StringUtils.escape(StringUtils.map(entryPattern,PATTERN_MAP_FROM,PATTERN_MAP_TO));
-//Dprintf.dprintf("commandString=%s",commandString);
             if (BARServer.executeCommand(commandString,result) == Errors.NONE)
             {
               // read results
