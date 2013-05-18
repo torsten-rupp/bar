@@ -1,4 +1,5 @@
 2013-??-?? 0.18
+  * added multi-core compression/encryption support!
   * added automatic delete of duplicate index entries when
     server is started
   * fixed create index: do not delete index which is currently
@@ -11,6 +12,17 @@
   * added support for WebDAV protocol
   * integrated a scan-node which will scan partiallly broken
     archives for still readable parts
+  * fix output in verbose/quiet mode
+  * fixed restore: list files when "only newest" is disabled
+  * fixed duplicate archive entries when multiple include options
+    are specified (thanks to Stefan A.)
+
+2013-05-05 0.17b
+  * fixed parsing of storage specifier (ftp, scp/sftp,
+    cd/dvd/bd): user name
+  * fixed dialog text when password is requested
+  * improved checking host name for ftp/scp/sftp login
+  * fixed lost string resource
 
 2013-01-26 0.17a
   * fixed writing CD/DVD/BD: do not write an empty last medium
