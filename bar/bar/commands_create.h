@@ -37,7 +37,7 @@ typedef struct
 {
   ulong  doneEntries;                      // number of entries processed
   uint64 doneBytes;                        // number of bytes processed
-  ulong  totalEntries;                     // total number of enttries
+  ulong  totalEntries;                     // total number of entries
   uint64 totalBytes;                       // total bytes
   ulong  skippedEntries;                   // number of skipped enttries
   uint64 skippedBytes;                     // sum of skipped bytes
