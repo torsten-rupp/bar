@@ -96,7 +96,7 @@ typedef int(*ListNodeCompareFunction)(const void *node1, const void *node2, void
 * Output : -
 * Return : -
 * Notes  : usage:
-*            LIST_ITERATE(list,variable)
+*            LIST_DONE(list,variable)
 *            {
 *              ... = variable->...
 *            }
