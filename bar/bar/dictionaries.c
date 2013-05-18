@@ -8,6 +8,8 @@
 *
 \***********************************************************************/
 
+#define __DICTIONARY_IMPLEMENATION__
+
 /****************************** Includes *******************************/
 #include <stdlib.h>
 #include <stdio.h>
@@ -962,16 +964,6 @@ bool Dictionary_find(Dictionary *dictionary,
   }
 
   return foundFlag;
-}
-
-bool Dictionary_contain(Dictionary *dictionary,
-                        const void *keyData,
-                        ulong      keyLength
-                       )
-{
-  assert(dictionary != NULL);
-
-  return Dictionary_find(dictionary,keyData,keyLength,NULL,NULL);
 }
 
 void Dictionary_initIterator(DictionaryIterator *dictionaryIterator,
