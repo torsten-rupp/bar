@@ -756,43 +756,43 @@ LOCAL bool updateStorageStatusInfo(CreateInfo              *createInfo,
 }
 
 /***********************************************************************\
-* Name   : checkIsIncluded
-* Purpose: check if filename is included
+* Name   : isIncluded
+* Purpose: check if name is included
 * Input  : includeEntryNode - include entry node
-*          fileName         - file name
+*          name             - name
 * Output : -
 * Return : TRUE if excluded, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool checkIsIncluded(const EntryNode *includeEntryNode,
-                           const String    fileName
-                          )
+LOCAL bool isIncluded(const EntryNode *includeEntryNode,
+                      const String    name
+                     )
 {
   assert(includeEntryNode != NULL);
-  assert(fileName != NULL);
+  assert(name != NULL);
 
-  return Pattern_match(&includeEntryNode->pattern,fileName,PATTERN_MATCH_MODE_BEGIN);
+  return Pattern_match(&includeEntryNode->pattern,name,PATTERN_MATCH_MODE_BEGIN);
 }
 
 /***********************************************************************\
 * Name   : checkIsExcluded
-* Purpose: check if filename is excluded
+* Purpose: check if name is excluded
 * Input  : excludePatternList - exclude pattern list
-*          fileName           - file name
+*          name               - name
 * Output : -
 * Return : TRUE if excluded, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool checkIsExcluded(const PatternList *excludePatternList,
-                           const String      fileName
-                          )
+LOCAL bool isExcluded(const PatternList *excludePatternList,
+                      const String      name
+                     )
 {
   assert(excludePatternList != NULL);
-  assert(fileName != NULL);
+  assert(name != NULL);
 
-  return PatternList_match(excludePatternList,fileName,PATTERN_MATCH_MODE_EXACT);
+  return PatternList_match(excludePatternList,name,PATTERN_MATCH_MODE_EXACT);
 }
 
 /***********************************************************************\
@@ -1448,12 +1448,10 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
       // get next file/directory to process
       name = StringList_getLast(&nameList,name);
 
-#warning check all include entries?
-      if (   checkIsIncluded(includeEntryNode,name)
-          && !checkIsExcluded(createInfo->excludePatternList,name)
+      if (   isIncluded(includeEntryNode,name)
+          && !isExcluded(createInfo->excludePatternList,name)
          )
       {
-
         // read file info
         error = File_getFileInfo(&fileInfo,name);
         if (error != ERROR_NONE)
@@ -1534,8 +1532,8 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
                       continue;
                     }
 
-                    if (   checkIsIncluded(includeEntryNode,fileName)
-                        && !checkIsExcluded(createInfo->excludePatternList,fileName)
+                    if (   isIncluded(includeEntryNode,fileName)
+                        && !isExcluded(createInfo->excludePatternList,fileName)
                        )
                     {
                       // read file info
@@ -1852,11 +1850,10 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
 
       // get next directory to process
       name = StringList_getLast(&nameList,name);
-//fprintf(stderr,"%s, %d: %s %d %d\n",__FILE__,__LINE__,String_cString(name),checkIsIncluded(includeEntryNode,name),checkIsExcluded(createInfo->excludePatternList,name));
+//fprintf(stderr,"%s, %d: %s %d %d\n",__FILE__,__LINE__,String_cString(name),isIncluded(includeEntryNode,name),checkIsExcluded(createInfo->excludePatternList,name));
 
-#warning check all include entries?
-      if (   checkIsIncluded(includeEntryNode,name)
-          && !checkIsExcluded(createInfo->excludePatternList,name)
+      if (   isIncluded(includeEntryNode,name)
+          && !isExcluded(createInfo->excludePatternList,name)
          )
       {
         // read file info
@@ -1952,8 +1949,8 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                       continue;
                     }
 
-                    if (   checkIsIncluded(includeEntryNode,fileName)
-                        && !checkIsExcluded(createInfo->excludePatternList,fileName)
+                    if (   isIncluded(includeEntryNode,fileName)
+                        && !isExcluded(createInfo->excludePatternList,fileName)
                        )
                     {
                       // read file info
