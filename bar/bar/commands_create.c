@@ -97,7 +97,7 @@ typedef struct
   bool                        *requestedAbortFlag;                // TRUE to abort create
 
   bool                        partialFlag;                        // TRUE for create incremental/differential archive
-  Dictionary                  filesDictionary;                    // dictionary with files (used for incremental/differental backup)
+  Dictionary                  namesDictionary;                    // dictionary with files (used for incremental/differental backup)
   bool                        storeIncrementalFileInfoFlag;       // TRUE to store incremental file data
   StorageFileHandle           storageFileHandle;                  // storage handle
   time_t                      startTime;                          // start time [ms] (unix time)
@@ -352,7 +352,7 @@ LOCAL void doneCreateInfo(CreateInfo *createInfo)
 * Name   : readIncrementalList
 * Purpose: read data of incremental list from file
 * Input  : fileName        - file name
-*          filesDictionary - files dictionary variable
+*          namesDictionary - names dictionary variable
 * Output : -
 * Return : ERROR_NONE if incremental list read in files dictionary,
 *          error code otherwise
@@ -360,7 +360,7 @@ LOCAL void doneCreateInfo(CreateInfo *createInfo)
 \***********************************************************************/
 
 LOCAL Errors readIncrementalList(const String fileName,
-                                 Dictionary   *filesDictionary
+                                 Dictionary   *namesDictionary
                                 )
 {
   #define MAX_KEY_DATA (64*1024)
@@ -374,7 +374,7 @@ LOCAL Errors readIncrementalList(const String fileName,
   uint16              keyLength;
 
   assert(fileName != NULL);
-  assert(filesDictionary != NULL);
+  assert(namesDictionary != NULL);
 
   keyData = malloc(MAX_KEY_DATA);
   if (keyData == NULL)
@@ -383,7 +383,7 @@ LOCAL Errors readIncrementalList(const String fileName,
   }
 
   // init variables
-  Dictionary_clear(filesDictionary,NULL,NULL);
+  Dictionary_clear(namesDictionary,NULL,NULL);
 
   // open file
   error = File_open(&fileHandle,fileName,FILE_OPEN_READ);
@@ -434,7 +434,7 @@ LOCAL Errors readIncrementalList(const String fileName,
     if (error != ERROR_NONE) break;
 
     // store in dictionary
-    Dictionary_add(filesDictionary,
+    Dictionary_add(namesDictionary,
                    keyData,
                    keyLength,
                    &incrementalListInfo,
@@ -455,7 +455,7 @@ LOCAL Errors readIncrementalList(const String fileName,
 * Name   : writeIncrementalList
 * Purpose: write incremental list data to file
 * Input  : fileName        - file name
-*          filesDictionary - files dictionary
+*          namesDictionary - names dictionary
 * Output : -
 * Return : ERROR_NONE if incremental list file written, error code
 *          otherwise
@@ -463,7 +463,7 @@ LOCAL Errors readIncrementalList(const String fileName,
 \***********************************************************************/
 
 LOCAL Errors writeIncrementalList(const String fileName,
-                                  Dictionary   *filesDictionary
+                                  Dictionary   *namesDictionary
                                  )
 {
   String                    directoryName;
@@ -482,7 +482,7 @@ LOCAL Errors writeIncrementalList(const String fileName,
   const IncrementalListInfo *incrementalListInfo;
 
   assert(fileName != NULL);
-  assert(filesDictionary != NULL);
+  assert(namesDictionary != NULL);
 
   // create directory if not existing
   directoryName = File_getFilePathName(String_new(),fileName);
@@ -551,7 +551,7 @@ LOCAL Errors writeIncrementalList(const String fileName,
   }
 
   // write entries
-  Dictionary_initIterator(&dictionaryIterator,filesDictionary);
+  Dictionary_initIterator(&dictionaryIterator,namesDictionary);
   while (Dictionary_getNext(&dictionaryIterator,
                             &keyData,
                             &keyLength,
@@ -616,7 +616,7 @@ fprintf(stderr,"%s,%d: %s %d\n",__FILE__,__LINE__,s,incrementalFileInfo->state);
 /***********************************************************************\
 * Name   : checkFileChanged
 * Purpose: check if file changed
-* Input  : filesDictionary - files dictionary
+* Input  : namesDictionary - names dictionary
 *          fileName        - file name
 *          fileInfo        - file info with file cast data
 * Output : -
@@ -624,7 +624,7 @@ fprintf(stderr,"%s,%d: %s %d\n",__FILE__,__LINE__,s,incrementalFileInfo->state);
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool checkFileChanged(Dictionary     *filesDictionary,
+LOCAL bool checkFileChanged(Dictionary     *namesDictionary,
                             const String   fileName,
                             const FileInfo *fileInfo
                            )
@@ -636,12 +636,12 @@ LOCAL bool checkFileChanged(Dictionary     *filesDictionary,
   } data;
   ulong length;
 
-  assert(filesDictionary != NULL);
+  assert(namesDictionary != NULL);
   assert(fileName != NULL);
   assert(fileInfo != NULL);
 
   // check if exists
-  if (!Dictionary_find(filesDictionary,
+  if (!Dictionary_find(namesDictionary,
                        String_cString(fileName),
                        String_length(fileName),
                        &data.value,
@@ -665,7 +665,7 @@ LOCAL bool checkFileChanged(Dictionary     *filesDictionary,
 /***********************************************************************\
 * Name   : addIncrementalList
 * Purpose: add file to incremental list
-* Input  : filesDictionary - files dictionary
+* Input  : namesDictionary - names dictionary
 *          fileName        - file name
 *          fileInfo        - file info
 * Output : -
@@ -673,21 +673,21 @@ LOCAL bool checkFileChanged(Dictionary     *filesDictionary,
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void addIncrementalList(Dictionary     *filesDictionary,
+LOCAL void addIncrementalList(Dictionary     *namesDictionary,
                               const String   fileName,
                               const FileInfo *fileInfo
                              )
 {
   IncrementalListInfo incrementalListInfo;
 
-  assert(filesDictionary != NULL);
+  assert(namesDictionary != NULL);
   assert(fileName != NULL);
   assert(fileInfo != NULL);
 
   incrementalListInfo.state = INCREMENTAL_FILE_STATE_ADDED;
   memcpy(incrementalListInfo.cast,fileInfo->cast,sizeof(FileCast));
 
-  Dictionary_add(filesDictionary,
+  Dictionary_add(namesDictionary,
                  String_cString(fileName),
                  String_length(fileName),
                  &incrementalListInfo,
@@ -1470,7 +1470,7 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
               {
                 case ENTRY_TYPE_FILE:
                   if (   !createInfo->partialFlag
-                      || checkFileChanged(&createInfo->filesDictionary,name,&fileInfo)
+                      || checkFileChanged(&createInfo->namesDictionary,name,&fileInfo)
                      )
                   {
                     SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
@@ -1494,7 +1494,7 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
                 {
                   case ENTRY_TYPE_FILE:
                     if (   !createInfo->partialFlag
-                        || checkFileChanged(&createInfo->filesDictionary,name,&fileInfo)
+                        || checkFileChanged(&createInfo->namesDictionary,name,&fileInfo)
                        )
                     {
                       SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
@@ -1554,7 +1554,7 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
                             {
                               case ENTRY_TYPE_FILE:
                                 if (   !createInfo->partialFlag
-                                    || checkFileChanged(&createInfo->filesDictionary,fileName,&fileInfo)
+                                    || checkFileChanged(&createInfo->namesDictionary,fileName,&fileInfo)
                                    )
                                 {
                                   SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
@@ -1578,7 +1578,7 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
                             {
                               case ENTRY_TYPE_FILE:
                                 if (   !createInfo->partialFlag
-                                    || checkFileChanged(&createInfo->filesDictionary,fileName,&fileInfo)
+                                    || checkFileChanged(&createInfo->namesDictionary,fileName,&fileInfo)
                                    )
                                 {
                                   SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
@@ -1597,7 +1597,7 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
                             {
                               case ENTRY_TYPE_FILE:
                                 if (  !createInfo->partialFlag
-                                    || checkFileChanged(&createInfo->filesDictionary,fileName,&fileInfo)
+                                    || checkFileChanged(&createInfo->namesDictionary,fileName,&fileInfo)
                                    )
                                 {
                                   SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
@@ -1617,7 +1617,7 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
                             {
                               case ENTRY_TYPE_FILE:
                                 if (  !createInfo->partialFlag
-                                    || checkFileChanged(&createInfo->filesDictionary,fileName,&fileInfo)
+                                    || checkFileChanged(&createInfo->namesDictionary,fileName,&fileInfo)
                                    )
                                 {
                                   SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
@@ -1665,7 +1665,7 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
               {
                 case ENTRY_TYPE_FILE:
                   if (   !createInfo->partialFlag
-                      || checkFileChanged(&createInfo->filesDictionary,name,&fileInfo)
+                      || checkFileChanged(&createInfo->namesDictionary,name,&fileInfo)
                      )
                   {
                     SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
@@ -1684,7 +1684,7 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
               {
                 case ENTRY_TYPE_FILE:
                   if (   !createInfo->partialFlag
-                      || checkFileChanged(&createInfo->filesDictionary,name,&fileInfo)
+                      || checkFileChanged(&createInfo->namesDictionary,name,&fileInfo)
                      )
                   {
                     SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
@@ -1704,7 +1704,7 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
               {
                 case ENTRY_TYPE_FILE:
                   if (   !createInfo->partialFlag
-                      || checkFileChanged(&createInfo->filesDictionary,name,&fileInfo)
+                      || checkFileChanged(&createInfo->namesDictionary,name,&fileInfo)
                      )
                   {
                     SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
@@ -1882,7 +1882,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
               {
                 case ENTRY_TYPE_FILE:
                   if (   !createInfo->partialFlag
-                      || checkFileChanged(&createInfo->filesDictionary,name,&fileInfo)
+                      || checkFileChanged(&createInfo->namesDictionary,name,&fileInfo)
                      )
                   {
                     // add to store list
@@ -1903,7 +1903,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                 {
                   case ENTRY_TYPE_FILE:
                     if (   !createInfo->partialFlag
-                        || checkFileChanged(&createInfo->filesDictionary,name,&fileInfo)
+                        || checkFileChanged(&createInfo->namesDictionary,name,&fileInfo)
                        )
                     {
                       // add to store list
@@ -1980,7 +1980,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                             {
                               case ENTRY_TYPE_FILE:
                                 if (   !createInfo->partialFlag
-                                    || checkFileChanged(&createInfo->filesDictionary,fileName,&fileInfo)
+                                    || checkFileChanged(&createInfo->namesDictionary,fileName,&fileInfo)
                                    )
                                 {
                                   // add to store list
@@ -2003,7 +2003,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                             {
                               case ENTRY_TYPE_FILE:
                                 if (   !createInfo->partialFlag
-                                    || checkFileChanged(&createInfo->filesDictionary,fileName,&fileInfo)
+                                    || checkFileChanged(&createInfo->namesDictionary,fileName,&fileInfo)
                                    )
                                 {
                                   // add to store list
@@ -2026,7 +2026,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                                   HardLinkInfo hardLinkInfo;
 
                                   if (   !createInfo->partialFlag
-                                      || checkFileChanged(&createInfo->filesDictionary,fileName,&fileInfo)
+                                      || checkFileChanged(&createInfo->namesDictionary,fileName,&fileInfo)
                                      )
                                   {
                                     if (Dictionary_find(&hardLinkDictionary,
@@ -2087,7 +2087,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                             {
                               case ENTRY_TYPE_FILE:
                                 if (   !createInfo->partialFlag
-                                    || checkFileChanged(&createInfo->filesDictionary,fileName,&fileInfo)
+                                    || checkFileChanged(&createInfo->namesDictionary,fileName,&fileInfo)
                                    )
                                 {
                                   // add to store list
@@ -2179,7 +2179,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
               {
                 case ENTRY_TYPE_FILE:
                   if (  !createInfo->partialFlag
-                      || checkFileChanged(&createInfo->filesDictionary,name,&fileInfo)
+                      || checkFileChanged(&createInfo->namesDictionary,name,&fileInfo)
                     )
                   {
                     // add to store list
@@ -2198,14 +2198,14 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
               {
                 case ENTRY_TYPE_FILE:
                   if (   !createInfo->partialFlag
-                      || checkFileChanged(&createInfo->filesDictionary,name,&fileInfo)
+                      || checkFileChanged(&createInfo->namesDictionary,name,&fileInfo)
                      )
                   {
                     union { void *value; HardLinkInfo *hardLinkInfo; } data;
                     HardLinkInfo hardLinkInfo;
 
                     if (   !createInfo->partialFlag
-                        || checkFileChanged(&createInfo->filesDictionary,fileName,&fileInfo)
+                        || checkFileChanged(&createInfo->namesDictionary,fileName,&fileInfo)
                        )
                     {
                       if (Dictionary_find(&hardLinkDictionary,
@@ -2266,7 +2266,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
               {
                 case ENTRY_TYPE_FILE:
                   if (   !createInfo->partialFlag
-                      || checkFileChanged(&createInfo->filesDictionary,name,&fileInfo)
+                      || checkFileChanged(&createInfo->namesDictionary,name,&fileInfo)
                      )
                   {
                     // add to store list
@@ -3408,7 +3408,7 @@ LOCAL Errors storeFileEntry(CreateInfo   *createInfo,
   // add to incremental list
   if (createInfo->storeIncrementalFileInfoFlag)
   {
-    addIncrementalList(&createInfo->filesDictionary,fileName,&fileInfo);
+    addIncrementalList(&createInfo->namesDictionary,fileName,&fileInfo);
   }
 
   return ERROR_NONE;
@@ -3852,7 +3852,7 @@ LOCAL Errors storeDirectoryEntry(CreateInfo   *createInfo,
   // add to incremental list
   if (createInfo->storeIncrementalFileInfoFlag)
   {
-    addIncrementalList(&createInfo->filesDictionary,directoryName,&fileInfo);
+    addIncrementalList(&createInfo->namesDictionary,directoryName,&fileInfo);
   }
 
   return ERROR_NONE;
@@ -3997,7 +3997,7 @@ LOCAL Errors storeLinkEntry(CreateInfo   *createInfo,
   // add to incremental list
   if (createInfo->storeIncrementalFileInfoFlag)
   {
-    addIncrementalList(&createInfo->filesDictionary,linkName,&fileInfo);
+    addIncrementalList(&createInfo->namesDictionary,linkName,&fileInfo);
   }
 
   return ERROR_NONE;
@@ -4272,7 +4272,7 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
   {
     STRINGLIST_ITERATE(nameList,stringNode,name)
     {
-      addIncrementalList(&createInfo->filesDictionary,name,&fileInfo);
+      addIncrementalList(&createInfo->namesDictionary,name,&fileInfo);
     }
   }
 
@@ -4383,7 +4383,7 @@ LOCAL Errors storeSpecialEntry(CreateInfo   *createInfo,
   // add to incremental list
   if (createInfo->storeIncrementalFileInfoFlag)
   {
-    addIncrementalList(&createInfo->filesDictionary,fileName,&fileInfo);
+    addIncrementalList(&createInfo->namesDictionary,fileName,&fileInfo);
   }
 
   return ERROR_NONE;
@@ -4691,7 +4691,7 @@ Errors Command_create(const String                    storageName,
                                 createInfo.storageFileName
                                );
     }
-    Dictionary_init(&createInfo.filesDictionary,NULL,NULL);
+    Dictionary_init(&createInfo.namesDictionary,NULL,NULL);
 
     // read incremental list
     incrementalFileInfoExistFlag = File_exists(incrementalListFileName);
@@ -4703,7 +4703,7 @@ Errors Command_create(const String                    storageName,
     {
       printInfo(1,"Read incremental list '%s'...",String_cString(incrementalListFileName));
       error = readIncrementalList(incrementalListFileName,
-                                  &createInfo.filesDictionary
+                                  &createInfo.namesDictionary
                                  );
       if (error != ERROR_NONE)
       {
@@ -4724,7 +4724,7 @@ Errors Command_create(const String                    storageName,
           Storage_indexDiscard(&createInfo.storageIndexHandle);
         }
 #endif /* 0 */
-        Dictionary_done(&createInfo.filesDictionary,NULL,NULL);
+        Dictionary_done(&createInfo.namesDictionary,NULL,NULL);
         Storage_done(&createInfo.storageFileHandle);
         String_delete(printableStorageName);
         doneCreateInfo(&createInfo);
@@ -4736,7 +4736,7 @@ Errors Command_create(const String                    storageName,
       }
       printInfo(1,
                 "ok (%lu entries)\n",
-                Dictionary_count(&createInfo.filesDictionary)
+                Dictionary_count(&createInfo.namesDictionary)
                );
     }
 
@@ -4781,7 +4781,7 @@ Errors Command_create(const String                    storageName,
     Thread_join(&collectorSumThread);
     if (useIncrementalFileInfoFlag)
     {
-      Dictionary_done(&createInfo.filesDictionary,NULL,NULL);
+      Dictionary_done(&createInfo.namesDictionary,NULL,NULL);
       if (!incrementalFileInfoExistFlag) File_delete(incrementalListFileName,FALSE);
       String_delete(incrementalListFileName);
     }
@@ -4839,7 +4839,7 @@ createThreadCode(&createInfo);
     Thread_join(&collectorSumThread);
     if (useIncrementalFileInfoFlag)
     {
-      Dictionary_done(&createInfo.filesDictionary,NULL,NULL);
+      Dictionary_done(&createInfo.namesDictionary,NULL,NULL);
       if (!incrementalFileInfoExistFlag) File_delete(incrementalListFileName,FALSE);
       String_delete(incrementalListFileName);
     }
@@ -4885,7 +4885,7 @@ createThreadCode(&createInfo);
   {
     printInfo(1,"Write incremental list '%s'...",String_cString(incrementalListFileName));
     error = writeIncrementalList(incrementalListFileName,
-                                 &createInfo.filesDictionary
+                                 &createInfo.namesDictionary
                                 );
     if (error != ERROR_NONE)
     {
@@ -4896,7 +4896,7 @@ createThreadCode(&createInfo);
                 );
       if (!incrementalFileInfoExistFlag) File_delete(incrementalListFileName,FALSE);
       String_delete(incrementalListFileName);
-      Dictionary_done(&createInfo.filesDictionary,NULL,NULL);
+      Dictionary_done(&createInfo.namesDictionary,NULL,NULL);
       Storage_done(&createInfo.storageFileHandle);
       String_delete(printableStorageName);
       doneCreateInfo(&createInfo);
@@ -4932,7 +4932,7 @@ createThreadCode(&createInfo);
   // free resources
   if (useIncrementalFileInfoFlag)
   {
-    Dictionary_done(&createInfo.filesDictionary,NULL,NULL);
+    Dictionary_done(&createInfo.namesDictionary,NULL,NULL);
     String_delete(incrementalListFileName);
   }
   Thread_done(&storageThread);
