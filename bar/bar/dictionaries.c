@@ -887,12 +887,12 @@ bool Dictionary_add(Dictionary *dictionary,
   return TRUE;
 }
 
-void Dictionary_rem(Dictionary             *dictionary,
-                    const void             *keyData,
-                    ulong                  keyLength,
-                    DictionaryFreeFunction dictionaryFreeFunction,
-                    void                   *dictionaryFreeUserData
-                   )
+void Dictionary_remove(Dictionary             *dictionary,
+                       const void             *keyData,
+                       ulong                  keyLength,
+                       DictionaryFreeFunction dictionaryFreeFunction,
+                       void                   *dictionaryFreeUserData
+                      )
 {
   ulong                hash;
   SemaphoreLock        semaphoreLock;

@@ -2049,12 +2049,12 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                                                                  );
 
                                         // clear entry
-                                        Dictionary_rem(&hardLinkDictionary,
-                                                       &fileInfo.id,
-                                                       sizeof(fileInfo.id),
-                                                       NULL,
-                                                       NULL
-                                                      );
+                                        Dictionary_remove(&hardLinkDictionary,
+                                                          &fileInfo.id,
+                                                          sizeof(fileInfo.id),
+                                                          NULL,
+                                                          NULL
+                                                         );
                                       }
                                     }
                                     else
@@ -2228,12 +2228,12 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                                                    );
 
                           // clear entry
-                          Dictionary_rem(&hardLinkDictionary,
-                                         &fileInfo.id,
-                                         sizeof(fileInfo.id),
-                                         NULL,
-                                         NULL
-                                        );
+                          Dictionary_remove(&hardLinkDictionary,
+                                            &fileInfo.id,
+                                            sizeof(fileInfo.id),
+                                            NULL,
+                                            NULL
+                                           );
                         }
                       }
                       else

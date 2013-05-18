@@ -200,7 +200,7 @@ bool Dictionary_add(Dictionary *dictionary,
                    );
 
 /***********************************************************************\
-* Name   : Dictionary_rem
+* Name   : Dictionary_remove
 * Purpose: remove entry from dictionary
 * Input  : dictionary             - dictionary
 *          keyData                - key data
@@ -214,12 +214,12 @@ bool Dictionary_add(Dictionary *dictionary,
 * Notes  : -
 \***********************************************************************/
 
-void Dictionary_rem(Dictionary             *dictionary,
-                    const void             *keyData,
-                    ulong                  keyLength,
-                    DictionaryFreeFunction dictionaryFreeFunction,
-                    void                   *dictionaryFreeUserData
-                   );
+void Dictionary_remove(Dictionary             *dictionary,
+                       const void             *keyData,
+                       ulong                  keyLength,
+                       DictionaryFreeFunction dictionaryFreeFunction,
+                       void                   *dictionaryFreeUserData
+                      );
 
 /***********************************************************************\
 * Name   : Dictionary_find
