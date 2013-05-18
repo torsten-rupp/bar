@@ -114,11 +114,38 @@ class BusyDialog
       widgetImage.setImage(animateImages[animateImageIndex]);
       widgetImage.setLayoutData(new TableLayoutData(0,0,TableLayoutData.NW,0,0,4,4));
 
+      double[] rowWeights = new double[6];
+      int row = 0;
+      if (message != null)
+      {
+        rowWeights[row] = 0.0; row++;
+      }
+      if ((flags & TEXT0) != 0)
+      {
+        rowWeights[row] = 1.0; row++;
+      }
+      if ((flags & PROGRESS_BAR0) != 0)
+      {
+        rowWeights[row] = 0.0; row++;
+      }
+      if ((flags & TEXT1) != 0)
+      {
+        rowWeights[row] = 1.0; row++;
+      }
+      if ((flags & PROGRESS_BAR1) != 0)
+      {
+        rowWeights[row] = 0.0; row++;
+      }
+      if ((flags & LIST) != 0)
+      {
+        rowWeights[row] = 1.0; row++;
+      }
+
       subComposite = new Composite(composite,SWT.NONE);
-      subComposite.setLayout(new TableLayout(new double[]{0.0,1.0},1.0));
+      subComposite.setLayout(new TableLayout(rowWeights,1.0));
       subComposite.setLayoutData(new TableLayoutData(0,1,TableLayoutData.NSWE));
       {
-        int row = 0;
+        row = 0;
 
         if (message != null)
         {
@@ -259,27 +286,6 @@ class BusyDialog
     resizedFlag = false;
     abortedFlag = false;
     dialog.open();
-
-    // start animation
-    animateInterval = 250;
-    Thread thread = new Thread()
-    {
-      public void run()
-      {
-        while (!dialog.isDisposed())
-        {
-          display.syncExec(new Runnable()
-          {
-            public void run()
-            {
-              animate();
-            }
-          });
-          try { Thread.sleep(animateInterval); } catch (InterruptedException exception) { /* ignore */ }
-        }
-      }
-    };
-    thread.start();
   }
 
   /** create busy dialog
@@ -346,7 +352,7 @@ class BusyDialog
    */
   public BusyDialog(Shell parentShell, String title, String message, int flags)
   {
-    this(parentShell,title,300,150,message,flags,10);
+    this(parentShell,title,300,150,message,flags,100);
   }
 
   /** create busy dialog
@@ -366,7 +372,7 @@ class BusyDialog
    */
   public BusyDialog(Shell parentShell, String title, int flags)
   {
-    this(parentShell,title,null,flags,10);
+    this(parentShell,title,null,flags,100);
   }
 
   /** create busy dialog
