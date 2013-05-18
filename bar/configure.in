@@ -983,6 +983,7 @@ AC_CHECK_HEADERS(\
                  pwd.h \
                  regex.h \
                  stdbool.h \
+                 sys/xattr.h \
                  sys/ioctl.h \
                  sys/resource.h \
                  sys/select.h \
