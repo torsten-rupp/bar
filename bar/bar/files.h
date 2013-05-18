@@ -28,6 +28,7 @@
 
 #include "global.h"
 #include "strings.h"
+#include "lists.h"
 #include "errors.h"
 
 /****************** Conditional compilation switches *******************/
@@ -200,6 +201,21 @@ typedef struct
 
 // file permission
 typedef uint32 FilePermission;
+
+// file extended attributes
+typedef struct FileExtendedAttributeNode
+{
+  LIST_NODE_HEADER(struct FileExtendedAttributeNode);
+
+  String name;
+  void   *data;
+  uint   length;
+} FileExtendedAttributeNode;
+
+typedef struct
+{
+  LIST_HEADER(FileExtendedAttributeNode);
+} FileExtendedAttributeList;
 
 // file cast: change if file is modified in some way
 typedef byte FileCast[FILE_CAST_SIZE];
@@ -995,6 +1011,20 @@ Errors File_getFileInfo(FileInfo     *fileInfo,
                        );
 
 /***********************************************************************\
+* Name   : File_setFileInfo
+* Purpose: set file info (time, owner, permission)
+* Input  : fileName - file name
+*          fileInfo - file info
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors File_setFileInfo(const String fileName,
+                        FileInfo     *fileInfo
+                       );
+
+/***********************************************************************\
 * Name   : File_haveAttributeCompress, File_haveAttributeNoCompress,
 *          File_haveAttributeNoDump
 * Purpose: check if compress/no-compress/no-dump attribute is set
@@ -1053,6 +1083,43 @@ INLINE bool File_haveAttributeNoDump(const FileInfo *fileInfo)
 #endif /* NDEBUG || __FILES_IMPLEMENATION__ */
 
 /***********************************************************************\
+* Name   : 
+* Purpose: 
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+Errors File_getExtendedAttributes(FileExtendedAttributeList *fileExtendedAttributeList,
+                                  const String              fileName
+                                 );
+
+/***********************************************************************\
+* Name   : 
+* Purpose: 
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+Errors File_setExtendedAttributes(const String                    fileName,
+                                  const FileExtendedAttributeList *fileExtendedAttributeList
+                                 );
+
+/***********************************************************************\
+* Name   : 
+* Purpose: 
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void File_doneExtendedAttributes(FileExtendedAttributeList *fileExtendedAttributeList);
+
+/***********************************************************************\
 * Name   : File_getFileTimeModified
 * Purpose: get file modified time
 * Input  : fileName - file name
@@ -1092,20 +1159,6 @@ Errors File_setOwner(const String fileName,
                      uint32       userId,
                      uint32       groupId
                     );
-
-/***********************************************************************\
-* Name   : File_setFileInfo
-* Purpose: set file info (time, owner, permission)
-* Input  : fileName - file name
-*          fileInfo - file info
-* Output : -
-* Return : ERROR_NONE or error code
-* Notes  : -
-\***********************************************************************/
-
-Errors File_setFileInfo(const String fileName,
-                        FileInfo     *fileInfo
-                       );
 
 /***********************************************************************\
 * Name   : File_makeDirectory, File_makeDirectoryCString
