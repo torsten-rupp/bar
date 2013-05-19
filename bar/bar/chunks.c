@@ -729,10 +729,10 @@ Errors __Chunk_init(const char    *__fileName__,
 
   chunkInfo->id              = chunkId;
   chunkInfo->definition      = definition;
-  chunkInfo->chunkSize       = 0;
-  chunkInfo->size            = 0;
-  chunkInfo->offset          = 0;
-  chunkInfo->index           = 0;
+  chunkInfo->chunkSize       = 0L;
+  chunkInfo->size            = 0LL;
+  chunkInfo->offset          = 0LL;
+  chunkInfo->index           = 0LL;
 
   chunkInfo->data            = data;
 
@@ -895,7 +895,7 @@ Errors Chunk_open(ChunkInfo         *chunkInfo,
   chunkInfo->size      = chunkHeader->size;
   chunkInfo->offset    = chunkHeader->offset;
   chunkInfo->mode      = CHUNK_MODE_READ;
-  chunkInfo->index     = 0;
+  chunkInfo->index     = 0LL;
 
   error = readDefinition(chunkInfo->io,
                          chunkInfo->ioUserData,
@@ -932,10 +932,10 @@ Errors Chunk_create(ChunkInfo *chunkInfo)
   assert(chunkInfo->data != NULL);
 
   // init
-  chunkInfo->size   = 0;
-  chunkInfo->offset = 0;
+  chunkInfo->size   = 0LL;
+  chunkInfo->offset = 0LL;
   chunkInfo->mode   = CHUNK_MODE_WRITE;
-  chunkInfo->index  = 0;
+  chunkInfo->index  = 0LL;
 
   // get size of chunk (without data elements)
   chunkInfo->chunkSize = Chunk_getSize(chunkInfo->definition,chunkInfo->alignment,chunkInfo->data,0);
@@ -964,8 +964,8 @@ Errors Chunk_create(ChunkInfo *chunkInfo)
   {
     return error;
   }
-  chunkInfo->index = 0;
-  chunkInfo->size  = 0;
+  chunkInfo->index = 0LL;
+  chunkInfo->size  = 0LL;
   if (chunkInfo->parentChunkInfo != NULL)
   {
     chunkInfo->parentChunkInfo->index += bytesWritten;
@@ -1099,7 +1099,7 @@ Errors Chunk_nextSub(ChunkInfo   *chunkInfo,
   assert(chunkInfo->io != NULL);
   assert(chunkHeader != NULL);
 
-  if ((chunkInfo->index+CHUNK_HEADER_SIZE) > chunkInfo->size)
+  if ((chunkInfo->index+CHUNK_HEADER_SIZE) > (chunkInfo->offset+chunkInfo->size))
   {
     return ERROR_END_OF_DATA;
   }
@@ -1147,11 +1147,37 @@ Errors Chunk_skipSub(ChunkInfo   *chunkInfo,
                      ChunkHeader *chunkHeader
                     )
 {
+  uint64 size;
+  uint64 offset;
+  Errors error;
+
   assert(chunkInfo != NULL);
   assert(chunkInfo->io != NULL);
+  assert(chunkInfo->io->getSize != NULL);
+  assert(chunkInfo->io->seek != NULL);
   assert(chunkHeader != NULL);
 
-  return Chunk_skip(chunkInfo->io,chunkInfo->ioUserData,chunkHeader);
+  size = chunkInfo->io->getSize(chunkInfo->ioUserData);
+  if (chunkHeader->offset+CHUNK_HEADER_SIZE+chunkHeader->size > size)
+  {
+    return ERROR_INVALID_CHUNK_SIZE;
+  }
+
+  /* Note: fseeko in File_seek() cause an SigSegV if "offset" is
+     completely wrong; thus never call it with an invalid offset
+  */
+  offset = (chunkHeader->offset+CHUNK_HEADER_SIZE+chunkHeader->size <= size)
+             ? chunkHeader->offset+CHUNK_HEADER_SIZE+chunkHeader->size
+             : size+1;
+  error = chunkInfo->io->seek(chunkInfo->ioUserData,offset);
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+
+  chunkInfo->index = offset;
+
+  return ERROR_NONE;
 }
 
 bool Chunk_eofSub(ChunkInfo *chunkInfo)
