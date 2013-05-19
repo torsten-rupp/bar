@@ -202,6 +202,9 @@ typedef struct
 // file permission
 typedef uint32 FilePermission;
 
+// file attributes
+typedef uint64 FileAttributes;
+
 // file extended attributes
 typedef struct FileExtendedAttributeNode
 {
@@ -209,7 +212,7 @@ typedef struct FileExtendedAttributeNode
 
   String name;
   void   *data;
-  uint   length;
+  ulong  dataLength;
 } FileExtendedAttributeNode;
 
 typedef struct
@@ -233,7 +236,8 @@ typedef struct
   FilePermission   permission;               // permission flags
   FileSpecialTypes specialType;              // special type; see FileSpecialTypes
   uint32           major,minor;              // special type major/minor number
-  uint64           attributes;               // attributes
+  FileAttributes            attributes;               // attributes
+  FileExtendedAttributeList extendedAttributeList;
 
   uint64           id;                       // unique id (e. g. inode number)
   uint             linkCount;                // number of hard links
@@ -997,13 +1001,35 @@ bool File_isWriteable(const String fileName);
 bool File_isWriteableCString(const char *fileName);
 
 /***********************************************************************\
+* Name   : File_initFileInfo
+* Purpose: initialize file info
+* Input  : fileInfo - file info
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void File_initFileInfo(FileInfo *fileInfo);
+
+/***********************************************************************\
+* Name   : File_doneFileInfo
+* Purpose: deinitialize file info
+* Input  : fileInfo - file info
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void File_doneFileInfo(FileInfo *fileInfo);
+
+/***********************************************************************\
 * Name   : File_getInfo
 * Purpose: get file info
 * Input  : fileInfo - file info variable
 *          fileName - file name
 * Output : fileInfo - file info
 * Return : ERROR_NONE or error code
-* Notes  : -
+* Notes  : fileInfo must _not_ be initialized
 \***********************************************************************/
 
 Errors File_getFileInfo(FileInfo     *fileInfo,
@@ -1111,7 +1137,7 @@ void File_doneExtendedAttributes(FileExtendedAttributeList *fileExtendedAttribut
 *          fileName                  - file name
 * Output : -
 * Return : ERROR_NONE or error code
-* Notes  : -
+* Notes  : fileExtendedAttributeList must _not_ be initialized
 \***********************************************************************/
 
 Errors File_getExtendedAttributes(FileExtendedAttributeList *fileExtendedAttributeList,

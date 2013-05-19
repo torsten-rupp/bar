@@ -225,15 +225,15 @@ LOCAL void fileCheckValid(const char *fileName,
 #endif /* NDEBUG */
 
 /***********************************************************************\
-* Name   : getExtendedAttributes
-* Purpose: get extended file attributes
+* Name   : getAttributes
+* Purpose: get file attributes
 * Input  : fileName - file name
 * Output : attributes - extended file attributes
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors getExtendedAttributes(const String fileName, uint64 *extendedAttributes)
+LOCAL Errors getAttributes(const String fileName, FileAttributes *extendedAttributes)
 {
   long   attributes;
   #ifdef FS_IOC_GETFLAGS
@@ -246,7 +246,7 @@ LOCAL Errors getExtendedAttributes(const String fileName, uint64 *extendedAttrib
 
   attributes = 0LL;
   #ifdef FS_IOC_GETFLAGS
-    // get extended file attributes
+    // get file attributes
     handle = open(String_cString(fileName),O_RDONLY|O_NONBLOCK);
     if (handle == -1)
     {
@@ -2585,6 +2585,21 @@ bool File_isWriteableCString(const char *fileName)
   #endif /* PLATFORM_... */
 }
 
+void File_initFileInfo(FileInfo *fileInfo)
+{
+  assert(fileInfo != NULL);
+
+  memset(fileInfo,0,sizeof(FileInfo));
+  List_init(&fileInfo->extendedAttributeList);
+}
+
+void File_doneFileInfo(FileInfo *fileInfo)
+{
+  assert(fileInfo != NULL);
+
+  List_done(&fileInfo->extendedAttributeList,(ListNodeFreeFunction)freeExtendedAttributeNode,NULL);
+}
+
 Errors File_getFileInfo(FileInfo     *fileInfo,
                         const String fileName
                        )
@@ -2629,14 +2644,14 @@ Errors File_getFileInfo(FileInfo     *fileInfo,
   cast.d1 = fileStat.st_ctime;
   memcpy(fileInfo->cast,&cast,sizeof(FileCast));
 
-  // store meta data
+  // store specific meta data
   if      (S_ISREG(fileStat.st_mode))
   {
     fileInfo->type = (fileStat.st_nlink > 1) ? FILE_TYPE_HARDLINK : FILE_TYPE_FILE;
     fileInfo->size = fileStat.st_size;
 
-    // get extended file attributes
-    error = getExtendedAttributes(fileName,&fileInfo->attributes);
+    // get file attributes
+    error = getAttributes(fileName,&fileInfo->attributes);
     if (error != ERROR_NONE)
     {
       return error;
@@ -2647,8 +2662,8 @@ Errors File_getFileInfo(FileInfo     *fileInfo,
     fileInfo->type = FILE_TYPE_DIRECTORY;
     fileInfo->size = 0LL;
 
-    // get extended file attributes
-    error = getExtendedAttributes(fileName,&fileInfo->attributes);
+    // get file attributes
+    error = getAttributes(fileName,&fileInfo->attributes);
     if (error != ERROR_NONE)
     {
       return error;
@@ -2702,6 +2717,13 @@ Errors File_getFileInfo(FileInfo     *fileInfo,
     fileInfo->attributes  = 0LL;
   }
 
+  // get extended attributes
+  error = File_getExtendedAttributes(&fileInfo->extendedAttributeList,fileName);
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+
   return ERROR_NONE;
 }
 
@@ -2710,10 +2732,12 @@ Errors File_setFileInfo(const String fileName,
                        )
 {
   struct utimbuf utimeBuffer;
+  Errors         error;
 
   assert(fileName != NULL);
   assert(fileInfo != NULL);
 
+  // set meta data
   switch (fileInfo->type)
   {
     case FILE_TYPE_FILE:
@@ -2754,6 +2778,13 @@ Errors File_setFileInfo(const String fileName,
       break; /* not reached */
   }
 
+  // set extended attributes
+  error = File_setExtendedAttributes(fileName,&fileInfo->extendedAttributeList);
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+
   return ERROR_NONE;
 }
 
@@ -2782,14 +2813,14 @@ Errors File_getExtendedAttributes(FileExtendedAttributeList *fileExtendedAttribu
   uint                      namesLength;
   const char                *name;
   void                      *data;
-  uint                      length;
+  uint                      dataLength;
   FileExtendedAttributeNode *fileExtendedAttributeNode;
 
   assert(fileExtendedAttributeList != NULL);
   assert(fileName != NULL);
 
   // init variables
-  List_clear(fileExtendedAttributeList,(ListNodeFreeFunction)freeExtendedAttributeNode,NULL);
+  List_init(fileExtendedAttributeList);
 
   // allocate buffer for attribute names
   n = listxattr(String_cString(fileName),NULL,0);
@@ -2822,8 +2853,8 @@ Errors File_getExtendedAttributes(FileExtendedAttributeList *fileExtendedAttribu
       free(names);
       return ERRORX_(IO_ERROR,errno,String_cString(fileName));
     }
-    length = (uint)n;
-    data = malloc(length);
+    dataLength = (uint)n;
+    data = malloc(dataLength);
     if (data == NULL)
     {
       free(names);
@@ -2831,7 +2862,7 @@ Errors File_getExtendedAttributes(FileExtendedAttributeList *fileExtendedAttribu
     }
 
     // get extended attribute
-    n = lgetxattr(String_cString(fileName),name,data,length);
+    n = lgetxattr(String_cString(fileName),name,data,dataLength);
     if (n < 0)
     {
       free(data);
@@ -2847,9 +2878,9 @@ Errors File_getExtendedAttributes(FileExtendedAttributeList *fileExtendedAttribu
       free(names);
       return ERROR_INSUFFICIENT_MEMORY;
     }
-    fileExtendedAttributeNode->name   = String_newCString(name);
-    fileExtendedAttributeNode->data   = data;
-    fileExtendedAttributeNode->length = length;
+    fileExtendedAttributeNode->name       = String_newCString(name);
+    fileExtendedAttributeNode->data       = data;
+    fileExtendedAttributeNode->dataLength = dataLength;
     List_append(fileExtendedAttributeList,fileExtendedAttributeNode);
 
     // next attribute
@@ -2876,7 +2907,7 @@ Errors File_setExtendedAttributes(const String                    fileName,
     if (lsetxattr(String_cString(fileName),
                   String_cString(fileExtendedAttributeNode->name),
                   fileExtendedAttributeNode->data,
-                  fileExtendedAttributeNode->length,
+                  fileExtendedAttributeNode->dataLength,
                   0
                  ) != 0
        )
