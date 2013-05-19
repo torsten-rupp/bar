@@ -624,48 +624,58 @@ const char *Chunk_idToString(ChunkId chunkId)
 
 ulong Chunk_getSize(const int  *definition,
                     ulong      alignment,
-                    const void *data
+                    const void *chunkData,
+                    ulong      dataLength
                    )
 {
-  int   z;
   ulong definitionSize;
+  int   z;
 
   assert(definition != NULL);
 
   definitionSize = 0;
-  for (z = 0; definition[z+0] != 0; z+=2)
+  z = 0;
+  while (definition[z+0] != CHUNK_DATATYPE_NONE)
   {
     switch (definition[z+0])
     {
       case CHUNK_DATATYPE_UINT8:
       case CHUNK_DATATYPE_INT8:
         definitionSize += 1;
+        z+=2;
         break;
       case CHUNK_DATATYPE_UINT16:
       case CHUNK_DATATYPE_INT16:
         definitionSize += 2;
+        z+=2;
         break;
       case CHUNK_DATATYPE_UINT32:
       case CHUNK_DATATYPE_INT32:
       case CHUNK_DATATYPE_CRC32:
         definitionSize += 4;
+        z+=2;
         break;
       case CHUNK_DATATYPE_UINT64:
       case CHUNK_DATATYPE_INT64:
         definitionSize += 8;
+        z+=2;
         break;
       case CHUNK_DATATYPE_STRING:
         {
           String s;
 
-          assert(data != NULL);
+          assert(chunkData != NULL);
 
-          s = (*((String*)((byte*)data+definition[z+1])));
+          s = (*((String*)((byte*)chunkData+definition[z+1])));
           assert(s != NULL);
+#warning alignment string?
           definitionSize += 2+String_length(s);
+          z+=2;
         }
         break;
       case CHUNK_DATATYPE_DATA:
+        definitionSize += dataLength;
+        z+=2;
         break;
       #ifndef NDEBUG
         default:
@@ -681,22 +691,37 @@ ulong Chunk_getSize(const int  *definition,
   return definitionSize;
 }
 
+#ifdef NDEBUG
 Errors Chunk_init(ChunkInfo     *chunkInfo,
                   ChunkInfo     *parentChunkInfo,
-                  const ChunkIO *io,
-                  void          *ioUserData,
+                  const ChunkIO *chunkIO,
+                  void          *chunkIOUserData,
                   ChunkId       chunkId,
                   const int     *definition,
                   uint          alignment,
                   CryptInfo     *cryptInfo,
                   void          *data
                  )
+#else /* not NDEBUG */
+Errors __Chunk_init(const char    *__fileName__,
+                    ulong         __lineNb__,
+                    ChunkInfo     *chunkInfo,
+                    ChunkInfo     *parentChunkInfo,
+                    const ChunkIO *chunkIO,
+                    void          *chunkIOUserData,
+                    ChunkId       chunkId,
+                    const int     *definition,
+                    uint          alignment,
+                    CryptInfo     *cryptInfo,
+                    void          *data
+                   )
+#endif /* NDEBUG */
 {
   assert(chunkInfo != NULL);
 
   chunkInfo->parentChunkInfo = parentChunkInfo;
-  chunkInfo->io              = (parentChunkInfo != NULL) ? parentChunkInfo->io         : io;
-  chunkInfo->ioUserData      = (parentChunkInfo != NULL) ? parentChunkInfo->ioUserData : ioUserData;
+  chunkInfo->io              = (parentChunkInfo != NULL) ? parentChunkInfo->io         : chunkIO;
+  chunkInfo->ioUserData      = (parentChunkInfo != NULL) ? parentChunkInfo->ioUserData : chunkIOUserData;
 
   chunkInfo->mode            = CHUNK_MODE_UNKNOWN;
   chunkInfo->alignment       = alignment;
@@ -713,6 +738,8 @@ Errors Chunk_init(ChunkInfo     *chunkInfo,
 
   initDefinition(definition,data);
 
+  DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,"chunk",chunkInfo);
+
   return ERROR_NONE;
 }
 
@@ -721,6 +748,8 @@ void Chunk_done(ChunkInfo *chunkInfo)
   assert(chunkInfo != NULL);
 
   doneDefinition(chunkInfo->definition,chunkInfo->data);
+
+  DEBUG_REMOVE_RESOURCE_TRACE(chunkInfo);
 }
 
 Errors Chunk_next(const ChunkIO *io,
@@ -909,7 +938,7 @@ Errors Chunk_create(ChunkInfo *chunkInfo)
   chunkInfo->index  = 0;
 
   // get size of chunk (without data elements)
-  chunkInfo->chunkSize = Chunk_getSize(chunkInfo->definition,chunkInfo->alignment,chunkInfo->data);
+  chunkInfo->chunkSize = Chunk_getSize(chunkInfo->definition,chunkInfo->alignment,chunkInfo->data,0);
 
   // get current offset
   error = chunkInfo->io->tell(chunkInfo->ioUserData,&offset);
@@ -1141,7 +1170,7 @@ Errors Chunk_update(ChunkInfo *chunkInfo)
   assert(chunkInfo->io->tell != NULL);
   assert(chunkInfo->io->seek != NULL);
   assert(chunkInfo->data != NULL);
-  assert(chunkInfo->chunkSize == Chunk_getSize(chunkInfo->definition,chunkInfo->alignment,chunkInfo->data));
+  assert(chunkInfo->chunkSize == Chunk_getSize(chunkInfo->definition,chunkInfo->alignment,chunkInfo->data,0));
 
   // get current offset
   error = chunkInfo->io->tell(chunkInfo->ioUserData,&offset);

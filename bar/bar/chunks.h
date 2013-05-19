@@ -33,17 +33,21 @@
 #define CHUNK_ID_NONE 0
 
 // chunk data types
-#define CHUNK_DATATYPE_UINT8    1
-#define CHUNK_DATATYPE_UINT16   2
-#define CHUNK_DATATYPE_UINT32   3
-#define CHUNK_DATATYPE_UINT64   4
-#define CHUNK_DATATYPE_INT8     5
-#define CHUNK_DATATYPE_INT16    6
-#define CHUNK_DATATYPE_INT32    7
-#define CHUNK_DATATYPE_INT64    8
-#define CHUNK_DATATYPE_STRING   9
-#define CHUNK_DATATYPE_DATA    10
-#define CHUNK_DATATYPE_CRC32   11
+#define CHUNK_DATATYPE_NONE     0
+#define CHUNK_DATATYPE_BYTE     1
+#define CHUNK_DATATYPE_UINT8    2
+#define CHUNK_DATATYPE_UINT16   3
+#define CHUNK_DATATYPE_UINT32   4
+#define CHUNK_DATATYPE_UINT64   5
+#define CHUNK_DATATYPE_INT8     6
+#define CHUNK_DATATYPE_INT16    7
+#define CHUNK_DATATYPE_INT32    8
+#define CHUNK_DATATYPE_INT64    9
+#define CHUNK_DATATYPE_STRING  10
+#define CHUNK_DATATYPE_DATA    11
+#define CHUNK_DATATYPE_CRC32   12
+
+#define CHUNK_DATATYPE_ARRAY   0x80
 
 // chunk i/o modes
 typedef enum
@@ -55,6 +59,9 @@ typedef enum
 
 // indicate to use data from parent chunk
 #define CHUNK_USE_PARENT NULL
+
+// chunk flags
+#define CHUNK_FLAG_DATA (1 << 0)
 
 /***************************** Datatypes *******************************/
 
@@ -119,6 +126,31 @@ typedef struct ChunkInfo
 
 /****************************** Macros *********************************/
 
+#ifndef NDEBUG
+  #define Chunk_init(chunkInfo, \
+                     parentChunkInfo, \
+                     chunkIO, \
+                     chunkIOUserData, \
+                     hunkId, \
+                     definition, \
+                     lignment, \
+                     cryptInfo, \
+                     data \
+                    ) \
+     __Chunk_init(__FILE__, \
+                  __LINE__, \
+                  chunkInfo, \
+                  parentChunkInfo, \
+                  chunkIO, \
+                  chunkIOUserData, \
+                  hunkId, \
+                  definition, \
+                  lignment, \
+                  cryptInfo, \
+                  data \
+                 )
+#endif /* not NDEBUG */
+
 /***************************** Forwards ********************************/
 
 /***************************** Functions *******************************/
@@ -165,7 +197,8 @@ const char *Chunk_idToString(ChunkId chunkId);
 * Purpose: get size of chunk in bytes (without header and data elements)
 * Input  : definition - chunk definition
 *          alignment  - alignment to use
-*          data       - chunk data
+*          chunkData  - chunk data
+*          dataLength - length of data
 * Output : -
 * Return : size of chunk
 * Notes  : -
@@ -173,7 +206,8 @@ const char *Chunk_idToString(ChunkId chunkId);
 
 ulong Chunk_getSize(const int  *definition,
                     ulong      alignment,
-                    const void *data
+                    const void *chunkData,
+                    ulong      dataLength
                    );
 
 /***********************************************************************\
@@ -190,6 +224,7 @@ ulong Chunk_getSize(const int  *definition,
 * Notes  : -
 \***********************************************************************/
 
+#ifdef NDEBUG
 Errors Chunk_init(ChunkInfo     *chunkInfo,
                   ChunkInfo     *parentChunkInfo,
                   const ChunkIO *chunkIO,
@@ -200,6 +235,20 @@ Errors Chunk_init(ChunkInfo     *chunkInfo,
                   CryptInfo     *cryptInfo,
                   void          *data
                  );
+#else /* not NDEBUG */
+Errors __Chunk_init(const char    *__fileName__,
+                    ulong         __lineNb__,
+                    ChunkInfo     *chunkInfo,
+                    ChunkInfo     *parentChunkInfo,
+                    const ChunkIO *chunkIO,
+                    void          *chunkIOUserData,
+                    ChunkId       chunkId,
+                    const int     *definition,
+                    uint          alignment,
+                    CryptInfo     *cryptInfo,
+                    void          *data
+                   );
+#endif /* NDEBUG */
 
 /***********************************************************************\
 * Name   : Chunk_done
