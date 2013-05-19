@@ -1147,15 +1147,15 @@ void debugAddResourceTrace(const char *__fileName__,
 * Name   : debugRemoveResourceTrace
 * Purpose: remove resource from debug trace list
 * Input  : __fileName__ - file name
-*          lineNb   - line number
-*          resource - resource
+*          __lineNb__   - line number
+*          resource     - resource
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
 void debugRemoveResourceTrace(const char *__fileName__,
-                              ulong      lineNb,
+                              uint       __lineNb__,
                               const void *resource
                              );
 
