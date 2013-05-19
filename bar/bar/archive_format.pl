@@ -30,17 +30,17 @@ my $PREFIX_CONST_NAME       = "CHUNK_CONST_";
 
 my $DEFINITION_TYPES =
   {
-   "uint8"  => "CHUNK_DATATYPE_UINT8",
-   "uint16" => "CHUNK_DATATYPE_UINT16",
-   "uint32" => "CHUNK_DATATYPE_UINT32",
-   "uint64" => "CHUNK_DATATYPE_UINT64",
-   "int8"   => "CHUNK_DATATYPE_INT8",
-   "int16"  => "CHUNK_DATATYPE_INT16",
-   "int32"  => "CHUNK_DATATYPE_INT32",
-   "int64"  => "CHUNK_DATATYPE_INT64",
-   "string" => "CHUNK_DATATYPE_STRING",
-   "data"   => "CHUNK_DATATYPE_DATA",
-   "crc32"  => "CHUNK_DATATYPE_CRC32",
+   "uint8"    => "CHUNK_DATATYPE_UINT8",
+   "uint16"   => "CHUNK_DATATYPE_UINT16",
+   "uint32"   => "CHUNK_DATATYPE_UINT32",
+   "uint64"   => "CHUNK_DATATYPE_UINT64",
+   "int8"     => "CHUNK_DATATYPE_INT8",
+   "int16"    => "CHUNK_DATATYPE_INT16",
+   "int32"    => "CHUNK_DATATYPE_INT32",
+   "int64"    => "CHUNK_DATATYPE_INT64",
+   "string"   => "CHUNK_DATATYPE_STRING",
+   "data"     => "CHUNK_DATATYPE_DATA",
+   "crc32"    => "CHUNK_DATATYPE_CRC32",
   };
 
 my $cFileName,$hFileName;
@@ -215,7 +215,7 @@ while ($line=<STDIN>)
     writeHFile("} $PREFIX_CHUNK_NAME$structName;\n");
     writeHFile("typedef struct { LIST_HEADER($PREFIX_CHUNK_NAME$structName); } $PREFIX_CHUNK_NAME$structName"."List".";\n");
 
-    push(@parseDefinitions,"0");
+    push(@parseDefinitions,"CHUNK_DATATYPE_NONE");
     writeHFile("extern const int $PREFIX_CHUNK_DEFINITION$idName\[\];\n");
     writeCFile("const int $PREFIX_CHUNK_DEFINITION$idName\[\] = {".join(",",@parseDefinitions)."};\n");
   }
