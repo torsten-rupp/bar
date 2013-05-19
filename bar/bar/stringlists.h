@@ -70,9 +70,12 @@ typedef struct
 * Return : -
 * Notes  : variable will contain all strings in list
 *          usage:
+*            StringNode *iteratorVariable;
+*            String     variable;
+*
 *            STRINGLIST_ITERATE(list,iteratorVariable,variable)
 *            {
-*              ... = variable->...
+*              ... = variable
 *            }
 \***********************************************************************/
 
