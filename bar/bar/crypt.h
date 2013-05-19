@@ -115,6 +115,19 @@ typedef struct
 #define CRYPT_ALGORITHM_TO_CONSTANT(cryptAlgorithm) \
   ((uint16)(cryptAlgorithm))
 
+#ifndef NDEBUG
+  #define Crypt_init(cryptInfo, \
+                     cryptAlgorithm, \
+                     password \
+                    ) \
+     __Crypt_init(__FILE__, \
+                  __LINE__, \
+                  cryptInfo, \
+                  cryptAlgorithm, \
+                  password \
+                 )
+#endif /* not NDEBUG */
+
 /***************************** Forwards ********************************/
 
 /***************************** Functions *******************************/
@@ -244,10 +257,19 @@ Errors Crypt_getBlockLength(CryptAlgorithms cryptAlgorithm,
 * Notes  : -
 \***********************************************************************/
 
+#ifdef NDEBUG
 Errors Crypt_init(CryptInfo       *cryptInfo,
                   CryptAlgorithms cryptAlgorithm,
                   const Password  *password
                  );
+#else /* not NDEBUG */
+Errors __Crypt_init(const char      *__fileName__,
+                    ulong           __lineNb__,
+                    CryptInfo       *cryptInfo,
+                    CryptAlgorithms cryptAlgorithm,
+                    const Password  *password
+                   );
+#endif /* NDEBUG */
 
 /***********************************************************************\
 * Name   : Crypt_delete

@@ -530,10 +530,19 @@ Errors Crypt_getBlockLength(CryptAlgorithms cryptAlgorithm,
   return ERROR_NONE;
 }
 
+#ifdef NDEBUG
 Errors Crypt_init(CryptInfo       *cryptInfo,
                   CryptAlgorithms cryptAlgorithm,
                   const Password  *password
                  )
+#else /* not NDEBUG */
+Errors __Crypt_init(const char    *__fileName__,
+                    ulong         __lineNb__,
+                    CryptInfo       *cryptInfo,
+                    CryptAlgorithms cryptAlgorithm,
+                    const Password  *password
+                   )
+#endif /* NDEBUG */
 {
   assert(cryptInfo != NULL);
 
@@ -734,6 +743,8 @@ Errors Crypt_init(CryptInfo       *cryptInfo,
       break; /* not reached */
   }
 
+  DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,"crypt",cryptInfo);
+
   return ERROR_NONE;
 }
 
@@ -769,6 +780,8 @@ void Crypt_done(CryptInfo *cryptInfo)
       #endif /* NDEBUG */
       break; /* not reached */
   }
+
+  DEBUG_REMOVE_RESOURCE_TRACE(cryptInfo);
 }
 
 Errors Crypt_reset(CryptInfo *cryptInfo, uint64 seed)
