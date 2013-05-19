@@ -113,54 +113,54 @@ typedef Errors(*ArchiveGetCryptPasswordFunction)(void         *userData,
 typedef struct
 {
   const JobOptions                *jobOptions;
-  ArchiveCreatedFunction          archiveCreatedFunction;            // call back for new archive file
-  void                            *archiveNewFileUserData;           // user data for call back for new archive file
-  ArchiveGetCryptPasswordFunction archiveGetCryptPasswordFunction;   // call back to get crypt password
-  void                            *archiveGetCryptPasswordUserData;  // user data for call back to get crypt password
+  ArchiveCreatedFunction          archiveCreatedFunction;              // call back for new archive file
+  void                            *archiveNewFileUserData;             // user data for call back for new archive file
+  ArchiveGetCryptPasswordFunction archiveGetCryptPasswordFunction;     // call back to get crypt password
+  void                            *archiveGetCryptPasswordUserData;    // user data for call back to get crypt password
 
-  String                          printableName;                     // printable file/storage name (without password)
+  String                          printableName;                       // printable file/storage name (without password)
 
-  CryptTypes                      cryptType;                         // crypt type (symmetric/asymmetric; see CryptTypes)
-  Password                        *cryptPassword;                    // cryption password for encryption/decryption
-  CryptKey                        cryptKey;                          // public/private key for encryption/decryption of random key used for asymmetric encryption
-  void                            *cryptKeyData;                     // encrypted random key used for asymmetric encryption
-  uint                            cryptKeyDataLength;                // length of encrypted random key
+  CryptTypes                      cryptType;                           // crypt type (symmetric/asymmetric; see CryptTypes)
+  Password                        *cryptPassword;                      // cryption password for encryption/decryption
+  CryptKey                        cryptKey;                            // public/private key for encryption/decryption of random key used for asymmetric encryptio
+  void                            *cryptKeyData;                       // encrypted random key used for asymmetric encryption
+  uint                            cryptKeyDataLength;                  // length of encrypted random key
 
-  uint                            blockLength;                       // block length for file entry/file data (depend on used crypt algorithm)
+  uint                            blockLength;                         // block length for file entry/file data (depend on used crypt algorithm)
 
-  ArchiveIOTypes                  ioType;                            // i/o type
+  ArchiveIOTypes                  ioType;                              // i/o type
   union
   {
     struct
     {
-      String                      fileName;                          // file name
-      FileHandle                  fileHandle;                        // file handle
-      bool                        openFlag;                          // TRUE iff archive file is open
+      String                      fileName;                            // file name
+      FileHandle                  fileHandle;                          // file handle
+      bool                        openFlag;                            // TRUE iff archive file is open
     } file;
     struct
     {
-      StorageSpecifier            storageSpecifier;                  // storage specifier structure
-      String                      storageFileName;                   // storage file name
-      StorageFileHandle           storageFileHandle;                 // storage file handle
+      StorageSpecifier            storageSpecifier;                    // storage specifier structure
+      String                      storageFileName;                     // storage file name
+      StorageFileHandle           storageFileHandle;                   // storage file handle
     } storage;
   };
-  const ChunkIO                   *chunkIO;                          // chunk i/o functions
-  void                            *chunkIOUserData;                  // chunk i/o functions data
-  Semaphore                       chunkIOLock;                       // chunk i/o functions lock
+  const ChunkIO                   *chunkIO;                            // chunk i/o functions
+  void                            *chunkIOUserData;                    // chunk i/o functions data
+  Semaphore                       chunkIOLock;                         // chunk i/o functions lock
 
-  DatabaseHandle                  *databaseHandle;                   // database handle
-  int64                           storageId;                         // index storage id in database
+  DatabaseHandle                  *databaseHandle;                     // database handle
+  int64                           storageId;                           // index storage id in database
 
-  uint                            partNumber;                        // file part number
+  uint                            partNumber;                          // file part number
 
-  Errors                          pendingError;                      // pending error or ERROR_NONE
-  bool                            nextChunkHeaderReadFlag;           // TRUE iff next chunk header read
-  ChunkHeader                     nextChunkHeader;                   // next chunk header
+  Errors                          pendingError;                        // pending error or ERROR_NONE
+  bool                            nextChunkHeaderReadFlag;             // TRUE iff next chunk header read
+  ChunkHeader                     nextChunkHeader;                     // next chunk header
 
   struct
   {
-    bool                          openFlag;                          // TRUE iff archive is open
-    uint64                        offset;                            // interrupt offset
+    bool                          openFlag;                            // TRUE iff archive is open
+    uint64                        offset;                              // interrupt offset
   } interrupt;
 
   // list of open archive entries
@@ -176,120 +176,134 @@ typedef struct ArchiveEntryInfo
 {
   LIST_NODE_HEADER(struct ArchiveEntryInfo);
 
-  ArchiveInfo                     *archiveInfo;                      // archive info
+  ArchiveInfo                     *archiveInfo;                        // archive info
 
   enum
   {
     ARCHIVE_MODE_READ,
     ARCHIVE_MODE_WRITE,
-  } mode;                                                            // read/write archive mode
+  } mode;                                                              // read/write archive mode
 
-  CryptAlgorithms                 cryptAlgorithm;                    // crypt algorithm for entry
-  uint                            blockLength;                       /* block length for file entry/file
-                                                                        data (depend on used crypt
-                                                                        algorithm)
-                                                                     */
+  CryptAlgorithms                 cryptAlgorithm;                      // crypt algorithm for entry
+  uint                            blockLength;                         /* block length for file entry/file
+                                                                          data (depend on used crypt
+                                                                          algorithm)
+                                                                       */
 
   ArchiveEntryTypes               archiveEntryType;
   union
   {
     struct
     {
-      FileExtendedAttributeList   *fileExtendedAttributeList;
-      SourceHandle                sourceHandle;                      // delta handle
-      bool                        sourceHandleInitFlag;              // TRUE if delta source is initialized
+      const FileExtendedAttributeList *fileExtendedAttributeList;      // extended attribute list
 
-      CompressAlgorithms          deltaCompressAlgorithm;            // delta compression algorithm
-      CompressAlgorithms          byteCompressAlgorithm;             // byte compression algorithm
+      SourceHandle                    sourceHandle;                    // delta source handle
+      bool                            sourceHandleInitFlag;            // TRUE if delta source is initialized
 
-      ChunkFile                   chunkFile;                         // file
-      ChunkFileEntry              chunkFileEntry;                    // file entry
-      ChunkFileExtendedAttribute  chunkFileExtendedAttribute;        // file extended attribute
-      ChunkFileDelta              chunkFileDelta;                    // file delta
-      ChunkFileData               chunkFileData;                     // file data
+      CompressAlgorithms              deltaCompressAlgorithm;          // delta compression algorithm
+      CompressAlgorithms              byteCompressAlgorithm;           // byte compression algorithm
 
-      CompressInfo                deltaCompressInfo;                 // delta compress info
-      CompressInfo                byteCompressInfo;                  // byte compress info
-      CryptInfo                   cryptInfo;                         // cryption info
+      ChunkFile                       chunkFile;                       // base chunk
+      ChunkFileEntry                  chunkFileEntry;                  // entry
+      ChunkFileExtendedAttribute      chunkFileExtendedAttribute;      // extended attribute
+      ChunkFileDelta                  chunkFileDelta;                  // delta
+      ChunkFileData                   chunkFileData;                   // data
 
-      uint                        headerLength;                      // length of header
-      bool                        headerWrittenFlag;                 // TRUE iff header written
+      CompressInfo                    deltaCompressInfo;               // delta compress info
+      CompressInfo                    byteCompressInfo;                // byte compress info
+      CryptInfo                       cryptInfo;                       // cryption info
 
-      FileHandle                  tmpFileHandle;                     // temporary file handle
-      byte                        *byteBuffer;                       // buffer for processing byte data
-      ulong                       byteBufferSize;                    // size of byte buffer
-      byte                        *deltaBuffer;                      // buffer for processing delta data
-      ulong                       deltaBufferSize;                   // size of delta buffer
+      uint                            headerLength;                    // length of header
+      bool                            headerWrittenFlag;               // TRUE iff header written
+
+      FileHandle                      tmpFileHandle;                   // temporary file handle
+      byte                            *byteBuffer;                     // buffer for processing byte data
+      ulong                           byteBufferSize;                  // size of byte buffer
+      byte                            *deltaBuffer;                    // buffer for processing delta data
+      ulong                           deltaBufferSize;                 // size of delta buffer
     } file;
     struct
     {
-      SourceHandle                sourceHandle;                      // delta source info
-      bool                        sourceHandleInitFlag;              // TRUE if delta source is initialized
+      const FileExtendedAttributeList *fileExtendedAttributeList;      // extended attribute list
 
-      uint                        blockSize;                         // block size of device
+      SourceHandle                    sourceHandle;                    // delta source handle
+      bool                            sourceHandleInitFlag;            // TRUE if delta source is initialized
 
-      CompressAlgorithms          deltaCompressAlgorithm;            // delta compression algorithm
-      CompressAlgorithms          byteCompressAlgorithm;             // byte compression algorithm
+      uint                            blockSize;                       // block size of device
 
-      ChunkImage                  chunkImage;                        // image
-      ChunkImageEntry             chunkImageEntry;                   // image entry
-      ChunkImageDelta             chunkImageDelta;                   // image delta
-      ChunkImageData              chunkImageData;                    // image data
+      CompressAlgorithms              deltaCompressAlgorithm;          // delta compression algorithm
+      CompressAlgorithms              byteCompressAlgorithm;           // byte compression algorithm
 
-      CompressInfo                deltaCompressInfo;                 // delta compress info
-      CompressInfo                byteCompressInfo;                  // byte compress info
-      CryptInfo                   cryptInfo;                         // cryption info
+      ChunkImage                      chunkImage;                      // base chunk
+      ChunkImageEntry                 chunkImageEntry;                 // entry chunk
+      ChunkImageDelta                 chunkImageDelta;                 // delta chunk
+      ChunkImageData                  chunkImageData;                  // data chunk
 
-      uint                        headerLength;                      // length of header
-      bool                        headerWrittenFlag;                 // TRUE iff header written
+      CompressInfo                    deltaCompressInfo;               // delta compress info
+      CompressInfo                    byteCompressInfo;                // byte compress info
+      CryptInfo                       cryptInfo;                       // cryption info
 
-      FileHandle                  tmpFileHandle;                     // temporary file handle
-      byte                        *byteBuffer;                       // buffer for processing byte data
-      ulong                       byteBufferSize;                    // size of byte buffer
-      byte                        *deltaBuffer;                      // buffer for processing delta data
-      ulong                       deltaBufferSize;                   // size of delta buffer
+      uint                            headerLength;                    // length of header
+      bool                            headerWrittenFlag;               // TRUE iff header written
+
+      FileHandle                      tmpFileHandle;                   // temporary file handle
+      byte                            *byteBuffer;                     // buffer for processing byte data
+      ulong                           byteBufferSize;                  // size of byte buffer
+      byte                            *deltaBuffer;                    // buffer for processing delta data
+      ulong                           deltaBufferSize;                 // size of delta buffer
     } image;
     struct
     {
-      ChunkDirectory              chunkDirectory;                    // directory
-      ChunkDirectoryEntry         chunkDirectoryEntry;               // directory entry
+      ChunkDirectory                  chunkDirectory;                  // base chunk
+      ChunkDirectoryEntry             chunkDirectoryEntry;             // entry chunk
+      ChunkDirectoryExtendedAttribute chunkDirectoryExtendedAttribute; // extended attribute chunk
     } directory;
     struct
     {
-      ChunkLink                   chunkLink;                         // link
-      ChunkLinkEntry              chunkLinkEntry;                    // link entry
+      const FileExtendedAttributeList *fileExtendedAttributeList;      // extended attribute list
+
+      ChunkLink                       chunkLink;                       // base chunk
+      ChunkLinkEntry                  chunkLinkEntry;                  // entry chunk
+      ChunkLinkExtendedAttribute      chunkLinkExtendedAttribute;      // extended attribute chunk
     } link;
     struct
     {
-      SourceHandle                sourceHandle;                      // delta source info
-      bool                        sourceHandleInitFlag;              // TRUE if delta source is initialized
+      const StringList                *fileNameList;                   // list of hard link names
+      const FileExtendedAttributeList *fileExtendedAttributeList;      // extended attribute list
 
-      CompressAlgorithms          deltaCompressAlgorithm;            // delta compression algorithm
-      CompressAlgorithms          byteCompressAlgorithm;             // byte compression algorithm
+      SourceHandle                    sourceHandle;                    // delta source handle
+      bool                            sourceHandleInitFlag;            // TRUE if delta source is initialized
 
-      ChunkHardLink               chunkHardLink;                     // hard link
-      ChunkHardLinkEntry          chunkHardLinkEntry;                // hard link entry
-      ChunkHardLinkNameList       chunkHardLinkNameList;             // hard link name list
-      ChunkHardLinkDelta          chunkHardLinkDelta;                // hard link delta
-      ChunkHardLinkData           chunkHardLinkData;                 // hard link data
+      CompressAlgorithms              deltaCompressAlgorithm;          // delta compression algorithm
+      CompressAlgorithms              byteCompressAlgorithm;           // byte compression algorithm
 
-      CompressInfo                deltaCompressInfo;                 // delta compress info
-      CompressInfo                byteCompressInfo;                  // byte compress info
-      CryptInfo                   cryptInfo;                         // cryption info
+      ChunkHardLink                   chunkHardLink;                   // base chunk
+      ChunkHardLinkEntry              chunkHardLinkEntry;              // entry chunk
+      ChunkHardLinkExtendedAttribute  chunkHardLinkExtendedAttribute;  // extended attribute chunk
+      ChunkHardLinkName               chunkHardLinkName;               // name chunk
+      ChunkHardLinkDelta              chunkHardLinkDelta;              // delta chunk
+      ChunkHardLinkData               chunkHardLinkData;               // data chunk
 
-      uint                        headerLength;                      // length of header
-      bool                        headerWrittenFlag;                 // TRUE iff header written
+      CompressInfo                    deltaCompressInfo;               // delta compress info
+      CompressInfo                    byteCompressInfo;                // byte compress info
+      CryptInfo                       cryptInfo;                       // cryption info
 
-      FileHandle                  tmpFileHandle;                     // temporary file handle
-      byte                        *byteBuffer;                       // buffer for processing byte data
-      ulong                       byteBufferSize;                    // size of byte buffer
-      byte                        *deltaBuffer;                      // buffer for processing delta data
-      ulong                       deltaBufferSize;                   // size of delta buffer
+      uint                            headerLength;                    // length of header
+      bool                            headerWrittenFlag;               // TRUE iff header written
+
+      FileHandle                      tmpFileHandle;                   // temporary file handle
+      byte                            *byteBuffer;                     // buffer for processing byte data
+      ulong                           byteBufferSize;                  // size of byte buffer
+      byte                            *deltaBuffer;                    // buffer for processing delta data
+      ulong                           deltaBufferSize;                 // size of delta buffer
     } hardLink;
     struct
     {
-      ChunkSpecial                chunkSpecial;                      // special
-      ChunkSpecialEntry           chunkSpecialEntry;                 // special entry
+      const FileExtendedAttributeList *fileExtendedAttributeList;      // extended attribute list
+
+      ChunkSpecial                    chunkSpecial;                    // base chunk
+      ChunkSpecialEntry               chunkSpecialEntry;               // entry chunk
+      ChunkHardLinkExtendedAttribute  chunkSpecialExtendedAttribute;   // extended attribute chunk
     } special;
   };
 } ArchiveEntryInfo;
@@ -403,7 +417,8 @@ Errors Archive_create(ArchiveInfo                     *archiveInfo,
 *          archiveGetCryptPassword     - get password call back (can be
 *                                        NULL)
 *          archiveGetCryptPasswordData - user data for get password call
-*                                        back
+*                                        back  archiveEntryInfo->file.fileExtendedAttributeList = &fileInfo->extendedAttributeList;
+
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -469,15 +484,14 @@ bool Archive_eof(ArchiveInfo *archiveInfo,
 /***********************************************************************\
 * Name   : Archive_newFileEntry
 * Purpose: add new file to archive
-* Input  : archiveInfo                     - archive info
-*          fileName                        - file name
-*          fileInfo                        - file info
-*          deltaCompressFlag               - TRUE for delta compression,
-*                                            FALSE otherwise
-*          byteCompressFlag                - TRUE for byte compression,
-*                                            FALSE otherwise (e. g. file
-*                                            is to small or already
-*                                            compressed)
+* Input  : archiveInfo       - archive info
+*          fileName          - file name
+*          fileInfo          - file info
+*          deltaCompressFlag - TRUE for delta compression, FALSE
+*                              otherwise
+*          byteCompressFlag  - TRUE for byte compression, FALSE
+*                              otherwise (e. g. file is to small
+*                              or already compressed)
 * Output : archiveEntryInfo - archive file entry info
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -487,7 +501,6 @@ Errors Archive_newFileEntry(ArchiveEntryInfo *archiveEntryInfo,
                             ArchiveInfo      *archiveInfo,
                             const String     fileName,
                             const FileInfo   *fileInfo,
-                            const FileExtendedAttributeList *fileExtendedAttributeList,
                             const bool       deltaCompressFlag,
                             const bool       byteCompressFlag
                            );
@@ -495,15 +508,14 @@ Errors Archive_newFileEntry(ArchiveEntryInfo *archiveEntryInfo,
 /***********************************************************************\
 * Name   : Archive_newImageEntry
 * Purpose: add new block device image to archive
-* Input  : archiveInfo                     - archive info
-*          deviceName                      - special device name
-*          deviceInfo                      - device info
-*          deltaCompressFlag               - TRUE for delta compression,
-*                                            FALSE otherwise
-*          byteCompressFlag                - TRUE for byte compression,
-*                                            FALSE otherwise (e. g. file
-*                                            is to small or already
-*                                            compressed)
+* Input  : archiveInfo       - archive info
+*          deviceName        - special device name
+*          deviceInfo        - device info
+*          deltaCompressFlag - TRUE for delta compression, FALSE
+*                              otherwise
+*          byteCompressFlag  - TRUE for byte compression, FALSE
+*                              otherwise (e. g. file is to small
+*                              or already compressed)
 * Output : archiveEntryInfo - archive image entry info
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -520,9 +532,9 @@ Errors Archive_newImageEntry(ArchiveEntryInfo *archiveEntryInfo,
 /***********************************************************************\
 * Name   : Archive_newDirectoryEntry
 * Purpose: add new directory to archive
-* Input  : archiveInfo      - archive info
-*          name             - directory name
-*          fileInfo         - file info
+* Input  : archiveInfo - archive info
+*          name        - directory name
+*          fileInfo    - file info
 * Output : archiveEntryInfo - archive directory entry info
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -537,10 +549,11 @@ Errors Archive_newDirectoryEntry(ArchiveEntryInfo *archiveEntryInfo,
 /***********************************************************************\
 * Name   : Archive_newLinkEntry
 * Purpose: add new link to archive
-* Input  : archiveInfo      - archive info variable
-*          fileName         - link name
-*          destinationName  - name of referenced file
-*          fileInfo         - file info
+* Input  : archiveInfo               - archive info variable
+*          fileName                  - link name
+*          destinationName           - name of referenced file
+*          fileInfo                  - file info
+*          fileExtendedAttributeList - extended attribute list or NULL
 * Output : archiveEntryInfo - archive link entry info
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -556,15 +569,14 @@ Errors Archive_newLinkEntry(ArchiveEntryInfo *archiveEntryInfo,
 /***********************************************************************\
 * Name   : Archive_newHardLinkEntry
 * Purpose: add new hard link to archive
-* Input  : archiveInfo                     - archive info
-*          fileNameList                    - list of file names
-*          fileInfo                        - file info
-*          deltaCompressFlag               - TRUE for delta compression,
-*                                            FALSE otherwise
-*          byteCompressFlag                - TRUE for byte compression,
-*                                            FALSE otherwise (e. g. file
-*                                            is to small or already
-*                                            compressed)
+* Input  : archiveInfo       - archive info
+*          fileNameList      - list of file names
+*          fileInfo          - file info
+*          deltaCompressFlag - TRUE for delta compression, FALSE
+*                              otherwise
+*          byteCompressFlag  - TRUE for byte compression, FALSE
+*                              otherwise (e. g. file is to small
+*                              or already compressed)
 * Output : archiveEntryInfo - archive hard link entry info
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -581,9 +593,9 @@ Errors Archive_newHardLinkEntry(ArchiveEntryInfo *archiveEntryInfo,
 /***********************************************************************\
 * Name   : Archive_newSpecialEntry
 * Purpose: add new special entry to archive
-* Input  : archiveInfo      - archive info
-*          specialName      - special name
-*          fileInfo         - file info
+* Input  : archiveInfo - archive info
+*          specialName - special name
+*          fileInfo    - file info
 * Output : archiveEntryInfo - archive special entry info
 * Return : ERROR_NONE or error code
 * Notes  : -
