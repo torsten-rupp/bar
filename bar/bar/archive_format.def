@@ -311,6 +311,14 @@ CHUNK DIRECTORY_ENTRY "DENT" DirectoryEntry
   string name
   crc32  crc
 
+# directory extended attribute
+# never compress, encrypted as specified in DIR0
+CHUNK DIRECTORY_EXTENDED_ATTRIBUTE "DEAT" DirectoryExtendedAttribute
+  ENCRYPT
+  string name
+  data   data
+  crc32  crc
+
 # ----------------------------------------------------------------------
 
 # (symbolic) link info header
@@ -337,6 +345,14 @@ CHUNK LINK_ENTRY "LENT" LinkEntry
   string destinationName
   crc32  crc
 
+# (symbolic) link extended attribute
+# never compress, encrypted as specified in LNK0
+CHUNK LINK_EXTENDED_ATTRIBUTE "LEAT" LinkExtendedAttribute
+  ENCRYPT
+  string name
+  data   data
+  crc32  crc
+
 # ----------------------------------------------------------------------
 
 # hard link info header
@@ -361,6 +377,14 @@ CHUNK HARDLINK_ENTRY "HENT" HardLinkEntry
   uint32 userId
   uint32 groupId
   uint32 permission
+  crc32  crc
+
+# hard link extended attribute
+# never compress, encrypted as specified in HLN0
+CHUNK HARDLINK_EXTENDED_ATTRIBUTE "HEAT" HardLinkExtendedAttribute
+  ENCRYPT
+  string name
+  data   data
   crc32  crc
 
 # hard link name
@@ -421,6 +445,14 @@ CHUNK SPECIAL_ENTRY "SENT" SpecialEntry
   uint32 major
   uint32 minor
   string name
+  crc32  crc
+
+# special entry extended attribute
+# never compress, encrypted as specified in SPE0
+CHUNK SPECIAL_EXTENDED_ATTRIBUTE "SEAT" SpecialExtendedAttribute
+  ENCRYPT
+  string name
+  data   data
   crc32  crc
 
 # ----------------------------------------------------------------------
