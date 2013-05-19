@@ -195,6 +195,7 @@ typedef struct ArchiveEntryInfo
   {
     struct
     {
+      FileExtendedAttributeList   *fileExtendedAttributeList;
       SourceHandle                sourceHandle;                      // delta handle
       bool                        sourceHandleInitFlag;              // TRUE if delta source is initialized
 
@@ -203,6 +204,7 @@ typedef struct ArchiveEntryInfo
 
       ChunkFile                   chunkFile;                         // file
       ChunkFileEntry              chunkFileEntry;                    // file entry
+      ChunkFileExtendedAttribute  chunkFileExtendedAttribute;        // file extended attribute
       ChunkFileDelta              chunkFileDelta;                    // file delta
       ChunkFileData               chunkFileData;                     // file data
 
@@ -485,6 +487,7 @@ Errors Archive_newFileEntry(ArchiveEntryInfo *archiveEntryInfo,
                             ArchiveInfo      *archiveInfo,
                             const String     fileName,
                             const FileInfo   *fileInfo,
+                            const FileExtendedAttributeList *fileExtendedAttributeList,
                             const bool       deltaCompressFlag,
                             const bool       byteCompressFlag
                            );

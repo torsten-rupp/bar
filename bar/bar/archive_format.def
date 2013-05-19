@@ -209,6 +209,14 @@ CHUNK FILE_ENTRY "FENT" FileEntry
   string name
   crc32  crc
 
+# file extended attribute
+# never compress, encrypted as specified in FIL0
+CHUNK FILE_EXTENDED_ATTRIBUTE "FEAT" FileExtendedAttribute
+  ENCRYPT
+  string name
+  data   data
+  crc32  crc
+
 # file delta compression
 #
 # parent: FIL0

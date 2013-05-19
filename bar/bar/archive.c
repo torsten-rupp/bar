@@ -756,7 +756,7 @@ LOCAL Errors writeEncryptionKey(ArchiveInfo *archiveInfo)
   ChunkKey  chunkKey;
 
   assert(archiveInfo != NULL);
-  SEMAPHORE_ASSERT_OWNERSHIP(&archiveInfo->chunkIOLock);
+  assert(Semaphore_isOwned(&archiveInfo->chunkIOLock));
 
   // create key chunk
   error = Chunk_init(&chunkInfoKey,
@@ -984,7 +984,7 @@ LOCAL Errors ensureArchiveSpace(ArchiveInfo *archiveInfo,
 
   assert(archiveInfo != NULL);
   assert(archiveInfo->ioType == ARCHIVE_IO_TYPE_FILE);
-  SEMAPHORE_ASSERT_OWNERSHIP(&archiveInfo->chunkIOLock);
+  assert(Semaphore_isOwned(&archiveInfo->chunkIOLock));
 
   // check if split necessary
   if (isNewPartNeeded(archiveInfo,
@@ -1043,7 +1043,7 @@ LOCAL Errors transferArchiveFileData(const ArchiveInfo *archiveInfo,
   assert(archiveInfo->chunkIO != NULL);
   assert(archiveInfo->chunkIO->write != NULL);
   assert(fileHandle != NULL);
-  SEMAPHORE_ASSERT_OWNERSHIP(&archiveInfo->chunkIOLock);
+  assert(Semaphore_isOwned(&archiveInfo->chunkIOLock));
 
   // allocate transfer buffer
   buffer = (char*)malloc(BUFFER_SIZE);
@@ -1105,7 +1105,8 @@ LOCAL Errors transferArchiveFileData(const ArchiveInfo *archiveInfo,
 
 LOCAL Errors writeFileChunks(ArchiveEntryInfo *archiveEntryInfo)
 {
-  Errors error;
+  Errors                    error;
+  FileExtendedAttributeNode *fileExtendedAttributeNode;
 
   assert(archiveEntryInfo != NULL);
   assert(archiveEntryInfo->archiveInfo != NULL);
@@ -1123,6 +1124,32 @@ LOCAL Errors writeFileChunks(ArchiveEntryInfo *archiveEntryInfo)
   if (error != ERROR_NONE)
   {
     return error;
+  }
+
+  // create extended attribute chunks
+  LIST_ITERATE(archiveEntryInfo->file.fileExtendedAttributeList,fileExtendedAttributeNode)
+  {
+//TODO
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+    String_set(archiveEntryInfo->file.chunkFileExtendedAttribute.name,fileExtendedAttributeNode->name);
+    error = Chunk_create(&archiveEntryInfo->file.chunkFileExtendedAttribute.info);
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
+    error = Chunk_writeData(&archiveEntryInfo->file.chunkFileExtendedAttribute.info,
+                            fileExtendedAttributeNode->data,
+                            fileExtendedAttributeNode->length
+                           );
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
+    error = Chunk_close(&archiveEntryInfo->file.chunkFileExtendedAttribute.info);
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
   }
 
   // create file delta chunk
@@ -1684,7 +1711,7 @@ LOCAL Errors flushImageDataBlocks(ArchiveEntryInfo   *archiveEntryInfo,
 
   assert(archiveEntryInfo != NULL);
   assert(archiveEntryInfo->archiveInfo != NULL);
-  SEMAPHORE_ASSERT_OWNERSHIP(&archiveEntryInfo->archiveInfo->chunkIOLock);
+  assert(Semaphore_isOwned(&archiveEntryInfo->archiveInfo->chunkIOLock));
 
   // flush data
   do
@@ -1779,7 +1806,7 @@ LOCAL Errors writeImageDataBlock(ArchiveEntryInfo *archiveEntryInfo,
   assert(archiveEntryInfo != NULL);
   assert(archiveEntryInfo->archiveInfo != NULL);
   assert(archiveEntryInfo->archiveInfo->ioType == ARCHIVE_IO_TYPE_FILE);
-  SEMAPHORE_ASSERT_OWNERSHIP(&archiveEntryInfo->archiveInfo->chunkIOLock);
+  assert(Semaphore_isOwned(&archiveEntryInfo->archiveInfo->chunkIOLock));
 
   // get next byte-compressed data block (only 1 block, because of splitting)
   assert(archiveEntryInfo->image.byteBufferSize >= archiveEntryInfo->image.byteCompressInfo.blockLength);
@@ -3286,12 +3313,13 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
   return !chunkHeaderFoundFlag;
 }
 
-Errors Archive_newFileEntry(ArchiveEntryInfo *archiveEntryInfo,
-                            ArchiveInfo      *archiveInfo,
-                            const String     fileName,
-                            const FileInfo   *fileInfo,
-                            const bool       deltaCompressFlag,
-                            const bool       byteCompressFlag
+Errors Archive_newFileEntry(ArchiveEntryInfo                *archiveEntryInfo,
+                            ArchiveInfo                     *archiveInfo,
+                            const String                    fileName,
+                            const FileInfo                  *fileInfo,
+                            const FileExtendedAttributeList *fileExtendedAttributeList,
+                            const bool                      deltaCompressFlag,
+                            const bool                      byteCompressFlag
                            )
 {
   Errors error;
@@ -3327,6 +3355,8 @@ Errors Archive_newFileEntry(ArchiveEntryInfo *archiveEntryInfo,
 
   archiveEntryInfo->file.deltaCompressAlgorithm = COMPRESS_ALGORITHM_NONE;
   archiveEntryInfo->file.byteCompressAlgorithm  = byteCompressFlag ? archiveInfo->jobOptions->compressAlgorithm.byte : COMPRESS_ALGORITHM_NONE;
+
+  archiveEntryInfo->file.fileExtendedAttributeList = fileExtendedAttributeList;
 
   archiveEntryInfo->file.sourceHandleInitFlag   = FALSE;
 
@@ -3460,14 +3490,57 @@ Errors Archive_newFileEntry(ArchiveEntryInfo *archiveEntryInfo,
   archiveEntryInfo->file.chunkFileEntry.permission      = fileInfo->permission;
   String_set(archiveEntryInfo->file.chunkFileEntry.name,fileName);
 
+  // init file extended attribute crypt, file extended attribute chunk
+  error = Crypt_init(&archiveEntryInfo->file.chunkFileExtendedAttribute.cryptInfo,
+                     archiveInfo->jobOptions->cryptAlgorithm,
+                     archiveInfo->cryptPassword
+                    );
+  DEBUG_TEST_CODE("Archive_newFileEntry5") { Crypt_done(&archiveEntryInfo->file.chunkFileExtendedAttribute.cryptInfo); error = ERROR_UNKNOWN; }
+  if (error != ERROR_NONE)
+  {
+    Chunk_done(&archiveEntryInfo->file.chunkFileEntry.info);
+    Crypt_done(&archiveEntryInfo->file.chunkFileEntry.cryptInfo);
+    Chunk_done(&archiveEntryInfo->file.chunkFile.info);
+    if (archiveEntryInfo->file.sourceHandleInitFlag) Source_closeEntry(&archiveEntryInfo->file.sourceHandle);
+    free(archiveEntryInfo->file.deltaBuffer);
+    free(archiveEntryInfo->file.byteBuffer);
+    (void)File_close(&archiveEntryInfo->file.tmpFileHandle);
+    return error;
+  }
+  error = Chunk_init(&archiveEntryInfo->file.chunkFileExtendedAttribute.info,
+                     &archiveEntryInfo->file.chunkFile.info,
+                     CHUNK_USE_PARENT,
+                     CHUNK_USE_PARENT,
+                     CHUNK_ID_FILE_EXTENDED_ATTRIBUTE,
+                     CHUNK_DEFINITION_FILE_EXTENDED_ATTRIBUTE,
+                     archiveEntryInfo->blockLength,
+                     &archiveEntryInfo->file.chunkFileExtendedAttribute.cryptInfo,
+                     &archiveEntryInfo->file.chunkFileExtendedAttribute
+                    );
+  DEBUG_TEST_CODE("Archive_newFileEntry6") { Chunk_done(&archiveEntryInfo->file.chunkFileExtendedAttribute.info); error = ERROR_UNKNOWN; }
+  if (error != ERROR_NONE)
+  {
+    Crypt_done(&archiveEntryInfo->file.chunkFileExtendedAttribute.cryptInfo);
+    Chunk_done(&archiveEntryInfo->file.chunkFileEntry.info);
+    Crypt_done(&archiveEntryInfo->file.chunkFileEntry.cryptInfo);
+    Chunk_done(&archiveEntryInfo->file.chunkFile.info);
+    if (archiveEntryInfo->file.sourceHandleInitFlag) Source_closeEntry(&archiveEntryInfo->file.sourceHandle);
+    free(archiveEntryInfo->file.deltaBuffer);
+    free(archiveEntryInfo->file.byteBuffer);
+    (void)File_close(&archiveEntryInfo->file.tmpFileHandle);
+    return error;
+  }
+
   // init file delta crypt, file delta chunk
   error = Crypt_init(&archiveEntryInfo->file.chunkFileDelta.cryptInfo,
                      archiveInfo->jobOptions->cryptAlgorithm,
                      archiveInfo->cryptPassword
                     );
-  DEBUG_TEST_CODE("Archive_newFileEntry5") { Crypt_done(&archiveEntryInfo->file.chunkFileDelta.cryptInfo); error = ERROR_UNKNOWN; }
+  DEBUG_TEST_CODE("Archive_newFileEntry7") { Crypt_done(&archiveEntryInfo->file.chunkFileDelta.cryptInfo); error = ERROR_UNKNOWN; }
   if (error != ERROR_NONE)
   {
+    Chunk_done(&archiveEntryInfo->file.chunkFileExtendedAttribute.info);
+    Crypt_done(&archiveEntryInfo->file.chunkFileExtendedAttribute.cryptInfo);
     Chunk_done(&archiveEntryInfo->file.chunkFileEntry.info);
     Crypt_done(&archiveEntryInfo->file.chunkFileEntry.cryptInfo);
     Chunk_done(&archiveEntryInfo->file.chunkFile.info);
@@ -3487,10 +3560,12 @@ Errors Archive_newFileEntry(ArchiveEntryInfo *archiveEntryInfo,
                      &archiveEntryInfo->file.chunkFileDelta.cryptInfo,
                      &archiveEntryInfo->file.chunkFileDelta
                     );
-  DEBUG_TEST_CODE("Archive_newFileEntry6") { Chunk_done(&archiveEntryInfo->file.chunkFileDelta.info); error = ERROR_UNKNOWN; }
+  DEBUG_TEST_CODE("Archive_newFileEntry8") { Chunk_done(&archiveEntryInfo->file.chunkFileDelta.info); error = ERROR_UNKNOWN; }
   if (error != ERROR_NONE)
   {
     Crypt_done(&archiveEntryInfo->file.chunkFileDelta.cryptInfo);
+    Chunk_done(&archiveEntryInfo->file.chunkFileExtendedAttribute.info);
+    Crypt_done(&archiveEntryInfo->file.chunkFileExtendedAttribute.cryptInfo);
     Chunk_done(&archiveEntryInfo->file.chunkFileEntry.info);
     Crypt_done(&archiveEntryInfo->file.chunkFileEntry.cryptInfo);
     Chunk_done(&archiveEntryInfo->file.chunkFile.info);
@@ -3514,11 +3589,13 @@ Errors Archive_newFileEntry(ArchiveEntryInfo *archiveEntryInfo,
                      archiveInfo->jobOptions->cryptAlgorithm,
                      archiveInfo->cryptPassword
                     );
-  DEBUG_TEST_CODE("Archive_newFileEntry7") { Crypt_done(&archiveEntryInfo->file.chunkFileData.cryptInfo); error = ERROR_UNKNOWN; }
+  DEBUG_TEST_CODE("Archive_newFileEntry9") { Crypt_done(&archiveEntryInfo->file.chunkFileData.cryptInfo); error = ERROR_UNKNOWN; }
   if (error != ERROR_NONE)
   {
     Chunk_done(&archiveEntryInfo->file.chunkFileDelta.info);
     Crypt_done(&archiveEntryInfo->file.chunkFileDelta.cryptInfo);
+    Chunk_done(&archiveEntryInfo->file.chunkFileExtendedAttribute.info);
+    Crypt_done(&archiveEntryInfo->file.chunkFileExtendedAttribute.cryptInfo);
     Chunk_done(&archiveEntryInfo->file.chunkFileEntry.info);
     Crypt_done(&archiveEntryInfo->file.chunkFileEntry.cryptInfo);
     Chunk_done(&archiveEntryInfo->file.chunkFile.info);
@@ -3538,12 +3615,14 @@ Errors Archive_newFileEntry(ArchiveEntryInfo *archiveEntryInfo,
                      &archiveEntryInfo->file.chunkFileData.cryptInfo,
                      &archiveEntryInfo->file.chunkFileData
                     );
-  DEBUG_TEST_CODE("Archive_newFileEntry8") { Chunk_done(&archiveEntryInfo->file.chunkFileData.info); error = ERROR_UNKNOWN; }
+  DEBUG_TEST_CODE("Archive_newFileEntry10") { Chunk_done(&archiveEntryInfo->file.chunkFileData.info); error = ERROR_UNKNOWN; }
   if (error != ERROR_NONE)
   {
     Crypt_done(&archiveEntryInfo->file.chunkFileData.cryptInfo);
     Chunk_done(&archiveEntryInfo->file.chunkFileDelta.info);
     Crypt_done(&archiveEntryInfo->file.chunkFileDelta.cryptInfo);
+    Chunk_done(&archiveEntryInfo->file.chunkFileExtendedAttribute.info);
+    Crypt_done(&archiveEntryInfo->file.chunkFileExtendedAttribute.cryptInfo);
     Chunk_done(&archiveEntryInfo->file.chunkFileEntry.info);
     Crypt_done(&archiveEntryInfo->file.chunkFileEntry.cryptInfo);
     Chunk_done(&archiveEntryInfo->file.chunkFile.info);
@@ -3563,13 +3642,15 @@ Errors Archive_newFileEntry(ArchiveEntryInfo *archiveEntryInfo,
                        1,
                        &archiveEntryInfo->file.sourceHandle
                       );
-  DEBUG_TEST_CODE("Archive_newFileEntry9") { Compress_delete(&archiveEntryInfo->file.deltaCompressInfo); error = ERROR_UNKNOWN; }
+  DEBUG_TEST_CODE("Archive_newFileEntry11") { Compress_delete(&archiveEntryInfo->file.deltaCompressInfo); error = ERROR_UNKNOWN; }
   if (error != ERROR_NONE)
   {
     Chunk_done(&archiveEntryInfo->file.chunkFileData.info);
     Crypt_done(&archiveEntryInfo->file.chunkFileData.cryptInfo);
     Chunk_done(&archiveEntryInfo->file.chunkFileDelta.info);
     Crypt_done(&archiveEntryInfo->file.chunkFileDelta.cryptInfo);
+    Chunk_done(&archiveEntryInfo->file.chunkFileExtendedAttribute.info);
+    Crypt_done(&archiveEntryInfo->file.chunkFileExtendedAttribute.cryptInfo);
     Chunk_done(&archiveEntryInfo->file.chunkFileEntry.info);
     Crypt_done(&archiveEntryInfo->file.chunkFileEntry.cryptInfo);
     Chunk_done(&archiveEntryInfo->file.chunkFile.info);
@@ -3587,7 +3668,7 @@ Errors Archive_newFileEntry(ArchiveEntryInfo *archiveEntryInfo,
                        archiveEntryInfo->blockLength,
                        NULL
                       );
-  DEBUG_TEST_CODE("Archive_newFileEntry10") { Compress_delete(&archiveEntryInfo->file.byteCompressInfo); error = ERROR_UNKNOWN; }
+  DEBUG_TEST_CODE("Archive_newFileEntry12") { Compress_delete(&archiveEntryInfo->file.byteCompressInfo); error = ERROR_UNKNOWN; }
   if (error != ERROR_NONE)
   {
     Compress_delete(&archiveEntryInfo->file.deltaCompressInfo);
@@ -3595,6 +3676,8 @@ Errors Archive_newFileEntry(ArchiveEntryInfo *archiveEntryInfo,
     Crypt_done(&archiveEntryInfo->file.chunkFileData.cryptInfo);
     Chunk_done(&archiveEntryInfo->file.chunkFileDelta.info);
     Crypt_done(&archiveEntryInfo->file.chunkFileDelta.cryptInfo);
+    Chunk_done(&archiveEntryInfo->file.chunkFileExtendedAttribute.info);
+    Crypt_done(&archiveEntryInfo->file.chunkFileExtendedAttribute.cryptInfo);
     Chunk_done(&archiveEntryInfo->file.chunkFileEntry.info);
     Crypt_done(&archiveEntryInfo->file.chunkFileEntry.cryptInfo);
     Chunk_done(&archiveEntryInfo->file.chunkFile.info);
@@ -3610,7 +3693,7 @@ Errors Archive_newFileEntry(ArchiveEntryInfo *archiveEntryInfo,
                      archiveInfo->jobOptions->cryptAlgorithm,
                      archiveInfo->cryptPassword
                     );
-  DEBUG_TEST_CODE("Archive_newFileEntry11") { Crypt_done(&archiveEntryInfo->file.cryptInfo); error = ERROR_UNKNOWN; }
+  DEBUG_TEST_CODE("Archive_newFileEntry13") { Crypt_done(&archiveEntryInfo->file.cryptInfo); error = ERROR_UNKNOWN; }
   if (error != ERROR_NONE)
   {
     Compress_delete(&archiveEntryInfo->file.byteCompressInfo);
@@ -3619,6 +3702,8 @@ Errors Archive_newFileEntry(ArchiveEntryInfo *archiveEntryInfo,
     Crypt_done(&archiveEntryInfo->file.chunkFileData.cryptInfo);
     Chunk_done(&archiveEntryInfo->file.chunkFileDelta.info);
     Crypt_done(&archiveEntryInfo->file.chunkFileDelta.cryptInfo);
+    Chunk_done(&archiveEntryInfo->file.chunkFileExtendedAttribute.info);
+    Crypt_done(&archiveEntryInfo->file.chunkFileExtendedAttribute.cryptInfo);
     Chunk_done(&archiveEntryInfo->file.chunkFileEntry.info);
     Crypt_done(&archiveEntryInfo->file.chunkFileEntry.cryptInfo);
     Chunk_done(&archiveEntryInfo->file.chunkFile.info);
@@ -3632,6 +3717,7 @@ Errors Archive_newFileEntry(ArchiveEntryInfo *archiveEntryInfo,
   // calculate header size
   archiveEntryInfo->file.headerLength = Chunk_getSize(CHUNK_DEFINITION_FILE,      0,                            &archiveEntryInfo->file.chunkFile     )+
                                         Chunk_getSize(CHUNK_DEFINITION_FILE_ENTRY,archiveEntryInfo->blockLength,&archiveEntryInfo->file.chunkFileEntry)+
+                                        List_count(fileExtendedAttributeList)*Chunk_getSize(CHUNK_DEFINITION_FILE_EXTENDED_ATTRIBUTE,archiveEntryInfo->blockLength,&archiveEntryInfo->file.chunkFileExtendedAttribute)+
                                         ((Compress_isCompressed(archiveEntryInfo->file.deltaCompressAlgorithm))
                                           ? Chunk_getSize(CHUNK_DEFINITION_FILE_DELTA,archiveEntryInfo->blockLength,&archiveEntryInfo->file.chunkFileDelta)
                                           : 0
@@ -5483,6 +5569,11 @@ Errors Archive_readFileEntry(ArchiveEntryInfo   *archiveEntryInfo,
             foundFileDataFlag = TRUE;
             break;
           default:
+            // unknown sub-chunk -> skip
+            if (globalOptions.verboseLevel >= 3)
+            {
+              printWarning("Skipped unknown sub-chunk '%s' (offset %ld) - skipped.\n",Chunk_idToString(subChunkHeader.id),subChunkHeader.offset);
+            }
             error = Chunk_skipSub(&archiveEntryInfo->file.chunkFile.info,&subChunkHeader);
             if (error != ERROR_NONE)
             {
@@ -5976,6 +6067,11 @@ Errors Archive_readImageEntry(ArchiveEntryInfo   *archiveEntryInfo,
             foundImageDataFlag = TRUE;
             break;
           default:
+            // unknown sub-chunk -> skip
+            if (globalOptions.verboseLevel >= 3)
+            {
+              printWarning("Skipped unknown sub-chunk '%s' (offset %ld) - skipped.\n",Chunk_idToString(subChunkHeader.id),subChunkHeader.offset);
+            }
             error = Chunk_skipSub(&archiveEntryInfo->image.chunkImage.info,&subChunkHeader);
             if (error != ERROR_NONE)
             {
@@ -6295,6 +6391,11 @@ Errors Archive_readDirectoryEntry(ArchiveEntryInfo *archiveEntryInfo,
             foundDirectoryEntryFlag = TRUE;
             break;
           default:
+            // unknown sub-chunk -> skip
+            if (globalOptions.verboseLevel >= 3)
+            {
+              printWarning("Skipped unknown sub-chunk '%s' (offset %ld) - skipped.\n",Chunk_idToString(subChunkHeader.id),subChunkHeader.offset);
+            }
             error = Chunk_skipSub(&archiveEntryInfo->directory.chunkDirectory.info,&subChunkHeader);
             if (error != ERROR_NONE)
             {
@@ -6574,6 +6675,11 @@ Errors Archive_readLinkEntry(ArchiveEntryInfo *archiveEntryInfo,
             foundLinkEntryFlag = TRUE;
             break;
           default:
+            // unknown sub-chunk -> skip
+            if (globalOptions.verboseLevel >= 3)
+            {
+              printWarning("Skipped unknown sub-chunk '%s' (offset %ld) - skipped.\n",Chunk_idToString(subChunkHeader.id),subChunkHeader.offset);
+            }
             error = Chunk_skipSub(&archiveEntryInfo->link.chunkLink.info,&subChunkHeader);
             if (error != ERROR_NONE)
             {
@@ -7078,6 +7184,11 @@ Errors Archive_readHardLinkEntry(ArchiveEntryInfo   *archiveEntryInfo,
             foundHardLinkDataFlag = TRUE;
             break;
           default:
+            // unknown sub-chunk -> skip
+            if (globalOptions.verboseLevel >= 3)
+            {
+              printWarning("Skipped unknown sub-chunk '%s' (offset %ld) - skipped.\n",Chunk_idToString(subChunkHeader.id),subChunkHeader.offset);
+            }
             error = Chunk_skipSub(&archiveEntryInfo->hardLink.chunkHardLink.info,&subChunkHeader);
             if (error != ERROR_NONE)
             {
@@ -7421,6 +7532,11 @@ Errors Archive_readSpecialEntry(ArchiveEntryInfo *archiveEntryInfo,
             foundSpecialEntryFlag = TRUE;
             break;
           default:
+            // unknown sub-chunk -> skip
+            if (globalOptions.verboseLevel >= 3)
+            {
+              printWarning("Skipped unknown sub-chunk '%s' (offset %ld) - skipped.\n",Chunk_idToString(subChunkHeader.id),subChunkHeader.offset);
+            }
             error = Chunk_skipSub(&archiveEntryInfo->special.chunkSpecial.info,&subChunkHeader);
             if (error != ERROR_NONE)
             {
@@ -7642,6 +7758,8 @@ Errors Archive_closeEntry(ArchiveEntryInfo *archiveEntryInfo)
             Crypt_done(&archiveEntryInfo->file.chunkFileData.cryptInfo);
             Chunk_done(&archiveEntryInfo->file.chunkFileDelta.info);
             Crypt_done(&archiveEntryInfo->file.chunkFileDelta.cryptInfo);
+            Chunk_done(&archiveEntryInfo->file.chunkFileExtendedAttribute.info);
+            Crypt_done(&archiveEntryInfo->file.chunkFileExtendedAttribute.cryptInfo);
             Chunk_done(&archiveEntryInfo->file.chunkFileEntry.info);
             Crypt_done(&archiveEntryInfo->file.chunkFileEntry.cryptInfo);
             Chunk_done(&archiveEntryInfo->file.chunkFile.info);
