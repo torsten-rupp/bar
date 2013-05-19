@@ -2757,6 +2757,22 @@ Errors File_setFileInfo(const String fileName,
   return ERROR_NONE;
 }
 
+FileExtendedAttributeList *File_initExtendedAttributes(FileExtendedAttributeList *fileExtendedAttributeList)
+{
+  assert(fileExtendedAttributeList != NULL);
+
+  List_init(fileExtendedAttributeList);
+
+  return fileExtendedAttributeList;
+}
+
+void File_doneExtendedAttributes(FileExtendedAttributeList *fileExtendedAttributeList)
+{
+  assert(fileExtendedAttributeList != NULL);
+
+  List_done(fileExtendedAttributeList,(ListNodeFreeFunction)freeExtendedAttributeNode,NULL);
+}
+
 Errors File_getExtendedAttributes(FileExtendedAttributeList *fileExtendedAttributeList,
                                   const String              fileName
                                  )
@@ -2772,6 +2788,7 @@ Errors File_getExtendedAttributes(FileExtendedAttributeList *fileExtendedAttribu
   assert(fileExtendedAttributeList != NULL);
   assert(fileName != NULL);
 
+  // init variables
   List_clear(fileExtendedAttributeList,(ListNodeFreeFunction)freeExtendedAttributeNode,NULL);
 
   // allocate buffer for attribute names
@@ -2790,6 +2807,7 @@ Errors File_getExtendedAttributes(FileExtendedAttributeList *fileExtendedAttribu
   // get attribute names
   if (listxattr(String_cString(fileName),names,namesLength) < 0)
   {
+    free(names);
     return ERRORX_(IO_ERROR,errno,String_cString(fileName));
   }
 
@@ -2798,25 +2816,35 @@ Errors File_getExtendedAttributes(FileExtendedAttributeList *fileExtendedAttribu
   while ((name-names) < namesLength)
   {
     // allocate buffer for data
-    n = getxattr(String_cString(fileName),name,NULL,0);
+    n = lgetxattr(String_cString(fileName),name,NULL,0);
     if (n < 0)
     {
-      List_clear(fileExtendedAttributeList,(ListNodeFreeFunction)freeExtendedAttributeNode,NULL);
+      free(names);
       return ERRORX_(IO_ERROR,errno,String_cString(fileName));
     }
     length = (uint)n;
     data = malloc(length);
     if (data == NULL)
     {
-      List_clear(fileExtendedAttributeList,(ListNodeFreeFunction)freeExtendedAttributeNode,NULL);
+      free(names);
       return ERROR_INSUFFICIENT_MEMORY;
+    }
+
+    // get extended attribute
+    n = lgetxattr(String_cString(fileName),name,data,length);
+    if (n < 0)
+    {
+      free(data);
+      free(names);
+      return ERRORX_(IO_ERROR,errno,String_cString(fileName));
     }
 
     // store in attribute list
     fileExtendedAttributeNode = LIST_NEW_NODE(FileExtendedAttributeNode);
     if (fileExtendedAttributeNode == NULL)
     {
-      List_clear(fileExtendedAttributeList,(ListNodeFreeFunction)freeExtendedAttributeNode,NULL);
+      free(data);
+      free(names);
       return ERROR_INSUFFICIENT_MEMORY;
     }
     fileExtendedAttributeNode->name   = String_newCString(name);
@@ -2845,16 +2873,19 @@ Errors File_setExtendedAttributes(const String                    fileName,
 
   LIST_ITERATE(fileExtendedAttributeList,fileExtendedAttributeNode)
   {
+    if (lsetxattr(String_cString(fileName),
+                  String_cString(fileExtendedAttributeNode->name),
+                  fileExtendedAttributeNode->data,
+                  fileExtendedAttributeNode->length,
+                  0
+                 ) != 0
+       )
+    {
+      return ERRORX_(IO_ERROR,errno,String_cString(fileName));
+    }
   }
 
   return ERROR_NONE;
-}
-
-void File_doneExtendedAttributes(FileExtendedAttributeList *fileExtendedAttributeList)
-{
-  assert(fileExtendedAttributeList != NULL);
-
-  List_done(fileExtendedAttributeList,(ListNodeFreeFunction)freeExtendedAttributeNode,NULL);
 }
 
 uint64 File_getFileTimeModified(const String fileName)

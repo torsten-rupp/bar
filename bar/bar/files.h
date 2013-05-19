@@ -1083,11 +1083,34 @@ INLINE bool File_haveAttributeNoDump(const FileInfo *fileInfo)
 #endif /* NDEBUG || __FILES_IMPLEMENATION__ */
 
 /***********************************************************************\
-* Name   : 
-* Purpose: 
-* Input  : -
+* Name   : File_initExtendedAttributes
+* Purpose: initialize extended attributes list
+* Input  : fileExtendedAttributeList - extended attributes list
+* Output : -
+* Return : extended attributes list
+* Notes  : -
+\***********************************************************************/
+
+FileExtendedAttributeList *File_initExtendedAttributes(FileExtendedAttributeList *fileExtendedAttributeList);
+
+/***********************************************************************\
+* Name   : File_doneExtendedAttributes
+* Purpose: deinitialize extended attributes list
+* Input  : fileExtendedAttributeList - extended attributes list
 * Output : -
 * Return : -
+* Notes  : -
+\***********************************************************************/
+
+void File_doneExtendedAttributes(FileExtendedAttributeList *fileExtendedAttributeList);
+
+/***********************************************************************\
+* Name   : File_getExtendedAttributes
+* Purpose: get extended attributes of file
+* Input  : fileExtendedAttributeList - extended attributes list
+*          fileName                  - file name
+* Output : -
+* Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
@@ -1096,28 +1119,18 @@ Errors File_getExtendedAttributes(FileExtendedAttributeList *fileExtendedAttribu
                                  );
 
 /***********************************************************************\
-* Name   : 
-* Purpose: 
-* Input  : -
+* Name   : File_setExtendedAttributes
+* Purpose: set extended attributes of file
+* Input  : fileName                  - file name
+*          fileExtendedAttributeList - extended attributes list
 * Output : -
-* Return : -
+* Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
 Errors File_setExtendedAttributes(const String                    fileName,
                                   const FileExtendedAttributeList *fileExtendedAttributeList
                                  );
-
-/***********************************************************************\
-* Name   : 
-* Purpose: 
-* Input  : -
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-void File_doneExtendedAttributes(FileExtendedAttributeList *fileExtendedAttributeList);
 
 /***********************************************************************\
 * Name   : File_getFileTimeModified
