@@ -786,7 +786,7 @@ Errors Chunk_skip(const ChunkIO     *io,
   }
 
   /* Note: fseeko in File_seek() cause an SigSegV if "offset" is
-     completely wrong; thus never call with an invalid offset
+     completely wrong; thus never call it with an invalid offset
   */
   offset = (chunkHeader->offset+CHUNK_HEADER_SIZE+chunkHeader->size <= size)
              ? chunkHeader->offset+CHUNK_HEADER_SIZE+chunkHeader->size
@@ -1120,13 +1120,9 @@ Errors Chunk_skipSub(ChunkInfo   *chunkInfo,
 {
   assert(chunkInfo != NULL);
   assert(chunkInfo->io != NULL);
+  assert(chunkHeader != NULL);
 
-  UNUSED_VARIABLE(chunkInfo);
-  UNUSED_VARIABLE(chunkHeader);
-
-  HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
-
-  return ERROR_NONE;
+  return Chunk_skip(chunkInfo->io,chunkInfo->ioUserData,chunkHeader);
 }
 
 bool Chunk_eofSub(ChunkInfo *chunkInfo)
