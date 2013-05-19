@@ -96,6 +96,8 @@ typedef int(*ListNodeCompareFunction)(const void *node1, const void *node2, void
 * Output : -
 * Return : -
 * Notes  : usage:
+*            ListNode *variable;
+*
 *            LIST_DONE(list,variable)
 *            {
 *              ... = variable->...
@@ -148,9 +150,9 @@ typedef int(*ListNodeCompareFunction)(const void *node1, const void *node2, void
 
 #ifdef NDEBUG
 Node *List_newNode(ulong size);
-#else /* NDEBUG */
+#else /* not NDEBUG */
 Node *__List_newNode(const char *__fileName__, ulong __lineNb__, ulong size);
-#endif /*NDEBUG */
+#endif /* NDEBUG */
 
 /***********************************************************************\
 * Name   : List_deleteNode
@@ -163,9 +165,9 @@ Node *__List_newNode(const char *__fileName__, ulong __lineNb__, ulong size);
 
 #ifdef NDEBUG
 Node *List_deleteNode(Node *node);
-#else /* NDEBUG */
+#else /* not NDEBUG */
 Node *__List_deleteNode(const char *__fileName__, ulong __lineNb__, Node *node);
-#endif /*NDEBUG */
+#endif /* NDEBUG */
 
 /***********************************************************************\
 * Name   : List_init
@@ -210,14 +212,14 @@ void List_new(void *list,
                  void *node,
                  void *nextNode
                 );
-#else /* NDEBUG */
+#else /* not NDEBUG */
 void __List_new(const char *fileName,
                 ulong      lineNb,
                 void       *list,
                 void       *node,
                 void       *nextNode
                );
-#endif /*NDEBUG */
+#endif /* NDEBUG */
 #endif /* 0 */
 
 /***********************************************************************\
@@ -378,14 +380,14 @@ void List_insert(void *list,
                  void *node,
                  void *nextNode
                 );
-#else /* NDEBUG */
+#else /* not NDEBUG */
 void __List_insert(const char *fileName,
                    ulong      lineNb,
                    void       *list,
                    void       *node,
                    void       *nextNode
                   );
-#endif /*NDEBUG */
+#endif /* NDEBUG */
 
 /***********************************************************************\
 * Name   : List_append
@@ -401,7 +403,7 @@ void __List_insert(const char *fileName,
 void List_append(void *list,
                  void *node
                 );
-#else /* NDEBUG */
+#else /* not NDEBUG */
 void __List_append(const char *fileName,
                    ulong      lineNb,
                    void       *list,

@@ -279,9 +279,9 @@ LOCAL void checkDuplicateNode(const char *fileName,
 
 #ifdef NDEBUG
 Node * List_newNode(ulong size)
-#else /* NDEBUG */
+#else /* not NDEBUG */
 Node * __List_newNode(const char *__fileName__, ulong __lineNb__, ulong size)
-#endif /*NDEBUG */
+#endif /* NDEBUG */
 {
   Node *node;
   #ifndef NDEBUG
@@ -331,16 +331,16 @@ Node * __List_newNode(const char *__fileName__, ulong __lineNb__, ulong size)
       listAppend(&debugListAllocNodeList,debugListNode);
     }
     pthread_mutex_unlock(&debugListLock);
-  #endif /*NDEBUG */
+  #endif /* not NDEBUG */
 
   return node;
 }
 
 #ifdef NDEBUG
 Node *List_deleteNode(Node *node)
-#else /* NDEBUG */
+#else /* not NDEBUG */
 Node *__List_deleteNode(const char *__fileName__, ulong __lineNb__, Node *node)
-#endif /*NDEBUG */
+#endif /* NDEBUG */
 {
   Node *nextNode;
   #ifndef NDEBUG
@@ -419,7 +419,7 @@ Node *__List_deleteNode(const char *__fileName__, ulong __lineNb__, Node *node)
       }
     }
     pthread_mutex_unlock(&debugListLock);
-  #endif /*NDEBUG */
+  #endif /* not NDEBUG */
 
   // get next node, free node
   nextNode = node->next;
@@ -597,14 +597,14 @@ void List_insert(void *list,
                  void *node,
                  void *nextNode
                 )
-#else /* NDEBUG */
+#else /* not NDEBUG */
 void __List_insert(const char *fileName,
                    ulong      lineNb,
                    void       *list,
                    void       *node,
                    void       *nextNode
                   )
-#endif /*NDEBUG */
+#endif /* NDEBUG */
 {
   assert(list != NULL);
   assert(node != NULL);
@@ -620,7 +620,7 @@ void __List_insert(const char *fileName,
 void List_append(void *list,
                  void *node
                 )
-#else /* NDEBUG */
+#else /* not NDEBUG */
 void __List_append(const char *fileName,
                    ulong      lineNb,
                    void       *list,
@@ -633,7 +633,7 @@ void __List_append(const char *fileName,
 
   #ifdef NDEBUG
     List_insert(list,node,NULL);
-  #else /* NDEBUG */
+  #else /* not NDEBUG */
     __List_insert(fileName,lineNb,list,node,NULL);
   #endif /* NDEBUG */
 }
