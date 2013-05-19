@@ -1946,7 +1946,6 @@ void Storage_initSpecifier(StorageSpecifier *storageSpecifier)
 {
   assert(storageSpecifier != NULL);
 
-//  storageSpecifier->string        = String_new();
   storageSpecifier->hostName      = String_new();
   storageSpecifier->hostPort      = 0;
   storageSpecifier->loginName     = String_new();
@@ -1964,7 +1963,6 @@ void Storage_doneSpecifier(StorageSpecifier *storageSpecifier)
   Password_delete(storageSpecifier->loginPassword);
   String_delete(storageSpecifier->loginName);
   String_delete(storageSpecifier->hostName);
-//  String_delete(storageSpecifier->string);
 
   DEBUG_REMOVE_RESOURCE_TRACE(storageSpecifier);
 }
