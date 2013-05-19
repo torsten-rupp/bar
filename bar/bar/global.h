@@ -1154,10 +1154,10 @@ void debugAddResourceTrace(const char *__fileName__,
 * Notes  : -
 \***********************************************************************/
 
-void debugRemResourceTrace(const char *__fileName__,
-                           ulong      lineNb,
-                           const void *resource
-                          );
+void debugRemoveResourceTrace(const char *__fileName__,
+                              ulong      lineNb,
+                              const void *resource
+                             );
 
 /***********************************************************************\
 * Name   : debugResourceDone
