@@ -756,7 +756,7 @@ typedef void                void32;
       debugAddResourceTrace(__FILE__,__LINE__,typeName,resource); \
     } \
     while (0)
-  
+
   #define DEBUG_REMOVE_RESOURCE_TRACE(resource) \
     do \
     { \
@@ -770,7 +770,7 @@ typedef void                void32;
       debugAddResourceTrace(fileName,lineNb,typeName,resource); \
     } \
     while (0)
-  
+
   #define DEBUG_REMOVE_RESOURCE_TRACEX(fileName,lineNb,resource) \
     do \
     { \
@@ -785,7 +785,7 @@ typedef void                void32;
     { \
     } \
     while (0)
-  
+
   #define DEBUG_REMOVE_RESOURCE_TRACE(resource) \
     do \
     { \
@@ -797,7 +797,7 @@ typedef void                void32;
     { \
     } \
     while (0)
-  
+
   #define DEBUG_REMOVE_RESOURCE_TRACEX(fileName,lineNb,resource) \
     do \
     { \
@@ -816,16 +816,20 @@ extern "C" {
 /***********************************************************************\
 * Name   : __dprintf
 * Purpose: debug printf
-* Input  : fileName - file name
-*          lineNb   - line number
-*          format   - format string (like printf)
-*          ...      - optional arguments
+* Input  : __fileName__ - file name
+*          __lineNb__   - line number
+*          format       - format string (like printf)
+*          ...          - optional arguments
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-void __dprintf(const char *fileName, unsigned int lineNb, const char *format, ...);
+void __dprintf(const char *__fileName__,
+               uint       __lineNb__,
+               const char *format,
+               ...
+              );
 #endif /* NDEBUG */
 
 #ifdef __cplusplus
@@ -855,7 +859,7 @@ inline bool isNaN(double n)
 
 inline bool isInf(double n)
 {
-  return((n<-MAX_DOUBLE) || (n>MAX_DOUBLE));
+  return((n < -MAX_DOUBLE) || (n > MAX_DOUBLE));
 }
 
 #endif
@@ -876,7 +880,7 @@ inline double radToDegree(double n)
 //???  ASSERT_NaN(n);
 //  n=fmod(n,2*PI);
 //  if (n<0) n+=2*PI;
-  return(n*180/PI);
+  return n*180/PI;
 }
 
 /***********************************************************************\
@@ -912,9 +916,9 @@ inline double degreeToRad(double n)
 inline double normRad(double n)
 {
 //???  ASSERT(!IsNaN(n));
-  n=fmod(n,2*PI);
-  if (n<0) n+=2*PI;
-  return(n);
+  n = fmod(n,2 * PI);
+  if (n < 0) n += 2*PI;
+  return n;
 }
 
 /***********************************************************************\
@@ -929,9 +933,9 @@ inline double normRad(double n)
 inline double normDegree(double n)
 {
 //???  ASSERT(!IsNaN(n));
-  n=fmod(n,360);
-  if (n<0) n+=360;
-  return(n);
+  n = fmod(n,360);
+  if (n < 0) n += 360;
+  return n;
 }
 
 /***********************************************************************\
@@ -949,11 +953,11 @@ inline double normDegree(double n)
 inline double normRad90(double n)
 {
 //???  ASSERT(!IsNaN(n));
-  if (n> 3*PI/2) n-=2*PI;
-  if (n<-3*PI/2) n+=2*PI;
-  if (n>   PI/2) n-=PI;
-  if (n<  -PI/2) n+=PI;
-  return(n);
+  if (n >  3*PI/2) n -= 2*PI;
+  if (n < -3*PI/2) n += 2*PI;
+  if (n >    PI/2) n -= PI;
+  if (n <   -PI/2) n += PI;
+  return n;
 }
 
 /***********************************************************************\
@@ -968,7 +972,7 @@ inline double normRad90(double n)
 inline double normRad180(double n)
 {
 //???  ASSERT(!IsNaN(n));
-  return(n>PI?(n-2*PI):n<-PI?(n+2*PI):n);
+  return (n > PI) ? (n-2*PI) : ((n < -PI) ? n+2*PI : n);
 }
 
 /***********************************************************************\
@@ -986,11 +990,11 @@ inline double normRad180(double n)
 inline double normDegree90(double n)
 {
 //???  ASSERT(!IsNaN(n));
-  if (n> 270) n-=360;
-  if (n<-270) n+=360;
-  if (n>  90) n-=180;
-  if (n< -90) n+=180;
-  return(n);
+  if (n >  270) n -= 360;
+  if (n < -270) n += 360;
+  if (n >   90) n -= 180;
+  if (n <  -90) n += 180;
+  return n;
 }
 
 /***********************************************************************\
@@ -1005,7 +1009,7 @@ inline double normDegree90(double n)
 inline double normDegree180(double n)
 {
 //???  ASSERT(!IsNaN(n));
-  return(n>180?(n-360):n<-180?(n+360):n);
+  return (n > 180) ? (n-360) : ((n<-180) ? n+360 : n);
 }
 
 /***********************************************************************\
@@ -1020,7 +1024,7 @@ inline double normDegree180(double n)
 inline double normRad360(double n)
 {
 //???  ASSERT(!IsNaN(n));
-  return(fmod(n,2*PI));
+  return fmod(n,2*PI);
 }
 
 /***********************************************************************\
@@ -1035,7 +1039,7 @@ inline double normRad360(double n)
 inline double normDegree360(double n)
 {
 //???  ASSERT(!IsNaN(n));
-  return(fmod(n,360));
+  return fmod(n,360);
 }
 
 #endif
@@ -1083,40 +1087,40 @@ inline ulong swapLONG(ulong n)
 /***********************************************************************\
 * Name   : __halt
 * Purpose: halt program
-* Input  : fileName - file name
-*          lineNb   - line number
-*          exitcode - exitcode
-*          format   - format string (like printf)
-*          ...      - optional arguments
+* Input  : __fileName__ - file name
+*          __lineNb__   - line number
+*          exitcode     - exitcode
+*          format       - format string (like printf)
+*          ...          - optional arguments
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-void __halt(const char   *fileName,
-            unsigned int lineNb,
-            int          exitcode,
-            const char   *format,
+void __halt(const char *__fileName__,
+            uint       __lineNb__,
+            int        exitcode,
+            const char *format,
             ...
            );
 
 /***********************************************************************\
 * Name   : __abort
 * Purpose: abort program
-* Input  : fileName - file name
-*          lineNb   - line number
-*          prefix   - prefix text
-*          format   - format string (like printf)
-*          ...      - optional arguments
+* Input  : __fileName__ - file name
+*          __lineNb__   - line number
+*          prefix       - prefix text
+*          format       - format string (like printf)
+*          ...          - optional arguments
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-void __abort(const char   *fileName,
-             unsigned int lineNb,
-             const char   *prefix,
-             const char   *format,
+void __abort(const char *__fileName__,
+             uint       __lineNb__,
+             const char *prefix,
+             const char *format,
              ...
             );
 
@@ -1124,21 +1128,25 @@ void __abort(const char   *fileName,
 /***********************************************************************\
 * Name   : debugAddResourceTrace
 * Purpose: add resource to debug trace list
-* Input  : fileName - file name
-*          lineNb   - line number
-*          typeName - type name
-*          resource - resource
+* Input  : __fileName__ - file name
+*          __lineNb__   - line number
+*          typeName     - type name
+*          resource     - resource
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-void debugAddResourceTrace(const char *fileName, ulong lineNb, const char *typeName, const void *resource);
+void debugAddResourceTrace(const char *__fileName__,
+                           uint       __lineNb__,
+                           const char *typeName,
+                           const void *resource
+                          );
 
 /***********************************************************************\
 * Name   : debugRemoveResourceTrace
 * Purpose: remove resource from debug trace list
-* Input  : fileName - file name
+* Input  : __fileName__ - file name
 *          lineNb   - line number
 *          resource - resource
 * Output : -
@@ -1146,7 +1154,10 @@ void debugAddResourceTrace(const char *fileName, ulong lineNb, const char *typeN
 * Notes  : -
 \***********************************************************************/
 
-void debugRemResourceTrace(const char *fileName, ulong lineNb, const void *resource);
+void debugRemResourceTrace(const char *__fileName__,
+                           ulong      lineNb,
+                           const void *resource
+                          );
 
 /***********************************************************************\
 * Name   : debugResourceDone
@@ -1218,8 +1229,16 @@ void debugResourceCheck(void);
 * Notes  : -
 \***********************************************************************/
 
-void debugDumpStackTrace(FILE *handle, const char *title, uint indent, void const *stackTrace[], uint stackTraceSize);
-void debugDumpCurrentStackTrace(FILE *handle, const char *title, uint indent);
+void debugDumpStackTrace(FILE       *handle,
+                         const char *title,
+                         uint       indent,
+                         void const *stackTrace[],
+                         uint       stackTraceSize
+                        );
+void debugDumpCurrentStackTrace(FILE       *handle,
+                                const char *title,
+                                uint       indent
+                               );
 #endif /* !defined(NDEBUG) && defined(HAVE_BACKTRACE) */
 
 #ifndef NDEBUG

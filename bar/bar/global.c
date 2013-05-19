@@ -96,47 +96,51 @@ LOCAL void debugResourceInit(void)
 
 // ----------------------------------------------------------------------
 
-void __halt(const char   *fileName,
-            unsigned int lineNb,
-            int          exitcode,
-            const char   *format,
+void __halt(const char *__fileName__,
+            uint       __lineNb__,
+            int        exitcode,
+            const char *format,
             ...
            )
 {
   va_list arguments;
 
-  assert(fileName != NULL);
+  assert(__fileName__ != NULL);
   assert(format != NULL);
 
   va_start(arguments,format);
   vfprintf(stderr,format,arguments);
   va_end(arguments);
-  fprintf(stderr," - halt in file %s, line %d\n",fileName,lineNb);
+  fprintf(stderr," - halt in file %s, line %d\n",__fileName__,__lineNb__);
   exit(exitcode);
 }
 
-void __abort(const char   *fileName,
-             unsigned int lineNb,
-             const char   *prefix,
-             const char   *format,
+void __abort(const char *__fileName__,
+             uint       __lineNb__,
+             const char *prefix,
+             const char *format,
              ...
             )
 {
   va_list arguments;
 
-  assert(fileName != NULL);
+  assert(__fileName__ != NULL);
   assert(format != NULL);
 
   if (prefix != NULL) fprintf(stderr,"%s", prefix);
   va_start(arguments,format);
   vfprintf(stderr,format,arguments);
   va_end(arguments);
-  fprintf(stderr," - program aborted in file %s, line %u\n",fileName,lineNb);
+  fprintf(stderr," - program aborted in file %s, line %u\n",__fileName__,__lineNb__);
   abort();
 }
 
 #ifndef NDEBUG
-void debugAddResourceTrace(const char *fileName, ulong lineNb, const char *typeName, const void *resource)
+void debugAddResourceTrace(const char *__fileName__,
+                           uint       __lineNb__,
+                           const char *typeName,
+                           const void *resource
+                          )
 {
   DebugResourceNode *debugResourceNode;
 
@@ -144,6 +148,27 @@ void debugAddResourceTrace(const char *fileName, ulong lineNb, const char *typeN
 
   pthread_mutex_lock(&debugResourceLock);
   {
+    // check for duplicate initialization in allocated list
+    debugResourceNode = debugResourceAllocList.head;
+    while ((debugResourceNode != NULL) && (debugResourceNode->resource != resource))
+    {
+      debugResourceNode = debugResourceNode->next;
+    }
+    if (debugResourceNode != NULL)
+    {
+      fprintf(stderr,"DEBUG WARNING: multiple init of resource %p at %s, %lu which was previously initialized at %s, %ld!\n",
+              resource,
+              __fileName__,
+              __lineNb__,
+              debugResourceNode->allocFileName,
+              debugResourceNode->allocLineNb
+             );
+      #ifdef HAVE_BACKTRACE
+        debugDumpCurrentStackTrace(stderr,"",0);
+      #endif /* HAVE_BACKTRACE */
+      HALT_INTERNAL_ERROR("");
+    }
+
     // find resource in free-list; reuse or allocate new debug node
     debugResourceNode = debugResourceFreeList.head;
     while ((debugResourceNode != NULL) && (debugResourceNode->resource != resource))
@@ -156,7 +181,7 @@ void debugAddResourceTrace(const char *fileName, ulong lineNb, const char *typeN
     }
     else
     {
-      debugResourceNode = LIST_NEW_NODEX(fileName,lineNb,DebugResourceNode);
+      debugResourceNode = LIST_NEW_NODEX(__fileName__,__lineNb__,DebugResourceNode);
       if (debugResourceNode == NULL)
       {
         HALT_INSUFFICIENT_MEMORY();
@@ -164,8 +189,8 @@ void debugAddResourceTrace(const char *fileName, ulong lineNb, const char *typeN
     }
 
     // init resource node
-    debugResourceNode->allocFileName = fileName;
-    debugResourceNode->allocLineNb   = lineNb;
+    debugResourceNode->allocFileName = __fileName__;
+    debugResourceNode->allocLineNb   = __lineNb__;
     #ifdef HAVE_BACKTRACE
       debugResourceNode->stackTraceSize = backtrace((void*)debugResourceNode->stackTrace,SIZE_OF_ARRAY(debugResourceNode->stackTrace));
     #endif /* HAVE_BACKTRACE */
@@ -183,7 +208,10 @@ void debugAddResourceTrace(const char *fileName, ulong lineNb, const char *typeN
   pthread_mutex_unlock(&debugResourceLock);
 }
 
-void debugRemoveResourceTrace(const char *fileName, ulong lineNb, const void *resource)
+void debugRemoveResourceTrace(const char *__fileName__,
+                              uint       __lineNb__,
+                              const void *resource
+                             )
 {
   DebugResourceNode *debugResourceNode;
 
@@ -203,8 +231,8 @@ void debugRemoveResourceTrace(const char *fileName, ulong lineNb, const void *re
       List_remove(&debugResourceAllocList,debugResourceNode);
 
       // add to free list
-      debugResourceNode->freeFileName = fileName;
-      debugResourceNode->freeLineNb   = lineNb;
+      debugResourceNode->freeFileName = __fileName__;
+      debugResourceNode->freeLineNb   = __lineNb__;
       #ifdef HAVE_BACKTRACE
         debugResourceNode->deleteStackTraceSize = backtrace((void*)debugResourceNode->deleteStackTrace,SIZE_OF_ARRAY(debugResourceNode->deleteStackTrace));
       #endif /* HAVE_BACKTRACE */
@@ -221,8 +249,8 @@ void debugRemoveResourceTrace(const char *fileName, ulong lineNb, const void *re
     {
       fprintf(stderr,"DEBUG WARNING: resource '%p' not found in debug list at %s, line %lu\n",
               resource,
-              fileName,
-              lineNb
+              __fileName__,
+              __lineNb__
              );
       #ifdef HAVE_BACKTRACE
         debugDumpCurrentStackTrace(stderr,"",0);
