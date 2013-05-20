@@ -226,28 +226,27 @@ typedef byte FileCast[FILE_CAST_SIZE];
 // file info data
 typedef struct
 {
-  FileTypes                 type;                   // file type; see FileTypes
-  int64                     size;                   // size of file [bytes]
-  uint64                    timeLastAccess;         // timestamp of last access
-  uint64                    timeModified;           // timestamp of last modification
-  uint64                    timeLastChanged;        // timestamp of last changed
-  uint32                    userId;                 // user id
-  uint32                    groupId;                // group id
-  FilePermission            permission;             // permission flags
-  FileSpecialTypes          specialType;            // special type; see FileSpecialTypes
-  uint32                    major,minor;            // special type major/minor number
-  FileAttributes            attributes;             // attributes
-//  FileExtendedAttributeList extendedAttributeList;
+  FileTypes        type;              // file type; see FileTypes
+  int64            size;              // size of file [bytes]
+  uint64           timeLastAccess;    // timestamp of last access
+  uint64           timeModified;      // timestamp of last modification
+  uint64           timeLastChanged;   // timestamp of last changed
+  uint32           userId;            // user id
+  uint32           groupId;           // group id
+  FilePermission   permission;        // permission flags
+  FileSpecialTypes specialType;       // special type; see FileSpecialTypes
+  uint32           major,minor;       // special type major/minor number
+  FileAttributes   attributes;        // attributes
 
-  uint64                    id;                     // unique id (e. g. inode number)
-  uint                      linkCount;              // number of hard links
-  FileCast                  cast;                   // cast value for checking if file was changed
+  uint64           id;                // unique id (e. g. inode number)
+  uint             linkCount;         // number of hard links
+  FileCast         cast;              // cast value for checking if file was changed
 } FileInfo;
 
 // file system info data
 typedef struct
 {
-  ulong  blockSize;                                 // size of block [bytes]
+  ulong  blockSize;                   // size of block [bytes]
   uint64 freeBytes;
   uint64 totalBytes;
   uint   maxFileNameLength;
