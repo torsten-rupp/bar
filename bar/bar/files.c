@@ -228,12 +228,12 @@ LOCAL void fileCheckValid(const char *fileName,
 * Name   : getAttributes
 * Purpose: get file attributes
 * Input  : fileName - file name
-* Output : attributes - extended file attributes
+* Output : attributes - file attributes
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors getAttributes(const String fileName, FileAttributes *extendedAttributes)
+LOCAL Errors getAttributes(const String fileName, FileAttributes *fileAttributes)
 {
   long   attributes;
   #ifdef FS_IOC_GETFLAGS
@@ -242,7 +242,7 @@ LOCAL Errors getAttributes(const String fileName, FileAttributes *extendedAttrib
   #endif /* FS_IOC_GETFLAGS */
 
   assert(fileName != NULL);
-  assert(extendedAttributes != NULL);
+  assert(fileAttributes != NULL);
 
   attributes = 0LL;
   #ifdef FS_IOC_GETFLAGS
@@ -263,15 +263,15 @@ LOCAL Errors getAttributes(const String fileName, FileAttributes *extendedAttrib
     UNUSED_VARIABLE(fileName);
   #endif /* FS_IOC_GETFLAGS */
 
-  (*extendedAttributes) = 0LL;
+  (*fileAttributes) = 0LL;
   #ifdef HAVE_FS_COMPR_FL
-    if ((attributes & FILE_ATTRIBUTE_COMPRESS   ) != 0LL) (*extendedAttributes) |= FILE_ATTRIBUTE_COMPRESS;
+    if ((attributes & FILE_ATTRIBUTE_COMPRESS   ) != 0LL) (*fileAttributes) |= FILE_ATTRIBUTE_COMPRESS;
   #endif
   #ifdef HAVE_FS_NOCOMP_FL
-    if ((attributes & FILE_ATTRIBUTE_NO_COMPRESS) != 0LL) (*extendedAttributes) |= FILE_ATTRIBUTE_NO_COMPRESS;
+    if ((attributes & FILE_ATTRIBUTE_NO_COMPRESS) != 0LL) (*fileAttributes) |= FILE_ATTRIBUTE_NO_COMPRESS;
   #endif
   #ifdef HAVE_FS_NODUMP_FL
-    if ((attributes & FILE_ATTRIBUTE_NO_DUMP    ) != 0LL) (*extendedAttributes) |= FILE_ATTRIBUTE_NO_DUMP;
+    if ((attributes & FILE_ATTRIBUTE_NO_DUMP    ) != 0LL) (*fileAttributes) |= FILE_ATTRIBUTE_NO_DUMP;
   #endif
 
   return ERROR_NONE;
@@ -289,6 +289,8 @@ LOCAL Errors getAttributes(const String fileName, FileAttributes *extendedAttrib
 LOCAL void freeExtendedAttributeNode(FileExtendedAttributeNode *fileExtendedAttributeNode, void *userData)
 {
   assert(fileExtendedAttributeNode != NULL);
+  assert(fileExtendedAttributeNode->name != NULL);
+  assert(fileExtendedAttributeNode->data != NULL);
 
   UNUSED_VARIABLE(userData);
 
@@ -2585,21 +2587,6 @@ bool File_isWriteableCString(const char *fileName)
   #endif /* PLATFORM_... */
 }
 
-void File_initFileInfo(FileInfo *fileInfo)
-{
-  assert(fileInfo != NULL);
-
-  memset(fileInfo,0,sizeof(FileInfo));
-  List_init(&fileInfo->extendedAttributeList);
-}
-
-void File_doneFileInfo(FileInfo *fileInfo)
-{
-  assert(fileInfo != NULL);
-
-  List_done(&fileInfo->extendedAttributeList,(ListNodeFreeFunction)freeExtendedAttributeNode,NULL);
-}
-
 Errors File_getFileInfo(FileInfo     *fileInfo,
                         const String fileName
                        )
@@ -2717,12 +2704,14 @@ Errors File_getFileInfo(FileInfo     *fileInfo,
     fileInfo->attributes  = 0LL;
   }
 
+#if 0
   // get extended attributes
   error = File_getExtendedAttributes(&fileInfo->extendedAttributeList,fileName);
   if (error != ERROR_NONE)
   {
     return error;
   }
+  #endif
 
   return ERROR_NONE;
 }
@@ -2778,23 +2767,23 @@ Errors File_setFileInfo(const String fileName,
       break; /* not reached */
   }
 
+#if 0
   // set extended attributes
   error = File_setExtendedAttributes(fileName,&fileInfo->extendedAttributeList);
   if (error != ERROR_NONE)
   {
     return error;
   }
+#endif
 
   return ERROR_NONE;
 }
 
-FileExtendedAttributeList *File_initExtendedAttributes(FileExtendedAttributeList *fileExtendedAttributeList)
+void File_initExtendedAttributes(FileExtendedAttributeList *fileExtendedAttributeList)
 {
   assert(fileExtendedAttributeList != NULL);
 
   List_init(fileExtendedAttributeList);
-
-  return fileExtendedAttributeList;
 }
 
 void File_doneExtendedAttributes(FileExtendedAttributeList *fileExtendedAttributeList)
@@ -2802,6 +2791,46 @@ void File_doneExtendedAttributes(FileExtendedAttributeList *fileExtendedAttribut
   assert(fileExtendedAttributeList != NULL);
 
   List_done(fileExtendedAttributeList,(ListNodeFreeFunction)freeExtendedAttributeNode,NULL);
+}
+
+void File_addExtendedAttribute(FileExtendedAttributeList *fileExtendedAttributeList,
+                               const String              name,
+                               const void                *data,
+                               uint                      dataLength
+                              )
+{
+  File_addExtendedAttributeCString(fileExtendedAttributeList,String_cString(name),data,dataLength);
+}
+
+void File_addExtendedAttributeCString(FileExtendedAttributeList *fileExtendedAttributeList,
+                                      const char                *name,
+                                      const void                *data,
+                                      uint                      dataLength
+                                     )
+{
+  FileExtendedAttributeNode *fileExtendedAttributeNode;
+
+  assert(fileExtendedAttributeList != NULL);
+  assert(name != NULL);
+  assert(data != NULL);
+
+  // allocate file extended attribute node
+  fileExtendedAttributeNode = LIST_NEW_NODE(FileExtendedAttributeNode);
+  if (fileExtendedAttributeNode == NULL)
+  {
+    HALT_INSUFFICIENT_MEMORY();
+  }
+  fileExtendedAttributeNode->data = malloc(dataLength);
+  if (fileExtendedAttributeNode->data == NULL)
+  {
+    HALT_INSUFFICIENT_MEMORY();
+  }
+
+  // add extended attribute to list
+  fileExtendedAttributeNode->name       = String_newCString(name);
+  memcpy(fileExtendedAttributeNode->data,data,dataLength);
+  fileExtendedAttributeNode->dataLength = dataLength;
+  List_append(fileExtendedAttributeList,fileExtendedAttributeNode);
 }
 
 Errors File_getExtendedAttributes(FileExtendedAttributeList *fileExtendedAttributeList,

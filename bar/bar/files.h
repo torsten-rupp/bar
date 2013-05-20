@@ -212,7 +212,7 @@ typedef struct FileExtendedAttributeNode
 
   String name;
   void   *data;
-  ulong  dataLength;
+  uint   dataLength;
 } FileExtendedAttributeNode;
 
 typedef struct
@@ -237,7 +237,7 @@ typedef struct
   FileSpecialTypes          specialType;            // special type; see FileSpecialTypes
   uint32                    major,minor;            // special type major/minor number
   FileAttributes            attributes;             // attributes
-  FileExtendedAttributeList extendedAttributeList;
+//  FileExtendedAttributeList extendedAttributeList;
 
   uint64                    id;                     // unique id (e. g. inode number)
   uint                      linkCount;              // number of hard links
@@ -1001,28 +1001,6 @@ bool File_isWriteable(const String fileName);
 bool File_isWriteableCString(const char *fileName);
 
 /***********************************************************************\
-* Name   : File_initFileInfo
-* Purpose: initialize file info
-* Input  : fileInfo - file info
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-void File_initFileInfo(FileInfo *fileInfo);
-
-/***********************************************************************\
-* Name   : File_doneFileInfo
-* Purpose: deinitialize file info
-* Input  : fileInfo - file info
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-void File_doneFileInfo(FileInfo *fileInfo);
-
-/***********************************************************************\
 * Name   : File_getInfo
 * Purpose: get file info
 * Input  : fileInfo - file info variable
@@ -1113,11 +1091,11 @@ INLINE bool File_haveAttributeNoDump(const FileInfo *fileInfo)
 * Purpose: initialize extended attributes list
 * Input  : fileExtendedAttributeList - extended attributes list
 * Output : -
-* Return : extended attributes list
+* Return : -
 * Notes  : -
 \***********************************************************************/
 
-FileExtendedAttributeList *File_initExtendedAttributes(FileExtendedAttributeList *fileExtendedAttributeList);
+void File_initExtendedAttributes(FileExtendedAttributeList *fileExtendedAttributeList);
 
 /***********************************************************************\
 * Name   : File_doneExtendedAttributes
@@ -1129,6 +1107,28 @@ FileExtendedAttributeList *File_initExtendedAttributes(FileExtendedAttributeList
 \***********************************************************************/
 
 void File_doneExtendedAttributes(FileExtendedAttributeList *fileExtendedAttributeList);
+
+/***********************************************************************\
+* Name   : File_addExtendedAttribute, File_addExtendedAttributeCString
+* Purpose: add file extended attribute to list
+* Input  : name       - name of attribute
+*          data       - data
+*          dataLength - length of data
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void File_addExtendedAttribute(FileExtendedAttributeList *fileExtendedAttributeList,
+                               const String              name,
+                               const void                *data,
+                               uint                      dataLength
+                              );
+void File_addExtendedAttributeCString(FileExtendedAttributeList *fileExtendedAttributeList,
+                                      const char                *name,
+                                      const void                *data,
+                                      uint                      dataLength
+                                     );
 
 /***********************************************************************\
 * Name   : File_getExtendedAttributes
