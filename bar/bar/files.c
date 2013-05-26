@@ -1448,7 +1448,7 @@ Errors File_read(FileHandle *fileHandle,
 
   if (bytesRead != NULL)
   {
-    // read a much data as possible
+    // read as much data as possible
     n = fread(buffer,1,bufferLength,fileHandle->file);
 //fprintf(stderr,"%s, %d: much %x bufferLength=%lu n=%ld %d\n",__FILE__,__LINE__,fileHandle->file,bufferLength,n,ferror(fileHandle->file));
     if ((n <= 0) && ferror(fileHandle->file))
