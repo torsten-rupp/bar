@@ -6449,6 +6449,7 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const Stri
                                           &cryptType,
                                           fileName,
                                           &fileInfo,
+                                          NULL, // fileExtendedAttributeList
                                           deltaSourceName,
                                           &deltaSourceSize,
                                           &fragmentOffset,
@@ -6568,7 +6569,8 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const Stri
                                                &cryptAlgorithm,
                                                &cryptType,
                                                directoryName,
-                                               &fileInfo
+                                               &fileInfo,
+                                               NULL   // fileExtendedAttributeList
                                               );
             if (error != ERROR_NONE)
             {
@@ -6612,7 +6614,8 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const Stri
                                           &cryptType,
                                           linkName,
                                           name,
-                                          NULL
+                                          NULL,  // fileInfo
+                                          NULL   // fileExtendedAttributeList
                                          );
             if (error != ERROR_NONE)
             {
@@ -6665,6 +6668,7 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const Stri
                                               &cryptType,
                                               &fileNameList,
                                               &fileInfo,
+                                              NULL,  // fileExtendedAttributeList
                                               deltaSourceName,
                                               &deltaSourceSize,
                                               &fragmentOffset,
@@ -6715,10 +6719,11 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const Stri
             name = String_new();
             error = Archive_readSpecialEntry(&archiveEntryInfo,
                                              &archiveInfo,
-                                             NULL,
-                                             NULL,
+                                             NULL,  // cryptAlgorithm
+                                             NULL,  // cryptType
                                              name,
-                                             &fileInfo
+                                             &fileInfo,
+                                             NULL   // fileExtendedAttributeList
                                             );
             if (error != ERROR_NONE)
             {
