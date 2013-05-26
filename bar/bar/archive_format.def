@@ -214,7 +214,7 @@ CHUNK FILE_ENTRY "FENT" FileEntry
 CHUNK FILE_EXTENDED_ATTRIBUTE "FEAT" FileExtendedAttribute
   ENCRYPT
   string name
-  data   data
+  byte[] value
   crc32  crc
 
 # file delta compression
