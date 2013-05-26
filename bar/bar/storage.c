@@ -7061,10 +7061,9 @@ Errors Storage_read(StorageFileHandle *storageFileHandle,
   assert(storageFileHandle->jobOptions != NULL);
   assert(storageFileHandle->mode == STORAGE_MODE_READ);
   assert(buffer != NULL);
-  assert(bytesRead != NULL);
 
 //fprintf(stderr,"%s,%d: size=%lu\n",__FILE__,__LINE__,size);
-  (*bytesRead) = 0L;
+  if (bytesRead != NULL) (*bytesRead) = 0L;
   error = ERROR_NONE;
   switch (storageFileHandle->storageSpecifier.type)
   {
@@ -7108,7 +7107,7 @@ Errors Storage_read(StorageFileHandle *storageFileHandle,
               // adjust buffer, size, bytes read, index
               buffer = (byte*)buffer+n;
               size -= n;
-              (*bytesRead) += n;
+              if (bytesRead != NULL) (*bytesRead) += n;
               storageFileHandle->ftp.index += (uint64)n;
             }
 
@@ -7220,7 +7219,7 @@ Errors Storage_read(StorageFileHandle *storageFileHandle,
                 // adjust buffer, size, bytes read, index
                 buffer = (byte*)buffer+n;
                 size -= n;
-                (*bytesRead) += n;
+                if (bytesRead != NULL) (*bytesRead) += n;
                 storageFileHandle->ftp.index += (uint64)n;
               }
               else
@@ -7303,7 +7302,7 @@ Errors Storage_read(StorageFileHandle *storageFileHandle,
                 // adjust buffer, size, bytes read, index
                 buffer = (byte*)buffer+n;
                 size -= n;
-                (*bytesRead) += n;
+                if (bytesRead != NULL) (*bytesRead) += n;
                 storageFileHandle->ftp.index += (uint64)n;
               }
 
@@ -7351,7 +7350,7 @@ Errors Storage_read(StorageFileHandle *storageFileHandle,
               // adjust buffer, size, bytes read, index
               buffer = (byte*)buffer+n;
               size -= n;
-              (*bytesRead) += n;
+              if (bytesRead != NULL) (*bytesRead) += n;
               storageFileHandle->ftp.index += (uint64)n;
             }
 
@@ -7410,7 +7409,7 @@ Errors Storage_read(StorageFileHandle *storageFileHandle,
                 // adjust buffer, size, bytes read, index
                 buffer = (byte*)buffer+n;
                 size -= n;
-                (*bytesRead) += n;
+                if (bytesRead != NULL) (*bytesRead) += n;
                 storageFileHandle->ftp.index += (uint64)n;
               }
               else
@@ -7442,7 +7441,7 @@ Errors Storage_read(StorageFileHandle *storageFileHandle,
                 // adjust buffer, size, bytes read, index
                 buffer = (byte*)buffer+n;
                 size -= n;
-                (*bytesRead) += n;
+                if (bytesRead != NULL) (*bytesRead) += n;
                 storageFileHandle->ftp.index += (uint64)n;
               }
 
@@ -7498,7 +7497,7 @@ Errors Storage_read(StorageFileHandle *storageFileHandle,
               // adjust buffer, size, bytes read, index
               buffer = (byte*)buffer+bytesAvail;
               size -= bytesAvail;
-              (*bytesRead) += bytesAvail;
+              if (bytesRead != NULL) (*bytesRead) += bytesAvail;
               storageFileHandle->scp.index += (uint64)bytesAvail;
             }
 
@@ -7551,7 +7550,7 @@ Errors Storage_read(StorageFileHandle *storageFileHandle,
                 // adjust buffer, size, bytes read, index
                 buffer = (byte*)buffer+bytesAvail;
                 size -= bytesAvail;
-                (*bytesRead) += bytesAvail;
+                if (bytesRead != NULL) (*bytesRead) += bytesAvail;
                 storageFileHandle->scp.index += (uint64)bytesAvail;
               }
               else
@@ -7575,7 +7574,7 @@ Errors Storage_read(StorageFileHandle *storageFileHandle,
                 // adjust buffer, size, bytes read, index
                 buffer = (byte*)buffer+(ulong)n;
                 size -= (ulong)n;
-                (*bytesRead) += (ulong)n;
+                if (bytesRead != NULL) (*bytesRead) += (ulong)n;
                 storageFileHandle->scp.index += (uint64)n;
               }
 
@@ -7630,7 +7629,7 @@ Errors Storage_read(StorageFileHandle *storageFileHandle,
               // adjust buffer, size, bytes read, index
               buffer = (byte*)buffer+bytesAvail;
               size -= bytesAvail;
-              (*bytesRead) += bytesAvail;
+              if (bytesRead != NULL) (*bytesRead) += bytesAvail;
               storageFileHandle->sftp.index += bytesAvail;
             }
 
@@ -7684,7 +7683,7 @@ Errors Storage_read(StorageFileHandle *storageFileHandle,
                 memcpy(buffer,storageFileHandle->sftp.readAheadBuffer.data,bytesAvail);
 
                 // adjust buffer, size, bytes read, index
-                (*bytesRead) += bytesAvail;
+                if (bytesRead != NULL) (*bytesRead) += bytesAvail;
                 storageFileHandle->sftp.index += (uint64)bytesAvail;
               }
               else
@@ -7701,7 +7700,7 @@ Errors Storage_read(StorageFileHandle *storageFileHandle,
                 }
 
                 // adjust buffer, size, bytes read, index
-                (*bytesRead) += (ulong)n;
+                if (bytesRead != NULL) (*bytesRead) += (ulong)n;
                 storageFileHandle->sftp.index += (uint64)n;
               }
 
@@ -7761,7 +7760,7 @@ Errors Storage_read(StorageFileHandle *storageFileHandle,
               // adjust buffer, size, bytes read, index
               buffer = (byte*)buffer+n;
               size -= n;
-              (*bytesRead) += n;
+              if (bytesRead != NULL) (*bytesRead) += n;
               storageFileHandle->webdav.index += (uint64)n;
             }
 
@@ -7868,7 +7867,7 @@ Errors Storage_read(StorageFileHandle *storageFileHandle,
               // adjust buffer, size, bytes read, index
               buffer = (byte*)buffer+n;
               size -= n;
-              (*bytesRead) += n;
+              if (bytesRead != NULL) (*bytesRead) += n;
               storageFileHandle->webdav.index += (uint64)n;
 
               // get end time
@@ -7945,7 +7944,7 @@ Errors Storage_read(StorageFileHandle *storageFileHandle,
               // adjust buffer, size, bytes read, index
               buffer = (byte*)buffer+n;
               size -= n;
-              (*bytesRead) += n;
+              if (bytesRead != NULL) (*bytesRead) += n;
               storageFileHandle->opticalDisk.read.index += n;
             }
           }

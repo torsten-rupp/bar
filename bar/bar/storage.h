@@ -955,6 +955,7 @@ bool Storage_eof(StorageFileHandle *storageFileHandle);
 * Input  : storageFileHandle - storage file handle
 *          buffer            - buffer with data to write
 *          size              - data size
+*          bytesRead         - number of bytes read or NULL
 * Output : bytesRead - number of bytes read
 * Return : ERROR_NONE or errorcode
 * Notes  : -
