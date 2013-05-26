@@ -39,8 +39,12 @@ my $DEFINITION_TYPES =
    "int32"    => "CHUNK_DATATYPE_INT32",
    "int64"    => "CHUNK_DATATYPE_INT64",
    "string"   => "CHUNK_DATATYPE_STRING",
-   "data"     => "CHUNK_DATATYPE_DATA",
+
+   "byteArray" => "CHUNK_DATATYPE_BYTE|CHUNK_DATATYPE_ARRAY",
+
    "crc32"    => "CHUNK_DATATYPE_CRC32",
+
+   "data"     => "CHUNK_DATATYPE_DATA",
   };
 
 my $cFileName,$hFileName;
@@ -162,7 +166,7 @@ while ($line=<STDIN>)
       {
         writeHFile("  CompressInfo compressInfo;\n");
       }
-      elsif ($line =~ /^\s*(uint8|int8)\s+(\w+)/)
+      elsif ($line =~ /^\s*(byte|uint8|int8)\s+(\w+)/)
       {
         writeHFile("  $1 $2;\n");
         writeHFile("  uint8 pad".$n."[3];\n");
@@ -194,14 +198,25 @@ while ($line=<STDIN>)
         push(@parseDefinitions,$DEFINITION_TYPES->{string});
         push(@parseDefinitions,"offsetof($PREFIX_CHUNK_NAME$structName,$1)");
       }
-      elsif ($line =~ /^\s*data\s+(\w+)/)
+      elsif ($line =~ /^\s*(byte|uint8|int8|uint16|int16|uint32|int32|uint64|int64|string)\[\]\s+(\w+)/)
       {
-        push(@parseDefinitions,$DEFINITION_TYPES->{data});
-        push(@parseDefinitions,"0");
+        writeHFile("  struct\n");
+        writeHFile("  {\n");
+        writeHFile("    uint length;\n");
+        writeHFile("    $1 *data;\n");
+        writeHFile("  } $2;\n");
+        push(@parseDefinitions,$DEFINITION_TYPES->{byteArray});
+        push(@parseDefinitions,"offsetof($PREFIX_CHUNK_NAME$structName,$2.length)");
+        push(@parseDefinitions,"offsetof($PREFIX_CHUNK_NAME$structName,$2.data)");
       }
       elsif ($line =~ /^\s*crc32\s+(\w+)/)
       {
         push(@parseDefinitions,$DEFINITION_TYPES->{crc32});
+        push(@parseDefinitions,"0");
+      }
+      elsif ($line =~ /^\s*data\s+(\w+)/)
+      {
+        push(@parseDefinitions,$DEFINITION_TYPES->{data});
         push(@parseDefinitions,"0");
       }
       else
