@@ -398,6 +398,7 @@ LOCAL Errors restoreFile(const String                    storageName,
                                         NULL,  // cryptType
                                         fileName,
                                         NULL,  // fileInfo
+                                        NULL,  // fileExtendedAttributeList
                                         NULL,  // deltaSourceName
                                         NULL,  // deltaSourceSize
                                         &fragmentOffset,
@@ -670,6 +671,7 @@ LOCAL Errors restoreFile(const String                    storageName,
                                             NULL,  // cryptType
                                             &fileNameList,
                                             NULL,  // fileInfo
+                                            NULL,  // fileExtendedAttributeList
                                             NULL,  // deltaSourceName
                                             NULL,  // deltaSourceSize
                                             &fragmentOffset,
