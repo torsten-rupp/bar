@@ -215,10 +215,11 @@ Errors Command_compare(const StringList                *storageNameList,
                                           &archiveInfo,
                                           &deltaCompressAlgorithm,
                                           &byteCompressAlgorithm,
-                                          NULL,
-                                          NULL,
+                                          NULL,  // cryptAlgorithm
+                                          NULL,  // cryptType
                                           fileName,
                                           &fileInfo,
+                                          NULL,  // fileExtendedAttributeList
                                           NULL,  // deltaSourceName
                                           NULL,  // deltaSourceSize
                                           &fragmentOffset,
@@ -457,8 +458,8 @@ Errors Command_compare(const StringList                *storageNameList,
                                            &archiveInfo,
                                            &deltaCompressAlgorithm,
                                            &byteCompressAlgorithm,
-                                           NULL,
-                                           NULL,
+                                           NULL,  // cryptAlgorithm
+                                           NULL,  // cryptType
                                            deviceName,
                                            &deviceInfo,
                                            NULL,  // deltaSourceName
@@ -762,10 +763,11 @@ Errors Command_compare(const StringList                *storageNameList,
             directoryName = String_new();
             error = Archive_readDirectoryEntry(&archiveEntryInfo,
                                                &archiveInfo,
-                                               NULL,
-                                               NULL,
+                                               NULL,  // cryptAlgorithm
+                                               NULL,  // cryptType
                                                directoryName,
-                                               &fileInfo
+                                               &fileInfo,
+                                               NULL   // fileExtendedAttributeList
                                               );
             if (error != ERROR_NONE)
             {
@@ -863,11 +865,12 @@ Errors Command_compare(const StringList                *storageNameList,
             fileName = String_new();
             error = Archive_readLinkEntry(&archiveEntryInfo,
                                           &archiveInfo,
-                                          NULL,
-                                          NULL,
+                                          NULL,  // cryptAlgorithm
+                                          NULL,  // cryptType
                                           linkName,
                                           fileName,
-                                          &fileInfo
+                                          &fileInfo,
+                                          NULL   // fileExtendedAttributeList
                                          );
             if (error != ERROR_NONE)
             {
@@ -1015,10 +1018,11 @@ Errors Command_compare(const StringList                *storageNameList,
                                               &archiveInfo,
                                               &deltaCompressAlgorithm,
                                               &byteCompressAlgorithm,
-                                              NULL,
-                                              NULL,
+                                              NULL,  // cryptAlgorithm
+                                              NULL,  // cryptType
                                               &fileNameList,
                                               &fileInfo,
+                                              NULL,  // fileExtendedAttributeList
                                               NULL,  // deltaSourceName
                                               NULL,  // deltaSourceSize
                                               &fragmentOffset,
@@ -1292,10 +1296,11 @@ Errors Command_compare(const StringList                *storageNameList,
             fileName = String_new();
             error = Archive_readSpecialEntry(&archiveEntryInfo,
                                              &archiveInfo,
-                                             NULL,
-                                             NULL,
+                                             NULL,  // cryptAlgorithm
+                                             NULL,  // cryptType
                                              fileName,
-                                             &fileInfo
+                                             &fileInfo,
+                                             NULL   // fileExtendedAttributeList
                                             );
             if (error != ERROR_NONE)
             {

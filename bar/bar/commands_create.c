@@ -1773,7 +1773,6 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
         }
 
         // free resources
-        File_doneFileInfo(&fileInfo);
       }
     }
 
@@ -2411,7 +2410,6 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
         }
 
         // free resources
-        File_doneFileInfo(&fileInfo);
       }
       else
       {
@@ -2585,7 +2583,6 @@ LOCAL Errors storeArchiveFile(void           *userData,
   if (error != ERROR_NONE)
   {
     String_delete(destinationFileName);
-    File_doneFileInfo(&fileInfo);
     return error;
   }
 
@@ -2600,7 +2597,6 @@ LOCAL Errors storeArchiveFile(void           *userData,
   {
     freeStorageMsg(&storageMsg,NULL);
     String_delete(destinationFileName);
-    File_doneFileInfo(&fileInfo);
     return ERROR_NONE;
   }
 
@@ -2627,7 +2623,6 @@ LOCAL Errors storeArchiveFile(void           *userData,
   }
 
   // free resources
-  File_doneFileInfo(&fileInfo);
 
   return ERROR_NONE;
 }
@@ -2807,7 +2802,6 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
             File_delete(storageMsg.fileName,FALSE);
             storageInfoDecrement(createInfo,storageMsg.fileSize);
             freeStorageMsg(&storageMsg,NULL);
-            File_doneFileInfo(&fileInfo);
             continue;
           }
         }
@@ -2842,7 +2836,6 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
           File_delete(storageMsg.fileName,FALSE);
           storageInfoDecrement(createInfo,storageMsg.fileSize);
           freeStorageMsg(&storageMsg,NULL);
-          File_doneFileInfo(&fileInfo);
           continue;
         }
 
@@ -3121,7 +3114,6 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
           // free resources
           File_delete(storageMsg.fileName,FALSE);
           freeStorageMsg(&storageMsg,NULL);
-          File_doneFileInfo(&fileInfo);
           continue;
         }
 
@@ -3253,20 +3245,21 @@ LOCAL Errors storeFileEntry(CreateInfo   *createInfo,
                             uint         bufferSize
                            )
 {
-  Errors           error;
-  FileInfo         fileInfo;
-  FileHandle       fileHandle;
-  bool             byteCompressFlag;
-  bool             deltaCompressFlag;
-  ArchiveEntryInfo archiveEntryInfo;
-  SemaphoreLock    semaphoreLock;
-  bool             nameSemaphoreLocked;
-  uint64           entryDoneBytes;
-  ulong            bufferLength;
-  uint64           archiveSize;
-  uint64           archiveBytes;
-  double           compressionRatio;
-  uint             percentageDone;
+  Errors                    error;
+  FileInfo                  fileInfo;
+  FileExtendedAttributeList fileExtendedAttributeList;
+  FileHandle                fileHandle;
+  bool                      byteCompressFlag;
+  bool                      deltaCompressFlag;
+  ArchiveEntryInfo          archiveEntryInfo;
+  SemaphoreLock             semaphoreLock;
+  bool                      nameSemaphoreLocked;
+  uint64                    entryDoneBytes;
+  ulong                     bufferLength;
+  uint64                    archiveSize;
+  uint64                    archiveBytes;
+  double                    compressionRatio;
+  uint                      percentageDone;
 
   assert(createInfo != NULL);
   assert(createInfo->jobOptions != NULL);
@@ -3275,7 +3268,7 @@ LOCAL Errors storeFileEntry(CreateInfo   *createInfo,
 
   printInfo(1,"Add '%s'...",String_cString(fileName));
 
-  // get file info
+  // get file info, file extended attributes
   error = File_getFileInfo(&fileInfo,fileName);
   if (error != ERROR_NONE)
   {
@@ -3299,6 +3292,30 @@ LOCAL Errors storeFileEntry(CreateInfo   *createInfo,
       return error;
     }
   }
+  error = File_getExtendedAttributes(&fileExtendedAttributeList,fileName);
+  if (error != ERROR_NONE)
+  {
+    if (createInfo->jobOptions->skipUnreadableFlag)
+    {
+      printInfo(1,"skipped (reason: %s)\n",Errors_getText(error));
+      logMessage(LOG_TYPE_ENTRY_ACCESS_DENIED,"access denied '%s'\n",String_cString(fileName));
+      SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+      {
+        createInfo->statusInfo.errorEntries++;
+      }
+      return ERROR_NONE;
+    }
+    else
+    {
+      printInfo(1,"FAIL\n");
+      printError("Cannot get extended attributes for '%s' (error: %s)\n",
+                 String_cString(fileName),
+                 Errors_getText(error)
+                );
+      return error;
+    }
+  }
+
 //fprintf(stderr,"%s, %d: ----------------\n",__FILE__,__LINE__);
 //FileExtendedAttributeNode *fileExtendedAttributeNode; LIST_ITERATE(&fileExtendedAttributeList,fileExtendedAttributeNode) { fprintf(stderr,"%s, %d: fileExtendedAttributeNode=%s\n",__FILE__,__LINE__,String_cString(fileExtendedAttributeNode->name)); }
 
@@ -3315,7 +3332,7 @@ LOCAL Errors storeFileEntry(CreateInfo   *createInfo,
         createInfo->statusInfo.errorEntries++;
         createInfo->statusInfo.errorBytes += (uint64)fileInfo.size;
       }
-      File_doneFileInfo(&fileInfo);
+      File_doneExtendedAttributes(&fileExtendedAttributeList);
       return ERROR_NONE;
     }
     else
@@ -3325,7 +3342,7 @@ LOCAL Errors storeFileEntry(CreateInfo   *createInfo,
                  String_cString(fileName),
                  Errors_getText(error)
                 );
-      File_doneFileInfo(&fileInfo);
+      File_doneExtendedAttributes(&fileExtendedAttributeList);
       return error;
     }
   }
@@ -3344,6 +3361,7 @@ LOCAL Errors storeFileEntry(CreateInfo   *createInfo,
                                  &createInfo->archiveInfo,
                                  fileName,
                                  &fileInfo,
+                                 &fileExtendedAttributeList,
                                  deltaCompressFlag,
                                  byteCompressFlag
                                 );
@@ -3355,7 +3373,7 @@ LOCAL Errors storeFileEntry(CreateInfo   *createInfo,
                  Errors_getText(error)
                 );
       (void)File_close(&fileHandle);
-      File_doneFileInfo(&fileInfo);
+      File_doneExtendedAttributes(&fileExtendedAttributeList);
       return error;
     }
 
@@ -3443,7 +3461,7 @@ LOCAL Errors storeFileEntry(CreateInfo   *createInfo,
       Archive_closeEntry(&archiveEntryInfo);
       if (nameSemaphoreLocked) Semaphore_unlock(&createInfo->statusInfoNameLock);
       (void)File_close(&fileHandle);
-      File_doneFileInfo(&fileInfo);
+      File_doneExtendedAttributes(&fileExtendedAttributeList);
       return FALSE;
     }
     if (error != ERROR_NONE)
@@ -3455,7 +3473,7 @@ LOCAL Errors storeFileEntry(CreateInfo   *createInfo,
       Archive_closeEntry(&archiveEntryInfo);
       if (nameSemaphoreLocked) Semaphore_unlock(&createInfo->statusInfoNameLock);
       (void)File_close(&fileHandle);
-      File_doneFileInfo(&fileInfo);
+      File_doneExtendedAttributes(&fileExtendedAttributeList);
       return error;
     }
     printInfo(2,"    \b\b\b\b");
@@ -3470,7 +3488,7 @@ LOCAL Errors storeFileEntry(CreateInfo   *createInfo,
                 );
       if (nameSemaphoreLocked) Semaphore_unlock(&createInfo->statusInfoNameLock);
       (void)File_close(&fileHandle);
-      File_doneFileInfo(&fileInfo);
+      File_doneExtendedAttributes(&fileExtendedAttributeList);
       return error;
     }
 
@@ -3478,7 +3496,7 @@ LOCAL Errors storeFileEntry(CreateInfo   *createInfo,
     if (nameSemaphoreLocked) Semaphore_unlock(&createInfo->statusInfoNameLock);
 
     // close file
-    File_close(&fileHandle);
+    (void)File_close(&fileHandle);
 
     // get compression ratio
     if (archiveEntryInfo.file.chunkFileData.fragmentSize > 0LL)
@@ -3513,7 +3531,7 @@ LOCAL Errors storeFileEntry(CreateInfo   *createInfo,
   }
 
   // free resources
-  File_doneFileInfo(&fileInfo);
+  File_doneExtendedAttributes(&fileExtendedAttributeList);
 
   // add to incremental list
   if (createInfo->storeIncrementalFileInfoFlag)
@@ -3880,10 +3898,11 @@ LOCAL Errors storeDirectoryEntry(CreateInfo   *createInfo,
                                  const String directoryName
                                 )
 {
-  Errors           error;
-  SemaphoreLock    semaphoreLock;
-  FileInfo         fileInfo;
-  ArchiveEntryInfo archiveEntryInfo;
+  Errors                    error;
+  FileInfo                  fileInfo;
+  FileExtendedAttributeList fileExtendedAttributeList;
+  ArchiveEntryInfo          archiveEntryInfo;
+  SemaphoreLock             semaphoreLock;
 
   assert(createInfo != NULL);
   assert(createInfo->jobOptions != NULL);
@@ -3891,7 +3910,7 @@ LOCAL Errors storeDirectoryEntry(CreateInfo   *createInfo,
 
   printInfo(1,"Add '%s'...",String_cString(directoryName));
 
-  // get file info
+  // get file info, file extended attributes
   error = File_getFileInfo(&fileInfo,directoryName);
   if (error != ERROR_NONE)
   {
@@ -3915,6 +3934,29 @@ LOCAL Errors storeDirectoryEntry(CreateInfo   *createInfo,
       return error;
     }
   }
+  error = File_getExtendedAttributes(&fileExtendedAttributeList,directoryName);
+  if (error != ERROR_NONE)
+  {
+    if (createInfo->jobOptions->skipUnreadableFlag)
+    {
+      printInfo(1,"skipped (reason: %s)\n",Errors_getText(error));
+      logMessage(LOG_TYPE_ENTRY_ACCESS_DENIED,"access denied '%s'\n",String_cString(directoryName));
+      SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+      {
+        createInfo->statusInfo.errorEntries++;
+      }
+      return ERROR_NONE;
+    }
+    else
+    {
+      printInfo(1,"FAIL\n");
+      printError("Cannot get extended attributes for '%s' (error: %s)\n",
+                 String_cString(directoryName),
+                 Errors_getText(error)
+                );
+      return error;
+    }
+  }
 
   if (!createInfo->jobOptions->noStorageFlag)
   {
@@ -3922,7 +3964,8 @@ LOCAL Errors storeDirectoryEntry(CreateInfo   *createInfo,
     error = Archive_newDirectoryEntry(&archiveEntryInfo,
                                       &createInfo->archiveInfo,
                                       directoryName,
-                                      &fileInfo
+                                      &fileInfo,
+                                      &fileExtendedAttributeList
                                      );
     if (error != ERROR_NONE)
     {
@@ -3932,7 +3975,7 @@ LOCAL Errors storeDirectoryEntry(CreateInfo   *createInfo,
                  Errors_getText(error)
                 );
       logMessage(LOG_TYPE_ENTRY_ACCESS_DENIED,"open failed '%s'\n",String_cString(directoryName));
-      File_doneFileInfo(&fileInfo);
+      File_doneExtendedAttributes(&fileExtendedAttributeList);
       return error;
     }
 
@@ -3944,7 +3987,7 @@ LOCAL Errors storeDirectoryEntry(CreateInfo   *createInfo,
       printError("Cannot close archive directory entry (error: %s)!\n",
                  Errors_getText(error)
                 );
-      File_doneFileInfo(&fileInfo);
+      File_doneExtendedAttributes(&fileExtendedAttributeList);
       return error;
     }
 
@@ -3971,7 +4014,7 @@ LOCAL Errors storeDirectoryEntry(CreateInfo   *createInfo,
   }
 
   // free resources
-  File_doneFileInfo(&fileInfo);
+  File_doneExtendedAttributes(&fileExtendedAttributeList);
 
   // add to incremental list
   if (createInfo->storeIncrementalFileInfoFlag)
@@ -3996,18 +4039,19 @@ LOCAL Errors storeLinkEntry(CreateInfo   *createInfo,
                             const String linkName
                            )
 {
-  Errors           error;
-  SemaphoreLock    semaphoreLock;
-  FileInfo         fileInfo;
-  String           fileName;
-  ArchiveEntryInfo archiveEntryInfo;
+  Errors                    error;
+  FileInfo                  fileInfo;
+  FileExtendedAttributeList fileExtendedAttributeList;
+  String                    fileName;
+  ArchiveEntryInfo          archiveEntryInfo;
+  SemaphoreLock             semaphoreLock;
 
   assert(createInfo != NULL);
   assert(linkName != NULL);
 
   printInfo(1,"Add '%s'...",String_cString(linkName));
 
-  // get file info
+  // get file info, file extended attributes
   error = File_getFileInfo(&fileInfo,linkName);
   if (error != ERROR_NONE)
   {
@@ -4025,6 +4069,29 @@ LOCAL Errors storeLinkEntry(CreateInfo   *createInfo,
     {
       printInfo(1,"FAIL\n");
       printError("Cannot get info for '%s' (error: %s)\n",
+                 String_cString(linkName),
+                 Errors_getText(error)
+                );
+      return error;
+    }
+  }
+  error = File_getExtendedAttributes(&fileExtendedAttributeList,linkName);
+  if (error != ERROR_NONE)
+  {
+    if (createInfo->jobOptions->skipUnreadableFlag)
+    {
+      printInfo(1,"skipped (reason: %s)\n",Errors_getText(error));
+      logMessage(LOG_TYPE_ENTRY_ACCESS_DENIED,"access denied '%s'\n",String_cString(linkName));
+      SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+      {
+        createInfo->statusInfo.errorEntries++;
+      }
+      return ERROR_NONE;
+    }
+    else
+    {
+      printInfo(1,"FAIL\n");
+      printError("Cannot get extended attributes for '%s' (error: %s)\n",
                  String_cString(linkName),
                  Errors_getText(error)
                 );
@@ -4049,7 +4116,7 @@ LOCAL Errors storeLinkEntry(CreateInfo   *createInfo,
           createInfo->statusInfo.errorBytes += (uint64)fileInfo.size;
         }
         String_delete(fileName);
-        File_doneFileInfo(&fileInfo);
+        File_doneExtendedAttributes(&fileExtendedAttributeList);
         return ERROR_NONE;
       }
       else
@@ -4060,7 +4127,7 @@ LOCAL Errors storeLinkEntry(CreateInfo   *createInfo,
                    Errors_getText(error)
                   );
         String_delete(fileName);
-        File_doneFileInfo(&fileInfo);
+        File_doneExtendedAttributes(&fileExtendedAttributeList);
         return error;
       }
     }
@@ -4070,7 +4137,8 @@ LOCAL Errors storeLinkEntry(CreateInfo   *createInfo,
                                  &createInfo->archiveInfo,
                                  linkName,
                                  fileName,
-                                 &fileInfo
+                                 &fileInfo,
+                                 &fileExtendedAttributeList
                                 );
     if (error != ERROR_NONE)
     {
@@ -4080,7 +4148,7 @@ LOCAL Errors storeLinkEntry(CreateInfo   *createInfo,
                  Errors_getText(error)
                 );
       String_delete(fileName);
-      File_doneFileInfo(&fileInfo);
+      File_doneExtendedAttributes(&fileExtendedAttributeList);
       return error;
     }
 
@@ -4093,7 +4161,7 @@ LOCAL Errors storeLinkEntry(CreateInfo   *createInfo,
                  Errors_getText(error)
                 );
       String_delete(fileName);
-      File_doneFileInfo(&fileInfo);
+      File_doneExtendedAttributes(&fileExtendedAttributeList);
       return error;
     }
 
@@ -4123,7 +4191,7 @@ LOCAL Errors storeLinkEntry(CreateInfo   *createInfo,
   }
 
   // free resources
-  File_doneFileInfo(&fileInfo);
+  File_doneExtendedAttributes(&fileExtendedAttributeList);
 
   // add to incremental list
   if (createInfo->storeIncrementalFileInfoFlag)
@@ -4152,38 +4220,39 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
                                 uint             bufferSize
                                )
 {
-  Errors           error;
-  FileInfo         fileInfo;
-  FileHandle       fileHandle;
-  bool             byteCompressFlag;
-  bool             deltaCompressFlag;
-  ArchiveEntryInfo archiveEntryInfo;
-  SemaphoreLock    semaphoreLock;
-  bool             nameSemaphoreLocked;
-  uint64           entryDoneBytes;
-  ulong            bufferLength;
-  uint64           archiveSize;
-  uint64           archiveBytes;
-  double           compressionRatio;
-  uint             percentageDone;
-  const StringNode *stringNode;
-  String           name;
+  Errors                    error;
+  FileInfo                  fileInfo;
+  FileExtendedAttributeList fileExtendedAttributeList;
+  FileHandle                fileHandle;
+  bool                      byteCompressFlag;
+  bool                      deltaCompressFlag;
+  ArchiveEntryInfo          archiveEntryInfo;
+  SemaphoreLock             semaphoreLock;
+  bool                      nameSemaphoreLocked;
+  uint64                    entryDoneBytes;
+  ulong                     bufferLength;
+  uint64                    archiveSize;
+  uint64                    archiveBytes;
+  double                    compressionRatio;
+  uint                      percentageDone;
+  const StringNode          *stringNode;
+  String                    name;
 
   assert(createInfo != NULL);
   assert(nameList != NULL);
   assert(!StringList_isEmpty(nameList));
   assert(buffer != NULL);
 
-  printInfo(1,"Add '%s'...",String_cString(nameList->head->string));
+  printInfo(1,"Add '%s'...",String_cString(StringList_first(nameList,NULL)));
 
-  // get file info
-  error = File_getFileInfo(&fileInfo,nameList->head->string);
+  // get file info, file extended attributes
+  error = File_getFileInfo(&fileInfo,StringList_first(nameList,NULL));
   if (error != ERROR_NONE)
   {
     if (createInfo->jobOptions->skipUnreadableFlag)
     {
       printInfo(1,"skipped (reason: %s)\n",Errors_getText(error));
-      logMessage(LOG_TYPE_ENTRY_ACCESS_DENIED,"access denied '%s'\n",String_cString(nameList->head->string));
+      logMessage(LOG_TYPE_ENTRY_ACCESS_DENIED,"access denied '%s'\n",String_cString(StringList_first(nameList,NULL)));
       SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
       {
         createInfo->statusInfo.errorEntries += StringList_count(nameList);
@@ -4194,7 +4263,30 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
     {
       printInfo(1,"FAIL\n");
       printError("Cannot get info for '%s' (error: %s)\n",
-                 String_cString(nameList->head->string),
+                 String_cString(StringList_first(nameList,NULL)),
+                 Errors_getText(error)
+                );
+      return error;
+    }
+  }
+  error = File_getExtendedAttributes(&fileExtendedAttributeList,StringList_first(nameList,NULL));
+  if (error != ERROR_NONE)
+  {
+    if (createInfo->jobOptions->skipUnreadableFlag)
+    {
+      printInfo(1,"skipped (reason: %s)\n",Errors_getText(error));
+      logMessage(LOG_TYPE_ENTRY_ACCESS_DENIED,"access denied '%s'\n",String_cString(StringList_first(nameList,NULL)));
+      SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+      {
+        createInfo->statusInfo.errorEntries++;
+      }
+      return ERROR_NONE;
+    }
+    else
+    {
+      printInfo(1,"FAIL\n");
+      printError("Cannot get extended attributes for '%s' (error: %s)\n",
+                 String_cString(StringList_first(nameList,NULL)),
                  Errors_getText(error)
                 );
       return error;
@@ -4202,29 +4294,29 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
   }
 
   // open file
-  error = File_open(&fileHandle,nameList->head->string,FILE_OPEN_READ|FILE_OPEN_NO_CACHE);
+  error = File_open(&fileHandle,StringList_first(nameList,NULL),FILE_OPEN_READ|FILE_OPEN_NO_CACHE);
   if (error != ERROR_NONE)
   {
     if (createInfo->jobOptions->skipUnreadableFlag)
     {
       printInfo(1,"skipped (reason: %s)\n",Errors_getText(error));
-      logMessage(LOG_TYPE_ENTRY_ACCESS_DENIED,"open file failed '%s'\n",String_cString(nameList->head->string));
+      logMessage(LOG_TYPE_ENTRY_ACCESS_DENIED,"open file failed '%s'\n",String_cString(StringList_first(nameList,NULL)));
       SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
       {
         createInfo->statusInfo.errorEntries += StringList_count(nameList);
         createInfo->statusInfo.errorBytes += (uint64)StringList_count(nameList)*(uint64)fileInfo.size;
       }
-      File_doneFileInfo(&fileInfo);
+      File_doneExtendedAttributes(&fileExtendedAttributeList);
       return ERROR_NONE;
     }
     else
     {
       printInfo(1,"FAIL\n");
       printError("Cannot open file '%s' (error: %s)\n",
-                 String_cString(nameList->head->string),
+                 String_cString(StringList_first(nameList,NULL)),
                  Errors_getText(error)
                 );
-      File_doneFileInfo(&fileInfo);
+      File_doneExtendedAttributes(&fileExtendedAttributeList);
       return error;
     }
   }
@@ -4243,6 +4335,7 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
                                      &createInfo->archiveInfo,
                                      nameList,
                                      &fileInfo,
+                                     &fileExtendedAttributeList,
                                      deltaCompressFlag,
                                      byteCompressFlag
                                     );
@@ -4250,11 +4343,11 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
     {
       printInfo(1,"FAIL\n");
       printError("Cannot create new archive file entry '%s' (error: %s)\n",
-                 String_cString(nameList->head->string),
+                 String_cString(StringList_first(nameList,NULL)),
                  Errors_getText(error)
                 );
       (void)File_close(&fileHandle);
-      File_doneFileInfo(&fileInfo);
+      File_doneExtendedAttributes(&fileExtendedAttributeList);
       return error;
     }
 
@@ -4264,7 +4357,7 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
     {
       SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
       {
-        String_set(createInfo->statusInfo.name,nameList->head->string);
+        String_set(createInfo->statusInfo.name,StringList_first(nameList,NULL));
         createInfo->statusInfo.entryDoneBytes  = 0LL;
         createInfo->statusInfo.entryTotalBytes = fileInfo.size;
         updateStatusInfo(createInfo);
@@ -4302,7 +4395,7 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
               createInfo->statusInfo.doneBytes += (uint64)StringList_count(nameList)*(uint64)bufferLength;
               if (nameSemaphoreLocked)
               {
-                String_set(createInfo->statusInfo.name,nameList->head->string);
+                String_set(createInfo->statusInfo.name,StringList_first(nameList,NULL));
                 createInfo->statusInfo.entryDoneBytes  = entryDoneBytes;
                 createInfo->statusInfo.entryTotalBytes = fileInfo.size;
               }
@@ -4334,7 +4427,7 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
       Archive_closeEntry(&archiveEntryInfo);
       if (nameSemaphoreLocked) Semaphore_unlock(&createInfo->statusInfoNameLock);
       (void)File_close(&fileHandle);
-      File_doneFileInfo(&fileInfo);
+      File_doneExtendedAttributes(&fileExtendedAttributeList);
       return error;
     }
     if (error != ERROR_NONE)
@@ -4346,7 +4439,7 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
       Archive_closeEntry(&archiveEntryInfo);
       if (nameSemaphoreLocked) Semaphore_unlock(&createInfo->statusInfoNameLock);
       (void)File_close(&fileHandle);
-      File_doneFileInfo(&fileInfo);
+      File_doneExtendedAttributes(&fileExtendedAttributeList);
       return error;
     }
     printInfo(2,"    \b\b\b\b");
@@ -4361,7 +4454,6 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
                 );
       if (nameSemaphoreLocked) Semaphore_unlock(&createInfo->statusInfoNameLock);
       (void)File_close(&fileHandle);
-      File_doneFileInfo(&fileInfo);
       return error;
     }
 
@@ -4369,7 +4461,7 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
     if (nameSemaphoreLocked) Semaphore_unlock(&createInfo->statusInfoNameLock);
 
     // close file
-    File_close(&fileHandle);
+    (void)File_close(&fileHandle);
 
     // get compression ratio
     if (archiveEntryInfo.hardLink.chunkHardLinkData.fragmentSize > 0LL)
@@ -4387,7 +4479,7 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
                 fileInfo.size,
                 compressionRatio
                );
-      logMessage(LOG_TYPE_ENTRY_OK,"added '%s'\n",String_cString(nameList->head->string));
+      logMessage(LOG_TYPE_ENTRY_OK,"added '%s'\n",String_cString(StringList_first(nameList,NULL)));
     }
     else
     {
@@ -4407,7 +4499,7 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
   }
 
   // free resources
-  File_doneFileInfo(&fileInfo);
+  File_doneExtendedAttributes(&fileExtendedAttributeList);
 
   // add to incremental list
   if (createInfo->storeIncrementalFileInfoFlag)
@@ -4435,10 +4527,11 @@ LOCAL Errors storeSpecialEntry(CreateInfo   *createInfo,
                                const String fileName
                               )
 {
-  Errors           error;
-  SemaphoreLock    semaphoreLock;
-  FileInfo         fileInfo;
-  ArchiveEntryInfo archiveEntryInfo;
+  Errors                    error;
+  FileInfo                  fileInfo;
+  FileExtendedAttributeList fileExtendedAttributeList;
+  ArchiveEntryInfo          archiveEntryInfo;
+  SemaphoreLock             semaphoreLock;
 
   assert(createInfo != NULL);
   assert(createInfo->jobOptions != NULL);
@@ -4446,7 +4539,7 @@ LOCAL Errors storeSpecialEntry(CreateInfo   *createInfo,
 
   printInfo(1,"Add '%s'...",String_cString(fileName));
 
-  // get file info
+  // get file info, file extended attributes
   error = File_getFileInfo(&fileInfo,fileName);
   if (error != ERROR_NONE)
   {
@@ -4470,6 +4563,29 @@ LOCAL Errors storeSpecialEntry(CreateInfo   *createInfo,
       return error;
     }
   }
+  error = File_getExtendedAttributes(&fileExtendedAttributeList,fileName);
+  if (error != ERROR_NONE)
+  {
+    if (createInfo->jobOptions->skipUnreadableFlag)
+    {
+      printInfo(1,"skipped (reason: %s)\n",Errors_getText(error));
+      logMessage(LOG_TYPE_ENTRY_ACCESS_DENIED,"access denied '%s'\n",String_cString(fileName));
+      SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+      {
+        createInfo->statusInfo.errorEntries++;
+      }
+      return ERROR_NONE;
+    }
+    else
+    {
+      printInfo(1,"FAIL\n");
+      printError("Cannot get extended attributes for '%s' (error: %s)\n",
+                 String_cString(fileName),
+                 Errors_getText(error)
+                );
+      return error;
+    }
+  }
 
   if (!createInfo->jobOptions->noStorageFlag)
   {
@@ -4477,7 +4593,8 @@ LOCAL Errors storeSpecialEntry(CreateInfo   *createInfo,
     error = Archive_newSpecialEntry(&archiveEntryInfo,
                                     &createInfo->archiveInfo,
                                     fileName,
-                                    &fileInfo
+                                    &fileInfo,
+                                    &fileExtendedAttributeList
                                    );
     if (error != ERROR_NONE)
     {
@@ -4486,7 +4603,7 @@ LOCAL Errors storeSpecialEntry(CreateInfo   *createInfo,
                  String_cString(fileName),
                  Errors_getText(error)
                 );
-      File_doneFileInfo(&fileInfo);
+      File_doneExtendedAttributes(&fileExtendedAttributeList);
       return error;
     }
 
@@ -4498,7 +4615,6 @@ LOCAL Errors storeSpecialEntry(CreateInfo   *createInfo,
       printError("Cannot close archive special entry (error: %s)!\n",
                  Errors_getText(error)
                 );
-      File_doneFileInfo(&fileInfo);
       return error;
     }
 
@@ -4525,7 +4641,7 @@ LOCAL Errors storeSpecialEntry(CreateInfo   *createInfo,
   }
 
   // free resources
-  File_doneFileInfo(&fileInfo);
+  File_doneExtendedAttributes(&fileExtendedAttributeList);
 
   // add to incremental list
   if (createInfo->storeIncrementalFileInfoFlag)

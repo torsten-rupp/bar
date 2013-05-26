@@ -342,26 +342,29 @@ Errors Command_restore(const StringList                *storageNameList,
       {
         case ARCHIVE_ENTRY_TYPE_FILE:
           {
-            String       fileName;
-            FileInfo     fileInfo;
-            uint64       fragmentOffset,fragmentSize;
-            String       destinationFileName;
-            String       parentDirectoryName;
-//            FileInfo         localFileInfo;
-            FileHandle   fileHandle;
-            uint64       length;
-            ulong        n;
+            String                    fileName;
+            FileExtendedAttributeList fileExtendedAttributeList;
+            FileInfo                  fileInfo;
+            uint64                    fragmentOffset,fragmentSize;
+            String                    destinationFileName;
+            String                    parentDirectoryName;
+//            FileInfo                      localFileInfo;
+            FileHandle                fileHandle;
+            uint64                    length;
+            ulong                     n;
 
             // read file
             fileName = String_new();
+            File_initExtendedAttributes(&fileExtendedAttributeList);
             error = Archive_readFileEntry(&archiveEntryInfo,
                                           &archiveInfo,
-                                          NULL,
-                                          NULL,
-                                          NULL,
-                                          NULL,
+                                          NULL,  // deltaCompressAlgorithm
+                                          NULL,  // byteCompressAlgorithm
+                                          NULL,  // cryptAlgorithm
+                                          NULL,  // cryptType
                                           fileName,
                                           &fileInfo,
+                                          &fileExtendedAttributeList,
                                           NULL,  // deltaSourceName
                                           NULL,  // deltaSourceSize
                                           &fragmentOffset,
@@ -422,6 +425,7 @@ Errors Command_restore(const StringList                *storageNameList,
                     printInfo(1,"  Restore file '%s'...skipped (file exists)\n",String_cString(destinationFileName));
                     String_delete(destinationFileName);
                     Archive_closeEntry(&archiveEntryInfo);
+                    File_doneExtendedAttributes(&fileExtendedAttributeList);
                     String_delete(fileName);
                     continue;
                   }
@@ -458,6 +462,7 @@ Errors Command_restore(const StringList                *storageNameList,
                     String_delete(parentDirectoryName);
                     String_delete(destinationFileName);
                     Archive_closeEntry(&archiveEntryInfo);
+                    File_doneExtendedAttributes(&fileExtendedAttributeList);
                     String_delete(fileName);
                     if (restoreInfo.failError == ERROR_NONE) restoreInfo.failError = error;
                     continue;
@@ -480,6 +485,7 @@ Errors Command_restore(const StringList                *storageNameList,
                       String_delete(parentDirectoryName);
                       String_delete(destinationFileName);
                       Archive_closeEntry(&archiveEntryInfo);
+                      File_doneExtendedAttributes(&fileExtendedAttributeList);
                       String_delete(fileName);
                       if (restoreInfo.failError == ERROR_NONE) restoreInfo.failError = error;
                       continue;
@@ -509,6 +515,7 @@ Errors Command_restore(const StringList                *storageNameList,
                             );
                   String_delete(destinationFileName);
                   Archive_closeEntry(&archiveEntryInfo);
+                  File_doneExtendedAttributes(&fileExtendedAttributeList);
                   String_delete(fileName);
                   if (jobOptions->stopOnErrorFlag) restoreInfo.failError = error;
                   continue;
@@ -526,6 +533,7 @@ Errors Command_restore(const StringList                *storageNameList,
                   File_close(&fileHandle);
                   String_delete(destinationFileName);
                   Archive_closeEntry(&archiveEntryInfo);
+                  File_doneExtendedAttributes(&fileExtendedAttributeList);
                   String_delete(fileName);
                   if (jobOptions->stopOnErrorFlag) restoreInfo.failError = error;
                   continue;
@@ -586,6 +594,7 @@ Errors Command_restore(const StringList                *storageNameList,
                 }
                 String_delete(destinationFileName);
                 Archive_closeEntry(&archiveEntryInfo);
+                File_doneExtendedAttributes(&fileExtendedAttributeList);
                 String_delete(fileName);
                 continue;
               }
@@ -598,6 +607,7 @@ Errors Command_restore(const StringList                *storageNameList,
                 }
                 String_delete(destinationFileName);
                 Archive_closeEntry(&archiveEntryInfo);
+                File_doneExtendedAttributes(&fileExtendedAttributeList);
                 String_delete(fileName);
                 continue;
               }
@@ -644,6 +654,7 @@ Errors Command_restore(const StringList                *storageNameList,
                                 );
                       String_delete(destinationFileName);
                       Archive_closeEntry(&archiveEntryInfo);
+                      File_doneExtendedAttributes(&fileExtendedAttributeList);
                       String_delete(fileName);
                       restoreInfo.failError = error;
                       continue;
@@ -707,6 +718,7 @@ Errors Command_restore(const StringList                *storageNameList,
             }
 
             // free resources
+            File_doneExtendedAttributes(&fileExtendedAttributeList);
             String_delete(fileName);
           }
           break;
@@ -732,10 +744,10 @@ Errors Command_restore(const StringList                *storageNameList,
             deviceName = String_new();
             error = Archive_readImageEntry(&archiveEntryInfo,
                                            &archiveInfo,
-                                           NULL,
-                                           NULL,
-                                           NULL,
-                                           NULL,
+                                           NULL,  // deltaCompressAlgorithm
+                                           NULL,  // byteCompressAlgorithm
+                                           NULL,  // cryptAlgorithm
+                                           NULL,  // cryptType
                                            deviceName,
                                            &deviceInfo,
                                            NULL,  // deltaSourceName
@@ -1163,19 +1175,22 @@ Errors Command_restore(const StringList                *storageNameList,
           break;
         case ARCHIVE_ENTRY_TYPE_DIRECTORY:
           {
-            String   directoryName;
-            FileInfo fileInfo;
-            String   destinationFileName;
+            String                    directoryName;
+            FileExtendedAttributeList fileExtendedAttributeList;
+            FileInfo                  fileInfo;
+            String                    destinationFileName;
 //            FileInfo localFileInfo;
 
             // read directory
             directoryName = String_new();
+            File_initExtendedAttributes(&fileExtendedAttributeList);
             error = Archive_readDirectoryEntry(&archiveEntryInfo,
                                                &archiveInfo,
-                                               NULL,
-                                               NULL,
+                                               NULL,  // cryptAlgorithm
+                                               NULL,  // cryptType
                                                directoryName,
-                                               &fileInfo
+                                               &fileInfo,
+                                               &fileExtendedAttributeList
                                               );
             if (error != ERROR_NONE)
             {
@@ -1214,6 +1229,7 @@ Errors Command_restore(const StringList                *storageNameList,
                          );
                 String_delete(destinationFileName);
                 Archive_closeEntry(&archiveEntryInfo);
+                File_doneExtendedAttributes(&fileExtendedAttributeList);
                 String_delete(directoryName);
                 continue;
               }
@@ -1237,6 +1253,7 @@ Errors Command_restore(const StringList                *storageNameList,
                             );
                   String_delete(destinationFileName);
                   Archive_closeEntry(&archiveEntryInfo);
+                  File_doneExtendedAttributes(&fileExtendedAttributeList);
                   String_delete(directoryName);
                   if (jobOptions->stopOnErrorFlag)
                   {
@@ -1263,6 +1280,7 @@ Errors Command_restore(const StringList                *storageNameList,
                               );
                     String_delete(destinationFileName);
                     Archive_closeEntry(&archiveEntryInfo);
+                    File_doneExtendedAttributes(&fileExtendedAttributeList);
                     String_delete(directoryName);
                     if (jobOptions->stopOnErrorFlag)
                     {
@@ -1312,28 +1330,32 @@ Errors Command_restore(const StringList                *storageNameList,
             }
 
             // free resources
+            File_doneExtendedAttributes(&fileExtendedAttributeList);
             String_delete(directoryName);
           }
           break;
         case ARCHIVE_ENTRY_TYPE_LINK:
           {
-            String   linkName;
-            String   fileName;
-            FileInfo fileInfo;
-            String   destinationFileName;
-            String   parentDirectoryName;
+            String                    linkName;
+            String                    fileName;
+            FileExtendedAttributeList fileExtendedAttributeList;
+            FileInfo                  fileInfo;
+            String                    destinationFileName;
+            String                    parentDirectoryName;
 //            FileInfo localFileInfo;
 
             // read link
             linkName = String_new();
             fileName = String_new();
+            File_initExtendedAttributes(&fileExtendedAttributeList);
             error = Archive_readLinkEntry(&archiveEntryInfo,
                                           &archiveInfo,
-                                          NULL,
-                                          NULL,
+                                          NULL,  // cryptAlgorithm
+                                          NULL,  // cryptType
                                           linkName,
                                           fileName,
-                                          &fileInfo
+                                          &fileInfo,
+                                          &fileExtendedAttributeList
                                          );
             if (error != ERROR_NONE)
             {
@@ -1341,6 +1363,7 @@ Errors Command_restore(const StringList                *storageNameList,
                          String_cString(printableStorageName),
                          Errors_getText(error)
                         );
+              File_doneExtendedAttributes(&fileExtendedAttributeList);
               String_delete(fileName);
               String_delete(linkName);
               if (restoreInfo.failError == ERROR_NONE) restoreInfo.failError = error;
@@ -1385,6 +1408,7 @@ Errors Command_restore(const StringList                *storageNameList,
                     String_delete(parentDirectoryName);
                     String_delete(destinationFileName);
                     Archive_closeEntry(&archiveEntryInfo);
+                    File_doneExtendedAttributes(&fileExtendedAttributeList);
                     String_delete(fileName);
                     String_delete(linkName);
                     if (restoreInfo.failError == ERROR_NONE) restoreInfo.failError = error;
@@ -1408,7 +1432,9 @@ Errors Command_restore(const StringList                *storageNameList,
                       String_delete(parentDirectoryName);
                       String_delete(destinationFileName);
                       Archive_closeEntry(&archiveEntryInfo);
+                      File_doneExtendedAttributes(&fileExtendedAttributeList);
                       String_delete(fileName);
+                      String_delete(linkName);
                       if (restoreInfo.failError == ERROR_NONE) restoreInfo.failError = error;
                       continue;
                     }
@@ -1433,6 +1459,7 @@ Errors Command_restore(const StringList                *storageNameList,
                          );
                 String_delete(destinationFileName);
                 Archive_closeEntry(&archiveEntryInfo);
+                File_doneExtendedAttributes(&fileExtendedAttributeList);
                 String_delete(fileName);
                 String_delete(linkName);
                 if (jobOptions->stopOnErrorFlag)
@@ -1458,6 +1485,7 @@ Errors Command_restore(const StringList                *storageNameList,
                             );
                   String_delete(destinationFileName);
                   Archive_closeEntry(&archiveEntryInfo);
+                  File_doneExtendedAttributes(&fileExtendedAttributeList);
                   String_delete(fileName);
                   String_delete(linkName);
                   if (jobOptions->stopOnErrorFlag)
@@ -1485,6 +1513,7 @@ Errors Command_restore(const StringList                *storageNameList,
                               );
                     String_delete(destinationFileName);
                     Archive_closeEntry(&archiveEntryInfo);
+                    File_doneExtendedAttributes(&fileExtendedAttributeList);
                     String_delete(fileName);
                     String_delete(linkName);
                     if (jobOptions->stopOnErrorFlag)
@@ -1535,36 +1564,40 @@ Errors Command_restore(const StringList                *storageNameList,
             }
 
             // free resources
+            File_doneExtendedAttributes(&fileExtendedAttributeList);
             String_delete(fileName);
             String_delete(linkName);
           }
           break;
         case ARCHIVE_ENTRY_TYPE_HARDLINK:
           {
-            StringList       fileNameList;
-            FileInfo         fileInfo;
-            uint64           fragmentOffset,fragmentSize;
-            String           hardLinkFileName;
-            String           destinationFileName;
-            bool             restoredDataFlag;
-            const StringNode *stringNode;
-            String           fileName;
-            String           parentDirectoryName;
-//            FileInfo         localFileInfo;
-            FileHandle       fileHandle;
-            uint64           length;
-            ulong            n;
+            StringList                fileNameList;
+            FileExtendedAttributeList fileExtendedAttributeList;
+            FileInfo                  fileInfo;
+            uint64                    fragmentOffset,fragmentSize; 
+            String                    hardLinkFileName;            
+            String                    destinationFileName;         
+            bool                      restoredDataFlag;            
+            const StringNode          *stringNode;                 
+            String                    fileName;                    
+            String                    parentDirectoryName;         
+//            FileInfo                  localFileInfo;             
+            FileHandle                fileHandle;                  
+            uint64                    length;                      
+            ulong                     n;                           
 
             // read hard link
             StringList_init(&fileNameList);
+            File_initExtendedAttributes(&fileExtendedAttributeList);
             error = Archive_readHardLinkEntry(&archiveEntryInfo,
                                               &archiveInfo,
-                                              NULL,
-                                              NULL,
-                                              NULL,
-                                              NULL,
+                                              NULL,  // deltaCompressAlgorithm
+                                              NULL,  // byteCompressAlgorithm
+                                              NULL,  // cryptAlgorithm
+                                              NULL,  // cryptType
                                               &fileNameList,
                                               &fileInfo,
+                                              &fileExtendedAttributeList,
                                               NULL,  // deltaSourceName
                                               NULL,  // deltaSourceSize
                                               &fragmentOffset,
@@ -1951,6 +1984,7 @@ Errors Command_restore(const StringList                *storageNameList,
             if (restoreInfo.failError != ERROR_NONE)
             {
               Archive_closeEntry(&archiveEntryInfo);
+              File_doneExtendedAttributes(&fileExtendedAttributeList);
               StringList_done(&fileNameList);
               continue;
             }
@@ -1963,25 +1997,29 @@ Errors Command_restore(const StringList                *storageNameList,
             }
 
             // free resources
+            File_doneExtendedAttributes(&fileExtendedAttributeList);
             StringList_done(&fileNameList);
           }
           break;
         case ARCHIVE_ENTRY_TYPE_SPECIAL:
           {
-            String   fileName;
-            FileInfo fileInfo;
-            String   destinationFileName;
-            String   parentDirectoryName;
+            String                    fileName;
+            FileExtendedAttributeList fileExtendedAttributeList;
+            FileInfo                  fileInfo;
+            String                    destinationFileName;
+            String                    parentDirectoryName;
 //            FileInfo localFileInfo;
 
             // read special device
             fileName = String_new();
+            File_initExtendedAttributes(&fileExtendedAttributeList);
             error = Archive_readSpecialEntry(&archiveEntryInfo,
                                              &archiveInfo,
-                                             NULL,
-                                             NULL,
+                                             NULL,  // cryptAlgorithm
+                                             NULL,  // cryptType
                                              fileName,
-                                             &fileInfo
+                                             &fileInfo,
+                                             &fileExtendedAttributeList
                                             );
             if (error != ERROR_NONE)
             {
@@ -2032,6 +2070,7 @@ Errors Command_restore(const StringList                *storageNameList,
                     String_delete(parentDirectoryName);
                     String_delete(destinationFileName);
                     Archive_closeEntry(&archiveEntryInfo);
+                    File_doneExtendedAttributes(&fileExtendedAttributeList);
                     String_delete(fileName);
                     if (restoreInfo.failError == ERROR_NONE) restoreInfo.failError = error;
                     continue;
@@ -2054,6 +2093,7 @@ Errors Command_restore(const StringList                *storageNameList,
                       String_delete(parentDirectoryName);
                       String_delete(destinationFileName);
                       Archive_closeEntry(&archiveEntryInfo);
+                      File_doneExtendedAttributes(&fileExtendedAttributeList);
                       String_delete(fileName);
                       if (restoreInfo.failError == ERROR_NONE) restoreInfo.failError = error;
                       continue;
@@ -2079,6 +2119,7 @@ Errors Command_restore(const StringList                *storageNameList,
                          );
                 String_delete(destinationFileName);
                 Archive_closeEntry(&archiveEntryInfo);
+                File_doneExtendedAttributes(&fileExtendedAttributeList);
                 String_delete(fileName);
                 if (jobOptions->stopOnErrorFlag)
                 {
@@ -2106,6 +2147,7 @@ Errors Command_restore(const StringList                *storageNameList,
                             );
                   String_delete(destinationFileName);
                   Archive_closeEntry(&archiveEntryInfo);
+                  File_doneExtendedAttributes(&fileExtendedAttributeList);
                   String_delete(fileName);
                   if (jobOptions->stopOnErrorFlag)
                   {
@@ -2132,6 +2174,7 @@ Errors Command_restore(const StringList                *storageNameList,
                               );
                     String_delete(destinationFileName);
                     Archive_closeEntry(&archiveEntryInfo);
+                    File_doneExtendedAttributes(&fileExtendedAttributeList);
                     String_delete(fileName);
                     if (jobOptions->stopOnErrorFlag)
                     {
@@ -2181,6 +2224,7 @@ Errors Command_restore(const StringList                *storageNameList,
             }
 
             // free resources
+            File_doneExtendedAttributes(&fileExtendedAttributeList);
             String_delete(fileName);
           }
           break;

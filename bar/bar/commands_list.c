@@ -1691,6 +1691,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                                                 &cryptType,
                                                 fileName,
                                                 &fileInfo,
+                                                NULL,  // fileExtendedAttributeList
                                                 deltaSourceName,
                                                 &delteSourceSize,
                                                 &fragmentOffset,
@@ -1884,7 +1885,8 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                                                      &cryptAlgorithm,
                                                      &cryptType,
                                                      directoryName,
-                                                     &fileInfo
+                                                     &fileInfo,
+                                                     NULL   // fileExtendedAttributeList
                                                     );
                   if (error != ERROR_NONE)
                   {
@@ -1958,7 +1960,8 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                                                 &cryptType,
                                                 linkName,
                                                 fileName,
-                                                &fileInfo
+                                                &fileInfo,
+                                                NULL   // fileExtendedAttributeList
                                                );
                   if (error != ERROR_NONE)
                   {
@@ -2042,6 +2045,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                                                     &cryptType,
                                                     &fileNameList,
                                                     &fileInfo,
+                                                    NULL,  // fileExtendedAttributeList
                                                     deltaSourceName,
                                                     &deltaSourceSize,
                                                     &fragmentOffset,
@@ -2137,7 +2141,8 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                                                    &cryptAlgorithm,
                                                    &cryptType,
                                                    fileName,
-                                                   &fileInfo
+                                                   &fileInfo,
+                                                   NULL   // fileExtendedAttributeList
                                                   );
                   if (error != ERROR_NONE)
                   {
