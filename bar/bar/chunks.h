@@ -27,7 +27,7 @@
 /***************************** Constants *******************************/
 
 // size of chunk header
-#define CHUNK_HEADER_SIZE (4+8)
+#define CHUNK_HEADER_SIZE (4L+8L)
 
 // chunk ids
 #define CHUNK_ID_NONE 0
@@ -52,9 +52,12 @@
 // chunk i/o modes
 typedef enum
 {
-  CHUNK_MODE_UNKNOWN,
-  CHUNK_MODE_WRITE,
+  CHUNK_MODE_NONE,
+
   CHUNK_MODE_READ,
+  CHUNK_MODE_WRITE,
+
+  CHUNK_MODE_UNKNOWN
 } ChunkModes;
 
 // indicate to use data from parent chunk

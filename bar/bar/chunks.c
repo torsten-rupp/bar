@@ -82,8 +82,10 @@ typedef struct
   const ChunkIO *chunkIO;
   void          *chunkIOUserData;
   ulong         bytesRead;
+  ulong         bytesWritten;
 
   const int     *definition;
+  ulong         chunkSize;
   uint          definitionIndex;
   uint          alignment;
   CryptInfo     *cryptInfo;
@@ -112,6 +114,7 @@ typedef struct
 * Input  : chunkIO         - i/o functions
 *          chunkIOUserData - user data for i/o
 *          definition      - chunk definition
+*          chunkSize       - chunk size (in bytes)
 *          alignment       - chunk alignment
 *          cryptInfo       - crypt info
 * Output : -
@@ -120,9 +123,11 @@ typedef struct
 \***********************************************************************/
 
 LOCAL Errors initChunkBuffer(ChunkBuffer   *chunkBuffer,
+                             ChunkModes    chunkMode,
                              const ChunkIO *chunkIO,
                              void          *chunkIOUserData,
                              const int     *definition,
+                             ulong         chunkSize,
                              uint          alignment,
                              CryptInfo     *cryptInfo
                             )
@@ -140,8 +145,10 @@ LOCAL Errors initChunkBuffer(ChunkBuffer   *chunkBuffer,
   chunkBuffer->chunkIO         = chunkIO;
   chunkBuffer->chunkIOUserData = chunkIOUserData;
   chunkBuffer->bytesRead       = 0L;
+  chunkBuffer->bytesWritten    = 0L;
 
   chunkBuffer->definition      = definition;
+  chunkBuffer->chunkSize       = chunkSize;
   chunkBuffer->definitionIndex = 0;
   chunkBuffer->alignment       = alignment;
   chunkBuffer->cryptInfo       = cryptInfo;
@@ -150,117 +157,140 @@ LOCAL Errors initChunkBuffer(ChunkBuffer   *chunkBuffer,
   chunkBuffer->bufferSize      = 0L;
   chunkBuffer->bufferIndex     = 0L;
 
-  // get aligned max. data length which can be read initialy
-  n        = 0;
-  i        = 0;
-  doneFlag = FALSE;
-  while (   (definition[i] != 0)
-         && !doneFlag
-        )
+  switch (chunkMode)
   {
-    switch (definition[i+0])
-    {
-      case CHUNK_DATATYPE_BYTE:
-      case CHUNK_DATATYPE_UINT8:
-      case CHUNK_DATATYPE_INT8:
-        n += 1L;
-        i += 2;
-        break;
-      case CHUNK_DATATYPE_UINT16:
-      case CHUNK_DATATYPE_INT16:
-        n += 2L;
-        i += 2;
-        break;
-      case CHUNK_DATATYPE_UINT32:
-      case CHUNK_DATATYPE_INT32:
-        n += 4L;
-        i += 2;
-        break;
-      case CHUNK_DATATYPE_UINT64:
-      case CHUNK_DATATYPE_INT64:
-        n += 8L;
-        i += 2;
-        break;
-      case CHUNK_DATATYPE_STRING:
-        n += 2L;
-        doneFlag = TRUE;
-        i += 2;
-        break;
+    case CHUNK_MODE_READ:
+      // get aligned max. data length which can be read initialy
+      n        = 0;
+      i        = 0;
+      doneFlag = FALSE;
+      while (   (definition[i] != 0)
+             && !doneFlag
+            )
+      {
+        switch (definition[i+0])
+        {
+          case CHUNK_DATATYPE_BYTE:
+          case CHUNK_DATATYPE_UINT8:
+          case CHUNK_DATATYPE_INT8:
+            n += 1L;
+            i += 2;
+            break;
+          case CHUNK_DATATYPE_UINT16:
+          case CHUNK_DATATYPE_INT16:
+            n += 2L;
+            i += 2;
+            break;
+          case CHUNK_DATATYPE_UINT32:
+          case CHUNK_DATATYPE_INT32:
+            n += 4L;
+            i += 2;
+            break;
+          case CHUNK_DATATYPE_UINT64:
+          case CHUNK_DATATYPE_INT64:
+            n += 8L;
+            i += 2;
+            break;
+          case CHUNK_DATATYPE_STRING:
+            n += 2L;
+            doneFlag = TRUE;
+            i += 2;
+            break;
 
-      case CHUNK_DATATYPE_BYTE|CHUNK_DATATYPE_ARRAY:
-      case CHUNK_DATATYPE_UINT8|CHUNK_DATATYPE_ARRAY:
-      case CHUNK_DATATYPE_INT8|CHUNK_DATATYPE_ARRAY:
-      case CHUNK_DATATYPE_UINT16|CHUNK_DATATYPE_ARRAY:
-      case CHUNK_DATATYPE_INT16|CHUNK_DATATYPE_ARRAY:
-      case CHUNK_DATATYPE_UINT32|CHUNK_DATATYPE_ARRAY:
-      case CHUNK_DATATYPE_INT32|CHUNK_DATATYPE_ARRAY:
-      case CHUNK_DATATYPE_UINT64|CHUNK_DATATYPE_ARRAY:
-      case CHUNK_DATATYPE_INT64|CHUNK_DATATYPE_ARRAY:
-        n += 2L;
-        doneFlag = TRUE;
-        i += 3;
-        break;
-      case CHUNK_DATATYPE_STRING|CHUNK_DATATYPE_ARRAY:
-        n += 2L+2L;
-        doneFlag = TRUE;
-        i += 3;
-        break;
+          case CHUNK_DATATYPE_BYTE|CHUNK_DATATYPE_ARRAY:
+          case CHUNK_DATATYPE_UINT8|CHUNK_DATATYPE_ARRAY:
+          case CHUNK_DATATYPE_INT8|CHUNK_DATATYPE_ARRAY:
+          case CHUNK_DATATYPE_UINT16|CHUNK_DATATYPE_ARRAY:
+          case CHUNK_DATATYPE_INT16|CHUNK_DATATYPE_ARRAY:
+          case CHUNK_DATATYPE_UINT32|CHUNK_DATATYPE_ARRAY:
+          case CHUNK_DATATYPE_INT32|CHUNK_DATATYPE_ARRAY:
+          case CHUNK_DATATYPE_UINT64|CHUNK_DATATYPE_ARRAY:
+          case CHUNK_DATATYPE_INT64|CHUNK_DATATYPE_ARRAY:
+            n += 2L;
+            doneFlag = TRUE;
+            i += 3;
+            break;
+          case CHUNK_DATATYPE_STRING|CHUNK_DATATYPE_ARRAY:
+            n += 2L+2L;
+            doneFlag = TRUE;
+            i += 3;
+            break;
 
-      case CHUNK_DATATYPE_CRC32:
-        n += 4L;
-        i += 2;
-        break;
+          case CHUNK_DATATYPE_CRC32:
+            n += 4L;
+            i += 2;
+            break;
 
-      case CHUNK_DATATYPE_DATA:
-        doneFlag = TRUE;
-        i += 2;
-        break;
+          case CHUNK_DATATYPE_DATA:
+            doneFlag = TRUE;
+            i += 2;
+            break;
 
+          #ifndef NDEBUG
+            default:
+              HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+              break; /* not reached */
+          #endif /* NDEBUG */
+        }
+      }
+      n = ALIGN(n,alignment);
+      if ((chunkBuffer->bytesRead+n) > chunkSize)
+      {
+        return ERROR_INVALID_CHUNK_SIZE;
+      }
+
+      // allocate initial buffer size
+      chunkBuffer->bufferSize = ALIGN(n,1024);
+      chunkBuffer->buffer = malloc(chunkBuffer->bufferSize);
+      if (chunkBuffer->buffer == NULL)
+      {
+        return ERROR_INSUFFICIENT_MEMORY;
+      }
+
+      // read initial data
+      error = chunkIO->read(chunkIOUserData,
+                            chunkBuffer->buffer,
+                            n,
+                            NULL
+                           );
+      if (error != ERROR_NONE)
+      {
+        free(chunkBuffer->buffer);
+        return error;
+      }
+      chunkBuffer->bytesRead += n;
+    //fprintf(stderr,"%s, %d: read:\n",__FILE__,__LINE__); debugDumpMemory(FALSE,chunkBuffer->buffer,n);
+
+      // decrypt initial data
+      if (cryptInfo != NULL)
+      {
+    // NYI ???: seed value?
+        Crypt_reset(cryptInfo,0);
+        error = Crypt_decrypt(cryptInfo,chunkBuffer->buffer,n);
+        if (error != ERROR_NONE)
+        {
+          free(chunkBuffer->buffer);
+          return error;
+        }
+      }
+      chunkBuffer->bufferLength += n;
+    //fprintf(stderr,"%s, %d: read decrypted:\n",__FILE__,__LINE__); debugDumpMemory(FALSE,chunkBuffer->buffer,n);
+      break;
+    case CHUNK_MODE_WRITE:
+      // allocate initial buffer size
+      chunkBuffer->bufferSize = 1024;
+      chunkBuffer->buffer = malloc(chunkBuffer->bufferSize);
+      if (chunkBuffer->buffer == NULL)
+      {
+        return ERROR_INSUFFICIENT_MEMORY;
+      }
+      break;
+    default:
       #ifndef NDEBUG
-        default:
-          HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-          break; /* not reached */
+        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
       #endif /* NDEBUG */
-    }
+      break; /* not reached */
   }
-  n = ALIGN(n,alignment);
-
-  // allocate initial buffer size
-  chunkBuffer->bufferSize = ALIGN(n,1024);
-  chunkBuffer->buffer = malloc(chunkBuffer->bufferSize);
-  if (chunkBuffer->buffer == NULL)
-  {
-    return ERROR_INSUFFICIENT_MEMORY;
-  }
-
-  // read initial data
-  error = chunkIO->read(chunkIOUserData,
-                        chunkBuffer->buffer,
-                        n,
-                        NULL
-                       );
-  if (error != ERROR_NONE)
-  {
-    free(chunkBuffer->buffer);
-    return error;
-  }
-  chunkBuffer->bytesRead += n;
-//fprintf(stderr,"%s, %d: read:\n",__FILE__,__LINE__); debugDumpMemory(FALSE,chunkBuffer->buffer,n);
-
-  // decrypt initial data
-  if (cryptInfo != NULL)
-  {
-// NYI ???: seed value?
-    Crypt_reset(cryptInfo,0);
-    error = Crypt_decrypt(cryptInfo,chunkBuffer->buffer,n);
-    if (error != ERROR_NONE)
-    {
-      free(chunkBuffer->buffer);
-      return error;
-    }
-  }
-  chunkBuffer->bufferLength += n;
-//fprintf(stderr,"%s, %d: read decrypted:\n",__FILE__,__LINE__); debugDumpMemory(FALSE,chunkBuffer->buffer,n);
 
   DEBUG_ADD_RESOURCE_TRACE("chunk buffer",chunkBuffer);
 
@@ -296,7 +326,7 @@ LOCAL void doneChunkBuffer(ChunkBuffer *chunkBuffer)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors getChunkBuffer(ChunkBuffer *chunkBuffer, void **p, ulong size)
+LOCAL Errors getChunkBuffer(ChunkBuffer *chunkBuffer, byte **p, ulong size)
 {
   ulong  n;
   Errors error;
@@ -310,6 +340,10 @@ LOCAL Errors getChunkBuffer(ChunkBuffer *chunkBuffer, void **p, ulong size)
   {
     // calculate number of data bytes to append
     n = ALIGN((chunkBuffer->bufferIndex+size)-chunkBuffer->bufferLength,chunkBuffer->alignment);
+    if ((chunkBuffer->bytesRead+n) > chunkBuffer->chunkSize)
+    {
+      return ERROR_INVALID_CHUNK_SIZE;
+    }
 
     // increase buffer size if required
     if ((chunkBuffer->bufferLength+n) > chunkBuffer->bufferSize)
@@ -320,6 +354,7 @@ LOCAL Errors getChunkBuffer(ChunkBuffer *chunkBuffer, void **p, ulong size)
       {
         return ERROR_INSUFFICIENT_MEMORY;
       }
+      memset(&chunkBuffer->buffer[chunkBuffer->bufferLength],0,chunkBuffer->bufferSize-chunkBuffer->bufferLength);
     }
 
     // read data
@@ -357,6 +392,74 @@ LOCAL Errors getChunkBuffer(ChunkBuffer *chunkBuffer, void **p, ulong size)
   // get data
   (*p) = &chunkBuffer->buffer[chunkBuffer->bufferIndex];
   chunkBuffer->bufferIndex += size;
+
+  return ERROR_NONE;
+}
+
+LOCAL Errors putChunkBuffer(ChunkBuffer *chunkBuffer, void *p, ulong size)
+{
+  assert(chunkBuffer != NULL);
+  assert(chunkBuffer->chunkIO != NULL);
+  assert(chunkBuffer->chunkIO->read != NULL);
+
+  // increase buffer size if required
+  if ((chunkBuffer->bufferLength+size) > chunkBuffer->bufferSize)
+  {
+    chunkBuffer->bufferSize = ALIGN(ALIGN(chunkBuffer->bufferLength+size,chunkBuffer->alignment),1024);
+    chunkBuffer->buffer = realloc(chunkBuffer->buffer,chunkBuffer->bufferSize);
+    if (chunkBuffer->buffer == NULL)
+    {
+      return ERROR_INSUFFICIENT_MEMORY;
+    }
+    memset(&chunkBuffer->buffer[chunkBuffer->bufferLength],0,chunkBuffer->bufferSize-chunkBuffer->bufferLength);
+  }
+
+  // put data
+  memcpy(&chunkBuffer->buffer[chunkBuffer->bufferLength],p,size);
+  chunkBuffer->bufferLength += size;
+
+  return ERROR_NONE;
+}
+
+LOCAL Errors flushChunkBuffer(ChunkBuffer *chunkBuffer)
+{
+  ulong  n;
+  Errors error;
+
+  assert(chunkBuffer != NULL);
+  assert(chunkBuffer->chunkIO != NULL);
+  assert(chunkBuffer->chunkIO->write != NULL);
+
+  // calculate data bytes
+  n = ALIGN(chunkBuffer->bufferLength,chunkBuffer->alignment);
+
+  // encrypt data
+//fprintf(stderr,"%s, %d: write:\n",__FILE__,__LINE__); debugDumpMemory(FALSE,chunkBuffer->buffer,ALIGN(chunkBuffer->bufferLength,chunkBuffer->alignment));
+  if (chunkBuffer->cryptInfo != NULL)
+  {
+// NYI ???: seed value?
+    Crypt_reset(chunkBuffer->cryptInfo,0);
+    error = Crypt_encrypt(chunkBuffer->cryptInfo,
+                          chunkBuffer->buffer,
+                          n
+                         );
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
+  }
+
+  // write data
+//fprintf(stderr,"%s, %d: write encrypted:\n",__FILE__,__LINE__); debugDumpMemory(FALSE,chunkBuffer->buffer,ALIGN(chunkBuffer->bufferLength,chunkBuffer->alignment));
+  error = chunkBuffer->chunkIO->write(chunkBuffer->chunkIOUserData,
+                                      chunkBuffer->buffer,
+                                      n
+                                     );
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+  chunkBuffer->bytesWritten += n;
 
   return ERROR_NONE;
 }
@@ -585,7 +688,7 @@ LOCAL Errors doneDefinition(const int  *definition,
 * Input  : chunkIO         - i/o functions
 *          chunkIOUserData - user data for i/o
 *          definition      - chunk definition
-*          size            - chunk size (in bytes)
+*          chunkSize       - size of chunk (in bytes)
 *          alignment       - chunk alignment
 *          cryptInfo       - crypt info
 * Output : chunkData - chunk data
@@ -597,7 +700,7 @@ LOCAL Errors doneDefinition(const int  *definition,
 LOCAL Errors readDefinition(const ChunkIO *chunkIO,
                             void          *chunkIOUserData,
                             const int     *definition,
-                            uint          size,
+                            ulong         chunkSize,
                             uint          alignment,
                             CryptInfo     *cryptInfo,
                             void          *chunkData,
@@ -607,10 +710,9 @@ LOCAL Errors readDefinition(const ChunkIO *chunkIO,
   Errors      error;
   uint64      offset;
   ChunkBuffer chunkBuffer;
+  uint32      crc;
   uint        i;
   byte        *p;
-  ulong       dataLength;
-  uint32      crc;
   char        errorText[64];
 
   assert(chunkIO != NULL);
@@ -632,9 +734,11 @@ LOCAL Errors readDefinition(const ChunkIO *chunkIO,
 
     // init chunk buffer
     error = initChunkBuffer(&chunkBuffer,
+                            CHUNK_MODE_READ,
                             chunkIO,
                             chunkIOUserData,
                             definition,
+                            chunkSize,
                             alignment,
                             cryptInfo
                            );
@@ -803,7 +907,7 @@ LOCAL Errors readDefinition(const ChunkIO *chunkIO,
                   data = malloc((ulong)length*size);
                   if (data == NULL)
                   {
-                    snprintf(errorText,sizeof(errorText),"insufficient memory: %ubytes",(ulong)length*size);
+                    snprintf(errorText,sizeof(errorText),"insufficient memory: %lubytes",(ulong)length*size);
                     error = ERRORX_(CORRUPT_DATA,0,errorText);
                     break;
                   }
@@ -821,7 +925,7 @@ LOCAL Errors readDefinition(const ChunkIO *chunkIO,
                   strings = calloc((ulong)length,sizeof(String));
                   if (data == NULL)
                   {
-                    snprintf(errorText,sizeof(errorText),"insufficient memory: %ubytes",(ulong)length*sizeof(String));
+                    snprintf(errorText,sizeof(errorText),"insufficient memory: %lubytes",(ulong)length*sizeof(String));
                     error = ERRORX_(CORRUPT_DATA,0,errorText);
                     break;
                   }
@@ -833,7 +937,7 @@ LOCAL Errors readDefinition(const ChunkIO *chunkIO,
                     error = getChunkBuffer(&chunkBuffer,&p,2L);
                     if (error != ERROR_NONE) break;
                     crc = crc32(crc,p,2);
-                    stringLength = ntohl(*((uint16*)p));
+                    stringLength = ntohs(*((uint16*)p));
 
                     // get string data
                     error = getChunkBuffer(&chunkBuffer,&p,(ulong)stringLength);
@@ -850,7 +954,7 @@ LOCAL Errors readDefinition(const ChunkIO *chunkIO,
             }
             if (error != ERROR_NONE) break;
 
-            (*((uint* )((byte*)chunkData+definition[i+1]))) = length;
+            (*((uint* )((byte*)chunkData+definition[i+1]))) = (uint)length;
             (*((void**)((byte*)chunkData+definition[i+2]))) = data;
 
             i += 3;
@@ -915,7 +1019,7 @@ LOCAL Errors readDefinition(const ChunkIO *chunkIO,
 * Input  : chunkIO         - i/o functions
 *          chunkIOUserData - user data for i/o
 *          definition      - chunk definition
-*          size            - chunk size (in bytes)
+*          chunkSize       - chunk size (in bytes)
 *          alignment       - chunk alignment
 *          cryptInfo       - crypt info
 *          chunkData       - chunk data
@@ -927,41 +1031,49 @@ LOCAL Errors readDefinition(const ChunkIO *chunkIO,
 LOCAL Errors writeDefinition(const ChunkIO *chunkIO,
                              void          *chunkIOUserData,
                              const int     *definition,
-                             uint          size,
+                             uint          chunkSize,
                              uint          alignment,
                              CryptInfo     *cryptInfo,
                              const void    *chunkData,
                              ulong         *bytesWritten
                             )
 {
-  ulong  bufferSize;
-  byte   *buffer;
-  byte   *p;
-  uint32 crc;
-  int    z;
-  Errors error;
+  ChunkBuffer chunkBuffer;
+  uint32      crc;
+  int         i;
+  byte        p[8];
+  Errors      error;
 
   assert(chunkIO != NULL);
   assert(chunkIO->write != NULL);
-  assert(bytesWritten != NULL);
+  assert(definition != NULL);
 
-  // allocate buffer
-  bufferSize = ALIGN(size,alignment);
-  buffer = (byte*)calloc(bufferSize,1);
-  if (buffer == NULL)
-  {
-    return ERROR_INSUFFICIENT_MEMORY;
-  }
+  // initialize variables
+  if (bytesWritten != NULL) (*bytesWritten) = 0L;
 
-  // write definition
   if (definition != NULL)
   {
-    crc = crc32(0,Z_NULL,0);
-    p   = buffer;
-    z   = 0;
-    while (definition[z+0] != 0)
+    // init chunk buffer
+    error = initChunkBuffer(&chunkBuffer,
+                            CHUNK_MODE_WRITE,
+                            chunkIO,
+                            chunkIOUserData,
+                            definition,
+                            chunkSize,
+                            alignment,
+                            cryptInfo
+                           );
+    if (error != ERROR_NONE)
     {
-      switch (definition[z+0])
+      return error;
+    }
+
+    // write definition
+    crc = crc32(0,Z_NULL,0);
+    i   = 0;
+    while (definition[i+0] != 0)
+    {
+      switch (definition[i+0])
       {
         case CHUNK_DATATYPE_BYTE:
         case CHUNK_DATATYPE_UINT8:
@@ -969,15 +1081,15 @@ LOCAL Errors writeDefinition(const ChunkIO *chunkIO,
           {
             uint8 n;
 
-            n = (*((uint8*)((byte*)chunkData+definition[z+1])));
+            n = (*((uint8*)((byte*)chunkData+definition[i+1])));
 
             // put 8bit value
-            assert(p+1 <= buffer+bufferSize);
             (*((uint8*)p)) = n;
+            error = putChunkBuffer(&chunkBuffer,p,1L);
+            if (error != ERROR_NONE) break;
             crc = crc32(crc,p,1);
-            p += 1;
 
-            z += 2;
+            i += 2;
           }
           break;
         case CHUNK_DATATYPE_UINT16:
@@ -985,15 +1097,15 @@ LOCAL Errors writeDefinition(const ChunkIO *chunkIO,
           {
             uint16 n;
 
-            n = (*((uint16*)((byte*)chunkData+definition[z+1])));
+            n = (*((uint16*)((byte*)chunkData+definition[i+1])));
 
             // put 16bit value
-            assert(p+2 <= buffer+bufferSize);
             (*((uint16*)p)) = htons(n);
+            error = putChunkBuffer(&chunkBuffer,p,2L);
+            if (error != ERROR_NONE) break;
             crc = crc32(crc,p,2);
-            p += 2;
 
-            z += 2;
+            i += 2;
           }
           break;
         case CHUNK_DATATYPE_UINT32:
@@ -1001,15 +1113,15 @@ LOCAL Errors writeDefinition(const ChunkIO *chunkIO,
           {
             uint32 n;
 
-            n = (*((uint32*)((byte*)chunkData+definition[z+1])));
+            n = (*((uint32*)((byte*)chunkData+definition[i+1])));
 
             // put 32bit value
-            assert(p+4 <= buffer+bufferSize);
             (*((uint32*)p)) = htonl(n);
+            error = putChunkBuffer(&chunkBuffer,p,4L);
+            if (error != ERROR_NONE) break;
             crc = crc32(crc,p,4);
-            p += 4;
 
-            z += 2;
+            i += 2;
           }
           break;
         case CHUNK_DATATYPE_UINT64:
@@ -1018,164 +1130,151 @@ LOCAL Errors writeDefinition(const ChunkIO *chunkIO,
             uint64 n;
             uint32 h,l;
 
-            n = (*((uint64*)((byte*)chunkData+definition[z+1])));
+            n = (*((uint64*)((byte*)chunkData+definition[i+1])));
 
             // put 64bit value
-            assert(p+8 <= buffer+bufferSize);
             h = (n & 0xFFFFffff00000000LL) >> 32;
             l = (n & 0x00000000FFFFffffLL) >>  0;
-            (*((uint32*)p)) = htonl(h);
-            crc = crc32(crc,p,4);
-            p += 4;
-            (*((uint32*)p)) = htonl(l);
-            crc = crc32(crc,p,4);
-            p += 4;
+            (*((uint32*)(p+0))) = htonl(h);
+            (*((uint32*)(p+4))) = htonl(l);
+            error = putChunkBuffer(&chunkBuffer,p,8L);
+            if (error != ERROR_NONE) break;
+            crc = crc32(crc,p,8);
 
-            z += 2;
+            i += 2;
           }
           break;
         case CHUNK_DATATYPE_STRING:
           {
-            uint16 length;
-            String string;
+            String     string;
+            const void *data;
+            uint16     length;
 
-            string = (*((String*)((byte*)chunkData+definition[z+1])));
+            string = (*((String*)((byte*)chunkData+definition[i+1])));
+            data   = String_cString(string);
             length = (uint16)String_length(string);
 
             // put string length (16bit value)
-            assert(p+2 <= buffer+bufferSize);
-            (*((uint16*)p)) = htons(length); \
+            (*((uint16*)p)) = htons(length);
+            error = putChunkBuffer(&chunkBuffer,p,2L);
+            if (error != ERROR_NONE) break;
             crc = crc32(crc,p,2);
-            p += 2;
 
             // put string data
-            assert(p+length <= buffer+bufferSize);
-            memcpy(p,String_cString(string),length);
-            crc = crc32(crc,p,length);
-            p += length;
+            error = putChunkBuffer(&chunkBuffer,data,(ulong)length);
+            if (error != ERROR_NONE) break;
+            crc = crc32(crc,data,length);
 
-            z += 2;
+            i += 2;
           }
           break;
 
         case CHUNK_DATATYPE_BYTE|CHUNK_DATATYPE_ARRAY:
         case CHUNK_DATATYPE_UINT8|CHUNK_DATATYPE_ARRAY:
         case CHUNK_DATATYPE_INT8|CHUNK_DATATYPE_ARRAY:
-          {
-            uint length;
-            void *data;
-
-            length = (*((uint* )((byte*)chunkData+definition[z+1])));
-            data   = (*((void**)((byte*)chunkData+definition[z+2])));
-
-            // put array length (16bit value)
-            assert(p+2 <= buffer+bufferSize);
-            (*((uint16*)p)) = htonl(length);
-            crc = crc32(crc,p,2);
-            p += 2;
-
-            // put array data
-            assert(p+length <= buffer+bufferSize);
-            memcpy(p,data,length);
-            crc = crc32(crc,p,length);
-            p += length;
-
-            z += 3;
-          }
-          break;
         case CHUNK_DATATYPE_UINT16|CHUNK_DATATYPE_ARRAY:
         case CHUNK_DATATYPE_INT16|CHUNK_DATATYPE_ARRAY:
-          {
-            uint16 n;
-
-            n = (*((uint16*)((byte*)chunkData+definition[z+1])));
-
-            // put 16bit value
-            assert(p+2 <= buffer+bufferSize);
-            (*((uint16*)p)) = htons(n);
-            crc = crc32(crc,p,2);
-            p += 2;
-
-            z += 3;
-          }
-          break;
         case CHUNK_DATATYPE_UINT32|CHUNK_DATATYPE_ARRAY:
         case CHUNK_DATATYPE_INT32|CHUNK_DATATYPE_ARRAY:
-          {
-            uint32 n;
-
-            n = (*((uint32*)((byte*)chunkData+definition[z+1])));
-
-            // put 32bit value
-            assert(p+4 <= buffer+bufferSize);
-            (*((uint32*)p)) = htonl(n);
-            crc = crc32(crc,p,4);
-            p += 4;
-
-            z += 3;
-          }
-          break;
         case CHUNK_DATATYPE_UINT64|CHUNK_DATATYPE_ARRAY:
         case CHUNK_DATATYPE_INT64|CHUNK_DATATYPE_ARRAY:
-          {
-            uint64 n;
-            uint32 h,l;
-
-            n = (*((uint64*)((byte*)chunkData+definition[z+1])));
-
-            // put 64bit value
-            assert(p+8 <= buffer+bufferSize);
-            h = (n & 0xFFFFffff00000000LL) >> 32;
-            l = (n & 0x00000000FFFFffffLL) >>  0;
-            (*((uint32*)p)) = htonl(h);
-            crc = crc32(crc,p,4);
-            p += 4;
-            (*((uint32*)p)) = htonl(l);
-            crc = crc32(crc,p,4);
-            p += 4;
-
-            z += 3;
-          }
-          break;
         case CHUNK_DATATYPE_STRING|CHUNK_DATATYPE_ARRAY:
           {
             uint16 length;
-            String string;
+            void   *data;
 
-            string = (*((String*)((byte*)chunkData+definition[z+1])));
-            length = (uint16)String_length(string);
+#warning datatype definition? void*?
+            length = (*((uint* )((byte*)chunkData+definition[i+1])));
+            data   = (*((void**)((byte*)chunkData+definition[i+2])));
 
-            // put string length (16bit value)
-            assert(p+2 <= buffer+bufferSize);
-            (*((uint16*)p)) = htons(length); \
+            // put array length (16bit value)
+            (*((uint16*)p)) = htons(length);
+            error = putChunkBuffer(&chunkBuffer,p,2L);
+            if (error != ERROR_NONE) break;
             crc = crc32(crc,p,2);
-            p += 2;
 
-            // put string data
-            assert(p+length <= buffer+bufferSize);
-            memcpy(p,String_cString(string),length);
-            crc = crc32(crc,p,length);
-            p += length;
+            switch (definition[i+0])
+            {
+              case CHUNK_DATATYPE_BYTE|CHUNK_DATATYPE_ARRAY:
+              case CHUNK_DATATYPE_UINT8|CHUNK_DATATYPE_ARRAY:
+              case CHUNK_DATATYPE_INT8|CHUNK_DATATYPE_ARRAY:
+              case CHUNK_DATATYPE_UINT16|CHUNK_DATATYPE_ARRAY:
+              case CHUNK_DATATYPE_INT16|CHUNK_DATATYPE_ARRAY:
+              case CHUNK_DATATYPE_UINT32|CHUNK_DATATYPE_ARRAY:
+              case CHUNK_DATATYPE_INT32|CHUNK_DATATYPE_ARRAY:
+              case CHUNK_DATATYPE_UINT64|CHUNK_DATATYPE_ARRAY:
+              case CHUNK_DATATYPE_INT64|CHUNK_DATATYPE_ARRAY:
+                {
+                  ulong size;
 
-            z += 3;
+                  switch (definition[i+0])
+                  {
+                    case CHUNK_DATATYPE_BYTE|CHUNK_DATATYPE_ARRAY  :
+                    case CHUNK_DATATYPE_UINT8|CHUNK_DATATYPE_ARRAY :
+                    case CHUNK_DATATYPE_INT8|CHUNK_DATATYPE_ARRAY  : size = 1; break;
+                    case CHUNK_DATATYPE_UINT16|CHUNK_DATATYPE_ARRAY:
+                    case CHUNK_DATATYPE_INT16|CHUNK_DATATYPE_ARRAY : size = 2; break;
+                    case CHUNK_DATATYPE_UINT32|CHUNK_DATATYPE_ARRAY:
+                    case CHUNK_DATATYPE_INT32|CHUNK_DATATYPE_ARRAY : size = 4; break;
+                    case CHUNK_DATATYPE_UINT64|CHUNK_DATATYPE_ARRAY:
+                    case CHUNK_DATATYPE_INT64|CHUNK_DATATYPE_ARRAY : size = 8; break;
+                  }
+
+                  // put array data
+                  error = putChunkBuffer(&chunkBuffer,data,(ulong)length*size);
+                  if (error != ERROR_NONE) break;
+                  crc = crc32(crc,data,length*size);
+                }
+                break;
+              case CHUNK_DATATYPE_STRING|CHUNK_DATATYPE_ARRAY:
+                {
+                  String     *strings;
+                  uint       z;
+                  uint16     length;
+                  const void *data;
+
+                  // get array data
+                  strings = (String*)data;
+                  for (z = 0; z < length; z++)
+                  {
+                    length = (uint16)String_length(strings[z]);
+                    data   = String_cString(strings[z]);
+
+                    // put string length (16bit value)
+                    (*((uint16*)p)) = htons(length);
+                    error = putChunkBuffer(&chunkBuffer,&p,2L);
+                    if (error != ERROR_NONE) break;
+                    crc = crc32(crc,p,2);
+
+                    // put string data
+                    error = putChunkBuffer(&chunkBuffer,data,(ulong)length);
+                    if (error != ERROR_NONE) break;
+                    crc = crc32(crc,data,length);
+                  }
+                }
+                break;
+            }
+            if (error != ERROR_NONE) break;
+
+            i += 3;
           }
           break;
 
         case CHUNK_DATATYPE_CRC32:
           {
-            // put 32bit value
-            assert(p+4 <= buffer+bufferSize);
+            // put crc (32bit value)
             (*((uint32*)p)) = htonl(crc);
-            p += 4;
+            error = putChunkBuffer(&chunkBuffer,p,4);
+            if (error != ERROR_NONE) break;
 
             crc = crc32(0,Z_NULL,0);
 
-            z += 2;
+            i += 2;
           }
           break;
 
         case CHUNK_DATATYPE_DATA:
-          z += 2;
+          i += 2;
           break;
 
         #ifndef NDEBUG
@@ -1185,33 +1284,19 @@ LOCAL Errors writeDefinition(const ChunkIO *chunkIO,
         #endif /* NDEBUG */
       }
     }
-  }
 
-  // encrypt
-//fprintf(stderr,"%s, %d: write:\n",__FILE__,__LINE__); debugDumpMemory(FALSE,buffer,bufferSize);
-  if (cryptInfo != NULL)
-  {
-// NYI ???: seed value?
-    Crypt_reset(cryptInfo,0);
-    if (Crypt_encrypt(cryptInfo,buffer,bufferSize) != ERROR_NONE)
+    // write data
+    error = flushChunkBuffer(&chunkBuffer);
+    if (error != ERROR_NONE)
     {
-      free(buffer);
-      return ERROR_ENCRYPT_FAIL;
+      doneChunkBuffer(&chunkBuffer);
+      return error;
     }
-  }
+    if (bytesWritten != NULL) (*bytesWritten) = chunkBuffer.bytesWritten;
 
-  // write data
-//fprintf(stderr,"%s, %d: write encrypted:\n",__FILE__,__LINE__); debugDumpMemory(FALSE,buffer,bufferSize);
-  error = chunkIO->write(chunkIOUserData,buffer,bufferSize);
-  if (error != ERROR_NONE)
-  {
-    free(buffer);
-    return error;
+    // free resources
+    doneChunkBuffer(&chunkBuffer);
   }
-  (*bytesWritten) = bufferSize;
-
-  // free resources
-  free(buffer);
 
   return ERROR_NONE;
 }
