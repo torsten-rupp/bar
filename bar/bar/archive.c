@@ -1132,6 +1132,8 @@ LOCAL Errors writeFileChunks(ArchiveEntryInfo *archiveEntryInfo)
 //TODO
 fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     String_set(archiveEntryInfo->file.chunkFileExtendedAttribute.name,fileExtendedAttributeNode->name);
+    archiveEntryInfo->file.chunkFileExtendedAttribute.value.data   = fileExtendedAttributeNode->data;
+    archiveEntryInfo->file.chunkFileExtendedAttribute.value.length = fileExtendedAttributeNode->dataLength;
 
     error = Chunk_create(&archiveEntryInfo->file.chunkFileExtendedAttribute.info);
     if (error != ERROR_NONE)
@@ -3302,12 +3304,13 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
   return !chunkHeaderFoundFlag;
 }
 
-Errors Archive_newFileEntry(ArchiveEntryInfo *archiveEntryInfo,
-                            ArchiveInfo      *archiveInfo,
-                            const String     fileName,
-                            const FileInfo   *fileInfo,
-                            const bool       deltaCompressFlag,
-                            const bool       byteCompressFlag
+Errors Archive_newFileEntry(ArchiveEntryInfo                *archiveEntryInfo,
+                            ArchiveInfo                     *archiveInfo,
+                            const String                    fileName,
+                            const FileInfo                  *fileInfo,
+                            const FileExtendedAttributeList *fileExtendedAttributeList,
+                            const bool                      deltaCompressFlag,
+                            const bool                      byteCompressFlag
                            )
 {
   Errors                          error;
@@ -3345,7 +3348,7 @@ Errors Archive_newFileEntry(ArchiveEntryInfo *archiveEntryInfo,
   archiveEntryInfo->file.deltaCompressAlgorithm = COMPRESS_ALGORITHM_NONE;
   archiveEntryInfo->file.byteCompressAlgorithm  = byteCompressFlag ? archiveInfo->jobOptions->compressAlgorithm.byte : COMPRESS_ALGORITHM_NONE;
 
-  archiveEntryInfo->file.fileExtendedAttributeList = &fileInfo->extendedAttributeList;
+  archiveEntryInfo->file.fileExtendedAttributeList = fileExtendedAttributeList;
 
   archiveEntryInfo->file.sourceHandleInitFlag   = FALSE;
 
@@ -4125,10 +4128,11 @@ Errors Archive_newImageEntry(ArchiveEntryInfo *archiveEntryInfo,
   return ERROR_NONE;
 }
 
-Errors Archive_newDirectoryEntry(ArchiveEntryInfo *archiveEntryInfo,
-                                 ArchiveInfo      *archiveInfo,
-                                 const String     directoryName,
-                                 const FileInfo   *fileInfo
+Errors Archive_newDirectoryEntry(ArchiveEntryInfo                *archiveEntryInfo,
+                                 ArchiveInfo                     *archiveInfo,
+                                 const String                    directoryName,
+                                 const FileInfo                  *fileInfo,
+                                 const FileExtendedAttributeList *fileExtendedAttributeList
                                 )
 {
   Errors        error;
@@ -4304,11 +4308,12 @@ Errors Archive_newDirectoryEntry(ArchiveEntryInfo *archiveEntryInfo,
   return ERROR_NONE;
 }
 
-Errors Archive_newLinkEntry(ArchiveEntryInfo *archiveEntryInfo,
-                            ArchiveInfo      *archiveInfo,
-                            const String     linkName,
-                            const String     destinationName,
-                            const FileInfo   *fileInfo
+Errors Archive_newLinkEntry(ArchiveEntryInfo                *archiveEntryInfo,
+                            ArchiveInfo                     *archiveInfo,
+                            const String                    linkName,
+                            const String                    destinationName,
+                            const FileInfo                  *fileInfo,
+                            const FileExtendedAttributeList *fileExtendedAttributeList
                            )
 {
   Errors        error;
@@ -4515,12 +4520,13 @@ Errors Archive_newLinkEntry(ArchiveEntryInfo *archiveEntryInfo,
   return ERROR_NONE;
 }
 
-Errors Archive_newHardLinkEntry(ArchiveEntryInfo *archiveEntryInfo,
-                                ArchiveInfo      *archiveInfo,
-                                const StringList *fileNameList,
-                                const FileInfo   *fileInfo,
-                                const bool       deltaCompressFlag,
-                                const bool       byteCompressFlag
+Errors Archive_newHardLinkEntry(ArchiveEntryInfo                *archiveEntryInfo,
+                                ArchiveInfo                     *archiveInfo,
+                                const StringList                *fileNameList,
+                                const FileInfo                  *fileInfo,
+                                const FileExtendedAttributeList *fileExtendedAttributeList,
+                                const bool                      deltaCompressFlag,
+                                const bool                      byteCompressFlag
                                )
 {
   Errors                          error;
@@ -4561,7 +4567,7 @@ Errors Archive_newHardLinkEntry(ArchiveEntryInfo *archiveEntryInfo,
   archiveEntryInfo->hardLink.byteCompressAlgorithm     = byteCompressFlag ?archiveInfo->jobOptions->compressAlgorithm.byte :COMPRESS_ALGORITHM_NONE;
 
   archiveEntryInfo->hardLink.fileNameList              = fileNameList;
-  archiveEntryInfo->hardLink.fileExtendedAttributeList = &fileInfo->extendedAttributeList;
+  archiveEntryInfo->hardLink.fileExtendedAttributeList = fileExtendedAttributeList;
 
   archiveEntryInfo->hardLink.sourceHandleInitFlag      = FALSE;
 
@@ -5060,10 +5066,11 @@ Errors Archive_newHardLinkEntry(ArchiveEntryInfo *archiveEntryInfo,
   return ERROR_NONE;
 }
 
-Errors Archive_newSpecialEntry(ArchiveEntryInfo *archiveEntryInfo,
-                               ArchiveInfo      *archiveInfo,
-                               const String     specialName,
-                               const FileInfo   *fileInfo
+Errors Archive_newSpecialEntry(ArchiveEntryInfo                *archiveEntryInfo,
+                               ArchiveInfo                     *archiveInfo,
+                               const String                    specialName,
+                               const FileInfo                  *fileInfo,
+                               const FileExtendedAttributeList *fileExtendedAttributeList
                               )
 {
   Errors        error;
@@ -5489,6 +5496,7 @@ Errors Archive_readFileEntry(ArchiveEntryInfo   *archiveEntryInfo,
                              CryptTypes         *cryptType,
                              String             fileName,
                              FileInfo           *fileInfo,
+                             FileExtendedAttributeList *fileExtendedAttributeList,
                              String             deltaSourceName,
                              uint64             *deltaSourceSize,
                              uint64             *fragmentOffset,
@@ -5522,10 +5530,6 @@ Errors Archive_readFileEntry(ArchiveEntryInfo   *archiveEntryInfo,
   archiveEntryInfo->archiveInfo               = archiveInfo;
   archiveEntryInfo->mode                      = ARCHIVE_MODE_READ;
   archiveEntryInfo->archiveEntryType          = ARCHIVE_ENTRY_TYPE_FILE;
-  if (fileInfo != NULL)
-  {
-    File_initFileInfo(fileInfo);
-  }
 
   archiveEntryInfo->file.sourceHandleInitFlag = FALSE;
 
@@ -5831,8 +5835,8 @@ Errors Archive_readFileEntry(ArchiveEntryInfo   *archiveEntryInfo,
     if (error == ERROR_NONE)
     {
       while (   !Chunk_eofSub(&archiveEntryInfo->file.chunkFile.info)
-             && (error == ERROR_NONE)
              && (!foundFileEntryFlag || !foundFileDataFlag)
+             && (error == ERROR_NONE)
             )
       {
         error = Chunk_nextSub(&archiveEntryInfo->file.chunkFile.info,&subChunkHeader);
@@ -5869,6 +5873,42 @@ Errors Archive_readFileEntry(ArchiveEntryInfo   *archiveEntryInfo,
             }
 
             foundFileEntryFlag = TRUE;
+            break;
+          case CHUNK_ID_FILE_EXTENDED_ATTRIBUTE:
+            {
+              FileExtendedAttributeNode *fileExtendedAttributeNode;
+              ulong                     bytesRead;
+
+              if (fileExtendedAttributeList != NULL)
+              {
+                // read file extended attribute chunk
+                bytesRead = 0L;
+                error = Chunk_open(&archiveEntryInfo->file.chunkFileExtendedAttribute.info,
+                                   &subChunkHeader,
+                                   subChunkHeader.size
+                                  );
+                if (error != ERROR_NONE)
+                {
+                  break;
+                }
+
+                // add extended attribute to list
+                File_addExtendedAttribute(fileExtendedAttributeList,
+                                          archiveEntryInfo->file.chunkFileExtendedAttribute.name,
+                                          archiveEntryInfo->file.chunkFileExtendedAttribute.value.data,
+                                          archiveEntryInfo->file.chunkFileExtendedAttribute.value.length
+                                         );
+              }
+              else
+              {
+                // skip file extended attribute chunk
+                error = Chunk_skipSub(&archiveEntryInfo->file.chunkFile.info,&subChunkHeader);
+                if (error != ERROR_NONE)
+                {
+                  break;
+                }
+              }
+            }
             break;
           case CHUNK_ID_FILE_DELTA:
             // read file delta chunk
@@ -5926,6 +5966,7 @@ Errors Archive_readFileEntry(ArchiveEntryInfo   *archiveEntryInfo,
       }
       if (error != ERROR_NONE)
       {
+        // free resources
         Chunk_done(&archiveEntryInfo->file.chunkFileData.info);
         Chunk_done(&archiveEntryInfo->file.chunkFileDelta.info);
         Chunk_done(&archiveEntryInfo->file.chunkFileExtendedAttribute.info);
@@ -6342,8 +6383,8 @@ Errors Archive_readImageEntry(ArchiveEntryInfo   *archiveEntryInfo,
     if (error == ERROR_NONE)
     {
       while (   !Chunk_eofSub(&archiveEntryInfo->image.chunkImage.info)
-             && (error == ERROR_NONE)
              && (!foundImageEntryFlag || !foundImageDataFlag)
+             && (error == ERROR_NONE)
             )
       {
         error = Chunk_nextSub(&archiveEntryInfo->image.chunkImage.info,&subChunkHeader);
@@ -6531,12 +6572,13 @@ Errors Archive_readImageEntry(ArchiveEntryInfo   *archiveEntryInfo,
   return ERROR_NONE;
 }
 
-Errors Archive_readDirectoryEntry(ArchiveEntryInfo *archiveEntryInfo,
-                                  ArchiveInfo      *archiveInfo,
-                                  CryptAlgorithms  *cryptAlgorithm,
-                                  CryptTypes       *cryptType,
-                                  String           directoryName,
-                                  FileInfo         *fileInfo
+Errors Archive_readDirectoryEntry(ArchiveEntryInfo          *archiveEntryInfo,
+                                  ArchiveInfo               *archiveInfo,
+                                  CryptAlgorithms           *cryptAlgorithm,
+                                  CryptTypes                *cryptType,
+                                  String                    directoryName,
+                                  FileInfo                  *fileInfo,
+                                  FileExtendedAttributeList *fileExtendedAttributeList
                                  )
 {
   Errors         error;
@@ -6565,10 +6607,6 @@ Errors Archive_readDirectoryEntry(ArchiveEntryInfo *archiveEntryInfo,
   archiveEntryInfo->archiveInfo      = archiveInfo;
   archiveEntryInfo->mode             = ARCHIVE_MODE_READ;
   archiveEntryInfo->archiveEntryType = ARCHIVE_ENTRY_TYPE_DIRECTORY;
-  if (fileInfo != NULL)
-  {
-    File_initFileInfo(fileInfo);
-  }
 
   // init directory chunk
   error = Chunk_init(&archiveEntryInfo->directory.chunkDirectory.info,
@@ -6735,8 +6773,8 @@ Errors Archive_readDirectoryEntry(ArchiveEntryInfo *archiveEntryInfo,
     if (error == ERROR_NONE)
     {
       while (   !Chunk_eofSub(&archiveEntryInfo->directory.chunkDirectory.info)
-             && (error == ERROR_NONE)
              && !foundDirectoryEntryFlag
+             && (error == ERROR_NONE)
             )
       {
         error = Chunk_nextSub(&archiveEntryInfo->directory.chunkDirectory.info,&subChunkHeader);
@@ -6853,13 +6891,14 @@ Errors Archive_readDirectoryEntry(ArchiveEntryInfo *archiveEntryInfo,
   return ERROR_NONE;
 }
 
-Errors Archive_readLinkEntry(ArchiveEntryInfo *archiveEntryInfo,
-                             ArchiveInfo      *archiveInfo,
-                             CryptAlgorithms  *cryptAlgorithm,
-                             CryptTypes       *cryptType,
-                             String           linkName,
-                             String           destinationName,
-                             FileInfo         *fileInfo
+Errors Archive_readLinkEntry(ArchiveEntryInfo          *archiveEntryInfo,
+                             ArchiveInfo               *archiveInfo,
+                             CryptAlgorithms           *cryptAlgorithm,
+                             CryptTypes                *cryptType,
+                             String                    linkName,
+                             String                    destinationName,
+                             FileInfo                  *fileInfo,
+                             FileExtendedAttributeList *fileExtendedAttributeList
                             )
 {
   Errors         error;
@@ -6888,10 +6927,6 @@ Errors Archive_readLinkEntry(ArchiveEntryInfo *archiveEntryInfo,
   archiveEntryInfo->archiveInfo      = archiveInfo;
   archiveEntryInfo->mode             = ARCHIVE_MODE_READ;
   archiveEntryInfo->archiveEntryType = ARCHIVE_ENTRY_TYPE_LINK;
-  if (fileInfo != NULL)
-  {
-    File_initFileInfo(fileInfo);
-  }
 
   // init link chunk
   error = Chunk_init(&archiveEntryInfo->link.chunkLink.info,
@@ -7058,8 +7093,8 @@ Errors Archive_readLinkEntry(ArchiveEntryInfo *archiveEntryInfo,
     if (error == ERROR_NONE)
     {
       while (   !Chunk_eofSub(&archiveEntryInfo->link.chunkLink.info)
-             && (error == ERROR_NONE)
              && !foundLinkEntryFlag
+             && (error == ERROR_NONE)
             )
       {
         error = Chunk_nextSub(&archiveEntryInfo->link.chunkLink.info,&subChunkHeader);
@@ -7175,18 +7210,19 @@ Errors Archive_readLinkEntry(ArchiveEntryInfo *archiveEntryInfo,
   return ERROR_NONE;
 }
 
-Errors Archive_readHardLinkEntry(ArchiveEntryInfo   *archiveEntryInfo,
-                                 ArchiveInfo        *archiveInfo,
-                                 CompressAlgorithms *deltaCompressAlgorithm,
-                                 CompressAlgorithms *byteCompressAlgorithm,
-                                 CryptAlgorithms    *cryptAlgorithm,
-                                 CryptTypes         *cryptType,
-                                 StringList         *fileNameList,
-                                 FileInfo           *fileInfo,
-                                 String             deltaSourceName,
-                                 uint64             *deltaSourceSize,
-                                 uint64             *fragmentOffset,
-                                 uint64             *fragmentSize
+Errors Archive_readHardLinkEntry(ArchiveEntryInfo          *archiveEntryInfo,
+                                 ArchiveInfo               *archiveInfo,
+                                 CompressAlgorithms        *deltaCompressAlgorithm,
+                                 CompressAlgorithms        *byteCompressAlgorithm,
+                                 CryptAlgorithms           *cryptAlgorithm,
+                                 CryptTypes                *cryptType,
+                                 StringList                *fileNameList,
+                                 FileInfo                  *fileInfo,
+                                 FileExtendedAttributeList *fileExtendedAttributeList,
+                                 String                    deltaSourceName,
+                                 uint64                    *deltaSourceSize,
+                                 uint64                    *fragmentOffset,
+                                 uint64                    *fragmentSize
                                 )
 {
   Errors         error;
@@ -7216,10 +7252,6 @@ Errors Archive_readHardLinkEntry(ArchiveEntryInfo   *archiveEntryInfo,
   archiveEntryInfo->archiveInfo                   = archiveInfo;
   archiveEntryInfo->mode                          = ARCHIVE_MODE_READ;
   archiveEntryInfo->archiveEntryType              = ARCHIVE_ENTRY_TYPE_HARDLINK;
-  if (fileInfo != NULL)
-  {
-    File_initFileInfo(fileInfo);
-  }
 
   archiveEntryInfo->hardLink.sourceHandleInitFlag = FALSE;
 
@@ -7572,8 +7604,8 @@ Errors Archive_readHardLinkEntry(ArchiveEntryInfo   *archiveEntryInfo,
     if (error == ERROR_NONE)
     {
       while (   !Chunk_eofSub(&archiveEntryInfo->hardLink.chunkHardLink.info)
-             && (error == ERROR_NONE)
              && (!foundHardLinkEntryFlag || !foundHardLinkDataFlag)
+             && (error == ERROR_NONE)
             )
       {
         error = Chunk_nextSub(&archiveEntryInfo->hardLink.chunkHardLink.info,&subChunkHeader);
@@ -7618,8 +7650,6 @@ Errors Archive_readHardLinkEntry(ArchiveEntryInfo   *archiveEntryInfo,
                               );
             if (error != ERROR_NONE)
             {
-              Chunk_done(&archiveEntryInfo->hardLink.chunkHardLinkName.info);
-              Crypt_done(&archiveEntryInfo->hardLink.chunkHardLinkName.cryptInfo);
               break;
             }
 
@@ -7803,12 +7833,13 @@ Errors Archive_readHardLinkEntry(ArchiveEntryInfo   *archiveEntryInfo,
   return ERROR_NONE;
 }
 
-Errors Archive_readSpecialEntry(ArchiveEntryInfo *archiveEntryInfo,
-                                ArchiveInfo      *archiveInfo,
-                                CryptAlgorithms  *cryptAlgorithm,
-                                CryptTypes       *cryptType,
-                                String           specialName,
-                                FileInfo         *fileInfo
+Errors Archive_readSpecialEntry(ArchiveEntryInfo          *archiveEntryInfo,
+                                ArchiveInfo               *archiveInfo,
+                                CryptAlgorithms           *cryptAlgorithm,
+                                CryptTypes                *cryptType,
+                                String                    specialName,
+                                FileInfo                  *fileInfo,
+                                FileExtendedAttributeList *fileExtendedAttributeList
                                )
 {
   Errors         error;
@@ -7837,10 +7868,6 @@ Errors Archive_readSpecialEntry(ArchiveEntryInfo *archiveEntryInfo,
   archiveEntryInfo->archiveInfo      = archiveInfo;
   archiveEntryInfo->mode             = ARCHIVE_MODE_READ;
   archiveEntryInfo->archiveEntryType = ARCHIVE_ENTRY_TYPE_SPECIAL;
-  if (fileInfo != NULL)
-  {
-    File_initFileInfo(fileInfo);
-  }
 
   // init special chunk
   error = Chunk_init(&archiveEntryInfo->special.chunkSpecial.info,
@@ -8010,8 +8037,8 @@ Errors Archive_readSpecialEntry(ArchiveEntryInfo *archiveEntryInfo,
     if (error == ERROR_NONE)
     {
       while (   !Chunk_eofSub(&archiveEntryInfo->special.chunkSpecial.info)
-             && (error == ERROR_NONE)
              && !foundSpecialEntryFlag
+             && (error == ERROR_NONE)
             )
       {
         error = Chunk_nextSub(&archiveEntryInfo->special.chunkSpecial.info,&subChunkHeader);
@@ -10071,8 +10098,8 @@ Errors Archive_updateIndex(DatabaseHandle               *databaseHandle,
   error       = ERROR_NONE;
   abortedFlag = (abortCallback != NULL) && abortCallback(abortUserData);;
   while (   !Archive_eof(&archiveInfo,FALSE)
-         && (error == ERROR_NONE)
          && !abortedFlag
+         && (error == ERROR_NONE)
         )
   {
     // pause
@@ -10130,6 +10157,7 @@ Errors Archive_updateIndex(DatabaseHandle               *databaseHandle,
                                           NULL,  // cryptType
                                           fileName,
                                           &fileInfo,
+                                          NULL,  // fileExtendedAttributeList
                                           NULL,  // deltaSourceName
                                           NULL,  // deltaSourceSize
                                           &fragmentOffset,
@@ -10227,10 +10255,11 @@ Errors Archive_updateIndex(DatabaseHandle               *databaseHandle,
             directoryName = String_new();
             error = Archive_readDirectoryEntry(&archiveEntryInfo,
                                                &archiveInfo,
-                                               NULL,
-                                               NULL,
+                                               NULL,  // cryptAlgorithm
+                                               NULL,  // cryptType
                                                directoryName,
-                                               &fileInfo
+                                               &fileInfo,
+                                               NULL   // fileExtendedAttributeList
                                               );
             if (error != ERROR_NONE)
             {
@@ -10273,11 +10302,12 @@ Errors Archive_updateIndex(DatabaseHandle               *databaseHandle,
             destinationName = String_new();
             error = Archive_readLinkEntry(&archiveEntryInfo,
                                           &archiveInfo,
-                                          NULL,
-                                          NULL,
+                                          NULL,  // cryptAlgorithm
+                                          NULL,  // cryptType
                                           linkName,
                                           destinationName,
-                                          &fileInfo
+                                          &fileInfo,
+                                          NULL   // fileExtendedAttributeList
                                          );
             if (error != ERROR_NONE)
             {
@@ -10332,6 +10362,7 @@ Errors Archive_updateIndex(DatabaseHandle               *databaseHandle,
                                               NULL,  // cryptType
                                               &fileNameList,
                                               &fileInfo,
+                                              NULL,  // fileExtendedAttributeList
                                               NULL,  // deltaSourceName
                                               NULL,  // deltaSourceSize
                                               &fragmentOffset,
@@ -10386,10 +10417,11 @@ Errors Archive_updateIndex(DatabaseHandle               *databaseHandle,
             fileName = String_new();
             error = Archive_readSpecialEntry(&archiveEntryInfo,
                                              &archiveInfo,
-                                             NULL,
-                                             NULL,
+                                             NULL,  // cryptAlgorithm
+                                             NULL,  // cryptType
                                              fileName,
-                                             &fileInfo
+                                             &fileInfo,
+                                             NULL   // fileExtendedAttributeList
                                             );
             if (error != ERROR_NONE)
             {

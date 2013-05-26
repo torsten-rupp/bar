@@ -484,9 +484,11 @@ bool Archive_eof(ArchiveInfo *archiveInfo,
 /***********************************************************************\
 * Name   : Archive_newFileEntry
 * Purpose: add new file to archive
-* Input  : archiveInfo       - archive info
-*          fileName          - file name
-*          fileInfo          - file info
+* Input  : archiveInfo               - archive info
+*          fileName                  - file name
+*          fileInfo                  - file info
+*          fileExtendedAttributeList - file extended attribute list or
+*                                      NULL
 *          deltaCompressFlag - TRUE for delta compression, FALSE
 *                              otherwise
 *          byteCompressFlag  - TRUE for byte compression, FALSE
@@ -497,12 +499,13 @@ bool Archive_eof(ArchiveInfo *archiveInfo,
 * Notes  : -
 \***********************************************************************/
 
-Errors Archive_newFileEntry(ArchiveEntryInfo *archiveEntryInfo,
-                            ArchiveInfo      *archiveInfo,
-                            const String     fileName,
-                            const FileInfo   *fileInfo,
-                            const bool       deltaCompressFlag,
-                            const bool       byteCompressFlag
+Errors Archive_newFileEntry(ArchiveEntryInfo                *archiveEntryInfo,
+                            ArchiveInfo                     *archiveInfo,
+                            const String                    fileName,
+                            const FileInfo                  *fileInfo,
+                            const FileExtendedAttributeList *fileExtendedAttributeList,
+                            const bool                      deltaCompressFlag,
+                            const bool                      byteCompressFlag
                            );
 
 /***********************************************************************\
@@ -532,18 +535,21 @@ Errors Archive_newImageEntry(ArchiveEntryInfo *archiveEntryInfo,
 /***********************************************************************\
 * Name   : Archive_newDirectoryEntry
 * Purpose: add new directory to archive
-* Input  : archiveInfo - archive info
-*          name        - directory name
-*          fileInfo    - file info
+* Input  : archiveInfo               - archive info
+*          name                      - directory name
+*          fileInfo                  - file info
+*          fileExtendedAttributeList - file extended attribute list or
+*                                      NULL
 * Output : archiveEntryInfo - archive directory entry info
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-Errors Archive_newDirectoryEntry(ArchiveEntryInfo *archiveEntryInfo,
-                                 ArchiveInfo      *archiveInfo,
-                                 const String     directoryName,
-                                 const FileInfo   *fileInfo
+Errors Archive_newDirectoryEntry(ArchiveEntryInfo                *archiveEntryInfo,
+                                 ArchiveInfo                     *archiveInfo,
+                                 const String                    directoryName,
+                                 const FileInfo                  *fileInfo,
+                                 const FileExtendedAttributeList *fileExtendedAttributeList
                                 );
 
 /***********************************************************************\
@@ -553,58 +559,66 @@ Errors Archive_newDirectoryEntry(ArchiveEntryInfo *archiveEntryInfo,
 *          fileName                  - link name
 *          destinationName           - name of referenced file
 *          fileInfo                  - file info
-*          fileExtendedAttributeList - extended attribute list or NULL
+*          fileExtendedAttributeList - file extended attribute list or
+*                                      NULL
 * Output : archiveEntryInfo - archive link entry info
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-Errors Archive_newLinkEntry(ArchiveEntryInfo *archiveEntryInfo,
-                            ArchiveInfo      *archiveInfo,
-                            const String     linkName,
-                            const String     destinationName,
-                            const FileInfo   *fileInfo
+Errors Archive_newLinkEntry(ArchiveEntryInfo                *archiveEntryInfo,
+                            ArchiveInfo                     *archiveInfo,
+                            const String                    linkName,
+                            const String                    destinationName,
+                            const FileInfo                  *fileInfo,
+                            const FileExtendedAttributeList *fileExtendedAttributeList
                            );
 
 /***********************************************************************\
 * Name   : Archive_newHardLinkEntry
 * Purpose: add new hard link to archive
-* Input  : archiveInfo       - archive info
-*          fileNameList      - list of file names
-*          fileInfo          - file info
-*          deltaCompressFlag - TRUE for delta compression, FALSE
-*                              otherwise
-*          byteCompressFlag  - TRUE for byte compression, FALSE
-*                              otherwise (e. g. file is to small
-*                              or already compressed)
+* Input  : archiveInfo               - archive info
+*          fileNameList              - list of file names
+*          fileInfo                  - file info
+*          fileExtendedAttributeList - file extended attribute list or
+*                                      NULL
+*          deltaCompressFlag         - TRUE for delta compression, FALSE
+*                                      otherwise
+*          byteCompressFlag          - TRUE for byte compression, FALSE
+*                                      otherwise (e. g. file is to small
+*                                      or already compressed)
 * Output : archiveEntryInfo - archive hard link entry info
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-Errors Archive_newHardLinkEntry(ArchiveEntryInfo *archiveEntryInfo,
-                                ArchiveInfo      *archiveInfo,
-                                const StringList *fileNameList,
-                                const FileInfo   *fileInfo,
-                                const bool       deltaCompressFlag,
-                                const bool       byteCompressFlag
+Errors Archive_newHardLinkEntry(ArchiveEntryInfo                *archiveEntryInfo,
+                                ArchiveInfo                     *archiveInfo,
+                                const StringList                *fileNameList,
+                                const FileInfo                  *fileInfo,
+                                const FileExtendedAttributeList *fileExtendedAttributeList,
+                                const bool                      deltaCompressFlag,
+                                const bool                      byteCompressFlag
                                );
 
 /***********************************************************************\
 * Name   : Archive_newSpecialEntry
 * Purpose: add new special entry to archive
-* Input  : archiveInfo - archive info
-*          specialName - special name
-*          fileInfo    - file info
+* Input  : archiveInfo               - archive info
+*          specialName               - special name
+*          fileInfo                  - file info
+*          fileExtendedAttributeList - file extended attribute list or
+*                                      NULL
 * Output : archiveEntryInfo - archive special entry info
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-Errors Archive_newSpecialEntry(ArchiveEntryInfo *archiveEntryInfo,
-                               ArchiveInfo      *archiveInfo,
-                               const String     specialName,
-                               const FileInfo   *fileInfo
+Errors Archive_newSpecialEntry(ArchiveEntryInfo                *archiveEntryInfo,
+                               ArchiveInfo                     *archiveInfo,
+                               const String                    specialName,
+                               const FileInfo                  *fileInfo,
+                               const FileExtendedAttributeList *fileExtendedAttributeList
                               );
 
 /***********************************************************************\
@@ -638,32 +652,40 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo);
 * Purpose: read file info from archive
 * Input  : archiveEntryInfo - archive file entry info
 *          archiveInfo      - archive info
-* Output : deltaCompressAlgorithm - used delta compression algorithm (can be NULL)
-*          byteCompressAlgorithm  - used byte compression algorithm (can be NULL)
-*          cryptAlgorithm         - used crypt algorithm (can be NULL)
-*          cryptType              - used crypt type (can be NULL)
-*          fileName               - file name
-*          fileInfo               - file info
-*          deltaSourceName        - delta source name (can be NULL)
-*          deltaSourceSize        - delta source size [bytes] (can be NULL)
-*          fragmentOffset         - fragment offset (can be NULL)
-*          fragmentSize           - fragment size in bytes (can be NULL)
+* Output : deltaCompressAlgorithm    - used delta compression algorithm
+*                                      (can be NULL)
+*          byteCompressAlgorithm     - used byte compression algorithm
+*                                      (can be NULL)
+*          cryptAlgorithm            - used crypt algorithm (can be
+*                                      NULL)
+*          cryptType                 - used crypt type (can be NULL)
+*          fileName                  - file name
+*          fileInfo                  - file info
+*          fileExtendedAttributeList - file extended attribute list or
+*                                      NULL
+*          deltaSourceName           - delta source name (can be NULL)
+*          deltaSourceSize           - delta source size [bytes] (can be
+*                                      NULL)
+*          fragmentOffset            - fragment offset (can be NULL)
+*          fragmentSize              - fragment size in bytes (can be
+*                                      NULL)
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-Errors Archive_readFileEntry(ArchiveEntryInfo   *archiveEntryInfo,
-                             ArchiveInfo        *archiveInfo,
-                             CompressAlgorithms *deltaCompressAlgorithm,
-                             CompressAlgorithms *byteCompressAlgorithm,
-                             CryptAlgorithms    *cryptAlgorithm,
-                             CryptTypes         *cryptType,
-                             String             fileName,
-                             FileInfo           *fileInfo,
-                             String             deltaSourceName,
-                             uint64             *deltaSourceSize,
-                             uint64             *fragmentOffset,
-                             uint64             *fragmentSize
+Errors Archive_readFileEntry(ArchiveEntryInfo          *archiveEntryInfo,
+                             ArchiveInfo               *archiveInfo,
+                             CompressAlgorithms        *deltaCompressAlgorithm,
+                             CompressAlgorithms        *byteCompressAlgorithm,
+                             CryptAlgorithms           *cryptAlgorithm,
+                             CryptTypes                *cryptType,
+                             String                    fileName,
+                             FileInfo                  *fileInfo,
+                             FileExtendedAttributeList *fileExtendedAttributeList,
+                             String                    deltaSourceName,
+                             uint64                    *deltaSourceSize,
+                             uint64                    *fragmentOffset,
+                             uint64                    *fragmentSize
                             );
 
 /***********************************************************************\
@@ -671,14 +693,17 @@ Errors Archive_readFileEntry(ArchiveEntryInfo   *archiveEntryInfo,
 * Purpose: read block device image info from archive
 * Input  : archiveEntryInfo - archive image entry info
 *          archiveInfo      - archive info
-* Output : deltaCompressAlgorithm - used delta compression algorithm (can be NULL)
-*          byteCompressAlgorithm  - used byte compression algorithm (can be NULL)
+* Output : deltaCompressAlgorithm - used delta compression algorithm
+*                                   (can be NULL)
+*          byteCompressAlgorithm  - used byte compression algorithm (can
+*                                   be NULL)
 *          cryptAlgorithm         - used crypt algorithm (can be NULL)
 *          cryptType              - used crypt type (can be NULL)
 *          deviceName             - image name
 *          deviceInfo             - device info (can be NULL)
 *          deltaSourceName        - delta source name (can be NULL)
-*          deltaSourceSize        - delta source size [bytes] (can be NULL)
+*          deltaSourceSize        - delta source size [bytes] (can be
+*                                   NULL)
 *          blockOffset            - block offset (0..n-1)
 *          blockCount             - number of blocks
 * Return : ERROR_NONE or error code
@@ -704,20 +729,23 @@ Errors Archive_readImageEntry(ArchiveEntryInfo   *archiveEntryInfo,
 * Purpose: read directory info from archive
 * Input  : archiveEntryInfo - archive directory info
 *          archiveInfo      - archive info
-* Output : cryptAlgorithm - used crypt algorithm (can be NULL)
-*          cryptType      - used crypt type (can be NULL)
-*          directoryName  - directory name
-*          fileInfo       - file info
+* Output : cryptAlgorithm            - used crypt algorithm (can be NULL)
+*          cryptType                 - used crypt type (can be NULL)
+*          directoryName             - directory name
+*          fileInfo                  - file info
+*          fileExtendedAttributeList - file extended attribute list or
+*                                      NULL
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-Errors Archive_readDirectoryEntry(ArchiveEntryInfo *archiveEntryInfo,
-                                  ArchiveInfo      *archiveInfo,
-                                  CryptAlgorithms  *cryptAlgorithm,
-                                  CryptTypes       *cryptType,
-                                  String           directoryName,
-                                  FileInfo         *fileInfo
+Errors Archive_readDirectoryEntry(ArchiveEntryInfo          *archiveEntryInfo,
+                                  ArchiveInfo               *archiveInfo,
+                                  CryptAlgorithms           *cryptAlgorithm,
+                                  CryptTypes                *cryptType,
+                                  String                    directoryName,
+                                  FileInfo                  *fileInfo,
+                                  FileExtendedAttributeList *fileExtendedAttributeList
                                  );
 
 /***********************************************************************\
@@ -725,22 +753,25 @@ Errors Archive_readDirectoryEntry(ArchiveEntryInfo *archiveEntryInfo,
 * Purpose: read link info from archive
 * Input  : archiveEntryInfo - archive link entry info
 *          archiveInfo      - archive info
-* Output : cryptAlgorithm  - used crypt algorithm (can be NULL)
-*          cryptType       - used crypt type (can be NULL)
-*          linkName        - link name
-*          destinationName - name of referenced file
-*          fileInfo        - file info
+* Output : cryptAlgorithm            - used crypt algorithm (can be NULL)
+*          cryptType                 - used crypt type (can be NULL)
+*          linkName                  - link name
+*          destinationName           - name of referenced file
+*          fileInfo                  - file info
+*          fileExtendedAttributeList - file extended attribute list or
+*                                      NULL
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-Errors Archive_readLinkEntry(ArchiveEntryInfo *archiveEntryInfo,
-                             ArchiveInfo      *archiveInfo,
-                             CryptAlgorithms  *cryptAlgorithm,
-                             CryptTypes       *cryptType,
-                             String           linkName,
-                             String           destinationName,
-                             FileInfo         *fileInfo
+Errors Archive_readLinkEntry(ArchiveEntryInfo          *archiveEntryInfo,
+                             ArchiveInfo               *archiveInfo,
+                             CryptAlgorithms           *cryptAlgorithm,
+                             CryptTypes                *cryptType,
+                             String                    linkName,
+                             String                    destinationName,
+                             FileInfo                  *fileInfo,
+                             FileExtendedAttributeList *fileExtendedAttributeList
                             );
 
 /***********************************************************************\
@@ -748,32 +779,39 @@ Errors Archive_readLinkEntry(ArchiveEntryInfo *archiveEntryInfo,
 * Purpose: read hard link info from archive
 * Input  : archiveEntryInfo - archive hard link entry info
 *          archiveInfo      - archive info
-* Output : deltaCompressAlgorithm - used delta compression algorithm (can be NULL)
-*          byteCompressAlgorithm  - used byte compression algorithm (can be NULL)
-*          cryptAlgorithm         - used crypt algorithm (can be NULL)
-*          cryptType              - used crypt type (can be NULL)
-*          fileNameList           - list of file names
-*          fileInfo               - file info
-*          deltaSourceName        - delta source name (can be NULL)
-*          deltaSourceSize        - delta source size [bytes] (can be NULL)
-*          fragmentOffset         - fragment offset (can be NULL)
-*          fragmentSize           - fragment size in bytes (can be NULL)
+* Output : deltaCompressAlgorithm    - used delta compression algorithm
+*                                      (can be NULL)
+*          byteCompressAlgorithm     - used byte compression algorithm
+*                                      (can be NULL)
+*          cryptAlgorithm            - used crypt algorithm (can be NULL)
+*          cryptType                 - used crypt type (can be NULL)
+*          fileNameList              - list of file names
+*          fileInfo                  - file info
+*          fileExtendedAttributeList - file extended attribute list or
+*                                      NULL
+*          deltaSourceName           - delta source name (can be NULL)
+*          deltaSourceSize           - delta source size [bytes] (can
+*                                      be NULL)
+*          fragmentOffset            - fragment offset (can be NULL)
+*          fragmentSize              - fragment size in bytes (can be
+*                                      NULL)
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-Errors Archive_readHardLinkEntry(ArchiveEntryInfo   *archiveEntryInfo,
-                                 ArchiveInfo        *archiveInfo,
-                                 CompressAlgorithms *deltaCompressAlgorithm,
-                                 CompressAlgorithms *byteCompressAlgorithm,
-                                 CryptAlgorithms    *cryptAlgorithm,
-                                 CryptTypes         *cryptType,
-                                 StringList         *fileNameList,
-                                 FileInfo           *fileInfo,
-                                 String             deltaSourceName,
-                                 uint64             *deltaSourceSize,
-                                 uint64             *fragmentOffset,
-                                 uint64             *fragmentSize
+Errors Archive_readHardLinkEntry(ArchiveEntryInfo          *archiveEntryInfo,
+                                 ArchiveInfo               *archiveInfo,
+                                 CompressAlgorithms        *deltaCompressAlgorithm,
+                                 CompressAlgorithms        *byteCompressAlgorithm,
+                                 CryptAlgorithms           *cryptAlgorithm,
+                                 CryptTypes                *cryptType,
+                                 StringList                *fileNameList,
+                                 FileInfo                  *fileInfo,
+                                 FileExtendedAttributeList *fileExtendedAttributeList,
+                                 String                    deltaSourceName,
+                                 uint64                    *deltaSourceSize,
+                                 uint64                    *fragmentOffset,
+                                 uint64                    *fragmentSize
                                 );
 
 /***********************************************************************\
@@ -781,20 +819,23 @@ Errors Archive_readHardLinkEntry(ArchiveEntryInfo   *archiveEntryInfo,
 * Purpose: read special device info from archive
 * Input  : archiveEntryInfo - archive special entry info
 *          archiveInfo      - archive info
-* Output : cryptAlgorithm - used crypt algorithm (can be NULL)
-*          cryptType      - used crypt type (can be NULL)
-*          name           - link name
-*          fileInfo       - file info
+* Output : cryptAlgorithm            - used crypt algorithm (can be NULL)
+*          cryptType                 - used crypt type (can be NULL)
+*          name                      - link name
+*          fileInfo                  - file info
+*          fileExtendedAttributeList - file extended attribute list or
+*                                      NULL
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-Errors Archive_readSpecialEntry(ArchiveEntryInfo *archiveEntryInfo,
-                                ArchiveInfo      *archiveInfo,
-                                CryptAlgorithms  *cryptAlgorithm,
-                                CryptTypes       *cryptType,
-                                String           specialName,
-                                FileInfo         *fileInfo
+Errors Archive_readSpecialEntry(ArchiveEntryInfo          *archiveEntryInfo,
+                                ArchiveInfo               *archiveInfo,
+                                CryptAlgorithms           *cryptAlgorithm,
+                                CryptTypes                *cryptType,
+                                String                    specialName,
+                                FileInfo                  *fileInfo,
+                                FileExtendedAttributeList *fileExtendedAttributeList
                                );
 
 /***********************************************************************\
