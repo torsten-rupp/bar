@@ -752,6 +752,8 @@ void Crypt_done(CryptInfo *cryptInfo)
 {
   assert(cryptInfo != NULL);
 
+  DEBUG_REMOVE_RESOURCE_TRACE(cryptInfo);
+
   switch (cryptInfo->cryptAlgorithm)
   {
     case CRYPT_ALGORITHM_NONE:
@@ -780,8 +782,6 @@ void Crypt_done(CryptInfo *cryptInfo)
       #endif /* NDEBUG */
       break; /* not reached */
   }
-
-  DEBUG_REMOVE_RESOURCE_TRACE(cryptInfo);
 }
 
 Errors Crypt_reset(CryptInfo *cryptInfo, uint64 seed)
