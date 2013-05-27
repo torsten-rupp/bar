@@ -156,7 +156,8 @@ void debugAddResourceTrace(const char *__fileName__,
     }
     if (debugResourceNode != NULL)
     {
-      fprintf(stderr,"DEBUG WARNING: multiple init of resource %p at %s, %lu which was previously initialized at %s, %ld!\n",
+      fprintf(stderr,"DEBUG WARNING: multiple init of resource '%s' %p at %s, %lu which was previously initialized at %s, %ld!\n",
+              typeName,
               resource,
               __fileName__,
               __lineNb__,
@@ -227,8 +228,9 @@ void debugRemoveResourceTrace(const char *__fileName__,
     }
     if (debugResourceNode != NULL)
     {
-      fprintf(stderr,"DEBUG WARNING: multiple free of resource %p at %s, %lu and previously at %s, %lu which was allocated at %s, %ld!\n",
-              resource,
+      fprintf(stderr,"DEBUG WARNING: multiple free of resource '%s' %p at %s, %lu and previously at %s, %lu which was allocated at %s, %ld!\n",
+              debugResourceNode->typeName,
+              debugResourceNode->resource,
               __fileName__,
               __lineNb__,
               debugResourceNode->freeFileName,
