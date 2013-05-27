@@ -71,8 +71,11 @@
 #   int32  signed integer 32bit
 #   int64  signed integer 64bit
 #   string string
-#            uint16 length
+#            uint16 length of string (characters)
 #            char   string data (UTF-8)
+#   <type>[] array of <type>
+#            uint16 length of array (number of elements)
+#            ...    array data of <type>
 #   data   data bytes
 #   crc32  32bit CRC of the previous data types
 #

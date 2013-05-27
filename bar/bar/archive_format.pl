@@ -30,21 +30,20 @@ my $PREFIX_CONST_NAME       = "CHUNK_CONST_";
 
 my $DEFINITION_TYPES =
   {
-   "uint8"    => "CHUNK_DATATYPE_UINT8",
-   "uint16"   => "CHUNK_DATATYPE_UINT16",
-   "uint32"   => "CHUNK_DATATYPE_UINT32",
-   "uint64"   => "CHUNK_DATATYPE_UINT64",
-   "int8"     => "CHUNK_DATATYPE_INT8",
-   "int16"    => "CHUNK_DATATYPE_INT16",
-   "int32"    => "CHUNK_DATATYPE_INT32",
-   "int64"    => "CHUNK_DATATYPE_INT64",
-   "string"   => "CHUNK_DATATYPE_STRING",
+   "byte"   => "CHUNK_DATATYPE_BYTE",
+   "uint8"  => "CHUNK_DATATYPE_UINT8",
+   "uint16" => "CHUNK_DATATYPE_UINT16",
+   "uint32" => "CHUNK_DATATYPE_UINT32",
+   "uint64" => "CHUNK_DATATYPE_UINT64",
+   "int8"   => "CHUNK_DATATYPE_INT8",
+   "int16"  => "CHUNK_DATATYPE_INT16",
+   "int32"  => "CHUNK_DATATYPE_INT32",
+   "int64"  => "CHUNK_DATATYPE_INT64",
+   "string" => "CHUNK_DATATYPE_STRING",
 
-   "byteArray" => "CHUNK_DATATYPE_BYTE|CHUNK_DATATYPE_ARRAY",
+   "crc32"  => "CHUNK_DATATYPE_CRC32",
 
-   "crc32"    => "CHUNK_DATATYPE_CRC32",
-
-   "data"     => "CHUNK_DATATYPE_DATA",
+   "data"   => "CHUNK_DATATYPE_DATA",
   };
 
 my $cFileName,$hFileName;
@@ -205,7 +204,7 @@ while ($line=<STDIN>)
         writeHFile("    uint length;\n");
         writeHFile("    $1 *data;\n");
         writeHFile("  } $2;\n");
-        push(@parseDefinitions,$DEFINITION_TYPES->{byteArray});
+        push(@parseDefinitions,$DEFINITION_TYPES->{$1}."|CHUNK_DATATYPE_ARRAY");
         push(@parseDefinitions,"offsetof($PREFIX_CHUNK_NAME$structName,$2.length)");
         push(@parseDefinitions,"offsetof($PREFIX_CHUNK_NAME$structName,$2.data)");
       }
