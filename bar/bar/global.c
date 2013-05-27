@@ -219,6 +219,30 @@ void debugRemoveResourceTrace(const char *__fileName__,
 
   pthread_mutex_lock(&debugResourceLock);
   {
+    // find in free-list to check for duplicate free
+    debugResourceNode = debugResourceFreeList.head;
+    while ((debugResourceNode != NULL) && (debugResourceNode->resource != resource))
+    {
+      debugResourceNode = debugResourceNode->next;
+    }
+    if (debugResourceNode != NULL)
+    {
+      fprintf(stderr,"DEBUG WARNING: multiple free of resource %p at %s, %lu and previously at %s, %lu which was allocated at %s, %ld!\n",
+              resource,
+              __fileName__,
+              __lineNb__,
+              debugResourceNode->freeFileName,
+              debugResourceNode->freeLineNb,
+              debugResourceNode->allocFileName,
+              debugResourceNode->allocLineNb
+             );
+      #ifdef HAVE_BACKTRACE
+        debugDumpStackTrace(stderr,"allocated at",2,debugResourceNode->stackTrace,debugResourceNode->stackTraceSize);
+        debugDumpStackTrace(stderr,"deleted at",2,debugResourceNode->deleteStackTrace,debugResourceNode->deleteStackTraceSize);
+      #endif /* HAVE_BACKTRACE */
+      HALT_INTERNAL_ERROR("");
+    }
+
     // remove resource from allocated list, add resource to free-list, shorten list
     debugResourceNode = debugResourceAllocList.head;
     while ((debugResourceNode != NULL) && (debugResourceNode->resource != resource))
