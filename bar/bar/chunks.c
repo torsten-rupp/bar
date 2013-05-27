@@ -61,28 +61,16 @@ typedef struct
   uint64  size;
 } Chunk;
 
-typedef union
-{
-  struct
-  {
-    uint dataLength;
-    void *data;
-  };
-
-  struct
-  {
-    uint dataLength;
-    byte *data;
-  };
-
-} ChunkArray;
-
+// chunk read/write buffer
 typedef struct
 {
   const ChunkIO *chunkIO;
   void          *chunkIOUserData;
-  ulong         bytesRead;
-  ulong         bytesWritten;
+  union
+  {
+    ulong       bytesRead;
+    ulong       bytesWritten;
+  };
 
   const int     *definition;
   ulong         chunkSize;
@@ -310,9 +298,9 @@ LOCAL void doneChunkBuffer(ChunkBuffer *chunkBuffer)
 {
   assert(chunkBuffer != NULL);
 
-  free(chunkBuffer->buffer);
-
   DEBUG_REMOVE_RESOURCE_TRACE(chunkBuffer);
+
+  free(chunkBuffer->buffer);
 }
 
 /***********************************************************************\
@@ -396,7 +384,18 @@ LOCAL Errors getChunkBuffer(ChunkBuffer *chunkBuffer, byte **p, ulong size)
   return ERROR_NONE;
 }
 
-LOCAL Errors putChunkBuffer(ChunkBuffer *chunkBuffer, void *p, ulong size)
+/***********************************************************************\
+* Name   : putChunkBuffer
+* Purpose: put data into chunk buffer
+* Input  : chunkBuffer - chunk buffer handle
+*          p           - data pointer
+*          size        - size of data
+* Output : -
+* Return : ERROR_NONE or errorcode
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors putChunkBuffer(ChunkBuffer *chunkBuffer, const void *p, ulong size)
 {
   assert(chunkBuffer != NULL);
   assert(chunkBuffer->chunkIO != NULL);
@@ -610,6 +609,8 @@ LOCAL Errors doneDefinition(const int  *definition,
 {
   uint i;
 
+  DEBUG_REMOVE_RESOURCE_TRACE(data);
+
   if (definition != NULL)
   {
     i = 0;
@@ -676,8 +677,6 @@ LOCAL Errors doneDefinition(const int  *definition,
       }
     }
   }
-
-  DEBUG_REMOVE_RESOURCE_TRACE(data);
 
   return ERROR_NONE;
 }
@@ -1183,7 +1182,6 @@ LOCAL Errors writeDefinition(const ChunkIO *chunkIO,
             uint16 length;
             void   *data;
 
-#warning datatype definition? void*?
             length = (*((uint* )((byte*)chunkData+definition[i+1])));
             data   = (*((void**)((byte*)chunkData+definition[i+2])));
 
@@ -1537,18 +1535,33 @@ Errors __Chunk_init(const char    *__fileName__,
 
   initDefinition(definition,data);
 
-  DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,"chunk",chunkInfo);
+  #ifdef NDEBUG
+    DEBUG_ADD_RESOURCE_TRACE("chunk",chunkInfo);
+  #else /* not NDEBUG */
+    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,"chunk",chunkInfo);
+  #endif /* NDEBUG */
 
   return ERROR_NONE;
 }
 
+#ifdef NDEBUG
 void Chunk_done(ChunkInfo *chunkInfo)
+#else /* not NDEBUG */
+void __Chunk_done(const char *__fileName__,
+                  ulong      __lineNb__,
+                  ChunkInfo  *chunkInfo
+                 )
+#endif /* NDEBUG */
 {
   assert(chunkInfo != NULL);
 
-  doneDefinition(chunkInfo->definition,chunkInfo->data);
+  #ifdef NDEBUG
+    DEBUG_REMOVE_RESOURCE_TRACE(chunkInfo);
+  #else /* not NDEBUG */
+    DEBUG_REMOVE_RESOURCE_TRACEX(__fileName__,__lineNb__,chunkInfo);
+  #endif /* NDEBUG */
 
-  DEBUG_REMOVE_RESOURCE_TRACE(chunkInfo);
+  doneDefinition(chunkInfo->definition,chunkInfo->data);
 }
 
 Errors Chunk_next(const ChunkIO *chunkIO,

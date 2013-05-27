@@ -152,6 +152,7 @@ typedef struct ChunkInfo
                   cryptInfo, \
                   data \
                  )
+  #define Chunk_done(chunkInfo) __Chunk_done(__FILE__,__LINE__,chunkInfo)
 #endif /* not NDEBUG */
 
 /***************************** Forwards ********************************/
@@ -262,7 +263,14 @@ Errors __Chunk_init(const char    *__fileName__,
 * Notes  : -
 \***********************************************************************/
 
+#ifdef NDEBUG
 void Chunk_done(ChunkInfo *chunkInfo);
+#else /* not NDEBUG */
+void __Chunk_done(const char *__fileName__,
+                  ulong      __lineNb__,
+                  ChunkInfo  *chunkInfo
+                 );
+#endif /* NDEBUG */
 
 /***********************************************************************\
 * Name   : Chunk_next
