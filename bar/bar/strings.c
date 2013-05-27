@@ -105,8 +105,8 @@ typedef struct
   {
     LIST_NODE_HEADER(struct DebugStringNode);
 
-    const char      *fileName;
-    ulong           lineNb;
+    const char      *allocFileName;
+    ulong           allocLineNb;
     #ifdef HAVE_BACKTRACE
       void const *stackTrace[16];
       int        stackTraceSize;
@@ -1822,8 +1822,8 @@ String __String_new(const char *__fileName__, ulong __lineNb__)
       debugStringAllocList.allocatedMemory += sizeof(DebugStringNode);
 
       // init string node
-      debugStringNode->fileName       = __fileName__;
-      debugStringNode->lineNb         = __lineNb__;
+      debugStringNode->allocFileName  = __fileName__;
+      debugStringNode->allocLineNb    = __lineNb__;
       #ifdef HAVE_BACKTRACE
         debugStringNode->stackTraceSize = backtrace((void*)debugStringNode->stackTrace,SIZE_OF_ARRAY(debugStringNode->stackTrace));
       #endif /* HAVE_BACKTRACE */
@@ -2035,8 +2035,8 @@ void __String_delete(const char *__fileName__, ulong __lineNb__, String string)
                   __lineNb__,
                   debugStringNode->deleteFileName,
                   debugStringNode->deleteLineNb,
-                  debugStringNode->fileName,
-                  debugStringNode->lineNb
+                  debugStringNode->allocFileName,
+                  debugStringNode->allocLineNb
                  );
           #ifdef HAVE_BACKTRACE
             debugDumpStackTrace(stderr,"allocated at",2,debugStringNode->stackTrace,debugStringNode->stackTraceSize);
@@ -4539,8 +4539,8 @@ void String_debugDumpInfo(FILE *handle)
       fprintf(handle,"DEBUG: string %p '%s' allocated at %s, line %lu\n",
               debugStringNode->string,
               debugStringNode->string->data,
-              debugStringNode->fileName,
-              debugStringNode->lineNb
+              debugStringNode->allocFileName,
+              debugStringNode->allocLineNb
              );
       #ifdef HAVE_BACKTRACE
         debugDumpStackTrace(handle,"allocated at",2,debugStringNode->stackTrace,debugStringNode->stackTraceSize);
