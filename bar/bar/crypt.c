@@ -743,16 +743,31 @@ Errors __Crypt_init(const char    *__fileName__,
       break; /* not reached */
   }
 
-  DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,"crypt",cryptInfo);
+  #ifdef NDEBUG
+    DEBUG_ADD_RESOURCE_TRACE("crypt",cryptInfo);
+  #else /* not NDEBUG */
+    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,"crypt",cryptInfo);
+  #endif /* NDEBUG */
 
   return ERROR_NONE;
 }
 
+#ifdef NDEBUG
 void Crypt_done(CryptInfo *cryptInfo)
+#else /* not NDEBUG */
+void __Crypt_done(const char *__fileName__,
+                  ulong      __lineNb__,
+                  CryptInfo  *cryptInfo
+                 )
+#endif /* NDEBUG */
 {
   assert(cryptInfo != NULL);
 
-  DEBUG_REMOVE_RESOURCE_TRACE(cryptInfo);
+  #ifdef NDEBUG
+    DEBUG_REMOVE_RESOURCE_TRACE(cryptInfo);
+  #else /* not NDEBUG */
+    DEBUG_REMOVE_RESOURCE_TRACEX(__fileName__,__lineNb__,cryptInfo);
+  #endif /* NDEBUG */
 
   switch (cryptInfo->cryptAlgorithm)
   {

@@ -126,6 +126,7 @@ typedef struct
                   cryptAlgorithm, \
                   password \
                  )
+  #define Crypt_done(cryptInfo) __Crypt_done(__FILE__,__LINE__,cryptInfo)
 #endif /* not NDEBUG */
 
 /***************************** Forwards ********************************/
@@ -280,7 +281,14 @@ Errors __Crypt_init(const char      *__fileName__,
 * Notes  : -
 \***********************************************************************/
 
+#ifdef NDEBUG
 void Crypt_done(CryptInfo *cryptInfo);
+#else /* not NDEBUG */
+void __Crypt_done(const char *__fileName__,
+                  ulong      __lineNb__,
+                  CryptInfo  *cryptInfo
+                 );
+#endif /* NDEBUG */
 
 /***********************************************************************\
 * Name   : Crypt_reset
