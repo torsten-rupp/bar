@@ -5971,6 +5971,7 @@ Errors Archive_readFileEntry(ArchiveEntryInfo   *archiveEntryInfo,
         Chunk_done(&archiveEntryInfo->file.chunkFileDelta.info);
         Chunk_done(&archiveEntryInfo->file.chunkFileExtendedAttribute.info);
         Chunk_done(&archiveEntryInfo->file.chunkFileEntry.info);
+
         Crypt_done(&archiveEntryInfo->file.cryptInfo);
         Crypt_done(&archiveEntryInfo->file.chunkFileData.cryptInfo);
         Crypt_done(&archiveEntryInfo->file.chunkFileDelta.cryptInfo);
@@ -5979,7 +5980,7 @@ Errors Archive_readFileEntry(ArchiveEntryInfo   *archiveEntryInfo,
       }
     }
 
-    if (error != ERROR_NONE)
+    if (error == ERROR_INVALID_CRYPT_PASSWORD)
     {
       if (   (archiveEntryInfo->cryptAlgorithm != CRYPT_ALGORITHM_NONE)
           && (archiveInfo->cryptType != CRYPT_TYPE_ASYMMETRIC)
@@ -6007,7 +6008,9 @@ Errors Archive_readFileEntry(ArchiveEntryInfo   *archiveEntryInfo,
     free(archiveEntryInfo->file.deltaBuffer);
     free(archiveEntryInfo->file.byteBuffer);
     Chunk_done(&archiveEntryInfo->file.chunkFile.info);
+
     archiveInfo->pendingError = Chunk_skip(archiveInfo->chunkIO,archiveInfo->chunkIOUserData,&chunkHeader);
+
     return error;
   }
 
@@ -6018,15 +6021,18 @@ Errors Archive_readFileEntry(ArchiveEntryInfo   *archiveEntryInfo,
     Chunk_done(&archiveEntryInfo->file.chunkFileDelta.info);
     Chunk_done(&archiveEntryInfo->file.chunkFileExtendedAttribute.info);
     Chunk_done(&archiveEntryInfo->file.chunkFileEntry.info);
+
     Crypt_done(&archiveEntryInfo->file.cryptInfo);
     Crypt_done(&archiveEntryInfo->file.chunkFileData.cryptInfo);
     Crypt_done(&archiveEntryInfo->file.chunkFileDelta.cryptInfo);
     Crypt_done(&archiveEntryInfo->file.chunkFileExtendedAttribute.cryptInfo);
     Crypt_done(&archiveEntryInfo->file.chunkFileEntry.cryptInfo);
+
     Compress_delete(&archiveEntryInfo->file.byteCompressInfo);
     free(archiveEntryInfo->file.deltaBuffer);
     free(archiveEntryInfo->file.byteBuffer);
     Chunk_done(&archiveEntryInfo->file.chunkFile.info);
+
     archiveInfo->pendingError = Chunk_skip(archiveInfo->chunkIO,archiveInfo->chunkIOUserData,&chunkHeader);
 
     if      (error != ERROR_NONE) return error;
@@ -6050,15 +6056,18 @@ Errors Archive_readFileEntry(ArchiveEntryInfo   *archiveEntryInfo,
     Chunk_done(&archiveEntryInfo->file.chunkFileDelta.info);
     Chunk_done(&archiveEntryInfo->file.chunkFileExtendedAttribute.info);
     Chunk_done(&archiveEntryInfo->file.chunkFileEntry.info);
+
     Crypt_done(&archiveEntryInfo->file.cryptInfo);
     Crypt_done(&archiveEntryInfo->file.chunkFileData.cryptInfo);
     Crypt_done(&archiveEntryInfo->file.chunkFileDelta.cryptInfo);
     Crypt_done(&archiveEntryInfo->file.chunkFileExtendedAttribute.cryptInfo);
     Crypt_done(&archiveEntryInfo->file.chunkFileEntry.cryptInfo);
+
     Compress_delete(&archiveEntryInfo->file.byteCompressInfo);
     free(archiveEntryInfo->file.deltaBuffer);
     free(archiveEntryInfo->file.byteBuffer);
     Chunk_done(&archiveEntryInfo->file.chunkFile.info);
+
     archiveInfo->pendingError = Chunk_skip(archiveInfo->chunkIO,archiveInfo->chunkIOUserData,&chunkHeader);
 
     return error;
@@ -6471,9 +6480,11 @@ Errors Archive_readImageEntry(ArchiveEntryInfo   *archiveEntryInfo,
       }
       if (error != ERROR_NONE)
       {
+        // free resources
         Chunk_done(&archiveEntryInfo->image.chunkImageData.info);
         Chunk_done(&archiveEntryInfo->image.chunkImageDelta.info);
         Chunk_done(&archiveEntryInfo->image.chunkImageEntry.info);
+
         Crypt_done(&archiveEntryInfo->image.cryptInfo);
         Crypt_done(&archiveEntryInfo->image.chunkImageData.cryptInfo);
         Crypt_done(&archiveEntryInfo->image.chunkImageDelta.cryptInfo);
@@ -6481,7 +6492,7 @@ Errors Archive_readImageEntry(ArchiveEntryInfo   *archiveEntryInfo,
       }
     }
 
-    if (error != ERROR_NONE)
+    if (error == ERROR_INVALID_CRYPT_PASSWORD)
     {
       if (   (archiveEntryInfo->cryptAlgorithm != CRYPT_ALGORITHM_NONE)
           && (archiveInfo->cryptType != CRYPT_TYPE_ASYMMETRIC)
@@ -6509,7 +6520,9 @@ Errors Archive_readImageEntry(ArchiveEntryInfo   *archiveEntryInfo,
     free(archiveEntryInfo->image.deltaBuffer);
     free(archiveEntryInfo->image.byteBuffer);
     Chunk_done(&archiveEntryInfo->image.chunkImage.info);
+
     archiveInfo->pendingError = Chunk_skip(archiveInfo->chunkIO,archiveInfo->chunkIOUserData,&chunkHeader);
+
     return error;
   }
 
@@ -6518,14 +6531,17 @@ Errors Archive_readImageEntry(ArchiveEntryInfo   *archiveEntryInfo,
     Chunk_done(&archiveEntryInfo->image.chunkImageData.info);
     Chunk_done(&archiveEntryInfo->image.chunkImageDelta.info);
     Chunk_done(&archiveEntryInfo->image.chunkImageEntry.info);
+
     Crypt_done(&archiveEntryInfo->image.cryptInfo);
     Crypt_done(&archiveEntryInfo->image.chunkImageData.cryptInfo);
     Crypt_done(&archiveEntryInfo->image.chunkImageDelta.cryptInfo);
     Crypt_done(&archiveEntryInfo->image.chunkImageEntry.cryptInfo);
+
     Compress_delete(&archiveEntryInfo->image.byteCompressInfo);
     free(archiveEntryInfo->image.deltaBuffer);
     free(archiveEntryInfo->image.byteBuffer);
     Chunk_done(&archiveEntryInfo->image.chunkImage.info);
+
     archiveInfo->pendingError = Chunk_skip(archiveInfo->chunkIO,archiveInfo->chunkIOUserData,&chunkHeader);
 
     if      (error != ERROR_NONE)  return error;
@@ -6548,15 +6564,19 @@ Errors Archive_readImageEntry(ArchiveEntryInfo   *archiveEntryInfo,
     Chunk_done(&archiveEntryInfo->image.chunkImageData.info);
     Chunk_done(&archiveEntryInfo->image.chunkImageDelta.info);
     Chunk_done(&archiveEntryInfo->image.chunkImageEntry.info);
+
     Crypt_done(&archiveEntryInfo->image.cryptInfo);
     Crypt_done(&archiveEntryInfo->image.chunkImageData.cryptInfo);
     Crypt_done(&archiveEntryInfo->image.chunkImageDelta.cryptInfo);
     Crypt_done(&archiveEntryInfo->image.chunkImageEntry.cryptInfo);
+
     Compress_delete(&archiveEntryInfo->image.byteCompressInfo);
     free(archiveEntryInfo->image.deltaBuffer);
     free(archiveEntryInfo->image.byteBuffer);
     Chunk_done(&archiveEntryInfo->image.chunkImage.info);
+
     archiveInfo->pendingError = Chunk_skip(archiveInfo->chunkIO,archiveInfo->chunkIOUserData,&chunkHeader);
+
     return error;
   }
 
@@ -6827,14 +6847,16 @@ Errors Archive_readDirectoryEntry(ArchiveEntryInfo          *archiveEntryInfo,
       }
       if (error != ERROR_NONE)
       {
+        // free resources
         Chunk_done(&archiveEntryInfo->directory.chunkDirectoryExtendedAttribute.info);
         Chunk_done(&archiveEntryInfo->directory.chunkDirectoryEntry.info);
+
         Crypt_done(&archiveEntryInfo->directory.chunkDirectoryExtendedAttribute.cryptInfo);
         Crypt_done(&archiveEntryInfo->directory.chunkDirectoryEntry.cryptInfo);
       }
     }
 
-    if (error != ERROR_NONE)
+    if (error == ERROR_INVALID_CRYPT_PASSWORD)
     {
       if (   (archiveEntryInfo->cryptAlgorithm != CRYPT_ALGORITHM_NONE)
           && (archiveInfo->cryptType != CRYPT_TYPE_ASYMMETRIC)
@@ -6858,8 +6880,6 @@ Errors Archive_readDirectoryEntry(ArchiveEntryInfo          *archiveEntryInfo,
   } /* while */
   if (error != ERROR_NONE)
   {
-#warning done crypt
-    Chunk_done(&archiveEntryInfo->directory.chunkDirectoryExtendedAttribute.info);
     Chunk_done(&archiveEntryInfo->directory.chunkDirectory.info);
 
     archiveInfo->pendingError = Chunk_skip(archiveInfo->chunkIO,archiveInfo->chunkIOUserData,&chunkHeader);
@@ -6869,11 +6889,13 @@ Errors Archive_readDirectoryEntry(ArchiveEntryInfo          *archiveEntryInfo,
 
   if (!foundDirectoryEntryFlag)
   {
-#warning done crypt
     Chunk_done(&archiveEntryInfo->directory.chunkDirectoryExtendedAttribute.info);
     Chunk_done(&archiveEntryInfo->directory.chunkDirectory.info);
 
-    Chunk_skip(archiveInfo->chunkIO,archiveInfo->chunkIOUserData,&chunkHeader);
+    Crypt_done(&archiveEntryInfo->directory.chunkDirectoryExtendedAttribute.cryptInfo);
+    Crypt_done(&archiveEntryInfo->directory.chunkDirectoryEntry.cryptInfo);
+
+    archiveInfo->pendingError = Chunk_skip(archiveInfo->chunkIO,archiveInfo->chunkIOUserData,&chunkHeader);
 
     if      (error != ERROR_NONE)      return error;
     else if (!passwordFlag)            return ERROR_NO_CRYPT_PASSWORD;
@@ -7148,14 +7170,16 @@ Errors Archive_readLinkEntry(ArchiveEntryInfo          *archiveEntryInfo,
       }
       if (error != ERROR_NONE)
       {
+        // free resources
         Chunk_done(&archiveEntryInfo->link.chunkLinkExtendedAttribute.info);
         Chunk_done(&archiveEntryInfo->link.chunkLinkEntry.info);
+
         Crypt_done(&archiveEntryInfo->link.chunkLinkExtendedAttribute.cryptInfo);
         Crypt_done(&archiveEntryInfo->link.chunkLinkEntry.cryptInfo);
       }
     }
 
-    if (error != ERROR_NONE)
+    if (error == ERROR_INVALID_CRYPT_PASSWORD)
     {
       if (   (archiveEntryInfo->cryptAlgorithm != CRYPT_ALGORITHM_NONE)
           && (archiveInfo->cryptType != CRYPT_TYPE_ASYMMETRIC)
@@ -7179,18 +7203,20 @@ Errors Archive_readLinkEntry(ArchiveEntryInfo          *archiveEntryInfo,
   } // while
   if (error != ERROR_NONE)
   {
-#warning done crypt?
-    Chunk_done(&archiveEntryInfo->link.chunkLinkExtendedAttribute.info);
     Chunk_done(&archiveEntryInfo->link.chunkLink.info);
+
     archiveInfo->pendingError = Chunk_skip(archiveInfo->chunkIO,archiveInfo->chunkIOUserData,&chunkHeader);
+
     return error;
   }
 
   if (!foundLinkEntryFlag)
   {
-#warning done crypt?
     Chunk_done(&archiveEntryInfo->link.chunkLinkExtendedAttribute.info);
     Chunk_done(&archiveEntryInfo->link.chunkLink.info);
+
+    Crypt_done(&archiveEntryInfo->link.chunkLinkExtendedAttribute.cryptInfo);
+    Crypt_done(&archiveEntryInfo->link.chunkLinkEntry.cryptInfo);
 
     archiveInfo->pendingError = Chunk_skip(archiveInfo->chunkIO,archiveInfo->chunkIOUserData,&chunkHeader);
 
@@ -7727,7 +7753,7 @@ Errors Archive_readHardLinkEntry(ArchiveEntryInfo          *archiveEntryInfo,
       }
     }
 
-    if (error != ERROR_NONE)
+    if (error == ERROR_INVALID_CRYPT_PASSWORD)
     {
       if (   (archiveEntryInfo->cryptAlgorithm != CRYPT_ALGORITHM_NONE)
           && (archiveInfo->cryptType != CRYPT_TYPE_ASYMMETRIC)
@@ -7755,7 +7781,9 @@ Errors Archive_readHardLinkEntry(ArchiveEntryInfo          *archiveEntryInfo,
     free(archiveEntryInfo->hardLink.deltaBuffer);
     free(archiveEntryInfo->hardLink.byteBuffer);
     Chunk_done(&archiveEntryInfo->hardLink.chunkHardLink.info);
+
     archiveInfo->pendingError = Chunk_skip(archiveInfo->chunkIO,archiveInfo->chunkIOUserData,&chunkHeader);
+
     return error;
   }
 
@@ -8094,15 +8122,16 @@ Errors Archive_readSpecialEntry(ArchiveEntryInfo          *archiveEntryInfo,
       }
       if (error != ERROR_NONE)
       {
-        Crypt_done(&archiveEntryInfo->special.chunkSpecialExtendedAttribute.cryptInfo);
-        Crypt_done(&archiveEntryInfo->special.chunkSpecialEntry.cryptInfo);
-
+        // free resources
         Chunk_done(&archiveEntryInfo->special.chunkSpecialExtendedAttribute.info);
         Chunk_done(&archiveEntryInfo->special.chunkSpecialEntry.info);
+
+        Crypt_done(&archiveEntryInfo->special.chunkSpecialExtendedAttribute.cryptInfo);
+        Crypt_done(&archiveEntryInfo->special.chunkSpecialEntry.cryptInfo);
       }
     }
 
-    if (error != ERROR_NONE)
+    if (error == ERROR_INVALID_CRYPT_PASSWORD)
     {
       if (   (archiveEntryInfo->cryptAlgorithm != CRYPT_ALGORITHM_NONE)
           && (archiveInfo->cryptType != CRYPT_TYPE_ASYMMETRIC)
@@ -8126,8 +8155,6 @@ Errors Archive_readSpecialEntry(ArchiveEntryInfo          *archiveEntryInfo,
   } /* while */
   if (error != ERROR_NONE)
   {
-#warning doen crypt?
-    Chunk_done(&archiveEntryInfo->special.chunkSpecialExtendedAttribute.info);
     Chunk_done(&archiveEntryInfo->special.chunkSpecial.info);
 
     archiveInfo->pendingError = Chunk_skip(archiveInfo->chunkIO,archiveInfo->chunkIOUserData,&chunkHeader);
@@ -8137,9 +8164,11 @@ Errors Archive_readSpecialEntry(ArchiveEntryInfo          *archiveEntryInfo,
 
   if (!foundSpecialEntryFlag)
   {
-#warning doen crypt?
     Chunk_done(&archiveEntryInfo->special.chunkSpecialExtendedAttribute.info);
     Chunk_done(&archiveEntryInfo->special.chunkSpecial.info);
+
+    Crypt_done(&archiveEntryInfo->special.chunkSpecialExtendedAttribute.cryptInfo);
+    Crypt_done(&archiveEntryInfo->special.chunkSpecialEntry.cryptInfo);
 
     archiveInfo->pendingError = Chunk_skip(archiveInfo->chunkIO,archiveInfo->chunkIOUserData,&chunkHeader);
 

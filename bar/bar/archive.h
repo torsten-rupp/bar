@@ -176,7 +176,7 @@ typedef struct ArchiveEntryInfo
 {
   LIST_NODE_HEADER(struct ArchiveEntryInfo);
 
-  ArchiveInfo                     *archiveInfo;                        // archive info
+  ArchiveInfo                         *archiveInfo;                    // archive info
 
   enum
   {
@@ -184,13 +184,13 @@ typedef struct ArchiveEntryInfo
     ARCHIVE_MODE_WRITE,
   } mode;                                                              // read/write archive mode
 
-  CryptAlgorithms                 cryptAlgorithm;                      // crypt algorithm for entry
-  uint                            blockLength;                         /* block length for file entry/file
+  CryptAlgorithms                     cryptAlgorithm;                  // crypt algorithm for entry
+  uint                                blockLength;                     /* block length for file entry/file
                                                                           data (depend on used crypt
                                                                           algorithm)
                                                                        */
 
-  ArchiveEntryTypes               archiveEntryType;
+  ArchiveEntryTypes                   archiveEntryType;
   union
   {
     struct
@@ -308,7 +308,26 @@ typedef struct ArchiveEntryInfo
   };
 } ArchiveEntryInfo;
 
+/***********************************************************************\
+* Name   : ArchivePauseCallbackFunction
+* Purpose: call back to check if pause activate
+* Input  : userData - user data
+* Output : -
+* Return : TRUE iff pause
+* Notes  : -
+\***********************************************************************/
+
 typedef bool(*ArchivePauseCallbackFunction)(void *userData);
+
+/***********************************************************************\
+* Name   : ArchiveAbortCallbackFunction
+* Purpose: call back to check if aborted
+* Input  : userData - user data
+* Output : -
+* Return : TRUE if aborted
+* Notes  : -
+\***********************************************************************/
+
 typedef bool(*ArchiveAbortCallbackFunction)(void *userData);
 
 /***************************** Variables *******************************/
@@ -346,11 +365,11 @@ Errors Archive_initAll(void);
 void Archive_doneAll(void);
 
 /***********************************************************************\
-* Name   :
-* Purpose:
-* Input  : -
+* Name   : Archive_isArchiveFile
+* Purpose: check if archive file
+* Input  : fileName - file name
 * Output : -
-* Return : -
+* Return : TRUE if archive file, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
 
