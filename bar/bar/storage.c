@@ -1959,12 +1959,12 @@ void Storage_doneSpecifier(StorageSpecifier *storageSpecifier)
 {
   assert(storageSpecifier != NULL);
 
+  DEBUG_REMOVE_RESOURCE_TRACE(storageSpecifier);
+
   String_delete(storageSpecifier->deviceName);
   Password_delete(storageSpecifier->loginPassword);
   String_delete(storageSpecifier->loginName);
   String_delete(storageSpecifier->hostName);
-
-  DEBUG_REMOVE_RESOURCE_TRACE(storageSpecifier);
 }
 
 void Storage_duplicateSpecifier(StorageSpecifier       *destinationStorageSpecifier,
