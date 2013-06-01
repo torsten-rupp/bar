@@ -2,6 +2,7 @@
   * added multi-core compression/encryption support!
   * added automatic delete of duplicate index entries when
     server is started
+  * store and restore extended file attributes (EAs)
   * fixed create index: do not delete index which is currently
     updated
   * added support for crash dump tool Breakpad
@@ -16,6 +17,7 @@
   * fixed restore: list files when "only newest" is disabled
   * fixed duplicate archive entries when multiple include options
     are specified (thanks to Stefan A.)
+  * fixed writing .bid file when no directory is given
 
 2013-05-05 0.17b
   * fixed parsing of storage specifier (ftp, scp/sftp,
