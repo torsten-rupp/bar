@@ -243,6 +243,46 @@ CHUNK FILE_DATA "FDAT" FileData
   crc32  crc
   data   data
 
+
+# new???:
+## CHUNK FILE "FIL1" File
+##  uint16 compressAlgorithm;
+##  uint16 cryptAlgorithm;
+##  crc32  crc
+##
+## CHUNK FILE_ENTRY "FENT" FileEntry
+##   ENCRYPT
+##   uint64 size
+##   uint64 timeLastAccess
+##   uint64 timeModified
+##   uint64 timeLastChanged
+##   uint32 userId
+##   uint32 groupId
+##   uint32 permission
+##   uint64 fragmentOffset
+##   uint64 fragmentSize
+##   string name
+##   crc32  crc
+##
+## CHUNK FILE_EXTENDED_ATTRIBUTE "FEAT" FileExtendedAttribute
+##   ENCRYPT
+##   string name
+##   byte[] value
+##   crc32  crc
+##
+## CHUNK FILE_DELTA "FDLT" FileDelta
+##   ENCRYPT
+##   uint16 deltaAlgorithm;
+##   string name
+##   uint64 size
+##   crc32  crc
+##
+## CHUNK FILE_DATA "DATA" FileData
+##   ENCRYPT
+##   COMPRESS
+##   data   data
+##   crc32  crc
+
 # ----------------------------------------------------------------------
 
 # image info header
