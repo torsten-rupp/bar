@@ -466,7 +466,6 @@ LOCAL Errors writeIncrementalList(const String fileName,
                                   Dictionary   *namesDictionary
                                  )
 {
-  String                    directoryName;
   String                    directory;
   String                    tmpFileName;
   Errors                    error;
@@ -484,46 +483,46 @@ LOCAL Errors writeIncrementalList(const String fileName,
   assert(fileName != NULL);
   assert(namesDictionary != NULL);
 
+  // get directory of .bid file
+  directory = File_getFilePathName(String_new(),fileName);
+
   // create directory if not existing
-  directoryName = File_getFilePathName(String_new(),fileName);
-  if (!String_isEmpty(directoryName))
+  if (!String_isEmpty(directory))
   {
-    if      (!File_exists(directoryName))
+    if      (!File_exists(directory))
     {
-      error = File_makeDirectory(directoryName,FILE_DEFAULT_USER_ID,FILE_DEFAULT_GROUP_ID,FILE_DEFAULT_PERMISSION);
+      error = File_makeDirectory(directory,FILE_DEFAULT_USER_ID,FILE_DEFAULT_GROUP_ID,FILE_DEFAULT_PERMISSION);
       if (error != ERROR_NONE)
       {
-        String_delete(directoryName);
+        String_delete(directory);
         return error;
       }
     }
-    else if (!File_isDirectory(directoryName))
+    else if (!File_isDirectory(directory))
     {
-      error = ERRORX_(NOT_A_DIRECTORY,0,String_cString(directoryName));
-      String_delete(directoryName);
+      error = ERRORX_(NOT_A_DIRECTORY,0,String_cString(directory));
+      String_delete(directory);
       return error;
     }
   }
-  String_delete(directoryName);
 
-  // get temporary name
-  directory = File_getFilePathName(File_newFileName(),fileName);
-  tmpFileName = File_newFileName();
+  // get temporary name for new .bid file
+  tmpFileName = String_new();
   error = File_getTmpFileName(tmpFileName,NULL,directory);
   if (error != ERROR_NONE)
   {
-    File_deleteFileName(tmpFileName);
-    File_deleteFileName(directory);
+    String_delete(tmpFileName);
+    String_delete(directory);
     return error;
   }
 
-  // open file
+  // open file new .bid file
   error = File_open(&fileHandle,tmpFileName,FILE_OPEN_CREATE);
   if (error != ERROR_NONE)
   {
     File_delete(tmpFileName,FALSE);
-    File_deleteFileName(tmpFileName);
-    File_deleteFileName(directory);
+    String_delete(tmpFileName);
+    String_delete(directory);
     return error;
   }
 
@@ -535,8 +534,8 @@ LOCAL Errors writeIncrementalList(const String fileName,
   {
     File_close(&fileHandle);
     File_delete(tmpFileName,FALSE);
-    File_deleteFileName(tmpFileName);
-    File_deleteFileName(directory);
+    String_delete(tmpFileName);
+    String_delete(directory);
     return error;
   }
   version = INCREMENTAL_LIST_FILE_VERSION;
@@ -545,8 +544,8 @@ LOCAL Errors writeIncrementalList(const String fileName,
   {
     File_close(&fileHandle);
     File_delete(tmpFileName,FALSE);
-    File_deleteFileName(tmpFileName);
-    File_deleteFileName(directory);
+    String_delete(tmpFileName);
+    String_delete(directory);
     return error;
   }
 
@@ -585,14 +584,14 @@ fprintf(stderr,"%s,%d: %s %d\n",__FILE__,__LINE__,s,incrementalFileInfo->state);
   }
   Dictionary_doneIterator(&dictionaryIterator);
 
-  // close file
+  // close file .bid file
   File_close(&fileHandle);
   if (error != ERROR_NONE)
   {
     File_delete(tmpFileName,FALSE);
     File_delete(tmpFileName,FALSE);
-    File_deleteFileName(tmpFileName);
-    File_deleteFileName(directory);
+    String_delete(tmpFileName);
+    String_delete(directory);
     return error;
   }
 
@@ -601,14 +600,14 @@ fprintf(stderr,"%s,%d: %s %d\n",__FILE__,__LINE__,s,incrementalFileInfo->state);
   if (error != ERROR_NONE)
   {
     File_delete(tmpFileName,FALSE);
-    File_deleteFileName(tmpFileName);
-    File_deleteFileName(directory);
+    String_delete(tmpFileName);
+    String_delete(directory);
     return error;
   }
 
   // free resources
-  File_deleteFileName(tmpFileName);
-  File_deleteFileName(directory);
+  String_delete(tmpFileName);
+  String_delete(directory);
 
   return ERROR_NONE;
 }
@@ -815,10 +814,10 @@ LOCAL bool checkNoBackup(const String pathName)
   haveNoBackupFlag = FALSE;
   if (!globalOptions.ignoreNoBackupFileFlag)
   {
-    fileName = File_newFileName();
+    fileName = String_new();
     haveNoBackupFlag |= File_exists(File_appendFileNameCString(File_setFileName(fileName,pathName),".nobackup"));
     haveNoBackupFlag |= File_exists(File_appendFileNameCString(File_setFileName(fileName,pathName),".NOBACKUP"));
-    File_deleteFileName(fileName);
+    String_delete(fileName);
   }
 
   return haveNoBackupFlag;
