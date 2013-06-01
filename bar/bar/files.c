@@ -609,7 +609,7 @@ Errors __File_getTmpFileCString(const char *__fileName__,
 
   if (pattern == NULL) pattern = "tmp-XXXXXX";
 
-  if (directory != NULL)
+  if (!String_isEmpty(directory))
   {
     s = (char*)malloc(String_length(directory)+strlen(FILE_SEPARATOR_STRING)+strlen(pattern)+1);
     if (s == NULL)
@@ -763,7 +763,7 @@ Errors File_getTmpFileNameCString(String fileName, char const *pattern, const St
 
   if (pattern == NULL) pattern = "tmp-XXXXXX";
 
-  if (directory != NULL)
+  if (!String_isEmpty(directory))
   {
     s = (char*)malloc(String_length(directory)+strlen(FILE_SEPARATOR_STRING)+strlen(pattern)+1);
     if (s == NULL)
@@ -840,7 +840,7 @@ Errors File_getTmpDirectoryNameCString(String directoryName, char const *pattern
 
   if (pattern == NULL) pattern = "tmp-XXXXXX";
 
-  if (directory != NULL)
+  if (!String_isEmpty(directory))
   {
     String_set(directoryName,directory);
     File_appendFileNameCString(directoryName,pattern);
