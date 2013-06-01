@@ -148,6 +148,8 @@ LOCAL Errors initChunkBuffer(ChunkBuffer   *chunkBuffer,
   switch (chunkMode)
   {
     case CHUNK_MODE_READ:
+#if 0
+// does not work: decryption in parts is not possible, thus data must be read and decrypted as a single block
       // get aligned max. data length which can be read initialy
       n        = 0;
       i        = 0;
@@ -222,6 +224,9 @@ LOCAL Errors initChunkBuffer(ChunkBuffer   *chunkBuffer,
         }
       }
       n = ALIGN(n,alignment);
+#else
+      n = ALIGN(chunkSize,alignment);
+#endif
       if ((chunkBuffer->bytesRead+n) > chunkSize)
       {
         return ERROR_INVALID_CHUNK_SIZE;
@@ -247,12 +252,12 @@ LOCAL Errors initChunkBuffer(ChunkBuffer   *chunkBuffer,
         return error;
       }
       chunkBuffer->bytesRead += n;
-    //fprintf(stderr,"%s, %d: read:\n",__FILE__,__LINE__); debugDumpMemory(FALSE,chunkBuffer->buffer,n);
+//fprintf(stderr,"%s, %d: read:\n",__FILE__,__LINE__); debugDumpMemory(FALSE,chunkBuffer->buffer,n);
 
       // decrypt initial data
       if (cryptInfo != NULL)
       {
-    // NYI ???: seed value?
+// NYI ???: seed value?
         Crypt_reset(cryptInfo,0);
         error = Crypt_decrypt(cryptInfo,chunkBuffer->buffer,n);
         if (error != ERROR_NONE)
@@ -262,7 +267,7 @@ LOCAL Errors initChunkBuffer(ChunkBuffer   *chunkBuffer,
         }
       }
       chunkBuffer->bufferLength += n;
-    //fprintf(stderr,"%s, %d: read decrypted:\n",__FILE__,__LINE__); debugDumpMemory(FALSE,chunkBuffer->buffer,n);
+//fprintf(stderr,"%s, %d: read decrypted:\n",__FILE__,__LINE__); debugDumpMemory(FALSE,chunkBuffer->buffer,n);
       break;
     case CHUNK_MODE_WRITE:
       // allocate initial buffer size
@@ -420,6 +425,15 @@ LOCAL Errors putChunkBuffer(ChunkBuffer *chunkBuffer, const void *p, ulong size)
   return ERROR_NONE;
 }
 
+/***********************************************************************\
+* Name   : flushChunkBuffer
+* Purpose: flush and write chunk buffer
+* Input  : chunkBuffer - chunk buffer handle
+* Output : -
+* Return : ERROR_NONE or errorcode
+* Notes  : -
+\***********************************************************************/
+
 LOCAL Errors flushChunkBuffer(ChunkBuffer *chunkBuffer)
 {
   ulong  n;
@@ -464,7 +478,7 @@ LOCAL Errors flushChunkBuffer(ChunkBuffer *chunkBuffer)
 }
 
 /***********************************************************************\
-* Name   : initDefinition7063
+* Name   : initDefinition
 * Purpose: init chunk definition
 * Input  : definition - chunk definition
 *          data       - chunk data
@@ -1330,15 +1344,15 @@ ulong Chunk_getSize(const int  *definition,
                     ulong      dataLength
                    )
 {
-  ulong definitionSize;
+  ulong size;
   int   z;
 
   assert(definition != NULL);
 #warning todo
 //assert(chunkData != NULL);
 
-  definitionSize = 0;
-  z              = 0;
+  size = 0;
+  z    = 0;
   while (definition[z+0] != CHUNK_DATATYPE_NONE)
   {
     switch (definition[z+0])
@@ -1346,25 +1360,25 @@ ulong Chunk_getSize(const int  *definition,
       case CHUNK_DATATYPE_BYTE:
       case CHUNK_DATATYPE_UINT8:
       case CHUNK_DATATYPE_INT8:
-        definitionSize += 1;
+        size += 1;
 
         z += 2;
         break;
       case CHUNK_DATATYPE_UINT16:
       case CHUNK_DATATYPE_INT16:
-        definitionSize += 2;
+        size += 2;
 
         z += 2;
         break;
       case CHUNK_DATATYPE_UINT32:
       case CHUNK_DATATYPE_INT32:
-        definitionSize += 4;
+        size += 4;
 
         z += 2;
         break;
       case CHUNK_DATATYPE_UINT64:
       case CHUNK_DATATYPE_INT64:
-        definitionSize += 8;
+        size += 8;
 
         z += 2;
         break;
@@ -1377,7 +1391,7 @@ ulong Chunk_getSize(const int  *definition,
           s = (*((String*)((byte*)chunkData+definition[z+1])));
           assert(s != NULL);
 #warning alignment string?
-          definitionSize += 2+String_length(s);
+          size += 2+String_length(s);
 
           z += 2;
         }
@@ -1392,8 +1406,7 @@ ulong Chunk_getSize(const int  *definition,
           assert(chunkData != NULL);
 
           length = (*((uint*)((byte*)chunkData+definition[z+1])));
-
-          definitionSize += 2+ALIGN(length*1,2);
+          size += 2+ALIGN(length*1,4);
 
           z += 3;
         }
@@ -1406,8 +1419,7 @@ ulong Chunk_getSize(const int  *definition,
           assert(chunkData != NULL);
 
           length = (*((uint*)((byte*)chunkData+definition[z+1])));
-
-          definitionSize += 2+length*2;
+          size += 2+ALIGN(length*2,4);
 
           z += 3;
         }
@@ -1420,8 +1432,7 @@ ulong Chunk_getSize(const int  *definition,
           assert(chunkData != NULL);
 
           length = (*((uint*)((byte*)chunkData+definition[z+1])));
-
-          definitionSize += 2+length*4;
+          size += 2+length*4;
 
           z += 3;
         }
@@ -1434,8 +1445,7 @@ ulong Chunk_getSize(const int  *definition,
           assert(chunkData != NULL);
 
           length = (*((uint*)((byte*)chunkData+definition[z+1])));
-
-          definitionSize += 2+length*8;
+          size += 2+length*8;
 
           z += 3;
         }
@@ -1448,14 +1458,12 @@ ulong Chunk_getSize(const int  *definition,
           assert(chunkData != NULL);
 
           length = (*((uint*)((byte*)chunkData+definition[z+1])));
-
           while (length > 0)
           {
-#warning todo
             s = (*((String*)((byte*)chunkData+definition[z+1])));
             assert(s != NULL);
 #warning alignment string?
-            definitionSize += 2+String_length(s);
+            size += 2+String_length(s);
           }
 
           z += 3;
@@ -1463,13 +1471,13 @@ ulong Chunk_getSize(const int  *definition,
         break;
 
       case CHUNK_DATATYPE_CRC32:
-        definitionSize += 4;
+        size += 4;
 
         z += 2;
         break;
 
       case CHUNK_DATATYPE_DATA:
-        definitionSize += dataLength;
+        size += dataLength;
 
         z += 2;
         break;
@@ -1482,10 +1490,10 @@ ulong Chunk_getSize(const int  *definition,
     }
   }
 
-  // add padding for alignment
-  definitionSize = ALIGN(definitionSize,alignment);
+  // align size
+  size = ALIGN(size,alignment);
 
-  return definitionSize;
+  return size;
 }
 
 #ifdef NDEBUG
