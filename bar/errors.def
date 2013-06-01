@@ -243,9 +243,18 @@ ERROR WRONG_PRIVATE_KEY              "wrong private decryption key"
 ERROR CREATE_FILE
 ERROR OPEN_FILE
 ERROR CREATE_DIRECTORY
+  // Note: do not add error text to error message if error number is set; file name should be part of error text
+  if (ERROR_ERRNO != 0)
+  {
+    strncpy(errorText,strerror(ERROR_ERRNO),sizeof(errorText)-1);
+  }
+  else
+  {
+    strncpy(errorText,ERROR_TEXT,sizeof(errorText)-1-strlen(errorText));
+  }
 
 ERROR IO_ERROR
-  strncpy(errorText,(ERROR_ERRNO != 0)?strerror(ERROR_ERRNO):"i/o error",sizeof(errorText)-1);
+  strncpy(errorText,(ERROR_ERRNO != 0) ? strerror(ERROR_ERRNO) : "i/o error",sizeof(errorText)-1);
   if (ERROR_TEXT != NULL)
   {
     strncat(errorText,": ",sizeof(errorText)-1-strlen(errorText));
@@ -471,5 +480,8 @@ ERROR DATABASE
 
 ERROR DATABASE_CREATE_INDEX          "error creating index"
 ERROR DATABASE_INDEX_NOT_FOUND       "index not found"
+
+// --- debugging only ---------------------------------------------------
+ERROR TESTCODE                       "test code"
 
 // end of file
