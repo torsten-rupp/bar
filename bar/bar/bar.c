@@ -140,6 +140,8 @@ typedef enum
 GlobalOptions          globalOptions;
 String                 tmpDirectory;
 DatabaseHandle         *indexDatabaseHandle;
+Semaphore              inputLock;
+Semaphore              outputLock;
 
 LOCAL Commands         command;
 LOCAL String           jobName;
@@ -204,7 +206,6 @@ LOCAL String             tmpLogFileName;      // file name of temporary log file
 LOCAL FILE               *logFile = NULL;     // log file handle
 LOCAL FILE               *tmpLogFile = NULL;  // temporary log file handle
 
-LOCAL Semaphore          outputLock;
 LOCAL ThreadLocalStorage outputLineHandle;
 LOCAL String             lastOutputLine;
 
@@ -2475,20 +2476,20 @@ LOCAL Errors initAll(void)
 
   // initialize modules
   error = Password_initAll();
-  DEBUG_TEST_CODE("initAll1") { Password_doneAll(); error = ERROR_UNKNOWN; }
+  DEBUG_TEST_CODE("initAll1") { Password_doneAll(); error = ERROR_TESTCODE; }
   if (error != ERROR_NONE)
   {
     return error;
   }
   error = Crypt_initAll();
-  DEBUG_TEST_CODE("initAll2") { Crypt_doneAll(); error = ERROR_UNKNOWN; }
+  DEBUG_TEST_CODE("initAll2") { Crypt_doneAll(); error = ERROR_TESTCODE; }
   if (error != ERROR_NONE)
   {
     Password_doneAll();
     return error;
   }
   error = Pattern_initAll();
-  DEBUG_TEST_CODE("initAll3") { Password_doneAll(); error = ERROR_UNKNOWN; }
+  DEBUG_TEST_CODE("initAll3") { Password_doneAll(); error = ERROR_TESTCODE; }
   if (error != ERROR_NONE)
   {
     Crypt_doneAll();
@@ -2496,7 +2497,7 @@ LOCAL Errors initAll(void)
     return error;
   }
   error = PatternList_initAll();
-  DEBUG_TEST_CODE("initAll4") { PatternList_doneAll(); error = ERROR_UNKNOWN; }
+  DEBUG_TEST_CODE("initAll4") { PatternList_doneAll(); error = ERROR_TESTCODE; }
   if (error != ERROR_NONE)
   {
     Pattern_doneAll();
@@ -2505,7 +2506,7 @@ LOCAL Errors initAll(void)
     return error;
   }
   error = Chunk_initAll();
-  DEBUG_TEST_CODE("initAll5") { Chunk_doneAll(); error = ERROR_UNKNOWN; }
+  DEBUG_TEST_CODE("initAll5") { Chunk_doneAll(); error = ERROR_TESTCODE; }
   if (error != ERROR_NONE)
   {
     PatternList_doneAll();
@@ -2515,7 +2516,7 @@ LOCAL Errors initAll(void)
     return error;
   }
   error = Source_initAll();
-  DEBUG_TEST_CODE("initAll6") { Source_doneAll(); error = ERROR_UNKNOWN; }
+  DEBUG_TEST_CODE("initAll6") { Source_doneAll(); error = ERROR_TESTCODE; }
   if (error != ERROR_NONE)
   {
     Chunk_doneAll();
@@ -2526,7 +2527,7 @@ LOCAL Errors initAll(void)
     return error;
   }
   error = Archive_initAll();
-  DEBUG_TEST_CODE("initAll7") { Archive_doneAll(); error = ERROR_UNKNOWN; }
+  DEBUG_TEST_CODE("initAll7") { Archive_doneAll(); error = ERROR_TESTCODE; }
   if (error != ERROR_NONE)
   {
     Source_doneAll();
@@ -2538,7 +2539,7 @@ LOCAL Errors initAll(void)
     return error;
   }
   error = Storage_initAll();
-  DEBUG_TEST_CODE("initAll8") { Storage_doneAll(); error = ERROR_UNKNOWN; }
+  DEBUG_TEST_CODE("initAll8") { Storage_doneAll(); error = ERROR_TESTCODE; }
   if (error != ERROR_NONE)
   {
     Archive_doneAll();
@@ -2551,7 +2552,7 @@ LOCAL Errors initAll(void)
     return error;
   }
   error = Index_initAll();
-  DEBUG_TEST_CODE("initAll9") { Index_doneAll(); error = ERROR_UNKNOWN; }
+  DEBUG_TEST_CODE("initAll9") { Index_doneAll(); error = ERROR_TESTCODE; }
   if (error != ERROR_NONE)
   {
     Storage_doneAll();
@@ -2565,7 +2566,7 @@ LOCAL Errors initAll(void)
     return error;
   }
   error = Network_initAll();
-  DEBUG_TEST_CODE("initAll10") { Network_doneAll(); error = ERROR_UNKNOWN; }
+  DEBUG_TEST_CODE("initAll10") { Network_doneAll(); error = ERROR_TESTCODE; }
   if (error != ERROR_NONE)
   {
     Index_doneAll();
@@ -2580,7 +2581,7 @@ LOCAL Errors initAll(void)
     return error;
   }
   error = Server_initAll();
-  DEBUG_TEST_CODE("initAll11") { Server_doneAll(); error = ERROR_UNKNOWN; }
+  DEBUG_TEST_CODE("initAll11") { Server_doneAll(); error = ERROR_TESTCODE; }
   if (error != ERROR_NONE)
   {
     Network_doneAll();
@@ -2685,6 +2686,7 @@ LOCAL Errors initAll(void)
   logFile                                = NULL;
   tmpLogFile                             = NULL;
 
+  Semaphore_init(&inputLock);
   Semaphore_init(&outputLock);
   Thread_initLocalVariable(&outputLineHandle,outputLineInit,NULL);
   lastOutputLine                         = NULL;
@@ -2733,6 +2735,7 @@ LOCAL void doneAll(void)
 
   // deinitialize variables
   Semaphore_done(&outputLock);
+  Semaphore_done(&inputLock);
   if (defaultDevice.writeCommand != NULL) String_delete(defaultDevice.writeCommand);
   if (defaultDevice.writePostProcessCommand != NULL) String_delete(defaultDevice.writePostProcessCommand);
   if (defaultDevice.writePreProcessCommand != NULL) String_delete(defaultDevice.writePreProcessCommand);
@@ -2767,12 +2770,6 @@ LOCAL void doneAll(void)
   Semaphore_done(&serverListLock);
   List_done(&serverList,(ListNodeFreeFunction)freeServerNode,NULL);
 
-//  Semaphore_done(&webdavServerListLock);
-//  List_done(&webdavServerList,(ListNodeFreeFunction)freeWebDAVServerNode,NULL);
-//  Semaphore_done(&sshServerListLock);
-//  List_done(&sshServerList,(ListNodeFreeFunction)freeSSHServerNode,NULL);
-//  Semaphore_done(&ftpServerListLock);
-//  List_done(&ftpServerList,(ListNodeFreeFunction)freeFTPServerNode,NULL);
   freeJobOptions(&jobOptions);
   String_delete(storageName);
   String_delete(jobName);
@@ -2940,7 +2937,7 @@ void logMessage(ulong logType, const char *text, ...)
   va_end(arguments);
 }
 
-void printConsole(const char *format, ...)
+void printConsole(FILE *file, const char *format, ...)
 {
   String  line;
   va_list arguments;
@@ -3062,6 +3059,7 @@ void logPostProcess(void)
                                 (ExecuteIOFunction)executeIOlogPostProcess,
                                 &stderrList
                                );
+    DEBUG_TEST_CODE("logPostProcess") { StringList_done(&stderrList); error = ERROR_TESTCODE; }
     if (error != ERROR_NONE)
     {
       printError("Cannot post-process log file (error: %s)\n",Error_getText(error));
@@ -3703,7 +3701,8 @@ Errors inputCryptPassword(void         *userData,
                           bool         weakCheckFlag
                          )
 {
-  Errors error;
+  Errors        error;
+  SemaphoreLock semaphoreInputLock,semaphoreOutputLock;
 
   assert(password != NULL);
   assert(fileName != NULL);
@@ -3711,76 +3710,80 @@ Errors inputCryptPassword(void         *userData,
   UNUSED_VARIABLE(userData);
 
   error = ERROR_UNKNOWN;
-  switch (globalOptions.runMode)
-  {
-    case RUN_MODE_INTERACTIVE:
-      {
-        String title;
-        // initialize variables
-        title = String_new();
 
-        // input password
-        String_clear(title);
-        if (!String_isEmpty(fileName))
+  SEMAPHORE_LOCKED_DO(semaphoreInputLock,&inputLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+  {
+    switch (globalOptions.runMode)
+    {
+      case RUN_MODE_INTERACTIVE:
         {
-          String_format(title,"Crypt password for '%S'",fileName);
-        }
-        else
-        {
-          String_setCString(title,"Crypt password");
-        }
-        if (!Password_input(password,String_cString(title),PASSWORD_INPUT_MODE_ANY) || (Password_length(password) <= 0))
-        {
-          String_delete(title);
-          error = ERROR_NO_CRYPT_PASSWORD;
-          break;
-        }
-        if (validateFlag)
-        {
+          String title;
+          // initialize variables
+          title = String_new();
+
+          // input password
+          String_clear(title);
           if (!String_isEmpty(fileName))
           {
-            String_format(title,"Verify password for '%S'",fileName);
+            String_format(title,"Crypt password for '%S'",fileName);
           }
           else
           {
-            String_setCString(title,"Verify password");
+            String_setCString(title,"Crypt password");
           }
-          if (!Password_inputVerify(password,String_cString(title),PASSWORD_INPUT_MODE_ANY))
+          if (!Password_input(password,String_cString(title),PASSWORD_INPUT_MODE_ANY) || (Password_length(password) <= 0))
           {
-            printError("Crypt passwords are not equal!\n");
             String_delete(title);
-            error = ERROR_CRYPT_PASSWORDS_MISMATCH;
+            error = ERROR_NO_CRYPT_PASSWORD;
             break;
           }
-        }
-        String_delete(title);
-
-        if (weakCheckFlag)
-        {
-          // check password quality
-          if (Password_getQualityLevel(password) < MIN_PASSWORD_QUALITY_LEVEL)
+          if (validateFlag)
           {
-            printWarning("Low password quality!\n");
+            if (!String_isEmpty(fileName))
+            {
+              String_format(title,"Verify password for '%S'",fileName);
+            }
+            else
+            {
+              String_setCString(title,"Verify password");
+            }
+            if (!Password_inputVerify(password,String_cString(title),PASSWORD_INPUT_MODE_ANY))
+            {
+              printError("Crypt passwords are not equal!\n");
+              String_delete(title);
+              error = ERROR_CRYPT_PASSWORDS_MISMATCH;
+              break;
+            }
           }
-        }
+          String_delete(title);
 
-        error = ERROR_NONE;
-      }
-      break;
-    case RUN_MODE_BATCH:
-      printf("PASSWORD\n"); fflush(stdout);
-      if (Password_input(password,NULL,PASSWORD_INPUT_MODE_CONSOLE) || (Password_length(password) <= 0))
-      {
-        error = ERROR_NONE;
-      }
-      else
-      {
+          if (weakCheckFlag)
+          {
+            // check password quality
+            if (Password_getQualityLevel(password) < MIN_PASSWORD_QUALITY_LEVEL)
+            {
+              printWarning("Low password quality!\n");
+            }
+          }
+
+          error = ERROR_NONE;
+        }
+        break;
+      case RUN_MODE_BATCH:
+        printf("PASSWORD\n"); fflush(stdout);
+        if (Password_input(password,NULL,PASSWORD_INPUT_MODE_CONSOLE) || (Password_length(password) <= 0))
+        {
+          error = ERROR_NONE;
+        }
+        else
+        {
+          error = ERROR_NO_CRYPT_PASSWORD;
+        }
+        break;
+      case RUN_MODE_SERVER:
         error = ERROR_NO_CRYPT_PASSWORD;
-      }
-      break;
-    case RUN_MODE_SERVER:
-      error = ERROR_NO_CRYPT_PASSWORD;
-      break;
+        break;
+    }
   }
 
   return error;

@@ -545,9 +545,10 @@ bool Password_input(Password   *password,
       if (isatty(STDIN_FILENO) == 1)
       {
         // read data from interactive input
+
         if (message != NULL)
         {
-          fprintf(stderr,"%s: ",message); fflush(stderr);
+          printConsole(stderr,"%s: ",message);
         }
 
         // save current console settings
@@ -595,7 +596,7 @@ bool Password_input(Password   *password,
 
         if (message != NULL)
         {
-          fprintf(stderr,"\n");
+          printConsole(stderr,"\n");
         }
       }
       else

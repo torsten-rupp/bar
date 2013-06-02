@@ -499,6 +499,8 @@ struct JobOptions
 extern GlobalOptions  globalOptions;          // global options
 extern String         tmpDirectory;           // temporary directory
 extern DatabaseHandle *indexDatabaseHandle;   // index database handle
+extern Semaphore      inputLock;              // lock console input
+extern Semaphore      outputLock;             // lock console output
 
 /****************************** Macros *********************************/
 
@@ -586,9 +588,10 @@ void plogMessage(ulong logType, const char *prefix, const char *text, ...);
 void logMessage(ulong logType, const char *text, ...);
 
 /***********************************************************************\
-* Name   : outputConsole
+* Name   : printConsole
 * Purpose: output to console
-* Input  : format       - format string (like printf)
+* Input  : file         - stdout or stderr
+*          format       - format string (like printf)
 *          ...          - optional arguments (like printf)
 *          arguments    - arguments
 * Output : -
@@ -596,7 +599,7 @@ void logMessage(ulong logType, const char *text, ...);
 * Notes  : -
 \***********************************************************************/
 
-void printConsole(const char *format, ...);
+void printConsole(FILE *file, const char *format, ...);
 
 /***********************************************************************\
 * Name   : printWarning
