@@ -4914,7 +4914,7 @@ LOCAL Errors createPIDFile(void)
 
   if (pidFileName != NULL)
   {
-    fileName = File_newFileName();
+    fileName = String_new();
     error = File_open(&fileHandle,File_setFileNameCString(fileName,pidFileName),FILE_OPEN_CREATE);
     if (error != ERROR_NONE)
     {
@@ -4923,7 +4923,7 @@ LOCAL Errors createPIDFile(void)
     }
     File_printLine(&fileHandle,"%d",(int)getpid());
     File_close(&fileHandle);
-    File_deleteFileName(fileName);
+    String_delete(fileName);
   }
 
   return ERROR_NONE;
@@ -4996,7 +4996,7 @@ int main(int argc, const char *argv[])
 
   if (!globalOptions.noDefaultConfigFlag)
   {
-    fileName = File_newFileName();
+    fileName = String_new();
 
     // read default configuration from <CONFIG_DIR>/bar.cfg (ignore errors)
     File_setFileNameCString(fileName,CONFIG_DIR);
@@ -5015,7 +5015,7 @@ int main(int argc, const char *argv[])
       StringList_append(&configFileNameList,fileName);
     }
 
-    File_deleteFileName(fileName);
+    String_delete(fileName);
   }
 
   // read all configuration files
@@ -5042,7 +5042,7 @@ int main(int argc, const char *argv[])
   // read job file
   if (jobName != NULL)
   {
-    fileName = File_newFileName();
+    fileName = String_new();
 
     // read job file
     File_setFileNameCString(fileName,serverJobsDirectory);
@@ -5054,11 +5054,11 @@ int main(int argc, const char *argv[])
                     )
        )
     {
-      File_deleteFileName(fileName);
+      String_delete(fileName);
       return EXITCODE_CONFIG_ERROR;
     }
 
-    File_deleteFileName(fileName);
+    String_delete(fileName);
   }
 
   // parse command line: all
@@ -5495,8 +5495,8 @@ error = ERROR_STILL_NOT_IMPLEMENTED;
           keyFileName = argv[1];
 
           // initialize variables
-          publicKeyFileName  = File_newFileName();
-          privateKeyFileName = File_newFileName();
+          publicKeyFileName  = String_new();
+          privateKeyFileName = String_new();
 
           // get file names of keys
           File_setFileNameCString(publicKeyFileName,keyFileName);
@@ -5508,15 +5508,15 @@ error = ERROR_STILL_NOT_IMPLEMENTED;
           if (File_exists(publicKeyFileName))
           {
             printError("Public key file '%s' already exists!\n",String_cString(publicKeyFileName));
-            File_deleteFileName(privateKeyFileName);
-            File_deleteFileName(publicKeyFileName);
+            String_delete(privateKeyFileName);
+            String_delete(publicKeyFileName);
             break;
           }
           if (File_exists(privateKeyFileName))
           {
             printError("Private key file '%s' already exists!\n",String_cString(privateKeyFileName));
-            File_deleteFileName(privateKeyFileName);
-            File_deleteFileName(publicKeyFileName);
+            String_delete(privateKeyFileName);
+            String_delete(publicKeyFileName);
             break;
           }
 
@@ -5527,8 +5527,8 @@ error = ERROR_STILL_NOT_IMPLEMENTED;
           {
             printError("No password given for private key!\n");
             Password_done(&cryptPassword);
-            File_deleteFileName(privateKeyFileName);
-            File_deleteFileName(publicKeyFileName);
+            String_delete(privateKeyFileName);
+            String_delete(publicKeyFileName);
             break;
           }
 
@@ -5542,8 +5542,8 @@ error = ERROR_STILL_NOT_IMPLEMENTED;
             Crypt_doneKey(&privateKey);
             Crypt_doneKey(&publicKey);
             Password_done(&cryptPassword);
-            File_deleteFileName(privateKeyFileName);
-            File_deleteFileName(publicKeyFileName);
+            String_delete(privateKeyFileName);
+            String_delete(publicKeyFileName);
             break;
           }
           error = Crypt_writeKeyFile(&publicKey,publicKeyFileName,NULL);
@@ -5553,8 +5553,8 @@ error = ERROR_STILL_NOT_IMPLEMENTED;
             Crypt_doneKey(&privateKey);
             Crypt_doneKey(&publicKey);
             Password_done(&cryptPassword);
-            File_deleteFileName(privateKeyFileName);
-            File_deleteFileName(publicKeyFileName);
+            String_delete(privateKeyFileName);
+            String_delete(publicKeyFileName);
             break;
           }
           error = Crypt_writeKeyFile(&privateKey,privateKeyFileName,&cryptPassword);
@@ -5564,8 +5564,8 @@ error = ERROR_STILL_NOT_IMPLEMENTED;
             Crypt_doneKey(&privateKey);
             Crypt_doneKey(&publicKey);
             Password_done(&cryptPassword);
-            File_deleteFileName(privateKeyFileName);
-            File_deleteFileName(publicKeyFileName);
+            String_delete(privateKeyFileName);
+            String_delete(publicKeyFileName);
             break;
           }
 #if 0
@@ -5587,8 +5587,8 @@ fprintf(stderr,"%s,%d: t=%s\n",__FILE__,__LINE__,t);
           Crypt_doneKey(&privateKey);
           Crypt_doneKey(&publicKey);
           Password_done(&cryptPassword);
-          File_deleteFileName(privateKeyFileName);
-          File_deleteFileName(publicKeyFileName);
+          String_delete(privateKeyFileName);
+          String_delete(publicKeyFileName);
         }
         break;
       default:
