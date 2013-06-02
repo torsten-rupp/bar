@@ -5219,12 +5219,8 @@ int main(int argc, const char *argv[])
       #if   defined(PLATFORM_LINUX)
         if (daemon(1,0) == 0)
         {
-          if (pidFileName != NULL)
-          {
-            // create pid file
-            error = createPIDFile();
-          }
-
+          // create pid file
+          error = createPIDFile();
           if (error == ERROR_NONE)
           {
             // run server
@@ -5237,10 +5233,6 @@ int main(int argc, const char *argv[])
                                serverJobsDirectory,
                                &jobOptions
                               );
-          }
-
-          if (pidFileName != NULL)
-          {
             // delete pid file
             deletePIDFile();
           }
@@ -5290,16 +5282,8 @@ error = ERROR_STILL_NOT_IMPLEMENTED;
     }
     else
     {
-      if (pidFileName != NULL)
-      {
-        // create pid file
-        error = createPIDFile();
-        if (error != ERROR_NONE)
-        {
-          printError("Cannot create process id file '%s' (error: %s)\n",pidFileName,Error_getText(error));
-        }
-      }
-
+      // create pid file
+      error = createPIDFile();
       if (error == ERROR_NONE)
       {
         // run server (not detached)
@@ -5312,10 +5296,6 @@ error = ERROR_STILL_NOT_IMPLEMENTED;
                            serverJobsDirectory,
                            &jobOptions
                           );
-      }
-
-      if (pidFileName != NULL)
-      {
         // delete pid file
         deletePIDFile();
       }
