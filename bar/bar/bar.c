@@ -1043,8 +1043,7 @@ LOCAL void outputLineDone(void *variable, void *userData)
 *          string - string
 * Output : -
 * Return : -
-* Notes  :  if saveRestoreFlag is TRUE the current line is saved, the
-*           string is printed and the line is restored
+* Notes  : -
 \***********************************************************************/
 
 LOCAL void output(FILE *file, const String string)
@@ -1054,15 +1053,17 @@ LOCAL void output(FILE *file, const String string)
   ulong         z;
   char          ch;
 
+//fprintf(stderr,"%s, %d: string=%s\n",__FILE__,__LINE__,String_cString(string));
   outputLine = (String)Thread_getLocalVariable(&outputLineHandle);
   if (outputLine != NULL)
   {
     if (File_isTerminal(file))
     {
+      // lock
       SEMAPHORE_LOCKED_DO(semaphoreLock,&outputLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
       {
-        // restore and output line
-        if ((lastOutputLine != NULL) && (outputLine != lastOutputLine))
+        // restore output line
+        if (outputLine != lastOutputLine)
         {
           // wipe-out current line
           for (z = 0; z < String_length(lastOutputLine); z++)
@@ -1085,23 +1086,20 @@ LOCAL void output(FILE *file, const String string)
         // output string
         fwrite(String_cString(string),1,String_length(string),file);
 
-        // store string
-        if (String_index(string,STRING_END) == '\n')
+        // store output string
+        STRING_CHAR_ITERATE(string,z,ch)
         {
-          String_clear(outputLine);
-        }
-        else
-        {
-          STRING_CHAR_ITERATE(string,z,ch)
+          switch (ch)
           {
-            if (ch == '\b')
-            {
+            case '\n':
+              String_clear(outputLine);
+              break;
+            case '\b':
               String_remove(outputLine,STRING_END,1);
-            }
-            else
-            {
+              break;
+            default:
               String_appendChar(outputLine,ch);
-            }
+              break;
           }
         }
 
@@ -1124,10 +1122,10 @@ LOCAL void output(FILE *file, const String string)
   }
   else
   {
-    // no entry -> output string
+    // no thread local vairable -> output string
     fwrite(String_cString(string),1,String_length(string),file);
   }
-  fflush(stdout);
+  fflush(file);
 }
 
 /***********************************************************************\
@@ -2937,11 +2935,22 @@ void logMessage(ulong logType, const char *text, ...)
   va_end(arguments);
 }
 
+bool lockConsole(void)
+{
+  return Semaphore_lock(&outputLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,SEMAPHORE_WAIT_FOREVER);
+}
+
+void unlockConsole(void)
+{
+  Semaphore_unlock(&outputLock);
+}
+
 void printConsole(FILE *file, const char *format, ...)
 {
   String  line;
   va_list arguments;
 
+  assert(file != NULL);
   assert(format != NULL);
 
   line = String_new();
@@ -2952,7 +2961,7 @@ void printConsole(FILE *file, const char *format, ...)
   va_end(arguments);
 
   // output
-  output(stdout,line);
+  output(file,line);
 
   String_delete(line);
 }
@@ -3702,7 +3711,7 @@ Errors inputCryptPassword(void         *userData,
                          )
 {
   Errors        error;
-  SemaphoreLock semaphoreInputLock,semaphoreOutputLock;
+  SemaphoreLock semaphoreLock;
 
   assert(password != NULL);
   assert(fileName != NULL);
@@ -3711,7 +3720,7 @@ Errors inputCryptPassword(void         *userData,
 
   error = ERROR_UNKNOWN;
 
-  SEMAPHORE_LOCKED_DO(semaphoreInputLock,&inputLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&inputLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
   {
     switch (globalOptions.runMode)
     {

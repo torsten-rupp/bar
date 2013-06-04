@@ -517,6 +517,12 @@ extern Semaphore      outputLock;             // lock console output
                        "bytes" \
                       )
 
+#define CONSOLE_LOCKED_DO(semaphoreLock,semaphore,semaphoreLockType) \
+  for (semaphoreLock = lockConsole(); \
+       semaphoreLock; \
+       unlockConsole(semaphore), semaphoreLock = FALSE \
+      )
+
 /***************************** Forwards ********************************/
 
 /***************************** Functions *******************************/
@@ -586,6 +592,28 @@ void printInfo(uint verboseLevel, const char *format, ...);
 void vlogMessage(ulong logType, const char *prefix, const char *text, va_list arguments);
 void plogMessage(ulong logType, const char *prefix, const char *text, ...);
 void logMessage(ulong logType, const char *text, ...);
+
+/***********************************************************************\
+* Name   : lockConsole
+* Purpose: lock console
+* Input  : -
+* Output : -
+* Return : TRUE iff locked
+* Notes  : -
+\***********************************************************************/
+
+bool lockConsole(void);
+
+/***********************************************************************\
+* Name   : unlockConsole
+* Purpose: unlock console
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void unlockConsole(void);
 
 /***********************************************************************\
 * Name   : printConsole
