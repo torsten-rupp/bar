@@ -3711,6 +3711,7 @@ Errors inputCryptPassword(void         *userData,
                          )
 {
   Errors        error;
+#warning remove semaphoreLock
   SemaphoreLock semaphoreLock;
 
   assert(password != NULL);
@@ -3727,53 +3728,58 @@ Errors inputCryptPassword(void         *userData,
       case RUN_MODE_INTERACTIVE:
         {
           String title;
-          // initialize variables
-          title = String_new();
 
-          // input password
-          String_clear(title);
-          if (!String_isEmpty(fileName))
+          lockConsole();
           {
-            String_format(title,"Crypt password for '%S'",fileName);
-          }
-          else
-          {
-            String_setCString(title,"Crypt password");
-          }
-          if (!Password_input(password,String_cString(title),PASSWORD_INPUT_MODE_ANY) || (Password_length(password) <= 0))
-          {
-            String_delete(title);
-            error = ERROR_NO_CRYPT_PASSWORD;
-            break;
-          }
-          if (validateFlag)
-          {
+            // input password
+            title = String_new();
             if (!String_isEmpty(fileName))
             {
-              String_format(title,"Verify password for '%S'",fileName);
+              String_format(title,"Crypt password for '%S'",fileName);
             }
             else
             {
-              String_setCString(title,"Verify password");
+              String_setCString(title,"Crypt password");
             }
-            if (!Password_inputVerify(password,String_cString(title),PASSWORD_INPUT_MODE_ANY))
+            if (!Password_input(password,String_cString(title),PASSWORD_INPUT_MODE_ANY) || (Password_length(password) <= 0))
             {
-              printError("Crypt passwords are not equal!\n");
               String_delete(title);
-              error = ERROR_CRYPT_PASSWORDS_MISMATCH;
+              unlockConsole();
+              error = ERROR_NO_CRYPT_PASSWORD;
               break;
             }
-          }
-          String_delete(title);
-
-          if (weakCheckFlag)
-          {
-            // check password quality
-            if (Password_getQualityLevel(password) < MIN_PASSWORD_QUALITY_LEVEL)
+            if (validateFlag)
             {
-              printWarning("Low password quality!\n");
+              // verify input password
+              if (!String_isEmpty(fileName))
+              {
+                String_format(String_clear(title),"Verify password for '%S'",fileName);
+              }
+              else
+              {
+                String_setCString(title,"Verify password");
+              }
+              if (!Password_inputVerify(password,String_cString(title),PASSWORD_INPUT_MODE_ANY))
+              {
+                printError("Crypt passwords are not equal!\n");
+                String_delete(title);
+                unlockConsole();
+                error = ERROR_CRYPT_PASSWORDS_MISMATCH;
+                break;
+              }
+            }
+            String_delete(title);
+
+            if (weakCheckFlag)
+            {
+              // check password quality
+              if (Password_getQualityLevel(password) < MIN_PASSWORD_QUALITY_LEVEL)
+              {
+                printWarning("Low password quality!\n");
+              }
             }
           }
+          unlockConsole();
 
           error = ERROR_NONE;
         }
