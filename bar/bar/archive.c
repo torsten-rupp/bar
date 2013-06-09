@@ -663,7 +663,7 @@ LOCAL Errors readEncryptionKey(ArchiveInfo       *archiveInfo,
   }
   Chunk_done(&chunkInfoKey);
 
-  // decrypt key
+  // get decrypt key
   if (archiveInfo->cryptPassword == NULL)
   {
     archiveInfo->cryptPassword = Password_new();
@@ -2749,6 +2749,7 @@ Errors Archive_create(ArchiveInfo                     *archiveInfo,
   }
 
   // init archive info
+  Semaphore_init(&archiveInfo->lock);
   archiveInfo->jobOptions                      = jobOptions;
   archiveInfo->archiveCreatedFunction          = archiveCreatedFunction;
   archiveInfo->archiveNewFileUserData          = archiveNewFileUserData;
@@ -2759,6 +2760,7 @@ Errors Archive_create(ArchiveInfo                     *archiveInfo,
 
   archiveInfo->cryptType                       = (jobOptions->cryptAlgorithm != CRYPT_ALGORITHM_NONE)?jobOptions->cryptType:CRYPT_TYPE_NONE;
   archiveInfo->cryptPassword                   = NULL;
+  archiveInfo->cryptPasswordReadFlag           = FALSE;
   archiveInfo->cryptKeyData                    = NULL;
   archiveInfo->cryptKeyDataLength              = 0;
 
@@ -2880,6 +2882,7 @@ Errors Archive_open(ArchiveInfo                     *archiveInfo,
   fileName = String_new();
 
   // initstorageSpecifier
+  Semaphore_init(&archiveInfo->lock);
   archiveInfo->jobOptions                      = jobOptions;
   archiveInfo->archiveCreatedFunction          = NULL;
   archiveInfo->archiveNewFileUserData          = NULL;
@@ -2889,6 +2892,7 @@ Errors Archive_open(ArchiveInfo                     *archiveInfo,
   archiveInfo->printableName                   = Storage_getPrintableName(String_new(),storageSpecifier,storageFileName);
 
   archiveInfo->cryptPassword                   = NULL;
+  archiveInfo->cryptPasswordReadFlag           = FALSE;
   archiveInfo->cryptType                       = CRYPT_TYPE_NONE;
   archiveInfo->cryptKeyData                    = NULL;
   archiveInfo->cryptKeyDataLength              = 0;
@@ -3037,6 +3041,7 @@ Errors Archive_close(ArchiveInfo *archiveInfo)
         break; /* not reached */
     #endif /* NDEBUG */
   }
+  Semaphore_done(&archiveInfo->lock);
 
   return error;
 }
@@ -3313,6 +3318,7 @@ Errors Archive_newFileEntry(ArchiveEntryInfo                *archiveEntryInfo,
                             const bool                      byteCompressFlag
                            )
 {
+  SemaphoreLock                   semaphoreLock;
   Errors                          error;
   const FileExtendedAttributeNode *fileExtendedAttributeNode;
 
@@ -3324,12 +3330,19 @@ Errors Archive_newFileEntry(ArchiveEntryInfo                *archiveEntryInfo,
   // init crypt password
   if ((archiveInfo->jobOptions->cryptAlgorithm != CRYPT_ALGORITHM_NONE) && (archiveInfo->cryptPassword == NULL))
   {
-    archiveInfo->cryptPassword = getCryptPassword(archiveInfo->printableName,
-                                                  archiveInfo->jobOptions,
-                                                  archiveInfo->jobOptions->cryptPasswordMode,
-                                                  archiveInfo->archiveGetCryptPasswordFunction,
-                                                  archiveInfo->archiveGetCryptPasswordUserData
-                                                 );
+    SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveInfo->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+    {
+      if (!archiveInfo->cryptPasswordReadFlag)
+      {
+        archiveInfo->cryptPassword = getCryptPassword(archiveInfo->printableName,
+                                                      archiveInfo->jobOptions,
+                                                      archiveInfo->jobOptions->cryptPasswordMode,
+                                                      archiveInfo->archiveGetCryptPasswordFunction,
+                                                      archiveInfo->archiveGetCryptPasswordUserData
+                                                     );
+        archiveInfo->cryptPasswordReadFlag = TRUE;
+      }
+    }
     if (archiveInfo->cryptPassword == NULL)
     {
       return ERROR_NO_CRYPT_PASSWORD;
@@ -3776,7 +3789,8 @@ Errors Archive_newImageEntry(ArchiveEntryInfo *archiveEntryInfo,
                              const bool       byteCompressFlag
                             )
 {
-  Errors error;
+  SemaphoreLock semaphoreLock;
+  Errors        error;
 
   assert(archiveEntryInfo != NULL);
   assert(archiveInfo != NULL);
@@ -3787,12 +3801,19 @@ Errors Archive_newImageEntry(ArchiveEntryInfo *archiveEntryInfo,
   // init crypt password
   if ((archiveInfo->jobOptions->cryptAlgorithm != CRYPT_ALGORITHM_NONE) && (archiveInfo->cryptPassword == NULL))
   {
-    archiveInfo->cryptPassword = getCryptPassword(archiveInfo->printableName,
-                                                  archiveInfo->jobOptions,
-                                                  archiveInfo->jobOptions->cryptPasswordMode,
-                                                  archiveInfo->archiveGetCryptPasswordFunction,
-                                                  archiveInfo->archiveGetCryptPasswordUserData
-                                                 );
+    SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveInfo->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+    {
+      if (!archiveInfo->cryptPasswordReadFlag)
+      {
+        archiveInfo->cryptPassword = getCryptPassword(archiveInfo->printableName,
+                                                      archiveInfo->jobOptions,
+                                                      archiveInfo->jobOptions->cryptPasswordMode,
+                                                      archiveInfo->archiveGetCryptPasswordFunction,
+                                                      archiveInfo->archiveGetCryptPasswordUserData
+                                                     );
+        archiveInfo->cryptPasswordReadFlag = TRUE;
+      }
+    }
     if (archiveInfo->cryptPassword == NULL)
     {
       return ERROR_NO_CRYPT_PASSWORD;
@@ -4135,9 +4156,9 @@ Errors Archive_newDirectoryEntry(ArchiveEntryInfo                *archiveEntryIn
                                  const FileExtendedAttributeList *fileExtendedAttributeList
                                 )
 {
+  SemaphoreLock semaphoreLock;
   Errors        error;
   ulong         headerLength;
-  SemaphoreLock semaphoreLock;
 
   assert(archiveEntryInfo != NULL);
   assert(archiveInfo != NULL);
@@ -4147,12 +4168,19 @@ Errors Archive_newDirectoryEntry(ArchiveEntryInfo                *archiveEntryIn
   // init crypt password
   if ((archiveInfo->jobOptions->cryptAlgorithm != CRYPT_ALGORITHM_NONE) && (archiveInfo->cryptPassword == NULL))
   {
-    archiveInfo->cryptPassword = getCryptPassword(archiveInfo->printableName,
-                                                  archiveInfo->jobOptions,
-                                                  archiveInfo->jobOptions->cryptPasswordMode,
-                                                  archiveInfo->archiveGetCryptPasswordFunction,
-                                                  archiveInfo->archiveGetCryptPasswordUserData
-                                                 );
+    SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveInfo->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+    {
+      if (!archiveInfo->cryptPasswordReadFlag)
+      {
+        archiveInfo->cryptPassword = getCryptPassword(archiveInfo->printableName,
+                                                      archiveInfo->jobOptions,
+                                                      archiveInfo->jobOptions->cryptPasswordMode,
+                                                      archiveInfo->archiveGetCryptPasswordFunction,
+                                                      archiveInfo->archiveGetCryptPasswordUserData
+                                                     );
+        archiveInfo->cryptPasswordReadFlag = TRUE;
+      }
+    }
     if (archiveInfo->cryptPassword == NULL)
     {
       return ERROR_NO_CRYPT_PASSWORD;
@@ -4316,9 +4344,9 @@ Errors Archive_newLinkEntry(ArchiveEntryInfo                *archiveEntryInfo,
                             const FileExtendedAttributeList *fileExtendedAttributeList
                            )
 {
+  SemaphoreLock semaphoreLock;
   Errors        error;
   ulong         headerLength;
-  SemaphoreLock semaphoreLock;
 
   assert(archiveEntryInfo != NULL);
   assert(archiveInfo != NULL);
@@ -4328,12 +4356,19 @@ Errors Archive_newLinkEntry(ArchiveEntryInfo                *archiveEntryInfo,
   // init crypt password
   if ((archiveInfo->jobOptions->cryptAlgorithm != CRYPT_ALGORITHM_NONE) && (archiveInfo->cryptPassword == NULL))
   {
-    archiveInfo->cryptPassword = getCryptPassword(archiveInfo->printableName,
-                                                  archiveInfo->jobOptions,
-                                                  archiveInfo->jobOptions->cryptPasswordMode,
-                                                  archiveInfo->archiveGetCryptPasswordFunction,
-                                                  archiveInfo->archiveGetCryptPasswordUserData
-                                                 );
+    SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveInfo->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+    {
+      if (!archiveInfo->cryptPasswordReadFlag)
+      {
+        archiveInfo->cryptPassword = getCryptPassword(archiveInfo->printableName,
+                                                      archiveInfo->jobOptions,
+                                                      archiveInfo->jobOptions->cryptPasswordMode,
+                                                      archiveInfo->archiveGetCryptPasswordFunction,
+                                                      archiveInfo->archiveGetCryptPasswordUserData
+                                                     );
+        archiveInfo->cryptPasswordReadFlag = TRUE;
+      }
+    }
     if (archiveInfo->cryptPassword == NULL)
     {
       return ERROR_NO_CRYPT_PASSWORD;
@@ -4529,6 +4564,7 @@ Errors Archive_newHardLinkEntry(ArchiveEntryInfo                *archiveEntryInf
                                 const bool                      byteCompressFlag
                                )
 {
+  SemaphoreLock                   semaphoreLock;
   Errors                          error;
   const FileExtendedAttributeNode *fileExtendedAttributeNode;
   const StringNode                *stringNode;
@@ -4542,12 +4578,19 @@ Errors Archive_newHardLinkEntry(ArchiveEntryInfo                *archiveEntryInf
   // init crypt password
   if ((archiveInfo->jobOptions->cryptAlgorithm != CRYPT_ALGORITHM_NONE) && (archiveInfo->cryptPassword == NULL))
   {
-    archiveInfo->cryptPassword = getCryptPassword(archiveInfo->printableName,
-                                                  archiveInfo->jobOptions,
-                                                  archiveInfo->jobOptions->cryptPasswordMode,
-                                                  archiveInfo->archiveGetCryptPasswordFunction,
-                                                  archiveInfo->archiveGetCryptPasswordUserData
-                                                 );
+    SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveInfo->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+    {
+      if (!archiveInfo->cryptPasswordReadFlag)
+      {
+        archiveInfo->cryptPassword = getCryptPassword(archiveInfo->printableName,
+                                                      archiveInfo->jobOptions,
+                                                      archiveInfo->jobOptions->cryptPasswordMode,
+                                                      archiveInfo->archiveGetCryptPasswordFunction,
+                                                      archiveInfo->archiveGetCryptPasswordUserData
+                                                     );
+        archiveInfo->cryptPasswordReadFlag = TRUE;
+      }
+    }
     if (archiveInfo->cryptPassword == NULL)
     {
       return ERROR_NO_CRYPT_PASSWORD;
@@ -5073,9 +5116,9 @@ Errors Archive_newSpecialEntry(ArchiveEntryInfo                *archiveEntryInfo
                                const FileExtendedAttributeList *fileExtendedAttributeList
                               )
 {
+  SemaphoreLock semaphoreLock;
   Errors        error;
   ulong         headerLength;
-  SemaphoreLock semaphoreLock;
 
   assert(archiveEntryInfo != NULL);
   assert(archiveInfo != NULL);
@@ -5085,12 +5128,19 @@ Errors Archive_newSpecialEntry(ArchiveEntryInfo                *archiveEntryInfo
   // init crypt password
   if ((archiveInfo->jobOptions->cryptAlgorithm != CRYPT_ALGORITHM_NONE) && (archiveInfo->cryptPassword == NULL))
   {
-    archiveInfo->cryptPassword = getCryptPassword(archiveInfo->printableName,
-                                                  archiveInfo->jobOptions,
-                                                  archiveInfo->jobOptions->cryptPasswordMode,
-                                                  archiveInfo->archiveGetCryptPasswordFunction,
-                                                  archiveInfo->archiveGetCryptPasswordUserData
-                                                 );
+    SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveInfo->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+    {
+      if (!archiveInfo->cryptPasswordReadFlag)
+      {
+        archiveInfo->cryptPassword = getCryptPassword(archiveInfo->printableName,
+                                                      archiveInfo->jobOptions,
+                                                      archiveInfo->jobOptions->cryptPasswordMode,
+                                                      archiveInfo->archiveGetCryptPasswordFunction,
+                                                      archiveInfo->archiveGetCryptPasswordUserData
+                                                     );
+        archiveInfo->cryptPasswordReadFlag = TRUE;
+      }
+    }
     if (archiveInfo->cryptPassword == NULL)
     {
       return ERROR_NO_CRYPT_PASSWORD;
