@@ -545,7 +545,6 @@ bool Password_input(Password   *password,
       if (isatty(STDIN_FILENO) == 1)
       {
         // read data from interactive input
-
         if (message != NULL)
         {
           printConsole(stderr,"%s: ",message);
