@@ -165,35 +165,41 @@ LOCAL size_t curlNopDataCallback(void   *buffer,
 
 LOCAL bool initFTPPassword(const String hostName, const String loginName, const JobOptions *jobOptions)
 {
-  String s;
-  bool   initFlag;
+  SemaphoreLock semaphoreLock;
+  String        s;
+  bool          initFlag;
 
   assert(jobOptions != NULL);
 
-  if (jobOptions->ftpServer.password == NULL)
+//  SEMAPHORE_LOCKED_DO(semaphoreLock,&inputLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
   {
-    if (globalOptions.runMode == RUN_MODE_INTERACTIVE)
+    lockConsole();
+    if (jobOptions->ftpServer.password == NULL)
     {
-      s = String_newCString("FTP login password for ");
-      if (!String_isEmpty(loginName))
+      if (globalOptions.runMode == RUN_MODE_INTERACTIVE)
       {
-        String_format(s,"'%S@%S'",loginName,hostName);
+        s = String_newCString("FTP login password for ");
+        if (!String_isEmpty(loginName))
+        {
+          String_format(s,"'%S@%S'",loginName,hostName);
+        }
+        else
+        {
+          String_format(s,"'%S'",hostName);
+        }
+        initFlag = Password_input(defaultFTPPassword,String_cString(s),PASSWORD_INPUT_MODE_ANY);
+        String_delete(s);
       }
       else
       {
-        String_format(s,"'%S'",hostName);
+        initFlag = FALSE;
       }
-      initFlag = Password_input(defaultFTPPassword,String_cString(s),PASSWORD_INPUT_MODE_ANY);
-      String_delete(s);
     }
     else
     {
-      initFlag = FALSE;
+      initFlag = TRUE;
     }
-  }
-  else
-  {
-    initFlag = TRUE;
+    unlockConsole();
   }
 
   return initFlag;
@@ -214,35 +220,41 @@ LOCAL bool initFTPPassword(const String hostName, const String loginName, const 
 
 LOCAL bool initSSHPassword(const String hostName, const String loginName, const JobOptions *jobOptions)
 {
-  String s;
-  bool   initFlag;
+  SemaphoreLock semaphoreLock;
+  String        s;
+  bool          initFlag;
 
   assert(jobOptions != NULL);
 
-  if (jobOptions->sshServer.password == NULL)
+//  SEMAPHORE_LOCKED_DO(semaphoreLock,&inputLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
   {
-    if (globalOptions.runMode == RUN_MODE_INTERACTIVE)
+    lockConsole();
+    if (jobOptions->sshServer.password == NULL)
     {
-      s = String_newCString("SSH login password for ");
-      if (!String_isEmpty(loginName))
+      if (globalOptions.runMode == RUN_MODE_INTERACTIVE)
       {
-        String_format(s,"'%S@%S'",loginName,hostName);
+        s = String_newCString("SSH login password for ");
+        if (!String_isEmpty(loginName))
+        {
+          String_format(s,"'%S@%S'",loginName,hostName);
+        }
+        else
+        {
+          String_format(s,"'%S'",hostName);
+        }
+        initFlag = Password_input(defaultSSHPassword,String_cString(s),PASSWORD_INPUT_MODE_ANY);
+        String_delete(s);
       }
       else
       {
-        String_format(s,"'%S'",hostName);
+        initFlag = FALSE;
       }
-      initFlag = Password_input(defaultSSHPassword,String_cString(s),PASSWORD_INPUT_MODE_ANY);
-      String_delete(s);
     }
     else
     {
-      initFlag = FALSE;
+      initFlag = TRUE;
     }
-  }
-  else
-  {
-    initFlag = TRUE;
+    unlockConsole();
   }
 
   return initFlag;
@@ -1070,29 +1082,35 @@ LOCAL bool waitSessionSocket(SocketHandle *socketHandle)
 
 LOCAL bool initWebDAVPassword(const String hostName, const String loginName, const JobOptions *jobOptions)
 {
-  String s;
-  bool   initFlag;
+  SemaphoreLock semaphoreLock;
+  String        s;
+  bool          initFlag;
 
   assert(jobOptions != NULL);
 
-  if (jobOptions->webdavServer.password == NULL)
+//  SEMAPHORE_LOCKED_DO(semaphoreLock,&inputLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
   {
-    if (globalOptions.runMode == RUN_MODE_INTERACTIVE)
+    lockConsole();
+    if (jobOptions->webdavServer.password == NULL)
     {
-      s = !String_isEmpty(loginName)
-            ? String_format(String_new(),"WebDAV login password for %S@%S",loginName,hostName)
-            : String_format(String_new(),"WebDAV login password for %S",hostName);
-      initFlag = Password_input(defaultWebDAVPassword,String_cString(s),PASSWORD_INPUT_MODE_ANY);
-      String_delete(s);
+      if (globalOptions.runMode == RUN_MODE_INTERACTIVE)
+      {
+        s = !String_isEmpty(loginName)
+              ? String_format(String_new(),"WebDAV login password for %S@%S",loginName,hostName)
+              : String_format(String_new(),"WebDAV login password for %S",hostName);
+        initFlag = Password_input(defaultWebDAVPassword,String_cString(s),PASSWORD_INPUT_MODE_ANY);
+        String_delete(s);
+      }
+      else
+      {
+        initFlag = FALSE;
+      }
     }
     else
     {
-      initFlag = FALSE;
+      initFlag = TRUE;
     }
-  }
-  else
-  {
-    initFlag = TRUE;
+    unlockConsole();
   }
 
   return initFlag;
