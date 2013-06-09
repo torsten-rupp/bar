@@ -210,7 +210,7 @@ LOCAL Password *getCryptPassword(const String                    fileName,
   assert(jobOptions != NULL);
 
   password = NULL;
-  switch ((passwordMode != PASSWORD_MODE_DEFAULT)?passwordMode:jobOptions->cryptPasswordMode)
+  switch ((passwordMode != PASSWORD_MODE_DEFAULT) ? passwordMode : jobOptions->cryptPasswordMode)
   {
     case PASSWORD_MODE_DEFAULT:
       if (globalOptions.cryptPassword != NULL)
@@ -1129,7 +1129,7 @@ LOCAL Errors writeFileChunks(ArchiveEntryInfo *archiveEntryInfo)
   // create extended attribute chunks
   LIST_ITERATE(archiveEntryInfo->file.fileExtendedAttributeList,fileExtendedAttributeNode)
   {
-//TODO
+#warning todo
 fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     String_set(archiveEntryInfo->file.chunkFileExtendedAttribute.name,fileExtendedAttributeNode->name);
     archiveEntryInfo->file.chunkFileExtendedAttribute.value.data   = fileExtendedAttributeNode->data;
@@ -3337,28 +3337,28 @@ Errors Archive_newFileEntry(ArchiveEntryInfo                *archiveEntryInfo,
   }
 
   // init archive entry info
-  archiveEntryInfo->archiveInfo                 = archiveInfo;
-  archiveEntryInfo->mode                        = ARCHIVE_MODE_WRITE;
+  archiveEntryInfo->archiveInfo                    = archiveInfo;
+  archiveEntryInfo->mode                           = ARCHIVE_MODE_WRITE;
 
-  archiveEntryInfo->cryptAlgorithm              = archiveInfo->jobOptions->cryptAlgorithm;
-  archiveEntryInfo->blockLength                 = archiveInfo->blockLength;
+  archiveEntryInfo->cryptAlgorithm                 = archiveInfo->jobOptions->cryptAlgorithm;
+  archiveEntryInfo->blockLength                    = archiveInfo->blockLength;
 
-  archiveEntryInfo->archiveEntryType            = ARCHIVE_ENTRY_TYPE_FILE;
+  archiveEntryInfo->archiveEntryType               = ARCHIVE_ENTRY_TYPE_FILE;
 
-  archiveEntryInfo->file.deltaCompressAlgorithm = COMPRESS_ALGORITHM_NONE;
-  archiveEntryInfo->file.byteCompressAlgorithm  = byteCompressFlag ? archiveInfo->jobOptions->compressAlgorithm.byte : COMPRESS_ALGORITHM_NONE;
+  archiveEntryInfo->file.deltaCompressAlgorithm    = COMPRESS_ALGORITHM_NONE;
+  archiveEntryInfo->file.byteCompressAlgorithm     = byteCompressFlag ? archiveInfo->jobOptions->compressAlgorithm.byte : COMPRESS_ALGORITHM_NONE;
 
   archiveEntryInfo->file.fileExtendedAttributeList = fileExtendedAttributeList;
 
-  archiveEntryInfo->file.sourceHandleInitFlag   = FALSE;
+  archiveEntryInfo->file.sourceHandleInitFlag      = FALSE;
 
-  archiveEntryInfo->file.headerLength           = 0;
-  archiveEntryInfo->file.headerWrittenFlag      = FALSE;
+  archiveEntryInfo->file.headerLength              = 0;
+  archiveEntryInfo->file.headerWrittenFlag         = FALSE;
 
-  archiveEntryInfo->file.byteBuffer             = NULL;
-  archiveEntryInfo->file.byteBufferSize         = 0L;
-  archiveEntryInfo->file.deltaBuffer            = NULL;
-  archiveEntryInfo->file.deltaBufferSize        = 0L;
+  archiveEntryInfo->file.byteBuffer                = NULL;
+  archiveEntryInfo->file.byteBufferSize            = 0L;
+  archiveEntryInfo->file.deltaBuffer               = NULL;
+  archiveEntryInfo->file.deltaBufferSize           = 0L;
 
   // get temporary output file
   error = File_getTmpFile(&archiveEntryInfo->file.tmpFileHandle,NULL,tmpDirectory);
@@ -5488,19 +5488,19 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
   return ERROR_NONE;
 }
 
-Errors Archive_readFileEntry(ArchiveEntryInfo   *archiveEntryInfo,
-                             ArchiveInfo        *archiveInfo,
-                             CompressAlgorithms *deltaCompressAlgorithm,
-                             CompressAlgorithms *byteCompressAlgorithm,
-                             CryptAlgorithms    *cryptAlgorithm,
-                             CryptTypes         *cryptType,
-                             String             fileName,
-                             FileInfo           *fileInfo,
+Errors Archive_readFileEntry(ArchiveEntryInfo          *archiveEntryInfo,
+                             ArchiveInfo               *archiveInfo,
+                             CompressAlgorithms        *deltaCompressAlgorithm,
+                             CompressAlgorithms        *byteCompressAlgorithm,
+                             CryptAlgorithms           *cryptAlgorithm,
+                             CryptTypes                *cryptType,
+                             String                    fileName,
+                             FileInfo                  *fileInfo,
                              FileExtendedAttributeList *fileExtendedAttributeList,
-                             String             deltaSourceName,
-                             uint64             *deltaSourceSize,
-                             uint64             *fragmentOffset,
-                             uint64             *fragmentSize
+                             String                    deltaSourceName,
+                             uint64                    *deltaSourceSize,
+                             uint64                    *fragmentOffset,
+                             uint64                    *fragmentSize
                             )
 {
   Errors         error;
