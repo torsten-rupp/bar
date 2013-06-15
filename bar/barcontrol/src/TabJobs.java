@@ -426,12 +426,12 @@ class TabJobs
       }
     };
 
-    /* timeouts to get directory information */
+    // timeouts to get directory information
     private final int DEFAULT_TIMEOUT = 1*1000;
     private final int TIMEOUT_DETLA   = 2*1000;
     private final int MAX_TIMEOUT     = 5*1000;
 
-    /* variables */
+    // variables
     private Display                          display;
     private LinkedList<DirectoryInfoRequest> directoryInfoRequestList;
 
@@ -457,7 +457,7 @@ class TabJobs
         final DirectoryInfoRequest directoryInfoRequest;
         synchronized(directoryInfoRequestList)
         {
-          /* get next request */
+          // get next request
           while (directoryInfoRequestList.size() == 0)
           {
             try
@@ -466,7 +466,7 @@ class TabJobs
             }
             catch (InterruptedException exception)
             {
-              /* ignored */
+              // ignored
             }
           }
           directoryInfoRequest = directoryInfoRequestList.remove();
@@ -486,11 +486,11 @@ class TabJobs
           });
           if ((Boolean)disposedData[0])
           {
-            /* disposed -> skip */
+            // disposed -> skip
             continue;
           }
 
-          /* get file count, size */
+          // get file count, size
 //Dprintf.dprintf("get file size for %s\n",directoryInfoRequest);
           String[] result = new String[1];
           Object[] data   = new Object[3];
@@ -498,14 +498,14 @@ class TabJobs
               || !StringParser.parse(result[0],"%ld %ld %d",data,StringParser.QUOTE_CHARS)
              )
           {
-            /* command execution fail or parsing error; ignore request */
+            // command execution fail or parsing error; ignore request
             continue;
           }
           final long    count       = (Long)data[0];
           final long    size        = (Long)data[1];
           final boolean timeoutFlag = (((Integer)data[2]) != 0);
 
-          /* update view */
+          // update view
 //Dprintf.dprintf("name=%s count=%d size=%d timeout=%s\n",directoryInfoRequest.name,count,size,timeoutFlag);
           display.syncExec(new Runnable()
           {
@@ -527,7 +527,7 @@ class TabJobs
 
           if (timeoutFlag)
           {
-            /* timeout -> increase timmeout and re-insert in list if not beyond max. timeout */
+            // timeout -> increase timmeout and re-insert in list if not beyond max. timeout
             if (directoryInfoRequest.timeout+TIMEOUT_DETLA <= MAX_TIMEOUT)
             {
               directoryInfoRequest.timeout += TIMEOUT_DETLA;
@@ -535,44 +535,6 @@ class TabJobs
             add(directoryInfoRequest);
           }
         }
-      }
-    }
-
-    /** get index of directory info request in list
-     * @param directoryInfoRequest directory info request
-     * @return index or 0
-     */
-    private int getIndex(DirectoryInfoRequest directoryInfoRequest)
-    {
-//Dprintf.dprintf("find index %d: %s\n",directoryInfoRequestList.size(),directoryInfoRequest);
-      /* find new position in list */
-      ListIterator<DirectoryInfoRequest> listIterator = directoryInfoRequestList.listIterator();
-      boolean                            foundFlag = false;
-      int                                index = 0;
-      while (listIterator.hasNext() && !foundFlag)
-      {
-        index = listIterator.nextIndex();
-
-        DirectoryInfoRequest nextDirectoryInfoRequest = listIterator.next();
-        foundFlag = (   (directoryInfoRequest.depth > nextDirectoryInfoRequest.depth)
-                     || (directoryInfoRequest.timeout < nextDirectoryInfoRequest.timeout)
-                    );
-      }
-//Dprintf.dprintf("found index=%d\n",index);
-
-      return index;
-    }
-
-    /** add directory info request
-     * @param directoryInfoRequest directory info request
-     */
-    private void add(DirectoryInfoRequest directoryInfoRequest)
-    {
-      synchronized(directoryInfoRequestList)
-      {
-        int index = getIndex(directoryInfoRequest);
-        directoryInfoRequestList.add(index,directoryInfoRequest);
-        directoryInfoRequestList.notifyAll();
       }
     }
 
@@ -626,6 +588,46 @@ class TabJobs
       synchronized(directoryInfoRequestList)
       {
         directoryInfoRequestList.clear();
+      }
+    }
+
+    // ----------------------------------------------------------------------
+
+    /** get index of directory info request in list
+     * @param directoryInfoRequest directory info request
+     * @return index or 0
+     */
+    private int getIndex(DirectoryInfoRequest directoryInfoRequest)
+    {
+//Dprintf.dprintf("find index %d: %s\n",directoryInfoRequestList.size(),directoryInfoRequest);
+      // find new position in list
+      ListIterator<DirectoryInfoRequest> listIterator = directoryInfoRequestList.listIterator();
+      boolean                            foundFlag = false;
+      int                                index = 0;
+      while (listIterator.hasNext() && !foundFlag)
+      {
+        index = listIterator.nextIndex();
+
+        DirectoryInfoRequest nextDirectoryInfoRequest = listIterator.next();
+        foundFlag = (   (directoryInfoRequest.depth > nextDirectoryInfoRequest.depth)
+                     || (directoryInfoRequest.timeout < nextDirectoryInfoRequest.timeout)
+                    );
+      }
+//Dprintf.dprintf("found index=%d\n",index);
+
+      return index;
+    }
+
+    /** add directory info request
+     * @param directoryInfoRequest directory info request
+     */
+    private void add(DirectoryInfoRequest directoryInfoRequest)
+    {
+      synchronized(directoryInfoRequestList)
+      {
+        int index = getIndex(directoryInfoRequest);
+        directoryInfoRequestList.add(index,directoryInfoRequest);
+        directoryInfoRequestList.notifyAll();
       }
     }
   }
