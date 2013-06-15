@@ -112,6 +112,7 @@ typedef Errors(*ArchiveGetCryptPasswordFunction)(void         *userData,
 // archive info
 typedef struct
 {
+  Semaphore                       lock;
   const JobOptions                *jobOptions;
   ArchiveCreatedFunction          archiveCreatedFunction;              // call back for new archive file
   void                            *archiveNewFileUserData;             // user data for call back for new archive file
@@ -122,6 +123,7 @@ typedef struct
 
   CryptTypes                      cryptType;                           // crypt type (symmetric/asymmetric; see CryptTypes)
   Password                        *cryptPassword;                      // cryption password for encryption/decryption
+  bool                            cryptPasswordReadFlag;
   CryptKey                        cryptKey;                            // public/private key for encryption/decryption of random key used for asymmetric encryptio
   void                            *cryptKeyData;                       // encrypted random key used for asymmetric encryption
   uint                            cryptKeyDataLength;                  // length of encrypted random key
