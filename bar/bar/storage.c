@@ -171,9 +171,8 @@ LOCAL bool initFTPPassword(const String hostName, const String loginName, const 
 
   assert(jobOptions != NULL);
 
-//  SEMAPHORE_LOCKED_DO(semaphoreLock,&inputLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&consoleLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
   {
-    lockConsole();
     if (jobOptions->ftpServer.password == NULL)
     {
       if (globalOptions.runMode == RUN_MODE_INTERACTIVE)
@@ -199,7 +198,6 @@ LOCAL bool initFTPPassword(const String hostName, const String loginName, const 
     {
       initFlag = TRUE;
     }
-    unlockConsole();
   }
 
   return initFlag;
@@ -226,9 +224,8 @@ LOCAL bool initSSHPassword(const String hostName, const String loginName, const 
 
   assert(jobOptions != NULL);
 
-//  SEMAPHORE_LOCKED_DO(semaphoreLock,&inputLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&consoleLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
   {
-    lockConsole();
     if (jobOptions->sshServer.password == NULL)
     {
       if (globalOptions.runMode == RUN_MODE_INTERACTIVE)
@@ -254,7 +251,6 @@ LOCAL bool initSSHPassword(const String hostName, const String loginName, const 
     {
       initFlag = TRUE;
     }
-    unlockConsole();
   }
 
   return initFlag;
@@ -1088,9 +1084,8 @@ LOCAL bool initWebDAVPassword(const String hostName, const String loginName, con
 
   assert(jobOptions != NULL);
 
-//  SEMAPHORE_LOCKED_DO(semaphoreLock,&inputLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&consoleLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
   {
-    lockConsole();
     if (jobOptions->webdavServer.password == NULL)
     {
       if (globalOptions.runMode == RUN_MODE_INTERACTIVE)
@@ -1110,7 +1105,6 @@ LOCAL bool initWebDAVPassword(const String hostName, const String loginName, con
     {
       initFlag = TRUE;
     }
-    unlockConsole();
   }
 
   return initFlag;

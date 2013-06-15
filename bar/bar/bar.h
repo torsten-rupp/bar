@@ -499,8 +499,7 @@ struct JobOptions
 extern GlobalOptions  globalOptions;          // global options
 extern String         tmpDirectory;           // temporary directory
 extern DatabaseHandle *indexDatabaseHandle;   // index database handle
-extern Semaphore      inputLock;              // lock console input
-extern Semaphore      outputLock;             // lock console output
+extern Semaphore      consoleLock;            // lock console
 
 /****************************** Macros *********************************/
 

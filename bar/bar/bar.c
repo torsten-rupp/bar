@@ -140,8 +140,7 @@ typedef enum
 GlobalOptions          globalOptions;
 String                 tmpDirectory;
 DatabaseHandle         *indexDatabaseHandle;
-Semaphore              inputLock;
-Semaphore              outputLock;
+Semaphore              consoleLock;
 
 LOCAL Commands         command;
 LOCAL String           jobName;
@@ -1060,7 +1059,7 @@ LOCAL void output(FILE *file, const String string)
     if (File_isTerminal(file))
     {
       // lock
-      SEMAPHORE_LOCKED_DO(semaphoreLock,&outputLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+      SEMAPHORE_LOCKED_DO(semaphoreLock,&consoleLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
       {
         // restore output line
         if (outputLine != lastOutputLine)
@@ -2684,8 +2683,7 @@ LOCAL Errors initAll(void)
   logFile                                = NULL;
   tmpLogFile                             = NULL;
 
-  Semaphore_init(&inputLock);
-  Semaphore_init(&outputLock);
+  Semaphore_init(&consoleLock);
   Thread_initLocalVariable(&outputLineHandle,outputLineInit,NULL);
   lastOutputLine                         = NULL;
 
@@ -2732,8 +2730,7 @@ LOCAL void doneAll(void)
   ConfigValue_done(CONFIG_VALUES,SIZE_OF_ARRAY(CONFIG_VALUES));
 
   // deinitialize variables
-  Semaphore_done(&outputLock);
-  Semaphore_done(&inputLock);
+  Semaphore_done(&consoleLock);
   if (defaultDevice.writeCommand != NULL) String_delete(defaultDevice.writeCommand);
   if (defaultDevice.writePostProcessCommand != NULL) String_delete(defaultDevice.writePostProcessCommand);
   if (defaultDevice.writePreProcessCommand != NULL) String_delete(defaultDevice.writePreProcessCommand);
@@ -2937,12 +2934,12 @@ void logMessage(ulong logType, const char *text, ...)
 
 bool lockConsole(void)
 {
-  return Semaphore_lock(&outputLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,SEMAPHORE_WAIT_FOREVER);
+  return Semaphore_lock(&consoleLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,SEMAPHORE_WAIT_FOREVER);
 }
 
 void unlockConsole(void)
 {
-  Semaphore_unlock(&outputLock);
+  Semaphore_unlock(&consoleLock);
 }
 
 void printConsole(FILE *file, const char *format, ...)
@@ -3721,7 +3718,7 @@ Errors inputCryptPassword(void         *userData,
 
   error = ERROR_UNKNOWN;
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&inputLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&consoleLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
   {
     switch (globalOptions.runMode)
     {
