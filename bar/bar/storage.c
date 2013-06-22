@@ -30,6 +30,7 @@
   #include <cdio/cdio.h>
   #include <cdio/iso9660.h>
 #endif /* HAVE_ISO9660 */
+#include <signal.h>
 #include <errno.h>
 #include <assert.h>
 
@@ -1028,8 +1029,8 @@ LOCAL LIBSSH2_RECV_FUNC(sftpReceiveCallback)
 }
 
 /***********************************************************************\
-* Name   : waitSessionSocket
-* Purpose: wait a little until session socket can be read/write
+* Name   : waitSSHSessionSocket
+* Purpose: wait a little until SSH session socket can be read/write
 * Input  : socketHandle - socket handle
 * Output : -
 * Return : TRUE if session socket can be read/write, FALSE on
@@ -1037,10 +1038,11 @@ LOCAL LIBSSH2_RECV_FUNC(sftpReceiveCallback)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool waitSessionSocket(SocketHandle *socketHandle)
+LOCAL bool waitSSHSessionSocket(SocketHandle *socketHandle)
 {
   LIBSSH2_SESSION *session;
-  struct timeval  tv;
+  sigset_t        signalMask;
+  struct timespec ts;
   fd_set          fdSet;
 
   assert(socketHandle != NULL);
@@ -1049,16 +1051,21 @@ LOCAL bool waitSessionSocket(SocketHandle *socketHandle)
   session = Network_getSSHSession(socketHandle);
   assert(session != NULL);
 
+  // Note: ignore SIGALRM in pselect()
+  sigemptyset(&signalMask);
+  sigaddset(&signalMask,SIGALRM);
+
   // wait for max. 60s
-  tv.tv_sec  = 60;
-  tv.tv_usec = 0;
+  ts.tv_sec  = 60L;
+  ts.tv_nsec = 0L;
   FD_ZERO(&fdSet);
   FD_SET(socketHandle->handle,&fdSet);
-  return (select(socketHandle->handle+1,
+  return (pselect(socketHandle->handle+1,
                  ((libssh2_session_block_directions(session) & LIBSSH2_SESSION_BLOCK_INBOUND ) != 0) ? &fdSet : NULL,
                  ((libssh2_session_block_directions(session) & LIBSSH2_SESSION_BLOCK_OUTBOUND) != 0) ? &fdSet : NULL,
                  NULL,
-                 &tv
+                 &ts,
+                 &signalMask
                 ) > 0
          );
 }
@@ -1297,6 +1304,62 @@ LOCAL size_t curlWebDAVReadDirectoryDataCallback(const void *buffer,
 
   return size*n;
 }
+
+LOCAL Errors waitCurlSocket(CURLM *curlMultiHandle)
+{
+  sigset_t        signalMask;
+  fd_set          fdSetRead,fdSetWrite,fdSetException;
+  int             maxFD;
+  long            curlTimeout;
+  struct timespec ts;
+  Errors          error;
+
+  assert(curlMultiHandle != NULL);
+
+  // Note: ignore SIGALRM in pselect()
+  sigemptyset(&signalMask);
+  sigaddset(&signalMask,SIGALRM);
+
+  // get file descriptors from the transfers
+  FD_ZERO(&fdSetRead);
+  FD_ZERO(&fdSetWrite);
+  FD_ZERO(&fdSetException);
+  curl_multi_fdset(curlMultiHandle,&fdSetRead,&fdSetWrite,&fdSetException,&maxFD);
+
+  // get a suitable timeout
+  curl_multi_timeout(curlMultiHandle,&curlTimeout);
+
+  if (curlTimeout > (long)READ_TIMEOUT)
+  {
+    ts.tv_sec  = curlTimeout/1000L;
+    ts.tv_nsec = (curlTimeout%1000L)*1000000L;
+  }
+  else
+  {
+    ts.tv_sec  = READ_TIMEOUT/1000L;
+    ts.tv_nsec = (READ_TIMEOUT%1000L)*1000000L;
+  }
+
+  // wait
+  switch (pselect(maxFD+1,&fdSetRead,&fdSetWrite,&fdSetException,&ts,&signalMask))
+  {
+    case -1:
+      // error
+      error = ERROR_NETWORK_RECEIVE;
+      break;
+    case 0:
+      // timeout
+      error = ERROR_NETWORK_TIMEOUT;
+      break;
+    default:
+      // OK
+      error = ERROR_NONE;
+      break;
+  }
+
+  return error;
+}
+
 #endif /* HAVE_CURL */
 
 #if defined(HAVE_CURL) || defined(HAVE_FTP) || defined(HAVE_SSH2)
@@ -7090,16 +7153,12 @@ Errors Storage_read(StorageFileHandle *storageFileHandle,
     case STORAGE_TYPE_FTP:
       #if   defined(HAVE_CURL)
         {
-          ulong          i;
-          ulong          n;
-          ulong          length;
-          uint64         startTimestamp,endTimestamp;
-          fd_set         fdSetRead,fdSetWrite,fdSetException;
-          int            maxFD;
-          long           curlTimeout;
-          struct timeval timeout;
-          CURLMcode      curlmCode;
-          int            runningHandles;
+          ulong     i;
+          ulong     n;
+          ulong     length;
+          uint64    startTimestamp,endTimestamp;
+          CURLMcode curlmCode;
+          int       runningHandles;
 
           if (!storageFileHandle->jobOptions->dryRunFlag)
           {
@@ -7157,43 +7216,8 @@ Errors Storage_read(StorageFileHandle *storageFileHandle,
                        && (runningHandles > 0)
                       )
                 {
-                  // get file descriptors from the transfers
-                  FD_ZERO(&fdSetRead);
-                  FD_ZERO(&fdSetWrite);
-                  FD_ZERO(&fdSetException);
-                  curl_multi_fdset(storageFileHandle->ftp.curlMultiHandle,&fdSetRead,&fdSetWrite,&fdSetException,&maxFD);
-
-                  // get a suitable timeout
-                  curl_multi_timeout(storageFileHandle->ftp.curlMultiHandle,&curlTimeout);
-
-                  // wait for sockets
-                  if (curlTimeout != 0L)
-                  {
-                    if (curlTimeout > (long)READ_TIMEOUT)
-                    {
-                      timeout.tv_sec  = curlTimeout / 1000L;
-                      timeout.tv_usec = (curlTimeout % 1000L) * 1000L;
-                    }
-                    else
-                    {
-                      timeout.tv_sec  = READ_TIMEOUT / 1000L;
-                      timeout.tv_usec = (READ_TIMEOUT % 1000L) * 1000L;
-                    }
-                    switch (select(maxFD+1,&fdSetRead,&fdSetWrite,&fdSetException,&timeout))
-                    {
-                      case -1:
-                        // error
-                        error = ERROR_NETWORK_RECEIVE;
-                        break;
-                      case 0:
-                        // timeout
-                        error = ERROR_NETWORK_TIMEOUT;
-                        break;
-                      default:
-                        // OK
-                        break;
-                    }
-                  }
+                  // wait for socket
+                  error = waitCurlSocket(storageFileHandle->ftp.curlMultiHandle);
 
                   // perform curl action
                   if (error == ERROR_NONE)
@@ -7246,43 +7270,8 @@ Errors Storage_read(StorageFileHandle *storageFileHandle,
                        && (runningHandles > 0)
                       )
                 {
-                  // get file descriptors from the transfers
-                  FD_ZERO(&fdSetRead);
-                  FD_ZERO(&fdSetWrite);
-                  FD_ZERO(&fdSetException);
-                  curl_multi_fdset(storageFileHandle->ftp.curlMultiHandle,&fdSetRead,&fdSetWrite,&fdSetException,&maxFD);
-
-                  // get a suitable timeout
-                  curl_multi_timeout(storageFileHandle->ftp.curlMultiHandle,&curlTimeout);
-
-                  // wait for sockets
-                  if (curlTimeout != 0L)
-                  {
-                    if (curlTimeout > (long)READ_TIMEOUT)
-                    {
-                      timeout.tv_sec  = curlTimeout / 1000L;
-                      timeout.tv_usec = (curlTimeout % 1000L) * 1000L;
-                    }
-                    else
-                    {
-                      timeout.tv_sec  = READ_TIMEOUT / 1000L;
-                      timeout.tv_usec = (READ_TIMEOUT % 1000L) * 1000L;
-                    }
-                    switch (select(maxFD+1,&fdSetRead,&fdSetWrite,&fdSetException,&timeout))
-                    {
-                      case -1:
-                        // error
-                        error = ERROR_NETWORK_RECEIVE;
-                        break;
-                      case 0:
-                        // timeout
-                        error = ERROR_NETWORK_TIMEOUT;
-                        break;
-                      default:
-                        // OK
-                        break;
-                    }
-                  }
+                  // wait for socket
+                  error = waitCurlSocket(storageFileHandle->ftp.curlMultiHandle);
 
                   // perform curl action
                   if (error == ERROR_NONE)
@@ -7743,16 +7732,12 @@ Errors Storage_read(StorageFileHandle *storageFileHandle,
 #warning todo webdav
       #ifdef HAVE_CURL
         {
-          ulong          i;
-          ulong          n;
-          ulong          length;
-          uint64         startTimestamp,endTimestamp;
-          fd_set         fdSetRead,fdSetWrite,fdSetException;
-          int            maxFD;
-          long           curlTimeout;
-          struct timeval timeout;
-          CURLMcode      curlmCode;
-          int            runningHandles;
+          ulong     i;
+          ulong     n;
+          ulong     length;
+          uint64    startTimestamp,endTimestamp;
+          CURLMcode curlmCode;
+          int       runningHandles;
 
           if (!storageFileHandle->jobOptions->dryRunFlag)
           {
@@ -7806,43 +7791,8 @@ Errors Storage_read(StorageFileHandle *storageFileHandle,
                      && (runningHandles > 0)
                     )
               {
-                // get file descriptors from the transfers
-                FD_ZERO(&fdSetRead);
-                FD_ZERO(&fdSetWrite);
-                FD_ZERO(&fdSetException);
-                curl_multi_fdset(storageFileHandle->webdav.curlMultiHandle,&fdSetRead,&fdSetWrite,&fdSetException,&maxFD);
-
-                // get a suitable timeout (min. 10s)
-                curl_multi_timeout(storageFileHandle->webdav.curlMultiHandle,&curlTimeout);
-
-                // wait for sockets
-                if (curlTimeout != 0L)
-                {
-                  if (curlTimeout > (long)READ_TIMEOUT)
-                  {
-                    timeout.tv_sec  = curlTimeout / 1000L;
-                    timeout.tv_usec = (curlTimeout % 1000L) * 1000L;
-                  }
-                  else
-                  {
-                    timeout.tv_sec  = READ_TIMEOUT / 1000L;
-                    timeout.tv_usec = (READ_TIMEOUT % 1000L) * 1000L;
-                  }
-                  switch (select(maxFD+1,&fdSetRead,&fdSetWrite,&fdSetException,&timeout))
-                  {
-                    case -1:
-                      // error
-                      error = ERROR_NETWORK_RECEIVE;
-                      break;
-                    case 0:
-                      // timeout
-                      error = ERROR_NETWORK_TIMEOUT;
-                      break;
-                    default:
-                      // OK
-                      break;
-                  }
-                }
+                // wait for socket
+                error = waitCurlSocket(storageFileHandle->webdav.curlMultiHandle);
 
                 // perform curl action
                 if (error == ERROR_NONE)
@@ -8007,15 +7957,11 @@ Errors Storage_write(StorageFileHandle *storageFileHandle,
     case STORAGE_TYPE_FTP:
       #if   defined(HAVE_CURL)
         {
-          ulong          writtenBytes;
-          ulong          length;
-          uint64         startTimestamp,endTimestamp;
-          fd_set         fdSetRead,fdSetWrite,fdSetException;
-          int            maxFD;
-          long           curlTimeout;
-          struct timeval timeout;
-          CURLMcode      curlmCode;
-          int            runningHandles;
+          ulong     writtenBytes;
+          ulong     length;
+          uint64    startTimestamp,endTimestamp;
+          CURLMcode curlmCode;
+          int       runningHandles;
 
           if (!storageFileHandle->jobOptions->dryRunFlag)
           {
@@ -8048,43 +7994,8 @@ Errors Storage_write(StorageFileHandle *storageFileHandle,
                      && (runningHandles > 0)
                     )
               {
-                // get file descriptors from the transfers
-                FD_ZERO(&fdSetRead);
-                FD_ZERO(&fdSetWrite);
-                FD_ZERO(&fdSetException);
-                curl_multi_fdset(storageFileHandle->ftp.curlMultiHandle,&fdSetRead,&fdSetWrite,&fdSetException,&maxFD);
-
-                // get a suitable timeout
-                curl_multi_timeout(storageFileHandle->ftp.curlMultiHandle,&curlTimeout);
-
-                // wait for sockets
-                if (curlTimeout != 0L)
-                {
-                  if (curlTimeout > (long)READ_TIMEOUT)
-                  {
-                    timeout.tv_sec  = curlTimeout / 1000L;
-                    timeout.tv_usec = (curlTimeout % 1000L) * 1000L;
-                  }
-                  else
-                  {
-                    timeout.tv_sec  = READ_TIMEOUT / 1000L;
-                    timeout.tv_usec = (READ_TIMEOUT % 1000L) * 1000L;
-                  }
-                  switch (select(maxFD+1,&fdSetRead,&fdSetWrite,&fdSetException,&timeout))
-                  {
-                    case -1:
-                      // error
-                      error = ERROR_NETWORK_RECEIVE;
-                      break;
-                    case 0:
-                      // timeout
-                      error = ERROR_NETWORK_TIMEOUT;
-                      break;
-                    default:
-                      // OK
-                      break;
-                  }
-                }
+                // wait for socket
+                error = waitCurlSocket(storageFileHandle->ftp.curlMultiHandle);
 
                 // perform curl action
                 if (error == ERROR_NONE)
@@ -8258,7 +8169,7 @@ Errors Storage_write(StorageFileHandle *storageFileHandle,
               if      (n == 0)
               {
                 // should not happen in blocking-mode: bug? libssh2 API changed somewhere between 0.18 and 1.2.4? => wait for data
-                if (!waitSessionSocket(&storageFileHandle->scp.socketHandle))
+                if (!waitSSHSessionSocket(&storageFileHandle->scp.socketHandle))
                 {
                   error = ERROR_NETWORK_SEND;
                   break;
@@ -8350,7 +8261,7 @@ Errors Storage_write(StorageFileHandle *storageFileHandle,
               if      (n == 0)
               {
                 // should not happen in blocking-mode: bug? libssh2 API changed somewhere between 0.18 and 1.2.4? => wait for data
-                if (!waitSessionSocket(&storageFileHandle->sftp.socketHandle))
+                if (!waitSSHSessionSocket(&storageFileHandle->sftp.socketHandle))
                 {
                   error = ERROR_NETWORK_SEND;
                   break;
@@ -8392,15 +8303,11 @@ Errors Storage_write(StorageFileHandle *storageFileHandle,
     case STORAGE_TYPE_WEBDAV:
       #ifdef HAVE_CURL
         {
-          ulong          writtenBytes;
-          ulong          length;
-          uint64         startTimestamp,endTimestamp;
-          fd_set         fdSetRead,fdSetWrite,fdSetException;
-          int            maxFD;
-          long           curlTimeout;
-          struct timeval timeout;
-          CURLMcode      curlmCode;
-          int            runningHandles;
+          ulong     writtenBytes;
+          ulong     length;
+          uint64    startTimestamp,endTimestamp;
+          CURLMcode curlmCode;
+          int       runningHandles;
 
           if (!storageFileHandle->jobOptions->dryRunFlag)
           {
@@ -8433,43 +8340,8 @@ Errors Storage_write(StorageFileHandle *storageFileHandle,
                      && (runningHandles > 0)
                     )
               {
-                // get file descriptors from the transfers
-                FD_ZERO(&fdSetRead);
-                FD_ZERO(&fdSetWrite);
-                FD_ZERO(&fdSetException);
-                curl_multi_fdset(storageFileHandle->webdav.curlMultiHandle,&fdSetRead,&fdSetWrite,&fdSetException,&maxFD);
-
-                // get a suitable timeout
-                curl_multi_timeout(storageFileHandle->webdav.curlMultiHandle,&curlTimeout);
-
-                // wait for sockets
-                if (curlTimeout != 0L)
-                {
-                  if (curlTimeout > (long)READ_TIMEOUT)
-                  {
-                    timeout.tv_sec  = curlTimeout / 1000L;
-                    timeout.tv_usec = (curlTimeout % 1000L) * 1000L;
-                  }
-                  else
-                  {
-                    timeout.tv_sec  = READ_TIMEOUT / 1000L;
-                    timeout.tv_usec = (READ_TIMEOUT % 1000L) * 1000L;
-                  }
-                  switch (select(maxFD+1,&fdSetRead,&fdSetWrite,&fdSetException,&timeout))
-                  {
-                    case -1:
-                      // error
-                      error = ERROR_NETWORK_RECEIVE;
-                      break;
-                    case 0:
-                      // timeout
-                      error = ERROR_NETWORK_TIMEOUT;
-                      break;
-                    default:
-                      // OK
-                      break;
-                  }
-                }
+                // wait for socket
+                error = waitCurlSocket(storageFileHandle->webdav.curlMultiHandle);
 
                 // perform curl action
                 if (error == ERROR_NONE)
@@ -8772,15 +8644,11 @@ Errors Storage_seek(StorageFileHandle *storageFileHandle,
 
             if      (offset > storageFileHandle->ftp.index)
             {
-              uint64         skip;
-              ulong          i;
-              ulong          n;
-              fd_set         fdSetRead,fdSetWrite,fdSetException;
-              int            maxFD;
-              long           curlTimeout;
-              struct timeval timeout;
-              CURLMcode      curlmCode;
-              int            runningHandles;
+              uint64    skip;
+              ulong     i;
+              ulong     n;
+              CURLMcode curlmCode;
+              int       runningHandles;
 
               // calculate number of bytes to skip
               skip = offset-storageFileHandle->ftp.index;
@@ -8812,43 +8680,8 @@ Errors Storage_seek(StorageFileHandle *storageFileHandle,
                          && (runningHandles > 0)
                         )
                   {
-                    // get file descriptors from the transfers
-                    FD_ZERO(&fdSetRead);
-                    FD_ZERO(&fdSetWrite);
-                    FD_ZERO(&fdSetException);
-                    curl_multi_fdset(storageFileHandle->ftp.curlMultiHandle,&fdSetRead,&fdSetWrite,&fdSetException,&maxFD);
-
-                    // get a suitable timeout
-                    curl_multi_timeout(storageFileHandle->ftp.curlMultiHandle,&curlTimeout);
-
-                    // wait for sockets
-                    if (curlTimeout != 0L)
-                    {
-                      if (curlTimeout > (long)READ_TIMEOUT)
-                      {
-                        timeout.tv_sec  = curlTimeout / 1000L;
-                        timeout.tv_usec = (curlTimeout % 1000L) * 1000L;
-                      }
-                      else
-                      {
-                        timeout.tv_sec  = READ_TIMEOUT / 1000L;
-                        timeout.tv_usec = (READ_TIMEOUT % 1000L) * 1000L;
-                      }
-                      switch (select(maxFD+1,&fdSetRead,&fdSetWrite,&fdSetException,&timeout))
-                      {
-                        case -1:
-                          // error
-                          error = ERROR_NETWORK_RECEIVE;
-                          break;
-                        case 0:
-                          // timeout
-                          error = ERROR_NETWORK_TIMEOUT;
-                          break;
-                        default:
-                          // OK
-                          break;
-                      }
-                    }
+                    // wait for socket
+                    error = waitCurlSocket(storageFileHandle->ftp.curlMultiHandle);
 
                     // perform curl action
                     if (error == ERROR_NONE)
@@ -8998,7 +8831,7 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
                 assert(storageFileHandle->scp.index >= (storageFileHandle->scp.readAheadBuffer.offset+storageFileHandle->scp.readAheadBuffer.length));
 
                 // wait for data
-                if (!waitSessionSocket(&storageFileHandle->scp.socketHandle))
+                if (!waitSSHSessionSocket(&storageFileHandle->scp.socketHandle))
                 {
                   error = ERROR_(IO_ERROR,errno);
                   break;
@@ -9087,17 +8920,13 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
 
             if      (offset > storageFileHandle->webdav.index)
             {
-              uint64         skip;
-              ulong          i;
-              ulong          n;
-              ulong          length;
-              uint64         startTimestamp,endTimestamp;
-              fd_set         fdSetRead,fdSetWrite,fdSetException;
-              int            maxFD;
-              long           curlTimeout;
-              struct timeval timeout;
-              CURLMcode      curlmCode;
-              int            runningHandles;
+              uint64    skip;
+              ulong     i;
+              ulong     n;
+              ulong     length;
+              uint64    startTimestamp,endTimestamp;
+              CURLMcode curlmCode;
+              int       runningHandles;
 
               // calculate number of bytes to skip
               skip = offset-storageFileHandle->webdav.index;
@@ -9142,43 +8971,8 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
                          && (runningHandles > 0)
                         )
                   {
-                    // get file descriptors from the transfers
-                    FD_ZERO(&fdSetRead);
-                    FD_ZERO(&fdSetWrite);
-                    FD_ZERO(&fdSetException);
-                    curl_multi_fdset(storageFileHandle->webdav.curlMultiHandle,&fdSetRead,&fdSetWrite,&fdSetException,&maxFD);
-
-                    // get a suitable timeout
-                    curl_multi_timeout(storageFileHandle->webdav.curlMultiHandle,&curlTimeout);
-
-                    // wait for sockets
-                    if (curlTimeout != 0L)
-                    {
-                      if (curlTimeout > (long)READ_TIMEOUT)
-                      {
-                        timeout.tv_sec  = curlTimeout / 1000L;
-                        timeout.tv_usec = (curlTimeout % 1000L) * 1000L;
-                      }
-                      else
-                      {
-                        timeout.tv_sec  = READ_TIMEOUT / 1000L;
-                        timeout.tv_usec = (READ_TIMEOUT % 1000L) * 1000L;
-                      }
-                      switch (select(maxFD+1,&fdSetRead,&fdSetWrite,&fdSetException,&timeout))
-                      {
-                        case -1:
-                          // error
-                          error = ERROR_NETWORK_RECEIVE;
-                          break;
-                        case 0:
-                          // timeout
-                          error = ERROR_NETWORK_TIMEOUT;
-                          break;
-                        default:
-                          // OK
-                          break;
-                      }
-                    }
+                    // wait for socket
+                    error = waitCurlSocket(storageFileHandle->webdav.curlMultiHandle);
 
                     // perform curl action
                     if (error == ERROR_NONE)
