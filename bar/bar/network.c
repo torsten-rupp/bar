@@ -723,9 +723,10 @@ Errors Network_receive(SocketHandle *socketHandle,
                        ulong        *bytesReceived
                       )
 {
-  struct timeval tv;
-  fd_set         fdSet;
-  long           n;
+  sigset_t        signalMask;
+  struct timespec ts;
+  fd_set          fdSet;
+  long            n;
 
   assert(socketHandle != NULL);
   assert(bytesReceived != NULL);
@@ -740,13 +741,16 @@ Errors Network_receive(SocketHandle *socketHandle,
       }
       else
       {
+        // Note: ignore SIGALRM in pselect()
+        sigemptyset(&signalMask);
+        sigaddset(&signalMask,SIGALRM);
 
-        tv.tv_sec  = timeout/1000;
-        tv.tv_usec = (timeout%1000)*1000;
+        ts.tv_sec  = timeout/1000L;
+        ts.tv_nsec = (timeout%1000L)*1000000L;
         FD_ZERO(&fdSet);
         assert(socketHandle->handle < FD_SETSIZE);
         FD_SET(socketHandle->handle,&fdSet);
-        if (select(socketHandle->handle+1,&fdSet,NULL,NULL,&tv) > 0)
+        if (pselect(socketHandle->handle+1,&fdSet,NULL,NULL,&ts,&signalMask) > 0)
         {
           n = recv(socketHandle->handle,buffer,maxLength,0);
         }
@@ -788,11 +792,11 @@ Errors Network_send(SocketHandle *socketHandle,
                     ulong        length
                    )
 {
-//  Errors         error;
-  ulong          sentBytes;
-  struct timeval tv;
-  fd_set         fdSetInput,fdSetOutput,fdSetError;
-  long           n;
+  ulong           sentBytes;
+  sigset_t        signalMask;
+  struct timespec ts;
+  fd_set          fdSetInput,fdSetOutput,fdSetError;
+  long            n;
 
   assert(socketHandle != NULL);
 
@@ -804,17 +808,22 @@ Errors Network_send(SocketHandle *socketHandle,
       case SOCKET_TYPE_PLAIN:
           do
           {
-            // wait until space in buffer is available
             assert(socketHandle->handle < FD_SETSIZE);
-            tv.tv_sec  = SEND_TIMEOUT/1000;
-            tv.tv_usec = (SEND_TIMEOUT%1000)*1000;
+
+            // Note: ignore SIGALRM in pselect()
+            sigemptyset(&signalMask);
+            sigaddset(&signalMask,SIGALRM);
+
+            // wait until space in buffer is available
+            ts.tv_sec  = SEND_TIMEOUT/1000L;
+            ts.tv_nsec = (SEND_TIMEOUT%1000L)*1000000L;
             FD_ZERO(&fdSetInput);
             FD_SET(socketHandle->handle,&fdSetInput);
             FD_ZERO(&fdSetOutput);
             FD_SET(socketHandle->handle,&fdSetOutput);
             FD_ZERO(&fdSetError);
             FD_SET(socketHandle->handle,&fdSetError);
-            select(socketHandle->handle+1,NULL,&fdSetOutput,NULL,&tv);
+            pselect(socketHandle->handle+1,NULL,&fdSetOutput,NULL,&ts,&signalMask);
 
             // send data
             n = send(socketHandle->handle,((char*)buffer)+sentBytes,length-sentBytes,0);
@@ -834,17 +843,22 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
         #ifdef HAVE_GNU_TLS
           do
           {
-            // wait until space in buffer is available
             assert(socketHandle->handle < FD_SETSIZE);
-            tv.tv_sec  = SEND_TIMEOUT/1000;
-            tv.tv_usec = (SEND_TIMEOUT%1000)*1000;
+
+            // Note: ignore SIGALRM in pselect()
+            sigemptyset(&signalMask);
+            sigaddset(&signalMask,SIGALRM);
+
+            // wait until space in buffer is available
+            ts.tv_sec  = SEND_TIMEOUT/1000L;
+            ts.tv_nsec = (SEND_TIMEOUT%1000L)*1000000L;
             FD_ZERO(&fdSetInput);
             FD_SET(socketHandle->handle,&fdSetInput);
             FD_ZERO(&fdSetOutput);
             FD_SET(socketHandle->handle,&fdSetOutput);
             FD_ZERO(&fdSetError);
             FD_SET(socketHandle->handle,&fdSetError);
-            select(socketHandle->handle+1,NULL,&fdSetOutput,NULL,&tv);
+            pselect(socketHandle->handle+1,NULL,&fdSetOutput,NULL,&ts,&signalMask);
 
             // send data
             n = gnutls_record_send(socketHandle->gnuTLS.session,((char*)buffer)+sentBytes,length-sentBytes);
