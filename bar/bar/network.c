@@ -782,9 +782,9 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
         break; /* not reached */
     #endif /* NDEBUG */
   }
-  (*bytesReceived) = (n >= 0)?n:0;
+  (*bytesReceived) = (n >= 0) ? n : 0;
 
-  return (n >= 0)?ERROR_NONE:ERROR_NETWORK_RECEIVE;
+  return (n >= 0) ? ERROR_NONE : ERROR_NETWORK_RECEIVE;
 }
 
 Errors Network_send(SocketHandle *socketHandle,
@@ -879,7 +879,7 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
 //  if (sentBytes != length) fprintf(stderr,"%s,%d: send error %d: %s\n",__FILE__,__LINE__,errno,strerror(errno));
   }
 
-  return (sentBytes == length)?ERROR_NONE:ERROR_NETWORK_SEND;
+  return (sentBytes == length) ? ERROR_NONE : ERROR_NETWORK_SEND;
 }
 
 Errors Network_readLine(SocketHandle *socketHandle,
@@ -1677,9 +1677,9 @@ Errors Network_executeRead(NetworkExecuteHandle  *networkExecuteHandle,
     return ERROR_FUNCTION_NOT_SUPPORTED;
   #endif /* HAVE_SSH2 */
 
-  (*bytesRead) = (n >= 0)?n:0;
+  (*bytesRead) = (n >= 0) ? n : 0;
 
-  return (n >= 0)?ERROR_NONE:ERROR_NETWORK_RECEIVE;
+  return (n >= 0) ? ERROR_NONE : ERROR_NETWORK_RECEIVE;
 }
 
 Errors Network_executeWriteLine(NetworkExecuteHandle *networkExecuteHandle,
