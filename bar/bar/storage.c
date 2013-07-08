@@ -4967,6 +4967,14 @@ Errors Storage_create(StorageFileHandle *storageFileHandle,
             (void)curl_easy_setopt(storageFileHandle->ftp.curlHandle,CURLOPT_VERBOSE,1L);
           }
 
+          /* work-around for curl limitation/bug: curl trigger sometimes an alarm
+             signal if signal are not switched off.
+             Note: if signals are switched of c-ares library for asynchronous DNS
+             is recommented to avoid infinite lookups
+          */
+          (void)curl_easy_setopt(storageFileHandle->ftp.curlMultiHandle,CURLOPT_NOSIGNAL,1);
+          (void)curl_easy_setopt(storageFileHandle->ftp.curlHandle,CURLOPT_NOSIGNAL,1);
+
           // get pathname, basename
           pathName = File_getFilePathName(String_new(),fileName);
           baseName = File_getFileBaseName(String_new(),fileName);
@@ -5371,6 +5379,14 @@ LIBSSH2_SFTP_S_IRUSR|LIBSSH2_SFTP_S_IWUSR
             (void)curl_easy_setopt(storageFileHandle->webdav.curlHandle,CURLOPT_VERBOSE,1L);
           }
 
+          /* work-around for curl limitation/bug: curl trigger sometimes an alarm
+             signal if signal are not switched off.
+             Note: if signals are switched of c-ares library for asynchronous DNS
+             is recommented to avoid infinite lookups
+          */
+          (void)curl_easy_setopt(storageFileHandle->webdav.curlMultiHandle,CURLOPT_NOSIGNAL,1);
+          (void)curl_easy_setopt(storageFileHandle->webdav.curlHandle,CURLOPT_NOSIGNAL,1);
+
           // get base URL
           baseURL = String_format(String_new(),"http://%S",storageFileHandle->storageSpecifier.hostName);
           if (storageFileHandle->storageSpecifier.hostPort != 0) String_format(baseURL,":d",storageFileHandle->storageSpecifier.hostPort);
@@ -5715,6 +5731,14 @@ Errors Storage_open(StorageFileHandle *storageFileHandle,
             // enable debug mode
             (void)curl_easy_setopt(storageFileHandle->ftp.curlHandle,CURLOPT_VERBOSE,1L);
           }
+
+          /* work-around for curl limitation/bug: curl trigger sometimes an alarm
+             signal if signal are not switched off.
+             Note: if signals are switched of c-ares library for asynchronous DNS
+             is recommented to avoid infinite lookups
+          */
+          (void)curl_easy_setopt(storageFileHandle->ftp.curlMultiHandle,CURLOPT_NOSIGNAL,1);
+          (void)curl_easy_setopt(storageFileHandle->ftp.curlHandle,CURLOPT_NOSIGNAL,1);
 
           // get pathname, basename
           pathName = File_getFilePathName(String_new(),storageFileName);
@@ -6213,6 +6237,14 @@ fprintf(stderr,"%s, %d: httpCode=%ld\n",__FILE__,__LINE__,httpCode);
             (void)curl_easy_setopt(storageFileHandle->webdav.curlHandle,CURLOPT_VERBOSE,1L);
           }
 
+          /* work-around for curl limitation/bug: curl trigger sometimes an alarm
+             signal if signal are not switched off.
+             Note: if signals are switched of c-ares library for asynchronous DNS
+             is recommented to avoid infinite lookups
+          */
+          (void)curl_easy_setopt(storageFileHandle->webdav.curlMultiHandle,CURLOPT_NOSIGNAL,1);
+          (void)curl_easy_setopt(storageFileHandle->webdav.curlHandle,CURLOPT_NOSIGNAL,1);
+
           // get base URL
           baseURL = String_format(String_new(),"http://%S",storageFileHandle->storageSpecifier.hostName);
           if (storageFileHandle->storageSpecifier.hostPort != 0) String_format(baseURL,":d",storageFileHandle->storageSpecifier.hostPort);
@@ -6503,6 +6535,10 @@ void Storage_close(StorageFileHandle *storageFileHandle)
         assert(storageFileHandle->ftp.curlHandle != NULL);
         assert(storageFileHandle->ftp.curlMultiHandle != NULL);
 
+        // for some reason signals must be reenabled, otherwise curl is crashing!
+        (void)curl_easy_setopt(storageFileHandle->webdav.curlHandle,CURLOPT_NOSIGNAL,0);
+        (void)curl_easy_setopt(storageFileHandle->webdav.curlMultiHandle,CURLOPT_NOSIGNAL,0);
+
         (void)curl_multi_remove_handle(storageFileHandle->ftp.curlMultiHandle,storageFileHandle->ftp.curlHandle);
         (void)curl_easy_cleanup(storageFileHandle->ftp.curlHandle);
         (void)curl_multi_cleanup(storageFileHandle->ftp.curlMultiHandle);
@@ -6598,9 +6634,14 @@ void Storage_close(StorageFileHandle *storageFileHandle)
         assert(storageFileHandle->webdav.curlHandle != NULL);
         assert(storageFileHandle->webdav.curlMultiHandle != NULL);
 
+        // for some reason signals must be reenabled, otherwise curl is crashing!
+        (void)curl_easy_setopt(storageFileHandle->webdav.curlHandle,CURLOPT_NOSIGNAL,0);
+        (void)curl_easy_setopt(storageFileHandle->webdav.curlMultiHandle,CURLOPT_NOSIGNAL,0);
+
         (void)curl_multi_remove_handle(storageFileHandle->webdav.curlMultiHandle,storageFileHandle->webdav.curlHandle);
         (void)curl_easy_cleanup(storageFileHandle->webdav.curlHandle);
         (void)curl_multi_cleanup(storageFileHandle->webdav.curlMultiHandle);
+        if (storageFileHandle->webdav.receiveBuffer.data != NULL) free(storageFileHandle->webdav.receiveBuffer.data);
       #else /* not HAVE_CURL */
       #endif /* HAVE_CURL */
       break;
@@ -6710,6 +6751,7 @@ Errors Storage_delete(StorageFileHandle *storageFileHandle,
             {
               return ERROR_FTP_SESSION_FAIL;
             }
+            (void)curl_easy_setopt(curlHandle,CURLOPT_NOSIGNAL,1);
             (void)curl_easy_setopt(curlHandle,CURLOPT_FTP_RESPONSE_TIMEOUT,FTP_TIMEOUT/1000);
             if (globalOptions.verboseLevel >= 6)
             {
@@ -6911,6 +6953,7 @@ whould this be a possible implementation?
             {
               return ERROR_WEBDAV_SESSION_FAIL;
             }
+            (void)curl_easy_setopt(curlHandle,CURLOPT_NOSIGNAL,1);
             (void)curl_easy_setopt(curlHandle,CURLOPT_CONNECTTIMEOUT_MS,WEBDAV_TIMEOUT);
             if (globalOptions.verboseLevel >= 6)
             {
@@ -9215,6 +9258,7 @@ Errors Storage_openDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
             error = ERROR_FTP_SESSION_FAIL;
             break;
           }
+          (void)curl_easy_setopt(curlHandle,CURLOPT_NOSIGNAL,1);
           (void)curl_easy_setopt(curlHandle,CURLOPT_FTP_RESPONSE_TIMEOUT,FTP_TIMEOUT/1000);
           if (globalOptions.verboseLevel >= 6)
           {
@@ -9649,6 +9693,7 @@ error = ERROR_FUNCTION_NOT_SUPPORTED;
             error = ERROR_WEBDAV_SESSION_FAIL;
             break;
           }
+          (void)curl_easy_setopt(curlHandle,CURLOPT_NOSIGNAL,1);
           (void)curl_easy_setopt(curlHandle,CURLOPT_CONNECTTIMEOUT_MS,WEBDAV_TIMEOUT);
           if (globalOptions.verboseLevel >= 6)
           {
