@@ -5087,7 +5087,7 @@ Errors Archive_newHardLinkEntry(ArchiveEntryInfo                *archiveEntryInf
                                                              fileExtendedAttributeNode->dataLength
                                                             );
   }
-  if (Compress_isCompressed(archiveEntryInfo->file.deltaCompressAlgorithm))
+  if (Compress_isCompressed(archiveEntryInfo->hardLink.deltaCompressAlgorithm))
   {
     archiveEntryInfo->hardLink.chunkHardLinkDelta.deltaAlgorithm = COMPRESS_ALGORITHM_TO_CONSTANT(archiveEntryInfo->hardLink.deltaCompressAlgorithm);
     String_set(archiveEntryInfo->hardLink.chunkHardLinkDelta.name,Source_getName(&archiveEntryInfo->hardLink.sourceHandle));
