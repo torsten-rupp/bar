@@ -2852,7 +2852,7 @@ Errors File_getExtendedAttributes(FileExtendedAttributeList *fileExtendedAttribu
   List_init(fileExtendedAttributeList);
 
   // allocate buffer for attribute names
-  n = listxattr(String_cString(fileName),NULL,0);
+  n = llistxattr(String_cString(fileName),NULL,0);
   if (n < 0)
   {
     return ERRORX_(IO_ERROR,errno,String_cString(fileName));
@@ -2865,7 +2865,7 @@ Errors File_getExtendedAttributes(FileExtendedAttributeList *fileExtendedAttribu
   }
 
   // get attribute names
-  if (listxattr(String_cString(fileName),names,namesLength) < 0)
+  if (llistxattr(String_cString(fileName),names,namesLength) < 0)
   {
     free(names);
     return ERRORX_(IO_ERROR,errno,String_cString(fileName));
