@@ -445,6 +445,7 @@ LOCAL Errors flushChunkBuffer(ChunkBuffer *chunkBuffer)
 
   // calculate data bytes
   n = ALIGN(chunkBuffer->bufferLength,chunkBuffer->alignment);
+  memset(&chunkBuffer->buffer[chunkBuffer->bufferLength],0,n-chunkBuffer->bufferLength);
 
   // encrypt data
 //fprintf(stderr,"%s, %d: write:\n",__FILE__,__LINE__); debugDumpMemory(FALSE,chunkBuffer->buffer,ALIGN(chunkBuffer->bufferLength,chunkBuffer->alignment));
