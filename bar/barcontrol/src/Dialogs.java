@@ -15,6 +15,8 @@ import java.io.IOException;
 import java.util.BitSet;
 import java.util.List;
 
+import org.eclipse.swt.events.MouseEvent;
+import org.eclipse.swt.events.MouseListener;
 import org.eclipse.swt.events.TraverseEvent;
 import org.eclipse.swt.events.TraverseListener;
 import org.eclipse.swt.events.SelectionEvent;
@@ -346,7 +348,6 @@ class SimpleProgressDialog
         {
           int x = (data.animationIndex%8)*48;
           int y = (data.animationIndex/8)*48;
-Dprintf.dprintf("");
 
 /*
           if (!widgetImage.isDisposed())
@@ -419,19 +420,20 @@ abstract class DialogRunnable
  */
 class BooleanFieldUpdater
 {
-  private Object object;
   private Field  field;
+  private Object object;
 
   /** create boolean field updater
    * @param clazz class with boolean or Boolean field
+   * @param object object instance
    * @param fieldName field name
    */
-  BooleanFieldUpdater(Class clazz, String fieldName)
+  BooleanFieldUpdater(Class clazz, Object object, String fieldName)
   {
     try
     {
-      this.object = object;
       this.field  = clazz.getDeclaredField(fieldName);
+      this.object = object;
     }
     catch (NoSuchFieldException exception)
     {
@@ -1128,12 +1130,23 @@ class Dialogs
 
   /** create boolean field updater
    * @param clazz class with boolean or Boolean field
+   * @param object object instance
+   * @param fieldName field name
+   * @return boolean field updater
+   */
+  public static BooleanFieldUpdater booleanFieldUpdater(Class clazz, Object object, String fieldName)
+  {
+    return new BooleanFieldUpdater(clazz,object,fieldName);
+  }
+
+  /** create boolean field updater
+   * @param clazz class with boolean or Boolean field
    * @param fieldName field name
    * @return boolean field updater
    */
   public static BooleanFieldUpdater booleanFieldUpdater(Class clazz, String fieldName)
   {
-    return new BooleanFieldUpdater(clazz,fieldName);
+    return booleanFieldUpdater(clazz,null,fieldName);
   }
 
   /** info dialog
@@ -1299,9 +1312,25 @@ class Dialogs
           label.setImage(IMAGE);
           label.setLayoutData(new TableLayoutData(0,0,TableLayoutData.W,0,0,10));
 
-          label = new Label(composite,SWT.LEFT|SWT.WRAP);
-          label.setText(message);
-          label.setLayoutData(new TableLayoutData(0,1,TableLayoutData.NSWE,0,0,4));
+          text = new Text(composite,SWT.LEFT|SWT.WRAP|SWT.READ_ONLY);
+          text.setText(message);
+          text.setBackground(composite.getBackground());
+          text.setLayoutData(new TableLayoutData(0,1,TableLayoutData.NSWE,0,0,4));
+          text.addMouseListener(new MouseListener()
+          {
+            public void mouseDoubleClick(MouseEvent mouseEvent)
+            {
+              Text widget = (Text)mouseEvent.widget;
+
+              widget.setSelection(0,widget.getText().length());
+            }
+            public void mouseDown(MouseEvent mouseEvent)
+            {
+            }
+            public void mouseUp(MouseEvent mouseEvent)
+            {
+            }
+          });
 
           int row = 1;
 
@@ -1312,8 +1341,8 @@ class Dialogs
             label.setLayoutData(new TableLayoutData(row,1,TableLayoutData.NSWE,0,0,4)); row++;
 
             text = new Text(composite,SWT.LEFT|SWT.BORDER|SWT.V_SCROLL|SWT.READ_ONLY);
-            text.setLayoutData(new TableLayoutData(row,1,TableLayoutData.NSWE,0,0,0,0,SWT.DEFAULT,100)); row++;
             text.setText(StringUtils.join(extendedMessage,text.DELIMITER));
+            text.setLayoutData(new TableLayoutData(row,1,TableLayoutData.NSWE,0,0,0,0,SWT.DEFAULT,100)); row++;
           }
 
           if (showAgainFieldFlag != null)
@@ -1321,7 +1350,7 @@ class Dialogs
             widgetShowAgain = new Button(composite,SWT.CHECK);
             widgetShowAgain.setText("show again");
             widgetShowAgain.setSelection(true);
-            widgetShowAgain.setLayoutData(new TableLayoutData(1,1,TableLayoutData.W));
+            widgetShowAgain.setLayoutData(new TableLayoutData(row,1,TableLayoutData.W)); row++;
           }
           else
           {
@@ -1599,8 +1628,6 @@ class Dialogs
     {
       if (!parentShell.isDisposed())
       {
-        final boolean[] result = new boolean[1];
-
         final Shell dialog = openModal(parentShell,title,300,70);
         dialog.setLayout(new TableLayout(new double[]{1.0,0.0},1.0));
 
@@ -1668,6 +1695,7 @@ class Dialogs
         }
 
         return (Boolean)run(dialog,
+                            defaultValue,
                             new DialogRunnable()
                             {
                               public void done(Object result)
@@ -2787,7 +2815,7 @@ class Dialogs
 
         button = new Button(composite,SWT.CENTER);
         button.setText(cancelText);
-        button.setLayoutData(new TableLayoutData(0,1,TableLayoutData.E,0,0,0,0,SWT.DEFAULT,SWT.DEFAULT,60,SWT.DEFAULT));
+        button.setLayoutData(new TableLayoutData(0,1,TableLayoutData.E));
         button.addSelectionListener(new SelectionListener()
         {
           public void widgetDefaultSelected(SelectionEvent selectionEvent)
