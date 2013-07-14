@@ -237,27 +237,26 @@ public class StringUtils
         }
       }
 
-      // unescape
-      int index = startIndex;
-      while (index < endIndex)
-      {
-        char ch = string.charAt(index);
+    // unescape
+    int index = startIndex;
+    while (index < endIndex)
+    {
+      char ch = string.charAt(index);
 
-        if      ((ch == '\\') && ((index+1) < endIndex) && quotedFlag && (string.charAt(index+1) == quoteChar))
-        {
-          buffer.append(quoteChar);
-          index += 2;
-        }
-        else if ((ch == '\\') && ((index+1) < endIndex) && (string.charAt(index+1) == '\\'))
-        {
-          buffer.append('\\');
-          index += 2;
-        }
-        else
-        {
-          buffer.append(ch);
-          index += 1;
-        }
+      if      ((ch == '\\') && ((index+1) < endIndex) && quotedFlag && (string.charAt(index+1) == quoteChar))
+      {
+        buffer.append(quoteChar);
+        index += 2;
+      }
+      else if ((ch == '\\') && ((index+1) < endIndex) && (string.charAt(index+1) == '\\'))
+      {
+        buffer.append('\\');
+        index += 2;
+      }
+      else
+      {
+        buffer.append(ch);
+        index += 1;
       }
     }
 
