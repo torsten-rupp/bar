@@ -221,8 +221,7 @@ public class StringUtils
 
       // check for outer quotes
       if ((enclosingQuotes) && (string.length() >= 2))
-      {  public static String unescape(String string, char quoteChar)
-
+      {
         for (int i = 0; i < quoteChars.length(); i++)
         {
           quoteChar = quoteChars.charAt(i);
