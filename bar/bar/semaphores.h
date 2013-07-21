@@ -112,7 +112,7 @@ typedef bool SemaphoreLock;
 * Return : -
 * Notes  : usage:
 *            SemaphoreLock semaphoreLock;
-*            SEMAPHORE_LOCKED_DO(semaphoreLock,semaphore,semaphoreLockType)
+*            SEMAPHORE_LOCKED_DO(semaphoreLock,semaphore,semaphoreLockType,timeout)
 *            {
 *              ...
 *            }
