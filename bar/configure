@@ -8084,8 +8084,70 @@ fi
 fi
 
 if test $ENABLE_CURL = "yes"; then
-  if test \( -d curl -o -d "`readlink curl`" \) -a \( -d mxml -o -d "`readlink mxml`" \); then
+  if test \( -d curl -o -d "`readlink curl`" \) -a \( -d c-ares -o -d "`readlink c-ares`" \) -a \( -d mxml -o -d "`readlink mxml`" \); then
     if test "$ENABLE_PACKAGE_COMPILE" = "yes"; then
+
+
+  $as_echo_n "Compile c-ares... " >&6
+
+      result=1
+      if test $result -eq 1; then
+        case $host_os in
+          mingw*)
+            # patch to disable usage of lib-command when RANLIB is set
+            # patch created with:
+            #   diff -u curl-7.28.1.org/m4/libtool.m4 curl-7.28.1/m4/libtool.m4 >  curl-7.28.1-libtool.patch
+            #   diff -u curl-7.28.1.org/aclocal.m4 curl-7.28.1/aclocal.m4       >> curl-7.28.1-libtool.patch
+            #   diff -u curl-7.28.1.org/Makefile.in curl-7.28.1/Makefile.in     >> curl-7.28.1-libtool.patch
+            #   diff -u curl-7.28.1.org/configure curl-7.28.1/configure         >> curl-7.28.1-libtool.patch
+#              if test -d packages/curl-7.28.1; then
+#                (cd packages/curl-7.28.1; patch --batch -N -p1 <$cwd/misc/curl-7.28.1-libtool.patch) 1>/dev/null 2>/dev/null
+#              else
+#                AC_MSG_WARN([curl-7.28.1 not available - skipped libtool patch!])
+#              fi
+            ;;
+          *)
+            ;;
+        esac
+      fi
+      if test $result -eq 1; then
+        (cd c-ares; ./configure --host=$host_cpu-$host_os --prefix=$cwd/packages --disable-shared --enable-static `if test "$ENABLE_DEBUG" = "yes"; then echo --enable-debug; fi`) 1>/dev/null 2>$tmpFile
+        if test $? -ne 0; then
+          { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (configure)" >&5
+$as_echo "fail (configure)" >&6; }
+          cat $tmpFile
+          result1=0
+        fi
+      fi
+      if test $result -eq 1; then
+        (cd c-ares; make clean; make) 1>/dev/null 2>$tmpFile
+        if test $? -ne 0; then
+          { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (make)" >&5
+$as_echo "fail (make)" >&6; }
+          cat $tmpFile
+          result=0
+        fi
+      fi
+      if test $result -eq 1; then
+        (cd c-ares; make install) 1>/dev/null 2>$tmpFile
+        if test $? -ne 0; then
+          { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (install)" >&5
+$as_echo "fail (install)" >&6; }
+          cat $tmpFile
+          result=0
+        fi
+        case $host_os in
+          mingw*)
+            (cd packages/lib; ln -s libcares.lib libcares.a) 1>/dev/null 2>/dev/null
+            ;;
+          *)
+            ;;
+        esac
+      fi
+      if test $result -eq 1; then
+        { $as_echo "$as_me:${as_lineno-$LINENO}: result: done" >&5
+$as_echo "done" >&6; }
+      fi
 
 
   $as_echo_n "Compile curl... " >&6
@@ -8112,7 +8174,7 @@ $as_echo "$as_me: WARNING: curl-7.28.1 not available - skipped libtool patch!" >
         esac
       fi
       if test $result -eq 1; then
-        (cd curl; ./configure --host=$host_cpu-$host_os --prefix=$cwd/packages --disable-shared --enable-static --disable-ldap) 1>/dev/null 2>$tmpFile
+        (cd curl; LDFLAGS=-ldl ./configure --host=$host_cpu-$host_os --prefix=$cwd/packages --disable-shared --enable-static --disable-ldap --enable-ares=$cwd/packages `if test "$ENABLE_DEBUG" = "yes"; then echo --enable-debug; fi`) 1>/dev/null 2>$tmpFile
         if test $? -ne 0; then
           { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (configure)" >&5
 $as_echo "fail (configure)" >&6; }
@@ -8219,7 +8281,7 @@ $as_echo "done" >&6; }
       HAVE_CURL=1
       HAVE_MXML=1
       CC_DEFINES="$CC_DEFINES CURL_STATICLIB"
-      STATIC_LIBRARIES="$STATIC_LIBRARIES curl mxml"
+      STATIC_LIBRARIES="$STATIC_LIBRARIES curl cares mxml"
 
 $as_echo "#define HAVE_CURL 1" >>confdefs.h
 
