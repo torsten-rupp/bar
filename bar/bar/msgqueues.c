@@ -34,9 +34,34 @@ typedef struct MsgNode
   byte  data[0];
 } MsgNode;
 
+typedef bool MsgQueueLock;
+
 /***************************** Variables *******************************/
 
 /****************************** Macros *********************************/
+
+/***********************************************************************\
+* Name   : MSGQUEUE_LOCKED_DO
+* Purpose: execute block with message queue locked
+* Input  : msgQueueLock - lock flag variable (MsgQueueLock)
+*          msgQueue     - message queue
+* Output : -
+* Return : -
+* Notes  : usage:
+*            MsgQueueLock msgQueueLock;
+*            MSGQUEUE_LOCKED_DO(msgQueueLock,msgQueue)
+*            {
+*              ...
+*            }
+*
+*          message queue must be unlocked manually if break is used!
+\***********************************************************************/
+
+#define MSGQUEUE_LOCKED_DO(msgQueueLock,msgQueue) \
+  for (lock(msgQueue), msgQueueLock = TRUE; \
+       msgQueueLock; \
+       unlock(msgQueue), msgQueueLock = FALSE \
+      )
 
 /***************************** Forwards ********************************/
 
@@ -46,6 +71,15 @@ typedef struct MsgNode
   extern "C" {
 #endif
 
+/***********************************************************************\
+* Name   : lock
+* Purpose: lock message queue
+* Input  : msgQueue - message queue
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
 LOCAL void lock(MsgQueue *msgQueue)
 {
   assert(msgQueue != NULL);
@@ -53,6 +87,15 @@ LOCAL void lock(MsgQueue *msgQueue)
   pthread_mutex_lock(&msgQueue->lock);
   msgQueue->lockCount++;
 }
+
+/***********************************************************************\
+* Name   : unlock
+* Purpose: message queue unlock
+* Input  : msgQueue - message queue
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
 
 LOCAL void unlock(MsgQueue *msgQueue)
 {
@@ -67,6 +110,15 @@ LOCAL void unlock(MsgQueue *msgQueue)
   msgQueue->lockCount--;
   pthread_mutex_unlock(&msgQueue->lock);
 }
+
+/***********************************************************************\
+* Name   : waitModified
+* Purpose: wait until message is modified
+* Input  : msgQueue - message queue
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
 
 LOCAL void waitModified(MsgQueue *msgQueue)
 {
@@ -169,27 +221,25 @@ void MsgQueue_delete(MsgQueue *msgQueue, MsgQueueMsgFreeFunction msgQueueMsgFree
 
 void MsgQueue_clear(MsgQueue *msgQueue, MsgQueueMsgFreeFunction msgQueueMsgFreeFunction, void *msgQueueMsgFreeUserData)
 {
-  MsgNode *msgNode;
+  MsgQueueLock msgQueueLock;
+  MsgNode      *msgNode;
 
   assert(msgQueue != NULL);
 
-  // lock
-  lock(msgQueue);
-
-  // discard all remaining messages
-  while (!List_isEmpty(&msgQueue->list))
+  MSGQUEUE_LOCKED_DO(msgQueueLock,msgQueue)
   {
-    msgNode = (MsgNode*)List_getFirst(&msgQueue->list);
-
-    if (msgQueueMsgFreeFunction != NULL)
+    // discard all remaining messages
+    while (!List_isEmpty(&msgQueue->list))
     {
-      msgQueueMsgFreeFunction(msgNode->data,msgQueueMsgFreeUserData);
-    }
-    free(msgNode);
-  }
+      msgNode = (MsgNode*)List_getFirst(&msgQueue->list);
 
-  // unlock
-  unlock(msgQueue);
+      if (msgQueueMsgFreeFunction != NULL)
+      {
+        msgQueueMsgFreeFunction(msgNode->data,msgQueueMsgFreeUserData);
+      }
+      free(msgNode);
+    }
+  }
 }
 
 void MsgQueue_lock(MsgQueue *msgQueue)
@@ -208,28 +258,26 @@ void MsgQueue_unlock(MsgQueue *msgQueue)
 
 bool MsgQueue_get(MsgQueue *msgQueue, void *msg, ulong *size, ulong maxSize)
 {
-  MsgNode *msgNode;
-  ulong   n;
+  MsgQueueLock msgQueueLock;
+  MsgNode      *msgNode;
+  ulong        n;
 
   assert(msgQueue != NULL);
 
-  // lock
-  lock(msgQueue);
-
-  // wait for message
-  while (!msgQueue->endOfMsgFlag && (List_count(&msgQueue->list) <= 0))
+  MSGQUEUE_LOCKED_DO(msgQueueLock,msgQueue)
   {
-    waitModified(msgQueue);
+    // wait for message
+    while (!msgQueue->endOfMsgFlag && (List_count(&msgQueue->list) <= 0))
+    {
+      waitModified(msgQueue);
+    }
+
+    // get message
+    msgNode = (MsgNode*)List_getFirst(&msgQueue->list);
+
+    // signal modify
+    msgQueue->modifiedFlag = TRUE;
   }
-
-  // get message
-  msgNode = (MsgNode*)List_getFirst(&msgQueue->list);
-
-  // signal modify
-  msgQueue->modifiedFlag = TRUE;
-
-  // unlock
-  unlock(msgQueue);
 
   // copy data, free message
   if (msgNode == NULL)
@@ -246,7 +294,8 @@ bool MsgQueue_get(MsgQueue *msgQueue, void *msg, ulong *size, ulong maxSize)
 
 bool MsgQueue_put(MsgQueue *msgQueue, const void *msg, ulong size)
 {
-  MsgNode *msgNode;
+  MsgQueueLock msgQueueLock;
+  MsgNode      *msgNode;
 
   assert(msgQueue != NULL);
 
@@ -259,92 +308,85 @@ bool MsgQueue_put(MsgQueue *msgQueue, const void *msg, ulong size)
   msgNode->size = size;
   memcpy(msgNode->data,msg,size);
 
-  // lock
-  lock(msgQueue);
-
-  // check if end of message
-  if (msgQueue->endOfMsgFlag)
+  MSGQUEUE_LOCKED_DO(msgQueueLock,msgQueue)
   {
-    free(msgNode);
-    unlock(msgQueue);
-    return FALSE;
-  }
-
-  // check number of messages
-  if (msgQueue->maxMsgs > 0)
-  {
-    while (!msgQueue->endOfMsgFlag && (List_count(&msgQueue->list) >= msgQueue->maxMsgs))
-    {
-      waitModified(msgQueue);
-    }
-    if (List_count(&msgQueue->list) >= msgQueue->maxMsgs)
+    // check if end of message
+    if (msgQueue->endOfMsgFlag)
     {
       free(msgNode);
       unlock(msgQueue);
       return FALSE;
     }
+
+    // check number of messages
+    if (msgQueue->maxMsgs > 0)
+    {
+      while (!msgQueue->endOfMsgFlag && (List_count(&msgQueue->list) >= msgQueue->maxMsgs))
+      {
+        waitModified(msgQueue);
+      }
+      if (List_count(&msgQueue->list) >= msgQueue->maxMsgs)
+      {
+        free(msgNode);
+        unlock(msgQueue);
+        return FALSE;
+      }
+    }
+
+    // put message
+    List_append(&msgQueue->list,msgNode);
+
+    // signal modify
+    msgQueue->modifiedFlag = TRUE;
   }
-
-  // put message
-  List_append(&msgQueue->list,msgNode);
-
-  // signal modify
-  msgQueue->modifiedFlag = TRUE;
-
-  // unlock
-  unlock(msgQueue);
 
   return TRUE;
 }
 
 ulong MsgQueue_count(MsgQueue *msgQueue)
 {
-  ulong count;
+  MsgQueueLock msgQueueLock;
+  ulong        count;
 
   assert(msgQueue != NULL);
 
-  // lock
-  lock(msgQueue);
-
-  // get count
-  count = List_count(&msgQueue->list);
-
-  // unlock
-  unlock(msgQueue);
+  MSGQUEUE_LOCKED_DO(msgQueueLock,msgQueue)
+  {
+    // get count
+    count = List_count(&msgQueue->list);
+  }
 
   return count;
 }
 
 void MsgQueue_wait(MsgQueue *msgQueue)
 {
+  MsgQueueLock msgQueueLock;
+
   assert(msgQueue != NULL);
 
-  // lock
-  lock(msgQueue);
-
-  if (!msgQueue->endOfMsgFlag)
+  MSGQUEUE_LOCKED_DO(msgQueueLock,msgQueue)
   {
-    waitModified(msgQueue);
+    if (!msgQueue->endOfMsgFlag)
+    {
+      waitModified(msgQueue);
+    }
   }
-
-  // unlock
-  unlock(msgQueue);
 }
 
 void MsgQueue_setEndOfMsg(MsgQueue *msgQueue)
 {
+  MsgQueueLock msgQueueLock;
+
   assert(msgQueue != NULL);
 
-  // lock
-  lock(msgQueue);
+  MSGQUEUE_LOCKED_DO(msgQueueLock,msgQueue)
+  {
+    msgQueue->endOfMsgFlag = TRUE;
 
-  msgQueue->endOfMsgFlag = TRUE;
-
-  // signal modify
-  msgQueue->modifiedFlag = TRUE;
-
-  // unlock
-  unlock(msgQueue);
+    // signal modify
+    msgQueue->modifiedFlag = TRUE;
+  }
 }
 
 #ifdef __cplusplus
