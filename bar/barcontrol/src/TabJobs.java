@@ -634,7 +634,7 @@ class TabJobs
 
   /** entry data
    */
-  class EntryData
+  class EntryData implements Cloneable
   {
     EntryTypes entryType;
     String     pattern;
@@ -647,6 +647,14 @@ class TabJobs
     {
       this.entryType = entryType;
       this.pattern   = pattern;
+    }
+
+    /** clone entry data object
+     * @return clone of object
+     */
+    public EntryData clone()
+    {
+      return new EntryData(entryType,pattern);
     }
 
     /** get image for entry data
@@ -763,7 +771,7 @@ class TabJobs
     {
       assert (year == ANY) || (year >= 1);
 
-      return (year != ANY)?Integer.toString(year):"*";
+      return (year != ANY) ? Integer.toString(year) : "*";
     }
 
     /** get month value
@@ -799,7 +807,7 @@ class TabJobs
     {
       assert (day == ANY) || ((day >= 1) && (day <= 31));
 
-      return (day != ANY)?Integer.toString(day):"*";
+      return (day != ANY) ? Integer.toString(day) : "*";
     }
 
     /** get week days value
@@ -861,7 +869,7 @@ class TabJobs
     {
       assert (hour == ANY) || ((hour >= 0) && (hour <= 23));
 
-      return (hour != ANY)?String.format("%02d",hour):"*";
+      return (hour != ANY) ? String.format("%02d",hour) : "*";
     }
 
     /** get minute value
@@ -871,7 +879,7 @@ class TabJobs
     {
       assert (minute == ANY) || ((minute >= 0) && (minute <= 59));
 
-      return (minute != ANY)?String.format("%02d",minute):"*";
+      return (minute != ANY) ? String.format("%02d",minute) : "*";
     }
 
     /** get time value
@@ -911,7 +919,7 @@ class TabJobs
      */
     void setDate(String year, String month, String day)
     {
-      this.year = !year.equals("*")?Integer.parseInt(year):ANY;
+      this.year = !year.equals("*") ? Integer.parseInt(year) : ANY;
       if      (month.equals("*")) this.month = ANY;
       else if (month.toLowerCase().equals("jan")) this.month =  1;
       else if (month.toLowerCase().equals("feb")) this.month =  2;
@@ -936,7 +944,7 @@ class TabJobs
           this.month = ANY;
         }
       }
-      this.day = !day.equals("*")?Integer.parseInt(day):ANY;
+      this.day = !day.equals("*") ? Integer.parseInt(day) : ANY;
     }
 
     /** set week days
@@ -1012,8 +1020,8 @@ class TabJobs
      */
     void setTime(String hour, String minute)
     {
-      this.hour   = !hour.equals  ("*")?Integer.parseInt(hour,  10):ANY;
-      this.minute = !minute.equals("*")?Integer.parseInt(minute,10):ANY;
+      this.hour   = !hour.equals  ("*") ? Integer.parseInt(hour,  10) : ANY;
+      this.minute = !minute.equals("*") ? Integer.parseInt(minute,10) : ANY;
     }
 
     /** check if week day enabled
@@ -1194,6 +1202,7 @@ class TabJobs
   private TabFolder    widgetTabFolder;
   private Combo        widgetJobList;
   private Tree         widgetFileTree;
+  private MenuItem     menuItemOpenClose;
   private Shell        widgetFileTreeToolTip = null;
   private Tree         widgetDeviceTree;
   private Table        widgetIncludeTable;
@@ -1306,7 +1315,7 @@ class TabJobs
     directoryInfoThread.start();
 
     // create tab
-    widgetTab = Widgets.addTab(parentTabFolder,"Jobs"+((accelerator != 0)?" ("+Widgets.acceleratorToText(accelerator)+")":""));
+    widgetTab = Widgets.addTab(parentTabFolder,"Jobs"+((accelerator != 0) ? " ("+Widgets.acceleratorToText(accelerator)+")" : ""));
     widgetTab.setLayout(new TableLayout(new double[]{0.0,1.0,0.0},1.0,2));
     Widgets.layout(widgetTab,0,0,TableLayoutData.NSWE);
 
@@ -1474,6 +1483,63 @@ class TabJobs
         treeColumn.addSelectionListener(fileTreeColumnSelectionListener);
         treeColumn.setToolTipText("Click to sort for modified time.");
 
+        widgetFileTree.addListener(SWT.Expand,new Listener()
+        {
+          public void handleEvent(final Event event)
+          {
+            final TreeItem treeItem = (TreeItem)event.item;
+            addFileTree(treeItem);
+          }
+        });
+        widgetFileTree.addListener(SWT.Collapse,new Listener()
+        {
+          public void handleEvent(final Event event)
+          {
+            final TreeItem treeItem = (TreeItem)event.item;
+            treeItem.removeAll();
+            new TreeItem(treeItem,SWT.NONE);
+          }
+        });
+        widgetFileTree.addMouseListener(new MouseListener()
+        {
+          public void mouseDoubleClick(final MouseEvent mouseEvent)
+          {
+            TreeItem treeItem = widgetFileTree.getItem(new Point(mouseEvent.x,mouseEvent.y));
+            if (treeItem != null)
+            {
+              FileTreeData fileTreeData = (FileTreeData)treeItem.getData();
+              if (fileTreeData.type == FileTypes.DIRECTORY)
+              {
+                Event treeEvent = new Event();
+                treeEvent.item = treeItem;
+                if (treeItem.getExpanded())
+                {
+                  widgetFileTree.notifyListeners(SWT.Collapse,treeEvent);
+                  treeItem.setExpanded(false);
+                }
+                else
+                {
+                  widgetFileTree.notifyListeners(SWT.Expand,treeEvent);
+                  treeItem.setExpanded(true);
+                }
+              }
+            }
+          }
+
+          public void mouseDown(final MouseEvent mouseEvent)
+          {
+            TreeItem treeItem = widgetFileTree.getItem(new Point(mouseEvent.x,mouseEvent.y));
+            if (treeItem != null)
+            {
+              FileTreeData fileTreeData = (FileTreeData)treeItem.getData();
+              menuItemOpenClose.setEnabled(fileTreeData.type == FileTypes.DIRECTORY);
+            }
+          }
+
+          public void mouseUp(final MouseEvent mouseEvent)
+          {
+          }
+        });
         widgetFileTree.addMouseTrackListener(new MouseTrackListener()
         {
           public void mouseEnter(MouseEvent mouseEvent)
@@ -1538,8 +1604,8 @@ class TabJobs
 
         menu = Widgets.newPopupMenu(shell);
         {
-          menuItem = Widgets.addMenuItem(menu,"Open/Close");
-          menuItem.addSelectionListener(new SelectionListener()
+          menuItemOpenClose = Widgets.addMenuItem(menu,"Open/Close");
+          menuItemOpenClose.addSelectionListener(new SelectionListener()
           {
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
             {
@@ -1586,7 +1652,7 @@ class TabJobs
               for (TreeItem treeItem : widgetFileTree.getSelection())
               {
                 FileTreeData fileTreeData = (FileTreeData)treeItem.getData();
-                includeListAdd(EntryTypes.FILE,fileTreeData.name);
+                includeListAdd(new EntryData(EntryTypes.FILE,fileTreeData.name));
                 excludeListRemove(fileTreeData.name);
                 switch (fileTreeData.type)
                 {
@@ -1697,7 +1763,7 @@ class TabJobs
               for (TreeItem treeItem : widgetFileTree.getSelection())
               {
                 FileTreeData fileTreeData = (FileTreeData)treeItem.getData();
-                includeListAdd(EntryTypes.FILE,fileTreeData.name);
+                includeListAdd(new EntryData(EntryTypes.FILE,fileTreeData.name));
                 excludeListRemove(fileTreeData.name);
                 switch (fileTreeData.type)
                 {
@@ -1849,7 +1915,7 @@ class TabJobs
               for (TreeItem treeItem : widgetDeviceTree.getSelection())
               {
                 DeviceTreeData deviceTreeData = (DeviceTreeData)treeItem.getData();
-                includeListAdd(EntryTypes.IMAGE,deviceTreeData.name);
+                includeListAdd(new EntryData(EntryTypes.IMAGE,deviceTreeData.name));
                 excludeListRemove(deviceTreeData.name);
                 treeItem.setImage(IMAGE_DEVICE_INCLUDED);
               }
@@ -1913,7 +1979,7 @@ class TabJobs
               for (TreeItem treeItem : widgetDeviceTree.getSelection())
               {
                 DeviceTreeData deviceTreeData = (DeviceTreeData)treeItem.getData();
-                includeListAdd(EntryTypes.IMAGE,deviceTreeData.name);
+                includeListAdd(new EntryData(EntryTypes.IMAGE,deviceTreeData.name));
                 excludeListRemove(deviceTreeData.name);
                 treeItem.setImage(IMAGE_DEVICE_INCLUDED);
               }
@@ -1977,6 +2043,13 @@ class TabJobs
 // automatic column width calculation?
 //widgetIncludeTable.setLayout(new TableLayout(new double[]{0.5,0.0,0.5,0.0,0.0},new double[]{0.0,1.0}));
         Widgets.layout(widgetIncludeTable,0,1,TableLayoutData.NSWE);
+        widgetIncludeTable.addListener(SWT.MouseDoubleClick,new Listener()
+        {
+          public void handleEvent(final Event event)
+          {
+            includeListEdit();
+          }
+        });
         widgetIncludeTable.setToolTipText("List of included entries.");
 
         menu = Widgets.newPopupMenu(shell);
@@ -1993,6 +2066,38 @@ class TabJobs
               if (selectedJobId > 0)
               {
                 includeListAdd();
+              }
+            }
+          });
+
+          menuItem = Widgets.addMenuItem(menu,"Edit\u2026");
+          menuItem.addSelectionListener(new SelectionListener()
+          {
+            public void widgetDefaultSelected(SelectionEvent selectionEvent)
+            {
+            }
+            public void widgetSelected(SelectionEvent selectionEvent)
+            {
+              MenuItem widget = (MenuItem)selectionEvent.widget;
+              if (selectedJobId > 0)
+              {
+                includeListEdit();
+              }
+            }
+          });
+
+          menuItem = Widgets.addMenuItem(menu,"Clone\u2026");
+          menuItem.addSelectionListener(new SelectionListener()
+          {
+            public void widgetDefaultSelected(SelectionEvent selectionEvent)
+            {
+            }
+            public void widgetSelected(SelectionEvent selectionEvent)
+            {
+              MenuItem widget = (MenuItem)selectionEvent.widget;
+              if (selectedJobId > 0)
+              {
+                includeListClone();
               }
             }
           });
@@ -2037,8 +2142,44 @@ class TabJobs
           });
           button.setToolTipText("Add entry to included list.");
 
-          button = Widgets.newButton(composite,"Remove\u2026");
+          button = Widgets.newButton(composite,"Edit\u2026");
           Widgets.layout(button,0,1,TableLayoutData.DEFAULT,0,0,0,0,90,SWT.DEFAULT);
+          button.addSelectionListener(new SelectionListener()
+          {
+            public void widgetDefaultSelected(SelectionEvent selectionEvent)
+            {
+            }
+            public void widgetSelected(SelectionEvent selectionEvent)
+            {
+              Button widget = (Button)selectionEvent.widget;
+              if (selectedJobId > 0)
+              {
+                includeListEdit();
+              }
+            }
+          });
+          button.setToolTipText("Edit entry in included list.");
+
+          button = Widgets.newButton(composite,"Clone\u2026");
+          Widgets.layout(button,0,2,TableLayoutData.DEFAULT,0,0,0,0,90,SWT.DEFAULT);
+          button.addSelectionListener(new SelectionListener()
+          {
+            public void widgetDefaultSelected(SelectionEvent selectionEvent)
+            {
+            }
+            public void widgetSelected(SelectionEvent selectionEvent)
+            {
+              Button widget = (Button)selectionEvent.widget;
+              if (selectedJobId > 0)
+              {
+                includeListClone();
+              }
+            }
+          });
+          button.setToolTipText("Clone entry in included list.");
+
+          button = Widgets.newButton(composite,"Remove\u2026");
+          Widgets.layout(button,0,3,TableLayoutData.DEFAULT,0,0,0,0,90,SWT.DEFAULT);
           button.addSelectionListener(new SelectionListener()
           {
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -2060,6 +2201,15 @@ class TabJobs
         Widgets.layout(label,2,0,TableLayoutData.NS);
         widgetExcludeList = Widgets.newList(tab);
         Widgets.layout(widgetExcludeList,2,1,TableLayoutData.NSWE);
+        widgetExcludeList.addListener(SWT.MouseDoubleClick,new Listener()
+        {
+          public void handleEvent(final Event event)
+          {
+            excludeListEdit();
+          }
+        });
+        widgetExcludeList.setToolTipText("List with exclude patterns, right-click for context menu.");
+
         menu = Widgets.newPopupMenu(shell);
         {
           menuItem = Widgets.addMenuItem(menu,"Add\u2026");
@@ -2074,6 +2224,38 @@ class TabJobs
               if (selectedJobId > 0)
               {
                 excludeListAdd();
+              }
+            }
+          });
+
+          menuItem = Widgets.addMenuItem(menu,"Edit\u2026");
+          menuItem.addSelectionListener(new SelectionListener()
+          {
+            public void widgetDefaultSelected(SelectionEvent selectionEvent)
+            {
+            }
+            public void widgetSelected(SelectionEvent selectionEvent)
+            {
+              MenuItem widget = (MenuItem)selectionEvent.widget;
+              if (selectedJobId > 0)
+              {
+                excludeListEdit();
+              }
+            }
+          });
+
+          menuItem = Widgets.addMenuItem(menu,"Clone\u2026");
+          menuItem.addSelectionListener(new SelectionListener()
+          {
+            public void widgetDefaultSelected(SelectionEvent selectionEvent)
+            {
+            }
+            public void widgetSelected(SelectionEvent selectionEvent)
+            {
+              MenuItem widget = (MenuItem)selectionEvent.widget;
+              if (selectedJobId > 0)
+              {
+                excludeListClone();
               }
             }
           });
@@ -2095,7 +2277,6 @@ class TabJobs
           });
         }
         widgetExcludeList.setMenu(menu);
-        widgetExcludeList.setToolTipText("List with exclude patterns, right-click for context menu.");
 
         // buttons
         composite = Widgets.newComposite(tab,SWT.NONE,4);
@@ -2119,8 +2300,44 @@ class TabJobs
           });
           button.setToolTipText("Add entry to excluded list.");
 
-          button = Widgets.newButton(composite,"Remove\u2026");
+          button = Widgets.newButton(composite,"Edit\u2026");
           Widgets.layout(button,0,1,TableLayoutData.DEFAULT,0,0,0,0,90,SWT.DEFAULT);
+          button.addSelectionListener(new SelectionListener()
+          {
+            public void widgetDefaultSelected(SelectionEvent selectionEvent)
+            {
+            }
+            public void widgetSelected(SelectionEvent selectionEvent)
+            {
+              Button widget = (Button)selectionEvent.widget;
+              if (selectedJobId > 0)
+              {
+                excludeListEdit();
+              }
+            }
+          });
+          button.setToolTipText("Edit entry in excluded list.");
+
+          button = Widgets.newButton(composite,"Clone\u2026");
+          Widgets.layout(button,0,2,TableLayoutData.DEFAULT,0,0,0,0,90,SWT.DEFAULT);
+          button.addSelectionListener(new SelectionListener()
+          {
+            public void widgetDefaultSelected(SelectionEvent selectionEvent)
+            {
+            }
+            public void widgetSelected(SelectionEvent selectionEvent)
+            {
+              Button widget = (Button)selectionEvent.widget;
+              if (selectedJobId > 0)
+              {
+                excludeListClone();
+              }
+            }
+          });
+          button.setToolTipText("Clone entry in excluded list.");
+
+          button = Widgets.newButton(composite,"Remove\u2026");
+          Widgets.layout(button,0,3,TableLayoutData.DEFAULT,0,0,0,0,90,SWT.DEFAULT);
           button.addSelectionListener(new SelectionListener()
           {
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -5460,10 +5677,10 @@ class TabJobs
    */
   private void clearJobData()
   {
-    widgetIncludeTable.removeAll();
-    widgetExcludeList.removeAll();
-    widgetCompressExcludeList.removeAll();
-    widgetScheduleList.removeAll();
+    Widgets.removeAllTableEntries(widgetIncludeTable);
+    Widgets.removeAllListEntries(widgetExcludeList);
+    Widgets.removeAllListEntries(widgetCompressExcludeList);
+    Widgets.removeAllTableEntries(widgetScheduleList);
   }
 
   /** update selected job data
@@ -5918,64 +6135,13 @@ throw new Error("NYI");
 
   //-----------------------------------------------------------------------
 
-  /** add directorty root devices
+  /** add directory root devices
    */
   private void addDirectoryRootDevices()
   {
     TreeItem treeItem = Widgets.addTreeItem(widgetFileTree,new FileTreeData("/",FileTypes.DIRECTORY,"/"),true);
     treeItem.setText("/");
     treeItem.setImage(IMAGE_DIRECTORY);
-    widgetFileTree.addListener(SWT.Expand,new Listener()
-    {
-      public void handleEvent(final Event event)
-      {
-        final TreeItem treeItem = (TreeItem)event.item;
-        addFileTree(treeItem);
-      }
-    });
-    widgetFileTree.addListener(SWT.Collapse,new Listener()
-    {
-      public void handleEvent(final Event event)
-      {
-        final TreeItem treeItem = (TreeItem)event.item;
-        treeItem.removeAll();
-        new TreeItem(treeItem,SWT.NONE);
-      }
-    });
-    widgetFileTree.addMouseListener(new MouseListener()
-    {
-      public void mouseDoubleClick(final MouseEvent mouseEvent)
-      {
-        TreeItem treeItem = widgetFileTree.getItem(new Point(mouseEvent.x,mouseEvent.y));
-        if (treeItem != null)
-        {
-          FileTreeData fileTreeData = (FileTreeData)treeItem.getData();
-          if (fileTreeData.type == FileTypes.DIRECTORY)
-          {
-            Event treeEvent = new Event();
-            treeEvent.item = treeItem;
-            if (treeItem.getExpanded())
-            {
-              widgetFileTree.notifyListeners(SWT.Collapse,treeEvent);
-              treeItem.setExpanded(false);
-            }
-            else
-            {
-              widgetFileTree.notifyListeners(SWT.Expand,treeEvent);
-              treeItem.setExpanded(true);
-            }
-          }
-        }
-      }
-
-      public void mouseDown(final MouseEvent mouseEvent)
-      {
-      }
-
-      public void mouseUp(final MouseEvent mouseEvent)
-      {
-      }
-    });
   }
 
   /** clear file tree, close all sub-directories
@@ -6104,6 +6270,7 @@ throw new Error("NYI");
              format:
                size
                date/time
+               backup flag
                name
           */
           long   size     = (Long  )data[0];
@@ -6129,15 +6296,17 @@ throw new Error("NYI");
           subTreeItem.setText(3,simpleDateFormat.format(new Date(datetime*1000)));
           subTreeItem.setImage(image);
         }
-        else if (StringParser.parse(line,"DIRECTORY %ld %S",data,StringParser.QUOTE_CHARS))
+        else if (StringParser.parse(line,"DIRECTORY %ld %d %S",data,StringParser.QUOTE_CHARS))
         {
           /* get data
              format:
                date/time
+               backup flag
                name
           */
-          long   datetime = (Long  )data[0];
-          String name     = (String)data[1];
+          long    datetime   = (Long    )data[0];
+          boolean backupFlag = ((Integer)data[1] != 0);
+          String  name       = (String  )data[2];
 
           // create file tree data
           fileTreeData = new FileTreeData(name,FileTypes.DIRECTORY,datetime,new File(name).getName());
@@ -6511,6 +6680,8 @@ throw new Error("NYI");
     return index;
   }
 
+  //-----------------------------------------------------------------------
+
   /** update include list
    */
   private void updateIncludeList()
@@ -6524,7 +6695,7 @@ throw new Error("NYI");
     if (BARServer.executeCommand("INCLUDE_LIST "+selectedJobId,result) != Errors.NONE) return;
 
     includeHashMap.clear();
-    widgetIncludeTable.removeAll();
+    Widgets.removeAllTableEntries(widgetIncludeTable);
     for (String line : result)
     {
       Object[] data = new Object[3];
@@ -6576,7 +6747,7 @@ Dprintf.dprintf("name=%s %s",name,includeHashMap.containsKey(name));
     if (BARServer.executeCommand("EXCLUDE_LIST "+selectedJobId,result) != Errors.NONE) return;
 
     excludeHashSet.clear();
-    widgetExcludeList.removeAll();
+    Widgets.removeAllListEntries(widgetExcludeList);
 
     for (String line : result)
     {
@@ -6606,7 +6777,7 @@ Dprintf.dprintf("name=%s %s",name,includeHashMap.containsKey(name));
     if (BARServer.executeCommand("EXCLUDE_COMPRESS_LIST "+selectedJobId,result) != Errors.NONE) return;
 
     compressExcludeHashSet.clear();
-    widgetCompressExcludeList.removeAll();
+    Widgets.removeAllListEntries(widgetCompressExcludeList);
 
     for (String line : result)
     {
@@ -6620,19 +6791,20 @@ Dprintf.dprintf("name=%s %s",name,includeHashMap.containsKey(name));
         if (!pattern.equals(""))
         {
            compressExcludeHashSet.add(pattern);
-           widgetCompressExcludeList.add(pattern,findListIndex(widgetCompressExcludeList,pattern));
+           Widgets.addListEntry(widgetCompressExcludeList,findListIndex(widgetCompressExcludeList,pattern),pattern);
         }
       }
     }
   }
 
+  //-----------------------------------------------------------------------
+
   /** edit include entry
-   * @param entryType entry type
-   * @param pattern pattern
+   * @param entryData entry data
    * @param title dialog title
    * @param buttonText add button text
    */
-  private boolean includeEdit(final EntryTypes[] entryType, final String[] pattern, String title, String buttonText)
+  private boolean includeEdit(final EntryData entryData, String title, String buttonText)
   {
     Composite composite,subComposite;
     Label     label;
@@ -6658,6 +6830,7 @@ Dprintf.dprintf("name=%s %s",name,includeHashMap.containsKey(name));
       Widgets.layout(subComposite,0,1,TableLayoutData.WE);
       {
         widgetPattern = Widgets.newText(subComposite);
+        if (entryData.pattern != null) widgetPattern.setText(entryData.pattern);
         Widgets.layout(widgetPattern,0,0,TableLayoutData.WE);
         widgetPattern.setToolTipText("Include pattern. Use * and ? as wildcards.");
 
@@ -6676,7 +6849,7 @@ Dprintf.dprintf("name=%s %s",name,includeHashMap.containsKey(name));
                                                );
             if (pathName != null)
             {
-              widgetPattern.setText(pathName);
+              widgetPattern.setText(pathName.trim());
             }
           }
         });
@@ -6690,7 +6863,7 @@ Dprintf.dprintf("name=%s %s",name,includeHashMap.containsKey(name));
       Widgets.layout(subComposite,1,1,TableLayoutData.WE);
       {
         button = Widgets.newRadio(subComposite,"file");
-        button.setSelection(true);
+        button.setSelection(entryData.entryType == EntryTypes.FILE);
         Widgets.layout(button,0,0,TableLayoutData.W);
         button.addSelectionListener(new SelectionListener()
         {
@@ -6700,11 +6873,11 @@ Dprintf.dprintf("name=%s %s",name,includeHashMap.containsKey(name));
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             Button widget = (Button)selectionEvent.widget;
-            entryType[0] = EntryTypes.FILE;
+            entryData.entryType = EntryTypes.FILE;
           }
         });
         button = Widgets.newRadio(subComposite,"image");
-        button.setSelection(false);
+        button.setSelection(entryData.entryType == EntryTypes.IMAGE);
         Widgets.layout(button,0,1,TableLayoutData.W);
         button.addSelectionListener(new SelectionListener()
         {
@@ -6714,7 +6887,7 @@ Dprintf.dprintf("name=%s %s",name,includeHashMap.containsKey(name));
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             Button widget = (Button)selectionEvent.widget;
-            entryType[0] = EntryTypes.IMAGE;
+            entryData.entryType = EntryTypes.IMAGE;
           }
         });
       }
@@ -6727,6 +6900,17 @@ Dprintf.dprintf("name=%s %s",name,includeHashMap.containsKey(name));
     {
       widgetAdd = Widgets.newButton(composite,buttonText);
       Widgets.layout(widgetAdd,0,0,TableLayoutData.W,0,0,0,0,60,SWT.DEFAULT);
+      widgetAdd.addSelectionListener(new SelectionListener()
+      {
+        public void widgetDefaultSelected(SelectionEvent selectionEvent)
+        {
+        }
+        public void widgetSelected(SelectionEvent selectionEvent)
+        {
+          entryData.pattern = widgetPattern.getText().trim();
+          Dialogs.close(dialog,true);
+        }
+      });
 
       button = Widgets.newButton(composite,"Cancel");
       Widgets.layout(button,0,1,TableLayoutData.E,0,0,0,0,60,SWT.DEFAULT);
@@ -6737,7 +6921,6 @@ Dprintf.dprintf("name=%s %s",name,includeHashMap.containsKey(name));
         }
         public void widgetSelected(SelectionEvent selectionEvent)
         {
-          Button widget = (Button)selectionEvent.widget;
           Dialogs.close(dialog,false);
         }
       });
@@ -6755,21 +6938,178 @@ Dprintf.dprintf("name=%s %s",name,includeHashMap.containsKey(name));
 throw new Error("NYI");
       }
     });
-    widgetAdd.addSelectionListener(new SelectionListener()
-    {
-      public void widgetDefaultSelected(SelectionEvent selectionEvent)
-      {
-      }
-      public void widgetSelected(SelectionEvent selectionEvent)
-      {
-        Button widget = (Button)selectionEvent.widget;
-        pattern[0] = widgetPattern.getText().trim();
-        Dialogs.close(dialog,true);
-      }
-    });
 
-    return (Boolean)Dialogs.run(dialog,false) && !pattern[0].equals("");
+    return (Boolean)Dialogs.run(dialog,false) && !entryData.pattern.equals("");
   }
+
+  /** add include entry
+   * @param entryData entry data
+   */
+  private void includeListAdd(EntryData entryData)
+  {
+    final String[] PATTERN_MAP_FROM = new String[]{"\n","\r","\\"};
+    final String[] PATTERN_MAP_TO   = new String[]{"\\n","\\r","\\\\"};
+
+    assert selectedJobId != 0;
+
+    // update include list
+    String[] result = new String[1];
+    if (BARServer.executeCommand("INCLUDE_LIST_ADD "+selectedJobId+" "+entryData.entryType.toString()+" GLOB "+StringUtils.escape(StringUtils.map(entryData.pattern,PATTERN_MAP_FROM,PATTERN_MAP_TO)),result) != Errors.NONE)
+    {
+      Dialogs.error(shell,"Cannot add include entry:\n\n"+result[0]);
+      return;
+    }
+
+    // update hash map
+    includeHashMap.put(entryData.pattern,entryData);
+
+    // update table widget
+    Widgets.insertTableEntry(widgetIncludeTable,
+                             findTableIndex(widgetIncludeTable,entryData.pattern),
+                             (Object)entryData,
+                             entryData.getImage(),
+                             entryData.pattern
+                            );
+
+    // update file tree/device images
+    updateFileTreeImages();
+    updateDeviceImages();
+  }
+
+  /** remove include entry
+   * @param patterns patterns to remove from include/exclude list
+   */
+  private void includeListRemove(String[] patterns)
+  {
+    final String[] PATTERN_MAP_FROM = new String[]{"\n","\r","\\"};
+    final String[] PATTERN_MAP_TO   = new String[]{"\\n","\\r","\\\\"};
+
+    assert selectedJobId != 0;
+
+    // remove patterns from hash map
+    for (String pattern : patterns)
+    {
+      includeHashMap.remove(pattern);
+    }
+
+    // update include list
+    BARServer.executeCommand("INCLUDE_LIST_CLEAR "+selectedJobId);
+    for (EntryData entryData : includeHashMap.values())
+    {
+      BARServer.executeCommand("INCLUDE_LIST_ADD "+selectedJobId+" "+entryData.entryType.toString()+" GLOB "+StringUtils.escape(StringUtils.map(entryData.pattern,PATTERN_MAP_FROM,PATTERN_MAP_TO)));
+    }
+
+    // update table widget
+    Widgets.removeAllTableEntries(widgetIncludeTable);
+    for (EntryData entryData : includeHashMap.values())
+    {
+      Widgets.insertTableEntry(widgetIncludeTable,
+                               findTableIndex(widgetIncludeTable,entryData.pattern),
+                               (Object)entryData,
+                               entryData.getImage(),
+                               entryData.pattern
+                              );
+    }
+
+    // update file tree/device images
+    updateFileTreeImages();
+    updateDeviceImages();
+  }
+
+  /** remove include entry
+   * @param pattern pattern to remove from include/exclude list
+   */
+  private void includeListRemove(String pattern)
+  {
+    includeListRemove(new String[]{pattern});
+  }
+
+  /** add new include entry
+   */
+  private void includeListAdd()
+  {
+    assert selectedJobId != 0;
+
+    EntryData entryData = new EntryData(EntryTypes.FILE,"");
+    if (includeEdit(entryData,"Add new include pattern","Add"))
+    {
+      includeListAdd(entryData);
+    }
+  }
+
+  /** edit include entry
+   */
+  private void includeListEdit()
+  {
+    assert selectedJobId != 0;
+
+    TableItem[] tableItems = widgetIncludeTable.getSelection();
+    if (tableItems.length > 0)
+    {
+      EntryData oldEntryData = (EntryData)tableItems[0].getData();
+      EntryData newEntryData = oldEntryData.clone();
+
+      if (includeEdit(newEntryData,"Edit include pattern","Save"))
+      {
+        // update include list
+        includeListRemove(new String[]{oldEntryData.pattern,newEntryData.pattern});
+        includeListAdd(newEntryData);
+
+        // update file tree/device images
+        updateFileTreeImages();
+        updateDeviceImages();
+      }
+    }
+  }
+
+  /** clone include entry
+   */
+  private void includeListClone()
+  {
+    assert selectedJobId != 0;
+
+    TableItem[] tableItems = widgetIncludeTable.getSelection();
+    if (tableItems.length > 0)
+    {
+      EntryData entryData = ((EntryData)tableItems[0].getData()).clone();
+
+      if (includeEdit(entryData,"Clone include pattern","Add"))
+      {
+        // update include list
+        includeListRemove(entryData.pattern);
+        includeListAdd(entryData);
+
+        // update file tree/device images
+        updateFileTreeImages();
+        updateDeviceImages();
+      }
+    }
+  }
+
+  /** remove selected include pattern
+   */
+  private void includeListRemove()
+  {
+    assert selectedJobId != 0;
+
+    ArrayList<EntryData> entryDataList = new ArrayList<EntryData>();
+    for (TableItem tableItem : widgetIncludeTable.getSelection())
+    {
+      entryDataList.add((EntryData)tableItem.getData());
+    }
+    if (entryDataList.size() > 0)
+    {
+      if ((entryDataList.size() == 1) || Dialogs.confirm(shell,"Remove "+entryDataList.size()+" include patterns?"))
+      {
+        for (EntryData entryData : entryDataList)
+        {
+          includeListRemove(entryData.pattern);
+        }
+      }
+    }
+  }
+
+  //-----------------------------------------------------------------------
 
   /** edit exclude pattern
    * @param pattern pattern
@@ -6798,6 +7138,7 @@ throw new Error("NYI");
       Widgets.layout(label,0,0,TableLayoutData.W);
 
       widgetPattern = Widgets.newText(composite);
+      if (pattern[0] != null) widgetPattern.setText(pattern[0]);
       Widgets.layout(widgetPattern,0,1,TableLayoutData.WE);
       widgetPattern.setToolTipText("Exclude pattern. Use * and ? as wildcards.");
 
@@ -6816,7 +7157,7 @@ throw new Error("NYI");
                                              );
           if (pathName != null)
           {
-            widgetPattern.setText(pathName);
+            widgetPattern.setText(pathName.trim());
           }
         }
       });
@@ -6829,6 +7170,17 @@ throw new Error("NYI");
     {
       widgetAdd = Widgets.newButton(composite,buttonText);
       Widgets.layout(widgetAdd,0,0,TableLayoutData.W,0,0,0,0,60,SWT.DEFAULT);
+      widgetAdd.addSelectionListener(new SelectionListener()
+      {
+        public void widgetDefaultSelected(SelectionEvent selectionEvent)
+        {
+        }
+        public void widgetSelected(SelectionEvent selectionEvent)
+        {
+          pattern[0] = widgetPattern.getText().trim();
+          Dialogs.close(dialog,true);
+        }
+      });
 
       button = Widgets.newButton(composite,"Cancel");
       Widgets.layout(button,0,1,TableLayoutData.E,0,0,0,0,60,SWT.DEFAULT);
@@ -6857,21 +7209,164 @@ throw new Error("NYI");
 throw new Error("NYI");
       }
     });
-    widgetAdd.addSelectionListener(new SelectionListener()
-    {
-      public void widgetDefaultSelected(SelectionEvent selectionEvent)
-      {
-      }
-      public void widgetSelected(SelectionEvent selectionEvent)
-      {
-        Button widget = (Button)selectionEvent.widget;
-        pattern[0] = widgetPattern.getText();
-        Dialogs.close(dialog,true);
-      }
-    });
 
     return (Boolean)Dialogs.run(dialog,false) && !pattern[0].equals("");
   }
+
+  /** add exclude pattern
+   * @param pattern pattern to add to included/exclude list
+   */
+  private void excludeListAdd(String pattern)
+  {
+    final String[] PATTERN_MAP_FROM = new String[]{"\n","\r","\\"};
+    final String[] PATTERN_MAP_TO   = new String[]{"\\n","\\r","\\\\"};
+
+    assert selectedJobId != 0;
+
+    // update exclude list
+    String[] result = new String[1];
+    if (BARServer.executeCommand("EXCLUDE_LIST_ADD "+selectedJobId+" GLOB "+StringUtils.escape(StringUtils.map(pattern,PATTERN_MAP_FROM,PATTERN_MAP_TO)),result) != Errors.NONE)
+    {
+      Dialogs.error(shell,"Cannot add exclude entry:\n\n"+result[0]);
+      return;
+    }
+
+    // update hash map
+    excludeHashSet.add(pattern);
+
+// TODO
+//.    widgetExcludeList.add(pattern,findListIndex(widgetExcludeList,pattern));
+    Widgets.insertListEntry(widgetExcludeList,
+                            findListIndex(widgetExcludeList,pattern),
+                            pattern,
+                            pattern
+                           );
+
+    // update file tree/device images
+    updateFileTreeImages();
+    updateDeviceImages();
+  }
+
+  /** remove exclude pattern
+   * @param patterns pattern to remove from exclude list
+   */
+  private void excludeListRemove(String[] patterns)
+  {
+    final String[] PATTERN_MAP_FROM = new String[]{"\n","\r","\\"};
+    final String[] PATTERN_MAP_TO   = new String[]{"\\n","\\r","\\\\"};
+
+    assert selectedJobId != 0;
+
+    // remove patterns from hash set
+    for (String pattern : patterns)
+    {
+      excludeHashSet.remove(pattern);
+    }
+
+    // update exclude list
+    BARServer.executeCommand("EXCLUDE_LIST_CLEAR "+selectedJobId);
+    for (String pattern : excludeHashSet)
+    {
+      BARServer.executeCommand("EXCLUDE_LIST_ADD "+selectedJobId+" GLOB "+StringUtils.escape(StringUtils.map(pattern,PATTERN_MAP_FROM,PATTERN_MAP_TO)));
+    }
+
+    // update list widget
+    Widgets.removeAllListEntries(widgetExcludeList);
+    for (String pattern : excludeHashSet)
+    {
+      Widgets.addListEntry(widgetExcludeList,findListIndex(widgetExcludeList,pattern),pattern);
+    }
+
+    // update file tree/device images
+    updateFileTreeImages();
+    updateDeviceImages();
+  }
+
+  /** remove exclude pattern
+   * @param pattern pattern to remove from exclude list
+   */
+  private void excludeListRemove(String pattern)
+  {
+    excludeListRemove(new String[]{pattern});
+  }
+
+  /** add new exclude pattern
+   */
+  private void excludeListAdd()
+  {
+    assert selectedJobId != 0;
+
+    String[] pattern = new String[1];
+    if (excludeEdit(pattern,"Add new exclude pattern","Add"))
+    {
+      excludeListAdd(pattern[0]);
+    }
+  }
+
+  /** edit exclude pattern
+   */
+  private void excludeListEdit()
+  {
+    assert selectedJobId != 0;
+
+    String[] patterns = widgetExcludeList.getSelection();
+    if (patterns.length > 0)
+    {
+      String   oldPattern = patterns[0];
+      String[] newPattern = new String[]{new String(oldPattern)};
+      if (excludeEdit(newPattern,"Edit exclude pattern","Save"))
+      {
+        // update exclude list
+        excludeListRemove(new String[]{oldPattern,newPattern[0]});
+        excludeListAdd(newPattern[0]);
+
+        // update file tree/device images
+        updateFileTreeImages();
+        updateDeviceImages();
+      }
+    }
+  }
+
+  /** clone exclude pattern
+   */
+  private void excludeListClone()
+  {
+    assert selectedJobId != 0;
+
+    String[] patterns = widgetExcludeList.getSelection();
+    if (patterns.length > 0)
+    {
+      String[] pattern = new String[]{new String(patterns[0])};
+      if (excludeEdit(pattern,"Clone exclude pattern","Add"))
+      {
+        // update exclude list
+        excludeListRemove(new String[]{pattern[0]});
+        excludeListAdd(pattern[0]);
+
+        // update file tree/device images
+        updateFileTreeImages();
+        updateDeviceImages();
+      }
+    }
+  }
+
+  /** remove selected exclude pattern
+   */
+  private void excludeListRemove()
+  {
+    assert selectedJobId != 0;
+
+    String[] patterns = widgetExcludeList.getSelection();
+    if (patterns.length > 0)
+    {
+      if ((patterns.length == 1) || Dialogs.confirm(shell,"Remove "+patterns.length+" exclude patterns?"))
+      {
+        excludeListRemove(patterns);
+      }
+    }
+  }
+
+  //-----------------------------------------------------------------------
 
   /** edit compress exclude pattern
    * @param pattern pattern
@@ -6974,62 +7469,6 @@ throw new Error("NYI");
     return (Boolean)Dialogs.run(dialog,false) && !pattern[0].equals("");
   }
 
-  /** add include entry
-   * @param entryType entry type
-   * @param pattern pattern to add to included/exclude list
-   */
-  private void includeListAdd(EntryTypes entryType, String pattern)
-  {
-    final String[] PATTERN_MAP_FROM = new String[]{"\n","\r","\\"};
-    final String[] PATTERN_MAP_TO   = new String[]{"\\n","\\r","\\\\"};
-
-    assert selectedJobId != 0;
-
-    EntryData entryData = new EntryData(entryType,pattern);
-
-    String[] result = new String[1];
-    if (BARServer.executeCommand("INCLUDE_LIST_ADD "+selectedJobId+" "+entryType.toString()+" GLOB "+StringUtils.escape(StringUtils.map(entryData.pattern,PATTERN_MAP_FROM,PATTERN_MAP_TO)),result) != Errors.NONE)
-    {
-      Dialogs.error(shell,"Cannot add include entry:\n\n"+result[0]);
-      return;
-    }
-
-    includeHashMap.put(pattern,entryData);
-    Widgets.insertTableEntry(widgetIncludeTable,
-                             findTableIndex(widgetIncludeTable,pattern),
-                             (Object)entryData,
-                             entryData.getImage(),
-                             entryData.pattern
-                            );
-
-    updateFileTreeImages();
-    updateDeviceImages();
-  }
-
-  /** add exclude pattern
-   * @param pattern pattern to add to included/exclude list
-   */
-  private void excludeListAdd(String pattern)
-  {
-    final String[] PATTERN_MAP_FROM = new String[]{"\n","\r","\\"};
-    final String[] PATTERN_MAP_TO   = new String[]{"\\n","\\r","\\\\"};
-
-    assert selectedJobId != 0;
-
-    String[] result = new String[1];
-    if (BARServer.executeCommand("EXCLUDE_LIST_ADD "+selectedJobId+" GLOB "+StringUtils.escape(StringUtils.map(pattern,PATTERN_MAP_FROM,PATTERN_MAP_TO)),result) != Errors.NONE)
-    {
-      Dialogs.error(shell,"Cannot add exclude entry:\n\n"+result[0]);
-      return;
-    }
-
-    excludeHashSet.add(pattern);
-    widgetExcludeList.add(pattern,findListIndex(widgetExcludeList,pattern));
-
-    updateFileTreeImages();
-    updateDeviceImages();
-  }
-
   /** add compress exclude pattern
    * @param pattern pattern to add to compress exclude list
    */
@@ -7050,9 +7489,10 @@ throw new Error("NYI");
       }
 
       compressExcludeHashSet.add(pattern);
-      widgetCompressExcludeList.add(pattern,findListIndex(widgetCompressExcludeList,pattern));
+      Widgets.addListEntry(widgetCompressExcludeList,findListIndex(widgetCompressExcludeList,pattern),pattern);
     }
 
+    // update file tree/device images
     updateFileTreeImages();
     updateDeviceImages();
   }
@@ -7079,39 +7519,13 @@ throw new Error("NYI");
         }
 
         compressExcludeHashSet.add(pattern);
-        widgetCompressExcludeList.add(pattern,findListIndex(widgetCompressExcludeList,pattern));
+        Widgets.addListEntry(widgetCompressExcludeList,findListIndex(widgetCompressExcludeList,pattern),pattern);
       }
     }
 
+    // update file tree/device images
     updateFileTreeImages();
     updateDeviceImages();
-  }
-
-  /** add new include entry
-   */
-  private void includeListAdd()
-  {
-    assert selectedJobId != 0;
-
-    EntryTypes[] entryType = new EntryTypes[]{EntryTypes.FILE};
-    String[]     pattern   = new String[1];
-    if (includeEdit(entryType,pattern,"New include pattern","Add"))
-    {
-      includeListAdd(entryType[0],pattern[0]);
-    }
-  }
-
-  /** add new exclude pattern
-   */
-  private void excludeListAdd()
-  {
-    assert selectedJobId != 0;
-
-    String[] pattern = new String[1];
-    if (excludeEdit(pattern,"New exclude pattern","Add"))
-    {
-      excludeListAdd(pattern[0]);
-    }
   }
 
   /** add new compress exclude pattern
@@ -7121,71 +7535,10 @@ throw new Error("NYI");
     assert selectedJobId != 0;
 
     String[] pattern = new String[1];
-    if (compressExcludeEdit(pattern,"New compress exclude pattern","Add"))
+    if (compressExcludeEdit(pattern,"Add new compress exclude pattern","Add"))
     {
       compressExcludeListAdd(pattern[0]);
     }
-  }
-
-  /** remove include entry
-   * @param pattern pattern to remove from include/exclude list
-   */
-  private void includeListRemove(String[] patterns)
-  {
-    final String[] PATTERN_MAP_FROM = new String[]{"\n","\r","\\"};
-    final String[] PATTERN_MAP_TO   = new String[]{"\\n","\\r","\\\\"};
-
-    assert selectedJobId != 0;
-
-    for (String pattern : patterns)
-    {
-      includeHashMap.remove(pattern);
-    }
-
-    BARServer.executeCommand("INCLUDE_LIST_CLEAR "+selectedJobId);
-    widgetIncludeTable.removeAll();
-    for (EntryData entryData : includeHashMap.values())
-    {
-      BARServer.executeCommand("INCLUDE_LIST_ADD "+selectedJobId+" "+entryData.entryType.toString()+" GLOB "+StringUtils.escape(StringUtils.map(entryData.pattern,PATTERN_MAP_FROM,PATTERN_MAP_TO)));
-      Widgets.insertTableEntry(widgetIncludeTable,
-                               findTableIndex(widgetIncludeTable,entryData.pattern),
-                               (Object)entryData,
-                               entryData.getImage(),
-                               entryData.pattern
-                              );
-    }
-
-    updateFileTreeImages();
-    updateDeviceImages();
-  }
-
-  private void includeListRemove(String pattern)
-  {
-    includeListRemove(new String[]{pattern});
-  }
-
-  /** remove exclude pattern
-   * @param pattern pattern to remove from include/exclude list
-   */
-  private void excludeListRemove(String pattern)
-  {
-    final String[] PATTERN_MAP_FROM = new String[]{"\n","\r","\\"};
-    final String[] PATTERN_MAP_TO   = new String[]{"\\n","\\r","\\\\"};
-
-    assert selectedJobId != 0;
-
-    excludeHashSet.remove(pattern);
-
-    BARServer.executeCommand("EXCLUDE_LIST_CLEAR "+selectedJobId);
-    widgetExcludeList.removeAll();
-    for (String s : excludeHashSet)
-    {
-      BARServer.executeCommand("EXCLUDE_LIST_ADD "+selectedJobId+" GLOB "+StringUtils.escape(StringUtils.map(s,PATTERN_MAP_FROM,PATTERN_MAP_TO)));
-      widgetExcludeList.add(s,findListIndex(widgetExcludeList,s));
-    }
-
-    updateFileTreeImages();
-    updateDeviceImages();
   }
 
   /** remove compress exclude pattern
@@ -7201,57 +7554,16 @@ throw new Error("NYI");
     compressExcludeHashSet.remove(pattern);
 
     BARServer.executeCommand("EXCLUDE_COMPRESS_LIST_CLEAR "+selectedJobId);
-    widgetCompressExcludeList.removeAll();
+    Widgets.removeAllListEntries(widgetCompressExcludeList);
     for (String s : compressExcludeHashSet)
     {
       BARServer.executeCommand("EXCLUDE_COMPRESS_LIST_ADD "+selectedJobId+" GLOB "+StringUtils.escape(StringUtils.map(s,PATTERN_MAP_FROM,PATTERN_MAP_TO)));
-      widgetCompressExcludeList.add(s,findListIndex(widgetCompressExcludeList,s));
+      Widgets.addListEntry(widgetCompressExcludeList,findListIndex(widgetCompressExcludeList,s),s);
     }
 
+    // update file tree/device images
     updateFileTreeImages();
     updateDeviceImages();
-  }
-
-  /** remove selected include pattern
-   */
-  private void includeListRemove()
-  {
-    assert selectedJobId != 0;
-
-    ArrayList<EntryData> entryDataList = new ArrayList<EntryData>();
-    for (TableItem tableItem : widgetIncludeTable.getSelection())
-    {
-      entryDataList.add((EntryData)tableItem.getData());
-    }
-    if (entryDataList.size() > 0)
-    {
-      if ((entryDataList.size() == 1) || Dialogs.confirm(shell,"Remove "+entryDataList.size()+" include patterns?"))
-      {
-        for (EntryData entryData : entryDataList)
-        {
-          includeListRemove(entryData.pattern);
-        }
-      }
-    }
-  }
-
-  /** remove selected exclude pattern
-   */
-  private void excludeListRemove()
-  {
-    assert selectedJobId != 0;
-
-    String[] patterns = widgetExcludeList.getSelection();
-    if (patterns.length > 0)
-    {
-      if ((patterns.length == 1) || Dialogs.confirm(shell,"Remove "+patterns.length+" exclude patterns?"))
-      {
-        for (String pattern : patterns)
-        {
-          excludeListRemove(pattern);
-        }
-      }
-    }
   }
 
   /** remove selected compress exclude pattern
