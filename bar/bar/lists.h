@@ -181,6 +181,28 @@ Node *__List_deleteNode(const char *__fileName__, ulong __lineNb__, Node *node);
 void List_init(void *list);
 
 /***********************************************************************\
+* Name   : List_initDuplicate
+* Purpose: initialize a duplicated list
+* Input  : list                            - list to initialize
+*          fromList                        - from list
+*          fromListFromNode,fromListToNode - from/to node (could be
+*                                            NULL)
+*          listNodeCopyFunction            - node copy function
+*          listNodeCopyUserData            - node copy user data
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void List_initDuplicate(void                 *list,
+                        const void           *fromList,
+                        const void           *fromListFromNode,
+                        const void           *fromListToNode,
+                        ListNodeCopyFunction listNodeCopyFunction,
+                        void                 *listNodeCopyUserData
+                       );
+
+/***********************************************************************\
 * Name   : List_done
 * Purpose: free all nodes
 * Input  : list                 - list to free
@@ -209,9 +231,9 @@ List *List_new(void);
 #if 0
 #ifdef NDEBUG
 void List_new(void *list,
-                 void *node,
-                 void *nextNode
-                );
+              void *node,
+              void *nextNode
+             );
 #else /* not NDEBUG */
 void __List_new(const char *fileName,
                 ulong      lineNb,
@@ -265,14 +287,14 @@ void List_delete(void                 *list,
 *          listNodeFreeFunction - free function for single node or NULL
 *          listNodeFreeUserData - user data for free function
 * Output : -
-* Return : -
+* Return : list
 * Notes  : -
 \***********************************************************************/
 
-void List_clear(void                 *list,
-                ListNodeFreeFunction listNodeFreeFunction,
-                void                 *listNodeFreeUserData
-               );
+void *List_clear(void                 *list,
+                 ListNodeFreeFunction listNodeFreeFunction,
+                 void                 *listNodeFreeUserData
+                );
 
 /***********************************************************************\
 * Name   : List_copy
@@ -313,11 +335,11 @@ void List_copy(const void           *fromList,
 * Notes  : -
 \***********************************************************************/
 
-void List_move(void *fromList,
-               void *toList,
-               void *fromListFromNode,
-               void *fromListToNode,
-               void *toListNextNode
+void List_move(void       *fromList,
+               void       *toList,
+               const void *fromListFromNode,
+               const void *fromListToNode,
+               void       *toListNextNode
               );
 
 /***********************************************************************\

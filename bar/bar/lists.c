@@ -437,6 +437,28 @@ void List_init(void *list)
   ((List*)list)->count = 0;
 }
 
+void List_initDuplicate(void                 *list,
+                        const void           *fromList,
+                        const void           *fromListFromNode,
+                        const void           *fromListToNode,
+                        ListNodeCopyFunction listNodeCopyFunction,
+                        void                 *listNodeCopyUserData
+                       )
+{
+  assert(list != NULL);
+  assert(fromList != NULL);
+
+  List_init(list);
+  List_copy(fromList,
+            list,
+            fromListFromNode,
+            fromListToNode,
+            NULL,
+            listNodeCopyFunction,
+            listNodeCopyUserData
+           );
+}
+
 void List_done(void                 *list,
                ListNodeFreeFunction listNodeFreeFunction,
                void                 *listNodeFreeUserData
@@ -474,15 +496,13 @@ List *List_duplicate(const void           *fromList,
   list = (List*)malloc(sizeof(List));
   if (list == NULL) return NULL;
 
-  List_init(list);
-  List_copy(fromList,
-            list,
-            fromListFromNode,
-            fromListToNode,
-            NULL,
-            listNodeCopyFunction,
-            listNodeCopyUserData
-           );
+  List_initDuplicate(list,
+                     fromList,
+                     fromListFromNode,
+                     fromListToNode,
+                     listNodeCopyFunction,
+                     listNodeCopyUserData
+                    );
 
   return list;
 }
@@ -498,10 +518,10 @@ void List_delete(void                 *list,
   free(list);
 }
 
-void List_clear(void                 *list,
-                ListNodeFreeFunction listNodeFreeFunction,
-                void                 *listNodeFreeUserData
-               )
+void *List_clear(void                 *list,
+                 ListNodeFreeFunction listNodeFreeFunction,
+                 void                 *listNodeFreeUserData
+                )
 {
   Node *node;
 
@@ -528,6 +548,8 @@ void List_clear(void                 *list,
   }
   ((List*)list)->head  = NULL;
   ((List*)list)->count = 0;
+
+  return list;
 }
 
 void List_copy(const void           *fromList,
@@ -562,11 +584,11 @@ void List_copy(const void           *fromList,
   }
 }
 
-void List_move(void *fromList,
-               void *toList,
-               void *fromListFromNode,
-               void *fromListToNode,
-               void *toListNextNode
+void List_move(void       *fromList,
+               void       *toList,
+               const void *fromListFromNode,
+               const void *fromListToNode,
+               void       *toListNextNode
               )
 {
   Node *node;
