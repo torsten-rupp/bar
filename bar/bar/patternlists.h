@@ -12,7 +12,7 @@
 #define __PATTERNLISTS__
 
 /****************************** Includes *******************************/
-#include <config.h>  // use <...> to support separated build directory 
+#include <config.h>  // use <...> to support separated build directory
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -119,6 +119,24 @@ void PatternList_doneAll(void);
 void PatternList_init(PatternList *patternList);
 
 /***********************************************************************\
+* Name   : PatternList_initDuplicate
+* Purpose: init duplicated pattern list
+* Input  : patternList             - pattern list
+*          fromPatternList         - from pattern list (source)
+*          fromPatternListFromNode - from node (could be NULL)
+*          fromPatternListToNode   - to node (could be NULL)
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void PatternList_initDuplicate(PatternList       *patternList,
+                               const PatternList *fromPatternList,
+                               const PatternNode *fromPatternListFromNode,
+                               const PatternNode *fromPatternListToNode
+                              );
+
+/***********************************************************************\
 * Name   : PatternList_done
 * Purpose: done pattern list
 * Input  : patternList - pattern list
@@ -134,35 +152,47 @@ void PatternList_done(PatternList *patternList);
 * Purpose: remove all patterns in list
 * Input  : patternList - pattern list
 * Output : -
-* Return : -
+* Return : pattern list
 * Notes  : -
 \***********************************************************************/
 
-void PatternList_clear(PatternList *patternList);
+PatternList *PatternList_clear(PatternList *patternList);
 
 /***********************************************************************\
 * Name   : Pattern_copyList
 * Purpose: copy all patterns from source list to destination list
-* Input  : fromPatternList - from pattern list (source)
-*          toPatternList   - to pattern list (destination)
+* Input  : fromPatternList         - from pattern list (source)
+*          toPatternList           - to pattern list (destination)
+*          fromPatternListFromNode - from node (could be NULL)
+*          fromPatternListToNode   - to node (could be NULL)
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-void PatternList_copy(const PatternList *fromPatternList, PatternList *toPatternList);
+void PatternList_copy(const PatternList *fromPatternList,
+                      PatternList       *toPatternList,
+                      const PatternNode *fromPatternListFromNode,
+                      const PatternNode *fromPatternListToNode
+                     );
 
 /***********************************************************************\
 * Name   : PatternList_move
 * Purpose: move all patterns from source list to destination list
-* Input  : fromPatternList - from pattern list (source)
-*          toPatternList   - to pattern list (destination)
+* Input  : fromPatternList         - from pattern list (source)
+*          toPatternList           - to pattern list (destination)
+*          fromPatternListFromNode - from node (could be NULL)
+*          fromPatternListToNode   - to node (could be NULL)
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-void PatternList_move(PatternList *fromPatternList, PatternList *toPatternList);
+void PatternList_move(PatternList       *fromPatternList,
+                      PatternList       *toPatternList,
+                      const PatternNode *fromPatternListFromNode,
+                      const PatternNode *fromPatternListToNode
+                     );
 
 /***********************************************************************\
 * Name   : PatternList_append, PatternList_appendCString

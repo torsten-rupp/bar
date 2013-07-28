@@ -9,7 +9,7 @@
 \***********************************************************************/
 
 /****************************** Includes *******************************/
-#include <config.h>  // use <...> to support separated build directory 
+#include <config.h>  // use <...> to support separated build directory
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -136,6 +136,19 @@ void PatternList_init(PatternList *patternList)
   List_init(patternList);
 }
 
+void PatternList_initDuplicate(PatternList       *patternList,
+                               const PatternList *fromPatternList,
+                               const PatternNode *fromPatternListFromNode,
+                               const PatternNode *fromPatternListToNode
+                              )
+{
+  assert(patternList != NULL);
+  assert(fromPatternList != NULL);
+
+  PatternList_init(patternList);
+  PatternList_copy(fromPatternList,patternList,fromPatternListFromNode,fromPatternListToNode);
+}
+
 void PatternList_done(PatternList *patternList)
 {
   assert(patternList != NULL);
@@ -143,27 +156,35 @@ void PatternList_done(PatternList *patternList)
   List_done(patternList,(ListNodeFreeFunction)freePatternNode,NULL);
 }
 
-void PatternList_clear(PatternList *patternList)
+PatternList *PatternList_clear(PatternList *patternList)
 {
   assert(patternList != NULL);
 
-  List_clear(patternList,(ListNodeFreeFunction)freePatternNode,NULL);
+  return (PatternList*)List_clear(patternList,(ListNodeFreeFunction)freePatternNode,NULL);
 }
 
-void PatternList_copy(const PatternList *fromPatternList, PatternList *toPatternList)
+void PatternList_copy(const PatternList *fromPatternList,
+                      PatternList       *toPatternList,
+                      const PatternNode *fromPatternListFromNode,
+                      const PatternNode *fromPatternListToNode
+                     )
 {
   assert(fromPatternList != NULL);
   assert(toPatternList != NULL);
 
-  List_copy(fromPatternList,toPatternList,NULL,NULL,NULL,(ListNodeCopyFunction)copyPatternNode,NULL);
+  List_copy(fromPatternList,toPatternList,fromPatternListFromNode,fromPatternListToNode,NULL,(ListNodeCopyFunction)copyPatternNode,NULL);
 }
 
-void PatternList_move(PatternList *fromPatternList, PatternList *toPatternList)
+void PatternList_move(PatternList       *fromPatternList,
+                      PatternList       *toPatternList,
+                      const PatternNode *fromPatternListFromNode,
+                      const PatternNode *fromPatternListToNode
+                     )
 {
   assert(fromPatternList != NULL);
   assert(toPatternList != NULL);
 
-  List_move(fromPatternList,toPatternList,NULL,NULL,NULL);
+  List_move(fromPatternList,toPatternList,fromPatternListFromNode,fromPatternListToNode,NULL);
 }
 
 Errors PatternList_append(PatternList  *patternList,
