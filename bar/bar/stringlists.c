@@ -110,6 +110,14 @@ void StringList_init(StringList *stringList)
   List_init(stringList);
 }
 
+void StringList_initDuplicate(StringList *stringList, const StringList *fromStringList)
+{
+  assert(stringList != NULL);
+
+  StringList_init(stringList);
+  StringList_copy(fromStringList,stringList);
+}
+
 void StringList_done(StringList *stringList)
 {
   assert(stringList != NULL);
@@ -161,11 +169,11 @@ void StringList_delete(StringList *stringList)
   List_delete(stringList,(ListNodeFreeFunction)freeStringNode,NULL);
 }
 
-void StringList_clear(StringList *stringList)
+StringList *StringList_clear(StringList *stringList)
 {
   assert(stringList != NULL);
 
-  List_clear(stringList,(ListNodeFreeFunction)freeStringNode,NULL);
+  return (StringList*)List_clear(stringList,(ListNodeFreeFunction)freeStringNode,NULL);
 }
 
 void StringList_move(StringList *fromStringList, StringList *toStringList)

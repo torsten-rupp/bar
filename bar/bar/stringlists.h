@@ -105,6 +105,18 @@ typedef struct
 void StringList_init(StringList *stringList);
 
 /***********************************************************************\
+* Name   : StringList_initDuplicate
+* Purpose: initialize duplicated string list
+* Input  : stringList     - string list to initialize
+*          fromStringList - string list to copy (strings will be copied!)
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void StringList_initDuplicate(StringList *stringList, const StringList *fromStringList);
+
+/***********************************************************************\
 * Name   : StringList_done
 * Purpose: free a strings in list
 * Input  : stringList - string list to free
@@ -140,7 +152,7 @@ StringList *StringList_duplicate(const StringList *stringList);
 /***********************************************************************\
 * Name   : StringList_copy
 * Purpose: copy sting list
-* Input  : stringList - string list
+* Input  : stringList     - string list
 *          fromStringList - string list to copy (strings will be copied!)
 * Output : -
 * Return : string list or NULL on insufficient memory
@@ -165,11 +177,11 @@ void StringList_delete(StringList *stringList);
 * Purpose: remove all entry in list
 * Input  : stringList - string list
 * Output : -
-* Return : -
-* Notes  :
+* Return : string list
+* Notes  : -
 \***********************************************************************/
 
-void StringList_clear(StringList *stringList);
+StringList *StringList_clear(StringList *stringList);
 
 /***********************************************************************\
 * Name   : StringList_move
