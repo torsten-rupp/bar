@@ -1358,7 +1358,6 @@ class TabJobs
         }
         public void widgetSelected(SelectionEvent selectionEvent)
         {
-          Button widget = (Button)selectionEvent.widget;
           jobNew();
         }
       });
@@ -1381,7 +1380,6 @@ class TabJobs
         }
         public void widgetSelected(SelectionEvent selectionEvent)
         {
-          Button widget = (Button)selectionEvent.widget;
           if (selectedJobId > 0)
           {
             jobCopy();
@@ -1407,7 +1405,6 @@ class TabJobs
         }
         public void widgetSelected(SelectionEvent selectionEvent)
         {
-          Button widget = (Button)selectionEvent.widget;
           if (selectedJobId > 0)
           {
             jobRename();
@@ -1433,7 +1430,6 @@ class TabJobs
         }
         public void widgetSelected(SelectionEvent selectionEvent)
         {
-          Button widget = (Button)selectionEvent.widget;
           if (selectedJobId > 0)
           {
             jobDelete();
@@ -5790,6 +5786,7 @@ class TabJobs
           int    id   = (Integer)data[0];
           String name = (String )data[1];
 
+// TODO deleted jobs?
           int index = findJobListIndex(name);
           widgetJobList.add(name,index);
           jobIds.put(name,id);
@@ -5908,6 +5905,9 @@ throw new Error("NYI");
     Label     label;
     Button    button;
 
+    assert selectedJobName != null;
+    assert selectedJobId != 0;
+
     final Shell dialog = Dialogs.openModal(shell,"Clone job",300,SWT.DEFAULT,new double[]{1.0,0.0},1.0);
 
     // create widgets
@@ -5921,6 +5921,7 @@ throw new Error("NYI");
       Widgets.layout(label,0,0,TableLayoutData.W);
 
       widgetJobName = Widgets.newText(composite);
+      widgetJobName.setText(selectedJobName);
       Widgets.layout(widgetJobName,0,1,TableLayoutData.WE);
     }
 
@@ -5993,6 +5994,7 @@ throw new Error("NYI");
       }
     });
 
+    Widgets.setFocus(widgetJobName);
     Dialogs.run(dialog);
   }
 
@@ -6099,6 +6101,7 @@ throw new Error("NYI");
       }
     });
 
+    Widgets.setFocus(widgetNewJobName);
     Dialogs.run(dialog);
   }
 
