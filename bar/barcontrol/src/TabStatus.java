@@ -405,8 +405,8 @@ class TabStatus
     {
       public void handleEvent(Event event)
       {
-        // make sure status data is updated when jobs tab was modified
-        updateJobList();
+        // make sure data is updated when jobs tab is shown
+        update();
       }
     });
 
@@ -1237,7 +1237,7 @@ class TabStatus
             // remove not existing entries
             for (int z = 0; z < tableItems.length; z++)
             {
-              if (!tableItemFlags[z]) Widgets.removeTableEntry(widgetJobList,tableItems);
+              if (!tableItemFlags[z]) Widgets.removeTableEntry(widgetJobList,tableItems[z]);
             }
           }
         }
