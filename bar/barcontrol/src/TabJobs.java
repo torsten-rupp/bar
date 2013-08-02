@@ -1206,14 +1206,18 @@ class TabJobs
   private Shell        widgetFileTreeToolTip = null;
   private Tree         widgetDeviceTree;
   private Table        widgetIncludeTable;
+  private Button       widgetIncludeTableInsert,widgetIncludeTableEdit,widgetIncludeTableRemove;
   private List         widgetExcludeList;
+  private Button       widgetExcludeListInsert,widgetExcludeListEdit,widgetExcludeListRemove;
   private Combo        widgetArchivePartSize;
   private List         widgetCompressExcludeList;
+  private Button       widgetCompressExcludeListInsert,widgetCompressExcludeListRemove;
   private Text         widgetCryptPassword1,widgetCryptPassword2;
   private Combo        widgetFTPMaxBandWidth;
   private Combo        widgetSCPSFTPMaxBandWidth;
   private Combo        widgetWebdavMaxBandWidth;
   private Table        widgetScheduleList;
+  private Button       widgetScheduleListInsert,widgetScheduleListEdit,widgetScheduleListRemove;
 
   // BAR variables
   private WidgetVariable  archiveType             = new WidgetVariable(new String[]{"normal","full","incremental","differential"});
@@ -2046,6 +2050,27 @@ class TabJobs
             includeListEdit();
           }
         });
+        widgetIncludeTable.addKeyListener(new KeyListener()
+        {
+          public void keyPressed(KeyEvent keyEvent)
+          {
+          }
+          public void keyReleased(KeyEvent keyEvent)
+          {
+            if      (Widgets.isAccelerator(keyEvent,SWT.INSERT))
+            {
+              Widgets.invoke(widgetIncludeTableInsert);
+            }
+            else if (Widgets.isAccelerator(keyEvent,SWT.CR))
+            {
+              Widgets.invoke(widgetIncludeTableEdit);
+            }
+            else if (Widgets.isAccelerator(keyEvent,SWT.DEL))
+            {
+              Widgets.invoke(widgetIncludeTableRemove);
+            }
+          }
+        });
         widgetIncludeTable.setToolTipText("List of included entries.");
 
         menu = Widgets.newPopupMenu(shell);
@@ -2120,9 +2145,9 @@ class TabJobs
         composite = Widgets.newComposite(tab,SWT.NONE,4);
         Widgets.layout(composite,1,1,TableLayoutData.W);
         {
-          button = Widgets.newButton(composite,"Add\u2026");
-          Widgets.layout(button,0,0,TableLayoutData.DEFAULT,0,0,0,0,90,SWT.DEFAULT);
-          button.addSelectionListener(new SelectionListener()
+          widgetIncludeTableInsert = Widgets.newButton(composite,"Add\u2026");
+          Widgets.layout(widgetIncludeTableInsert,0,0,TableLayoutData.DEFAULT,0,0,0,0,90,SWT.DEFAULT);
+          widgetIncludeTableInsert.addSelectionListener(new SelectionListener()
           {
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
             {
@@ -2136,11 +2161,11 @@ class TabJobs
               }
             }
           });
-          button.setToolTipText("Add entry to included list.");
+          widgetIncludeTableInsert.setToolTipText("Add entry to included list.");
 
-          button = Widgets.newButton(composite,"Edit\u2026");
-          Widgets.layout(button,0,1,TableLayoutData.DEFAULT,0,0,0,0,90,SWT.DEFAULT);
-          button.addSelectionListener(new SelectionListener()
+          widgetIncludeTableEdit = Widgets.newButton(composite,"Edit\u2026");
+          Widgets.layout(widgetIncludeTableEdit,0,1,TableLayoutData.DEFAULT,0,0,0,0,90,SWT.DEFAULT);
+          widgetIncludeTableEdit.addSelectionListener(new SelectionListener()
           {
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
             {
@@ -2154,11 +2179,11 @@ class TabJobs
               }
             }
           });
-          button.setToolTipText("Edit entry in included list.");
+          widgetIncludeTableEdit.setToolTipText("Edit entry in included list.");
 
-          button = Widgets.newButton(composite,"Clone\u2026");
-          Widgets.layout(button,0,2,TableLayoutData.DEFAULT,0,0,0,0,90,SWT.DEFAULT);
-          button.addSelectionListener(new SelectionListener()
+          widgetIncludeTableRemove = Widgets.newButton(composite,"Clone\u2026");
+          Widgets.layout(widgetIncludeTableRemove,0,2,TableLayoutData.DEFAULT,0,0,0,0,90,SWT.DEFAULT);
+          widgetIncludeTableRemove.addSelectionListener(new SelectionListener()
           {
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
             {
@@ -2172,7 +2197,7 @@ class TabJobs
               }
             }
           });
-          button.setToolTipText("Clone entry in included list.");
+          widgetIncludeTableRemove.setToolTipText("Clone entry in included list.");
 
           button = Widgets.newButton(composite,"Remove\u2026");
           Widgets.layout(button,0,3,TableLayoutData.DEFAULT,0,0,0,0,90,SWT.DEFAULT);
@@ -2202,6 +2227,27 @@ class TabJobs
           public void handleEvent(final Event event)
           {
             excludeListEdit();
+          }
+        });
+        widgetExcludeList.addKeyListener(new KeyListener()
+        {
+          public void keyPressed(KeyEvent keyEvent)
+          {
+          }
+          public void keyReleased(KeyEvent keyEvent)
+          {
+            if      (Widgets.isAccelerator(keyEvent,SWT.INSERT))
+            {
+              Widgets.invoke(widgetExcludeListInsert);
+            }
+            else if (Widgets.isAccelerator(keyEvent,SWT.CR))
+            {
+              Widgets.invoke(widgetExcludeListEdit);
+            }
+            else if (Widgets.isAccelerator(keyEvent,SWT.DEL))
+            {
+              Widgets.invoke(widgetExcludeListRemove);
+            }
           }
         });
         widgetExcludeList.setToolTipText("List with exclude patterns, right-click for context menu.");
@@ -2278,9 +2324,9 @@ class TabJobs
         composite = Widgets.newComposite(tab,SWT.NONE,4);
         Widgets.layout(composite,3,1,TableLayoutData.W);
         {
-          button = Widgets.newButton(composite,"Add\u2026");
-          Widgets.layout(button,0,0,TableLayoutData.DEFAULT,0,0,0,0,90,SWT.DEFAULT);
-          button.addSelectionListener(new SelectionListener()
+          widgetExcludeListInsert = Widgets.newButton(composite,"Add\u2026");
+          Widgets.layout(widgetExcludeListInsert,0,0,TableLayoutData.DEFAULT,0,0,0,0,90,SWT.DEFAULT);
+          widgetExcludeListInsert.addSelectionListener(new SelectionListener()
           {
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
             {
@@ -2294,11 +2340,11 @@ class TabJobs
               }
             }
           });
-          button.setToolTipText("Add entry to excluded list.");
+          widgetExcludeListInsert.setToolTipText("Add entry to excluded list.");
 
-          button = Widgets.newButton(composite,"Edit\u2026");
-          Widgets.layout(button,0,1,TableLayoutData.DEFAULT,0,0,0,0,90,SWT.DEFAULT);
-          button.addSelectionListener(new SelectionListener()
+          widgetExcludeListEdit = Widgets.newButton(composite,"Edit\u2026");
+          Widgets.layout(widgetExcludeListEdit,0,1,TableLayoutData.DEFAULT,0,0,0,0,90,SWT.DEFAULT);
+          widgetExcludeListEdit.addSelectionListener(new SelectionListener()
           {
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
             {
@@ -2312,7 +2358,7 @@ class TabJobs
               }
             }
           });
-          button.setToolTipText("Edit entry in excluded list.");
+          widgetExcludeListEdit.setToolTipText("Edit entry in excluded list.");
 
           button = Widgets.newButton(composite,"Clone\u2026");
           Widgets.layout(button,0,2,TableLayoutData.DEFAULT,0,0,0,0,90,SWT.DEFAULT);
@@ -2332,9 +2378,9 @@ class TabJobs
           });
           button.setToolTipText("Clone entry in excluded list.");
 
-          button = Widgets.newButton(composite,"Remove\u2026");
-          Widgets.layout(button,0,3,TableLayoutData.DEFAULT,0,0,0,0,90,SWT.DEFAULT);
-          button.addSelectionListener(new SelectionListener()
+          widgetExcludeListRemove = Widgets.newButton(composite,"Remove\u2026");
+          Widgets.layout(widgetExcludeListRemove,0,3,TableLayoutData.DEFAULT,0,0,0,0,90,SWT.DEFAULT);
+          widgetExcludeListRemove.addSelectionListener(new SelectionListener()
           {
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
             {
@@ -2348,7 +2394,7 @@ class TabJobs
               }
             }
           });
-          button.setToolTipText("Remove entry from excluded list.");
+          widgetExcludeListRemove.setToolTipText("Remove entry from excluded list.");
         }
 
         // options
@@ -2730,6 +2776,23 @@ class TabJobs
           // compress exclude list
           widgetCompressExcludeList = Widgets.newList(composite);
           Widgets.layout(widgetCompressExcludeList,0,0,TableLayoutData.NSWE);
+          widgetCompressExcludeList.addKeyListener(new KeyListener()
+          {
+            public void keyPressed(KeyEvent keyEvent)
+            {
+            }
+            public void keyReleased(KeyEvent keyEvent)
+            {
+              if      (Widgets.isAccelerator(keyEvent,SWT.INSERT))
+              {
+                Widgets.invoke(widgetCompressExcludeListInsert);
+              }
+              else if (Widgets.isAccelerator(keyEvent,SWT.DEL))
+              {
+                Widgets.invoke(widgetCompressExcludeListRemove);
+              }
+            }
+          });
           Widgets.addModifyListener(new WidgetModifyListener(widgetCompressExcludeList,new WidgetVariable[]{deltaCompressAlgorithm,byteCompressAlgorithm})
           {
             public void modified(Control control, WidgetVariable[] compressAlgorithms)
@@ -2851,16 +2914,16 @@ class TabJobs
           subComposite = Widgets.newComposite(composite,SWT.NONE,4);
           Widgets.layout(subComposite,1,0,TableLayoutData.W);
           {
-            button = Widgets.newButton(subComposite,"Add\u2026");
-            Widgets.layout(button,0,0,TableLayoutData.DEFAULT,0,0,0,0,90,SWT.DEFAULT);
-            Widgets.addModifyListener(new WidgetModifyListener(button,new WidgetVariable[]{deltaCompressAlgorithm,byteCompressAlgorithm})
+            widgetCompressExcludeListInsert = Widgets.newButton(subComposite,"Add\u2026");
+            Widgets.layout(widgetCompressExcludeListInsert,0,0,TableLayoutData.DEFAULT,0,0,0,0,90,SWT.DEFAULT);
+            Widgets.addModifyListener(new WidgetModifyListener(widgetCompressExcludeListInsert,new WidgetVariable[]{deltaCompressAlgorithm,byteCompressAlgorithm})
             {
               public void modified(Control control, WidgetVariable byteCompressAlgorithm)
               {
                 Widgets.setEnabled(control,!deltaCompressAlgorithm.equals("none") || !byteCompressAlgorithm.equals("none"));
               }
             });
-            button.addSelectionListener(new SelectionListener()
+            widgetCompressExcludeListInsert.addSelectionListener(new SelectionListener()
             {
               public void widgetDefaultSelected(SelectionEvent selectionEvent)
               {
@@ -2874,18 +2937,18 @@ class TabJobs
                 }
               }
             });
-            button.setToolTipText("Add entry to compress exclude list.");
+            widgetCompressExcludeListInsert.setToolTipText("Add entry to compress exclude list.");
 
-            button = Widgets.newButton(subComposite,"Remove\u2026");
-            Widgets.layout(button,0,1,TableLayoutData.DEFAULT,0,0,0,0,90,SWT.DEFAULT);
-            Widgets.addModifyListener(new WidgetModifyListener(button,new WidgetVariable[]{deltaCompressAlgorithm,byteCompressAlgorithm})
+            widgetCompressExcludeListRemove = Widgets.newButton(subComposite,"Remove\u2026");
+            Widgets.layout(widgetCompressExcludeListRemove,0,1,TableLayoutData.DEFAULT,0,0,0,0,90,SWT.DEFAULT);
+            Widgets.addModifyListener(new WidgetModifyListener(widgetCompressExcludeListRemove,new WidgetVariable[]{deltaCompressAlgorithm,byteCompressAlgorithm})
             {
               public void modified(Control control, WidgetVariable byteCompressAlgorithm)
               {
                 Widgets.setEnabled(control,!deltaCompressAlgorithm.equals("none") || !byteCompressAlgorithm.equals("none"));
               }
             });
-            button.addSelectionListener(new SelectionListener()
+            widgetCompressExcludeListRemove.addSelectionListener(new SelectionListener()
             {
               public void widgetDefaultSelected(SelectionEvent selectionEvent)
               {
@@ -2899,7 +2962,9 @@ class TabJobs
                 }
               }
             });
-            button.setToolTipText("Remove entry from compress exclude list.");
+            widgetCompressExcludeListRemove.setToolTipText("Remove entry from compress exclude list.");
+
+
           }
         }
 
@@ -5413,6 +5478,27 @@ class TabJobs
             scheduleEdit();
           }
         });
+        widgetScheduleList.addKeyListener(new KeyListener()
+        {
+          public void keyPressed(KeyEvent keyEvent)
+          {
+          }
+          public void keyReleased(KeyEvent keyEvent)
+          {
+            if      (Widgets.isAccelerator(keyEvent,SWT.INSERT))
+            {
+              Widgets.invoke(widgetScheduleListInsert);
+            }
+            else if (Widgets.isAccelerator(keyEvent,SWT.CR))
+            {
+              Widgets.invoke(widgetScheduleListEdit);
+            }
+            else if (Widgets.isAccelerator(keyEvent,SWT.DEL))
+            {
+              Widgets.invoke(widgetScheduleListRemove);
+            }
+          }
+        });
         SelectionListener scheduleListColumnSelectionListener = new SelectionListener()
         {
           public void widgetDefaultSelected(SelectionEvent selectionEvent)
@@ -5504,9 +5590,9 @@ class TabJobs
         composite = Widgets.newComposite(tab,SWT.NONE,4);
         Widgets.layout(composite,1,0,TableLayoutData.WE);
         {
-          button = Widgets.newButton(composite,"Add\u2026");
-          Widgets.layout(button,0,0,TableLayoutData.DEFAULT,0,0,0,0,90,SWT.DEFAULT);
-          button.addSelectionListener(new SelectionListener()
+          widgetScheduleListInsert = Widgets.newButton(composite,"Add\u2026");
+          Widgets.layout(widgetScheduleListInsert,0,0,TableLayoutData.DEFAULT,0,0,0,0,90,SWT.DEFAULT);
+          widgetScheduleListInsert.addSelectionListener(new SelectionListener()
           {
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
             {
@@ -5517,11 +5603,11 @@ class TabJobs
               scheduleNew();
             }
           });
-          button.setToolTipText("Add new schedule entry.");
+          widgetScheduleListInsert.setToolTipText("Add new schedule entry.");
 
-          button = Widgets.newButton(composite,"Edit\u2026");
-          Widgets.layout(button,0,1,TableLayoutData.DEFAULT,0,0,0,0,90,SWT.DEFAULT);
-          button.addSelectionListener(new SelectionListener()
+          widgetScheduleListEdit = Widgets.newButton(composite,"Edit\u2026");
+          Widgets.layout(widgetScheduleListEdit,0,1,TableLayoutData.DEFAULT,0,0,0,0,90,SWT.DEFAULT);
+          widgetScheduleListEdit.addSelectionListener(new SelectionListener()
           {
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
             {
@@ -5532,7 +5618,7 @@ class TabJobs
               scheduleEdit();
             }
           });
-          button.setToolTipText("Edit schedule entry.");
+          widgetScheduleListEdit.setToolTipText("Edit schedule entry.");
 
           button = Widgets.newButton(composite,"Clone\u2026");
           Widgets.layout(button,0,2,TableLayoutData.DEFAULT,0,0,0,0,90,SWT.DEFAULT);
@@ -5549,9 +5635,9 @@ class TabJobs
           });
           button.setToolTipText("Clone schedule entry.");
 
-          button = Widgets.newButton(composite,"Remove\u2026");
-          Widgets.layout(button,0,3,TableLayoutData.DEFAULT,0,0,0,0,90,SWT.DEFAULT);
-          button.addSelectionListener(new SelectionListener()
+          widgetScheduleListRemove = Widgets.newButton(composite,"Remove\u2026");
+          Widgets.layout(widgetScheduleListRemove,0,3,TableLayoutData.DEFAULT,0,0,0,0,90,SWT.DEFAULT);
+          widgetScheduleListRemove.addSelectionListener(new SelectionListener()
           {
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
             {
@@ -5562,7 +5648,7 @@ class TabJobs
               scheduleDelete();
             }
           });
-          button.setToolTipText("Remove schedule entry.");
+          widgetScheduleListRemove.setToolTipText("Remove schedule entry.");
         }
       }
     }
