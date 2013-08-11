@@ -4280,7 +4280,15 @@ int String_toInteger(const String convertString, ulong index, long *nextIndex, c
     n = strtol(&convertString->data[index],&nextData,0);
     if ((ulong)(nextData-convertString->data) < convertString->length)
     {
-      n = n*(int)getUnitFactor(stringUnits,stringUnitCount,convertString->data,nextData,nextIndex);
+      if (stringUnitCount > 0)
+      {
+        n = n*(int)getUnitFactor(stringUnits,stringUnitCount,convertString->data,nextData,nextIndex);
+      }
+      else
+      {
+        n = 0;
+        if (nextIndex != NULL) (*nextIndex) = (ulong)(nextData-convertString->data);
+      }
     }
     else
     {
@@ -4308,7 +4316,15 @@ int64 String_toInteger64(const String convertString, ulong index, long *nextInde
     n = strtoll(&convertString->data[index],&nextData,0);
     if ((ulong)(nextData-convertString->data) < convertString->length)
     {
-      n = n*(int64)getUnitFactor(stringUnits,stringUnitCount,convertString->data,nextData,nextIndex);
+      if (stringUnitCount > 0)
+      {
+        n = n*(int64)getUnitFactor(stringUnits,stringUnitCount,convertString->data,nextData,nextIndex);
+      }
+      else
+      {
+        n = 0;
+        if (nextIndex != NULL) (*nextIndex) = (ulong)(nextData-convertString->data);
+      }
     }
     else
     {
@@ -4338,7 +4354,15 @@ double String_toDouble(const String convertString, ulong index, long *nextIndex,
     n = strtod(&convertString->data[index],&nextData);
     if ((ulong)(nextData-convertString->data) < convertString->length)
     {
-      n = n*(double)(long)getUnitFactor(stringUnits,stringUnitCount,convertString->data,nextData,nextIndex);
+      if (stringUnitCount > 0)
+      {
+        n = n*(double)(long)getUnitFactor(stringUnits,stringUnitCount,convertString->data,nextData,nextIndex);
+      }
+      else
+      {
+        n = 0;
+        if (nextIndex != NULL) (*nextIndex) = (ulong)(nextData-convertString->data);
+      }
     }
     else
     {
