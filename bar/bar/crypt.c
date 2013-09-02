@@ -339,17 +339,14 @@ const char *Crypt_typeToString(CryptTypes cryptType, const char *defaultValue)
 {
   const char *typeName;
 
-  typeName = NULL;
   switch (cryptType)
   {
     case CRYPT_TYPE_NONE      : typeName = "NONE";       break;
     case CRYPT_TYPE_SYMMETRIC : typeName = "SYMMETRIC";  break;
     case CRYPT_TYPE_ASYMMETRIC: typeName = "ASYMMETRIC"; break;
-    #ifndef NDEBUG
-      default:
-        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-        break; /* not reached */
-    #endif /* NDEBUG */
+    default:
+      typeName = defaultValue;
+      break;
   }
 
   return typeName;
