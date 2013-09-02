@@ -277,8 +277,8 @@ LOCAL void initCreateInfo(CreateInfo               *createInfo,
   createInfo->statusInfo.entryDoneBytes    = 0LL;
   createInfo->statusInfo.entryTotalBytes   = 0LL;
   createInfo->statusInfo.storageName       = String_new();
-  createInfo->statusInfo.archiveDoneBytes  = 0LL;
-  createInfo->statusInfo.archiveTotalBytes = 0LL;
+  createInfo->statusInfo.storageDoneBytes  = 0LL;
+  createInfo->statusInfo.storageTotalBytes = 0LL;
   createInfo->statusInfo.volumeNumber      = 0;
   createInfo->statusInfo.volumeProgress    = 0.0;
 
@@ -2602,7 +2602,7 @@ LOCAL Errors storeArchiveFile(void           *userData,
   // update status info
   SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
   {
-    createInfo->statusInfo.archiveTotalBytes += fileInfo.size;
+    createInfo->statusInfo.storageTotalBytes += fileInfo.size;
     updateStatusInfo(createInfo);
   }
 
@@ -2937,7 +2937,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
             // update status info, check for abort
             SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
             {
-              createInfo->statusInfo.archiveDoneBytes += (uint64)bufferLength;
+              createInfo->statusInfo.storageDoneBytes += (uint64)bufferLength;
               abortFlag |= !updateStatusInfo(createInfo);
             }
 
@@ -3353,6 +3353,7 @@ LOCAL Errors storeFileEntry(CreateInfo   *createInfo,
                        && !PatternList_match(createInfo->compressExcludePatternList,fileName,PATTERN_MATCH_MODE_EXACT);
 
     // check if file data should be delta compressed
+#warning delta compress wihtout byte compress?
     deltaCompressFlag = (byteCompressFlag && Compress_isCompressed(createInfo->jobOptions->compressAlgorithm.delta));
 
     // create new archive file entry
@@ -3422,8 +3423,8 @@ LOCAL Errors storeFileEntry(CreateInfo   *createInfo,
             // update status info
             SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
             {
-              archiveBytes     = createInfo->statusInfo.archiveTotalBytes+archiveSize;
-              compressionRatio = 100.0-(createInfo->statusInfo.archiveTotalBytes+archiveSize)*100.0/createInfo->statusInfo.doneBytes;
+              archiveBytes     = createInfo->statusInfo.storageTotalBytes+archiveSize;
+              compressionRatio = 100.0-(createInfo->statusInfo.storageTotalBytes+archiveSize)*100.0/createInfo->statusInfo.doneBytes;
 
               createInfo->statusInfo.doneBytes += (uint64)bufferLength;
               if (nameSemaphoreLocked)
@@ -3763,8 +3764,8 @@ LOCAL Errors storeImageEntry(CreateInfo   *createInfo,
           // update status info
           SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
           {
-            archiveBytes     = createInfo->statusInfo.archiveTotalBytes+archiveSize;
-            compressionRatio = 100.0-(createInfo->statusInfo.archiveTotalBytes+archiveSize)*100.0/createInfo->statusInfo.doneBytes;
+            archiveBytes     = createInfo->statusInfo.storageTotalBytes+archiveSize;
+            compressionRatio = 100.0-(createInfo->statusInfo.storageTotalBytes+archiveSize)*100.0/createInfo->statusInfo.doneBytes;
 
             createInfo->statusInfo.doneBytes += (uint64)bufferBlockCount*(uint64)deviceInfo.blockSize;
             if (nameSemaphoreLocked)
@@ -4388,8 +4389,8 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
 
             SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
             {
-              archiveBytes     = createInfo->statusInfo.archiveTotalBytes+archiveSize;
-              compressionRatio = 100.0-(createInfo->statusInfo.archiveTotalBytes+archiveSize)*100.0/createInfo->statusInfo.doneBytes;
+              archiveBytes     = createInfo->statusInfo.storageTotalBytes+archiveSize;
+              compressionRatio = 100.0-(createInfo->statusInfo.storageTotalBytes+archiveSize)*100.0/createInfo->statusInfo.doneBytes;
 
               createInfo->statusInfo.doneBytes += (uint64)StringList_count(nameList)*(uint64)bufferLength;
               if (nameSemaphoreLocked)
@@ -5077,9 +5078,14 @@ Errors Command_create(const String                    storageName,
       HALT_FATAL_ERROR("Cannot initialize create thread!");
     }
   }
+
+  // wait for create threads
   for (z = 0; z < createThreadCount; z++)
   {
-    Thread_join(&createThreads[z]);
+    if (!Thread_join(&createThreads[z]))
+    {
+      HALT_FATAL_ERROR("Cannot stop create thread!");
+    }
   }
 #else
 fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);

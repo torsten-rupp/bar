@@ -49,8 +49,8 @@ typedef struct
   uint64 entryDoneBytes;                   // number of bytes processed of current entry
   uint64 entryTotalBytes;                  // total number of bytes of current entry
   String storageName;                      // current storage name
-  uint64 archiveDoneBytes;                 // number of bytes processed of current archive
-  uint64 archiveTotalBytes;                // total bytes of current archive
+  uint64 storageDoneBytes;                 // number of bytes processed of current archive
+  uint64 storageTotalBytes;                // total bytes of current archive
   uint   volumeNumber;                     // current volume number
   double volumeProgress;                   // current volume progress [0..100]
 } CreateStatusInfo;
