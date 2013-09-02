@@ -28,8 +28,12 @@
 #define STRING_END   MAX_LONG
 
 #define STRING_WHITE_SPACES " \t\f\v\n\r"
-#define STRING_QUOTE        "'"
+#define STRING_QUOTE        '\''
 #define STRING_QUOTES       "\"'"
+
+extern const char STRING_ESCAPE_CHARACTERS[];
+extern const char STRING_ESCAPE_MAP[];
+#define STRING_ESCAPE_LENGTH 9
 
 #define STRING_NO_ASSIGN (void*)(-1)
 
@@ -448,7 +452,7 @@ INLINE ulong String_length(const String string)
 * Purpose: check if string is empty
 * Input  : string - string
 * Output : -
-* Return : TRUE iff string is empty or NULL, FALSE otherwise
+* Return : TRUE iff string is empty, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
 
@@ -759,7 +763,6 @@ String String_padLeft(String string, ulong length, char ch);
 * Notes  : -
 \***********************************************************************/
 
-//String String_fillString(String string, ulong length, char ch);
 String String_fillChar(String string, ulong length, char ch);
 
 /***********************************************************************\
@@ -781,7 +784,7 @@ String String_vformat(String string, const char *format, va_list arguments);
 /***********************************************************************\
 * Name   : String_initTokenizer, String_initTokenizerCString,
 *          String_doneTokenizer
-* Purpose: initialize/deinitialize string tokenizer
+* Purpose: initialise/deinitialise string tokenizer
 * Input  : stringTokenizer - string tokenizer
 *          string          - string
 *          separatorChars  - token seperator characters, e. g. " "
@@ -828,8 +831,9 @@ bool String_getNextToken(StringTokenizer *stringTokenizer,
 * Name   : String_scan
 * Purpose: scan string
 * Input  : string,s - string
-*          format - format (like scanf)
-*          ...    - optional variables
+*          index    - start index or STRING_BEGIN
+*          format   - format (like scanf)
+*          ...      - optional variables
 * Output : -
 * Return : TRUE is scanned, FALSE on error
 * Notes  : for C-strings the max. length have to be specified with %<n>s
@@ -842,8 +846,9 @@ bool String_scanCString(const char *s, const char *format, ...);
 * Name   : String_parse
 * Purpose: parse string
 * Input  : string,s - string
-*          format - format (like scanf)
-*          ...    - optional variables
+*          index    - start index or STRING_BEGIN
+*          format   - format (like scanf)
+*          ...      - optional variables
 * Output : nextIndex - index of next character in string not parsed or
 *                      STRING_END if string completely parsed (can be
 *                      NULL)

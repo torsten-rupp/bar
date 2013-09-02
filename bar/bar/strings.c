@@ -55,6 +55,9 @@
 #define STRING_START_LENGTH 64   // string start length
 #define STRING_DELTA_LENGTH 32   // string delta increasing/decreasing
 
+const char STRING_ESCAPE_CHARACTERS[] = {'\0','\007','\b','\t','\n','\v','\f','\r','\033'};
+const char STRING_ESCAPE_MAP[]        = {'0', 'a',   'b', 't', 'n', 'v', 'f', 'r', 'e'   };
+
 LOCAL const char *DEFAULT_TRUE_STRINGS[] =
 {
   "1",
@@ -424,7 +427,7 @@ LOCAL const char *parseNextFormatToken(const char *format, FormatToken *formatTo
       ADD_CHAR(formatToken,(*(format+1)));
 
       formatToken->lengthType = FORMAT_LENGTH_TYPE_INTEGER;
-      format+=2;
+      format += 2;
     }
     else if ((*format) == 'h')
     {
@@ -439,7 +442,7 @@ LOCAL const char *parseNextFormatToken(const char *format, FormatToken *formatTo
       ADD_CHAR(formatToken,(*(format+1)));
 
       formatToken->lengthType = FORMAT_LENGTH_TYPE_LONGLONG;
-      format+=2;
+      format += 2;
     }
     else if ((*format) == 'l')
     {
@@ -547,6 +550,7 @@ LOCAL void formatString(struct __String *string,
   const char    *s;
   ulong         i;
   char          ch;
+  int           j;
 
   STRING_CHECK_VALID(string);
 
@@ -750,6 +754,9 @@ LOCAL void formatString(struct __String *string,
           }
           break;
         case 's':
+          assert(sizeof(STRING_ESCAPE_CHARACTERS) == STRING_ESCAPE_LENGTH);
+          assert(sizeof(STRING_ESCAPE_MAP) == STRING_ESCAPE_LENGTH);
+
           data.s = va_arg(arguments,const char*);
           assert(data.s != NULL);
 
@@ -763,8 +770,29 @@ LOCAL void formatString(struct __String *string,
               if (ch == formatToken.quoteChar)
               {
                 String_appendChar(string,'\\');
+                String_appendChar(string,ch);
               }
-              String_appendChar(string,ch);
+              else
+              {
+                // check if escape character
+                j = STRING_ESCAPE_LENGTH-1;
+                while ((j >= 0) && (STRING_ESCAPE_CHARACTERS[j] != ch))
+                {
+                  j--;
+                }
+
+                if (j >= 0)
+                {
+                  // escape character
+                  String_appendChar(string,'\\');
+                  String_appendChar(string,STRING_ESCAPE_MAP[j]);
+                }
+                else
+                {
+                  // other character
+                  String_appendChar(string,ch);
+                }
+              }
               s++;
             }
             String_appendChar(string,formatToken.quoteChar);
@@ -820,8 +848,32 @@ LOCAL void formatString(struct __String *string,
               if (ch == formatToken.quoteChar)
               {
                 String_appendChar(string,'\\');
+                String_appendChar(string,ch);
               }
-              String_appendChar(string,ch);
+              else
+              {
+                // check if escape character
+                j = SIZE_OF_ARRAY(STRING_ESCAPE_CHARACTERS)-1;
+                while ((j >= 0) && (STRING_ESCAPE_CHARACTERS[j] != ch))
+                {
+                  j--;
+                }
+
+                if (j >= 0)
+                {
+                  // escape character
+                  assert(SIZE_OF_ARRAY(STRING_ESCAPE_CHARACTERS) == SIZE_OF_ARRAY(STRING_ESCAPE_MAP));
+                  assert((uint)j < SIZE_OF_ARRAY(STRING_ESCAPE_MAP));
+
+                  String_appendChar(string,'\\');
+                  String_appendChar(string,STRING_ESCAPE_MAP[j]);
+                }
+                else
+                {
+                  // other character
+                  String_appendChar(string,ch);
+                }
+              }
               i++;
             }
             String_appendChar(string,formatToken.quoteChar);
@@ -1153,7 +1205,7 @@ LOCAL bool parseString(const char    *string,
             // get data
             if (((index+1) < length) && (string[index+0] == '0') && (string[index+0] == 'x'))
             {
-              index+=2;
+              index += 2;
             }
             z = 0L;
             while (   (index < length)
@@ -1290,7 +1342,7 @@ LOCAL bool parseString(const char    *string,
                     String_appendChar(value.string,string[index+1]);
                     z++;
                   }
-                  index+=2;
+                  index += 2;
                 }
                 else
                 {
@@ -1392,7 +1444,7 @@ LOCAL bool parseString(const char    *string,
                     String_appendChar(value.string,string[index+1]);
                     z++;
                   }
-                  index+=2;
+                  index += 2;
                 }
                 else
                 {
