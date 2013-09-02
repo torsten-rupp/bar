@@ -17,6 +17,7 @@
 #include <assert.h>
 
 #include "global.h"
+#include "semaphores.h"
 
 /****************** Conditional compilation switches *******************/
 

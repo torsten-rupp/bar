@@ -555,6 +555,8 @@ bool Dictionary_init(Dictionary                *dictionary,
   dictionary->dictionaryCompareFunction = dictionaryCompareFunction;
   dictionary->dictionaryCompareUserData = dictionaryCompareUserData;
 
+  DEBUG_ADD_RESOURCE_TRACE("dictionary",dictionary);
+
   return TRUE;
 }
 
@@ -568,6 +570,8 @@ void Dictionary_done(Dictionary             *dictionary,
 
   assert(dictionary != NULL);
   assert(dictionary->entryTables != NULL);
+
+  DEBUG_REMOVE_RESOURCE_TRACE(dictionary);
 
   // free resources
   for (z = 0; z < dictionary->entryTableCount; z++)
@@ -977,6 +981,8 @@ void Dictionary_initIterator(DictionaryIterator *dictionaryIterator,
   dictionaryIterator->i          = 0;
   dictionaryIterator->j          = 0;
 
+  DEBUG_ADD_RESOURCE_TRACE("dictionary iterator",dictionaryIterator);
+
   Semaphore_forceLock(&dictionary->lock,SEMAPHORE_LOCK_TYPE_READ);
 }
 
@@ -984,6 +990,8 @@ void Dictionary_doneIterator(DictionaryIterator *dictionaryIterator)
 {
   assert(dictionaryIterator != NULL);
   assert(dictionaryIterator->dictionary != NULL);
+
+  DEBUG_REMOVE_RESOURCE_TRACE(dictionaryIterator);
 
   Semaphore_unlock(&dictionaryIterator->dictionary->lock);
 }
