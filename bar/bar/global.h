@@ -183,11 +183,19 @@ typedef void                void32;
 #endif
 
 #ifdef __GNUC__
-  #define ATTRIBUTE_PACKED             __attribute__ ((__packed__))
-  #define ATTRIBUTE_WARN_UNUSED_RESULT __attribute__ ((__warn_unused_result__))
+  #define ATTRIBUTE_PACKED             __attribute__((__packed__))
+  #define ATTRIBUTE_WARN_UNUSED_RESULT __attribute__((__warn_unused_result__))
+  #ifndef DEBUG
+    #define ATTRIBUTE_NO_INSTRUMENT_FUNCTION __attribute__((no_instrument_function))
+  #else
+    #define ATTRIBUTE_NO_INSTRUMENT_FUNCTION
+  #endif
+  #define ATTRIBUTE_AUTO(functionCode) __attribute((cleanup(functionCode)))
 #else
   #define ATTRIBUTE_PACKED
   #define ATTRIBUTE_WARN_UNUSED_RESULT
+  #define ATTRIBUTE_NO_INSTRUMENT_FUNCTION
+  #define ATTRIBUTE_AUTO(functionCode)
 #endif
 
 // only for better reading
@@ -752,6 +760,36 @@ typedef void                void32;
 #endif /* NDEBUG */
 
 /***********************************************************************\
+* Name   : DEBUG_LOCAL_RESOURCE
+* Purpose: mark resource as local resource only
+* Input  : resource  - resource
+*          initValue - init value
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+#ifndef NDEBUG
+
+  #define DEBUG_LOCAL_RESOURCE(resource,initValue) \
+    do \
+    { \
+      debugLocalResource(__FILE__,__LINE__,resource); \
+      resource = initValue; \
+    } \
+    while (0)
+
+#else /* NDEBUG */
+
+  #define DEBUG_LOCAL_RESOURCE(resource) \
+    do \
+    { \
+    } \
+    while (0)
+
+#endif /* not NDEBUG */
+
+/***********************************************************************\
 * Name   : DEBUG_ADD_RESOURCE_TRACE, DEBUG_REMOVE_RESOURCE_TRACE,
 *          DEBUG_ADD_RESOURCE_TRACEX, DEBUG_REMOVE_RESOURCE_TRACEX,
 * Purpose: add/remove debug trace allocated resource functions
@@ -1061,6 +1099,36 @@ inline double normDegree360(double n)
 
 /*---------------------------------------------------------------------*/
 
+/***********************************************************************\
+* Name   : stringEquals
+* Purpose: compare strings for equal
+* Input  : s1, s2 - strings
+* Output : -
+* Return : TRUE if equals
+* Notes  : -
+\***********************************************************************/
+
+static inline bool stringEquals(const char *s1, const char *s2)
+{
+  return strcmp(s1,s2) == 0;
+}
+
+/***********************************************************************\
+* Name   : stringEqualsIgnoreCase
+* Purpose: compare strings for equal and ignore case
+* Input  : s1, s2 - strings
+* Output : -
+* Return : TRUE if equals
+* Notes  : -
+\***********************************************************************/
+
+static inline bool stringEqualsIgnoreCase(const char *s1, const char *s2)
+{
+  return strcasecmp(s1,s2) == 0;
+}
+
+/*---------------------------------------------------------------------*/
+
 #ifdef __cplusplus
 
 /***********************************************************************\
@@ -1138,6 +1206,25 @@ void __abort(const char *__fileName__,
              const char *format,
              ...
             );
+
+#ifndef NDEBUG
+/***********************************************************************\
+* Name   : debugLocalResource
+* Purpose: mark resource as local resource (must be freed before
+*          function exit)
+* Input  : __fileName__ - file name
+*          __lineNb__   - line number
+*          resource     - resource
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void debugLocalResource(const char *__fileName__,
+                        uint       __lineNb__,
+                        const void *resource
+                       ) ATTRIBUTE_NO_INSTRUMENT_FUNCTION;
+#endif /* not NDEBUG */
 
 #ifndef NDEBUG
 /***********************************************************************\

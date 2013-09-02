@@ -136,6 +136,28 @@ void __abort(const char *__fileName__,
 }
 
 #ifndef NDEBUG
+void __cyg_profile_func_enter(void *functionCode, void *callAddress) ATTRIBUTE_NO_INSTRUMENT_FUNCTION;
+void __cyg_profile_func_enter(void *functionCode, void *callAddress)
+{
+//fprintf(stderr,"%s, %d: enter %p\n",__FILE__,__LINE__,functionCode);
+}
+
+void __cyg_profile_func_exit(void *functionCode, void *callAddress) ATTRIBUTE_NO_INSTRUMENT_FUNCTION;
+void __cyg_profile_func_exit(void *functionCode, void *callAddress)
+{
+//fprintf(stderr,"%s, %d: exit %p\n",__FILE__,__LINE__,functionCode);
+}
+
+void debugLocalResource(const char *__fileName__,
+                        uint       __lineNb__,
+                        const void *resource
+                       )
+{
+}
+#endif /* not NDEBUG */
+
+#ifndef NDEBUG
+
 void debugAddResourceTrace(const char *__fileName__,
                            uint       __lineNb__,
                            const char *typeName,
