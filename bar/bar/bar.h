@@ -675,6 +675,18 @@ void logPostProcess(void);
 void initJobOptions(JobOptions *jobOptions);
 
 /***********************************************************************\
+* Name   : initDuplicateJobOptions
+* Purpose: init duplicated job options structure
+* Input  : jobOptions     - job options variable
+*          fromJobOptions - source job options
+* Output : jobOptions - initialized job options variable
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void initDuplicateJobOptions(JobOptions *jobOptions, const JobOptions *fromJobOptions);
+
+/***********************************************************************\
 * Name   : copyJobOptions
 * Purpose: copy job options structure
 * Input  : fromJobOptions - source job options
@@ -1332,8 +1344,6 @@ bool configValueFormatCompressAlgorithm(void **formatUserData, void *userData, S
 * Input  : date        - date string (<year|*>-<month|*>-<day|*>)
 *          weekDay     - week day string
 *          time        - time string <hour|*>:<minute|*>
-*          enabled     - enabled string (0|1)
-*          archiveType - archive type (normal, full, incremental, differential)
 * Output :
 * Return : scheduleNode or NULL on error
 * Notes  : month names: jan, feb, mar, apr, may, jun, jul, aug, sep, oct
@@ -1343,9 +1353,7 @@ bool configValueFormatCompressAlgorithm(void **formatUserData, void *userData, S
 
 ScheduleNode *parseScheduleParts(const String date,
                                  const String weekDay,
-                                 const String time,
-                                 const String enabled,
-                                 const String archiveType
+                                 const String time
                                 );
 
 /***********************************************************************\
@@ -1422,15 +1430,27 @@ void configValueFormatDoneSchedule(void **formatUserData, void *userData);
 bool configValueFormatSchedule(void **formatUserData, void *userData, String line);
 
 /***********************************************************************\
-* Name   : archiveTypeText
-* Purpose: get text for archive type
-* Input  : archiveType
+* Name   : archiveTypeToString
+* Purpose: get name for archive type
+* Input  : archiveType  - archive type
+*          defaultValue - default value
 * Output : -
-* Return : text
+* Return : name
 * Notes  : -
 \***********************************************************************/
 
-const char *archiveTypeText(ArchiveTypes archiveType);
+const char *archiveTypeToString(ArchiveTypes archiveType, const char *defaultValue);
+
+/***********************************************************************\
+* Name   : parseArchiveType
+* Purpose: parse archive type
+* Input  : name - normal|full|incremental|differential
+* Output : archiveType - archive type
+* Return : TRUE iff parsed
+* Notes  : -
+\***********************************************************************/
+
+bool parseArchiveType(const char *name, ArchiveTypes *archiveType);
 
 /***********************************************************************\
 * Name   : readJobFile

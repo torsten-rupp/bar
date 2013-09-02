@@ -61,6 +61,8 @@
 
 #include "bar.h"
 
+#include <signal.h>
+
 /****************** Conditional compilation switches *******************/
 
 /***************************** Constants *******************************/
@@ -116,6 +118,18 @@
 #define BD_WRITE_IMAGE_COMMAND                "nice growisofs -Z %device=%image -use-the-force-luke=dao -dvd-compat -use-the-force-luke=noload"
 
 #define MIN_PASSWORD_QUALITY_LEVEL            0.6
+
+LOCAL const struct
+{
+  const char   *name;
+  ArchiveTypes archiveType;
+} ARCHIVE_TYPES[] =
+{
+  { "normal",       ARCHIVE_TYPE_NORMAL       },
+  { "full",         ARCHIVE_TYPE_FULL         },
+  { "incremental",  ARCHIVE_TYPE_INCREMENTAL  },
+  { "differential", ARCHIVE_TYPE_DIFFERENTIAL }
+};
 
 /***************************** Datatypes *******************************/
 
@@ -3124,6 +3138,15 @@ void initJobOptions(JobOptions *jobOptions)
   jobOptions->stopOnErrorFlag                 = FALSE;
 }
 
+void initDuplicateJobOptions(JobOptions *jobOptions, const JobOptions *fromJobOptions)
+{
+  assert(jobOptions != NULL);
+  assert(fromJobOptions != NULL);
+
+  initJobOptions(jobOptions);
+  copyJobOptions(fromJobOptions,jobOptions);
+}
+
 void copyJobOptions(const JobOptions *fromJobOptions, JobOptions *toJobOptions)
 {
   assert(fromJobOptions != NULL);
@@ -4454,47 +4477,36 @@ LOCAL ScheduleNode *newScheduleNode(void)
 
 LOCAL bool parseScheduleArchiveType(const String s, ArchiveTypes *archiveType)
 {
-  String name;
-
   assert(s != NULL);
   assert(archiveType != NULL);
 
-  name = String_toLower(String_duplicate(s));
   if (String_equalsCString(s,"*"))
   {
     (*archiveType) = ARCHIVE_TYPE_NORMAL;
   }
-  else if (String_equalsIgnoreCaseCString(name,"normal"      )) (*archiveType) = ARCHIVE_TYPE_NORMAL;
-  else if (String_equalsIgnoreCaseCString(name,"full"        )) (*archiveType) = ARCHIVE_TYPE_FULL;
-  else if (String_equalsIgnoreCaseCString(name,"incremental" )) (*archiveType) = ARCHIVE_TYPE_INCREMENTAL;
-  else if (String_equalsIgnoreCaseCString(name,"differential")) (*archiveType) = ARCHIVE_TYPE_DIFFERENTIAL;
   else
   {
-    String_delete(name);
-    return FALSE;
+    if (!parseArchiveType(String_cString(s),archiveType))
+    {
+      return FALSE;
+    }
   }
-  String_delete(name);
 
   return TRUE;
 }
 
 ScheduleNode *parseScheduleParts(const String date,
                                  const String weekDay,
-                                 const String time,
-                                 const String enabled,
-                                 const String archiveType
+                                 const String time
                                 )
 {
   ScheduleNode *scheduleNode;
   bool         errorFlag;
   String       s0,s1,s2;
-  bool         b;
 
   assert(date != NULL);
   assert(weekDay != NULL);
   assert(time != NULL);
-  assert(enabled != NULL);
-  assert(archiveType != NULL);
 
   // allocate new schedule node
   scheduleNode = newScheduleNode();
@@ -4527,24 +4539,6 @@ ScheduleNode *parseScheduleParts(const String date,
   {
     errorFlag = TRUE;
   }
-  if (String_parse(enabled,STRING_BEGIN,"%y",NULL,&b))
-  {
-/* It seems gcc has a bug in option -fno-schedule-insns2: if -O2 is used this
-   option is enabled. Then either the program crashes with a SigSegV or parsing
-   boolean values here fail. It seems the address of 'b' is not received in the
-   function. Because this problem disappear when -fno-schedule-insns2 is given
-   it looks like the gcc do some rearrangements in the generated machine code
-   which is not valid anymore. How can this be tracked down? Is this problem
-   known?
-*/
-if ((b != FALSE) && (b != TRUE)) HALT_INTERNAL_ERROR("parsing boolean string value fail - C compiler bug?");
-    scheduleNode->enabled = b;
-  }
-  else
-  {
-    errorFlag = TRUE;
-  }
-  if (!parseScheduleArchiveType(archiveType,&scheduleNode->archiveType)) errorFlag = TRUE;
   String_delete(s2);
   String_delete(s1);
   String_delete(s0);
@@ -4797,15 +4791,52 @@ bool configValueFormatSchedule(void **formatUserData, void *userData, String lin
   }
 }
 
-const char *archiveTypeText(ArchiveTypes archiveType)
+const char *archiveTypeToString(ArchiveTypes archiveType, const char *defaultValue)
 {
-  switch (archiveType)
+  uint       z;
+  const char *name;
+
+  z = 0;
+  while (   (z < SIZE_OF_ARRAY(ARCHIVE_TYPES))
+         && (ARCHIVE_TYPES[z].archiveType != archiveType)
+        )
   {
-    case ARCHIVE_TYPE_NORMAL:       return "normal";       break;
-    case ARCHIVE_TYPE_FULL:         return "full";         break;
-    case ARCHIVE_TYPE_INCREMENTAL:  return "incremental";  break;
-    case ARCHIVE_TYPE_DIFFERENTIAL: return "differential"; break;
-    default:                        return "unknown";      break;
+    z++;
+  }
+  if (z < SIZE_OF_ARRAY(ARCHIVE_TYPES))
+  {
+    name = ARCHIVE_TYPES[z].name;
+  }
+  else
+  {
+    name = defaultValue;
+  }
+
+  return name;
+}
+
+bool parseArchiveType(const char *name, ArchiveTypes *archiveType)
+{
+  uint z;
+
+  assert(name != NULL);
+  assert(archiveType != NULL);
+
+  z = 0;
+  while (   (z < SIZE_OF_ARRAY(ARCHIVE_TYPES))
+         && !stringEqualsIgnoreCase(ARCHIVE_TYPES[z].name,name)
+        )
+  {
+    z++;
+  }
+  if (z < SIZE_OF_ARRAY(ARCHIVE_TYPES))
+  {
+    (*archiveType) = ARCHIVE_TYPES[z].archiveType;
+    return TRUE;
+  }
+  else
+  {
+    return FALSE;
   }
 }
 
@@ -4963,6 +4994,14 @@ LOCAL void deletePIDFile(void)
 }
 
 /*---------------------------------------------------------------------*/
+
+LOCAL void signalAlarmHandler(int signalNumber)
+{
+  UNUSED_VARIABLE(signalNumber);
+
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+exit(12);
+}
 
 int main(int argc, const char *argv[])
 {
@@ -5206,6 +5245,8 @@ int main(int argc, const char *argv[])
     #endif /* not NDEBUG */
     return EXITCODE_FAIL;
   }
+
+signal(SIGALRM,signalAlarmHandler);
 
   error = ERROR_NONE;
   if      (daemonFlag)
