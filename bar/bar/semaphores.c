@@ -445,6 +445,9 @@ LOCAL void checkForDeadLock(Semaphore *semaphore, DebugLockTypes debugLockType)
 {
   assert(semaphore != NULL);
 
+  UNUSED_VARIABLE(semaphore);
+  UNUSED_VARIABLE(debugLockType);
+
 //fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 }
 
