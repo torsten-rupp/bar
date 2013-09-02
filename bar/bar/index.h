@@ -12,7 +12,7 @@
 #define __INDEX__
 
 /****************************** Includes *******************************/
-#include <config.h>  // use <...> to support separated build directory 
+#include <config.h>  // use <...> to support separated build directory
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -46,7 +46,6 @@ typedef enum
 
   INDEX_STATE_UNKNOWN
 } IndexStates;
-extern const char* INDEX_STATE_STRINGS[8];
 
 // index modes
 typedef enum
@@ -58,7 +57,6 @@ typedef enum
 
   INDEX_MODE_UNKNOWN
 } IndexModes;
-extern const char* INDEX_MODE_STRINGS[4];
 
 /***************************** Datatypes *******************************/
 
@@ -97,26 +95,50 @@ Errors Index_initAll(void);
 void Index_doneAll(void);
 
 /***********************************************************************\
-* Name   : Index_stringToState
-* Purpose: convert string to state
-* Input  : string - string
+* Name   : Index_stateToString
+* Purpose: get name of index state
+* Input  : indexState   - index state
+*          defaultValue - default value
 * Output : -
-* Return : state or INDEX_STATE_UNKNOWN if not known
+* Return : name
 * Notes  : -
 \***********************************************************************/
 
-IndexStates Index_stringToState(const String string);
+const char *Index_stateToString(IndexStates indexState, const char *defaultValue);
 
 /***********************************************************************\
-* Name   : Index_stringToMode
-* Purpose: convert string to mode
-* Input  : string - string
-* Output : -
-* Return : mode or INDEX_MODE_UNKNOWN if not known
+* Name   : Index_parseState
+* Purpose: parse state string
+* Input  : name - name
+* Output : indexState - index state
+* Return : TRUE iff parsed
 * Notes  : -
 \***********************************************************************/
 
-IndexModes Index_stringToMode(const String string);
+bool Index_parseState(const char *name, IndexStates *indexState);
+
+/***********************************************************************\
+* Name   : Index_parseMode
+* Purpose: get name of index mode
+* Input  : indexMode    - index mode
+*          defaultValue - default value
+* Output : -
+* Return : name
+* Notes  : -
+\***********************************************************************/
+
+const char *Index_modeToString(IndexModes indexMode, const char *defaultValue);
+
+/***********************************************************************\
+* Name   : Index_parseMode
+* Purpose: parse mode string
+* Input  : name - name
+* Output : indexMode - index mode
+* Return : TRUE iff parsed
+* Notes  : -
+\***********************************************************************/
+
+bool Index_parseMode(const char *name, IndexModes *indexMode);
 
 /***********************************************************************\
 * Name   : Index_init

@@ -29,24 +29,30 @@
 /****************** Conditional compilation switches *******************/
 
 /***************************** Constants *******************************/
-const char* INDEX_STATE_STRINGS[8] =
+LOCAL const struct
 {
-  "NONE",
-  "OK",
-  "CREATE",
-  "UPDATE_REQUESTED",
-  "UPDATE",
-  "ERROR",
-  "*",
-  "UNKNOWN"
+  const char  *name;
+  IndexStates indexState;
+} INDEX_STATES[] =
+{
+  { "none",             INDEX_STATE_NONE             },
+  { "ok",               INDEX_STATE_OK               },
+  { "create",           INDEX_STATE_CREATE           },
+  { "update_requested", INDEX_STATE_UPDATE_REQUESTED },
+  { "update",           INDEX_STATE_UPDATE           },
+  { "error",            INDEX_STATE_ERROR            },
+  { "*",                INDEX_STATE_ALL              }
 };
 
-const char* INDEX_MODE_STRINGS[4] =
+LOCAL const struct
 {
-  "MANUAL",
-  "AUTO",
-  "*",
-  "UNKNOWN"
+  const char *name;
+  IndexModes indexMode;
+} INDEX_MODES[] =
+{
+  { "MANUAL", INDEX_MODE_MANUAL },
+  { "AUTO",   INDEX_MODE_AUTO   },
+  { "*",      INDEX_MODE_ALL    }
 };
 
 // current index database version
@@ -156,36 +162,102 @@ void Index_doneAll(void)
 {
 }
 
-IndexStates Index_stringToState(const String string)
+const char *Index_stateToString(IndexStates indexState, const char *defaultValue)
 {
-  IndexStates indexState;
+  uint       z;
+  const char *name;
 
-  assert(string != NULL);
+  z = 0;
+  while (   (z < SIZE_OF_ARRAY(INDEX_STATES))
+         && (INDEX_STATES[z].indexState != indexState)
+        )
+  {
+    z++;
+  }
+  if (z < SIZE_OF_ARRAY(INDEX_STATES))
+  {
+    name = INDEX_STATES[z].name;
+  }
+  else
+  {
+    name = defaultValue;
+  }
 
-  if      (String_equalsIgnoreCaseCString(string,INDEX_STATE_STRINGS[0])) indexState = INDEX_STATE_NONE;
-  else if (String_equalsIgnoreCaseCString(string,INDEX_STATE_STRINGS[1])) indexState = INDEX_STATE_OK;
-  else if (String_equalsIgnoreCaseCString(string,INDEX_STATE_STRINGS[2])) indexState = INDEX_STATE_CREATE;
-  else if (String_equalsIgnoreCaseCString(string,INDEX_STATE_STRINGS[3])) indexState = INDEX_STATE_UPDATE_REQUESTED;
-  else if (String_equalsIgnoreCaseCString(string,INDEX_STATE_STRINGS[4])) indexState = INDEX_STATE_UPDATE;
-  else if (String_equalsIgnoreCaseCString(string,INDEX_STATE_STRINGS[5])) indexState = INDEX_STATE_ERROR;
-  else if (String_equalsIgnoreCaseCString(string,INDEX_STATE_STRINGS[6])) indexState = INDEX_STATE_ALL;
-  else                                                                    indexState = INDEX_STATE_UNKNOWN;
-
-  return indexState;
+  return name;
 }
 
-IndexModes Index_stringToMode(const String string)
+bool Index_parseState(const char *name, IndexStates *indexState)
 {
-  IndexModes indexMode;
+  uint z;
 
-  assert(string != NULL);
+  assert(name != NULL);
+  assert(indexState != NULL);
 
-  if      (String_equalsIgnoreCaseCString(string,INDEX_MODE_STRINGS[0])) indexMode = INDEX_MODE_MANUAL;
-  else if (String_equalsIgnoreCaseCString(string,INDEX_MODE_STRINGS[1])) indexMode = INDEX_MODE_AUTO;
-  else if (String_equalsIgnoreCaseCString(string,INDEX_MODE_STRINGS[2])) indexMode = INDEX_MODE_ALL;
-  else                                                                   indexMode = INDEX_MODE_UNKNOWN;
+  z = 0;
+  while (   (z < SIZE_OF_ARRAY(INDEX_STATES))
+         && !stringEqualsIgnoreCase(INDEX_STATES[z].name,name)
+        )
+  {
+    z++;
+  }
+  if (z < SIZE_OF_ARRAY(INDEX_STATES))
+  {
+    (*indexState) = INDEX_STATES[z].indexState;
+    return TRUE;
+  }
+  else
+  {
+    return FALSE;
+  }
+}
 
-  return indexMode;
+const char *Index_modeToString(IndexModes indexMode, const char *defaultValue)
+{
+  uint       z;
+  const char *name;
+
+  z = 0;
+  while (   (z < SIZE_OF_ARRAY(INDEX_MODES))
+         && (INDEX_MODES[z].indexMode != indexMode)
+        )
+  {
+    z++;
+  }
+  if (z < SIZE_OF_ARRAY(INDEX_MODES))
+  {
+    name = INDEX_MODES[z].name;
+  }
+  else
+  {
+    name = "unknown";
+  }
+
+  return name;
+}
+
+bool Index_parseMode(const char *name, IndexModes *indexMode)
+{
+  uint z;
+
+  assert(name != NULL);
+  assert(indexMode != NULL);
+
+  z = 0;
+  while (   (z < SIZE_OF_ARRAY(INDEX_MODES))
+         && !stringEqualsIgnoreCase(INDEX_MODES[z].name,name)
+        )
+  {
+    z++;
+  }
+  if (z < SIZE_OF_ARRAY(INDEX_MODES))
+  {
+    (*indexMode) = INDEX_MODES[z].indexMode;
+    return TRUE;
+  }
+  else
+  {
+    return FALSE;
+  }
 }
 
 Errors Index_init(DatabaseHandle *indexDatabaseHandle,
