@@ -3382,7 +3382,7 @@ Dprintf.dprintf("line=%s",line);
 
               ArrayList<String> result = new ArrayList<String>();
               command = BARServer.runCommand(StringParser.format("RESTORE storageName=%'S destinationDirectory=%'S overwriteFlag=%y name=%'S",
-                                                                 storageName,
+                                                                 entryData.storageName,
                                                                  directory,
                                                                  overwriteEntries,
                                                                  entryData.name
