@@ -68,8 +68,8 @@ typedef struct
 
 typedef struct
 {
-  const Dictionary *dictionary;
-  uint             i,j;
+  Dictionary *dictionary;
+  uint       i,j;
 } DictionaryIterator;
 
 /***********************************************************************\
