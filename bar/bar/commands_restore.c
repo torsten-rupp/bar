@@ -251,8 +251,8 @@ Errors Command_restore(const StringList                *storageNameList,
   restoreInfo.statusInfo.entryDoneBytes    = 0LL;
   restoreInfo.statusInfo.entryTotalBytes   = 0LL;
   restoreInfo.statusInfo.storageName       = String_new();
-  restoreInfo.statusInfo.archiveDoneBytes  = 0LL;
-  restoreInfo.statusInfo.archiveTotalBytes = 0LL;
+  restoreInfo.statusInfo.storageDoneBytes  = 0LL;
+  restoreInfo.statusInfo.storageTotalBytes = 0LL;
 
   // allocate resources
   buffer = malloc(BUFFER_SIZE);
@@ -1574,17 +1574,17 @@ Errors Command_restore(const StringList                *storageNameList,
             StringList                fileNameList;
             FileExtendedAttributeList fileExtendedAttributeList;
             FileInfo                  fileInfo;
-            uint64                    fragmentOffset,fragmentSize; 
-            String                    hardLinkFileName;            
-            String                    destinationFileName;         
-            bool                      restoredDataFlag;            
-            const StringNode          *stringNode;                 
-            String                    fileName;                    
-            String                    parentDirectoryName;         
-//            FileInfo                  localFileInfo;             
-            FileHandle                fileHandle;                  
-            uint64                    length;                      
-            ulong                     n;                           
+            uint64                    fragmentOffset,fragmentSize;
+            String                    hardLinkFileName;
+            String                    destinationFileName;
+            bool                      restoredDataFlag;
+            const StringNode          *stringNode;
+            String                    fileName;
+            String                    parentDirectoryName;
+//            FileInfo                  localFileInfo;
+            FileHandle                fileHandle;
+            uint64                    length;
+            ulong                     n;
 
             // read hard link
             StringList_init(&fileNameList);

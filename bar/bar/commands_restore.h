@@ -12,7 +12,7 @@
 #define __COMMANDS_RESTORE__
 
 /****************************** Includes *******************************/
-#include <config.h>  // use <...> to support separated build directory 
+#include <config.h>  // use <...> to support separated build directory
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -43,8 +43,8 @@ typedef struct
   uint64 entryDoneBytes;                   // number of bytes processed of current entry
   uint64 entryTotalBytes;                  // total number of bytes of current entry
   String storageName;                      // current storage name
-  uint64 archiveDoneBytes;                 // number of bytes processed of current archive
-  uint64 archiveTotalBytes;                // total bytes of current archive
+  uint64 storageDoneBytes;                 // number of bytes processed of current archive
+  uint64 storageTotalBytes;                // total bytes of current archive
 } RestoreStatusInfo;
 
 /***********************************************************************\
@@ -78,7 +78,7 @@ typedef bool(*RestoreStatusInfoFunction)(void                    *userData,
 /***********************************************************************\
 * Name   : Command_restore
 * Purpose: restore archive content
-* Input  : archiveFileNameList              - list with archive files
+* Input  : storageNameList                  - list with storage names
 *          includeEntryList                 - include entry list
 *          excludePatternList               - exclude pattern list
 *          jobOptions                       - job options
@@ -97,7 +97,7 @@ typedef bool(*RestoreStatusInfoFunction)(void                    *userData,
 * Notes  : -
 \***********************************************************************/
 
-Errors Command_restore(const StringList                *archiveFileNameList,
+Errors Command_restore(const StringList                *storageNameList,
                        const EntryList                 *includeEntryList,
                        const PatternList               *excludePatternList,
                        JobOptions                      *jobOptions,
