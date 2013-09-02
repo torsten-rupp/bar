@@ -160,37 +160,39 @@ Errors Crypt_initAll(void);
 void Crypt_doneAll(void);
 
 /***********************************************************************\
-* Name   : Crypt_getAlgorithmName
+* Name   : Crypt_algorithmToString
 * Purpose: get name of crypt algorithm
 * Input  : cryptAlgorithm - crypt algorithm
+*          defaultValue   - default value
 * Output : -
 * Return : algorithm name
 * Notes  : -
 \***********************************************************************/
 
-const char *Crypt_getAlgorithmName(CryptAlgorithms cryptAlgorithm);
+const char *Crypt_algorithmToString(CryptAlgorithms cryptAlgorithm, const char *defaultValue);
 
 /***********************************************************************\
-* Name   : Crypt_getAlgorithm
-* Purpose: get crypt algorithm
+* Name   : Crypt_parseAlgorithm
+* Purpose: parse crypt algorithm
 * Input  : name - name of crypt algorithm
-* Output : -
-* Return : crypt algorithm
+* Output : cryptAlgorithm - crypt algorithm
+* Return : TRUE if parsed
 * Notes  : -
 \***********************************************************************/
 
-CryptAlgorithms Crypt_getAlgorithm(const char *name);
+bool Crypt_parseAlgorithm(const char *name, CryptAlgorithms *cryptAlgorithm);
 
 /***********************************************************************\
-* Name   : Crypt_getTypeName
+* Name   : Crypt_typeToString
 * Purpose: get name of crypt type
-* Input  : cryptType - crypt type
+* Input  : cryptType    - crypt type
+*          defaultValue - default value
 * Output : -
 * Return : mode string
 * Notes  : -
 \***********************************************************************/
 
-const char *Crypt_getTypeName(CryptTypes cryptType);
+const char *Crypt_typeToString(CryptTypes cryptType, const char *defaultValue);
 
 /***********************************************************************\
 * Name   : Crypt_isEncrypted

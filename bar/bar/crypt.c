@@ -45,7 +45,11 @@
 
 #define BLOCK_LENGTH_CRYPT_NONE 4       // block size if no encryption
 
-LOCAL const struct { const char *name; CryptAlgorithms cryptAlgorithm; } CRYPT_ALGORITHMS[] =
+LOCAL const struct
+{
+  const char      *name;
+  CryptAlgorithms cryptAlgorithm;
+} CRYPT_ALGORITHMS[] =
 {
   { "none",       CRYPT_ALGORITHM_NONE        },
 
@@ -282,10 +286,10 @@ void Crypt_doneAll(void)
 {
 }
 
-const char *Crypt_getAlgorithmName(CryptAlgorithms cryptAlgorithm)
+const char *Crypt_algorithmToString(CryptAlgorithms cryptAlgorithm, const char *defaultValue)
 {
   uint       z;
-  const char *algorithmName;
+  const char *name;
 
   z = 0;
   while (   (z < SIZE_OF_ARRAY(CRYPT_ALGORITHMS))
@@ -296,43 +300,42 @@ const char *Crypt_getAlgorithmName(CryptAlgorithms cryptAlgorithm)
   }
   if (z < SIZE_OF_ARRAY(CRYPT_ALGORITHMS))
   {
-    algorithmName = CRYPT_ALGORITHMS[z].name;
+    name = CRYPT_ALGORITHMS[z].name;
   }
   else
   {
-    algorithmName = "unknown";
+    name = defaultValue;
   }
 
-  return algorithmName;
+  return name;
 }
 
-CryptAlgorithms Crypt_getAlgorithm(const char *name)
+bool Crypt_parseAlgorithm(const char *name, CryptAlgorithms *cryptAlgorithm)
 {
-  uint            z;
-  CryptAlgorithms cryptAlgorithm;
+  uint z;
 
   assert(name != NULL);
+  assert(cryptAlgorithm != NULL);
 
   z = 0;
   while (   (z < SIZE_OF_ARRAY(CRYPT_ALGORITHMS))
-         && (strcmp(CRYPT_ALGORITHMS[z].name,name) != 0)
+         && !stringEqualsIgnoreCase(CRYPT_ALGORITHMS[z].name,name)
         )
   {
     z++;
   }
   if (z < SIZE_OF_ARRAY(CRYPT_ALGORITHMS))
   {
-    cryptAlgorithm = CRYPT_ALGORITHMS[z].cryptAlgorithm;
+    (*cryptAlgorithm) = CRYPT_ALGORITHMS[z].cryptAlgorithm;
+    return TRUE;
   }
   else
   {
-    cryptAlgorithm = CRYPT_ALGORITHM_UNKNOWN;
+    return FALSE;
   }
-
-  return cryptAlgorithm;
 }
 
-const char *Crypt_getTypeName(CryptTypes cryptType)
+const char *Crypt_typeToString(CryptTypes cryptType, const char *defaultValue)
 {
   const char *typeName;
 
