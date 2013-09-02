@@ -428,6 +428,24 @@ if test $cleanFlag -eq 0; then
   fi
 
   if test $allFlag -eq 1 -o $curlFlag -eq 1; then
+    # c-areas 1.10
+    (
+     if test -n "$destination"; then
+       cd $destination
+     else
+       cd $tmpDirectory
+     fi
+     if test ! -f c-ares-1.10.0.tar.gz; then
+       $WGET $WGET_OPTIONS 'http://c-ares.haxx.se/download/c-ares-1.10.0.tar.gz'
+     fi
+     if test $noDecompressFlag -eq 0; then
+       $TAR xzf c-ares-1.10.0.tar.gz
+     fi
+    )
+    if test $noDecompressFlag -eq 0; then
+      $LN -f -s $tmpDirectory/c-ares-1.10.0 c-ares
+    fi
+
     # curl 7.28.1
     (
      if test -n "$destination"; then
@@ -682,6 +700,11 @@ else
     $RMF $tmpDirectory/curl-*-.tar.bz2
     $RMRF $tmpDirectory/curl-*
     $RMF curl
+
+    # c-areas
+    $RMF $tmpDirectory/c-ares-*-.tar.gz
+    $RMRF $tmpDirectory/c-ares-*
+    $RMF c-ares
   fi
 
   if test $allFlag -eq 1 -o $mxmlFlag -eq 1; then
