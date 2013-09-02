@@ -8,8 +8,7 @@
   * added support for crash dump tool Breakpad
   * upgrade gpg-error 1.10, gcrypt 1.5.0
   * support cross-compilation Linux -> Windows
-  * replaced FTPLib by curl (FTPLib is optional when curl is
-    not available)
+  * replaced FTPLib by curl+c-areas
   * added support for WebDAV protocol
   * integrated a scan-node which will scan partiallly broken
     archives for still readable parts
@@ -18,6 +17,11 @@
   * fixed duplicate archive entries when multiple include options
     are specified (thanks to Stefan A.)
   * fixed writing .bid file when no directory is given
+  * barcontrol: fixed duplicate job
+  * barcontrol: added insert/edit/delete keyboard shortcuts
+  * server protocol changes: replaced list of values by value map
+    for easier extension of protocol. Note: you _must_ update
+    both server and clients with this change.
 
 2013-05-05 0.17b
   * fixed parsing of storage specifier (ftp, scp/sftp,
