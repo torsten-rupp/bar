@@ -12,7 +12,7 @@
 #define __ENTRYLISTS__
 
 /****************************** Includes *******************************/
-#include <config.h>  // use <...> to support separated build directory 
+#include <config.h>  // use <...> to support separated build directory
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -44,6 +44,8 @@ typedef enum
 {
   ENTRY_TYPE_FILE,                      // store matching entries as files
   ENTRY_TYPE_IMAGE,                     // store matching entries as block device images
+
+  ENTRY_TYPE_UNKNOWN,
 } EntryTypes;
 
 typedef struct EntryNode
@@ -95,6 +97,29 @@ Errors EntryList_initAll(void);
 void EntryList_doneAll(void);
 
 /***********************************************************************\
+* Name   : EntryList_entryTypeToString
+* Purpose: get name of entry type
+* Input  : entryType    - entry type
+*          defaultValue - default value
+* Output : -
+* Return : name
+* Notes  : -
+\***********************************************************************/
+
+const char *EntryList_entryTypeToString(EntryTypes entryType, const char* defaultValue);
+
+/***********************************************************************\
+* Name   : EntryList_parseEntryType
+* Purpose: get entry type
+* Input  : name - name of entry type
+* Output : entryType - entry type
+* Return : TRUE iff parsed
+* Notes  : -
+\***********************************************************************/
+
+bool EntryList_parseEntryType(const char *name, EntryTypes *entryType);
+
+/***********************************************************************\
 * Name   : EntryList_init
 * Purpose: init entry list
 * Input  : entryList - entry list
@@ -104,6 +129,24 @@ void EntryList_doneAll(void);
 \***********************************************************************/
 
 void EntryList_init(EntryList *entryList);
+
+/***********************************************************************\
+* Name   : EntryList_initDuplicaet
+* Purpose: init duplicated entry list
+* Input  : entryList             - entry list
+*          fromEntryList         - from entry list (source)
+*          fromEntryListFromNode - from node (could be NULL)
+*          fromEntryListToNode   - to node (could be NULL)
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void EntryList_initDuplicate(EntryList       *entryList,
+                             const EntryList *fromEntryList,
+                             const EntryNode *fromEntryListFromNode,
+                             const EntryNode *fromEntryListToNode
+                            );
 
 /***********************************************************************\
 * Name   : EntryList_done
@@ -121,35 +164,47 @@ void EntryList_done(EntryList *entryList);
 * Purpose: remove all entrys in list
 * Input  : entryList - entry list
 * Output : -
-* Return : -
+* Return : entry list
 * Notes  : -
 \***********************************************************************/
 
-void EntryList_clear(EntryList *entryList);
+EntryList *EntryList_clear(EntryList *entryList);
 
 /***********************************************************************\
 * Name   : Entry_copyList
 * Purpose: copy all entrys from source list to destination list
-* Input  : fromEntryList - from entry list (source)
-*          toEntryList   - to entry list (destination)
+* Input  : fromEntryList         - from entry list (source)
+*          toEntryList           - to entry list (destination)
+*          fromEntryListFromNode - from node (could be NULL)
+*          fromEntryListToNode   - to node (could be NULL)
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-void EntryList_copy(const EntryList *fromEntryList, EntryList *toEntryList);
+void EntryList_copy(const EntryList *fromEntryList,
+                    EntryList       *toEntryList,
+                    const EntryNode *fromEntryListFromNode,
+                    const EntryNode *fromEntryListToNode
+                   );
 
 /***********************************************************************\
 * Name   : EntryList_move
 * Purpose: move all entrys from source list to destination list
-* Input  : fromEntryList - from entry list (source)
-*          toEntryList   - to entry list (destination)
+* Input  : fromEntryList         - from entry list (source)
+*          toEntryList           - to entry list (destination)
+*          fromEntryListFromNode - from node (could be NULL)
+*          fromEntryListToNode   - to node (could be NULL)
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-void EntryList_move(EntryList *fromEntryList, EntryList *toEntryList);
+void EntryList_move(EntryList       *fromEntryList,
+                    EntryList       *toEntryList,
+                    const EntryNode *fromEntryListFromNode,
+                    const EntryNode *fromEntryListToNode
+                   );
 
 /***********************************************************************\
 * Name   : EntryList_append, EntryList_appendCString

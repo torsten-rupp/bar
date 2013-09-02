@@ -37,6 +37,15 @@
 /****************** Conditional compilation switches *******************/
 
 /***************************** Constants *******************************/
+LOCAL const struct
+{
+  const char *name;
+  EntryTypes entryType;
+} ENTRY_TYPES[] =
+{
+  { "file",  ENTRY_TYPE_FILE  },
+  { "image", ENTRY_TYPE_IMAGE }
+};
 
 /***************************** Datatypes *******************************/
 
@@ -149,11 +158,72 @@ void EntryList_doneAll(void)
 {
 }
 
+const char *EntryList_entryTypeToString(EntryTypes entryType, const char *defaultValue)
+{
+  uint       z;
+  const char *name;
+
+  z = 0;
+  while (   (z < SIZE_OF_ARRAY(ENTRY_TYPES))
+         && (ENTRY_TYPES[z].entryType != entryType)
+        )
+  {
+    z++;
+  }
+  if (z < SIZE_OF_ARRAY(ENTRY_TYPES))
+  {
+    name = ENTRY_TYPES[z].name;
+  }
+  else
+  {
+    name = defaultValue;
+  }
+
+  return name;
+}
+
+bool EntryList_parseEntryType(const char *name, EntryTypes *entryType)
+{
+  uint z;
+
+  assert(name != NULL);
+  assert(entryType != NULL);
+
+  z = 0;
+  while (   (z < SIZE_OF_ARRAY(ENTRY_TYPES))
+         && !stringEqualsIgnoreCase(ENTRY_TYPES[z].name,name)
+        )
+  {
+    z++;
+  }
+  if (z < SIZE_OF_ARRAY(ENTRY_TYPES))
+  {
+    (*entryType) = ENTRY_TYPES[z].entryType;
+    return TRUE;
+  }
+  else
+  {
+    return FALSE;
+  }
+}
+
 void EntryList_init(EntryList *entryList)
 {
   assert(entryList != NULL);
 
   List_init(entryList);
+}
+
+void EntryList_initDuplicate(EntryList       *entryList,
+                             const EntryList *fromEntryList,
+                             const EntryNode *fromEntryListFromNode,
+                             const EntryNode *fromEntryListToNode
+                            )
+{
+  assert(entryList != NULL);
+
+  EntryList_init(entryList);
+  EntryList_copy(fromEntryList,entryList,fromEntryListFromNode,fromEntryListToNode);
 }
 
 void EntryList_done(EntryList *entryList)
@@ -163,27 +233,35 @@ void EntryList_done(EntryList *entryList)
   List_done(entryList,(ListNodeFreeFunction)freeEntryNode,NULL);
 }
 
-void EntryList_clear(EntryList *entryList)
+EntryList *EntryList_clear(EntryList *entryList)
 {
   assert(entryList != NULL);
 
-  List_clear(entryList,(ListNodeFreeFunction)freeEntryNode,NULL);
+  return (EntryList*)List_clear(entryList,(ListNodeFreeFunction)freeEntryNode,NULL);
 }
 
-void EntryList_copy(const EntryList *fromEntryList, EntryList *toEntryList)
+void EntryList_copy(const EntryList *fromEntryList,
+                    EntryList       *toEntryList,
+                    const EntryNode *fromEntryListFromNode,
+                    const EntryNode *fromEntryListToNode
+                   )
 {
   assert(fromEntryList != NULL);
   assert(toEntryList != NULL);
 
-  List_copy(fromEntryList,toEntryList,NULL,NULL,NULL,(ListNodeCopyFunction)copyEntryNode,NULL);
+  List_copy(fromEntryList,toEntryList,fromEntryListFromNode,fromEntryListToNode,NULL,(ListNodeCopyFunction)copyEntryNode,NULL);
 }
 
-void EntryList_move(EntryList *fromEntryList, EntryList *toEntryList)
+void EntryList_move(EntryList       *fromEntryList,
+                    EntryList       *toEntryList,
+                    const EntryNode *fromEntryListFromNode,
+                    const EntryNode *fromEntryListToNode
+                   )
 {
   assert(fromEntryList != NULL);
   assert(toEntryList != NULL);
 
-  List_move(fromEntryList,toEntryList,NULL,NULL,NULL);
+  List_move(fromEntryList,toEntryList,fromEntryListFromNode,fromEntryListToNode,NULL);
 }
 
 Errors EntryList_append(EntryList    *entryList,
