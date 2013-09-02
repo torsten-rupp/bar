@@ -33,6 +33,10 @@ CXX                 = @CXX@
 CXX_FLAGS           = @CXX_FLAGS@ -g
 CXX_WARN_FLAGS      = @CXX_WARN_FLAGS@
 CC_OPTIMIZE         = @CC_OPTIMIZE@
+CC_ADDITIONAL =
+ifndef NDEBUG
+  CC_ADDITIONAL += -finstrument-functions
+endif
 CC_DEFINES          = PLATFORM_$(PLATFORM) @CC_DEFINES@ _GNU_SOURCE _LONG_LONG
 # -D_LONG_LONG
 CC_INCLUDES         = @CC_INCLUDES@
@@ -141,11 +145,11 @@ vpath %.cpp $(SOURCE_DIR)
 
 # compile C source
 %.o: $(SOURCE_DIR)/%.c
-	$(CC) $(CC_FLAGS) $(CC_OPTIMIZE) -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" $(foreach z,$(CC_DEFINES),-D$z) $(CC_WARN_FLAGS) -I. $(foreach z,$(CC_INCLUDES),-I$z) -c $(SOURCE_DIR)/$*.c -o $*.o
+	$(CC) $(CC_FLAGS) $(CC_ADDITIONAL) $(CC_OPTIMIZE) -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" $(foreach z,$(CC_DEFINES),-D$z) $(CC_WARN_FLAGS) -I. $(foreach z,$(CC_INCLUDES),-I$z) -c $(SOURCE_DIR)/$*.c -o $*.o
 
 # compile C++ source
 %.o: %.cpp
-	$(CXX) $(CXX_FLAGS) $(CC_OPTIMIZE) -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" $(foreach z,$(CC_DEFINES),-D$z) $(CXX_WARN_FLAGS) -I. $(foreach z,$(CC_INCLUDES),-I$z) -c $(SOURCE_DIR)/$*.cpp -o $*.o
+	$(CXX) $(CXX_FLAGS) $(CC_ADDITIONAL) $(CC_OPTIMIZE) -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" $(foreach z,$(CC_DEFINES),-D$z) $(CXX_WARN_FLAGS) -I. $(foreach z,$(CC_INCLUDES),-I$z) -c $(SOURCE_DIR)/$*.cpp -o $*.o
 
 # link object files
 %@EXEEXT@: %.o
@@ -187,6 +191,7 @@ BAR_SOURCES          = bar.c \
                        configvalues.c \
                        lists.c \
                        strings.c \
+                       stringmaps.c \
                        stringlists.c \
                        ringbuffers.c \
                        threads.c \
@@ -298,6 +303,9 @@ help:
 	@$(ECHO) "  memcheck"
 	@$(ECHO) "  memcheck_extended"
 	@$(ECHO) ""
+	@$(ECHO) "  testcode"
+	@$(ECHO) "  testcode NAME=<name>"
+	@$(ECHO) ""
 	@$(ECHO) "  performance"
 	@$(ECHO) "  performance1, performance_none"
 	@$(ECHO) "  performance2, performance_zip_compress"
@@ -314,7 +322,7 @@ depend: Makefile.depend
 Makefile.depend: $(BAR_SOURCES) $(EXTERN_SOURCES) $(DESTROYER_SOURCES) $(INTERMEDIATE)
 	$(ECHO) > Makefile.depend
 	for z in $(BAR_SOURCES) $(EXTERN_SOURCES) $(DESTROYER_SOURCES); do \
-          $(CC) $(CC_FLAGS) $(foreach z,$(CC_DEFINES),-D$z) $(CC_WARN_FLAGS) -I. $(foreach z,$(CC_INCLUDES),-I$z) -MM >> Makefile.depend $(SOURCE_DIR)/$$z; \
+          $(CC) $(CC_FLAGS) $(CC_ADDITIONAL) $(foreach z,$(CC_DEFINES),-D$z) $(CC_WARN_FLAGS) -I. $(foreach z,$(CC_INCLUDES),-I$z) -MM >> Makefile.depend $(SOURCE_DIR)/$$z; \
         done;
 
 # ----------------------------------------------------------------------------
@@ -328,7 +336,7 @@ bar.symbols: bar@EXEEXT@
 	$(DUMP_SYMS) bar@EXEEXT@ > $@
 endif
 
-# compile SQLite, xdelta C source without warning flags
+# compile SQLite, xdelta C source without warning and debug flags
 sqlite3.o: sqlite3.c
 	$(CC) $(CC_FLAGS) $(CC_OPTIMIZE) -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" $(foreach z,$(CC_DEFINES),-D$z) $(foreach z,$(CC_INCLUDES),-I$z) -c $< -o $@
 
@@ -832,8 +840,8 @@ test_parameters: \
 	@$(ECHO) "# test config" > test/test.cfg
 	#
 	# help
-	$(call functionTestCheckExitcode,1,1,SSH_ASKPASS= $(TEST_BAR) -h 1>/dev/null $(if $(QUIET),1>/dev/null))
-	$(call functionTestCheckExitcode,1,1,SSH_ASKPASS= $(TEST_BAR) --help 1>/dev/null $(if $(QUIET),1>/dev/null))
+	$(call functionTestCheckExitcode,0,0,SSH_ASKPASS= $(TEST_BAR) -h 1>/dev/null $(if $(QUIET),1>/dev/null))
+	$(call functionTestCheckExitcode,0,0,SSH_ASKPASS= $(TEST_BAR) --help 1>/dev/null $(if $(QUIET),1>/dev/null))
 	#
 	# different options
 	$(call functionTestCheckExitcode,0,0,SSH_ASKPASS= $(TEST_BAR) -c test/test.bar test/data --overwrite-archive-files --verbose=2 $(if $(QUIET),1>/dev/null))
@@ -2602,6 +2610,16 @@ ifeq (@HAVE_XDELTA@,1)
 	@($(CD) test/data/delta2; SSH_ASKPASS= $(TIME) --format="%E" sh -c "../../../$(PERFORMANCE_BAR) -d ../../test-B.bar --delta-source=../../test-A.bar 1>/dev/null 2>/dev/null")
 	@$(ECHO_NO_LF) "  Extract: "
 	@($(CD) test/data/delta2; SSH_ASKPASS= $(TIME) --format="%E" sh -c "../../../$(PERFORMANCE_BAR) -x ../../test-B.bar --delta-source=../../test-A.bar --destination=../../restore --overwrite-files 1>/dev/null 2>/dev/null")
+endif
+
+# ----------------------------------------------------------------------------
+
+.PHONY: testcode
+testcode:
+ifneq ($(NAME),)
+	$(BAR) 
+else
+	@$(GREP) DEBUG_TEST_CODE $(BAR_SOURCES) | $(SED) 's/.*"\(.*\)".*/\1/g'
 endif
 
 # ----------------------------------------------------------------------------
