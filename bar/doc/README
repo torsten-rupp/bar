@@ -48,6 +48,9 @@ automated backups in the background.
 * gnutls library from http://www.gnu.org/software/gnutls
   (optional)
 * ftplib from http://nbpfaus.net/~pfau/ftplib (optional)
+* curl from http://curl.haxx.se (optional)
+* c-areas from http://c-ares.haxx.se (optional)
+* mmxml from http://www.minixml.org (optional)
 * cdio library from www.gnu.org/software/libcdio/libcdio.html (optional)
 * long long datatype (because of large files)
 * perl (only for compiling)
@@ -369,7 +372,7 @@ On a Ubuntu system you can use the following packages (or newer versions):
   liblzma-dev
   libxdelta2
   libxdelta2-dev
-  libssl0.9.8  
+  libssl0.9.8
   libssl-dev
   libssh2-1
   libssh2-1-dev
