@@ -122,11 +122,11 @@ void Thread_done(Thread *thread);
 * Purpose: wait for termination of thread
 * Input  : thread - thread
 * Output : -
-* Return : -
+* Return : TRUE if no error, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
 
-void Thread_join(Thread *thread);
+bool Thread_join(Thread *thread);
 
 /***********************************************************************\
 * Name   : Thread_yield

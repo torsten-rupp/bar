@@ -170,11 +170,11 @@ void Thread_done(Thread *thread)
   UNUSED_VARIABLE(thread);
 }
 
-void Thread_join(Thread *thread)
+bool Thread_join(Thread *thread)
 {
   assert(thread != NULL);
 
-  pthread_join(thread->handle,NULL);
+  return pthread_join(thread->handle,NULL) == 0;
 }
 
 void Thread_initLocalVariable(ThreadLocalStorage *threadLocalStorage, ThreadLocalStorageAllocFunction threadLocalStorageAllocFunction, void *threadLocalStorageAllocUserData)
