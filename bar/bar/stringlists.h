@@ -251,10 +251,10 @@ void StringList_insertCString(StringList *stringList, const char *s, StringNode 
 void StringList_insertChar(StringList *stringList, char ch, StringNode *nextStringNode);
 void StringList_insertBuffer(StringList *stringList, char *buffer, ulong bufferLength, StringNode *nextStringNode);
 #else /* not NDEBUG */
-void __StringList_insert(const char *fileName, ulong lineNb, StringList *stringList, const String string, StringNode *nextStringNode);
-void __StringList_insertCString(const char *fileName, ulong lineNb, StringList *stringList, const char *s, StringNode *nextStringNode);
-void __StringList_insertChar(const char *fileName, ulong lineNb, StringList *stringList, char ch, StringNode *nextStringNode);
-void __StringList_insertBuffer(const char *fileName, ulong lineNb, StringList *stringList, char *buffer, ulong bufferLength, StringNode *nextStringNode);
+void __StringList_insert(const char *__fileName__, ulong __lineNb__, StringList *stringList, const String string, StringNode *nextStringNode);
+void __StringList_insertCString(const char *__fileName__, ulong __lineNb__, StringList *stringList, const char *s, StringNode *nextStringNode);
+void __StringList_insertChar(const char *__fileName__, ulong __lineNb__, StringList *stringList, char ch, StringNode *nextStringNode);
+void __StringList_insertBuffer(const char *__fileName__, ulong __lineNb__, StringList *stringList, char *buffer, ulong bufferLength, StringNode *nextStringNode);
 #endif /* NDEBUG */
 
 /***********************************************************************\
@@ -274,10 +274,10 @@ void StringList_appendCString(StringList *stringList, const char *s);
 void StringList_appendChar(StringList *stringList, char ch);
 void StringList_appendBuffer(StringList *stringList, char *buffer, ulong bufferLength);
 #else /* not NDEBUG */
-void __StringList_append(const char *fileName, ulong lineNb, StringList *stringList, const String string);
-void __StringList_appendCString(const char *fileName, ulong lineNb, StringList *stringList, const char *s);
-void __StringList_appendChar(const char *fileName, ulong lineNb, StringList *stringList, char ch);
-void __StringList_appendBuffer(const char *fileName, ulong lineNb, StringList *stringList, char *buffer, ulong bufferLength);
+void __StringList_append(const char *__fileName__, ulong __lineNb__, StringList *stringList, const String string);
+void __StringList_appendCString(const char *__fileName__, ulong __lineNb__, StringList *stringList, const char *s);
+void __StringList_appendChar(const char *__fileName__, ulong __lineNb__, StringList *stringList, char ch);
+void __StringList_appendBuffer(const char *__fileName__, ulong __lineNb__, StringList *stringList, char *buffer, ulong bufferLength);
 #endif /* NDEBUG */
 
 /***********************************************************************\

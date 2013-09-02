@@ -85,8 +85,9 @@ LOCAL void insertString(const char *__fileName__, ulong __lineNb__, StringList *
 
 /***********************************************************************\
 * Name   : freeStringNode
-* Purpose: free allocated file name node
-* Input  : fileNameNode - file name node
+* Purpose: free allocated string node
+* Input  : stringNode - string node
+*          userData   - user data
 * Output : -
 * Return : -
 * Notes  : -
@@ -115,7 +116,7 @@ void StringList_initDuplicate(StringList *stringList, const StringList *fromStri
   assert(stringList != NULL);
 
   StringList_init(stringList);
-  StringList_copy(fromStringList,stringList);
+  StringList_copy(stringList,fromStringList);
 }
 
 void StringList_done(StringList *stringList)
