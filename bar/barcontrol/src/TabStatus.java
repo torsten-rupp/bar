@@ -89,7 +89,7 @@ class TabStatus
     int    id;
     String name;
     String state;
-    String type;
+    String archiveType;
     long   archivePartSize;
     String deltaCompressAlgorithm;
     String byteCompressAlgorithm;
@@ -103,13 +103,25 @@ class TabStatus
     private final SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
     /** create job data
+     * @param id id
+     * @param name name
+     * @param state job state
+     * @param archiveType archive type
+     * @param archivePartSize archive part size
+     * @param deltaCompressAlgorithm delta compress algorithm
+     * @param byteCompressAlgorithm byte compress algorithm
+     * @param cryptAlgorithm crypt algorithm
+     * @param cryptType crypt type
+     * @param cryptPasswordMode crypt password mode
+     * @param lastExecutedDateTime last executed date/time [s]
+     * @param estimatedRestTime estimated rest time [s]
      */
-    JobData(int id, String name, String state, String type, long archivePartSize, String deltaCompressAlgorithm, String byteCompressAlgorithm, String cryptAlgorithm, String cryptType, String cryptPasswordMode, long lastExecutedDateTime, long estimatedRestTime)
+    JobData(int id, String name, String state, String archiveType, long archivePartSize, String deltaCompressAlgorithm, String byteCompressAlgorithm, String cryptAlgorithm, String cryptType, String cryptPasswordMode, long lastExecutedDateTime, long estimatedRestTime)
     {
       this.id                     = id;
       this.name                   = name;
       this.state                  = state;
-      this.type                   = type;
+      this.archiveType            = archiveType;
       this.archivePartSize        = archivePartSize;
       this.deltaCompressAlgorithm = deltaCompressAlgorithm;
       this.byteCompressAlgorithm  = byteCompressAlgorithm;
@@ -155,7 +167,7 @@ class TabStatus
      */
     String formatCryptAlgorithm()
     {
-      return cryptAlgorithm+(cryptType.equals("ASYMMETRIC")?"*":"");
+      return cryptAlgorithm+(cryptType.equals("ASYMMETRIC") ? "*" : "");
     }
 
     /** format last executed date/time
@@ -196,7 +208,7 @@ class TabStatus
      */
     public String toString()
     {
-      return "Job {"+id+", "+name+", "+state+", "+type+"}";
+      return "Job {"+id+", "+name+", "+state+", "+archiveType+"}";
     }
   };
 
@@ -266,7 +278,7 @@ class TabStatus
         case SORTMODE_STATE:
           return jobData1.state.compareTo(jobData2.state);
         case SORTMODE_TYPE:
-          return jobData1.type.compareTo(jobData2.type);
+          return jobData1.archiveType.compareTo(jobData2.archiveType);
         case SORTMODE_PARTSIZE:
           if      (jobData1.archivePartSize < jobData2.archivePartSize) return -1;
           else if (jobData1.archivePartSize > jobData2.archivePartSize) return  1;
@@ -275,8 +287,8 @@ class TabStatus
           int result = jobData1.deltaCompressAlgorithm.compareTo(jobData2.deltaCompressAlgorithm);
           if (result == 0) result = jobData1.byteCompressAlgorithm.compareTo(jobData2.byteCompressAlgorithm);
         case SORTMODE_CRYPT:
-          String crypt1 = jobData1.cryptAlgorithm+(jobData1.cryptType.equals("ASYMMETRIC")?"*":"");
-          String crypt2 = jobData2.cryptAlgorithm+(jobData2.cryptType.equals("ASYMMETRIC")?"*":"");
+          String crypt1 = jobData1.cryptAlgorithm+(jobData1.cryptType.equals("ASYMMETRIC") ?"*" : "");
+          String crypt2 = jobData2.cryptAlgorithm+(jobData2.cryptType.equals("ASYMMETRIC") ?"*" : "");
 
           return crypt1.compareTo(crypt2);
         case SORTMODE_LAST_EXECUTED_DATETIME:
@@ -311,20 +323,20 @@ class TabStatus
   public  Button      widgetButtonQuit;
 
   // BAR variables
-  private WidgetVariable doneFiles             = new WidgetVariable(0);
+  private WidgetVariable doneEntries           = new WidgetVariable(0);
   private WidgetVariable doneBytes             = new WidgetVariable(0);
-  private WidgetVariable storedBytes           = new WidgetVariable(0);
-  private WidgetVariable skippedFiles          = new WidgetVariable(0);
+  private WidgetVariable storageTotalBytes     = new WidgetVariable(0);
+  private WidgetVariable skippedEntries        = new WidgetVariable(0);
   private WidgetVariable skippedBytes          = new WidgetVariable(0);
-  private WidgetVariable errorFiles            = new WidgetVariable(0);
+  private WidgetVariable errorEntries          = new WidgetVariable(0);
   private WidgetVariable errorBytes            = new WidgetVariable(0);
-  private WidgetVariable totalFiles            = new WidgetVariable(0);
+  private WidgetVariable totalEntries          = new WidgetVariable(0);
   private WidgetVariable totalBytes            = new WidgetVariable(0);
 
   private WidgetVariable filesPerSecond        = new WidgetVariable(0.0);
   private WidgetVariable bytesPerSecond        = new WidgetVariable(0.0);
   private WidgetVariable storageBytesPerSecond = new WidgetVariable(0.0);
-  private WidgetVariable ratio                 = new WidgetVariable(0.0);
+  private WidgetVariable compressionRatio      = new WidgetVariable(0.0);
 
   private WidgetVariable fileName              = new WidgetVariable("");
   private WidgetVariable fileProgress          = new WidgetVariable(0.0);
@@ -332,7 +344,7 @@ class TabStatus
   private WidgetVariable storageProgress       = new WidgetVariable(0.0);
   private WidgetVariable volumeNumber          = new WidgetVariable(0);
   private WidgetVariable volumeProgress        = new WidgetVariable(0.0);
-  private WidgetVariable totalFilesProgress    = new WidgetVariable(0.0);
+  private WidgetVariable totalEntriesProgress  = new WidgetVariable(0.0);
   private WidgetVariable totalBytesProgress    = new WidgetVariable(0.0);
   private WidgetVariable requestedVolumeNumber = new WidgetVariable(0);
   private WidgetVariable message               = new WidgetVariable("");
@@ -360,20 +372,33 @@ class TabStatus
      */
     public void run()
     {
-      for (;;)
+      try
       {
-        // update
-        try
+        for (;;)
         {
-          tabStatus.update();
-        }
-        catch (org.eclipse.swt.SWTException exception)
-        {
-          // ignore SWT exceptions
-        }
+          // update
+          try
+          {
+            tabStatus.update();
+          }
+          catch (org.eclipse.swt.SWTException exception)
+          {
+            // ignore SWT exceptions
+          }
 
-        // sleep a short time
-        try { Thread.sleep(1000); } catch (InterruptedException exception) { /* ignored */ };
+          // sleep a short time
+          try { Thread.sleep(1000); } catch (InterruptedException exception) { /* ignored */ };
+        }
+      }
+      catch (Exception exception)
+      {
+        if (Settings.debugFlag)
+        {
+          BARServer.disconnect();
+          System.err.println("ERROR: "+exception.getMessage());
+          BARControl.printStackTrace(exception);
+          System.exit(1);
+        }
       }
     }
   }
@@ -398,7 +423,7 @@ class TabStatus
     display = shell.getDisplay();
 
     // create tab
-    widgetTab = Widgets.addTab(parentTabFolder,"Status"+((accelerator != 0)?" ("+Widgets.acceleratorToText(accelerator)+")":""));
+    widgetTab = Widgets.addTab(parentTabFolder,"Status"+((accelerator != 0) ? " ("+Widgets.acceleratorToText(accelerator)+")" : ""));
     widgetTab.setLayout(new TableLayout(new double[]{1.0,0.0,0.0},1.0,2));
     Widgets.layout(widgetTab,0,0,TableLayoutData.NSWE);
     widgetTab.addListener(SWT.Show,new Listener()
@@ -548,7 +573,7 @@ class TabStatus
       Widgets.layout(label,0,0,TableLayoutData.W);
       label = Widgets.newNumberView(widgetSelectedJob);
       Widgets.layout(label,0,1,TableLayoutData.WE);
-      Widgets.addModifyListener(new WidgetModifyListener(label,doneFiles));
+      Widgets.addModifyListener(new WidgetModifyListener(label,doneEntries));
       label = Widgets.newLabel(widgetSelectedJob,"files");
       Widgets.layout(label,0,2,TableLayoutData.W);
       label = Widgets.newNumberView(widgetSelectedJob);
@@ -623,14 +648,14 @@ class TabStatus
       Widgets.layout(label,1,0,TableLayoutData.W);
       label = Widgets.newNumberView(widgetSelectedJob);
       Widgets.layout(label,1,3,TableLayoutData.WE);
-      Widgets.addModifyListener(new WidgetModifyListener(label,storedBytes));
+      Widgets.addModifyListener(new WidgetModifyListener(label,storageTotalBytes));
       label = Widgets.newLabel(widgetSelectedJob,"bytes");
       Widgets.layout(label,1,4,TableLayoutData.W);
       label = Widgets.newLabel(widgetSelectedJob,"/");
       Widgets.layout(label,1,5,TableLayoutData.W);
       label = Widgets.newNumberView(widgetSelectedJob);
       Widgets.layout(label,1,6,TableLayoutData.WE);
-      Widgets.addModifyListener(new WidgetModifyListener(label,storedBytes)
+      Widgets.addModifyListener(new WidgetModifyListener(label,storageTotalBytes)
       {
         public String getString(WidgetVariable variable)
         {
@@ -639,7 +664,7 @@ class TabStatus
       });
       label = Widgets.newLabel(widgetSelectedJob,"bytes");
       Widgets.layout(label,1,7,TableLayoutData.W,0,0,0,0,Widgets.getTextSize(label,new String[]{"bytes","KBytes","MBytes","GBytes"}));
-      Widgets.addModifyListener(new WidgetModifyListener(label,storedBytes)
+      Widgets.addModifyListener(new WidgetModifyListener(label,storageTotalBytes)
       {
         public String getString(WidgetVariable variable)
         {
@@ -655,7 +680,7 @@ class TabStatus
         Widgets.layout(label,0,0,TableLayoutData.W);
         label = Widgets.newNumberView(composite);
         Widgets.layout(label,0,1,TableLayoutData.WE);
-        Widgets.addModifyListener(new WidgetModifyListener(label,ratio)
+        Widgets.addModifyListener(new WidgetModifyListener(label,compressionRatio)
         {
           public String getString(WidgetVariable variable)
           {
@@ -690,12 +715,12 @@ class TabStatus
         });
       }
 
-      // skipped files/bytes, ratio
+      // skipped files/bytes
       label = Widgets.newLabel(widgetSelectedJob,"Skipped:");
       Widgets.layout(label,2,0,TableLayoutData.W);
       label = Widgets.newNumberView(widgetSelectedJob);
       Widgets.layout(label,2,1,TableLayoutData.WE);
-      Widgets.addModifyListener(new WidgetModifyListener(label,skippedFiles));
+      Widgets.addModifyListener(new WidgetModifyListener(label,skippedEntries));
       label = Widgets.newLabel(widgetSelectedJob,"files");
       Widgets.layout(label,2,2,TableLayoutData.W);
       label = Widgets.newNumberView(widgetSelectedJob);
@@ -729,7 +754,7 @@ class TabStatus
       Widgets.layout(label,3,0,TableLayoutData.W);
       label = Widgets.newNumberView(widgetSelectedJob);
       Widgets.layout(label,3,1,TableLayoutData.WE);
-      Widgets.addModifyListener(new WidgetModifyListener(label,errorFiles));
+      Widgets.addModifyListener(new WidgetModifyListener(label,errorEntries));
       label = Widgets.newLabel(widgetSelectedJob,"files");
       Widgets.layout(label,3,2,TableLayoutData.W);
       label = Widgets.newNumberView(widgetSelectedJob);
@@ -763,7 +788,7 @@ class TabStatus
       Widgets.layout(label,4,0,TableLayoutData.W);
       label = Widgets.newNumberView(widgetSelectedJob);
       Widgets.layout(label,4,1,TableLayoutData.WE);
-      Widgets.addModifyListener(new WidgetModifyListener(label,totalFiles));
+      Widgets.addModifyListener(new WidgetModifyListener(label,totalEntries));
       label = Widgets.newLabel(widgetSelectedJob,"files");
       Widgets.layout(label,4,2,TableLayoutData.W);
       label = Widgets.newNumberView(widgetSelectedJob);
@@ -824,7 +849,7 @@ class TabStatus
       Widgets.layout(label,10,0,TableLayoutData.W);
       progressBar = Widgets.newProgressBar(widgetSelectedJob);
       Widgets.layout(progressBar,10,1,TableLayoutData.WE,0,9);
-      Widgets.addModifyListener(new WidgetModifyListener(progressBar,totalFilesProgress));
+      Widgets.addModifyListener(new WidgetModifyListener(progressBar,totalEntriesProgress));
 
       // total bytes percentage
       label = Widgets.newLabel(widgetSelectedJob,"Total bytes:");
@@ -1027,7 +1052,7 @@ class TabStatus
     synchronized(jobList)
     {
       selectedJobData = jobList.get(name);
-      widgetSelectedJob.setText("Selected '"+((selectedJobData != null)?selectedJobData.name:"")+"'");
+      widgetSelectedJob.setText("Selected '"+((selectedJobData != null) ? selectedJobData.name : "")+"'");
     }
   }
 
@@ -1035,11 +1060,11 @@ class TabStatus
 
   /** getProgress
    * @param n,m process current/max. value
-   * @return progress value (in %)
+   * @return progress value [%]
    */
   private double getProgress(long n, long m)
   {
-    return (m > 0)?((double)n*100.0)/(double)m:0.0;
+    return (m > 0) ? ((double)n*100.0)/(double)m : 0.0;
   }
 
   /** update status
@@ -1047,25 +1072,36 @@ class TabStatus
   private void updateStatus()
   {
     // get status
-    String[] result = new String[1];
-    if (BARServer.executeCommand("STATUS",result) != Errors.NONE) return;
-
-    Object[] data = new Object[1];
-    if      (StringParser.parse(result[0],"pause %ld",data,StringParser.QUOTE_CHARS))
+    String[] errorMessage = new String[1];
+    ValueMap resultMap    = new ValueMap();
+    int error = BARServer.executeCommand(StringParser.format("STATUS"),
+                                         new TypeMap("type",String.class,
+                                                     "time",long.class
+                                                    ),
+                                         errorMessage,
+                                         resultMap
+                                        );
+    if (error != Errors.NONE)
     {
-      final long pauseTime = (Long)data[0];
+      return;
+    }
+
+    String type = resultMap.getString("type");
+    if      (type.equals("pause"))
+    {
+      final long pauseTime = resultMap.getLong("time");
 
       status = States.PAUSE;
       display.syncExec(new Runnable()
       {
         public void run()
         {
-          widgetButtonPause.setText(String.format("Pause [%3dmin]",(pauseTime > 0)?(pauseTime+59)/60:1));
+          widgetButtonPause.setText(String.format("Pause [%3dmin]",(pauseTime > 0) ? (pauseTime+59)/60:1));
           widgetButtonSuspendContinue.setText("Continue");
         }
       });
     }
-    else if (StringParser.parse(result[0],"suspended",data,StringParser.QUOTE_CHARS))
+    else if (type.equals("suspended"))
     {
       status = States.SUSPEND;
       display.syncExec(new Runnable()
@@ -1133,8 +1169,29 @@ class TabStatus
     if (!widgetJobList.isDisposed())
     {
       // get job list
-      final ArrayList<String> result = new ArrayList<String>();
-      if (BARServer.executeCommand("JOB_LIST",result) != Errors.NONE) return;
+      String[]                  resultErrorMessage = new String[1];
+      final ArrayList<ValueMap> resultMapList      = new ArrayList<ValueMap>();
+      int error = BARServer.executeCommand(StringParser.format("JOB_LIST"),
+                                           new TypeMap("id",                    int.class,
+                                                       "name",                  String.class,
+                                                       "state",                 String.class,
+                                                       "archiveType",           String.class,
+                                                       "archivePartSize",       long.class,
+                                                       "deltaCompressAlgorithm",String.class,
+                                                       "byteCompressAlgorithm", String.class,
+                                                       "cryptAlgorithm",        String.class,
+                                                       "cryptType",             String.class,
+                                                       "cryptPasswordMode",     String.class,
+                                                       "lastExecutedDateTime",  long.class,
+                                                       "estimatedRestTime",     long.class
+                                                       ),
+                                           resultErrorMessage,
+                                           resultMapList
+                                          );
+       if (error != Errors.NONE)
+       {
+         return;
+       }
 
       display.syncExec(new Runnable()
       {
@@ -1146,92 +1203,75 @@ class TabStatus
             jobList.clear();
             TableItem[] tableItems     = widgetJobList.getItems();
             boolean[]   tableItemFlags = new boolean[tableItems.length];
-            for (String line : result)
+
+            for (ValueMap resultMap : resultMapList)
             {
-              Object data[] = new Object[12];
-              /* format:
-                 <id>
-                 <name>
-                 <state>
-                 <type>
-                 <archivePartSize>
-                 <deltaCompressAlgorithm>+<byteCompressAlgorithm>
-                 <byteCompressAlgorithm>
-                 <cryptAlgorithm>
-                 <cryptType>
-                 <cryptPasswordMode>
-                 <lastExecutedDateTime>
-                 <estimatedRestTime>
-              */
-              if (StringParser.parse(line,"%d %S %S %s %ld '%s+%s' %S %S %S %ld %ld",data,StringParser.QUOTE_CHARS))
+              // get data
+              int    id                     = resultMap.getInt   ("id"                    );
+              String name                   = resultMap.getString("name"                  );
+              String state                  = resultMap.getString("state"                 );
+              String archiveType            = resultMap.getString("archiveType"           );
+              long   archivePartSize        = resultMap.getLong  ("archivePartSize"       );
+              String deltaCompressAlgorithm = resultMap.getString("deltaCompressAlgorithm");
+              String byteCompressAlgorithm  = resultMap.getString("byteCompressAlgorithm" );
+              String cryptAlgorithm         = resultMap.getString("cryptAlgorithm"        );
+              String cryptType              = resultMap.getString("cryptType"             );
+              String cryptPasswordMode      = resultMap.getString("cryptPasswordMode"     );
+              long   lastExecutedDateTime   = resultMap.getLong  ("lastExecutedDateTime"  );
+              long   estimatedRestTime      = resultMap.getLong  ("estimatedRestTime"     );
+
+              // get/create table item
+              TableItem tableItem;
+              JobData   jobData;
+              int index = getTableItemIndex(tableItems,id);
+              if (index >= 0)
               {
-                // get data
-                int    id                     = (Integer)data[ 0];
-                String name                   = (String )data[ 1];
-                String state                  = (String )data[ 2];
-                String type                   = (String )data[ 3];
-                long   archivePartSize        = (Long   )data[ 4];
-                String deltaCompressAlgorithm = (String )data[ 5];
-                String byteCompressAlgorithm  = (String )data[ 6];
-                String cryptAlgorithm         = (String )data[ 7];
-                String cryptType              = (String )data[ 8];
-                String cryptPasswordMode      = (String )data[ 9];
-                long   lastExecutedDateTime   = (Long   )data[10];
-                long   estimatedRestTime      = (Long   )data[11];
+                tableItem = tableItems[index];
 
-                // get/create table item
-                TableItem tableItem;
-                JobData   jobData;
-                int index = getTableItemIndex(tableItems,id);
-                if (index >= 0)
-                {
-                  tableItem = tableItems[index];
+                jobData = (JobData)tableItem.getData();
+                jobData.name                   = name;
+                jobData.state                  = state;
+                jobData.archiveType            = archiveType;
+                jobData.archivePartSize        = archivePartSize;
+                jobData.deltaCompressAlgorithm = deltaCompressAlgorithm;
+                jobData.byteCompressAlgorithm  = byteCompressAlgorithm;
+                jobData.cryptAlgorithm         = cryptAlgorithm;
+                jobData.cryptType              = cryptType;
+                jobData.cryptPasswordMode      = cryptPasswordMode;
+                jobData.lastExecutedDateTime   = lastExecutedDateTime;
+                jobData.estimatedRestTime      = estimatedRestTime;
 
-                  jobData = (JobData)tableItem.getData();
-                  jobData.name                   = name;
-                  jobData.state                  = state;
-                  jobData.type                   = type;
-                  jobData.archivePartSize        = archivePartSize;
-                  jobData.deltaCompressAlgorithm = deltaCompressAlgorithm;
-                  jobData.byteCompressAlgorithm  = byteCompressAlgorithm;
-                  jobData.cryptAlgorithm         = cryptAlgorithm;
-                  jobData.cryptType              = cryptType;
-                  jobData.cryptPasswordMode      = cryptPasswordMode;
-                  jobData.lastExecutedDateTime   = lastExecutedDateTime;
-                  jobData.estimatedRestTime      = estimatedRestTime;
-
-                  tableItemFlags[index] = true;
-                }
-                else
-                {
-                  jobData = new JobData(id,
-                                        name,
-                                        state,
-                                        type,
-                                        archivePartSize,
-                                        deltaCompressAlgorithm,
-                                        byteCompressAlgorithm,
-                                        cryptAlgorithm,
-                                        cryptType,
-                                        cryptPasswordMode,
-                                        lastExecutedDateTime,
-                                        estimatedRestTime
-                                       );
-
-                  tableItem = new TableItem(widgetJobList,SWT.NONE,findJobListIndex(jobData));
-                  tableItem.setData(jobData);
-                }
-
-                jobList.put(name,jobData);
-                tableItem.setText(0,jobData.name);
-                tableItem.setText(1,(status == States.RUNNING)?jobData.state:"suspended");
-                tableItem.setText(2,jobData.type);
-                tableItem.setText(3,(jobData.archivePartSize > 0)?Units.formatByteSize(jobData.archivePartSize):"unlimited");
-                tableItem.setText(4,jobData.formatCompressAlgorithm());
-                tableItem.setText(5,jobData.formatCryptAlgorithm());
-                tableItem.setText(6,jobData.formatLastExecutedDateTime());
-                tableItem.setText(7,jobData.formatEstimatedRestTime());
+                tableItemFlags[index] = true;
               }
+              else
+              {
+                jobData = new JobData(id,
+                                      name,
+                                      state,
+                                      archiveType,
+                                      archivePartSize,
+                                      deltaCompressAlgorithm,
+                                      byteCompressAlgorithm,
+                                      cryptAlgorithm,
+                                      cryptType,
+                                      cryptPasswordMode,
+                                      lastExecutedDateTime,
+                                      estimatedRestTime
+                                     );
+
+                tableItem = new TableItem(widgetJobList,SWT.NONE,findJobListIndex(jobData));
+                tableItem.setData(jobData);
+              }
+
+              jobList.put(name,jobData);
+              tableItem.setText(0,jobData.name);
+              tableItem.setText(1,(status == States.RUNNING) ? jobData.state : "suspended");
+              tableItem.setText(2,jobData.archiveType);
+              tableItem.setText(3,(jobData.archivePartSize > 0) ? Units.formatByteSize(jobData.archivePartSize) : "unlimited");
+              tableItem.setText(4,jobData.formatCompressAlgorithm());
+              tableItem.setText(5,jobData.formatCryptAlgorithm());
+              tableItem.setText(6,jobData.formatLastExecutedDateTime());
+              tableItem.setText(7,jobData.formatEstimatedRestTime());
             }
 
             // remove not existing entries
@@ -1249,95 +1289,96 @@ class TabStatus
    */
   private void updateJobInfo()
   {
-    final String[] MAP_TEXT = new String[]{"\\n","\\r","\\\\"};
-    final String[] MAP_BIN  = new String[]{"\n","\r","\\"};
+    final TypeMap TYPES = new TypeMap("id",  int.class,
+                                      "name",String.class
+                                     );
 
     if (selectedJobData != null)
     {
       // get job info
-      final String result[] = new String[1];
-      if (BARServer.executeCommand(String.format("JOB_INFO %d",selectedJobData.id),result) != Errors.NONE) return;
+      final String resultErrorMessage[] = new String[1];
+      final ValueMap resultMap          = new ValueMap();
+      int error = BARServer.executeCommand(StringParser.format("JOB_INFO jobId=%d",selectedJobData.id),
+                                           new TypeMap("state",                String.class,
+                                                       "error",                String.class,
+                                                       "doneEntries",          long.class,
+                                                       "doneBytes",            long.class,
+                                                       "totalEntries",         long.class,
+                                                       "totalBytes",           long.class,
+                                                       "skippedEntries",       long.class,
+                                                       "skippedBytes",         long.class,
+                                                       "errorEntries",         long.class,
+                                                       "errorBytes",           long.class,
+                                                       "entriesPerSecond",     double.class,
+                                                       "bytesPerSecond",       double.class,
+                                                       "storageBytesPerSecond",double.class,
+                                                       "archiveBytes",         long.class,
+                                                       "compressionRatio",     double.class,
+                                                       "entryName",            String.class,
+                                                       "entryDoneBytes",       long.class,
+                                                       "entryTotalBytes",      long.class,
+                                                       "storageName",          String.class,
+                                                       "storageDoneBytes",     long.class,
+                                                       "storageTotalBytes",    long.class,
+                                                       "volumeNumber",         long.class,
+                                                       "volumeProgress",       double.class,
+                                                       "requestedVolumeNumber",int.class
+                                                      ),
+                                           resultErrorMessage,
+                                           resultMap
+                                          );
+      if (error != Errors.NONE)
+      {
+        return;
+      }
 
       display.syncExec(new Runnable()
       {
         public void run()
         {
-          // update job info
-          Object data[] = new Object[24];
-          /* format:
-            <state>
-            <error>
-            <doneFiles>
-            <doneBytes>
-            <totalFiles>
-            <totalBytes>
-            <skippedFiles>
-            <skippedBytes>
-            <errorFiles>
-            <errorBytes>
-            <filesPerSecond>
-            <bytesPerSecond>
-            <storageBytesPerSecond>
-            <archiveBytes>
-            <ratio \
-            <fileName>
-            <fileDoneBytes>
-            <fileTotalBytes>
-            <storageName>
-            <storageDoneBytes>
-            <storageTotalBytes>
-            <volumeNumber>
-            <volumeProgress>
-            <requestedVolumeNumber\>
-          */
-          if (StringParser.parse(result[0],"%S %S %ld %ld %ld %ld %ld %ld %ld %ld %f %f %f %ld %f %S %ld %ld %S %ld %ld %ld %f %d",data,StringParser.QUOTE_CHARS))
-          {
-             String state = (String)data[0];
+          String state = resultMap.getString("state");
 
-             doneFiles.set            ((Long  )data[ 2]);
-             doneBytes.set            ((Long  )data[ 3]);
-             storedBytes.set          ((Long  )data[20]);
-             skippedFiles.set         ((Long  )data[ 6]);
-             skippedBytes.set         ((Long  )data[ 7]);
-             errorFiles.set           ((Long  )data[ 8]);
-             errorBytes.set           ((Long  )data[ 9]);
-             totalFiles.set           ((Long  )data[ 4]);
-             totalBytes.set           ((Long  )data[ 5]);
+          doneEntries.set          (resultMap.getLong("doneEntries"));
+          doneBytes.set            (resultMap.getLong("doneBytes"));
+          storageTotalBytes.set    (resultMap.getLong("storageTotalBytes"));
+          skippedEntries.set       (resultMap.getLong("skippedEntries"));
+          skippedBytes.set         (resultMap.getLong("skippedBytes"));
+          errorEntries.set         (resultMap.getLong("errorEntries"));
+          errorBytes.set           (resultMap.getLong("errorBytes"));
+          totalEntries.set         (resultMap.getLong("totalEntries"));
+          totalBytes.set           (resultMap.getLong("totalBytes"));
 
-             filesPerSecond.set       ((Double)data[10]);
-             bytesPerSecond.set       ((Double)data[11]);
-             storageBytesPerSecond.set((Double)data[12]);
-//             archiveBytes.set((Long)data[13]);
-             ratio.set                ((Double)data[14]);
+          filesPerSecond.set       (resultMap.getDouble("entriesPerSecond"));
+          bytesPerSecond.set       (resultMap.getDouble("bytesPerSecond"));
+          storageBytesPerSecond.set(resultMap.getDouble("storageBytesPerSecond"));
+          compressionRatio.set     (resultMap.getDouble("compressionRatio"));
 
-             fileName.set             (StringUtils.map((String)data[15],MAP_TEXT,MAP_BIN));
-             fileProgress.set         (getProgress((Long)data[16],(Long)data[17]));
-             storageName.set          (StringUtils.map((String)data[18],MAP_TEXT,MAP_BIN));
-             storageProgress.set      (getProgress((Long)data[19],(Long)data[20]));
-             volumeNumber.set         ((Long  )data[21]);
-             volumeProgress.set       ((Double)data[22]*100.0);
-             totalFilesProgress.set   (getProgress((Long)data[ 2],(Long)data[ 4]));
-             totalBytesProgress.set   (getProgress((Long)data[ 3],(Long)data[ 5]));
-             requestedVolumeNumber.set((Integer)data[23]);
-             message.set              ((String)data[ 1]);
+          fileName.set             (resultMap.getString("entryName"));
+          fileProgress.set         (getProgress(resultMap.getLong("entryDoneBytes"),resultMap.getLong("entryTotalBytes")));
+          storageName.set          (resultMap.getString("storageName"));
+          storageProgress.set      (getProgress(resultMap.getLong("storageDoneBytes"),resultMap.getLong("storageTotalBytes")));
+          volumeNumber.set         (resultMap.getLong("volumeNumber"));
+          volumeProgress.set       (resultMap.getDouble("volumeProgress")*100.0);
+          totalEntriesProgress.set (getProgress(resultMap.getLong("doneEntries"),resultMap.getLong("totalEntries")));
+          totalBytesProgress.set   (getProgress(resultMap.getLong("doneBytes"),resultMap.getLong("totalBytes")));
+          requestedVolumeNumber.set(resultMap.getInt("requestedVolumeNumber"));
+          message.set              (resultMap.getString("message"));
 
-             widgetButtonStart.setEnabled(   !state.equals("running")
-                                          && !state.equals("incremental")
-                                          && !state.equals("differential")
-                                          && !state.equals("dry-run")
-                                          && !state.equals("waiting")
-                                          && !state.equals("pause")
-                                         );
-             widgetButtonAbort.setEnabled(   state.equals("waiting")
-                                          || state.equals("running")
-                                          || state.equals("incremental")
-                                          || state.equals("differential")
-                                          || state.equals("dry-run")
-                                          || state.equals("request volume")
-                                         );
-             widgetButtonVolume.setEnabled(state.equals("request volume"));
-          }
-//          else { Dprintf.dprintf("unexecpted "+result[0]); }
+          widgetButtonStart.setEnabled(   !state.equals("running")
+                                       && !state.equals("incremental")
+                                       && !state.equals("differential")
+                                       && !state.equals("dry-run")
+                                       && !state.equals("waiting")
+                                       && !state.equals("pause")
+                                      );
+          widgetButtonAbort.setEnabled(   state.equals("waiting")
+                                       || state.equals("running")
+                                       || state.equals("incremental")
+                                       || state.equals("differential")
+                                       || state.equals("dry-run")
+                                       || state.equals("request volume")
+                                      );
+          widgetButtonVolume.setEnabled(state.equals("request volume"));
         }
       });
     }
@@ -1392,10 +1433,16 @@ class TabStatus
       }
 
       // set crypt password
-      String[] result = new String[1];
-      if (BARServer.executeCommand("CRYPT_PASSWORD "+selectedJobData.id+" "+StringUtils.escape(password),result) != Errors.NONE)
+      String[] resultErrorMessage = new String[1];
+      int error = BARServer.executeCommand(StringParser.format("CRYPT_PASSWORD jobId=%d password=%S",
+                                                               selectedJobData.id,
+                                                               password
+                                                              ),
+                                           resultErrorMessage
+                                          );
+      if (error != Errors.NONE)
       {
-        Dialogs.error(shell,"Cannot start job (error: %s)",result[0]);
+        Dialogs.error(shell,"Cannot start job (error: %s)",resultErrorMessage[0]);
         return;
       }
     }
@@ -1404,19 +1451,19 @@ class TabStatus
     switch (mode)
     {
       case 0:
-        BARServer.executeCommand("JOB_START "+selectedJobData.id+" normal");
+        BARServer.executeCommand(StringParser.format("JOB_START jobId=%d type=normal",selectedJobData.id));
         break;
       case 1:
-        BARServer.executeCommand("JOB_START "+selectedJobData.id+" full");
+        BARServer.executeCommand(StringParser.format("JOB_START jobId=%d type=full",selectedJobData.id));
         break;
       case 2:
-        BARServer.executeCommand("JOB_START "+selectedJobData.id+" incremental");
+        BARServer.executeCommand(StringParser.format("JOB_START jobId=%d type=incremental",selectedJobData.id));
         break;
       case 3:
-        BARServer.executeCommand("JOB_START "+selectedJobData.id+" differential");
+        BARServer.executeCommand(StringParser.format("JOB_START jobId=%d type=differential",selectedJobData.id));
         break;
       case 4:
-        BARServer.executeCommand("JOB_START "+selectedJobData.id+" dry-run");
+        BARServer.executeCommand(StringParser.format("JOB_START jobId=%d type=dry-run",selectedJobData.id));
         break;
       case 5:
         break;
@@ -1431,10 +1478,13 @@ class TabStatus
 
     if (!selectedJobData.state.equals("running") || Dialogs.confirm(shell,"Abort running job '"+selectedJobData.name+"'?",false))
     {
-      String[] result = new String[1];
-      if (BARServer.executeCommand("JOB_ABORT "+selectedJobData.id,result) != Errors.NONE)
+      String[] resultErrorMessage = new String[1];
+      int error = BARServer.executeCommand(StringParser.format("JOB_ABORT jobId=%d",selectedJobData.id),
+                                           resultErrorMessage
+                                          );
+      if (error != Errors.NONE)
       {
-        Dialogs.error(shell,"Cannot abort job (error: %s)",result[0]);
+        Dialogs.error(shell,"Cannot abort job (error: %s)",resultErrorMessage[0]);
       }
     }
   }
@@ -1452,10 +1502,13 @@ class TabStatus
 
     if (buffer.length() > 0)
     {
-      String[] result = new String[1];
-      if (BARServer.executeCommand("PAUSE "+pauseTime+" "+buffer.toString(),result) != Errors.NONE)
+      String[] resultErrorMessage = new String[1];
+      int error = BARServer.executeCommand(StringParser.format("PAUSE time=%d type=%s",pauseTime,buffer.toString()),
+                                           resultErrorMessage
+                                          );
+      if (error != Errors.NONE)
       {
-        Dialogs.error(shell,"Cannot pause job (error: %s)",result[0]);
+        Dialogs.error(shell,"Cannot pause job (error: %s)",resultErrorMessage[0]);
       }
     }
   }
@@ -1464,17 +1517,17 @@ class TabStatus
    */
   private void jobSuspendContinue()
   {
-    String[] result = new String[1];
+    String[] errorMessage = new String[1];
     int      error  = Errors.NONE;
     switch (status)
     {
-      case RUNNING: error = BARServer.executeCommand("SUSPEND" ,result); break;
+      case RUNNING: error = BARServer.executeCommand(StringParser.format("SUSPEND") ,errorMessage); break;
       case PAUSE:
-      case SUSPEND: error = BARServer.executeCommand("CONTINUE",result); break;
+      case SUSPEND: error = BARServer.executeCommand(StringParser.format("CONTINUE"),errorMessage); break;
     }
     if (error != Errors.NONE)
     {
-      Dialogs.error(shell,"Cannot suspend job (error: %s)",result[0]);
+      Dialogs.error(shell,"Cannot suspend job (error: %s)",errorMessage[0]);
     }
   }
 
@@ -1485,22 +1538,22 @@ class TabStatus
     assert selectedJobData != null;
 
     long     volumeNumber = requestedVolumeNumber.getLong();
-    String[] result       = new String[1];
-    int      error        = Errors.NONE;
+    String[] resultErrorMessage = new String[1];
+    int      error              = Errors.NONE;
     switch (Dialogs.select(shell,"Volume request","Load volume number "+volumeNumber+".",new String[]{"OK","Unload tray","Cancel"},0))
     {
       case 0:
-        error = BARServer.executeCommand("VOLUME_LOAD "+selectedJobData.id+" "+volumeNumber,result);
+        error = BARServer.executeCommand(StringParser.format("VOLUME_LOAD jobId=%d volumeNumber=%d",selectedJobData.id,volumeNumber),resultErrorMessage);
         break;
       case 1:
-        error = BARServer.executeCommand("VOLUME_UNLOAD "+selectedJobData.id,result);
+        error = BARServer.executeCommand(StringParser.format("VOLUME_UNLOAD jobId=%d",selectedJobData.id),resultErrorMessage);
         break;
       case 2:
         break;
     }
     if (error != Errors.NONE)
     {
-      Dialogs.error(shell,"Cannot change volume job (error: %s)",result[0]);
+      Dialogs.error(shell,"Cannot change volume job (error: %s)",resultErrorMessage[0]);
     }
   }
 }

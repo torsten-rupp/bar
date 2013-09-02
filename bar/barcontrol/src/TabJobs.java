@@ -117,73 +117,114 @@ class TabJobs
     FILE,
     DIRECTORY,
     LINK,
-    DEVICE,
+    HARDLINK,
     SPECIAL,
+    UNKNOWN
+  };
+
+  enum SpecialTypes
+  {
+    NONE,
+
+    CHARACTER_DEVICE,
+    BLOCK_DEVICE,
     FIFO,
-    SOCKET
+    SOCKET,
+    OTHER
   };
 
   /** file tree data
    */
   class FileTreeData
   {
-    String    name;
-    FileTypes type;
-    long      size;
-    long      datetime;
-    String    title;
+    String       name;
+    FileTypes    fileType;
+    long         size;
+    long         dateTime;
+    String       title;
+    SpecialTypes specialType;
 
     /** create file tree data
      * @param name file name
-     * @param type file type
+     * @param fileType file type
      * @param size file size [bytes]
-     * @param datetime file date/time [s]
+     * @param dateTime file date/time [s]
      * @param title title to display
+     * @param specialType special type
      */
-    FileTreeData(String name, FileTypes type, long size, long datetime, String title)
+    FileTreeData(String name, FileTypes fileType, long size, long dateTime, String title, SpecialTypes specialType)
     {
-      this.name     = name;
-      this.type     = type;
-      this.size     = size;
-      this.datetime = datetime;
-      this.title    = title;
+      this.name        = name;
+      this.fileType    = fileType;
+      this.size        = size;
+      this.dateTime    = dateTime;
+      this.title       = title;
+      this.specialType = specialType;
     }
 
     /** create file tree data
      * @param name file name
-     * @param type file type
-     * @param datetime file date/time [s]
+     * @param fileType file type
+     * @param size file size [bytes]
+     * @param dateTime file date/time [s]
      * @param title title to display
      */
-    FileTreeData(String name, FileTypes type, long datetime, String title)
+    FileTreeData(String name, FileTypes fileType, long size, long dateTime, String title)
     {
-      this.name     = name;
-      this.type     = type;
-      this.size     = 0;
-      this.datetime = datetime;
-      this.title    = title;
+      this(name,fileType,size,dateTime,title,SpecialTypes.NONE);
     }
 
     /** create file tree data
      * @param name file name
-     * @param type file type
+     * @param fileType file type
+     * @param dateTime file date/time [s]
      * @param title title to display
      */
-    FileTreeData(String name, FileTypes type, String title)
+    FileTreeData(String name, FileTypes fileType, long dateTime, String title)
     {
-      this.name     = name;
-      this.type     = type;
-      this.size     = 0;
-      this.datetime = 0;
-      this.title    = title;
+      this(name,fileType,0L,dateTime,title);
     }
+
+    /** create file tree data
+     * @param name file name
+     * @param fileType file type
+     * @param title title to display
+     */
+    FileTreeData(String name, FileTypes fileType, String title)
+    {
+      this(name,fileType,0L,title);
+    }
+
+    /** create file tree data
+     * @param name file name
+     * @param specialType special type
+     * @param size file size [bytes]
+     * @param dateTime file date/time [s]
+     * @param title title to display
+     */
+    FileTreeData(String name, SpecialTypes specialType, long size, long dateTime, String title)
+    {
+      this(name,FileTypes.SPECIAL,size,dateTime,title,specialType);
+    }
+
+    /** create file tree data
+     * @param name file name
+     * @param specialType special type
+     * @param dateTime file date/time [s]
+     * @param title title to display
+     */
+    FileTreeData(String name, SpecialTypes specialType, long dateTime, String title)
+    {
+      this(name,FileTypes.SPECIAL,0L,dateTime,title,specialType);
+    }
+
 
     /** convert data to string
      * @return string
      */
     public String toString()
     {
-      return "File {"+name+", "+type+", "+size+" bytes, datetime="+datetime+", title="+title+"}";
+      return "File {"+name+", "+fileType+", "+size+" bytes, dateTime="+dateTime+", title="+title+"}";
     }
   };
 
@@ -233,14 +274,14 @@ class TabJobs
         case SORTMODE_NAME:
           return fileTreeData1.title.compareTo(fileTreeData2.title);
         case SORTMODE_TYPE:
-          return fileTreeData1.type.compareTo(fileTreeData2.type);
+          return fileTreeData1.fileType.compareTo(fileTreeData2.fileType);
         case SORTMODE_SIZE:
           if      (fileTreeData1.size < fileTreeData2.size) return -1;
           else if (fileTreeData1.size > fileTreeData2.size) return  1;
           else                                              return  0;
         case SORTMODE_DATETIME:
-          if      (fileTreeData1.datetime < fileTreeData2.datetime) return -1;
-          else if (fileTreeData1.datetime > fileTreeData2.datetime) return  1;
+          if      (fileTreeData1.dateTime < fileTreeData2.dateTime) return -1;
+          else if (fileTreeData1.dateTime > fileTreeData2.dateTime) return  1;
           else                                                      return  0;
         default:
           return 0;
@@ -255,9 +296,9 @@ class TabJobs
      */
     public int compare(FileTreeData fileTreeData1, FileTreeData fileTreeData2)
     {
-      if (fileTreeData1.type == FileTypes.DIRECTORY)
+      if (fileTreeData1.fileType == FileTypes.DIRECTORY)
       {
-        if (fileTreeData2.type == FileTypes.DIRECTORY)
+        if (fileTreeData2.fileType == FileTypes.DIRECTORY)
         {
           return compareWithoutType(fileTreeData1,fileTreeData2);
         }
@@ -268,7 +309,7 @@ class TabJobs
       }
       else
       {
-        if (fileTreeData2.type == FileTypes.DIRECTORY)
+        if (fileTreeData2.fileType == FileTypes.DIRECTORY)
         {
           return 1;
         }
@@ -451,89 +492,110 @@ class TabJobs
      */
     public void run()
     {
-      for (;;)
+      try
       {
-        // get next directory info request
-        final DirectoryInfoRequest directoryInfoRequest;
-        synchronized(directoryInfoRequestList)
+        for (;;)
         {
-          // get next request
-          while (directoryInfoRequestList.size() == 0)
+          // get next directory info request
+          final DirectoryInfoRequest directoryInfoRequest;
+          synchronized(directoryInfoRequestList)
           {
-            try
+            // get next request
+            while (directoryInfoRequestList.size() == 0)
             {
-              directoryInfoRequestList.wait();
-            }
-            catch (InterruptedException exception)
-            {
-              // ignored
-            }
-          }
-          directoryInfoRequest = directoryInfoRequestList.remove();
-        }
-
-        if (directorySizesFlag || directoryInfoRequest.forceFlag)
-        {
-          // check if disposed tree item
-          final Object[] disposedData = new Object[]{null};
-          display.syncExec(new Runnable()
-          {
-            public void run()
-            {
-              TreeItem treeItem = directoryInfoRequest.treeItem;
-              disposedData[0] = (Boolean)treeItem.isDisposed();
-            }
-          });
-          if ((Boolean)disposedData[0])
-          {
-            // disposed -> skip
-            continue;
-          }
-
-          // get file count, size
-//Dprintf.dprintf("get file size for %s\n",directoryInfoRequest);
-          String[] result = new String[1];
-          Object[] data   = new Object[3];
-          if (   (BARServer.executeCommand("DIRECTORY_INFO "+StringUtils.escape(directoryInfoRequest.name)+" "+directoryInfoRequest.timeout,result) != Errors.NONE)
-              || !StringParser.parse(result[0],"%ld %ld %d",data,StringParser.QUOTE_CHARS)
-             )
-          {
-            // command execution fail or parsing error; ignore request
-            continue;
-          }
-          final long    count       = (Long)data[0];
-          final long    size        = (Long)data[1];
-          final boolean timeoutFlag = (((Integer)data[2]) != 0);
-
-          // update view
-//Dprintf.dprintf("name=%s count=%d size=%d timeout=%s\n",directoryInfoRequest.name,count,size,timeoutFlag);
-          display.syncExec(new Runnable()
-          {
-            public void run()
-            {
-              TreeItem treeItem = directoryInfoRequest.treeItem;
-              if (!treeItem.isDisposed())
+              try
               {
-                FileTreeData fileTreeData = (FileTreeData)treeItem.getData();
-
-                fileTreeData.size = size;
-
-//Dprintf.dprintf("update %s\n",treeItem.isDisposed());
-                treeItem.setText(2,Units.formatByteSize(size));
-                treeItem.setForeground(2,timeoutFlag?COLOR_RED:COLOR_BLACK);
+                directoryInfoRequestList.wait();
+              }
+              catch (InterruptedException exception)
+              {
+                // ignored
               }
             }
-          });
-
-          if (timeoutFlag)
-          {
-            // timeout -> increase timmeout and re-insert in list if not beyond max. timeout
-            if (directoryInfoRequest.timeout+TIMEOUT_DETLA <= MAX_TIMEOUT)
-            {
-              directoryInfoRequest.timeout += TIMEOUT_DETLA;
-            }
-            add(directoryInfoRequest);
+            directoryInfoRequest = directoryInfoRequestList.remove();
           }
+
+          if (directorySizesFlag || directoryInfoRequest.forceFlag)
+          {
+            // check if disposed tree item
+            final Object[] disposedData = new Object[]{null};
+            display.syncExec(new Runnable()
+            {
+              public void run()
+              {
+                TreeItem treeItem = directoryInfoRequest.treeItem;
+                disposedData[0] = (Boolean)treeItem.isDisposed();
+              }
+            });
+            if ((Boolean)disposedData[0])
+            {
+              // disposed -> skip
+              continue;
+            }
+
+            // get file count, size
+            String[] resultErrorMessage = new String[1];
+            ValueMap resultMap          = new ValueMap();
+            int error = BARServer.executeCommand(StringParser.format("DIRECTORY_INFO name=%S timeout=%d",
+                                                                     directoryInfoRequest.name,
+                                                                     directoryInfoRequest.timeout
+                                                                    ),
+                                                 new TypeMap("count", long.class,
+                                                             "size",  long.class,
+                                                             "timeoutFlag",boolean.class
+                                                            ),
+                                                 resultErrorMessage,
+                                                 resultMap
+                                                );
+            if (error != Errors.NONE)
+            {
+              // command execution fail or parsing error; ignore request
+              continue;
+            }
+            final long    count       = resultMap.getLong("count");
+            final long    size        = resultMap.getLong("size");
+            final boolean timeoutFlag = resultMap.getBoolean("timeoutFlag");
+
+            // update view
+//Dprintf.dprintf("name=%s count=%d size=%d timeout=%s\n",directoryInfoRequest.name,count,size,timeoutFlag);
+            display.syncExec(new Runnable()
+            {
+              public void run()
+              {
+                TreeItem treeItem = directoryInfoRequest.treeItem;
+                if (!treeItem.isDisposed())
+                {
+                  FileTreeData fileTreeData = (FileTreeData)treeItem.getData();
+
+                  fileTreeData.size = size;
+
+//Dprintf.dprintf("update %s\n",treeItem.isDisposed());
+                  treeItem.setText(2,Units.formatByteSize(size));
+                  treeItem.setForeground(2,timeoutFlag?COLOR_RED:COLOR_BLACK);
+                }
+              }
+            });
+
+            if (timeoutFlag)
+            {
+              // timeout -> increase timmeout and re-insert in list if not beyond max. timeout
+              if (directoryInfoRequest.timeout+TIMEOUT_DETLA <= MAX_TIMEOUT)
+              {
+                directoryInfoRequest.timeout += TIMEOUT_DETLA;
+              }
+              add(directoryInfoRequest);
+            }
+          }
+        }
+      }
+      catch (Exception exception)
+      {
+        if (Settings.debugFlag)
+        {
+          BARServer.disconnect();
+          System.err.println("ERROR: "+exception.getMessage());
+          BARControl.printStackTrace(exception);
+          System.exit(1);
         }
       }
     }
@@ -730,20 +792,17 @@ class TabJobs
     }
 
     /** create schedule data
-     * @param year year string
-     * @param month month string
-     * @param day day string
+     * @param date date string (<year>-<month>-<day>)
      * @param weekDays week days string; values separated by ','
-     * @param hour hour string
-     * @param minute minute string
+     * @param time time string (<hour>:<minute>)
      * @param enabled enabled state
      * @param type type string
      */
-    ScheduleData(String year, String month, String day, String weekDays, String hour, String minute, boolean enabled, String type)
+    ScheduleData(String date, String weekDays, String time, boolean enabled, String type)
     {
-      setDate(year,month,day);
+      setDate(date);
       setWeekDays(weekDays);
-      setTime(hour,minute);
+      setTime(time);
       this.enabled = enabled;
       this.type    = getValidString(type,new String[]{"*","full","incremental","differential"},"*");;
     }
@@ -896,14 +955,6 @@ class TabJobs
       return buffer.toString();
     }
 
-    /** get enable value
-     * @return enable value
-     */
-    String getEnabled()
-    {
-      return enabled?"yes":"no";
-    }
-
     /** get type
      * @return type
      */
@@ -917,7 +968,7 @@ class TabJobs
      * @param month month value
      * @param day day value
      */
-    void setDate(String year, String month, String day)
+    private void setDate(String year, String month, String day)
     {
       this.year = !year.equals("*") ? Integer.parseInt(year) : ANY;
       if      (month.equals("*")) this.month = ANY;
@@ -945,6 +996,12 @@ class TabJobs
         }
       }
       this.day = !day.equals("*") ? Integer.parseInt(day) : ANY;
+    }
+
+    private void setDate(String date)
+    {
+      String[] parts = date.split("-");
+      setDate(parts[0],parts[1],parts[2]);
     }
 
     /** set week days
@@ -1022,6 +1079,12 @@ class TabJobs
     {
       this.hour   = !hour.equals  ("*") ? Integer.parseInt(hour,  10) : ANY;
       this.minute = !minute.equals("*") ? Integer.parseInt(minute,10) : ANY;
+    }
+
+    void setTime(String time)
+    {
+      String[] parts = time.split(":");
+      setTime(parts[0],parts[1]);
     }
 
     /** check if week day enabled
@@ -1211,7 +1274,7 @@ class TabJobs
   private Button       widgetExcludeListInsert,widgetExcludeListEdit,widgetExcludeListRemove;
   private Combo        widgetArchivePartSize;
   private List         widgetCompressExcludeList;
-  private Button       widgetCompressExcludeListInsert,widgetCompressExcludeListRemove;
+  private Button       widgetCompressExcludeListInsert,widgetCompressExcludeListEdit,widgetCompressExcludeListRemove;
   private Text         widgetCryptPassword1,widgetCryptPassword2;
   private Combo        widgetFTPMaxBandWidth;
   private Combo        widgetSCPSFTPMaxBandWidth;
@@ -1508,7 +1571,7 @@ class TabJobs
             if (treeItem != null)
             {
               FileTreeData fileTreeData = (FileTreeData)treeItem.getData();
-              if (fileTreeData.type == FileTypes.DIRECTORY)
+              if (fileTreeData.fileType == FileTypes.DIRECTORY)
               {
                 Event treeEvent = new Event();
                 treeEvent.item = treeItem;
@@ -1532,7 +1595,7 @@ class TabJobs
             if (treeItem != null)
             {
               FileTreeData fileTreeData = (FileTreeData)treeItem.getData();
-              menuItemOpenClose.setEnabled(fileTreeData.type == FileTypes.DIRECTORY);
+              menuItemOpenClose.setEnabled(fileTreeData.fileType == FileTypes.DIRECTORY);
             }
           }
 
@@ -1618,7 +1681,7 @@ class TabJobs
               if (treeItems != null)
               {
                 FileTreeData fileTreeData = (FileTreeData)treeItems[0].getData();
-                if (fileTreeData.type == FileTypes.DIRECTORY)
+                if (fileTreeData.fileType == FileTypes.DIRECTORY)
                 {
                   Event treeEvent = new Event();
                   treeEvent.item = treeItems[0];
@@ -1654,15 +1717,13 @@ class TabJobs
                 FileTreeData fileTreeData = (FileTreeData)treeItem.getData();
                 includeListAdd(new EntryData(EntryTypes.FILE,fileTreeData.name));
                 excludeListRemove(fileTreeData.name);
-                switch (fileTreeData.type)
+                switch (fileTreeData.fileType)
                 {
                   case FILE:      treeItem.setImage(IMAGE_FILE_INCLUDED);      break;
                   case DIRECTORY: treeItem.setImage(IMAGE_DIRECTORY_INCLUDED); break;
                   case LINK:      treeItem.setImage(IMAGE_LINK_INCLUDED);      break;
-                  case DEVICE:    treeItem.setImage(IMAGE_FILE_INCLUDED);      break;
+                  case HARDLINK:  treeItem.setImage(IMAGE_LINK_INCLUDED);      break;
                   case SPECIAL:   treeItem.setImage(IMAGE_FILE_INCLUDED);      break;
-                  case FIFO:      treeItem.setImage(IMAGE_FILE_INCLUDED);      break;
-                  case SOCKET:    treeItem.setImage(IMAGE_FILE_INCLUDED);      break;
                 }
               }
             }
@@ -1681,15 +1742,13 @@ class TabJobs
                 FileTreeData fileTreeData = (FileTreeData)treeItem.getData();
                 includeListRemove(fileTreeData.name);
                 excludeListAdd(fileTreeData.name);
-                switch (fileTreeData.type)
+                switch (fileTreeData.fileType)
                 {
                   case FILE:      treeItem.setImage(IMAGE_FILE_EXCLUDED);      break;
                   case DIRECTORY: treeItem.setImage(IMAGE_DIRECTORY_EXCLUDED); break;
                   case LINK:      treeItem.setImage(IMAGE_LINK_EXCLUDED);      break;
-                  case DEVICE:    treeItem.setImage(IMAGE_FILE_EXCLUDED);      break;
+                  case HARDLINK:  treeItem.setImage(IMAGE_LINK_EXCLUDED);      break;
                   case SPECIAL:   treeItem.setImage(IMAGE_FILE_EXCLUDED);      break;
-                  case FIFO:      treeItem.setImage(IMAGE_FILE_EXCLUDED);      break;
-                  case SOCKET:    treeItem.setImage(IMAGE_FILE_EXCLUDED);      break;
                 }
               }
             }
@@ -1708,15 +1767,13 @@ class TabJobs
                 FileTreeData fileTreeData = (FileTreeData)treeItem.getData();
                 includeListRemove(fileTreeData.name);
                 excludeListRemove(fileTreeData.name);
-                switch (fileTreeData.type)
+                switch (fileTreeData.fileType)
                 {
                   case FILE:      treeItem.setImage(IMAGE_FILE);      break;
                   case DIRECTORY: treeItem.setImage(IMAGE_DIRECTORY); break;
                   case LINK:      treeItem.setImage(IMAGE_LINK);      break;
-                  case DEVICE:    treeItem.setImage(IMAGE_FILE);      break;
+                  case HARDLINK:  treeItem.setImage(IMAGE_LINK);      break;
                   case SPECIAL:   treeItem.setImage(IMAGE_FILE);      break;
-                  case FIFO:      treeItem.setImage(IMAGE_FILE);      break;
-                  case SOCKET:    treeItem.setImage(IMAGE_FILE);      break;
                 }
               }
             }
@@ -1765,15 +1822,13 @@ class TabJobs
                 FileTreeData fileTreeData = (FileTreeData)treeItem.getData();
                 includeListAdd(new EntryData(EntryTypes.FILE,fileTreeData.name));
                 excludeListRemove(fileTreeData.name);
-                switch (fileTreeData.type)
+                switch (fileTreeData.fileType)
                 {
                   case FILE:      treeItem.setImage(IMAGE_FILE_INCLUDED);      break;
                   case DIRECTORY: treeItem.setImage(IMAGE_DIRECTORY_INCLUDED); break;
                   case LINK:      treeItem.setImage(IMAGE_LINK_INCLUDED);      break;
-                  case DEVICE:    treeItem.setImage(IMAGE_FILE_INCLUDED);      break;
+                  case HARDLINK:  treeItem.setImage(IMAGE_LINK_INCLUDED);      break;
                   case SPECIAL:   treeItem.setImage(IMAGE_FILE_INCLUDED);      break;
-                  case FIFO:      treeItem.setImage(IMAGE_FILE_INCLUDED);      break;
-                  case SOCKET:    treeItem.setImage(IMAGE_FILE_INCLUDED);      break;
                 }
               }
             }
@@ -1794,15 +1849,13 @@ class TabJobs
                 FileTreeData fileTreeData = (FileTreeData)treeItem.getData();
                 includeListRemove(fileTreeData.name);
                 excludeListAdd(fileTreeData.name);
-                switch (fileTreeData.type)
+                switch (fileTreeData.fileType)
                 {
                   case FILE:      treeItem.setImage(IMAGE_FILE_EXCLUDED);      break;
                   case DIRECTORY: treeItem.setImage(IMAGE_DIRECTORY_EXCLUDED); break;
                   case LINK:      treeItem.setImage(IMAGE_LINK_EXCLUDED);      break;
-                  case DEVICE:    treeItem.setImage(IMAGE_FILE_EXCLUDED);      break;
+                  case HARDLINK:  treeItem.setImage(IMAGE_LINK_EXCLUDED);      break;
                   case SPECIAL:   treeItem.setImage(IMAGE_FILE_EXCLUDED);      break;
-                  case FIFO:      treeItem.setImage(IMAGE_FILE_EXCLUDED);      break;
-                  case SOCKET:    treeItem.setImage(IMAGE_FILE_EXCLUDED);      break;
                 }
               }
             }
@@ -1823,15 +1876,13 @@ class TabJobs
                 FileTreeData fileTreeData = (FileTreeData)treeItem.getData();
                 includeListRemove(fileTreeData.name);
                 excludeListRemove(fileTreeData.name);
-                switch (fileTreeData.type)
+                switch (fileTreeData.fileType)
                 {
                   case FILE:      treeItem.setImage(IMAGE_FILE);      break;
                   case DIRECTORY: treeItem.setImage(IMAGE_DIRECTORY); break;
                   case LINK:      treeItem.setImage(IMAGE_LINK);      break;
-                  case DEVICE:    treeItem.setImage(IMAGE_FILE);      break;
+                  case HARDLINK:  treeItem.setImage(IMAGE_LINK);      break;
                   case SPECIAL:   treeItem.setImage(IMAGE_FILE);      break;
-                  case FIFO:      treeItem.setImage(IMAGE_FILE);      break;
-                  case SOCKET:    treeItem.setImage(IMAGE_FILE);      break;
                 }
               }
             }
@@ -2043,11 +2094,17 @@ class TabJobs
 // automatic column width calculation?
 //widgetIncludeTable.setLayout(new TableLayout(new double[]{0.5,0.0,0.5,0.0,0.0},new double[]{0.0,1.0}));
         Widgets.layout(widgetIncludeTable,0,1,TableLayoutData.NSWE);
-        widgetIncludeTable.addListener(SWT.MouseDoubleClick,new Listener()
+        widgetIncludeTable.addMouseListener(new MouseListener()
         {
-          public void handleEvent(final Event event)
+          public void mouseDoubleClick(final MouseEvent mouseEvent)
           {
             includeListEdit();
+          }
+          public void mouseDown(final MouseEvent mouseEvent)
+          {
+          }
+          public void mouseUp(final MouseEvent mouseEvent)
+          {
           }
         });
         widgetIncludeTable.addKeyListener(new KeyListener()
@@ -2222,11 +2279,17 @@ class TabJobs
         Widgets.layout(label,2,0,TableLayoutData.NS);
         widgetExcludeList = Widgets.newList(tab);
         Widgets.layout(widgetExcludeList,2,1,TableLayoutData.NSWE);
-        widgetExcludeList.addListener(SWT.MouseDoubleClick,new Listener()
+        widgetExcludeList.addMouseListener(new MouseListener()
         {
-          public void handleEvent(final Event event)
+          public void mouseDoubleClick(final MouseEvent mouseEvent)
           {
             excludeListEdit();
+          }
+          public void mouseDown(final MouseEvent mouseEvent)
+          {
+          }
+          public void mouseUp(final MouseEvent mouseEvent)
+          {
           }
         });
         widgetExcludeList.addKeyListener(new KeyListener()
@@ -2776,6 +2839,19 @@ class TabJobs
           // compress exclude list
           widgetCompressExcludeList = Widgets.newList(composite);
           Widgets.layout(widgetCompressExcludeList,0,0,TableLayoutData.NSWE);
+          widgetCompressExcludeList.addMouseListener(new MouseListener()
+          {
+            public void mouseDoubleClick(final MouseEvent mouseEvent)
+            {
+              compressExcludeListEdit();
+            }
+            public void mouseDown(final MouseEvent mouseEvent)
+            {
+            }
+            public void mouseUp(final MouseEvent mouseEvent)
+            {
+            }
+          });
           widgetCompressExcludeList.addKeyListener(new KeyListener()
           {
             public void keyPressed(KeyEvent keyEvent)
@@ -2786,6 +2862,10 @@ class TabJobs
               if      (Widgets.isAccelerator(keyEvent,SWT.INSERT))
               {
                 Widgets.invoke(widgetCompressExcludeListInsert);
+              }
+              else if (Widgets.isAccelerator(keyEvent,SWT.CR))
+              {
+                Widgets.invoke(widgetCompressExcludeListEdit);
               }
               else if (Widgets.isAccelerator(keyEvent,SWT.DEL))
               {
@@ -2939,8 +3019,27 @@ class TabJobs
             });
             widgetCompressExcludeListInsert.setToolTipText("Add entry to compress exclude list.");
 
+            widgetCompressExcludeListEdit = Widgets.newButton(subComposite,"Edit\u2026");
+            Widgets.layout(widgetCompressExcludeListEdit,0,1,TableLayoutData.DEFAULT,0,0,0,0,90,SWT.DEFAULT);
+            widgetCompressExcludeListEdit.addSelectionListener(new SelectionListener()
+            {
+              public void widgetDefaultSelected(SelectionEvent selectionEvent)
+              {
+              }
+              public void widgetSelected(SelectionEvent selectionEvent)
+              {
+                Button widget = (Button)selectionEvent.widget;
+                if (selectedJobId > 0)
+                {
+Dprintf.dprintf("");
+                  compressExcludeListEdit();
+                }
+              }
+            });
+            widgetCompressExcludeListEdit.setToolTipText("Edit entry in compress exclude list.");
+
             widgetCompressExcludeListRemove = Widgets.newButton(subComposite,"Remove\u2026");
-            Widgets.layout(widgetCompressExcludeListRemove,0,1,TableLayoutData.DEFAULT,0,0,0,0,90,SWT.DEFAULT);
+            Widgets.layout(widgetCompressExcludeListRemove,0,2,TableLayoutData.DEFAULT,0,0,0,0,90,SWT.DEFAULT);
             Widgets.addModifyListener(new WidgetModifyListener(widgetCompressExcludeListRemove,new WidgetVariable[]{deltaCompressAlgorithm,byteCompressAlgorithm})
             {
               public void modified(Control control, WidgetVariable byteCompressAlgorithm)
@@ -2963,8 +3062,6 @@ class TabJobs
               }
             });
             widgetCompressExcludeListRemove.setToolTipText("Remove entry from compress exclude list.");
-
-
           }
         }
 
@@ -5471,11 +5568,17 @@ class TabJobs
         // list
         widgetScheduleList = Widgets.newTable(tab,SWT.NONE);
         Widgets.layout(widgetScheduleList,0,0,TableLayoutData.NSWE);
-        widgetScheduleList.addListener(SWT.MouseDoubleClick,new Listener()
+        widgetScheduleList.addMouseListener(new MouseListener()
         {
-          public void handleEvent(final Event event)
+          public void mouseDoubleClick(final MouseEvent mouseEvent)
           {
             scheduleEdit();
+          }
+          public void mouseDown(final MouseEvent mouseEvent)
+          {
+          }
+          public void mouseUp(final MouseEvent mouseEvent)
+          {
           }
         });
         widgetScheduleList.addKeyListener(new KeyListener()
@@ -5839,8 +5942,19 @@ class TabJobs
   private void updateJobList()
   {
     // get job list
-    ArrayList<String> result = new ArrayList<String>();
-    if (BARServer.executeCommand("JOB_LIST",result) != Errors.NONE) return;
+    String[]            resultErrorMessage = new String[1];
+    ArrayList<ValueMap> resultMapList      = new ArrayList<ValueMap>();
+    int error = BARServer.executeCommand(StringParser.format("JOB_LIST"),
+                                         new TypeMap("id",  int.class,
+                                                     "name",String.class
+                                                    ),
+                                         resultErrorMessage,
+                                         resultMapList
+                                        );
+    if (error != Errors.NONE)
+    {
+      return;
+    }
 
 // NYI: how to update job listin status tab?
     // update job list
@@ -5848,35 +5962,16 @@ class TabJobs
     {
       jobIds.clear();
       widgetJobList.removeAll();
-      for (String line : result)
+      for (ValueMap resultMap : resultMapList)
       {
-        Object data[] = new Object[12];
-        /* format:
-           <id>
-           <name>
-           <state>
-           <type>
-           <compressAlgorithm>
-           <byteCompressAlgorithm>
-           <cryptAlgorithm>
-           <cryptType>
-           <cryptPasswordMode>
-           <lastExecutedDateTime>
-           <estimatedRestTime>
-        */
-//Dprintf.dprintf("line=%s",line);
-        if (StringParser.parse(line,"%d %S %S %s %ld %S %S %S %S %ld %ld",data,StringParser.QUOTE_CHARS))
-        {
-//Dprintf.dprintf("%s--%s--%s",data[0],data[5],data[6]);
-          // get data
-          int    id   = (Integer)data[0];
-          String name = (String )data[1];
+        // get data
+        int    id   = resultMap.getInt   ("id"  );
+        String name = resultMap.getString("name");
 
 // TODO deleted jobs?
-          int index = findJobListIndex(name);
-          widgetJobList.add(name,index);
-          jobIds.put(name,id);
-        }
+        int index = findJobListIndex(name);
+        widgetJobList.add(name,index);
+        jobIds.put(name,id);
       }
     }
   }
@@ -5955,9 +6050,12 @@ throw new Error("NYI");
         {
           try
           {
+            String[] errorMessage = new String[1];
             String[] result = new String[1];
-            int errorCode = BARServer.executeCommand("JOB_NEW "+StringUtils.escape(jobName),result);
-            if (errorCode == Errors.NONE)
+            int error = BARServer.executeCommand(StringParser.format("JOB_NEW name=%S",jobName),
+                                                 errorMessage
+                                                );
+            if (error == Errors.NONE)
             {
               updateJobList();
               selectJob(jobName);
@@ -6059,16 +6157,21 @@ throw new Error("NYI");
         {
           try
           {
-            String[] result = new String[1];
-            int errorCode = BARServer.executeCommand("JOB_COPY "+selectedJobId+" "+StringUtils.escape(jobName),result);
-            if (errorCode == Errors.NONE)
+            String[] errorMessage = new String[1];
+            int error = BARServer.executeCommand(StringParser.format("JOB_COPY jobId=%d newName=%S",
+                                                                     selectedJobId,
+                                                                     jobName
+                                                                    ),
+                                                 errorMessage
+                                                );
+            if (error != Errors.NONE)
             {
               updateJobList();
               selectJob(jobName);
             }
             else
             {
-              Dialogs.error(shell,"Cannot copy job:\n\n"+result[0]);
+              Dialogs.error(shell,"Cannot copy job:\n\n"+errorMessage[0]);
             }
           }
           catch (CommunicationError error)
@@ -6166,16 +6269,21 @@ throw new Error("NYI");
         {
           try
           {
-            String[] result = new String[1];
-            int errorCode = BARServer.executeCommand("JOB_RENAME "+selectedJobId+" "+StringUtils.escape(newJobName),result);
-            if (errorCode == Errors.NONE)
+            String[] errorMessage = new String[1];
+            int error = BARServer.executeCommand(StringParser.format("JOB_RENAME jobId=%d newName=%S",
+                                                                     selectedJobId,
+                                                                     newJobName
+                                                                    ),
+                                                 errorMessage
+                                                );
+            if (error == Errors.NONE)
             {
               updateJobList();
               selectJob(newJobName);
             }
             else
             {
-              Dialogs.error(shell,"Cannot rename job:\n\n"+result[0]);
+              Dialogs.error(shell,"Cannot rename job:\n\n"+errorMessage[0]);
             }
           }
           catch (CommunicationError error)
@@ -6203,8 +6311,8 @@ throw new Error("NYI");
       try
       {
         String[] result = new String[1];
-        int errorCode = BARServer.executeCommand("JOB_DELETE "+selectedJobId);
-        if (errorCode == Errors.NONE)
+        int error = BARServer.executeCommand(StringParser.format("JOB_DELETE jobId=%d",selectedJobId));
+        if (error == Errors.NONE)
         {
           updateJobList();
           selectJobEvent.trigger();
@@ -6342,235 +6450,205 @@ throw new Error("NYI");
 
     treeItem.removeAll();
 
-    ArrayList<String> fileListResult = new ArrayList<String>();
-    int errorCode = BARServer.executeCommand("FILE_LIST "+StringUtils.escape("file://"+fileTreeData.name),fileListResult);
-    if (errorCode == Errors.NONE)
+    String[]            resultErrorMessage = new String[1];
+    ArrayList<ValueMap> resultMapList      = new ArrayList<ValueMap>();
+    int error = BARServer.executeCommand(StringParser.format("FILE_LIST url=%S",
+                                                             "file://"+fileTreeData.name
+                                                            ),
+                                                            new TypeMap("fileType",FileTypes.class,
+                                                                        "name",String.class,
+                                                                        "size",long.class,
+                                                                        "dateTime",long.class,
+                                                                        "noBackupFlag",boolean.class,
+                                                                        "specialType",SpecialTypes.class
+                                                                       ),
+                                                            resultErrorMessage,
+                                                            resultMapList
+                                                    );
+    if (error == Errors.NONE)
     {
-      final String[] FILENAME_MAP_FROM = new String[]{"\\n","\\r","\\\\"};
-      final String[] FILENAME_MAP_TO   = new String[]{"\n","\r","\\"};
-
-      for (String line : fileListResult)
+      for (ValueMap resultMap : resultMapList)
       {
-        Object data[] = new Object[10];
-//Dprintf.dprintf("line_%s",line);
-        if      (StringParser.parse(line,"FILE %ld %ld %S",data,StringParser.QUOTE_CHARS))
+        FileTypes fileType = resultMap.getEnum("fileType");
+        switch (fileType)
         {
-          /* get data
-             format:
-               size
-               date/time
-               backup flag
-               name
-          */
-          long   size     = (Long  )data[0];
-          long   datetime = (Long  )data[1];
-          String name     = StringUtils.map((String)data[2],FILENAME_MAP_FROM,FILENAME_MAP_TO);
+          case FILE:
+            {
+              String  name         = resultMap.getString("name");
+              long    size         = resultMap.getLong("size");
+              long    dateTime     = resultMap.getLong("dateTime");
+              boolean noBackupFlag = resultMap.getBoolean("noBackupFlag",false);
 
-          // create file tree data
-          fileTreeData = new FileTreeData(name,FileTypes.FILE,size,datetime,new File(name).getName());
+              // create file tree data
+              fileTreeData = new FileTreeData(name,FileTypes.FILE,size,dateTime,new File(name).getName());
 
-          // add entry
-          Image image;
-          if      (includeHashMap.containsKey(name))
-            image = IMAGE_FILE_INCLUDED;
-          else if (excludeHashSet.contains(name))
-            image = IMAGE_FILE_EXCLUDED;
-          else
-            image = IMAGE_FILE;
+              // add entry
+              Image image;
+              if      (includeHashMap.containsKey(name))
+                image = IMAGE_FILE_INCLUDED;
+              else if (excludeHashSet.contains(name))
+                image = IMAGE_FILE_EXCLUDED;
+              else
+                image = IMAGE_FILE;
 
-          subTreeItem = Widgets.addTreeItem(treeItem,findFilesTreeIndex(treeItem,fileTreeData),fileTreeData,false);
-          subTreeItem.setText(0,fileTreeData.title);
-          subTreeItem.setText(1,"FILE");
-          subTreeItem.setText(2,Units.formatByteSize(size));
-          subTreeItem.setText(3,simpleDateFormat.format(new Date(datetime*1000)));
-          subTreeItem.setImage(image);
-        }
-        else if (StringParser.parse(line,"DIRECTORY %ld %d %S",data,StringParser.QUOTE_CHARS))
-        {
-          /* get data
-             format:
-               date/time
-               backup flag
-               name
-          */
-          long    datetime   = (Long    )data[0];
-          boolean backupFlag = ((Integer)data[1] != 0);
-          String  name       = (String  )data[2];
+              subTreeItem = Widgets.addTreeItem(treeItem,findFilesTreeIndex(treeItem,fileTreeData),fileTreeData,false);
+              subTreeItem.setText(0,fileTreeData.title);
+              subTreeItem.setText(1,"FILE");
+              subTreeItem.setText(2,Units.formatByteSize(size));
+              subTreeItem.setText(3,simpleDateFormat.format(new Date(dateTime*1000)));
+              subTreeItem.setImage(image);
+            }
+            break;
+          case DIRECTORY:
+            {
+              String  name         = resultMap.getString("name");
+              long    dateTime     = resultMap.getLong("dateTime");
+              boolean noBackupFlag = resultMap.getBoolean("noBackupFlag",false);
 
-          // create file tree data
-          fileTreeData = new FileTreeData(name,FileTypes.DIRECTORY,datetime,new File(name).getName());
+              // create file tree data
+              fileTreeData = new FileTreeData(name,FileTypes.DIRECTORY,dateTime,new File(name).getName());
 
-          // add entry
-          Image   image;
-          if      (includeHashMap.containsKey(name))
-            image = IMAGE_DIRECTORY_INCLUDED;
-          else if (excludeHashSet.contains(name))
-            image = IMAGE_DIRECTORY_EXCLUDED;
-          else
-            image = IMAGE_DIRECTORY;
+              // add entry
+              Image   image;
+              if      (includeHashMap.containsKey(name))
+                image = IMAGE_DIRECTORY_INCLUDED;
+              else if (excludeHashSet.contains(name))
+                image = IMAGE_DIRECTORY_EXCLUDED;
+              else
+                image = IMAGE_DIRECTORY;
 
-          subTreeItem = Widgets.addTreeItem(treeItem,findFilesTreeIndex(treeItem,fileTreeData),fileTreeData,true);
-          subTreeItem.setText(0,fileTreeData.title);
-          subTreeItem.setText(1,"DIR");
-          subTreeItem.setText(3,simpleDateFormat.format(new Date(datetime*1000)));
-          subTreeItem.setImage(image);
+              subTreeItem = Widgets.addTreeItem(treeItem,findFilesTreeIndex(treeItem,fileTreeData),fileTreeData,true);
+              subTreeItem.setText(0,fileTreeData.title);
+              subTreeItem.setText(1,"DIR");
+              subTreeItem.setText(3,simpleDateFormat.format(new Date(dateTime*1000)));
+              subTreeItem.setImage(image);
 
-          // request directory info
-          directoryInfoThread.add(name,subTreeItem);
-        }
-        else if (StringParser.parse(line,"LINK %ld %S",data,StringParser.QUOTE_CHARS))
-        {
-          /* get data
-             format:
-               date/time
-               name
-          */
-          long   datetime = (Long  )data[0];
-          String name     = (String)data[1];
+              // request directory info
+              directoryInfoThread.add(name,subTreeItem);
+            }
+            break;
+          case LINK:
+            {
+              String  name         = resultMap.getString("name");
+              long    dateTime     = resultMap.getLong("dateTime");
+              boolean noBackupFlag = resultMap.getBoolean("noBackupFlag",false);
 
-          // create file tree data
-          fileTreeData = new FileTreeData(name,FileTypes.LINK,0,datetime,new File(name).getName());
+              // create file tree data
+              fileTreeData = new FileTreeData(name,FileTypes.LINK,dateTime,new File(name).getName());
 
-          // add entry
-          Image image;
-          if      (includeHashMap.containsKey(name))
-            image = IMAGE_LINK_INCLUDED;
-          else if (excludeHashSet.contains(name))
-            image = IMAGE_LINK_EXCLUDED;
-          else
-            image = IMAGE_LINK;
+              // add entry
+              Image image;
+              if      (includeHashMap.containsKey(name))
+                image = IMAGE_LINK_INCLUDED;
+              else if (excludeHashSet.contains(name))
+                image = IMAGE_LINK_EXCLUDED;
+              else
+                image = IMAGE_LINK;
 
-          subTreeItem = Widgets.addTreeItem(treeItem,findFilesTreeIndex(treeItem,fileTreeData),fileTreeData,false);
-          subTreeItem.setText(0,fileTreeData.title);
-          subTreeItem.setText(1,"LINK");
-          subTreeItem.setText(3,simpleDateFormat.format(new Date(datetime*1000)));
-          subTreeItem.setImage(image);
-        }
-        else if (StringParser.parse(line,"DEVICE CHARACTER %ld %S",data,StringParser.QUOTE_CHARS))
-        {
-          /* get data
-             format:
-               date/time
-               name
-          */
-          long   datetime = (Long  )data[0];
-          String name     = (String)data[1];
+              subTreeItem = Widgets.addTreeItem(treeItem,findFilesTreeIndex(treeItem,fileTreeData),fileTreeData,false);
+              subTreeItem.setText(0,fileTreeData.title);
+              subTreeItem.setText(1,"LINK");
+              subTreeItem.setText(3,simpleDateFormat.format(new Date(dateTime*1000)));
+              subTreeItem.setImage(image);
+            }
+            break;
+          case HARDLINK:
+            {
+              String  name         = resultMap.getString("name");
+              long    size         = resultMap.getLong("size");
+              long    dateTime     = resultMap.getLong("dateTime");
+              boolean noBackupFlag = resultMap.getBoolean("noBackupFlag",false);
 
-          // create file tree data
-          fileTreeData = new FileTreeData(name,FileTypes.DEVICE,0,datetime,name);
+              // create file tree data
+              fileTreeData = new FileTreeData(name,FileTypes.HARDLINK,size,dateTime,new File(name).getName());
 
-          // add entry
-          subTreeItem = Widgets.addTreeItem(treeItem,findFilesTreeIndex(treeItem,fileTreeData),fileTreeData,false);
-          subTreeItem.setText(0,fileTreeData.title);
-          subTreeItem.setText(1,"DEVICE CHARACTER");
-          subTreeItem.setText(3,simpleDateFormat.format(new Date(datetime*1000)));
-        }
-        else if (StringParser.parse(line,"DEVICE BLOCK %ld %ld %S",data,StringParser.QUOTE_CHARS))
-        {
-          /* get data
-             format:
-               size
-               date/time
-               name
-          */
-          long   size     = (Long  )data[0];
-          long   datetime = (Long  )data[1];
-          String name     = (String)data[2];
+              // add entry
+              Image image;
+              if      (includeHashMap.containsKey(name))
+                image = IMAGE_FILE_INCLUDED;
+              else if (excludeHashSet.contains(name))
+                image = IMAGE_FILE_EXCLUDED;
+              else
+                image = IMAGE_FILE;
 
-          // create file tree data
-          fileTreeData = new FileTreeData(name,FileTypes.DEVICE,0,datetime,name);
+              subTreeItem = Widgets.addTreeItem(treeItem,findFilesTreeIndex(treeItem,fileTreeData),fileTreeData,false);
+              subTreeItem.setText(0,fileTreeData.title);
+              subTreeItem.setText(1,"HARDLINK");
+              subTreeItem.setText(2,Units.formatByteSize(size));
+              subTreeItem.setText(3,simpleDateFormat.format(new Date(dateTime*1000)));
+              subTreeItem.setImage(image);
+            }
+            break;
+          case SPECIAL:
+            {
+              String  name     = resultMap.getString("name");
+              long    size     = resultMap.getLong("size");
+              long    dateTime = resultMap.getLong("dateTime");
 
-          // add entry
-          subTreeItem = Widgets.addTreeItem(treeItem,findFilesTreeIndex(treeItem,fileTreeData),fileTreeData,false);
-          subTreeItem.setText(0,fileTreeData.title);
-          subTreeItem.setText(1,"DEVICE BLOCK");
-          if (size >= 0) subTreeItem.setText(2,Units.formatByteSize(size));
-          subTreeItem.setText(3,simpleDateFormat.format(new Date(datetime*1000)));
-        }
-        else if (StringParser.parse(line,"DEVICE %s %ld %S",data,StringParser.QUOTE_CHARS))
-        {
-          /* get data
-             format:
-               type
-               date/time
-               name
-          */
-          String type     = (String)data[0];
-          long   datetime = (Long  )data[1];
-          String name     = (String)data[2];
+              SpecialTypes specialType = resultMap.getEnum("specialType");
+              switch (specialType)
+              {
+                case CHARACTER_DEVICE:
+                  // create file tree data
+                  fileTreeData = new FileTreeData(name,SpecialTypes.CHARACTER_DEVICE,dateTime,name);
 
-          // create file tree data
-          fileTreeData = new FileTreeData(name,FileTypes.DEVICE,0,datetime,name);
+                  // add entry
+                  subTreeItem = Widgets.addTreeItem(treeItem,findFilesTreeIndex(treeItem,fileTreeData),fileTreeData,false);
+                  subTreeItem.setText(0,fileTreeData.title);
+                  subTreeItem.setText(1,"CHARACTER DEVICE");
+                  subTreeItem.setText(3,simpleDateFormat.format(new Date(dateTime*1000)));
+                  break;
+                case BLOCK_DEVICE:
+                  // create file tree data
+                  fileTreeData = new FileTreeData(name,SpecialTypes.BLOCK_DEVICE,size,dateTime,name);
 
-          // add entry
-          subTreeItem = Widgets.addTreeItem(treeItem,findFilesTreeIndex(treeItem,fileTreeData),fileTreeData,false);
-          subTreeItem.setText(0,fileTreeData.title);
-          subTreeItem.setText(1,String.format("DEVICE %s",type));
-          subTreeItem.setText(3,simpleDateFormat.format(new Date(datetime*1000)));
-        }
-        else if (StringParser.parse(line,"FIFO %ld %S",data,StringParser.QUOTE_CHARS))
-        {
-          /* get data
-             format:
-               date/time
-               name
-          */
-          long   datetime = (Long  )data[0];
-          String name     = (String)data[1];
+                  // add entry
+                  subTreeItem = Widgets.addTreeItem(treeItem,findFilesTreeIndex(treeItem,fileTreeData),fileTreeData,false);
+                  subTreeItem.setText(0,fileTreeData.title);
+                  subTreeItem.setText(1,"BLOCK DEVICE");
+                  if (size >= 0) subTreeItem.setText(2,Units.formatByteSize(size));
+                  subTreeItem.setText(3,simpleDateFormat.format(new Date(dateTime*1000)));
+                  break;
+                case FIFO:
+                  // create file tree data
+                  fileTreeData = new FileTreeData(name,SpecialTypes.FIFO,dateTime,name);
 
-          // create file tree data
-          fileTreeData = new FileTreeData(name,FileTypes.FIFO,0,datetime,name);
+                  // add entry
+                  subTreeItem = Widgets.addTreeItem(treeItem,findFilesTreeIndex(treeItem,fileTreeData),fileTreeData,false);
+                  subTreeItem.setText(0,fileTreeData.title);
+                  subTreeItem.setText(1,"FIFO");
+                  subTreeItem.setText(3,simpleDateFormat.format(new Date(dateTime*1000)));
+                  break;
+                case SOCKET:
+                  // create file tree data
+                  fileTreeData = new FileTreeData(name,SpecialTypes.SOCKET,dateTime,name);
 
-          // add entry
-          subTreeItem = Widgets.addTreeItem(treeItem,findFilesTreeIndex(treeItem,fileTreeData),fileTreeData,false);
-          subTreeItem.setText(0,fileTreeData.title);
-          subTreeItem.setText(1,"FIFO");
-          subTreeItem.setText(3,simpleDateFormat.format(new Date(datetime*1000)));
-        }
-        else if (StringParser.parse(line,"SOCKET %ld %S",data,StringParser.QUOTE_CHARS))
-        {
-          /* get data
-             format:
-               date/time
-               name
-          */
-          long   datetime = (Long  )data[0];
-          String name     = (String)data[1];
+                  // add entry
+                  subTreeItem = Widgets.addTreeItem(treeItem,findFilesTreeIndex(treeItem,fileTreeData),fileTreeData,false);
+                  subTreeItem.setText(0,fileTreeData.title);
+                  subTreeItem.setText(1,"SOCKET");
+                  subTreeItem.setText(3,simpleDateFormat.format(new Date(dateTime*1000)));
+                  break;
+                case OTHER:
+                  // create file tree data
+                  fileTreeData = new FileTreeData(name,SpecialTypes.OTHER,dateTime,name);
 
-          // create file tree data
-          fileTreeData = new FileTreeData(name,FileTypes.SOCKET,0,datetime,name);
-
-          // add entry
-          subTreeItem = Widgets.addTreeItem(treeItem,findFilesTreeIndex(treeItem,fileTreeData),fileTreeData,false);
-          subTreeItem.setText(0,fileTreeData.title);
-          subTreeItem.setText(1,"SOCKET");
-          subTreeItem.setText(3,simpleDateFormat.format(new Date(datetime*1000)));
-        }
-        else if (StringParser.parse(line,"SPECIAL %ld %S",data,StringParser.QUOTE_CHARS))
-        {
-          /* get data
-             format:
-               date/time
-               name
-          */
-          long   datetime = (Long  )data[0];
-          String name     = (String)data[1];
-
-          // create file tree data
-          fileTreeData = new FileTreeData(name,FileTypes.SPECIAL,0,datetime,name);
-
-          // add entry
-          subTreeItem = Widgets.addTreeItem(treeItem,findFilesTreeIndex(treeItem,fileTreeData),fileTreeData,false);
-          subTreeItem.setText(0,fileTreeData.title);
-          subTreeItem.setText(1,"SPECIAL");
-          subTreeItem.setText(3,simpleDateFormat.format(new Date(datetime*1000)));
+                  // add entry
+                  subTreeItem = Widgets.addTreeItem(treeItem,findFilesTreeIndex(treeItem,fileTreeData),fileTreeData,false);
+                  subTreeItem.setText(0,fileTreeData.title);
+                  subTreeItem.setText(1,"SPECIAL");
+                  subTreeItem.setText(3,simpleDateFormat.format(new Date(dateTime*1000)));
+                  break;
+              }
+            }
+            break;
         }
       }
     }
     else
     {
 //Dprintf.dprintf("fileTreeData.name=%s fileListResult=%s errorCode=%d\n",fileTreeData.name,fileListResult,errorCode);
-       Dialogs.error(shell,"Cannot get file list (error: "+fileListResult.get(0)+")");
+       Dialogs.error(shell,"Cannot get file list (error: "+resultErrorMessage[0]+")");
     }
 
     shell.setCursor(null);
@@ -6595,41 +6673,44 @@ throw new Error("NYI");
       Image image = null;
       if      (includeHashMap.containsKey(fileTreeData.name) && !excludeHashSet.contains(fileTreeData.name))
       {
-        switch (fileTreeData.type)
+        switch (fileTreeData.fileType)
         {
           case FILE:      image = IMAGE_FILE_INCLUDED;      break;
           case DIRECTORY: image = IMAGE_DIRECTORY_INCLUDED; break;
           case LINK:      image = IMAGE_LINK_INCLUDED;      break;
-          case DEVICE:    image = IMAGE_FILE_INCLUDED;      break;
+          case HARDLINK:  image = IMAGE_LINK_INCLUDED;      break;
           case SPECIAL:   image = IMAGE_FILE_INCLUDED;      break;
-          case FIFO:      image = IMAGE_FILE_INCLUDED;      break;
-          case SOCKET:    image = IMAGE_FILE_INCLUDED;      break;
         }
       }
       else if (excludeHashSet.contains(fileTreeData.name))
       {
-        switch (fileTreeData.type)
+        switch (fileTreeData.fileType)
         {
           case FILE:      image = IMAGE_FILE_EXCLUDED;      break;
           case DIRECTORY: image = IMAGE_DIRECTORY_EXCLUDED; break;
           case LINK:      image = IMAGE_LINK_EXCLUDED;      break;
-          case DEVICE:    image = IMAGE_FILE_EXCLUDED;      break;
+          case HARDLINK:  image = IMAGE_LINK_EXCLUDED;      break;
           case SPECIAL:   image = IMAGE_FILE_EXCLUDED;      break;
-          case FIFO:      image = IMAGE_FILE_EXCLUDED;      break;
-          case SOCKET:    image = IMAGE_FILE_EXCLUDED;      break;
         }
       }
       else
       {
-        switch (fileTreeData.type)
+        switch (fileTreeData.fileType)
         {
           case FILE:      image = IMAGE_FILE;      break;
           case DIRECTORY: image = IMAGE_DIRECTORY; break;
           case LINK:      image = IMAGE_LINK;      break;
-          case DEVICE:    image = IMAGE_FILE;      break;
-          case SPECIAL:   image = IMAGE_FILE;      break;
-          case FIFO:      image = IMAGE_FILE;      break;
-          case SOCKET:    image = IMAGE_FILE;      break;
+          case HARDLINK:  image = IMAGE_LINK;      break;
+          case SPECIAL:
+            switch (fileTreeData.specialType)
+            {
+              case CHARACTER_DEVICE: image = IMAGE_FILE;      break;
+              case BLOCK_DEVICE:     image = IMAGE_FILE;      break;
+              case FIFO:             image = IMAGE_FILE;      break;
+              case SOCKET:           image = IMAGE_FILE;      break;
+              case OTHER:            image = IMAGE_FILE;      break;
+            }
+            break;
         }
       }
       treeItem.setImage(image);
@@ -6652,38 +6733,36 @@ throw new Error("NYI");
    */
   private void addDevicesList()
   {
-    ArrayList<String> result = new ArrayList<String>();
-    int errorCode = BARServer.executeCommand("DEVICE_LIST",result);
-    if (errorCode == Errors.NONE)
+    String[]            resultErrorMessage = new String[1];
+    ArrayList<ValueMap> resultMapList      = new ArrayList<ValueMap>();
+    int error = BARServer.executeCommand(StringParser.format("DEVICE_LIST"),
+                                         new TypeMap("name",String.class,
+                                                     "size",long.class,
+                                                     "mountedFlag",Boolean.class
+                                                    ),
+                                         resultErrorMessage,
+                                         resultMapList
+                                        );
+    if (error == Errors.NONE)
     {
-      for (String line : result)
+      for (ValueMap resultMap : resultMapList)
       {
-        Object data[] = new Object[3];
-        if      (StringParser.parse(line,"%ld %d %S",data,StringParser.QUOTE_CHARS))
-        {
-          /* get data
-             format:
-               size
-               mountedFlag
-               name
-          */
-          long    size        = (Long)data[0];
-          boolean mountedFlag = ((Integer)data[1] == 1);
-          String  name        = (String)data[2];
+        long    size        = resultMap.getLong("size");
+        boolean mountedFlag = resultMap.getBoolean("mountedFlag");
+        String  name        = resultMap.getString("name");
 
-          // create device data
-          DeviceTreeData deviceTreeData = new DeviceTreeData(name,size);
+        // create device data
+        DeviceTreeData deviceTreeData = new DeviceTreeData(name,size);
 
-          TreeItem treeItem = Widgets.addTreeItem(widgetDeviceTree,findDeviceIndex(widgetDeviceTree,deviceTreeData),deviceTreeData,false);
-          treeItem.setText(0,name);
-          treeItem.setText(1,Units.formatByteSize(size));
-          treeItem.setImage(IMAGE_DEVICE);
-        }
+        TreeItem treeItem = Widgets.addTreeItem(widgetDeviceTree,findDeviceIndex(widgetDeviceTree,deviceTreeData),deviceTreeData,false);
+        treeItem.setText(0,name);
+        treeItem.setText(1,Units.formatByteSize(size));
+        treeItem.setImage(IMAGE_DEVICE);
       }
     }
     else
     {
-      Dialogs.error(shell,"Cannot get device list:\n\n"+result.get(0));
+      Dialogs.error(shell,"Cannot get device list:\n\n"+resultErrorMessage[0]);
     }
   }
 
@@ -6775,50 +6854,57 @@ throw new Error("NYI");
    */
   private void updateIncludeList()
   {
-    final String[] PATTERN_MAP_FROM = new String[]{"\\n","\\r","\\\\"};
-    final String[] PATTERN_MAP_TO   = new String[]{"\n","\r","\\"};
-
     assert selectedJobId != 0;
 
-    ArrayList<String> result = new ArrayList<String>();
-    if (BARServer.executeCommand("INCLUDE_LIST "+selectedJobId,result) != Errors.NONE) return;
+    String[]            resultErrorMessage = new String[1];
+    ArrayList<ValueMap> resultMapList      = new ArrayList<ValueMap>();
+    int error = BARServer.executeCommand(StringParser.format("INCLUDE_LIST jobId=%d",
+                                                             selectedJobId
+                                                            ),
+                                         new TypeMap("entryType",  EntryTypes.class,
+                                                     "patternType",PatternTypes.class,
+                                                     "pattern",    String.class
+                                                    ),
+                                         resultErrorMessage,
+                                         resultMapList
+                                        );
+    if (error != Errors.NONE)
+    {
+      return;
+    }
 
     includeHashMap.clear();
     Widgets.removeAllTableEntries(widgetIncludeTable);
-    for (String line : result)
+    for (ValueMap resultMap : resultMapList)
     {
-      Object[] data = new Object[3];
-      if (StringParser.parse(line,"%{TabJobs.EntryTypes}s %{TabJobs.PatternTypes}s %'S",data,StringParser.QUOTE_CHARS))
-      {
-        // get data
-        EntryTypes   entryType   = (EntryTypes)data[0];
-        PatternTypes patternType = (PatternTypes)data[1];
-        String       pattern     = StringUtils.map((String)data[2],PATTERN_MAP_FROM,PATTERN_MAP_TO);
+      // get data
+      EntryTypes   entryType   = resultMap.getEnum("entryType");
+      PatternTypes patternType = resultMap.getEnum("patternType");
+      String       pattern     = resultMap.getString("pattern");
 
-        if (!pattern.equals(""))
-        {
-          EntryData entryData = new EntryData(entryType,pattern);
+      if (!pattern.equals(""))
+      {
+        EntryData entryData = new EntryData(entryType,pattern);
 
 /*
-          // add entry
-          Image image;
-          if      (includeHashMap.containsKey(name))
-            image = IMAGE_DEVICE_INCLUDED;
-          else if (excludeHashSet.contains(name))
-            image = IMAGE_FILE_EXCLUDED;
-          else
-            image = IMAGE_DEVICE;
+        // add entry
+        Image image;
+        if      (includeHashMap.containsKey(name))
+          image = IMAGE_DEVICE_INCLUDED;
+        else if (excludeHashSet.contains(name))
+          image = IMAGE_FILE_EXCLUDED;
+        else
+          image = IMAGE_DEVICE;
 Dprintf.dprintf("name=%s %s",name,includeHashMap.containsKey(name));
 */
 
-          includeHashMap.put(pattern,entryData);
-          Widgets.insertTableEntry(widgetIncludeTable,
-                                   findTableIndex(widgetIncludeTable,pattern),
-                                   (Object)entryData,
-                                   entryData.getImage(),
-                                   entryData.pattern
-                                  );
-        }
+        includeHashMap.put(pattern,entryData);
+        Widgets.insertTableEntry(widgetIncludeTable,
+                                 findTableIndex(widgetIncludeTable,pattern),
+                                 (Object)entryData,
+                                 entryData.getImage(),
+                                 entryData.pattern
+                                );
       }
     }
   }
@@ -6827,31 +6913,37 @@ Dprintf.dprintf("name=%s %s",name,includeHashMap.containsKey(name));
    */
   private void updateExcludeList()
   {
-    final String[] PATTERN_MAP_FROM = new String[]{"\\n","\\r","\\\\"};
-    final String[] PATTERN_MAP_TO   = new String[]{"\n","\r","\\"};
-
     assert selectedJobId != 0;
 
-    ArrayList<String> result = new ArrayList<String>();
-    if (BARServer.executeCommand("EXCLUDE_LIST "+selectedJobId,result) != Errors.NONE) return;
+    String[]            resultErrorMessage = new String[1];
+    ArrayList<ValueMap> resultMapList      = new ArrayList<ValueMap>();
+    int error = BARServer.executeCommand(StringParser.format("EXCLUDE_LIST jobId=%d",
+                                                             selectedJobId
+                                                            ),
+                                         new TypeMap("patternType",PatternTypes.class,
+                                                     "pattern",    String.class
+                                                    ),
+                                         resultErrorMessage,
+                                         resultMapList
+                                        );
+    if (error != Errors.NONE)
+    {
+      return;
+    }
 
     excludeHashSet.clear();
     Widgets.removeAllListEntries(widgetExcludeList);
 
-    for (String line : result)
+    for (ValueMap resultMap : resultMapList)
     {
-      Object[] data = new Object[2];
-      if (StringParser.parse(line,"%s %S",data,StringParser.QUOTE_CHARS))
-      {
-        // get data
-        String type    = (String)data[0];
-        String pattern = StringUtils.map((String)data[1],PATTERN_MAP_FROM,PATTERN_MAP_TO);
+      // get data
+      PatternTypes patternType = resultMap.getEnum("patternType");
+      String       pattern     = resultMap.getString("pattern");
 
-        if (!pattern.equals(""))
-        {
-          excludeHashSet.add(pattern);
-          widgetExcludeList.add(pattern,findListIndex(widgetExcludeList,pattern));
-        }
+      if (!pattern.equals(""))
+      {
+        excludeHashSet.add(pattern);
+        widgetExcludeList.add(pattern,findListIndex(widgetExcludeList,pattern));
       }
     }
   }
@@ -6862,26 +6954,35 @@ Dprintf.dprintf("name=%s %s",name,includeHashMap.containsKey(name));
   {
     assert selectedJobId != 0;
 
-    ArrayList<String> result = new ArrayList<String>();
-    if (BARServer.executeCommand("EXCLUDE_COMPRESS_LIST "+selectedJobId,result) != Errors.NONE) return;
+    String[]            resultErrorMessage  = new String[1];
+    ArrayList<ValueMap> resultMapList       = new ArrayList<ValueMap>();
+    int error = BARServer.executeCommand(StringParser.format("EXCLUDE_COMPRESS_LIST jobId=%d",
+                                                             selectedJobId
+                                                            ),
+                                                            new TypeMap("patternType",PatternTypes.class,
+                                                                        "pattern",    String.class
+                                                                       ),
+                                                            resultErrorMessage,
+                                                            resultMapList
+                                                           );
+    if (error != Errors.NONE)
+    {
+      return;
+    }
 
     compressExcludeHashSet.clear();
     Widgets.removeAllListEntries(widgetCompressExcludeList);
 
-    for (String line : result)
+    for (ValueMap resultMap : resultMapList)
     {
-      Object[] data = new Object[2];
-      if (StringParser.parse(line,"%s %S",data,StringParser.QUOTE_CHARS))
-      {
-        // get data
-        String type    = (String)data[0];
-        String pattern = (String)data[1];
+      // get data
+      PatternTypes patternType = resultMap.getEnum("patternType");
+      String       pattern     = resultMap.getString("pattern");
 
-        if (!pattern.equals(""))
-        {
-           compressExcludeHashSet.add(pattern);
-           Widgets.addListEntry(widgetCompressExcludeList,findListIndex(widgetCompressExcludeList,pattern),pattern);
-        }
+      if (!pattern.equals(""))
+      {
+         compressExcludeHashSet.add(pattern);
+         Widgets.addListEntry(widgetCompressExcludeList,findListIndex(widgetCompressExcludeList,pattern),pattern);
       }
     }
   }
@@ -7042,10 +7143,18 @@ throw new Error("NYI");
     assert selectedJobId != 0;
 
     // update include list
-    String[] result = new String[1];
-    if (BARServer.executeCommand("INCLUDE_LIST_ADD "+selectedJobId+" "+entryData.entryType.toString()+" GLOB "+StringUtils.escape(StringUtils.map(entryData.pattern,PATTERN_MAP_FROM,PATTERN_MAP_TO)),result) != Errors.NONE)
+    String[] resultErrorMessage = new String[1];
+    int error = BARServer.executeCommand(StringParser.format("INCLUDE_LIST_ADD jobId=%d entryType=%d patternType=%s pattern=%'S",
+                                                             selectedJobId,
+                                                             entryData.entryType.toString(),
+                                                             "GLOB",
+                                                             entryData.pattern
+                                                            ),
+                                         resultErrorMessage
+                                        );
+    if (error != Errors.NONE)
     {
-      Dialogs.error(shell,"Cannot add include entry:\n\n"+result[0]);
+      Dialogs.error(shell,"Cannot add include entry:\n\n"+resultErrorMessage[0]);
       return;
     }
 
@@ -7082,10 +7191,19 @@ throw new Error("NYI");
     }
 
     // update include list
-    BARServer.executeCommand("INCLUDE_LIST_CLEAR "+selectedJobId);
+    String[] resultErrorMessage = new String[1];
+//TODO return value?
+    BARServer.executeCommand(StringParser.format("INCLUDE_LIST_CLEAR jobId=%d",selectedJobId),resultErrorMessage);
     for (EntryData entryData : includeHashMap.values())
     {
-      BARServer.executeCommand("INCLUDE_LIST_ADD "+selectedJobId+" "+entryData.entryType.toString()+" GLOB "+StringUtils.escape(StringUtils.map(entryData.pattern,PATTERN_MAP_FROM,PATTERN_MAP_TO)));
+      BARServer.executeCommand(StringParser.format("INCLUDE_LIST_ADD jobId=%d entryType=%d patternType=%s pattern=%'S",
+                                                   selectedJobId,
+                                                   entryData.entryType.toString(),
+                                                   "GLOB",
+                                                   entryData.pattern
+                                                  ),
+                               resultErrorMessage
+                              );
     }
 
     // update table widget
@@ -7313,10 +7431,17 @@ throw new Error("NYI");
     assert selectedJobId != 0;
 
     // update exclude list
-    String[] result = new String[1];
-    if (BARServer.executeCommand("EXCLUDE_LIST_ADD "+selectedJobId+" GLOB "+StringUtils.escape(StringUtils.map(pattern,PATTERN_MAP_FROM,PATTERN_MAP_TO)),result) != Errors.NONE)
+    String[] resultErrorMessage = new String[1];
+    int error = BARServer.executeCommand(StringParser.format("EXCLUDE_LIST_ADD jobId=%d patternType=%s pattern=%'S",
+                                                             selectedJobId,
+                                                             "GLOB",
+                                                             pattern
+                                                            ),
+                                         resultErrorMessage
+                                        );
+    if (error != Errors.NONE)
     {
-      Dialogs.error(shell,"Cannot add exclude entry:\n\n"+result[0]);
+      Dialogs.error(shell,"Cannot add exclude entry:\n\n"+resultErrorMessage[0]);
       return;
     }
 
@@ -7353,10 +7478,18 @@ throw new Error("NYI");
     }
 
     // update exclude list
-    BARServer.executeCommand("EXCLUDE_LIST_CLEAR "+selectedJobId);
+    String[] resultErrorMessage = new String[1];
+//TODO return value?
+    BARServer.executeCommand(StringParser.format("EXCLUDE_LIST_CLEAR jobId=%d",selectedJobId),resultErrorMessage);
     for (String pattern : excludeHashSet)
     {
-      BARServer.executeCommand("EXCLUDE_LIST_ADD "+selectedJobId+" GLOB "+StringUtils.escape(StringUtils.map(pattern,PATTERN_MAP_FROM,PATTERN_MAP_TO)));
+      BARServer.executeCommand(StringParser.format("EXCLUDE_LIST_ADD jobId=%d patternType=%s pattern=%'S",
+                                                   selectedJobId,
+                                                   "GLOB",
+                                                   pattern
+                                                  ),
+                                resultErrorMessage
+                               );
     }
 
     // update list widget
@@ -7484,7 +7617,9 @@ throw new Error("NYI");
       Widgets.layout(label,0,0,TableLayoutData.W);
 
       widgetPattern = Widgets.newText(composite);
+      if (pattern[0] != null) widgetPattern.setText(pattern[0]);
       Widgets.layout(widgetPattern,0,1,TableLayoutData.WE);
+      widgetPattern.setToolTipText("Compress exclude pattern. Use * and ? as wildcards.");
 
       button = Widgets.newButton(composite,IMAGE_DIRECTORY);
       Widgets.layout(button,0,2,TableLayoutData.DEFAULT);
@@ -7563,17 +7698,21 @@ throw new Error("NYI");
    */
   private void compressExcludeListAdd(String pattern)
   {
-    final String[] PATTERN_MAP_FROM = new String[]{"\n","\r","\\"};
-    final String[] PATTERN_MAP_TO   = new String[]{"\\n","\\r","\\\\"};
-
     assert selectedJobId != 0;
 
     if (!compressExcludeHashSet.contains(pattern))
     {
-      String[] result = new String[1];
-      if (BARServer.executeCommand("EXCLUDE_COMPRESS_LIST_ADD "+selectedJobId+" GLOB "+StringUtils.escape(StringUtils.map(pattern,PATTERN_MAP_FROM,PATTERN_MAP_TO)),result) != Errors.NONE)
+      String[] resultErrorMesage = new String[1];
+      int error = BARServer.executeCommand(StringParser.format("EXCLUDE_COMPRESS_LIST_ADD jobId=%d patternType=%s pattern=%'S",
+                                                               selectedJobId,
+                                                               "GLOB",
+                                                               pattern
+                                                              ),
+                                           resultErrorMesage
+                                          );
+      if (error != Errors.NONE)
       {
-        Dialogs.error(shell,"Cannot add compress exclude entry:\n\n"+result[0]);
+        Dialogs.error(shell,"Cannot add compress exclude entry:\n\n"+resultErrorMesage[0]);
         return;
       }
 
@@ -7591,19 +7730,23 @@ throw new Error("NYI");
    */
   private void compressExcludeListAdd(String[] patterns)
   {
-    final String[] PATTERN_MAP_FROM = new String[]{"\n","\r","\\"};
-    final String[] PATTERN_MAP_TO   = new String[]{"\\n","\\r","\\\\"};
-
     assert selectedJobId != 0;
 
     for (String pattern : patterns)
     {
       if (!compressExcludeHashSet.contains(pattern))
       {
-        String[] result = new String[1];
-        if (BARServer.executeCommand("EXCLUDE_COMPRESS_LIST_ADD "+selectedJobId+" GLOB "+StringUtils.escape(StringUtils.map(pattern,PATTERN_MAP_FROM,PATTERN_MAP_TO)),result) != Errors.NONE)
+        String[] resultErrorMessage = new String[1];
+        int error = BARServer.executeCommand(StringParser.format("EXCLUDE_COMPRESS_LIST_ADD jobId=%d patternType=%s pattern=%'S",
+                                                                 selectedJobId,
+                                                                 "GLOB",
+                                                                 pattern
+                                                                ),
+                                             resultErrorMessage
+                                            );
+        if (error != Errors.NONE)
         {
-          Dialogs.error(shell,"Cannot add compress exclude entry:\n\n"+result[0]);
+          Dialogs.error(shell,"Cannot add compress exclude entry:\n\n"+resultErrorMessage[0]);
           return;
         }
 
@@ -7630,29 +7773,73 @@ throw new Error("NYI");
     }
   }
 
-  /** remove compress exclude pattern
+  /** edit compress exclude entry
+   */
+  private void compressExcludeListEdit()
+  {
+    assert selectedJobId != 0;
+
+    String[] patterns = widgetCompressExcludeList.getSelection();
+    if (patterns.length > 0)
+    {
+      String   oldPattern = patterns[0];
+      String[] newPattern = new String[]{new String(oldPattern)};
+
+      if (compressExcludeEdit(newPattern,"Edit compress exclude pattern","Save"))
+      {
+        // update include list
+        compressExcludeListRemove(new String[]{oldPattern,newPattern[0]});
+        compressExcludeListAdd(newPattern[0]);
+
+        // update file tree/device images
+        updateFileTreeImages();
+        updateDeviceImages();
+      }
+    }
+  }
+
+  /** remove compress exclude patterns
    * @param pattern pattern to remove from include/exclude list
    */
-  private void compressExcludeListRemove(String pattern)
+  private void compressExcludeListRemove(String[] patterns)
   {
     final String[] PATTERN_MAP_FROM = new String[]{"\n","\r","\\"};
     final String[] PATTERN_MAP_TO   = new String[]{"\\n","\\r","\\\\"};
 
     assert selectedJobId != 0;
 
-    compressExcludeHashSet.remove(pattern);
-
-    BARServer.executeCommand("EXCLUDE_COMPRESS_LIST_CLEAR "+selectedJobId);
-    Widgets.removeAllListEntries(widgetCompressExcludeList);
-    for (String s : compressExcludeHashSet)
+    for (String pattern : patterns)
     {
-      BARServer.executeCommand("EXCLUDE_COMPRESS_LIST_ADD "+selectedJobId+" GLOB "+StringUtils.escape(StringUtils.map(s,PATTERN_MAP_FROM,PATTERN_MAP_TO)));
-      Widgets.addListEntry(widgetCompressExcludeList,findListIndex(widgetCompressExcludeList,s),s);
+      compressExcludeHashSet.remove(pattern);
+    }
+
+    String[] resultErrorMessage = new String[1];
+//TODO return value?
+    BARServer.executeCommand(StringParser.format("EXCLUDE_COMPRESS_LIST_CLEAR jobId=%d",selectedJobId),resultErrorMessage);
+    Widgets.removeAllListEntries(widgetCompressExcludeList);
+    for (String pattern : compressExcludeHashSet)
+    {
+      BARServer.executeCommand(StringParser.format("EXCLUDE_COMPRESS_LIST_ADD jobId=%d patternType=%s pattern=%'S",
+                                                   selectedJobId,
+                                                   "GLOB",
+                                                   pattern
+                                                  ),
+                               resultErrorMessage
+                              );
+      Widgets.addListEntry(widgetCompressExcludeList,findListIndex(widgetCompressExcludeList,pattern),pattern);
     }
 
     // update file tree/device images
     updateFileTreeImages();
     updateDeviceImages();
+  }
+
+  /** remove compress exclude pattern
+   * @param pattern pattern to remove from compress exclude list
+   */
+  private void compressExcludeListRemove(String pattern)
+  {
+    compressExcludeListRemove(new String[]{pattern});
   }
 
   /** remove selected compress exclude pattern
@@ -8621,47 +8808,47 @@ throw new Error("NYI");
   private void updateScheduleList()
   {
     // get schedule list
-    ArrayList<String> result = new ArrayList<String>();
-    if (BARServer.executeCommand("SCHEDULE_LIST "+selectedJobId,result) != Errors.NONE) return;
+    String[]            resultErrorMessage  = new String[1];
+    ArrayList<ValueMap> resultMapList       = new ArrayList<ValueMap>();
+    int error = BARServer.executeCommand(StringParser.format("SCHEDULE_LIST jobId=%d",selectedJobId),
+                                         new TypeMap("date",    String.class,
+                                                     "weekDays",String.class,
+                                                     "time",    String.class,
+                                                     "enabled", Boolean.class,
+                                                     "type",    String.class
+                                                    ),
+                                         resultErrorMessage,
+                                         resultMapList
+                                        );
+    if (error != Errors.NONE)
+    {
+      return;
+    }
 
     // update schedule list
     synchronized(scheduleList)
     {
       scheduleList.clear();
       widgetScheduleList.removeAll();
-      for (String line : result)
+      for (ValueMap resultMap : resultMapList)
       {
-        Object data[] = new Object[8];
-        /* format:
-           <date y-m-d>
-           <weekDay>
-           <time h:m>
-           <enabled>
-           <type>
-        */
-        if (StringParser.parse(line,"%S-%S-%S %S %S:%S %y %S",data,StringParser.QUOTE_CHARS))
-        {
-          // get data
-          String  year     = (String)data[0];
-          String  month    = (String)data[1];
-          String  day      = (String)data[2];
-          String  weekDays = (String)data[3];
-          String  hour     = (String)data[4];
-          String  minute   = (String)data[5];
-          boolean enabled  = (Boolean)data[6];
-          String  type     = (String)data[7];
+        // get data
+        String  date     = resultMap.getString("date");
+        String  weekDays = resultMap.getString("weekDays");
+        String  time     = resultMap.getString("time");
+        boolean enabled  = resultMap.getBoolean("enabled");
+        String  type     = resultMap.getString("type");
 
-          ScheduleData scheduleData = new ScheduleData(year,month,day,weekDays,hour,minute,enabled,type);
+        ScheduleData scheduleData = new ScheduleData(date,weekDays,time,enabled,type);
 
-          scheduleList.add(scheduleData);
-          TableItem tableItem = new TableItem(widgetScheduleList,SWT.NONE,findScheduleListIndex(scheduleData));
-          tableItem.setData(scheduleData);
-          tableItem.setText(0,scheduleData.getDate());
-          tableItem.setText(1,scheduleData.getWeekDays());
-          tableItem.setText(2,scheduleData.getTime());
-          tableItem.setText(3,scheduleData.getEnabled());
-          tableItem.setText(4,scheduleData.getType());
-        }
+        scheduleList.add(scheduleData);
+        TableItem tableItem = new TableItem(widgetScheduleList,SWT.NONE,findScheduleListIndex(scheduleData));
+        tableItem.setData(scheduleData);
+        tableItem.setText(0,scheduleData.getDate());
+        tableItem.setText(1,scheduleData.getWeekDays());
+        tableItem.setText(2,scheduleData.getTime());
+        tableItem.setText(3,scheduleData.enabled ? "yes" : "no");
+        tableItem.setText(4,scheduleData.type);
       }
     }
   }
@@ -8903,13 +9090,17 @@ throw new Error("NYI");
     ScheduleData scheduleData = new ScheduleData();
     if (scheduleEdit(scheduleData,"New schedule","Add"))
     {
-      BARServer.executeCommand("SCHEDULE_LIST_ADD "+
-                               selectedJobId+" "+
-                               scheduleData.getDate()+" "+
-                               scheduleData.getWeekDays()+" "+
-                               scheduleData.getTime()+" "+
-                               scheduleData.getEnabled()+" "+
-                               scheduleData.getType()
+    String[] resultErrorMessage = new String[1];
+//TODO return value?
+      BARServer.executeCommand(StringParser.format("SCHEDULE_LIST_ADD jobId=%d date=%s weekDay=%s time=%s enabledFlag=%y type=%s",
+                                                   selectedJobId,
+                                                   scheduleData.getDate(),
+                                                   scheduleData.getWeekDays(),
+                                                   scheduleData.getTime(),
+                                                   scheduleData.enabled,
+                                                   scheduleData.type
+                                                  ),
+                               resultErrorMessage
                               );
 
       scheduleList.add(scheduleData);
@@ -8918,8 +9109,8 @@ throw new Error("NYI");
       tableItem.setText(0,scheduleData.getDate());
       tableItem.setText(1,scheduleData.getWeekDays());
       tableItem.setText(2,scheduleData.getTime());
-      tableItem.setText(3,scheduleData.getEnabled());
-      tableItem.setText(4,scheduleData.getType());
+      tableItem.setText(3,scheduleData.enabled ? "yes" : "no");
+      tableItem.setText(4,scheduleData.type);
     }
   }
 
@@ -8943,19 +9134,23 @@ throw new Error("NYI");
         tableItem.setText(0,scheduleData.getDate());
         tableItem.setText(1,scheduleData.getWeekDays());
         tableItem.setText(2,scheduleData.getTime());
-        tableItem.setText(3,scheduleData.getEnabled());
-        tableItem.setText(4,scheduleData.getType());
+        tableItem.setText(3,scheduleData.enabled ? "yes" : "no");
+        tableItem.setText(4,scheduleData.type);
 
-        BARServer.executeCommand("SCHEDULE_LIST_CLEAR "+selectedJobId);
-        for (ScheduleData data : scheduleList)
+    String[] resultErrorMessage = new String[1];
+//TODO return value?
+        BARServer.executeCommand(StringParser.format("SCHEDULE_LIST_CLEAR jobId=%d",selectedJobId),resultErrorMessage);
+        for (ScheduleData scheduleData_ : scheduleList)
         {
-          BARServer.executeCommand("SCHEDULE_LIST_ADD "+
-                                   selectedJobId+" "+
-                                   data.getDate()+" "+
-                                   data.getWeekDays()+" "+
-                                   data.getTime()+" "+
-                                   data.getEnabled()+" "+
-                                   data.getType()
+          BARServer.executeCommand(StringParser.format("SCHEDULE_LIST_ADD jobId=%d date=%s weekDay=%s time=%s enabledFlag=%y type=%s",
+                                                       selectedJobId,
+                                                       scheduleData_.getDate(),
+                                                       scheduleData_.getWeekDays(),
+                                                       scheduleData_.getTime(),
+                                                       scheduleData_.enabled,
+                                                       scheduleData_.type
+                                                      ),
+                                   resultErrorMessage
                                   );
         }
       }
@@ -8984,16 +9179,20 @@ throw new Error("NYI");
         tableItem.setText(0,newScheduleData.getDate());
         tableItem.setText(1,newScheduleData.getWeekDays());
         tableItem.setText(2,newScheduleData.getTime());
-        tableItem.setText(3,newScheduleData.getEnabled());
-        tableItem.setText(4,newScheduleData.getType());
+        tableItem.setText(3,newScheduleData.enabled ? "yes" : "no");
+        tableItem.setText(4,newScheduleData.type);
 
-        BARServer.executeCommand("SCHEDULE_LIST_ADD "+
-                                 selectedJobId+" "+
-                                 newScheduleData.getDate()+" "+
-                                 newScheduleData.getWeekDays()+" "+
-                                 newScheduleData.getTime()+" "+
-                                 newScheduleData.getEnabled()+" "+
-                                 newScheduleData.getType()
+// TODO result
+        String[] resultErrorMessage = new String[1];
+        BARServer.executeCommand(StringParser.format("SCHEDULE_LIST_ADD jobId=%d date=%s weekDay=%s time=%s enabledFlag=%y type=%s",
+                                                     selectedJobId,
+                                                     newScheduleData.getDate(),
+                                                     newScheduleData.getWeekDays(),
+                                                     newScheduleData.getTime(),
+                                                     newScheduleData.enabled,
+                                                     newScheduleData.type
+                                                    ),
+                                 resultErrorMessage
                                 );
       }
     }
@@ -9017,16 +9216,20 @@ throw new Error("NYI");
 
         tableItem.dispose();
 
-        BARServer.executeCommand("SCHEDULE_LIST_CLEAR "+selectedJobId);
-        for (ScheduleData data : scheduleList)
+// TODO result?
+        String[] resultErrorMessage = new String[1];
+        BARServer.executeCommand(StringParser.format("SCHEDULE_LIST_CLEAR jobId=%d",selectedJobId),resultErrorMessage);
+        for (ScheduleData scheduleData_ : scheduleList)
         {
-          BARServer.executeCommand("SCHEDULE_LIST_ADD "+
-                                   selectedJobId+" "+
-                                   data.getDate()+" "+
-                                   data.getWeekDays()+" "+
-                                   data.getTime()+" "+
-                                   data.getEnabled()+" "+
-                                   data.getType()
+          BARServer.executeCommand(StringParser.format("SCHEDULE_LIST_ADD jobId=%d date=%s weekDay=%s time=%s enabledFlag=%y type=%s",
+                                                       selectedJobId,
+                                                       scheduleData_.getDate(),
+                                                       scheduleData_.getWeekDays(),
+                                                       scheduleData_.getTime(),
+                                                       scheduleData_.enabled,
+                                                       scheduleData_.type
+                                                      ),
+                                   resultErrorMessage
                                   );
         }
       }

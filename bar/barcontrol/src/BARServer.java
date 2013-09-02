@@ -29,6 +29,7 @@ import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedList;
+import java.util.List;
 
 import javax.net.ssl.SSLSocket;
 import javax.net.ssl.SSLSocketFactory;
@@ -178,7 +179,7 @@ class Command
    */
   public boolean endOfData()
   {
-    return completedFlag && (result.size() == 0);
+    return (result.size() == 0) && completedFlag;
   }
 
   /** check if completed
@@ -311,7 +312,7 @@ class Command
     return errorText;
   }
 
-  /** get next result
+  /** get next resultg
    * @param timeout timeout [ms]
    * @return result string or null
    */
@@ -379,6 +380,145 @@ class Command
     return errorCode;
   }
 
+  /** get next result
+   * @param typeMap type map
+   * @param errorMessage error message
+   * @param valueMap value map
+   * @param unknownValueMap unknown values map or null
+   * @param timeout timeout or -1 [ms]
+   * @return error code
+   */
+  public synchronized int getNextResult(TypeMap typeMap, String[] errorMessage, ValueMap valueMap, ValueMap unknownValueMap, int timeout)
+  {
+    if (unknownValueMap != null) unknownValueMap.clear();
+
+    if (errorCode == Errors.NONE)
+    {
+      if (timeout > 0)
+      {
+        // wait for result
+        if (   !completedFlag
+            && (result.size() == 0)
+           )
+        {
+          try
+          {
+            this.wait(timeout);
+          }
+          catch (InterruptedException exception)
+          {
+            /* ignored */
+          }
+        }
+      }
+
+      if (result.size() > 0)
+      {
+        String line = result.removeFirst();
+        if (!line.isEmpty())
+        {
+          valueMap.clear();
+          if (!StringParser.parse(line,typeMap,valueMap,unknownValueMap))
+          {
+            throw new RuntimeException("parse '"+line+"' fail");
+          }
+//Dprintf.dprintf("line=%s",line);
+//Dprintf.dprintf("typeMap=%s",typeMap);
+//Dprintf.dprintf("valueMap=%s",valueMap);
+        }
+      }
+      if (errorMessage != null) errorMessage[0] = "";
+    }
+    else
+    {
+      if (errorMessage != null) errorMessage[0] = this.errorText;
+    }
+
+    return errorCode;
+  }
+
+  /** get next result
+   * @param typeMap type map
+   * @param errorMessage error message
+   * @param valueMap value map
+   * @param unknownValueMap unknown values map or null
+   * @return error code
+   */
+  public synchronized int getResult(TypeMap typeMap, String[] errorMessage, ValueMap valueMap, ValueMap unknownValueMap)
+  {
+    return getNextResult(typeMap,errorMessage,valueMap,unknownValueMap,0);
+  }
+
+  /** get next result
+   * @param typeMap type map
+   * @param errorMessage error message
+   * @param valueMap value map
+   * @param timeout timeout or -1 [ms]
+   * @return error code
+   */
+  public synchronized int getNextResult(TypeMap typeMap, String[] errorMessage, ValueMap valueMap, int timeout)
+  {
+    return getNextResult(typeMap,errorMessage,valueMap,(ValueMap)null,timeout);
+  }
+
+  /** get result string list array
+   * @param typeMap type map
+   * @param errorMessage error message
+   * @param valueMap value map
+   * @return error code
+   */
+  public synchronized int getResult(TypeMap typeMap, String[] errorMessage, ValueMap valueMap)
+  {
+    return getNextResult(typeMap,errorMessage,valueMap,0);
+  }
+
+  /** get result string list array
+   * @param typeMap type map
+   * @param errorMessage error message
+   * @param valueMapList value map list
+   * @param unknownValueMap unknown values map or null
+   * @return error code
+   */
+  public synchronized int getResult(TypeMap typeMap, String[] errorMessage, List<ValueMap> valueMapList, ValueMap unknownValueMap)
+  {
+    valueMapList.clear();
+    if (unknownValueMap != null) unknownValueMap.clear();
+
+    if (errorCode == Errors.NONE)
+    {
+      for (String line : result)
+      {
+        if (!line.isEmpty())
+        {
+          ValueMap valueMap = new ValueMap();
+          StringParser.parse(line,typeMap,valueMap,unknownValueMap);
+//Dprintf.dprintf("line=%s",line);
+//Dprintf.dprintf("typeMap=%s",typeMap);
+//Dprintf.dprintf("valueMap=%s",valueMap);
+          valueMapList.add(valueMap);
+        }
+      }
+      if (errorMessage != null) errorMessage[0] = "";
+    }
+    else
+    {
+      if (errorMessage != null) errorMessage[0] = this.errorText;
+    }
+
+    return errorCode;
+  }
+
+  /** get result string list array
+   * @param typeMap type map
+   * @param errorMessage error message
+   * @param valueMapList value map list
+   * @return error code
+   */
+  public synchronized int getResult(TypeMap typeMap, String[] errorMessage, List<ValueMap> valueMapList)
+  {
+    return getResult(typeMap,errorMessage,valueMapList,(ValueMap)null);
+  }
+
   /** get error code
    * @return error code
    */
@@ -406,7 +546,36 @@ class Command
    */
   public String toString()
   {
-    return "Command {"+id+", errorCode="+errorCode+", "+errorText+" completedFlag="+completedFlag+"}";
+    return "Command {"+id+", errorCode="+errorCode+", error="+errorText+", completedFlag="+completedFlag+"}";
+  }
+}
+
+/** BAR command handler
+ */
+abstract class CommandHandler
+{
+  /** handle command result
+   * @param command command
+   * @return Errors.NONE or error code
+   */
+  abstract public int handleResult(Command command);
+}
+
+abstract class CommandResult
+{
+  abstract public int result(HashMap<String,Object> values);
+}
+
+class ResultTypes extends HashMap<String,Class>
+{
+}
+
+class Result extends HashMap<String,Object>
+{
+  Result(String errorText)
+  {
+    super();
+    put("error",errorText);
   }
 }
 
@@ -464,16 +633,17 @@ class ReadThread extends Thread
           if (Settings.debugServerFlag) System.err.println("Network: received '"+line+"'");
 
           // parse: line format <id> <error code> <completed flag> <data>
-          String data[] = line.split(" ",4);
-          if (data.length < 4)
+          String parts[] = line.split(" ",4);
+          if (parts.length < 4)
           {
             throw new CommunicationError("malformed command result '"+line+"'");
           }
 
           // get command id, completed flag, error code
-          long    commandId     = Long.parseLong(data[0]);
-          boolean completedFlag = (Integer.parseInt(data[1]) != 0);;
-          int     errorCode     = Integer.parseInt(data[2]);
+          long    commandId     = Long.parseLong(parts[0]);
+          boolean completedFlag = (Integer.parseInt(parts[1]) != 0);;
+          int     errorCode     = Integer.parseInt(parts[2]);
+          String  data          = parts[3].trim();
 
           // store result
           synchronized(commandHashMap)
@@ -490,16 +660,19 @@ class ReadThread extends Thread
                   {
                     if (command.processResult != null)
                     {
-                      command.processResult.process(data[3]);
+                      command.processResult.process(data);
                     }
                     else
                     {
-                      command.result.add(data[3]);
+                      if (!data.isEmpty())
+                      {
+                        command.result.add(data);
+                      }
                     }
                   }
                   else
                   {
-                    command.errorText = data[3];
+                    command.errorText = data;
                   }
                   command.completedFlag = true;
                   command.notifyAll();
@@ -509,12 +682,15 @@ class ReadThread extends Thread
                   command.errorCode = Errors.NONE;
                   if (command.processResult != null)
                   {
-                    command.processResult.process(data[3]);
+                    command.processResult.process(data);
                   }
                   else
                   {
-                    command.result.add(data[3]);
-                    command.notifyAll();
+                    if (!data.isEmpty())
+                    {
+                      command.result.add(data);
+                      command.notifyAll();
+                    }
                   }
                 }
               }
@@ -537,7 +713,7 @@ class ReadThread extends Thread
       }
       catch (IOException exception)
       {
-        /* communication impossible, cancel all commands with error and wait for termination */
+        // communication impossible, cancel all commands with error and wait for termination
         synchronized(commandHashMap)
         {
           while (!quitFlag)
@@ -619,8 +795,8 @@ class ReadThread extends Thread
 class BARServer
 {
   // --------------------------- constants --------------------------------
-  private final static int PROTOCOL_VERSION_MAJOR = 1;
-  private final static int PROTOCOL_VERSION_MINOR = 3;
+  private final static int PROTOCOL_VERSION_MAJOR = 2;
+  private final static int PROTOCOL_VERSION_MINOR = 0;
 
   public final static  String JAVA_SSL_KEY_FILE_NAME = "bar.jks";  // default name Java TLS/SSL key
 
@@ -656,7 +832,7 @@ class BARServer
 
     // connect to server
     socket = null;
-    String errorMessage = null;
+    String connectErrorMessage = null;
     if ((socket == null) && (tlsPort != 0))
     {
       // get all possible bar.jks file names
@@ -731,27 +907,27 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
           }
           catch (SocketTimeoutException exception)
           {
-            errorMessage = "host '"+hostname+"' unreachable (error: "+exception.getMessage()+")";
+            connectErrorMessage = "host '"+hostname+"' unreachable (error: "+exception.getMessage()+")";
           }
           catch (ConnectException exception)
           {
-            errorMessage = "host '"+hostname+"' unreachable (error: "+exception.getMessage()+")";
+            connectErrorMessage = "host '"+hostname+"' unreachable (error: "+exception.getMessage()+")";
           }
           catch (NoRouteToHostException exception)
           {
-            errorMessage = "host '"+hostname+"' unreachable (no route to host)";
+            connectErrorMessage = "host '"+hostname+"' unreachable (no route to host)";
           }
           catch (UnknownHostException exception)
           {
-            errorMessage = "unknown host '"+hostname+"'";
+            connectErrorMessage = "unknown host '"+hostname+"'";
           }
           catch (RuntimeException exception)
           {
-            errorMessage = exception.getMessage();
+            connectErrorMessage = exception.getMessage();
           }
           catch (Exception exception)
           {
-            errorMessage = exception.getMessage();
+            connectErrorMessage = exception.getMessage();
           }
         }
       }
@@ -768,35 +944,37 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
       }
       catch (SocketTimeoutException exception)
       {
-        errorMessage = exception.getMessage();
+        connectErrorMessage = exception.getMessage();
       }
       catch (ConnectException exception)
       {
-        errorMessage = exception.getMessage();
+        connectErrorMessage = exception.getMessage();
       }
       catch (NoRouteToHostException exception)
       {
-        errorMessage = "host '"+hostname+"' unreachable (no route to host)";
+        connectErrorMessage = "host '"+hostname+"' unreachable (no route to host)";
       }
       catch (UnknownHostException exception)
       {
-        errorMessage = "unknown host '"+hostname+"'";
+        connectErrorMessage = "unknown host '"+hostname+"'";
       }
       catch (Exception exception)
       {
 //        exception.printStackTrace();
-        errorMessage = exception.getMessage();
+        connectErrorMessage = exception.getMessage();
       }
     }
     if (socket == null)
     {
-      if   ((tlsPort != 0) || (port!= 0)) throw new ConnectionError(errorMessage);
+      if   ((tlsPort != 0) || (port!= 0)) throw new ConnectionError(connectErrorMessage);
       else                                throw new ConnectionError("no server ports specified");
     }
 
     try
     {
       String   line;
+      String[] errorMessage = new String[1];
+      ValueMap valueMap = new ValueMap();
       String[] data;
 
       // read session id
@@ -820,83 +998,46 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
       {
         authorizeData[z] = (byte)((((serverPassword != null) && (z < serverPassword.length()))?(int)serverPassword.charAt(z):0)^(int)sessionId[z]);
       }
-      commandId++;
-      line = Long.toString(commandId)+" AUTHORIZE "+encodeHex(authorizeData);
-      output.write(line); output.write('\n'); output.flush();
-      if (Settings.debugServerFlag) System.err.println("Network: sent '"+line+"'");
-      line = input.readLine();
-      if (line == null)
-      {
-        throw new CommunicationError("No result from server");
-      }
-      if (Settings.debugServerFlag) System.err.println("Network: received '"+line+"'");
-      data = line.split(" ",4);
-      if (data.length < 3) // at least 3 values: <command id> <complete flag> <error code>
-      {
-        throw new CommunicationError("Invalid response from server");
-      }
-      if (   (Integer.parseInt(data[0]) != commandId)
-          || (Integer.parseInt(data[1]) != 1)
-          || (Integer.parseInt(data[2]) != 0)
+      if (syncExecuteCommand("AUTHORIZE encodedPassword="+encodeHex(authorizeData),
+                             errorMessage
+                            ) != Errors.NONE
          )
       {
         throw new ConnectionError("Authorization fail");
       }
 
       // get version
-      line = "VERSION";
-      output.write(line); output.write('\n'); output.flush();
-      if (Settings.debugServerFlag) System.err.println("Network: sent '"+line+"'");
-      line = input.readLine();
-      if (line == null)
-      {
-        throw new CommunicationError("No result from server");
-      }
-      if (Settings.debugServerFlag) System.err.println("Network: received '"+line+"'");
-      data = line.split(" ",5);
-      if (data.length != 5) // exactly 5 values: <command id> <complete flag> <error code> <major version> <minor version>
-      {
-        throw new CommunicationError("Invalid response from server");
-      }
-      if (   (Integer.parseInt(data[1]) != 1)
-          || (Integer.parseInt(data[2]) != 0)
+      if (syncExecuteCommand("VERSION",
+                             new TypeMap("major",int.class,
+                                         "minor",int.class
+                                        ),
+                             errorMessage,
+                             valueMap
+                            ) != Errors.NONE
          )
       {
-        throw new ConnectionError("Cannot get protocol version for '"+hostname+"' (error: "+data[3]+")");
+        throw new ConnectionError("Cannot get protocol version for '"+hostname+"' (error: "+errorMessage[0]+")");
       }
-      if (Integer.parseInt(data[3]) != PROTOCOL_VERSION_MAJOR)
+      if (valueMap.getInt("major") != PROTOCOL_VERSION_MAJOR)
       {
         throw new CommunicationError("Incompatible protocol version for '"+hostname+"' (expected "+PROTOCOL_VERSION_MAJOR+", got "+data[3]+")");
       }
-      if (Integer.parseInt(data[4]) != PROTOCOL_VERSION_MINOR)
+      if (valueMap.getInt("minor") != PROTOCOL_VERSION_MINOR)
       {
         BARControl.printWarning("Incompatible minor protocol version for '"+hostname+"' (expected "+PROTOCOL_VERSION_MINOR+", got "+data[4]+")");
       }
 
       // get file separator character
-      commandId++;
-      line = Long.toString(commandId)+" GET FILE_SEPARATOR";
-      output.write(line); output.write('\n'); output.flush();
-      if (Settings.debugServerFlag) System.err.println("Network: sent '"+line+"'");
-      line = input.readLine();
-      if (line == null)
-      {
-        throw new CommunicationError("No result from server");
-      }
-      if (Settings.debugServerFlag) System.err.println("Network: received '"+line+"'");
-      data = line.split(" ",4);
-      if (data.length < 4) // at least 4 values: <command id> <complete flag> <error code> <separator char>|<error text>
-      {
-        throw new CommunicationError("Invalid response from server");
-      }
-      if (   (Integer.parseInt(data[0]) != commandId)
-          || (Integer.parseInt(data[1]) != 1)
-          || (Integer.parseInt(data[2]) != 0)
+      if (syncExecuteCommand("GET name=FILE_SEPARATOR",
+                             new TypeMap("value",String.class),
+                             errorMessage,
+                             valueMap
+                            ) != Errors.NONE
          )
       {
         throw new ConnectionError("Get file separator character fail (error: "+data[3]+")");
       }
-      fileSeparator = data[3].charAt(0);
+      fileSeparator = valueMap.getString("value","/").charAt(0);
     }
     catch (IOException exception)
     {
@@ -1007,7 +1148,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
   static void abortCommand(Command command)
   {
     // send abort command to command
-    executeCommand(String.format("ABORT %d",command.id));
+    executeCommand(StringParser.format("ABORT jobId=%d",command.id));
     readThread.commandRemove(command);
 
     // set abort error
@@ -1025,7 +1166,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
   static void timeoutCommand(Command command)
   {
     // send abort command to command
-    executeCommand(String.format("ABORT %d",command.id));
+    executeCommand(StringParser.format("ABORT jobId=%d",command.id));
     readThread.commandRemove(command);
 
     // set abort error
@@ -1041,7 +1182,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
    * @param busyIndicator busy indicator or null
    * @return Errors.NONE or error code
    */
-  public static int executeCommand(String commandString, Object result, BusyIndicator busyIndicator)
+  public static int XXXexecuteCommand(String commandString, Object result, BusyIndicator busyIndicator)
   {
     final int TIMEOUT = 120*1000; // total timeout [ms]
 
@@ -1132,9 +1273,114 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
    * @param result result (String[] or ArrayList)
    * @return Errors.NONE or error code
    */
-  public static int executeCommand(String command, Object result)
+  public static int XXXexecuteCommand(String command, Object result)
   {
-    return executeCommand(command,result,null);
+    return XXXexecuteCommand(command,result,null);
+  }
+
+  /** execute command
+   * @param command command to send to BAR server
+   * @param typeMap type map
+   * @param errorMessage error message or ""
+   * @param valueMap value map
+   * @param unknownValueMap unknown values map or null
+   * @param busyIndicator busy indicator or null
+   * @return Errors.NONE or error code
+   */
+  public static int executeCommand(String commandString, final TypeMap typeMap, final String[] errorMessage, final ValueMap valueMap, final ValueMap unknownValueMap, BusyIndicator busyIndicator)
+  {
+    return executeCommand(commandString,
+                          busyIndicator,
+                          new CommandHandler()
+    {
+      public int handleResult(Command command)
+      {
+//Dprintf.dprintf("handle command=%s",command);
+        return command.getResult(typeMap,errorMessage,valueMap,unknownValueMap);
+      }
+    });
+  }
+
+  /** execute command
+   * @param command command to send to BAR server
+   * @param typeMap type map
+   * @param errorMessage error message or ""
+   * @param valueMap value map
+   * @param unknownValueMap unknown values map or null
+   * @return Errors.NONE or error code
+   */
+  public static int executeCommand(String commandString, TypeMap typeMap, String[] errorMessage, ValueMap valueMap, ValueMap unknownValueMap)
+  {
+    return executeCommand(commandString,typeMap,errorMessage,valueMap,unknownValueMap,(BusyIndicator)null);
+  }
+
+  /** execute command
+   * @param command command to send to BAR server
+   * @param typeMap type map
+   * @param errorMessage error message or ""
+   * @param valueMap value map
+   * @return Errors.NONE or error code
+   */
+  public static int executeCommand(String commandString, TypeMap typeMap, String[] errorMessage, ValueMap valueMap)
+  {
+    return executeCommand(commandString,typeMap,errorMessage,valueMap,(ValueMap)null);
+  }
+
+  /** execute command
+   * @param command command to send to BAR server
+   * @param typeMap type map
+   * @param errorMessage error message or ""
+   * @param valueMapList value map list
+   * @param unknownValueMap unknown values map or null
+   * @param busyIndicator busy indicator or null
+   * @return Errors.NONE or error code
+   */
+  public static int executeCommand(String commandString, final TypeMap typeMap, final String[] errorMessage, final List<ValueMap> valueMapList, final ValueMap unknownValueMap, BusyIndicator busyIndicator)
+  {
+    return executeCommand(commandString,
+                          busyIndicator,
+                          new CommandHandler()
+    {
+      public int handleResult(Command command)
+      {
+        return command.getResult(typeMap,errorMessage,valueMapList,unknownValueMap);
+      }
+    });
+  }
+
+  /** execute command
+   * @param command command to send to BAR server
+   * @param typeMap type map
+   * @param errorMessage error message or ""
+   * @param valueMapList value map list
+   * @param unknownValueMap unknown values map or null
+   * @return Errors.NONE or error code
+   */
+  public static int executeCommand(String commandString, TypeMap typeMap, String[] errorMessage, List<ValueMap> valueMapList, ValueMap unknownValueMap)
+  {
+    return executeCommand(commandString,typeMap,errorMessage,valueMapList,unknownValueMap,(BusyIndicator)null);
+  }
+
+  /** execute command
+   * @param command command to send to BAR server
+   * @param typeMap type map
+   * @param errorMessage error message or ""
+   * @param valueMapList value map list
+   * @return Errors.NONE or error code
+   */
+  public static int executeCommand(String commandString, TypeMap typeMap, String[] errorMessage, List<ValueMap> valueMapList)
+  {
+    return executeCommand(commandString,typeMap,errorMessage,valueMapList,(ValueMap)null);
+  }
+
+  /** execute command
+   * @param command command to send to BAR server
+   * @param errorMessage error message or ""
+   * @return Errors.NONE or error code
+   */
+  public static int executeCommand(String command, String[] errorMessage)
+  {
+    return executeCommand(command,(TypeMap)null,errorMessage,(ValueMap)null);
   }
 
   /** execute command
@@ -1143,7 +1389,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
    */
   public static int executeCommand(String command)
   {
-    return executeCommand(command,null);
+    return executeCommand(command,(String[])null);
   }
 
   /** set boolean value on BAR server
@@ -1153,7 +1399,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
    */
   public static void set(String name, boolean b)
   {
-    executeCommand("SET "+name+" "+(b?"yes":"no"));
+    executeCommand(StringParser.format("SET name=%s value=%s",name,b ? "yes" : "no"));
   }
 
   /** set long value on BAR server
@@ -1163,7 +1409,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
    */
   static void set(String name, long n)
   {
-    executeCommand("SET "+name+" "+n);
+    executeCommand(StringParser.format("SET name=%s value=%d",name,n));
   }
 
   /** set string value on BAR server
@@ -1173,7 +1419,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
    */
   public static void set(String name, String s)
   {
-    executeCommand("SET "+name+" "+StringUtils.escape(s));
+    executeCommand(StringParser.format("SET name=% value=%S",name,s));
   }
 
   /** get boolean value from BAR server
@@ -1183,13 +1429,17 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
    */
   public static boolean getBooleanOption(int jobId, String name)
   {
-    String[] result = new String[1];
+    String[] errorMessage = new String[1];
+    ValueMap resultMap    = new ValueMap();
 
-    if (executeCommand("OPTION_GET "+jobId+" "+name,result) == Errors.NONE)
+    if (executeCommand(StringParser.format("OPTION_GET jobId=%d name=%S",jobId,name),
+                       new TypeMap("value",Boolean.class),
+                       errorMessage,
+                       resultMap
+                      ) == Errors.NONE
+       )
     {
-      return    result[0].toLowerCase().equals("yes")
-             || result[0].toLowerCase().equals("on")
-             || result[0].equals("1");
+      return resultMap.getBoolean("value");
     }
     else
     {
@@ -1204,11 +1454,17 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
    */
   public static long getLongOption(int jobId, String name)
   {
-    String[] result = new String[1];
+    String[] errorMessage = new String[1];
+    ValueMap resultMap    = new ValueMap();
 
-    if (executeCommand("OPTION_GET "+jobId+" "+name,result) == Errors.NONE)
+    if (executeCommand(StringParser.format("OPTION_GET jobId=%d name=%S",jobId,name),
+                       new TypeMap("value",Long.class),
+                       errorMessage,
+                       resultMap
+                      ) == Errors.NONE
+       )
     {
-      return Long.parseLong(result[0]);
+      return resultMap.getLong("value");
     }
     else
     {
@@ -1223,11 +1479,17 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
    */
   public static String getStringOption(int jobId, String name)
   {
-    String[] result = new String[1];
+    String[] errorMessage = new String[1];
+    ValueMap resultMap    = new ValueMap();
 
-    if (executeCommand("OPTION_GET "+jobId+" "+name,result) == Errors.NONE)
+    if (executeCommand(StringParser.format("OPTION_GET jobId=%d name=%S",jobId,name),
+                       new TypeMap("value",String.class),
+                       errorMessage,
+                       resultMap
+                      ) == Errors.NONE
+       )
     {
-      return StringUtils.unescape(result[0]);
+      return resultMap.getString("value");
     }
     else
     {
@@ -1242,7 +1504,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
    */
   public static void setOption(int jobId, String name, boolean b)
   {
-    executeCommand("OPTION_SET "+jobId+" "+name+" "+(b?"yes":"no"));
+    executeCommand(StringParser.format("OPTION_SET jobId=%d name=%S value=%s",jobId,name,b ? "yes" : "no"));
   }
 
   /** set long option value on BAR server
@@ -1252,7 +1514,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
    */
   public static void setOption(int jobId, String name, long n)
   {
-    executeCommand("OPTION_SET "+jobId+" "+name+" "+n);
+    executeCommand(StringParser.format("OPTION_SET jobId=%d name=%S value=%d",jobId,name,n));
   }
 
   /** set string option value on BAR server
@@ -1262,7 +1524,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
    */
   public static void setOption(int jobId, String name, String s)
   {
-    executeCommand("OPTION_SET "+jobId+" "+name+" "+StringUtils.escape(s));
+    executeCommand(StringParser.format("OPTION_SET jobId=%d name=%S value=%S",jobId,name,s));
   }
 
   //-----------------------------------------------------------------------
@@ -1295,6 +1557,177 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
     }
 
     return stringBuffer.toString();
+  }
+
+  /** execute command syncronous
+   * @param commandString command string
+   * @param typeMap types or null
+   * @param errorMessage error message or ""
+   * @param valueMap values or null
+   * @return Errors.NONE or error code
+   */
+  public static int syncExecuteCommand(String commandString, TypeMap typeMap, String[] errorMessage, ValueMap valueMap)
+    throws IOException
+  {
+    int errorCode;
+
+    synchronized(output)
+    {
+      // new command
+      commandId++;
+      String line = String.format("%d %s",commandId,commandString);
+
+      // send command
+      output.write(line); output.write('\n'); output.flush();
+      if (Settings.debugServerFlag) System.err.println("Network: sent '"+line+"'");
+
+      // read and parse result
+      String[] data;
+      do
+      {
+        // read line
+        line = input.readLine();
+        if (line == null)
+        {
+          throw new CommunicationError("No result from server");
+        }
+        if (Settings.debugServerFlag) System.err.println("Network: received '"+line+"'");
+
+        // parse
+        data = line.split(" ",4);
+        if (data.length < 3) // at least 3 values: <command id> <complete flag> <error code>
+        {
+          throw new CommunicationError("Invalid response from server");
+        }
+      }
+      while (Integer.parseInt(data[0]) != commandId);
+
+      // check result
+      if (Integer.parseInt(data[1]) != 1)
+      {
+        throw new CommunicationError("Invalid response from server");
+      }
+
+      // get result
+      errorCode = Integer.parseInt(data[2]);
+      if (errorCode == Errors.NONE)
+      {
+        if (valueMap != null)
+        {
+          valueMap.clear();
+          if (!StringParser.parse(data[3],typeMap,valueMap))
+          {
+            throw new CommunicationError("Invalid response from server");
+          }
+        }
+        if (errorMessage != null) errorMessage[0] = "";
+      }
+      else
+      {
+        if (errorMessage != null) errorMessage[0] = data[3];
+      }
+    }
+
+    return errorCode;
+  }
+
+  /** execute command syncronous
+   * @param commandString command string
+   * @param errorMessage error message or ""
+   * @return Errors.NONE or error code
+   */
+  public static int syncExecuteCommand(String commandString, String[] errorMessage)
+    throws IOException
+  {
+    return syncExecuteCommand(commandString,(TypeMap)null,errorMessage,(ValueMap)null);
+  }
+
+  /** execute command syncronous
+   * @param commandString command string
+   * @param errorMessage error message or ""
+   * @return Errors.NONE or error code
+   */
+  public static int syncExecuteCommand(String commandString)
+    throws IOException
+  {
+    return syncExecuteCommand(commandString,(String[])null);
+  }
+
+  /** execute command
+   * @param command command to send to BAR server
+   * @param busyIndicator busy indicator or null
+   * @param commandHandler command handler
+   * @return Errors.NONE or error code
+   */
+  private static int executeCommand(String commandString, BusyIndicator busyIndicator, CommandHandler commandHandler)
+  {
+    final int TIMEOUT = 120*1000; // total timeout [ms]
+
+    Command command;
+    int     errorCode;
+
+    synchronized(output)
+    {
+      if (busyIndicator != null)
+      {
+        busyIndicator.busy(0);
+        if (busyIndicator.isAborted()) return -1;
+      }
+
+      // new command
+      commandId++;
+      String line = String.format("%d %s",commandId,commandString);
+
+      // add command
+      command = readThread.commandAdd(commandId,TIMEOUT);
+
+      // send command
+      try
+      {
+        output.write(line); output.write('\n'); output.flush();
+        if (Settings.debugServerFlag) System.err.println("Network: sent '"+line+"'");
+      }
+      catch (IOException exception)
+      {
+        readThread.commandRemove(command);
+        return -1;
+      }
+      if (busyIndicator != null)
+      {
+        if (busyIndicator.isAborted())
+        {
+          abortCommand(command);
+          return command.getErrorCode();
+        }
+      }
+    }
+
+    // wait until completed, aborted or timeout
+    while (   !command.waitCompleted(250)
+           && ((busyIndicator == null) || !busyIndicator.isAborted())
+          )
+    {
+      if (busyIndicator != null)
+      {
+        busyIndicator.busy(0);
+      }
+    }
+    if (busyIndicator != null)
+    {
+      if (busyIndicator.isAborted())
+      {
+        command.abort();
+        return command.getErrorCode();
+      }
+    }
+
+    // get result
+    errorCode = commandHandler.handleResult(command);
+
+    // free command
+    readThread.commandRemove(command);
+
+    return errorCode;
   }
 }
 

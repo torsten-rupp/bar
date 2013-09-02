@@ -409,78 +409,78 @@ class TabRestore
      */
     public void run()
     {
-      final String[] MAP_FROM = new String[]{"\\n","\\r","\\\\"};
-      final String[] MAP_TO   = new String[]{"\n","\r","\\"};
-
-      for (;;)
+      try
       {
-        if (setColorFlag)
+        for (;;)
         {
-          // set busy cursor, foreground color to inform about update
-          display.syncExec(new Runnable()
+          if (setColorFlag)
           {
-            public void run()
+            // set busy cursor, foreground color to inform about update
+            display.syncExec(new Runnable()
             {
-              shell.setCursor(waitCursor);
-              widgetStorageList.setForeground(COLOR_MODIFIED);
-            }
-          });
-        }
+              public void run()
+              {
+                shell.setCursor(waitCursor);
+                widgetStorageList.setForeground(COLOR_MODIFIED);
+              }
+            });
+          }
 
-        // create new storage map
-        StorageDataMap newStorageDataMap = new StorageDataMap();
+          // create new storage map
+          StorageDataMap newStorageDataMap = new StorageDataMap();
 
-        // save marked entries
-        synchronized(storageDataMap)
-        {
-          for (StorageData storageData : storageDataMap.values())
+          // save marked entries
+          synchronized(storageDataMap)
           {
-            if (storageData.isChecked())
+            for (StorageData storageData : storageDataMap.values())
             {
-              newStorageDataMap.remove(storageData);
+              if (storageData.isChecked())
+              {
+                newStorageDataMap.remove(storageData);
+              }
             }
           }
-        }
 
-        // update entries
-        try
-        {
-          String commandString = "INDEX_STORAGE_LIST "+
-                                 storageMaxCount+" "+
-                                 ((storageIndexStateFilter != IndexStates.ALL) ? storageIndexStateFilter.name() : "*")+" "+
-                                 "* "+
-                                 (((storagePattern != null) && !storagePattern.equals("")) ? StringUtils.escape(storagePattern) : "*");
-          Command command = BARServer.runCommand(commandString);
-
-          // read results, update/add data
-          String line;
-          Object data[] = new Object[8];
-          while (!command.endOfData())
+          // update entries
+          try
           {
-            line = command.getNextResult(5*1000);
-            if (line != null)
+            Command command = BARServer.runCommand(StringParser.format("INDEX_STORAGE_LIST pattern=%'S maxCount=%d indexState=%s indexMode=%s",
+                                                                       (((storagePattern != null) && !storagePattern.equals("")) ? storagePattern : "*"),
+                                                                       storageMaxCount,
+                                                                       ((storageIndexStateFilter != IndexStates.ALL) ? storageIndexStateFilter.name() : "*"),
+                                                                       "*"
+                                                                      )
+                                                  );
+
+            // read results, update/add data
+            final TypeMap TYPE_MAP = new TypeMap("id",long.class,
+                                                 "name",String.class,
+                                                 "dateTime",long.class,
+                                                 "size",long.class,
+                                                 "indexState",IndexStates.class,
+                                                 "indexMode",IndexModes.class,
+                                                 "lastCheckedDateTime",long.class,
+                                                 "errorMessage",String.class
+                                                );
+            String[] resultErrorMessage = new String[1];
+            ValueMap resultMap          = new ValueMap();
+            while (!command.endOfData())
             {
-              if      (StringParser.parse(line,"%ld %S %ld %ld %S %S %ld %S",data,StringParser.QUOTE_CHARS))
+              if (command.getNextResult(TYPE_MAP,
+                                        resultErrorMessage,
+                                        resultMap,
+                                        5*1000
+                                       ) == Errors.NONE
+                 )
               {
-                /* get data
-                   format:
-                     storage id
-                     storage name
-                     created date/time
-                     size
-                     index state
-                     index mode
-                     last check date/time
-                     error message
-                */
-                long        storageId           = (Long)data[0];
-                String      name                = StringUtils.map((String)data[1],MAP_FROM,MAP_TO);
-                long        dateTime            = (Long)data[2];
-                long        size                = (Long)data[3];
-                IndexStates indexState          = Enum.valueOf(IndexStates.class,(String)data[4]);
-                IndexModes  indexMode           = Enum.valueOf(IndexModes.class,(String)data[5]);
-                long        lastCheckedDateTime = (Long)data[6];
-                String      errorMessage        = (String)data[7];
+                long        storageId           = resultMap.getLong("id");
+                String      name                = resultMap.getString("name");
+                long        dateTime            = resultMap.getLong("dateTime");
+                long        size                = resultMap.getLong("size");
+                IndexStates indexState          = resultMap.getEnum("indexState");
+                IndexModes  indexMode           = resultMap.getEnum("indexMode");
+                long        lastCheckedDateTime = resultMap.getLong("lastCheckedDateTime");
+                String      errorMessage        = resultMap.getString("errorMessage");
 
                 StorageData storageData;
                 synchronized(storageDataMap)
@@ -514,47 +514,67 @@ class TabRestore
               }
             }
           }
-        }
-        catch (CommunicationError error)
-        {
-          // ignored
-        }
-
-        // store new storage map
-        storageDataMap = newStorageDataMap;
-
-        // referesh list
-        display.syncExec(new Runnable()
-        {
-          public void run()
+          catch (CommunicationError error)
           {
-            refreshStorageList();
+            // ignored
           }
-        });
+          catch (Exception exception)
+          {
+            if (Settings.debugFlag)
+            {
+              BARServer.disconnect();
+              System.err.println("ERROR: "+exception.getMessage());
+              BARControl.printStackTrace(exception);
+              System.exit(1);
+            }
+          }
 
-        if (setColorFlag)
-        {
-          // reset cursor, foreground color
+          // store new storage map
+          storageDataMap = newStorageDataMap;
+
+          // referesh list
           display.syncExec(new Runnable()
           {
             public void run()
             {
-              widgetStorageList.setForeground(null);
-              shell.setCursor(null);
+              refreshStorageList();
             }
           });
+
+          if (setColorFlag)
+          {
+            // reset cursor, foreground color
+            display.syncExec(new Runnable()
+            {
+              public void run()
+              {
+                widgetStorageList.setForeground(null);
+                shell.setCursor(null);
+              }
+            });
+          }
+
+          // sleep a short time or get new pattern
+          synchronized(trigger)
+          {
+            // wait for refresh request or timeout
+            try { trigger.wait(30*1000); } catch (InterruptedException exception) { /* ignored */ };
+
+            // if not triggered (timeout occurred) update is done invisible (color is not set)
+            if (!triggeredFlag) setColorFlag = false;
+
+            triggeredFlag = false;
+          }
         }
-
-        // sleep a short time or get new pattern
-        synchronized(trigger)
+      }
+      catch (Exception exception)
+      {
+        if (Settings.debugFlag)
         {
-          // wait for refresh request or timeout
-          try { trigger.wait(30*1000); } catch (InterruptedException exception) { /* ignored */ };
-
-          // if not triggered (timeout occurred) update is done invisible (color is not set)
-          if (!triggeredFlag) setColorFlag = false;
-
-          triggeredFlag = false;
+          BARServer.disconnect();
+          System.err.println("ERROR: "+exception.getMessage());
+          BARControl.printStackTrace(exception);
+          System.exit(1);
         }
       }
     }
@@ -611,7 +631,7 @@ class TabRestore
     String        name;
     EntryTypes    type;
     long          size;
-    long          datetime;
+    long          dateTime;
     boolean       checked;
     RestoreStates restoreState;
 
@@ -621,16 +641,16 @@ class TabRestore
      * @param name entry name
      * @param type entry type
      * @param size size [bytes]
-     * @param datetime date/time (timestamp)
+     * @param dateTime date/time (timestamp)
      */
-    EntryData(String storageName, long storageDateTime, String name, EntryTypes type, long size, long datetime)
+    EntryData(String storageName, long storageDateTime, String name, EntryTypes type, long size, long dateTime)
     {
       this.storageName     = storageName;
       this.storageDateTime = storageDateTime;
       this.name            = name;
       this.type            = type;
       this.size            = size;
-      this.datetime        = datetime;
+      this.dateTime        = dateTime;
       this.checked         = false;
       this.restoreState    = RestoreStates.UNKNOWN;
     }
@@ -640,11 +660,11 @@ class TabRestore
      * @param storageDateTime archive date/time (timestamp)
      * @param name entry name
      * @param type entry type
-     * @param datetime date/time (timestamp)
+     * @param dateTime date/time (timestamp)
      */
-    EntryData(String storageName, long storageDateTime, String name, EntryTypes type, long datetime)
+    EntryData(String storageName, long storageDateTime, String name, EntryTypes type, long dateTime)
     {
-      this(storageName,storageDateTime,name,type,0L,datetime);
+      this(storageName,storageDateTime,name,type,0L,dateTime);
     }
 
     /** set restore state of entry
@@ -676,7 +696,7 @@ class TabRestore
      */
     public String toString()
     {
-      return "Entry {"+storageName+", "+name+", "+type+", "+size+" bytes, datetime="+datetime+", checked="+checked+", state="+restoreState+"}";
+      return "Entry {"+storageName+", "+name+", "+type+", "+size+" bytes, dateTime="+dateTime+", checked="+checked+", state="+restoreState+"}";
     }
   };
 
@@ -792,8 +812,8 @@ class TabRestore
           else if (entryData1.size > entryData2.size) return  1;
           else                                        return  0;
         case SORTMODE_DATE:
-          if      (entryData1.datetime < entryData2.datetime) return -1;
-          else if (entryData1.datetime > entryData2.datetime) return  1;
+          if      (entryData1.dateTime < entryData2.dateTime) return -1;
+          else if (entryData1.dateTime > entryData2.dateTime) return  1;
           else                                                return  0;
         default:
           return 0;
@@ -825,286 +845,243 @@ class TabRestore
      */
     public void run()
     {
-      final String[] PATTERN_MAP_FROM  = new String[]{"\n","\r","\\"};
-      final String[] PATTERN_MAP_TO    = new String[]{"\\n","\\r","\\\\"};
-      final String[] MAP_FROM = new String[]{"\\n","\\r","\\\\"};
-      final String[] MAP_TO   = new String[]{"\n","\r","\\"};
-
-      for (;;)
+      try
       {
-        // set busy cursor, foreground color to inform about update
-        display.syncExec(new Runnable()
+        for (;;)
         {
-          public void run()
+          // set busy cursor, foreground color to inform about update
+          display.syncExec(new Runnable()
           {
-            shell.setCursor(waitCursor);
-            widgetEntryList.setForeground(COLOR_MODIFIED);
-          }
-        });
-
-        // update
-        synchronized(entryDataMap)
-        {
-          // clear not checked entries
-          entryDataMap.clearNotChecked();
-
-          // get matching entries
-          if (entryPattern != null)
-          {
-            // execute command
-            ArrayList<String> result = new ArrayList<String>();
-            String commandString = "INDEX_ENTRIES_LIST "+
-                                   (checkedStorageOnlyFlag  ? "1" : "0")+" "+
-                                   entryMaxCount+" "+
-                                   (newestEntriesOnlyFlag ? "1" : "0")+" "+
-                                   StringUtils.escape(StringUtils.map(entryPattern,PATTERN_MAP_FROM,PATTERN_MAP_TO));
-            if (BARServer.executeCommand(commandString,result) == Errors.NONE)
+            public void run()
             {
-              // read results
-              Object data[] = new Object[10];
-              for (String line : result)
+              shell.setCursor(waitCursor);
+              widgetEntryList.setForeground(COLOR_MODIFIED);
+            }
+          });
+
+          // update
+          synchronized(entryDataMap)
+          {
+            // clear not checked entries
+            entryDataMap.clearNotChecked();
+
+            // get matching entries
+            if (entryPattern != null)
+            {
+              // execute command
+              String[]            resultErrorMessage  = new String[1];
+              ArrayList<ValueMap> resultMapList       = new ArrayList<ValueMap>();
+
+Dprintf.dprintf("process line by line");
+
+              if (BARServer.executeCommand(StringParser.format("INDEX_ENTRIES_LIST entryPattern=%'S checkedStorageOnlyFlag=%y entryMaxCount=%d newestEntriesOnlyFlag=%y",
+                                                               entryPattern,
+                                                               checkedStorageOnlyFlag,
+                                                               entryMaxCount,
+                                                               newestEntriesOnlyFlag
+                                                              ),
+                                           new TypeMap("entryType",EntryTypes.class,
+                                                       "storageName",String.class,
+                                                       "storageDateTime",long.class,
+                                                       "name",String.class,
+                                                       "size",long.class,
+                                                       "dateTime",long.class,
+                                                       "userId",int.class,
+                                                       "groupId",int.class,
+                                                       "permission",long.class,
+                                                       "fragmentOffset",long.class,
+                                                       "fragmentSize",long.class
+                                                      ),
+                                           resultErrorMessage,
+                                           resultMapList
+                                          ) == Errors.NONE
+                 )
               {
-                if      (StringParser.parse(line,"FILE %S %ld %S %ld %ld %d %d %d %ld %ld",data,StringParser.QUOTE_CHARS))
+                for (ValueMap resultMap : resultMapList)
                 {
-                  /* get data
-                     format:
-                       storage name
-                       storage date/time
-                       file name
-                       size
-                       date/time
-                       user id
-                       group id
-                       permission
-                       fragment offset
-                       fragment size
-                  */
-                  String storageName     = StringUtils.map((String)data[0],MAP_FROM,MAP_TO);
-                  long   storageDateTime = (Long)data[1];
-                  String fileName        = StringUtils.map((String)data[2],MAP_FROM,MAP_TO);
-                  long   size            = (Long)data[3];
-                  long   datetime        = (Long)data[4];
-                  long   fragmentOffset  = (Long)data[8];
-                  long   fragmentSize    = (Long)data[9];
-                  /* get data
-                     format:
-                       storage date/time
-                       size
-                       date/time
-                       user id
-                       group id
-                       permission
-                       fragment offset
-                       fragment size
-                       storage name
-                       file name
-                  */
+                  EntryTypes entryType = resultMap.getEnum("entryType");
+                  switch (entryType)
+                  {
+                    case FILE:
+                      {
+                        String storageName     = resultMap.getString("name");
+                        long   storageDateTime = resultMap.getLong("storageDateTime");
+                        String fileName        = resultMap.getString("name");
+                        long   size            = resultMap.getLong("size");
+                        long   dateTime        = resultMap.getLong("dateTime");
+                        long   fragmentOffset  = resultMap.getLong("fragmentOffset");
+                        long   fragmentSize    = resultMap.getLong("fragmentSize");
 
-                  EntryData entryData = entryDataMap.get(storageName,fileName,EntryTypes.FILE);
-                  if (entryData != null)
-                  {
-                    entryData.size     = size;
-                    entryData.datetime = datetime;
-                  }
-                  else
-                  {
-                    entryData = new EntryData(storageName,storageDateTime,fileName,EntryTypes.FILE,size,datetime);
-                    entryDataMap.put(entryData);
-                  }
-                }
-                else if (StringParser.parse(line,"IMAGE %S %ld %S %ld %ld %ld",data,StringParser.QUOTE_CHARS))
-                {
-                  /* get data
-                     format:
-                       storage name
-                       storage date/time
-                       name
-                       size
-                       blockOffset
-                       blockCount
-                  */
-                  String storageName     = StringUtils.map((String)data[0],MAP_FROM,MAP_TO);
-                  long   storageDateTime = (Long)data[1];
-                  String imageName       = StringUtils.map((String)data[2],MAP_FROM,MAP_TO);
-                  long   size            = (Long)data[3];
-                  long   blockOffset     = (Long)data[4];
-                  long   blockCount      = (Long)data[5];
+                        EntryData entryData = entryDataMap.get(storageName,fileName,EntryTypes.FILE);
+                        if (entryData != null)
+                        {
+                          entryData.size     = size;
+                          entryData.dateTime = dateTime;
+                        }
+                        else
+                        {
+                          entryData = new EntryData(storageName,storageDateTime,fileName,EntryTypes.FILE,size,dateTime);
+                          entryDataMap.put(entryData);
+                        }
+                      }
+                      break;
+                    case IMAGE:
+                      {
+                        String storageName     = resultMap.getString("name");
+                        long   storageDateTime = resultMap.getLong("storageDateTime");
+                        String imageName       = resultMap.getString("name");
+                        long   size            = resultMap.getLong("size");
+                        long   blockOffset     = resultMap.getLong("blockOffset");
+                        long   blockCount      = resultMap.getLong("blockCount");
 
-                  EntryData entryData = entryDataMap.get(storageName,imageName,EntryTypes.IMAGE);
-                  if (entryData != null)
-                  {
-                    entryData.size = size;
-                  }
-                  else
-                  {
-                    entryData = new EntryData(storageName,storageDateTime,imageName,EntryTypes.IMAGE,size,0L);
-                    entryDataMap.put(entryData);
-                  }
-                }
-                else if (StringParser.parse(line,"DIRECTORY %S %ld %S %ld %d %d %d",data,StringParser.QUOTE_CHARS))
-                {
-                  /* get data
-                     format:
-                       storage name
-                       storage date/time
-                       directory name
-                       date/time
-                       user id
-                       group id
-                       permission
-                  */
-                  String storageName     = StringUtils.map((String)data[0],MAP_FROM,MAP_TO);
-                  long   storageDateTime = (Long)data[1];
-                  String directoryName   = StringUtils.map((String)data[2],MAP_FROM,MAP_TO);
-                  long   datetime        = (Long)data[3];
+                        EntryData entryData = entryDataMap.get(storageName,imageName,EntryTypes.IMAGE);
+                        if (entryData != null)
+                        {
+                          entryData.size = size;
+                        }
+                        else
+                        {
+                          entryData = new EntryData(storageName,storageDateTime,imageName,EntryTypes.IMAGE,size,0L);
+                          entryDataMap.put(entryData);
+                        }
+                      }
+                      break;
+                    case DIRECTORY:
+                      {
+                        String storageName     = resultMap.getString("name");
+                        long   storageDateTime = resultMap.getLong("storageDateTime");
+                        String directoryName   = resultMap.getString("name");
+                        long   dateTime        = resultMap.getLong("dateTime");
 
-                  EntryData entryData = entryDataMap.get(storageName,directoryName,EntryTypes.DIRECTORY);
-                  if (entryData != null)
-                  {
-                    entryData.datetime = datetime;
-                  }
-                  else
-                  {
-                    entryData = new EntryData(storageName,storageDateTime,directoryName,EntryTypes.DIRECTORY,datetime);
-                    entryDataMap.put(entryData);
-                  }
-                }
-                else if (StringParser.parse(line,"LINK %S %ld %S %S %ld %d %d %d",data,StringParser.QUOTE_CHARS))
-                {
-                  /* get data
-                     format:
-                       storage name
-                       storage date/time
-                       link name
-                       destination name
-                       date/time
-                       user id
-                       group id
-                       permission
-                  */
-                  String storageName     = StringUtils.map((String)data[0],MAP_FROM,MAP_TO);
-                  long   storageDateTime = (Long)data[1];
-                  String linkName        = StringUtils.map((String)data[2],MAP_FROM,MAP_TO);
-                  String destinationName = StringUtils.map((String)data[3],MAP_FROM,MAP_TO);
-                  long   datetime        = (Long)data[4];
+                        EntryData entryData = entryDataMap.get(storageName,directoryName,EntryTypes.DIRECTORY);
+                        if (entryData != null)
+                        {
+                          entryData.dateTime = dateTime;
+                        }
+                        else
+                        {
+                          entryData = new EntryData(storageName,storageDateTime,directoryName,EntryTypes.DIRECTORY,dateTime);
+                          entryDataMap.put(entryData);
+                        }
+                      }
+                      break;
+                    case LINK:
+                      {
+                        String storageName     = resultMap.getString("name");
+                        long   storageDateTime = resultMap.getLong("storageDateTime");
+                        String linkName        = resultMap.getString("name");
+                        String destinationName = resultMap.getString("destinationName");
+                        long   dateTime        = resultMap.getLong("dateTime");
 
-                  EntryData entryData = entryDataMap.get(storageName,linkName,EntryTypes.LINK);
-                  if (entryData != null)
-                  {
-                    entryData.datetime = datetime;
-                  }
-                  else
-                  {
-                    entryData = new EntryData(storageName,storageDateTime,linkName,EntryTypes.LINK,datetime);
-                    entryDataMap.put(entryData);
-                  }
-                }
-                else if (StringParser.parse(line,"HARDLINK %S %ld %S %ld %ld %d %d %d %ld %ld",data,StringParser.QUOTE_CHARS))
-                {
-                  /* get data
-                     format:
-                       storage name
-                       storage date/time
-                       file name
-                       size
-                       date/time
-                       user id
-                       group id
-                       permission
-                       fragment offset
-                       fragment size
-                  */
-                  String storageName     = StringUtils.map((String)data[0],MAP_FROM,MAP_TO);
-                  long   storageDateTime = (Long)data[1];
-                  String fileName        = StringUtils.map((String)data[2],MAP_FROM,MAP_TO);
-                  long   size            = (Long)data[3];
-                  long   datetime        = (Long)data[4];
-                  long   fragmentOffset  = (Long)data[8];
-                  long   fragmentSize    = (Long)data[9];
+                        EntryData entryData = entryDataMap.get(storageName,linkName,EntryTypes.LINK);
+                        if (entryData != null)
+                        {
+                          entryData.dateTime = dateTime;
+                        }
+                        else
+                        {
+                          entryData = new EntryData(storageName,storageDateTime,linkName,EntryTypes.LINK,dateTime);
+                          entryDataMap.put(entryData);
+                        }
+                      }
+                      break;
+                    case HARDLINK:
+                      {
+                        String storageName     = resultMap.getString("name");
+                        long   storageDateTime = resultMap.getLong("storageDateTime");
+                        String fileName        = resultMap.getString("name");
+                        long   size            = resultMap.getLong("size");
+                        long   dateTime        = resultMap.getLong("dateTime");
+                        long   fragmentOffset  = resultMap.getLong("fragmentOffset");
+                        long   fragmentSize    = resultMap.getLong("fragmentSize");
 
-                  EntryData entryData = entryDataMap.get(storageName,fileName,EntryTypes.HARDLINK);
-                  if (entryData != null)
-                  {
-                    entryData.datetime = datetime;
-                  }
-                  else
-                  {
-                    entryData = new EntryData(storageName,storageDateTime,fileName,EntryTypes.HARDLINK,datetime);
-                    entryDataMap.put(entryData);
-                  }
-                }
-                else if (StringParser.parse(line,"SPECIAL %S %ld %S %ld %d %d %d",data,StringParser.QUOTE_CHARS))
-                {
-                  /* get data
-                     format:
-                       storage name
-                       storage date/time
-                       name
-                       date/time
-                       user id
-                       group id
-                       permission
-                  */
-                  String storageName     = StringUtils.map((String)data[0],MAP_FROM,MAP_TO);
-                  long   storageDateTime = (Long)data[1];
-                  String name            = StringUtils.map((String)data[2],MAP_FROM,MAP_TO);
-                  long   datetime        = (Long)data[3];
+                        EntryData entryData = entryDataMap.get(storageName,fileName,EntryTypes.HARDLINK);
+                        if (entryData != null)
+                        {
+                          entryData.dateTime = dateTime;
+                        }
+                        else
+                        {
+                          entryData = new EntryData(storageName,storageDateTime,fileName,EntryTypes.HARDLINK,dateTime);
+                          entryDataMap.put(entryData);
+                        }
+                      }
+                      break;
+                    case SPECIAL:
+                      {
+                        String storageName     = resultMap.getString("name");
+                        long   storageDateTime = resultMap.getLong("storageDateTime");
+                        String name            = resultMap.getString("name");
+                        long   dateTime        = resultMap.getLong("dateTime");
 
-                  EntryData entryData = entryDataMap.get(storageName,name,EntryTypes.SPECIAL);
-                  if (entryData != null)
-                  {
-                    entryData.datetime = datetime;
-                  }
-                  else
-                  {
-                    entryData = new EntryData(storageName,storageDateTime,name,EntryTypes.SPECIAL,datetime);
-                    entryDataMap.put(entryData);
+                        EntryData entryData = entryDataMap.get(storageName,name,EntryTypes.SPECIAL);
+                        if (entryData != null)
+                        {
+                          entryData.dateTime = dateTime;
+                        }
+                        else
+                        {
+                          entryData = new EntryData(storageName,storageDateTime,name,EntryTypes.SPECIAL,dateTime);
+                          entryDataMap.put(entryData);
+                        }
+                      }
+                      break;
                   }
                 }
               }
-            }
-            else
-            {
-              final String errorText = result.get(0);
-              display.syncExec(new Runnable()
+              else
               {
-                public void run()
+                final String errorText = String.format("Cannot list entries (error: %s)",resultErrorMessage[0]);
+                display.syncExec(new Runnable()
                 {
-                  Dialogs.error(shell,"Cannot list entries (error: "+errorText+")");
-                }
-              });
+                  public void run()
+                  {
+                    Dialogs.error(shell,errorText);
+                  }
+                });
+              }
             }
+          }
+
+          // refresh list
+          display.syncExec(new Runnable()
+          {
+            public void run()
+            {
+              refreshEntryList();
+            }
+          });
+
+          // reset cursor, foreground color
+          display.syncExec(new Runnable()
+          {
+            public void run()
+            {
+              widgetEntryList.setForeground(null);
+              shell.setCursor(null);
+            }
+          });
+
+          // get new pattern
+          synchronized(trigger)
+          {
+            // wait for refresh request trigger
+            while (!triggeredFlag)
+            {
+              try { trigger.wait(); } catch (InterruptedException exception) { /* ignored */ };
+            }
+            triggeredFlag = false;
           }
         }
-
-        // refresh list
-        display.syncExec(new Runnable()
+      }
+      catch (Exception exception)
+      {
+        if (Settings.debugFlag)
         {
-          public void run()
-          {
-            refreshEntryList();
-          }
-        });
-
-        // reset cursor, foreground color
-        display.syncExec(new Runnable()
-        {
-          public void run()
-          {
-            widgetEntryList.setForeground(null);
-            shell.setCursor(null);
-          }
-        });
-
-        // get new pattern
-        synchronized(trigger)
-        {
-          // wait for refresh request trigger
-          while (!triggeredFlag)
-          {
-            try { trigger.wait(); } catch (InterruptedException exception) { /* ignored */ };
-          }
-          triggeredFlag = false;
+          BARServer.disconnect();
+          System.err.println("ERROR: "+exception.getMessage());
+          BARControl.printStackTrace(exception);
+          System.exit(1);
         }
       }
     }
@@ -1317,14 +1294,12 @@ class TabRestore
           {
             ((StorageData)tableItem.getData()).setChecked(tableItem.getChecked());
 
-            BARServer.executeCommand("STORAGE_LIST_CLEAR");
+            BARServer.executeCommand(StringParser.format("STORAGE_LIST_CLEAR"));
             for (StorageData storageData : storageDataMap.values())
             {
               if (storageData.isChecked())
               {
-                BARServer.executeCommand("STORAGE_LIST_ADD "+
-                                         storageData.id
-                                        );
+                BARServer.executeCommand(StringParser.format("STORAGE_LIST_ADD jobId=%d",storageData.id));
               }
             }
           }
@@ -1945,7 +1920,7 @@ class TabRestore
             label.setBackground(COLOR_BACKGROUND);
             Widgets.layout(label,6,0,TableLayoutData.W);
 
-            label = Widgets.newLabel(widgetEntryListToolTip,simpleDateFormat.format(new Date(entryData.datetime*1000)));
+            label = Widgets.newLabel(widgetEntryListToolTip,simpleDateFormat.format(new Date(entryData.dateTime*1000)));
             label.setForeground(COLOR_FORGROUND);
             label.setBackground(COLOR_BACKGROUND);
             Widgets.layout(label,6,1,TableLayoutData.WE);
@@ -2271,7 +2246,7 @@ class TabRestore
    */
   private void setCheckedStorage(boolean checked)
   {
-    BARServer.executeCommand("STORAGE_LIST_CLEAR");
+    BARServer.executeCommand(StringParser.format("STORAGE_LIST_CLEAR"));
     for (TableItem tableItem : widgetStorageList.getItems())
     {
       tableItem.setChecked(checked);
@@ -2280,9 +2255,7 @@ class TabRestore
       storageData.setChecked(checked);
       if (checked)
       {
-        BARServer.executeCommand("STORAGE_LIST_ADD "+
-                                 storageData.id
-                                );
+        BARServer.executeCommand(StringParser.format("STORAGE_LIST_ADD jobId=%d",storageData.id));
       }
     }
 
@@ -2515,10 +2488,9 @@ class TabRestore
                 busyDialog.updateText(archiveNameParts.getPrintableName());
 
                 // delete storage
-                final String[] result = new String[1];
-                int errorCode = BARServer.executeCommand("STORAGE_DELETE "+
-                                                         storageData.id,
-                                                         result
+                final String[] resultErrorMessage = new String[1];
+                int errorCode = BARServer.executeCommand(StringParser.format("STORAGE_DELETE jobId=%d",storageData.id),
+                                                         resultErrorMessage
                                                         );
                 if (errorCode == Errors.NONE)
                 {
@@ -2539,7 +2511,7 @@ class TabRestore
                       {
                         selection[0] = Dialogs.select(shell,
                                                       "Confirmation",
-                                                      "Cannot delete strorage file\n\n'"+archiveNameParts.getPrintableName()+"'\n\n(error: "+result[0]+")",
+                                                      "Cannot delete strorage file\n\n'"+archiveNameParts.getPrintableName()+"'\n\n(error: "+resultErrorMessage[0]+")",
                                                       new String[]{"Continue","Continue with all","Abort"},
                                                       0
                                                      );
@@ -2691,15 +2663,17 @@ class TabRestore
     // add storage file
     if (storageName != null)
     {
-      String[] result = new String[1];
-      int errorCode = BARServer.executeCommand("INDEX_STORAGE_ADD "+StringUtils.escape(storageName),result);
+      String[] resultErrorMessage = new String[1];
+      int errorCode = BARServer.executeCommand(StringParser.format("INDEX_STORAGE_ADD name=%S",storageName),
+                                               resultErrorMessage
+                                              );
       if (errorCode == Errors.NONE)
       {
         updateStorageListThread.triggerUpdate(storagePattern,storageIndexState,storageMaxCount);
       }
       else
       {
-        Dialogs.error(shell,"Cannot add index database for storage file\n\n'"+storageName+"'\n\n(error: "+result[0]+")");
+        Dialogs.error(shell,"Cannot add index database for storage file\n\n'"+storageName+"'\n\n(error: "+resultErrorMessage[0]+")");
       }
     }
   }
@@ -2737,11 +2711,9 @@ class TabRestore
                 busyDialog.updateText(archiveNameParts.getPrintableName());
 
                 // remove entry
-                final String[] result = new String[1];
-                int errorCode = BARServer.executeCommand("INDEX_STORAGE_REMOVE "+
-                                                         "* "+
-                                                         storageData.id,
-                                                         result
+                final String[] resultErrorMessage = new String[1];
+                int errorCode = BARServer.executeCommand(StringParser.format("INDEX_STORAGE_REMOVE state=* jobId=%d",storageData.id),
+                                                         resultErrorMessage
                                                         );
                 if (errorCode == Errors.NONE)
                 {
@@ -2757,7 +2729,7 @@ class TabRestore
                   {
                     public void run()
                     {
-                      Dialogs.error(shell,"Cannot remove index database for storage file\n\n'"+archiveNameParts.getPrintableName()+"'\n\n(error: "+result[0]+")");
+                      Dialogs.error(shell,"Cannot remove index database for storage file\n\n'"+archiveNameParts.getPrintableName()+"'\n\n(error: "+resultErrorMessage[0]+")");
                     }
                   });
                 }
@@ -2808,122 +2780,119 @@ class TabRestore
       if (Dialogs.confirm(shell,"Really remove all indizes with error state?"))
       {
         int    errorCode;
-        String result[] = new String[1];
-        errorCode = BARServer.executeCommand(String.format("INDEX_STORAGE_INFO"),result);
+        String[] resultErrorMessage = new String[1];
+        ValueMap resultMap          = new ValueMap();
+        errorCode = BARServer.executeCommand(StringParser.format("INDEX_STORAGE_INFO"),
+                                             new TypeMap("storageEntryCountError",long.class),
+                                             resultErrorMessage,
+                                             resultMap
+                                            );
         if (errorCode == Errors.NONE)
         {
-          Object data[] = new Object[5];
-          if (StringParser.parse(result[0],"%ld %ld %ld %ld %ld",data,StringParser.QUOTE_CHARS))
+          long storageEntryCountError = resultMap.getLong("storageEntryCountError");
+
+          final BusyDialog busyDialog = new BusyDialog(shell,"Remove indizes",500,100,null,BusyDialog.TEXT0|BusyDialog.PROGRESS_BAR0);
+          busyDialog.setMaximum(storageEntryCountError);
+
+          new BackgroundTask(busyDialog)
           {
-            long storageEntryCountError = (Long)data[4];
-
-            final BusyDialog busyDialog = new BusyDialog(shell,"Remove indizes",500,100,null,BusyDialog.TEXT0|BusyDialog.PROGRESS_BAR0);
-            busyDialog.setMaximum(storageEntryCountError);
-
-            new BackgroundTask(busyDialog)
+            public void run(final BusyDialog busyDialog, Object userData)
             {
-              public void run(final BusyDialog busyDialog, Object userData)
+              try
               {
-                try
+                int            errorCode;
+                final String[] resultErrorMessage = new String[1];
+                final ValueMap resultMap          = new ValueMap();
+
+                long n = 0;
+                do
                 {
-                  int          errorCode;
-                  final String result[] = new String[1];
-
-                  long n = 0;
-                  do
+                  errorCode = BARServer.executeCommand(StringParser.format("INDEX_STORAGE_LIST pattern=%'S maxCount=%d indexState=%s indexMode=%s",
+                                                                           "*",
+                                                                           1,
+                                                                           "ERROR",
+                                                                           "*"
+                                                                          ),
+                                                       new TypeMap("id",long.class,
+                                                                   "name",String.class,
+                                                                   "createdDateTime",long.class,
+                                                                   "size",long.class,
+                                                                   "indexState",int.class,
+                                                                   "indexMode",int.class,
+                                                                   "lastCheckDateTime",long.class,
+                                                                   "errorMessage",String.class
+                                                                  ),
+                                                       resultErrorMessage,
+                                                       resultMap
+                                                      );
+                  if (errorCode == Errors.NONE)
                   {
-                    errorCode = BARServer.executeCommand(String.format("INDEX_STORAGE_LIST 1 ERROR * *"),result);
-                    if (errorCode == Errors.NONE)
+                    long   storageId = resultMap.getLong("id");
+                    String name      = resultMap.getString("name");
+
+                    // update busy dialog
+                    busyDialog.updateText("'"+name+"'");
+
+                    // remove storage index
+                    errorCode = BARServer.executeCommand(StringParser.format("INDEX_STORAGE_REMOVE state=%s jobId=%d",
+                                                                             "*",
+                                                                             storageId
+                                                                            ),
+                                                         resultErrorMessage
+                                                        );
+                    if (errorCode != Errors.NONE)
                     {
-                      Object data[] = new Object[8];
-                      if (StringParser.parse(result[0],"%ld %S %ld %ld %S %S %ld %S",data,StringParser.QUOTE_CHARS))
+                      final String errorText = String.format("Cannot remove database indizes for '%s' (error: %s)",name,resultErrorMessage[0]);
+                      display.syncExec(new Runnable()
                       {
-                        /* get data
-                           format:
-                             storage id
-                             storage name
-                             created date/time
-                             size
-                             index state
-                             index mode
-                             last check date/time
-                             error message
-                        */
-                        long         storageId   = (Long)data[0];
-                        final String storageName = (String)data[1];
-
-                        // update busy dialog
-                        busyDialog.updateText("'"+storageName+"'");
-
-                        // remove storage index
-                        errorCode = BARServer.executeCommand("INDEX_STORAGE_REMOVE "+
-                                                             "* "+
-                                                             storageId,
-                                                             result
-                                                            );
-                        if (errorCode != Errors.NONE)
+                        public void run()
                         {
-                          display.syncExec(new Runnable()
-                          {
-                            public void run()
-                            {
-                              Dialogs.error(shell,"Cannot remove database indizes for '"+storageName+"' (error: "+result[0]+")");
-                            }
-                          });
+                          Dialogs.error(shell,errorText);
                         }
+                      });
+                    }
 
-                        // update progress bar
-                        n++;
-                        busyDialog.updateProgressBar(n);
-                      }
-                      else
-                      {
-                        // parse error -> stop
-                        break;
-                      }
-                    }
-                    else
-                    {
-                      Dialogs.error(shell,"Cannot remove database indizes with error state (error: "+result[0]+")");
-                      break;
-                    }
+                    // update progress bar
+                    n++;
+                    busyDialog.updateProgressBar(n);
                   }
-                  while (!busyDialog.isAborted());
-
-                  // close busy dialog, restore cursor
-                  display.syncExec(new Runnable()
+                  else
                   {
-                    public void run()
-                    {
-                      busyDialog.close();
-                    }
-                  });
-
-                  updateStorageListThread.triggerUpdate(storagePattern,storageIndexState,storageMaxCount);
+                    Dialogs.error(shell,"Cannot remove database indizes with error state (error: "+resultErrorMessage[0]+")");
+                    break;
+                  }
                 }
-                catch (CommunicationError error)
+                while (!busyDialog.isAborted());
+
+                // close busy dialog, restore cursor
+                display.syncExec(new Runnable()
                 {
-                  final String errorMessage = error.getMessage();
-                  display.syncExec(new Runnable()
+                  public void run()
                   {
-                    public void run()
-                    {
-                      busyDialog.close();
-                      Dialogs.error(shell,"Communication error while removing database indizes (error: "+errorMessage+")");
-                     }
-                  });
-                }
+                    busyDialog.close();
+                  }
+                });
+
+                updateStorageListThread.triggerUpdate(storagePattern,storageIndexState,storageMaxCount);
               }
-            };
-          }
-          else
-          {
-            // parse error -> ignored
-          }
+              catch (CommunicationError error)
+              {
+                final String errorMessage = error.getMessage();
+                display.syncExec(new Runnable()
+                {
+                  public void run()
+                  {
+                    busyDialog.close();
+                    Dialogs.error(shell,"Communication error while removing database indizes (error: "+errorMessage+")");
+                   }
+                });
+              }
+            }
+          };
         }
         else
         {
-          Dialogs.error(shell,"Communication error while removing database indizes (error: "+result[0]+")");
+          Dialogs.error(shell,"Communication error while removing database indizes (error: "+resultErrorMessage[0]+")");
         }
       }
     }
@@ -2949,11 +2918,12 @@ class TabRestore
         {
           for (StorageData storageData : selectedStorageHashSet)
           {
-            String[] result = new String[1];
-            int errorCode = BARServer.executeCommand("INDEX_STORAGE_REFRESH "+
-                                                     "* "+
-                                                     storageData.id,
-                                                     result
+            String[] resultErrorMessage = new String[1];
+            int errorCode = BARServer.executeCommand(StringParser.format("INDEX_STORAGE_REFRESH state=%s jobId=%d",
+                                                                         "*",
+                                                                         storageData.id
+                                                                        ),
+                                                     resultErrorMessage
                                                     );
             if (errorCode == Errors.NONE)
             {
@@ -2961,7 +2931,7 @@ class TabRestore
             }
             else
             {
-              Dialogs.error(shell,"Cannot refresh index database for storage file\n\n'"+storageData.name+"'\n\n(error: "+result[0]+")");
+              Dialogs.error(shell,"Cannot refresh index database for storage file\n\n'"+storageData.name+"'\n\n(error: "+resultErrorMessage[0]+")");
             }
           }
 
@@ -2983,11 +2953,12 @@ class TabRestore
     {
       if (Dialogs.confirm(shell,"Really refresh all indizes with error state?"))
       {
-        String[] result = new String[1];
-        int errorCode = BARServer.executeCommand("INDEX_STORAGE_REFRESH "+
-                                                 "ERROR "+
-                                                 "0",
-                                                 result
+        String[] resultErrorMessage = new String[1];
+        int errorCode = BARServer.executeCommand(StringParser.format("INDEX_STORAGE_REFRESH state=%s jobId=%d",
+                                                                     "ERROR",
+                                                                     0
+                                                                    ),
+                                                 resultErrorMessage
                                                 );
         if (errorCode == Errors.NONE)
         {
@@ -2995,7 +2966,7 @@ class TabRestore
         }
         else
         {
-          Dialogs.error(shell,"Cannot refresh database indizes with error state (error: "+result[0]+")");
+          Dialogs.error(shell,"Cannot refresh database indizes with error state (error: "+resultErrorMessage[0]+")");
         }
       }
     }
@@ -3047,14 +3018,15 @@ class TabRestore
             {
               retryFlag = false;
 
-              ArrayList<String> result = new ArrayList<String>();
-              String commandString = "RESTORE "+
-                                     StringUtils.escape(storageName)+" "+
-                                     StringUtils.escape(directory)+" "+
-                                     (overwriteEntries?"1":"0")
-                                     ;
-Dprintf.dprintf("command=%s",commandString);
-              command = BARServer.runCommand(commandString);
+              final String[] resultErrorMessage = new String[1];
+              command = BARServer.runCommand(StringParser.format("RESTORE storageName=%'S destinationDirectory=%'S overwriteFlag=%y",
+                                                                 storageName,
+                                                                 directory,
+                                                                 overwriteEntries
+                                                                )
+                                            );
+
+Dprintf.dprintf("parse result");
 
               // read results, update/add data
               String line;
@@ -3109,7 +3081,7 @@ Dprintf.dprintf("line=%s",line);
                                                       );
                     if (password != null)
                     {
-                      BARServer.executeCommand("DECRYPT_PASSWORD_ADD "+StringUtils.escape(password));
+                      BARServer.executeCommand(StringParser.format("DECRYPT_PASSWORD_ADD password=%S",password));
                     }
                   }
                 });
@@ -3266,7 +3238,7 @@ Dprintf.dprintf("line=%s",line);
                                      entryData.name,
                                      "FILE",
                                      Units.formatByteSize(entryData.size),
-                                     simpleDateFormat.format(new Date(entryData.datetime*1000))
+                                     simpleDateFormat.format(new Date(entryData.dateTime*1000))
                                     );
             break;
           case DIRECTORY:
@@ -3277,7 +3249,7 @@ Dprintf.dprintf("line=%s",line);
                                      entryData.name,
                                      "DIR",
                                      "",
-                                     simpleDateFormat.format(new Date(entryData.datetime*1000))
+                                     simpleDateFormat.format(new Date(entryData.dateTime*1000))
                                     );
             break;
           case LINK:
@@ -3288,7 +3260,7 @@ Dprintf.dprintf("line=%s",line);
                                      entryData.name,
                                      "LINK",
                                      "",
-                                     simpleDateFormat.format(new Date(entryData.datetime*1000))
+                                     simpleDateFormat.format(new Date(entryData.dateTime*1000))
                                     );
             break;
           case SPECIAL:
@@ -3299,7 +3271,7 @@ Dprintf.dprintf("line=%s",line);
                                      entryData.name,
                                      "SPECIAL",
                                      Units.formatByteSize(entryData.size),
-                                     simpleDateFormat.format(new Date(entryData.datetime*1000))
+                                     simpleDateFormat.format(new Date(entryData.dateTime*1000))
                                     );
             break;
           case DEVICE:
@@ -3310,7 +3282,7 @@ Dprintf.dprintf("line=%s",line);
                                      entryData.name,
                                      "DEVICE",
                                      Units.formatByteSize(entryData.size),
-                                     simpleDateFormat.format(new Date(entryData.datetime*1000))
+                                     simpleDateFormat.format(new Date(entryData.dateTime*1000))
                                     );
             break;
           case SOCKET:
@@ -3321,7 +3293,7 @@ Dprintf.dprintf("line=%s",line);
                                      entryData.name,
                                      "SOCKET",
                                      "",
-                                     simpleDateFormat.format(new Date(entryData.datetime*1000))
+                                     simpleDateFormat.format(new Date(entryData.dateTime*1000))
                                     );
             break;
         }
@@ -3409,14 +3381,14 @@ Dprintf.dprintf("line=%s",line);
               retryFlag = false;
 
               ArrayList<String> result = new ArrayList<String>();
-              String commandString = "RESTORE "+
-                                     StringUtils.escape(entryData.storageName)+" "+
-                                     StringUtils.escape(directory)+" "+
-                                     (overwriteEntries?"1":"0")+" "+
-                                     StringUtils.escape(StringUtils.map(entryData.name,MAP_FROM,MAP_TO))
-                                     ;
-//Dprintf.dprintf("command=%s",commandString);
-              command = BARServer.runCommand(commandString);
+              command = BARServer.runCommand(StringParser.format("RESTORE storageName=%'S destinationDirectory=%'S overwriteFlag=%y name=%'S",
+                                                                 storageName,
+                                                                 directory,
+                                                                 overwriteEntries,
+                                                                 entryData.name
+                                                                )
+                                            );
+Dprintf.dprintf("parse result");
 
               // read results, update/add data
               String line;
@@ -3475,7 +3447,7 @@ Dprintf.dprintf("line=%s",line);
                                                       );
                     if (password != null)
                     {
-                      BARServer.executeCommand("FTP_PASSWORD "+StringUtils.escape(password));
+                      BARServer.executeCommand(StringParser.format("FTP_PASSWORD password=%S",password));
                     }
                   }
                 });
@@ -3504,7 +3476,7 @@ Dprintf.dprintf("line=%s",line);
                                                       );
                     if (password != null)
                     {
-                      BARServer.executeCommand("SSH_PASSWORD "+StringUtils.escape(password));
+                      BARServer.executeCommand(StringParser.format("SSH_PASSWORD password=%S",password));
                     }
                   }
                 });
@@ -3533,7 +3505,7 @@ Dprintf.dprintf("line=%s",line);
                                                       );
                     if (password != null)
                     {
-                      BARServer.executeCommand("DECRYPT_PASSWORD_ADD "+StringUtils.escape(password));
+                      BARServer.executeCommand(StringParser.format("DECRYPT_PASSWORD_ADD password=%S",password));
                     }
                   }
                 });

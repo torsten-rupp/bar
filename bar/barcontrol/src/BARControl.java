@@ -50,8 +50,6 @@ import org.eclipse.swt.dnd.Transfer;
 import org.eclipse.swt.dnd.TransferData;
 import org.eclipse.swt.events.FocusEvent;
 import org.eclipse.swt.events.FocusListener;
-import org.eclipse.swt.events.KeyEvent;
-import org.eclipse.swt.events.KeyListener;
 import org.eclipse.swt.events.ModifyEvent;
 import org.eclipse.swt.events.ModifyListener;
 import org.eclipse.swt.events.MouseEvent;
@@ -1000,6 +998,27 @@ public class BARControl
     System.err.println("INTERNAL ERROR: "+String.format(format,args));
   }
 
+  /** print stack trace
+   * @param throwable throwable
+   */
+  public static void printStackTrace(Throwable throwable)
+  {
+    for (StackTraceElement stackTraceElement : throwable.getStackTrace())
+    {
+      System.err.println("  "+stackTraceElement);
+    }
+    Throwable cause = throwable.getCause();
+    while (cause != null)
+    {
+      System.err.println("Caused by:");
+      for (StackTraceElement stackTraceElement : cause.getStackTrace())
+      {
+        System.err.println("  "+stackTraceElement);
+      }
+      cause = cause.getCause();
+    }
+  }
+
   /** renice i/o exception (remove java.io.IOExcpetion text from exception)
    * @param exception i/o exception to renice
    * @return reniced exception
@@ -1133,8 +1152,11 @@ public class BARControl
    */
   private static int getJobId(String name)
   {
+    String[] errorMessage = new String[1];
     ArrayList<String> result = new ArrayList<String>();
-    BARServer.executeCommand("JOB_LIST",result);
+    int errorCode = BARServer.executeCommand(StringParser.format("JOB_LIST"),errorMessage);
+    if (errorCode != Errors.NONE)
+    {
     for (String line : result)
     {
       Object data[] = new Object[12];
@@ -1167,6 +1189,7 @@ public class BARControl
           System.exit(1);
         }
       }
+    }
     }
 
     return -1;
@@ -1493,11 +1516,11 @@ public class BARControl
         }
         public void widgetSelected(SelectionEvent selectionEvent)
         {
-          String[] result = new String[1];
-          int errorCode = BARServer.executeCommand("PASSWORDS_CLEAR",result);
+          String[] errorMessage = new String[1];
+          int errorCode = BARServer.executeCommand(StringParser.format("PASSWORDS_CLEAR"),errorMessage);
           if (errorCode != Errors.NONE)
           {
-            Dialogs.error(shell,"Cannot clear passwords on server:\n\n"+result[0]);
+            Dialogs.error(shell,"Cannot clear passwords on server:\n\n"+errorMessage[0]);
           }
         }
       });
@@ -1547,7 +1570,7 @@ public class BARControl
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             MenuItem widget = (MenuItem)selectionEvent.widget;
-            BARServer.executeCommand("DEBUG_PRINT_STATISTICS");
+            BARServer.executeCommand(StringParser.format("DEBUG_PRINT_STATISTICS"));
           }
         });
 
@@ -1560,7 +1583,7 @@ public class BARControl
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             MenuItem widget = (MenuItem)selectionEvent.widget;
-            BARServer.executeCommand("DEBUG_PRINT_MEMORY_INFO");
+            BARServer.executeCommand(StringParser.format("DEBUG_PRINT_MEMORY_INFO"));
           }
         });
 
@@ -1573,7 +1596,7 @@ public class BARControl
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             MenuItem widget = (MenuItem)selectionEvent.widget;
-            BARServer.executeCommand("DEBUG_DUMP_MEMORY_INFO");
+            BARServer.executeCommand(StringParser.format("DEBUG_DUMP_MEMORY_INFO"));
           }
         });
       }
@@ -1669,11 +1692,16 @@ public class BARControl
           }
 
           // start job
-          String[] result = new String[1];
-          int errorCode = BARServer.executeCommand("JOB_START "+jobId+" "+Settings.archiveType.toString(),result);
+          String[] errorMessage = new String[1];
+          int errorCode = BARServer.executeCommand(StringParser.format("JOB_START jobId=%d type=%s",
+                                                                       jobId,
+                                                                       Settings.archiveType.toString()
+                                                                      ),
+                                                   errorMessage
+                                                  );
           if (errorCode != Errors.NONE)
           {
-            printError("cannot start job '%s' (error: %s)",Settings.runJobName,result[0]);
+            printError("cannot start job '%s' (error: %s)",Settings.runJobName,errorMessage[0]);
             BARServer.disconnect();
             System.exit(1);
           }
@@ -1681,11 +1709,13 @@ public class BARControl
         if (Settings.indexDatabaseAddStorageName != null)
         {
           // add index for storage
-          String[] result = new String[1];
-          int errorCode = BARServer.executeCommand("INDEX_STORAGE_ADD "+StringUtils.escape(Settings.indexDatabaseAddStorageName),result);
+          String[] errorMessage = new String[1];
+          int errorCode = BARServer.executeCommand(StringParser.format("INDEX_STORAGE_ADD name=%S",Settings.indexDatabaseAddStorageName),
+                                                   errorMessage
+                                                  );
           if (errorCode != Errors.NONE)
           {
-            printError("cannot add index for storage '%s' to index (error: %s)",Settings.indexDatabaseAddStorageName,result[0]);
+            printError("cannot add index for storage '%s' to index (error: %s)",Settings.indexDatabaseAddStorageName,errorMessage[0]);
             BARServer.disconnect();
             System.exit(1);
           }
@@ -1693,11 +1723,13 @@ public class BARControl
         if (Settings.indexDatabaseRemoveStorageName != null)
         {
           // remote index for storage
-          String[] result = new String[1];
-          int errorCode = BARServer.executeCommand("INDEX_STORAGE_REMOVE "+StringUtils.escape(Settings.indexDatabaseRemoveStorageName),result);
+          String[] errorMessage = new String[1];
+          int errorCode = BARServer.executeCommand(StringParser.format("INDEX_STORAGE_REMOVE name=%S",Settings.indexDatabaseRemoveStorageName),
+                                                   errorMessage
+                                                  );
           if (errorCode != Errors.NONE)
           {
-            printError("cannot remove index for storage '%s' from index (error: %s)",Settings.indexDatabaseRemoveStorageName,result[0]);
+            printError("cannot remove index for storage '%s' from index (error: %s)",Settings.indexDatabaseRemoveStorageName,errorMessage[0]);
             BARServer.disconnect();
             System.exit(1);
           }
@@ -1949,11 +1981,13 @@ public class BARControl
         if (Settings.pauseTime > 0)
         {
           // pause
-          String[] result = new String[1];
-          int errorCode = BARServer.executeCommand("PAUSE "+Settings.pauseTime,result);
+          String[] errorMessage = new String[1];
+          int errorCode = BARServer.executeCommand(StringParser.format("PAUSE time=%d",Settings.pauseTime),
+                                                   errorMessage
+                                                  );
           if (errorCode != Errors.NONE)
           {
-            printError("cannot pause (error: %s)",Settings.runJobName,result[0]);
+            printError("cannot pause (error: %s)",Settings.runJobName,errorMessage[0]);
             BARServer.disconnect();
             System.exit(1);
           }
@@ -1964,11 +1998,11 @@ public class BARControl
         if (Settings.suspendFlag)
         {
           // suspend
-          String[] result = new String[1];
-          int errorCode = BARServer.executeCommand("SUSPEND",result);
+          String[] errorMessage = new String[1];
+          int errorCode = BARServer.executeCommand(StringParser.format("SUSPEND"),errorMessage);
           if (errorCode != Errors.NONE)
           {
-            printError("cannot suspend (error: %s)",Settings.runJobName,result[0]);
+            printError("cannot suspend (error: %s)",Settings.runJobName,errorMessage[0]);
             BARServer.disconnect();
             System.exit(1);
           }
@@ -1976,11 +2010,11 @@ public class BARControl
         if (Settings.continueFlag)
         {
           // continue
-          String[] result = new String[1];
-          int errorCode = BARServer.executeCommand("CONTINUE",result);
+          String[] errorMessage = new String[1];
+          int errorCode = BARServer.executeCommand(StringParser.format("CONTINUE"),errorMessage);
           if (errorCode != Errors.NONE)
           {
-            printError("cannot continue (error: %s)",Settings.runJobName,result[0]);
+            printError("cannot continue (error: %s)",Settings.runJobName,errorMessage[0]);
             BARServer.disconnect();
             System.exit(1);
           }
@@ -1997,23 +2031,33 @@ public class BARControl
           }
 
           // abort job
-          String[] result = new String[1];
-          int errorCode = BARServer.executeCommand("JOB_ABORT "+jobId,result);
+          String[] errorMessage = new String[1];
+          int errorCode = BARServer.executeCommand(StringParser.format("JOB_ABORT jobId=%d",jobId),errorMessage);
           if (errorCode != Errors.NONE)
           {
-            printError("cannot abort job '%s' (error: %s)",Settings.abortJobName,result[0]);
+            printError("cannot abort job '%s' (error: %s)",Settings.abortJobName,errorMessage[0]);
             BARServer.disconnect();
             System.exit(1);
           }
         }
         if (Settings.listFlag)
         {
+          int      errorCode;
+          String[] errorMessage = new String[1];
           Object data[] = new Object[12];
 
           // get server state
           String serverState = null;
-          String[] result1 = new String[1];
-          if (BARServer.executeCommand("STATUS",result1) != Errors.NONE)
+          ValueMap resultMap = new ValueMap();
+String[] result1 = new String[1];
+          errorCode = BARServer.executeCommand(StringParser.format("STATUS"),
+                                               new TypeMap("type",String.class,
+                                                           "time",long.class
+                                                          ),
+                                               errorMessage,
+                                               resultMap
+                                              );
+          if (errorCode != Errors.NONE)
           {
             printError("cannot get state (error: %s)",result1[0]);
             BARServer.disconnect();
@@ -2032,17 +2076,35 @@ public class BARControl
           }
           else
           {
-            printWarning("unknown server response '%s'",result1[0]);
+            printWarning("unknown server response '%s'",errorMessage[0]);
             BARServer.disconnect();
             System.exit(1);
           }
 
           // get joblist
-          ArrayList<String> result2 = new ArrayList<String>();
-          int errorCode = BARServer.executeCommand("JOB_LIST",result2);
+          ArrayList<ValueMap> resultMapList = new ArrayList<ValueMap>();
+Dprintf.dprintf("TODO");
+String[] result2 = new String[1];
+          errorCode = BARServer.executeCommand(StringParser.format("JOB_LIST"),
+                                               new TypeMap("id",                    int.class,
+                                                           "name",                  String.class,
+                                                           "state",                 String.class,
+                                                           "archiveType",           String.class,
+                                                           "archivePartSize",       long.class,
+                                                           "deltaCompressAlgorithm",String.class,
+                                                           "byteCompressAlgorithm", String.class,
+                                                           "cryptAlgorithm",        String.class,
+                                                           "cryptType",             String.class,
+                                                           "cryptPasswordMode",     String.class,
+                                                           "lastExecutedDateTime",  long.class,
+                                                           "estimatedRestTime",     long.class
+                                                           ),
+                                               errorMessage,
+                                               resultMapList
+                                              );
           if (errorCode != Errors.NONE)
           {
-            printError("cannot get job list (error: %s)",result2.get(0));
+            printError("cannot get job list (error: %s)",errorMessage[0]);
             BARServer.disconnect();
             System.exit(1);
           }
@@ -2228,10 +2290,7 @@ public class BARControl
       System.err.println("ERROR graphics: "+exception.getCause());
       if (Settings.debugFlag)
       {
-        for (StackTraceElement stackTraceElement : exception.getStackTrace())
-        {
-          System.err.println("  "+stackTraceElement);
-        }
+        printStackTrace(exception);
       }
     }
     catch (CommunicationError communicationError)
@@ -2241,20 +2300,14 @@ public class BARControl
     catch (AssertionError assertionError)
     {
       System.err.println("INTERNAL ERROR: "+assertionError.toString());
-      for (StackTraceElement stackTraceElement : assertionError.getStackTrace())
-      {
-        System.err.println("  "+stackTraceElement);
-      }
+      printStackTrace(assertionError);
       System.err.println("");
       System.err.println("Please report this assertion error to torsten.rupp"+MAIL_AT+"gmx.net."); // use MAIL_AT to avoid SPAM
     }
     catch (InternalError error)
     {
       System.err.println("INTERNAL ERROR: "+error.getMessage());
-      for (StackTraceElement stackTraceElement : error.getStackTrace())
-      {
-        System.err.println("  "+stackTraceElement);
-      }
+      printStackTrace(error);
       System.err.println("");
       System.err.println("Please report this internal error to torsten.rupp"+MAIL_AT+"gmx.net."); // use MAIL_AT to avoid SPAM
     }
@@ -2263,10 +2316,7 @@ public class BARControl
       System.err.println("ERROR: "+error.getMessage());
       if (Settings.debugFlag)
       {
-        for (StackTraceElement stackTraceElement : error.getStackTrace())
-        {
-          System.err.println("  "+stackTraceElement);
-        }
+        printStackTrace(error);
       }
     }
   }
