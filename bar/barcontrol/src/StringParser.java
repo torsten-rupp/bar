@@ -17,11 +17,305 @@ import java.lang.String;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 
+import java.util.HashMap;
+
 /****************************** Classes ********************************/
+
+/** map parser type
+ */
+class TypeMap extends HashMap<String,Class>
+{
+  /** create type map
+   * @param data definition (tuples of <String,Class>)
+   */
+  TypeMap(Object... data)
+  {
+    assert (data.length%2) == 0;
+
+    for (int i = 0; i < data.length; i+=2)
+    {
+      put((String)data[i+0],(Class)data[i+1]);
+    }
+  }
+
+  /** convert to string
+   * @return string
+   */
+  public String toString()
+  {
+    StringBuilder buffer = new StringBuilder();
+
+    buffer.append('{');
+    for (String name : keySet())
+    {
+      if (buffer.length() > 1) buffer.append(", ");
+      buffer.append(name);
+      buffer.append(':');
+      buffer.append(get(name));
+    }
+    buffer.append('}');
+
+    return buffer.toString();
+  }
+}
+
+/** map parser value
+ */
+class ValueMap extends HashMap<String,Object>
+{
+  /** create value map
+   * @param name name
+   * @param value value
+   */
+  ValueMap(String name, String value)
+  {
+    super();
+    put(name,value);
+  }
+
+  /** create value map
+   */
+  ValueMap()
+  {
+    super();
+  }
+
+  /** get int value
+   * @param name name
+   * @param defaultValue default value
+   * @return int value
+   */
+  public int getInt(String name, Integer defaultValue)
+  {
+    if      (containsKey(name))
+    {
+      return (Integer)get(name);
+    }
+    else if (defaultValue != null)
+    {
+      return defaultValue;
+    }
+    else
+    {
+      throw new IllegalArgumentException("unknown entry '"+name+"'");
+    }
+  }
+
+  /** get int value
+   * @param name name
+   * @return int value
+   */
+  public int getInt(String name)
+  {
+    return getInt(name,null);
+  }
+
+  /** get long value
+   * @param name name
+   * @param defaultValue default value
+   * @return int value
+   */
+  public long getLong(String name, Long defaultValue)
+  {
+    if      (containsKey(name))
+    {
+      return (Long)get(name);
+    }
+    else if (defaultValue != null)
+    {
+      return defaultValue;
+    }
+    else
+    {
+      throw new IllegalArgumentException("unknown entry '"+name+"'");
+    }
+  }
+
+  /** get long value
+   * @param name name
+   * @return int value
+   */
+  public long getLong(String name)
+  {
+    return getLong(name,null);
+  }
+
+  /** get double value
+   * @param name name
+   * @param defaultValue default value
+   * @return double value
+   */
+  public double getDouble(String name, Double defaultValue)
+  {
+    if      (containsKey(name))
+    {
+      return (Double)get(name);
+    }
+    else if (defaultValue != null)
+    {
+      return defaultValue;
+    }
+    else
+    {
+      throw new IllegalArgumentException("unknown entry '"+name+"'");
+    }
+  }
+
+  /** get double value
+   * @param name name
+   * @return double value
+   */
+  public double getDouble(String name)
+  {
+    return getDouble(name,null);
+  }
+
+  /** get boolean value
+   * @param name name
+   * @param defaultValue default value
+   * @return boolean value
+   */
+  public boolean getBoolean(String name, Boolean defaultValue)
+  {
+    if      (containsKey(name))
+    {
+      return (Boolean)get(name);
+    }
+    else if (defaultValue != null)
+    {
+      return defaultValue;
+    }
+    else
+    {
+      throw new IllegalArgumentException("unknown entry '"+name+"'");
+    }
+  }
+
+  /** get boolean value
+   * @param name name
+   * @return boolean value
+   */
+  public boolean getBoolean(String name)
+  {
+    return getBoolean(name,null);
+  }
+
+
+  /** get character value
+   * @param name name
+   * @param defaultValue default value
+   * @return string value
+   */
+  public char getChar(String name, Character defaultValue)
+  {
+    if      (containsKey(name))
+    {
+      return (Character)get(name);
+    }
+    else if (defaultValue != null)
+    {
+      return defaultValue;
+    }
+    else
+    {
+      throw new IllegalArgumentException("unknown entry '"+name+"'");
+    }
+  }
+
+  /** get character value
+   * @param name name
+   * @return string value
+   */
+  public char getChar(String name)
+  {
+    return getChar(name,null);
+  }
+
+  /** get string value
+   * @param name name
+   * @param defaultValue default value
+   * @return string value
+   */
+  public String getString(String name, String defaultValue)
+  {
+    if      (containsKey(name))
+    {
+      return (String)get(name);
+    }
+    else if (defaultValue != null)
+    {
+      return defaultValue;
+    }
+    else
+    {
+      throw new IllegalArgumentException("unknown entry '"+name+"'");
+    }
+  }
+
+  /** get string value
+   * @param name name
+   * @param defaultValue default value
+   * @return string value
+   */
+  public String getString(String name)
+  {
+    return getString(name,null);
+  }
+
+  /** get enum value
+   * @param name name
+   * @param defaultValue default value
+   * @return enum value
+   */
+  public <T extends Enum<T>> T getEnum(String name, T defaultValue)
+  {
+    if      (containsKey(name))
+    {
+      return (T)get(name);
+    }
+    else if (defaultValue != null)
+    {
+      return defaultValue;
+    }
+    else
+    {
+      throw new IllegalArgumentException("unknown entry '"+name+"'");
+    }
+  }
+
+  /** get enum value
+   * @param name name
+   * @return enum value
+   */
+  public <T extends Enum<T>> T getEnum(String name)
+  {
+    return getEnum(name,null);
+  }
+
+  /** convert to string
+   * @return string
+   */
+  public String toString()
+  {
+    StringBuilder buffer = new StringBuilder();
+
+    buffer.append('{');
+    for (String name : keySet())
+    {
+      if (buffer.length() > 1) buffer.append(", ");
+      buffer.append(name);
+      buffer.append('=');
+      buffer.append(get(name));
+    }
+    buffer.append('}');
+
+    return buffer.toString();
+  }
+}
 
 /** scanf-like string parser
  */
-class StringParser
+public class StringParser
 {
   /** quoting characters for string values
    */
@@ -57,19 +351,19 @@ class StringParser
    */
   private static class FormatToken
   {
-    StringBuffer token;
-    int          length;
-    boolean      alternateFlag;            // #: not used
-    boolean      zeroPaddingFlag;          // 0: pad numbers with 0
-    boolean      leftAdjustedFlag;         // -: format left adjusted
-    boolean      blankFlag;                // ' '/+: pad numbers with spaces/get string with spaces
-    boolean      greedyFlag;               // *: get all characters of string if last format token
-    int          width;
-    int          precision;
-    LengthTypes  lengthType;
-    char         quoteChar;
-    String       enumClassName;
-    char         conversionChar;
+    StringBuilder token;
+    int           length;
+    boolean       alternateFlag;            // #: not used
+    boolean       zeroPaddingFlag;          // 0: pad numbers with 0
+    boolean       leftAdjustedFlag;         // -: format left adjusted
+    boolean       blankFlag;                // ' '/+: pad numbers with spaces/get string with spaces
+    boolean       greedyFlag;               // *: get all characters of string if last format token
+    int           width;
+    int           precision;
+    LengthTypes   lengthType;
+    char          quoteChar;
+    String        enumClassName;
+    char          conversionChar;
   }
 
   /** get next format token
@@ -99,7 +393,7 @@ class StringParser
    */
   private static int getNextFormatToken(String format, int formatIndex, FormatToken formatToken)
   {
-    formatToken.token            = new StringBuffer();
+    formatToken.token            = new StringBuilder();
     formatToken.length           = 0;
     formatToken.alternateFlag    = false;
     formatToken.zeroPaddingFlag  = false;
@@ -113,7 +407,7 @@ class StringParser
     formatToken.enumClassName    = null;
     formatToken.conversionChar   = '\0';
 
-    /* format start character */
+    // format start character
     assert format.charAt(formatIndex) == '%';
     formatToken.token.append('%');
     formatIndex++;
@@ -122,7 +416,7 @@ class StringParser
       return -1;
     }
 
-    /* flags */
+    // flags
     while (   (formatIndex < format.length())
            && (   (format.charAt(formatIndex) == '#')
                || (format.charAt(formatIndex) == '0')
@@ -152,7 +446,7 @@ class StringParser
       return -1;
     }
 
-    /* width, precision */
+    // width, precision
     while ((formatIndex < format.length()) && (Character.isDigit(format.charAt(formatIndex))))
     {
       formatToken.token.append(format.charAt(formatIndex));
@@ -165,7 +459,7 @@ class StringParser
       return -1;
     }
 
-    /* precision */
+    // precision
     if (format.charAt(formatIndex) == '.')
     {
       formatToken.token.append(format.charAt(formatIndex));
@@ -179,7 +473,7 @@ class StringParser
       }
     }
 
-    /* quoting character */
+    // quoting character
     if (   (formatIndex+1 < format.length())
         && (format.charAt(formatIndex) != '{')
         && ((format.charAt(formatIndex+1) == 's') || (format.charAt(formatIndex+1) == 'S'))
@@ -189,7 +483,7 @@ class StringParser
       formatIndex++;
     }
 
-    /* length modifier */
+    // length modifier
     if      (   (formatIndex+1 < format.length())
              && (format.charAt(formatIndex) == 'h')
              && (format.charAt(formatIndex+1) == 'h')
@@ -262,11 +556,11 @@ class StringParser
         && (format.charAt(formatIndex) == '{')
        )
     {
-      /* enum name */
+      // enum name
       formatToken.token.append(format.charAt(formatIndex));
       formatIndex++;
 
-      StringBuffer buffer = new StringBuffer();
+      StringBuilder buffer = new StringBuilder();
       while ((formatIndex < format.length()) && (format.charAt(formatIndex) != '}'))
       {
         char ch = format.charAt(formatIndex);
@@ -284,7 +578,7 @@ class StringParser
       return -1;
     }
 
-    /* conversion character */
+    // conversion character
     switch (format.charAt(formatIndex))
     {
       case 'S':
@@ -340,12 +634,12 @@ class StringParser
    */
   public static int parse(String string, int index, String format, Object arguments[], String stringQuotes)
   {
-    int          formatIndex;
-    int          argumentIndex;
-    FormatToken  formatToken = new FormatToken();
-    StringBuffer buffer;
-    char         ch;
-    int          z;
+    int           formatIndex;
+    int           argumentIndex;
+    FormatToken   formatToken = new FormatToken();
+    StringBuilder buffer;
+    char          ch;
+    int           i;
 
     formatIndex   = 0;
     argumentIndex = 0;
@@ -365,21 +659,21 @@ class StringParser
       {
         if (format.charAt(formatIndex) == '%')
         {
-          /* get format token */
+          // get format token
           formatIndex = getNextFormatToken(format,formatIndex,formatToken);
           if (formatIndex < 0)
           {
             return -1;
           }
 
-          /* parse string and store values */
+          // parse string and store values
           switch (formatToken.conversionChar)
           {
             case 'i':
             case 'd':
             case 'u':
-              /* get data */
-              buffer = new StringBuffer();
+              // get data
+              buffer = new StringBuilder();
               if ((index < string.length()) && ((string.charAt(index) == '+') || (string.charAt(index) == '-')))
               {
                 buffer.append(string.charAt(index));
@@ -397,7 +691,7 @@ class StringParser
                 return -1;
               }
 
-              /* convert */
+              // convert
               try
               {
                 switch (formatToken.lengthType)
@@ -420,7 +714,7 @@ class StringParser
               }
               break;
             case 'c':
-              /* get data */
+              // get data
               if (index < string.length())
               {
                 ch = string.charAt(index);
@@ -431,13 +725,13 @@ class StringParser
                 return -1;
               }
 
-              /* convert */
+              // convert
               arguments[argumentIndex] = ch;
               argumentIndex++;
               break;
             case 'o':
-              /* get data */
-              buffer = new StringBuffer();
+              // get data
+              buffer = new StringBuilder();
               while (   (index < string.length())
                      && (string.charAt(index) >= '0')
                      && (string.charAt(index) <= '7')
@@ -451,7 +745,7 @@ class StringParser
                 return -1;
               }
 
-              /* convert */
+              // convert
               try
               {
                 switch (formatToken.lengthType)
@@ -474,8 +768,8 @@ class StringParser
               break;
             case 'x':
             case 'X':
-              /* get data */
-              buffer = new StringBuffer();
+              // get data
+              buffer = new StringBuilder();
               if (((index+1) < string.length()) && (string.charAt(index+0) == '0') && (string.charAt(index+0) == 'x'))
               {
                 index+=2;
@@ -492,7 +786,7 @@ class StringParser
                 return -1;
               }
 
-              /* convert */
+              // convert
               try
               {
                 switch (formatToken.lengthType)
@@ -521,8 +815,8 @@ class StringParser
             case 'G':
             case 'a':
             case 'A':
-              /* get data */
-              buffer = new StringBuffer();
+              // get data
+              buffer = new StringBuilder();
               if ((index < string.length()) && ((string.charAt(index) == '+') || (string.charAt(index) == '-')))
               {
                 buffer.append(string.charAt(index));
@@ -552,7 +846,7 @@ class StringParser
                 return -1;
               }
 
-              /* convert */
+              // convert
               try
               {
                 arguments[argumentIndex] = Double.parseDouble(buffer.toString());
@@ -564,20 +858,21 @@ class StringParser
               }
               break;
             case 's':
-              /* get data */
-              buffer = new StringBuffer();
+              // get data
+              buffer = new StringBuilder();
               while (   (index < string.length())
                      && (formatToken.blankFlag || ((formatIndex >= format.length()) && formatToken.greedyFlag) || !Character.isSpaceChar((string.charAt(index))))
                      && ((formatIndex >= format.length()) || (string.charAt(index) != format.charAt(formatIndex)))
                     )
               {
                 if (   !formatToken.greedyFlag
-                    && (stringQuotes != null)
                     && ((index+1) < string.length())
                     && (string.charAt(index) == '\\')
+                    && (stringQuotes != null)
                     && (stringQuotes.indexOf(string.charAt(index+1)) >= 0)
                    )
                 {
+                  // quoted quote
                   if ((formatToken.width == 0) || (buffer.length() < formatToken.width-1))
                   {
                     buffer.append(string.charAt(index+1));
@@ -631,19 +926,20 @@ class StringParser
             case 'n':
               break;
             case 'S':
-              /* get data */
-              buffer = new StringBuffer();
+              // get data
+              buffer = new StringBuilder();
               while (   (index < string.length())
                      && (formatToken.blankFlag || ((formatIndex >= format.length()) && formatToken.greedyFlag) || !Character.isSpaceChar(string.charAt(index)))
                      && ((formatIndex >= format.length()) || (string.charAt(index) != format.charAt(formatIndex)))
                     )
               {
-                if (   (stringQuotes != null)
-                    && ((index+1) < string.length())
+                if (   ((index+1) < string.length())
                     && (string.charAt(index) == '\\')
+                    && (stringQuotes != null)
                     && (stringQuotes.indexOf(string.charAt(index+1)) >= 0)
                    )
                 {
+                  // quoted quote
                   if ((formatToken.width == 0) || (buffer.length() < formatToken.width-1))
                   {
                     buffer.append(string.charAt(index+1));
@@ -652,7 +948,7 @@ class StringParser
                 }
                 else
                 {
-                  /* check for string quote */
+                  // check for string quote
                   char stringQuote;
 
                   stringQuote = getQuoteChar(string,index,formatToken,stringQuotes);
@@ -660,18 +956,19 @@ class StringParser
                   {
                     do
                     {
-                      /* skip quote-char */
+                      // skip quote-char
                       index++;
 
-                      /* get string */
+                      // get string
                       while ((index < string.length()) && (string.charAt(index) != stringQuote))
                       {
-                        if (   (stringQuotes != null)
-                            && ((index+1) < string.length())
+                        if (   ((index+1) < string.length())
                             && (string.charAt(index) == '\\')
+                            && (stringQuotes != null)
                             && (stringQuotes.indexOf(string.charAt(index+1)) >= 0)
                            )
                         {
+                          // quoted quote
                           if ((formatToken.width == 0) || (buffer.length() < formatToken.width-1))
                           {
                             buffer.append(string.charAt(index+1));
@@ -688,13 +985,13 @@ class StringParser
                         }
                       }
 
-                      /* skip quote-char */
+                      // skip quote-char
                       if (index < string.length())
                       {
                         index++;
                       }
 
-                      /* check for string quote */
+                      // check for string quote
                       stringQuote = getQuoteChar(string,index,formatToken,stringQuotes);
                     }
                     while (stringQuote != '\0');
@@ -714,8 +1011,8 @@ class StringParser
               break;
             case 'y':
               {
-                /* get data */
-                buffer = new StringBuffer();
+                // get data
+                buffer = new StringBuilder();
                 while (   (index < string.length())
                        && !Character.isSpaceChar(string.charAt(index))
                       )
@@ -724,27 +1021,27 @@ class StringParser
                   index++;
                 }
 
-                /* convert */
+                // convert
                 boolean foundFlag = false;
-                z = 0;
-                while (!foundFlag && (z < trueStrings.length))
+                i = 0;
+                while (!foundFlag && (i < trueStrings.length))
                 {
-                  if (trueStrings[z].contentEquals(buffer))
+                  if (trueStrings[i].contentEquals(buffer))
                   {
                     arguments[argumentIndex] = true;
                     foundFlag = true;
                   }
-                  z++;
+                  i++;
                 }
-                z = 0;
-                while (!foundFlag && (z < falseStrings.length))
+                i = 0;
+                while (!foundFlag && (i < falseStrings.length))
                 {
-                  if (falseStrings[z].contentEquals(buffer))
+                  if (falseStrings[i].contentEquals(buffer))
                   {
                     arguments[argumentIndex] = false;
                     foundFlag = true;
                   }
-                  z++;
+                  i++;
                 }
 
                 if (!foundFlag)
@@ -817,6 +1114,442 @@ class StringParser
   public static boolean parse(String string, String format, Object arguments[])
   {
     return parse(string,format,arguments,null);
+  }
+
+  /** get quote char
+   * @param string string
+   * @param index index in string
+   * @param string quote characters
+   * @return string quote character or '\0'
+   */
+  private static char getQuoteChar(String string, int index, String stringQuotes)
+  {
+    char stringQuote = '\0';
+    if (index < string.length())
+    {
+      // check if one of string quote characters is in string
+      if ((stringQuote == '\0') && (stringQuotes != null) && (stringQuotes.indexOf(string.charAt(index)) >= 0))
+      {
+        stringQuote = stringQuotes.charAt(stringQuotes.indexOf(string.charAt(index)));
+      }
+    }
+
+    return stringQuote;
+  }
+
+  /** parse string into hash map
+   * @param string string to parse
+   * @param index start index for parsing
+   * @param typeMap type map
+   * @param valueMap parsed values
+   * @param unknownValueMap unknown values
+   * @param stringQuotes string quote characters
+   * @return index of first not parsed character or -1 on error
+   */
+  public static int parse(String string, int index, TypeMap typeMap, ValueMap valueMap, ValueMap unknownValueMap, String stringQuotes)
+  {
+    final String ESCAPE_CHARACTERS = "0abtnvfre";
+    final char[] ESCAPE_MAP        = new char[]{'\0','\007','\b','\t','\n','\013','\014','\r','\033'};
+
+    StringBuilder buffer;
+    char          ch;
+    int           z;
+
+    while (index < string.length())
+    {
+      // skip spaces in line, format
+      while ((index < string.length()) && Character.isSpaceChar(string.charAt(index)))
+      {
+        index++;
+      }
+
+      if (index < string.length())
+      {
+        // get name
+        buffer = new StringBuilder();
+        if (!Character.isLetter(string.charAt(index)) && (string.charAt(index) != '_'))
+        {
+          return index;
+        }
+        do
+        {
+          buffer.append(string.charAt(index));
+          index++;
+        }
+        while ((index < string.length()) && (Character.isLetterOrDigit(string.charAt(index)) || (string.charAt(index) == '_')));
+        String name = buffer.toString();
+//Dprintf.dprintf("name=%s",name);
+
+        // skip spaces
+        while ((index < string.length()) && Character.isSpaceChar(string.charAt(index)))
+        {
+          index++;
+        }
+
+        // check if '='
+        if ((index >= string.length()) || (string.charAt(index) != '='))
+        {
+          return index;
+        }
+        index++;
+
+        // skip spaces
+        while ((index < string.length()) && Character.isSpaceChar(string.charAt(index)))
+        {
+          index++;
+        }
+
+        // get value
+        buffer = new StringBuilder();
+        while (   (index < string.length())
+               && !Character.isSpaceChar(string.charAt(index))
+              )
+        {
+          if (   ((index+1) < string.length())
+              && (string.charAt(index) == '\\')
+              && (stringQuotes != null)
+              && (stringQuotes.indexOf(string.charAt(index+1)) >= 0)
+             )
+          {
+            // quoted quote
+            buffer.append(string.charAt(index+1));
+            index+=2;
+          }
+          else
+          {
+            // check for string quote
+            char stringQuote;
+
+            stringQuote = getQuoteChar(string,index,stringQuotes);
+            if (stringQuote != '\0')
+            {
+              do
+              {
+                // skip quote-char
+                index++;
+
+                // get string
+                while ((index < string.length()) && (string.charAt(index) != stringQuote))
+                {
+                  if (   ((index+1) < string.length())
+                      && (string.charAt(index) == '\\')
+                     )
+                  {
+                    index++;
+
+                    if      (   (stringQuotes != null)
+                             && (stringQuotes.indexOf(string.charAt(index)) >= 0)
+                            )
+                    {
+                      // quoted quote
+                      buffer.append(string.charAt(index));
+                    }
+                    else if (ESCAPE_CHARACTERS.indexOf(string.charAt(index)) >= 0)
+                    {
+                      // known escape characater
+                      buffer.append(ESCAPE_MAP[ESCAPE_CHARACTERS.indexOf(string.charAt(index))]);
+                    }
+                    else
+                    {
+                      // other escaped character
+                      buffer.append(string.charAt(index));
+                    }
+                  }
+                  else
+                  {
+                    buffer.append(string.charAt(index));
+                  }
+                  index++;
+                }
+
+                // skip quote-char
+                if (index < string.length())
+                {
+                  index++;
+                }
+
+                // check for string quote
+                stringQuote = getQuoteChar(string,index,stringQuotes);
+              }
+              while (stringQuote != '\0');
+            }
+            else
+            {
+              buffer.append(string.charAt(index));
+              index++;
+            }
+          }
+        }
+        String value = buffer.toString();
+//Dprintf.dprintf("name=%s value=%s",name,value);
+
+        // store value
+        if (typeMap != null)
+        {
+          Class type = typeMap.get(name);
+//Dprintf.dprintf("type=%s",type);
+          if      ((type == int.class) || (type == Integer.class))
+          {
+            valueMap.put(name,Integer.parseInt(value));
+          }
+          else if ((type == long.class) || (type == Long.class))
+          {
+            valueMap.put(name,Long.parseLong(value));
+          }
+          else if ((type == float.class) || (type == Float.class))
+          {
+            valueMap.put(name,Float.parseFloat(value));
+          }
+          else if ((type == double.class) || (type == Double.class))
+          {
+            valueMap.put(name,Double.parseDouble(value));
+          }
+          else if ((type == boolean.class) || (type == Boolean.class))
+          {
+            valueMap.put(name,
+                            value.equalsIgnoreCase("yes")
+                         || value.equalsIgnoreCase("on")
+                         || value.equalsIgnoreCase("true")
+                         || value.equals("1")
+                        );
+          }
+          else if (type == Character.class)
+          {
+            valueMap.put(name,value.charAt(0));
+          }
+          else if (type == String.class)
+          {
+            valueMap.put(name,value);
+          }
+          else if ((type != null) && type.isEnum())
+          {
+            Enum[] enumConstants = (Enum[])type.getEnumConstants();
+            int n;
+            try
+            {
+              n = Integer.parseInt(value);
+            }
+            catch (NumberFormatException exception)
+            {
+              n = -1;
+            }
+            boolean foundFlag = false;
+            for (Enum enumConstant : enumConstants)
+            {
+              if (   value.equalsIgnoreCase(enumConstant.name())
+                  || (enumConstant.ordinal() == n)
+                  || value.equalsIgnoreCase(enumConstant.toString())
+                 )
+              {
+                valueMap.put(name,enumConstant);
+                foundFlag = true;
+                break;
+              }
+            }
+            if (!foundFlag)
+            {
+              throw new IllegalArgumentException("unknown enum value '"+value+"' for "+name);
+            }
+          }
+          else if (unknownValueMap != null)
+          {
+            unknownValueMap.put(name,value);
+          }
+          else
+          {
+            valueMap.put(name,value);
+          }
+        }
+        else
+        {
+          valueMap.put(name,value);
+        }
+      }
+    }
+
+    return index;
+  }
+
+  /** parse string into hash map
+   * @param string string to parse
+   * @param typeMap type map
+   * @param valueMap parsed values
+   * @param unknownValueMap unknown values
+   * @param stringQuotes string quote characters
+   * @return index of first not parsed character or -1 on error
+   */
+  public static boolean parse(String string, TypeMap typeMap, ValueMap valueMap, ValueMap unknownValueMap, String stringQuotes)
+  {
+    return parse(string,0,typeMap,valueMap,unknownValueMap,stringQuotes) >= string.length();
+  }
+
+  /** parse string into hash map
+   * @param string string to parse
+   * @param typeMap type map
+   * @param valueMap parsed values
+   * @param unknownValueMap unknown values
+   * @return index of first not parsed character or -1 on error
+   */
+  public static boolean parse(String string, TypeMap typeMap, ValueMap valueMap, ValueMap unknownValueMap)
+  {
+    return parse(string,typeMap,valueMap,unknownValueMap,QUOTE_CHARS);
+  }
+
+  /** parse string into hash map
+   * @param string string to parse
+   * @param valueMap parsed values
+   * @param unknownValueMap unknown values
+   * @return index of first not parsed character or -1 on error
+   */
+  public static boolean parse(String string, ValueMap valueMap, ValueMap unknownValueMap)
+  {
+    return parse(string,(TypeMap)null,valueMap,unknownValueMap);
+  }
+
+  /** parse string into hash map
+   * @param string string to parse
+   * @param typeMap type map
+   * @param valueMap parsed values
+   * @return index of first not parsed character or -1 on error
+   */
+  public static boolean parse(String string, TypeMap typeMap, ValueMap valueMap)
+  {
+    return parse(string,typeMap,valueMap,null);
+  }
+
+  /** parse string into hash map
+   * @param string string to parse
+   * @param valueMap parsed values
+   * @return index of first not parsed character or -1 on error
+   */
+  public static boolean parse(String string, ValueMap valueMap)
+  {
+    return parse(string,(TypeMap)null,valueMap);
+  }
+
+  /** format string and escape %S strings
+   * @param format format string
+   * @param quoteChar quote character to use
+   * @param arguments optional arguments
+   * @return formated string
+   */
+  public static String format(String format, char quoteChar, Object... arguments)
+  {
+    final String ESCAPE_CHARACTERS = "\0\007\b\t\n\013\014\r\033";
+    final char[] ESCAPE_MAP        = new char[]{'0','a','b','t','n','v','f','r','e'};
+
+    StringBuilder buffer;
+    int           formatIndex;
+    int           argumentIndex;
+    FormatToken   formatToken = new FormatToken();
+    char          ch;
+    int           i;
+
+    buffer        = new StringBuilder();
+    formatIndex   = 0;
+    argumentIndex = 0;
+    while (formatIndex < format.length())
+    {
+      // copy prefix
+      while (   (formatIndex < format.length())
+             && (format.charAt(formatIndex) != '%')
+            )
+      {
+        if (   ((formatIndex+1) < format.length())
+            && (format.charAt(formatIndex) == '\\')
+           )
+        {
+          formatIndex++;
+          buffer.append(format.charAt(formatIndex));
+        }
+        else
+        {
+          buffer.append(format.charAt(formatIndex));
+        }
+        formatIndex++;
+      }
+
+      if (formatIndex < format.length())
+      {
+        if (format.charAt(formatIndex) == '%')
+        {
+          // get format token
+          formatIndex = getNextFormatToken(format,formatIndex,formatToken);
+          if (formatIndex < 0)
+          {
+            return null;
+          }
+
+          // format string
+          switch (formatToken.conversionChar)
+          {
+            case 'y':
+              buffer.append((Boolean)arguments[argumentIndex] ? "yes" : "no");
+              argumentIndex++;
+              break;
+            case 'S':
+              buffer.append(quoteChar);
+              String string = String.format("%s",arguments[argumentIndex]);
+              for (i = 0; i < string.length(); i++)
+              {
+                ch = string.charAt(i);
+                if      (ch == quoteChar)
+                {
+                  buffer.append('\\');
+                  buffer.append(ch);
+                }
+                else if (ch == '\\')
+                {
+                  buffer.append("\\\\");
+                }
+                else if (ESCAPE_CHARACTERS.indexOf(ch) >= 0)
+                {
+                  buffer.append('\\');
+                  buffer.append(ESCAPE_MAP[ESCAPE_CHARACTERS.indexOf(ch)]);
+                }
+                else
+                {
+                  buffer.append(ch);
+                }
+              }
+              buffer.append(quoteChar);
+              argumentIndex++;
+              break;
+            case '%':
+              buffer.append('%');
+              break;
+            default:
+              buffer.append(String.format("%"+formatToken.conversionChar,arguments[argumentIndex]));
+              argumentIndex++;
+              break;
+          }
+        }
+        else
+        {
+          buffer.append(format.charAt(formatIndex));
+          formatIndex++;
+        }
+      }
+    }
+
+    // copy postfix
+    while (formatIndex < format.length())
+    {
+      buffer.append(format.charAt(formatIndex));
+      formatIndex++;
+    }
+
+    return buffer.toString();
+  }
+
+  /** format string and escape %S strings
+   * @param format format string
+   * @param arguments optional arguments
+   * @return formated string
+   */
+  public static String format(String format, Object... arguments)
+  {
+    return format(format,'"',arguments);
   }
 }
 
