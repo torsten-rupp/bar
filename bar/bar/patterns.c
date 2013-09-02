@@ -9,7 +9,7 @@
 \***********************************************************************/
 
 /****************************** Includes *******************************/
-#include <config.h>  // use <...> to support separated build directory 
+#include <config.h>  // use <...> to support separated build directory
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -34,6 +34,16 @@
 /****************** Conditional compilation switches *******************/
 
 /***************************** Constants *******************************/
+LOCAL const struct
+{
+  const char   *name;
+  PatternTypes patternType;
+} PATTERN_TYPES[] =
+{
+  { "glob",           PATTERN_TYPE_GLOB           },
+  { "regex",          PATTERN_TYPE_REGEX          },
+  { "extended_regex", PATTERN_TYPE_EXTENDED_REGEX }
+};
 
 /***************************** Datatypes *******************************/
 
@@ -186,7 +196,7 @@ LOCAL Errors compilePattern(const char   *pattern,
     return ERRORX_(INVALID_PATTERN,0,buffer);
   }
 
-  /* free resources */
+  // free resources
   String_delete(regexString);
   String_delete(matchString);
 
@@ -202,6 +212,55 @@ Errors Pattern_initAll(void)
 
 void Pattern_doneAll(void)
 {
+}
+
+const char *Pattern_patternTypeToString(PatternTypes patternType, const char *defaultValue)
+{
+  uint       z;
+  const char *name;
+
+  z = 0;
+  while (   (z < SIZE_OF_ARRAY(PATTERN_TYPES))
+         && (PATTERN_TYPES[z].patternType != patternType)
+        )
+  {
+    z++;
+  }
+  if (z < SIZE_OF_ARRAY(PATTERN_TYPES))
+  {
+    name = PATTERN_TYPES[z].name;
+  }
+  else
+  {
+    name = defaultValue;
+  }
+
+  return name;
+}
+
+bool Pattern_parsePatternType(const char *name, PatternTypes *patternType)
+{
+  uint z;
+
+  assert(name != NULL);
+  assert(patternType != NULL);
+
+  z = 0;
+  while (   (z < SIZE_OF_ARRAY(PATTERN_TYPES))
+         && !stringEqualsIgnoreCase(PATTERN_TYPES[z].name,name)
+        )
+  {
+    z++;
+  }
+  if (z < SIZE_OF_ARRAY(PATTERN_TYPES))
+  {
+    (*patternType) = PATTERN_TYPES[z].patternType;
+    return TRUE;
+  }
+  else
+  {
+    return FALSE;
+  }
 }
 
 Errors Pattern_init(Pattern *pattern, const String string, PatternTypes patternType, uint patternFlags)

@@ -12,7 +12,7 @@
 #define __PATTERNS__
 
 /****************************** Includes *******************************/
-#include <config.h>  // use <...> to support separated build directory 
+#include <config.h>  // use <...> to support separated build directory
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -48,7 +48,7 @@ typedef enum
 } PatternTypes;
 
 // pattern flags
-#define PATTERN_FLAG_NONE        0x00   // no flags 
+#define PATTERN_FLAG_NONE        0x00   // no flags
 #define PATTERN_FLAG_IGNORE_CASE 0x01   // ignore upper/lower case
 
 // match modes
@@ -104,6 +104,29 @@ Errors Pattern_initAll(void);
 \***********************************************************************/
 
 void Pattern_doneAll(void);
+
+/***********************************************************************\
+* Name   : Pattern_patternTypeToString
+* Purpose: get name of pattern type
+* Input  : patternType  - pattern type
+*          defaultValue - default value
+* Output : -
+* Return : name
+* Notes  : -
+\***********************************************************************/
+
+const char *Pattern_patternTypeToString(PatternTypes patternType, const char *defaultValue);
+
+/***********************************************************************\
+* Name   : Pattern_parsePatternType
+* Purpose: pattern pattern type
+* Input  : name - name of pattern type
+* Output : patternType - pattern type
+* Return : TRUE iff parsed
+* Notes  : -
+\***********************************************************************/
+
+bool Pattern_parsePatternType(const char *name, PatternTypes *patternType);
 
 /***********************************************************************\
 * Name   : Pattern_init
