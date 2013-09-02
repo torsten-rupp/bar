@@ -139,12 +139,16 @@ void __abort(const char *__fileName__,
 void __cyg_profile_func_enter(void *functionCode, void *callAddress) ATTRIBUTE_NO_INSTRUMENT_FUNCTION;
 void __cyg_profile_func_enter(void *functionCode, void *callAddress)
 {
+  UNUSED_VARIABLE(functionCode);
+  UNUSED_VARIABLE(callAddress);
 //fprintf(stderr,"%s, %d: enter %p\n",__FILE__,__LINE__,functionCode);
 }
 
 void __cyg_profile_func_exit(void *functionCode, void *callAddress) ATTRIBUTE_NO_INSTRUMENT_FUNCTION;
 void __cyg_profile_func_exit(void *functionCode, void *callAddress)
 {
+  UNUSED_VARIABLE(functionCode);
+  UNUSED_VARIABLE(callAddress);
 //fprintf(stderr,"%s, %d: exit %p\n",__FILE__,__LINE__,functionCode);
 }
 
@@ -153,6 +157,9 @@ void debugLocalResource(const char *__fileName__,
                         const void *resource
                        )
 {
+  UNUSED_VARIABLE(__fileName__);
+  UNUSED_VARIABLE(__lineNb__);
+  UNUSED_VARIABLE(resource);
 }
 #endif /* not NDEBUG */
 
@@ -178,7 +185,7 @@ void debugAddResourceTrace(const char *__fileName__,
     }
     if (debugResourceNode != NULL)
     {
-      fprintf(stderr,"DEBUG WARNING: multiple init of resource '%s' %p at %s, %lu which was previously initialized at %s, %ld!\n",
+      fprintf(stderr,"DEBUG WARNING: multiple init of resource '%s' %p at %s, %u which was previously initialized at %s, %ld!\n",
               typeName,
               resource,
               __fileName__,
@@ -250,7 +257,7 @@ void debugRemoveResourceTrace(const char *__fileName__,
     }
     if (debugResourceNode != NULL)
     {
-      fprintf(stderr,"DEBUG WARNING: multiple free of resource '%s' %p at %s, %lu and previously at %s, %lu which was allocated at %s, %ld!\n",
+      fprintf(stderr,"DEBUG WARNING: multiple free of resource '%s' %p at %s, %u and previously at %s, %lu which was allocated at %s, %ld!\n",
               debugResourceNode->typeName,
               debugResourceNode->resource,
               __fileName__,
@@ -295,7 +302,7 @@ void debugRemoveResourceTrace(const char *__fileName__,
     }
     else
     {
-      fprintf(stderr,"DEBUG WARNING: resource '%p' not found in debug list at %s, line %lu\n",
+      fprintf(stderr,"DEBUG WARNING: resource '%p' not found in debug list at %s, line %u\n",
               resource,
               __fileName__,
               __lineNb__
