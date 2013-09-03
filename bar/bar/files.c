@@ -2721,7 +2721,7 @@ Errors File_setFileInfo(const String fileName,
                        )
 {
   struct utimbuf utimeBuffer;
-  Errors         error;
+//  Errors         error;
 
   assert(fileName != NULL);
   assert(fileInfo != NULL);
