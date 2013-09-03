@@ -121,8 +121,8 @@ LOCAL Errors initChunkBuffer(ChunkBuffer   *chunkBuffer,
                             )
 {
   ulong  n;
-  uint   i;
-  bool   doneFlag;
+//  uint   i;
+//  bool   doneFlag;
   Errors error;
 
   assert(chunkBuffer != NULL);
