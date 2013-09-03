@@ -552,8 +552,8 @@ class TabJobs
               // command execution fail or parsing error; ignore request
               continue;
             }
-            final long    count       = resultMap.getLong("count");
-            final long    size        = resultMap.getLong("size");
+            final long    count       = resultMap.getLong   ("count"      );
+            final long    size        = resultMap.getLong   ("size"       );
             final boolean timeoutFlag = resultMap.getBoolean("timeoutFlag");
 
             // update view
@@ -5945,8 +5945,8 @@ Dprintf.dprintf("");
     String[]            resultErrorMessage = new String[1];
     ArrayList<ValueMap> resultMapList      = new ArrayList<ValueMap>();
     int error = BARServer.executeCommand(StringParser.format("JOB_LIST"),
-                                         new TypeMap("id",  int.class,
-                                                     "name",String.class
+                                         new TypeMap("jobId",int.class,
+                                                     "name", String.class
                                                     ),
                                          resultErrorMessage,
                                          resultMapList
@@ -5965,13 +5965,13 @@ Dprintf.dprintf("");
       for (ValueMap resultMap : resultMapList)
       {
         // get data
-        int    id   = resultMap.getInt   ("id"  );
-        String name = resultMap.getString("name");
+        int    jobId = resultMap.getInt   ("jobId");
+        String name  = resultMap.getString("name" );
 
 // TODO deleted jobs?
         int index = findJobListIndex(name);
         widgetJobList.add(name,index);
-        jobIds.put(name,id);
+        jobIds.put(name,jobId);
       }
     }
   }
@@ -6474,9 +6474,9 @@ throw new Error("NYI");
         {
           case FILE:
             {
-              String  name         = resultMap.getString("name");
-              long    size         = resultMap.getLong("size");
-              long    dateTime     = resultMap.getLong("dateTime");
+              String  name         = resultMap.getString ("name"              );
+              long    size         = resultMap.getLong   ("size"              );
+              long    dateTime     = resultMap.getLong   ("dateTime"          );
               boolean noBackupFlag = resultMap.getBoolean("noBackupFlag",false);
 
               // create file tree data
@@ -6501,8 +6501,8 @@ throw new Error("NYI");
             break;
           case DIRECTORY:
             {
-              String  name         = resultMap.getString("name");
-              long    dateTime     = resultMap.getLong("dateTime");
+              String  name         = resultMap.getString ("name"              );
+              long    dateTime     = resultMap.getLong   ("dateTime"          );
               boolean noBackupFlag = resultMap.getBoolean("noBackupFlag",false);
 
               // create file tree data
@@ -6529,8 +6529,8 @@ throw new Error("NYI");
             break;
           case LINK:
             {
-              String  name         = resultMap.getString("name");
-              long    dateTime     = resultMap.getLong("dateTime");
+              String  name         = resultMap.getString ("name"              );
+              long    dateTime     = resultMap.getLong   ("dateTime"          );
               boolean noBackupFlag = resultMap.getBoolean("noBackupFlag",false);
 
               // create file tree data
@@ -6554,9 +6554,9 @@ throw new Error("NYI");
             break;
           case HARDLINK:
             {
-              String  name         = resultMap.getString("name");
-              long    size         = resultMap.getLong("size");
-              long    dateTime     = resultMap.getLong("dateTime");
+              String  name         = resultMap.getString ("name"              );
+              long    size         = resultMap.getLong   ("size"              );
+              long    dateTime     = resultMap.getLong   ("dateTime"          );
               boolean noBackupFlag = resultMap.getBoolean("noBackupFlag",false);
 
               // create file tree data
@@ -6581,9 +6581,9 @@ throw new Error("NYI");
             break;
           case SPECIAL:
             {
-              String  name     = resultMap.getString("name");
-              long    size     = resultMap.getLong("size");
-              long    dateTime = resultMap.getLong("dateTime");
+              String  name     = resultMap.getString("name"    );
+              long    size     = resultMap.getLong  ("size"    );
+              long    dateTime = resultMap.getLong  ("dateTime");
 
               SpecialTypes specialType = resultMap.getEnum("specialType");
               switch (specialType)
@@ -6747,9 +6747,9 @@ throw new Error("NYI");
     {
       for (ValueMap resultMap : resultMapList)
       {
-        long    size        = resultMap.getLong("size");
+        long    size        = resultMap.getLong   ("size"       );
         boolean mountedFlag = resultMap.getBoolean("mountedFlag");
-        String  name        = resultMap.getString("name");
+        String  name        = resultMap.getString ("name"       );
 
         // create device data
         DeviceTreeData deviceTreeData = new DeviceTreeData(name,size);
@@ -6878,9 +6878,9 @@ throw new Error("NYI");
     for (ValueMap resultMap : resultMapList)
     {
       // get data
-      EntryTypes   entryType   = resultMap.getEnum("entryType");
-      PatternTypes patternType = resultMap.getEnum("patternType");
-      String       pattern     = resultMap.getString("pattern");
+      EntryTypes   entryType   = resultMap.getEnum  ("entryType"  );
+      PatternTypes patternType = resultMap.getEnum  ("patternType");
+      String       pattern     = resultMap.getString("pattern"    );
 
       if (!pattern.equals(""))
       {
@@ -6937,8 +6937,8 @@ Dprintf.dprintf("name=%s %s",name,includeHashMap.containsKey(name));
     for (ValueMap resultMap : resultMapList)
     {
       // get data
-      PatternTypes patternType = resultMap.getEnum("patternType");
-      String       pattern     = resultMap.getString("pattern");
+      PatternTypes patternType = resultMap.getEnum  ("patternType");
+      String       pattern     = resultMap.getString("pattern"    );
 
       if (!pattern.equals(""))
       {
@@ -6976,8 +6976,8 @@ Dprintf.dprintf("name=%s %s",name,includeHashMap.containsKey(name));
     for (ValueMap resultMap : resultMapList)
     {
       // get data
-      PatternTypes patternType = resultMap.getEnum("patternType");
-      String       pattern     = resultMap.getString("pattern");
+      PatternTypes patternType = resultMap.getEnum  ("patternType");
+      String       pattern     = resultMap.getString("pattern"    );
 
       if (!pattern.equals(""))
       {
@@ -8833,11 +8833,11 @@ throw new Error("NYI");
       for (ValueMap resultMap : resultMapList)
       {
         // get data
-        String  date     = resultMap.getString("date");
-        String  weekDays = resultMap.getString("weekDays");
-        String  time     = resultMap.getString("time");
-        boolean enabled  = resultMap.getBoolean("enabled");
-        String  type     = resultMap.getString("type");
+        String  date     = resultMap.getString ("date"    );
+        String  weekDays = resultMap.getString ("weekDays");
+        String  time     = resultMap.getString ("time"    );
+        boolean enabled  = resultMap.getBoolean("enabled" );
+        String  type     = resultMap.getString ("type"    );
 
         ScheduleData scheduleData = new ScheduleData(date,weekDays,time,enabled,type);
 

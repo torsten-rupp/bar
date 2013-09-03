@@ -453,7 +453,7 @@ class TabRestore
                                                   );
 
             // read results, update/add data
-            final TypeMap TYPE_MAP = new TypeMap("id",long.class,
+            final TypeMap TYPE_MAP = new TypeMap("storageId",long.class,
                                                  "name",String.class,
                                                  "dateTime",long.class,
                                                  "size",long.class,
@@ -473,14 +473,14 @@ class TabRestore
                                        ) == Errors.NONE
                  )
               {
-                long        storageId           = resultMap.getLong("id");
-                String      name                = resultMap.getString("name");
-                long        dateTime            = resultMap.getLong("dateTime");
-                long        size                = resultMap.getLong("size");
-                IndexStates indexState          = resultMap.getEnum("indexState");
-                IndexModes  indexMode           = resultMap.getEnum("indexMode");
-                long        lastCheckedDateTime = resultMap.getLong("lastCheckedDateTime");
-                String      errorMessage        = resultMap.getString("errorMessage");
+                long        storageId           = resultMap.getLong  ("storageId"          );
+                String      name                = resultMap.getString("name"               );
+                long        dateTime            = resultMap.getLong  ("dateTime"           );
+                long        size                = resultMap.getLong  ("size"               );
+                IndexStates indexState          = resultMap.getEnum  ("indexState"         );
+                IndexModes  indexMode           = resultMap.getEnum  ("indexMode"          );
+                long        lastCheckedDateTime = resultMap.getLong  ("lastCheckedDateTime");
+                String      errorMessage        = resultMap.getString("errorMessage"       );
 
                 StorageData storageData;
                 synchronized(storageDataMap)
@@ -904,13 +904,13 @@ Dprintf.dprintf("process line by line");
                   {
                     case FILE:
                       {
-                        String storageName     = resultMap.getString("name");
-                        long   storageDateTime = resultMap.getLong("storageDateTime");
-                        String fileName        = resultMap.getString("name");
-                        long   size            = resultMap.getLong("size");
-                        long   dateTime        = resultMap.getLong("dateTime");
-                        long   fragmentOffset  = resultMap.getLong("fragmentOffset");
-                        long   fragmentSize    = resultMap.getLong("fragmentSize");
+                        String storageName     = resultMap.getString("name"           );
+                        long   storageDateTime = resultMap.getLong  ("storageDateTime");
+                        String fileName        = resultMap.getString("name"           );
+                        long   size            = resultMap.getLong  ("size"           );
+                        long   dateTime        = resultMap.getLong  ("dateTime"       );
+                        long   fragmentOffset  = resultMap.getLong  ("fragmentOffset" );
+                        long   fragmentSize    = resultMap.getLong  ("fragmentSize"   );
 
                         EntryData entryData = entryDataMap.get(storageName,fileName,EntryTypes.FILE);
                         if (entryData != null)
@@ -927,12 +927,12 @@ Dprintf.dprintf("process line by line");
                       break;
                     case IMAGE:
                       {
-                        String storageName     = resultMap.getString("name");
-                        long   storageDateTime = resultMap.getLong("storageDateTime");
-                        String imageName       = resultMap.getString("name");
-                        long   size            = resultMap.getLong("size");
-                        long   blockOffset     = resultMap.getLong("blockOffset");
-                        long   blockCount      = resultMap.getLong("blockCount");
+                        String storageName     = resultMap.getString("name"           );
+                        long   storageDateTime = resultMap.getLong  ("storageDateTime");
+                        String imageName       = resultMap.getString("name"           );
+                        long   size            = resultMap.getLong  ("size"           );
+                        long   blockOffset     = resultMap.getLong  ("blockOffset"    );
+                        long   blockCount      = resultMap.getLong  ("blockCount"     );
 
                         EntryData entryData = entryDataMap.get(storageName,imageName,EntryTypes.IMAGE);
                         if (entryData != null)
@@ -948,10 +948,10 @@ Dprintf.dprintf("process line by line");
                       break;
                     case DIRECTORY:
                       {
-                        String storageName     = resultMap.getString("name");
-                        long   storageDateTime = resultMap.getLong("storageDateTime");
-                        String directoryName   = resultMap.getString("name");
-                        long   dateTime        = resultMap.getLong("dateTime");
+                        String storageName     = resultMap.getString("name"           );
+                        long   storageDateTime = resultMap.getLong  ("storageDateTime");
+                        String directoryName   = resultMap.getString("name"           );
+                        long   dateTime        = resultMap.getLong  ("dateTime"       );
 
                         EntryData entryData = entryDataMap.get(storageName,directoryName,EntryTypes.DIRECTORY);
                         if (entryData != null)
@@ -967,11 +967,11 @@ Dprintf.dprintf("process line by line");
                       break;
                     case LINK:
                       {
-                        String storageName     = resultMap.getString("name");
-                        long   storageDateTime = resultMap.getLong("storageDateTime");
-                        String linkName        = resultMap.getString("name");
+                        String storageName     = resultMap.getString("name"           );
+                        long   storageDateTime = resultMap.getLong  ("storageDateTime");
+                        String linkName        = resultMap.getString("name"           );
                         String destinationName = resultMap.getString("destinationName");
-                        long   dateTime        = resultMap.getLong("dateTime");
+                        long   dateTime        = resultMap.getLong  ("dateTime"       );
 
                         EntryData entryData = entryDataMap.get(storageName,linkName,EntryTypes.LINK);
                         if (entryData != null)
@@ -987,13 +987,13 @@ Dprintf.dprintf("process line by line");
                       break;
                     case HARDLINK:
                       {
-                        String storageName     = resultMap.getString("name");
-                        long   storageDateTime = resultMap.getLong("storageDateTime");
-                        String fileName        = resultMap.getString("name");
-                        long   size            = resultMap.getLong("size");
-                        long   dateTime        = resultMap.getLong("dateTime");
-                        long   fragmentOffset  = resultMap.getLong("fragmentOffset");
-                        long   fragmentSize    = resultMap.getLong("fragmentSize");
+                        String storageName     = resultMap.getString("name"           );
+                        long   storageDateTime = resultMap.getLong  ("storageDateTime");
+                        String fileName        = resultMap.getString("name"           );
+                        long   size            = resultMap.getLong  ("size"           );
+                        long   dateTime        = resultMap.getLong  ("dateTime"       );
+                        long   fragmentOffset  = resultMap.getLong  ("fragmentOffset" );
+                        long   fragmentSize    = resultMap.getLong  ("fragmentSize"   );
 
                         EntryData entryData = entryDataMap.get(storageName,fileName,EntryTypes.HARDLINK);
                         if (entryData != null)
@@ -1009,10 +1009,10 @@ Dprintf.dprintf("process line by line");
                       break;
                     case SPECIAL:
                       {
-                        String storageName     = resultMap.getString("name");
-                        long   storageDateTime = resultMap.getLong("storageDateTime");
-                        String name            = resultMap.getString("name");
-                        long   dateTime        = resultMap.getLong("dateTime");
+                        String storageName     = resultMap.getString("name"           );
+                        long   storageDateTime = resultMap.getLong  ("storageDateTime");
+                        String name            = resultMap.getString("name"           );
+                        long   dateTime        = resultMap.getLong  ("dateTime"       );
 
                         EntryData entryData = entryDataMap.get(storageName,name,EntryTypes.SPECIAL);
                         if (entryData != null)
@@ -2813,22 +2813,22 @@ Dprintf.dprintf("process line by line");
                                                                            "ERROR",
                                                                            "*"
                                                                           ),
-                                                       new TypeMap("id",long.class,
-                                                                   "name",String.class,
-                                                                   "createdDateTime",long.class,
-                                                                   "size",long.class,
-                                                                   "indexState",int.class,
-                                                                   "indexMode",int.class,
+                                                       new TypeMap("storageId",        long.class,
+                                                                   "name",             String.class,
+                                                                   "createdDateTime",  long.class,
+                                                                   "size",             long.class,
+                                                                   "indexState",       int.class,
+                                                                   "indexMode",        int.class,
                                                                    "lastCheckDateTime",long.class,
-                                                                   "errorMessage",String.class
+                                                                   "errorMessage",     String.class
                                                                   ),
                                                        resultErrorMessage,
                                                        resultMap
                                                       );
                   if (errorCode == Errors.NONE)
                   {
-                    long   storageId = resultMap.getLong("id");
-                    String name      = resultMap.getString("name");
+                    long   storageId = resultMap.getLong  ("storageId");
+                    String name      = resultMap.getString("name"     );
 
                     // update busy dialog
                     busyDialog.updateText("'"+name+"'");
@@ -3018,7 +3018,7 @@ Dprintf.dprintf("process line by line");
             {
               retryFlag = false;
 
-              final String[] resultErrorMessage = new String[1];
+              // start restore
               command = BARServer.runCommand(StringParser.format("RESTORE storageName=%'S destinationDirectory=%'S overwriteFlag=%y",
                                                                  storageName,
                                                                  directory,
@@ -3026,38 +3026,35 @@ Dprintf.dprintf("process line by line");
                                                                 )
                                             );
 
-Dprintf.dprintf("parse result");
-
               // read results, update/add data
-              String line;
-              Object data[] = new Object[5];
-              while (   !command.isCompleted()
+              final TypeMap TYPE_MAP = new TypeMap("name",String.class,
+                                                   "entryDoneBytes",long.class,
+                                                   "entryTotalBytes",long.class,
+                                                   "storageDoneBytes",long.class,
+                                                   "storageTotalBytes",long.class
+                                                  );
+              String[] resultErrorMessage = new String[1];
+              ValueMap resultMap          = new ValueMap();
+              while (   !command.endOfData()
                      && !busyDialog.isAborted()
                     )
               {
-                line = command.getNextResult(1000);
-                if (line != null)
+                if (command.getNextResult(TYPE_MAP,
+                                          resultErrorMessage,
+                                          resultMap,
+                                          60*1000
+                                         ) == Errors.NONE
+                   )
                 {
-Dprintf.dprintf("line=%s",line);
-                  if      (StringParser.parse(line,"%ld %ld %ld %ld %S",data,StringParser.QUOTE_CHARS))
-                  {
-                    /* get data
-                       format:
-                         doneBytes
-                         totalBytes
-                         archiveDoneBytes
-                         archiveTotalBytes
-                         name
-                    */
-                    long   doneBytes         = (Long)data[0];
-                    long   totalBytes        = (Long)data[1];
-                    long   archiveDoneBytes  = (Long)data[2];
-                    long   archiveTotalBytes = (Long)data[3];
-                    String name              = (String)data[4];
+//Dprintf.dprintf("resultMap=%s",resultMap);
+                  String name              = resultMap.getString("name"            );
+                  long   entryDoneBytes    = resultMap.getLong  ("entryDoneBytes"  );
+                  long   entryTotalBytes   = resultMap.getLong  ("entryTotalBytes" );
+//                  long   storageDoneBytes  = resultMap.getLong("storageDoneBytes" );
+//                  long   storageTotalBytes = resultMap.getLong("storageTotalBytes");
 
-                    busyDialog.updateText(1,name);
-                    busyDialog.updateProgressBar(1,(totalBytes > 0) ? ((double)doneBytes*100.0)/(double)totalBytes : 0.0);
-                  }
+                  busyDialog.updateText(1,name);
+                  busyDialog.updateProgressBar(1,(entryTotalBytes > 0) ? ((double)entryDoneBytes*100.0)/(double)entryTotalBytes : 0.0);
                 }
               }
 //Dprintf.dprintf("command=%s",command);
@@ -3380,7 +3377,7 @@ Dprintf.dprintf("line=%s",line);
             {
               retryFlag = false;
 
-              ArrayList<String> result = new ArrayList<String>();
+              // start restore
               command = BARServer.runCommand(StringParser.format("RESTORE storageName=%'S destinationDirectory=%'S overwriteFlag=%y name=%'S",
                                                                  entryData.storageName,
                                                                  directory,
@@ -3388,38 +3385,36 @@ Dprintf.dprintf("line=%s",line);
                                                                  entryData.name
                                                                 )
                                             );
-Dprintf.dprintf("parse result");
 
               // read results, update/add data
-              String line;
-              Object data[] = new Object[5];
-              while (   !command.isCompleted()
+              final TypeMap TYPE_MAP = new TypeMap("name",String.class,
+                                                   "entryDoneBytes",long.class,
+                                                   "entryTotalBytes",long.class,
+                                                   "storageDoneBytes",long.class,
+                                                   "storageTotalBytes",long.class
+                                                  );
+              String[] resultErrorMessage = new String[1];
+              ValueMap resultMap          = new ValueMap();
+              while (   !command.endOfData()
                      && !busyDialog.isAborted()
                     )
               {
-                line = command.getNextResult(60*1000);
-                if (line != null)
+                if (command.getNextResult(TYPE_MAP,
+                                          resultErrorMessage,
+                                          resultMap,
+                                          60*1000
+                                         ) == Errors.NONE
+                   )
                 {
-//Dprintf.dprintf("line=%s",line);
-                  if      (StringParser.parse(line,"%ld %ld %ld %ld %S",data,StringParser.QUOTE_CHARS))
-                  {
-                    /* get data
-                       format:
-                         doneBytes
-                         totalBytes
-                         archiveDoneBytes
-                         archiveTotalBytes
-                         name
-                    */
-                    long   doneBytes         = (Long)data[0];
-                    long   totalBytes        = (Long)data[1];
-                    long   archiveDoneBytes  = (Long)data[2];
-                    long   archiveTotalBytes = (Long)data[3];
-                    String name              = StringUtils.map((String)data[4],MAP_FROM,MAP_TO);
+//Dprintf.dprintf("resultMap=%s",resultMap);
+                  String name              = resultMap.getString("name"            );
+                  long   entryDoneBytes    = resultMap.getLong("entryDoneBytes"    );
+                  long   entryTotalBytes   = resultMap.getLong("entryTotalBytes"   );
+//                  long   storageDoneBytes  = resultMap.getLong("storageDoneBytes" );
+//                  long   storageTotalBytes = resultMap.getLong("storageTotalBytes");
 
-                    busyDialog.updateText(1,name);
-                    busyDialog.updateProgressBar(1,(totalBytes > 0) ? ((double)doneBytes*100.0)/(double)totalBytes : 0.0);
-                  }
+                  busyDialog.updateText(1,name);
+                  busyDialog.updateProgressBar(1,(entryTotalBytes > 0) ? ((double)entryDoneBytes*100.0)/(double)entryTotalBytes : 0.0);
                 }
                 else
                 {
