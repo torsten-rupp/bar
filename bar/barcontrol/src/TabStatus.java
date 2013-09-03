@@ -1172,7 +1172,7 @@ class TabStatus
       String[]                  resultErrorMessage = new String[1];
       final ArrayList<ValueMap> resultMapList      = new ArrayList<ValueMap>();
       int error = BARServer.executeCommand(StringParser.format("JOB_LIST"),
-                                           new TypeMap("id",                    int.class,
+                                           new TypeMap("jobId",                 int.class,
                                                        "name",                  String.class,
                                                        "state",                 String.class,
                                                        "archiveType",           String.class,
@@ -1207,7 +1207,7 @@ class TabStatus
             for (ValueMap resultMap : resultMapList)
             {
               // get data
-              int    id                     = resultMap.getInt   ("id"                    );
+              int    jobId                  = resultMap.getInt   ("jobId"                 );
               String name                   = resultMap.getString("name"                  );
               String state                  = resultMap.getString("state"                 );
               String archiveType            = resultMap.getString("archiveType"           );
@@ -1223,7 +1223,7 @@ class TabStatus
               // get/create table item
               TableItem tableItem;
               JobData   jobData;
-              int index = getTableItemIndex(tableItems,id);
+              int index = getTableItemIndex(tableItems,jobId);
               if (index >= 0)
               {
                 tableItem = tableItems[index];
@@ -1245,7 +1245,7 @@ class TabStatus
               }
               else
               {
-                jobData = new JobData(id,
+                jobData = new JobData(jobId,
                                       name,
                                       state,
                                       archiveType,
@@ -1289,8 +1289,8 @@ class TabStatus
    */
   private void updateJobInfo()
   {
-    final TypeMap TYPES = new TypeMap("id",  int.class,
-                                      "name",String.class
+    final TypeMap xTYPES = new TypeMap("jobId",int.class,
+                                      "name", String.class
                                      );
 
     if (selectedJobData != null)
@@ -1338,20 +1338,20 @@ class TabStatus
         {
           String state = resultMap.getString("state");
 
-          doneEntries.set          (resultMap.getLong("doneEntries"));
-          doneBytes.set            (resultMap.getLong("doneBytes"));
-          storageTotalBytes.set    (resultMap.getLong("storageTotalBytes"));
-          skippedEntries.set       (resultMap.getLong("skippedEntries"));
-          skippedBytes.set         (resultMap.getLong("skippedBytes"));
-          errorEntries.set         (resultMap.getLong("errorEntries"));
-          errorBytes.set           (resultMap.getLong("errorBytes"));
-          totalEntries.set         (resultMap.getLong("totalEntries"));
-          totalBytes.set           (resultMap.getLong("totalBytes"));
+          doneEntries.set          (resultMap.getLong("doneEntries"            ));
+          doneBytes.set            (resultMap.getLong("doneBytes"              ));
+          storageTotalBytes.set    (resultMap.getLong("storageTotalBytes"      ));
+          skippedEntries.set       (resultMap.getLong("skippedEntries"         ));
+          skippedBytes.set         (resultMap.getLong("skippedBytes"           ));
+          errorEntries.set         (resultMap.getLong("errorEntries"           ));
+          errorBytes.set           (resultMap.getLong("errorBytes"             ));
+          totalEntries.set         (resultMap.getLong("totalEntries"           ));
+          totalBytes.set           (resultMap.getLong("totalBytes"             ));
 
-          filesPerSecond.set       (resultMap.getDouble("entriesPerSecond"));
-          bytesPerSecond.set       (resultMap.getDouble("bytesPerSecond"));
+          filesPerSecond.set       (resultMap.getDouble("entriesPerSecond"     ));
+          bytesPerSecond.set       (resultMap.getDouble("bytesPerSecond"       ));
           storageBytesPerSecond.set(resultMap.getDouble("storageBytesPerSecond"));
-          compressionRatio.set     (resultMap.getDouble("compressionRatio"));
+          compressionRatio.set     (resultMap.getDouble("compressionRatio"     ));
 
           fileName.set             (resultMap.getString("entryName"));
           fileProgress.set         (getProgress(resultMap.getLong("entryDoneBytes"),resultMap.getLong("entryTotalBytes")));
