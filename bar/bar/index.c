@@ -229,7 +229,7 @@ const char *Index_modeToString(IndexModes indexMode, const char *defaultValue)
   }
   else
   {
-    name = "unknown";
+    name = defaultValue;
   }
 
   return name;
