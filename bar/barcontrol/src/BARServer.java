@@ -17,7 +17,13 @@ import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 
-import java.lang.RuntimeException;
+import java.math.BigInteger;
+
+import java.security.interfaces.RSAPublicKey;
+import java.security.Key;
+import java.security.KeyFactory;
+import java.security.PublicKey;
+import java.security.spec.RSAPublicKeySpec;
 
 import java.net.ConnectException;
 import java.net.InetSocketAddress;
@@ -30,6 +36,10 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Random;
+
+import javax.crypto.Cipher;
+import javax.crypto.NullCipher;
 
 import javax.net.ssl.SSLSocket;
 import javax.net.ssl.SSLSocketFactory;
@@ -218,7 +228,7 @@ class Command
         }
         catch (InterruptedException exception)
         {
-          /* ignored */
+          // ignored
         }
       }
       else
@@ -269,7 +279,7 @@ class Command
           }
           catch (InterruptedException exception)
           {
-            /* ignored */
+            // ignored
           }
         }
         else
@@ -328,7 +338,7 @@ class Command
       }
       catch (InterruptedException exception)
       {
-        /* ignored */
+        // ignored
       }
     }
 
@@ -407,7 +417,7 @@ class Command
           }
           catch (InterruptedException exception)
           {
-            /* ignored */
+            // ignored
           }
         }
       }
@@ -795,25 +805,39 @@ class ReadThread extends Thread
 class BARServer
 {
   // --------------------------- constants --------------------------------
-  private final static int PROTOCOL_VERSION_MAJOR = 2;
-  private final static int PROTOCOL_VERSION_MINOR = 0;
+  private final static int   PROTOCOL_VERSION_MAJOR = 2;
+  private final static int   PROTOCOL_VERSION_MINOR = 0;
 
-  public final static  String JAVA_SSL_KEY_FILE_NAME = "bar.jks";  // default name Java TLS/SSL key
+  public final static String JAVA_SSL_KEY_FILE_NAME = "bar.jks";  // default name Java TLS/SSL key
 
-  public static char fileSeparator;
+  public static char         fileSeparator;
 
-  private final static int    SOCKET_READ_TIMEOUT    = 20*1000;    // timeout reading socket [ms]
+  private final static int   SOCKET_READ_TIMEOUT    = 20*1000;    // timeout reading socket [ms]
+
+  private static byte[]      RANDOM_DATA = new byte[64];
 
   // --------------------------- variables --------------------------------
-  private static long               commandId;
-  private static Socket             socket;
-  private static BufferedWriter     output;
-  private static BufferedReader     input;
-  private static ReadThread         readThread;
+  private static byte[]         sessionId;
+  private static String         passwordEncryptType;
+  private static Cipher         passwordCipher;
+  private static Key            passwordKey;
+
+  private static long           commandId;
+  private static Socket         socket;
+  private static BufferedWriter output;
+  private static BufferedReader input;
+  private static ReadThread     readThread;
 
   // ------------------------ native functions ----------------------------
 
   // ---------------------------- methods ---------------------------------
+
+  // init random data
+  static
+  {
+    Random random = new Random(System.currentTimeMillis());
+    random.nextBytes(RANDOM_DATA);
+  }
 
   /** connect to BAR server
    * @param hostname host name
@@ -970,15 +994,17 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
       else                                throw new ConnectionError("no server ports specified");
     }
 
+    sessionId           = null;
+    passwordEncryptType = null;
+    passwordCipher      = null;
     try
     {
       String   line;
       String[] errorMessage = new String[1];
-      ValueMap valueMap = new ValueMap();
+      ValueMap valueMap     = new ValueMap();
       String[] data;
 
-      // read session id
-      byte sessionId[];
+      // read session data
       line = input.readLine();
       if (line == null)
       {
@@ -990,21 +1016,137 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
       {
         throw new CommunicationError("Invalid response from server");
       }
-      sessionId = decodeHex(data[1]);
+      if (!StringParser.parse(data[1],
+                              new TypeMap("id",String.class,
+                                          "encryptTypes",String.class,
+                                          "n",String.class,
+                                          "e",String.class
+                                         ),
+                              valueMap
+                             )
+         )
+      {
+        throw new CommunicationError("Invalid response from server");
+      }
+      sessionId = decodeHex(valueMap.getString("id"));
+
+      // get encoded password
+      byte[] passwordBytes   = serverPassword.getBytes("UTF-8");
+      byte[] encodedPassword = new byte[sessionId.length];
+      for (int i = 0; i < sessionId.length; i++)
+      {
+        if (i < passwordBytes.length)
+        {
+          encodedPassword[i] = (byte)((int)passwordBytes[i] ^ (int)sessionId[i]);
+        }
+        else
+        {
+          encodedPassword[i] = sessionId[i];
+        }
+      }
+
+      // get password chipher
+      String[] encryptTypes = valueMap.getString("encryptTypes").split(",");
+      int      i            = 0;
+      while ((i < encryptTypes.length) && (passwordCipher == null))
+      {
+        if      (encryptTypes[i].equalsIgnoreCase("RSA"))
+        {
+          // encrypted passwords with RSA
+          try
+          {
+            BigInteger n = valueMap.containsKey("n") ? new BigInteger(valueMap.getString("n"),16) : null;
+            BigInteger e = valueMap.containsKey("e") ? new BigInteger(valueMap.getString("e"),16) : null;
+//Dprintf.dprintf("n=%s e=%s",n,e);
+
+            RSAPublicKeySpec rsaPublicKeySpec = new RSAPublicKeySpec(n,e);
+            PublicKey        publicKey        = KeyFactory.getInstance("RSA").generatePublic(rsaPublicKeySpec);
+
+            passwordEncryptType = "RSA";
+            passwordCipher      = Cipher.getInstance("RSA/ECB/PKCS1Padding");
+//            passwordCipher = Cipher.getInstance("RSA/ECB/OAEPWithSHA-1AndMGF1Padding");
+//            passwordCipher = Cipher.getInstance("RSA/ECB/OAEPWithSHA-256AndMGF1Padding");
+            passwordKey         = publicKey;
+          }
+          catch (java.security.NoSuchAlgorithmException  exception)
+          {
+            if (Settings.debugFlag)
+            {
+              BARControl.printStackTrace(exception);
+            }
+          }
+          catch (javax.crypto.NoSuchPaddingException exception)
+          {
+            if (Settings.debugFlag)
+            {
+              BARControl.printStackTrace(exception);
+            }
+          }
+          catch (java.security.spec.InvalidKeySpecException exception)
+          {
+            if (Settings.debugFlag)
+            {
+              BARControl.printStackTrace(exception);
+            }
+          }
+        }
+        else if (encryptTypes[i].equalsIgnoreCase("NONE"))
+        {
+          passwordEncryptType = "NONE";
+          passwordCipher      = new NullCipher();
+          passwordKey         = null;
+        }
+
+        i++;
+      }
+      if (passwordCipher == null)
+      {
+        throw new CommunicationError("Init password cipher fail");
+      }
+
+      // encrypt password
+      byte[] encryptedPasswordBytes = null;
+      try
+      {
+        passwordCipher.init(Cipher.ENCRYPT_MODE,passwordKey);
+        encryptedPasswordBytes = passwordCipher.doFinal(encodedPassword);
+Dprintf.dprintf("encryptedPasswordBytes.length=%d serverPassword.getBytes.length=%d",encryptedPasswordBytes.length,serverPassword.getBytes("UTF-8").length);
+      }
+      catch (java.security.InvalidKeyException exception)
+      {
+        if (Settings.debugFlag)
+        {
+          BARControl.printStackTrace(exception);
+        }
+      }
+      catch (javax.crypto.IllegalBlockSizeException exception)
+      {
+        if (Settings.debugFlag)
+        {
+          BARControl.printStackTrace(exception);
+        }
+      }
+      catch (javax.crypto.BadPaddingException exception)
+      {
+        if (Settings.debugFlag)
+        {
+          BARControl.printStackTrace(exception);
+        }
+      }
+      if (encryptedPasswordBytes == null)
+      {
+        throw new CommunicationError("Password encryption fail");
+      }
 
       // authorize
-      byte authorizeData[] = new byte[sessionId.length];
-      for (int z = 0; z < sessionId.length; z++)
-      {
-        authorizeData[z] = (byte)((((serverPassword != null) && (z < serverPassword.length()))?(int)serverPassword.charAt(z):0)^(int)sessionId[z]);
-      }
-      if (syncExecuteCommand("AUTHORIZE encodedPassword="+encodeHex(authorizeData),
+      if (syncExecuteCommand(StringParser.format("AUTHORIZE encryptType=%s encryptedPassword=%s",passwordEncryptType,encodeHex(encryptedPasswordBytes)),
                              errorMessage
                             ) != Errors.NONE
          )
       {
         throw new ConnectionError("Authorization fail");
       }
+//System.exit(1);
 
       // get version
       if (syncExecuteCommand("VERSION",
@@ -1273,6 +1415,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
    * @param result result (String[] or ArrayList)
    * @return Errors.NONE or error code
    */
+//TODO
   public static int XXXexecuteCommand(String command, Object result)
   {
     return XXXexecuteCommand(command,result,null);
