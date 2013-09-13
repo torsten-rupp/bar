@@ -22,6 +22,10 @@
   * server protocol changes: replaced list of values by value map
     for easier extension of protocol. Note: you _must_ update
     both server and clients with this change.
+  * barcontrol: passwords sent to the bar daemon are now RSA
+    encrypted! This makes it much harder to steal plain text
+    passwords even when no TLS encrypted network connection is
+    used.
 
 2013-05-05 0.17b
   * fixed parsing of storage specifier (ftp, scp/sftp,
