@@ -459,6 +459,35 @@ void Password_undeploy(Password *password)
   }
 }
 
+bool Password_equals(const Password *password0, const Password *password1)
+{
+  #ifdef HAVE_GCRYPT
+  #else /* not HAVE_GCRYPT */
+    uint z;
+  #endif /* HAVE_GCRYPT */
+
+  if (   (password0 != NULL)
+      && (password1 != NULL)
+      && (password0->length == password1->length)
+     )
+  {
+    #ifdef HAVE_GCRYPT
+      return memcmp(password0->data,password1->data,password0->length) == 0;
+    #else /* not HAVE_GCRYPT */
+      for (z = 0; z < password->length; z++)
+      {
+        if ((password0->data[z]^obfuscator[z]) != (password1->data[z]^obfuscator[z])) return FALSE;
+      }
+    #endif /* HAVE_GCRYPT */
+  }
+  else
+  {
+    return FALSE;
+  }
+
+  return TRUE;
+}
+
 bool Password_input(Password   *password,
                     const char *message,
                     uint       modes

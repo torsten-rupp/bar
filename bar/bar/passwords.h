@@ -12,7 +12,7 @@
 #define __PASSWORDS__
 
 /****************************** Includes *******************************/
-#include <config.h>  // use <...> to support separated build directory 
+#include <config.h>  // use <...> to support separated build directory
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -285,6 +285,17 @@ const char *Password_deploy(Password *password);
 \***********************************************************************/
 
 void Password_undeploy(Password *password);
+
+/***********************************************************************\
+* Name   : Password_equals
+* Purpose: check if passwords are equal
+* Input  : password0,password1 - passwords to compare
+* Output : -
+* Return : TURE iff passwords are equal
+* Notes  : -
+\***********************************************************************/
+
+bool Password_equals(const Password *password0, const Password *password1);
 
 /***********************************************************************\
 * Name   : Password_input
