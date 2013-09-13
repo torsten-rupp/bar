@@ -530,6 +530,17 @@ Errors Crypt_getBlockLength(CryptAlgorithms cryptAlgorithm,
   return ERROR_NONE;
 }
 
+/*---------------------------------------------------------------------*/
+
+bool Crypt_isSymmetricSupported(void)
+{
+  #ifdef HAVE_GCRYPT
+    return TRUE;
+  #else /* not HAVE_GCRYPT */
+    return FALSE;
+  #endif /* HAVE_GCRYPT */
+}
+
 #ifdef NDEBUG
 Errors Crypt_init(CryptInfo       *cryptInfo,
                   CryptAlgorithms cryptAlgorithm,
@@ -1162,12 +1173,24 @@ Errors Crypt_decryptBytes(CryptInfo *cryptInfo,
 
 /*---------------------------------------------------------------------*/
 
-void Crypt_initKey(CryptKey *cryptKey)
+bool Crypt_isAsymmetricSupported(void)
+{
+  #ifdef HAVE_GCRYPT
+    return TRUE;
+  #else /* not HAVE_GCRYPT */
+    return FALSE;
+  #endif /* HAVE_GCRYPT */
+}
+
+void Crypt_initKey(CryptKey          *cryptKey,
+                   CryptPaddingTypes cryptPaddingType
+                  )
 {
   assert(cryptKey != NULL);
 
   #ifdef HAVE_GCRYPT
-    cryptKey->key = NULL;
+    cryptKey->key              = NULL;
+    cryptKey->cryptPaddingType = cryptPaddingType;
   #else /* not HAVE_GCRYPT */
     UNUSED_VARIABLE(cryptKey);
   #endif /* HAVE_GCRYPT */
@@ -1298,6 +1321,92 @@ p++;
 
     return ERROR_FUNCTION_NOT_SUPPORTED;
   #endif /* HAVE_GCRYPT */
+}
+
+String Crypt_getKeyModulus(CryptKey *cryptKey)
+{
+  gcry_sexp_t sexpToken;
+  gcry_sexp_t rsaToken;
+  gcry_sexp_t nToken;
+  gcry_mpi_t  n;
+  char        *s;
+  String      string;
+
+  assert(cryptKey != NULL);
+
+  // find key token
+  sexpToken = NULL;
+  if (sexpToken == NULL) sexpToken = gcry_sexp_find_token(cryptKey->key,"public-key",0);
+  if (sexpToken == NULL) sexpToken = gcry_sexp_find_token(cryptKey->key,"private-key",0);
+  if (sexpToken == NULL)
+  {
+    return NULL;
+  }
+
+  // get RSA, modulus token
+  rsaToken = gcry_sexp_find_token(sexpToken,"rsa",0);
+  assert(rsaToken != NULL);
+  nToken   = gcry_sexp_find_token(rsaToken,"n",0);
+  assert(nToken != NULL);
+
+  // get modulus number
+  n = gcry_sexp_nth_mpi(nToken,1,GCRYMPI_FMT_USG);
+
+  // format string
+  gcry_mpi_aprint(GCRYMPI_FMT_HEX,(unsigned char**)&s,NULL,n);
+  string = String_newCString(s);
+  free(s);
+
+  // free resources
+  gcry_mpi_release(n);
+  gcry_sexp_release(nToken);
+  gcry_sexp_release(rsaToken);
+  gcry_sexp_release(sexpToken);
+
+  return string;
+}
+
+String Crypt_getKeyExponent(CryptKey *cryptKey)
+{
+  gcry_sexp_t sexpToken;
+  gcry_sexp_t rsaToken;
+  gcry_sexp_t eToken;
+  gcry_mpi_t  e;
+  char        *s;
+  String      string;
+
+  assert(cryptKey != NULL);
+
+  // find key token
+  sexpToken = NULL;
+  if (sexpToken == NULL) sexpToken = gcry_sexp_find_token(cryptKey->key,"public-key",0);
+  if (sexpToken == NULL) sexpToken = gcry_sexp_find_token(cryptKey->key,"private-key",0);
+  if (sexpToken == NULL)
+  {
+    return NULL;
+  }
+
+  // get RSA, modulus token
+  rsaToken = gcry_sexp_find_token(sexpToken,"rsa",0);
+  assert(rsaToken != NULL);
+  eToken   = gcry_sexp_find_token(rsaToken,"e",0);
+  assert(eToken != NULL);
+
+  // get modulus number
+  e = gcry_sexp_nth_mpi(eToken,1,GCRYMPI_FMT_USG);
+
+  // format string
+  gcry_mpi_aprint(GCRYMPI_FMT_HEX,(unsigned char**)&s,NULL,e);
+  string = String_newCString(s);
+  free(s);
+
+  // free resources
+  gcry_mpi_release(e);
+  gcry_sexp_release(eToken);
+  gcry_sexp_release(rsaToken);
+  gcry_sexp_release(sexpToken);
+
+  return string;
 }
 
 Errors Crypt_setKeyData(CryptKey       *cryptKey,
@@ -1512,9 +1621,10 @@ Errors Crypt_writeKeyFile(CryptKey       *cryptKey,
   return ERROR_NONE;
 }
 
-Errors Crypt_createKeys(CryptKey *publicCryptKey,
-                        CryptKey *privateCryptKey,
-                        uint     bits
+Errors Crypt_createKeys(CryptKey          *publicCryptKey,
+                        CryptKey          *privateCryptKey,
+                        uint              bits,
+                        CryptPaddingTypes cryptPaddingType
                        )
 {
   #ifdef HAVE_GCRYPT
@@ -1529,8 +1639,8 @@ Errors Crypt_createKeys(CryptKey *publicCryptKey,
 
   #ifdef HAVE_GCRYPT
     // init keys
-    Crypt_initKey(publicCryptKey);
-    Crypt_initKey(privateCryptKey);
+    Crypt_initKey(publicCryptKey,cryptPaddingType);
+    Crypt_initKey(privateCryptKey,cryptPaddingType);
 
     // create key parameters
     description = String_format(String_new(),"(genkey (rsa (nbits 4:%d)))",bits);
@@ -1559,6 +1669,7 @@ Errors Crypt_createKeys(CryptKey *publicCryptKey,
     }
     gcry_sexp_release(sexpKeyParameters);
     String_delete(description);
+//gcry_sexp_dump(sexpKey);
     publicCryptKey->key  = gcry_sexp_find_token(sexpKey,"public-key",0);
     privateCryptKey->key = gcry_sexp_find_token(sexpKey,"private-key",0);
     gcry_sexp_release(sexpKey);
@@ -1573,24 +1684,25 @@ Errors Crypt_createKeys(CryptKey *publicCryptKey,
   #endif /* HAVE_GCRYPT */
 }
 
-Errors Crypt_keyEncrypt(CryptKey   *cryptKey,
-                        const void *buffer,
-                        ulong      bufferLength,
-                        ulong      maxEncryptBufferLength,
-                        void       *encryptBuffer,
-                        ulong      *encryptBufferLength
+Errors Crypt_keyEncrypt(const CryptKey *cryptKey,
+                        const void     *buffer,
+                        uint           bufferLength,
+                        void           *encryptBuffer,
+                        uint           *encryptBufferLength,
+                        uint           maxEncryptBufferLength
                        )
 {
   #ifdef HAVE_GCRYPT
-    gcry_mpi_t   n;
-    byte         *p;
-    ulong        z;
+//    gcry_mpi_t   n;
+//    byte         *p;
+//    ulong        z;
+    Errors       error;
+    gcry_error_t gcryptError;
     gcry_sexp_t  sexpData;
     gcry_sexp_t  sexpEncryptData;
     gcry_sexp_t  sexpToken;
     const char   *encryptData;
     size_t       encryptDataLength;
-    gcry_error_t gcryptError;
   #endif /* HAVE_GCRYPT */
 
   assert(cryptKey != NULL);
@@ -1599,10 +1711,11 @@ Errors Crypt_keyEncrypt(CryptKey   *cryptKey,
   assert(encryptBufferLength != NULL);
 
   #ifdef HAVE_GCRYPT
-//fprintf(stderr,"%s,%d: ---------------------------------\n",__FILE__,__LINE__);
+fprintf(stderr,"%s,%d: ---------------------------------\n",__FILE__,__LINE__);
 //gcry_sexp_dump(cryptKey->key);
 //fprintf(stderr,"%s,%d: %d\n",__FILE__,__LINE__,bufferLength);
 
+#if 0
     // create mpi from data: push data bytes into mpi by shift+add
     n = gcry_mpi_new(0);
     if (n == NULL)
@@ -1615,14 +1728,30 @@ Errors Crypt_keyEncrypt(CryptKey   *cryptKey,
       gcry_mpi_mul_ui(n,n,256);
       gcry_mpi_add_ui(n,n,p[z]);
     }
-//gcry_mpi_dump(n);fprintf(stderr,"\n");
+gcry_mpi_dump(n);fprintf(stderr,"\n");
+#endif
 
     // create S-expression with data
-    gcryptError = gcry_sexp_build(&sexpData,NULL,"(data (value %b))",bufferLength,buffer);
+    switch (cryptKey->cryptPaddingType)
+    {
+      case CRYPT_PADDING_TYPE_NONE:
+        gcryptError = gcry_sexp_build(&sexpData,NULL,"(data (value %b))",bufferLength,buffer);
+        break;
+      case CRYPT_PADDING_TYPE_PKCS1:
+        gcryptError = gcry_sexp_build(&sexpData,NULL,"(data (flags pkcs1) (value %b))",bufferLength,buffer);
+        break;
+      case CRYPT_PADDING_TYPE_OAEP:
+        gcryptError = gcry_sexp_build(&sexpData,NULL,"(data (flags oaep) (value %b))",bufferLength,buffer);
+        break;
+      default:
+        return ERROR_KEY_ENCRYPT_FAIL;
+        break;
+    }
     if (gcryptError != 0)
     {
-      gcry_mpi_release(n);
-      return ERROR_KEY_ENCRYPT_FAIL;
+      error = ERRORX_(KEY_ENCRYPT_FAIL,gcryptError,gcry_strerror(gcryptError));
+//      gcry_mpi_release(n);
+      return error;
     }
 //gcry_sexp_dump(sexpData);
 
@@ -1630,9 +1759,10 @@ Errors Crypt_keyEncrypt(CryptKey   *cryptKey,
     gcryptError = gcry_pk_encrypt(&sexpEncryptData,sexpData,cryptKey->key);
     if (gcryptError != 0)
     {
+      error = ERRORX_(KEY_ENCRYPT_FAIL,gcryptError,gcry_strerror(gcryptError));
       gcry_sexp_release(sexpData);
-      gcry_mpi_release(n);
-      return ERROR_KEY_ENCRYPT_FAIL;
+//      gcry_mpi_release(n);
+      return error;
     }
 //gcry_sexp_dump(sexpEncryptData);
 
@@ -1640,19 +1770,21 @@ Errors Crypt_keyEncrypt(CryptKey   *cryptKey,
     sexpToken = gcry_sexp_find_token(sexpEncryptData,"a",0);
     if (sexpToken == NULL)
     {
+      error = ERRORX_(KEY_ENCRYPT_FAIL,gcryptError,gcry_strerror(gcryptError));
       gcry_sexp_release(sexpEncryptData);
       gcry_sexp_release(sexpData);
-      gcry_mpi_release(n);
-      return ERROR_KEY_ENCRYPT_FAIL;
+//      gcry_mpi_release(n);
+      return error;
     }
 //gcry_sexp_dump(sexpToken);
     encryptData = gcry_sexp_nth_data(sexpToken,1,&encryptDataLength);
     if (encryptData == NULL)
     {
+      error = ERRORX_(KEY_ENCRYPT_FAIL,gcryptError,gcry_strerror(gcryptError));
       gcry_sexp_release(sexpEncryptData);
       gcry_sexp_release(sexpData);
-      gcry_mpi_release(n);
-      return ERROR_KEY_ENCRYPT_FAIL;
+//      gcry_mpi_release(n);
+      return error;
     }
     (*encryptBufferLength) = MIN(encryptDataLength,maxEncryptBufferLength);
     memcpy(encryptBuffer,encryptData,*encryptBufferLength);
@@ -1661,7 +1793,7 @@ Errors Crypt_keyEncrypt(CryptKey   *cryptKey,
     // free resources
     gcry_sexp_release(sexpEncryptData);
     gcry_sexp_release(sexpData);
-    gcry_mpi_release(n);
+//    gcry_mpi_release(n);
 
     return ERROR_NONE;
   #else /* not HAVE_GCRYPT */
@@ -1676,52 +1808,72 @@ Errors Crypt_keyEncrypt(CryptKey   *cryptKey,
   #endif /* HAVE_GCRYPT */
 }
 
-Errors Crypt_keyDecrypt(CryptKey   *cryptKey,
-                        const void *encryptBuffer,
-                        ulong      encryptBufferLength,
-                        ulong      maxBufferLength,
-                        void       *buffer,
-                        ulong      *bufferLength
+Errors Crypt_keyDecrypt(const CryptKey *cryptKey,
+                        const void     *encryptBuffer,
+                        uint           encryptBufferLength,
+                        void           *buffer,
+                        uint           *bufferLength,
+                        uint           maxBufferLength
                        )
 {
   #ifdef HAVE_GCRYPT
+    Errors       error;
+    gcry_error_t gcryptError;
     gcry_sexp_t  sexpEncryptData;
     gcry_sexp_t  sexpData;
     const char   *data;
     size_t       dataLength;
-    gcry_error_t gcryptError;
   #endif /* HAVE_GCRYPT */
 
   assert(cryptKey != NULL);
   assert(encryptBuffer != NULL);
   assert(buffer != NULL);
   assert(bufferLength != NULL);
+fprintf(stderr,"%s, %d: -------------------------\n",__FILE__,__LINE__);
 
   #ifdef HAVE_GCRYPT
     // create S-expression with encrypted data
-    gcryptError = gcry_sexp_build(&sexpEncryptData,NULL,"(enc-val (rsa (a %b)))",encryptBufferLength,encryptBuffer);
+    switch (cryptKey->cryptPaddingType)
+    {
+      case CRYPT_PADDING_TYPE_NONE:
+        gcryptError = gcry_sexp_build(&sexpEncryptData,NULL,"(enc-val (rsa (a %b)))",encryptBufferLength,encryptBuffer);
+//    gcryptError = gcry_sexp_build(&sexpEncryptData,NULL,"(enc-val (flags raw) (rsa (a %b)))",encryptBufferLength,encryptBuffer);
+        break;
+      case CRYPT_PADDING_TYPE_PKCS1:
+        gcryptError = gcry_sexp_build(&sexpEncryptData,NULL,"(enc-val (flags pkcs1) (rsa (a %b)))",encryptBufferLength,encryptBuffer);
+        break;
+      case CRYPT_PADDING_TYPE_OAEP:
+        gcryptError = gcry_sexp_build(&sexpEncryptData,NULL,"(enc-val (flags oaep) (rsa (a %b)))",encryptBufferLength,encryptBuffer);
+//    gcryptError = gcry_sexp_build(&sexpEncryptData,NULL,"(enc-val (flags pss) (rsa (a %b)))",encryptBufferLength,encryptBuffer);
+        break;
+      default:
+        return ERROR_KEY_ENCRYPT_FAIL;
+        break;
+    }
     if (gcryptError != 0)
     {
-      return ERROR_KEY_ENCRYPT_FAIL;
+      return ERRORX_(KEY_ENCRYPT_FAIL,gcryptError,gcry_strerror(gcryptError));
     }
-//gcry_sexp_dump(sexpEncryptData);
+fprintf(stderr,"%s, %d: encrypted data\n",__FILE__,__LINE__); gcry_sexp_dump(sexpEncryptData);
 
     // decrypt
     gcryptError = gcry_pk_decrypt(&sexpData,sexpEncryptData,cryptKey->key);
     if (gcryptError != 0)
     {
+      error = ERRORX_(KEY_ENCRYPT_FAIL,gcryptError,gcry_strerror(gcryptError));
       gcry_sexp_release(sexpEncryptData);
-      return ERROR_KEY_ENCRYPT_FAIL;
+      return error;
     }
-//gcry_sexp_dump(sexpData);
+fprintf(stderr,"%s, %d: plain data\n",__FILE__,__LINE__); gcry_sexp_dump(sexpData);
 
     // get decrypted data
-    data = gcry_sexp_nth_data(sexpData,0,&dataLength);
+    data = gcry_sexp_nth_data(sexpData,1,&dataLength);
     if (data == NULL)
     {
+      error = ERRORX_(KEY_ENCRYPT_FAIL,gcryptError,gcry_strerror(gcryptError));
       gcry_sexp_release(sexpData);
       gcry_sexp_release(sexpEncryptData);
-      return ERROR_KEY_ENCRYPT_FAIL;
+      return error;
     }
     (*bufferLength) = MIN(dataLength,maxBufferLength);
     memcpy(buffer,data,*bufferLength);
@@ -1986,6 +2138,116 @@ Errors Crypt_getDecryptKey(CryptKey   *privateKey,
     return ERROR_FUNCTION_NOT_SUPPORTED;
   #endif /* HAVE_GCRYPT */
 }
+
+#ifndef NDEBUG
+void Crypt_dumpKey(const CryptKey *cryptKey)
+{
+  gcry_sexp_t   sexpToken;
+  gcry_sexp_t   rsaToken;
+  gcry_sexp_t   nToken,eToken;
+  gcry_mpi_t    n,e;
+  gcry_sexp_t   dToken,pToken,qToken,uToken;
+  gcry_mpi_t    d,p,q,u;
+  unsigned char *s;
+
+//gcry_sexp_dump(cryptKey->key);
+
+  sexpToken = gcry_sexp_find_token(cryptKey->key,"public-key",0);
+  if (sexpToken != NULL)
+  {
+    printf("Public key:\n");
+
+    rsaToken = gcry_sexp_find_token(sexpToken,"rsa",0);
+    nToken   = gcry_sexp_find_token(rsaToken,"n",0);
+    eToken   = gcry_sexp_find_token(rsaToken,"e",0);
+//fprintf(stderr,"%s, %d: rsa\n",__FILE__,__LINE__); gcry_sexp_dump(rsaToken);
+//fprintf(stderr,"%s, %d: nToken\n",__FILE__,__LINE__); gcry_sexp_dump(nToken);
+//fprintf(stderr,"%s, %d: eToken\n",__FILE__,__LINE__); gcry_sexp_dump(eToken);
+
+    n = gcry_sexp_nth_mpi(nToken,1,GCRYMPI_FMT_USG);
+    gcry_mpi_aprint(GCRYMPI_FMT_HEX,&s,NULL,n);
+    printf("  n=%s\n",s);
+    free(s);
+
+    e = gcry_sexp_nth_mpi(eToken,1,GCRYMPI_FMT_USG);
+    gcry_mpi_aprint(GCRYMPI_FMT_HEX,&s,NULL,e);
+    printf("  e=%s\n",s);
+    free(s);
+
+    gcry_mpi_release(e);
+    gcry_mpi_release(n);
+
+    gcry_sexp_release(eToken);
+    gcry_sexp_release(nToken);
+
+    gcry_sexp_release(rsaToken);
+    gcry_sexp_release(sexpToken);
+  }
+
+  sexpToken = gcry_sexp_find_token(cryptKey->key,"private-key",0);
+  if (sexpToken != NULL)
+  {
+    printf("Private key:\n");
+
+    rsaToken = gcry_sexp_find_token(sexpToken,"rsa",0);
+    nToken   = gcry_sexp_find_token(rsaToken,"n",0);
+    eToken   = gcry_sexp_find_token(rsaToken,"e",0);
+    dToken   = gcry_sexp_find_token(rsaToken,"d",0);
+    pToken   = gcry_sexp_find_token(rsaToken,"p",0);
+    qToken   = gcry_sexp_find_token(rsaToken,"q",0);
+    uToken   = gcry_sexp_find_token(rsaToken,"u",0);
+//fprintf(stderr,"%s, %d: rsa\n",__FILE__,__LINE__); gcry_sexp_dump(rsaToken);
+//fprintf(stderr,"%s, %d: nToken\n",__FILE__,__LINE__); gcry_sexp_dump(nToken);
+//fprintf(stderr,"%s, %d: eToken\n",__FILE__,__LINE__); gcry_sexp_dump(eToken);
+//fprintf(stderr,"%s, %d: dToken\n",__FILE__,__LINE__); gcry_sexp_dump(dToken);
+//fprintf(stderr,"%s, %d: pToken\n",__FILE__,__LINE__); gcry_sexp_dump(pToken);
+//fprintf(stderr,"%s, %d: qToken\n",__FILE__,__LINE__); gcry_sexp_dump(qToken);
+//fprintf(stderr,"%s, %d: uToken\n",__FILE__,__LINE__); gcry_sexp_dump(uToken);
+
+    n = gcry_sexp_nth_mpi(nToken,1,GCRYMPI_FMT_USG);
+    gcry_mpi_aprint(GCRYMPI_FMT_HEX,&s,NULL,n);
+    printf("  n=%s\n",s);
+    free(s);
+    e = gcry_sexp_nth_mpi(eToken,1,GCRYMPI_FMT_USG);
+    gcry_mpi_aprint(GCRYMPI_FMT_HEX,&s,NULL,e);
+    printf("  e=%s\n",s);
+    free(s);
+    d = gcry_sexp_nth_mpi(dToken,1,GCRYMPI_FMT_USG);
+    gcry_mpi_aprint(GCRYMPI_FMT_HEX,&s,NULL,d);
+    printf("  d=%s\n",s);
+    free(s);
+    p = gcry_sexp_nth_mpi(pToken,1,GCRYMPI_FMT_USG);
+    gcry_mpi_aprint(GCRYMPI_FMT_HEX,&s,NULL,p);
+    printf("  p=%s\n",s);
+    free(s);
+    q = gcry_sexp_nth_mpi(qToken,1,GCRYMPI_FMT_USG);
+    gcry_mpi_aprint(GCRYMPI_FMT_HEX,&s,NULL,q);
+    printf("  q=%s\n",s);
+    free(s);
+    u = gcry_sexp_nth_mpi(uToken,1,GCRYMPI_FMT_USG);
+    gcry_mpi_aprint(GCRYMPI_FMT_HEX,&s,NULL,u);
+    printf("  u=%s\n",s);
+    free(s);
+
+    gcry_mpi_release(u);
+    gcry_mpi_release(q);
+    gcry_mpi_release(p);
+    gcry_mpi_release(d);
+    gcry_mpi_release(e);
+    gcry_mpi_release(n);
+
+    gcry_sexp_release(uToken);
+    gcry_sexp_release(qToken);
+    gcry_sexp_release(pToken);
+    gcry_sexp_release(dToken);
+    gcry_sexp_release(eToken);
+    gcry_sexp_release(nToken);
+
+    gcry_sexp_release(rsaToken);
+    gcry_sexp_release(sexpToken);
+  }
+}
+#endif /* NDEBUG */
 
 #ifdef __cplusplus
   }

@@ -67,6 +67,14 @@ typedef enum
   CRYPT_TYPE_ASYMMETRIC,
 } CryptTypes;
 
+typedef enum
+{
+  CRYPT_PADDING_TYPE_NONE,
+
+  CRYPT_PADDING_TYPE_PKCS1,
+  CRYPT_PADDING_TYPE_OAEP
+} CryptPaddingTypes;
+
 /***************************** Datatypes *******************************/
 
 // crypt info block
@@ -85,6 +93,7 @@ typedef struct
   #ifdef HAVE_GCRYPT
     gcry_sexp_t key;
   #endif /* HAVE_GCRYPT */
+  CryptPaddingTypes cryptPaddingType;
 } CryptKey;
 
 /***************************** Variables *******************************/
@@ -249,6 +258,19 @@ Errors Crypt_getBlockLength(CryptAlgorithms cryptAlgorithm,
                             uint            *blockLength
                            );
 
+/*---------------------------------------------------------------------*/
+
+/***********************************************************************\
+* Name   : Crypt_isSymmetricSupported
+* Purpose: check if symmetric encryption is supported
+* Input  : -
+* Output : -
+* Return : TRUE iff symmetric encryption is supported
+* Notes  : -
+\***********************************************************************/
+
+bool Crypt_isSymmetricSupported(void);
+
 /***********************************************************************\
 * Name   : Crypt_new
 * Purpose: create new crypt handle
@@ -374,15 +396,29 @@ Errors Crypt_decryptBytes(CryptInfo *cryptInfo,
 /*---------------------------------------------------------------------*/
 
 /***********************************************************************\
+* Name   : Crypt_isAsymmetricSupported
+* Purpose: check if asymmetric encryption is supported
+* Input  : -
+* Output : -
+* Return : TRUE iff asymmetric encryption is supported
+* Notes  : -
+\***********************************************************************/
+
+bool Crypt_isAsymmetricSupported(void);
+
+/***********************************************************************\
 * Name   : Crypt_initKey
 * Purpose: initialize public/private key
-* Input  : cryptKey - crypt key
+* Input  : cryptKey         - crypt key
+*          cryptPaddingType - padding type
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-void Crypt_initKey(CryptKey *cryptKey);
+void Crypt_initKey(CryptKey          *cryptKey,
+                   CryptPaddingTypes cryptPaddingType
+                  );
 
 /***********************************************************************\
 * Name   : public/private
@@ -394,17 +430,6 @@ void Crypt_initKey(CryptKey *cryptKey);
 \***********************************************************************/
 
 void Crypt_doneKey(CryptKey *cryptKey);
-
-/***********************************************************************\
-* Name   : PublicKey_new
-* Purpose: create new public/private key
-* Input  : -
-* Output : -
-* Return : crypt key or NULL iff insufficient memory
-* Notes  : -
-\***********************************************************************/
-
-CryptKey *Crypt_newKey(void);
 
 /***********************************************************************\
 * Name   : Crypt_getKeyData
@@ -435,6 +460,19 @@ Errors Crypt_setKeyData(CryptKey       *cryptKey,
                         const String   string,
                         const Password *password
                        );
+
+/***********************************************************************\
+* Name   : Crypt_getKeyModulus, Crypt_getKeyExponent
+* Purpose: get public/private key modulus/exponent as hex-string
+* Input  : cryptKey - crypt key
+*          string   - string variable
+* Output : string - string with key modulus
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+String Crypt_getKeyModulus(CryptKey *cryptKey);
+String Crypt_getKeyExponent(CryptKey *cryptKey);
 
 /***********************************************************************\
 * Name   : Crypt_readKeyFile
@@ -471,15 +509,16 @@ Errors Crypt_writeKeyFile(CryptKey       *cryptKey,
 * Name   : Crypt_createKeys
 * Purpose: create new public/private key pair
 * Input  : bits - number of RSA key bits
-* Output : publicKey  - public crypt key
-*          privateKey - private crypt key
+* Output : publicCryptKey  - public crypt key
+*          privateCryptKey - private crypt key
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-Errors Crypt_createKeys(CryptKey *publicKey,
-                        CryptKey *privateKey,
-                        uint     bits
+Errors Crypt_createKeys(CryptKey          *publicCryptKey,
+                        CryptKey          *privateCryptKey,
+                        uint              bits,
+                        CryptPaddingTypes cryptPaddingType
                        );
 
 /***********************************************************************\
@@ -497,12 +536,12 @@ Errors Crypt_createKeys(CryptKey *publicKey,
 *          small!
 \***********************************************************************/
 
-Errors Crypt_keyEncrypt(CryptKey   *cryptKey,
-                        const void *buffer,
-                        ulong      bufferLength,
-                        ulong      maxEncryptBufferLength,
-                        void       *encryptBuffer,
-                        ulong      *encryptBufferLength
+Errors Crypt_keyEncrypt(const CryptKey *cryptKey,
+                        const void     *buffer,
+                        uint           bufferLength,
+                        void           *encryptBuffer,
+                        uint           *encryptBufferLength,
+                        uint           maxEncryptBufferLength
                        );
 
 /***********************************************************************\
@@ -519,12 +558,12 @@ Errors Crypt_keyEncrypt(CryptKey   *cryptKey,
 * Notes  : if bufferLength==maxBufferLength buffer was to small!
 \***********************************************************************/
 
-Errors Crypt_keyDecrypt(CryptKey   *cryptKey,
-                        const void *encryptBuffer,
-                        ulong      encryptBufferLength,
-                        ulong      maxBufferLength,
-                        void       *buffer,
-                        ulong      *bufferLength
+Errors Crypt_keyDecrypt(const CryptKey *cryptKey,
+                        const void     *encryptBuffer,
+                        uint           encryptBufferLength,
+                        void           *buffer,
+                        uint           *bufferLength,
+                        uint           maxBufferLength
                        );
 
 /***********************************************************************\
@@ -568,6 +607,18 @@ Errors Crypt_getDecryptKey(CryptKey   *privateKey,
                            Password   *password
                           );
 
+/***********************************************************************\
+* Name   : Crypt_dumpKey
+* Purpose: dump key to stdout
+* Input  : cryptKey - crypt key
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+#ifndef NDEBUG
+void Crypt_dumpKey(const CryptKey *cryptKey);
+#endif /* NDEBUG */
 
 
 #ifdef __cplusplus
