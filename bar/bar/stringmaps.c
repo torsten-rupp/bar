@@ -185,7 +185,7 @@ LOCAL void removeStringMapEntry(StringMapEntry *stringMapEntry)
     case STRINGMAP_TYPE_DOUBLE:
     case STRINGMAP_TYPE_BOOL:
     case STRINGMAP_TYPE_CHAR:
-    case STRINGMAP_TYPE_VOID:
+    case STRINGMAP_TYPE_DATA:
       break;
     case STRINGMAP_TYPE_CSTRING:
       free(stringMapEntry->value.data.s);
@@ -666,6 +666,30 @@ void __StringMap_putString(const char *__fileName__, ulong __lineNb__, StringMap
   }
 }
 
+#ifdef NDEBUG
+void StringMap_putData(StringMap stringMap, const char *name, void *data, StringMapFormatFunction stringMapFormatFunction, void *stringMapFormatUserData)
+#else /* not NDEBUG */
+void __StringMap_putData(const char *__fileName__, ulong __lineNb__, StringMap stringMap, const char *name, void *data, StringMapFormatFunction stringMapFormatFunction, void *stringMapFormatUserData)
+#endif /* NDEBUG */
+{
+  StringMapEntry *stringMapEntry;
+
+  assert(stringMap != NULL);
+  assert(name != NULL);
+
+  #ifdef NDEBUG
+    stringMapEntry = addStringMapEntry(stringMap,name);
+  #else /* not NDEBUG */
+    stringMapEntry = addStringMapEntry(__fileName__,__lineNb__,stringMap,name);
+  #endif /* NDEBUG */
+
+  if (stringMapEntry != NULL)
+  {
+    stringMapEntry->type       = STRINGMAP_TYPE_DATA;
+    stringMapEntry->value.text = stringMapFormatFunction(data,stringMapFormatUserData);
+  }
+}
+
 String StringMap_getText(const StringMap stringMap, const char *name, const String defaultValue)
 {
   const StringMapEntry *stringMapEntry;
@@ -867,19 +891,19 @@ bool StringMap_getBool(const StringMap stringMap, const char *name, bool *data, 
   }
 }
 
-bool StringMap_getEnum(const StringMap stringMap, const char *name, void *data, StringMapParseFunction stringMapParseFunction, int defaultValue)
+bool StringMap_getEnum(const StringMap stringMap, const char *name, void *data, StringMapParseEnumFunction stringMapParseEnumFunction, int defaultValue)
 {
   StringMapEntry *stringMapEntry;
 
   assert(stringMap != NULL);
   assert(name != NULL);
   assert(data != NULL);
-  assert(stringMapParseFunction != NULL);
+  assert(stringMapParseEnumFunction != NULL);
 
   stringMapEntry = findStringMapEntry(stringMap,name);
   if ((stringMapEntry != NULL) && (stringMapEntry->value.text != NULL))
   {
-    return stringMapParseFunction(String_cString(stringMapEntry->value.text),(int*)data);
+    return stringMapParseEnumFunction(String_cString(stringMapEntry->value.text),(int*)data);
   }
   else
   {
@@ -967,6 +991,25 @@ bool StringMap_getString(const StringMap stringMap, const char *name, String dat
     {
       String_clear(data);
     }
+    return FALSE;
+  }
+}
+
+bool StringMap_getData(const StringMap stringMap, const char *name, void *data, StringMapParseFunction stringMapParseFunction, void *stringMapParseUserData)
+{
+  StringMapEntry *stringMapEntry;
+
+  assert(stringMap != NULL);
+  assert(name != NULL);
+  assert(data != NULL);
+
+  stringMapEntry = findStringMapEntry(stringMap,name);
+  if ((stringMapEntry != NULL) && (stringMapEntry->value.text != NULL))
+  {
+    return stringMapParseFunction(stringMapEntry->value.text,data,stringMapParseUserData);
+  }
+  else
+  {
     return FALSE;
   }
 }
