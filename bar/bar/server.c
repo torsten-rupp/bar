@@ -62,6 +62,7 @@
 #define PROTOCOL_VERSION_MINOR 0
 
 #define SESSION_ID_LENGTH 64                   // max. length of session id
+#define SESSION_KEY_SIZE  1024                 // number of session key bits
 
 #define MAX_NETWORK_CLIENT_THREADS 3           // number of threads for a client
 
@@ -303,6 +304,7 @@ typedef struct
   ClientTypes         type;
 
   SessionId           sessionId;
+  CryptKey            publicKey,secretKey;
   AuthorizationStates authorizationState;
 
   uint                abortCommandId;                      // command id to abort
@@ -2898,6 +2900,228 @@ LOCAL bool commandAborted(ClientInfo *clientInfo, uint commandId)
 /*---------------------------------------------------------------------*/
 
 /***********************************************************************\
+* Name   : encodeHex
+* Purpose: encoded data as hex-string
+* Input  : string     - string variable
+*          data       - data to encode
+*          dataLength - length of data [bytes]
+* Output : string - string
+* Return : string
+* Notes  : -
+\***********************************************************************/
+
+LOCAL String encodeHex(String string, const byte *data, uint length)
+{
+  uint z;
+
+  assert(string != NULL);
+
+  for (z = 0; z < length; z++)
+  {
+    String_format(string,"%02x",data[z]);
+  }
+
+  return string;
+}
+
+/***********************************************************************\
+* Name   : decodeHex
+* Purpose: decode hex-string into data
+* Input  : s             - hex-string
+*          maxDataLength - max. data length  [bytes]
+* Output : data       - data
+*          dataLength - length of data [bytes]
+* Return : TRUE iff data decoded
+* Notes  : -
+\***********************************************************************/
+
+LOCAL bool decodeHex(const char *s, byte *data, uint *dataLength, uint maxDataLength)
+{
+  uint i;
+  char t[3];
+  char *w;
+
+  assert(s != NULL);
+  assert(data != NULL);
+  assert(dataLength != NULL);
+
+  i = 0;
+  while (((*s) != '\0') && (i < maxDataLength))
+  {
+    t[0] = (*s); s++;
+    if ((*s) != '\0')
+    {
+      t[1] = (*s); s++;
+      t[2] = '\0';
+
+      data[i] = (byte)strtol(t,&w,16);
+      if ((*w) != '\0') return FALSE;
+      i++;
+    }
+    else
+    {
+      return FALSE;
+    }
+  }
+  (*dataLength) = i;
+
+  return TRUE;
+}
+
+/***********************************************************************\
+* Name   : decryptPassword
+* Purpose: decrypt password
+* Input  : password          - password
+*          clientInfo        - client info
+*          encryptType       - encrypt type
+*          encryptedPassword - encrypted password
+* Output : -
+* Return : TRUE iff encrypted password equals password
+* Notes  : -
+\***********************************************************************/
+
+LOCAL bool decryptPassword(Password *password, const ClientInfo *clientInfo, const String encryptType, const String encryptedPassword)
+{
+  byte encryptedBuffer[1024];
+  uint encryptedBufferLength;
+  byte encodedBuffer[1024];
+  uint encodedBufferLength;
+  uint i;
+
+  assert(password != NULL);
+
+  // decode hex-string
+  if (!decodeHex(String_cString(encryptedPassword),encryptedBuffer,&encryptedBufferLength,sizeof(encryptedBuffer)))
+  {
+    return FALSE;
+  }
+
+  // decrypt password
+  if      (String_equalsIgnoreCaseCString(encryptType,"RSA") && Crypt_isAsymmetricSupported())
+  {
+//fprintf(stderr,"%s, %d: %d\n",__FILE__,__LINE__,encryptedBufferLength);
+    Crypt_keyDecrypt(&clientInfo->secretKey,
+                     encryptedBuffer,
+                     encryptedBufferLength,
+                     encodedBuffer,
+                     &encodedBufferLength,
+                     sizeof(encodedBuffer)
+                    );
+  }
+  else if (String_equalsIgnoreCaseCString(encryptType,"NONE"))
+  {
+    memcpy(encodedBuffer,encryptedBuffer,encryptedBufferLength);
+    encodedBufferLength = encryptedBufferLength;
+  }
+  else
+  {
+    return FALSE;
+  }
+
+//fprintf(stderr,"%s, %d: n=%d s='",__FILE__,__LINE__,encodedBufferLength); for (i = 0; i < encodedBufferLength; i++) { fprintf(stderr,"%c",encodedBuffer[i]^clientInfo->sessionId[i]); } fprintf(stderr,"'\n");
+
+  // get password
+  Password_clear(password);
+  i = 0;
+  while (   (i < encodedBufferLength)
+         && ((char)(encodedBuffer[i]^clientInfo->sessionId[i]) != '\0')
+        )
+  {
+    Password_appendChar(password,(char)(encodedBuffer[i]^clientInfo->sessionId[i]));
+    i++;
+  }
+
+  return TRUE;
+}
+
+/***********************************************************************\
+* Name   : checkPassword
+* Purpose: check password
+* Input  : clientInfo        - client info
+*          encryptType       - encrypt type
+*          encryptedPassword - encrypted password
+*          password          - password
+* Output : -
+* Return : TRUE iff encrypted password equals password
+* Notes  : -
+\***********************************************************************/
+
+LOCAL bool checkPassword(const ClientInfo *clientInfo, const String encryptType, const String encryptedPassword, const Password *password)
+{
+  byte encryptedBuffer[1024];
+  uint encryptedBufferLength;
+  byte encodedBuffer[1024];
+  uint encodedBufferLength;
+  uint n;
+  uint i;
+  bool okFlag;
+
+  // decode hex-string
+  if (!decodeHex(String_cString(encryptedPassword),encryptedBuffer,&encryptedBufferLength,sizeof(encryptedBuffer)))
+  {
+    return FALSE;
+  }
+
+  // decrypt password
+  if      (String_equalsIgnoreCaseCString(encryptType,"RSA") && Crypt_isAsymmetricSupported())
+  {
+//fprintf(stderr,"%s, %d: %d\n",__FILE__,__LINE__,encryptedBufferLength);
+    Crypt_keyDecrypt(&clientInfo->secretKey,
+                     encryptedBuffer,
+                     encryptedBufferLength,
+                     encodedBuffer,
+                     &encodedBufferLength,
+                     sizeof(encodedBuffer)
+                    );
+  }
+  else if (String_equalsIgnoreCaseCString(encryptType,"NONE"))
+  {
+    memcpy(encodedBuffer,encryptedBuffer,encryptedBufferLength);
+    encodedBufferLength = encryptedBufferLength;
+  }
+  else
+  {
+    return FALSE;
+  }
+
+//fprintf(stderr,"%s, %d: n=%d s='",__FILE__,__LINE__,encodedBufferLength); for (i = 0; i < encodedBufferLength; i++) { fprintf(stderr,"%c",encodedBuffer[i]^clientInfo->sessionId[i]); } fprintf(stderr,"'\n");
+
+  // check password length
+  n = 0;
+  while (   (n < encodedBufferLength)
+         && ((char)(encodedBuffer[n]^clientInfo->sessionId[n]) != '\0')
+        )
+  {
+    n++;
+  }
+  if (password != NULL)
+  {
+    if (Password_length(password) != n)
+    {
+      return FALSE;
+    }
+  }
+
+  // check encoded password
+  if (password != NULL)
+  {
+    okFlag = TRUE;
+    i = 0;
+    while ((i < Password_length(password)) && okFlag)
+    {
+      okFlag = (Password_getChar(password,i) == (encodedBuffer[i]^clientInfo->sessionId[i]));
+      i++;
+    }
+  }
+  if (!okFlag)
+  {
+    return FALSE;
+  }
+
+  return TRUE;
+}
+
+/***********************************************************************\
 * Name   : getJobStateText
 * Purpose: get text for job state
 * Input  : jobState - job state
@@ -3202,50 +3426,38 @@ LOCAL void serverCommand_errorInfo(ClientInfo *clientInfo, uint id, const String
 * Output : -
 * Return : -
 * Notes  : Arguments:
-*            encodedPassword=<text>
+*            encryptType=<type>
+*            encryptedPassword=<encrypted password>
 *          Result:
 \***********************************************************************/
 
 LOCAL void serverCommand_authorize(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
 {
-  String encodedPassword;
-  bool okFlag;
-
-  uint z;
-  char s[3];
-  char n0,n1;
+  String encryptType;
+  String encryptedPassword;
+  bool   okFlag;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
-  // get encoded password
-  encodedPassword = String_new();
-  if (!StringMap_getString(argumentMap,"encodedPassword",encodedPassword,NULL))
+  // get encrypt type, encrypted password
+  encryptType = String_new();
+  if (!StringMap_getString(argumentMap,"encryptType",encryptType,NULL))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected encodedPassword=<encoded password>");
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected encryptType=<type>");
     return;
   }
+  encryptedPassword = String_new();
+  if (!StringMap_getString(argumentMap,"encryptedPassword",encryptedPassword,NULL))
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected encryptedPassword=<encrypted password>");
+    String_delete(encryptType);
+    return;
+  }
+//fprintf(stderr,"%s, %d: %s %d\n",__FILE__,__LINE__,String_cString(encryptedPassword),String_length(encryptedPassword));
 
   // check password
-  okFlag = TRUE;
-  if (serverPassword != NULL)
-  {
-    z = 0;
-    while ((z < SESSION_ID_LENGTH) && okFlag)
-    {
-      n0 = (char)(strtoul(String_subCString(s,encodedPassword,z*2,2),NULL,16) & 0xFF);
-      n1 = clientInfo->sessionId[z];
-      if (z < Password_length(serverPassword))
-      {
-        okFlag = (Password_getChar(serverPassword,z) == (n0^n1));
-      }
-      else
-      {
-        okFlag = (n0 == n1);
-      }
-      z++;
-    }
-  }
+  okFlag = checkPassword(clientInfo,encryptType,encryptedPassword,serverPassword);
 
   // authorization state
   if (okFlag)
@@ -3260,7 +3472,8 @@ LOCAL void serverCommand_authorize(ClientInfo *clientInfo, uint id, const String
   sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
 
   // free resources
-  String_delete(encodedPassword);
+  String_delete(encryptedPassword);
+  String_delete(encryptType);
 }
 
 /***********************************************************************\
@@ -4892,7 +5105,6 @@ LOCAL void serverCommand_includeList(ClientInfo *clientInfo, uint id, const Stri
   SemaphoreLock semaphoreLock;
   JobNode       *jobNode;
   EntryNode     *entryNode;
-  const char    *entryType;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -5013,12 +5225,12 @@ LOCAL void serverCommand_includeListAdd(ClientInfo *clientInfo, uint id, const S
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobId=<id>");
     return;
   }
-  if (!StringMap_getEnum(argumentMap,"entryType",&entryType,(StringMapParseFunction)EntryList_parseEntryType,0))
+  if (!StringMap_getEnum(argumentMap,"entryType",&entryType,(StringMapParseEnumFunction)EntryList_parseEntryType,0))
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected entryType=FILE|IMAGE");
     return;
   }
-  if (!StringMap_getEnum(argumentMap,"patternType",&patternType,(StringMapParseFunction)Pattern_parsePatternType,0))
+  if (!StringMap_getEnum(argumentMap,"patternType",&patternType,(StringMapParseEnumFunction)Pattern_parsePatternType,0))
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected entryType=");
     return;
@@ -5193,7 +5405,7 @@ LOCAL void serverCommand_excludeListAdd(ClientInfo *clientInfo, uint id, const S
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobId=<id>");
     return;
   }
-  if (!StringMap_getEnum(argumentMap,"patternType",&patternType,(StringMapParseFunction)Pattern_parsePatternType,0))
+  if (!StringMap_getEnum(argumentMap,"patternType",&patternType,(StringMapParseEnumFunction)Pattern_parsePatternType,0))
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected entryType=GLOB|REGEX|EXTENDED_REGEX");
     return;
@@ -5369,7 +5581,7 @@ LOCAL void serverCommand_sourceListAdd(ClientInfo *clientInfo, uint id, const St
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobId=<id>");
     return;
   }
-  if (!StringMap_getEnum(argumentMap,"patternType",&patternType,(StringMapParseFunction)Pattern_parsePatternType,0))
+  if (!StringMap_getEnum(argumentMap,"patternType",&patternType,(StringMapParseEnumFunction)Pattern_parsePatternType,0))
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected patternType=GLOB|REGEX|EXTENDED_REGEX");
     return;
@@ -5541,7 +5753,7 @@ LOCAL void serverCommand_excludeCompressListAdd(ClientInfo *clientInfo, uint id,
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobId=<id>");
     return;
   }
-  if (!StringMap_getEnum(argumentMap,"patternType",&patternType,(StringMapParseFunction)Pattern_parsePatternType,0))
+  if (!StringMap_getEnum(argumentMap,"patternType",&patternType,(StringMapParseEnumFunction)Pattern_parsePatternType,0))
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected patternType=GLOB|REGEX|EXTENDED_REGEX");
     return;
@@ -5833,7 +6045,7 @@ LOCAL void serverCommand_scheduleListAdd(ClientInfo *clientInfo, uint id, const 
     String_delete(date);
     return;
   }
-  if (!StringMap_getEnum(argumentMap,"archiveType",&archiveType,(StringMapParseFunction)parseArchiveType,0))
+  if (!StringMap_getEnum(argumentMap,"archiveType",&archiveType,(StringMapParseEnumFunction)parseArchiveType,0))
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected archiveType=NORMAL|FULL|INCREMENTAL|DIFFERENTIAL");
     String_delete(time);
@@ -5928,13 +6140,15 @@ LOCAL void serverCommand_decryptPasswordsClear(ClientInfo *clientInfo, uint id, 
 * Output : -
 * Return : -
 * Notes  : Arguments:
-*            <password>
+*            encryptType=<type>
+*            encryptedPassword=<encrypted password>
 *          Result:
 \***********************************************************************/
 
 LOCAL void serverCommand_decryptPasswordAdd(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
 {
-  String   encodedPassword;
+  String   encryptType;
+  String   encryptedPassword;
   Password password;
 
   assert(clientInfo != NULL);
@@ -5942,26 +6156,39 @@ LOCAL void serverCommand_decryptPasswordAdd(ClientInfo *clientInfo, uint id, con
 
   UNUSED_VARIABLE(argumentMap);
 
-  // get password
-  encodedPassword = String_new();
-  if (!StringMap_getString(argumentMap,"encodedPassword",encodedPassword,NULL))
+  // get encrypt type, encrypted password
+  encryptType = String_new();
+  if (!StringMap_getString(argumentMap,"encryptType",encryptType,NULL))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected encodedPassword=<encoded password>");
-    String_delete(encodedPassword);
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected encryptType=<type>");
     return;
   }
+  encryptedPassword = String_new();
+  if (!StringMap_getString(argumentMap,"encryptedPassword",encryptedPassword,NULL))
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected encryptedPassword=<encrypted password>");
+    String_delete(encryptType);
+    return;
+  }
+
+  // decrypt password
   Password_init(&password);
-  Password_setString(&password,encodedPassword);
+  if (!decryptPassword(&password,clientInfo,encryptType,encryptedPassword))
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_INVALID_CRYPT_PASSWORD,"");
+    Password_done(&password);
+    String_delete(encryptType);
+  }
 
   // add to decrypt password list
   Archive_appendDecryptPassword(&password);
-
 
   sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
 
   // free resources
   Password_done(&password);
-  String_delete(encodedPassword);
+  String_delete(encryptedPassword);
+  String_delete(encryptType);
 }
 
 /***********************************************************************\
@@ -5974,34 +6201,47 @@ LOCAL void serverCommand_decryptPasswordAdd(ClientInfo *clientInfo, uint id, con
 * Output : -
 * Return : -
 * Notes  : Arguments:
-*            <password>
+*            encryptType=<type>
+*            encryptedPassword=<encrypted password>
 *          Result:
 \***********************************************************************/
 
 LOCAL void serverCommand_ftpPassword(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
 {
-  String encodedPassword;
+  String encryptType;
+  String encryptedPassword;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
-  // get encoded password
-#warning TODO encode password with session id
-  encodedPassword = String_new();
-  if (!StringMap_getString(argumentMap,"encodedPassword",encodedPassword,NULL))
+  // get encrypt type, encrypted password
+  encryptType = String_new();
+  if (!StringMap_getString(argumentMap,"encryptType",encryptType,NULL))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected encodedPassword=<encoded password>");
-    String_delete(encodedPassword);
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected encryptType=<type>");
+    return;
+  }
+  encryptedPassword = String_new();
+  if (!StringMap_getString(argumentMap,"encryptedPassword",encryptedPassword,NULL))
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected encryptedPassword=<encrypted password>");
+    String_delete(encryptType);
     return;
   }
 
+  // decrypt password
   if (clientInfo->jobOptions.ftpServer.password == NULL) clientInfo->jobOptions.ftpServer.password = Password_new();
-  Password_setString(clientInfo->jobOptions.ftpServer.password,encodedPassword);
+  if (!decryptPassword(clientInfo->jobOptions.ftpServer.password,clientInfo,encryptType,encryptedPassword))
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_INVALID_FTP_PASSWORD,"");
+    String_delete(encryptType);
+  }
 
   sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
 
   // free resources
-  String_delete(encodedPassword);
+  String_delete(encryptedPassword);
+  String_delete(encryptType);
 }
 
 /***********************************************************************\
@@ -6014,33 +6254,100 @@ LOCAL void serverCommand_ftpPassword(ClientInfo *clientInfo, uint id, const Stri
 * Output : -
 * Return : -
 * Notes  : Arguments:
-*            <password>
+*            encryptType=<type>
+*            encryptedPassword=<encrypted password>
 *          Result:
 \***********************************************************************/
 
 LOCAL void serverCommand_sshPassword(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
 {
-  String encodedPassword;
+  String encryptType;
+  String encryptedPassword;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
-  // get encoded password
-#warning TODO encode password with session id
-  encodedPassword = String_new();
-  if (!StringMap_getString(argumentMap,"encodedPassword",encodedPassword,NULL))
+  // get encrypt type, encrypted password
+  encryptType = String_new();
+  if (!StringMap_getString(argumentMap,"encryptType",encryptType,NULL))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected encodedPassword=<encoded password>");
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected encryptType=<type>");
+    return;
+  }
+  encryptedPassword = String_new();
+  if (!StringMap_getString(argumentMap,"encryptedPassword",encryptedPassword,NULL))
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected encryptedPassword=<encrypted password>");
+    String_delete(encryptType);
     return;
   }
 
+  // decrypt password
   if (clientInfo->jobOptions.sshServer.password == NULL) clientInfo->jobOptions.sshServer.password = Password_new();
-  Password_setString(clientInfo->jobOptions.sshServer.password,encodedPassword);
+  if (!decryptPassword(clientInfo->jobOptions.sshServer.password,clientInfo,encryptType,encryptedPassword))
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_INVALID_SSH_PASSWORD,"");
+    String_delete(encryptType);
+  }
 
   sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
 
   // free resources
-  String_delete(encodedPassword);
+  String_delete(encryptedPassword);
+  String_delete(encryptType);
+}
+
+/***********************************************************************\
+* Name   : serverCommand_webdavPassword
+* Purpose: set job Webdav password
+* Input  : clientInfo    - client info
+*          id            - command id
+*          arguments     - command arguments
+*          argumentCount - command arguments count
+* Output : -
+* Return : -
+* Notes  : Arguments:
+*            encryptType=<type>
+*            encryptedPassword=<encrypted password>
+*          Result:
+\***********************************************************************/
+
+LOCAL void serverCommand_webdavPassword(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
+{
+  String encryptType;
+  String encryptedPassword;
+
+  assert(clientInfo != NULL);
+  assert(argumentMap != NULL);
+
+  // get encrypt type, encrypted password
+  encryptType = String_new();
+  if (!StringMap_getString(argumentMap,"encryptType",encryptType,NULL))
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected encryptType=<type>");
+    return;
+  }
+  encryptedPassword = String_new();
+  if (!StringMap_getString(argumentMap,"encryptedPassword",encryptedPassword,NULL))
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected encryptedPassword=<encrypted password>");
+    String_delete(encryptType);
+    return;
+  }
+
+  // decrypt password
+  if (clientInfo->jobOptions.webdavServer.password == NULL) clientInfo->jobOptions.webdavServer.password = Password_new();
+  if (!decryptPassword(clientInfo->jobOptions.webdavServer.password,clientInfo,encryptType,encryptedPassword))
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_INVALID_WEBDAV_PASSWORD,"");
+    String_delete(encryptType);
+  }
+
+  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
+
+  // free resources
+  String_delete(encryptedPassword);
+  String_delete(encryptType);
 }
 
 /***********************************************************************\
@@ -6054,32 +6361,39 @@ LOCAL void serverCommand_sshPassword(ClientInfo *clientInfo, uint id, const Stri
 * Return : -
 * Notes  : Arguments:
 *            jobId=<id>|0
-*            password=<text>
+*            encryptType=<type>
+*            encryptedPassword=<encrypted password>
 *          Result:
 \***********************************************************************/
 
 LOCAL void serverCommand_cryptPassword(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
 {
   uint          jobId;
-  String        encodedPassword;
+  String        encryptType;
+  String        encryptedPassword;
   SemaphoreLock semaphoreLock;
   JobNode       *jobNode;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
-  // get job id, encoded password
+  // get job id, get encrypt type, encrypted password
   if (!StringMap_getUInt(argumentMap,"jobId",&jobId,0))
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobId=<id>");
     return;
   }
-#warning TODO encode password with session id
-  encodedPassword = String_new();
-  if (!StringMap_getString(argumentMap,"encodedPassword",encodedPassword,NULL))
+  encryptType = String_new();
+  if (!StringMap_getString(argumentMap,"encryptType",encryptType,NULL))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected encodedPassword=<encoded password>");
-    String_delete(encodedPassword);
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected encryptType=<type>");
+    return;
+  }
+  encryptedPassword = String_new();
+  if (!StringMap_getString(argumentMap,"encryptedPassword",encryptedPassword,NULL))
+  {
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected encryptedPassword=<encrypted password>");
+    String_delete(encryptType);
     return;
   }
 
@@ -6093,24 +6407,38 @@ LOCAL void serverCommand_cryptPassword(ClientInfo *clientInfo, uint id, const St
       {
         sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job #%d not found",jobId);
         Semaphore_unlock(&jobList.lock);
-        String_delete(encodedPassword);
+        String_delete(encryptedPassword);
+        String_delete(encryptType);
         return;
       }
 
-      // set password
+      // decrypt password
       if (jobNode->cryptPassword == NULL) jobNode->cryptPassword = Password_new();
-      Password_setString(jobNode->cryptPassword,encodedPassword);
+      if (!decryptPassword(jobNode->cryptPassword,clientInfo,encryptType,encryptedPassword))
+      {
+        sendClientResult(clientInfo,id,TRUE,ERROR_INVALID_CRYPT_PASSWORD,"");
+        Semaphore_unlock(&jobList.lock);
+        String_delete(encryptedPassword);
+        String_delete(encryptType);
+        return;
+      }
     }
   }
   else
   {
-    Password_setString(clientInfo->jobOptions.cryptPassword,encodedPassword);
+    // decrypt password
+    if (!decryptPassword(clientInfo->jobOptions.cryptPassword,clientInfo,encryptType,encryptedPassword))
+    {
+      sendClientResult(clientInfo,id,TRUE,ERROR_INVALID_CRYPT_PASSWORD,"");
+      return;
+    }
   }
 
   sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
 
   // free resources
-  String_delete(encodedPassword);
+  String_delete(encryptedPassword);
+  String_delete(encryptType);
 }
 
 /***********************************************************************\
@@ -6715,8 +7043,6 @@ LOCAL bool updateRestoreCommandStatus(RestoreCommandInfo      *restoreCommandInf
                                       const RestoreStatusInfo *restoreStatusInfo
                                      )
 {
-  String string;
-
   assert(restoreCommandInfo != NULL);
   assert(restoreStatusInfo != NULL);
   assert(restoreStatusInfo->name != NULL);
@@ -7174,12 +7500,12 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected maxCount=<n>");
     return;
   }
-  if (!StringMap_getEnum(argumentMap,"indexState",&indexState,(StringMapParseFunction)Index_parseState,0))
+  if (!StringMap_getEnum(argumentMap,"indexState",&indexState,(StringMapParseEnumFunction)Index_parseState,0))
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected indexState=OK|CREATE|UPDATE_REQUESTED|UPDATE|ERROR|*");
     return;
   }
-  if (!StringMap_getEnum(argumentMap,"indexMode",&indexMode,(StringMapParseFunction)Index_parseMode,0))
+  if (!StringMap_getEnum(argumentMap,"indexMode",&indexMode,(StringMapParseEnumFunction)Index_parseMode,0))
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected indexMode=MANUAL|AUTO|*");
     return;
@@ -7370,7 +7696,7 @@ LOCAL void serverCommand_indexStorageRemove(ClientInfo *clientInfo, uint id, con
   {
     stateAny = TRUE;
   }
-  else if (StringMap_getEnum(argumentMap,"state",&state,(StringMapParseFunction)Index_parseState,0))
+  else if (StringMap_getEnum(argumentMap,"state",&state,(StringMapParseEnumFunction)Index_parseState,0))
   {
     stateAny = FALSE;
   }
@@ -7481,7 +7807,7 @@ LOCAL void serverCommand_indexStorageRefresh(ClientInfo *clientInfo, uint id, co
   {
     stateAny = TRUE;
   }
-  else if (StringMap_getEnum(argumentMap,"state",&state,(StringMapParseFunction)Index_parseState,0))
+  else if (StringMap_getEnum(argumentMap,"state",&state,(StringMapParseEnumFunction)Index_parseState,0))
   {
     stateAny = FALSE;
   }
@@ -8680,6 +9006,7 @@ SERVER_COMMANDS[] =
   { "DECRYPT_PASSWORD_ADD",       serverCommand_decryptPasswordAdd,      AUTHORIZATION_STATE_OK      },
   { "FTP_PASSWORD",               serverCommand_ftpPassword,             AUTHORIZATION_STATE_OK      },
   { "SSH_PASSWORD",               serverCommand_sshPassword,             AUTHORIZATION_STATE_OK      },
+  { "WEBDAV_PASSWORD",            serverCommand_webdavPassword,          AUTHORIZATION_STATE_OK      },
   { "CRYPT_PASSWORD",             serverCommand_cryptPassword,           AUTHORIZATION_STATE_OK      },
   { "PASSWORDS_CLEAR",            serverCommand_passwordsClear,          AUTHORIZATION_STATE_OK      },
   { "VOLUME_LOAD",                serverCommand_volumeLoad,              AUTHORIZATION_STATE_OK      },
@@ -8844,21 +9171,41 @@ LOCAL void networkClientThreadCode(ClientInfo *clientInfo)
 }
 
 /***********************************************************************\
-* Name   : getNewSessionId
-* Purpose: get new session id
-* Input  : -
-* Output : sessionId - new session id
+* Name   : initSession
+* Purpose: init new session
+* Input  : clientInfo - client info
+* Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void getNewSessionId(SessionId sessionId)
+LOCAL void initSession(ClientInfo *clientInfo)
 {
+  assert(clientInfo != NULL);
+
   #ifndef NO_SESSION_ID
-    Crypt_randomize(sessionId,sizeof(SessionId));
+    Crypt_randomize(clientInfo->sessionId,sizeof(SessionId));
   #else /* not NO_SESSION_ID */
-    memset(sessionId,0,sizeof(SessionId));
+    memset(clientInfo->sessionId,0,sizeof(SessionId));
   #endif /* NO_SESSION_ID */
+  Crypt_createKeys(&clientInfo->publicKey,&clientInfo->secretKey,SESSION_KEY_SIZE,CRYPT_PADDING_TYPE_PKCS1);
+}
+
+/***********************************************************************\
+* Name   : doneSession
+* Purpose: done session
+* Input  : clientInfo - client info
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void doneSession(ClientInfo *clientInfo)
+{
+  assert(clientInfo != NULL);
+
+  Crypt_doneKey(&clientInfo->publicKey);
+  Crypt_doneKey(&clientInfo->secretKey);
 }
 
 /***********************************************************************\
@@ -8872,18 +9219,33 @@ LOCAL void getNewSessionId(SessionId sessionId)
 
 LOCAL void sendSessionId(ClientInfo *clientInfo)
 {
+  String id;
+  String n,e;
   String s;
-  uint   z;
 
-  s = String_new();
-  String_appendCString(s,"SESSION ");
-  for (z = 0; z < sizeof(SessionId); z++)
-  {
-    String_format(s,"%02x",clientInfo->sessionId[z]);
-  }
+  assert(clientInfo != NULL);
+
+  // format session data
+  id = encodeHex(String_new(),clientInfo->sessionId,sizeof(SessionId));
+  n  = Crypt_getKeyModulus(&clientInfo->publicKey);
+  e  = Crypt_getKeyExponent(&clientInfo->publicKey);
+  s  = String_format(String_new(),
+                     "SESSION id=%S encryptTypes=%s n=%S e=%S",
+                     id,
+                     "RSA,NONE",
+                     n,
+                     e
+                    );
   String_appendChar(s,'\n');
+
+  // send session data to client
   sendClient(clientInfo,s);
+
+  // free resources
   String_delete(s);
+  String_delete(e);
+  String_delete(n);
+  String_delete(id);
 }
 
 /***********************************************************************\
@@ -8922,7 +9284,7 @@ clientInfo->authorizationState   = AUTHORIZATION_STATE_OK;
 
   // create and send session id
 // authorization?
-//  getNewSessionId(clientInfo->sessionId);
+//  initSession(clientInfo->sessionId);
 //  sendSessionId(clientInfo);
 }
 
@@ -8980,8 +9342,8 @@ LOCAL void initNetworkClient(ClientInfo   *clientInfo,
     }
   }
 
-  // create and send session id
-  getNewSessionId(clientInfo->sessionId);
+  // init and send session id
+  initSession(clientInfo);
   sendSessionId(clientInfo);
 }
 
@@ -9014,13 +9376,14 @@ LOCAL void doneClient(ClientInfo *clientInfo)
       }
 
       // free resources
-      MsgQueue_done(&clientInfo->network.commandMsgQueue,(MsgQueueMsgFreeFunction)freeCommandMsg,NULL);
-      String_delete(clientInfo->network.name);
+      doneSession(clientInfo);
       for (z = MAX_NETWORK_CLIENT_THREADS-1; z >= 0; z--)
       {
         Thread_done(&clientInfo->network.threads[z]);
       }
       Semaphore_done(&clientInfo->network.writeLock);
+      MsgQueue_done(&clientInfo->network.commandMsgQueue,(MsgQueueMsgFreeFunction)freeCommandMsg,NULL);
+      String_delete(clientInfo->network.name);
       break;
     default:
       #ifndef NDEBUG
