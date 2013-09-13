@@ -1130,7 +1130,6 @@ LOCAL Errors writeFileChunks(ArchiveEntryInfo *archiveEntryInfo)
   LIST_ITERATE(archiveEntryInfo->file.fileExtendedAttributeList,fileExtendedAttributeNode)
   {
 #warning todo
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     String_set(archiveEntryInfo->file.chunkFileExtendedAttribute.name,fileExtendedAttributeNode->name);
     archiveEntryInfo->file.chunkFileExtendedAttribute.value.data   = fileExtendedAttributeNode->data;
     archiveEntryInfo->file.chunkFileExtendedAttribute.value.length = fileExtendedAttributeNode->dataLength;
@@ -2736,6 +2735,8 @@ Errors Archive_create(ArchiveInfo                     *archiveInfo,
   assert(archiveCreatedFunction != NULL);
   assert(jobOptions != NULL);
 
+  DEBUG_ADD_RESOURCE_TRACE("archive",archiveInfo);
+
   // detect block length of used crypt algorithm
   error = Crypt_getBlockLength(jobOptions->cryptAlgorithm,&archiveInfo->blockLength);
   if (error != ERROR_NONE)
@@ -2797,7 +2798,7 @@ Errors Archive_create(ArchiveInfo                     *archiveInfo,
     }
 
     // read public key
-    Crypt_initKey(&archiveInfo->cryptKey);
+    Crypt_initKey(&archiveInfo->cryptKey,CRYPT_PADDING_TYPE_NONE);
     error = Crypt_readKeyFile(&archiveInfo->cryptKey,
                               jobOptions->cryptPublicKeyFileName,
                               NULL
@@ -2877,6 +2878,8 @@ Errors Archive_open(ArchiveInfo                     *archiveInfo,
   assert(archiveInfo != NULL);
   assert(storageSpecifier != NULL);
   assert(storageFileName != NULL);
+
+  DEBUG_ADD_RESOURCE_TRACE("archive",archiveInfo);
 
   // init variables
   fileName = String_new();
@@ -2994,6 +2997,8 @@ Errors Archive_close(ArchiveInfo *archiveInfo)
 
   assert(archiveInfo != NULL);
   assert(List_isEmpty(&archiveInfo->archiveEntryList));
+
+  DEBUG_REMOVE_RESOURCE_TRACE(archiveInfo);
 
   // close file/storage
   switch (archiveInfo->ioType)
@@ -3199,7 +3204,7 @@ bool Archive_eof(ArchiveInfo *archiveInfo,
         }
 
         // read private key, try to read key with no password, all passwords
-        Crypt_initKey(&archiveInfo->cryptKey);
+        Crypt_initKey(&archiveInfo->cryptKey,CRYPT_PADDING_TYPE_NONE);
         decryptedFlag = FALSE;
         archiveInfo->pendingError = Crypt_readKeyFile(&archiveInfo->cryptKey,
                                                       archiveInfo->jobOptions->cryptPrivateKeyFileName,
@@ -5381,7 +5386,7 @@ Errors Archive_getNextArchiveEntryType(ArchiveInfo       *archiveInfo,
         }
 
         // read private key, try to read key with no password, all passwords
-        Crypt_initKey(&archiveInfo->cryptKey);
+        Crypt_initKey(&archiveInfo->cryptKey,CRYPT_PADDING_TYPE_NONE);
         decryptedFlag = FALSE;
         error = Crypt_readKeyFile(&archiveInfo->cryptKey,
                                   archiveInfo->jobOptions->cryptPrivateKeyFileName,
