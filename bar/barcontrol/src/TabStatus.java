@@ -1434,9 +1434,10 @@ class TabStatus
 
       // set crypt password
       String[] resultErrorMessage = new String[1];
-      int error = BARServer.executeCommand(StringParser.format("CRYPT_PASSWORD jobId=%d password=%S",
+      int error = BARServer.executeCommand(StringParser.format("CRYPT_PASSWORD jobId=%d encryptType=%s encryptedPassword=%S",
                                                                selectedJobData.id,
-                                                               password
+                                                               BARServer.getPasswordEncryptType(),
+                                                               BARServer.encryptPassword(password)
                                                               ),
                                            resultErrorMessage
                                           );

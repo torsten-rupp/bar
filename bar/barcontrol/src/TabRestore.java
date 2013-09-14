@@ -3078,7 +3078,11 @@ Dprintf.dprintf("process line by line");
                                                       );
                     if (password != null)
                     {
-                      BARServer.executeCommand(StringParser.format("DECRYPT_PASSWORD_ADD password=%S",password));
+                      BARServer.executeCommand(StringParser.format("DECRYPT_PASSWORD_ADD encryptType=%s encryptedPassword=%S",
+                                                                   BARServer.getPasswordEncryptType(),
+                                                                   BARServer.encryptPassword(password)
+                                                                  )
+                                              );
                     }
                   }
                 });
@@ -3372,6 +3376,7 @@ Dprintf.dprintf("process line by line");
             boolean retryFlag;
             boolean ftpPasswordFlag     = false;
             boolean sshPasswordFlag     = false;
+            boolean webdavPasswordFlag  = false;
             boolean decryptPasswordFlag = false;
             do
             {
@@ -3442,7 +3447,11 @@ Dprintf.dprintf("process line by line");
                                                       );
                     if (password != null)
                     {
-                      BARServer.executeCommand(StringParser.format("FTP_PASSWORD password=%S",password));
+                      BARServer.executeCommand(StringParser.format("FTP_PASSWORD encryptType=%s encryptedPassword=%S",
+                                                                   BARServer.getPasswordEncryptType(),
+                                                                   BARServer.encryptPassword(password)
+                                                                  )
+                                              );
                     }
                   }
                 });
@@ -3455,7 +3464,7 @@ Dprintf.dprintf("process line by line");
                            || (command.getErrorCode() == Errors.NO_SSH_PASSWORD)
                            || (command.getErrorCode() == Errors.INVALID_SSH_PASSWORD)
                           )
-                       && !ftpPasswordFlag
+                       && !sshPasswordFlag
                        && !busyDialog.isAborted()
                       )
               {
@@ -3471,11 +3480,48 @@ Dprintf.dprintf("process line by line");
                                                       );
                     if (password != null)
                     {
-                      BARServer.executeCommand(StringParser.format("SSH_PASSWORD password=%S",password));
+                      BARServer.executeCommand(StringParser.format("SSH_PASSWORD encryptType=%s encryptedPassword=%S",
+                                                                   BARServer.getPasswordEncryptType(),
+                                                                   BARServer.encryptPassword(password)
+                                                                  )
+                                              );
                     }
                   }
                 });
                 sshPasswordFlag = true;
+
+                // retry
+                retryFlag = true;
+              }
+              else if (   (   (command.getErrorCode() == Errors.WEBDAV_SESSION_FAIL)
+                           || (command.getErrorCode() == Errors.NO_WEBDAV_PASSWORD)
+                           || (command.getErrorCode() == Errors.INVALID_WEBDAV_PASSWORD)
+                          )
+                       && !webdavPasswordFlag
+                       && !busyDialog.isAborted()
+                      )
+              {
+                // get webdav password
+                display.syncExec(new Runnable()
+                {
+                  public void run()
+                  {
+                    String password = Dialogs.password(shell,
+                                                       "Webdav login password",
+                                                       "Please enter Webdav login password for: "+entryData.storageName+".",
+                                                       "Password:"
+                                                      );
+                    if (password != null)
+                    {
+                      BARServer.executeCommand(StringParser.format("WEBDAV_PASSWORD encryptType=%s encryptedPassword=%S",
+                                                                   BARServer.getPasswordEncryptType(),
+                                                                   BARServer.encryptPassword(password)
+                                                                  )
+                                              );
+                    }
+                  }
+                });
+                webdavPasswordFlag = true;
 
                 // retry
                 retryFlag = true;
@@ -3500,7 +3546,11 @@ Dprintf.dprintf("process line by line");
                                                       );
                     if (password != null)
                     {
-                      BARServer.executeCommand(StringParser.format("DECRYPT_PASSWORD_ADD password=%S",password));
+                      BARServer.executeCommand(StringParser.format("DECRYPT_PASSWORD_ADD encryptType=%s encryptedPassword=%S",
+                                                                   BARServer.getPasswordEncryptType(),
+                                                                   BARServer.encryptPassword(password)
+                                                                  )
+                                              );
                     }
                   }
                 });
