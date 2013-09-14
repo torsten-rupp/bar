@@ -16,14 +16,9 @@ import java.io.InputStreamReader;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
+import java.io.UnsupportedEncodingException;
 
 import java.math.BigInteger;
-
-import java.security.interfaces.RSAPublicKey;
-import java.security.Key;
-import java.security.KeyFactory;
-import java.security.PublicKey;
-import java.security.spec.RSAPublicKeySpec;
 
 import java.net.ConnectException;
 import java.net.InetSocketAddress;
@@ -32,13 +27,22 @@ import java.net.Socket;
 import java.net.SocketTimeoutException;
 import java.net.UnknownHostException;
 
+import java.security.interfaces.RSAPublicKey;
+import java.security.InvalidKeyException;
+import java.security.Key;
+import java.security.KeyFactory;
+import java.security.PublicKey;
+import java.security.spec.RSAPublicKeySpec;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Random;
 
+import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
+import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.NullCipher;
 
 import javax.net.ssl.SSLSocket;
@@ -1030,21 +1034,6 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
       }
       sessionId = decodeHex(valueMap.getString("id"));
 
-      // get encoded password
-      byte[] passwordBytes   = serverPassword.getBytes("UTF-8");
-      byte[] encodedPassword = new byte[sessionId.length];
-      for (int i = 0; i < sessionId.length; i++)
-      {
-        if (i < passwordBytes.length)
-        {
-          encodedPassword[i] = (byte)((int)passwordBytes[i] ^ (int)sessionId[i]);
-        }
-        else
-        {
-          encodedPassword[i] = sessionId[i];
-        }
-      }
-
       // get password chipher
       String[] encryptTypes = valueMap.getString("encryptTypes").split(",");
       int      i            = 0;
@@ -1104,42 +1093,8 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
         throw new CommunicationError("Init password cipher fail");
       }
 
-      // encrypt password
-      byte[] encryptedPasswordBytes = null;
-      try
-      {
-        passwordCipher.init(Cipher.ENCRYPT_MODE,passwordKey);
-        encryptedPasswordBytes = passwordCipher.doFinal(encodedPassword);
-Dprintf.dprintf("encryptedPasswordBytes.length=%d serverPassword.getBytes.length=%d",encryptedPasswordBytes.length,serverPassword.getBytes("UTF-8").length);
-      }
-      catch (java.security.InvalidKeyException exception)
-      {
-        if (Settings.debugFlag)
-        {
-          BARControl.printStackTrace(exception);
-        }
-      }
-      catch (javax.crypto.IllegalBlockSizeException exception)
-      {
-        if (Settings.debugFlag)
-        {
-          BARControl.printStackTrace(exception);
-        }
-      }
-      catch (javax.crypto.BadPaddingException exception)
-      {
-        if (Settings.debugFlag)
-        {
-          BARControl.printStackTrace(exception);
-        }
-      }
-      if (encryptedPasswordBytes == null)
-      {
-        throw new CommunicationError("Password encryption fail");
-      }
-
       // authorize
-      if (syncExecuteCommand(StringParser.format("AUTHORIZE encryptType=%s encryptedPassword=%s",passwordEncryptType,encodeHex(encryptedPasswordBytes)),
+      if (syncExecuteCommand(StringParser.format("AUTHORIZE encryptType=%s encryptedPassword=%s",passwordEncryptType,encryptPassword(serverPassword)),
                              errorMessage
                             ) != Errors.NONE
          )
@@ -1668,6 +1623,81 @@ Dprintf.dprintf("encryptedPasswordBytes.length=%d serverPassword.getBytes.length
   public static void setOption(int jobId, String name, String s)
   {
     executeCommand(StringParser.format("OPTION_SET jobId=%d name=%S value=%S",jobId,name,s));
+  }
+
+  /** get password encrypt type
+   * @return type
+   */
+  public static String getPasswordEncryptType()
+  {
+    return passwordEncryptType;
+  }
+
+  /** encrypt password as hex-string
+   * @param password password
+   * @return hex-string
+   */
+  public static String encryptPassword(String password)
+    throws CommunicationError
+  {
+    // get encoded password (XOR with session id)
+    byte[] encodedPassword = new byte[sessionId.length];
+    try
+    {
+      byte[] passwordBytes   = password.getBytes("UTF-8");
+      for (int i = 0; i < sessionId.length; i++)
+      {
+        if (i < passwordBytes.length)
+        {
+          encodedPassword[i] = (byte)((int)passwordBytes[i] ^ (int)sessionId[i]);
+        }
+        else
+        {
+          encodedPassword[i] = sessionId[i];
+        }
+      }
+    }
+    catch (UnsupportedEncodingException exception)
+    {
+      throw new CommunicationError("Password encryption fail");
+    }
+
+    // encrypt password
+    byte[] encryptedPasswordBytes = null;
+    try
+    {
+      passwordCipher.init(Cipher.ENCRYPT_MODE,passwordKey);
+      encryptedPasswordBytes = passwordCipher.doFinal(encodedPassword);
+//Dprintf.dprintf("encryptedPasswordBytes.length=%d serverPassword.getBytes.length=%d",encryptedPasswordBytes.length,password.getBytes("UTF-8").length);
+    }
+    catch (InvalidKeyException exception)
+    {
+      if (Settings.debugFlag)
+      {
+        BARControl.printStackTrace(exception);
+      }
+    }
+    catch (IllegalBlockSizeException exception)
+    {
+      if (Settings.debugFlag)
+      {
+        BARControl.printStackTrace(exception);
+      }
+    }
+    catch (BadPaddingException exception)
+    {
+      if (Settings.debugFlag)
+      {
+        BARControl.printStackTrace(exception);
+      }
+    }
+    if (encryptedPasswordBytes == null)
+    {
+      throw new CommunicationError("Password encryption fail");
+    }
+
+    // encode as hex-string
+    return encodeHex(encryptedPasswordBytes);
   }
 
   //-----------------------------------------------------------------------
