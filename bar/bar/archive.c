@@ -5539,10 +5539,6 @@ Errors Archive_readFileEntry(ArchiveEntryInfo          *archiveEntryInfo,
       {
         AUTOFREE_ADD(&autoFreeList2,&archiveEntryInfo->file.chunkFileExtendedAttribute.cryptInfo,CryptInfo*,{ Crypt_done(resource); });
       }
-      else
-      {
-        Crypt_done(&archiveEntryInfo->file.chunkFileEntry.cryptInfo);
-      }
     }
     if (error == ERROR_NONE)
     {
@@ -5553,11 +5549,6 @@ Errors Archive_readFileEntry(ArchiveEntryInfo          *archiveEntryInfo,
       if (error == ERROR_NONE)
       {
         AUTOFREE_ADD(&autoFreeList2,&archiveEntryInfo->file.chunkFileDelta.cryptInfo,CryptInfo*,{ Crypt_done(resource); });
-      }
-      else
-      {
-        Crypt_done(&archiveEntryInfo->file.chunkFileExtendedAttribute.cryptInfo);
-        Crypt_done(&archiveEntryInfo->file.chunkFileEntry.cryptInfo);
       }
     }
     if (error == ERROR_NONE)
@@ -5570,12 +5561,6 @@ Errors Archive_readFileEntry(ArchiveEntryInfo          *archiveEntryInfo,
       {
         AUTOFREE_ADD(&autoFreeList2,&archiveEntryInfo->file.chunkFileData.cryptInfo,CryptInfo*,{ Crypt_done(resource); });
       }
-      else
-      {
-        Crypt_done(&archiveEntryInfo->file.chunkFileDelta.cryptInfo);
-        Crypt_done(&archiveEntryInfo->file.chunkFileExtendedAttribute.cryptInfo);
-        Crypt_done(&archiveEntryInfo->file.chunkFileEntry.cryptInfo);
-      }
     }
     if (error == ERROR_NONE)
     {
@@ -5586,13 +5571,6 @@ Errors Archive_readFileEntry(ArchiveEntryInfo          *archiveEntryInfo,
       if (error == ERROR_NONE)
       {
         AUTOFREE_ADD(&autoFreeList2,&archiveEntryInfo->file.cryptInfo,CryptInfo*,{ Crypt_done(resource); });
-      }
-      else
-      {
-        Crypt_done(&archiveEntryInfo->file.chunkFileData.cryptInfo);
-        Crypt_done(&archiveEntryInfo->file.chunkFileDelta.cryptInfo);
-        Crypt_done(&archiveEntryInfo->file.chunkFileExtendedAttribute.cryptInfo);
-        Crypt_done(&archiveEntryInfo->file.chunkFileEntry.cryptInfo);
       }
     }
 
@@ -5613,14 +5591,6 @@ Errors Archive_readFileEntry(ArchiveEntryInfo          *archiveEntryInfo,
       {
         AUTOFREE_ADD(&autoFreeList2,&archiveEntryInfo->file.chunkFileEntry.info,ChunkInfo*,{ Chunk_done(resource); });
       }
-      else
-      {
-        Crypt_done(&archiveEntryInfo->file.cryptInfo);
-        Crypt_done(&archiveEntryInfo->file.chunkFileData.cryptInfo);
-        Crypt_done(&archiveEntryInfo->file.chunkFileDelta.cryptInfo);
-        Crypt_done(&archiveEntryInfo->file.chunkFileExtendedAttribute.cryptInfo);
-        Crypt_done(&archiveEntryInfo->file.chunkFileEntry.cryptInfo);
-      }
     }
     if (error == ERROR_NONE)
     {
@@ -5637,15 +5607,6 @@ Errors Archive_readFileEntry(ArchiveEntryInfo          *archiveEntryInfo,
       if (error == ERROR_NONE)
       {
         AUTOFREE_ADD(&autoFreeList2,&archiveEntryInfo->file.chunkFileExtendedAttribute.info,ChunkInfo*,{ Chunk_done(resource); });
-      }
-      else
-      {
-        Chunk_done(&archiveEntryInfo->file.chunkFileEntry.info);
-        Crypt_done(&archiveEntryInfo->file.cryptInfo);
-        Crypt_done(&archiveEntryInfo->file.chunkFileData.cryptInfo);
-        Crypt_done(&archiveEntryInfo->file.chunkFileDelta.cryptInfo);
-        Crypt_done(&archiveEntryInfo->file.chunkFileExtendedAttribute.cryptInfo);
-        Crypt_done(&archiveEntryInfo->file.chunkFileEntry.cryptInfo);
       }
     }
     if (error == ERROR_NONE)
@@ -5664,16 +5625,6 @@ Errors Archive_readFileEntry(ArchiveEntryInfo          *archiveEntryInfo,
       {
         AUTOFREE_ADD(&autoFreeList2,&archiveEntryInfo->file.chunkFileDelta.info,ChunkInfo*,{ Chunk_done(resource); });
       }
-      else
-      {
-        Chunk_done(&archiveEntryInfo->file.chunkFileExtendedAttribute.info);
-        Chunk_done(&archiveEntryInfo->file.chunkFileEntry.info);
-        Crypt_done(&archiveEntryInfo->file.cryptInfo);
-        Crypt_done(&archiveEntryInfo->file.chunkFileData.cryptInfo);
-        Crypt_done(&archiveEntryInfo->file.chunkFileDelta.cryptInfo);
-        Crypt_done(&archiveEntryInfo->file.chunkFileExtendedAttribute.cryptInfo);
-        Crypt_done(&archiveEntryInfo->file.chunkFileEntry.cryptInfo);
-      }
     }
     if (error == ERROR_NONE)
     {
@@ -5690,17 +5641,6 @@ Errors Archive_readFileEntry(ArchiveEntryInfo          *archiveEntryInfo,
       if (error == ERROR_NONE)
       {
         AUTOFREE_ADD(&autoFreeList2,&archiveEntryInfo->file.chunkFileData.info,ChunkInfo*,{ Chunk_done(resource); });
-      }
-      else
-      {
-        Chunk_done(&archiveEntryInfo->file.chunkFileDelta.info);
-        Chunk_done(&archiveEntryInfo->file.chunkFileExtendedAttribute.info);
-        Chunk_done(&archiveEntryInfo->file.chunkFileEntry.info);
-        Crypt_done(&archiveEntryInfo->file.cryptInfo);
-        Crypt_done(&archiveEntryInfo->file.chunkFileData.cryptInfo);
-        Crypt_done(&archiveEntryInfo->file.chunkFileDelta.cryptInfo);
-        Crypt_done(&archiveEntryInfo->file.chunkFileExtendedAttribute.cryptInfo);
-        Crypt_done(&archiveEntryInfo->file.chunkFileEntry.cryptInfo);
       }
     }
 
@@ -5840,16 +5780,6 @@ Errors Archive_readFileEntry(ArchiveEntryInfo          *archiveEntryInfo,
       {
         // free resources
         AutoFree_freeAll(&autoFreeList2);
-        Chunk_done(&archiveEntryInfo->file.chunkFileData.info);
-        Chunk_done(&archiveEntryInfo->file.chunkFileDelta.info);
-        Chunk_done(&archiveEntryInfo->file.chunkFileExtendedAttribute.info);
-        Chunk_done(&archiveEntryInfo->file.chunkFileEntry.info);
-
-        Crypt_done(&archiveEntryInfo->file.cryptInfo);
-        Crypt_done(&archiveEntryInfo->file.chunkFileData.cryptInfo);
-        Crypt_done(&archiveEntryInfo->file.chunkFileDelta.cryptInfo);
-        Crypt_done(&archiveEntryInfo->file.chunkFileExtendedAttribute.cryptInfo);
-        Crypt_done(&archiveEntryInfo->file.chunkFileEntry.cryptInfo);
       }
     }
 
@@ -6134,9 +6064,6 @@ Errors Archive_readImageEntry(ArchiveEntryInfo   *archiveEntryInfo,
       {
         AUTOFREE_ADD(&autoFreeList2,&archiveEntryInfo->image.chunkImageEntry.cryptInfo,CryptInfo*,{ Crypt_done(resource); });
       }
-      else
-      {
-      }
     }
     if (error == ERROR_NONE)
     {
@@ -6147,10 +6074,6 @@ Errors Archive_readImageEntry(ArchiveEntryInfo   *archiveEntryInfo,
       if (error == ERROR_NONE)
       {
         AUTOFREE_ADD(&autoFreeList2,&archiveEntryInfo->image.chunkImageDelta.cryptInfo,CryptInfo*,{ Crypt_done(resource); });
-      }
-      else
-      {
-        Crypt_done(&archiveEntryInfo->image.chunkImageEntry.cryptInfo);
       }
     }
     if (error == ERROR_NONE)
@@ -6163,11 +6086,6 @@ Errors Archive_readImageEntry(ArchiveEntryInfo   *archiveEntryInfo,
       {
         AUTOFREE_ADD(&autoFreeList2,&archiveEntryInfo->image.chunkImageData.cryptInfo,CryptInfo*,{ Crypt_done(resource); });
       }
-      else
-      {
-        Crypt_done(&archiveEntryInfo->image.chunkImageDelta.cryptInfo);
-        Crypt_done(&archiveEntryInfo->image.chunkImageEntry.cryptInfo);
-      }
     }
     if (error == ERROR_NONE)
     {
@@ -6178,12 +6096,6 @@ Errors Archive_readImageEntry(ArchiveEntryInfo   *archiveEntryInfo,
       if (error == ERROR_NONE)
       {
         AUTOFREE_ADD(&autoFreeList2,&archiveEntryInfo->image.cryptInfo,CryptInfo*,{ Crypt_done(resource); });
-      }
-      else
-      {
-        Crypt_done(&archiveEntryInfo->image.chunkImageData.cryptInfo);
-        Crypt_done(&archiveEntryInfo->image.chunkImageDelta.cryptInfo);
-        Crypt_done(&archiveEntryInfo->image.chunkImageEntry.cryptInfo);
       }
     }
 
@@ -6204,13 +6116,6 @@ Errors Archive_readImageEntry(ArchiveEntryInfo   *archiveEntryInfo,
       {
         AUTOFREE_ADD(&autoFreeList2,&archiveEntryInfo->image.chunkImageEntry.info,ChunkInfo*,{ Chunk_done(resource); });
       }
-      else
-      {
-        Crypt_done(&archiveEntryInfo->image.cryptInfo);
-        Crypt_done(&archiveEntryInfo->image.chunkImageData.cryptInfo);
-        Crypt_done(&archiveEntryInfo->image.chunkImageDelta.cryptInfo);
-        Crypt_done(&archiveEntryInfo->image.chunkImageEntry.cryptInfo);
-      }
     }
     if (error == ERROR_NONE)
     {
@@ -6228,14 +6133,6 @@ Errors Archive_readImageEntry(ArchiveEntryInfo   *archiveEntryInfo,
       {
         AUTOFREE_ADD(&autoFreeList2,&archiveEntryInfo->image.chunkImageDelta.info,ChunkInfo*,{ Chunk_done(resource); });
       }
-      else
-      {
-        Chunk_done(&archiveEntryInfo->image.chunkImageEntry.info);
-        Crypt_done(&archiveEntryInfo->image.cryptInfo);
-        Crypt_done(&archiveEntryInfo->image.chunkImageData.cryptInfo);
-        Crypt_done(&archiveEntryInfo->image.chunkImageDelta.cryptInfo);
-        Crypt_done(&archiveEntryInfo->image.chunkImageEntry.cryptInfo);
-      }
     }
     if (error == ERROR_NONE)
     {
@@ -6252,15 +6149,6 @@ Errors Archive_readImageEntry(ArchiveEntryInfo   *archiveEntryInfo,
       if (error == ERROR_NONE)
       {
         AUTOFREE_ADD(&autoFreeList2,&archiveEntryInfo->image.chunkImageData.info,ChunkInfo*,{ Chunk_done(resource); });
-      }
-      else
-      {
-        Chunk_done(&archiveEntryInfo->image.chunkImageDelta.info);
-        Chunk_done(&archiveEntryInfo->image.chunkImageEntry.info);
-        Crypt_done(&archiveEntryInfo->image.cryptInfo);
-        Crypt_done(&archiveEntryInfo->image.chunkImageData.cryptInfo);
-        Crypt_done(&archiveEntryInfo->image.chunkImageDelta.cryptInfo);
-        Crypt_done(&archiveEntryInfo->image.chunkImageEntry.cryptInfo);
       }
     }
 
@@ -6358,14 +6246,6 @@ Errors Archive_readImageEntry(ArchiveEntryInfo   *archiveEntryInfo,
       {
         // free resources
         AutoFree_freeAll(&autoFreeList2);
-        Chunk_done(&archiveEntryInfo->image.chunkImageData.info);
-        Chunk_done(&archiveEntryInfo->image.chunkImageDelta.info);
-        Chunk_done(&archiveEntryInfo->image.chunkImageEntry.info);
-
-        Crypt_done(&archiveEntryInfo->image.cryptInfo);
-        Crypt_done(&archiveEntryInfo->image.chunkImageData.cryptInfo);
-        Crypt_done(&archiveEntryInfo->image.chunkImageDelta.cryptInfo);
-        Crypt_done(&archiveEntryInfo->image.chunkImageEntry.cryptInfo);
       }
     }
 
@@ -6595,9 +6475,6 @@ Errors Archive_readDirectoryEntry(ArchiveEntryInfo          *archiveEntryInfo,
       {
         AUTOFREE_ADD(&autoFreeList2,&archiveEntryInfo->directory.chunkDirectoryEntry.cryptInfo,CryptInfo*,{ Crypt_done(resource); });
       }
-      else
-      {
-      }
     }
     if (error == ERROR_NONE)
     {
@@ -6608,10 +6485,6 @@ Errors Archive_readDirectoryEntry(ArchiveEntryInfo          *archiveEntryInfo,
       if (error == ERROR_NONE)
       {
         AUTOFREE_ADD(&autoFreeList2,&archiveEntryInfo->directory.chunkDirectoryExtendedAttribute.cryptInfo,CryptInfo*,{ Crypt_done(resource); });
-      }
-      else
-      {
-        Crypt_done(&archiveEntryInfo->directory.chunkDirectoryEntry.cryptInfo);
       }
     }
 
@@ -6632,11 +6505,6 @@ Errors Archive_readDirectoryEntry(ArchiveEntryInfo          *archiveEntryInfo,
       {
         AUTOFREE_ADD(&autoFreeList2,&archiveEntryInfo->directory.chunkDirectoryEntry.info,ChunkInfo*,{ Chunk_done(resource); });
       }
-      else
-      {
-        Crypt_done(&archiveEntryInfo->directory.chunkDirectoryExtendedAttribute.cryptInfo);
-        Crypt_done(&archiveEntryInfo->directory.chunkDirectoryEntry.cryptInfo);
-      }
     }
     if (error == ERROR_NONE)
     {
@@ -6653,12 +6521,6 @@ Errors Archive_readDirectoryEntry(ArchiveEntryInfo          *archiveEntryInfo,
       if (error == ERROR_NONE)
       {
         AUTOFREE_ADD(&autoFreeList2,&archiveEntryInfo->directory.chunkDirectoryExtendedAttribute.info,ChunkInfo*,{ Chunk_done(resource); });
-      }
-      else
-      {
-        Chunk_done(&archiveEntryInfo->directory.chunkDirectoryEntry.info);
-        Crypt_done(&archiveEntryInfo->directory.chunkDirectoryExtendedAttribute.cryptInfo);
-        Crypt_done(&archiveEntryInfo->directory.chunkDirectoryEntry.cryptInfo);
       }
     }
 
@@ -6757,11 +6619,6 @@ Errors Archive_readDirectoryEntry(ArchiveEntryInfo          *archiveEntryInfo,
       {
         // free resources
         AutoFree_freeAll(&autoFreeList2);
-        Chunk_done(&archiveEntryInfo->directory.chunkDirectoryExtendedAttribute.info);
-        Chunk_done(&archiveEntryInfo->directory.chunkDirectoryEntry.info);
-
-        Crypt_done(&archiveEntryInfo->directory.chunkDirectoryExtendedAttribute.cryptInfo);
-        Crypt_done(&archiveEntryInfo->directory.chunkDirectoryEntry.cryptInfo);
       }
     }
 
@@ -6975,9 +6832,6 @@ Errors Archive_readLinkEntry(ArchiveEntryInfo          *archiveEntryInfo,
       {
         AUTOFREE_ADD(&autoFreeList2,&archiveEntryInfo->link.chunkLinkEntry.cryptInfo,CryptInfo*,{ Crypt_done(resource); });
       }
-      else
-      {
-      }
     }
     if (error == ERROR_NONE)
     {
@@ -6988,9 +6842,6 @@ Errors Archive_readLinkEntry(ArchiveEntryInfo          *archiveEntryInfo,
       if (error == ERROR_NONE)
       {
         AUTOFREE_ADD(&autoFreeList2,&archiveEntryInfo->link.chunkLinkExtendedAttribute.cryptInfo,CryptInfo*,{ Crypt_done(resource); });
-      }
-      else
-      {
       }
     }
 
@@ -7011,10 +6862,6 @@ Errors Archive_readLinkEntry(ArchiveEntryInfo          *archiveEntryInfo,
       {
         AUTOFREE_ADD(&autoFreeList2,&archiveEntryInfo->link.chunkLinkEntry.info,ChunkInfo*,{ Chunk_done(resource); });
       }
-      else
-      {
-        Crypt_done(&archiveEntryInfo->link.chunkLinkEntry.cryptInfo);
-      }
     }
     if (error == ERROR_NONE)
     {
@@ -7031,11 +6878,6 @@ Errors Archive_readLinkEntry(ArchiveEntryInfo          *archiveEntryInfo,
       if (error == ERROR_NONE)
       {
         AUTOFREE_ADD(&autoFreeList2,&archiveEntryInfo->link.chunkLinkExtendedAttribute.info,ChunkInfo*,{ Chunk_done(resource); });
-      }
-      else
-      {
-        Crypt_done(&archiveEntryInfo->link.chunkLinkExtendedAttribute.cryptInfo);
-        Crypt_done(&archiveEntryInfo->link.chunkLinkEntry.cryptInfo);
       }
     }
 
@@ -7135,11 +6977,6 @@ Errors Archive_readLinkEntry(ArchiveEntryInfo          *archiveEntryInfo,
       {
         // free resources
         AutoFree_freeAll(&autoFreeList2);
-        Chunk_done(&archiveEntryInfo->link.chunkLinkExtendedAttribute.info);
-        Chunk_done(&archiveEntryInfo->link.chunkLinkEntry.info);
-
-        Crypt_done(&archiveEntryInfo->link.chunkLinkExtendedAttribute.cryptInfo);
-        Crypt_done(&archiveEntryInfo->link.chunkLinkEntry.cryptInfo);
       }
     }
 
@@ -7405,9 +7242,6 @@ Errors Archive_readHardLinkEntry(ArchiveEntryInfo          *archiveEntryInfo,
       {
         AUTOFREE_ADD(&autoFreeList2,&archiveEntryInfo->hardLink.chunkHardLinkEntry.cryptInfo,CryptInfo*,{ Crypt_done(resource); });
       }
-      else
-      {
-      }
     }
     if (error == ERROR_NONE)
     {
@@ -7418,10 +7252,6 @@ Errors Archive_readHardLinkEntry(ArchiveEntryInfo          *archiveEntryInfo,
       if (error == ERROR_NONE)
       {
         AUTOFREE_ADD(&autoFreeList2,&archiveEntryInfo->hardLink.chunkHardLinkExtendedAttribute.cryptInfo,CryptInfo*,{ Crypt_done(resource); });
-      }
-      else
-      {
-        Crypt_done(&archiveEntryInfo->hardLink.chunkHardLinkEntry.cryptInfo);
       }
     }
     if (error == ERROR_NONE)
@@ -7434,11 +7264,6 @@ Errors Archive_readHardLinkEntry(ArchiveEntryInfo          *archiveEntryInfo,
       {
         AUTOFREE_ADD(&autoFreeList2,&archiveEntryInfo->hardLink.chunkHardLinkName.cryptInfo,CryptInfo*,{ Crypt_done(resource); });
       }
-      else
-      {
-        Crypt_done(&archiveEntryInfo->hardLink.chunkHardLinkExtendedAttribute.cryptInfo);
-        Crypt_done(&archiveEntryInfo->hardLink.chunkHardLinkEntry.cryptInfo);
-      }
     }
     if (error == ERROR_NONE)
     {
@@ -7449,12 +7274,6 @@ Errors Archive_readHardLinkEntry(ArchiveEntryInfo          *archiveEntryInfo,
       if (error == ERROR_NONE)
       {
         AUTOFREE_ADD(&autoFreeList2,&archiveEntryInfo->hardLink.chunkHardLinkDelta.cryptInfo,CryptInfo*,{ Crypt_done(resource); });
-      }
-      else
-      {
-        Crypt_done(&archiveEntryInfo->hardLink.chunkHardLinkName.cryptInfo);
-        Crypt_done(&archiveEntryInfo->hardLink.chunkHardLinkExtendedAttribute.cryptInfo);
-        Crypt_done(&archiveEntryInfo->hardLink.chunkHardLinkEntry.cryptInfo);
       }
     }
     if (error == ERROR_NONE)
@@ -7467,13 +7286,6 @@ Errors Archive_readHardLinkEntry(ArchiveEntryInfo          *archiveEntryInfo,
       {
         AUTOFREE_ADD(&autoFreeList2,&archiveEntryInfo->hardLink.chunkHardLinkData.cryptInfo,CryptInfo*,{ Crypt_done(resource); });
       }
-      else
-      {
-        Crypt_done(&archiveEntryInfo->hardLink.chunkHardLinkDelta.cryptInfo);
-        Crypt_done(&archiveEntryInfo->hardLink.chunkHardLinkName.cryptInfo);
-        Crypt_done(&archiveEntryInfo->hardLink.chunkHardLinkExtendedAttribute.cryptInfo);
-        Crypt_done(&archiveEntryInfo->hardLink.chunkHardLinkEntry.cryptInfo);
-      }
     }
     if (error == ERROR_NONE)
     {
@@ -7484,14 +7296,6 @@ Errors Archive_readHardLinkEntry(ArchiveEntryInfo          *archiveEntryInfo,
       if (error == ERROR_NONE)
       {
         AUTOFREE_ADD(&autoFreeList2,&archiveEntryInfo->hardLink.cryptInfo,CryptInfo*,{ Crypt_done(resource); });
-      }
-      else
-      {
-        Crypt_done(&archiveEntryInfo->hardLink.chunkHardLinkData.cryptInfo);
-        Crypt_done(&archiveEntryInfo->hardLink.chunkHardLinkDelta.cryptInfo);
-        Crypt_done(&archiveEntryInfo->hardLink.chunkHardLinkName.cryptInfo);
-        Crypt_done(&archiveEntryInfo->hardLink.chunkHardLinkExtendedAttribute.cryptInfo);
-        Crypt_done(&archiveEntryInfo->hardLink.chunkHardLinkEntry.cryptInfo);
       }
     }
 
@@ -7512,15 +7316,6 @@ Errors Archive_readHardLinkEntry(ArchiveEntryInfo          *archiveEntryInfo,
       {
         AUTOFREE_ADD(&autoFreeList2,&archiveEntryInfo->hardLink.chunkHardLinkEntry.info,ChunkInfo*,{ Chunk_done(resource); });
       }
-      else
-      {
-        Crypt_done(&archiveEntryInfo->hardLink.cryptInfo);
-        Crypt_done(&archiveEntryInfo->hardLink.chunkHardLinkData.cryptInfo);
-        Crypt_done(&archiveEntryInfo->hardLink.chunkHardLinkDelta.cryptInfo);
-        Crypt_done(&archiveEntryInfo->hardLink.chunkHardLinkName.cryptInfo);
-        Crypt_done(&archiveEntryInfo->hardLink.chunkHardLinkExtendedAttribute.cryptInfo);
-        Crypt_done(&archiveEntryInfo->hardLink.chunkHardLinkEntry.cryptInfo);
-      }
     }
     if (error == ERROR_NONE)
     {
@@ -7537,16 +7332,6 @@ Errors Archive_readHardLinkEntry(ArchiveEntryInfo          *archiveEntryInfo,
       if (error == ERROR_NONE)
       {
         AUTOFREE_ADD(&autoFreeList2,&archiveEntryInfo->hardLink.chunkHardLinkExtendedAttribute.info,ChunkInfo*,{ Chunk_done(resource); });
-      }
-      else
-      {
-        Chunk_done(&archiveEntryInfo->hardLink.chunkHardLinkEntry.info);
-        Crypt_done(&archiveEntryInfo->hardLink.cryptInfo);
-        Crypt_done(&archiveEntryInfo->hardLink.chunkHardLinkData.cryptInfo);
-        Crypt_done(&archiveEntryInfo->hardLink.chunkHardLinkDelta.cryptInfo);
-        Crypt_done(&archiveEntryInfo->hardLink.chunkHardLinkName.cryptInfo);
-        Crypt_done(&archiveEntryInfo->hardLink.chunkHardLinkExtendedAttribute.cryptInfo);
-        Crypt_done(&archiveEntryInfo->hardLink.chunkHardLinkEntry.cryptInfo);
       }
     }
     if (error == ERROR_NONE)
@@ -7565,17 +7350,6 @@ Errors Archive_readHardLinkEntry(ArchiveEntryInfo          *archiveEntryInfo,
       {
         AUTOFREE_ADD(&autoFreeList2,&archiveEntryInfo->hardLink.chunkHardLinkName.info,ChunkInfo*,{ Chunk_done(resource); });
       }
-      else
-      {
-        Chunk_done(&archiveEntryInfo->hardLink.chunkHardLinkExtendedAttribute.info);
-        Chunk_done(&archiveEntryInfo->hardLink.chunkHardLinkEntry.info);
-        Crypt_done(&archiveEntryInfo->hardLink.cryptInfo);
-        Crypt_done(&archiveEntryInfo->hardLink.chunkHardLinkData.cryptInfo);
-        Crypt_done(&archiveEntryInfo->hardLink.chunkHardLinkDelta.cryptInfo);
-        Crypt_done(&archiveEntryInfo->hardLink.chunkHardLinkName.cryptInfo);
-        Crypt_done(&archiveEntryInfo->hardLink.chunkHardLinkExtendedAttribute.cryptInfo);
-        Crypt_done(&archiveEntryInfo->hardLink.chunkHardLinkEntry.cryptInfo);
-      }
     }
     if (error == ERROR_NONE)
     {
@@ -7593,18 +7367,6 @@ Errors Archive_readHardLinkEntry(ArchiveEntryInfo          *archiveEntryInfo,
       {
         AUTOFREE_ADD(&autoFreeList2,&archiveEntryInfo->hardLink.chunkHardLinkDelta.info,ChunkInfo*,{ Chunk_done(resource); });
       }
-      else
-      {
-        Chunk_done(&archiveEntryInfo->hardLink.chunkHardLinkName.info);
-        Chunk_done(&archiveEntryInfo->hardLink.chunkHardLinkExtendedAttribute.info);
-        Chunk_done(&archiveEntryInfo->hardLink.chunkHardLinkEntry.info);
-        Crypt_done(&archiveEntryInfo->hardLink.cryptInfo);
-        Crypt_done(&archiveEntryInfo->hardLink.chunkHardLinkData.cryptInfo);
-        Crypt_done(&archiveEntryInfo->hardLink.chunkHardLinkDelta.cryptInfo);
-        Crypt_done(&archiveEntryInfo->hardLink.chunkHardLinkName.cryptInfo);
-        Crypt_done(&archiveEntryInfo->hardLink.chunkHardLinkExtendedAttribute.cryptInfo);
-        Crypt_done(&archiveEntryInfo->hardLink.chunkHardLinkEntry.cryptInfo);
-      }
     }
     if (error == ERROR_NONE)
     {
@@ -7621,19 +7383,6 @@ Errors Archive_readHardLinkEntry(ArchiveEntryInfo          *archiveEntryInfo,
       if (error == ERROR_NONE)
       {
         AUTOFREE_ADD(&autoFreeList2,&archiveEntryInfo->hardLink.chunkHardLinkData.info,ChunkInfo*,{ Chunk_done(resource); });
-      }
-      else
-      {
-        Chunk_done(&archiveEntryInfo->hardLink.chunkHardLinkDelta.info);
-        Chunk_done(&archiveEntryInfo->hardLink.chunkHardLinkName.info);
-        Chunk_done(&archiveEntryInfo->hardLink.chunkHardLinkExtendedAttribute.info);
-        Chunk_done(&archiveEntryInfo->hardLink.chunkHardLinkEntry.info);
-        Crypt_done(&archiveEntryInfo->hardLink.cryptInfo);
-        Crypt_done(&archiveEntryInfo->hardLink.chunkHardLinkData.cryptInfo);
-        Crypt_done(&archiveEntryInfo->hardLink.chunkHardLinkDelta.cryptInfo);
-        Crypt_done(&archiveEntryInfo->hardLink.chunkHardLinkName.cryptInfo);
-        Crypt_done(&archiveEntryInfo->hardLink.chunkHardLinkExtendedAttribute.cryptInfo);
-        Crypt_done(&archiveEntryInfo->hardLink.chunkHardLinkEntry.cryptInfo);
       }
     }
 
@@ -7784,18 +7533,6 @@ Errors Archive_readHardLinkEntry(ArchiveEntryInfo          *archiveEntryInfo,
       {
         // free resources
         AutoFree_freeAll(&autoFreeList2);
-        Chunk_done(&archiveEntryInfo->hardLink.chunkHardLinkData.info);
-        Chunk_done(&archiveEntryInfo->hardLink.chunkHardLinkDelta.info);
-        Chunk_done(&archiveEntryInfo->hardLink.chunkHardLinkName.info);
-        Chunk_done(&archiveEntryInfo->hardLink.chunkHardLinkExtendedAttribute.info);
-        Chunk_done(&archiveEntryInfo->hardLink.chunkHardLinkEntry.info);
-
-        Crypt_done(&archiveEntryInfo->hardLink.cryptInfo);
-        Crypt_done(&archiveEntryInfo->hardLink.chunkHardLinkData.cryptInfo);
-        Crypt_done(&archiveEntryInfo->hardLink.chunkHardLinkDelta.cryptInfo);
-        Crypt_done(&archiveEntryInfo->hardLink.chunkHardLinkName.cryptInfo);
-        Crypt_done(&archiveEntryInfo->hardLink.chunkHardLinkExtendedAttribute.cryptInfo);
-        Crypt_done(&archiveEntryInfo->hardLink.chunkHardLinkEntry.cryptInfo);
       }
     }
 
@@ -8028,9 +7765,6 @@ Errors Archive_readSpecialEntry(ArchiveEntryInfo          *archiveEntryInfo,
       {
         AUTOFREE_ADD(&autoFreeList2,&archiveEntryInfo->special.chunkSpecialEntry.cryptInfo,CryptInfo*,{ Crypt_done(resource); });
       }
-      else
-      {
-      }
     }
     if (error == ERROR_NONE)
     {
@@ -8041,10 +7775,6 @@ Errors Archive_readSpecialEntry(ArchiveEntryInfo          *archiveEntryInfo,
       if (error == ERROR_NONE)
       {
         AUTOFREE_ADD(&autoFreeList2,&archiveEntryInfo->special.chunkSpecialExtendedAttribute.cryptInfo,CryptInfo*,{ Crypt_done(resource); });
-      }
-      else
-      {
-        Crypt_done(&archiveEntryInfo->special.chunkSpecialEntry.cryptInfo);
       }
     }
 
@@ -8065,11 +7795,6 @@ Errors Archive_readSpecialEntry(ArchiveEntryInfo          *archiveEntryInfo,
       {
         AUTOFREE_ADD(&autoFreeList2,&archiveEntryInfo->special.chunkSpecialEntry.info,ChunkInfo*,{ Chunk_done(resource); });
       }
-      else
-      {
-        Crypt_done(&archiveEntryInfo->special.chunkSpecialExtendedAttribute.cryptInfo);
-        Crypt_done(&archiveEntryInfo->special.chunkSpecialEntry.cryptInfo);
-      }
     }
     if (error == ERROR_NONE)
     {
@@ -8086,12 +7811,6 @@ Errors Archive_readSpecialEntry(ArchiveEntryInfo          *archiveEntryInfo,
       if (error == ERROR_NONE)
       {
         AUTOFREE_ADD(&autoFreeList2,&archiveEntryInfo->special.chunkSpecialExtendedAttribute.info,ChunkInfo*,{ Chunk_done(resource); });
-      }
-      else
-      {
-        Chunk_done(&archiveEntryInfo->special.chunkSpecialEntry.info);
-        Crypt_done(&archiveEntryInfo->special.chunkSpecialExtendedAttribute.cryptInfo);
-        Crypt_done(&archiveEntryInfo->special.chunkSpecialEntry.cryptInfo);
       }
     }
 
@@ -8193,11 +7912,6 @@ Errors Archive_readSpecialEntry(ArchiveEntryInfo          *archiveEntryInfo,
       {
         // free resources
         AutoFree_freeAll(&autoFreeList2);
-        Chunk_done(&archiveEntryInfo->special.chunkSpecialExtendedAttribute.info);
-        Chunk_done(&archiveEntryInfo->special.chunkSpecialEntry.info);
-
-        Crypt_done(&archiveEntryInfo->special.chunkSpecialExtendedAttribute.cryptInfo);
-        Crypt_done(&archiveEntryInfo->special.chunkSpecialEntry.cryptInfo);
       }
     }
 
