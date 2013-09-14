@@ -16,6 +16,7 @@
 #include <assert.h>
 
 #include "global.h"
+#include "autofree.h"
 #include "strings.h"
 #include "lists.h"
 #include "files.h"
@@ -1129,7 +1130,6 @@ LOCAL Errors writeFileChunks(ArchiveEntryInfo *archiveEntryInfo)
   // create extended attribute chunks
   LIST_ITERATE(archiveEntryInfo->file.fileExtendedAttributeList,fileExtendedAttributeNode)
   {
-#warning todo
     String_set(archiveEntryInfo->file.chunkFileExtendedAttribute.name,fileExtendedAttributeNode->name);
     archiveEntryInfo->file.chunkFileExtendedAttribute.value.data   = fileExtendedAttributeNode->data;
     archiveEntryInfo->file.chunkFileExtendedAttribute.value.length = fileExtendedAttributeNode->dataLength;
@@ -2141,9 +2141,10 @@ LOCAL Errors readImageDataBlock(ArchiveEntryInfo *archiveEntryInfo)
 
 LOCAL Errors writeHardLinkChunks(ArchiveEntryInfo *archiveEntryInfo)
 {
-  Errors     error;
-  StringNode *stringNode;
-  String     fileName;
+  Errors                    error;
+  StringNode                *stringNode;
+  String                    fileName;
+  FileExtendedAttributeNode *fileExtendedAttributeNode;
 
   assert(archiveEntryInfo != NULL);
   assert(archiveEntryInfo->archiveInfo != NULL);
@@ -2174,6 +2175,33 @@ LOCAL Errors writeHardLinkChunks(ArchiveEntryInfo *archiveEntryInfo)
       return error;
     }
     error = Chunk_close(&archiveEntryInfo->hardLink.chunkHardLinkName.info);
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
+  }
+
+  // create extended attribute chunks
+  LIST_ITERATE(archiveEntryInfo->hardLink.fileExtendedAttributeList,fileExtendedAttributeNode)
+  {
+    String_set(archiveEntryInfo->hardLink.chunkHardLinkExtendedAttribute.name,fileExtendedAttributeNode->name);
+    archiveEntryInfo->hardLink.chunkHardLinkExtendedAttribute.value.data   = fileExtendedAttributeNode->data;
+    archiveEntryInfo->hardLink.chunkHardLinkExtendedAttribute.value.length = fileExtendedAttributeNode->dataLength;
+
+    error = Chunk_create(&archiveEntryInfo->hardLink.chunkHardLinkExtendedAttribute.info);
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
+    error = Chunk_writeData(&archiveEntryInfo->hardLink.chunkHardLinkExtendedAttribute.info,
+                            fileExtendedAttributeNode->data,
+                            fileExtendedAttributeNode->dataLength
+                           );
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
+    error = Chunk_close(&archiveEntryInfo->hardLink.chunkHardLinkExtendedAttribute.info);
     if (error != ERROR_NONE)
     {
       return error;
@@ -3323,6 +3351,7 @@ Errors Archive_newFileEntry(ArchiveEntryInfo                *archiveEntryInfo,
                             const bool                      byteCompressFlag
                            )
 {
+  AutoFreeList                    autoFreeList;
   SemaphoreLock                   semaphoreLock;
   Errors                          error;
   const FileExtendedAttributeNode *fileExtendedAttributeNode;
@@ -3331,6 +3360,9 @@ Errors Archive_newFileEntry(ArchiveEntryInfo                *archiveEntryInfo,
   assert(archiveInfo != NULL);
   assert(archiveInfo->jobOptions != NULL);
   assert(fileInfo != NULL);
+
+  // init variables
+  AutoFree_init(&autoFreeList);
 
   // init crypt password
   if ((archiveInfo->jobOptions->cryptAlgorithm != CRYPT_ALGORITHM_NONE) && (archiveInfo->cryptPassword == NULL))
@@ -3350,6 +3382,7 @@ Errors Archive_newFileEntry(ArchiveEntryInfo                *archiveEntryInfo,
     }
     if (archiveInfo->cryptPassword == NULL)
     {
+      AutoFree_freeDone(&autoFreeList);
       return ERROR_NO_CRYPT_PASSWORD;
     }
   }
@@ -3383,8 +3416,10 @@ Errors Archive_newFileEntry(ArchiveEntryInfo                *archiveEntryInfo,
   DEBUG_TEST_CODE("Archive_newFileEntry1") { (void)File_close(&archiveEntryInfo->file.tmpFileHandle); error = ERROR_UNKNOWN; }
   if (error != ERROR_NONE)
   {
+    AutoFree_freeDone(&autoFreeList);
     return error;
   }
+  AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->file.tmpFileHandle,FileHandle*,{ (void)File_close(resource); });
 
   // allocate buffers
   archiveEntryInfo->file.byteBufferSize = FLOOR(MAX_BUFFER_SIZE,archiveEntryInfo->blockLength);
@@ -3393,12 +3428,14 @@ Errors Archive_newFileEntry(ArchiveEntryInfo                *archiveEntryInfo,
   {
     HALT_INSUFFICIENT_MEMORY();
   }
+  AUTOFREE_ADD(&autoFreeList,archiveEntryInfo->file.byteBuffer,void*,{ free(resource); });
   archiveEntryInfo->file.deltaBufferSize = MAX_BUFFER_SIZE;
   archiveEntryInfo->file.deltaBuffer = (byte*)malloc(archiveEntryInfo->file.deltaBufferSize);
   if (archiveEntryInfo->file.deltaBuffer == NULL)
   {
     HALT_INSUFFICIENT_MEMORY();
   }
+  AUTOFREE_ADD(&autoFreeList,archiveEntryInfo->file.deltaBuffer,void*,{ free(resource); });
 
   // get source for delta-compression
   if (deltaCompressFlag)
@@ -3413,12 +3450,11 @@ Errors Archive_newFileEntry(ArchiveEntryInfo                *archiveEntryInfo,
     {
       archiveEntryInfo->file.sourceHandleInitFlag   = TRUE;
       archiveEntryInfo->file.deltaCompressAlgorithm = archiveInfo->jobOptions->compressAlgorithm.delta;
+      AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->file.sourceHandle,SourceHandle*,{ Source_closeEntry(resource); });
     }
     else if (archiveInfo->jobOptions->forceDeltaCompressionFlag)
     {
-      free(archiveEntryInfo->file.deltaBuffer);
-      free(archiveEntryInfo->file.byteBuffer);
-      (void)File_close(&archiveEntryInfo->file.tmpFileHandle);
+      AutoFree_freeDone(&autoFreeList);
       return error;
     }
     else
@@ -3446,14 +3482,12 @@ Errors Archive_newFileEntry(ArchiveEntryInfo                *archiveEntryInfo,
   DEBUG_TEST_CODE("Archive_newFileEntry2") { Chunk_done(&archiveEntryInfo->file.chunkFile.info); error = ERROR_UNKNOWN; }
   if (error != ERROR_NONE)
   {
-    if (archiveEntryInfo->file.sourceHandleInitFlag) Source_closeEntry(&archiveEntryInfo->file.sourceHandle);
-    free(archiveEntryInfo->file.deltaBuffer);
-    free(archiveEntryInfo->file.byteBuffer);
-    (void)File_close(&archiveEntryInfo->file.tmpFileHandle);
+    AutoFree_freeDone(&autoFreeList);
     return error;
   }
   archiveEntryInfo->file.chunkFile.compressAlgorithm = COMPRESS_ALGORITHM_TO_CONSTANT(archiveEntryInfo->file.byteCompressAlgorithm);
   archiveEntryInfo->file.chunkFile.cryptAlgorithm    = CRYPT_ALGORITHM_TO_CONSTANT(archiveInfo->jobOptions->cryptAlgorithm);
+  AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->file.chunkFile.info,ChunkInfo*,{ Chunk_done(resource); });
 
   // init crypt
   error = Crypt_init(&archiveEntryInfo->file.chunkFileEntry.cryptInfo,
@@ -3463,14 +3497,10 @@ Errors Archive_newFileEntry(ArchiveEntryInfo                *archiveEntryInfo,
   DEBUG_TEST_CODE("Archive_newFileEntry3") { Crypt_done(&archiveEntryInfo->file.chunkFileEntry.cryptInfo); error = ERROR_UNKNOWN; }
   if (error != ERROR_NONE)
   {
-    Chunk_done(&archiveEntryInfo->file.chunkFile.info);
-
-    if (archiveEntryInfo->file.sourceHandleInitFlag) Source_closeEntry(&archiveEntryInfo->file.sourceHandle);
-    free(archiveEntryInfo->file.deltaBuffer);
-    free(archiveEntryInfo->file.byteBuffer);
-    (void)File_close(&archiveEntryInfo->file.tmpFileHandle);
+    AutoFree_freeDone(&autoFreeList);
     return error;
   }
+  AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->file.chunkFileEntry.cryptInfo,CryptInfo*,{ Crypt_done(resource); });
 
   error = Crypt_init(&archiveEntryInfo->file.chunkFileExtendedAttribute.cryptInfo,
                      archiveInfo->jobOptions->cryptAlgorithm,
@@ -3479,16 +3509,10 @@ Errors Archive_newFileEntry(ArchiveEntryInfo                *archiveEntryInfo,
   DEBUG_TEST_CODE("Archive_newFileEntry5") { Crypt_done(&archiveEntryInfo->file.chunkFileExtendedAttribute.cryptInfo); error = ERROR_UNKNOWN; }
   if (error != ERROR_NONE)
   {
-    Crypt_done(&archiveEntryInfo->file.chunkFileEntry.cryptInfo);
-
-    Chunk_done(&archiveEntryInfo->file.chunkFile.info);
-
-    if (archiveEntryInfo->file.sourceHandleInitFlag) Source_closeEntry(&archiveEntryInfo->file.sourceHandle);
-    free(archiveEntryInfo->file.deltaBuffer);
-    free(archiveEntryInfo->file.byteBuffer);
-    (void)File_close(&archiveEntryInfo->file.tmpFileHandle);
+    AutoFree_freeDone(&autoFreeList);
     return error;
   }
+  AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->file.chunkFileExtendedAttribute.cryptInfo,CryptInfo*,{ Crypt_done(resource); });
 
   error = Crypt_init(&archiveEntryInfo->file.chunkFileDelta.cryptInfo,
                      archiveInfo->jobOptions->cryptAlgorithm,
@@ -3497,17 +3521,10 @@ Errors Archive_newFileEntry(ArchiveEntryInfo                *archiveEntryInfo,
   DEBUG_TEST_CODE("Archive_newFileEntry7") { Crypt_done(&archiveEntryInfo->file.chunkFileDelta.cryptInfo); error = ERROR_UNKNOWN; }
   if (error != ERROR_NONE)
   {
-    Crypt_done(&archiveEntryInfo->file.chunkFileExtendedAttribute.cryptInfo);
-    Crypt_done(&archiveEntryInfo->file.chunkFileEntry.cryptInfo);
-
-    Chunk_done(&archiveEntryInfo->file.chunkFile.info);
-
-    if (archiveEntryInfo->file.sourceHandleInitFlag) Source_closeEntry(&archiveEntryInfo->file.sourceHandle);
-    free(archiveEntryInfo->file.deltaBuffer);
-    free(archiveEntryInfo->file.byteBuffer);
-    (void)File_close(&archiveEntryInfo->file.tmpFileHandle);
+    AutoFree_freeDone(&autoFreeList);
     return error;
   }
+  AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->file.chunkFileDelta.cryptInfo,CryptInfo*,{ Crypt_done(resource); });
 
   error = Crypt_init(&archiveEntryInfo->file.chunkFileData.cryptInfo,
                      archiveInfo->jobOptions->cryptAlgorithm,
@@ -3516,18 +3533,10 @@ Errors Archive_newFileEntry(ArchiveEntryInfo                *archiveEntryInfo,
   DEBUG_TEST_CODE("Archive_newFileEntry9") { Crypt_done(&archiveEntryInfo->file.chunkFileData.cryptInfo); error = ERROR_UNKNOWN; }
   if (error != ERROR_NONE)
   {
-    Crypt_done(&archiveEntryInfo->file.chunkFileDelta.cryptInfo);
-    Crypt_done(&archiveEntryInfo->file.chunkFileExtendedAttribute.cryptInfo);
-    Crypt_done(&archiveEntryInfo->file.chunkFileEntry.cryptInfo);
-
-    Chunk_done(&archiveEntryInfo->file.chunkFile.info);
-
-    if (archiveEntryInfo->file.sourceHandleInitFlag) Source_closeEntry(&archiveEntryInfo->file.sourceHandle);
-    free(archiveEntryInfo->file.deltaBuffer);
-    free(archiveEntryInfo->file.byteBuffer);
-    (void)File_close(&archiveEntryInfo->file.tmpFileHandle);
+    AutoFree_freeDone(&autoFreeList);
     return error;
   }
+  AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->file.chunkFileData.cryptInfo,CryptInfo*,{ Crypt_done(resource); });
 
   error = Crypt_init(&archiveEntryInfo->file.cryptInfo,
                      archiveInfo->jobOptions->cryptAlgorithm,
@@ -3536,19 +3545,10 @@ Errors Archive_newFileEntry(ArchiveEntryInfo                *archiveEntryInfo,
   DEBUG_TEST_CODE("Archive_newFileEntry13") { Crypt_done(&archiveEntryInfo->file.cryptInfo); error = ERROR_UNKNOWN; }
   if (error != ERROR_NONE)
   {
-    Crypt_done(&archiveEntryInfo->file.chunkFileData.cryptInfo);
-    Crypt_done(&archiveEntryInfo->file.chunkFileDelta.cryptInfo);
-    Crypt_done(&archiveEntryInfo->file.chunkFileExtendedAttribute.cryptInfo);
-    Crypt_done(&archiveEntryInfo->file.chunkFileEntry.cryptInfo);
-
-    Chunk_done(&archiveEntryInfo->file.chunkFile.info);
-
-    if (archiveEntryInfo->file.sourceHandleInitFlag) Source_closeEntry(&archiveEntryInfo->file.sourceHandle);
-    free(archiveEntryInfo->file.deltaBuffer);
-    free(archiveEntryInfo->file.byteBuffer);
-    (void)File_close(&archiveEntryInfo->file.tmpFileHandle);
+    AutoFree_freeDone(&autoFreeList);
     return error;
   }
+  AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->file.cryptInfo,CryptInfo*,{ Crypt_done(resource); });
 
   // init sub-chunks
   error = Chunk_init(&archiveEntryInfo->file.chunkFileEntry.info,
@@ -3564,18 +3564,7 @@ Errors Archive_newFileEntry(ArchiveEntryInfo                *archiveEntryInfo,
   DEBUG_TEST_CODE("Archive_newFileEntry4") { Chunk_done(&archiveEntryInfo->file.chunkFileEntry.info); error = ERROR_UNKNOWN; }
   if (error != ERROR_NONE)
   {
-    Crypt_done(&archiveEntryInfo->file.cryptInfo);
-    Crypt_done(&archiveEntryInfo->file.chunkFileData.cryptInfo);
-    Crypt_done(&archiveEntryInfo->file.chunkFileDelta.cryptInfo);
-    Crypt_done(&archiveEntryInfo->file.chunkFileExtendedAttribute.cryptInfo);
-    Crypt_done(&archiveEntryInfo->file.chunkFileEntry.cryptInfo);
-
-    Chunk_done(&archiveEntryInfo->file.chunkFile.info);
-
-    if (archiveEntryInfo->file.sourceHandleInitFlag) Source_closeEntry(&archiveEntryInfo->file.sourceHandle);
-    free(archiveEntryInfo->file.deltaBuffer);
-    free(archiveEntryInfo->file.byteBuffer);
-    (void)File_close(&archiveEntryInfo->file.tmpFileHandle);
+    AutoFree_freeDone(&autoFreeList);
     return error;
   }
   archiveEntryInfo->file.chunkFileEntry.size            = fileInfo->size;
@@ -3586,6 +3575,7 @@ Errors Archive_newFileEntry(ArchiveEntryInfo                *archiveEntryInfo,
   archiveEntryInfo->file.chunkFileEntry.groupId         = fileInfo->groupId;
   archiveEntryInfo->file.chunkFileEntry.permission      = fileInfo->permission;
   String_set(archiveEntryInfo->file.chunkFileEntry.name,fileName);
+  AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->file.chunkFileEntry.info,ChunkInfo*,{ Chunk_done(resource); });
 
   error = Chunk_init(&archiveEntryInfo->file.chunkFileExtendedAttribute.info,
                      &archiveEntryInfo->file.chunkFile.info,
@@ -3600,22 +3590,10 @@ Errors Archive_newFileEntry(ArchiveEntryInfo                *archiveEntryInfo,
   DEBUG_TEST_CODE("Archive_newFileEntry6") { Chunk_done(&archiveEntryInfo->file.chunkFileExtendedAttribute.info); error = ERROR_UNKNOWN; }
   if (error != ERROR_NONE)
   {
-    Chunk_done(&archiveEntryInfo->file.chunkFileEntry.info);
-
-    Crypt_done(&archiveEntryInfo->file.cryptInfo);
-    Crypt_done(&archiveEntryInfo->file.chunkFileData.cryptInfo);
-    Crypt_done(&archiveEntryInfo->file.chunkFileDelta.cryptInfo);
-    Crypt_done(&archiveEntryInfo->file.chunkFileExtendedAttribute.cryptInfo);
-    Crypt_done(&archiveEntryInfo->file.chunkFileEntry.cryptInfo);
-
-    Chunk_done(&archiveEntryInfo->file.chunkFile.info);
-
-    if (archiveEntryInfo->file.sourceHandleInitFlag) Source_closeEntry(&archiveEntryInfo->file.sourceHandle);
-    free(archiveEntryInfo->file.deltaBuffer);
-    free(archiveEntryInfo->file.byteBuffer);
-    (void)File_close(&archiveEntryInfo->file.tmpFileHandle);
+    AutoFree_freeDone(&autoFreeList);
     return error;
   }
+  AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->file.chunkFileExtendedAttribute.info,ChunkInfo*,{ Chunk_done(resource); });
 
   error = Chunk_init(&archiveEntryInfo->file.chunkFileDelta.info,
                      &archiveEntryInfo->file.chunkFile.info,
@@ -3630,21 +3608,7 @@ Errors Archive_newFileEntry(ArchiveEntryInfo                *archiveEntryInfo,
   DEBUG_TEST_CODE("Archive_newFileEntry8") { Chunk_done(&archiveEntryInfo->file.chunkFileDelta.info); error = ERROR_UNKNOWN; }
   if (error != ERROR_NONE)
   {
-    Chunk_done(&archiveEntryInfo->file.chunkFileExtendedAttribute.info);
-    Chunk_done(&archiveEntryInfo->file.chunkFileEntry.info);
-
-    Crypt_done(&archiveEntryInfo->file.cryptInfo);
-    Crypt_done(&archiveEntryInfo->file.chunkFileData.cryptInfo);
-    Crypt_done(&archiveEntryInfo->file.chunkFileDelta.cryptInfo);
-    Crypt_done(&archiveEntryInfo->file.chunkFileExtendedAttribute.cryptInfo);
-    Crypt_done(&archiveEntryInfo->file.chunkFileEntry.cryptInfo);
-
-    Chunk_done(&archiveEntryInfo->file.chunkFile.info);
-
-    if (archiveEntryInfo->file.sourceHandleInitFlag) Source_closeEntry(&archiveEntryInfo->file.sourceHandle);
-    free(archiveEntryInfo->file.deltaBuffer);
-    free(archiveEntryInfo->file.byteBuffer);
-    (void)File_close(&archiveEntryInfo->file.tmpFileHandle);
+    AutoFree_freeDone(&autoFreeList);
     return error;
   }
   if (Compress_isCompressed(archiveEntryInfo->file.deltaCompressAlgorithm))
@@ -3655,6 +3619,7 @@ Errors Archive_newFileEntry(ArchiveEntryInfo                *archiveEntryInfo,
     String_set(archiveEntryInfo->file.chunkFileDelta.name,Source_getName(&archiveEntryInfo->file.sourceHandle));
     archiveEntryInfo->file.chunkFileDelta.size = Source_getSize(&archiveEntryInfo->file.sourceHandle);
   }
+  AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->file.chunkFileDelta.info,ChunkInfo*,{ Chunk_done(resource); });
 
   error = Chunk_init(&archiveEntryInfo->file.chunkFileData.info,
                      &archiveEntryInfo->file.chunkFile.info,
@@ -3669,86 +3634,41 @@ Errors Archive_newFileEntry(ArchiveEntryInfo                *archiveEntryInfo,
   DEBUG_TEST_CODE("Archive_newFileEntry10") { Chunk_done(&archiveEntryInfo->file.chunkFileData.info); error = ERROR_UNKNOWN; }
   if (error != ERROR_NONE)
   {
-    Chunk_done(&archiveEntryInfo->file.chunkFileDelta.info);
-    Chunk_done(&archiveEntryInfo->file.chunkFileExtendedAttribute.info);
-    Chunk_done(&archiveEntryInfo->file.chunkFileEntry.info);
-
-    Crypt_done(&archiveEntryInfo->file.cryptInfo);
-    Crypt_done(&archiveEntryInfo->file.chunkFileData.cryptInfo);
-    Crypt_done(&archiveEntryInfo->file.chunkFileDelta.cryptInfo);
-    Crypt_done(&archiveEntryInfo->file.chunkFileExtendedAttribute.cryptInfo);
-    Crypt_done(&archiveEntryInfo->file.chunkFileEntry.cryptInfo);
-
-    Chunk_done(&archiveEntryInfo->file.chunkFile.info);
-
-    if (archiveEntryInfo->file.sourceHandleInitFlag) Source_closeEntry(&archiveEntryInfo->file.sourceHandle);
-    free(archiveEntryInfo->file.deltaBuffer);
-    free(archiveEntryInfo->file.byteBuffer);
-    (void)File_close(&archiveEntryInfo->file.tmpFileHandle);
+    AutoFree_freeDone(&autoFreeList);
     return error;
   }
   archiveEntryInfo->file.chunkFileData.fragmentOffset = 0LL;
   archiveEntryInfo->file.chunkFileData.fragmentSize   = 0LL;
+  AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->file.chunkFileData.info,ChunkInfo*,{ Chunk_done(resource); });
 
   // init delta compress (if no delta-compression is enabled, use identity-compressor), byte compress
-  error = Compress_new(&archiveEntryInfo->file.deltaCompressInfo,
-                       COMPRESS_MODE_DEFLATE,
-                       archiveEntryInfo->file.deltaCompressAlgorithm,
-                       1,
-                       &archiveEntryInfo->file.sourceHandle
-                      );
-  DEBUG_TEST_CODE("Archive_newFileEntry11") { Compress_delete(&archiveEntryInfo->file.deltaCompressInfo); error = ERROR_UNKNOWN; }
+  error = Compress_init(&archiveEntryInfo->file.deltaCompressInfo,
+                        COMPRESS_MODE_DEFLATE,
+                        archiveEntryInfo->file.deltaCompressAlgorithm,
+                        1,
+                        &archiveEntryInfo->file.sourceHandle
+                       );
+  DEBUG_TEST_CODE("Archive_newFileEntry11") { Compress_done(&archiveEntryInfo->file.deltaCompressInfo); error = ERROR_UNKNOWN; }
   if (error != ERROR_NONE)
   {
-    Chunk_done(&archiveEntryInfo->file.chunkFileData.info);
-    Chunk_done(&archiveEntryInfo->file.chunkFileDelta.info);
-    Chunk_done(&archiveEntryInfo->file.chunkFileExtendedAttribute.info);
-    Chunk_done(&archiveEntryInfo->file.chunkFileEntry.info);
-
-    Crypt_done(&archiveEntryInfo->file.cryptInfo);
-    Crypt_done(&archiveEntryInfo->file.chunkFileData.cryptInfo);
-    Crypt_done(&archiveEntryInfo->file.chunkFileDelta.cryptInfo);
-    Crypt_done(&archiveEntryInfo->file.chunkFileExtendedAttribute.cryptInfo);
-    Crypt_done(&archiveEntryInfo->file.chunkFileEntry.cryptInfo);
-
-    Chunk_done(&archiveEntryInfo->file.chunkFile.info);
-
-    if (archiveEntryInfo->file.sourceHandleInitFlag) Source_closeEntry(&archiveEntryInfo->file.sourceHandle);
-    free(archiveEntryInfo->file.deltaBuffer);
-    free(archiveEntryInfo->file.byteBuffer);
-    (void)File_close(&archiveEntryInfo->file.tmpFileHandle);
+    AutoFree_freeDone(&autoFreeList);
     return error;
   }
+  AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->file.deltaCompressInfo,CompressInfo*,{ Compress_done(resource); });
 
-  error = Compress_new(&archiveEntryInfo->file.byteCompressInfo,
-                       COMPRESS_MODE_DEFLATE,
-                       archiveEntryInfo->file.byteCompressAlgorithm,
-                       archiveEntryInfo->blockLength,
-                       NULL
-                      );
-  DEBUG_TEST_CODE("Archive_newFileEntry12") { Compress_delete(&archiveEntryInfo->file.byteCompressInfo); error = ERROR_UNKNOWN; }
+  error = Compress_init(&archiveEntryInfo->file.byteCompressInfo,
+                        COMPRESS_MODE_DEFLATE,
+                        archiveEntryInfo->file.byteCompressAlgorithm,
+                        archiveEntryInfo->blockLength,
+                        NULL
+                       );
+  DEBUG_TEST_CODE("Archive_newFileEntry12") { Compress_done(&archiveEntryInfo->file.byteCompressInfo); error = ERROR_UNKNOWN; }
   if (error != ERROR_NONE)
   {
-    Chunk_done(&archiveEntryInfo->file.chunkFileData.info);
-    Compress_delete(&archiveEntryInfo->file.deltaCompressInfo);
-    Chunk_done(&archiveEntryInfo->file.chunkFileDelta.info);
-    Chunk_done(&archiveEntryInfo->file.chunkFileExtendedAttribute.info);
-    Chunk_done(&archiveEntryInfo->file.chunkFileEntry.info);
-
-    Crypt_done(&archiveEntryInfo->file.cryptInfo);
-    Crypt_done(&archiveEntryInfo->file.chunkFileData.cryptInfo);
-    Crypt_done(&archiveEntryInfo->file.chunkFileDelta.cryptInfo);
-    Crypt_done(&archiveEntryInfo->file.chunkFileExtendedAttribute.cryptInfo);
-    Crypt_done(&archiveEntryInfo->file.chunkFileEntry.cryptInfo);
-
-    Chunk_done(&archiveEntryInfo->file.chunkFile.info);
-
-    if (archiveEntryInfo->file.sourceHandleInitFlag) Source_closeEntry(&archiveEntryInfo->file.sourceHandle);
-    free(archiveEntryInfo->file.deltaBuffer);
-    free(archiveEntryInfo->file.byteBuffer);
-    (void)File_close(&archiveEntryInfo->file.tmpFileHandle);
+    AutoFree_freeDone(&autoFreeList);
     return error;
   }
+  AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->file.byteCompressInfo,CompressInfo*,{ Compress_done(resource); });
 
   // calculate header size
   archiveEntryInfo->file.headerLength = Chunk_getSize(CHUNK_DEFINITION_FILE,      0,                            &archiveEntryInfo->file.chunkFile,     0)+
@@ -3783,6 +3703,9 @@ Errors Archive_newFileEntry(ArchiveEntryInfo                *archiveEntryInfo,
   // registers as open archive entry
   registerArchiveEntry(archiveEntryInfo);
 
+  // free resources
+  AutoFree_done(&autoFreeList);
+
   return ERROR_NONE;
 }
 
@@ -3794,6 +3717,7 @@ Errors Archive_newImageEntry(ArchiveEntryInfo *archiveEntryInfo,
                              const bool       byteCompressFlag
                             )
 {
+  AutoFreeList  autoFreeList;
   SemaphoreLock semaphoreLock;
   Errors        error;
 
@@ -3802,6 +3726,9 @@ Errors Archive_newImageEntry(ArchiveEntryInfo *archiveEntryInfo,
   assert(archiveInfo->jobOptions != NULL);
   assert(deviceInfo != NULL);
   assert(deviceInfo->blockSize > 0);
+
+  // init variables
+  AutoFree_init(&autoFreeList);
 
   // init crypt password
   if ((archiveInfo->jobOptions->cryptAlgorithm != CRYPT_ALGORITHM_NONE) && (archiveInfo->cryptPassword == NULL))
@@ -3821,6 +3748,7 @@ Errors Archive_newImageEntry(ArchiveEntryInfo *archiveEntryInfo,
     }
     if (archiveInfo->cryptPassword == NULL)
     {
+      AutoFree_freeDone(&autoFreeList);
       return ERROR_NO_CRYPT_PASSWORD;
     }
   }
@@ -3861,10 +3789,12 @@ Errors Archive_newImageEntry(ArchiveEntryInfo *archiveEntryInfo,
   }
   archiveEntryInfo->image.deltaBufferSize = MAX_BUFFER_SIZE;
   archiveEntryInfo->image.deltaBuffer = (byte*)malloc(archiveEntryInfo->image.deltaBufferSize);
+  AUTOFREE_ADD(&autoFreeList,archiveEntryInfo->image.byteBuffer,void*,{ free(resource); });
   if (archiveEntryInfo->image.deltaBuffer == NULL)
   {
     HALT_INSUFFICIENT_MEMORY();
   }
+  AUTOFREE_ADD(&autoFreeList,archiveEntryInfo->image.deltaBuffer,void*,{ free(resource); });
 
   // get source for delta-compression
   if (deltaCompressFlag)
@@ -3879,13 +3809,13 @@ Errors Archive_newImageEntry(ArchiveEntryInfo *archiveEntryInfo,
     {
       archiveEntryInfo->image.sourceHandleInitFlag   = TRUE;
       archiveEntryInfo->image.deltaCompressAlgorithm = archiveInfo->jobOptions->compressAlgorithm.delta;
+      AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->image.sourceHandle,SourceHandle*,{ Source_closeEntry(resource); });
     }
     else
     {
       if (archiveInfo->jobOptions->forceDeltaCompressionFlag)
       {
-        free(archiveEntryInfo->image.deltaBuffer);
-        free(archiveEntryInfo->image.byteBuffer);
+        AutoFree_freeDone(&autoFreeList);
         return error;
       }
       else
@@ -3911,13 +3841,12 @@ Errors Archive_newImageEntry(ArchiveEntryInfo *archiveEntryInfo,
                     );
   if (error != ERROR_NONE)
   {
-    if (archiveEntryInfo->image.sourceHandleInitFlag) Source_closeEntry(&archiveEntryInfo->image.sourceHandle);
-    free(archiveEntryInfo->image.deltaBuffer);
-    free(archiveEntryInfo->image.byteBuffer);
+    AutoFree_freeDone(&autoFreeList);
     return error;
   }
   archiveEntryInfo->image.chunkImage.compressAlgorithm = COMPRESS_ALGORITHM_TO_CONSTANT(archiveEntryInfo->image.byteCompressAlgorithm);
   archiveEntryInfo->image.chunkImage.cryptAlgorithm    = archiveInfo->jobOptions->cryptAlgorithm;
+  AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->image.chunkImage.info,ChunkInfo*,{ Chunk_done(resource); });
 
   // init crypt
   error = Crypt_init(&archiveEntryInfo->image.chunkImageEntry.cryptInfo,
@@ -3926,13 +3855,10 @@ Errors Archive_newImageEntry(ArchiveEntryInfo *archiveEntryInfo,
                     );
   if (error != ERROR_NONE)
   {
-    Chunk_done(&archiveEntryInfo->image.chunkImage.info);
-
-    if (archiveEntryInfo->image.sourceHandleInitFlag) Source_closeEntry(&archiveEntryInfo->image.sourceHandle);
-    free(archiveEntryInfo->image.deltaBuffer);
-    free(archiveEntryInfo->image.byteBuffer);
+    AutoFree_freeDone(&autoFreeList);
     return error;
   }
+  AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->image.chunkImageEntry.cryptInfo,CryptInfo*,{ Crypt_done(resource); });
 
   error = Crypt_init(&archiveEntryInfo->image.chunkImageDelta.cryptInfo,
                      archiveInfo->jobOptions->cryptAlgorithm,
@@ -3940,13 +3866,10 @@ Errors Archive_newImageEntry(ArchiveEntryInfo *archiveEntryInfo,
                     );
   if (error != ERROR_NONE)
   {
-    Crypt_done(&archiveEntryInfo->image.chunkImageEntry.cryptInfo);
-    Chunk_done(&archiveEntryInfo->image.chunkImage.info);
-    if (archiveEntryInfo->image.sourceHandleInitFlag) Source_closeEntry(&archiveEntryInfo->image.sourceHandle);
-    free(archiveEntryInfo->image.deltaBuffer);
-    free(archiveEntryInfo->image.byteBuffer);
+    AutoFree_freeDone(&autoFreeList);
     return error;
   }
+  AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->image.chunkImageDelta.cryptInfo,CryptInfo*,{ Crypt_done(resource); });
 
   error = Crypt_init(&archiveEntryInfo->image.chunkImageData.cryptInfo,
                      archiveInfo->jobOptions->cryptAlgorithm,
@@ -3954,16 +3877,10 @@ Errors Archive_newImageEntry(ArchiveEntryInfo *archiveEntryInfo,
                     );
   if (error != ERROR_NONE)
   {
-    Crypt_done(&archiveEntryInfo->image.chunkImageDelta.cryptInfo);
-    Crypt_done(&archiveEntryInfo->image.chunkImageEntry.cryptInfo);
-
-    Chunk_done(&archiveEntryInfo->image.chunkImage.info);
-
-    if (archiveEntryInfo->image.sourceHandleInitFlag) Source_closeEntry(&archiveEntryInfo->image.sourceHandle);
-    free(archiveEntryInfo->image.deltaBuffer);
-    free(archiveEntryInfo->image.byteBuffer);
+    AutoFree_freeDone(&autoFreeList);
     return error;
   }
+  AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->image.chunkImageData.cryptInfo,CryptInfo*,{ Crypt_done(resource); });
 
   error = Crypt_init(&archiveEntryInfo->image.cryptInfo,
                      archiveInfo->jobOptions->cryptAlgorithm,
@@ -3971,15 +3888,10 @@ Errors Archive_newImageEntry(ArchiveEntryInfo *archiveEntryInfo,
                     );
   if (error != ERROR_NONE)
   {
-    Crypt_done(&archiveEntryInfo->image.chunkImageData.cryptInfo);
-    Crypt_done(&archiveEntryInfo->image.chunkImageDelta.cryptInfo);
-    Crypt_done(&archiveEntryInfo->image.chunkImageEntry.cryptInfo);
-    Chunk_done(&archiveEntryInfo->image.chunkImage.info);
-    if (archiveEntryInfo->image.sourceHandleInitFlag) Source_closeEntry(&archiveEntryInfo->image.sourceHandle);
-    free(archiveEntryInfo->image.deltaBuffer);
-    free(archiveEntryInfo->image.byteBuffer);
+    AutoFree_freeDone(&autoFreeList);
     return error;
   }
+  AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->image.cryptInfo,CryptInfo*,{ Crypt_done(resource); });
 
   // init sub-chunks
   error = Chunk_init(&archiveEntryInfo->image.chunkImageEntry.info,
@@ -3994,21 +3906,13 @@ Errors Archive_newImageEntry(ArchiveEntryInfo *archiveEntryInfo,
                     );
   if (error != ERROR_NONE)
   {
-    Crypt_done(&archiveEntryInfo->image.cryptInfo);
-    Crypt_done(&archiveEntryInfo->image.chunkImageData.cryptInfo);
-    Crypt_done(&archiveEntryInfo->image.chunkImageDelta.cryptInfo);
-    Crypt_done(&archiveEntryInfo->image.chunkImageEntry.cryptInfo);
-
-    Chunk_done(&archiveEntryInfo->image.chunkImage.info);
-
-    if (archiveEntryInfo->image.sourceHandleInitFlag) Source_closeEntry(&archiveEntryInfo->image.sourceHandle);
-    free(archiveEntryInfo->image.deltaBuffer);
-    free(archiveEntryInfo->image.byteBuffer);
+    AutoFree_freeDone(&autoFreeList);
     return error;
   }
   archiveEntryInfo->image.chunkImageEntry.size      = deviceInfo->size;
   archiveEntryInfo->image.chunkImageEntry.blockSize = deviceInfo->blockSize;
   String_set(archiveEntryInfo->image.chunkImageEntry.name,deviceName);
+  AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->image.chunkImageEntry.info,ChunkInfo*,{ Chunk_done(resource); });
 
   error = Chunk_init(&archiveEntryInfo->image.chunkImageDelta.info,
                      &archiveEntryInfo->image.chunkImage.info,
@@ -4022,18 +3926,7 @@ Errors Archive_newImageEntry(ArchiveEntryInfo *archiveEntryInfo,
                     );
   if (error != ERROR_NONE)
   {
-    Chunk_done(&archiveEntryInfo->image.chunkImageEntry.info);
-
-    Crypt_done(&archiveEntryInfo->image.cryptInfo);
-    Crypt_done(&archiveEntryInfo->image.chunkImageData.cryptInfo);
-    Crypt_done(&archiveEntryInfo->image.chunkImageDelta.cryptInfo);
-    Crypt_done(&archiveEntryInfo->image.chunkImageEntry.cryptInfo);
-
-    Chunk_done(&archiveEntryInfo->image.chunkImage.info);
-
-    if (archiveEntryInfo->image.sourceHandleInitFlag) Source_closeEntry(&archiveEntryInfo->image.sourceHandle);
-    free(archiveEntryInfo->image.deltaBuffer);
-    free(archiveEntryInfo->image.byteBuffer);
+    AutoFree_freeDone(&autoFreeList);
     return error;
   }
   if (Compress_isCompressed(archiveEntryInfo->image.deltaCompressAlgorithm))
@@ -4044,6 +3937,7 @@ Errors Archive_newImageEntry(ArchiveEntryInfo *archiveEntryInfo,
     String_set(archiveEntryInfo->image.chunkImageDelta.name,Source_getName(&archiveEntryInfo->image.sourceHandle));
     archiveEntryInfo->image.chunkImageDelta.size = Source_getSize(&archiveEntryInfo->file.sourceHandle);
   }
+  AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->image.chunkImageDelta.info,ChunkInfo*,{ Chunk_done(resource); });
 
   error = Chunk_init(&archiveEntryInfo->image.chunkImageData.info,
                      &archiveEntryInfo->image.chunkImage.info,
@@ -4057,76 +3951,39 @@ Errors Archive_newImageEntry(ArchiveEntryInfo *archiveEntryInfo,
                     );
   if (error != ERROR_NONE)
   {
-    Chunk_done(&archiveEntryInfo->image.chunkImageDelta.info);
-    Chunk_done(&archiveEntryInfo->image.chunkImageEntry.info);
-
-    Crypt_done(&archiveEntryInfo->image.cryptInfo);
-    Crypt_done(&archiveEntryInfo->image.chunkImageData.cryptInfo);
-    Crypt_done(&archiveEntryInfo->image.chunkImageDelta.cryptInfo);
-    Crypt_done(&archiveEntryInfo->image.chunkImageEntry.cryptInfo);
-
-    Chunk_done(&archiveEntryInfo->image.chunkImage.info);
-
-    if (archiveEntryInfo->image.sourceHandleInitFlag) Source_closeEntry(&archiveEntryInfo->image.sourceHandle);
-    free(archiveEntryInfo->image.deltaBuffer);
-    free(archiveEntryInfo->image.byteBuffer);
+    AutoFree_freeDone(&autoFreeList);
     return error;
   }
   archiveEntryInfo->image.chunkImageData.blockOffset = 0LL;
   archiveEntryInfo->image.chunkImageData.blockCount  = 0LL;
+  AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->image.chunkImageData.info,ChunkInfo*,{ Chunk_done(resource); });
 
   // init delta compress (if no delta-compression is enabled, use identity-compressor), byte compress
-  error = Compress_new(&archiveEntryInfo->image.deltaCompressInfo,
-                       COMPRESS_MODE_DEFLATE,
-                       archiveEntryInfo->image.deltaCompressAlgorithm,
-                       1,
-                       &archiveEntryInfo->image.sourceHandle
-                      );
+  error = Compress_init(&archiveEntryInfo->image.deltaCompressInfo,
+                        COMPRESS_MODE_DEFLATE,
+                        archiveEntryInfo->image.deltaCompressAlgorithm,
+                        1,
+                        &archiveEntryInfo->image.sourceHandle
+                       );
   if (error != ERROR_NONE)
   {
-    Chunk_done(&archiveEntryInfo->image.chunkImageData.info);
-    Chunk_done(&archiveEntryInfo->image.chunkImageDelta.info);
-    Chunk_done(&archiveEntryInfo->image.chunkImageEntry.info);
-
-    Crypt_done(&archiveEntryInfo->image.cryptInfo);
-    Crypt_done(&archiveEntryInfo->image.chunkImageData.cryptInfo);
-    Crypt_done(&archiveEntryInfo->image.chunkImageDelta.cryptInfo);
-    Crypt_done(&archiveEntryInfo->image.chunkImageEntry.cryptInfo);
-
-    Chunk_done(&archiveEntryInfo->image.chunkImage.info);
-
-    if (archiveEntryInfo->image.sourceHandleInitFlag) Source_closeEntry(&archiveEntryInfo->image.sourceHandle);
-    free(archiveEntryInfo->image.deltaBuffer);
-    free(archiveEntryInfo->image.byteBuffer);
+    AutoFree_freeDone(&autoFreeList);
     return error;
   }
+  AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->image.deltaCompressInfo,CompressInfo*,{ Compress_done(resource); });
 
-  error = Compress_new(&archiveEntryInfo->image.byteCompressInfo,
-                       COMPRESS_MODE_DEFLATE,
-                       archiveEntryInfo->image.byteCompressAlgorithm,
-                       archiveEntryInfo->blockLength,
-                       NULL
-                      );
+  error = Compress_init(&archiveEntryInfo->image.byteCompressInfo,
+                        COMPRESS_MODE_DEFLATE,
+                        archiveEntryInfo->image.byteCompressAlgorithm,
+                        archiveEntryInfo->blockLength,
+                        NULL
+                       );
   if (error != ERROR_NONE)
   {
-    Compress_delete(&archiveEntryInfo->image.deltaCompressInfo);
-
-    Chunk_done(&archiveEntryInfo->image.chunkImageData.info);
-    Chunk_done(&archiveEntryInfo->image.chunkImageDelta.info);
-    Chunk_done(&archiveEntryInfo->image.chunkImageEntry.info);
-
-    Crypt_done(&archiveEntryInfo->image.cryptInfo);
-    Crypt_done(&archiveEntryInfo->image.chunkImageData.cryptInfo);
-    Crypt_done(&archiveEntryInfo->image.chunkImageDelta.cryptInfo);
-    Crypt_done(&archiveEntryInfo->image.chunkImageEntry.cryptInfo);
-
-    Chunk_done(&archiveEntryInfo->image.chunkImage.info);
-
-    if (archiveEntryInfo->image.sourceHandleInitFlag) Source_closeEntry(&archiveEntryInfo->image.sourceHandle);
-    free(archiveEntryInfo->image.deltaBuffer);
-    free(archiveEntryInfo->image.byteBuffer);
+    AutoFree_freeDone(&autoFreeList);
     return error;
   }
+  AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->image.deltaCompressInfo,CompressInfo*,{ Compress_done(resource); });
 
   // calculate header size
   archiveEntryInfo->image.headerLength = Chunk_getSize(CHUNK_DEFINITION_IMAGE,      0,                            &archiveEntryInfo->image.chunkImage,     0)+
@@ -4151,6 +4008,9 @@ Errors Archive_newImageEntry(ArchiveEntryInfo *archiveEntryInfo,
   // registers as open archive entry
   registerArchiveEntry(archiveEntryInfo);
 
+  // free resources
+  AutoFree_done(&autoFreeList);
+
   return ERROR_NONE;
 }
 
@@ -4161,14 +4021,19 @@ Errors Archive_newDirectoryEntry(ArchiveEntryInfo                *archiveEntryIn
                                  const FileExtendedAttributeList *fileExtendedAttributeList
                                 )
 {
-  SemaphoreLock semaphoreLock;
-  Errors        error;
-  ulong         headerLength;
+  AutoFreeList                    autoFreeList;
+  SemaphoreLock                   semaphoreLock;
+  Errors                          error;
+  ulong                           headerLength;
+  const FileExtendedAttributeNode *fileExtendedAttributeNode;
 
   assert(archiveEntryInfo != NULL);
   assert(archiveInfo != NULL);
   assert(archiveInfo->jobOptions != NULL);
   assert(fileInfo != NULL);
+
+  // init variables
+  AutoFree_init(&autoFreeList);
 
   // init crypt password
   if ((archiveInfo->jobOptions->cryptAlgorithm != CRYPT_ALGORITHM_NONE) && (archiveInfo->cryptPassword == NULL))
@@ -4188,6 +4053,7 @@ Errors Archive_newDirectoryEntry(ArchiveEntryInfo                *archiveEntryIn
     }
     if (archiveInfo->cryptPassword == NULL)
     {
+      AutoFree_freeDone(&autoFreeList);
       return ERROR_NO_CRYPT_PASSWORD;
     }
   }
@@ -4214,9 +4080,11 @@ Errors Archive_newDirectoryEntry(ArchiveEntryInfo                *archiveEntryIn
                     );
   if (error != ERROR_NONE)
   {
+    AutoFree_freeDone(&autoFreeList);
     return error;
   }
   archiveEntryInfo->directory.chunkDirectory.cryptAlgorithm = archiveInfo->jobOptions->cryptAlgorithm;
+  AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->directory.chunkDirectory.info,ChunkInfo*,{ Chunk_done(resource); });
 
   // init crypt
   error = Crypt_init(&archiveEntryInfo->directory.chunkDirectoryEntry.cryptInfo,
@@ -4225,19 +4093,21 @@ Errors Archive_newDirectoryEntry(ArchiveEntryInfo                *archiveEntryIn
                     );
   if (error != ERROR_NONE)
   {
-    Chunk_done(&archiveEntryInfo->directory.chunkDirectory.info);
+    AutoFree_freeDone(&autoFreeList);
     return error;
   }
+  AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->directory.chunkDirectoryEntry.cryptInfo,CryptInfo*,{ Crypt_done(resource); });
+
   error = Crypt_init(&archiveEntryInfo->directory.chunkDirectoryExtendedAttribute.cryptInfo,
                      archiveInfo->jobOptions->cryptAlgorithm,
                      archiveInfo->cryptPassword
                     );
   if (error != ERROR_NONE)
   {
-    Crypt_done(&archiveEntryInfo->directory.chunkDirectoryEntry.cryptInfo);
-    Chunk_done(&archiveEntryInfo->directory.chunkDirectory.info);
+    AutoFree_freeDone(&autoFreeList);
     return error;
   }
+  AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->directory.chunkDirectoryExtendedAttribute.cryptInfo,CryptInfo*,{ Crypt_done(resource); });
 
   // init sub-chunks
   error = Chunk_init(&archiveEntryInfo->directory.chunkDirectoryEntry.info,
@@ -4252,9 +4122,7 @@ Errors Archive_newDirectoryEntry(ArchiveEntryInfo                *archiveEntryIn
                     );
   if (error != ERROR_NONE)
   {
-    Crypt_done(&archiveEntryInfo->directory.chunkDirectoryExtendedAttribute.cryptInfo);
-    Crypt_done(&archiveEntryInfo->directory.chunkDirectoryEntry.cryptInfo);
-    Chunk_done(&archiveEntryInfo->directory.chunkDirectory.info);
+    AutoFree_freeDone(&autoFreeList);
     return error;
   }
   archiveEntryInfo->directory.chunkDirectoryEntry.timeLastAccess  = fileInfo->timeLastAccess;
@@ -4264,6 +4132,7 @@ Errors Archive_newDirectoryEntry(ArchiveEntryInfo                *archiveEntryIn
   archiveEntryInfo->directory.chunkDirectoryEntry.groupId         = fileInfo->groupId;
   archiveEntryInfo->directory.chunkDirectoryEntry.permission      = fileInfo->permission;
   String_set(archiveEntryInfo->directory.chunkDirectoryEntry.name,directoryName);
+  AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->directory.chunkDirectoryEntry.info,ChunkInfo*,{ Chunk_done(resource); });
 
   error = Chunk_init(&archiveEntryInfo->directory.chunkDirectoryExtendedAttribute.info,
                      &archiveEntryInfo->directory.chunkDirectory.info,
@@ -4277,16 +4146,24 @@ Errors Archive_newDirectoryEntry(ArchiveEntryInfo                *archiveEntryIn
                     );
   if (error != ERROR_NONE)
   {
-    Crypt_done(&archiveEntryInfo->directory.chunkDirectoryExtendedAttribute.cryptInfo);
-    Crypt_done(&archiveEntryInfo->directory.chunkDirectoryEntry.cryptInfo);
-    Chunk_done(&archiveEntryInfo->directory.chunkDirectory.info);
+    AutoFree_freeDone(&autoFreeList);
     return error;
   }
+  AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->directory.chunkDirectoryExtendedAttribute.info,ChunkInfo*,{ Chunk_done(resource); });
 
   // calculate header size
-#warning extended attributes size
   headerLength = Chunk_getSize(CHUNK_DEFINITION_DIRECTORY,      0,                            &archiveEntryInfo->directory.chunkDirectory,     0)+
                  Chunk_getSize(CHUNK_DEFINITION_DIRECTORY_ENTRY,archiveEntryInfo->blockLength,&archiveEntryInfo->directory.chunkDirectoryEntry,0);
+  LIST_ITERATE(fileExtendedAttributeList,fileExtendedAttributeNode)
+  {
+    String_set(archiveEntryInfo->directory.chunkDirectoryExtendedAttribute.name,fileExtendedAttributeNode->name);
+
+    headerLength += Chunk_getSize(CHUNK_DEFINITION_FILE_EXTENDED_ATTRIBUTE,
+                                  archiveEntryInfo->blockLength,
+                                  &archiveEntryInfo->directory.chunkDirectoryExtendedAttribute,
+                                  fileExtendedAttributeNode->dataLength
+                                 );
+  }
 
   // lock archive
   Semaphore_forceLock(&archiveEntryInfo->archiveInfo->chunkIOLock,SEMAPHORE_LOCK_TYPE_READ_WRITE);
@@ -4301,11 +4178,7 @@ Errors Archive_newDirectoryEntry(ArchiveEntryInfo                *archiveEntryIn
     if (error != ERROR_NONE)
     {
       Semaphore_unlock(&archiveEntryInfo->archiveInfo->chunkIOLock);
-      Chunk_done(&archiveEntryInfo->directory.chunkDirectoryExtendedAttribute.info);
-      Chunk_done(&archiveEntryInfo->directory.chunkDirectoryEntry.info);
-      Crypt_done(&archiveEntryInfo->directory.chunkDirectoryExtendedAttribute.cryptInfo);
-      Crypt_done(&archiveEntryInfo->directory.chunkDirectoryEntry.cryptInfo);
-      Chunk_done(&archiveEntryInfo->directory.chunkDirectory.info);
+      AutoFree_freeDone(&autoFreeList);
       return error;
     }
 
@@ -4314,29 +4187,58 @@ Errors Archive_newDirectoryEntry(ArchiveEntryInfo                *archiveEntryIn
     if (error != ERROR_NONE)
     {
       Semaphore_unlock(&archiveEntryInfo->archiveInfo->chunkIOLock);
-      Chunk_done(&archiveEntryInfo->directory.chunkDirectoryExtendedAttribute.info);
-      Chunk_done(&archiveEntryInfo->directory.chunkDirectoryEntry.info);
-      Crypt_done(&archiveEntryInfo->directory.chunkDirectoryExtendedAttribute.cryptInfo);
-      Crypt_done(&archiveEntryInfo->directory.chunkDirectoryEntry.cryptInfo);
-      Chunk_done(&archiveEntryInfo->directory.chunkDirectory.info);
+      AutoFree_freeDone(&autoFreeList);
       return error;
     }
+
+    // write directory entry chunk
     error = Chunk_create(&archiveEntryInfo->directory.chunkDirectoryEntry.info);
     if (error != ERROR_NONE)
     {
       Semaphore_unlock(&archiveEntryInfo->archiveInfo->chunkIOLock);
-      Chunk_done(&archiveEntryInfo->directory.chunkDirectoryExtendedAttribute.info);
-      Chunk_done(&archiveEntryInfo->directory.chunkDirectoryEntry.info);
-      Crypt_done(&archiveEntryInfo->directory.chunkDirectoryExtendedAttribute.cryptInfo);
-      Crypt_done(&archiveEntryInfo->directory.chunkDirectoryEntry.cryptInfo);
-      Chunk_done(&archiveEntryInfo->directory.chunkDirectory.info);
+      AutoFree_freeDone(&autoFreeList);
       return error;
     }
-#warning write extended attributes
+
+    // write extended attribute chunks
+    LIST_ITERATE(fileExtendedAttributeList,fileExtendedAttributeNode)
+    {
+      String_set(archiveEntryInfo->directory.chunkDirectoryExtendedAttribute.name,fileExtendedAttributeNode->name);
+      archiveEntryInfo->directory.chunkDirectoryExtendedAttribute.value.data   = fileExtendedAttributeNode->data;
+      archiveEntryInfo->directory.chunkDirectoryExtendedAttribute.value.length = fileExtendedAttributeNode->dataLength;
+
+      error = Chunk_create(&archiveEntryInfo->directory.chunkDirectoryExtendedAttribute.info);
+      if (error != ERROR_NONE)
+      {
+        break;
+      }
+      error = Chunk_writeData(&archiveEntryInfo->directory.chunkDirectoryExtendedAttribute.info,
+                              fileExtendedAttributeNode->data,
+                              fileExtendedAttributeNode->dataLength
+                             );
+      if (error != ERROR_NONE)
+      {
+        break;
+      }
+      error = Chunk_close(&archiveEntryInfo->directory.chunkDirectoryExtendedAttribute.info);
+      if (error != ERROR_NONE)
+      {
+        break;
+      }
+    }
+    if (error != ERROR_NONE)
+    {
+      Semaphore_unlock(&archiveEntryInfo->archiveInfo->chunkIOLock);
+      AutoFree_freeDone(&autoFreeList);
+      return error;
+    }
   }
 
   // registers as open archive entry
   registerArchiveEntry(archiveEntryInfo);
+
+  // free resources
+  AutoFree_done(&autoFreeList);
 
   return ERROR_NONE;
 }
@@ -4349,14 +4251,19 @@ Errors Archive_newLinkEntry(ArchiveEntryInfo                *archiveEntryInfo,
                             const FileExtendedAttributeList *fileExtendedAttributeList
                            )
 {
-  SemaphoreLock semaphoreLock;
-  Errors        error;
-  ulong         headerLength;
+  AutoFreeList                    autoFreeList;
+  SemaphoreLock                   semaphoreLock;
+  Errors                          error;
+  ulong                           headerLength;
+  const FileExtendedAttributeNode *fileExtendedAttributeNode;
 
   assert(archiveEntryInfo != NULL);
   assert(archiveInfo != NULL);
   assert(archiveInfo->jobOptions != NULL);
   assert(fileInfo != NULL);
+
+  // init variables
+  AutoFree_init(&autoFreeList);
 
   // init crypt password
   if ((archiveInfo->jobOptions->cryptAlgorithm != CRYPT_ALGORITHM_NONE) && (archiveInfo->cryptPassword == NULL))
@@ -4376,6 +4283,7 @@ Errors Archive_newLinkEntry(ArchiveEntryInfo                *archiveEntryInfo,
     }
     if (archiveInfo->cryptPassword == NULL)
     {
+      AutoFree_freeDone(&autoFreeList);
       return ERROR_NO_CRYPT_PASSWORD;
     }
   }
@@ -4401,9 +4309,11 @@ Errors Archive_newLinkEntry(ArchiveEntryInfo                *archiveEntryInfo,
                     );
   if (error != ERROR_NONE)
   {
+    AutoFree_freeDone(&autoFreeList);
     return error;
   }
   archiveEntryInfo->link.chunkLink.cryptAlgorithm = archiveInfo->jobOptions->cryptAlgorithm;
+  AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->link.chunkLink.info,ChunkInfo*,{ Chunk_done(resource); });
 
   // init crypt
   error = Crypt_init(&archiveEntryInfo->link.chunkLinkEntry.cryptInfo,
@@ -4412,9 +4322,10 @@ Errors Archive_newLinkEntry(ArchiveEntryInfo                *archiveEntryInfo,
                     );
   if (error != ERROR_NONE)
   {
-    Chunk_done(&archiveEntryInfo->link.chunkLink.info);
+    AutoFree_freeDone(&autoFreeList);
     return error;
   }
+  AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->link.chunkLinkEntry.cryptInfo,CryptInfo*,{ Crypt_done(resource); });
 
   error = Crypt_init(&archiveEntryInfo->link.chunkLinkExtendedAttribute.cryptInfo,
                      archiveInfo->jobOptions->cryptAlgorithm,
@@ -4422,12 +4333,10 @@ Errors Archive_newLinkEntry(ArchiveEntryInfo                *archiveEntryInfo,
                     );
   if (error != ERROR_NONE)
   {
-    Crypt_done(&archiveEntryInfo->link.chunkLinkEntry.cryptInfo);
-
-    Chunk_done(&archiveEntryInfo->link.chunkLink.info);
-
+    AutoFree_freeDone(&autoFreeList);
     return error;
   }
+  AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->link.chunkLinkExtendedAttribute.cryptInfo,CryptInfo*,{ Crypt_done(resource); });
 
   // init sub-chunks
   error = Chunk_init(&archiveEntryInfo->link.chunkLinkEntry.info,
@@ -4442,11 +4351,7 @@ Errors Archive_newLinkEntry(ArchiveEntryInfo                *archiveEntryInfo,
                     );
   if (error != ERROR_NONE)
   {
-    Crypt_done(&archiveEntryInfo->link.chunkLinkExtendedAttribute.cryptInfo);
-    Crypt_done(&archiveEntryInfo->link.chunkLinkEntry.cryptInfo);
-
-    Chunk_done(&archiveEntryInfo->link.chunkLink.info);
-
+    AutoFree_freeDone(&autoFreeList);
     return error;
   }
   archiveEntryInfo->link.chunkLinkEntry.timeLastAccess  = fileInfo->timeLastAccess;
@@ -4457,6 +4362,7 @@ Errors Archive_newLinkEntry(ArchiveEntryInfo                *archiveEntryInfo,
   archiveEntryInfo->link.chunkLinkEntry.permission      = fileInfo->permission;
   String_set(archiveEntryInfo->link.chunkLinkEntry.name,linkName);
   String_set(archiveEntryInfo->link.chunkLinkEntry.destinationName,destinationName);
+  AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->link.chunkLinkEntry.info,ChunkInfo*,{ Chunk_done(resource); });
 
   error = Chunk_init(&archiveEntryInfo->link.chunkLinkExtendedAttribute.info,
                      &archiveEntryInfo->link.chunkLink.info,
@@ -4470,34 +4376,31 @@ Errors Archive_newLinkEntry(ArchiveEntryInfo                *archiveEntryInfo,
                     );
   if (error != ERROR_NONE)
   {
-    Chunk_done(&archiveEntryInfo->link.chunkLinkEntry.info);
-
-    Crypt_done(&archiveEntryInfo->link.chunkLinkExtendedAttribute.cryptInfo);
-    Crypt_done(&archiveEntryInfo->link.chunkLinkEntry.cryptInfo);
-
-    Chunk_done(&archiveEntryInfo->link.chunkLink.info);
-
+    AutoFree_freeDone(&autoFreeList);
     return error;
   }
+  AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->link.chunkLinkExtendedAttribute.info,ChunkInfo*,{ Chunk_done(resource); });
 
   // calculate header length
-#warning extended attribute size
   headerLength = Chunk_getSize(CHUNK_DEFINITION_LINK,      0,                            &archiveEntryInfo->link.chunkLink,     0)+
                  Chunk_getSize(CHUNK_DEFINITION_LINK_ENTRY,archiveEntryInfo->blockLength,&archiveEntryInfo->link.chunkLinkEntry,0);
+  LIST_ITERATE(fileExtendedAttributeList,fileExtendedAttributeNode)
+  {
+    String_set(archiveEntryInfo->link.chunkLinkExtendedAttribute.name,fileExtendedAttributeNode->name);
+
+    headerLength += Chunk_getSize(CHUNK_DEFINITION_FILE_EXTENDED_ATTRIBUTE,
+                                  archiveEntryInfo->blockLength,
+                                  &archiveEntryInfo->link.chunkLinkExtendedAttribute,
+                                  fileExtendedAttributeNode->dataLength
+                                 );
+  }
 
   if (!archiveEntryInfo->archiveInfo->jobOptions->dryRunFlag)
   {
     // lock archive
     if (!Semaphore_lock(&archiveEntryInfo->archiveInfo->chunkIOLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,SEMAPHORE_WAIT_FOREVER))
     {
-      Chunk_done(&archiveEntryInfo->link.chunkLinkExtendedAttribute.info);
-      Chunk_done(&archiveEntryInfo->link.chunkLinkEntry.info);
-
-      Crypt_done(&archiveEntryInfo->link.chunkLinkExtendedAttribute.cryptInfo);
-      Crypt_done(&archiveEntryInfo->link.chunkLinkEntry.cryptInfo);
-
-      Chunk_done(&archiveEntryInfo->link.chunkLink.info);
-
+      AutoFree_freeDone(&autoFreeList);
       return ERROR_IPC;
     }
 
@@ -4508,54 +4411,68 @@ Errors Archive_newLinkEntry(ArchiveEntryInfo                *archiveEntryInfo,
     if (error != ERROR_NONE)
     {
       Semaphore_unlock(&archiveEntryInfo->archiveInfo->chunkIOLock);
-
-      Chunk_done(&archiveEntryInfo->link.chunkLinkExtendedAttribute.info);
-      Chunk_done(&archiveEntryInfo->link.chunkLinkEntry.info);
-
-      Crypt_done(&archiveEntryInfo->link.chunkLinkExtendedAttribute.cryptInfo);
-      Crypt_done(&archiveEntryInfo->link.chunkLinkEntry.cryptInfo);
-
-      Chunk_done(&archiveEntryInfo->link.chunkLink.info);
-
+      AutoFree_freeDone(&autoFreeList);
       return error;
     }
 
-    // write link chunks
+    // write link chunk
     error = Chunk_create(&archiveEntryInfo->link.chunkLink.info);
     if (error != ERROR_NONE)
     {
+#warning semaphore when locking?
       Semaphore_unlock(&archiveEntryInfo->archiveInfo->chunkIOLock);
-
-      Chunk_done(&archiveEntryInfo->link.chunkLinkExtendedAttribute.info);
-      Chunk_done(&archiveEntryInfo->link.chunkLinkEntry.info);
-
-      Crypt_done(&archiveEntryInfo->link.chunkLinkExtendedAttribute.cryptInfo);
-      Crypt_done(&archiveEntryInfo->link.chunkLinkEntry.cryptInfo);
-
-      Chunk_done(&archiveEntryInfo->link.chunkLink.info);
-
+      AutoFree_freeDone(&autoFreeList);
       return error;
     }
+
+    // write link entry chunk
     error = Chunk_create(&archiveEntryInfo->link.chunkLinkEntry.info);
     if (error != ERROR_NONE)
     {
       Semaphore_unlock(&archiveEntryInfo->archiveInfo->chunkIOLock);
-
-      Chunk_done(&archiveEntryInfo->link.chunkLinkExtendedAttribute.info);
-      Chunk_done(&archiveEntryInfo->link.chunkLinkEntry.info);
-
-      Crypt_done(&archiveEntryInfo->link.chunkLinkExtendedAttribute.cryptInfo);
-      Crypt_done(&archiveEntryInfo->link.chunkLinkEntry.cryptInfo);
-
-      Chunk_done(&archiveEntryInfo->link.chunkLink.info);
-
+      AutoFree_freeDone(&autoFreeList);
       return error;
     }
-#warning write extended attributes
+
+    // write extended attribute chunks
+    LIST_ITERATE(fileExtendedAttributeList,fileExtendedAttributeNode)
+    {
+      String_set(archiveEntryInfo->link.chunkLinkExtendedAttribute.name,fileExtendedAttributeNode->name);
+      archiveEntryInfo->link.chunkLinkExtendedAttribute.value.data   = fileExtendedAttributeNode->data;
+      archiveEntryInfo->link.chunkLinkExtendedAttribute.value.length = fileExtendedAttributeNode->dataLength;
+
+      error = Chunk_create(&archiveEntryInfo->link.chunkLinkExtendedAttribute.info);
+      if (error != ERROR_NONE)
+      {
+        break;
+      }
+      error = Chunk_writeData(&archiveEntryInfo->link.chunkLinkExtendedAttribute.info,
+                              fileExtendedAttributeNode->data,
+                              fileExtendedAttributeNode->dataLength
+                             );
+      if (error != ERROR_NONE)
+      {
+        break;
+      }
+      error = Chunk_close(&archiveEntryInfo->link.chunkLinkExtendedAttribute.info);
+      if (error != ERROR_NONE)
+      {
+        break;
+      }
+    }
+    if (error != ERROR_NONE)
+    {
+      Semaphore_unlock(&archiveEntryInfo->archiveInfo->chunkIOLock);
+      AutoFree_freeDone(&autoFreeList);
+      return error;
+    }
   }
 
   // registers as open archive entry
   registerArchiveEntry(archiveEntryInfo);
+
+  // free resources
+  AutoFree_done(&autoFreeList);
 
   return ERROR_NONE;
 }
@@ -4569,6 +4486,7 @@ Errors Archive_newHardLinkEntry(ArchiveEntryInfo                *archiveEntryInf
                                 const bool                      byteCompressFlag
                                )
 {
+  AutoFreeList                    autoFreeList;
   SemaphoreLock                   semaphoreLock;
   Errors                          error;
   const FileExtendedAttributeNode *fileExtendedAttributeNode;
@@ -4579,6 +4497,9 @@ Errors Archive_newHardLinkEntry(ArchiveEntryInfo                *archiveEntryInf
   assert(archiveInfo != NULL);
   assert(archiveInfo->jobOptions != NULL);
   assert(fileInfo != NULL);
+
+  // init variables
+  AutoFree_init(&autoFreeList);
 
   // init crypt password
   if ((archiveInfo->jobOptions->cryptAlgorithm != CRYPT_ALGORITHM_NONE) && (archiveInfo->cryptPassword == NULL))
@@ -4598,6 +4519,7 @@ Errors Archive_newHardLinkEntry(ArchiveEntryInfo                *archiveEntryInf
     }
     if (archiveInfo->cryptPassword == NULL)
     {
+      AutoFree_freeDone(&autoFreeList);
       return ERROR_NO_CRYPT_PASSWORD;
     }
   }
@@ -4632,6 +4554,7 @@ Errors Archive_newHardLinkEntry(ArchiveEntryInfo                *archiveEntryInf
   DEBUG_TEST_CODE("Archive_newFileEntry1") { (void)File_close(&archiveEntryInfo->hardLink.tmpFileHandle); error = ERROR_UNKNOWN; }
   if (error != ERROR_NONE)
   {
+    AutoFree_freeDone(&autoFreeList);
     return error;
   }
 
@@ -4667,13 +4590,11 @@ Errors Archive_newHardLinkEntry(ArchiveEntryInfo                *archiveEntryInf
     {
       archiveEntryInfo->hardLink.sourceHandleInitFlag   = TRUE;
       archiveEntryInfo->hardLink.deltaCompressAlgorithm = archiveInfo->jobOptions->compressAlgorithm.delta;
+      AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->hardLink.sourceHandle,SourceHandle*,{ Source_closeEntry(resource); });
     }
     else if (archiveInfo->jobOptions->forceDeltaCompressionFlag)
     {
-      free(archiveEntryInfo->hardLink.deltaBuffer);
-      free(archiveEntryInfo->hardLink.byteBuffer);
-      (void)File_close(&archiveEntryInfo->hardLink.tmpFileHandle);
-
+      AutoFree_freeDone(&autoFreeList);
       return error;
     }
     else
@@ -4699,15 +4620,12 @@ Errors Archive_newHardLinkEntry(ArchiveEntryInfo                *archiveEntryInf
                     );
   if (error != ERROR_NONE)
   {
-    if (archiveEntryInfo->hardLink.sourceHandleInitFlag) Source_closeEntry(&archiveEntryInfo->hardLink.sourceHandle);
-    free(archiveEntryInfo->hardLink.deltaBuffer);
-    free(archiveEntryInfo->hardLink.byteBuffer);
-    (void)File_close(&archiveEntryInfo->hardLink.tmpFileHandle);
-
+    AutoFree_freeDone(&autoFreeList);
     return error;
   }
   archiveEntryInfo->hardLink.chunkHardLink.compressAlgorithm = COMPRESS_ALGORITHM_TO_CONSTANT(archiveEntryInfo->hardLink.byteCompressAlgorithm);
   archiveEntryInfo->hardLink.chunkHardLink.cryptAlgorithm    = archiveInfo->jobOptions->cryptAlgorithm;
+  AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->hardLink.chunkHardLink.info,ChunkInfo*,{ Chunk_done(resource); });
 
   // init crypt
   error = Crypt_init(&archiveEntryInfo->hardLink.chunkHardLinkEntry.cryptInfo,
@@ -4716,33 +4634,10 @@ Errors Archive_newHardLinkEntry(ArchiveEntryInfo                *archiveEntryInf
                     );
   if (error != ERROR_NONE)
   {
-    Chunk_done(&archiveEntryInfo->hardLink.chunkHardLink.info);
-
-    if (archiveEntryInfo->hardLink.sourceHandleInitFlag) Source_closeEntry(&archiveEntryInfo->hardLink.sourceHandle);
-    free(archiveEntryInfo->hardLink.deltaBuffer);
-    free(archiveEntryInfo->hardLink.byteBuffer);
-    (void)File_close(&archiveEntryInfo->hardLink.tmpFileHandle);
-
+    AutoFree_freeDone(&autoFreeList);
     return error;
   }
-
-  error = Crypt_init(&archiveEntryInfo->hardLink.chunkHardLinkExtendedAttribute.cryptInfo,
-                     archiveInfo->jobOptions->cryptAlgorithm,
-                     archiveInfo->cryptPassword
-                    );
-  if (error != ERROR_NONE)
-  {
-    Crypt_done(&archiveEntryInfo->hardLink.chunkHardLinkEntry.cryptInfo);
-
-    Chunk_done(&archiveEntryInfo->hardLink.chunkHardLink.info);
-
-    if (archiveEntryInfo->hardLink.sourceHandleInitFlag) Source_closeEntry(&archiveEntryInfo->hardLink.sourceHandle);
-    free(archiveEntryInfo->hardLink.deltaBuffer);
-    free(archiveEntryInfo->hardLink.byteBuffer);
-    (void)File_close(&archiveEntryInfo->hardLink.tmpFileHandle);
-
-    return error;
-  }
+  AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->hardLink.chunkHardLinkEntry.cryptInfo,CryptInfo*,{ Crypt_done(resource); });
 
   error = Crypt_init(&archiveEntryInfo->hardLink.chunkHardLinkName.cryptInfo,
                      archiveInfo->jobOptions->cryptAlgorithm,
@@ -4750,17 +4645,21 @@ Errors Archive_newHardLinkEntry(ArchiveEntryInfo                *archiveEntryInf
                     );
   if (error != ERROR_NONE)
   {
-    Crypt_done(&archiveEntryInfo->hardLink.chunkHardLinkExtendedAttribute.cryptInfo);
-    Crypt_done(&archiveEntryInfo->hardLink.chunkHardLinkEntry.cryptInfo);
-
-    Chunk_done(&archiveEntryInfo->hardLink.chunkHardLink.info);
-
-    if (archiveEntryInfo->hardLink.sourceHandleInitFlag) Source_closeEntry(&archiveEntryInfo->hardLink.sourceHandle);
-    free(archiveEntryInfo->hardLink.deltaBuffer);
-    free(archiveEntryInfo->hardLink.byteBuffer);
-    (void)File_close(&archiveEntryInfo->hardLink.tmpFileHandle);
+    AutoFree_freeDone(&autoFreeList);
     return error;
   }
+  AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->hardLink.chunkHardLinkName.cryptInfo,CryptInfo*,{ Crypt_done(resource); });
+
+  error = Crypt_init(&archiveEntryInfo->hardLink.chunkHardLinkExtendedAttribute.cryptInfo,
+                     archiveInfo->jobOptions->cryptAlgorithm,
+                     archiveInfo->cryptPassword
+                    );
+  if (error != ERROR_NONE)
+  {
+    AutoFree_freeDone(&autoFreeList);
+    return error;
+  }
+  AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->hardLink.chunkHardLinkExtendedAttribute.cryptInfo,CryptInfo*,{ Crypt_done(resource); });
 
   error = Crypt_init(&archiveEntryInfo->hardLink.chunkHardLinkDelta.cryptInfo,
                      archiveInfo->jobOptions->cryptAlgorithm,
@@ -4768,19 +4667,10 @@ Errors Archive_newHardLinkEntry(ArchiveEntryInfo                *archiveEntryInf
                     );
   if (error != ERROR_NONE)
   {
-    Crypt_done(&archiveEntryInfo->hardLink.chunkHardLinkName.cryptInfo);
-    Crypt_done(&archiveEntryInfo->hardLink.chunkHardLinkExtendedAttribute.cryptInfo);
-    Crypt_done(&archiveEntryInfo->hardLink.chunkHardLinkEntry.cryptInfo);
-
-    Chunk_done(&archiveEntryInfo->hardLink.chunkHardLink.info);
-
-    if (archiveEntryInfo->hardLink.sourceHandleInitFlag) Source_closeEntry(&archiveEntryInfo->hardLink.sourceHandle);
-    free(archiveEntryInfo->hardLink.deltaBuffer);
-    free(archiveEntryInfo->hardLink.byteBuffer);
-    (void)File_close(&archiveEntryInfo->hardLink.tmpFileHandle);
-
+    AutoFree_freeDone(&autoFreeList);
     return error;
   }
+  AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->hardLink.chunkHardLinkDelta.cryptInfo,CryptInfo*,{ Crypt_done(resource); });
 
   error = Crypt_init(&archiveEntryInfo->hardLink.chunkHardLinkData.cryptInfo,
                      archiveInfo->jobOptions->cryptAlgorithm,
@@ -4788,20 +4678,10 @@ Errors Archive_newHardLinkEntry(ArchiveEntryInfo                *archiveEntryInf
                     );
   if (error != ERROR_NONE)
   {
-    Crypt_done(&archiveEntryInfo->hardLink.chunkHardLinkDelta.cryptInfo);
-    Crypt_done(&archiveEntryInfo->hardLink.chunkHardLinkName.cryptInfo);
-    Crypt_done(&archiveEntryInfo->hardLink.chunkHardLinkExtendedAttribute.cryptInfo);
-    Crypt_done(&archiveEntryInfo->hardLink.chunkHardLinkEntry.cryptInfo);
-
-    Chunk_done(&archiveEntryInfo->hardLink.chunkHardLink.info);
-
-    if (archiveEntryInfo->hardLink.sourceHandleInitFlag) Source_closeEntry(&archiveEntryInfo->hardLink.sourceHandle);
-    free(archiveEntryInfo->hardLink.deltaBuffer);
-    free(archiveEntryInfo->hardLink.byteBuffer);
-    (void)File_close(&archiveEntryInfo->hardLink.tmpFileHandle);
-
+    AutoFree_freeDone(&autoFreeList);
     return error;
   }
+  AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->hardLink.chunkHardLinkData.cryptInfo,CryptInfo*,{ Crypt_done(resource); });
 
   error = Crypt_init(&archiveEntryInfo->hardLink.cryptInfo,
                      archiveInfo->jobOptions->cryptAlgorithm,
@@ -4809,21 +4689,10 @@ Errors Archive_newHardLinkEntry(ArchiveEntryInfo                *archiveEntryInf
                     );
   if (error != ERROR_NONE)
   {
-    Crypt_done(&archiveEntryInfo->hardLink.chunkHardLinkData.cryptInfo);
-    Crypt_done(&archiveEntryInfo->hardLink.chunkHardLinkDelta.cryptInfo);
-    Crypt_done(&archiveEntryInfo->hardLink.chunkHardLinkName.cryptInfo);
-    Crypt_done(&archiveEntryInfo->hardLink.chunkHardLinkExtendedAttribute.cryptInfo);
-    Crypt_done(&archiveEntryInfo->hardLink.chunkHardLinkEntry.cryptInfo);
-
-    Chunk_done(&archiveEntryInfo->hardLink.chunkHardLink.info);
-
-    if (archiveEntryInfo->hardLink.sourceHandleInitFlag) Source_closeEntry(&archiveEntryInfo->hardLink.sourceHandle);
-    free(archiveEntryInfo->hardLink.deltaBuffer);
-    free(archiveEntryInfo->hardLink.byteBuffer);
-    (void)File_close(&archiveEntryInfo->hardLink.tmpFileHandle);
-
+    AutoFree_freeDone(&autoFreeList);
     return error;
   }
+  AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->hardLink.cryptInfo,CryptInfo*,{ Crypt_done(resource); });
 
   // init sub-chunks
   error = Chunk_init(&archiveEntryInfo->hardLink.chunkHardLinkEntry.info,
@@ -4838,20 +4707,7 @@ Errors Archive_newHardLinkEntry(ArchiveEntryInfo                *archiveEntryInf
                     );
   if (error != ERROR_NONE)
   {
-    Crypt_done(&archiveEntryInfo->hardLink.cryptInfo);
-    Crypt_done(&archiveEntryInfo->hardLink.chunkHardLinkData.cryptInfo);
-    Crypt_done(&archiveEntryInfo->hardLink.chunkHardLinkDelta.cryptInfo);
-    Crypt_done(&archiveEntryInfo->hardLink.chunkHardLinkName.cryptInfo);
-    Crypt_done(&archiveEntryInfo->hardLink.chunkHardLinkExtendedAttribute.cryptInfo);
-    Crypt_done(&archiveEntryInfo->hardLink.chunkHardLinkEntry.cryptInfo);
-
-    Chunk_done(&archiveEntryInfo->hardLink.chunkHardLink.info);
-
-    if (archiveEntryInfo->hardLink.sourceHandleInitFlag) Source_closeEntry(&archiveEntryInfo->hardLink.sourceHandle);
-    free(archiveEntryInfo->hardLink.deltaBuffer);
-    free(archiveEntryInfo->hardLink.byteBuffer);
-    (void)File_close(&archiveEntryInfo->hardLink.tmpFileHandle);
-
+    AutoFree_freeDone(&autoFreeList);
     return error;
   }
   archiveEntryInfo->hardLink.chunkHardLinkEntry.size            = fileInfo->size;
@@ -4861,6 +4717,7 @@ Errors Archive_newHardLinkEntry(ArchiveEntryInfo                *archiveEntryInf
   archiveEntryInfo->hardLink.chunkHardLinkEntry.userId          = fileInfo->userId;
   archiveEntryInfo->hardLink.chunkHardLinkEntry.groupId         = fileInfo->groupId;
   archiveEntryInfo->hardLink.chunkHardLinkEntry.permission      = fileInfo->permission;
+  AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->hardLink.chunkHardLinkEntry.info,ChunkInfo*,{ Chunk_done(resource); });
 
   error = Chunk_init(&archiveEntryInfo->hardLink.chunkHardLinkExtendedAttribute.info,
                      &archiveEntryInfo->hardLink.chunkHardLink.info,
@@ -4874,24 +4731,10 @@ Errors Archive_newHardLinkEntry(ArchiveEntryInfo                *archiveEntryInf
                     );
   if (error != ERROR_NONE)
   {
-    Chunk_done(&archiveEntryInfo->hardLink.chunkHardLinkEntry.info);
-
-    Crypt_done(&archiveEntryInfo->hardLink.cryptInfo);
-    Crypt_done(&archiveEntryInfo->hardLink.chunkHardLinkData.cryptInfo);
-    Crypt_done(&archiveEntryInfo->hardLink.chunkHardLinkDelta.cryptInfo);
-    Crypt_done(&archiveEntryInfo->hardLink.chunkHardLinkName.cryptInfo);
-    Crypt_done(&archiveEntryInfo->hardLink.chunkHardLinkExtendedAttribute.cryptInfo);
-    Crypt_done(&archiveEntryInfo->hardLink.chunkHardLinkEntry.cryptInfo);
-
-    Chunk_done(&archiveEntryInfo->hardLink.chunkHardLink.info);
-
-    if (archiveEntryInfo->hardLink.sourceHandleInitFlag) Source_closeEntry(&archiveEntryInfo->hardLink.sourceHandle);
-    free(archiveEntryInfo->hardLink.deltaBuffer);
-    free(archiveEntryInfo->hardLink.byteBuffer);
-    (void)File_close(&archiveEntryInfo->hardLink.tmpFileHandle);
-
+    AutoFree_freeDone(&autoFreeList);
     return error;
   }
+  AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->hardLink.chunkHardLinkExtendedAttribute.info,ChunkInfo*,{ Chunk_done(resource); });
 
   error = Chunk_init(&archiveEntryInfo->hardLink.chunkHardLinkName.info,
                      &archiveEntryInfo->hardLink.chunkHardLink.info,
@@ -4905,25 +4748,10 @@ Errors Archive_newHardLinkEntry(ArchiveEntryInfo                *archiveEntryInf
                     );
   if (error != ERROR_NONE)
   {
-    Chunk_done(&archiveEntryInfo->hardLink.chunkHardLinkExtendedAttribute.info);
-    Chunk_done(&archiveEntryInfo->hardLink.chunkHardLinkEntry.info);
-
-    Crypt_done(&archiveEntryInfo->hardLink.cryptInfo);
-    Crypt_done(&archiveEntryInfo->hardLink.chunkHardLinkData.cryptInfo);
-    Crypt_done(&archiveEntryInfo->hardLink.chunkHardLinkDelta.cryptInfo);
-    Crypt_done(&archiveEntryInfo->hardLink.chunkHardLinkName.cryptInfo);
-    Crypt_done(&archiveEntryInfo->hardLink.chunkHardLinkExtendedAttribute.cryptInfo);
-    Crypt_done(&archiveEntryInfo->hardLink.chunkHardLinkEntry.cryptInfo);
-
-    Chunk_done(&archiveEntryInfo->hardLink.chunkHardLink.info);
-
-    if (archiveEntryInfo->hardLink.sourceHandleInitFlag) Source_closeEntry(&archiveEntryInfo->hardLink.sourceHandle);
-    free(archiveEntryInfo->hardLink.deltaBuffer);
-    free(archiveEntryInfo->hardLink.byteBuffer);
-    (void)File_close(&archiveEntryInfo->hardLink.tmpFileHandle);
-
+    AutoFree_freeDone(&autoFreeList);
     return error;
   }
+  AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->hardLink.chunkHardLinkName.info,ChunkInfo*,{ Chunk_done(resource); });
 
   error = Chunk_init(&archiveEntryInfo->hardLink.chunkHardLinkDelta.info,
                      &archiveEntryInfo->hardLink.chunkHardLink.info,
@@ -4937,24 +4765,7 @@ Errors Archive_newHardLinkEntry(ArchiveEntryInfo                *archiveEntryInf
                     );
   if (error != ERROR_NONE)
   {
-    Chunk_done(&archiveEntryInfo->hardLink.chunkHardLinkName.info);
-    Chunk_done(&archiveEntryInfo->hardLink.chunkHardLinkExtendedAttribute.info);
-    Chunk_done(&archiveEntryInfo->hardLink.chunkHardLinkEntry.info);
-
-    Crypt_done(&archiveEntryInfo->hardLink.cryptInfo);
-    Crypt_done(&archiveEntryInfo->hardLink.chunkHardLinkData.cryptInfo);
-    Crypt_done(&archiveEntryInfo->hardLink.chunkHardLinkDelta.cryptInfo);
-    Crypt_done(&archiveEntryInfo->hardLink.chunkHardLinkName.cryptInfo);
-    Crypt_done(&archiveEntryInfo->hardLink.chunkHardLinkExtendedAttribute.cryptInfo);
-    Crypt_done(&archiveEntryInfo->hardLink.chunkHardLinkEntry.cryptInfo);
-
-    Chunk_done(&archiveEntryInfo->hardLink.chunkHardLink.info);
-
-    if (archiveEntryInfo->hardLink.sourceHandleInitFlag) Source_closeEntry(&archiveEntryInfo->hardLink.sourceHandle);
-    free(archiveEntryInfo->hardLink.deltaBuffer);
-    free(archiveEntryInfo->hardLink.byteBuffer);
-    (void)File_close(&archiveEntryInfo->hardLink.tmpFileHandle);
-
+    AutoFree_freeDone(&autoFreeList);
     return error;
   }
   if (Compress_isCompressed(archiveEntryInfo->hardLink.deltaCompressAlgorithm))
@@ -4965,6 +4776,7 @@ Errors Archive_newHardLinkEntry(ArchiveEntryInfo                *archiveEntryInf
     String_set(archiveEntryInfo->hardLink.chunkHardLinkDelta.name,Source_getName(&archiveEntryInfo->hardLink.sourceHandle));
     archiveEntryInfo->hardLink.chunkHardLinkDelta.size = Source_getSize(&archiveEntryInfo->file.sourceHandle);
   }
+  AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->hardLink.chunkHardLinkDelta.info,ChunkInfo*,{ Chunk_done(resource); });
 
   error = Chunk_init(&archiveEntryInfo->hardLink.chunkHardLinkData.info,
                      &archiveEntryInfo->hardLink.chunkHardLink.info,
@@ -4978,95 +4790,39 @@ Errors Archive_newHardLinkEntry(ArchiveEntryInfo                *archiveEntryInf
                     );
   if (error != ERROR_NONE)
   {
-    Chunk_done(&archiveEntryInfo->hardLink.chunkHardLinkDelta.info);
-    Chunk_done(&archiveEntryInfo->hardLink.chunkHardLinkName.info);
-    Chunk_done(&archiveEntryInfo->hardLink.chunkHardLinkExtendedAttribute.info);
-    Chunk_done(&archiveEntryInfo->hardLink.chunkHardLinkEntry.info);
-
-    Crypt_done(&archiveEntryInfo->hardLink.cryptInfo);
-    Crypt_done(&archiveEntryInfo->hardLink.chunkHardLinkData.cryptInfo);
-    Crypt_done(&archiveEntryInfo->hardLink.chunkHardLinkDelta.cryptInfo);
-    Crypt_done(&archiveEntryInfo->hardLink.chunkHardLinkName.cryptInfo);
-    Crypt_done(&archiveEntryInfo->hardLink.chunkHardLinkExtendedAttribute.cryptInfo);
-    Crypt_done(&archiveEntryInfo->hardLink.chunkHardLinkEntry.cryptInfo);
-
-    Chunk_done(&archiveEntryInfo->hardLink.chunkHardLink.info);
-
-    if (archiveEntryInfo->hardLink.sourceHandleInitFlag) Source_closeEntry(&archiveEntryInfo->hardLink.sourceHandle);
-    free(archiveEntryInfo->hardLink.deltaBuffer);
-    free(archiveEntryInfo->hardLink.byteBuffer);
-    (void)File_close(&archiveEntryInfo->hardLink.tmpFileHandle);
-
+    AutoFree_freeDone(&autoFreeList);
     return error;
   }
   archiveEntryInfo->hardLink.chunkHardLinkData.fragmentOffset = 0LL;
   archiveEntryInfo->hardLink.chunkHardLinkData.fragmentSize   = 0LL;
+  AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->hardLink.chunkHardLinkData.info,ChunkInfo*,{ Chunk_done(resource); });
 
   // init delta compress (if no delta-compression is enabled, use identity-compressor), byte compress
-  error = Compress_new(&archiveEntryInfo->hardLink.deltaCompressInfo,
-                       COMPRESS_MODE_DEFLATE,
-                       archiveEntryInfo->hardLink.deltaCompressAlgorithm,
-                       1,
-                       &archiveEntryInfo->hardLink.sourceHandle
-                      );
+  error = Compress_init(&archiveEntryInfo->hardLink.deltaCompressInfo,
+                        COMPRESS_MODE_DEFLATE,
+                        archiveEntryInfo->hardLink.deltaCompressAlgorithm,
+                        1,
+                        &archiveEntryInfo->hardLink.sourceHandle
+                       );
   if (error != ERROR_NONE)
   {
-    Chunk_done(&archiveEntryInfo->hardLink.chunkHardLinkData.info);
-    Chunk_done(&archiveEntryInfo->hardLink.chunkHardLinkDelta.info);
-    Chunk_done(&archiveEntryInfo->hardLink.chunkHardLinkName.info);
-    Chunk_done(&archiveEntryInfo->hardLink.chunkHardLinkExtendedAttribute.info);
-    Chunk_done(&archiveEntryInfo->hardLink.chunkHardLinkEntry.info);
-
-    Crypt_done(&archiveEntryInfo->hardLink.cryptInfo);
-    Crypt_done(&archiveEntryInfo->hardLink.chunkHardLinkData.cryptInfo);
-    Crypt_done(&archiveEntryInfo->hardLink.chunkHardLinkDelta.cryptInfo);
-    Crypt_done(&archiveEntryInfo->hardLink.chunkHardLinkName.cryptInfo);
-    Crypt_done(&archiveEntryInfo->hardLink.chunkHardLinkExtendedAttribute.cryptInfo);
-    Crypt_done(&archiveEntryInfo->hardLink.chunkHardLinkEntry.cryptInfo);
-
-    Chunk_done(&archiveEntryInfo->hardLink.chunkHardLink.info);
-
-    if (archiveEntryInfo->hardLink.sourceHandleInitFlag) Source_closeEntry(&archiveEntryInfo->hardLink.sourceHandle);
-    free(archiveEntryInfo->hardLink.deltaBuffer);
-    free(archiveEntryInfo->hardLink.byteBuffer);
-    (void)File_close(&archiveEntryInfo->hardLink.tmpFileHandle);
-
+    AutoFree_freeDone(&autoFreeList);
     return error;
   }
+  AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->hardLink.deltaCompressInfo,CompressInfo*,{ Compress_done(resource); });
 
-  error = Compress_new(&archiveEntryInfo->hardLink.byteCompressInfo,
-                       COMPRESS_MODE_DEFLATE,
-                       archiveEntryInfo->hardLink.byteCompressAlgorithm,
-                       archiveEntryInfo->blockLength,
-                       NULL
-                      );
+  error = Compress_init(&archiveEntryInfo->hardLink.byteCompressInfo,
+                        COMPRESS_MODE_DEFLATE,
+                        archiveEntryInfo->hardLink.byteCompressAlgorithm,
+                        archiveEntryInfo->blockLength,
+                        NULL
+                       );
   if (error != ERROR_NONE)
   {
-    Compress_delete(&archiveEntryInfo->hardLink.deltaCompressInfo);
-
-    Chunk_done(&archiveEntryInfo->hardLink.chunkHardLinkData.info);
-    Chunk_done(&archiveEntryInfo->hardLink.chunkHardLinkDelta.info);
-    Chunk_done(&archiveEntryInfo->hardLink.chunkHardLinkName.info);
-    Chunk_done(&archiveEntryInfo->hardLink.chunkHardLinkExtendedAttribute.info);
-    Chunk_done(&archiveEntryInfo->hardLink.chunkHardLinkEntry.info);
-
-
-    Crypt_done(&archiveEntryInfo->hardLink.cryptInfo);
-    Crypt_done(&archiveEntryInfo->hardLink.chunkHardLinkData.cryptInfo);
-    Crypt_done(&archiveEntryInfo->hardLink.chunkHardLinkDelta.cryptInfo);
-    Crypt_done(&archiveEntryInfo->hardLink.chunkHardLinkName.cryptInfo);
-    Crypt_done(&archiveEntryInfo->hardLink.chunkHardLinkExtendedAttribute.cryptInfo);
-    Crypt_done(&archiveEntryInfo->hardLink.chunkHardLinkEntry.cryptInfo);
-
-    Chunk_done(&archiveEntryInfo->hardLink.chunkHardLink.info);
-
-    if (archiveEntryInfo->hardLink.sourceHandleInitFlag) Source_closeEntry(&archiveEntryInfo->hardLink.sourceHandle);
-    free(archiveEntryInfo->hardLink.deltaBuffer);
-    free(archiveEntryInfo->hardLink.byteBuffer);
-    (void)File_close(&archiveEntryInfo->hardLink.tmpFileHandle);
-
+    AutoFree_freeDone(&autoFreeList);
     return error;
   }
+  AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->hardLink.byteCompressInfo,CompressInfo*,{ Compress_done(resource); });
 
   // calculate header size
   archiveEntryInfo->hardLink.headerLength = Chunk_getSize(CHUNK_DEFINITION_HARDLINK,      0,                            &archiveEntryInfo->hardLink.chunkHardLink,     0)+
@@ -5111,6 +4867,9 @@ Errors Archive_newHardLinkEntry(ArchiveEntryInfo                *archiveEntryInf
   // registers as open archive entry
   registerArchiveEntry(archiveEntryInfo);
 
+  // free resources
+  AutoFree_done(&autoFreeList);
+
   return ERROR_NONE;
 }
 
@@ -5121,14 +4880,19 @@ Errors Archive_newSpecialEntry(ArchiveEntryInfo                *archiveEntryInfo
                                const FileExtendedAttributeList *fileExtendedAttributeList
                               )
 {
-  SemaphoreLock semaphoreLock;
-  Errors        error;
-  ulong         headerLength;
+  AutoFreeList                    autoFreeList;
+  SemaphoreLock                   semaphoreLock;
+  Errors                          error;
+  ulong                           headerLength;
+  const FileExtendedAttributeNode *fileExtendedAttributeNode;
 
   assert(archiveEntryInfo != NULL);
   assert(archiveInfo != NULL);
   assert(archiveInfo->jobOptions != NULL);
   assert(fileInfo != NULL);
+
+  // init variables
+  AutoFree_init(&autoFreeList);
 
   // init crypt password
   if ((archiveInfo->jobOptions->cryptAlgorithm != CRYPT_ALGORITHM_NONE) && (archiveInfo->cryptPassword == NULL))
@@ -5148,6 +4912,7 @@ Errors Archive_newSpecialEntry(ArchiveEntryInfo                *archiveEntryInfo
     }
     if (archiveInfo->cryptPassword == NULL)
     {
+      AutoFree_freeDone(&autoFreeList);
       return ERROR_NO_CRYPT_PASSWORD;
     }
   }
@@ -5174,9 +4939,11 @@ Errors Archive_newSpecialEntry(ArchiveEntryInfo                *archiveEntryInfo
                     );
   if (error != ERROR_NONE)
   {
+    AutoFree_freeDone(&autoFreeList);
     return error;
   }
   archiveEntryInfo->special.chunkSpecial.cryptAlgorithm = archiveInfo->jobOptions->cryptAlgorithm;
+  AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->special.chunkSpecial.info,ChunkInfo*,{ Chunk_done(resource); });
 
   // init crypt
   error = Crypt_init(&archiveEntryInfo->special.chunkSpecialEntry.cryptInfo,
@@ -5185,9 +4952,10 @@ Errors Archive_newSpecialEntry(ArchiveEntryInfo                *archiveEntryInfo
                     );
   if (error != ERROR_NONE)
   {
-    Chunk_done(&archiveEntryInfo->special.chunkSpecial.info);
+    AutoFree_freeDone(&autoFreeList);
     return error;
   }
+  AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->special.chunkSpecialEntry,CryptInfo*,{ Crypt_done(resource); });
 
   error = Crypt_init(&archiveEntryInfo->special.chunkSpecialExtendedAttribute.cryptInfo,
                      archiveInfo->jobOptions->cryptAlgorithm,
@@ -5195,12 +4963,10 @@ Errors Archive_newSpecialEntry(ArchiveEntryInfo                *archiveEntryInfo
                     );
   if (error != ERROR_NONE)
   {
-    Crypt_done(&archiveEntryInfo->special.chunkSpecialEntry.cryptInfo);
-
-    Chunk_done(&archiveEntryInfo->special.chunkSpecial.info);
-
+    AutoFree_freeDone(&autoFreeList);
     return error;
   }
+  AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->special.chunkSpecialExtendedAttribute,CryptInfo*,{ Crypt_done(resource); });
 
   // init sub-chunks
   error = Chunk_init(&archiveEntryInfo->special.chunkSpecialEntry.info,
@@ -5215,11 +4981,7 @@ Errors Archive_newSpecialEntry(ArchiveEntryInfo                *archiveEntryInfo
                     );
   if (error != ERROR_NONE)
   {
-    Crypt_done(&archiveEntryInfo->special.chunkSpecialExtendedAttribute.cryptInfo);
-    Crypt_done(&archiveEntryInfo->special.chunkSpecialEntry.cryptInfo);
-
-    Chunk_done(&archiveEntryInfo->special.chunkSpecial.info);
-
+    AutoFree_freeDone(&autoFreeList);
     return error;
   }
   archiveEntryInfo->special.chunkSpecialEntry.specialType     = fileInfo->specialType;
@@ -5232,6 +4994,7 @@ Errors Archive_newSpecialEntry(ArchiveEntryInfo                *archiveEntryInfo
   archiveEntryInfo->special.chunkSpecialEntry.major           = fileInfo->major;
   archiveEntryInfo->special.chunkSpecialEntry.minor           = fileInfo->minor;
   String_set(archiveEntryInfo->special.chunkSpecialEntry.name,specialName);
+  AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->special.chunkSpecialEntry.info,ChunkInfo*,{ Chunk_done(resource); });
 
   error = Chunk_init(&archiveEntryInfo->special.chunkSpecialExtendedAttribute.info,
                      &archiveEntryInfo->special.chunkSpecial.info,
@@ -5245,30 +5008,31 @@ Errors Archive_newSpecialEntry(ArchiveEntryInfo                *archiveEntryInfo
                     );
   if (error != ERROR_NONE)
   {
-    Chunk_done(&archiveEntryInfo->special.chunkSpecialEntry.info);
-    Crypt_done(&archiveEntryInfo->special.chunkSpecialExtendedAttribute.cryptInfo);
-    Crypt_done(&archiveEntryInfo->special.chunkSpecialEntry.cryptInfo);
-    Chunk_done(&archiveEntryInfo->special.chunkSpecial.info);
+    AutoFree_freeDone(&autoFreeList);
     return error;
   }
+  AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->special.chunkSpecialExtendedAttribute.info,ChunkInfo*,{ Chunk_done(resource); });
 
   // calculate header length
-#warning extended attribute size
   headerLength = Chunk_getSize(CHUNK_DEFINITION_SPECIAL,      0,                            &archiveEntryInfo->special.chunkSpecial,     0)+
                  Chunk_getSize(CHUNK_DEFINITION_SPECIAL_ENTRY,archiveEntryInfo->blockLength,&archiveEntryInfo->special.chunkSpecialEntry,0);
+  LIST_ITERATE(fileExtendedAttributeList,fileExtendedAttributeNode)
+  {
+    String_set(archiveEntryInfo->special.chunkSpecialExtendedAttribute.name,fileExtendedAttributeNode->name);
+
+    headerLength += Chunk_getSize(CHUNK_DEFINITION_FILE_EXTENDED_ATTRIBUTE,
+                                  archiveEntryInfo->blockLength,
+                                  &archiveEntryInfo->special.chunkSpecialExtendedAttribute,
+                                  fileExtendedAttributeNode->dataLength
+                                 );
+  }
 
   if (!archiveEntryInfo->archiveInfo->jobOptions->dryRunFlag)
   {
     // lock archive
     if (!Semaphore_lock(&archiveEntryInfo->archiveInfo->chunkIOLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,SEMAPHORE_WAIT_FOREVER))
     {
-      Chunk_done(&archiveEntryInfo->special.chunkSpecialExtendedAttribute.info);
-      Chunk_done(&archiveEntryInfo->special.chunkSpecialEntry.info);
-
-      Crypt_done(&archiveEntryInfo->special.chunkSpecialExtendedAttribute.cryptInfo);
-      Crypt_done(&archiveEntryInfo->special.chunkSpecialEntry.cryptInfo);
-
-      Chunk_done(&archiveEntryInfo->special.chunkSpecial.info);
+      AutoFree_freeDone(&autoFreeList);
       return ERROR_IPC;
     }
 
@@ -5279,54 +5043,67 @@ Errors Archive_newSpecialEntry(ArchiveEntryInfo                *archiveEntryInfo
     if (error != ERROR_NONE)
     {
       Semaphore_unlock(&archiveEntryInfo->archiveInfo->chunkIOLock);
-
-      Chunk_done(&archiveEntryInfo->special.chunkSpecialExtendedAttribute.info);
-      Chunk_done(&archiveEntryInfo->special.chunkSpecialEntry.info);
-
-      Crypt_done(&archiveEntryInfo->special.chunkSpecialExtendedAttribute.cryptInfo);
-      Crypt_done(&archiveEntryInfo->special.chunkSpecialEntry.cryptInfo);
-
-      Chunk_done(&archiveEntryInfo->special.chunkSpecial.info);
-
+      AutoFree_freeDone(&autoFreeList);
       return error;
     }
 
-    // write special chunks
+    // write special chunk
     error = Chunk_create(&archiveEntryInfo->special.chunkSpecial.info);
     if (error != ERROR_NONE)
     {
       Semaphore_unlock(&archiveEntryInfo->archiveInfo->chunkIOLock);
-
-      Chunk_done(&archiveEntryInfo->special.chunkSpecialExtendedAttribute.info);
-      Chunk_done(&archiveEntryInfo->special.chunkSpecialEntry.info);
-
-      Crypt_done(&archiveEntryInfo->special.chunkSpecialExtendedAttribute.cryptInfo);
-      Crypt_done(&archiveEntryInfo->special.chunkSpecialEntry.cryptInfo);
-
-      Chunk_done(&archiveEntryInfo->special.chunkSpecial.info);
-
+      AutoFree_freeDone(&autoFreeList);
       return error;
     }
+
+    // write special entry chunk
     error = Chunk_create(&archiveEntryInfo->special.chunkSpecialEntry.info);
     if (error != ERROR_NONE)
     {
       Semaphore_unlock(&archiveEntryInfo->archiveInfo->chunkIOLock);
-
-      Chunk_done(&archiveEntryInfo->special.chunkSpecialExtendedAttribute.info);
-      Chunk_done(&archiveEntryInfo->special.chunkSpecialEntry.info);
-
-      Crypt_done(&archiveEntryInfo->special.chunkSpecialExtendedAttribute.cryptInfo);
-      Crypt_done(&archiveEntryInfo->special.chunkSpecialEntry.cryptInfo);
-
-      Chunk_done(&archiveEntryInfo->special.chunkSpecial.info);
-
+      AutoFree_freeDone(&autoFreeList);
       return error;
     }
-#warning write extended attributes
+
+    // write extended attribute chunks
+    LIST_ITERATE(fileExtendedAttributeList,fileExtendedAttributeNode)
+    {
+      String_set(archiveEntryInfo->special.chunkSpecialExtendedAttribute.name,fileExtendedAttributeNode->name);
+      archiveEntryInfo->special.chunkSpecialExtendedAttribute.value.data   = fileExtendedAttributeNode->data;
+      archiveEntryInfo->special.chunkSpecialExtendedAttribute.value.length = fileExtendedAttributeNode->dataLength;
+
+      error = Chunk_create(&archiveEntryInfo->special.chunkSpecialExtendedAttribute.info);
+      if (error != ERROR_NONE)
+      {
+        break;
+      }
+      error = Chunk_writeData(&archiveEntryInfo->special.chunkSpecialExtendedAttribute.info,
+                              fileExtendedAttributeNode->data,
+                              fileExtendedAttributeNode->dataLength
+                             );
+      if (error != ERROR_NONE)
+      {
+        break;
+      }
+      error = Chunk_close(&archiveEntryInfo->special.chunkSpecialExtendedAttribute.info);
+      if (error != ERROR_NONE)
+      {
+        break;
+      }
+    }
+    if (error != ERROR_NONE)
+    {
+      Semaphore_unlock(&archiveEntryInfo->archiveInfo->chunkIOLock);
+      AutoFree_freeDone(&autoFreeList);
+      return error;
+    }
   }
 
   // registers as open archive entry
   registerArchiveEntry(archiveEntryInfo);
+
+  // free resources
+  AutoFree_done(&autoFreeList);
 
   return ERROR_NONE;
 }
@@ -5558,6 +5335,7 @@ Errors Archive_readFileEntry(ArchiveEntryInfo          *archiveEntryInfo,
                              uint64                    *fragmentSize
                             )
 {
+  AutoFreeList   autoFreeList1,autoFreeList2;
   Errors         error;
   ChunkHeader    chunkHeader;
   uint64         index;
@@ -5582,6 +5360,8 @@ Errors Archive_readFileEntry(ArchiveEntryInfo          *archiveEntryInfo,
   }
 
   // init variables
+  AutoFree_init(&autoFreeList1);
+
   archiveEntryInfo->archiveInfo               = archiveInfo;
   archiveEntryInfo->mode                      = ARCHIVE_MODE_READ;
   archiveEntryInfo->archiveEntryType          = ARCHIVE_ENTRY_TYPE_FILE;
@@ -5606,8 +5386,10 @@ Errors Archive_readFileEntry(ArchiveEntryInfo          *archiveEntryInfo,
                     );
   if (error != ERROR_NONE)
   {
+    AutoFree_freeDone(&autoFreeList1);
     return error;
   }
+  AUTOFREE_ADD(&autoFreeList1,&archiveEntryInfo->file.chunkFile.info,ChunkInfo*,{ Chunk_done(resource); });
 
   // find next file chunk
   do
@@ -5616,6 +5398,7 @@ Errors Archive_readFileEntry(ArchiveEntryInfo          *archiveEntryInfo,
     if (error != ERROR_NONE)
     {
       Chunk_done(&archiveEntryInfo->file.chunkFile.info);
+      AutoFree_freeDone(&autoFreeList1);
       return error;
     }
 
@@ -5624,7 +5407,7 @@ Errors Archive_readFileEntry(ArchiveEntryInfo          *archiveEntryInfo,
       error = Chunk_skip(archiveInfo->chunkIO,archiveInfo->chunkIOUserData,&chunkHeader);
       if (error != ERROR_NONE)
       {
-        Chunk_done(&archiveEntryInfo->file.chunkFile.info);
+        AutoFree_freeDone(&autoFreeList1);
         return error;
       }
       continue;
@@ -5639,14 +5422,14 @@ Errors Archive_readFileEntry(ArchiveEntryInfo          *archiveEntryInfo,
                     );
   if (error != ERROR_NONE)
   {
-    Chunk_done(&archiveEntryInfo->file.chunkFile.info);
     archiveInfo->pendingError = Chunk_skip(archiveInfo->chunkIO,archiveInfo->chunkIOUserData,&chunkHeader);
+    AutoFree_freeDone(&autoFreeList1);
     return error;
   }
   if (!Compress_isValidAlgorithm(archiveEntryInfo->file.chunkFile.compressAlgorithm))
   {
-    Chunk_done(&archiveEntryInfo->file.chunkFile.info);
     archiveInfo->pendingError = Chunk_skip(archiveInfo->chunkIO,archiveInfo->chunkIOUserData,&chunkHeader);
+    AutoFree_freeDone(&autoFreeList1);
     return ERROR_INVALID_COMPRESS_ALGORITHM;
   }
   archiveEntryInfo->file.deltaCompressAlgorithm = COMPRESS_ALGORITHM_NONE;
@@ -5657,8 +5440,8 @@ Errors Archive_readFileEntry(ArchiveEntryInfo          *archiveEntryInfo,
   error = Crypt_getBlockLength(archiveEntryInfo->cryptAlgorithm,&archiveEntryInfo->blockLength);
   if (error != ERROR_NONE)
   {
-    Chunk_done(&archiveEntryInfo->file.chunkFile.info);
     archiveInfo->pendingError = Chunk_skip(archiveInfo->chunkIO,archiveInfo->chunkIOUserData,&chunkHeader);
+    AutoFree_freeDone(&autoFreeList1);
     return error;
   }
   assert(archiveEntryInfo->blockLength > 0);
@@ -5670,30 +5453,32 @@ Errors Archive_readFileEntry(ArchiveEntryInfo          *archiveEntryInfo,
   {
     HALT_INSUFFICIENT_MEMORY();
   }
+  AUTOFREE_ADD(&autoFreeList1,archiveEntryInfo->file.byteBuffer,void*,{ free(resource); });
   archiveEntryInfo->file.deltaBufferSize = MAX_BUFFER_SIZE;
   archiveEntryInfo->file.deltaBuffer = (byte*)malloc(archiveEntryInfo->file.deltaBufferSize);
   if (archiveEntryInfo->file.deltaBuffer == NULL)
   {
     HALT_INSUFFICIENT_MEMORY();
   }
+  AUTOFREE_ADD(&autoFreeList1,archiveEntryInfo->file.deltaBuffer,void*,{ free(resource); });
 
   // init byte decompress
-  error = Compress_new(&archiveEntryInfo->file.byteCompressInfo,
-                       COMPRESS_MODE_INFLATE,
-                       archiveEntryInfo->file.byteCompressAlgorithm,
-                       archiveEntryInfo->blockLength,
-                       NULL
-                      );
+  error = Compress_init(&archiveEntryInfo->file.byteCompressInfo,
+                        COMPRESS_MODE_INFLATE,
+                        archiveEntryInfo->file.byteCompressAlgorithm,
+                        archiveEntryInfo->blockLength,
+                        NULL
+                       );
   if (error != ERROR_NONE)
   {
-    free(archiveEntryInfo->file.deltaBuffer);
-    free(archiveEntryInfo->file.byteBuffer);
-    Chunk_done(&archiveEntryInfo->file.chunkFile.info);
     archiveInfo->pendingError = Chunk_skip(archiveInfo->chunkIO,archiveInfo->chunkIOUserData,&chunkHeader);
+    AutoFree_freeDone(&autoFreeList1);
     return error;
   }
+  AUTOFREE_ADD(&autoFreeList1,&archiveEntryInfo->file.byteCompressInfo,CompressInfo*,{ Compress_done(resource); });
 
   // try to read file entry with all passwords
+  AutoFree_init(&autoFreeList2);
   Chunk_tell(&archiveEntryInfo->file.chunkFile.info,&index);
   if (archiveEntryInfo->cryptAlgorithm != CRYPT_ALGORITHM_NONE)
   {
@@ -5739,8 +5524,9 @@ Errors Archive_readFileEntry(ArchiveEntryInfo          *archiveEntryInfo,
                          archiveEntryInfo->cryptAlgorithm,
                          password
                         );
-      if (error != ERROR_NONE)
+      if (error == ERROR_NONE)
       {
+        AUTOFREE_ADD(&autoFreeList2,&archiveEntryInfo->file.chunkFileEntry.cryptInfo,CryptInfo*,{ Crypt_done(resource); });
       }
     }
     if (error == ERROR_NONE)
@@ -5749,7 +5535,11 @@ Errors Archive_readFileEntry(ArchiveEntryInfo          *archiveEntryInfo,
                          archiveEntryInfo->cryptAlgorithm,
                          password
                         );
-      if (error != ERROR_NONE)
+      if (error == ERROR_NONE)
+      {
+        AUTOFREE_ADD(&autoFreeList2,&archiveEntryInfo->file.chunkFileExtendedAttribute.cryptInfo,CryptInfo*,{ Crypt_done(resource); });
+      }
+      else
       {
         Crypt_done(&archiveEntryInfo->file.chunkFileEntry.cryptInfo);
       }
@@ -5760,7 +5550,11 @@ Errors Archive_readFileEntry(ArchiveEntryInfo          *archiveEntryInfo,
                          archiveEntryInfo->cryptAlgorithm,
                          password
                         );
-      if (error != ERROR_NONE)
+      if (error == ERROR_NONE)
+      {
+        AUTOFREE_ADD(&autoFreeList2,&archiveEntryInfo->file.chunkFileDelta.cryptInfo,CryptInfo*,{ Crypt_done(resource); });
+      }
+      else
       {
         Crypt_done(&archiveEntryInfo->file.chunkFileExtendedAttribute.cryptInfo);
         Crypt_done(&archiveEntryInfo->file.chunkFileEntry.cryptInfo);
@@ -5772,7 +5566,11 @@ Errors Archive_readFileEntry(ArchiveEntryInfo          *archiveEntryInfo,
                          archiveEntryInfo->cryptAlgorithm,
                          password
                         );
-      if (error != ERROR_NONE)
+      if (error == ERROR_NONE)
+      {
+        AUTOFREE_ADD(&autoFreeList2,&archiveEntryInfo->file.chunkFileData.cryptInfo,CryptInfo*,{ Crypt_done(resource); });
+      }
+      else
       {
         Crypt_done(&archiveEntryInfo->file.chunkFileDelta.cryptInfo);
         Crypt_done(&archiveEntryInfo->file.chunkFileExtendedAttribute.cryptInfo);
@@ -5785,7 +5583,11 @@ Errors Archive_readFileEntry(ArchiveEntryInfo          *archiveEntryInfo,
                          archiveEntryInfo->cryptAlgorithm,
                          password
                         );
-      if (error != ERROR_NONE)
+      if (error == ERROR_NONE)
+      {
+        AUTOFREE_ADD(&autoFreeList2,&archiveEntryInfo->file.cryptInfo,CryptInfo*,{ Crypt_done(resource); });
+      }
+      else
       {
         Crypt_done(&archiveEntryInfo->file.chunkFileData.cryptInfo);
         Crypt_done(&archiveEntryInfo->file.chunkFileDelta.cryptInfo);
@@ -5807,7 +5609,11 @@ Errors Archive_readFileEntry(ArchiveEntryInfo          *archiveEntryInfo,
                          &archiveEntryInfo->file.chunkFileEntry.cryptInfo,
                          &archiveEntryInfo->file.chunkFileEntry
                         );
-      if (error != ERROR_NONE)
+      if (error == ERROR_NONE)
+      {
+        AUTOFREE_ADD(&autoFreeList2,&archiveEntryInfo->file.chunkFileEntry.info,ChunkInfo*,{ Chunk_done(resource); });
+      }
+      else
       {
         Crypt_done(&archiveEntryInfo->file.cryptInfo);
         Crypt_done(&archiveEntryInfo->file.chunkFileData.cryptInfo);
@@ -5828,7 +5634,11 @@ Errors Archive_readFileEntry(ArchiveEntryInfo          *archiveEntryInfo,
                          &archiveEntryInfo->file.chunkFileExtendedAttribute.cryptInfo,
                          &archiveEntryInfo->file.chunkFileExtendedAttribute
                         );
-      if (error != ERROR_NONE)
+      if (error == ERROR_NONE)
+      {
+        AUTOFREE_ADD(&autoFreeList2,&archiveEntryInfo->file.chunkFileExtendedAttribute.info,ChunkInfo*,{ Chunk_done(resource); });
+      }
+      else
       {
         Chunk_done(&archiveEntryInfo->file.chunkFileEntry.info);
         Crypt_done(&archiveEntryInfo->file.cryptInfo);
@@ -5850,7 +5660,11 @@ Errors Archive_readFileEntry(ArchiveEntryInfo          *archiveEntryInfo,
                          &archiveEntryInfo->file.chunkFileDelta.cryptInfo,
                          &archiveEntryInfo->file.chunkFileDelta
                         );
-      if (error != ERROR_NONE)
+      if (error == ERROR_NONE)
+      {
+        AUTOFREE_ADD(&autoFreeList2,&archiveEntryInfo->file.chunkFileDelta.info,ChunkInfo*,{ Chunk_done(resource); });
+      }
+      else
       {
         Chunk_done(&archiveEntryInfo->file.chunkFileExtendedAttribute.info);
         Chunk_done(&archiveEntryInfo->file.chunkFileEntry.info);
@@ -5873,7 +5687,11 @@ Errors Archive_readFileEntry(ArchiveEntryInfo          *archiveEntryInfo,
                          &archiveEntryInfo->file.chunkFileData.cryptInfo,
                          &archiveEntryInfo->file.chunkFileData
                         );
-      if (error != ERROR_NONE)
+      if (error == ERROR_NONE)
+      {
+        AUTOFREE_ADD(&autoFreeList2,&archiveEntryInfo->file.chunkFileData.info,ChunkInfo*,{ Chunk_done(resource); });
+      }
+      else
       {
         Chunk_done(&archiveEntryInfo->file.chunkFileDelta.info);
         Chunk_done(&archiveEntryInfo->file.chunkFileExtendedAttribute.info);
@@ -5931,8 +5749,7 @@ Errors Archive_readFileEntry(ArchiveEntryInfo          *archiveEntryInfo,
             break;
           case CHUNK_ID_FILE_EXTENDED_ATTRIBUTE:
             {
-              FileExtendedAttributeNode *fileExtendedAttributeNode;
-              ulong                     bytesRead;
+              ulong bytesRead;
 
               if (fileExtendedAttributeList != NULL)
               {
@@ -6022,6 +5839,7 @@ Errors Archive_readFileEntry(ArchiveEntryInfo          *archiveEntryInfo,
       if (error != ERROR_NONE)
       {
         // free resources
+        AutoFree_freeAll(&autoFreeList2);
         Chunk_done(&archiveEntryInfo->file.chunkFileData.info);
         Chunk_done(&archiveEntryInfo->file.chunkFileDelta.info);
         Chunk_done(&archiveEntryInfo->file.chunkFileExtendedAttribute.info);
@@ -6059,37 +5877,18 @@ Errors Archive_readFileEntry(ArchiveEntryInfo          *archiveEntryInfo,
   } /* while */
   if (error != ERROR_NONE)
   {
-    Compress_delete(&archiveEntryInfo->file.byteCompressInfo);
-    free(archiveEntryInfo->file.deltaBuffer);
-    free(archiveEntryInfo->file.byteBuffer);
-    Chunk_done(&archiveEntryInfo->file.chunkFile.info);
-
     archiveInfo->pendingError = Chunk_skip(archiveInfo->chunkIO,archiveInfo->chunkIOUserData,&chunkHeader);
-
+    AutoFree_freeDone(&autoFreeList2);
+    AutoFree_freeDone(&autoFreeList1);
     return error;
   }
+  AutoFree_done(&autoFreeList2);
 
   // check if mandatory file entry chunk and file data chunk found
   if (!foundFileEntryFlag || !foundFileDataFlag)
   {
-    Chunk_done(&archiveEntryInfo->file.chunkFileData.info);
-    Chunk_done(&archiveEntryInfo->file.chunkFileDelta.info);
-    Chunk_done(&archiveEntryInfo->file.chunkFileExtendedAttribute.info);
-    Chunk_done(&archiveEntryInfo->file.chunkFileEntry.info);
-
-    Crypt_done(&archiveEntryInfo->file.cryptInfo);
-    Crypt_done(&archiveEntryInfo->file.chunkFileData.cryptInfo);
-    Crypt_done(&archiveEntryInfo->file.chunkFileDelta.cryptInfo);
-    Crypt_done(&archiveEntryInfo->file.chunkFileExtendedAttribute.cryptInfo);
-    Crypt_done(&archiveEntryInfo->file.chunkFileEntry.cryptInfo);
-
-    Compress_delete(&archiveEntryInfo->file.byteCompressInfo);
-    free(archiveEntryInfo->file.deltaBuffer);
-    free(archiveEntryInfo->file.byteBuffer);
-    Chunk_done(&archiveEntryInfo->file.chunkFile.info);
-
     archiveInfo->pendingError = Chunk_skip(archiveInfo->chunkIO,archiveInfo->chunkIOUserData,&chunkHeader);
-
+    AutoFree_freeDone(&autoFreeList1);
     if      (error != ERROR_NONE) return error;
     else if (!passwordFlag)       return ERROR_NO_CRYPT_PASSWORD;
     else if (!decryptedFlag)      return ERROR_INVALID_CRYPT_PASSWORD;
@@ -6099,32 +5898,16 @@ Errors Archive_readFileEntry(ArchiveEntryInfo          *archiveEntryInfo,
   }
 
   // init delta decompress (if no delta-compression is enabled, use identity-compressor)
-  error = Compress_new(&archiveEntryInfo->file.deltaCompressInfo,
-                       COMPRESS_MODE_INFLATE,
-                       archiveEntryInfo->file.deltaCompressAlgorithm,
-                       1,
-                       &archiveEntryInfo->file.sourceHandle
-                      );
+  error = Compress_init(&archiveEntryInfo->file.deltaCompressInfo,
+                        COMPRESS_MODE_INFLATE,
+                        archiveEntryInfo->file.deltaCompressAlgorithm,
+                        1,
+                        &archiveEntryInfo->file.sourceHandle
+                       );
   if (error != ERROR_NONE)
   {
-    Chunk_done(&archiveEntryInfo->file.chunkFileData.info);
-    Chunk_done(&archiveEntryInfo->file.chunkFileDelta.info);
-    Chunk_done(&archiveEntryInfo->file.chunkFileExtendedAttribute.info);
-    Chunk_done(&archiveEntryInfo->file.chunkFileEntry.info);
-
-    Crypt_done(&archiveEntryInfo->file.cryptInfo);
-    Crypt_done(&archiveEntryInfo->file.chunkFileData.cryptInfo);
-    Crypt_done(&archiveEntryInfo->file.chunkFileDelta.cryptInfo);
-    Crypt_done(&archiveEntryInfo->file.chunkFileExtendedAttribute.cryptInfo);
-    Crypt_done(&archiveEntryInfo->file.chunkFileEntry.cryptInfo);
-
-    Compress_delete(&archiveEntryInfo->file.byteCompressInfo);
-    free(archiveEntryInfo->file.deltaBuffer);
-    free(archiveEntryInfo->file.byteBuffer);
-    Chunk_done(&archiveEntryInfo->file.chunkFile.info);
-
     archiveInfo->pendingError = Chunk_skip(archiveInfo->chunkIO,archiveInfo->chunkIOUserData,&chunkHeader);
-
+    AutoFree_freeDone(&autoFreeList1);
     return error;
   }
 
@@ -6136,6 +5919,9 @@ Errors Archive_readFileEntry(ArchiveEntryInfo          *archiveEntryInfo,
 
   // registers as open archive entry
   registerArchiveEntry(archiveEntryInfo);
+
+  // free resources
+  AutoFree_done(&autoFreeList1);
 
   return ERROR_NONE;
 }
@@ -6154,6 +5940,7 @@ Errors Archive_readImageEntry(ArchiveEntryInfo   *archiveEntryInfo,
                               uint64             *blockCount
                              )
 {
+  AutoFreeList   autoFreeList1,autoFreeList2;
   Errors         error;
   ChunkHeader    chunkHeader;
   uint64         index;
@@ -6177,7 +5964,9 @@ Errors Archive_readImageEntry(ArchiveEntryInfo   *archiveEntryInfo,
     return error;
   }
 
-  // init archive entry info
+  // init variables
+  AutoFree_init(&autoFreeList1);
+
   archiveEntryInfo->archiveInfo                = archiveInfo;
   archiveEntryInfo->mode                       = ARCHIVE_MODE_READ;
   archiveEntryInfo->archiveEntryType           = ARCHIVE_ENTRY_TYPE_IMAGE;
@@ -6202,8 +5991,10 @@ Errors Archive_readImageEntry(ArchiveEntryInfo   *archiveEntryInfo,
                     );
   if (error != ERROR_NONE)
   {
+    AutoFree_freeDone(&autoFreeList1);
     return error;
   }
+  AUTOFREE_ADD(&autoFreeList1,&archiveEntryInfo->image.chunkImage.info,ChunkInfo*,{ Chunk_done(resource); });
 
   // find next image chunk
   do
@@ -6211,7 +6002,7 @@ Errors Archive_readImageEntry(ArchiveEntryInfo   *archiveEntryInfo,
     error = getNextChunkHeader(archiveInfo,&chunkHeader);
     if (error != ERROR_NONE)
     {
-      Chunk_done(&archiveEntryInfo->image.chunkImage.info);
+      AutoFree_freeDone(&autoFreeList1);
       return error;
     }
 
@@ -6220,7 +6011,7 @@ Errors Archive_readImageEntry(ArchiveEntryInfo   *archiveEntryInfo,
       error = Chunk_skip(archiveInfo->chunkIO,archiveInfo->chunkIOUserData,&chunkHeader);
       if (error != ERROR_NONE)
       {
-        Chunk_done(&archiveEntryInfo->image.chunkImage.info);
+        AutoFree_freeDone(&autoFreeList1);
         return error;
       }
       continue;
@@ -6235,14 +6026,14 @@ Errors Archive_readImageEntry(ArchiveEntryInfo   *archiveEntryInfo,
                     );
   if (error != ERROR_NONE)
   {
-    Chunk_done(&archiveEntryInfo->image.chunkImage.info);
     archiveInfo->pendingError = Chunk_skip(archiveInfo->chunkIO,archiveInfo->chunkIOUserData,&chunkHeader);
+    AutoFree_freeDone(&autoFreeList1);
     return error;
   }
   if (!Compress_isValidAlgorithm(archiveEntryInfo->image.chunkImage.compressAlgorithm))
   {
-    Chunk_done(&archiveEntryInfo->image.chunkImage.info);
     archiveInfo->pendingError = Chunk_skip(archiveInfo->chunkIO,archiveInfo->chunkIOUserData,&chunkHeader);
+    AutoFree_freeDone(&autoFreeList1);
     return ERROR_INVALID_COMPRESS_ALGORITHM;
   }
   archiveEntryInfo->image.deltaCompressAlgorithm = COMPRESS_ALGORITHM_NONE;
@@ -6253,8 +6044,8 @@ Errors Archive_readImageEntry(ArchiveEntryInfo   *archiveEntryInfo,
   error = Crypt_getBlockLength(archiveEntryInfo->cryptAlgorithm,&archiveEntryInfo->blockLength);
   if (error != ERROR_NONE)
   {
-    Chunk_done(&archiveEntryInfo->image.chunkImage.info);
     archiveInfo->pendingError = Chunk_skip(archiveInfo->chunkIO,archiveInfo->chunkIOUserData,&chunkHeader);
+    AutoFree_freeDone(&autoFreeList1);
     return error;
   }
   assert(archiveEntryInfo->blockLength > 0);
@@ -6268,28 +6059,30 @@ Errors Archive_readImageEntry(ArchiveEntryInfo   *archiveEntryInfo,
   }
   archiveEntryInfo->image.deltaBufferSize = MAX_BUFFER_SIZE;
   archiveEntryInfo->image.deltaBuffer = (byte*)malloc(archiveEntryInfo->image.deltaBufferSize);
+  AUTOFREE_ADD(&autoFreeList1,archiveEntryInfo->image.byteBuffer,void*,{ free(resource); });
   if (archiveEntryInfo->image.deltaBuffer == NULL)
   {
     HALT_INSUFFICIENT_MEMORY();
   }
+  AUTOFREE_ADD(&autoFreeList1,archiveEntryInfo->image.deltaBuffer,void*,{ free(resource); });
 
   // init byte decompress
-  error = Compress_new(&archiveEntryInfo->image.byteCompressInfo,
-                       COMPRESS_MODE_INFLATE,
-                       archiveEntryInfo->image.byteCompressAlgorithm,
-                       archiveEntryInfo->blockLength,
-                       NULL
-                      );
+  error = Compress_init(&archiveEntryInfo->image.byteCompressInfo,
+                        COMPRESS_MODE_INFLATE,
+                        archiveEntryInfo->image.byteCompressAlgorithm,
+                        archiveEntryInfo->blockLength,
+                        NULL
+                       );
   if (error != ERROR_NONE)
   {
-    free(archiveEntryInfo->image.deltaBuffer);
-    free(archiveEntryInfo->image.byteBuffer);
-    Chunk_done(&archiveEntryInfo->image.chunkImage.info);
     archiveInfo->pendingError = Chunk_skip(archiveInfo->chunkIO,archiveInfo->chunkIOUserData,&chunkHeader);
+    AutoFree_freeDone(&autoFreeList1);
     return error;
   }
+  AUTOFREE_ADD(&autoFreeList1,&archiveEntryInfo->image.byteCompressInfo,CompressInfo*,{ Compress_done(resource); });
 
   // try to read image entry with all passwords
+  AutoFree_init(&autoFreeList2);
   Chunk_tell(&archiveEntryInfo->image.chunkImage.info,&index);
   if (archiveEntryInfo->cryptAlgorithm != CRYPT_ALGORITHM_NONE)
   {
@@ -6337,7 +6130,11 @@ Errors Archive_readImageEntry(ArchiveEntryInfo   *archiveEntryInfo,
                          archiveEntryInfo->cryptAlgorithm,
                          password
                         );
-      if (error != ERROR_NONE)
+      if (error == ERROR_NONE)
+      {
+        AUTOFREE_ADD(&autoFreeList2,&archiveEntryInfo->image.chunkImageEntry.cryptInfo,CryptInfo*,{ Crypt_done(resource); });
+      }
+      else
       {
       }
     }
@@ -6347,7 +6144,11 @@ Errors Archive_readImageEntry(ArchiveEntryInfo   *archiveEntryInfo,
                          archiveEntryInfo->cryptAlgorithm,
                          password
                         );
-      if (error != ERROR_NONE)
+      if (error == ERROR_NONE)
+      {
+        AUTOFREE_ADD(&autoFreeList2,&archiveEntryInfo->image.chunkImageDelta.cryptInfo,CryptInfo*,{ Crypt_done(resource); });
+      }
+      else
       {
         Crypt_done(&archiveEntryInfo->image.chunkImageEntry.cryptInfo);
       }
@@ -6358,7 +6159,11 @@ Errors Archive_readImageEntry(ArchiveEntryInfo   *archiveEntryInfo,
                          archiveEntryInfo->cryptAlgorithm,
                          password
                         );
-      if (error != ERROR_NONE)
+      if (error == ERROR_NONE)
+      {
+        AUTOFREE_ADD(&autoFreeList2,&archiveEntryInfo->image.chunkImageData.cryptInfo,CryptInfo*,{ Crypt_done(resource); });
+      }
+      else
       {
         Crypt_done(&archiveEntryInfo->image.chunkImageDelta.cryptInfo);
         Crypt_done(&archiveEntryInfo->image.chunkImageEntry.cryptInfo);
@@ -6370,7 +6175,11 @@ Errors Archive_readImageEntry(ArchiveEntryInfo   *archiveEntryInfo,
                          archiveEntryInfo->cryptAlgorithm,
                          password
                         );
-      if (error != ERROR_NONE)
+      if (error == ERROR_NONE)
+      {
+        AUTOFREE_ADD(&autoFreeList2,&archiveEntryInfo->image.cryptInfo,CryptInfo*,{ Crypt_done(resource); });
+      }
+      else
       {
         Crypt_done(&archiveEntryInfo->image.chunkImageData.cryptInfo);
         Crypt_done(&archiveEntryInfo->image.chunkImageDelta.cryptInfo);
@@ -6391,7 +6200,11 @@ Errors Archive_readImageEntry(ArchiveEntryInfo   *archiveEntryInfo,
                          &archiveEntryInfo->image.chunkImageEntry.cryptInfo,
                          &archiveEntryInfo->image.chunkImageEntry
                         );
-      if (error != ERROR_NONE)
+      if (error == ERROR_NONE)
+      {
+        AUTOFREE_ADD(&autoFreeList2,&archiveEntryInfo->image.chunkImageEntry.info,ChunkInfo*,{ Chunk_done(resource); });
+      }
+      else
       {
         Crypt_done(&archiveEntryInfo->image.cryptInfo);
         Crypt_done(&archiveEntryInfo->image.chunkImageData.cryptInfo);
@@ -6411,7 +6224,11 @@ Errors Archive_readImageEntry(ArchiveEntryInfo   *archiveEntryInfo,
                          &archiveEntryInfo->image.chunkImageDelta.cryptInfo,
                          &archiveEntryInfo->image.chunkImageDelta
                         );
-      if (error != ERROR_NONE)
+      if (error == ERROR_NONE)
+      {
+        AUTOFREE_ADD(&autoFreeList2,&archiveEntryInfo->image.chunkImageDelta.info,ChunkInfo*,{ Chunk_done(resource); });
+      }
+      else
       {
         Chunk_done(&archiveEntryInfo->image.chunkImageEntry.info);
         Crypt_done(&archiveEntryInfo->image.cryptInfo);
@@ -6432,7 +6249,11 @@ Errors Archive_readImageEntry(ArchiveEntryInfo   *archiveEntryInfo,
                          &archiveEntryInfo->image.chunkImageData.cryptInfo,
                          &archiveEntryInfo->image.chunkImageData
                         );
-      if (error != ERROR_NONE)
+      if (error == ERROR_NONE)
+      {
+        AUTOFREE_ADD(&autoFreeList2,&archiveEntryInfo->image.chunkImageData.info,ChunkInfo*,{ Chunk_done(resource); });
+      }
+      else
       {
         Chunk_done(&archiveEntryInfo->image.chunkImageDelta.info);
         Chunk_done(&archiveEntryInfo->image.chunkImageEntry.info);
@@ -6536,6 +6357,7 @@ Errors Archive_readImageEntry(ArchiveEntryInfo   *archiveEntryInfo,
       if (error != ERROR_NONE)
       {
         // free resources
+        AutoFree_freeAll(&autoFreeList2);
         Chunk_done(&archiveEntryInfo->image.chunkImageData.info);
         Chunk_done(&archiveEntryInfo->image.chunkImageDelta.info);
         Chunk_done(&archiveEntryInfo->image.chunkImageEntry.info);
@@ -6571,34 +6393,17 @@ Errors Archive_readImageEntry(ArchiveEntryInfo   *archiveEntryInfo,
   } /* while */
   if (error != ERROR_NONE)
   {
-    Compress_delete(&archiveEntryInfo->image.byteCompressInfo);
-    free(archiveEntryInfo->image.deltaBuffer);
-    free(archiveEntryInfo->image.byteBuffer);
-    Chunk_done(&archiveEntryInfo->image.chunkImage.info);
-
     archiveInfo->pendingError = Chunk_skip(archiveInfo->chunkIO,archiveInfo->chunkIOUserData,&chunkHeader);
-
+    AutoFree_freeDone(&autoFreeList2);
+    AutoFree_freeDone(&autoFreeList1);
     return error;
   }
+  AutoFree_done(&autoFreeList2);
 
   if (!foundImageEntryFlag || !foundImageDataFlag)
   {
-    Chunk_done(&archiveEntryInfo->image.chunkImageData.info);
-    Chunk_done(&archiveEntryInfo->image.chunkImageDelta.info);
-    Chunk_done(&archiveEntryInfo->image.chunkImageEntry.info);
-
-    Crypt_done(&archiveEntryInfo->image.cryptInfo);
-    Crypt_done(&archiveEntryInfo->image.chunkImageData.cryptInfo);
-    Crypt_done(&archiveEntryInfo->image.chunkImageDelta.cryptInfo);
-    Crypt_done(&archiveEntryInfo->image.chunkImageEntry.cryptInfo);
-
-    Compress_delete(&archiveEntryInfo->image.byteCompressInfo);
-    free(archiveEntryInfo->image.deltaBuffer);
-    free(archiveEntryInfo->image.byteBuffer);
-    Chunk_done(&archiveEntryInfo->image.chunkImage.info);
-
     archiveInfo->pendingError = Chunk_skip(archiveInfo->chunkIO,archiveInfo->chunkIOUserData,&chunkHeader);
-
+    AutoFree_freeDone(&autoFreeList1);
     if      (error != ERROR_NONE)  return error;
     else if (!passwordFlag)        return ERROR_NO_CRYPT_PASSWORD;
     else if (!decryptedFlag)       return ERROR_INVALID_CRYPT_PASSWORD;
@@ -6608,32 +6413,19 @@ Errors Archive_readImageEntry(ArchiveEntryInfo   *archiveEntryInfo,
   }
 
   // init delta decompress (if no delta-compression is enabled, use identity-compressor)
-  error = Compress_new(&archiveEntryInfo->image.deltaCompressInfo,
-                       COMPRESS_MODE_INFLATE,
-                       archiveEntryInfo->image.deltaCompressAlgorithm,
-                       1,
-                       &archiveEntryInfo->image.sourceHandle
-                      );
+  error = Compress_init(&archiveEntryInfo->image.deltaCompressInfo,
+                        COMPRESS_MODE_INFLATE,
+                        archiveEntryInfo->image.deltaCompressAlgorithm,
+                        1,
+                        &archiveEntryInfo->image.sourceHandle
+                       );
   if (error != ERROR_NONE)
   {
-    Chunk_done(&archiveEntryInfo->image.chunkImageData.info);
-    Chunk_done(&archiveEntryInfo->image.chunkImageDelta.info);
-    Chunk_done(&archiveEntryInfo->image.chunkImageEntry.info);
-
-    Crypt_done(&archiveEntryInfo->image.cryptInfo);
-    Crypt_done(&archiveEntryInfo->image.chunkImageData.cryptInfo);
-    Crypt_done(&archiveEntryInfo->image.chunkImageDelta.cryptInfo);
-    Crypt_done(&archiveEntryInfo->image.chunkImageEntry.cryptInfo);
-
-    Compress_delete(&archiveEntryInfo->image.byteCompressInfo);
-    free(archiveEntryInfo->image.deltaBuffer);
-    free(archiveEntryInfo->image.byteBuffer);
-    Chunk_done(&archiveEntryInfo->image.chunkImage.info);
-
     archiveInfo->pendingError = Chunk_skip(archiveInfo->chunkIO,archiveInfo->chunkIOUserData,&chunkHeader);
-
+    AutoFree_freeDone(&autoFreeList1);
     return error;
   }
+  AUTOFREE_ADD(&autoFreeList1,&archiveEntryInfo->image.deltaCompressInfo,CompressInfo*,{ Compress_done(resource); });
 
   // init variables
   if (deltaCompressAlgorithm != NULL) (*deltaCompressAlgorithm) = archiveEntryInfo->image.deltaCompressAlgorithm;
@@ -6643,6 +6435,9 @@ Errors Archive_readImageEntry(ArchiveEntryInfo   *archiveEntryInfo,
 
   // registers as open archive entry
   registerArchiveEntry(archiveEntryInfo);
+
+  // free resources
+  AutoFree_done(&autoFreeList1);
 
   return ERROR_NONE;
 }
@@ -6656,6 +6451,7 @@ Errors Archive_readDirectoryEntry(ArchiveEntryInfo          *archiveEntryInfo,
                                   FileExtendedAttributeList *fileExtendedAttributeList
                                  )
 {
+  AutoFreeList   autoFreeList1,autoFreeList2;
   Errors         error;
   ChunkHeader    chunkHeader;
   uint64         index;
@@ -6679,6 +6475,8 @@ Errors Archive_readDirectoryEntry(ArchiveEntryInfo          *archiveEntryInfo,
   }
 
   // init variables
+  AutoFree_init(&autoFreeList1);
+
   archiveEntryInfo->archiveInfo      = archiveInfo;
   archiveEntryInfo->mode             = ARCHIVE_MODE_READ;
   archiveEntryInfo->archiveEntryType = ARCHIVE_ENTRY_TYPE_DIRECTORY;
@@ -6696,8 +6494,10 @@ Errors Archive_readDirectoryEntry(ArchiveEntryInfo          *archiveEntryInfo,
                     );
   if (error != ERROR_NONE)
   {
+    AutoFree_freeDone(&autoFreeList1);
     return error;
   }
+  AUTOFREE_ADD(&autoFreeList1,&archiveEntryInfo->directory.chunkDirectory.info,ChunkInfo*,{ Chunk_done(resource); });
 
   // find next directory chunk
   do
@@ -6706,6 +6506,7 @@ Errors Archive_readDirectoryEntry(ArchiveEntryInfo          *archiveEntryInfo,
     if (error != ERROR_NONE)
     {
       Chunk_done(&archiveEntryInfo->directory.chunkDirectory.info);
+      AutoFree_freeDone(&autoFreeList1);
       return error;
     }
 
@@ -6714,7 +6515,7 @@ Errors Archive_readDirectoryEntry(ArchiveEntryInfo          *archiveEntryInfo,
       error = Chunk_skip(archiveInfo->chunkIO,archiveInfo->chunkIOUserData,&chunkHeader);
       if (error != ERROR_NONE)
       {
-        Chunk_done(&archiveEntryInfo->directory.chunkDirectory.info);
+        AutoFree_freeDone(&autoFreeList1);
         return error;
       }
       continue;
@@ -6729,8 +6530,8 @@ Errors Archive_readDirectoryEntry(ArchiveEntryInfo          *archiveEntryInfo,
                     );
   if (error != ERROR_NONE)
   {
-    Chunk_done(&archiveEntryInfo->directory.chunkDirectory.info);
     archiveInfo->pendingError = Chunk_skip(archiveInfo->chunkIO,archiveInfo->chunkIOUserData,&chunkHeader);
+    AutoFree_freeDone(&autoFreeList1);
     return error;
   }
   archiveEntryInfo->cryptAlgorithm = archiveEntryInfo->directory.chunkDirectory.cryptAlgorithm;
@@ -6739,13 +6540,14 @@ Errors Archive_readDirectoryEntry(ArchiveEntryInfo          *archiveEntryInfo,
   error = Crypt_getBlockLength(archiveEntryInfo->cryptAlgorithm,&archiveEntryInfo->blockLength);
   if (error != ERROR_NONE)
   {
-    Chunk_done(&archiveEntryInfo->directory.chunkDirectory.info);
     archiveInfo->pendingError = Chunk_skip(archiveInfo->chunkIO,archiveInfo->chunkIOUserData,&chunkHeader);
+    AutoFree_freeDone(&autoFreeList1);
     return error;
   }
   assert(archiveEntryInfo->blockLength > 0);
 
   // try to read directory entry with all passwords
+  AutoFree_init(&autoFreeList2);
   Chunk_tell(&archiveEntryInfo->directory.chunkDirectory.info,&index);
   if (archiveEntryInfo->cryptAlgorithm != CRYPT_ALGORITHM_NONE)
   {
@@ -6789,7 +6591,11 @@ Errors Archive_readDirectoryEntry(ArchiveEntryInfo          *archiveEntryInfo,
                          archiveEntryInfo->cryptAlgorithm,
                          password
                         );
-      if (error != ERROR_NONE)
+      if (error == ERROR_NONE)
+      {
+        AUTOFREE_ADD(&autoFreeList2,&archiveEntryInfo->directory.chunkDirectoryEntry.cryptInfo,CryptInfo*,{ Crypt_done(resource); });
+      }
+      else
       {
       }
     }
@@ -6799,7 +6605,11 @@ Errors Archive_readDirectoryEntry(ArchiveEntryInfo          *archiveEntryInfo,
                          archiveEntryInfo->cryptAlgorithm,
                          password
                         );
-      if (error != ERROR_NONE)
+      if (error == ERROR_NONE)
+      {
+        AUTOFREE_ADD(&autoFreeList2,&archiveEntryInfo->directory.chunkDirectoryExtendedAttribute.cryptInfo,CryptInfo*,{ Crypt_done(resource); });
+      }
+      else
       {
         Crypt_done(&archiveEntryInfo->directory.chunkDirectoryEntry.cryptInfo);
       }
@@ -6818,7 +6628,11 @@ Errors Archive_readDirectoryEntry(ArchiveEntryInfo          *archiveEntryInfo,
                          &archiveEntryInfo->directory.chunkDirectoryEntry.cryptInfo,
                          &archiveEntryInfo->directory.chunkDirectoryEntry
                         );
-      if (error != ERROR_NONE)
+      if (error == ERROR_NONE)
+      {
+        AUTOFREE_ADD(&autoFreeList2,&archiveEntryInfo->directory.chunkDirectoryEntry.info,ChunkInfo*,{ Chunk_done(resource); });
+      }
+      else
       {
         Crypt_done(&archiveEntryInfo->directory.chunkDirectoryExtendedAttribute.cryptInfo);
         Crypt_done(&archiveEntryInfo->directory.chunkDirectoryEntry.cryptInfo);
@@ -6836,7 +6650,11 @@ Errors Archive_readDirectoryEntry(ArchiveEntryInfo          *archiveEntryInfo,
                          &archiveEntryInfo->directory.chunkDirectoryExtendedAttribute.cryptInfo,
                          &archiveEntryInfo->directory.chunkDirectoryExtendedAttribute
                         );
-      if (error != ERROR_NONE)
+      if (error == ERROR_NONE)
+      {
+        AUTOFREE_ADD(&autoFreeList2,&archiveEntryInfo->directory.chunkDirectoryExtendedAttribute.info,ChunkInfo*,{ Chunk_done(resource); });
+      }
+      else
       {
         Chunk_done(&archiveEntryInfo->directory.chunkDirectoryEntry.info);
         Crypt_done(&archiveEntryInfo->directory.chunkDirectoryExtendedAttribute.cryptInfo);
@@ -6886,6 +6704,41 @@ Errors Archive_readDirectoryEntry(ArchiveEntryInfo          *archiveEntryInfo,
 
             foundDirectoryEntryFlag = TRUE;
             break;
+          case CHUNK_ID_DIRECTORY_EXTENDED_ATTRIBUTE:
+            {
+              ulong bytesRead;
+
+              if (fileExtendedAttributeList != NULL)
+              {
+                // read file extended attribute chunk
+                bytesRead = 0L;
+                error = Chunk_open(&archiveEntryInfo->directory.chunkDirectoryExtendedAttribute.info,
+                                   &subChunkHeader,
+                                   subChunkHeader.size
+                                  );
+                if (error != ERROR_NONE)
+                {
+                  break;
+                }
+
+                // add extended attribute to list
+                File_addExtendedAttribute(fileExtendedAttributeList,
+                                          archiveEntryInfo->directory.chunkDirectoryExtendedAttribute.name,
+                                          archiveEntryInfo->directory.chunkDirectoryExtendedAttribute.value.data,
+                                          archiveEntryInfo->directory.chunkDirectoryExtendedAttribute.value.length
+                                         );
+              }
+              else
+              {
+                // skip file extended attribute chunk
+                error = Chunk_skipSub(&archiveEntryInfo->directory.chunkDirectory.info,&subChunkHeader);
+                if (error != ERROR_NONE)
+                {
+                  break;
+                }
+              }
+            }
+            break;
           default:
             // unknown sub-chunk -> skip
             if (globalOptions.verboseLevel >= 3)
@@ -6903,6 +6756,7 @@ Errors Archive_readDirectoryEntry(ArchiveEntryInfo          *archiveEntryInfo,
       if (error != ERROR_NONE)
       {
         // free resources
+        AutoFree_freeAll(&autoFreeList2);
         Chunk_done(&archiveEntryInfo->directory.chunkDirectoryExtendedAttribute.info);
         Chunk_done(&archiveEntryInfo->directory.chunkDirectoryEntry.info);
 
@@ -6935,23 +6789,17 @@ Errors Archive_readDirectoryEntry(ArchiveEntryInfo          *archiveEntryInfo,
   } /* while */
   if (error != ERROR_NONE)
   {
-    Chunk_done(&archiveEntryInfo->directory.chunkDirectory.info);
-
     archiveInfo->pendingError = Chunk_skip(archiveInfo->chunkIO,archiveInfo->chunkIOUserData,&chunkHeader);
-
+    AutoFree_freeDone(&autoFreeList2);
+    AutoFree_freeDone(&autoFreeList1);
     return error;
   }
+  AutoFree_done(&autoFreeList2);
 
   if (!foundDirectoryEntryFlag)
   {
-    Chunk_done(&archiveEntryInfo->directory.chunkDirectoryExtendedAttribute.info);
-    Chunk_done(&archiveEntryInfo->directory.chunkDirectory.info);
-
-    Crypt_done(&archiveEntryInfo->directory.chunkDirectoryExtendedAttribute.cryptInfo);
-    Crypt_done(&archiveEntryInfo->directory.chunkDirectoryEntry.cryptInfo);
-
     archiveInfo->pendingError = Chunk_skip(archiveInfo->chunkIO,archiveInfo->chunkIOUserData,&chunkHeader);
-
+    AutoFree_freeDone(&autoFreeList1);
     if      (error != ERROR_NONE)      return error;
     else if (!passwordFlag)            return ERROR_NO_CRYPT_PASSWORD;
     else if (!decryptedFlag)           return ERROR_INVALID_CRYPT_PASSWORD;
@@ -6964,6 +6812,9 @@ Errors Archive_readDirectoryEntry(ArchiveEntryInfo          *archiveEntryInfo,
 
   // registers as open archive entry
   registerArchiveEntry(archiveEntryInfo);
+
+  // free resources
+  AutoFree_done(&autoFreeList1);
 
   return ERROR_NONE;
 }
@@ -6978,6 +6829,7 @@ Errors Archive_readLinkEntry(ArchiveEntryInfo          *archiveEntryInfo,
                              FileExtendedAttributeList *fileExtendedAttributeList
                             )
 {
+  AutoFreeList   autoFreeList1,autoFreeList2;
   Errors         error;
   ChunkHeader    chunkHeader;
   uint64         index;
@@ -7001,6 +6853,8 @@ Errors Archive_readLinkEntry(ArchiveEntryInfo          *archiveEntryInfo,
   }
 
   // init variables
+  AutoFree_init(&autoFreeList1);
+
   archiveEntryInfo->archiveInfo      = archiveInfo;
   archiveEntryInfo->mode             = ARCHIVE_MODE_READ;
   archiveEntryInfo->archiveEntryType = ARCHIVE_ENTRY_TYPE_LINK;
@@ -7018,8 +6872,10 @@ Errors Archive_readLinkEntry(ArchiveEntryInfo          *archiveEntryInfo,
                     );
   if (error != ERROR_NONE)
   {
+    AutoFree_freeDone(&autoFreeList1);
     return error;
   }
+  AUTOFREE_ADD(&autoFreeList1,&archiveEntryInfo->link.chunkLink.info,ChunkInfo*,{ Chunk_done(resource); });
 
   // find next soft link chunk
   do
@@ -7027,7 +6883,7 @@ Errors Archive_readLinkEntry(ArchiveEntryInfo          *archiveEntryInfo,
     error = getNextChunkHeader(archiveInfo,&chunkHeader);
     if (error != ERROR_NONE)
     {
-      Chunk_done(&archiveEntryInfo->link.chunkLink.info);
+      AutoFree_freeDone(&autoFreeList1);
       return error;
     }
 
@@ -7035,8 +6891,8 @@ Errors Archive_readLinkEntry(ArchiveEntryInfo          *archiveEntryInfo,
     {
       if (error != ERROR_NONE)
       {
-        Chunk_done(&archiveEntryInfo->link.chunkLink.info);
         archiveInfo->pendingError = Chunk_skip(archiveInfo->chunkIO,archiveInfo->chunkIOUserData,&chunkHeader);
+        AutoFree_freeDone(&autoFreeList1);
         return error;
       }
       archiveInfo->pendingError = Chunk_skip(archiveInfo->chunkIO,archiveInfo->chunkIOUserData,&chunkHeader);
@@ -7052,8 +6908,8 @@ Errors Archive_readLinkEntry(ArchiveEntryInfo          *archiveEntryInfo,
                     );
   if (error != ERROR_NONE)
   {
-    Chunk_done(&archiveEntryInfo->link.chunkLink.info);
     archiveInfo->pendingError = Chunk_skip(archiveInfo->chunkIO,archiveInfo->chunkIOUserData,&chunkHeader);
+    AutoFree_freeDone(&autoFreeList1);
     return error;
   }
   archiveEntryInfo->cryptAlgorithm = archiveEntryInfo->link.chunkLink.cryptAlgorithm;
@@ -7062,13 +6918,14 @@ Errors Archive_readLinkEntry(ArchiveEntryInfo          *archiveEntryInfo,
   error = Crypt_getBlockLength(archiveEntryInfo->cryptAlgorithm,&archiveEntryInfo->blockLength);
   if (error != ERROR_NONE)
   {
-    Chunk_done(&archiveEntryInfo->link.chunkLink.info);
     archiveInfo->pendingError = Chunk_skip(archiveInfo->chunkIO,archiveInfo->chunkIOUserData,&chunkHeader);
+    AutoFree_freeDone(&autoFreeList1);
     return error;
   }
   assert(archiveEntryInfo->blockLength > 0);
 
   // try to read link entry with all passwords
+  AutoFree_init(&autoFreeList2);
   Chunk_tell(&archiveEntryInfo->link.chunkLink.info,&index);
   if (archiveEntryInfo->cryptAlgorithm != CRYPT_ALGORITHM_NONE)
   {
@@ -7114,7 +6971,11 @@ Errors Archive_readLinkEntry(ArchiveEntryInfo          *archiveEntryInfo,
                          archiveEntryInfo->cryptAlgorithm,
                          password
                         );
-      if (error != ERROR_NONE)
+      if (error == ERROR_NONE)
+      {
+        AUTOFREE_ADD(&autoFreeList2,&archiveEntryInfo->link.chunkLinkEntry.cryptInfo,CryptInfo*,{ Crypt_done(resource); });
+      }
+      else
       {
       }
     }
@@ -7124,7 +6985,11 @@ Errors Archive_readLinkEntry(ArchiveEntryInfo          *archiveEntryInfo,
                          archiveEntryInfo->cryptAlgorithm,
                          password
                         );
-      if (error != ERROR_NONE)
+      if (error == ERROR_NONE)
+      {
+        AUTOFREE_ADD(&autoFreeList2,&archiveEntryInfo->link.chunkLinkExtendedAttribute.cryptInfo,CryptInfo*,{ Crypt_done(resource); });
+      }
+      else
       {
       }
     }
@@ -7142,7 +7007,11 @@ Errors Archive_readLinkEntry(ArchiveEntryInfo          *archiveEntryInfo,
                          &archiveEntryInfo->link.chunkLinkEntry.cryptInfo,
                          &archiveEntryInfo->link.chunkLinkEntry
                         );
-      if (error != ERROR_NONE)
+      if (error == ERROR_NONE)
+      {
+        AUTOFREE_ADD(&autoFreeList2,&archiveEntryInfo->link.chunkLinkEntry.info,ChunkInfo*,{ Chunk_done(resource); });
+      }
+      else
       {
         Crypt_done(&archiveEntryInfo->link.chunkLinkEntry.cryptInfo);
       }
@@ -7159,7 +7028,11 @@ Errors Archive_readLinkEntry(ArchiveEntryInfo          *archiveEntryInfo,
                          &archiveEntryInfo->link.chunkLinkExtendedAttribute.cryptInfo,
                          &archiveEntryInfo->link.chunkLinkExtendedAttribute
                         );
-      if (error != ERROR_NONE)
+      if (error == ERROR_NONE)
+      {
+        AUTOFREE_ADD(&autoFreeList2,&archiveEntryInfo->link.chunkLinkExtendedAttribute.info,ChunkInfo*,{ Chunk_done(resource); });
+      }
+      else
       {
         Crypt_done(&archiveEntryInfo->link.chunkLinkExtendedAttribute.cryptInfo);
         Crypt_done(&archiveEntryInfo->link.chunkLinkEntry.cryptInfo);
@@ -7209,6 +7082,41 @@ Errors Archive_readLinkEntry(ArchiveEntryInfo          *archiveEntryInfo,
 
             foundLinkEntryFlag = TRUE;
             break;
+          case CHUNK_ID_LINK_EXTENDED_ATTRIBUTE:
+            {
+              ulong bytesRead;
+
+              if (fileExtendedAttributeList != NULL)
+              {
+                // read file extended attribute chunk
+                bytesRead = 0L;
+                error = Chunk_open(&archiveEntryInfo->link.chunkLinkExtendedAttribute.info,
+                                   &subChunkHeader,
+                                   subChunkHeader.size
+                                  );
+                if (error != ERROR_NONE)
+                {
+                  break;
+                }
+
+                // add extended attribute to list
+                File_addExtendedAttribute(fileExtendedAttributeList,
+                                          archiveEntryInfo->link.chunkLinkExtendedAttribute.name,
+                                          archiveEntryInfo->link.chunkLinkExtendedAttribute.value.data,
+                                          archiveEntryInfo->link.chunkLinkExtendedAttribute.value.length
+                                         );
+              }
+              else
+              {
+                // skip file extended attribute chunk
+                error = Chunk_skipSub(&archiveEntryInfo->link.chunkLink.info,&subChunkHeader);
+                if (error != ERROR_NONE)
+                {
+                  break;
+                }
+              }
+            }
+            break;
           default:
             // unknown sub-chunk -> skip
             if (globalOptions.verboseLevel >= 3)
@@ -7226,6 +7134,7 @@ Errors Archive_readLinkEntry(ArchiveEntryInfo          *archiveEntryInfo,
       if (error != ERROR_NONE)
       {
         // free resources
+        AutoFree_freeAll(&autoFreeList2);
         Chunk_done(&archiveEntryInfo->link.chunkLinkExtendedAttribute.info);
         Chunk_done(&archiveEntryInfo->link.chunkLinkEntry.info);
 
@@ -7258,23 +7167,17 @@ Errors Archive_readLinkEntry(ArchiveEntryInfo          *archiveEntryInfo,
   } // while
   if (error != ERROR_NONE)
   {
-    Chunk_done(&archiveEntryInfo->link.chunkLink.info);
-
     archiveInfo->pendingError = Chunk_skip(archiveInfo->chunkIO,archiveInfo->chunkIOUserData,&chunkHeader);
-
+    AutoFree_freeDone(&autoFreeList2);
+    AutoFree_freeDone(&autoFreeList1);
     return error;
   }
+  AutoFree_done(&autoFreeList2);
 
   if (!foundLinkEntryFlag)
   {
-    Chunk_done(&archiveEntryInfo->link.chunkLinkExtendedAttribute.info);
-    Chunk_done(&archiveEntryInfo->link.chunkLink.info);
-
-    Crypt_done(&archiveEntryInfo->link.chunkLinkExtendedAttribute.cryptInfo);
-    Crypt_done(&archiveEntryInfo->link.chunkLinkEntry.cryptInfo);
-
     archiveInfo->pendingError = Chunk_skip(archiveInfo->chunkIO,archiveInfo->chunkIOUserData,&chunkHeader);
-
+    AutoFree_freeDone(&autoFreeList1);
     if      (error != ERROR_NONE)     return error;
     else if (!passwordFlag)           return ERROR_NO_CRYPT_PASSWORD;
     else if (!decryptedFlag)          return ERROR_INVALID_CRYPT_PASSWORD;
@@ -7287,6 +7190,9 @@ Errors Archive_readLinkEntry(ArchiveEntryInfo          *archiveEntryInfo,
 
   // registers as open archive entry
   registerArchiveEntry(archiveEntryInfo);
+
+  // free resources
+  AutoFree_done(&autoFreeList1);
 
   return ERROR_NONE;
 }
@@ -7306,6 +7212,7 @@ Errors Archive_readHardLinkEntry(ArchiveEntryInfo          *archiveEntryInfo,
                                  uint64                    *fragmentSize
                                 )
 {
+  AutoFreeList   autoFreeList1,autoFreeList2;
   Errors         error;
   ChunkHeader    chunkHeader;
   uint64         index;
@@ -7330,6 +7237,8 @@ Errors Archive_readHardLinkEntry(ArchiveEntryInfo          *archiveEntryInfo,
   }
 
   // init variables
+  AutoFree_init(&autoFreeList1);
+
   archiveEntryInfo->archiveInfo                   = archiveInfo;
   archiveEntryInfo->mode                          = ARCHIVE_MODE_READ;
   archiveEntryInfo->archiveEntryType              = ARCHIVE_ENTRY_TYPE_HARDLINK;
@@ -7354,8 +7263,10 @@ Errors Archive_readHardLinkEntry(ArchiveEntryInfo          *archiveEntryInfo,
                     );
   if (error != ERROR_NONE)
   {
+    AutoFree_freeDone(&autoFreeList1);
     return error;
   }
+  AUTOFREE_ADD(&autoFreeList1,&archiveEntryInfo->hardLink.chunkHardLink.info,ChunkInfo*,{ Chunk_done(resource); });
 
   // find next hard link chunk
   do
@@ -7363,7 +7274,7 @@ Errors Archive_readHardLinkEntry(ArchiveEntryInfo          *archiveEntryInfo,
     error = getNextChunkHeader(archiveInfo,&chunkHeader);
     if (error != ERROR_NONE)
     {
-      Chunk_done(&archiveEntryInfo->hardLink.chunkHardLink.info);
+      AutoFree_freeDone(&autoFreeList1);
       return error;
     }
 
@@ -7372,7 +7283,7 @@ Errors Archive_readHardLinkEntry(ArchiveEntryInfo          *archiveEntryInfo,
       error = Chunk_skip(archiveInfo->chunkIO,archiveInfo->chunkIOUserData,&chunkHeader);
       if (error != ERROR_NONE)
       {
-        Chunk_done(&archiveEntryInfo->hardLink.chunkHardLink.info);
+        AutoFree_freeDone(&autoFreeList1);
         return error;
       }
       continue;
@@ -7387,14 +7298,14 @@ Errors Archive_readHardLinkEntry(ArchiveEntryInfo          *archiveEntryInfo,
                     );
   if (error != ERROR_NONE)
   {
-    Chunk_done(&archiveEntryInfo->hardLink.chunkHardLink.info);
     archiveInfo->pendingError = Chunk_skip(archiveInfo->chunkIO,archiveInfo->chunkIOUserData,&chunkHeader);
+    AutoFree_freeDone(&autoFreeList1);
     return error;
   }
   if (!Compress_isValidAlgorithm(archiveEntryInfo->hardLink.chunkHardLink.compressAlgorithm))
   {
-    Chunk_done(&archiveEntryInfo->hardLink.chunkHardLink.info);
     archiveInfo->pendingError = Chunk_skip(archiveInfo->chunkIO,archiveInfo->chunkIOUserData,&chunkHeader);
+    AutoFree_freeDone(&autoFreeList1);
     return ERROR_INVALID_COMPRESS_ALGORITHM;
   }
   archiveEntryInfo->hardLink.deltaCompressAlgorithm = COMPRESS_ALGORITHM_NONE;
@@ -7405,8 +7316,8 @@ Errors Archive_readHardLinkEntry(ArchiveEntryInfo          *archiveEntryInfo,
   error = Crypt_getBlockLength(archiveEntryInfo->cryptAlgorithm,&archiveEntryInfo->blockLength);
   if (error != ERROR_NONE)
   {
-    Chunk_done(&archiveEntryInfo->hardLink.chunkHardLink.info);
     archiveInfo->pendingError = Chunk_skip(archiveInfo->chunkIO,archiveInfo->chunkIOUserData,&chunkHeader);
+    AutoFree_freeDone(&autoFreeList1);
     return error;
   }
   assert(archiveEntryInfo->blockLength > 0);
@@ -7420,28 +7331,29 @@ Errors Archive_readHardLinkEntry(ArchiveEntryInfo          *archiveEntryInfo,
   }
   archiveEntryInfo->hardLink.deltaBufferSize = MAX_BUFFER_SIZE;
   archiveEntryInfo->hardLink.deltaBuffer = (byte*)malloc(archiveEntryInfo->hardLink.deltaBufferSize);
+  AUTOFREE_ADD(&autoFreeList1,archiveEntryInfo->hardLink.byteBuffer,void*,{ free(resource); });
   if (archiveEntryInfo->hardLink.deltaBuffer == NULL)
   {
     HALT_INSUFFICIENT_MEMORY();
   }
+  AUTOFREE_ADD(&autoFreeList1,archiveEntryInfo->hardLink.deltaBuffer,void*,{ free(resource); });
 
   // init byte decompress
-  error = Compress_new(&archiveEntryInfo->hardLink.byteCompressInfo,
-                       COMPRESS_MODE_INFLATE,
-                       archiveEntryInfo->hardLink.byteCompressAlgorithm,
-                       archiveEntryInfo->blockLength,
-                       NULL
-                      );
+  error = Compress_init(&archiveEntryInfo->hardLink.byteCompressInfo,
+                        COMPRESS_MODE_INFLATE,
+                        archiveEntryInfo->hardLink.byteCompressAlgorithm,
+                        archiveEntryInfo->blockLength,
+                        NULL
+                       );
   if (error != ERROR_NONE)
   {
-    free(archiveEntryInfo->hardLink.deltaBuffer);
-    free(archiveEntryInfo->hardLink.byteBuffer);
-    Chunk_done(&archiveEntryInfo->hardLink.chunkHardLink.info);
     archiveInfo->pendingError = Chunk_skip(archiveInfo->chunkIO,archiveInfo->chunkIOUserData,&chunkHeader);
+    AutoFree_freeDone(&autoFreeList1);
     return error;
   }
 
   // try to read hard link entry with all passwords
+  AutoFree_init(&autoFreeList2);
   Chunk_tell(&archiveEntryInfo->hardLink.chunkHardLink.info,&index);
   if (archiveEntryInfo->cryptAlgorithm != CRYPT_ALGORITHM_NONE)
   {
@@ -7489,7 +7401,11 @@ Errors Archive_readHardLinkEntry(ArchiveEntryInfo          *archiveEntryInfo,
                          archiveEntryInfo->cryptAlgorithm,
                          password
                         );
-      if (error != ERROR_NONE)
+      if (error == ERROR_NONE)
+      {
+        AUTOFREE_ADD(&autoFreeList2,&archiveEntryInfo->hardLink.chunkHardLinkEntry.cryptInfo,CryptInfo*,{ Crypt_done(resource); });
+      }
+      else
       {
       }
     }
@@ -7499,7 +7415,11 @@ Errors Archive_readHardLinkEntry(ArchiveEntryInfo          *archiveEntryInfo,
                          archiveEntryInfo->cryptAlgorithm,
                          password
                         );
-      if (error != ERROR_NONE)
+      if (error == ERROR_NONE)
+      {
+        AUTOFREE_ADD(&autoFreeList2,&archiveEntryInfo->hardLink.chunkHardLinkExtendedAttribute.cryptInfo,CryptInfo*,{ Crypt_done(resource); });
+      }
+      else
       {
         Crypt_done(&archiveEntryInfo->hardLink.chunkHardLinkEntry.cryptInfo);
       }
@@ -7510,7 +7430,11 @@ Errors Archive_readHardLinkEntry(ArchiveEntryInfo          *archiveEntryInfo,
                          archiveEntryInfo->cryptAlgorithm,
                          password
                         );
-      if (error != ERROR_NONE)
+      if (error == ERROR_NONE)
+      {
+        AUTOFREE_ADD(&autoFreeList2,&archiveEntryInfo->hardLink.chunkHardLinkName.cryptInfo,CryptInfo*,{ Crypt_done(resource); });
+      }
+      else
       {
         Crypt_done(&archiveEntryInfo->hardLink.chunkHardLinkExtendedAttribute.cryptInfo);
         Crypt_done(&archiveEntryInfo->hardLink.chunkHardLinkEntry.cryptInfo);
@@ -7522,7 +7446,11 @@ Errors Archive_readHardLinkEntry(ArchiveEntryInfo          *archiveEntryInfo,
                          archiveEntryInfo->cryptAlgorithm,
                          password
                         );
-      if (error != ERROR_NONE)
+      if (error == ERROR_NONE)
+      {
+        AUTOFREE_ADD(&autoFreeList2,&archiveEntryInfo->hardLink.chunkHardLinkDelta.cryptInfo,CryptInfo*,{ Crypt_done(resource); });
+      }
+      else
       {
         Crypt_done(&archiveEntryInfo->hardLink.chunkHardLinkName.cryptInfo);
         Crypt_done(&archiveEntryInfo->hardLink.chunkHardLinkExtendedAttribute.cryptInfo);
@@ -7535,7 +7463,11 @@ Errors Archive_readHardLinkEntry(ArchiveEntryInfo          *archiveEntryInfo,
                          archiveEntryInfo->cryptAlgorithm,
                          password
                         );
-      if (error != ERROR_NONE)
+      if (error == ERROR_NONE)
+      {
+        AUTOFREE_ADD(&autoFreeList2,&archiveEntryInfo->hardLink.chunkHardLinkData.cryptInfo,CryptInfo*,{ Crypt_done(resource); });
+      }
+      else
       {
         Crypt_done(&archiveEntryInfo->hardLink.chunkHardLinkDelta.cryptInfo);
         Crypt_done(&archiveEntryInfo->hardLink.chunkHardLinkName.cryptInfo);
@@ -7549,7 +7481,11 @@ Errors Archive_readHardLinkEntry(ArchiveEntryInfo          *archiveEntryInfo,
                          archiveEntryInfo->cryptAlgorithm,
                          password
                         );
-      if (error != ERROR_NONE)
+      if (error == ERROR_NONE)
+      {
+        AUTOFREE_ADD(&autoFreeList2,&archiveEntryInfo->hardLink.cryptInfo,CryptInfo*,{ Crypt_done(resource); });
+      }
+      else
       {
         Crypt_done(&archiveEntryInfo->hardLink.chunkHardLinkData.cryptInfo);
         Crypt_done(&archiveEntryInfo->hardLink.chunkHardLinkDelta.cryptInfo);
@@ -7572,7 +7508,11 @@ Errors Archive_readHardLinkEntry(ArchiveEntryInfo          *archiveEntryInfo,
                          &archiveEntryInfo->hardLink.chunkHardLinkEntry.cryptInfo,
                          &archiveEntryInfo->hardLink.chunkHardLinkEntry
                         );
-      if (error != ERROR_NONE)
+      if (error == ERROR_NONE)
+      {
+        AUTOFREE_ADD(&autoFreeList2,&archiveEntryInfo->hardLink.chunkHardLinkEntry.info,ChunkInfo*,{ Chunk_done(resource); });
+      }
+      else
       {
         Crypt_done(&archiveEntryInfo->hardLink.cryptInfo);
         Crypt_done(&archiveEntryInfo->hardLink.chunkHardLinkData.cryptInfo);
@@ -7594,7 +7534,11 @@ Errors Archive_readHardLinkEntry(ArchiveEntryInfo          *archiveEntryInfo,
                          &archiveEntryInfo->hardLink.chunkHardLinkExtendedAttribute.cryptInfo,
                          &archiveEntryInfo->hardLink.chunkHardLinkExtendedAttribute
                         );
-      if (error != ERROR_NONE)
+      if (error == ERROR_NONE)
+      {
+        AUTOFREE_ADD(&autoFreeList2,&archiveEntryInfo->hardLink.chunkHardLinkExtendedAttribute.info,ChunkInfo*,{ Chunk_done(resource); });
+      }
+      else
       {
         Chunk_done(&archiveEntryInfo->hardLink.chunkHardLinkEntry.info);
         Crypt_done(&archiveEntryInfo->hardLink.cryptInfo);
@@ -7617,7 +7561,11 @@ Errors Archive_readHardLinkEntry(ArchiveEntryInfo          *archiveEntryInfo,
                          &archiveEntryInfo->hardLink.chunkHardLinkName.cryptInfo,
                          &archiveEntryInfo->hardLink.chunkHardLinkName
                         );
-      if (error != ERROR_NONE)
+      if (error == ERROR_NONE)
+      {
+        AUTOFREE_ADD(&autoFreeList2,&archiveEntryInfo->hardLink.chunkHardLinkName.info,ChunkInfo*,{ Chunk_done(resource); });
+      }
+      else
       {
         Chunk_done(&archiveEntryInfo->hardLink.chunkHardLinkExtendedAttribute.info);
         Chunk_done(&archiveEntryInfo->hardLink.chunkHardLinkEntry.info);
@@ -7641,7 +7589,11 @@ Errors Archive_readHardLinkEntry(ArchiveEntryInfo          *archiveEntryInfo,
                          &archiveEntryInfo->hardLink.chunkHardLinkDelta.cryptInfo,
                          &archiveEntryInfo->hardLink.chunkHardLinkDelta
                         );
-      if (error != ERROR_NONE)
+      if (error == ERROR_NONE)
+      {
+        AUTOFREE_ADD(&autoFreeList2,&archiveEntryInfo->hardLink.chunkHardLinkDelta.info,ChunkInfo*,{ Chunk_done(resource); });
+      }
+      else
       {
         Chunk_done(&archiveEntryInfo->hardLink.chunkHardLinkName.info);
         Chunk_done(&archiveEntryInfo->hardLink.chunkHardLinkExtendedAttribute.info);
@@ -7666,7 +7618,11 @@ Errors Archive_readHardLinkEntry(ArchiveEntryInfo          *archiveEntryInfo,
                          &archiveEntryInfo->hardLink.chunkHardLinkData.cryptInfo,
                          &archiveEntryInfo->hardLink.chunkHardLinkData
                         );
-      if (error != ERROR_NONE)
+      if (error == ERROR_NONE)
+      {
+        AUTOFREE_ADD(&autoFreeList2,&archiveEntryInfo->hardLink.chunkHardLinkData.info,ChunkInfo*,{ Chunk_done(resource); });
+      }
+      else
       {
         Chunk_done(&archiveEntryInfo->hardLink.chunkHardLinkDelta.info);
         Chunk_done(&archiveEntryInfo->hardLink.chunkHardLinkName.info);
@@ -7736,6 +7692,40 @@ Errors Archive_readHardLinkEntry(ArchiveEntryInfo          *archiveEntryInfo,
 
             StringList_append(fileNameList,archiveEntryInfo->hardLink.chunkHardLinkName.name);
             break;
+          case CHUNK_ID_HARDLINK_EXTENDED_ATTRIBUTE:
+            {
+              ulong bytesRead;
+
+              if (fileExtendedAttributeList != NULL)
+              {
+                // read file extended attribute chunk
+                bytesRead = 0L;
+                error = Chunk_open(&archiveEntryInfo->hardLink.chunkHardLinkExtendedAttribute.info,
+                                   &subChunkHeader,
+                                   subChunkHeader.size
+                                  );
+                if (error != ERROR_NONE)
+                {
+                  break;
+                }
+
+                // add extended attribute to list
+                File_addExtendedAttribute(fileExtendedAttributeList,
+                                          archiveEntryInfo->hardLink.chunkHardLinkExtendedAttribute.name,
+                                          archiveEntryInfo->hardLink.chunkHardLinkExtendedAttribute.value.data,
+                                          archiveEntryInfo->hardLink.chunkHardLinkExtendedAttribute.value.length
+                                         );
+              }
+              else
+              {
+                // skip file extended attribute chunk
+                error = Chunk_skipSub(&archiveEntryInfo->hardLink.chunkHardLink.info,&subChunkHeader);
+                if (error != ERROR_NONE)
+                {
+                  break;
+                }
+              }
+            }
           case CHUNK_ID_HARDLINK_DELTA:
             // read hard link delta chunk
             error = Chunk_open(&archiveEntryInfo->hardLink.chunkHardLinkDelta.info,
@@ -7793,6 +7783,7 @@ Errors Archive_readHardLinkEntry(ArchiveEntryInfo          *archiveEntryInfo,
       if (error != ERROR_NONE)
       {
         // free resources
+        AutoFree_freeAll(&autoFreeList2);
         Chunk_done(&archiveEntryInfo->hardLink.chunkHardLinkData.info);
         Chunk_done(&archiveEntryInfo->hardLink.chunkHardLinkDelta.info);
         Chunk_done(&archiveEntryInfo->hardLink.chunkHardLinkName.info);
@@ -7832,38 +7823,18 @@ Errors Archive_readHardLinkEntry(ArchiveEntryInfo          *archiveEntryInfo,
   } /* while */
   if (error != ERROR_NONE)
   {
-    Compress_delete(&archiveEntryInfo->hardLink.byteCompressInfo);
-    free(archiveEntryInfo->hardLink.deltaBuffer);
-    free(archiveEntryInfo->hardLink.byteBuffer);
-    Chunk_done(&archiveEntryInfo->hardLink.chunkHardLink.info);
-
     archiveInfo->pendingError = Chunk_skip(archiveInfo->chunkIO,archiveInfo->chunkIOUserData,&chunkHeader);
-
+    AutoFree_freeDone(&autoFreeList2);
+    AutoFree_freeDone(&autoFreeList1);
     return error;
   }
+  AutoFree_done(&autoFreeList2);
 
   if (!foundHardLinkEntryFlag || !foundHardLinkDataFlag)
   {
     // free resources
-    Chunk_done(&archiveEntryInfo->hardLink.chunkHardLinkData.info);
-    Chunk_done(&archiveEntryInfo->hardLink.chunkHardLinkDelta.info);
-    Chunk_done(&archiveEntryInfo->hardLink.chunkHardLinkName.info);
-    Chunk_done(&archiveEntryInfo->hardLink.chunkHardLinkExtendedAttribute.info);
-    Chunk_done(&archiveEntryInfo->hardLink.chunkHardLinkEntry.info);
-
-    Crypt_done(&archiveEntryInfo->hardLink.cryptInfo);
-    Crypt_done(&archiveEntryInfo->hardLink.chunkHardLinkData.cryptInfo);
-    Crypt_done(&archiveEntryInfo->hardLink.chunkHardLinkDelta.cryptInfo);
-    Crypt_done(&archiveEntryInfo->hardLink.chunkHardLinkName.cryptInfo);
-    Crypt_done(&archiveEntryInfo->hardLink.chunkHardLinkExtendedAttribute.cryptInfo);
-    Crypt_done(&archiveEntryInfo->hardLink.chunkHardLinkEntry.cryptInfo);
-
-    Compress_delete(&archiveEntryInfo->hardLink.byteCompressInfo);
-    free(archiveEntryInfo->hardLink.deltaBuffer);
-    free(archiveEntryInfo->hardLink.byteBuffer);
-    Chunk_done(&archiveEntryInfo->hardLink.chunkHardLink.info);
     archiveInfo->pendingError = Chunk_skip(archiveInfo->chunkIO,archiveInfo->chunkIOUserData,&chunkHeader);
-
+    AutoFree_freeDone(&autoFreeList1);
     if      (error != ERROR_NONE)     return error;
     else if (!passwordFlag)           return ERROR_NO_CRYPT_PASSWORD;
     else if (!decryptedFlag)          return ERROR_INVALID_CRYPT_PASSWORD;
@@ -7873,36 +7844,19 @@ Errors Archive_readHardLinkEntry(ArchiveEntryInfo          *archiveEntryInfo,
   }
 
   // init delta decompress (if no delta-compression is enabled, use identity-compressor)
-  error = Compress_new(&archiveEntryInfo->hardLink.deltaCompressInfo,
-                       COMPRESS_MODE_INFLATE,
-                       archiveEntryInfo->hardLink.deltaCompressAlgorithm,
-                       1,
-                       &archiveEntryInfo->hardLink.sourceHandle
-                      );
+  error = Compress_init(&archiveEntryInfo->hardLink.deltaCompressInfo,
+                        COMPRESS_MODE_INFLATE,
+                        archiveEntryInfo->hardLink.deltaCompressAlgorithm,
+                        1,
+                        &archiveEntryInfo->hardLink.sourceHandle
+                       );
   if (error != ERROR_NONE)
   {
-    Chunk_done(&archiveEntryInfo->hardLink.chunkHardLinkData.info);
-    Chunk_done(&archiveEntryInfo->hardLink.chunkHardLinkDelta.info);
-    Chunk_done(&archiveEntryInfo->hardLink.chunkHardLinkName.info);
-    Chunk_done(&archiveEntryInfo->hardLink.chunkHardLinkExtendedAttribute.info);
-    Chunk_done(&archiveEntryInfo->hardLink.chunkHardLinkEntry.info);
-
-    Crypt_done(&archiveEntryInfo->hardLink.cryptInfo);
-    Crypt_done(&archiveEntryInfo->hardLink.chunkHardLinkData.cryptInfo);
-    Crypt_done(&archiveEntryInfo->hardLink.chunkHardLinkDelta.cryptInfo);
-    Crypt_done(&archiveEntryInfo->hardLink.chunkHardLinkName.cryptInfo);
-    Crypt_done(&archiveEntryInfo->hardLink.chunkHardLinkExtendedAttribute.cryptInfo);
-    Crypt_done(&archiveEntryInfo->hardLink.chunkHardLinkEntry.cryptInfo);
-
-    Compress_delete(&archiveEntryInfo->hardLink.byteCompressInfo);
-    free(archiveEntryInfo->hardLink.deltaBuffer);
-    free(archiveEntryInfo->hardLink.byteBuffer);
-    Chunk_done(&archiveEntryInfo->hardLink.chunkHardLink.info);
-
     archiveInfo->pendingError = Chunk_skip(archiveInfo->chunkIO,archiveInfo->chunkIOUserData,&chunkHeader);
-
+    AutoFree_freeDone(&autoFreeList1);
     return error;
   }
+  AUTOFREE_ADD(&autoFreeList1,&archiveEntryInfo->hardLink.deltaCompressInfo,CompressInfo*,{ Compress_done(resource); });
 
   // init variables
   if (deltaCompressAlgorithm != NULL) (*deltaCompressAlgorithm) = archiveEntryInfo->hardLink.deltaCompressAlgorithm;
@@ -7912,6 +7866,9 @@ Errors Archive_readHardLinkEntry(ArchiveEntryInfo          *archiveEntryInfo,
 
   // registers as open archive entry
   registerArchiveEntry(archiveEntryInfo);
+
+  // free resources
+  AutoFree_done(&autoFreeList1);
 
   return ERROR_NONE;
 }
@@ -7925,6 +7882,7 @@ Errors Archive_readSpecialEntry(ArchiveEntryInfo          *archiveEntryInfo,
                                 FileExtendedAttributeList *fileExtendedAttributeList
                                )
 {
+  AutoFreeList   autoFreeList1,autoFreeList2;
   Errors         error;
   ChunkHeader    chunkHeader;
   uint64         index;
@@ -7948,6 +7906,8 @@ Errors Archive_readSpecialEntry(ArchiveEntryInfo          *archiveEntryInfo,
   }
 
   // init variables
+  AutoFree_init(&autoFreeList1);
+
   archiveEntryInfo->archiveInfo      = archiveInfo;
   archiveEntryInfo->mode             = ARCHIVE_MODE_READ;
   archiveEntryInfo->archiveEntryType = ARCHIVE_ENTRY_TYPE_SPECIAL;
@@ -7965,8 +7925,10 @@ Errors Archive_readSpecialEntry(ArchiveEntryInfo          *archiveEntryInfo,
                     );
   if (error != ERROR_NONE)
   {
+    AutoFree_freeDone(&autoFreeList1);
     return error;
   }
+  AUTOFREE_ADD(&autoFreeList1,&archiveEntryInfo->special.chunkSpecial.info,ChunkInfo*,{ Chunk_done(resource); });
 
   // find next special chunk
   do
@@ -7974,7 +7936,7 @@ Errors Archive_readSpecialEntry(ArchiveEntryInfo          *archiveEntryInfo,
     error = getNextChunkHeader(archiveInfo,&chunkHeader);
     if (error != ERROR_NONE)
     {
-      Chunk_done(&archiveEntryInfo->special.chunkSpecial.info);
+      AutoFree_freeDone(&autoFreeList1);
       return error;
     }
 
@@ -7982,8 +7944,8 @@ Errors Archive_readSpecialEntry(ArchiveEntryInfo          *archiveEntryInfo,
     {
       if (error != ERROR_NONE)
       {
-        Chunk_done(&archiveEntryInfo->special.chunkSpecial.info);
         archiveInfo->pendingError = Chunk_skip(archiveInfo->chunkIO,archiveInfo->chunkIOUserData,&chunkHeader);
+        AutoFree_freeDone(&autoFreeList1);
         return error;
       }
       archiveInfo->pendingError = Chunk_skip(archiveInfo->chunkIO,archiveInfo->chunkIOUserData,&chunkHeader);
@@ -7999,8 +7961,8 @@ Errors Archive_readSpecialEntry(ArchiveEntryInfo          *archiveEntryInfo,
                     );
   if (error != ERROR_NONE)
   {
-    Chunk_done(&archiveEntryInfo->special.chunkSpecial.info);
     archiveInfo->pendingError = Chunk_skip(archiveInfo->chunkIO,archiveInfo->chunkIOUserData,&chunkHeader);
+    AutoFree_freeDone(&autoFreeList1);
     return error;
   }
   archiveEntryInfo->cryptAlgorithm = archiveEntryInfo->special.chunkSpecial.cryptAlgorithm;
@@ -8009,13 +7971,14 @@ Errors Archive_readSpecialEntry(ArchiveEntryInfo          *archiveEntryInfo,
   error = Crypt_getBlockLength(archiveEntryInfo->cryptAlgorithm,&archiveEntryInfo->blockLength);
   if (error != ERROR_NONE)
   {
-    Chunk_done(&archiveEntryInfo->special.chunkSpecial.info);
     archiveInfo->pendingError = Chunk_skip(archiveInfo->chunkIO,archiveInfo->chunkIOUserData,&chunkHeader);
+    AutoFree_freeDone(&autoFreeList1);
     return error;
   }
   assert(archiveEntryInfo->blockLength > 0);
 
   // try to read special entry with all passwords
+  AutoFree_init(&autoFreeList2);
   Chunk_tell(&archiveEntryInfo->special.chunkSpecial.info,&index);
   if (archiveEntryInfo->cryptAlgorithm != CRYPT_ALGORITHM_NONE)
   {
@@ -8061,7 +8024,11 @@ Errors Archive_readSpecialEntry(ArchiveEntryInfo          *archiveEntryInfo,
                          archiveEntryInfo->cryptAlgorithm,
                          password
                         );
-      if (error != ERROR_NONE)
+      if (error == ERROR_NONE)
+      {
+        AUTOFREE_ADD(&autoFreeList2,&archiveEntryInfo->special.chunkSpecialEntry.cryptInfo,CryptInfo*,{ Crypt_done(resource); });
+      }
+      else
       {
       }
     }
@@ -8071,7 +8038,11 @@ Errors Archive_readSpecialEntry(ArchiveEntryInfo          *archiveEntryInfo,
                          archiveEntryInfo->cryptAlgorithm,
                          password
                         );
-      if (error != ERROR_NONE)
+      if (error == ERROR_NONE)
+      {
+        AUTOFREE_ADD(&autoFreeList2,&archiveEntryInfo->special.chunkSpecialExtendedAttribute.cryptInfo,CryptInfo*,{ Crypt_done(resource); });
+      }
+      else
       {
         Crypt_done(&archiveEntryInfo->special.chunkSpecialEntry.cryptInfo);
       }
@@ -8090,7 +8061,11 @@ Errors Archive_readSpecialEntry(ArchiveEntryInfo          *archiveEntryInfo,
                          &archiveEntryInfo->special.chunkSpecialEntry.cryptInfo,
                          &archiveEntryInfo->special.chunkSpecialEntry
                         );
-      if (error != ERROR_NONE)
+      if (error == ERROR_NONE)
+      {
+        AUTOFREE_ADD(&autoFreeList2,&archiveEntryInfo->special.chunkSpecialEntry.info,ChunkInfo*,{ Chunk_done(resource); });
+      }
+      else
       {
         Crypt_done(&archiveEntryInfo->special.chunkSpecialExtendedAttribute.cryptInfo);
         Crypt_done(&archiveEntryInfo->special.chunkSpecialEntry.cryptInfo);
@@ -8108,7 +8083,11 @@ Errors Archive_readSpecialEntry(ArchiveEntryInfo          *archiveEntryInfo,
                          &archiveEntryInfo->special.chunkSpecialExtendedAttribute.cryptInfo,
                          &archiveEntryInfo->special.chunkSpecialExtendedAttribute
                         );
-      if (error != ERROR_NONE)
+      if (error == ERROR_NONE)
+      {
+        AUTOFREE_ADD(&autoFreeList2,&archiveEntryInfo->special.chunkSpecialExtendedAttribute.info,ChunkInfo*,{ Chunk_done(resource); });
+      }
+      else
       {
         Chunk_done(&archiveEntryInfo->special.chunkSpecialEntry.info);
         Crypt_done(&archiveEntryInfo->special.chunkSpecialExtendedAttribute.cryptInfo);
@@ -8161,6 +8140,41 @@ Errors Archive_readSpecialEntry(ArchiveEntryInfo          *archiveEntryInfo,
 
             foundSpecialEntryFlag = TRUE;
             break;
+          case CHUNK_ID_SPECIAL_EXTENDED_ATTRIBUTE:
+            {
+              ulong bytesRead;
+
+              if (fileExtendedAttributeList != NULL)
+              {
+                // read file extended attribute chunk
+                bytesRead = 0L;
+                error = Chunk_open(&archiveEntryInfo->special.chunkSpecialExtendedAttribute.info,
+                                   &subChunkHeader,
+                                   subChunkHeader.size
+                                  );
+                if (error != ERROR_NONE)
+                {
+                  break;
+                }
+
+                // add extended attribute to list
+                File_addExtendedAttribute(fileExtendedAttributeList,
+                                          archiveEntryInfo->special.chunkSpecialExtendedAttribute.name,
+                                          archiveEntryInfo->special.chunkSpecialExtendedAttribute.value.data,
+                                          archiveEntryInfo->special.chunkSpecialExtendedAttribute.value.length
+                                         );
+              }
+              else
+              {
+                // skip file extended attribute chunk
+                error = Chunk_skipSub(&archiveEntryInfo->special.chunkSpecial.info,&subChunkHeader);
+                if (error != ERROR_NONE)
+                {
+                  break;
+                }
+              }
+            }
+            break;
           default:
             // unknown sub-chunk -> skip
             if (globalOptions.verboseLevel >= 3)
@@ -8178,6 +8192,7 @@ Errors Archive_readSpecialEntry(ArchiveEntryInfo          *archiveEntryInfo,
       if (error != ERROR_NONE)
       {
         // free resources
+        AutoFree_freeAll(&autoFreeList2);
         Chunk_done(&archiveEntryInfo->special.chunkSpecialExtendedAttribute.info);
         Chunk_done(&archiveEntryInfo->special.chunkSpecialEntry.info);
 
@@ -8210,23 +8225,17 @@ Errors Archive_readSpecialEntry(ArchiveEntryInfo          *archiveEntryInfo,
   } /* while */
   if (error != ERROR_NONE)
   {
-    Chunk_done(&archiveEntryInfo->special.chunkSpecial.info);
-
     archiveInfo->pendingError = Chunk_skip(archiveInfo->chunkIO,archiveInfo->chunkIOUserData,&chunkHeader);
-
+    AutoFree_freeDone(&autoFreeList2);
+    AutoFree_freeDone(&autoFreeList1);
     return error;
   }
+  AutoFree_done(&autoFreeList2);
 
   if (!foundSpecialEntryFlag)
   {
-    Chunk_done(&archiveEntryInfo->special.chunkSpecialExtendedAttribute.info);
-    Chunk_done(&archiveEntryInfo->special.chunkSpecial.info);
-
-    Crypt_done(&archiveEntryInfo->special.chunkSpecialExtendedAttribute.cryptInfo);
-    Crypt_done(&archiveEntryInfo->special.chunkSpecialEntry.cryptInfo);
-
     archiveInfo->pendingError = Chunk_skip(archiveInfo->chunkIO,archiveInfo->chunkIOUserData,&chunkHeader);
-
+    AutoFree_freeDone(&autoFreeList1);
     if      (error != ERROR_NONE)    return error;
     else if (!passwordFlag)          return ERROR_NO_CRYPT_PASSWORD;
     else if (!decryptedFlag)         return ERROR_INVALID_CRYPT_PASSWORD;
@@ -8239,6 +8248,9 @@ Errors Archive_readSpecialEntry(ArchiveEntryInfo          *archiveEntryInfo,
 
   // registers as open archive entry
   registerArchiveEntry(archiveEntryInfo);
+
+  // free resources
+  AutoFree_done(&autoFreeList1);
 
   return ERROR_NONE;
 }
@@ -8385,8 +8397,8 @@ Errors Archive_closeEntry(ArchiveEntryInfo *archiveEntryInfo)
             }
 
             // free resources
-            Compress_delete(&archiveEntryInfo->file.byteCompressInfo);
-            Compress_delete(&archiveEntryInfo->file.deltaCompressInfo);
+            Compress_done(&archiveEntryInfo->file.byteCompressInfo);
+            Compress_done(&archiveEntryInfo->file.deltaCompressInfo);
 
             Chunk_done(&archiveEntryInfo->file.chunkFileData.info);
             Chunk_done(&archiveEntryInfo->file.chunkFileDelta.info);
@@ -8509,8 +8521,8 @@ Errors Archive_closeEntry(ArchiveEntryInfo *archiveEntryInfo)
 
             // free resources
 
-            Compress_delete(&archiveEntryInfo->image.byteCompressInfo);
-            Compress_delete(&archiveEntryInfo->image.deltaCompressInfo);
+            Compress_done(&archiveEntryInfo->image.byteCompressInfo);
+            Compress_done(&archiveEntryInfo->image.deltaCompressInfo);
 
             Chunk_done(&archiveEntryInfo->image.chunkImageData.info);
             Chunk_done(&archiveEntryInfo->image.chunkImageDelta.info);
@@ -8759,8 +8771,8 @@ Errors Archive_closeEntry(ArchiveEntryInfo *archiveEntryInfo)
             }
 
             // free resources
-            Compress_delete(&archiveEntryInfo->hardLink.byteCompressInfo);
-            Compress_delete(&archiveEntryInfo->hardLink.deltaCompressInfo);
+            Compress_done(&archiveEntryInfo->hardLink.byteCompressInfo);
+            Compress_done(&archiveEntryInfo->hardLink.deltaCompressInfo);
 
             Chunk_done(&archiveEntryInfo->hardLink.chunkHardLinkData.info);
             Chunk_done(&archiveEntryInfo->hardLink.chunkHardLinkDelta.info);
@@ -8863,7 +8875,7 @@ Errors Archive_closeEntry(ArchiveEntryInfo *archiveEntryInfo)
               Source_closeEntry(&archiveEntryInfo->file.sourceHandle);
             }
 
-            Compress_delete(&archiveEntryInfo->file.deltaCompressInfo);
+            Compress_done(&archiveEntryInfo->file.deltaCompressInfo);
 
             Chunk_done(&archiveEntryInfo->file.chunkFileData.info);
             Chunk_done(&archiveEntryInfo->file.chunkFileDelta.info);
@@ -8876,7 +8888,7 @@ Errors Archive_closeEntry(ArchiveEntryInfo *archiveEntryInfo)
             Crypt_done(&archiveEntryInfo->file.chunkFileExtendedAttribute.cryptInfo);
             Crypt_done(&archiveEntryInfo->file.chunkFileEntry.cryptInfo);
 
-            Compress_delete(&archiveEntryInfo->file.byteCompressInfo);
+            Compress_done(&archiveEntryInfo->file.byteCompressInfo);
 
             free(archiveEntryInfo->file.deltaBuffer);
             free(archiveEntryInfo->file.byteBuffer);
@@ -8900,7 +8912,7 @@ Errors Archive_closeEntry(ArchiveEntryInfo *archiveEntryInfo)
               Source_closeEntry(&archiveEntryInfo->image.sourceHandle);
             }
 
-            Compress_delete(&archiveEntryInfo->image.deltaCompressInfo);
+            Compress_done(&archiveEntryInfo->image.deltaCompressInfo);
 
             Chunk_done(&archiveEntryInfo->image.chunkImageData.info);
             Chunk_done(&archiveEntryInfo->image.chunkImageDelta.info);
@@ -8911,7 +8923,7 @@ Errors Archive_closeEntry(ArchiveEntryInfo *archiveEntryInfo)
             Crypt_done(&archiveEntryInfo->image.chunkImageDelta.cryptInfo);
             Crypt_done(&archiveEntryInfo->image.chunkImageEntry.cryptInfo);
 
-            Compress_delete(&archiveEntryInfo->image.byteCompressInfo);
+            Compress_done(&archiveEntryInfo->image.byteCompressInfo);
 
             free(archiveEntryInfo->image.deltaBuffer);
             free(archiveEntryInfo->image.byteBuffer);
@@ -8971,7 +8983,7 @@ Errors Archive_closeEntry(ArchiveEntryInfo *archiveEntryInfo)
               Source_closeEntry(&archiveEntryInfo->hardLink.sourceHandle);
             }
 
-            Compress_delete(&archiveEntryInfo->hardLink.deltaCompressInfo);
+            Compress_done(&archiveEntryInfo->hardLink.deltaCompressInfo);
 
             Chunk_done(&archiveEntryInfo->hardLink.chunkHardLinkData.info);
             Chunk_done(&archiveEntryInfo->hardLink.chunkHardLinkDelta.info);
@@ -8986,7 +8998,7 @@ Errors Archive_closeEntry(ArchiveEntryInfo *archiveEntryInfo)
             Crypt_done(&archiveEntryInfo->hardLink.chunkHardLinkExtendedAttribute.cryptInfo);
             Crypt_done(&archiveEntryInfo->hardLink.chunkHardLinkEntry.cryptInfo);
 
-            Compress_delete(&archiveEntryInfo->hardLink.byteCompressInfo);
+            Compress_done(&archiveEntryInfo->hardLink.byteCompressInfo);
 
             free(archiveEntryInfo->hardLink.deltaBuffer);
             free(archiveEntryInfo->hardLink.byteBuffer);
