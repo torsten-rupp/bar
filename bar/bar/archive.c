@@ -4719,23 +4719,6 @@ Errors Archive_newHardLinkEntry(ArchiveEntryInfo                *archiveEntryInf
   archiveEntryInfo->hardLink.chunkHardLinkEntry.permission      = fileInfo->permission;
   AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->hardLink.chunkHardLinkEntry.info,ChunkInfo*,{ Chunk_done(resource); });
 
-  error = Chunk_init(&archiveEntryInfo->hardLink.chunkHardLinkExtendedAttribute.info,
-                     &archiveEntryInfo->hardLink.chunkHardLink.info,
-                     CHUNK_USE_PARENT,
-                     CHUNK_USE_PARENT,
-                     CHUNK_ID_HARDLINK_EXTENDED_ATTRIBUTE,
-                     CHUNK_DEFINITION_HARDLINK_EXTENDED_ATTRIBUTE,
-                     archiveEntryInfo->blockLength,
-                     &archiveEntryInfo->hardLink.chunkHardLinkExtendedAttribute.cryptInfo,
-                     &archiveEntryInfo->hardLink.chunkHardLinkExtendedAttribute
-                    );
-  if (error != ERROR_NONE)
-  {
-    AutoFree_freeDone(&autoFreeList);
-    return error;
-  }
-  AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->hardLink.chunkHardLinkExtendedAttribute.info,ChunkInfo*,{ Chunk_done(resource); });
-
   error = Chunk_init(&archiveEntryInfo->hardLink.chunkHardLinkName.info,
                      &archiveEntryInfo->hardLink.chunkHardLink.info,
                      CHUNK_USE_PARENT,
@@ -4752,6 +4735,23 @@ Errors Archive_newHardLinkEntry(ArchiveEntryInfo                *archiveEntryInf
     return error;
   }
   AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->hardLink.chunkHardLinkName.info,ChunkInfo*,{ Chunk_done(resource); });
+
+  error = Chunk_init(&archiveEntryInfo->hardLink.chunkHardLinkExtendedAttribute.info,
+                     &archiveEntryInfo->hardLink.chunkHardLink.info,
+                     CHUNK_USE_PARENT,
+                     CHUNK_USE_PARENT,
+                     CHUNK_ID_HARDLINK_EXTENDED_ATTRIBUTE,
+                     CHUNK_DEFINITION_HARDLINK_EXTENDED_ATTRIBUTE,
+                     archiveEntryInfo->blockLength,
+                     &archiveEntryInfo->hardLink.chunkHardLinkExtendedAttribute.cryptInfo,
+                     &archiveEntryInfo->hardLink.chunkHardLinkExtendedAttribute
+                    );
+  if (error != ERROR_NONE)
+  {
+    AutoFree_freeDone(&autoFreeList);
+    return error;
+  }
+  AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->hardLink.chunkHardLinkExtendedAttribute.info,ChunkInfo*,{ Chunk_done(resource); });
 
   error = Chunk_init(&archiveEntryInfo->hardLink.chunkHardLinkDelta.info,
                      &archiveEntryInfo->hardLink.chunkHardLink.info,
@@ -7569,7 +7569,6 @@ Errors Archive_readHardLinkEntry(ArchiveEntryInfo          *archiveEntryInfo,
 
   if (!foundHardLinkEntryFlag || !foundHardLinkDataFlag)
   {
-    // free resources
     archiveInfo->pendingError = Chunk_skip(archiveInfo->chunkIO,archiveInfo->chunkIOUserData,&chunkHeader);
     AutoFree_freeDone(&autoFreeList1);
     if      (error != ERROR_NONE)     return error;
@@ -8234,7 +8233,6 @@ Errors Archive_closeEntry(ArchiveEntryInfo *archiveEntryInfo)
             }
 
             // free resources
-
             Compress_done(&archiveEntryInfo->image.byteCompressInfo);
             Compress_done(&archiveEntryInfo->image.deltaCompressInfo);
 
