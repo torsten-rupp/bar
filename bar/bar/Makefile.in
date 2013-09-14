@@ -187,6 +187,7 @@ BAR_SOURCES          = bar.c \
                        $(if @HAVE_BREAKPAD@,minidump.cpp) \
                        \
                        global.c \
+                       autofree.c \
                        cmdoptions.c \
                        configvalues.c \
                        lists.c \
