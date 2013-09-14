@@ -1292,14 +1292,14 @@ p++;
       // done crypt
       Crypt_done(&cryptInfo);
     }
-    #if 0
-    {
-    int z;
-    byte *p=fileCryptKey->data;
-    printf("cryp@t data: "); for (z=0;z<dataLength;z++,p++) printf("%02x",*p); printf("\n");
-    p++;
-    }
-    #endif /* 0 */
+#if 0
+{
+int z;
+byte *p=fileCryptKey->data;
+printf("cryp@t data: "); for (z=0;z<dataLength;z++,p++) printf("%02x",*p); printf("\n");
+p++;
+}
+#endif /* 0 */
 
     // calculate CRC
     fileCryptKey->crc = htonl(crc32(crc32(0,Z_NULL,0),fileCryptKey->data,dataLength));
@@ -1482,7 +1482,7 @@ p++;
         return error;
       }
 
-      // encrypt
+      // decrypt
       error = Crypt_decrypt(&cryptInfo,data,ALIGN(dataLength,blockLength));
       if (error != ERROR_NONE)
       {

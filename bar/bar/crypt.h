@@ -436,6 +436,7 @@ void Crypt_doneKey(CryptKey *cryptKey);
 * Purpose: get public/private key data as string
 * Input  : cryptKey - crypt key
 *          string   - string variable
+*          password - password to encrypt key (can be NULL)
 * Output : string - string with key data
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -451,6 +452,7 @@ Errors Crypt_getKeyData(CryptKey       *cryptKey,
 * Purpose: set public/private key data from string
 * Input  : cryptKey - crypt key
 *          string   - string with key data
+*          password - password to decrypt key (can be NULL)
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -478,10 +480,10 @@ String Crypt_getKeyExponent(CryptKey *cryptKey);
 * Name   : Crypt_readKeyFile
 * Purpose: read key from file
 * Input  : fileName - file name
-*          password - password for decryption key
+*          password - password tor decrypt key (can be NULL)
 * Output : cryptKey - crypt key
 * Return : ERROR_NONE or error code
-* Notes  : -
+* Notes  : use own specific file format
 \***********************************************************************/
 
 Errors Crypt_readKeyFile(CryptKey       *cryptKey,
@@ -494,10 +496,10 @@ Errors Crypt_readKeyFile(CryptKey       *cryptKey,
 * Purpose: write key to file
 * Input  : cryptKey - crypt key
 *          fileName - file name
-*          password - password for encryption key
+*          password - password to encrypt key (can be NULL)
 * Output : -
 * Return : ERROR_NONE or error code
-* Notes  : -
+* Notes  : use own specific file format
 \***********************************************************************/
 
 Errors Crypt_writeKeyFile(CryptKey       *cryptKey,
