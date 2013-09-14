@@ -12,7 +12,7 @@
 #define __COMPRESS__
 
 /****************************** Includes *******************************/
-#include <config.h>  // use <...> to support separated build directory 
+#include <config.h>  // use <...> to support separated build directory
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -214,7 +214,7 @@ typedef struct
 * Notes  : -
 \***********************************************************************/
 
-Errors Compress_init(void);
+Errors Compress_initAll(void);
 
 /***********************************************************************\
 * Name   : Compress_done
@@ -225,7 +225,7 @@ Errors Compress_init(void);
 * Notes  : -
 \***********************************************************************/
 
-void Compress_done(void);
+void Compress_doneAll(void);
 
 /***********************************************************************\
 * Name   : Compress_getAlgorithmName
@@ -346,8 +346,8 @@ INLINE bool Compress_isXDeltaCompressed(CompressAlgorithms compressAlgorithm)
 #endif /* NDEBUG || __COMPRESS_IMPLEMENATION__ */
 
 /***********************************************************************\
-* Name   : Compress_new
-* Purpose: create new compress handle
+* Name   : Compress_init
+* Purpose: init compress handle
 * Input  : compressInfo     - compress info block
 *          compressionLevel - compression level (0..9)
 *          blockLength      - block length
@@ -358,23 +358,23 @@ INLINE bool Compress_isXDeltaCompressed(CompressAlgorithms compressAlgorithm)
 * Notes  : -
 \***********************************************************************/
 
-Errors Compress_new(CompressInfo       *compressInfo,
-                    CompressModes      compressMode,
-                    CompressAlgorithms compressAlgorithm,
-                    ulong              blockLength,
-                    SourceHandle       *sourceHandle
-                   );
+Errors Compress_init(CompressInfo       *compressInfo,
+                     CompressModes      compressMode,
+                     CompressAlgorithms compressAlgorithm,
+                     ulong              blockLength,
+                     SourceHandle       *sourceHandle
+                    );
 
 /***********************************************************************\
-* Name   : Compress_delete
-* Purpose: delete compress handle
+* Name   : Compress_done
+* Purpose: done compress handle
 * Input  : compressInfo - compress info block
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-void Compress_delete(CompressInfo *compressInfo);
+void Compress_done(CompressInfo *compressInfo);
 
 /***********************************************************************\
 * Name   : Compress_reset

@@ -1334,12 +1334,12 @@ LOCAL Errors decompressData(CompressInfo *compressInfo)
 
 /*---------------------------------------------------------------------*/
 
-Errors Compress_init(void)
+Errors Compress_initAll(void)
 {
   return ERROR_NONE;
 }
 
-void Compress_done(void)
+void Compress_doneAll(void)
 {
 }
 
@@ -1408,12 +1408,12 @@ bool Compress_isValidAlgorithm(uint16 n)
   return (z < SIZE_OF_ARRAY(COMPRESS_ALGORITHMS));
 }
 
-Errors Compress_new(CompressInfo       *compressInfo,
-                    CompressModes      compressMode,
-                    CompressAlgorithms compressAlgorithm,
-                    ulong              blockLength,
-                    SourceHandle       *sourceHandle
-                   )
+Errors Compress_init(CompressInfo       *compressInfo,
+                     CompressModes      compressMode,
+                     CompressAlgorithms compressAlgorithm,
+                     ulong              blockLength,
+                     SourceHandle       *sourceHandle
+                    )
 {
   assert(compressInfo != NULL);
 
@@ -1728,7 +1728,7 @@ Errors Compress_new(CompressInfo       *compressInfo,
   return ERROR_NONE;
 }
 
-void Compress_delete(CompressInfo *compressInfo)
+void Compress_done(CompressInfo *compressInfo)
 {
   assert(compressInfo != NULL);
 
