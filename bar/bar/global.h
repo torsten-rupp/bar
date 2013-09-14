@@ -11,9 +11,9 @@
 #ifndef __GLOBAL__
 #define __GLOBAL__
 
- #if (defined DEBUG)
-  #warning DEBUG option set - no LOCAL and no -O2 (optimizer) will be used!
- #endif
+#if (defined DEBUG)
+ #warning DEBUG option set - no LOCAL and no -O2 (optimizer) will be used!
+#endif
 
 /****************************** Includes *******************************/
 #include <stdlib.h>
