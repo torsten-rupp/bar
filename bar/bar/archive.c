@@ -4165,11 +4165,10 @@ Errors Archive_newDirectoryEntry(ArchiveEntryInfo                *archiveEntryIn
                                  );
   }
 
-  // lock archive
-  Semaphore_forceLock(&archiveEntryInfo->archiveInfo->chunkIOLock,SEMAPHORE_LOCK_TYPE_READ_WRITE);
-
   if (!archiveEntryInfo->archiveInfo->jobOptions->dryRunFlag)
   {
+    // lock archive
+    Semaphore_forceLock(&archiveEntryInfo->archiveInfo->chunkIOLock,SEMAPHORE_LOCK_TYPE_READ_WRITE);
 
     // ensure space in archive
     error = ensureArchiveSpace(archiveEntryInfo->archiveInfo,
@@ -4398,11 +4397,7 @@ Errors Archive_newLinkEntry(ArchiveEntryInfo                *archiveEntryInfo,
   if (!archiveEntryInfo->archiveInfo->jobOptions->dryRunFlag)
   {
     // lock archive
-    if (!Semaphore_lock(&archiveEntryInfo->archiveInfo->chunkIOLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,SEMAPHORE_WAIT_FOREVER))
-    {
-      AutoFree_freeDone(&autoFreeList);
-      return ERROR_IPC;
-    }
+    Semaphore_forceLock(&archiveEntryInfo->archiveInfo->chunkIOLock,SEMAPHORE_LOCK_TYPE_READ_WRITE);
 
     // ensure space in archive
     error = ensureArchiveSpace(archiveEntryInfo->archiveInfo,
@@ -5030,11 +5025,7 @@ Errors Archive_newSpecialEntry(ArchiveEntryInfo                *archiveEntryInfo
   if (!archiveEntryInfo->archiveInfo->jobOptions->dryRunFlag)
   {
     // lock archive
-    if (!Semaphore_lock(&archiveEntryInfo->archiveInfo->chunkIOLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,SEMAPHORE_WAIT_FOREVER))
-    {
-      AutoFree_freeDone(&autoFreeList);
-      return ERROR_IPC;
-    }
+    Semaphore_forceLock(&archiveEntryInfo->archiveInfo->chunkIOLock,SEMAPHORE_LOCK_TYPE_READ_WRITE);
 
     // ensure space in archive
     error = ensureArchiveSpace(archiveEntryInfo->archiveInfo,
@@ -8270,6 +8261,9 @@ Errors Archive_closeEntry(ArchiveEntryInfo *archiveEntryInfo)
               tmpError = Chunk_close(&archiveEntryInfo->directory.chunkDirectory.info);
               if ((error == ERROR_NONE) && (tmpError != ERROR_NONE)) error = tmpError;
 
+              // unlock archive
+              Semaphore_unlock(&archiveEntryInfo->archiveInfo->chunkIOLock);
+
               if (   (archiveEntryInfo->archiveInfo->databaseHandle != NULL)
                   && !archiveEntryInfo->archiveInfo->jobOptions->noIndexDatabaseFlag
                   && !archiveEntryInfo->archiveInfo->jobOptions->noStorageFlag
@@ -8291,9 +8285,6 @@ Errors Archive_closeEntry(ArchiveEntryInfo *archiveEntryInfo)
                 }
               }
             }
-
-            // unlock archive
-            Semaphore_unlock(&archiveEntryInfo->archiveInfo->chunkIOLock);
 
             // free resources
             Chunk_done(&archiveEntryInfo->directory.chunkDirectoryExtendedAttribute.info);
