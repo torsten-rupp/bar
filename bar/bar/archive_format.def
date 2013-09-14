@@ -359,7 +359,7 @@ CHUNK DIRECTORY_ENTRY "DENT" DirectoryEntry
 CHUNK DIRECTORY_EXTENDED_ATTRIBUTE "DEAT" DirectoryExtendedAttribute
   ENCRYPT
   string name
-  data   data
+  byte[] value
   crc32  crc
 
 # ----------------------------------------------------------------------
@@ -393,7 +393,7 @@ CHUNK LINK_ENTRY "LENT" LinkEntry
 CHUNK LINK_EXTENDED_ATTRIBUTE "LEAT" LinkExtendedAttribute
   ENCRYPT
   string name
-  data   data
+  byte[] value
   crc32  crc
 
 # ----------------------------------------------------------------------
@@ -427,7 +427,7 @@ CHUNK HARDLINK_ENTRY "HENT" HardLinkEntry
 CHUNK HARDLINK_EXTENDED_ATTRIBUTE "HEAT" HardLinkExtendedAttribute
   ENCRYPT
   string name
-  data   data
+  byte[] value
   crc32  crc
 
 # hard link name
@@ -495,7 +495,7 @@ CHUNK SPECIAL_ENTRY "SENT" SpecialEntry
 CHUNK SPECIAL_EXTENDED_ATTRIBUTE "SEAT" SpecialExtendedAttribute
   ENCRYPT
   string name
-  data   data
+  byte[] value
   crc32  crc
 
 # ----------------------------------------------------------------------
