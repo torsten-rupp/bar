@@ -31,6 +31,10 @@
 /***************************** Constants *******************************/
 #define DEBUG_MAX_FREE_LIST 4000
 
+#define DEBUG_TESTCODE_NAME          "TESTCODE"
+#define DEBUG_TESTCODE_LIST_FILENAME "TESTCODE_LIST"
+#define DEBUG_TESTCODE_DONE_FILENAME "TESTCODE_DONE"
+
 /**************************** Datatypes ********************************/
 #ifndef NDEBUG
   typedef struct DebugResourceNode
@@ -150,6 +154,115 @@ void __cyg_profile_func_exit(void *functionCode, void *callAddress)
   UNUSED_VARIABLE(functionCode);
   UNUSED_VARIABLE(callAddress);
 //fprintf(stderr,"%s, %d: exit %p\n",__FILE__,__LINE__,functionCode);
+}
+
+bool debugIsTestCodeEnabled(const char *name)
+{
+  bool       isTestCodeEnabledFlag;
+  const char *value;
+  bool       isInListFileFlag,isInDoneFileFlag;
+  FILE       *file;
+  char       line[1024];
+  char       *s,*t;
+
+  assert(name != NULL);
+
+  isTestCodeEnabledFlag = FALSE;
+
+  // check environment variable
+  value = getenv(DEBUG_TESTCODE_NAME);
+  if ((value != NULL) && stringEquals(name,value))
+  {
+    isTestCodeEnabledFlag = TRUE;
+  }
+  else
+  {
+    isInListFileFlag = FALSE;
+    isInDoneFileFlag = FALSE;
+
+    // check test code list file
+    value = getenv(DEBUG_TESTCODE_LIST_FILENAME);
+    if (value != NULL)
+    {
+      // open file
+      file = fopen(value,"r");
+      if (file != NULL)
+      {
+        // read file
+        while ((fgets(line,sizeof(line),file) != NULL) && !isInListFileFlag)
+        {
+          // trim spaces, LF
+          s = line;
+          while (isspace(*s)) { s++; }
+          t = s;
+          while ((*t) != '\0') { t++; }
+          t--;
+          while ((t > s) && isspace(*t)) { (*t) = '\0'; t--; }
+
+          // skip empty/commented lines
+          if (((*s) == '\0') || ((*s) == '#')) continue;
+
+          // name
+          isInListFileFlag = stringEquals(name,s);
+        }
+
+        // close file
+        fclose(file);
+
+        // check test code done file
+        if (isInListFileFlag)
+        {
+          value = getenv(DEBUG_TESTCODE_DONE_FILENAME);
+          if (value != NULL)
+          {
+            // check if name is in done file
+            file = fopen(value,"r");
+            if (file != NULL)
+            {
+              while ((fgets(line,sizeof(line),file) != NULL) && !isInDoneFileFlag)
+              {
+                // trim spaces, LF
+                s = line;
+                while (isspace(*s)) { s++; }
+                t = s;
+                while ((*t) != '\0') { t++; }
+                t--;
+                while ((t > s) && isspace(*t)) { (*t) = '\0'; t--; }
+
+                // skip empty/commented lines
+                if (((*s) == '\0') || ((*s) == '#')) continue;
+
+                // name
+                isInDoneFileFlag = stringEquals(name,s);
+              }
+
+              // close file
+              fclose(file);
+            }
+          }
+        }
+      }
+    }
+
+    isTestCodeEnabledFlag = isInListFileFlag && !isInDoneFileFlag;
+  }
+
+  if (isTestCodeEnabledFlag)
+  {
+    value = getenv(DEBUG_TESTCODE_DONE_FILENAME);
+    if (value != NULL)
+    {
+      // append to done file
+      file = fopen(value,"a");
+      if (file != NULL)
+      {
+        fputs(name,file); fputc('\n',file);
+        fclose(file);
+      }
+    }
+  }
+
+  return isTestCodeEnabledFlag;
 }
 
 void debugLocalResource(const char *__fileName__,

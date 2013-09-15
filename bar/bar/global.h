@@ -750,7 +750,7 @@ typedef void                void32;
 #ifndef NDEBUG
 
   #define DEBUG_TEST_CODE(name) \
-    if (getenv(name) != NULL)
+    if (debugIsTestCodeEnabled(name))
 
 #else /* not NDEBUG */
 
@@ -1208,6 +1208,18 @@ void __abort(const char *__fileName__,
             );
 
 #ifndef NDEBUG
+
+/***********************************************************************\
+* Name   : debugIsTestCodeEnabled
+* Purpose: check if test code is enabled
+* Input  : name - name
+* Output : -
+* Return : TRUE iff test code is enabled
+* Notes  : -
+\***********************************************************************/
+
+bool debugIsTestCodeEnabled(const char *name);
+
 /***********************************************************************\
 * Name   : debugLocalResource
 * Purpose: mark resource as local resource (must be freed before
