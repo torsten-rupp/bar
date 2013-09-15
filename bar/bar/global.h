@@ -741,10 +741,18 @@ typedef void                void32;
 /***********************************************************************\
 * Name   : DEBUG_TEST_CODE
 * Purpose: execute test code
-* Input  : name - environment variable name
+* Input  : name - test code name
 * Output : -
 * Return : -
-* Notes  : -
+* Notes  : test code is executed if:
+*            - environement variable TESTCODE contains name
+*          or
+*            - text file specified by environment varibale TESTCODE_LIST
+*              contains name and
+*            - text file specified by environment varibale TESTCODE_DONE
+*              does not contain name
+*          If environment variable TESTCODE_DONE is defined the name of
+*          executed testcode is added to that text file.
 \***********************************************************************/
 
 #ifndef NDEBUG
