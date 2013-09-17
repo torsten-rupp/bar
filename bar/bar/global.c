@@ -72,6 +72,10 @@
   LOCAL DebugResourceList debugResourceFreeList;
 #endif /* not NDEBUG */
 
+#ifndef NDEBUG
+  const char *__testCodeName__;
+#endif /* not NDEBUG */
+
 /****************************** Macros *********************************/
 
 /**************************** Functions ********************************/
@@ -259,7 +263,14 @@ bool debugIsTestCodeEnabled(const char *name)
         fputs(name,file); fputc('\n',file);
         fclose(file);
       }
+      fprintf(stderr,"DEBUG: Execute testcode '%s'\n",name);
     }
+
+    __testCodeName__ = name;
+  }
+  else
+  {
+    __testCodeName__ = NULL;
   }
 
   return isTestCodeEnabledFlag;
@@ -484,15 +495,27 @@ void debugResourcePrintStatistics(void)
 
 void debugResourceCheck(void)
 {
+  DebugResourceNode *debugResourceNode;
+
   pthread_once(&debugResourceInitFlag,debugResourceInit);
 
-  debugResourcePrintInfo();
-  debugResourcePrintStatistics();
 
   pthread_mutex_lock(&debugResourceLock);
   {
     if (!List_isEmpty(&debugResourceAllocList))
     {
+      LIST_ITERATE(&debugResourceAllocList,debugResourceNode)
+      {
+        fprintf(stderr,"DEBUG: lost resource '%s' %p allocated at %s, line %ld\n",
+                debugResourceNode->typeName,
+                debugResourceNode->resource,
+                debugResourceNode->allocFileName,
+                debugResourceNode->allocLineNb
+               );
+      }
+      fprintf(stderr,"DEBUG: %lu resource(s) lost\n",
+              List_count(&debugResourceAllocList)
+             );
       HALT_INTERNAL_ERROR_LOST_RESOURCE();
     }
   }

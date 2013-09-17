@@ -170,6 +170,10 @@ typedef void                void32;
 
 /**************************** Variables ********************************/
 
+#ifndef NDEBUG
+  extern const char *__testCodeName__;
+#endif /* not NDEBUG */
+
 /****************************** Macros *********************************/
 #define GLOBAL extern
 #define LOCAL static
@@ -180,7 +184,7 @@ typedef void                void32;
 #else
   #define INLINE
   #define LOCAL_INLINE static
-#endif
+#endif /* NDEBUG */
 
 #ifdef __GNUC__
   #define ATTRIBUTE_PACKED             __attribute__((__packed__))
@@ -196,7 +200,7 @@ typedef void                void32;
   #define ATTRIBUTE_WARN_UNUSED_RESULT
   #define ATTRIBUTE_NO_INSTRUMENT_FUNCTION
   #define ATTRIBUTE_AUTO(functionCode)
-#endif
+#endif /* __GNUC__ */
 
 // only for better reading
 #define CALLBACK(code,argument) code,argument
@@ -759,6 +763,13 @@ typedef void                void32;
 
   #define DEBUG_TEST_CODE(name) \
     if (debugIsTestCodeEnabled(name))
+
+  #define DEBUG_TEST_CODE2(name,codeBody) \
+    void (*__testcode__ ## __LINE__)(const char*) = ({ \
+                                          auto void __closure__(const char *); \
+                                          void __closure__(const char *__testCodeName__)codeBody __closure__; \
+                                        }); \
+    if (debugIsTestCodeEnabled(name)) { __testcode__ ## __LINE__(name); } \
 
 #else /* not NDEBUG */
 
