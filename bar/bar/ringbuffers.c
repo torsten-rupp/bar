@@ -11,7 +11,7 @@
 #define __RINGBUFFER_IMPLEMENATION__
 
 /****************************** Includes *******************************/
-#include <config.h>  // use <...> to support separated build directory 
+#include <config.h>  // use <...> to support separated build directory
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -265,7 +265,7 @@ LOCAL void normalizeOut(RingBuffer *ringBuffer)
 #ifdef NDEBUG
 bool RingBuffer_init(RingBuffer *ringBuffer, uint elementSize, ulong size)
 #else /* not NDEBUG */
-bool __RingBuffer_init(const char *__fileName__, ulong __lineNb__, RingBuffer *ringBuffer, uint elementSize, ulong size)
+bool __RingBuffer_init(const char *__fileName__, uint __lineNb__, RingBuffer *ringBuffer, uint elementSize, ulong size)
 #endif /* NDEBUG */
 {
   #ifndef NDEBUG
@@ -323,7 +323,7 @@ bool __RingBuffer_init(const char *__fileName__, ulong __lineNb__, RingBuffer *r
 #ifdef NDEBUG
 void RingBuffer_done(RingBuffer *ringBuffer, RingBufferElementFreeFunction ringBufferElementFreeFunction, void *ringBufferElementFreeUserData)
 #else /* not NDEBUG */
-void __RingBuffer_done(const char *__fileName__, ulong __lineNb__, RingBuffer *ringBuffer, RingBufferElementFreeFunction ringBufferElementFreeFunction, void *ringBufferElementFreeUserData)
+void __RingBuffer_done(const char *__fileName__, uint __lineNb__, RingBuffer *ringBuffer, RingBufferElementFreeFunction ringBufferElementFreeFunction, void *ringBufferElementFreeUserData)
 #endif /* NDEBUG */
 {
   void *p;
@@ -362,7 +362,7 @@ void __RingBuffer_done(const char *__fileName__, ulong __lineNb__, RingBuffer *r
         }
         else
         {
-          fprintf(stderr,"DEBUG WARNING: ring buffer %p not found in debug list at %s, line %lu\n",
+          fprintf(stderr,"DEBUG WARNING: ring buffer %p not found in debug list at %s, line %u\n",
                   ringBuffer,
                   __fileName__,
                   __lineNb__
@@ -383,7 +383,7 @@ void __RingBuffer_done(const char *__fileName__, ulong __lineNb__, RingBuffer *r
 #ifdef NDEBUG
 RingBuffer* RingBuffer_new(uint elementSize, ulong size)
 #else /* not NDEBUG */
-RingBuffer* __RingBuffer_new(const char *__fileName__, ulong __lineNb__, uint elementSize, ulong size)
+RingBuffer* __RingBuffer_new(const char *__fileName__, uint __lineNb__, uint elementSize, ulong size)
 #endif /* NDEBUG */
 {
   RingBuffer *ringBuffer;
@@ -431,7 +431,7 @@ RingBuffer* __RingBuffer_new(const char *__fileName__, ulong __lineNb__, uint el
 #ifdef NDEBUG
 void RingBuffer_delete(RingBuffer *ringBuffer, RingBufferElementFreeFunction ringBufferElementFreeFunction, void *ringBufferElementFreeUserData)
 #else /* not NDEBUG */
-void __RingBuffer_delete(const char *__fileName__, ulong __lineNb__, RingBuffer *ringBuffer, RingBufferElementFreeFunction ringBufferElementFreeFunction, void *ringBufferElementFreeUserData)
+void __RingBuffer_delete(const char *__fileName__, uint __lineNb__, RingBuffer *ringBuffer, RingBufferElementFreeFunction ringBufferElementFreeFunction, void *ringBufferElementFreeUserData)
 #endif /* NDEBUG */
 {
   if (ringBuffer != NULL)
