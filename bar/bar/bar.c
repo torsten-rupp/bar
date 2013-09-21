@@ -4988,6 +4988,39 @@ LOCAL void deletePIDFile(void)
   }
 }
 
+/***********************************************************************\
+* Name   : errorToExitcode
+* Purpose: map error to exitcode
+* Input  : error - error
+* Output : -
+* Return : exitcode
+* Notes  : -
+\***********************************************************************/
+
+LOCAL int errorToExitcode(Errors error)
+{
+  switch (Errors_getCode(error))
+  {
+    case ERROR_NONE:
+      return EXITCODE_OK;
+      break;
+    case ERROR_TESTCODE:
+      return EXITCODE_TESTCODE;
+      break;
+    case ERROR_INVALID_ARGUMENT:
+      return EXITCODE_INVALID_ARGUMENT;
+      break;
+    case ERROR_CONFIG:
+      return EXITCODE_CONFIG_ERROR;
+    case ERROR_FUNCTION_NOT_SUPPORTED:
+      return EXITCODE_FUNCTION_NOT_SUPPORTED;
+      break;
+    default:
+      return EXITCODE_FAIL;
+      break;
+  }
+}
+
 /*---------------------------------------------------------------------*/
 
 LOCAL void signalAlarmHandler(int signalNumber)
@@ -5017,7 +5050,7 @@ int main(int argc, const char *argv[])
       String_debugDone();
       List_debugDone();
     #endif /* not NDEBUG */
-    return EXITCODE_INIT_FAIL;
+    return errorToExitcode(error);
   }
   globalOptions.barExecutable = argv[0];
 
@@ -5206,7 +5239,7 @@ exit(1);
       String_debugDone();
       List_debugDone();
     #endif /* not NDEBUG */
-    return EXITCODE_FAIL;
+    return errorToExitcode(error);
   }
 
   if (indexDatabaseFileName != NULL)
@@ -5229,7 +5262,7 @@ exit(1);
         String_debugDone();
         List_debugDone();
       #endif /* not NDEBUG */
-      return EXITCODE_FAIL;
+      return errorToExitcode(error);
     }
 
     indexDatabaseHandle = &databaseHandle;
@@ -5255,7 +5288,7 @@ exit(1);
       String_debugDone();
       List_debugDone();
     #endif /* not NDEBUG */
-    return EXITCODE_FAIL;
+    return errorToExitcode(error);
   }
 
 signal(SIGALRM,signalAlarmHandler);
@@ -5318,23 +5351,7 @@ signal(SIGALRM,signalAlarmHandler);
             List_debugDone();
           #endif /* not NDEBUG */
 
-          switch (error)
-          {
-            case ERROR_NONE:
-              return EXITCODE_OK;
-              break;
-            case ERROR_INVALID_ARGUMENT:
-              return EXITCODE_INVALID_ARGUMENT;
-              break;
-            case ERROR_CONFIG:
-              return EXITCODE_CONFIG_ERROR;
-            case ERROR_FUNCTION_NOT_SUPPORTED:
-              return EXITCODE_FUNCTION_NOT_SUPPORTED;
-              break;
-            default:
-              return EXITCODE_FAIL;
-              break;
-          }
+          return errorToExitcode(error);
         }
         else
         {
@@ -5660,23 +5677,7 @@ fprintf(stderr,"%s,%d: t=%s\n",__FILE__,__LINE__,t);
     List_debugDone();
   #endif /* not NDEBUG */
 
-  switch (error)
-  {
-    case ERROR_NONE:
-      return EXITCODE_OK;
-      break;
-    case ERROR_INVALID_ARGUMENT:
-      return EXITCODE_INVALID_ARGUMENT;
-      break;
-    case ERROR_CONFIG:
-      return EXITCODE_CONFIG_ERROR;
-    case ERROR_FUNCTION_NOT_SUPPORTED:
-      return EXITCODE_FUNCTION_NOT_SUPPORTED;
-      break;
-    default:
-      return EXITCODE_FAIL;
-      break;
-  }
+  return errorToExitcode(error);
 }
 
 #ifdef __cplusplus
