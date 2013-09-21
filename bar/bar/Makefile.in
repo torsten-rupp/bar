@@ -2644,47 +2644,54 @@ testcode_init:
 	$(GREP) DEBUG_TESTCODE $(BAR_SOURCES) | $(SED) 's/.*"\(.*\)".*/\1/g' > testcode.list
 	$(RMF) testcode.done
 
-testcode: $(TEST_BAR) $(TEST_KEYS)
+testcode: $(TEST_BAR) $(TEST_KEYS) $(TEST_FILES)
 	rc=$(TESTCODE_EXITCODE); \
         until test $$rc -ne $(TESTCODE_EXITCODE); do \
           if test $$rc -eq $(TESTCODE_EXITCODE); then \
             TESTCODE_LIST=testcode.list TESTCODE_NAME=testcode.name TESTCODE_DONE=testcode.done \
               $(TESTCODE_COMMAND1); \
             rc=$$?; \
+            if test $$rc -ne $(TESTCODE_EXITCODE); then \
+              $(ECHO) "Fail: TESTCODE=$(shell $(CAT) testcode.name) $(TESTCODE_COMMAND1)"; \
+            fi; \
           fi;\
-          if test $$rc -ne $(TESTCODE_EXITCODE); then \
-            $(ECHO) "Fail: TESTCODE=$(shell $(CAT) testcode.name) $(TESTCODE_COMMAND1)"; \
-          fi; \
           \
           if test $$rc -eq $(TESTCODE_EXITCODE); then \
+            $(TESTCODE_COMMAND1); \
             TESTCODE_LIST=testcode.list TESTCODE_NAME=testcode.name TESTCODE_DONE=testcode.done \
               $(TESTCODE_COMMAND2); \
             rc=$$?; \
+            if test $$rc -ne $(TESTCODE_EXITCODE); then \
+              $(ECHO) "Fail: TESTCODE=$(shell $(CAT) testcode.name) $(TESTCODE_COMMAND2)"; \
+            fi; \
           fi;\
-          if test $$rc -ne $(TESTCODE_EXITCODE); then \
-            $(ECHO) "Fail: TESTCODE=$(shell $(CAT) testcode.name) $(TESTCODE_COMMAND2)"; \
-          fi; \
           \
           if test $$rc -eq $(TESTCODE_EXITCODE); then \
+            $(TESTCODE_COMMAND1); \
             TESTCODE_LIST=testcode.list TESTCODE_NAME=testcode.name TESTCODE_DONE=testcode.done \
               $(TESTCODE_COMMAND3); \
             rc=$$?; \
+            if test $$rc -ne $(TESTCODE_EXITCODE); then \
+              $(TESTCODE_COMMAND1); \
+              $(ECHO) "Fail: TESTCODE=$(shell $(CAT) testcode.name) $(TESTCODE_COMMAND3)"; \
+            fi; \
           fi;\
-          if test $$rc -ne $(TESTCODE_EXITCODE); then \
-            $(ECHO) "Fail: TESTCODE=$(shell $(CAT) testcode.name) $(TESTCODE_COMMAND3)"; \
-          fi; \
           \
           if test $$rc -eq $(TESTCODE_EXITCODE); then \
+            $(TESTCODE_COMMAND1); \
             TESTCODE_LIST=testcode.list TESTCODE_NAME=testcode.name TESTCODE_DONE=testcode.done \
               $(TESTCODE_COMMAND4); \
             rc=$$?; \
+            if test $$rc -ne $(TESTCODE_EXITCODE); then \
+              $(ECHO) "Fail: TESTCODE=$(shell $(CAT) testcode.name) $(TESTCODE_COMMAND4)"; \
+            fi; \
           fi;\
-          if test $$rc -ne $(TESTCODE_EXITCODE); then \
-            $(ECHO) "Fail: TESTCODE=$(shell $(CAT) testcode.name) $(TESTCODE_COMMAND4)"; \
-          fi; \
           \
           if test $$rc -eq $(TESTCODE_EXITCODE); then \
             $(CAT) testcode.name >> testcode.done; \
+          else \
+echo rc=$$rc; \
+            exit 1; \
           fi; \
         done
 
