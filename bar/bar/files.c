@@ -570,7 +570,7 @@ Errors File_getTmpFile(FileHandle   *fileHandle,
                       )
 #else /* not NDEBUG */
 Errors __File_getTmpFile(const char   *__fileName__,
-                         ulong        __lineNb__,
+                         uint         __lineNb__,
                          FileHandle   *fileHandle,
                          const String pattern,
                          const String directory
@@ -590,10 +590,10 @@ Errors File_getTmpFileCString(FileHandle   *fileHandle,
                               const String directory
                              )
 #else /* not NDEBUG */
-Errors __File_getTmpFileCString(const char *__fileName__,
-                                ulong      __lineNb__,
-                                FileHandle  *fileHandle,
-                                char const  *pattern,
+Errors __File_getTmpFileCString(const char   *__fileName__,
+                                uint         __lineNb__,
+                                FileHandle   *fileHandle,
+                                char const   *pattern,
                                 const String directory
                                )
 #endif /* NDEBUG */
@@ -694,7 +694,7 @@ Errors __File_getTmpFileCString(const char *__fileName__,
       }
       if (debugFileNode != NULL)
       {
-        fprintf(stderr,"DEBUG WARNING: file '%s' at %s, line %lu opened again at %s, line %lu\n",
+        fprintf(stderr,"DEBUG WARNING: file '%s' at %s, line %lu opened again at %s, line %u\n",
                 String_cString(debugFileNode->fileHandle->name),
                 debugFileNode->fileName,
                 debugFileNode->lineNb,
@@ -912,7 +912,7 @@ Errors File_open(FileHandle    *fileHandle,
                 )
 #else /* not NDEBUG */
 Errors __File_open(const char   *__fileName__,
-                   ulong        __lineNb__,
+                   uint         __lineNb__,
                    FileHandle   *fileHandle,
                    const String fileName,
                    FileModes    fileMode
@@ -941,7 +941,7 @@ Errors File_openCString(FileHandle *fileHandle,
                        )
 #else /* not NDEBUG */
 Errors __File_openCString(const char *__fileName__,
-                          ulong      __lineNb__,
+                          uint       __lineNb__,
                           FileHandle *fileHandle,
                           const char *fileName,
                           FileModes  fileMode
@@ -1119,7 +1119,7 @@ Errors __File_openCString(const char *__fileName__,
         #ifdef HAVE_BACKTRACE
           debugDumpCurrentStackTrace(stderr,"",0);
         #endif /* HAVE_BACKTRACE */
-        HALT_INTERNAL_ERROR("File '%s' at %s, line %lu opened again at %s, line %lu",
+        HALT_INTERNAL_ERROR("File '%s' at %s, line %lu opened again at %s, line %u",
                             String_cString(debugFileNode->fileHandle->name),
                             debugFileNode->fileName,
                             debugFileNode->lineNb,
@@ -1176,7 +1176,7 @@ Errors File_openDescriptor(FileHandle *fileHandle,
                           )
 #else /* not NDEBUG */
 Errors __File_openDescriptor(const char *__fileName__,
-                             ulong      __lineNb__,
+                             uint       __lineNb__,
                              FileHandle *fileHandle,
                              int        fileDescriptor,
                              FileModes  fileMode
@@ -1328,7 +1328,10 @@ Errors __File_openDescriptor(const char *__fileName__,
 #ifdef NDEBUG
 Errors File_close(FileHandle *fileHandle)
 #else /* not NDEBUG */
-Errors __File_close(const char *__fileName__, ulong __lineNb__, FileHandle *fileHandle)
+Errors __File_close(const char *__fileName__,
+                    uint       __lineNb__,
+                    FileHandle *fileHandle
+                   )
 #endif /* NDEBUG */
 {
   #ifndef NDEBUG
@@ -1397,7 +1400,7 @@ Errors __File_close(const char *__fileName__, ulong __lineNb__, FileHandle *file
         #ifdef HAVE_BACKTRACE
           debugDumpCurrentStackTrace(stderr,"",0);
         #endif /* HAVE_BACKTRACE */
-        HALT_INTERNAL_ERROR("File '%p' not found in debug list at %s, line %lu",
+        HALT_INTERNAL_ERROR("File '%p' not found in debug list at %s, line %u",
                             fileHandle->file,
                             __fileName__,
                             __lineNb__
