@@ -107,7 +107,7 @@ LOCAL uint calculateHash(const char *name)
 #ifdef NDEBUG
 LOCAL StringMapEntry *addStringMapEntry(struct __StringMap *stringMap, const char *name)
 #else /* not NDEBUG */
-LOCAL StringMapEntry *addStringMapEntry(const char *__fileName__, ulong __lineNb__, struct __StringMap *stringMap, const char *name)
+LOCAL StringMapEntry *addStringMapEntry(const char *__fileName__, uint __lineNb__, struct __StringMap *stringMap, const char *name)
 #endif /* NDEBUG */
 {
   uint           i;
@@ -233,7 +233,7 @@ LOCAL StringMapEntry *findStringMapEntry(const struct __StringMap *stringMap, co
 #ifdef NDEBUG
 StringMap StringMap_new(uint size)
 #else /* not NDEBUG */
-StringMap __StringMap_new(const char *__fileName__, ulong __lineNb__)
+StringMap __StringMap_new(const char *__fileName__, uint __lineNb__)
 #endif /* NDEBUG */
 {
   struct __StringMap *stringMap;
@@ -269,7 +269,7 @@ StringMap __StringMap_new(const char *__fileName__, ulong __lineNb__)
 #ifdef NDEBUG
 StringMap StringMap_duplicate(const StringMap stringMap)
 #else /* not NDEBUG */
-StringMap __StringMap_duplicate(const char *__fileName__, ulong __lineNb__, const StringMap stringMap)
+StringMap __StringMap_duplicate(const char *__fileName__, uint __lineNb__, const StringMap stringMap)
 #endif /* NDEBUG */
 {
   struct __StringMap *newStringMap;
@@ -316,7 +316,7 @@ void StringMap_copy(StringMap stringMap, const StringMap fromStringMap)
 #ifdef NDEBUG
 void StringMap_delete(StringMap stringMap)
 #else /* not NDEBUG */
-void __StringMap_delete(const char *__fileName__, ulong __lineNb__, StringMap stringMap)
+void __StringMap_delete(const char *__fileName__, uint __lineNb__, StringMap stringMap)
 #endif /* NDEBUG */
 {
   uint i;
@@ -427,7 +427,7 @@ StringMapValue StringMap_indexValue(const StringMap stringMap, uint index)
 #ifdef NDEBUG
 void __StringMap_putText(StringMap stringMap, const char *name, String text)
 #else /* not NDEBUG */
-void __StringMap_putText(const char *__fileName__, ulong __lineNb__, StringMap stringMap, const char *name, String text)
+void __StringMap_putText(const char *__fileName__, uint __lineNb__, StringMap stringMap, const char *name, String text)
 #endif /* NDEBUG */
 {
   StringMapEntry *stringMapEntry;
@@ -451,7 +451,7 @@ void __StringMap_putText(const char *__fileName__, ulong __lineNb__, StringMap s
 #ifdef NDEBUG
 void __StringMap_putTextCString(StringMap stringMap, const char *name, String text)
 #else /* not NDEBUG */
-void __StringMap_putTextCString(const char *__fileName__, ulong __lineNb__, StringMap stringMap, const char *name, const char *text)
+void __StringMap_putTextCString(const char *__fileName__, uint __lineNb__, StringMap stringMap, const char *name, const char *text)
 #endif /* NDEBUG */
 {
   StringMapEntry *stringMapEntry;
@@ -475,7 +475,7 @@ void __StringMap_putTextCString(const char *__fileName__, ulong __lineNb__, Stri
 #ifdef NDEBUG
 void StringMap_put(StringMap stringMap, const char *name, void *value)
 #else /* not NDEBUG */
-void __StringMap_put(const char *__fileName__, ulong __lineNb__, StringMap stringMap, const char *name, void *value)
+void __StringMap_put(const char *__fileName__, uint __lineNb__, StringMap stringMap, const char *name, void *value)
 #endif /* NDEBUG */
 {
   StringMapEntry *stringMapEntry;
@@ -499,7 +499,7 @@ void __StringMap_put(const char *__fileName__, ulong __lineNb__, StringMap strin
 #ifdef NDEBUG
 void StringMap_putInt(StringMap stringMap, const char *name, int value)
 #else /* not NDEBUG */
-void __StringMap_putInt(const char *__fileName__, ulong __lineNb__, StringMap stringMap, const char *name, int value)
+void __StringMap_putInt(const char *__fileName__, uint __lineNb__, StringMap stringMap, const char *name, int value)
 #endif /* NDEBUG */
 {
   StringMapEntry *stringMapEntry;
@@ -523,7 +523,7 @@ void __StringMap_putInt(const char *__fileName__, ulong __lineNb__, StringMap st
 #ifdef NDEBUG
 void StringMap_putInt64(StringMap stringMap, const char *name, int64 value)
 #else /* not NDEBUG */
-void __StringMap_putInt64(const char *__fileName__, ulong __lineNb__, StringMap stringMap, const char *name, int64 value)
+void __StringMap_putInt64(const char *__fileName__, uint __lineNb__, StringMap stringMap, const char *name, int64 value)
 #endif /* NDEBUG */
 {
   StringMapEntry *stringMapEntry;
@@ -547,7 +547,7 @@ void __StringMap_putInt64(const char *__fileName__, ulong __lineNb__, StringMap 
 #ifdef NDEBUG
 void StringMap_putDouble(StringMap stringMap, const char *name, double value)
 #else /* not NDEBUG */
-void __StringMap_putDouble(const char *__fileName__, ulong __lineNb__, StringMap stringMap, const char *name, double value)
+void __StringMap_putDouble(const char *__fileName__, uint __lineNb__, StringMap stringMap, const char *name, double value)
 #endif /* NDEBUG */
 {
   StringMapEntry *stringMapEntry;
@@ -571,7 +571,7 @@ void __StringMap_putDouble(const char *__fileName__, ulong __lineNb__, StringMap
 #ifdef NDEBUG
 void StringMap_putBool(StringMap stringMap, const char *name, bool value)
 #else /* not NDEBUG */
-void __StringMap_putBool(const char *__fileName__, ulong __lineNb__, StringMap stringMap, const char *name, bool value)
+void __StringMap_putBool(const char *__fileName__, uint __lineNb__, StringMap stringMap, const char *name, bool value)
 #endif /* NDEBUG */
 {
   StringMapEntry *stringMapEntry;
@@ -595,7 +595,7 @@ void __StringMap_putBool(const char *__fileName__, ulong __lineNb__, StringMap s
 #ifdef NDEBUG
 void StringMap_putChar(StringMap stringMap, const char *name, char value)
 #else /* not NDEBUG */
-void __StringMap_putChar(const char *__fileName__, ulong __lineNb__, StringMap stringMap, const char *name, char value)
+void __StringMap_putChar(const char *__fileName__, uint __lineNb__, StringMap stringMap, const char *name, char value)
 #endif /* NDEBUG */
 {
   StringMapEntry *stringMapEntry;
@@ -619,7 +619,7 @@ void __StringMap_putChar(const char *__fileName__, ulong __lineNb__, StringMap s
 #ifdef NDEBUG
 void StringMap_putCString(StringMap stringMap, const char *name, const char *value)
 #else /* not NDEBUG */
-void __StringMap_putCString(const char *__fileName__, ulong __lineNb__, StringMap stringMap, const char *name, const char *value)
+void __StringMap_putCString(const char *__fileName__, uint __lineNb__, StringMap stringMap, const char *name, const char *value)
 #endif /* NDEBUG */
 {
   StringMapEntry *stringMapEntry;
@@ -644,7 +644,7 @@ void __StringMap_putCString(const char *__fileName__, ulong __lineNb__, StringMa
 #ifdef NDEBUG
 void StringMap_putString(StringMap stringMap, const char *name, String value)
 #else /* not NDEBUG */
-void __StringMap_putString(const char *__fileName__, ulong __lineNb__, StringMap stringMap, const char *name, String value)
+void __StringMap_putString(const char *__fileName__, uint __lineNb__, StringMap stringMap, const char *name, String value)
 #endif /* NDEBUG */
 {
   StringMapEntry *stringMapEntry;
@@ -669,7 +669,7 @@ void __StringMap_putString(const char *__fileName__, ulong __lineNb__, StringMap
 #ifdef NDEBUG
 void StringMap_putData(StringMap stringMap, const char *name, void *data, StringMapFormatFunction stringMapFormatFunction, void *stringMapFormatUserData)
 #else /* not NDEBUG */
-void __StringMap_putData(const char *__fileName__, ulong __lineNb__, StringMap stringMap, const char *name, void *data, StringMapFormatFunction stringMapFormatFunction, void *stringMapFormatUserData)
+void __StringMap_putData(const char *__fileName__, uint __lineNb__, StringMap stringMap, const char *name, void *data, StringMapFormatFunction stringMapFormatFunction, void *stringMapFormatUserData)
 #endif /* NDEBUG */
 {
   StringMapEntry *stringMapEntry;
@@ -1017,7 +1017,7 @@ bool StringMap_getData(const StringMap stringMap, const char *name, void *data, 
 #ifdef NDEBUG
 void StringMap_remove(StringMap stringMap, const char *name)
 #else /* not NDEBUG */
-void __StringMap_remove(const char *__fileName__, ulong __lineNb__, StringMap stringMap, const char *name)
+void __StringMap_remove(const char *__fileName__, uint __lineNb__, StringMap stringMap, const char *name)
 #endif /* NDEBUG */
 {
   StringMapEntry *stringMapEntry;
