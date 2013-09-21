@@ -70,12 +70,12 @@ typedef struct
          http://gcc.gnu.org/onlinedocs/gcc/Statement-Exprs.html
 */
 #ifdef __GNUC__
-  #define AUTOFREE_ADD(autoFreeList,resource_,type,freeFunctionBody) \
+  #define AUTOFREE_ADD(autoFreeList,resource_,freeFunctionBody) \
     AutoFree_add(autoFreeList,\
                  (void*)(unsigned long long)resource_, \
                  (AutoFreeFunction)({ \
-                                     auto void __closure__(type); \
-                                     void __closure__(type resource)freeFunctionBody __closure__; \
+                                     auto void __closure__(void); \
+                                     void __closure__(void)freeFunctionBody __closure__; \
                                    }) \
                 )
 
@@ -113,7 +113,7 @@ void AutoFree_init(AutoFreeList *autoFreeList);
 
 /***********************************************************************\
 * Name   : AutoFree_done
-* Purpose: done auto-free list
+* Purpose: free resources and done auto-free list
 * Input  : autoFreeList - auto-free list
 * Output : -
 * Return : -
@@ -123,15 +123,15 @@ void AutoFree_init(AutoFreeList *autoFreeList);
 void AutoFree_done(AutoFreeList *autoFreeList);
 
 /***********************************************************************\
-* Name   : AutoFree_done
-* Purpose: free all resources and done auto-free list
+* Name   : AutoFree_cleanup
+* Purpose: cleanup all resources and free auto-free list
 * Input  : autoFreeList - auto-free list
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-void AutoFree_freeDone(AutoFreeList *autoFreeList);
+void AutoFree_cleanup(AutoFreeList *autoFreeList);
 
 /***********************************************************************\
 * Name   : AutoFree_add
@@ -151,7 +151,7 @@ bool AutoFree_add(AutoFreeList     *autoFreeList,
                  );
 #else /* not NDEBUG */
 bool __AutoFree_add(const char       *__fileName__,
-                    ulong            __lineNb__,
+                    uint             __lineNb__,
                     AutoFreeList     *autoFreeList,
                     void             *resource,
                     AutoFreeFunction autoFreeFunction
@@ -174,7 +174,7 @@ void AutoFree_remove(AutoFreeList *autoFreeList,
                     );
 #else /* not NDEBUG */
 void __AutoFree_remove(const char   *__fileName__,
-                       ulong        __lineNb__,
+                       uint         __lineNb__,
                        AutoFreeList *autoFreeList,
                        void         *resource
                       );

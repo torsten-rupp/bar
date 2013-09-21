@@ -57,12 +57,13 @@ void AutoFree_done(AutoFreeList *autoFreeList)
   pthread_mutex_destroy(&autoFreeList->lock);
 }
 
-void AutoFree_freeDone(AutoFreeList *autoFreeList)
+void AutoFree_cleanup(AutoFreeList *autoFreeList)
 {
   assert(autoFreeList != NULL);
 
   AutoFree_freeAll(autoFreeList);
-  AutoFree_done(autoFreeList);
+  List_done(autoFreeList,NULL,NULL);
+  pthread_mutex_destroy(&autoFreeList->lock);
 }
 
 #ifdef NDEBUG
@@ -72,7 +73,7 @@ bool AutoFree_add(AutoFreeList     *autoFreeList,
                  )
 #else /* not NDEBUG */
 bool __AutoFree_add(const char       *__fileName__,
-                    ulong            __lineNb__,
+                    uint             __lineNb__,
                     AutoFreeList     *autoFreeList,
                     void             *resource,
                     AutoFreeFunction autoFreeFunction
@@ -85,33 +86,6 @@ bool __AutoFree_add(const char       *__fileName__,
 
   pthread_mutex_lock(&autoFreeList->lock);
   {
-    // check for duplicate initialization in list
-    autoFreeNode = autoFreeList->head;
-    while ((autoFreeNode != NULL) && (autoFreeNode->resource != resource))
-    {
-      autoFreeNode = autoFreeNode->next;
-    }
-    if (autoFreeNode != NULL)
-    {
-      #ifndef NDEBUG
-        fprintf(stderr,"DEBUG WARNING: multiple add of auto resource %p at %s, line %lu which was previously initialized at %s, line %lu!\n",
-                resource,
-                __fileName__,
-                __lineNb__,
-                autoFreeNode->fileName,
-                autoFreeNode->lineNb
-               );
-        #ifdef HAVE_BACKTRACE
-          debugDumpCurrentStackTrace(stderr,"",0);
-        #endif /* HAVE_BACKTRACE */
-        HALT_INTERNAL_ERROR("");
-      #else /* not NDEBUG */
-        fprintf(stderr,"DEBUG WARNING: multiple add of auto resource %p!\n",
-                resource
-               );
-      #endif /* not NDEBUG */
-    }
-
     // allocate new node
     autoFreeNode = LIST_NEW_NODEX(__fileName__,__lineNb__,AutoFreeNode);
     if (autoFreeNode == NULL)
@@ -144,33 +118,40 @@ void AutoFree_remove(AutoFreeList *autoFreeList,
                     )
 #else /* not NDEBUG */
 void __AutoFree_remove(const char   *__fileName__,
-                       ulong        __lineNb__,
+                       uint         __lineNb__,
                        AutoFreeList *autoFreeList,
                        void         *resource
                       )
 #endif /* NDEBUG */
 {
+  bool         foundFlag;
   AutoFreeNode *autoFreeNode;
 
   assert(autoFreeList != NULL);
 
   pthread_mutex_lock(&autoFreeList->lock);
   {
-    // remove resource from list
+    // remove resources from list
+    foundFlag = FALSE;
     autoFreeNode = autoFreeList->head;
-    while ((autoFreeNode != NULL) && (autoFreeNode->resource != resource))
+    while (autoFreeNode != NULL)
     {
-      autoFreeNode = autoFreeNode->next;
+      if (autoFreeNode->resource == resource)
+      {
+        // remove from list
+        autoFreeNode = List_remove(autoFreeList,autoFreeNode);
+        foundFlag = TRUE;
+      }
+      else
+      {
+        // next node
+        autoFreeNode = autoFreeNode->next;
+      }
     }
-    if (autoFreeNode != NULL)
-    {
-      // remove from list
-      List_remove(autoFreeList,autoFreeNode);
-    }
-    else
+    if (!foundFlag)
     {
       #ifndef NDEBUG
-        fprintf(stderr,"DEBUG WARNING: auto resource '%p' not found in auto resource list at %s, line %lu\n",
+        fprintf(stderr,"DEBUG WARNING: auto resource '%p' not found in auto resource list at %s, line %u\n",
                 resource,
                 __fileName__,
                 __lineNb__
@@ -237,6 +218,7 @@ void AutoFree_freeAll(AutoFreeList *autoFreeList)
       // free resource
       if (autoFreeNode->autoFreeFunction != NULL)
       {
+#if 0
         #ifndef NDEBUG
           fprintf(stderr,
                   "DEBUG: call auto free %p at %s, line %lu with auto resource %p\n",
@@ -246,6 +228,7 @@ void AutoFree_freeAll(AutoFreeList *autoFreeList)
                   autoFreeNode->resource
                  );
         #endif /* not NDEBUG */
+#endif /* 0 */
         autoFreeNode->autoFreeFunction(autoFreeNode->resource);
       }
 
