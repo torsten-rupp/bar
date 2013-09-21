@@ -24,6 +24,7 @@
 #include <assert.h>
 
 #include "global.h"
+#include "autofree.h"
 #include "strings.h"
 #include "lists.h"
 #include "stringlists.h"
@@ -1562,6 +1563,7 @@ Errors Command_list(StringList                      *storageNameList,
                     void                            *archiveGetCryptPasswordUserData
                    )
 {
+  AutoFreeList     autoFreeList;
   String           storageName;
   StorageSpecifier storageSpecifier;
   String           printableStorageName;
@@ -1585,11 +1587,17 @@ bool         remoteBarFlag;
 remoteBarFlag=FALSE;
 
   // init variables
+  AutoFree_init(&autoFreeList);
   List_init(&archiveContentList);
   storageName          = String_new();
   Storage_initSpecifier(&storageSpecifier);
   storageFileName      = String_new();
   printableStorageName = String_new();
+  AUTOFREE_ADD(&autoFreeList,printableStorageName,{ String_delete(printableStorageName); });
+  AUTOFREE_ADD(&autoFreeList,storageFileName,{ String_delete(storageFileName); });
+  AUTOFREE_ADD(&autoFreeList,&storageSpecifier,{ Storage_doneSpecifier(&storageSpecifier); });
+  AUTOFREE_ADD(&autoFreeList,storageName,{ String_delete(storageName); });
+  AUTOFREE_ADD(&autoFreeList,&archiveContentList,{ List_done(&archiveContentList,(ListNodeFreeFunction)freeArchiveContentNode,NULL); });
 
   // list archive content
   failError = ERROR_NONE;
@@ -2933,6 +2941,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   Storage_doneSpecifier(&storageSpecifier);
   String_delete(storageName);
   List_done(&archiveContentList,(ListNodeFreeFunction)freeArchiveContentNode,NULL);
+  AutoFree_done(&autoFreeList);
 
   return failError;
 }
