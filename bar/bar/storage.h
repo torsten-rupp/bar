@@ -522,6 +522,10 @@ typedef struct
 
 /****************************** Macros *********************************/
 
+#ifndef NDEBUG
+  #define Storage_initSpecifier(storageSpecifier) __Storage_initSpecifier(__FILE__,__LINE__,storageSpecifier)
+#endif /* not NDEBUG */
+
 /***************************** Forwards ********************************/
 
 /***************************** Functions *******************************/
@@ -561,7 +565,14 @@ void Storage_doneAll(void);
 * Notes  : -
 \***********************************************************************/
 
-void Storage_initSpecifier(StorageSpecifier *storageSpecifier);
+#ifdef NDEBUG
+  void Storage_initSpecifier(StorageSpecifier *storageSpecifier);
+#else /* not NDEBUG */
+  void __Storage_initSpecifier(const char       *__fileName__,
+                               ulong            __lineNb__,
+                               StorageSpecifier *storageSpecifier
+                              );
+#endif /* NDEBUG */
 
 /***********************************************************************\
 * Name   : Storage_doneSpecifier

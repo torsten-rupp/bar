@@ -37,6 +37,7 @@
 #include "mxml.h"
 
 #include "global.h"
+#include "autofree.h"
 #include "strings.h"
 #include "stringlists.h"
 #include "files.h"
@@ -1981,6 +1982,11 @@ LOCAL void executeIOgrowisofs(StorageFileHandle *storageFileHandle,
 
 /*---------------------------------------------------------------------*/
 
+void myhandler(int signalNumber)
+{
+  fprintf(stderr,"XXXXXX signal %d\n",signalNumber);
+}
+
 Errors Storage_initAll(void)
 {
   #if   defined(HAVE_CURL)
@@ -1988,6 +1994,7 @@ Errors Storage_initAll(void)
     {
       return ERROR_INIT_STORAGE;
     }
+signal(SIGALRM,myhandler);
   #elif defined(HAVE_FTP)
     FtpInit();
   #endif /* HAVE_CURL || HAVE_FTP */
@@ -2017,7 +2024,14 @@ void Storage_doneAll(void)
   #endif /* HAVE_CURL || HAVE_FTP */
 }
 
-void Storage_initSpecifier(StorageSpecifier *storageSpecifier)
+#ifdef NDEBUG
+  void Storage_initSpecifier(StorageSpecifier *storageSpecifier)
+#else /* not NDEBUG */
+  void __Storage_initSpecifier(const char       *__fileName__,
+                               ulong            __lineNb__,
+                               StorageSpecifier *storageSpecifier
+                              )
+#endif /* NDEBUG */
 {
   assert(storageSpecifier != NULL);
 
@@ -2027,7 +2041,11 @@ void Storage_initSpecifier(StorageSpecifier *storageSpecifier)
   storageSpecifier->loginPassword = Password_new();
   storageSpecifier->deviceName    = String_new();
 
-  DEBUG_ADD_RESOURCE_TRACE("storage specifier",storageSpecifier);
+  #ifdef NDEBUG
+    DEBUG_ADD_RESOURCE_TRACE("storage specifier",storageSpecifier);
+  #else /* not NDEBUG */
+    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,"storage specifier",storageSpecifier);
+  #endif /* NDEBUG */
 }
 
 void Storage_doneSpecifier(StorageSpecifier *storageSpecifier)
@@ -3317,6 +3335,7 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
                         : ERRORX_(NO_SSH_PASSWORD,0,String_cString(storageFileHandle->storageSpecifier.hostName));
             }
           }
+          assert(error != ERROR_UNKNOWN);
           if (error != ERROR_NONE)
           {
             Storage_doneSpecifier(&storageFileHandle->storageSpecifier);
@@ -3417,6 +3436,7 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
               error = !Password_isEmpty(defaultSSHPassword) ? ERROR_INVALID_SSH_PASSWORD : ERROR_NO_SSH_PASSWORD;
             }
           }
+          assert(error != ERROR_UNKNOWN);
           if (error != ERROR_NONE)
           {
             Storage_doneSpecifier(&storageFileHandle->storageSpecifier);
@@ -4868,6 +4888,7 @@ Errors Storage_unloadVolume(StorageFileHandle *storageFileHandle)
       #endif /* NDEBUG */
       break;
   }
+  assert(error != ERROR_UNKNOWN);
 
   return error;
 }
@@ -4972,8 +4993,8 @@ Errors Storage_create(StorageFileHandle *storageFileHandle,
              Note: if signals are switched of c-ares library for asynchronous DNS
              is recommented to avoid infinite lookups
           */
-          (void)curl_easy_setopt(storageFileHandle->ftp.curlMultiHandle,CURLOPT_NOSIGNAL,1);
-          (void)curl_easy_setopt(storageFileHandle->ftp.curlHandle,CURLOPT_NOSIGNAL,1);
+//          (void)curl_easy_setopt(storageFileHandle->ftp.curlMultiHandle,CURLOPT_NOSIGNAL,1L);
+//          (void)curl_easy_setopt(storageFileHandle->ftp.curlHandle,CURLOPT_NOSIGNAL,1L);
 
           // get pathname, basename
           pathName = File_getFilePathName(String_new(),fileName);
@@ -5384,8 +5405,8 @@ LIBSSH2_SFTP_S_IRUSR|LIBSSH2_SFTP_S_IWUSR
              Note: if signals are switched of c-ares library for asynchronous DNS
              is recommented to avoid infinite lookups
           */
-          (void)curl_easy_setopt(storageFileHandle->webdav.curlMultiHandle,CURLOPT_NOSIGNAL,1);
-          (void)curl_easy_setopt(storageFileHandle->webdav.curlHandle,CURLOPT_NOSIGNAL,1);
+//          (void)curl_easy_setopt(storageFileHandle->webdav.curlMultiHandle,CURLOPT_NOSIGNAL,1L);
+//          (void)curl_easy_setopt(storageFileHandle->webdav.curlHandle,CURLOPT_NOSIGNAL,1L);
 
           // get base URL
           baseURL = String_format(String_new(),"http://%S",storageFileHandle->storageSpecifier.hostName);
@@ -5737,8 +5758,8 @@ Errors Storage_open(StorageFileHandle *storageFileHandle,
              Note: if signals are switched of c-ares library for asynchronous DNS
              is recommented to avoid infinite lookups
           */
-          (void)curl_easy_setopt(storageFileHandle->ftp.curlMultiHandle,CURLOPT_NOSIGNAL,1);
-          (void)curl_easy_setopt(storageFileHandle->ftp.curlHandle,CURLOPT_NOSIGNAL,1);
+//          (void)curl_easy_setopt(storageFileHandle->ftp.curlMultiHandle,CURLOPT_NOSIGNAL,1L);
+//          (void)curl_easy_setopt(storageFileHandle->ftp.curlHandle,CURLOPT_NOSIGNAL,1L);
 
           // get pathname, basename
           pathName = File_getFilePathName(String_new(),storageFileName);
@@ -6242,8 +6263,8 @@ fprintf(stderr,"%s, %d: httpCode=%ld\n",__FILE__,__LINE__,httpCode);
              Note: if signals are switched of c-ares library for asynchronous DNS
              is recommented to avoid infinite lookups
           */
-          (void)curl_easy_setopt(storageFileHandle->webdav.curlMultiHandle,CURLOPT_NOSIGNAL,1);
-          (void)curl_easy_setopt(storageFileHandle->webdav.curlHandle,CURLOPT_NOSIGNAL,1);
+//          (void)curl_easy_setopt(storageFileHandle->webdav.curlMultiHandle,CURLOPT_NOSIGNAL,1L);
+//          (void)curl_easy_setopt(storageFileHandle->webdav.curlHandle,CURLOPT_NOSIGNAL,1L);
 
           // get base URL
           baseURL = String_format(String_new(),"http://%S",storageFileHandle->storageSpecifier.hostName);
@@ -6536,8 +6557,8 @@ void Storage_close(StorageFileHandle *storageFileHandle)
         assert(storageFileHandle->ftp.curlMultiHandle != NULL);
 
         // for some reason signals must be reenabled, otherwise curl is crashing!
-        (void)curl_easy_setopt(storageFileHandle->webdav.curlHandle,CURLOPT_NOSIGNAL,0);
-        (void)curl_easy_setopt(storageFileHandle->webdav.curlMultiHandle,CURLOPT_NOSIGNAL,0);
+//        (void)curl_easy_setopt(storageFileHandle->webdav.curlHandle,CURLOPT_NOSIGNAL,0L);
+//        (void)curl_easy_setopt(storageFileHandle->webdav.curlMultiHandle,CURLOPT_NOSIGNAL,0L);
 
         (void)curl_multi_remove_handle(storageFileHandle->ftp.curlMultiHandle,storageFileHandle->ftp.curlHandle);
         (void)curl_easy_cleanup(storageFileHandle->ftp.curlHandle);
@@ -6635,8 +6656,8 @@ void Storage_close(StorageFileHandle *storageFileHandle)
         assert(storageFileHandle->webdav.curlMultiHandle != NULL);
 
         // for some reason signals must be reenabled, otherwise curl is crashing!
-        (void)curl_easy_setopt(storageFileHandle->webdav.curlHandle,CURLOPT_NOSIGNAL,0);
-        (void)curl_easy_setopt(storageFileHandle->webdav.curlMultiHandle,CURLOPT_NOSIGNAL,0);
+//        (void)curl_easy_setopt(storageFileHandle->webdav.curlHandle,CURLOPT_NOSIGNAL,0L);
+//        (void)curl_easy_setopt(storageFileHandle->webdav.curlMultiHandle,CURLOPT_NOSIGNAL,0L);
 
         (void)curl_multi_remove_handle(storageFileHandle->webdav.curlMultiHandle,storageFileHandle->webdav.curlHandle);
         (void)curl_easy_cleanup(storageFileHandle->webdav.curlHandle);
@@ -6751,7 +6772,7 @@ Errors Storage_delete(StorageFileHandle *storageFileHandle,
             {
               return ERROR_FTP_SESSION_FAIL;
             }
-            (void)curl_easy_setopt(curlHandle,CURLOPT_NOSIGNAL,1);
+//            (void)curl_easy_setopt(curlHandle,CURLOPT_NOSIGNAL,1L);
             (void)curl_easy_setopt(curlHandle,CURLOPT_FTP_RESPONSE_TIMEOUT,FTP_TIMEOUT/1000);
             if (globalOptions.verboseLevel >= 6)
             {
@@ -6953,7 +6974,7 @@ whould this be a possible implementation?
             {
               return ERROR_WEBDAV_SESSION_FAIL;
             }
-            (void)curl_easy_setopt(curlHandle,CURLOPT_NOSIGNAL,1);
+//            (void)curl_easy_setopt(curlHandle,CURLOPT_NOSIGNAL,1L);
             (void)curl_easy_setopt(curlHandle,CURLOPT_CONNECTTIMEOUT_MS,WEBDAV_TIMEOUT);
             if (globalOptions.verboseLevel >= 6)
             {
@@ -7043,6 +7064,7 @@ whould this be a possible implementation?
       #endif /* NDEBUG */
       break;
   }
+  assert(error != ERROR_UNKNOWN);
 
   return error;
 }
@@ -7970,6 +7992,7 @@ Errors Storage_read(StorageFileHandle *storageFileHandle,
       #endif /* NDEBUG */
       break;
   }
+  assert(error != ERROR_UNKNOWN);
 
   return error;
 }
@@ -8455,6 +8478,7 @@ Errors Storage_write(StorageFileHandle *storageFileHandle,
       #endif /* NDEBUG */
       break;
   }
+  assert(error != ERROR_UNKNOWN);
 
   return error;
 }
@@ -8645,6 +8669,7 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
       #endif /* NDEBUG */
       break;
   }
+  assert(error != ERROR_UNKNOWN);
 
   return error;
 }
@@ -9102,6 +9127,7 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
       #endif /* NDEBUG */
       break;
   }
+  assert(error != ERROR_UNKNOWN);
 
   return error;
 }
@@ -9258,7 +9284,7 @@ Errors Storage_openDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
             error = ERROR_FTP_SESSION_FAIL;
             break;
           }
-          (void)curl_easy_setopt(curlHandle,CURLOPT_NOSIGNAL,1);
+//          (void)curl_easy_setopt(curlHandle,CURLOPT_NOSIGNAL,1L);
           (void)curl_easy_setopt(curlHandle,CURLOPT_FTP_RESPONSE_TIMEOUT,FTP_TIMEOUT/1000);
           if (globalOptions.verboseLevel >= 6)
           {
@@ -9693,7 +9719,7 @@ error = ERROR_FUNCTION_NOT_SUPPORTED;
             error = ERROR_WEBDAV_SESSION_FAIL;
             break;
           }
-          (void)curl_easy_setopt(curlHandle,CURLOPT_NOSIGNAL,1);
+//          (void)curl_easy_setopt(curlHandle,CURLOPT_NOSIGNAL,1L);
           (void)curl_easy_setopt(curlHandle,CURLOPT_CONNECTTIMEOUT_MS,WEBDAV_TIMEOUT);
           if (globalOptions.verboseLevel >= 6)
           {
@@ -9863,6 +9889,7 @@ error = ERROR_FUNCTION_NOT_SUPPORTED;
       #endif /* NDEBUG */
       break;
   }
+  assert(error != ERROR_UNKNOWN);
 
   // free resources
   String_delete(pathName);
@@ -10490,6 +10517,7 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
       #endif /* NDEBUG */
       break;
   }
+  assert(error != ERROR_UNKNOWN);
 
   return error;
 }
@@ -10505,6 +10533,7 @@ Errors Storage_copy(const StorageSpecifier       *storageSpecifier,
                     const String                 localFileName
                    )
 {
+  AutoFreeList      autoFreeList;
   String            fileName;
   void              *buffer;
   Errors            error;
@@ -10517,12 +10546,14 @@ Errors Storage_copy(const StorageSpecifier       *storageSpecifier,
   assert(jobOptions != NULL);
   assert(localFileName != NULL);
 
-  // initialize variables
-  buffer   = (byte*)malloc(BUFFER_SIZE);
+  // init variables
+  AutoFree_init(&autoFreeList);
+  buffer = (byte*)malloc(BUFFER_SIZE);
   if (buffer == NULL)
   {
     HALT_INSUFFICIENT_MEMORY();
   }
+  AUTOFREE_ADD(&autoFreeList,buffer,{ free(buffer); });
 
   // open storage
   fileName = String_new();
@@ -10537,7 +10568,7 @@ Errors Storage_copy(const StorageSpecifier       *storageSpecifier,
   if (error != ERROR_NONE)
   {
     String_delete(fileName);
-    free(buffer);
+    AutoFree_cleanup(&autoFreeList);
     return error;
   }
   error = Storage_open(&storageFileHandle,
@@ -10548,9 +10579,11 @@ Errors Storage_copy(const StorageSpecifier       *storageSpecifier,
   {
     (void)Storage_done(&storageFileHandle);
     String_delete(fileName);
-    free(buffer);
+    AutoFree_cleanup(&autoFreeList);
     return error;
   }
+  AUTOFREE_ADD(&autoFreeList,&storageFileHandle,{ Storage_close(&storageFileHandle); (void)Storage_done(&storageFileHandle); });
+  AUTOFREE_ADD(&autoFreeList,fileName,{ String_delete(fileName); });
 
   // create local file
   error = File_open(&fileHandle,
@@ -10559,12 +10592,11 @@ Errors Storage_copy(const StorageSpecifier       *storageSpecifier,
                    );
   if (error != ERROR_NONE)
   {
-    Storage_close(&storageFileHandle);
-    (void)Storage_done(&storageFileHandle);
-    String_delete(fileName);
-    free(buffer);
+    AutoFree_cleanup(&autoFreeList);
     return error;
   }
+  AUTOFREE_ADD(&autoFreeList,&fileHandle,{ File_close(&fileHandle); });
+  AUTOFREE_ADD(&autoFreeList,localFileName,{ (void)File_delete(localFileName,FALSE); });
 
   // copy data from archive to local file
   while (   (error == ERROR_NONE)
@@ -10586,12 +10618,7 @@ Errors Storage_copy(const StorageSpecifier       *storageSpecifier,
   }
   if (error != ERROR_NONE)
   {
-    File_close(&fileHandle);
-    (void)File_delete(localFileName,FALSE);
-    Storage_close(&storageFileHandle);
-    (void)Storage_done(&storageFileHandle);
-    String_delete(fileName);
-    free(buffer);
+    AutoFree_cleanup(&autoFreeList);
     return error;
   }
 
@@ -10601,10 +10628,9 @@ Errors Storage_copy(const StorageSpecifier       *storageSpecifier,
   // close archive
   Storage_close(&storageFileHandle);
   (void)Storage_done(&storageFileHandle);
-  String_delete(fileName);
 
   // free resources
-  free(buffer);
+  AutoFree_done(&autoFreeList);
 
   return ERROR_NONE;
 }
