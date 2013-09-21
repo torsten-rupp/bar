@@ -109,6 +109,10 @@ typedef bool(*DictionaryIterateFunction)(const void *keyData,
 
 /****************************** Macros *********************************/
 
+#ifndef NDEBUG
+  #define Dictionary_init(dictionary,dictionaryCompareFunction,dictionaryCompareUserData) __Dictionary_init(__FILE__,__LINE__,dictionary,dictionaryCompareFunction,dictionaryCompareUserData)
+#endif /* not NDEBUG */
+
 /***************************** Forwards ********************************/
 
 /***************************** Functions *******************************/
@@ -128,10 +132,19 @@ typedef bool(*DictionaryIterateFunction)(const void *keyData,
 * Notes  : -
 \***********************************************************************/
 
-bool Dictionary_init(Dictionary                *dictionary,
-                     DictionaryCompareFunction dictionaryCompareFunction,
-                     void                      *dictionaryCompareUserData
-                    );
+#ifdef NDEBUG
+  bool Dictionary_init(Dictionary                *dictionary,
+                       DictionaryCompareFunction dictionaryCompareFunction,
+                       void                      *dictionaryCompareUserData
+                      );
+#else /* not NDEBUG */
+  bool __Dictionary_init(const char                *__fileName__,
+                         ulong                     __lineNb__,
+                         Dictionary                *dictionary,
+                         DictionaryCompareFunction dictionaryCompareFunction,
+                         void                      *dictionaryCompareUserData
+                        );
+#endif /* NDEBUG */
 
 /***********************************************************************\
 * Name   : Dictionary_done

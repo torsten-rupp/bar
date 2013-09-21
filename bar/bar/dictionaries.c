@@ -523,10 +523,19 @@ LOCAL DictionaryEntry *growTable(DictionaryEntry *entries, uint oldSize, uint ne
 
 /*---------------------------------------------------------------------*/
 
-bool Dictionary_init(Dictionary                *dictionary,
-                     DictionaryCompareFunction dictionaryCompareFunction,
-                     void                      *dictionaryCompareUserData
-                    )
+#ifdef NDEBUG
+  bool Dictionary_init(Dictionary                *dictionary,
+                       DictionaryCompareFunction dictionaryCompareFunction,
+                       void                      *dictionaryCompareUserData
+                      )
+#else /* not NDEBUG */
+  bool __Dictionary_init(const char                *__fileName__,
+                         ulong                     __lineNb__,
+                         Dictionary                *dictionary,
+                         DictionaryCompareFunction dictionaryCompareFunction,
+                         void                      *dictionaryCompareUserData
+                        )
+#endif /* NDEBUG */
 {
   assert(dictionary != NULL);
 
@@ -555,7 +564,11 @@ bool Dictionary_init(Dictionary                *dictionary,
   dictionary->dictionaryCompareFunction = dictionaryCompareFunction;
   dictionary->dictionaryCompareUserData = dictionaryCompareUserData;
 
-  DEBUG_ADD_RESOURCE_TRACE("dictionary",dictionary);
+  #ifdef NDEBUG
+    DEBUG_ADD_RESOURCE_TRACEX("dictionary",dictionary);
+  #else /* not NDEBUG */
+    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,"dictionary",dictionary);
+  #endif /* NDEBUG */
 
   return TRUE;
 }
