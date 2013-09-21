@@ -27,6 +27,7 @@
 #endif /* PLATFORM_... */
 
 #include "global.h"
+#include "autofree.h"
 #include "cmdoptions.h"
 #include "configvalues.h"
 #include "strings.h"
@@ -2474,8 +2475,9 @@ LOCAL void freeScheduleNode(ScheduleNode *scheduleNode, void *userData)
 
 LOCAL Errors initAll(void)
 {
-  Errors error;
-  String fileName;
+  AutoFreeList autoFreeList;
+  Errors       error;
+  String       fileName;
 
   // initialize crash dump handler
   #if HAVE_BREAKPAD
@@ -2485,128 +2487,116 @@ LOCAL Errors initAll(void)
     }
   #endif /* HAVE_BREAKPAD */
 
+  // initialize variables
+  AutoFree_init(&autoFreeList);
+
   // initialize modules
   error = Password_initAll();
-  DEBUG_TEST_CODE("initAll1") { Password_doneAll(); error = ERROR_TESTCODE; }
+  DEBUG_TESTCODE("initAll1") { Password_doneAll(); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
   if (error != ERROR_NONE)
   {
     return error;
   }
+  AUTOFREE_ADD(&autoFreeList,Password_initAll,{ Password_doneAll(); });
+
+  error = Compress_initAll();
+  DEBUG_TESTCODE("initAll2") { Compress_doneAll(); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
+  if (error != ERROR_NONE)
+  {
+    AutoFree_cleanup(&autoFreeList);
+    return error;
+  }
+  AUTOFREE_ADD(&autoFreeList,Compress_initAll,{ Compress_doneAll(); });
+
   error = Crypt_initAll();
-  DEBUG_TEST_CODE("initAll2") { Crypt_doneAll(); error = ERROR_TESTCODE; }
+  DEBUG_TESTCODE("initAll3") { Crypt_doneAll(); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
   if (error != ERROR_NONE)
   {
-    Password_doneAll();
+    AutoFree_cleanup(&autoFreeList);
     return error;
   }
+  AUTOFREE_ADD(&autoFreeList,Crypt_initAll,{ Crypt_doneAll(); });
+
   error = Pattern_initAll();
-  DEBUG_TEST_CODE("initAll3") { Password_doneAll(); error = ERROR_TESTCODE; }
+  DEBUG_TESTCODE("initAll4") { Pattern_doneAll(); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
   if (error != ERROR_NONE)
   {
-    Crypt_doneAll();
-    Password_doneAll();
+    AutoFree_cleanup(&autoFreeList);
     return error;
   }
+  AUTOFREE_ADD(&autoFreeList,Pattern_initAll,{ Password_doneAll(); });
+
   error = PatternList_initAll();
-  DEBUG_TEST_CODE("initAll4") { PatternList_doneAll(); error = ERROR_TESTCODE; }
+  DEBUG_TESTCODE("initAll5") { PatternList_doneAll(); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
   if (error != ERROR_NONE)
   {
-    Pattern_doneAll();
-    Crypt_doneAll();
-    Password_doneAll();
+    AutoFree_cleanup(&autoFreeList);
     return error;
   }
+  AUTOFREE_ADD(&autoFreeList,PatternList_initAll,{ PatternList_doneAll(); });
+
   error = Chunk_initAll();
-  DEBUG_TEST_CODE("initAll5") { Chunk_doneAll(); error = ERROR_TESTCODE; }
+  DEBUG_TESTCODE("initAll6") { Chunk_doneAll(); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
   if (error != ERROR_NONE)
   {
-    PatternList_doneAll();
-    Pattern_doneAll();
-    Crypt_doneAll();
-    Password_doneAll();
+    AutoFree_cleanup(&autoFreeList);
     return error;
   }
+  AUTOFREE_ADD(&autoFreeList,Chunk_initAll,{ Chunk_doneAll(); });
+
   error = Source_initAll();
-  DEBUG_TEST_CODE("initAll6") { Source_doneAll(); error = ERROR_TESTCODE; }
+  DEBUG_TESTCODE("initAll7") { Source_doneAll(); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
   if (error != ERROR_NONE)
   {
-    Chunk_doneAll();
-    PatternList_doneAll();
-    Pattern_doneAll();
-    Crypt_doneAll();
-    Password_doneAll();
+    AutoFree_cleanup(&autoFreeList);
     return error;
   }
+  AUTOFREE_ADD(&autoFreeList,Source_initAll,{ Source_doneAll(); });
+
   error = Archive_initAll();
-  DEBUG_TEST_CODE("initAll7") { Archive_doneAll(); error = ERROR_TESTCODE; }
+  DEBUG_TESTCODE("initAll8") { Archive_doneAll(); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
   if (error != ERROR_NONE)
   {
-    Source_doneAll();
-    Chunk_doneAll();
-    PatternList_doneAll();
-    Pattern_doneAll();
-    Crypt_doneAll();
-    Password_doneAll();
+    AutoFree_cleanup(&autoFreeList);
     return error;
   }
+  AUTOFREE_ADD(&autoFreeList,Archive_initAll,{ Archive_doneAll(); });
+
   error = Storage_initAll();
-  DEBUG_TEST_CODE("initAll8") { Storage_doneAll(); error = ERROR_TESTCODE; }
+  DEBUG_TESTCODE("initAll9") { Storage_doneAll(), AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
   if (error != ERROR_NONE)
   {
-    Archive_doneAll();
-    Source_doneAll();
-    Chunk_doneAll();
-    PatternList_doneAll();
-    Pattern_doneAll();
-    Crypt_doneAll();
-    Password_doneAll();
+    AutoFree_cleanup(&autoFreeList);
     return error;
   }
+  AUTOFREE_ADD(&autoFreeList,Storage_initAll,{ Storage_doneAll(); });
+
   error = Index_initAll();
-  DEBUG_TEST_CODE("initAll9") { Index_doneAll(); error = ERROR_TESTCODE; }
+  DEBUG_TESTCODE("initAll10") { Index_doneAll(); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
   if (error != ERROR_NONE)
   {
-    Storage_doneAll();
-    Archive_doneAll();
-    Source_doneAll();
-    Chunk_doneAll();
-    PatternList_doneAll();
-    Pattern_doneAll();
-    Crypt_doneAll();
-    Password_doneAll();
+    AutoFree_cleanup(&autoFreeList);
     return error;
   }
+  AUTOFREE_ADD(&autoFreeList,Index_initAll,{ Index_doneAll(); });
+
   error = Network_initAll();
-  DEBUG_TEST_CODE("initAll10") { Network_doneAll(); error = ERROR_TESTCODE; }
+  DEBUG_TESTCODE("initAll11") { Network_doneAll(); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
   if (error != ERROR_NONE)
   {
-    Index_doneAll();
-    Storage_doneAll();
-    Archive_doneAll();
-    Source_doneAll();
-    Chunk_doneAll();
-    PatternList_doneAll();
-    Pattern_doneAll();
-    Crypt_doneAll();
-    Password_doneAll();
+    AutoFree_cleanup(&autoFreeList);
     return error;
   }
+  AUTOFREE_ADD(&autoFreeList,Network_initAll,{ Network_doneAll(); });
+
   error = Server_initAll();
-  DEBUG_TEST_CODE("initAll11") { Server_doneAll(); error = ERROR_TESTCODE; }
+  DEBUG_TESTCODE("initAll12") { Server_doneAll(); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
   if (error != ERROR_NONE)
   {
-    Network_doneAll();
-    Index_doneAll();
-    Storage_doneAll();
-    Archive_doneAll();
-    Source_doneAll();
-    Chunk_doneAll();
-    PatternList_doneAll();
-    Pattern_doneAll();
-    Crypt_doneAll();
-    Password_doneAll();
+    AutoFree_cleanup(&autoFreeList);
     return error;
   }
+  AUTOFREE_ADD(&autoFreeList,Server_initAll,{ Server_doneAll(); });
 
   // initialize variables
   initGlobalOptions();
@@ -2725,6 +2715,9 @@ LOCAL Errors initAll(void)
   ConfigValue_init(CONFIG_VALUES,SIZE_OF_ARRAY(CONFIG_VALUES));
   CmdOption_init(COMMAND_LINE_OPTIONS,SIZE_OF_ARRAY(COMMAND_LINE_OPTIONS));
 
+  // done resources
+  AutoFree_done(&autoFreeList);
+
   return ERROR_NONE;
 }
 
@@ -2800,6 +2793,7 @@ LOCAL void doneAll(void)
   PatternList_doneAll();
   Pattern_doneAll();
   Crypt_doneAll();
+  Compress_doneAll();
   Password_doneAll();
 
   // deinitialize crash dump handler
@@ -3079,7 +3073,7 @@ void logPostProcess(void)
                                 (ExecuteIOFunction)executeIOlogPostProcess,
                                 &stderrList
                                );
-    DEBUG_TEST_CODE("logPostProcess") { StringList_done(&stderrList); error = ERROR_TESTCODE; }
+    DEBUG_TESTCODE("logPostProcess") { StringList_done(&stderrList); error = DEBUG_TESTCODE_ERROR(); }
     if (error != ERROR_NONE)
     {
       printError("Cannot post-process log file (error: %s)\n",Error_getText(error));
@@ -3820,6 +3814,7 @@ Errors inputCryptPassword(void         *userData,
         break;
     }
   }
+  assert(error != ERROR_UNKNOWN);
 
   return error;
 }
@@ -5026,6 +5021,23 @@ int main(int argc, const char *argv[])
   }
   globalOptions.barExecutable = argv[0];
 
+#if 0
+{
+CryptKey p,s;
+String n,e;
+
+Crypt_createKeys(&p,&s,1024);
+Crypt_dumpKey(&p);
+//Crypt_dumpKey(&s);
+n = Crypt_getKeyModulus(&p);
+e = Crypt_getKeyExponent(&p);
+fprintf(stderr,"%s, %d: n=%s\n",__FILE__,__LINE__,String_cString(n));
+fprintf(stderr,"%s, %d: e=%s\n",__FILE__,__LINE__,String_cString(e));
+
+exit(1);
+}
+#endif
+
   // parse command line: pre-options
   if (!CmdOption_parse(argv,&argc,
                        COMMAND_LINE_OPTIONS,SIZE_OF_ARRAY(COMMAND_LINE_OPTIONS),
@@ -5388,7 +5400,6 @@ error = ERROR_STILL_NOT_IMPLEMENTED;
                            NULL,
                            NULL
                           );
-
   }
   else
   {
@@ -5566,9 +5577,7 @@ error = ERROR_STILL_NOT_IMPLEMENTED;
           }
 
           // generate new keys pair
-          Crypt_initKey(&publicKey);
-          Crypt_initKey(&privateKey);
-          error = Crypt_createKeys(&publicKey,&privateKey,keyBits);
+          error = Crypt_createKeys(&publicKey,&privateKey,keyBits,CRYPT_PADDING_TYPE_NONE);
           if (error != ERROR_NONE)
           {
             printError("Cannot create key pair (error: %s)!\n",Error_getText(error));
