@@ -761,19 +761,23 @@ typedef void                void32;
 
 #ifndef NDEBUG
 
-  #define DEBUG_TEST_CODE(name) \
-    if (debugIsTestCodeEnabled(name))
+  #define DEBUG_TESTCODE(name) \
+    if (debugIsTestCodeEnabled(__FILE__,__LINE__,name))
 
-  #define DEBUG_TEST_CODE2(name,codeBody) \
+// TODO: remove
+  #define DEBUG_TESTCODE2(name,codeBody) \
     void (*__testcode__ ## __LINE__)(const char*) = ({ \
                                           auto void __closure__(const char *); \
                                           void __closure__(const char *__testCodeName__)codeBody __closure__; \
                                         }); \
-    if (debugIsTestCodeEnabled(name)) { __testcode__ ## __LINE__(name); } \
+    if (debugIsTestCodeEnabled(__FILE__,__LINE__,name)) { __testcode__ ## __LINE__(name); } \
+
+  #define DEBUG_TESTCODE_ERROR() \
+    ERRORX_(TESTCODE,0,__testCodeName__)
 
 #else /* not NDEBUG */
 
-  #define DEBUG_TEST_CODE(name) \
+  #define DEBUG_TESTCODE(name) \
     if (FALSE)
 
 #endif /* NDEBUG */
@@ -1231,13 +1235,18 @@ void __abort(const char *__fileName__,
 /***********************************************************************\
 * Name   : debugIsTestCodeEnabled
 * Purpose: check if test code is enabled
-* Input  : name - name
+* Input  : __fileName__ - file name
+*          __lineNb__   - line number
+*          name         - name
 * Output : -
 * Return : TRUE iff test code is enabled
 * Notes  : -
 \***********************************************************************/
 
-bool debugIsTestCodeEnabled(const char *name);
+bool debugIsTestCodeEnabled(const char *__fileName__,
+                            uint       __lineNb__,
+                            const char *name
+                           );
 
 /***********************************************************************\
 * Name   : debugLocalResource

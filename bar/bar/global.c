@@ -33,6 +33,7 @@
 
 #define DEBUG_TESTCODE_NAME          "TESTCODE"
 #define DEBUG_TESTCODE_LIST_FILENAME "TESTCODE_LIST"
+#define DEBUG_TESTCODE_NAME_FILENAME "TESTCODE_NAME"
 #define DEBUG_TESTCODE_DONE_FILENAME "TESTCODE_DONE"
 
 /**************************** Datatypes ********************************/
@@ -119,7 +120,7 @@ void __halt(const char *__fileName__,
   va_start(arguments,format);
   vfprintf(stderr,format,arguments);
   va_end(arguments);
-  fprintf(stderr," - halt in file %s, line %d\n",__fileName__,__lineNb__);
+  fprintf(stderr," - halt in file %s, line %u\n",__fileName__,__lineNb__);
   exit(exitcode);
 }
 
@@ -160,7 +161,10 @@ void __cyg_profile_func_exit(void *functionCode, void *callAddress)
 //fprintf(stderr,"%s, %d: exit %p\n",__FILE__,__LINE__,functionCode);
 }
 
-bool debugIsTestCodeEnabled(const char *name)
+bool debugIsTestCodeEnabled(const char *__fileName__,
+                            uint       __lineNb__,
+                            const char *name
+                           )
 {
   bool       isTestCodeEnabledFlag;
   const char *value;
@@ -253,17 +257,17 @@ bool debugIsTestCodeEnabled(const char *name)
 
   if (isTestCodeEnabledFlag)
   {
-    value = getenv(DEBUG_TESTCODE_DONE_FILENAME);
+    value = getenv(DEBUG_TESTCODE_NAME_FILENAME);
     if (value != NULL)
     {
-      // append to done file
-      file = fopen(value,"a");
+      // write name to file
+      file = fopen(value,"w");
       if (file != NULL)
       {
         fputs(name,file); fputc('\n',file);
         fclose(file);
       }
-      fprintf(stderr,"DEBUG: Execute testcode '%s'\n",name);
+      fprintf(stderr,"DEBUG: Execute testcode '%s', %s, line %u\n",name,__fileName__,__lineNb__);
     }
 
     __testCodeName__ = name;
