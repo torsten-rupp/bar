@@ -12,6 +12,8 @@
 
 PLATFORM            = @PLATFORM@
 
+TESTCODE_EXITCODE   = 124
+
 #------------------------------------ paths ----------------------------------
 
 SOURCE_DIR          = @srcdir@
@@ -304,8 +306,10 @@ help:
 	@$(ECHO) "  memcheck"
 	@$(ECHO) "  memcheck_extended"
 	@$(ECHO) ""
-	@$(ECHO) "  testcode"
-	@$(ECHO) "  testcode NAME=<name>"
+	@$(ECHO) "  testcode_init                             init test code name"
+	@$(ECHO) "  testcode                                  run all test code"
+	@$(ECHO) "  testcodex [TESTCODE=<name>]               run test code or test code <name>"
+	@$(ECHO) "  testcode_list                             list test code names"
 	@$(ECHO) ""
 	@$(ECHO) "  performance"
 	@$(ECHO) "  performance1, performance_none"
@@ -2615,13 +2619,81 @@ endif
 
 # ----------------------------------------------------------------------------
 
-.PHONY: testcode
-testcode:
-ifneq ($(NAME),)
-	$(BAR) 
-else
+TESTCODE_COMMAND1=$(TEST_BAR) \
+                    --compress-algorithm=lzma9 \
+                    --crypt-algorithm=AES256 \
+                    --crypt-password=$(TEST_PASSWORD) \
+                    --crypt-type=asymmetric \
+                    --crypt-public-key=$(PWD)/test/key.public \
+                    --crypt-private-key=$(PWD)/test/key.private \
+                    --archive-part-size=100K \
+                    --overwrite-archive-files \
+                    -c test/test.bar test/data
+TESTCODE_COMMAND2=$(TEST_BAR) \
+                    -l test/test.bar
+TESTCODE_COMMAND3=$(TEST_BAR) \
+                    -d test/test.bar
+TESTCODE_COMMAND4=$(TEST_BAR) \
+                    --destination=test/restore \
+                    -x test/test.bar
+
+.PHONY: testcode_init testcode testcodex testcode_list 
+
+.PHONY: testcode_init testcode testcode_list
+testcode_init:
+	$(GREP) DEBUG_TESTCODE $(BAR_SOURCES) | $(SED) 's/.*"\(.*\)".*/\1/g' > testcode.list
+	$(RMF) testcode.done
+
+testcode: $(TEST_BAR) $(TEST_KEYS)
+	rc=$(TESTCODE_EXITCODE); \
+        until test $$rc -ne $(TESTCODE_EXITCODE); do \
+          if test $$rc -eq $(TESTCODE_EXITCODE); then \
+            TESTCODE_LIST=testcode.list TESTCODE_NAME=testcode.name TESTCODE_DONE=testcode.done \
+              $(TESTCODE_COMMAND1); \
+            rc=$$?; \
+          fi;\
+          if test $$rc -ne $(TESTCODE_EXITCODE); then \
+            $(ECHO) "Fail: TESTCODE=$(shell $(CAT) testcode.name) $(TESTCODE_COMMAND1)"; \
+          fi; \
+          \
+          if test $$rc -eq $(TESTCODE_EXITCODE); then \
+            TESTCODE_LIST=testcode.list TESTCODE_NAME=testcode.name TESTCODE_DONE=testcode.done \
+              $(TESTCODE_COMMAND2); \
+            rc=$$?; \
+          fi;\
+          if test $$rc -ne $(TESTCODE_EXITCODE); then \
+            $(ECHO) "Fail: TESTCODE=$(shell $(CAT) testcode.name) $(TESTCODE_COMMAND2)"; \
+          fi; \
+          \
+          if test $$rc -eq $(TESTCODE_EXITCODE); then \
+            TESTCODE_LIST=testcode.list TESTCODE_NAME=testcode.name TESTCODE_DONE=testcode.done \
+              $(TESTCODE_COMMAND3); \
+            rc=$$?; \
+          fi;\
+          if test $$rc -ne $(TESTCODE_EXITCODE); then \
+            $(ECHO) "Fail: TESTCODE=$(shell $(CAT) testcode.name) $(TESTCODE_COMMAND3)"; \
+          fi; \
+          \
+          if test $$rc -eq $(TESTCODE_EXITCODE); then \
+            TESTCODE_LIST=testcode.list TESTCODE_NAME=testcode.name TESTCODE_DONE=testcode.done \
+              $(TESTCODE_COMMAND4); \
+            rc=$$?; \
+          fi;\
+          if test $$rc -ne $(TESTCODE_EXITCODE); then \
+            $(ECHO) "Fail: TESTCODE=$(shell $(CAT) testcode.name) $(TESTCODE_COMMAND4)"; \
+          fi; \
+          \
+          if test $$rc -eq $(TESTCODE_EXITCODE); then \
+            $(CAT) testcode.name >> testcode.done; \
+          fi; \
+        done
+
+testcodex: $(TEST_BAR) $(TEST_KEYS)
+	  TESTCODE_NAME=$(shell $(CAT) testcode.name) \
+            $(TESTCODE_COMMAND)
+
+testcode_list:
 	@$(GREP) DEBUG_TEST_CODE $(BAR_SOURCES) | $(SED) 's/.*"\(.*\)".*/\1/g'
-endif
 
 # ----------------------------------------------------------------------------
 
