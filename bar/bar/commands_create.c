@@ -22,6 +22,7 @@
 #include <assert.h>
 
 #include "global.h"
+#include "autofree.h"
 #include "strings.h"
 #include "lists.h"
 #include "stringlists.h"
@@ -4847,6 +4848,7 @@ Errors Command_create(const String                    storageName,
                       bool                            *requestedAbortFlag
                      )
 {
+  AutoFreeList     autoFreeList;
   String           storageFileName;
   StorageSpecifier storageSpecifier;
   CreateInfo       createInfo;
@@ -4866,6 +4868,12 @@ Errors Command_create(const String                    storageName,
   assert(includeEntryList != NULL);
   assert(excludePatternList != NULL);
 
+  // init variables
+  AutoFree_init(&autoFreeList);
+  incrementalListFileName      = NULL;
+  useIncrementalFileInfoFlag   = FALSE;
+  incrementalFileInfoExistFlag = FALSE;
+
   // parse storage name
   Storage_initSpecifier(&storageSpecifier);
   storageFileName = String_new();
@@ -4881,10 +4889,13 @@ Errors Command_create(const String                    storageName,
               );
     String_delete(storageFileName);
     Storage_doneSpecifier(&storageSpecifier);
+    AutoFree_cleanup(&autoFreeList);
     return error;
   }
+  AUTOFREE_ADD(&autoFreeList,&storageSpecifier,{ Storage_doneSpecifier(&storageSpecifier); });
+  AUTOFREE_ADD(&autoFreeList,storageFileName,{ String_delete(storageFileName); });
 
-  // initialize variables
+  // init threads
   initCreateInfo(&createInfo,
                  &storageSpecifier,
                  storageFileName,
@@ -4904,13 +4915,13 @@ Errors Command_create(const String                    storageName,
   {
     HALT_INSUFFICIENT_MEMORY();
   }
-  printableStorageName         = String_new();
-  incrementalListFileName      = NULL;
-  useIncrementalFileInfoFlag   = FALSE;
-  incrementalFileInfoExistFlag = FALSE;
+  AUTOFREE_ADD(&autoFreeList,&createInfo,{ doneCreateInfo(&createInfo); });
+  AUTOFREE_ADD(&autoFreeList,createThreads,{ free(createThreads); });
 
   // get printable storage name
+  printableStorageName = String_new();
   Storage_getPrintableName(printableStorageName,createInfo.storageSpecifier,createInfo.storageFileName);
+  AUTOFREE_ADD(&autoFreeList,printableStorageName,{ String_delete(printableStorageName); });
 
   // init storage
   error = Storage_init(&createInfo.storageFileHandle,
@@ -4927,14 +4938,10 @@ Errors Command_create(const String                    storageName,
                String_cString(printableStorageName),
                Errors_getText(error)
               );
-    String_delete(printableStorageName);
-    doneCreateInfo(&createInfo);
-    free(createThreads);
-    String_delete(storageFileName);
-    Storage_doneSpecifier(&storageSpecifier);
-
+    AutoFree_cleanup(&autoFreeList);
     return error;
   }
+  AUTOFREE_ADD(&autoFreeList,&createInfo.storageFileHandle,{ Storage_done(&createInfo.storageFileHandle); });
 
   if (   (createInfo.archiveType == ARCHIVE_TYPE_FULL)
       || (createInfo.archiveType == ARCHIVE_TYPE_INCREMENTAL)
@@ -4955,6 +4962,8 @@ Errors Command_create(const String                    storageName,
                                );
     }
     Dictionary_init(&createInfo.namesDictionary,NULL,NULL);
+    AUTOFREE_ADD(&autoFreeList,incrementalListFileName,{ String_delete(incrementalListFileName); });
+    AUTOFREE_ADD(&autoFreeList,&createInfo.namesDictionary,{ Dictionary_done(&createInfo.namesDictionary,NULL,NULL); });
 
     // read incremental list
     incrementalFileInfoExistFlag = File_exists(incrementalListFileName);
@@ -4975,7 +4984,6 @@ Errors Command_create(const String                    storageName,
                    String_cString(incrementalListFileName),
                    Errors_getText(error)
                   );
-        String_delete(incrementalListFileName);
 #if 0
 // NYI: must index be deleted on error?
         if (   (indexDatabaseHandle != NULL)
@@ -4987,14 +4995,7 @@ Errors Command_create(const String                    storageName,
           Storage_indexDiscard(&createInfo.storageIndexHandle);
         }
 #endif /* 0 */
-        Dictionary_done(&createInfo.namesDictionary,NULL,NULL);
-        Storage_done(&createInfo.storageFileHandle);
-        String_delete(printableStorageName);
-        doneCreateInfo(&createInfo);
-        free(createThreads);
-        String_delete(storageFileName);
-        Storage_doneSpecifier(&storageSpecifier);
-
+        AutoFree_cleanup(&autoFreeList);
         return error;
       }
       printInfo(1,
@@ -5021,6 +5022,9 @@ Errors Command_create(const String                    storageName,
   {
     HALT_FATAL_ERROR("Cannot initialize storage thread!");
   }
+  AUTOFREE_ADD(&autoFreeList,&collectorSumThread,{ MsgQueue_setEndOfMsg(&createInfo.entryMsgQueue); Thread_join(&collectorSumThread); Thread_done(&collectorSumThread); });
+  AUTOFREE_ADD(&autoFreeList,&collectorThread,{ MsgQueue_setEndOfMsg(&createInfo.entryMsgQueue); Thread_join(&collectorThread); Thread_done(&collectorThread); });
+  AUTOFREE_ADD(&autoFreeList,&storageThread,{ MsgQueue_setEndOfMsg(&createInfo.storageMsgQueue); Thread_join(&storageThread); Thread_done(&storageThread); });
 
   // create new archive
   error = Archive_create(&createInfo.archiveInfo,
@@ -5030,24 +5034,13 @@ Errors Command_create(const String                    storageName,
                          CALLBACK(archiveGetCryptPasswordFunction,archiveGetCryptPasswordUserData),
                          indexDatabaseHandle
                         );
-  DEBUG_TEST_CODE("command_create") { Archive_close(&createInfo.archiveInfo); error = ERROR_UNKNOWN; }
+  DEBUG_TESTCODE("command_create1") { Archive_close(&createInfo.archiveInfo); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
   if (error != ERROR_NONE)
   {
     printError("Cannot create archive file '%s' (error: %s)\n",
                String_cString(printableStorageName),
                Errors_getText(error)
               );
-    MsgQueue_setEndOfMsg(&createInfo.entryMsgQueue);
-    MsgQueue_setEndOfMsg(&createInfo.storageMsgQueue);
-    Thread_join(&storageThread);
-    Thread_join(&collectorThread);
-    Thread_join(&collectorSumThread);
-    if (useIncrementalFileInfoFlag)
-    {
-      Dictionary_done(&createInfo.namesDictionary,NULL,NULL);
-      if (!incrementalFileInfoExistFlag) File_delete(incrementalListFileName,FALSE);
-      String_delete(incrementalListFileName);
-    }
 #if 0
 // NYI: must index be deleted on error?
     if (   (indexDatabaseHandle != NULL)
@@ -5059,13 +5052,7 @@ Errors Command_create(const String                    storageName,
       Storage_closeIndex(&createInfo.storageIndexHandle);
     }
 #endif /* 0 */
-    Storage_done(&createInfo.storageFileHandle);
-    String_delete(printableStorageName);
-    doneCreateInfo(&createInfo);
-    free(createThreads);
-    String_delete(storageFileName);
-    Storage_doneSpecifier(&storageSpecifier);
-
+    AutoFree_cleanup(&autoFreeList);
     return error;
   }
 
@@ -5086,6 +5073,7 @@ Errors Command_create(const String                    storageName,
     {
       HALT_FATAL_ERROR("Cannot stop create thread!");
     }
+    Thread_done(&createThreads[z]);
   }
 #else
 fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
@@ -5094,23 +5082,13 @@ createThreadCode(&createInfo);
 
   // close archive
   error = Archive_close(&createInfo.archiveInfo);
+  DEBUG_TESTCODE("command_create2") { AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
   if (error != ERROR_NONE)
   {
     printError("Cannot close archive file '%s' (error: %s)\n",
                String_cString(printableStorageName),
                Errors_getText(error)
               );
-    MsgQueue_setEndOfMsg(&createInfo.entryMsgQueue);
-    MsgQueue_setEndOfMsg(&createInfo.storageMsgQueue);
-    Thread_join(&storageThread);
-    Thread_join(&collectorThread);
-    Thread_join(&collectorSumThread);
-    if (useIncrementalFileInfoFlag)
-    {
-      Dictionary_done(&createInfo.namesDictionary,NULL,NULL);
-      if (!incrementalFileInfoExistFlag) File_delete(incrementalListFileName,FALSE);
-      String_delete(incrementalListFileName);
-    }
 #if 0
 // NYI: must index be deleted on error?
     if (   (indexDatabaseHandle != NULL)
@@ -5122,13 +5100,7 @@ createThreadCode(&createInfo);
       Storage_closeIndex(&createInfo.storageIndexHandle);
     }
 #endif /* 0 */
-    Storage_done(&createInfo.storageFileHandle);
-    String_delete(printableStorageName);
-    doneCreateInfo(&createInfo);
-    free(createThreads);
-    String_delete(storageFileName);
-    Storage_doneSpecifier(&storageSpecifier);
-
+    AutoFree_cleanup(&autoFreeList);
     return error;
   }
 
@@ -5155,6 +5127,7 @@ createThreadCode(&createInfo);
     error = writeIncrementalList(incrementalListFileName,
                                  &createInfo.namesDictionary
                                 );
+    DEBUG_TESTCODE("command_create3") { AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
     if (error != ERROR_NONE)
     {
       printInfo(1,"FAIL\n");
@@ -5162,16 +5135,7 @@ createThreadCode(&createInfo);
                  String_cString(incrementalListFileName),
                  Errors_getText(error)
                 );
-      if (!incrementalFileInfoExistFlag) File_delete(incrementalListFileName,FALSE);
-      String_delete(incrementalListFileName);
-      Dictionary_done(&createInfo.namesDictionary,NULL,NULL);
-      Storage_done(&createInfo.storageFileHandle);
-      String_delete(printableStorageName);
-      doneCreateInfo(&createInfo);
-      free(createThreads);
-      String_delete(storageFileName);
-      Storage_doneSpecifier(&storageSpecifier);
-
+      AutoFree_cleanup(&autoFreeList);
       return error;
     }
 
@@ -5198,20 +5162,21 @@ createThreadCode(&createInfo);
   }
 
   // free resources
+  Thread_done(&collectorSumThread);
+  Thread_done(&collectorThread);
+  Thread_done(&storageThread);
   if (useIncrementalFileInfoFlag)
   {
-    Dictionary_done(&createInfo.namesDictionary,NULL,NULL);
     String_delete(incrementalListFileName);
+    Dictionary_done(&createInfo.namesDictionary,NULL,NULL);
   }
-  Thread_done(&storageThread);
-  Thread_done(&collectorThread);
-  Thread_done(&collectorSumThread);
   Storage_done(&createInfo.storageFileHandle);
   String_delete(printableStorageName);
   doneCreateInfo(&createInfo);
   free(createThreads);
-  String_delete(storageFileName);
   Storage_doneSpecifier(&storageSpecifier);
+  String_delete(storageFileName);
+  AutoFree_done(&autoFreeList);
 
   return error;
 }

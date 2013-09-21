@@ -24,6 +24,7 @@
 #include <assert.h>
 
 #include "global.h"
+#include "autofree.h"
 #include "strings.h"
 #include "stringlists.h"
 
@@ -100,6 +101,7 @@ Errors Command_compare(const StringList                *storageNameList,
                        void                            *archiveGetCryptPasswordUserData
                       )
 {
+  AutoFreeList      autoFreeList;
   byte              *archiveBuffer,*buffer;
   FragmentList      fragmentList;
   StorageSpecifier  storageSpecifier;
@@ -119,6 +121,9 @@ Errors Command_compare(const StringList                *storageNameList,
   assert(excludePatternList != NULL);
   assert(jobOptions != NULL);
 
+  // init variables
+  AutoFree_init(&autoFreeList);
+
   // allocate resources
   archiveBuffer = (byte*)malloc(BUFFER_SIZE);
   if (archiveBuffer == NULL)
@@ -135,6 +140,12 @@ Errors Command_compare(const StringList                *storageNameList,
   Storage_initSpecifier(&storageSpecifier);
   storageFileName      = String_new();
   printableStorageName = String_new();
+  AUTOFREE_ADD(&autoFreeList,printableStorageName,{ String_delete(printableStorageName); });
+  AUTOFREE_ADD(&autoFreeList,storageFileName,{ String_delete(storageFileName); });
+  AUTOFREE_ADD(&autoFreeList,&storageSpecifier,{ Storage_doneSpecifier(&storageSpecifier); });
+  AUTOFREE_ADD(&autoFreeList,&fragmentList,{ FragmentList_done(&fragmentList); });
+  AUTOFREE_ADD(&autoFreeList,archiveBuffer,{ free(archiveBuffer); });
+  AUTOFREE_ADD(&autoFreeList,buffer,{ free(buffer); });
 
   failError = ERROR_NONE;
   STRINGLIST_ITERATE(storageNameList,stringNode,storageName)
@@ -1463,8 +1474,9 @@ Errors Command_compare(const StringList                *storageNameList,
   String_delete(storageFileName);
   Storage_doneSpecifier(&storageSpecifier);
   FragmentList_done(&fragmentList);
-  free(buffer);
   free(archiveBuffer);
+  free(buffer);
+  AutoFree_done(&autoFreeList);
 
   return failError;
 }

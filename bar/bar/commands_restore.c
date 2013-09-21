@@ -24,6 +24,7 @@
 #include <assert.h>
 
 #include "global.h"
+#include "autofree.h"
 #include "strings.h"
 #include "stringlists.h"
 
@@ -213,6 +214,7 @@ Errors Command_restore(const StringList                *storageNameList,
                        bool                            *requestedAbortFlag
                       )
 {
+  AutoFreeList      autoFreeList;
   RestoreInfo       restoreInfo;
   byte              *buffer;
   FragmentList      fragmentList;
@@ -232,7 +234,8 @@ Errors Command_restore(const StringList                *storageNameList,
   assert(includeEntryList != NULL);
   assert(jobOptions != NULL);
 
-  // initialize variables
+  // init variables
+  AutoFree_init(&autoFreeList);
   restoreInfo.includeEntryList             = includeEntryList;
   restoreInfo.excludePatternList           = excludePatternList;
   restoreInfo.jobOptions                   = jobOptions;
@@ -253,6 +256,8 @@ Errors Command_restore(const StringList                *storageNameList,
   restoreInfo.statusInfo.storageName       = String_new();
   restoreInfo.statusInfo.storageDoneBytes  = 0LL;
   restoreInfo.statusInfo.storageTotalBytes = 0LL;
+  AUTOFREE_ADD(&autoFreeList,restoreInfo.statusInfo.storageName,{ String_delete(restoreInfo.statusInfo.storageName); });
+  AUTOFREE_ADD(&autoFreeList,restoreInfo.statusInfo.name,{ String_delete(restoreInfo.statusInfo.name); });
 
   // allocate resources
   buffer = malloc(BUFFER_SIZE);
@@ -264,6 +269,11 @@ Errors Command_restore(const StringList                *storageNameList,
   Storage_initSpecifier(&storageSpecifier);
   storageFileName      = String_new();
   printableStorageName = String_new();
+  AUTOFREE_ADD(&autoFreeList,printableStorageName,{ String_delete(printableStorageName); });
+  AUTOFREE_ADD(&autoFreeList,storageFileName,{ String_delete(storageFileName); });
+  AUTOFREE_ADD(&autoFreeList,&storageSpecifier,{ Storage_doneSpecifier(&storageSpecifier); });
+  AUTOFREE_ADD(&autoFreeList,&fragmentList,{ FragmentList_done(&fragmentList); });
+  AUTOFREE_ADD(&autoFreeList,buffer,{ free(buffer); });
 
   error     = ERROR_NONE;
   abortFlag = FALSE;
@@ -2302,13 +2312,7 @@ Errors Command_restore(const StringList                *storageNameList,
   }
 
   // free resources
-  String_delete(printableStorageName);
-  String_delete(storageFileName);
-  Storage_doneSpecifier(&storageSpecifier);
-  FragmentList_done(&fragmentList);
-  free(buffer);
-  String_delete(restoreInfo.statusInfo.name);
-  String_delete(restoreInfo.statusInfo.storageName);
+  AutoFree_done(&autoFreeList);
 
   if ((restoreInfo.requestedAbortFlag == NULL) || !(*restoreInfo.requestedAbortFlag))
   {
