@@ -27,6 +27,7 @@ automated backups in the background.
 * with external tools: store archives on CD/DVD/BD including
   error correction codes,
 * support storage on a generic device,
+* multicore support for compression and encryption,
 * server mode with included scheduler for doing backups regularly.
   Controlling the server can be done via network connection
   (plain & TLS/SSL),
