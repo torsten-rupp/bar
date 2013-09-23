@@ -2970,7 +2970,7 @@ LOCAL bool decodeHex(const char *s, byte *data, uint *dataLength, uint maxDataLe
 
 /***********************************************************************\
 * Name   : decryptPassword
-* Purpose: decrypt password
+* Purpose: decrypt password from hex-string
 * Input  : password          - password
 *          clientInfo        - client info
 *          encryptType       - encrypt type
@@ -3020,7 +3020,7 @@ LOCAL bool decryptPassword(Password *password, const ClientInfo *clientInfo, con
 
 //fprintf(stderr,"%s, %d: n=%d s='",__FILE__,__LINE__,encodedBufferLength); for (i = 0; i < encodedBufferLength; i++) { fprintf(stderr,"%c",encodedBuffer[i]^clientInfo->sessionId[i]); } fprintf(stderr,"'\n");
 
-  // get password
+  // decode password (XOR with session id)
   Password_clear(password);
   i = 0;
   while (   (i < encodedBufferLength)
