@@ -1665,7 +1665,6 @@ remoteBarFlag=FALSE;
                                                    );
             if (error != ERROR_NONE)
             {
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
               printError("Cannot read next entry from storage '%s' (error: %s)!\n",
                          String_cString(printableStorageName),
                          Errors_getText(error)

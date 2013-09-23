@@ -2312,6 +2312,13 @@ Errors Command_restore(const StringList                *storageNameList,
   }
 
   // free resources
+  String_delete(printableStorageName);
+  String_delete(storageFileName);
+  Storage_doneSpecifier(&storageSpecifier);
+  FragmentList_done(&fragmentList);
+  free(buffer);
+  String_delete(restoreInfo.statusInfo.storageName);
+  String_delete(restoreInfo.statusInfo.name);
   AutoFree_done(&autoFreeList);
 
   if ((restoreInfo.requestedAbortFlag == NULL) || !(*restoreInfo.requestedAbortFlag))

@@ -5034,7 +5034,6 @@ Errors Command_create(const String                    storageName,
                          CALLBACK(archiveGetCryptPasswordFunction,archiveGetCryptPasswordUserData),
                          indexDatabaseHandle
                         );
-  DEBUG_TESTCODE("command_create1") { Archive_close(&createInfo.archiveInfo); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
   if (error != ERROR_NONE)
   {
     printError("Cannot create archive file '%s' (error: %s)\n",
@@ -5055,6 +5054,7 @@ Errors Command_create(const String                    storageName,
     AutoFree_cleanup(&autoFreeList);
     return error;
   }
+  DEBUG_TESTCODE("command_create1") { Archive_close(&createInfo.archiveInfo); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
 
   // start create threads
 #if 1
@@ -5082,7 +5082,6 @@ createThreadCode(&createInfo);
 
   // close archive
   error = Archive_close(&createInfo.archiveInfo);
-  DEBUG_TESTCODE("command_create2") { AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
   if (error != ERROR_NONE)
   {
     printError("Cannot close archive file '%s' (error: %s)\n",
@@ -5103,6 +5102,7 @@ createThreadCode(&createInfo);
     AutoFree_cleanup(&autoFreeList);
     return error;
   }
+  DEBUG_TESTCODE("command_create2") { AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
 
   // signal end of data
   MsgQueue_setEndOfMsg(&createInfo.entryMsgQueue);
@@ -5127,7 +5127,6 @@ createThreadCode(&createInfo);
     error = writeIncrementalList(incrementalListFileName,
                                  &createInfo.namesDictionary
                                 );
-    DEBUG_TESTCODE("command_create3") { AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
     if (error != ERROR_NONE)
     {
       printInfo(1,"FAIL\n");
@@ -5138,6 +5137,7 @@ createThreadCode(&createInfo);
       AutoFree_cleanup(&autoFreeList);
       return error;
     }
+    DEBUG_TESTCODE("command_create3") { AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
 
     printInfo(1,"ok\n");
     logMessage(LOG_TYPE_ALWAYS,"create incremental file '%s'\n",String_cString(incrementalListFileName));
