@@ -2492,110 +2492,110 @@ LOCAL Errors initAll(void)
 
   // initialize modules
   error = Password_initAll();
-  DEBUG_TESTCODE("initAll1") { Password_doneAll(); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
   if (error != ERROR_NONE)
   {
     return error;
   }
+  DEBUG_TESTCODE("initAll1") { Password_doneAll(); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
   AUTOFREE_ADD(&autoFreeList,Password_initAll,{ Password_doneAll(); });
 
   error = Compress_initAll();
-  DEBUG_TESTCODE("initAll2") { Compress_doneAll(); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
   if (error != ERROR_NONE)
   {
     AutoFree_cleanup(&autoFreeList);
     return error;
   }
+  DEBUG_TESTCODE("initAll2") { Compress_doneAll(); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
   AUTOFREE_ADD(&autoFreeList,Compress_initAll,{ Compress_doneAll(); });
 
   error = Crypt_initAll();
-  DEBUG_TESTCODE("initAll3") { Crypt_doneAll(); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
   if (error != ERROR_NONE)
   {
     AutoFree_cleanup(&autoFreeList);
     return error;
   }
+  DEBUG_TESTCODE("initAll3") { Crypt_doneAll(); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
   AUTOFREE_ADD(&autoFreeList,Crypt_initAll,{ Crypt_doneAll(); });
 
   error = Pattern_initAll();
-  DEBUG_TESTCODE("initAll4") { Pattern_doneAll(); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
   if (error != ERROR_NONE)
   {
     AutoFree_cleanup(&autoFreeList);
     return error;
   }
+  DEBUG_TESTCODE("initAll4") { Pattern_doneAll(); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
   AUTOFREE_ADD(&autoFreeList,Pattern_initAll,{ Password_doneAll(); });
 
   error = PatternList_initAll();
-  DEBUG_TESTCODE("initAll5") { PatternList_doneAll(); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
   if (error != ERROR_NONE)
   {
     AutoFree_cleanup(&autoFreeList);
     return error;
   }
+  DEBUG_TESTCODE("initAll5") { PatternList_doneAll(); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
   AUTOFREE_ADD(&autoFreeList,PatternList_initAll,{ PatternList_doneAll(); });
 
   error = Chunk_initAll();
-  DEBUG_TESTCODE("initAll6") { Chunk_doneAll(); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
   if (error != ERROR_NONE)
   {
     AutoFree_cleanup(&autoFreeList);
     return error;
   }
+  DEBUG_TESTCODE("initAll6") { Chunk_doneAll(); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
   AUTOFREE_ADD(&autoFreeList,Chunk_initAll,{ Chunk_doneAll(); });
 
   error = Source_initAll();
-  DEBUG_TESTCODE("initAll7") { Source_doneAll(); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
   if (error != ERROR_NONE)
   {
     AutoFree_cleanup(&autoFreeList);
     return error;
   }
+  DEBUG_TESTCODE("initAll7") { Source_doneAll(); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
   AUTOFREE_ADD(&autoFreeList,Source_initAll,{ Source_doneAll(); });
 
   error = Archive_initAll();
-  DEBUG_TESTCODE("initAll8") { Archive_doneAll(); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
   if (error != ERROR_NONE)
   {
     AutoFree_cleanup(&autoFreeList);
     return error;
   }
+  DEBUG_TESTCODE("initAll8") { Archive_doneAll(); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
   AUTOFREE_ADD(&autoFreeList,Archive_initAll,{ Archive_doneAll(); });
 
   error = Storage_initAll();
-  DEBUG_TESTCODE("initAll9") { Storage_doneAll(), AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
   if (error != ERROR_NONE)
   {
     AutoFree_cleanup(&autoFreeList);
     return error;
   }
+  DEBUG_TESTCODE("initAll9") { Storage_doneAll(), AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
   AUTOFREE_ADD(&autoFreeList,Storage_initAll,{ Storage_doneAll(); });
 
   error = Index_initAll();
-  DEBUG_TESTCODE("initAll10") { Index_doneAll(); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
   if (error != ERROR_NONE)
   {
     AutoFree_cleanup(&autoFreeList);
     return error;
   }
+  DEBUG_TESTCODE("initAll10") { Index_doneAll(); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
   AUTOFREE_ADD(&autoFreeList,Index_initAll,{ Index_doneAll(); });
 
   error = Network_initAll();
-  DEBUG_TESTCODE("initAll11") { Network_doneAll(); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
   if (error != ERROR_NONE)
   {
     AutoFree_cleanup(&autoFreeList);
     return error;
   }
+  DEBUG_TESTCODE("initAll11") { Network_doneAll(); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
   AUTOFREE_ADD(&autoFreeList,Network_initAll,{ Network_doneAll(); });
 
   error = Server_initAll();
-  DEBUG_TESTCODE("initAll12") { Server_doneAll(); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
   if (error != ERROR_NONE)
   {
     AutoFree_cleanup(&autoFreeList);
     return error;
   }
+  DEBUG_TESTCODE("initAll12") { Server_doneAll(); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
   AUTOFREE_ADD(&autoFreeList,Server_initAll,{ Server_doneAll(); });
 
   // initialize variables
@@ -3073,7 +3073,6 @@ void logPostProcess(void)
                                 (ExecuteIOFunction)executeIOlogPostProcess,
                                 &stderrList
                                );
-    DEBUG_TESTCODE("logPostProcess") { StringList_done(&stderrList); error = DEBUG_TESTCODE_ERROR(); }
     if (error != ERROR_NONE)
     {
       printError("Cannot post-process log file (error: %s)\n",Error_getText(error));
