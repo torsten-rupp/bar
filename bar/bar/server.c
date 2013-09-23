@@ -7914,8 +7914,6 @@ LOCAL void freeIndexNode(IndexNode *indexNode, void *userData)
       break;
     case ARCHIVE_ENTRY_TYPE_SPECIAL:
       break;
-    case ARCHIVE_ENTRY_TYPE_UNKNOWN:
-      break;
     #ifndef NDEBUG
       default:
         HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
@@ -7973,8 +7971,6 @@ LOCAL IndexNode *newIndexEntryNode(IndexList *indexList, ArchiveEntryTypes archi
     case ARCHIVE_ENTRY_TYPE_HARDLINK:
       break;
     case ARCHIVE_ENTRY_TYPE_SPECIAL:
-      break;
-    case ARCHIVE_ENTRY_TYPE_UNKNOWN:
       break;
     #ifndef NDEBUG
       default:
@@ -8830,8 +8826,6 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
                              indexNode->special.groupId,
                              indexNode->special.permission
                             );
-          break;
-        case ARCHIVE_ENTRY_TYPE_UNKNOWN:
           break;
         #ifndef NDEBUG
           default:
