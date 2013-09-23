@@ -482,6 +482,12 @@ ERROR DATABASE_CREATE_INDEX          "error creating index"
 ERROR DATABASE_INDEX_NOT_FOUND       "index not found"
 
 // --- debugging only ---------------------------------------------------
-ERROR TESTCODE                       "test code"
-
+ERROR TESTCODE
+  strncpy(errorText,"test code",sizeof(errorText)-1);
+  if (ERROR_TEXT != NULL)
+  {
+    strncat(errorText," '",sizeof(errorText)-1-strlen(errorText));
+    strncat(errorText,ERROR_TEXT,sizeof(errorText)-1-strlen(errorText));
+    strncat(errorText,"'",sizeof(errorText)-1-strlen(errorText));
+  }
 // end of file
