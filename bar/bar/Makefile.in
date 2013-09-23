@@ -81,6 +81,7 @@ RMF           = rm -f
 RMRF          = rm -rf
 SED           = sed
 SLEEP         = sleep
+SORT          = sort
 STAT          = stat
 TAR           = tar
 TIME          = @TIME@
@@ -2646,12 +2647,15 @@ TESTCODE_COMMAND4=$(TEST_BAR) \
                     --destination=test/restore \
                     -x test/test-*.bar
 
-.PHONY: testcode_init testcode testcodex testcode_list 
+.PHONY: testcode_clean testcode_init testcode testcodex testcode_list testcode_diff
 
-.PHONY: testcode_init testcode testcode_list
+testcode_clean:
+	$(RMRF) $(TEST_FILES_CLEAN)
+	$(RMF) testcode.list testcode.name testcode.done
+
 testcode_init:
-	$(GREP) DEBUG_TESTCODE $(BAR_SOURCES) | $(SED) 's/.*"\(.*\)".*/\1/g' > testcode.list
-	$(RMF) testcode.done
+	$(GREP) -e 'DEBUG_TESTCODE\s*(\s*"' $(BAR_SOURCES) | $(SED) 's/.*"\(.*\)".*/\1/g' > testcode.list
+	$(ECHO_NO_LF) > testcode.done
 
 testcode: $(TEST_BAR) $(TEST_KEYS) $(TEST_FILES)
 	rc=$(TESTCODE_EXITCODE); \
@@ -2694,6 +2698,7 @@ testcode: $(TEST_BAR) $(TEST_KEYS) $(TEST_FILES)
           \
           if test $$rc -eq $(TESTCODE_EXITCODE); then \
             $(CAT) testcode.name >> testcode.done; \
+            $(ECHO_NO_LF) > testcode.name; \
           else \
             if test $$rc1 -ne $(TESTCODE_EXITCODE); then \
               $(ECHO) "Fail: TESTCODE=$(shell $(CAT) testcode.name) $(TESTCODE_COMMAND1)"; \
@@ -2711,11 +2716,26 @@ testcode: $(TEST_BAR) $(TEST_KEYS) $(TEST_FILES)
         done
 
 testcodex: $(TEST_BAR) $(TEST_KEYS)
-	  TESTCODE_NAME=$(shell $(CAT) testcode.name) \
-            $(TESTCODE_COMMAND)
+	TESTCODE=$(shell $(CAT) testcode.name) \
+          $(TESTCODE_COMMAND1)
+	$(TESTCODE_COMMAND1) > /dev/null
+	TESTCODE=$(shell $(CAT) testcode.name) \
+          $(TESTCODE_COMMAND2) > /dev/null; \
+	$(TESTCODE_COMMAND1) > /dev/null
+	TESTCODE=$(shell $(CAT) testcode.name) \
+          $(TESTCODE_COMMAND3) > /dev/null; \
+	$(TESTCODE_COMMAND1) > /dev/null
+	TESTCODE=$(shell $(CAT) testcode.name) \
+          $(TESTCODE_COMMAND4) > /dev/null; \
 
 testcode_list:
-	@$(GREP) DEBUG_TEST_CODE $(BAR_SOURCES) | $(SED) 's/.*"\(.*\)".*/\1/g'
+	@$(GREP) -e 'DEBUG_TESTCODE\s*(\s*"' $(BAR_SOURCES) | $(SED) 's/.*"\(.*\)".*/\1/g'
+
+testcode_diff:
+	$(SORT) < testcode.list > testcode.list.sorted
+	$(SORT) < testcode.done > testcode.done.sorted
+	$(DIFF) testcode.list.sorted testcode.done.sorted
+	$(RMF) testcode.list.sorted testcode.done.sorted
 
 # ----------------------------------------------------------------------------
 
