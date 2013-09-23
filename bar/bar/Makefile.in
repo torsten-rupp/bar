@@ -2629,6 +2629,9 @@ TESTCODE_COMMAND1=$(TEST_BAR) \
                     --crypt-private-key=$(PWD)/test/key.private \
                     --archive-part-size=100K \
                     --overwrite-archive-files \
+                    --incremental \
+                    --incremental-list-file=test/test.bid \
+                    --log-post-command='true' \
                     -c test/test-\#\#\#.bar test/data
 TESTCODE_COMMAND2=$(TEST_BAR) \
                     --crypt-password=$(TEST_PASSWORD) \
@@ -2660,12 +2663,14 @@ testcode_init:
 testcode: $(TEST_BAR) $(TEST_KEYS) $(TEST_FILES)
 	rc=$(TESTCODE_EXITCODE); \
         while test $$rc -eq $(TESTCODE_EXITCODE); do \
+          $(ECHO) -----------------------------------------------------------------------; \
           rc=0; \
           rc1=0; \
           rc2=0; \
           rc3=0; \
           rc4=0; \
           if test $$rc -ne $(TESTCODE_EXITCODE); then \
+            $(RMF) test/test.bid; \
             TESTCODE_LIST=testcode.list TESTCODE_NAME=testcode.name TESTCODE_DONE=testcode.done \
               $(TESTCODE_COMMAND1) > /dev/null; \
             rc1=$$?; \
@@ -2674,6 +2679,9 @@ testcode: $(TEST_BAR) $(TEST_KEYS) $(TEST_FILES)
           \
           if test $$rc -ne $(TESTCODE_EXITCODE); then \
             $(TESTCODE_COMMAND1) > /dev/null; \
+          fi; \
+          \
+          if test $$rc -ne $(TESTCODE_EXITCODE); then \
             TESTCODE_LIST=testcode.list TESTCODE_NAME=testcode.name TESTCODE_DONE=testcode.done \
               $(TESTCODE_COMMAND2) > /dev/null; \
             rc2=$$?; \
@@ -2681,7 +2689,6 @@ testcode: $(TEST_BAR) $(TEST_KEYS) $(TEST_FILES)
           fi;\
           \
           if test $$rc -ne $(TESTCODE_EXITCODE); then \
-            $(TESTCODE_COMMAND1) > /dev/null; \
             TESTCODE_LIST=testcode.list TESTCODE_NAME=testcode.name TESTCODE_DONE=testcode.done \
               $(TESTCODE_COMMAND3) > /dev/null; \
             rc3=$$?; \
@@ -2689,7 +2696,6 @@ testcode: $(TEST_BAR) $(TEST_KEYS) $(TEST_FILES)
           fi;\
           \
           if test $$rc -ne $(TESTCODE_EXITCODE); then \
-            $(TESTCODE_COMMAND1) > /dev/null; \
             TESTCODE_LIST=testcode.list TESTCODE_NAME=testcode.name TESTCODE_DONE=testcode.done \
               $(TESTCODE_COMMAND4) > /dev/null; \
             rc4=$$?; \
@@ -2711,6 +2717,11 @@ testcode: $(TEST_BAR) $(TEST_KEYS) $(TEST_FILES)
             fi; \
             if test $$rc4 -ne $(TESTCODE_EXITCODE); then \
               $(ECHO) "Fail: TESTCODE=$(shell $(CAT) testcode.name) $(TESTCODE_COMMAND4)"; \
+            fi; \
+            if test -z "$(shell $(CAT) testcode.name)"; then \
+              $(ECHO) "ERROR: No testcode executed!"; \
+              $(ECHO) "  Not executed testcode:"; \
+              $(MAKE) testcode_diff; \
             fi; \
           fi; \
         done
@@ -2734,7 +2745,7 @@ testcode_list:
 testcode_diff:
 	$(SORT) < testcode.list > testcode.list.sorted
 	$(SORT) < testcode.done > testcode.done.sorted
-	$(DIFF) testcode.list.sorted testcode.done.sorted
+	$(DIFF) testcode.list.sorted testcode.done.sorted | $(GREP) '<' | $(SED) 's/<\s*/  /g'
 	$(RMF) testcode.list.sorted testcode.done.sorted
 
 # ----------------------------------------------------------------------------
