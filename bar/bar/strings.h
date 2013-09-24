@@ -186,10 +186,10 @@ String String_newCString(const char *s);
 String String_newChar(char ch);
 String String_newBuffer(const void *buffer, ulong bufferLength);
 #else /* not NDEBUG */
-String __String_new(const char *fileName, ulong __lineNb__);
-String __String_newCString(const char *fileName, ulong __lineNb__, const char *s);
-String __String_newChar(const char *fileName, ulong __lineNb__, char ch);
-String __String_newBuffer(const char *fileName, ulong __lineNb__, const void *buffer, ulong bufferLength);
+String __String_new(const char *__fileName__, ulong __lineNb__);
+String __String_newCString(const char *__fileName__, ulong __lineNb__, const char *s);
+String __String_newChar(const char *__fileName__, ulong __lineNb__, char ch);
+String __String_newBuffer(const char *__fileName__, ulong __lineNb__, const void *buffer, ulong bufferLength);
 #endif /* NDEBUG */
 
 /***********************************************************************\
@@ -204,7 +204,7 @@ String __String_newBuffer(const char *fileName, ulong __lineNb__, const void *bu
 #ifdef NDEBUG
 String String_duplicate(const String fromString);
 #else /* not NDEBUG */
-String __String_duplicate(const char *fileName, ulong __lineNb__, const String fromString);
+String __String_duplicate(const char *__fileName__, ulong __lineNb__, const String fromString);
 #endif /* NDEBUG */
 
 /***********************************************************************\
@@ -221,7 +221,7 @@ String __String_duplicate(const char *fileName, ulong __lineNb__, const String f
 #ifdef NDEBUG
 String String_copy(String *string, const String fromString);
 #else /* not NDEBUG */
-String __String_copy(const char *fileName, ulong __lineNb__, String *string, const String fromString);
+String __String_copy(const char *__fileName__, ulong __lineNb__, String *string, const String fromString);
 #endif /* NDEBUG */
 
 /***********************************************************************\
@@ -236,7 +236,7 @@ String __String_copy(const char *fileName, ulong __lineNb__, String *string, con
 #ifdef NDEBUG
 void String_delete(String string);
 #else /* not NDEBUG */
-void __String_delete(const char *fileName, ulong __lineNb__, String string);
+void __String_delete(const char *__fileName__, ulong __lineNb__, String string);
 #endif /* NDEBUG */
 
 /***********************************************************************\
