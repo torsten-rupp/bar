@@ -1408,12 +1408,23 @@ bool Compress_isValidAlgorithm(uint16 n)
   return (z < SIZE_OF_ARRAY(COMPRESS_ALGORITHMS));
 }
 
-Errors Compress_init(CompressInfo       *compressInfo,
-                     CompressModes      compressMode,
-                     CompressAlgorithms compressAlgorithm,
-                     ulong              blockLength,
-                     SourceHandle       *sourceHandle
-                    )
+#ifdef NDEBUG
+  Errors Compress_init(CompressInfo       *compressInfo,
+                       CompressModes      compressMode,
+                       CompressAlgorithms compressAlgorithm,
+                       ulong              blockLength,
+                       SourceHandle       *sourceHandle
+                      )
+#else /* not NDEBUG */
+  Errors __Compress_init(const char         *__fileName__,
+                         ulong              __lineNb__,
+                         CompressInfo       *compressInfo,
+                         CompressModes      compressMode,
+                         CompressAlgorithms compressAlgorithm,
+                         ulong              blockLength,
+                         SourceHandle       *sourceHandle
+                        )
+#endif /* NDEBUG */
 {
   assert(compressInfo != NULL);
 
@@ -1428,6 +1439,7 @@ Errors Compress_init(CompressInfo       *compressInfo,
   compressInfo->compressState        = COMPRESS_STATE_INIT;
   compressInfo->endOfDataFlag        = FALSE;
   compressInfo->flushFlag            = FALSE;
+
   // allocate buffers
   if (!RingBuffer_init(&compressInfo->dataRingBuffer,1,FLOOR(MAX_BUFFER_SIZE,blockLength)))
   {
@@ -1725,12 +1737,31 @@ Errors Compress_init(CompressInfo       *compressInfo,
       break; /* not reached */
   }
 
+  #ifndef NDEBUG
+    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,"compress",compressInfo);
+  #else /* not NDEBUG */
+    DEBUG_ADD_RESOURCE_TRACE("compress",compressInfo);
+  #endif /* NDEBUG */
+
   return ERROR_NONE;
 }
 
-void Compress_done(CompressInfo *compressInfo)
+#ifdef NDEBUG
+  void Compress_done(CompressInfo *compressInfo)
+#else /* not NDEBUG */
+  void __Compress_done(const char   *__fileName__,
+                       ulong        __lineNb__,
+                       CompressInfo *compressInfo
+                      )
+#endif /* NDEBUG */
 {
   assert(compressInfo != NULL);
+
+  #ifndef NDEBUG
+    DEBUG_REMOVE_RESOURCE_TRACEX(__fileName__,__lineNb__,compressInfo);
+  #else /* not NDEBUG */
+    DEBUG_REMOVE_RESOURCE_TRACE(compressInfo);
+  #endif /* NDEBUG */
 
   switch (compressInfo->compressAlgorithm)
   {

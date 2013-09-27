@@ -197,6 +197,11 @@ typedef struct
 #define COMPRESS_ALGORITHM_TO_CONSTANT(compressAlgorithm) \
   ((uint16)(compressAlgorithm))
 
+#ifndef NDEBUG
+  #define Compress_init(compressInfo,compressMode,compressAlgorithm,blockLength,sourceHandle) __Compress_init(__FILE__,__LINE__,compressInfo,compressMode,compressAlgorithm,blockLength,sourceHandle)
+  #define Compress_done(compressInfo) __Compress_done(__FILE__,__LINE__,compressInfo)
+#endif /* not NDEBUG */
+
 /***************************** Forwards ********************************/
 
 /***************************** Functions *******************************/
@@ -206,7 +211,7 @@ typedef struct
 #endif
 
 /***********************************************************************\
-* Name   : Compress_init
+* Name   : Compress_initAll
 * Purpose: initialize compress functions
 * Input  : -
 * Output : -
@@ -217,7 +222,7 @@ typedef struct
 Errors Compress_initAll(void);
 
 /***********************************************************************\
-* Name   : Compress_done
+* Name   : Compress_doneAll
 * Purpose: deinitialize compress functions
 * Input  : -
 * Output : -
@@ -358,12 +363,23 @@ INLINE bool Compress_isXDeltaCompressed(CompressAlgorithms compressAlgorithm)
 * Notes  : -
 \***********************************************************************/
 
-Errors Compress_init(CompressInfo       *compressInfo,
-                     CompressModes      compressMode,
-                     CompressAlgorithms compressAlgorithm,
-                     ulong              blockLength,
-                     SourceHandle       *sourceHandle
-                    );
+#ifdef NDEBUG
+  Errors Compress_init(CompressInfo       *compressInfo,
+                       CompressModes      compressMode,
+                       CompressAlgorithms compressAlgorithm,
+                       ulong              blockLength,
+                       SourceHandle       *sourceHandle
+                      );
+#else /* not NDEBUG */
+  Errors __Compress_init(const char         *__fileName__,
+                         ulong              __lineNb__,
+                         CompressInfo       *compressInfo,
+                         CompressModes      compressMode,
+                         CompressAlgorithms compressAlgorithm,
+                         ulong              blockLength,
+                         SourceHandle       *sourceHandle
+                        );
+#endif /* NDEBUG */
 
 /***********************************************************************\
 * Name   : Compress_done
@@ -374,7 +390,14 @@ Errors Compress_init(CompressInfo       *compressInfo,
 * Notes  : -
 \***********************************************************************/
 
-void Compress_done(CompressInfo *compressInfo);
+#ifdef NDEBUG
+  void Compress_done(CompressInfo *compressInfo);
+#else /* not NDEBUG */
+  void __Compress_done(const char   *__fileName__,
+                       ulong        __lineNb__,
+                       CompressInfo *compressInfo
+                      );
+#endif /* NDEBUG */
 
 /***********************************************************************\
 * Name   : Compress_reset
