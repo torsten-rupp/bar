@@ -123,6 +123,29 @@ void AutoFree_init(AutoFreeList *autoFreeList);
 void AutoFree_done(AutoFreeList *autoFreeList);
 
 /***********************************************************************\
+* Name   : AutoFree_save
+* Purpose: save end of autofree list
+* Input  : autoFreeList - auto-free list
+* Output : -
+* Return : store point
+* Notes  : -
+\***********************************************************************/
+
+void *AutoFree_save(AutoFreeList *autoFreeList);
+
+/***********************************************************************\
+* Name   : AutoFree_restore
+* Purpose: restore saved auto-free list
+* Input  : autoFreeList - auto-free list
+*          savePoint    - save point
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void AutoFree_restore(AutoFreeList *autoFreeList, void *savePoint);
+
+/***********************************************************************\
 * Name   : AutoFree_cleanup
 * Purpose: cleanup all resources and free auto-free list
 * Input  : autoFreeList - auto-free list

@@ -57,6 +57,46 @@ void AutoFree_done(AutoFreeList *autoFreeList)
   pthread_mutex_destroy(&autoFreeList->lock);
 }
 
+void *AutoFree_save(AutoFreeList *autoFreeList)
+{
+  assert(autoFreeList != NULL);
+
+  return autoFreeList->tail;
+}
+
+void AutoFree_restore(AutoFreeList *autoFreeList, void *savePoint)
+{
+  AutoFreeNode *autoFreeNode;
+
+  assert(autoFreeList != NULL);
+
+  while (autoFreeList->tail != savePoint)
+  {
+    // remove last from list
+    autoFreeNode = (AutoFreeNode*)List_getLast(autoFreeList);
+
+    // free resource
+    if (autoFreeNode->autoFreeFunction != NULL)
+    {
+#if 0
+      #ifndef NDEBUG
+        fprintf(stderr,
+                "DEBUG: call auto free %p at %s, line %lu with auto resource %p\n",
+                autoFreeNode->autoFreeFunction,
+                autoFreeNode->fileName,
+                autoFreeNode->lineNb,
+                autoFreeNode->resource
+               );
+      #endif /* not NDEBUG */
+#endif /* 0 */
+      autoFreeNode->autoFreeFunction(autoFreeNode->resource);
+    }
+
+    // free node
+    LIST_DELETE_NODE(autoFreeNode);
+  }
+}
+
 void AutoFree_cleanup(AutoFreeList *autoFreeList)
 {
   assert(autoFreeList != NULL);
