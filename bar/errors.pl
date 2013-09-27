@@ -229,7 +229,7 @@ int _Error_textToIndex(const char *text)
     }
     z = 0;
     i = 0;
-    while ((z < strlen(text)) && (i < $MAX_ERRORTEXT_LENGTH-1-1))
+    while ((z < strlen(text)) && (i < $ERROR_MAX_TEXT_LENGTH-1))
     {
       if (!iscntrl(text[z])) { errorTexts[index].text[i] = text[z]; i++; }
       z++;
