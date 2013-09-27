@@ -385,7 +385,6 @@ LOCAL const ConfigValueUnit CONFIG_VALUE_BITS_UNITS[] =
   {"K",1024},
 };
 
-#warning TODO move to bar.c?
 LOCAL const ConfigValueSelect CONFIG_VALUE_ARCHIVE_TYPES[] =
 {
   {"normal",      ARCHIVE_TYPE_NORMAL,     },
@@ -401,26 +400,82 @@ LOCAL const ConfigValueSelect CONFIG_VALUE_PATTERN_TYPES[] =
   {"extended",PATTERN_TYPE_EXTENDED_REGEX},
 };
 
+LOCAL const ConfigValueSelect CONFIG_VALUE_COMPRESS_ALGORITHMS[] =
+{
+  {"none", COMPRESS_ALGORITHM_NONE,  },
+
+  {"zip0", COMPRESS_ALGORITHM_ZIP_0, },
+  {"zip1", COMPRESS_ALGORITHM_ZIP_1, },
+  {"zip2", COMPRESS_ALGORITHM_ZIP_2, },
+  {"zip3", COMPRESS_ALGORITHM_ZIP_3, },
+  {"zip4", COMPRESS_ALGORITHM_ZIP_4, },
+  {"zip5", COMPRESS_ALGORITHM_ZIP_5, },
+  {"zip6", COMPRESS_ALGORITHM_ZIP_6, },
+  {"zip7", COMPRESS_ALGORITHM_ZIP_7, },
+  {"zip8", COMPRESS_ALGORITHM_ZIP_8, },
+  {"zip9", COMPRESS_ALGORITHM_ZIP_9, },
+
+  #ifdef HAVE_BZ2
+    {"bzip1",COMPRESS_ALGORITHM_BZIP2_1},
+    {"bzip2",COMPRESS_ALGORITHM_BZIP2_2},
+    {"bzip3",COMPRESS_ALGORITHM_BZIP2_3},
+    {"bzip4",COMPRESS_ALGORITHM_BZIP2_4},
+    {"bzip5",COMPRESS_ALGORITHM_BZIP2_5},
+    {"bzip6",COMPRESS_ALGORITHM_BZIP2_6},
+    {"bzip7",COMPRESS_ALGORITHM_BZIP2_7},
+    {"bzip8",COMPRESS_ALGORITHM_BZIP2_8},
+    {"bzip9",COMPRESS_ALGORITHM_BZIP2_9},
+  #endif /* HAVE_BZ2 */
+
+  #ifdef HAVE_LZMA
+    {"lzma1",COMPRESS_ALGORITHM_LZMA_1},
+    {"lzma2",COMPRESS_ALGORITHM_LZMA_2},
+    {"lzma3",COMPRESS_ALGORITHM_LZMA_3},
+    {"lzma4",COMPRESS_ALGORITHM_LZMA_4},
+    {"lzma5",COMPRESS_ALGORITHM_LZMA_5},
+    {"lzma6",COMPRESS_ALGORITHM_LZMA_6},
+    {"lzma7",COMPRESS_ALGORITHM_LZMA_7},
+    {"lzma8",COMPRESS_ALGORITHM_LZMA_8},
+    {"lzma9",COMPRESS_ALGORITHM_LZMA_9},
+  #endif /* HAVE_LZMA */
+
+  #ifdef HAVE_XDELTA3
+    {"xdelta1",COMPRESS_ALGORITHM_XDELTA_1},
+    {"xdelta2",COMPRESS_ALGORITHM_XDELTA_2},
+    {"xdelta3",COMPRESS_ALGORITHM_XDELTA_3},
+    {"xdelta4",COMPRESS_ALGORITHM_XDELTA_4},
+    {"xdelta5",COMPRESS_ALGORITHM_XDELTA_5},
+    {"xdelta6",COMPRESS_ALGORITHM_XDELTA_6},
+    {"xdelta7",COMPRESS_ALGORITHM_XDELTA_7},
+    {"xdelta8",COMPRESS_ALGORITHM_XDELTA_8},
+    {"xdelta9",COMPRESS_ALGORITHM_XDELTA_9},
+  #endif /* HAVE_XDELTA3 */
+};
+
 LOCAL const ConfigValueSelect CONFIG_VALUE_CRYPT_ALGORITHMS[] =
 {
-  {"none",CRYPT_ALGORITHM_NONE},
+  {"none",      CRYPT_ALGORITHM_NONE,     },
 
   #ifdef HAVE_GCRYPT
-    {"3DES",      CRYPT_ALGORITHM_3DES      },
-    {"CAST5",     CRYPT_ALGORITHM_CAST5     },
-    {"BLOWFISH",  CRYPT_ALGORITHM_BLOWFISH  },
-    {"AES128",    CRYPT_ALGORITHM_AES128    },
-    {"AES192",    CRYPT_ALGORITHM_AES192    },
-    {"AES256",    CRYPT_ALGORITHM_AES256    },
+    {"3DES",      CRYPT_ALGORITHM_3DES,     },
+    {"CAST5",     CRYPT_ALGORITHM_CAST5,    },
+    {"BLOWFISH",  CRYPT_ALGORITHM_BLOWFISH, },
+    {"AES128",    CRYPT_ALGORITHM_AES128,   },
+    {"AES192",    CRYPT_ALGORITHM_AES192,   },
+    {"AES256",    CRYPT_ALGORITHM_AES256,   },
     {"TWOFISH128",CRYPT_ALGORITHM_TWOFISH128},
     {"TWOFISH256",CRYPT_ALGORITHM_TWOFISH256},
+    {"SERPENT128",CRYPT_ALGORITHM_SERPENT128},
+    {"SERPENT192",CRYPT_ALGORITHM_SERPENT192},
+    {"SERPENT256",CRYPT_ALGORITHM_SERPENT256},
+    {"CAMELLIA128",CRYPT_ALGORITHM_CAMELLIA128},
+    {"CAMELLIA192",CRYPT_ALGORITHM_CAMELLIA192},
+    {"CAMELLIA256",CRYPT_ALGORITHM_CAMELLIA256},
   #endif /* HAVE_GCRYPT */
 };
 
 LOCAL const ConfigValueSelect CONFIG_VALUE_CRYPT_TYPES[] =
 {
-  {"none",CRYPT_TYPE_NONE},
-
   #ifdef HAVE_GCRYPT
     {"symmetric", CRYPT_TYPE_SYMMETRIC },
     {"asymmetric",CRYPT_TYPE_ASYMMETRIC},
@@ -3923,7 +3978,7 @@ LOCAL void serverCommand_deviceList(ClientInfo *clientInfo, uint id, const Strin
                        "name=%'S size=%lld mounted=%b",
                        deviceName,
                        deviceInfo.size,
-FALSE//                       deviceInfo.mountedFlag
+                       deviceInfo.mountedFlag
                       );
     }
   }
