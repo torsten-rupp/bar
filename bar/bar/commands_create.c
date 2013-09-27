@@ -4892,6 +4892,7 @@ Errors Command_create(const String                    storageName,
     AutoFree_cleanup(&autoFreeList);
     return error;
   }
+  DEBUG_TESTCODE("Command_create1") { String_delete(storageFileName); Storage_doneSpecifier(&storageSpecifier); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
   AUTOFREE_ADD(&autoFreeList,&storageSpecifier,{ Storage_doneSpecifier(&storageSpecifier); });
   AUTOFREE_ADD(&autoFreeList,storageFileName,{ String_delete(storageFileName); });
 
@@ -4941,6 +4942,7 @@ Errors Command_create(const String                    storageName,
     AutoFree_cleanup(&autoFreeList);
     return error;
   }
+  DEBUG_TESTCODE("Command_create2") { Storage_done(&createInfo.storageFileHandle); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
   AUTOFREE_ADD(&autoFreeList,&createInfo.storageFileHandle,{ Storage_done(&createInfo.storageFileHandle); });
 
   if (   (createInfo.archiveType == ARCHIVE_TYPE_FULL)
@@ -4998,6 +5000,7 @@ Errors Command_create(const String                    storageName,
         AutoFree_cleanup(&autoFreeList);
         return error;
       }
+      DEBUG_TESTCODE("Command_create3") { AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
       printInfo(1,
                 "ok (%lu entries)\n",
                 Dictionary_count(&createInfo.namesDictionary)
@@ -5054,7 +5057,7 @@ Errors Command_create(const String                    storageName,
     AutoFree_cleanup(&autoFreeList);
     return error;
   }
-  DEBUG_TESTCODE("command_create1") { Archive_close(&createInfo.archiveInfo); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
+  DEBUG_TESTCODE("command_create4") { Archive_close(&createInfo.archiveInfo); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
 
   // start create threads
 #if 1
@@ -5102,7 +5105,7 @@ createThreadCode(&createInfo);
     AutoFree_cleanup(&autoFreeList);
     return error;
   }
-  DEBUG_TESTCODE("command_create2") { AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
+  DEBUG_TESTCODE("command_create5") { AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
 
   // signal end of data
   MsgQueue_setEndOfMsg(&createInfo.entryMsgQueue);
