@@ -130,29 +130,8 @@ typedef struct ChunkInfo
 /****************************** Macros *********************************/
 
 #ifndef NDEBUG
-  #define Chunk_init(chunkInfo, \
-                     parentChunkInfo, \
-                     chunkIO, \
-                     chunkIOUserData, \
-                     hunkId, \
-                     definition, \
-                     lignment, \
-                     cryptInfo, \
-                     data \
-                    ) \
-     __Chunk_init(__FILE__, \
-                  __LINE__, \
-                  chunkInfo, \
-                  parentChunkInfo, \
-                  chunkIO, \
-                  chunkIOUserData, \
-                  hunkId, \
-                  definition, \
-                  lignment, \
-                  cryptInfo, \
-                  data \
-                 )
-  #define Chunk_done(chunkInfo) __Chunk_done(__FILE__,__LINE__,chunkInfo)
+  #define Chunk_init(...) __Chunk_init(__FILE__,__LINE__,__VA_ARGS__)
+  #define Chunk_done(...) __Chunk_done(__FILE__,__LINE__,__VA_ARGS__)
 #endif /* not NDEBUG */
 
 /***************************** Forwards ********************************/
