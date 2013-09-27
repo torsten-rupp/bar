@@ -434,7 +434,6 @@ Errors Device_getDeviceInfo(DeviceInfo   *deviceInfo,
     long     l;
   #endif
   FILE          *mtab;
-  struct mntent *mountEntryPointer;
   struct mntent mountEntry;
   char          buffer[4096];
 
