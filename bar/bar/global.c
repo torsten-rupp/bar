@@ -33,6 +33,7 @@
 
 #define DEBUG_TESTCODE_NAME          "TESTCODE"
 #define DEBUG_TESTCODE_LIST_FILENAME "TESTCODE_LIST"
+#define DEBUG_TESTCODE_SKIP_FILENAME "TESTCODE_SKIP"
 #define DEBUG_TESTCODE_NAME_FILENAME "TESTCODE_NAME"
 #define DEBUG_TESTCODE_DONE_FILENAME "TESTCODE_DONE"
 
@@ -168,7 +169,7 @@ bool debugIsTestCodeEnabled(const char *__fileName__,
 {
   bool       isTestCodeEnabledFlag;
   const char *value;
-  bool       isInListFileFlag,isInDoneFileFlag;
+  bool       isInListFileFlag,isInSkipFileFlag,isInDoneFileFlag;
   FILE       *file;
   char       line[1024];
   char       *s,*t;
@@ -186,6 +187,7 @@ bool debugIsTestCodeEnabled(const char *__fileName__,
   else
   {
     isInListFileFlag = FALSE;
+    isInSkipFileFlag = FALSE;
     isInDoneFileFlag = FALSE;
 
     // check test code list file
@@ -216,43 +218,76 @@ bool debugIsTestCodeEnabled(const char *__fileName__,
 
         // close file
         fclose(file);
+      }
+    }
 
-        // check test code done file
-        if (isInListFileFlag)
+    // check test code done file
+    if (isInListFileFlag)
+    {
+      value = getenv(DEBUG_TESTCODE_SKIP_FILENAME);
+      if (value != NULL)
+      {
+        // check if name is in done file
+        file = fopen(value,"r");
+        if (file != NULL)
         {
-          value = getenv(DEBUG_TESTCODE_DONE_FILENAME);
-          if (value != NULL)
+          while ((fgets(line,sizeof(line),file) != NULL) && !isInSkipFileFlag)
           {
-            // check if name is in done file
-            file = fopen(value,"r");
-            if (file != NULL)
-            {
-              while ((fgets(line,sizeof(line),file) != NULL) && !isInDoneFileFlag)
-              {
-                // trim spaces, LF
-                s = line;
-                while (isspace(*s)) { s++; }
-                t = s;
-                while ((*t) != '\0') { t++; }
-                t--;
-                while ((t > s) && isspace(*t)) { (*t) = '\0'; t--; }
+            // trim spaces, LF
+            s = line;
+            while (isspace(*s)) { s++; }
+            t = s;
+            while ((*t) != '\0') { t++; }
+            t--;
+            while ((t > s) && isspace(*t)) { (*t) = '\0'; t--; }
 
-                // skip empty/commented lines
-                if (((*s) == '\0') || ((*s) == '#')) continue;
+            // skip empty/commented lines
+            if (((*s) == '\0') || ((*s) == '#')) continue;
 
-                // name
-                isInDoneFileFlag = stringEquals(name,s);
-              }
-
-              // close file
-              fclose(file);
-            }
+            // name
+            isInSkipFileFlag = stringEquals(name,s);
           }
+
+          // close file
+          fclose(file);
         }
       }
     }
 
-    isTestCodeEnabledFlag = isInListFileFlag && !isInDoneFileFlag;
+    // check test code done file
+    if (isInListFileFlag && !isInSkipFileFlag)
+    {
+      value = getenv(DEBUG_TESTCODE_DONE_FILENAME);
+      if (value != NULL)
+      {
+        // check if name is in done file
+        file = fopen(value,"r");
+        if (file != NULL)
+        {
+          while ((fgets(line,sizeof(line),file) != NULL) && !isInDoneFileFlag)
+          {
+            // trim spaces, LF
+            s = line;
+            while (isspace(*s)) { s++; }
+            t = s;
+            while ((*t) != '\0') { t++; }
+            t--;
+            while ((t > s) && isspace(*t)) { (*t) = '\0'; t--; }
+
+            // skip empty/commented lines
+            if (((*s) == '\0') || ((*s) == '#')) continue;
+
+            // name
+            isInDoneFileFlag = stringEquals(name,s);
+          }
+
+          // close file
+          fclose(file);
+        }
+      }
+    }
+
+    isTestCodeEnabledFlag = isInListFileFlag && !isInSkipFileFlag && !isInDoneFileFlag;
   }
 
   if (isTestCodeEnabledFlag)
