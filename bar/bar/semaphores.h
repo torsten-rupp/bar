@@ -131,12 +131,12 @@ typedef bool SemaphoreLock;
   #define _SEMAPHORE_NAME(variable) _SEMAPHORE_NAME_INTERN(variable)
   #define _SEMAPHORE_NAME_INTERN(variable) #variable
 
-  #define Semaphore_init(semaphore) __Semaphore_init(__FILE__,__LINE__,_SEMAPHORE_NAME(semaphore),semaphore)
-  #define Semaphore_new(semaphore) __Semaphore_new(__FILE__,__LINE__,_SEMAPHORE_NAME(semaphore),semaphore)
-  #define Semaphore_lock(semaphore,semaphoreLockType,timeout) __Semaphore_lock(__FILE__,__LINE__,semaphore,semaphoreLockType,timeout)
-  #define Semaphore_forceLock(semaphore,semaphoreLockType) __Semaphore_forceLock(__FILE__,__LINE__,semaphore,semaphoreLockType)
-  #define Semaphore_unlock(semaphore) __Semaphore_unlock(__FILE__,__LINE__,semaphore)
-  #define Semaphore_waitModified(semaphore,timeout) __Semaphore_waitModified(__FILE__,__LINE__,semaphore,timeout)
+  #define Semaphore_init(semaphore)   __Semaphore_init(__FILE__,__LINE__,_SEMAPHORE_NAME(semaphore),semaphore)
+  #define Semaphore_new(semaphore)    __Semaphore_new(__FILE__,__LINE__,_SEMAPHORE_NAME(semaphore),semaphore)
+  #define Semaphore_lock(...)         __Semaphore_lock(__FILE__,__LINE__,__VA_ARGS__)
+  #define Semaphore_forceLock(...)    __Semaphore_forceLock(__FILE__,__LINE__,__VA_ARGS__)
+  #define Semaphore_unlock(...)       __Semaphore_unlock(__FILE__,__LINE__,__VA_ARGS__)
+  #define Semaphore_waitModified(...) __Semaphore_waitModified(__FILE__,__LINE__,__VA_ARGS__)
 #endif /* not NDEBUG */
 
 /***************************** Forwards ********************************/
