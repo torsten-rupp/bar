@@ -3972,7 +3972,6 @@ LOCAL void serverCommand_deviceList(ClientInfo *clientInfo, uint id, const Strin
         && (deviceInfo.size > 0)
        )
     {
-#warning TODO
       sendClientResult(clientInfo,
                        id,FALSE,ERROR_NONE,
                        "name=%'S size=%lld mounted=%b",
@@ -4934,7 +4933,6 @@ LOCAL void serverCommand_jobDelete(ClientInfo *clientInfo, uint id, const String
     return;
   }
 
-#warning TODO
   SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
   {
     // find job
@@ -7367,8 +7365,6 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, uint id, const StringMa
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
-
-#warning TODO
 
   // get archive name, destination, overwrite flag, files
   storageName = String_new();
