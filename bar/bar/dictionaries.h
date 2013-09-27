@@ -110,7 +110,8 @@ typedef bool(*DictionaryIterateFunction)(const void *keyData,
 /****************************** Macros *********************************/
 
 #ifndef NDEBUG
-  #define Dictionary_init(dictionary,dictionaryCompareFunction,dictionaryCompareUserData) __Dictionary_init(__FILE__,__LINE__,dictionary,dictionaryCompareFunction,dictionaryCompareUserData)
+  #define Dictionary_init(...) __Dictionary_init(__FILE__,__LINE__,__VA_ARGS__)
+  #define Dictionary_done(...) __Dictionary_done(__FILE__,__LINE__,__VA_ARGS__)
 #endif /* not NDEBUG */
 
 /***************************** Forwards ********************************/
@@ -159,10 +160,19 @@ typedef bool(*DictionaryIterateFunction)(const void *keyData,
 * Notes  : -
 \***********************************************************************/
 
-void Dictionary_done(Dictionary             *dictionary,
-                     DictionaryFreeFunction dictionaryFreeFunction,
-                     void                   *dictionaryFreeUserData
-                    );
+#ifdef NDEBUG
+  void Dictionary_done(Dictionary             *dictionary,
+                       DictionaryFreeFunction dictionaryFreeFunction,
+                       void                   *dictionaryFreeUserData
+                      );
+#else /* not NDEBUG */
+  void __Dictionary_done(const char                *__fileName__,
+                         ulong                     __lineNb__,
+                         Dictionary             *dictionary,
+                         DictionaryFreeFunction dictionaryFreeFunction,
+                         void                   *dictionaryFreeUserData
+                        );
+#endif /* NDEBUG */
 
 /***********************************************************************\
 * Name   : Dictionary_clear

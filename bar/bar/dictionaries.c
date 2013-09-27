@@ -573,10 +573,19 @@ LOCAL DictionaryEntry *growTable(DictionaryEntry *entries, uint oldSize, uint ne
   return TRUE;
 }
 
-void Dictionary_done(Dictionary             *dictionary,
-                     DictionaryFreeFunction dictionaryFreeFunction,
-                     void                   *dictionaryFreeUserData
-                    )
+#ifdef NDEBUG
+  void Dictionary_done(Dictionary             *dictionary,
+                       DictionaryFreeFunction dictionaryFreeFunction,
+                       void                   *dictionaryFreeUserData
+                      )
+#else /* not NDEBUG */
+  void __Dictionary_done(const char                *__fileName__,
+                         ulong                     __lineNb__,
+                         Dictionary             *dictionary,
+                         DictionaryFreeFunction dictionaryFreeFunction,
+                         void                   *dictionaryFreeUserData
+                        )
+#endif /* NDEBUG */
 {
   uint z;
   uint index;
@@ -584,7 +593,11 @@ void Dictionary_done(Dictionary             *dictionary,
   assert(dictionary != NULL);
   assert(dictionary->entryTables != NULL);
 
-  DEBUG_REMOVE_RESOURCE_TRACE(dictionary);
+  #ifdef NDEBUG
+    DEBUG_REMOVE_RESOURCE_TRACE(dictionary);
+  #else /* not NDEBUG */
+    DEBUG_REMOVE_RESOURCE_TRACEX(__fileName__,__lineNb__,dictionary);
+  #endif /* NDEBUG */
 
   // free resources
   for (z = 0; z < dictionary->entryTableCount; z++)
