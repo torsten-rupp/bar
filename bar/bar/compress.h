@@ -198,8 +198,8 @@ typedef struct
   ((uint16)(compressAlgorithm))
 
 #ifndef NDEBUG
-  #define Compress_init(compressInfo,compressMode,compressAlgorithm,blockLength,sourceHandle) __Compress_init(__FILE__,__LINE__,compressInfo,compressMode,compressAlgorithm,blockLength,sourceHandle)
-  #define Compress_done(compressInfo) __Compress_done(__FILE__,__LINE__,compressInfo)
+  #define Compress_init(...) __Compress_init(__FILE__,__LINE__,__VA_ARGS__)
+  #define Compress_done(...) __Compress_done(__FILE__,__LINE__,__VA_ARGS__)
 #endif /* not NDEBUG */
 
 /***************************** Forwards ********************************/
