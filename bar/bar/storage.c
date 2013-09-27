@@ -2048,11 +2048,22 @@ void Storage_doneAll(void)
   #endif /* NDEBUG */
 }
 
-void Storage_doneSpecifier(StorageSpecifier *storageSpecifier)
+#ifdef NDEBUG
+  void Storage_doneSpecifier(StorageSpecifier *storageSpecifier)
+#else /* not NDEBUG */
+  void __Storage_doneSpecifier(const char       *__fileName__,
+                               ulong            __lineNb__,
+                               StorageSpecifier *storageSpecifier
+                              )
+#endif /* NDEBUG */
 {
   assert(storageSpecifier != NULL);
 
-  DEBUG_REMOVE_RESOURCE_TRACE(storageSpecifier);
+  #ifdef NDEBUG
+    DEBUG_REMOVE_RESOURCE_TRACE(storageSpecifier);
+  #else /* not NDEBUG */
+    DEBUG_REMOVE_RESOURCE_TRACEX(__fileName__,__lineNb__,storageSpecifier);
+  #endif /* NDEBUG */
 
   String_delete(storageSpecifier->deviceName);
   Password_delete(storageSpecifier->loginPassword);

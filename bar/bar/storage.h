@@ -523,7 +523,8 @@ typedef struct
 /****************************** Macros *********************************/
 
 #ifndef NDEBUG
-  #define Storage_initSpecifier(storageSpecifier) __Storage_initSpecifier(__FILE__,__LINE__,storageSpecifier)
+  #define Storage_initSpecifier(...) __Storage_initSpecifier(__FILE__,__LINE__,__VA_ARGS__)
+  #define Storage_doneSpecifier(...) __Storage_doneSpecifier(__FILE__,__LINE__,__VA_ARGS__)
 #endif /* not NDEBUG */
 
 /***************************** Forwards ********************************/
@@ -583,7 +584,14 @@ void Storage_doneAll(void);
 * Notes  : -
 \***********************************************************************/
 
-void Storage_doneSpecifier(StorageSpecifier *storageSpecifier);
+#ifdef NDEBUG
+  void Storage_doneSpecifier(StorageSpecifier *storageSpecifier);
+#else /* not NDEBUG */
+  void __Storage_doneSpecifier(const char       *__fileName__,
+                               ulong            __lineNb__,
+                               StorageSpecifier *storageSpecifier
+                              );
+#endif /* NDEBUG */
 
 /***********************************************************************\
 * Name   : Storage_duplicateSpecifier
