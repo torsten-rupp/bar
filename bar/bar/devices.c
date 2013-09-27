@@ -21,6 +21,7 @@
 #ifdef HAVE_SYS_IOCTL_H
   #include <sys/ioctl.h>
 #endif
+#include <mntent.h>
 #include <errno.h>
 #include <assert.h>
 
@@ -432,6 +433,10 @@ Errors Device_getDeviceInfo(DeviceInfo   *deviceInfo,
   #if defined(HAVE_IOCTL) && defined(HAVE_BLKGETSIZE)
     long     l;
   #endif
+  FILE          *mtab;
+  struct mntent *mountEntryPointer;
+  struct mntent mountEntry;
+  char          buffer[4096];
 
   assert(deviceName != NULL);
   assert(deviceInfo != NULL);
@@ -442,7 +447,7 @@ Errors Device_getDeviceInfo(DeviceInfo   *deviceInfo,
   deviceInfo->blockSize   = 0L;
 //  deviceInfo->freeBlocks  = 0LL;
 //  deviceInfo->totalBlocks = 0LL;
-//  deviceInfo->mountedFlag = FALSE;
+  deviceInfo->mountedFlag = FALSE;
 
   // get device meta data
   if (LSTAT(String_cString(deviceName),&fileStat) == 0)
@@ -487,6 +492,21 @@ Errors Device_getDeviceInfo(DeviceInfo   *deviceInfo,
     {
       return ERRORX_(OPEN_DEVICE,errno,String_cString(deviceName));
     }
+  }
+
+  // check if mounted
+  mtab = setmntent("/etc/mtab","r");
+  if (mtab != NULL)
+  {
+    while (getmntent_r(mtab,&mountEntry,buffer,sizeof(buffer)) != NULL)
+    {
+      if (String_equalsCString(deviceName,mountEntry.mnt_fsname))
+      {
+        deviceInfo->mountedFlag = TRUE;
+        break;
+      }
+    }
+    endmntent(mtab);
   }
 
   return ERROR_NONE;

@@ -76,7 +76,6 @@ typedef struct
 // NYI
 //  int64       freeBlocks;       // number of free blocks
 //  int64       totalBlocks;      // total number of blocks
-//  bool        mountedFlag;      // TRUE iff device is currently mounted
   uint64           timeLastAccess;           // timestamp of last access
   uint64           timeModified;             // timestamp of last modification
   uint64           timeLastChanged;          // timestamp of last changed
@@ -85,6 +84,7 @@ typedef struct
   DevicePermission permission;               // permission flags
   uint32           major,minor;              // special type major/minor number
   uint64           id;                       // unique id (e. g. inode number)
+  bool             mountedFlag;              // TRUE iff device is currently mounted
 } DeviceInfo;
 
 /***************************** Variables *******************************/
