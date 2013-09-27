@@ -258,12 +258,12 @@ typedef struct
 /****************************** Macros *********************************/
 
 #ifndef NDEBUG
-  #define File_getTmpFile(fileHandle,pattern,directory)           __File_getTmpFile(__FILE__,__LINE__,fileHandle,pattern,directory)
-  #define File_getTmpFileCString(fileHandle,pattern,directory)    __File_getTmpFileCString(__FILE__,__LINE__,fileHandle,pattern,directory)
-  #define File_open(fileHandle,fileName,fileMode)                 __File_open(__FILE__,__LINE__,fileHandle,fileName,fileMode)
-  #define File_openCString(fileHandle,fileName,fileMode)          __File_openCString(__FILE__,__LINE__,fileHandle,fileName,fileMode)
-  #define File_openDescriptor(fileHandle,fileDescriptor,fileMode) __File_openDescriptor(__FILE__,__LINE__,fileHandle,fileDescriptor,fileMode)
-  #define File_close(fileHandle)                                  __File_close(__FILE__,__LINE__,fileHandle)
+  #define File_getTmpFile(...)        __File_getTmpFile(__FILE__,__LINE__,__VA_ARGS__)
+  #define File_getTmpFileCString(...) __File_getTmpFileCString(__FILE__,__LINE__,__VA_ARGS__)
+  #define File_open(...)              __File_open(__FILE__,__LINE__,__VA_ARGS__)
+  #define File_openCString(...)       __File_openCString(__FILE__,__LINE__,__VA_ARGS__)
+  #define File_openDescriptor(...)    __File_openDescriptor(__FILE__,__LINE__,__VA_ARGS__)
+  #define File_close(...)             __File_close(__FILE__,__LINE__,__VA_ARGS__)
 #endif /* not NDEBUG */
 
 /***************************** Forwards ********************************/
