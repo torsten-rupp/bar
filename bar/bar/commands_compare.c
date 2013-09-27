@@ -161,6 +161,7 @@ Errors Command_compare(const StringList                *storageNameList,
       if (failError == ERROR_NONE) failError = error;
       continue;
     }
+    DEBUG_TESTCODE("Command_compare1") { failError = DEBUG_TESTCODE_ERROR(); break; }
     Storage_getPrintableName(printableStorageName,&storageSpecifier,storageFileName);
 
     printInfo(1,"Comparing archive '%s':\n",String_cString(printableStorageName));
@@ -183,6 +184,7 @@ Errors Command_compare(const StringList                *storageNameList,
       if (failError == ERROR_NONE) failError = error;
       continue;
     }
+    DEBUG_TESTCODE("Command_compare2") { (void)Archive_close(&archiveInfo); failError = DEBUG_TESTCODE_ERROR(); break; }
 
     // read files
     while (   !Archive_eof(&archiveInfo,TRUE)
@@ -203,6 +205,7 @@ Errors Command_compare(const StringList                *storageNameList,
         if (failError == ERROR_NONE) failError = error;
         break;
       }
+      DEBUG_TESTCODE("Command_compare3") { failError = DEBUG_TESTCODE_ERROR(); break; }
 
       switch (archiveEntryType)
       {
@@ -246,6 +249,7 @@ Errors Command_compare(const StringList                *storageNameList,
               if (failError == ERROR_NONE) failError = error;
               break;
             }
+            DEBUG_TESTCODE("Command_compare100") { String_delete(fileName); Archive_closeEntry(&archiveEntryInfo); failError = DEBUG_TESTCODE_ERROR(); break; }
 
             if (   (List_isEmpty(includeEntryList) || EntryList_match(includeEntryList,fileName,PATTERN_MATCH_MODE_EXACT))
                 && !PatternList_match(excludePatternList,fileName,PATTERN_MATCH_MODE_EXACT)
@@ -303,6 +307,7 @@ Errors Command_compare(const StringList                *storageNameList,
                 if (jobOptions->stopOnErrorFlag) failError = error;
                 continue;
               }
+              DEBUG_TESTCODE("Command_compare101") { (void)File_close(&fileHandle); String_delete(fileName); Archive_closeEntry(&archiveEntryInfo); failError = DEBUG_TESTCODE_ERROR(); break; }
 
               // check file size
               if (fileInfo.size != (long)File_getSize(&fileHandle))
@@ -335,6 +340,7 @@ Errors Command_compare(const StringList                *storageNameList,
                 if (jobOptions->stopOnErrorFlag) failError = error;
                 continue;
               }
+              DEBUG_TESTCODE("Command_compare102") { (void)File_close(&fileHandle); String_delete(fileName); Archive_closeEntry(&archiveEntryInfo); failError = DEBUG_TESTCODE_ERROR(); continue; }
 
               // compare archive and file content
               length    = 0LL;
@@ -358,6 +364,7 @@ Errors Command_compare(const StringList                *storageNameList,
                   if (failError == ERROR_NONE) failError = error;
                   break;
                 }
+                DEBUG_TESTCODE("Command_compare103") { failError = DEBUG_TESTCODE_ERROR(); break; }
                 error = File_read(&fileHandle,buffer,bufferLength,NULL);
                 if (error != ERROR_NONE)
                 {
@@ -369,6 +376,7 @@ Errors Command_compare(const StringList                *storageNameList,
                   if (jobOptions->stopOnErrorFlag) failError = error;
                   break;
                 }
+                DEBUG_TESTCODE("Command_compare104") { failError = DEBUG_TESTCODE_ERROR(); break; }
 
                 // compare
                 diffIndex = compare(archiveBuffer,buffer,bufferLength);
@@ -390,14 +398,26 @@ Errors Command_compare(const StringList                *storageNameList,
 
                 printInfo(2,"%3d%%\b\b\b\b",(uint)((length*100LL)/fragmentSize));
               }
-              File_close(&fileHandle);
               if (error != ERROR_NONE)
               {
+                File_close(&fileHandle);
                 Archive_closeEntry(&archiveEntryInfo);
                 String_delete(fileName);
                 continue;
               }
+              if (failError != ERROR_NONE)
+              {
+                File_close(&fileHandle);
+                Archive_closeEntry(&archiveEntryInfo);
+                String_delete(fileName);
+                break;
+              }
+              DEBUG_TESTCODE("Command_compare105") { File_close(&fileHandle); Archive_closeEntry(&archiveEntryInfo); String_delete(fileName); failError = DEBUG_TESTCODE_ERROR(); break; }
+
               printInfo(2,"    \b\b\b\b");
+
+              // close file
+              File_close(&fileHandle);
 
               if (fragmentNode != NULL)
               {
@@ -488,6 +508,7 @@ Errors Command_compare(const StringList                *storageNameList,
               if (failError == ERROR_NONE) failError = error;
               break;
             }
+            DEBUG_TESTCODE("Command_compare200") { Archive_closeEntry(&archiveEntryInfo); String_delete(deviceName); failError = DEBUG_TESTCODE_ERROR(); break; }
             if (deviceInfo.blockSize > BUFFER_SIZE)
             {
               printError("Device block size %llu on '%s' is too big (max: %llu)\n",
@@ -499,6 +520,7 @@ Errors Command_compare(const StringList                *storageNameList,
               if (jobOptions->stopOnErrorFlag) failError = ERROR_INVALID_DEVICE_BLOCK_SIZE;
               break;
             }
+            DEBUG_TESTCODE("Command_compare201") { Archive_closeEntry(&archiveEntryInfo); String_delete(deviceName); failError = DEBUG_TESTCODE_ERROR(); break; }
             assert(deviceInfo.blockSize > 0);
 
             if (   (List_isEmpty(includeEntryList) || EntryList_match(includeEntryList,deviceName,PATTERN_MATCH_MODE_EXACT))
@@ -554,6 +576,7 @@ Errors Command_compare(const StringList                *storageNameList,
                 String_delete(deviceName);
                 continue;
               }
+              DEBUG_TESTCODE("Command_compare202") { Archive_closeEntry(&archiveEntryInfo); String_delete(deviceName); failError = DEBUG_TESTCODE_ERROR(); break; }
 
               // check device block size, get max. blocks in buffer
               if (deviceInfo.blockSize > BUFFER_SIZE)
@@ -585,6 +608,7 @@ Errors Command_compare(const StringList                *storageNameList,
                 if (jobOptions->stopOnErrorFlag) failError = error;
                 continue;
               }
+              DEBUG_TESTCODE("Command_compare203") { Device_close(&deviceHandle); Archive_closeEntry(&archiveEntryInfo); String_delete(deviceName); failError = DEBUG_TESTCODE_ERROR(); break; }
 
               // check image size
               if (deviceInfo.size != Device_getSize(&deviceHandle))
@@ -627,12 +651,15 @@ Errors Command_compare(const StringList                *storageNameList,
                 if (jobOptions->stopOnErrorFlag) failError = error;
                 continue;
               }
+              DEBUG_TESTCODE("Command_compare204") { Device_close(&deviceHandle); Archive_closeEntry(&archiveEntryInfo); String_delete(deviceName); failError = DEBUG_TESTCODE_ERROR(); break; }
 
               // compare archive and device/image content
               block     = 0LL;
               equalFlag = TRUE;
               diffIndex = 0L;
-              while ((block < blockCount) && equalFlag)
+              while (   (block < blockCount)
+                     && equalFlag
+                    )
               {
                 // read data from archive (only single block)
                 error = Archive_readData(&archiveEntryInfo,archiveBuffer,deviceInfo.blockSize);
@@ -646,6 +673,7 @@ Errors Command_compare(const StringList                *storageNameList,
                   if (failError == ERROR_NONE) failError = error;
                   break;
                 }
+                DEBUG_TESTCODE("Command_compare205") { failError = DEBUG_TESTCODE_ERROR(); break; }
 
                 if (   !fileSystemFlag
                     || FileSystem_blockIsUsed(&fileSystemHandle,(blockOffset+block)*(uint64)deviceInfo.blockSize)
@@ -663,6 +691,7 @@ Errors Command_compare(const StringList                *storageNameList,
                     if (jobOptions->stopOnErrorFlag) failError = error;
                     break;
                   }
+                  DEBUG_TESTCODE("Command_compare206") { failError = DEBUG_TESTCODE_ERROR(); break; }
 
                   // read data from device/image
                   error = Device_read(&deviceHandle,buffer,deviceInfo.blockSize,NULL);
@@ -676,6 +705,7 @@ Errors Command_compare(const StringList                *storageNameList,
                     if (jobOptions->stopOnErrorFlag) failError = error;
                     break;
                   }
+                  DEBUG_TESTCODE("Command_compare207") { failError = DEBUG_TESTCODE_ERROR(); break; }
 
                   // compare
                   diffIndex = compare(archiveBuffer,buffer,deviceInfo.blockSize);
@@ -706,6 +736,15 @@ Errors Command_compare(const StringList                *storageNameList,
                 String_delete(deviceName);
                 continue;
               }
+              if (failError != ERROR_NONE)
+              {
+                if (fileSystemFlag) FileSystem_done(&fileSystemHandle);
+                Device_close(&deviceHandle);
+                Archive_closeEntry(&archiveEntryInfo);
+                String_delete(deviceName);
+                break;
+              }
+              DEBUG_TESTCODE("Command_compare208") { failError = DEBUG_TESTCODE_ERROR(); break; }
               printInfo(2,"    \b\b\b\b");
 
               if (fragmentNode != NULL)
@@ -790,6 +829,7 @@ Errors Command_compare(const StringList                *storageNameList,
               if (failError == ERROR_NONE) failError = error;
               break;
             }
+            DEBUG_TESTCODE("Command_compare300") { Archive_closeEntry(&archiveEntryInfo); String_delete(directoryName); failError = DEBUG_TESTCODE_ERROR(); break; }
 
             if (   (List_isEmpty(includeEntryList) || EntryList_match(includeEntryList,directoryName,PATTERN_MATCH_MODE_EXACT))
                 && !PatternList_match(excludePatternList,directoryName,PATTERN_MATCH_MODE_EXACT)
@@ -833,6 +873,7 @@ Errors Command_compare(const StringList                *storageNameList,
                 if (failError == ERROR_NONE) failError = error;
                 break;
               }
+              DEBUG_TESTCODE("Command_compare301") { Archive_closeEntry(&archiveEntryInfo); String_delete(directoryName); failError = DEBUG_TESTCODE_ERROR(); break; }
 
               // check file time, permissions, file owner/group
 #endif /* 0 */
@@ -894,6 +935,7 @@ Errors Command_compare(const StringList                *storageNameList,
               if (failError == ERROR_NONE) failError = error;
               break;
             }
+            DEBUG_TESTCODE("Command_compare400") { Archive_closeEntry(&archiveEntryInfo); String_delete(linkName); String_delete(fileName); failError = DEBUG_TESTCODE_ERROR(); break; }
 
             if (   (List_isEmpty(includeEntryList) || EntryList_match(includeEntryList,linkName,PATTERN_MATCH_MODE_EXACT))
                 && !PatternList_match(excludePatternList,linkName,PATTERN_MATCH_MODE_EXACT)
@@ -944,6 +986,7 @@ Errors Command_compare(const StringList                *storageNameList,
                 if (jobOptions->stopOnErrorFlag) failError = error;
                 break;
               }
+              DEBUG_TESTCODE("Command_compare401") { String_delete(localFileName); Archive_closeEntry(&archiveEntryInfo); String_delete(linkName); String_delete(fileName); failError = DEBUG_TESTCODE_ERROR(); break; }
               if (!String_equals(fileName,localFileName))
               {
                 printInfo(1,"FAIL!\n");
@@ -975,6 +1018,7 @@ Errors Command_compare(const StringList                *storageNameList,
                 if (failError == ERROR_NONE) failError = error;
                 break;
               }
+              DEBUG_TESTCODE("Command_compare403") { Archive_closeEntry(&archiveEntryInfo); String_delete(linkName); String_delete(fileName); failError = DEBUG_TESTCODE_ERROR(); break; }
 
               // check file time, permissions, file owner/group
 #endif /* 0 */
@@ -1049,6 +1093,7 @@ Errors Command_compare(const StringList                *storageNameList,
               if (failError == ERROR_NONE) failError = error;
               break;
             }
+            DEBUG_TESTCODE("Command_compare500") { Archive_closeEntry(&archiveEntryInfo); StringList_done(&fileNameList); failError = DEBUG_TESTCODE_ERROR(); break; }
 
             comparedDataFlag = FALSE;
             STRINGLIST_ITERATE(&fileNameList,stringNode,fileName)
@@ -1127,6 +1172,7 @@ Errors Command_compare(const StringList                *storageNameList,
                       continue;
                     }
                   }
+                  DEBUG_TESTCODE("Command_compare501") { (void)File_close(&fileHandle); failError = DEBUG_TESTCODE_ERROR(); break; }
 
                   // check file size
                   if (fileInfo.size != (long)File_getSize(&fileHandle))
@@ -1169,6 +1215,7 @@ Errors Command_compare(const StringList                *storageNameList,
                       continue;
                     }
                   }
+                  DEBUG_TESTCODE("Command_compare502") { (void)File_close(&fileHandle); failError = DEBUG_TESTCODE_ERROR(); break; }
 
                   // compare archive and hard link content
                   length    = 0LL;
@@ -1192,6 +1239,7 @@ Errors Command_compare(const StringList                *storageNameList,
                       if (failError == ERROR_NONE) failError = error;
                       break;
                     }
+                    DEBUG_TESTCODE("Command_compare503") { failError = DEBUG_TESTCODE_ERROR(); break; }
                     error = File_read(&fileHandle,buffer,bufferLength,NULL);
                     if (error != ERROR_NONE)
                     {
@@ -1203,6 +1251,7 @@ Errors Command_compare(const StringList                *storageNameList,
                       if (jobOptions->stopOnErrorFlag) failError = error;
                       break;
                     }
+                    DEBUG_TESTCODE("Command_compare504") { failError = DEBUG_TESTCODE_ERROR(); break; }
 
                     // compare
                     diffIndex = compare(archiveBuffer,buffer,bufferLength);
@@ -1323,6 +1372,7 @@ Errors Command_compare(const StringList                *storageNameList,
               if (failError == ERROR_NONE) failError = error;
               break;
             }
+            DEBUG_TESTCODE("Command_compare600") { Archive_closeEntry(&archiveEntryInfo); String_delete(fileName); failError = DEBUG_TESTCODE_ERROR(); break; }
 
             if (   (List_isEmpty(includeEntryList) || EntryList_match(includeEntryList,fileName,PATTERN_MATCH_MODE_EXACT))
                 && !PatternList_match(excludePatternList,fileName,PATTERN_MATCH_MODE_EXACT)
@@ -1367,6 +1417,7 @@ Errors Command_compare(const StringList                *storageNameList,
                 if (jobOptions->stopOnErrorFlag) failError = error;
                 break;
               }
+              DEBUG_TESTCODE("Command_compare601") { Archive_closeEntry(&archiveEntryInfo); String_delete(fileName); failError = DEBUG_TESTCODE_ERROR(); break; }
               if (fileInfo.specialType != localFileInfo.specialType)
               {
                 printError("Different types of special device '%s'!\n",
