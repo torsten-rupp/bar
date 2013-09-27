@@ -257,7 +257,8 @@ TARGETS              = bar@EXEEXT@ \
 all: $(TARGETS)
 
 # clean
-clean:
+clean: \
+  testcode_clean
 	$(RMF) $(BAR_OBJECTS)
 	$(RMF) $(EXTERN_OBJECTS)
 	$(RMF) $(DESTROYER_OBJECTS)
@@ -2654,11 +2655,12 @@ TESTCODE_COMMAND4=$(TEST_BAR) \
 
 testcode_clean:
 	$(RMRF) $(TEST_FILES_CLEAN)
-	$(RMF) testcode.list testcode.name testcode.done
+	$(RMF) testcode.list testcode.skip testcode.name testcode.done
 
 testcode_init:
 	$(GREP) -e 'DEBUG_TESTCODE\s*(\s*"' $(BAR_SOURCES) | $(SED) 's/.*"\(.*\)".*/\1/g' > testcode.list
 	$(ECHO_NO_LF) > testcode.done
+	for z in $(TESTCODE_SKIP); do $(ECHO) $$s; done > testcode.skip
 
 testcode: $(TEST_BAR) $(TEST_KEYS) $(TEST_FILES)
 	rc=$(TESTCODE_EXITCODE); \
