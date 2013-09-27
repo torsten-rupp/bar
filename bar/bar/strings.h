@@ -80,13 +80,13 @@ typedef struct
 /****************************** Macros *********************************/
 
 #ifndef NDEBUG
-  #define String_new()                          __String_new(__FILE__,__LINE__)
-  #define String_newCString(s)                  __String_newCString(__FILE__,__LINE__,s)
-  #define String_newChar(ch)                    __String_newChar(__FILE__,__LINE__,ch)
-  #define String_newBuffer(buffer,bufferLength) __String_newBuffer(__FILE__,__LINE__,buffer,bufferLength)
-  #define String_duplicate(fromString)          __String_duplicate(__FILE__,__LINE__,fromString)
-  #define String_copy(string,fromString)        __String_copy(__FILE__,__LINE__,string,fromString)
-  #define String_delete(string)                 __String_delete(__FILE__,__LINE__,string)
+  #define String_new()           __String_new(__FILE__,__LINE__)
+  #define String_newCString(...) __String_newCString(__FILE__,__LINE__,__VA_ARGS__)
+  #define String_newChar(...)    __String_newChar(__FILE__,__LINE__,__VA_ARGS__)
+  #define String_newBuffer(...)  __String_newBuffer(__FILE__,__LINE__,__VA_ARGS__)
+  #define String_duplicate(...)  __String_duplicate(__FILE__,__LINE__,__VA_ARGS__)
+  #define String_copy(...)       __String_copy(__FILE__,__LINE__,__VA_ARGS__)
+  #define String_delete(...)     __String_delete(__FILE__,__LINE__,__VA_ARGS__)
 #endif /* not NDEBUG */
 
 #ifndef NDEBUG

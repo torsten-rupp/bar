@@ -47,17 +47,17 @@ typedef struct
 /****************************** Macros *********************************/
 
 #ifndef NDEBUG
-  #define StringList_insert(stringList,string,nextStringNode)                    __StringList_insert(__FILE__,__LINE__,stringList,string,nextStringNode)
-  #define StringList_insertCString(stringList,s,nextStringNode)                  __StringList_insertCString(__FILE__,__LINE__,stringList,s,nextStringNode)
-  #define StringList_insertChar(stringList,ch,nextStringNode)                    __StringList_insertChar(__FILE__,__LINE__,stringList,ch,nextStringNode)
-  #define StringList_insertBuffer(stringList,buffer,bufferLength,nextStringNode) __StringList_insertBuffer(__FILE__,__LINE__,stringList,buffer,bufferLength,nextStringNode)
-  #define StringList_append(stringList,string)                                   __StringList_append(__FILE__,__LINE__,stringList,string)
-  #define StringList_appendCString(stringList,s)                                 __StringList_appendCString(__FILE__,__LINE__,stringList,s)
-  #define StringList_appendChar(stringList,ch)                                   __StringList_appendChar(__FILE__,__LINE__,stringList,ch)
-  #define StringList_appendBuffer(stringList,buffer,bufferLength)                __StringList_appendBuffer(__FILE__,__LINE__,stringList,buffer,bufferLength)
-  #define StringList_remove(stringList,stringNode)                               __StringList_remove(__FILE__,__LINE__,stringList,stringNode)
-  #define StringList_getFirst(stringList,string)                                 __StringList_getFirst(__FILE__,__LINE__,stringList,string)
-  #define StringList_getLast(stringList,string)                                  __StringList_getLast(__FILE__,__LINE__,stringList,string)
+  #define StringList_insert(...)        __StringList_insert(__FILE__,__LINE__,__VA_ARGS__)
+  #define StringList_insertCString(...) __StringList_insertCString(__FILE__,__LINE__,__VA_ARGS__)
+  #define StringList_insertChar(...)    __StringList_insertChar(__FILE__,__LINE__,__VA_ARGS__)
+  #define StringList_insertBuffer(...)  __StringList_insertBuffer(__FILE__,__LINE__,__VA_ARGS__)
+  #define StringList_append(...)        __StringList_append(__FILE__,__LINE__,__VA_ARGS__)
+  #define StringList_appendCString(...) __StringList_appendCString(__FILE__,__LINE__,__VA_ARGS__)
+  #define StringList_appendChar(...)    __StringList_appendChar(__FILE__,__LINE__,__VA_ARGS__)
+  #define StringList_appendBuffer(...)  __StringList_appendBuffer(__FILE__,__LINE__,__VA_ARGS__)
+  #define StringList_remove(...)        __StringList_remove(__FILE__,__LINE__,__VA_ARGS__)
+  #define StringList_getFirst(...)      __StringList_getFirst(__FILE__,__LINE__,__VA_ARGS__)
+  #define StringList_getLast(...)       __StringList_getLast(__FILE__,__LINE__,__VA_ARGS__)
 #endif /* not NDEBUG */
 
 /***********************************************************************\
