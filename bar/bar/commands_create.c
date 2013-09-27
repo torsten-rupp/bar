@@ -75,8 +75,7 @@ typedef enum
 
 /***************************** Datatypes *******************************/
 
-#warning todo
-// ???
+// incremental data info prefix
 typedef struct
 {
   IncrementalFileStates state;
@@ -1801,6 +1800,7 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
 
 LOCAL void collectorThreadCode(CreateInfo *createInfo)
 {
+  AutoFreeList        autoFreeList;
   Dictionary          duplicateNamesDictionary;
   StringList          nameList;
   String              basePath;
@@ -1827,6 +1827,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
   assert(createInfo->jobOptions != NULL);
 
   // initialize variables
+  AutoFree_init(&autoFreeList);
   if (!Dictionary_init(&duplicateNamesDictionary,NULL,NULL))
   {
     HALT_INSUFFICIENT_MEMORY();
@@ -1839,6 +1840,12 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
   {
     HALT_INSUFFICIENT_MEMORY();
   }
+  AUTOFREE_ADD(&autoFreeList,&duplicateNamesDictionary,{ Dictionary_done(&duplicateNamesDictionary,NULL,NULL); });
+  AUTOFREE_ADD(&autoFreeList,&nameList,{ StringList_done(&nameList); });
+  AUTOFREE_ADD(&autoFreeList,basePath,{ String_delete(basePath); });
+  AUTOFREE_ADD(&autoFreeList,name,{ String_delete(name); });
+  AUTOFREE_ADD(&autoFreeList,fileName,{ String_delete(fileName); });
+  AUTOFREE_ADD(&autoFreeList,&hardLinksDictionary,{ Dictionary_done(&hardLinksDictionary,NULL,NULL); });
 
   // process include entries
   abortFlag        = FALSE;
@@ -2448,13 +2455,13 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
   MsgQueue_setEndOfMsg(&createInfo->entryMsgQueue);
 
   // free resoures
-#warning todo
-  Dictionary_done(&hardLinksDictionary,NULL,NULL); //???(DictionaryFreeFunction)freeHardLinkEntry,NULL);
+  Dictionary_done(&hardLinksDictionary,NULL,NULL);
   String_delete(fileName);
   String_delete(name);
   String_delete(basePath);
   StringList_done(&nameList);
   Dictionary_done(&duplicateNamesDictionary,NULL,NULL);
+  AutoFree_done(&autoFreeList);
 }
 
 /*---------------------------------------------------------------------*/
@@ -3354,8 +3361,7 @@ LOCAL Errors storeFileEntry(CreateInfo   *createInfo,
                        && !PatternList_match(createInfo->compressExcludePatternList,fileName,PATTERN_MATCH_MODE_EXACT);
 
     // check if file data should be delta compressed
-#warning delta compress wihtout byte compress?
-    deltaCompressFlag = (byteCompressFlag && Compress_isCompressed(createInfo->jobOptions->compressAlgorithm.delta));
+    deltaCompressFlag = Compress_isCompressed(createInfo->jobOptions->compressAlgorithm.delta);
 
     // create new archive file entry
     error = Archive_newFileEntry(&archiveEntryInfo,
@@ -3670,7 +3676,7 @@ LOCAL Errors storeImageEntry(CreateInfo   *createInfo,
                        && !PatternList_match(createInfo->compressExcludePatternList,deviceName,PATTERN_MATCH_MODE_EXACT);
 
     // check if file data should be delta compressed
-    deltaCompressFlag = (byteCompressFlag && Compress_isCompressed(createInfo->jobOptions->compressAlgorithm.delta));
+    deltaCompressFlag = Compress_isCompressed(createInfo->jobOptions->compressAlgorithm.delta);
 
     // create new archive image entry
     error = Archive_newImageEntry(&archiveEntryInfo,
@@ -4329,7 +4335,7 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
                        && !PatternList_matchStringList(createInfo->compressExcludePatternList,nameList,PATTERN_MATCH_MODE_EXACT);
 
     // check if file data should be delta compressed
-    deltaCompressFlag = (byteCompressFlag && Compress_isCompressed(createInfo->jobOptions->compressAlgorithm.delta));
+    deltaCompressFlag = Compress_isCompressed(createInfo->jobOptions->compressAlgorithm.delta);
 
     // create new archive hard link entry
     error = Archive_newHardLinkEntry(&archiveEntryInfo,
