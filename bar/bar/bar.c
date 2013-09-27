@@ -708,9 +708,10 @@ LOCAL const ConfigValueUnit CONFIG_VALUE_BITS_UNITS[] =
 
 LOCAL const ConfigValueSelect CONFIG_VALUE_ARCHIVE_TYPES[] =
 {
-  {"normal",     ARCHIVE_TYPE_NORMAL,    },
-  {"full",       ARCHIVE_TYPE_FULL,      },
-  {"incremental",ARCHIVE_TYPE_INCREMENTAL},
+  {"normal",      ARCHIVE_TYPE_NORMAL,     },
+  {"full",        ARCHIVE_TYPE_FULL,       },
+  {"incremental", ARCHIVE_TYPE_INCREMENTAL },
+  {"differential",ARCHIVE_TYPE_DIFFERENTIAL},
 };
 
 LOCAL const ConfigValueSelect CONFIG_VALUE_PATTERN_TYPES[] =
