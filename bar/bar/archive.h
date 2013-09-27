@@ -336,6 +336,26 @@ typedef bool(*ArchiveAbortCallbackFunction)(void *userData);
 
 /****************************** Macros *********************************/
 
+#ifndef NDEBUG
+  #define Archive_create(...) __Archive_create(__FILE__,__LINE__,__VA_ARGS__)
+  #define Archive_open(...)   __Archive_open  (__FILE__,__LINE__,__VA_ARGS__)
+  #define Archive_close(...)  __Archive_close (__FILE__,__LINE__,__VA_ARGS__)
+
+  #define Archive_newFileEntry(...)       __Archive_newFileEntry      (__FILE__,__LINE__,__VA_ARGS__)
+  #define Archive_newImageEntry(...)      __Archive_newImageEntry     (__FILE__,__LINE__,__VA_ARGS__)
+  #define Archive_newDirectoryEntry(...)  __Archive_newDirectoryEntry (__FILE__,__LINE__,__VA_ARGS__)
+  #define Archive_newLinkEntry(...)       __Archive_newLinkEntry      (__FILE__,__LINE__,__VA_ARGS__)
+  #define Archive_newHardLinkEntry(...)   __Archive_newHardLinkEntry  (__FILE__,__LINE__,__VA_ARGS__)
+  #define Archive_newSpecialEntry(...)    __Archive_newSpecialEntry   (__FILE__,__LINE__,__VA_ARGS__)
+  #define Archive_readFileEntry(...)      __Archive_readFileEntry     (__FILE__,__LINE__,__VA_ARGS__)
+  #define Archive_readImageEntry(...)     __Archive_readImageEntry    (__FILE__,__LINE__,__VA_ARGS__)
+  #define Archive_readDirectoryEntry(...) __Archive_readDirectoryEntry(__FILE__,__LINE__,__VA_ARGS__)
+  #define Archive_readLinkEntry(...)      __Archive_readLinkEntry     (__FILE__,__LINE__,__VA_ARGS__)
+  #define Archive_readHardLinkEntry(...)  __Archive_readHardLinkEntry (__FILE__,__LINE__,__VA_ARGS__)
+  #define Archive_readSpecialEntry(...)   __Archive_readSpecialEntry  (__FILE__,__LINE__,__VA_ARGS__)
+  #define Archive_closeEntry(...)         __Archive_closeEntry        (__FILE__,__LINE__,__VA_ARGS__)
+#endif /* not NDEBUG */
+
 /***************************** Forwards ********************************/
 
 /***************************** Functions *******************************/
@@ -402,57 +422,82 @@ const Password *Archive_appendDecryptPassword(const Password *password);
 /***********************************************************************\
 * Name   : Archive_create
 * Purpose: create archive
-* Input  : archiveInfo                 - archive info data
-*          jobOptions                  - job option settings
-*          archiveCreatedFunction      - call back for creating new
-*                                        archive file
-*          archiveNewFileUserData      - user data for call back
-*          archiveGetCryptPassword     - get password call back (can be
-*                                        NULL)
-*          archiveGetCryptPasswordData - user data for get password call
-*                                        back
+* Input  : archiveInfo                     - archive info data
+*          jobOptions                      - job option settings
+*          archiveCreatedFunction          - call back for creating new
+*                                            archive file
+*          archiveNewFileUserData          - user data for call back
+*          archiveGetCryptPasswordFunction - get password call back (can
+*                                            be NULL)
+*          archiveGetCryptPasswordData     - user data for get password
+*                                            call back
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-Errors Archive_create(ArchiveInfo                     *archiveInfo,
-                      const JobOptions                *jobOptions,
-                      ArchiveCreatedFunction          archiveCreatedFunction,
-                      void                            *archiveNewFileUserData,
-                      ArchiveGetCryptPasswordFunction archiveGetCryptPassword,
-                      void                            *archiveGetCryptPasswordData,
-                      DatabaseHandle                  *databaseHandle
-                     );
+#ifdef NDEBUG
+  Errors Archive_create(ArchiveInfo                     *archiveInfo,
+                        const JobOptions                *jobOptions,
+                        ArchiveCreatedFunction          archiveCreatedFunction,
+                        void                            *archiveNewFileUserData,
+                        ArchiveGetCryptPasswordFunction archiveGetCryptPasswordFunction,
+                        void                            *archiveGetCryptPasswordUserData,
+                        DatabaseHandle                  *databaseHandle
+                       );
+#else /* not NDEBUG */
+  Errors __Archive_create(const char                      *__fileName__,
+                          ulong                           __lineNb__,
+                          ArchiveInfo                     *archiveInfo,
+                          const JobOptions                *jobOptions,
+                          ArchiveCreatedFunction          archiveCreatedFunction,
+                          void                            *archiveNewFileUserData,
+                          ArchiveGetCryptPasswordFunction archiveGetCryptPasswordFunction,
+                          void                            *archiveGetCryptPasswordUserData,
+                          DatabaseHandle                  *databaseHandle
+                         );
+#endif /* NDEBUG */
 
 /***********************************************************************\
 * Name   : Archive_open
 * Purpose: open archive
-* Input  : archiveInfo                 - archive info data
-*          storageSpecifier            - storage specifier structure
-*          storageFileName             - storage file name
-*          storageName                 - storage name
-*          jobOptions                  - option settings
-*          maxBandWidthList            - list with max. band width to use
-*                                        [bits/s] or NULL
-*          archiveGetCryptPassword     - get password call back (can be
-*                                        NULL)
-*          archiveGetCryptPasswordData - user data for get password call
-*                                        back  archiveEntryInfo->file.fileExtendedAttributeList = &fileInfo->extendedAttributeList;
-
+* Input  : archiveInfo                     - archive info data
+*          storageSpecifier                - storage specifier structure
+*          storageFileName                 - storage file name
+*          storageName                     - storage name
+*          jobOptions                      - option settings
+*          maxBandWidthList                - list with max. band width
+*                                            to use [bits/s] or NULL
+*          archiveGetCryptPasswordFunction - get password call back (can
+*                                            be NULL)
+*          archiveGetCryptPasswordUserData - user data for get password
+*                                            call back
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-Errors Archive_open(ArchiveInfo                     *archiveInfo,
-                    const StorageSpecifier          *storageSpecifier,
-                    const String                    storageFileName,
-                    const JobOptions                *jobOptions,
-                    BandWidthList                   *maxBandWidthList,
-                    ArchiveGetCryptPasswordFunction archiveGetCryptPassword,
-                    void                            *archiveGetCryptPasswordData
-                   );
+#ifdef NDEBUG
+  Errors Archive_open(ArchiveInfo                     *archiveInfo,
+                      const StorageSpecifier          *storageSpecifier,
+                      const String                    storageFileName,
+                      const JobOptions                *jobOptions,
+                      BandWidthList                   *maxBandWidthList,
+                      ArchiveGetCryptPasswordFunction archiveGetCryptPasswordFunction,
+                      void                            *archiveGetCryptPasswordUserData
+                     );
+#else /* not NDEBUG */
+  Errors __Archive_open(const char                      *__fileName__,
+                        ulong                           __lineNb__,
+                        ArchiveInfo                     *archiveInfo,
+                        const StorageSpecifier          *storageSpecifier,
+                        const String                    storageFileName,
+                        const JobOptions                *jobOptions,
+                        BandWidthList                   *maxBandWidthList,
+                        ArchiveGetCryptPasswordFunction archiveGetCryptPasswordFunction,
+                        void                            *archiveGetCryptPasswordUserData
+                       );
+#endif /* NDEBUG */
 
 /***********************************************************************\
 * Name   : Archive_close
@@ -463,7 +508,14 @@ Errors Archive_open(ArchiveInfo                     *archiveInfo,
 * Notes  : -
 \***********************************************************************/
 
-Errors Archive_close(ArchiveInfo *archiveInfo);
+#ifdef NDEBUG
+  Errors Archive_close(ArchiveInfo *archiveInfo);
+#else /* not NDEBUG */
+  Errors __Archive_close(const char  *__fileName__,
+                         ulong       __lineNb__,
+                         ArchiveInfo *archiveInfo
+                        );
+#endif /* NDEBUG */
 
 /***********************************************************************\
 * Name   : Archive_storageInterrupt
@@ -520,14 +572,27 @@ bool Archive_eof(ArchiveInfo *archiveInfo,
 * Notes  : -
 \***********************************************************************/
 
-Errors Archive_newFileEntry(ArchiveEntryInfo                *archiveEntryInfo,
-                            ArchiveInfo                     *archiveInfo,
-                            const String                    fileName,
-                            const FileInfo                  *fileInfo,
-                            const FileExtendedAttributeList *fileExtendedAttributeList,
-                            const bool                      deltaCompressFlag,
-                            const bool                      byteCompressFlag
-                           );
+#ifdef NDEBUG
+  Errors Archive_newFileEntry(ArchiveEntryInfo                *archiveEntryInfo,
+                              ArchiveInfo                     *archiveInfo,
+                              const String                    fileName,
+                              const FileInfo                  *fileInfo,
+                              const FileExtendedAttributeList *fileExtendedAttributeList,
+                              const bool                      deltaCompressFlag,
+                              const bool                      byteCompressFlag
+                             );
+#else /* not NDEBUG */
+  Errors __Archive_newFileEntry(const char                      *__fileName__,
+                                ulong                           __lineNb__,
+                                ArchiveEntryInfo                *archiveEntryInfo,
+                                ArchiveInfo                     *archiveInfo,
+                                const String                    fileName,
+                                const FileInfo                  *fileInfo,
+                                const FileExtendedAttributeList *fileExtendedAttributeList,
+                                const bool                      deltaCompressFlag,
+                                const bool                      byteCompressFlag
+                               );
+#endif /* NDEBUG */
 
 /***********************************************************************\
 * Name   : Archive_newImageEntry
@@ -545,13 +610,25 @@ Errors Archive_newFileEntry(ArchiveEntryInfo                *archiveEntryInfo,
 * Notes  : -
 \***********************************************************************/
 
-Errors Archive_newImageEntry(ArchiveEntryInfo *archiveEntryInfo,
-                             ArchiveInfo      *archiveInfo,
-                             const String     deviceName,
-                             const DeviceInfo *deviceInfo,
-                             const bool       deltaCompressFlag,
-                             const bool       byteCompressFlag
-                            );
+#ifdef NDEBUG
+  Errors Archive_newImageEntry(ArchiveEntryInfo *archiveEntryInfo,
+                               ArchiveInfo      *archiveInfo,
+                               const String     deviceName,
+                               const DeviceInfo *deviceInfo,
+                               const bool       deltaCompressFlag,
+                               const bool       byteCompressFlag
+                              );
+#else /* not NDEBUG */
+  Errors __Archive_newImageEntry(const char       *__fileName__,
+                                 ulong            __lineNb__,
+                                 ArchiveEntryInfo *archiveEntryInfo,
+                                 ArchiveInfo      *archiveInfo,
+                                 const String     deviceName,
+                                 const DeviceInfo *deviceInfo,
+                                 const bool       deltaCompressFlag,
+                                 const bool       byteCompressFlag
+                                );
+#endif /* NDEBUG */
 
 /***********************************************************************\
 * Name   : Archive_newDirectoryEntry
@@ -566,12 +643,23 @@ Errors Archive_newImageEntry(ArchiveEntryInfo *archiveEntryInfo,
 * Notes  : -
 \***********************************************************************/
 
-Errors Archive_newDirectoryEntry(ArchiveEntryInfo                *archiveEntryInfo,
-                                 ArchiveInfo                     *archiveInfo,
-                                 const String                    directoryName,
-                                 const FileInfo                  *fileInfo,
-                                 const FileExtendedAttributeList *fileExtendedAttributeList
-                                );
+#ifdef NDEBUG
+  Errors Archive_newDirectoryEntry(ArchiveEntryInfo                *archiveEntryInfo,
+                                   ArchiveInfo                     *archiveInfo,
+                                   const String                    directoryName,
+                                   const FileInfo                  *fileInfo,
+                                   const FileExtendedAttributeList *fileExtendedAttributeList
+                                  );
+#else /* not NDEBUG */
+  Errors __Archive_newDirectoryEntry(const char                      *__fileName__,
+                                     ulong                           __lineNb__,
+                                     ArchiveEntryInfo                *archiveEntryInfo,
+                                     ArchiveInfo                     *archiveInfo,
+                                     const String                    directoryName,
+                                     const FileInfo                  *fileInfo,
+                                     const FileExtendedAttributeList *fileExtendedAttributeList
+                                    );
+#endif /* NDEBUG */
 
 /***********************************************************************\
 * Name   : Archive_newLinkEntry
@@ -587,13 +675,25 @@ Errors Archive_newDirectoryEntry(ArchiveEntryInfo                *archiveEntryIn
 * Notes  : -
 \***********************************************************************/
 
-Errors Archive_newLinkEntry(ArchiveEntryInfo                *archiveEntryInfo,
-                            ArchiveInfo                     *archiveInfo,
-                            const String                    linkName,
-                            const String                    destinationName,
-                            const FileInfo                  *fileInfo,
-                            const FileExtendedAttributeList *fileExtendedAttributeList
-                           );
+#ifdef NDEBUG
+  Errors Archive_newLinkEntry(ArchiveEntryInfo                *archiveEntryInfo,
+                              ArchiveInfo                     *archiveInfo,
+                              const String                    linkName,
+                              const String                    destinationName,
+                              const FileInfo                  *fileInfo,
+                              const FileExtendedAttributeList *fileExtendedAttributeList
+                             );
+#else /* not NDEBUG */
+  Errors __Archive_newLinkEntry(const char                      *__fileName__,
+                                ulong                           __lineNb__,
+                                ArchiveEntryInfo                *archiveEntryInfo,
+                                ArchiveInfo                     *archiveInfo,
+                                const String                    linkName,
+                                const String                    destinationName,
+                                const FileInfo                  *fileInfo,
+                                const FileExtendedAttributeList *fileExtendedAttributeList
+                               );
+#endif /* NDEBUG */
 
 /***********************************************************************\
 * Name   : Archive_newHardLinkEntry
@@ -613,14 +713,27 @@ Errors Archive_newLinkEntry(ArchiveEntryInfo                *archiveEntryInfo,
 * Notes  : -
 \***********************************************************************/
 
-Errors Archive_newHardLinkEntry(ArchiveEntryInfo                *archiveEntryInfo,
-                                ArchiveInfo                     *archiveInfo,
-                                const StringList                *fileNameList,
-                                const FileInfo                  *fileInfo,
-                                const FileExtendedAttributeList *fileExtendedAttributeList,
-                                const bool                      deltaCompressFlag,
-                                const bool                      byteCompressFlag
-                               );
+#ifdef NDEBUG
+  Errors Archive_newHardLinkEntry(ArchiveEntryInfo                *archiveEntryInfo,
+                                  ArchiveInfo                     *archiveInfo,
+                                  const StringList                *fileNameList,
+                                  const FileInfo                  *fileInfo,
+                                  const FileExtendedAttributeList *fileExtendedAttributeList,
+                                  const bool                      deltaCompressFlag,
+                                  const bool                      byteCompressFlag
+                                 );
+#else /* not NDEBUG */
+  Errors __Archive_newHardLinkEntry(const char                      *__fileName__,
+                                    ulong                           __lineNb__,
+                                    ArchiveEntryInfo                *archiveEntryInfo,
+                                    ArchiveInfo                     *archiveInfo,
+                                    const StringList                *fileNameList,
+                                    const FileInfo                  *fileInfo,
+                                    const FileExtendedAttributeList *fileExtendedAttributeList,
+                                    const bool                      deltaCompressFlag,
+                                    const bool                      byteCompressFlag
+                                   );
+#endif /* NDEBUG */
 
 /***********************************************************************\
 * Name   : Archive_newSpecialEntry
@@ -635,12 +748,23 @@ Errors Archive_newHardLinkEntry(ArchiveEntryInfo                *archiveEntryInf
 * Notes  : -
 \***********************************************************************/
 
-Errors Archive_newSpecialEntry(ArchiveEntryInfo                *archiveEntryInfo,
-                               ArchiveInfo                     *archiveInfo,
-                               const String                    specialName,
-                               const FileInfo                  *fileInfo,
-                               const FileExtendedAttributeList *fileExtendedAttributeList
-                              );
+#ifdef NDEBUG
+  Errors Archive_newSpecialEntry(ArchiveEntryInfo                *archiveEntryInfo,
+                                 ArchiveInfo                     *archiveInfo,
+                                 const String                    specialName,
+                                 const FileInfo                  *fileInfo,
+                                 const FileExtendedAttributeList *fileExtendedAttributeList
+                                );
+#else /* not NDEBUG */
+  Errors __Archive_newSpecialEntry(const char                      *__fileName__,
+                                   ulong                           __lineNb__,
+                                   ArchiveEntryInfo                *archiveEntryInfo,
+                                   ArchiveInfo                     *archiveInfo,
+                                   const String                    specialName,
+                                   const FileInfo                  *fileInfo,
+                                   const FileExtendedAttributeList *fileExtendedAttributeList
+                                  );
+#endif /* NDEBUG */
 
 /***********************************************************************\
 * Name   : Archive_getNextArchiveEntryType
@@ -694,20 +818,39 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo);
 * Notes  : -
 \***********************************************************************/
 
-Errors Archive_readFileEntry(ArchiveEntryInfo          *archiveEntryInfo,
-                             ArchiveInfo               *archiveInfo,
-                             CompressAlgorithms        *deltaCompressAlgorithm,
-                             CompressAlgorithms        *byteCompressAlgorithm,
-                             CryptAlgorithms           *cryptAlgorithm,
-                             CryptTypes                *cryptType,
-                             String                    fileName,
-                             FileInfo                  *fileInfo,
-                             FileExtendedAttributeList *fileExtendedAttributeList,
-                             String                    deltaSourceName,
-                             uint64                    *deltaSourceSize,
-                             uint64                    *fragmentOffset,
-                             uint64                    *fragmentSize
-                            );
+#ifdef NDEBUG
+  Errors Archive_readFileEntry(ArchiveEntryInfo          *archiveEntryInfo,
+                               ArchiveInfo               *archiveInfo,
+                               CompressAlgorithms        *deltaCompressAlgorithm,
+                               CompressAlgorithms        *byteCompressAlgorithm,
+                               CryptAlgorithms           *cryptAlgorithm,
+                               CryptTypes                *cryptType,
+                               String                    fileName,
+                               FileInfo                  *fileInfo,
+                               FileExtendedAttributeList *fileExtendedAttributeList,
+                               String                    deltaSourceName,
+                               uint64                    *deltaSourceSize,
+                               uint64                    *fragmentOffset,
+                               uint64                    *fragmentSize
+                              );
+#else /* not NDEBUG */
+  Errors __Archive_readFileEntry(const char                *__fileName__,
+                                 ulong                     __lineNb__,
+                                 ArchiveEntryInfo          *archiveEntryInfo,
+                                 ArchiveInfo               *archiveInfo,
+                                 CompressAlgorithms        *deltaCompressAlgorithm,
+                                 CompressAlgorithms        *byteCompressAlgorithm,
+                                 CryptAlgorithms           *cryptAlgorithm,
+                                 CryptTypes                *cryptType,
+                                 String                    fileName,
+                                 FileInfo                  *fileInfo,
+                                 FileExtendedAttributeList *fileExtendedAttributeList,
+                                 String                    deltaSourceName,
+                                 uint64                    *deltaSourceSize,
+                                 uint64                    *fragmentOffset,
+                                 uint64                    *fragmentSize
+                                );
+#endif /* NDEBUG */
 
 /***********************************************************************\
 * Name   : Archive_readImageEntry
@@ -731,19 +874,37 @@ Errors Archive_readFileEntry(ArchiveEntryInfo          *archiveEntryInfo,
 * Notes  : -
 \***********************************************************************/
 
-Errors Archive_readImageEntry(ArchiveEntryInfo   *archiveEntryInfo,
-                              ArchiveInfo        *archiveInfo,
-                              CompressAlgorithms *deltaCompressAlgorithm,
-                              CompressAlgorithms *byteCompressAlgorithm,
-                              CryptAlgorithms    *cryptAlgorithm,
-                              CryptTypes         *cryptType,
-                              String             deviceName,
-                              DeviceInfo         *deviceInfo,
-                              String             deltaSourceName,
-                              uint64             *deltaSourceSize,
-                              uint64             *blockOffset,
-                              uint64             *blockCount
-                             );
+#ifdef NDEBUG
+  Errors Archive_readImageEntry(ArchiveEntryInfo   *archiveEntryInfo,
+                                ArchiveInfo        *archiveInfo,
+                                CompressAlgorithms *deltaCompressAlgorithm,
+                                CompressAlgorithms *byteCompressAlgorithm,
+                                CryptAlgorithms    *cryptAlgorithm,
+                                CryptTypes         *cryptType,
+                                String             deviceName,
+                                DeviceInfo         *deviceInfo,
+                                String             deltaSourceName,
+                                uint64             *deltaSourceSize,
+                                uint64             *blockOffset,
+                                uint64             *blockCount
+                               );
+#else /* not NDEBUG */
+  Errors __Archive_readImageEntry(const char         *__fileName__,
+                                  ulong              __lineNb__,
+                                  ArchiveEntryInfo   *archiveEntryInfo,
+                                  ArchiveInfo        *archiveInfo,
+                                  CompressAlgorithms *deltaCompressAlgorithm,
+                                  CompressAlgorithms *byteCompressAlgorithm,
+                                  CryptAlgorithms    *cryptAlgorithm,
+                                  CryptTypes         *cryptType,
+                                  String             deviceName,
+                                  DeviceInfo         *deviceInfo,
+                                  String             deltaSourceName,
+                                  uint64             *deltaSourceSize,
+                                  uint64             *blockOffset,
+                                  uint64             *blockCount
+                                 );
+#endif /* NDEBUG */
 
 /***********************************************************************\
 * Name   : Archive_readDirectoryEntry
@@ -760,14 +921,27 @@ Errors Archive_readImageEntry(ArchiveEntryInfo   *archiveEntryInfo,
 * Notes  : -
 \***********************************************************************/
 
-Errors Archive_readDirectoryEntry(ArchiveEntryInfo          *archiveEntryInfo,
-                                  ArchiveInfo               *archiveInfo,
-                                  CryptAlgorithms           *cryptAlgorithm,
-                                  CryptTypes                *cryptType,
-                                  String                    directoryName,
-                                  FileInfo                  *fileInfo,
-                                  FileExtendedAttributeList *fileExtendedAttributeList
-                                 );
+#ifdef NDEBUG
+  Errors Archive_readDirectoryEntry(ArchiveEntryInfo          *archiveEntryInfo,
+                                    ArchiveInfo               *archiveInfo,
+                                    CryptAlgorithms           *cryptAlgorithm,
+                                    CryptTypes                *cryptType,
+                                    String                    directoryName,
+                                    FileInfo                  *fileInfo,
+                                    FileExtendedAttributeList *fileExtendedAttributeList
+                                   );
+#else /* not NDEBUG */
+  Errors __Archive_readDirectoryEntry(const char                *__fileName__,
+                                      ulong                     __lineNb__,
+                                      ArchiveEntryInfo          *archiveEntryInfo,
+                                      ArchiveInfo               *archiveInfo,
+                                      CryptAlgorithms           *cryptAlgorithm,
+                                      CryptTypes                *cryptType,
+                                      String                    directoryName,
+                                      FileInfo                  *fileInfo,
+                                      FileExtendedAttributeList *fileExtendedAttributeList
+                                     );
+#endif /* NDEBUG */
 
 /***********************************************************************\
 * Name   : Archive_readLinkEntry
@@ -785,15 +959,29 @@ Errors Archive_readDirectoryEntry(ArchiveEntryInfo          *archiveEntryInfo,
 * Notes  : -
 \***********************************************************************/
 
-Errors Archive_readLinkEntry(ArchiveEntryInfo          *archiveEntryInfo,
-                             ArchiveInfo               *archiveInfo,
-                             CryptAlgorithms           *cryptAlgorithm,
-                             CryptTypes                *cryptType,
-                             String                    linkName,
-                             String                    destinationName,
-                             FileInfo                  *fileInfo,
-                             FileExtendedAttributeList *fileExtendedAttributeList
-                            );
+#ifdef NDEBUG
+  Errors Archive_readLinkEntry(ArchiveEntryInfo          *archiveEntryInfo,
+                               ArchiveInfo               *archiveInfo,
+                               CryptAlgorithms           *cryptAlgorithm,
+                               CryptTypes                *cryptType,
+                               String                    linkName,
+                               String                    destinationName,
+                               FileInfo                  *fileInfo,
+                               FileExtendedAttributeList *fileExtendedAttributeList
+                              );
+#else /* not NDEBUG */
+  Errors __Archive_readLinkEntry(const char                *__fileName__,
+                                 ulong                     __lineNb__,
+                                 ArchiveEntryInfo          *archiveEntryInfo,
+                                 ArchiveInfo               *archiveInfo,
+                                 CryptAlgorithms           *cryptAlgorithm,
+                                 CryptTypes                *cryptType,
+                                 String                    linkName,
+                                 String                    destinationName,
+                                 FileInfo                  *fileInfo,
+                                 FileExtendedAttributeList *fileExtendedAttributeList
+                                );
+#endif /* NDEBUG */
 
 /***********************************************************************\
 * Name   : Archive_readHardLinkEntry
@@ -820,20 +1008,39 @@ Errors Archive_readLinkEntry(ArchiveEntryInfo          *archiveEntryInfo,
 * Notes  : -
 \***********************************************************************/
 
-Errors Archive_readHardLinkEntry(ArchiveEntryInfo          *archiveEntryInfo,
-                                 ArchiveInfo               *archiveInfo,
-                                 CompressAlgorithms        *deltaCompressAlgorithm,
-                                 CompressAlgorithms        *byteCompressAlgorithm,
-                                 CryptAlgorithms           *cryptAlgorithm,
-                                 CryptTypes                *cryptType,
-                                 StringList                *fileNameList,
-                                 FileInfo                  *fileInfo,
-                                 FileExtendedAttributeList *fileExtendedAttributeList,
-                                 String                    deltaSourceName,
-                                 uint64                    *deltaSourceSize,
-                                 uint64                    *fragmentOffset,
-                                 uint64                    *fragmentSize
-                                );
+#ifdef NDEBUG
+  Errors Archive_readHardLinkEntry(ArchiveEntryInfo          *archiveEntryInfo,
+                                   ArchiveInfo               *archiveInfo,
+                                   CompressAlgorithms        *deltaCompressAlgorithm,
+                                   CompressAlgorithms        *byteCompressAlgorithm,
+                                   CryptAlgorithms           *cryptAlgorithm,
+                                   CryptTypes                *cryptType,
+                                   StringList                *fileNameList,
+                                   FileInfo                  *fileInfo,
+                                   FileExtendedAttributeList *fileExtendedAttributeList,
+                                   String                    deltaSourceName,
+                                   uint64                    *deltaSourceSize,
+                                   uint64                    *fragmentOffset,
+                                   uint64                    *fragmentSize
+                                  );
+#else /* not NDEBUG */
+  Errors __Archive_readHardLinkEntry(const char                *__fileName__,
+                                     ulong                     __lineNb__,
+                                     ArchiveEntryInfo          *archiveEntryInfo,
+                                     ArchiveInfo               *archiveInfo,
+                                     CompressAlgorithms        *deltaCompressAlgorithm,
+                                     CompressAlgorithms        *byteCompressAlgorithm,
+                                     CryptAlgorithms           *cryptAlgorithm,
+                                     CryptTypes                *cryptType,
+                                     StringList                *fileNameList,
+                                     FileInfo                  *fileInfo,
+                                     FileExtendedAttributeList *fileExtendedAttributeList,
+                                     String                    deltaSourceName,
+                                     uint64                    *deltaSourceSize,
+                                     uint64                    *fragmentOffset,
+                                     uint64                    *fragmentSize
+                                    );
+#endif /* NDEBUG */
 
 /***********************************************************************\
 * Name   : Archive_readSpecialEntry
@@ -850,14 +1057,27 @@ Errors Archive_readHardLinkEntry(ArchiveEntryInfo          *archiveEntryInfo,
 * Notes  : -
 \***********************************************************************/
 
-Errors Archive_readSpecialEntry(ArchiveEntryInfo          *archiveEntryInfo,
-                                ArchiveInfo               *archiveInfo,
-                                CryptAlgorithms           *cryptAlgorithm,
-                                CryptTypes                *cryptType,
-                                String                    specialName,
-                                FileInfo                  *fileInfo,
-                                FileExtendedAttributeList *fileExtendedAttributeList
-                               );
+#ifdef NDEBUG
+  Errors Archive_readSpecialEntry(ArchiveEntryInfo          *archiveEntryInfo,
+                                  ArchiveInfo               *archiveInfo,
+                                  CryptAlgorithms           *cryptAlgorithm,
+                                  CryptTypes                *cryptType,
+                                  String                    specialName,
+                                  FileInfo                  *fileInfo,
+                                  FileExtendedAttributeList *fileExtendedAttributeList
+                                 );
+#else /* not NDEBUG */
+  Errors __Archive_readSpecialEntry(const char                *__fileName__,
+                                    ulong                     __lineNb__,
+                                    ArchiveEntryInfo          *archiveEntryInfo,
+                                    ArchiveInfo               *archiveInfo,
+                                    CryptAlgorithms           *cryptAlgorithm,
+                                    CryptTypes                *cryptType,
+                                    String                    specialName,
+                                    FileInfo                  *fileInfo,
+                                    FileExtendedAttributeList *fileExtendedAttributeList
+                                   );
+#endif /* NDEBUG */
 
 /***********************************************************************\
 * Name   : Archive_closeEntry
@@ -868,7 +1088,14 @@ Errors Archive_readSpecialEntry(ArchiveEntryInfo          *archiveEntryInfo,
 * Notes  : -
 \***********************************************************************/
 
-Errors Archive_closeEntry(ArchiveEntryInfo *archiveEntryInfo);
+#ifdef NDEBUG
+  Errors Archive_closeEntry(ArchiveEntryInfo *archiveEntryInfo);
+#else /* not NDEBUG */
+  Errors __Archive_closeEntry(const char       *__fileName__,
+                              ulong            __lineNb__,
+                              ArchiveEntryInfo *archiveEntryInfo
+                             );
+#endif /* NDEBUG */
 
 /***********************************************************************\
 * Name   : Archive_writeData
