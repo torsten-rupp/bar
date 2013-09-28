@@ -900,6 +900,7 @@ LOCAL bool waitModified(const char *fileName,
     case SEMAPHORE_LOCK_TYPE_NONE:
       break;
     case SEMAPHORE_LOCK_TYPE_READ:
+      // semaphore is read-locked -> temporary revert own read-lock and wait for modification signal
       __SEMAPHORE_LOCK(DEBUG_FLAG_READ,DEBUG_LOCK_TYPE_READ,"R",semaphore);
       {
         assert(semaphore->readLockCount > 0);
@@ -947,10 +948,11 @@ LOCAL bool waitModified(const char *fileName,
       __SEMAPHORE_UNLOCK(DEBUG_FLAG_READ,"R",semaphore,semaphore->readLockCount);
       break;
     case SEMAPHORE_LOCK_TYPE_READ_WRITE:
+      // semaphore is read/write-locked -> temporary revert own read/write-lock and wait for modification signal
       assert(semaphore->readLockCount == 0);
       assert(semaphore->readWriteLockCount > 0);
 
-      // temporary revert write-lock
+      // temporary revert write-lock (Note: no locking is required, because read/write-lock is already exclusive)
       savedReadWriteLockCount = semaphore->readWriteLockCount;
       semaphore->readWriteLockCount = 0;
       semaphore->lockType = SEMAPHORE_LOCK_TYPE_NONE;
@@ -990,18 +992,17 @@ LOCAL bool waitModified(const char *fileName,
       }
       assert(semaphore->readLockCount == 0);
 
-      // decrement write request counter
+      // restore temporary reverted write-lock
       __SEMAPHORE_REQUEST_LOCK(semaphore);
       {
         assert(semaphore->readWriteRequestCount > 0);
         semaphore->readWriteRequestCount--;
+
+        assert(semaphore->readWriteLockCount == 0);
+        semaphore->readWriteLockCount = savedReadWriteLockCount;
+        semaphore->lockType = SEMAPHORE_LOCK_TYPE_READ_WRITE;
       }
       __SEMAPHORE_REQUEST_UNLOCK(semaphore);
-
-      // restore temporary reverted write-lock
-      assert(semaphore->readWriteLockCount == 0);
-      semaphore->readWriteLockCount = savedReadWriteLockCount;
-      semaphore->lockType = SEMAPHORE_LOCK_TYPE_READ_WRITE;
       break;
     #ifndef NDEBUG
       default:
