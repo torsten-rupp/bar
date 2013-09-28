@@ -279,7 +279,11 @@ bool Index_parseMode(const char *name, IndexModes *indexMode)
   if (File_existsCString(indexDatabaseFileName))
   {
     // open index database
-    error = Database_open(indexDatabaseHandle,indexDatabaseFileName,DATABASE_OPENMODE_READWRITE);
+    #ifdef NDEBUG
+      error = Database_open(indexDatabaseHandle,indexDatabaseFileName,DATABASE_OPENMODE_READWRITE);
+    #else /* not NDEBUG */
+      error = __Database_open(__fileName__,__lineNb__,indexDatabaseHandle,indexDatabaseFileName,DATABASE_OPENMODE_READWRITE);
+    #endif /* NDEBUG */
     if (error != ERROR_NONE)
     {
       return error;
@@ -288,7 +292,11 @@ bool Index_parseMode(const char *name, IndexModes *indexMode)
   else
   {
     // create index database
-    error = Database_open(indexDatabaseHandle,indexDatabaseFileName,DATABASE_OPENMODE_CREATE);
+    #ifdef NDEBUG
+      error = Database_open(indexDatabaseHandle,indexDatabaseFileName,DATABASE_OPENMODE_CREATE);
+    #else /* not NDEBUG */
+      error = __Database_open(__fileName__,__lineNb__,indexDatabaseHandle,indexDatabaseFileName,DATABASE_OPENMODE_CREATE);
+    #endif /* NDEBUG */
     if (error != ERROR_NONE)
     {
       return error;
@@ -300,7 +308,11 @@ bool Index_parseMode(const char *name, IndexModes *indexMode)
                             );
     if (error != ERROR_NONE)
     {
-      Database_close(indexDatabaseHandle);
+      #ifdef NDEBUG
+        Database_close(indexDatabaseHandle);
+      #else /* not NDEBUG */
+        __Database_close(__fileName__,__lineNb__,indexDatabaseHandle);
+      #endif /* NDEBUG */
       return error;
     }
   }
@@ -326,7 +338,11 @@ bool Index_parseMode(const char *name, IndexModes *indexMode)
                                );
   if (error != ERROR_NONE)
   {
-    Database_close(indexDatabaseHandle);
+    #ifdef NDEBUG
+      Database_close(indexDatabaseHandle);
+    #else /* not NDEBUG */
+      __Database_close(__fileName__,__lineNb__,indexDatabaseHandle);
+    #endif /* NDEBUG */
     return error;
   }
 
@@ -346,7 +362,11 @@ bool Index_parseMode(const char *name, IndexModes *indexMode)
                                 );
         if (error != ERROR_NONE)
         {
-          Database_close(indexDatabaseHandle);
+          #ifdef NDEBUG
+            Database_close(indexDatabaseHandle);
+          #else /* not NDEBUG */
+            __Database_close(__fileName__,__lineNb__,indexDatabaseHandle);
+          #endif /* NDEBUG */
           return error;
         }
 
@@ -359,7 +379,11 @@ bool Index_parseMode(const char *name, IndexModes *indexMode)
                                      );
         if (error != ERROR_NONE)
         {
-          Database_close(indexDatabaseHandle);
+          #ifdef NDEBUG
+            Database_close(indexDatabaseHandle);
+          #else /* not NDEBUG */
+            __Database_close(__fileName__,__lineNb__,indexDatabaseHandle);
+          #endif /* NDEBUG */
           return error;
         }
 
@@ -374,12 +398,6 @@ bool Index_parseMode(const char *name, IndexModes *indexMode)
       #endif
     }
   }
-
-  #ifdef NDEBUG
-    DEBUG_ADD_RESOURCE_TRACE("index",indexDatabaseHandle);
-  #else /* not NDEBUG */
-    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,"index",indexDatabaseHandle);
-  #endif /* NDEBUG */
 
   return ERROR_NONE;
 }
@@ -396,12 +414,10 @@ bool Index_parseMode(const char *name, IndexModes *indexMode)
   assert(indexDatabaseHandle != NULL);
 
   #ifdef NDEBUG
-    DEBUG_REMOVE_RESOURCE_TRACE(indexDatabaseHandle);
+    Database_close(indexDatabaseHandle);
   #else /* not NDEBUG */
-    DEBUG_REMOVE_RESOURCE_TRACEX(__fileName__,__lineNb__,indexDatabaseHandle);
+    __Database_close(__fileName__,__lineNb__,indexDatabaseHandle);
   #endif /* NDEBUG */
-
-  Database_close(indexDatabaseHandle);
 }
 
 bool Index_findById(DatabaseHandle *databaseHandle,
