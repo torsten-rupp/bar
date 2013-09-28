@@ -2736,7 +2736,7 @@ LOCAL void doneAll(void)
   ConfigValue_done(CONFIG_VALUES,SIZE_OF_ARRAY(CONFIG_VALUES));
 
   // deinitialize variables
-  if (indexDatabaseHandle != NULL) Index_done(indexDatabaseHandle);
+  if (indexDatabaseHandle != NULL) Index_done(&databaseHandle);
   Semaphore_done(&consoleLock);
   if (defaultDevice.writeCommand != NULL) String_delete(defaultDevice.writeCommand);
   if (defaultDevice.writePostProcessCommand != NULL) String_delete(defaultDevice.writePostProcessCommand);
@@ -5263,13 +5263,7 @@ exit(1);
       return errorToExitcode(error);
     }
     indexDatabaseHandle = &databaseHandle;
-
     if (printInfoFlag) printf("ok\n");
-  }
-  else
-  {
-    // no index database
-    indexDatabaseHandle = NULL;
   }
 
   // create temporary directory
@@ -5658,12 +5652,6 @@ fprintf(stderr,"%s,%d: t=%s\n",__FILE__,__LINE__,t);
   // delete temporary directory
 #warning remove
 //  File_delete(tmpDirectory,TRUE);
-
-  // close index database (if open)
-  if (indexDatabaseHandle != NULL)
-  {
-    Database_close(indexDatabaseHandle);
-  }
 
   // free resources
   doneAll();
