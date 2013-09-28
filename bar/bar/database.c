@@ -390,10 +390,19 @@ LOCAL int executeCallback(void *userData,
 
 /*---------------------------------------------------------------------*/
 
-Errors Database_open(DatabaseHandle    *databaseHandle,
-                     const char        *fileName,
-                     DatabaseOpenModes databaseOpenMode
-                    )
+#ifdef NDEBUG
+  Errors Database_open(DatabaseHandle    *databaseHandle,
+                       const char        *fileName,
+                       DatabaseOpenModes databaseOpenMode
+                      )
+#else /* not NDEBUG */
+  Errors __Database_open(const char        *__fileName__,
+                         uint              __lineNb__,
+                         DatabaseHandle    *databaseHandle,
+                         const char        *fileName,
+                         DatabaseOpenModes databaseOpenMode
+                        )
+#endif /* NDEBUG */
 {
   String directory;
   Errors error;
@@ -442,8 +451,9 @@ Errors Database_open(DatabaseHandle    *databaseHandle,
   sqliteResult = sqlite3_open_v2(fileName,&databaseHandle->handle,sqliteMode,NULL);
   if (sqliteResult != SQLITE_OK)
   {
+    error = ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->handle),sqlite3_errmsg(databaseHandle->handle));
     Semaphore_done(&databaseHandle->lock);
-    return ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->handle),sqlite3_errmsg(databaseHandle->handle));
+    return error;
   }
 
   // register REGEXP functions
@@ -457,12 +467,40 @@ Errors Database_open(DatabaseHandle    *databaseHandle,
                           NULL
                          );
 
+  #ifdef DATABASE_DEBUG
+    fprintf(stderr,"Database debug: open %s: %p\n",fileName,databaseHandle);
+  #endif
+
+  #ifdef NDEBUG
+    DEBUG_ADD_RESOURCE_TRACE("database",databaseHandle);
+  #else /* not NDEBUG */
+    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,"database",databaseHandle);
+  #endif /* NDEBUG */
+
   return ERROR_NONE;
 }
 
-void Database_close(DatabaseHandle *databaseHandle)
+#ifdef NDEBUG
+  void Database_close(DatabaseHandle *databaseHandle)
+#else /* not NDEBUG */
+  void __Database_close(const char   *__fileName__,
+                        uint         __lineNb__,
+                        DatabaseHandle *databaseHandle
+                       )
+#endif /* NDEBUG */
 {
   assert(databaseHandle != NULL);
+  assert(databaseHandle->handle != NULL);
+
+  #ifdef NDEBUG
+    DEBUG_REMOVE_RESOURCE_TRACE(databaseHandle);
+  #else /* not NDEBUG */
+    DEBUG_REMOVE_RESOURCE_TRACEX(__fileName__,__lineNb__,databaseHandle);
+  #endif /* NDEBUG */
+
+  #ifdef DATABASE_DEBUG
+    fprintf(stderr,"Database debug: close: %p\n",databaseHandle);
+  #endif
 
   sqlite3_close(databaseHandle->handle);
   Semaphore_done(&databaseHandle->lock);
@@ -504,6 +542,7 @@ Errors Database_execute(DatabaseHandle   *databaseHandle,
   int              sqliteResult;
 
   assert(databaseHandle != NULL);
+  assert(databaseHandle->handle != NULL);
   assert(command != NULL);
 
   // format SQL command string
@@ -516,6 +555,7 @@ Errors Database_execute(DatabaseHandle   *databaseHandle,
 
   // execute SQL command
   error = ERROR_NONE;
+  sqlite3_mutex_enter(sqlite3_db_mutex(databaseHandle->handle));
   SEMAPHORE_LOCKED_DO(lockFlag,&databaseHandle->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
   {
     #ifdef DATABASE_DEBUG
@@ -529,15 +569,20 @@ Errors Database_execute(DatabaseHandle   *databaseHandle,
                                 (databaseFunction != NULL) ? &databaseCallback : NULL,
                                 NULL
                                );
-    if (sqliteResult == SQLITE_OK)
+    if      (sqliteResult == SQLITE_OK)
     {
       error = ERROR_NONE;
+    }
+    else if (sqliteResult == SQLITE_MISUSE)
+    {
+      HALT_INTERNAL_ERROR("SQLite library reported misuse");
     }
     else
     {
       error = ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->handle),sqlite3_errmsg(databaseHandle->handle));
     }
   }
+  sqlite3_mutex_leave(sqlite3_db_mutex(databaseHandle->handle));
   if (error != ERROR_NONE)
   {
     String_delete(sqlString);
@@ -562,8 +607,9 @@ Errors Database_prepare(DatabaseQueryHandle *databaseQueryHandle,
   bool    lockFlag;
   int     sqliteResult;
 
-  assert(databaseHandle != NULL);
   assert(databaseQueryHandle != NULL);
+  assert(databaseHandle != NULL);
+  assert(databaseHandle->handle != NULL);
   assert(command != NULL);
 
   // initialize variables
@@ -1040,6 +1086,7 @@ Errors Database_setInteger64(DatabaseHandle *databaseHandle,
   int     sqliteResult;
 
   assert(databaseHandle != NULL);
+  assert(databaseHandle->handle != NULL);
   assert(tableName != NULL);
   assert(columnName != NULL);
 
@@ -1065,6 +1112,7 @@ Errors Database_setInteger64(DatabaseHandle *databaseHandle,
 
   // execute SQL command
   error = ERROR_NONE;
+  sqlite3_mutex_enter(sqlite3_db_mutex(databaseHandle->handle));
   SEMAPHORE_LOCKED_DO(lockFlag,&databaseHandle->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
   {
     #ifdef DATABASE_DEBUG
@@ -1076,15 +1124,20 @@ Errors Database_setInteger64(DatabaseHandle *databaseHandle,
                                 NULL,
                                 NULL
                                );
-    if (sqliteResult == SQLITE_OK)
+    if      (sqliteResult == SQLITE_OK)
     {
       error = ERROR_NONE;
+    }
+    else if (sqliteResult == SQLITE_MISUSE)
+    {
+      HALT_INTERNAL_ERROR("SQLite library reported misuse");
     }
     else
     {
       error = ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->handle),sqlite3_errmsg(databaseHandle->handle));
     }
   }
+  sqlite3_mutex_leave(sqlite3_db_mutex(databaseHandle->handle));
   if (error != ERROR_NONE)
   {
     String_delete(sqlString);
@@ -1112,6 +1165,7 @@ Errors Database_setString(DatabaseHandle *databaseHandle,
   int     sqliteResult;
 
   assert(databaseHandle != NULL);
+  assert(databaseHandle->handle != NULL);
   assert(tableName != NULL);
   assert(columnName != NULL);
 
@@ -1137,6 +1191,7 @@ Errors Database_setString(DatabaseHandle *databaseHandle,
 
   // execute SQL command
   error = ERROR_NONE;
+  sqlite3_mutex_enter(sqlite3_db_mutex(databaseHandle->handle));
   SEMAPHORE_LOCKED_DO(lockFlag,&databaseHandle->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
   {
     #ifdef DATABASE_DEBUG
@@ -1148,15 +1203,20 @@ Errors Database_setString(DatabaseHandle *databaseHandle,
                                 NULL,
                                 NULL
                                );
-    if (sqliteResult == SQLITE_OK)
+    if      (sqliteResult == SQLITE_OK)
     {
       error = ERROR_NONE;
+    }
+    else if (sqliteResult == SQLITE_MISUSE)
+    {
+      HALT_INTERNAL_ERROR("SQLite library reported misuse");
     }
     else
     {
       error = ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->handle),sqlite3_errmsg(databaseHandle->handle));
     }
   }
+  sqlite3_mutex_leave(sqlite3_db_mutex(databaseHandle->handle));
   if (error != ERROR_NONE)
   {
     String_delete(sqlString);

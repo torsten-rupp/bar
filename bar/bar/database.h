@@ -12,7 +12,7 @@
 #define __DATABASE__
 
 /****************************** Includes *******************************/
-#include <config.h>  // use <...> to support separated build directory 
+#include <config.h>  // use <...> to support separated build directory
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -81,6 +81,11 @@ typedef int64 DatabaseId;
 #define DATABASE_LOCKED_DO(databaseHandle) \
   for (Database_lock(databaseHandle); Database_isLocked(databaseHandle); Database_unlock(databaseHandle))
 
+#ifndef NDEBUG
+  #define Database_open(...)  __Database_open(__FILE__,__LINE__,__VA_ARGS__)
+  #define Database_close(...) __Database_close(__FILE__,__LINE__,__VA_ARGS__)
+#endif /* not NDEBUG */
+
 /***************************** Forwards ********************************/
 
 /***************************** Functions *******************************/
@@ -99,10 +104,19 @@ typedef int64 DatabaseId;
 * Notes  : -
 \***********************************************************************/
 
-Errors Database_open(DatabaseHandle    *databaseHandle,
-                     const char        *fileName,
-                     DatabaseOpenModes databaseOpenMode
-                    );
+#ifdef NDEBUG
+  Errors Database_open(DatabaseHandle    *databaseHandle,
+                       const char        *fileName,
+                       DatabaseOpenModes databaseOpenMode
+                      );
+#else /* not NDEBUG */
+  Errors __Database_open(const char        *__fileName__,
+                         uint              __lineNb__,
+                         DatabaseHandle    *databaseHandle,
+                         const char        *fileName,
+                         DatabaseOpenModes databaseOpenMode
+                        );
+#endif /* NDEBUG */
 
 /***********************************************************************\
 * Name   : Database_close
@@ -113,7 +127,14 @@ Errors Database_open(DatabaseHandle    *databaseHandle,
 * Notes  : -
 \***********************************************************************/
 
-void Database_close(DatabaseHandle *databaseHandle);
+#ifdef NDEBUG
+  void Database_close(DatabaseHandle *databaseHandle);
+#else /* not NDEBUG */
+  void __Database_close(const char   *__fileName__,
+                        uint         __lineNb__,
+                        DatabaseHandle *databaseHandle
+                       );
+#endif /* NDEBUG */
 
 /***********************************************************************\
 * Name   : Database_lock
