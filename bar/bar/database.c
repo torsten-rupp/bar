@@ -34,7 +34,7 @@
 #include "database.h"
 
 /****************** Conditional compilation switches *******************/
-#define _DATABASE_DEBUG
+#define DATABASE_DEBUG
 
 /***************************** Constants *******************************/
 
@@ -905,7 +905,7 @@ Errors Database_getInteger64(DatabaseHandle *databaseHandle,
   SEMAPHORE_LOCKED_DO(lockFlag,&databaseHandle->lock,SEMAPHORE_LOCK_TYPE_READ)
   {
     #ifdef DATABASE_DEBUG
-      fprintf(stderr,"Database debug: get integer 64: %s\n",__FILE__,__LINE__,String_cString(sqlString));
+      fprintf(stderr,"Database debug: get integer 64: %s\n",String_cString(sqlString));
     #endif
     sqliteResult = sqlite3_prepare_v2(databaseHandle->handle,
                                       String_cString(sqlString),
@@ -989,7 +989,7 @@ Errors Database_getString(DatabaseHandle *databaseHandle,
   SEMAPHORE_LOCKED_DO(lockFlag,&databaseHandle->lock,SEMAPHORE_LOCK_TYPE_READ)
   {
     #ifdef DATABASE_DEBUG
-      fprintf(stderr,"Database debug: get integer 64: %s\n",__FILE__,__LINE__,String_cString(sqlString));
+      fprintf(stderr,"Database debug: get integer 64: %s\n",String_cString(sqlString));
     #endif
     sqliteResult = sqlite3_prepare_v2(databaseHandle->handle,
                                       String_cString(sqlString),
@@ -1068,7 +1068,7 @@ Errors Database_setInteger64(DatabaseHandle *databaseHandle,
   SEMAPHORE_LOCKED_DO(lockFlag,&databaseHandle->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
   {
     #ifdef DATABASE_DEBUG
-      fprintf(stderr,"Database debug: set integer 64: %s\n",__FILE__,__LINE__,String_cString(sqlString));
+      fprintf(stderr,"Database debug: set integer 64: %s\n",String_cString(sqlString));
     #endif
     sqliteResult = sqlite3_exec(databaseHandle->handle,
                                 String_cString(sqlString),
@@ -1140,7 +1140,7 @@ Errors Database_setString(DatabaseHandle *databaseHandle,
   SEMAPHORE_LOCKED_DO(lockFlag,&databaseHandle->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
   {
     #ifdef DATABASE_DEBUG
-      fprintf(stderr,"Database debug: set string 64: %s\n",__FILE__,__LINE__,String_cString(sqlString));
+      fprintf(stderr,"Database debug: set string 64: %s\n",String_cString(sqlString));
     #endif
     sqliteResult = sqlite3_exec(databaseHandle->handle,
                                 String_cString(sqlString),
