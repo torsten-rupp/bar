@@ -260,9 +260,17 @@ bool Index_parseMode(const char *name, IndexModes *indexMode)
   }
 }
 
-Errors Index_init(DatabaseHandle *indexDatabaseHandle,
-                  const char     *indexDatabaseFileName
-                 )
+#ifdef NDEBUG
+  Errors Index_init(DatabaseHandle *indexDatabaseHandle,
+                    const char     *indexDatabaseFileName
+                   )
+#else /* not NDEBUG */
+  Errors __Index_init(const char     *__fileName__,
+                      uint           __lineNb__,
+                      DatabaseHandle *indexDatabaseHandle,
+                      const char     *indexDatabaseFileName
+                     )
+#endif /* NDEBUG */
 {
   Errors error;
   int64  indexVersion;
@@ -367,12 +375,31 @@ Errors Index_init(DatabaseHandle *indexDatabaseHandle,
     }
   }
 
+  #ifdef NDEBUG
+    DEBUG_ADD_RESOURCE_TRACE("index",indexDatabaseHandle);
+  #else /* not NDEBUG */
+    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,"index",indexDatabaseHandle);
+  #endif /* NDEBUG */
+
   return ERROR_NONE;
 }
 
-void Index_done(DatabaseHandle *indexDatabaseHandle)
+#ifdef NDEBUG
+  void Index_done(DatabaseHandle *indexDatabaseHandle)
+#else /* not NDEBUG */
+  void __Index_done(const char     *__fileName__,
+                    uint           __lineNb__,
+                    DatabaseHandle *indexDatabaseHandle
+                   )
+#endif /* NDEBUG */
 {
   assert(indexDatabaseHandle != NULL);
+
+  #ifdef NDEBUG
+    DEBUG_REMOVE_RESOURCE_TRACE(indexDatabaseHandle);
+  #else /* not NDEBUG */
+    DEBUG_REMOVE_RESOURCE_TRACEX(__fileName__,__lineNb__,indexDatabaseHandle);
+  #endif /* NDEBUG */
 
   Database_close(indexDatabaseHandle);
 }

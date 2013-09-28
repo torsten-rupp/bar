@@ -64,6 +64,11 @@ typedef enum
 
 /****************************** Macros *********************************/
 
+#ifndef NDEBUG
+  #define Index_init(...) __Index_init(__FILE__,__LINE__,__VA_ARGS__)
+  #define Index_done(...) __Index_done(__FILE__,__LINE__,__VA_ARGS__)
+#endif /* not NDEBUG */
+
 /***************************** Forwards ********************************/
 
 /***************************** Functions *******************************/
@@ -96,7 +101,7 @@ void Index_doneAll(void);
 
 /***********************************************************************\
 * Name   : Index_stateToString
-* Purpose: get name of index state
+* Purpose: get name of index sIndex_donetateIndex_init
 * Input  : indexState   - index state
 *          defaultValue - default value
 * Output : -
@@ -150,9 +155,17 @@ bool Index_parseMode(const char *name, IndexModes *indexMode);
 * Notes  : -
 \***********************************************************************/
 
-Errors Index_init(DatabaseHandle *indexDatabaseHandle,
-                  const char     *indexDatabaseFileName
-                 );
+#ifdef NDEBUG
+  Errors Index_init(DatabaseHandle *indexDatabaseHandle,
+                    const char     *indexDatabaseFileName
+                   );
+#else /* not NDEBUG */
+  Errors __Index_init(const char     *__fileName__,
+                      uint           __lineNb__,
+                      DatabaseHandle *indexDatabaseHandle,
+                      const char     *indexDatabaseFileName
+                     );
+#endif /* NDEBUG */
 
 /***********************************************************************\
 * Name   : Index_done
@@ -163,7 +176,14 @@ Errors Index_init(DatabaseHandle *indexDatabaseHandle,
 * Notes  : -
 \***********************************************************************/
 
-void Index_done(DatabaseHandle *indexDatabaseHandle);
+#ifdef NDEBUG
+  void Index_done(DatabaseHandle *indexDatabaseHandle);
+#else /* not NDEBUG */
+  void __Index_done(const char     *__fileName__,
+                    uint           __lineNb__,
+                    DatabaseHandle *indexDatabaseHandle
+                   );
+#endif /* NDEBUG */
 
 /***********************************************************************\
 * Name   : Index_findById
