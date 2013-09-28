@@ -212,6 +212,8 @@ LOCAL const char       *pidFileName;
 LOCAL String           keyFileName;
 LOCAL uint             keyBits;
 
+LOCAL DatabaseHandle   databaseHandle;
+
 /*---------------------------------------------------------------------*/
 
 LOCAL StringList         configFileNameList;  // list of configuration files to read
@@ -2606,12 +2608,6 @@ LOCAL Errors initAll(void)
   jobName                               = NULL;
   storageName                           = NULL;
   initJobOptions(&jobOptions);
-//  List_init(&ftpServerList);
-//  Semaphore_init(&ftpServerListLock);
-//  List_init(&sshServerList);
-//  Semaphore_init(&sshServerListLock);
-//  List_init(&webdavServerList);
-//  Semaphore_init(&webdavServerListLock);
 
   List_init(&serverList);
   Semaphore_init(&serverListLock);
@@ -2692,6 +2688,8 @@ LOCAL Errors initAll(void)
   Thread_initLocalVariable(&outputLineHandle,outputLineInit,NULL);
   lastOutputLine                         = NULL;
 
+  indexDatabaseHandle                    = NULL;
+
   // initialize default ssh keys
   fileName = File_appendFileNameCString(String_newCString(getenv("HOME")),".ssh/id_rsa.pub");
   if (File_exists(fileName))
@@ -2738,6 +2736,7 @@ LOCAL void doneAll(void)
   ConfigValue_done(CONFIG_VALUES,SIZE_OF_ARRAY(CONFIG_VALUES));
 
   // deinitialize variables
+  if (indexDatabaseHandle != NULL) Index_done(indexDatabaseHandle);
   Semaphore_done(&consoleLock);
   if (defaultDevice.writeCommand != NULL) String_delete(defaultDevice.writeCommand);
   if (defaultDevice.writePostProcessCommand != NULL) String_delete(defaultDevice.writePostProcessCommand);
@@ -5033,10 +5032,9 @@ exit(12);
 
 int main(int argc, const char *argv[])
 {
-  Errors         error;
-  String         fileName;
-  bool           printInfoFlag;
-  DatabaseHandle databaseHandle;
+  Errors error;
+  String fileName;
+  bool   printInfoFlag;
 
   // init
   error = initAll();
@@ -5264,7 +5262,6 @@ exit(1);
       #endif /* not NDEBUG */
       return errorToExitcode(error);
     }
-
     indexDatabaseHandle = &databaseHandle;
 
     if (printInfoFlag) printf("ok\n");
@@ -5291,6 +5288,7 @@ exit(1);
     return errorToExitcode(error);
   }
 
+#warning todo install sigalrm handler to avoid crashes?
 signal(SIGALRM,signalAlarmHandler);
 
   error = ERROR_NONE;
