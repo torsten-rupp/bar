@@ -138,12 +138,13 @@ void *AutoFree_save(AutoFreeList *autoFreeList);
 * Purpose: restore saved auto-free list
 * Input  : autoFreeList - auto-free list
 *          savePoint    - save point
+*          freeFlag     - TRUE to free resources
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-void AutoFree_restore(AutoFreeList *autoFreeList, void *savePoint);
+void AutoFree_restore(AutoFreeList *autoFreeList, void *savePoint, bool freeFlag);
 
 /***********************************************************************\
 * Name   : AutoFree_cleanup

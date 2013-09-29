@@ -64,7 +64,7 @@ void *AutoFree_save(AutoFreeList *autoFreeList)
   return autoFreeList->tail;
 }
 
-void AutoFree_restore(AutoFreeList *autoFreeList, void *savePoint)
+void AutoFree_restore(AutoFreeList *autoFreeList, void *savePoint, bool freeFlag)
 {
   AutoFreeNode *autoFreeNode;
 
@@ -76,7 +76,7 @@ void AutoFree_restore(AutoFreeList *autoFreeList, void *savePoint)
     autoFreeNode = (AutoFreeNode*)List_getLast(autoFreeList);
 
     // free resource
-    if (autoFreeNode->autoFreeFunction != NULL)
+    if (freeFlag && (autoFreeNode->autoFreeFunction != NULL))
     {
 #if 0
       #ifndef NDEBUG
