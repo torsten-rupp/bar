@@ -376,6 +376,7 @@ LOCAL Errors readIncrementalList(const String fileName,
   assert(fileName != NULL);
   assert(namesDictionary != NULL);
 
+  // initialize variables
   keyData = malloc(MAX_KEY_DATA);
   if (keyData == NULL)
   {
@@ -2647,10 +2648,12 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
 {
   #define MAX_RETRIES 3
 
+  AutoFreeList               autoFreeList;
   byte                       *buffer;
   String                     storageName;
   String                     hostName,loginName,deviceName,fileName;
   String                     printableStorageName;
+  void                       *autoFreeSavePoint;
   bool                       abortFlag;
   StorageMsg                 storageMsg;
   Errors                     error;
@@ -2667,6 +2670,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
   assert(createInfo != NULL);
 
   // allocate resources
+  AutoFree_init(&autoFreeList);
   buffer = (byte*)malloc(BUFFER_SIZE);
   if (buffer == NULL)
   {
@@ -2678,6 +2682,12 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
   deviceName           = String_new();
   fileName             = String_new();
   printableStorageName = String_new();
+  AUTOFREE_ADD(&autoFreeList,buffer,{ free(buffer); });
+  AUTOFREE_ADD(&autoFreeList,storageName,{ String_delete(storageName); });
+  AUTOFREE_ADD(&autoFreeList,hostName,{ String_delete(hostName); });
+  AUTOFREE_ADD(&autoFreeList,loginName,{ String_delete(loginName); });
+  AUTOFREE_ADD(&autoFreeList,deviceName,{ String_delete(deviceName); });
+  AUTOFREE_ADD(&autoFreeList,printableStorageName,{ String_delete(printableStorageName); });
 
   // initial pre-processing
   if ((createInfo->requestedAbortFlag == NULL) || !(*createInfo->requestedAbortFlag))
@@ -2703,9 +2713,20 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
   }
 
   // store data
-  abortFlag = FALSE;
+  autoFreeSavePoint = AutoFree_save(&autoFreeList);
+  abortFlag         = FALSE;
   while (MsgQueue_get(&createInfo->storageMsgQueue,&storageMsg,NULL,sizeof(storageMsg)))
   {
+    AUTOFREE_ADD(&autoFreeList,&storageMsg,
+                 {
+                   storageInfoDecrement(createInfo,storageMsg.fileSize);
+                   File_delete(storageMsg.fileName,FALSE);
+                   if (storageMsg.storageId != DATABASE_ID_NONE) Index_delete(indexDatabaseHandle,storageMsg.storageId);
+                   freeStorageMsg(&storageMsg,NULL);
+                 }
+                );
+fprintf(stderr,"%s, %d: storageMsg.fileName=%s\n",__FILE__,__LINE__,String_cString(storageMsg.fileName));
+
     if (   !abortFlag
         && ((createInfo->requestedAbortFlag == NULL) || !(*createInfo->requestedAbortFlag))
        )
@@ -2728,22 +2749,11 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
                     );
           createInfo->failError = error;
 
-          // delete index database
-          if (   (indexDatabaseHandle != NULL)
-              && !createInfo->jobOptions->noIndexDatabaseFlag
-              && !createInfo->jobOptions->dryRunFlag
-              && !createInfo->jobOptions->noStorageFlag
-             )
-          {
-            Index_delete(indexDatabaseHandle,storageMsg.storageId);
-          }
-
           // free resources
-          File_delete(storageMsg.fileName,FALSE);
-          storageInfoDecrement(createInfo,storageMsg.fileSize);
-          freeStorageMsg(&storageMsg,NULL);
+          AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
           continue;
         }
+        DEBUG_TESTCODE("storageThreadCode1") { createInfo->failError = DEBUG_TESTCODE_ERROR(); break; }
 
         // get file info
         error = File_getFileInfo(&fileInfo,storageMsg.fileName);
@@ -2755,22 +2765,11 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
                     );
           createInfo->failError = error;
 
-          // delete index database
-          if (   (indexDatabaseHandle != NULL)
-              && !createInfo->jobOptions->noIndexDatabaseFlag
-              && !createInfo->jobOptions->dryRunFlag
-              && !createInfo->jobOptions->noStorageFlag
-             )
-          {
-            Index_delete(indexDatabaseHandle,storageMsg.storageId);
-          }
-
           // free resources
-          File_delete(storageMsg.fileName,FALSE);
-          storageInfoDecrement(createInfo,storageMsg.fileSize);
-          freeStorageMsg(&storageMsg,NULL);
+          AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
           continue;
         }
+        DEBUG_TESTCODE("storageThreadCode2") { createInfo->failError = DEBUG_TESTCODE_ERROR(); break; }
 
         // get storage name
         Storage_getHandleName(storageName,
@@ -2784,12 +2783,9 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
 
         // set database storage name
         if (   (indexDatabaseHandle != NULL)
-            && !createInfo->jobOptions->noIndexDatabaseFlag
-            && !createInfo->jobOptions->dryRunFlag
-            && !createInfo->jobOptions->noStorageFlag
+            && (storageMsg.storageId != DATABASE_ID_NONE)
            )
         {
-          // set database storage name
           error = Index_update(indexDatabaseHandle,
                                storageMsg.storageId,
                                storageName,
@@ -2802,15 +2798,11 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
                        Errors_getText(error)
                       );
 
-            // delete index database
-            Index_delete(indexDatabaseHandle,storageMsg.storageId);
-
             // free resources
-            File_delete(storageMsg.fileName,FALSE);
-            storageInfoDecrement(createInfo,storageMsg.fileSize);
-            freeStorageMsg(&storageMsg,NULL);
+            AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
             continue;
           }
+          DEBUG_TESTCODE("storageThreadCode3") { createInfo->failError = DEBUG_TESTCODE_ERROR(); break; }
         }
 
         // open file to store
@@ -2829,22 +2821,11 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
                     );
           createInfo->failError = error;
 
-          // delete index database
-          if (   (indexDatabaseHandle != NULL)
-              && !createInfo->jobOptions->noIndexDatabaseFlag
-              && !createInfo->jobOptions->dryRunFlag
-              && !createInfo->jobOptions->noStorageFlag
-             )
-          {
-            Index_delete(indexDatabaseHandle,storageMsg.storageId);
-          }
-
           // free resources
-          File_delete(storageMsg.fileName,FALSE);
-          storageInfoDecrement(createInfo,storageMsg.fileSize);
-          freeStorageMsg(&storageMsg,NULL);
+          AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
           continue;
         }
+        DEBUG_TESTCODE("storageThreadCode4") { createInfo->failError = DEBUG_TESTCODE_ERROR(); break; }
 
         // store file
         retryCount = 0;
@@ -2887,6 +2868,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
               continue;
             }
           }
+          DEBUG_TESTCODE("storageThreadCode5") { createInfo->failError = DEBUG_TESTCODE_ERROR(); break; }
 
           // update status info, check for abort
           SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
@@ -2919,6 +2901,8 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
               createInfo->failError = error;
               break;
             }
+            DEBUG_TESTCODE("storageThreadCode6") { createInfo->failError = DEBUG_TESTCODE_ERROR(); break; }
+
             error = Storage_write(&createInfo->storageFileHandle,buffer,bufferLength);
             if (error != ERROR_NONE)
             {
@@ -2941,6 +2925,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
                 break;
               }
             }
+            DEBUG_TESTCODE("storageThreadCode7") { createInfo->failError = DEBUG_TESTCODE_ERROR(); break; }
 
             // update status info, check for abort
             SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
@@ -2989,9 +2974,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
            )
         {
           if (   (indexDatabaseHandle != NULL)
-              && !createInfo->jobOptions->noIndexDatabaseFlag
-              && !createInfo->jobOptions->dryRunFlag
-              && !createInfo->jobOptions->noStorageFlag
+              && (storageMsg.storageId != DATABASE_ID_NONE)
              )
           {
             // delete old indizes for same storage file
@@ -3020,6 +3003,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
                   createInfo->failError = error;
                   break;
                 }
+                DEBUG_TESTCODE("storageThreadCode8") { createInfo->failError = DEBUG_TESTCODE_ERROR(); break; }
               }
             }
 
@@ -3039,6 +3023,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
                           );
                 createInfo->failError = error;
               }
+              DEBUG_TESTCODE("storageThreadCode9") { createInfo->failError = DEBUG_TESTCODE_ERROR(); }
             }
 
             // set database state
@@ -3058,6 +3043,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
                           );
                 createInfo->failError = error;
               }
+              DEBUG_TESTCODE("storageThreadCode10") { createInfo->failError = DEBUG_TESTCODE_ERROR(); }
             }
           }
         }
@@ -3076,6 +3062,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
                       );
             createInfo->failError = error;
           }
+          DEBUG_TESTCODE("storageThreadCode11") { createInfo->failError = DEBUG_TESTCODE_ERROR(); }
         }
 
         // check error/aborted
@@ -3083,44 +3070,8 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
             || ((createInfo->requestedAbortFlag != NULL) && (*createInfo->requestedAbortFlag))
            )
         {
-          if (createInfo->failError != ERROR_NONE)
-          {
-            // error -> set database state
-            if (   (indexDatabaseHandle != NULL)
-                && !createInfo->jobOptions->noIndexDatabaseFlag
-                && !createInfo->jobOptions->dryRunFlag
-                && !createInfo->jobOptions->noStorageFlag
-               )
-            {
-              Index_setState(indexDatabaseHandle,
-                             storageMsg.storageId,
-                             INDEX_STATE_ERROR,
-                             0LL,
-                             "%s (error code: %d)",
-                             Errors_getText(error),
-                             error
-                            );
-            }
-          }
-          else if ((createInfo->requestedAbortFlag != NULL) && (*createInfo->requestedAbortFlag))
-          {
-            // aborted -> delete index database
-            if (   (indexDatabaseHandle != NULL)
-                && !createInfo->jobOptions->noIndexDatabaseFlag
-                && !createInfo->jobOptions->dryRunFlag
-                && !createInfo->jobOptions->noStorageFlag
-               )
-            {
-              Index_delete(indexDatabaseHandle,storageMsg.storageId);
-            }
-          }
-
-          // done storage
-          storageInfoDecrement(createInfo,storageMsg.fileSize);
-
           // free resources
-          File_delete(storageMsg.fileName,FALSE);
-          freeStorageMsg(&storageMsg,NULL);
+          AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
           continue;
         }
 
@@ -3129,7 +3080,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
       }
     }
 
-    // delete source file
+    // delete temporary storage file
     error = File_delete(storageMsg.fileName,FALSE);
     if (error != ERROR_NONE)
     {
@@ -3144,6 +3095,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
 
     // free resources
     freeStorageMsg(&storageMsg,NULL);
+    AutoFree_restore(&autoFreeList,autoFreeSavePoint,FALSE);
   }
 
   // final post-processing
@@ -3230,6 +3182,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
   String_delete(hostName);
   String_delete(storageName);
   free(buffer);
+  AutoFree_done(&autoFreeList);
 
   createInfo->storageThreadExitFlag = TRUE;
 }
