@@ -1829,7 +1829,6 @@ Errors Crypt_keyDecrypt(const CryptKey *cryptKey,
   assert(encryptBuffer != NULL);
   assert(buffer != NULL);
   assert(bufferLength != NULL);
-fprintf(stderr,"%s, %d: -------------------------\n",__FILE__,__LINE__);
 
   #ifdef HAVE_GCRYPT
     // create S-expression with encrypted data
@@ -1854,7 +1853,7 @@ fprintf(stderr,"%s, %d: -------------------------\n",__FILE__,__LINE__);
     {
       return ERRORX_(KEY_ENCRYPT_FAIL,gcryptError,gcry_strerror(gcryptError));
     }
-fprintf(stderr,"%s, %d: encrypted data\n",__FILE__,__LINE__); gcry_sexp_dump(sexpEncryptData);
+//fprintf(stderr,"%s, %d: encrypted data\n",__FILE__,__LINE__); gcry_sexp_dump(sexpEncryptData);
 
     // decrypt
     gcryptError = gcry_pk_decrypt(&sexpData,sexpEncryptData,cryptKey->key);
@@ -1864,7 +1863,7 @@ fprintf(stderr,"%s, %d: encrypted data\n",__FILE__,__LINE__); gcry_sexp_dump(sex
       gcry_sexp_release(sexpEncryptData);
       return error;
     }
-fprintf(stderr,"%s, %d: plain data\n",__FILE__,__LINE__); gcry_sexp_dump(sexpData);
+//fprintf(stderr,"%s, %d: plain data\n",__FILE__,__LINE__); gcry_sexp_dump(sexpData);
 
     // get decrypted data
     data = gcry_sexp_nth_data(sexpData,1,&dataLength);
