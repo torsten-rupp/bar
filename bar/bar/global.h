@@ -573,6 +573,44 @@ typedef void                void32;
 #endif
 
 /***********************************************************************\
+* Name   : BLOCK_DO, BLOCK_DOX
+* Purpose: execute code with entry and exit code
+* Input  : result    -0 result
+*          entryCode - entry code
+*          exitCode  - exit code
+* Output : -
+* Return : -
+* Notes  : use gcc closure!
+\***********************************************************************/
+
+#define BLOCK_DO(entryCode,exitCode,block) \
+  do \
+  { \
+    entryCode; \
+    ({ \
+      auto void __closure__(void); \
+      \
+      void __closure__(void)block; \
+      __closure__; \
+    })(); \
+    exitCode; \
+  } \
+  while (0)
+
+#define BLOCK_DOX(result,entryCode,exitCode,block) \
+  do \
+  { \
+    entryCode; \
+    result = ({ \
+               auto typeof(result) __closure__(void); \
+               \
+               typeof(result) __closure__(void)block; __closure__; \
+             })(); \
+    exitCode; \
+  } \
+  while (0)
+
+/***********************************************************************\
 * Name   : HALT, HALT_INSUFFICIENT_MEMORY, HALT_FATAL_ERROR,
 *          HALT_INTERNAL_ERROR, HALT_INTERNAL_ERROR_AT,
 *          HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED,
