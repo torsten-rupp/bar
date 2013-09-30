@@ -575,7 +575,7 @@ typedef void                void32;
 /***********************************************************************\
 * Name   : BLOCK_DO, BLOCK_DOX
 * Purpose: execute code with entry and exit code
-* Input  : result    -0 result
+* Input  : result    - result
 *          entryCode - entry code
 *          exitCode  - exit code
 * Output : -
