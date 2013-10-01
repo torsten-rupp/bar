@@ -34,7 +34,7 @@
 #include "database.h"
 
 /****************** Conditional compilation switches *******************/
-#define DATABASE_DEBUG
+#define _DATABASE_DEBUG
 
 /***************************** Constants *******************************/
 
@@ -412,12 +412,6 @@ LOCAL int executeCallback(void *userData,
   assert(databaseHandle != NULL);
   assert(fileName != NULL);
 
-  // create lock
-  if (!Semaphore_init(&databaseHandle->lock))
-  {
-    return ERRORX_(DATABASE,errno,"create database lock fail");
-  }
-
   // create directory if needed
   directory = File_getFilePathNameCString(String_new(),fileName);
   if (   !String_isEmpty(directory)
@@ -432,7 +426,6 @@ LOCAL int executeCallback(void *userData,
     if (error != ERROR_NONE)
     {
       File_deleteFileName(directory);
-      Semaphore_done(&databaseHandle->lock);
       return error;
     }
   }
@@ -452,7 +445,6 @@ LOCAL int executeCallback(void *userData,
   if (sqliteResult != SQLITE_OK)
   {
     error = ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->handle),sqlite3_errmsg(databaseHandle->handle));
-    Semaphore_done(&databaseHandle->lock);
     return error;
   }
 
@@ -503,28 +495,6 @@ LOCAL int executeCallback(void *userData,
   #endif
 
   sqlite3_close(databaseHandle->handle);
-  Semaphore_done(&databaseHandle->lock);
-}
-
-void Database_lock(DatabaseHandle *databaseHandle)
-{
-  assert(databaseHandle != NULL);
-
-  Semaphore_lock(&databaseHandle->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,SEMAPHORE_WAIT_FOREVER);
-}
-
-void Database_unlock(DatabaseHandle *databaseHandle)
-{
-  assert(databaseHandle != NULL);
-
-  Semaphore_unlock(&databaseHandle->lock);
-}
-
-bool Database_isLocked(DatabaseHandle *databaseHandle)
-{
-  assert(databaseHandle != NULL);
-
-  return Semaphore_isLocked(&databaseHandle->lock);
 }
 
 Errors Database_execute(DatabaseHandle   *databaseHandle,
@@ -537,7 +507,6 @@ Errors Database_execute(DatabaseHandle   *databaseHandle,
   String           sqlString;
   va_list          arguments;
   Errors           error;
-  bool             lockFlag;
   DatabaseCallback databaseCallback;
   int              sqliteResult;
 
@@ -554,9 +523,9 @@ Errors Database_execute(DatabaseHandle   *databaseHandle,
   va_end(arguments);
 
   // execute SQL command
-  error = ERROR_NONE;
-  sqlite3_mutex_enter(sqlite3_db_mutex(databaseHandle->handle));
-  SEMAPHORE_LOCKED_DO(lockFlag,&databaseHandle->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+  BLOCK_DOX(error,
+            sqlite3_mutex_enter(sqlite3_db_mutex(databaseHandle->handle)),
+            sqlite3_mutex_leave(sqlite3_db_mutex(databaseHandle->handle)),
   {
     #ifdef DATABASE_DEBUG
       fprintf(stderr,"Database debug: execute command: %s\n",String_cString(sqlString));
@@ -581,8 +550,9 @@ Errors Database_execute(DatabaseHandle   *databaseHandle,
     {
       error = ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->handle),sqlite3_errmsg(databaseHandle->handle));
     }
-  }
-  sqlite3_mutex_leave(sqlite3_db_mutex(databaseHandle->handle));
+
+    return error;
+  });
   if (error != ERROR_NONE)
   {
     String_delete(sqlString);
@@ -604,7 +574,6 @@ Errors Database_prepare(DatabaseQueryHandle *databaseQueryHandle,
   String  sqlString;
   va_list arguments;
   Errors  error;
-  bool    lockFlag;
   int     sqliteResult;
 
   assert(databaseQueryHandle != NULL);
@@ -625,7 +594,8 @@ Errors Database_prepare(DatabaseQueryHandle *databaseQueryHandle,
 
   // prepare SQL command execution
   error = ERROR_NONE;
-  SEMAPHORE_LOCKED_DO(lockFlag,&databaseHandle->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+  BLOCK_DO(sqlite3_mutex_enter(sqlite3_db_mutex(databaseHandle->handle)),
+           sqlite3_mutex_leave(sqlite3_db_mutex(databaseHandle->handle)),
   {
     #ifdef DATABASE_DEBUG
       fprintf(stderr,"Database debug: prepare command: %s\n",String_cString(sqlString));
@@ -644,7 +614,7 @@ Errors Database_prepare(DatabaseQueryHandle *databaseQueryHandle,
     {
       error = ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->handle),sqlite3_errmsg(databaseHandle->handle));
     }
-  }
+  });
   if (error != ERROR_NONE)
   {
     String_delete(sqlString);
@@ -663,7 +633,6 @@ bool Database_getNextRow(DatabaseQueryHandle *databaseQueryHandle,
                         )
 {
   bool    result;
-  bool    lockFlag;
   uint    column;
   va_list arguments;
   bool    longFlag,longLongFlag;
@@ -684,16 +653,20 @@ bool Database_getNextRow(DatabaseQueryHandle *databaseQueryHandle,
   }       value;
 
   assert(databaseQueryHandle != NULL);
+  assert(databaseQueryHandle->databaseHandle != NULL);
+  assert(databaseQueryHandle->databaseHandle->handle != NULL);
   assert(format != NULL);
 
-  result = FALSE;
-  SEMAPHORE_LOCKED_DO(lockFlag,&databaseQueryHandle->databaseHandle->lock,SEMAPHORE_LOCK_TYPE_READ)
+  va_start(arguments,format);
+  BLOCK_DOX(result,
+            sqlite3_mutex_enter(sqlite3_db_mutex(databaseQueryHandle->databaseHandle->handle)),
+            sqlite3_mutex_leave(sqlite3_db_mutex(databaseQueryHandle->databaseHandle->handle)),
   {
+
     if (sqlite3_step(databaseQueryHandle->handle) == SQLITE_ROW)
     {
       // get data
       column = 0;
-      va_start(arguments,format);
       while ((*format) != '\0')
       {
         // find next format specifier
@@ -870,37 +843,37 @@ bool Database_getNextRow(DatabaseQueryHandle *databaseQueryHandle,
               }
               break;
             default:
-              Semaphore_unlock(&databaseQueryHandle->databaseHandle->lock);
               return FALSE;
-              break;
+              break; /* not reached */
           }
 
           column++;
         }
       }
-      va_end(arguments);
 
-      result = TRUE;
+      return TRUE;
     }
     else
     {
-      result = FALSE;
+      return FALSE;
     }
-  }
+  });
+  va_end(arguments);
 
   return result;
 }
 
 void Database_finalize(DatabaseQueryHandle *databaseQueryHandle)
 {
-  bool lockFlag;
-
   assert(databaseQueryHandle != NULL);
+  assert(databaseQueryHandle->databaseHandle != NULL);
+  assert(databaseQueryHandle->databaseHandle->handle != NULL);
 
-  SEMAPHORE_LOCKED_DO(lockFlag,&databaseQueryHandle->databaseHandle->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+  BLOCK_DO(sqlite3_mutex_enter(sqlite3_db_mutex(databaseQueryHandle->databaseHandle->handle)),
+           sqlite3_mutex_leave(sqlite3_db_mutex(databaseQueryHandle->databaseHandle->handle)),
   {
     sqlite3_finalize(databaseQueryHandle->handle);
-  }
+  });
 }
 
 Errors Database_getInteger64(DatabaseHandle *databaseHandle,
@@ -913,7 +886,6 @@ Errors Database_getInteger64(DatabaseHandle *databaseHandle,
 {
   String       sqlString;
   va_list      arguments;
-  bool         lockFlag;
   Errors       error;
   sqlite3_stmt *handle;
   int          sqliteResult;
@@ -947,8 +919,9 @@ Errors Database_getInteger64(DatabaseHandle *databaseHandle,
   String_appendCString(sqlString," LIMIT 0,1");
 
   // execute SQL command
-  error = ERROR_NONE;
-  SEMAPHORE_LOCKED_DO(lockFlag,&databaseHandle->lock,SEMAPHORE_LOCK_TYPE_READ)
+  BLOCK_DOX(error,
+            sqlite3_mutex_enter(sqlite3_db_mutex(databaseHandle->handle)),
+            sqlite3_mutex_leave(sqlite3_db_mutex(databaseHandle->handle)),
   {
     #ifdef DATABASE_DEBUG
       fprintf(stderr,"Database debug: get integer 64: %s\n",String_cString(sqlString));
@@ -974,7 +947,9 @@ Errors Database_getInteger64(DatabaseHandle *databaseHandle,
     }
 
     sqlite3_finalize(handle);
-  }
+
+    return error;
+  });
   if (error != ERROR_NONE)
   {
     String_delete(sqlString);
@@ -997,7 +972,6 @@ Errors Database_getString(DatabaseHandle *databaseHandle,
 {
   String       sqlString;
   va_list      arguments;
-  bool         lockFlag;
   Errors       error;
   sqlite3_stmt *handle;
   int          sqliteResult;
@@ -1031,8 +1005,9 @@ Errors Database_getString(DatabaseHandle *databaseHandle,
   String_appendCString(sqlString," LIMIT 0,1");
 
   // execute SQL command
-  error = ERROR_NONE;
-  SEMAPHORE_LOCKED_DO(lockFlag,&databaseHandle->lock,SEMAPHORE_LOCK_TYPE_READ)
+  BLOCK_DOX(error,
+            sqlite3_mutex_enter(sqlite3_db_mutex(databaseHandle->handle)),
+            sqlite3_mutex_leave(sqlite3_db_mutex(databaseHandle->handle)),
   {
     #ifdef DATABASE_DEBUG
       fprintf(stderr,"Database debug: get integer 64: %s\n",String_cString(sqlString));
@@ -1058,7 +1033,9 @@ Errors Database_getString(DatabaseHandle *databaseHandle,
     }
 
     sqlite3_finalize(handle);
-  }
+
+    return error;
+  });
   if (error != ERROR_NONE)
   {
     String_delete(sqlString);
@@ -1082,7 +1059,6 @@ Errors Database_setInteger64(DatabaseHandle *databaseHandle,
   String  sqlString;
   va_list arguments;
   Errors  error;
-  bool    lockFlag;
   int     sqliteResult;
 
   assert(databaseHandle != NULL);
@@ -1111,9 +1087,9 @@ Errors Database_setInteger64(DatabaseHandle *databaseHandle,
   }
 
   // execute SQL command
-  error = ERROR_NONE;
-  sqlite3_mutex_enter(sqlite3_db_mutex(databaseHandle->handle));
-  SEMAPHORE_LOCKED_DO(lockFlag,&databaseHandle->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+  BLOCK_DOX(error,
+            sqlite3_mutex_enter(sqlite3_db_mutex(databaseHandle->handle)),
+            sqlite3_mutex_leave(sqlite3_db_mutex(databaseHandle->handle)),
   {
     #ifdef DATABASE_DEBUG
       fprintf(stderr,"Database debug: set integer 64: %s\n",String_cString(sqlString));
@@ -1136,8 +1112,9 @@ Errors Database_setInteger64(DatabaseHandle *databaseHandle,
     {
       error = ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->handle),sqlite3_errmsg(databaseHandle->handle));
     }
-  }
-  sqlite3_mutex_leave(sqlite3_db_mutex(databaseHandle->handle));
+
+    return error;
+  });
   if (error != ERROR_NONE)
   {
     String_delete(sqlString);
@@ -1161,7 +1138,6 @@ Errors Database_setString(DatabaseHandle *databaseHandle,
   String  sqlString;
   va_list arguments;
   Errors  error;
-  bool    lockFlag;
   int     sqliteResult;
 
   assert(databaseHandle != NULL);
@@ -1190,9 +1166,9 @@ Errors Database_setString(DatabaseHandle *databaseHandle,
   }
 
   // execute SQL command
-  error = ERROR_NONE;
-  sqlite3_mutex_enter(sqlite3_db_mutex(databaseHandle->handle));
-  SEMAPHORE_LOCKED_DO(lockFlag,&databaseHandle->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+  BLOCK_DOX(error,
+            sqlite3_mutex_enter(sqlite3_db_mutex(databaseHandle->handle)),
+            sqlite3_mutex_leave(sqlite3_db_mutex(databaseHandle->handle)),
   {
     #ifdef DATABASE_DEBUG
       fprintf(stderr,"Database debug: set string 64: %s\n",String_cString(sqlString));
@@ -1215,8 +1191,9 @@ Errors Database_setString(DatabaseHandle *databaseHandle,
     {
       error = ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->handle),sqlite3_errmsg(databaseHandle->handle));
     }
-  }
-  sqlite3_mutex_leave(sqlite3_db_mutex(databaseHandle->handle));
+
+    return error;
+  });
   if (error != ERROR_NONE)
   {
     String_delete(sqlString);
@@ -1232,15 +1209,15 @@ Errors Database_setString(DatabaseHandle *databaseHandle,
 int64 Database_getLastRowId(DatabaseHandle *databaseHandle)
 {
   int64 databaseId;
-  bool  lockFlag;
 
   assert(databaseHandle != NULL);
 
   databaseId = DATABASE_ID_NONE;
-  SEMAPHORE_LOCKED_DO(lockFlag,&databaseHandle->lock,SEMAPHORE_LOCK_TYPE_READ)
+  BLOCK_DO(sqlite3_mutex_enter(sqlite3_db_mutex(databaseHandle->handle)),
+           sqlite3_mutex_leave(sqlite3_db_mutex(databaseHandle->handle)),
   {
     databaseId = (uint64)sqlite3_last_insert_rowid(databaseHandle->handle);
-  }
+  });
 
   return databaseId;
 }

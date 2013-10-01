@@ -45,7 +45,6 @@ typedef enum
 // database handle
 typedef struct
 {
-  Semaphore lock;
   sqlite3   *handle;
 } DatabaseHandle;
 
@@ -64,22 +63,6 @@ typedef int64 DatabaseId;
 /***************************** Variables *******************************/
 
 /****************************** Macros *********************************/
-
-/***********************************************************************\
-* Name   : DATABASE_LOCKED_DO
-* Purpose: execute block with database locked
-* Input  : databaseHandle - database handle
-* Output : -
-* Return : -
-* Notes  : usage:
-*            DATABASE_LOCKED_DO(databaseHandle)
-*            {
-*              ...
-*            }
-\***********************************************************************/
-
-#define DATABASE_LOCKED_DO(databaseHandle) \
-  for (Database_lock(databaseHandle); Database_isLocked(databaseHandle); Database_unlock(databaseHandle))
 
 #ifndef NDEBUG
   #define Database_open(...)  __Database_open(__FILE__,__LINE__,__VA_ARGS__)
@@ -135,39 +118,6 @@ typedef int64 DatabaseId;
                         DatabaseHandle *databaseHandle
                        );
 #endif /* NDEBUG */
-
-/***********************************************************************\
-* Name   : Database_lock
-* Purpose: lock database access
-* Input  : databaseHandle - database handle
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-void Database_lock(DatabaseHandle *databaseHandle);
-
-/***********************************************************************\
-* Name   : Database_unlock
-* Purpose: unlock database access
-* Input  : databaseHandle - database handle
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-void Database_unlock(DatabaseHandle *databaseHandle);
-
-/***********************************************************************\
-* Name   : Database_isLocked
-* Purpose: check if database access is locked
-* Input  : databaseHandle - database handle
-* Output : -
-* Return : TRUE if database access is locked, FALSE otherwise
-* Notes  : -
-\***********************************************************************/
-
-bool Database_isLocked(DatabaseHandle *databaseHandle);
 
 /***********************************************************************\
 * Name   : Database_execute
