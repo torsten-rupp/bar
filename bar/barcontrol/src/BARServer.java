@@ -193,7 +193,22 @@ class Command
    */
   public boolean endOfData()
   {
-    return (result.size() == 0) && completedFlag;
+    if ((result.size() == 0) && !completedFlag)
+    {
+      try
+      {
+        this.wait();
+      }
+      catch (InterruptedException exception)
+      {
+        // ignored
+      }
+      return (result.size() == 0) && completedFlag;
+    }
+    else
+    {
+      return false;
+    }
   }
 
   /** check if completed
@@ -475,7 +490,19 @@ class Command
     return getNextResult(typeMap,errorMessage,valueMap,(ValueMap)null,timeout);
   }
 
-  /** get result string list array
+  /** get next result
+   * @param typeMap type map
+   * @param errorMessage error message
+   * @param valueMap value map
+   * @return error code
+   */
+  public synchronized int getNextResult(TypeMap typeMap, String[] errorMessage, ValueMap valueMap)
+  {
+    return getNextResult(typeMap,errorMessage,valueMap,0);
+  }
+
+
+  /** get result
    * @param typeMap type map
    * @param errorMessage error message
    * @param valueMap value map
@@ -483,10 +510,10 @@ class Command
    */
   public synchronized int getResult(TypeMap typeMap, String[] errorMessage, ValueMap valueMap)
   {
-    return getNextResult(typeMap,errorMessage,valueMap,0);
+    return getNextResult(typeMap,errorMessage,valueMap);
   }
 
-  /** get result string list array
+  /** get result list
    * @param typeMap type map
    * @param errorMessage error message
    * @param valueMapList value map list
@@ -575,9 +602,13 @@ abstract class CommandHandler
   abstract public int handleResult(Command command);
 }
 
-abstract class CommandResult
+abstract class CommandResultHandler
 {
-  abstract public int result(HashMap<String,Object> values);
+  /** handle command result
+   * @param valueMap value map
+   * @return Errors.NONE or error code
+   */
+  abstract public int handleResult(ValueMap valueMap);
 }
 
 class ResultTypes extends HashMap<String,Class>
@@ -1113,15 +1144,15 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
                             ) != Errors.NONE
          )
       {
-        throw new ConnectionError("Cannot get protocol version for '"+hostname+"' (error: "+errorMessage[0]+")");
+        throw new ConnectionError("Cannot get protocol version for '"+hostname+"': "+errorMessage[0]);
       }
       if (valueMap.getInt("major") != PROTOCOL_VERSION_MAJOR)
       {
-        throw new CommunicationError("Incompatible protocol version for '"+hostname+"' (expected "+PROTOCOL_VERSION_MAJOR+", got "+data[3]+")");
+        throw new CommunicationError("Incompatible protocol version for '"+hostname+"': expected "+PROTOCOL_VERSION_MAJOR+", got "+data[3]);
       }
       if (valueMap.getInt("minor") != PROTOCOL_VERSION_MINOR)
       {
-        BARControl.printWarning("Incompatible minor protocol version for '"+hostname+"' (expected "+PROTOCOL_VERSION_MINOR+", got "+data[4]+")");
+        BARControl.printWarning("Incompatible minor protocol version for '"+hostname+"': expected "+PROTOCOL_VERSION_MINOR+", got "+data[4]);
       }
 
       // get file separator character
@@ -1138,7 +1169,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
     }
     catch (IOException exception)
     {
-      throw new CommunicationError("Network error on "+socket.getInetAddress()+":"+socket.getPort()+" (error: "+exception.getMessage()+")");
+      throw new CommunicationError("Network error on "+socket.getInetAddress()+":"+socket.getPort()+": "+exception.getMessage());
     }
 
     // start read thread
@@ -1374,6 +1405,46 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
   public static int XXXexecuteCommand(String command, Object result)
   {
     return XXXexecuteCommand(command,result,null);
+  }
+
+  /** execute command
+   * @param command command to send to BAR server
+   * @param typeMap type map
+   * @param errorMessage error message or ""
+   * @param commandResultHandler command result handler
+   * @param busyIndicator busy indicator or null
+   * @return Errors.NONE or error code
+   */
+  public static int executeCommand(String commandString, final TypeMap typeMap, final String[] errorMessage, final CommandResultHandler commandResultHandler, BusyIndicator busyIndicator)
+  {
+    return executeCommand(commandString,
+                          busyIndicator,
+                          new CommandHandler()
+    {
+      public int handleResult(Command command)
+      {
+        ValueMap valueMap = new ValueMap();
+        int      error    = command.getNextResult(typeMap,errorMessage,valueMap);
+        if (error == Errors.NONE)
+        {
+          error = commandResultHandler.handleResult(valueMap);
+        }
+
+        return error;
+      }
+    });
+  }
+
+  /** execute command
+   * @param command command to send to BAR server
+   * @param typeMap type map
+   * @param errorMessage error message or ""
+   * @param commandResultHandler command result handler
+   * @return Errors.NONE or error code
+   */
+  public static int executeCommand(String commandString, final TypeMap typeMap, final String[] errorMessage, CommandResultHandler commandResultHandler)
+  {
+    return executeCommand(commandString,typeMap,errorMessage,commandResultHandler,(BusyIndicator)null);
   }
 
   /** execute command
@@ -1640,60 +1711,64 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
   public static String encryptPassword(String password)
     throws CommunicationError
   {
-    // get encoded password (XOR with session id)
-    byte[] encodedPassword = new byte[sessionId.length];
-    try
-    {
-      byte[] passwordBytes   = password.getBytes("UTF-8");
-      for (int i = 0; i < sessionId.length; i++)
-      {
-        if (i < passwordBytes.length)
-        {
-          encodedPassword[i] = (byte)((int)passwordBytes[i] ^ (int)sessionId[i]);
-        }
-        else
-        {
-          encodedPassword[i] = sessionId[i];
-        }
-      }
-    }
-    catch (UnsupportedEncodingException exception)
-    {
-      throw new CommunicationError("Password encryption fail");
-    }
+    byte[] encryptedPasswordBytes = new byte[0];
 
-    // encrypt password
-    byte[] encryptedPasswordBytes = null;
-    try
+    if (password != null)
     {
-      passwordCipher.init(Cipher.ENCRYPT_MODE,passwordKey);
-      encryptedPasswordBytes = passwordCipher.doFinal(encodedPassword);
-//Dprintf.dprintf("encryptedPasswordBytes.length=%d serverPassword.getBytes.length=%d",encryptedPasswordBytes.length,password.getBytes("UTF-8").length);
-    }
-    catch (InvalidKeyException exception)
-    {
-      if (Settings.debugFlag)
+      // get encoded password (XOR with session id)
+      byte[] encodedPassword = new byte[sessionId.length];
+      try
       {
-        BARControl.printStackTrace(exception);
+        byte[] passwordBytes   = password.getBytes("UTF-8");
+        for (int i = 0; i < sessionId.length; i++)
+        {
+          if (i < passwordBytes.length)
+          {
+            encodedPassword[i] = (byte)((int)passwordBytes[i] ^ (int)sessionId[i]);
+          }
+          else
+          {
+            encodedPassword[i] = sessionId[i];
+          }
+        }
       }
-    }
-    catch (IllegalBlockSizeException exception)
-    {
-      if (Settings.debugFlag)
+      catch (UnsupportedEncodingException exception)
       {
-        BARControl.printStackTrace(exception);
+        throw new CommunicationError("Password encryption fail");
       }
-    }
-    catch (BadPaddingException exception)
-    {
-      if (Settings.debugFlag)
+
+      // encrypt password
+      try
       {
-        BARControl.printStackTrace(exception);
+        passwordCipher.init(Cipher.ENCRYPT_MODE,passwordKey);
+        encryptedPasswordBytes = passwordCipher.doFinal(encodedPassword);
+  //Dprintf.dprintf("encryptedPasswordBytes.length=%d serverPassword.getBytes.length=%d",encryptedPasswordBytes.length,password.getBytes("UTF-8").length);
       }
-    }
-    if (encryptedPasswordBytes == null)
-    {
-      throw new CommunicationError("Password encryption fail");
+      catch (InvalidKeyException exception)
+      {
+        if (Settings.debugFlag)
+        {
+          BARControl.printStackTrace(exception);
+        }
+      }
+      catch (IllegalBlockSizeException exception)
+      {
+        if (Settings.debugFlag)
+        {
+          BARControl.printStackTrace(exception);
+        }
+      }
+      catch (BadPaddingException exception)
+      {
+        if (Settings.debugFlag)
+        {
+          BARControl.printStackTrace(exception);
+        }
+      }
+      if (encryptedPasswordBytes == null)
+      {
+        throw new CommunicationError("Password encryption fail");
+      }
     }
 
     // encode as hex-string
