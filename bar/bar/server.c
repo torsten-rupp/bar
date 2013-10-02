@@ -3121,13 +3121,17 @@ LOCAL bool checkPassword(const ClientInfo *clientInfo, const String encryptType,
   if      (String_equalsIgnoreCaseCString(encryptType,"RSA") && Crypt_isAsymmetricSupported())
   {
 //fprintf(stderr,"%s, %d: %d\n",__FILE__,__LINE__,encryptedBufferLength);
-    Crypt_keyDecrypt(&clientInfo->secretKey,
-                     encryptedBuffer,
-                     encryptedBufferLength,
-                     encodedBuffer,
-                     &encodedBufferLength,
-                     sizeof(encodedBuffer)
-                    );
+    if (Crypt_keyDecrypt(&clientInfo->secretKey,
+                         encryptedBuffer,
+                         encryptedBufferLength,
+                         encodedBuffer,
+                         &encodedBufferLength,
+                         sizeof(encodedBuffer)
+                        ) != ERROR_NONE
+       )
+    {
+      return FALSE;
+    }
   }
   else if (String_equalsIgnoreCaseCString(encryptType,"NONE"))
   {
@@ -3521,6 +3525,7 @@ LOCAL void serverCommand_authorize(ClientInfo *clientInfo, uint id, const String
   }
   else
   {
+//fprintf(stderr,"%s, %d: encryptedPassword='%s' %d\n",__FILE__,__LINE__,String_cString(encryptedPassword),String_length(encryptedPassword));
     clientInfo->authorizationState = AUTHORIZATION_STATE_FAIL;
   }
 
@@ -7512,7 +7517,7 @@ LOCAL void serverCommand_indexStorageInfo(ClientInfo *clientInfo, uint id, const
 *            indexState=<state>|*
 *            mode=<mode>|*
 *          Result:
-*            jobId=<storage id>
+*            storageId=<storage id>
 *            name=<name>
 *            createDateTime=<created date/time>
 *            size=<size>
