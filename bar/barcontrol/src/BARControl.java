@@ -917,6 +917,20 @@ public class BARControl
     }
   }
 
+  /** entry types
+   */
+  enum EntryTypes
+  {
+    FILE,
+    IMAGE,
+    DIRECTORY,
+    LINK,
+    HARDLINK,
+    SPECIAL,
+    DEVICE,
+    SOCKET
+  };
+
   // --------------------------- constants --------------------------------
 
   // command line options
@@ -930,6 +944,7 @@ public class BARControl
 
   private static final Option[] options =
   {
+    new Option("--password",                   null,Options.Types.STRING,     "serverPassword"),
     new Option("--port",                       "-p",Options.Types.INTEGER,    "serverPort"),
     new Option("--tls-port",                   null,Options.Types.INTEGER,    "serverTLSPort"),
     new Option("--key-file",                   null,Options.Types.STRING,     "serverKeyFileName"),
@@ -1048,6 +1063,7 @@ public class BARControl
     System.out.println("");
     System.out.println("Options: -p|--port=<n>                              - server port (default: "+Settings.DEFAULT_SERVER_PORT+")");
     System.out.println("         --tls-port=<n>                             - TLS server port (default: "+Settings.DEFAULT_SERVER_TLS_PORT+")");
+    System.out.println("         --password=<password>                      - server password (use with care!)");
     System.out.println("         --select-job=<name>                        - select job <name>");
     System.out.println("         --login-dialog                             - force to open login dialog");
     System.out.println("         --key-file=<file name>                     - key file name (default: ");
@@ -1147,49 +1163,41 @@ public class BARControl
   }
 
   /** get job id
-   * @param name job name
+   * @param jobName job name
    * @return job id or -1 if not found
    */
-  private static int getJobId(String name)
+  private static int getJobId(String jobName)
   {
-    String[] errorMessage = new String[1];
-    ArrayList<String> result = new ArrayList<String>();
-    int errorCode = BARServer.executeCommand(StringParser.format("JOB_LIST"),errorMessage);
-    if (errorCode != Errors.NONE)
+    String[]            errorMessage  = new String[1];
+    ArrayList<ValueMap> resultMapList = new ArrayList<ValueMap>();
+    int errorCode = BARServer.executeCommand(StringParser.format("JOB_LIST"),
+                                             new TypeMap("jobId", int.class,
+                                                         "name",  String.class
+                                                        ),
+                                             errorMessage,
+                                             resultMapList
+                                            );
+    if (errorCode == Errors.NONE)
     {
-    for (String line : result)
-    {
-      Object data[] = new Object[12];
-      /* format:
-         <id>
-         <name>
-         <state>
-         <type>
-         <archivePartSize>
-         <compressAlgorithms>
-         <cryptAlgorithm>
-         <cryptType>
-         <cryptPasswordMode>
-         <lastExecutedDateTime>
-         <estimatedRestTime>
-      */
-      if (StringParser.parse(line,"%d %S %S %s %ld %S %S %S %S %ld %ld",data,StringParser.QUOTE_CHARS))
+      for (ValueMap resultMap : resultMapList)
       {
-        if (name.equalsIgnoreCase((String)data[1]))
+        int    jobId = resultMap.getInt   ("jobId");
+        String name  = resultMap.getString("name" );
+
+        if (jobName.equalsIgnoreCase(name))
         {
-          return (Integer)data[0];
-        }
-      }
-      else
-      {
-        if (Settings.debugFlag)
-        {
-          printWarning("unknown server response '%s'",line);
-          BARServer.disconnect();
-          System.exit(1);
+          return jobId;
         }
       }
     }
+    else
+    {
+      if (Settings.debugFlag)
+      {
+        printError("cannot get job list (error: %s)",errorMessage[0]);
+        BARServer.disconnect();
+        System.exit(1);
+      }
     }
 
     return -1;
@@ -1682,6 +1690,9 @@ public class BARControl
         // execute commands
         if (Settings.runJobName != null)
         {
+          String[] errorMessage  = new String[1];
+          int      errorCode;
+
           // get job id
           int jobId = getJobId(Settings.runJobName);
           if (jobId < 0)
@@ -1692,13 +1703,12 @@ public class BARControl
           }
 
           // start job
-          String[] errorMessage = new String[1];
-          int errorCode = BARServer.executeCommand(StringParser.format("JOB_START jobId=%d type=%s",
-                                                                       jobId,
-                                                                       Settings.archiveType.toString()
-                                                                      ),
-                                                   errorMessage
-                                                  );
+          errorCode = BARServer.executeCommand(StringParser.format("JOB_START jobId=%d type=%s",
+                                                                   jobId,
+                                                                   Settings.archiveType.toString()
+                                                                  ),
+                                               errorMessage
+                                              );
           if (errorCode != Errors.NONE)
           {
             printError("cannot start job '%s' (error: %s)",Settings.runJobName,errorMessage[0]);
@@ -1708,11 +1718,13 @@ public class BARControl
         }
         if (Settings.indexDatabaseAddStorageName != null)
         {
+          String[] errorMessage  = new String[1];
+          int      errorCode;
+
           // add index for storage
-          String[] errorMessage = new String[1];
-          int errorCode = BARServer.executeCommand(StringParser.format("INDEX_STORAGE_ADD name=%S",Settings.indexDatabaseAddStorageName),
-                                                   errorMessage
-                                                  );
+          errorCode = BARServer.executeCommand(StringParser.format("INDEX_STORAGE_ADD name=%S",Settings.indexDatabaseAddStorageName),
+                                               errorMessage
+                                              );
           if (errorCode != Errors.NONE)
           {
             printError("cannot add index for storage '%s' to index (error: %s)",Settings.indexDatabaseAddStorageName,errorMessage[0]);
@@ -1722,11 +1734,13 @@ public class BARControl
         }
         if (Settings.indexDatabaseRemoveStorageName != null)
         {
+          String[] errorMessage  = new String[1];
+          int      errorCode;
+
           // remote index for storage
-          String[] errorMessage = new String[1];
-          int errorCode = BARServer.executeCommand(StringParser.format("INDEX_STORAGE_REMOVE name=%S",Settings.indexDatabaseRemoveStorageName),
-                                                   errorMessage
-                                                  );
+          errorCode = BARServer.executeCommand(StringParser.format("INDEX_STORAGE_REMOVE name=%S",Settings.indexDatabaseRemoveStorageName),
+                                               errorMessage
+                                              );
           if (errorCode != Errors.NONE)
           {
             printError("cannot remove index for storage '%s' from index (error: %s)",Settings.indexDatabaseRemoveStorageName,errorMessage[0]);
@@ -1738,6 +1752,11 @@ public class BARControl
         {
           final String[] MAP_TEXT = new String[]{"\\n","\\r","\\\\"};
           final String[] MAP_BIN  = new String[]{"\n","\r","\\"};
+
+          String[]            errorMessage  = new String[1];
+          ValueMap            resultMap     = new ValueMap();
+          ArrayList<ValueMap> resultMapList = new ArrayList<ValueMap>();
+          int                 errorCode;
 
           // list storage index
           Command command = BARServer.runCommand("INDEX_STORAGE_LIST 0 * * "+StringUtils.escape(Settings.indexDatabaseStorageListPattern));
@@ -1797,194 +1816,156 @@ public class BARControl
         }
         if (Settings.indexDatabaseEntriesListPattern != null)
         {
-          final String[] MAP_TEXT = new String[]{"\\n","\\r","\\\\"};
-          final String[] MAP_BIN  = new String[]{"\n","\r","\\"};
+          String[] errorMessage = new String[1];
+          int      errorCode;
 
           // list storage index
-          Command  command = BARServer.runCommand("INDEX_ENTRIES_LIST 0 * 0 "+StringUtils.escape(Settings.indexDatabaseEntriesListPattern));
-          String   line;
-          Object[] data = new Object[10];
-          while (!command.endOfData())
+          if (BARServer.executeCommand(StringParser.format("INDEX_ENTRIES_LIST entryPattern=%'S checkedStorageOnlyFlag=%y entryMaxCount=%d newestEntriesOnlyFlag=%y",
+                                                           Settings.indexDatabaseEntriesListPattern,
+                                                           false,
+                                                           0,
+                                                           false
+                                                          ),
+                                       new TypeMap("entryType",EntryTypes.class,
+                                                   "storageName",String.class,
+                                                   "storageDateTime",long.class,
+                                                   "name",String.class,
+                                                   "size",long.class,
+                                                   "dateTime",long.class,
+                                                   "userId",int.class,
+                                                   "groupId",int.class,
+                                                   "permission",long.class,
+                                                   "fragmentOffset",long.class,
+                                                   "fragmentSize",long.class
+                                                  ),
+                                       errorMessage,
+                                       new CommandResultHandler()
+                                       {
+                                         public int handleResult(ValueMap resultMap)
+                                         {
+                                           EntryTypes entryType = resultMap.getEnum("entryType");
+                                           switch (entryType)
+                                           {
+                                             case FILE:
+                                               {
+                                                 String storageName     = resultMap.getString("name"           );
+                                                 long   storageDateTime = resultMap.getLong  ("storageDateTime");
+                                                 String fileName        = resultMap.getString("name"           );
+                                                 long   size            = resultMap.getLong  ("size"           );
+                                                 long   dateTime        = resultMap.getLong  ("dateTime"       );
+                                                 long   fragmentOffset  = resultMap.getLong  ("fragmentOffset" );
+                                                 long   fragmentSize    = resultMap.getLong  ("fragmentSize"   );
+
+                                                 System.out.println(String.format("%s: FILE %-40s %12d",
+                                                                                  storageName,
+                                                                                  fileName,
+                                                                                  size
+                                                                                 )
+                                                                   );
+                                               }
+                                               break;
+                                             case IMAGE:
+                                               {
+                                                 String storageName     = resultMap.getString("name"           );
+                                                 long   storageDateTime = resultMap.getLong  ("storageDateTime");
+                                                 String imageName       = resultMap.getString("name"           );
+                                                 long   size            = resultMap.getLong  ("size"           );
+                                                 long   blockOffset     = resultMap.getLong  ("blockOffset"    );
+                                                 long   blockCount      = resultMap.getLong  ("blockCount"     );
+
+                                                 System.out.println(String.format("%s: IMAGE %-40s %12d",
+                                                                                  storageName,
+                                                                                  imageName,
+                                                                                  size
+                                                                                 )
+                                                                   );
+                                               }
+                                               break;
+                                             case DIRECTORY:
+                                               {
+                                                 String storageName     = resultMap.getString("name"           );
+                                                 long   storageDateTime = resultMap.getLong  ("storageDateTime");
+                                                 String directoryName   = resultMap.getString("name"           );
+                                                 long   dateTime        = resultMap.getLong  ("dateTime"       );
+
+                                                 System.out.println(String.format("%s: DIR %-40s",
+                                                                                  storageName,
+                                                                                  directoryName
+                                                                                 )
+                                                                   );
+                                               }
+                                               break;
+                                             case LINK:
+                                               {
+                                                 String storageName     = resultMap.getString("name"           );
+                                                 long   storageDateTime = resultMap.getLong  ("storageDateTime");
+                                                 String linkName        = resultMap.getString("name"           );
+                                                 String destinationName = resultMap.getString("destinationName");
+                                                 long   dateTime        = resultMap.getLong  ("dateTime"       );
+
+                                                 System.out.println(String.format("%s: LINK %s -> %s",
+                                                                                  storageName,
+                                                                                  linkName,
+                                                                                  destinationName
+                                                                                 )
+                                                                   );
+                                               }
+                                               break;
+                                             case HARDLINK:
+                                               {
+                                                 String storageName     = resultMap.getString("name"           );
+                                                 long   storageDateTime = resultMap.getLong  ("storageDateTime");
+                                                 String fileName        = resultMap.getString("name"           );
+                                                 long   size            = resultMap.getLong  ("size"           );
+                                                 long   dateTime        = resultMap.getLong  ("dateTime"       );
+                                                 long   fragmentOffset  = resultMap.getLong  ("fragmentOffset" );
+                                                 long   fragmentSize    = resultMap.getLong  ("fragmentSize"   );
+
+                                                 System.out.println(String.format("%s: HARDLINK %-40s %12d",
+                                                                                  storageName,
+                                                                                  fileName,
+                                                                                  size
+                                                                                 )
+                                                                   );
+                                               }
+                                               break;
+                                             case SPECIAL:
+                                               {
+                                                 String storageName     = resultMap.getString("name"           );
+                                                 long   storageDateTime = resultMap.getLong  ("storageDateTime");
+                                                 String name            = resultMap.getString("name"           );
+                                                 long   dateTime        = resultMap.getLong  ("dateTime"       );
+
+                                                 System.out.println(String.format("%s: SPECIAL %-40s",
+                                                                                  storageName,
+                                                                                  name
+                                                                                 )
+                                                                   );
+                                               }
+                                               break;
+                                           }
+
+                                           return Errors.NONE;
+                                         }
+                                       }
+                                      ) != Errors.NONE
+             )
           {
-            line = command.getNextResult(5*1000);
-            if (line != null)
-            {
-              if      (StringParser.parse(line,"FILE %S %ld %S %ld %ld %d %d %d %ld %ld",data,StringParser.QUOTE_CHARS))
-              {
-                /* get data
-                   format:
-                     storage name
-                     storage date/time
-                     file name
-                     size
-                     date/time
-                     user id
-                     group id
-                     permission
-                     fragment offset
-                     fragment size
-                */
-                String storageName    = StringUtils.map((String)data[0],MAP_TEXT,MAP_BIN);
-                String fileName       = StringUtils.map((String)data[2],MAP_TEXT,MAP_BIN);
-                long   size           = (Long)data[3];
-                long   datetime       = (Long)data[4];
-                long   fragmentOffset = (Long)data[8];
-                long   fragmentSize   = (Long)data[9];
-
-                System.out.println(String.format("%s: FILE %-40s %12d",
-                                                 storageName,
-                                                 fileName,
-                                                 size
-                                                )
-                                  );
-              }
-              else if (StringParser.parse(line,"IMAGE %S %ld %S %ld %ld %ld",data,StringParser.QUOTE_CHARS))
-              {
-                /* get data
-                   format:
-                     storage name
-                     storage date/time
-                     name
-                     size
-                     blockOffset
-                     blockCount
-                */
-                String storageName = StringUtils.map((String)data[0],MAP_TEXT,MAP_BIN);
-                String imageName   = StringUtils.map((String)data[2],MAP_TEXT,MAP_BIN);
-                long   size        = (Long)data[3];
-                long   blockOffset = (Long)data[4];
-                long   blockCount  = (Long)data[5];
-
-                System.out.println(String.format("%s: IMAGE %-40s %12d",
-                                                 storageName,
-                                                 imageName,
-                                                 size
-                                                )
-                                  );
-              }
-              else if (StringParser.parse(line,"DIRECTORY %S %ld %S %ld %d %d %d",data,StringParser.QUOTE_CHARS))
-              {
-                /* get data
-                   format:
-                     storage name
-                     storage date/time
-                     directory name
-                     date/time
-                     user id
-                     group id
-                     permission
-                */
-                String storageName   = StringUtils.map((String)data[0],MAP_TEXT,MAP_BIN);
-                String directoryName = StringUtils.map((String)data[2],MAP_TEXT,MAP_BIN);
-                long   datetime      = (Long)data[3];
-
-                System.out.println(String.format("%s: DIR %-40s",
-                                                 storageName,
-                                                 directoryName
-                                                )
-                                  );
-              }
-              else if (StringParser.parse(line,"LINK %S %ld %S %S %ld %d %d %d",data,StringParser.QUOTE_CHARS))
-              {
-                /* get data
-                   format:
-                     storage name
-                     storage date/time
-                     link name
-                     destination name
-                     date/time
-                     user id
-                     group id
-                     permission
-                */
-                String storageName     = StringUtils.map((String)data[0],MAP_TEXT,MAP_BIN);
-                String linkName        = StringUtils.map((String)data[2],MAP_TEXT,MAP_BIN);
-                String destinationName = StringUtils.map((String)data[3],MAP_TEXT,MAP_BIN);
-                long   datetime        = (Long)data[4];
-
-                System.out.println(String.format("%s: LINK %s -> %s",
-                                                 storageName,
-                                                 linkName,
-                                                 destinationName
-                                                )
-                                  );
-              }
-              else if (StringParser.parse(line,"HARDLINK %S %ld %S %ld %ld %d %d %d %ld %ld",data,StringParser.QUOTE_CHARS))
-              {
-                /* get data
-                   format:
-                     storage name
-                     storage date/time
-                     file name
-                     size
-                     date/time
-                     user id
-                     group id
-                     permission
-                     fragment offset
-                     fragment size
-                */
-                String storageName     = StringUtils.map((String)data[0],MAP_TEXT,MAP_BIN);
-                String fileName        = StringUtils.map((String)data[2],MAP_TEXT,MAP_BIN);
-                long   size            = (Long)data[3];
-                long   datetime        = (Long)data[4];
-                long   fragmentOffset  = (Long)data[8];
-                long   fragmentSize    = (Long)data[9];
-
-                System.out.println(String.format("%s: HARDLINK %-40s %12d",
-                                                 storageName,
-                                                 fileName,
-                                                 size
-                                                )
-                                  );
-              }
-              else if (StringParser.parse(line,"SPECIAL %S %ld %S %ld %d %d %d",data,StringParser.QUOTE_CHARS))
-              {
-                /* get data
-                   format:
-                     storage name
-                     storage date/time
-                     name
-                     date/time
-                     user id
-                     group id
-                     permission
-                */
-                String storageName = StringUtils.map((String)data[0],MAP_TEXT,MAP_BIN);
-                String name        = StringUtils.map((String)data[2],MAP_TEXT,MAP_BIN);
-                long   datetime    = (Long)data[3];
-
-                System.out.println(String.format("%s: SPECIAL %-40s",
-                                                 storageName,
-                                                 name
-                                                )
-                                  );
-              }
-              else if (!line.isEmpty())
-              {
-                if (Settings.debugFlag)
-                {
-                  printWarning("unknown server response '%s'",line);
-                  BARServer.disconnect();
-                  System.exit(1);
-                }
-              }
-            }
-          }
-          if (command.getErrorCode() != Errors.NONE)
-          {
-            printError("cannot list archive files index (error: %s)",command.getErrorText());
+            printError("cannot list archive files index (error: %s)",errorMessage[0]);
             BARServer.disconnect();
             System.exit(1);
           }
+//                                           "INDEX_ENTRIES_LIST 0 * 0 "+StringUtils.escape(Settings.indexDatabaseEntriesListPattern));
         }
         if (Settings.pauseTime > 0)
         {
+          String[] errorMessage  = new String[1];
+          int      errorCode;
+
           // pause
-          String[] errorMessage = new String[1];
-          int errorCode = BARServer.executeCommand(StringParser.format("PAUSE time=%d",Settings.pauseTime),
-                                                   errorMessage
-                                                  );
+          errorCode = BARServer.executeCommand(StringParser.format("PAUSE time=%d",Settings.pauseTime),
+                                               errorMessage
+                                              );
           if (errorCode != Errors.NONE)
           {
             printError("cannot pause (error: %s)",Settings.runJobName,errorMessage[0]);
@@ -1994,12 +1975,15 @@ public class BARControl
         }
         if (Settings.pingFlag)
         {
+          // nothing to do
         }
         if (Settings.suspendFlag)
         {
+          String[] errorMessage  = new String[1];
+          int      errorCode;
+
           // suspend
-          String[] errorMessage = new String[1];
-          int errorCode = BARServer.executeCommand(StringParser.format("SUSPEND"),errorMessage);
+          errorCode = BARServer.executeCommand(StringParser.format("SUSPEND"),errorMessage);
           if (errorCode != Errors.NONE)
           {
             printError("cannot suspend (error: %s)",Settings.runJobName,errorMessage[0]);
@@ -2009,9 +1993,11 @@ public class BARControl
         }
         if (Settings.continueFlag)
         {
+          String[] errorMessage  = new String[1];
+          int      errorCode;
+
           // continue
-          String[] errorMessage = new String[1];
-          int errorCode = BARServer.executeCommand(StringParser.format("CONTINUE"),errorMessage);
+          errorCode = BARServer.executeCommand(StringParser.format("CONTINUE"),errorMessage);
           if (errorCode != Errors.NONE)
           {
             printError("cannot continue (error: %s)",Settings.runJobName,errorMessage[0]);
@@ -2021,6 +2007,9 @@ public class BARControl
         }
         if (Settings.abortJobName != null)
         {
+          String[] errorMessage  = new String[1];
+          int      errorCode;
+
           // get job id
           int jobId = getJobId(Settings.abortJobName);
           if (jobId < 0)
@@ -2031,8 +2020,9 @@ public class BARControl
           }
 
           // abort job
-          String[] errorMessage = new String[1];
-          int errorCode = BARServer.executeCommand(StringParser.format("JOB_ABORT jobId=%d",jobId),errorMessage);
+          errorCode = BARServer.executeCommand(StringParser.format("JOB_ABORT jobId=%d",jobId),
+                                               errorMessage
+                                              );
           if (errorCode != Errors.NONE)
           {
             printError("cannot abort job '%s' (error: %s)",Settings.abortJobName,errorMessage[0]);
@@ -2042,35 +2032,34 @@ public class BARControl
         }
         if (Settings.listFlag)
         {
-          int      errorCode;
-          String[] errorMessage = new String[1];
-          Object data[] = new Object[12];
+          String[]            errorMessage  = new String[1];
+          ValueMap            resultMap     = new ValueMap();
+          ArrayList<ValueMap> resultMapList = new ArrayList<ValueMap>();
+          int                 errorCode;
 
           // get server state
           String serverState = null;
-          ValueMap resultMap = new ValueMap();
-String[] result1 = new String[1];
           errorCode = BARServer.executeCommand(StringParser.format("STATUS"),
-                                               new TypeMap("type",String.class,
-                                                           "time",long.class
-                                                          ),
+                                               new TypeMap("type",String.class),
                                                errorMessage,
                                                resultMap
                                               );
           if (errorCode != Errors.NONE)
           {
-            printError("cannot get state (error: %s)",result1[0]);
+            printError("cannot get state (error: %s)",errorMessage[0]);
             BARServer.disconnect();
             System.exit(1);
           }
-          if      (StringParser.parse(result1[0],"running",data,StringParser.QUOTE_CHARS))
+          String type = resultMap.getString("type");
+          if      (type.equals("running"))
           {
+            serverState = "running";
           }
-          else if (StringParser.parse(result1[0],"pause %ld",data,StringParser.QUOTE_CHARS))
+          else if (type.equals("pause"))
           {
             serverState = "pause";
           }
-          else if (StringParser.parse(result1[0],"suspended",data,StringParser.QUOTE_CHARS))
+          else if (type.equals("suspended"))
           {
             serverState = "suspended";
           }
@@ -2082,11 +2071,8 @@ String[] result1 = new String[1];
           }
 
           // get joblist
-          ArrayList<ValueMap> resultMapList = new ArrayList<ValueMap>();
-Dprintf.dprintf("TODO");
-String[] result2 = new String[1];
           errorCode = BARServer.executeCommand(StringParser.format("JOB_LIST"),
-                                               new TypeMap("id",                    int.class,
+                                               new TypeMap("jobId",                 int.class,
                                                            "name",                  String.class,
                                                            "state",                 String.class,
                                                            "archiveType",           String.class,
@@ -2108,67 +2094,57 @@ String[] result2 = new String[1];
             BARServer.disconnect();
             System.exit(1);
           }
-          for (String line : result2)
+          for (ValueMap resultMap_ : resultMapList)
           {
-            /* format:
-               <id>
-               <name>
-               <state>
-               <type>
-               <archivePartSize>
-               <compressAlgorithms>
-               <cryptAlgorithm>
-               <cryptType>
-               <cryptPasswordMode>
-               <lastExecutedDateTime>
-               <estimatedRestTime>
-            */
-            if (StringParser.parse(line,"%d %S %S %s %ld %S %S %S %S %ld %ld",data,StringParser.QUOTE_CHARS))
+            // get data
+            int    jobId                  = resultMap_.getInt   ("jobId"                 );
+            String name                   = resultMap_.getString("name"                  );
+            String state                  = resultMap_.getString("state"                 );
+            String archiveType            = resultMap_.getString("archiveType"           );
+            long   archivePartSize        = resultMap_.getLong  ("archivePartSize"       );
+            String deltaCompressAlgorithm = resultMap_.getString("deltaCompressAlgorithm");
+            String byteCompressAlgorithm  = resultMap_.getString("byteCompressAlgorithm" );
+            String cryptAlgorithm         = resultMap_.getString("cryptAlgorithm"        );
+            String cryptType              = resultMap_.getString("cryptType"             );
+            String cryptPasswordMode      = resultMap_.getString("cryptPasswordMode"     );
+            long   lastExecutedDateTime   = resultMap_.getLong  ("lastExecutedDateTime"  );
+            long   estimatedRestTime      = resultMap_.getLong  ("estimatedRestTime"     );
+
+            String compressAlgorithms;
+            if      (!deltaCompressAlgorithm.equalsIgnoreCase("none") && !byteCompressAlgorithm.equalsIgnoreCase("none")) compressAlgorithms = deltaCompressAlgorithm+"+"+byteCompressAlgorithm;
+            else if (!deltaCompressAlgorithm.equalsIgnoreCase("none")                                                   ) compressAlgorithms = deltaCompressAlgorithm;
+            else if (                                                    !byteCompressAlgorithm.equalsIgnoreCase("none")) compressAlgorithms = byteCompressAlgorithm;
+            else                                                                                                          compressAlgorithms = "-";
+            if (cryptAlgorithm.equalsIgnoreCase("none"))
             {
-              // get data
-              int    id                     = (Integer)data[ 0];
-              String name                   = (String) data[ 1];
-              String state                  = (String) data[ 2];
-              String type                   = (String) data[ 3];
-              long   archivePartSize        = (Long)   data[ 4];
-              String compressAlgorithms     = (String) data[ 5];
-              String cryptAlgorithm         = (String) data[ 6];
-              String cryptType              = (String) data[ 7];
-              String cryptPasswordMode      = (String) data[ 8];
-              Long   lastExecutedDateTime   = (Long)   data[ 9];
-              Long   estimatedRestTime      = (Long)   data[10];
-
-              String s[] = StringUtils.split(compressAlgorithms,"+");
-              if      (!s[0].equalsIgnoreCase("none") && !s[1].equalsIgnoreCase("none")) compressAlgorithms = s[0]+"+"+s[1];
-              else if (!s[0].equalsIgnoreCase("none")                                  ) compressAlgorithms = s[0];
-              else if (!s[1].equalsIgnoreCase("none")                                  ) compressAlgorithms = s[1];
-              else                                                                       compressAlgorithms = "-";
-              if (cryptAlgorithm.equalsIgnoreCase("none"))
-              {
-                cryptAlgorithm    = "-";
-                cryptType         = "-";
-                cryptPasswordMode = "-";
-              }
-
-              System.out.println(String.format("%2d: %-40s %-10s %-11s %12d %-25s %-12s %-10s %-8s %s %8d",
-                                               id,
-                                               name,
-                                               (serverState == null)?state:serverState,
-                                               type,
-                                               archivePartSize,
-                                               compressAlgorithms,
-                                               cryptAlgorithm,
-                                               cryptType,
-                                               cryptPasswordMode,
-                                               DATE_FORMAT.format(new Date(lastExecutedDateTime*1000)),
-                                               estimatedRestTime
-                                              )
-                                );
+              cryptAlgorithm    = "-";
+              cryptType         = "-";
+              cryptPasswordMode = "-";
             }
+
+            System.out.println(String.format("%2d: %-40s %-10s %-11s %12d %-25s %-12s %-10s %-8s %s %8d",
+                                             jobId,
+                                             name,
+                                             (serverState == null)?state:serverState,
+                                             type,
+                                             archivePartSize,
+                                             compressAlgorithms,
+                                             cryptAlgorithm,
+                                             cryptType,
+                                             cryptPasswordMode,
+                                             DATE_FORMAT.format(new Date(lastExecutedDateTime*1000)),
+                                             estimatedRestTime
+                                            )
+                              );
           }
         }
         if (Settings.debugQuitServerFlag)
         {
+          String[]            errorMessage  = new String[1];
+          ValueMap            resultMap     = new ValueMap();
+          ArrayList<ValueMap> resultMapList = new ArrayList<ValueMap>();
+          int                 errorCode;
+
           // quit server
           String[] result = new String[1];
           if (!BARServer.quit(result))
