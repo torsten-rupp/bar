@@ -1830,68 +1830,77 @@ Errors Crypt_keyDecrypt(const CryptKey *cryptKey,
   assert(buffer != NULL);
   assert(bufferLength != NULL);
 
-  #ifdef HAVE_GCRYPT
-    // create S-expression with encrypted data
-    switch (cryptKey->cryptPaddingType)
-    {
-      case CRYPT_PADDING_TYPE_NONE:
-        gcryptError = gcry_sexp_build(&sexpEncryptData,NULL,"(enc-val (rsa (a %b)))",encryptBufferLength,encryptBuffer);
-//    gcryptError = gcry_sexp_build(&sexpEncryptData,NULL,"(enc-val (flags raw) (rsa (a %b)))",encryptBufferLength,encryptBuffer);
-        break;
-      case CRYPT_PADDING_TYPE_PKCS1:
-        gcryptError = gcry_sexp_build(&sexpEncryptData,NULL,"(enc-val (flags pkcs1) (rsa (a %b)))",encryptBufferLength,encryptBuffer);
-        break;
-      case CRYPT_PADDING_TYPE_OAEP:
-        gcryptError = gcry_sexp_build(&sexpEncryptData,NULL,"(enc-val (flags oaep) (rsa (a %b)))",encryptBufferLength,encryptBuffer);
-//    gcryptError = gcry_sexp_build(&sexpEncryptData,NULL,"(enc-val (flags pss) (rsa (a %b)))",encryptBufferLength,encryptBuffer);
-        break;
-      default:
-        return ERROR_KEY_ENCRYPT_FAIL;
-        break;
-    }
-    if (gcryptError != 0)
-    {
-      return ERRORX_(KEY_ENCRYPT_FAIL,gcryptError,gcry_strerror(gcryptError));
-    }
-//fprintf(stderr,"%s, %d: encrypted data\n",__FILE__,__LINE__); gcry_sexp_dump(sexpEncryptData);
+  (*bufferLength) = 0;
 
-    // decrypt
-    gcryptError = gcry_pk_decrypt(&sexpData,sexpEncryptData,cryptKey->key);
-    if (gcryptError != 0)
-    {
-      error = ERRORX_(KEY_ENCRYPT_FAIL,gcryptError,gcry_strerror(gcryptError));
-      gcry_sexp_release(sexpEncryptData);
-      return error;
-    }
-//fprintf(stderr,"%s, %d: plain data\n",__FILE__,__LINE__); gcry_sexp_dump(sexpData);
+  if (encryptBufferLength > 0)
+  {
+    #ifdef HAVE_GCRYPT
+      // create S-expression with encrypted data
+      switch (cryptKey->cryptPaddingType)
+      {
+        case CRYPT_PADDING_TYPE_NONE:
+          gcryptError = gcry_sexp_build(&sexpEncryptData,NULL,"(enc-val (rsa (a %b)))",encryptBufferLength,encryptBuffer);
+    //    gcryptError = gcry_sexp_build(&sexpEncryptData,NULL,"(enc-val (flags raw) (rsa (a %b)))",encryptBufferLength,encryptBuffer);
+          break;
+        case CRYPT_PADDING_TYPE_PKCS1:
+          gcryptError = gcry_sexp_build(&sexpEncryptData,NULL,"(enc-val (flags pkcs1) (rsa (a %b)))",encryptBufferLength,encryptBuffer);
+          break;
+        case CRYPT_PADDING_TYPE_OAEP:
+          gcryptError = gcry_sexp_build(&sexpEncryptData,NULL,"(enc-val (flags oaep) (rsa (a %b)))",encryptBufferLength,encryptBuffer);
+    //    gcryptError = gcry_sexp_build(&sexpEncryptData,NULL,"(enc-val (flags pss) (rsa (a %b)))",encryptBufferLength,encryptBuffer);
+          break;
+        default:
+          return ERROR_KEY_ENCRYPT_FAIL;
+          break;
+      }
+      if (gcryptError != 0)
+      {
+        return ERRORX_(KEY_ENCRYPT_FAIL,gcryptError,gcry_strerror(gcryptError));
+      }
+    //fprintf(stderr,"%s, %d: encrypted data\n",__FILE__,__LINE__); gcry_sexp_dump(sexpEncryptData);
 
-    // get decrypted data
-    data = gcry_sexp_nth_data(sexpData,1,&dataLength);
-    if (data == NULL)
-    {
-      error = ERRORX_(KEY_ENCRYPT_FAIL,gcryptError,gcry_strerror(gcryptError));
+      // decrypt
+      gcryptError = gcry_pk_decrypt(&sexpData,sexpEncryptData,cryptKey->key);
+      if (gcryptError != 0)
+      {
+        error = ERRORX_(KEY_ENCRYPT_FAIL,gcryptError,gcry_strerror(gcryptError));
+        gcry_sexp_release(sexpEncryptData);
+        return error;
+      }
+    //fprintf(stderr,"%s, %d: plain data\n",__FILE__,__LINE__); gcry_sexp_dump(sexpData);
+
+      // get decrypted data
+      data = gcry_sexp_nth_data(sexpData,1,&dataLength);
+      if (data == NULL)
+      {
+        error = ERRORX_(KEY_ENCRYPT_FAIL,gcryptError,gcry_strerror(gcryptError));
+        gcry_sexp_release(sexpData);
+        gcry_sexp_release(sexpEncryptData);
+        return error;
+      }
+      (*bufferLength) = MIN(dataLength,maxBufferLength);
+      memcpy(buffer,data,*bufferLength);
+
+      // free resources
       gcry_sexp_release(sexpData);
       gcry_sexp_release(sexpEncryptData);
-      return error;
-    }
-    (*bufferLength) = MIN(dataLength,maxBufferLength);
-    memcpy(buffer,data,*bufferLength);
 
-    // free resources
-    gcry_sexp_release(sexpData);
-    gcry_sexp_release(sexpEncryptData);
+      return ERROR_NONE;
+    #else /* not HAVE_GCRYPT */
+      UNUSED_VARIABLE(cryptKey);
+      UNUSED_VARIABLE(encryptBuffer);
+      UNUSED_VARIABLE(encryptBufferLength);
+      UNUSED_VARIABLE(maxBufferLength);
+      UNUSED_VARIABLE(buffer);
+      UNUSED_VARIABLE(bufferLength);
 
+      return ERROR_FUNCTION_NOT_SUPPORTED;
+    #endif /* HAVE_GCRYPT */
+  }
+  else
+  {
     return ERROR_NONE;
-  #else /* not HAVE_GCRYPT */
-    UNUSED_VARIABLE(cryptKey);
-    UNUSED_VARIABLE(encryptBuffer);
-    UNUSED_VARIABLE(encryptBufferLength);
-    UNUSED_VARIABLE(maxBufferLength);
-    UNUSED_VARIABLE(buffer);
-    UNUSED_VARIABLE(bufferLength);
-
-    return ERROR_FUNCTION_NOT_SUPPORTED;
-  #endif /* HAVE_GCRYPT */
+  }
 }
 
 Errors Crypt_getRandomEncryptKey(CryptKey        *publicKey,
