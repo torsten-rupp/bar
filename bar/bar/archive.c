@@ -869,13 +869,13 @@ LOCAL Errors createArchiveFile(ArchiveInfo *archiveInfo)
         }
       }
 
-      // init index
       if (   (archiveInfo->databaseHandle != NULL)
           && !archiveInfo->jobOptions->noIndexDatabaseFlag
           && !archiveInfo->jobOptions->dryRunFlag
           && !archiveInfo->jobOptions->noStorageFlag
          )
       {
+        // create index
         error = Index_create(archiveInfo->databaseHandle,
                              NULL,
                              INDEX_STATE_CREATE,
@@ -889,6 +889,11 @@ LOCAL Errors createArchiveFile(ArchiveInfo *archiveInfo)
           Semaphore_unlock(&archiveInfo->chunkIOLock);
           return error;
         }
+      }
+      else
+      {
+        // no index
+        archiveInfo->storageId = DATABASE_ID_NONE;
       }
 
       // mark archive file "open"
@@ -934,14 +939,14 @@ LOCAL Errors closeArchiveFile(ArchiveInfo *archiveInfo,
       if (archiveInfo->archiveCreatedFunction != NULL)
       {
         error = archiveInfo->archiveCreatedFunction(archiveInfo->archiveNewFileUserData,
+                                                    archiveInfo->databaseHandle,
                                                     (   (archiveInfo->databaseHandle != NULL)
                                                      && !archiveInfo->jobOptions->noIndexDatabaseFlag
                                                      && !archiveInfo->jobOptions->dryRunFlag
                                                      && !archiveInfo->jobOptions->noStorageFlag
                                                     )
-                                                      ? archiveInfo->databaseHandle
-                                                      : NULL,
-                                                    archiveInfo->storageId,
+                                                      ? archiveInfo->storageId
+                                                      : DATABASE_ID_NONE,
                                                     archiveInfo->file.fileName,
                                                     (archiveInfo->jobOptions->archivePartSize > 0LL)
                                                       ? (int)archiveInfo->partNumber
@@ -2798,7 +2803,7 @@ const Password *Archive_appendDecryptPassword(const Password *password)
 
   archiveInfo->printableName                   = String_new();
 
-  archiveInfo->cryptType                       = (jobOptions->cryptAlgorithm != CRYPT_ALGORITHM_NONE)?jobOptions->cryptType:CRYPT_TYPE_NONE;
+  archiveInfo->cryptType                       = (jobOptions->cryptAlgorithm != CRYPT_ALGORITHM_NONE) ? jobOptions->cryptType : CRYPT_TYPE_NONE;
   archiveInfo->cryptPassword                   = NULL;
   archiveInfo->cryptPasswordReadFlag           = FALSE;
   archiveInfo->cryptKeyData                    = NULL;
@@ -8371,8 +8376,7 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
               }
 
               if (   (archiveEntryInfo->archiveInfo->databaseHandle != NULL)
-                  && !archiveEntryInfo->archiveInfo->jobOptions->noIndexDatabaseFlag
-                  && !archiveEntryInfo->archiveInfo->jobOptions->noStorageFlag
+                  && (archiveEntryInfo->archiveInfo->storageId != DATABASE_ID_NONE)
                  )
               {
                 // store in index database
@@ -8499,8 +8503,7 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
               }
 
               if (   (archiveEntryInfo->archiveInfo->databaseHandle != NULL)
-                  && !archiveEntryInfo->archiveInfo->jobOptions->noIndexDatabaseFlag
-                  && !archiveEntryInfo->archiveInfo->jobOptions->noStorageFlag
+                  && (archiveEntryInfo->archiveInfo->storageId != DATABASE_ID_NONE)
                  )
               {
                 // store in index database
@@ -8560,8 +8563,7 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
               Semaphore_unlock(&archiveEntryInfo->archiveInfo->chunkIOLock);
 
               if (   (archiveEntryInfo->archiveInfo->databaseHandle != NULL)
-                  && !archiveEntryInfo->archiveInfo->jobOptions->noIndexDatabaseFlag
-                  && !archiveEntryInfo->archiveInfo->jobOptions->noStorageFlag
+                  && (archiveEntryInfo->archiveInfo->storageId != DATABASE_ID_NONE)
                  )
               {
                 // store in index database
@@ -8605,8 +8607,7 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
               Semaphore_unlock(&archiveEntryInfo->archiveInfo->chunkIOLock);
 
               if (   (archiveEntryInfo->archiveInfo->databaseHandle != NULL)
-                  && !archiveEntryInfo->archiveInfo->jobOptions->noIndexDatabaseFlag
-                  && !archiveEntryInfo->archiveInfo->jobOptions->noStorageFlag
+                  && (archiveEntryInfo->archiveInfo->storageId != DATABASE_ID_NONE)
                  )
               {
                 // store in index database
@@ -8740,8 +8741,7 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
               }
 
               if (   (archiveEntryInfo->archiveInfo->databaseHandle != NULL)
-                  && !archiveEntryInfo->archiveInfo->jobOptions->noIndexDatabaseFlag
-                  && !archiveEntryInfo->archiveInfo->jobOptions->noStorageFlag
+                  && (archiveEntryInfo->archiveInfo->storageId != DATABASE_ID_NONE)
                  )
               {
                 // store in index database
@@ -8813,8 +8813,7 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
               Semaphore_unlock(&archiveEntryInfo->archiveInfo->chunkIOLock);
 
               if (   (archiveEntryInfo->archiveInfo->databaseHandle != NULL)
-                  && !archiveEntryInfo->archiveInfo->jobOptions->noIndexDatabaseFlag
-                  && !archiveEntryInfo->archiveInfo->jobOptions->noStorageFlag
+                  && (archiveEntryInfo->archiveInfo->storageId != DATABASE_ID_NONE)
                  )
               {
                 // store in index database
@@ -10004,13 +10003,13 @@ uint64 Archive_getSize(ArchiveInfo *archiveInfo)
   return size;
 }
 
-Errors Archive_addIndex(DatabaseHandle *databaseHandle,
-                        const String   storageName,
-                        IndexModes     indexMode,
-                        Password       *cryptPassword,
-                        String         cryptPrivateKeyFileName,
-                        BandWidthList  *maxBandWidthList
-                       )
+Errors Archive_addToIndex(DatabaseHandle *databaseHandle,
+                          const String   storageName,
+                          IndexModes     indexMode,
+                          Password       *cryptPassword,
+                          String         cryptPrivateKeyFileName,
+                          BandWidthList  *maxBandWidthList
+                         )
 {
   Errors error;
   int64  storageId;

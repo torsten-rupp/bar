@@ -1192,7 +1192,7 @@ Errors Archive_seek(ArchiveInfo *archiveInfo,
 uint64 Archive_getSize(ArchiveInfo *archiveInfo);
 
 /***********************************************************************\
-* Name   : Archive_addIndex
+* Name   : Archive_addToIndex
 * Purpose: add storage index
 * Input  : databaseHandle          - database handle
 *          storageName             - storage name
@@ -1206,13 +1206,13 @@ uint64 Archive_getSize(ArchiveInfo *archiveInfo);
 * Notes  : -
 \***********************************************************************/
 
-Errors Archive_addIndex(DatabaseHandle *databaseHandle,
-                        const String   storageName,
-                        IndexModes     indexMode,
-                        Password       *cryptPassword,
-                        String         cryptPrivateKeyFileName,
-                        BandWidthList  *maxBandWidthList
-                       );
+Errors Archive_addToIndex(DatabaseHandle *databaseHandle,
+                          const String   storageName,
+                          IndexModes     indexMode,
+                          Password       *cryptPassword,
+                          String         cryptPrivateKeyFileName,
+                          BandWidthList  *maxBandWidthList
+                         );
 
 /***********************************************************************\
 * Name   : Archive_updateIndex
