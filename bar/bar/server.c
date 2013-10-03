@@ -3522,14 +3522,14 @@ LOCAL void serverCommand_authorize(ClientInfo *clientInfo, uint id, const String
   if (okFlag)
   {
     clientInfo->authorizationState = AUTHORIZATION_STATE_OK;
+    sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
   }
   else
   {
 //fprintf(stderr,"%s, %d: encryptedPassword='%s' %d\n",__FILE__,__LINE__,String_cString(encryptedPassword),String_length(encryptedPassword));
     clientInfo->authorizationState = AUTHORIZATION_STATE_FAIL;
+    sendClientResult(clientInfo,id,TRUE,ERROR_AUTHORIZATION,"authorization failure");
   }
-
-  sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
 
   // free resources
   String_delete(encryptedPassword);
@@ -3750,7 +3750,7 @@ LOCAL void serverCommand_pause(ClientInfo *clientInfo, uint id, const StringMap 
   modeMask = String_new();
   if (!StringMap_getString(argumentMap,"modeMask",modeMask,0))
   {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected modeMask=CREATE,STORAGE,RESTORE,INDEX_UPDATE");
+    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected modeMask=CREATE,STORAGE,RESTORE,INDEX_UPDATE|ALL");
     return;
   }
 
@@ -3784,6 +3784,13 @@ LOCAL void serverCommand_pause(ClientInfo *clientInfo, uint id, const StringMap 
         }
         else if (String_equalsIgnoreCaseCString(token,"INDEX_UPDATE"))
         {
+          pauseFlags.indexUpdate = TRUE;
+        }
+        else if (String_equalsIgnoreCaseCString(token,"ALL"))
+        {
+          pauseFlags.create      = TRUE;
+          pauseFlags.storage     = TRUE;
+          pauseFlags.restore     = TRUE;
           pauseFlags.indexUpdate = TRUE;
         }
       }
@@ -9210,8 +9217,8 @@ LOCAL void networkClientThreadCode(ClientInfo *clientInfo)
     else
     {
       // authorization failure -> mark for disconnect
-      sendClientResult(clientInfo,commandMsg.id,TRUE,ERROR_AUTHORIZATION,"authorization failure");
       clientInfo->authorizationState = AUTHORIZATION_STATE_FAIL;
+      sendClientResult(clientInfo,commandMsg.id,TRUE,ERROR_AUTHORIZATION,"authorization failure");
     }
 
     // free resources
