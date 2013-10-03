@@ -1113,7 +1113,10 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
       }
 
       // authorize
-      if (syncExecuteCommand(StringParser.format("AUTHORIZE encryptType=%s encryptedPassword=%s",passwordEncryptType,encryptPassword(serverPassword)),
+      if (syncExecuteCommand(StringParser.format("AUTHORIZE encryptType=%s encryptedPassword=%s",
+                                                 passwordEncryptType,
+                                                 encryptPassword(serverPassword)
+                                                ),
                              errorMessage
                             ) != Errors.NONE
          )
