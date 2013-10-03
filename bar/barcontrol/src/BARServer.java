@@ -191,17 +191,20 @@ class Command
   /** check if end of data
    * @return true iff command completed and all data processed
    */
-  public boolean endOfData()
+  public synchronized boolean endOfData()
   {
-    if ((result.size() == 0) && !completedFlag)
+    if (result.size() == 0)
     {
-      try
+      if (!completedFlag)
       {
-        this.wait();
-      }
-      catch (InterruptedException exception)
-      {
-        // ignored
+        try
+        {
+          this.wait();
+        }
+        catch (InterruptedException exception)
+        {
+          // ignored
+        }
       }
       return (result.size() == 0) && completedFlag;
     }
@@ -419,28 +422,15 @@ class Command
    */
   public synchronized int getNextResult(TypeMap typeMap, String[] errorMessage, ValueMap valueMap, ValueMap unknownValueMap, int timeout)
   {
+    // init variables
     if (unknownValueMap != null) unknownValueMap.clear();
 
     if (errorCode == Errors.NONE)
     {
-      if (timeout > 0)
-      {
-        // wait for result
-        if (   !completedFlag
-            && (result.size() == 0)
-           )
-        {
-          try
-          {
-            this.wait(timeout);
-          }
-          catch (InterruptedException exception)
-          {
-            // ignored
-          }
-        }
-      }
+      // wait for result
+      waitForResult(timeout);
 
+      // parse next line
       if (result.size() > 0)
       {
         String line = result.removeFirst();
@@ -456,12 +446,10 @@ class Command
 //Dprintf.dprintf("valueMap=%s",valueMap);
         }
       }
-      if (errorMessage != null) errorMessage[0] = "";
     }
-    else
-    {
-      if (errorMessage != null) errorMessage[0] = this.errorText;
-    }
+
+    // get error message
+    if (errorMessage != null) errorMessage[0] = errorText;
 
     return errorCode;
   }
@@ -1306,109 +1294,6 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
 
   /** execute command
    * @param command command to send to BAR server
-   * @param result result (String[] or ArrayList)
-   * @param busyIndicator busy indicator or null
-   * @return Errors.NONE or error code
-   */
-  public static int XXXexecuteCommand(String commandString, Object result, BusyIndicator busyIndicator)
-  {
-    final int TIMEOUT = 120*1000; // total timeout [ms]
-
-    Command command;
-    int     errorCode;
-
-    synchronized(output)
-    {
-      if (busyIndicator != null)
-      {
-        busyIndicator.busy(0);
-        if (busyIndicator.isAborted()) return -1;
-      }
-
-      // new command
-      commandId++;
-      String line = String.format("%d %s",commandId,commandString);
-
-      // add command
-      command = readThread.commandAdd(commandId,TIMEOUT);
-
-      // send command
-      try
-      {
-        output.write(line); output.write('\n'); output.flush();
-        if (Settings.debugServerFlag) System.err.println("Network: sent '"+line+"'");
-      }
-      catch (IOException exception)
-      {
-        readThread.commandRemove(command);
-        return -1;
-      }
-      if (busyIndicator != null)
-      {
-        if (busyIndicator.isAborted())
-        {
-          abortCommand(command);
-          return command.getErrorCode();
-        }
-      }
-    }
-
-    // wait until completed, aborted or timeout
-    while (   !command.waitCompleted(250)
-           && ((busyIndicator == null) || !busyIndicator.isAborted())
-          )
-    {
-      if (busyIndicator != null)
-      {
-        busyIndicator.busy(0);
-      }
-    }
-    if (busyIndicator != null)
-    {
-      if (busyIndicator.isAborted())
-      {
-        command.abort();
-        return command.getErrorCode();
-      }
-    }
-
-    // get result
-    if      (result == null)
-    {
-      errorCode = command.getResult();
-    }
-    else if (result instanceof ArrayList)
-    {
-      errorCode = command.getResult((ArrayList<String>)result);
-    }
-    else if (result instanceof String[])
-    {
-      errorCode = command.getResult((String[])result);
-    }
-    else
-    {
-      throw new Error("Invalid result data type");
-    }
-
-    // free command
-    readThread.commandRemove(command);
-
-    return errorCode;
-  }
-
-  /** execute command
-   * @param command command to send to BAR server
-   * @param result result (String[] or ArrayList)
-   * @return Errors.NONE or error code
-   */
-//TODO
-  public static int XXXexecuteCommand(String command, Object result)
-  {
-    return XXXexecuteCommand(command,result,null);
-  }
-
-  /** execute command
-   * @param command command to send to BAR server
    * @param typeMap type map
    * @param errorMessage error message or ""
    * @param commandResultHandler command result handler
@@ -1497,6 +1382,25 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
 
   /** execute command
    * @param command command to send to BAR server
+   * @param errorMessage error message or ""
+   * @return Errors.NONE or error code
+   */
+  public static int executeCommand(String command, String[] errorMessage)
+  {
+    return executeCommand(command,(TypeMap)null,errorMessage,(ValueMap)null);
+  }
+
+  /** execute command
+   * @param command command to send to BAR server
+   * @return Errors.NONE or error code
+   */
+  public static int executeCommand(String command)
+  {
+    return executeCommand(command,(String[])null);
+  }
+
+  /** execute command
+   * @param command command to send to BAR server
    * @param typeMap type map
    * @param errorMessage error message or ""
    * @param valueMapList value map list
@@ -1540,25 +1444,6 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
   public static int executeCommand(String commandString, TypeMap typeMap, String[] errorMessage, List<ValueMap> valueMapList)
   {
     return executeCommand(commandString,typeMap,errorMessage,valueMapList,(ValueMap)null);
-  }
-
-  /** execute command
-   * @param command command to send to BAR server
-   * @param errorMessage error message or ""
-   * @return Errors.NONE or error code
-   */
-  public static int executeCommand(String command, String[] errorMessage)
-  {
-    return executeCommand(command,(TypeMap)null,errorMessage,(ValueMap)null);
-  }
-
-  /** execute command
-   * @param command command to send to BAR server
-   * @return Errors.NONE or error code
-   */
-  public static int executeCommand(String command)
-  {
-    return executeCommand(command,(String[])null);
   }
 
   /** set boolean value on BAR server
