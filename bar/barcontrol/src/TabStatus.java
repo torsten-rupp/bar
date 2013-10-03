@@ -1504,7 +1504,10 @@ class TabStatus
     if (buffer.length() > 0)
     {
       String[] resultErrorMessage = new String[1];
-      int error = BARServer.executeCommand(StringParser.format("PAUSE time=%d type=%s",pauseTime,buffer.toString()),
+      int error = BARServer.executeCommand(StringParser.format("PAUSE time=%d modeMask=%s",
+                                                               pauseTime,
+                                                               buffer.toString()
+                                                              ),
                                            resultErrorMessage
                                           );
       if (error != Errors.NONE)
