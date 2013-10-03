@@ -1963,12 +1963,15 @@ public class BARControl
           int      errorCode;
 
           // pause
-          errorCode = BARServer.executeCommand(StringParser.format("PAUSE time=%d",Settings.pauseTime),
+          errorCode = BARServer.executeCommand(StringParser.format("PAUSE time=%d modeMask=%s",
+                                                                   Settings.pauseTime,
+                                                                   "ALL"
+                                                                  ),
                                                errorMessage
                                               );
           if (errorCode != Errors.NONE)
           {
-            printError("cannot pause (error: %s)",Settings.runJobName,errorMessage[0]);
+            printError("cannot pause (error: %s)",errorMessage[0]);
             BARServer.disconnect();
             System.exit(1);
           }
