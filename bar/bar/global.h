@@ -94,6 +94,8 @@
 #else
   #define MAX_LONG_LONG    9223372036854775807LL
 #endif
+#define MIN_INT64          MIN_LONG_LONG
+#define MAX_INT64          MAX_LONG_LONG
 
 #define MIN_UCHAR          0
 #define MAX_UCHAR          UCHAR_MAX
@@ -109,6 +111,8 @@
 #else
   #define MAX_ULONG_LONG   18446744073709551615LL
 #endif
+#define MIN_UINT64         0LL
+#define MAX_UINT64         MAX_ULONG_LONG
 
 #define MIN_FLOAT          FLT_MIN
 #define MAX_FLOAT          FLT_MAX
@@ -119,6 +123,8 @@
 #define MIN_LONGDOUBLE     LDBL_MIN
 #define MAX_LONGDOUBLE     LDBL_MAX
 #define EPSILON_LONGDOUBLE LDBL_EPSILON
+
+
 
 // special constants
 #define NO_WAIT      0
