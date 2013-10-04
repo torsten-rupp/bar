@@ -122,7 +122,8 @@ typedef enum
    | SET_VALUE(WEEKDAY_SUN) \
   )
 
-#define MAX_CONNECTION_COUNT_UNLIMITED -1
+#define MAX_CONNECTION_COUNT_UNLIMITED MAX_INT
+#define MAX_STORAGE_SIZE_UNLIMITED     MAX_INT64
 
 /***************************** Datatypes *******************************/
 
@@ -179,21 +180,8 @@ typedef struct
   String   loginName;                                    // login name
   Password *password;                                    // login password
   int      maxConnectionCount;                           // max. number of concurrent connections or MAX_CONNECTION_COUNT_UNLIMITED
+  uint64   maxStorageSize;                               // max. number of bytes to store on server
 } FTPServer;
-
-typedef struct FTPServerNode
-{
-  LIST_NODE_HEADER(struct FTPServerNode);
-
-  String    name;                                        // ftp server name
-  FTPServer ftpServer;
-  uint      connectionCount;                             // number of connections
-} FTPServerNode;
-
-typedef struct
-{
-  LIST_HEADER(FTPServerNode);
-} FTPServerList;
 
 // SSH server settings
 typedef struct
@@ -204,21 +192,8 @@ typedef struct
   String   publicKeyFileName;                            // public key file name (ssh,scp,sftp)
   String   privateKeyFileName;                           // private key file name (ssh,scp,sftp)
   int      maxConnectionCount;                           // max. number of concurrent connections or MAX_CONNECTION_COUNT_UNLIMITED
+  uint64   maxStorageSize;                               // max. number of bytes to store on server
 } SSHServer;
-
-typedef struct SSHServerNode
-{
-  LIST_NODE_HEADER(struct SSHServerNode);
-
-  String    name;                                        // ssh server name
-  SSHServer sshServer;
-  uint      connectionCount;                             // number of connections
-} SSHServerNode;
-
-typedef struct
-{
-  LIST_HEADER(SSHServerNode);
-} SSHServerList;
 
 // WebDAV server settings
 typedef struct
@@ -228,21 +203,8 @@ typedef struct
   String   publicKeyFileName;                            // public key file name
   String   privateKeyFileName;                           // private key file name
   int      maxConnectionCount;                           // max. number of concurrent connections or MAX_CONNECTION_COUNT_UNLIMITED
+  uint64   maxStorageSize;                               // max. number of bytes to store on server
 } WebDAVServer;
-
-typedef struct WebDAVServerNode
-{
-  LIST_NODE_HEADER(struct WebDAVServerNode);
-
-  String           name;                                 // WebDAV server name
-  ServerAllocation serverAllocation;
-  WebDAVServer     webdavServer;
-} WebDAVServerNode;
-
-typedef struct
-{
-  LIST_HEADER(WebDAVServerNode);
-} WebDAVServerList;
 
 // server types
 typedef enum
