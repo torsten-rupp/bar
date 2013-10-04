@@ -58,13 +58,15 @@
 
 /***************************** Constants *******************************/
 
-#define PROTOCOL_VERSION_MAJOR 2
-#define PROTOCOL_VERSION_MINOR 0
+#define PROTOCOL_VERSION_MAJOR         2
+#define PROTOCOL_VERSION_MINOR         0
 
-#define SESSION_ID_LENGTH 64                   // max. length of session id
-#define SESSION_KEY_SIZE  1024                 // number of session key bits
+#define SESSION_ID_LENGTH              64          // max. length of session id
+#define SESSION_KEY_SIZE               1024        // number of session key bits
 
-#define MAX_NETWORK_CLIENT_THREADS 3           // number of threads for a client
+#define MAX_NETWORK_CLIENT_THREADS     3           // number of threads for a client
+
+#define MAX_AUTHORIZATION_FAIL_HISTORY 64          // max. length of history of authorization fail clients
 
 // sleep times [s]
 #define SLEEP_TIME_SCHEDULER_THREAD    ( 1*60)
@@ -298,6 +300,22 @@ typedef enum
   AUTHORIZATION_STATE_FAIL,
 } AuthorizationStates;
 
+// authorization fail node
+typedef struct AuthorizationFailNode
+{
+  LIST_NODE_HEADER(struct AuthorizationFailNode);
+
+  String clientName;
+  uint   count;
+  uint64 lastTimestamp;
+} AuthorizationFailNode;
+
+// authorization fail list
+typedef struct
+{
+  LIST_HEADER(AuthorizationFailNode);
+} AuthorizationFailList;
+
 // client info
 typedef struct
 {
@@ -306,6 +324,8 @@ typedef struct
   SessionId           sessionId;
   CryptKey            publicKey,secretKey;
   AuthorizationStates authorizationState;
+  uint                authorizationFailCounter;
+  uint64              lastAuthorizationTimestamp;
 
   uint                abortCommandId;                      // command id to abort
 
@@ -541,30 +561,31 @@ LOCAL const ConfigValue CONFIG_VALUES[] =
 
 /***************************** Variables *******************************/
 
-LOCAL const Password   *serverPassword;
-LOCAL const char       *serverJobsDirectory;
-LOCAL const JobOptions *serverDefaultJobOptions;
-LOCAL JobList          jobList;
-LOCAL Thread           jobThread;
-LOCAL Thread           schedulerThread;
-LOCAL Thread           pauseThread;
-LOCAL Thread           indexThread;
-LOCAL Thread           autoIndexUpdateThread;
-LOCAL ClientList       clientList;
-LOCAL Semaphore        serverStateLock;
-LOCAL ServerStates     serverState;
-LOCAL bool             createFlag;            // TRUE iff create archive in progress
-LOCAL bool             restoreFlag;           // TRUE iff restore archive in progress
+LOCAL ClientList            clientList;
+LOCAL AuthorizationFailList authorizationFailList;
+LOCAL const Password        *serverPassword;
+LOCAL const char            *serverJobsDirectory;
+LOCAL const JobOptions      *serverDefaultJobOptions;
+LOCAL JobList               jobList;
+LOCAL Thread                jobThread;
+LOCAL Thread                schedulerThread;
+LOCAL Thread                pauseThread;
+LOCAL Thread                indexThread;
+LOCAL Thread                autoIndexUpdateThread;
+LOCAL Semaphore             serverStateLock;
+LOCAL ServerStates          serverState;
+LOCAL bool                  createFlag;            // TRUE iff create archive in progress
+LOCAL bool                  restoreFlag;           // TRUE iff restore archive in progress
 LOCAL struct
       {
         bool create;
         bool storage;
         bool restore;
         bool indexUpdate;
-      } pauseFlags;                           // TRUE iff pause
-LOCAL uint64           pauseEndTimestamp;
-LOCAL bool             indexFlag;             // TRUE iff index archive in progress
-LOCAL bool             quitFlag;              // TRUE iff quit requested
+      } pauseFlags;                                // TRUE iff pause
+LOCAL uint64                pauseEndTimestamp;
+LOCAL bool                  indexFlag;             // TRUE iff index archive in progress
+LOCAL bool                  quitFlag;              // TRUE iff quit requested
 
 /****************************** Macros *********************************/
 
@@ -1862,7 +1883,7 @@ LOCAL void jobThreadCode(void)
         switch (jobNode->jobType)
         {
           case JOB_TYPE_CREATE:
-            logMessage(LOG_TYPE_ALWAYS,"start create archive '%s': '%s'\n",String_cString(jobNode->name),String_cString(printableStorageName));
+            logMessage(LOG_TYPE_ALWAYS,"start job '%s': '%s'\n",String_cString(jobNode->name),String_cString(printableStorageName));
 
             // try to pause background index thread, do short delay to make sure network connection is possible
             createFlag = TRUE;
@@ -1897,11 +1918,11 @@ LOCAL void jobThreadCode(void)
 
             if (!jobNode->requestedAbortFlag)
             {
-              logMessage(LOG_TYPE_ALWAYS,"done create archive '%s': '%s' (error: %s)\n",String_cString(jobNode->name),String_cString(printableStorageName),Errors_getText(jobNode->runningInfo.error));
+              logMessage(LOG_TYPE_ALWAYS,"done job '%s': '%s' (error: %s)\n",String_cString(jobNode->name),String_cString(printableStorageName),Errors_getText(jobNode->runningInfo.error));
             }
             else
             {
-              logMessage(LOG_TYPE_ALWAYS,"aborted create archive '%s': '%s'\n",String_cString(jobNode->name),String_cString(printableStorageName));
+              logMessage(LOG_TYPE_ALWAYS,"aborted job '%s': '%s'\n",String_cString(jobNode->name),String_cString(printableStorageName));
             }
             break;
           case JOB_TYPE_RESTORE:
@@ -3521,15 +3542,18 @@ LOCAL void serverCommand_authorize(ClientInfo *clientInfo, uint id, const String
   // authorization state
   if (okFlag)
   {
-    clientInfo->authorizationState = AUTHORIZATION_STATE_OK;
+    clientInfo->authorizationState       = AUTHORIZATION_STATE_OK;
+    clientInfo->authorizationFailCounter = 0;
     sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
   }
   else
   {
 //fprintf(stderr,"%s, %d: encryptedPassword='%s' %d\n",__FILE__,__LINE__,String_cString(encryptedPassword),String_length(encryptedPassword));
     clientInfo->authorizationState = AUTHORIZATION_STATE_FAIL;
+    clientInfo->authorizationFailCounter++;
     sendClientResult(clientInfo,id,TRUE,ERROR_AUTHORIZATION,"authorization failure");
   }
+  clientInfo->lastAuthorizationTimestamp = Misc_getTimestamp();
 
   // free resources
   String_delete(encryptedPassword);
@@ -9477,6 +9501,78 @@ LOCAL void freeClientNode(ClientNode *clientNode, void *userData)
 }
 
 /***********************************************************************\
+* Name   : freeAuthorizationFailNode
+* Purpose: free authorazation fail node
+* Input  : authorizationFailNode - authorization fail node
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void freeAuthorizationFailNode(AuthorizationFailNode *authorizationFailNode, void *userData)
+{
+  assert(authorizationFailNode != NULL);
+
+  UNUSED_VARIABLE(userData);
+
+  String_delete(authorizationFailNode->clientName);
+}
+
+/***********************************************************************\
+* Name   : findAuthorizationFailNode
+* Purpose: find authorazation fail node
+* Input  : clientName - client name
+* Output : -
+* Return : authorization fail node or NULL
+* Notes  : -
+\***********************************************************************/
+
+LOCAL AuthorizationFailNode *findAuthorizationFailNode(const String clientName)
+{
+  AuthorizationFailNode *authorizationFailNode;
+
+  assert(clientName != NULL);
+
+  authorizationFailNode = authorizationFailList.head;
+  while ((authorizationFailNode != NULL) && !String_equals(authorizationFailNode->clientName,clientName))
+  {
+    authorizationFailNode = authorizationFailNode->next;
+  }
+
+  return authorizationFailNode;
+}
+
+/***********************************************************************\
+* Name   : getAuthorizationFailNode
+* Purpose: get authorazation fail node
+* Input  : clientName - client name
+* Output : -
+* Return : authorization fail node
+* Notes  : -
+\***********************************************************************/
+
+LOCAL AuthorizationFailNode *getAuthorizationFailNode(const String clientName)
+{
+  AuthorizationFailNode *authorizationFailNode;
+
+  authorizationFailNode = findAuthorizationFailNode(clientName);
+  if (authorizationFailNode == NULL)
+  {
+    authorizationFailNode = LIST_NEW_NODE(AuthorizationFailNode);
+    if (authorizationFailNode == NULL)
+    {
+      HALT_INSUFFICIENT_MEMORY();
+    }
+    authorizationFailNode->clientName    = String_duplicate(clientName);
+    authorizationFailNode->count         = 0;
+    authorizationFailNode->lastTimestamp = Misc_getTimestamp();
+    List_append(&authorizationFailList,authorizationFailNode);
+  }
+
+  return authorizationFailNode;
+}
+
+/***********************************************************************\
 * Name   : newClient
 * Purpose: create new client
 * Input  : type - client type
@@ -9497,9 +9593,11 @@ LOCAL ClientNode *newClient(void)
   }
 
   // initialize node
-  clientNode->clientInfo.type               = CLIENT_TYPE_NONE;
-  clientNode->clientInfo.authorizationState = AUTHORIZATION_STATE_WAITING;
-  clientNode->commandString                 = String_new();
+  clientNode->clientInfo.type                       = CLIENT_TYPE_NONE;
+  clientNode->clientInfo.authorizationState         = AUTHORIZATION_STATE_WAITING;
+  clientNode->clientInfo.authorizationFailCounter   = 0;
+  clientNode->clientInfo.lastAuthorizationTimestamp = 0LL;
+  clientNode->commandString                         = String_new();
 
   return clientNode;
 }
@@ -9601,19 +9699,20 @@ Errors Server_run(uint             port,
                   const JobOptions *defaultJobOptions
                  )
 {
-  Errors             error;
-  bool               serverFlag,serverTLSFlag;
-  ServerSocketHandle serverSocketHandle,serverTLSSocketHandle;
-  sigset_t           signalMask;
-  fd_set             selectSet;
-  ClientNode         *clientNode;
-  SocketHandle       socketHandle;
-  String             clientName;
-  uint               clientPort;
-  char               buffer[256];
-  ulong              receivedBytes;
-  ulong              z;
-  ClientNode         *deleteClientNode;
+  Errors                error;
+  bool                  serverFlag,serverTLSFlag;
+  ServerSocketHandle    serverSocketHandle,serverTLSSocketHandle;
+  sigset_t              signalMask;
+  fd_set                selectSet;
+  AuthorizationFailNode *authorizationFailNode,*oldestAuthorizationFailNode;
+  ClientNode            *clientNode;
+  SocketHandle          socketHandle;
+  String                clientName;
+  uint                  clientPort;
+  char                  buffer[256];
+  ulong                 receivedBytes;
+  ulong                 z;
+  ClientNode            *disconnectClientNode;
 
   // initialize variables
   serverPassword          = password;
@@ -9623,6 +9722,7 @@ Errors Server_run(uint             port,
   List_init(&jobList);
   Semaphore_init(&serverStateLock);
   List_init(&clientList);
+  List_init(&authorizationFailList);
   serverState             = SERVER_STATE_RUNNING;
   createFlag              = FALSE;
   restoreFlag             = FALSE;
@@ -9822,10 +9922,25 @@ Errors Server_run(uint             port,
       if (error == ERROR_NONE)
       {
         Network_getRemoteInfo(&socketHandle,clientName,&clientPort);
+
+        // initialize network for client
         clientNode = newClient();
         assert(clientNode != NULL);
         initNetworkClient(&clientNode->clientInfo,clientName,clientPort,socketHandle);
+
+        // append to list of connected clients
         List_append(&clientList,clientNode);
+
+        // check if client is known from authorization fail
+        authorizationFailNode = authorizationFailList.head;
+        while ((authorizationFailNode != NULL) && !String_equals(authorizationFailNode->clientName,clientName))
+        {
+          authorizationFailNode = authorizationFailNode->next;
+        }
+        if (authorizationFailNode != NULL)
+        {
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+        }
 
         printInfo(1,"Connected client '%s:%u' (TLS/SSL)\n",String_cString(clientNode->clientInfo.network.name),clientNode->clientInfo.network.port);
       }
@@ -9869,15 +9984,24 @@ Errors Server_run(uint             port,
         }
         else
         {
-          // disconnect
           printInfo(1,"Disconnected client '%s:%u'\n",String_cString(clientNode->clientInfo.network.name),clientNode->clientInfo.network.port);
 
-          deleteClientNode = clientNode;
+          // remove from client list
+          disconnectClientNode = clientNode;
           clientNode = clientNode->next;
-          List_remove(&clientList,deleteClientNode);
+          List_remove(&clientList,disconnectClientNode);
 
-          Network_disconnect(&deleteClientNode->clientInfo.network.socketHandle);
-          deleteClient(deleteClientNode);
+          // disconnect
+          Network_disconnect(&disconnectClientNode->clientInfo.network.socketHandle);
+
+          // update authorization fail list
+          authorizationFailNode = getAuthorizationFailNode(disconnectClientNode->clientInfo.network.name);
+          assert(authorizationFailNode != NULL);
+          authorizationFailNode->count++;
+          authorizationFailNode->lastTimestamp = Misc_getTimestamp();
+
+          // free resources
+          deleteClient(disconnectClientNode);
         }
       }
       else
@@ -9892,21 +10016,46 @@ Errors Server_run(uint             port,
     {
       if (clientNode->clientInfo.authorizationState == AUTHORIZATION_STATE_FAIL)
       {
-        // authorizaton error -> disconnect  client
         printInfo(1,"Disconnected client '%s:%u': authorization failure\n",String_cString(clientNode->clientInfo.network.name),clientNode->clientInfo.network.port);
 
-        deleteClientNode = clientNode;
+        // remove from connected list
+        disconnectClientNode = clientNode;
         clientNode = clientNode->next;
-        List_remove(&clientList,deleteClientNode);
+        List_remove(&clientList,disconnectClientNode);
 
-        Network_disconnect(&deleteClientNode->clientInfo.network.socketHandle);
-        deleteClient(deleteClientNode);
+        // disconnect
+        Network_disconnect(&disconnectClientNode->clientInfo.network.socketHandle);
+
+        // update authorization fail list
+        authorizationFailNode = getAuthorizationFailNode(disconnectClientNode->clientInfo.network.name);
+        assert(authorizationFailNode != NULL);
+        authorizationFailNode->count++;
+        authorizationFailNode->lastTimestamp = Misc_getTimestamp();
       }
       else
       {
         // next client
         clientNode = clientNode->next;
       }
+    }
+
+    // shorten authorization failure list
+    while (List_count(&authorizationFailList) > MAX_AUTHORIZATION_FAIL_HISTORY)
+    {
+      // find oldest authorization failure
+      oldestAuthorizationFailNode = authorizationFailList.head;
+      LIST_ITERATE(&authorizationFailList,authorizationFailNode)
+      {
+        if (authorizationFailNode->lastTimestamp < oldestAuthorizationFailNode->lastTimestamp)
+        {
+          oldestAuthorizationFailNode = authorizationFailNode;
+        }
+      }
+
+      // remove oldest authorization failure from list
+      List_remove(&authorizationFailList,oldestAuthorizationFailNode);
+      freeAuthorizationFailNode(oldestAuthorizationFailNode,NULL);
+      LIST_DELETE_NODE(oldestAuthorizationFailNode);
     }
   }
   String_delete(clientName);
@@ -9951,6 +10100,7 @@ Errors Server_run(uint             port,
   Thread_done(&schedulerThread);
   Thread_done(&jobThread);
   Semaphore_done(&serverStateLock);
+  List_done(&authorizationFailList,(ListNodeFreeFunction)freeAuthorizationFailNode,NULL);
   List_done(&clientList,(ListNodeFreeFunction)freeClientNode,NULL);
   Semaphore_done(&jobList.lock);
   List_done(&jobList,(ListNodeFreeFunction)freeJobNode,NULL);
