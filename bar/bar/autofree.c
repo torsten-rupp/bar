@@ -179,7 +179,7 @@ void __AutoFree_remove(const char   *__fileName__,
       if (autoFreeNode->resource == resource)
       {
         // remove from list
-        autoFreeNode = List_remove(autoFreeList,autoFreeNode);
+        autoFreeNode = List_removeAndFree(autoFreeList,autoFreeNode,CALLBACK_NONE);
         foundFlag = TRUE;
       }
       else
