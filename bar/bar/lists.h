@@ -34,26 +34,28 @@
   type          *tail; \
   unsigned long count
 
+// list node
 typedef struct Node
 {
   LIST_NODE_HEADER(struct Node);
 } Node;
 
+// list
 typedef struct
 {
   LIST_HEADER(Node);
 } List;
 
-/* delete list node function */
+// delete list node function
 typedef void(*ListNodeFreeFunction)(void *node, void *userData);
 
-/* copy list node function */
+// copy list node function
 typedef void*(*ListNodeCopyFunction)(const void *node, void *userData);
 
-/* list node equals function */
+// list node equals function
 typedef int(*ListNodeEqualsFunction)(const void *node, void *userData);
 
-/* compare list nodes function */
+// compare list nodes function
 typedef int(*ListNodeCompareFunction)(const void *node1, const void *node2, void *userData);
 
 /***************************** Variables *******************************/
@@ -446,6 +448,24 @@ void __List_append(const char *fileName,
 void *List_remove(void *list,
                   void *node
                  );
+
+/***********************************************************************\
+* Name   : List_removeAndFree
+* Purpose: remove node from list and free
+* Input  : list                 - list
+*          node                 - node to remove
+*          listNodeFreeFunction - free function for single node or NULL
+*          listNodeFreeUserData - user data for free function
+* Output : -
+* Return : next node in list or NULL
+* Notes  : -
+\***********************************************************************/
+
+void *List_removeAndFree(void                 *list,
+                         void                 *node,
+                         ListNodeFreeFunction listNodeFreeFunction,
+                         void                 *listNodeFreeUserData
+                        );
 
 /***********************************************************************\
 * Name   : List_first
