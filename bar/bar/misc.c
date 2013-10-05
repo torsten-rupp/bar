@@ -402,6 +402,51 @@ void Misc_udelay(uint64 time)
 
 /*---------------------------------------------------------------------*/
 
+String Misc_getUUID(String string)
+{
+  char buffer[1024];
+
+  assert(string != NULL);
+
+  return String_setCString(string,Misc_getUUIDCString(buffer,sizeof(buffer)));
+}
+
+const char *Misc_getUUIDCString(char *buffer, uint bufferSize)
+{
+  FILE *file;
+  char *s;
+
+  assert(buffer != NULL);
+  assert(bufferSize > 0);
+
+  buffer[0] = '\0';
+
+  // read kernel uuid device
+  file = fopen("/proc/sys/kernel/random/uuid","r");
+  if (file != NULL)
+  {
+    (void)fgets(buffer,bufferSize,file);
+    fclose(file);
+  }
+
+  // remove trailing white spaces
+  s = buffer;
+  while ((*s) != '\0')
+  {
+    s++;
+  }
+  do
+  {
+    (*s) = '\0';
+    s--;
+  }
+  while ((s >= buffer) && isspace(*s));
+
+  return buffer;
+}
+
+/*---------------------------------------------------------------------*/
+
 String Misc_expandMacros(String          string,
                          const char      *macroTemplate,
                          const TextMacro macros[],

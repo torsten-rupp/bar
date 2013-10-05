@@ -264,6 +264,22 @@ void Misc_udelay(uint64 time);
 /*---------------------------------------------------------------------*/
 
 /***********************************************************************\
+* Name   : Misc_getUUID, Misc_getUUIDCString
+* Purpose: get universally unique identifier
+* Input  : string     - string variable
+*          buffer     - buffer
+*          bufferSize - buffer size
+* Output : -
+* Return : universally unique identifier
+* Notes  : -
+\***********************************************************************/
+
+String Misc_getUUID(String string);
+const char *Misc_getUUIDCString(char *buffer, uint bufferSize);
+
+/*---------------------------------------------------------------------*/
+
+/***********************************************************************\
 * Name   : Misc_expandMacrosCString
 * Purpose: expand macros %<name>:<format> in string
 * Input  : string        - string variable
