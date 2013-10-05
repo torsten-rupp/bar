@@ -209,7 +209,29 @@ typedef void                void32;
 #endif /* __GNUC__ */
 
 // only for better reading
+#define CALLBACK_NONE NULL,NULL
 #define CALLBACK(code,argument) code,argument
+
+/***********************************************************************\
+* Name   : CALLBACK_INLINE
+* Purpose: define an inline call-back function
+* Input  : functionSignature - call-back function signature
+*          functionBody      - call-back function body
+* Output : -
+* Return : -
+* Notes  : example
+*          List_removeAndFree(list,
+*                             node,
+*                             CALLBACK_INLINE(ListNodeFreeFunction,{ ... })
+*                            );
+\***********************************************************************/
+
+#define CALLBACK_INLINE(functionSignature,functionBody) \
+  (functionSignature)({ \
+                      auto void __closure__(void); \
+                      void __closure__(void)functionBody __closure__; \
+                     }), \
+  NULL
 
 #if   defined(PLATFORM_LINUX)
 #elif defined(PLATFORM_WINDOWS)
