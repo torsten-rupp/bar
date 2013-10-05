@@ -562,12 +562,12 @@ test1 test_basic: $(TEST_BAR)
 	@$(MAKE) \
           BAR_FILE="test" \
           BAR_PATTERN="test" \
-          BAR_OPTIONS="--compress-algorithm=none --crypt-algorithm=none --max-threads=1" \
+          BAR_OPTIONS="--compress-algorithm=none --crypt-algorithm=none --index-database=test/index.db --max-threads=1" \
           test_file_operations
 	@$(MAKE) \
           BAR_FILE="test" \
           BAR_PATTERN="test" \
-          BAR_OPTIONS="--compress-algorithm=none --crypt-algorithm=none" \
+          BAR_OPTIONS="--compress-algorithm=none --crypt-algorithm=none --index-database=test/index.db" \
           test_file_operations
 	@$(ECHO) "ok"
 
