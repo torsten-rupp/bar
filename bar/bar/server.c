@@ -58,23 +58,24 @@
 
 /***************************** Constants *******************************/
 
-#define PROTOCOL_VERSION_MAJOR         2
-#define PROTOCOL_VERSION_MINOR         0
+#define PROTOCOL_VERSION_MAJOR              2
+#define PROTOCOL_VERSION_MINOR              0
 
-#define SESSION_ID_LENGTH              64          // max. length of session id
-#define SESSION_KEY_SIZE               1024        // number of session key bits
+#define SESSION_ID_LENGTH                   64      // max. length of session id
+#define SESSION_KEY_SIZE                    1024    // number of session key bits
 
-#define MAX_NETWORK_CLIENT_THREADS     3           // number of threads for a client
+#define MAX_NETWORK_CLIENT_THREADS          3       // number of threads for a client
 
-#define AUTHORIZATION_PENALITY_TIME    500         // delay processing by failCount^2*n ms
-#define MAX_AUTHORIZATION_FAIL_HISTORY 64          // max. length of history of authorization fail clients
+#define AUTHORIZATION_PENALITY_TIME         500     // delay processing by failCount^2*n [ms]
+#define MAX_AUTHORIZATION_HISTORY_KEEP_TIME 30000   // max. time to keep entries in authorization fail history [ms]
+#define MAX_AUTHORIZATION_FAIL_HISTORY      64      // max. length of history of authorization fail clients
 
 // sleep times [s]
-#define SLEEP_TIME_SCHEDULER_THREAD    ( 1*60)
-#define SLEEP_TIME_PAUSE_THREAD        ( 1*60)
-#define SLEEP_TIME_INDEX_THREAD        (10*60)
+#define SLEEP_TIME_SCHEDULER_THREAD         ( 1*60)
+#define SLEEP_TIME_PAUSE_THREAD             ( 1*60)
+#define SLEEP_TIME_INDEX_THREAD             (10*60)
 //#define SLEEP_TIME_INDEX_UPDATE_THREAD (10*60)
-#define SLEEP_TIME_INDEX_UPDATE_THREAD (10)
+#define SLEEP_TIME_INDEX_UPDATE_THREAD      (10)
 
 /***************************** Datatypes *******************************/
 
@@ -10110,7 +10111,25 @@ Errors Server_run(uint             port,
       }
     }
 
-    // shorten authorization failure list
+    // clean-up authorization failure list
+    nowTimestamp          = Misc_getTimestamp();
+    authorizationFailNode = authorizationFailList.head;
+    while (authorizationFailNode != NULL)
+    {
+      if (nowTimestamp > (authorizationFailNode->lastTimestamp+(uint64)MAX_AUTHORIZATION_HISTORY_KEEP_TIME*1000LL))
+      {
+        authorizationFailNode = List_removeAndFree(&authorizationFailList,
+                                                   authorizationFailNode,
+                                                   CALLBACK((ListNodeFreeFunction)freeAuthorizationFailNode,NULL)
+                                                  );
+      }
+      else
+      {
+        authorizationFailNode = authorizationFailNode->next;
+      }
+    }
+
+    assert(MAX_AUTHORIZATION_FAIL_HISTORY);
     while (List_count(&authorizationFailList) > MAX_AUTHORIZATION_FAIL_HISTORY)
     {
       // find oldest authorization failure
@@ -10124,8 +10143,10 @@ Errors Server_run(uint             port,
       }
 
       // remove oldest authorization failure from list
-      List_remove(&authorizationFailList,oldestAuthorizationFailNode);
-      deleteAuthorizationFailNode(oldestAuthorizationFailNode);
+      List_removeAndFree(&authorizationFailList,
+                         oldestAuthorizationFailNode,
+                         CALLBACK((ListNodeFreeFunction)freeAuthorizationFailNode,NULL)
+                        );
     }
   }
   String_delete(clientName);
