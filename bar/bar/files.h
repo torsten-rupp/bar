@@ -29,6 +29,7 @@
 #include "global.h"
 #include "strings.h"
 #include "lists.h"
+#include "stringlists.h"
 #include "errors.h"
 
 /****************** Conditional compilation switches *******************/
@@ -182,14 +183,15 @@ typedef enum
 // file i/o handle
 typedef struct
 {
-  String name;
-  ulong  mode;
-  FILE   *file;
-  uint64 index;
-  uint64 size;
+  String     name;
+  ulong      mode;
+  FILE       *file;
+  uint64     index;
+  uint64     size;
   #ifndef NDEBUG
     bool deleteOnCloseFlag;
   #endif /* not NDEBUG */
+  StringList lineBufferList;
 } FileHandle;
 
 // directory list handle
@@ -684,7 +686,7 @@ Errors File_transfer(FileHandle *sourceFileHandle,
 Errors File_flush(FileHandle *fileHandle);
 
 /***********************************************************************\
-* Name   : File_getNextLine
+* Name   : File_getLine
 * Purpose: get next non-empty/non-comment line
 * Input  : fileHandle - file handle
 *          line       - string variable
@@ -695,11 +697,27 @@ Errors File_flush(FileHandle *fileHandle);
 * Notes  : -
 \***********************************************************************/
 
-bool File_getNextLine(FileHandle *fileHandle,
-                      String     line,
-                      uint       *lineNb,
-                      const char *commentChars
-                     );
+bool File_getLine(FileHandle *fileHandle,
+                  String     line,
+                  uint       *lineNb,
+                  const char *commentChars
+                 );
+
+/***********************************************************************\
+* Name   : File_ungetLine
+* Purpose: unget line
+* Input  : fileHandle - file handle
+*          line       - string variable
+*          lineNb     - line number variable or NULL
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void File_ungetLine(FileHandle   *fileHandle,
+                    const String line,
+                    uint         *lineNb
+                   );
 
 /***********************************************************************\
 * Name   : File_getSize

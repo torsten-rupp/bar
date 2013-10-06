@@ -678,6 +678,7 @@ Errors __File_getTmpFileCString(const char   *__fileName__,
   fileHandle->index = 0LL;
   fileHandle->size  = 0LL;
   fileHandle->mode  = 0;
+  StringList_init(&fileHandle->lineBufferList);
 
   free(s);
 
@@ -1102,6 +1103,7 @@ Errors __File_openCString(const char *__fileName__,
     #endif /* NDEBUG */
   }
   fileHandle->mode = fileMode;
+  StringList_init(&fileHandle->lineBufferList);
 
   #ifndef NDEBUG
     pthread_once(&debugFileInitFlag,debugFileInit);
@@ -1258,6 +1260,7 @@ Errors __File_openDescriptor(const char *__fileName__,
     #endif /* NDEBUG */
   }
   fileHandle->mode = fileMode;
+  StringList_init(&fileHandle->lineBufferList);
 
   #ifndef NDEBUG
     pthread_once(&debugFileInitFlag,debugFileInit);
@@ -1362,6 +1365,7 @@ Errors __File_close(const char *__fileName__,
   fclose(fileHandle->file);
 
   // free resources
+  StringList_done(&fileHandle->lineBufferList);
   if (fileHandle->name != NULL) String_delete(fileHandle->name);
 
   #ifndef NDEBUG
@@ -1527,29 +1531,36 @@ Errors File_readLine(FileHandle *fileHandle,
   FILE_CHECK_VALID(fileHandle);
 
   String_clear(line);
-  do
+  if (StringList_isEmpty(&fileHandle->lineBufferList))
   {
-    ch = getc(fileHandle->file);
-    if (ch >= 0) fileHandle->index += 1;
-    if (ch < 0)
+    do
     {
-      return ERRORX_(IO_ERROR,errno,String_cString(fileHandle->name));
+      ch = getc(fileHandle->file);
+      if (ch >= 0) fileHandle->index += 1;
+      if (ch < 0)
+      {
+        return ERRORX_(IO_ERROR,errno,String_cString(fileHandle->name));
+      }
+      if (((char)ch != '\n') && ((char)ch != '\r'))
+      {
+        String_appendChar(line,ch);
+      }
     }
-    if (((char)ch != '\n') && ((char)ch != '\r'))
+    while (((char)ch != '\r') && ((char)ch != '\n'));
+    if      ((char)ch == '\r')
     {
-      String_appendChar(line,ch);
+      ch = getc(fileHandle->file);
+      if (ch >= 0) fileHandle->index += 1;
+      if (ch != '\n')
+      {
+        fileHandle->index -= 1;
+        ungetc(ch,fileHandle->file);
+      }
     }
   }
-  while (((char)ch != '\r') && ((char)ch != '\n'));
-  if      ((char)ch == '\r')
+  else
   {
-    ch = getc(fileHandle->file);
-    if (ch >= 0) fileHandle->index += 1;
-    if (ch != '\n')
-    {
-      fileHandle->index -= 1;
-      ungetc(ch,fileHandle->file);
-    }
+    StringList_getLast(&fileHandle->lineBufferList,line);
   }
 
   return ERROR_NONE;
@@ -1690,33 +1701,60 @@ Errors File_flush(FileHandle *fileHandle)
   return ERROR_NONE;
 }
 
-bool File_getNextLine(FileHandle *fileHandle,
-                      String     line,
-                      uint       *lineNb,
-                      const char *commentChars
-                     )
+bool File_getLine(FileHandle *fileHandle,
+                  String     line,
+                  uint       *lineNb,
+                  const char *commentChars
+                 )
 {
   bool readFlag;
 
-  readFlag = FALSE;
-  while (!File_eof(fileHandle) && !readFlag)
-  {
-    // read next line
-    if (File_readLine(fileHandle,line) != ERROR_NONE)
-    {
-      break;
-    }
-    String_trim(line,STRING_WHITE_SPACES);
-    if (lineNb != NULL) (*lineNb)++;
+  assert(fileHandle != NULL);
+  assert(fileHandle->file != NULL);
+  FILE_CHECK_VALID(fileHandle);
 
-    // check if non-empty and non-comment
-    if (!String_isEmpty(line))
+  String_clear(line);
+
+  readFlag = FALSE;
+  if (StringList_isEmpty(&fileHandle->lineBufferList))
+  {
+    while (!File_eof(fileHandle) && !readFlag)
     {
-      readFlag = (commentChars == NULL) || (strchr(commentChars,(int)String_index(line,STRING_BEGIN)) == NULL);
+      // read next line
+      if (File_readLine(fileHandle,line) != ERROR_NONE)
+      {
+        break;
+      }
+      String_trim(line,STRING_WHITE_SPACES);
+      if (lineNb != NULL) (*lineNb)++;
+
+      // check if non-empty and non-comment
+      if (!String_isEmpty(line))
+      {
+        readFlag = (commentChars == NULL) || (strchr(commentChars,(int)String_index(line,STRING_BEGIN)) == NULL);
+      }
     }
+  }
+  else
+  {
+    StringList_getLast(&fileHandle->lineBufferList,line);
+    readFlag = TRUE;
   }
 
   return readFlag;
+}
+
+void File_ungetLine(FileHandle   *fileHandle,
+                    const String line,
+                    uint         *lineNb
+                   )
+{
+  assert(fileHandle != NULL);
+  assert(fileHandle->file != NULL);
+  FILE_CHECK_VALID(fileHandle);
+
+  StringList_append(&fileHandle->lineBufferList,line);
+  if (lineNb != NULL) (*lineNb)--;
 }
 
 uint64 File_getSize(FileHandle *fileHandle)
