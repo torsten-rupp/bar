@@ -684,6 +684,24 @@ Errors File_transfer(FileHandle *sourceFileHandle,
 Errors File_flush(FileHandle *fileHandle);
 
 /***********************************************************************\
+* Name   : File_getNextLine
+* Purpose: get next non-empty/non-comment line
+* Input  : fileHandle - file handle
+*          line       - string variable
+*          lineNb     - line number variable or NULL
+* Output : line   - read line
+*          lineNb - line number
+* Return : TRUE iff line read
+* Notes  : -
+\***********************************************************************/
+
+bool File_getNextLine(FileHandle *fileHandle,
+                      String     line,
+                      uint       *lineNb,
+                      const char *commentChars
+                     );
+
+/***********************************************************************\
 * Name   : File_getSize
 * Purpose: get file size
 * Input  : fileHandle - file handle

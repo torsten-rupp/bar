@@ -1690,6 +1690,35 @@ Errors File_flush(FileHandle *fileHandle)
   return ERROR_NONE;
 }
 
+bool File_getNextLine(FileHandle *fileHandle,
+                      String     line,
+                      uint       *lineNb,
+                      const char *commentChars
+                     )
+{
+  bool readFlag;
+
+  readFlag = FALSE;
+  while (!File_eof(fileHandle) && !readFlag)
+  {
+    // read next line
+    if (File_readLine(fileHandle,line) != ERROR_NONE)
+    {
+      break;
+    }
+    String_trim(line,STRING_WHITE_SPACES);
+    if (lineNb != NULL) (*lineNb)++;
+
+    // check if non-empty and non-comment
+    if (!String_isEmpty(line))
+    {
+      readFlag = (commentChars == NULL) || (strchr(commentChars,(int)String_index(line,STRING_BEGIN)) == NULL);
+    }
+  }
+
+  return readFlag;
+}
+
 uint64 File_getSize(FileHandle *fileHandle)
 {
   assert(fileHandle != NULL);
