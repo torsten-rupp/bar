@@ -1180,24 +1180,12 @@ public class StringParser
         String name = buffer.toString();
 //Dprintf.dprintf("name=%s",name);
 
-        // skip spaces
-        while ((index < string.length()) && Character.isSpaceChar(string.charAt(index)))
-        {
-          index++;
-        }
-
         // check if '='
         if ((index >= string.length()) || (string.charAt(index) != '='))
         {
           return index;
         }
         index++;
-
-        // skip spaces
-        while ((index < string.length()) && Character.isSpaceChar(string.charAt(index)))
-        {
-          index++;
-        }
 
         // get value
         buffer = new StringBuilder();
