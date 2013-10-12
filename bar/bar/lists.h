@@ -50,7 +50,7 @@ typedef struct
 typedef void(*ListNodeFreeFunction)(void *node, void *userData);
 
 // copy list node function
-typedef void*(*ListNodeCopyFunction)(const void *node, void *userData);
+typedef void*(*ListNodeCopyFunction)(const void *fromNode, void *userData);
 
 // list node equals function
 typedef int(*ListNodeEqualsFunction)(const void *node, void *userData);
