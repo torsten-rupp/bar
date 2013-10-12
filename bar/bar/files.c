@@ -1716,29 +1716,32 @@ bool File_getLine(FileHandle *fileHandle,
   String_clear(line);
 
   readFlag = FALSE;
-  if (StringList_isEmpty(&fileHandle->lineBufferList))
+  while (!readFlag)
   {
-    while (!File_eof(fileHandle) && !readFlag)
+    if (StringList_isEmpty(&fileHandle->lineBufferList))
     {
       // read next line
-      if (File_readLine(fileHandle,line) != ERROR_NONE)
+      if (   File_eof(fileHandle)
+          || (File_readLine(fileHandle,line) != ERROR_NONE)
+         )
       {
         break;
       }
-      String_trim(line,STRING_WHITE_SPACES);
-      if (lineNb != NULL) (*lineNb)++;
-
-      // check if non-empty and non-comment
-      if (!String_isEmpty(line))
-      {
-        readFlag = (commentChars == NULL) || (strchr(commentChars,(int)String_index(line,STRING_BEGIN)) == NULL);
-      }
     }
-  }
-  else
-  {
-    StringList_getLast(&fileHandle->lineBufferList,line);
-    readFlag = TRUE;
+    else
+    {
+      // get next line from line buffer
+      StringList_getLast(&fileHandle->lineBufferList,line);
+    }
+    if (lineNb != NULL) (*lineNb)++;
+
+    String_trim(line,STRING_WHITE_SPACES);
+
+    // check if non-empty and non-comment
+    if (!String_isEmpty(line))
+    {
+      readFlag = (commentChars == NULL) || (strchr(commentChars,(int)String_index(line,STRING_BEGIN)) == NULL);
+    }
   }
 
   return readFlag;
