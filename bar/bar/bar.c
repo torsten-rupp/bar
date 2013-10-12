@@ -169,7 +169,6 @@ LOCAL EntryList        includeEntryList;
 LOCAL PatternList      excludePatternList;
 LOCAL PatternList      deltaSourcePatternList;
 LOCAL PatternList      compressExcludePatternList;
-LOCAL ScheduleList     scheduleList;
 LOCAL FTPServer        defaultFTPServer;
 LOCAL ServerAllocation defaultFTPServerAllocation;
 LOCAL SSHServer        defaultSSHServer;
@@ -834,186 +833,195 @@ LOCAL const ConfigValueSet CONFIG_VALUE_LOG_TYPES[] =
 LOCAL const ConfigValue CONFIG_VALUES[] =
 {
   // general settings
-  CONFIG_VALUE_SPECIAL  ("config",                       NULL,-1,                                                 configValueParseConfigFile,NULL,NULL,NULL,NULL),
+  CONFIG_VALUE_SPECIAL  ("config",                       NULL,-1,                                                       configValueParseConfigFile,NULL,NULL,NULL,NULL),
 
-  CONFIG_VALUE_STRING   ("tmp-directory",                &globalOptions.tmpDirectory,-1                           ),
-  CONFIG_VALUE_INTEGER64("max-tmp-size",                 &globalOptions.maxTmpSize,-1,                            0LL,MAX_LONG_LONG,CONFIG_VALUE_BYTES_UNITS),
+  CONFIG_VALUE_STRING   ("tmp-directory",                &globalOptions.tmpDirectory,-1                                 ),
+  CONFIG_VALUE_INTEGER64("max-tmp-size",                 &globalOptions.maxTmpSize,-1,                                  0LL,MAX_LONG_LONG,CONFIG_VALUE_BYTES_UNITS),
 
-  CONFIG_VALUE_INTEGER  ("nice-level",                   &globalOptions.niceLevel,-1,                             0,19,NULL),
-  CONFIG_VALUE_INTEGER  ("max-threads",                  &globalOptions.maxThreads,-1,                            0,65535,NULL),
+  CONFIG_VALUE_INTEGER  ("nice-level",                   &globalOptions.niceLevel,-1,                                   0,19,NULL),
+  CONFIG_VALUE_INTEGER  ("max-threads",                  &globalOptions.maxThreads,-1,                                  0,65535,NULL),
 
-  CONFIG_VALUE_SPECIAL  ("max-band-width",               &globalOptions.maxBandWidthList,-1,                      configValueParseBandWidth,NULL,NULL,NULL,&globalOptions.maxBandWidthList),
+  CONFIG_VALUE_SPECIAL  ("max-band-width",               &globalOptions.maxBandWidthList,-1,                            configValueParseBandWidth,NULL,NULL,NULL,&globalOptions.maxBandWidthList),
 
-  CONFIG_VALUE_INTEGER  ("compress-min-size",            &globalOptions.compressMinFileSize,-1,                   0,MAX_INT,CONFIG_VALUE_BYTES_UNITS),
-  CONFIG_VALUE_SPECIAL  ("compress-exclude",             &compressExcludePatternList,-1,                          configValueParsePattern,NULL,NULL,NULL,NULL),
+  CONFIG_VALUE_INTEGER  ("compress-min-size",            &globalOptions.compressMinFileSize,-1,                         0,MAX_INT,CONFIG_VALUE_BYTES_UNITS),
+  CONFIG_VALUE_SPECIAL  ("compress-exclude",             &compressExcludePatternList,-1,                                configValueParsePattern,NULL,NULL,NULL,NULL),
 
-  CONFIG_VALUE_CSTRING  ("index-database",               &indexDatabaseFileName,-1                                ),
-  CONFIG_VALUE_BOOLEAN  ("index-database-auto-update",   &globalOptions.indexDatabaseAutoUpdateFlag,-1            ),
-  CONFIG_VALUE_SPECIAL  ("index-database-max-band-width",&globalOptions.indexDatabaseMaxBandWidthList,-1,         configValueParseBandWidth,NULL,NULL,NULL,&globalOptions.indexDatabaseMaxBandWidthList),
-  CONFIG_VALUE_INTEGER  ("index-database-keep-time",     &globalOptions.indexDatabaseKeepTime,-1,                 0,MAX_INT,CONFIG_VALUE_TIME_UNITS),
+  CONFIG_VALUE_CSTRING  ("index-database",               &indexDatabaseFileName,-1                                      ),
+  CONFIG_VALUE_BOOLEAN  ("index-database-auto-update",   &globalOptions.indexDatabaseAutoUpdateFlag,-1                  ),
+  CONFIG_VALUE_SPECIAL  ("index-database-max-band-width",&globalOptions.indexDatabaseMaxBandWidthList,-1,               configValueParseBandWidth,NULL,NULL,NULL,&globalOptions.indexDatabaseMaxBandWidthList),
+  CONFIG_VALUE_INTEGER  ("index-database-keep-time",     &globalOptions.indexDatabaseKeepTime,-1,                       0,MAX_INT,CONFIG_VALUE_TIME_UNITS),
 
   // global job settings
-  CONFIG_VALUE_STRING   ("archive-name",                 &storageName,-1                                          ),
-  CONFIG_VALUE_SELECT   ("archive-type",                 &jobOptions.archiveType,-1,                              CONFIG_VALUE_ARCHIVE_TYPES),
+  CONFIG_VALUE_STRING   ("archive-name",                 &storageName,-1                                                ),
+  CONFIG_VALUE_SELECT   ("archive-type",                 &jobOptions.archiveType,-1,                                    CONFIG_VALUE_ARCHIVE_TYPES),
 
-  CONFIG_VALUE_STRING   ("incremental-list-file",        &jobOptions.incrementalListFileName,-1                   ),
+  CONFIG_VALUE_STRING   ("incremental-list-file",        &jobOptions.incrementalListFileName,-1                         ),
 
-  CONFIG_VALUE_INTEGER64("archive-part-size",            &jobOptions.archivePartSize,-1,                          0LL,MAX_LONG_LONG,CONFIG_VALUE_BYTES_UNITS),
+  CONFIG_VALUE_INTEGER64("archive-part-size",            &jobOptions.archivePartSize,-1,                                0LL,MAX_LONG_LONG,CONFIG_VALUE_BYTES_UNITS),
 
-  CONFIG_VALUE_INTEGER  ("directory-strip",              &jobOptions.directoryStripCount,-1,                      0,MAX_INT,NULL),
-  CONFIG_VALUE_STRING   ("destination",                  &jobOptions.destination,-1                               ),
-  CONFIG_VALUE_SPECIAL  ("owner",                        &jobOptions.owner,-1,                                    configValueParseOwner,NULL,NULL,NULL,&jobOptions),
+  CONFIG_VALUE_INTEGER  ("directory-strip",              &jobOptions.directoryStripCount,-1,                            0,MAX_INT,NULL),
+  CONFIG_VALUE_STRING   ("destination",                  &jobOptions.destination,-1                                     ),
+  CONFIG_VALUE_SPECIAL  ("owner",                        &jobOptions.owner,-1,                                          configValueParseOwner,NULL,NULL,NULL,&jobOptions),
 
-  CONFIG_VALUE_SELECT   ("pattern-type",                 &jobOptions.patternType,-1,                              CONFIG_VALUE_PATTERN_TYPES),
+  CONFIG_VALUE_SELECT   ("pattern-type",                 &jobOptions.patternType,-1,                                    CONFIG_VALUE_PATTERN_TYPES),
 
-  CONFIG_VALUE_SPECIAL  ("compress-algorithm",           &jobOptions.compressAlgorithm,-1,                        configValueParseCompressAlgorithm,NULL,NULL,NULL,&jobOptions),
+  CONFIG_VALUE_SPECIAL  ("compress-algorithm",           &jobOptions.compressAlgorithm,-1,                              configValueParseCompressAlgorithm,NULL,NULL,NULL,&jobOptions),
 
-  CONFIG_VALUE_SELECT   ("crypt-algorithm",              &jobOptions.cryptAlgorithm,-1,                           CONFIG_VALUE_CRYPT_ALGORITHMS),
-  CONFIG_VALUE_SELECT   ("crypt-type",                   &jobOptions.cryptType,-1,                                CONFIG_VALUE_CRYPT_TYPES),
-  CONFIG_VALUE_SELECT   ("crypt-password-mode",          &jobOptions.cryptPasswordMode,-1,                        CONFIG_VALUE_PASSWORD_MODES),
-  CONFIG_VALUE_SPECIAL  ("crypt-password",               &globalOptions.cryptPassword,-1,                         configValueParsePassword,NULL,NULL,NULL,NULL),
-  CONFIG_VALUE_STRING   ("crypt-public-key",             &jobOptions.cryptPublicKeyFileName,-1                    ),
-  CONFIG_VALUE_STRING   ("crypt-private-key",            &jobOptions.cryptPrivateKeyFileName,-1                   ),
+  CONFIG_VALUE_SELECT   ("crypt-algorithm",              &jobOptions.cryptAlgorithm,-1,                                 CONFIG_VALUE_CRYPT_ALGORITHMS),
+  CONFIG_VALUE_SELECT   ("crypt-type",                   &jobOptions.cryptType,-1,                                      CONFIG_VALUE_CRYPT_TYPES),
+  CONFIG_VALUE_SELECT   ("crypt-password-mode",          &jobOptions.cryptPasswordMode,-1,                              CONFIG_VALUE_PASSWORD_MODES),
+  CONFIG_VALUE_SPECIAL  ("crypt-password",               &globalOptions.cryptPassword,-1,                               configValueParsePassword,NULL,NULL,NULL,NULL),
+  CONFIG_VALUE_STRING   ("crypt-public-key",             &jobOptions.cryptPublicKeyFileName,-1                          ),
+  CONFIG_VALUE_STRING   ("crypt-private-key",            &jobOptions.cryptPrivateKeyFileName,-1                         ),
 
-  CONFIG_VALUE_STRING   ("ftp-login-name",               &currentFTPServer,offsetof(FTPServer,loginName)          ),
-  CONFIG_VALUE_SPECIAL  ("ftp-password",                 &currentFTPServer,offsetof(FTPServer,password),          configValueParsePassword,NULL,NULL,NULL,NULL),
-  CONFIG_VALUE_INTEGER  ("ftp-max-connections",          &defaultFTPServer.maxConnectionCount,-1,                 0,MAX_INT,NULL),
-  CONFIG_VALUE_INTEGER64("ftp-max-storage-size",         &defaultFTPServer.maxStorageSize,-1,                     0LL,MAX_INT64,NULL),
+  CONFIG_VALUE_STRING   ("ftp-login-name",               &currentFTPServer,offsetof(FTPServer,loginName)                ),
+  CONFIG_VALUE_SPECIAL  ("ftp-password",                 &currentFTPServer,offsetof(FTPServer,password),                configValueParsePassword,NULL,NULL,NULL,NULL),
+  CONFIG_VALUE_INTEGER  ("ftp-max-connections",          &defaultFTPServer,offsetof(FTPServer,maxConnectionCount),      0,MAX_INT,NULL),
+  CONFIG_VALUE_INTEGER64("ftp-max-storage-size",         &defaultFTPServer,offsetof(FTPServer,maxStorageSize),          0LL,MAX_INT64,NULL),
 
-  CONFIG_VALUE_INTEGER  ("ssh-port",                     &currentSSHServer,offsetof(SSHServer,port),              0,65535,NULL),
-  CONFIG_VALUE_STRING   ("ssh-login-name",               &currentSSHServer,offsetof(SSHServer,loginName)          ),
-  CONFIG_VALUE_SPECIAL  ("ssh-password",                 &currentSSHServer,offsetof(SSHServer,password),          configValueParsePassword,NULL,NULL,NULL,NULL),
-  CONFIG_VALUE_STRING   ("ssh-public-key",               &currentSSHServer,offsetof(SSHServer,publicKeyFileName)  ),
-  CONFIG_VALUE_STRING   ("ssh-private-key",              &currentSSHServer,offsetof(SSHServer,privateKeyFileName) ),
-  CONFIG_VALUE_INTEGER  ("ssh-max-connections",          &defaultSSHServer.maxConnectionCount,-1,                 0,MAX_INT,NULL),
-  CONFIG_VALUE_INTEGER64("ssh-max-storage-size",         &defaultSSHServer.maxStorageSize,-1,                     0LL,MAX_INT64,NULL),
+  CONFIG_VALUE_INTEGER  ("ssh-port",                     &currentSSHServer,offsetof(SSHServer,port),                    0,65535,NULL),
+  CONFIG_VALUE_STRING   ("ssh-login-name",               &currentSSHServer,offsetof(SSHServer,loginName)                ),
+  CONFIG_VALUE_SPECIAL  ("ssh-password",                 &currentSSHServer,offsetof(SSHServer,password),                configValueParsePassword,NULL,NULL,NULL,NULL),
+  CONFIG_VALUE_STRING   ("ssh-public-key",               &currentSSHServer,offsetof(SSHServer,publicKeyFileName)        ),
+  CONFIG_VALUE_STRING   ("ssh-private-key",              &currentSSHServer,offsetof(SSHServer,privateKeyFileName)       ),
+  CONFIG_VALUE_INTEGER  ("ssh-max-connections",          &defaultSSHServer,offsetof(SSHServer,maxConnectionCount),      0,MAX_INT,NULL),
+  CONFIG_VALUE_INTEGER64("ssh-max-storage-size",         &defaultSSHServer,offsetof(SSHServer,maxStorageSize),          0LL,MAX_INT64,NULL),
 
-//  CONFIG_VALUE_INTEGER  ("webdav-port",                  &currentWebDAVServer,offsetof(WebDAVServer,port),        0,65535,NULL),
-  CONFIG_VALUE_STRING   ("webdav-login-name",            &currentWebDAVServer,offsetof(WebDAVServer,loginName)    ),
-  CONFIG_VALUE_SPECIAL  ("webdav-password",              &currentWebDAVServer,offsetof(WebDAVServer,password),    configValueParsePassword,NULL,NULL,NULL,NULL),
-  CONFIG_VALUE_INTEGER  ("webdav-max-connections",       &defaultWebDAVServer.maxConnectionCount,-1,              0,MAX_INT,NULL),
-  CONFIG_VALUE_INTEGER64("webdav-max-storage-size",      &defaultWebDAVServer.maxStorageSize,-1,                  0LL,MAX_INT64,NULL),
+//  CONFIG_VALUE_INTEGER  ("webdav-port",                  &currentWebDAVServer,offsetof(WebDAVServer,port),              0,65535,NULL),
+  CONFIG_VALUE_STRING   ("webdav-login-name",            &currentWebDAVServer,offsetof(WebDAVServer,loginName)          ),
+  CONFIG_VALUE_SPECIAL  ("webdav-password",              &currentWebDAVServer,offsetof(WebDAVServer,password),          configValueParsePassword,NULL,NULL,NULL,NULL),
+  CONFIG_VALUE_INTEGER  ("webdav-max-connections",       &defaultWebDAVServer,offsetof(WebDAVServer,maxConnectionCount),0,MAX_INT,NULL),
+  CONFIG_VALUE_INTEGER64("webdav-max-storage-size",      &defaultWebDAVServer,offsetof(WebDAVServer,maxStorageSize),    0LL,MAX_INT64,NULL),
 
-  CONFIG_VALUE_SPECIAL  ("include-file",                 &includeEntryList,-1,                                    configValueParseFileEntry,NULL,NULL,NULL,&jobOptions.patternType),
-  CONFIG_VALUE_SPECIAL  ("include-image",                &includeEntryList,-1,                                    configValueParseImageEntry,NULL,NULL,NULL,&jobOptions.patternType),
-  CONFIG_VALUE_SPECIAL  ("exclude",                      &excludePatternList,-1,                                  configValueParsePattern,NULL,NULL,NULL,&jobOptions.patternType),
-  CONFIG_VALUE_SPECIAL  ("exclude-compress",             &compressExcludePatternList,-1,                          configValueParsePattern,NULL,NULL,NULL,&jobOptions.patternType),
+  CONFIG_VALUE_SPECIAL  ("include-file",                 &includeEntryList,-1,                                          configValueParseFileEntry,NULL,NULL,NULL,&jobOptions.patternType),
+  CONFIG_VALUE_SPECIAL  ("include-image",                &includeEntryList,-1,                                          configValueParseImageEntry,NULL,NULL,NULL,&jobOptions.patternType),
+  CONFIG_VALUE_SPECIAL  ("exclude",                      &excludePatternList,-1,                                        configValueParsePattern,NULL,NULL,NULL,&jobOptions.patternType),
 
-  CONFIG_VALUE_INTEGER64("volume-size",                  &jobOptions.volumeSize,-1,                               0LL,MAX_LONG_LONG,CONFIG_VALUE_BYTES_UNITS),
-  CONFIG_VALUE_BOOLEAN  ("ecc",                          &jobOptions.errorCorrectionCodesFlag,-1                  ),
-  CONFIG_VALUE_BOOLEAN  ("always-create-image",          &jobOptions.alwaysCreateImageFlag,-1                     ),
+  CONFIG_VALUE_SPECIAL  ("delta-source",                 &deltaSourcePatternList,-1,                                    configValueParsePattern,NULL,NULL,NULL,&jobOptions.patternType),
 
-  CONFIG_VALUE_BOOLEAN  ("skip-unreadable",              &jobOptions.skipUnreadableFlag,-1                        ),
-  CONFIG_VALUE_BOOLEAN  ("raw-images",                   &jobOptions.rawImagesFlag,-1                             ),
-  CONFIG_VALUE_BOOLEAN  ("no-fragments-check",           &jobOptions.noFragmentsCheckFlag,-1                      ),
-  CONFIG_VALUE_BOOLEAN  ("overwrite-archive-files",      &jobOptions.overwriteArchiveFilesFlag,-1                 ),
-  CONFIG_VALUE_BOOLEAN  ("overwrite-files",              &jobOptions.overwriteFilesFlag,-1                        ),
-  CONFIG_VALUE_BOOLEAN  ("wait-first-volume",            &jobOptions.waitFirstVolumeFlag,-1                       ),
-  CONFIG_VALUE_BOOLEAN  ("no-bar-on-medium",             &jobOptions.noBAROnMediumFlag,-1                         ),
-  CONFIG_VALUE_BOOLEAN  ("quiet",                        &globalOptions.quietFlag,-1                              ),
-  CONFIG_VALUE_INTEGER  ("verbose",                      &globalOptions.verboseLevel,-1,                          0,6,NULL),
+  CONFIG_VALUE_INTEGER64("volume-size",                  &jobOptions.volumeSize,-1,                                     0LL,MAX_LONG_LONG,CONFIG_VALUE_BYTES_UNITS),
+  CONFIG_VALUE_BOOLEAN  ("ecc",                          &jobOptions.errorCorrectionCodesFlag,-1                        ),
+  CONFIG_VALUE_BOOLEAN  ("always-create-image",          &jobOptions.alwaysCreateImageFlag,-1                           ),
 
-  // igored job settings (server only)
+  CONFIG_VALUE_BOOLEAN  ("skip-unreadable",              &jobOptions.skipUnreadableFlag,-1                              ),
+  CONFIG_VALUE_BOOLEAN  ("raw-images",                   &jobOptions.rawImagesFlag,-1                                   ),
+  CONFIG_VALUE_BOOLEAN  ("no-fragments-check",           &jobOptions.noFragmentsCheckFlag,-1                            ),
+  CONFIG_VALUE_BOOLEAN  ("overwrite-archive-files",      &jobOptions.overwriteArchiveFilesFlag,-1                       ),
+  CONFIG_VALUE_BOOLEAN  ("overwrite-files",              &jobOptions.overwriteFilesFlag,-1                              ),
+  CONFIG_VALUE_BOOLEAN  ("wait-first-volume",            &jobOptions.waitFirstVolumeFlag,-1                             ),
+  CONFIG_VALUE_BOOLEAN  ("no-bar-on-medium",             &jobOptions.noBAROnMediumFlag,-1                               ),
+  CONFIG_VALUE_BOOLEAN  ("quiet",                        &globalOptions.quietFlag,-1                                    ),
+  CONFIG_VALUE_INTEGER  ("verbose",                      &globalOptions.verboseLevel,-1,                                0,6,NULL),
 
-  CONFIG_VALUE_SPECIAL  ("schedule",                     &scheduleList,-1,                                        configValueParseSchedule,configValueFormatInitSchedule,configValueFormatDoneSchedule,configValueFormatSchedule,NULL),
+  // ignored job settings (server only)
+  CONFIG_VALUE_BEGIN_SECTION("schedule",-1),
+  CONFIG_VALUE_STRING   ("title",                        NULL,offsetof(ScheduleNode,title)                              ),
+  CONFIG_VALUE_SPECIAL  ("date",                         NULL,offsetof(ScheduleNode,date),                              configValueParseScheduleDate,configValueFormatInitScheduleDate,configValueFormatDoneScheduleDate,configValueFormatScheduleDate,NULL),
+  CONFIG_VALUE_SPECIAL  ("weekdays",                     NULL,offsetof(ScheduleNode,weekDays),                          configValueParseScheduleWeekDays,configValueFormatInitScheduleWeekDays,configValueFormatDoneScheduleWeekDays,configValueFormatScheduleWeekDays,NULL),
+  CONFIG_VALUE_SPECIAL  ("time",                         NULL,offsetof(ScheduleNode,time),                              configValueParseScheduleTime,configValueFormatInitScheduleTime,configValueFormatDoneScheduleTime,configValueFormatScheduleTime,NULL),
+  CONFIG_VALUE_SELECT   ("archive-type",                 NULL,offsetof(ScheduleNode,archiveType),                       CONFIG_VALUE_ARCHIVE_TYPES),
+  CONFIG_VALUE_STRING   ("text",                         NULL,offsetof(ScheduleNode,customText)                         ),
+  CONFIG_VALUE_BOOLEAN  ("enabled",                      NULL,offsetof(ScheduleNode,enabledFlag)                        ),
+  CONFIG_VALUE_END_SECTION(),
 
   // commands
+  CONFIG_VALUE_STRING   ("file-write-pre-command",       &globalOptions.file.writePreProcessCommand,-1                  ),
+  CONFIG_VALUE_STRING   ("file-write-post-command",      &globalOptions.file.writePostProcessCommand,-1                 ),
 
-  CONFIG_VALUE_STRING   ("file-write-pre-command",       &globalOptions.file.writePreProcessCommand,-1            ),
-  CONFIG_VALUE_STRING   ("file-write-post-command",      &globalOptions.file.writePostProcessCommand,-1           ),
+  CONFIG_VALUE_STRING   ("ftp-write-pre-command",        &globalOptions.ftp.writePreProcessCommand,-1                   ),
+  CONFIG_VALUE_STRING   ("ftp-write-post-command",       &globalOptions.ftp.writePostProcessCommand,-1                  ),
 
-  CONFIG_VALUE_STRING   ("ftp-write-pre-command",        &globalOptions.ftp.writePreProcessCommand,-1             ),
-  CONFIG_VALUE_STRING   ("ftp-write-post-command",       &globalOptions.ftp.writePostProcessCommand,-1            ),
+  CONFIG_VALUE_STRING   ("scp-write-pre-command",        &globalOptions.scp.writePreProcessCommand,-1                   ),
+  CONFIG_VALUE_STRING   ("scp-write-post-command",       &globalOptions.scp.writePostProcessCommand,-1                  ),
 
-  CONFIG_VALUE_STRING   ("scp-write-pre-command",        &globalOptions.scp.writePreProcessCommand,-1             ),
-  CONFIG_VALUE_STRING   ("scp-write-post-command",       &globalOptions.scp.writePostProcessCommand,-1            ),
+  CONFIG_VALUE_STRING   ("sftp-write-pre-command",       &globalOptions.sftp.writePreProcessCommand,-1                  ),
+  CONFIG_VALUE_STRING   ("sftp-write-post-command",      &globalOptions.sftp.writePostProcessCommand,-1                 ),
 
-  CONFIG_VALUE_STRING   ("sftp-write-pre-command",       &globalOptions.sftp.writePreProcessCommand,-1            ),
-  CONFIG_VALUE_STRING   ("sftp-write-post-command",      &globalOptions.sftp.writePostProcessCommand,-1           ),
+  CONFIG_VALUE_STRING   ("webdav-write-pre-command",     &globalOptions.webdav.writePreProcessCommand,-1                ),
+  CONFIG_VALUE_STRING   ("webdav-write-post-command",    &globalOptions.webdav.writePostProcessCommand,-1               ),
 
-  CONFIG_VALUE_STRING   ("webdav-write-pre-command",     &globalOptions.webdav.writePreProcessCommand,-1          ),
-  CONFIG_VALUE_STRING   ("webdav-write-post-command",    &globalOptions.webdav.writePostProcessCommand,-1         ),
+  CONFIG_VALUE_STRING   ("cd-device",                    &globalOptions.bd.defaultDeviceName,-1                         ),
+  CONFIG_VALUE_STRING   ("cd-request-volume-command",    &globalOptions.cd.requestVolumeCommand,-1                      ),
+  CONFIG_VALUE_STRING   ("cd-unload-volume-command",     &globalOptions.cd.unloadVolumeCommand,-1                       ),
+  CONFIG_VALUE_STRING   ("cd-load-volume-command",       &globalOptions.cd.loadVolumeCommand,-1                         ),
+  CONFIG_VALUE_INTEGER64("cd-volume-size",               &globalOptions.cd.volumeSize,-1,                               0LL,MAX_LONG_LONG,CONFIG_VALUE_BYTES_UNITS),
+  CONFIG_VALUE_STRING   ("cd-image-pre-command",         &globalOptions.cd.imagePreProcessCommand,-1                    ),
+  CONFIG_VALUE_STRING   ("cd-image-post-command",        &globalOptions.cd.imagePostProcessCommand,-1                   ),
+  CONFIG_VALUE_STRING   ("cd-image-command",             &globalOptions.cd.imageCommand,-1                              ),
+  CONFIG_VALUE_STRING   ("cd-ecc-pre-command",           &globalOptions.cd.eccPreProcessCommand,-1                      ),
+  CONFIG_VALUE_STRING   ("cd-ecc-post-command",          &globalOptions.cd.eccPostProcessCommand,-1                     ),
+  CONFIG_VALUE_STRING   ("cd-ecc-command",               &globalOptions.cd.eccCommand,-1                                ),
+  CONFIG_VALUE_STRING   ("cd-write-pre-command",         &globalOptions.cd.writePreProcessCommand,-1                    ),
+  CONFIG_VALUE_STRING   ("cd-write-post-command",        &globalOptions.cd.writePostProcessCommand,-1                   ),
+  CONFIG_VALUE_STRING   ("cd-write-command",             &globalOptions.cd.writeCommand,-1                              ),
+  CONFIG_VALUE_STRING   ("cd-write-image-command",       &globalOptions.cd.writeImageCommand,-1                         ),
 
-  CONFIG_VALUE_STRING   ("cd-device",                    &globalOptions.bd.defaultDeviceName,-1                   ),
-  CONFIG_VALUE_STRING   ("cd-request-volume-command",    &globalOptions.cd.requestVolumeCommand,-1                ),
-  CONFIG_VALUE_STRING   ("cd-unload-volume-command",     &globalOptions.cd.unloadVolumeCommand,-1                 ),
-  CONFIG_VALUE_STRING   ("cd-load-volume-command",       &globalOptions.cd.loadVolumeCommand,-1                   ),
-  CONFIG_VALUE_INTEGER64("cd-volume-size",               &globalOptions.cd.volumeSize,-1,                         0LL,MAX_LONG_LONG,CONFIG_VALUE_BYTES_UNITS),
-  CONFIG_VALUE_STRING   ("cd-image-pre-command",         &globalOptions.cd.imagePreProcessCommand,-1              ),
-  CONFIG_VALUE_STRING   ("cd-image-post-command",        &globalOptions.cd.imagePostProcessCommand,-1             ),
-  CONFIG_VALUE_STRING   ("cd-image-command",             &globalOptions.cd.imageCommand,-1                        ),
-  CONFIG_VALUE_STRING   ("cd-ecc-pre-command",           &globalOptions.cd.eccPreProcessCommand,-1                ),
-  CONFIG_VALUE_STRING   ("cd-ecc-post-command",          &globalOptions.cd.eccPostProcessCommand,-1               ),
-  CONFIG_VALUE_STRING   ("cd-ecc-command",               &globalOptions.cd.eccCommand,-1                          ),
-  CONFIG_VALUE_STRING   ("cd-write-pre-command",         &globalOptions.cd.writePreProcessCommand,-1              ),
-  CONFIG_VALUE_STRING   ("cd-write-post-command",        &globalOptions.cd.writePostProcessCommand,-1             ),
-  CONFIG_VALUE_STRING   ("cd-write-command",             &globalOptions.cd.writeCommand,-1                        ),
-  CONFIG_VALUE_STRING   ("cd-write-image-command",       &globalOptions.cd.writeImageCommand,-1                   ),
+  CONFIG_VALUE_STRING   ("dvd-device",                   &globalOptions.bd.defaultDeviceName,-1                         ),
+  CONFIG_VALUE_STRING   ("dvd-request-volume-command",   &globalOptions.dvd.requestVolumeCommand,-1                     ),
+  CONFIG_VALUE_STRING   ("dvd-unload-volume-command",    &globalOptions.dvd.unloadVolumeCommand,-1                      ),
+  CONFIG_VALUE_STRING   ("dvd-load-volume-command",      &globalOptions.dvd.loadVolumeCommand,-1                        ),
+  CONFIG_VALUE_INTEGER64("dvd-volume-size",              &globalOptions.dvd.volumeSize,-1,                              0LL,MAX_LONG_LONG,CONFIG_VALUE_BYTES_UNITS),
+  CONFIG_VALUE_STRING   ("dvd-image-pre-command",        &globalOptions.dvd.imagePreProcessCommand,-1                   ),
+  CONFIG_VALUE_STRING   ("dvd-image-post-command",       &globalOptions.dvd.imagePostProcessCommand,-1                  ),
+  CONFIG_VALUE_STRING   ("dvd-image-command",            &globalOptions.dvd.imageCommand,-1                             ),
+  CONFIG_VALUE_STRING   ("dvd-ecc-pre-command",          &globalOptions.dvd.eccPreProcessCommand,-1                     ),
+  CONFIG_VALUE_STRING   ("dvd-ecc-post-command",         &globalOptions.dvd.eccPostProcessCommand,-1                    ),
+  CONFIG_VALUE_STRING   ("dvd-ecc-command",              &globalOptions.dvd.eccCommand,-1                               ),
+  CONFIG_VALUE_STRING   ("dvd-write-pre-command",        &globalOptions.dvd.writePreProcessCommand,-1                   ),
+  CONFIG_VALUE_STRING   ("dvd-write-post-command",       &globalOptions.dvd.writePostProcessCommand,-1                  ),
+  CONFIG_VALUE_STRING   ("dvd-write-command",            &globalOptions.dvd.writeCommand,-1                             ),
+  CONFIG_VALUE_STRING   ("dvd-write-image-command",      &globalOptions.dvd.writeImageCommand,-1                        ),
 
-  CONFIG_VALUE_STRING   ("dvd-device",                   &globalOptions.bd.defaultDeviceName,-1                   ),
-  CONFIG_VALUE_STRING   ("dvd-request-volume-command",   &globalOptions.dvd.requestVolumeCommand,-1               ),
-  CONFIG_VALUE_STRING   ("dvd-unload-volume-command",    &globalOptions.dvd.unloadVolumeCommand,-1                ),
-  CONFIG_VALUE_STRING   ("dvd-load-volume-command",      &globalOptions.dvd.loadVolumeCommand,-1                  ),
-  CONFIG_VALUE_INTEGER64("dvd-volume-size",              &globalOptions.dvd.volumeSize,-1,                        0LL,MAX_LONG_LONG,CONFIG_VALUE_BYTES_UNITS),
-  CONFIG_VALUE_STRING   ("dvd-image-pre-command",        &globalOptions.dvd.imagePreProcessCommand,-1             ),
-  CONFIG_VALUE_STRING   ("dvd-image-post-command",       &globalOptions.dvd.imagePostProcessCommand,-1            ),
-  CONFIG_VALUE_STRING   ("dvd-image-command",            &globalOptions.dvd.imageCommand,-1                       ),
-  CONFIG_VALUE_STRING   ("dvd-ecc-pre-command",          &globalOptions.dvd.eccPreProcessCommand,-1               ),
-  CONFIG_VALUE_STRING   ("dvd-ecc-post-command",         &globalOptions.dvd.eccPostProcessCommand,-1              ),
-  CONFIG_VALUE_STRING   ("dvd-ecc-command",              &globalOptions.dvd.eccCommand,-1                         ),
-  CONFIG_VALUE_STRING   ("dvd-write-pre-command",        &globalOptions.dvd.writePreProcessCommand,-1             ),
-  CONFIG_VALUE_STRING   ("dvd-write-post-command",       &globalOptions.dvd.writePostProcessCommand,-1            ),
-  CONFIG_VALUE_STRING   ("dvd-write-command",            &globalOptions.dvd.writeCommand,-1                       ),
-  CONFIG_VALUE_STRING   ("dvd-write-image-command",      &globalOptions.dvd.writeImageCommand,-1                  ),
+  CONFIG_VALUE_STRING   ("bd-device",                    &globalOptions.bd.defaultDeviceName,-1                         ),
+  CONFIG_VALUE_STRING   ("bd-request-volume-command",    &globalOptions.bd.requestVolumeCommand,-1                      ),
+  CONFIG_VALUE_STRING   ("bd-unload-volume-command",     &globalOptions.bd.unloadVolumeCommand,-1                       ),
+  CONFIG_VALUE_STRING   ("bd-load-volume-command",       &globalOptions.bd.loadVolumeCommand,-1                         ),
+  CONFIG_VALUE_INTEGER64("bd-volume-size",               &globalOptions.bd.volumeSize,-1,                               0LL,MAX_LONG_LONG,CONFIG_VALUE_BYTES_UNITS),
+  CONFIG_VALUE_STRING   ("bd-image-pre-command",         &globalOptions.bd.imagePreProcessCommand,-1                    ),
+  CONFIG_VALUE_STRING   ("bd-image-post-command",        &globalOptions.bd.imagePostProcessCommand,-1                   ),
+  CONFIG_VALUE_STRING   ("bd-image-command",             &globalOptions.bd.imageCommand,-1                              ),
+  CONFIG_VALUE_STRING   ("bd-ecc-pre-command",           &globalOptions.bd.eccPreProcessCommand,-1                      ),
+  CONFIG_VALUE_STRING   ("bd-ecc-post-command",          &globalOptions.bd.eccPostProcessCommand,-1                     ),
+  CONFIG_VALUE_STRING   ("bd-ecc-command",               &globalOptions.bd.eccCommand,-1                                ),
+  CONFIG_VALUE_STRING   ("bd-write-pre-command",         &globalOptions.bd.writePreProcessCommand,-1                    ),
+  CONFIG_VALUE_STRING   ("bd-write-post-command",        &globalOptions.bd.writePostProcessCommand,-1                   ),
+  CONFIG_VALUE_STRING   ("bd-write-command",             &globalOptions.bd.writeCommand,-1                              ),
+  CONFIG_VALUE_STRING   ("bd-write-image-command",       &globalOptions.bd.writeImageCommand,-1                         ),
 
-  CONFIG_VALUE_STRING   ("bd-device",                    &globalOptions.bd.defaultDeviceName,-1                   ),
-  CONFIG_VALUE_STRING   ("bd-request-volume-command",    &globalOptions.bd.requestVolumeCommand,-1                ),
-  CONFIG_VALUE_STRING   ("bd-unload-volume-command",     &globalOptions.bd.unloadVolumeCommand,-1                 ),
-  CONFIG_VALUE_STRING   ("bd-load-volume-command",       &globalOptions.bd.loadVolumeCommand,-1                   ),
-  CONFIG_VALUE_INTEGER64("bd-volume-size",               &globalOptions.bd.volumeSize,-1,                         0LL,MAX_LONG_LONG,CONFIG_VALUE_BYTES_UNITS),
-  CONFIG_VALUE_STRING   ("bd-image-pre-command",         &globalOptions.bd.imagePreProcessCommand,-1              ),
-  CONFIG_VALUE_STRING   ("bd-image-post-command",        &globalOptions.bd.imagePostProcessCommand,-1             ),
-  CONFIG_VALUE_STRING   ("bd-image-command",             &globalOptions.bd.imageCommand,-1                        ),
-  CONFIG_VALUE_STRING   ("bd-ecc-pre-command",           &globalOptions.bd.eccPreProcessCommand,-1                ),
-  CONFIG_VALUE_STRING   ("bd-ecc-post-command",          &globalOptions.bd.eccPostProcessCommand,-1               ),
-  CONFIG_VALUE_STRING   ("bd-ecc-command",               &globalOptions.bd.eccCommand,-1                          ),
-  CONFIG_VALUE_STRING   ("bd-write-pre-command",         &globalOptions.bd.writePreProcessCommand,-1              ),
-  CONFIG_VALUE_STRING   ("bd-write-post-command",        &globalOptions.bd.writePostProcessCommand,-1             ),
-  CONFIG_VALUE_STRING   ("bd-write-command",             &globalOptions.bd.writeCommand,-1                        ),
-  CONFIG_VALUE_STRING   ("bd-write-image-command",       &globalOptions.bd.writeImageCommand,-1                   ),
-
-  CONFIG_VALUE_STRING   ("device",                       &currentDevice,offsetof(Device,defaultDeviceName)        ),
-  CONFIG_VALUE_STRING   ("device-request-volume-command",&currentDevice,offsetof(Device,requestVolumeCommand)     ),
-  CONFIG_VALUE_STRING   ("device-unload-volume-command", &currentDevice,offsetof(Device,unloadVolumeCommand)      ),
-  CONFIG_VALUE_STRING   ("device-load-volume-command",   &currentDevice,offsetof(Device,loadVolumeCommand)        ),
-  CONFIG_VALUE_INTEGER64("device-volume-size",           &currentDevice,offsetof(Device,volumeSize),              0LL,MAX_LONG_LONG,CONFIG_VALUE_BYTES_UNITS),
-  CONFIG_VALUE_STRING   ("device-image-pre-command",     &currentDevice,offsetof(Device,imagePreProcessCommand)   ),
-  CONFIG_VALUE_STRING   ("device-image-post-command",    &currentDevice,offsetof(Device,imagePostProcessCommand)  ),
-  CONFIG_VALUE_STRING   ("device-image-command",         &currentDevice,offsetof(Device,imageCommand)             ),
-  CONFIG_VALUE_STRING   ("device-ecc-pre-command",       &currentDevice,offsetof(Device,eccPreProcessCommand)     ),
-  CONFIG_VALUE_STRING   ("device-ecc-post-command",      &currentDevice,offsetof(Device,eccPostProcessCommand)    ),
-  CONFIG_VALUE_STRING   ("device-ecc-command",           &currentDevice,offsetof(Device,eccCommand)               ),
-  CONFIG_VALUE_STRING   ("device-write-pre-command",     &currentDevice,offsetof(Device,writePreProcessCommand)   ),
-  CONFIG_VALUE_STRING   ("device-write-post-command",    &currentDevice,offsetof(Device,writePostProcessCommand)  ),
-  CONFIG_VALUE_STRING   ("device-write-command",         &currentDevice,offsetof(Device,writeCommand)             ),
+  CONFIG_VALUE_STRING   ("device",                       &currentDevice,offsetof(Device,defaultDeviceName)              ),
+  CONFIG_VALUE_STRING   ("device-request-volume-command",&currentDevice,offsetof(Device,requestVolumeCommand)           ),
+  CONFIG_VALUE_STRING   ("device-unload-volume-command", &currentDevice,offsetof(Device,unloadVolumeCommand)            ),
+  CONFIG_VALUE_STRING   ("device-load-volume-command",   &currentDevice,offsetof(Device,loadVolumeCommand)              ),
+  CONFIG_VALUE_INTEGER64("device-volume-size",           &currentDevice,offsetof(Device,volumeSize),                    0LL,MAX_LONG_LONG,CONFIG_VALUE_BYTES_UNITS),
+  CONFIG_VALUE_STRING   ("device-image-pre-command",     &currentDevice,offsetof(Device,imagePreProcessCommand)         ),
+  CONFIG_VALUE_STRING   ("device-image-post-command",    &currentDevice,offsetof(Device,imagePostProcessCommand)        ),
+  CONFIG_VALUE_STRING   ("device-image-command",         &currentDevice,offsetof(Device,imageCommand)                   ),
+  CONFIG_VALUE_STRING   ("device-ecc-pre-command",       &currentDevice,offsetof(Device,eccPreProcessCommand)           ),
+  CONFIG_VALUE_STRING   ("device-ecc-post-command",      &currentDevice,offsetof(Device,eccPostProcessCommand)          ),
+  CONFIG_VALUE_STRING   ("device-ecc-command",           &currentDevice,offsetof(Device,eccCommand)                     ),
+  CONFIG_VALUE_STRING   ("device-write-pre-command",     &currentDevice,offsetof(Device,writePreProcessCommand)         ),
+  CONFIG_VALUE_STRING   ("device-write-post-command",    &currentDevice,offsetof(Device,writePostProcessCommand)        ),
+  CONFIG_VALUE_STRING   ("device-write-command",         &currentDevice,offsetof(Device,writeCommand)                   ),
 
   // server settings
+  CONFIG_VALUE_INTEGER  ("server-port",                  &serverPort,-1,                                                0,65535,NULL),
+  CONFIG_VALUE_INTEGER  ("server-tls-port",              &serverTLSPort,-1,                                             0,65535,NULL),
+  CONFIG_VALUE_CSTRING  ("server-ca-file",               &serverCAFileName,-1                                           ),
+  CONFIG_VALUE_CSTRING  ("server-cert-file",             &serverCertFileName,-1                                         ),
+  CONFIG_VALUE_CSTRING  ("server-key-file",              &serverKeyFileName,-1                                          ),
+  CONFIG_VALUE_SPECIAL  ("server-password",              &serverPassword,-1,                                            configValueParsePassword,NULL,NULL,NULL,NULL),
+  CONFIG_VALUE_CSTRING  ("server-jobs-directory",        &serverJobsDirectory,-1                                        ),
 
-  CONFIG_VALUE_INTEGER  ("server-port",                  &serverPort,-1,                                          0,65535,NULL),
-  CONFIG_VALUE_INTEGER  ("server-tls-port",              &serverTLSPort,-1,                                       0,65535,NULL),
-  CONFIG_VALUE_CSTRING  ("server-ca-file",               &serverCAFileName,-1                                     ),
-  CONFIG_VALUE_CSTRING  ("server-cert-file",             &serverCertFileName,-1                                   ),
-  CONFIG_VALUE_CSTRING  ("server-key-file",              &serverKeyFileName,-1                                    ),
-  CONFIG_VALUE_SPECIAL  ("server-password",              &serverPassword,-1,                                      configValueParsePassword,NULL,NULL,NULL,NULL),
-  CONFIG_VALUE_CSTRING  ("server-jobs-directory",        &serverJobsDirectory,-1                                  ),
+  CONFIG_VALUE_STRING   ("remote-bar-executable",        &globalOptions.remoteBARExecutable,-1                          ),
 
-  CONFIG_VALUE_STRING   ("remote-bar-executable",        &globalOptions.remoteBARExecutable,-1                    ),
+  CONFIG_VALUE_SET      ("log",                          &logTypes,-1,                                                  CONFIG_VALUE_LOG_TYPES),
+  CONFIG_VALUE_CSTRING  ("log-file",                     &logFileName,-1                                                ),
+  CONFIG_VALUE_CSTRING  ("log-post-command",             &logPostCommand,-1                                             ),
 
-  CONFIG_VALUE_SET      ("log",                          &logTypes,-1,                                            CONFIG_VALUE_LOG_TYPES),
-  CONFIG_VALUE_CSTRING  ("log-file",                     &logFileName,-1                                          ),
-  CONFIG_VALUE_CSTRING  ("log-post-command",             &logPostCommand,-1                                       ),
+  CONFIG_VALUE_CSTRING  ("pid-file",                     &pidFileName,-1                                                ),
 
-  CONFIG_VALUE_CSTRING  ("pid-file",                     &pidFileName,-1                                          ),
+  // old/obsolete
+  CONFIG_VALUE_SPECIAL  ("schedule",                     NULL,-1,                                                       configValueParseSchedule,NULL,NULL,NULL,NULL),
 };
 
 /*---------------------------------------------------------------------*/
@@ -1240,33 +1248,12 @@ LOCAL bool readConfigFile(const String fileName, bool printInfoFlag)
   // parse file
   if (isPrintInfo(2) || printInfoFlag) printf("Reading configuration file '%s'...",String_cString(fileName));
   failFlag   = FALSE;
-  lineNb     = 0;
   line       = String_new();
+  lineNb     = 0;
   name       = String_new();
   value      = String_new();
-  while (!File_eof(&fileHandle) && !failFlag)
+  while (File_getLine(&fileHandle,line,&lineNb,"#") && !failFlag)
   {
-    // read line
-    error = File_readLine(&fileHandle,line);
-    if (error != ERROR_NONE)
-    {
-      if (printInfoFlag) printf("FAIL!\n");
-      printError("Cannot read file '%s' (error: %s)!\n",
-                 String_cString(fileName),
-                 Error_getText(error)
-                );
-      failFlag = TRUE;
-      break;
-    }
-    String_trim(line,STRING_WHITE_SPACES);
-    lineNb++;
-
-    // skip comments, empty lines
-    if (String_isEmpty(line) || String_startsWithChar(line,'#'))
-    {
-      continue;
-    }
-
     // parse line
     if      (String_parse(line,STRING_BEGIN,"[ftp-server %S]",NULL,name))
     {
@@ -1372,20 +1359,28 @@ LOCAL bool readConfigFile(const String fileName, bool printInfoFlag)
       currentWebDAVServer = &defaultWebDAVServer;
       currentDevice       = &defaultDevice;
     }
+    else if (String_parse(line,STRING_BEGIN,"[end]",NULL))
+    {
+      currentFTPServer    = &defaultFTPServer;
+      currentSSHServer    = &defaultSSHServer;
+      currentWebDAVServer = &defaultWebDAVServer;
+      currentDevice       = &defaultDevice;
+    }
     else if (String_parse(line,STRING_BEGIN,"%S=% S",&nextIndex,name,value))
     {
       String_unquote(value,STRING_QUOTES);
       if (!ConfigValue_parse(String_cString(name),
                              String_cString(value),
                              CONFIG_VALUES,SIZE_OF_ARRAY(CONFIG_VALUES),
-                             NULL,
-                             NULL,
-                             NULL
+                             NULL, // section name
+                             NULL, // errorOutputHandle,
+                             NULL, // errorPrefix,
+                             NULL  // variable
                             )
          )
       {
         if (printInfoFlag) printf("FAIL!\n");
-        printError("Unknown or invalid config '%s' with value '%s' in %s, line %ld\n",
+        printError("Unknown or invalid config entry '%s' with value '%s' in %s, line %ld\n",
                    String_cString(name),
                    String_cString(value),
                    String_cString(fileName),
@@ -1700,22 +1695,21 @@ LOCAL bool parseDateMonth(const String s, int *month)
 /***********************************************************************\
 * Name   : parseDateWeekDays
 * Purpose: parse date week day
-* Input  : s - string to parse
+* Input  : names - day names to parse
 * Output : weekDays - week days
 * Return : TRUE iff week day parsed
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool parseDateWeekDays(const String s, long *weekDays)
+LOCAL bool parseDateWeekDays(const char *names, ScheduleWeekDays *weekDays)
 {
-  String          names;
   StringTokenizer stringTokenizer;
   String          name;
 
-  assert(s != NULL);
+  assert(names != NULL);
   assert(weekDays != NULL);
 
-  if (String_equalsCString(s,"*"))
+  if (stringEquals(names,"*"))
   {
     (*weekDays) = SCHEDULE_ANY_DAY;
   }
@@ -1723,14 +1717,12 @@ LOCAL bool parseDateWeekDays(const String s, long *weekDays)
   {
     SET_CLEAR(*weekDays);
 
-    names = String_toLower(String_duplicate(s));
-    String_initTokenizer(&stringTokenizer,
-                         names,
-                         STRING_BEGIN,
-                         ",",
-                         STRING_QUOTES,
-                         TRUE
-                        );
+    String_initTokenizerCString(&stringTokenizer,
+                                names,
+                                ",",
+                                STRING_QUOTES,
+                                TRUE
+                               );
     while (String_getNextToken(&stringTokenizer,&name,NULL))
     {
       if      (String_equalsIgnoreCaseCString(name,"mon")) SET_ADD(*weekDays,WEEKDAY_MON);
@@ -1743,12 +1735,10 @@ LOCAL bool parseDateWeekDays(const String s, long *weekDays)
       else
       {
         String_doneTokenizer(&stringTokenizer);
-        String_delete(names);
         return FALSE;
       }
     }
     String_doneTokenizer(&stringTokenizer);
-    String_delete(names);
   }
 
   return TRUE;
@@ -1812,8 +1802,8 @@ LOCAL BandWidthNode *parseBandWidth(const String s)
   s1 = String_new();
   s2 = String_new();
   nextIndex = STRING_BEGIN;
-  if      (   String_matchCString(s,nextIndex,"^\\s*[[:digit:]]+\\s*$",&nextIndex,s0)
-           || String_matchCString(s,nextIndex,"^\\s*[[:digit:]]+\\S+",&nextIndex,s0)
+  if      (   String_matchCString(s,nextIndex,"^\\s*[[:digit:]]+\\s*$",&nextIndex,s0,NULL)
+           || String_matchCString(s,nextIndex,"^\\s*[[:digit:]]+\\S+",&nextIndex,s0,NULL)
           )
   {
     // value
@@ -1846,9 +1836,9 @@ LOCAL BandWidthNode *parseBandWidth(const String s)
     {
       if      (String_parse(s,nextIndex,"%S %S:%S",&nextIndex,s0,s1,s2))
       {
-        if (!parseDateWeekDays  (s0,&bandWidthNode->weekDays)) errorFlag = TRUE;
-        if (!parseDateTimeNumber(s1,&bandWidthNode->hour    )) errorFlag = TRUE;
-        if (!parseDateTimeNumber(s2,&bandWidthNode->minute  )) errorFlag = TRUE;
+        if (!parseDateWeekDays(String_cString(s0),&bandWidthNode->weekDays)) errorFlag = TRUE;
+        if (!parseDateTimeNumber(s1,&bandWidthNode->hour  )) errorFlag = TRUE;
+        if (!parseDateTimeNumber(s2,&bandWidthNode->minute)) errorFlag = TRUE;
       }
       else if (String_parse(s,nextIndex,"%S:%S",&nextIndex,s0,s1))
       {
@@ -2177,7 +2167,6 @@ LOCAL void freeBandWidthNode(BandWidthNode *bandWidthNode, void *userData)
   assert(bandWidthNode != NULL);
 
   UNUSED_VARIABLE(userData);
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 
   String_delete(bandWidthNode->fileName);
 }
@@ -2453,24 +2442,6 @@ LOCAL void freeDeviceNode(DeviceNode *deviceNode, void *userData)
 }
 
 /***********************************************************************\
-* Name   : freeDeviceNode
-* Purpose: free device node
-* Input  : deviceNode - device node
-*          userData   - user data
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void freeScheduleNode(ScheduleNode *scheduleNode, void *userData)
-{
-  assert(scheduleNode != NULL);
-
-  UNUSED_VARIABLE(scheduleNode);
-  UNUSED_VARIABLE(userData);
-}
-
-/***********************************************************************\
 * Name   : initAll
 * Purpose: initialize
 * Input  : -
@@ -2620,7 +2591,6 @@ LOCAL Errors initAll(void)
   PatternList_init(&excludePatternList);
   PatternList_init(&deltaSourcePatternList);
   PatternList_init(&compressExcludePatternList);
-  List_init(&scheduleList);
   defaultFTPServer.loginName             = NULL;
   defaultFTPServer.password              = NULL;
   defaultFTPServer.maxConnectionCount    = MAX_CONNECTION_COUNT_UNLIMITED;
@@ -2767,7 +2737,6 @@ LOCAL void doneAll(void)
   if (defaultSSHServer.loginName != NULL) String_delete(defaultSSHServer.loginName);
   if (defaultFTPServer.password != NULL) Password_delete(defaultFTPServer.password);
   if (defaultFTPServer.loginName != NULL) String_delete(defaultFTPServer.loginName);
-  List_done(&scheduleList,(ListNodeFreeFunction)freeScheduleNode,NULL);
   PatternList_done(&compressExcludePatternList);
   PatternList_done(&deltaSourcePatternList);
   PatternList_done(&excludePatternList);
@@ -3265,7 +3234,6 @@ ulong getBandWidth(BandWidthList *bandWidthList)
   ulong         n;
   uint64        timestamp;
   FileHandle    fileHandle;
-  bool          readFlag;
   String        line;
 
   assert(bandWidthList != NULL);
@@ -3367,36 +3335,14 @@ ulong getBandWidth(BandWidthList *bandWidthList)
         // open file
         if (File_open(&fileHandle,matchingBandWidthNode->fileName,FILE_OPEN_READ) == ERROR_NONE)
         {
-          // read first none-comment line
-          readFlag = FALSE;
-          line     = String_new();
-          while (!File_eof(&fileHandle) && !readFlag)
+          line = String_new();
+          while (File_getLine(&fileHandle,line,NULL,"#;"))
           {
-            // read line
-            if (File_readLine(&fileHandle,line) != ERROR_NONE)
-            {
-              continue;
-            }
-            String_trim(line,STRING_WHITE_SPACES);
-
-            // skip empty and commented lines (lines starting with //, #, ;)
-            if (   String_isEmpty(line)
-                || String_startsWithCString(line,"//")
-                || String_startsWithCString(line,"#")
-                || String_startsWithCString(line,";")
-               )
-            {
-              continue;
-            }
-
             // parse band width
             if (!parseBandWidthNumber(line,&bandWidthList->n))
             {
               continue;
             }
-
-            // value found
-            readFlag = TRUE;
           }
           String_delete(line);
 
@@ -3420,7 +3366,7 @@ ulong getBandWidth(BandWidthList *bandWidthList)
   return n;
 }
 
-bool allocateServer(ServerAllocation *serverAllocation, ServerAllocationPriorities priority, int maxConnectionCount)
+bool allocateServer(ServerAllocation *serverAllocation, ServerAllocationPriorities priority, uint maxConnectionCount)
 {
   SemaphoreLock semaphoreLock;
 
@@ -3551,7 +3497,7 @@ ServerAllocation *getFTPServerSettings(const String     hostName,
   ftpServer->loginName          = !String_isEmpty(jobOptions->ftpServer.loginName                            ) ? jobOptions->ftpServer.loginName          : ((serverNode != NULL) ? serverNode->ftpServer.loginName          : globalOptions.defaultFTPServer->loginName         );
   ftpServer->password           = !Password_isEmpty(jobOptions->ftpServer.password                           ) ? jobOptions->ftpServer.password           : ((serverNode != NULL) ? serverNode->ftpServer.password           : globalOptions.defaultFTPServer->password          );
   ftpServer->maxConnectionCount = (jobOptions->ftpServer.maxConnectionCount != MAX_CONNECTION_COUNT_UNLIMITED) ? jobOptions->ftpServer.maxConnectionCount : ((serverNode != NULL) ? serverNode->ftpServer.maxConnectionCount : globalOptions.defaultFTPServer->maxConnectionCount);
-  ftpServer->maxStorageSize     = (jobOptions->ftpServer.maxStorageSize != MAX_STORAGE_SIZE_UNLIMITED        ) ? jobOptions->ftpServer.maxStorageSize : ((serverNode != NULL) ? serverNode->ftpServer.maxConnectionCount     : globalOptions.defaultFTPServer->maxStorageSize);
+  ftpServer->maxStorageSize     = (jobOptions->ftpServer.maxStorageSize != MAX_STORAGE_SIZE_UNLIMITED        ) ? jobOptions->ftpServer.maxStorageSize     : ((serverNode != NULL) ? serverNode->ftpServer.maxConnectionCount : globalOptions.defaultFTPServer->maxStorageSize);
 
   return (serverNode != NULL) ? &serverNode->serverAllocation : &defaultFTPServerAllocation;
 }
@@ -3585,7 +3531,7 @@ ServerAllocation *getSSHServerSettings(const String     hostName,
   sshServer->publicKeyFileName  = !String_isEmpty(jobOptions->sshServer.publicKeyFileName                    ) ? jobOptions->sshServer.publicKeyFileName  : ((serverNode != NULL) ? serverNode->sshServer.publicKeyFileName  : globalOptions.defaultSSHServer->publicKeyFileName );
   sshServer->privateKeyFileName = !String_isEmpty(jobOptions->sshServer.privateKeyFileName                   ) ? jobOptions->sshServer.privateKeyFileName : ((serverNode != NULL) ? serverNode->sshServer.privateKeyFileName : globalOptions.defaultSSHServer->privateKeyFileName);
   sshServer->maxConnectionCount = (jobOptions->sshServer.maxConnectionCount != MAX_CONNECTION_COUNT_UNLIMITED) ? jobOptions->sshServer.maxConnectionCount : ((serverNode != NULL) ? serverNode->sshServer.maxConnectionCount : globalOptions.defaultSSHServer->maxConnectionCount);
-  sshServer->maxStorageSize     = (jobOptions->sshServer.maxStorageSize != MAX_STORAGE_SIZE_UNLIMITED        ) ? jobOptions->sshServer.maxStorageSize : ((serverNode != NULL) ? serverNode->sshServer.maxConnectionCount     : globalOptions.defaultSSHServer->maxStorageSize);
+  sshServer->maxStorageSize     = (jobOptions->sshServer.maxStorageSize != MAX_STORAGE_SIZE_UNLIMITED        ) ? jobOptions->sshServer.maxStorageSize     : ((serverNode != NULL) ? serverNode->sshServer.maxConnectionCount : globalOptions.defaultSSHServer->maxStorageSize);
 
   return (serverNode != NULL) ? &serverNode->serverAllocation : &defaultSSHServerAllocation;
 }
@@ -3619,7 +3565,7 @@ ServerAllocation *getWebDAVServerSettings(const String     hostName,
   webdavServer->publicKeyFileName  = !String_isEmpty(jobOptions->webdavServer.publicKeyFileName                    ) ? jobOptions->webdavServer.publicKeyFileName  : ((serverNode != NULL) ? serverNode->webdavServer.publicKeyFileName  : globalOptions.defaultWebDAVServer->publicKeyFileName );
   webdavServer->privateKeyFileName = !String_isEmpty(jobOptions->webdavServer.privateKeyFileName                   ) ? jobOptions->webdavServer.privateKeyFileName : ((serverNode != NULL) ? serverNode->webdavServer.privateKeyFileName : globalOptions.defaultWebDAVServer->privateKeyFileName);
   webdavServer->maxConnectionCount = (jobOptions->webdavServer.maxConnectionCount != MAX_CONNECTION_COUNT_UNLIMITED) ? jobOptions->webdavServer.maxConnectionCount : ((serverNode != NULL) ? serverNode->webdavServer.maxConnectionCount : globalOptions.defaultWebDAVServer->maxConnectionCount);
-  webdavServer->maxStorageSize     = (jobOptions->webdavServer.maxStorageSize != MAX_STORAGE_SIZE_UNLIMITED        ) ? jobOptions->webdavServer.maxStorageSize : ((serverNode != NULL) ? serverNode->webdavServer.maxConnectionCount     : globalOptions.defaultWebDAVServer->maxStorageSize);
+  webdavServer->maxStorageSize     = (jobOptions->webdavServer.maxStorageSize != MAX_STORAGE_SIZE_UNLIMITED        ) ? jobOptions->webdavServer.maxStorageSize     : ((serverNode != NULL) ? serverNode->webdavServer.maxConnectionCount : globalOptions.defaultWebDAVServer->maxStorageSize);
 
   return (serverNode != NULL) ? &serverNode->serverAllocation : &defaultWebDAVServerAllocation;
 }
@@ -4275,6 +4221,12 @@ void configValueFormatInitPassord(void **formatUserData, void *userData, void *v
   (*formatUserData) = (*(Password**)variable);
 }
 
+void configValueFormatDonePassword(void **formatUserData, void *userData)
+{
+  UNUSED_VARIABLE(formatUserData);
+  UNUSED_VARIABLE(userData);
+}
+
 bool configValueFormatPassword(void **formatUserData, void *userData, String line)
 {
   Password   *password;
@@ -4460,14 +4412,16 @@ LOCAL ScheduleNode *newScheduleNode(void)
   {
     HALT_INSUFFICIENT_MEMORY();
   }
-  scheduleNode->year        = SCHEDULE_ANY;
-  scheduleNode->month       = SCHEDULE_ANY;
-  scheduleNode->day         = SCHEDULE_ANY;
-  scheduleNode->hour        = SCHEDULE_ANY;
-  scheduleNode->minute      = SCHEDULE_ANY;
+  scheduleNode->title       = String_new();
+  scheduleNode->date.year   = SCHEDULE_ANY;
+  scheduleNode->date.month  = SCHEDULE_ANY;
+  scheduleNode->date.day    = SCHEDULE_ANY;
   scheduleNode->weekDays    = SCHEDULE_ANY_DAY;
+  scheduleNode->time.hour   = SCHEDULE_ANY;
+  scheduleNode->time.minute = SCHEDULE_ANY;
   scheduleNode->archiveType = ARCHIVE_TYPE_NORMAL;
-  scheduleNode->enabled     = FALSE;
+  scheduleNode->customText  = String_new();
+  scheduleNode->enabledFlag = FALSE;
 
   return scheduleNode;
 }
@@ -4501,17 +4455,17 @@ LOCAL bool parseScheduleArchiveType(const String s, ArchiveTypes *archiveType)
   return TRUE;
 }
 
-ScheduleNode *parseScheduleParts(const String date,
-                                 const String weekDay,
-                                 const String time
-                                )
+ScheduleNode *parseScheduleDateTime(const String date,
+                                    const String weekDays,
+                                    const String time
+                                   )
 {
   ScheduleNode *scheduleNode;
   bool         errorFlag;
   String       s0,s1,s2;
 
   assert(date != NULL);
-  assert(weekDay != NULL);
+  assert(weekDays != NULL);
   assert(time != NULL);
 
   // allocate new schedule node
@@ -4524,22 +4478,22 @@ ScheduleNode *parseScheduleParts(const String date,
   s2 = String_new();
   if      (String_parse(date,STRING_BEGIN,"%S-%S-%S",NULL,s0,s1,s2))
   {
-    if (!parseDateTimeNumber(s0,&scheduleNode->year)) errorFlag = TRUE;
-    if (!parseDateMonth     (s1,&scheduleNode->month)) errorFlag = TRUE;
-    if (!parseDateTimeNumber(s2,&scheduleNode->day)) errorFlag = TRUE;
+    if (!parseDateTimeNumber(s0,&scheduleNode->date.year)) errorFlag = TRUE;
+    if (!parseDateMonth     (s1,&scheduleNode->date.month)) errorFlag = TRUE;
+    if (!parseDateTimeNumber(s2,&scheduleNode->date.day)) errorFlag = TRUE;
   }
   else
   {
     errorFlag = TRUE;
   }
-  if (!parseDateWeekDays(weekDay,&scheduleNode->weekDays))
+  if (!parseDateWeekDays(String_cString(weekDays),&scheduleNode->weekDays))
   {
     errorFlag = TRUE;
   }
   if (String_parse(time,STRING_BEGIN,"%S:%S",NULL,s0,s1))
   {
-    if (!parseDateTimeNumber(s0,&scheduleNode->hour  )) errorFlag = TRUE;
-    if (!parseDateTimeNumber(s1,&scheduleNode->minute)) errorFlag = TRUE;
+    if (!parseDateTimeNumber(s0,&scheduleNode->time.hour  )) errorFlag = TRUE;
+    if (!parseDateTimeNumber(s1,&scheduleNode->time.minute)) errorFlag = TRUE;
   }
   else
   {
@@ -4579,9 +4533,9 @@ ScheduleNode *parseSchedule(const String s)
   nextIndex = STRING_BEGIN;
   if      (String_parse(s,nextIndex,"%S-%S-%S",&nextIndex,s0,s1,s2))
   {
-    if (!parseDateTimeNumber(s0,&scheduleNode->year )) errorFlag = TRUE;
-    if (!parseDateMonth     (s1,&scheduleNode->month)) errorFlag = TRUE;
-    if (!parseDateTimeNumber(s2,&scheduleNode->day  )) errorFlag = TRUE;
+    if (!parseDateTimeNumber(s0,&scheduleNode->date.year )) errorFlag = TRUE;
+    if (!parseDateMonth     (s1,&scheduleNode->date.month)) errorFlag = TRUE;
+    if (!parseDateTimeNumber(s2,&scheduleNode->date.day  )) errorFlag = TRUE;
   }
   else
   {
@@ -4589,14 +4543,14 @@ ScheduleNode *parseSchedule(const String s)
   }
   if      (String_parse(s,nextIndex,"%S %S:%S",&nextIndex,s0,s1,s2))
   {
-    if (!parseDateWeekDays  (s0,&scheduleNode->weekDays)) errorFlag = TRUE;
-    if (!parseDateTimeNumber(s1,&scheduleNode->hour    )) errorFlag = TRUE;
-    if (!parseDateTimeNumber(s2,&scheduleNode->minute  )) errorFlag = TRUE;
+    if (!parseDateWeekDays(String_cString(s0),&scheduleNode->weekDays)) errorFlag = TRUE;
+    if (!parseDateTimeNumber(s1,&scheduleNode->time.hour  )) errorFlag = TRUE;
+    if (!parseDateTimeNumber(s2,&scheduleNode->time.minute)) errorFlag = TRUE;
   }
   else if (String_parse(s,nextIndex,"%S:%S",&nextIndex,s0,s1))
   {
-    if (!parseDateTimeNumber(s0,&scheduleNode->hour  )) errorFlag = TRUE;
-    if (!parseDateTimeNumber(s1,&scheduleNode->minute)) errorFlag = TRUE;
+    if (!parseDateTimeNumber(s0,&scheduleNode->time.hour  )) errorFlag = TRUE;
+    if (!parseDateTimeNumber(s1,&scheduleNode->time.minute)) errorFlag = TRUE;
   }
   else
   {
@@ -4613,7 +4567,7 @@ ScheduleNode *parseSchedule(const String s)
    known?
 */
 if ((b != FALSE) && (b != TRUE)) HALT_INTERNAL_ERROR("parsing boolean string value fail - C compiler bug?");
-    scheduleNode->enabled = b;
+    scheduleNode->enabledFlag = b;
   }
   else
   {
@@ -4638,6 +4592,282 @@ if ((b != FALSE) && (b != TRUE)) HALT_INTERNAL_ERROR("parsing boolean string val
   }
 
   return scheduleNode;
+}
+
+bool configValueParseScheduleDate(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
+{
+  bool         errorFlag;
+  String       s0,s1,s2;
+  ScheduleDate date;
+
+  assert(variable != NULL);
+  assert(value != NULL);
+
+  UNUSED_VARIABLE(userData);
+  UNUSED_VARIABLE(name);
+  UNUSED_VARIABLE(errorMessage);
+  UNUSED_VARIABLE(errorMessageSize);
+#warning use errorMessage?
+
+  errorFlag = FALSE;
+
+  s0 = String_new();
+  s1 = String_new();
+  s2 = String_new();
+  if      (String_parseCString(value,"%S-%S-%S",NULL,s0,s1,s2))
+  {
+    if (!parseDateTimeNumber(s0,&date.year )) errorFlag = TRUE;
+    if (!parseDateMonth     (s1,&date.month)) errorFlag = TRUE;
+    if (!parseDateTimeNumber(s2,&date.day  )) errorFlag = TRUE;
+  }
+  else
+  {
+    errorFlag = TRUE;
+  }
+  String_delete(s2);
+  String_delete(s1);
+  String_delete(s0);
+
+  // store values
+  (*(ScheduleDate*)variable) = date;
+
+  return !errorFlag;
+}
+
+void configValueFormatInitScheduleDate(void **formatUserData, void *userData, void *variable)
+{
+  assert(formatUserData != NULL);
+
+  UNUSED_VARIABLE(userData);
+
+  (*formatUserData) = (ScheduleDate*)variable;
+}
+
+void configValueFormatDoneScheduleDate(void **formatUserData, void *userData)
+{
+  assert(formatUserData != NULL);
+
+  UNUSED_VARIABLE(formatUserData);
+  UNUSED_VARIABLE(userData);
+}
+
+bool configValueFormatScheduleDate(void **formatUserData, void *userData, String line)
+{
+  const ScheduleDate *scheduleDate;
+
+  assert(formatUserData != NULL);
+
+  UNUSED_VARIABLE(userData);
+
+  scheduleDate = (const ScheduleDate*)(*formatUserData);
+  if (scheduleDate != NULL)
+  {
+    if (scheduleDate->year != SCHEDULE_ANY)
+    {
+      String_format(line,"%d",scheduleDate->year);
+    }
+    else
+    {
+      String_appendCString(line,"*");
+    }
+    String_appendChar(line,'-');
+    if (scheduleDate->month != SCHEDULE_ANY)
+    {
+      String_format(line,"%d",scheduleDate->month);
+    }
+    else
+    {
+      String_appendCString(line,"*");
+    }
+    String_appendChar(line,'-');
+    if (scheduleDate->day != SCHEDULE_ANY)
+    {
+      String_format(line,"%d",scheduleDate->day);
+    }
+    else
+    {
+      String_appendCString(line,"*");
+    }
+
+    (*formatUserData) = NULL;
+
+    return TRUE;
+  }
+  else
+  {
+    return FALSE;
+  }
+}
+
+bool configValueParseScheduleWeekDays(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
+{
+  bool             errorFlag;
+  ScheduleWeekDays weekDays;
+
+  assert(variable != NULL);
+  assert(value != NULL);
+
+  UNUSED_VARIABLE(userData);
+  UNUSED_VARIABLE(name);
+  UNUSED_VARIABLE(errorMessage);
+  UNUSED_VARIABLE(errorMessageSize);
+#warning use errorMessage?
+
+  errorFlag = FALSE;
+
+  if (!parseDateWeekDays(value,&weekDays)) errorFlag = TRUE;
+
+  // store value
+  (*(ScheduleWeekDays*)variable) = weekDays;
+
+  return !errorFlag;
+}
+
+void configValueFormatInitScheduleWeekDays(void **formatUserData, void *userData, void *variable)
+{
+  assert(formatUserData != NULL);
+
+  UNUSED_VARIABLE(userData);
+
+  (*formatUserData) = (ScheduleWeekDays*)variable;
+}
+
+void configValueFormatDoneScheduleWeekDays(void **formatUserData, void *userData)
+{
+  assert(formatUserData != NULL);
+
+  UNUSED_VARIABLE(formatUserData);
+  UNUSED_VARIABLE(userData);
+}
+
+bool configValueFormatScheduleWeekDays(void **formatUserData, void *userData, String line)
+{
+  const ScheduleWeekDays *scheduleWeekDays;
+  String                 names;
+
+  assert(formatUserData != NULL);
+
+  UNUSED_VARIABLE(userData);
+
+  scheduleWeekDays = (ScheduleWeekDays*)(*formatUserData);
+  if (scheduleWeekDays != NULL)
+  {
+    if ((*scheduleWeekDays) != SCHEDULE_ANY_DAY)
+    {
+      names = String_new();
+
+      if (IN_SET(*scheduleWeekDays,WEEKDAY_MON)) { String_joinCString(names,"Mon",','); }
+      if (IN_SET(*scheduleWeekDays,WEEKDAY_TUE)) { String_joinCString(names,"Tue",','); }
+      if (IN_SET(*scheduleWeekDays,WEEKDAY_WED)) { String_joinCString(names,"Wed",','); }
+      if (IN_SET(*scheduleWeekDays,WEEKDAY_THU)) { String_joinCString(names,"Thu",','); }
+      if (IN_SET(*scheduleWeekDays,WEEKDAY_FRI)) { String_joinCString(names,"Fri",','); }
+      if (IN_SET(*scheduleWeekDays,WEEKDAY_SAT)) { String_joinCString(names,"Sat",','); }
+      if (IN_SET(*scheduleWeekDays,WEEKDAY_SUN)) { String_joinCString(names,"Sun",','); }
+
+      String_append(line,names);
+      String_appendChar(line,' ');
+
+      String_delete(names);
+    }
+
+    (*formatUserData) = NULL;
+
+    return TRUE;
+  }
+  else
+  {
+    return FALSE;
+  }
+}
+
+bool configValueParseScheduleTime(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
+{
+  bool         errorFlag;
+  String       s0,s1;
+  ScheduleTime time;
+
+  assert(variable != NULL);
+  assert(value != NULL);
+
+  UNUSED_VARIABLE(userData);
+  UNUSED_VARIABLE(name);
+  UNUSED_VARIABLE(errorMessage);
+  UNUSED_VARIABLE(errorMessageSize);
+#warning use errorMessage?
+
+  errorFlag = FALSE;
+
+  s0 = String_new();
+  s1 = String_new();
+  if (String_parseCString(value,"%S:%S",NULL,s0,s1))
+  {
+    if (!parseDateTimeNumber(s0,&time.hour  )) errorFlag = TRUE;
+    if (!parseDateTimeNumber(s1,&time.minute)) errorFlag = TRUE;
+  }
+  String_delete(s1);
+  String_delete(s0);
+
+  // store values
+  (*(ScheduleTime*)variable) = time;
+
+  return !errorFlag;
+}
+
+void configValueFormatInitScheduleTime(void **formatUserData, void *userData, void *variable)
+{
+  assert(formatUserData != NULL);
+
+  UNUSED_VARIABLE(userData);
+
+  (*formatUserData) = (ScheduleTime*)variable;
+}
+
+void configValueFormatDoneScheduleTime(void **formatUserData, void *userData)
+{
+  assert(formatUserData != NULL);
+
+  UNUSED_VARIABLE(formatUserData);
+  UNUSED_VARIABLE(userData);
+}
+
+bool configValueFormatScheduleTime(void **formatUserData, void *userData, String line)
+{
+  const ScheduleTime *scheduleTime;
+
+  assert(formatUserData != NULL);
+
+  UNUSED_VARIABLE(userData);
+  UNUSED_VARIABLE(userData);
+
+  scheduleTime = (const ScheduleTime*)(*formatUserData);
+  if (scheduleTime != NULL)
+  {
+    if (scheduleTime->hour != SCHEDULE_ANY)
+    {
+      String_format(line,"%d",scheduleTime->hour);
+    }
+    else
+    {
+      String_appendCString(line,"*");
+    }
+    String_appendChar(line,':');
+    if (scheduleTime->minute != SCHEDULE_ANY)
+    {
+      String_format(line,"%d",scheduleTime->minute);
+    }
+    else
+    {
+      String_appendCString(line,"*");
+    }
+
+    (*formatUserData) = NULL;
+
+    return TRUE;
+  }
+  else
+  {
+    return FALSE;
+  }
 }
 
 bool configValueParseSchedule(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
@@ -4670,6 +4900,7 @@ bool configValueParseSchedule(void *userData, void *variable, const char *name, 
   return TRUE;
 }
 
+#if 0
 void configValueFormatInitSchedule(void **formatUserData, void *userData, void *variable)
 {
   assert(formatUserData != NULL);
@@ -4687,37 +4918,37 @@ void configValueFormatDoneSchedule(void **formatUserData, void *userData)
 
 bool configValueFormatSchedule(void **formatUserData, void *userData, String line)
 {
-  ScheduleNode *scheduleNode;
-  String       names;
+  const ScheduleNode *scheduleNode;
+  String             names;
 
   assert(formatUserData != NULL);
 
   UNUSED_VARIABLE(userData);
 
-  scheduleNode = (ScheduleNode*)(*formatUserData);
+  scheduleNode = (const ScheduleNode*)(*formatUserData);
   if (scheduleNode != NULL)
   {
-    if (scheduleNode->year != SCHEDULE_ANY)
+    if (scheduleNode->date.year != SCHEDULE_ANY)
     {
-      String_format(line,"%d",scheduleNode->year);
+      String_format(line,"%d",scheduleNode->date.year);
     }
     else
     {
       String_appendCString(line,"*");
     }
     String_appendChar(line,'-');
-    if (scheduleNode->month != SCHEDULE_ANY)
+    if (scheduleNode->date.month != SCHEDULE_ANY)
     {
-      String_format(line,"%d",scheduleNode->month);
+      String_format(line,"%d",scheduleNode->date.month);
     }
     else
     {
       String_appendCString(line,"*");
     }
     String_appendChar(line,'-');
-    if (scheduleNode->day != SCHEDULE_ANY)
+    if (scheduleNode->date.day != SCHEDULE_ANY)
     {
-      String_format(line,"%d",scheduleNode->day);
+      String_format(line,"%d",scheduleNode->date.day);
     }
     else
     {
@@ -4743,25 +4974,25 @@ bool configValueFormatSchedule(void **formatUserData, void *userData, String lin
       String_delete(names);
     }
 
-    if (scheduleNode->hour != SCHEDULE_ANY)
+    if (scheduleNode->time.hour != SCHEDULE_ANY)
     {
-      String_format(line,"%d",scheduleNode->hour);
+      String_format(line,"%d",scheduleNode->time.hour);
     }
     else
     {
       String_appendCString(line,"*");
     }
     String_appendChar(line,':');
-    if (scheduleNode->minute != SCHEDULE_ANY)
+    if (scheduleNode->time.minute != SCHEDULE_ANY)
     {
-      String_format(line,"%d",scheduleNode->minute);
+      String_format(line,"%d",scheduleNode->time.minute);
     }
     else
     {
       String_appendCString(line,"*");
     }
     String_appendChar(line,' ');
-    String_format(line,"%y",scheduleNode->enabled);
+    String_format(line,"%y",scheduleNode->enabledFlag);
     String_appendChar(line,' ');
     switch (scheduleNode->archiveType)
     {
@@ -4796,6 +5027,7 @@ bool configValueFormatSchedule(void **formatUserData, void *userData, String lin
     return FALSE;
   }
 }
+#endif
 
 const char *archiveTypeToString(ArchiveTypes archiveType, const char *defaultValue)
 {
@@ -4846,25 +5078,27 @@ bool parseArchiveType(const char *name, ArchiveTypes *archiveType)
   }
 }
 
-bool readJobFile(const String      fileName,
-                 const ConfigValue *configValues,
-                 uint              configValueCount,
-                 void              *configData
-                )
+/***********************************************************************\
+* Name   : readFromJob
+* Purpose: read options from job file
+* Input  : fileName - file name
+* Output : -
+* Return : TRUE iff read
+* Notes  : -
+\***********************************************************************/
+
+LOCAL bool readFromJob(const String fileName)
 {
   Errors     error;
   FileHandle fileHandle;
   bool       failFlag;
   uint       lineNb;
   String     line;
+  String     title;
   String     name,value;
   long       nextIndex;
 
   assert(fileName != NULL);
-  assert(configValues != NULL);
-
-  // initialize variables
-  line = String_new();
 
   // open file
   error = File_open(&fileHandle,fileName,FILE_OPEN_READ);
@@ -4874,47 +5108,46 @@ bool readJobFile(const String      fileName,
                String_cString(fileName),
                Error_getText(error)
               );
-    String_delete(line);
     return FALSE;
   }
 
   // parse file
   failFlag = FALSE;
+  line     = String_new();
   lineNb   = 0;
+  title    = String_new();
+const char *sectionName = NULL;
   name     = String_new();
   value    = String_new();
-  while (!File_eof(&fileHandle) && !failFlag)
+  while (File_getLine(&fileHandle,line,&lineNb,"#") && !failFlag)
   {
-    // read line
-    error = File_readLine(&fileHandle,line);
-    if (error != ERROR_NONE)
-    {
-      printError("Cannot read file '%s' (error: %s)!\n",
-                 String_cString(fileName),
-                 Error_getText(error)
-                );
-      failFlag = TRUE;
-      break;
-    }
-    String_trim(line,STRING_WHITE_SPACES);
-    lineNb++;
-
-    // skip comments, empty lines
-    if (String_isEmpty(line) || String_startsWithChar(line,'#'))
-    {
-      continue;
-    }
-
     // parse line
-    if (String_parse(line,STRING_BEGIN,"%S=% S",&nextIndex,name,value))
+    if      (String_parse(line,STRING_BEGIN,"[schedule %S]",NULL,title))
+    {
+      // skip schedule sections
+      while (   File_getLine(&fileHandle,line,&lineNb,"#")
+             && !String_matchCString(line,STRING_BEGIN,"^\\s*\\[",NULL,NULL,NULL)
+             && !failFlag
+            )
+      {
+        // nothing to do
+      }
+      File_ungetLine(&fileHandle,line,&lineNb);
+    }
+    else if (String_parse(line,STRING_BEGIN,"[global]",NULL))
+    {
+      // nothing to do
+    }
+    else if (String_parse(line,STRING_BEGIN,"%S=% S",&nextIndex,name,value))
     {
       String_unquote(value,STRING_QUOTES);
       if (!ConfigValue_parse(String_cString(name),
                              String_cString(value),
-                             configValues,configValueCount,
-                             NULL,
-                             NULL,
-                             configData
+                             CONFIG_VALUES,SIZE_OF_ARRAY(CONFIG_VALUES),
+                             sectionName,
+                             NULL, // errorOutputHandle,
+                             NULL, // errorPrefix,
+                             NULL  // variable
                             )
          )
       {
@@ -4927,7 +5160,7 @@ bool readJobFile(const String      fileName,
     }
     else
     {
-      printError("Error in %s, line %ld: '%s' - skipped\n",
+      printError("Syntax error in %s, line %ld: '%s' - skipped\n",
                  String_cString(fileName),
                  lineNb,
                  String_cString(line)
@@ -4936,12 +5169,11 @@ bool readJobFile(const String      fileName,
   }
   String_delete(value);
   String_delete(name);
+  String_delete(title);
+  String_delete(line);
 
   // close file
   File_close(&fileHandle);
-
-  // free resources
-  String_delete(line);
 
   return !failFlag;
 }
@@ -5041,6 +5273,8 @@ LOCAL void signalAlarmHandler(int signalNumber)
 fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 exit(12);
 }
+
+/*---------------------------------------------------------------------*/
 
 int main(int argc, const char *argv[])
 {
@@ -5145,20 +5379,14 @@ exit(1);
   }
   String_delete(fileName);
 
-  // read job file
+  // read options from job file
   if (jobName != NULL)
   {
     fileName = String_new();
 
-    // read job file
     File_setFileNameCString(fileName,serverJobsDirectory);
     File_appendFileName(fileName,jobName);
-    if (!readJobFile(fileName,
-                     CONFIG_VALUES,
-                     SIZE_OF_ARRAY(CONFIG_VALUES),
-                     NULL
-                    )
-       )
+    if (!readFromJob(fileName))
     {
       String_delete(fileName);
       return EXITCODE_CONFIG_ERROR;
@@ -5414,9 +5642,11 @@ error = ERROR_STILL_NOT_IMPLEMENTED;
                            &compressExcludePatternList,
                            &jobOptions,
                            ARCHIVE_TYPE_NORMAL,
+                           NULL,
+                           NULL,
                            CALLBACK(inputCryptPassword,NULL),
-                           CALLBACK(NULL,NULL),
-                           CALLBACK(NULL,NULL),
+                           CALLBACK_NONE,
+                           CALLBACK_NONE,
                            NULL,
                            NULL,
                            NULL
@@ -5464,9 +5694,11 @@ error = ERROR_STILL_NOT_IMPLEMENTED;
                                  &compressExcludePatternList,
                                  &jobOptions,
                                  ARCHIVE_TYPE_NORMAL,
+                                 NULL,
+                                 NULL,
                                  CALLBACK(inputCryptPassword,NULL),
-                                 CALLBACK(NULL,NULL),
-                                 CALLBACK(NULL,NULL),
+                                 CALLBACK_NONE,
+                                 CALLBACK_NONE,
                                  NULL,
                                  NULL,
                                  NULL

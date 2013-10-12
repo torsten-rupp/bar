@@ -122,8 +122,8 @@ typedef enum
    | SET_VALUE(WEEKDAY_SUN) \
   )
 
-#define MAX_CONNECTION_COUNT_UNLIMITED MAX_INT
-#define MAX_STORAGE_SIZE_UNLIMITED     MAX_INT64
+#define MAX_CONNECTION_COUNT_UNLIMITED MAX_UINT
+#define MAX_STORAGE_SIZE_UNLIMITED     MAX_UINT64
 
 /***************************** Datatypes *******************************/
 
@@ -179,7 +179,7 @@ typedef struct
 {
   String   loginName;                                    // login name
   Password *password;                                    // login password
-  int      maxConnectionCount;                           // max. number of concurrent connections or MAX_CONNECTION_COUNT_UNLIMITED
+  uint     maxConnectionCount;                           // max. number of concurrent connections or MAX_CONNECTION_COUNT_UNLIMITED
   uint64   maxStorageSize;                               // max. number of bytes to store on server
 } FTPServer;
 
@@ -191,7 +191,7 @@ typedef struct
   Password *password;                                    // login password
   String   publicKeyFileName;                            // public key file name (ssh,scp,sftp)
   String   privateKeyFileName;                           // private key file name (ssh,scp,sftp)
-  int      maxConnectionCount;                           // max. number of concurrent connections or MAX_CONNECTION_COUNT_UNLIMITED
+  uint     maxConnectionCount;                           // max. number of concurrent connections or MAX_CONNECTION_COUNT_UNLIMITED
   uint64   maxStorageSize;                               // max. number of bytes to store on server
 } SSHServer;
 
@@ -202,7 +202,7 @@ typedef struct
   Password *password;                                    // login password
   String   publicKeyFileName;                            // public key file name
   String   privateKeyFileName;                           // private key file name
-  int      maxConnectionCount;                           // max. number of concurrent connections or MAX_CONNECTION_COUNT_UNLIMITED
+  uint     maxConnectionCount;                           // max. number of concurrent connections or MAX_CONNECTION_COUNT_UNLIMITED
   uint64   maxStorageSize;                               // max. number of bytes to store on server
 } WebDAVServer;
 
@@ -374,18 +374,29 @@ typedef struct
 } GlobalOptions;
 
 // schedule
+typedef struct
+{
+  int year;                                              // year or SCHEDULE_ANY
+  int month;                                             // month or SCHEDULE_ANY
+  int day;                                               // day or SCHEDULE_ANY
+} ScheduleDate;
+typedef long ScheduleWeekDays;                           // week days set or SCHEDULE_ANY
+typedef struct
+{
+  int hour;                                              // hour or SCHEDULE_ANY
+  int minute;                                            // minute or SCHEDULE_ANY
+} ScheduleTime;
 typedef struct ScheduleNode
 {
   LIST_NODE_HEADER(struct ScheduleNode);
 
-  int          year;
-  int          month;
-  int          day;
-  int          hour;
-  int          minute;
-  long         weekDays;
-  ArchiveTypes archiveType;
-  bool         enabled;
+  String           title;                                // title text
+  ScheduleDate     date;
+  ScheduleWeekDays weekDays;
+  ScheduleTime     time;
+  ArchiveTypes     archiveType;                          // archive type to create
+  String           customText;                           // custom text
+  bool             enabledFlag;                          // TRUE iff enabled
 } ScheduleNode;
 
 typedef struct
@@ -396,65 +407,65 @@ typedef struct
 // job options
 typedef struct
 {
-  uint32 userId;                                                 // restore user id
-  uint32 groupId;                                                // restore group id
+  uint32 userId;                                         // restore user id
+  uint32 groupId;                                        // restore group id
 } JobOptionsOwner;
 
 typedef struct
 {
-  CompressAlgorithms delta;                                      // delta compress algorithm to use
-  CompressAlgorithms byte;                                       // byte compress algorithm to use
+  CompressAlgorithms delta;                              // delta compress algorithm to use
+  CompressAlgorithms byte;                               // byte compress algorithm to use
 } JobOptionsCompressAlgorithm;
 
 // see forward declaration in forward.h
 struct JobOptions
 {
-  ArchiveTypes                archiveType;                       // archive type (normal, full, incremental, differential)
+  ArchiveTypes                archiveType;               // archive type (normal, full, incremental, differential)
 
-  uint64                      archivePartSize;                   // archive part size [bytes]
+  uint64                      archivePartSize;           // archive part size [bytes]
 
-  String                      incrementalListFileName;           // name of incremental list file
+  String                      incrementalListFileName;   // name of incremental list file
 
-  uint                        directoryStripCount;               // number of directories to strip in restore
-  String                      destination;                       // destination for restore
-  JobOptionsOwner             owner;                             // restore owner
+  uint                        directoryStripCount;       // number of directories to strip in restore
+  String                      destination;               // destination for restore
+  JobOptionsOwner             owner;                     // restore owner
 
-  PatternTypes                patternType;                       // pattern type
+  PatternTypes                patternType;               // pattern type
 
-  JobOptionsCompressAlgorithm compressAlgorithm;                 // compress algorithms
+  JobOptionsCompressAlgorithm compressAlgorithm;         // compress algorithms
 
-  CryptTypes                  cryptType;                         // crypt type (symmetric, asymmetric)
-  CryptAlgorithms             cryptAlgorithm;                    // crypt algorithm to use
-  PasswordModes               cryptPasswordMode;                 // crypt password mode
-  Password                    *cryptPassword;                    // crypt password
+  CryptTypes                  cryptType;                 // crypt type (symmetric, asymmetric)
+  CryptAlgorithms             cryptAlgorithm;            // crypt algorithm to use
+  PasswordModes               cryptPasswordMode;         // crypt password mode
+  Password                    *cryptPassword;            // crypt password
   String                      cryptPublicKeyFileName;
   String                      cryptPrivateKeyFileName;
 
-  FTPServer                   ftpServer;                         // job specific FTP server settings
-  SSHServer                   sshServer;                         // job specific SSH server settings
-  WebDAVServer                webdavServer;                      // job specific WebDAV server settings
+  FTPServer                   ftpServer;                 // job specific FTP server settings
+  SSHServer                   sshServer;                 // job specific SSH server settings
+  WebDAVServer                webdavServer;              // job specific WebDAV server settings
 
-  OpticalDisk                 opticalDisk;                       // job specific optical disk settings
+  OpticalDisk                 opticalDisk;               // job specific optical disk settings
 
-  String                      deviceName;                        // device name to use
-  Device                      device;                            // job specific device settings
+  String                      deviceName;                // device name to use
+  Device                      device;                    // job specific device settings
 
-  uint64                      volumeSize;                        // volume size or 0LL for default [bytes]
+  uint64                      volumeSize;                // volume size or 0LL for default [bytes]
 
-  bool                        skipUnreadableFlag;                // TRUE for skipping unreadable files
-  bool                        forceDeltaCompressionFlag;         // TRUE to force delta compression of files
-  bool                        ignoreNoDumpAttributeFlag;         // TRUE for ignoring no-dump attribute
-  bool                        overwriteArchiveFilesFlag;         // TRUE for overwrite existing archive files
-  bool                        overwriteFilesFlag;                // TURE for overwrite existing files on restore
-  bool                        errorCorrectionCodesFlag;          // TRUE iff error correction codes should be added
-  bool                        alwaysCreateImageFlag;             // TRUE iff always create image for CD/DVD/BD/device
-  bool                        waitFirstVolumeFlag;               // TRUE for wait for first volume
-  bool                        rawImagesFlag;                     // TRUE for storing raw images
-  bool                        noFragmentsCheckFlag;              // TRUE to skip checking file fragments for completeness
-  bool                        noIndexDatabaseFlag;               // TRUE for do not store index database for archives
-  bool                        dryRunFlag;                        // TRUE to do a dry-run (do not store, do not create incremental data, do not store in database)
-  bool                        noStorageFlag;                     // TRUE to skip storage, only create incremental data file
-  bool                        noBAROnMediumFlag;                 // TRUE for not storing BAR on medium
+  bool                        skipUnreadableFlag;        // TRUE for skipping unreadable files
+  bool                        forceDeltaCompressionFlag; // TRUE to force delta compression of files
+  bool                        ignoreNoDumpAttributeFlag; // TRUE for ignoring no-dump attribute
+  bool                        overwriteArchiveFilesFlag; // TRUE for overwrite existing archive files
+  bool                        overwriteFilesFlag;        // TURE for overwrite existing files on restore
+  bool                        errorCorrectionCodesFlag;  // TRUE iff error correction codes should be added
+  bool                        alwaysCreateImageFlag;     // TRUE iff always create image for CD/DVD/BD/device
+  bool                        waitFirstVolumeFlag;       // TRUE for wait for first volume
+  bool                        rawImagesFlag;             // TRUE for storing raw images
+  bool                        noFragmentsCheckFlag;      // TRUE to skip checking file fragments for completeness
+  bool                        noIndexDatabaseFlag;       // TRUE for do not store index database for archives
+  bool                        dryRunFlag;                // TRUE to do a dry-run (do not store, do not create incremental data, do not store in database)
+  bool                        noStorageFlag;             // TRUE to skip storage, only create incremental data file
+  bool                        noBAROnMediumFlag;         // TRUE for not storing BAR on medium
   bool                        stopOnErrorFlag;
 };
 
@@ -798,7 +809,7 @@ void getDeviceSettings(const String     name,
 * Notes  : -
 \***********************************************************************/
 
-bool allocateServer(ServerAllocation *serverAllocation, ServerAllocationPriorities priority, int maxConnectionCount);
+bool allocateServer(ServerAllocation *serverAllocation, ServerAllocationPriorities priority, uint maxConnectionCount);
 
 /***********************************************************************\
 * Name   : freeServer
@@ -1117,6 +1128,19 @@ bool configValueParsePassword(void *userData, void *variable, const char *name, 
 void configValueFormatInitPassord(void **formatUserData, void *userData, void *variable);
 
 /***********************************************************************\
+* Name   : configValueFormatDonePassword
+* Purpose: done format of config password setting
+* Input  : formatUserData - format user data
+*          userData       - user data
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void configValueFormatDonePassword(void **formatUserData, void *userData);
+
+/***********************************************************************\
 * Name   : configValueFormatPassword
 * Purpose: format password config statement
 * Input  : formatUserData - format user data
@@ -1302,6 +1326,34 @@ void configValueFormatDoneCompressAlgorithm(void **formatUserData, void *userDat
 bool configValueFormatCompressAlgorithm(void **formatUserData, void *userData, String line);
 
 /***********************************************************************\
+* Name   : parseScheduleDate
+* Purpose: parse schedule date
+* Input  : date - date string (<year|*>-<month|*>-<day|*>)
+* Output :
+* Return : scheduleNode or NULL on error
+* Notes  : month names: jan, feb, mar, apr, may, jun, jul, aug, sep, oct
+*          nov, dec
+*          week day names: mon, tue, wed, thu, fri, sat, sun
+\***********************************************************************/
+
+ScheduleNode *parseScheduleDate(const String date);
+
+/***********************************************************************\
+* Name   : parseScheduleParts
+* Purpose: parse schedule parts
+* Input  : date        - date string (<year|*>-<month|*>-<day|*>)
+*          weekDay     - week days string (<day>,...)
+*          time        - time string <hour|*>:<minute|*>
+* Output :
+* Return : scheduleNode or NULL on error
+* Notes  : month names: jan, feb, mar, apr, may, jun, jul, aug, sep, oct
+*          nov, dec
+*          week day names: mon, tue, wed, thu, fri, sat, sun
+\***********************************************************************/
+
+ScheduleNode *parseScheduleWeekDays(const String weekDay);
+
+/***********************************************************************\
 * Name   : parseScheduleParts
 * Purpose: parse schedule parts
 * Input  : date        - date string (<year|*>-<month|*>-<day|*>)
@@ -1314,10 +1366,25 @@ bool configValueFormatCompressAlgorithm(void **formatUserData, void *userData, S
 *          week day names: mon, tue, wed, thu, fri, sat, sun
 \***********************************************************************/
 
-ScheduleNode *parseScheduleParts(const String date,
-                                 const String weekDay,
-                                 const String time
-                                );
+ScheduleNode *parseScheduleTime(const String time);
+
+/***********************************************************************\
+* Name   : parseScheduleParts
+* Purpose: parse schedule parts
+* Input  : date        - date string (<year|*>-<month|*>-<day|*>)
+*          weekDays    - week days string (<day>,...)
+*          time        - time string <hour|*>:<minute|*>
+* Output :
+* Return : scheduleNode or NULL on error
+* Notes  : month names: jan, feb, mar, apr, may, jun, jul, aug, sep, oct
+*          nov, dec
+*          week day names: mon, tue, wed, thu, fri, sat, sun
+\***********************************************************************/
+
+ScheduleNode *parseScheduleDateTime(const String date,
+                                    const String weekDays,
+                                    const String time
+                                   );
 
 /***********************************************************************\
 * Name   : parseSchedule
@@ -1334,6 +1401,177 @@ ScheduleNode *parseScheduleParts(const String date,
 \***********************************************************************/
 
 ScheduleNode *parseSchedule(const String s);
+
+/***********************************************************************\
+* Name   : configValueParseScheduleDate
+* Purpose: config value option call back for parsing schedule date
+* Input  : userData              - user data
+*          variable              - config variable
+*          name                  - config name
+*          value                 - config value
+*          maxErrorMessageLength - max. length of error message text
+* Output : errorMessage - error message text
+* Return : TRUE if config value parsed and stored in variable, FALSE
+*          otherwise
+* Notes  : -
+\***********************************************************************/
+
+bool configValueParseScheduleDate(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
+
+/***********************************************************************\
+* Name   : configValueFormatInitScheduleDate
+* Purpose: init format config schedule
+* Input  : userData - user data
+*          variable - config variable
+* Output : formatUserData - format user data
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void configValueFormatInitScheduleDate(void **formatUserData, void *userData, void *variable);
+
+/***********************************************************************\
+* Name   : configValueFormatDoneScheduleDate
+* Purpose: done format of config schedule statements
+* Input  : formatUserData - format user data
+*          userData       - user data
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void configValueFormatDoneScheduleDate(void **formatUserData, void *userData);
+
+/***********************************************************************\
+* Name   : configValueFormatScheduleDate
+* Purpose: format schedule config statement
+* Input  : formatUserData - format user data
+*          userData       - user data
+*          line           - line variable
+*          name           - config name
+* Output : line - formated line
+* Return : TRUE if config statement formated, FALSE if end of data
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+bool configValueFormatScheduleDate(void **formatUserData, void *userData, String line);
+
+/***********************************************************************\
+* Name   : configValueParseScheduleWeekDays
+* Purpose: config value option call back for parsing schedule week days
+* Input  : userData              - user data
+*          variable              - config variable
+*          name                  - config name
+*          value                 - config value
+*          maxErrorMessageLength - max. length of error message text
+* Output : errorMessage - error message text
+* Return : TRUE if config value parsed and stored in variable, FALSE
+*          otherwise
+* Notes  : -
+\***********************************************************************/
+
+bool configValueParseScheduleWeekDays(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
+
+/***********************************************************************\
+* Name   : configValueFormatInitSchedule
+* Purpose: init format config schedule
+* Input  : userData - user data
+*          variable - config variable
+* Output : formatUserData - format user data
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void configValueFormatInitScheduleWeekDays(void **formatUserData, void *userData, void *variable);
+
+/***********************************************************************\
+* Name   : configValueFormatDoneScheduleWeekDays
+* Purpose: done format of config schedule statements
+* Input  : formatUserData - format user data
+*          userData       - user data
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void configValueFormatDoneScheduleWeekDays(void **formatUserData, void *userData);
+
+/***********************************************************************\
+* Name   : configValueFormatScheduleWeekDays
+* Purpose: format schedule config statement
+* Input  : formatUserData - format user data
+*          userData       - user data
+*          line           - line variable
+*          name           - config name
+* Output : line - formated line
+* Return : TRUE if config statement formated, FALSE if end of data
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+bool configValueFormatScheduleWeekDays(void **formatUserData, void *userData, String line);
+
+/***********************************************************************\
+* Name   : configValueParseScheduleTime
+* Purpose: config value option call back for parsing schedule time
+* Input  : userData              - user data
+*          variable              - config variable
+*          name                  - config name
+*          value                 - config value
+*          maxErrorMessageLength - max. length of error message text
+* Output : errorMessage - error message text
+* Return : TRUE if config value parsed and stored in variable, FALSE
+*          otherwise
+* Notes  : -
+\***********************************************************************/
+
+bool configValueParseScheduleTime(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
+
+/***********************************************************************\
+* Name   : configValueFormatInitScheduleTime
+* Purpose: init format config schedule
+* Input  : userData - user data
+*          variable - config variable
+* Output : formatUserData - format user data
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void configValueFormatInitScheduleTime(void **formatUserData, void *userData, void *variable);
+
+/***********************************************************************\
+* Name   : configValueFormatDoneScheduleTime
+* Purpose: done format of config schedule statements
+* Input  : formatUserData - format user data
+*          userData       - user data
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void configValueFormatDoneScheduleTime(void **formatUserData, void *userData);
+
+/***********************************************************************\
+* Name   : configValueFormatScheduleTime
+* Purpose: format schedule config statement
+* Input  : formatUserData - format user data
+*          userData       - user data
+*          line           - line variable
+*          name           - config name
+* Output : line - formated line
+* Return : TRUE if config statement formated, FALSE if end of data
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+bool configValueFormatScheduleTime(void **formatUserData, void *userData, String line);
 
 /***********************************************************************\
 * Name   : configValueParseSchedule
@@ -1414,24 +1652,6 @@ const char *archiveTypeToString(ArchiveTypes archiveType, const char *defaultVal
 \***********************************************************************/
 
 bool parseArchiveType(const char *name, ArchiveTypes *archiveType);
-
-/***********************************************************************\
-* Name   : readJobFile
-* Purpose: read job from file
-* Input  : fileName         - file name
-*          configValues     - job configuration values
-*          configValueCount - number of job configuration values
-*          configData       - configuration data
-* Output : -
-* Return : TRUE iff job read, FALSE otherwise (error)
-* Notes  : -
-\***********************************************************************/
-
-bool readJobFile(const String      fileName,
-                 const ConfigValue *configValues,
-                 uint              configValueCount,
-                 void              *configData
-                );
 
 #ifdef __cplusplus
   }
