@@ -304,10 +304,10 @@ StringNode *__StringList_remove(const char *__fileName__, ulong __lineNb__, Stri
 
   #ifdef NDEBUG
     String_delete(stringNode->string);
-    (StringNode*)LIST_DELETE_NODE(stringNode);
+    LIST_DELETE_NODE(stringNode);
   #else /* not NDEBUG */
     __String_delete(__fileName__,__lineNb__,stringNode->string);
-    (StringNode*)LIST_DELETE_NODEX(__fileName__,__lineNb__,stringNode);
+    LIST_DELETE_NODEX(__fileName__,__lineNb__,stringNode);
   #endif /* NDEBUG */
 
   return nextStringNode;
@@ -500,7 +500,7 @@ const char* const *StringList_toCStringArray(const StringList *stringList)
 }
 
 #ifndef NDEBUG
-void StringList_debugDumpInfo(FILE *handle, const StringList *stringList)
+void StringList_debugDump(FILE *handle, const StringList *stringList)
 {
   StringNode *stringNode;
   uint       z;
@@ -511,15 +511,15 @@ void StringList_debugDumpInfo(FILE *handle, const StringList *stringList)
   z = 1;
   while (stringNode != NULL)
   {
-    fprintf(handle,"DEBUG %d: %s\n",z,String_cString(stringNode->string));
+    fprintf(handle,"DEBUG %03d %08p: %s\n",z,stringNode,String_cString(stringNode->string));
     stringNode = stringNode->next;
     z++;
   }
 }
 
-void StringList_debugPrintInfo(const StringList *stringList)
+void StringList_debugPrint(const StringList *stringList)
 {
-  StringList_debugDumpInfo(stderr,stringList);
+  StringList_debugDump(stderr,stringList);
 }
 #endif /* not NDEBUG */
 

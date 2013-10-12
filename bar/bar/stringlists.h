@@ -454,7 +454,7 @@ const char* const *StringList_toCStringArray(const StringList *stringList);
 
 #ifndef NDEBUG
 /***********************************************************************\
-* Name   : StringList_debugDumpInfo, StringList_debugPrintInfo
+* Name   : StringList_debugDump, StringList_debugPrint
 * Purpose: string list debug function: output not allocated strings
 * Input  : handle - output channel
 * Output : -
@@ -462,8 +462,8 @@ const char* const *StringList_toCStringArray(const StringList *stringList);
 * Notes  : -
 \***********************************************************************/
 
-void StringList_debugDumpInfo(FILE *handle, const StringList *stringList);
-void StringList_debugPrintInfo(const StringList *stringList);
+void StringList_debugDump(FILE *handle, const StringList *stringList);
+void StringList_debugPrint(const StringList *stringList);
 #endif /* not NDEBUG */
 
 #ifdef __cplusplus
