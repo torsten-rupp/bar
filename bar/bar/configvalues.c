@@ -83,7 +83,7 @@ LOCAL bool getIntegerValue(int                   *value,
     {
       z = 0;
       while (   (z < unitCount)
-             && (strcmp(units[z].name,unit) != 0)
+             && !stringEquals(units[z].name,unit)
             )
       {
         z++;
@@ -176,7 +176,7 @@ LOCAL bool getInteger64Value(int64                 *value,
     {
       z = 0;
       while (   (z < unitCount)
-             && (strcmp(units[z].name,unit) != 0)
+             && !stringEquals(units[z].name,unit)
             )
       {
         z++;
@@ -395,7 +395,7 @@ LOCAL bool processValue(const ConfigValue *configValue,
           {
             z = 0;
             while (   (z < configValue->doubleValue.unitCount)
-                   && (strcmp(configValue->doubleValue.units[z].name,unit) != 0)
+                   && stringEquals(configValue->doubleValue.units[z].name,unit)
                   )
             {
               z++;
@@ -482,18 +482,18 @@ LOCAL bool processValue(const ConfigValue *configValue,
 
         // calculate value
         if      (   (value == NULL)
-                 || (strcmp(value,"1") == 0)
-                 || (strcmp(value,"true") == 0)
-                 || (strcmp(value,"on") == 0)
-                 || (strcmp(value,"yes") == 0)
+                 || stringEqualsIgnoreCase(value,"1")
+                 || stringEqualsIgnoreCase(value,"true")
+                 || stringEqualsIgnoreCase(value,"on")
+                 || stringEqualsIgnoreCase(value,"yes")
                 )
         {
           data = TRUE;
         }
-        else if (   (strcmp(value,"0") == 0)
-                 || (strcmp(value,"false") == 0)
-                 || (strcmp(value,"off") == 0)
-                 || (strcmp(value,"no") == 0)
+        else if (   stringEqualsIgnoreCase(value,"0")
+                 || stringEqualsIgnoreCase(value,"false")
+                 || stringEqualsIgnoreCase(value,"off")
+                 || stringEqualsIgnoreCase(value,"no")
                 )
         {
           data = FALSE;
@@ -567,7 +567,7 @@ LOCAL bool processValue(const ConfigValue *configValue,
         // find select value
         z = 0;
         while (   (z < configValue->selectValue.selectCount)
-               && (strcmp(configValue->selectValue.select[z].name,value) != 0)
+               && !stringEquals(configValue->selectValue.select[z].name,value)
               )
         {
           z++;
@@ -637,7 +637,7 @@ LOCAL bool processValue(const ConfigValue *configValue,
           {
             // find value
             z = 0;
-            while ((z < configValue->setValue.setCount) && (strcmp(configValue->setValue.set[z].name,setName) != 0))
+            while ((z < configValue->setValue.setCount) && !stringEquals(configValue->setValue.set[z].name,setName))
             {
               z++;
             }
@@ -869,6 +869,10 @@ LOCAL bool processValue(const ConfigValue *configValue,
         }
       }
       break;
+    case CONFIG_VALUE_TYPE_BEGIN_SECTION:
+    case CONFIG_VALUE_TYPE_END_SECTION:
+      // nothing to do
+      break;
     #ifndef NDEBUG
       default:
         HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
@@ -907,23 +911,41 @@ bool ConfigValue_parse(const char        *name,
                        const char        *value,
                        const ConfigValue configValues[],
                        uint              configValueCount,
+                       const char        *sectionName,
                        FILE              *errorOutputHandle,
                        const char        *errorPrefix,
                        void              *variable
                       )
 {
-  uint i;
+  uint i,j;
 
   assert(name != NULL);
   assert(configValues != NULL);
 
   // find config value
-  i = 0;
-  while ((i < configValueCount) && (strcmp(configValues[i].name,name) != 0))
+  if (sectionName != NULL)
   {
-    i++;
+    i = ConfigValue_firstSectionValue(configValues,configValueCount,sectionName);
+    j = ConfigValue_endSectionValue(configValues,configValueCount,i);
+    while (   (i < j)
+           && !stringEquals(configValues[i].name,name)
+          )
+    {
+      i = ConfigValue_nextSectionValue(configValues,configValueCount,i);
+    }
   }
-  if (i >= configValueCount)
+  else
+  {
+    i = ConfigValue_firstValue(configValues,configValueCount);
+    j = ConfigValue_endValue(configValues,configValueCount,i);
+    while (   (i < j)
+           && !stringEquals(configValues[i].name,name)
+          )
+    {
+      i = ConfigValue_nextValue(configValues,configValueCount,i);
+    }
+  }
+  if (i >= j)
   {
     return FALSE;
   }
@@ -1040,6 +1062,10 @@ void ConfigValue_formatInit(ConfigValueFormat      *configValueFormat,
         }
       }
       break;
+    case CONFIG_VALUE_TYPE_BEGIN_SECTION:
+    case CONFIG_VALUE_TYPE_END_SECTION:
+      // nothing to do
+      break;
     #ifndef NDEBUG
       default:
         HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
@@ -1071,6 +1097,10 @@ void ConfigValue_formatDone(ConfigValueFormat *configValueFormat)
                                                                 configValueFormat->configValue->specialValue.userData
                                                                );
       }
+      break;
+    case CONFIG_VALUE_TYPE_BEGIN_SECTION:
+    case CONFIG_VALUE_TYPE_END_SECTION:
+      // nothing to do
       break;
     #ifndef NDEBUG
       default:
@@ -1531,6 +1561,10 @@ bool ConfigValue_format(ConfigValueFormat *configValueFormat,
           configValueFormat->endOfDataFlag = TRUE;
         }
         if (configValueFormat->endOfDataFlag) return FALSE;
+        break;
+      case CONFIG_VALUE_TYPE_BEGIN_SECTION:
+      case CONFIG_VALUE_TYPE_END_SECTION:
+        // nothing to do
         break;
       #ifndef NDEBUG
         default:
