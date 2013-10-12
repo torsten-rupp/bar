@@ -22,6 +22,7 @@
 #include <assert.h>
 
 #include "global.h"
+#include "autofree.h"
 #include "lists.h"
 #include "strings.h"
 #include "stringmaps.h"
@@ -531,15 +532,15 @@ LOCAL const ConfigValue CONFIG_VALUES[] =
   CONFIG_STRUCT_VALUE_SELECT   ("crypt-algorithm",         JobNode,jobOptions.cryptAlgorithm,              CONFIG_VALUE_CRYPT_ALGORITHMS),
   CONFIG_STRUCT_VALUE_SELECT   ("crypt-type",              JobNode,jobOptions.cryptType,                   CONFIG_VALUE_CRYPT_TYPES),
   CONFIG_STRUCT_VALUE_SELECT   ("crypt-password-mode",     JobNode,jobOptions.cryptPasswordMode,           CONFIG_VALUE_PASSWORD_MODES),
-  CONFIG_STRUCT_VALUE_SPECIAL  ("crypt-password",          JobNode,jobOptions.cryptPassword,               configValueParsePassword,configValueFormatInitPassord,NULL,configValueFormatPassword,NULL),
+  CONFIG_STRUCT_VALUE_SPECIAL  ("crypt-password",          JobNode,jobOptions.cryptPassword,               configValueParsePassword,configValueFormatInitPassord,configValueFormatDonePassword,configValueFormatPassword,NULL),
   CONFIG_STRUCT_VALUE_STRING   ("crypt-public-key",        JobNode,jobOptions.cryptPublicKeyFileName       ),
 
   CONFIG_STRUCT_VALUE_STRING   ("ftp-login-name",          JobNode,jobOptions.ftpServer.loginName          ),
-  CONFIG_STRUCT_VALUE_SPECIAL  ("ftp-password",            JobNode,jobOptions.ftpServer.password,          configValueParsePassword,configValueFormatInitPassord,NULL,configValueFormatPassword,NULL),
+  CONFIG_STRUCT_VALUE_SPECIAL  ("ftp-password",            JobNode,jobOptions.ftpServer.password,          configValueParsePassword,configValueFormatInitPassord,configValueFormatDonePassword,configValueFormatPassword,NULL),
 
   CONFIG_STRUCT_VALUE_INTEGER  ("ssh-port",                JobNode,jobOptions.sshServer.port,              0,65535,NULL),
   CONFIG_STRUCT_VALUE_STRING   ("ssh-login-name",          JobNode,jobOptions.sshServer.loginName          ),
-  CONFIG_STRUCT_VALUE_SPECIAL  ("ssh-password",            JobNode,jobOptions.sshServer.password,          configValueParsePassword,configValueFormatInitPassord,NULL,configValueFormatPassword,NULL),
+  CONFIG_STRUCT_VALUE_SPECIAL  ("ssh-password",            JobNode,jobOptions.sshServer.password,          configValueParsePassword,configValueFormatInitPassord,configValueFormatDonePassword,configValueFormatPassword,NULL),
   CONFIG_STRUCT_VALUE_STRING   ("ssh-public-key",          JobNode,jobOptions.sshServer.publicKeyFileName  ),
   CONFIG_STRUCT_VALUE_STRING   ("ssh-private-key",         JobNode,jobOptions.sshServer.privateKeyFileName ),
 
@@ -557,7 +558,18 @@ LOCAL const ConfigValue CONFIG_VALUES[] =
   CONFIG_STRUCT_VALUE_BOOLEAN  ("overwrite-files",         JobNode,jobOptions.overwriteFilesFlag           ),
   CONFIG_STRUCT_VALUE_BOOLEAN  ("wait-first-volume",       JobNode,jobOptions.waitFirstVolumeFlag          ),
 
-  CONFIG_STRUCT_VALUE_SPECIAL  ("schedule",                JobNode,scheduleList,                           configValueParseSchedule,configValueFormatInitSchedule,configValueFormatDoneSchedule,configValueFormatSchedule,NULL),
+  CONFIG_VALUE_BEGIN_SECTION("schedule",-1),
+  CONFIG_STRUCT_VALUE_STRING   ("title",                   ScheduleNode,title                              ),
+  CONFIG_STRUCT_VALUE_SPECIAL  ("date",                    ScheduleNode,date,                              configValueParseScheduleDate,configValueFormatInitScheduleDate,configValueFormatDoneScheduleDate,configValueFormatScheduleDate,NULL),
+  CONFIG_STRUCT_VALUE_SPECIAL  ("weekdays",                ScheduleNode,weekDays,                          configValueParseScheduleWeekDays,configValueFormatInitScheduleWeekDays,configValueFormatDoneScheduleWeekDays,configValueFormatScheduleWeekDays,NULL),
+  CONFIG_STRUCT_VALUE_SPECIAL  ("time",                    ScheduleNode,time,                              configValueParseScheduleTime,configValueFormatInitScheduleTime,configValueFormatDoneScheduleTime,configValueFormatScheduleTime,NULL),
+  CONFIG_STRUCT_VALUE_SELECT   ("archive-type",            ScheduleNode,archiveType,                       CONFIG_VALUE_ARCHIVE_TYPES),
+  CONFIG_STRUCT_VALUE_STRING   ("text",                    ScheduleNode,customText                         ),
+  CONFIG_STRUCT_VALUE_BOOLEAN  ("enabled",                 ScheduleNode,enabledFlag                        ),
+  CONFIG_VALUE_END_SECTION(),
+
+  // old/obsolete
+  CONFIG_STRUCT_VALUE_SPECIAL  ("schedule",                JobNode,scheduleList,                           configValueParseSchedule,NULL,NULL,NULL,NULL),
 };
 
 /***************************** Variables *******************************/
@@ -568,6 +580,7 @@ LOCAL const Password        *serverPassword;
 LOCAL const char            *serverJobsDirectory;
 LOCAL const JobOptions      *serverDefaultJobOptions;
 LOCAL JobList               jobList;
+LOCAL ScheduleNode          *currentScheduleNode;
 LOCAL Thread                jobThread;
 LOCAL Thread                schedulerThread;
 LOCAL Thread                pauseThread;
@@ -631,6 +644,8 @@ LOCAL const char *getCryptPasswordModeName(PasswordModes passwordMode)
   return (z < SIZE_OF_ARRAY(CONFIG_VALUE_PASSWORD_MODES)) ? CONFIG_VALUE_PASSWORD_MODES[z].name : "";
 }
 
+
+
 /***********************************************************************\
 * Name   : copyScheduleNode
 * Purpose: copy allocated schedule node
@@ -640,32 +655,83 @@ LOCAL const char *getCryptPasswordModeName(PasswordModes passwordMode)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL ScheduleNode *copyScheduleNode(ScheduleNode *scheduleNode,
-                                     void         *userData
-                                    )
+LOCAL void freeScheduleNode(ScheduleNode *scheduleNode, void *userData)
 {
-  ScheduleNode *newScheduleNode;
-
   assert(scheduleNode != NULL);
 
   UNUSED_VARIABLE(userData);
 
-  // allocate pattern node
-  newScheduleNode = LIST_NEW_NODE(ScheduleNode);
-  if (newScheduleNode == NULL)
+  String_delete(scheduleNode->customText);
+  String_delete(scheduleNode->title);
+}
+
+LOCAL ScheduleNode *newScheduleNode(void)
+{
+  ScheduleNode *scheduleNode;
+
+  scheduleNode = LIST_NEW_NODE(ScheduleNode);
+  if (scheduleNode == NULL)
   {
     HALT_INSUFFICIENT_MEMORY();
   }
-  newScheduleNode->year        = scheduleNode->year;
-  newScheduleNode->month       = scheduleNode->month;
-  newScheduleNode->day         = scheduleNode->day;
-  newScheduleNode->hour        = scheduleNode->hour;
-  newScheduleNode->minute      = scheduleNode->minute;
-  newScheduleNode->weekDays    = scheduleNode->weekDays;
-  newScheduleNode->archiveType = scheduleNode->archiveType;
-  newScheduleNode->enabled     = scheduleNode->enabled;
+  scheduleNode->title       = String_new();
+  scheduleNode->date.year   = -1;
+  scheduleNode->date.month  = -1;
+  scheduleNode->date.day    = -1;
+  scheduleNode->weekDays    = -1;
+  scheduleNode->time.hour   = -1;
+  scheduleNode->time.minute = -1;
+  scheduleNode->archiveType = ARCHIVE_TYPE_NORMAL;
+  scheduleNode->customText  = String_new();
+  scheduleNode->enabledFlag = FALSE;
 
-  return newScheduleNode;
+  return scheduleNode;
+}
+
+/***********************************************************************\
+* Name   : duplicateScheduleNode
+* Purpose: duplicate schedule node
+* Input  : fromScheduleNode - from schedule node
+* Output : -
+* Return : duplicated schedule node
+* Notes  : -
+\***********************************************************************/
+
+LOCAL ScheduleNode *duplicateScheduleNode(ScheduleNode *fromScheduleNode,
+                                          void         *userData
+                                         )
+{
+  ScheduleNode *scheduleNode;
+
+  assert(fromScheduleNode != NULL);
+
+  UNUSED_VARIABLE(userData);
+
+  scheduleNode = LIST_NEW_NODE(ScheduleNode);
+  if (scheduleNode == NULL)
+  {
+    HALT_INSUFFICIENT_MEMORY();
+  }
+  scheduleNode->title       = String_duplicate(fromScheduleNode->title);
+  scheduleNode->date.year   = fromScheduleNode->date.year;
+  scheduleNode->date.month  = fromScheduleNode->date.month;
+  scheduleNode->date.day    = fromScheduleNode->date.day;
+  scheduleNode->weekDays    = fromScheduleNode->weekDays;
+  scheduleNode->time.hour   = fromScheduleNode->time.hour;
+  scheduleNode->time.minute = fromScheduleNode->time.minute;
+  scheduleNode->archiveType = fromScheduleNode->archiveType;
+  scheduleNode->customText  = String_duplicate(fromScheduleNode->customText);
+  scheduleNode->enabledFlag = fromScheduleNode->enabledFlag;
+
+  return scheduleNode;
+}
+
+LOCAL ScheduleNode *deleteScheduleNode(ScheduleNode *scheduleNode)
+{
+  assert(scheduleNode != NULL);
+
+  freeScheduleNode(scheduleNode,NULL);
+  LIST_DELETE_NODE(scheduleNode);
 }
 
 /***********************************************************************\
@@ -724,6 +790,45 @@ LOCAL void resetJobRunningInfo(JobNode *jobNode)
   Misc_performanceFilterClear(&jobNode->runningInfo.entriesPerSecond     );
   Misc_performanceFilterClear(&jobNode->runningInfo.bytesPerSecond       );
   Misc_performanceFilterClear(&jobNode->runningInfo.storageBytesPerSecond);
+}
+
+/***********************************************************************\
+* Name   : freeJobNode
+* Purpose: free job node
+* Input  : jobNode  - job node
+*          userData - user data (no used)
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void freeJobNode(JobNode *jobNode, void *userData)
+{
+  assert(jobNode != NULL);
+
+  UNUSED_VARIABLE(userData);
+
+  Misc_performanceFilterDone(&jobNode->runningInfo.storageBytesPerSecond);
+  Misc_performanceFilterDone(&jobNode->runningInfo.bytesPerSecond);
+  Misc_performanceFilterDone(&jobNode->runningInfo.entriesPerSecond);
+
+  String_delete(jobNode->runningInfo.message);
+  String_delete(jobNode->runningInfo.storageName);
+  String_delete(jobNode->runningInfo.name);
+
+  if (jobNode->cryptPassword != NULL) Password_delete(jobNode->cryptPassword);
+  if (jobNode->sshPassword != NULL) Password_delete(jobNode->sshPassword);
+  if (jobNode->ftpPassword != NULL) Password_delete(jobNode->ftpPassword);
+
+  freeJobOptions(&jobNode->jobOptions);
+  List_done(&jobNode->scheduleList,CALLBACK_NONE);
+  PatternList_done(&jobNode->compressExcludePatternList);
+  PatternList_done(&jobNode->deltaSourcePatternList);
+  PatternList_done(&jobNode->excludePatternList);
+  EntryList_done(&jobNode->includeEntryList);
+  String_delete(jobNode->archiveName);
+  String_delete(jobNode->name);
+  String_delete(jobNode->fileName);
 }
 
 /***********************************************************************\
@@ -825,7 +930,7 @@ LOCAL JobNode *copyJob(JobNode      *jobNode,
   PatternList_initDuplicate(&newJobNode->excludePatternList,&jobNode->excludePatternList,NULL,NULL);
   PatternList_initDuplicate(&newJobNode->deltaSourcePatternList,&jobNode->deltaSourcePatternList,NULL,NULL);
   PatternList_initDuplicate(&newJobNode->compressExcludePatternList,&jobNode->compressExcludePatternList,NULL,NULL);
-  List_initDuplicate(&newJobNode->scheduleList,&jobNode->scheduleList,NULL,NULL,(ListNodeCopyFunction)copyScheduleNode,NULL);
+  List_initDuplicate(&newJobNode->scheduleList,&jobNode->scheduleList,NULL,NULL,(ListNodeCopyFunction)duplicateScheduleNode,NULL);
   initDuplicateJobOptions(&newJobNode->jobOptions,&jobNode->jobOptions);
   newJobNode->modifiedFlag                   = TRUE;
 
@@ -855,44 +960,6 @@ LOCAL JobNode *copyJob(JobNode      *jobNode,
   resetJobRunningInfo(newJobNode);
 
   return newJobNode;
-}
-
-/***********************************************************************\
-* Name   : freeJobNode
-* Purpose: free job node
-* Input  : jobNode - job node
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void freeJobNode(JobNode *jobNode, void *userData)
-{
-  assert(jobNode != NULL);
-
-  UNUSED_VARIABLE(userData);
-
-  Misc_performanceFilterDone(&jobNode->runningInfo.storageBytesPerSecond);
-  Misc_performanceFilterDone(&jobNode->runningInfo.bytesPerSecond);
-  Misc_performanceFilterDone(&jobNode->runningInfo.entriesPerSecond);
-
-  String_delete(jobNode->runningInfo.message);
-  String_delete(jobNode->runningInfo.storageName);
-  String_delete(jobNode->runningInfo.name);
-
-  if (jobNode->cryptPassword != NULL) Password_delete(jobNode->cryptPassword);
-  if (jobNode->sshPassword != NULL) Password_delete(jobNode->sshPassword);
-  if (jobNode->ftpPassword != NULL) Password_delete(jobNode->ftpPassword);
-
-  freeJobOptions(&jobNode->jobOptions);
-  List_done(&jobNode->scheduleList,NULL,NULL);
-  PatternList_done(&jobNode->compressExcludePatternList);
-  PatternList_done(&jobNode->deltaSourcePatternList);
-  PatternList_done(&jobNode->excludePatternList);
-  EntryList_done(&jobNode->includeEntryList);
-  String_delete(jobNode->archiveName);
-  String_delete(jobNode->name);
-  String_delete(jobNode->fileName);
 }
 
 /***********************************************************************\
@@ -1059,19 +1126,8 @@ LOCAL Errors readJobScheduleInfo(JobNode *jobNode)
 
     // read file
     line = String_new();
-    while (!File_eof(&fileHandle))
+    while (File_getLine(&fileHandle,line,NULL,NULL))
     {
-      // read line
-      error = File_readLine(&fileHandle,line);
-      if (error != ERROR_NONE) break;
-      String_trim(line,STRING_WHITE_SPACES);
-
-      // skip comments, empty lines
-      if (String_isEmpty(line) || String_startsWithChar(line,'#'))
-      {
-        continue;
-      }
-
       // parse
       if (String_parse(line,STRING_BEGIN,"%lld",NULL,&n))
       {
@@ -1159,16 +1215,25 @@ LOCAL Errors writeJobScheduleInfo(JobNode *jobNode)
 
 LOCAL bool readJob(JobNode *jobNode)
 {
+  Errors     error;
+  FileHandle fileHandle;
+  bool       failFlag;
+  uint       lineNb;
+  String     line;
+  String     title;
+  String     name,value;
+  long       nextIndex;
+
   assert(jobNode != NULL);
   assert(jobNode->fileName != NULL);
 
-  // reset values
+  // reset job values
   String_clear(jobNode->archiveName);
   EntryList_clear(&jobNode->includeEntryList);
   PatternList_clear(&jobNode->excludePatternList);
   PatternList_clear(&jobNode->deltaSourcePatternList);
   PatternList_clear(&jobNode->compressExcludePatternList);
-  List_clear(&jobNode->scheduleList,NULL,NULL);
+  List_clear(&jobNode->scheduleList,CALLBACK((ListNodeFreeFunction)freeScheduleNode,NULL));
   jobNode->jobOptions.archiveType                  = ARCHIVE_TYPE_NORMAL;
   jobNode->jobOptions.archivePartSize              = 0LL;
   jobNode->jobOptions.incrementalListFileName      = NULL;
@@ -1200,22 +1265,127 @@ LOCAL bool readJob(JobNode *jobNode)
   jobNode->jobOptions.overwriteArchiveFilesFlag    = FALSE;
   jobNode->jobOptions.overwriteFilesFlag           = FALSE;
 
-  // read file
-  if (!readJobFile(jobNode->fileName,
-                   CONFIG_VALUES,
-                   SIZE_OF_ARRAY(CONFIG_VALUES),
-                   jobNode
-                  )
-     )
+  // open file
+  error = File_open(&fileHandle,jobNode->fileName,FILE_OPEN_READ);
+  if (error != ERROR_NONE)
   {
+    printError("Cannot open job file '%s' (error: %s)!\n",
+               String_cString(jobNode->fileName),
+               Error_getText(error)
+              );
     return FALSE;
   }
+
+  // parse file
+  failFlag    = FALSE;
+  line        = String_new();
+  lineNb      = 0;
+  title       = String_new();
+  name        = String_new();
+  value       = String_new();
+  while (File_getLine(&fileHandle,line,&lineNb,"#") && !failFlag)
+  {
+    // parse line
+    if      (String_parse(line,STRING_BEGIN,"[schedule %S]",NULL,title))
+    {
+      ScheduleNode *scheduleNode;
+
+      scheduleNode = newScheduleNode();
+      String_set(scheduleNode->title,title);
+      while (   File_getLine(&fileHandle,line,&lineNb,"#")
+             && !String_matchCString(line,STRING_BEGIN,"^\\s*\\[",NULL,NULL,NULL)
+             && !failFlag
+            )
+      {
+        if (String_parse(line,STRING_BEGIN,"%S=% S",&nextIndex,name,value))
+        {
+          String_unquote(value,STRING_QUOTES);
+          if (!ConfigValue_parse(String_cString(name),
+                                 String_cString(value),
+                                 CONFIG_VALUES,SIZE_OF_ARRAY(CONFIG_VALUES),
+                                 "schedule",
+                                 NULL, // errorOutputHandle,
+                                 NULL, // errorPrefix,
+                                 scheduleNode
+                                )
+             )
+          {
+            printError("Unknown or invalid config value '%s' in section '%s' in %s, line %ld - skipped\n",
+                       String_cString(name),
+                       "schedule",
+                       String_cString(jobNode->fileName),
+                       lineNb
+                      );
+          }
+        }
+        else
+        {
+          printError("Syntax error in %s, line %ld: '%s' - skipped\n",
+                     String_cString(jobNode->fileName),
+                     lineNb,
+                     String_cString(line)
+                    );
+        }
+      }
+      File_ungetLine(&fileHandle,line,&lineNb);
+
+      List_append(&jobNode->scheduleList,scheduleNode);
+    }
+    else if (String_parse(line,STRING_BEGIN,"[global]",NULL))
+    {
+      // nothing to do
+    }
+    else if (String_parse(line,STRING_BEGIN,"[end]",NULL))
+    {
+      // nothing to do
+    }
+    else if (String_parse(line,STRING_BEGIN,"%S=% S",&nextIndex,name,value))
+    {
+      String_unquote(value,STRING_QUOTES);
+      if (!ConfigValue_parse(String_cString(name),
+                             String_cString(value),
+                             CONFIG_VALUES,SIZE_OF_ARRAY(CONFIG_VALUES),
+                             NULL,
+                             NULL, // errorOutputHandle,
+                             NULL, // errorPrefix,
+                             jobNode
+                            )
+         )
+      {
+        printError("Unknown or invalid config value '%s' in %s, line %ld - skipped\n",
+                   String_cString(name),
+                   String_cString(jobNode->fileName),
+                   lineNb
+                  );
+      }
+    }
+    else
+    {
+      printError("Syntax error in %s, line %ld: '%s' - skipped\n",
+                 String_cString(jobNode->fileName),
+                 lineNb,
+                 String_cString(line)
+                );
+    }
+  }
+  String_delete(value);
+  String_delete(name);
+  String_delete(title);
+  String_delete(line);
+  if (failFlag)
+  {
+    (void)File_close(&fileHandle);
+    return FALSE;
+  }
+
+  // close file
+  (void)File_close(&fileHandle);
 
   // save time modified
   jobNode->timeModified = File_getFileTimeModified(jobNode->fileName);
 
   // read schedule info
-  readJobScheduleInfo(jobNode);
+  (void)readJobScheduleInfo(jobNode);
 
   return TRUE;
 }
@@ -1236,7 +1406,7 @@ LOCAL Errors rereadAllJobs(const char *jobsDirectory)
   String              fileName;
   String              baseName;
   SemaphoreLock       semaphoreLock;
-  JobNode             *jobNode,*deleteJobNode;
+  JobNode             *jobNode;
 
   assert(jobsDirectory != NULL);
 
@@ -1308,10 +1478,7 @@ LOCAL Errors rereadAllJobs(const char *jobsDirectory)
         else
         {
           // do not exists => delete job node
-          deleteJobNode = jobNode;
-          jobNode = jobNode->next;
-          List_remove(&jobList,deleteJobNode);
-          deleteJob(deleteJobNode);
+          jobNode = List_removeAndFree(&jobList,jobNode,CALLBACK((ListNodeFreeFunction)freeJobNode,NULL));
         }
       }
       else
@@ -1329,7 +1496,7 @@ LOCAL Errors rereadAllJobs(const char *jobsDirectory)
 
 /***********************************************************************\
 * Name   : deleteJobEntries
-* Purpose: delete entries from job
+* Purpose: delete all entries from job with given name
 * Input  : stringList - job file string list to modify
 *          name       - name of value
 * Output : -
@@ -1341,16 +1508,16 @@ LOCAL StringNode *deleteJobEntries(StringList *stringList,
                                    const char *name
                                   )
 {
-  StringNode *nextNode;
+  StringNode *nextStringNode;
 
   StringNode *stringNode;
   String     line;
   String     string;
 
-  nextNode = NULL;
+  nextStringNode = NULL;
 
-  line = String_new();
-  string = String_new();
+  line       = String_new();
+  string     = String_new();
   stringNode = stringList->head;
   while (stringNode != NULL)
   {
@@ -1363,12 +1530,15 @@ LOCAL StringNode *deleteJobEntries(StringList *stringList,
     }
 
     // parse and match
-    if (   String_parse(line,STRING_BEGIN,"%S=% S",NULL,string,NULL)
+    if (   String_matchCString(line,STRING_BEGIN,"^(\\S+)\\s*=.*",NULL,NULL,string,NULL)
         && String_equalsCString(string,name)
        )
     {
       // delete line
       stringNode = StringList_remove(stringList,stringNode);
+
+      // store next line
+      if (nextStringNode == NULL) nextStringNode = stringNode;
     }
     else
     {
@@ -1379,7 +1549,106 @@ LOCAL StringNode *deleteJobEntries(StringList *stringList,
   String_delete(string);
   String_delete(line);
 
-  return nextNode;
+  return nextStringNode;
+}
+
+/***********************************************************************\
+* Name   : deleteJobSections
+* Purpose: delete all sections from job with given name
+* Input  : stringList - job file string list to modify
+*          name       - name of section
+* Output : -
+* Return : next entry in string list or NULL
+* Notes  : -
+\***********************************************************************/
+
+LOCAL StringNode *deleteJobSections(StringList *stringList,
+                                    const char *name
+                                   )
+{
+  StringNode *nextStringNode;
+
+  StringNode *stringNode;
+  String     line;
+  String     string;
+  ulong      nextIndex;
+
+  nextStringNode = NULL;
+
+  line       = String_new();
+  string     = String_new();
+  stringNode = stringList->head;
+  while (stringNode != NULL)
+  {
+    // skip comments, empty lines
+    String_trim(String_set(line,stringNode->string),STRING_WHITE_SPACES);
+    if (String_isEmpty(line) || String_startsWithChar(line,'#'))
+    {
+      stringNode = stringNode->next;
+      continue;
+    }
+
+    // parse and match
+    if (   String_matchCString(line,STRING_BEGIN,"^\\s*\\[\\s*(\\S+).*",NULL,NULL,string,NULL)
+        && String_equalsCString(string,name)
+       )
+    {
+      // delete section
+      do
+      {
+        stringNode = StringList_remove(stringList,stringNode);
+        String_trim(String_set(line,stringNode->string),STRING_WHITE_SPACES);
+        if (String_isEmpty(line) || String_startsWithChar(line,'#'))
+        {
+          stringNode = stringNode->next;
+          continue;
+        }
+      }
+      while ((stringNode != NULL) && !String_matchCString(line,STRING_BEGIN,"^\\s*\\[",NULL,NULL,NULL));
+      if (stringNode != NULL)
+      {
+        stringNode = StringList_remove(stringList,stringNode);
+      }
+
+      // delete following empty lines
+      while (   (stringNode != NULL)
+             && String_isEmpty(String_trim(String_set(line,stringNode->string),STRING_WHITE_SPACES))
+            )
+      {
+        stringNode = StringList_remove(stringList,stringNode);
+      }
+
+      // store next line
+      nextStringNode = stringNode;
+    }
+    else
+    {
+      // keep line
+      stringNode = stringNode->next;
+    }
+  }
+  if (nextStringNode != NULL)
+  {
+    // delete previous empty lines
+    while (   (nextStringNode->prev != NULL)
+           && String_isEmpty(String_trim(String_set(line,nextStringNode->prev->string),STRING_WHITE_SPACES))
+          )
+    {
+      StringList_remove(stringList,nextStringNode->prev);
+    }
+  }
+  else
+  {
+    // delete empty lines at end
+    while (!StringList_isEmpty(stringList) && String_isEmpty(StringList_last(stringList,NULL)))
+    {
+      StringList_remove(stringList,stringList->tail);
+    }
+  }
+  String_delete(string);
+  String_delete(line);
+
+  return nextStringNode;
 }
 
 /***********************************************************************\
@@ -1393,25 +1662,26 @@ LOCAL StringNode *deleteJobEntries(StringList *stringList,
 
 LOCAL Errors updateJob(JobNode *jobNode)
 {
-  StringList jobFileList;
-  String     line;
-  Errors     error;
-  FileHandle fileHandle;
-  uint       z;
-  StringNode *nextNode;
+  StringList        jobLinesList;
+  String            line;
+  Errors            error;
+  FileHandle        fileHandle;
+  uint              z;
+  StringNode        *nextStringNode;
+  ScheduleNode      *scheduleNode;
   ConfigValueFormat configValueFormat;
 
   assert(jobNode != NULL);
 
   // init variables
-  StringList_init(&jobFileList);
-  line  = String_new();
+  StringList_init(&jobLinesList);
+  line = String_new();
 
   // read file
   error = File_open(&fileHandle,jobNode->fileName,FILE_OPEN_READ);
   if (error != ERROR_NONE)
   {
-    StringList_done(&jobFileList);
+    StringList_done(&jobLinesList);
     String_delete(line);
     return error;
   }
@@ -1421,21 +1691,31 @@ LOCAL Errors updateJob(JobNode *jobNode)
     error = File_readLine(&fileHandle,line);
     if (error != ERROR_NONE) break;
 
-    StringList_append(&jobFileList,line);
+    StringList_append(&jobLinesList,line);
   }
   File_close(&fileHandle);
   if (error != ERROR_NONE)
   {
-    StringList_done(&jobFileList);
+    StringList_done(&jobLinesList);
     String_delete(line);
     return error;
   }
 
-  // update in line list
-  for (z = 0; z < SIZE_OF_ARRAY(CONFIG_VALUES); z++)
+  // trim empty lines at begin/end
+  while (!StringList_isEmpty(&jobLinesList) && String_isEmpty(StringList_first(&jobLinesList,NULL)))
+  {
+    StringList_remove(&jobLinesList,jobLinesList.head);
+  }
+  while (!StringList_isEmpty(&jobLinesList) && String_isEmpty(StringList_last(&jobLinesList,NULL)))
+  {
+    StringList_remove(&jobLinesList,jobLinesList.tail);
+  }
+
+  // update line list
+  CONFIG_VALUE_ITERATE(CONFIG_VALUES,z)
   {
     // delete old entries, get position for insert new entries
-    nextNode = deleteJobEntries(&jobFileList,CONFIG_VALUES[z].name);
+    nextStringNode = deleteJobEntries(&jobLinesList,CONFIG_VALUES[z].name);
 
     // insert new entries
     ConfigValue_formatInit(&configValueFormat,
@@ -1445,9 +1725,39 @@ LOCAL Errors updateJob(JobNode *jobNode)
                           );
     while (ConfigValue_format(&configValueFormat,line))
     {
-      StringList_insert(&jobFileList,line,nextNode);
+      StringList_insert(&jobLinesList,line,nextStringNode);
     }
     ConfigValue_formatDone(&configValueFormat);
+  }
+
+  // delete old schedule sections, get position for insert new schedule sections
+  nextStringNode = deleteJobSections(&jobLinesList,"schedule");
+  if (!List_isEmpty(&jobNode->scheduleList))
+  {
+    StringList_insertCString(&jobLinesList,"",nextStringNode);
+    LIST_ITERATE(&jobNode->scheduleList,scheduleNode)
+    {
+      // insert new schedule sections
+      String_format(String_clear(line),"[schedule %'S]",scheduleNode->title);
+      StringList_insert(&jobLinesList,line,nextStringNode);
+
+      CONFIG_VALUE_ITERATE_SECTION(CONFIG_VALUES,"schedule",z)
+      {
+        ConfigValue_formatInit(&configValueFormat,
+                               &CONFIG_VALUES[z],
+                               CONFIG_VALUE_FORMAT_MODE_LINE,
+                               scheduleNode
+                              );
+        while (ConfigValue_format(&configValueFormat,line))
+        {
+          StringList_insert(&jobLinesList,line,nextStringNode);
+        }
+        ConfigValue_formatDone(&configValueFormat);
+      }
+
+      StringList_insertCString(&jobLinesList,"[end]",nextStringNode);
+      StringList_insertCString(&jobLinesList,"",nextStringNode);
+    }
   }
 
   // write file
@@ -1455,12 +1765,12 @@ LOCAL Errors updateJob(JobNode *jobNode)
   if (error != ERROR_NONE)
   {
     String_delete(line);
-    StringList_done(&jobFileList);
+    StringList_done(&jobLinesList);
     return error;
   }
-  while (!StringList_isEmpty(&jobFileList))
+  while (!StringList_isEmpty(&jobLinesList))
   {
-    StringList_getFirst(&jobFileList,line);
+    StringList_getFirst(&jobLinesList,line);
     error = File_writeLine(&fileHandle,line);
     if (error != ERROR_NONE) break;
   }
@@ -1468,7 +1778,7 @@ LOCAL Errors updateJob(JobNode *jobNode)
   if (error != ERROR_NONE)
   {
     String_delete(line);
-    StringList_done(&jobFileList);
+    StringList_done(&jobLinesList);
     return error;
   }
   error = File_setPermission(jobNode->fileName,FILE_PERMISSION_USER_READ|FILE_PERMISSION_USER_WRITE);
@@ -1486,7 +1796,7 @@ LOCAL Errors updateJob(JobNode *jobNode)
 
   // free resources
   String_delete(line);
-  StringList_done(&jobFileList);
+  StringList_done(&jobLinesList);
 
   // reset modified flag
   jobNode->modifiedFlag = FALSE;
@@ -1823,6 +2133,8 @@ LOCAL void jobThreadCode(void)
       break;
     }
     assert(jobNode != NULL);
+String scheduleTitle = String_new();
+String scheduleCustomText = String_new();
 
     // start job
     startJob(jobNode);
@@ -1861,7 +2173,7 @@ LOCAL void jobThreadCode(void)
           extern void sleep(int);
           if (jobNode->requestedAbortFlag) break;
 
-          fprintf(stderr,"%s,%d: z=%d\n",__FILE__,__LINE__,z);
+fprintf(stderr,"%s,%d: z=%d\n",__FILE__,__LINE__,z);
           sleep(1);
 
           if (z==40) {
@@ -1906,6 +2218,8 @@ LOCAL void jobThreadCode(void)
                                                         &compressExcludePatternList,
                                                         &jobOptions,
                                                         archiveType,
+                                                        scheduleTitle,
+                                                        scheduleCustomText,
                                                         CALLBACK(getCryptPassword,jobNode),
                                                         CALLBACK((CreateStatusInfoFunction)updateCreateJobStatus,jobNode),
                                                         CALLBACK((StorageRequestVolumeFunction)storageRequestVolume,jobNode),
@@ -2089,13 +2403,13 @@ LOCAL void schedulerThreadCode(void)
             scheduleNode = jobNode->scheduleList.head;
             while ((scheduleNode != NULL) && (executeScheduleNode == NULL))
             {
-              if (   ((scheduleNode->year     == SCHEDULE_ANY    ) || (scheduleNode->year   == (int)year  ) )
-                  && ((scheduleNode->month    == SCHEDULE_ANY    ) || (scheduleNode->month  == (int)month ) )
-                  && ((scheduleNode->day      == SCHEDULE_ANY    ) || (scheduleNode->day    == (int)day   ) )
-                  && ((scheduleNode->weekDays == SCHEDULE_ANY_DAY) || IN_SET(scheduleNode->weekDays,weekDay))
-                  && ((scheduleNode->hour     == SCHEDULE_ANY    ) || (scheduleNode->hour   == (int)hour  ) )
-                  && ((scheduleNode->minute   == SCHEDULE_ANY    ) || (scheduleNode->minute == (int)minute) )
-                  && scheduleNode->enabled
+              if (   ((scheduleNode->date.year     == SCHEDULE_ANY    ) || (scheduleNode->date.year   == (int)year  ) )
+                  && ((scheduleNode->date.month    == SCHEDULE_ANY    ) || (scheduleNode->date.month  == (int)month ) )
+                  && ((scheduleNode->date.day      == SCHEDULE_ANY    ) || (scheduleNode->date.day    == (int)day   ) )
+                  && ((scheduleNode->weekDays      == SCHEDULE_ANY_DAY) || IN_SET(scheduleNode->weekDays,weekDay)     )
+                  && ((scheduleNode->time.hour     == SCHEDULE_ANY    ) || (scheduleNode->time.hour   == (int)hour  ) )
+                  && ((scheduleNode->time.minute   == SCHEDULE_ANY    ) || (scheduleNode->time.minute == (int)minute) )
+                  && scheduleNode->enabledFlag
                  )
               {
                 executeScheduleNode = scheduleNode;
@@ -2602,7 +2916,7 @@ LOCAL void indexThreadCode(void)
   }
 
   // free resources
-  List_done(&indexCryptPasswordList,(ListNodeFreeFunction)freeIndexCryptPasswordNode,NULL);
+  List_done(&indexCryptPasswordList,CALLBACK((ListNodeFreeFunction)freeIndexCryptPasswordNode,NULL));
   String_delete(printableStorageName);
   String_delete(storageName);
   Storage_doneSpecifier(&storageSpecifier);
@@ -4392,19 +4706,18 @@ LOCAL void serverCommand_optionSet(ClientInfo *clientInfo, uint id, const String
     if (ConfigValue_parse(String_cString(name),
                           String_cString(value),
                           CONFIG_VALUES,SIZE_OF_ARRAY(CONFIG_VALUES),
-                          NULL,
-                          NULL,
+                          NULL, // section name
+                          NULL, // errorOutputHandle,
+                          NULL, // errorPrefix,
                           jobNode
                          )
        )
     {
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       jobNode->modifiedFlag = TRUE;
       sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
     }
     else
     {
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       sendClientResult(clientInfo,id,TRUE,ERROR_UNKNOWN_VALUE,"unknown config value for '%S'",name);
     }
   }
@@ -4994,8 +5307,7 @@ LOCAL void serverCommand_jobDelete(ClientInfo *clientInfo, uint id, const String
       Semaphore_unlock(&jobList.lock);
       return;
     }
-    List_remove(&jobList,jobNode);
-    deleteJob(jobNode);
+    List_removeAndFree(&jobList,jobNode,CALLBACK((ListNodeFreeFunction)freeJobNode,NULL));
   }
 
   sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
@@ -5883,9 +6195,12 @@ LOCAL void serverCommand_excludeCompressListAdd(ClientInfo *clientInfo, uint id,
 * Notes  : Arguments:
 *            jobId=<id>
 *          Result:
-*            date=<year>|*-<month>|*-<day>|* weekDay=<week day>|* \
-*            time=<hour>|*:<minute>|* enabledFlag=yes|no \
-*            type=normal|full|incremental|differential
+*            date=<year>|*-<month>|*-<day>|* \
+*            weekDay=<week day>|* \
+*            time=<hour>|*:<minute>|* \
+*            archiveType=normal|full|incremental|differential
+*            customText=<text> \
+*            enabledFlag=yes|no \
 *            ...
 \***********************************************************************/
 
@@ -5925,28 +6240,31 @@ LOCAL void serverCommand_scheduleList(ClientInfo *clientInfo, uint id, const Str
     {
       String_clear(line);
 
+      String_format(line,"title=%'S",scheduleNode->title);
+      String_appendChar(line,' ');
+
       String_appendCString(line,"date=");
-      if (scheduleNode->year != SCHEDULE_ANY)
+      if (scheduleNode->date.year != SCHEDULE_ANY)
       {
-        String_format(line,"%d",scheduleNode->year);
+        String_format(line,"%d",scheduleNode->date.year);
       }
       else
       {
         String_appendCString(line,"*");
       }
       String_appendChar(line,'-');
-      if (scheduleNode->month != SCHEDULE_ANY)
+      if (scheduleNode->date.month != SCHEDULE_ANY)
       {
-        String_format(line,"%02d",scheduleNode->month);
+        String_format(line,"%02d",scheduleNode->date.month);
       }
       else
       {
         String_appendCString(line,"*");
       }
       String_appendChar(line,'-');
-      if (scheduleNode->day != SCHEDULE_ANY)
+      if (scheduleNode->date.day != SCHEDULE_ANY)
       {
-        String_format(line,"%02d",scheduleNode->day);
+        String_format(line,"%02d",scheduleNode->date.day);
       }
       else
       {
@@ -5975,18 +6293,18 @@ LOCAL void serverCommand_scheduleList(ClientInfo *clientInfo, uint id, const Str
       String_appendChar(line,' ');
 
       String_appendCString(line,"time=");
-      if (scheduleNode->hour != SCHEDULE_ANY)
+      if (scheduleNode->time.hour != SCHEDULE_ANY)
       {
-        String_format(line,"%02d",scheduleNode->hour);
+        String_format(line,"%02d",scheduleNode->time.hour);
       }
       else
       {
         String_appendCString(line,"*");
       }
       String_appendChar(line,':');
-      if (scheduleNode->minute != SCHEDULE_ANY)
+      if (scheduleNode->time.minute != SCHEDULE_ANY)
       {
-        String_format(line,"%02d",scheduleNode->minute);
+        String_format(line,"%02d",scheduleNode->time.minute);
       }
       else
       {
@@ -5994,11 +6312,14 @@ LOCAL void serverCommand_scheduleList(ClientInfo *clientInfo, uint id, const Str
       }
       String_appendChar(line,' ');
 
-      String_format(line,"enabled=%y",scheduleNode->enabled);
+      String_appendCString(line,"archiveType=");
+      String_appendCString(line,archiveTypeToString(scheduleNode->archiveType,"*"));
       String_appendChar(line,' ');
 
-      String_appendCString(line,"type=");
-      String_appendCString(line,archiveTypeToString(scheduleNode->archiveType,"*"));
+      String_format(line,"customText=%'S",scheduleNode->customText);
+      String_appendChar(line,' ');
+
+      String_format(line,"enabledFlag=%y",scheduleNode->enabledFlag);
 
       sendClientResult(clientInfo,id,FALSE,ERROR_NONE,
                        "%S",
@@ -6053,7 +6374,7 @@ LOCAL void serverCommand_scheduleListClear(ClientInfo *clientInfo, uint id, cons
     }
 
     // clear schedule list
-    List_clear(&jobNode->scheduleList,NULL,NULL);
+    List_clear(&jobNode->scheduleList,CALLBACK((ListNodeFreeFunction)freeScheduleNode,NULL));
     jobNode->modifiedFlag = TRUE;
   }
 
@@ -6074,19 +6395,22 @@ LOCAL void serverCommand_scheduleListClear(ClientInfo *clientInfo, uint id, cons
 *            date=<year>|*-<month>|*-<day>|*
 *            weekDay=<week day>|*
 *            time=<hour>|*:<minute>|*
+*            archiveType=normal|full|incremental|differential
+*            customText=<text>
 *            enabledFlag=yes|no
-*            type=normal|full|incremental|differential
 *          Result:
 \***********************************************************************/
 
 LOCAL void serverCommand_scheduleListAdd(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
 {
   uint          jobId;
+  String        title;
   String        date;
-  String        weekDay;
+  String        weekDays;
   String        time;
-  bool          enabledFlag;
+  String        customText;
   ArchiveTypes  archiveType;
+  bool          enabledFlag;
   SemaphoreLock semaphoreLock;
   ScheduleNode  *scheduleNode;
   JobNode       *jobNode;
@@ -6100,19 +6424,23 @@ LOCAL void serverCommand_scheduleListAdd(ClientInfo *clientInfo, uint id, const 
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected jobId=<id>");
     return;
   }
+  title = String_new();
+  StringMap_getString(argumentMap,"title",title,NULL);
   date = String_new();
   if (!StringMap_getString(argumentMap,"date",date,NULL))
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected date=<date>|*");
     String_delete(date);
+    String_delete(title);
     return;
   }
-  weekDay = String_new();
-  if (!StringMap_getString(argumentMap,"weekDay",date,NULL))
+  weekDays = String_new();
+  if (!StringMap_getString(argumentMap,"weekDays",weekDays,NULL))
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected weekDay=<name>|*");
-    String_delete(weekDay);
+    String_delete(weekDays);
     String_delete(date);
+    String_delete(title);
     return;
   }
   time = String_new();
@@ -6120,32 +6448,45 @@ LOCAL void serverCommand_scheduleListAdd(ClientInfo *clientInfo, uint id, const 
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected time=<time>|*");
     String_delete(time);
-    String_delete(weekDay);
+    String_delete(weekDays);
     String_delete(date);
+    String_delete(title);
     return;
   }
+  if      (stringEquals(StringMap_getTextCString(argumentMap,"archiveType","*"),"*"))
+  {
+    archiveType = ARCHIVE_TYPE_NORMAL;
+  }
+  else
+  {
+    if (!StringMap_getEnum(argumentMap,"archiveType",&archiveType,(StringMapParseEnumFunction)parseArchiveType,0))
+    {
+      sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected archiveType=NORMAL|FULL|INCREMENTAL|DIFFERENTIAL");
+      String_delete(time);
+      String_delete(weekDays);
+      String_delete(date);
+      String_delete(title);
+      return;
+    }
+  }
+  customText = String_new();
+  StringMap_getString(argumentMap,"customText",customText,NULL);
   if (!StringMap_getBool(argumentMap,"enabledFlag",&enabledFlag,FALSE))
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected enabledFlag=yes|no");
+    String_delete(customText);
     String_delete(time);
-    String_delete(weekDay);
+    String_delete(weekDays);
     String_delete(date);
-    return;
-  }
-  if (!StringMap_getEnum(argumentMap,"archiveType",&archiveType,(StringMapParseEnumFunction)parseArchiveType,0))
-  {
-    sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected archiveType=NORMAL|FULL|INCREMENTAL|DIFFERENTIAL");
-    String_delete(time);
-    String_delete(weekDay);
-    String_delete(date);
+    String_delete(title);
     return;
   }
 
   // parse schedule
-  scheduleNode = parseScheduleParts(date,
-                                    weekDay,
-                                    time
-                                   );
+  scheduleNode = parseScheduleDateTime(date,
+                                       weekDays,
+                                       time
+                                      );
   if (scheduleNode == NULL)
   {
     sendClientResult(clientInfo,
@@ -6154,14 +6495,20 @@ LOCAL void serverCommand_scheduleListAdd(ClientInfo *clientInfo, uint id, const 
                      ERROR_PARSING,
                      "cannot parse schedule '%S %S %S'",
                      date,
-                     weekDay,
+                     weekDays,
                      time
                     );
+    String_delete(customText);
     String_delete(time);
-    String_delete(weekDay);
+    String_delete(weekDays);
     String_delete(date);
+    String_delete(title);
     return;
   }
+  String_set(scheduleNode->title,title);
+  scheduleNode->archiveType = archiveType;
+  String_set(scheduleNode->customText,customText);
+  scheduleNode->enabledFlag = enabledFlag;
 
   SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
   {
@@ -6171,6 +6518,7 @@ LOCAL void serverCommand_scheduleListAdd(ClientInfo *clientInfo, uint id, const 
     {
       sendClientResult(clientInfo,id,TRUE,ERROR_JOB_NOT_FOUND,"job #%d not found",jobId);
       Semaphore_unlock(&jobList.lock);
+      deleteScheduleNode(scheduleNode);
       return;
     }
 
@@ -6182,9 +6530,11 @@ LOCAL void serverCommand_scheduleListAdd(ClientInfo *clientInfo, uint id, const 
   sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
 
   // free resources
+  String_delete(customText);
   String_delete(time);
-  String_delete(weekDay);
+  String_delete(weekDays);
   String_delete(date);
+  String_delete(title);
 }
 
 /***********************************************************************\
@@ -7173,7 +7523,7 @@ LOCAL void serverCommand_storageListClear(ClientInfo *clientInfo, uint id, const
 
   UNUSED_VARIABLE(argumentMap);
 
-  Array_clear(clientInfo->storageIdArray,NULL,NULL);
+  Array_clear(clientInfo->storageIdArray,CALLBACK_NONE);
 
   sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
 }
@@ -8383,7 +8733,7 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
         String_delete(name);
         String_delete(storageName);
         String_delete(regexpString);
-        List_done(&indexList,(ListNodeFreeFunction)freeIndexNode,NULL);
+        List_done(&indexList,CALLBACK((ListNodeFreeFunction)freeIndexNode,NULL));
         String_delete(entryPattern);
         return;
       }
@@ -8466,7 +8816,7 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
         String_delete(name);
         String_delete(storageName);
         String_delete(regexpString);
-        List_done(&indexList,(ListNodeFreeFunction)freeIndexNode,NULL);
+        List_done(&indexList,CALLBACK((ListNodeFreeFunction)freeIndexNode,NULL));
         String_delete(entryPattern);
         return;
       }
@@ -8542,7 +8892,7 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
         String_delete(name);
         String_delete(storageName);
         String_delete(regexpString);
-        List_done(&indexList,(ListNodeFreeFunction)freeIndexNode,NULL);
+        List_done(&indexList,CALLBACK((ListNodeFreeFunction)freeIndexNode,NULL));
         String_delete(entryPattern);
         return;
       }
@@ -8619,7 +8969,7 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
         String_delete(name);
         String_delete(storageName);
         String_delete(regexpString);
-        List_done(&indexList,(ListNodeFreeFunction)freeIndexNode,NULL);
+        List_done(&indexList,CALLBACK((ListNodeFreeFunction)freeIndexNode,NULL));
         String_delete(entryPattern);
         return;
       }
@@ -8700,7 +9050,7 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
         String_delete(name);
         String_delete(storageName);
         String_delete(regexpString);
-        List_done(&indexList,(ListNodeFreeFunction)freeIndexNode,NULL);
+        List_done(&indexList,CALLBACK((ListNodeFreeFunction)freeIndexNode,NULL));
         String_delete(entryPattern);
         return;
       }
@@ -8785,7 +9135,7 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
         String_delete(name);
         String_delete(storageName);
         String_delete(regexpString);
-        List_done(&indexList,(ListNodeFreeFunction)freeIndexNode,NULL);
+        List_done(&indexList,CALLBACK((ListNodeFreeFunction)freeIndexNode,NULL));
         String_delete(entryPattern);
         return;
       }
@@ -8925,7 +9275,7 @@ LOCAL void serverCommand_indexEntriesList(ClientInfo *clientInfo, uint id, const
     String_delete(name);
     String_delete(storageName);
     String_delete(regexpString);
-    List_done(&indexList,(ListNodeFreeFunction)freeIndexNode,NULL);
+    List_done(&indexList,CALLBACK((ListNodeFreeFunction)freeIndexNode,NULL));
     String_delete(entryPattern);
 
     sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
@@ -9169,7 +9519,7 @@ LOCAL bool parseCommand(CommandMsg *commandMsg,
     return FALSE;
   }
 
-  // get command
+  // find command
   z = 0;
   while ((z < SIZE_OF_ARRAY(SERVER_COMMANDS)) && !String_equalsCString(command,SERVER_COMMANDS[z].name))
   {
@@ -9184,6 +9534,7 @@ LOCAL bool parseCommand(CommandMsg *commandMsg,
   commandMsg->serverCommandFunction = SERVER_COMMANDS[z].serverCommandFunction;
   commandMsg->authorizationState    = SERVER_COMMANDS[z].authorizationState;
 
+  // parse arguments
   commandMsg->argumentMap = StringMap_new();
   if (commandMsg->argumentMap == NULL)
   {
@@ -9474,7 +9825,7 @@ LOCAL void doneClient(ClientInfo *clientInfo)
   }
 
   Array_delete(clientInfo->storageIdArray,NULL,NULL);
-  List_done(&clientInfo->directoryInfoList,(ListNodeFreeFunction)freeDirectoryInfoNode,NULL);
+  List_done(&clientInfo->directoryInfoList,CALLBACK((ListNodeFreeFunction)freeDirectoryInfoNode,NULL));
   freeJobOptions(&clientInfo->jobOptions);
   PatternList_done(&clientInfo->compressExcludePatternList);
   PatternList_done(&clientInfo->excludePatternList);
@@ -10034,8 +10385,7 @@ Errors Server_run(uint             port,
 
           // remove from client list
           disconnectClientNode = clientNode;
-          clientNode = clientNode->next;
-          List_remove(&clientList,disconnectClientNode);
+          clientNode = List_remove(&clientList,disconnectClientNode);
 
           // disconnect
           Network_disconnect(&disconnectClientNode->clientInfo.network.socketHandle);
@@ -10050,8 +10400,10 @@ Errors Server_run(uint             port,
               if (authorizationFailNode != NULL)
               {
                 // remove from authorization fail list
-                List_remove(&authorizationFailList,authorizationFailNode);
-                deleteAuthorizationFailNode(authorizationFailNode);
+                List_removeAndFree(&authorizationFailList,
+                                   authorizationFailNode,
+                                   CALLBACK((ListNodeFreeFunction)freeAuthorizationFailNode,NULL)
+                                  );
               }
               break;
             case AUTHORIZATION_STATE_FAIL:
@@ -10088,8 +10440,7 @@ Errors Server_run(uint             port,
 
         // remove from connected list
         disconnectClientNode = clientNode;
-        clientNode = clientNode->next;
-        List_remove(&clientList,disconnectClientNode);
+        clientNode = List_remove(&clientList,disconnectClientNode);
 
         // disconnect
         Network_disconnect(&disconnectClientNode->clientInfo.network.socketHandle);
@@ -10191,10 +10542,10 @@ Errors Server_run(uint             port,
   Thread_done(&schedulerThread);
   Thread_done(&jobThread);
   Semaphore_done(&serverStateLock);
-  List_done(&authorizationFailList,(ListNodeFreeFunction)freeAuthorizationFailNode,NULL);
-  List_done(&clientList,(ListNodeFreeFunction)freeClientNode,NULL);
+  List_done(&authorizationFailList,CALLBACK((ListNodeFreeFunction)freeAuthorizationFailNode,NULL));
+  List_done(&clientList,CALLBACK((ListNodeFreeFunction)freeClientNode,NULL));
   Semaphore_done(&jobList.lock);
-  List_done(&jobList,(ListNodeFreeFunction)freeJobNode,NULL);
+  List_done(&jobList,CALLBACK((ListNodeFreeFunction)freeJobNode,NULL));
 
   return ERROR_NONE;
 }
@@ -10268,7 +10619,7 @@ processCommand(&clientInfo,commandString);
   doneClient(&clientInfo);
   File_close(&outputFileHandle);
   File_close(&inputFileHandle);
-  List_done(&jobList,(ListNodeFreeFunction)freeJobNode,NULL);
+  List_done(&jobList,CALLBACK((ListNodeFreeFunction)freeJobNode,NULL));
 
   return ERROR_NONE;
 }
