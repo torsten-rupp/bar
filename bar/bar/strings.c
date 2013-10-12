@@ -1323,9 +1323,9 @@ LOCAL bool parseString(const char    *string,
             value.s = va_arg(arguments,char*);
             assert(formatToken.width > 0);
 
+            z = 0L;
             if (index < length)
             {
-              z = 0L;
               while (   (index < length)
                      && (formatToken.blankFlag || !isspace(string[index]))
                      && (string[index] != (*format))
@@ -1412,8 +1412,8 @@ LOCAL bool parseString(const char    *string,
                   }
                 }
               }
-              if (value.s != NULL) value.s[z] = '\0';
             }
+            if (value.s != NULL) value.s[z] = '\0';
             break;
           case 'p':
           case 'n':
@@ -1423,9 +1423,9 @@ LOCAL bool parseString(const char    *string,
             value.string = va_arg(arguments,String);
             STRING_CHECK_VALID(value.string);
 
+            String_clear(value.string);
             if (index < length)
             {
-              String_clear(value.string);
               z = 0L;
               while (   (index < length)
                      && (formatToken.blankFlag || !isspace(string[index]))
