@@ -122,8 +122,8 @@ typedef enum
    | SET_VALUE(WEEKDAY_SUN) \
   )
 
-#define MAX_CONNECTION_COUNT_UNLIMITED MAX_UINT
-#define MAX_STORAGE_SIZE_UNLIMITED     MAX_UINT64
+#define MAX_CONNECTION_COUNT_UNLIMITED MAX_INT
+#define MAX_STORAGE_SIZE_UNLIMITED     MAX_INT64
 
 /***************************** Datatypes *******************************/
 
