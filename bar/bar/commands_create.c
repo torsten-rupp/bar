@@ -92,6 +92,8 @@ typedef struct
   const PatternList           *compressExcludePatternList;        // exclude compression pattern list
   const JobOptions            *jobOptions;
   ArchiveTypes                archiveType;                        // archive type to create
+  String                      scheduleTitle;                      // schedule title or NULL
+  String                      scheduleCustomText;                 // schedule custom text or NULL
   bool                        *pauseCreateFlag;                   // TRUE for pause creation
   bool                        *pauseStorageFlag;                  // TRUE for pause storage
   bool                        *requestedAbortFlag;                // TRUE to abort create
@@ -213,6 +215,7 @@ LOCAL void freeEntryMsg(EntryMsg *entryMsg, void *userData)
 *          jobOptions                 - job options
 *          archiveType                - archive type; see ArchiveTypes
 *                                       (normal/full/incremental)
+*          storageNameCustomText      - storage name custome text or NULL
 *          createStatusInfoFunction   - status info call back function
 *                                       (can be NULL)
 *          createStatusInfoUserData   - user data for status info
@@ -234,6 +237,8 @@ LOCAL void initCreateInfo(CreateInfo               *createInfo,
                           const PatternList        *compressExcludePatternList,
                           JobOptions               *jobOptions,
                           ArchiveTypes             archiveType,
+                          const String             scheduleTitle,
+                          const String             scheduleCustomText,
                           CreateStatusInfoFunction createStatusInfoFunction,
                           void                     *createStatusInfoUserData,
                           bool                     *pauseCreateFlag,
@@ -250,6 +255,8 @@ LOCAL void initCreateInfo(CreateInfo               *createInfo,
   createInfo->excludePatternList           = excludePatternList;
   createInfo->compressExcludePatternList   = compressExcludePatternList;
   createInfo->jobOptions                   = jobOptions;
+  createInfo->scheduleTitle                = scheduleTitle;
+  createInfo->scheduleCustomText           = scheduleCustomText;
   createInfo->pauseCreateFlag              = pauseCreateFlag;
   createInfo->pauseStorageFlag             = pauseStorageFlag;
   createInfo->requestedAbortFlag           = requestedAbortFlag;
@@ -1017,15 +1024,17 @@ LOCAL void appendSpecialToEntryList(MsgQueue     *entryMsgQueue,
 /***********************************************************************\
 * Name   : formatArchiveFileName
 * Purpose: get archive file name
-* Input  : fileName         - file name variable
-*          formatMode       - format mode; see FORMAT_MODE_*
-*          archiveType      - archive type; see ARCHIVE_TYPE_*
-*          templateFileName - template file name
-*          time             - time
-*          partNumber       - part number (>=0 for parts,
-*                             ARCHIVE_PART_NUMBER_NONE for single part
-*                             archive)
-*          lastPartFlag     - TRUE iff last part
+* Input  : fileName              - file name variable
+*          formatMode            - format mode; see FORMAT_MODE_*
+*          templateFileName      - template file name
+*          archiveType           - archive type; see ARCHIVE_TYPE_*
+*          scheduleTitle         - schedule title or NULL
+*          scheduleCustomText    - schedule custom text or NULL
+*          time                  - time
+*          partNumber            - part number (>=0 for parts,
+*                                  ARCHIVE_PART_NUMBER_NONE for single
+*                                  part archive)
+*          lastPartFlag          - TRUE iff last part
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -1033,15 +1042,18 @@ LOCAL void appendSpecialToEntryList(MsgQueue     *entryMsgQueue,
 
 LOCAL Errors formatArchiveFileName(String       fileName,
                                    FormatModes  formatMode,
-                                   ArchiveTypes archiveType,
                                    const String templateFileName,
+                                   ArchiveTypes archiveType,
+                                   const String scheduleTitle,
+                                   const String scheduleCustomText,
                                    time_t       time,
                                    int          partNumber,
                                    bool         lastPartFlag
                                   )
 {
-  TextMacro textMacros[2];
+  TextMacro textMacros[5];
 
+  String    uuid;
   bool      partNumberFlag;
   #ifdef HAVE_LOCALTIME_R
     struct tm tmBuffer;
@@ -1055,6 +1067,9 @@ LOCAL Errors formatArchiveFileName(String       fileName,
   ulong     n;
   uint      z;
   int       d;
+
+  // init variables
+  uuid = Misc_getUUID(String_new());
 
   // expand named macros
   switch (archiveType)
@@ -1073,11 +1088,17 @@ LOCAL Errors formatArchiveFileName(String       fileName,
   switch (formatMode)
   {
     case FORMAT_MODE_ARCHIVE_FILE_NAME:
-      TEXT_MACRO_N_CSTRING(textMacros[1],"%last",lastPartFlag?"-last":"");
+      TEXT_MACRO_N_CSTRING(textMacros[1],"%last", lastPartFlag ? "-last" : "");
+      TEXT_MACRO_N_CSTRING(textMacros[2],"%uuid", String_cString(uuid));
+      TEXT_MACRO_N_CSTRING(textMacros[3],"%title",(scheduleTitle != NULL) ? String_cString(scheduleTitle) : "");
+      TEXT_MACRO_N_CSTRING(textMacros[4],"%text", (scheduleCustomText != NULL) ? String_cString(scheduleCustomText) : "");
       Misc_expandMacros(fileName,String_cString(templateFileName),textMacros,SIZE_OF_ARRAY(textMacros));
       break;
     case FORMAT_MODE_PATTERN:
-      TEXT_MACRO_N_CSTRING(textMacros[1],"%last","(-last){0,1}");
+      TEXT_MACRO_N_CSTRING(textMacros[1],"%last", "(-last){0,1}");
+      TEXT_MACRO_N_CSTRING(textMacros[2],"%uuid", "[-0-9a-fA-F]+");
+      TEXT_MACRO_N_CSTRING(textMacros[3],"%title","\\S+");
+      TEXT_MACRO_N_CSTRING(textMacros[4],"%text", "\\S+");
       break;
     #ifndef NDEBUG
       default:
@@ -1190,6 +1211,7 @@ LOCAL Errors formatArchiveFileName(String       fileName,
               }
               if ((ulong)partNumber >= (divisor*10L))
               {
+                free(uuid);
                 return ERROR_INSUFFICIENT_SPLIT_NUMBERS;
               }
 
@@ -1251,6 +1273,9 @@ LOCAL Errors formatArchiveFileName(String       fileName,
         #endif /* NDEBUG */
     }
   }
+
+  // free resources
+  String_delete(uuid);
 
   return ERROR_NONE;
 }
@@ -2582,8 +2607,10 @@ LOCAL Errors storeArchiveFile(void           *userData,
   destinationFileName = String_new();
   error = formatArchiveFileName(destinationFileName,
                                 FORMAT_MODE_ARCHIVE_FILE_NAME,
-                                createInfo->archiveType,
                                 createInfo->storageFileName,
+                                createInfo->archiveType,
+                                createInfo->scheduleTitle,
+                                createInfo->scheduleCustomText,
                                 createInfo->startTime,
                                 partNumber,
                                 lastPartFlag
@@ -3131,8 +3158,10 @@ fprintf(stderr,"%s, %d: storageMsg.fileName=%s\n",__FILE__,__LINE__,String_cStri
         pattern = String_new();
         error = formatArchiveFileName(pattern,
                                       FORMAT_MODE_PATTERN,
-                                      createInfo->archiveType,
                                       createInfo->storageFileName,
+                                      createInfo->archiveType,
+                                      createInfo->scheduleTitle,
+                                      createInfo->scheduleCustomText,
                                       createInfo->startTime,
                                       ARCHIVE_PART_NUMBER_NONE,
                                       FALSE
@@ -3217,7 +3246,7 @@ LOCAL Errors storeFileEntry(CreateInfo   *createInfo,
   uint64                    entryDoneBytes;
   ulong                     bufferLength;
   uint64                    archiveSize;
-  uint64                    archiveBytes;
+  uint64                    doneBytes,archiveBytes;
   double                    compressionRatio;
   uint                      percentageDone;
 
@@ -3383,16 +3412,17 @@ LOCAL Errors storeFileEntry(CreateInfo   *createInfo,
             // update status info
             SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
             {
+              doneBytes        = createInfo->statusInfo.doneBytes+(uint64)bufferLength;
               archiveBytes     = createInfo->statusInfo.storageTotalBytes+archiveSize;
-              compressionRatio = 100.0-(createInfo->statusInfo.storageTotalBytes+archiveSize)*100.0/createInfo->statusInfo.doneBytes;
+              compressionRatio = (doneBytes > 0) ? 100.0-(archiveBytes*100.0)/doneBytes : 0.0;
 
-              createInfo->statusInfo.doneBytes += (uint64)bufferLength;
               if (nameSemaphoreLocked)
               {
                 String_set(createInfo->statusInfo.name,fileName);
                 createInfo->statusInfo.entryDoneBytes  = entryDoneBytes;
                 createInfo->statusInfo.entryTotalBytes = fileInfo.size;
               }
+              createInfo->statusInfo.doneBytes        = doneBytes;
               createInfo->statusInfo.archiveBytes     = archiveBytes;
               createInfo->statusInfo.compressionRatio = compressionRatio;
               updateStatusInfo(createInfo);
@@ -3535,7 +3565,7 @@ LOCAL Errors storeImageEntry(CreateInfo   *createInfo,
   uint64           blockCount;
   uint             bufferBlockCount;
   uint64           archiveSize;
-  uint64           archiveBytes;
+  uint64           doneBytes,archiveBytes;
   double           compressionRatio;
   uint             percentageDone;
   ArchiveEntryInfo archiveEntryInfo;
@@ -3724,8 +3754,9 @@ LOCAL Errors storeImageEntry(CreateInfo   *createInfo,
           // update status info
           SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
           {
+            doneBytes        = createInfo->statusInfo.doneBytes+(uint64)bufferBlockCount*(uint64)deviceInfo.blockSize;
             archiveBytes     = createInfo->statusInfo.storageTotalBytes+archiveSize;
-            compressionRatio = 100.0-(createInfo->statusInfo.storageTotalBytes+archiveSize)*100.0/createInfo->statusInfo.doneBytes;
+            compressionRatio = (doneBytes > 0) ? 100.0-(archiveBytes*100.0)/doneBytes : 0.0;
 
             createInfo->statusInfo.doneBytes += (uint64)bufferBlockCount*(uint64)deviceInfo.blockSize;
             if (nameSemaphoreLocked)
@@ -3734,6 +3765,7 @@ LOCAL Errors storeImageEntry(CreateInfo   *createInfo,
               createInfo->statusInfo.entryDoneBytes  = entryDoneBytes;
               createInfo->statusInfo.entryTotalBytes = deviceInfo.size;
             }
+            createInfo->statusInfo.doneBytes        = doneBytes;
             createInfo->statusInfo.archiveBytes     = archiveBytes;
             createInfo->statusInfo.compressionRatio = compressionRatio;
             updateStatusInfo(createInfo);
@@ -4192,7 +4224,7 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
   uint64                    entryDoneBytes;
   ulong                     bufferLength;
   uint64                    archiveSize;
-  uint64                    archiveBytes;
+  uint64                    doneBytes,archiveBytes;
   double                    compressionRatio;
   uint                      percentageDone;
   const StringNode          *stringNode;
@@ -4345,12 +4377,13 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
           if (error == ERROR_NONE)
           {
             entryDoneBytes += (uint64)StringList_count(nameList)*(uint64)bufferLength;
-            archiveSize    = Archive_getSize(&createInfo->archiveInfo);
+            archiveSize = Archive_getSize(&createInfo->archiveInfo);
 
             SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
             {
+              doneBytes        = createInfo->statusInfo.doneBytes+(uint64)bufferLength;
               archiveBytes     = createInfo->statusInfo.storageTotalBytes+archiveSize;
-              compressionRatio = 100.0-(createInfo->statusInfo.storageTotalBytes+archiveSize)*100.0/createInfo->statusInfo.doneBytes;
+              compressionRatio = (doneBytes > 0) ? 100.0-(archiveBytes*100.0)/doneBytes : 0.0;
 
               createInfo->statusInfo.doneBytes += (uint64)StringList_count(nameList)*(uint64)bufferLength;
               if (nameSemaphoreLocked)
@@ -4359,6 +4392,7 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
                 createInfo->statusInfo.entryDoneBytes  = entryDoneBytes;
                 createInfo->statusInfo.entryTotalBytes = fileInfo.size;
               }
+              createInfo->statusInfo.doneBytes        = doneBytes;
               createInfo->statusInfo.archiveBytes     = archiveBytes;
               createInfo->statusInfo.compressionRatio = compressionRatio;
               updateStatusInfo(createInfo);
@@ -4796,6 +4830,8 @@ Errors Command_create(const String                    storageName,
                       const PatternList               *compressExcludePatternList,
                       JobOptions                      *jobOptions,
                       ArchiveTypes                    archiveType,
+                      const String                    scheduleTitle,
+                      const String                    scheduleCustomText,
                       ArchiveGetCryptPasswordFunction archiveGetCryptPasswordFunction,
                       void                            *archiveGetCryptPasswordUserData,
                       CreateStatusInfoFunction        createStatusInfoFunction,
@@ -4864,6 +4900,8 @@ Errors Command_create(const String                    storageName,
                  compressExcludePatternList,
                  jobOptions,
                  archiveType,
+                 scheduleTitle,
+                 scheduleCustomText,
                  CALLBACK(createStatusInfoFunction,createStatusInfoUserData),
                  pauseCreateFlag,
                  pauseStorageFlag,
