@@ -334,7 +334,7 @@ INLINE String StringList_first(const StringList *stringList, String string)
 
 /***********************************************************************\
 * Name   : StringList_last
-* Purpose: last string from list
+* Purpose: get last string from list
 * Input  : stringList - string list
 *          string     - string variable (can be NULL)
 * Output : -
@@ -370,7 +370,7 @@ INLINE String StringList_last(const StringList *stringList, String string)
 
 /***********************************************************************\
 * Name   : StringList_getFirst
-* Purpose: remove first string from list
+* Purpose: remove and return first string from list
 * Input  : stringList - string list
 *          string     - string variable (can be NULL)
 * Output : -
@@ -387,7 +387,7 @@ String __StringList_getFirst(const char *fileName, ulong lineNb, StringList *str
 
 /***********************************************************************\
 * Name   : StringList_getLast
-* Purpose: remove last string from list
+* Purpose: remove and return last string from list
 * Input  : stringList - string list
 *          string     - string variable (can be NULL)
 * Output : -

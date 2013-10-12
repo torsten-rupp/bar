@@ -302,11 +302,12 @@ StringNode *__StringList_remove(const char *__fileName__, ulong __lineNb__, Stri
 
   nextStringNode = (StringNode*)List_remove(stringList,stringNode);
 
-  String_delete(stringNode->string);
   #ifdef NDEBUG
-    stringNode = (StringNode*)LIST_DELETE_NODE(stringNode);
+    String_delete(stringNode->string);
+    (StringNode*)LIST_DELETE_NODE(stringNode);
   #else /* not NDEBUG */
-    stringNode = (StringNode*)LIST_DELETE_NODEX(__fileName__,__lineNb__,stringNode);
+    __String_delete(__fileName__,__lineNb__,stringNode->string);
+    (StringNode*)LIST_DELETE_NODEX(__fileName__,__lineNb__,stringNode);
   #endif /* NDEBUG */
 
   return nextStringNode;
@@ -315,7 +316,7 @@ StringNode *__StringList_remove(const char *__fileName__, ulong __lineNb__, Stri
 #ifdef NDEBUG
 String StringList_getFirst(StringList *stringList, String string)
 #else /* not NDEBUG */
-String __StringList_getFirst(const char *fileName, ulong lineNb, StringList *stringList, String string)
+String __StringList_getFirst(const char *__fileName__, ulong __lineNb__, StringList *stringList, String string)
 #endif /* NDEBUG */
 {
   StringNode *stringNode;
@@ -328,7 +329,11 @@ String __StringList_getFirst(const char *fileName, ulong lineNb, StringList *str
     if (string != NULL)
     {
       String_set(string,stringNode->string);
-      String_delete(stringNode->string);
+      #ifdef NDEBUG
+        String_delete(stringNode->string);
+      #else /* not NDEBUG */
+        __String_delete(__fileName__,__lineNb__,stringNode->string);
+      #endif /* NDEBUG */
     }
     else
     {
@@ -337,7 +342,7 @@ String __StringList_getFirst(const char *fileName, ulong lineNb, StringList *str
     #ifdef NDEBUG
       LIST_DELETE_NODE(stringNode);
     #else /* not NDEBUG */
-      LIST_DELETE_NODEX(fileName,lineNb,stringNode);
+      LIST_DELETE_NODEX(__fileName__,__lineNb__,stringNode);
     #endif /* NDEBUG */
 
     return string;
@@ -356,7 +361,7 @@ String __StringList_getFirst(const char *fileName, ulong lineNb, StringList *str
 #ifdef NDEBUG
 String StringList_getLast(StringList *stringList, String string)
 #else /* not NDEBUG */
-String __StringList_getLast(const char *fileName, ulong lineNb, StringList *stringList, String string)
+String __StringList_getLast(const char *__fileName__, ulong __lineNb__, StringList *stringList, String string)
 #endif /* NDEBUG */
 {
   StringNode *stringNode;
@@ -369,7 +374,11 @@ String __StringList_getLast(const char *fileName, ulong lineNb, StringList *stri
     if (string != NULL)
     {
       String_set(string,stringNode->string);
-      String_delete(stringNode->string);
+      #ifdef NDEBUG
+        String_delete(stringNode->string);
+      #else /* not NDEBUG */
+        __String_delete(__fileName__,__lineNb__,stringNode->string);
+      #endif /* NDEBUG */
     }
     else
     {
@@ -378,7 +387,7 @@ String __StringList_getLast(const char *fileName, ulong lineNb, StringList *stri
     #ifdef NDEBUG
       LIST_DELETE_NODE(stringNode);
     #else /* not NDEBUG */
-      LIST_DELETE_NODEX(fileName,lineNb,stringNode);
+      LIST_DELETE_NODEX(__fileName__,__lineNb__,stringNode);
     #endif /* NDEBUG */
 
     return string;
