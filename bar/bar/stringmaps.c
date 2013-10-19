@@ -898,7 +898,7 @@ bool StringMap_getBool(const StringMap stringMap, const char *name, bool *data, 
   }
 }
 
-bool StringMap_getEnum(const StringMap stringMap, const char *name, void *data, StringMapParseEnumFunction stringMapParseEnumFunction, int defaultValue)
+bool StringMap_getEnum(const StringMap stringMap, const char *name, void *data, StringMapParseEnumFunction stringMapParseEnumFunction, uint defaultValue)
 {
   StringMapEntry *stringMapEntry;
 
@@ -910,11 +910,56 @@ bool StringMap_getEnum(const StringMap stringMap, const char *name, void *data, 
   stringMapEntry = findStringMapEntry(stringMap,name);
   if ((stringMapEntry != NULL) && (stringMapEntry->value.text != NULL))
   {
-    return stringMapParseEnumFunction(String_cString(stringMapEntry->value.text),(int*)data);
+    return stringMapParseEnumFunction(String_cString(stringMapEntry->value.text),(uint*)data);
   }
   else
   {
     (*(int*)data) = defaultValue;
+    return FALSE;
+  }
+}
+
+bool StringMap_getEnumSet(const StringMap stringMap, const char *name, uint64 *data, StringMapParseEnumFunction stringMapParseEnumFunction, uint64 allValue, const char *separatorChars, uint64 defaultValue)
+{
+  StringMapEntry  *stringMapEntry;
+  StringTokenizer stringTokenizer;
+  String          token;
+  uint            value;
+
+  assert(stringMap != NULL);
+  assert(name != NULL);
+  assert(data != NULL);
+  assert(stringMapParseEnumFunction != NULL);
+
+  stringMapEntry = findStringMapEntry(stringMap,name);
+  if ((stringMapEntry != NULL) && (stringMapEntry->value.text != NULL))
+  {
+    (*data) = 0LL;
+
+    String_initTokenizer(&stringTokenizer,stringMapEntry->value.text,STRING_BEGIN,separatorChars,NULL,TRUE);
+    while (String_getNextToken(&stringTokenizer,&token,NULL))
+    {
+      if      (String_equalsCString(token,"*"))
+      {
+        (*data) = allValue;
+      }
+      else if (stringMapParseEnumFunction(String_cString(token),&value))
+      {
+        (*data) |= (1 << value);
+      }
+      else
+      {
+        String_doneTokenizer(&stringTokenizer);
+        return FALSE;
+      }
+    }
+    String_doneTokenizer(&stringTokenizer);
+
+    return TRUE;
+  }
+  else
+  {
+    (*data) = defaultValue;
     return FALSE;
   }
 }
