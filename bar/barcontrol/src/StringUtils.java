@@ -630,7 +630,6 @@ public class StringUtils
   public static String join(EnumSet enumSet, String joinString, boolean ordinal)
   {
     StringBuilder buffer = new StringBuilder();
-    String        string;
     if (enumSet != null)
     {
       Iterator iterator = enumSet.iterator();
