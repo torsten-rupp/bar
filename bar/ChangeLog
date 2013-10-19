@@ -26,6 +26,17 @@
     encrypted! This makes it much harder to steal plain text
     passwords even when no TLS encrypted network connection is
     used.
+  * improved tests: added special testcode to execute error
+    handling code in tests
+  * using gcc to compile is now mandatory (required because of
+    improved error-handlingn with using closure like code)
+  * improved defense against denial-of-service-attack: force
+    delay for clients with multiple authorazation failure
+  * added macros %uuid, %text to storage name template
+  * changed schedule entry in job configuration: use a section.
+    Entries in the old format are still read, but not created
+    anymore.
+  * added custom text to schedule entries
 
 2013-05-05 0.17b
   * fixed parsing of storage specifier (ftp, scp/sftp,
