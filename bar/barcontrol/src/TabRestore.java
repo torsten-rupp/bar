@@ -16,8 +16,10 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.Date;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.LinkedList;
 
 // graphics
@@ -132,6 +134,11 @@ class TabRestore
     ALL,
     UNKNOWN;
 
+    public static EnumSet<IndexStates> ALL()
+    {
+      return EnumSet.of(IndexStates.OK,IndexStates.ERROR);
+    }
+
     /** convert data to string
      * @return string
      */
@@ -148,6 +155,78 @@ class TabRestore
       }
     }
   };
+
+  /** index state set
+   */
+  class IndexStateSet
+  {
+    private EnumSet<IndexStates> indexStateSet;
+
+    /** create index state set
+     * @param indexStates index states
+     */
+    public IndexStateSet(IndexStates... indexStates)
+    {
+      this.indexStateSet = EnumSet.noneOf(IndexStates.class);
+      for (IndexStates indexState : indexStates)
+      {
+        this.indexStateSet.add(indexState);
+      }
+    }
+
+    /** create index state set
+     * @param indexState0,indexState1 index states from/to
+     */
+    public IndexStateSet(IndexStates indexState0, IndexStates indexState1)
+    {
+      this.indexStateSet = EnumSet.range(indexState0,indexState1);
+    }
+
+    /** convert data to string
+     * @param indexState index state
+     */
+    public void add(IndexStates indexState)
+    {
+      indexStateSet.add(indexState);
+    }
+
+    /** convert data to string
+     * @param indexState index state
+     * @return true if index state is in set
+     */
+    public boolean contains(IndexStates indexState)
+    {
+      return indexStateSet.contains(indexState);
+    }
+
+    /** convert data to name list
+     * @return name list
+     */
+    public String name()
+    {
+      StringBuilder buffer = new StringBuilder();
+
+      Iterator iterator = indexStateSet.iterator();
+      while (iterator.hasNext())
+      {
+        Enum value = (Enum)iterator.next();
+        if (buffer.length() > 0) buffer.append("|");
+        buffer.append(value.name());
+      }
+
+      return buffer.toString();
+    }
+
+    /** convert data to string
+     * @return string
+     */
+    public String toString()
+    {
+      return StringUtils.join(indexStateSet,",");
+    }
+  }
+
+  final IndexStateSet INDEX_STATE_SET_ALL = new IndexStateSet(IndexStates.OK,IndexStates.ERROR);
 
   /** index modes
    */
@@ -390,12 +469,12 @@ class TabRestore
    */
   class UpdateStorageListThread extends Thread
   {
-    private Object      trigger                 = new Object();   // trigger update object
-    private boolean     triggeredFlag           = false;
-    private int         storageMaxCount         = 100;
-    private String      storagePattern          = null;
-    private IndexStates storageIndexStateFilter = IndexStates.ALL;
-    private boolean     setColorFlag            = false;          // true to set color at update
+    private Object        trigger                    = new Object();   // trigger update object
+    private boolean       triggeredFlag              = false;
+    private int           storageMaxCount            = 100;
+    private String        storagePattern             = null;
+    private IndexStateSet storageIndexStateSetFilter = new IndexStateSet(IndexStates.OK,IndexStates.ERROR);
+    private boolean       setColorFlag               = false;          // true to set color at update
 
     /** create update storage list thread
      */
@@ -447,7 +526,7 @@ class TabRestore
             Command command = BARServer.runCommand(StringParser.format("INDEX_STORAGE_LIST pattern=%'S maxCount=%d indexState=%s indexMode=%s",
                                                                        (((storagePattern != null) && !storagePattern.equals("")) ? storagePattern : "*"),
                                                                        storageMaxCount,
-                                                                       ((storageIndexStateFilter != IndexStates.ALL) ? storageIndexStateFilter.name() : "*"),
+                                                                       storageIndexStateSetFilter.name(),
                                                                        "*"
                                                                       )
                                                   );
@@ -579,17 +658,17 @@ class TabRestore
       }
     }
 
-    /** trigger an update
+    /** trigger an update of the storage list
      * @param storagePattern new storage pattern
-     * @param storageStateFilter new storage state filter
+     * @param storageIndexStateSetFilter new storage index state set filter
      * @param storageMaxCount new max. entries in list
      */
-    public void triggerUpdate(String storagePattern, IndexStates storageIndexStateFilter, int storageMaxCount)
+    public void triggerUpdate(String storagePattern, IndexStateSet storageIndexStateSetFilter, int storageMaxCount)
     {
       synchronized(trigger)
       {
         this.storagePattern          = storagePattern;
-        this.storageIndexStateFilter = storageIndexStateFilter;
+        this.storageIndexStateSetFilter = storageIndexStateSetFilter;
         this.storageMaxCount         = storageMaxCount;
         this.setColorFlag            = true;
 
@@ -1086,7 +1165,7 @@ Dprintf.dprintf("process line by line");
       }
     }
 
-    /** trigger an update
+    /** trigger an update of the entry list
      * @param checkedStorageOnlyFlag checked storage only or null
      * @param entryPattern new entry pattern or null
      * @param newestEntriesOnlyFlag flag for newest entries only or null
@@ -1157,7 +1236,7 @@ Dprintf.dprintf("process line by line");
 
   UpdateStorageListThread updateStorageListThread;
   private String          storagePattern    = null;
-  private IndexStates     storageIndexState = IndexStates.ALL;
+  private IndexStateSet   storageIndexStateSet = new IndexStateSet(IndexStates.OK,IndexStates.ERROR);
   private int             storageMaxCount   = 100;
   private StorageDataMap  storageDataMap    = new StorageDataMap();
 
@@ -1666,7 +1745,7 @@ Dprintf.dprintf("process line by line");
         Widgets.layout(label,0,3,TableLayoutData.W);
 
         widgetStorageStateFilter = Widgets.newOptionMenu(composite);
-        widgetStorageStateFilter.setItems(new String[]{"*","ok","error","update","update requested"});
+        widgetStorageStateFilter.setItems(new String[]{"*","ok","error","update","update requested","error/update/update requested"});
         widgetStorageStateFilter.setText("*");
         Widgets.layout(widgetStorageStateFilter,0,4,TableLayoutData.W);
         widgetStorageStateFilter.addSelectionListener(new SelectionListener()
@@ -1678,13 +1757,14 @@ Dprintf.dprintf("process line by line");
           {
             Combo widget = (Combo)selectionEvent.widget;
             String indexStateText = widget.getText();
-            if      (indexStateText.equalsIgnoreCase("ok"))               storageIndexState = IndexStates.OK;
-            else if (indexStateText.equalsIgnoreCase("error"))            storageIndexState = IndexStates.ERROR;
-            else if (indexStateText.equalsIgnoreCase("update"))           storageIndexState = IndexStates.UPDATE;
-            else if (indexStateText.equalsIgnoreCase("update requested")) storageIndexState = IndexStates.UPDATE_REQUESTED;
-            else if (indexStateText.equalsIgnoreCase("*"))                storageIndexState = IndexStates.ALL;
-            else                                                          storageIndexState = IndexStates.UNKNOWN;
-            updateStorageListThread.triggerUpdate(storagePattern,storageIndexState,storageMaxCount);
+            if      (indexStateText.equalsIgnoreCase("ok"))               storageIndexStateSet = new IndexStateSet(IndexStates.OK);
+            else if (indexStateText.equalsIgnoreCase("error"))            storageIndexStateSet = new IndexStateSet(IndexStates.ERROR);
+            else if (indexStateText.equalsIgnoreCase("update"))           storageIndexStateSet = new IndexStateSet(IndexStates.UPDATE);
+            else if (indexStateText.equalsIgnoreCase("update requested")) storageIndexStateSet = new IndexStateSet(IndexStates.UPDATE_REQUESTED);
+            else if (indexStateText.equalsIgnoreCase("error/update/update requested")) storageIndexStateSet = new IndexStateSet(IndexStates.ERROR,IndexStates.UPDATE,IndexStates.UPDATE_REQUESTED);
+            else if (indexStateText.equalsIgnoreCase("*"))                storageIndexStateSet = new IndexStateSet(IndexStates.ALL);
+            else                                                          storageIndexStateSet = new IndexStateSet(IndexStates.UNKNOWN);
+            updateStorageListThread.triggerUpdate(storagePattern,storageIndexStateSet,storageMaxCount);
           }
         });
         widgetStorageStateFilter.setToolTipText("Storage states filter.");
@@ -1705,7 +1785,7 @@ Dprintf.dprintf("process line by line");
           {
             Combo widget = (Combo)selectionEvent.widget;
             storageMaxCount = Integer.parseInt(widget.getText());
-            updateStorageListThread.triggerUpdate(storagePattern,storageIndexState,storageMaxCount);
+            updateStorageListThread.triggerUpdate(storagePattern,storageIndexStateSet,storageMaxCount);
           }
         });
         widgetStorageMaxCount.setToolTipText("Max. number of entries in list.");
@@ -2440,7 +2520,7 @@ Dprintf.dprintf("process line by line");
       if ((storagePattern == null) || !storagePattern.equals(string))
       {
         storagePattern = string;
-        updateStorageListThread.triggerUpdate(storagePattern,storageIndexState,storageMaxCount);
+        updateStorageListThread.triggerUpdate(storagePattern,storageIndexStateSet,storageMaxCount);
       }
     }
     else
@@ -2448,7 +2528,7 @@ Dprintf.dprintf("process line by line");
       if (storagePattern != null)
       {
         storagePattern = null;
-        updateStorageListThread.triggerUpdate(storagePattern,storageIndexState,storageMaxCount);
+        updateStorageListThread.triggerUpdate(storagePattern,storageIndexStateSet,storageMaxCount);
       }
     }
   }
@@ -2550,7 +2630,7 @@ Dprintf.dprintf("process line by line");
                 }
               });
 
-              updateStorageListThread.triggerUpdate(storagePattern,storageIndexState,storageMaxCount);
+              updateStorageListThread.triggerUpdate(storagePattern,storageIndexStateSet,storageMaxCount);
             }
             catch (CommunicationError error)
             {
@@ -2669,7 +2749,7 @@ Dprintf.dprintf("process line by line");
                                               );
       if (errorCode == Errors.NONE)
       {
-        updateStorageListThread.triggerUpdate(storagePattern,storageIndexState,storageMaxCount);
+        updateStorageListThread.triggerUpdate(storagePattern,storageIndexStateSet,storageMaxCount);
       }
       else
       {
@@ -2751,7 +2831,7 @@ Dprintf.dprintf("process line by line");
                 }
               });
 
-              updateStorageListThread.triggerUpdate(storagePattern,storageIndexState,storageMaxCount);
+              updateStorageListThread.triggerUpdate(storagePattern,storageIndexStateSet,storageMaxCount);
             }
             catch (CommunicationError error)
             {
@@ -2873,7 +2953,7 @@ Dprintf.dprintf("process line by line");
                   }
                 });
 
-                updateStorageListThread.triggerUpdate(storagePattern,storageIndexState,storageMaxCount);
+                updateStorageListThread.triggerUpdate(storagePattern,storageIndexStateSet,storageMaxCount);
               }
               catch (CommunicationError error)
               {
@@ -2962,7 +3042,7 @@ Dprintf.dprintf("process line by line");
                                                 );
         if (errorCode == Errors.NONE)
         {
-          updateStorageListThread.triggerUpdate(storagePattern,storageIndexState,storageMaxCount);
+          updateStorageListThread.triggerUpdate(storagePattern,storageIndexStateSet,storageMaxCount);
         }
         else
         {
