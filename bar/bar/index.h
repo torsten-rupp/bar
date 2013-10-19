@@ -42,10 +42,11 @@ typedef enum
   INDEX_STATE_UPDATE,
   INDEX_STATE_ERROR,
 
-  INDEX_STATE_ALL,
-
   INDEX_STATE_UNKNOWN
 } IndexStates;
+typedef uint64 IndexStateSet;
+
+#define INDEX_STATE_ALL (INDEX_STATE_OK|INDEX_STATE_CREATE|INDEX_STATE_UPDATE_REQUESTED|INDEX_STATE_UPDATE)
 
 // index modes
 typedef enum
@@ -53,10 +54,11 @@ typedef enum
   INDEX_MODE_MANUAL,
   INDEX_MODE_AUTO,
 
-  INDEX_MODE_ALL,
-
   INDEX_MODE_UNKNOWN
 } IndexModes;
+typedef uint64 IndexModeSet;
+
+#define INDEX_MODE_ALL (INDEX_MODE_MANUAL|INDEX_MODE_AUTO)
 
 /***************************** Datatypes *******************************/
 
@@ -244,7 +246,7 @@ bool Index_findByName(DatabaseHandle *databaseHandle,
 \***********************************************************************/
 
 bool Index_findByState(DatabaseHandle *databaseHandle,
-                       IndexStates    indexState,
+                       IndexStateSet  indexStateSet,
                        int64          *storageId,
                        String         name,
                        uint64         *lastChecked
@@ -383,7 +385,7 @@ long Index_countState(DatabaseHandle *databaseHandle,
 
 Errors Index_initListStorage(DatabaseQueryHandle *databaseQueryHandle,
                              DatabaseHandle      *databaseHandle,
-                             IndexStates         indexState,
+                             IndexStateSet       indexStateSet,
                              String              pattern
                             );
 

@@ -73,6 +73,60 @@ LOCAL const struct
 #endif
 
 /***********************************************************************\
+* Name   : getIndexStateSetString
+* Purpose: get index state filter string
+* Input  : string        - string variable
+*          indexStateSet - index state set
+* Output : -
+* Return : string for IN statement
+* Notes  : -
+\***********************************************************************/
+
+LOCAL String getIndexStateSetString(String string, IndexStateSet indexStateSet)
+{
+  uint i;
+
+  String_clear(string);
+  for (i = INDEX_STATE_OK; i < INDEX_STATE_UNKNOWN; i++)
+  {
+    if ((indexStateSet & (1 << i)) != 0)
+    {
+      if (!String_isEmpty(string)) String_appendCString(string,",");
+      String_format(string,"%d",i);
+    }
+  }
+
+  return string;
+}
+
+/***********************************************************************\
+* Name   : getIndexModeSetString
+* Purpose: get index state filter string
+* Input  : string       - string variable
+*          indexModeSet - index mode set
+* Output : -
+* Return : string for IN statement
+* Notes  : -
+\***********************************************************************/
+
+LOCAL String getIndexModeSetString(String string, IndexModeSet indexModeSet)
+{
+  uint i;
+
+  String_clear(string);
+  for (i = INDEX_MODE_MANUAL; i < INDEX_MODE_UNKNOWN; i++)
+  {
+    if ((indexModeSet & (1 << i)) != 0)
+    {
+      if (!String_isEmpty(string)) String_appendCString(string,",");
+      String_format(string,"%d",i);
+    }
+  }
+
+  return string;
+}
+
+/***********************************************************************\
 * Name   : getREGEXPString
 * Purpose: get REGEXP filter string
 * Input  : string      - string variable
@@ -581,12 +635,13 @@ bool Index_findByName(DatabaseHandle *databaseHandle,
 }
 
 bool Index_findByState(DatabaseHandle *databaseHandle,
-                       IndexStates    indexState,
+                       IndexStateSet  indexStateSet,
                        int64          *storageId,
                        String         name,
                        uint64         *lastChecked
                       )
 {
+  String              indexStateSetString;
   DatabaseQueryHandle databaseQueryHandle;
   Errors              error;
   bool                result;
@@ -598,20 +653,25 @@ bool Index_findByState(DatabaseHandle *databaseHandle,
   if (name != NULL) String_clear(name);
   if (lastChecked != NULL) (*lastChecked) = 0LL;
 
+  indexStateSetString = String_new();
   error = Database_prepare(&databaseQueryHandle,
                            databaseHandle,
                            "SELECT id, \
                                    name, \
                                    STRFTIME('%%s',lastChecked) \
                             FROM storage \
-                            WHERE state=%d \
+                            WHERE state IN (%S) \
                            ",
-                           indexState
+//                            WHERE state=%d
+                           getIndexStateSetString(indexStateSetString,indexStateSet)
+//                           indexState
                           );
   if (error != ERROR_NONE)
   {
+    String_delete(indexStateSetString);
     return FALSE;
   }
+  String_delete(indexStateSetString);
   result = Database_getNextRow(&databaseQueryHandle,
                                "%lld %S %llu",
                                storageId,
@@ -996,17 +1056,18 @@ long Index_countState(DatabaseHandle *databaseHandle,
 
 Errors Index_initListStorage(DatabaseQueryHandle *databaseQueryHandle,
                              DatabaseHandle      *databaseHandle,
-                             IndexStates         indexState,
+                             IndexStateSet       indexStateSet,
                              String              pattern
                             )
 {
-  String regexpString;
+  String regexpString,indexStateSetString;
   Errors error;
 
   assert(databaseQueryHandle != NULL);
   assert(databaseHandle != NULL);
 
-  regexpString = String_new();
+  regexpString        = String_new();
+  indexStateSetString = String_new();
   error = Database_prepare(databaseQueryHandle,
                            databaseHandle,
                            "SELECT id, \
@@ -1019,16 +1080,14 @@ Errors Index_initListStorage(DatabaseQueryHandle *databaseQueryHandle,
                                    errorMessage \
                             FROM storage \
                             WHERE %S \
-                                  AND (%d=%d OR state=%d) \
-                                  AND state!=%d \
+                                  AND state IN (%S) \
                             ORDER BY created DESC \
                            ",
                            getREGEXPString(regexpString,"name",pattern),
-                           indexState,
-                           INDEX_STATE_ALL,
-                           indexState,
+                           getIndexStateSetString(indexStateSetString,indexStateSet),
                            INDEX_STATE_CREATE
                           );
+  String_delete(indexStateSetString);
   String_delete(regexpString);
 
   return error;
