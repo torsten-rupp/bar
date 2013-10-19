@@ -559,7 +559,6 @@ LOCAL const ConfigValue CONFIG_VALUES[] =
   CONFIG_STRUCT_VALUE_BOOLEAN  ("wait-first-volume",       JobNode,jobOptions.waitFirstVolumeFlag          ),
 
   CONFIG_VALUE_BEGIN_SECTION("schedule",-1),
-  CONFIG_STRUCT_VALUE_STRING   ("title",                   ScheduleNode,title                              ),
   CONFIG_STRUCT_VALUE_SPECIAL  ("date",                    ScheduleNode,date,                              configValueParseScheduleDate,configValueFormatInitScheduleDate,configValueFormatDoneScheduleDate,configValueFormatScheduleDate,NULL),
   CONFIG_STRUCT_VALUE_SPECIAL  ("weekdays",                ScheduleNode,weekDays,                          configValueParseScheduleWeekDays,configValueFormatInitScheduleWeekDays,configValueFormatDoneScheduleWeekDays,configValueFormatScheduleWeekDays,NULL),
   CONFIG_STRUCT_VALUE_SPECIAL  ("time",                    ScheduleNode,time,                              configValueParseScheduleTime,configValueFormatInitScheduleTime,configValueFormatDoneScheduleTime,configValueFormatScheduleTime,NULL),
@@ -580,7 +579,6 @@ LOCAL const Password        *serverPassword;
 LOCAL const char            *serverJobsDirectory;
 LOCAL const JobOptions      *serverDefaultJobOptions;
 LOCAL JobList               jobList;
-LOCAL ScheduleNode          *currentScheduleNode;
 LOCAL Thread                jobThread;
 LOCAL Thread                schedulerThread;
 LOCAL Thread                pauseThread;
@@ -643,8 +641,6 @@ LOCAL const char *getCryptPasswordModeName(PasswordModes passwordMode)
 
   return (z < SIZE_OF_ARRAY(CONFIG_VALUE_PASSWORD_MODES)) ? CONFIG_VALUE_PASSWORD_MODES[z].name : "";
 }
-
-
 
 /***********************************************************************\
 * Name   : copyScheduleNode
@@ -726,7 +722,16 @@ LOCAL ScheduleNode *duplicateScheduleNode(ScheduleNode *fromScheduleNode,
   return scheduleNode;
 }
 
-LOCAL ScheduleNode *deleteScheduleNode(ScheduleNode *scheduleNode)
+/***********************************************************************\
+* Name   : deleteScheduleNode
+* Purpose: delete schedule node
+* Input  : scheduleNode - schedule node
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void deleteScheduleNode(ScheduleNode *scheduleNode)
 {
   assert(scheduleNode != NULL);
 
@@ -1876,11 +1881,11 @@ LOCAL Errors getCryptPassword(void         *userData,
 *          error            - error code
 *          createStatusInfo - create status info data
 * Output : -
-* Return : bool TRUE to continue, FALSE to abort
+* Return :
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool updateCreateJobStatus(JobNode                *jobNode,
+LOCAL void updateCreateJobStatus(JobNode                *jobNode,
                                  Errors                 error,
                                  const CreateStatusInfo *createStatusInfo
                                 )
@@ -1949,8 +1954,6 @@ entriesPerSecond,bytesPerSecond,estimatedRestTime);
       String_setCString(jobNode->runningInfo.message,Error_getText(error));
     }
   }
-
-  return TRUE;
 }
 
 /***********************************************************************\
@@ -1960,11 +1963,11 @@ entriesPerSecond,bytesPerSecond,estimatedRestTime);
 *          error             - error code
 *          restoreStatusInfo - create status info data
 * Output : -
-* Return : bool TRUE to continue, FALSE to abort
+* Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool updateRestoreJobStatus(JobNode                 *jobNode,
+LOCAL void updateRestoreJobStatus(JobNode                 *jobNode,
                                   Errors                  error,
                                   const RestoreStatusInfo *restoreStatusInfo
                                  )
@@ -2015,8 +2018,6 @@ entriesPerSecond,bytesPerSecond,estimatedRestTime);
     jobNode->runningInfo.volumeNumber          = 0; // ???
     jobNode->runningInfo.volumeProgress        = 0.0; // ???
   }
-
-  return TRUE;
 }
 
 /***********************************************************************\
@@ -3865,6 +3866,7 @@ LOCAL void serverCommand_authorize(ClientInfo *clientInfo, uint id, const String
 //fprintf(stderr,"%s, %d: encryptedPassword='%s' %d\n",__FILE__,__LINE__,String_cString(encryptedPassword),String_length(encryptedPassword));
     clientInfo->authorizationState = AUTHORIZATION_STATE_FAIL;
     sendClientResult(clientInfo,id,TRUE,ERROR_AUTHORIZATION,"authorization failure");
+    printInfo(1,"Client authorization failure: '%s:%u'\n",String_cString(clientInfo->network.name),clientInfo->network.port);
   }
 
   // free resources
@@ -7910,8 +7912,8 @@ LOCAL void serverCommand_indexStorageInfo(ClientInfo *clientInfo, uint id, const
 LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
 {
   uint                maxCount;
-  IndexStates         indexState;
-  IndexModes          indexMode;
+  IndexStateSet       indexStateSet;
+  IndexModeSet        indexModeSet;
   String              patternText;
   Errors              error;
   DatabaseQueryHandle databaseQueryHandle;
@@ -7924,6 +7926,8 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const
   DatabaseId          storageId;
   uint64              storageDateTime;
   uint64              size;
+  IndexStates         indexState;
+  IndexModes          indexMode;
   uint64              lastCheckedDateTime;
 
   assert(clientInfo != NULL);
@@ -7935,12 +7939,12 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected maxCount=<n>");
     return;
   }
-  if (!StringMap_getEnum(argumentMap,"indexState",&indexState,(StringMapParseEnumFunction)Index_parseState,0))
+  if (!StringMap_getEnumSet(argumentMap,"indexState",&indexStateSet,(StringMapParseEnumFunction)Index_parseState,INDEX_STATE_ALL,"|",0))
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected indexState=OK|CREATE|UPDATE_REQUESTED|UPDATE|ERROR|*");
     return;
   }
-  if (!StringMap_getEnum(argumentMap,"indexMode",&indexMode,(StringMapParseEnumFunction)Index_parseMode,0))
+  if (!StringMap_getEnumSet(argumentMap,"indexMode",&indexModeSet,(StringMapParseEnumFunction)Index_parseMode,INDEX_MODE_ALL,"|",0))
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected indexMode=MANUAL|AUTO|*");
     return;
@@ -7964,7 +7968,7 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, uint id, const
     // list index
     error = Index_initListStorage(&databaseQueryHandle,
                                   indexDatabaseHandle,
-                                  indexState,
+                                  indexStateSet,
                                   patternText
                                  );
     if (error != ERROR_NONE)
@@ -9579,7 +9583,7 @@ LOCAL void networkClientThreadCode(ClientInfo *clientInfo)
         )
   {
     // check authorization (if not in server debug mode)
-    if (globalOptions.serverDebugFlag || (clientInfo->authorizationState == commandMsg.authorizationState))
+    if (globalOptions.serverDebugFlag || (commandMsg.authorizationState == clientInfo->authorizationState))
     {
       // execute command
       commandMsg.serverCommandFunction(clientInfo,
@@ -9996,6 +10000,7 @@ LOCAL void processCommand(ClientInfo *clientInfo, const String command)
   #ifdef SERVER_DEBUG
     fprintf(stderr,"%s,%d: command=%s\n",__FILE__,__LINE__,String_cString(command));
   #endif // SERVER_DEBUG
+
   // parse command
   if (!parseCommand(&commandMsg,command))
   {
@@ -10007,7 +10012,7 @@ LOCAL void processCommand(ClientInfo *clientInfo, const String command)
   {
     case CLIENT_TYPE_BATCH:
       // check authorization (if not in server debug mode)
-      if (globalOptions.serverDebugFlag || (clientInfo->authorizationState == commandMsg.authorizationState))
+      if (globalOptions.serverDebugFlag || (commandMsg.authorizationState == clientInfo->authorizationState))
       {
         // execute
         commandMsg.serverCommandFunction(clientInfo,
@@ -10018,18 +10023,47 @@ LOCAL void processCommand(ClientInfo *clientInfo, const String command)
       else
       {
         // authorization failure -> mark for disconnect
-        sendClientResult(clientInfo,commandMsg.id,TRUE,ERROR_AUTHORIZATION,"authorization failure");
         clientInfo->authorizationState = AUTHORIZATION_STATE_FAIL;
+        sendClientResult(clientInfo,commandMsg.id,TRUE,ERROR_AUTHORIZATION,"authorization failure");
       }
 
       // free resources
       freeCommandMsg(&commandMsg,NULL);
       break;
     case CLIENT_TYPE_NETWORK:
-      // send command to client thread
-      MsgQueue_put(&clientInfo->network.commandMsgQueue,&commandMsg,sizeof(commandMsg));
+      switch (clientInfo->authorizationState)
+      {
+        case AUTHORIZATION_STATE_WAITING:
+          // check authorization (if not in server debug mode)
+          if (globalOptions.serverDebugFlag || (commandMsg.authorizationState == AUTHORIZATION_STATE_WAITING))
+          {
+            // execute command
+            commandMsg.serverCommandFunction(clientInfo,
+                                             commandMsg.id,
+                                             commandMsg.argumentMap
+                                            );
+          }
+          else
+          {
+            // authorization failure -> mark for disconnect
+            clientInfo->authorizationState = AUTHORIZATION_STATE_FAIL;
+            sendClientResult(clientInfo,commandMsg.id,TRUE,ERROR_AUTHORIZATION,"authorization failure");
+          }
+
+          // free resources
+          freeCommandMsg(&commandMsg,NULL);
+          break;
+        case AUTHORIZATION_STATE_OK:
+          // send command to client thread for asynchronous processing
+          MsgQueue_put(&clientInfo->network.commandMsgQueue,&commandMsg,sizeof(commandMsg));
+          break;
+        case AUTHORIZATION_STATE_FAIL:
+          break;
+      }
       break;
     default:
+      // free resources
+      freeCommandMsg(&commandMsg,NULL);
       #ifndef NDEBUG
         HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
       #endif /* NDEBUG */
@@ -10380,9 +10414,6 @@ Errors Server_run(uint             port,
         }
         else
         {
-          // client disconnected
-          printInfo(1,"Disconnected client '%s:%u'\n",String_cString(clientNode->clientInfo.network.name),clientNode->clientInfo.network.port);
-
           // remove from client list
           disconnectClientNode = clientNode;
           clientNode = List_remove(&clientList,disconnectClientNode);
@@ -10396,10 +10427,10 @@ Errors Server_run(uint             port,
             case AUTHORIZATION_STATE_WAITING:
               break;
             case AUTHORIZATION_STATE_OK:
+              // remove from authorization fail list
               authorizationFailNode = disconnectClientNode->clientInfo.authorizationFailNode;
               if (authorizationFailNode != NULL)
               {
-                // remove from authorization fail list
                 List_removeAndFree(&authorizationFailList,
                                    authorizationFailNode,
                                    CALLBACK((ListNodeFreeFunction)freeAuthorizationFailNode,NULL)
@@ -10412,16 +10443,18 @@ Errors Server_run(uint             port,
               if (authorizationFailNode == NULL)
               {
                 authorizationFailNode = newAuthorizationFailNode(disconnectClientNode->clientInfo.network.name);
+                assert(authorizationFailNode != NULL);
                 List_append(&authorizationFailList,authorizationFailNode);
               }
-              assert(authorizationFailNode != NULL);
               authorizationFailNode->count++;
               authorizationFailNode->lastTimestamp = Misc_getTimestamp();
               break;
           }
+          printInfo(1,"Disconnected client '%s:%u'\n",String_cString(disconnectClientNode->clientInfo.network.name),disconnectClientNode->clientInfo.network.port);
 
           // free resources
           deleteClient(disconnectClientNode);
+
         }
       }
       else
@@ -10436,8 +10469,6 @@ Errors Server_run(uint             port,
     {
       if (clientNode->clientInfo.authorizationState == AUTHORIZATION_STATE_FAIL)
       {
-        printInfo(1,"Disconnected client '%s:%u': authorization failure\n",String_cString(clientNode->clientInfo.network.name),clientNode->clientInfo.network.port);
-
         // remove from connected list
         disconnectClientNode = clientNode;
         clientNode = List_remove(&clientList,disconnectClientNode);
@@ -10447,13 +10478,16 @@ Errors Server_run(uint             port,
 
         // add to/update authorization fail list
         authorizationFailNode = disconnectClientNode->clientInfo.authorizationFailNode;
-        if (authorizationFailNode != NULL)
+        if (authorizationFailNode == NULL)
         {
           authorizationFailNode = newAuthorizationFailNode(disconnectClientNode->clientInfo.network.name);
+          assert(authorizationFailNode != NULL);
+          List_append(&authorizationFailList,authorizationFailNode);
         }
-        assert(authorizationFailNode != NULL);
         authorizationFailNode->count++;
         authorizationFailNode->lastTimestamp = Misc_getTimestamp();
+
+        printInfo(1,"Disconnected client '%s:%u'\n",String_cString(disconnectClientNode->clientInfo.network.name),disconnectClientNode->clientInfo.network.port);
       }
       else
       {
@@ -10467,7 +10501,16 @@ Errors Server_run(uint             port,
     authorizationFailNode = authorizationFailList.head;
     while (authorizationFailNode != NULL)
     {
-      if (nowTimestamp > (authorizationFailNode->lastTimestamp+(uint64)MAX_AUTHORIZATION_HISTORY_KEEP_TIME*1000LL))
+      // find active client
+      LIST_ITERATE(&clientList,clientNode)
+      {
+        if (clientNode->clientInfo.authorizationFailNode == authorizationFailNode) break;
+      }
+
+      // check if authorization fail timed out for not active clients
+      if (   (clientNode == NULL)
+          && (nowTimestamp > (authorizationFailNode->lastTimestamp+(uint64)MAX_AUTHORIZATION_HISTORY_KEEP_TIME*1000LL))
+         )
       {
         authorizationFailNode = List_removeAndFree(&authorizationFailList,
                                                    authorizationFailNode,
@@ -10487,7 +10530,16 @@ Errors Server_run(uint             port,
       oldestAuthorizationFailNode = authorizationFailList.head;
       LIST_ITERATE(&authorizationFailList,authorizationFailNode)
       {
-        if (authorizationFailNode->lastTimestamp < oldestAuthorizationFailNode->lastTimestamp)
+        // find active client
+        LIST_ITERATE(&clientList,clientNode)
+        {
+          if (clientNode->clientInfo.authorizationFailNode == authorizationFailNode) break;
+        }
+
+        // get oldest not active client
+        if (   (clientNode == NULL)
+            && (authorizationFailNode->lastTimestamp < oldestAuthorizationFailNode->lastTimestamp)
+           )
         {
           oldestAuthorizationFailNode = authorizationFailNode;
         }
