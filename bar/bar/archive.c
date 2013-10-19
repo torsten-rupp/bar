@@ -3357,7 +3357,11 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
           {
             if (globalOptions.verboseLevel >= 3)
             {
-              printWarning("Skipped unknown chunk '%s' (offset %ld). Switch to scan mode.\n",Chunk_idToString(chunkHeader.id),chunkHeader.offset);
+              printWarning("Skipped unknown chunk '%s' (offset %ld) in '%s'. Switch to scan mode.\n",
+                           Chunk_idToString(chunkHeader.id),
+                           chunkHeader.offset,
+                           String_cString(archiveInfo->printableName)
+                          );
             }
 
             scanFlag = TRUE;
@@ -3374,7 +3378,11 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
         {
           // report unknown chunk
           archiveInfo->pendingError = ERROR_UNKNOWN_CHUNK;
-          printWarning("Skipped unknown chunk '%s' (offset %ld). Switch to scan mode.\n",Chunk_idToString(chunkHeader.id),chunkHeader.offset);
+          printWarning("Skipped unknown chunk '%s' (offset %ld) in '%s'. Switch to scan mode.\n",
+                       Chunk_idToString(chunkHeader.id),
+                       chunkHeader.offset,
+                       String_cString(archiveInfo->printableName)
+                      );
           return FALSE;
         }
         break;
@@ -5384,7 +5392,11 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
           {
             if (globalOptions.verboseLevel >= 3)
             {
-              printWarning("Skipped unknown chunk '%s' (offset %ld). Switch to scan mode.\n",Chunk_idToString(chunkHeader.id),chunkHeader.offset);
+              printWarning("Skipped unknown chunk '%s' (offset %ld) in '%s'. Switch to scan mode.\n",
+                           Chunk_idToString(chunkHeader.id),
+                           chunkHeader.offset,
+                           String_cString(archiveInfo->printableName)
+                          );
             }
 
             scanMode = TRUE;
@@ -5932,7 +5944,11 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
             // unknown sub-chunk -> skip
             if (globalOptions.verboseLevel >= 3)
             {
-              printWarning("Skipped unknown sub-chunk '%s' (offset %ld) - skipped.\n",Chunk_idToString(subChunkHeader.id),subChunkHeader.offset);
+              printWarning("Skipped unknown sub-chunk '%s' (offset %ld) in '%s'.\n",
+                           Chunk_idToString(subChunkHeader.id),
+                           subChunkHeader.offset,
+                           String_cString(archiveInfo->printableName)
+                          );
             }
             error = Chunk_skipSub(&archiveEntryInfo->file.chunkFile.info,&subChunkHeader);
             if (error != ERROR_NONE)
@@ -6422,7 +6438,11 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
             // unknown sub-chunk -> skip
             if (globalOptions.verboseLevel >= 3)
             {
-              printWarning("Skipped unknown sub-chunk '%s' (offset %ld) - skipped.\n",Chunk_idToString(subChunkHeader.id),subChunkHeader.offset);
+              printWarning("Skipped unknown sub-chunk '%s' (offset %ld) in '%s'.\n",
+                           Chunk_idToString(subChunkHeader.id),
+                           subChunkHeader.offset,
+                           String_cString(archiveInfo->printableName)
+                          );
             }
             error = Chunk_skipSub(&archiveEntryInfo->image.chunkImage.info,&subChunkHeader);
             if (error != ERROR_NONE)
@@ -6813,7 +6833,11 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
             // unknown sub-chunk -> skip
             if (globalOptions.verboseLevel >= 3)
             {
-              printWarning("Skipped unknown sub-chunk '%s' (offset %ld) - skipped.\n",Chunk_idToString(subChunkHeader.id),subChunkHeader.offset);
+              printWarning("Skipped unknown sub-chunk '%s' (offset %ld).\n",
+                           Chunk_idToString(subChunkHeader.id),
+                           subChunkHeader.offset,
+                           String_cString(archiveInfo->printableName)
+                          );
             }
             error = Chunk_skipSub(&archiveEntryInfo->directory.chunkDirectory.info,&subChunkHeader);
             if (error != ERROR_NONE)
@@ -7191,7 +7215,11 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
             // unknown sub-chunk -> skip
             if (globalOptions.verboseLevel >= 3)
             {
-              printWarning("Skipped unknown sub-chunk '%s' (offset %ld) - skipped.\n",Chunk_idToString(subChunkHeader.id),subChunkHeader.offset);
+              printWarning("Skipped unknown sub-chunk '%s' (offset %ld).\n",
+                           Chunk_idToString(subChunkHeader.id),
+                           subChunkHeader.offset,
+                           String_cString(archiveInfo->printableName)
+                          );
             }
             error = Chunk_skipSub(&archiveEntryInfo->link.chunkLink.info,&subChunkHeader);
             if (error != ERROR_NONE)
@@ -7772,7 +7800,11 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
             // unknown sub-chunk -> skip
             if (globalOptions.verboseLevel >= 3)
             {
-              printWarning("Skipped unknown sub-chunk '%s' (offset %ld) - skipped.\n",Chunk_idToString(subChunkHeader.id),subChunkHeader.offset);
+              printWarning("Skipped unknown sub-chunk '%s' (offset %ld).\n",
+                           Chunk_idToString(subChunkHeader.id),
+                           subChunkHeader.offset,
+                           String_cString(archiveInfo->printableName)
+                          );
             }
             error = Chunk_skipSub(&archiveEntryInfo->hardLink.chunkHardLink.info,&subChunkHeader);
             if (error != ERROR_NONE)
@@ -8169,7 +8201,11 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
             // unknown sub-chunk -> skip
             if (globalOptions.verboseLevel >= 3)
             {
-              printWarning("Skipped unknown sub-chunk '%s' (offset %ld) - skipped.\n",Chunk_idToString(subChunkHeader.id),subChunkHeader.offset);
+              printWarning("Skipped unknown sub-chunk '%s' (offset %ld).\n",
+                           Chunk_idToString(subChunkHeader.id),
+                           subChunkHeader.offset,
+                           String_cString(archiveInfo->printableName)
+                          );
             }
             error = Chunk_skipSub(&archiveEntryInfo->special.chunkSpecial.info,&subChunkHeader);
             if (error != ERROR_NONE)
