@@ -62,11 +62,11 @@ typedef struct
 * @param   error            - error code
 * @param   createStatusInfo - create status info
 * Output : -
-* Return : bool TRUE to continue, FALSE to abort
+* Return : -
 * Notes  : -
 \***********************************************************************/
 
-typedef bool(*CreateStatusInfoFunction)(void                   *userData,
+typedef void(*CreateStatusInfoFunction)(void                   *userData,
                                         Errors                 error,
                                         const CreateStatusInfo *createStatusInfo
                                        );

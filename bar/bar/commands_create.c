@@ -621,7 +621,42 @@ fprintf(stderr,"%s,%d: %s %d\n",__FILE__,__LINE__,s,incrementalFileInfo->state);
 }
 
 /***********************************************************************\
-* Name   : checkFileChanged
+* Name   : isAborted
+* Purpose: check if job is aborted
+* Input  : createInfo - create info
+* Output : -
+* Return : TRUE iff aborted
+* Notes  : -
+\***********************************************************************/
+
+LOCAL INLINE bool isAborted(const CreateInfo *createInfo)
+{
+  assert(createInfo != NULL);
+
+  return (createInfo->requestedAbortFlag != NULL) && (*createInfo->requestedAbortFlag);
+}
+
+/***********************************************************************\
+* Name   : pauseStorage
+* Purpose: pause storage
+* Input  : createInfo - create info
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void pauseStorage(const CreateInfo *createInfo)
+{
+  assert(createInfo != NULL);
+
+  while ((createInfo->pauseStorageFlag != NULL) && (*createInfo->pauseStorageFlag))
+  {
+    Misc_udelay(500L*1000L);
+  }
+}
+
+/***********************************************************************\
+* Name   : isFileChanged
 * Purpose: check if file changed
 * Input  : namesDictionary - names dictionary
 *          fileName        - file name
@@ -631,10 +666,10 @@ fprintf(stderr,"%s,%d: %s %d\n",__FILE__,__LINE__,s,incrementalFileInfo->state);
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool checkFileChanged(Dictionary     *namesDictionary,
-                            const String   fileName,
-                            const FileInfo *fileInfo
-                           )
+LOCAL bool isFileChanged(Dictionary     *namesDictionary,
+                         const String   fileName,
+                         const FileInfo *fileInfo
+                        )
 {
   union
   {
@@ -707,29 +742,21 @@ LOCAL void addIncrementalList(Dictionary     *namesDictionary,
 * Purpose: update status info
 * Input  : createInfo - create info
 * Output : -
-* Return : TRUE to continue, FALSE if user aborted
+* Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool updateStatusInfo(CreateInfo *createInfo)
+LOCAL void updateStatusInfo(CreateInfo *createInfo)
 {
-  bool continueFlag;
-
   assert(createInfo != NULL);
 
   if (createInfo->statusInfoFunction != NULL)
   {
-    continueFlag = createInfo->statusInfoFunction(createInfo->statusInfoUserData,
-                                                  createInfo->failError,
-                                                  &createInfo->statusInfo
-                                                 );
+    createInfo->statusInfoFunction(createInfo->statusInfoUserData,
+                                   createInfo->failError,
+                                   &createInfo->statusInfo
+                                  );
   }
-  else
-  {
-    continueFlag = TRUE;
-  }
-
-  return continueFlag;
 }
 
 /***********************************************************************\
@@ -738,16 +765,15 @@ LOCAL bool updateStatusInfo(CreateInfo *createInfo)
 * Input  : createInfo        - create info
 *          storageStatusInfo - storage status info
 * Output : -
-* Return : TRUE to continue, FALSE if user aborted
+* Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool updateStorageStatusInfo(CreateInfo              *createInfo,
+LOCAL void updateStorageStatusInfo(CreateInfo              *createInfo,
                                    const StorageStatusInfo *storageStatusInfo
                                   )
 {
   SemaphoreLock semaphoreLock;
-  bool          continueFlag;
 
   assert(createInfo != NULL);
   assert(storageStatusInfo != NULL);
@@ -756,10 +782,8 @@ LOCAL bool updateStorageStatusInfo(CreateInfo              *createInfo,
   {
     createInfo->statusInfo.volumeNumber   = storageStatusInfo->volumeNumber;
     createInfo->statusInfo.volumeProgress = storageStatusInfo->volumeProgress;
-    continueFlag = updateStatusInfo(createInfo);
+    updateStatusInfo(createInfo);
   }
-
-  return continueFlag;
 }
 
 /***********************************************************************\
@@ -803,7 +827,7 @@ LOCAL bool isExcluded(const PatternList *excludePatternList,
 }
 
 /***********************************************************************\
-* Name   : checkNoBackup
+* Name   : isNoBackup
 * Purpose: check if file .nobackup/.NOBACKUP exists in sub-directory
 * Input  : pathName - path name
 * Output : -
@@ -812,7 +836,7 @@ LOCAL bool isExcluded(const PatternList *excludePatternList,
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool checkNoBackup(const String pathName)
+LOCAL bool isNoBackup(const String pathName)
 {
   String fileName;
   bool   haveNoBackupFlag;
@@ -832,7 +856,7 @@ LOCAL bool checkNoBackup(const String pathName)
 }
 
 /***********************************************************************\
-* Name   : checkNoDumpAttribute
+* Name   : isNoDumpAttribute
 * Purpose: check if file attribute 'no dump' is set
 * Input  : fileInfo   - file info
 *          jobOptions - job options
@@ -842,7 +866,7 @@ LOCAL bool checkNoBackup(const String pathName)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL_INLINE bool checkNoDumpAttribute(const FileInfo *fileInfo, const JobOptions *jobOptions)
+LOCAL_INLINE bool isNoDumpAttribute(const FileInfo *fileInfo, const JobOptions *jobOptions)
 {
   assert(fileInfo != NULL);
   assert(jobOptions != NULL);
@@ -1403,7 +1427,6 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
   StringList          nameList;
   String              basePath;
   String              name;
-  bool                abortFlag;
   EntryNode           *includeEntryNode;
   StringTokenizer     fileNameTokenizer;
   String              string;
@@ -1429,12 +1452,10 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
   name     = String_new();
 
   // process include entries
-  abortFlag        = FALSE;
   includeEntryNode = createInfo->includeEntryList->head;
-  while (   !abortFlag
-         && ((createInfo->requestedAbortFlag == NULL) || !(*createInfo->requestedAbortFlag))
+  while (   (includeEntryNode != NULL)
          && (createInfo->failError == ERROR_NONE)
-         && (includeEntryNode != NULL)
+         && !isAborted(createInfo)
         )
   {
     // pause
@@ -1465,7 +1486,7 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
     // find files
     StringList_append(&nameList,basePath);
     while (   (createInfo->failError == ERROR_NONE)
-           && ((createInfo->requestedAbortFlag == NULL) || !(*createInfo->requestedAbortFlag))
+           && !isAborted(createInfo)
            && !StringList_isEmpty(&nameList)
           )
     {
@@ -1489,7 +1510,7 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
           continue;
         }
 
-        if (!checkNoDumpAttribute(&fileInfo,createInfo->jobOptions))
+        if (!isNoDumpAttribute(&fileInfo,createInfo->jobOptions))
         {
           switch (fileInfo.type)
           {
@@ -1503,14 +1524,14 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
                 {
                   case ENTRY_TYPE_FILE:
                     if (   !createInfo->partialFlag
-                        || checkFileChanged(&createInfo->namesDictionary,name,&fileInfo)
+                        || isFileChanged(&createInfo->namesDictionary,name,&fileInfo)
                        )
                     {
                       SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
                       {
                         createInfo->statusInfo.totalEntries++;
                         createInfo->statusInfo.totalBytes += fileInfo.size;
-                        abortFlag |= !updateStatusInfo(createInfo);
+                        updateStatusInfo(createInfo);
                       }
                     }
                     break;
@@ -1525,19 +1546,19 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
                 // add to known names history
                 Dictionary_add(&duplicateNamesDictionary,String_cString(name),String_length(name),NULL,0);
 
-                if (!checkNoBackup(name))
+                if (!isNoBackup(name))
                 {
                   switch (includeEntryNode->type)
                   {
                     case ENTRY_TYPE_FILE:
                       if (   !createInfo->partialFlag
-                          || checkFileChanged(&createInfo->namesDictionary,name,&fileInfo)
+                          || isFileChanged(&createInfo->namesDictionary,name,&fileInfo)
                          )
                       {
                         SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
                         {
                           createInfo->statusInfo.totalEntries++;
-                          abortFlag |= !updateStatusInfo(createInfo);
+                          updateStatusInfo(createInfo);
                         }
                       }
                       break;
@@ -1552,7 +1573,7 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
                     // read directory contents
                     fileName = String_new();
                     while (   (createInfo->failError == ERROR_NONE)
-                           && ((createInfo->requestedAbortFlag == NULL) || !(*createInfo->requestedAbortFlag))
+                           && !isAborted(createInfo)
                            && !File_endOfDirectoryList(&directoryListHandle)
                           )
                     {
@@ -1580,7 +1601,7 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
                           continue;
                         }
 
-                        if (!checkNoDumpAttribute(&fileInfo,createInfo->jobOptions))
+                        if (!isNoDumpAttribute(&fileInfo,createInfo->jobOptions))
                         {
                           switch (fileInfo.type)
                           {
@@ -1594,14 +1615,14 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
                                 {
                                   case ENTRY_TYPE_FILE:
                                     if (   !createInfo->partialFlag
-                                        || checkFileChanged(&createInfo->namesDictionary,fileName,&fileInfo)
+                                        || isFileChanged(&createInfo->namesDictionary,fileName,&fileInfo)
                                        )
                                     {
                                       SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
                                       {
                                         createInfo->statusInfo.totalEntries++;
                                         createInfo->statusInfo.totalBytes += fileInfo.size;
-                                        abortFlag |= !updateStatusInfo(createInfo);
+                                        updateStatusInfo(createInfo);
                                       }
                                     }
                                     break;
@@ -1619,13 +1640,13 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
                               {
                                 case ENTRY_TYPE_FILE:
                                   if (   !createInfo->partialFlag
-                                      || checkFileChanged(&createInfo->namesDictionary,fileName,&fileInfo)
+                                      || isFileChanged(&createInfo->namesDictionary,fileName,&fileInfo)
                                      )
                                   {
                                     SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
                                     {
                                       createInfo->statusInfo.totalEntries++;
-                                      abortFlag |= !updateStatusInfo(createInfo);
+                                      updateStatusInfo(createInfo);
                                     }
                                   }
                                   break;
@@ -1638,14 +1659,14 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
                               {
                                 case ENTRY_TYPE_FILE:
                                   if (  !createInfo->partialFlag
-                                      || checkFileChanged(&createInfo->namesDictionary,fileName,&fileInfo)
+                                      || isFileChanged(&createInfo->namesDictionary,fileName,&fileInfo)
                                      )
                                   {
                                     SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
                                     {
                                       createInfo->statusInfo.totalEntries++;
                                       createInfo->statusInfo.totalBytes += fileInfo.size;
-                                      abortFlag |= !updateStatusInfo(createInfo);
+                                      updateStatusInfo(createInfo);
                                     }
                                   }
                                   break;
@@ -1658,7 +1679,7 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
                               {
                                 case ENTRY_TYPE_FILE:
                                   if (  !createInfo->partialFlag
-                                      || checkFileChanged(&createInfo->namesDictionary,fileName,&fileInfo)
+                                      || isFileChanged(&createInfo->namesDictionary,fileName,&fileInfo)
                                      )
                                   {
                                     SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
@@ -1671,7 +1692,7 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
                                       {
                                         createInfo->statusInfo.totalBytes += fileInfo.size;
                                       }
-                                      abortFlag |= !updateStatusInfo(createInfo);
+                                      updateStatusInfo(createInfo);
                                     }
                                   }
                                   break;
@@ -1682,7 +1703,7 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
                                     {
                                       createInfo->statusInfo.totalEntries++;
                                       if (fileInfo.size >= 0LL) createInfo->statusInfo.totalBytes += fileInfo.size;
-                                      abortFlag |= !updateStatusInfo(createInfo);
+                                      updateStatusInfo(createInfo);
                                     }
                                   }
                                   break;
@@ -1711,13 +1732,13 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
                 {
                   case ENTRY_TYPE_FILE:
                     if (   !createInfo->partialFlag
-                        || checkFileChanged(&createInfo->namesDictionary,name,&fileInfo)
+                        || isFileChanged(&createInfo->namesDictionary,name,&fileInfo)
                        )
                     {
                       SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
                       {
                         createInfo->statusInfo.totalEntries++;
-                        abortFlag |= !updateStatusInfo(createInfo);
+                        updateStatusInfo(createInfo);
                       }
                     }
                     break;
@@ -1735,14 +1756,14 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
                 {
                   case ENTRY_TYPE_FILE:
                     if (   !createInfo->partialFlag
-                        || checkFileChanged(&createInfo->namesDictionary,name,&fileInfo)
+                        || isFileChanged(&createInfo->namesDictionary,name,&fileInfo)
                        )
                     {
                       SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
                       {
                         createInfo->statusInfo.totalEntries++;
                         createInfo->statusInfo.totalBytes += fileInfo.size;
-                        abortFlag |= !updateStatusInfo(createInfo);
+                        updateStatusInfo(createInfo);
                       }
                     }
                     break;
@@ -1760,13 +1781,13 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
                 {
                   case ENTRY_TYPE_FILE:
                     if (   !createInfo->partialFlag
-                        || checkFileChanged(&createInfo->namesDictionary,name,&fileInfo)
+                        || isFileChanged(&createInfo->namesDictionary,name,&fileInfo)
                        )
                     {
                       SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
                       {
                         createInfo->statusInfo.totalEntries++;
-                        abortFlag |= !updateStatusInfo(createInfo);
+                        updateStatusInfo(createInfo);
                       }
                     }
                     break;
@@ -1785,7 +1806,7 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
                       {
                         createInfo->statusInfo.totalEntries++;
                         if (fileInfo.size >= 0LL) createInfo->statusInfo.totalBytes += fileInfo.size;
-                        abortFlag |= !updateStatusInfo(createInfo);
+                        updateStatusInfo(createInfo);
                       }
                     }
                     break;
@@ -1834,7 +1855,6 @@ LOCAL void collectorThreadCode(CreateInfo *createInfo)
   SemaphoreLock       semaphoreLock;
   String              fileName;
   Dictionary          hardLinksDictionary;
-  bool                abortFlag;
   EntryNode           *includeEntryNode;
   StringTokenizer     fileNameTokenizer;
   String              string;
@@ -1874,12 +1894,10 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
   AUTOFREE_ADD(&autoFreeList,&hardLinksDictionary,{ Dictionary_done(&hardLinksDictionary,NULL,NULL); });
 
   // process include entries
-  abortFlag        = FALSE;
   includeEntryNode = createInfo->includeEntryList->head;
-  while (   !abortFlag
-         && ((createInfo->requestedAbortFlag == NULL) || !(*createInfo->requestedAbortFlag))
+  while (   (includeEntryNode != NULL)
          && (createInfo->failError == ERROR_NONE)
-         && (includeEntryNode != NULL)
+         && !isAborted(createInfo)
         )
   {
     // pause
@@ -1909,10 +1927,9 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
 
     // find files
     StringList_append(&nameList,basePath);
-    while (   !abortFlag
-           && ((createInfo->requestedAbortFlag == NULL) || !(*createInfo->requestedAbortFlag))
+    while (   !StringList_isEmpty(&nameList)
            && (createInfo->failError == ERROR_NONE)
-           && !StringList_isEmpty(&nameList)
+           && !isAborted(createInfo)
           )
     {
       // pause
@@ -1940,12 +1957,12 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
           SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
           {
             createInfo->statusInfo.errorEntries++;
-            abortFlag |= !updateStatusInfo(createInfo);
+            updateStatusInfo(createInfo);
           }
           continue;
         }
 
-        if (!checkNoDumpAttribute(&fileInfo,createInfo->jobOptions))
+        if (!isNoDumpAttribute(&fileInfo,createInfo->jobOptions))
         {
           switch (fileInfo.type)
           {
@@ -1959,7 +1976,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                 {
                   case ENTRY_TYPE_FILE:
                     if (   !createInfo->partialFlag
-                        || checkFileChanged(&createInfo->namesDictionary,name,&fileInfo)
+                        || isFileChanged(&createInfo->namesDictionary,name,&fileInfo)
                        )
                     {
                       // add to entry list
@@ -1980,13 +1997,13 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                 // add to known names history
                 Dictionary_add(&duplicateNamesDictionary,String_cString(name),String_length(name),NULL,0);
 
-                if (!checkNoBackup(name))
+                if (!isNoBackup(name))
                 {
                   switch (includeEntryNode->type)
                   {
                     case ENTRY_TYPE_FILE:
                       if (   !createInfo->partialFlag
-                          || checkFileChanged(&createInfo->namesDictionary,name,&fileInfo)
+                          || isFileChanged(&createInfo->namesDictionary,name,&fileInfo)
                          )
                       {
                         // add to entry list
@@ -2006,7 +2023,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                   {
                     // read directory content
                     while (   (createInfo->failError == ERROR_NONE)
-                           && ((createInfo->requestedAbortFlag == NULL) || !(*createInfo->requestedAbortFlag))
+                           && !isAborted(createInfo)
                            && !File_endOfDirectoryList(&directoryListHandle)
                           )
                     {
@@ -2027,7 +2044,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                         {
                           createInfo->statusInfo.errorEntries++;
                           createInfo->statusInfo.errorBytes += (uint64)fileInfo.size;
-                          abortFlag |= !updateStatusInfo(createInfo);
+                          updateStatusInfo(createInfo);
                         }
                         continue;
                       }
@@ -2047,12 +2064,12 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                           SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
                           {
                             createInfo->statusInfo.errorEntries++;
-                            abortFlag |= !updateStatusInfo(createInfo);
+                            updateStatusInfo(createInfo);
                           }
                           continue;
                         }
 
-                        if (!checkNoDumpAttribute(&fileInfo,createInfo->jobOptions))
+                        if (!isNoDumpAttribute(&fileInfo,createInfo->jobOptions))
                         {
                           switch (fileInfo.type)
                           {
@@ -2065,7 +2082,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                                 {
                                   case ENTRY_TYPE_FILE:
                                     if (   !createInfo->partialFlag
-                                        || checkFileChanged(&createInfo->namesDictionary,fileName,&fileInfo)
+                                        || isFileChanged(&createInfo->namesDictionary,fileName,&fileInfo)
                                        )
                                     {
                                       // add to entry list
@@ -2093,7 +2110,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                                 {
                                   case ENTRY_TYPE_FILE:
                                     if (   !createInfo->partialFlag
-                                        || checkFileChanged(&createInfo->namesDictionary,fileName,&fileInfo)
+                                        || isFileChanged(&createInfo->namesDictionary,fileName,&fileInfo)
                                        )
                                     {
                                       // add to entry list
@@ -2121,7 +2138,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                                       HardLinkInfo hardLinkInfo;
 
                                       if (   !createInfo->partialFlag
-                                          || checkFileChanged(&createInfo->namesDictionary,fileName,&fileInfo)
+                                          || isFileChanged(&createInfo->namesDictionary,fileName,&fileInfo)
                                          )
                                       {
                                         if (Dictionary_find(&hardLinksDictionary,
@@ -2187,7 +2204,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                                 {
                                   case ENTRY_TYPE_FILE:
                                     if (   !createInfo->partialFlag
-                                        || checkFileChanged(&createInfo->namesDictionary,fileName,&fileInfo)
+                                        || isFileChanged(&createInfo->namesDictionary,fileName,&fileInfo)
                                        )
                                     {
                                       // add to entry list
@@ -2218,7 +2235,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                               {
                                 createInfo->statusInfo.errorEntries++;
                                 createInfo->statusInfo.errorBytes += (uint64)fileInfo.size;
-                                abortFlag |= !updateStatusInfo(createInfo);
+                                updateStatusInfo(createInfo);
                               }
                               break;
                           }
@@ -2231,7 +2248,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                           {
                             createInfo->statusInfo.skippedEntries++;
                             createInfo->statusInfo.skippedBytes += fileInfo.size;
-                            abortFlag |= !updateStatusInfo(createInfo);
+                            updateStatusInfo(createInfo);
                           }
                         }
                       }
@@ -2243,7 +2260,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                         {
                           createInfo->statusInfo.skippedEntries++;
                           createInfo->statusInfo.skippedBytes += fileInfo.size;
-                          abortFlag |= !updateStatusInfo(createInfo);
+                          updateStatusInfo(createInfo);
                         }
                       }
                     }
@@ -2259,7 +2276,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                     SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
                     {
                       createInfo->statusInfo.errorEntries++;
-                      abortFlag |= !updateStatusInfo(createInfo);
+                      updateStatusInfo(createInfo);
                     }
                   }
                 }
@@ -2279,7 +2296,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                 {
                   case ENTRY_TYPE_FILE:
                     if (  !createInfo->partialFlag
-                        || checkFileChanged(&createInfo->namesDictionary,name,&fileInfo)
+                        || isFileChanged(&createInfo->namesDictionary,name,&fileInfo)
                       )
                     {
                       // add to entry list
@@ -2304,14 +2321,14 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                 {
                   case ENTRY_TYPE_FILE:
                     if (   !createInfo->partialFlag
-                        || checkFileChanged(&createInfo->namesDictionary,name,&fileInfo)
+                        || isFileChanged(&createInfo->namesDictionary,name,&fileInfo)
                        )
                     {
                       union { void *value; HardLinkInfo *hardLinkInfo; } data;
                       HardLinkInfo hardLinkInfo;
 
                       if (   !createInfo->partialFlag
-                          || checkFileChanged(&createInfo->namesDictionary,fileName,&fileInfo)
+                          || isFileChanged(&createInfo->namesDictionary,fileName,&fileInfo)
                          )
                       {
                         if (Dictionary_find(&hardLinksDictionary,
@@ -2378,7 +2395,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                 {
                   case ENTRY_TYPE_FILE:
                     if (   !createInfo->partialFlag
-                        || checkFileChanged(&createInfo->namesDictionary,name,&fileInfo)
+                        || isFileChanged(&createInfo->namesDictionary,name,&fileInfo)
                        )
                     {
                       // add to entry list
@@ -2401,7 +2418,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                         SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
                         {
                           createInfo->statusInfo.errorEntries++;
-                          abortFlag |= !updateStatusInfo(createInfo);
+                          updateStatusInfo(createInfo);
                         }
                         continue;
                       }
@@ -2425,7 +2442,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
               {
                 createInfo->statusInfo.errorEntries++;
                 createInfo->statusInfo.errorBytes += (uint64)fileInfo.size;
-                abortFlag |= !updateStatusInfo(createInfo);
+                updateStatusInfo(createInfo);
               }
               break;
           }
@@ -2438,7 +2455,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
           {
             createInfo->statusInfo.skippedEntries++;
             createInfo->statusInfo.skippedBytes += fileInfo.size;
-            abortFlag |= !updateStatusInfo(createInfo);
+            updateStatusInfo(createInfo);
           }
         }
 
@@ -2452,7 +2469,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
         {
           createInfo->statusInfo.skippedEntries++;
           createInfo->statusInfo.skippedBytes += fileInfo.size;
-          abortFlag |= !updateStatusInfo(createInfo);
+          updateStatusInfo(createInfo);
         }
       }
     }
@@ -2649,7 +2666,7 @@ LOCAL Errors storeArchiveFile(void           *userData,
     {
       while (   (createInfo->storageInfo.count > 2)                           // more than 2 archives are waiting
              && (createInfo->storageInfo.bytes > globalOptions.maxTmpSize)    // temporary space above limit is used
-             && ((createInfo->requestedAbortFlag == NULL) || !(*createInfo->requestedAbortFlag))
+             && !isAborted(createInfo)
             )
       {
         Semaphore_waitModified(&createInfo->storageInfoLock,30*1000);
@@ -2681,7 +2698,6 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
   String                     hostName,loginName,deviceName,fileName;
   String                     printableStorageName;
   void                       *autoFreeSavePoint;
-  bool                       abortFlag;
   StorageMsg                 storageMsg;
   Errors                     error;
   FileInfo                   fileInfo;
@@ -2717,7 +2733,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
   AUTOFREE_ADD(&autoFreeList,printableStorageName,{ String_delete(printableStorageName); });
 
   // initial pre-processing
-  if ((createInfo->requestedAbortFlag == NULL) || !(*createInfo->requestedAbortFlag))
+  if (!isAborted(createInfo))
   {
     if (createInfo->failError == ERROR_NONE)
     {
@@ -2741,8 +2757,9 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
 
   // store data
   autoFreeSavePoint = AutoFree_save(&autoFreeList);
-  abortFlag         = FALSE;
-  while (MsgQueue_get(&createInfo->storageMsgQueue,&storageMsg,NULL,sizeof(storageMsg)))
+  while (   !isAborted(createInfo)
+         && MsgQueue_get(&createInfo->storageMsgQueue,&storageMsg,NULL,sizeof(storageMsg))
+        )
   {
     AUTOFREE_ADD(&autoFreeList,&storageMsg,
                  {
@@ -2754,358 +2771,338 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
                 );
 fprintf(stderr,"%s, %d: storageMsg.fileName=%s\n",__FILE__,__LINE__,String_cString(storageMsg.fileName));
 
-    if (   !abortFlag
-        && ((createInfo->requestedAbortFlag == NULL) || !(*createInfo->requestedAbortFlag))
-       )
+    // pause
+    pauseStorage(createInfo);
+
+    // pre-process
+    error = Storage_preProcess(&createInfo->storageFileHandle,FALSE);
+    if (error != ERROR_NONE)
     {
-      if (createInfo->failError == ERROR_NONE)
+      printError("Cannot pre-process file '%s' (error: %s)!\n",
+                 String_cString(storageMsg.fileName),
+                 Errors_getText(error)
+                );
+      createInfo->failError = error;
+
+      AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
+      continue;
+    }
+    DEBUG_TESTCODE("storageThreadCode1") { createInfo->failError = DEBUG_TESTCODE_ERROR(); break; }
+
+    // get file info
+    error = File_getFileInfo(&fileInfo,storageMsg.fileName);
+    if (error != ERROR_NONE)
+    {
+      printError("Cannot get information for file '%s' (error: %s)!\n",
+                 String_cString(storageMsg.fileName),
+                 Errors_getText(error)
+                );
+      createInfo->failError = error;
+
+      AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
+      continue;
+    }
+    DEBUG_TESTCODE("storageThreadCode2") { createInfo->failError = DEBUG_TESTCODE_ERROR(); break; }
+
+    // get storage name
+    Storage_getHandleName(storageName,
+                          &createInfo->storageFileHandle,
+                          storageMsg.destinationFileName
+                         );
+    Storage_getPrintableName(printableStorageName,
+                             &createInfo->storageFileHandle.storageSpecifier,
+                             storageMsg.destinationFileName
+                            );
+
+    // set database storage name and state
+    if (storageMsg.storageId != DATABASE_ID_NONE)
+    {
+      error = Index_update(indexDatabaseHandle,
+                           storageMsg.storageId,
+                           storageName,
+                           0LL
+                          );
+      if (error != ERROR_NONE)
+      {
+        printError("Cannot update index for storage '%s' (error: %s)!\n",
+                   String_cString(printableStorageName),
+                   Errors_getText(error)
+                  );
+        createInfo->failError = error;
+
+        AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
+        continue;
+      }
+      DEBUG_TESTCODE("storageThreadCode3") { createInfo->failError = DEBUG_TESTCODE_ERROR(); break; }
+
+      error = Index_setState(indexDatabaseHandle,
+                             storageMsg.storageId,
+                             INDEX_STATE_OK,
+                             Misc_getCurrentDateTime(),
+                             NULL
+                            );
+      if (error != ERROR_NONE)
+      {
+        printError("Cannot update index for storage '%s' (error: %s)!\n",
+                   String_cString(printableStorageName),
+                   Errors_getText(error)
+                  );
+        createInfo->failError = error;
+
+        AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
+        continue;
+      }
+
+      logMessage(LOG_TYPE_STORAGE,"stored '%s'\n",String_cString(printableStorageName));
+    }
+
+    // open file to store
+    #ifndef NDEBUG
+      printInfo(0,"Store '%s' to '%s'...",String_cString(storageMsg.fileName),String_cString(printableStorageName));
+    #else /* not NDEBUG */
+      printInfo(0,"Store archive '%s'...",String_cString(printableStorageName));
+    #endif /* NDEBUG */
+    error = File_open(&fileHandle,storageMsg.fileName,FILE_OPEN_READ);
+    if (error != ERROR_NONE)
+    {
+      printInfo(0,"FAIL!\n");
+      printError("Cannot open file '%s' (error: %s)!\n",
+                 String_cString(storageMsg.fileName),
+                 Errors_getText(error)
+                );
+      createInfo->failError = error;
+
+      AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
+      continue;
+    }
+    DEBUG_TESTCODE("storageThreadCode4") { createInfo->failError = DEBUG_TESTCODE_ERROR(); AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE); continue; }
+
+    // write data to store file
+    retryCount = 0;
+    do
+    {
+      // next try
+      if (retryCount > MAX_RETRIES)
+      {
+        break;
+      }
+      retryCount++;
+
+      // pause
+      pauseStorage(createInfo);
+
+      // create storage file
+      error = Storage_create(&createInfo->storageFileHandle,
+                             storageMsg.destinationFileName,
+                             fileInfo.size
+                            );
+      if (error != ERROR_NONE)
+      {
+        if (retryCount <= MAX_RETRIES)
+        {
+          // retry
+          continue;
+        }
+        else
+        {
+          printInfo(0,"FAIL!\n");
+          printError("Cannot store file '%s' (error: %s)\n",
+                     String_cString(printableStorageName),
+                     Errors_getText(error)
+                    );
+          break;
+        }
+      }
+      DEBUG_TESTCODE("storageThreadCode5") { error = DEBUG_TESTCODE_ERROR(); break; }
+
+      // update status info, check for abort
+      SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+      {
+        String_set(createInfo->statusInfo.storageName,printableStorageName);
+        updateStatusInfo(createInfo);
+      }
+
+      // store data
+      File_seek(&fileHandle,0);
+      do
       {
         // pause
-        while ((createInfo->pauseStorageFlag != NULL) && (*createInfo->pauseStorageFlag))
-        {
-          Misc_udelay(500L*1000L);
-        }
+        pauseStorage(createInfo);
 
-        // pre-process
-        error = Storage_preProcess(&createInfo->storageFileHandle,FALSE);
-        if (error != ERROR_NONE)
-        {
-          printError("Cannot pre-process file '%s' (error: %s)!\n",
-                     String_cString(storageMsg.fileName),
-                     Errors_getText(error)
-                    );
-          createInfo->failError = error;
-
-          // free resources
-          AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
-          continue;
-        }
-        DEBUG_TESTCODE("storageThreadCode1") { createInfo->failError = DEBUG_TESTCODE_ERROR(); break; }
-
-        // get file info
-        error = File_getFileInfo(&fileInfo,storageMsg.fileName);
-        if (error != ERROR_NONE)
-        {
-          printError("Cannot get information for file '%s' (error: %s)!\n",
-                     String_cString(storageMsg.fileName),
-                     Errors_getText(error)
-                    );
-          createInfo->failError = error;
-
-          // free resources
-          AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
-          continue;
-        }
-        DEBUG_TESTCODE("storageThreadCode2") { createInfo->failError = DEBUG_TESTCODE_ERROR(); break; }
-
-        // get storage name
-        Storage_getHandleName(storageName,
-                              &createInfo->storageFileHandle,
-                              storageMsg.destinationFileName
-                             );
-        Storage_getPrintableName(printableStorageName,
-                                 &createInfo->storageFileHandle.storageSpecifier,
-                                 storageMsg.destinationFileName
-                                );
-
-        // set database storage name
-        if (   (indexDatabaseHandle != NULL)
-            && (storageMsg.storageId != DATABASE_ID_NONE)
-           )
-        {
-          error = Index_update(indexDatabaseHandle,
-                               storageMsg.storageId,
-                               storageName,
-                               0LL
-                              );
-          if (error != ERROR_NONE)
-          {
-            printError("Cannot update index for storage '%s' (error: %s)!\n",
-                       String_cString(printableStorageName),
-                       Errors_getText(error)
-                      );
-
-            // free resources
-            AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
-            continue;
-          }
-          DEBUG_TESTCODE("storageThreadCode3") { createInfo->failError = DEBUG_TESTCODE_ERROR(); break; }
-        }
-
-        // open file to store
-        #ifndef NDEBUG
-          printInfo(0,"Store '%s' to '%s'...",String_cString(storageMsg.fileName),String_cString(printableStorageName));
-        #else /* not NDEBUG */
-          printInfo(0,"Store archive '%s'...",String_cString(printableStorageName));
-        #endif /* NDEBUG */
-        error = File_open(&fileHandle,storageMsg.fileName,FILE_OPEN_READ);
+        // read data from local file
+        error = File_read(&fileHandle,buffer,BUFFER_SIZE,&bufferLength);
         if (error != ERROR_NONE)
         {
           printInfo(0,"FAIL!\n");
-          printError("Cannot open file '%s' (error: %s)!\n",
-                     String_cString(storageMsg.fileName),
+          printError("Cannot read file '%s' (error: %s)!\n",
+                     String_cString(printableStorageName),
                      Errors_getText(error)
                     );
-          createInfo->failError = error;
-
-          // free resources
-          AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
-          continue;
+          break;
         }
-        DEBUG_TESTCODE("storageThreadCode4") { createInfo->failError = DEBUG_TESTCODE_ERROR(); break; }
+        DEBUG_TESTCODE("storageThreadCode6") { error = DEBUG_TESTCODE_ERROR(); break; }
 
-        // store file
-        retryCount = 0;
-        do
+        // store data
+        error = Storage_write(&createInfo->storageFileHandle,buffer,bufferLength);
+        if (error != ERROR_NONE)
         {
-          // pause
-          while ((createInfo->pauseStorageFlag != NULL) && (*createInfo->pauseStorageFlag))
+          if (retryCount <= MAX_RETRIES)
           {
-            Misc_udelay(500L*1000L);
+            // retry
+            break;
           }
-
-          // next try
-          if (retryCount > MAX_RETRIES) break;
-          retryCount++;
-
-          // create storage file
-          error = Storage_create(&createInfo->storageFileHandle,
-                                 storageMsg.destinationFileName,
-                                 fileInfo.size
-                                );
-          if (error != ERROR_NONE)
+          else
           {
-            // output error message, store error
-            if (retryCount > MAX_RETRIES)
-            {
-              // output error message, store error
-              printInfo(0,"FAIL!\n");
-              printError("Cannot store file '%s' (error: %s)\n",
-                         String_cString(printableStorageName),
-                         Errors_getText(error)
-                        );
-
-              // fatal error -> stop
-              createInfo->failError = error;
-              break;
-            }
-            else
-            {
-              // error -> retry
-              continue;
-            }
-          }
-          DEBUG_TESTCODE("storageThreadCode5") { createInfo->failError = DEBUG_TESTCODE_ERROR(); break; }
-
-          // update status info, check for abort
-          SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
-          {
-            String_set(createInfo->statusInfo.storageName,printableStorageName);
-            abortFlag |= !updateStatusInfo(createInfo);
-          }
-
-          // store data
-          File_seek(&fileHandle,0);
-          do
-          {
-            // pause
-            while ((createInfo->pauseStorageFlag != NULL) && (*createInfo->pauseStorageFlag))
-            {
-              Misc_udelay(500L*1000L);
-            }
-
-            error = File_read(&fileHandle,buffer,BUFFER_SIZE,&bufferLength);
-            if (error != ERROR_NONE)
-            {
-              // output error message, store error
-              printInfo(0,"FAIL!\n");
-              printError("Cannot read file '%s' (error: %s)!\n",
-                         String_cString(printableStorageName),
-                         Errors_getText(error)
-                        );
-
-              // fatal error -> stop
-              createInfo->failError = error;
-              break;
-            }
-            DEBUG_TESTCODE("storageThreadCode6") { createInfo->failError = DEBUG_TESTCODE_ERROR(); break; }
-
-            error = Storage_write(&createInfo->storageFileHandle,buffer,bufferLength);
-            if (error != ERROR_NONE)
-            {
-              if (retryCount > MAX_RETRIES)
-              {
-                // output error message, store error
-                printInfo(0,"FAIL!\n");
-                printError("Cannot write file '%s' (error: %s)!\n",
-                           String_cString(printableStorageName),
-                           Errors_getText(error)
-                          );
-
-                // fatal error -> stop
-                createInfo->failError = error;
-                break;
-              }
-              else
-              {
-                // error -> retry
-                break;
-              }
-            }
-            DEBUG_TESTCODE("storageThreadCode7") { createInfo->failError = DEBUG_TESTCODE_ERROR(); break; }
-
-            // update status info, check for abort
-            SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
-            {
-              createInfo->statusInfo.storageDoneBytes += (uint64)bufferLength;
-              abortFlag |= !updateStatusInfo(createInfo);
-            }
-
-            // on fatal error/abort -> stop
-            if (   (createInfo->failError != ERROR_NONE)
-                || ((createInfo->requestedAbortFlag != NULL) && (*createInfo->requestedAbortFlag))
-               )
-            {
-              // fatal error/abort -> stop
-              break;
-            }
-          }
-          while (!File_eof(&fileHandle));
-
-          // close storage file
-          Storage_close(&createInfo->storageFileHandle);
-
-          // on fatal error/abort -> stop
-          if (   (createInfo->failError != ERROR_NONE)
-              || ((createInfo->requestedAbortFlag != NULL) && (*createInfo->requestedAbortFlag))
-             )
-          {
-            // fatal error/abort -> stop
+            printInfo(0,"FAIL!\n");
+            printError("Cannot write file '%s' (error: %s)!\n",
+                       String_cString(printableStorageName),
+                       Errors_getText(error)
+                      );
             break;
           }
         }
-        while (error != ERROR_NONE);
+        DEBUG_TESTCODE("storageThreadCode7") { error = DEBUG_TESTCODE_ERROR(); break; }
 
-        // close file to store
-        File_close(&fileHandle);
-
-        if (createInfo->failError == ERROR_NONE)
+        // update status info, check for abort
+        SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
         {
-          printInfo(0,"ok\n");
-          logMessage(LOG_TYPE_STORAGE,"stored '%s'\n",String_cString(printableStorageName));
+          createInfo->statusInfo.storageDoneBytes += (uint64)bufferLength;
+          updateStatusInfo(createInfo);
         }
-
-        // update index database and set state
-        if (   (createInfo->failError == ERROR_NONE)
-            && ((createInfo->requestedAbortFlag == NULL) || !(*createInfo->requestedAbortFlag))
-           )
-        {
-          if (   (indexDatabaseHandle != NULL)
-              && (storageMsg.storageId != DATABASE_ID_NONE)
-             )
-          {
-            // delete old indizes for same storage file
-            if (createInfo->failError == ERROR_NONE)
-            {
-              while (   Index_findByName(indexDatabaseHandle,
-                                         STORAGE_TYPE_UNKNOWN,
-                                         hostName,
-                                         loginName,
-                                         deviceName,
-                                         fileName,
-                                         &oldStorageId,
-                                         NULL,
-                                         NULL
-                                        )
-                     && (oldStorageId != DATABASE_ID_NONE)
-                    )
-              {
-                error = Index_delete(indexDatabaseHandle,oldStorageId);
-                if (error != ERROR_NONE)
-                {
-                  printError("Cannot delete old index for storage '%s' (error: %s)!\n",
-                             String_cString(printableStorageName),
-                             Errors_getText(error)
-                            );
-                  createInfo->failError = error;
-                  break;
-                }
-                DEBUG_TESTCODE("storageThreadCode8") { createInfo->failError = DEBUG_TESTCODE_ERROR(); break; }
-              }
-            }
-
-            // set database storage size
-            if (createInfo->failError == ERROR_NONE)
-            {
-              error = Index_update(indexDatabaseHandle,
-                                   storageMsg.storageId,
-                                   NULL,
-                                   fileInfo.size
-                                  );
-              if (error != ERROR_NONE)
-              {
-                printError("Cannot update index for storage '%s' (error: %s)!\n",
-                           String_cString(printableStorageName),
-                           Errors_getText(error)
-                          );
-                createInfo->failError = error;
-              }
-              DEBUG_TESTCODE("storageThreadCode9") { createInfo->failError = DEBUG_TESTCODE_ERROR(); }
-            }
-
-            // set database state
-            if (createInfo->failError == ERROR_NONE)
-            {
-              error = Index_setState(indexDatabaseHandle,
-                                     storageMsg.storageId,
-                                     INDEX_STATE_OK,
-                                     Misc_getCurrentDateTime(),
-                                     NULL
-                                    );
-              if (error != ERROR_NONE)
-              {
-                printError("Cannot update index for storage '%s' (error: %s)!\n",
-                           String_cString(printableStorageName),
-                           Errors_getText(error)
-                          );
-                createInfo->failError = error;
-              }
-              DEBUG_TESTCODE("storageThreadCode10") { createInfo->failError = DEBUG_TESTCODE_ERROR(); }
-            }
-          }
-        }
-
-        // post-process
-        if (   (createInfo->failError == ERROR_NONE)
-            && ((createInfo->requestedAbortFlag == NULL) || !(*createInfo->requestedAbortFlag))
-           )
-        {
-          error = Storage_postProcess(&createInfo->storageFileHandle,FALSE);
-          if (error != ERROR_NONE)
-          {
-            printError("Cannot post-process storage file '%s' (error: %s)!\n",
-                       String_cString(storageMsg.fileName),
-                       Errors_getText(error)
-                      );
-            createInfo->failError = error;
-          }
-          DEBUG_TESTCODE("storageThreadCode11") { createInfo->failError = DEBUG_TESTCODE_ERROR(); }
-        }
-
-        // check error/aborted
-        if (   (createInfo->failError != ERROR_NONE)
-            || ((createInfo->requestedAbortFlag != NULL) && (*createInfo->requestedAbortFlag))
-           )
-        {
-          // free resources
-          AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
-          continue;
-        }
-
-        // add to list of stored storage files
-        StringList_append(&createInfo->storageFileList,storageMsg.destinationFileName);
       }
+      while (   !File_eof(&fileHandle)
+             && !isAborted(createInfo)
+            );
+
+      // close storage
+      Storage_close(&createInfo->storageFileHandle);
     }
+    while (   (error != ERROR_NONE)
+           && (retryCount <= MAX_RETRIES)
+           && !isAborted(createInfo)
+          );
+    if (error != ERROR_NONE)
+    {
+      createInfo->failError = error;
+
+      File_close(&fileHandle);
+      AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
+      continue;
+    }
+
+    // close file to store
+    File_close(&fileHandle);
+
+    if (!isAborted(createInfo))
+    {
+      printInfo(0,"ok\n");
+      logMessage(LOG_TYPE_STORAGE,"Stored '%s'\n",String_cString(printableStorageName));
+    }
+    else
+    {
+      printInfo(0,"ABORTED\n");
+    }
+
+    // update index database and set state
+    if (storageMsg.storageId != DATABASE_ID_NONE)
+    {
+      // delete old indizes for same storage file
+      while (   Index_findByName(indexDatabaseHandle,
+                                 STORAGE_TYPE_UNKNOWN,
+                                 hostName,
+                                 loginName,
+                                 deviceName,
+                                 fileName,
+                                 &oldStorageId,
+                                 NULL,
+                                 NULL
+                                )
+             && (oldStorageId != DATABASE_ID_NONE)
+            )
+      {
+#warning avoid delete own index?
+        error = Index_delete(indexDatabaseHandle,oldStorageId);
+        if (error != ERROR_NONE)
+        {
+          printError("Cannot delete old index for storage '%s' (error: %s)!\n",
+                     String_cString(printableStorageName),
+                     Errors_getText(error)
+                    );
+          createInfo->failError = error;
+          break;
+        }
+        DEBUG_TESTCODE("storageThreadCode8") { createInfo->failError = DEBUG_TESTCODE_ERROR(); break; }
+      }
+      if (createInfo->failError != ERROR_NONE)
+      {
+        AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
+        continue;
+      }
+
+      // set database storage size
+      error = Index_update(indexDatabaseHandle,
+                           storageMsg.storageId,
+                           NULL,
+                           fileInfo.size
+                          );
+      if (error != ERROR_NONE)
+      {
+        printError("Cannot update index for storage '%s' (error: %s)!\n",
+                   String_cString(printableStorageName),
+                   Errors_getText(error)
+                  );
+        createInfo->failError = error;
+
+        AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
+        continue;
+      }
+      DEBUG_TESTCODE("storageThreadCode9") { createInfo->failError = DEBUG_TESTCODE_ERROR(); }
+
+      // set database state
+      error = Index_setState(indexDatabaseHandle,
+                             storageMsg.storageId,
+                             INDEX_STATE_OK,
+                             Misc_getCurrentDateTime(),
+                             NULL
+                            );
+      if (error != ERROR_NONE)
+      {
+        printError("Cannot update index for storage '%s' (error: %s)!\n",
+                   String_cString(printableStorageName),
+                   Errors_getText(error)
+                  );
+        createInfo->failError = error;
+
+        AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
+        continue;
+      }
+      DEBUG_TESTCODE("storageThreadCode10") { createInfo->failError = DEBUG_TESTCODE_ERROR(); AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE); continue; }
+    }
+
+    // post-process
+    error = Storage_postProcess(&createInfo->storageFileHandle,FALSE);
+    if (error != ERROR_NONE)
+    {
+      printError("Cannot post-process storage file '%s' (error: %s)!\n",
+                 String_cString(storageMsg.fileName),
+                 Errors_getText(error)
+                );
+      createInfo->failError = error;
+
+      AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
+      continue;
+    }
+    DEBUG_TESTCODE("storageThreadCode11") { createInfo->failError = DEBUG_TESTCODE_ERROR(); AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE); continue; }
+
+    // check if aborted
+    if (isAborted(createInfo))
+    {
+      AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
+      continue;
+    }
+
+    // add to list of stored storage files
+    StringList_append(&createInfo->storageFileList,storageMsg.destinationFileName);
 
     // delete temporary storage file
     error = File_delete(storageMsg.fileName,FALSE);
@@ -3126,80 +3123,75 @@ fprintf(stderr,"%s, %d: storageMsg.fileName=%s\n",__FILE__,__LINE__,String_cStri
   }
 
   // final post-processing
-  if ((createInfo->requestedAbortFlag == NULL) || !(*createInfo->requestedAbortFlag))
+  if (   !isAborted(createInfo)
+      && (createInfo->failError == ERROR_NONE)
+     )
   {
-    if (createInfo->failError == ERROR_NONE)
-    {
-      // pause
-      while ((createInfo->pauseStorageFlag != NULL) && (*createInfo->pauseStorageFlag))
-      {
-        Misc_udelay(500L*1000L);
-      }
+    // pause
+    pauseStorage(createInfo);
 
-      error = Storage_postProcess(&createInfo->storageFileHandle,TRUE);
-      if (error != ERROR_NONE)
-      {
-        printError("Cannot post-process storage (error: %s)!\n",
-                   Errors_getText(error)
-                  );
-        createInfo->failError = error;
-      }
+    error = Storage_postProcess(&createInfo->storageFileHandle,TRUE);
+    if (error != ERROR_NONE)
+    {
+      printError("Cannot post-process storage (error: %s)!\n",
+                 Errors_getText(error)
+                );
+      createInfo->failError = error;
     }
   }
 
   // delete old storage files
-  if ((createInfo->requestedAbortFlag == NULL) || !(*createInfo->requestedAbortFlag))
+  if (   !isAborted(createInfo)
+      && (createInfo->failError == ERROR_NONE)
+     )
   {
-    if (createInfo->failError == ERROR_NONE)
+    if (globalOptions.deleteOldArchiveFilesFlag)
     {
-      if (globalOptions.deleteOldArchiveFilesFlag)
+      // get archive name pattern
+      pattern = String_new();
+      error = formatArchiveFileName(pattern,
+                                    FORMAT_MODE_PATTERN,
+                                    createInfo->storageFileName,
+                                    createInfo->archiveType,
+                                    createInfo->scheduleTitle,
+                                    createInfo->scheduleCustomText,
+                                    createInfo->startTime,
+                                    ARCHIVE_PART_NUMBER_NONE,
+                                    FALSE
+                                   );
+      if (error == ERROR_NONE)
       {
-        // get archive name pattern
-        pattern = String_new();
-        error = formatArchiveFileName(pattern,
-                                      FORMAT_MODE_PATTERN,
-                                      createInfo->storageFileName,
-                                      createInfo->archiveType,
-                                      createInfo->scheduleTitle,
-                                      createInfo->scheduleCustomText,
-                                      createInfo->startTime,
-                                      ARCHIVE_PART_NUMBER_NONE,
-                                      FALSE
-                                     );
+        // open directory
+        storagePath = File_getFilePathName(String_new(),createInfo->storageFileName);
+        error = Storage_openDirectoryList(&storageDirectoryListHandle,
+                                          storagePath,
+                                          createInfo->jobOptions
+                                         );
         if (error == ERROR_NONE)
         {
-          // open directory
-          storagePath = File_getFilePathName(String_new(),createInfo->storageFileName);
-          error = Storage_openDirectoryList(&storageDirectoryListHandle,
-                                            storagePath,
-                                            createInfo->jobOptions
-                                           );
-          if (error == ERROR_NONE)
+          // read directory
+          fileName = String_new();
+          while (   !Storage_endOfDirectoryList(&storageDirectoryListHandle)
+                 && (Storage_readDirectoryList(&storageDirectoryListHandle,fileName,NULL) == ERROR_NONE)
+                )
           {
-            // read directory
-            fileName = String_new();
-            while (   !Storage_endOfDirectoryList(&storageDirectoryListHandle)
-                   && (Storage_readDirectoryList(&storageDirectoryListHandle,fileName,NULL) == ERROR_NONE)
-                  )
+            // find in storage list
+            if (String_match(fileName,STRING_BEGIN,pattern,NULL,NULL))
             {
-              // find in storage list
-              if (String_match(fileName,STRING_BEGIN,pattern,NULL,NULL))
+              if (StringList_find(&createInfo->storageFileList,fileName) == NULL)
               {
-                if (StringList_find(&createInfo->storageFileList,fileName) == NULL)
-                {
-                  Storage_delete(&createInfo->storageFileHandle,fileName);
-                }
+                Storage_delete(&createInfo->storageFileHandle,fileName);
               }
             }
-            String_delete(fileName);
-
-            // close directory
-            Storage_closeDirectoryList(&storageDirectoryListHandle);
           }
-          String_delete(storagePath);
+          String_delete(fileName);
+
+          // close directory
+          Storage_closeDirectoryList(&storageDirectoryListHandle);
         }
-        String_delete(pattern);
+        String_delete(storagePath);
       }
+      String_delete(pattern);
     }
   }
 
@@ -3440,12 +3432,12 @@ LOCAL Errors storeFileEntry(CreateInfo   *createInfo,
         }
       }
     }
-    while (   ((createInfo->requestedAbortFlag == NULL) || !(*createInfo->requestedAbortFlag))
+    while (   !isAborted(createInfo)
            && (bufferLength > 0L)
            && (createInfo->failError == ERROR_NONE)
            && (error == ERROR_NONE)
           );
-    if ((createInfo->requestedAbortFlag != NULL) && (*createInfo->requestedAbortFlag))
+    if (isAborted(createInfo))
     {
       printInfo(1,"ABORTED\n");
       Archive_closeEntry(&archiveEntryInfo);
@@ -3699,7 +3691,7 @@ LOCAL Errors storeImageEntry(CreateInfo   *createInfo,
     blockCount = deviceInfo.size/(uint64)deviceInfo.blockSize;
     error      = ERROR_NONE;
     while (   (block < blockCount)
-           && ((createInfo->requestedAbortFlag == NULL) || !(*createInfo->requestedAbortFlag))
+           && !isAborted(createInfo)
            && (createInfo->failError == ERROR_NONE)
            && (error == ERROR_NONE)
           )
@@ -3782,7 +3774,7 @@ LOCAL Errors storeImageEntry(CreateInfo   *createInfo,
         }
       }
     }
-    if ((createInfo->requestedAbortFlag != NULL) && (*createInfo->requestedAbortFlag))
+    if (isAborted(createInfo))
     {
       printInfo(1,"ABORTED\n");
       Archive_closeEntry(&archiveEntryInfo);
@@ -4410,12 +4402,12 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
         }
       }
     }
-    while (   ((createInfo->requestedAbortFlag == NULL) || !(*createInfo->requestedAbortFlag))
+    while (   !isAborted(createInfo)
            && (bufferLength > 0L)
            && (createInfo->failError == ERROR_NONE)
            && (error == ERROR_NONE)
           );
-    if ((createInfo->requestedAbortFlag != NULL) && (*createInfo->requestedAbortFlag))
+    if (isAborted(createInfo))
     {
       printInfo(1,"ABORTED\n");
       Archive_closeEntry(&archiveEntryInfo);
@@ -4658,7 +4650,6 @@ LOCAL Errors storeSpecialEntry(CreateInfo   *createInfo,
 LOCAL void createThreadCode(CreateInfo *createInfo)
 {
   byte             *buffer;
-  bool             abortFlag;
   EntryMsg         entryMsg;
   bool             ownFileFlag;
   const StringNode *stringNode;
@@ -4676,12 +4667,9 @@ LOCAL void createThreadCode(CreateInfo *createInfo)
   }
 
   // store files
-  abortFlag = FALSE;
   while (   (createInfo->failError == ERROR_NONE)
-         && !abortFlag
-         && ((createInfo->requestedAbortFlag == NULL) || !(*createInfo->requestedAbortFlag))
+         && !isAborted(createInfo)
          && MsgQueue_get(&createInfo->entryMsgQueue,&entryMsg,NULL,sizeof(entryMsg))
-
         )
   {
     // pause
@@ -4802,7 +4790,7 @@ LOCAL void createThreadCode(CreateInfo *createInfo)
     // update status info and check if aborted
     SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
     {
-      abortFlag |= !updateStatusInfo(createInfo);
+      updateStatusInfo(createInfo);
     }
 
     // free entry message
@@ -5119,7 +5107,7 @@ createThreadCode(&createInfo);
   // write incremental list
   if (   createInfo.storeIncrementalFileInfoFlag
       && (createInfo.failError == ERROR_NONE)
-      && ((createInfo.requestedAbortFlag == NULL) || !(*createInfo.requestedAbortFlag))
+      && !isAborted(&createInfo)
       && !jobOptions->dryRunFlag
      )
   {
@@ -5152,7 +5140,7 @@ createThreadCode(&createInfo);
   }
 
   // get error code
-  if ((createInfo.requestedAbortFlag == NULL) || !(*createInfo.requestedAbortFlag))
+  if (!isAborted(&createInfo))
   {
     error = createInfo.failError;
   }
