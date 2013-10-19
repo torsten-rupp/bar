@@ -2630,7 +2630,7 @@ LOCAL void indexThreadCode(void)
   // reset/delete incomplete database entries (ignore possible errors)
   plogMessage(LOG_TYPE_INDEX,"INDEX","start clean-up database\n");
   while (Index_findByState(indexDatabaseHandle,
-                           INDEX_STATE_UPDATE,
+                           INDEX_STATE_SET(INDEX_STATE_UPDATE),
                            &storageId,
                            NULL,
                            NULL
@@ -2646,7 +2646,7 @@ LOCAL void indexThreadCode(void)
                           );
   }
   while (Index_findByState(indexDatabaseHandle,
-                           INDEX_STATE_CREATE,
+                           INDEX_STATE_SET(INDEX_STATE_CREATE),
                            &storageId,
                            storageName,
                            NULL
@@ -2751,7 +2751,7 @@ LOCAL void indexThreadCode(void)
   if (!globalOptions.indexDatabaseAutoUpdateFlag)
   {
     while (Index_findByState(indexDatabaseHandle,
-                             INDEX_STATE_UPDATE_REQUESTED,
+                             INDEX_STATE_SET(INDEX_STATE_UPDATE_REQUESTED),
                              &storageId,
                              NULL,
                              NULL
@@ -2795,7 +2795,7 @@ LOCAL void indexThreadCode(void)
     // update index entries
     interruptFlag = FALSE;
     while (   Index_findByState(indexDatabaseHandle,
-                                INDEX_STATE_UPDATE_REQUESTED,
+                                INDEX_STATE_SET(INDEX_STATE_UPDATE_REQUESTED),
                                 &storageId,
                                 storageName,
                                 NULL
@@ -2804,6 +2804,7 @@ LOCAL void indexThreadCode(void)
            && !quitFlag
           )
     {
+fprintf(stderr,"%s, %d: storageId=%ld\n",__FILE__,__LINE__,storageId);
       // get printable name (if possible)
       error = Storage_parseName(storageName,&storageSpecifier,storageFileName);
       if (error == ERROR_NONE)
