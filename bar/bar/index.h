@@ -66,6 +66,8 @@ typedef uint64 IndexModeSet;
 
 /****************************** Macros *********************************/
 
+#define INDEX_STATE_SET(indexState) (1 << indexState)
+
 #ifndef NDEBUG
   #define Index_init(...) __Index_init(__FILE__,__LINE__,__VA_ARGS__)
   #define Index_done(...) __Index_done(__FILE__,__LINE__,__VA_ARGS__)
