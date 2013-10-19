@@ -759,8 +759,9 @@ class TabJobs
     int     year,month,day;
     int     weekDays;
     int     hour,minute;
-    boolean enabled;
     String  archiveType;
+    String  customText;
+    boolean enabled;
 
     /** create schedule data
      * @param year year
@@ -770,9 +771,10 @@ class TabJobs
      * @param hour hour
      * @param minute minute
      * @param archiveType archive type string
+     * @param customText custom text
      * @param enabled enabled state
      */
-    ScheduleData(int year, int month, int day, int weekDays, int hour, int minute, String archiveType, boolean enabled)
+    ScheduleData(int year, int month, int day, int weekDays, int hour, int minute, String archiveType, String customText, boolean enabled)
     {
       this.year        = year;
       this.month       = month;
@@ -781,6 +783,7 @@ class TabJobs
       this.hour        = hour;
       this.minute      = minute;
       this.archiveType = archiveType;
+      this.customText  = customText;
       this.enabled     = enabled;
     }
 
@@ -788,7 +791,7 @@ class TabJobs
      */
     ScheduleData()
     {
-      this(ScheduleData.ANY,ScheduleData.ANY,ScheduleData.ANY,ScheduleData.ANY,ScheduleData.ANY,ScheduleData.ANY,"*",true);
+      this(ScheduleData.ANY,ScheduleData.ANY,ScheduleData.ANY,ScheduleData.ANY,ScheduleData.ANY,ScheduleData.ANY,"*","",true);
     }
 
     /** create schedule data
@@ -798,12 +801,13 @@ class TabJobs
      * @param archiveType archive type string
      * @param enabled enabled state
      */
-    ScheduleData(String date, String weekDays, String time, String archiveType, boolean enabled)
+    ScheduleData(String date, String weekDays, String time, String archiveType, String customText, boolean enabled)
     {
       setDate(date);
       setWeekDays(weekDays);
       setTime(time);
-      this.archiveType = getValidString(archiveType,new String[]{"*","full","incremental","differential"},"*");;
+      this.archiveType = getValidString(archiveType,new String[]{"*","full","incremental","differential"},"*");
+      this.customText  = customText;
       this.enabled     = enabled;
     }
 
@@ -819,6 +823,7 @@ class TabJobs
                               hour,
                               minute,
                               archiveType,
+                              customText,
                               enabled
                              );
     }
@@ -1140,11 +1145,12 @@ class TabJobs
   class ScheduleDataComparator implements Comparator<ScheduleData>
   {
     // Note: enum in inner classes are not possible in Java, thus use the old way...
-    private final static int SORTMODE_DATE    = 0;
-    private final static int SORTMODE_WEEKDAY = 1;
-    private final static int SORTMODE_TIME    = 2;
-    private final static int SORTMODE_ENABLED = 3;
-    private final static int SORTMODE_TYPE    = 4;
+    private final static int SORTMODE_DATE         = 0;
+    private final static int SORTMODE_WEEKDAY      = 1;
+    private final static int SORTMODE_TIME         = 2;
+    private final static int SORTMODE_ARCHIVE_TYPE = 3;
+    private final static int SORTMODE_CUSTOM_TEXT  = 4;
+    private final static int SORTMODE_ENABLED      = 5;
 
     private int sortMode;
 
@@ -1159,8 +1165,9 @@ class TabJobs
       if      (table.getColumn(0) == sortColumn) sortMode = SORTMODE_DATE;
       else if (table.getColumn(1) == sortColumn) sortMode = SORTMODE_WEEKDAY;
       else if (table.getColumn(2) == sortColumn) sortMode = SORTMODE_TIME;
-      else if (table.getColumn(3) == sortColumn) sortMode = SORTMODE_ENABLED;
-      else if (table.getColumn(4) == sortColumn) sortMode = SORTMODE_TYPE;
+      else if (table.getColumn(3) == sortColumn) sortMode = SORTMODE_ARCHIVE_TYPE;
+      else if (table.getColumn(4) == sortColumn) sortMode = SORTMODE_CUSTOM_TEXT;
+      else if (table.getColumn(5) == sortColumn) sortMode = SORTMODE_ENABLED;
       else                                       sortMode = SORTMODE_DATE;
     }
 
@@ -1174,8 +1181,9 @@ class TabJobs
       if      (table.getColumn(0) == sortColumn) sortMode = SORTMODE_DATE;
       else if (table.getColumn(1) == sortColumn) sortMode = SORTMODE_WEEKDAY;
       else if (table.getColumn(2) == sortColumn) sortMode = SORTMODE_TIME;
-      else if (table.getColumn(3) == sortColumn) sortMode = SORTMODE_ENABLED;
-      else if (table.getColumn(4) == sortColumn) sortMode = SORTMODE_TYPE;
+      else if (table.getColumn(3) == sortColumn) sortMode = SORTMODE_ARCHIVE_TYPE;
+      else if (table.getColumn(4) == sortColumn) sortMode = SORTMODE_CUSTOM_TEXT;
+      else if (table.getColumn(5) == sortColumn) sortMode = SORTMODE_ENABLED;
       else                                       sortMode = SORTMODE_DATE;
     }
     /** compare schedule data
@@ -1202,12 +1210,14 @@ class TabJobs
           String time2 = scheduleData2.hour+":"+scheduleData2.minute;
 
           return time1.compareTo(time2);
+        case SORTMODE_ARCHIVE_TYPE:
+          return scheduleData1.archiveType.compareTo(scheduleData2.archiveType);
+        case SORTMODE_CUSTOM_TEXT:
+          return scheduleData1.customText.compareTo(scheduleData2.customText);
         case SORTMODE_ENABLED:
           if      (scheduleData1.enabled && !scheduleData2.enabled) return -1;
           else if (!scheduleData1.enabled && scheduleData2.enabled) return  1;
           else                                                      return  0;
-        case SORTMODE_TYPE:
-          return scheduleData1.archiveType.compareTo(scheduleData2.archiveType);
         default:
           return 0;
       }
@@ -1280,7 +1290,7 @@ class TabJobs
   private Combo        widgetSCPSFTPMaxBandWidth;
   private Combo        widgetWebdavMaxBandWidth;
   private Table        widgetScheduleList;
-  private Button       widgetScheduleListInsert,widgetScheduleListEdit,widgetScheduleListRemove;
+  private Button       widgetScheduleListAdd,widgetScheduleListEdit,widgetScheduleListRemove;
 
   // BAR variables
   private WidgetVariable  archiveType             = new WidgetVariable(new String[]{"normal","full","incremental","differential"});
@@ -5590,7 +5600,7 @@ Dprintf.dprintf("");
           {
             if      (Widgets.isAccelerator(keyEvent,SWT.INSERT))
             {
-              Widgets.invoke(widgetScheduleListInsert);
+              Widgets.invoke(widgetScheduleListAdd);
             }
             else if (Widgets.isAccelerator(keyEvent,SWT.CR))
             {
@@ -5617,19 +5627,21 @@ Dprintf.dprintf("");
             }
           }
         };
-        tableColumn = Widgets.addTableColumn(widgetScheduleList,0,"Date",     SWT.LEFT,100,false);
+        tableColumn = Widgets.addTableColumn(widgetScheduleList,0,"Date",        SWT.LEFT,100,false);
         tableColumn.addSelectionListener(scheduleListColumnSelectionListener);
-        tableColumn = Widgets.addTableColumn(widgetScheduleList,1,"Week day", SWT.LEFT,250,true );
+        tableColumn = Widgets.addTableColumn(widgetScheduleList,1,"Week day",    SWT.LEFT,250,true );
         synchronized(scheduleList)
         {
           Widgets.sortTableColumn(widgetScheduleList,tableColumn,new ScheduleDataComparator(widgetScheduleList,tableColumn));
         }
         tableColumn.addSelectionListener(scheduleListColumnSelectionListener);
-        tableColumn = Widgets.addTableColumn(widgetScheduleList,2,"Time",     SWT.LEFT,100,false);
+        tableColumn = Widgets.addTableColumn(widgetScheduleList,2,"Time",        SWT.LEFT,100,false);
         tableColumn.addSelectionListener(scheduleListColumnSelectionListener);
-        tableColumn = Widgets.addTableColumn(widgetScheduleList,3,"Type",     SWT.LEFT, 80,true );
+        tableColumn = Widgets.addTableColumn(widgetScheduleList,3,"Archive type",SWT.LEFT, 80,true );
         tableColumn.addSelectionListener(scheduleListColumnSelectionListener);
-        tableColumn = Widgets.addTableColumn(widgetScheduleList,4,"Enabled",  SWT.LEFT, 60,false);
+        tableColumn = Widgets.addTableColumn(widgetScheduleList,4,"Custom text", SWT.LEFT, 90,true );
+        tableColumn.addSelectionListener(scheduleListColumnSelectionListener);
+        tableColumn = Widgets.addTableColumn(widgetScheduleList,5,"Enabled",     SWT.LEFT, 60,false);
         tableColumn.addSelectionListener(scheduleListColumnSelectionListener);
 
         menu = Widgets.newPopupMenu(shell);
@@ -5693,9 +5705,9 @@ Dprintf.dprintf("");
         composite = Widgets.newComposite(tab,SWT.NONE,4);
         Widgets.layout(composite,1,0,TableLayoutData.WE);
         {
-          widgetScheduleListInsert = Widgets.newButton(composite,"Add\u2026");
-          Widgets.layout(widgetScheduleListInsert,0,0,TableLayoutData.DEFAULT,0,0,0,0,90,SWT.DEFAULT);
-          widgetScheduleListInsert.addSelectionListener(new SelectionListener()
+          widgetScheduleListAdd = Widgets.newButton(composite,"Add\u2026");
+          Widgets.layout(widgetScheduleListAdd,0,0,TableLayoutData.DEFAULT,0,0,0,0,90,SWT.DEFAULT);
+          widgetScheduleListAdd.addSelectionListener(new SelectionListener()
           {
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
             {
@@ -5706,7 +5718,7 @@ Dprintf.dprintf("");
               scheduleNew();
             }
           });
-          widgetScheduleListInsert.setToolTipText("Add new schedule entry.");
+          widgetScheduleListAdd.setToolTipText("Add new schedule entry.");
 
           widgetScheduleListEdit = Widgets.newButton(composite,"Edit\u2026");
           Widgets.layout(widgetScheduleListEdit,0,1,TableLayoutData.DEFAULT,0,0,0,0,90,SWT.DEFAULT);
@@ -8848,10 +8860,9 @@ throw new Error("NYI");
         String  time        = resultMap.getString ("time"       );
         String  archiveType = resultMap.getString ("archiveType");
         String  customText  = resultMap.getString ("customText" );
-//TODO: custome text?
         boolean enabled     = resultMap.getBoolean("enabledFlag");
 
-        ScheduleData scheduleData = new ScheduleData(date,weekDays,time,archiveType,enabled);
+        ScheduleData scheduleData = new ScheduleData(date,weekDays,time,archiveType,customText,enabled);
 
         scheduleList.add(scheduleData);
         TableItem tableItem = new TableItem(widgetScheduleList,SWT.NONE,findScheduleListIndex(scheduleData));
@@ -8860,7 +8871,8 @@ throw new Error("NYI");
         tableItem.setText(1,scheduleData.getWeekDays());
         tableItem.setText(2,scheduleData.getTime());
         tableItem.setText(3,scheduleData.archiveType);
-        tableItem.setText(4,scheduleData.enabled ? "yes" : "no");
+        tableItem.setText(4,scheduleData.customText);
+        tableItem.setText(5,scheduleData.enabled ? "yes" : "no");
       }
     }
   }
@@ -8887,7 +8899,9 @@ throw new Error("NYI");
     final Combo    widgetYear,widgetMonth,widgetDay;
     final Button[] widgetWeekDays = new Button[7];
     final Combo    widgetHour,widgetMinute;
-    final Button   widgetTypeDefault,widgetTypeNormal,widgetTypeFull,widgetTypeIncremental,widgetTypeDifferential,widgetEnabled;
+    final Button   widgetTypeDefault,widgetTypeNormal,widgetTypeFull,widgetTypeIncremental,widgetTypeDifferential;
+    final Text     widgetCustomText;
+    final Button   widgetEnabled;
     final Button   widgetAdd;
     composite = Widgets.newComposite(dialog,SWT.NONE);
     composite.setLayout(new TableLayout(null,new double[]{0.0,1.0}));
@@ -9012,11 +9026,19 @@ throw new Error("NYI");
         widgetTypeDifferential.setToolTipText("Execute job as differential backup.");
       }
 
-      label = Widgets.newLabel(composite,"Options:");
+      label = Widgets.newLabel(composite,"Custom text:");
       Widgets.layout(label,4,0,TableLayoutData.W);
 
+      widgetCustomText = Widgets.newText(composite);
+      widgetCustomText.setText(scheduleData.customText);
+      Widgets.layout(widgetCustomText,4,1,TableLayoutData.WE);
+      widgetCustomText.setToolTipText("Custom text.");
+
+      label = Widgets.newLabel(composite,"Options:");
+      Widgets.layout(label,5,0,TableLayoutData.W);
+
       subComposite = Widgets.newComposite(composite,SWT.NONE);
-      Widgets.layout(subComposite,4,1,TableLayoutData.WE);
+      Widgets.layout(subComposite,5,1,TableLayoutData.WE);
       {
         widgetEnabled = Widgets.newCheckbox(subComposite,"enabled");
         Widgets.layout(widgetEnabled,0,0,TableLayoutData.W);
@@ -9079,12 +9101,13 @@ throw new Error("NYI");
                                  widgetWeekDays[ScheduleData.SUN].getSelection()
                                 );
         scheduleData.setTime(widgetHour.getText(),widgetMinute.getText());
-        scheduleData.enabled = widgetEnabled.getSelection();
         if      (widgetTypeNormal.getSelection())       scheduleData.archiveType = "normal";
         else if (widgetTypeFull.getSelection())         scheduleData.archiveType = "full";
         else if (widgetTypeIncremental.getSelection())  scheduleData.archiveType = "incremental";
         else if (widgetTypeDifferential.getSelection()) scheduleData.archiveType = "differential";
         else                                            scheduleData.archiveType = "*";
+        scheduleData.customText = widgetCustomText.getText();
+        scheduleData.enabled    = widgetEnabled.getSelection();
 
         Dialogs.close(dialog,true);
       }
@@ -9104,12 +9127,13 @@ throw new Error("NYI");
     {
     String[] resultErrorMessage = new String[1];
 //TODO return value?
-      BARServer.executeCommand(StringParser.format("SCHEDULE_LIST_ADD jobId=%d date=%s weekDays=%s time=%s archiveType=%s enabledFlag=%y",
+      BARServer.executeCommand(StringParser.format("SCHEDULE_LIST_ADD jobId=%d date=%s weekDays=%s time=%s archiveType=%s customText=%S enabledFlag=%y",
                                                    selectedJobId,
                                                    scheduleData.getDate(),
                                                    scheduleData.getWeekDays(),
                                                    scheduleData.getTime(),
                                                    scheduleData.archiveType,
+                                                   scheduleData.customText,
                                                    scheduleData.enabled
                                                   ),
                                resultErrorMessage
@@ -9122,7 +9146,8 @@ throw new Error("NYI");
       tableItem.setText(1,scheduleData.getWeekDays());
       tableItem.setText(2,scheduleData.getTime());
       tableItem.setText(3,scheduleData.archiveType);
-      tableItem.setText(4,scheduleData.enabled ? "yes" : "no");
+      tableItem.setText(4,scheduleData.customText);
+      tableItem.setText(5,scheduleData.enabled ? "yes" : "no");
     }
   }
 
@@ -9147,19 +9172,21 @@ throw new Error("NYI");
         tableItem.setText(1,scheduleData.getWeekDays());
         tableItem.setText(2,scheduleData.getTime());
         tableItem.setText(3,scheduleData.archiveType);
-        tableItem.setText(4,scheduleData.enabled ? "yes" : "no");
+        tableItem.setText(4,scheduleData.customText);
+        tableItem.setText(5,scheduleData.enabled ? "yes" : "no");
 
     String[] resultErrorMessage = new String[1];
 //TODO return value?
         BARServer.executeCommand(StringParser.format("SCHEDULE_LIST_CLEAR jobId=%d",selectedJobId),resultErrorMessage);
         for (ScheduleData scheduleData_ : scheduleList)
         {
-          BARServer.executeCommand(StringParser.format("SCHEDULE_LIST_ADD jobId=%d date=%s weekDays=%s time=%s archiveType=%s enabledFlag=%y",
+          BARServer.executeCommand(StringParser.format("SCHEDULE_LIST_ADD jobId=%d date=%s weekDays=%s time=%s archiveType=%s customText=%S enabledFlag=%y",
                                                        selectedJobId,
                                                        scheduleData_.getDate(),
                                                        scheduleData_.getWeekDays(),
                                                        scheduleData_.getTime(),
                                                        scheduleData_.archiveType,
+                                                       scheduleData_.customText,
                                                        scheduleData_.enabled
                                                       ),
                                    resultErrorMessage
@@ -9192,16 +9219,18 @@ throw new Error("NYI");
         tableItem.setText(1,newScheduleData.getWeekDays());
         tableItem.setText(2,newScheduleData.getTime());
         tableItem.setText(3,newScheduleData.archiveType);
-        tableItem.setText(4,newScheduleData.enabled ? "yes" : "no");
+        tableItem.setText(4,newScheduleData.customText);
+        tableItem.setText(5,newScheduleData.enabled ? "yes" : "no");
 
 // TODO result
         String[] resultErrorMessage = new String[1];
-        BARServer.executeCommand(StringParser.format("SCHEDULE_LIST_ADD jobId=%d date=%s weekDays=%s time=%s archiveType=%s enabledFlag=%y",
+        BARServer.executeCommand(StringParser.format("SCHEDULE_LIST_ADD jobId=%d date=%s weekDays=%s time=%s archiveType=%s customText=%S enabledFlag=%y",
                                                      selectedJobId,
                                                      newScheduleData.getDate(),
                                                      newScheduleData.getWeekDays(),
                                                      newScheduleData.getTime(),
                                                      newScheduleData.archiveType,
+                                                     newScheduleData.customText,
                                                      newScheduleData.enabled
                                                     ),
                                  resultErrorMessage
@@ -9233,12 +9262,13 @@ throw new Error("NYI");
         BARServer.executeCommand(StringParser.format("SCHEDULE_LIST_CLEAR jobId=%d",selectedJobId),resultErrorMessage);
         for (ScheduleData scheduleData_ : scheduleList)
         {
-          BARServer.executeCommand(StringParser.format("SCHEDULE_LIST_ADD jobId=%d date=%s weekDays=%s time=%s archiveType=%s enabledFlag=%y",
+          BARServer.executeCommand(StringParser.format("SCHEDULE_LIST_ADD jobId=%d date=%s weekDays=%s time=%s archiveType=%s customText=%S enabledFlag=%y",
                                                        selectedJobId,
                                                        scheduleData_.getDate(),
                                                        scheduleData_.getWeekDays(),
                                                        scheduleData_.getTime(),
                                                        scheduleData_.archiveType,
+                                                       scheduleData_.customText,
                                                        scheduleData_.enabled
                                                       ),
                                    resultErrorMessage
