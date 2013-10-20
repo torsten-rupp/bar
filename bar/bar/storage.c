@@ -2998,6 +2998,7 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
                     const String                 storageFileName,
                     const JobOptions             *jobOptions,
                     BandWidthList                *maxBandWidthList,
+                    ServerConnectionPriorities   serverConnectionPriority,
                     StorageRequestVolumeFunction storageRequestVolumeFunction,
                     void                         *storageRequestVolumeUserData,
                     StorageStatusInfoFunction    storageStatusInfoFunction,
@@ -3086,7 +3087,7 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
           }
 
           // allocate FTP server connection
-          if (!allocateServerConnection(storageFileHandle->ftp.server,SERVER_CONNECTION_PRIORITY_HIGH))
+          if (!allocateServerConnection(storageFileHandle->ftp.server,serverConnectionPriority))
           {
             Storage_doneSpecifier(&storageFileHandle->storageSpecifier);
             return ERROR_TOO_MANY_CONNECTIONS;
@@ -3298,7 +3299,7 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
           }
 
           // allocate SSH server connection
-          if (!allocateServerConnection(storageFileHandle->scp.server,SERVER_CONNECTION_PRIORITY_HIGH))
+          if (!allocateServerConnection(storageFileHandle->scp.server,serverConnectionPriority))
           {
             Storage_doneSpecifier(&storageFileHandle->storageSpecifier);
             return ERROR_TOO_MANY_CONNECTIONS;
@@ -3401,7 +3402,7 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
           }
 
           // allocate SSH server connection
-          if (!allocateServerConnection(storageFileHandle->sftp.server,SERVER_CONNECTION_PRIORITY_HIGH))
+          if (!allocateServerConnection(storageFileHandle->sftp.server,serverConnectionPriority))
           {
             Storage_doneSpecifier(&storageFileHandle->storageSpecifier);
             return ERROR_TOO_MANY_CONNECTIONS;
@@ -3493,7 +3494,7 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
           }
 
           // allocate WebDAV server connection
-          if (!allocateServerConnection(storageFileHandle->webdav.server,SERVER_CONNECTION_PRIORITY_HIGH))
+          if (!allocateServerConnection(storageFileHandle->webdav.server,serverConnectionPriority))
           {
             Storage_doneSpecifier(&storageFileHandle->storageSpecifier);
             return ERROR_TOO_MANY_CONNECTIONS;
@@ -4563,7 +4564,10 @@ Errors Storage_postProcess(StorageFileHandle *storageFileHandle,
                 else
                 {
                   printInfo(0,"FAIL\n");
-                  retryFlag = Misc_getYesNo("Retry write image to medium?");
+                  if (globalOptions.runMode == RUN_MODE_INTERACTIVE)
+                  {
+                    retryFlag = Misc_getYesNo("Retry write image to medium?");
+                  }
                 }
               }
               while ((error != ERROR_NONE) && retryFlag);
@@ -4611,7 +4615,10 @@ Errors Storage_postProcess(StorageFileHandle *storageFileHandle,
                 else
                 {
                   printInfo(0,"FAIL (error: %s)\n",Errors_getText(error));
-                  retryFlag = Misc_getYesNo("Retry write image to medium?");
+                  if (globalOptions.runMode == RUN_MODE_INTERACTIVE)
+                  {
+                    retryFlag = Misc_getYesNo("Retry write image to medium?");
+                  }
                 }
               }
               while ((error != ERROR_NONE) && retryFlag);
@@ -9215,7 +9222,7 @@ Errors Storage_openDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
           }
 
           // allocate FTP server connection
-          if (!allocateServerConnection(storageDirectoryListHandle->ftp.server,SERVER_CONNECTION_PRIORITY_HIGH))
+          if (!allocateServerConnection(storageDirectoryListHandle->ftp.server,serverConnectionPriority))
           {
             error = ERROR_TOO_MANY_CONNECTIONS;
             String_delete(storageDirectoryListHandle->ftp.fileName);
@@ -9660,7 +9667,7 @@ error = ERROR_FUNCTION_NOT_SUPPORTED;
 
           // allocate WebDAV server connection
 #warning webdav
-          if (!allocateServerConnection(storageDirectoryListHandle->webdav.server,SERVER_CONNECTION_PRIORITY_LOW))
+          if (!allocateServerConnection(storageDirectoryListHandle->webdav.server,serverConnectionPriority))
           {
             error = ERROR_TOO_MANY_CONNECTIONS;
             break;

@@ -793,7 +793,9 @@ Errors Storage_prepare(const String     storageName,
 *          storageSpecifier             - storage specifier structure
 *          storageFileName              - storage file name
 *          jobOptions                   - job options
-*          maxBandWidthList             - list with max. band width to use [bits/s] or NULL
+*          maxBandWidthList             - list with max. band width to
+*                                         use [bits/s] or NULL
+*          serverConnectionPriority     - server connection priority
 *          storageRequestVolumeFunction - volume request call back
 *          storageRequestVolumeUserData - user data for volume request
 *                                         call back
@@ -810,6 +812,7 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
                     const String                 storageFileName,
                     const JobOptions             *jobOptions,
                     BandWidthList                *maxBandWidthList,
+                    ServerConnectionPriorities   serverConnectionPriority,
                     StorageRequestVolumeFunction storageRequestVolumeFunction,
                     void                         *storageRequestVolumeUserData,
                     StorageStatusInfoFunction    storageStatusInfoFunction,
