@@ -205,7 +205,8 @@ typedef struct
       // FTP storage
       struct
       {
-        ServerAllocation        *serverAllocation;
+//        ServerAllocation        *serverAllocation;
+        Server                  *server;
         CURLM                   *curlMultiHandle;
         CURL                    *curlHandle;
 //        int                     runningHandles;            // curl number of active handles (1 or 0)
@@ -226,7 +227,8 @@ typedef struct
       // WebDAV storage
       struct
       {
-        ServerAllocation        *serverAllocation;
+//        ServerAllocation        *serverAllocation;
+        Server                  *server;
         CURLM                   *curlMultiHandle;
         CURL                    *curlHandle;
         uint64                  index;                     // current read/write index in file [0..n-1]
@@ -250,7 +252,8 @@ typedef struct
       // FTP storage
       struct
       {
-        ServerAllocation        *serverAllocation;
+//        ServerAllocation        *serverAllocation;
+        Server                  *server;
         netbuf                  *control;
         netbuf                  *data;
         uint64                  index;                     // current read/write index in file [0..n-1]
@@ -269,7 +272,8 @@ typedef struct
       // ssh storage (remote BAR)
       struct
       {
-        ServerAllocation        *serverAllocation;
+//        ServerAllocation        *serverAllocation;
+        Server                  *server;
 //        String                  hostName;                  // ssh server host name
 //        uint                    hostPort;                  // ssh server port number
 //        String                  loginName;                 // ssh login name
@@ -289,7 +293,8 @@ typedef struct
       // scp storage
       struct
       {
-        ServerAllocation        *serverAllocation;
+//        ServerAllocation        *serverAllocation;
+        Server                  *server;
         String                  sshPublicKeyFileName;      // ssh public key file name
         String                  sshPrivateKeyFileName;     // ssh private key file name
 
@@ -313,7 +318,8 @@ typedef struct
       // sftp storage
       struct
       {
-        ServerAllocation        *serverAllocation;
+//        ServerAllocation        *serverAllocation;
+        Server                  *server;
         String                  sshPublicKeyFileName;      // ssh public key file name
         String                  sshPrivateKeyFileName;     // ssh private key file name
 
@@ -433,7 +439,8 @@ typedef struct
     #if   defined(HAVE_CURL)
       struct
       {
-        ServerAllocation        *serverAllocation;
+//        ServerAllocation        *serverAllocation;
+        Server                  *server;
         String                  pathName;                  // directory name
         StringList              lineList;
 
@@ -449,7 +456,8 @@ typedef struct
 
       struct
       {
-        ServerAllocation        *serverAllocation;
+//        ServerAllocation        *serverAllocation;
+        Server                  *server;
         String                  pathName;                  // directory name
 
         mxml_node_t             *rootNode;
@@ -505,7 +513,6 @@ typedef struct
     struct
     {
       #ifdef HAVE_ISO9660
-        ServerAllocation        *serverAllocation;
         String                  pathName;                  // directory name
 
         iso9660_t               *iso9660Handle;            // ISO9660 image handle

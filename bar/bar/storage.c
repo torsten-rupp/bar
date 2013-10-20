@@ -1094,7 +1094,7 @@ LOCAL bool initWebDAVPassword(const String hostName, const String loginName, con
 
   SEMAPHORE_LOCKED_DO(semaphoreLock,&consoleLock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
   {
-    if (jobOptions->webdavServer.password == NULL)
+    if (jobOptions->webDAVServer.password == NULL)
     {
       if (globalOptions.runMode == RUN_MODE_INTERACTIVE)
       {
@@ -3076,7 +3076,7 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
           }
 
           // get FTP server settings
-          storageFileHandle->ftp.serverAllocation = getFTPServerSettings(storageFileHandle->storageSpecifier.hostName,jobOptions,&ftpServer);
+          storageFileHandle->ftp.server = getFTPServerSettings(storageFileHandle->storageSpecifier.hostName,jobOptions,&ftpServer);
           if (String_isEmpty(storageFileHandle->storageSpecifier.loginName)) String_set(storageFileHandle->storageSpecifier.loginName,ftpServer.loginName);
           if (String_isEmpty(storageFileHandle->storageSpecifier.loginName)) String_setCString(storageFileHandle->storageSpecifier.loginName,getenv("LOGNAME"));
           if (String_isEmpty(storageFileHandle->storageSpecifier.hostName))
@@ -3086,7 +3086,7 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
           }
 
           // allocate FTP server connection
-          if (!allocateServer(storageFileHandle->ftp.serverAllocation,SERVER_ALLOCATION_PRIORITY_HIGH,ftpServer.maxConnectionCount))
+          if (!allocateServerConnection(storageFileHandle->ftp.server,SERVER_CONNECTION_PRIORITY_HIGH))
           {
             Storage_doneSpecifier(&storageFileHandle->storageSpecifier);
             return ERROR_TOO_MANY_CONNECTIONS;
@@ -3285,7 +3285,7 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
           }
 
           // get SSH server settings
-          storageFileHandle->scp.serverAllocation = getSSHServerSettings(storageFileHandle->storageSpecifier.hostName,jobOptions,&sshServer);
+          storageFileHandle->scp.server = getSSHServerSettings(storageFileHandle->storageSpecifier.hostName,jobOptions,&sshServer);
           if (String_isEmpty(storageFileHandle->storageSpecifier.loginName)) String_set(storageFileHandle->storageSpecifier.loginName,sshServer.loginName);
           if (String_isEmpty(storageFileHandle->storageSpecifier.loginName)) String_setCString(storageFileHandle->storageSpecifier.loginName,getenv("LOGNAME"));
           if (storageFileHandle->storageSpecifier.hostPort == 0) storageFileHandle->storageSpecifier.hostPort = sshServer.port;
@@ -3298,7 +3298,7 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
           }
 
           // allocate SSH server connection
-          if (!allocateServer(storageFileHandle->scp.serverAllocation,SERVER_ALLOCATION_PRIORITY_HIGH,sshServer.maxConnectionCount))
+          if (!allocateServerConnection(storageFileHandle->scp.server,SERVER_CONNECTION_PRIORITY_HIGH))
           {
             Storage_doneSpecifier(&storageFileHandle->storageSpecifier);
             return ERROR_TOO_MANY_CONNECTIONS;
@@ -3388,7 +3388,7 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
           }
 
           // get SSH server settings
-          storageFileHandle->sftp.serverAllocation = getSSHServerSettings(storageFileHandle->storageSpecifier.hostName,jobOptions,&sshServer);
+          storageFileHandle->sftp.server = getSSHServerSettings(storageFileHandle->storageSpecifier.hostName,jobOptions,&sshServer);
           if (String_isEmpty(storageFileHandle->storageSpecifier.loginName)) String_set(storageFileHandle->storageSpecifier.loginName,sshServer.loginName);
           if (String_isEmpty(storageFileHandle->storageSpecifier.loginName)) String_setCString(storageFileHandle->storageSpecifier.loginName,getenv("LOGNAME"));
           if (storageFileHandle->storageSpecifier.hostPort == 0) storageFileHandle->storageSpecifier.hostPort = sshServer.port;
@@ -3401,7 +3401,7 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
           }
 
           // allocate SSH server connection
-          if (!allocateServer(storageFileHandle->sftp.serverAllocation,SERVER_ALLOCATION_PRIORITY_HIGH,sshServer.maxConnectionCount))
+          if (!allocateServerConnection(storageFileHandle->sftp.server,SERVER_CONNECTION_PRIORITY_HIGH))
           {
             Storage_doneSpecifier(&storageFileHandle->storageSpecifier);
             return ERROR_TOO_MANY_CONNECTIONS;
@@ -3466,7 +3466,7 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
     case STORAGE_TYPE_WEBDAV:
       #if   defined(HAVE_CURL)
         {
-          WebDAVServer webdavServer;
+          WebDAVServer webDAVServer;
 
           // init variables
           storageFileHandle->webdav.curlMultiHandle      = NULL;
@@ -3483,8 +3483,8 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
           initBandWidthLimiter(&storageFileHandle->webdav.bandWidthLimiter,maxBandWidthList);
 
           // get WebDAV server settings
-          storageFileHandle->webdav.serverAllocation = getWebDAVServerSettings(storageFileHandle->storageSpecifier.hostName,jobOptions,&webdavServer);
-          if (String_isEmpty(storageFileHandle->storageSpecifier.loginName)) String_set(storageFileHandle->storageSpecifier.loginName,webdavServer.loginName);
+          storageFileHandle->webdav.server = getWebDAVServerSettings(storageFileHandle->storageSpecifier.hostName,jobOptions,&webDAVServer);
+          if (String_isEmpty(storageFileHandle->storageSpecifier.loginName)) String_set(storageFileHandle->storageSpecifier.loginName,webDAVServer.loginName);
           if (String_isEmpty(storageFileHandle->storageSpecifier.loginName)) String_setCString(storageFileHandle->storageSpecifier.loginName,getenv("LOGNAME"));
           if (String_isEmpty(storageFileHandle->storageSpecifier.hostName))
           {
@@ -3493,7 +3493,7 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
           }
 
           // allocate WebDAV server connection
-          if (!allocateServer(storageFileHandle->webdav.serverAllocation,SERVER_ALLOCATION_PRIORITY_HIGH,webdavServer.maxConnectionCount))
+          if (!allocateServerConnection(storageFileHandle->webdav.server,SERVER_CONNECTION_PRIORITY_HIGH))
           {
             Storage_doneSpecifier(&storageFileHandle->storageSpecifier);
             return ERROR_TOO_MANY_CONNECTIONS;
@@ -3508,15 +3508,15 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
                                      storageFileHandle->storageSpecifier.loginPassword
                                     );
           }
-          if ((error != ERROR_NONE) && !Password_isEmpty(webdavServer.password))
+          if ((error != ERROR_NONE) && !Password_isEmpty(webDAVServer.password))
           {
             error = checkWebDAVLogin(storageFileHandle->storageSpecifier.hostName,
                                      storageFileHandle->storageSpecifier.loginName,
-                                     webdavServer.password
+                                     webDAVServer.password
                                     );
             if (error == ERROR_NONE)
             {
-              Password_set(storageFileHandle->storageSpecifier.loginPassword,webdavServer.password);
+              Password_set(storageFileHandle->storageSpecifier.loginPassword,webDAVServer.password);
             }
           }
           if ((error != ERROR_NONE) && !Password_isEmpty(defaultWebDAVPassword))
@@ -3551,7 +3551,7 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
           }
           if (error != ERROR_NONE)
           {
-            freeServer(storageFileHandle->webdav.serverAllocation);
+            freeServerConnection(storageFileHandle->webdav.server);
             Storage_doneSpecifier(&storageFileHandle->storageSpecifier);
             return error;
           }
@@ -3858,7 +3858,7 @@ Errors Storage_done(StorageFileHandle *storageFileHandle)
       break;
     case STORAGE_TYPE_FTP:
       // free FTP server connection
-      freeServer(storageFileHandle->ftp.serverAllocation);
+      freeServerConnection(storageFileHandle->ftp.server);
       #if   defined(HAVE_CURL)
         free(storageFileHandle->ftp.readAheadBuffer.data);
       #elif defined(HAVE_FTP)
@@ -3868,11 +3868,11 @@ Errors Storage_done(StorageFileHandle *storageFileHandle)
       break;
     case STORAGE_TYPE_SSH:
       // free SSH server connection
-      freeServer(storageFileHandle->ssh.serverAllocation);
+      freeServerConnection(storageFileHandle->ssh.server);
       break;
     case STORAGE_TYPE_SCP:
       // free SSH server connection
-      freeServer(storageFileHandle->scp.serverAllocation);
+      freeServerConnection(storageFileHandle->scp.server);
       #ifdef HAVE_SSH2
         free(storageFileHandle->scp.readAheadBuffer.data);
       #else /* not HAVE_SSH2 */
@@ -3880,7 +3880,7 @@ Errors Storage_done(StorageFileHandle *storageFileHandle)
       break;
     case STORAGE_TYPE_SFTP:
       // free SSH server connection
-      freeServer(storageFileHandle->sftp.serverAllocation);
+      freeServerConnection(storageFileHandle->sftp.server);
       #ifdef HAVE_SSH2
         free(storageFileHandle->sftp.readAheadBuffer.data);
       #else /* not HAVE_SSH2 */
@@ -3888,7 +3888,7 @@ Errors Storage_done(StorageFileHandle *storageFileHandle)
       break;
     case STORAGE_TYPE_WEBDAV:
       // free WebDAV server connection
-      freeServer(storageFileHandle->webdav.serverAllocation);
+      freeServerConnection(storageFileHandle->webdav.server);
       #if   defined(HAVE_CURL)
       #else /* not HAVE_CURL || HAVE_FTP */
       #endif /* HAVE_CURL || HAVE_FTP */
@@ -9203,7 +9203,7 @@ Errors Storage_openDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
           storageDirectoryListHandle->ftp.fileName = String_new();
 
           // get FTP server settings
-          storageDirectoryListHandle->ftp.serverAllocation = getFTPServerSettings(storageSpecifier.hostName,jobOptions,&ftpServer);
+          storageDirectoryListHandle->ftp.server = getFTPServerSettings(storageSpecifier.hostName,jobOptions,&ftpServer);
           if (String_isEmpty(storageSpecifier.loginName)) String_set(storageSpecifier.loginName,ftpServer.loginName);
           if (String_isEmpty(storageSpecifier.loginName)) String_setCString(storageSpecifier.loginName,getenv("LOGNAME"));
           if (String_isEmpty(storageSpecifier.hostName))
@@ -9215,7 +9215,7 @@ Errors Storage_openDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
           }
 
           // allocate FTP server connection
-          if (!allocateServer(storageDirectoryListHandle->ftp.serverAllocation,SERVER_ALLOCATION_PRIORITY_HIGH,ftpServer.maxConnectionCount))
+          if (!allocateServerConnection(storageDirectoryListHandle->ftp.server,SERVER_CONNECTION_PRIORITY_HIGH))
           {
             error = ERROR_TOO_MANY_CONNECTIONS;
             String_delete(storageDirectoryListHandle->ftp.fileName);
@@ -9279,7 +9279,7 @@ Errors Storage_openDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
           }
           if (error != ERROR_NONE)
           {
-            freeServer(storageDirectoryListHandle->ftp.serverAllocation);
+            freeServerConnection(storageDirectoryListHandle->ftp.server);
             String_delete(storageDirectoryListHandle->ftp.fileName);
             StringList_done(&storageDirectoryListHandle->ftp.lineList);
             break;
@@ -9289,7 +9289,7 @@ Errors Storage_openDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
           curlHandle = curl_easy_init();
           if (curlHandle == NULL)
           {
-            freeServer(storageDirectoryListHandle->ftp.serverAllocation);
+            freeServerConnection(storageDirectoryListHandle->ftp.server);
             String_delete(storageDirectoryListHandle->ftp.fileName);
             StringList_done(&storageDirectoryListHandle->ftp.lineList);
             error = ERROR_FTP_SESSION_FAIL;
@@ -9320,7 +9320,7 @@ Errors Storage_openDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
             error = ERRORX_(FTP_SESSION_FAIL,0,curl_easy_strerror(curlCode));
             String_delete(url);
             (void)curl_easy_cleanup(curlHandle);
-            freeServer(storageDirectoryListHandle->ftp.serverAllocation);
+            freeServerConnection(storageDirectoryListHandle->ftp.server);
             String_delete(storageDirectoryListHandle->ftp.fileName);
             StringList_done(&storageDirectoryListHandle->ftp.lineList);
             break;
@@ -9339,7 +9339,7 @@ Errors Storage_openDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
             error = ERRORX_(FTP_SESSION_FAIL,0,curl_easy_strerror(curlCode));
             String_delete(url);
             (void)curl_easy_cleanup(curlHandle);
-            freeServer(storageDirectoryListHandle->ftp.serverAllocation);
+            freeServerConnection(storageDirectoryListHandle->ftp.server);
             String_delete(storageDirectoryListHandle->ftp.fileName);
             StringList_done(&storageDirectoryListHandle->ftp.lineList);
             break;
@@ -9358,7 +9358,7 @@ Errors Storage_openDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
             error = ERRORX_(FTP_SESSION_FAIL,0,curl_easy_strerror(curlCode));
             String_delete(url);
             (void)curl_easy_cleanup(curlHandle);
-            freeServer(storageDirectoryListHandle->ftp.serverAllocation);
+            freeServerConnection(storageDirectoryListHandle->ftp.server);
             String_delete(storageDirectoryListHandle->ftp.fileName);
             StringList_done(&storageDirectoryListHandle->ftp.lineList);
             break;
@@ -9367,7 +9367,7 @@ Errors Storage_openDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
           // free resources
           String_delete(url);
           (void)curl_easy_cleanup(curlHandle);
-          freeServer(storageDirectoryListHandle->ftp.serverAllocation);
+          freeServerConnection(storageDirectoryListHandle->ftp.server);
         }
       #elif defined(HAVE_FTP)
         {
@@ -9632,7 +9632,7 @@ error = ERROR_FUNCTION_NOT_SUPPORTED;
 #warning todo webdav
       #ifdef HAVE_CURL
         {
-          WebDAVServer      webdavServer;
+          WebDAVServer      webDAVServer;
           CURL              *curlHandle;
           String            url;
           CURLcode          curlCode;
@@ -9649,8 +9649,8 @@ error = ERROR_FUNCTION_NOT_SUPPORTED;
           storageDirectoryListHandle->webdav.currentNode = NULL;
 
           // get WebDAV server settings
-          storageDirectoryListHandle->webdav.serverAllocation = getWebDAVServerSettings(storageSpecifier.hostName,jobOptions,&webdavServer);
-          if (String_isEmpty(storageSpecifier.loginName)) String_set(storageSpecifier.loginName,webdavServer.loginName);
+          storageDirectoryListHandle->webdav.server = getWebDAVServerSettings(storageSpecifier.hostName,jobOptions,&webDAVServer);
+          if (String_isEmpty(storageSpecifier.loginName)) String_set(storageSpecifier.loginName,webDAVServer.loginName);
           if (String_isEmpty(storageSpecifier.loginName)) String_setCString(storageSpecifier.loginName,getenv("LOGNAME"));
           if (String_isEmpty(storageSpecifier.hostName))
           {
@@ -9660,7 +9660,7 @@ error = ERROR_FUNCTION_NOT_SUPPORTED;
 
           // allocate WebDAV server connection
 #warning webdav
-          if (!allocateServer(storageDirectoryListHandle->webdav.serverAllocation,SERVER_ALLOCATION_PRIORITY_LOW,webdavServer.maxConnectionCount))
+          if (!allocateServerConnection(storageDirectoryListHandle->webdav.server,SERVER_CONNECTION_PRIORITY_LOW))
           {
             error = ERROR_TOO_MANY_CONNECTIONS;
             break;
@@ -9675,15 +9675,15 @@ error = ERROR_FUNCTION_NOT_SUPPORTED;
                                      storageSpecifier.loginPassword
                                     );
           }
-          if ((error != ERROR_NONE) && !Password_isEmpty(webdavServer.password))
+          if ((error != ERROR_NONE) && !Password_isEmpty(webDAVServer.password))
           {
             error = checkWebDAVLogin(storageSpecifier.hostName,
                                      storageSpecifier.loginName,
-                                     webdavServer.password
+                                     webDAVServer.password
                                     );
             if (error == ERROR_NONE)
             {
-              Password_set(storageSpecifier.loginPassword,webdavServer.password);
+              Password_set(storageSpecifier.loginPassword,webDAVServer.password);
             }
           }
           if ((error != ERROR_NONE) && !Password_isEmpty(defaultWebDAVPassword))
@@ -9718,7 +9718,7 @@ error = ERROR_FUNCTION_NOT_SUPPORTED;
           }
           if (error != ERROR_NONE)
           {
-            freeServer(storageDirectoryListHandle->webdav.serverAllocation);
+            freeServerConnection(storageDirectoryListHandle->webdav.server);
             break;
           }
 
@@ -9726,7 +9726,7 @@ error = ERROR_FUNCTION_NOT_SUPPORTED;
           curlHandle = curl_easy_init();
           if (curlHandle == NULL)
           {
-            freeServer(storageDirectoryListHandle->webdav.serverAllocation);
+            freeServerConnection(storageDirectoryListHandle->webdav.server);
             error = ERROR_WEBDAV_SESSION_FAIL;
             break;
           }
@@ -9757,7 +9757,7 @@ error = ERROR_FUNCTION_NOT_SUPPORTED;
             error = ERRORX_(WEBDAV_SESSION_FAIL,0,curl_easy_strerror(curlCode));
             String_delete(url);
             (void)curl_easy_cleanup(curlHandle);
-            freeServer(storageDirectoryListHandle->webdav.serverAllocation);
+            freeServerConnection(storageDirectoryListHandle->webdav.server);
             break;
           }
 
@@ -9797,7 +9797,7 @@ error = ERROR_FUNCTION_NOT_SUPPORTED;
             curl_slist_free_all(curlSList);
             String_delete(url);
             (void)curl_easy_cleanup(curlHandle);
-            freeServer(storageDirectoryListHandle->webdav.serverAllocation);
+            freeServerConnection(storageDirectoryListHandle->webdav.server);
             break;
           }
 //fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,String_cString(directoryData));
@@ -9813,7 +9813,7 @@ error = ERROR_FUNCTION_NOT_SUPPORTED;
             String_delete(directoryData);
             String_delete(url);
             (void)curl_easy_cleanup(curlHandle);
-            freeServer(storageDirectoryListHandle->webdav.serverAllocation);
+            freeServerConnection(storageDirectoryListHandle->webdav.server);
             break;
           }
           storageDirectoryListHandle->webdav.lastNode = storageDirectoryListHandle->webdav.rootNode;
@@ -9822,7 +9822,7 @@ error = ERROR_FUNCTION_NOT_SUPPORTED;
           String_delete(directoryData);
           String_delete(url);
           (void)curl_easy_cleanup(curlHandle);
-          freeServer(storageDirectoryListHandle->webdav.serverAllocation);
+          freeServerConnection(storageDirectoryListHandle->webdav.server);
         }
       #else /* not HAVE_CURL */
         UNUSED_VARIABLE(jobOptions);

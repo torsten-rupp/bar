@@ -158,52 +158,30 @@ typedef enum
   PASSWORD_MODE_UNKNOWN,
 } PasswordModes;
 
-// server allocation priority
-typedef enum
-{
-  SERVER_ALLOCATION_PRIORITY_LOW,
-  SERVER_ALLOCATION_PRIORITY_HIGH,
-} ServerAllocationPriorities;
-
-// server allocation
-typedef struct
-{
-  Semaphore    lock;
-  uint         lowPriorityRequestCount;                  // number of waiting low priority connection requests
-  uint         highPriorityRequestCount;                 // number of waiting high priority connection requests
-  uint         connectionCount;                          // number of connections
-} ServerAllocation;
-
 // FTP server settings
 typedef struct
 {
-  String   loginName;                                    // login name
-  Password *password;                                    // login password
-  uint     maxConnectionCount;                           // max. number of concurrent connections or MAX_CONNECTION_COUNT_UNLIMITED
-  uint64   maxStorageSize;                               // max. number of bytes to store on server
+  String           loginName;                            // login name
+  Password         *password;                            // login password
 } FTPServer;
 
 // SSH server settings
 typedef struct
 {
-  uint     port;                                         // server port (ssh,scp,sftp)
-  String   loginName;                                    // login name
-  Password *password;                                    // login password
-  String   publicKeyFileName;                            // public key file name (ssh,scp,sftp)
-  String   privateKeyFileName;                           // private key file name (ssh,scp,sftp)
-  uint     maxConnectionCount;                           // max. number of concurrent connections or MAX_CONNECTION_COUNT_UNLIMITED
-  uint64   maxStorageSize;                               // max. number of bytes to store on server
+  uint             port;                                 // server port (ssh,scp,sftp)
+  String           loginName;                            // login name
+  Password         *password;                            // login password
+  String           publicKeyFileName;                    // public key file name (ssh,scp,sftp)
+  String           privateKeyFileName;                   // private key file name (ssh,scp,sftp)
 } SSHServer;
 
 // WebDAV server settings
 typedef struct
 {
-  String   loginName;                                    // login name
-  Password *password;                                    // login password
-  String   publicKeyFileName;                            // public key file name
-  String   privateKeyFileName;                           // private key file name
-  uint     maxConnectionCount;                           // max. number of concurrent connections or MAX_CONNECTION_COUNT_UNLIMITED
-  uint64   maxStorageSize;                               // max. number of bytes to store on server
+  String           loginName;                            // login name
+  Password         *password;                            // login password
+  String           publicKeyFileName;                    // public key file name
+  String           privateKeyFileName;                   // private key file name
 } WebDAVServer;
 
 // server types
@@ -218,20 +196,41 @@ typedef enum
   SERVER_TYPE_UNKNOWN
 } ServerTypes;
 
+// server connection priority
+typedef enum
+{
+  SERVER_CONNECTION_PRIORITY_LOW,
+  SERVER_CONNECTION_PRIORITY_HIGH,
+} ServerConnectionPriorities;
+
+// server
+typedef struct
+{
+  Semaphore   lock;
+  ServerTypes type;                                      // server type
+  String      name;                                      // server name
+  union
+  {
+    FTPServer    ftpServer;
+    SSHServer    sshServer;
+    WebDAVServer webDAVServer;
+  };
+  uint        maxConnectionCount;                        // max. number of concurrent connections or MAX_CONNECTION_COUNT_UNLIMITED
+  uint64      maxStorageSize;                            // max. number of bytes to store on server
+  struct
+  {
+    uint      lowPriorityRequestCount;                   // number of waiting low priority connection requests
+    uint      highPriorityRequestCount;                  // number of waiting high priority connection requests
+    uint      connectionCount;                           // number of connections
+  }           connection;
+} Server;
+
 // server node
 typedef struct ServerNode
 {
   LIST_NODE_HEADER(struct ServerNode);
 
-  ServerTypes      type;                                 // server type
-  String           name;                                 // server name
-  union
-  {
-    FTPServer    ftpServer;
-    SSHServer    sshServer;
-    WebDAVServer webdavServer;
-  };
-  ServerAllocation serverAllocation;                     // server allocation
+  Server server;
 } ServerNode;
 
 // server list
@@ -320,14 +319,14 @@ typedef struct
 
   Password               *cryptPassword;                 // default password for encryption/decryption
 
-  FTPServer              *ftpServer;                     // current selected FTP server
-  FTPServer              *defaultFTPServer;              // default FTP server
+  Server                 *ftpServer;                     // current selected FTP server
+  Server                 *defaultFTPServer;              // default FTP server
 
-  SSHServer              *sshServer;                     // current selected SSH server
-  SSHServer              *defaultSSHServer;              // default SSH server
+  Server                 *sshServer;                     // current selected SSH server
+  Server                 *defaultSSHServer;              // default SSH server
 
-  WebDAVServer           *webdavServer;                  // current selected WebDAV server
-  WebDAVServer           *defaultWebDAVServer;           // default WebDAV server
+  Server                 *webDAVServer;                  // current selected WebDAV server
+  Server                 *defaultWebDAVServer;           // default WebDAV server
 
   const ServerList       *serverList;                    // list with FTP/SSH/WebDAV servers
 
@@ -443,7 +442,7 @@ struct JobOptions
 
   FTPServer                   ftpServer;                 // job specific FTP server settings
   SSHServer                   sshServer;                 // job specific SSH server settings
-  WebDAVServer                webdavServer;              // job specific WebDAV server settings
+  WebDAVServer                webDAVServer;              // job specific WebDAV server settings
 
   OpticalDisk                 opticalDisk;               // job specific optical disk settings
 
@@ -503,12 +502,6 @@ extern Semaphore      consoleLock;            // lock console
 #ifdef __cplusplus
   extern "C" {
 #endif
-
-//void initServerAllocate(ServerAllocation *serverAllocation);
-//void doneServerAllocate(ServerAllocation *serverAllocation);
-//bool allocateServer(ServerAllocation *serverAllocation, ServerAllocationPriorities priority, uint maxConnectionCount);
-//void freeServer(ServerAllocation *serverAllocation);
-//bool isServerAllocationPending(ServerAllocation *serverAllocation, ServerAllocationPriorities priority);
 
 /***********************************************************************\
 * Name   : getErrorText
@@ -701,14 +694,14 @@ ulong getBandWidth(BandWidthList *bandWidthList);
 *          jobOptions - job options
 * Output : ftperver   - FTP server settings from job options, server
 *                       list or default FTP server values
-* Return : server allocation
+* Return : server
 * Notes  : -
 \***********************************************************************/
 
-ServerAllocation *getFTPServerSettings(const String     hostName,
-                                       const JobOptions *jobOptions,
-                                       FTPServer        *ftpServer
-                                      );
+Server *getFTPServerSettings(const String     hostName,
+                             const JobOptions *jobOptions,
+                             FTPServer        *ftpServer
+                            );
 
 /***********************************************************************\
 * Name   : getSSHServerSettings
@@ -717,14 +710,14 @@ ServerAllocation *getFTPServerSettings(const String     hostName,
 *          jobOptions - job options
 * Output : sshServer  - SSH server settings from job options, server
 *                       list or default SSH server values
-* Return : server allocation
+* Return : server
 * Notes  : -
 \***********************************************************************/
 
-ServerAllocation *getSSHServerSettings(const String     hostName,
-                                       const JobOptions *jobOptions,
-                                       SSHServer        *sshServer
-                                      );
+Server *getSSHServerSettings(const String     hostName,
+                             const JobOptions *jobOptions,
+                             SSHServer        *sshServer
+                            );
 
 /***********************************************************************\
 * Name   : getWebDAVServerSettings
@@ -733,11 +726,11 @@ ServerAllocation *getSSHServerSettings(const String     hostName,
 *          jobOptions - job options
 * Output : webDAVServer - WebDAV server settings from job options,
 *                         server list or default WebDAV server values
-* Return : server allocation
+* Return : server
 * Notes  : -
 \***********************************************************************/
 
-ServerAllocation *getWebDAVServerSettings(const String     hostName,
+Server *getWebDAVServerSettings(const String     hostName,
                                           const JobOptions *jobOptions,
                                           WebDAVServer     *webDAVServer
                                          );
@@ -798,41 +791,41 @@ void getDeviceSettings(const String     name,
                       );
 
 /***********************************************************************\
-* Name   : allocateServer
-* Purpose: allocate server
-* Input  : serverNode         - server node
-*          priority           - server allocation priority; see
-*                               SERVER_ALLOCATION_PRIORITY_...
-*          maxConnectionCount - nax. number of concurrent connections
+* Name   : allocateServerConnection
+* Purpose: allocate server connection
+* Input  : server   - server
+*          priority - server connection priority; see
+*                     SERVER_CONNECTION_PRIORITY_...
 * Output : -
-* Return : TRUE iff connected allocated, FALSE otherwise
+* Return : TRUE iff connection allocated, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
 
-bool allocateServer(ServerAllocation *serverAllocation, ServerAllocationPriorities priority, uint maxConnectionCount);
+bool allocateServerConnection(Server *server, ServerConnectionPriorities priority);
 
 /***********************************************************************\
-* Name   : freeServer
-* Purpose: free allocated server
-* Input  : serverNode - server node
+* Name   : freeServerConnection
+* Purpose: free allocated server connection
+* Input  : server - server
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-void freeServer(ServerAllocation *serverAllocation);
+void freeServerConnection(Server *server);
 
 /***********************************************************************\
-* Name   : isServerAllocationPending
+* Name   : isServerConnectionAllocationPending
 * Purpose: check if another server allocation is pending
-* Input  : serverAllocation - server allocation handle
-*          priority         - priority of other server allocation
+* Input  : server   - server
+*          priority - priority of other server allocation
 * Output : -
-* Return : TRUE if another server allocation is pending, FALSE otherwise
+* Return : TRUE if another server connection allocation with higher
+*          priority is pending, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
 
-bool isServerAllocationPending(ServerAllocation *serverAllocation, ServerAllocationPriorities priority);
+bool isServerConnectionAllocationPending(Server *server, ServerConnectionPriorities priority);
 
 /***********************************************************************\
 * Name   : inputCryptPassword

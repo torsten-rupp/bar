@@ -2628,7 +2628,7 @@ LOCAL void indexThreadCode(void)
   error = ERROR_NONE;
 
   // reset/delete incomplete database entries (ignore possible errors)
-  plogMessage(LOG_TYPE_INDEX,"INDEX","start clean-up database\n");
+  plogMessage(LOG_TYPE_INDEX,"INDEX","Start clean-up database\n");
   while (Index_findByState(indexDatabaseHandle,
                            INDEX_STATE_SET(INDEX_STATE_UPDATE),
                            &storageId,
@@ -2672,7 +2672,7 @@ LOCAL void indexThreadCode(void)
     {
       plogMessage(LOG_TYPE_INDEX,
                   "INDEX",
-                  "deleted incomplete index #%lld: %s\n",
+                  "Deleted incomplete index #%lld: %s\n",
                   storageId,
                   String_cString(printableStorageName)
                  );
@@ -2736,7 +2736,7 @@ LOCAL void indexThreadCode(void)
             }
 
             error = Index_delete(indexDatabaseHandle,duplicateStorageId);
-            if (error == ERROR_NONE) plogMessage(LOG_TYPE_INDEX,"INDEX","deleted duplicate index #%lld: %s\n",duplicateStorageId,String_cString(printableStorageName));
+            if (error == ERROR_NONE) plogMessage(LOG_TYPE_INDEX,"INDEX","Deleted duplicate index #%lld: %s\n",duplicateStorageId,String_cString(printableStorageName));
           }
         }
         Index_doneList(&databaseQueryHandle2);
@@ -2767,7 +2767,7 @@ LOCAL void indexThreadCode(void)
                             );
     }
   }
-  plogMessage(LOG_TYPE_ALWAYS,"INDEX","done clean-up database\n");
+  plogMessage(LOG_TYPE_ALWAYS,"INDEX","Done clean-up database\n");
 
   // add/update index database
   while (!quitFlag)
@@ -2804,7 +2804,6 @@ LOCAL void indexThreadCode(void)
            && !quitFlag
           )
     {
-fprintf(stderr,"%s, %d: storageId=%ld\n",__FILE__,__LINE__,storageId);
       // get printable name (if possible)
       error = Storage_parseName(storageName,&storageSpecifier,storageFileName);
       if (error == ERROR_NONE)
@@ -2818,7 +2817,7 @@ fprintf(stderr,"%s, %d: storageId=%ld\n",__FILE__,__LINE__,storageId);
 
       plogMessage(LOG_TYPE_INDEX,
                   "INDEX",
-                  "create index for '%s'\n",
+                  "Start create index for '%s'\n",
                   String_cString(printableStorageName)
                  );
 
@@ -2865,7 +2864,7 @@ fprintf(stderr,"%s, %d: storageId=%ld\n",__FILE__,__LINE__,storageId);
           {
             plogMessage(LOG_TYPE_INDEX,
                         "INDEX",
-                        "created index #%lld for '%s'\n",
+                        "Created index #%lld for '%s'\n",
                         storageId,
                         String_cString(printableStorageName)
                        );
@@ -2874,7 +2873,7 @@ fprintf(stderr,"%s, %d: storageId=%ld\n",__FILE__,__LINE__,storageId);
           {
             plogMessage(LOG_TYPE_ERROR,
                         "INDEX",
-                        "cannot create index for '%s' (error: %s)\n",
+                        "Cannot create index for '%s' (error: %s)\n",
                         String_cString(printableStorageName),
                         Errors_getText(error)
                        );
@@ -2884,7 +2883,7 @@ fprintf(stderr,"%s, %d: storageId=%ld\n",__FILE__,__LINE__,storageId);
         {
           plogMessage(LOG_TYPE_INDEX,
                       "INDEX",
-                      "interrupted created index #%lld for '%s'\n",
+                      "Interrupted created index #%lld for '%s'\n",
                       storageId,
                       String_cString(printableStorageName)
                      );
@@ -3153,7 +3152,7 @@ LOCAL void autoIndexUpdateThreadCode(void)
           Misc_formatDateTime(dateTime,lastCheckedDateTime,NULL);
           plogMessage(LOG_TYPE_INDEX,
                       "INDEX",
-                      "deleted index for '%s', last checked %s\n",
+                      "Deleted index for '%s', last checked %s\n",
                       String_cString(printableStorageName),
                       String_cString(dateTime)
                      );
@@ -6776,8 +6775,8 @@ LOCAL void serverCommand_webdavPassword(ClientInfo *clientInfo, uint id, const S
   }
 
   // decrypt password
-  if (clientInfo->jobOptions.webdavServer.password == NULL) clientInfo->jobOptions.webdavServer.password = Password_new();
-  if (!decryptPassword(clientInfo->jobOptions.webdavServer.password,clientInfo,encryptType,encryptedPassword))
+  if (clientInfo->jobOptions.webDAVServer.password == NULL) clientInfo->jobOptions.webDAVServer.password = Password_new();
+  if (!decryptPassword(clientInfo->jobOptions.webDAVServer.password,clientInfo,encryptType,encryptedPassword))
   {
     sendClientResult(clientInfo,id,TRUE,ERROR_INVALID_WEBDAV_PASSWORD,"");
     String_delete(encryptType);
@@ -7901,10 +7900,10 @@ LOCAL void serverCommand_indexStorageInfo(ClientInfo *clientInfo, uint id, const
 *          Result:
 *            storageId=<storage id>
 *            name=<name>
-*            createDateTime=<created date/time>
+*            dateTime=<created date/time>
 *            size=<size>
-*            state=<state>
-*            mode=<mode>
+*            indexState=<state>
+*            indexMode=<mode>
 *            lastCheckedDateTime=<last checked date/time>
 *            errorMessage=<error message>
 *            ...

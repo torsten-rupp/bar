@@ -169,16 +169,13 @@ LOCAL EntryList        includeEntryList;
 LOCAL PatternList      excludePatternList;
 LOCAL PatternList      deltaSourcePatternList;
 LOCAL PatternList      compressExcludePatternList;
-LOCAL FTPServer        defaultFTPServer;
-LOCAL ServerAllocation defaultFTPServerAllocation;
-LOCAL SSHServer        defaultSSHServer;
-LOCAL ServerAllocation defaultSSHServerAllocation;
-LOCAL WebDAVServer     defaultWebDAVServer;
-LOCAL ServerAllocation defaultWebDAVServerAllocation;
+LOCAL Server           defaultFTPServer;
+LOCAL Server           defaultSSHServer;
+LOCAL Server           defaultWebDAVServer;
 LOCAL Device           defaultDevice;
-LOCAL FTPServer        *currentFTPServer;
-LOCAL SSHServer        *currentSSHServer;
-LOCAL WebDAVServer     *currentWebDAVServer;
+LOCAL Server           *currentFTPServer;
+LOCAL Server           *currentSSHServer;
+LOCAL Server           *currentWebDAVServer;
 LOCAL Device           *currentDevice;
 LOCAL bool             daemonFlag;
 LOCAL bool             noDetachFlag;
@@ -462,231 +459,231 @@ LOCAL const CommandLineOptionSet COMMAND_LINE_OPTIONS_LOG_TYPES[] =
 
 LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
 {
-  CMD_OPTION_ENUM         ("create",                       'c',0,0,command,                                     COMMAND_CREATE_FILES,                                  "create new files archive"                                                 ),
-  CMD_OPTION_ENUM         ("image",                        'm',0,0,command,                                     COMMAND_CREATE_IMAGES,                                 "create new images archive"                                                ),
-  CMD_OPTION_ENUM         ("list",                         'l',0,0,command,                                     COMMAND_LIST,                                          "list contents of archive"                                                 ),
-  CMD_OPTION_ENUM         ("test",                         't',0,0,command,                                     COMMAND_TEST,                                          "test contents of archive"                                                 ),
-  CMD_OPTION_ENUM         ("compare",                      'd',0,0,command,                                     COMMAND_COMPARE,                                       "compare contents of archive with files and images"                        ),
-  CMD_OPTION_ENUM         ("extract",                      'x',0,0,command,                                     COMMAND_RESTORE,                                       "restore archive"                                                          ),
-  CMD_OPTION_ENUM         ("generate-keys",                0,  0,0,command,                                     COMMAND_GENERATE_KEYS,                                 "generate new public/private key pair"                                     ),
-//  CMD_OPTION_ENUM         ("new-key-password",             0,  0,0,command,                                     COMMAND_NEW_KEY_PASSWORD,                            "set new private key password"                                             ),
-  CMD_OPTION_INTEGER      ("generate-keys-bits",           0,  1,0,keyBits,                                     MIN_ASYMMETRIC_CRYPT_KEY_BITS,
-                                                                                                                MAX_ASYMMETRIC_CRYPT_KEY_BITS,COMMAND_LINE_BITS_UNITS, "key bits",NULL                                                             ),
-  CMD_OPTION_STRING       ("job",                          0,  0,0,jobName,                                                                                            "execute job","name"                                                       ),
+  CMD_OPTION_ENUM         ("create",                       'c',0,0,command,                                         COMMAND_CREATE_FILES,                                  "create new files archive"                                                 ),
+  CMD_OPTION_ENUM         ("image",                        'm',0,0,command,                                         COMMAND_CREATE_IMAGES,                                 "create new images archive"                                                ),
+  CMD_OPTION_ENUM         ("list",                         'l',0,0,command,                                         COMMAND_LIST,                                          "list contents of archive"                                                 ),
+  CMD_OPTION_ENUM         ("test",                         't',0,0,command,                                         COMMAND_TEST,                                          "test contents of archive"                                                 ),
+  CMD_OPTION_ENUM         ("compare",                      'd',0,0,command,                                         COMMAND_COMPARE,                                       "compare contents of archive with files and images"                        ),
+  CMD_OPTION_ENUM         ("extract",                      'x',0,0,command,                                         COMMAND_RESTORE,                                       "restore archive"                                                          ),
+  CMD_OPTION_ENUM         ("generate-keys",                0,  0,0,command,                                         COMMAND_GENERATE_KEYS,                                 "generate new public/private key pair"                                     ),
+//  CMD_OPTION_ENUM         ("new-key-password",             0,  0,0,command,                                         COMMAND_NEW_KEY_PASSWORD,                             "set new private key password"                                             ),
+  CMD_OPTION_INTEGER      ("generate-keys-bits",           0,  1,0,keyBits,                                         MIN_ASYMMETRIC_CRYPT_KEY_BITS,
+                                                                                                                    MAX_ASYMMETRIC_CRYPT_KEY_BITS,COMMAND_LINE_BITS_UNITS, "key bits",NULL                                                            ),
+  CMD_OPTION_STRING       ("job",                          0,  0,0,jobName,                                                                                                "execute job","name"                                                       ),
 
-  CMD_OPTION_ENUM         ("normal",                       0,  1,1,jobOptions.archiveType,                      ARCHIVE_TYPE_NORMAL,                                   "create normal archive (no incremental list file)"                         ),
-  CMD_OPTION_ENUM         ("full",                         'f',0,1,jobOptions.archiveType,                      ARCHIVE_TYPE_FULL,                                     "create full archive and incremental list file"                            ),
-  CMD_OPTION_ENUM         ("incremental",                  'i',0,1,jobOptions.archiveType,                      ARCHIVE_TYPE_INCREMENTAL,                              "create incremental archive"                                               ),
-  CMD_OPTION_SPECIAL      ("incremental-list-file",        'I',1,1,&jobOptions.incrementalListFileName,         cmdOptionParseString,NULL,                             "incremental list file name (default: <archive name>.bid)","file name"     ),
-  CMD_OPTION_ENUM         ("differential",                 0,  1,1,jobOptions.archiveType,                      ARCHIVE_TYPE_DIFFERENTIAL,                             "create differential archive"                                              ),
+  CMD_OPTION_ENUM         ("normal",                       0,  1,1,jobOptions.archiveType,                          ARCHIVE_TYPE_NORMAL,                                   "create normal archive (no incremental list file)"                         ),
+  CMD_OPTION_ENUM         ("full",                         'f',0,1,jobOptions.archiveType,                          ARCHIVE_TYPE_FULL,                                     "create full archive and incremental list file"                            ),
+  CMD_OPTION_ENUM         ("incremental",                  'i',0,1,jobOptions.archiveType,                          ARCHIVE_TYPE_INCREMENTAL,                              "create incremental archive"                                               ),
+  CMD_OPTION_SPECIAL      ("incremental-list-file",        'I',1,1,&jobOptions.incrementalListFileName,             cmdOptionParseString,NULL,                             "incremental list file name (default: <archive name>.bid)","file name"     ),
+  CMD_OPTION_ENUM         ("differential",                 0,  1,1,jobOptions.archiveType,                          ARCHIVE_TYPE_DIFFERENTIAL,                             "create differential archive"                                              ),
 
-  CMD_OPTION_SELECT       ("pattern-type",                 0,  1,1,jobOptions.patternType,                      COMMAND_LINE_OPTIONS_PATTERN_TYPES,                    "select pattern type"                                                      ),
+  CMD_OPTION_SELECT       ("pattern-type",                 0,  1,1,jobOptions.patternType,                          COMMAND_LINE_OPTIONS_PATTERN_TYPES,                    "select pattern type"                                                      ),
 
-  CMD_OPTION_SPECIAL      ("include",                      '#',0,2,&includeEntryList,                           cmdOptionParseEntryPattern,NULL,                       "include pattern","pattern"                                                ),
-  CMD_OPTION_SPECIAL      ("exclude",                      '!',0,2,&excludePatternList,                         cmdOptionParsePattern,NULL,                            "exclude pattern","pattern"                                                ),
+  CMD_OPTION_SPECIAL      ("include",                      '#',0,2,&includeEntryList,                               cmdOptionParseEntryPattern,NULL,                       "include pattern","pattern"                                                ),
+  CMD_OPTION_SPECIAL      ("exclude",                      '!',0,2,&excludePatternList,                             cmdOptionParsePattern,NULL,                            "exclude pattern","pattern"                                                ),
 
-  CMD_OPTION_SPECIAL      ("delta-source",                 0,  0,2,&deltaSourcePatternList,                     cmdOptionParsePattern,NULL,                            "source pattern","pattern"                                                 ),
+  CMD_OPTION_SPECIAL      ("delta-source",                 0,  0,2,&deltaSourcePatternList,                         cmdOptionParsePattern,NULL,                            "source pattern","pattern"                                                 ),
 
-  CMD_OPTION_SPECIAL      ("config",                       0,  1,0,NULL,                                        cmdOptionParseConfigFile,NULL,                         "configuration file","file name"                                           ),
+  CMD_OPTION_SPECIAL      ("config",                       0,  1,0,NULL,                                            cmdOptionParseConfigFile,NULL,                         "configuration file","file name"                                           ),
 
-  CMD_OPTION_STRING       ("tmp-directory",                0,  1,0,globalOptions.tmpDirectory,                                                                         "temporary directory","path"                                               ),
-  CMD_OPTION_INTEGER64    ("max-tmp-size",                 0,  1,0,globalOptions.maxTmpSize,                    0,MAX_LONG_LONG,COMMAND_LINE_BYTES_UNITS,              "max. size of temporary files","unlimited"                                 ),
+  CMD_OPTION_STRING       ("tmp-directory",                0,  1,0,globalOptions.tmpDirectory,                                                                             "temporary directory","path"                                               ),
+  CMD_OPTION_INTEGER64    ("max-tmp-size",                 0,  1,0,globalOptions.maxTmpSize,                        0,MAX_LONG_LONG,COMMAND_LINE_BYTES_UNITS,              "max. size of temporary files","unlimited"                                 ),
 
-  CMD_OPTION_INTEGER64    ("archive-part-size",            's',0,1,jobOptions.archivePartSize,                  0,MAX_LONG_LONG,COMMAND_LINE_BYTES_UNITS,              "approximated archive part size","unlimited"                               ),
+  CMD_OPTION_INTEGER64    ("archive-part-size",            's',0,1,jobOptions.archivePartSize,                      0,MAX_LONG_LONG,COMMAND_LINE_BYTES_UNITS,              "approximated archive part size","unlimited"                               ),
 
-  CMD_OPTION_INTEGER      ("directory-strip",              'p',1,1,jobOptions.directoryStripCount,              0,MAX_INT,NULL,                                        "number of directories to strip on extract",NULL                           ),
-  CMD_OPTION_STRING       ("destination",                  0,  0,1,jobOptions.destination,                                                                             "destination to restore files/images","path"                               ),
-  CMD_OPTION_SPECIAL      ("owner",                        0,  0,1,&jobOptions.owner,                           cmdOptionParseOwner,NULL,                              "user and group of restored files","user:group"                            ),
+  CMD_OPTION_INTEGER      ("directory-strip",              'p',1,1,jobOptions.directoryStripCount,                  0,MAX_INT,NULL,                                        "number of directories to strip on extract",NULL                           ),
+  CMD_OPTION_STRING       ("destination",                  0,  0,1,jobOptions.destination,                                                                                 "destination to restore files/images","path"                               ),
+  CMD_OPTION_SPECIAL      ("owner",                        0,  0,1,&jobOptions.owner,                               cmdOptionParseOwner,NULL,                              "user and group of restored files","user:group"                            ),
 
-  CMD_OPTION_SPECIAL      ("compress-algorithm",           'z',0,1,&jobOptions.compressAlgorithm,               cmdOptionParseCompressAlgorithm,NULL,                  "select compress algorithms to use\n"
-                                                                                                                                                                       "  none        : no compression (default)\n"
-                                                                                                                                                                       "  zip0..zip9  : ZIP compression level 0..9"
-                                                                                                                                                                       #ifdef HAVE_BZ2
-                                                                                                                                                                       "\n"
-                                                                                                                                                                       "  bzip1..bzip9: BZIP2 compression level 1..9"
-                                                                                                                                                                       #endif
-                                                                                                                                                                       #ifdef HAVE_LZMA
-                                                                                                                                                                       "\n"
-                                                                                                                                                                       "  lzma1..lzma9: LZMA compression level 1..9"
-                                                                                                                                                                       #endif
-                                                                                                                                                                       #ifdef HAVE_XDELTA
-                                                                                                                                                                       "\n"
-                                                                                                                                                                       "additional select with '+':\n"
-                                                                                                                                                                       "  xdelta1..xdelta9: XDELTA compression level 1..9"
-                                                                                                                                                                       #endif
-                                                                                                                                                                       ,
-                                                                                                                                                                       "algorithm|xdelta+algorithm"                                               ),
-  CMD_OPTION_INTEGER      ("compress-min-size",            0,  1,1,globalOptions.compressMinFileSize,           0,MAX_INT,COMMAND_LINE_BYTES_UNITS,                    "minimal size of file for compression",NULL                                ),
-  CMD_OPTION_SPECIAL      ("compress-exclude",             0,  0,2,&compressExcludePatternList,                 cmdOptionParsePattern,NULL,                            "exclude compression pattern","pattern"                                    ),
+  CMD_OPTION_SPECIAL      ("compress-algorithm",           'z',0,1,&jobOptions.compressAlgorithm,                   cmdOptionParseCompressAlgorithm,NULL,                  "select compress algorithms to use\n"
+                                                                                                                                                                           "  none        : no compression (default)\n"
+                                                                                                                                                                           "  zip0..zip9  : ZIP compression level 0..9"
+                                                                                                                                                                           #ifdef HAVE_BZ2
+                                                                                                                                                                           "\n"
+                                                                                                                                                                           "  bzip1..bzip9: BZIP2 compression level 1..9"
+                                                                                                                                                                           #endif
+                                                                                                                                                                           #ifdef HAVE_LZMA
+                                                                                                                                                                           "\n"
+                                                                                                                                                                           "  lzma1..lzma9: LZMA compression level 1..9"
+                                                                                                                                                                           #endif
+                                                                                                                                                                           #ifdef HAVE_XDELTA
+                                                                                                                                                                           "\n"
+                                                                                                                                                                           "additional select with '+':\n"
+                                                                                                                                                                           "  xdelta1..xdelta9: XDELTA compression level 1..9"
+                                                                                                                                                                           #endif
+                                                                                                                                                                           ,
+                                                                                                                                                                           "algorithm|xdelta+algorithm"                                               ),
+  CMD_OPTION_INTEGER      ("compress-min-size",            0,  1,1,globalOptions.compressMinFileSize,               0,MAX_INT,COMMAND_LINE_BYTES_UNITS,                    "minimal size of file for compression",NULL                                ),
+  CMD_OPTION_SPECIAL      ("compress-exclude",             0,  0,2,&compressExcludePatternList,                     cmdOptionParsePattern,NULL,                            "exclude compression pattern","pattern"                                    ),
 
-  CMD_OPTION_SELECT       ("crypt-algorithm",              'y',0,1,jobOptions.cryptAlgorithm,                   COMMAND_LINE_OPTIONS_CRYPT_ALGORITHMS,                 "select crypt algorithm to use"                                            ),
-  CMD_OPTION_SELECT       ("crypt-type",                   0,  0,1,jobOptions.cryptType,                        COMMAND_LINE_OPTIONS_CRYPT_TYPES,                      "select crypt type"                                                        ),
-  CMD_OPTION_SPECIAL      ("crypt-password",               0,  0,1,&globalOptions.cryptPassword,                cmdOptionParsePassword,NULL,                           "crypt password (use with care!)","password"                               ),
-  CMD_OPTION_STRING       ("crypt-public-key",             0,  0,1,jobOptions.cryptPublicKeyFileName,                                                                  "public key for encryption","file name"                                    ),
-  CMD_OPTION_STRING       ("crypt-private-key",            0,  0,1,jobOptions.cryptPrivateKeyFileName,                                                                 "private key for decryption","file name"                                   ),
+  CMD_OPTION_SELECT       ("crypt-algorithm",              'y',0,1,jobOptions.cryptAlgorithm,                       COMMAND_LINE_OPTIONS_CRYPT_ALGORITHMS,                 "select crypt algorithm to use"                                            ),
+  CMD_OPTION_SELECT       ("crypt-type",                   0,  0,1,jobOptions.cryptType,                            COMMAND_LINE_OPTIONS_CRYPT_TYPES,                      "select crypt type"                                                        ),
+  CMD_OPTION_SPECIAL      ("crypt-password",               0,  0,1,&globalOptions.cryptPassword,                    cmdOptionParsePassword,NULL,                           "crypt password (use with care!)","password"                               ),
+  CMD_OPTION_STRING       ("crypt-public-key",             0,  0,1,jobOptions.cryptPublicKeyFileName,                                                                      "public key for encryption","file name"                                    ),
+  CMD_OPTION_STRING       ("crypt-private-key",            0,  0,1,jobOptions.cryptPrivateKeyFileName,                                                                     "private key for decryption","file name"                                   ),
 
-  CMD_OPTION_STRING       ("ftp-login-name",               0,  0,1,defaultFTPServer.loginName,                                                                         "ftp login name","name"                                                    ),
-  CMD_OPTION_SPECIAL      ("ftp-password",                 0,  0,1,&defaultFTPServer.password,                  cmdOptionParsePassword,NULL,                           "ftp password (use with care!)","password"                                 ),
-  CMD_OPTION_INTEGER      ("ftp-max-connections",          0,  0,1,defaultFTPServer.maxConnectionCount,         0,MAX_INT,NULL,                                        "max. number of concurrent ftp connections","unlimited"                    ),
-  CMD_OPTION_INTEGER64    ("ftp-max-storage-size",         0,  0,1,defaultFTPServer.maxStorageSize,             0LL,MAX_INT64,NULL,                                    "max. number of bytes to store on ftp server","unlimited"                  ),
+  CMD_OPTION_STRING       ("ftp-login-name",               0,  0,1,defaultFTPServer.ftpServer.loginName,                                                                   "ftp login name","name"                                                    ),
+  CMD_OPTION_SPECIAL      ("ftp-password",                 0,  0,1,&defaultFTPServer.ftpServer.password,            cmdOptionParsePassword,NULL,                           "ftp password (use with care!)","password"                                 ),
+  CMD_OPTION_INTEGER      ("ftp-max-connections",          0,  0,1,defaultFTPServer.maxConnectionCount,             0,MAX_INT,NULL,                                        "max. number of concurrent ftp connections","unlimited"                    ),
+  CMD_OPTION_INTEGER64    ("ftp-max-storage-size",         0,  0,1,defaultFTPServer.maxStorageSize,                 0LL,MAX_INT64,NULL,                                    "max. number of bytes to store on ftp server","unlimited"                  ),
 
-  CMD_OPTION_INTEGER      ("ssh-port",                     0,  0,1,defaultSSHServer.port,                       0,65535,NULL,                                          "ssh port",NULL                                                            ),
-  CMD_OPTION_STRING       ("ssh-login-name",               0,  0,1,defaultSSHServer.loginName,                                                                         "ssh login name","name"                                                    ),
-  CMD_OPTION_SPECIAL      ("ssh-password",                 0,  0,1,&defaultSSHServer.password,                  cmdOptionParsePassword,NULL,                           "ssh password (use with care!)","password"                                 ),
-  CMD_OPTION_STRING       ("ssh-public-key",               0,  1,1,defaultSSHServer.publicKeyFileName,                                                                 "ssh public key file name","file name"                                     ),
-  CMD_OPTION_STRING       ("ssh-private-key",              0,  1,1,defaultSSHServer.privateKeyFileName,                                                                "ssh private key file name","file name"                                    ),
-  CMD_OPTION_INTEGER      ("ssh-max-connections",          0,  0,1,defaultSSHServer.maxConnectionCount,         0,MAX_INT,NULL,                                        "max. number of concurrent ssh connections","unlimited"                    ),
-  CMD_OPTION_INTEGER64    ("ssh-max-storage-size",         0,  0,1,defaultSSHServer.maxStorageSize,             0LL,MAX_INT64,NULL,                                    "max. number of bytes to store on ssh server","unlimited"                  ),
+  CMD_OPTION_INTEGER      ("ssh-port",                     0,  0,1,defaultSSHServer.sshServer.port,                 0,65535,NULL,                                          "ssh port",NULL                                                            ),
+  CMD_OPTION_STRING       ("ssh-login-name",               0,  0,1,defaultSSHServer.sshServer.loginName,                                                                   "ssh login name","name"                                                    ),
+  CMD_OPTION_SPECIAL      ("ssh-password",                 0,  0,1,&defaultSSHServer.sshServer.password,            cmdOptionParsePassword,NULL,                           "ssh password (use with care!)","password"                                 ),
+  CMD_OPTION_STRING       ("ssh-public-key",               0,  1,1,defaultSSHServer.sshServer.publicKeyFileName,                                                           "ssh public key file name","file name"                                     ),
+  CMD_OPTION_STRING       ("ssh-private-key",              0,  1,1,defaultSSHServer.sshServer.privateKeyFileName,                                                          "ssh private key file name","file name"                                    ),
+  CMD_OPTION_INTEGER      ("ssh-max-connections",          0,  0,1,defaultSSHServer.maxConnectionCount,             0,MAX_INT,NULL,                                        "max. number of concurrent ssh connections","unlimited"                    ),
+  CMD_OPTION_INTEGER64    ("ssh-max-storage-size",         0,  0,1,defaultSSHServer.maxStorageSize,                 0LL,MAX_INT64,NULL,                                    "max. number of bytes to store on ssh server","unlimited"                  ),
 
-//  CMD_OPTION_INTEGER      ("webdav-port",                  0,  0,1,defaultWebDAVServer.port,                    0,65535,NULL,                                          "WebDAV port",NULL                                                         ),
-  CMD_OPTION_STRING       ("webdav-login-name",            0,  0,1,defaultWebDAVServer.loginName,                                                                      "WebDAV login name","name"                                                 ),
-  CMD_OPTION_SPECIAL      ("webdav-password",              0,  0,1,&defaultWebDAVServer.password,               cmdOptionParsePassword,NULL,                           "WebDAV password (use with care!)","password"                              ),
-  CMD_OPTION_INTEGER      ("webdav-max-connections",       0,  0,1,defaultWebDAVServer.maxConnectionCount,      0,MAX_INT,NULL,                                        "max. number of concurrent WebDAV connections","unlimited"                 ),
-  CMD_OPTION_INTEGER64    ("webdav-max-storage-size",      0,  0,1,defaultWebDAVServer.maxStorageSize,          0LL,MAX_INT64,NULL,                                    "max. number of bytes to store on WebDAV server","unlimited"               ),
+//  CMD_OPTION_INTEGER      ("webdav-port",                  0,  0,1,defaultWebDAVServer.webDAVServer.port,          0,65535,NULL,                                          "WebDAV port",NULL                                                         ),
+  CMD_OPTION_STRING       ("webdav-login-name",            0,  0,1,defaultWebDAVServer.webDAVServer.loginName,                                                             "WebDAV login name","name"                                                 ),
+  CMD_OPTION_SPECIAL      ("webdav-password",              0,  0,1,&defaultWebDAVServer.webDAVServer.password,      cmdOptionParsePassword,NULL,                           "WebDAV password (use with care!)","password"                              ),
+  CMD_OPTION_INTEGER      ("webdav-max-connections",       0,  0,1,defaultWebDAVServer.maxConnectionCount,          0,MAX_INT,NULL,                                        "max. number of concurrent WebDAV connections","unlimited"                 ),
+  CMD_OPTION_INTEGER64    ("webdav-max-storage-size",      0,  0,1,defaultWebDAVServer.maxStorageSize,              0LL,MAX_INT64,NULL,                                    "max. number of bytes to store on WebDAV server","unlimited"               ),
 
-  CMD_OPTION_BOOLEAN      ("daemon",                       0,  1,0,daemonFlag,                                                                                         "run in daemon mode"                                                       ),
-  CMD_OPTION_BOOLEAN      ("no-detach",                    'D',1,0,noDetachFlag,                                                                                       "do not detach in daemon mode"                                             ),
-  CMD_OPTION_INTEGER      ("server-port",                  0,  1,0,serverPort,                                  0,65535,NULL,                                          "server port",NULL                                                         ),
-  CMD_OPTION_INTEGER      ("server-tls-port",              0,  1,0,serverTLSPort,                               0,65535,NULL,                                          "TLS (SSL) server port",NULL                                               ),
-  CMD_OPTION_CSTRING      ("server-ca-file",               0,  1,0,serverCAFileName,                                                                                   "TLS (SSL) server certificate authority file (CA file)","file name"        ),
-  CMD_OPTION_CSTRING      ("server-cert-file",             0,  1,0,serverCertFileName,                                                                                 "TLS (SSL) server certificate file","file name"                            ),
-  CMD_OPTION_CSTRING      ("server-key-file",              0,  1,0,serverKeyFileName,                                                                                  "TLS (SSL) server key file","file name"                                    ),
-  CMD_OPTION_SPECIAL      ("server-password",              0,  1,0,&serverPassword,                             cmdOptionParsePassword,NULL,                           "server password (use with care!)","password"                              ),
-  CMD_OPTION_CSTRING      ("server-jobs-directory",        0,  1,0,serverJobsDirectory,                                                                                "server job directory","path name"                                         ),
+  CMD_OPTION_BOOLEAN      ("daemon",                       0,  1,0,daemonFlag,                                                                                             "run in daemon mode"                                                       ),
+  CMD_OPTION_BOOLEAN      ("no-detach",                    'D',1,0,noDetachFlag,                                                                                           "do not detach in daemon mode"                                             ),
+  CMD_OPTION_INTEGER      ("server-port",                  0,  1,0,serverPort,                                      0,65535,NULL,                                          "server port",NULL                                                         ),
+  CMD_OPTION_INTEGER      ("server-tls-port",              0,  1,0,serverTLSPort,                                   0,65535,NULL,                                          "TLS (SSL) server port",NULL                                               ),
+  CMD_OPTION_CSTRING      ("server-ca-file",               0,  1,0,serverCAFileName,                                                                                       "TLS (SSL) server certificate authority file (CA file)","file name"        ),
+  CMD_OPTION_CSTRING      ("server-cert-file",             0,  1,0,serverCertFileName,                                                                                     "TLS (SSL) server certificate file","file name"                            ),
+  CMD_OPTION_CSTRING      ("server-key-file",              0,  1,0,serverKeyFileName,                                                                                      "TLS (SSL) server key file","file name"                                    ),
+  CMD_OPTION_SPECIAL      ("server-password",              0,  1,0,&serverPassword,                                 cmdOptionParsePassword,NULL,                           "server password (use with care!)","password"                              ),
+  CMD_OPTION_CSTRING      ("server-jobs-directory",        0,  1,0,serverJobsDirectory,                                                                                    "server job directory","path name"                                         ),
 
-  CMD_OPTION_INTEGER      ("nice-level",                   0,  1,0,globalOptions.niceLevel,                     0,19,NULL,                                             "general nice level of processes/threads",NULL                             ),
-  CMD_OPTION_INTEGER      ("max-threads",                  0,  1,0,globalOptions.maxThreads,                    0,65535,NULL,                                          "max. number of concurrent compress/encryption threads","cpu cores"        ),
+  CMD_OPTION_INTEGER      ("nice-level",                   0,  1,0,globalOptions.niceLevel,                         0,19,NULL,                                             "general nice level of processes/threads",NULL                             ),
+  CMD_OPTION_INTEGER      ("max-threads",                  0,  1,0,globalOptions.maxThreads,                        0,65535,NULL,                                          "max. number of concurrent compress/encryption threads","cpu cores"        ),
 
-  CMD_OPTION_SPECIAL      ("max-band-width",               0,  1,0,&globalOptions.maxBandWidthList,             cmdOptionParseBandWidth,NULL,                          "max. network band width to use [bits/s]","number or file name"            ),
+  CMD_OPTION_SPECIAL      ("max-band-width",               0,  1,0,&globalOptions.maxBandWidthList,                 cmdOptionParseBandWidth,NULL,                          "max. network band width to use [bits/s]","number or file name"            ),
 
-  CMD_OPTION_BOOLEAN      ("batch",                        0,  2,0,batchFlag,                                                                                          "run in batch mode"                                                        ),
-  CMD_OPTION_SPECIAL      ("remote-bar-executable",        0,  1,0,&globalOptions.remoteBARExecutable,          cmdOptionParseString,NULL,                             "remote BAR executable","file name"                                        ),
+  CMD_OPTION_BOOLEAN      ("batch",                        0,  2,0,batchFlag,                                                                                              "run in batch mode"                                                        ),
+  CMD_OPTION_SPECIAL      ("remote-bar-executable",        0,  1,0,&globalOptions.remoteBARExecutable,              cmdOptionParseString,NULL,                             "remote BAR executable","file name"                                        ),
 
-  CMD_OPTION_STRING       ("file-write-pre-command",       0,  1,0,globalOptions.file.writePreProcessCommand,                                                          "write file pre-process command","command"                                 ),
-  CMD_OPTION_STRING       ("file-write-post-command",      0,  1,0,globalOptions.file.writePostProcessCommand,                                                         "write file post-process command","command"                                ),
+  CMD_OPTION_STRING       ("file-write-pre-command",       0,  1,0,globalOptions.file.writePreProcessCommand,                                                              "write file pre-process command","command"                                 ),
+  CMD_OPTION_STRING       ("file-write-post-command",      0,  1,0,globalOptions.file.writePostProcessCommand,                                                             "write file post-process command","command"                                ),
 
-  CMD_OPTION_STRING       ("ftp-write-pre-command",        0,  1,0,globalOptions.ftp.writePreProcessCommand,                                                           "write FTP pre-process command","command"                                  ),
-  CMD_OPTION_STRING       ("ftp-write-post-command",       0,  1,0,globalOptions.ftp.writePostProcessCommand,                                                          "write FTP post-process command","command"                                 ),
+  CMD_OPTION_STRING       ("ftp-write-pre-command",        0,  1,0,globalOptions.ftp.writePreProcessCommand,                                                               "write FTP pre-process command","command"                                  ),
+  CMD_OPTION_STRING       ("ftp-write-post-command",       0,  1,0,globalOptions.ftp.writePostProcessCommand,                                                              "write FTP post-process command","command"                                 ),
 
-  CMD_OPTION_STRING       ("scp-write-pre-command",        0,  1,0,globalOptions.scp.writePreProcessCommand,                                                           "write SCP pre-process command","command"                                  ),
-  CMD_OPTION_STRING       ("scp-write-post-command",       0,  1,0,globalOptions.scp.writePostProcessCommand,                                                          "write SCP post-process command","command"                                 ),
+  CMD_OPTION_STRING       ("scp-write-pre-command",        0,  1,0,globalOptions.scp.writePreProcessCommand,                                                               "write SCP pre-process command","command"                                  ),
+  CMD_OPTION_STRING       ("scp-write-post-command",       0,  1,0,globalOptions.scp.writePostProcessCommand,                                                              "write SCP post-process command","command"                                 ),
 
-  CMD_OPTION_STRING       ("sftp-write-pre-command",       0,  1,0,globalOptions.sftp.writePreProcessCommand,                                                          "write SFTP pre-process command","command"                                 ),
-  CMD_OPTION_STRING       ("sftp-write-post-command",      0,  1,0,globalOptions.sftp.writePostProcessCommand,                                                         "write SFTP post-process command","command"                                ),
+  CMD_OPTION_STRING       ("sftp-write-pre-command",       0,  1,0,globalOptions.sftp.writePreProcessCommand,                                                              "write SFTP pre-process command","command"                                 ),
+  CMD_OPTION_STRING       ("sftp-write-post-command",      0,  1,0,globalOptions.sftp.writePostProcessCommand,                                                             "write SFTP post-process command","command"                                ),
 
-  CMD_OPTION_STRING       ("webdav-write-pre-command",     0,  1,0,globalOptions.webdav.writePreProcessCommand,                                                        "write WebDAV pre-process command","command"                               ),
-  CMD_OPTION_STRING       ("webdav-write-post-command",    0,  1,0,globalOptions.webdav.writePostProcessCommand,                                                       "write WebDAV post-process command","command"                              ),
+  CMD_OPTION_STRING       ("webdav-write-pre-command",     0,  1,0,globalOptions.webdav.writePreProcessCommand,                                                            "write WebDAV pre-process command","command"                               ),
+  CMD_OPTION_STRING       ("webdav-write-post-command",    0,  1,0,globalOptions.webdav.writePostProcessCommand,                                                           "write WebDAV post-process command","command"                              ),
 
-  CMD_OPTION_STRING       ("cd-device",                    0,  1,0,globalOptions.cd.defaultDeviceName,                                                                 "default CD device","device name"                                          ),
-  CMD_OPTION_STRING       ("cd-request-volume-command",    0,  1,0,globalOptions.cd.requestVolumeCommand,                                                              "request new CD volume command","command"                                  ),
-  CMD_OPTION_STRING       ("cd-unload-volume-command",     0,  1,0,globalOptions.cd.unloadVolumeCommand,                                                               "unload CD volume command","command"                                       ),
-  CMD_OPTION_STRING       ("cd-load-volume-command",       0,  1,0,globalOptions.cd.loadVolumeCommand,                                                                 "load CD volume command","command"                                         ),
-  CMD_OPTION_INTEGER64    ("cd-volume-size",               0,  1,0,globalOptions.cd.volumeSize,                 0LL,MAX_LONG_LONG,COMMAND_LINE_BYTES_UNITS,            "CD volume size","unlimited"                                                           ),
-  CMD_OPTION_STRING       ("cd-image-pre-command",         0,  1,0,globalOptions.cd.imagePreProcessCommand,                                                            "make CD image pre-process command","command"                              ),
-  CMD_OPTION_STRING       ("cd-image-post-command",        0,  1,0,globalOptions.cd.imagePostProcessCommand,                                                           "make CD image post-process command","command"                             ),
-  CMD_OPTION_STRING       ("cd-image-command",             0,  1,0,globalOptions.cd.imageCommand,                                                                      "make CD image command","command"                                          ),
-  CMD_OPTION_STRING       ("cd-ecc-pre-command",           0,  1,0,globalOptions.cd.eccPreProcessCommand,                                                              "make CD error-correction codes pre-process command","command"             ),
-  CMD_OPTION_STRING       ("cd-ecc-post-command",          0,  1,0,globalOptions.cd.eccPostProcessCommand,                                                             "make CD error-correction codes post-process command","command"            ),
-  CMD_OPTION_STRING       ("cd-ecc-command",               0,  1,0,globalOptions.cd.eccCommand,                                                                        "make CD error-correction codes command","command"                         ),
-  CMD_OPTION_STRING       ("cd-write-pre-command",         0,  1,0,globalOptions.cd.writePreProcessCommand,                                                            "write CD pre-process command","command"                                   ),
-  CMD_OPTION_STRING       ("cd-write-post-command",        0,  1,0,globalOptions.cd.writePostProcessCommand,                                                           "write CD post-process command","command"                                  ),
-  CMD_OPTION_STRING       ("cd-write-command",             0,  1,0,globalOptions.cd.writeCommand,                                                                      "write CD command","command"                                               ),
-  CMD_OPTION_STRING       ("cd-write-image-command",       0,  1,0,globalOptions.cd.writeImageCommand,                                                                 "write CD image command","command"                                         ),
+  CMD_OPTION_STRING       ("cd-device",                    0,  1,0,globalOptions.cd.defaultDeviceName,                                                                     "default CD device","device name"                                          ),
+  CMD_OPTION_STRING       ("cd-request-volume-command",    0,  1,0,globalOptions.cd.requestVolumeCommand,                                                                  "request new CD volume command","command"                                  ),
+  CMD_OPTION_STRING       ("cd-unload-volume-command",     0,  1,0,globalOptions.cd.unloadVolumeCommand,                                                                   "unload CD volume command","command"                                       ),
+  CMD_OPTION_STRING       ("cd-load-volume-command",       0,  1,0,globalOptions.cd.loadVolumeCommand,                                                                     "load CD volume command","command"                                         ),
+  CMD_OPTION_INTEGER64    ("cd-volume-size",               0,  1,0,globalOptions.cd.volumeSize,                     0LL,MAX_LONG_LONG,COMMAND_LINE_BYTES_UNITS,            "CD volume size","unlimited"                                               ),
+  CMD_OPTION_STRING       ("cd-image-pre-command",         0,  1,0,globalOptions.cd.imagePreProcessCommand,                                                                "make CD image pre-process command","command"                              ),
+  CMD_OPTION_STRING       ("cd-image-post-command",        0,  1,0,globalOptions.cd.imagePostProcessCommand,                                                               "make CD image post-process command","command"                             ),
+  CMD_OPTION_STRING       ("cd-image-command",             0,  1,0,globalOptions.cd.imageCommand,                                                                          "make CD image command","command"                                          ),
+  CMD_OPTION_STRING       ("cd-ecc-pre-command",           0,  1,0,globalOptions.cd.eccPreProcessCommand,                                                                  "make CD error-correction codes pre-process command","command"             ),
+  CMD_OPTION_STRING       ("cd-ecc-post-command",          0,  1,0,globalOptions.cd.eccPostProcessCommand,                                                                 "make CD error-correction codes post-process command","command"            ),
+  CMD_OPTION_STRING       ("cd-ecc-command",               0,  1,0,globalOptions.cd.eccCommand,                                                                            "make CD error-correction codes command","command"                         ),
+  CMD_OPTION_STRING       ("cd-write-pre-command",         0,  1,0,globalOptions.cd.writePreProcessCommand,                                                                "write CD pre-process command","command"                                   ),
+  CMD_OPTION_STRING       ("cd-write-post-command",        0,  1,0,globalOptions.cd.writePostProcessCommand,                                                               "write CD post-process command","command"                                  ),
+  CMD_OPTION_STRING       ("cd-write-command",             0,  1,0,globalOptions.cd.writeCommand,                                                                          "write CD command","command"                                               ),
+  CMD_OPTION_STRING       ("cd-write-image-command",       0,  1,0,globalOptions.cd.writeImageCommand,                                                                     "write CD image command","command"                                         ),
 
-  CMD_OPTION_STRING       ("dvd-device",                   0,  1,0,globalOptions.dvd.defaultDeviceName,                                                                "default DVD device","device name"                                         ),
-  CMD_OPTION_STRING       ("dvd-request-volume-command",   0,  1,0,globalOptions.dvd.requestVolumeCommand,                                                             "request new DVD volume command","command"                                 ),
-  CMD_OPTION_STRING       ("dvd-unload-volume-command",    0,  1,0,globalOptions.dvd.unloadVolumeCommand,                                                              "unload DVD volume command","command"                                      ),
-  CMD_OPTION_STRING       ("dvd-load-volume-command",      0,  1,0,globalOptions.dvd.loadVolumeCommand,                                                                "load DVD volume command","command"                                        ),
-  CMD_OPTION_INTEGER64    ("dvd-volume-size",              0,  1,0,globalOptions.dvd.volumeSize,                0LL,MAX_LONG_LONG,COMMAND_LINE_BYTES_UNITS,            "DVD volume size","unlimited"                                                          ),
-  CMD_OPTION_STRING       ("dvd-image-pre-command",        0,  1,0,globalOptions.dvd.imagePreProcessCommand,                                                           "make DVD image pre-process command","command"                             ),
-  CMD_OPTION_STRING       ("dvd-image-post-command",       0,  1,0,globalOptions.dvd.imagePostProcessCommand,                                                          "make DVD image post-process command","command"                            ),
-  CMD_OPTION_STRING       ("dvd-image-command",            0,  1,0,globalOptions.dvd.imageCommand,                                                                     "make DVD image command","command"                                         ),
-  CMD_OPTION_STRING       ("dvd-ecc-pre-command",          0,  1,0,globalOptions.dvd.eccPreProcessCommand,                                                             "make DVD error-correction codes pre-process command","command"            ),
-  CMD_OPTION_STRING       ("dvd-ecc-post-command",         0,  1,0,globalOptions.dvd.eccPostProcessCommand,                                                            "make DVD error-correction codes post-process command","command"           ),
-  CMD_OPTION_STRING       ("dvd-ecc-command",              0,  1,0,globalOptions.dvd.eccCommand,                                                                       "make DVD error-correction codes command","command"                        ),
-  CMD_OPTION_STRING       ("dvd-write-pre-command",        0,  1,0,globalOptions.dvd.writePreProcessCommand,                                                           "write DVD pre-process command","command"                                  ),
-  CMD_OPTION_STRING       ("dvd-write-post-command",       0,  1,0,globalOptions.dvd.writePostProcessCommand,                                                          "write DVD post-process command","command"                                 ),
-  CMD_OPTION_STRING       ("dvd-write-command",            0,  1,0,globalOptions.dvd.writeCommand,                                                                     "write DVD command","command"                                              ),
-  CMD_OPTION_STRING       ("dvd-write-image-command",      0,  1,0,globalOptions.dvd.writeImageCommand,                                                                "write DVD image command","command"                                        ),
+  CMD_OPTION_STRING       ("dvd-device",                   0,  1,0,globalOptions.dvd.defaultDeviceName,                                                                    "default DVD device","device name"                                         ),
+  CMD_OPTION_STRING       ("dvd-request-volume-command",   0,  1,0,globalOptions.dvd.requestVolumeCommand,                                                                 "request new DVD volume command","command"                                 ),
+  CMD_OPTION_STRING       ("dvd-unload-volume-command",    0,  1,0,globalOptions.dvd.unloadVolumeCommand,                                                                  "unload DVD volume command","command"                                      ),
+  CMD_OPTION_STRING       ("dvd-load-volume-command",      0,  1,0,globalOptions.dvd.loadVolumeCommand,                                                                    "load DVD volume command","command"                                        ),
+  CMD_OPTION_INTEGER64    ("dvd-volume-size",              0,  1,0,globalOptions.dvd.volumeSize,                    0LL,MAX_LONG_LONG,COMMAND_LINE_BYTES_UNITS,            "DVD volume size","unlimited"                                              ),
+  CMD_OPTION_STRING       ("dvd-image-pre-command",        0,  1,0,globalOptions.dvd.imagePreProcessCommand,                                                               "make DVD image pre-process command","command"                             ),
+  CMD_OPTION_STRING       ("dvd-image-post-command",       0,  1,0,globalOptions.dvd.imagePostProcessCommand,                                                              "make DVD image post-process command","command"                            ),
+  CMD_OPTION_STRING       ("dvd-image-command",            0,  1,0,globalOptions.dvd.imageCommand,                                                                         "make DVD image command","command"                                         ),
+  CMD_OPTION_STRING       ("dvd-ecc-pre-command",          0,  1,0,globalOptions.dvd.eccPreProcessCommand,                                                                 "make DVD error-correction codes pre-process command","command"            ),
+  CMD_OPTION_STRING       ("dvd-ecc-post-command",         0,  1,0,globalOptions.dvd.eccPostProcessCommand,                                                                "make DVD error-correction codes post-process command","command"           ),
+  CMD_OPTION_STRING       ("dvd-ecc-command",              0,  1,0,globalOptions.dvd.eccCommand,                                                                           "make DVD error-correction codes command","command"                        ),
+  CMD_OPTION_STRING       ("dvd-write-pre-command",        0,  1,0,globalOptions.dvd.writePreProcessCommand,                                                               "write DVD pre-process command","command"                                  ),
+  CMD_OPTION_STRING       ("dvd-write-post-command",       0,  1,0,globalOptions.dvd.writePostProcessCommand,                                                              "write DVD post-process command","command"                                 ),
+  CMD_OPTION_STRING       ("dvd-write-command",            0,  1,0,globalOptions.dvd.writeCommand,                                                                         "write DVD command","command"                                              ),
+  CMD_OPTION_STRING       ("dvd-write-image-command",      0,  1,0,globalOptions.dvd.writeImageCommand,                                                                    "write DVD image command","command"                                        ),
 
-  CMD_OPTION_STRING       ("bd-device",                    0,  1,0,globalOptions.bd.defaultDeviceName,                                                                 "default BD device","device name"                                          ),
-  CMD_OPTION_STRING       ("bd-request-volume-command",    0,  1,0,globalOptions.bd.requestVolumeCommand,                                                              "request new BD volume command","command"                                  ),
-  CMD_OPTION_STRING       ("bd-unload-volume-command",     0,  1,0,globalOptions.bd.unloadVolumeCommand,                                                               "unload BD volume command","command"                                       ),
-  CMD_OPTION_STRING       ("bd-load-volume-command",       0,  1,0,globalOptions.bd.loadVolumeCommand,                                                                 "load BD volume command","command"                                         ),
-  CMD_OPTION_INTEGER64    ("bd-volume-size",               0,  1,0,globalOptions.bd.volumeSize,                 0LL,MAX_LONG_LONG,COMMAND_LINE_BYTES_UNITS,            "BD volume size","unlimited"                                                           ),
-  CMD_OPTION_STRING       ("bd-image-pre-command",         0,  1,0,globalOptions.bd.imagePreProcessCommand,                                                            "make BD image pre-process command","command"                              ),
-  CMD_OPTION_STRING       ("bd-image-post-command",        0,  1,0,globalOptions.bd.imagePostProcessCommand,                                                           "make BD image post-process command","command"                             ),
-  CMD_OPTION_STRING       ("bd-image-command",             0,  1,0,globalOptions.bd.imageCommand,                                                                      "make BD image command","command"                                          ),
-  CMD_OPTION_STRING       ("bd-ecc-pre-command",           0,  1,0,globalOptions.bd.eccPreProcessCommand,                                                              "make BD error-correction codes pre-process command","command"             ),
-  CMD_OPTION_STRING       ("bd-ecc-post-command",          0,  1,0,globalOptions.bd.eccPostProcessCommand,                                                             "make BD error-correction codes post-process command","command"            ),
-  CMD_OPTION_STRING       ("bd-ecc-command",               0,  1,0,globalOptions.bd.eccCommand,                                                                        "make BD error-correction codes command","command"                         ),
-  CMD_OPTION_STRING       ("bd-write-pre-command",         0,  1,0,globalOptions.bd.writePreProcessCommand,                                                            "write BD pre-process command","command"                                   ),
-  CMD_OPTION_STRING       ("bd-write-post-command",        0,  1,0,globalOptions.bd.writePostProcessCommand,                                                           "write BD post-process command","command"                                  ),
-  CMD_OPTION_STRING       ("bd-write-command",             0,  1,0,globalOptions.bd.writeCommand,                                                                      "write BD command","command"                                               ),
-  CMD_OPTION_STRING       ("bd-write-image-command",       0,  1,0,globalOptions.bd.writeImageCommand,                                                                 "write BD image command","command"                                         ),
+  CMD_OPTION_STRING       ("bd-device",                    0,  1,0,globalOptions.bd.defaultDeviceName,                                                                     "default BD device","device name"                                          ),
+  CMD_OPTION_STRING       ("bd-request-volume-command",    0,  1,0,globalOptions.bd.requestVolumeCommand,                                                                  "request new BD volume command","command"                                  ),
+  CMD_OPTION_STRING       ("bd-unload-volume-command",     0,  1,0,globalOptions.bd.unloadVolumeCommand,                                                                   "unload BD volume command","command"                                       ),
+  CMD_OPTION_STRING       ("bd-load-volume-command",       0,  1,0,globalOptions.bd.loadVolumeCommand,                                                                     "load BD volume command","command"                                         ),
+  CMD_OPTION_INTEGER64    ("bd-volume-size",               0,  1,0,globalOptions.bd.volumeSize,                     0LL,MAX_LONG_LONG,COMMAND_LINE_BYTES_UNITS,            "BD volume size","unlimited"                                               ),
+  CMD_OPTION_STRING       ("bd-image-pre-command",         0,  1,0,globalOptions.bd.imagePreProcessCommand,                                                                "make BD image pre-process command","command"                              ),
+  CMD_OPTION_STRING       ("bd-image-post-command",        0,  1,0,globalOptions.bd.imagePostProcessCommand,                                                               "make BD image post-process command","command"                             ),
+  CMD_OPTION_STRING       ("bd-image-command",             0,  1,0,globalOptions.bd.imageCommand,                                                                          "make BD image command","command"                                          ),
+  CMD_OPTION_STRING       ("bd-ecc-pre-command",           0,  1,0,globalOptions.bd.eccPreProcessCommand,                                                                  "make BD error-correction codes pre-process command","command"             ),
+  CMD_OPTION_STRING       ("bd-ecc-post-command",          0,  1,0,globalOptions.bd.eccPostProcessCommand,                                                                 "make BD error-correction codes post-process command","command"            ),
+  CMD_OPTION_STRING       ("bd-ecc-command",               0,  1,0,globalOptions.bd.eccCommand,                                                                            "make BD error-correction codes command","command"                         ),
+  CMD_OPTION_STRING       ("bd-write-pre-command",         0,  1,0,globalOptions.bd.writePreProcessCommand,                                                                "write BD pre-process command","command"                                   ),
+  CMD_OPTION_STRING       ("bd-write-post-command",        0,  1,0,globalOptions.bd.writePostProcessCommand,                                                               "write BD post-process command","command"                                  ),
+  CMD_OPTION_STRING       ("bd-write-command",             0,  1,0,globalOptions.bd.writeCommand,                                                                          "write BD command","command"                                               ),
+  CMD_OPTION_STRING       ("bd-write-image-command",       0,  1,0,globalOptions.bd.writeImageCommand,                                                                     "write BD image command","command"                                         ),
 
-  CMD_OPTION_STRING       ("device",                       0,  1,0,defaultDevice.defaultDeviceName,                                                                    "default device","device name"                                             ),
-  CMD_OPTION_STRING       ("device-request-volume-command",0,  1,0,defaultDevice.requestVolumeCommand,                                                                 "request new volume command","command"                                     ),
-  CMD_OPTION_STRING       ("device-load-volume-command",   0,  1,0,defaultDevice.loadVolumeCommand,                                                                    "load volume command","command"                                            ),
-  CMD_OPTION_STRING       ("device-unload-volume-command", 0,  1,0,defaultDevice.unloadVolumeCommand,                                                                  "unload volume command","command"                                          ),
-  CMD_OPTION_INTEGER64    ("device-volume-size",           0,  1,0,defaultDevice.volumeSize,                    0LL,MAX_LONG_LONG,COMMAND_LINE_BYTES_UNITS,            "volume size","unlimited"                                                              ),
-  CMD_OPTION_STRING       ("device-image-pre-command",     0,  1,0,defaultDevice.imagePreProcessCommand,                                                               "make image pre-process command","command"                                 ),
-  CMD_OPTION_STRING       ("device-image-post-command",    0,  1,0,defaultDevice.imagePostProcessCommand,                                                              "make image post-process command","command"                                ),
-  CMD_OPTION_STRING       ("device-image-command",         0,  1,0,defaultDevice.imageCommand,                                                                         "make image command","command"                                             ),
-  CMD_OPTION_STRING       ("device-ecc-pre-command",       0,  1,0,defaultDevice.eccPreProcessCommand,                                                                 "make error-correction codes pre-process command","command"                ),
-  CMD_OPTION_STRING       ("device-ecc-post-command",      0,  1,0,defaultDevice.eccPostProcessCommand,                                                                "make error-correction codes post-process command","command"               ),
-  CMD_OPTION_STRING       ("device-ecc-command",           0,  1,0,defaultDevice.eccCommand,                                                                           "make error-correction codes command","command"                            ),
-  CMD_OPTION_STRING       ("device-write-pre-command",     0,  1,0,defaultDevice.writePreProcessCommand,                                                               "write device pre-process command","command"                               ),
-  CMD_OPTION_STRING       ("device-write-post-command",    0,  1,0,defaultDevice.writePostProcessCommand,                                                              "write device post-process command","command"                              ),
-  CMD_OPTION_STRING       ("device-write-command",         0,  1,0,defaultDevice.writeCommand,                                                                         "write device command","command"                                           ),
+  CMD_OPTION_STRING       ("device",                       0,  1,0,defaultDevice.defaultDeviceName,                                                                        "default device","device name"                                             ),
+  CMD_OPTION_STRING       ("device-request-volume-command",0,  1,0,defaultDevice.requestVolumeCommand,                                                                     "request new volume command","command"                                     ),
+  CMD_OPTION_STRING       ("device-load-volume-command",   0,  1,0,defaultDevice.loadVolumeCommand,                                                                        "load volume command","command"                                            ),
+  CMD_OPTION_STRING       ("device-unload-volume-command", 0,  1,0,defaultDevice.unloadVolumeCommand,                                                                      "unload volume command","command"                                          ),
+  CMD_OPTION_INTEGER64    ("device-volume-size",           0,  1,0,defaultDevice.volumeSize,                        0LL,MAX_LONG_LONG,COMMAND_LINE_BYTES_UNITS,            "volume size","unlimited"                                                  ),
+  CMD_OPTION_STRING       ("device-image-pre-command",     0,  1,0,defaultDevice.imagePreProcessCommand,                                                                   "make image pre-process command","command"                                 ),
+  CMD_OPTION_STRING       ("device-image-post-command",    0,  1,0,defaultDevice.imagePostProcessCommand,                                                                  "make image post-process command","command"                                ),
+  CMD_OPTION_STRING       ("device-image-command",         0,  1,0,defaultDevice.imageCommand,                                                                             "make image command","command"                                             ),
+  CMD_OPTION_STRING       ("device-ecc-pre-command",       0,  1,0,defaultDevice.eccPreProcessCommand,                                                                     "make error-correction codes pre-process command","command"                ),
+  CMD_OPTION_STRING       ("device-ecc-post-command",      0,  1,0,defaultDevice.eccPostProcessCommand,                                                                    "make error-correction codes post-process command","command"               ),
+  CMD_OPTION_STRING       ("device-ecc-command",           0,  1,0,defaultDevice.eccCommand,                                                                               "make error-correction codes command","command"                            ),
+  CMD_OPTION_STRING       ("device-write-pre-command",     0,  1,0,defaultDevice.writePreProcessCommand,                                                                   "write device pre-process command","command"                               ),
+  CMD_OPTION_STRING       ("device-write-post-command",    0,  1,0,defaultDevice.writePostProcessCommand,                                                                  "write device post-process command","command"                              ),
+  CMD_OPTION_STRING       ("device-write-command",         0,  1,0,defaultDevice.writeCommand,                                                                             "write device command","command"                                           ),
 
-  CMD_OPTION_INTEGER64    ("volume-size",                  0,  1,1,jobOptions.volumeSize,                       0LL,MAX_LONG_LONG,COMMAND_LINE_BYTES_UNITS,            "volume size","unlimited"                                                              ),
-  CMD_OPTION_BOOLEAN      ("ecc",                          0,  1,1,jobOptions.errorCorrectionCodesFlag,                                                                "add error-correction codes with 'dvdisaster' tool"                        ),
-  CMD_OPTION_BOOLEAN      ("always-create-image",          0,  1,1,jobOptions.alwaysCreateImageFlag,                                                                   "always create image for CD/DVD/BD/device"                                 ),
+  CMD_OPTION_INTEGER64    ("volume-size",                  0,  1,1,jobOptions.volumeSize,                           0LL,MAX_LONG_LONG,COMMAND_LINE_BYTES_UNITS,            "volume size","unlimited"                                                  ),
+  CMD_OPTION_BOOLEAN      ("ecc",                          0,  1,1,jobOptions.errorCorrectionCodesFlag,                                                                    "add error-correction codes with 'dvdisaster' tool"                        ),
+  CMD_OPTION_BOOLEAN      ("always-create-image",          0,  1,1,jobOptions.alwaysCreateImageFlag,                                                                       "always create image for CD/DVD/BD/device"                                 ),
 
-  CMD_OPTION_CSTRING      ("index-database",               0,  1,0,indexDatabaseFileName,                                                                              "index database file name","file name"                                     ),
-  CMD_OPTION_BOOLEAN      ("index-database-auto-update",   0,  1,0,globalOptions.indexDatabaseAutoUpdateFlag,                                                          "enabled automatic update index database"                                  ),
-  CMD_OPTION_SPECIAL      ("index-database-max-band-width",0,  1,0,&globalOptions.indexDatabaseMaxBandWidthList,cmdOptionParseBandWidth,NULL,                          "max. band width to use for index updates [bis/s]","number or file name"   ),
-  CMD_OPTION_INTEGER      ("index-database-keep-time",     0,  1,0,globalOptions.indexDatabaseKeepTime,         0,MAX_INT,COMMAND_LINE_TIME_UNITS,                     "time to keep index data of not existing storage",NULL                     ),
+  CMD_OPTION_CSTRING      ("index-database",               0,  1,0,indexDatabaseFileName,                                                                                  "index database file name","file name"                                     ),
+  CMD_OPTION_BOOLEAN      ("index-database-auto-update",   0,  1,0,globalOptions.indexDatabaseAutoUpdateFlag,                                                              "enabled automatic update index database"                                  ),
+  CMD_OPTION_SPECIAL      ("index-database-max-band-width",0,  1,0,&globalOptions.indexDatabaseMaxBandWidthList,    cmdOptionParseBandWidth,NULL,                          "max. band width to use for index updates [bis/s]","number or file name"   ),
+  CMD_OPTION_INTEGER      ("index-database-keep-time",     0,  1,0,globalOptions.indexDatabaseKeepTime,             0,MAX_INT,COMMAND_LINE_TIME_UNITS,                     "time to keep index data of not existing storage",NULL                     ),
 
-  CMD_OPTION_SET          ("log",                          0,  1,0,logTypes,                                    COMMAND_LINE_OPTIONS_LOG_TYPES,                        "log types"                                                                ),
-  CMD_OPTION_CSTRING      ("log-file",                     0,  1,0,logFileName,                                                                                        "log file name","file name"                                                ),
-  CMD_OPTION_CSTRING      ("log-post-command",             0,  1,0,logPostCommand,                                                                                     "log file post-process command","command"                                  ),
+  CMD_OPTION_SET          ("log",                          0,  1,0,logTypes,                                        COMMAND_LINE_OPTIONS_LOG_TYPES,                        "log types"                                                                ),
+  CMD_OPTION_CSTRING      ("log-file",                     0,  1,0,logFileName,                                                                                            "log file name","file name"                                                ),
+  CMD_OPTION_CSTRING      ("log-post-command",             0,  1,0,logPostCommand,                                                                                         "log file post-process command","command"                                  ),
 
-  CMD_OPTION_CSTRING      ("pid-file",                     0,  1,0,pidFileName,                                                                                        "process id file name","file name"                                         ),
+  CMD_OPTION_CSTRING      ("pid-file",                     0,  1,0,pidFileName,                                                                                            "process id file name","file name"                                         ),
 
-  CMD_OPTION_BOOLEAN      ("group",                        'g',0,0,globalOptions.groupFlag,                                                                            "group files in list"                                                      ),
-  CMD_OPTION_BOOLEAN      ("all",                          0,  0,0,globalOptions.allFlag,                                                                              "show all files"                                                           ),
-  CMD_OPTION_BOOLEAN      ("long-format",                  'L',0,0,globalOptions.longFormatFlag,                                                                       "list in long format"                                                      ),
-  CMD_OPTION_BOOLEAN      ("human-format",                 'H',0,0,globalOptions.humanFormatFlag,                                                                      "list in human readable format"                                            ),
-  CMD_OPTION_BOOLEAN      ("no-header-footer",             0,  0,0,globalOptions.noHeaderFooterFlag,                                                                   "output no header/footer in list"                                          ),
-  CMD_OPTION_BOOLEAN      ("delete-old-archive-files",     0,  1,0,globalOptions.deleteOldArchiveFilesFlag,                                                            "delete old archive files after creating new files"                        ),
-  CMD_OPTION_BOOLEAN      ("ignore-no-backup-file",        0,  1,1,globalOptions.ignoreNoBackupFileFlag,                                                               "ignore .nobackup/.NOBACKUP file"                                          ),
-  CMD_OPTION_BOOLEAN      ("ignore-no-dump",               0,  1,1,jobOptions.ignoreNoDumpAttributeFlag,                                                               "ignore 'no dump' attribute of files"                                      ),
+  CMD_OPTION_BOOLEAN      ("group",                        'g',0,0,globalOptions.groupFlag,                                                                                "group files in list"                                                      ),
+  CMD_OPTION_BOOLEAN      ("all",                          0,  0,0,globalOptions.allFlag,                                                                                  "show all files"                                                           ),
+  CMD_OPTION_BOOLEAN      ("long-format",                  'L',0,0,globalOptions.longFormatFlag,                                                                           "list in long format"                                                      ),
+  CMD_OPTION_BOOLEAN      ("human-format",                 'H',0,0,globalOptions.humanFormatFlag,                                                                          "list in human readable format"                                            ),
+  CMD_OPTION_BOOLEAN      ("no-header-footer",             0,  0,0,globalOptions.noHeaderFooterFlag,                                                                       "output no header/footer in list"                                          ),
+  CMD_OPTION_BOOLEAN      ("delete-old-archive-files",     0,  1,0,globalOptions.deleteOldArchiveFilesFlag,                                                                "delete old archive files after creating new files"                        ),
+  CMD_OPTION_BOOLEAN      ("ignore-no-backup-file",        0,  1,1,globalOptions.ignoreNoBackupFileFlag,                                                                   "ignore .nobackup/.NOBACKUP file"                                          ),
+  CMD_OPTION_BOOLEAN      ("ignore-no-dump",               0,  1,1,jobOptions.ignoreNoDumpAttributeFlag,                                                                   "ignore 'no dump' attribute of files"                                      ),
 
-  CMD_OPTION_BOOLEAN      ("skip-unreadable",              0,  0,1,jobOptions.skipUnreadableFlag,                                                                      "skip unreadable files"                                                    ),
-  CMD_OPTION_BOOLEAN      ("force-delta-compression",      0,  0,1,jobOptions.forceDeltaCompressionFlag,                                                               "force delta compression of files. Stop on error"                          ),
-  CMD_OPTION_BOOLEAN      ("raw-images",                   0,  1,1,jobOptions.rawImagesFlag,                                                                           "store raw images (store all image blocks)"                                ),
-  CMD_OPTION_BOOLEAN      ("no-fragments-check",           0,  1,1,jobOptions.noFragmentsCheckFlag,                                                                    "do not check completeness of file fragments"                              ),
-  CMD_OPTION_BOOLEAN      ("no-index-database",            0,  1,0,jobOptions.noIndexDatabaseFlag,                                                                     "do not store index database for archives"                                 ),
-  CMD_OPTION_BOOLEAN      ("overwrite-archive-files",      'o',0,1,jobOptions.overwriteArchiveFilesFlag,                                                               "overwrite existing archive files"                                         ),
-  CMD_OPTION_BOOLEAN      ("overwrite-files",              0,  0,1,jobOptions.overwriteFilesFlag,                                                                      "overwrite existing files"                                                 ),
-  CMD_OPTION_BOOLEAN      ("wait-first-volume",            0,  1,1,jobOptions.waitFirstVolumeFlag,                                                                     "wait for first volume"                                                    ),
-  CMD_OPTION_BOOLEAN      ("dry-run",                      0,  1,1,jobOptions.dryRunFlag,                                                                              "do dry-run (skip storage/restore, incremental data, index database)"      ),
-  CMD_OPTION_BOOLEAN      ("no-storage",                   0,  1,1,jobOptions.noStorageFlag,                                                                           "do not store archives (skip storage, index database)"                     ),
-  CMD_OPTION_BOOLEAN      ("no-bar-on-medium",             0,  1,1,jobOptions.noBAROnMediumFlag,                                                                       "do not store a copy of BAR on medium"                                     ),
-  CMD_OPTION_BOOLEAN      ("stop-on-error",                0,  1,1,jobOptions.stopOnErrorFlag,                                                                         "immediately stop on error"                                                ),
+  CMD_OPTION_BOOLEAN      ("skip-unreadable",              0,  0,1,jobOptions.skipUnreadableFlag,                                                                          "skip unreadable files"                                                    ),
+  CMD_OPTION_BOOLEAN      ("force-delta-compression",      0,  0,1,jobOptions.forceDeltaCompressionFlag,                                                                   "force delta compression of files. Stop on error"                          ),
+  CMD_OPTION_BOOLEAN      ("raw-images",                   0,  1,1,jobOptions.rawImagesFlag,                                                                               "store raw images (store all image blocks)"                                ),
+  CMD_OPTION_BOOLEAN      ("no-fragments-check",           0,  1,1,jobOptions.noFragmentsCheckFlag,                                                                        "do not check completeness of file fragments"                              ),
+  CMD_OPTION_BOOLEAN      ("no-index-database",            0,  1,0,jobOptions.noIndexDatabaseFlag,                                                                         "do not store index database for archives"                                 ),
+  CMD_OPTION_BOOLEAN      ("overwrite-archive-files",      'o',0,1,jobOptions.overwriteArchiveFilesFlag,                                                                   "overwrite existing archive files"                                         ),
+  CMD_OPTION_BOOLEAN      ("overwrite-files",              0,  0,1,jobOptions.overwriteFilesFlag,                                                                          "overwrite existing files"                                                 ),
+  CMD_OPTION_BOOLEAN      ("wait-first-volume",            0,  1,1,jobOptions.waitFirstVolumeFlag,                                                                         "wait for first volume"                                                    ),
+  CMD_OPTION_BOOLEAN      ("dry-run",                      0,  1,1,jobOptions.dryRunFlag,                                                                                  "do dry-run (skip storage/restore, incremental data, index database)"      ),
+  CMD_OPTION_BOOLEAN      ("no-storage",                   0,  1,1,jobOptions.noStorageFlag,                                                                               "do not store archives (skip storage, index database)"                     ),
+  CMD_OPTION_BOOLEAN      ("no-bar-on-medium",             0,  1,1,jobOptions.noBAROnMediumFlag,                                                                           "do not store a copy of BAR on medium"                                     ),
+  CMD_OPTION_BOOLEAN      ("stop-on-error",                0,  1,1,jobOptions.stopOnErrorFlag,                                                                             "immediately stop on error"                                                ),
 
-  CMD_OPTION_BOOLEAN      ("no-default-config",            0,  1,0,globalOptions.noDefaultConfigFlag,                                                                  "do not read personal configuration file ~/.bar/" DEFAULT_CONFIG_FILE_NAME ),
-  CMD_OPTION_BOOLEAN      ("quiet",                        0,  1,0,globalOptions.quietFlag,                                                                            "suppress any output"                                                      ),
-  CMD_OPTION_INTEGER_RANGE("verbose",                      'v',1,0,globalOptions.verboseLevel,                  0,6,NULL,                                              "verbosity level",NULL                                                     ),
+  CMD_OPTION_BOOLEAN      ("no-default-config",            0,  1,0,globalOptions.noDefaultConfigFlag,                                                                      "do not read personal configuration file ~/.bar/" DEFAULT_CONFIG_FILE_NAME ),
+  CMD_OPTION_BOOLEAN      ("quiet",                        0,  1,0,globalOptions.quietFlag,                                                                                "suppress any output"                                                      ),
+  CMD_OPTION_INTEGER_RANGE("verbose",                      'v',1,0,globalOptions.verboseLevel,                      0,6,NULL,                                              "verbosity level",NULL                                                     ),
 
-  CMD_OPTION_BOOLEAN      ("server-debug",                 0,  2,0,globalOptions.serverDebugFlag,                                                                      "enable debug mode for server"                                             ),
+  CMD_OPTION_BOOLEAN      ("server-debug",                 0,  2,0,globalOptions.serverDebugFlag,                                                                          "enable debug mode for server"                                             ),
 
-  CMD_OPTION_BOOLEAN      ("version",                      0  ,0,0,versionFlag,                                                                                        "output version"                                                           ),
-  CMD_OPTION_BOOLEAN      ("help",                         'h',0,0,helpFlag,                                                                                           "output this help"                                                         ),
-  CMD_OPTION_BOOLEAN      ("xhelp",                        0,  0,0,xhelpFlag,                                                                                          "output help to extended options"                                          ),
-  CMD_OPTION_BOOLEAN      ("help-internal",                0,  1,0,helpInternalFlag,                                                                                   "output help to internal options"                                          ),
+  CMD_OPTION_BOOLEAN      ("version",                      0  ,0,0,versionFlag,                                                                                            "output version"                                                           ),
+  CMD_OPTION_BOOLEAN      ("help",                         'h',0,0,helpFlag,                                                                                               "output this help"                                                         ),
+  CMD_OPTION_BOOLEAN      ("xhelp",                        0,  0,0,xhelpFlag,                                                                                              "output help to extended options"                                          ),
+  CMD_OPTION_BOOLEAN      ("help-internal",                0,  1,0,helpInternalFlag,                                                                                       "output help to internal options"                                          ),
 };
 
 LOCAL bool configValueParseConfigFile(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
@@ -874,24 +871,24 @@ LOCAL const ConfigValue CONFIG_VALUES[] =
   CONFIG_VALUE_STRING   ("crypt-public-key",             &jobOptions.cryptPublicKeyFileName,-1                          ),
   CONFIG_VALUE_STRING   ("crypt-private-key",            &jobOptions.cryptPrivateKeyFileName,-1                         ),
 
-  CONFIG_VALUE_STRING   ("ftp-login-name",               &currentFTPServer,offsetof(FTPServer,loginName)                ),
-  CONFIG_VALUE_SPECIAL  ("ftp-password",                 &currentFTPServer,offsetof(FTPServer,password),                configValueParsePassword,NULL,NULL,NULL,NULL),
-  CONFIG_VALUE_INTEGER  ("ftp-max-connections",          &defaultFTPServer,offsetof(FTPServer,maxConnectionCount),      0,MAX_INT,NULL),
-  CONFIG_VALUE_INTEGER64("ftp-max-storage-size",         &defaultFTPServer,offsetof(FTPServer,maxStorageSize),          0LL,MAX_INT64,NULL),
+  CONFIG_VALUE_STRING   ("ftp-login-name",               &currentFTPServer,offsetof(Server,ftpServer.loginName)                ),
+  CONFIG_VALUE_SPECIAL  ("ftp-password",                 &currentFTPServer,offsetof(Server,ftpServer.password),                configValueParsePassword,NULL,NULL,NULL,NULL),
+  CONFIG_VALUE_INTEGER  ("ftp-max-connections",          &currentFTPServer,offsetof(Server,maxConnectionCount),      0,MAX_INT,NULL),
+  CONFIG_VALUE_INTEGER64("ftp-max-storage-size",         &currentFTPServer,offsetof(Server,maxStorageSize),          0LL,MAX_INT64,NULL),
 
-  CONFIG_VALUE_INTEGER  ("ssh-port",                     &currentSSHServer,offsetof(SSHServer,port),                    0,65535,NULL),
-  CONFIG_VALUE_STRING   ("ssh-login-name",               &currentSSHServer,offsetof(SSHServer,loginName)                ),
-  CONFIG_VALUE_SPECIAL  ("ssh-password",                 &currentSSHServer,offsetof(SSHServer,password),                configValueParsePassword,NULL,NULL,NULL,NULL),
-  CONFIG_VALUE_STRING   ("ssh-public-key",               &currentSSHServer,offsetof(SSHServer,publicKeyFileName)        ),
-  CONFIG_VALUE_STRING   ("ssh-private-key",              &currentSSHServer,offsetof(SSHServer,privateKeyFileName)       ),
-  CONFIG_VALUE_INTEGER  ("ssh-max-connections",          &defaultSSHServer,offsetof(SSHServer,maxConnectionCount),      0,MAX_INT,NULL),
-  CONFIG_VALUE_INTEGER64("ssh-max-storage-size",         &defaultSSHServer,offsetof(SSHServer,maxStorageSize),          0LL,MAX_INT64,NULL),
+  CONFIG_VALUE_INTEGER  ("ssh-port",                     &currentSSHServer,offsetof(Server,sshServer.port),                    0,65535,NULL),
+  CONFIG_VALUE_STRING   ("ssh-login-name",               &currentSSHServer,offsetof(Server,sshServer.loginName)                ),
+  CONFIG_VALUE_SPECIAL  ("ssh-password",                 &currentSSHServer,offsetof(Server,sshServer.password),                configValueParsePassword,NULL,NULL,NULL,NULL),
+  CONFIG_VALUE_STRING   ("ssh-public-key",               &currentSSHServer,offsetof(Server,sshServer.publicKeyFileName)        ),
+  CONFIG_VALUE_STRING   ("ssh-private-key",              &currentSSHServer,offsetof(Server,sshServer.privateKeyFileName)       ),
+  CONFIG_VALUE_INTEGER  ("ssh-max-connections",          &currentSSHServer,offsetof(Server,maxConnectionCount),      0,MAX_INT,NULL),
+  CONFIG_VALUE_INTEGER64("ssh-max-storage-size",         &currentSSHServer,offsetof(Server,maxStorageSize),          0LL,MAX_INT64,NULL),
 
-//  CONFIG_VALUE_INTEGER  ("webdav-port",                  &currentWebDAVServer,offsetof(WebDAVServer,port),              0,65535,NULL),
-  CONFIG_VALUE_STRING   ("webdav-login-name",            &currentWebDAVServer,offsetof(WebDAVServer,loginName)          ),
-  CONFIG_VALUE_SPECIAL  ("webdav-password",              &currentWebDAVServer,offsetof(WebDAVServer,password),          configValueParsePassword,NULL,NULL,NULL,NULL),
-  CONFIG_VALUE_INTEGER  ("webdav-max-connections",       &defaultWebDAVServer,offsetof(WebDAVServer,maxConnectionCount),0,MAX_INT,NULL),
-  CONFIG_VALUE_INTEGER64("webdav-max-storage-size",      &defaultWebDAVServer,offsetof(WebDAVServer,maxStorageSize),    0LL,MAX_INT64,NULL),
+//  CONFIG_VALUE_INTEGER  ("webdav-port",                  &currentWebDAVServer,offsetof(Server,port),              0,65535,NULL),
+  CONFIG_VALUE_STRING   ("webdav-login-name",            &currentWebDAVServer,offsetof(Server,webDAVServer.loginName)          ),
+  CONFIG_VALUE_SPECIAL  ("webdav-password",              &currentWebDAVServer,offsetof(Server,webDAVServer.password),          configValueParsePassword,NULL,NULL,NULL,NULL),
+  CONFIG_VALUE_INTEGER  ("webdav-max-connections",       &currentWebDAVServer,offsetof(Server,maxConnectionCount),0,MAX_INT,NULL),
+  CONFIG_VALUE_INTEGER64("webdav-max-storage-size",      &currentWebDAVServer,offsetof(Server,maxStorageSize),    0LL,MAX_INT64,NULL),
 
   CONFIG_VALUE_SPECIAL  ("include-file",                 &includeEntryList,-1,                                          configValueParseFileEntry,NULL,NULL,NULL,&jobOptions.patternType),
   CONFIG_VALUE_SPECIAL  ("include-image",                &includeEntryList,-1,                                          configValueParseImageEntry,NULL,NULL,NULL,&jobOptions.patternType),
@@ -1154,41 +1151,148 @@ LOCAL void output(FILE *file, const String string)
 }
 
 /***********************************************************************\
-* Name   : initServerAllocate
-* Purpose: init server allocation handle
-* Input  : serverAllocation - server allocation handle
+* Name   : initServer
+* Purpose: init server
+* Input  : server     - server
+*          serverType - server type
+*          name       - server name
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void initServerAllocate(ServerAllocation *serverAllocation)
+LOCAL void initServer(Server *server, ServerTypes serverType, const String name)
 {
-  assert(serverAllocation != NULL);
+  assert(server != NULL);
+  assert(name != NULL);
 
-  if (!Semaphore_init(&serverAllocation->lock))
+  if (!Semaphore_init(&server->lock))
   {
-    HALT_FATAL_ERROR("cannot initialize semaphore");
+    HALT_FATAL_ERROR("cannot initialize server lock semaphore");
   }
-  serverAllocation->lowPriorityRequestCount  = 0;
-  serverAllocation->highPriorityRequestCount = 0;
-  serverAllocation->connectionCount          = 0;
+  server->type                                = serverType;
+  server->name                                = String_duplicate(name);
+  switch (serverType)
+  {
+    case SERVER_TYPE_FTP:
+      server->ftpServer.loginName = NULL;
+      server->ftpServer.password  = NULL;
+      break;
+    case SERVER_TYPE_SSH:
+      server->sshServer.port               = 0;
+      server->sshServer.loginName          = NULL;
+      server->sshServer.password           = NULL;
+      server->sshServer.publicKeyFileName  = NULL;
+      server->sshServer.privateKeyFileName = NULL;
+      break;
+    case SERVER_TYPE_WEBDAV:
+//      server->webDAVServer.port               = 0;
+      server->webDAVServer.loginName          = NULL;
+      server->webDAVServer.password           = NULL;
+      server->webDAVServer.publicKeyFileName  = NULL;
+      server->webDAVServer.privateKeyFileName = NULL;
+      break;
+    #ifndef NDEBUG
+      default:
+        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+        break;
+    #endif /* NDEBUG */
+  }
+  server->connection.lowPriorityRequestCount  = 0;
+  server->connection.highPriorityRequestCount = 0;
+  server->connection.connectionCount          = 0;
 }
 
 /***********************************************************************\
-* Name   : doneServerAllocate
-* Purpose: done server allocation handle
-* Input  : serverAllocation - server allocation handle
+* Name   : doneServer
+* Purpose: done server
+* Input  : server - server
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void doneServerAllocate(ServerAllocation *serverAllocation)
+LOCAL void doneServer(Server *server)
 {
-  assert(serverAllocation != NULL);
+  assert(server != NULL);
 
-  Semaphore_done(&serverAllocation->lock);
+  switch (server->type)
+  {
+    case SERVER_TYPE_FTP:
+      if (defaultWebDAVServer.ftpServer.password != NULL) Password_delete(server->ftpServer.password);
+      if (defaultWebDAVServer.ftpServer.loginName != NULL) String_delete(server->ftpServer.loginName);
+      break;
+    case SERVER_TYPE_SSH:
+      if (defaultWebDAVServer.sshServer.privateKeyFileName != NULL) String_delete(server->sshServer.privateKeyFileName);
+      if (defaultWebDAVServer.sshServer.publicKeyFileName != NULL) String_delete(server->sshServer.publicKeyFileName);
+      if (defaultWebDAVServer.sshServer.password != NULL) Password_delete(server->sshServer.password);
+      if (defaultWebDAVServer.sshServer.loginName != NULL) String_delete(server->sshServer.loginName);
+      break;
+    case SERVER_TYPE_WEBDAV:
+      if (defaultWebDAVServer.webDAVServer.privateKeyFileName != NULL) String_delete(server->webDAVServer.privateKeyFileName);
+      if (defaultWebDAVServer.webDAVServer.publicKeyFileName != NULL) String_delete(server->webDAVServer.publicKeyFileName);
+      if (defaultWebDAVServer.webDAVServer.password != NULL) Password_delete(server->webDAVServer.password);
+      if (defaultWebDAVServer.webDAVServer.loginName != NULL) String_delete(server->webDAVServer.loginName);
+      break;
+    #ifndef NDEBUG
+      default:
+        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+        break;
+    #endif /* NDEBUG */
+  }
+  String_delete(server->name);
+  Semaphore_done(&server->lock);
+}
+
+/***********************************************************************\
+* Name   : freeServerNode
+* Purpose: free server node
+* Input  : serverNode - server node
+*          userData   - user data
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void freeServerNode(ServerNode *serverNode, void *userData)
+{
+  assert(serverNode != NULL);
+
+  UNUSED_VARIABLE(userData);
+
+  doneServer(&serverNode->server);
+}
+
+/***********************************************************************\
+* Name   : freeDeviceNode
+* Purpose: free device node
+* Input  : deviceNode - device node
+*          userData   - user data
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void freeDeviceNode(DeviceNode *deviceNode, void *userData)
+{
+  assert(deviceNode != NULL);
+
+  UNUSED_VARIABLE(userData);
+
+  String_delete(deviceNode->device.writeCommand           );
+  String_delete(deviceNode->device.writePostProcessCommand);
+  String_delete(deviceNode->device.writePreProcessCommand );
+  String_delete(deviceNode->device.eccCommand             );
+  String_delete(deviceNode->device.eccPostProcessCommand  );
+  String_delete(deviceNode->device.eccPreProcessCommand   );
+  String_delete(deviceNode->device.imageCommand           );
+  String_delete(deviceNode->device.imagePostProcessCommand);
+  String_delete(deviceNode->device.imagePreProcessCommand );
+  String_delete(deviceNode->device.loadVolumeCommand      );
+  String_delete(deviceNode->device.unloadVolumeCommand    );
+  String_delete(deviceNode->device.requestVolumeCommand   );
+  String_delete(deviceNode->device.defaultDeviceName      );
+  String_delete(deviceNode->name);
 }
 
 /***********************************************************************\
@@ -1264,17 +1368,15 @@ LOCAL bool readConfigFile(const String fileName, bool printInfoFlag)
       {
         HALT_INSUFFICIENT_MEMORY();
       }
-      serverNode->type                         = SERVER_TYPE_FTP;
-      serverNode->name                         = String_duplicate(name);
-      initServerAllocate(&serverNode->serverAllocation);
-      serverNode->ftpServer.loginName          = NULL;
-      serverNode->ftpServer.password           = NULL;
-      serverNode->ftpServer.maxConnectionCount = MAX_CONNECTION_COUNT_UNLIMITED;
-      serverNode->ftpServer.maxStorageSize     = MAX_STORAGE_SIZE_UNLIMITED;
+      initServer(&serverNode->server,SERVER_TYPE_FTP,name);
+      serverNode->server.ftpServer.loginName          = NULL;
+      serverNode->server.ftpServer.password           = NULL;
+//      serverNode->server.ftpServer.maxConnectionCount = MAX_CONNECTION_COUNT_UNLIMITED;
+//      serverNode->server.ftpServer.maxStorageSize     = MAX_STORAGE_SIZE_UNLIMITED;
 
       List_append(&serverList,serverNode);
 
-      currentFTPServer = &serverNode->ftpServer;
+      currentFTPServer = &serverNode->server;
     }
     else if (String_parse(line,STRING_BEGIN,"[ssh-server %S]",NULL,name))
     {
@@ -1285,20 +1387,18 @@ LOCAL bool readConfigFile(const String fileName, bool printInfoFlag)
       {
         HALT_INSUFFICIENT_MEMORY();
       }
-      serverNode->type                         = SERVER_TYPE_SSH;
-      serverNode->name                         = String_duplicate(name);
-      initServerAllocate(&serverNode->serverAllocation);
-      serverNode->sshServer.port               = 22;
-      serverNode->sshServer.loginName          = NULL;
-      serverNode->sshServer.password           = NULL;
-      serverNode->sshServer.publicKeyFileName  = NULL;
-      serverNode->sshServer.privateKeyFileName = NULL;
-      serverNode->sshServer.maxConnectionCount = MAX_CONNECTION_COUNT_UNLIMITED;
-      serverNode->sshServer.maxStorageSize     = MAX_STORAGE_SIZE_UNLIMITED;
+      initServer(&serverNode->server,SERVER_TYPE_SSH,name);
+      serverNode->server.sshServer.port               = 22;
+      serverNode->server.sshServer.loginName          = NULL;
+      serverNode->server.sshServer.password           = NULL;
+      serverNode->server.sshServer.publicKeyFileName  = NULL;
+      serverNode->server.sshServer.privateKeyFileName = NULL;
+//      serverNode->server.sshServer.maxConnectionCount = MAX_CONNECTION_COUNT_UNLIMITED;
+//      serverNode->server.sshServer.maxStorageSize     = MAX_STORAGE_SIZE_UNLIMITED;
 
       List_append(&serverList,serverNode);
 
-      currentSSHServer = &serverNode->sshServer;
+      currentSSHServer = &serverNode->server;
     }
     else if (String_parse(line,STRING_BEGIN,"[webdav-server %S]",NULL,name))
     {
@@ -1309,20 +1409,19 @@ LOCAL bool readConfigFile(const String fileName, bool printInfoFlag)
       {
         HALT_INSUFFICIENT_MEMORY();
       }
-      serverNode->type                            = SERVER_TYPE_WEBDAV;
-      serverNode->name                            = String_duplicate(name);
-      initServerAllocate(&serverNode->serverAllocation);
-//      serverNode->webdavServer.port               = 80;
-      serverNode->webdavServer.loginName          = NULL;
-      serverNode->webdavServer.password           = NULL;
-      serverNode->webdavServer.publicKeyFileName  = NULL;
-      serverNode->webdavServer.privateKeyFileName = NULL;
-      serverNode->webdavServer.maxConnectionCount = MAX_CONNECTION_COUNT_UNLIMITED;
-      serverNode->webdavServer.maxStorageSize     = MAX_STORAGE_SIZE_UNLIMITED;
+      initServer(&serverNode->server,SERVER_TYPE_WEBDAV,name);
+#warning TODO: remove?
+//      serverNode->server.webDAVServer.port               = 80;
+      serverNode->server.webDAVServer.loginName          = NULL;
+      serverNode->server.webDAVServer.password           = NULL;
+      serverNode->server.webDAVServer.publicKeyFileName  = NULL;
+      serverNode->server.webDAVServer.privateKeyFileName = NULL;
+//      serverNode->server.webDAVServer.maxConnectionCount = MAX_CONNECTION_COUNT_UNLIMITED;
+//      serverNode->server.webDAVServer.maxStorageSize     = MAX_STORAGE_SIZE_UNLIMITED;
 
       List_append(&serverList,serverNode);
 
-      currentWebDAVServer = &serverNode->webdavServer;
+      currentWebDAVServer = &serverNode->server;
     }
     else if (String_parse(line,STRING_BEGIN,"[device %S]",NULL,name))
     {
@@ -2195,14 +2294,11 @@ LOCAL void initGlobalOptions(void)
   globalOptions.maxBandWidthList.lastReadTimestamp              = 0LL;
   globalOptions.compressMinFileSize                             = DEFAULT_COMPRESS_MIN_FILE_SIZE;
   globalOptions.cryptPassword                                   = NULL;
-  globalOptions.ftpServer                                       = globalOptions.defaultFTPServer;
-//  globalOptions.ftpServerList                                   = &ftpServerList;
+  globalOptions.ftpServer                                       = &defaultFTPServer;
   globalOptions.defaultFTPServer                                = &defaultFTPServer;
-  globalOptions.sshServer                                       = globalOptions.defaultSSHServer;
-//  globalOptions.sshServerList                                   = &sshServerList;
+  globalOptions.sshServer                                       = &defaultSSHServer;
   globalOptions.defaultSSHServer                                = &defaultSSHServer;
-  globalOptions.webdavServer                                    = globalOptions.defaultWebDAVServer;
-//  globalOptions.webdavServerList                                = &webdavServerList;
+  globalOptions.webDAVServer                                    = &defaultWebDAVServer;
   globalOptions.defaultWebDAVServer                             = &defaultWebDAVServer;
 
   globalOptions.serverList                                      = &serverList;
@@ -2366,82 +2462,6 @@ LOCAL void doneGlobalOptions(void)
 }
 
 /***********************************************************************\
-* Name   : freeServerNode
-* Purpose: free server node
-* Input  : serverNode - server node
-*          userData   - user data
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void freeServerNode(ServerNode *serverNode, void *userData)
-{
-  assert(serverNode != NULL);
-
-  UNUSED_VARIABLE(userData);
-
-  switch (serverNode->type)
-  {
-    case SERVER_TYPE_FTP:
-      Password_delete(serverNode->ftpServer.password);
-      String_delete(serverNode->ftpServer.loginName);
-      break;
-    case SERVER_TYPE_SSH:
-      String_delete(serverNode->sshServer.privateKeyFileName);
-      String_delete(serverNode->sshServer.publicKeyFileName);
-      Password_delete(serverNode->sshServer.password);
-      String_delete(serverNode->sshServer.loginName);
-      break;
-    case SERVER_TYPE_WEBDAV:
-      String_delete(serverNode->webdavServer.privateKeyFileName);
-      String_delete(serverNode->webdavServer.publicKeyFileName);
-      Password_delete(serverNode->webdavServer.password);
-      String_delete(serverNode->webdavServer.loginName);
-      break;
-    #ifndef NDEBUG
-      default:
-        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-        break;
-    #endif /* NDEBUG */
-  }
-  doneServerAllocate(&serverNode->serverAllocation);
-  String_delete(serverNode->name);
-}
-
-/***********************************************************************\
-* Name   : freeDeviceNode
-* Purpose: free device node
-* Input  : deviceNode - device node
-*          userData   - user data
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void freeDeviceNode(DeviceNode *deviceNode, void *userData)
-{
-  assert(deviceNode != NULL);
-
-  UNUSED_VARIABLE(userData);
-
-  String_delete(deviceNode->device.writeCommand           );
-  String_delete(deviceNode->device.writePostProcessCommand);
-  String_delete(deviceNode->device.writePreProcessCommand );
-  String_delete(deviceNode->device.eccCommand             );
-  String_delete(deviceNode->device.eccPostProcessCommand  );
-  String_delete(deviceNode->device.eccPreProcessCommand   );
-  String_delete(deviceNode->device.imageCommand           );
-  String_delete(deviceNode->device.imagePostProcessCommand);
-  String_delete(deviceNode->device.imagePreProcessCommand );
-  String_delete(deviceNode->device.loadVolumeCommand      );
-  String_delete(deviceNode->device.unloadVolumeCommand    );
-  String_delete(deviceNode->device.requestVolumeCommand   );
-  String_delete(deviceNode->device.defaultDeviceName      );
-  String_delete(deviceNode->name);
-}
-
-/***********************************************************************\
 * Name   : initAll
 * Purpose: initialize
 * Input  : -
@@ -2591,25 +2611,28 @@ LOCAL Errors initAll(void)
   PatternList_init(&excludePatternList);
   PatternList_init(&deltaSourcePatternList);
   PatternList_init(&compressExcludePatternList);
-  defaultFTPServer.loginName             = NULL;
-  defaultFTPServer.password              = NULL;
+  defaultFTPServer.ftpServer.loginName             = NULL;
+  defaultFTPServer.ftpServer.password              = NULL;
   defaultFTPServer.maxConnectionCount    = MAX_CONNECTION_COUNT_UNLIMITED;
   defaultFTPServer.maxStorageSize        = MAX_STORAGE_SIZE_UNLIMITED;
-  defaultSSHServer.port                  = 22;
-  defaultSSHServer.loginName             = NULL;
-  defaultSSHServer.password              = NULL;
-  defaultSSHServer.publicKeyFileName     = NULL;
-  defaultSSHServer.privateKeyFileName    = NULL;
+//  initServerAllocation(&defaultFTPServerAllocation);
+  defaultSSHServer.sshServer.port                  = 22;
+  defaultSSHServer.sshServer.loginName             = NULL;
+  defaultSSHServer.sshServer.password              = NULL;
+  defaultSSHServer.sshServer.publicKeyFileName     = NULL;
+  defaultSSHServer.sshServer.privateKeyFileName    = NULL;
   defaultSSHServer.maxConnectionCount    = MAX_CONNECTION_COUNT_UNLIMITED;
   defaultSSHServer.maxStorageSize        = MAX_STORAGE_SIZE_UNLIMITED;
+//  initServerAllocation(&defaultSSHServerAllocation);
+#warning TODO: remove?
 //  defaultWebDAVServer.port               = 80;
-  defaultWebDAVServer.loginName          = NULL;
-  defaultWebDAVServer.password           = NULL;
-  defaultWebDAVServer.publicKeyFileName  = NULL;
-  defaultWebDAVServer.privateKeyFileName = NULL;
-  defaultWebDAVServer.maxConnectionCount = MAX_CONNECTION_COUNT_UNLIMITED;
+  defaultWebDAVServer.webDAVServer.loginName          = NULL;
+  defaultWebDAVServer.webDAVServer.password           = NULL;
+  defaultWebDAVServer.webDAVServer.publicKeyFileName  = NULL;
+  defaultWebDAVServer.webDAVServer.privateKeyFileName = NULL;
+//  defaultWebDAVServer.maxConnectionCount = MAX_CONNECTION_COUNT_UNLIMITED;
   defaultWebDAVServer.maxStorageSize     = MAX_STORAGE_SIZE_UNLIMITED;
-  initServerAllocate(&defaultWebDAVServerAllocation);
+//  initServerAllocation(&defaultWebDAVServerAllocation);
   defaultDevice.requestVolumeCommand     = NULL;
   defaultDevice.unloadVolumeCommand      = NULL;
   defaultDevice.loadVolumeCommand        = NULL;
@@ -2670,7 +2693,8 @@ LOCAL Errors initAll(void)
   fileName = File_appendFileNameCString(String_newCString(getenv("HOME")),".ssh/id_rsa.pub");
   if (File_exists(fileName))
   {
-    defaultSSHServer.publicKeyFileName = fileName;
+    defaultSSHServer.sshServer.publicKeyFileName    = fileName;
+    defaultSSHServer.webDAVServer.publicKeyFileName = fileName;
   }
   else
   {
@@ -2679,7 +2703,8 @@ LOCAL Errors initAll(void)
   fileName = File_appendFileNameCString(String_newCString(getenv("HOME")),".ssh/id_rsa");
   if (File_exists(fileName))
   {
-    defaultSSHServer.privateKeyFileName = fileName;
+    defaultSSHServer.sshServer.privateKeyFileName    = fileName;
+    defaultSSHServer.webDAVServer.privateKeyFileName = fileName;
   }
   else
   {
@@ -2726,17 +2751,9 @@ LOCAL void doneAll(void)
   if (defaultDevice.unloadVolumeCommand != NULL) String_delete(defaultDevice.unloadVolumeCommand);
   if (defaultDevice.loadVolumeCommand != NULL) String_delete(defaultDevice.loadVolumeCommand);
   if (defaultDevice.requestVolumeCommand != NULL) String_delete(defaultDevice.requestVolumeCommand);
-  doneServerAllocate(&defaultWebDAVServerAllocation);
-  if (defaultWebDAVServer.privateKeyFileName != NULL) String_delete(defaultWebDAVServer.privateKeyFileName);
-  if (defaultWebDAVServer.publicKeyFileName != NULL) String_delete(defaultWebDAVServer.publicKeyFileName);
-  if (defaultWebDAVServer.password != NULL) Password_delete(defaultWebDAVServer.password);
-  if (defaultWebDAVServer.loginName != NULL) String_delete(defaultWebDAVServer.loginName);
-  if (defaultSSHServer.privateKeyFileName != NULL) String_delete(defaultSSHServer.privateKeyFileName);
-  if (defaultSSHServer.publicKeyFileName != NULL) String_delete(defaultSSHServer.publicKeyFileName);
-  if (defaultSSHServer.password != NULL) Password_delete(defaultSSHServer.password);
-  if (defaultSSHServer.loginName != NULL) String_delete(defaultSSHServer.loginName);
-  if (defaultFTPServer.password != NULL) Password_delete(defaultFTPServer.password);
-  if (defaultFTPServer.loginName != NULL) String_delete(defaultFTPServer.loginName);
+  doneServer(&defaultWebDAVServer);
+  doneServer(&defaultSSHServer);
+  doneServer(&defaultFTPServer);
   PatternList_done(&compressExcludePatternList);
   PatternList_done(&deltaSourcePatternList);
   PatternList_done(&excludePatternList);
@@ -3085,12 +3102,13 @@ void initJobOptions(JobOptions *jobOptions)
   jobOptions->cryptPasswordMode               = PASSWORD_MODE_DEFAULT;
   jobOptions->cryptPublicKeyFileName          = NULL;
   jobOptions->cryptPrivateKeyFileName         = NULL;
-  jobOptions->ftpServer.maxConnectionCount    = MAX_CONNECTION_COUNT_UNLIMITED;
-  jobOptions->ftpServer.maxStorageSize        = MAX_STORAGE_SIZE_UNLIMITED;
-  jobOptions->sshServer.maxConnectionCount    = MAX_CONNECTION_COUNT_UNLIMITED;
-  jobOptions->sshServer.maxStorageSize        = MAX_STORAGE_SIZE_UNLIMITED;
-  jobOptions->webdavServer.maxConnectionCount = MAX_CONNECTION_COUNT_UNLIMITED;
-  jobOptions->webdavServer.maxStorageSize     = MAX_STORAGE_SIZE_UNLIMITED;
+#warning todo
+//  jobOptions->ftpServer.maxConnectionCount    = MAX_CONNECTION_COUNT_UNLIMITED;
+//  jobOptions->ftpServer.maxStorageSize        = MAX_STORAGE_SIZE_UNLIMITED;
+//  jobOptions->sshServer.maxConnectionCount    = MAX_CONNECTION_COUNT_UNLIMITED;
+//  jobOptions->sshServer.maxStorageSize        = MAX_STORAGE_SIZE_UNLIMITED;
+//  jobOptions->webDAVServer.maxConnectionCount = MAX_CONNECTION_COUNT_UNLIMITED;
+//  jobOptions->webDAVServer.maxStorageSize     = MAX_STORAGE_SIZE_UNLIMITED;
   jobOptions->volumeSize                      = 0LL;
   jobOptions->skipUnreadableFlag              = TRUE;
   jobOptions->forceDeltaCompressionFlag       = FALSE;
@@ -3140,10 +3158,10 @@ void copyJobOptions(const JobOptions *fromJobOptions, JobOptions *toJobOptions)
   toJobOptions->sshServer.publicKeyFileName         = String_duplicate(fromJobOptions->sshServer.publicKeyFileName);
   toJobOptions->sshServer.privateKeyFileName        = String_duplicate(fromJobOptions->sshServer.privateKeyFileName);
 
-  toJobOptions->webdavServer.loginName              = String_duplicate(fromJobOptions->webdavServer.loginName);
-  toJobOptions->webdavServer.password               = Password_duplicate(fromJobOptions->webdavServer.password);
-  toJobOptions->webdavServer.publicKeyFileName      = String_duplicate(fromJobOptions->webdavServer.publicKeyFileName);
-  toJobOptions->webdavServer.privateKeyFileName     = String_duplicate(fromJobOptions->webdavServer.privateKeyFileName);
+  toJobOptions->webDAVServer.loginName              = String_duplicate(fromJobOptions->webDAVServer.loginName);
+  toJobOptions->webDAVServer.password               = Password_duplicate(fromJobOptions->webDAVServer.password);
+  toJobOptions->webDAVServer.publicKeyFileName      = String_duplicate(fromJobOptions->webDAVServer.publicKeyFileName);
+  toJobOptions->webDAVServer.privateKeyFileName     = String_duplicate(fromJobOptions->webDAVServer.privateKeyFileName);
 
   toJobOptions->opticalDisk.requestVolumeCommand    = String_duplicate(fromJobOptions->opticalDisk.requestVolumeCommand);
   toJobOptions->opticalDisk.unloadVolumeCommand     = String_duplicate(fromJobOptions->opticalDisk.unloadVolumeCommand);
@@ -3200,10 +3218,10 @@ void freeJobOptions(JobOptions *jobOptions)
   String_delete(jobOptions->opticalDisk.unloadVolumeCommand);
   String_delete(jobOptions->opticalDisk.requestVolumeCommand);
 
-  String_delete(jobOptions->webdavServer.privateKeyFileName);
-  String_delete(jobOptions->webdavServer.publicKeyFileName);
-  Password_delete(jobOptions->webdavServer.password);
-  String_delete(jobOptions->webdavServer.loginName);
+  String_delete(jobOptions->webDAVServer.privateKeyFileName);
+  String_delete(jobOptions->webDAVServer.publicKeyFileName);
+  Password_delete(jobOptions->webDAVServer.password);
+  String_delete(jobOptions->webDAVServer.loginName);
 
   String_delete(jobOptions->sshServer.privateKeyFileName);
   String_delete(jobOptions->sshServer.publicKeyFileName);
@@ -3366,52 +3384,52 @@ ulong getBandWidth(BandWidthList *bandWidthList)
   return n;
 }
 
-bool allocateServer(ServerAllocation *serverAllocation, ServerAllocationPriorities priority, uint maxConnectionCount)
+bool allocateServerConnection(Server *server, ServerConnectionPriorities priority)
 {
   SemaphoreLock semaphoreLock;
 
-  assert(serverAllocation != NULL);
+  assert(server != NULL);
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&serverAllocation->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&server->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
   {
     switch (priority)
     {
-      case SERVER_ALLOCATION_PRIORITY_LOW:
-        if (   (maxConnectionCount != MAX_CONNECTION_COUNT_UNLIMITED)
-            && (serverAllocation->connectionCount >= (uint)maxConnectionCount)
+      case SERVER_CONNECTION_PRIORITY_LOW:
+        if (   (server->maxConnectionCount != MAX_CONNECTION_COUNT_UNLIMITED)
+            && (server->connection.connectionCount >= server->maxConnectionCount)
            )
         {
           // request low priority connection
-          serverAllocation->lowPriorityRequestCount++;
+          server->connection.lowPriorityRequestCount++;
 
           // wait for free connection
-          while (serverAllocation->connectionCount >= (uint)maxConnectionCount)
+          while (server->connection.connectionCount >= server->maxConnectionCount)
           {
-            Semaphore_waitModified(&serverAllocation->lock,SEMAPHORE_WAIT_FOREVER);
+            Semaphore_waitModified(&server->lock,SEMAPHORE_WAIT_FOREVER);
           }
 
           // low priority request done
-          assert(serverAllocation->lowPriorityRequestCount > 0);
-          serverAllocation->lowPriorityRequestCount--;
+          assert(server->connection.lowPriorityRequestCount > 0);
+          server->connection.lowPriorityRequestCount--;
         }
         break;
-      case SERVER_ALLOCATION_PRIORITY_HIGH:
-        if (   (maxConnectionCount != MAX_CONNECTION_COUNT_UNLIMITED)
-            && (serverAllocation->connectionCount >= (uint)maxConnectionCount)
+      case SERVER_CONNECTION_PRIORITY_HIGH:
+        if (   (server->maxConnectionCount != MAX_CONNECTION_COUNT_UNLIMITED)
+            && (server->connection.connectionCount >= server->maxConnectionCount)
            )
         {
           // request high priority connection
-          serverAllocation->highPriorityRequestCount++;
+          server->connection.highPriorityRequestCount++;
 
           // wait for free connection
-          while (serverAllocation->connectionCount >= (uint)maxConnectionCount)
+          while (server->connection.connectionCount >= server->maxConnectionCount)
           {
-            Semaphore_waitModified(&serverAllocation->lock,SEMAPHORE_WAIT_FOREVER);
+            Semaphore_waitModified(&server->lock,SEMAPHORE_WAIT_FOREVER);
           }
 
           // high priority request done
-          assert(serverAllocation->highPriorityRequestCount > 0);
-          serverAllocation->highPriorityRequestCount--;
+          assert(server->connection.highPriorityRequestCount > 0);
+          server->connection.highPriorityRequestCount--;
         }
         break;
       #ifndef NDEBUG
@@ -3422,43 +3440,43 @@ bool allocateServer(ServerAllocation *serverAllocation, ServerAllocationPrioriti
     }
 
     // allocated connection
-    serverAllocation->connectionCount++;
+    server->connection.connectionCount++;
   }
 
   return TRUE;
 }
 
-void freeServer(ServerAllocation *serverAllocation)
+void freeServerConnection(Server *server)
 {
   SemaphoreLock semaphoreLock;
 
-  assert(serverAllocation != NULL);
-  assert(serverAllocation->connectionCount > 0);
+  assert(server != NULL);
+  assert(server->connection.connectionCount > 0);
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&serverAllocation->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&server->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
   {
     // free connection
-    serverAllocation->connectionCount--;
+    server->connection.connectionCount--;
   }
 }
 
-bool isServerAllocationPending(ServerAllocation *serverAllocation, ServerAllocationPriorities priority)
+bool isServerConnectionAllocationPending(Server *server, ServerConnectionPriorities priority)
 {
   SemaphoreLock semaphoreLock;
   bool          pendingFlag;
 
-  assert(serverAllocation != NULL);
+  assert(server != NULL);
 
   pendingFlag = FALSE;
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&serverAllocation->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE)
+  SEMAPHORE_LOCKED_DO(semaphoreLock,&server->lock,SEMAPHORE_LOCK_TYPE_READ)
   {
     switch (priority)
     {
-      case SERVER_ALLOCATION_PRIORITY_LOW:
-        pendingFlag = (serverAllocation->lowPriorityRequestCount);
+      case SERVER_CONNECTION_PRIORITY_LOW:
+        pendingFlag = (server->connection.lowPriorityRequestCount);
         break;
-      case SERVER_ALLOCATION_PRIORITY_HIGH:
-        pendingFlag = (serverAllocation->highPriorityRequestCount);
+      case SERVER_CONNECTION_PRIORITY_HIGH:
+        pendingFlag = (server->connection.highPriorityRequestCount);
         break;
       #ifndef NDEBUG
         default:
@@ -3471,10 +3489,10 @@ bool isServerAllocationPending(ServerAllocation *serverAllocation, ServerAllocat
   return pendingFlag;
 }
 
-ServerAllocation *getFTPServerSettings(const String     hostName,
-                                       const JobOptions *jobOptions,
-                                       FTPServer        *ftpServer
-                                      )
+Server *getFTPServerSettings(const String     hostName,
+                             const JobOptions *jobOptions,
+                             FTPServer        *ftpServer
+                            )
 {
   ServerNode *serverNode;
 
@@ -3485,8 +3503,8 @@ ServerAllocation *getFTPServerSettings(const String     hostName,
   // find FTP server
   serverNode = globalOptions.serverList->head;
   while (   (serverNode != NULL)
-         && (   (serverNode->type != SERVER_TYPE_FTP)
-             || !String_equals(serverNode->name,hostName)
+         && (   (serverNode->server.type != SERVER_TYPE_FTP)
+             || !String_equals(serverNode->server.name,hostName)
             )
         )
   {
@@ -3494,18 +3512,18 @@ ServerAllocation *getFTPServerSettings(const String     hostName,
   }
 
   // get FTP server settings
-  ftpServer->loginName          = !String_isEmpty(jobOptions->ftpServer.loginName                            ) ? jobOptions->ftpServer.loginName          : ((serverNode != NULL) ? serverNode->ftpServer.loginName          : globalOptions.defaultFTPServer->loginName         );
-  ftpServer->password           = !Password_isEmpty(jobOptions->ftpServer.password                           ) ? jobOptions->ftpServer.password           : ((serverNode != NULL) ? serverNode->ftpServer.password           : globalOptions.defaultFTPServer->password          );
-  ftpServer->maxConnectionCount = (jobOptions->ftpServer.maxConnectionCount != MAX_CONNECTION_COUNT_UNLIMITED) ? jobOptions->ftpServer.maxConnectionCount : ((serverNode != NULL) ? serverNode->ftpServer.maxConnectionCount : globalOptions.defaultFTPServer->maxConnectionCount);
-  ftpServer->maxStorageSize     = (jobOptions->ftpServer.maxStorageSize != MAX_STORAGE_SIZE_UNLIMITED        ) ? jobOptions->ftpServer.maxStorageSize     : ((serverNode != NULL) ? serverNode->ftpServer.maxConnectionCount : globalOptions.defaultFTPServer->maxStorageSize);
+  ftpServer->loginName          = !String_isEmpty(jobOptions->ftpServer.loginName                            ) ? jobOptions->ftpServer.loginName          : ((serverNode != NULL) ? serverNode->server.ftpServer.loginName          : globalOptions.defaultFTPServer->ftpServer.loginName         );
+  ftpServer->password           = !Password_isEmpty(jobOptions->ftpServer.password                           ) ? jobOptions->ftpServer.password           : ((serverNode != NULL) ? serverNode->server.ftpServer.password           : globalOptions.defaultFTPServer->ftpServer.password          );
+//  ftpServer->maxConnectionCount = (jobOptions->ftpServer.maxConnectionCount != MAX_CONNECTION_COUNT_UNLIMITED) ? jobOptions->ftpServer.maxConnectionCount : ((serverNode != NULL) ? serverNode->server.ftpServer.maxConnectionCount : globalOptions.defaultFTPServer->maxConnectionCount);
+//  ftpServer->maxStorageSize     = (jobOptions->ftpServer.maxStorageSize != MAX_STORAGE_SIZE_UNLIMITED        ) ? jobOptions->ftpServer.maxStorageSize     : ((serverNode != NULL) ? serverNode->server.ftpServer.maxStorageSize     : globalOptions.defaultFTPServer->maxStorageSize);
 
-  return (serverNode != NULL) ? &serverNode->serverAllocation : &defaultFTPServerAllocation;
+  return (serverNode != NULL) ? &serverNode->server : &defaultFTPServer;
 }
 
-ServerAllocation *getSSHServerSettings(const String     hostName,
-                                       const JobOptions *jobOptions,
-                                       SSHServer        *sshServer
-                                      )
+Server *getSSHServerSettings(const String     hostName,
+                             const JobOptions *jobOptions,
+                             SSHServer        *sshServer
+                            )
 {
   ServerNode *serverNode;
 
@@ -3516,8 +3534,8 @@ ServerAllocation *getSSHServerSettings(const String     hostName,
   // find SSH server
   serverNode = globalOptions.serverList->head;
   while (   (serverNode != NULL)
-         && (   (serverNode->type != SERVER_TYPE_SSH)
-             || !String_equals(serverNode->name,hostName)
+         && (   (serverNode->server.type != SERVER_TYPE_SSH)
+             || !String_equals(serverNode->server.name,hostName)
             )
         )
   {
@@ -3525,33 +3543,33 @@ ServerAllocation *getSSHServerSettings(const String     hostName,
   }
 
   // get SSH server settings
-  sshServer->port               = (jobOptions->sshServer.port != 0                                           ) ? jobOptions->sshServer.port               : ((serverNode != NULL) ? serverNode->sshServer.port               : globalOptions.defaultSSHServer->port              );
-  sshServer->loginName          = !String_isEmpty(jobOptions->sshServer.loginName                            ) ? jobOptions->sshServer.loginName          : ((serverNode != NULL) ? serverNode->sshServer.loginName          : globalOptions.defaultSSHServer->loginName         );
-  sshServer->password           = !Password_isEmpty(jobOptions->sshServer.password                           ) ? jobOptions->sshServer.password           : ((serverNode != NULL) ? serverNode->sshServer.password           : globalOptions.defaultSSHServer->password          );
-  sshServer->publicKeyFileName  = !String_isEmpty(jobOptions->sshServer.publicKeyFileName                    ) ? jobOptions->sshServer.publicKeyFileName  : ((serverNode != NULL) ? serverNode->sshServer.publicKeyFileName  : globalOptions.defaultSSHServer->publicKeyFileName );
-  sshServer->privateKeyFileName = !String_isEmpty(jobOptions->sshServer.privateKeyFileName                   ) ? jobOptions->sshServer.privateKeyFileName : ((serverNode != NULL) ? serverNode->sshServer.privateKeyFileName : globalOptions.defaultSSHServer->privateKeyFileName);
-  sshServer->maxConnectionCount = (jobOptions->sshServer.maxConnectionCount != MAX_CONNECTION_COUNT_UNLIMITED) ? jobOptions->sshServer.maxConnectionCount : ((serverNode != NULL) ? serverNode->sshServer.maxConnectionCount : globalOptions.defaultSSHServer->maxConnectionCount);
-  sshServer->maxStorageSize     = (jobOptions->sshServer.maxStorageSize != MAX_STORAGE_SIZE_UNLIMITED        ) ? jobOptions->sshServer.maxStorageSize     : ((serverNode != NULL) ? serverNode->sshServer.maxConnectionCount : globalOptions.defaultSSHServer->maxStorageSize);
+  sshServer->port               = (jobOptions->sshServer.port != 0                                           ) ? jobOptions->sshServer.port               : ((serverNode != NULL) ? serverNode->server.sshServer.port               : globalOptions.defaultSSHServer->sshServer.port              );
+  sshServer->loginName          = !String_isEmpty(jobOptions->sshServer.loginName                            ) ? jobOptions->sshServer.loginName          : ((serverNode != NULL) ? serverNode->server.sshServer.loginName          : globalOptions.defaultSSHServer->sshServer.loginName         );
+  sshServer->password           = !Password_isEmpty(jobOptions->sshServer.password                           ) ? jobOptions->sshServer.password           : ((serverNode != NULL) ? serverNode->server.sshServer.password           : globalOptions.defaultSSHServer->sshServer.password          );
+  sshServer->publicKeyFileName  = !String_isEmpty(jobOptions->sshServer.publicKeyFileName                    ) ? jobOptions->sshServer.publicKeyFileName  : ((serverNode != NULL) ? serverNode->server.sshServer.publicKeyFileName  : globalOptions.defaultSSHServer->sshServer.publicKeyFileName );
+  sshServer->privateKeyFileName = !String_isEmpty(jobOptions->sshServer.privateKeyFileName                   ) ? jobOptions->sshServer.privateKeyFileName : ((serverNode != NULL) ? serverNode->server.sshServer.privateKeyFileName : globalOptions.defaultSSHServer->sshServer.privateKeyFileName);
+//  sshServer->maxConnectionCount = (jobOptions->sshServer.maxConnectionCount != MAX_CONNECTION_COUNT_UNLIMITED) ? jobOptions->sshServer.maxConnectionCount : ((serverNode != NULL) ? serverNode->server.sshServer.maxConnectionCount : globalOptions.defaultSSHServer->maxConnectionCount);
+//  sshServer->maxStorageSize     = (jobOptions->sshServer.maxStorageSize != MAX_STORAGE_SIZE_UNLIMITED        ) ? jobOptions->sshServer.maxStorageSize     : ((serverNode != NULL) ? serverNode->server.sshServer.maxStorageSize     : globalOptions.defaultSSHServer->maxStorageSize);
 
-  return (serverNode != NULL) ? &serverNode->serverAllocation : &defaultSSHServerAllocation;
+  return (serverNode != NULL) ? &serverNode->server : &defaultSSHServer;
 }
 
-ServerAllocation *getWebDAVServerSettings(const String     hostName,
-                                          const JobOptions *jobOptions,
-                                          WebDAVServer     *webdavServer
-                                         )
+Server *getWebDAVServerSettings(const String     hostName,
+                                const JobOptions *jobOptions,
+                                WebDAVServer     *webDAVServer
+                               )
 {
   ServerNode *serverNode;
 
   assert(hostName != NULL);
   assert(jobOptions != NULL);
-  assert(webdavServer != NULL);
+  assert(webDAVServer != NULL);
 
   // find WebDAV server
   serverNode = globalOptions.serverList->head;
   while (   (serverNode != NULL)
-         && (   (serverNode->type != SERVER_TYPE_WEBDAV)
-             || !String_equals(serverNode->name,hostName)
+         && (   (serverNode->server.type != SERVER_TYPE_WEBDAV)
+             || !String_equals(serverNode->server.name,hostName)
             )
         )
   {
@@ -3559,15 +3577,15 @@ ServerAllocation *getWebDAVServerSettings(const String     hostName,
   }
 
   // get WebDAV server settings
-//  webdavServer->port               = (jobOptions->webdavServer.port != 0                                           ) ? jobOptions->webdavServer.port               : ((serverNode != NULL) ? serverNode->webdavServer.port               : globalOptions.defaultWebDAVServer->port              );
-  webdavServer->loginName          = !String_isEmpty(jobOptions->webdavServer.loginName                            ) ? jobOptions->webdavServer.loginName          : ((serverNode != NULL) ? serverNode->webdavServer.loginName          : globalOptions.defaultWebDAVServer->loginName         );
-  webdavServer->password           = !Password_isEmpty(jobOptions->webdavServer.password                           ) ? jobOptions->webdavServer.password           : ((serverNode != NULL) ? serverNode->webdavServer.password           : globalOptions.defaultWebDAVServer->password          );
-  webdavServer->publicKeyFileName  = !String_isEmpty(jobOptions->webdavServer.publicKeyFileName                    ) ? jobOptions->webdavServer.publicKeyFileName  : ((serverNode != NULL) ? serverNode->webdavServer.publicKeyFileName  : globalOptions.defaultWebDAVServer->publicKeyFileName );
-  webdavServer->privateKeyFileName = !String_isEmpty(jobOptions->webdavServer.privateKeyFileName                   ) ? jobOptions->webdavServer.privateKeyFileName : ((serverNode != NULL) ? serverNode->webdavServer.privateKeyFileName : globalOptions.defaultWebDAVServer->privateKeyFileName);
-  webdavServer->maxConnectionCount = (jobOptions->webdavServer.maxConnectionCount != MAX_CONNECTION_COUNT_UNLIMITED) ? jobOptions->webdavServer.maxConnectionCount : ((serverNode != NULL) ? serverNode->webdavServer.maxConnectionCount : globalOptions.defaultWebDAVServer->maxConnectionCount);
-  webdavServer->maxStorageSize     = (jobOptions->webdavServer.maxStorageSize != MAX_STORAGE_SIZE_UNLIMITED        ) ? jobOptions->webdavServer.maxStorageSize     : ((serverNode != NULL) ? serverNode->webdavServer.maxConnectionCount : globalOptions.defaultWebDAVServer->maxStorageSize);
+//  webDAVServer->port               = (jobOptions->webDAVServer.port != 0                                           ) ? jobOptions->webDAVServer.port               : ((serverNode != NULL) ? serverNode->webDAVServer.port               : globalOptions.defaultWebDAVServer->port              );
+  webDAVServer->loginName          = !String_isEmpty(jobOptions->webDAVServer.loginName                            ) ? jobOptions->webDAVServer.loginName          : ((serverNode != NULL) ? serverNode->server.webDAVServer.loginName          : globalOptions.defaultWebDAVServer->webDAVServer.loginName         );
+  webDAVServer->password           = !Password_isEmpty(jobOptions->webDAVServer.password                           ) ? jobOptions->webDAVServer.password           : ((serverNode != NULL) ? serverNode->server.webDAVServer.password           : globalOptions.defaultWebDAVServer->webDAVServer.password          );
+  webDAVServer->publicKeyFileName  = !String_isEmpty(jobOptions->webDAVServer.publicKeyFileName                    ) ? jobOptions->webDAVServer.publicKeyFileName  : ((serverNode != NULL) ? serverNode->server.webDAVServer.publicKeyFileName  : globalOptions.defaultWebDAVServer->webDAVServer.publicKeyFileName );
+  webDAVServer->privateKeyFileName = !String_isEmpty(jobOptions->webDAVServer.privateKeyFileName                   ) ? jobOptions->webDAVServer.privateKeyFileName : ((serverNode != NULL) ? serverNode->server.webDAVServer.privateKeyFileName : globalOptions.defaultWebDAVServer->webDAVServer.privateKeyFileName);
+//  webDAVServer->maxConnectionCount = (jobOptions->webDAVServer.maxConnectionCount != MAX_CONNECTION_COUNT_UNLIMITED) ? jobOptions->webDAVServer.maxConnectionCount : ((serverNode != NULL) ? serverNode->server.webDAVServer.maxConnectionCount : globalOptions.defaultWebDAVServer->maxConnectionCount);
+//  webDAVServer->maxStorageSize     = (jobOptions->webDAVServer.maxStorageSize != MAX_STORAGE_SIZE_UNLIMITED        ) ? jobOptions->webDAVServer.maxStorageSize     : ((serverNode != NULL) ? serverNode->server.webDAVServer.maxStorageSize     : globalOptions.defaultWebDAVServer->maxStorageSize);
 
-  return (serverNode != NULL) ? &serverNode->serverAllocation : &defaultWebDAVServerAllocation;
+  return (serverNode != NULL) ? &serverNode->server : &defaultWebDAVServer;
 }
 
 void getCDSettings(const JobOptions *jobOptions,
