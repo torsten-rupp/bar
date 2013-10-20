@@ -5663,8 +5663,8 @@ error = ERROR_STILL_NOT_IMPLEMENTED;
                            NULL,
                            NULL,
                            CALLBACK(inputCryptPassword,NULL),
-                           CALLBACK_NONE,
-                           CALLBACK_NONE,
+                           CALLBACK(NULL,NULL),
+                           CALLBACK(NULL,NULL),
                            NULL,
                            NULL,
                            NULL
@@ -5715,8 +5715,8 @@ error = ERROR_STILL_NOT_IMPLEMENTED;
                                  NULL,
                                  NULL,
                                  CALLBACK(inputCryptPassword,NULL),
-                                 CALLBACK_NONE,
-                                 CALLBACK_NONE,
+                                 CALLBACK(NULL,NULL),
+                                 CALLBACK(NULL,NULL),
                                  NULL,
                                  NULL,
                                  NULL

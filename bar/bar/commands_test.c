@@ -128,6 +128,7 @@ Errors Command_test(const StringList                *storageNameList,
                          storageFileName,
                          jobOptions,
                          &globalOptions.maxBandWidthList,
+                         SERVER_CONNECTION_PRIORITY_HIGH,
                          archiveGetCryptPasswordFunction,
                          archiveGetCryptPasswordUserData
                         );

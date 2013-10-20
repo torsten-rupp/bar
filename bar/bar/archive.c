@@ -601,13 +601,13 @@ LOCAL Errors readEncryptionKey(ArchiveInfo       *archiveInfo,
 
   // create key chunk
   error = Chunk_init(&chunkInfoKey,
-                     NULL,
+                     NULL,  // parentChunkInfo
                      archiveInfo->chunkIO,
                      archiveInfo->chunkIOUserData,
                      CHUNK_ID_KEY,
                      CHUNK_DEFINITION_KEY,
                      0,
-                     NULL,
+                     NULL,  // cryptInfo
                      &chunkKey
                     );
   if (error != ERROR_NONE)
@@ -707,13 +707,13 @@ LOCAL Errors writeFileInfo(ArchiveInfo *archiveInfo)
 
   // create key chunk
   error = Chunk_init(&chunkInfoBar,
-                     NULL,
+                     NULL,  // parentChunkInfo
                      archiveInfo->chunkIO,
                      archiveInfo->chunkIOUserData,
                      CHUNK_ID_BAR,
                      CHUNK_DEFINITION_BAR,
                      0,
-                     NULL,
+                     NULL,  // cryptInfo
                      &chunkBar
                     );
   if (error != ERROR_NONE)
@@ -761,13 +761,13 @@ LOCAL Errors writeEncryptionKey(ArchiveInfo *archiveInfo)
 
   // create key chunk
   error = Chunk_init(&chunkInfoKey,
-                     NULL,
+                     NULL,  // parentChunkInfo
                      archiveInfo->chunkIO,
                      archiveInfo->chunkIOUserData,
                      CHUNK_ID_KEY,
                      CHUNK_DEFINITION_KEY,
                      0,
-                     NULL,
+                     NULL,  // cryptInfo
                      &chunkKey
                     );
   if (error != ERROR_NONE)
@@ -2918,6 +2918,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
                       const String                    storageFileName,
                       const JobOptions                *jobOptions,
                       BandWidthList                   *maxBandWidthList,
+                      ServerConnectionPriorities      serverConnectionPriority,
                       ArchiveGetCryptPasswordFunction archiveGetCryptPasswordFunction,
                       void                            *archiveGetCryptPasswordUserData
                      )
@@ -2929,6 +2930,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
                         const String                    storageFileName,
                         const JobOptions                *jobOptions,
                         BandWidthList                   *maxBandWidthList,
+                        ServerConnectionPriorities      serverConnectionPriority,
                         ArchiveGetCryptPasswordFunction archiveGetCryptPasswordFunction,
                         void                            *archiveGetCryptPasswordUserData
                        )
@@ -2998,6 +3000,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
                        archiveInfo->storage.storageFileName,
                        jobOptions,
                        maxBandWidthList,
+                       serverConnectionPriority,
                        CALLBACK(NULL,NULL),
                        CALLBACK(NULL,NULL)
                       );
@@ -3538,14 +3541,14 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
 
   // init file chunk
   error = Chunk_init(&archiveEntryInfo->file.chunkFile.info,
-                     NULL,
+                     NULL,  // parentChunkInfo
 #warning todo
 &CHUNK_IO_FILE,//                     archiveInfo->chunkIO,
 &archiveEntryInfo->file.tmpFileHandle,//                     archiveInfo->chunkIOUserData,
                      CHUNK_ID_FILE,
                      CHUNK_DEFINITION_FILE,
                      0,
-                     NULL,
+                     NULL,  // cryptInfo
                      &archiveEntryInfo->file.chunkFile
                     );
   if (error != ERROR_NONE)
@@ -3917,13 +3920,13 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
 
   // init image chunk
   error = Chunk_init(&archiveEntryInfo->image.chunkImage.info,
-                     NULL,
+                     NULL,  // parentChunkInfo
                      archiveInfo->chunkIO,
                      archiveInfo->chunkIOUserData,
                      CHUNK_ID_IMAGE,
                      CHUNK_DEFINITION_IMAGE,
                      0,
-                     NULL,
+                     NULL,  // cryptInfo
                      &archiveEntryInfo->image.chunkImage
                     );
   if (error != ERROR_NONE)
@@ -4173,13 +4176,13 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
 
   // init directory entry chunk
   error = Chunk_init(&archiveEntryInfo->directory.chunkDirectory.info,
-                     NULL,
+                     NULL,  // parentChunkInfo
                      archiveInfo->chunkIO,
                      archiveInfo->chunkIOUserData,
                      CHUNK_ID_DIRECTORY,
                      CHUNK_DEFINITION_DIRECTORY,
                      0,
-                     NULL,
+                     NULL,  // cryptInfo
                      &archiveEntryInfo->directory.chunkDirectory
                     );
   if (error != ERROR_NONE)
@@ -4420,13 +4423,14 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
 
   // init link chunk
   error = Chunk_init(&archiveEntryInfo->link.chunkLink.info,
-                     NULL,
+                     NULL,  // parentChunkInfo
                      archiveInfo->chunkIO,
                      archiveInfo->chunkIOUserData,
                      CHUNK_ID_LINK,
                      CHUNK_DEFINITION_LINK,
                      0,
-                     NULL,&archiveEntryInfo->link.chunkLink
+                     NULL,  // cryptInfo
+                     &archiveEntryInfo->link.chunkLink
                     );
   if (error != ERROR_NONE)
   {
@@ -4744,14 +4748,14 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
 
   // init hard link chunk
   error = Chunk_init(&archiveEntryInfo->hardLink.chunkHardLink.info,
-                     NULL,
+                     NULL,  // parentChunkInfo
 #warning todo
 &CHUNK_IO_FILE,//                     archiveInfo->chunkIO,
 &archiveEntryInfo->hardLink.tmpFileHandle,//                     archiveInfo->chunkIOUserData,
                      CHUNK_ID_HARDLINK,
                      CHUNK_DEFINITION_HARDLINK,
                      0,
-                     NULL,
+                     NULL,  // cryptInfo
                      &archiveEntryInfo->hardLink.chunkHardLink
                     );
   if (error != ERROR_NONE)
@@ -5081,13 +5085,13 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
 
   // init special chunk
   error = Chunk_init(&archiveEntryInfo->special.chunkSpecial.info,
-                     NULL,
+                     NULL,  // parentChunkInfo
                      archiveInfo->chunkIO,
                      archiveInfo->chunkIOUserData,
                      CHUNK_ID_SPECIAL,
                      CHUNK_DEFINITION_SPECIAL,
                      0,
-                     NULL,
+                     NULL,  // cryptInfo
                      &archiveEntryInfo->special.chunkSpecial
                     );
   if (error != ERROR_NONE)
@@ -5553,13 +5557,13 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
 
   // init file chunk
   error = Chunk_init(&archiveEntryInfo->file.chunkFile.info,
-                     NULL,
+                     NULL,  // parentChunkInfo
                      archiveInfo->chunkIO,
                      archiveInfo->chunkIOUserData,
                      CHUNK_ID_FILE,
                      CHUNK_DEFINITION_FILE,
                      0,
-                     NULL,
+                     NULL,  // cryptInfo
                      &archiveEntryInfo->file.chunkFile
                     );
   if (error != ERROR_NONE)
@@ -6116,13 +6120,13 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
 
   // init image chunk
   error = Chunk_init(&archiveEntryInfo->image.chunkImage.info,
-                     NULL,
+                     NULL,  // parentChunkInfo
                      archiveInfo->chunkIO,
                      archiveInfo->chunkIOUserData,
                      CHUNK_ID_IMAGE,
                      CHUNK_DEFINITION_IMAGE,
                      0,
-                     NULL,
+                     NULL,  // cryptInfo
                      &archiveEntryInfo->image.chunkImage
                     );
   if (error != ERROR_NONE)
@@ -6592,13 +6596,13 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
 
   // init directory chunk
   error = Chunk_init(&archiveEntryInfo->directory.chunkDirectory.info,
-                     NULL,
+                     NULL,  // parentChunkInfo
                      archiveInfo->chunkIO,
                      archiveInfo->chunkIOUserData,
                      CHUNK_ID_DIRECTORY,
                      CHUNK_DEFINITION_DIRECTORY,
                      0,
-                     NULL,
+                     NULL,  // cryptInfo
                      &archiveEntryInfo->directory.chunkDirectory
                     );
   if (error != ERROR_NONE)
@@ -6970,13 +6974,13 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
 
   // init link chunk
   error = Chunk_init(&archiveEntryInfo->link.chunkLink.info,
-                     NULL,
+                     NULL,  // parentChunkInfo
                      archiveInfo->chunkIO,
                      archiveInfo->chunkIOUserData,
                      CHUNK_ID_LINK,
                      CHUNK_DEFINITION_LINK,
                      0,
-                     NULL,
+                     NULL,  // cryptInfo
                      &archiveEntryInfo->link.chunkLink
                     );
   if (error != ERROR_NONE)
@@ -7370,13 +7374,13 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
 
   // init hard link chunk
   error = Chunk_init(&archiveEntryInfo->hardLink.chunkHardLink.info,
-                     NULL,
+                     NULL,  // parentChunkInfo
                      archiveInfo->chunkIO,
                      archiveInfo->chunkIOUserData,
                      CHUNK_ID_HARDLINK,
                      CHUNK_DEFINITION_HARDLINK,
                      0,
-                     NULL,
+                     NULL,  // cryptInfo
                      &archiveEntryInfo->hardLink.chunkHardLink
                     );
   if (error != ERROR_NONE)
@@ -7954,13 +7958,13 @@ Errors Archive_skipNextEntry(ArchiveInfo *archiveInfo)
 
   // init special chunk
   error = Chunk_init(&archiveEntryInfo->special.chunkSpecial.info,
-                     NULL,
+                     NULL,  // parentChunkInfo
                      archiveInfo->chunkIO,
                      archiveInfo->chunkIOUserData,
                      CHUNK_ID_SPECIAL,
                      CHUNK_DEFINITION_SPECIAL,
                      0,
-                     NULL,
+                     NULL,  // cryptInfo
                      &archiveEntryInfo->special.chunkSpecial
                     );
   if (error != ERROR_NONE)
@@ -10141,8 +10145,8 @@ Errors Archive_updateIndex(DatabaseHandle               *databaseHandle,
                          storageFileName,
                          &jobOptions,
                          maxBandWidthList,
-                         NULL,
-                         NULL
+                         SERVER_CONNECTION_PRIORITY_LOW,
+                         CALLBACK(NULL,NULL)
                         );
 
     if (error != ERROR_NONE)
@@ -10154,8 +10158,8 @@ Errors Archive_updateIndex(DatabaseHandle               *databaseHandle,
                            storageFileName,
                            &jobOptions,
                            maxBandWidthList,
-                           NULL,
-                           NULL
+                           SERVER_CONNECTION_PRIORITY_LOW,
+                           CALLBACK(NULL,NULL)
                           );
     }
   }
@@ -10167,8 +10171,8 @@ Errors Archive_updateIndex(DatabaseHandle               *databaseHandle,
                          storageFileName,
                          &jobOptions,
                          maxBandWidthList,
-                         NULL,
-                         NULL
+                         SERVER_CONNECTION_PRIORITY_LOW,
+                         CALLBACK(NULL,NULL)
                         );
   }
   if (error != ERROR_NONE)
@@ -10757,9 +10761,8 @@ Errors Archive_copy(const String                    storageName,
                          jobOptions,
                          ArchiveCreatedFunction          archiveCreatedFunction,
                          void                            *archiveNewFileUserData,
-                         NULL,
-                         NULL,
-                         NULL,
+                         CALLBACK(NULL,NULL)
+                         NULL, // databaseHandle
                         );
   if (error != ERROR_NONE)
   {
@@ -10811,9 +10814,9 @@ Errors Archive_copy(const String                    storageName,
           fileName = String_new();
           error = Archive_readFileEntry(&archiveEntryInfo,
                                         &archiveInfo,
-                                        NULL,
-                                        NULL,
-                                        NULL,
+                                        NULL,  // deltaCompressAlgorithm
+                                        NULL,  // byteCompressAlgorithm
+                                        NULL,  // cryptAlgorithm
                                         fileName,
                                         &fileInfo,
                                         &fragmentOffset,

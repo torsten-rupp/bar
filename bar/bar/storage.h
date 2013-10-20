@@ -1060,6 +1060,7 @@ Errors Storage_seek(StorageFileHandle *storageFileHandle,
 *          storageName                - storage name
 *                                       (prefix+specifier+path only)
 *          jobOptions                 - job options
+*          serverConnectionPriority        - server connection priority
 * Output : storageDirectoryListHandle - initialized storage directory
 *                                       list handle
 * Return : ERROR_NONE or errorcode
@@ -1068,7 +1069,8 @@ Errors Storage_seek(StorageFileHandle *storageFileHandle,
 
 Errors Storage_openDirectoryList(StorageDirectoryListHandle *storageDirectoryListHandle,
                                  const String               storageName,
-                                 const JobOptions           *jobOptions
+                                 const JobOptions           *jobOptions,
+                                 ServerConnectionPriorities serverConnectionPriority
                                 );
 
 /***********************************************************************\

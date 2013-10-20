@@ -436,6 +436,7 @@ const Password *Archive_appendDecryptPassword(const Password *password);
 * Notes  : -
 \***********************************************************************/
 
+#warning TODO add maxBandWidthList,serverConnectionPriority?
 #ifdef NDEBUG
   Errors Archive_create(ArchiveInfo                     *archiveInfo,
                         const JobOptions                *jobOptions,
@@ -468,6 +469,7 @@ const Password *Archive_appendDecryptPassword(const Password *password);
 *          jobOptions                      - option settings
 *          maxBandWidthList                - list with max. band width
 *                                            to use [bits/s] or NULL
+*          serverConnectionPriority        - server connection priority
 *          archiveGetCryptPasswordFunction - get password call back (can
 *                                            be NULL)
 *          archiveGetCryptPasswordUserData - user data for get password
@@ -483,6 +485,7 @@ const Password *Archive_appendDecryptPassword(const Password *password);
                       const String                    storageFileName,
                       const JobOptions                *jobOptions,
                       BandWidthList                   *maxBandWidthList,
+                      ServerConnectionPriorities      serverConnectionPriority,
                       ArchiveGetCryptPasswordFunction archiveGetCryptPasswordFunction,
                       void                            *archiveGetCryptPasswordUserData
                      );
@@ -494,6 +497,7 @@ const Password *Archive_appendDecryptPassword(const Password *password);
                         const String                    storageFileName,
                         const JobOptions                *jobOptions,
                         BandWidthList                   *maxBandWidthList,
+                        ServerConnectionPriorities      serverConnectionPriority,
                         ArchiveGetCryptPasswordFunction archiveGetCryptPasswordFunction,
                         void                            *archiveGetCryptPasswordUserData
                        );

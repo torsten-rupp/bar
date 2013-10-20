@@ -2757,12 +2757,14 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
 
   // store data
   autoFreeSavePoint = AutoFree_save(&autoFreeList);
-  while (   !isAborted(createInfo)
+  while (   (createInfo->failError == ERROR_NONE)
+         && !isAborted(createInfo)
          && MsgQueue_get(&createInfo->storageMsgQueue,&storageMsg,NULL,sizeof(storageMsg))
         )
   {
     AUTOFREE_ADD(&autoFreeList,&storageMsg,
                  {
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                    storageInfoDecrement(createInfo,storageMsg.fileSize);
                    File_delete(storageMsg.fileName,FALSE);
                    if (storageMsg.storageId != DATABASE_ID_NONE) Index_delete(indexDatabaseHandle,storageMsg.storageId);
@@ -3165,7 +3167,8 @@ fprintf(stderr,"%s, %d: storageMsg.fileName=%s\n",__FILE__,__LINE__,String_cStri
         storagePath = File_getFilePathName(String_new(),createInfo->storageFileName);
         error = Storage_openDirectoryList(&storageDirectoryListHandle,
                                           storagePath,
-                                          createInfo->jobOptions
+                                          createInfo->jobOptions,
+                                          SERVER_CONNECTION_PRIORITY_HIGH
                                          );
         if (error == ERROR_NONE)
         {
@@ -4915,6 +4918,7 @@ Errors Command_create(const String                    storageName,
                        createInfo.storageFileName,
                        createInfo.jobOptions,
                        &globalOptions.maxBandWidthList,
+                       SERVER_CONNECTION_PRIORITY_HIGH,
                        CALLBACK(storageRequestVolumeFunction,storageRequestVolumeUserData),
                        CALLBACK((StorageStatusInfoFunction)updateStorageStatusInfo,&createInfo)
                       );

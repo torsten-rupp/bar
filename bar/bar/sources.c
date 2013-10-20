@@ -99,7 +99,8 @@ LOCAL void addSourceNodes(const String storageName, const Pattern *storagePatter
   sourceNode = NULL;
   error = Storage_openDirectoryList(&storageDirectoryListHandle,
                                     baseStorageName,
-                                    &jobOptions
+                                    &jobOptions,
+                                    SERVER_CONNECTION_PRIORITY_LOW
                                    );
   if (error == ERROR_NONE)
   {
@@ -343,6 +344,7 @@ LOCAL Errors restoreFile(const String                    storageName,
                        storageFileName,
                        jobOptions,
                        &globalOptions.maxBandWidthList,
+                       SERVER_CONNECTION_PRIORITY_HIGH,
                        archiveGetCryptPasswordFunction,
                        archiveGetCryptPasswordUserData
                       );

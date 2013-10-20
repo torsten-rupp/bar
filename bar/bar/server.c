@@ -826,7 +826,7 @@ LOCAL void freeJobNode(JobNode *jobNode, void *userData)
   if (jobNode->ftpPassword != NULL) Password_delete(jobNode->ftpPassword);
 
   freeJobOptions(&jobNode->jobOptions);
-  List_done(&jobNode->scheduleList,CALLBACK_NONE);
+  List_done(&jobNode->scheduleList,CALLBACK(NULL,NULL));
   PatternList_done(&jobNode->compressExcludePatternList);
   PatternList_done(&jobNode->deltaSourcePatternList);
   PatternList_done(&jobNode->excludePatternList);
@@ -3029,7 +3029,8 @@ LOCAL void autoIndexUpdateThreadCode(void)
           // list directory, update index checked/request create index
           error = Storage_openDirectoryList(&storageDirectoryListHandle,
                                             storageDirectoryName,
-                                            &jobOptions
+                                            &jobOptions,
+                                            SERVER_CONNECTION_PRIORITY_LOW
                                            );
           if (error == ERROR_NONE)
           {
@@ -4384,7 +4385,8 @@ LOCAL void serverCommand_fileList(ClientInfo *clientInfo, uint id, const StringM
   // open directory
   error = Storage_openDirectoryList(&storageDirectoryListHandle,
                                     url,
-                                    &clientInfo->jobOptions
+                                    &clientInfo->jobOptions,
+                                    SERVER_CONNECTION_PRIORITY_HIGH
                                    );
   if (error != ERROR_NONE)
   {
@@ -7084,8 +7086,8 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const Stri
                        storageFileName,
                        &clientInfo->jobOptions,
                        &globalOptions.maxBandWidthList,
-                       NULL,
-                       NULL
+                       SERVER_CONNECTION_PRIORITY_HIGH,
+                       CALLBACK(NULL,NULL)
                       );
   if (error != ERROR_NONE)
   {
@@ -7525,7 +7527,7 @@ LOCAL void serverCommand_storageListClear(ClientInfo *clientInfo, uint id, const
 
   UNUSED_VARIABLE(argumentMap);
 
-  Array_clear(clientInfo->storageIdArray,CALLBACK_NONE);
+  Array_clear(clientInfo->storageIdArray,CALLBACK(NULL,NULL));
 
   sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
 }
@@ -7637,6 +7639,7 @@ LOCAL void serverCommand_storageDelete(ClientInfo *clientInfo, uint id, const St
                            storageFileName,
                            &clientInfo->jobOptions,
                            &globalOptions.indexDatabaseMaxBandWidthList,
+                           SERVER_CONNECTION_PRIORITY_HIGH,
                            CALLBACK(NULL,NULL),
                            CALLBACK(NULL,NULL)
                           );
@@ -7649,6 +7652,7 @@ LOCAL void serverCommand_storageDelete(ClientInfo *clientInfo, uint id, const St
                              storageFileName,
                              &clientInfo->jobOptions,
                              &globalOptions.indexDatabaseMaxBandWidthList,
+                             SERVER_CONNECTION_PRIORITY_HIGH,
                              CALLBACK(NULL,NULL),
                              CALLBACK(NULL,NULL)
                             );
@@ -7662,6 +7666,7 @@ LOCAL void serverCommand_storageDelete(ClientInfo *clientInfo, uint id, const St
                            storageFileName,
                            &clientInfo->jobOptions,
                            &globalOptions.indexDatabaseMaxBandWidthList,
+                           SERVER_CONNECTION_PRIORITY_HIGH,
                            CALLBACK(NULL,NULL),
                            CALLBACK(NULL,NULL)
                           );
