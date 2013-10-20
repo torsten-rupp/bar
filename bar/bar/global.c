@@ -479,6 +479,25 @@ void debugRemoveResourceTrace(const char *__fileName__,
   pthread_mutex_unlock(&debugResourceLock);
 }
 
+bool debugIsResourceTrace(const void *resource)
+{
+  DebugResourceNode *debugResourceNode;
+
+  pthread_once(&debugResourceInitFlag,debugResourceInit);
+
+  pthread_mutex_lock(&debugResourceLock);
+  {
+    debugResourceNode = debugResourceAllocList.head;
+    while ((debugResourceNode != NULL) && (debugResourceNode->resource != resource))
+    {
+      debugResourceNode = debugResourceNode->next;
+    }
+  }
+  pthread_mutex_unlock(&debugResourceLock);
+
+  return (debugResourceNode != NULL);
+}
+
 void debugResourceDone(void)
 {
   pthread_once(&debugResourceInitFlag,debugResourceInit);

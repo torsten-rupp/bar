@@ -209,7 +209,6 @@ typedef void                void32;
 #endif /* __GNUC__ */
 
 // only for better reading
-#define CALLBACK_NONE NULL,NULL
 #define CALLBACK(code,argument) code,argument
 
 /***********************************************************************\
@@ -920,6 +919,9 @@ typedef void                void32;
     } \
     while (0)
 
+  #define DEBUG_IS_RESOURCE_TRACE(resource) \
+    debugIsResourceTrace(resource)
+
 #else /* NDEBUG */
 
   #define DEBUG_ADD_RESOURCE_TRACE(typeName,resource) \
@@ -945,6 +947,9 @@ typedef void                void32;
     { \
     } \
     while (0)
+
+  #define DEBUG_IS_RESOURCE_TRACE(resource) \
+    TRUE
 
 #endif /* not NDEBUG */
 
@@ -1366,6 +1371,17 @@ void debugRemoveResourceTrace(const char *__fileName__,
                               uint       __lineNb__,
                               const void *resource
                              );
+
+/***********************************************************************\
+* Name   : debugIsResourceTrace
+* Purpose: check if resource is in debug trace list
+* Input  : resource     - resource
+* Output : -
+* Return : TRUE iff resource in debug trace list
+* Notes  : -
+\***********************************************************************/
+
+bool debugIsResourceTrace(const void *resource);
 
 /***********************************************************************\
 * Name   : debugResourceDone
