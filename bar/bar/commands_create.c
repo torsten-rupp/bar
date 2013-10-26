@@ -5021,8 +5021,7 @@ Errors Command_create(const String                    storageName,
   // create new archive
   error = Archive_create(&createInfo.archiveInfo,
                          jobOptions,
-                         storeArchiveFile,
-                         &createInfo,
+                         CALLBACK(storeArchiveFile,&createInfo),
                          CALLBACK(archiveGetCryptPasswordFunction,archiveGetCryptPasswordUserData),
                          indexDatabaseHandle
                         );

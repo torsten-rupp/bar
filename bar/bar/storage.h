@@ -182,6 +182,7 @@ typedef struct
 {
   StorageModes                 mode;                       // storage mode: READ, WRITE
   StorageSpecifier             storageSpecifier;           // storage specifier data
+#warning TODO: add storageName, printableStorageName
   const JobOptions             *jobOptions;
 
   StorageRequestVolumeFunction requestVolumeFunction;      // call back for request new volume

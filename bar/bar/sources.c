@@ -89,7 +89,7 @@ LOCAL void addSourceNodes(const String storageName, const Pattern *storagePatter
     String_delete(fileName);
     String_delete(baseStorageName);
     Storage_doneSpecifier(&storageSpecifier);
-    freeJobOptions(&jobOptions);
+    doneJobOptions(&jobOptions);
     return;
   }
   File_getFilePathName(basePath,fileName);
@@ -148,7 +148,7 @@ LOCAL void addSourceNodes(const String storageName, const Pattern *storagePatter
   String_delete(basePath);
   String_delete(baseStorageName);
   Storage_doneSpecifier(&storageSpecifier);
-  freeJobOptions(&jobOptions);
+  doneJobOptions(&jobOptions);
 }
 
 /***********************************************************************\
@@ -297,6 +297,7 @@ LOCAL Errors restoreFile(const String                    storageName,
   bool              restoredFlag;
   StorageSpecifier  storageSpecifier;
   String            storageFileName;
+  StorageFileHandle storageFileHandle;
   byte              *buffer;
 //  bool              abortFlag;
   Errors            error;
@@ -338,8 +339,30 @@ LOCAL Errors restoreFile(const String                    storageName,
     return error;
   }
 
+  // init storage
+  error = Storage_init(&storageFileHandle,
+                       &storageSpecifier,
+                       storageFileName,
+                       jobOptions,
+                       &globalOptions.maxBandWidthList,
+                       SERVER_CONNECTION_PRIORITY_HIGH,
+                       CALLBACK(NULL,NULL),
+                       CALLBACK(NULL,NULL)
+                      );
+  if (error != ERROR_NONE)
+  {
+    printError("Cannot initialize storage '%s' (error: %s)!\n",
+               String_cString(storageName),
+               Errors_getText(error)
+              );
+    String_delete(storageFileName);
+    Storage_doneSpecifier(&storageSpecifier);
+    return error;
+  }
+
   // open archive
   error = Archive_open(&archiveInfo,
+                       &storageFileHandle,
                        &storageSpecifier,
                        storageFileName,
                        jobOptions,
@@ -350,6 +373,7 @@ LOCAL Errors restoreFile(const String                    storageName,
                       );
   if (error != ERROR_NONE)
   {
+    (void)Storage_done(&storageFileHandle);
     String_delete(storageFileName);
     Storage_doneSpecifier(&storageSpecifier);
     return error;
@@ -815,6 +839,9 @@ LOCAL Errors restoreFile(const String                    storageName,
 
   // close archive
   Archive_close(&archiveInfo);
+
+  // done storage
+  (void)Storage_done(&storageFileHandle);
 
   // free resources
   Storage_doneSpecifier(&storageSpecifier);

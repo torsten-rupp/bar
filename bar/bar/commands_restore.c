@@ -221,6 +221,7 @@ Errors Command_restore(const StringList                *storageNameList,
   StorageSpecifier  storageSpecifier;
   String            storageFileName;
   String            printableStorageName;
+  StorageFileHandle storageFileHandle;
   StringNode        *stringNode;
   String            storageName;
   bool              abortFlag;
@@ -300,8 +301,29 @@ Errors Command_restore(const StringList                *storageNameList,
 
     printInfo(0,"Restore from archive '%s':\n",String_cString(printableStorageName));
 
+    // init storage
+    error = Storage_init(&storageFileHandle,
+                         &storageSpecifier,
+                         storageFileName,
+                         jobOptions,
+                         &globalOptions.maxBandWidthList,
+                         SERVER_CONNECTION_PRIORITY_HIGH,
+                         CALLBACK(NULL,NULL),
+                         CALLBACK(NULL,NULL)
+                        );
+    if (error != ERROR_NONE)
+    {
+      printError("Cannot initialize storage '%s' (error: %s)!\n",
+                 String_cString(storageName),
+                 Errors_getText(error)
+                );
+      if (restoreInfo.failError == ERROR_NONE) restoreInfo.failError = error;
+      continue;
+    }
+
     // open archive
     error = Archive_open(&archiveInfo,
+                         &storageFileHandle,
                          &storageSpecifier,
                          storageFileName,
                          jobOptions,
@@ -2249,6 +2271,9 @@ Errors Command_restore(const StringList                *storageNameList,
 
     // close archive
     Archive_close(&archiveInfo);
+
+    // done storage
+    (void)Storage_done(&storageFileHandle);
 
     if (   abortFlag
         || ((restoreInfo.requestedAbortFlag != NULL) && (*restoreInfo.requestedAbortFlag))

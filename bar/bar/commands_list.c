@@ -1566,8 +1566,9 @@ Errors Command_list(StringList                      *storageNameList,
   AutoFreeList     autoFreeList;
   String           storageName;
   StorageSpecifier storageSpecifier;
-  String           printableStorageName;
   String           storageFileName;
+  String           printableStorageName;
+  StorageFileHandle storageFileHandle;
   bool             printedInfoFlag;
   ulong            fileCount;
   Errors           failError;
@@ -1618,6 +1619,26 @@ remoteBarFlag=FALSE;
     }
     Storage_getPrintableName(printableStorageName,&storageSpecifier,storageFileName);
 
+    // init storage
+    error = Storage_init(&storageFileHandle,
+                         &storageSpecifier,
+                         storageFileName,
+                         jobOptions,
+                         &globalOptions.maxBandWidthList,
+                         SERVER_CONNECTION_PRIORITY_HIGH,
+                         CALLBACK(NULL,NULL),
+                         CALLBACK(NULL,NULL)
+                        );
+    if (error != ERROR_NONE)
+    {
+      printError("Cannot initialize storage '%s' (error: %s)!\n",
+                 String_cString(storageName),
+                 Errors_getText(error)
+                );
+      if (failError == ERROR_NONE) failError = error;
+      continue;
+    }
+
     printedInfoFlag = FALSE;
     fileCount       = 0L;
     switch (storageSpecifier.type)
@@ -1636,6 +1657,7 @@ remoteBarFlag=FALSE;
 
           // open archive
           error = Archive_open(&archiveInfo,
+                               &storageFileHandle,
                                &storageSpecifier,
                                storageFileName,
                                jobOptions,
@@ -2925,6 +2947,9 @@ remoteBarFlag=FALSE;
     {
       printFooter(fileCount);
     }
+
+    // done storage
+    (void)Storage_done(&storageFileHandle);
   }
 
   // output grouped list

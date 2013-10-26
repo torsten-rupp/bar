@@ -207,8 +207,8 @@ typedef enum
 typedef struct
 {
   Semaphore   lock;
-  ServerTypes type;                                      // server type
   String      name;                                      // server name
+  ServerTypes type;                                      // server type
   union
   {
     FTPServer    ftpServer;
@@ -666,15 +666,15 @@ void initDuplicateJobOptions(JobOptions *jobOptions, const JobOptions *fromJobOp
 void copyJobOptions(const JobOptions *fromJobOptions, JobOptions *toJobOptions);
 
 /***********************************************************************\
-* Name   : freeJobOptions
-* Purpose: free job options
+* Name   : doneJobOptions
+* Purpose: done job options structure
 * Input  : jobOptions - job options
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-void freeJobOptions(JobOptions *jobOptions);
+void doneJobOptions(JobOptions *jobOptions);
 
 /***********************************************************************\
 * Name   : getBandWidth
@@ -791,29 +791,29 @@ void getDeviceSettings(const String     name,
                       );
 
 /***********************************************************************\
-* Name   : allocateServerConnection
-* Purpose: allocate server connection
+* Name   : allocateServer
+* Purpose: allocate server
 * Input  : server   - server
 *          priority - server connection priority; see
 *                     SERVER_CONNECTION_PRIORITY_...
 *          timeout  - timeout or -1 [ms]
 * Output : -
-* Return : TRUE iff connection allocated, FALSE otherwise
+* Return : TRUE iff server allocated, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
 
-bool allocateServerConnection(Server *server, ServerConnectionPriorities priority, long timeout);
+bool allocateServer(Server *server, ServerConnectionPriorities priority, long timeout);
 
 /***********************************************************************\
-* Name   : freeServerConnection
-* Purpose: free allocated server connection
+* Name   : freeServer
+* Purpose: free allocated server
 * Input  : server - server
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-void freeServerConnection(Server *server);
+void freeServer(Server *server);
 
 /***********************************************************************\
 * Name   : isServerAllocationPending

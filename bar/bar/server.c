@@ -596,7 +596,6 @@ LOCAL struct
         bool indexUpdate;
       } pauseFlags;                                // TRUE iff pause
 LOCAL uint64                pauseEndTimestamp;
-LOCAL bool                  indexFlag;             // TRUE iff index archive in progress
 LOCAL bool                  quitFlag;              // TRUE iff quit requested
 
 /****************************** Macros *********************************/
@@ -825,7 +824,7 @@ LOCAL void freeJobNode(JobNode *jobNode, void *userData)
   if (jobNode->sshPassword != NULL) Password_delete(jobNode->sshPassword);
   if (jobNode->ftpPassword != NULL) Password_delete(jobNode->ftpPassword);
 
-  freeJobOptions(&jobNode->jobOptions);
+  doneJobOptions(&jobNode->jobOptions);
   List_done(&jobNode->scheduleList,CALLBACK(NULL,NULL));
   PatternList_done(&jobNode->compressExcludePatternList);
   PatternList_done(&jobNode->deltaSourcePatternList);
@@ -2197,8 +2196,9 @@ fprintf(stderr,"%s,%d: z=%d\n",__FILE__,__LINE__,z);
         switch (jobNode->jobType)
         {
           case JOB_TYPE_CREATE:
-            logMessage(LOG_TYPE_ALWAYS,"start job '%s': '%s'\n",String_cString(jobNode->name),String_cString(printableStorageName));
+            logMessage(LOG_TYPE_ALWAYS,"Start job '%s': '%s'\n",String_cString(jobNode->name),String_cString(printableStorageName));
 
+#if 0
             // try to pause background index thread, do short delay to make sure network connection is possible
             createFlag = TRUE;
             if (indexFlag)
@@ -2211,6 +2211,7 @@ fprintf(stderr,"%s,%d: z=%d\n",__FILE__,__LINE__,z);
               }
               Misc_udelay(30LL*MISC_US_PER_SECOND);
             }
+#endif
 
             // create archive
             jobNode->runningInfo.error = Command_create(storageName,
@@ -2234,16 +2235,17 @@ fprintf(stderr,"%s,%d: z=%d\n",__FILE__,__LINE__,z);
 
             if (!jobNode->requestedAbortFlag)
             {
-              logMessage(LOG_TYPE_ALWAYS,"done job '%s': '%s' (error: %s)\n",String_cString(jobNode->name),String_cString(printableStorageName),Errors_getText(jobNode->runningInfo.error));
+              logMessage(LOG_TYPE_ALWAYS,"Done job '%s': '%s' (error: %s)\n",String_cString(jobNode->name),String_cString(printableStorageName),Errors_getText(jobNode->runningInfo.error));
             }
             else
             {
-              logMessage(LOG_TYPE_ALWAYS,"aborted job '%s': '%s'\n",String_cString(jobNode->name),String_cString(printableStorageName));
+              logMessage(LOG_TYPE_ALWAYS,"Aborted job '%s': '%s'\n",String_cString(jobNode->name),String_cString(printableStorageName));
             }
             break;
           case JOB_TYPE_RESTORE:
-            logMessage(LOG_TYPE_ALWAYS,"start restore archive '%s'\n",String_cString(printableStorageName));
+            logMessage(LOG_TYPE_ALWAYS,"Start restore archive '%s'\n",String_cString(printableStorageName));
 
+#if 0
             // try to pause background index thread, make a short delay to make sure network connection is possible
             restoreFlag = TRUE;
             if (indexFlag)
@@ -2256,6 +2258,7 @@ fprintf(stderr,"%s,%d: z=%d\n",__FILE__,__LINE__,z);
               }
               Misc_udelay(30LL*MISC_US_PER_SECOND);
             }
+#endif
 
             // restore archive
             StringList_init(&archiveFileNameList);
@@ -2276,7 +2279,7 @@ fprintf(stderr,"%s,%d: z=%d\n",__FILE__,__LINE__,z);
             // allow background threads
             restoreFlag = FALSE;
 
-            logMessage(LOG_TYPE_ALWAYS,"done restore archive '%s' (error: %s)\n",String_cString(printableStorageName),Errors_getText(jobNode->runningInfo.error));
+            logMessage(LOG_TYPE_ALWAYS,"Done restore archive '%s' (error: %s)\n",String_cString(printableStorageName),Errors_getText(jobNode->runningInfo.error));
             break;
           #ifndef NDEBUG
             default:
@@ -2290,7 +2293,7 @@ fprintf(stderr,"%s,%d: z=%d\n",__FILE__,__LINE__,z);
     else
     {
       logMessage(LOG_TYPE_ALWAYS,
-                 "aborted job '%s': invalid storage '%s' (error: %s)\n",
+                 "Aborted job '%s': invalid storage '%s' (error: %s)\n",
                  String_cString(jobNode->name),
                  String_cString(printableStorageName),
                  Errors_getText(jobNode->runningInfo.error)
@@ -2305,7 +2308,7 @@ fprintf(stderr,"%s,%d: z=%d\n",__FILE__,__LINE__,z);
 
 
     // free resources
-    freeJobOptions(&jobOptions);
+    doneJobOptions(&jobOptions);
     PatternList_clear(&compressExcludePatternList);
     PatternList_clear(&deltaSourcePatternList);
     PatternList_clear(&excludePatternList);
@@ -2607,12 +2610,13 @@ LOCAL void indexThreadCode(void)
   StorageSpecifier       storageSpecifier;
   String                 storageName;
   String                 storageFileName;
+  StorageFileHandle      storageFileHandle;
   int64                  duplicateStorageId;
   String                 duplicateStorageName;
   String                 printableStorageName;
   IndexCryptPasswordList indexCryptPasswordList;
   SemaphoreLock          semaphoreLock;
-  bool                   interruptFlag;
+  JobOptions             jobOptions;
   Errors                 error;
   JobNode                *jobNode;
   IndexCryptPasswordNode *indexCryptPasswordNode;
@@ -2793,18 +2797,17 @@ LOCAL void indexThreadCode(void)
     }
 
     // update index entries
-    interruptFlag = FALSE;
     while (   Index_findByState(indexDatabaseHandle,
                                 INDEX_STATE_SET(INDEX_STATE_UPDATE_REQUESTED),
                                 &storageId,
                                 storageName,
                                 NULL
                                )
-           && !interruptFlag
            && !quitFlag
           )
     {
-      // get printable name (if possible)
+fprintf(stderr,"%s, %d: %ld %s\n",__FILE__,__LINE__,storageId,String_cString(storageName));
+      // parse storage name
       error = Storage_parseName(storageName,&storageSpecifier,storageFileName);
       if (error == ERROR_NONE)
       {
@@ -2815,77 +2818,86 @@ LOCAL void indexThreadCode(void)
         String_set(printableStorageName,storageName);
       }
 
-      plogMessage(LOG_TYPE_INDEX,
-                  "INDEX",
-                  "Start create index for '%s'\n",
-                  String_cString(printableStorageName)
-                 );
-
-      // try to create index
-      LIST_ITERATE(&indexCryptPasswordList,indexCryptPasswordNode)
+      // init storage
+      initJobOptions(&jobOptions);
+      error = Storage_init(&storageFileHandle,
+                           &storageSpecifier,
+                           storageFileName,
+                           &jobOptions,
+                           &globalOptions.indexDatabaseMaxBandWidthList,
+                           SERVER_CONNECTION_PRIORITY_LOW,
+                           CALLBACK(NULL,NULL),
+                           CALLBACK(NULL,NULL)
+                          );
+      if (error == ERROR_NONE)
       {
-        // set state 'index update in progress'
-        indexFlag = TRUE;
+        plogMessage(LOG_TYPE_INDEX,
+                    "INDEX",
+                    "Start create index for '%s'\n",
+                    String_cString(printableStorageName)
+                   );
 
-        // index update
-        error = Archive_updateIndex(indexDatabaseHandle,
-                                    storageId,
-                                    storageName,
-                                    indexCryptPasswordNode->cryptPassword,
-                                    indexCryptPasswordNode->cryptPrivateKeyFileName,
-                                    &globalOptions.indexDatabaseMaxBandWidthList,
-                                    indexPauseCallback,
-                                    NULL,
-                                    indexAbortCallback,
-                                    NULL
-                                   );
-        if (error == ERROR_NONE)
+        // try to create index
+        LIST_ITERATE(&indexCryptPasswordList,indexCryptPasswordNode)
         {
-          indexFlag = FALSE;
-          break;
+          // index update
+  #warning todo init?
+          jobOptions.cryptPassword           = Password_duplicate(indexCryptPasswordNode->cryptPassword);
+          jobOptions.cryptPrivateKeyFileName = String_duplicate(indexCryptPasswordNode->cryptPrivateKeyFileName);
+          error = Archive_updateIndex(indexDatabaseHandle,
+                                      storageId,
+                                      &storageFileHandle,
+                                      storageName,
+                                      &jobOptions,
+                                      &globalOptions.indexDatabaseMaxBandWidthList,
+                                      indexPauseCallback,
+                                      NULL,
+                                      indexAbortCallback,
+                                      NULL
+                                     );
+
+          // stop if done or quit or interrupted
+          if (   (error == ERROR_NONE)
+              || (Errors_getCode(error) == ERROR_INTERRUPTED)
+              || quitFlag
+             )
+          {
+            break;
+          }
         }
 
-        // clear state 'index update in progress'
-        indexFlag = FALSE;
-
-        // check if interrupted by create or restore
-// ??? entfernen wenn interrupt index geht
-        if (createFlag || restoreFlag)
-        {
-          interruptFlag = TRUE;
-          break;
-        }
+        // done storage
+        (void)Storage_done(&storageFileHandle);
       }
+      doneJobOptions(&jobOptions);
+
       if (!quitFlag)
       {
-        if (!interruptFlag)
-        {
-          if (error == ERROR_NONE)
-          {
-            plogMessage(LOG_TYPE_INDEX,
-                        "INDEX",
-                        "Created index #%lld for '%s'\n",
-                        storageId,
-                        String_cString(printableStorageName)
-                       );
-          }
-          else
-          {
-            plogMessage(LOG_TYPE_ERROR,
-                        "INDEX",
-                        "Cannot create index for '%s' (error: %s)\n",
-                        String_cString(printableStorageName),
-                        Errors_getText(error)
-                       );
-          }
-        }
-        else
+        if (error == ERROR_NONE)
         {
           plogMessage(LOG_TYPE_INDEX,
                       "INDEX",
-                      "Interrupted created index #%lld for '%s'\n",
+                      "Created index #%lld for '%s'\n",
                       storageId,
                       String_cString(printableStorageName)
+                     );
+        }
+        else if (Errors_getCode(error) == ERROR_INTERRUPTED)
+        {
+          plogMessage(LOG_TYPE_INDEX,
+                      "INDEX",
+                      "Interrupted create index for '%s' - postpone\n",
+                      String_cString(printableStorageName),
+                      Errors_getText(error)
+                     );
+        }
+        else
+        {
+          plogMessage(LOG_TYPE_ERROR,
+                      "INDEX",
+                      "Cannot create index for '%s' (error: %s)\n",
+                      String_cString(printableStorageName),
+                      Errors_getText(error)
                      );
         }
       }
@@ -2904,15 +2916,12 @@ LOCAL void indexThreadCode(void)
       Misc_udelay(10LL*MISC_US_PER_SECOND);
     }
 
-    if (!interruptFlag && !quitFlag)
+    // sleep, check quit flag
+    z = 0;
+    while ((z < SLEEP_TIME_INDEX_THREAD) && !quitFlag)
     {
-      // sleep, check quit flag
-      z = 0;
-      while ((z < SLEEP_TIME_INDEX_THREAD) && !quitFlag)
-      {
-        Misc_udelay(10LL*MISC_US_PER_SECOND);
-        z += 10;
-      }
+      Misc_udelay(10LL*MISC_US_PER_SECOND);
+      z += 10;
     }
   }
 
@@ -3106,7 +3115,7 @@ LOCAL void autoIndexUpdateThreadCode(void)
         }
       }
     }
-    freeJobOptions(&jobOptions);
+    doneJobOptions(&jobOptions);
 
     // delete not existing indizes
     error = Index_initListStorage(&databaseQueryHandle,
@@ -7049,6 +7058,7 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const Stri
   String            storageName;
   StorageSpecifier  storageSpecifier;
   String            storageFileName;
+  StorageFileHandle storageFileHandle;
   Errors            error;
   ArchiveInfo       archiveInfo;
   ArchiveEntryInfo  archiveEntryInfo;
@@ -7080,8 +7090,31 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const Stri
     return;
   }
 
+  // init storage
+  error = Storage_init(&storageFileHandle,
+                       &storageSpecifier,
+                       storageFileName,
+                       &clientInfo->jobOptions,
+                       &globalOptions.maxBandWidthList,
+                       SERVER_CONNECTION_PRIORITY_HIGH,
+                       CALLBACK(NULL,NULL),
+                       CALLBACK(NULL,NULL)
+                      );
+  if (error != ERROR_NONE)
+  {
+    printError("Cannot initialize storage '%s' (error: %s)!\n",
+               String_cString(storageName),
+               Errors_getText(error)
+              );
+    String_delete(storageFileName);
+    sendClientResult(clientInfo,id,TRUE,error,"%s",Errors_getText(error));
+    String_delete(storageName);
+    return;
+  }
+
   // open archive
   error = Archive_open(&archiveInfo,
+                       &storageFileHandle,
                        &storageSpecifier,
                        storageFileName,
                        &clientInfo->jobOptions,
@@ -7454,6 +7487,9 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const Stri
   // close archive
   Archive_close(&archiveInfo);
 
+  // done storage
+  (void)Storage_done(&storageFileHandle);
+
   sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
 
   // free resources
@@ -7780,6 +7816,7 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, uint id, const StringMa
   name = String_new();
   StringMap_getString(argumentMap,"name",name,NULL);
 
+#if 0
   // try to pause background index thread, do short delay to make sure network connection is possible
   restoreFlag = TRUE;
   if (indexFlag)
@@ -7792,6 +7829,7 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, uint id, const StringMa
     }
     Misc_udelay(30LL*MISC_US_PER_SECOND);
   }
+#endif
 
   // restore
   StringList_init(&storageNameList);
@@ -9835,7 +9873,7 @@ LOCAL void doneClient(ClientInfo *clientInfo)
 
   Array_delete(clientInfo->storageIdArray,NULL,NULL);
   List_done(&clientInfo->directoryInfoList,CALLBACK((ListNodeFreeFunction)freeDirectoryInfoNode,NULL));
-  freeJobOptions(&clientInfo->jobOptions);
+  doneJobOptions(&clientInfo->jobOptions);
   PatternList_done(&clientInfo->compressExcludePatternList);
   PatternList_done(&clientInfo->excludePatternList);
   EntryList_done(&clientInfo->includeEntryList);
@@ -10131,7 +10169,6 @@ Errors Server_run(uint             port,
   pauseFlags.restore      = FALSE;
   pauseFlags.indexUpdate  = FALSE;
   pauseEndTimestamp       = 0LL;
-  indexFlag               = FALSE;
   quitFlag                = FALSE;
 
   // create jobs directory if necessary

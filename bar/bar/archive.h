@@ -143,7 +143,7 @@ typedef struct
     {
       StorageSpecifier            storageSpecifier;                    // storage specifier structure
       String                      storageFileName;                     // storage file name
-      StorageFileHandle           storageFileHandle;                   // storage file handle
+      StorageFileHandle           *storageFileHandle;                  // storage file handle
     } storage;
   };
   const ChunkIO                   *chunkIO;                            // chunk i/o functions
@@ -463,6 +463,7 @@ const Password *Archive_appendDecryptPassword(const Password *password);
 * Name   : Archive_open
 * Purpose: open archive
 * Input  : archiveInfo                     - archive info data
+*          storageFileHandle               - storage file handle
 *          storageSpecifier                - storage specifier structure
 *          storageFileName                 - storage file name
 *          storageName                     - storage name
@@ -481,6 +482,7 @@ const Password *Archive_appendDecryptPassword(const Password *password);
 
 #ifdef NDEBUG
   Errors Archive_open(ArchiveInfo                     *archiveInfo,
+                      StorageFileHandle               *storageFileHandle,
                       const StorageSpecifier          *storageSpecifier,
                       const String                    storageFileName,
                       const JobOptions                *jobOptions,
@@ -493,6 +495,7 @@ const Password *Archive_appendDecryptPassword(const Password *password);
   Errors __Archive_open(const char                      *__fileName__,
                         ulong                           __lineNb__,
                         ArchiveInfo                     *archiveInfo,
+                        StorageFileHandle               *storageFileHandle,
                         const StorageSpecifier          *storageSpecifier,
                         const String                    storageFileName,
                         const JobOptions                *jobOptions,
@@ -1199,6 +1202,7 @@ uint64 Archive_getSize(ArchiveInfo *archiveInfo);
 * Name   : Archive_addToIndex
 * Purpose: add storage index
 * Input  : databaseHandle          - database handle
+*          storageFileHandle       - storage file handle
 *          storageName             - storage name
 *          indexMode               - index mode
 *          cryptPassword           - encryption password
@@ -1210,12 +1214,12 @@ uint64 Archive_getSize(ArchiveInfo *archiveInfo);
 * Notes  : -
 \***********************************************************************/
 
-Errors Archive_addToIndex(DatabaseHandle *databaseHandle,
-                          const String   storageName,
-                          IndexModes     indexMode,
-                          Password       *cryptPassword,
-                          String         cryptPrivateKeyFileName,
-                          BandWidthList  *maxBandWidthList
+Errors Archive_addToIndex(DatabaseHandle    *databaseHandle,
+                          StorageFileHandle *storageFileHandle,
+                          const String      storageName,
+                          IndexModes        indexMode,
+                          const JobOptions  *jobOptions,
+                          BandWidthList     *maxBandWidthList
                          );
 
 /***********************************************************************\
@@ -1223,6 +1227,7 @@ Errors Archive_addToIndex(DatabaseHandle *databaseHandle,
 * Purpose: update storage index
 * Input  : databaseHandle          - database handle
 *          storageId               - storage id
+*          storageFileHandle       - storage file handle
 *          storageName             - storage name
 *          cryptPassword           - encryption password
 *          cryptPrivateKeyFileName - encryption private key file name
@@ -1239,9 +1244,9 @@ Errors Archive_addToIndex(DatabaseHandle *databaseHandle,
 
 Errors Archive_updateIndex(DatabaseHandle               *databaseHandle,
                            int64                        storageId,
+                           StorageFileHandle            *storageFileHandle,
                            const String                 storageName,
-                           Password                     *cryptPassword,
-                           String                       cryptPrivateKeyFileName,
+                           const JobOptions             *jobOptions,
                            BandWidthList                *maxBandWidthList,
                            ArchivePauseCallbackFunction pauseCallback,
                            void                         *pauseUserData,

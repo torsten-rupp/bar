@@ -2914,6 +2914,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
 
 #ifdef NDEBUG
   Errors Archive_open(ArchiveInfo                     *archiveInfo,
+                      StorageFileHandle               *storageFileHandle,
                       const StorageSpecifier          *storageSpecifier,
                       const String                    storageFileName,
                       const JobOptions                *jobOptions,
@@ -2926,6 +2927,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
   Errors __Archive_open(const char                      *__fileName__,
                         ulong                           __lineNb__,
                         ArchiveInfo                     *archiveInfo,
+                        StorageFileHandle               *storageFileHandle,
                         const StorageSpecifier          *storageSpecifier,
                         const String                    storageFileName,
                         const JobOptions                *jobOptions,
@@ -2969,8 +2971,9 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
   archiveInfo->ioType                          = ARCHIVE_IO_TYPE_STORAGE_FILE;
   Storage_duplicateSpecifier(&archiveInfo->storage.storageSpecifier,storageSpecifier);
   archiveInfo->storage.storageFileName         = String_duplicate(storageFileName);
+  archiveInfo->storage.storageFileHandle       = storageFileHandle;
   archiveInfo->chunkIO                         = &CHUNK_IO_STORAGE_FILE;
-  archiveInfo->chunkIOUserData                 = &archiveInfo->storage.storageFileHandle;
+  archiveInfo->chunkIOUserData                 = storageFileHandle;
   Semaphore_init(&archiveInfo->chunkIOLock);
 
   archiveInfo->databaseHandle                  = NULL;
@@ -2994,34 +2997,17 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
   AUTOFREE_ADD(&autoFreeList,&archiveInfo->archiveEntryList,{ List_done(&archiveInfo->archiveEntryList,NULL,NULL); });
   AUTOFREE_ADD(&autoFreeList,&archiveInfo->archiveEntryList.lock,{ Semaphore_done(&archiveInfo->archiveEntryList.lock); });
 
-  // init storage
-  error = Storage_init(&archiveInfo->storage.storageFileHandle,
-                       &archiveInfo->storage.storageSpecifier,
-                       archiveInfo->storage.storageFileName,
-                       jobOptions,
-                       maxBandWidthList,
-                       serverConnectionPriority,
-                       CALLBACK(NULL,NULL),
-                       CALLBACK(NULL,NULL)
-                      );
-  if (error != ERROR_NONE)
-  {
-    AutoFree_cleanup(&autoFreeList);
-    return error;
-  }
-  DEBUG_TESTCODE("Archive_open1") { Storage_done(&archiveInfo->storage.storageFileHandle); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
-  error = Storage_open(&archiveInfo->storage.storageFileHandle,
+  error = Storage_open(archiveInfo->storage.storageFileHandle,
                        &archiveInfo->storage.storageSpecifier,
                        archiveInfo->storage.storageFileName
                       );
   if (error != ERROR_NONE)
   {
-    Storage_done(&archiveInfo->storage.storageFileHandle);
     AutoFree_cleanup(&autoFreeList);
     return error;
   }
-  DEBUG_TESTCODE("Archive_open2") { Storage_close(&archiveInfo->storage.storageFileHandle); Storage_done(&archiveInfo->storage.storageFileHandle); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
-  AUTOFREE_ADD(&autoFreeList,archiveInfo->storage.storageFileName,{ Storage_close(&archiveInfo->storage.storageFileHandle); Storage_done(&archiveInfo->storage.storageFileHandle); });
+  DEBUG_TESTCODE("Archive_open2") { Storage_close(archiveInfo->storage.storageFileHandle); return DEBUG_TESTCODE_ERROR(); }
+  AUTOFREE_ADD(&autoFreeList,archiveInfo->storage.storageFileName,{ Storage_close(archiveInfo->storage.storageFileHandle); Storage_done(archiveInfo->storage.storageFileHandle); });
 
   // check if BAR archive file
   error = getNextChunkHeader(archiveInfo,&chunkHeader);
@@ -3086,8 +3072,7 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
       error = closeArchiveFile(archiveInfo,TRUE);
       break;
     case ARCHIVE_IO_TYPE_STORAGE_FILE:
-      Storage_close(&archiveInfo->storage.storageFileHandle);
-      error = Storage_done(&archiveInfo->storage.storageFileHandle);
+      Storage_close(archiveInfo->storage.storageFileHandle);
       break;
     #ifndef NDEBUG
       default:
@@ -3156,12 +3141,12 @@ Errors Archive_storageInterrupt(ArchiveInfo *archiveInfo)
       }
       break;
     case ARCHIVE_IO_TYPE_STORAGE_FILE:
-      error = Storage_tell(&archiveInfo->storage.storageFileHandle,&archiveInfo->interrupt.offset);
+      error = Storage_tell(archiveInfo->storage.storageFileHandle,&archiveInfo->interrupt.offset);
       if (error != ERROR_NONE)
       {
         return error;
       }
-      Storage_close(&archiveInfo->storage.storageFileHandle);
+      Storage_close(archiveInfo->storage.storageFileHandle);
       break;
     #ifndef NDEBUG
       default:
@@ -3202,7 +3187,7 @@ Errors Archive_storageContinue(ArchiveInfo *archiveInfo)
       }
       break;
     case ARCHIVE_IO_TYPE_STORAGE_FILE:
-      error = Storage_open(&archiveInfo->storage.storageFileHandle,
+      error = Storage_open(archiveInfo->storage.storageFileHandle,
                            &archiveInfo->storage.storageSpecifier,
                            archiveInfo->storage.storageFileName
                           );
@@ -3210,7 +3195,7 @@ Errors Archive_storageContinue(ArchiveInfo *archiveInfo)
       {
         return error;
       }
-      error = Storage_tell(&archiveInfo->storage.storageFileHandle,&archiveInfo->interrupt.offset);
+      error = Storage_tell(archiveInfo->storage.storageFileHandle,&archiveInfo->interrupt.offset);
       if (error != ERROR_NONE)
       {
         return error;
@@ -10043,12 +10028,12 @@ uint64 Archive_getSize(ArchiveInfo *archiveInfo)
   return size;
 }
 
-Errors Archive_addToIndex(DatabaseHandle *databaseHandle,
-                          const String   storageName,
-                          IndexModes     indexMode,
-                          Password       *cryptPassword,
-                          String         cryptPrivateKeyFileName,
-                          BandWidthList  *maxBandWidthList
+Errors Archive_addToIndex(DatabaseHandle    *databaseHandle,
+                          StorageFileHandle *storageFileHandle,
+                          const String      storageName,
+                          IndexModes        indexMode,
+                          const JobOptions  *jobOptions,
+                          BandWidthList     *maxBandWidthList
                          )
 {
   Errors error;
@@ -10072,9 +10057,9 @@ Errors Archive_addToIndex(DatabaseHandle *databaseHandle,
   // add index
   error = Archive_updateIndex(databaseHandle,
                               storageId,
+                              storageFileHandle,
                               storageName,
-                              cryptPassword,
-                              cryptPrivateKeyFileName,
+                              jobOptions,
                               maxBandWidthList,
                               NULL,
                               NULL,
@@ -10092,9 +10077,9 @@ Errors Archive_addToIndex(DatabaseHandle *databaseHandle,
 
 Errors Archive_updateIndex(DatabaseHandle               *databaseHandle,
                            int64                        storageId,
+                           StorageFileHandle            *storageFileHandle,
                            const String                 storageName,
-                           Password                     *cryptPassword,
-                           String                       cryptPrivateKeyFileName,
+                           const JobOptions             *jobOptions,
                            BandWidthList                *maxBandWidthList,
                            ArchivePauseCallbackFunction pauseCallback,
                            void                         *pauseUserData,
@@ -10105,7 +10090,6 @@ Errors Archive_updateIndex(DatabaseHandle               *databaseHandle,
   StorageSpecifier  storageSpecifier;
   String            storageFileName;
   String            printableStorageName;
-  JobOptions        jobOptions;
   Errors            error;
   bool              abortedFlag,serverAllocationPendingFlag;
   ArchiveInfo       archiveInfo;
@@ -10119,7 +10103,6 @@ Errors Archive_updateIndex(DatabaseHandle               *databaseHandle,
   Storage_initSpecifier(&storageSpecifier);
   storageFileName      = String_new();
   printableStorageName = String_new();
-  initJobOptions(&jobOptions);
 
   // get printable name (if possible)
   if (Storage_parseName(storageName,&storageSpecifier,storageFileName) == ERROR_NONE)
@@ -10131,19 +10114,16 @@ Errors Archive_updateIndex(DatabaseHandle               *databaseHandle,
     String_set(printableStorageName,storageName);
   }
 
-  // init job options
-  jobOptions.cryptPassword           = Password_duplicate(cryptPassword);
-  jobOptions.cryptPrivateKeyFileName = String_duplicate(cryptPrivateKeyFileName);
-
   // open archive (Note optimization: try sftp for scp protocol, because sftp support seek()-operation)
   if (storageSpecifier.type == STORAGE_TYPE_SCP)
   {
     // try to open scp-storage first with sftp
     storageSpecifier.type = STORAGE_TYPE_SFTP;
     error = Archive_open(&archiveInfo,
+                         storageFileHandle,
                          &storageSpecifier,
                          storageFileName,
-                         &jobOptions,
+                         jobOptions,
                          maxBandWidthList,
                          SERVER_CONNECTION_PRIORITY_LOW,
                          CALLBACK(NULL,NULL)
@@ -10154,9 +10134,10 @@ Errors Archive_updateIndex(DatabaseHandle               *databaseHandle,
       // open scp-storage
       storageSpecifier.type = STORAGE_TYPE_SCP;
       error = Archive_open(&archiveInfo,
+                           storageFileHandle,
                            &storageSpecifier,
                            storageFileName,
-                           &jobOptions,
+                           jobOptions,
                            maxBandWidthList,
                            SERVER_CONNECTION_PRIORITY_LOW,
                            CALLBACK(NULL,NULL)
@@ -10167,9 +10148,10 @@ Errors Archive_updateIndex(DatabaseHandle               *databaseHandle,
   {
     // open other storage types
     error = Archive_open(&archiveInfo,
+                         storageFileHandle,
                          &storageSpecifier,
                          storageFileName,
-                         &jobOptions,
+                         jobOptions,
                          maxBandWidthList,
                          SERVER_CONNECTION_PRIORITY_LOW,
                          CALLBACK(NULL,NULL)
@@ -10187,7 +10169,6 @@ Errors Archive_updateIndex(DatabaseHandle               *databaseHandle,
                    Errors_getText(error),
                    Errors_getCode(error)
                   );
-    freeJobOptions(&jobOptions);
     String_delete(storageFileName);
     String_delete(printableStorageName);
     Storage_doneSpecifier(&storageSpecifier);
@@ -10211,7 +10192,6 @@ Errors Archive_updateIndex(DatabaseHandle               *databaseHandle,
                    Errors_getText(error),
                    Errors_getCode(error)
                   );
-    freeJobOptions(&jobOptions);
     String_delete(storageFileName);
     String_delete(printableStorageName);
     Storage_doneSpecifier(&storageSpecifier);
@@ -10230,7 +10210,7 @@ Errors Archive_updateIndex(DatabaseHandle               *databaseHandle,
   printInfo(4,"Create index for '%s'\n",String_cString(printableStorageName));
   error                       = ERROR_NONE;
   abortedFlag                 = (abortCallback != NULL) && abortCallback(abortUserData);
-  serverAllocationPendingFlag = Storage_isServerAllocationPending(&archiveInfo.storage.storageFileHandle);
+  serverAllocationPendingFlag = Storage_isServerAllocationPending(storageFileHandle);
   while (   !Archive_eof(&archiveInfo,FALSE)
          && (error == ERROR_NONE)
          && !abortedFlag
@@ -10608,7 +10588,7 @@ Errors Archive_updateIndex(DatabaseHandle               *databaseHandle,
 
     // check if aborted, check if server allocation pending
     abortedFlag                 = (abortCallback != NULL) && abortCallback(abortUserData);
-    serverAllocationPendingFlag = Storage_isServerAllocationPending(&archiveInfo.storage.storageFileHandle);
+    serverAllocationPendingFlag = Storage_isServerAllocationPending(storageFileHandle);
   }
   if      (error != ERROR_NONE)
   {
@@ -10696,7 +10676,6 @@ Errors Archive_updateIndex(DatabaseHandle               *databaseHandle,
   Archive_close(&archiveInfo);
 
   // free resources
-  freeJobOptions(&jobOptions);
   String_delete(storageFileName);
   String_delete(printableStorageName);
   Storage_doneSpecifier(&storageSpecifier);
