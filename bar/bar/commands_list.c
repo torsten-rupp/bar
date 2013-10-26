@@ -1568,7 +1568,7 @@ Errors Command_list(StringList                      *storageNameList,
   StorageSpecifier storageSpecifier;
   String           storageFileName;
   String           printableStorageName;
-  StorageFileHandle storageFileHandle;
+  StorageHandle    storageHandle;
   bool             printedInfoFlag;
   ulong            fileCount;
   Errors           failError;
@@ -1620,7 +1620,7 @@ remoteBarFlag=FALSE;
     Storage_getPrintableName(printableStorageName,&storageSpecifier,storageFileName);
 
     // init storage
-    error = Storage_init(&storageFileHandle,
+    error = Storage_init(&storageHandle,
                          &storageSpecifier,
                          storageFileName,
                          jobOptions,
@@ -1657,7 +1657,7 @@ remoteBarFlag=FALSE;
 
           // open archive
           error = Archive_open(&archiveInfo,
-                               &storageFileHandle,
+                               &storageHandle,
                                &storageSpecifier,
                                storageFileName,
                                jobOptions,
@@ -2949,7 +2949,7 @@ remoteBarFlag=FALSE;
     }
 
     // done storage
-    (void)Storage_done(&storageFileHandle);
+    (void)Storage_done(&storageHandle);
   }
 
   // output grouped list

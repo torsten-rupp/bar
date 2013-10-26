@@ -420,7 +420,7 @@ typedef struct
   };
 
   StorageStatusInfo runningInfo;
-} StorageFileHandle;
+} StorageHandle;
 
 typedef struct
 {
@@ -782,7 +782,7 @@ Errors Storage_prepare(const String     storageName,
 /***********************************************************************\
 * Name   : Storage_init
 * Purpose: init new storage
-* Input  : storageFileHandle            - storage file handle variable
+* Input  : storageHandle                - storage handle variable
 *          storageSpecifier             - storage specifier structure
 *          storageFileName              - storage file name
 *          jobOptions                   - job options
@@ -795,12 +795,12 @@ Errors Storage_prepare(const String     storageName,
 *          storageStatusInfoFunction    - status info call back
 *          storageStatusInfoUserData    - user data for status info
 *                                         call back
-* Output : storageFileHandle - initialized storage file handle
+* Output : storageHandle - initialized storage handle
 * Return : ERROR_NONE or errorcode
 * Notes  : -
 \***********************************************************************/
 
-Errors Storage_init(StorageFileHandle            *storageFileHandle,
+Errors Storage_init(StorageHandle                *storageHandle,
                     const StorageSpecifier       *storageSpecifier,
                     const String                 storageFileName,
                     const JobOptions             *jobOptions,
@@ -815,134 +815,134 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
 /***********************************************************************\
 * Name   : Storage_done
 * Purpose: deinit storage
-* Input  : storageFileHandle - storage file handle variable
+* Input  : storageHandle - storage handle variable
 * Output : -
 * Return : ERROR_NONE or errorcode
 * Notes  : -
 \***********************************************************************/
 
-Errors Storage_done(StorageFileHandle *storageFileHandle);
+Errors Storage_done(StorageHandle *storageHandle);
 
 /***********************************************************************\
 * Name   : Storage_isServerAllocationPending
 * Purpose: check if a server allocation with high priority is pending
-* Input  : storageFileHandle - storage file handle
+* Input  : storageHandle - storage handle
 * Output : -
 * Return : TRUE if server allocation with high priority is pending,
 *          FALSE otherwise
 * Notes  : -
 \***********************************************************************/
 
-bool Storage_isServerAllocationPending(StorageFileHandle *storageFileHandle);
+bool Storage_isServerAllocationPending(StorageHandle *storageHandle);
 
 /***********************************************************************\
 * Name   : Storage_getHandleName
 * Purpose: get storage name from storage handle
-* Input  : storageName       - storage name variable
-*          storageFileHandle - storage file handle
-*          fileName          - file name (can be NULL)
+* Input  : storageName   - storage name variable
+*          storageHandle - storage handle
+*          fileName      - file name (can be NULL)
 * Output : storageName - storage name
 * Return : storage name variable
 * Notes  : -
 \***********************************************************************/
 
-String Storage_getHandleName(String                  storageName,
-                             const StorageFileHandle *storageFileHandle,
-                             const String            fileName
+String Storage_getHandleName(String              storageName,
+                             const StorageHandle *storageHandle,
+                             const String        fileName
                             );
 
 /***********************************************************************\
 * Name   : Storage_preProcess
 * Purpose: pre-process storage
-* Input  : storageFileHandle - storage file handle
-*          initialFlag       - TRUE iff initial call, FALSE otherwise
+* Input  : storageHandle - storage handle
+*          initialFlag   - TRUE iff initial call, FALSE otherwise
 * Output : -
 * Return : ERROR_NONE or errorcode
 * Notes  : -
 \***********************************************************************/
 
-Errors Storage_preProcess(StorageFileHandle *storageFileHandle,
-                          bool              initialFlag
+Errors Storage_preProcess(StorageHandle *storageHandle,
+                          bool          initialFlag
                          );
 
 /***********************************************************************\
 * Name   : Storage_postProcess
 * Purpose: post-process storage
-* Input  : storageFileHandle - storage file handle
-*          finalFlag         - TRUE iff final call, FALSE otherwise
+* Input  : storageHandle - storage handle
+*          finalFlag     - TRUE iff final call, FALSE otherwise
 * Output : -
 * Return : ERROR_NONE or errorcode
 * Notes  : -
 \***********************************************************************/
 
-Errors Storage_postProcess(StorageFileHandle *storageFileHandle,
-                           bool              finalFlag
+Errors Storage_postProcess(StorageHandle *storageHandle,
+                           bool          finalFlag
                           );
 
 /***********************************************************************\
 * Name   : Storage_getVolumeNumber
 * Purpose: get current volume number
-* Input  : storageFileHandle - storage file handle
+* Input  : storageHandle - storage handle
 * Output : -
 * Return : volume number
 * Notes  : -
 \***********************************************************************/
 
-uint Storage_getVolumeNumber(const StorageFileHandle *storageFileHandle);
+uint Storage_getVolumeNumber(const StorageHandle *storageHandle);
 
 /***********************************************************************\
 * Name   : Storage_setVolumeNumber
 * Purpose: set volume number
-* Input  : storageFileHandle - storage file handle
-*          volumeNumber      - volume number
+* Input  : storageHandle - storage handle
+*          volumeNumber  - volume number
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-void Storage_setVolumeNumber(StorageFileHandle *storageFileHandle,
-                             uint              volumeNumber
+void Storage_setVolumeNumber(StorageHandle *storageHandle,
+                             uint          volumeNumber
                             );
 
 /***********************************************************************\
 * Name   : Storage_unloadVolume
 * Purpose: unload volume
-* Input  : storageFileHandle - storage file handle
+* Input  : storageHandle - storage handle
 * Output : -
 * Return : ERROR_NONE or errorcode
 * Notes  : -
 \***********************************************************************/
 
-Errors Storage_unloadVolume(StorageFileHandle *storageFileHandle);
+Errors Storage_unloadVolume(StorageHandle *storageHandle);
 
 /***********************************************************************\
 * Name   : Storage_create
 * Purpose: create new storage file
-* Input  : storageFileHandle - storage file handle
-*          fileName          - archive file name
-*          fileSize          - storage file size
+* Input  : storageHandle - storage handle
+*          fileName      - archive file name
+*          fileSize      - storage file size
 * Output : -
 * Return : ERROR_NONE or errorcode
 * Notes  : -
 \***********************************************************************/
 
-Errors Storage_create(StorageFileHandle *storageFileHandle,
-                      const String      fileName,
-                      uint64            fileSize
+Errors Storage_create(StorageHandle *storageHandle,
+                      const String  fileName,
+                      uint64        fileSize
                      );
 
 /***********************************************************************\
 * Name   : Storage_open
 * Purpose: open storage file
-* Input  : storageFileHandle - storage file handle
-*          storageSpecifier  - storage specifier structure
-*          storageFileName   - storage file name
+* Input  : storageHandle    - storage handle
+*          storageSpecifier - storage specifier structure
+*          storageFileName  - storage file name
 * Output : -
 * Return : ERROR_NONE or errorcode
 * Notes  : -
 \***********************************************************************/
 
-Errors Storage_open(StorageFileHandle      *storageFileHandle,
+Errors Storage_open(StorageHandle          *storageHandle,
                     const StorageSpecifier *storageSpecifier,
                     const String           storageFileName
                    );
@@ -950,109 +950,109 @@ Errors Storage_open(StorageFileHandle      *storageFileHandle,
 /***********************************************************************\
 * Name   : Storage_close
 * Purpose: close storage file
-* Input  : storageFileHandle - storage file handle
+* Input  : storageHandle - storage handle
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-void Storage_close(StorageFileHandle *storageFileHandle);
+void Storage_close(StorageHandle *storageHandle);
 
 /***********************************************************************\
 * Name   : Storage_delete
 * Purpose: delete storage file
-* Input  : storageFileHandle - storage file handle
-*          fileName          - archive file name
+* Input  : storageHandle - storage handle
+*          fileName      - archive file name
 * Output : -
 * Return : ERROR_NONE or errorcode
 * Notes  : -
 \***********************************************************************/
 
-Errors Storage_delete(StorageFileHandle *storageFileHandle,
-                      const String      fileName
+Errors Storage_delete(StorageHandle *storageHandle,
+                      const String  fileName
                      );
 
 /***********************************************************************\
 * Name   : Storage_eof
 * Purpose: check if end-of-file in storage file
-* Input  : storageFileHandle - storage file handle
+* Input  : storageHandle - storage handle
 * Output : -
 * Return : TRUE if end-of-file, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
 
-bool Storage_eof(StorageFileHandle *storageFileHandle);
+bool Storage_eof(StorageHandle *storageHandle);
 
 /***********************************************************************\
 * Name   : Storage_read
 * Purpose: read from storage file
-* Input  : storageFileHandle - storage file handle
-*          buffer            - buffer with data to write
-*          size              - data size
-*          bytesRead         - number of bytes read or NULL
+* Input  : storageHandle - storage file handle
+*          buffer        - buffer with data to write
+*          size          - data size
+*          bytesRead     - number of bytes read or NULL
 * Output : bytesRead - number of bytes read
 * Return : ERROR_NONE or errorcode
 * Notes  : -
 \***********************************************************************/
 
-Errors Storage_read(StorageFileHandle *storageFileHandle,
-                    void              *buffer,
-                    ulong             size,
-                    ulong             *bytesRead
+Errors Storage_read(StorageHandle *storageHandle,
+                    void          *buffer,
+                    ulong         size,
+                    ulong         *bytesRead
                    );
 
 /***********************************************************************\
 * Name   : Storage_write
 * Purpose: write into storage file
-* Input  : storageFileHandle - storage file handle
-*          buffer            - buffer with data to write
-*          size              - data size
+* Input  : storageHandle - storage handle
+*          buffer        - buffer with data to write
+*          size          - data size
 * Output : -
 * Return : ERROR_NONE or errorcode
 * Notes  : -
 \***********************************************************************/
 
-Errors Storage_write(StorageFileHandle *storageFileHandle,
-                     const void        *buffer,
-                     ulong             size
+Errors Storage_write(StorageHandle *storageHandle,
+                     const void    *buffer,
+                     ulong         size
                     );
 
 /***********************************************************************\
 * Name   : Storage_getSize
 * Purpose: get storage file size
-* Input  : storageFileHandle - storage file handle
+* Input  : storageHandle - storage handle
 * Output : -
 * Return : size of storage
 * Notes  : -
 \***********************************************************************/
 
-uint64 Storage_getSize(StorageFileHandle *storageFileHandle);
+uint64 Storage_getSize(StorageHandle *storageHandle);
 
 /***********************************************************************\
 * Name   : Storage_tell
 * Purpose: get current position in storage file
-* Input  : storageFileHandle - storage file handle
+* Input  : storageHandle - storage handle
 * Output : offset - offset (0..n-1)
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-Errors Storage_tell(StorageFileHandle *storageFileHandle,
-                    uint64            *offset
+Errors Storage_tell(StorageHandle *storageHandle,
+                    uint64        *offset
                    );
 
 /***********************************************************************\
 * Name   : Storage_seek
 * Purpose: seek in storage file
-* Input  : storageFileHandle - storage file handle
+* Input  : storageHandle - storage handle
 *          offset            - offset (0..n-1)
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-Errors Storage_seek(StorageFileHandle *storageFileHandle,
-                    uint64            offset
+Errors Storage_seek(StorageHandle *storageHandle,
+                    uint64        offset
                    );
 
 /*---------------------------------------------------------------------*/

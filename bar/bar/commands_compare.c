@@ -107,7 +107,7 @@ Errors Command_compare(const StringList                *storageNameList,
   StorageSpecifier  storageSpecifier;
   String            storageFileName;
   String            printableStorageName;
-  StorageFileHandle storageFileHandle;
+  StorageHandle     storageHandle;
   StringNode        *stringNode;
   String            storageName;
   Errors            failError;
@@ -168,7 +168,7 @@ Errors Command_compare(const StringList                *storageNameList,
     printInfo(1,"Comparing archive '%s':\n",String_cString(printableStorageName));
 
     // init storage
-    error = Storage_init(&storageFileHandle,
+    error = Storage_init(&storageHandle,
                          &storageSpecifier,
                          storageFileName,
                          jobOptions,
@@ -189,7 +189,7 @@ Errors Command_compare(const StringList                *storageNameList,
 
     // open archive
     error = Archive_open(&archiveInfo,
-                         &storageFileHandle,
+                         &storageHandle,
                          &storageSpecifier,
                          storageFileName,
                          jobOptions,
@@ -1521,7 +1521,7 @@ Errors Command_compare(const StringList                *storageNameList,
     Archive_close(&archiveInfo);
 
     // done storage
-    (void)Storage_done(&storageFileHandle);
+    (void)Storage_done(&storageHandle);
 
     if (failError != ERROR_NONE) break;
   }

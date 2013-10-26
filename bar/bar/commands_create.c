@@ -101,7 +101,7 @@ typedef struct
   bool                        partialFlag;                        // TRUE for create incremental/differential archive
   Dictionary                  namesDictionary;                    // dictionary with files (used for incremental/differental backup)
   bool                        storeIncrementalFileInfoFlag;       // TRUE to store incremental file data
-  StorageFileHandle           storageFileHandle;                  // storage handle
+  StorageHandle               storageHandle;                      // storage handle
   time_t                      startTime;                          // start time [ms] (unix time)
 
   MsgQueue                    entryMsgQueue;                      // queue with entries to store
@@ -2744,7 +2744,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
       }
 
       // initial pre-process
-      error = Storage_preProcess(&createInfo->storageFileHandle,TRUE);
+      error = Storage_preProcess(&createInfo->storageHandle,TRUE);
       if (error != ERROR_NONE)
       {
         printError("Cannot pre-process storage (error: %s)!\n",
@@ -2777,7 +2777,7 @@ fprintf(stderr,"%s, %d: storageMsg.fileName=%s\n",__FILE__,__LINE__,String_cStri
     pauseStorage(createInfo);
 
     // pre-process
-    error = Storage_preProcess(&createInfo->storageFileHandle,FALSE);
+    error = Storage_preProcess(&createInfo->storageHandle,FALSE);
     if (error != ERROR_NONE)
     {
       printError("Cannot pre-process file '%s' (error: %s)!\n",
@@ -2808,11 +2808,11 @@ fprintf(stderr,"%s, %d: storageMsg.fileName=%s\n",__FILE__,__LINE__,String_cStri
 
     // get storage name
     Storage_getHandleName(storageName,
-                          &createInfo->storageFileHandle,
+                          &createInfo->storageHandle,
                           storageMsg.destinationFileName
                          );
     Storage_getPrintableName(printableStorageName,
-                             &createInfo->storageFileHandle.storageSpecifier,
+                             &createInfo->storageHandle.storageSpecifier,
                              storageMsg.destinationFileName
                             );
 
@@ -2894,7 +2894,7 @@ fprintf(stderr,"%s, %d: storageMsg.fileName=%s\n",__FILE__,__LINE__,String_cStri
       pauseStorage(createInfo);
 
       // create storage file
-      error = Storage_create(&createInfo->storageFileHandle,
+      error = Storage_create(&createInfo->storageHandle,
                              storageMsg.destinationFileName,
                              fileInfo.size
                             );
@@ -2945,7 +2945,7 @@ fprintf(stderr,"%s, %d: storageMsg.fileName=%s\n",__FILE__,__LINE__,String_cStri
         DEBUG_TESTCODE("storageThreadCode6") { error = DEBUG_TESTCODE_ERROR(); break; }
 
         // store data
-        error = Storage_write(&createInfo->storageFileHandle,buffer,bufferLength);
+        error = Storage_write(&createInfo->storageHandle,buffer,bufferLength);
         if (error != ERROR_NONE)
         {
           if (retryCount <= MAX_RETRIES)
@@ -2977,7 +2977,7 @@ fprintf(stderr,"%s, %d: storageMsg.fileName=%s\n",__FILE__,__LINE__,String_cStri
             );
 
       // close storage
-      Storage_close(&createInfo->storageFileHandle);
+      Storage_close(&createInfo->storageHandle);
     }
     while (   (error != ERROR_NONE)
            && (retryCount <= MAX_RETRIES)
@@ -3082,7 +3082,7 @@ fprintf(stderr,"%s, %d: storageMsg.fileName=%s\n",__FILE__,__LINE__,String_cStri
     }
 
     // post-process
-    error = Storage_postProcess(&createInfo->storageFileHandle,FALSE);
+    error = Storage_postProcess(&createInfo->storageHandle,FALSE);
     if (error != ERROR_NONE)
     {
       printError("Cannot post-process storage file '%s' (error: %s)!\n",
@@ -3132,7 +3132,7 @@ fprintf(stderr,"%s, %d: storageMsg.fileName=%s\n",__FILE__,__LINE__,String_cStri
     // pause
     pauseStorage(createInfo);
 
-    error = Storage_postProcess(&createInfo->storageFileHandle,TRUE);
+    error = Storage_postProcess(&createInfo->storageHandle,TRUE);
     if (error != ERROR_NONE)
     {
       printError("Cannot post-process storage (error: %s)!\n",
@@ -3183,7 +3183,7 @@ fprintf(stderr,"%s, %d: storageMsg.fileName=%s\n",__FILE__,__LINE__,String_cStri
             {
               if (StringList_find(&createInfo->storageFileList,fileName) == NULL)
               {
-                Storage_delete(&createInfo->storageFileHandle,fileName);
+                Storage_delete(&createInfo->storageHandle,fileName);
               }
             }
           }
@@ -4913,7 +4913,7 @@ Errors Command_create(const String                    storageName,
   AUTOFREE_ADD(&autoFreeList,printableStorageName,{ String_delete(printableStorageName); });
 
   // init storage
-  error = Storage_init(&createInfo.storageFileHandle,
+  error = Storage_init(&createInfo.storageHandle,
                        createInfo.storageSpecifier,
                        createInfo.storageFileName,
                        createInfo.jobOptions,
@@ -4931,8 +4931,8 @@ Errors Command_create(const String                    storageName,
     AutoFree_cleanup(&autoFreeList);
     return error;
   }
-  DEBUG_TESTCODE("Command_create2") { Storage_done(&createInfo.storageFileHandle); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
-  AUTOFREE_ADD(&autoFreeList,&createInfo.storageFileHandle,{ Storage_done(&createInfo.storageFileHandle); });
+  DEBUG_TESTCODE("Command_create2") { Storage_done(&createInfo.storageHandle); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
+  AUTOFREE_ADD(&autoFreeList,&createInfo.storageHandle,{ Storage_done(&createInfo.storageHandle); });
 
   if (   (createInfo.archiveType == ARCHIVE_TYPE_FULL)
       || (createInfo.archiveType == ARCHIVE_TYPE_INCREMENTAL)
@@ -5161,7 +5161,7 @@ createThreadCode(&createInfo);
     String_delete(incrementalListFileName);
     Dictionary_done(&createInfo.namesDictionary,NULL,NULL);
   }
-  Storage_done(&createInfo.storageFileHandle);
+  Storage_done(&createInfo.storageHandle);
   String_delete(printableStorageName);
   doneCreateInfo(&createInfo);
   free(createThreads);

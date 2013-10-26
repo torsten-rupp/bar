@@ -2610,7 +2610,7 @@ LOCAL void indexThreadCode(void)
   StorageSpecifier       storageSpecifier;
   String                 storageName;
   String                 storageFileName;
-  StorageFileHandle      storageFileHandle;
+  StorageHandle          storageHandle;
   int64                  duplicateStorageId;
   String                 duplicateStorageName;
   String                 printableStorageName;
@@ -2820,7 +2820,7 @@ fprintf(stderr,"%s, %d: %ld %s\n",__FILE__,__LINE__,storageId,String_cString(sto
 
       // init storage
       initJobOptions(&jobOptions);
-      error = Storage_init(&storageFileHandle,
+      error = Storage_init(&storageHandle,
                            &storageSpecifier,
                            storageFileName,
                            &jobOptions,
@@ -2846,7 +2846,7 @@ fprintf(stderr,"%s, %d: %ld %s\n",__FILE__,__LINE__,storageId,String_cString(sto
           jobOptions.cryptPrivateKeyFileName = String_duplicate(indexCryptPasswordNode->cryptPrivateKeyFileName);
           error = Archive_updateIndex(indexDatabaseHandle,
                                       storageId,
-                                      &storageFileHandle,
+                                      &storageHandle,
                                       storageName,
                                       &jobOptions,
                                       &globalOptions.indexDatabaseMaxBandWidthList,
@@ -2867,7 +2867,7 @@ fprintf(stderr,"%s, %d: %ld %s\n",__FILE__,__LINE__,storageId,String_cString(sto
         }
 
         // done storage
-        (void)Storage_done(&storageFileHandle);
+        (void)Storage_done(&storageHandle);
       }
       doneJobOptions(&jobOptions);
 
@@ -7058,7 +7058,7 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const Stri
   String            storageName;
   StorageSpecifier  storageSpecifier;
   String            storageFileName;
-  StorageFileHandle storageFileHandle;
+  StorageHandle     storageHandle;
   Errors            error;
   ArchiveInfo       archiveInfo;
   ArchiveEntryInfo  archiveEntryInfo;
@@ -7091,7 +7091,7 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const Stri
   }
 
   // init storage
-  error = Storage_init(&storageFileHandle,
+  error = Storage_init(&storageHandle,
                        &storageSpecifier,
                        storageFileName,
                        &clientInfo->jobOptions,
@@ -7114,7 +7114,7 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const Stri
 
   // open archive
   error = Archive_open(&archiveInfo,
-                       &storageFileHandle,
+                       &storageHandle,
                        &storageSpecifier,
                        storageFileName,
                        &clientInfo->jobOptions,
@@ -7488,7 +7488,7 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const Stri
   Archive_close(&archiveInfo);
 
   // done storage
-  (void)Storage_done(&storageFileHandle);
+  (void)Storage_done(&storageHandle);
 
   sendClientResult(clientInfo,id,TRUE,ERROR_NONE,"");
 
@@ -7618,13 +7618,13 @@ LOCAL void serverCommand_storageListAdd(ClientInfo *clientInfo, uint id, const S
 
 LOCAL void serverCommand_storageDelete(ClientInfo *clientInfo, uint id, const StringMap argumentMap)
 {
-  DatabaseId        storageId;
-  String            storageName;
-  StorageSpecifier  storageSpecifier;
-  String            storageFileName;
-  String            fileName;
-  Errors            error;
-  StorageFileHandle storageFileHandle;
+  DatabaseId       storageId;
+  String           storageName;
+  StorageSpecifier storageSpecifier;
+  String           storageFileName;
+  String           fileName;
+  Errors           error;
+  StorageHandle    storageHandle;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -7670,7 +7670,7 @@ LOCAL void serverCommand_storageDelete(ClientInfo *clientInfo, uint id, const St
     {
       // try to init scp-storage first with sftp
       storageSpecifier.type = STORAGE_TYPE_SFTP;
-      error = Storage_init(&storageFileHandle,
+      error = Storage_init(&storageHandle,
                            &storageSpecifier,
                            storageFileName,
                            &clientInfo->jobOptions,
@@ -7683,7 +7683,7 @@ LOCAL void serverCommand_storageDelete(ClientInfo *clientInfo, uint id, const St
       {
         // init scp-storage
         storageSpecifier.type = STORAGE_TYPE_SCP;
-        error = Storage_init(&storageFileHandle,
+        error = Storage_init(&storageHandle,
                              &storageSpecifier,
                              storageFileName,
                              &clientInfo->jobOptions,
@@ -7697,7 +7697,7 @@ LOCAL void serverCommand_storageDelete(ClientInfo *clientInfo, uint id, const St
     else
     {
       // init other storage types
-      error = Storage_init(&storageFileHandle,
+      error = Storage_init(&storageHandle,
                            &storageSpecifier,
                            storageFileName,
                            &clientInfo->jobOptions,
@@ -7718,7 +7718,7 @@ LOCAL void serverCommand_storageDelete(ClientInfo *clientInfo, uint id, const St
     }
 
     // delete storage
-    error = Storage_delete(&storageFileHandle,
+    error = Storage_delete(&storageHandle,
                            fileName
                           );
     if (error != ERROR_NONE)
@@ -7732,7 +7732,7 @@ LOCAL void serverCommand_storageDelete(ClientInfo *clientInfo, uint id, const St
     }
 
     // close storage
-    Storage_done(&storageFileHandle);
+    Storage_done(&storageHandle);
 
     // delete index
     error = Index_delete(indexDatabaseHandle,

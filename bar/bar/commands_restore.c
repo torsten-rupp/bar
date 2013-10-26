@@ -221,7 +221,7 @@ Errors Command_restore(const StringList                *storageNameList,
   StorageSpecifier  storageSpecifier;
   String            storageFileName;
   String            printableStorageName;
-  StorageFileHandle storageFileHandle;
+  StorageHandle     storageHandle;
   StringNode        *stringNode;
   String            storageName;
   bool              abortFlag;
@@ -302,7 +302,7 @@ Errors Command_restore(const StringList                *storageNameList,
     printInfo(0,"Restore from archive '%s':\n",String_cString(printableStorageName));
 
     // init storage
-    error = Storage_init(&storageFileHandle,
+    error = Storage_init(&storageHandle,
                          &storageSpecifier,
                          storageFileName,
                          jobOptions,
@@ -323,7 +323,7 @@ Errors Command_restore(const StringList                *storageNameList,
 
     // open archive
     error = Archive_open(&archiveInfo,
-                         &storageFileHandle,
+                         &storageHandle,
                          &storageSpecifier,
                          storageFileName,
                          jobOptions,
@@ -2273,7 +2273,7 @@ Errors Command_restore(const StringList                *storageNameList,
     Archive_close(&archiveInfo);
 
     // done storage
-    (void)Storage_done(&storageFileHandle);
+    (void)Storage_done(&storageHandle);
 
     if (   abortFlag
         || ((restoreInfo.requestedAbortFlag != NULL) && (*restoreInfo.requestedAbortFlag))

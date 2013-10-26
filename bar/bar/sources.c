@@ -297,7 +297,7 @@ LOCAL Errors restoreFile(const String                    storageName,
   bool              restoredFlag;
   StorageSpecifier  storageSpecifier;
   String            storageFileName;
-  StorageFileHandle storageFileHandle;
+  StorageHandle     storageHandle;
   byte              *buffer;
 //  bool              abortFlag;
   Errors            error;
@@ -340,7 +340,7 @@ LOCAL Errors restoreFile(const String                    storageName,
   }
 
   // init storage
-  error = Storage_init(&storageFileHandle,
+  error = Storage_init(&storageHandle,
                        &storageSpecifier,
                        storageFileName,
                        jobOptions,
@@ -362,7 +362,7 @@ LOCAL Errors restoreFile(const String                    storageName,
 
   // open archive
   error = Archive_open(&archiveInfo,
-                       &storageFileHandle,
+                       &storageHandle,
                        &storageSpecifier,
                        storageFileName,
                        jobOptions,
@@ -373,7 +373,7 @@ LOCAL Errors restoreFile(const String                    storageName,
                       );
   if (error != ERROR_NONE)
   {
-    (void)Storage_done(&storageFileHandle);
+    (void)Storage_done(&storageHandle);
     String_delete(storageFileName);
     Storage_doneSpecifier(&storageSpecifier);
     return error;
@@ -841,7 +841,7 @@ LOCAL Errors restoreFile(const String                    storageName,
   Archive_close(&archiveInfo);
 
   // done storage
-  (void)Storage_done(&storageFileHandle);
+  (void)Storage_done(&storageHandle);
 
   // free resources
   Storage_doneSpecifier(&storageSpecifier);
