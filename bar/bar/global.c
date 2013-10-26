@@ -420,7 +420,7 @@ void debugRemoveResourceTrace(const char *__fileName__,
     }
     if (debugResourceNode != NULL)
     {
-      fprintf(stderr,"DEBUG WARNING: multiple free of resource '%s' %p at %s, %u and previously at %s, %lu which was allocated at %s, %ld!\n",
+      fprintf(stderr,"DEBUG ERROR: multiple free of resource '%s' %p at %s, %u and previously at %s, %lu which was allocated at %s, %ld!\n",
               debugResourceNode->typeName,
               debugResourceNode->resource,
               __fileName__,
@@ -465,7 +465,7 @@ void debugRemoveResourceTrace(const char *__fileName__,
     }
     else
     {
-      fprintf(stderr,"DEBUG WARNING: resource '%p' not found in debug list at %s, line %u\n",
+      fprintf(stderr,"DEBUG ERROR: resource '%p' not found in debug list at %s, line %u\n",
               resource,
               __fileName__,
               __lineNb__
@@ -479,7 +479,10 @@ void debugRemoveResourceTrace(const char *__fileName__,
   pthread_mutex_unlock(&debugResourceLock);
 }
 
-bool debugIsResourceTrace(const void *resource)
+void debugCheckResourceTrace(const char *__fileName__,
+                             uint       __lineNb__,
+                             const void *resource
+                            )
 {
   DebugResourceNode *debugResourceNode;
 
@@ -487,15 +490,52 @@ bool debugIsResourceTrace(const void *resource)
 
   pthread_mutex_lock(&debugResourceLock);
   {
+    // find in allocate-list
     debugResourceNode = debugResourceAllocList.head;
     while ((debugResourceNode != NULL) && (debugResourceNode->resource != resource))
     {
       debugResourceNode = debugResourceNode->next;
     }
+    if (debugResourceNode == NULL)
+    {
+      // find in free-list to check for duplicate free
+      debugResourceNode = debugResourceFreeList.head;
+      while ((debugResourceNode != NULL) && (debugResourceNode->resource != resource))
+      {
+        debugResourceNode = debugResourceNode->next;
+      }
+      if (debugResourceNode != NULL)
+      {
+        fprintf(stderr,"DEBUG ERROR: resource '%s' %p invalid at %s, %u which was allocated at %s, %ld and freed at %s, %ld!\n",
+                debugResourceNode->typeName,
+                debugResourceNode->resource,
+                __fileName__,
+                __lineNb__,
+                debugResourceNode->allocFileName,
+                debugResourceNode->allocLineNb,
+                debugResourceNode->freeFileName,
+                debugResourceNode->freeLineNb
+               );
+        #ifdef HAVE_BACKTRACE
+          debugDumpStackTrace(stderr,"allocated at",2,debugResourceNode->stackTrace,debugResourceNode->stackTraceSize);
+          debugDumpStackTrace(stderr,"deleted at",2,debugResourceNode->deleteStackTrace,debugResourceNode->deleteStackTraceSize);
+        #endif /* HAVE_BACKTRACE */
+      }
+      else
+      {
+        fprintf(stderr,"DEBUG ERROR: resource '%p' not found in debug list at %s, line %u\n",
+                resource,
+                __fileName__,
+                __lineNb__
+               );
+        #ifdef HAVE_BACKTRACE
+          debugDumpCurrentStackTrace(stderr,"",0);
+        #endif /* HAVE_BACKTRACE */
+      }
+      HALT_INTERNAL_ERROR("");
+    }
   }
   pthread_mutex_unlock(&debugResourceLock);
-
-  return (debugResourceNode != NULL);
 }
 
 void debugResourceDone(void)

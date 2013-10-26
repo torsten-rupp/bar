@@ -880,6 +880,8 @@ typedef void                void32;
 /***********************************************************************\
 * Name   : DEBUG_ADD_RESOURCE_TRACE, DEBUG_REMOVE_RESOURCE_TRACE,
 *          DEBUG_ADD_RESOURCE_TRACEX, DEBUG_REMOVE_RESOURCE_TRACEX,
+*          DEBUG_IS_RESOURCE_TRACE
+*          DEBUG_CHECK_RESOURCE_TRACE
 * Purpose: add/remove debug trace allocated resource functions
 * Input  : fileName - file name
 *          lineNb   - line number
@@ -919,8 +921,19 @@ typedef void                void32;
     } \
     while (0)
 
-  #define DEBUG_IS_RESOURCE_TRACE(resource) \
-    debugIsResourceTrace(resource)
+  #define DEBUG_CHECK_RESOURCE_TRACE(resource) \
+    do \
+    { \
+      debugCheckResourceTrace(__FILE__,__LINE__,resource); \
+    } \
+    while (0)
+
+  #define DEBUG_CHECK_RESOURCE_TRACEX(fileName,lineNb,resource) \
+    do \
+    { \
+      debugCheckResourceTrace(fileName,lineNb,resource); \
+    } \
+    while (0)
 
 #else /* NDEBUG */
 
@@ -948,8 +961,17 @@ typedef void                void32;
     } \
     while (0)
 
-  #define DEBUG_IS_RESOURCE_TRACE(resource) \
-    TRUE
+  #define DEBUG_CHECK_RESOURCE_TRACE(resource) \
+    do \
+    { \
+    } \
+    while (0)
+
+  #define DEBUG_CHECK_RESOURCE_TRACEX(fileName,lineNb,resource) \
+    do \
+    { \
+    } \
+    while (0)
 
 #endif /* not NDEBUG */
 
@@ -1373,15 +1395,20 @@ void debugRemoveResourceTrace(const char *__fileName__,
                              );
 
 /***********************************************************************\
-* Name   : debugIsResourceTrace
+* Name   : debugCheckResourceTrace
 * Purpose: check if resource is in debug trace list
-* Input  : resource     - resource
+* Input  : __fileName__ - file name
+*          __lineNb__   - line number
+*          resource     - resource
 * Output : -
-* Return : TRUE iff resource in debug trace list
+* Return : -
 * Notes  : -
 \***********************************************************************/
 
-bool debugIsResourceTrace(const void *resource);
+void debugCheckResourceTrace(const char *__fileName__,
+                             uint       __lineNb__,
+                             const void *resource
+                            );
 
 /***********************************************************************\
 * Name   : debugResourceDone
