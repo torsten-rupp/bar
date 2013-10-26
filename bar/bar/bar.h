@@ -796,12 +796,13 @@ void getDeviceSettings(const String     name,
 * Input  : server   - server
 *          priority - server connection priority; see
 *                     SERVER_CONNECTION_PRIORITY_...
+*          timeout  - timeout or -1 [ms]
 * Output : -
 * Return : TRUE iff connection allocated, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
 
-bool allocateServerConnection(Server *server, ServerConnectionPriorities priority);
+bool allocateServerConnection(Server *server, ServerConnectionPriorities priority, long timeout);
 
 /***********************************************************************\
 * Name   : freeServerConnection
