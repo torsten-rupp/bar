@@ -366,8 +366,6 @@ LOCAL Errors restoreFile(const String                    storageName,
                        &storageSpecifier,
                        storageFileName,
                        jobOptions,
-                       &globalOptions.maxBandWidthList,
-                       SERVER_CONNECTION_PRIORITY_HIGH,
                        archiveGetCryptPasswordFunction,
                        archiveGetCryptPasswordUserData
                       );

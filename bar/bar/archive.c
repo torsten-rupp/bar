@@ -2918,8 +2918,6 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
                       const StorageSpecifier          *storageSpecifier,
                       const String                    storageFileName,
                       const JobOptions                *jobOptions,
-                      BandWidthList                   *maxBandWidthList,
-                      ServerConnectionPriorities      serverConnectionPriority,
                       ArchiveGetCryptPasswordFunction archiveGetCryptPasswordFunction,
                       void                            *archiveGetCryptPasswordUserData
                      )
@@ -2931,8 +2929,6 @@ fprintf(stderr,"data: ");for (z=0;z<archiveInfo->cryptKeyDataLength;z++) fprintf
                         const StorageSpecifier          *storageSpecifier,
                         const String                    storageFileName,
                         const JobOptions                *jobOptions,
-                        BandWidthList                   *maxBandWidthList,
-                        ServerConnectionPriorities      serverConnectionPriority,
                         ArchiveGetCryptPasswordFunction archiveGetCryptPasswordFunction,
                         void                            *archiveGetCryptPasswordUserData
                        )
@@ -10063,7 +10059,6 @@ Errors Archive_addToIndex(DatabaseHandle   *databaseHandle,
                               maxBandWidthList,
                               NULL,
                               NULL,
-                              NULL,
                               NULL
                              );
   if (error != ERROR_NONE)
@@ -10080,7 +10075,6 @@ Errors Archive_updateIndex(DatabaseHandle               *databaseHandle,
                            StorageHandle                *storageHandle,
                            const String                 storageName,
                            const JobOptions             *jobOptions,
-                           BandWidthList                *maxBandWidthList,
                            ArchivePauseCallbackFunction pauseCallback,
                            void                         *pauseUserData,
                            ArchiveAbortCallbackFunction abortCallback,
@@ -10124,8 +10118,6 @@ Errors Archive_updateIndex(DatabaseHandle               *databaseHandle,
                          &storageSpecifier,
                          storageFileName,
                          jobOptions,
-                         maxBandWidthList,
-                         SERVER_CONNECTION_PRIORITY_LOW,
                          CALLBACK(NULL,NULL)
                         );
 
@@ -10138,8 +10130,6 @@ Errors Archive_updateIndex(DatabaseHandle               *databaseHandle,
                            &storageSpecifier,
                            storageFileName,
                            jobOptions,
-                           maxBandWidthList,
-                           SERVER_CONNECTION_PRIORITY_LOW,
                            CALLBACK(NULL,NULL)
                           );
     }
@@ -10152,8 +10142,6 @@ Errors Archive_updateIndex(DatabaseHandle               *databaseHandle,
                          &storageSpecifier,
                          storageFileName,
                          jobOptions,
-                         maxBandWidthList,
-                         SERVER_CONNECTION_PRIORITY_LOW,
                          CALLBACK(NULL,NULL)
                         );
   }

@@ -2849,11 +2849,8 @@ fprintf(stderr,"%s, %d: %ld %s\n",__FILE__,__LINE__,storageId,String_cString(sto
                                       &storageHandle,
                                       storageName,
                                       &jobOptions,
-                                      &globalOptions.indexDatabaseMaxBandWidthList,
-                                      indexPauseCallback,
-                                      NULL,
-                                      indexAbortCallback,
-                                      NULL
+                                      CALLBACK(indexPauseCallback,NULL),
+                                      CALLBACK(indexAbortCallback,NULL)
                                      );
 
           // stop if done or quit or interrupted
@@ -7118,8 +7115,6 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, uint id, const Stri
                        &storageSpecifier,
                        storageFileName,
                        &clientInfo->jobOptions,
-                       &globalOptions.maxBandWidthList,
-                       SERVER_CONNECTION_PRIORITY_HIGH,
                        CALLBACK(NULL,NULL)
                       );
   if (error != ERROR_NONE)

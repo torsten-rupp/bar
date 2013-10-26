@@ -327,8 +327,6 @@ Errors Command_restore(const StringList                *storageNameList,
                          &storageSpecifier,
                          storageFileName,
                          jobOptions,
-                         &globalOptions.maxBandWidthList,
-                         SERVER_CONNECTION_PRIORITY_HIGH,
                          archiveGetCryptPasswordFunction,
                          archiveGetCryptPasswordUserData
                         );

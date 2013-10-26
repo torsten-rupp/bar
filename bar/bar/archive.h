@@ -468,9 +468,6 @@ const Password *Archive_appendDecryptPassword(const Password *password);
 *          storageFileName                 - storage file name
 *          storageName                     - storage name
 *          jobOptions                      - option settings
-*          maxBandWidthList                - list with max. band width
-*                                            to use [bits/s] or NULL
-*          serverConnectionPriority        - server connection priority
 *          archiveGetCryptPasswordFunction - get password call back (can
 *                                            be NULL)
 *          archiveGetCryptPasswordUserData - user data for get password
@@ -486,8 +483,6 @@ const Password *Archive_appendDecryptPassword(const Password *password);
                       const StorageSpecifier          *storageSpecifier,
                       const String                    storageFileName,
                       const JobOptions                *jobOptions,
-                      BandWidthList                   *maxBandWidthList,
-                      ServerConnectionPriorities      serverConnectionPriority,
                       ArchiveGetCryptPasswordFunction archiveGetCryptPasswordFunction,
                       void                            *archiveGetCryptPasswordUserData
                      );
@@ -499,8 +494,6 @@ const Password *Archive_appendDecryptPassword(const Password *password);
                         const StorageSpecifier          *storageSpecifier,
                         const String                    storageFileName,
                         const JobOptions                *jobOptions,
-                        BandWidthList                   *maxBandWidthList,
-                        ServerConnectionPriorities      serverConnectionPriority,
                         ArchiveGetCryptPasswordFunction archiveGetCryptPasswordFunction,
                         void                            *archiveGetCryptPasswordUserData
                        );
@@ -1231,8 +1224,6 @@ Errors Archive_addToIndex(DatabaseHandle    *databaseHandle,
 *          storageName             - storage name
 *          cryptPassword           - encryption password
 *          cryptPrivateKeyFileName - encryption private key file name
-*          maxBandWidthList        - list with max. band width to use
-*                                    [bits/s] or NULL
 *          pauseCallback           - pause check callback (can be NULL)
 *          pauseUserData           - pause user data
 *          abortCallback           - abort check callback (can be NULL)
@@ -1247,7 +1238,6 @@ Errors Archive_updateIndex(DatabaseHandle               *databaseHandle,
                            StorageHandle                *storageHandle,
                            const String                 storageName,
                            const JobOptions             *jobOptions,
-                           BandWidthList                *maxBandWidthList,
                            ArchivePauseCallbackFunction pauseCallback,
                            void                         *pauseUserData,
                            ArchiveAbortCallbackFunction abortCallback,
