@@ -3103,7 +3103,7 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
           }
 
           // allocate FTP server connection
-          if (!allocateServerConnection(storageFileHandle->ftp.server,serverConnectionPriority))
+          if (!allocateServerConnection(storageFileHandle->ftp.server,serverConnectionPriority,60*1000L))
           {
             Storage_doneSpecifier(&storageFileHandle->storageSpecifier);
             return ERROR_TOO_MANY_CONNECTIONS;
@@ -3315,7 +3315,7 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
           }
 
           // allocate SSH server connection
-          if (!allocateServerConnection(storageFileHandle->scp.server,serverConnectionPriority))
+          if (!allocateServerConnection(storageFileHandle->scp.server,serverConnectionPriority,60*1000L))
           {
             Storage_doneSpecifier(&storageFileHandle->storageSpecifier);
             return ERROR_TOO_MANY_CONNECTIONS;
@@ -3418,7 +3418,7 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
           }
 
           // allocate SSH server connection
-          if (!allocateServerConnection(storageFileHandle->sftp.server,serverConnectionPriority))
+          if (!allocateServerConnection(storageFileHandle->sftp.server,serverConnectionPriority,60*1000L))
           {
             Storage_doneSpecifier(&storageFileHandle->storageSpecifier);
             return ERROR_TOO_MANY_CONNECTIONS;
@@ -3510,7 +3510,7 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
           }
 
           // allocate WebDAV server connection
-          if (!allocateServerConnection(storageFileHandle->webdav.server,serverConnectionPriority))
+          if (!allocateServerConnection(storageFileHandle->webdav.server,serverConnectionPriority,60*1000L))
           {
             Storage_doneSpecifier(&storageFileHandle->storageSpecifier);
             return ERROR_TOO_MANY_CONNECTIONS;
@@ -9254,7 +9254,7 @@ Errors Storage_openDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
           }
 
           // allocate FTP server connection
-          if (!allocateServerConnection(storageDirectoryListHandle->ftp.server,serverConnectionPriority))
+          if (!allocateServerConnection(storageDirectoryListHandle->ftp.server,serverConnectionPriority,60*1000L))
           {
             error = ERROR_TOO_MANY_CONNECTIONS;
             String_delete(storageDirectoryListHandle->ftp.fileName);
@@ -9699,7 +9699,7 @@ error = ERROR_FUNCTION_NOT_SUPPORTED;
 
           // allocate WebDAV server connection
 #warning webdav
-          if (!allocateServerConnection(storageDirectoryListHandle->webdav.server,serverConnectionPriority))
+          if (!allocateServerConnection(storageDirectoryListHandle->webdav.server,serverConnectionPriority,60*1000L))
           {
             error = ERROR_TOO_MANY_CONNECTIONS;
             break;
