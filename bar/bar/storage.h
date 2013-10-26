@@ -205,7 +205,6 @@ typedef struct
       // FTP storage
       struct
       {
-//        ServerAllocation        *serverAllocation;
         Server                  *server;
         CURLM                   *curlMultiHandle;
         CURL                    *curlHandle;
@@ -227,7 +226,6 @@ typedef struct
       // WebDAV storage
       struct
       {
-//        ServerAllocation        *serverAllocation;
         Server                  *server;
         CURLM                   *curlMultiHandle;
         CURL                    *curlHandle;
@@ -252,7 +250,6 @@ typedef struct
       // FTP storage
       struct
       {
-//        ServerAllocation        *serverAllocation;
         Server                  *server;
         netbuf                  *control;
         netbuf                  *data;
@@ -272,7 +269,6 @@ typedef struct
       // ssh storage (remote BAR)
       struct
       {
-//        ServerAllocation        *serverAllocation;
         Server                  *server;
 //        String                  hostName;                  // ssh server host name
 //        uint                    hostPort;                  // ssh server port number
@@ -293,7 +289,6 @@ typedef struct
       // scp storage
       struct
       {
-//        ServerAllocation        *serverAllocation;
         Server                  *server;
         String                  sshPublicKeyFileName;      // ssh public key file name
         String                  sshPrivateKeyFileName;     // ssh private key file name
@@ -318,7 +313,6 @@ typedef struct
       // sftp storage
       struct
       {
-//        ServerAllocation        *serverAllocation;
         Server                  *server;
         String                  sshPublicKeyFileName;      // ssh public key file name
         String                  sshPrivateKeyFileName;     // ssh private key file name
@@ -439,7 +433,6 @@ typedef struct
     #if   defined(HAVE_CURL)
       struct
       {
-//        ServerAllocation        *serverAllocation;
         Server                  *server;
         String                  pathName;                  // directory name
         StringList              lineList;
@@ -456,7 +449,6 @@ typedef struct
 
       struct
       {
-//        ServerAllocation        *serverAllocation;
         Server                  *server;
         String                  pathName;                  // directory name
 
@@ -478,7 +470,7 @@ typedef struct
     #elif defined(HAVE_FTP)
       struct
       {
-        ServerAllocation        *serverAllocation;
+        Server                  *server;
         String                  pathName;                  // directory name
 
         String                  fileListFileName;
@@ -829,6 +821,18 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
 \***********************************************************************/
 
 Errors Storage_done(StorageFileHandle *storageFileHandle);
+
+/***********************************************************************\
+* Name   : Storage_isServerAllocationPending
+* Purpose: check if a server allocation with high priority is pending
+* Input  : storageFileHandle - storage file handle
+* Output : -
+* Return : TRUE if server allocation with high priority is pending,
+*          FALSE otherwise
+* Notes  : -
+\***********************************************************************/
+
+bool Storage_isServerAllocationPending(StorageFileHandle *storageFileHandle);
 
 /***********************************************************************\
 * Name   : Storage_getHandleName

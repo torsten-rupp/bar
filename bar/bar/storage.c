@@ -3979,6 +3979,49 @@ Errors Storage_done(StorageFileHandle *storageFileHandle)
   return error;
 }
 
+bool Storage_isServerAllocationPending(StorageFileHandle *storageFileHandle)
+{
+  assert(storageFileHandle != NULL);
+  assert(DEBUG_IS_RESOURCE_TRACE(storageFileHandle));
+
+  DEBUG_REMOVE_RESOURCE_TRACE(storageFileHandle);
+
+  switch (storageFileHandle->storageSpecifier.type)
+  {
+    case STORAGE_TYPE_NONE:
+      return FALSE;
+      break;
+    case STORAGE_TYPE_FILESYSTEM:
+      return FALSE;
+      break;
+    case STORAGE_TYPE_FTP:
+      return isServerAllocationPending(storageFileHandle->ftp.server);
+      break;
+    case STORAGE_TYPE_SSH:
+      return isServerAllocationPending(storageFileHandle->ssh.server);
+      break;
+    case STORAGE_TYPE_SCP:
+      return isServerAllocationPending(storageFileHandle->scp.server);
+      break;
+    case STORAGE_TYPE_SFTP:
+      return isServerAllocationPending(storageFileHandle->sftp.server);
+      break;
+    case STORAGE_TYPE_WEBDAV:
+      return isServerAllocationPending(storageFileHandle->webdav.server);
+      break;
+    case STORAGE_TYPE_CD:
+    case STORAGE_TYPE_DVD:
+    case STORAGE_TYPE_BD:
+      return FALSE;
+      break;
+    default:
+      #ifndef NDEBUG
+        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+      #endif /* NDEBUG */
+      break;
+  }
+}
+
 String Storage_getHandleName(String                  storageName,
                              const StorageFileHandle *storageFileHandle,
                              const String            fileName
