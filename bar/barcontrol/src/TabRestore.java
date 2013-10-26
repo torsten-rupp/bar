@@ -174,14 +174,6 @@ class TabRestore
       }
     }
 
-    /** create index state set
-     * @param indexState0,indexState1 index states from/to
-     */
-    public IndexStateSet(IndexStates indexState0, IndexStates indexState1)
-    {
-      this.indexStateSet = EnumSet.range(indexState0,indexState1);
-    }
-
     /** convert data to string
      * @param indexState index state
      */
@@ -202,7 +194,7 @@ class TabRestore
     /** convert data to name list
      * @return name list
      */
-    public String name()
+    public String nameList(String separator)
     {
       StringBuilder buffer = new StringBuilder();
 
@@ -210,7 +202,7 @@ class TabRestore
       while (iterator.hasNext())
       {
         Enum value = (Enum)iterator.next();
-        if (buffer.length() > 0) buffer.append("|");
+        if (buffer.length() > 0) buffer.append(separator);
         buffer.append(value.name());
       }
 
@@ -226,7 +218,7 @@ class TabRestore
     }
   }
 
-  final IndexStateSet INDEX_STATE_SET_ALL = new IndexStateSet(IndexStates.OK,IndexStates.ERROR);
+  final IndexStateSet INDEX_STATE_SET_ALL = new IndexStateSet(IndexStates.OK,IndexStates.CREATE,IndexStates.UPDATE_REQUESTED,IndexStates.UPDATE,IndexStates.ERROR);
 
   /** index modes
    */
@@ -473,7 +465,7 @@ class TabRestore
     private boolean       triggeredFlag              = false;
     private int           storageMaxCount            = 100;
     private String        storagePattern             = null;
-    private IndexStateSet storageIndexStateSetFilter = new IndexStateSet(IndexStates.OK,IndexStates.ERROR);
+    private IndexStateSet storageIndexStateSetFilter = INDEX_STATE_SET_ALL;
     private boolean       setColorFlag               = false;          // true to set color at update
 
     /** create update storage list thread
@@ -526,7 +518,7 @@ class TabRestore
             Command command = BARServer.runCommand(StringParser.format("INDEX_STORAGE_LIST pattern=%'S maxCount=%d indexState=%s indexMode=%s",
                                                                        (((storagePattern != null) && !storagePattern.equals("")) ? storagePattern : "*"),
                                                                        storageMaxCount,
-                                                                       storageIndexStateSetFilter.name(),
+                                                                       storageIndexStateSetFilter.nameList("|"),
                                                                        "*"
                                                                       )
                                                   );
@@ -1745,7 +1737,7 @@ Dprintf.dprintf("process line by line");
         Widgets.layout(label,0,3,TableLayoutData.W);
 
         widgetStorageStateFilter = Widgets.newOptionMenu(composite);
-        widgetStorageStateFilter.setItems(new String[]{"*","ok","error","update","update requested","error/update/update requested"});
+        widgetStorageStateFilter.setItems(new String[]{"*","ok","error","update","update requested","update/update requested","error/update/update requested"});
         widgetStorageStateFilter.setText("*");
         Widgets.layout(widgetStorageStateFilter,0,4,TableLayoutData.W);
         widgetStorageStateFilter.addSelectionListener(new SelectionListener()
@@ -1756,14 +1748,18 @@ Dprintf.dprintf("process line by line");
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             Combo widget = (Combo)selectionEvent.widget;
-            String indexStateText = widget.getText();
-            if      (indexStateText.equalsIgnoreCase("ok"))               storageIndexStateSet = new IndexStateSet(IndexStates.OK);
-            else if (indexStateText.equalsIgnoreCase("error"))            storageIndexStateSet = new IndexStateSet(IndexStates.ERROR);
-            else if (indexStateText.equalsIgnoreCase("update"))           storageIndexStateSet = new IndexStateSet(IndexStates.UPDATE);
-            else if (indexStateText.equalsIgnoreCase("update requested")) storageIndexStateSet = new IndexStateSet(IndexStates.UPDATE_REQUESTED);
-            else if (indexStateText.equalsIgnoreCase("error/update/update requested")) storageIndexStateSet = new IndexStateSet(IndexStates.ERROR,IndexStates.UPDATE,IndexStates.UPDATE_REQUESTED);
-            else if (indexStateText.equalsIgnoreCase("*"))                storageIndexStateSet = new IndexStateSet(IndexStates.ALL);
-            else                                                          storageIndexStateSet = new IndexStateSet(IndexStates.UNKNOWN);
+            switch (widget.getSelectionIndex())
+            {
+              case 0:  storageIndexStateSet = new IndexStateSet(IndexStates.ALL);                                                   break;
+              case 1:  storageIndexStateSet = new IndexStateSet(IndexStates.OK);                                                    break;
+              case 2:  storageIndexStateSet = new IndexStateSet(IndexStates.ERROR);                                                 break;
+              case 3:  storageIndexStateSet = new IndexStateSet(IndexStates.UPDATE);                                                break;
+              case 4:  storageIndexStateSet = new IndexStateSet(IndexStates.UPDATE_REQUESTED);                                      break;
+              case 5:  storageIndexStateSet = new IndexStateSet(IndexStates.UPDATE,IndexStates.UPDATE_REQUESTED);                   break;
+              case 6:  storageIndexStateSet = new IndexStateSet(IndexStates.ERROR,IndexStates.UPDATE,IndexStates.UPDATE_REQUESTED); break;
+              default: storageIndexStateSet = new IndexStateSet(IndexStates.UNKNOWN);                                               break;
+
+            }
             updateStorageListThread.triggerUpdate(storagePattern,storageIndexStateSet,storageMaxCount);
           }
         });
