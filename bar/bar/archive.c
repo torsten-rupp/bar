@@ -10107,7 +10107,7 @@ Errors Archive_updateIndex(DatabaseHandle               *databaseHandle,
   String            printableStorageName;
   JobOptions        jobOptions;
   Errors            error;
-  bool              abortedFlag;
+  bool              abortedFlag,serverAllocationPendingFlag;
   ArchiveInfo       archiveInfo;
   ArchiveEntryInfo  archiveEntryInfo;
   ArchiveEntryTypes archiveEntryType;
@@ -10228,11 +10228,13 @@ Errors Archive_updateIndex(DatabaseHandle               *databaseHandle,
 
   // index archive contents
   printInfo(4,"Create index for '%s'\n",String_cString(printableStorageName));
-  error       = ERROR_NONE;
-  abortedFlag = (abortCallback != NULL) && abortCallback(abortUserData);;
+  error                       = ERROR_NONE;
+  abortedFlag                 = (abortCallback != NULL) && abortCallback(abortUserData);
+  serverAllocationPendingFlag = Storage_isServerAllocationPending(&archiveInfo.storage.storageFileHandle);
   while (   !Archive_eof(&archiveInfo,FALSE)
-         && !abortedFlag
          && (error == ERROR_NONE)
+         && !abortedFlag
+         && !serverAllocationPendingFlag
         )
   {
     // pause
@@ -10604,51 +10606,36 @@ Errors Archive_updateIndex(DatabaseHandle               *databaseHandle,
                   );
     }
 
-    // check if aborted
-    abortedFlag = (abortCallback != NULL) && abortCallback(abortUserData);
+    // check if aborted, check if server allocation pending
+    abortedFlag                 = (abortCallback != NULL) && abortCallback(abortUserData);
+    serverAllocationPendingFlag = Storage_isServerAllocationPending(&archiveInfo.storage.storageFileHandle);
   }
-  if (!abortedFlag)
+  if      (error != ERROR_NONE)
   {
-    if (error == ERROR_NONE)
+    printInfo(4,"Failed to create index for '%s' (error: %s)\n",String_cString(printableStorageName),Errors_getText(error));
+
+    if (Errors_getCode(error) == ERROR_NO_CRYPT_PASSWORD)
     {
-      printInfo(4,"Done create index for '%s'\n",String_cString(printableStorageName));
+      Index_setState(databaseHandle,
+                     storageId,
+                     INDEX_STATE_UPDATE_REQUESTED,
+                     0LL,
+                     NULL
+                    );
     }
     else
     {
-      printInfo(4,"Failed to create index for '%s' (error: %s)\n",String_cString(printableStorageName),Errors_getText(error));
-
-      if (Errors_getCode(error) == ERROR_NO_CRYPT_PASSWORD)
-      {
-        Index_setState(databaseHandle,
-                       storageId,
-                       INDEX_STATE_UPDATE_REQUESTED,
-                       0LL,
-                       NULL
-                      );
-      }
-      else
-      {
-        Index_setState(databaseHandle,
-                       storageId,
-                       INDEX_STATE_ERROR,
-                       0LL,
-                       "%s (error code: %d)",
-                       Errors_getText(error),
-                       Errors_getCode(error)
-                      );
-      }
-
-      // free resources
-      Archive_close(&archiveInfo);
-      freeJobOptions(&jobOptions);
-      String_delete(storageFileName);
-      String_delete(printableStorageName);
-      Storage_doneSpecifier(&storageSpecifier);
-
-      return error;
+      Index_setState(databaseHandle,
+                     storageId,
+                     INDEX_STATE_ERROR,
+                     0LL,
+                     "%s (error code: %d)",
+                     Errors_getText(error),
+                     Errors_getCode(error)
+                    );
     }
   }
-  else
+  else if (abortedFlag)
   {
     printInfo(4,"Aborted create index for '%s'\n",String_cString(printableStorageName));
 
@@ -10659,46 +10646,50 @@ Errors Archive_updateIndex(DatabaseHandle               *databaseHandle,
                    NULL
                   );
 
-    // free resources
-    Archive_close(&archiveInfo);
-    freeJobOptions(&jobOptions);
-    String_delete(storageFileName);
-    String_delete(printableStorageName);
-    Storage_doneSpecifier(&storageSpecifier);
-
-    return ERROR_ABORTED;
+    error = ERROR_ABORTED;
   }
-
-  // set index state 'OK', last checked time
-  Index_setState(databaseHandle,
-                 storageId,
-                 INDEX_STATE_OK,
-                 Misc_getCurrentDateTime(),
-                 NULL
-                );
-
-  // update name/size
-  error = Index_update(databaseHandle,
-                       storageId,
-                       storageName,
-                       Archive_getSize(&archiveInfo)
-                      );
-  if (error != ERROR_NONE)
+  else if (serverAllocationPendingFlag)
   {
-    Archive_close(&archiveInfo);
+    printInfo(4,"Interrupted create index for '%s'\n",String_cString(printableStorageName));
+
     Index_setState(databaseHandle,
                    storageId,
-                   INDEX_STATE_ERROR,
+                   INDEX_STATE_UPDATE_REQUESTED,
                    0LL,
-                   "%s (error code: %d)",
-                   Errors_getText(error),
-                   Errors_getCode(error)
+                   NULL
                   );
-    freeJobOptions(&jobOptions);
-    String_delete(storageFileName);
-    String_delete(printableStorageName);
-    Storage_doneSpecifier(&storageSpecifier);
-    return error;
+
+    error = ERROR_INTERRUPTED;
+  }
+  else
+  {
+    printInfo(4,"Done create index for '%s'\n",String_cString(printableStorageName));
+
+    // set index state 'OK', last checked time
+    Index_setState(databaseHandle,
+                   storageId,
+                   INDEX_STATE_OK,
+                   Misc_getCurrentDateTime(),
+                   NULL
+                  );
+
+    // update name/size
+    error = Index_update(databaseHandle,
+                         storageId,
+                         storageName,
+                         Archive_getSize(&archiveInfo)
+                        );
+    if (error != ERROR_NONE)
+    {
+      Index_setState(databaseHandle,
+                     storageId,
+                     INDEX_STATE_ERROR,
+                     0LL,
+                     "%s (error code: %d)",
+                     Errors_getText(error),
+                     Errors_getCode(error)
+                    );
+    }
   }
 
   // close archive
@@ -10710,7 +10701,7 @@ Errors Archive_updateIndex(DatabaseHandle               *databaseHandle,
   String_delete(printableStorageName);
   Storage_doneSpecifier(&storageSpecifier);
 
-  return ERROR_NONE;
+  return error;
 }
 
 Errors Archive_remIndex(DatabaseHandle *databaseHandle,
