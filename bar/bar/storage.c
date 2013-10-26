@@ -118,7 +118,7 @@
 LOCAL void updateStatusInfo(const StorageFileHandle *storageFileHandle)
 {
   assert(storageFileHandle != NULL);
-  assert(DEBUG_IS_RESOURCE_TRACE(storageFileHandle));
+  DEBUG_CHECK_RESOURCE_TRACE(storageFileHandle);
 
   if (storageFileHandle->storageStatusInfoFunction != NULL)
   {
@@ -391,8 +391,8 @@ LOCAL size_t curlFTPReadDataCallback(void   *buffer,
   assert(buffer != NULL);
   assert(size > 0);
   assert(storageFileHandle != NULL);
-  assert(DEBUG_IS_RESOURCE_TRACE(storageFileHandle));
   assert(storageFileHandle->ftp.buffer != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(storageFileHandle);
 
   if (storageFileHandle->ftp.transferedBytes < storageFileHandle->ftp.length)
   {
@@ -436,8 +436,8 @@ LOCAL size_t curlFTPWriteDataCallback(const void *buffer,
   assert(buffer != NULL);
   assert(size > 0);
   assert(storageFileHandle != NULL);
-  assert(DEBUG_IS_RESOURCE_TRACE(storageFileHandle));
   assert(storageFileHandle->ftp.buffer != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(storageFileHandle);
 
   if (storageFileHandle->ftp.transferedBytes < storageFileHandle->ftp.length)
   {
@@ -932,8 +932,8 @@ LOCAL LIBSSH2_SEND_FUNC(sshSendCallback)
 #warning TODO abstact?
   storageFileHandle = *((StorageFileHandle**)abstract);
   assert(storageFileHandle != NULL);
-  assert(DEBUG_IS_RESOURCE_TRACE(storageFileHandle));
   assert(storageFileHandle->scp.oldSendCallback != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(storageFileHandle);
 
   n = storageFileHandle->scp.oldSendCallback(socket,buffer,length,flags,abstract);
   if (n > 0) storageFileHandle->scp.totalSentBytes += (uint64)n;
@@ -965,8 +965,8 @@ LOCAL LIBSSH2_RECV_FUNC(sshReceiveCallback)
 #warning TODO abstract?
   storageFileHandle = *((StorageFileHandle**)abstract);
   assert(storageFileHandle != NULL);
-  assert(DEBUG_IS_RESOURCE_TRACE(storageFileHandle));
   assert(storageFileHandle->scp.oldReceiveCallback != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(storageFileHandle);
 
   n = storageFileHandle->scp.oldReceiveCallback(socket,buffer,length,flags,abstract);
   if (n > 0) storageFileHandle->scp.totalReceivedBytes += (uint64)n;
@@ -998,8 +998,8 @@ LOCAL LIBSSH2_SEND_FUNC(sftpSendCallback)
 #warning TODO abstract?
   storageFileHandle = *((StorageFileHandle**)abstract);
   assert(storageFileHandle != NULL);
-  assert(DEBUG_IS_RESOURCE_TRACE(storageFileHandle));
   assert(storageFileHandle->sftp.oldSendCallback != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(storageFileHandle);
 
   n = storageFileHandle->sftp.oldSendCallback(socket,buffer,length,flags,abstract);
   if (n > 0) storageFileHandle->sftp.totalSentBytes += (uint64)n;
@@ -1031,8 +1031,8 @@ LOCAL LIBSSH2_RECV_FUNC(sftpReceiveCallback)
 #warning TODO abstract?
   storageFileHandle = *((StorageFileHandle**)abstract);
   assert(storageFileHandle != NULL);
-  assert(DEBUG_IS_RESOURCE_TRACE(storageFileHandle));
   assert(storageFileHandle->sftp.oldReceiveCallback != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(storageFileHandle);
 
   n = storageFileHandle->sftp.oldReceiveCallback(socket,buffer,length,flags,abstract);
   if (n > 0) storageFileHandle->sftp.totalReceivedBytes += (uint64)n;
@@ -1217,8 +1217,8 @@ LOCAL size_t curlWebDAVReadDataCallback(void   *buffer,
   assert(buffer != NULL);
   assert(size > 0);
   assert(storageFileHandle != NULL);
-  assert(DEBUG_IS_RESOURCE_TRACE(storageFileHandle));
   assert(storageFileHandle->webdav.sendBuffer.data != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(storageFileHandle);
 
   if (storageFileHandle->webdav.sendBuffer.index < storageFileHandle->webdav.sendBuffer.length)
   {
@@ -1262,7 +1262,7 @@ LOCAL size_t curlWebDAVWriteDataCallback(const void *buffer,
   assert(buffer != NULL);
   assert(size > 0);
   assert(storageFileHandle != NULL);
-  assert(DEBUG_IS_RESOURCE_TRACE(storageFileHandle));
+  DEBUG_CHECK_RESOURCE_TRACE(storageFileHandle);
 
   // calculate number of received bytes
   bytesReceived = n*size;
@@ -1910,7 +1910,7 @@ LOCAL void executeIOmkisofs(StorageFileHandle *storageFileHandle,
   double p;
 
   assert(storageFileHandle != NULL);
-  assert(DEBUG_IS_RESOURCE_TRACE(storageFileHandle));
+  DEBUG_CHECK_RESOURCE_TRACE(storageFileHandle);
 
 //fprintf(stderr,"%s,%d: line=%s\n",__FILE__,__LINE__,String_cString(line));
   s = String_new();
@@ -1944,7 +1944,7 @@ LOCAL void executeIOdvdisaster(StorageFileHandle *storageFileHandle,
   double p;
 
   assert(storageFileHandle != NULL);
-  assert(DEBUG_IS_RESOURCE_TRACE(storageFileHandle));
+  DEBUG_CHECK_RESOURCE_TRACE(storageFileHandle);
 
   s = String_new();
   if (String_matchCString(line,STRING_BEGIN,".*adding space\\): +([0-9\\.]+)%",NULL,NULL,s,NULL))
@@ -1982,7 +1982,7 @@ LOCAL void executeIOgrowisofs(StorageFileHandle *storageFileHandle,
   double p;
 
   assert(storageFileHandle != NULL);
-  assert(DEBUG_IS_RESOURCE_TRACE(storageFileHandle));
+  DEBUG_CHECK_RESOURCE_TRACE(storageFileHandle);
 
   s = String_new();
   if (String_matchCString(line,STRING_BEGIN,".* \\(([0-9\\.]+)%\\) .*",NULL,NULL,s,NULL))
@@ -3853,6 +3853,7 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
   storageFileHandle->runningInfo.volumeProgress = 0;
 
   DEBUG_ADD_RESOURCE_TRACE("storage file handle",storageFileHandle);
+fprintf(stderr,"%s, %d: add storageFileHandle=%p\n",__FILE__,__LINE__,storageFileHandle);
 
   return ERROR_NONE;
 }
@@ -3862,9 +3863,10 @@ Errors Storage_done(StorageFileHandle *storageFileHandle)
   Errors error;
 
   assert(storageFileHandle != NULL);
-  assert(DEBUG_IS_RESOURCE_TRACE(storageFileHandle));
+  DEBUG_CHECK_RESOURCE_TRACE(storageFileHandle);
 
   DEBUG_REMOVE_RESOURCE_TRACE(storageFileHandle);
+fprintf(stderr,"%s, %d: remove storageFileHandle=%p\n",__FILE__,__LINE__,storageFileHandle);
 
   error = ERROR_NONE;
 
@@ -3982,9 +3984,9 @@ Errors Storage_done(StorageFileHandle *storageFileHandle)
 bool Storage_isServerAllocationPending(StorageFileHandle *storageFileHandle)
 {
   assert(storageFileHandle != NULL);
-  assert(DEBUG_IS_RESOURCE_TRACE(storageFileHandle));
+  DEBUG_CHECK_RESOURCE_TRACE(storageFileHandle);
 
-  DEBUG_REMOVE_RESOURCE_TRACE(storageFileHandle);
+  DEBUG_CHECK_RESOURCE_TRACE(storageFileHandle);
 
   switch (storageFileHandle->storageSpecifier.type)
   {
@@ -4042,8 +4044,8 @@ Errors Storage_preProcess(StorageFileHandle *storageFileHandle,
   Errors error;
 
   assert(storageFileHandle != NULL);
-  assert(DEBUG_IS_RESOURCE_TRACE(storageFileHandle));
   assert(storageFileHandle->jobOptions != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(storageFileHandle);
 
   error = ERROR_NONE;
   switch (storageFileHandle->storageSpecifier.type)
@@ -4302,8 +4304,8 @@ Errors Storage_postProcess(StorageFileHandle *storageFileHandle,
   Errors error;
 
   assert(storageFileHandle != NULL);
-  assert(DEBUG_IS_RESOURCE_TRACE(storageFileHandle));
   assert(storageFileHandle->jobOptions != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(storageFileHandle);
 
   error = ERROR_NONE;
   switch (storageFileHandle->storageSpecifier.type)
@@ -4922,7 +4924,7 @@ Errors Storage_unloadVolume(StorageFileHandle *storageFileHandle)
   Errors error;
 
   assert(storageFileHandle != NULL);
-  assert(DEBUG_IS_RESOURCE_TRACE(storageFileHandle));
+  DEBUG_CHECK_RESOURCE_TRACE(storageFileHandle);
 
   error = ERROR_UNKNOWN;
   switch (storageFileHandle->storageSpecifier.type)
@@ -4984,9 +4986,9 @@ Errors Storage_create(StorageFileHandle *storageFileHandle,
   String directoryName;
 
   assert(storageFileHandle != NULL);
-  assert(DEBUG_IS_RESOURCE_TRACE(storageFileHandle));
   assert(storageFileHandle->jobOptions != NULL);
   assert(fileName != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(storageFileHandle);
 
   // init variables
   storageFileHandle->mode = STORAGE_MODE_WRITE;
@@ -5771,9 +5773,9 @@ Errors Storage_open(StorageFileHandle *storageFileHandle,
   Errors error;
 
   assert(storageFileHandle != NULL);
-  assert(DEBUG_IS_RESOURCE_TRACE(storageFileHandle));
   assert(storageSpecifier != NULL);
   assert(storageFileName != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(storageFileHandle);
 
   // init variables
   storageFileHandle->mode = STORAGE_MODE_READ;
@@ -6608,8 +6610,8 @@ fprintf(stderr,"%s, %d: httpCode=%ld\n",__FILE__,__LINE__,httpCode);
 void Storage_close(StorageFileHandle *storageFileHandle)
 {
   assert(storageFileHandle != NULL);
-  assert(DEBUG_IS_RESOURCE_TRACE(storageFileHandle));
   assert(storageFileHandle->jobOptions != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(storageFileHandle);
 
   switch (storageFileHandle->storageSpecifier.type)
   {
@@ -6821,8 +6823,8 @@ Errors Storage_delete(StorageFileHandle *storageFileHandle,
   Errors error;
 
   assert(storageFileHandle != NULL);
-  assert(DEBUG_IS_RESOURCE_TRACE(storageFileHandle));
   assert(storageFileHandle->jobOptions != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(storageFileHandle);
 
   error = ERROR_UNKNOWN;
   switch (storageFileHandle->storageSpecifier.type)
@@ -7158,9 +7160,9 @@ whould this be a possible implementation?
 bool Storage_eof(StorageFileHandle *storageFileHandle)
 {
   assert(storageFileHandle != NULL);
-  assert(DEBUG_IS_RESOURCE_TRACE(storageFileHandle));
   assert(storageFileHandle->mode == STORAGE_MODE_READ);
   assert(storageFileHandle->jobOptions != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(storageFileHandle);
 
   switch (storageFileHandle->storageSpecifier.type)
   {
@@ -7284,11 +7286,11 @@ Errors Storage_read(StorageFileHandle *storageFileHandle,
   Errors error;
 
   assert(storageFileHandle != NULL);
-  assert(DEBUG_IS_RESOURCE_TRACE(storageFileHandle));
   assert(storageFileHandle->mode == STORAGE_MODE_READ);
   assert(storageFileHandle->jobOptions != NULL);
   assert(storageFileHandle->mode == STORAGE_MODE_READ);
   assert(buffer != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(storageFileHandle);
 
 //fprintf(stderr,"%s,%d: size=%lu\n",__FILE__,__LINE__,size);
   if (bytesRead != NULL) (*bytesRead) = 0L;
@@ -8093,10 +8095,10 @@ Errors Storage_write(StorageFileHandle *storageFileHandle,
   Errors error;
 
   assert(storageFileHandle != NULL);
-  assert(DEBUG_IS_RESOURCE_TRACE(storageFileHandle));
   assert(storageFileHandle->mode == STORAGE_MODE_WRITE);
   assert(storageFileHandle->jobOptions != NULL);
   assert(buffer != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(storageFileHandle);
 
   error = ERROR_NONE;
   switch (storageFileHandle->storageSpecifier.type)
@@ -8577,8 +8579,8 @@ uint64 Storage_getSize(StorageFileHandle *storageFileHandle)
   uint64 size;
 
   assert(storageFileHandle != NULL);
-  assert(DEBUG_IS_RESOURCE_TRACE(storageFileHandle));
   assert(storageFileHandle->jobOptions != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(storageFileHandle);
 
   size = 0LL;
   switch (storageFileHandle->storageSpecifier.type)
@@ -8668,9 +8670,9 @@ Errors Storage_tell(StorageFileHandle *storageFileHandle,
   Errors error;
 
   assert(storageFileHandle != NULL);
-  assert(DEBUG_IS_RESOURCE_TRACE(storageFileHandle));
   assert(storageFileHandle->jobOptions != NULL);
   assert(offset != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(storageFileHandle);
 
   (*offset) = 0LL;
 
@@ -8772,8 +8774,8 @@ Errors Storage_seek(StorageFileHandle *storageFileHandle,
   Errors error;
 
   assert(storageFileHandle != NULL);
-  assert(DEBUG_IS_RESOURCE_TRACE(storageFileHandle));
   assert(storageFileHandle->jobOptions != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(storageFileHandle);
 
   error = ERROR_NONE;
   switch (storageFileHandle->storageSpecifier.type)
