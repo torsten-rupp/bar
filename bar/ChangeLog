@@ -37,6 +37,7 @@
     Entries in the old format are still read, but not created
     anymore.
   * added custom text to schedule entries
+  * avoid console input in non-interactive mode
 
 2013-05-05 0.17b
   * fixed parsing of storage specifier (ftp, scp/sftp,
