@@ -3853,7 +3853,6 @@ Errors Storage_init(StorageFileHandle            *storageFileHandle,
   storageFileHandle->runningInfo.volumeProgress = 0;
 
   DEBUG_ADD_RESOURCE_TRACE("storage file handle",storageFileHandle);
-fprintf(stderr,"%s, %d: add storageFileHandle=%p\n",__FILE__,__LINE__,storageFileHandle);
 
   return ERROR_NONE;
 }
@@ -3866,7 +3865,6 @@ Errors Storage_done(StorageFileHandle *storageFileHandle)
   DEBUG_CHECK_RESOURCE_TRACE(storageFileHandle);
 
   DEBUG_REMOVE_RESOURCE_TRACE(storageFileHandle);
-fprintf(stderr,"%s, %d: remove storageFileHandle=%p\n",__FILE__,__LINE__,storageFileHandle);
 
   error = ERROR_NONE;
 
